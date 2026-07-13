@@ -127,7 +127,7 @@ The specialist-occurrence fixture is separate from the complete built-tree relea
 store below. It retains ten occurrence manifests and two selected media generations,
 but does not claim a deployed object-store adapter or distributed lease.
 
-## Astro built-tree release and serving cache (local backend)
+## Astro built-tree release and serving cache
 
 `site-astro/scripts/lib/site-release-store.mjs` treats one complete Astro `dist/`
 tree as the release unit. It inventories a closed, sorted, case-fold-collision-free
@@ -186,12 +186,24 @@ publication, and immediately before selection; exercise concurrent and dead-owne
 leases; prove retry and rollback; enforce retention/reachability; corrupt selected
 bytes; boot from baked fallback; and run all CLI operations end to end.
 
-This commit provides the complete local filesystem primitive needed for stage wiring,
-but does not deploy it. Object storage still needs an implementation of the exposed
-store semantics plus a real distributed lease/conditional-write authority. Stage
-wiring still needs a fleet-origin image and GitOps manifest, a writable cache volume,
-an immutable baked bundle selected by release digest, and live freshness alert routing.
-Those are deployment/data-authority concerns, not hidden claims of this local backend.
+`S3SiteReleaseStore` is the inactive object-storage implementation of that same
+operation surface. A strict parser distinguishes canonical local paths from
+`s3://bucket/non-empty-prefix`; ambiguous schemes and non-canonical prefixes fail
+closed. Immutable blobs, manifests, and event intents use absent-only conditional
+writes and byte-for-byte collision checks. The mutable selector retains the existing
+SHA-256 caller precondition while using the entity tag returned by the immediately
+preceding read for the object-store compare-and-swap. Reads are byte-bounded and
+release listings consume bounded continuation pages. The AWS client is injected in
+offline tests; the exact SDK is locked in `site-astro/package-lock.json`.
+
+This storage foundation does not change the credential-free CLI or deploy anything.
+The CLI/publisher factory, cache hydration from object bytes, occurrence persistence
+caller, bounded retention/GC, event agent, endpoint configuration, credential-name
+wiring, and real-endpoint conditional-write proof remain separate Phase 4b work. The
+endpoint proof must confirm the compatible store preserves the tested conditional
+semantics before any writer is activated. Stage wiring also still needs a fleet-origin
+image and GitOps manifest, a writable cache volume, an immutable baked bundle selected
+by release digest, and live freshness alert routing.
 
 ## Source of Truth
 

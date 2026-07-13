@@ -31,7 +31,7 @@
     "build:fixture": "LAB_SNAPSHOT=tests/fixtures/snapshot ALLOW_SYNTHETIC_FIXTURE=true SITE_ORIGIN=https://lab-stage.verdify.ai npm run build",
     "build:production": "node scripts/build-production.mjs",
     "build:production:fixture": "node scripts/build-production.mjs --fixture",
-    "test:unit": "node --test tests/build-lock.test.mjs tests/compiler.test.mjs tests/manifests.test.mjs tests/occurrence-export.test.mjs tests/occurrence-release.test.mjs tests/site-release.test.mjs tests/snapshot-hydrator.test.mjs",
+    "test:unit": "node --test tests/build-lock.test.mjs tests/compiler.test.mjs tests/manifests.test.mjs tests/occurrence-export.test.mjs tests/occurrence-release.test.mjs tests/site-release.test.mjs tests/site-release-s3.test.mjs tests/snapshot-hydrator.test.mjs",
     "test:parity": "python3 -m unittest discover -s tests -p 'test_site_build_parity_limits.py'",
     "test:manifests:stage": "kubectl kustomize ../deploy/k8s/overlays/lab-stage | node scripts/verify-rendered-stage.mjs",
     "test:manifests:production": "kubectl kustomize ../deploy/k8s/candidates/lab-astro-production | node scripts/verify-rendered-production-candidate.mjs",
@@ -52,6 +52,7 @@
     "parity:compare:provisional": "python3 scripts/site-build-parity.py compare ${QUARTZ_MANIFEST:?set QUARTZ_MANIFEST} astro-manifest.json --allow-provisional -o parity-report.json"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "3.1085.0",
     "@tailwindcss/postcss": "4.3.0",
     "astro": "6.4.8",
     "github-slugger": "2.0.0",

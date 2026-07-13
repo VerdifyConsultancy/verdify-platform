@@ -18,6 +18,7 @@ import { hostname } from "node:os";
 import path from "node:path";
 
 import { evaluateEventFreshness } from "./occurrence-release.mjs";
+import { parseSiteReleaseStoreLocation, S3ObjectStore } from "./s3-object-store.mjs";
 
 const SHA256_RE = /^[0-9a-f]{64}$/;
 const EVENT_ID_RE = /^evt_[A-Za-z0-9_-]{8,128}$/;
@@ -538,6 +539,201 @@ export class LocalSiteReleaseStore extends SiteReleaseStore {
     return names.map((name) => name.slice(0, -5));
   }
 }
+
+function parseS3CanonicalJson(bytes, label) {
+  try {
+    return JSON.parse(bytes.toString("utf8"));
+  } catch {
+    throw new Error(`${label} is not valid JSON`);
+  }
+}
+
+function validateS3EventIntent(intent, bytes = canonicalBytes(intent)) {
+  if (
+    !exactKeys(intent, [
+      "contract",
+      "schemaVersion",
+      "eventId",
+      "eventSha256",
+      "payloadSha256",
+      "releaseSha256",
+      "expectedSelectionSha256",
+    ])
+    || intent.contract !== "verdify.lab-site-release-event-intent"
+    || intent.schemaVersion !== 1
+    || !EVENT_ID_RE.test(intent.eventId)
+    || !SHA256_RE.test(intent.eventSha256)
+    || !SHA256_RE.test(intent.payloadSha256)
+    || !SHA256_RE.test(intent.releaseSha256)
+    || (intent.expectedSelectionSha256 !== null && !SHA256_RE.test(intent.expectedSelectionSha256))
+    || canonicalBytes(intent).compare(bytes) !== 0
+  ) throw new Error("site release event intent does not use the canonical v1 contract");
+  return intent;
+}
+
+export class S3SiteReleaseStore extends SiteReleaseStore {
+  constructor(location, options = {}) {
+    super();
+    const parsed = typeof location === "string" ? parseSiteReleaseStoreLocation(location) : location;
+    if (
+      parsed === null
+      || typeof parsed !== "object"
+      || parsed.kind !== "s3"
+      || typeof parsed.bucket !== "string"
+      || typeof parsed.prefix !== "string"
+    ) throw new Error("S3 site release store location is invalid");
+    this.location = Object.freeze({ kind: "s3", bucket: parsed.bucket, prefix: parsed.prefix });
+    this.objects = new S3ObjectStore({
+      bucket: parsed.bucket,
+      prefix: parsed.prefix,
+      client: options.client ?? null,
+      clientConfig: options.clientConfig ?? {},
+      clientFactory: options.clientFactory,
+    });
+  }
+
+  async initialize(_options = {}) {
+    await this.objects.initialize();
+    return this;
+  }
+
+  blobKey(digest) {
+    if (!SHA256_RE.test(digest)) throw new Error("site blob digest is invalid");
+    return `blobs/sha256/${digest}`;
+  }
+
+  releaseKey(digest) {
+    if (!SHA256_RE.test(digest)) throw new Error("site release digest is invalid");
+    return `releases/sha256/${digest}.json`;
+  }
+
+  eventKey(eventId) {
+    if (!EVENT_ID_RE.test(eventId)) throw new Error("site event ID is invalid");
+    return `events/sha256/${sha256(Buffer.from(eventId))}.json`;
+  }
+
+  async publishImmutable(key, bytes, maximumBytes, collisionMessage, contentType) {
+    const published = await this.objects.putIfAbsent(key, bytes, { contentType });
+    if (published.written) return;
+    const existing = await this.objects.read(key, { maximumBytes, label: "immutable site release object" });
+    if (!existing.bytes.equals(bytes)) throw new Error(collisionMessage);
+  }
+
+  async readSelection() {
+    const value = await this.objects.read("selection.json", {
+      maximumBytes: 64 * 1024,
+      label: "site release selection",
+      missing: true,
+    });
+    if (value === null) return null;
+    const selection = parseS3CanonicalJson(value.bytes, "site release selection");
+    return {
+      document: validateSelection(selection, value.bytes),
+      sha256: sha256(value.bytes),
+      etag: value.etag,
+    };
+  }
+
+  async writeSelection(selection, expectedSelectionSha256) {
+    const bytes = canonicalBytes(selection);
+    validateSelection(selection, bytes);
+    const selected = await this.readSelection();
+    if ((selected?.sha256 ?? null) !== expectedSelectionSha256) throw new Error("site selection precondition failed");
+    const result = selected === null
+      ? await this.objects.putIfAbsent("selection.json", bytes, { contentType: "application/json" })
+      : await this.objects.putIfMatch("selection.json", bytes, selected.etag, { contentType: "application/json" });
+    if (!result.written) throw new Error("site selection precondition failed");
+    return sha256(bytes);
+  }
+
+  async publishBlob(source) {
+    const key = this.blobKey(source.sha256);
+    if (!Number.isSafeInteger(source.bytes) || source.bytes < 1 || source.bytes > MAX_FILE_BYTES) {
+      throw new Error("site blob byte count is invalid");
+    }
+    const value = await readSingleLink(source.sourcePath, MAX_FILE_BYTES, "site release input");
+    if (sha256(value.bytes) !== source.sha256 || value.bytes.length !== source.bytes) throw new Error("site blob changed during import");
+    await this.publishImmutable(key, value.bytes, MAX_FILE_BYTES, "content-addressed site blob collision", "application/octet-stream");
+  }
+
+  async publishRelease(manifest) {
+    const bytes = canonicalBytes(manifest);
+    validateSiteReleaseManifest(manifest, bytes);
+    const digest = sha256(bytes);
+    await this.publishImmutable(
+      this.releaseKey(digest),
+      bytes,
+      MAX_MANIFEST_BYTES,
+      "content-addressed site JSON collision",
+      "application/json",
+    );
+    return digest;
+  }
+
+  async readRelease(digest, { verifyBlobs = true } = {}) {
+    const value = await this.objects.read(this.releaseKey(digest), {
+      maximumBytes: MAX_MANIFEST_BYTES,
+      label: "site release manifest",
+    });
+    if (sha256(value.bytes) !== digest) throw new Error("site release manifest digest mismatch");
+    const manifest = parseS3CanonicalJson(value.bytes, "site release manifest");
+    validateSiteReleaseManifest(manifest, value.bytes);
+    if (verifyBlobs) {
+      const verified = new Set();
+      for (const file of manifest.files) {
+        if (verified.has(file.sha256)) continue;
+        const blob = await this.objects.read(this.blobKey(file.sha256), {
+          maximumBytes: file.bytes,
+          label: "site release blob",
+        });
+        if (sha256(blob.bytes) !== file.sha256 || blob.bytes.length !== file.bytes) {
+          throw new Error("site release blob verification failed");
+        }
+        verified.add(file.sha256);
+      }
+    }
+    return manifest;
+  }
+
+  async publishEventIntent(intent) {
+    const bytes = canonicalBytes(intent);
+    validateS3EventIntent(intent, bytes);
+    await this.publishImmutable(
+      this.eventKey(intent.eventId),
+      bytes,
+      32 * 1024,
+      "content-addressed site JSON collision",
+      "application/json",
+    );
+  }
+
+  async readEventIntent(eventId) {
+    const value = await this.objects.read(this.eventKey(eventId), {
+      maximumBytes: 32 * 1024,
+      label: "site release event intent",
+      missing: true,
+    });
+    if (value === null) return null;
+    return validateS3EventIntent(parseS3CanonicalJson(value.bytes, "site release event intent"), value.bytes);
+  }
+
+  async listReleaseDigests() {
+    const keys = await this.objects.list("releases/sha256/", { maximumObjects: 1000 });
+    if (keys.some((key) => !/^releases\/sha256\/[0-9a-f]{64}\.json$/u.test(key))) {
+      throw new Error("site release manifest membership is invalid");
+    }
+    return keys.map((key) => key.slice("releases/sha256/".length, -5));
+  }
+}
+
+export function createSiteReleaseStore(location, options = {}) {
+  const parsed = parseSiteReleaseStoreLocation(location);
+  return parsed.kind === "local"
+    ? new LocalSiteReleaseStore(parsed.root)
+    : new S3SiteReleaseStore(parsed, options);
+}
+
+export { parseSiteReleaseStoreLocation };
 
 export function validateSiteReleaseManifest(manifest, bytes = canonicalBytes(manifest)) {
   if (
