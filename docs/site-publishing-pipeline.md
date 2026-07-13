@@ -46,8 +46,8 @@ specialist store, every occurrence is explicit pending evidence. When
 `LAB_OCCURRENCE_STORE` names an already-verified read-only store, the compiler
 revalidates the selected manifest and decoded blobs, copies only the referenced
 content-addressed images, emits local fallbacks, and keeps an independently
-usable graph link. Current-camera public manifests include a provenance digest,
-not the upstream identity.
+usable graph link. Current-camera public manifests include opaque occurrence,
+exact-policy, and approved-request provenance digests, never the upstream URL.
 
 The CLI is deliberately local and credential-free:
 
@@ -89,13 +89,17 @@ The camera source contract is GET-only and exact:
 Redirects, cookies, auth, direct device/VLAN, Frigate, go2rtc, database, and
 control access are forbidden. A domain-separated SHA-256 binds each opaque
 occurrence to GET, its exact URL, and those redirect/auth/cookie rules in the
-reviewed policy, batch, sanitized candidate, and private generation request; the
-URL is never emitted into public release output. The future producer must decode each JPEG and
+reviewed policy, batch, sanitized candidate, private generation, selection, and
+reconciliation request. A generation is eligible for LKG only while its exact policy
+and request digests match, so a same-version policy or URL mutation cannot retain it.
+Only the opaque digests—not the URL—enter public release output. The future producer must decode each JPEG and
 re-encode a metadata-free RGB/RGBA PNG named by its SHA-256. The offline compiler
 then revalidates PNG structure, CRC, bounded inflate, decoded pixels, MIME,
 dimensions, byte count, bounded PNG chunk cardinality, content-addressed name,
 exact occurrence allowlist, and camera opacity before emitting canonical
-per-camera then reconciliation requests.
+per-camera then reconciliation requests. Event, publication, capture, verification,
+selection, freshness, and rollback instants must round-trip as canonical UTC with
+either whole seconds or exactly three milliseconds; impossible dates are rejected.
 
 `deploy/k8s/components/lab-occurrence-reporting-boundary/` records the future
 boundary but is deliberately inert: no overlay reference, workload, Secret,

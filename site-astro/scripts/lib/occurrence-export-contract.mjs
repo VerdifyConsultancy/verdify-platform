@@ -806,6 +806,8 @@ export async function prepareOccurrenceExportRequests({
       sourceRoot: path.resolve(sourceRoot),
       event: null,
       policyVersion: policy.policyVersion,
+      policySha256: batch.policySha256,
+      requestProvenanceSha256: record.requestProvenanceSha256,
       publishedAt: inspected.feedFreshness.effectiveProcessingAt,
       occurrence,
       candidate,
@@ -833,9 +835,13 @@ export async function prepareOccurrenceExportRequests({
     event: null,
     sourceSnapshotManifestSha256: policy.sourceSnapshotManifestSha256,
     policyVersion: policy.policyVersion,
+    policySha256: batch.policySha256,
     publishedAt: inspected.feedFreshness.effectiveProcessingAt,
     graphs,
-    currentMedia: discovered.currentMedia,
+    currentMedia: discovered.currentMedia.map((occurrence) => ({
+      discovered: occurrence,
+      requestProvenanceSha256: mediaById.get(occurrence.occurrenceId).requestProvenanceSha256,
+    })),
     expectedSelectionSha256: batch.expectedSelectionSha256,
   };
   const payloadSha256 = occurrenceReleasePayloadSha256(releaseRequest);

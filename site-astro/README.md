@@ -95,10 +95,9 @@ The Astro compiler now emits `occurrence-manifest.json` for every discovered
 Grafana and current-camera occurrence. Grafana records preserve the normalized
 dashboard UID, panel, query multiplicity, variables, time range, semantic role,
 cadence, and an opaque occurrence ID. Camera records expose only an opaque
-occurrence ID, semantic role, stable same-origin target, cadence, and a digest of
-the approved occurrence provenance; the upstream camera identity is neither copied
-nor reversibly hashed into the public
-manifest.
+occurrence ID, semantic role, stable same-origin target, cadence, and opaque
+occurrence, exact-policy, and approved-request digests. The upstream camera URL is
+never copied into the public manifest.
 
 `scripts/manage-occurrence-release.mjs` implements the offline specialist-release
 contract. Its input is a canonical, bounded request containing one idempotent
@@ -113,10 +112,15 @@ The local store uses content-addressed image blobs and release manifests. One
 canonical release `selection.json` atomically selects both `current` and `previous`.
 Each current-camera occurrence has a separate two-generation CAS selector so camera
 events never mutate the graph/page release. Every selector carries a generation and
-selection-digest precondition. Event intents are durable before selection, retries
-are idempotent, event IDs bind both payload and envelope, and old-event tombstones
-survive the ten-manifest retention window. Local rollback swaps current/previous
-without regenerating evidence. Planner triggers carry a five-minute
+selection-digest precondition. Private generations bind the exact canonical policy
+SHA-256 and expected camera-request provenance SHA-256. Reconciliation selects LKG
+only when both still match; changing a camera URL or any policy byte, even under the
+same policy-version label, cannot relabel the old generation. Event intents are
+durable before selection, retries are idempotent, event IDs bind both payload and
+envelope, and old-event tombstones survive the ten-manifest retention window. All
+release instants use strict canonical UTC second-or-millisecond form and reject
+calendar normalization. Local rollback swaps current/previous without regenerating
+evidence. Planner triggers carry a five-minute
 target and fifteen-minute alert contract; graph and camera records carry their
 ratified cadence-based stale thresholds.
 
@@ -157,8 +161,10 @@ and image-data chunk cardinality, and applies tighter MIME, byte, and dimension
 bounds before it can emit canonical media-first and reconciliation publish
 requests. Camera batches carry only opaque occurrence IDs plus a domain-separated
 request-provenance SHA-256. That digest binds the occurrence ID, GET method, exact
-URL, and the no-redirect/no-auth/no-cookie rules through the candidate and private
-generation request without publishing the URL. The approved upstream handoff is
+URL, and the no-redirect/no-auth/no-cookie rules through the candidate, private
+generation, selection, and reconciliation contracts without publishing the URL.
+Both the exact policy and request digests must still match before camera LKG is
+selected. The approved upstream handoff is
 GET-only to the two exact
 `api.verdify.ai/api/v1/public/cameras/.../latest.jpg?h=1080` paths; redirects,
 cookies, authentication, device/VLAN access, Frigate, and go2rtc are forbidden,

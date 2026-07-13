@@ -18,6 +18,8 @@ authentication, decode the JPEG, re-encode clean RGB/RGBA PNG bytes without
 metadata, and name the candidate by its SHA-256 before the offline occurrence
 compiler will accept it. A privacy-safe request-provenance digest binds the
 occurrence, GET method, exact URL, and no-redirect/no-auth/no-cookie policy through
-the private handoff; the public release continues to expose opaque occurrence IDs
-only. Batches are also exact-policy-digest bound and must reach the trusted compiler
-clock within five minutes, with at most 60 seconds of bounded future skew.
+the private handoff, generation, and selection contracts. The public release exposes
+only opaque occurrence and policy/request digests, never the URL. A same-version
+policy or URL mutation cannot select an older camera generation. Batches are also
+exact-policy-digest bound and must reach the trusted compiler clock within five
+minutes, with at most 60 seconds of bounded future skew.

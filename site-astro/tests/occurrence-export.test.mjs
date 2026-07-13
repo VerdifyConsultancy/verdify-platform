@@ -548,6 +548,20 @@ test("prepared digests reject valid PNG replacement between inspection and publi
     storeRoot,
     processingAt: processingAtFor(exportBatch),
   });
+  await assert.rejects(
+    () => publishCurrentMediaGeneration({
+      ...prepared.mediaRequests[0],
+      sourceUrl: "https://api.verdify.ai/forbidden-public-leak",
+    }),
+    /current media generation request does not use the closed v3 shape/,
+  );
+  await assert.rejects(
+    () => publishOccurrenceRelease({
+      ...prepared.releaseRequest,
+      cameraUrl: "https://api.verdify.ai/forbidden-public-leak",
+    }),
+    /occurrence release request does not use the closed v2 shape/,
+  );
   await writeFile(path.join(sourceRoot, ...mediaCandidate.relativePath.split("/")), png(640, 360, [80, 20, 120, 255]));
   await assert.rejects(
     () => publishCurrentMediaGeneration(prepared.mediaRequests[0]),
@@ -681,6 +695,142 @@ test("canonical requests publish every occurrence and failed refresh retains gra
       retained.current.occurrences.currentMedia[0].fallback.sha256,
     );
   }
+});
+
+test("same-version policy and camera URL mutation cannot retain a generation from the prior exact policy", async (context) => {
+  const { sourceRoot, storeRoot } = await workspace(context);
+  const { graph, media, manifest, manifestSha256, active } = fixture();
+  const graphCandidate = await candidate(sourceRoot, "graphs", graph.occurrenceId, png());
+  const mediaCandidate = await candidate(
+    sourceRoot,
+    "current-media",
+    media.occurrenceId,
+    png(640, 360),
+    "2026-07-13T12:00:00Z",
+    requestProvenance(active, media.occurrenceId),
+  );
+  const initialBatch = batch({ policy: active, graph, media, graphCandidate, mediaCandidate });
+  const initial = await prepareOccurrenceExportRequests({
+    policy: active,
+    manifest,
+    manifestSha256,
+    batch: initialBatch,
+    sourceRoot,
+    storeRoot,
+    processingAt: processingAtFor(initialBatch),
+  });
+  await publishCurrentMediaGeneration(initial.mediaRequests[0]);
+  await publishOccurrenceRelease(initial.releaseRequest);
+  const selected = await loadSelectedOccurrenceRelease(storeRoot);
+  const selectedMedia = selected.current.occurrences.currentMedia[0];
+  assert.equal(selectedMedia.state, "verified");
+
+  const mutated = structuredClone(active);
+  const cameraSource = mutated.cameraUpstream.sources.find((source) => source.occurrenceId === media.occurrenceId);
+  cameraSource.url = "https://api.verdify.ai/api/v1/public/cameras/greenhouse_2/latest.jpg?h=1080";
+  cameraSource.requestProvenanceSha256 = cameraRequestProvenanceSha256(cameraSource);
+  mutated.currentMedia.find((record) => record.occurrenceId === media.occurrenceId).requestProvenanceSha256 =
+    cameraSource.requestProvenanceSha256;
+  validateOccurrenceExportPolicy(mutated);
+  assert.equal(mutated.policyVersion, active.policyVersion);
+  assert.notEqual(occurrenceExportPolicySha256(mutated), occurrenceExportPolicySha256(active));
+  assert.notEqual(requestProvenance(mutated, media.occurrenceId), requestProvenance(active, media.occurrenceId));
+
+  const mutatedBatch = batch({
+    policy: mutated,
+    graph,
+    media,
+    graphCandidate: null,
+    mediaCandidate: null,
+    id: "batch_same_version_camera_mutation",
+    exportedAt: "2026-07-13T12:20:00Z",
+    watermarkAt: "2026-07-13T12:19:00Z",
+    releaseExpected: selected.selectionSha256,
+    mediaExpected: selectedMedia.pointer.selectionSha256,
+  });
+  const prepared = await prepareOccurrenceExportRequests({
+    policy: mutated,
+    manifest,
+    manifestSha256,
+    batch: mutatedBatch,
+    sourceRoot,
+    storeRoot,
+    processingAt: processingAtFor(mutatedBatch),
+  });
+  assert.equal(prepared.mediaRequests.length, 0);
+  assert.equal(prepared.releaseRequest.policySha256, occurrenceExportPolicySha256(mutated));
+  assert.equal(
+    prepared.releaseRequest.currentMedia[0].requestProvenanceSha256,
+    requestProvenance(mutated, media.occurrenceId),
+  );
+  assert.doesNotMatch(JSON.stringify(prepared), /greenhouse_[12]|latest\.jpg|api\.verdify/i);
+
+  const released = await publishOccurrenceRelease(prepared.releaseRequest);
+  const currentMedia = released.manifest.occurrences.currentMedia[0];
+  assert.equal(released.manifest.policySha256, occurrenceExportPolicySha256(mutated));
+  assert.equal(currentMedia.policySha256, occurrenceExportPolicySha256(mutated));
+  assert.equal(currentMedia.requestProvenanceSha256, requestProvenance(mutated, media.occurrenceId));
+  assert.equal(currentMedia.state, "missing");
+  assert.equal(currentMedia.fallback, null);
+  assert.equal(currentMedia.pointer, null);
+  assert.doesNotMatch(JSON.stringify(released.manifest), /greenhouse_[12]|latest\.jpg|api\.verdify/i);
+
+  const refreshedMediaCandidate = await candidate(
+    sourceRoot,
+    "current-media",
+    media.occurrenceId,
+    png(640, 360, [48, 112, 64, 255]),
+    "2026-07-13T12:29:00Z",
+    requestProvenance(mutated, media.occurrenceId),
+  );
+  const refreshedBatch = batch({
+    policy: mutated,
+    graph,
+    media,
+    graphCandidate: null,
+    mediaCandidate: refreshedMediaCandidate,
+    id: "batch_same_version_camera_refresh",
+    exportedAt: "2026-07-13T12:30:00Z",
+    watermarkAt: "2026-07-13T12:29:00Z",
+    releaseExpected: released.selectionSha256,
+    mediaExpected: selectedMedia.pointer.selectionSha256,
+  });
+  const refreshed = await prepareOccurrenceExportRequests({
+    policy: mutated,
+    manifest,
+    manifestSha256,
+    batch: refreshedBatch,
+    sourceRoot,
+    storeRoot,
+    processingAt: processingAtFor(refreshedBatch),
+  });
+  const refreshedGeneration = await publishCurrentMediaGeneration(refreshed.mediaRequests[0]);
+  assert.equal(refreshedGeneration.selected.current.policySha256, occurrenceExportPolicySha256(mutated));
+  assert.equal(
+    refreshedGeneration.selected.current.requestProvenanceSha256,
+    requestProvenance(mutated, media.occurrenceId),
+  );
+  assert.equal(
+    refreshedGeneration.selected.current.sourceProvenanceSha256,
+    refreshed.releaseRequest.currentMedia[0].discovered.sourceProvenanceSha256,
+  );
+  assert.equal(refreshedGeneration.selected.current.policyVersion, refreshed.releaseRequest.policyVersion);
+  assert.equal(refreshedGeneration.selected.current.policySha256, refreshed.releaseRequest.policySha256);
+  assert.equal(
+    refreshedGeneration.selected.current.requestProvenanceSha256,
+    refreshed.releaseRequest.currentMedia[0].requestProvenanceSha256,
+  );
+  assert.equal(
+    refreshedGeneration.selected.selection.previous,
+    null,
+    "a policy/request identity change must break the rollback chain to the prior camera generation",
+  );
+  const refreshedRelease = await publishOccurrenceRelease(refreshed.releaseRequest);
+  assert.equal(refreshedRelease.manifest.occurrences.currentMedia[0].state, "verified");
+  assert.equal(
+    refreshedRelease.manifest.occurrences.currentMedia[0].fallback.sha256,
+    refreshedGeneration.selected.current.fallback.sha256,
+  );
 });
 
 test("full 143+2 policy-rejected reconciliation publishes then retains every LKG", async (context) => {

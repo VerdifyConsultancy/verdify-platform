@@ -90,11 +90,16 @@ function verifiedCandidate(relativePath, bytes, instant, requestProvenanceSha256
 }
 
 function bindReleaseEvent(request, eventId, eventType = "planner-completed", occurredAt = "2026-07-12T12:00:00Z") {
+  if (!Object.hasOwn(request, "policySha256")) request.policySha256 = digest(`policy:${request.policyVersion}`);
   request.event = event(eventId, occurrenceReleasePayloadSha256(request), eventType, occurredAt);
   return request;
 }
 
 function bindMediaEvent(request, eventId, occurredAt = "2026-07-12T12:00:00Z") {
+  if (!Object.hasOwn(request, "policySha256")) request.policySha256 = digest(`policy:${request.policyVersion}`);
+  if (!Object.hasOwn(request, "requestProvenanceSha256")) {
+    request.requestProvenanceSha256 = request.candidate.requestProvenanceSha256;
+  }
   request.event = event(eventId, currentMediaGenerationPayloadSha256(request), "current-media-updated", occurredAt);
   return request;
 }
@@ -129,9 +134,15 @@ function mediaInput(candidate) {
       semanticRole: "Current greenhouse view",
       captureCadenceSeconds: 300,
     }),
+    requestProvenanceSha256: candidate?.requestProvenanceSha256 ?? digest("approved-camera-request"),
     captureStatus: "success",
     candidate,
   };
+}
+
+function mediaReleaseInput(candidate) {
+  const { discovered, requestProvenanceSha256 } = mediaInput(candidate);
+  return { discovered, requestProvenanceSha256 };
 }
 
 test("PNG validation inflates and reconstructs bounded scanlines", async (context) => {
@@ -227,7 +238,7 @@ test("publisher selects decoded fallbacks and emits one atomic current/previous 
     policyVersion: "verdify-public-output-v1",
     publishedAt: "2026-07-12T12:01:00Z",
     graphs: [graphInput(candidate("graph.png", graphBytes))],
-    currentMedia: [mediaInput(candidate("camera.png", cameraBytes)).discovered],
+    currentMedia: [mediaReleaseInput(candidate("camera.png", cameraBytes))],
   };
   bindReleaseEvent(firstRequest, "evt_plan_0001");
   const first = await publishOccurrenceRelease(firstRequest);
@@ -369,7 +380,7 @@ test("failed graph and camera updates retain last-known-good bytes", async (cont
     policyVersion: "verdify-public-output-v1",
     publishedAt: "2026-07-12T12:01:00Z",
     graphs: [graphInput(candidate("graph.png", "2026-07-12T12:00:00Z"))],
-    currentMedia: [mediaInput(candidate("camera.png", "2026-07-12T12:00:00Z")).discovered],
+    currentMedia: [mediaReleaseInput(candidate("camera.png", "2026-07-12T12:00:00Z"))],
   };
   bindReleaseEvent(firstRequest, "evt_plan_1001");
   const first = await publishOccurrenceRelease(firstRequest);
@@ -402,6 +413,7 @@ test("failed graph and camera updates retain last-known-good bytes", async (cont
     policyVersion: "verdify-public-output-v2",
     publishedAt: "2026-07-12T12:11:00Z",
     graphs: [graphInput(candidate("corrupt.png", "2026-07-12T12:10:00Z"))],
+    currentMedia: firstRequest.currentMedia,
     expectedSelectionSha256: (await loadSelectedOccurrenceRelease(store)).selectionSha256,
   };
   bindReleaseEvent(thirdRequest, "evt_plan_1003", "planner-completed", "2026-07-12T12:10:00Z");
@@ -585,6 +597,112 @@ test("current-media readers reject intermediate directory symlinks", async (cont
   await assert.rejects(
     () => loadSelectedCurrentMediaGeneration(store, occurrence.occurrenceId),
     /store layout is invalid/,
+  );
+});
+
+test("downstream event, publication, verification, selection, and rollback instants reject impossible dates", async (context) => {
+  const impossible = "2026-02-30T12:00:00Z";
+  const valid = "2026-03-02T12:00:00Z";
+  assert.throws(
+    () => evaluateEventFreshness(event("evt_bad_date_event", digest("event"), "planner-completed", impossible), valid),
+    /release event occurrence time is invalid/,
+  );
+  assert.throws(
+    () => evaluateEventFreshness(event("evt_bad_date_publish", digest("publish")), impossible),
+    /release publication time is invalid/,
+  );
+  assert.throws(
+    () => evaluateOccurrenceFreshness({ occurrences: { graphs: [], currentMedia: [] } }, impossible),
+    /occurrence freshness evaluation time is invalid/,
+  );
+
+  const { source, store } = await workspace(context);
+  const graphBytes = png(10, 90, 30);
+  const cameraBytes = png(90, 30, 10);
+  await writeFile(path.join(source, "graph.png"), graphBytes);
+  await writeFile(path.join(source, "camera.png"), cameraBytes);
+
+  const occurrence = mediaInput(verifiedCandidate(
+    "camera.png",
+    cameraBytes,
+    valid,
+    digest("strict-camera-request"),
+  )).discovered;
+  const invalidVerification = {
+    storeRoot: store,
+    sourceRoot: source,
+    event: null,
+    policyVersion: "strict-policy-v1",
+    publishedAt: "2026-03-02T12:01:00Z",
+    occurrence,
+    candidate: verifiedCandidate(
+      "camera.png",
+      cameraBytes,
+      impossible,
+      digest("strict-camera-request"),
+    ),
+  };
+  bindMediaEvent(invalidVerification, "evt_bad_date_verify", valid);
+  await assert.rejects(
+    () => publishCurrentMediaGeneration(invalidVerification),
+    /image verification time is invalid/,
+  );
+
+  const validMedia = {
+    ...invalidVerification,
+    event: null,
+    candidate: verifiedCandidate("camera.png", cameraBytes, valid, digest("strict-camera-request")),
+  };
+  bindMediaEvent(validMedia, "evt_valid_date_media", valid);
+  const publishedMedia = await publishCurrentMediaGeneration(validMedia);
+  await assert.rejects(
+    () => rollbackCurrentMediaGeneration({
+      storeRoot: store,
+      occurrenceId: occurrence.occurrenceId,
+      expectedSelectionSha256: publishedMedia.selected.selectionSha256,
+      rolledBackAt: impossible,
+    }),
+    /current media rollback time is invalid/,
+  );
+
+  const release = {
+    storeRoot: store,
+    sourceRoot: source,
+    event: null,
+    sourceSnapshotManifestSha256: digest("strict-snapshot"),
+    policyVersion: "strict-policy-v1",
+    publishedAt: "2026-03-02T12:01:00Z",
+    graphs: [graphInput(verifiedCandidate("graph.png", graphBytes, valid))],
+    currentMedia: [],
+  };
+  bindReleaseEvent(release, "evt_valid_date_release", "planner-completed", valid);
+  await publishOccurrenceRelease(release);
+  const selected = await loadSelectedOccurrenceRelease(store);
+  await assert.rejects(
+    () => rollbackOccurrenceRelease({
+      storeRoot: store,
+      expectedSelectionSha256: selected.selectionSha256,
+      rolledBackAt: impossible,
+    }),
+    /rollback time is invalid/,
+  );
+
+  const occurrenceSelectionPath = path.join(store, "selection.json");
+  const occurrenceSelection = JSON.parse(await readFile(occurrenceSelectionPath, "utf8"));
+  occurrenceSelection.selectedAt = impossible;
+  await writeFile(occurrenceSelectionPath, `${JSON.stringify(occurrenceSelection, null, 2)}\n`);
+  await assert.rejects(
+    () => loadSelectedOccurrenceRelease(store),
+    /occurrence selection time is invalid/,
+  );
+
+  const mediaSelectionPath = path.join(store, "occurrences", occurrence.occurrenceId, "selection.json");
+  const mediaSelection = JSON.parse(await readFile(mediaSelectionPath, "utf8"));
+  mediaSelection.selectedAt = impossible;
+  await writeFile(mediaSelectionPath, `${JSON.stringify(mediaSelection, null, 2)}\n`);
+  await assert.rejects(
+    () => loadSelectedCurrentMediaGeneration(store, occurrence.occurrenceId),
+    /current media selection time is invalid/,
   );
 });
 
