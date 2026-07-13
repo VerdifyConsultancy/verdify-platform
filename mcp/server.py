@@ -13,7 +13,7 @@ import asyncio
 import json
 import os
 import sys
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from uuid import UUID, uuid4
 from zoneinfo import ZoneInfo
@@ -611,6 +611,54 @@ async def scorecard(target_date: str = "") -> str:
         await conn.close()
 
 
+# #389: the transition-derived runtime contract lives in
+# v_equipment_runtime_daily, but its single-day evaluation costs 11-40+ s in
+# prod (O(days x transitions), migration-199/200 headers) — over the MCP
+# statement fence — so outcome_kpi reads the migration-200 materialized
+# snapshot (mv_equipment_runtime_daily, refreshed every 10 min) and reconciles:
+# a completed local day must be complete in the snapshot, otherwise the read
+# falls back to the live view so completed-day truth never silently degrades
+# to a stale snapshot. Rows for the snapshot window bound come from
+# migration 199.
+_EQUIPMENT_RUNTIME_SNAPSHOT_WINDOW_DAYS = 45
+
+
+def _cycle_day_status(target_day: date, today_local: date) -> str:
+    """Deploy-gate day classification for the cycle/runtime axis (#389).
+
+    Only completed local days are comparable across an OTA; the current local
+    day is mid-flight (its transition counts are honest but partial) and a
+    future-dated day has no evidence at all.
+    """
+    if target_day > today_local:
+        return "future_date_excluded"
+    if target_day == today_local:
+        return "partial_day_excluded"
+    return "complete"
+
+
+def _cycle_snapshot_is_stale(cycle_rows, target_day: date, today_local: date) -> bool:
+    """True when the materialized runtime snapshot cannot serve a completed day.
+
+    A completed local day inside the migration-199 window must exist in the
+    snapshot and be marked complete; a missing or still-partial row means the
+    10-minute refresh has not run since local midnight (or the snapshot never
+    covered the day), so the caller must re-read the live view instead of
+    serving mid-day counts as completed-day truth. Partial (current) and
+    future-dated targets never trigger the fallback — they are excluded from
+    deploy-gate comparison regardless of snapshot freshness — and neither do
+    days older than the operational window, where both surfaces are empty by
+    design.
+    """
+    if target_day >= today_local:
+        return False
+    if target_day < today_local - timedelta(days=_EQUIPMENT_RUNTIME_SNAPSHOT_WINDOW_DAYS):
+        return False
+    if not cycle_rows:
+        return True
+    return any(not row["is_complete_day"] for row in cycle_rows)
+
+
 @mcp.tool()
 async def outcome_kpi(target_date: str = "") -> str:
     """Get ADR-0004 outcome KPIs for a day.
@@ -637,6 +685,12 @@ async def outcome_kpi(target_date: str = "") -> str:
     Migration 187's v_moisture_estimator_telemetry view is the equivalent
     typed SQL surface.  Raw equipment transitions, not firmware daily counters,
     are the cycle/runtime authority; the counters remain diagnostic context.
+    Cycle/runtime rows are read from the migration-200 materialized snapshot
+    (mv_equipment_runtime_daily, refreshed every 10 minutes) with a live-view
+    fallback whenever the snapshot cannot serve a completed day; only
+    completed local days participate in deploy-gate cycle comparison —
+    the current (partial) day and future-dated targets are explicitly
+    excluded (vpd_policy.cycle_source.deploy_gate).
     Realized solar-night dry-out episodes distinguish effective, ineffective,
     blocked, and insufficient-evidence outcomes. Pass date as YYYY-MM-DD or
     omit for today.
@@ -652,13 +706,17 @@ async def outcome_kpi(target_date: str = "") -> str:
     greenhouse_id = "vallery"
     conn = await _db()
     try:
+        # today_local comes from the DB clock (the same clock that stamps
+        # equipment_state and the runtime views) so the #389 partial/future
+        # classification below can never disagree with the SQL surfaces.
+        today_local = await conn.fetchval("SELECT (now() AT TIME ZONE 'America/Denver')::date")
         if target_date:
             try:
                 d = datetime.strptime(target_date, "%Y-%m-%d").date()
             except ValueError:
                 return _json({"error": "target_date must be YYYY-MM-DD"})
         else:
-            d = await conn.fetchval("SELECT (now() AT TIME ZONE 'America/Denver')::date")
+            d = today_local
 
         summary_sql = """
             SELECT date, greenhouse_id,
@@ -747,7 +805,12 @@ async def outcome_kpi(target_date: str = "") -> str:
             FROM v_energy_estimate_reconciliation
             WHERE date = $1::date AND greenhouse_id = $2
             """
-        cycles_sql = """
+        # #389: one shared column list, two sources. The materialized snapshot
+        # (migration 200, refreshed every 10 min) is the fast path; the live
+        # view is the reconciliation fallback when the snapshot cannot serve a
+        # completed day (see _cycle_snapshot_is_stale). Both carry the
+        # identical migration-190/199 transition-derived contract.
+        cycles_columns = """
             SELECT equipment,
                    on_minutes::double precision AS on_minutes,
                    starts,
@@ -769,10 +832,23 @@ async def outcome_kpi(target_date: str = "") -> str:
                    same_timestamp_duplicate_rows,
                    redundant_state_rows,
                    conflicting_timestamp_count
+            """
+        cycles_snapshot_sql = (
+            cycles_columns
+            + """
+            FROM mv_equipment_runtime_daily
+            WHERE day = $1::date AND greenhouse_id = $2
+            ORDER BY equipment
+            """
+        )
+        cycles_live_sql = (
+            cycles_columns
+            + """
             FROM v_equipment_runtime_daily
             WHERE day = $1::date AND greenhouse_id = $2
             ORDER BY equipment
             """
+        )
         dryout_sql = """
             SELECT *
             FROM fn_realized_solar_night_dryout($1::date, $1::date, $2)
@@ -1461,9 +1537,18 @@ async def outcome_kpi(target_date: str = "") -> str:
             return summary_row, dli_evidence, water_resource_row, energy_resource_row
 
         async def _equipment_task(c: asyncpg.Connection):
-            cycle_rows = await c.fetch(cycles_sql, d, greenhouse_id)
+            cycle_rows = await c.fetch(cycles_snapshot_sql, d, greenhouse_id)
+            cycle_read_path = "mv_equipment_runtime_daily"
+            if _cycle_snapshot_is_stale(cycle_rows, d, today_local):
+                # Completed in-window day the snapshot cannot serve — re-read
+                # the live transition derivation rather than presenting stale
+                # partial counts as completed-day truth. Bounded by the
+                # statement fence: if the live view exceeds it, the tool fails
+                # loud instead of lying.
+                cycle_rows = await c.fetch(cycles_live_sql, d, greenhouse_id)
+                cycle_read_path = "v_equipment_runtime_daily_stale_snapshot_fallback"
             dryout_rows = await c.fetch(dryout_sql, d, greenhouse_id)
-            return cycle_rows, dryout_rows
+            return cycle_rows, cycle_read_path, dryout_rows
 
         async def _dif_task(c: asyncpg.Connection):
             return await c.fetchrow(dif_sql, d, greenhouse_id)
@@ -1499,7 +1584,7 @@ async def outcome_kpi(target_date: str = "") -> str:
         (
             (pinched, phase_rows),
             (summary_row, dli_evidence, water_resource_row, energy_resource_row),
-            (cycle_rows, dryout_rows),
+            (cycle_rows, cycle_read_path, dryout_rows),
             dif_row,
             (action_rows, moisture_rows, vpd_policy_row, vpd_policy_reason_rows),
         ) = results
@@ -1606,11 +1691,25 @@ async def outcome_kpi(target_date: str = "") -> str:
                 key.removeprefix("runtime_"): summary.get(key) for key in summary if key.startswith("runtime_")
             },
         }
+        cycle_day_status = _cycle_day_status(d, today_local)
         vpd_policy["cycle_source"] = {
             "authority": "v_equipment_runtime_daily",
+            "read_path": cycle_read_path,
             "semantics": "raw equipment_state transition derivation",
             "all_rows_deploy_gate_eligible": bool(cycle_rows)
             and all(row["is_deploy_gate_eligible"] for row in cycle_rows),
+            # #389: only completed local days participate in deploy-gate cycle
+            # comparison; the current (partial) day's transition counts stay
+            # readable — honest undercounts, never firmware-counter inflation —
+            # but are excluded from gates, and future-dated targets carry no
+            # evidence at all.
+            "deploy_gate": {
+                "eligible_days": "completed local days with is_deploy_gate_eligible rows only",
+                "target_day_status": cycle_day_status,
+                "excluded_from_deploy_gate": cycle_day_status != "complete"
+                or not cycle_rows
+                or not all(row["is_deploy_gate_eligible"] for row in cycle_rows),
+            },
             "equipment": cycle_quality,
         }
         vpd_policy["firmware_counter_diagnostics"] = firmware_counter_diagnostics
@@ -1650,7 +1749,16 @@ async def outcome_kpi(target_date: str = "") -> str:
         pending_metrics = []
         if not moisture_sample_count:
             pending_metrics.append("moisture_estimator: source path wired; waiting for OTA/deploy/live rows")
-        if not cycle_rows:
+        if cycle_day_status == "future_date_excluded":
+            pending_metrics.append(
+                "actuator_cycles_runtime: target date is future-dated; excluded from deploy-gate cycle comparison"
+            )
+        elif cycle_day_status == "partial_day_excluded":
+            pending_metrics.append(
+                "actuator_cycles_runtime: current local day is partial; counts are honest "
+                "mid-day undercounts and excluded from deploy-gate cycle comparison"
+            )
+        elif not cycle_rows:
             pending_metrics.append("actuator_cycles_runtime: no transition-derived rows for date")
         elif any(not row["is_deploy_gate_eligible"] for row in cycle_rows):
             pending_metrics.append(
@@ -1677,7 +1785,11 @@ async def outcome_kpi(target_date: str = "") -> str:
                     dli="unavailable",
                     actuator_cycles_runtime=(
                         "available"
-                        if cycle_rows and all(row["is_deploy_gate_eligible"] for row in cycle_rows)
+                        if cycle_day_status == "complete"
+                        and cycle_rows
+                        and all(row["is_deploy_gate_eligible"] for row in cycle_rows)
+                        else "unavailable"
+                        if cycle_day_status == "future_date_excluded"
                         else "pending"
                     ),
                     moisture_estimator="available" if moisture_sample_count else "pending",
@@ -1812,6 +1924,7 @@ async def outcome_kpi(target_date: str = "") -> str:
                 pending_metrics=pending_metrics,
                 source_tables=[
                     "daily_summary",
+                    "mv_equipment_runtime_daily",
                     "v_equipment_runtime_daily",
                     "fn_realized_solar_night_dryout",
                     "v_climate_action_daily_scorecard",
