@@ -24,7 +24,6 @@ spec:
         app.kubernetes.io/part-of: verdify
       annotations:
         verdify.ai/release-boundary: disconnected-read-only-cache-candidate
-        verdify.ai/object-store-endpoint: s3-hdd.vallery.net
     spec:
       automountServiceAccountToken: false
       imagePullSecrets:
@@ -56,10 +55,6 @@ spec:
             # patches this URI in a separate, reviewed overlay.
             - name: LAB_RELEASE_STORE
               value: /unconfigured/verdify-lab-release-store
-            - name: LAB_S3_ENDPOINT_URL
-              value: https://s3-hdd.vallery.net
-            - name: AWS_DEFAULT_REGION
-              value: garage
             - name: LAB_RELEASE_CACHE
               value: /srv/lab-cache
             - name: LAB_RELEASE_RUNTIME_STATE
@@ -149,10 +144,6 @@ spec:
           env:
             - name: LAB_RELEASE_STORE
               value: /unconfigured/verdify-lab-release-store
-            - name: LAB_S3_ENDPOINT_URL
-              value: https://s3-hdd.vallery.net
-            - name: AWS_DEFAULT_REGION
-              value: garage
             - name: LAB_RELEASE_CACHE
               value: /srv/lab-cache
             - name: LAB_RELEASE_RUNTIME_STATE
@@ -243,27 +234,4 @@ spec:
       ports:
         - protocol: TCP
           port: 8080
-  egress:
-    # DNS is the only infrastructure dependency. Both protocols are required
-    # because large DNS replies can retry over TCP.
-    - to:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: kube-system
-          podSelector:
-            matchLabels:
-              k8s-app: kube-dns
-      ports:
-        - protocol: UDP
-          port: 53
-        - protocol: TCP
-          port: 53
-    # s3-hdd.vallery.net resolves through the apps edge VIP. This /32 + 443 is
-    # the only application egress; an application-layer client must also pin
-    # the exact HTTPS host and reject redirects.
-    - to:
-        - ipBlock:
-            cidr: 192.168.7.10/32
-      ports:
-        - protocol: TCP
-          port: 443
+  egress: []

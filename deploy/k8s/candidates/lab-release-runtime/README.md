@@ -1,8 +1,9 @@
 # Lab immutable-release runtime candidate
 
-This directory is a disconnected, read-only proof target. It is intentionally
-absent from every active overlay and creates no Ingress, IngressRoute, DNS,
-Secret, PVC, publishing writer, database reader, or device path.
+This directory is a disconnected, read-only proof target. The Lab stage overlay
+includes it only as dormant desired state with `replicas: 0` and zero-digest
+image sentinels. It creates no Ingress, IngressRoute, DNS, Secret, PVC,
+publishing writer, database reader, or device path.
 
 Each of the two hostname-spread pods owns an `emptyDir` cache. The init
 container verifies and hydrates the image-baked known-good release before nginx
@@ -11,19 +12,25 @@ SHA-256 identity, verifies a changed release into a new physical generation,
 then atomically changes the relative `current` symlink. Nginx serves
 `current/tree`; a failed observation preserves that complete generation.
 
-The checked-in workload is deliberately disabled at the storage layer:
-`LAB_RELEASE_STORE` names an absent local directory, so cold start uses only the
-digest-bound baked bundle. Enabling object storage is a separate integration:
+The checked-in workload is deliberately disabled at both the scheduler and
+storage boundaries: `LAB_RELEASE_STORE` names an absent local directory, the
+pod has no S3/AWS environment or object-store annotation, and its NetworkPolicy
+allows no egress. Enabling object storage is a separate integration:
 
 1. build and pin the `agent` and `site` targets from
    `site-astro/Dockerfile.release-runtime` through the fleet Kaniko/ZOT path;
 2. land the object-store implementation behind `manage-site-release.mjs`;
-3. deliver a read-only, prefix-scoped credential outside this candidate and
-   patch `LAB_RELEASE_STORE` to its credential-free `s3://bucket/prefix` URI;
-4. verify the endpoint remains `s3-hdd.vallery.net` (the policy permits only
-   its current `192.168.7.10/32` edge address on TCP 443 plus cluster DNS); and
-5. run disconnected canary probes before any separately authorized route or
-   cutover change.
+3. introduce a separately reviewed least-privilege egress policy and read-only,
+   prefix-scoped credential outside this candidate, then patch
+   `LAB_RELEASE_STORE` to its credential-free `s3://bucket/prefix` URI;
+4. replace both zero image sentinels and explicitly raise the replica count; and
+5. obtain the operator stage-sync gate and run disconnected canary probes before
+   any separately authorized route or cutover change.
+
+Merging this source does not change the live cluster. The Lab stage ArgoCD app
+is manual-sync, and an operator sync is a separate recorded action. Even after
+such a sync, this source remains unschedulable at `replicas: 0`; activation
+requires another reviewed change satisfying every step above.
 
 The runtime publishes `/healthz`, `/readyz`, `/metrics`, and
 `/.well-known/verdify-release.json` through the internal ClusterIP service.

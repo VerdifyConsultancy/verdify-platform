@@ -207,9 +207,14 @@ alert evaluation. `npm test` includes failure injection, concurrency, GC/retenti
 corruption/fallback, rollback, baked-outage, and CLI end-to-end coverage.
 
 This is a complete local-filesystem backend, not a deployed S3 adapter or distributed
-lease. Stage still needs image/GitOps/cache-volume wiring and alert routing. No code in
-this path queries S3, the database, Grafana, cameras, or the network, and this change
-does not deploy or alter production.
+lease. Its candidate is present in the Lab stage GitOps source only as a dormant
+`replicas: 0` workload with separate zero-digest agent/site sentinels, no route, no
+object-store/AWS environment, and no egress. The stage app remains manual-sync;
+merging source is not an operator sync, and even a sync cannot schedule this
+zero-replica candidate. Activation still needs reviewed image pins, store/egress
+wiring, an explicit replicas change, cache and alert proof, and normal stage
+acceptance. No code in this path queries S3, the database, Grafana, cameras, or the
+network, and this change does not alter production.
 
 The stage vendors the reviewed offline parity comparator at
 `scripts/site-build-parity.py` (SHA-256

@@ -1,6 +1,6 @@
 # Lab Astro Migration — Consolidated Program Tracker
 
-Last updated: 2026-07-13 (Phase 3 gate passed; Phase 4c PR #483 open).
+Last updated: 2026-07-13 (Phase 4a dormant release-runtime source prepared).
 Owner: platform agent (Claude outer loop plans/verifies; Codex executes on
 xhigh). Human gate: Jason (prod sync, DNS/edge, Quartz retirement, credential
 work). Epic: #351 (L9, G3). This file is the single source of truth for the
@@ -13,7 +13,7 @@ changes state.
 |---|---|
 | `lab.verdify.ai` (prod) | Quartz. `verdify-lab` Deployment in `verdify-prod` (ghcr image — pre-ADR-0021 holdover), `verdify-lab-publisher` CronJob republished every 10 min (mutable, shared RWO PVC, both replicas node-pinned). Healthy and fresh; had a 5-job BackoffLimitExceeded streak before recovering. |
 | `lab-stage.verdify.ai` (canary) | Astro. `verdify-lab-astro-stage` in ns `verdify-platform`, 2/2 Ready with zero restarts on distinct nodes, exact image and pod image IDs `verdify-lab-astro@sha256:ee36941f20028fcfe06f12bf253e7139c00e3d5de1949eb8b12bb1d4ebe60b99` (pin PR #468), shell contract **1.1.0**, content frozen at the 2026-07-12 snapshot. Live T0/T+10 acceptance passed and the ArgoCD app returned to manual-sync. |
-| `main` | Astro implementation through `38ccd5e` is deployed on stage: PRs #459/#461/#462 plus Pagefind fix #466, quality-gate retry #467, and verdify-www#33 shell 1.1.0. Phase 4 release/store, graph/camera fallback, exact-parity, and production-canary work remain. |
+| `main` | Astro implementation through `38ccd5e` is deployed on stage: PRs #459/#461/#462 plus Pagefind fix #466, quality-gate retry #467, and verdify-www#33 shell 1.1.0. The release/cache runtime and offline graph/camera boundary are source-visible, but the live stage remains the static image above; event/store wiring, exact parity, and production cutover remain. |
 | In-cluster CI | **Green for lab-astro.** `verdify-platform-ci-phase1-38ccd5e` built exact revision `38ccd5e`, passed all 12 browser quality tests plus build/verify/probe/pin, and published the accepted zot digest above. Playwright fixes #463/#464 and agents#2969/#2970 closed the missing-browser, pin-idempotency, and deterministic CPU-allocation failures without relaxing the strict quality budgets. |
 
 ## Completed (do not re-plan)
@@ -48,7 +48,7 @@ Child issues (persisted 2026-07-13 post-consensus): 1→#474, 2→#475, 3→#476
 | 4 | Media & lightbox | Responsive images, intrinsic sizing, and lightbox accepted on stage | Production remains Quartz until Phase 5 |
 | 5 | Planner/evidence templates | Accepted on stage against the full frozen snapshot | Event-driven content refresh remains Phase 4b |
 | 6 | Semantic parity | Routes/aliases complete; comparator improved | Exact same-snapshot parity not green: ~240 false findings from SVG-`<title>` parser bug (fix exists uncommitted on a dead worktree — must be recreated), 9 unavailable historical refs (5 daily-plan routes, 4 images), and Quartz-vs-Astro must build from the SAME immutable snapshot |
-| 7 | Immutable publishing | Local CAS/release/cache engine merged; isolated 4a runtime cherry-pick is PR #473 | No S3 adapter wiring (CLI s3:// unwired, no endpoint/credential probe, no event producer/release-agent workload) |
+| 7 | Immutable publishing | Local-filesystem CAS/release/cache engine merged; 4a runtime is source-visible in the Lab stage overlay as a disconnected `replicas: 0` workload with zero image sentinels | No S3 backend or adapter exists (CLI s3:// unwired, no endpoint/credential probe, no event producer); no runtime pod is scheduled or routed |
 | 8 | Quality gates | Strict real-content gates green; exact tested build passed live T0 and T+10 acceptance | Keep the same budgets for every Phase 4 rollout; no production acceptance yet |
 | 9 | Production cutover | Fail-closed canary scaffold is preserved in open PR #471 | Not on main/built/pinned/deployed; Quartz remains authoritative; Jason APPLY required |
 
@@ -160,11 +160,19 @@ Phase 4 — **Feature completion (owner: codex, critical-path order below).**
    #476. It does not create a workload, activate a tier, read a credential, or
    mutate stage/prod; #476 remains open for the operator-owned reporting feed,
    renderer/re-encoder, occurrence-store delivery, alerts, and joint live proof.
-2. **4a Release runtime:** cherry-pick only `d91737d` onto main and land its
-   init hydration, atomic runtime, readiness, and metrics with tests. This can
-   proceed in parallel with the gated 4c reporting-tier activation.
-3. **4b S3/event wiring:** wire the CLI, the 4c occurrence persistence caller,
-   real-endpoint conditional-write proof (credential presence by name only),
+2. **4a Release runtime:** `d91737d` landed via #473 with init hydration,
+   atomic runtime, readiness, metrics, and tests. The follow-through makes the
+   candidate visible in the Lab stage GitOps source only as a truly disconnected
+   dormant workload: `replicas: 0`, separate zero-digest agent/site image
+   sentinels, no route, no object-store/AWS environment, and deny-all egress.
+   Merging that source is not a live rollout: the Lab stage ArgoCD app remains
+   manual-sync, and an operator sync is a separately recorded boundary. A later
+   activation must pin both runtime images, add the reviewed 4b store/egress
+   contract, explicitly raise replicas, and pass stage acceptance.
+3. **4b S3 backend and event wiring:** implement the S3 release-store backend
+   and occurrence persistence adapter behind the existing abstract/local
+   interfaces, then wire the CLI and 4c caller. Prove real-endpoint conditional
+   writes and a distributed lease (credential presence by name only),
    event-driven publishing, bounded retention/GC, and resource metrics. S3
    occurrence wiring and S7 closure are hard-gated on the 4c producer contract.
 4. **4d Exact parity:** recreate the SVG-title comparator fix (+8 tests),
@@ -231,7 +239,7 @@ DELETE — verified superseded (content demonstrably on main via #461/#462):
   #461 squash 7020834), `web/lab-runtime-completion`,
   `coordinator/lab-publishing-completion` (byte-identical release machinery),
   `web/lab-production-candidate` (canary superseded by canary-v2),
-  `coordinator/lab-s3-release` (S3/CAS content already on main; canary
+  `coordinator/lab-s3-release` (local-filesystem release/CAS content already on main; canary
   superseded), and `coordinator/lab-goal-completion` after PR #470 preserved its
   doc patch. These are the nine authorized deletions.
 - **Deferred:** `web/public-output-guard` +
