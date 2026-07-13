@@ -17,6 +17,7 @@ import {
   graphExportProducerContract,
   planGraphExportRequests,
   produceGraphExportCandidates,
+  reportingDatasourceIdentitySha256,
 } from "../scripts/lib/graph-export-producer.mjs";
 import { persistOccurrenceCandidate } from "../scripts/lib/occurrence-candidate-store.mjs";
 import {
@@ -40,6 +41,10 @@ const REPORTING_FEED = Object.freeze({
   sourceWatermarkAt: APPROVED_AT,
 });
 const REPORTING_FEED_SHA256 = reportingFeedEnvelopeSha256(REPORTING_FEED);
+const REPORTING_DATASOURCE_IDENTITY = "operator-reporting-datasource-fixture";
+const REPORTING_DATASOURCE_IDENTITY_SHA256 = reportingDatasourceIdentitySha256(
+  REPORTING_DATASOURCE_IDENTITY,
+);
 
 function canonicalBytes(value) {
   return Buffer.from(`${JSON.stringify(value, null, 2)}\n`);
@@ -109,11 +114,18 @@ function response(bytes, overrides = {}) {
   };
 }
 
-function rendererContract(render, reportingFeedSha256 = REPORTING_FEED_SHA256) {
+function rendererContract(
+  render,
+  reportingFeedSha256 = REPORTING_FEED_SHA256,
+  datasourceIdentitySha256 = REPORTING_DATASOURCE_IDENTITY_SHA256,
+) {
   return {
     contract: "verdify.lab-graph-renderer",
-    schemaVersion: 2,
+    schemaVersion: 3,
+    sourceClass: "operator-owned-reporting-tier",
+    anonymousAccess: false,
     reportingFeedSha256,
+    reportingDatasourceIdentitySha256: datasourceIdentitySha256,
     abortCooperation: "settle-within-grace-after-abort",
     render,
   };
@@ -126,9 +138,10 @@ test("the pure planner byte-binds exactly 143 manifest-ordered, feed-bound endpo
     manifest,
     manifestSha256,
     reportingFeedSha256: REPORTING_FEED_SHA256,
+    reportingDatasourceIdentitySha256: REPORTING_DATASOURCE_IDENTITY_SHA256,
   });
   assert.equal(plan.contract, "verdify.lab-graph-export-plan");
-  assert.equal(plan.schemaVersion, 2);
+  assert.equal(plan.schemaVersion, 3);
   assert.equal(plan.policySha256, occurrenceExportPolicySha256(blocked));
   assert.equal(plan.sourceOccurrenceManifestSha256, manifestSha256);
   assert.equal(plan.reportingFeedSha256, REPORTING_FEED_SHA256);
@@ -144,7 +157,7 @@ test("the pure planner byte-binds exactly 143 manifest-ordered, feed-bound endpo
       "reportingFeedSha256",
       "target",
     ]);
-    assert.equal(request.schemaVersion, 2);
+    assert.equal(request.schemaVersion, 3);
     assert.equal(request.occurrenceId, graphs[index].occurrenceId);
     assert.equal(request.reportingFeedSha256, REPORTING_FEED_SHA256);
     assert.equal(request.target.uid, graphs[index].uid);
@@ -152,6 +165,10 @@ test("the pure planner byte-binds exactly 143 manifest-ordered, feed-bound endpo
     assert.deepEqual(request.target.query, graphs[index].query);
     assert.deepEqual(request.target.variables, graphs[index].variables);
     assert.deepEqual(request.target.timeRange, graphs[index].timeRange);
+    assert.deepEqual(request.target.datasourceBinding, {
+      mode: "reporting-tier-dedicated-default",
+      identitySha256: REPORTING_DATASOURCE_IDENTITY_SHA256,
+    });
   }
   assert.doesNotMatch(
     JSON.stringify(plan),
@@ -175,6 +192,7 @@ test("manifest, byte-digest, and policy drift fail before a plan or renderer cal
       manifest,
       manifestSha256: "b".repeat(64),
       reportingFeedSha256: REPORTING_FEED_SHA256,
+      reportingDatasourceIdentitySha256: REPORTING_DATASOURCE_IDENTITY_SHA256,
     }),
     /does not match the supplied manifest bytes/,
   );
@@ -187,6 +205,7 @@ test("manifest, byte-digest, and policy drift fail before a plan or renderer cal
       manifest: driftedManifest,
       manifestSha256,
       reportingFeedSha256: REPORTING_FEED_SHA256,
+      reportingDatasourceIdentitySha256: REPORTING_DATASOURCE_IDENTITY_SHA256,
     }),
     /not canonical|not exactly allowlisted/,
   );
@@ -199,6 +218,7 @@ test("manifest, byte-digest, and policy drift fail before a plan or renderer cal
       manifest: reducedManifest,
       manifestSha256,
       reportingFeedSha256: REPORTING_FEED_SHA256,
+      reportingDatasourceIdentitySha256: REPORTING_DATASOURCE_IDENTITY_SHA256,
     }),
     /allowlist is not complete/,
   );
@@ -214,6 +234,7 @@ test("manifest, byte-digest, and policy drift fail before a plan or renderer cal
       manifest: reorderedManifest,
       manifestSha256,
       reportingFeedSha256: REPORTING_FEED_SHA256,
+      reportingDatasourceIdentitySha256: REPORTING_DATASOURCE_IDENTITY_SHA256,
     }),
     /does not match its canonical byte digest/,
   );
@@ -224,6 +245,7 @@ test("manifest, byte-digest, and policy drift fail before a plan or renderer cal
     manifest,
     manifestSha256,
     reportingFeed: REPORTING_FEED,
+    reportingDatasourceIdentity: REPORTING_DATASOURCE_IDENTITY,
     outputRoot: root,
     renderer: rendererContract(async () => {
       calls += 1;
@@ -237,8 +259,9 @@ test("manifest, byte-digest, and policy drift fail before a plan or renderer cal
     manifest,
     manifestSha256,
     reportingFeed: REPORTING_FEED,
+    reportingDatasourceIdentity: REPORTING_DATASOURCE_IDENTITY,
     outputRoot: root,
-  }), /feed-bound abort-cooperative v2 contract/);
+  }), /dedicated feed-bound abort-cooperative v3 contract/);
 
   const validRenderer = rendererContract(async () => {
     calls += 1;
@@ -254,9 +277,10 @@ test("manifest, byte-digest, and policy drift fail before a plan or renderer cal
       manifest,
       manifestSha256,
       reportingFeed: REPORTING_FEED,
+      reportingDatasourceIdentity: REPORTING_DATASOURCE_IDENTITY,
       outputRoot: root,
       renderer: candidate,
-    }), /feed-bound abort-cooperative v2 contract/);
+    }), /dedicated feed-bound abort-cooperative v3 contract/);
   }
 
   let writes = 0;
@@ -270,6 +294,7 @@ test("manifest, byte-digest, and policy drift fail before a plan or renderer cal
       manifest,
       manifestSha256,
       reportingFeed: candidate,
+      reportingDatasourceIdentity: REPORTING_DATASOURCE_IDENTITY,
       outputRoot: root,
       renderer: validRenderer,
       fileOperations: countedFileOperations,
@@ -280,15 +305,17 @@ test("manifest, byte-digest, and policy drift fail before a plan or renderer cal
     manifest,
     manifestSha256,
     reportingFeed: REPORTING_FEED,
+    reportingDatasourceIdentity: REPORTING_DATASOURCE_IDENTITY,
     outputRoot: root,
     renderer: rendererContract(validRenderer.render, "0".repeat(64)),
     fileOperations: countedFileOperations,
-  }), /feed-bound abort-cooperative v2 contract/);
+  }), /dedicated feed-bound abort-cooperative v3 contract/);
   await assert.rejects(produceGraphExportCandidates({
     policy: active,
     manifest,
     manifestSha256,
     reportingFeedSha256: REPORTING_FEED_SHA256,
+    reportingDatasourceIdentity: REPORTING_DATASOURCE_IDENTITY,
     outputRoot: root,
     renderer: validRenderer,
     fileOperations: countedFileOperations,
@@ -311,6 +338,7 @@ test("the injected renderer never exceeds four calls and normalizes every graph 
     manifest,
     manifestSha256,
     reportingFeed: REPORTING_FEED,
+    reportingDatasourceIdentity: REPORTING_DATASOURCE_IDENTITY,
     outputRoot: root,
     now: () => CAPTURED_AT,
     concurrency: 4,
@@ -381,6 +409,7 @@ test("mixed renderer failures classify deterministically and still return every 
     manifest,
     manifestSha256,
     reportingFeed: REPORTING_FEED,
+    reportingDatasourceIdentity: REPORTING_DATASOURCE_IDENTITY,
     outputRoot: root,
     now: () => CAPTURED_AT,
     timeoutMs: 500,
@@ -441,6 +470,7 @@ test("a renderer that ignores abort stops the batch at four unsettled calls and 
     manifest,
     manifestSha256,
     reportingFeed: REPORTING_FEED,
+    reportingDatasourceIdentity: REPORTING_DATASOURCE_IDENTITY,
     outputRoot: root,
     timeoutMs: 10,
     settlementGraceMs: 20,
@@ -505,6 +535,7 @@ test("a body whose read and cleanup never settle stops scheduling and returns al
     manifest,
     manifestSha256,
     reportingFeed: REPORTING_FEED,
+    reportingDatasourceIdentity: REPORTING_DATASOURCE_IDENTITY,
     outputRoot: root,
     timeoutMs: 10,
     settlementGraceMs: 20,
