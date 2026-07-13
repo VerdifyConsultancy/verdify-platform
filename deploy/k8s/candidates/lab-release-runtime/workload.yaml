@@ -24,7 +24,6 @@ spec:
         app.kubernetes.io/part-of: verdify
       annotations:
         verdify.ai/release-boundary: disconnected-read-only-cache-candidate
-        verdify.ai/object-store-endpoint: s3-hdd.vallery.net
     spec:
       automountServiceAccountToken: false
       imagePullSecrets:
@@ -49,17 +48,14 @@ spec:
         - name: hydrate-known-good
           image: registry.vallery.net/verdifyconsultancy/verdify-lab-release-agent@sha256:0000000000000000000000000000000000000000000000000000000000000000
           imagePullPolicy: IfNotPresent
+          command: ["/app/release-runtime/entrypoint.sh"]
           args: ["init"]
           env:
             # Deliberately absent. The verified image-baked release is selected
-            # until an operator supplies a read-only object-store adapter and
-            # patches this URI in a separate, reviewed overlay.
+            # until a Jason-gated overlay wires the implemented S3 adapter and
+            # dedicated-bucket read-only runtime key by name, then patches URI.
             - name: LAB_RELEASE_STORE
               value: /unconfigured/verdify-lab-release-store
-            - name: LAB_S3_ENDPOINT_URL
-              value: https://s3-hdd.vallery.net
-            - name: AWS_DEFAULT_REGION
-              value: garage
             - name: LAB_RELEASE_CACHE
               value: /srv/lab-cache
             - name: LAB_RELEASE_RUNTIME_STATE
@@ -93,6 +89,8 @@ spec:
         - name: site
           image: registry.vallery.net/verdifyconsultancy/verdify-lab-release-nginx@sha256:0000000000000000000000000000000000000000000000000000000000000000
           imagePullPolicy: IfNotPresent
+          command: ["nginx"]
+          args: ["-g", "daemon off;"]
           ports:
             - name: http
               containerPort: 8080
@@ -145,14 +143,11 @@ spec:
         - name: release-reconciler
           image: registry.vallery.net/verdifyconsultancy/verdify-lab-release-agent@sha256:0000000000000000000000000000000000000000000000000000000000000000
           imagePullPolicy: IfNotPresent
+          command: ["/app/release-runtime/entrypoint.sh"]
           args: ["reconcile"]
           env:
             - name: LAB_RELEASE_STORE
               value: /unconfigured/verdify-lab-release-store
-            - name: LAB_S3_ENDPOINT_URL
-              value: https://s3-hdd.vallery.net
-            - name: AWS_DEFAULT_REGION
-              value: garage
             - name: LAB_RELEASE_CACHE
               value: /srv/lab-cache
             - name: LAB_RELEASE_RUNTIME_STATE
@@ -243,27 +238,4 @@ spec:
       ports:
         - protocol: TCP
           port: 8080
-  egress:
-    # DNS is the only infrastructure dependency. Both protocols are required
-    # because large DNS replies can retry over TCP.
-    - to:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: kube-system
-          podSelector:
-            matchLabels:
-              k8s-app: kube-dns
-      ports:
-        - protocol: UDP
-          port: 53
-        - protocol: TCP
-          port: 53
-    # s3-hdd.vallery.net resolves through the apps edge VIP. This /32 + 443 is
-    # the only application egress; an application-layer client must also pin
-    # the exact HTTPS host and reject redirects.
-    - to:
-        - ipBlock:
-            cidr: 192.168.7.10/32
-      ports:
-        - protocol: TCP
-          port: 443
+  egress: []

@@ -207,9 +207,15 @@ alert evaluation. `npm test` includes failure injection, concurrency, GC/retenti
 corruption/fallback, rollback, baked-outage, and CLI end-to-end coverage.
 
 This is a complete local-filesystem backend, not a deployed S3 adapter or distributed
-lease. Stage still needs image/GitOps/cache-volume wiring and alert routing. No code in
-this path queries S3, the database, Grafana, cameras, or the network, and this change
-does not deploy or alter production.
+lease. Its candidate is present in the Lab stage GitOps source only as a dormant
+`replicas: 0` workload with separate zero-digest agent/site sentinels, no route, no
+object-store/AWS environment, no application/object-store credential, and no
+egress. Its standard zot registry `imagePullSecret` is only for image retrieval.
+The stage app remains manual-sync; merging source is not an operator sync, and even
+a sync cannot schedule this zero-replica candidate. Activation still needs reviewed
+image pins, store/egress wiring, an explicit replicas change, cache and alert proof,
+and normal stage acceptance. No code in this path queries S3, the database, Grafana,
+cameras, or the network, and this change does not alter production.
 
 The stage vendors the reviewed offline parity comparator at
 `scripts/site-build-parity.py` (SHA-256
@@ -277,9 +283,10 @@ before Kaniko receives the context; neither the Astro compiler nor runtime
 fetches it. The release pipeline pins the published zot-origin digest in Git,
 and the stage runtime has no egress.
 
-The runtime is static nginx on port 8080, globally noindex, read-only-root
-compatible, and requires no Secret, service-account token, database, object
-store, Grafana, or device-network access.
+The runtime is static nginx on port 8080, globally noindex, and read-only-root
+compatible. Its standard zot registry `imagePullSecret` is only for image
+retrieval; it requires no application/object-store Secret, service-account
+token, database, object store, Grafana, or device-network access.
 
 ## Known blockers
 

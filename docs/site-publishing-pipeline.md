@@ -7,11 +7,12 @@ Production still uses the Quartz path documented below. The isolated Astro
 candidate at `lab-stage.verdify.ai` is a separate, provisional image and must not
 be treated as production authority or as permission to retire this path.
 
-Status 2026-07-13: PRs #461/#462 merged the full Astro implementation (shell
-1.1.0, parity comparator, immutable local releases, quality gates), but the
-in-cluster `build-lab-astro` step is red on main, so nothing newer than digest
-`2c03489c` (shell 1.0.0) is pinned or deployed to stage. The release runtime
-and production-canary scaffold live on local branches only. Program tracker:
+Status 2026-07-13: the accepted static Astro stage runs digest `ee36941f…`
+(shell 1.1.0) after its in-cluster gates and T0/T+10 checks passed. The local
+release/cache runtime is now represented in the Lab stage GitOps source only as
+a disconnected dormant workload: `replicas: 0`, zero-digest agent/site image
+sentinels, no route, no object-store/AWS environment, and no egress. It has not
+been activated or synced by this source change. Program tracker:
 `docs/plans/lab-astro-migration.md`.
 
 ## Astro specialist-occurrence release contract (source-only)
@@ -186,12 +187,20 @@ publication, and immediately before selection; exercise concurrent and dead-owne
 leases; prove retry and rollback; enforce retention/reachability; corrupt selected
 bytes; boot from baked fallback; and run all CLI operations end to end.
 
-This commit provides the complete local filesystem primitive needed for stage wiring,
-but does not deploy it. Object storage still needs an implementation of the exposed
-store semantics plus a real distributed lease/conditional-write authority. Stage
-wiring still needs a fleet-origin image and GitOps manifest, a writable cache volume,
-an immutable baked bundle selected by release digest, and live freshness alert routing.
-Those are deployment/data-authority concerns, not hidden claims of this local backend.
+The complete local filesystem primitive is present, and its candidate manifest is
+included by the Lab stage overlay only at `replicas: 0`. The overlay deliberately
+retains separate zero-digest sentinels for the release agent and nginx site images;
+the candidate has no route, object-store/AWS environment, application/object-store
+credential, or egress. Its standard zot registry `imagePullSecret` remains solely
+for image retrieval and grants no application or object-store authority. Merging
+this source does not alter the live cluster because the Lab stage ArgoCD app remains
+manual-sync. An operator sync is separately recorded and still cannot schedule the
+dormant zero-replica workload. Object storage needs an
+implementation of the exposed store semantics plus a real distributed
+lease/conditional-write authority; activation additionally needs reviewed exact
+image pins, store/egress wiring, an explicit replicas change, and live freshness
+alert routing. Those are deployment/data-authority concerns, not hidden claims of
+the local backend.
 
 ## Source of Truth
 
