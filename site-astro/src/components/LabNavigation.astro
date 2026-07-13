@@ -116,7 +116,7 @@ const active = (href: string) => {
 
     const input = document.querySelector("#lab-search");
     const output = document.querySelector("#lab-search-results");
-    let pagefind;
+    let pagefindReady;
     let searchSequence = 0;
     input?.addEventListener("input", async () => {
       const query = input.value.trim();
@@ -129,8 +129,15 @@ const active = (href: string) => {
       }
       output.setAttribute("aria-busy", "true");
       try {
-        pagefind ??= await import("/pagefind/pagefind.js");
-        await pagefind.init();
+        pagefindReady ??= import("/pagefind/pagefind.js").then(async (pagefind) => {
+          // Pagefind's worker URL is not content-addressed. Running the index on
+          // the document avoids an old immutable edge response pinning the
+          // worker to a superseded CSP after a stage release.
+          await pagefind.options({ noWorker: true });
+          await pagefind.init();
+          return pagefind;
+        });
+        const pagefind = await pagefindReady;
         const search = await pagefind.search(query);
         const details = await Promise.all(search.results.slice(0, 6).map((result) => result.data()));
         if (sequence !== searchSequence) return;
