@@ -7,6 +7,13 @@ Production still uses the Quartz path documented below. The isolated Astro
 candidate at `lab-stage.verdify.ai` is a separate, provisional image and must not
 be treated as production authority or as permission to retire this path.
 
+Status 2026-07-13: PRs #461/#462 merged the full Astro implementation (shell
+1.1.0, parity comparator, immutable local releases, quality gates), but the
+in-cluster `build-lab-astro` step is red on main, so nothing newer than digest
+`2c03489c` (shell 1.0.0) is pinned or deployed to stage. The release runtime
+and production-canary scaffold live on local branches only. Program tracker:
+`docs/plans/lab-astro-migration.md`.
+
 ## Astro specialist-occurrence release contract (source-only)
 
 The Astro candidate owns an offline specialist-evidence release interface under

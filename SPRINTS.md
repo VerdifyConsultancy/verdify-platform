@@ -129,7 +129,11 @@ corpus.
 Primary lanes:
 
 - #350 L8 Irrigation, Fertilization, and Orchids.
-- #351 L9 Lab Notebook, Website, and Publishing.
+- #351 L9 Lab Notebook, Website, and Publishing. (2026-07-13: executing as
+  the Quartz->Astro migration program, In Progress/P1/XL — see
+  `docs/plans/lab-astro-migration.md`; site-astro changes are gated by the
+  site-astro test/verify suite in `site-astro/package.json` in addition to
+  `make site-lint`/`make site-doctor` for the legacy path.)
 - #352 L10 Testing and Research.
 
 Verification:
