@@ -854,6 +854,11 @@ async def outcome_kpi(target_date: str = "") -> str:
             FROM fn_realized_solar_night_dryout($1::date, $1::date, $2)
             ORDER BY episode_started_at
             """
+        # #498: the migration-202 single-day function, not the whole-window
+        # view — v_climate_action_daily_scorecard evaluates the effectiveness
+        # fan-out (fn_equip_at/fn_setpoint_at per action row) at ~6 min of DB
+        # CPU per call; the function is byte-identical for one Denver-local
+        # date and prunes to that day's chunks (~5 s measured in prod).
         actions_sql = """
             SELECT climate_action,
                    decisions,
@@ -866,8 +871,8 @@ async def outcome_kpi(target_date: str = "") -> str:
                    mister_water_delta_gal,
                    wet_blocked_decisions,
                    fog_blocked_decisions
-            FROM v_climate_action_daily_scorecard
-            WHERE date = $1::date AND greenhouse_id = $2
+            FROM fn_climate_action_daily_scorecard($1::date)
+            WHERE greenhouse_id = $2
             ORDER BY decisions DESC, climate_action
             """
         pinched_phase_sql = """
@@ -1927,7 +1932,7 @@ async def outcome_kpi(target_date: str = "") -> str:
                     "mv_equipment_runtime_daily",
                     "v_equipment_runtime_daily",
                     "fn_realized_solar_night_dryout",
-                    "v_climate_action_daily_scorecard",
+                    "fn_climate_action_daily_scorecard",
                     "v_water_attribution_daily",
                     "v_energy_estimate_reconciliation",
                     "v_resource_accounting_health",

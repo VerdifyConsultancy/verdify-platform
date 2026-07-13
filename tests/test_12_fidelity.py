@@ -2283,6 +2283,56 @@ def test_climate_authority_action_log_contract_is_tracked():
     assert "ClimateActionLogRow(" in ingestor
 
 
+def test_climate_action_scorecard_single_day_pushdown_contract():
+    """#498: outcome_kpi's action scorecard reads the migration-202 single-day
+    function, not the whole-window view. The function must keep the sargable
+    day bounds intersected with the effectiveness 14-day window, the
+    fn_equip_at tie-order dedup, and the once-per-channel carry lookup; its
+    byte-equivalence to the view is pinned by the migration contract test."""
+    migration = (REPO_ROOT / "db" / "migrations" / "202-climate-action-scorecard-date-pushdown.sql").read_text()
+    contract_test = (
+        REPO_ROOT / "db" / "migrations" / "tests" / "test-202-climate-action-scorecard-date-pushdown.sql"
+    ).read_text()
+    schema = (REPO_ROOT / "db" / "schema.sql").read_text()
+    server = (REPO_ROOT / "mcp" / "server.py").read_text()
+
+    for token in (
+        "CREATE OR REPLACE FUNCTION public.fn_climate_action_daily_scorecard(target_date date)",
+        # day bounds must stay intersected with the rolling window (GREATEST),
+        # or a day at the window edge diverges from the view
+        "GREATEST(",
+        "now() - interval '14 days'",
+        "(target_date::timestamp AT TIME ZONE 'America/Denver')",
+        "((target_date + 1)::timestamp AT TIME ZONE 'America/Denver')",
+        # fn_equip_at returns the smallest-ctid duplicate at equal timestamps
+        "DISTINCT ON (es.equipment, es.ts)",
+        # once-per-channel carry: without MATERIALIZED the planner re-executes
+        # the lookup per grp=0 sample-channel row (measured 46k execs / 11.5 s)
+        "carry AS MATERIALIZED",
+    ):
+        assert token in migration
+
+    assert "CREATE FUNCTION public.fn_climate_action_daily_scorecard(target_date date)" in schema
+    assert "FROM fn_climate_action_daily_scorecard($1::date)" in server
+    assert "fn_climate_action_daily_scorecard" in server.split("source_tables=[")[1].split("]")[0]
+    assert "FROM v_climate_action_daily_scorecard" not in server
+
+    # the container contract test proves fn == view per date, both directions
+    assert "fn/view divergence" in contract_test
+    assert "EXCEPT" in contract_test
+
+    # schema.sql must carry the migration's function body VERBATIM (pg_dump
+    # prints prosrc as stored, so any drift here is drift from what prod
+    # would dump after the migration applies)
+    mig_body = migration.split("AS $$\n", 1)[1].split("\n$$;", 1)[0]
+    schema_fn = schema.split(
+        "CREATE FUNCTION public.fn_climate_action_daily_scorecard(target_date date) RETURNS TABLE",
+        1,
+    )[1]
+    schema_body = schema_fn.split("    AS $$\n", 1)[1].split("\n$$;", 1)[0]
+    assert schema_body == mig_body
+
+
 def test_health_checks_require_climate_action_log_freshness():
     api = (REPO_ROOT / "api" / "main.py").read_text()
     api_schema = (REPO_ROOT / "verdify_schemas" / "api.py").read_text()
