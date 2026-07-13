@@ -6,7 +6,6 @@ import {
   LocalOccurrenceReleaseStore,
   OccurrenceReleaseStore,
   createOccurrenceReleaseStore,
-  removeMaterializedOccurrenceTarget,
 } from "./occurrence-release-store.mjs";
 import { validatePngFile } from "./png-validation.mjs";
 
@@ -1718,38 +1717,47 @@ export async function rollbackCurrentMediaGeneration({
 export async function materializeOccurrenceBlobs(storeRoot, manifest, destination) {
   const store = await occurrenceStore(storeRoot);
   await verifyReleaseBlobs(store, manifest, { verifyBlobBytes: false });
-  await mkdir(path.join(destination, "evidence", "blobs", "sha256"), { recursive: true, mode: 0o755 });
+  const targetDirectory = path.join(destination, "evidence", "blobs", "sha256");
+  await mkdir(targetDirectory, { recursive: true, mode: 0o755 });
   const fallbacks = [...manifest.occurrences.graphs, ...manifest.occurrences.currentMedia]
     .map((occurrence) => occurrence.fallback)
     .filter(Boolean);
   const digests = [...new Set(fallbacks.map((fallback) => fallback.sha256))].sort();
-  const created = [];
+  const stage = await store.createMaterializationStage(targetDirectory);
+  let operationError = null;
   try {
+    const staged = [];
     for (const digest of digests) {
-      const target = path.join(destination, "evidence", "blobs", "sha256", `${digest}.png`);
       const fallback = fallbacks.find((value) => value.sha256 === digest);
-      const verified = await store.materializePngBlob(digest, target, { maximumBytes: fallback.bytes });
-      created.push({ target, identity: verified.materializedIdentity });
+      const verified = await store.stagePngBlob(digest, stage, {
+        maximumBytes: fallback.bytes,
+      });
       verifyFallbackMetadata(verified, fallback);
+      staged.push({
+        target: path.join(targetDirectory, `${digest}.png`),
+        verified,
+      });
     }
+    for (const item of staged) {
+      await store.commitStagedPngBlob(item.verified, item.target);
+    }
+    return digests.length;
   } catch (error) {
-    const cleanupErrors = [];
-    for (const item of created.reverse()) {
-      try {
-        await removeMaterializedOccurrenceTarget(item.target, item.identity);
-      } catch (cleanupError) {
-        cleanupErrors.push(cleanupError);
-      }
-    }
-    if (cleanupErrors.length > 0) {
-      throw new AggregateError(
-        [error, ...cleanupErrors],
-        "occurrence materialization failed and cleanup did not complete",
-      );
-    }
+    operationError = error;
     throw error;
+  } finally {
+    try {
+      await store.discardMaterializationStage(stage);
+    } catch (cleanupError) {
+      if (operationError !== null) {
+        throw new AggregateError(
+          [operationError, cleanupError],
+          "occurrence materialization failed and private staging cleanup did not complete",
+        );
+      }
+      throw cleanupError;
+    }
   }
-  return digests.length;
 }
 
 export function occurrenceStateIndex(manifest) {

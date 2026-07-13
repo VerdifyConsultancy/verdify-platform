@@ -75,6 +75,7 @@ $PY -m pytest -q \
   tests/test_slack_ops.py \
   tests/test_soil_dryout_alert.py \
   tests/test_solar_band_anchors.py \
+  tests/test_solar_constants_check.py \
   tests/test_tempest_sync.py \
   tests/test_writer_lease_fence.py
 
@@ -83,6 +84,9 @@ $PY scripts/check_migration_rollback_safety.py
 
 step "grafana dashboard CMs match JSON sources (#392)"
 $PY scripts/gen-grafana-dashboard-cms.py --check
+
+step "solar site constants SSOT guard (#393)"
+$PY scripts/check-solar-constants.py
 
 step "twin vendored source compiles (the initContainer's exact build)"
 if command -v g++ >/dev/null; then

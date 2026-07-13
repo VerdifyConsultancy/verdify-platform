@@ -50,6 +50,7 @@ AlertType = Literal[
     "safety_invalid",
     "sensor_offline",
     "setpoint_unconfirmed",
+    "site_content_stale",
     "soil_dryout",
     "soil_sensor_offline",
     "temp_safety",
@@ -97,6 +98,7 @@ ALERT_TYPES: tuple[str, ...] = (
     "safety_invalid",
     "sensor_offline",
     "setpoint_unconfirmed",
+    "site_content_stale",
     "soil_dryout",
     "soil_sensor_offline",
     "temp_safety",
@@ -201,6 +203,19 @@ class ClimateActionProofStaleDetails(_DetailsBase):
     age_s: int | None = Field(default=None, ge=0)
     latest_ts: AwareDatetime | None = None
     proof_missing: str | None = None
+
+
+class SiteContentStaleDetails(_DetailsBase):
+    # site_content RAG snapshot watermark did not advance back inside the
+    # cadence window after a refresh pass (#43/#400): the corpus roots were
+    # unavailable in the runtime environment (docs tree missing from the
+    # image, website snapshot unmounted), so Iris keeps serving a stale
+    # corpus. age_s/max_updated_at None == empty table (nothing to serve).
+    age_s: int | None = Field(default=None, ge=0)
+    max_updated_at: AwareDatetime | None = None
+    rows_refreshed: int = Field(..., ge=0)
+    window_s: int = Field(..., gt=0)
+    corpus_roots: list[str] = Field(default_factory=list)
 
 
 class ESP32RebootDetails(_DetailsBase):
@@ -558,6 +573,11 @@ class ClimateActionProofStaleAlert(_AlertBase):
     details: ClimateActionProofStaleDetails
 
 
+class SiteContentStaleAlert(_AlertBase):
+    alert_type: Literal["site_content_stale"]
+    details: SiteContentStaleDetails
+
+
 class ESP32RebootAlert(_AlertBase):
     alert_type: Literal["esp32_reboot"]
     details: ESP32RebootDetails
@@ -801,6 +821,7 @@ AlertEnvelopeUnion = Annotated[
     | SafetyInvalidAlert
     | SensorOfflineAlert
     | SetpointUnconfirmedAlert
+    | SiteContentStaleAlert
     | SoilDryoutAlert
     | SoilSensorOfflineAlert
     | TempSafetyAlert

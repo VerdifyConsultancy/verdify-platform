@@ -252,6 +252,32 @@ must carry the adapter's canonical store-identity digest. Bounded blob reads can
 materialize exact bytes for a compiler, but the occurrence CLI still accepts local
 stores only and no event producer is wired to mutate S3.
 
+Occurrence blob materialization is monotonic and delete-free at its public destination.
+Every selected blob is first written, synced, closed, and fully PNG/digest/size validated
+inside one private same-filesystem staging directory; no destination is committed until
+all source blobs pass. Commit uses an absent-only hard link. An existing destination is
+accepted only when bounded validation proves the exact expected content, while a conflict
+is left untouched. A later commit or directory-sync failure may therefore leave only exact
+content-addressed outputs; retry converges by accepting those outputs and completing the
+remainder. Cleanup removes private staging only and never rollback-deletes a destination.
+
+The separate source-only occurrence-store binding-readiness contract carried by #501
+fixes the five future environment key names and three resource names without reading
+any value. It assigns non-secret location/endpoint/region key names to ConfigMap
+`verdify-lab-occurrence-store-metadata`, and access-key key names to distinct
+`verdify-lab-occurrence-store-reader` and
+`verdify-lab-occurrence-store-writer` Secrets. It explicitly rejects reuse of the
+legacy Quartz publisher Secret. The offline CLI consumes a canonical JSON name
+inventory rather than `process.env`; strict `{kind,bucket,prefix}` metadata is
+validation-only and is omitted from its names/status-only output:
+
+```bash
+npm run object-store:binding-readiness -- --inventory /path/to/name-inventory.json
+```
+
+This is not a Kubernetes existence check, value check, endpoint probe, credential
+grant, or runtime binding.
+
 The runtime candidate is present in Lab stage GitOps source only as a dormant
 `replicas: 0` workload. Its paired agent/site images are pinned to exact zot digests
 after their source-bound container probe, but it still has no route, object-store/AWS
@@ -263,9 +289,10 @@ zero-replica candidate.
 The CLI and cache hydrator remain local-only. Object-store CLI wiring and bounded site
 cache materialization, the occurrence producer/caller transaction, the event agent,
 distributed coordination, retention/GC, resource accounting, real-endpoint
-conditional-write proof, store/egress wiring, and alert routing are still required
-before activation. No endpoint or credential is configured here, and this change does
-not deploy or alter production.
+conditional-write proof, actual resource/value binding, store/egress wiring, and alert
+routing are still required before activation. The #501 slice fixes names only; it does
+not configure an endpoint or credential, deploy a binding, activate a writer, or alter
+production.
 
 The stage vendors the reviewed offline parity comparator at
 `scripts/site-build-parity.py` (SHA-256

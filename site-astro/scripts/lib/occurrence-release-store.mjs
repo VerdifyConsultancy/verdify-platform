@@ -4,9 +4,11 @@ import {
   lstat,
   link,
   mkdir,
+  mkdtemp,
   open,
   realpath,
   rename,
+  rm,
   unlink,
 } from "node:fs/promises";
 import path from "node:path";
@@ -24,6 +26,7 @@ const MAX_GENERATION_BYTES = 128 * 1024;
 const MAX_EVENT_BYTES = 32 * 1024;
 const MAX_S3_KEY_BYTES = 1024;
 const MAX_RELATIVE_OBJECT_KEY_BYTES = 160;
+const MATERIALIZATION_STAGE_PREFIX = ".occurrence-stage-";
 
 function canonicalBytes(value) {
   return Buffer.from(`${JSON.stringify(value, null, 2)}\n`);
@@ -351,66 +354,7 @@ function blobValue(bytes, expectedSha256) {
   };
 }
 
-function materializedFileIdentity(metadata) {
-  if (!metadata.isFile() || metadata.isSymbolicLink() || metadata.nlink !== 1n) {
-    throw new Error("materialized occurrence target is invalid");
-  }
-  return Object.freeze({
-    dev: metadata.dev,
-    ino: metadata.ino,
-    birthtimeNs: metadata.birthtimeNs,
-    ctimeNs: metadata.ctimeNs,
-    mtimeNs: metadata.mtimeNs,
-    size: metadata.size,
-  });
-}
-
-export async function removeMaterializedOccurrenceTarget(
-  destination,
-  identity,
-  { lstatFile = lstat, unlinkFile = unlink } = {},
-) {
-  if (
-    identity === null
-    || typeof identity !== "object"
-    || typeof identity.dev !== "bigint"
-    || typeof identity.ino !== "bigint"
-    || typeof identity.birthtimeNs !== "bigint"
-    || typeof identity.ctimeNs !== "bigint"
-    || typeof identity.mtimeNs !== "bigint"
-    || typeof identity.size !== "bigint"
-  ) {
-    throw new Error("materialized occurrence target identity is invalid");
-  }
-  let selected;
-  try {
-    selected = await lstatFile(destination, { bigint: true });
-  } catch (error) {
-    if (error.code === "ENOENT") return false;
-    throw error;
-  }
-  if (
-    !selected.isFile()
-    || selected.isSymbolicLink()
-    || selected.dev !== identity.dev
-    || selected.ino !== identity.ino
-    || selected.birthtimeNs !== identity.birthtimeNs
-    || selected.ctimeNs !== identity.ctimeNs
-    || selected.mtimeNs !== identity.mtimeNs
-    || selected.size !== identity.size
-  ) {
-    return false;
-  }
-  await unlinkFile(destination);
-  return true;
-}
-
-async function materializeBytes(
-  bytes,
-  expectedSha256,
-  destination,
-  { fileOperations = {} } = {},
-) {
+function validateMaterializationFileOperations(fileOperations) {
   if (
     fileOperations === null
     || typeof fileOperations !== "object"
@@ -418,58 +362,211 @@ async function materializeBytes(
   ) {
     throw new Error("occurrence materialization file operations are invalid");
   }
+  return fileOperations;
+}
+
+async function canonicalMaterializationDirectory(directory) {
+  const absolute = path.resolve(directory);
+  const metadata = await lstat(absolute, { bigint: true });
+  if (
+    !metadata.isDirectory()
+    || metadata.isSymbolicLink()
+    || (await realpath(absolute)) !== absolute
+  ) {
+    throw new Error("occurrence materialization directory is invalid");
+  }
+  return absolute;
+}
+
+function validateMaterializationStage(stage) {
+  if (
+    stage === null
+    || typeof stage !== "object"
+    || typeof stage.directory !== "string"
+    || typeof stage.parent !== "string"
+    || path.dirname(stage.directory) !== stage.parent
+    || !path.basename(stage.directory).startsWith(MATERIALIZATION_STAGE_PREFIX)
+    || path.basename(stage.directory).length > MATERIALIZATION_STAGE_PREFIX.length + 64
+  ) {
+    throw new Error("occurrence materialization stage is invalid");
+  }
+  return stage;
+}
+
+async function createMaterializationStage(directory, { fileOperations = {} } = {}) {
+  validateMaterializationFileOperations(fileOperations);
+  const parent = await canonicalMaterializationDirectory(directory);
+  const createTemporaryDirectory = fileOperations.mkdtemp ?? mkdtemp;
+  const stagedDirectory = path.resolve(
+    await createTemporaryDirectory(path.join(parent, MATERIALIZATION_STAGE_PREFIX)),
+  );
+  const stage = Object.freeze({ directory: stagedDirectory, parent });
+  validateMaterializationStage(stage);
+  const metadata = await lstat(stagedDirectory, { bigint: true });
+  if (
+    !metadata.isDirectory()
+    || metadata.isSymbolicLink()
+    || (await realpath(stagedDirectory)) !== stagedDirectory
+  ) {
+    throw new Error("occurrence materialization stage is invalid");
+  }
+  return stage;
+}
+
+async function discardMaterializationStage(stage, { fileOperations = {} } = {}) {
+  validateMaterializationFileOperations(fileOperations);
+  validateMaterializationStage(stage);
+  const removeDirectory = fileOperations.rm ?? rm;
+  await removeDirectory(stage.directory, { recursive: true, force: true });
+}
+
+function sameMaterializedPng(left, right) {
+  return left.sha256 === right.sha256
+    && left.bytes === right.bytes
+    && left.decodedSha256 === right.decodedSha256
+    && left.decodedBytes === right.decodedBytes
+    && left.width === right.width
+    && left.height === right.height
+    && left.mediaType === right.mediaType;
+}
+
+async function stageMaterializationBytes(
+  bytes,
+  expectedSha256,
+  stage,
+  { fileOperations = {} } = {},
+) {
+  validateMaterializationFileOperations(fileOperations);
+  validateMaterializationStage(stage);
+  const expected = blobValue(bytes, expectedSha256);
   const openFile = fileOperations.open ?? open;
   const validateFile = fileOperations.validatePngFile ?? validatePngFile;
-  const syncTargetDirectory = fileOperations.syncDirectory ?? syncDirectory;
-  const cleanupOperations = {
-    lstatFile: fileOperations.lstat ?? lstat,
-    unlinkFile: fileOperations.unlink ?? unlink,
-  };
-  const directory = path.dirname(destination);
-  const relative = path.basename(destination);
+  const relative = `${expectedSha256}.png`;
+  const stagedPath = path.join(stage.directory, relative);
   let handle = null;
-  let identity = null;
-  let created = false;
   try {
-    handle = await openFile(destination, "wx", 0o644);
-    created = true;
-    materializedFileIdentity(await handle.stat({ bigint: true }));
+    handle = await openFile(stagedPath, "wx", 0o644);
+    const identity = await handle.stat({ bigint: true });
+    if (!identity.isFile() || identity.nlink !== 1n || identity.size !== 0n) {
+      throw new Error("occurrence materialization staged file is invalid");
+    }
     await handle.writeFile(bytes);
     await handle.sync();
-    identity = materializedFileIdentity(await handle.stat({ bigint: true }));
+    const completed = await handle.stat({ bigint: true });
+    if (
+      !completed.isFile()
+      || completed.dev !== identity.dev
+      || completed.ino !== identity.ino
+      || completed.nlink !== 1n
+      || completed.size !== BigInt(bytes.length)
+    ) {
+      throw new Error("occurrence materialization staged file changed while being written");
+    }
     await handle.close();
     handle = null;
-    const verified = await validateFile(directory, relative);
-    if (verified.sha256 !== expectedSha256) {
-      throw new Error("materialized occurrence blob digest mismatch");
+    const verified = await validateFile(stage.directory, relative);
+    if (!sameMaterializedPng(verified, expected)) {
+      throw new Error("staged occurrence materialization does not match its blob");
     }
-    await syncTargetDirectory(directory);
-    return { ...verified, materializedIdentity: identity };
-  } catch (error) {
-    if (created && handle !== null) {
-      try {
-        identity = materializedFileIdentity(await handle.stat({ bigint: true }));
-      } catch {
-        // Without a descriptor identity, deleting by path could remove a replacement.
-      }
-    }
+    return Object.freeze({
+      ...verified,
+      sourcePath: stagedPath,
+      staging: Object.freeze({
+        stage,
+        stagedPath,
+        dev: completed.dev,
+        ino: completed.ino,
+      }),
+    });
+  } finally {
     await handle?.close().catch(() => {});
-    if (created && identity !== null) {
-      try {
-        await removeMaterializedOccurrenceTarget(
-          destination,
-          identity,
-          cleanupOperations,
-        );
-      } catch (cleanupError) {
-        throw new AggregateError(
-          [error, cleanupError],
-          "occurrence materialization failed and cleanup did not complete",
-        );
-      }
+  }
+}
+
+function validateStagedMaterialization(value) {
+  if (
+    value === null
+    || typeof value !== "object"
+    || value.staging === null
+    || typeof value.staging !== "object"
+    || typeof value.staging.stagedPath !== "string"
+    || typeof value.staging.dev !== "bigint"
+    || typeof value.staging.ino !== "bigint"
+  ) {
+    throw new Error("staged occurrence materialization is invalid");
+  }
+  const stage = validateMaterializationStage(value.staging.stage);
+  if (
+    path.dirname(value.staging.stagedPath) !== stage.directory
+    || path.basename(value.staging.stagedPath) !== `${value.sha256}.png`
+  ) {
+    throw new Error("staged occurrence materialization is invalid");
+  }
+  return value;
+}
+
+async function exactExistingMaterialization(destination, staged, validateFile) {
+  let verified;
+  try {
+    verified = await validateFile(path.dirname(destination), path.basename(destination));
+  } catch {
+    return null;
+  }
+  if (!sameMaterializedPng(verified, staged)) return null;
+  return {
+    ...verified,
+    sourcePath: destination,
+    created: false,
+  };
+}
+
+async function commitStagedMaterialization(
+  stagedValue,
+  destination,
+  { fileOperations = {} } = {},
+) {
+  validateMaterializationFileOperations(fileOperations);
+  const staged = validateStagedMaterialization(stagedValue);
+  const absoluteDestination = path.resolve(destination);
+  if (path.dirname(absoluteDestination) !== staged.staging.stage.parent) {
+    throw new Error("occurrence materialization destination is outside its stage");
+  }
+  const lstatFile = fileOperations.lstat ?? lstat;
+  const linkFile = fileOperations.link ?? link;
+  const validateFile = fileOperations.validatePngFile ?? validatePngFile;
+  const syncTargetDirectory = fileOperations.syncDirectory ?? syncDirectory;
+  const metadata = await lstatFile(staged.staging.stagedPath, { bigint: true });
+  if (
+    !metadata.isFile()
+    || metadata.isSymbolicLink()
+    || metadata.dev !== staged.staging.dev
+    || metadata.ino !== staged.staging.ino
+    || metadata.nlink !== 1n
+    || metadata.size !== BigInt(staged.bytes)
+  ) {
+    throw new Error("staged occurrence materialization changed before commit");
+  }
+  try {
+    await linkFile(staged.staging.stagedPath, absoluteDestination);
+  } catch (error) {
+    const existing = await exactExistingMaterialization(
+      absoluteDestination,
+      staged,
+      validateFile,
+    );
+    if (existing !== null) return existing;
+    if (error.code === "EEXIST") {
+      throw new Error("existing occurrence materialization conflicts with staged blob");
     }
     throw error;
   }
+  await syncTargetDirectory(path.dirname(absoluteDestination));
+  const { staging: _staging, ...verified } = staged;
+  return {
+    ...verified,
+    sourcePath: absoluteDestination,
+    created: true,
+  };
 }
 
 export class OccurrenceReleaseStore {
@@ -538,10 +635,54 @@ export class OccurrenceReleaseStore {
     throw new Error("occurrence PNG blob read is not implemented");
   }
 
-  async materializePngBlob(digestValue, destination, options = {}) {
+  async createMaterializationStage(directory, options = {}) {
+    return createMaterializationStage(directory, options);
+  }
+
+  async discardMaterializationStage(stage, options = {}) {
+    return discardMaterializationStage(stage, options);
+  }
+
+  async stagePngBlob(digestValue, stage, options = {}) {
     const { fileOperations, ...readOptions } = options;
     const value = await this.readPngBlob(digestValue, readOptions);
-    return materializeBytes(value.body, digestValue, destination, { fileOperations });
+    return stageMaterializationBytes(value.body, digestValue, stage, {
+      fileOperations,
+    });
+  }
+
+  async commitStagedPngBlob(staged, destination, options = {}) {
+    return commitStagedMaterialization(staged, destination, options);
+  }
+
+  async materializePngBlob(digestValue, destination, options = {}) {
+    const { fileOperations, ...readOptions } = options;
+    const stage = await this.createMaterializationStage(path.dirname(destination), {
+      fileOperations,
+    });
+    let operationError = null;
+    try {
+      const staged = await this.stagePngBlob(digestValue, stage, {
+        ...readOptions,
+        fileOperations,
+      });
+      return await this.commitStagedPngBlob(staged, destination, { fileOperations });
+    } catch (error) {
+      operationError = error;
+      throw error;
+    } finally {
+      try {
+        await this.discardMaterializationStage(stage, { fileOperations });
+      } catch (cleanupError) {
+        if (operationError !== null) {
+          throw new AggregateError(
+            [operationError, cleanupError],
+            "occurrence materialization failed and private staging cleanup did not complete",
+          );
+        }
+        throw cleanupError;
+      }
+    }
   }
 }
 

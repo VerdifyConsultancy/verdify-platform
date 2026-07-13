@@ -9,19 +9,20 @@ resources:
   - ingressroute.yaml
 
 images:
-  # Integration replaces this visibly non-deployable digest with the exact
-  # fleet-origin digest produced by the in-cluster Kaniko path.
+  # The serving static Astro image remains the separately accepted stage
+  # release; changing it requires its own reviewed exact-source pin.
   - name: registry.vallery.net/verdifyconsultancy/verdify-lab-astro
     newName: registry.vallery.net/verdifyconsultancy/verdify-lab-astro
     digest: sha256:ee36941f20028fcfe06f12bf253e7139c00e3d5de1949eb8b12bb1d4ebe60b99
-  # The release-runtime images remain visibly non-deployable until a separate
-  # reviewed activation replaces each sentinel with its exact zot digest.
+  # These exact-source runtime images remain dormant under the replicas-zero
+  # patch. A separate reviewed activation must add the store contract and raise
+  # replicas; digest presence alone is not rollout authority.
   - name: registry.vallery.net/verdifyconsultancy/verdify-lab-release-agent
     newName: registry.vallery.net/verdifyconsultancy/verdify-lab-release-agent
-    digest: sha256:2c6f22020ccc323d45d0a404a776354a4f866795fcc901749758f2726e5df382
+    digest: sha256:3ae9f1f2cec8ee3d6748a37bf2ce8d9a780230d1ad5ef69ebdd35ce1d7f3fac9
   - name: registry.vallery.net/verdifyconsultancy/verdify-lab-release-nginx
     newName: registry.vallery.net/verdifyconsultancy/verdify-lab-release-nginx
-    digest: sha256:bae8888cf4cee7c21ed4a186aab384cebe8f1dd3bbd00401f213e13031bbabe0
+    digest: sha256:004320c7ba9b4d038509f86d8929f5d60dd68dc4455251b2cb068e6f769074ee
 
 patches:
   - path: lab-release-runtime-dormant.patch.yaml

@@ -1,14 +1,12 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import {
-  lstat,
   mkdir,
   mkdtemp,
   open,
   readFile,
   readdir,
   rm,
-  unlink,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -31,7 +29,6 @@ import {
   createOccurrenceReleaseStore,
   occurrenceReleaseStoreContract,
   parseOccurrenceReleaseStoreLocation,
-  removeMaterializedOccurrenceTarget,
 } from "../scripts/lib/occurrence-release-store.mjs";
 
 const BUCKET = "verdify-lab-releases";
@@ -425,12 +422,16 @@ test("local adapter preserves aggregate, per-camera, event, and PNG layouts", as
   );
 
   const target = path.join(output, `${imageSha256}.png`);
-  await store.materializePngBlob(imageSha256, target, { maximumBytes: image.length });
-  assert.deepEqual(await readFile(target), image);
-  await assert.rejects(
-    store.materializePngBlob(imageSha256, target),
-    (error) => error.code === "EEXIST",
+  assert.equal(
+    (await store.materializePngBlob(imageSha256, target, { maximumBytes: image.length })).created,
+    true,
   );
+  assert.deepEqual(await readFile(target), image);
+  assert.equal(
+    (await store.materializePngBlob(imageSha256, target, { maximumBytes: image.length })).created,
+    false,
+  );
+  assert.deepEqual(await readdir(output), [`${imageSha256}.png`]);
 });
 
 test("materialization removes its wx target when the file-handle close fails", async (t) => {
@@ -469,27 +470,102 @@ test("materialization removes its wx target when the file-handle close fails", a
   );
   assert.ok(closeCalls >= 1);
   await assert.rejects(readFile(target), (error) => error.code === "ENOENT");
+  assert.deepEqual(await readdir(output), []);
 });
 
-test("materialization cleanup preserves a foreign replacement", async (t) => {
-  const root = await mkdtemp(path.join(tmpdir(), "verdify-occurrence-replacement-"));
+test("staging and directory-sync failures clean private state and retry monotonically", async (t) => {
+  const root = await mkdtemp(path.join(tmpdir(), "verdify-occurrence-sync-"));
   t.after(() => rm(root, { recursive: true, force: true }));
-  const target = path.join(root, "target.png");
-  await writeFile(target, "created-by-this-invocation");
-  const created = await lstat(target, { bigint: true });
-  const identity = {
-    dev: created.dev,
-    ino: created.ino,
-    birthtimeNs: created.birthtimeNs,
-    ctimeNs: created.ctimeNs,
-    mtimeNs: created.mtimeNs,
-    size: created.size,
-  };
-  await unlink(target);
-  const replacement = Buffer.alloc(Number(created.size), 0x66);
-  await writeFile(target, replacement);
-  assert.equal(await removeMaterializedOccurrenceTarget(target, identity), false);
-  assert.deepEqual(await readFile(target), replacement);
+  const storeRoot = path.join(root, "store");
+  await mkdir(storeRoot);
+  const store = await new LocalOccurrenceReleaseStore(storeRoot).initialize({ create: true });
+  const image = png(25, 50, 75);
+  const imageSha256 = sha256(image);
+  await store.publishPngBlob(image, imageSha256);
+
+  const stagedOutput = path.join(root, "staged-output");
+  await mkdir(stagedOutput);
+  const stagedTarget = path.join(stagedOutput, `${imageSha256}.png`);
+  await assert.rejects(
+    store.materializePngBlob(imageSha256, stagedTarget, {
+      maximumBytes: image.length,
+      fileOperations: {
+        open: async (...args) => {
+          const handle = await open(...args);
+          return {
+            stat: (...values) => handle.stat(...values),
+            writeFile: (...values) => handle.writeFile(...values),
+            sync: async () => {
+              throw new Error("injected staged file sync failure");
+            },
+            close: (...values) => handle.close(...values),
+          };
+        },
+      },
+    }),
+    /injected staged file sync failure/,
+  );
+  assert.deepEqual(await readdir(stagedOutput), []);
+  assert.equal(
+    (await store.materializePngBlob(imageSha256, stagedTarget, { maximumBytes: image.length })).created,
+    true,
+  );
+
+  const directorySyncOutput = path.join(root, "directory-sync-output");
+  await mkdir(directorySyncOutput);
+  const directorySyncTarget = path.join(directorySyncOutput, `${imageSha256}.png`);
+  await assert.rejects(
+    store.materializePngBlob(imageSha256, directorySyncTarget, {
+      maximumBytes: image.length,
+      fileOperations: {
+        syncDirectory: async () => {
+          throw new Error("injected destination directory sync failure");
+        },
+      },
+    }),
+    /injected destination directory sync failure/,
+  );
+  assert.deepEqual(await readFile(directorySyncTarget), image);
+  assert.deepEqual(await readdir(directorySyncOutput), [`${imageSha256}.png`]);
+  assert.equal(
+    (await store.materializePngBlob(
+      imageSha256,
+      directorySyncTarget,
+      { maximumBytes: image.length },
+    )).created,
+    false,
+  );
+});
+
+test("a conflicting target arriving at commit is never overwritten or deleted", async (t) => {
+  const root = await mkdtemp(path.join(tmpdir(), "verdify-occurrence-conflict-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const storeRoot = path.join(root, "store");
+  const output = path.join(root, "output");
+  await mkdir(storeRoot);
+  await mkdir(output);
+  const store = await new LocalOccurrenceReleaseStore(storeRoot).initialize({ create: true });
+  const expected = png(10, 20, 30);
+  const expectedSha256 = sha256(expected);
+  const foreign = png(90, 80, 70);
+  await store.publishPngBlob(expected, expectedSha256);
+  const target = path.join(output, `${expectedSha256}.png`);
+  await assert.rejects(
+    store.materializePngBlob(expectedSha256, target, {
+      maximumBytes: expected.length,
+      fileOperations: {
+        link: async (_source, destination) => {
+          await writeFile(destination, foreign, { flag: "wx" });
+          const error = new Error("injected destination arrival");
+          error.code = "EEXIST";
+          throw error;
+        },
+      },
+    }),
+    /conflicts with staged blob/,
+  );
+  assert.deepEqual(await readFile(target), foreign);
+  assert.deepEqual(await readdir(output), [`${expectedSha256}.png`]);
 });
 
 test("S3 adapter covers both selector families and immutable object families offline", async (t) => {
@@ -577,7 +653,7 @@ test("S3 adapter covers both selector families and immutable object families off
   assert.deepEqual(await readFile(target), image);
 });
 
-test("explicit S3 two-blob materialization removes partial output and retries cleanly", async (t) => {
+test("S3 two-blob materialization pre-stages sources and partial commit retries monotonically", async (t) => {
   const root = await mkdtemp(path.join(tmpdir(), "verdify-occurrence-s3-materialize-"));
   const output = path.join(root, "output");
   await mkdir(output);
@@ -604,6 +680,24 @@ test("explicit S3 two-blob materialization removes partial output and retries cl
   assert.deepEqual(await readdir(targetDirectory), []);
 
   client.seed(failedKey, failedBlob.body);
+  const commitStagedPngBlob = store.commitStagedPngBlob.bind(store);
+  let commitCalls = 0;
+  store.commitStagedPngBlob = async (...args) => {
+    commitCalls += 1;
+    if (commitCalls === 2) throw new Error("injected second destination commit failure");
+    return commitStagedPngBlob(...args);
+  };
+  await assert.rejects(
+    materializeOccurrenceBlobs(store, manifest, output),
+    /injected second destination commit failure/,
+  );
+  store.commitStagedPngBlob = commitStagedPngBlob;
+  assert.deepEqual(await readdir(targetDirectory), [`${ordered[0].sha256}.png`]);
+  assert.deepEqual(
+    await readFile(path.join(targetDirectory, `${ordered[0].sha256}.png`)),
+    ordered[0].body,
+  );
+
   assert.equal(await materializeOccurrenceBlobs(store, manifest, output), 2);
   assert.deepEqual(
     (await readdir(targetDirectory)).sort(),
@@ -615,10 +709,7 @@ test("explicit S3 two-blob materialization removes partial output and retries cl
       blob.body,
     );
   }
-  await assert.rejects(
-    materializeOccurrenceBlobs(store, manifest, output),
-    (error) => error.code === "EEXIST",
-  );
+  assert.equal(await materializeOccurrenceBlobs(store, manifest, output), 2);
   for (const blob of ordered) {
     assert.deepEqual(
       await readFile(path.join(targetDirectory, `${blob.sha256}.png`)),
