@@ -2,6 +2,11 @@ import { createHash, randomUUID } from "node:crypto";
 import { constants as fsConstants, copyFile, link, lstat, mkdir, open, readdir, realpath, rename, unlink } from "node:fs/promises";
 import path from "node:path";
 
+import {
+  LocalOccurrenceReleaseStore,
+  OccurrenceReleaseStore,
+  createOccurrenceReleaseStore,
+} from "./occurrence-release-store.mjs";
 import { validatePngFile } from "./png-validation.mjs";
 
 const SHA256_RE = /^[0-9a-f]{64}$/;
@@ -27,6 +32,19 @@ const EVENT_FRESHNESS = {
 };
 
 class CandidateImageError extends Error {}
+
+async function occurrenceStore(value, { create = false } = {}) {
+  if (value instanceof OccurrenceReleaseStore) {
+    return value.initialize({ create });
+  }
+  const store = createOccurrenceReleaseStore(value);
+  if (!(store instanceof LocalOccurrenceReleaseStore)) {
+    throw new Error(
+      "S3 occurrence store access requires an explicitly constructed adapter; CLI S3 mutation is disabled",
+    );
+  }
+  return store.initialize({ create });
+}
 
 function canonicalBytes(value) {
   return Buffer.from(`${JSON.stringify(value, null, 2)}\n`);
@@ -375,15 +393,6 @@ export function summarizeOccurrenceFreshness(manifest, asOf) {
   };
 }
 
-async function canonicalStoreRoot(root) {
-  const absolute = path.resolve(root);
-  const metadata = await lstat(absolute, { bigint: true });
-  if (!metadata.isDirectory() || metadata.isSymbolicLink() || (await realpath(absolute)) !== absolute) {
-    throw new Error("occurrence store root is invalid");
-  }
-  return absolute;
-}
-
 async function secureDirectory(root, relative, { create = false, leafMode = 0o755 } = {}) {
   let current = root;
   const segments = relative.split("/");
@@ -402,23 +411,6 @@ async function secureDirectory(root, relative, { create = false, leafMode = 0o75
     }
   }
   return current;
-}
-
-async function ensureStore(root) {
-  const resolved = await canonicalStoreRoot(root);
-  for (const relative of ["blobs/sha256", "manifests/sha256", "events/sha256"]) {
-    await secureDirectory(resolved, relative, { create: true });
-  }
-  await secureDirectory(resolved, ".quarantine", { create: true, leafMode: 0o700 });
-  return resolved;
-}
-
-async function openStore(root) {
-  const resolved = await canonicalStoreRoot(root);
-  for (const relative of ["blobs/sha256", "manifests/sha256", "events/sha256", ".quarantine"]) {
-    await secureDirectory(resolved, relative);
-  }
-  return resolved;
 }
 
 async function syncDirectory(directory) {
@@ -657,29 +649,7 @@ function currentMediaDirectory(storeRoot, occurrenceIdValue) {
   return path.join(storeRoot, "occurrences", occurrenceIdValue);
 }
 
-async function readCurrentMediaSelectionFromRoot(storeRoot, occurrenceIdValue) {
-  const directory = currentMediaDirectory(storeRoot, occurrenceIdValue);
-  try {
-    await secureDirectory(storeRoot, `occurrences/${occurrenceIdValue}`);
-    await secureDirectory(storeRoot, `occurrences/${occurrenceIdValue}/generations/sha256`);
-    await secureDirectory(storeRoot, `occurrences/${occurrenceIdValue}/events/sha256`);
-  } catch (error) {
-    if (error.code === "ENOENT") return null;
-    throw error;
-  }
-  let bytes;
-  try {
-    bytes = await readBoundedSingleLink(path.join(directory, "selection.json"), 64 * 1024, "current media selection");
-  } catch (error) {
-    if (error.code === "ENOENT") return null;
-    throw error;
-  }
-  let selection;
-  try {
-    selection = JSON.parse(bytes.toString("utf8"));
-  } catch {
-    throw new Error("current media selection is not valid JSON");
-  }
+function validateCurrentMediaSelection(selection, bytes, occurrenceIdValue) {
   if (
     !exactKeys(selection, [
       "contract",
@@ -707,25 +677,44 @@ async function readCurrentMediaSelectionFromRoot(storeRoot, occurrenceIdValue) {
     throw new Error("current media selection pointers are inconsistent");
   }
   requireInstant(selection.selectedAt, "current media selection time");
+  return selection;
+}
+
+async function readCurrentMediaSelectionFromRoot(storeRoot, occurrenceIdValue) {
+  const directory = currentMediaDirectory(storeRoot, occurrenceIdValue);
+  try {
+    await secureDirectory(storeRoot, `occurrences/${occurrenceIdValue}`);
+    await secureDirectory(storeRoot, `occurrences/${occurrenceIdValue}/generations/sha256`);
+    await secureDirectory(storeRoot, `occurrences/${occurrenceIdValue}/events/sha256`);
+  } catch (error) {
+    if (error.code === "ENOENT") return null;
+    throw error;
+  }
+  let bytes;
+  try {
+    bytes = await readBoundedSingleLink(path.join(directory, "selection.json"), 64 * 1024, "current media selection");
+  } catch (error) {
+    if (error.code === "ENOENT") return null;
+    throw error;
+  }
+  let selection;
+  try {
+    selection = JSON.parse(bytes.toString("utf8"));
+  } catch {
+    throw new Error("current media selection is not valid JSON");
+  }
+  validateCurrentMediaSelection(selection, bytes, occurrenceIdValue);
   return { selection, selectionSha256: sha256(bytes), directory };
 }
 
-async function loadCurrentMediaGenerationFromRoot(storeRoot, occurrenceIdValue, digest) {
-  if (!SHA256_RE.test(digest)) throw new Error("current media generation digest is invalid");
-  const directory = currentMediaDirectory(storeRoot, occurrenceIdValue);
-  await secureDirectory(storeRoot, `occurrences/${occurrenceIdValue}/generations/sha256`);
-  const bytes = await readBoundedSingleLink(
-    path.join(directory, "generations", "sha256", `${digest}.json`),
-    128 * 1024,
-    "current media generation",
-  );
+async function validateCurrentMediaGeneration(
+  generation,
+  bytes,
+  occurrenceIdValue,
+  digest,
+  storeRoot,
+) {
   if (sha256(bytes) !== digest) throw new Error("current media generation digest mismatch");
-  let generation;
-  try {
-    generation = JSON.parse(bytes.toString("utf8"));
-  } catch {
-    throw new Error("current media generation is not valid JSON");
-  }
   if (
     !exactKeys(generation, [
       "contract",
@@ -760,6 +749,24 @@ async function loadCurrentMediaGenerationFromRoot(storeRoot, occurrenceIdValue, 
   return generation;
 }
 
+async function loadCurrentMediaGenerationFromRoot(storeRoot, occurrenceIdValue, digest) {
+  if (!SHA256_RE.test(digest)) throw new Error("current media generation digest is invalid");
+  const directory = currentMediaDirectory(storeRoot, occurrenceIdValue);
+  await secureDirectory(storeRoot, `occurrences/${occurrenceIdValue}/generations/sha256`);
+  const bytes = await readBoundedSingleLink(
+    path.join(directory, "generations", "sha256", `${digest}.json`),
+    128 * 1024,
+    "current media generation",
+  );
+  let generation;
+  try {
+    generation = JSON.parse(bytes.toString("utf8"));
+  } catch {
+    throw new Error("current media generation is not valid JSON");
+  }
+  return validateCurrentMediaGeneration(generation, bytes, occurrenceIdValue, digest, storeRoot);
+}
+
 async function selectedCurrentMediaPointer(storeRoot, occurrenceIdValue) {
   const selected = await readCurrentMediaSelectionFromRoot(storeRoot, occurrenceIdValue);
   if (selected === null) return null;
@@ -778,6 +785,56 @@ async function selectedCurrentMediaPointer(storeRoot, occurrenceIdValue) {
     throw new Error("current media selection does not match its generations");
   }
   return { ...selected, current, previous };
+}
+
+async function selectedCurrentMediaPointerFromStore(store, occurrenceIdValue) {
+  const selected = await store.readCurrentMediaSelection(occurrenceIdValue);
+  if (selected === null) return null;
+  const selection = validateCurrentMediaSelection(
+    selected.document,
+    selected.bytes,
+    occurrenceIdValue,
+  );
+  const currentValue = await store.readCurrentMediaGeneration(
+    occurrenceIdValue,
+    selection.current.generationSha256,
+  );
+  const current = await validateCurrentMediaGeneration(
+    currentValue.document,
+    currentValue.bytes,
+    occurrenceIdValue,
+    selection.current.generationSha256,
+    store,
+  );
+  let previous = null;
+  if (selection.previous !== null) {
+    const previousValue = await store.readCurrentMediaGeneration(
+      occurrenceIdValue,
+      selection.previous.generationSha256,
+    );
+    previous = await validateCurrentMediaGeneration(
+      previousValue.document,
+      previousValue.bytes,
+      occurrenceIdValue,
+      selection.previous.generationSha256,
+      store,
+    );
+  }
+  if (
+    current.fallback.sha256 !== selection.current.blobSha256
+    || (previous && previous.fallback.sha256 !== selection.previous.blobSha256)
+  ) {
+    throw new Error("current media selection does not match its generations");
+  }
+  return {
+    selection,
+    selectionSha256: selected.sha256,
+    directory: store.root
+      ? currentMediaDirectory(store.root, occurrenceIdValue)
+      : null,
+    current,
+    previous,
+  };
 }
 
 async function pruneCurrentMediaGenerations(directory, selection, priorSelection = null) {
@@ -957,20 +1014,7 @@ function publicCurrentMediaPointer(selected) {
   };
 }
 
-async function readSelection(storeRoot) {
-  let bytes;
-  try {
-    bytes = await readBoundedSingleLink(path.join(storeRoot, "selection.json"), 64 * 1024, "occurrence selection");
-  } catch (error) {
-    if (error.code === "ENOENT") return null;
-    throw error;
-  }
-  let selection;
-  try {
-    selection = JSON.parse(bytes.toString("utf8"));
-  } catch {
-    throw new Error("occurrence selection is not valid JSON");
-  }
+function validateOccurrenceSelection(selection, bytes) {
   if (
     !exactKeys(selection, ["contract", "schemaVersion", "generation", "current", "previous", "selectedAt", "reason"])
     || selection.contract !== "verdify.lab-occurrence-selection"
@@ -990,6 +1034,23 @@ async function readSelection(storeRoot) {
   requireInstant(selection.selectedAt, "occurrence selection time");
   if (!["publish", "rollback"].includes(selection.reason)) throw new Error("occurrence selection reason is invalid");
   return selection;
+}
+
+async function readSelection(storeRoot) {
+  let bytes;
+  try {
+    bytes = await readBoundedSingleLink(path.join(storeRoot, "selection.json"), 64 * 1024, "occurrence selection");
+  } catch (error) {
+    if (error.code === "ENOENT") return null;
+    throw error;
+  }
+  let selection;
+  try {
+    selection = JSON.parse(bytes.toString("utf8"));
+  } catch {
+    throw new Error("occurrence selection is not valid JSON");
+  }
+  return validateOccurrenceSelection(selection, bytes);
 }
 
 async function readIdempotencyRecord(file) {
@@ -1057,17 +1118,9 @@ async function pruneOccurrenceHistory(storeRoot, selection, retain = 10, priorSe
   await syncDirectory(directory);
 }
 
-async function loadManifest(storeRoot, digest) {
+function validateOccurrenceManifest(manifest, bytes, digest) {
   if (!SHA256_RE.test(digest)) throw new Error("occurrence manifest digest is invalid");
-  const file = path.join(storeRoot, "manifests", "sha256", `${digest}.json`);
-  const bytes = await readBoundedSingleLink(file, MAX_MANIFEST_BYTES, "occurrence manifest");
   if (sha256(bytes) !== digest) throw new Error("occurrence manifest digest mismatch");
-  let manifest;
-  try {
-    manifest = JSON.parse(bytes.toString("utf8"));
-  } catch {
-    throw new Error("occurrence manifest is not valid JSON");
-  }
   if (
     !exactKeys(manifest, [
       "contract",
@@ -1097,7 +1150,20 @@ async function loadManifest(storeRoot, digest) {
   return manifest;
 }
 
-async function verifyFallbackBlob(storeRoot, fallback) {
+async function loadManifest(storeRoot, digest) {
+  if (!SHA256_RE.test(digest)) throw new Error("occurrence manifest digest is invalid");
+  const file = path.join(storeRoot, "manifests", "sha256", `${digest}.json`);
+  const bytes = await readBoundedSingleLink(file, MAX_MANIFEST_BYTES, "occurrence manifest");
+  let manifest;
+  try {
+    manifest = JSON.parse(bytes.toString("utf8"));
+  } catch {
+    throw new Error("occurrence manifest is not valid JSON");
+  }
+  return validateOccurrenceManifest(manifest, bytes, digest);
+}
+
+function validateFallbackRecord(fallback) {
   if (fallback === null) return;
   const keys = [
     "publicPath",
@@ -1120,11 +1186,23 @@ async function verifyFallbackBlob(storeRoot, fallback) {
     || fallback.publicPath !== `/evidence/blobs/sha256/${fallback.sha256}.png`
     || !Number.isSafeInteger(fallback.decodedBytes)
     || fallback.decodedBytes <= 0
+    || !Number.isSafeInteger(fallback.bytes)
+    || fallback.bytes <= 0
+    || !Number.isSafeInteger(fallback.width)
+    || fallback.width <= 0
+    || !Number.isSafeInteger(fallback.height)
+    || fallback.height <= 0
   ) {
     throw new Error("occurrence fallback does not use the closed v1 shape");
   }
-  const relative = path.posix.join("blobs", "sha256", `${fallback.sha256}.png`);
-  const verified = await validatePngFile(storeRoot, relative);
+  requireInstant(fallback.capturedAt, "fallback capture time");
+  requireInstant(fallback.verifiedAt, "fallback verification time");
+  requireSafeText(fallback.policyVersion, "fallback policy version", 256);
+  return fallback;
+}
+
+function verifyFallbackMetadata(verified, fallback) {
+  validateFallbackRecord(fallback);
   if (
     verified.sha256 !== fallback.sha256
     || verified.decodedSha256 !== fallback.decodedSha256
@@ -1135,12 +1213,19 @@ async function verifyFallbackBlob(storeRoot, fallback) {
   ) {
     throw new Error("occurrence fallback metadata does not match decoded bytes");
   }
-  requireInstant(fallback.capturedAt, "fallback capture time");
-  requireInstant(fallback.verifiedAt, "fallback verification time");
-  requireSafeText(fallback.policyVersion, "fallback policy version", 256);
+  return verified;
 }
 
-async function verifyReleaseBlobs(storeRoot, manifest) {
+async function verifyFallbackBlob(storeRoot, fallback) {
+  validateFallbackRecord(fallback);
+  const relative = path.posix.join("blobs", "sha256", `${fallback.sha256}.png`);
+  const verified = storeRoot instanceof OccurrenceReleaseStore
+    ? await storeRoot.readPngBlob(fallback.sha256, { maximumBytes: fallback.bytes })
+    : await validatePngFile(storeRoot, relative);
+  return verifyFallbackMetadata(verified, fallback);
+}
+
+async function verifyReleaseBlobs(storeRoot, manifest, { verifyBlobBytes = true } = {}) {
   const occurrences = [...manifest.occurrences.graphs, ...manifest.occurrences.currentMedia];
   if (occurrences.length > 10_000) throw new Error("occurrence release exceeds its record limit");
   if (JSON.stringify(manifest.freshness) !== JSON.stringify(evaluateEventFreshness(manifest.event, manifest.publishedAt))) {
@@ -1276,28 +1361,62 @@ async function verifyReleaseBlobs(storeRoot, manifest) {
   let encodedBytes = 0;
   let decodedBytes = 0;
   for (const fallback of uniqueFallbacks.values()) {
+    validateFallbackRecord(fallback);
     encodedBytes += fallback.bytes;
     decodedBytes += fallback.decodedBytes;
     if (encodedBytes > MAX_RELEASE_ENCODED_BYTES || decodedBytes > MAX_RELEASE_DECODED_BYTES) {
       throw new Error("occurrence release exceeds its aggregate image byte budget");
     }
-    await verifyFallbackBlob(storeRoot, fallback);
+    if (verifyBlobBytes) await verifyFallbackBlob(storeRoot, fallback);
   }
 }
 
 export async function loadSelectedOccurrenceRelease(storeRoot) {
-  const root = await openStore(storeRoot);
-  const selection = await readSelection(root);
-  if (selection === null) return { root, selection: null, selectionSha256: null, current: null, previous: null };
-  const current = await loadManifest(root, selection.current.manifestSha256);
-  const previous = selection.previous ? await loadManifest(root, selection.previous.manifestSha256) : null;
-  await verifyReleaseBlobs(root, current);
-  if (previous) await verifyReleaseBlobs(root, previous);
-  return { root, selection, selectionSha256: sha256(canonicalBytes(selection)), current, previous };
+  const store = await occurrenceStore(storeRoot);
+  const selected = await store.readAggregateSelection();
+  const root = store.root ?? null;
+  if (selected === null) {
+    return {
+      root,
+      selection: null,
+      selectionSha256: null,
+      current: null,
+      previous: null,
+    };
+  }
+  const selection = validateOccurrenceSelection(selected.document, selected.bytes);
+  const currentValue = await store.readAggregateManifest(selection.current.manifestSha256);
+  const current = validateOccurrenceManifest(
+    currentValue.document,
+    currentValue.bytes,
+    selection.current.manifestSha256,
+  );
+  let previous = null;
+  if (selection.previous !== null) {
+    const previousValue = await store.readAggregateManifest(selection.previous.manifestSha256);
+    previous = validateOccurrenceManifest(
+      previousValue.document,
+      previousValue.bytes,
+      selection.previous.manifestSha256,
+    );
+  }
+  await verifyReleaseBlobs(store, current);
+  if (previous) await verifyReleaseBlobs(store, previous);
+  return {
+    root,
+    selection,
+    selectionSha256: selected.sha256,
+    current,
+    previous,
+  };
 }
 
 async function withStoreLock(storeRoot, callback) {
-  const root = await ensureStore(storeRoot);
+  const store = await occurrenceStore(storeRoot, { create: true });
+  if (!(store instanceof LocalOccurrenceReleaseStore)) {
+    throw new Error("S3 occurrence publication is not enabled by the local publisher");
+  }
+  const root = store.root;
   const lockPath = path.join(root, ".publish.lock");
   let handle;
   try {
@@ -1531,8 +1650,8 @@ export async function rollbackOccurrenceRelease({ storeRoot, expectedSelectionSh
 }
 
 export async function loadSelectedCurrentMediaGeneration(storeRoot, occurrenceIdValue) {
-  const root = await openStore(storeRoot);
-  return selectedCurrentMediaPointer(root, occurrenceIdValue);
+  const store = await occurrenceStore(storeRoot);
+  return selectedCurrentMediaPointerFromStore(store, occurrenceIdValue);
 }
 
 export async function rollbackCurrentMediaGeneration({
@@ -1568,19 +1687,23 @@ export async function rollbackCurrentMediaGeneration({
 }
 
 export async function materializeOccurrenceBlobs(storeRoot, manifest, destination) {
-  const root = await openStore(storeRoot);
-  await verifyReleaseBlobs(root, manifest);
+  const store = await occurrenceStore(storeRoot);
+  await verifyReleaseBlobs(store, manifest, { verifyBlobBytes: false });
   await mkdir(path.join(destination, "evidence", "blobs", "sha256"), { recursive: true, mode: 0o755 });
   const fallbacks = [...manifest.occurrences.graphs, ...manifest.occurrences.currentMedia]
     .map((occurrence) => occurrence.fallback)
     .filter(Boolean);
   const digests = [...new Set(fallbacks.map((fallback) => fallback.sha256))].sort();
   for (const digest of digests) {
-    const source = path.join(root, "blobs", "sha256", `${digest}.png`);
     const target = path.join(destination, "evidence", "blobs", "sha256", `${digest}.png`);
-    await copyFile(source, target, fsConstants.COPYFILE_EXCL);
-    const verified = await validatePngFile(path.dirname(target), path.basename(target));
-    if (verified.sha256 !== digest) throw new Error("materialized occurrence blob digest mismatch");
+    const fallback = fallbacks.find((value) => value.sha256 === digest);
+    const verified = await store.materializePngBlob(digest, target, { maximumBytes: fallback.bytes });
+    try {
+      verifyFallbackMetadata(verified, fallback);
+    } catch (error) {
+      await unlink(target).catch(() => {});
+      throw error;
+    }
   }
   return digests.length;
 }

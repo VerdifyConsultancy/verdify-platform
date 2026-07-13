@@ -197,6 +197,17 @@ preceding read for the object-store compare-and-swap. Reads are byte-bounded and
 release listings consume bounded continuation pages. The AWS client is injected in
 offline tests; the exact SDK is locked in `site-astro/package-lock.json`.
 
+`OccurrenceReleaseStore` is a distinct source-only adapter for specialist evidence.
+`LocalOccurrenceReleaseStore` preserves the current aggregate and per-camera object
+layout. `S3OccurrenceReleaseStore` appends the typed `occurrence-releases/v1`
+namespace to a strict base URI so built-site and occurrence identities cannot overlap.
+It provides absent-only manifests, media generations, event intents, and validated PNG
+blobs; canonical store-identity binding on every event intent; immediate-read
+entity-tag CAS plus exact post-write verification for both selector families; and
+bounded PNG reads and exact materialization. High-level read/materialization accepts
+an explicitly injected adapter, but the credential-free occurrence CLI deliberately
+refuses implicit S3 access and its publication path remains local-only.
+
 The complete local filesystem primitive is present, and its candidate manifest is
 included by the Lab stage overlay only at `replicas: 0`. The overlay deliberately
 uses exact source-bound zot digests for the release agent and nginx site images. The
@@ -208,10 +219,11 @@ source does not alter the live cluster; even an operator sync cannot schedule th
 zero-replica workload.
 
 This storage foundation does not change the credential-free local CLI or deploy
-anything. The CLI/publisher factory, bounded cache hydration from object bytes,
-occurrence persistence caller, distributed lease, bounded retention/GC, event agent,
-resource accounting, endpoint configuration, credential-name wiring, and real-endpoint
-conditional-write proof remain separate Phase 4b work. The endpoint proof must confirm
+anything. The built-site CLI/publisher factory, bounded cache hydration from object
+bytes, occurrence producer/caller transaction, distributed lease, bounded retention
+and GC, event agent, resource accounting, endpoint configuration, credential-name
+wiring, and real-endpoint conditional-write proof remain separate Phase 4b work. The
+endpoint proof must confirm
 the compatible store preserves the tested conditional semantics before any writer is
 activated. Activation additionally requires reviewed store/egress wiring, an explicit
 replicas change, and live cache/freshness/alert proof. Those are deployment and data
