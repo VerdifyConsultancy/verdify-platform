@@ -229,7 +229,11 @@ class OutcomeKpiCoverage(BaseModel):
 
 
 class OutcomeKpiActionRow(BaseModel):
-    """One action row from `v_climate_action_daily_scorecard`."""
+    """One action row from `fn_climate_action_daily_scorecard` (#498).
+
+    The migration-202 single-day function is byte-identical to a
+    `v_climate_action_daily_scorecard` slice for the same Denver-local date.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
