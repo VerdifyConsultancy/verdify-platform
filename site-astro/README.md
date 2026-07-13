@@ -131,11 +131,28 @@ target and fifteen-minute alert contract; graph and camera records carry their
 ratified cadence-based stale thresholds.
 
 For a build that has an already-verified local occurrence store, set
-`LAB_OCCURRENCE_STORE` to that read-only store. The compiler revalidates the selected
-manifest and decoded blobs, copies only referenced content-addressed images into the
-static release, renders them as the inline same-origin fallbacks, and preserves the
-separate interactive evidence link. An absent store remains explicit pending evidence
-and never causes a network render during the build.
+`LAB_OCCURRENCE_STORE` to that read-only store and set `LAB_OCCURRENCE_POLICY` to the
+canonical JSON file for the exact approved export policy that produced the selected
+release. The store is fail-closed without that policy, and a selected release cannot
+use a policy that remains blocked. The compiler revalidates the selected manifest and
+decoded blobs, then binds the release to the snapshot-manifest SHA-256,
+the export-policy version, and the SHA-256 of the complete canonical policy bytes. The
+snapshot sanitization-policy version is a separate contract and is not used for this
+binding. The policy's source-occurrence digest is checked against a stable discovery
+projection with the top-level selection and every per-occurrence selection set to null,
+so decorating served evidence cannot change the approved discovery identity. A selected
+build is accepted only with fallbacks for every discovered graph and current-camera
+occurrence. Before copying any blob, the compiler also rechecks each selected discovery
+fingerprint against the exact policy allowlist, each camera request-provenance digest,
+and the graph/current-media MIME, encoded-byte, width, and height bounds. The compiler
+copies only referenced content-addressed images into the static release, renders them as
+the inline same-origin fallbacks, and preserves the separate interactive evidence link.
+`static-build.json` uses the repository-wide
+`sha256:<64-hex>` digest form for `selectedOccurrenceManifestSha256`; the v1
+`occurrence-manifest.json` contract retains the raw lowercase 64-hex digest in
+`selectedManifestSha256`. The production verifier cross-checks the two representations.
+An absent `LAB_OCCURRENCE_STORE` remains explicit pending evidence, does not require a
+policy, and never causes a network render during the build.
 
 This is release tooling and fixture proof, not live export authority. The current
 stage image was built before these contracts and still has no selected occurrence
