@@ -9,6 +9,7 @@ Run: python mcp/server.py
 Transport: streamable-http on port 8400
 """
 
+import asyncio
 import json
 import os
 import sys
@@ -316,6 +317,40 @@ async def _db() -> asyncpg.Connection:
     )
 
 
+# #387: outcome_kpi() fans its independent section fetches out concurrently,
+# and asyncpg connections cannot multiplex queries — concurrency needs more
+# connections. There is deliberately NO per-call connection burst: the extra
+# connections come from this small shared pool, so the global fan-out is
+# capped at max_size regardless of how hard a looping LLM caller hammers the
+# tool (excess acquires queue instead of stacking DB backends). min_size=0
+# plus a short inactive lifetime keeps the idle footprint at zero between
+# bursts. Every pooled connection carries the same statement-timeout fence as
+# _db().
+_KPI_FANOUT_POOL_MAX_SIZE = 4
+# Annotations quoted: schema-only CI imports this module with a lightweight
+# asyncpg stub that has no Pool attribute (see _install_mcp_runtime_import_stubs).
+_kpi_fanout_pool: "asyncpg.Pool | None" = None
+_kpi_fanout_pool_lock = asyncio.Lock()
+
+
+async def _kpi_fanout_pool_get() -> "asyncpg.Pool":
+    global _kpi_fanout_pool
+    if _kpi_fanout_pool is None:
+        async with _kpi_fanout_pool_lock:
+            if _kpi_fanout_pool is None:
+                _kpi_fanout_pool = await asyncpg.create_pool(
+                    DB_DSN,
+                    min_size=0,
+                    max_size=_KPI_FANOUT_POOL_MAX_SIZE,
+                    max_inactive_connection_lifetime=60.0,
+                    server_settings={
+                        "application_name": "verdify-mcp",
+                        "statement_timeout": f"{MCP_DB_STATEMENT_TIMEOUT_MS}ms",
+                    },
+                )
+    return _kpi_fanout_pool
+
+
 def _custom_route(path: str, *, methods: list[str]):
     """Register a FastMCP route while keeping schema-only import stubs usable."""
     custom_route = getattr(mcp, "custom_route", None)
@@ -604,7 +639,16 @@ async def outcome_kpi(target_date: str = "") -> str:
     are the cycle/runtime authority; the counters remain diagnostic context.
     Realized solar-night dry-out episodes distinguish effective, ineffective,
     blocked, and insufficient-evidence outcomes. Pass date as YYYY-MM-DD or
-    omit for today."""
+    omit for today.
+
+    Single-day, cache-friendly surface: one call covers exactly one
+    Denver-local day (multi-day ranges are not accepted), and completed days
+    are stable reads — identical inputs return identical content — so a
+    looping LLM caller (e.g. the planner) should reuse prior responses for
+    finished dates instead of re-polling. The independent section fetches run
+    concurrently on a small bounded connection pool and the shared 1-minute
+    resolved-samples scan is computed once, so repeated calls queue on the
+    pool instead of fanning out unbounded database load."""
     greenhouse_id = "vallery"
     conn = await _db()
     try:
@@ -616,8 +660,7 @@ async def outcome_kpi(target_date: str = "") -> str:
         else:
             d = await conn.fetchval("SELECT (now() AT TIME ZONE 'America/Denver')::date")
 
-        summary_row = await conn.fetchrow(
-            """
+        summary_sql = """
             SELECT date, greenhouse_id,
                    compliance_v2_attributable_pct,
                    compliance_v2_raw_pct,
@@ -668,14 +711,8 @@ async def outcome_kpi(target_date: str = "") -> str:
                    cost_total
             FROM daily_summary
             WHERE date = $1::date AND greenhouse_id = $2
-            """,
-            d,
-            greenhouse_id,
-        )
-        summary = dict(summary_row) if summary_row else {}
-
-        dli_row = await conn.fetchrow(
             """
+        dli_sql = """
             SELECT crop_dli_mol_m2_day AS value_mol_m2_day,
                    availability,
                    unavailable_reason,
@@ -685,15 +722,8 @@ async def outcome_kpi(target_date: str = "") -> str:
                    valid_to
             FROM v_dli_daily
             WHERE date = $1::date AND greenhouse_id = $2
-            """,
-            d,
-            greenhouse_id,
-        )
-        if dli_row:
-            dli_evidence = DliEvidence.model_validate(dict(dli_row))
-        else:
-            validity_row = await conn.fetchrow(
-                """
+            """
+        dli_validity_sql = """
                 SELECT NULL::double precision AS value_mol_m2_day,
                        COALESCE(availability, 'unavailable') AS availability,
                        COALESCE(unavailable_reason, 'validity_contract_missing') AS unavailable_reason,
@@ -706,38 +736,18 @@ async def outcome_kpi(target_date: str = "") -> str:
                     ($1::date::timestamp + interval '12 hours') AT TIME ZONE 'America/Denver',
                     $2
                 ) ON true
-                """,
-                d,
-                greenhouse_id,
-            )
-            dli_evidence = DliEvidence.model_validate(dict(validity_row))
-
-        water_resource_row = await conn.fetchrow(
-            """
+                """
+        water_sql = """
             SELECT *
             FROM v_water_attribution_daily
             WHERE date = $1::date AND greenhouse_id = $2
-            """,
-            d,
-            greenhouse_id,
-        )
-        water_resource = dict(water_resource_row) if water_resource_row else None
-
-        energy_resource_row = await conn.fetchrow(
             """
+        energy_sql = """
             SELECT *
             FROM v_energy_estimate_reconciliation
             WHERE date = $1::date AND greenhouse_id = $2
-            """,
-            d,
-            greenhouse_id,
-        )
-        energy_resource = dict(energy_resource_row) if energy_resource_row else None
-        if energy_resource and isinstance(energy_resource.get("coefficient_revisions"), str):
-            energy_resource["coefficient_revisions"] = json.loads(energy_resource["coefficient_revisions"])
-
-        cycle_rows = await conn.fetch(
             """
+        cycles_sql = """
             SELECT equipment,
                    on_minutes::double precision AS on_minutes,
                    starts,
@@ -762,23 +772,13 @@ async def outcome_kpi(target_date: str = "") -> str:
             FROM v_equipment_runtime_daily
             WHERE day = $1::date AND greenhouse_id = $2
             ORDER BY equipment
-            """,
-            d,
-            greenhouse_id,
-        )
-
-        dryout_rows = await conn.fetch(
             """
+        dryout_sql = """
             SELECT *
             FROM fn_realized_solar_night_dryout($1::date, $1::date, $2)
             ORDER BY episode_started_at
-            """,
-            d,
-            greenhouse_id,
-        )
-
-        action_rows = await conn.fetch(
             """
+        actions_sql = """
             SELECT climate_action,
                    decisions,
                    avg_abs_temp_error_before_f,
@@ -793,18 +793,22 @@ async def outcome_kpi(target_date: str = "") -> str:
             FROM v_climate_action_daily_scorecard
             WHERE date = $1::date AND greenhouse_id = $2
             ORDER BY decisions DESC, climate_action
-            """,
-            d,
-            greenhouse_id,
-        )
-
-        pinched_row = await conn.fetchrow(
             """
+        pinched_phase_sql = """
             WITH bounds AS (
                 SELECT
                     ($1::date::timestamp AT TIME ZONE 'America/Denver') AS start_ts,
                     (($1::date + 1)::timestamp AT TIME ZONE 'America/Denver') AS end_ts
             ),
+            -- #387: ONE 1-minute climate scan and ONE 6-way LATERAL
+            -- setpoint/band resolution feed BOTH the pinched-corridor and
+            -- solar-phase sections (each previously ran this fan-out
+            -- independently). resolved_samples is referenced twice below, so
+            -- PostgreSQL materializes it once. Row-set fidelity: the pinched
+            -- section reads the unprefixed bucket averages (rows with
+            -- temp/vpd present); the solar-phase section additionally
+            -- requires solar_phase IS NOT NULL per row, which the FILTERed
+            -- ph_* averages and the ph_sample_rows guard reproduce exactly.
             samples AS (
                 SELECT
                     time_bucket('1 minute', c.ts) AS bucket,
@@ -812,7 +816,20 @@ async def outcome_kpi(target_date: str = "") -> str:
                     avg(c.vpd_avg)::double precision AS vpd_avg,
                     avg(c.house_temp_target_f)::double precision AS temp_target_f,
                     avg(c.house_vpd_target)::double precision AS vpd_target_kpa,
-                    avg(c.solar_phase)::double precision AS solar_phase
+                    avg(c.solar_phase)::double precision AS solar_phase,
+                    count(c.solar_phase)::int AS ph_sample_rows,
+                    (avg(c.temp_avg) FILTER (WHERE c.solar_phase IS NOT NULL)
+                        )::double precision AS ph_temp_avg,
+                    (avg(c.vpd_avg) FILTER (WHERE c.solar_phase IS NOT NULL)
+                        )::double precision AS ph_vpd_avg,
+                    (avg(c.dew_point) FILTER (WHERE c.solar_phase IS NOT NULL)
+                        )::double precision AS ph_dew_point,
+                    (avg(c.solar_irradiance_w_m2) FILTER (WHERE c.solar_phase IS NOT NULL)
+                        )::double precision AS ph_solar_w_m2,
+                    (avg(c.house_temp_target_f) FILTER (WHERE c.solar_phase IS NOT NULL)
+                        )::double precision AS ph_temp_target_f,
+                    (avg(c.house_vpd_target) FILTER (WHERE c.solar_phase IS NOT NULL)
+                        )::double precision AS ph_vpd_target_kpa
                 FROM climate c
                 CROSS JOIN bounds b
                 WHERE c.greenhouse_id = $2
@@ -822,7 +839,7 @@ async def outcome_kpi(target_date: str = "") -> str:
                   AND c.vpd_avg IS NOT NULL
                 GROUP BY 1
             ),
-            resolved AS (
+            resolved_samples AS (
                 SELECT
                     s.*,
                     COALESCE(temp_low.value, band.temp_low) AS temp_low_f,
@@ -876,7 +893,7 @@ async def outcome_kpi(target_date: str = "") -> str:
                     ORDER BY ts DESC LIMIT 1
                 ) btf_change ON true
             ),
-            eligible AS (
+            pinched_eligible AS (
                 SELECT
                     *,
                     temp_low_f + band_track_fraction
@@ -891,7 +908,7 @@ async def outcome_kpi(target_date: str = "") -> str:
                     vpd_high_kpa - band_track_fraction
                         * (vpd_high_kpa - LEAST(GREATEST(vpd_target_kpa, vpd_low_kpa), vpd_high_kpa))
                         AS pinched_vpd_high_kpa
-                FROM resolved
+                FROM resolved_samples
                 WHERE temp_target_f IS NOT NULL
                   AND vpd_target_kpa IS NOT NULL
                   AND temp_low_f IS NOT NULL
@@ -899,7 +916,7 @@ async def outcome_kpi(target_date: str = "") -> str:
                   AND vpd_low_kpa IS NOT NULL
                   AND vpd_high_kpa IS NOT NULL
             ),
-            scored AS (
+            pinched_scored AS (
                 SELECT
                     *,
                     GREATEST(pinched_temp_low_f - temp_avg, temp_avg - pinched_temp_high_f, 0.0)
@@ -908,8 +925,9 @@ async def outcome_kpi(target_date: str = "") -> str:
                         AS vpd_pinched_miss_kpa,
                     temp_avg BETWEEN pinched_temp_low_f AND pinched_temp_high_f AS temp_pinched_in_band,
                     vpd_avg BETWEEN pinched_vpd_low_kpa AND pinched_vpd_high_kpa AS vpd_pinched_in_band
-                FROM eligible
-            )
+                FROM pinched_eligible
+            ),
+            pinched AS (
             SELECT
                 count(*)::int AS sample_min,
                 count(*) FILTER (WHERE has_fraction_readback)::int AS samples_with_fraction_readback,
@@ -939,15 +957,119 @@ async def outcome_kpi(target_date: str = "") -> str:
                 round((percentile_cont(0.95) WITHIN GROUP (
                     ORDER BY vpd_pinched_miss_kpa
                 ))::numeric, 3)::double precision AS p95_vpd_miss_kpa
-            FROM scored
-            """,
-            d,
-            greenhouse_id,
-        )
-        pinched = dict(pinched_row) if pinched_row else {}
-
-        dif_row = await conn.fetchrow(
+            FROM pinched_scored
+            ),
+            phase_resolved AS (
+                SELECT
+                    s.bucket,
+                    s.ph_temp_avg AS temp_avg,
+                    s.ph_vpd_avg AS vpd_avg,
+                    s.ph_dew_point AS dew_point,
+                    s.ph_solar_w_m2 AS solar_w_m2,
+                    s.solar_phase,
+                    s.ph_temp_target_f AS temp_target_f,
+                    s.ph_vpd_target_kpa AS vpd_target_kpa,
+                    CASE
+                        WHEN s.solar_phase < 1.0 THEN 'sunrise_to_noon'
+                        WHEN s.solar_phase < 2.0 THEN 'noon_to_sunset'
+                        WHEN s.solar_phase < 3.0 THEN 'sunset_to_midnight'
+                        ELSE 'midnight_to_sunrise'
+                    END AS phase_bucket,
+                    CASE
+                        WHEN s.solar_phase < 1.0 THEN 0
+                        WHEN s.solar_phase < 2.0 THEN 1
+                        WHEN s.solar_phase < 3.0 THEN 2
+                        ELSE 3
+                    END AS phase_order,
+                    s.temp_low_f,
+                    s.temp_high_f,
+                    s.vpd_low_kpa,
+                    s.vpd_high_kpa,
+                    s.band_track_fraction
+                FROM resolved_samples s
+                WHERE s.ph_sample_rows > 0
+            ),
+            phase_scored AS (
+                SELECT
+                    *,
+                    temp_low_f + band_track_fraction
+                        * (LEAST(GREATEST(temp_target_f, temp_low_f), temp_high_f) - temp_low_f)
+                        AS pinched_temp_low_f,
+                    temp_high_f - band_track_fraction
+                        * (temp_high_f - LEAST(GREATEST(temp_target_f, temp_low_f), temp_high_f))
+                        AS pinched_temp_high_f,
+                    vpd_low_kpa + band_track_fraction
+                        * (LEAST(GREATEST(vpd_target_kpa, vpd_low_kpa), vpd_high_kpa) - vpd_low_kpa)
+                        AS pinched_vpd_low_kpa,
+                    vpd_high_kpa - band_track_fraction
+                        * (vpd_high_kpa - LEAST(GREATEST(vpd_target_kpa, vpd_low_kpa), vpd_high_kpa))
+                        AS pinched_vpd_high_kpa
+                FROM phase_resolved
+                WHERE temp_target_f IS NOT NULL
+                  AND vpd_target_kpa IS NOT NULL
+                  AND temp_low_f IS NOT NULL
+                  AND temp_high_f IS NOT NULL
+                  AND vpd_low_kpa IS NOT NULL
+                  AND vpd_high_kpa IS NOT NULL
+            ),
+            phase AS (
+                SELECT
+                    phase_bucket,
+                    phase_order,
+                count(*)::int AS sample_min,
+                round(min(solar_phase)::numeric, 2)::double precision AS phase_min,
+                round(max(solar_phase)::numeric, 2)::double precision AS phase_max,
+                round(avg(temp_avg)::numeric, 2)::double precision AS temp_avg_f,
+                round(avg(vpd_avg)::numeric, 3)::double precision AS vpd_avg_kpa,
+                round(min(temp_avg - dew_point)::numeric, 2)::double precision AS min_dp_margin_f,
+                round(avg(solar_w_m2)::numeric, 1)::double precision AS avg_solar_w_m2,
+                round((100.0 * count(*) FILTER (
+                        WHERE temp_avg BETWEEN temp_low_f AND temp_high_f
+                          AND vpd_avg BETWEEN vpd_low_kpa AND vpd_high_kpa
+                    ) / NULLIF(count(*), 0))::numeric, 2)::double precision AS served_both_pct,
+                round((100.0 * count(*) FILTER (
+                        WHERE temp_avg BETWEEN pinched_temp_low_f AND pinched_temp_high_f
+                          AND vpd_avg BETWEEN pinched_vpd_low_kpa AND pinched_vpd_high_kpa
+                    ) / NULLIF(count(*), 0))::numeric, 2)::double precision AS pinched_both_pct,
+                round((100.0 * count(*) FILTER (
+                        WHERE vpd_avg > vpd_high_kpa
+                    ) / NULLIF(count(*), 0))::numeric, 2)::double precision AS vpd_high_miss_pct,
+                round((100.0 * count(*) FILTER (
+                        WHERE vpd_avg < vpd_low_kpa
+                    ) / NULLIF(count(*), 0))::numeric, 2)::double precision AS vpd_low_miss_pct
+                FROM phase_scored
+                GROUP BY phase_order, phase_bucket
+            )
+            SELECT
+                p.sample_min,
+                p.samples_with_fraction_readback,
+                p.avg_band_track_fraction,
+                p.min_band_track_fraction,
+                p.max_band_track_fraction,
+                p.temp_pct,
+                p.vpd_pct,
+                p.both_pct,
+                p.day_pct,
+                p.night_pct,
+                p.p95_temp_miss_f,
+                p.p95_vpd_miss_kpa,
+                ph.phase_bucket AS ph_phase_bucket,
+                ph.sample_min AS ph_sample_min,
+                ph.phase_min AS ph_phase_min,
+                ph.phase_max AS ph_phase_max,
+                ph.temp_avg_f AS ph_temp_avg_f,
+                ph.vpd_avg_kpa AS ph_vpd_avg_kpa,
+                ph.min_dp_margin_f AS ph_min_dp_margin_f,
+                ph.avg_solar_w_m2 AS ph_avg_solar_w_m2,
+                ph.served_both_pct AS ph_served_both_pct,
+                ph.pinched_both_pct AS ph_pinched_both_pct,
+                ph.vpd_high_miss_pct AS ph_vpd_high_miss_pct,
+                ph.vpd_low_miss_pct AS ph_vpd_low_miss_pct
+            FROM pinched p
+            LEFT JOIN phase ph ON true
+            ORDER BY ph.phase_order
             """
+        dif_sql = """
             WITH bounds AS (
                 SELECT
                     ($1::date::timestamp AT TIME ZONE 'America/Denver') AS start_ts,
@@ -979,160 +1101,8 @@ async def outcome_kpi(target_date: str = "") -> str:
                     - avg(temp_avg) FILTER (WHERE solar_phase >= 2.0)
                 )::numeric, 2)::double precision AS day_night_temp_delta_f
             FROM samples
-            """,
-            d,
-            greenhouse_id,
-        )
-        dif = dict(dif_row) if dif_row else {}
-
-        phase_rows = await conn.fetch(
             """
-            WITH bounds AS (
-                SELECT
-                    ($1::date::timestamp AT TIME ZONE 'America/Denver') AS start_ts,
-                    (($1::date + 1)::timestamp AT TIME ZONE 'America/Denver') AS end_ts
-            ),
-            samples AS (
-                SELECT
-                    time_bucket('1 minute', c.ts) AS bucket,
-                    avg(c.temp_avg)::double precision AS temp_avg,
-                    avg(c.vpd_avg)::double precision AS vpd_avg,
-                    avg(c.dew_point)::double precision AS dew_point,
-                    avg(c.solar_irradiance_w_m2)::double precision AS solar_w_m2,
-                    avg(c.solar_phase)::double precision AS solar_phase,
-                    avg(c.house_temp_target_f)::double precision AS temp_target_f,
-                    avg(c.house_vpd_target)::double precision AS vpd_target_kpa
-                FROM climate c
-                CROSS JOIN bounds b
-                WHERE c.greenhouse_id = $2
-                  AND c.ts >= b.start_ts
-                  AND c.ts < b.end_ts
-                  AND c.temp_avg IS NOT NULL
-                  AND c.vpd_avg IS NOT NULL
-                  AND c.solar_phase IS NOT NULL
-                GROUP BY 1
-            ),
-            resolved AS (
-                SELECT
-                    s.*,
-                    CASE
-                        WHEN s.solar_phase < 1.0 THEN 'sunrise_to_noon'
-                        WHEN s.solar_phase < 2.0 THEN 'noon_to_sunset'
-                        WHEN s.solar_phase < 3.0 THEN 'sunset_to_midnight'
-                        ELSE 'midnight_to_sunrise'
-                    END AS phase_bucket,
-                    CASE
-                        WHEN s.solar_phase < 1.0 THEN 0
-                        WHEN s.solar_phase < 2.0 THEN 1
-                        WHEN s.solar_phase < 3.0 THEN 2
-                        ELSE 3
-                    END AS phase_order,
-                    COALESCE(temp_low.value, band.temp_low) AS temp_low_f,
-                    COALESCE(temp_high.value, band.temp_high) AS temp_high_f,
-                    COALESCE(vpd_low.value, house.house_vpd_low) AS vpd_low_kpa,
-                    COALESCE(vpd_high.value, house.house_vpd_high) AS vpd_high_kpa,
-                    GREATEST(
-                        0.0,
-                        LEAST(
-                            1.0,
-                            COALESCE(btf_readback.value, btf_change.value, 0.0)
-                        )
-                    ) AS band_track_fraction
-                FROM samples s
-                CROSS JOIN LATERAL fn_band_setpoints(s.bucket) AS band
-                CROSS JOIN LATERAL fn_house_vpd_control_band(s.bucket) AS house
-                LEFT JOIN LATERAL (
-                    SELECT value FROM setpoint_snapshot
-                    WHERE greenhouse_id = $2 AND parameter = 'temp_low' AND ts <= s.bucket
-                    ORDER BY ts DESC LIMIT 1
-                ) temp_low ON true
-                LEFT JOIN LATERAL (
-                    SELECT value FROM setpoint_snapshot
-                    WHERE greenhouse_id = $2 AND parameter = 'temp_high' AND ts <= s.bucket
-                    ORDER BY ts DESC LIMIT 1
-                ) temp_high ON true
-                LEFT JOIN LATERAL (
-                    SELECT value FROM setpoint_snapshot
-                    WHERE greenhouse_id = $2 AND parameter = 'vpd_low' AND ts <= s.bucket
-                    ORDER BY ts DESC LIMIT 1
-                ) vpd_low ON true
-                LEFT JOIN LATERAL (
-                    SELECT value FROM setpoint_snapshot
-                    WHERE greenhouse_id = $2 AND parameter = 'vpd_high' AND ts <= s.bucket
-                    ORDER BY ts DESC LIMIT 1
-                ) vpd_high ON true
-                LEFT JOIN LATERAL (
-                    SELECT value FROM setpoint_snapshot
-                    WHERE greenhouse_id = $2
-                      AND parameter = 'band_track_fraction'
-                      AND ts <= s.bucket
-                    ORDER BY ts DESC LIMIT 1
-                ) btf_readback ON true
-                LEFT JOIN LATERAL (
-                    SELECT value FROM setpoint_changes
-                    WHERE greenhouse_id = $2
-                      AND parameter = 'band_track_fraction'
-                      AND ts <= s.bucket
-                      AND (expired_at IS NULL OR expired_at > s.bucket)
-                    ORDER BY ts DESC LIMIT 1
-                ) btf_change ON true
-            ),
-            scored AS (
-                SELECT
-                    *,
-                    temp_low_f + band_track_fraction
-                        * (LEAST(GREATEST(temp_target_f, temp_low_f), temp_high_f) - temp_low_f)
-                        AS pinched_temp_low_f,
-                    temp_high_f - band_track_fraction
-                        * (temp_high_f - LEAST(GREATEST(temp_target_f, temp_low_f), temp_high_f))
-                        AS pinched_temp_high_f,
-                    vpd_low_kpa + band_track_fraction
-                        * (LEAST(GREATEST(vpd_target_kpa, vpd_low_kpa), vpd_high_kpa) - vpd_low_kpa)
-                        AS pinched_vpd_low_kpa,
-                    vpd_high_kpa - band_track_fraction
-                        * (vpd_high_kpa - LEAST(GREATEST(vpd_target_kpa, vpd_low_kpa), vpd_high_kpa))
-                        AS pinched_vpd_high_kpa
-                FROM resolved
-                WHERE temp_target_f IS NOT NULL
-                  AND vpd_target_kpa IS NOT NULL
-                  AND temp_low_f IS NOT NULL
-                  AND temp_high_f IS NOT NULL
-                  AND vpd_low_kpa IS NOT NULL
-                  AND vpd_high_kpa IS NOT NULL
-            )
-            SELECT
-                phase_bucket,
-                count(*)::int AS sample_min,
-                round(min(solar_phase)::numeric, 2)::double precision AS phase_min,
-                round(max(solar_phase)::numeric, 2)::double precision AS phase_max,
-                round(avg(temp_avg)::numeric, 2)::double precision AS temp_avg_f,
-                round(avg(vpd_avg)::numeric, 3)::double precision AS vpd_avg_kpa,
-                round(min(temp_avg - dew_point)::numeric, 2)::double precision AS min_dp_margin_f,
-                round(avg(solar_w_m2)::numeric, 1)::double precision AS avg_solar_w_m2,
-                round((100.0 * count(*) FILTER (
-                        WHERE temp_avg BETWEEN temp_low_f AND temp_high_f
-                          AND vpd_avg BETWEEN vpd_low_kpa AND vpd_high_kpa
-                    ) / NULLIF(count(*), 0))::numeric, 2)::double precision AS served_both_pct,
-                round((100.0 * count(*) FILTER (
-                        WHERE temp_avg BETWEEN pinched_temp_low_f AND pinched_temp_high_f
-                          AND vpd_avg BETWEEN pinched_vpd_low_kpa AND pinched_vpd_high_kpa
-                    ) / NULLIF(count(*), 0))::numeric, 2)::double precision AS pinched_both_pct,
-                round((100.0 * count(*) FILTER (
-                        WHERE vpd_avg > vpd_high_kpa
-                    ) / NULLIF(count(*), 0))::numeric, 2)::double precision AS vpd_high_miss_pct,
-                round((100.0 * count(*) FILTER (
-                        WHERE vpd_avg < vpd_low_kpa
-                    ) / NULLIF(count(*), 0))::numeric, 2)::double precision AS vpd_low_miss_pct
-            FROM scored
-            GROUP BY phase_order, phase_bucket
-            ORDER BY phase_order
-            """,
-            d,
-            greenhouse_id,
-        )
-
-        moisture_rows = await conn.fetch(
-            """
+        moisture_sql = """
             WITH bounds AS (
                 SELECT
                     ($1::date::timestamp AT TIME ZONE 'America/Denver') AS start_ts,
@@ -1235,13 +1205,8 @@ async def outcome_kpi(target_date: str = "") -> str:
             FROM enriched
             GROUP BY action, reason
             ORDER BY decisions DESC, action, reason
-            """,
-            d,
-            greenhouse_id,
-        )
-
-        vpd_policy_row = await conn.fetchrow(
             """
+        vpd_policy_sql = """
             WITH bounds AS (
                 SELECT
                     ($1::date::timestamp AT TIME ZONE 'America/Denver') AS start_ts,
@@ -1353,19 +1318,14 @@ async def outcome_kpi(target_date: str = "") -> str:
                     )
                 )::numeric, 1)::double precision AS avg_dehum_to_wet_gap_min
             FROM classified
-            """,
-            d,
-            greenhouse_id,
-        )
-
+            """
         # #327: VPD-policy episode counters by estimator reason (mx_reason).
         # One row per modal estimator reason across the day's action episodes;
         # pre-#385 rows (no parsed object) land in 'estimator_absent' so the
         # counters stay meaningful across the fw 995c9b3 -> #385 -> #410
         # rollout. This is the #371 grading surface for "did the cycle take
         # vent_plus_heat_hold or heat_assist?".
-        vpd_policy_reason_rows = await conn.fetch(
-            """
+        vpd_policy_reason_sql = """
             WITH bounds AS (
                 SELECT
                     ($1::date::timestamp AT TIME ZONE 'America/Denver') AS start_ts,
@@ -1430,10 +1390,126 @@ async def outcome_kpi(target_date: str = "") -> str:
             FROM episodes
             GROUP BY mx_reason
             ORDER BY episodes DESC, mx_reason
-            """,
-            d,
-            greenhouse_id,
+            """
+
+        # #387: the fetches above are mutually independent single-day reads.
+        # They used to run as ~13 serial awaits (~27-30 s cold on prod, ~12 s
+        # of it the duplicated pinched/phase scan); they now run concurrently,
+        # grouped per connection so queries over the same base table share a
+        # warm buffer cache. asyncpg connections cannot multiplex queries, so
+        # the fan-out borrows from the small bounded module pool
+        # (_kpi_fanout_pool_get) while the heaviest unit — the combined
+        # pinched-corridor + solar-phase statement — runs on this call's own
+        # connection. Response content is byte-identical to the serial
+        # version; this is a latency-only change (see the PR #387 golden
+        # equivalence runs for the warm-cache benchmark).
+        pinched_corridor_columns = (
+            "sample_min",
+            "samples_with_fraction_readback",
+            "avg_band_track_fraction",
+            "min_band_track_fraction",
+            "max_band_track_fraction",
+            "temp_pct",
+            "vpd_pct",
+            "both_pct",
+            "day_pct",
+            "night_pct",
+            "p95_temp_miss_f",
+            "p95_vpd_miss_kpa",
         )
+        solar_phase_bucket_columns = (
+            "phase_bucket",
+            "sample_min",
+            "phase_min",
+            "phase_max",
+            "temp_avg_f",
+            "vpd_avg_kpa",
+            "min_dp_margin_f",
+            "avg_solar_w_m2",
+            "served_both_pct",
+            "pinched_both_pct",
+            "vpd_high_miss_pct",
+            "vpd_low_miss_pct",
+        )
+
+        async def _pinched_phase_task(c: asyncpg.Connection):
+            # One statement returns the single pinched aggregate row joined
+            # against the 0-4 phase-bucket rows; split it back into the two
+            # shapes the response builder has always consumed. Dict key order
+            # matches the historical per-query SELECT column order — it is
+            # visible in the serialized response.
+            rows = await c.fetch(pinched_phase_sql, d, greenhouse_id)
+            first = rows[0] if rows else None
+            pinched = {col: first[col] for col in pinched_corridor_columns} if first else {}
+            phase_rows = [
+                {col: row[f"ph_{col}"] for col in solar_phase_bucket_columns}
+                for row in rows
+                if row["ph_phase_bucket"] is not None
+            ]
+            return pinched, phase_rows
+
+        async def _summary_resources_task(c: asyncpg.Connection):
+            summary_row = await c.fetchrow(summary_sql, d, greenhouse_id)
+            dli_row = await c.fetchrow(dli_sql, d, greenhouse_id)
+            if dli_row:
+                dli_evidence = DliEvidence.model_validate(dict(dli_row))
+            else:
+                validity_row = await c.fetchrow(dli_validity_sql, d, greenhouse_id)
+                dli_evidence = DliEvidence.model_validate(dict(validity_row))
+            water_resource_row = await c.fetchrow(water_sql, d, greenhouse_id)
+            energy_resource_row = await c.fetchrow(energy_sql, d, greenhouse_id)
+            return summary_row, dli_evidence, water_resource_row, energy_resource_row
+
+        async def _equipment_task(c: asyncpg.Connection):
+            cycle_rows = await c.fetch(cycles_sql, d, greenhouse_id)
+            dryout_rows = await c.fetch(dryout_sql, d, greenhouse_id)
+            return cycle_rows, dryout_rows
+
+        async def _dif_task(c: asyncpg.Connection):
+            return await c.fetchrow(dif_sql, d, greenhouse_id)
+
+        async def _action_log_task(c: asyncpg.Connection):
+            action_rows = await c.fetch(actions_sql, d, greenhouse_id)
+            moisture_rows = await c.fetch(moisture_sql, d, greenhouse_id)
+            vpd_policy_row = await c.fetchrow(vpd_policy_sql, d, greenhouse_id)
+            vpd_policy_reason_rows = await c.fetch(vpd_policy_reason_sql, d, greenhouse_id)
+            return action_rows, moisture_rows, vpd_policy_row, vpd_policy_reason_rows
+
+        pool = await _kpi_fanout_pool_get()
+
+        async def _on_pool(task):
+            async with pool.acquire() as pooled_conn:
+                return await task(pooled_conn)
+
+        # return_exceptions=True so every branch runs to completion (each is
+        # bounded by the per-connection statement timeout) and no cancelled
+        # sibling leaks a mid-flight query; the first failure is then
+        # re-raised to keep the serial version's fail-loud behavior.
+        results = await asyncio.gather(
+            _pinched_phase_task(conn),
+            _on_pool(_summary_resources_task),
+            _on_pool(_equipment_task),
+            _on_pool(_dif_task),
+            _on_pool(_action_log_task),
+            return_exceptions=True,
+        )
+        for result in results:
+            if isinstance(result, BaseException):
+                raise result
+        (
+            (pinched, phase_rows),
+            (summary_row, dli_evidence, water_resource_row, energy_resource_row),
+            (cycle_rows, dryout_rows),
+            dif_row,
+            (action_rows, moisture_rows, vpd_policy_row, vpd_policy_reason_rows),
+        ) = results
+
+        summary = dict(summary_row) if summary_row else {}
+        water_resource = dict(water_resource_row) if water_resource_row else None
+        energy_resource = dict(energy_resource_row) if energy_resource_row else None
+        if energy_resource and isinstance(energy_resource.get("coefficient_revisions"), str):
+            energy_resource["coefficient_revisions"] = json.loads(energy_resource["coefficient_revisions"])
+        dif = dict(dif_row) if dif_row else {}
 
         moisture_sample_count = sum(row["decisions"] for row in moisture_rows)
         moisture_estimator = {
