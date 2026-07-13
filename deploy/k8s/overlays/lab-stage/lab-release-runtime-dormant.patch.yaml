@@ -1,0 +1,8 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-lab-release-runtime
+spec:
+  # Source-visible only. An operator-reviewed activation must replace both
+  # zero image digests and explicitly raise this count in a later change.
+  replicas: 0
