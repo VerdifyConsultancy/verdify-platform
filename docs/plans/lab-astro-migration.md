@@ -53,15 +53,31 @@ changes state.
 ## Execution phases and gates
 
 Phase 1 — **Unblock the pipeline (P0, owner: codex).**
-Diagnose `build-lab-astro` test failure on rev `3ce6674` (in-cluster differs
-from PR CI: suspect real-content/egress/memory), fix on main, re-trigger the
-build, land the `ci/lab-stage-pin-*` digest PR (the pin lives at
-`deploy/k8s/overlays/lab-stage/kustomization.yaml`, still pointing at
-`2c03489c`), gate-review, roll stage. Evidence trail: failed workflow
-`verdify-platform-ci-9vzwx`; the 8h-old errored
-`verdify-lab-stage-resume-pin-debug…open-lab-stage-pin-pr` pod holds the
-prior pin attempt's failure logs — capture before GC. Sibling failure to
-diagnose in passing: run `c7b2b` (rev `c1a7fff`) failed `build-api`.
+ROOT CAUSE (confirmed by local repro, 2026-07-13 forensics): the
+`build-lab-astro` test initContainer (`node:22-bookworm` in WorkflowTemplate
+`verdify-platform-ci` → `repo-build/build`, defined in jvallery/agents
+`platform/kubernetes/ci/agent-fleet-ci/workflows/`) never installs Playwright
+browsers; PR #461 added `test:quality:built` (Playwright `@quality`) to
+`npm test`, so every stage/build push since `7020834` fails at
+`chromium.launch()` ("Executable doesn't exist … run npx playwright
+install"). PR CI stays green because it runs zero site-astro steps (parity
+gap), and the authoring pod had a pre-seeded `~/.cache/ms-playwright`.
+Fix options: (a) repo-local — make site-astro's test chain provision its
+browser (e.g. `npx playwright install --with-deps chromium` before the
+quality gate, or gate on browser availability); (b) control-plane — patch the
+WFT test command or bake a pinned playwright test image (jvallery/agents PR).
+Then re-trigger CI for main HEAD and let the chain open the
+`ci/lab-stage-pin-*` PR (pin target:
+`deploy/k8s/overlays/lab-stage/kustomization.yaml`, still `2c03489c`),
+gate-review, roll stage.
+Known pipeline debt found in the same sweep (file follow-ups, coordinate for
+jvallery/agents changes): `open-lab-stage-pin-pr` is non-idempotent
+(non-force push + late curl/jq install — stranded PR-less branch
+`ci/lab-stage-pin-aa99b5a9a0be` holds digest `df8a3279` for aa99b5a; delete
+after a fresh pin lands); podGC `OnPodCompletion` destroys failure logs;
+`pin-digests` "main: Error" races in older runs; and `build-api` Kaniko
+failure on run `c7b2b` (rev `c1a7fff`) is SEPARATE and currently blocks prod
+digest pins for the firmware-OTA commit — diagnose alongside.
 GATE: stage serves the post-#462 digest; shell reports 1.1.0.
 
 Phase 2 — **Stage convergence verification (owner: codex, verified by outer
