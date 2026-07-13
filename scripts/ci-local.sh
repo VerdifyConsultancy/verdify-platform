@@ -57,6 +57,7 @@ $PY -m pytest -q \
   tests/test_forecast_action_engine_path.py \
   tests/test_g5_dualwrite_validation.py \
   tests/test_generate_daily_plan.py \
+  tests/test_grafana_cm_check.py \
   tests/test_grafana_manifest_security.py \
   tests/test_lab_publish_k3s_guard.py \
   tests/test_mqtt_fanout.py \
@@ -79,6 +80,9 @@ $PY -m pytest -q \
 
 step "migration rollback safety classification"
 $PY scripts/check_migration_rollback_safety.py
+
+step "grafana dashboard CMs match JSON sources (#392)"
+$PY scripts/gen-grafana-dashboard-cms.py --check
 
 step "twin vendored source compiles (the initContainer's exact build)"
 if command -v g++ >/dev/null; then

@@ -74,7 +74,9 @@ Key facts:
    `scripts/verdify-db.sh prod` kubectl-execs psql in the `verdify-db-0` pod
    (read-only SELECTs are safe; never run destructive prod DB work without a gate).
 3. **Regenerate the CMs:** `python3 scripts/gen-grafana-dashboard-cms.py`
-   (validates JSON, warns near the 1 MiB limit).
+   (validates JSON, warns near the 1 MiB limit). CI enforces this:
+   `make grafana-cm-check` (`--check` mode, run by `scripts/ci-local.sh`)
+   fails on any source↔CM drift (#392).
 4. **Commit + push** (`grafana/dashboards/*.json` + the regenerated CM) so
    git == live.
 5. **Deploy the CM** (server-side):

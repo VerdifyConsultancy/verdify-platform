@@ -267,6 +267,9 @@ grafana-brand-check: ## Verify embedded Grafana panels use Verdify Lab styling r
 grafana-brand-check-live: ## Verify live embedded Grafana panels use Verdify Lab styling rules
 	$(PYTHON) scripts/brand-grafana-embeds.py --check --live
 
+grafana-cm-check: ## Verify generated dashboard ConfigMaps match grafana/dashboards JSON sources (#392)
+	$(PYTHON) scripts/gen-grafana-dashboard-cms.py --check
+
 site-lint: ## Run cheap lint for public-site content and routes
 	$(PYTHON) scripts/lint_public_site.py
 
