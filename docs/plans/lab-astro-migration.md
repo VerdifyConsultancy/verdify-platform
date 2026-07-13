@@ -1,21 +1,22 @@
 # Lab Astro Migration — Consolidated Program Tracker
 
-Last updated: 2026-07-13 (Phase 4c offline producer build/probe/pin gate passed;
-Phase 4b S3 foundation ready for review).
+Last updated: 2026-07-13 (Phase 4c offline producer and current dormant-runtime
+build/probe/pin gates passed; Phase 4b S3 foundation merged; occurrence
+adapter is carried by #502).
 Owner: platform agent (Claude outer loop plans/verifies; Codex executes on
 xhigh). Human gate: Jason (prod sync, DNS/edge, Quartz retirement, credential
 work). Epic: #351 (L9, G3). This file is the single source of truth for the
 Quartz→Astro migration of lab.verdify.ai; update it whenever a phase gate
 changes state.
 
-## Ground truth (verified live 2026-07-13 ~07:04 UTC)
+## Ground truth (stage verified live ~07:04 UTC; repo/CI refreshed ~16:15 UTC)
 
 | Surface | State |
 |---|---|
 | `lab.verdify.ai` (prod) | Quartz. `verdify-lab` Deployment in `verdify-prod` (ghcr image — pre-ADR-0021 holdover), `verdify-lab-publisher` CronJob republished every 10 min (mutable, shared RWO PVC, both replicas node-pinned). Healthy and fresh; had a 5-job BackoffLimitExceeded streak before recovering. |
 | `lab-stage.verdify.ai` (canary) | Astro. `verdify-lab-astro-stage` in ns `verdify-platform`, 2/2 Ready with zero restarts on distinct nodes, exact image and pod image IDs `verdify-lab-astro@sha256:ee36941f20028fcfe06f12bf253e7139c00e3d5de1949eb8b12bb1d4ebe60b99` (pin PR #468), shell contract **1.1.0**, content frozen at the 2026-07-12 snapshot. Live T0/T+10 acceptance passed and the ArgoCD app returned to manual-sync. |
-| `main` | Astro source now includes the accepted static implementation, dormant release/cache runtime, offline camera producer (#487), and complete offline 143-graph producer (#492). Runtime pin #495 binds the dormant agent/nginx pair to the exact graph-containing source; the live stage remains the static image above. Occurrence-store/event wiring, exact parity, and production cutover remain. |
-| In-cluster CI | **Green for lab-astro.** Current-source workflow `verdify-platform-ci-d9bqw` completed 17/17 Lab Pod gates for `64dda4d...`: 12 browser quality tests, static/agent/nginx builds, metadata hydration, exact static probe, and paired runtime probe. Pin #495 passed exact-head PR CI/render/kubeconform; its digest-only follow-up workflow also passed. Earlier Playwright fixes #463/#464 and agents#2969/#2970 remain enforced without relaxing quality budgets. |
+| `main` | Astro source includes the accepted static implementation, dormant release/cache runtime, offline camera producer (#487), complete offline 143-graph producer (#492), and inactive S3 conditional-store foundation (#496). Runtime pin #500 binds the dormant agent/nginx pair to the latest completed relevant source chain; later #499 changes are outside the Lab source. The live stage remains the static image above. Occurrence caller/event wiring, exact parity, and production cutover remain. |
+| In-cluster CI | **Green for the latest completed Lab source/pin chain.** Workflow `verdify-platform-ci-crv96` completed 17/17 Lab Pod gates for `6729cc2...`: 12 browser quality tests, static/agent/nginx builds, metadata hydration, exact static probe, and paired runtime probe. Pin #500 passed exact-head PR CI/render/kubeconform and its digest-only follow-up workflow passed. Later exact-main workflows do not authorize stage sync or runtime activation. Earlier Playwright fixes #463/#464 and agents#2969/#2970 remain enforced without relaxing quality budgets. |
 
 ## Completed (do not re-plan)
 
@@ -49,9 +50,9 @@ Child issues (persisted 2026-07-13 post-consensus): 1→#474, 2→#475, 3→#476
 | 4 | Media & lightbox | Responsive images, intrinsic sizing, and lightbox accepted on stage | Production remains Quartz until Phase 5 |
 | 5 | Planner/evidence templates | Accepted on stage against the full frozen snapshot | Event-driven content refresh remains Phase 4b |
 | 6 | Semantic parity | Routes/aliases complete; comparator improved | Exact same-snapshot parity not green: ~240 false findings from SVG-`<title>` parser bug (fix exists uncommitted on a dead worktree — must be recreated), 9 unavailable historical refs (5 daily-plan routes, 4 images), and Quartz-vs-Astro must build from the SAME immutable snapshot |
-| 7 | Immutable publishing | Local-filesystem CAS/release/cache engine merged; 4a runtime is source-visible with exact source-bound images as a disconnected `replicas: 0` workload | S3 conditional-store foundation is not yet on main; CLI/caller, occurrence adapter, endpoint/credential-name probe, distributed coordination, retention/GC, and event producer remain; no runtime pod is scheduled or routed |
+| 7 | Immutable publishing | Local-filesystem CAS/release/cache engine and inactive S3 conditional-store foundation (#496) merged; typed occurrence adapter is carried by #502; 4a runtime is source-visible with exact source-bound images as a disconnected `replicas: 0` workload | CLI/caller, endpoint/credential-name probe, distributed coordination, retention/GC, and event producer remain; no runtime pod is scheduled or routed |
 | 8 | Quality gates | Strict real-content gates green; exact tested build passed live T0 and T+10 acceptance | Keep the same budgets for every Phase 4 rollout; no production acceptance yet |
-| 9 | Production cutover | Fail-closed canary scaffold is preserved in open PR #471 | Not on main/built/pinned/deployed; Quartz remains authoritative; Jason APPLY required |
+| 9 | Production cutover | Fail-closed canary scaffold merged via #471 | Not built/pinned/deployed; Quartz remains authoritative; Jason APPLY required |
 
 ## Execution phases and gates
 
@@ -166,8 +167,9 @@ Phase 4 — **Feature completion (owner: codex, critical-path order below).**
    implementation may proceed, but live reporting or occurrence activation
    remains separately Jason-gated.
    Their exact-source static/agent/nginx build, metadata, static-image, paired
-   runtime, and dormant digest-pin chain passed via `verdify-platform-ci-d9bqw`
-   and #495. This proves the packaged source pair only; no stage sync,
+   runtime, and latest completed dormant digest-pin chain passed via
+   `verdify-platform-ci-crv96` and #500. This proves the packaged source pair
+   only; no stage sync,
    reporting feed, producer request, route, or runtime activation occurred.
 2. **4a Release runtime:** `d91737d` landed via #473 with init hydration,
    atomic runtime, readiness, metrics, and tests. The follow-through makes the
@@ -184,6 +186,10 @@ Phase 4 — **Feature completion (owner: codex, critical-path order below).**
    writes and a distributed lease (credential presence by name only),
    event-driven publishing, bounded retention/GC, and resource metrics. S3
    occurrence wiring and S7 closure are hard-gated on the 4c producer contract.
+   The inactive full-site S3 conditional-store foundation merged through #496;
+   it is not selected by a CLI or workload and carries no endpoint, credential,
+   route, or activation. #502 carries the distinct typed occurrence adapter
+   while keeping S3 mutation caller-disabled.
 4. **4d Exact parity:** recreate the SVG-title comparator fix (+8 tests),
    rebuild Quartz+Astro from the same immutable snapshot, burn down real
    findings, and disposition the nine unavailable historical references. Its
@@ -196,40 +202,41 @@ fallbacks at T0 and T+10, with no pending/invalid occurrences and with LKG and
 freshness recovery proven. No reporting-tier activation, credential work,
 production sync, DNS, or Quartz change occurs without its recorded human gate.
 
-Phase 5 — **Production cutover (Jason-gated).** Land canary scaffold
-(`da26d54`) on main once Phase 2 is green, build/pin/deploy the dark canary,
-full acceptance vs prod, then Jason APPLY: route cutover, Quartz retirement,
-publisher decommission, ghcr image retirement (ADR-0021 cleanup).
+Phase 5 — **Production cutover (Jason-gated).** The canary scaffold landed via
+#471 but remains unbuilt, unpinned, undeployed, and unrouted. Build/pin/deploy
+the dark canary only after its gates, run full acceptance vs prod, then Jason
+APPLY: route cutover, Quartz retirement, publisher decommission, ghcr image
+retirement (ADR-0021 cleanup).
 GATE: Jason explicit approval; rollback = route flip back to Quartz (kept
 warm until sign-off).
 
 ## Branch dispositions (2026-07-13, per-branch triage vs origin/main)
 
-KEEP — real unmerged work:
+LANDED — salvaged work:
 
 - `coordinator/lab-production-canary-v2` (da26d54) — the fail-closed Astro
-  production canary scaffold, salvaged onto current main as PR #471 (head
-  27822e1; in-cluster PR CI green). Phase 5 input; leave open/unmerged until its
-  gates. It supersedes the unpushed local-main
+  production canary scaffold, merged onto main via PR #471 as `0285196` after
+  in-cluster PR CI. It remains dormant Phase 5 input and is not built, pinned,
+  deployed, or routed. It supersedes the unpushed local-main
   commit 03cff94 (verified patch-identical) and the canary copies buried in
   `web/lab-production-candidate`, `coordinator/lab-s3-release`, and
   `coordinator/lab-goal-completion`.
 - `coordinator/lab-release-runtime` — ONLY home of d91737d, the immutable
   release-cache runtime (2-pod read-only cache candidate, init hydration +
   sidecar reconciliation, atomic nginx current/tree, readiness/metrics, 61
-  unit tests). Only d91737d was cherry-picked onto current main as PR #473
-  (head 29edeb9; in-cluster PR CI green); the five superseded sibling commits
-  were omitted.
+  unit tests). Only d91737d was cherry-picked onto main via PR #473 as
+  `71530e1` after in-cluster PR CI; the five superseded sibling commits were
+  omitted.
 - `security/grafana-supported-images` — unrelated to lab but valuable:
   upgrades EOL grafana-oss 11.6.0 / renderer 3.12.6 to supported digest-pinned
-  releases + Secret-sourced renderer token. Salvaged as PR #472 (head 38536ec;
-  in-cluster PR CI green); prod Grafana Secret delivery and sync stay gated.
+  releases + Secret-sourced renderer token. Merged via PR #472 as `37561db`
+  after in-cluster PR CI; prod Grafana Secret delivery and sync stay gated.
 - `coordinator/lab-goal-completion` — one salvage beyond the canary: PR #462's
   merge dropped a release-store section from
-  `docs/site-publishing-pipeline.md`; the exact section is restored in PR #470
-  (head 8846b00; in-cluster PR CI green), and the source branch is deleted.
+  `docs/site-publishing-pipeline.md`; the exact section was restored via PR
+  #470 as `e34cf1d` after in-cluster PR CI, and the source branch is deleted.
 
-OPEN PR — already the vehicle:
+CLOSED REVIEW VEHICLE:
 
 - `web/public-output-hls-ts` = PR #458 — **MERGED 2026-07-13 ~11:15Z** after
   outer-loop (Claude) review, verdict MERGE-AFTER-FIXES: HIGH fixes applied
@@ -243,7 +250,8 @@ OPEN PR — already the vehicle:
   validate (`verdify-platform-pr-ci-dgmff`), merged at head 6ff5b19 + branch
   deleted. MEDIUM/LOW review findings remain tracked as PR comments. The two
   subsumed branches (`web/public-output-guard`,
-  `web/site-unification-integration`) are now safe to delete. Residue: two
+  `web/site-unification-integration`) are confirmed absent locally and on
+  `origin`. Residue: two
   inert debug Workflows (`…debug458`, `…debug458b`) in agent-fleet-ci need a
   delete-rights cleanup.
 
@@ -258,9 +266,8 @@ DELETE — verified superseded (content demonstrably on main via #461/#462):
   `coordinator/lab-s3-release` (local-filesystem release/CAS content already on main; canary
   superseded), and `coordinator/lab-goal-completion` after PR #470 preserved its
   doc patch. These are the nine authorized deletions.
-- **Deferred:** `web/public-output-guard` +
-  `web/site-unification-integration` are subsumed by PR #458 but stay until that
-  PR is green and merged.
+- **Confirmed absent:** `web/public-output-guard` +
+  `web/site-unification-integration`, subsumed by merged PR #458.
 - Local `main` in the shared root checkout: do NOT push, reset, rewrite, or
   otherwise disturb it; its extra commit is canary-v2 content and may coexist
   with unrelated operator state. Continue all program work from fresh
@@ -276,6 +283,11 @@ triage live on the (now-deleted) local branches' history and were never
 merged. Phase 4b therefore includes IMPLEMENTING the S3 backend and its
 conditional-write contract before any CLI/event wiring; endpoint and
 credential checks stay name-only and activation-gated.
+
+RESOLUTION (2026-07-13 ~14:56Z): #496 merged the inactive S3 full-site
+conditional-store foundation and exact SDK dependency. Occurrence persistence,
+CLI/caller selection, distributed coordination, retention/GC, endpoint proof,
+credentials, and activation remain open and separately gated.
 
 ## Operating cadence
 
