@@ -70,6 +70,7 @@ $PY -m pytest -q \
   tests/test_public_output_remediation.py \
   tests/test_public_zone_renderer.py \
   tests/test_service_restart_drift_guard.py \
+  tests/test_setpoint_server_db_backend.py \
   tests/test_site_content_refresh.py \
   tests/test_slack_config.py \
   tests/test_slack_ops.py \
