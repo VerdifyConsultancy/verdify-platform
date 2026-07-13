@@ -6,10 +6,9 @@ PR #504/pin #505 — user-reported viewport scroll-lock from body-level
 #502 content. Phases 1-3 PASSED; Phase 4 in flight.)
 build/probe/pin gates passed; Phase 4b S3 foundation merged; occurrence
 adapter is carried by #502; the source-only binding-name readiness contract is
-carried by #501). The occurrence-export caller exists only as the current local
-`phase4bc/occurrence-export-caller` validation slice: it has no PR, is not on
-`main`, and makes no endpoint, value, credential, deployment, or activation
-claim.
+carried by #501). The occurrence-export caller slice supplies only the injected,
+closed store-operation contract and makes no endpoint, value, credential,
+deployment, or activation claim.
 Owner: platform agent (Claude outer loop plans/verifies; Codex executes on
 xhigh). Human gate: Jason (prod sync, DNS/edge, Quartz retirement, credential
 work). Epic: #351 (L9, G3). This file is the single source of truth for the
@@ -22,7 +21,7 @@ changes state.
 |---|---|
 | `lab.verdify.ai` (prod) | Quartz. `verdify-lab` Deployment in `verdify-prod` (ghcr image — pre-ADR-0021 holdover), `verdify-lab-publisher` CronJob republished every 10 min (mutable, shared RWO PVC, both replicas node-pinned). Healthy and fresh; had a 5-job BackoffLimitExceeded streak before recovering. |
 | `lab-stage.verdify.ai` (canary) | Astro. `verdify-lab-astro-stage` in ns `verdify-platform`, 2/2 Ready with zero restarts on distinct nodes, exact image and pod image IDs `verdify-lab-astro@sha256:ee36941f20028fcfe06f12bf253e7139c00e3d5de1949eb8b12bb1d4ebe60b99` (pin PR #468), shell contract **1.1.0**, content frozen at the 2026-07-12 snapshot. Live T0/T+10 acceptance passed and the ArgoCD app returned to manual-sync. |
-| `main` | Astro source includes the accepted static implementation, dormant release/cache runtime, offline camera producer (#487), complete offline 143-graph producer (#492), inactive S3 conditional-store foundation (#496), and typed occurrence adapter (#502). Runtime pin #500 binds the dormant agent/nginx pair to the latest completed relevant source chain; later #499 changes are outside the Lab source. The source-only name-readiness contract is carried by #501, not yet a deployed binding. The live stage remains the static image above. The occurrence caller remains a local validation slice with no PR or `main` claim; event wiring, exact parity, and production cutover remain. |
+| `main` | Astro source includes the accepted static implementation, dormant release/cache runtime, offline camera producer (#487), complete offline 143-graph producer (#492), inactive S3 conditional-store foundation (#496), and typed occurrence adapter (#502). Runtime pin #500 binds the dormant agent/nginx pair to the latest completed relevant source chain; later #499 changes are outside the Lab source. The source-only name-readiness contract is carried by #501, not yet a deployed binding. The live stage remains the static image above. The occurrence caller slice is source-only and injected-operation-only; endpoint binding, event delivery, exact parity, and production cutover remain. |
 | In-cluster CI | **Green for the latest completed Lab source/pin chain.** Workflow `verdify-platform-ci-crv96` completed 17/17 Lab Pod gates for `6729cc2...`: 12 browser quality tests, static/agent/nginx builds, metadata hydration, exact static probe, and paired runtime probe. Pin #500 passed exact-head PR CI/render/kubeconform and its digest-only follow-up workflow passed. Later exact-main workflows do not authorize stage sync or runtime activation. Earlier Playwright fixes #463/#464 and agents#2969/#2970 remain enforced without relaxing quality budgets. |
 
 ## Completed (do not re-plan)
@@ -194,11 +193,10 @@ Phase 4 — **Feature completion (owner: codex, critical-path order below).**
    route, or activation. The source-only #501 binding-name contract fixes the
    future non-secret metadata ConfigMap and separate reader/writer Secret names,
    validates canonical key-name inventories without reading values, and makes no
-   existence, endpoint, deployment, or authority claim. A source-only 4c caller
-   is being validated on the local `phase4bc/occurrence-export-caller` branch;
-   until a PR exists it is not a `main` capability and does not claim endpoint,
-   value, credential, deployment, or activation wiring. Next land that caller
-   and wire the release CLI. Prove real-endpoint conditional writes and a
+   existence, endpoint, deployment, or authority claim. The source-only 4c
+   caller supplies a closed, injected store-operation contract without
+   endpoint, value, credential, deployment, or activation wiring. Next land
+   the caller slice and wire the release CLI. Prove real-endpoint conditional writes and a
    distributed lease (credential presence by name only), event-driven publishing, bounded
    retention/GC, and resource metrics. S3 occurrence wiring and S7 closure are
    hard-gated on the 4c producer contract.
