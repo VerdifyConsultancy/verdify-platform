@@ -43,10 +43,25 @@ EOF
   esac
 done
 
+reason_class() {
+  case "$1" in
+    "") printf 'unspecified' ;;
+    manual) printf 'manual' ;;
+    k3s-publisher|cron|scheduled*) printf 'scheduled' ;;
+    *planner*|plan-*) printf 'planner' ;;
+    *forecast*) printf 'forecast' ;;
+    *) printf 'custom' ;;
+  esac
+}
+
+REASON_CLASS="$(reason_class "$REASON")"
+
 SCRIPT_ROOT=${VERDIFY_SCRIPT_ROOT:-/srv/verdify/scripts}
 PYTHON=${PYTHON:-python3}
 LOG=${VERDIFY_PUBLISH_LOG:-/srv/verdify/state/publish.log}
 LOCK=${VERDIFY_PUBLISH_LOCK:-/var/lock/verdify-site-content-publish.lock}
+PUBLIC_OUTPUT_REPORT=${VERDIFY_PUBLIC_OUTPUT_REPORT:-/srv/verdify/state/public-output-source-report.json}
+PUBLIC_CONTENT_ROOT=${VERDIFY_PUBLIC_CONTENT_ROOT:-/srv/verdify/verdify-site/content}
 if ! PREV_DATE=$(date -d "${DATE} -1 day" +%Y-%m-%d 2>/dev/null); then
   PREV_DATE=$(date -j -f "%Y-%m-%d" "$DATE" -v-1d +%Y-%m-%d)
 fi
@@ -131,13 +146,20 @@ run_step() {
   return 0
 }
 
+report_failed_steps() {
+  echo "[$(date -Is)] publish finished with ${#FAILED_STEPS[@]} failed step(s) after retries; rebuild/promotion blocked:" | tee -a "$LOG" >&2
+  for step in "${FAILED_STEPS[@]}"; do
+    echo "[$(date -Is)]   - ${step}" | tee -a "$LOG" >&2
+  done
+}
+
 {
   flock -n 9 || {
-    echo "[$(date -Is)] publish already running; skipping ${REASON} refresh" | tee -a "$LOG"
+    echo "[$(date -Is)] publish already running; skipping reason_class=${REASON_CLASS}" | tee -a "$LOG"
     exit "$LOCKED_RC"
   }
 
-  echo "[$(date -Is)] Starting site content publish: reason=${REASON}, date=${DATE}" | tee -a "$LOG"
+  echo "[$(date -Is)] Starting site content publish: reason_class=${REASON_CLASS}, date=${DATE}" | tee -a "$LOG"
   cleanup_future_generated_plans
 
   run_step "$PYTHON" "$SCRIPT_ROOT/generate-daily-plan.py" --date "$PREV_DATE"
@@ -154,12 +176,24 @@ run_step() {
   run_step "$PYTHON" "$SCRIPT_ROOT/export-hourly-performance-dataset.py"
   run_step bash "$SCRIPT_ROOT/export-public-sample-dataset.sh"
   run_step bash "$SCRIPT_ROOT/gather-static-context.sh"
+  run_step "$PYTHON" "$SCRIPT_ROOT/check-public-output.py" \
+    --root "$PUBLIC_CONTENT_ROOT" \
+    --json-report "$PUBLIC_OUTPUT_REPORT"
+
+  # Generators and the source guard are candidate prerequisites. Never rebuild
+  # or promote a partial/stale tree after one of them fails.
+  if [[ ${#FAILED_STEPS[@]} -gt 0 ]]; then
+    report_failed_steps
+    exit 1
+  fi
 
   if [[ "$REBUILD" == true ]]; then
     run_step "$SCRIPT_ROOT/rebuild-site.sh"
-    echo "[$(date -Is)] Site content publish complete: reason=${REASON}, date=${DATE}" | tee -a "$LOG"
+    if [[ ${#FAILED_STEPS[@]} -eq 0 ]]; then
+      echo "[$(date -Is)] Site content publish complete: reason_class=${REASON_CLASS}, date=${DATE}" | tee -a "$LOG"
+    fi
   else
-    echo "[$(date -Is)] Site content generated without rebuild: reason=${REASON}, date=${DATE}" | tee -a "$LOG"
+    echo "[$(date -Is)] Site content generated without rebuild: reason_class=${REASON_CLASS}, date=${DATE}" | tee -a "$LOG"
   fi
 
   # Surface terminal failures once, at the end. A step that recovered on retry
@@ -168,10 +202,7 @@ run_step() {
   # A step that exhausted its retries exits the unit non-zero so systemd still
   # records genuine, persistent breakage as a failure.
   if [[ ${#FAILED_STEPS[@]} -gt 0 ]]; then
-    echo "[$(date -Is)] publish finished with ${#FAILED_STEPS[@]} failed step(s) after retries:" | tee -a "$LOG" >&2
-    for step in "${FAILED_STEPS[@]}"; do
-      echo "[$(date -Is)]   - ${step}" | tee -a "$LOG" >&2
-    done
+    report_failed_steps
     exit 1
   fi
 } 9>"$LOCK"

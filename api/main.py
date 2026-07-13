@@ -59,6 +59,17 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 for _p in reversed(("/app", str(_REPO_ROOT), "/mnt/iris/verdify")):
     if _p not in sys.path:
         sys.path.insert(0, _p)
+from verdify_public.output_policy import (  # noqa: E402
+    PUBLIC_CROP_EXCLUDE_SLUGS,
+    PUBLIC_CROP_SQL_NAME_PATTERN,
+    is_public_crop,
+    is_public_crop_record,
+    public_crop_sql_predicate,
+    public_crop_zone_joins,
+    public_crop_zone_predicate,
+    redact_non_public_crop_references,
+    redact_public_data,
+)
 from verdify_schemas import (  # noqa: E402
     AlertEnvelope,
     APIStatus,
@@ -107,6 +118,624 @@ HOUSE_BAND_COMPUTED_PARAMS = frozenset(
 )
 ZONE_VPD_TARGET_PARAMS = frozenset(name for name in CROP_BAND_REG if name.startswith("vpd_target_"))
 LEGACY_LIGHTING_COMPUTED_PARAMS = LEGACY_SHARED_LIGHTING_REG & FIRMWARE_SETPOINT_PARAMS
+PUBLIC_CROP_EXCLUDE_SLUGS_DB = sorted(PUBLIC_CROP_EXCLUDE_SLUGS)
+PUBLIC_CROP_FIELDS = (
+    "id",
+    "name",
+    "variety",
+    "position",
+    "zone",
+    "planted_date",
+    "expected_harvest",
+    "stage",
+    "count",
+    "seed_lot_id",
+    "supplier",
+    "base_temp_f",
+    "target_dli",
+    "target_vpd_low",
+    "target_vpd_high",
+    "notes",
+    "is_active",
+    "created_at",
+    "updated_at",
+    "greenhouse_id",
+)
+PUBLIC_CROP_RESPONSE_FIELDS = (*PUBLIC_CROP_FIELDS, "latest_health")
+PUBLIC_OBSERVATION_FIELDS = (
+    "id",
+    "ts",
+    "obs_type",
+    "zone",
+    "position",
+    "severity",
+    "species",
+    "count",
+    "affected_pct",
+    "crop_id",
+    "source",
+    "notes",
+    "health_score",
+    "greenhouse_id",
+    "position_id",
+    "zone_id",
+    "plant_height_cm",
+    "leaf_count",
+    "canopy_cover_pct",
+    "flowering_count",
+    "fruit_count",
+    "root_condition",
+    "mortality_count",
+    "stress_tags",
+)
+PUBLIC_EVENT_FIELDS = (
+    "id",
+    "ts",
+    "crop_id",
+    "event_type",
+    "old_stage",
+    "new_stage",
+    "count",
+    "source",
+    "notes",
+    "greenhouse_id",
+    "position_id",
+)
+PUBLIC_POSITION_FIELDS = (
+    "position_id",
+    "greenhouse_id",
+    "position_label",
+    "shelf_slug",
+    "shelf_kind",
+    "zone_id",
+    "zone_slug",
+    "zone_name",
+    "crop_id",
+    "crop_name",
+    "crop_variety",
+    "crop_stage",
+    "crop_planted_date",
+    "crop_expected_harvest",
+    "crop_catalog_slug",
+    "crop_days_in_place",
+    "is_occupied",
+)
+PUBLIC_CROP_HISTORY_FIELDS = (
+    "position_id",
+    "greenhouse_id",
+    "position_label",
+    "zone_slug",
+    "crop_id",
+    "crop_name",
+    "crop_variety",
+    "final_stage",
+    "planted_date",
+    "cleared_at",
+    "is_active",
+    "days_in_place",
+    "crop_catalog_slug",
+    "crop_common_name",
+    "event_count",
+    "observation_count",
+    "harvest_count",
+)
+PUBLIC_CROP_LIFECYCLE_FIELDS = (
+    "crop_id",
+    "greenhouse_id",
+    "crop_name",
+    "variety",
+    "current_stage",
+    "is_active",
+    "planted_date",
+    "cleared_at",
+    "days_alive",
+    "current_zone_slug",
+    "current_position_label",
+    "crop_catalog_slug",
+    "catalog_name",
+    "catalog_category",
+    "events",
+    "total_weight_kg",
+    "total_units",
+    "total_revenue_usd",
+    "observation_count",
+    "avg_health_score",
+    "latest_observation_ts",
+)
+PUBLIC_CROP_LIFECYCLE_EVENT_FIELDS = (
+    "ts",
+    "event_type",
+    "old_stage",
+    "new_stage",
+    "position_id",
+    "notes",
+    "source",
+)
+PUBLIC_CATALOG_FIELDS = (
+    "crop_catalog_id",
+    "slug",
+    "common_name",
+    "scientific_name",
+    "category",
+    "season",
+    "cycle_days_min",
+    "cycle_days_max",
+    "base_temp_f",
+    "default_target_dli",
+    "default_target_vpd_low",
+    "default_target_vpd_high",
+    "default_ph_low",
+    "default_ph_high",
+    "default_ec_low",
+    "default_ec_high",
+    "stage_season_profiles",
+)
+PUBLIC_CATALOG_PROFILE_FIELDS = (
+    "growth_stage",
+    "season",
+    "hours_covered",
+    "temp_ideal_min_24h",
+    "temp_ideal_max_24h",
+    "vpd_ideal_min_24h",
+    "vpd_ideal_max_24h",
+    "dli_target_mol",
+)
+PUBLIC_CATALOG_HOURLY_FIELDS = (
+    "growth_stage",
+    "hour_of_day",
+    "season",
+    "temp_ideal_min",
+    "temp_ideal_max",
+    "temp_stress_low",
+    "temp_stress_high",
+    "vpd_ideal_min",
+    "vpd_ideal_max",
+    "vpd_stress_low",
+    "vpd_stress_high",
+    "dli_target_mol",
+    "source",
+)
+PUBLIC_WATER_RESOURCE_FIELDS = (
+    "date",
+    "greenhouse_id",
+    "quality_filtered_meter_gal",
+    "attributed_gal",
+    "climate_wetting_gal",
+    "wall_irrigation_gal",
+    "wall_fertigation_gal",
+    "unsupported_path_gal",
+    "ambiguous_gal",
+    "manual_or_unattributed_gal",
+    "command_only_runs",
+    "ambiguous_runs",
+    "meter_attributed_runs",
+    "conservation_error_gal",
+    "ledger_quality",
+    "resource_quality",
+    "available_for_scoring",
+)
+PUBLIC_ENERGY_RESOURCE_FIELDS = (
+    "date",
+    "kwh_estimated",
+    "measured_kwh",
+    "estimate_delta_kwh",
+    "quality_flag",
+    "greenhouse_id",
+    "modeled_kwh_low",
+    "modeled_kwh_high",
+    "coefficient_revisions",
+    "modeled_scope",
+    "measured_scope",
+    "meter_coverage_pct",
+    "runtime_coverage_pct",
+    "model_quality",
+    "measured_quality",
+    "modeled_available_for_scoring",
+    "measured_available_for_scoring",
+    "runtime_evidence",
+)
+PUBLIC_WATER_LEDGER_HEALTH_FIELDS = (
+    "greenhouse_id",
+    "raw_latest_ts",
+    "materialized_through_ts",
+    "raw_age_seconds",
+    "materializer_lag_seconds",
+    "last_total_gal",
+    "last_event_quality",
+    "latest_gap_ts",
+    "ledger_status",
+    "available_for_scoring",
+    "latest_discontinuity_ts",
+)
+PUBLIC_RESOURCE_HEALTH_FIELDS = (
+    "resource",
+    "greenhouse_id",
+    "quality",
+    "available_for_scoring",
+    "observed_through",
+    "detail",
+)
+PUBLIC_PLANNER_HEALTH_FIELDS = (
+    "generated_at",
+    "missed_expected_count",
+    "overdue_delivered_count",
+    "required_failure_count",
+    "resolved_count",
+    "recent_expected_count",
+    "latest_required",
+)
+PUBLIC_PLANNER_REQUIRED_FIELDS = (
+    "event_type",
+    "event_label",
+    "instance",
+    "expected_at",
+    "due_at",
+    "delivered_at",
+    "resolved_at",
+    "status",
+    "resulting_plan_id",
+    "trigger_id",
+)
+PUBLIC_EQUIPMENT_FIELDS = (
+    "id",
+    "greenhouse_id",
+    "slug",
+    "kind",
+    "name",
+    "model",
+    "watts",
+    "cost_per_hour_usd",
+    "specs",
+    "is_active",
+    "zone_slug",
+)
+PUBLIC_EQUIPMENT_SPEC_FIELDS = ("telemetry_slug",)
+PUBLIC_SWITCH_FIELDS = (
+    "greenhouse_id",
+    "board",
+    "pin",
+    "switch_slug",
+    "equipment_slug",
+    "equipment_name",
+    "equipment_kind",
+    "model",
+    "zone_slug",
+    "zone_name",
+    "purpose",
+    "state_source_column",
+    "is_active",
+)
+PUBLIC_SENSOR_FIELDS = (
+    "id",
+    "greenhouse_id",
+    "slug",
+    "position_id",
+    "kind",
+    "protocol",
+    "model",
+    "modbus_addr",
+    "gpio_pin",
+    "unit",
+    "source_table",
+    "source_column",
+    "expected_interval_s",
+    "accuracy",
+    "installed_date",
+    "is_active",
+    "zone_slug",
+)
+PUBLIC_PRESSURE_GROUP_FIELDS = (
+    "pressure_group_id",
+    "greenhouse_id",
+    "group_slug",
+    "group_name",
+    "constraint_kind",
+    "max_concurrent",
+    "systems",
+)
+PUBLIC_RELAY_TRUTH_FIELDS = frozenset(
+    {
+        "heat1",
+        "heat2",
+        "fan1",
+        "fan2",
+        "fog",
+        "vent",
+        "grow_light_main",
+        "grow_light_grow",
+        "mister_south",
+        "mister_west",
+        "mister_center",
+        "mister_south_fert",
+        "mister_west_fert",
+        "drip_wall",
+        "drip_center",
+        "drip_wall_fert",
+        "drip_center_fert",
+        "fert_master_valve",
+    }
+)
+PUBLIC_SENSOR_STATUS_FIELDS = frozenset(
+    {
+        "latest_climate_ts",
+        "latest_climate_age_s",
+        "temp_avg_present",
+        "vpd_avg_present",
+        "band_context_complete",
+    }
+)
+PUBLIC_TOPOLOGY_ZONE_FIELDS = ("zone_id", "slug", "name", "status", "shelves")
+PUBLIC_TOPOLOGY_SHELF_FIELDS = ("shelf_id", "slug", "name", "kind", "positions")
+PUBLIC_TOPOLOGY_POSITION_FIELDS = ("position_id", "label", "mount_type", "is_active")
+PUBLIC_ZONE_FULL_FIELDS = (
+    "zone_id",
+    "greenhouse_id",
+    "zone_slug",
+    "zone_name",
+    "orientation",
+    "sensor_modbus_addr",
+    "peak_temp_f",
+    "zone_status",
+    "zone_notes",
+    "shelves",
+    "sensors",
+    "equipment",
+    "water_systems",
+    "active_crops_fk_count",
+)
+PUBLIC_ZONE_SHELF_FIELDS = ("id", "slug", "name", "kind", "tier", "position_scheme")
+PUBLIC_ZONE_SENSOR_FIELDS = (
+    "id",
+    "slug",
+    "kind",
+    "protocol",
+    "model",
+    "modbus_addr",
+    "source_table",
+    "source_column",
+    "unit",
+    "is_active",
+)
+PUBLIC_ZONE_EQUIPMENT_FIELDS = (
+    "id",
+    "slug",
+    "kind",
+    "name",
+    "model",
+    "watts",
+    "cost_per_hour_usd",
+    "is_active",
+)
+PUBLIC_ZONE_WATER_SYSTEM_FIELDS = (
+    "id",
+    "slug",
+    "kind",
+    "name",
+    "nozzle_count",
+    "head_count",
+    "mount",
+    "pressure_group_id",
+    "is_fert_path",
+)
+PUBLIC_PRESSURE_SYSTEM_FIELDS = (
+    "water_system_slug",
+    "water_system_kind",
+    "equipment_slug",
+    "zone_slug",
+    "is_on",
+)
+PUBLIC_COEFFICIENT_REVISION_FIELDS = (
+    "equipment",
+    "revision",
+    "source",
+    "low",
+    "nominal",
+    "high",
+    "unit",
+    "evidence_ref",
+)
+PUBLIC_RUNTIME_EVIDENCE_FIELDS = (
+    "equipment",
+    "quality",
+    "complete_day",
+    "start_state_known",
+    "eligible",
+)
+PUBLIC_RESOURCE_HEALTH_DETAIL_FIELDS = (
+    "raw_latest_ts",
+    "raw_age_seconds",
+    "materializer_lag_seconds",
+    "latest_gap_ts",
+    "latest_discontinuity_ts",
+    "modeled_kwh",
+    "modeled_kwh_low",
+    "modeled_kwh_high",
+    "runtime_coverage_pct",
+    "scope",
+    "coefficient_revisions",
+    "runtime_evidence",
+    "measured_kwh",
+    "meter_coverage_pct",
+    "sample_count",
+    "current_meter_status",
+    "sample_age_seconds",
+    "recent_sample_count",
+    "completed_day_quality",
+)
+
+
+def _sql_columns(alias: str, fields: tuple[str, ...]) -> str:
+    return ", ".join(f"{alias}.{field}" for field in fields)
+
+
+def _project_public_record(row: object, fields: tuple[str, ...] | frozenset[str]) -> dict:
+    record = dict(row)
+    return redact_public_data({field: record[field] for field in sorted(fields) if field in record})
+
+
+def _json_list(value: object) -> list:
+    if isinstance(value, str):
+        value = json.loads(value)
+    return value if isinstance(value, list) else []
+
+
+def _project_json_records(value: object, fields: tuple[str, ...]) -> list[dict]:
+    return [_project_public_record(item, fields) for item in _json_list(value) if isinstance(item, dict)]
+
+
+def _project_topology_zones(value: object) -> list[dict]:
+    zones: list[dict] = []
+    for zone_value in _json_list(value):
+        if not isinstance(zone_value, dict):
+            continue
+        zone = _project_public_record(zone_value, PUBLIC_TOPOLOGY_ZONE_FIELDS)
+        shelves: list[dict] = []
+        for shelf_value in _json_list(zone_value.get("shelves")):
+            if not isinstance(shelf_value, dict):
+                continue
+            shelf = _project_public_record(shelf_value, PUBLIC_TOPOLOGY_SHELF_FIELDS)
+            shelf["positions"] = _project_json_records(
+                shelf_value.get("positions"),
+                PUBLIC_TOPOLOGY_POSITION_FIELDS,
+            )
+            shelves.append(shelf)
+        zone["shelves"] = shelves
+        zones.append(zone)
+    return zones
+
+
+def _project_zone_full(row: object) -> dict:
+    record = dict(row)
+    result = _project_public_record(record, PUBLIC_ZONE_FULL_FIELDS)
+    result["shelves"] = _project_json_records(record.get("shelves"), PUBLIC_ZONE_SHELF_FIELDS)
+    result["sensors"] = _project_json_records(record.get("sensors"), PUBLIC_ZONE_SENSOR_FIELDS)
+    result["equipment"] = _project_json_records(record.get("equipment"), PUBLIC_ZONE_EQUIPMENT_FIELDS)
+    result["water_systems"] = _project_json_records(
+        record.get("water_systems"),
+        PUBLIC_ZONE_WATER_SYSTEM_FIELDS,
+    )
+    return result
+
+
+def _project_catalog_record(row: object) -> dict:
+    record = dict(row)
+    result = _project_public_record(record, PUBLIC_CATALOG_FIELDS)
+    result["stage_season_profiles"] = _project_json_records(
+        record.get("stage_season_profiles"),
+        PUBLIC_CATALOG_PROFILE_FIELDS,
+    )
+    return result
+
+
+def _project_crop_lifecycle(row: object) -> dict:
+    record = dict(row)
+    result = _project_public_record(record, PUBLIC_CROP_LIFECYCLE_FIELDS)
+    result["events"] = _project_json_records(
+        record.get("events"),
+        PUBLIC_CROP_LIFECYCLE_EVENT_FIELDS,
+    )
+    return result
+
+
+def _project_energy_resource(row: object) -> dict:
+    record = dict(row)
+    result = _project_public_record(record, PUBLIC_ENERGY_RESOURCE_FIELDS)
+    result["coefficient_revisions"] = _project_json_records(
+        record.get("coefficient_revisions"),
+        PUBLIC_COEFFICIENT_REVISION_FIELDS,
+    )
+    result["runtime_evidence"] = _project_json_records(
+        record.get("runtime_evidence"),
+        PUBLIC_RUNTIME_EVIDENCE_FIELDS,
+    )
+    return result
+
+
+def _project_resource_health(row: object) -> dict:
+    record = dict(row)
+    result = _project_public_record(record, PUBLIC_RESOURCE_HEALTH_FIELDS)
+    result["detail"] = _project_resource_health_detail(record.get("detail"))
+    return result
+
+
+def _project_planner_health(row: object) -> dict:
+    record = dict(row)
+    result = _project_public_record(record, PUBLIC_PLANNER_HEALTH_FIELDS)
+    result["latest_required"] = _project_json_records(
+        record.get("latest_required"),
+        PUBLIC_PLANNER_REQUIRED_FIELDS,
+    )
+    return result
+
+
+def _project_equipment(row: object) -> dict:
+    record = dict(row)
+    result = _project_public_record(record, PUBLIC_EQUIPMENT_FIELDS)
+    specs = record.get("specs")
+    if isinstance(specs, str):
+        specs = json.loads(specs)
+    result["specs"] = _project_public_record(specs, PUBLIC_EQUIPMENT_SPEC_FIELDS) if isinstance(specs, dict) else {}
+    return result
+
+
+def _project_pressure_group(row: object) -> dict:
+    record = dict(row)
+    result = _project_public_record(record, PUBLIC_PRESSURE_GROUP_FIELDS)
+    result["systems"] = _project_json_records(record.get("systems"), PUBLIC_PRESSURE_SYSTEM_FIELDS)
+    return result
+
+
+def _project_resource_health_detail(value: object) -> dict:
+    if isinstance(value, str):
+        value = json.loads(value)
+    if not isinstance(value, dict):
+        return {}
+    result = _project_public_record(value, PUBLIC_RESOURCE_HEALTH_DETAIL_FIELDS)
+    result["coefficient_revisions"] = _project_json_records(
+        value.get("coefficient_revisions"),
+        PUBLIC_COEFFICIENT_REVISION_FIELDS,
+    )
+    result["runtime_evidence"] = _project_json_records(
+        value.get("runtime_evidence"),
+        PUBLIC_RUNTIME_EVIDENCE_FIELDS,
+    )
+    return result
+
+
+def _public_crop_sql_predicate(
+    slug_expression: str,
+    name_expression: str,
+    slug_parameter: int,
+    name_parameter: int,
+) -> str:
+    """SQL half of the shared fail-closed record policy, before pagination."""
+    return public_crop_sql_predicate(slug_expression, name_expression, slug_parameter, name_parameter)
+
+
+def _public_crop_sql_parameters() -> tuple[list[str], str]:
+    return PUBLIC_CROP_EXCLUDE_SLUGS_DB, PUBLIC_CROP_SQL_NAME_PATTERN
+
+
+def _public_crop_zone_sql_predicate(
+    zone_expression: str,
+    slug_expression: str,
+    name_expression: str,
+    slug_parameter: int,
+    name_parameter: int,
+    *,
+    crop_alias: str = "c",
+) -> str:
+    """Use one zone identity and protected-record predicate at every zone surface."""
+    return public_crop_zone_predicate(
+        zone_expression,
+        slug_expression,
+        name_expression,
+        slug_parameter,
+        name_parameter,
+        crop_alias=crop_alias,
+    )
+
+
 ACTIVITY_MIRROR_PARAMS = frozenset({"activity_start_hour", "activity_start_minute", "activity_duration_min"})
 EQUIPMENT_SWITCH_SETPOINTS = {
     "sw_economiser_enabled": "economiser_enabled",
@@ -133,6 +762,85 @@ DIRECT_WET_DEFAULTS = {
     "irrig_center_fert_days_mask": 127,
     "sw_direct_wet_gate_enabled": 1,
 }
+
+_POSITION_CROP_FIELDS = (
+    "crop_id",
+    "crop_name",
+    "crop_variety",
+    "crop_stage",
+    "crop_planted_date",
+    "crop_expected_harvest",
+    "crop_catalog_slug",
+    "crop_days_in_place",
+)
+
+
+def _sanitize_public_position(row: object) -> dict:
+    """Preserve empty/public positions while hiding fail-closed crop occupancy."""
+    result = _project_public_record(row, PUBLIC_POSITION_FIELDS)
+    occupied = bool(result.get("is_occupied"))
+    public_occupancy = occupied and is_public_crop_record(
+        result.get("crop_catalog_slug"),
+        result.get("crop_name"),
+        occupied=occupied,
+    )
+    if public_occupancy:
+        return redact_public_data(result)
+    for key in _POSITION_CROP_FIELDS:
+        result[key] = None
+    result["is_occupied"] = False
+    return redact_public_data(result)
+
+
+def _public_crop_rows(
+    rows: object,
+    *,
+    slug_key: str = "crop_catalog_slug",
+    name_key: str = "name",
+    fields: tuple[str, ...] = PUBLIC_CROP_FIELDS,
+) -> list[dict]:
+    public_rows: list[dict] = []
+    for row in rows:
+        record = dict(row)
+        if is_public_crop_record(record.get(slug_key), record.get(name_key), occupied=True):
+            public_rows.append(_project_public_record(record, fields))
+    return public_rows
+
+
+def _public_crop_history_rows(rows: object) -> list[dict]:
+    return _public_crop_rows(rows, name_key="crop_name", fields=PUBLIC_CROP_HISTORY_FIELDS)
+
+
+def _public_observation_rows(rows: object) -> list[dict]:
+    """Keep truly crop-less observations; fail closed for crop-linked rows."""
+    public_rows: list[dict] = []
+    for row in rows:
+        record = dict(row)
+        if record.get("crop_id") is None or is_public_crop_record(
+            record.get("crop_catalog_slug"),
+            record.get("crop_name"),
+            occupied=True,
+        ):
+            public_rows.append(_project_public_record(record, (*PUBLIC_OBSERVATION_FIELDS, "crop_name", "crop_zone")))
+    return public_rows
+
+
+async def _require_public_crop(conn, crop_id: int, greenhouse_id: str | None = None) -> None:
+    """Return 404 for missing, excluded, or identity-less crop records."""
+    sql = f"""
+        SELECT cc.slug AS crop_catalog_slug, c.name
+        FROM crops c
+        JOIN crop_catalog cc ON cc.id = c.crop_catalog_id
+        WHERE c.id = $1
+          AND {_public_crop_sql_predicate("cc.slug", "c.name", 2, 3)}
+    """
+    args: list[object] = [crop_id, *_public_crop_sql_parameters()]
+    if greenhouse_id is not None:
+        sql += " AND c.greenhouse_id = $4"
+        args.append(greenhouse_id)
+    row = await conn.fetchrow(sql, *args)
+    if row is None or not is_public_crop_record(row["crop_catalog_slug"], row["name"], occupied=True):
+        raise HTTPException(404, "Crop not found")
 
 
 def _activity_policy_values(lighting_row, lighting_circuit_rows) -> dict[str, float | int]:
@@ -345,7 +1053,21 @@ FRIGATE_BASE_URL_ENV = "VERDIFY_FRIGATE_PUBLIC_BASE_URL"
 GO2RTC_BASE_URL_ENV = "VERDIFY_GO2RTC_PUBLIC_BASE_URL"
 CLIMATE_ACTION_PROOF_MISSING_SQL = """
 WITH latest AS (
-    SELECT *
+    SELECT climate_action,
+           priority_axis,
+           climate_intent_version,
+           temp_low_f,
+           temp_target_f,
+           temp_high_f,
+           vpd_low_kpa,
+           vpd_target_kpa,
+           vpd_high_kpa,
+           temp_target_delta_f,
+           vpd_target_delta_kpa,
+           temp_band_error_f,
+           vpd_band_error_kpa,
+           relay_truth,
+           sensor_status
     FROM climate_action_log
     ORDER BY ts DESC
     LIMIT 1
@@ -593,7 +1315,8 @@ def _contact_notification_message(
                 "",
                 "Review queue:",
                 "docker exec verdify-timescaledb psql -U verdify -d verdify -x -c "
-                "\"SELECT * FROM public_contact_submissions WHERE status = 'new' ORDER BY created_at DESC LIMIT 20;\"",
+                '"SELECT id, created_at, name, email, topic, affiliation, message, status '
+                "FROM public_contact_submissions WHERE status = 'new' ORDER BY created_at DESC LIMIT 20;\"",
             ]
         )
     )
@@ -701,7 +1424,7 @@ async def require_write_access(
         return
     raise HTTPException(
         status_code=403,
-        detail=f"Write API disabled for unauthenticated request to {request.url.path}",
+        detail="Write API disabled for unauthenticated request",
     )
 
 
@@ -772,12 +1495,22 @@ async def get_setpoints(greenhouse_id: str = DEFAULT_GREENHOUSE):
             sorted(FIRMWARE_SETPOINT_PARAMS),
         )
         # For band-driven params, compute from crop science + house VPD policy.
-        band_row = await conn.fetchrow("SELECT * FROM fn_band_setpoints(now())")
-        zone_row = await conn.fetchrow("SELECT * FROM fn_zone_vpd_targets(now())")
-        house_row = await conn.fetchrow("SELECT * FROM fn_house_vpd_control_band(now())")
-        lighting_row = await conn.fetchrow("SELECT * FROM fn_lighting_policy(now(), $1)", greenhouse_id)
+        band_row = await conn.fetchrow(
+            "SELECT temp_low, temp_high, vpd_low, vpd_high, temp_target, vpd_target FROM fn_band_setpoints(now())"
+        )
+        zone_row = await conn.fetchrow(
+            "SELECT vpd_target_south, vpd_target_west, vpd_target_east, vpd_target_center "
+            "FROM fn_zone_vpd_targets(now())"
+        )
+        house_row = await conn.fetchrow("SELECT house_vpd_low, house_vpd_high FROM fn_house_vpd_control_band(now())")
+        lighting_row = await conn.fetchrow(
+            "SELECT target_dli, sunrise_hour, cutoff_hour, target_light_hours FROM fn_lighting_policy(now(), $1)",
+            greenhouse_id,
+        )
         lighting_circuit_rows = await conn.fetch(
-            "SELECT * FROM fn_lighting_minutes_policy(now(), $1) ORDER BY light_key",
+            "SELECT light_key, equipment, target_light_minutes, start_hour, cutoff_hour, "
+            "lux_on_threshold, lux_hysteresis, min_on_s, min_off_s, auto_enabled, legacy_dli_target "
+            "FROM fn_lighting_minutes_policy(now(), $1) ORDER BY light_key",
             greenhouse_id,
         )
         # Tier 1 #3: fail loud if band computation returned NULL.
@@ -815,7 +1548,10 @@ async def get_setpoints(greenhouse_id: str = DEFAULT_GREENHOUSE):
                 status_code=503,
                 detail="policy setpoint computation unavailable — check band and lighting policy functions",
             )
-        plan_rows = await conn.fetch("SELECT parameter, value FROM v_active_plan")
+        plan_rows = await conn.fetch(
+            "SELECT parameter, value FROM v_active_plan WHERE parameter = ANY($1::text[])",
+            sorted(FIRMWARE_SETPOINT_PARAMS),
+        )
         params = {r["parameter"]: r["value"] for r in rows}
         plan_values = {r["parameter"]: r["value"] for r in plan_rows}
         plan_params = set(plan_values)
@@ -901,7 +1637,8 @@ async def get_setpoints(greenhouse_id: str = DEFAULT_GREENHOUSE):
         switch_rows = await conn.fetch(
             """
             WITH switch_map(parameter, equipment) AS (
-                SELECT * FROM unnest($1::text[], $2::text[])
+                SELECT parameter, equipment
+                FROM unnest($1::text[], $2::text[]) AS mapping(parameter, equipment)
             ),
             latest AS (
                 SELECT DISTINCT ON (equipment) equipment, state
@@ -1028,7 +1765,7 @@ async def health():
     # MCP server health is monitored by the ingestor (planning_heartbeat), not the API.
     # The API can't reach localhost:8000 from inside Docker (MCP binds to 127.0.0.1 on host).
 
-    return {"status": overall, "checks": checks}
+    return redact_public_data({"status": overall, "checks": checks})
 
 
 @app.get("/health/detailed")
@@ -1067,29 +1804,51 @@ async def health_detailed():
     }
     if db_error is not None:
         result["checks"]["db_error"] = db_error
-    return result
+    return redact_public_data(result)
 
 
 # ── Greenhouse ──
+
+PUBLIC_GREENHOUSE_FIELDS = ("id", "name", "timezone", "status")
+PUBLIC_GREENHOUSE_COLUMNS = ", ".join(PUBLIC_GREENHOUSE_FIELDS)
+
+
+def _public_greenhouse(row: object) -> dict:
+    record = dict(row)
+    return redact_public_data({field: record.get(field) for field in PUBLIC_GREENHOUSE_FIELDS})
 
 
 @app.get("/api/v1/greenhouses")
 async def list_greenhouses():
     async with pool.acquire() as conn:
-        rows = await conn.fetch("SELECT * FROM greenhouses ORDER BY name")
-    return [dict(r) for r in rows]
+        rows = await conn.fetch(f"SELECT {PUBLIC_GREENHOUSE_COLUMNS} FROM greenhouses ORDER BY name")
+    return [_public_greenhouse(row) for row in rows]
 
 
 @app.get("/api/v1/greenhouses/{greenhouse_id}")
 async def get_greenhouse(greenhouse_id: str):
     async with pool.acquire() as conn:
-        row = await conn.fetchrow("SELECT * FROM greenhouses WHERE id = $1", greenhouse_id)
+        row = await conn.fetchrow(
+            f"SELECT {PUBLIC_GREENHOUSE_COLUMNS} FROM greenhouses WHERE id = $1",
+            greenhouse_id,
+        )
         if not row:
-            raise HTTPException(404, f"Greenhouse '{greenhouse_id}' not found")
-        crops = await conn.fetchval("SELECT COUNT(*) FROM crops WHERE greenhouse_id = $1 AND is_active", greenhouse_id)
-        result = dict(row)
+            raise HTTPException(404, "Greenhouse not found")
+        crops = await conn.fetchval(
+            f"""
+            SELECT COUNT(*)
+            FROM crops c
+            JOIN crop_catalog cc ON cc.id = c.crop_catalog_id
+            WHERE c.greenhouse_id = $1
+              AND c.is_active
+              AND {_public_crop_sql_predicate("cc.slug", "c.name", 2, 3)}
+            """,
+            greenhouse_id,
+            *_public_crop_sql_parameters(),
+        )
+        result = _public_greenhouse(row)
         result["active_crops"] = crops
-    return result
+    return redact_public_data(result)
 
 
 # ── Crops (greenhouse-scoped + legacy aliases) ──
@@ -1105,9 +1864,22 @@ async def list_crops(
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
 ):
-    query = "SELECT c.*, (SELECT ROUND(AVG(o.health_score)::numeric, 2) FROM observations o WHERE o.crop_id = c.id AND o.health_score IS NOT NULL AND o.ts > now() - interval '7 days') AS latest_health FROM crops c WHERE c.is_active = $1 AND c.greenhouse_id = $2"
-    params = [active, greenhouse_id]
-    idx = 3
+    query = f"""
+        SELECT {_sql_columns("c", PUBLIC_CROP_FIELDS)},
+               cc.slug AS crop_catalog_slug,
+               (SELECT ROUND(AVG(o.health_score)::numeric, 2)
+                FROM observations o
+                WHERE o.crop_id = c.id
+                  AND o.health_score IS NOT NULL
+                  AND o.ts > now() - interval '7 days') AS latest_health
+        FROM crops c
+        JOIN crop_catalog cc ON cc.id = c.crop_catalog_id
+        WHERE c.is_active = $1
+          AND c.greenhouse_id = $2
+          AND {_public_crop_sql_predicate("cc.slug", "c.name", 3, 4)}
+    """
+    params = [active, greenhouse_id, *_public_crop_sql_parameters()]
+    idx = 5
     if zone:
         query += f" AND c.zone = ${idx}"
         params.append(zone)
@@ -1121,14 +1893,25 @@ async def list_crops(
 
     async with pool.acquire() as conn:
         rows = await conn.fetch(query, *params)
-    return [dict(r) for r in rows]
+    return _public_crop_rows(rows, fields=PUBLIC_CROP_RESPONSE_FIELDS)
 
 
 @app.get("/api/v1/crops/{crop_id}", response_model=CropDetail)
 async def get_crop(crop_id: int):
     async with pool.acquire() as conn:
-        row = await conn.fetchrow("SELECT * FROM crops WHERE id = $1", crop_id)
-        if not row:
+        row = await conn.fetchrow(
+            f"""
+            SELECT {_sql_columns("c", PUBLIC_CROP_FIELDS)}, cc.slug AS crop_catalog_slug
+            FROM crops c
+            JOIN crop_catalog cc ON cc.id = c.crop_catalog_id
+            WHERE c.id = $1
+              AND {_public_crop_sql_predicate("cc.slug", "c.name", 2, 3)}
+            """,
+            crop_id,
+            *_public_crop_sql_parameters(),
+        )
+        public_rows = _public_crop_rows([row], fields=PUBLIC_CROP_RESPONSE_FIELDS) if row else []
+        if not public_rows:
             raise HTTPException(404, "Crop not found")
 
         health = await conn.fetchval(
@@ -1141,10 +1924,10 @@ async def get_crop(crop_id: int):
             crop_id,
         )
 
-        result = dict(row)
+        result = public_rows[0]
         result["latest_health"] = float(health) if health else None
-        result["recent_observations"] = [dict(o) for o in recent_obs]
-    return result
+        result["recent_observations"] = redact_public_data([dict(o) for o in recent_obs])
+    return redact_public_data(result)
 
 
 @app.post("/api/v1/greenhouses/{greenhouse_id}/crops", status_code=201)
@@ -1195,7 +1978,10 @@ async def create_crop(
 @app.put("/api/v1/crops/{crop_id}")
 async def update_crop(crop_id: int, crop: CropUpdate, _write_access: None = Depends(require_write_access)):
     async with pool.acquire() as conn:
-        existing = await conn.fetchrow("SELECT * FROM crops WHERE id = $1", crop_id)
+        existing = await conn.fetchrow(
+            f"SELECT {_sql_columns('c', PUBLIC_CROP_FIELDS)} FROM crops c WHERE c.id = $1",
+            crop_id,
+        )
         if not existing:
             raise HTTPException(404, "Crop not found")
 
@@ -1266,10 +2052,14 @@ async def delete_crop(crop_id: int, _write_access: None = Depends(require_write_
 @app.get("/api/v1/crops/{crop_id}/observations")
 async def list_observations(crop_id: int, limit: int = 20):
     async with pool.acquire() as conn:
+        await _require_public_crop(conn, crop_id)
         rows = await conn.fetch(
-            "SELECT * FROM observations WHERE crop_id = $1 ORDER BY ts DESC LIMIT $2", crop_id, limit
+            f"SELECT {_sql_columns('o', PUBLIC_OBSERVATION_FIELDS)} "
+            "FROM observations o WHERE o.crop_id = $1 ORDER BY o.ts DESC LIMIT $2",
+            crop_id,
+            limit,
         )
-    return [dict(r) for r in rows]
+    return [_project_public_record(row, PUBLIC_OBSERVATION_FIELDS) for row in rows]
 
 
 @app.post("/api/v1/crops/{crop_id}/observations", status_code=201)
@@ -1328,15 +2118,21 @@ async def create_observation(
 async def recent_observations(limit: int = 20):
     async with pool.acquire() as conn:
         rows = await conn.fetch(
-            """
-            SELECT o.*, c.name AS crop_name, c.zone AS crop_zone
+            f"""
+            SELECT {_sql_columns("o", PUBLIC_OBSERVATION_FIELDS)},
+                   c.name AS crop_name, c.zone AS crop_zone,
+                   cc.slug AS crop_catalog_slug
             FROM observations o
             LEFT JOIN crops c ON o.crop_id = c.id
+            LEFT JOIN crop_catalog cc ON cc.id = c.crop_catalog_id
+            WHERE o.crop_id IS NULL
+               OR ({_public_crop_sql_predicate("cc.slug", "c.name", 2, 3)})
             ORDER BY o.ts DESC LIMIT $1
         """,
             limit,
+            *_public_crop_sql_parameters(),
         )
-    return [dict(r) for r in rows]
+    return _public_observation_rows(rows)
 
 
 # ── Events ──
@@ -1345,10 +2141,14 @@ async def recent_observations(limit: int = 20):
 @app.get("/api/v1/crops/{crop_id}/events")
 async def list_events(crop_id: int, limit: int = 20):
     async with pool.acquire() as conn:
+        await _require_public_crop(conn, crop_id)
         rows = await conn.fetch(
-            "SELECT * FROM crop_events WHERE crop_id = $1 ORDER BY ts DESC LIMIT $2", crop_id, limit
+            f"SELECT {_sql_columns('e', PUBLIC_EVENT_FIELDS)} "
+            "FROM crop_events e WHERE e.crop_id = $1 ORDER BY e.ts DESC LIMIT $2",
+            crop_id,
+            limit,
         )
-    return [dict(r) for r in rows]
+    return [_project_public_record(row, PUBLIC_EVENT_FIELDS) for row in rows]
 
 
 @app.post("/api/v1/crops/{crop_id}/events", status_code=201)
@@ -1388,6 +2188,7 @@ async def create_event(crop_id: int, event: EventCreate, _write_access: None = D
 @app.get("/api/v1/crops/{crop_id}/health", response_model=list[HealthTrendPoint])
 async def crop_health(crop_id: int, days: int = 30):
     async with pool.acquire() as conn:
+        await _require_public_crop(conn, crop_id)
         rows = await conn.fetch(
             """
             SELECT ts, health_score, obs_type, notes, source
@@ -1398,7 +2199,7 @@ async def crop_health(crop_id: int, days: int = 30):
             crop_id,
             str(days),
         )
-    return [dict(r) for r in rows]
+    return redact_public_data([dict(r) for r in rows])
 
 
 @app.get("/api/v1/greenhouses/{greenhouse_id}/health", response_model=list[CropHealthSummaryItem])
@@ -1408,18 +2209,26 @@ async def health_summary(greenhouse_id: str = DEFAULT_GREENHOUSE):
         rows = await conn.fetch(
             """
             SELECT c.name, c.zone, c.position, c.stage,
+                cc.slug AS crop_catalog_slug,
                 ROUND(AVG(o.health_score)::numeric, 2) AS avg_health,
                 COUNT(o.id) AS obs_count,
                 MAX(o.ts) AS last_observed
             FROM crops c
+            JOIN crop_catalog cc ON cc.id = c.crop_catalog_id
             LEFT JOIN observations o ON c.id = o.crop_id AND o.health_score IS NOT NULL AND o.ts > now() - interval '7 days'
-            WHERE c.is_active = true AND c.greenhouse_id = $1
-            GROUP BY c.id, c.name, c.zone, c.position, c.stage
+            WHERE c.is_active = true
+              AND c.greenhouse_id = $1
+              AND {_public_crop_sql_predicate("cc.slug", "c.name", 2, 3)}
+            GROUP BY c.id, c.name, c.zone, c.position, c.stage, cc.slug
             ORDER BY c.zone, c.position
         """,
             greenhouse_id,
+            *_public_crop_sql_parameters(),
         )
-    return [dict(r) for r in rows]
+    return _public_crop_rows(
+        rows,
+        fields=("name", "zone", "position", "stage", "avg_health", "obs_count", "last_observed"),
+    )
 
 
 # ── Zones ──
@@ -1428,38 +2237,82 @@ async def health_summary(greenhouse_id: str = DEFAULT_GREENHOUSE):
 @app.get("/api/v1/zones", response_model=list[ZoneListItem])
 async def list_zones():
     async with pool.acquire() as conn:
-        zones = await conn.fetch("""
-            SELECT zone,
-                COUNT(*) FILTER (WHERE is_active) AS active_crops,
+        zones = await conn.fetch(
+            f"""
+            SELECT z.slug AS zone,
+                COUNT(c.id) AS active_crops,
                 (SELECT ROUND(temp_avg::numeric, 1) FROM climate
                  WHERE ts > now() - interval '5 minutes' ORDER BY ts DESC LIMIT 1) AS current_temp
-            FROM crops GROUP BY zone ORDER BY zone
-        """)
-    return [dict(z) for z in zones]
+            FROM zones z
+            LEFT JOIN LATERAL (
+                SELECT c.id
+                FROM crops c
+                JOIN crop_catalog cc ON cc.id = c.crop_catalog_id
+                {public_crop_zone_joins()}
+                WHERE c.is_active
+                  AND c.greenhouse_id = z.greenhouse_id
+                  AND {_public_crop_zone_sql_predicate("z.id", "cc.slug", "c.name", 1, 2)}
+            ) c ON TRUE
+            WHERE z.greenhouse_id = $3
+            GROUP BY z.id, z.slug
+            ORDER BY z.slug
+            """,
+            PUBLIC_CROP_EXCLUDE_SLUGS_DB,
+            PUBLIC_CROP_SQL_NAME_PATTERN,
+            DEFAULT_GREENHOUSE,
+        )
+    return redact_public_data([dict(z) for z in zones])
 
 
 @app.get("/api/v1/zones/{zone}", response_model=ZoneDetail)
 async def get_zone(zone: str):
     async with pool.acquire() as conn:
-        crops = await conn.fetch("SELECT * FROM crops WHERE zone = $1 AND is_active ORDER BY position", zone)
-        if not crops:
-            raise HTTPException(404, f"No crops in zone '{zone}'")
-
+        zone_exists = await conn.fetchval(
+            "SELECT EXISTS (SELECT 1 FROM zones WHERE slug = $1 AND greenhouse_id = $2)",
+            zone,
+            DEFAULT_GREENHOUSE,
+        )
+        if not zone_exists:
+            raise HTTPException(404, "Zone not found")
+        crops = await conn.fetch(
+            f"""
+            SELECT {_sql_columns("c", PUBLIC_CROP_FIELDS)}, cc.slug AS crop_catalog_slug
+            FROM crops c
+            JOIN crop_catalog cc ON cc.id = c.crop_catalog_id
+            {public_crop_zone_joins()}
+            WHERE c.is_active
+              AND {_public_crop_zone_sql_predicate("(SELECT id FROM zones WHERE slug = $1 AND greenhouse_id = $4)", "cc.slug", "c.name", 2, 3)}
+            ORDER BY c.position
+            """,
+            zone,
+            *_public_crop_sql_parameters(),
+            DEFAULT_GREENHOUSE,
+        )
+        public_crops = _public_crop_rows(crops)
         observations = await conn.fetch(
-            """
-            SELECT o.*, c.name AS crop_name
-            FROM observations o JOIN crops c ON o.crop_id = c.id
-            WHERE c.zone = $1 AND o.ts > now() - interval '7 days'
+            f"""
+            SELECT {_sql_columns("o", PUBLIC_OBSERVATION_FIELDS)},
+                   c.name AS crop_name, c.zone AS crop_zone, cc.slug AS crop_catalog_slug
+            FROM observations o
+            JOIN crops c ON o.crop_id = c.id
+            JOIN crop_catalog cc ON cc.id = c.crop_catalog_id
+            {public_crop_zone_joins()}
+            WHERE {_public_crop_zone_sql_predicate("(SELECT id FROM zones WHERE slug = $1 AND greenhouse_id = $4)", "cc.slug", "c.name", 2, 3)}
+              AND o.ts > now() - interval '7 days'
             ORDER BY o.ts DESC LIMIT 10
         """,
             zone,
+            *_public_crop_sql_parameters(),
+            DEFAULT_GREENHOUSE,
         )
 
-    return {
-        "zone": zone,
-        "crops": [dict(c) for c in crops],
-        "recent_observations": [dict(o) for o in observations],
-    }
+    return redact_public_data(
+        {
+            "zone": zone,
+            "crops": public_crops,
+            "recent_observations": _public_observation_rows(observations),
+        }
+    )
 
 
 # ── System ──
@@ -1469,16 +2322,28 @@ async def get_zone(zone: str):
 async def status():
     async with pool.acquire() as conn:
         crop_count = await conn.fetchval(
-            """
+            f"""
             SELECT count(DISTINCT crop_catalog_slug)::int
             FROM v_position_current
             WHERE greenhouse_id = $1
               AND is_occupied
               AND crop_catalog_slug IS NOT NULL
+              AND {_public_crop_sql_predicate("crop_catalog_slug", "crop_name", 2, 3)}
             """,
             DEFAULT_GREENHOUSE,
+            *_public_crop_sql_parameters(),
         )
-        obs_count = await conn.fetchval("SELECT COUNT(*) FROM observations")
+        obs_count = await conn.fetchval(
+            f"""
+            SELECT COUNT(*)
+            FROM observations o
+            LEFT JOIN crops c ON c.id = o.crop_id
+            LEFT JOIN crop_catalog cc ON cc.id = c.crop_catalog_id
+            WHERE o.crop_id IS NULL
+               OR ({_public_crop_sql_predicate("cc.slug", "c.name", 1, 2)})
+            """,
+            *_public_crop_sql_parameters(),
+        )
         latest = await conn.fetchval("SELECT MAX(ts) FROM climate")
     return {
         "status": "ok",
@@ -1545,7 +2410,7 @@ async def get_dli_evidence(greenhouse_id: str = DEFAULT_GREENHOUSE):
                 """,
                 greenhouse_id,
             )
-    return DliEvidence.model_validate(dict(row))
+    return DliEvidence.model_validate(redact_public_data(dict(row)))
 
 
 @app.get("/api/v1/resources/daily")
@@ -1563,35 +2428,38 @@ async def daily_resource_accounting(
         target_date = resource_date or await conn.fetchval("SELECT (now() AT TIME ZONE 'America/Denver')::date")
         water = await _fetchrow_optional(
             conn,
-            "SELECT * FROM v_water_attribution_daily WHERE date = $1 AND greenhouse_id = $2",
+            f"SELECT {_sql_columns('w', PUBLIC_WATER_RESOURCE_FIELDS)} "
+            "FROM v_water_attribution_daily w WHERE w.date = $1 AND w.greenhouse_id = $2",
             target_date,
             greenhouse_id,
         )
         energy = await _fetchrow_optional(
             conn,
-            "SELECT * FROM v_energy_estimate_reconciliation WHERE date = $1 AND greenhouse_id = $2",
+            f"SELECT {_sql_columns('e', PUBLIC_ENERGY_RESOURCE_FIELDS)} "
+            "FROM v_energy_estimate_reconciliation e WHERE e.date = $1 AND e.greenhouse_id = $2",
             target_date,
             greenhouse_id,
         )
         health = await conn.fetch(
-            "SELECT * FROM v_resource_accounting_health WHERE greenhouse_id = $1 ORDER BY resource",
+            f"SELECT {_sql_columns('h', PUBLIC_RESOURCE_HEALTH_FIELDS)} "
+            "FROM v_resource_accounting_health h WHERE h.greenhouse_id = $1 ORDER BY h.resource",
             greenhouse_id,
         )
-    energy_payload = dict(energy) if energy else None
-    if energy_payload:
-        _coerce_jsonb(energy_payload, "coefficient_revisions")
-    health_payload = [_coerce_jsonb(dict(row), "detail") for row in health]
-    return {
-        "date": target_date,
-        "greenhouse_id": greenhouse_id,
-        "water": dict(water) if water else None,
-        "energy": energy_payload,
-        "health": health_payload,
-        "contract": {
-            "water": "quality-filtered meter deltas; command-only runs never become gallons",
-            "energy": "whole controlled-runtime model and partial two-channel measurement are separate scopes",
-        },
-    }
+    energy_payload = _project_energy_resource(energy) if energy else None
+    health_payload = [_project_resource_health(row) for row in health]
+    return redact_public_data(
+        {
+            "date": target_date,
+            "greenhouse_id": greenhouse_id,
+            "water": _project_public_record(water, PUBLIC_WATER_RESOURCE_FIELDS) if water else None,
+            "energy": energy_payload,
+            "health": health_payload,
+            "contract": {
+                "water": "quality-filtered meter deltas; command-only runs never become gallons",
+                "energy": "whole controlled-runtime model and partial two-channel measurement are separate scopes",
+            },
+        }
+    )
 
 
 async def _fetch_public_band_trace_generated_at() -> object:
@@ -1603,7 +2471,14 @@ async def _fetch_public_band_trace_latest(greenhouse_id: str) -> asyncpg.Record 
     async with pool.acquire() as conn:
         return await conn.fetchrow(
             """
-            SELECT *
+            SELECT ts, greenhouse_id, temp_avg, vpd_avg,
+                   temp_avg_smooth_15m, vpd_avg_smooth_30m,
+                   crop_temp_low, crop_temp_high, crop_vpd_low, crop_vpd_high,
+                   house_vpd_low, house_vpd_high,
+                   fw_temp_low, fw_temp_high, fw_vpd_low, fw_vpd_high,
+                   rb_temp_low, rb_temp_high, rb_vpd_low, rb_vpd_high,
+                   crop_both_in_band, fw_both_in_band,
+                   readback_matches_fw_band, trace_quality_flag
               FROM fn_band_trace(now() - interval '2 hours', now(), $1)
              ORDER BY ts DESC
              LIMIT 1
@@ -1617,7 +2492,9 @@ async def _fetch_public_band_trace_summary(hours: int, greenhouse_id: str) -> as
         return await conn.fetchrow(
             """
             WITH rows AS (
-                SELECT *
+                SELECT crop_temp_in_band, crop_vpd_in_band, crop_both_in_band,
+                       fw_temp_in_band, fw_vpd_in_band, fw_both_in_band,
+                       readback_matches_fw_band, trace_quality_flag
                   FROM fn_band_trace(now() - ($1::int * interval '1 hour'), now(), $2)
             )
             SELECT count(*)::int AS sample_count,
@@ -1679,6 +2556,7 @@ async def public_band_trace(
             ok_trace_pct=_to_float(summary["ok_trace_pct"]) if summary else None,
         ),
     )
+    response = PublicBandTraceResponse.model_validate(redact_public_data(response.model_dump()))
     _PUBLIC_BAND_TRACE_CACHE[cache_key] = (time.monotonic(), response)
     return response
 
@@ -1796,12 +2674,13 @@ async def public_data_health():
         )
         for r in pipeline_rows
     ]
-    return PublicDataHealthResponse(
+    response = PublicDataHealthResponse(
         generated_at=generated_at,
         overall_status=_overall_data_health(check_rows),
         checks=checks,
         pipeline_sources=pipeline_sources,
     )
+    return PublicDataHealthResponse.model_validate(redact_public_data(response.model_dump()))
 
 
 @app.get("/api/v1/public/gpu-power", response_model=PublicGpuPowerResponse)
@@ -1999,6 +2878,7 @@ async def public_gpu_power(
         cpu_latest=cpu_latest,
         cpu_series=cpu_series,
     )
+    payload = PublicGpuPowerResponse.model_validate(redact_public_data(payload.model_dump()))
     _PUBLIC_GPU_POWER_CACHE[cache_key] = (time.monotonic(), payload)
     return payload
 
@@ -2082,7 +2962,9 @@ def _active_plan_range_violation_count(rows) -> int:
 async def public_planner_health():
     """Public-safe expected-trigger SLA surface for planner reliability."""
     async with pool.acquire() as conn:
-        summary = await conn.fetchrow("SELECT * FROM v_planner_trigger_health")
+        summary = await conn.fetchrow(
+            f"SELECT {_sql_columns('h', PUBLIC_PLANNER_HEALTH_FIELDS)} FROM v_planner_trigger_health h"
+        )
         trigger_projection = """
             SELECT id, event_type, event_label, instance, expected_at, due_at,
                    delivered_at, resolved_at, status, expected_action, trigger_id,
@@ -2183,6 +3065,7 @@ async def public_planner_health():
 
     if summary is None:
         raise HTTPException(status_code=503, detail="Planner health view unavailable")
+    summary = _project_planner_health(summary)
 
     required_failure_count = int(summary["required_failure_count"] or 0)
     missed_expected_count = int(summary["missed_expected_count"] or 0)
@@ -2195,10 +3078,8 @@ async def public_planner_health():
         overall_status = "ok"
 
     latest_required = summary["latest_required"] or []
-    if isinstance(latest_required, str):
-        latest_required = json.loads(latest_required)
 
-    return PublicPlannerHealthResponse(
+    response = PublicPlannerHealthResponse(
         generated_at=summary["generated_at"],
         overall_status=overall_status,
         missed_expected_count=missed_expected_count,
@@ -2220,6 +3101,7 @@ async def public_planner_health():
         ],
         recent_triggers=[trigger for r in trigger_rows if (trigger := _public_planner_trigger(r)) is not None],
     )
+    return PublicPlannerHealthResponse.model_validate(redact_public_data(response.model_dump()))
 
 
 @app.get("/api/v1/public/cameras/{camera_id}/latest.jpg")
@@ -2439,14 +3321,15 @@ async def public_home_metrics(greenhouse_id: str = DEFAULT_GREENHOUSE):
             greenhouse_id,
         )
         active_crops = await conn.fetchval(
-            """
+            f"""
             SELECT count(DISTINCT crop_catalog_slug)::int
             FROM v_position_current
             WHERE greenhouse_id = $1
               AND is_occupied
-              AND crop_catalog_slug IS NOT NULL
+              AND {_public_crop_sql_predicate("crop_catalog_slug", "crop_name", 2, 3)}
             """,
             greenhouse_id,
+            *_public_crop_sql_parameters(),
         )
         plan_count = await conn.fetchval(
             """
@@ -2480,24 +3363,27 @@ async def public_home_metrics(greenhouse_id: str = DEFAULT_GREENHOUSE):
         scorecard = {r["metric"]: _to_float(r["value"]) for r in score_rows}
         water_resource = await _fetchrow_optional(
             conn,
-            """
-            SELECT * FROM v_water_attribution_daily
-            WHERE date = (now() AT TIME ZONE 'America/Denver')::date
-              AND greenhouse_id = $1
+            f"""
+            SELECT {_sql_columns("w", PUBLIC_WATER_RESOURCE_FIELDS)}
+            FROM v_water_attribution_daily w
+            WHERE w.date = (now() AT TIME ZONE 'America/Denver')::date
+              AND w.greenhouse_id = $1
             """,
             greenhouse_id,
         )
         energy_resource = await _fetchrow_optional(
             conn,
-            """
-            SELECT * FROM v_energy_estimate_reconciliation
-            WHERE date = (now() AT TIME ZONE 'America/Denver')::date
-              AND greenhouse_id = $1
+            f"""
+            SELECT {_sql_columns("e", PUBLIC_ENERGY_RESOURCE_FIELDS)}
+            FROM v_energy_estimate_reconciliation e
+            WHERE e.date = (now() AT TIME ZONE 'America/Denver')::date
+              AND e.greenhouse_id = $1
             """,
             greenhouse_id,
         )
         water_ledger_health = await conn.fetchrow(
-            "SELECT * FROM v_water_ledger_health WHERE greenhouse_id = $1",
+            f"SELECT {_sql_columns('h', PUBLIC_WATER_LEDGER_HEALTH_FIELDS)} "
+            "FROM v_water_ledger_health h WHERE h.greenhouse_id = $1",
             greenhouse_id,
         )
         open_critical_high = await conn.fetchval(
@@ -2543,6 +3429,15 @@ async def public_home_metrics(greenhouse_id: str = DEFAULT_GREENHOUSE):
         latest_action_data = (
             _coerce_jsonb(dict(latest_action), "relay_truth", "sensor_status") if latest_action else None
         )
+        if latest_action_data:
+            latest_action_data["relay_truth"] = _project_public_record(
+                latest_action_data.get("relay_truth") or {},
+                PUBLIC_RELAY_TRUTH_FIELDS,
+            )
+            latest_action_data["sensor_status"] = _project_public_record(
+                latest_action_data.get("sensor_status") or {},
+                PUBLIC_SENSOR_STATUS_FIELDS,
+            )
         climate_action_log_age_s = latest_action_data["age_s"] if latest_action_data else None
         climate_action_proof_missing = await conn.fetchval(CLIMATE_ACTION_PROOF_MISSING_SQL)
 
@@ -2685,6 +3580,7 @@ async def public_home_metrics(greenhouse_id: str = DEFAULT_GREENHOUSE):
         data_health_status=_overall_data_health(data_checks),
         data_health_warnings=warning_checks[:8],
     )
+    metrics = PublicHomeMetrics.model_validate(redact_public_data(metrics.model_dump()))
     _PUBLIC_HOME_METRICS_CACHE[cache_key] = (time.monotonic(), metrics)
     return metrics
 
@@ -2698,19 +3594,21 @@ async def public_evidence_snapshot(greenhouse_id: str = DEFAULT_GREENHOUSE):
         scorecard = {r["metric"]: _to_float(r["value"]) for r in score_rows}
         water_resource = await _fetchrow_optional(
             conn,
-            """
-            SELECT * FROM v_water_attribution_daily
-            WHERE date = (now() AT TIME ZONE 'America/Denver')::date
-              AND greenhouse_id = $1
+            f"""
+            SELECT {_sql_columns("w", PUBLIC_WATER_RESOURCE_FIELDS)}
+            FROM v_water_attribution_daily w
+            WHERE w.date = (now() AT TIME ZONE 'America/Denver')::date
+              AND w.greenhouse_id = $1
             """,
             greenhouse_id,
         )
         energy_resource = await _fetchrow_optional(
             conn,
-            """
-            SELECT * FROM v_energy_estimate_reconciliation
-            WHERE date = (now() AT TIME ZONE 'America/Denver')::date
-              AND greenhouse_id = $1
+            f"""
+            SELECT {_sql_columns("e", PUBLIC_ENERGY_RESOURCE_FIELDS)}
+            FROM v_energy_estimate_reconciliation e
+            WHERE e.date = (now() AT TIME ZONE 'America/Denver')::date
+              AND e.greenhouse_id = $1
             """,
             greenhouse_id,
         )
@@ -2775,14 +3673,15 @@ async def public_evidence_snapshot(greenhouse_id: str = DEFAULT_GREENHOUSE):
             greenhouse_id,
         )
         active_crops = await conn.fetchval(
-            """
+            f"""
             SELECT count(DISTINCT crop_catalog_slug)::int
             FROM v_position_current
             WHERE greenhouse_id = $1
               AND is_occupied
-              AND crop_catalog_slug IS NOT NULL
+              AND {_public_crop_sql_predicate("crop_catalog_slug", "crop_name", 2, 3)}
             """,
             greenhouse_id,
+            *_public_crop_sql_parameters(),
         )
         plan_count = await conn.fetchval(
             """
@@ -2861,7 +3760,9 @@ async def public_evidence_snapshot(greenhouse_id: str = DEFAULT_GREENHOUSE):
               check_name
             """,
         )
-        planner_health = await conn.fetchrow("SELECT * FROM v_planner_trigger_health")
+        planner_health = await conn.fetchrow(
+            f"SELECT {_sql_columns('h', PUBLIC_PLANNER_HEALTH_FIELDS)} FROM v_planner_trigger_health h"
+        )
 
     data_health_status = _overall_data_health(data_checks)
     active_plan_id = active_plan["plan_id"] if active_plan else (last_plan["plan_id"] if last_plan else None)
@@ -2876,10 +3777,8 @@ async def public_evidence_snapshot(greenhouse_id: str = DEFAULT_GREENHOUSE):
         if water_resource and water_resource["available_for_scoring"]
         else None
     )
-    planner_health_payload = dict(planner_health) if planner_health else None
-    if planner_health_payload and isinstance(planner_health_payload.get("latest_required"), str):
-        planner_health_payload["latest_required"] = json.loads(planner_health_payload["latest_required"])
-    return {
+    planner_health_payload = _project_planner_health(planner_health) if planner_health else None
+    response = {
         "generated_at": generated_at,
         "timezone": "America/Denver",
         "greenhouse_id": greenhouse_id,
@@ -2913,8 +3812,8 @@ async def public_evidence_snapshot(greenhouse_id: str = DEFAULT_GREENHOUSE):
         ),
         "water_today_gal": water_today_gal,
         "resource_accounting": {
-            "water": dict(water_resource) if water_resource else None,
-            "energy": _coerce_jsonb(dict(energy_resource), "coefficient_revisions") if energy_resource else None,
+            "water": (_project_public_record(water_resource, PUBLIC_WATER_RESOURCE_FIELDS) if water_resource else None),
+            "energy": _project_energy_resource(energy_resource) if energy_resource else None,
             "scalar_policy": (
                 "water_today_gal is null unless ledger conservation/coverage is scoring-eligible; "
                 "modeled and partial-measured energy remain separate"
@@ -2949,7 +3848,15 @@ async def public_evidence_snapshot(greenhouse_id: str = DEFAULT_GREENHOUSE):
             },
             "last_validated_plan": dict(last_validated_plan) if last_validated_plan else None,
             "last_plan": dict(last_plan) if last_plan else None,
-            "latest_lesson": dict(latest_lesson) if latest_lesson else None,
+            "latest_lesson": (
+                {
+                    **dict(latest_lesson),
+                    "category": redact_non_public_crop_references(latest_lesson["category"]),
+                    "lesson": redact_non_public_crop_references(latest_lesson["lesson"]),
+                }
+                if latest_lesson
+                else None
+            ),
         },
         "operations": {
             "data_health_status": data_health_status,
@@ -2984,6 +3891,7 @@ async def public_evidence_snapshot(greenhouse_id: str = DEFAULT_GREENHOUSE):
             ),
         },
     }
+    return redact_public_data(response)
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -3008,8 +3916,15 @@ async def get_topology(greenhouse_id: str = DEFAULT_GREENHOUSE):
             greenhouse_id,
         )
         if row is None:
-            raise HTTPException(404, f"Greenhouse '{greenhouse_id}' not found")
-    return _coerce_jsonb(dict(row), "zones")
+            raise HTTPException(404, "Greenhouse not found")
+    record = dict(row)
+    return redact_public_data(
+        {
+            "greenhouse_id": record.get("greenhouse_id"),
+            "greenhouse_name": record.get("greenhouse_name"),
+            "zones": _project_topology_zones(record.get("zones")),
+        }
+    )
 
 
 # ── Zone full detail ──────────────────────────────────────────────────
@@ -3020,16 +3935,33 @@ async def get_zone_full(zone_slug: str, greenhouse_id: str = DEFAULT_GREENHOUSE)
     """Zone detail: shelves[], sensors[], equipment[], water_systems[] (from v_zone_full)."""
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
-            """
-            SELECT * FROM v_zone_full
-            WHERE greenhouse_id = $1 AND zone_slug = $2
+            f"""
+            SELECT {_sql_columns("z", PUBLIC_ZONE_FULL_FIELDS)}
+            FROM v_zone_full z
+            WHERE z.greenhouse_id = $1 AND z.zone_slug = $2
             """,
             greenhouse_id,
             zone_slug,
         )
         if row is None:
-            raise HTTPException(404, f"Zone '{zone_slug}' not found in '{greenhouse_id}'")
-    return _coerce_jsonb(dict(row), "shelves", "sensors", "equipment", "water_systems")
+            raise HTTPException(404, "Zone not found")
+        public_active_crops = await conn.fetchval(
+            f"""
+            SELECT count(*)::int
+            FROM crops c
+            JOIN crop_catalog cc ON cc.id = c.crop_catalog_id
+            {public_crop_zone_joins()}
+            WHERE c.greenhouse_id = $2
+              AND c.is_active
+              AND {_public_crop_zone_sql_predicate("$1", "cc.slug", "c.name", 3, 4)}
+            """,
+            row["zone_id"],
+            greenhouse_id,
+            *_public_crop_sql_parameters(),
+        )
+    result = _project_zone_full(row)
+    result["active_crops_fk_count"] = public_active_crops or 0
+    return redact_public_data(result)
 
 
 # ── Positions (current state + history) ───────────────────────────────
@@ -3042,17 +3974,28 @@ async def list_positions(
     greenhouse_id: str = DEFAULT_GREENHOUSE,
 ):
     """Every active position + current crop (if any). Empty slots included unless occupied_only=true."""
-    sql = "SELECT * FROM v_position_current WHERE greenhouse_id = $1"
+    sql = f"SELECT {_sql_columns('p', PUBLIC_POSITION_FIELDS)} FROM v_position_current p WHERE p.greenhouse_id = $1"
     params: list = [greenhouse_id]
     if zone_slug is not None:
         sql += " AND zone_slug = $2"
         params.append(zone_slug)
     if occupied_only:
-        sql += " AND is_occupied"
+        slug_parameter = len(params) + 1
+        name_parameter = slug_parameter + 1
+        sql += " AND is_occupied AND " + _public_crop_sql_predicate(
+            "crop_catalog_slug",
+            "crop_name",
+            slug_parameter,
+            name_parameter,
+        )
+        params.extend(_public_crop_sql_parameters())
     sql += " ORDER BY zone_slug, shelf_slug, position_label"
     async with pool.acquire() as conn:
         rows = await conn.fetch(sql, *params)
-    return [PositionCurrentEntry.model_validate(dict(r)) for r in rows]
+    public_rows = [_sanitize_public_position(row) for row in rows]
+    if occupied_only:
+        public_rows = [row for row in public_rows if row["is_occupied"]]
+    return [PositionCurrentEntry.model_validate(redact_public_data(row)) for row in public_rows]
 
 
 @app.get("/api/v1/positions/{position_id}")
@@ -3060,21 +4003,34 @@ async def get_position(position_id: int, greenhouse_id: str = DEFAULT_GREENHOUSE
     """Position detail: current occupancy + full crop history at this slot."""
     async with pool.acquire() as conn:
         current = await conn.fetchrow(
-            "SELECT * FROM v_position_current WHERE position_id = $1 AND greenhouse_id = $2",
+            f"SELECT {_sql_columns('p', PUBLIC_POSITION_FIELDS)} "
+            "FROM v_position_current p WHERE p.position_id = $1 AND p.greenhouse_id = $2",
             position_id,
             greenhouse_id,
         )
         if current is None:
-            raise HTTPException(404, f"Position {position_id} not found")
+            raise HTTPException(404, "Position not found")
         history_rows = await conn.fetch(
-            "SELECT * FROM v_crop_history WHERE position_id = $1 AND greenhouse_id = $2 ORDER BY planted_date DESC",
+            f"""
+            SELECT {_sql_columns("h", PUBLIC_CROP_HISTORY_FIELDS)}
+            FROM v_crop_history h
+            WHERE h.position_id = $1
+              AND h.greenhouse_id = $2
+              AND {_public_crop_sql_predicate("crop_catalog_slug", "crop_name", 3, 4)}
+            ORDER BY planted_date DESC
+            """,
             position_id,
             greenhouse_id,
+            *_public_crop_sql_parameters(),
         )
-    return {
-        "current": dict(current),
-        "history": [CropHistoryEntry.model_validate(dict(r)).model_dump() for r in history_rows],
-    }
+    public_current = _sanitize_public_position(current)
+    public_history = _public_crop_history_rows(history_rows)
+    return redact_public_data(
+        {
+            "current": public_current,
+            "history": [CropHistoryEntry.model_validate(row).model_dump() for row in public_history],
+        }
+    )
 
 
 @app.post("/api/v1/positions/{position_id}/plant", status_code=201)
@@ -3100,7 +4056,7 @@ async def plant_at_position(
             greenhouse_id,
         )
         if pos is None:
-            raise HTTPException(404, f"Position {position_id} not found")
+            raise HTTPException(404, "Position not found")
         # Resolve crop_catalog_id via slug / name
         catalog_id = None
         if body.crop_catalog_slug:
@@ -3144,7 +4100,7 @@ async def plant_at_position(
                 catalog_id,
             )
         except asyncpg.exceptions.UniqueViolationError:
-            raise HTTPException(409, f"Position {position_id} ({pos['label']}) is already occupied by an active crop")
+            raise HTTPException(409, "Position is already occupied by an active crop")
     return dict(row)
 
 
@@ -3155,14 +4111,16 @@ async def plant_at_position(
 async def get_crop_lifecycle(crop_id: int, greenhouse_id: str = DEFAULT_GREENHOUSE):
     """Full crop timeline: events array, harvest totals, observations summary."""
     async with pool.acquire() as conn:
+        await _require_public_crop(conn, crop_id, greenhouse_id)
         row = await conn.fetchrow(
-            "SELECT * FROM v_crop_lifecycle WHERE crop_id = $1 AND greenhouse_id = $2",
+            f"SELECT {_sql_columns('l', PUBLIC_CROP_LIFECYCLE_FIELDS)} "
+            "FROM v_crop_lifecycle l WHERE l.crop_id = $1 AND l.greenhouse_id = $2",
             crop_id,
             greenhouse_id,
         )
         if row is None:
-            raise HTTPException(404, f"Crop {crop_id} not found")
-    return CropLifecycle.model_validate(_coerce_jsonb(dict(row), "events"))
+            raise HTTPException(404, "Crop not found")
+    return CropLifecycle.model_validate(_project_crop_lifecycle(row))
 
 
 @app.post("/api/v1/crops/{crop_id}/clear")
@@ -3179,7 +4137,7 @@ async def clear_crop(
             crop_id,
         )
         if row is None:
-            raise HTTPException(404, f"Crop {crop_id} not found or already cleared")
+            raise HTTPException(404, "Crop not found or already cleared")
         if operator:
             await conn.execute(
                 "UPDATE crop_events SET operator = $1 WHERE crop_id = $2 AND event_type = 'removed' AND operator IS NULL",
@@ -3209,14 +4167,14 @@ async def transplant_crop(
             crop_id,
         )
         if crop is None:
-            raise HTTPException(404, f"Active crop {crop_id} not found")
+            raise HTTPException(404, "Active crop not found")
         target = await conn.fetchrow(
             "SELECT p.id, p.label, sh.zone_id FROM positions p JOIN shelves sh ON sh.id = p.shelf_id WHERE p.id = $1 AND p.greenhouse_id = $2",
             body.new_position_id,
             greenhouse_id,
         )
         if target is None:
-            raise HTTPException(404, f"Target position {body.new_position_id} not found")
+            raise HTTPException(404, "Target position not found")
         try:
             await conn.execute(
                 "UPDATE crops SET position_id = $1, zone_id = $2, position = $3 WHERE id = $4",
@@ -3226,7 +4184,7 @@ async def transplant_crop(
                 crop_id,
             )
         except asyncpg.exceptions.UniqueViolationError:
-            raise HTTPException(409, f"Target position {body.new_position_id} is occupied")
+            raise HTTPException(409, "Target position is occupied")
         await conn.execute(
             """
             INSERT INTO crop_events (ts, crop_id, event_type, source, operator, notes, greenhouse_id, position_id)
@@ -3273,7 +4231,7 @@ async def harvest_crop(
             greenhouse_id,
         )
         if crop is None:
-            raise HTTPException(404, f"Crop {crop_id} not found")
+            raise HTTPException(404, "Crop not found")
         row = await conn.fetchrow(
             """
             INSERT INTO harvests (
@@ -3316,26 +4274,67 @@ async def harvest_crop(
 async def list_crop_catalog():
     """All crop types in the catalog (with aggregated stage/season profiles)."""
     async with pool.acquire() as conn:
-        rows = await conn.fetch("SELECT * FROM v_crop_catalog_with_profiles ORDER BY slug")
-    return [_coerce_jsonb(dict(r), "stage_season_profiles") for r in rows]
+        rows = await conn.fetch(
+            f"""
+            SELECT {_sql_columns("c", PUBLIC_CATALOG_FIELDS)}
+            FROM v_crop_catalog_with_profiles c
+            WHERE {_public_crop_sql_predicate("slug", "common_name", 1, 2)}
+            ORDER BY slug
+            """,
+            *_public_crop_sql_parameters(),
+        )
+    public_rows = _public_crop_rows(
+        rows,
+        slug_key="slug",
+        name_key="common_name",
+        fields=PUBLIC_CATALOG_FIELDS,
+    )
+    return [_project_catalog_record(row) for row in public_rows]
 
 
 @app.get("/api/v1/crop-catalog/{slug}")
 async def get_crop_catalog_entry(slug: str):
     """Single catalog entry + hourly profile detail."""
+    if not is_public_crop(slug):
+        raise HTTPException(404, "Crop catalog entry not found")
     async with pool.acquire() as conn:
-        entry = await conn.fetchrow("SELECT * FROM v_crop_catalog_with_profiles WHERE slug = $1", slug)
-        if entry is None:
-            raise HTTPException(404, f"Crop catalog entry '{slug}' not found")
+        entry = await conn.fetchrow(
+            f"""
+            SELECT {_sql_columns("c", PUBLIC_CATALOG_FIELDS)}
+            FROM v_crop_catalog_with_profiles c
+            WHERE slug = $1
+              AND {_public_crop_sql_predicate("slug", "common_name", 2, 3)}
+            """,
+            slug,
+            *_public_crop_sql_parameters(),
+        )
+        public_entries = (
+            _public_crop_rows(
+                [entry],
+                slug_key="slug",
+                name_key="common_name",
+                fields=PUBLIC_CATALOG_FIELDS,
+            )
+            if entry is not None
+            else []
+        )
+        if not public_entries:
+            raise HTTPException(404, "Crop catalog entry not found")
         hours = await conn.fetch(
-            """
-            SELECT * FROM crop_target_profiles
-            WHERE crop_catalog_id = (SELECT id FROM crop_catalog WHERE slug = $1)
-            ORDER BY growth_stage, season, hour_of_day
+            f"""
+            SELECT {_sql_columns("p", PUBLIC_CATALOG_HOURLY_FIELDS)}
+            FROM crop_target_profiles p
+            WHERE p.crop_catalog_id = (SELECT id FROM crop_catalog WHERE slug = $1)
+            ORDER BY p.growth_stage, p.season, p.hour_of_day
             """,
             slug,
         )
-    return {"entry": _coerce_jsonb(dict(entry), "stage_season_profiles"), "hourly_profiles": [dict(h) for h in hours]}
+    return redact_public_data(
+        {
+            "entry": _project_catalog_record(public_entries[0]),
+            "hourly_profiles": [_project_public_record(h, PUBLIC_CATALOG_HOURLY_FIELDS) for h in hours],
+        }
+    )
 
 
 # ── Equipment, switches, sensors (read-only for now) ──────────────────
@@ -3344,7 +4343,13 @@ async def get_crop_catalog_entry(slug: str):
 @app.get("/api/v1/equipment")
 async def list_equipment(zone_slug: str | None = None, greenhouse_id: str = DEFAULT_GREENHOUSE):
     sql = """
-        SELECT e.*, z.slug AS zone_slug
+        SELECT e.id, e.greenhouse_id, e.slug, e.kind, e.name, e.model,
+               e.watts, e.cost_per_hour_usd, e.is_active, z.slug AS zone_slug,
+               CASE
+                   WHEN jsonb_typeof(e.specs) = 'object' AND e.specs ? 'telemetry_slug'
+                   THEN jsonb_build_object('telemetry_slug', e.specs -> 'telemetry_slug')
+                   ELSE '{}'::jsonb
+               END AS specs
         FROM equipment e LEFT JOIN zones z ON z.id = e.zone_id
         WHERE e.greenhouse_id = $1 AND e.is_active
     """
@@ -3355,7 +4360,7 @@ async def list_equipment(zone_slug: str | None = None, greenhouse_id: str = DEFA
     sql += " ORDER BY e.kind, e.slug"
     async with pool.acquire() as conn:
         rows = await conn.fetch(sql, *params)
-    return [_coerce_jsonb(dict(r), "specs") for r in rows]
+    return [_project_equipment(row) for row in rows]
 
 
 @app.get("/api/v1/switches")
@@ -3363,16 +4368,18 @@ async def list_switches(greenhouse_id: str = DEFAULT_GREENHOUSE):
     """Full relay map — v_equipment_relay_map."""
     async with pool.acquire() as conn:
         rows = await conn.fetch(
-            "SELECT * FROM v_equipment_relay_map WHERE greenhouse_id = $1 ORDER BY board, pin",
+            f"SELECT {_sql_columns('s', PUBLIC_SWITCH_FIELDS)} "
+            "FROM v_equipment_relay_map s WHERE s.greenhouse_id = $1 ORDER BY s.board, s.pin",
             greenhouse_id,
         )
-    return [dict(r) for r in rows]
+    return [_project_public_record(row, PUBLIC_SWITCH_FIELDS) for row in rows]
 
 
 @app.get("/api/v1/sensors")
 async def list_sensors(zone_slug: str | None = None, greenhouse_id: str = DEFAULT_GREENHOUSE):
-    sql = """
-        SELECT s.*, z.slug AS zone_slug
+    sql = f"""
+        SELECT {_sql_columns("s", tuple(field for field in PUBLIC_SENSOR_FIELDS if field != "zone_slug"))},
+               z.slug AS zone_slug
         FROM sensors s LEFT JOIN zones z ON z.id = s.zone_id
         WHERE s.greenhouse_id = $1 AND s.is_active
     """
@@ -3383,7 +4390,7 @@ async def list_sensors(zone_slug: str | None = None, greenhouse_id: str = DEFAUL
     sql += " ORDER BY s.kind, s.slug"
     async with pool.acquire() as conn:
         rows = await conn.fetch(sql, *params)
-    return [dict(r) for r in rows]
+    return [_project_public_record(row, PUBLIC_SENSOR_FIELDS) for row in rows]
 
 
 @app.get("/api/v1/pressure-groups/status")
@@ -3391,7 +4398,8 @@ async def pressure_group_status(greenhouse_id: str = DEFAULT_GREENHOUSE):
     """Current mister/drip activity per pressure group (v_pressure_group_status)."""
     async with pool.acquire() as conn:
         rows = await conn.fetch(
-            "SELECT * FROM v_pressure_group_status WHERE greenhouse_id = $1 ORDER BY group_slug",
+            f"SELECT {_sql_columns('p', PUBLIC_PRESSURE_GROUP_FIELDS)} "
+            "FROM v_pressure_group_status p WHERE p.greenhouse_id = $1 ORDER BY p.group_slug",
             greenhouse_id,
         )
-    return [_coerce_jsonb(dict(r), "systems") for r in rows]
+    return [_project_pressure_group(row) for row in rows]

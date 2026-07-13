@@ -777,7 +777,13 @@ class TestContractDriftGuardrails:
         assert "PUBLIC_HOME_METRICS_CACHE_TTL_S" in api_source
         assert "_PUBLIC_HOME_METRICS_CACHE" in api_source
         assert "time.monotonic()" in api_source
-        assert '--timeout="$RSYNC_IO_TIMEOUT"' in rebuild_source
+        # rsync (and its --timeout backpressure) was replaced by the bounded
+        # public-output guard + atomic descriptor promotion (PR #458). The
+        # backpressure guard is now the clamped guard timeout around the
+        # scan-and-promote step; pin that mechanism instead.
+        assert '--timeout="$RSYNC_IO_TIMEOUT"' not in rebuild_source
+        assert 'timeout --kill-after=10s "${PUBLIC_OUTPUT_GUARD_TIMEOUT}s"' in rebuild_source
+        assert "PUBLIC_OUTPUT_GUARD_TIMEOUT < 30 || PUBLIC_OUTPUT_GUARD_TIMEOUT > 600" in rebuild_source
         assert "set -euo pipefail" in rebuild_source
 
     def test_firmware_deploy_refuses_dirty_worktree_without_explicit_override(self):
