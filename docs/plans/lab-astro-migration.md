@@ -1,6 +1,9 @@
 # Lab Astro Migration — Consolidated Program Tracker
 
-Last updated: 2026-07-13 (Phase 4c offline producer and current dormant-runtime
+Last updated: 2026-07-13 ~16:10Z (stage now serves `814eafff`: P0 scroll-fix
+PR #504/pin #505 — user-reported viewport scroll-lock from body-level
+`overflow:clip`, fixed + regression-tested; roll also shipped #487/#496/#501/
+#502 content. Phases 1-3 PASSED; Phase 4 in flight.)
 build/probe/pin gates passed; Phase 4b S3 foundation merged; occurrence
 adapter is carried by #502; the source-only binding-name readiness contract is
 carried by #501).
