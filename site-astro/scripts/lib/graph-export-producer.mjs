@@ -5,6 +5,7 @@ import sharp from "sharp";
 
 import {
   occurrenceExportPolicySha256,
+  reportingFeedEnvelopeSha256,
   validatePolicyManifestBinding,
 } from "./occurrence-export-contract.mjs";
 import {
@@ -21,6 +22,7 @@ const MAX_TIMEOUT_MS = 15_000;
 const DEFAULT_TIMEOUT_MS = 10_000;
 const MAX_SETTLEMENT_GRACE_MS = 250;
 const DEFAULT_SETTLEMENT_GRACE_MS = 50;
+const SHA256_RE = /^[0-9a-f]{64}$/;
 const ISO_INSTANT_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
 const PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 const WAIT_TIMEOUT = Symbol("wait-timeout");
@@ -60,8 +62,14 @@ function cloneQuery(value) {
   return Object.fromEntries(Object.entries(value).map(([key, values]) => [key, [...values]]));
 }
 
-export function planGraphExportRequests({ policy, manifest, manifestSha256 }) {
+export function planGraphExportRequests({
+  policy,
+  manifest,
+  manifestSha256,
+  reportingFeedSha256,
+}) {
   const discovered = validatePolicyManifestBinding(policy, manifest, manifestSha256);
+  if (!SHA256_RE.test(reportingFeedSha256)) throw new Error("graph export reporting feed digest is invalid");
   const canonicalManifestSha256 = createHash("sha256")
     .update(Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`))
     .digest("hex");
@@ -74,9 +82,10 @@ export function planGraphExportRequests({ policy, manifest, manifestSha256 }) {
   const approvedById = new Map(policy.graphs.map((record) => [record.occurrenceId, record.occurrenceSha256]));
   const requests = discovered.graphs.map((occurrence) => ({
     contract: "verdify.lab-graph-render-request",
-    schemaVersion: 1,
+    schemaVersion: 2,
     occurrenceId: occurrence.occurrenceId,
     occurrenceSha256: approvedById.get(occurrence.occurrenceId),
+    reportingFeedSha256,
     target: {
       uid: occurrence.uid,
       panelId: occurrence.panelId,
@@ -87,10 +96,11 @@ export function planGraphExportRequests({ policy, manifest, manifestSha256 }) {
   }));
   return {
     contract: "verdify.lab-graph-export-plan",
-    schemaVersion: 1,
+    schemaVersion: 2,
     policyVersion: policy.policyVersion,
     policySha256: occurrenceExportPolicySha256(policy),
     sourceOccurrenceManifestSha256: manifestSha256,
+    reportingFeedSha256,
     requests,
   };
 }
@@ -103,14 +113,15 @@ function assertApprovedPolicy(policy) {
   ) throw new Error("graph export policy is not activated");
 }
 
-function validateRenderer(renderer) {
+function validateRenderer(renderer, reportingFeedSha256) {
   if (
-    !exactKeys(renderer, ["contract", "schemaVersion", "abortCooperation", "render"])
+    !exactKeys(renderer, ["contract", "schemaVersion", "reportingFeedSha256", "abortCooperation", "render"])
     || renderer.contract !== "verdify.lab-graph-renderer"
-    || renderer.schemaVersion !== 1
+    || renderer.schemaVersion !== 2
+    || renderer.reportingFeedSha256 !== reportingFeedSha256
     || renderer.abortCooperation !== "settle-within-grace-after-abort"
     || typeof renderer.render !== "function"
-  ) throw new Error("graph exporter renderer does not use the closed abort-cooperative v1 contract");
+  ) throw new Error("graph exporter renderer does not use the feed-bound abort-cooperative v2 contract");
   return renderer;
 }
 
@@ -527,6 +538,7 @@ export async function produceGraphExportCandidates({
   policy,
   manifest,
   manifestSha256,
+  reportingFeed,
   outputRoot,
   renderer,
   now = () => new Date().toISOString(),
@@ -535,9 +547,15 @@ export async function produceGraphExportCandidates({
   concurrency = DEFAULT_CONCURRENCY,
   fileOperations: fileOperationOverrides,
 }) {
-  const plan = planGraphExportRequests({ policy, manifest, manifestSha256 });
+  const reportingFeedSha256 = reportingFeedEnvelopeSha256(reportingFeed);
+  const plan = planGraphExportRequests({
+    policy,
+    manifest,
+    manifestSha256,
+    reportingFeedSha256,
+  });
   assertApprovedPolicy(policy);
-  const validatedRenderer = validateRenderer(renderer);
+  const validatedRenderer = validateRenderer(renderer, reportingFeedSha256);
   if (typeof now !== "function") throw new Error("graph exporter dependency is invalid");
   if (
     typeof outputRoot !== "string"
@@ -595,10 +613,11 @@ export async function produceGraphExportCandidates({
     : results;
   return {
     contract: "verdify.lab-graph-export-result",
-    schemaVersion: 2,
+    schemaVersion: 3,
     policyVersion: plan.policyVersion,
     policySha256: plan.policySha256,
     sourceOccurrenceManifestSha256: plan.sourceOccurrenceManifestSha256,
+    reportingFeedSha256,
     rendererContract: {
       contract: "verdify.lab-graph-renderer-runtime-status",
       schemaVersion: 1,
@@ -619,7 +638,8 @@ export const graphExportProducerContract = Object.freeze({
   maxSettlementGraceMs: MAX_SETTLEMENT_GRACE_MS,
   renderer: Object.freeze({
     contract: "verdify.lab-graph-renderer",
-    schemaVersion: 1,
+    schemaVersion: 2,
+    reportingFeedSha256: "required-exact-plan-digest",
     abortCooperation: "settle-within-grace-after-abort",
   }),
   probeStatuses: Object.freeze(["success", "timeout", "http-error", "decode-error", "missing"]),

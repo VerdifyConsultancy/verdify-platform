@@ -3,6 +3,7 @@ import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { reportingFeedEnvelopeSha256 } from "./lib/occurrence-export-contract.mjs";
 import { planGraphExportRequests } from "./lib/graph-export-producer.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -16,10 +17,24 @@ const occurrencePolicy = JSON.parse(await readFile(
   "utf8",
 ));
 const occurrenceManifestSha256 = createHash("sha256").update(occurrenceManifestBytes).digest("hex");
+// This canonical envelope is an offline planning fixture only. It proves the
+// digest binding and makes no claim that a live feed exists or is fresh.
+const OFFLINE_NON_LIVE_REPORTING_FEED = Object.freeze({
+  contract: "verdify.operator-public-reporting-feed",
+  schemaVersion: 1,
+  sourceId: "operator-public-reporting-feed-offline-planning-proof",
+  sourceClass: "public-reporting-projection",
+  credentialClass: "reporting-read-only",
+  direction: "one-way-read-only",
+  sourceWatermark: "wm_offline_non_live_planning_proof",
+  sourceWatermarkAt: "2026-07-13T00:00:00Z",
+});
+const reportingFeedSha256 = reportingFeedEnvelopeSha256(OFFLINE_NON_LIVE_REPORTING_FEED);
 const graphPlan = planGraphExportRequests({
   policy: occurrencePolicy,
   manifest: occurrenceManifest,
   manifestSha256: occurrenceManifestSha256,
+  reportingFeedSha256,
 });
 
 if (
@@ -43,10 +58,12 @@ if (
 }
 if (
   occurrenceManifestSha256 !== occurrencePolicy.sourceOccurrenceManifestSha256
+  || graphPlan.reportingFeedSha256 !== reportingFeedSha256
   || graphPlan.requests.length !== 143
+  || graphPlan.requests.some((request) => request.reportingFeedSha256 !== reportingFeedSha256)
   || JSON.stringify(graphPlan.requests.map(({ occurrenceId }) => occurrenceId))
     !== JSON.stringify(occurrenceManifest.graphs.map(({ occurrenceId }) => occurrenceId))
-  || /https?:|graphs\.verdify\.ai/i.test(JSON.stringify(graphPlan))
+  || /sourceId|sourceWatermark|endpoint|https?:|graphs\.verdify\.ai|credential/i.test(JSON.stringify(graphPlan))
 ) {
   throw new Error("real occurrence manifest is not byte-bound to the exact 143-request graph plan");
 }

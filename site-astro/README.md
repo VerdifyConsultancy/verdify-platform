@@ -194,15 +194,21 @@ occurrence-manifest bytes against that policy and emits all 143 render targets i
 manifest order without an endpoint. Its producer has no default renderer or network,
 service, credential, database, Kubernetes, Grafana, or object-store client: an
 approved policy and an explicitly injected renderer are required before any call.
-That renderer must use the exact abort-cooperative v1 contract and settle promptly
-after the producer aborts it. The producer enforces the claim: a renderer or response
-body that does not settle and clean up within the short bounded grace period stops
+The producer also requires the full closed reporting-feed envelope and derives its
+canonical digest itself. Only that digest enters the v2 plan and all 143 requests;
+the feed identity, watermark, endpoint, and credential details do not. The injected
+renderer must declare the same digest through the exact abort-cooperative v2 contract
+and settle promptly after the producer aborts it. The producer enforces the claim: a
+renderer or response body that does not settle and clean up within the short bounded grace period stops
 all new scheduling and fails the whole batch closed, while still returning all 143
 ordered null records. At most four calls can remain unsettled, including after the
 producer returns. Bounded PNG responses are decoded and
 deterministically re-encoded as metadata-free RGB PNG, then published through the
 same canonical content-addressed candidate store used by camera capture. Stable,
-URL-free results include every graph once on mixed failures. This source-only slice
+URL-free v3 results include every graph once on mixed failures and repeat only the
+feed-envelope digest for the later 143+2 assembler to verify. The offline real-build
+verifier uses an explicit non-live envelope solely to prove planning; it makes no
+feed-existence or freshness claim. This source-only slice
 does not provide or activate the reporting feed, renderer, watermark/alert path,
 S3 delivery, workload, or stage rollout.
 

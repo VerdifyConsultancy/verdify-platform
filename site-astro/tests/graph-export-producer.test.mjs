@@ -11,6 +11,7 @@ import sharp from "sharp";
 import {
   draftBlockedOccurrenceExportPolicy,
   occurrenceExportPolicySha256,
+  reportingFeedEnvelopeSha256,
 } from "../scripts/lib/occurrence-export-contract.mjs";
 import {
   graphExportProducerContract,
@@ -28,6 +29,17 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const REVIEWED_AT = "2026-07-13T11:59:00Z";
 const APPROVED_AT = "2026-07-13T12:00:00Z";
 const CAPTURED_AT = "2026-07-13T12:01:00Z";
+const REPORTING_FEED = Object.freeze({
+  contract: "verdify.operator-public-reporting-feed",
+  schemaVersion: 1,
+  sourceId: "operator-public-reporting-feed-graph-offline",
+  sourceClass: "public-reporting-projection",
+  credentialClass: "reporting-read-only",
+  direction: "one-way-read-only",
+  sourceWatermark: "wm_graph_offline_fixture_0001",
+  sourceWatermarkAt: APPROVED_AT,
+});
+const REPORTING_FEED_SHA256 = reportingFeedEnvelopeSha256(REPORTING_FEED);
 
 function canonicalBytes(value) {
   return Buffer.from(`${JSON.stringify(value, null, 2)}\n`);
@@ -97,21 +109,29 @@ function response(bytes, overrides = {}) {
   };
 }
 
-function rendererContract(render) {
+function rendererContract(render, reportingFeedSha256 = REPORTING_FEED_SHA256) {
   return {
     contract: "verdify.lab-graph-renderer",
-    schemaVersion: 1,
+    schemaVersion: 2,
+    reportingFeedSha256,
     abortCooperation: "settle-within-grace-after-abort",
     render,
   };
 }
 
-test("the pure planner byte-binds exactly 143 manifest-ordered, endpoint-free targets", () => {
+test("the pure planner byte-binds exactly 143 manifest-ordered, feed-bound endpoint-free targets", () => {
   const { graphs, manifest, manifestSha256, blocked } = fixture();
-  const plan = planGraphExportRequests({ policy: blocked, manifest, manifestSha256 });
+  const plan = planGraphExportRequests({
+    policy: blocked,
+    manifest,
+    manifestSha256,
+    reportingFeedSha256: REPORTING_FEED_SHA256,
+  });
   assert.equal(plan.contract, "verdify.lab-graph-export-plan");
+  assert.equal(plan.schemaVersion, 2);
   assert.equal(plan.policySha256, occurrenceExportPolicySha256(blocked));
   assert.equal(plan.sourceOccurrenceManifestSha256, manifestSha256);
+  assert.equal(plan.reportingFeedSha256, REPORTING_FEED_SHA256);
   assert.equal(plan.requests.length, 143);
   assert.deepEqual(plan.requests.map(({ occurrenceId }) => occurrenceId), graphs.map(({ occurrenceId }) => occurrenceId));
   assert.equal(new Set(plan.requests.map(({ occurrenceId }) => occurrenceId)).size, 143);
@@ -121,37 +141,65 @@ test("the pure planner byte-binds exactly 143 manifest-ordered, endpoint-free ta
       "schemaVersion",
       "occurrenceId",
       "occurrenceSha256",
+      "reportingFeedSha256",
       "target",
     ]);
+    assert.equal(request.schemaVersion, 2);
     assert.equal(request.occurrenceId, graphs[index].occurrenceId);
+    assert.equal(request.reportingFeedSha256, REPORTING_FEED_SHA256);
     assert.equal(request.target.uid, graphs[index].uid);
     assert.equal(request.target.panelId, graphs[index].panelId);
     assert.deepEqual(request.target.query, graphs[index].query);
     assert.deepEqual(request.target.variables, graphs[index].variables);
     assert.deepEqual(request.target.timeRange, graphs[index].timeRange);
   }
-  assert.doesNotMatch(JSON.stringify(plan), /https?:|graphs\.verdify\.ai|credential|authorization|cookie|secret/i);
+  assert.doesNotMatch(
+    JSON.stringify(plan),
+    /sourceId|sourceWatermark|endpoint|https?:|graphs\.verdify\.ai|credential|authorization|cookie|secret/i,
+  );
+
+  const driftedFeed = { ...REPORTING_FEED, sourceWatermark: "wm_graph_offline_fixture_0002" };
+  assert.notEqual(reportingFeedEnvelopeSha256(driftedFeed), REPORTING_FEED_SHA256);
+  assert.throws(
+    () => reportingFeedEnvelopeSha256({ ...REPORTING_FEED, endpoint: "not-accepted" }),
+    /closed v1 shape/,
+  );
 });
 
 test("manifest, byte-digest, and policy drift fail before a plan or renderer call", async (context) => {
   const root = await workspace(context);
   const { manifest, manifestSha256, blocked, active } = fixture();
   assert.throws(
-    () => planGraphExportRequests({ policy: blocked, manifest, manifestSha256: "b".repeat(64) }),
+    () => planGraphExportRequests({
+      policy: blocked,
+      manifest,
+      manifestSha256: "b".repeat(64),
+      reportingFeedSha256: REPORTING_FEED_SHA256,
+    }),
     /does not match the supplied manifest bytes/,
   );
 
   const driftedManifest = structuredClone(manifest);
   driftedManifest.graphs[0].semanticRole = "Drifted graph";
   assert.throws(
-    () => planGraphExportRequests({ policy: blocked, manifest: driftedManifest, manifestSha256 }),
+    () => planGraphExportRequests({
+      policy: blocked,
+      manifest: driftedManifest,
+      manifestSha256,
+      reportingFeedSha256: REPORTING_FEED_SHA256,
+    }),
     /not canonical|not exactly allowlisted/,
   );
 
   const reducedManifest = structuredClone(manifest);
   reducedManifest.graphs.pop();
   assert.throws(
-    () => planGraphExportRequests({ policy: blocked, manifest: reducedManifest, manifestSha256 }),
+    () => planGraphExportRequests({
+      policy: blocked,
+      manifest: reducedManifest,
+      manifestSha256,
+      reportingFeedSha256: REPORTING_FEED_SHA256,
+    }),
     /allowlist is not complete/,
   );
 
@@ -161,7 +209,12 @@ test("manifest, byte-digest, and policy drift fail before a plan or renderer cal
     reorderedManifest.graphs[0],
   ];
   assert.throws(
-    () => planGraphExportRequests({ policy: blocked, manifest: reorderedManifest, manifestSha256 }),
+    () => planGraphExportRequests({
+      policy: blocked,
+      manifest: reorderedManifest,
+      manifestSha256,
+      reportingFeedSha256: REPORTING_FEED_SHA256,
+    }),
     /does not match its canonical byte digest/,
   );
 
@@ -170,6 +223,7 @@ test("manifest, byte-digest, and policy drift fail before a plan or renderer cal
     policy: blocked,
     manifest,
     manifestSha256,
+    reportingFeed: REPORTING_FEED,
     outputRoot: root,
     renderer: rendererContract(async () => {
       calls += 1;
@@ -182,10 +236,14 @@ test("manifest, byte-digest, and policy drift fail before a plan or renderer cal
     policy: active,
     manifest,
     manifestSha256,
+    reportingFeed: REPORTING_FEED,
     outputRoot: root,
-  }), /closed abort-cooperative v1 contract/);
+  }), /feed-bound abort-cooperative v2 contract/);
 
-  const validRenderer = rendererContract(async () => response(await graphPng()));
+  const validRenderer = rendererContract(async () => {
+    calls += 1;
+    return response(await graphPng());
+  });
   for (const candidate of [
     validRenderer.render,
     { ...validRenderer, endpoint: "not-accepted" },
@@ -195,10 +253,48 @@ test("manifest, byte-digest, and policy drift fail before a plan or renderer cal
       policy: active,
       manifest,
       manifestSha256,
+      reportingFeed: REPORTING_FEED,
       outputRoot: root,
       renderer: candidate,
-    }), /closed abort-cooperative v1 contract/);
+    }), /feed-bound abort-cooperative v2 contract/);
   }
+
+  let writes = 0;
+  const countedFileOperations = { writeFile: async () => { writes += 1; } };
+  for (const candidate of [
+    { ...REPORTING_FEED, endpoint: "not-accepted" },
+    { ...REPORTING_FEED, sourceWatermark: "not-opaque" },
+  ]) {
+    await assert.rejects(produceGraphExportCandidates({
+      policy: active,
+      manifest,
+      manifestSha256,
+      reportingFeed: candidate,
+      outputRoot: root,
+      renderer: validRenderer,
+      fileOperations: countedFileOperations,
+    }), /reporting feed/);
+  }
+  await assert.rejects(produceGraphExportCandidates({
+    policy: active,
+    manifest,
+    manifestSha256,
+    reportingFeed: REPORTING_FEED,
+    outputRoot: root,
+    renderer: rendererContract(validRenderer.render, "0".repeat(64)),
+    fileOperations: countedFileOperations,
+  }), /feed-bound abort-cooperative v2 contract/);
+  await assert.rejects(produceGraphExportCandidates({
+    policy: active,
+    manifest,
+    manifestSha256,
+    reportingFeedSha256: REPORTING_FEED_SHA256,
+    outputRoot: root,
+    renderer: validRenderer,
+    fileOperations: countedFileOperations,
+  }), /reporting feed/);
+  assert.equal(calls, 0);
+  assert.equal(writes, 0);
 });
 
 test("the injected renderer never exceeds four calls and normalizes every graph to the same metadata-free RGB PNG", async (context) => {
@@ -214,6 +310,7 @@ test("the injected renderer never exceeds four calls and normalizes every graph 
     policy: active,
     manifest,
     manifestSha256,
+    reportingFeed: REPORTING_FEED,
     outputRoot: root,
     now: () => CAPTURED_AT,
     concurrency: 4,
@@ -229,6 +326,18 @@ test("the injected renderer never exceeds four calls and normalizes every graph 
   });
 
   assert.equal(maximumActive, 4);
+  assert.deepEqual(Object.keys(result), [
+    "contract",
+    "schemaVersion",
+    "policyVersion",
+    "policySha256",
+    "sourceOccurrenceManifestSha256",
+    "reportingFeedSha256",
+    "rendererContract",
+    "graphs",
+  ]);
+  assert.equal(result.schemaVersion, 3);
+  assert.equal(result.reportingFeedSha256, REPORTING_FEED_SHA256);
   assert.equal(result.rendererContract.status, "satisfied");
   assert.equal(result.rendererContract.failure, null);
   assert.equal(observedCalls.length, 143);
@@ -248,9 +357,13 @@ test("the injected renderer never exceeds four calls and normalizes every graph 
   const bytes = await readFile(path.join(root, ...result.graphs[0].candidate.relativePath.split("/")));
   assert.equal(decodePng(bytes).colorType, 2);
   assert.deepEqual([...pngChunkTypes(bytes)], ["IHDR", "IDAT", "IEND"]);
-  assert.doesNotMatch(JSON.stringify(result), /url|https?:|credential|authorization|cookie|secret/i);
+  assert.doesNotMatch(
+    JSON.stringify(result),
+    /sourceId|sourceWatermark|endpoint|url|https?:|credential|authorization|cookie|secret/i,
+  );
   for (const call of observedCalls) {
     assert.deepEqual(Object.keys(call), ["request", "signal"]);
+    assert.equal(call.request.reportingFeedSha256, REPORTING_FEED_SHA256);
     assert.equal(call.signal.aborted, true);
   }
 });
@@ -267,9 +380,10 @@ test("mixed renderer failures classify deterministically and still return every 
     policy: active,
     manifest,
     manifestSha256,
+    reportingFeed: REPORTING_FEED,
     outputRoot: root,
     now: () => CAPTURED_AT,
-    timeoutMs: 10,
+    timeoutMs: 500,
     renderer: rendererContract(async ({ request, signal }) => {
       switch (indexById.get(request.occurrenceId)) {
         case 0:
@@ -292,6 +406,7 @@ test("mixed renderer failures classify deterministically and still return every 
     }),
   });
 
+  assert.equal(result.reportingFeedSha256, REPORTING_FEED_SHA256);
   assert.equal(result.rendererContract.status, "satisfied");
   assert.equal(result.graphs.length, 143);
   assert.equal(new Set(result.graphs.map(({ occurrenceId }) => occurrenceId)).size, 143);
@@ -308,7 +423,10 @@ test("mixed renderer failures classify deterministically and still return every 
   assert.equal(result.graphs.slice(7).every(({ probeStatus }) => probeStatus === "success"), true);
   assert.equal(result.graphs.slice(0, 7).every(({ candidate }) => candidate === null), true);
   assert.equal(result.graphs.slice(7).every(({ candidate }) => candidate?.mediaType === "image/png"), true);
-  assert.doesNotMatch(JSON.stringify(result), /renderer-specific|stopped|url|https?:|credential|authorization|cookie|secret/i);
+  assert.doesNotMatch(
+    JSON.stringify(result),
+    /renderer-specific|stopped|sourceId|sourceWatermark|endpoint|url|https?:|credential|authorization|cookie|secret/i,
+  );
 });
 
 test("a renderer that ignores abort stops the batch at four unsettled calls and returns a complete closed result", async (context) => {
@@ -322,6 +440,7 @@ test("a renderer that ignores abort stops the batch at four unsettled calls and 
     policy: active,
     manifest,
     manifestSha256,
+    reportingFeed: REPORTING_FEED,
     outputRoot: root,
     timeoutMs: 10,
     settlementGraceMs: 20,
@@ -335,6 +454,7 @@ test("a renderer that ignores abort stops the batch at four unsettled calls and 
   });
   const elapsedMs = Date.now() - startedAt;
 
+  assert.equal(result.reportingFeedSha256, REPORTING_FEED_SHA256);
   assert.equal(calls, 4);
   assert.equal(activeCalls, 4);
   assert.equal(maximumActive, 4);
@@ -348,7 +468,10 @@ test("a renderer that ignores abort stops the batch at four unsettled calls and 
   assert.equal(result.graphs.length, 143);
   assert.deepEqual(result.graphs.map(({ occurrenceId }) => occurrenceId), graphs.map(({ occurrenceId }) => occurrenceId));
   assert.equal(result.graphs.every(({ probeStatus, candidate }) => probeStatus === "missing" && candidate === null), true);
-  assert.doesNotMatch(JSON.stringify(result), /url|https?:|credential|authorization|cookie|secret/i);
+  assert.doesNotMatch(
+    JSON.stringify(result),
+    /sourceId|sourceWatermark|endpoint|url|https?:|credential|authorization|cookie|secret/i,
+  );
 
   await new Promise((resolve) => setTimeout(resolve, 30));
   assert.equal(calls, 4, "returning must not release workers to schedule more calls");
@@ -381,6 +504,7 @@ test("a body whose read and cleanup never settle stops scheduling and returns al
     policy: active,
     manifest,
     manifestSha256,
+    reportingFeed: REPORTING_FEED,
     outputRoot: root,
     timeoutMs: 10,
     settlementGraceMs: 20,
@@ -392,6 +516,7 @@ test("a body whose read and cleanup never settle stops scheduling and returns al
   });
   const elapsedMs = Date.now() - startedAt;
 
+  assert.equal(result.reportingFeedSha256, REPORTING_FEED_SHA256);
   assert.equal(calls, 4);
   assert.equal(activeReads, 4);
   assert.equal(maximumActiveReads, 4);
@@ -402,7 +527,10 @@ test("a body whose read and cleanup never settle stops scheduling and returns al
   assert.equal(result.graphs.length, 143);
   assert.deepEqual(result.graphs.map(({ occurrenceId }) => occurrenceId), graphs.map(({ occurrenceId }) => occurrenceId));
   assert.equal(result.graphs.every(({ probeStatus, candidate }) => probeStatus === "missing" && candidate === null), true);
-  assert.doesNotMatch(JSON.stringify(result), /url|https?:|credential|authorization|cookie|secret/i);
+  assert.doesNotMatch(
+    JSON.stringify(result),
+    /sourceId|sourceWatermark|endpoint|url|https?:|credential|authorization|cookie|secret/i,
+  );
 
   await new Promise((resolve) => setTimeout(resolve, 30));
   assert.equal(calls, 4);
