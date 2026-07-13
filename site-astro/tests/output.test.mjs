@@ -55,6 +55,8 @@ test("stage output stays noindex, blocker-labelled, searchable, and auditable", 
   assert.match(html, /rel="icon" href="\/assets\/verdify-lab-lockup\.svg" type="image\/svg\+xml"/);
   assert.match(html, /property="og:image" content="https:\/\/lab-stage\.verdify\.ai\/static\/og-image-v2\.jpg"/);
   assert.match(html, /name="twitter:card" content="summary_large_image"/);
+  assert.match(html, /rel="preload" href="\/assets\/verdify-site-shell\/fonts\/ibm-plex-sans-latin-wght-normal\.woff2" as="font" type="font\/woff2" crossorigin="anonymous"/);
+  assert.match(html, /rel="preload" href="\/assets\/verdify-site-shell\/fonts\/ibm-plex-mono-latin-400-normal\.woff2" as="font" type="font\/woff2" crossorigin="anonymous"/);
   assert.match(html, /known frozen-baseline integrity blockers remain open/);
   assert.match(html, /src="\/assets\/verdify-lab-lockup\.svg"/);
   assert.match(html, /href="https:\/\/verdify\.ai\/services\//);

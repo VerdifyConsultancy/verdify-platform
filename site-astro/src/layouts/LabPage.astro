@@ -71,6 +71,20 @@ const breadcrumbItems = [
     <meta name="twitter:title" content={socialTitle} />
     <meta name="twitter:description" content={socialDescription} />
     <meta name="twitter:image" content={socialImage} />
+    <link
+      rel="preload"
+      href="/assets/verdify-site-shell/fonts/ibm-plex-sans-latin-wght-normal.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="preload"
+      href="/assets/verdify-site-shell/fonts/ibm-plex-mono-latin-400-normal.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin="anonymous"
+    />
     <link rel="icon" href="/assets/verdify-lab-lockup.svg" type="image/svg+xml" />
     <link rel="canonical" href={record.kind === "alias" ? `${build.siteOrigin}${record.target}` : record.canonicalUrl} />
     <link rel="alternate" type="application/rss+xml" href="/rss.xml" title="Verdify Lab" />
