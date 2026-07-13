@@ -244,11 +244,14 @@ DELETE — verified superseded (content demonstrably on main via #461/#462):
   separately reviewed, explicitly authorized non-destructive disposition once
   no worktree uses it.
 
-Finding that improves on the 03:26 audit: the S3 CAS primitives (immutable
-puts, ETag CAS, pagination, distributed lease, safe GC) are ALREADY ON MAIN —
-what remains for Phase 4b is wiring (CLI s3:// construction, occurrence
-persistence caller, real endpoint/credential probe, publisher/event
-workload), not the backend itself.
+CORRECTION (2026-07-13 ~10:05Z, codex direct audit supersedes the branch
+triage's claim): main contains an abstract release store plus LOCAL
+FILESYSTEM implementations only — there is NO S3 backend, no S3 occurrence
+persistence, and no AWS SDK client on main. The S3/CAS primitives seen in
+triage live on the (now-deleted) local branches' history and were never
+merged. Phase 4b therefore includes IMPLEMENTING the S3 backend and its
+conditional-write contract before any CLI/event wiring; endpoint and
+credential checks stay name-only and activation-gated.
 
 ## Operating cadence
 
