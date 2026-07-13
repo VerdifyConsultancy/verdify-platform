@@ -336,7 +336,8 @@ test("@quality planner, archive, evidence, and contact templates keep semantic i
 
   await visit(page, "/data/plans");
   const archiveFilter = page.getByRole("searchbox", { name: "Filter planning archive" });
-  await archiveFilter.fill("2026-07-12");
+  const archiveNeedle = (await page.locator("tbody tr").first().locator("td").first().innerText()).trim();
+  await archiveFilter.fill(archiveNeedle);
   await expect(page.locator(".archive-tools output")).toHaveText("1 record");
   await expect(page.locator("tbody tr:visible")).toHaveCount(1);
   await expect(page.locator('.lab-table-scroll[role="region"]')).toHaveAttribute("tabindex", "0");
