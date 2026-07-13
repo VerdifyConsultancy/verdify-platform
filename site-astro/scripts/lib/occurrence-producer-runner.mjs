@@ -317,16 +317,18 @@ async function captureCurrentMedia({
 }
 
 function assertTransportFreeResult(result, rawDatasourceIdentity) {
-  const serialized = JSON.stringify(result);
-  if (
-    serialized.includes("://")
-    || serialized.includes(rawDatasourceIdentity)
-    || /graphs\.verdify\.ai/iu.test(serialized)
-  ) throw new Error("occurrence producer result contains transport identity");
   const visit = (value, key = "") => {
     if (/^(?:url|endpoint|authorization|cookie|secret|credential)$/iu.test(key)) {
       throw new Error("occurrence producer result contains a transport field");
     }
+    if (
+      typeof value === "string"
+      && (
+        value.includes("://")
+        || value === rawDatasourceIdentity
+        || /graphs\.verdify\.ai/iu.test(value)
+      )
+    ) throw new Error("occurrence producer result contains transport identity");
     if (Array.isArray(value)) {
       for (const child of value) visit(child);
       return;

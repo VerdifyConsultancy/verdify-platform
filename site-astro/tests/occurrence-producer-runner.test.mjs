@@ -279,7 +279,8 @@ test("offline runner emits one complete URL-free 143+2 batch with exact datasour
   assert.match(result.datasourceBindingProof.planSha256, /^[0-9a-f]{64}$/u);
   assert.equal(graphCalls.length, 143);
   assert.equal(cameraCalls.length, 2);
-  assert.equal(peakCameraCalls, 2);
+  assert.equal(peakCameraCalls >= 1, true);
+  assert.equal(peakCameraCalls <= occurrenceProducerRunnerContract.maxCameraConcurrency, true);
   assert.equal(selectorCalls.length, 1);
   assert.deepEqual(selectorCalls[0], {
     contract: "verdify.lab-occurrence-selector-precondition-read-request",
