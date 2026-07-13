@@ -85,6 +85,17 @@ assert.deepEqual(runtimeInit.command, ["/app/release-runtime/entrypoint.sh"]);
 assert.deepEqual(runtimeInit.args, ["init"]);
 assert.deepEqual(runtimeSite.command, ["nginx"]);
 assert.deepEqual(runtimeSite.args, ["-g", "daemon off;"]);
+assert.equal(
+  runtimeSite.volumeMounts.find((mount) => mount.name === "release-state")?.mountPath,
+  "/run/verdify-lab-release",
+);
+assert.equal(runtimeSite.volumeMounts.find((mount) => mount.name === "release-state")?.readOnly, true);
+assert.equal(
+  runtimeSite.volumeMounts.some((mount) => mount.mountPath === "/var/run"),
+  false,
+  "nginx must not mask the shared /run/verdify-lab-release state with a broad /var/run mount",
+);
+assert.equal(runtime.spec.template.spec.volumes.some((volume) => volume.name === "nginx-run"), false);
 assert.deepEqual(runtimeReconciler.command, ["/app/release-runtime/entrypoint.sh"]);
 assert.deepEqual(runtimeReconciler.args, ["reconcile"]);
 
