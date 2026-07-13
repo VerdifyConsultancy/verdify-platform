@@ -1,0 +1,92 @@
+# zones.yaml — Greenhouse zone configuration
+# Human-editable source of truth for zones, cameras, sensors, and crops
+# Used by: analyze-greenhouse-snapshot.py, GreenLight model, daily reports
+
+greenhouse:
+  name: Vallery Greenhouse
+  location: Longmont, CO
+  latitude: 40.1672
+  longitude: -105.1019
+  elevation_ft: 5003
+  area_sqft: 234
+  shape: hexagon (6 walls)
+  glazing: Gallina PoliCarb 2P 6mm Opal
+  r_value: 1.639
+
+zones:
+  south:
+    name: South Zone
+    description: Hottest zone — peak sun, exhaust fans, narrower hex taper
+    temp_character: hottest
+    cameras:
+      - camera: greenhouse_1
+        coverage_pct: 80
+    sensors:
+      air: [temp_south, rh_south, vpd_south]
+      soil: [soil_moisture_south_1, soil_temp_south_1, soil_ec_south_1,
+             soil_moisture_south_2, soil_temp_south_2]
+    crops:
+      - name: Canna Lily
+        position: SOUTH-FLOOR
+        stage: vegetative
+        notes: Large pots on floor with individual drip heads. Need fertilizer.
+
+  east:
+    name: East Zone
+    description: Coolest zone — tree shade, patio door, hydro system
+    temp_character: coolest
+    cameras:
+      - camera: greenhouse_2
+        coverage_pct: 80
+    sensors:
+      air: [temp_east, rh_east, vpd_east]
+    crops:
+      - name: Seedlings (unknown)
+        position: EAST-SHELF-T1
+        stage: seedling
+        notes: On heat mat. Species TBD — needs Emily inventory.
+
+  west:
+    name: West Zone
+    description: Mid-range, longest wall (16-17'), afternoon sun
+    temp_character: mid-range
+    cameras:
+      - camera: greenhouse_1
+        coverage_pct: 30
+      - camera: greenhouse_2
+        coverage_pct: 50
+    sensors:
+      air: [temp_west, rh_west, vpd_west]
+      soil: [soil_moisture_west, soil_temp_west]
+    crops:
+      - name: Unknown pots
+        position: WEST-SHELF
+        stage: unknown
+        notes: Random pots, contents unknown. Needs Emily inventory.
+
+  north:
+    name: North Zone
+    description: Equipment only — buffered by house heat
+    temp_character: buffered
+    cameras:
+      - camera: greenhouse_2
+        coverage_pct: 40
+    sensors:
+      air: [temp_north, rh_north, vpd_north]
+    crops: []
+
+  center:
+    name: Center Zone
+    description: Mixing zone — fog machine here, no active planting
+    temp_character: average
+    status: offline
+    cameras:
+      - camera: greenhouse_1
+        coverage_pct: 60
+    sensors:
+      air: []  # No dedicated center probe
+    crops:
+      - name: Vanda Orchids
+        position: CENTER-HANG
+        stage: vegetative
+        notes: Bare root epiphytes, hanging. Added 2026-04-02.

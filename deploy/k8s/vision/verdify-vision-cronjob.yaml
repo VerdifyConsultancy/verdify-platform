@@ -25,16 +25,20 @@ spec:
             app.kubernetes.io/component: vision
         spec:
           restartPolicy: Never
-          # The ingestor package is private. Reuse the same scoped pull
-          # credential as the running ingestor instead of falling back to an
-          # anonymous GHCR token, which returns 401 for this CronJob.
+          # zot origin only (ADR-0021 — GHCR is retired). The overlay rewrites
+          # the canonical image name below to registry.vallery.net@sha256, so
+          # the scoped zot pull credential is the ONLY one this pod needs; the
+          # transitional GHCR read-only pull-secret entry was dropped with
+          # #436 (tests/test_20_vision_src_sync.py fences it out).
           imagePullSecrets:
-            - name: zot-origin-cluster-pull  # zot origin (ADR-0021); ghcr kept during transition
-            - name: ghcr-jvallery-readonly
+            - name: zot-origin-cluster-pull
           containers:
             - name: vision
-              # overlays/prod applies its current, already-running immutable
-              # ingestor digest to this image name.
+              # Canonical image-name KEY only (never pulled as-is): the
+              # overlays/prod images transformer rewrites it to the pinned
+              # registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256
+              # digest, so vision advances in lock-step with the ingestor on
+              # every gitops(pin) commit + gated sync.
               image: ghcr.io/verdifyconsultancy/verdify-ingestor
               imagePullPolicy: IfNotPresent
               command: ["sh", "-c"]
