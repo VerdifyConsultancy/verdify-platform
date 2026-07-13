@@ -218,6 +218,22 @@ export function validateStaticOccurrenceManifest(manifest) {
   return { graphs, currentMedia };
 }
 
+export function staticOccurrenceDiscoveryProjection(manifest) {
+  const { graphs, currentMedia } = validateStaticOccurrenceManifest(manifest);
+  return {
+    contract: "verdify.lab-static-occurrence-manifest",
+    schemaVersion: 1,
+    snapshotId: manifest.snapshotId,
+    selectedManifestSha256: null,
+    graphs: graphs.map((occurrence) => ({ ...occurrence, selected: null })),
+    currentMedia: currentMedia.map((occurrence) => ({ ...occurrence, selected: null })),
+  };
+}
+
+export function staticOccurrenceDiscoverySha256(manifest) {
+  return sha256(canonicalBytes(staticOccurrenceDiscoveryProjection(manifest)));
+}
+
 function occurrenceFingerprint(occurrence) {
   return sha256(canonicalBytes(occurrence));
 }
