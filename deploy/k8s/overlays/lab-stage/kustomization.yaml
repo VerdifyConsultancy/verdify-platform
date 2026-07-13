@@ -12,7 +12,7 @@ images:
   # fleet-origin digest produced by the in-cluster Kaniko path.
   - name: registry.vallery.net/verdifyconsultancy/verdify-lab-astro
     newName: registry.vallery.net/verdifyconsultancy/verdify-lab-astro
-    digest: sha256:2c03489c75315f848a525700ccc93d7da7d1a9665c42d82c46c2535d6ff769b7
+    digest: sha256:fb72e1bad7c6c57649d86214067052d145648638e4fed3e6d7cee325becbee21
 
 labels:
   - pairs:
