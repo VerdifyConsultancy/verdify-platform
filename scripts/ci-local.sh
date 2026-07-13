@@ -68,6 +68,7 @@ $PY -m pytest -q \
   tests/test_public_output_policy.py \
   tests/test_public_output_remediation.py \
   tests/test_public_zone_renderer.py \
+  tests/test_service_restart_drift_guard.py \
   tests/test_site_content_refresh.py \
   tests/test_slack_config.py \
   tests/test_slack_ops.py \
@@ -110,6 +111,11 @@ if [ -n "${CI_BASE_REF:-}" ]; then
     grep -qE "id: cfg_(sw_)?${id}\b" firmware/greenhouse/sensors.yaml || MISSING="$MISSING $id"
   done
   [ -z "$MISSING" ] || { echo "New tunables without cfg_* readback:$MISSING" >&2; exit 1; }
+
+  step "service-restart drift guard (rule 7, schema -> runtime) vs ${BASE}"
+  # #391: the retired ci.yml job grepped the bare word 'service' and
+  # false-passed on ~every PR body. The structural contract lives in the guard.
+  bash scripts/check-service-restart-drift.sh "$BASE" HEAD
 
   step "firmware replay-diff trigger check vs ${BASE}"
   CHANGED=$(git diff --name-only "$BASE" HEAD -- 'firmware/lib/*.h' 'firmware/lib/*.cpp' \
