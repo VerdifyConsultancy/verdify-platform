@@ -11,6 +11,7 @@ import pytest
 from pydantic import ValidationError
 
 from verdify_schemas.mcp_responses import (
+    OUTCOME_COMPOSITE_METRICS,
     ClimateSnapshot,
     EquipmentStateRow,
     ForecastSummaryRow,
@@ -122,9 +123,13 @@ class TestScorecard:
         migration-146/147 compliance rearchitecture (band-compliance §6-§7):
         compliance_v2_raw/attributable/unachievable_frac, graded temp/vpd, and
         4 graded_*_stress_h — accepted BEFORE fn_planner_scorecard emits them so
-        the extra='forbid' contract cannot 500 the public /api/v1/scorecard."""
+        the extra='forbid' contract cannot 500 the public /api/v1/scorecard.
+
+        Plus the 6 ADR-0004 composite outcome-score metrics (schema-first,
+        #388): outcome_score_composite + its component sub-scores — accepted
+        BEFORE the #371 DB function emits them, same 500-proofing pattern."""
         names = ScorecardResponse.metric_names()
-        assert len(names) == 27 + 9 + 2
+        assert len(names) == 27 + 9 + 2 + 6
         assert "planner_score" in names
         assert "7d_avg_score" in names
         assert "7d_avg_stress" in names  # CI-only until G15
@@ -134,6 +139,72 @@ class TestScorecard:
         # Graded compliance metrics (schema-first, migration 146/147).
         assert "compliance_v2_attributable_pct" in names
         assert "graded_vpd_high_stress_h" in names
+        # ADR-0004 composite outcome score (schema-first, #388).
+        assert OUTCOME_COMPOSITE_METRICS <= names
+
+
+class TestOutcomeCompositeContract:
+    """#388 — ADR-0004 composite outcome score, schema-first wire contract.
+
+    OUTCOME_COMPOSITE_METRICS is the single pinned name set that the
+    ScorecardResponse model (== MCP scorecard() wire keys, the emitter is a
+    pass-through), the #371 DB function / daily_summary columns, and the #365
+    planner reader all bind to. These guards run with NO DB so a rename fails
+    everywhere, immediately."""
+
+    def test_model_fields_exactly_match_pinned_contract(self):
+        """Every outcome_* field on the model must be in the pinned set and
+        vice versa — a rename on either side fails loud instead of silently
+        NULLing the planner reward (#365)."""
+        model_outcome_fields = {n for n in ScorecardResponse.model_fields if n.startswith("outcome_")}
+        assert model_outcome_fields == set(OUTCOME_COMPOSITE_METRICS), (
+            f"ScorecardResponse outcome_* fields {sorted(model_outcome_fields)} != "
+            f"pinned OUTCOME_COMPOSITE_METRICS {sorted(OUTCOME_COMPOSITE_METRICS)}. "
+            f"Update BOTH together (and #371's DB fn / #365's reader)."
+        )
+
+    def test_no_wire_alias_on_outcome_fields(self):
+        """The MCP emitter dumps by_alias — outcome fields must have NO alias
+        so the Python identifier, the wire key, and the DB metric/column name
+        are the identical string."""
+        for name in OUTCOME_COMPOSITE_METRICS:
+            field = ScorecardResponse.model_fields[name]
+            assert field.alias is None, f"{name} must not carry a wire alias"
+
+    def test_outcome_fields_optional_and_default_none(self):
+        """Transitional safety (migration-147-header pattern): all outcome
+        fields are Optional and default to None, so days before the #371 DB
+        fn populates them serve present-but-null instead of 500."""
+        s = ScorecardResponse()
+        for name in OUTCOME_COMPOSITE_METRICS:
+            assert getattr(s, name) is None
+
+    def test_outcome_metric_rows_roundtrip(self):
+        """Once #371's fn emits the composite rows, they parse as floats and
+        survive the by_alias wire dump under their pinned names."""
+        rows = [
+            ("outcome_score_composite", Decimal("61.4")),
+            ("outcome_time_in_band", Decimal("87.5")),
+            ("outcome_dli_grade", Decimal("72.0")),
+            ("outcome_dif_grade", Decimal("90.0")),
+            ("outcome_wet_dry_completion", Decimal("100")),
+            ("outcome_cost_cycling_penalty", Decimal("12.3")),
+        ]
+        s = ScorecardResponse.from_metric_rows(rows)
+        assert s.outcome_score_composite == 61.4
+        assert s.outcome_cost_cycling_penalty == 12.3
+        dumped = s.model_dump(by_alias=True)
+        for name, value in rows:
+            assert dumped[name] == float(value)
+
+    def test_outcome_null_rows_accepted(self):
+        """Present-but-null rows (fn emits the metric with NULL value on a
+        partial day) must not raise — the /api/v1/scorecard 500-proofing the
+        issue's acceptance calls out."""
+        rows = [(name, None) for name in sorted(OUTCOME_COMPOSITE_METRICS)]
+        s = ScorecardResponse.from_metric_rows(rows)
+        assert s.outcome_score_composite is None
+        assert s.outcome_time_in_band is None
 
 
 class TestOutcomeKpi:
