@@ -1,0 +1,18 @@
+{
+  "contract": "verdify.lab-legacy-public-assets",
+  "schemaVersion": 1,
+  "sourceBaselineSha256": "6e24ceb1f43cfd09fae8368da55c00c6e546c152635e46538c9c928b5205389a",
+  "files": {
+    "favicon.ico": "b92e1087868ece44a41e0203e2e39308ceb27f339511daaf93ea1f8e324ef393",
+    "static/apple-touch-icon.png": "ad5bf0eea9d12623ba3a00ec03ea2c0451506bb3d9803ec8ea0df11cc91ecdc4",
+    "static/brand/apple-touch-icon.png": "ce0675001dc3b75d8778c42a4e57ebdbc2ef53ed0519f68ee8c48be0c236e7d2",
+    "static/brand/favicon.svg": "4969ca2115bc5f4529bb1b41b0e6c6cd6e51c563321cafbb811719afcfb382be",
+    "static/brand/verdify-icon.svg": "6fc7bf45c468ada2e7c748f9f4ec4e24f29632c6754aec97ed140f19b32522ba",
+    "static/brand/verdify-primary-consulting-lockup.png": "565acda631295abfa3ff66253607a84d0af4a09d3b0616a1afbe2818dcc8ddab",
+    "static/brand/verdify-wordmark-dark.svg": "065a8434c11e871445c622ecc760dd27d0b9c166f416acb7de507f8e0f1359d0",
+    "static/brand/verdify-wordmark.svg": "82ceff3b933480da8a1638fa44a848d7c3e82496f8b6cd6d1d632ecebc49f795",
+    "static/icon.png": "ce0675001dc3b75d8778c42a4e57ebdbc2ef53ed0519f68ee8c48be0c236e7d2",
+    "static/og-image.jpg": "c0e7d5baa3c1e1854cd95f0979be697c86c3e59f56518a496d33c3f665060b55",
+    "static/og-image.png": "7827d21a9000be2ce0c89ac674c07d502289a6d8cf1eb0b8a0a6a89b6b1637b9"
+  }
+}
