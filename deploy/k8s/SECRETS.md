@@ -74,6 +74,7 @@ Service → Secret → key wiring as authored in `deploy/k8s/{base,components}`:
 | `verdify-hermes-slack` | slack channel config | hermes-iris (optional volume mount; **non-secret** channel cfg) | — | — | opt |
 | `verdify-lab-publisher-s3` | `LAB_S3_BUCKET`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, optional `LAB_S3_ENDPOINT_URL` | lab-publisher (`envFrom.secretRef`) | ✓ | — | ✓ |
 | `verdify-grafana-secrets` | `GRAFANA_ADMIN_PASSWORD` | grafana (`secretKeyRef`, required; pod fails closed when absent) | — | — | ✓ |
+| `verdify-grafana-secrets` | `GRAFANA_RENDERER_TOKEN` | grafana + image-renderer (`secretKeyRef`, required shared token; pod fails closed when absent) | — | — | ✓ |
 | `ghcr-jvallery-readonly` | `.dockerconfigjson` | all workloads (`imagePullSecrets`) | ✓ | ✓ | ✓ |
 | `verdify-agent-secrets` | `AGENT_RO_DSN` | dev/coding agent (read-only `agent_ro`/`pg_read_all_data`, migration 184; **read-only, no device path**) | — | — | ✓ |
 | `verdify-firmware-ota` | `ota_password` | `make firmware-deploy` ESPHome OTA upload + `firmware-rollback.sh`; **device-affecting** (flash gate) | — | — | ✓ |
@@ -98,11 +99,13 @@ the public prod tree. For the current S3-compatible endpoint, set
 `LAB_S3_ENDPOINT_URL=https://s3-hdd.vallery.net` with the Verdify-scoped key.
 
 `verdify-grafana-secrets` is a prod-only, out-of-band prerequisite for the
-Grafana Deployment. Root must seal and deliver the single named key before an
-ArgoCD sync; there is deliberately no in-repo placeholder or default password.
-Verify the Secret and key names (never the value) before rollout. A missing
-Secret or key leaves new pods in `CreateContainerConfigError`; Kubernetes still
-accepts the Deployment object, but its rollout cannot complete.
+Grafana Deployment. Root must seal and deliver the two named keys before an
+ArgoCD sync; there is deliberately no in-repo placeholder, default password, or
+default renderer token. Before any sync, verify only the Secret name and both
+required key names (never their values), then obtain Jason's explicit approval
+for the manual `verdify-prod-dark` sync. A missing Secret or key leaves new pods
+in `CreateContainerConfigError`; Kubernetes still accepts the Deployment object,
+but its rollout cannot complete.
 
 ## Sealed-artifact shape (Root delivers; Iris specifies)
 

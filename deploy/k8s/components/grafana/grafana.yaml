@@ -27,10 +27,10 @@
 #
 # IMAGES: upstream Grafana and renderer are hand-pinned by immutable multi-arch
 # digest. Grafana 11.6.0 is past support and the former renderer 3.12.6 is in
-# CVE-2025-11539's affected range. The renderer token is the pod's random UID:
-# both sidecars receive the same non-default per-pod capability value through the
-# Downward API. It is RBAC-readable metadata, not a durable secret or authorization
-# boundary; port isolation remains mandatory. The unsafe upstream default is unused.
+# CVE-2025-11539's affected range. Both containers receive the same required
+# renderer token from verdify-grafana-secrets/GRAFANA_RENDERER_TOKEN. The value
+# is delivered out of band and never committed; port isolation remains mandatory.
+# The unsafe upstream default is unused.
 #
 # COMPONENT (not base): graphs.verdify.ai is a prod host; wiring lives in
 # overlays/prod only, never staging.
@@ -77,7 +77,7 @@ spec:
         # at init while the rolling strategy retains the old ready pod. CSS lives in
         # verdify-grafana-canvas-css (iterate there + rollout restart).
         - name: inject-canvas-css
-          image: grafana/grafana:12.4.3-security-02@sha256:fe5bc62ae401120c48b4cd50db122a632bfca8d48a7115a32cc7c9b80c19dc48
+          image: grafana/grafana:12.4.5@sha256:26b8f35a9e4e4431995cf64c3f396505a4faf17bcfc19f9ed84943ec6bfd5ecd
           command:
             - sh
             - -c
@@ -107,7 +107,7 @@ spec:
               readOnly: true
       containers:
         - name: grafana
-          image: grafana/grafana:12.4.3-security-02@sha256:fe5bc62ae401120c48b4cd50db122a632bfca8d48a7115a32cc7c9b80c19dc48
+          image: grafana/grafana:12.4.5@sha256:26b8f35a9e4e4431995cf64c3f396505a4faf17bcfc19f9ed84943ec6bfd5ecd
           ports:
             - name: http
               containerPort: 3000
@@ -179,14 +179,13 @@ spec:
             # the other Grafana pod through the load-balanced Service.
             - name: GF_RENDERING_SERVER_URL
               value: http://localhost:8081/render
-            # A unique per-pod Kubernetes UID replaces the renderer's public
-            # default. Both containers restart together and read the same value.
-            # This RBAC-readable identifier is defense in depth, not a secret;
-            # renderer port isolation is the primary boundary.
+            # Required out-of-band Secret key shared with the renderer. The
+            # source contains only its name/key contract, never its value.
             - name: GF_RENDERING_RENDERER_TOKEN
               valueFrom:
-                fieldRef:
-                  fieldPath: metadata.uid
+                secretKeyRef:
+                  name: verdify-grafana-secrets
+                  key: GRAFANA_RENDERER_TOKEN
             - name: GF_RENDERING_CALLBACK_URL
               value: http://127.0.0.1:3000/
             - name: GF_RENDERING_CONCURRENT_RENDER_REQUEST_LIMIT
@@ -262,7 +261,7 @@ spec:
         # /render/d-solo PNG embeds on lab.verdify.ai. grafana-image-renderer,
         # pinned (UPSTREAM image; not transformer-rewritten).
         - name: renderer
-          image: grafana/grafana-image-renderer:v5.9.1@sha256:c0c920e6974b0d30ae25313051344afcd2054362529968ebd9545a4b2bc8119b
+          image: grafana/grafana-image-renderer:v5.10.0@sha256:c0eb7b915a181c7bbe451718f9b633843678bef93703b5ed5fda2f28fa508986
           ports:
             - name: renderer
               containerPort: 8081
@@ -271,8 +270,9 @@ spec:
               value: ":8081"
             - name: AUTH_TOKEN
               valueFrom:
-                fieldRef:
-                  fieldPath: metadata.uid
+                secretKeyRef:
+                  name: verdify-grafana-secrets
+                  key: GRAFANA_RENDERER_TOKEN
             - name: LOG_LEVEL
               value: warn
             # Renderer v5 uses a memory-aware limiter instead of the retired

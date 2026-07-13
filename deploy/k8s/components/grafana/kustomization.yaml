@@ -18,9 +18,9 @@ kind: Component
 #
 # Upstream Grafana and image-renderer images are immutable-digest-pinned in the
 # Deployment (NOT transformer-rewritten — not verdify-* names). Required
-# admin/database Secrets come via secretKeyRef; the renderer's non-default per-pod
-# capability value comes from metadata.uid through the Downward API. It is pod
-# metadata rather than a durable secret; renderer port isolation remains mandatory.
+# admin/database/renderer keys come via secretKeyRef. Grafana and the renderer
+# share verdify-grafana-secrets/GRAFANA_RENDERER_TOKEN; its value is delivered
+# out of band and never committed. Renderer port isolation remains mandatory.
 resources:
   - grafana.yaml
   - graphs-ingressroute.yaml

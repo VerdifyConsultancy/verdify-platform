@@ -10,11 +10,9 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "deploy/k8s/components/grafana/grafana.yaml"
 SECRET_CONTRACT = ROOT / "deploy/k8s/SECRETS.md"
-GRAFANA_IMAGE = (
-    "grafana/grafana:12.4.3-security-02@sha256:fe5bc62ae401120c48b4cd50db122a632bfca8d48a7115a32cc7c9b80c19dc48"
-)
+GRAFANA_IMAGE = "grafana/grafana:12.4.5@sha256:26b8f35a9e4e4431995cf64c3f396505a4faf17bcfc19f9ed84943ec6bfd5ecd"
 RENDERER_IMAGE = (
-    "grafana/grafana-image-renderer:v5.9.1@sha256:c0c920e6974b0d30ae25313051344afcd2054362529968ebd9545a4b2bc8119b"
+    "grafana/grafana-image-renderer:v5.10.0@sha256:c0eb7b915a181c7bbe451718f9b633843678bef93703b5ed5fda2f28fa508986"
 )
 IMMUTABLE_IMAGE_RE = re.compile(r"^[^@\s]+@sha256:[0-9a-f]{64}$")
 
@@ -51,11 +49,18 @@ def test_grafana_and_renderer_use_reviewed_immutable_security_images():
     assert "grafana/grafana-image-renderer:3.12.6" not in text
 
 
-def test_manifest_wires_the_same_non_default_per_pod_renderer_value():
+def test_manifest_wires_the_same_required_secret_sourced_renderer_token():
     containers = _deployment()["spec"]["template"]["spec"]["containers"]
     grafana_env = _environment(_container(containers, "grafana"))
     renderer_env = _environment(_container(containers, "renderer"))
-    expected = {"valueFrom": {"fieldRef": {"fieldPath": "metadata.uid"}}}
+    expected = {
+        "valueFrom": {
+            "secretKeyRef": {
+                "name": "verdify-grafana-secrets",
+                "key": "GRAFANA_RENDERER_TOKEN",
+            }
+        }
+    }
 
     assert grafana_env["GF_RENDERING_RENDERER_TOKEN"] == {
         "name": "GF_RENDERING_RENDERER_TOKEN",
@@ -123,19 +128,28 @@ def test_surge_first_rollout_retains_the_old_pod_until_the_candidate_is_ready():
 def test_required_runtime_secrets_fail_closed_and_sql_expressions_are_not_explicitly_enabled():
     containers = _deployment()["spec"]["template"]["spec"]["containers"]
     grafana_env = _environment(_container(containers, "grafana"))
+    renderer_env = _environment(_container(containers, "renderer"))
     enabled = grafana_env.get("GF_FEATURE_TOGGLES_ENABLE", {}).get("value", "")
 
     for name in ("GF_SECURITY_ADMIN_PASSWORD", "POSTGRES_PASSWORD"):
         secret_ref = grafana_env[name]["valueFrom"]["secretKeyRef"]
         assert secret_ref.get("optional") is not True
+    assert grafana_env["GF_RENDERING_RENDERER_TOKEN"]["valueFrom"]["secretKeyRef"].get("optional") is not True
+    assert renderer_env["AUTH_TOKEN"]["valueFrom"]["secretKeyRef"].get("optional") is not True
     assert "sqlExpressions" not in enabled.split(",")
 
 
-def test_required_grafana_admin_secret_is_in_the_canonical_secret_contract():
+def test_required_grafana_secret_keys_and_manual_sync_gate_are_in_the_canonical_contract():
     contract = SECRET_CONTRACT.read_text()
 
     assert (
         "| `verdify-grafana-secrets` | `GRAFANA_ADMIN_PASSWORD` | "
         "grafana (`secretKeyRef`, required; pod fails closed when absent) | — | — | ✓ |"
     ) in contract
-    assert "there is deliberately no in-repo placeholder or default password" in contract
+    assert (
+        "| `verdify-grafana-secrets` | `GRAFANA_RENDERER_TOKEN` | "
+        "grafana + image-renderer (`secretKeyRef`, required shared token; pod fails closed when absent) | "
+        "— | — | ✓ |"
+    ) in contract
+    assert "there is deliberately no in-repo placeholder, default password, or" in contract
+    assert "then obtain Jason's explicit approval" in contract

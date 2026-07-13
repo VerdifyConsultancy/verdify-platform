@@ -30,7 +30,9 @@ Grafana pod (ns verdify-prod, deploy/verdify-grafana)
   • provider config (provisioning-cm.yaml) updateIntervalSeconds: 300  ← reload cadence
   • anonymous org role = Viewer (public, no login); admin login requires the
     out-of-band verdify-grafana-secrets/GRAFANA_ADMIN_PASSWORD prerequisite
-    (no default; missing Secret/key leaves a new pod CreateContainerConfigError)
+  • image-renderer auth requires the out-of-band verdify-grafana-secrets/
+    GRAFANA_RENDERER_TOKEN prerequisite in both containers
+    (no defaults; missing Secret/key leaves a new pod CreateContainerConfigError)
   • image-renderer sidecar → server-side PNG via /render/d-solo/...
         ▼
 graphs.verdify.ai (landing/Home)  +  lab.verdify.ai (/d-solo iframe embeds)
@@ -273,8 +275,10 @@ region the data spikes into. So:
   byte round-trip → clean diffs.
 - **SQL macros don't expand in psql:** substitute literal bounds to test.
 - **Do not use the Grafana admin API as an authoring path.** The required admin
-  Secret is delivered out of band and must exist before any rollout; dashboards
-  remain Git-provisioned, so preview through the reviewed deployment path.
+  and renderer Secret key names are delivered out of band and must be verified
+  without reading their values before any rollout. Production remains a
+  Jason-approved manual sync; dashboards remain Git-provisioned, so preview
+  through the reviewed deployment path.
 - **Band panels project into the future** (`now+30h`); `equipment_state` only
   exists up to now, so stripes correctly stop at "now".
 - **`rg` is unreliable in this repo** (silently misses, esp. `.sql`); use
