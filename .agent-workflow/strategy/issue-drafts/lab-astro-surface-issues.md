@@ -26,6 +26,8 @@ milestone `G3 — Planner, Irrigation, Lab, and Research`; labels `area:web`,
 - Parent: #351
 - Related Issues/PRs: #461, #465, #468, VerdifyConsultancy/verdify-www#33
 - Dependencies: verdify-www shell 1.1.0 (satisfied); blocks S2, S4, S5, S8
+- Human gate: none for the completed stage design-contract work; any production
+  adoption remains gated by S9
 - Evidence: docs/plans/lab-astro-migration.md; site-astro/vendor/site-shell/releases/verdify-site-shell-1.1.0.commit-7febbc479c6ed7d22f829e9c1e7109bc9bc7c6c0.release.json; #351 Phase 2 evidence
 
 ### What
@@ -73,6 +75,9 @@ checksum on live stage.
 - Parent: #351
 - Related Issues/PRs: #308, #461, #466, #468
 - Dependencies: S1 satisfied; close blocked by S3 current-media output and S7 live publication
+- Human gate: none for code and stage verification; camera source, allowlist,
+  reporting-feed, or credential changes inherit S3, and production adoption
+  inherits S9
 - Evidence: docs/plans/lab-astro-migration.md Phase 2; #468; immutable #351 acceptance comment https://github.com/VerdifyConsultancy/verdify-platform/issues/351#issuecomment-4955268098
 
 ### What
@@ -216,6 +221,8 @@ live T0/T+10 reconciliation after S7 integration.
 - Parent: #351
 - Related Issues/PRs: #458, #461, #468
 - Dependencies: S1 satisfied; #458 separately owns expanded HLS/MP4 public-output validation
+- Human gate: none for completed stage media/lightbox work; production adoption
+  inherits S9
 - Evidence: docs/plans/lab-astro-migration.md; site-astro/tests/quality.browser.test.mjs; Phase 2 acceptance reports
 
 ### What
@@ -265,6 +272,8 @@ console/network failures.
 - Parent: #351
 - Related Issues/PRs: #43, #219, #461, #468
 - Dependencies: S1 satisfied; S7 owns freshness; S6 owns unavailable historical references
+- Human gate: none for completed snapshot/template work; live publication and
+  credentials inherit S7, and production adoption inherits S9
 - Evidence: docs/plans/lab-astro-migration.md; site-astro/tests/quality.browser.test.mjs; Phase 2 route/acceptance evidence
 
 ### What
@@ -313,6 +322,8 @@ contact routes.
 - Parent: #351
 - Related Issues/PRs: #458, #461, #462
 - Dependencies: S1, S2, S3, S4, S5, S7; include #458 output before final locked comparison if merged
+- Human gate: none for read-only snapshot comparison and evidence; any
+  production route or cutover action inherits S9
 - Evidence: docs/plans/lab-astro-migration.md Phase 4d; site-astro/scripts/site-build-parity.py; site-astro/tests/test_site_build_parity_limits.py
 
 ### What
@@ -444,6 +455,8 @@ generation.
 - Parent: #351
 - Related Issues/PRs: #463, #464, #465, #466, #467, #468, jvallery/agents#2967, #2969, #2970, #2971, #2972
 - Dependencies: S1, S4, S5 satisfied; exact tested digest pinned by #468
+- Human gate: none for completed CI and authorized stage acceptance; any
+  production sync or cutover inherits S9
 - Evidence: PRs #463-#468; workflows `verdify-platform-ci-phase1-38ccd5e` and `verdify-platform-ci-9q2bl`; immutable #351 acceptance comment https://github.com/VerdifyConsultancy/verdify-platform/issues/351#issuecomment-4955268098
 
 ### What
@@ -496,6 +509,9 @@ re-probe.
 - Parent: #351
 - Related Issues/PRs: #337, #459, #460, coordinator/lab-production-canary-v2
 - Dependencies: S1-S8 green; Jason explicit APPLY; network-infra route truth; no prod action before gate
+- Human gate: Jason must explicitly approve and APPLY the production GitOps
+  sync, public route/DNS/edge cutover, and subsequent Quartz/publisher
+  retirement; no credential, device, or destructive database action is implied
 - Evidence: docs/plans/lab-astro-migration.md Phase 5; production-canary branch; final parity and stage acceptance reports
 
 ### What
