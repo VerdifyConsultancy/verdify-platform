@@ -1,10 +1,22 @@
 import assert from "node:assert/strict";
-import { readdir, readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { spawnSync } from "node:child_process";
+import { mkdir, mkdtemp, readdir, readFile, readlink, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 import YAML from "yaml";
+
+import { reconcileOnce, recordReconcileFailure, runtimeConfig } from "../release-runtime/reconcile.mjs";
+import { buildBakedSiteBundle } from "../scripts/build-baked-site-bundle.mjs";
+import {
+  inventoryBuiltSite,
+  publishSiteRelease,
+  siteContentIdentitySha256,
+  siteReleasePayloadSha256,
+} from "../scripts/lib/site-release-store.mjs";
 
 const SITE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const REPO_ROOT = path.resolve(SITE_ROOT, "..");
@@ -126,4 +138,247 @@ test("Phase 4c reporting boundary is deny-all and impossible to activate from cu
     if (file.startsWith(`${boundaryRoot}${path.sep}`)) continue;
     assert.doesNotMatch(await readFile(file, "utf8"), /lab-occurrence-reporting-boundary/);
   }
+});
+
+test("release runtime candidate is a two-node, no-PVC, no-route read-only cache", () => {
+  const candidate = path.join(REPO_ROOT, "deploy/k8s/candidates/lab-release-runtime");
+  const rendered = spawnSync("kubectl", ["kustomize", candidate], {
+    cwd: REPO_ROOT,
+    encoding: "utf8",
+    timeout: 30_000,
+  });
+  assert.equal(rendered.status, 0, rendered.stderr);
+  const resources = YAML.parseAllDocuments(rendered.stdout).map((document) => document.toJSON()).filter(Boolean);
+  assert.equal(resources.length, 4);
+  const one = (kind) => resources.find((resource) => resource.kind === kind);
+  for (const resource of resources) {
+    assert.equal(resource.metadata.namespace, "verdify-platform");
+    assert.equal(resource.metadata.labels["verdify.ai/traffic-state"], "disconnected");
+  }
+
+  const deployment = one("Deployment");
+  assert.equal(deployment.spec.replicas, 2);
+  assert.equal(deployment.spec.template.spec.automountServiceAccountToken, false);
+  assert.equal(deployment.spec.template.spec.topologySpreadConstraints[0].topologyKey, "kubernetes.io/hostname");
+  assert.equal(deployment.spec.template.spec.topologySpreadConstraints[0].whenUnsatisfiable, "DoNotSchedule");
+  assert.deepEqual(deployment.spec.template.spec.topologySpreadConstraints[0].matchLabelKeys, ["pod-template-hash"]);
+  assert.equal(deployment.spec.template.spec.initContainers.length, 1);
+  assert.equal(deployment.spec.template.spec.initContainers[0].name, "hydrate-known-good");
+  assert.deepEqual(deployment.spec.template.spec.initContainers[0].args, ["init"]);
+  assert.deepEqual(deployment.spec.template.spec.containers.map((container) => container.name), ["site", "release-reconciler"]);
+  assert.deepEqual(deployment.spec.template.spec.containers[1].args, ["reconcile"]);
+  assert.equal(deployment.spec.template.spec.containers[0].readinessProbe.httpGet.path, "/readyz");
+  assert.equal(deployment.spec.template.spec.containers[0].livenessProbe.httpGet.path, "/healthz");
+  assert.equal(
+    deployment.spec.template.spec.containers[0].volumeMounts.find((mount) => mount.name === "release-cache").readOnly,
+    true,
+  );
+  for (const container of [...deployment.spec.template.spec.initContainers, ...deployment.spec.template.spec.containers]) {
+    assert.equal(container.securityContext.readOnlyRootFilesystem, true);
+    assert.deepEqual(container.securityContext.capabilities.drop, ["ALL"]);
+    assert.equal(container.envFrom, undefined);
+    assert.match(container.image, /^registry\.vallery\.net\/verdifyconsultancy\/verdify-lab-release-(?:agent|nginx)@sha256:0{64}$/u);
+  }
+  assert.ok(deployment.spec.template.spec.volumes.every((volume) => volume.emptyDir && !volume.persistentVolumeClaim));
+  assert.doesNotMatch(rendered.stdout, /secretKeyRef|secretRef|PersistentVolumeClaim|IngressRoute|kind: Ingress\b/u);
+
+  const service = one("Service");
+  assert.equal(service.spec.type, "ClusterIP");
+  assert.equal(service.spec.ports[0].port, 80);
+  assert.equal(service.spec.ports[0].targetPort, "http");
+  assert.equal(one("PodDisruptionBudget").spec.minAvailable, 1);
+
+  const policy = one("NetworkPolicy");
+  assert.deepEqual(policy.spec.policyTypes, ["Ingress", "Egress"]);
+  assert.deepEqual(policy.spec.ingress[0].from, [{
+    podSelector: { matchLabels: { "verdify.ai/lab-canary-client": "true" } },
+  }]);
+  assert.deepEqual(policy.spec.egress, [
+    {
+      to: [{
+        namespaceSelector: { matchLabels: { "kubernetes.io/metadata.name": "kube-system" } },
+        podSelector: { matchLabels: { "k8s-app": "kube-dns" } },
+      }],
+      ports: [{ protocol: "UDP", port: 53 }, { protocol: "TCP", port: 53 }],
+    },
+    {
+      to: [{ ipBlock: { cidr: "192.168.7.10/32" } }],
+      ports: [{ protocol: "TCP", port: 443 }],
+    },
+  ]);
+});
+
+test("release runtime images bake a real digest-bound fallback and serve only the atomic symlink", async () => {
+  const dockerfile = await readFile(path.join(SITE_ROOT, "Dockerfile.release-runtime"), "utf8");
+  assert.match(dockerfile, /^FROM node:22\.22\.0-alpine3\.22@sha256:[0-9a-f]{64} AS dependencies$/mu);
+  assert.match(dockerfile, /^FROM nginxinc\/nginx-unprivileged:1\.29\.3-alpine@sha256:[0-9a-f]{64} AS site$/mu);
+  assert.match(dockerfile, /ARG LAB_RUNTIME_BUILDER_COMMIT/u);
+  assert.match(dockerfile, /ARG LAB_RUNTIME_RELEASED_AT/u);
+  assert.match(dockerfile, /build-baked-site-bundle\.mjs/u);
+  assert.match(dockerfile, /COPY --from=build \/image\/known-good\/ \/opt\/verdify\/lab-known-good\//u);
+  assert.doesNotMatch(dockerfile, /AWS_ACCESS_KEY_ID|AWS_SECRET_ACCESS_KEY|secretKeyRef/u);
+
+  const nginx = await readFile(path.join(SITE_ROOT, "release-runtime/nginx.conf"), "utf8");
+  assert.match(nginx, /root \/srv\/lab-cache\/current\/tree;/u);
+  assert.match(nginx, /location = \/metrics/u);
+  assert.match(nginx, /location = \/\.well-known\/verdify-release\.json/u);
+  assert.match(nginx, /location = \/readyz/u);
+
+  assert.throws(
+    () => runtimeConfig({ LAB_RELEASE_STORE: "s3://verdify-platform/lab/releases" }),
+    /pinned Verdify object-store endpoint/u,
+  );
+  assert.equal(runtimeConfig({
+    LAB_RELEASE_STORE: "s3://verdify-platform/lab/releases",
+    LAB_S3_ENDPOINT_URL: "https://s3-hdd.vallery.net",
+  }).store, "s3://verdify-platform/lab/releases");
+});
+
+function sha256(bytes) {
+  return createHash("sha256").update(bytes).digest("hex");
+}
+
+async function createReleaseBuild(root, title) {
+  await writeFile(path.join(root, "index.html"), `<!doctype html><title>${title}</title>\n`);
+  await writeFile(path.join(root, "static-build.json"), `${JSON.stringify({
+    contract: "verdify.lab-astro-stage-build",
+    schemaVersion: 1,
+    siteOrigin: "https://lab-stage.verdify.ai",
+    stageGlobalNoindex: true,
+    approvalEligible: false,
+    snapshotManifestDigest: `sha256:${"1".repeat(64)}`,
+    sanitization: {
+      fixtureOnly: false,
+      policyVersion: "verdify-public-output-stage-v1",
+    },
+  }, null, 2)}\n`);
+}
+
+async function publishTestRelease({ storeRoot, buildRoot, builderCommit, releasedAt, expectedSelectionSha256 = null }) {
+  const inventory = await inventoryBuiltSite(buildRoot);
+  const files = inventory.files.map(({ sourcePath: _sourcePath, ...record }) => record);
+  const sourceSnapshotManifestSha256 = "1".repeat(64);
+  const policyVersion = "verdify-public-output-stage-v1";
+  const contentIdentitySha256 = siteContentIdentitySha256({
+    sourceSnapshotManifestSha256,
+    policyVersion,
+    builderCommit,
+    files,
+  });
+  const payloadSha256 = siteReleasePayloadSha256({
+    sourceSnapshotManifestSha256,
+    policyVersion,
+    builderCommit,
+    contentIdentitySha256,
+  });
+  return publishSiteRelease({
+    storeRoot,
+    buildRoot,
+    event: {
+      contract: "verdify.lab-release-trigger",
+      schemaVersion: 1,
+      eventId: `evt_runtime_${builderCommit.slice(0, 16)}`,
+      eventType: "reconciliation",
+      sourceId: "release-runtime-test",
+      sourceWatermark: builderCommit,
+      occurredAt: releasedAt,
+      payloadSha256,
+    },
+    sourceSnapshotManifestSha256,
+    policyVersion,
+    builderCommit,
+    releasedAt,
+    expectedSelectionSha256,
+  });
+}
+
+test("release reconciler cold-starts baked, consumes an immutable selection, and preserves it on outage", async (context) => {
+  const root = await mkdtemp(path.join(tmpdir(), "verdify-release-runtime-test-"));
+  context.after(() => rm(root, { recursive: true, force: true }));
+  const bakedBuild = path.join(root, "baked-build");
+  const selectedBuild = path.join(root, "selected-build");
+  const store = path.join(root, "store");
+  const cache = path.join(root, "cache");
+  const state = path.join(root, "state");
+  const bundle = path.join(root, "bundle");
+  for (const directory of [bakedBuild, selectedBuild, store, cache, state]) {
+    await mkdir(directory);
+  }
+  await createReleaseBuild(bakedBuild, "baked");
+  await createReleaseBuild(selectedBuild, "selected");
+  const bakedCommit = "a".repeat(40);
+  const selectedCommit = "b".repeat(40);
+  await buildBakedSiteBundle({
+    buildRoot: bakedBuild,
+    destination: bundle,
+    builderCommit: bakedCommit,
+    releasedAt: "2026-07-13T00:00:00.000Z",
+  });
+
+  const baseConfig = {
+    store: path.join(root, "absent-store"),
+    cacheRoot: cache,
+    bakedBundleRoot: bundle,
+    stateRoot: state,
+    cli: path.join(SITE_ROOT, "scripts/manage-site-release.mjs"),
+    reconcileSeconds: 60,
+    verifySeconds: 900,
+    cliTimeoutSeconds: 30,
+  };
+  const cold = await reconcileOnce(baseConfig, { now: "2026-07-13T00:01:00.000Z", initial: true });
+  assert.equal(cold.source, "baked-known-good");
+  assert.equal(cold.triggerKind, "baked-known-good");
+  assert.match(await readlink(path.join(cache, "current")), /^generations\/[0-9a-f]{64}-[0-9a-f-]{36}$/u);
+
+  const selected = await publishTestRelease({
+    storeRoot: store,
+    buildRoot: selectedBuild,
+    builderCommit: selectedCommit,
+    releasedAt: "2026-07-13T00:02:00.000Z",
+  });
+  const configured = { ...baseConfig, store };
+  const promoted = await reconcileOnce(configured, { now: "2026-07-13T00:03:00.000Z" });
+  assert.equal(promoted.source, "store-current");
+  assert.equal(promoted.releaseSha256, selected.releaseSha256);
+  assert.equal(promoted.selectionSha256, selected.selectionSha256);
+  assert.equal(promoted.triggerKind, "immutable-selection-digest");
+  assert.equal(promoted.consecutiveFailures, 0);
+  assert.match(await readFile(path.join(state, "metrics"), "utf8"), /verdify_lab_release_reconcile_success 1/u);
+
+  const preservedLink = await readlink(path.join(cache, "current"));
+  const outage = await reconcileOnce(baseConfig, { now: "2026-07-13T00:04:00.000Z" });
+  assert.equal(outage.releaseSha256, promoted.releaseSha256);
+  assert.equal(outage.health, "degraded");
+  assert.equal(outage.consecutiveFailures, 1);
+  assert.equal(await readlink(path.join(cache, "current")), preservedLink);
+  assert.equal(sha256(await readFile(path.join(state, "release.json"))), sha256(Buffer.from(`${JSON.stringify(outage, null, 2)}\n`)));
+  assert.match(await readFile(path.join(state, "metrics"), "utf8"), /verdify_lab_release_reconcile_success 0/u);
+
+  const changedTrigger = {
+    contract: "verdify.lab-site-release-status",
+    schemaVersion: 1,
+    selectionSha256: "c".repeat(64),
+    generation: 2,
+    ready: true,
+    health: "ready",
+    current: {
+      releaseSha256: "d".repeat(64),
+      freshness: promoted.freshness,
+    },
+    previous: null,
+  };
+  await assert.rejects(
+    () => reconcileOnce(configured, {
+      now: "2026-07-13T00:05:00.000Z",
+      cliRunner: async (_config, args) => {
+        if (args[0] === "status") return changedTrigger;
+        throw new Error("injected hydrate failure");
+      },
+    }),
+    /injected hydrate failure/u,
+  );
+  const failed = await recordReconcileFailure(configured, "2026-07-13T00:05:00.000Z");
+  assert.equal(failed.releaseSha256, promoted.releaseSha256);
+  assert.equal(failed.consecutiveFailures, 2);
+  assert.equal(await readlink(path.join(cache, "current")), preservedLink);
 });
