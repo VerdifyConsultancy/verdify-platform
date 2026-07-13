@@ -95,6 +95,26 @@ function storeIdentity(location) {
   });
 }
 
+function validateS3OccurrenceLocation(value) {
+  if (
+    value === null
+    || typeof value !== "object"
+    || value.kind !== "s3"
+    || typeof value.bucket !== "string"
+    || typeof value.prefix !== "string"
+    || !value.prefix.endsWith(`/${TYPE_NAMESPACE}`)
+    || Buffer.byteLength(value.prefix) + 1 + MAX_RELATIVE_OBJECT_KEY_BYTES
+      > MAX_S3_KEY_BYTES
+  ) {
+    throw new Error("S3 occurrence release store location is invalid");
+  }
+  return Object.freeze({
+    kind: "s3",
+    bucket: value.bucket,
+    prefix: value.prefix,
+  });
+}
+
 export function parseOccurrenceReleaseStoreLocation(value) {
   let parsed;
   try {
@@ -103,17 +123,10 @@ export function parseOccurrenceReleaseStoreLocation(value) {
     throw new Error("occurrence release store location is invalid");
   }
   if (parsed.kind === "local") return parsed;
-  const prefix = `${parsed.prefix}/${TYPE_NAMESPACE}`;
-  if (
-    Buffer.byteLength(prefix) + 1 + MAX_RELATIVE_OBJECT_KEY_BYTES
-    > MAX_S3_KEY_BYTES
-  ) {
-    throw new Error("occurrence release store location is invalid");
-  }
-  return Object.freeze({
+  return validateS3OccurrenceLocation({
     kind: "s3",
     bucket: parsed.bucket,
-    prefix,
+    prefix: `${parsed.prefix}/${TYPE_NAMESPACE}`,
   });
 }
 
@@ -338,28 +351,123 @@ function blobValue(bytes, expectedSha256) {
   };
 }
 
-async function materializeBytes(bytes, expectedSha256, destination) {
-  const directory = path.dirname(destination);
-  const relative = path.basename(destination);
-  const handle = await open(destination, "wx", 0o644);
+function materializedFileIdentity(metadata) {
+  if (!metadata.isFile() || metadata.isSymbolicLink() || metadata.nlink !== 1n) {
+    throw new Error("materialized occurrence target is invalid");
+  }
+  return Object.freeze({
+    dev: metadata.dev,
+    ino: metadata.ino,
+    birthtimeNs: metadata.birthtimeNs,
+    ctimeNs: metadata.ctimeNs,
+    mtimeNs: metadata.mtimeNs,
+    size: metadata.size,
+  });
+}
+
+export async function removeMaterializedOccurrenceTarget(
+  destination,
+  identity,
+  { lstatFile = lstat, unlinkFile = unlink } = {},
+) {
+  if (
+    identity === null
+    || typeof identity !== "object"
+    || typeof identity.dev !== "bigint"
+    || typeof identity.ino !== "bigint"
+    || typeof identity.birthtimeNs !== "bigint"
+    || typeof identity.ctimeNs !== "bigint"
+    || typeof identity.mtimeNs !== "bigint"
+    || typeof identity.size !== "bigint"
+  ) {
+    throw new Error("materialized occurrence target identity is invalid");
+  }
+  let selected;
   try {
-    await handle.writeFile(bytes);
-    await handle.sync();
+    selected = await lstatFile(destination, { bigint: true });
   } catch (error) {
-    await handle.close().catch(() => {});
-    await unlink(destination).catch(() => {});
+    if (error.code === "ENOENT") return false;
     throw error;
   }
-  await handle.close();
+  if (
+    !selected.isFile()
+    || selected.isSymbolicLink()
+    || selected.dev !== identity.dev
+    || selected.ino !== identity.ino
+    || selected.birthtimeNs !== identity.birthtimeNs
+    || selected.ctimeNs !== identity.ctimeNs
+    || selected.mtimeNs !== identity.mtimeNs
+    || selected.size !== identity.size
+  ) {
+    return false;
+  }
+  await unlinkFile(destination);
+  return true;
+}
+
+async function materializeBytes(
+  bytes,
+  expectedSha256,
+  destination,
+  { fileOperations = {} } = {},
+) {
+  if (
+    fileOperations === null
+    || typeof fileOperations !== "object"
+    || Array.isArray(fileOperations)
+  ) {
+    throw new Error("occurrence materialization file operations are invalid");
+  }
+  const openFile = fileOperations.open ?? open;
+  const validateFile = fileOperations.validatePngFile ?? validatePngFile;
+  const syncTargetDirectory = fileOperations.syncDirectory ?? syncDirectory;
+  const cleanupOperations = {
+    lstatFile: fileOperations.lstat ?? lstat,
+    unlinkFile: fileOperations.unlink ?? unlink,
+  };
+  const directory = path.dirname(destination);
+  const relative = path.basename(destination);
+  let handle = null;
+  let identity = null;
+  let created = false;
   try {
-    const verified = await validatePngFile(directory, relative);
+    handle = await openFile(destination, "wx", 0o644);
+    created = true;
+    materializedFileIdentity(await handle.stat({ bigint: true }));
+    await handle.writeFile(bytes);
+    await handle.sync();
+    identity = materializedFileIdentity(await handle.stat({ bigint: true }));
+    await handle.close();
+    handle = null;
+    const verified = await validateFile(directory, relative);
     if (verified.sha256 !== expectedSha256) {
       throw new Error("materialized occurrence blob digest mismatch");
     }
-    await syncDirectory(directory);
-    return verified;
+    await syncTargetDirectory(directory);
+    return { ...verified, materializedIdentity: identity };
   } catch (error) {
-    await unlink(destination).catch(() => {});
+    if (created && handle !== null) {
+      try {
+        identity = materializedFileIdentity(await handle.stat({ bigint: true }));
+      } catch {
+        // Without a descriptor identity, deleting by path could remove a replacement.
+      }
+    }
+    await handle?.close().catch(() => {});
+    if (created && identity !== null) {
+      try {
+        await removeMaterializedOccurrenceTarget(
+          destination,
+          identity,
+          cleanupOperations,
+        );
+      } catch (cleanupError) {
+        throw new AggregateError(
+          [error, cleanupError],
+          "occurrence materialization failed and cleanup did not complete",
+        );
+      }
+    }
     throw error;
   }
 }
@@ -431,8 +539,9 @@ export class OccurrenceReleaseStore {
   }
 
   async materializePngBlob(digestValue, destination, options = {}) {
-    const value = await this.readPngBlob(digestValue, options);
-    return materializeBytes(value.body, digestValue, destination);
+    const { fileOperations, ...readOptions } = options;
+    const value = await this.readPngBlob(digestValue, readOptions);
+    return materializeBytes(value.body, digestValue, destination, { fileOperations });
   }
 }
 
@@ -687,21 +796,7 @@ export class S3OccurrenceReleaseStore extends OccurrenceReleaseStore {
     const parsed = typeof location === "string"
       ? parseOccurrenceReleaseStoreLocation(location)
       : location;
-    if (
-      parsed === null
-      || typeof parsed !== "object"
-      || parsed.kind !== "s3"
-      || typeof parsed.bucket !== "string"
-      || typeof parsed.prefix !== "string"
-      || !parsed.prefix.endsWith(`/${TYPE_NAMESPACE}`)
-    ) {
-      throw new Error("S3 occurrence release store location is invalid");
-    }
-    const normalized = Object.freeze({
-      kind: "s3",
-      bucket: parsed.bucket,
-      prefix: parsed.prefix,
-    });
+    const normalized = validateS3OccurrenceLocation(parsed);
     super(normalized);
     this.objects = new S3ObjectStore({
       bucket: normalized.bucket,
