@@ -8,6 +8,7 @@ import {
   publishOccurrenceRelease,
   rollbackCurrentMediaGeneration,
   rollbackOccurrenceRelease,
+  summarizeOccurrenceFreshness,
 } from "./lib/occurrence-release.mjs";
 
 const MAX_REQUEST_BYTES = 8 * 1024 * 1024;
@@ -17,6 +18,7 @@ function usage() {
     "Usage:",
     "  node scripts/manage-occurrence-release.mjs publish --request REQUEST.json",
     "  node scripts/manage-occurrence-release.mjs status --store STORE",
+    "  node scripts/manage-occurrence-release.mjs freshness --store STORE --at ISO_INSTANT",
     "  node scripts/manage-occurrence-release.mjs rollback --store STORE --expected SELECTION_SHA256 --at ISO_INSTANT",
     "  node scripts/manage-occurrence-release.mjs publish-media --request REQUEST.json",
     "  node scripts/manage-occurrence-release.mjs media-status --store STORE --occurrence MEDIA_ID",
@@ -64,8 +66,10 @@ async function requestDocument(file) {
   return document;
 }
 
-function requireKeys(document, keys) {
-  if (Object.keys(document).join(",") !== keys.join(",")) throw new Error("release request does not use the closed v1 shape");
+function requireKeys(document, keys, version) {
+  if (Object.keys(document).join(",") !== keys.join(",")) {
+    throw new Error(`release request does not use the closed ${version} shape`);
+  }
   return document;
 }
 
@@ -78,11 +82,12 @@ async function main() {
       "event",
       "sourceSnapshotManifestSha256",
       "policyVersion",
+      "policySha256",
       "publishedAt",
       "graphs",
       "currentMedia",
       "expectedSelectionSha256",
-    ]);
+    ], "v2");
     const result = await publishOccurrenceRelease(request);
     process.stdout.write(`${JSON.stringify({
       contract: "verdify.lab-occurrence-publish-result",
@@ -108,6 +113,27 @@ async function main() {
       previousManifestSha256: selected.selection?.previous?.manifestSha256 ?? null,
       currentEventId: selected.current?.event.eventId ?? null,
       freshness: selected.current?.freshness ?? null,
+    }, null, 2)}\n`);
+    return;
+  }
+  if (
+    command === "freshness"
+    && values.size === 2
+    && values.has("--store")
+    && values.has("--at")
+  ) {
+    const selected = await loadSelectedOccurrenceRelease(values.get("--store"));
+    const evaluated = summarizeOccurrenceFreshness(
+      selected.current ?? { occurrences: { graphs: [], currentMedia: [] } },
+      values.get("--at"),
+    );
+    const summary = selected.current ? evaluated : { ...evaluated, status: "missing" };
+    process.stdout.write(`${JSON.stringify({
+      contract: "verdify.lab-occurrence-freshness",
+      schemaVersion: 1,
+      generation: selected.selection?.generation ?? 0,
+      currentManifestSha256: selected.selection?.current.manifestSha256 ?? null,
+      ...summary,
     }, null, 2)}\n`);
     return;
   }
@@ -139,11 +165,13 @@ async function main() {
       "sourceRoot",
       "event",
       "policyVersion",
+      "policySha256",
+      "requestProvenanceSha256",
       "publishedAt",
       "occurrence",
       "candidate",
       "expectedSelectionSha256",
-    ]);
+    ], "v3");
     const result = await publishCurrentMediaGeneration(request);
     process.stdout.write(`${JSON.stringify({
       contract: "verdify.lab-current-media-publish-result",

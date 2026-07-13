@@ -20,7 +20,10 @@ const EVENT_FRESHNESS = {
   "dataset-published": { targetSeconds: 15 * 60, alertAfterSeconds: 30 * 60 },
   "graph-fallback-updated": { targetSeconds: 30 * 60, alertAfterSeconds: 30 * 60 },
   "current-media-updated": { targetSeconds: 15 * 60, alertAfterSeconds: 15 * 60 },
-  reconciliation: { targetSeconds: 15 * 60, alertAfterSeconds: 15 * 60 },
+  // A reconciliation carries the reporting-feed source watermark. Keep the
+  // per-release target aligned with the <=15 minute public-evidence SLO while
+  // reserving alert state for the >30 minute stale boundary.
+  reconciliation: { targetSeconds: 15 * 60, alertAfterSeconds: 30 * 60 },
 };
 
 class CandidateImageError extends Error {}
@@ -74,7 +77,10 @@ function requireSafeText(value, label, maximum = 256) {
 
 function requireInstant(value, label) {
   requireSafeText(value, label, 32);
-  if (!ISO_INSTANT_RE.test(value) || !Number.isFinite(Date.parse(value))) throw new Error(`${label} is invalid`);
+  const milliseconds = Date.parse(value);
+  const normalized = Number.isFinite(milliseconds) ? new Date(milliseconds).toISOString() : "";
+  const expected = value.includes(".") ? normalized : normalized.replace(".000Z", "Z");
+  if (!ISO_INSTANT_RE.test(value) || value !== expected) throw new Error(`${label} is invalid`);
   return value;
 }
 
@@ -85,24 +91,34 @@ function occurrenceId(kind, identity) {
 export function occurrenceReleasePayloadSha256({
   sourceSnapshotManifestSha256,
   policyVersion,
+  policySha256,
   graphs = [],
   currentMedia = [],
 }) {
   return sha256(canonicalBytes({
     contract: "verdify.lab-occurrence-release-payload",
-    schemaVersion: 1,
+    schemaVersion: 2,
     sourceSnapshotManifestSha256,
     policyVersion,
+    policySha256,
     graphs,
     currentMedia,
   }));
 }
 
-export function currentMediaGenerationPayloadSha256({ policyVersion, occurrence, candidate }) {
+export function currentMediaGenerationPayloadSha256({
+  policyVersion,
+  policySha256,
+  requestProvenanceSha256,
+  occurrence,
+  candidate,
+}) {
   return sha256(canonicalBytes({
     contract: "verdify.lab-current-media-generation-payload",
-    schemaVersion: 1,
+    schemaVersion: 3,
     policyVersion,
+    policySha256,
+    requestProvenanceSha256,
     occurrence,
     candidate,
   }));
@@ -256,6 +272,17 @@ function validateDiscoveredCurrentMediaOccurrence(occurrence) {
   return occurrence;
 }
 
+function validateCurrentMediaReleaseInput(input) {
+  if (
+    !exactKeys(input, ["discovered", "requestProvenanceSha256"])
+    || !SHA256_RE.test(input.requestProvenanceSha256)
+  ) {
+    throw new Error("current media release input does not use the closed v2 shape");
+  }
+  validateDiscoveredCurrentMediaOccurrence(input.discovered);
+  return input;
+}
+
 function validateEvent(event) {
   const keys = [
     "contract",
@@ -314,6 +341,7 @@ export function evaluateOccurrenceFreshness(manifest, asOf) {
         status: "missing",
       };
     }
+    requireInstant(timestamp, "occurrence evidence time");
     const ageSeconds = Math.floor((evaluatedAt - Date.parse(timestamp)) / 1000);
     if (ageSeconds < 0) throw new Error("occurrence freshness evaluation precedes its evidence");
     return {
@@ -327,6 +355,23 @@ export function evaluateOccurrenceFreshness(manifest, asOf) {
     evaluatedAt: asOf,
     graphs: manifest.occurrences.graphs.map((occurrence) => result(occurrence, occurrence.fallback?.verifiedAt)),
     currentMedia: manifest.occurrences.currentMedia.map((occurrence) => result(occurrence, occurrence.fallback?.capturedAt)),
+  };
+}
+
+export function summarizeOccurrenceFreshness(manifest, asOf) {
+  const evaluated = evaluateOccurrenceFreshness(manifest, asOf);
+  function group(items) {
+    const counts = { fresh: 0, alert: 0, missing: 0 };
+    for (const item of items) counts[item.status] += 1;
+    return { total: items.length, ...counts };
+  }
+  const graphs = group(evaluated.graphs);
+  const currentMedia = group(evaluated.currentMedia);
+  return {
+    evaluatedAt: evaluated.evaluatedAt,
+    status: graphs.alert + graphs.missing + currentMedia.alert + currentMedia.missing > 0 ? "alert" : "fresh",
+    graphs,
+    currentMedia,
   };
 }
 
@@ -425,12 +470,19 @@ async function publishCanonicalAbsent(destination, value) {
   return sha256(bytes);
 }
 
-async function importVerifiedPng(storeRoot, sourceRoot, candidate) {
-  if (!exactKeys(candidate, ["relativePath", "verifiedAt", "capturedAt"])) {
-    throw new Error("image candidate does not use the closed v1 shape");
+async function importVerifiedPng(storeRoot, sourceRoot, candidate, requireRequestProvenance = false) {
+  const keys = requireRequestProvenance
+    ? ["relativePath", "expectedSha256", "verifiedAt", "capturedAt", "requestProvenanceSha256"]
+    : ["relativePath", "expectedSha256", "verifiedAt", "capturedAt"];
+  if (!exactKeys(candidate, keys)) {
+    throw new Error("image candidate does not use its closed shape");
   }
   requireInstant(candidate.verifiedAt, "image verification time");
   requireInstant(candidate.capturedAt, "image capture time");
+  if (!SHA256_RE.test(candidate.expectedSha256)) throw new Error("image candidate expected digest is invalid");
+  if (requireRequestProvenance && !SHA256_RE.test(candidate.requestProvenanceSha256)) {
+    throw new Error("current media candidate request provenance is invalid");
+  }
   if (Date.parse(candidate.capturedAt) > Date.parse(candidate.verifiedAt)) {
     throw new Error("image verification precedes capture");
   }
@@ -439,6 +491,9 @@ async function importVerifiedPng(storeRoot, sourceRoot, candidate) {
     verified = await validatePngFile(sourceRoot, candidate.relativePath);
   } catch {
     throw new CandidateImageError("candidate image validation failed");
+  }
+  if (verified.sha256 !== candidate.expectedSha256) {
+    throw new CandidateImageError("candidate image changed after prepared verification");
   }
   const filename = `${verified.sha256}.png`;
   const relativeBlob = path.posix.join("blobs", "sha256", filename);
@@ -487,7 +542,7 @@ async function resolveGraph(storeRoot, sourceRoot, input, priorRelease, policyVe
   let fallback = null;
   let state = "missing";
   let probeStatus = input.probeStatus;
-  if (!["success", "timeout", "http-error", "decode-error", "missing"].includes(probeStatus)) {
+  if (!["success", "timeout", "http-error", "decode-error", "missing", "policy-rejected"].includes(probeStatus)) {
     throw new Error("graph probe status is invalid");
   }
   if (probeStatus === "success") {
@@ -515,21 +570,40 @@ async function resolveGraph(storeRoot, sourceRoot, input, priorRelease, policyVe
   };
 }
 
-async function resolveSelectedCurrentMedia(storeRoot, input, policyVersion) {
-  const discovered = input.discovered ?? input;
-  validateDiscoveredCurrentMediaOccurrence(discovered);
+function currentMediaGenerationMatches(generation, {
+  sourceProvenanceSha256,
+  policyVersion,
+  policySha256,
+  requestProvenanceSha256,
+}) {
+  return generation?.sourceProvenanceSha256 === sourceProvenanceSha256
+    && generation.policyVersion === policyVersion
+    && generation.policySha256 === policySha256
+    && generation.requestProvenanceSha256 === requestProvenanceSha256;
+}
+
+async function resolveSelectedCurrentMedia(storeRoot, input, policyVersion, policySha256) {
+  validateCurrentMediaReleaseInput(input);
+  const { discovered, requestProvenanceSha256 } = input;
   const pointer = await selectedCurrentMediaPointer(storeRoot, discovered.occurrenceId);
-  const selected = pointer?.current.sourceProvenanceSha256 === discovered.sourceProvenanceSha256
-    && pointer.current.policyVersion === policyVersion
+  const identity = {
+    sourceProvenanceSha256: discovered.sourceProvenanceSha256,
+    policyVersion,
+    policySha256,
+    requestProvenanceSha256,
+  };
+  const selected = currentMediaGenerationMatches(pointer?.current, identity)
     ? pointer.current
     : null;
   return {
     ...discovered,
+    policySha256,
+    requestProvenanceSha256,
     staleAfterSeconds: Math.max(discovered.captureCadenceSeconds * 2, CURRENT_MEDIA_MIN_STALE_SECONDS),
     captureStatus: selected ? "selected-generation" : "missing",
     state: selected ? "verified" : "missing",
     fallback: selected?.fallback ?? null,
-    pointer: publicCurrentMediaPointer(pointer),
+    pointer: publicCurrentMediaPointer(selected ? pointer : null),
   };
 }
 
@@ -658,18 +732,22 @@ async function loadCurrentMediaGenerationFromRoot(storeRoot, occurrenceIdValue, 
       "schemaVersion",
       "occurrenceId",
       "sourceProvenanceSha256",
+      "policySha256",
+      "requestProvenanceSha256",
       "event",
       "policyVersion",
       "publishedAt",
       "fallback",
     ])
     || generation.contract !== "verdify.lab-current-media-generation"
-    || generation.schemaVersion !== 1
+    || generation.schemaVersion !== 3
     || generation.occurrenceId !== occurrenceIdValue
     || !SHA256_RE.test(generation.sourceProvenanceSha256)
+    || !SHA256_RE.test(generation.policySha256)
+    || !SHA256_RE.test(generation.requestProvenanceSha256)
     || canonicalBytes(generation).compare(bytes) !== 0
   ) {
-    throw new Error("current media generation does not use the canonical v1 contract");
+    throw new Error("current media generation does not use the canonical v3 contract");
   }
   validateEvent(generation.event);
   if (generation.event.eventType !== "current-media-updated") throw new Error("current media generation event type is invalid");
@@ -725,23 +803,46 @@ export async function publishCurrentMediaGeneration({
   sourceRoot,
   event,
   policyVersion,
+  policySha256,
+  requestProvenanceSha256,
   publishedAt,
   occurrence,
   candidate,
   expectedSelectionSha256 = null,
+  ...unexpected
 }) {
+  if (Object.keys(unexpected).length > 0) {
+    throw new Error("current media generation request does not use the closed v3 shape");
+  }
   validateEvent(event);
   if (event.eventType !== "current-media-updated") throw new Error("current media generation event type is invalid");
   requireSafeText(policyVersion, "current media policy version", 256);
+  if (!SHA256_RE.test(policySha256)) throw new Error("current media policy digest is invalid");
+  if (!SHA256_RE.test(requestProvenanceSha256)) throw new Error("current media request provenance is invalid");
   requireInstant(publishedAt, "current media generation publication time");
   evaluateEventFreshness(event, publishedAt);
   if (expectedSelectionSha256 !== null && !SHA256_RE.test(expectedSelectionSha256)) {
     throw new Error("current media selection precondition is invalid");
   }
   validateDiscoveredCurrentMediaOccurrence(occurrence);
-  if (event.payloadSha256 !== currentMediaGenerationPayloadSha256({ policyVersion, occurrence, candidate })) {
+  if (candidate?.requestProvenanceSha256 !== requestProvenanceSha256) {
+    throw new Error("current media candidate does not match its expected camera request provenance");
+  }
+  if (event.payloadSha256 !== currentMediaGenerationPayloadSha256({
+    policyVersion,
+    policySha256,
+    requestProvenanceSha256,
+    occurrence,
+    candidate,
+  })) {
     throw new Error("current media event payload digest mismatch");
   }
+  const generationIdentity = {
+    sourceProvenanceSha256: occurrence.sourceProvenanceSha256,
+    policyVersion,
+    policySha256,
+    requestProvenanceSha256,
+  };
   return withStoreLock(storeRoot, async (root) => {
     const directory = currentMediaDirectory(root, occurrence.occurrenceId);
     await secureDirectory(root, `occurrences/${occurrence.occurrenceId}/generations/sha256`, { create: true });
@@ -768,10 +869,13 @@ export async function publishCurrentMediaGeneration({
       }
       if ((selected?.selectionSha256 ?? null) === existing.expectedSelectionSha256) {
         const pointer = { generationSha256: existing.manifestSha256, blobSha256: generation.fallback.sha256 };
+        const previous = currentMediaGenerationMatches(selected?.current, generation)
+          ? selected.selection.current
+          : null;
         const next = currentMediaPointerRecord(
           occurrence.occurrenceId,
           pointer,
-          selected?.selection.current ?? null,
+          previous,
           (selected?.selection.generation ?? 0) + 1,
           generation.publishedAt,
           "publish",
@@ -792,14 +896,16 @@ export async function publishCurrentMediaGeneration({
       throw new Error("current media selection precondition failed");
     }
     const fallback = {
-      ...(await importVerifiedPng(root, sourceRoot, candidate)),
+      ...(await importVerifiedPng(root, sourceRoot, candidate, true)),
       policyVersion,
     };
     const generation = {
       contract: "verdify.lab-current-media-generation",
-      schemaVersion: 1,
+      schemaVersion: 3,
       occurrenceId: occurrence.occurrenceId,
       sourceProvenanceSha256: occurrence.sourceProvenanceSha256,
+      policySha256,
+      requestProvenanceSha256,
       event,
       policyVersion,
       publishedAt,
@@ -811,10 +917,13 @@ export async function publishCurrentMediaGeneration({
       generation,
     );
     const pointer = { generationSha256, blobSha256: fallback.sha256 };
+    const previous = currentMediaGenerationMatches(selected?.current, generationIdentity)
+      ? selected.selection.current
+      : null;
     const next = currentMediaPointerRecord(
       occurrence.occurrenceId,
       pointer,
-      selected?.selection.current ?? null,
+      previous,
       (selected?.selection.generation ?? 0) + 1,
       publishedAt,
       "publish",
@@ -965,22 +1074,24 @@ async function loadManifest(storeRoot, digest) {
       "schemaVersion",
       "event",
       "policyVersion",
+      "policySha256",
       "sourceSnapshotManifestSha256",
       "publishedAt",
       "freshness",
       "occurrences",
     ])
     || manifest.contract !== "verdify.lab-specialist-occurrence-release"
-    || manifest.schemaVersion !== 1
+    || manifest.schemaVersion !== 2
     || canonicalBytes(manifest).compare(bytes) !== 0
     || !exactKeys(manifest.occurrences, ["graphs", "currentMedia"])
     || !Array.isArray(manifest.occurrences.graphs)
     || !Array.isArray(manifest.occurrences.currentMedia)
   ) {
-    throw new Error("occurrence manifest does not use the canonical v1 contract");
+    throw new Error("occurrence manifest does not use the canonical v2 contract");
   }
   validateEvent(manifest.event);
   requireSafeText(manifest.policyVersion, "occurrence policy version", 256);
+  if (!SHA256_RE.test(manifest.policySha256)) throw new Error("occurrence policy digest is invalid");
   if (!SHA256_RE.test(manifest.sourceSnapshotManifestSha256)) throw new Error("source snapshot manifest digest is invalid");
   requireInstant(manifest.publishedAt, "occurrence manifest publication time");
   return manifest;
@@ -1069,7 +1180,7 @@ async function verifyReleaseBlobs(storeRoot, manifest) {
     }
     if (
       occurrence.staleAfterSeconds !== Math.max(occurrence.renderCadenceSeconds * 2, GRAPH_MIN_STALE_SECONDS)
-      || !["success", "timeout", "http-error", "decode-error", "missing"].includes(occurrence.probeStatus)
+      || !["success", "timeout", "http-error", "decode-error", "missing", "policy-rejected"].includes(occurrence.probeStatus)
       || !["verified", "retained-last-known-good", "missing"].includes(occurrence.state)
       || (occurrence.state === "missing") !== (occurrence.fallback === null)
       || (occurrence.state === "verified" && occurrence.probeStatus !== "success")
@@ -1089,6 +1200,8 @@ async function verifyReleaseBlobs(storeRoot, manifest) {
       "sourceProvenanceSha256",
       "stableTarget",
       "captureCadenceSeconds",
+      "policySha256",
+      "requestProvenanceSha256",
       "staleAfterSeconds",
       "captureStatus",
       "state",
@@ -1099,11 +1212,14 @@ async function verifyReleaseBlobs(storeRoot, manifest) {
       !exactKeys(occurrence, keys)
       || occurrence.classification !== "current-still"
       || !SHA256_RE.test(occurrence.sourceProvenanceSha256)
+      || occurrence.policySha256 !== manifest.policySha256
+      || !SHA256_RE.test(occurrence.requestProvenanceSha256)
       || occurrence.stableTarget !== `/evidence/current/${occurrence.occurrenceId}`
       || occurrence.staleAfterSeconds !== Math.max(occurrence.captureCadenceSeconds * 2, CURRENT_MEDIA_MIN_STALE_SECONDS)
       || !["selected-generation", "missing"].includes(occurrence.captureStatus)
       || !["verified", "missing"].includes(occurrence.state)
       || (occurrence.state === "missing") !== (occurrence.fallback === null)
+      || (occurrence.state === "missing") !== (occurrence.pointer === null)
       || (occurrence.state === "verified" && occurrence.captureStatus !== "selected-generation")
       || (occurrence.state === "verified" && occurrence.fallback?.policyVersion !== manifest.policyVersion)
     ) {
@@ -1210,20 +1326,26 @@ export async function publishOccurrenceRelease({
   event,
   sourceSnapshotManifestSha256,
   policyVersion,
+  policySha256,
   publishedAt,
   graphs = [],
   currentMedia = [],
   expectedSelectionSha256 = null,
+  ...unexpected
 }) {
+  if (Object.keys(unexpected).length > 0) {
+    throw new Error("occurrence release request does not use the closed v2 shape");
+  }
   validateEvent(event);
   requireInstant(publishedAt, "release publication time");
   requireSafeText(policyVersion, "occurrence policy version", 256);
+  if (!SHA256_RE.test(policySha256)) throw new Error("occurrence policy digest is invalid");
   if (!SHA256_RE.test(sourceSnapshotManifestSha256)) throw new Error("source snapshot manifest digest is invalid");
   if (expectedSelectionSha256 !== null && !SHA256_RE.test(expectedSelectionSha256)) throw new Error("expected selection digest is invalid");
   if (!Array.isArray(graphs) || !Array.isArray(currentMedia) || graphs.length + currentMedia.length > 10_000) {
     throw new Error("occurrence candidates exceed their record limit");
   }
-  for (const media of currentMedia) validateDiscoveredCurrentMediaOccurrence(media);
+  for (const media of currentMedia) validateCurrentMediaReleaseInput(media);
   if (event.eventType === "current-media-updated") {
     throw new Error("current media updates require the independent generation publisher");
   }
@@ -1233,6 +1355,7 @@ export async function publishOccurrenceRelease({
   if (event.payloadSha256 !== occurrenceReleasePayloadSha256({
     sourceSnapshotManifestSha256,
     policyVersion,
+    policySha256,
     graphs,
     currentMedia,
   })) {
@@ -1300,7 +1423,10 @@ export async function publishOccurrenceRelease({
       return { manifestSha256: selectedDigest, manifest: selectedManifest, idempotent: true };
     }
 
-    if (selected.current?.event.payloadSha256 === event.payloadSha256) {
+    // Reconciliation output depends on the independently selected per-camera
+    // generations, so an identical request payload may resolve differently after
+    // media-first publication. Graph-only requests remain safely change-gated.
+    if (currentMedia.length === 0 && selected.current?.event.payloadSha256 === event.payloadSha256) {
       await publishCanonicalAbsent(eventPath, {
         contract: "verdify.lab-release-idempotency",
         schemaVersion: 1,
@@ -1342,7 +1468,7 @@ export async function publishOccurrenceRelease({
     }
     const mediaById = new Map((selected.current?.occurrences.currentMedia ?? []).map((occurrence) => [occurrence.occurrenceId, occurrence]));
     for (const media of currentMedia) {
-      const occurrence = await resolveSelectedCurrentMedia(root, media, policyVersion);
+      const occurrence = await resolveSelectedCurrentMedia(root, media, policyVersion, policySha256);
       mediaById.set(occurrence.occurrenceId, occurrence);
     }
     const resolvedGraphs = [...graphById.values()];
@@ -1351,9 +1477,10 @@ export async function publishOccurrenceRelease({
     resolvedMedia.sort((left, right) => left.occurrenceId.localeCompare(right.occurrenceId));
     const manifest = {
       contract: "verdify.lab-specialist-occurrence-release",
-      schemaVersion: 1,
+      schemaVersion: 2,
       event,
       policyVersion,
+      policySha256,
       sourceSnapshotManifestSha256,
       publishedAt,
       freshness: evaluateEventFreshness(event, publishedAt),
