@@ -1758,18 +1758,26 @@ def test_guard_rejects_special_entries_and_unreadable_directories_without_openin
     root.mkdir()
     fifo = root / "blocked.pipe"
     os.mkfifo(fifo)
-    unreadable = root / "unreadable"
-    unreadable.mkdir()
-    (unreadable / "private.md").write_text(f"do not read {excluded}\n", encoding="utf-8")
-    unreadable.chmod(0)
+    # chmod(0) cannot deny access to uid 0 (CAP_DAC_OVERRIDE): the in-cluster
+    # validate gate runs ci-local.sh as root, where the kernel ignores the
+    # mode bits and the directory scans normally. Exercise the
+    # unreadable-directory path only where EACCES is actually producible.
+    can_deny_access = os.geteuid() != 0
+    if can_deny_access:
+        unreadable = root / "unreadable"
+        unreadable.mkdir()
+        (unreadable / "private.md").write_text(f"do not read {excluded}\n", encoding="utf-8")
+        unreadable.chmod(0)
     try:
         findings = guard.scan_root(root)
     finally:
-        unreadable.chmod(0o700)
+        if can_deny_access:
+            unreadable.chmod(0o700)
 
     by_path = {(finding.path, finding.reason) for finding in findings}
     assert ("blocked.pipe", "special-entry") in by_path
-    assert ("unreadable", "unreadable-directory") in by_path
+    if can_deny_access:
+        assert ("unreadable", "unreadable-directory") in by_path
     assert all(finding.reason != "content" for finding in findings)
     assert excluded not in json.dumps(guard.report_payload([root], findings)).casefold()
 
