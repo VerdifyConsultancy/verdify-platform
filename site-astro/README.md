@@ -242,6 +242,23 @@ immutable objects, entity-tag compare-and-swap for the selector, bounded streame
 reads, and bounded paginated listing. Its client is dependency-injected and covered by
 offline fakes; no endpoint or credential is configured or contacted by the tests.
 
+The separate source-only occurrence-store binding-readiness contract fixes the five
+future environment key names and three resource names without reading any value. It
+assigns non-secret location/endpoint/region key names to ConfigMap
+`verdify-lab-occurrence-store-metadata`, and access-key key names to distinct
+`verdify-lab-occurrence-store-reader` and
+`verdify-lab-occurrence-store-writer` Secrets. It explicitly rejects reuse of the
+legacy Quartz publisher Secret. The offline CLI consumes a canonical JSON name
+inventory rather than `process.env`; strict `{kind,bucket,prefix}` metadata is
+validation-only and is omitted from its names/status-only output:
+
+```bash
+npm run object-store:binding-readiness -- --inventory /path/to/name-inventory.json
+```
+
+This is not a Kubernetes existence check, value check, endpoint probe, credential
+grant, or runtime binding.
+
 The runtime candidate is present in Lab stage GitOps source only as a dormant
 `replicas: 0` workload. Its paired agent/site images are pinned to exact zot digests
 after their source-bound container probe, but it still has no route, object-store/AWS
@@ -250,11 +267,12 @@ environment, application/object-store credential, or egress. Its standard zot re
 merging source is not an operator sync, and even a sync cannot schedule this
 zero-replica candidate.
 
-The CLI and cache hydrator remain local-only. Object-store CLI wiring and bounded cache
-materialization, occurrence persistence, the event agent, distributed coordination,
-retention/GC, resource accounting, real-endpoint conditional-write proof, store/egress
-wiring, and alert routing are still required before activation. No endpoint or
-credential is configured here, and this change does not deploy or alter production.
+The release CLI and cache hydrator remain local-only. Object-store CLI wiring and
+bounded cache materialization, occurrence persistence, the event agent, distributed
+coordination, retention/GC, resource accounting, real-endpoint conditional-write
+proof, store/egress wiring, and alert routing are still required before activation.
+No endpoint or credential is configured here, and this change does not deploy or
+alter production.
 
 The stage vendors the reviewed offline parity comparator at
 `scripts/site-build-parity.py` (SHA-256

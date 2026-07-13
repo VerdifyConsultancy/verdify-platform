@@ -49,7 +49,7 @@ Child issues (persisted 2026-07-13 post-consensus): 1→#474, 2→#475, 3→#476
 | 4 | Media & lightbox | Responsive images, intrinsic sizing, and lightbox accepted on stage | Production remains Quartz until Phase 5 |
 | 5 | Planner/evidence templates | Accepted on stage against the full frozen snapshot | Event-driven content refresh remains Phase 4b |
 | 6 | Semantic parity | Routes/aliases complete; comparator improved | Exact same-snapshot parity not green: ~240 false findings from SVG-`<title>` parser bug (fix exists uncommitted on a dead worktree — must be recreated), 9 unavailable historical refs (5 daily-plan routes, 4 images), and Quartz-vs-Astro must build from the SAME immutable snapshot |
-| 7 | Immutable publishing | Local-filesystem CAS/release/cache engine merged; 4a runtime is source-visible with exact source-bound images as a disconnected `replicas: 0` workload | S3 conditional-store foundation is not yet on main; CLI/caller, occurrence adapter, endpoint/credential-name probe, distributed coordination, retention/GC, and event producer remain; no runtime pod is scheduled or routed |
+| 7 | Immutable publishing | Local-filesystem CAS/release/cache engine and inactive S3 conditional-store foundation merged; 4a runtime is source-visible with exact source-bound images as a disconnected `replicas: 0` workload; the source-only occurrence-store name inventory fixes separate reader/writer Secret names plus non-secret metadata key names without reading values | Release CLI/caller, occurrence adapter, actual resource/value binding, real-endpoint proof, distributed coordination, retention/GC, and event producer remain; no runtime pod is scheduled or routed |
 | 8 | Quality gates | Strict real-content gates green; exact tested build passed live T0 and T+10 acceptance | Keep the same budgets for every Phase 4 rollout; no production acceptance yet |
 | 9 | Production cutover | Fail-closed canary scaffold is preserved in open PR #471 | Not on main/built/pinned/deployed; Quartz remains authoritative; Jason APPLY required |
 
@@ -178,10 +178,14 @@ Phase 4 — **Feature completion (owner: codex, critical-path order below).**
    manual-sync, and an operator sync is a separately recorded boundary. A later
    activation must pin both runtime images, add the reviewed 4b store/egress
    contract, explicitly raise replicas, and pass stage acceptance.
-3. **4b S3 backend and event wiring:** implement the S3 release-store backend
-   and occurrence persistence adapter behind the existing abstract/local
-   interfaces, then wire the CLI and 4c caller. Prove real-endpoint conditional
-   writes and a distributed lease (credential presence by name only),
+3. **4b S3 backend and event wiring:** the inactive S3 release-store backend is
+   merged behind the existing abstract/local interfaces. The source-only
+   binding-name contract fixes the future non-secret metadata ConfigMap and
+   separate reader/writer Secret names, validates canonical key-name inventories
+   without reading values, and makes no existence, endpoint, or authority claim.
+   Next implement the occurrence persistence adapter, then wire the release CLI
+   and 4c caller. Prove real-endpoint conditional writes and a distributed lease
+   (credential presence by name only),
    event-driven publishing, bounded retention/GC, and resource metrics. S3
    occurrence wiring and S7 closure are hard-gated on the 4c producer contract.
 4. **4d Exact parity:** recreate the SVG-title comparator fix (+8 tests),

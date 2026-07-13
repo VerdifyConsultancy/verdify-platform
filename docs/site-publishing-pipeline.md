@@ -210,12 +210,58 @@ zero-replica workload.
 This storage foundation does not change the credential-free local CLI or deploy
 anything. The CLI/publisher factory, bounded cache hydration from object bytes,
 occurrence persistence caller, distributed lease, bounded retention/GC, event agent,
-resource accounting, endpoint configuration, credential-name wiring, and real-endpoint
+resource accounting, endpoint configuration, runtime binding, and real-endpoint
 conditional-write proof remain separate Phase 4b work. The endpoint proof must confirm
 the compatible store preserves the tested conditional semantics before any writer is
 activated. Activation additionally requires reviewed store/egress wiring, an explicit
 replicas change, and live cache/freshness/alert proof. Those are deployment and data
 authority concerns, not hidden claims of either backend.
+
+### Astro occurrence-store binding names (source-only)
+
+The closed
+`verdify.lab-occurrence-store-binding-name-inventory` v1 contract fixes the
+future occurrence-store binding names without inspecting a binding value or a
+Kubernetes resource. Its five required environment key names are:
+
+- `LAB_OCCURRENCE_STORE`
+- `LAB_S3_ENDPOINT_URL`
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `AWS_DEFAULT_REGION`
+
+The non-secret metadata ConfigMap is named
+`verdify-lab-occurrence-store-metadata`; its declared data-key names are
+`LAB_OCCURRENCE_STORE`, `LAB_S3_ENDPOINT_URL`, and `AWS_DEFAULT_REGION`. Read
+and write authority remain separate by resource name:
+`verdify-lab-occurrence-store-reader` and
+`verdify-lab-occurrence-store-writer`. Each future Secret declares only the
+standard `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` key names. The legacy
+Quartz publisher Secret `verdify-lab-publisher-s3` is not a valid resource in
+this contract and is not reused.
+
+The offline readiness check consumes a canonical JSON key-name inventory file,
+not `process.env`:
+
+```bash
+cd site-astro
+npm run object-store:binding-readiness -- --inventory /path/to/name-inventory.json
+```
+
+The inventory may carry only the closed name fields and sanitized S3 location
+metadata `{kind,bucket,prefix}`. Endpoint, region, access-key, secret-key, and
+other values are not accepted. Bucket and prefix are validated but never
+reflected; output contains the fixed key/resource names plus
+`inventory-valid`, `declared-by-name`, `valid-sanitized-metadata`, and
+`source-only` statuses. Environment-like callers can use the library's
+key-enumeration entry point, which calls `Object.keys` and never gets a value.
+
+This proves only that an offline declaration has the complete, separated name
+inventory. It does not assert that a ConfigMap or Secret exists, that a key has
+a value, that credentials work, that an endpoint is reachable, or that either
+reader or writer has authority. No workload consumes these names yet; no
+manifest, egress, route, replica, sync, or activation is added by this source
+contract.
 
 ## Source of Truth
 
