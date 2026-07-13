@@ -1,19 +1,24 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, readlink, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 
 import { evaluateEventFreshness } from "../scripts/lib/occurrence-release.mjs";
 import { S3ObjectStore } from "../scripts/lib/s3-object-store.mjs";
+import { createBakedSiteBundle, hydrateSiteCache } from "../scripts/lib/site-release-cache.mjs";
 import {
     LocalSiteReleaseStore,
     S3SiteReleaseStore,
     createSiteReleaseStore,
+    inventoryBuiltSite,
     parseSiteReleaseStoreLocation,
+    publishSiteRelease,
+    rollbackSiteRelease,
     siteContentIdentitySha256,
     siteReleasePayloadSha256,
+    siteReleaseStatus,
 } from "../scripts/lib/site-release-store.mjs";
 
 const BUCKET = "verdify-lab-releases";
@@ -184,6 +189,7 @@ async function releaseFixture() {
     const releasedAt = "2026-07-12T12:01:00Z";
     return {
         root,
+        buildRoot: build,
         source: { ...file, sourcePath },
         manifest: {
             contract: "verdify.lab-site-release",
@@ -199,6 +205,46 @@ async function releaseFixture() {
             totalBytes: source.length,
             files: [file],
         },
+    };
+}
+
+async function highLevelRequest({
+    buildRoot,
+    sequence,
+    expectedSelectionSha256 = null,
+}) {
+    const inventory = await inventoryBuiltSite(buildRoot);
+    const files = inventory.files.map(({ sourcePath: _sourcePath, ...record }) => record);
+    const contentIdentitySha256 = siteContentIdentitySha256({
+        sourceSnapshotManifestSha256: SNAPSHOT,
+        policyVersion: "verdify-site-v1",
+        builderCommit: COMMIT,
+        files,
+    });
+    const occurredAt = `2026-07-12T12:${String(sequence).padStart(2, "0")}:00Z`;
+    return {
+        storeRoot: LOCATION,
+        buildRoot,
+        event: {
+            contract: "verdify.lab-release-trigger",
+            schemaVersion: 1,
+            eventId: `evt_site_s3_${String(sequence).padStart(4, "0")}`,
+            eventType: "planner-completed",
+            sourceId: "planner/public-snapshot",
+            sourceWatermark: `planner-s3-${sequence}`,
+            occurredAt,
+            payloadSha256: siteReleasePayloadSha256({
+                sourceSnapshotManifestSha256: SNAPSHOT,
+                policyVersion: "verdify-site-v1",
+                builderCommit: COMMIT,
+                contentIdentitySha256,
+            }),
+        },
+        sourceSnapshotManifestSha256: SNAPSHOT,
+        policyVersion: "verdify-site-v1",
+        builderCommit: COMMIT,
+        releasedAt: new Date(Date.parse(occurredAt) + 60_000).toISOString(),
+        expectedSelectionSha256,
     };
 }
 
@@ -255,6 +301,28 @@ test("store factory preserves local behavior and injects S3 client construction 
     await store.initialize();
     assert.equal(constructions, 1);
     assert.equal(client.commands.length, 0);
+});
+
+test("high-level S3 operations require an identity-matched injected store before client construction", async () => {
+    let constructions = 0;
+    const store = new S3SiteReleaseStore(LOCATION, {
+        clientFactory: () => {
+            constructions += 1;
+            return new FakeS3Client();
+        },
+    });
+    await assert.rejects(
+        siteReleaseStatus({ storeRoot: LOCATION }),
+        /explicitly injected store/,
+    );
+    await assert.rejects(
+        siteReleaseStatus({
+            storeRoot: "s3://verdify-lab-releases/another-prefix",
+            store,
+        }),
+        /canonical location identity/,
+    );
+    assert.equal(constructions, 0);
 });
 
 test("S3 release adapter creates immutable blobs and manifests and detects differing stored bytes", async (t) => {
@@ -523,7 +591,8 @@ test("S3 event intents are absent-only and retain canonical identity", async () 
     }).initialize();
     const intent = {
         contract: "verdify.lab-site-release-event-intent",
-        schemaVersion: 1,
+        schemaVersion: 2,
+        storeIdentitySha256: store.identity.sha256,
         eventId: "evt_site_s3_0002",
         eventSha256: "1".repeat(64),
         payloadSha256: "2".repeat(64),
@@ -542,4 +611,104 @@ test("S3 event intents are absent-only and retain canonical identity", async () 
         store.publishEventIntent(intent),
         /content-addressed site JSON collision/,
     );
+    await assert.rejects(
+        store.publishEventIntent({ ...intent, storeIdentitySha256: "f".repeat(64) }),
+        /canonical store identity/,
+    );
+});
+
+test("fake-S3 publish, status, bundle, rollback, and two-cache hydration converge while outage preserves LKG", async (t) => {
+    const value = await releaseFixture();
+    t.after(() => rm(value.root, { recursive: true, force: true }));
+    const cacheOne = path.join(value.root, "cache-one");
+    const cacheTwo = path.join(value.root, "cache-two");
+    const bundleRoot = path.join(value.root, "bundle");
+    await mkdir(cacheOne);
+    await mkdir(cacheTwo);
+    const client = new FakeS3Client();
+    const store = new S3SiteReleaseStore(LOCATION, { client });
+
+    const first = await publishSiteRelease({
+        ...await highLevelRequest({ buildRoot: value.buildRoot, sequence: 10 }),
+        store,
+    });
+    const firstStatus = await siteReleaseStatus({
+        storeRoot: LOCATION,
+        store,
+        asOf: "2026-07-12T12:11:00Z",
+    });
+    assert.equal(firstStatus.current.releaseSha256, first.releaseSha256);
+    const bundle = await createBakedSiteBundle({
+        storeRoot: LOCATION,
+        store,
+        releaseSha256: first.releaseSha256,
+        bundleRoot,
+    });
+    assert.equal(bundle.releaseSha256, first.releaseSha256);
+
+    for (const cacheRoot of [cacheOne, cacheTwo]) {
+        const hydrated = await hydrateSiteCache({
+            storeRoot: LOCATION,
+            store,
+            cacheRoot,
+            asOf: "2026-07-12T12:11:00Z",
+        });
+        assert.equal(hydrated.releaseSha256, first.releaseSha256);
+    }
+
+    await writeFile(value.source.sourcePath, "<!doctype html><title>S3 second</title>\n");
+    const second = await publishSiteRelease({
+        ...await highLevelRequest({
+            buildRoot: value.buildRoot,
+            sequence: 12,
+            expectedSelectionSha256: first.selectionSha256,
+        }),
+        store,
+    });
+    for (const cacheRoot of [cacheOne, cacheTwo]) {
+        const hydrated = await hydrateSiteCache({
+            storeRoot: LOCATION,
+            store,
+            cacheRoot,
+            asOf: "2026-07-12T12:13:00Z",
+        });
+        assert.equal(hydrated.releaseSha256, second.releaseSha256);
+        assert.match(await readlink(path.join(cacheRoot, "current")), new RegExp(`^generations/${second.releaseSha256}-`));
+    }
+
+    const rolledBack = await rollbackSiteRelease({
+        storeRoot: LOCATION,
+        store,
+        expectedSelectionSha256: second.selectionSha256,
+        rolledBackAt: "2026-07-12T12:14:00Z",
+    });
+    assert.equal(rolledBack.selection.current.releaseSha256, first.releaseSha256);
+    for (const cacheRoot of [cacheOne, cacheTwo]) {
+        const hydrated = await hydrateSiteCache({
+            storeRoot: LOCATION,
+            store,
+            cacheRoot,
+            asOf: "2026-07-12T12:14:00Z",
+        });
+        assert.equal(hydrated.releaseSha256, first.releaseSha256);
+    }
+
+    const selectedLinks = await Promise.all(
+        [cacheOne, cacheTwo].map((cacheRoot) => readlink(path.join(cacheRoot, "current"))),
+    );
+    const selectedBytes = await Promise.all(
+        [cacheOne, cacheTwo].map((cacheRoot, index) => readFile(path.join(cacheRoot, selectedLinks[index], "tree", "index.html"))),
+    );
+    client.send = async () => { throw new Error("fake S3 outage"); };
+    for (const [index, cacheRoot] of [cacheOne, cacheTwo].entries()) {
+        await assert.rejects(
+            hydrateSiteCache({ storeRoot: LOCATION, store, cacheRoot }),
+            /no verified site release is available: fake S3 outage/,
+        );
+        assert.equal(await readlink(path.join(cacheRoot, "current")), selectedLinks[index]);
+        assert.deepEqual(
+            await readFile(path.join(cacheRoot, selectedLinks[index], "tree", "index.html")),
+            selectedBytes[index],
+        );
+    }
 });

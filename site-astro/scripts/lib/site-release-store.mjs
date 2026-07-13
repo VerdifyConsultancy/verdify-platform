@@ -33,6 +33,7 @@ const MAX_MANIFEST_BYTES = 16 * 1024 * 1024;
 const RETAIN_RELEASES = 10;
 const MAX_EVENT_RECORDS = 1_000_000;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+const SITE_RELEASE_NAMESPACE = "site-releases/v1";
 
 function canonicalBytes(value) {
   return Buffer.from(`${JSON.stringify(value, null, 2)}\n`);
@@ -40,6 +41,29 @@ function canonicalBytes(value) {
 
 function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
+}
+
+function siteReleaseStoreIdentity(location) {
+  const document = location.kind === "local"
+    ? {
+        contract: "verdify.lab-site-release-store-identity",
+        schemaVersion: 1,
+        namespace: SITE_RELEASE_NAMESPACE,
+        backend: "local",
+        root: location.root,
+      }
+    : {
+        contract: "verdify.lab-site-release-store-identity",
+        schemaVersion: 1,
+        namespace: SITE_RELEASE_NAMESPACE,
+        backend: "s3",
+        bucket: location.bucket,
+        prefix: location.prefix,
+      };
+  return Object.freeze({
+    document: Object.freeze(document),
+    sha256: sha256(canonicalBytes(document)),
+  });
 }
 
 function exactKeys(value, keys) {
@@ -362,10 +386,11 @@ function validateSelection(selection, bytes) {
   return selection;
 }
 
-function eventIntent(event, releaseSha256, expectedSelectionSha256) {
+function eventIntent(event, releaseSha256, expectedSelectionSha256, storeIdentitySha256) {
   return {
     contract: "verdify.lab-site-release-event-intent",
-    schemaVersion: 1,
+    schemaVersion: 2,
+    storeIdentitySha256,
     eventId: event.eventId,
     eventSha256: sha256(canonicalBytes(event)),
     payloadSha256: event.payloadSha256,
@@ -374,29 +399,74 @@ function eventIntent(event, releaseSha256, expectedSelectionSha256) {
   };
 }
 
+function validateSiteEventIntent(intent, bytes, expectedStoreIdentitySha256) {
+  if (
+    !exactKeys(intent, [
+      "contract",
+      "schemaVersion",
+      "storeIdentitySha256",
+      "eventId",
+      "eventSha256",
+      "payloadSha256",
+      "releaseSha256",
+      "expectedSelectionSha256",
+    ])
+    || intent.contract !== "verdify.lab-site-release-event-intent"
+    || intent.schemaVersion !== 2
+    || intent.storeIdentitySha256 !== expectedStoreIdentitySha256
+    || !SHA256_RE.test(intent.storeIdentitySha256)
+    || !EVENT_ID_RE.test(intent.eventId)
+    || !SHA256_RE.test(intent.eventSha256)
+    || !SHA256_RE.test(intent.payloadSha256)
+    || !SHA256_RE.test(intent.releaseSha256)
+    || (intent.expectedSelectionSha256 !== null && !SHA256_RE.test(intent.expectedSelectionSha256))
+    || canonicalBytes(intent).compare(bytes) !== 0
+  ) throw new Error("site release event intent does not match its canonical store identity");
+  return intent;
+}
+
 // Backend contract for a future object-store implementation. Implementations must
 // preserve absent-only immutable objects and conditional/atomic selector semantics;
 // the local backend serializes those operations with its same-host lease.
 export class SiteReleaseStore {
+  constructor(location) {
+    this.location = location;
+    this.identity = siteReleaseStoreIdentity(location);
+  }
+
   async initialize(_options = {}) { throw new Error("site release store initialize is not implemented"); }
   async readSelection() { throw new Error("site release store selection read is not implemented"); }
   async writeSelection(_selection, _expectedSelectionSha256) { throw new Error("site release store selection write is not implemented"); }
   async publishBlob(_source) { throw new Error("site release store blob publication is not implemented"); }
+  async readBlob(_digest, _options = {}) { throw new Error("site release store blob read is not implemented"); }
   async publishRelease(_manifest) { throw new Error("site release store manifest publication is not implemented"); }
   async readRelease(_digest, _options = {}) { throw new Error("site release store manifest read is not implemented"); }
   async publishEventIntent(_intent) { throw new Error("site release store event publication is not implemented"); }
   async readEventIntent(_eventId) { throw new Error("site release store event read is not implemented"); }
   async listReleaseDigests() { throw new Error("site release store listing is not implemented"); }
+
+  async withPublication(callback) {
+    return callback();
+  }
+
+  async prepareSelectionTransition(_plannedSelection, _priorSelection, _options = {}) {
+    // Object-store retention/GC is deliberately a separate gated slice. The
+    // immutable objects and selector CAS remain safe without deleting objects.
+    return null;
+  }
 }
 
 export class LocalSiteReleaseStore extends SiteReleaseStore {
   constructor(root) {
-    super();
-    this.root = path.resolve(root);
+    const location = Object.freeze({ kind: "local", root: path.resolve(root) });
+    super(location);
+    this.root = location.root;
   }
 
   async initialize({ create = false } = {}) {
     this.root = await canonicalRoot(this.root, "site release store root");
+    this.location = Object.freeze({ kind: "local", root: this.root });
+    this.identity = siteReleaseStoreIdentity(this.location);
     for (const relative of ["blobs/sha256", "releases/sha256", "events/sha256", ".lease-tombstones"]) {
       await secureDirectory(this.root, relative, { create });
     }
@@ -463,6 +533,16 @@ export class LocalSiteReleaseStore extends SiteReleaseStore {
     }
   }
 
+  async readBlob(digest, { maximumBytes = MAX_FILE_BYTES } = {}) {
+    if (!SHA256_RE.test(digest)) throw new Error("site blob digest is invalid");
+    if (!Number.isSafeInteger(maximumBytes) || maximumBytes < 1 || maximumBytes > MAX_FILE_BYTES) {
+      throw new Error("site blob read limit is invalid");
+    }
+    const value = await readSingleLink(this.blobPath(digest), maximumBytes, "site release blob");
+    if (sha256(value.bytes) !== digest) throw new Error("site release blob digest mismatch");
+    return { body: value.bytes, bytes: value.bytes.length, sha256: digest };
+  }
+
   async publishRelease(manifest) {
     const digest = sha256(canonicalBytes(manifest));
     await publishCanonicalAbsent(this.releasePath(digest), manifest);
@@ -483,8 +563,8 @@ export class LocalSiteReleaseStore extends SiteReleaseStore {
       const verified = new Set();
       for (const file of manifest.files) {
         if (verified.has(file.sha256)) continue;
-        const blob = await digestFile(this.blobPath(file.sha256));
-        if (blob.sha256 !== file.sha256 || blob.bytes !== file.bytes) throw new Error("site release blob verification failed");
+        const blob = await this.readBlob(file.sha256, { maximumBytes: file.bytes });
+        if (blob.bytes !== file.bytes) throw new Error("site release blob verification failed");
         verified.add(file.sha256);
       }
     }
@@ -492,6 +572,7 @@ export class LocalSiteReleaseStore extends SiteReleaseStore {
   }
 
   async publishEventIntent(intent) {
+    validateSiteEventIntent(intent, canonicalBytes(intent), this.identity.sha256);
     await publishCanonicalAbsent(this.eventPath(intent.eventId), intent);
   }
 
@@ -509,26 +590,7 @@ export class LocalSiteReleaseStore extends SiteReleaseStore {
     } catch {
       throw new Error("site release event intent is not valid JSON");
     }
-    if (
-      !exactKeys(intent, [
-        "contract",
-        "schemaVersion",
-        "eventId",
-        "eventSha256",
-        "payloadSha256",
-        "releaseSha256",
-        "expectedSelectionSha256",
-      ])
-      || intent.contract !== "verdify.lab-site-release-event-intent"
-      || intent.schemaVersion !== 1
-      || !EVENT_ID_RE.test(intent.eventId)
-      || !SHA256_RE.test(intent.eventSha256)
-      || !SHA256_RE.test(intent.payloadSha256)
-      || !SHA256_RE.test(intent.releaseSha256)
-      || (intent.expectedSelectionSha256 !== null && !SHA256_RE.test(intent.expectedSelectionSha256))
-      || canonicalBytes(intent).compare(value.bytes) !== 0
-    ) throw new Error("site release event intent does not use the canonical v1 contract");
-    return intent;
+    return validateSiteEventIntent(intent, value.bytes, this.identity.sha256);
   }
 
   async listReleaseDigests() {
@@ -537,6 +599,14 @@ export class LocalSiteReleaseStore extends SiteReleaseStore {
       throw new Error("site release manifest membership is invalid");
     }
     return names.map((name) => name.slice(0, -5));
+  }
+
+  async withPublication(callback) {
+    return withLocalLease(this, callback);
+  }
+
+  async prepareSelectionTransition(plannedSelection, priorSelection, options = {}) {
+    return pruneAndCollect(this, plannedSelection, priorSelection, options);
   }
 }
 
@@ -548,32 +618,8 @@ function parseS3CanonicalJson(bytes, label) {
   }
 }
 
-function validateS3EventIntent(intent, bytes = canonicalBytes(intent)) {
-  if (
-    !exactKeys(intent, [
-      "contract",
-      "schemaVersion",
-      "eventId",
-      "eventSha256",
-      "payloadSha256",
-      "releaseSha256",
-      "expectedSelectionSha256",
-    ])
-    || intent.contract !== "verdify.lab-site-release-event-intent"
-    || intent.schemaVersion !== 1
-    || !EVENT_ID_RE.test(intent.eventId)
-    || !SHA256_RE.test(intent.eventSha256)
-    || !SHA256_RE.test(intent.payloadSha256)
-    || !SHA256_RE.test(intent.releaseSha256)
-    || (intent.expectedSelectionSha256 !== null && !SHA256_RE.test(intent.expectedSelectionSha256))
-    || canonicalBytes(intent).compare(bytes) !== 0
-  ) throw new Error("site release event intent does not use the canonical v1 contract");
-  return intent;
-}
-
 export class S3SiteReleaseStore extends SiteReleaseStore {
   constructor(location, options = {}) {
-    super();
     const parsed = typeof location === "string" ? parseSiteReleaseStoreLocation(location) : location;
     if (
       parsed === null
@@ -582,7 +628,8 @@ export class S3SiteReleaseStore extends SiteReleaseStore {
       || typeof parsed.bucket !== "string"
       || typeof parsed.prefix !== "string"
     ) throw new Error("S3 site release store location is invalid");
-    this.location = Object.freeze({ kind: "s3", bucket: parsed.bucket, prefix: parsed.prefix });
+    const normalized = Object.freeze({ kind: "s3", bucket: parsed.bucket, prefix: parsed.prefix });
+    super(normalized);
     this.objects = new S3ObjectStore({
       bucket: parsed.bucket,
       prefix: parsed.prefix,
@@ -662,6 +709,19 @@ export class S3SiteReleaseStore extends SiteReleaseStore {
     await this.publishImmutable(key, value.bytes, MAX_FILE_BYTES, "content-addressed site blob collision", "application/octet-stream");
   }
 
+  async readBlob(digest, { maximumBytes = MAX_FILE_BYTES } = {}) {
+    if (!SHA256_RE.test(digest)) throw new Error("site blob digest is invalid");
+    if (!Number.isSafeInteger(maximumBytes) || maximumBytes < 1 || maximumBytes > MAX_FILE_BYTES) {
+      throw new Error("site blob read limit is invalid");
+    }
+    const value = await this.objects.read(this.blobKey(digest), {
+      maximumBytes,
+      label: "site release blob",
+    });
+    if (sha256(value.bytes) !== digest) throw new Error("site release blob digest mismatch");
+    return { body: value.bytes, bytes: value.bytes.length, sha256: digest };
+  }
+
   async publishRelease(manifest) {
     const bytes = canonicalBytes(manifest);
     validateSiteReleaseManifest(manifest, bytes);
@@ -688,11 +748,8 @@ export class S3SiteReleaseStore extends SiteReleaseStore {
       const verified = new Set();
       for (const file of manifest.files) {
         if (verified.has(file.sha256)) continue;
-        const blob = await this.objects.read(this.blobKey(file.sha256), {
-          maximumBytes: file.bytes,
-          label: "site release blob",
-        });
-        if (sha256(blob.bytes) !== file.sha256 || blob.bytes.length !== file.bytes) {
+        const blob = await this.readBlob(file.sha256, { maximumBytes: file.bytes });
+        if (blob.bytes !== file.bytes) {
           throw new Error("site release blob verification failed");
         }
         verified.add(file.sha256);
@@ -703,7 +760,7 @@ export class S3SiteReleaseStore extends SiteReleaseStore {
 
   async publishEventIntent(intent) {
     const bytes = canonicalBytes(intent);
-    validateS3EventIntent(intent, bytes);
+    validateSiteEventIntent(intent, bytes, this.identity.sha256);
     await this.publishImmutable(
       this.eventKey(intent.eventId),
       bytes,
@@ -720,7 +777,11 @@ export class S3SiteReleaseStore extends SiteReleaseStore {
       missing: true,
     });
     if (value === null) return null;
-    return validateS3EventIntent(parseS3CanonicalJson(value.bytes, "site release event intent"), value.bytes);
+    return validateSiteEventIntent(
+      parseS3CanonicalJson(value.bytes, "site release event intent"),
+      value.bytes,
+      this.identity.sha256,
+    );
   }
 
   async listReleaseDigests() {
@@ -737,6 +798,24 @@ export function createSiteReleaseStore(location, options = {}) {
   return parsed.kind === "local"
     ? new LocalSiteReleaseStore(parsed.root)
     : new S3SiteReleaseStore(parsed, options);
+}
+
+export async function initializeSiteReleaseStore({ storeRoot, store = null, create = false }) {
+  const location = parseSiteReleaseStoreLocation(storeRoot);
+  const expectedIdentity = siteReleaseStoreIdentity(location);
+  let selected = store;
+  if (selected === null) {
+    if (location.kind !== "local") {
+      throw new Error("S3 site release operations require an explicitly injected store");
+    }
+    selected = new LocalSiteReleaseStore(location.root);
+  } else if (!(selected instanceof SiteReleaseStore)) {
+    throw new Error("injected site release store is invalid");
+  }
+  if (selected.identity?.sha256 !== expectedIdentity.sha256) {
+    throw new Error("injected site release store does not match its canonical location identity");
+  }
+  return selected.initialize({ create });
 }
 
 export { parseSiteReleaseStoreLocation };
@@ -1052,6 +1131,7 @@ async function hook(testHooks, name, context = {}) {
 
 export async function publishSiteRelease({
   storeRoot,
+  store = null,
   buildRoot,
   event,
   sourceSnapshotManifestSha256,
@@ -1080,11 +1160,11 @@ export async function publishSiteRelease({
     contentIdentitySha256,
   })) throw new Error("site release event payload digest mismatch");
 
-  const store = await new LocalSiteReleaseStore(storeRoot).initialize({ create: true });
-  return withLocalLease(store, async () => {
-    await hook(testHooks, "afterLease", { store });
-    const selected = await store.readSelection();
-    const eventIntentRecord = await store.readEventIntent(event.eventId);
+  const releaseStore = await initializeSiteReleaseStore({ storeRoot, store, create: true });
+  return releaseStore.withPublication(async () => {
+    await hook(testHooks, "afterLease", { store: releaseStore });
+    const selected = await releaseStore.readSelection();
+    const eventIntentRecord = await releaseStore.readEventIntent(event.eventId);
     if (eventIntentRecord) {
       if (
         eventIntentRecord.eventSha256 !== sha256(canonicalBytes(event))
@@ -1092,7 +1172,7 @@ export async function publishSiteRelease({
       ) throw new Error("site release event ID was reused with another payload or envelope");
       let manifest;
       try {
-        manifest = await store.readRelease(eventIntentRecord.releaseSha256);
+        manifest = await releaseStore.readRelease(eventIntentRecord.releaseSha256);
       } catch (error) {
         if (error.code === "ENOENT") {
           return { idempotent: true, retained: false, releaseSha256: eventIntentRecord.releaseSha256, selectionSha256: selected?.sha256 ?? null };
@@ -1111,8 +1191,10 @@ export async function publishSiteRelease({
           manifest.releasedAt,
           "publish",
         );
-        await pruneAndCollect(store, next, selected?.document ?? null, { byteLimit: testHooks?.storeByteLimit ?? MAX_STORE_BYTES });
-        const selectionSha256 = await store.writeSelection(next, eventIntentRecord.expectedSelectionSha256);
+        await releaseStore.prepareSelectionTransition(next, selected?.document ?? null, {
+          byteLimit: testHooks?.storeByteLimit ?? MAX_STORE_BYTES,
+        });
+        const selectionSha256 = await releaseStore.writeSelection(next, eventIntentRecord.expectedSelectionSha256);
         return { idempotent: true, retained: true, releaseSha256: eventIntentRecord.releaseSha256, selectionSha256, manifest };
       }
       return {
@@ -1126,14 +1208,19 @@ export async function publishSiteRelease({
     }
 
     if (selected) {
-      const current = await store.readRelease(selected.document.current.releaseSha256);
+      const current = await releaseStore.readRelease(selected.document.current.releaseSha256);
       if (current.contentIdentitySha256 === contentIdentitySha256) {
-        const intent = eventIntent(event, selected.document.current.releaseSha256, selected.sha256);
-        await pruneAndCollect(store, selected.document, selected.document, {
+        const intent = eventIntent(
+          event,
+          selected.document.current.releaseSha256,
+          selected.sha256,
+          releaseStore.identity.sha256,
+        );
+        await releaseStore.prepareSelectionTransition(selected.document, selected.document, {
           prospectiveIntent: intent,
           byteLimit: testHooks?.storeByteLimit ?? MAX_STORE_BYTES,
         });
-        await store.publishEventIntent(intent);
+        await releaseStore.publishEventIntent(intent);
         return {
           idempotent: false,
           unchanged: true,
@@ -1150,8 +1237,8 @@ export async function publishSiteRelease({
     }
     if ((selected?.sha256 ?? null) !== expectedSelectionSha256) throw new Error("site selection precondition failed");
 
-    for (const file of inventory.files) await store.publishBlob(file);
-    await hook(testHooks, "afterBlobs", { store });
+    for (const file of inventory.files) await releaseStore.publishBlob(file);
+    await hook(testHooks, "afterBlobs", { store: releaseStore });
     const manifest = {
       contract: "verdify.lab-site-release",
       schemaVersion: 1,
@@ -1167,9 +1254,9 @@ export async function publishSiteRelease({
       files,
     };
     validateSiteReleaseManifest(manifest, canonicalBytes(manifest));
-    const releaseSha256 = await store.publishRelease(manifest);
-    await hook(testHooks, "afterManifest", { store, releaseSha256 });
-    const intent = eventIntent(event, releaseSha256, expectedSelectionSha256);
+    const releaseSha256 = await releaseStore.publishRelease(manifest);
+    await hook(testHooks, "afterManifest", { store: releaseStore, releaseSha256 });
+    const intent = eventIntent(event, releaseSha256, expectedSelectionSha256, releaseStore.identity.sha256);
     const pointer = { releaseSha256, eventId: event.eventId };
     const next = selectionRecord(
       pointer,
@@ -1178,21 +1265,21 @@ export async function publishSiteRelease({
       releasedAt,
       "publish",
     );
-    await pruneAndCollect(store, next, selected?.document ?? null, {
+    await releaseStore.prepareSelectionTransition(next, selected?.document ?? null, {
       prospectiveIntent: intent,
       byteLimit: testHooks?.storeByteLimit ?? MAX_STORE_BYTES,
     });
-    await store.publishEventIntent(intent);
-    await hook(testHooks, "afterIntent", { store, releaseSha256 });
-    await hook(testHooks, "beforeSelection", { store, releaseSha256 });
-    const selectionSha256 = await store.writeSelection(next, expectedSelectionSha256);
+    await releaseStore.publishEventIntent(intent);
+    await hook(testHooks, "afterIntent", { store: releaseStore, releaseSha256 });
+    await hook(testHooks, "beforeSelection", { store: releaseStore, releaseSha256 });
+    const selectionSha256 = await releaseStore.writeSelection(next, expectedSelectionSha256);
     return { idempotent: false, retained: true, releaseSha256, selectionSha256, manifest };
   });
 }
 
-export async function siteReleaseStatus({ storeRoot, asOf = null }) {
-  const store = await new LocalSiteReleaseStore(storeRoot).initialize();
-  const selected = await store.readSelection();
+export async function siteReleaseStatus({ storeRoot, store = null, asOf = null }) {
+  const releaseStore = await initializeSiteReleaseStore({ storeRoot, store });
+  const selected = await releaseStore.readSelection();
   if (!selected) {
     return {
       contract: "verdify.lab-site-release-status",
@@ -1205,9 +1292,9 @@ export async function siteReleaseStatus({ storeRoot, asOf = null }) {
       previous: null,
     };
   }
-  const current = await store.readRelease(selected.document.current.releaseSha256);
+  const current = await releaseStore.readRelease(selected.document.current.releaseSha256);
   const previous = selected.document.previous
-    ? await store.readRelease(selected.document.previous.releaseSha256)
+    ? await releaseStore.readRelease(selected.document.previous.releaseSha256)
     : null;
   const evaluatedAt = asOf ?? new Date().toISOString();
   instant(evaluatedAt, "site status evaluation time");
@@ -1254,15 +1341,15 @@ export async function siteReleaseStatus({ storeRoot, asOf = null }) {
   };
 }
 
-export async function rollbackSiteRelease({ storeRoot, expectedSelectionSha256, rolledBackAt }) {
+export async function rollbackSiteRelease({ storeRoot, store = null, expectedSelectionSha256, rolledBackAt }) {
   if (!SHA256_RE.test(expectedSelectionSha256)) throw new Error("site rollback precondition is invalid");
   instant(rolledBackAt, "site rollback time");
-  const store = await new LocalSiteReleaseStore(storeRoot).initialize();
-  return withLocalLease(store, async () => {
-    const selected = await store.readSelection();
+  const releaseStore = await initializeSiteReleaseStore({ storeRoot, store });
+  return releaseStore.withPublication(async () => {
+    const selected = await releaseStore.readSelection();
     if (!selected || selected.sha256 !== expectedSelectionSha256) throw new Error("site rollback precondition failed");
     if (!selected.document.previous) throw new Error("site rollback has no previous release");
-    await store.readRelease(selected.document.previous.releaseSha256);
+    await releaseStore.readRelease(selected.document.previous.releaseSha256);
     const next = selectionRecord(
       selected.document.previous,
       selected.document.current,
@@ -1270,7 +1357,7 @@ export async function rollbackSiteRelease({ storeRoot, expectedSelectionSha256, 
       rolledBackAt,
       "rollback",
     );
-    const selectionSha256 = await store.writeSelection(next, expectedSelectionSha256);
+    const selectionSha256 = await releaseStore.writeSelection(next, expectedSelectionSha256);
     return { selection: next, selectionSha256 };
   });
 }

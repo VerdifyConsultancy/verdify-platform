@@ -249,13 +249,13 @@ test("retention evicts optional releases until the retained-byte cap fits", asyn
     await writeFile(path.join(value.buildRoot, "index.html"), `<!doctype html><title>cap-${sequence}-${"x".repeat(120)}</title>\n`);
     const result = await publishSiteRelease({
       ...await request({ ...value, sequence, expectedSelectionSha256: expected }),
-      testHooks: sequence === 48 ? { storeByteLimit: 9_000 } : null,
+      testHooks: sequence === 48 ? { storeByteLimit: 10_000 } : null,
     });
     expected = result.selectionSha256;
   }
   const manifests = await readdir(path.join(value.storeRoot, "releases", "sha256"));
   assert.ok(manifests.length < 7 && manifests.length >= 2);
-  assert.ok(await treeBytes(value.storeRoot) <= 9_000);
+  assert.ok(await treeBytes(value.storeRoot) <= 10_000);
 });
 
 test("unchanged publication rejects an event intent that would exceed the byte cap", async (t) => {

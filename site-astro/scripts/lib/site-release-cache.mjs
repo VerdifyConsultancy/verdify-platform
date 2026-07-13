@@ -18,7 +18,7 @@ import { hostname } from "node:os";
 import path from "node:path";
 
 import {
-  LocalSiteReleaseStore,
+  initializeSiteReleaseStore,
   inventoryBuiltSite,
   validateSiteReleaseManifest,
 } from "./site-release-store.mjs";
@@ -147,7 +147,15 @@ async function materializeStoreRelease(store, releaseSha256, destination) {
   for (const file of manifest.files) {
     const target = path.join(destination, ...file.path.split("/"));
     await mkdir(path.dirname(target), { recursive: true, mode: 0o755 });
-    await copyFile(store.blobPath(file.sha256), target, fsConstants.COPYFILE_EXCL);
+    const blob = await store.readBlob(file.sha256, { maximumBytes: file.bytes });
+    if (blob.bytes !== file.bytes) throw new Error("site release blob verification failed");
+    const handle = await open(target, "wx", 0o644);
+    try {
+      await handle.writeFile(blob.body);
+      await handle.sync();
+    } finally {
+      await handle.close();
+    }
     const copied = await readBounded(target, file.bytes, "hydrated site file");
     if (copied.length !== file.bytes || sha256(copied) !== file.sha256) {
       throw new Error("hydrated site file failed byte verification");
@@ -190,7 +198,7 @@ async function readBakedBundle(bundleRoot) {
   return { root, tree, manifest, releaseSha256: bundle.releaseSha256 };
 }
 
-export async function createBakedSiteBundle({ storeRoot, releaseSha256, bundleRoot }) {
+export async function createBakedSiteBundle({ storeRoot, store = null, releaseSha256, bundleRoot }) {
   if (!SHA256_RE.test(releaseSha256)) throw new Error("baked site release digest is invalid");
   const destination = path.resolve(bundleRoot);
   try {
@@ -201,11 +209,11 @@ export async function createBakedSiteBundle({ storeRoot, releaseSha256, bundleRo
   }
   const parent = await canonicalDirectory(path.dirname(destination), "baked site bundle parent");
   const temporary = path.join(parent, `.site-bundle-${randomUUID()}`);
-  const store = await new LocalSiteReleaseStore(storeRoot).initialize();
+  const releaseStore = await initializeSiteReleaseStore({ storeRoot, store });
   try {
     await mkdir(temporary, { mode: 0o755 });
     const tree = path.join(temporary, "tree");
-    const manifest = await materializeStoreRelease(store, releaseSha256, tree);
+    const manifest = await materializeStoreRelease(releaseStore, releaseSha256, tree);
     const manifestBytes = canonicalBytes(manifest);
     if (sha256(manifestBytes) !== releaseSha256) throw new Error("baked site release digest changed");
     await writeCanonical(path.join(temporary, "manifest.json"), manifest);
@@ -402,7 +410,14 @@ async function withCacheLease(cacheRoot, callback) {
   }
 }
 
-export async function hydrateSiteCache({ storeRoot, cacheRoot, bakedBundleRoot = null, asOf = null, testHooks = null }) {
+export async function hydrateSiteCache({
+  storeRoot,
+  store = null,
+  cacheRoot,
+  bakedBundleRoot = null,
+  asOf = null,
+  testHooks = null,
+}) {
   const root = await canonicalDirectory(cacheRoot, "site cache root");
   return withCacheLease(root, async () => {
   const generationsRoot = path.join(root, "generations");
@@ -416,18 +431,18 @@ export async function hydrateSiteCache({ storeRoot, cacheRoot, bakedBundleRoot =
   let candidate = null;
   let storeFailure = null;
   try {
-    const store = await new LocalSiteReleaseStore(storeRoot).initialize();
-    const selected = await store.readSelection();
+    const releaseStore = await initializeSiteReleaseStore({ storeRoot, store });
+    const selected = await releaseStore.readSelection();
     for (const [source, pointer] of [["store-current", selected?.document.current], ["store-previous", selected?.document.previous]]) {
       if (!pointer) continue;
       try {
-        const manifest = await store.readRelease(pointer.releaseSha256);
+        const manifest = await releaseStore.readRelease(pointer.releaseSha256);
         candidate = {
           source,
           releaseSha256: pointer.releaseSha256,
           manifest,
-          manifestFor: (digest) => store.readRelease(digest),
-          materialize: (tree) => materializeStoreRelease(store, pointer.releaseSha256, tree),
+          manifestFor: (digest) => releaseStore.readRelease(digest),
+          materialize: (tree) => materializeStoreRelease(releaseStore, pointer.releaseSha256, tree),
         };
         break;
       } catch (error) {
