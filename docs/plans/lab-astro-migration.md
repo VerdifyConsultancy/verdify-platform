@@ -1,21 +1,20 @@
 # Lab Astro Migration — Consolidated Program Tracker
 
-Last updated: 2026-07-13 (outer-loop assessment; supersedes chat-only status).
+Last updated: 2026-07-13 (Phase 3 formalization; Phase 2 gate passed).
 Owner: platform agent (Claude outer loop plans/verifies; Codex executes on
 xhigh). Human gate: Jason (prod sync, DNS/edge, Quartz retirement, credential
 work). Epic: #351 (L9, G3). This file is the single source of truth for the
 Quartz→Astro migration of lab.verdify.ai; update it whenever a phase gate
 changes state.
 
-## Ground truth (verified live 2026-07-13 ~04:30 UTC)
+## Ground truth (verified live 2026-07-13 ~07:04 UTC)
 
 | Surface | State |
 |---|---|
 | `lab.verdify.ai` (prod) | Quartz. `verdify-lab` Deployment in `verdify-prod` (ghcr image — pre-ADR-0021 holdover), `verdify-lab-publisher` CronJob republished every 10 min (mutable, shared RWO PVC, both replicas node-pinned). Healthy and fresh; had a 5-job BackoffLimitExceeded streak before recovering. |
-| `lab-stage.verdify.ai` (canary) | Astro. `verdify-lab-astro-stage` in ns `verdify-platform`, 2/2 Ready, image `verdify-lab-astro@sha256:2c03489c…` (pin PR #460, shell contract **1.0.0**), content frozen at the 2026-07-12 snapshot. |
-| `main` @ `3ce6674` | Full Astro implementation merged (PRs #459/#461/#462 + verdify-www#33 shell 1.1.0): parity comparator, immutable local releases, a11y/browser/visual/perf gates. **Merged but deployed nowhere.** |
-| In-cluster CI | **Red for lab-astro on main.** `verdify-platform-ci-9vzwx` (rev `3ce6674`, post-#462) failed in `build-lab-astro` at its `test` step (exit 1) even though PR CI was green; earlier run `c7b2b` (rev `c1a7fff`) failed in `build-api`. No `ci/lab-stage-pin-*` PR for the post-#462 build exists → stage cannot advance. An 8h-old errored `verdify-lab-stage-resume-pin-debug…open-lab-stage-pin-pr` pod is the failed prior pin attempt. |
-| Local checkout (`/workspace/verdify-platform/repo`) | `main` ahead 1/behind 7 of origin — the extra commit `03cff94` (prod-canary scaffold) is patch-identical to `da26d54` on `coordinator/lab-production-canary-v2` (verified hunk-for-hunk); do **not** push local main. The seven /tmp worktrees died with the 03:45 UTC pod reboot; only their branches survive — no uncommitted work was lost-in-place. |
+| `lab-stage.verdify.ai` (canary) | Astro. `verdify-lab-astro-stage` in ns `verdify-platform`, 2/2 Ready with zero restarts on distinct nodes, exact image and pod image IDs `verdify-lab-astro@sha256:ee36941f20028fcfe06f12bf253e7139c00e3d5de1949eb8b12bb1d4ebe60b99` (pin PR #468), shell contract **1.1.0**, content frozen at the 2026-07-12 snapshot. Live T0/T+10 acceptance passed and the ArgoCD app returned to manual-sync. |
+| `main` | Astro implementation through `38ccd5e` is deployed on stage: PRs #459/#461/#462 plus Pagefind fix #466, quality-gate retry #467, and verdify-www#33 shell 1.1.0. Phase 4 release/store, graph/camera fallback, exact-parity, and production-canary work remain. |
+| In-cluster CI | **Green for lab-astro.** `verdify-platform-ci-phase1-38ccd5e` built exact revision `38ccd5e`, passed all 12 browser quality tests plus build/verify/probe/pin, and published the accepted zot digest above. Playwright fixes #463/#464 and agents#2969/#2970 closed the missing-browser, pin-idempotency, and deterministic CPU-allocation failures without relaxing the strict quality budgets. |
 
 ## Completed (do not re-plan)
 
@@ -40,20 +39,21 @@ changes state.
 
 | # | Surface | Position | Remaining gap |
 |---|---|---|---|
-| 1 | Shared design contract | 1.1.0 merged & consumed by main | Stage serves 1.0.0 |
-| 2 | Search/CSP/camera/contact | Fixed impl merged+tested | Deployed stage still broken (search, camera) |
-| 3 | Graph fallbacks | Local occurrence/LKG validation exists | No exporter, reporting tier, fallback release, or live delivery — **143 graph occurrences, 0 live images on stage** |
-| 4 | Media & lightbox | Merged+tested | Old stage image unsized/non-lightboxed |
-| 5 | Planner/evidence templates | Merged, proven on full snapshot | Not deployed; stage frozen at Jul 12 |
+| 1 | Shared design contract | 1.1.0 merged and accepted on stage | Production remains Quartz until Phase 5 |
+| 2 | Search/CSP/camera/contact | Pagefind/search, strict CSP, and contact behavior accepted on stage | 2 camera occurrences have 0 verified same-origin fallbacks; carried to 4c. Cloudflare analytics remains diagnostic-only under the strict CSP |
+| 3 | Graph fallbacks | 143/143 occurrences discovered and DOM-reconciled; interactive links preserved | No exporter, reporting tier, selected fallback release, materialized blob, or live immutable fallback image |
+| 4 | Media & lightbox | Responsive images, intrinsic sizing, and lightbox accepted on stage | Production remains Quartz until Phase 5 |
+| 5 | Planner/evidence templates | Accepted on stage against the full frozen snapshot | Event-driven content refresh remains Phase 4b |
 | 6 | Semantic parity | Routes/aliases complete; comparator improved | Exact same-snapshot parity not green: ~240 false findings from SVG-`<title>` parser bug (fix exists uncommitted on a dead worktree — must be recreated), 9 unavailable historical refs (5 daily-plan routes, 4 images), and Quartz-vs-Astro must build from the SAME immutable snapshot |
 | 7 | Immutable publishing | Local CAS/release/cache engine merged | No S3 adapter wiring (CLI s3:// unwired, no endpoint/credential probe, no event producer/release-agent workload); release runtime on unmerged branch `coordinator/lab-release-runtime` (d91737d: hydration init/sidecar, atomic nginx current/tree, readiness/metrics, 61 tests passed) |
-| 8 | Quality gates | Real-content gates green on main | Deployed stage is not the tested build; no full acceptance on live stage |
+| 8 | Quality gates | Strict real-content gates green; exact tested build passed live T0 and T+10 acceptance | Keep the same budgets for every Phase 4 rollout; no production acceptance yet |
 | 9 | Production cutover | Fail-closed canary scaffold on `coordinator/lab-production-canary-v2` | Not on main/built/pinned/deployed; Quartz remains authoritative; Jason APPLY required |
 
 ## Execution phases and gates
 
-Phase 1 — **Unblock the pipeline (P0, owner: codex).**
-ROOT CAUSE (confirmed by local repro, 2026-07-13 forensics): the
+Phase 1 — **Unblock the pipeline (P0, owner: codex) — PASSED.**
+**Historical entry state and root cause:** confirmed by local repro and
+2026-07-13 forensics, the
 `build-lab-astro` test initContainer (`node:22-bookworm` in WorkflowTemplate
 `verdify-platform-ci` → `repo-build/build`, defined in jvallery/agents
 `platform/kubernetes/ci/agent-fleet-ci/workflows/`) never installs Playwright
@@ -62,15 +62,15 @@ browsers; PR #461 added `test:quality:built` (Playwright `@quality`) to
 `chromium.launch()` ("Executable doesn't exist … run npx playwright
 install"). PR CI stays green because it runs zero site-astro steps (parity
 gap), and the authoring pod had a pre-seeded `~/.cache/ms-playwright`.
-Fix options: (a) repo-local — make site-astro's test chain provision its
+The fix options were: (a) repo-local — make site-astro's test chain provision its
 browser (e.g. `npx playwright install --with-deps chromium` before the
 quality gate, or gate on browser availability); (b) control-plane — patch the
 WFT test command or bake a pinned playwright test image (jvallery/agents PR).
-Then re-trigger CI for main HEAD and let the chain open the
+The recovery plan was to re-trigger CI for main HEAD and let the chain open the
 `ci/lab-stage-pin-*` PR (pin target:
-`deploy/k8s/overlays/lab-stage/kustomization.yaml`, still `2c03489c`),
+`deploy/k8s/overlays/lab-stage/kustomization.yaml`, then at `2c03489c`),
 gate-review, roll stage.
-Known pipeline debt found in the same sweep (file follow-ups, coordinate for
+Pipeline debt recorded at entry in the same sweep (file follow-ups, coordinate for
 jvallery/agents changes): `open-lab-stage-pin-pr` is non-idempotent
 (non-force push + late curl/jq install — stranded PR-less branch
 `ci/lab-stage-pin-aa99b5a9a0be` holds digest `df8a3279` for aa99b5a; delete
@@ -89,7 +89,8 @@ markers, `wasm-unsafe-eval` CSP, lab-nav toggle, lightbox markup, intrinsic
 dims + srcset, /pagefind assets 200.
 
 Phase 2 — **Stage convergence verification (owner: codex, verified by outer
-loop).** Confirm on live stage: Pagefind search works (the 2026-07-13 probe
+loop) — PASSED.** **Historical entry checklist and pre-rollout evidence:**
+confirm on live stage that Pagefind search works (the 2026-07-13 probe
 confirmed all /pagefind assets serve 200 with 321 pages indexed — ONLY the
 missing `wasm-unsafe-eval` in script-src blocks it), imgs have intrinsic
 dims + srcset, lightbox works, mobile Lab-index toggle present (the shell's
@@ -117,11 +118,12 @@ blocks: diagnostic-only; strict CSP retained.
 
 Phase 3 — **Program formalization (owner: codex).** #351 → In Progress/P1/XL;
 create the nine surface child issues (What/Why/How/Test/Success + Project #5
-fields); salvage/park branch work per dispositions below. Doc debt from the
-2026-07-13 staleness scan (root tracking docs are being corrected with this
-tracker; these deeper ones belong here): `docs/handoff/k3s-agent-handoff.md`
-§2/§5.3 (zot/Kaniko pipeline, lab blocker), `docs/agents/web.md` (site-astro
-ownership + zot deploy path), `LANES.md` staleness banner for the lab lane.
+fields); salvage/park branch work per dispositions below. The doc-debt slice
+from the 2026-07-13 staleness scan is complete in this Phase 3 change:
+`docs/handoff/k3s-agent-handoff.md` §2/§5.3 now records the zot/Kaniko
+pipeline and current Lab blocker; `docs/agents/web.md` records Astro ownership,
+deploy, acceptance, and stage state; and `LANES.md` carries a Lab-lane
+staleness banner without rewriting its non-Lab historical plan.
 GATE: board reflects this tracker; no orphan branches unaccounted.
 
 Phase 4 — **Feature completion (owner: codex, sequenced).**
