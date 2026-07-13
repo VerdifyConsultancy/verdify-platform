@@ -97,6 +97,15 @@ function response(bytes, overrides = {}) {
   };
 }
 
+function rendererContract(render) {
+  return {
+    contract: "verdify.lab-graph-renderer",
+    schemaVersion: 1,
+    abortCooperation: "settle-within-grace-after-abort",
+    render,
+  };
+}
+
 test("the pure planner byte-binds exactly 143 manifest-ordered, endpoint-free targets", () => {
   const { graphs, manifest, manifestSha256, blocked } = fixture();
   const plan = planGraphExportRequests({ policy: blocked, manifest, manifestSha256 });
@@ -162,10 +171,10 @@ test("manifest, byte-digest, and policy drift fail before a plan or renderer cal
     manifest,
     manifestSha256,
     outputRoot: root,
-    renderer: async () => {
+    renderer: rendererContract(async () => {
       calls += 1;
       return response(await graphPng());
-    },
+    }),
   }), /not activated/);
   assert.equal(calls, 0);
 
@@ -174,7 +183,22 @@ test("manifest, byte-digest, and policy drift fail before a plan or renderer cal
     manifest,
     manifestSha256,
     outputRoot: root,
-  }), /dependency is invalid/);
+  }), /closed abort-cooperative v1 contract/);
+
+  const validRenderer = rendererContract(async () => response(await graphPng()));
+  for (const candidate of [
+    validRenderer.render,
+    { ...validRenderer, endpoint: "not-accepted" },
+    { ...validRenderer, abortCooperation: "best-effort" },
+  ]) {
+    await assert.rejects(produceGraphExportCandidates({
+      policy: active,
+      manifest,
+      manifestSha256,
+      outputRoot: root,
+      renderer: candidate,
+    }), /closed abort-cooperative v1 contract/);
+  }
 });
 
 test("the injected renderer never exceeds four calls and normalizes every graph to the same metadata-free RGB PNG", async (context) => {
@@ -193,7 +217,7 @@ test("the injected renderer never exceeds four calls and normalizes every graph 
     outputRoot: root,
     now: () => CAPTURED_AT,
     concurrency: 4,
-    renderer: async (options) => {
+    renderer: rendererContract(async (options) => {
       activeCalls += 1;
       maximumActive = Math.max(maximumActive, activeCalls);
       observedCalls.push(options);
@@ -201,10 +225,12 @@ test("the injected renderer never exceeds four calls and normalizes every graph 
       activeCalls -= 1;
       const index = graphs.findIndex(({ occurrenceId }) => occurrenceId === options.request.occurrenceId);
       return response(index % 2 === 0 ? plain : tagged);
-    },
+    }),
   });
 
   assert.equal(maximumActive, 4);
+  assert.equal(result.rendererContract.status, "satisfied");
+  assert.equal(result.rendererContract.failure, null);
   assert.equal(observedCalls.length, 143);
   assert.deepEqual(result.graphs.map(({ occurrenceId }) => occurrenceId), graphs.map(({ occurrenceId }) => occurrenceId));
   assert.equal(result.graphs.filter(({ probeStatus }) => probeStatus === "success").length, 143);
@@ -244,7 +270,7 @@ test("mixed renderer failures classify deterministically and still return every 
     outputRoot: root,
     now: () => CAPTURED_AT,
     timeoutMs: 10,
-    renderer: async ({ request, signal }) => {
+    renderer: rendererContract(async ({ request, signal }) => {
       switch (indexById.get(request.occurrenceId)) {
         case 0:
           throw new Error("renderer-specific details must not escape");
@@ -263,9 +289,10 @@ test("mixed renderer failures classify deterministically and still return every 
         default:
           return response(valid);
       }
-    },
+    }),
   });
 
+  assert.equal(result.rendererContract.status, "satisfied");
   assert.equal(result.graphs.length, 143);
   assert.equal(new Set(result.graphs.map(({ occurrenceId }) => occurrenceId)).size, 143);
   assert.deepEqual(result.graphs.map(({ occurrenceId }) => occurrenceId), graphs.map(({ occurrenceId }) => occurrenceId));
@@ -282,6 +309,104 @@ test("mixed renderer failures classify deterministically and still return every 
   assert.equal(result.graphs.slice(0, 7).every(({ candidate }) => candidate === null), true);
   assert.equal(result.graphs.slice(7).every(({ candidate }) => candidate?.mediaType === "image/png"), true);
   assert.doesNotMatch(JSON.stringify(result), /renderer-specific|stopped|url|https?:|credential|authorization|cookie|secret/i);
+});
+
+test("a renderer that ignores abort stops the batch at four unsettled calls and returns a complete closed result", async (context) => {
+  const root = await workspace(context);
+  const { graphs, manifest, manifestSha256, active } = fixture();
+  let calls = 0;
+  let activeCalls = 0;
+  let maximumActive = 0;
+  const startedAt = Date.now();
+  const result = await produceGraphExportCandidates({
+    policy: active,
+    manifest,
+    manifestSha256,
+    outputRoot: root,
+    timeoutMs: 10,
+    settlementGraceMs: 20,
+    concurrency: 4,
+    renderer: rendererContract(async () => {
+      calls += 1;
+      activeCalls += 1;
+      maximumActive = Math.max(maximumActive, activeCalls);
+      return new Promise(() => {});
+    }),
+  });
+  const elapsedMs = Date.now() - startedAt;
+
+  assert.equal(calls, 4);
+  assert.equal(activeCalls, 4);
+  assert.equal(maximumActive, 4);
+  assert.ok(elapsedMs < 500, `non-cooperative batch exceeded its bound: ${elapsedMs}ms`);
+  assert.deepEqual(result.rendererContract, {
+    contract: "verdify.lab-graph-renderer-runtime-status",
+    schemaVersion: 1,
+    status: "failed",
+    failure: "renderer-settlement-timeout",
+  });
+  assert.equal(result.graphs.length, 143);
+  assert.deepEqual(result.graphs.map(({ occurrenceId }) => occurrenceId), graphs.map(({ occurrenceId }) => occurrenceId));
+  assert.equal(result.graphs.every(({ probeStatus, candidate }) => probeStatus === "missing" && candidate === null), true);
+  assert.doesNotMatch(JSON.stringify(result), /url|https?:|credential|authorization|cookie|secret/i);
+
+  await new Promise((resolve) => setTimeout(resolve, 30));
+  assert.equal(calls, 4, "returning must not release workers to schedule more calls");
+  assert.equal(activeCalls, 4, "the four unsettled calls remain the absolute upper bound");
+});
+
+test("a body whose read and cleanup never settle stops scheduling and returns all 143 null records within bounds", async (context) => {
+  const root = await workspace(context);
+  const { graphs, manifest, manifestSha256, active } = fixture();
+  let calls = 0;
+  let activeReads = 0;
+  let maximumActiveReads = 0;
+  let cleanups = 0;
+  const stuckBody = () => {
+    const iterator = {
+      next: () => {
+        activeReads += 1;
+        maximumActiveReads = Math.max(maximumActiveReads, activeReads);
+        return new Promise(() => {});
+      },
+      return: () => {
+        cleanups += 1;
+        return new Promise(() => {});
+      },
+    };
+    return { [Symbol.asyncIterator]: () => iterator };
+  };
+  const startedAt = Date.now();
+  const result = await produceGraphExportCandidates({
+    policy: active,
+    manifest,
+    manifestSha256,
+    outputRoot: root,
+    timeoutMs: 10,
+    settlementGraceMs: 20,
+    concurrency: 4,
+    renderer: rendererContract(async () => {
+      calls += 1;
+      return response(Buffer.alloc(1), { contentLength: null, body: stuckBody() });
+    }),
+  });
+  const elapsedMs = Date.now() - startedAt;
+
+  assert.equal(calls, 4);
+  assert.equal(activeReads, 4);
+  assert.equal(maximumActiveReads, 4);
+  assert.equal(cleanups, 4);
+  assert.ok(elapsedMs < 500, `non-cooperative cleanup exceeded its bound: ${elapsedMs}ms`);
+  assert.equal(result.rendererContract.status, "failed");
+  assert.equal(result.rendererContract.failure, "body-cleanup-timeout");
+  assert.equal(result.graphs.length, 143);
+  assert.deepEqual(result.graphs.map(({ occurrenceId }) => occurrenceId), graphs.map(({ occurrenceId }) => occurrenceId));
+  assert.equal(result.graphs.every(({ probeStatus, candidate }) => probeStatus === "missing" && candidate === null), true);
+  assert.doesNotMatch(JSON.stringify(result), /url|https?:|credential|authorization|cookie|secret/i);
+
+  await new Promise((resolve) => setTimeout(resolve, 30));
+  assert.equal(calls, 4);
+  assert.equal(activeReads, 4);
 });
 
 test("the shared candidate store rejects linked paths and cleans interrupted graph writes", async (context) => {
@@ -349,7 +474,7 @@ test("the shared candidate store rejects linked paths and cleans interrupted gra
 test("the graph producer has no default network, service, credential, database, or object-store client", async () => {
   const source = await readFile(path.join(ROOT, "scripts/lib/graph-export-producer.mjs"), "utf8");
   assert.doesNotMatch(source, /\bfetch\s*\(|https?:\/\/|from ["']@aws-sdk|kubectl|grafana|postgres|secret(?:name|key)?/i);
-  assert.match(source, /renderer\(\{ request, signal:/);
+  assert.match(source, /renderer\.render\(\{/);
 });
 
 function* pngChunkTypes(bytes) {

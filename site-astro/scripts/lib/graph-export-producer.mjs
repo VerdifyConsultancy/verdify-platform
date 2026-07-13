@@ -19,13 +19,23 @@ const MAX_CONCURRENCY = 4;
 const DEFAULT_CONCURRENCY = 4;
 const MAX_TIMEOUT_MS = 15_000;
 const DEFAULT_TIMEOUT_MS = 10_000;
+const MAX_SETTLEMENT_GRACE_MS = 250;
+const DEFAULT_SETTLEMENT_GRACE_MS = 50;
 const ISO_INSTANT_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
 const PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+const WAIT_TIMEOUT = Symbol("wait-timeout");
 
 class GraphProbeError extends Error {
   constructor(probeStatus, message) {
     super(message);
     this.probeStatus = probeStatus;
+  }
+}
+
+class RendererContractError extends Error {
+  constructor(failure) {
+    super(`graph renderer contract failed: ${failure}`);
+    this.failure = failure;
   }
 }
 
@@ -93,12 +103,95 @@ function assertApprovedPolicy(policy) {
   ) throw new Error("graph export policy is not activated");
 }
 
-async function cancelBody(body) {
+function validateRenderer(renderer) {
+  if (
+    !exactKeys(renderer, ["contract", "schemaVersion", "abortCooperation", "render"])
+    || renderer.contract !== "verdify.lab-graph-renderer"
+    || renderer.schemaVersion !== 1
+    || renderer.abortCooperation !== "settle-within-grace-after-abort"
+    || typeof renderer.render !== "function"
+  ) throw new Error("graph exporter renderer does not use the closed abort-cooperative v1 contract");
+  return renderer;
+}
+
+function outcome(promise) {
+  return promise.then(
+    (value) => ({ state: "fulfilled", value }),
+    (error) => ({ state: "rejected", error }),
+  );
+}
+
+async function waitWithin(outcomePromise, timeoutMs) {
+  if (timeoutMs <= 0) return WAIT_TIMEOUT;
+  let timeout;
   try {
-    if (body?.cancel instanceof Function) await body.cancel();
-    else if (body?.return instanceof Function) await body.return();
-  } catch {
-    // The stable probe classification must not reflect renderer-specific errors.
+    return await Promise.race([
+      outcomePromise,
+      new Promise((resolve) => {
+        timeout = setTimeout(() => resolve(WAIT_TIMEOUT), timeoutMs);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function remainingMilliseconds(deadline) {
+  return Math.max(0, deadline - Date.now());
+}
+
+function emptyCleanup() {
+  return Promise.resolve();
+}
+
+function unsupportedCleanup() {
+  return Promise.reject(new Error("graph renderer body does not expose bounded cleanup"));
+}
+
+function rawBodyCleanup(body) {
+  try {
+    if (Buffer.isBuffer(body) || body instanceof Uint8Array || body === undefined || body === null) {
+      return emptyCleanup;
+    }
+    if (body.cancel instanceof Function) return () => body.cancel();
+    if (body[Symbol.asyncIterator] instanceof Function) {
+      let iterator;
+      return async () => {
+        iterator ??= body[Symbol.asyncIterator]();
+        if (!(iterator?.return instanceof Function)) return unsupportedCleanup();
+        await iterator.return();
+      };
+    }
+    if (body.return instanceof Function) return () => body.return();
+    return unsupportedCleanup;
+  } catch (error) {
+    return () => Promise.reject(error);
+  }
+}
+
+async function requireBoundedCleanup({ cleanup, pendingOutcome = null, graceMs }) {
+  const deadline = Date.now() + graceMs;
+  const cleanupResult = await waitWithin(
+    outcome(Promise.resolve().then(cleanup)),
+    remainingMilliseconds(deadline),
+  );
+  if (cleanupResult === WAIT_TIMEOUT) throw new RendererContractError("body-cleanup-timeout");
+  if (cleanupResult.state !== "fulfilled") throw new RendererContractError("body-cleanup-rejected");
+  if (pendingOutcome !== null) {
+    const pendingResult = await waitWithin(pendingOutcome, remainingMilliseconds(deadline));
+    if (pendingResult === WAIT_TIMEOUT) throw new RendererContractError("body-settlement-timeout");
+  }
+}
+
+async function settleRendererAfterAbort(renderOutcome, graceMs) {
+  const deadline = Date.now() + graceMs;
+  const settled = await waitWithin(renderOutcome, remainingMilliseconds(deadline));
+  if (settled === WAIT_TIMEOUT) throw new RendererContractError("renderer-settlement-timeout");
+  if (settled.state === "fulfilled") {
+    await requireBoundedCleanup({
+      cleanup: rawBodyCleanup(settled.value?.body),
+      graceMs: remainingMilliseconds(deadline),
+    });
   }
 }
 
@@ -119,102 +212,172 @@ function validateRendererResponse(response) {
   ) throw new GraphProbeError("http-error", "graph renderer response content length is invalid");
 }
 
-async function boundedBody(body, maximumBytes) {
+function appendChunk(chunks, chunk, length, maximumBytes) {
+  if (!(Buffer.isBuffer(chunk) || chunk instanceof Uint8Array) || chunk.length === 0) {
+    throw new GraphProbeError("http-error", "graph renderer response body contains an invalid chunk");
+  }
+  const nextLength = length + chunk.length;
+  if (nextLength > maximumBytes) {
+    throw new GraphProbeError("http-error", "graph renderer response is outside the byte limit");
+  }
+  chunks.push(Buffer.from(chunk));
+  return nextLength;
+}
+
+function boundedBodyOperation(body, maximumBytes) {
   if (Buffer.isBuffer(body) || body instanceof Uint8Array) {
-    if (body.length === 0 || body.length > maximumBytes) {
-      throw new GraphProbeError("http-error", "graph renderer response is outside the byte limit");
-    }
-    return Buffer.from(body);
+    return {
+      read: async () => {
+        if (body.length === 0 || body.length > maximumBytes) {
+          throw new GraphProbeError("http-error", "graph renderer response is outside the byte limit");
+        }
+        return Buffer.from(body);
+      },
+      cleanup: emptyCleanup,
+    };
   }
 
-  let iterable = body;
   if (body?.getReader instanceof Function) {
-    iterable = {
-      async *[Symbol.asyncIterator]() {
-        const reader = body.getReader();
+    let reader;
+    try {
+      reader = body.getReader();
+    } catch {
+      throw new GraphProbeError("http-error", "graph renderer response body is not readable");
+    }
+    let released = false;
+    const release = () => {
+      if (released) return;
+      released = true;
+      reader.releaseLock();
+    };
+    return {
+      read: async () => {
+        const chunks = [];
+        let length = 0;
         try {
           while (true) {
             const { done, value } = await reader.read();
-            if (done) return;
-            yield value;
+            if (done) {
+              if (length === 0) {
+                throw new GraphProbeError("http-error", "graph renderer response is outside the byte limit");
+              }
+              release();
+              return Buffer.concat(chunks, length);
+            }
+            length = appendChunk(chunks, value, length, maximumBytes);
           }
+        } catch (error) {
+          if (error instanceof GraphProbeError) throw error;
+          throw new GraphProbeError("http-error", "graph renderer response body could not be read");
+        }
+      },
+      cleanup: async () => {
+        try {
+          await reader.cancel();
         } finally {
-          reader.releaseLock();
+          release();
         }
       },
     };
   }
-  if (!iterable || !(Symbol.asyncIterator in Object(iterable))) {
+  if (!body || !(body[Symbol.asyncIterator] instanceof Function)) {
     throw new GraphProbeError("http-error", "graph renderer response body is not readable");
   }
-  const chunks = [];
-  let length = 0;
+  let iterator;
   try {
-    for await (const chunk of iterable) {
-      if (!(Buffer.isBuffer(chunk) || chunk instanceof Uint8Array) || chunk.length === 0) {
-        throw new GraphProbeError("http-error", "graph renderer response body contains an invalid chunk");
-      }
-      length += chunk.length;
-      if (length > maximumBytes) {
-        throw new GraphProbeError("http-error", "graph renderer response is outside the byte limit");
-      }
-      chunks.push(Buffer.from(chunk));
-    }
-  } catch (error) {
-    if (error instanceof GraphProbeError) throw error;
-    throw new GraphProbeError("http-error", "graph renderer response body could not be read");
+    iterator = body[Symbol.asyncIterator]();
+  } catch {
+    throw new GraphProbeError("http-error", "graph renderer response body is not readable");
   }
-  if (length === 0) throw new GraphProbeError("http-error", "graph renderer response is outside the byte limit");
-  return Buffer.concat(chunks, length);
+  if (!iterator || !(iterator.next instanceof Function)) {
+    throw new GraphProbeError("http-error", "graph renderer response body is not readable");
+  }
+  return {
+    read: async () => {
+      const chunks = [];
+      let length = 0;
+      try {
+        while (true) {
+          const { done, value } = await iterator.next();
+          if (done) {
+            if (length === 0) {
+              throw new GraphProbeError("http-error", "graph renderer response is outside the byte limit");
+            }
+            return Buffer.concat(chunks, length);
+          }
+          length = appendChunk(chunks, value, length, maximumBytes);
+        }
+      } catch (error) {
+        if (error instanceof GraphProbeError) throw error;
+        throw new GraphProbeError("http-error", "graph renderer response body could not be read");
+      }
+    },
+    cleanup: async () => {
+      if (!(iterator.return instanceof Function)) return unsupportedCleanup();
+      await iterator.return();
+    },
+  };
 }
 
-async function timedRendererResponse({ renderer, request, maximumBytes, timeoutMs }) {
+async function timedRendererResponse({ renderer, request, maximumBytes, timeoutMs, settlementGraceMs }) {
   const abortController = new AbortController();
-  let timeout;
-  let timedOut = false;
-  let responseBody;
-  const expired = new Promise((_, reject) => {
-    timeout = setTimeout(() => {
-      timedOut = true;
-      abortController.abort();
-      reject(new GraphProbeError("timeout", "graph renderer exceeded the time limit"));
-    }, timeoutMs);
-  });
+  const deadline = Date.now() + timeoutMs;
+  const renderOutcome = outcome(Promise.resolve().then(() => renderer.render({
+    request,
+    signal: abortController.signal,
+  })));
   try {
-    return await Promise.race([
-      (async () => {
-        let response;
-        try {
-          response = await renderer({ request, signal: abortController.signal });
-        } catch {
-          throw new GraphProbeError("missing", "graph renderer did not return a response");
-        }
-        responseBody = response?.body;
-        try {
-          validateRendererResponse(response);
-          if (response.contentLength !== null && response.contentLength > maximumBytes) {
-            throw new GraphProbeError("http-error", "graph renderer response is outside the byte limit");
-          }
-          const bytes = await boundedBody(response.body, maximumBytes);
-          if (response.contentLength !== null && response.contentLength !== bytes.length) {
-            throw new GraphProbeError("http-error", "graph renderer response length does not match its bytes");
-          }
-          return bytes;
-        } catch (error) {
-          await cancelBody(response?.body);
-          throw error;
-        }
-      })(),
-      expired,
-    ]);
-  } catch (error) {
-    if (timedOut) {
-      await cancelBody(responseBody);
+    const renderResult = await waitWithin(renderOutcome, remainingMilliseconds(deadline));
+    if (renderResult === WAIT_TIMEOUT) {
+      abortController.abort();
+      await settleRendererAfterAbort(renderOutcome, settlementGraceMs);
       throw new GraphProbeError("timeout", "graph renderer exceeded the time limit");
     }
-    throw error;
+    if (renderResult.state !== "fulfilled") {
+      throw new GraphProbeError("missing", "graph renderer did not return a response");
+    }
+    const response = renderResult.value;
+    try {
+      validateRendererResponse(response);
+      if (response.contentLength !== null && response.contentLength > maximumBytes) {
+        throw new GraphProbeError("http-error", "graph renderer response is outside the byte limit");
+      }
+    } catch (error) {
+      abortController.abort();
+      await requireBoundedCleanup({ cleanup: rawBodyCleanup(response?.body), graceMs: settlementGraceMs });
+      throw error;
+    }
+
+    let bodyOperation;
+    try {
+      bodyOperation = boundedBodyOperation(response.body, maximumBytes);
+    } catch (error) {
+      abortController.abort();
+      await requireBoundedCleanup({ cleanup: rawBodyCleanup(response.body), graceMs: settlementGraceMs });
+      throw error;
+    }
+    const bodyOutcome = outcome(Promise.resolve().then(bodyOperation.read));
+    const bodyResult = await waitWithin(bodyOutcome, remainingMilliseconds(deadline));
+    if (bodyResult === WAIT_TIMEOUT) {
+      abortController.abort();
+      await requireBoundedCleanup({
+        cleanup: bodyOperation.cleanup,
+        pendingOutcome: bodyOutcome,
+        graceMs: settlementGraceMs,
+      });
+      throw new GraphProbeError("timeout", "graph renderer exceeded the time limit");
+    }
+    if (bodyResult.state !== "fulfilled") {
+      abortController.abort();
+      await requireBoundedCleanup({ cleanup: bodyOperation.cleanup, graceMs: settlementGraceMs });
+      throw bodyResult.error;
+    }
+    const bytes = bodyResult.value;
+    if (response.contentLength !== null && response.contentLength !== bytes.length) {
+      throw new GraphProbeError("http-error", "graph renderer response length does not match its bytes");
+    }
+    return bytes;
   } finally {
-    clearTimeout(timeout);
     if (!abortController.signal.aborted) abortController.abort();
   }
 }
@@ -309,13 +472,23 @@ async function normalizeGraphPng(bytes, bounds) {
   return png;
 }
 
-async function renderOne({ request, policy, outputRoot, renderer, now, timeoutMs, fileOperations }) {
+async function renderOne({
+  request,
+  policy,
+  outputRoot,
+  renderer,
+  now,
+  timeoutMs,
+  settlementGraceMs,
+  fileOperations,
+}) {
   try {
     const source = await timedRendererResponse({
       renderer,
       request,
       maximumBytes: policy.imagePolicy.graphs.maxBytes,
       timeoutMs,
+      settlementGraceMs,
     });
     const capturedAt = canonicalInstant(now(), "graph capture time");
     if (Date.parse(capturedAt) < Date.parse(policy.activation.approvedAt)) {
@@ -341,6 +514,7 @@ async function renderOne({ request, policy, outputRoot, renderer, now, timeoutMs
       },
     };
   } catch (error) {
+    if (error instanceof RendererContractError) throw error;
     return {
       occurrenceId: request.occurrenceId,
       probeStatus: error instanceof GraphProbeError ? error.probeStatus : "missing",
@@ -357,12 +531,14 @@ export async function produceGraphExportCandidates({
   renderer,
   now = () => new Date().toISOString(),
   timeoutMs = DEFAULT_TIMEOUT_MS,
+  settlementGraceMs = DEFAULT_SETTLEMENT_GRACE_MS,
   concurrency = DEFAULT_CONCURRENCY,
   fileOperations: fileOperationOverrides,
 }) {
   const plan = planGraphExportRequests({ policy, manifest, manifestSha256 });
   assertApprovedPolicy(policy);
-  if (typeof renderer !== "function" || typeof now !== "function") throw new Error("graph exporter dependency is invalid");
+  const validatedRenderer = validateRenderer(renderer);
+  if (typeof now !== "function") throw new Error("graph exporter dependency is invalid");
   if (
     typeof outputRoot !== "string"
     || outputRoot.length === 0
@@ -372,6 +548,11 @@ export async function produceGraphExportCandidates({
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > MAX_TIMEOUT_MS) {
     throw new Error("graph exporter timeout is invalid");
   }
+  if (
+    !Number.isSafeInteger(settlementGraceMs)
+    || settlementGraceMs < 1
+    || settlementGraceMs > MAX_SETTLEMENT_GRACE_MS
+  ) throw new Error("graph exporter settlement grace is invalid");
   if (!Number.isSafeInteger(concurrency) || concurrency < 1 || concurrency > MAX_CONCURRENCY) {
     throw new Error("graph exporter concurrency is invalid");
   }
@@ -381,30 +562,50 @@ export async function produceGraphExportCandidates({
     "graph candidate output root",
   );
   const results = new Array(plan.requests.length);
+  const rendererContractFailures = new Array(plan.requests.length);
   let nextIndex = 0;
+  let stopScheduling = false;
   async function worker() {
-    while (nextIndex < plan.requests.length) {
+    while (!stopScheduling && nextIndex < plan.requests.length) {
       const index = nextIndex;
       nextIndex += 1;
-      results[index] = await renderOne({
-        request: plan.requests[index],
-        policy,
-        outputRoot: canonicalOutputRoot,
-        renderer,
-        now,
-        timeoutMs,
-        fileOperations,
-      });
+      try {
+        results[index] = await renderOne({
+          request: plan.requests[index],
+          policy,
+          outputRoot: canonicalOutputRoot,
+          renderer: validatedRenderer,
+          now,
+          timeoutMs,
+          settlementGraceMs,
+          fileOperations,
+        });
+      } catch (error) {
+        if (!(error instanceof RendererContractError)) throw error;
+        rendererContractFailures[index] = error.failure;
+        stopScheduling = true;
+      }
     }
   }
   await Promise.all(Array.from({ length: concurrency }, () => worker()));
+  const rendererContractFailure = rendererContractFailures.find((failure) => failure !== undefined) ?? null;
+  const contractFailed = rendererContractFailure !== null;
+  const graphResults = contractFailed
+    ? plan.requests.map(({ occurrenceId }) => ({ occurrenceId, probeStatus: "missing", candidate: null }))
+    : results;
   return {
     contract: "verdify.lab-graph-export-result",
-    schemaVersion: 1,
+    schemaVersion: 2,
     policyVersion: plan.policyVersion,
     policySha256: plan.policySha256,
     sourceOccurrenceManifestSha256: plan.sourceOccurrenceManifestSha256,
-    graphs: results,
+    rendererContract: {
+      contract: "verdify.lab-graph-renderer-runtime-status",
+      schemaVersion: 1,
+      status: contractFailed ? "failed" : "satisfied",
+      failure: rendererContractFailure,
+    },
+    graphs: graphResults,
   };
 }
 
@@ -414,5 +615,12 @@ export const graphExportProducerContract = Object.freeze({
   maxConcurrency: MAX_CONCURRENCY,
   defaultTimeoutMs: DEFAULT_TIMEOUT_MS,
   maxTimeoutMs: MAX_TIMEOUT_MS,
+  defaultSettlementGraceMs: DEFAULT_SETTLEMENT_GRACE_MS,
+  maxSettlementGraceMs: MAX_SETTLEMENT_GRACE_MS,
+  renderer: Object.freeze({
+    contract: "verdify.lab-graph-renderer",
+    schemaVersion: 1,
+    abortCooperation: "settle-within-grace-after-abort",
+  }),
   probeStatuses: Object.freeze(["success", "timeout", "http-error", "decode-error", "missing"]),
 });
