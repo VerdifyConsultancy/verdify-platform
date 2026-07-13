@@ -26,6 +26,18 @@ const SHA256_RE = /^[0-9a-f]{64}$/;
 const ISO_INSTANT_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
 const PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 const WAIT_TIMEOUT = Symbol("wait-timeout");
+const LEGACY_DATASOURCE_DASHBOARD_UIDS = Object.freeze([
+  "greenhouse-equipment",
+  "greenhouse-hydroponics",
+  "greenhouse-lighting",
+  "greenhouse-soil",
+  "greenhouse-weather",
+]);
+const LEGACY_DATASOURCE_DASHBOARD_UID_SET = new Set(LEGACY_DATASOURCE_DASHBOARD_UIDS);
+const FORBIDDEN_DATASOURCE_IDENTITIES = new Set([
+  "P44368ADAD746BC27",
+  "verdify-tsdb",
+]);
 
 class GraphProbeError extends Error {
   constructor(probeStatus, message) {
@@ -62,14 +74,41 @@ function cloneQuery(value) {
   return Object.fromEntries(Object.entries(value).map(([key, values]) => [key, [...values]]));
 }
 
+export function reportingDatasourceIdentitySha256(identity) {
+  if (
+    typeof identity !== "string"
+    || identity.length < 8
+    || identity.length > 256
+    || /[\u0000-\u0020\u007f]/u.test(identity)
+    || /(?:^|[-_])anonymous(?:$|[-_])/iu.test(identity)
+    || identity.includes("://")
+    || FORBIDDEN_DATASOURCE_IDENTITIES.has(identity)
+  ) throw new Error("dedicated reporting datasource identity is invalid");
+  return createHash("sha256")
+    .update(Buffer.from(`${JSON.stringify({
+      contract: "verdify.operator-reporting-datasource-identity",
+      schemaVersion: 1,
+      identity,
+    }, null, 2)}\n`))
+    .digest("hex");
+}
+
 export function planGraphExportRequests({
   policy,
   manifest,
   manifestSha256,
   reportingFeedSha256,
+  reportingDatasourceIdentitySha256: datasourceIdentitySha256,
 }) {
   const discovered = validatePolicyManifestBinding(policy, manifest, manifestSha256);
   if (!SHA256_RE.test(reportingFeedSha256)) throw new Error("graph export reporting feed digest is invalid");
+  const effectiveDatasourceIdentitySha256 = datasourceIdentitySha256 === undefined
+    && policy.activation.state === "blocked"
+    ? "0".repeat(64)
+    : datasourceIdentitySha256;
+  if (!SHA256_RE.test(effectiveDatasourceIdentitySha256)) {
+    throw new Error("graph export reporting datasource identity digest is invalid");
+  }
   const canonicalManifestSha256 = createHash("sha256")
     .update(Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`))
     .digest("hex");
@@ -82,7 +121,7 @@ export function planGraphExportRequests({
   const approvedById = new Map(policy.graphs.map((record) => [record.occurrenceId, record.occurrenceSha256]));
   const requests = discovered.graphs.map((occurrence) => ({
     contract: "verdify.lab-graph-render-request",
-    schemaVersion: 2,
+    schemaVersion: 3,
     occurrenceId: occurrence.occurrenceId,
     occurrenceSha256: approvedById.get(occurrence.occurrenceId),
     reportingFeedSha256,
@@ -92,11 +131,19 @@ export function planGraphExportRequests({
       query: cloneQuery(occurrence.query),
       variables: cloneQuery(occurrence.variables),
       timeRange: { ...occurrence.timeRange },
+      datasourceBinding: {
+        mode: datasourceIdentitySha256 === undefined
+          ? "blocked-offline-unbound"
+          : LEGACY_DATASOURCE_DASHBOARD_UID_SET.has(occurrence.uid)
+            ? "legacy-dashboard-dedicated-override"
+            : "reporting-tier-dedicated-default",
+        identitySha256: effectiveDatasourceIdentitySha256,
+      },
     },
   }));
   return {
     contract: "verdify.lab-graph-export-plan",
-    schemaVersion: 2,
+    schemaVersion: 3,
     policyVersion: policy.policyVersion,
     policySha256: occurrenceExportPolicySha256(policy),
     sourceOccurrenceManifestSha256: manifestSha256,
@@ -113,15 +160,27 @@ function assertApprovedPolicy(policy) {
   ) throw new Error("graph export policy is not activated");
 }
 
-function validateRenderer(renderer, reportingFeedSha256) {
+function validateRenderer(renderer, reportingFeedSha256, datasourceIdentitySha256) {
   if (
-    !exactKeys(renderer, ["contract", "schemaVersion", "reportingFeedSha256", "abortCooperation", "render"])
+    !exactKeys(renderer, [
+      "contract",
+      "schemaVersion",
+      "sourceClass",
+      "anonymousAccess",
+      "reportingFeedSha256",
+      "reportingDatasourceIdentitySha256",
+      "abortCooperation",
+      "render",
+    ])
     || renderer.contract !== "verdify.lab-graph-renderer"
-    || renderer.schemaVersion !== 2
+    || renderer.schemaVersion !== 3
+    || renderer.sourceClass !== "operator-owned-reporting-tier"
+    || renderer.anonymousAccess !== false
     || renderer.reportingFeedSha256 !== reportingFeedSha256
+    || renderer.reportingDatasourceIdentitySha256 !== datasourceIdentitySha256
     || renderer.abortCooperation !== "settle-within-grace-after-abort"
     || typeof renderer.render !== "function"
-  ) throw new Error("graph exporter renderer does not use the feed-bound abort-cooperative v2 contract");
+  ) throw new Error("graph exporter renderer does not use the dedicated feed-bound abort-cooperative v3 contract");
   return renderer;
 }
 
@@ -539,6 +598,7 @@ export async function produceGraphExportCandidates({
   manifest,
   manifestSha256,
   reportingFeed,
+  reportingDatasourceIdentity,
   outputRoot,
   renderer,
   now = () => new Date().toISOString(),
@@ -548,14 +608,16 @@ export async function produceGraphExportCandidates({
   fileOperations: fileOperationOverrides,
 }) {
   const reportingFeedSha256 = reportingFeedEnvelopeSha256(reportingFeed);
+  const datasourceIdentitySha256 = reportingDatasourceIdentitySha256(reportingDatasourceIdentity);
   const plan = planGraphExportRequests({
     policy,
     manifest,
     manifestSha256,
     reportingFeedSha256,
+    reportingDatasourceIdentitySha256: datasourceIdentitySha256,
   });
   assertApprovedPolicy(policy);
-  const validatedRenderer = validateRenderer(renderer, reportingFeedSha256);
+  const validatedRenderer = validateRenderer(renderer, reportingFeedSha256, datasourceIdentitySha256);
   if (typeof now !== "function") throw new Error("graph exporter dependency is invalid");
   if (
     typeof outputRoot !== "string"
@@ -638,9 +700,13 @@ export const graphExportProducerContract = Object.freeze({
   maxSettlementGraceMs: MAX_SETTLEMENT_GRACE_MS,
   renderer: Object.freeze({
     contract: "verdify.lab-graph-renderer",
-    schemaVersion: 2,
+    schemaVersion: 3,
+    sourceClass: "operator-owned-reporting-tier",
+    anonymousAccess: false,
     reportingFeedSha256: "required-exact-plan-digest",
+    reportingDatasourceIdentitySha256: "required-dedicated-identity-digest",
     abortCooperation: "settle-within-grace-after-abort",
   }),
+  legacyDatasourceDashboardUids: LEGACY_DATASOURCE_DASHBOARD_UIDS,
   probeStatuses: Object.freeze(["success", "timeout", "http-error", "decode-error", "missing"]),
 });
