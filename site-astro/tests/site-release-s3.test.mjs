@@ -343,8 +343,22 @@ test("S3 selection updates use entity-tag compare-and-swap and reject stale and 
         current: "2".repeat(64),
         previous: first.current,
     });
+    const secondSha256 = await store.writeSelection(second, firstSha256);
+    const secondSelected = await store.readSelection();
+    assert.equal(secondSelected.sha256, secondSha256);
+    assert.equal(secondSelected.document.generation, 2);
+    const successfulCompareWrite = client.commands
+        .filter((command) => command.name === "PutObjectCommand")
+        .at(-1);
+    assert.equal(successfulCompareWrite.input.IfMatch, selected.etag);
+
+    const third = selection({
+        generation: 3,
+        current: "3".repeat(64),
+        previous: second.current,
+    });
     await assert.rejects(
-        store.writeSelection(second, "f".repeat(64)),
+        store.writeSelection(third, "f".repeat(64)),
         /site selection precondition failed/,
     );
     client.beforePut = async (input, fake) => {
@@ -357,11 +371,11 @@ test("S3 selection updates use entity-tag compare-and-swap and reject stale and 
         );
     };
     await assert.rejects(
-        store.writeSelection(second, firstSha256),
+        store.writeSelection(third, secondSha256),
         /site selection precondition failed/,
     );
     const afterRace = await store.readSelection();
-    assert.equal(afterRace.document.generation, 1);
+    assert.equal(afterRace.document.generation, 2);
 });
 
 test("S3 reads enforce declared and streamed byte bounds", async () => {
@@ -389,6 +403,43 @@ test("S3 reads enforce declared and streamed byte bounds", async () => {
         }),
         /exceeds its byte limit/,
     );
+
+    for (const [capability, contentLength] of [
+        ["destroy", 5],
+        ["cancel", -1],
+    ]) {
+        let releases = 0;
+        let consumed = 0;
+        const body = {
+            async *[Symbol.asyncIterator]() {
+                consumed += 1;
+                yield Buffer.from("12345");
+            },
+            [capability]: async () => {
+                releases += 1;
+            },
+        };
+        const releasingObjects = await new S3ObjectStore({
+            bucket: BUCKET,
+            prefix: PREFIX,
+            client: {
+                send: async () => ({
+                    ETag: '"bounded-response"',
+                    ContentLength: contentLength,
+                    Body: body,
+                }),
+            },
+        }).initialize();
+        await assert.rejects(
+            releasingObjects.read("bounded/declared-response.bin", {
+                maximumBytes: 4,
+                label: `${capability} fixture`,
+            }),
+            /exceeds its byte limit/,
+        );
+        assert.equal(releases, 1);
+        assert.equal(consumed, 0);
+    }
 });
 
 test("S3 release listing consumes continuation pages and bounds membership", async () => {

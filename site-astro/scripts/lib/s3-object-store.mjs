@@ -83,6 +83,15 @@ function isPrecondition(error) {
     );
 }
 
+async function releaseResponseBody(body) {
+    if (body === undefined || body === null) return;
+    if (typeof body.destroy === "function") {
+        await body.destroy();
+        return;
+    }
+    if (typeof body.cancel === "function") await body.cancel();
+}
+
 async function boundedBody(body, maximumBytes, contentLength, label) {
     if (!Number.isSafeInteger(maximumBytes) || maximumBytes < 1)
         throw new Error(`${label} byte limit is invalid`);
@@ -92,6 +101,7 @@ async function boundedBody(body, maximumBytes, contentLength, label) {
             contentLength < 0 ||
             contentLength > maximumBytes)
     ) {
+        await releaseResponseBody(body).catch(() => {});
         throw new Error(`${label} exceeds its byte limit`);
     }
     if (body === undefined || body === null)
