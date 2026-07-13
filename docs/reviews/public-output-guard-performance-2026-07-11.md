@@ -181,6 +181,17 @@ media tree (179 files, 370,069,481 bytes) scanned clean at
 That same tree remained clean after stream-type/adaptation hardening at
 `2026-07-13T08:27:34Z` (3.180 seconds, identical report SHA-256).
 
+The final range-containment review replaced per-`mdat` sample rescans with one
+monotonic sweep. At `2026-07-13T08:38:28Z`, the adversarial 532,936-byte fixture
+(100,000 one-byte `avc1` chunks, 4,093 empty `mdat` boxes, and one populated
+`mdat`) scanned clean in 0.967 seconds; the prior nested implementation took
+22.3 seconds. The fixture SHA-256 was
+`3d22e2e8fd0d3b62a2c7ded2e535428d42da076df8fcd48c153ebf4f23069dd9` and the
+report SHA-256 was
+`586612d4905d555fe7e528eb32b04682e76c708dc63805436ffea1e17a054201`.
+The current 370,069,481-byte stage launch tree remained clean after this change
+in 3.229 seconds with its prior report SHA-256.
+
 The complete current stage tree is not a replacement for the frozen clean
 corpus above: its 1,184 files (453,366,254 bytes) completed in 125.060 seconds
 and failed only on a pre-existing Pagefind `.pf_meta` `decode-limit`. No matched

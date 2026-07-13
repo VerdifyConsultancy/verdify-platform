@@ -226,6 +226,26 @@ def iso_bmff_fixture(
     return ftyp + moov(media_offset) + udta + iso_bmff_box(b"mdat", media + unreferenced)
 
 
+def iso_bmff_many_mdat_fixture(*, sample_count: int = 100_000, empty_mdat_count: int = 4093) -> bytes:
+    ftyp = iso_bmff_box(b"ftyp", b"isom\x00\x00\x02\x00isomiso2")
+    empty_mdats = iso_bmff_box(b"mdat", b"") * empty_mdat_count
+
+    def moov(offset_bytes: bytes) -> bytes:
+        stsd = iso_bmff_box(b"stsd", b"\x00\x00\x00\x00" + struct.pack(">I", 1) + iso_bmff_box(b"avc1", b""))
+        stsc = iso_bmff_box(b"stsc", b"\x00\x00\x00\x00" + struct.pack(">IIII", 1, 1, 1, 1))
+        stsz = iso_bmff_box(b"stsz", b"\x00\x00\x00\x00" + struct.pack(">II", 1, sample_count))
+        stco = iso_bmff_box(b"stco", b"\x00\x00\x00\x00" + struct.pack(">I", sample_count) + offset_bytes)
+        stbl = iso_bmff_box(b"stbl", stsd + stsc + stsz + stco)
+        minf = iso_bmff_box(b"minf", stbl)
+        hdlr = iso_bmff_box(b"hdlr", b"\x00\x00\x00\x00" + b"\x00\x00\x00\x00vide" + b"\x00" * 12)
+        return iso_bmff_box(b"moov", iso_bmff_box(b"trak", iso_bmff_box(b"mdia", hdlr + minf)))
+
+    preliminary_moov = moov(b"\x00" * (sample_count * 4))
+    media_offset = len(ftyp) + len(preliminary_moov) + len(empty_mdats) + 8
+    offset_bytes = struct.pack(f">{sample_count}I", *range(media_offset, media_offset + sample_count))
+    return ftyp + moov(offset_bytes) + empty_mdats + iso_bmff_box(b"mdat", b"\x80" * sample_count)
+
+
 def font_table_checksum(tag: bytes, payload: bytes) -> int:
     if tag == b"head" and len(payload) >= 12:
         payload = payload[:8] + b"\x00\x00\x00\x00" + payload[12:]
@@ -699,6 +719,22 @@ def test_iso_bmff_rejects_unproven_codec_and_out_of_bounds_sample_table(tmp_path
         ("outside-mdat.mp4", "malformed-media-artifact"),
         ("unknown-codec.mp4", "malformed-media-artifact"),
     }
+
+
+def test_iso_bmff_many_mdat_sample_validation_is_linear(tmp_path):
+    guard = load_guard()
+    artifact = tmp_path / "many-mdats.mp4"
+    artifact.write_bytes(iso_bmff_many_mdat_fixture())
+
+    started = time.perf_counter()
+    findings = guard.scan_root(tmp_path)
+    elapsed = time.perf_counter() - started
+
+    assert findings == []
+    # The former nested containment and gap walks took more than 20 seconds
+    # for this 100k-sample/4094-mdat shape. Five seconds leaves substantial CI
+    # noise headroom while preserving a practical regression gate.
+    assert elapsed < 5.0
 
 
 def test_guard_maps_index_pages_and_scans_binary_metadata(tmp_path):

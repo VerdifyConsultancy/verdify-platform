@@ -1144,20 +1144,19 @@ def _scan_iso_bmff_stream(file_descriptor: int) -> set[str]:
         return {"malformed-media-artifact", *reasons}
     if any(current[0] < previous[1] for previous, current in zip(safe_ranges, safe_ranges[1:], strict=False)):
         return {"malformed-media-artifact", *reasons}
-    if any(
-        not any(media_start <= start and end <= media_end for media_start, media_end in media_ranges)
-        for start, end in safe_ranges
-    ):
-        return {"malformed-media-artifact", *reasons}
 
     padding_bytes = 0
+    sample_index = 0
     for media_start, media_end in media_ranges:
         cursor = media_start
-        for sample_start, sample_end in safe_ranges:
-            if sample_end <= media_start:
-                continue
+        if sample_index < len(safe_ranges) and safe_ranges[sample_index][1] <= media_start:
+            return {"malformed-media-artifact", *reasons}
+        while sample_index < len(safe_ranges):
+            sample_start, sample_end = safe_ranges[sample_index]
             if sample_start >= media_end:
                 break
+            if sample_start < media_start or sample_end > media_end:
+                return {"malformed-media-artifact", *reasons}
             if sample_start > cursor:
                 gap_size = sample_start - cursor
                 padding_bytes += gap_size
@@ -1166,6 +1165,7 @@ def _scan_iso_bmff_stream(file_descriptor: int) -> set[str]:
                 ):
                     return {"malformed-media-artifact", *reasons}
             cursor = sample_end
+            sample_index += 1
         if cursor < media_end:
             gap_size = media_end - cursor
             padding_bytes += gap_size
@@ -1173,6 +1173,8 @@ def _scan_iso_bmff_stream(file_descriptor: int) -> set[str]:
                 file_descriptor, cursor, gap_size
             ):
                 return {"malformed-media-artifact", *reasons}
+    if sample_index != len(safe_ranges):
+        return {"malformed-media-artifact", *reasons}
     if unproven:
         reasons.add("malformed-media-artifact")
     return reasons
