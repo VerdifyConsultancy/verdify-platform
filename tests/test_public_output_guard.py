@@ -1785,8 +1785,8 @@ def test_publish_and_rebuild_scripts_guard_one_same_filesystem_candidate_before_
     assert rebuild.index('npx quartz build --output "$staging"') < rebuild.index('"$PUBLIC_OUTPUT_GUARD"')
     assert rebuild.index('"$PUBLIC_OUTPUT_GUARD"') < rebuild.index('--promote-to "$LIVE_PUBLIC"')
     assert "candidate staging rsync" not in rebuild
-    assert "VERDIFY_PUBLIC_OUTPUT_GUARD_TIMEOUT:-120" in rebuild
-    assert "PUBLIC_OUTPUT_GUARD_TIMEOUT > 120" in rebuild
+    assert "VERDIFY_PUBLIC_OUTPUT_GUARD_TIMEOUT:-300" in rebuild
+    assert "PUBLIC_OUTPUT_GUARD_TIMEOUT > 600" in rebuild
     assert "atomic-promote-directory.py" in rebuild
     assert '--root "$staging"' in rebuild
     assert '--promote-to "$LIVE_PUBLIC"' in rebuild

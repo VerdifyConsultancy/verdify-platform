@@ -57,8 +57,10 @@ maxrss_kib=27564
 
 The rebuild pipeline builds directly into one hidden same-filesystem candidate,
 scans it once, and atomically exchanges it with the live directory. There is no
-post-scan copy or second scan. The guard timeout remains 120 seconds and is
-validated within a 30–120 second range.
+post-scan copy or second scan. The guard timeout defaults to 300 seconds and
+is validated within a 30–600 second range: the 125.060-second full-stage-tree
+measurement below already exceeded the earlier 120-second ceiling, so the
+clamp keeps headroom for tree growth while remaining fail-closed.
 
 ## Scan-to-promotion boundary
 

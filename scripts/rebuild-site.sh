@@ -28,11 +28,16 @@ PYTHON=${PYTHON:-python3}
 PUBLIC_OUTPUT_GUARD=${VERDIFY_PUBLIC_OUTPUT_GUARD:-"$SCRIPT_ROOT/check-public-output.py"}
 PUBLIC_OUTPUT_REPORT=${VERDIFY_PUBLIC_OUTPUT_BUILD_REPORT:-/srv/verdify/state/public-output-build-report.json}
 ATOMIC_PROMOTER=${VERDIFY_ATOMIC_DIRECTORY_PROMOTER:-"$SCRIPT_ROOT/atomic-promote-directory.py"}
-PUBLIC_OUTPUT_GUARD_TIMEOUT=${VERDIFY_PUBLIC_OUTPUT_GUARD_TIMEOUT:-120}
+# The bounded guard timeout is the publish backpressure guard. Its default
+# keeps real headroom over the measured worst case (125.06s for the 1,184-file
+# stage tree in docs/reviews/public-output-guard-performance-2026-07-11.md):
+# the timeout stays fail-closed, but it must not SIGKILL a legitimate
+# full-tree scan as the public tree grows.
+PUBLIC_OUTPUT_GUARD_TIMEOUT=${VERDIFY_PUBLIC_OUTPUT_GUARD_TIMEOUT:-300}
 STALE_CANDIDATE_MIN_AGE=${VERDIFY_STALE_CANDIDATE_MIN_AGE:-3600}
 if ! [[ "$PUBLIC_OUTPUT_GUARD_TIMEOUT" =~ ^[0-9]+$ ]] \
-    || ((PUBLIC_OUTPUT_GUARD_TIMEOUT < 30 || PUBLIC_OUTPUT_GUARD_TIMEOUT > 120)); then
-    echo "public-output guard timeout must be between 30 and 120 seconds" >&2
+    || ((PUBLIC_OUTPUT_GUARD_TIMEOUT < 30 || PUBLIC_OUTPUT_GUARD_TIMEOUT > 600)); then
+    echo "public-output guard timeout must be between 30 and 600 seconds" >&2
     exit 2
 fi
 if ! [[ "$STALE_CANDIDATE_MIN_AGE" =~ ^[0-9]+$ ]] \
