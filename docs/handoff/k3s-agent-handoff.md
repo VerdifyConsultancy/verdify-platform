@@ -56,17 +56,21 @@ laptop. (Firmware OTA is the exception — see §4.)
   - GOTCHA: `scripts/verdify-db.sh prod < file.sql` does **not** apply (stdin is
     swallowed). Apply SQL files with
     `kubectl exec -i -n verdify-prod verdify-db-0 -c postgres -- psql -U verdify -d verdify -v ON_ERROR_STOP=1 < file.sql`.
-- **Deploy / GitOps (single-env prod):**
+- **Deploy / GitOps (one greenhouse environment, plus an isolated static Lab
+  canary):**
+  ```text
+  merge main with make ci green
+    → in-cluster verdify-platform-ci / repo-build WorkflowTemplate
+       (Kaniko builds the exact revision in agent-fleet-ci)
+    → zot origin registry.vallery.net/verdifyconsultancy/<image>@sha256:...
+    → digest-only pin PR
+    → prod: human merge + Jason-gated manual sync of verdify-prod-dark
+    → Astro stage: reviewed lab-stage pin + stage-only rollout + T0/T+10
+       acceptance, then restore the manual-sync posture
   ```
-  push main → container-publish.yml (GHCR digest-pinned :sha-<sha> + :branch-main)
-            + ci.yml gates + k8s-manifests.yml (kubeconform)
-  → prod-promote.yml (DISPATCH: gh workflow run prod-promote.yml -f mode=pull-request)
-       resolves each promotable image's :branch-main digest from GHCR, surgically
-       bumps overlays/prod/kustomization.yaml, opens a prod-promote PR
-  → promote-diff-guard.yml (required check: digests-only change surface)
-  → human merges the PR (git == intended)
-  → GATED: argocd app sync verdify-prod-dark   (the ONLY step that touches the live writer)
-  ```
+  GitHub Actions and GHCR publishing are retired; do not create new GHCR pins.
+  See `docs/runbooks/prod-promotion.md` for the current Kaniko→zot procedure.
+  The prod sync remains the only step that can touch the live writer.
   The gated sync, from any kubectl host:
   ```bash
   kubectl patch application verdify-prod-dark -n argocd --type merge \
@@ -74,8 +78,12 @@ laptop. (Firmware OTA is the exception — see §4.)
   ```
   Pre-check: `kustomize build deploy/k8s/overlays/prod | kubectl diff -f -`; confirm
   the **ingestor Deployment** (the single device writer) only changes when intended.
-  Promotable set = api/mcp/ingestor/migrate/planner (setpoint-server + lab are
-  hand-pinned). ArgoCD app `verdify-prod-dark` is **manual-sync, prune:false**.
+  Prod promotable set = api/mcp/ingestor/migrate/planner; setpoint-server and
+  the current Quartz lab images remain hand-pinned. ArgoCD app
+  `verdify-prod-dark` is **manual-sync, prune:false**. The Astro canary is a
+  static, no-device/no-DB surface, not a second greenhouse environment. Its
+  reviewed zot digest is pinned in
+  `deploy/k8s/overlays/lab-stage/kustomization.yaml`.
 - **Grafana dashboards** (non-control-path, safe to iterate): edit
   `grafana/dashboards/*.json` → `python3 scripts/gen-grafana-dashboard-cms.py` →
   commit → SSA-apply the CM → the provisioner reloads on a **300 s** cycle (force
@@ -187,10 +195,15 @@ are infra work, gated and tracked — do **not** try to fix them in a code sessi
    lists source path/name mismatches (MQTT_*, HERMES_IRIS_API_KEY,
    API_WRITE_TOKEN↔VERDIFY_WRITE_API_KEY) to reconcile before SOPS/age sealing.
    The age private key lives in the fleet store (root-agent owned).
-3. **Lab-site Quartz vault** — the lab build needs the Obsidian vault
-   (`/mnt/iris/verdify-vault/website`, Syncthing-synced), which is **not in this
-   repo**. A k3s agent needs it NFS-mounted or mirrored. (Lab is not the core
-   greenhouse path.)
+3. **Lab Astro dynamic publishing / production cutover** — PARTIAL, tracked by
+   #351 and `docs/plans/lab-astro-migration.md`. The Quartz publisher is
+   S3-backed, and the accepted Astro stage hydrates a digest-bound sanitized
+   snapshot before Kaniko; its static runtime needs no vault/NFS mount, PVC,
+   Secret, DB, Grafana, or egress. Full autonomy and cutover still require the
+   event-driven S3 release adapter, graph occurrence exporter/reporting tier,
+   privacy-approved camera sanitizer/fallback, exact same-snapshot parity, and
+   Jason-gated production cutover/Quartz retirement. Do not add a new
+   `/mnt/iris` dependency.
 4. **Orbit context dump** (`/Users/jason/Orbit/context_dump/verdify-platform/`) —
    historical backlog/handoff/evidence, **not in git**. Treat as archive; the
    live tracker is GitHub issues and the durable knowledge is in `docs/`.
