@@ -531,10 +531,16 @@ def test_api_setpoint_fallback_uses_computed_band_not_planner_band_rows():
     assert set(module["HOUSE_BAND_COMPUTED_PARAMS"]) == {"temp_low", "temp_high", "vpd_low", "vpd_high"}
     assert "HOUSE_BAND_COMPUTED_PARAMS" in body
     assert "LEGACY_LIGHTING_COMPUTED_PARAMS" in body
-    assert "SELECT * FROM fn_band_setpoints(now())" in body
-    assert "SELECT * FROM fn_house_vpd_control_band(now())" in body
-    assert "SELECT * FROM fn_lighting_policy(now(), $1)" in body
+    # The fallback reads its band/lighting authority through explicit column
+    # lists (public-output allowlist discipline, PR #458); a reintroduced
+    # SELECT * would silently widen the public payload surface.
+    assert (
+        "SELECT temp_low, temp_high, vpd_low, vpd_high, temp_target, vpd_target FROM fn_band_setpoints(now())" in body
+    )
+    assert "SELECT house_vpd_low, house_vpd_high FROM fn_house_vpd_control_band(now())" in body
+    assert "SELECT target_dli, sunrise_hour, cutoff_hour, target_light_hours FROM fn_lighting_policy(now(), $1)" in body
     assert "fn_lighting_minutes_policy(now(), $1)" in body
+    assert "SELECT * FROM" not in body
     assert "planner_band" not in body
     assert "params[param] = _round_half_up(band_val, precision)" in body
     assert "params[param] = lighting_values[param]" in body

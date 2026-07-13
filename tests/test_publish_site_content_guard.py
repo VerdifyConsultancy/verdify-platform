@@ -22,7 +22,9 @@ SCRIPT_ROOT (so no live DB, no real HTTPS, no device) and assert the guard:
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
+import json
 import os
 import subprocess
 import sys
@@ -49,6 +51,10 @@ if [[ -f "$state" ]]; then n="$(cat "$state")"; fi
 n=$((n + 1))
 echo "$n" > "$state"
 echo "fake-python ran ${target} (attempt ${n})"
+if [[ "${FIXTURE_RUN_REAL_GUARD:-0}" == "1" && "$target" == "check-public-output.py" ]]; then
+  shift
+  exec "$FIXTURE_REAL_PYTHON" "$FIXTURE_REAL_GUARD" "$@"
+fi
 if [[ "${FIXTURE_HANG:-}" == "$target" ]]; then
   sleep 30
 fi
@@ -82,6 +88,7 @@ PY_GENERATORS = (
     "render-zone-pages.py",
     "render-crop-profiles.py",
     "export-hourly-performance-dataset.py",
+    "check-public-output.py",
 )
 
 
@@ -109,6 +116,16 @@ def harness(tmp_path: Path):
     for name in PY_GENERATORS:
         (script_root / name).write_text("# fixture placeholder\n", encoding="utf-8")
 
+    rebuild = script_root / "rebuild-site.sh"
+    rebuild.write_text(
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        'touch "${FIXTURE_STATE_DIR}/rebuild.called"\n'
+        'if [[ "${FIXTURE_REBUILD_FAIL:-}" == "1" ]]; then exit 1; fi\n',
+        encoding="utf-8",
+    )
+    rebuild.chmod(0o755)
+
     fake_python = tmp_path / "fake-python"
     fake_python.write_text(FAKE_PYTHON, encoding="utf-8")
     fake_python.chmod(0o755)
@@ -118,7 +135,13 @@ def harness(tmp_path: Path):
     log = tmp_path / "publish.log"
     lock = tmp_path / "publish.lock"
 
-    def run(extra_env: dict[str, str], timeout_s: int = 60):
+    def run(
+        extra_env: dict[str, str],
+        timeout_s: int = 60,
+        *,
+        rebuild: bool = False,
+        reason: str = "test",
+    ):
         env = dict(os.environ)
         env.update(
             {
@@ -135,8 +158,11 @@ def harness(tmp_path: Path):
             }
         )
         env.update(extra_env)
+        args = ["bash", str(SCRIPT), "--reason", reason]
+        if not rebuild:
+            args.append("--no-rebuild")
         proc = subprocess.run(
-            ["bash", str(SCRIPT), "--no-rebuild", "--reason", "test"],
+            args,
             env=env,
             capture_output=True,
             text=True,
@@ -186,6 +212,55 @@ def test_persistent_failure_does_not_skip_later_generators(harness):
     assert (state_dir / "render-crop-profiles.py.attempts").read_text().strip() == "1"
 
 
+def test_public_output_guard_failure_blocks_candidate_promotion(harness):
+    rc, out, state_dir = harness({"FIXTURE_FAIL_ALWAYS": "check-public-output.py"})
+
+    assert rc == 1, out
+    assert (state_dir / "check-public-output.py.attempts").read_text().strip() == "3"
+    assert "rebuild/promotion blocked" in out
+    assert "Site content generated without rebuild" not in out
+
+
+def test_clean_candidate_rebuilds_and_logs_complete(harness):
+    rc, out, state_dir = harness({}, rebuild=True)
+
+    assert rc == 0, out
+    assert (state_dir / "rebuild.called").is_file()
+    assert "Site content publish complete" in out
+
+
+def test_publish_script_passes_real_descriptor_safe_content_root_to_real_guard(harness, tmp_path):
+    content_root = tmp_path / "real-content"
+    content_root.mkdir()
+    (content_root / "index.md").write_text("ordinary public content\n", encoding="utf-8")
+    report = tmp_path / "guard-report.json"
+
+    rc, out, _state_dir = harness(
+        {
+            "FIXTURE_RUN_REAL_GUARD": "1",
+            "FIXTURE_REAL_PYTHON": sys.executable,
+            "FIXTURE_REAL_GUARD": str(REPO_ROOT / "scripts" / "check-public-output.py"),
+            "VERDIFY_PUBLIC_CONTENT_ROOT": str(content_root),
+            "VERDIFY_PUBLIC_OUTPUT_REPORT": str(report),
+        }
+    )
+
+    assert rc == 0, out
+    payload = json.loads(report.read_text(encoding="utf-8"))
+    assert payload["findings"] == []
+    assert payload["roots"][0]["label"] == content_root.name
+    assert payload["roots"][0]["identity"] != "unavailable"
+
+
+def test_failed_rebuild_never_logs_complete(harness):
+    rc, out, state_dir = harness({"FIXTURE_REBUILD_FAIL": "1"}, rebuild=True)
+
+    assert rc == 1, out
+    assert (state_dir / "rebuild.called").is_file()
+    assert "Site content publish complete" not in out
+    assert "rebuild/promotion blocked" in out
+
+
 def test_hung_step_is_bounded_by_timeout_and_does_not_wedge_the_unit(harness):
     # A generator that hangs (simulated wedged HTTPS read) must be killed by the
     # wall-clock timeout, retried, and ultimately recorded as failed — the unit
@@ -205,8 +280,23 @@ def test_locked_publish_can_return_nonzero_without_running_generators(harness):
         }
     )
     assert rc == 75, out
-    assert "publish already running; skipping test refresh" in out
+    assert "publish already running; skipping reason_class=custom" in out
     assert not list(state_dir.glob("*.attempts"))
+
+
+def test_publish_logs_allowlisted_reason_class_without_raw_text_or_digest(harness):
+    encoded_identifier = "%70%72%69%76%61%74%65%2D%7A%6F%6E%65"
+    raw_reason = f"private-zone-identifier\nforged-log-entry {encoded_identifier}"
+    digest_prefix = hashlib.sha256(raw_reason.encode()).hexdigest()[:12]
+
+    rc, out, _ = harness({}, reason=raw_reason)
+
+    assert rc == 0, out
+    assert "private-zone-identifier" not in out
+    assert "forged-log-entry" not in out
+    assert encoded_identifier not in out
+    assert digest_prefix not in out
+    assert "reason_class=custom" in out
 
 
 def _load_baseline_generator():

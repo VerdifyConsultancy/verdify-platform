@@ -40,7 +40,10 @@ data:
     server {
         listen 8080;
         server_name _;
-        root /usr/share/nginx/html;
+        # Mount the stable PVC parent, not publisher/public via subPath. A
+        # subPath is an inode-pinned bind mount and would keep serving the
+        # retired directory after the publisher exchanges the live name.
+        root /lab-cache/publisher/public;
         index index.html;
         absolute_redirect off;
 
@@ -133,6 +136,7 @@ spec:
         runAsUser: 1000
         runAsGroup: 1000
         fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
         seccompProfile:
           type: RuntimeDefault
       containers:
@@ -159,12 +163,13 @@ spec:
             limits:
               memory: "128Mi"
           # nginx-unprivileged needs writable scratch under a read-only root FS.
-          # The served tree is a read-only mount from the lab cache PVC; all
-          # other writable paths stay ephemeral.
+          # Mount the stable cache parent read-only: nginx resolves
+          # publisher/public by pathname for each request and therefore follows
+          # every atomic directory exchange without a pod restart. A Kubernetes
+          # subPath here would pin the retired directory inode.
           volumeMounts:
             - name: lab-cache
-              mountPath: /usr/share/nginx/html
-              subPath: public
+              mountPath: /lab-cache
               readOnly: true
             - name: tmp
               mountPath: /tmp
@@ -199,27 +204,57 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 10
       initContainers:
-        - name: seed-public-cache
+        # Copy the baked fallback without touching the PVC.  The next init owns
+        # all shared-cache mutation under the publisher's persistent lock.
+        - name: extract-baked-public
           # Same image as the serving container. If the lab cache PVC is empty,
           # seed it from the baked static site so lab.verdify.ai stays available
           # before the first S3-backed publisher run completes.
           image: ghcr.io/verdifyconsultancy/verdify-lab
           command:
             - sh
-            - -lc
+            - -ec
             - |
-              set -eu
-              mkdir -p /lab-cache/public
-              if [ ! -f /lab-cache/public/index.html ]; then
-                cp -a /usr/share/nginx/html/. /lab-cache/public/
-              fi
+              cp -a /usr/share/nginx/html/. /bootstrap/
           securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: bootstrap
+              mountPath: /bootstrap
+        # Use the publisher image for the same flock/ready-marker protocol as
+        # the CronJob.  Migration and bootstrap replacement finish before the
+        # main container can mount publisher/public.
+        - name: prepare-private-public-root
+          image: ghcr.io/verdifyconsultancy/verdify-lab-publisher-k3s
+          imagePullPolicy: IfNotPresent
+          command:
+            - prepare-lab-cache
+            - --root
+            - /work/publisher
+            - --legacy
+            - /work/public
+            - --bootstrap
+            - /bootstrap
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
             capabilities:
               drop: ["ALL"]
           volumeMounts:
             - name: lab-cache
-              mountPath: /lab-cache
+              mountPath: /work
+            - name: bootstrap
+              mountPath: /bootstrap
+              readOnly: true
       # Endpoint-drain window for the preStop hook above (HA #231); 30s explicit.
       terminationGracePeriodSeconds: 30
       volumes:
@@ -235,6 +270,8 @@ spec:
         - name: nginx-config
           configMap:
             name: verdify-lab-nginx-config
+        - name: bootstrap
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service

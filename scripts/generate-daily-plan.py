@@ -18,6 +18,7 @@ Output: /srv/verdify/verdify-site/content/plans/YYYY-MM-DD.md
 import argparse
 import hashlib
 import json
+import math
 import os
 import re
 import shlex
@@ -32,6 +33,10 @@ import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
+from verdify_public.output_policy import (  # noqa: E402
+    is_public_crop_record,
+    redact_non_public_crop_references,
+)
 from verdify_schemas import DailyPlanVaultFrontmatter  # noqa: E402
 
 CONTENT_DIR = Path("/srv/verdify/verdify-site/content/plans")
@@ -104,7 +109,7 @@ def _sql_literal(value: object) -> str:
 
 def public_text(value: object) -> str:
     """Scrub implementation names and avoid Quartz dollar-sign math parsing."""
-    text = str(value or "")
+    text = redact_non_public_crop_references(value)
     text = re.sub(r"iris-hermes-validation", "iris-validation", text, flags=re.IGNORECASE)
     text = re.sub(r"\bHermes\b", "planning gateway", text)
     text = re.sub(r"\bhermes\b", "planner-gateway", text)
@@ -800,9 +805,19 @@ def _num(val, digits: int = 1):
         return None
     try:
         f = float(val)
+        if not math.isfinite(f):
+            return None
         return round(f, digits) if digits > 0 else int(round(f))
-    except (TypeError, ValueError):
+    except (OverflowError, TypeError, ValueError):
         return None
+
+
+def format_public_currency(value: object, digits: int = 2) -> str:
+    """Format optional currency without publishing Python null sentinels."""
+    numeric = _num(value, digits)
+    if numeric is None:
+        return "Not available"
+    return f"USD {float(numeric):.{digits}f}"
 
 
 def get_latest_plan_page_date() -> date | None:
@@ -940,11 +955,14 @@ def generate_frontmatter(d: date, plans: list[dict], summary: dict, setpoints: d
         default_flow_style=False,
         allow_unicode=True,
     )
-    description = (
-        f"Generated AI greenhouse planning log for {title}: {len(plans)} planning cycles, "
-        f"{stress['vpd_high_hours']}h high-VPD stress, {stress['heat_hours']}h heat stress, "
-        f"and USD {cost['total']} total resource cost."
-    )
+    description_metrics = [f"{len(plans)} planning cycles"]
+    if stress["vpd_high_hours"] is not None:
+        description_metrics.append(f"{stress['vpd_high_hours']}h high-VPD stress")
+    if stress["heat_hours"] is not None:
+        description_metrics.append(f"{stress['heat_hours']}h heat stress")
+    if cost["total"] is not None:
+        description_metrics.append(f"{format_public_currency(cost['total'])} total resource cost")
+    description = f"Generated AI greenhouse planning log for {title}: {', '.join(description_metrics)}."
     yaml_block += f'description: "{_yaml_escape(description)}"\n'
     yaml_block += "noindex: true\n"
     if is_latest:
@@ -1360,10 +1378,10 @@ def generate_daily_summary_section(
             "",
             metric_grid(
                 [
-                    ("Electric", f"USD {r(summary.get('cost_electric'), 2)}"),
-                    ("Gas", f"USD {r(summary.get('cost_gas'), 2)}"),
-                    ("Water", f"USD {r(summary.get('cost_water'), 3)}"),
-                    ("Total", f"USD {r(summary.get('cost_total'), 2)}"),
+                    ("Electric", format_public_currency(summary.get("cost_electric"), 2)),
+                    ("Gas", format_public_currency(summary.get("cost_gas"), 2)),
+                    ("Water", format_public_currency(summary.get("cost_water"), 3)),
+                    ("Total", format_public_currency(summary.get("cost_total"), 2)),
                 ]
             ),
             "",
@@ -1413,16 +1431,36 @@ def generate_daily_summary_section(
             ]
         )
 
-    # Crop health (from Gemini Vision observations)
-    crop_health = db_query_rows(f"""
-        SELECT c.name, c.zone, ROUND(AVG(o.health_score)::numeric, 2) AS avg_health,
-            COUNT(*) AS obs_count,
-            string_agg(DISTINCT o.notes, ' || ' ORDER BY o.notes) AS notes
-        FROM observations o JOIN crops c ON o.crop_id = c.id
-        WHERE o.source = 'gemini-vision' AND o.ts::date = '{summary_date or local_today()}'
-        GROUP BY c.name, c.zone ORDER BY c.name
+    # Crop health (from Gemini Vision observations). JSON preserves delimiters
+    # and newlines in notes; catalog identity is fail-closed for occupied rows.
+    crop_health = (
+        db_query_json(f"""
+        SELECT COALESCE(json_agg(row_to_json(h) ORDER BY h.name), '[]'::json)
+        FROM (
+            SELECT c.name, c.zone, ROUND(AVG(o.health_score)::numeric, 2) AS avg_health,
+                COUNT(*) AS obs_count,
+                COALESCE(
+                    array_agg(DISTINCT o.notes ORDER BY o.notes) FILTER (WHERE o.notes IS NOT NULL),
+                    ARRAY[]::text[]
+                ) AS notes,
+                cc.slug AS crop_catalog_slug
+            FROM observations o
+            JOIN crops c ON o.crop_id = c.id
+            LEFT JOIN crop_catalog cc ON cc.id = c.crop_catalog_id
+            WHERE o.source = 'gemini-vision'
+              AND (o.ts AT TIME ZONE 'America/Denver')::date = '{summary_date or local_today()}'
+            GROUP BY c.name, c.zone, cc.slug
+        ) h
     """)
-    if crop_health:
+        or []
+    )
+    public_crop_health = [
+        row
+        for row in crop_health
+        if isinstance(row, dict) and is_public_crop_record(row.get("crop_catalog_slug"), row.get("name"), occupied=True)
+    ]
+
+    if public_crop_health:
         lines.extend(
             [
                 "### Crop Health (Gemini Vision)",
@@ -1431,22 +1469,22 @@ def generate_daily_summary_section(
         )
         rows = []
         detail_rows = []
-        for row in crop_health:
-            if len(row) >= 5:
-                health_pct = f"{float(row[2].strip()) * 100:.0f}%" if row[2].strip() else "—"
-                crop = row[0].strip()
-                notes = row[4].strip()
-                rows.append(
-                    (
-                        crop,
-                        row[1].strip(),
-                        health_pct,
-                        row[3].strip(),
-                        "Observation notes are collapsed below to avoid publishing partial vision snippets.",
-                    )
+        for row in public_crop_health:
+            health = row.get("avg_health")
+            health_pct = f"{float(health) * 100:.0f}%" if health not in (None, "") else "—"
+            crop = public_text(row.get("name"))
+            notes = " || ".join(str(note) for note in (row.get("notes") or []) if note)
+            rows.append(
+                (
+                    crop,
+                    str(row.get("zone") or "—"),
+                    health_pct,
+                    str(row.get("obs_count") or 0),
+                    "Observation notes are collapsed below to avoid publishing partial vision snippets.",
                 )
-                if notes:
-                    detail_rows.append((crop, "Gemini Vision notes", public_text(notes[:1000])))
+            )
+            if notes:
+                detail_rows.append((crop, "Gemini Vision notes", public_text(notes[:1000])))
         lines.append(
             lab_table(
                 ["Crop", "Zone", "Health", "Observations", "Note"],

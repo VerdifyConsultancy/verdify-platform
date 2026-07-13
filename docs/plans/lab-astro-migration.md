@@ -225,14 +225,21 @@ KEEP — real unmerged work:
 
 OPEN PR — already the vehicle:
 
-- `web/public-output-hls-ts` = PR #458 (fail-closed public-output guard stack
-  + HLS/MP4 media validation, `verdify_public/` package, ~9k lines). It
-  subsumes `web/public-output-guard` and `web/site-unification-integration`
-  (same tip commit f17e30f). Current main was merged into its head as 9cb8bcb;
-  the full local gate is green, but its clean in-cluster PR validator failed
-  without retained pod logs and is under exact-environment reproduction. Do not
-  request review or delete the two subsumed branches until that red gate is
-  resolved.
+- `web/public-output-hls-ts` = PR #458 — **MERGED 2026-07-13 ~11:15Z** after
+  outer-loop (Claude) review, verdict MERGE-AFTER-FIXES: HIGH fixes applied
+  (drift guards repinned to the new contracts; guard-timeout clamp raised to
+  30-600s/default 300s after the measured 125s tree exceeded the old 120s
+  ceiling), and the historically-red in-cluster validator was root-caused
+  with live pod logs to TWO environment mismatches — validate runs as root
+  (CAP_DAC_OVERRIDE defeats chmod-0 "unreadable" fixtures) and under
+  emissary umask 0000 (0777 fixture dirs correctly rejected by the
+  fail-closed promoter) — both fixed test-only. First-ever green in-cluster
+  validate (`verdify-platform-pr-ci-dgmff`), merged at head 6ff5b19 + branch
+  deleted. MEDIUM/LOW review findings remain tracked as PR comments. The two
+  subsumed branches (`web/public-output-guard`,
+  `web/site-unification-integration`) are now safe to delete. Residue: two
+  inert debug Workflows (`…debug458`, `…debug458b`) in agent-fleet-ci need a
+  delete-rights cleanup.
 
 DELETE — verified superseded (content demonstrably on main via #461/#462):
 
