@@ -248,10 +248,15 @@ async function fakeOperations({
   mediaCasFailure = new Set(),
   crashReadAfterPublish = null,
   raceOnSecondRead = null,
+  invalidMediaSelection = null,
   competingAggregateWriter = false,
+  aggregateCasFailure = false,
   aggregateCommitThenError = false,
+  invalidAggregateSelection = false,
+  aggregateManifestMutation = null,
 } = {}) {
   const store = await new LocalOccurrenceReleaseStore(storeRoot).initialize({ create: true });
+  const evidenceStore = await new LocalOccurrenceReleaseStore(storeRoot).initialize();
   const calls = [];
   const mediaReadCounts = new Map();
   let crashReadArmed = null;
@@ -351,10 +356,18 @@ async function fakeOperations({
       reason: "publish",
     };
     await store.writeCurrentMediaSelection(occurrenceId, next, selected?.sha256 ?? null);
+    if (invalidMediaSelection === occurrenceId) {
+      const committed = await store.readCurrentMediaSelection(occurrenceId);
+      await store.writeCurrentMediaSelection(occurrenceId, {
+        ...committed.document,
+        reason: "invalid",
+      }, committed.sha256);
+    }
     if (crashReadAfterPublish === occurrenceId) crashReadArmed = occurrenceId;
   }
 
-  async function readCurrentMediaSelection(occurrenceId) {
+  const readEvidenceCurrentMediaSelection = evidenceStore.readCurrentMediaSelection.bind(evidenceStore);
+  evidenceStore.readCurrentMediaSelection = async function readCurrentMediaSelection(occurrenceId) {
     calls.push({ operation: "read-current-media-selection", occurrenceId });
     if (crashReadArmed === occurrenceId) {
       crashReadArmed = null;
@@ -379,13 +392,21 @@ async function fakeOperations({
       };
       await store.writeCurrentMediaSelection(occurrenceId, competing, selected.sha256);
     }
-    return store.readCurrentMediaSelection(occurrenceId);
-  }
+    return readEvidenceCurrentMediaSelection(occurrenceId);
+  };
 
-  async function graphRecord(input, prior) {
+  async function graphRecord(input, prior, policyVersion) {
     if (input.candidate === undefined) {
-      if (prior !== undefined) return prior;
       const { probeStatus, ...discovered } = input;
+      if (prior?.fallback) {
+        return {
+          ...discovered,
+          staleAfterSeconds: Math.max(input.renderCadenceSeconds * 2, 1800),
+          probeStatus,
+          state: "retained-last-known-good",
+          fallback: prior.fallback,
+        };
+      }
       return {
         ...discovered,
         staleAfterSeconds: Math.max(input.renderCadenceSeconds * 2, 1800),
@@ -414,7 +435,7 @@ async function fakeOperations({
         height: blob.height,
         capturedAt: candidate.capturedAt,
         verifiedAt: candidate.verifiedAt,
-        policyVersion: null,
+        policyVersion,
       },
     };
   }
@@ -430,19 +451,17 @@ async function fakeOperations({
     );
     const graphs = [];
     for (const input of command.release.graphs) {
-      const record = await graphRecord(input, priorGraphs.get(input.occurrenceId));
-      if (record.fallback !== null) record.fallback.policyVersion = command.release.policyVersion;
+      const record = await graphRecord(
+        input,
+        priorGraphs.get(input.occurrenceId),
+        command.release.policyVersion,
+      );
       graphs.push(record);
     }
     const mediaById = new Map(command.release.currentMedia.map((entry) => [entry.discovered.occurrenceId, entry]));
     const currentMedia = [];
     for (const binding of command.reconciliation.cameraBindings) {
       const entry = mediaById.get(binding.occurrenceId);
-      const generation = (await store.readCurrentMediaGeneration(
-        binding.occurrenceId,
-        binding.generationSha256,
-      )).document;
-      const selectedMedia = await store.readCurrentMediaSelection(binding.occurrenceId);
       currentMedia.push({
         ...entry.discovered,
         policySha256: binding.policySha256,
@@ -450,12 +469,12 @@ async function fakeOperations({
         staleAfterSeconds: Math.max(entry.discovered.captureCadenceSeconds * 2, 900),
         captureStatus: "selected-generation",
         state: "verified",
-        fallback: generation.fallback,
+        fallback: binding.fallback,
         pointer: {
           selectionSha256: binding.selectionSha256,
-          generation: selectedMedia.document.generation,
+          generation: binding.selectionGeneration,
           currentGenerationSha256: binding.generationSha256,
-          previousGenerationSha256: selectedMedia.document.previous?.generationSha256 ?? null,
+          previousGenerationSha256: binding.previousGenerationSha256,
         },
       });
     }
@@ -470,6 +489,14 @@ async function fakeOperations({
       freshness: evaluateEventFreshness(command.event, command.release.publishedAt),
       occurrences: { graphs, currentMedia },
     };
+    if (aggregateManifestMutation === "graph-status") {
+      manifest.occurrences.graphs[0].probeStatus = "timeout";
+      manifest.occurrences.graphs[0].state = "retained-last-known-good";
+    } else if (aggregateManifestMutation === "extra-field") {
+      manifest.unexpected = true;
+    } else if (aggregateManifestMutation === "duplicate-graph") {
+      manifest.occurrences.graphs[1] = structuredClone(manifest.occurrences.graphs[0]);
+    }
     const manifestSha256 = await store.publishAggregateManifest(manifest);
     await store.publishAggregateEventIntent(command.event.eventId, {
       contract: "verdify.lab-exact-reconciliation-intent",
@@ -496,6 +523,7 @@ async function fakeOperations({
         throw new Error("camera selection precondition failed");
       }
     }
+    if (aggregateCasFailure) throw new Error("aggregate selection did not commit");
     if (competingAggregateWriter) {
       const event = releaseEvent({
         eventId: "evt_competing_aggregate_0001",
@@ -532,6 +560,13 @@ async function fakeOperations({
       command.selection,
       command.expectedSelectionSha256,
     );
+    if (invalidAggregateSelection) {
+      const committed = await store.readAggregateSelection();
+      await store.writeAggregateSelection({
+        ...committed.document,
+        reason: "invalid",
+      }, committed.sha256);
+    }
     if (aggregateCommitThenError) throw new Error("response unavailable after aggregate commit");
   }
 
@@ -539,14 +574,10 @@ async function fakeOperations({
     contract: "verdify.lab-occurrence-export-store-operations",
     schemaVersion: 1,
     storeIdentitySha256: store.identity.sha256,
+    evidenceStore,
     publishCurrentMedia,
-    readCurrentMediaSelection,
-    readCurrentMediaGeneration: (occurrenceId, digest) => store.readCurrentMediaGeneration(occurrenceId, digest),
     readCurrentMediaEventIntent: (occurrenceId, eventId) => store.readCurrentMediaEventIntent(occurrenceId, eventId),
-    readPngBlob: (digest) => store.readPngBlob(digest),
     publishAggregateReconciliation,
-    readAggregateSelection: () => store.readAggregateSelection(),
-    readAggregateManifest: (digest) => store.readAggregateManifest(digest),
     readAggregateEventIntent: (eventId) => store.readAggregateEventIntent(eventId),
     compareAndSwapAggregateSelection,
   };
@@ -598,7 +629,7 @@ async function fakeOperations({
     }, selected.sha256);
   }
 
-  return { operations, store, calls, publishSideGeneration };
+  return { operations, store, evidenceStore, calls, publishSideGeneration };
 }
 
 function inputFrom(value, operations) {
@@ -704,6 +735,128 @@ test("an uncertain aggregate CAS response recovers only from the exact post-read
     (await fake.store.readAggregateSelection()).document.current.manifestSha256,
     result.aggregate.manifestSha256,
   );
+});
+
+test("an unchanged null aggregate selector is retryable rather than superseded", async (context) => {
+  const value = await fixture(context);
+  const fake = await fakeOperations({ ...value, aggregateCasFailure: true });
+  const result = await executeOccurrenceExportBatch(inputFrom(value, fake.operations));
+  assert.equal(result.status, "failed");
+  assert.deepEqual(result.failure, {
+    stage: "aggregate-cas",
+    occurrenceId: null,
+    code: "selection-not-committed-retryable",
+  });
+  assert.deepEqual(result.aggregate, {
+    status: "published-unselected",
+    eventId: result.aggregate.eventId,
+    manifestSha256: result.aggregate.manifestSha256,
+    selectionSha256: null,
+  });
+  assert.equal(await fake.store.readAggregateSelection(), null);
+});
+
+test("a selected media pointer with a non-canonical reason cannot reach aggregate publication", async (context) => {
+  const value = await fixture(context);
+  const cameraA = value.currentMedia[0].occurrenceId;
+  const fake = await fakeOperations({ ...value, invalidMediaSelection: cameraA });
+  const result = await executeOccurrenceExportBatch(inputFrom(value, fake.operations));
+  assert.equal(result.status, "failed");
+  assert.deepEqual(result.failure, {
+    stage: "camera-publish",
+    occurrenceId: cameraA,
+    code: "selected-evidence-mismatch",
+  });
+  assert.equal(
+    fake.calls.filter(({ operation }) => operation === "publish-aggregate-reconciliation").length,
+    0,
+  );
+  assert.equal(await fake.store.readAggregateSelection(), null);
+});
+
+test("an aggregate pointer with a non-canonical reason is never reported selected", async (context) => {
+  const value = await fixture(context);
+  const fake = await fakeOperations({ ...value, invalidAggregateSelection: true });
+  const result = await executeOccurrenceExportBatch(inputFrom(value, fake.operations));
+  assert.equal(result.status, "failed");
+  assert.deepEqual(result.failure, {
+    stage: "aggregate-post-read",
+    occurrenceId: null,
+    code: "selection-unavailable",
+  });
+  assert.equal(result.aggregate.status, "published-but-unconfirmed");
+  assert.notEqual(result.aggregate.manifestSha256, null);
+});
+
+test("aggregate publication is rejected when graph state is not the inspected batch state", async (context) => {
+  const value = await fixture(context);
+  const fake = await fakeOperations({ ...value, aggregateManifestMutation: "graph-status" });
+  const result = await executeOccurrenceExportBatch(inputFrom(value, fake.operations));
+  assert.equal(result.status, "failed");
+  assert.deepEqual(result.failure, {
+    stage: "aggregate-publish",
+    occurrenceId: null,
+    code: "immutable-evidence-unavailable",
+  });
+  assert.equal(fake.calls.filter(({ operation }) => operation === "compare-and-swap-aggregate").length, 0);
+  assert.equal(await fake.store.readAggregateSelection(), null);
+});
+
+test("aggregate publication rejects a non-canonical manifest before selection", async (context) => {
+  const value = await fixture(context);
+  const fake = await fakeOperations({ ...value, aggregateManifestMutation: "extra-field" });
+  const result = await executeOccurrenceExportBatch(inputFrom(value, fake.operations));
+  assert.equal(result.status, "failed");
+  assert.equal(result.failure.stage, "aggregate-publish");
+  assert.equal(fake.calls.filter(({ operation }) => operation === "compare-and-swap-aggregate").length, 0);
+  assert.equal(await fake.store.readAggregateSelection(), null);
+});
+
+test("aggregate publication rejects duplicate occurrence identities before selection", async (context) => {
+  const value = await fixture(context);
+  const fake = await fakeOperations({ ...value, aggregateManifestMutation: "duplicate-graph" });
+  const result = await executeOccurrenceExportBatch(inputFrom(value, fake.operations));
+  assert.equal(result.status, "failed");
+  assert.equal(result.failure.stage, "aggregate-publish");
+  assert.equal(fake.calls.filter(({ operation }) => operation === "compare-and-swap-aggregate").length, 0);
+  assert.equal(await fake.store.readAggregateSelection(), null);
+});
+
+test("manifest object drift is rejected by canonical digest before any injected store operation", async (context) => {
+  const value = await fixture(context);
+  const fake = await fakeOperations(value);
+  const drifted = structuredClone(value.manifest);
+  drifted.graphs[0].semanticRole = "Drifted caller graph";
+  await assert.rejects(
+    executeOccurrenceExportBatch({
+      ...inputFrom(value, fake.operations),
+      manifest: drifted,
+    }),
+    /canonical byte digest/,
+  );
+  assert.equal(fake.calls.length, 0);
+  assert.equal(await fake.store.readAggregateSelection(), null);
+});
+
+test("a pre-activation batch is rejected before any injected store operation", async (context) => {
+  const value = await fixture(context);
+  const fake = await fakeOperations(value);
+  const early = structuredClone(value.batch);
+  early.batchId = "batch_caller_pre_activation_0002";
+  early.reportingFeed.sourceWatermark = "wm_caller_pre_activation_0002";
+  early.reportingFeed.sourceWatermarkAt = "2026-07-13T11:59:59Z";
+  early.exportedAt = "2026-07-13T11:59:59Z";
+  await assert.rejects(
+    executeOccurrenceExportBatch({
+      ...inputFrom(value, fake.operations),
+      batch: early,
+      graphResult: graphResultFor(early),
+      processingAt: APPROVED_AT,
+    }),
+    /predates policy activation/,
+  );
+  assert.equal(fake.calls.length, 0);
+  assert.equal(await fake.store.readAggregateSelection(), null);
 });
 
 test("stale reporting feed returns failure before any injected store write", async (context) => {

@@ -7,7 +7,13 @@ import {
   validateOccurrenceExportBatch,
   validatePolicyManifestBinding,
 } from "./occurrence-export-contract.mjs";
-import { currentMediaGenerationPayloadSha256 } from "./occurrence-release.mjs";
+import {
+  currentMediaGenerationPayloadSha256,
+  loadCurrentMediaGeneration,
+  loadOccurrenceReleaseManifest,
+  loadSelectedCurrentMediaGeneration,
+  loadSelectedOccurrenceRelease,
+} from "./occurrence-release.mjs";
 
 const SHA256_RE = /^[0-9a-f]{64}$/u;
 const EVENT_ID_RE = /^evt_[A-Za-z0-9_-]{8,128}$/u;
@@ -18,14 +24,10 @@ const OPERATION_KEYS = [
   "contract",
   "schemaVersion",
   "storeIdentitySha256",
+  "evidenceStore",
   "publishCurrentMedia",
-  "readCurrentMediaSelection",
-  "readCurrentMediaGeneration",
   "readCurrentMediaEventIntent",
-  "readPngBlob",
   "publishAggregateReconciliation",
-  "readAggregateSelection",
-  "readAggregateManifest",
   "readAggregateEventIntent",
   "compareAndSwapAggregateSelection",
 ];
@@ -80,7 +82,8 @@ function validateOperations(operations) {
     || operations.contract !== "verdify.lab-occurrence-export-store-operations"
     || operations.schemaVersion !== 1
     || !SHA256_RE.test(operations.storeIdentitySha256)
-    || OPERATION_KEYS.slice(3).some((key) => typeof operations[key] !== "function")
+    || operations.evidenceStore?.identity?.sha256 !== operations.storeIdentitySha256
+    || OPERATION_KEYS.slice(4).some((key) => typeof operations[key] !== "function")
   ) throw new Error("occurrence export store operations do not use the closed v1 contract");
   return operations;
 }
@@ -154,65 +157,6 @@ function validateEvent(event, expected = null) {
   return event;
 }
 
-function validateMediaSelection(value, occurrenceId) {
-  canonicalValue(value, "current media selection");
-  const selection = value.document;
-  if (
-    !exactKeys(selection, [
-      "contract",
-      "schemaVersion",
-      "occurrenceId",
-      "generation",
-      "current",
-      "previous",
-      "selectedAt",
-      "reason",
-    ])
-    || selection.contract !== "verdify.lab-current-media-selection"
-    || selection.schemaVersion !== 1
-    || selection.occurrenceId !== occurrenceId
-    || !Number.isSafeInteger(selection.generation)
-    || selection.generation < 1
-    || !exactKeys(selection.current, ["generationSha256", "blobSha256"])
-    || !SHA256_RE.test(selection.current.generationSha256)
-    || !SHA256_RE.test(selection.current.blobSha256)
-  ) throw new Error("current media selection identity mismatch");
-  return selection;
-}
-
-function validateFallback(fallback, blob, expectedBlobSha256 = null) {
-  if (
-    !exactKeys(fallback, [
-      "publicPath",
-      "sha256",
-      "decodedSha256",
-      "decodedBytes",
-      "bytes",
-      "mediaType",
-      "width",
-      "height",
-      "capturedAt",
-      "verifiedAt",
-      "policyVersion",
-    ])
-    || !SHA256_RE.test(fallback.sha256)
-    || !SHA256_RE.test(fallback.decodedSha256)
-    || fallback.publicPath !== `/evidence/blobs/sha256/${fallback.sha256}.png`
-    || fallback.mediaType !== "image/png"
-    || (expectedBlobSha256 !== null && fallback.sha256 !== expectedBlobSha256)
-    || blob.sha256 !== fallback.sha256
-    || blob.decodedSha256 !== fallback.decodedSha256
-    || blob.decodedBytes !== fallback.decodedBytes
-    || blob.bytes !== fallback.bytes
-    || blob.mediaType !== fallback.mediaType
-    || blob.width !== fallback.width
-    || blob.height !== fallback.height
-    || !Buffer.isBuffer(blob.body)
-    || sha256(blob.body) !== fallback.sha256
-  ) throw new Error("current media blob identity mismatch");
-  return fallback;
-}
-
 function validateMediaIntent(value, {
   operations,
   occurrenceId,
@@ -255,45 +199,27 @@ function validateMediaIntent(value, {
   return intent;
 }
 
-async function verifyGeneration({
+async function verifyGenerationEvidence({
   operations,
   occurrenceId,
   generationSha256,
+  generation,
+  sourceProvenanceSha256,
   policyVersion,
   policySha256,
   requestProvenanceSha256,
   expectedEvent = null,
-  expectedBlobSha256 = null,
+  expectedCandidate = null,
   expectedFallback = null,
   expectedSelectionSha256 = null,
   enforceExpectedSelection = false,
 }) {
-  const generationValue = canonicalValue(
-    await operations.readCurrentMediaGeneration(occurrenceId, generationSha256),
-    "current media generation",
-    generationSha256,
-  );
-  const generation = generationValue.document;
   if (
-    !exactKeys(generation, [
-      "contract",
-      "schemaVersion",
-      "occurrenceId",
-      "sourceProvenanceSha256",
-      "policySha256",
-      "requestProvenanceSha256",
-      "event",
-      "policyVersion",
-      "publishedAt",
-      "fallback",
-    ])
-    || generation.contract !== "verdify.lab-current-media-generation"
-    || generation.schemaVersion !== 3
-    || generation.occurrenceId !== occurrenceId
+    generation.occurrenceId !== occurrenceId
+    || generation.sourceProvenanceSha256 !== sourceProvenanceSha256
     || generation.policyVersion !== policyVersion
     || generation.policySha256 !== policySha256
     || generation.requestProvenanceSha256 !== requestProvenanceSha256
-    || !SHA256_RE.test(generation.sourceProvenanceSha256)
   ) throw new Error("current media generation identity mismatch");
   validateEvent(generation.event, expectedEvent);
   const intentValue = await operations.readCurrentMediaEventIntent(
@@ -308,104 +234,84 @@ async function verifyGeneration({
     expectedSelectionSha256,
     enforceExpectedSelection,
   });
-  const blob = await operations.readPngBlob(generation.fallback.sha256);
-  validateFallback(generation.fallback, blob, expectedBlobSha256);
+  if (
+    expectedCandidate !== null
+    && (
+      generation.fallback.sha256 !== expectedCandidate.expectedSha256
+      || generation.fallback.capturedAt !== expectedCandidate.capturedAt
+      || generation.fallback.verifiedAt !== expectedCandidate.verifiedAt
+      || generation.fallback.policyVersion !== policyVersion
+    )
+  ) throw new Error("current media generation does not match the inspected candidate");
   if (expectedFallback !== null && !canonicalBytes(generation.fallback).equals(canonicalBytes(expectedFallback))) {
     throw new Error("aggregate-bound current media fallback identity mismatch");
   }
   return { generation, generationSha256 };
 }
 
-async function verifySelectedMedia({ operations, request, expectedBlobSha256 }) {
-  const selectionValue = await operations.readCurrentMediaSelection(request.occurrence.occurrenceId);
-  if (selectionValue === null) throw new Error("current media selection is absent");
-  const selection = validateMediaSelection(selectionValue, request.occurrence.occurrenceId);
-  if (selection.current.blobSha256 !== expectedBlobSha256) {
+async function verifySelectedMedia({ operations, request, expectedCandidate }) {
+  const selected = await loadSelectedCurrentMediaGeneration(
+    operations.evidenceStore,
+    request.occurrence.occurrenceId,
+  );
+  if (selected === null) throw new Error("current media selection is absent");
+  if (
+    selected.selection.current.blobSha256 !== expectedCandidate.expectedSha256
+    || selected.current.fallback.sha256 !== expectedCandidate.expectedSha256
+  ) {
     throw new Error("current media selector does not select the batch blob");
   }
-  const verified = await verifyGeneration({
+  const verified = await verifyGenerationEvidence({
     operations,
     occurrenceId: request.occurrence.occurrenceId,
-    generationSha256: selection.current.generationSha256,
+    generationSha256: selected.selection.current.generationSha256,
+    generation: selected.current,
+    sourceProvenanceSha256: request.occurrence.sourceProvenanceSha256,
     policyVersion: request.policyVersion,
     policySha256: request.policySha256,
     requestProvenanceSha256: request.requestProvenanceSha256,
     expectedEvent: request.event,
-    expectedBlobSha256,
+    expectedCandidate,
     expectedSelectionSha256: request.expectedSelectionSha256,
     enforceExpectedSelection: true,
   });
-  if (verified.generation.sourceProvenanceSha256 !== request.occurrence.sourceProvenanceSha256) {
-    throw new Error("current media generation source identity mismatch");
-  }
   return {
     occurrenceId: request.occurrence.occurrenceId,
     disposition: "captured",
-    selectionSha256: selectionValue.sha256,
-    generationSha256: selection.current.generationSha256,
-    blobSha256: selection.current.blobSha256,
+    selectionSha256: selected.selectionSha256,
+    selectionGeneration: selected.selection.generation,
+    generationSha256: selected.selection.current.generationSha256,
+    previousGenerationSha256: selected.selection.previous?.generationSha256 ?? null,
+    blobSha256: selected.selection.current.blobSha256,
     eventId: verified.generation.event.eventId,
+    sourceProvenanceSha256: request.occurrence.sourceProvenanceSha256,
     policySha256: request.policySha256,
     requestProvenanceSha256: request.requestProvenanceSha256,
+    fallback: verified.generation.fallback,
   };
 }
 
-function validateAggregateSelection(value) {
-  if (value === null) return null;
-  canonicalValue(value, "aggregate occurrence selection");
-  const selection = value.document;
+function bindSelectedOccurrenceRelease(selected) {
   if (
-    !exactKeys(selection, [
-      "contract",
-      "schemaVersion",
-      "generation",
-      "current",
-      "previous",
-      "selectedAt",
-      "reason",
-    ])
-    || selection.contract !== "verdify.lab-occurrence-selection"
-    || selection.schemaVersion !== 1
-    || !Number.isSafeInteger(selection.generation)
-    || selection.generation < 1
-    || !exactKeys(selection.current, ["manifestSha256", "eventId"])
-    || !SHA256_RE.test(selection.current.manifestSha256)
-    || !EVENT_ID_RE.test(selection.current.eventId)
-  ) throw new Error("aggregate occurrence selection identity mismatch");
-  return selection;
-}
-
-function validateAggregateManifestValue(value, expectedManifestSha256, expectedEvent = null) {
-  canonicalValue(value, "aggregate occurrence manifest", expectedManifestSha256);
-  const manifest = value.document;
-  if (
-    manifest === null
-    || typeof manifest !== "object"
-    || Array.isArray(manifest)
-    || manifest.contract !== "verdify.lab-specialist-occurrence-release"
-    || manifest.schemaVersion !== 2
-    || !Array.isArray(manifest.occurrences?.graphs)
-    || !Array.isArray(manifest.occurrences?.currentMedia)
-  ) throw new Error("aggregate occurrence manifest identity mismatch");
-  validateEvent(manifest.event, expectedEvent);
-  return manifest;
+    selected.selection !== null
+    && (
+      selected.current?.event.eventId !== selected.selection.current.eventId
+      || (selected.selection.previous !== null
+        && selected.previous?.event.eventId !== selected.selection.previous.eventId)
+    )
+  ) throw new Error("aggregate selector and manifest event identities differ");
+  return selected;
 }
 
 async function readInitialAggregate(operations) {
-  const selectionValue = await operations.readAggregateSelection();
-  const selection = validateAggregateSelection(selectionValue);
-  if (selection === null) {
-    return { selectionValue: null, selection: null, manifest: null };
-  }
-  const manifestValue = await operations.readAggregateManifest(selection.current.manifestSha256);
-  const manifest = validateAggregateManifestValue(
-    manifestValue,
-    selection.current.manifestSha256,
+  const selected = bindSelectedOccurrenceRelease(
+    await loadSelectedOccurrenceRelease(operations.evidenceStore),
   );
-  if (manifest.event.eventId !== selection.current.eventId) {
-    throw new Error("aggregate selector and manifest event identities differ");
-  }
-  return { selectionValue, selection, manifest };
+  return {
+    selectionSha256: selected.selectionSha256,
+    selection: selected.selection,
+    manifest: selected.current,
+  };
 }
 
 async function retainedAggregateBinding({ operations, initialAggregate, occurrence, requestProvenanceSha256, policy }) {
@@ -423,28 +329,35 @@ async function retainedAggregateBinding({ operations, initialAggregate, occurren
     || !SHA256_RE.test(record.pointer.currentGenerationSha256)
     || !SHA256_RE.test(record.fallback.sha256)
   ) throw new Error("failed capture has no exact aggregate-bound last-known-good generation");
-  const verified = await verifyGeneration({
+  const loaded = await loadCurrentMediaGeneration(
+    operations.evidenceStore,
+    occurrence.occurrenceId,
+    record.pointer.currentGenerationSha256,
+  );
+  const verified = await verifyGenerationEvidence({
     operations,
     occurrenceId: occurrence.occurrenceId,
     generationSha256: record.pointer.currentGenerationSha256,
+    generation: loaded.generation,
+    sourceProvenanceSha256: occurrence.sourceProvenanceSha256,
     policyVersion: policy.policyVersion,
     policySha256: policy.policySha256,
     requestProvenanceSha256,
-    expectedBlobSha256: record.fallback.sha256,
     expectedFallback: record.fallback,
   });
-  if (verified.generation.sourceProvenanceSha256 !== occurrence.sourceProvenanceSha256) {
-    throw new Error("aggregate-bound generation source identity mismatch");
-  }
   return {
     occurrenceId: occurrence.occurrenceId,
     disposition: "retained-aggregate-lkg",
     selectionSha256: record.pointer.selectionSha256,
+    selectionGeneration: record.pointer.generation,
     generationSha256: record.pointer.currentGenerationSha256,
+    previousGenerationSha256: record.pointer.previousGenerationSha256,
     blobSha256: record.fallback.sha256,
     eventId: verified.generation.event.eventId,
+    sourceProvenanceSha256: occurrence.sourceProvenanceSha256,
     policySha256: policy.policySha256,
     requestProvenanceSha256,
+    fallback: verified.generation.fallback,
   };
 }
 
@@ -550,29 +463,79 @@ function validatePublishedManifest(manifest, {
   batch,
   discovered,
   bindings,
+  inspected,
+  initialAggregate,
+  publishedAt,
 }) {
   if (
     manifest.policyVersion !== policy.policyVersion
     || manifest.policySha256 !== batch.policySha256
     || manifest.sourceSnapshotManifestSha256 !== policy.sourceSnapshotManifestSha256
-    || manifest.publishedAt === undefined
-    || JSON.stringify(manifest.occurrences.graphs.map(({ occurrenceId }) => occurrenceId).sort())
-      !== JSON.stringify(discovered.graphs.map(({ occurrenceId }) => occurrenceId).sort())
+    || manifest.publishedAt !== publishedAt
+    || manifest.occurrences.graphs.length !== discovered.graphs.length
+    || manifest.occurrences.currentMedia.length !== discovered.currentMedia.length
   ) throw new Error("published aggregate manifest does not match the exact graph batch");
   validateEvent(manifest.event, event);
-  const mediaById = new Map(manifest.occurrences.currentMedia.map((record) => [record.occurrenceId, record]));
-  if (mediaById.size !== bindings.length) throw new Error("published aggregate manifest media set is incomplete");
-  for (const binding of bindings) {
-    const record = mediaById.get(binding.occurrenceId);
+  const graphBatchById = new Map(batch.graphs.map((record) => [record.occurrenceId, record]));
+  const priorGraphById = new Map(
+    (initialAggregate.manifest?.occurrences.graphs ?? []).map((record) => [record.occurrenceId, record]),
+  );
+  for (let index = 0; index < discovered.graphs.length; index += 1) {
+    const occurrence = discovered.graphs[index];
+    const actual = manifest.occurrences.graphs[index];
+    const batchRecord = graphBatchById.get(occurrence.occurrenceId);
+    const candidate = inspected.graphCandidates.get(occurrence.occurrenceId);
     if (
-      record === undefined
-      || record.policySha256 !== binding.policySha256
-      || record.requestProvenanceSha256 !== binding.requestProvenanceSha256
-      || record.state !== "verified"
-      || record.pointer?.selectionSha256 !== binding.selectionSha256
-      || record.pointer?.currentGenerationSha256 !== binding.generationSha256
-      || record.fallback?.sha256 !== binding.blobSha256
-    ) throw new Error("published aggregate manifest is not bound to the exact camera generations");
+      actual.occurrenceId !== occurrence.occurrenceId
+      || Object.keys(occurrence).some(
+        (key) => JSON.stringify(actual[key]) !== JSON.stringify(occurrence[key]),
+      )
+      || actual.staleAfterSeconds !== Math.max(occurrence.renderCadenceSeconds * 2, 1800)
+      || actual.probeStatus !== batchRecord.probeStatus
+    ) throw new Error("published graph occurrence is not the ordered inspected batch record");
+    if (candidate !== null) {
+      if (
+        actual.state !== "verified"
+        || actual.fallback?.sha256 !== candidate.expectedSha256
+        || actual.fallback?.capturedAt !== candidate.capturedAt
+        || actual.fallback?.verifiedAt !== candidate.verifiedAt
+        || actual.fallback?.policyVersion !== policy.policyVersion
+      ) throw new Error("published graph fallback does not match its inspected candidate");
+      continue;
+    }
+    const prior = priorGraphById.get(occurrence.occurrenceId);
+    if (prior?.fallback) {
+      if (
+        actual.state !== "retained-last-known-good"
+        || !canonicalBytes(actual.fallback).equals(canonicalBytes(prior.fallback))
+      ) throw new Error("failed graph did not retain its exact aggregate-bound fallback");
+    } else if (actual.state !== "missing" || actual.fallback !== null) {
+      throw new Error("failed graph without aggregate LKG was not published missing");
+    }
+  }
+  for (let index = 0; index < bindings.length; index += 1) {
+    const binding = bindings[index];
+    const occurrence = discovered.currentMedia[index];
+    const record = manifest.occurrences.currentMedia[index];
+    const expected = {
+      ...occurrence,
+      policySha256: binding.policySha256,
+      requestProvenanceSha256: binding.requestProvenanceSha256,
+      staleAfterSeconds: Math.max(occurrence.captureCadenceSeconds * 2, 900),
+      captureStatus: "selected-generation",
+      state: "verified",
+      fallback: binding.fallback,
+      pointer: {
+        selectionSha256: binding.selectionSha256,
+        generation: binding.selectionGeneration,
+        currentGenerationSha256: binding.generationSha256,
+        previousGenerationSha256: binding.previousGenerationSha256,
+      },
+    };
+    if (
+      binding.occurrenceId !== occurrence.occurrenceId
+      || !canonicalBytes(record).equals(canonicalBytes(expected))
+    ) throw new Error("published aggregate manifest is not bound to the exact ordered camera evidence");
   }
 }
 
@@ -593,7 +556,9 @@ export async function executeOccurrenceExportBatch({
   processingAt = new Date().toISOString(),
   operations: operationOverrides,
 }) {
-  const operations = validateOperations(operationOverrides);
+  if (sha256(canonicalBytes(manifest)) !== manifestSha256) {
+    throw new Error("occurrence export manifest object does not match its canonical byte digest");
+  }
   const discovered = validatePolicyManifestBinding(policy, manifest, manifestSha256);
   if (discovered.graphs.length !== EXPECTED_GRAPH_COUNT || discovered.currentMedia.length !== EXPECTED_MEDIA_COUNT) {
     throw new Error(`occurrence export caller requires exactly ${EXPECTED_GRAPH_COUNT}+${EXPECTED_MEDIA_COUNT} occurrences`);
@@ -606,6 +571,9 @@ export async function executeOccurrenceExportBatch({
   const policySha256 = occurrenceExportPolicySha256(policy);
   if (batch.policySha256 !== policySha256) throw new Error("occurrence export caller policy digest mismatch");
   const feedFreshness = validateOccurrenceExportBatch(batch, policy, processingAt);
+  if (Date.parse(batch.exportedAt) < Date.parse(policy.activation.approvedAt)) {
+    throw new Error("occurrence export batch predates policy activation");
+  }
   const reportingFeedSha256 = reportingFeedEnvelopeSha256(batch.reportingFeed);
   const base = resultBase({ batch, reportingFeedSha256 });
   const graphResultSha256 = validateGraphResult(
@@ -621,6 +589,7 @@ export async function executeOccurrenceExportBatch({
   if (feedFreshness.status === "alert") {
     return failedResult(base, [], "validation", "reporting-feed-stale");
   }
+  const operations = validateOperations(operationOverrides);
   const inspected = await inspectOccurrenceExportCandidates({
     policy,
     batch,
@@ -634,7 +603,7 @@ export async function executeOccurrenceExportBatch({
   } catch {
     return failedResult(base, [], "aggregate-initial-read", "evidence-unavailable");
   }
-  if ((initialAggregate.selectionValue?.sha256 ?? null) !== batch.expectedSelectionSha256) {
+  if (initialAggregate.selectionSha256 !== batch.expectedSelectionSha256) {
     return failedResult(base, [], "aggregate-precondition", "selection-changed");
   }
 
@@ -677,7 +646,7 @@ export async function executeOccurrenceExportBatch({
       batch,
       publishedAt: inspected.feedFreshness.effectiveProcessingAt,
     });
-    capturedRequests.set(occurrence.occurrenceId, { request, expectedBlobSha256: candidate.expectedSha256 });
+    capturedRequests.set(occurrence.occurrenceId, { request, expectedCandidate: candidate });
     let publishFailed = false;
     try {
       await operations.publishCurrentMedia(request);
@@ -689,7 +658,7 @@ export async function executeOccurrenceExportBatch({
       binding = await verifySelectedMedia({
         operations,
         request,
-        expectedBlobSha256: candidate.expectedSha256,
+        expectedCandidate: candidate,
       });
     } catch {
       return failedResult(
@@ -709,29 +678,36 @@ export async function executeOccurrenceExportBatch({
   for (let index = 0; index < bindings.length; index += 1) {
     const binding = bindings[index];
     try {
-      const selectionValue = await operations.readCurrentMediaSelection(binding.occurrenceId);
-      const selection = validateMediaSelection(selectionValue, binding.occurrenceId);
+      const selected = await loadSelectedCurrentMediaGeneration(
+        operations.evidenceStore,
+        binding.occurrenceId,
+      );
       if (
-        selectionValue.sha256 !== binding.selectionSha256
-        || selection.current.generationSha256 !== binding.generationSha256
-        || selection.current.blobSha256 !== binding.blobSha256
+        selected === null
+        || selected.selectionSha256 !== binding.selectionSha256
+        || selected.selection.generation !== binding.selectionGeneration
+        || selected.selection.current.generationSha256 !== binding.generationSha256
+        || selected.selection.current.blobSha256 !== binding.blobSha256
+        || (selected.selection.previous?.generationSha256 ?? null) !== binding.previousGenerationSha256
       ) throw new Error("current media selector changed before reconciliation");
       const captured = capturedRequests.get(binding.occurrenceId);
       if (captured) {
         await verifySelectedMedia({
           operations,
           request: captured.request,
-          expectedBlobSha256: captured.expectedBlobSha256,
+          expectedCandidate: captured.expectedCandidate,
         });
       } else {
-        await verifyGeneration({
+        await verifyGenerationEvidence({
           operations,
           occurrenceId: binding.occurrenceId,
           generationSha256: binding.generationSha256,
+          generation: selected.current,
+          sourceProvenanceSha256: binding.sourceProvenanceSha256,
           policyVersion: policy.policyVersion,
           policySha256,
           requestProvenanceSha256: binding.requestProvenanceSha256,
-          expectedBlobSha256: binding.blobSha256,
+          expectedFallback: binding.fallback,
         });
       }
     } catch {
@@ -812,18 +788,19 @@ export async function executeOccurrenceExportBatch({
       expectedSelectionSha256: batch.expectedSelectionSha256,
       cameraBindings: bindings,
     });
-    const manifestValue = await operations.readAggregateManifest(aggregateIntent.manifestSha256);
-    aggregateManifest = validateAggregateManifestValue(
-      manifestValue,
+    aggregateManifest = (await loadOccurrenceReleaseManifest(
+      operations.evidenceStore,
       aggregateIntent.manifestSha256,
-      event,
-    );
+    )).manifest;
     validatePublishedManifest(aggregateManifest, {
       event,
       policy,
       batch,
       discovered,
       bindings,
+      inspected,
+      initialAggregate,
+      publishedAt: inspected.feedFreshness.effectiveProcessingAt,
     });
   } catch {
     return failedResult(base, mediaOutput, "aggregate-publish", "immutable-evidence-unavailable");
@@ -856,8 +833,9 @@ export async function executeOccurrenceExportBatch({
   }
   let observed;
   try {
-    observed = await operations.readAggregateSelection();
-    validateAggregateSelection(observed);
+    observed = bindSelectedOccurrenceRelease(
+      await loadSelectedOccurrenceRelease(operations.evidenceStore),
+    );
   } catch {
     return failedResult(
       base,
@@ -873,10 +851,46 @@ export async function executeOccurrenceExportBatch({
       },
     );
   }
-  const selected = observed !== null
-    && observed.document.current.manifestSha256 === aggregateIntent.manifestSha256
-    && observed.document.current.eventId === event.eventId;
+  const selected = observed.selection !== null
+    && observed.selection.current.manifestSha256 === aggregateIntent.manifestSha256
+    && observed.selection.current.eventId === event.eventId;
+  if (selected) {
+    try {
+      validatePublishedManifest(observed.current, {
+        event,
+        policy,
+        batch,
+        discovered,
+        bindings,
+        inspected,
+        initialAggregate,
+        publishedAt: inspected.feedFreshness.effectiveProcessingAt,
+      });
+    } catch {
+      return failedResult(
+        base,
+        mediaOutput,
+        "aggregate-post-read",
+        "selected-evidence-mismatch",
+      );
+    }
+  }
   if (!selected) {
+    if (observed.selectionSha256 === batch.expectedSelectionSha256) {
+      return failedResult(
+        base,
+        mediaOutput,
+        "aggregate-cas",
+        "selection-not-committed-retryable",
+        null,
+        {
+          status: "published-unselected",
+          eventId: event.eventId,
+          manifestSha256: aggregateIntent.manifestSha256,
+          selectionSha256: observed.selectionSha256,
+        },
+      );
+    }
     return {
       ...base,
       status: "published-but-superseded",
@@ -902,7 +916,7 @@ export async function executeOccurrenceExportBatch({
       status: "selected",
       eventId: event.eventId,
       manifestSha256: aggregateIntent.manifestSha256,
-      selectionSha256: observed.sha256,
+      selectionSha256: observed.selectionSha256,
     },
     failure: null,
   };
