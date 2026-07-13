@@ -46,8 +46,8 @@ specialist store, every occurrence is explicit pending evidence. When
 `LAB_OCCURRENCE_STORE` names an already-verified read-only store, the compiler
 revalidates the selected manifest and decoded blobs, copies only the referenced
 content-addressed images, emits local fallbacks, and keeps an independently
-usable graph link. Current-camera public manifests include a provenance digest,
-not the upstream identity.
+usable graph link. Current-camera public manifests include opaque occurrence,
+exact-policy, and approved-request provenance digests, never the upstream URL.
 
 The CLI is deliberately local and credential-free:
 
@@ -62,6 +62,57 @@ node scripts/manage-occurrence-release.mjs media-status --store /path/to/store -
 node scripts/manage-occurrence-release.mjs rollback-media \
   --store /path/to/store --occurrence <opaque-id> --expected <selection-sha256> --at <UTC-instant>
 ```
+
+The compiler's canonical `media/*.request.json` files are the closed v3 input to
+`publish-media`; they require both `policySha256` and
+`requestProvenanceSha256`. Its canonical `release.request.json` is the closed v2
+input to `publish` and requires `policySha256`. Unknown fields—including source
+URLs—and missing identity fields are rejected before store mutation.
+
+Phase 4c adds a closed producer boundary without activating a producer:
+
+```bash
+cd site-astro
+node scripts/prepare-occurrence-export.mjs validate \
+  --manifest /path/to/occurrence-manifest.json \
+  --policy config/lab-stage-occurrence-export-policy.json \
+  --batch /path/to/canonical-export-batch.json \
+  --source /path/to/sanitized-candidates
+```
+
+The checked-in policy is blocked and byte-binds the accepted stage occurrence
+manifest: 143 graph fingerprints plus two opaque camera fingerprints. Every batch
+also binds the exact canonical policy SHA-256. The compiler requires a named
+operator-owned, one-way, read-only public reporting feed and rejects reuse of
+anonymous `graphs.verdify.ai` or the Track A primary role. A trusted processing
+instant limits delivery delay to 300 seconds and future skew to 60 seconds. Its
+end-to-end source watermark has a p95 target of 900 seconds; greater than 1800
+seconds is alert state and cannot prepare new release requests, so selected LKG
+bytes stay in place.
+
+The camera source contract is GET-only and exact:
+`https://api.verdify.ai/api/v1/public/cameras/{greenhouse_1|greenhouse_2}/latest.jpg?h=1080`.
+Redirects, cookies, auth, direct device/VLAN, Frigate, go2rtc, database, and
+control access are forbidden. A domain-separated SHA-256 binds each opaque
+occurrence to GET, its exact URL, and those redirect/auth/cookie rules in the
+reviewed policy, batch, sanitized candidate, private generation, selection, and
+reconciliation request. A generation is eligible for LKG only while its exact policy
+and request digests match, so a same-version policy or URL mutation cannot retain it.
+Only the opaque digests—not the URL—enter public release output. The future producer must decode each JPEG and
+re-encode a metadata-free RGB/RGBA PNG named by its SHA-256. The offline compiler
+then revalidates PNG structure, CRC, bounded inflate, decoded pixels, MIME,
+dimensions, byte count, bounded PNG chunk cardinality, content-addressed name,
+exact occurrence allowlist, and camera opacity before emitting canonical
+per-camera then reconciliation requests. Event, publication, capture, verification,
+selection, freshness, and rollback instants must round-trip as canonical UTC with
+either whole seconds or exactly three milliseconds; impossible dates are rejected.
+
+`deploy/k8s/components/lab-occurrence-reporting-boundary/` records the future
+boundary but is deliberately inert: no overlay reference, workload, Secret,
+Service, or Ingress, and deny-all egress. Request preparation also refuses the
+blocked policy. A separate Jason-gated change must approve and provide the
+reporting tier/feed, reporting-only credential, occurrence-store route, and
+egress restricted to that store plus `api.verdify.ai:443`.
 
 This implementation does not grant export authority or prove live freshness.
 Before stage can select a real occurrence release, separate work must provide a
