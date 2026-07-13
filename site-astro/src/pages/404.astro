@@ -1,11 +1,11 @@
 ---
 import LabPage from "../layouts/LabPage.astro";
-import type { ContentRecord } from "../lib/content";
+import { build, type ContentRecord } from "../lib/content";
 
 const record: ContentRecord = {
   route: "/404",
   canonicalPath: "/404",
-  canonicalUrl: "https://lab-stage.verdify.ai/404",
+  canonicalUrl: `${build.siteOrigin}/404`,
   physicalPath: "404.html",
   kind: "page",
   source: "generated:404",

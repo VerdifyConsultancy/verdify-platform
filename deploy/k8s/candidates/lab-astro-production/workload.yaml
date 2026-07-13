@@ -1,0 +1,153 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-lab-astro-green
+  labels:
+    app.kubernetes.io/name: verdify-lab-astro
+    app.kubernetes.io/component: lab-site-candidate
+    app.kubernetes.io/part-of: verdify
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: verdify-lab-astro
+      verdify.ai/release-track: green
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: verdify-lab-astro
+        app.kubernetes.io/component: lab-site-candidate
+        app.kubernetes.io/part-of: verdify
+        verdify.ai/release-track: green
+      annotations:
+        verdify.ai/release-boundary: disconnected-non-deployable-image-sentinel
+    spec:
+      automountServiceAccountToken: false
+      priorityClassName: verdify-serving
+      imagePullSecrets:
+        - name: zot-origin-cluster-pull
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        fsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          matchLabelKeys:
+            - pod-template-hash
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: verdify-lab-astro
+              verdify.ai/release-track: green
+      containers:
+        - name: site
+          # Intentionally non-pullable. Promotion replaces this sentinel with
+          # the exact zot-origin digest built from Dockerfile.production.
+          image: registry.vallery.net/verdifyconsultancy/verdify-lab-astro@sha256:0000000000000000000000000000000000000000000000000000000000000000
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+          readinessProbe:
+            httpGet:
+              path: /static-build.json
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sleep", "5"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: nginx-cache
+              mountPath: /var/cache/nginx
+            - name: nginx-run
+              mountPath: /var/run
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: nginx-cache
+          emptyDir: {}
+        - name: nginx-run
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: verdify-lab-astro-green
+  labels:
+    app.kubernetes.io/name: verdify-lab-astro
+    app.kubernetes.io/component: lab-site-candidate
+    app.kubernetes.io/part-of: verdify
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: verdify-lab-astro
+    verdify.ai/release-track: green
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: verdify-lab-astro-green
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: verdify-lab-astro
+      verdify.ai/release-track: green
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: verdify-lab-astro-green-disconnected
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: verdify-lab-astro
+      verdify.ai/release-track: green
+  policyTypes: ["Ingress", "Egress"]
+  ingress:
+    # A temporary in-namespace probe pod must opt in explicitly. The production
+    # Traefik pods do not carry this label, so this is not a traffic route.
+    - from:
+        - podSelector:
+            matchLabels:
+              verdify.ai/lab-canary-client: "true"
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress: []
