@@ -26,6 +26,13 @@ from pathlib import Path
 import asyncpg
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from verdify_public.output_policy import (  # noqa: E402
+    PUBLIC_CROP_EXCLUDE_SLUGS,
+    PUBLIC_CROP_SQL_NAME_PATTERN,
+    is_public_crop_record,
+    public_crop_zone_joins,
+    public_crop_zone_predicate,
+)
 from verdify_schemas.vault import VaultFrontmatter  # noqa: E402
 
 DEFAULT_OUT = Path("/mnt/iris/verdify-vault/website/greenhouse/zones")
@@ -40,10 +47,6 @@ def _database_dsn() -> str:
     return f"postgresql://verdify:{password}@127.0.0.1:5432/verdify"
 
 
-# Crops whose plantings must never be named on the public zone pages (#308,
-# Jason 2026-06-20). DB rows stay (control needs them); the renderer drops the
-# planting from the public table. Keep in sync with render-crop-profiles.py.
-PUBLISH_EXCLUDE_SLUGS = {"cannabis"}
 AUTO_BLOCK_RE = re.compile(
     r"(?P<start>(?:\[//\]: # \(auto-render:start (?P<markdown_name>[-a-z0-9_]+)\)|"
     r"<!-- auto-render:start (?P<html_name>[-a-z0-9_]+) -->|"
@@ -206,14 +209,20 @@ def _planting_age_note(planted_date: object, days_value: object, stage: object) 
     return note
 
 
-def _render_zone_profile_cards(d: dict, zone_slug: str, status: str, position_scheme: str | None) -> str:
+def _render_zone_profile_cards(
+    d: dict,
+    zone_slug: str,
+    status: str,
+    position_scheme: str | None,
+    public_active_crop_count: int,
+) -> str:
     cards = [
         (d["zone_name"], f"Slug <code>{zone_slug}</code>; status {status}."),
         (d.get("orientation") or "—", f"Sensor Modbus addr {d.get('sensor_modbus_addr') or '—'}."),
         ((str(d["peak_temp_f"]) + "°F") if d.get("peak_temp_f") else "—", "Recorded/known peak temperature."),
         (
-            str(d.get("active_crops_fk_count") or 0),
-            f"Active crop records. Position scheme: <code>{position_scheme or '—'}</code>.",
+            str(public_active_crop_count),
+            f"Public active crop records. Position scheme: <code>{position_scheme or '—'}</code>.",
         ),
     ]
     lines = ['<div class="metric-grid">']
@@ -273,16 +282,37 @@ async def render_zone(conn: asyncpg.Connection, zone_slug: str) -> tuple[str, st
         if isinstance(d.get(k), str):
             d[k] = json.loads(d[k])
 
-    # Current plantings
+    # Current plantings. Query crops directly rather than v_position_current so
+    # public active crops without a position_id are counted and rendered
+    # consistently. Missing catalog identity is not publishable for an occupied
+    # record; empty position rows are handled by the API and are not needed here.
     plantings = await conn.fetch(
-        "SELECT * FROM v_position_current WHERE zone_slug = $1 AND greenhouse_id = 'vallery'",
-        zone_slug,
+        f"""
+        SELECT c.position AS position_label,
+               c.name AS crop_name,
+               c.variety AS crop_variety,
+               c.stage AS crop_stage,
+               c.planted_date AS crop_planted_date,
+               (now() AT TIME ZONE 'America/Denver')::date - c.planted_date AS crop_days_in_place,
+               cc.slug AS crop_catalog_slug,
+               true AS is_occupied
+        FROM crops c
+        LEFT JOIN crop_catalog cc ON cc.id = c.crop_catalog_id
+        {public_crop_zone_joins()}
+        WHERE {public_crop_zone_predicate("$1", "cc.slug", "c.name", 2, 3)}
+          AND c.greenhouse_id = 'vallery'
+          AND c.is_active
+        ORDER BY c.position, c.name
+        """,
+        d["zone_id"],
+        sorted(PUBLIC_CROP_EXCLUDE_SLUGS),
+        PUBLIC_CROP_SQL_NAME_PATTERN,
     )
     plantings_list = [dict(r) for r in plantings]
-    # Redact non-publishable crops from the public zone page (#308). The position
-    # stays occupied in the DB; it just isn't named on the public site.
     plantings_list = [
-        p for p in plantings_list if (p.get("crop_catalog_slug") or "").lower() not in PUBLISH_EXCLUDE_SLUGS
+        p
+        for p in plantings_list
+        if is_public_crop_record(p.get("crop_catalog_slug"), p.get("crop_name"), occupied=True)
     ]
 
     status = d.get("zone_status") or "active"
@@ -310,7 +340,7 @@ async def render_zone(conn: asyncpg.Connection, zone_slug: str) -> tuple[str, st
         "sensors": _render_sensors_table(d["sensors"]),
         "equipment": _render_equipment_table(d["equipment"]),
         "water-systems": _render_water_systems_table(d["water_systems"], d["zone_name"]),
-        "zone-profile": _render_zone_profile_cards(d, zone_slug, status, position_scheme),
+        "zone-profile": _render_zone_profile_cards(d, zone_slug, status, position_scheme, len(plantings_list)),
     }
 
     body = f"""# {d["zone_name"]}
