@@ -336,10 +336,11 @@ production.
 
 The stage vendors the reviewed offline parity comparator at
 `scripts/site-build-parity.py` (SHA-256
-`d3f6662ac8303ae8a29020743254eb859db61693103b420b26df2c043ee659a4`):
+`9ffa966a8d36a1a98a56b941588a340f2e23cc7ee38389e1056717204fadf92c`):
 
 ```bash
-npm run parity:manifest
+LAB_SNAPSHOT=.snapshot npm run parity:manifest
+LAB_SNAPSHOT=.snapshot \
 QUARTZ_MANIFEST=/tmp/verdify-lab-quartz-baseline-20260712t1620z.json \
 npm run parity:compare:provisional
 ```

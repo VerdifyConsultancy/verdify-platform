@@ -139,8 +139,8 @@ export async function verifyProductionOutput({ dist, allowFixture = false }) {
   );
 
   const robots = await read("robots.txt");
-  if (robots !== `User-agent: *\nAllow: /\nSitemap: ${PRODUCTION_ORIGIN}/sitemap.xml\n`) {
-    throw new Error("production robots.txt is not the canonical allow policy");
+  if (robots !== `User-agent: *\nAllow: /\nDisallow: /static/vision/\nDisallow: /greenhouse/lessons/raw\n\nSitemap: ${PRODUCTION_ORIGIN}/sitemap.xml\n`) {
+    throw new Error("production robots.txt is not the canonical public-evidence policy");
   }
   for (const relative of ["sitemap.xml", "rss.xml"]) {
     const source = await read(relative);

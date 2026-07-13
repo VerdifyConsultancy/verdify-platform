@@ -1218,15 +1218,23 @@ def test_plans_index_includes_in_progress_plan_pages(tmp_path):
     plans_dir = content_root / "plans"
     plans_dir.mkdir(parents=True)
     (plans_dir / "2026-05-22.md").write_text("---\ntitle: May 22, 2026\n---\n", encoding="utf-8")
+    (plans_dir / "2026-05-21.md").write_text("---\ntitle: May 21, 2026\n---\n", encoding="utf-8")
     (plans_dir / "index.md").write_text("ignore aliases\n", encoding="utf-8")
     module["merge_plan_page_dates"].__globals__["CONTENT_ROOT"] = content_root
 
-    rows = module["merge_plan_page_dates"]([["2026-05-21", "3", "62-80", "2.1", "6.19", "Experiment", "7"]])
+    rows = module["merge_plan_page_dates"](
+        [
+            ["2026-05-21", "3", "62-80", "2.1", "6.19", "Experiment", "7"],
+            ["2026-05-20", "0", "-", "0.0", "-", "No cycle", "-"],
+        ]
+    )
     rendered = module["render"](rows, date(2026, 5, 22))
 
     assert rows[0][0] == "2026-05-22"
     assert "| [2026-05-22](/plans/2026-05-22) | 0 | - | 0.0h | - | In progress | - |" in rendered
     assert "| [2026-05-21](/plans/2026-05-21) | 3 | 62-80°F | 2.1h | $6.19 | Experiment | 7 |" in rendered
+    assert "| 2026-05-20 *(planner-cycle page unavailable)* | 0 | - | 0.0h | - | No cycle | - |" in rendered
+    assert "/plans/2026-05-20" not in rendered
 
 
 def test_grafana_dashboard_provider_poll_interval_avoids_sqlite_lock_churn():

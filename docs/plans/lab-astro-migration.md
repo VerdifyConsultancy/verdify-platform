@@ -56,7 +56,7 @@ Child issues (persisted 2026-07-13 post-consensus): 1→#474, 2→#475, 3→#476
 | 3 | Graph fallbacks | 143/143 occurrences discovered and DOM-reconciled; complete manifest/feed-bound offline producer merged; interactive links preserved | No reporting-feed activation, occurrence-store selection/materialization, freshness/LKG proof, or live immutable fallback image |
 | 4 | Media & lightbox | Responsive images, intrinsic sizing, and lightbox accepted on stage | Production remains Quartz until Phase 5 |
 | 5 | Planner/evidence templates | Accepted on stage against the full frozen snapshot | Event-driven content refresh remains Phase 4b |
-| 6 | Semantic parity | Routes/aliases complete; comparator improved | Exact same-snapshot parity not green: ~240 false findings from SVG-`<title>` parser bug (fix exists uncommitted on a dead worktree — must be recreated), 9 unavailable historical refs (5 daily-plan routes, 4 images), and Quartz-vs-Astro must build from the SAME immutable snapshot |
+| 6 | Semantic parity | Same-snapshot schema-v2 diagnostic implemented; 240/240 canonical routes and 84/84 aliases compare from one frozen input, with SVG-title, feed/sitemap, heading-fragment, robots, and ambiguous sibling-link drift cleared | The diagnostic has 442 fully accounted findings: 429 gated graph-fallback findings, nine unavailable historical source references pending a regenerated snapshot, and two gated current-camera occurrences; final proof also requires an approval-eligible immutable snapshot |
 | 7 | Immutable publishing | Local-filesystem CAS/release/cache engine, inactive S3 conditional-store foundation (#496), typed occurrence store (#502), closed caller (#507), and source-only concrete operation adapter/explicit CLI are present; 4a runtime is source-visible with exact source-bound images as a disconnected `replicas: 0` workload; the source-only #501 readiness contract fixes future reader/writer Secret resource names plus non-secret metadata ConfigMap/key names without inspecting values | Actual resource/value binding, real-endpoint proof, distributed coordination, retention/GC, event producer, and stage activation remain; no runtime pod is scheduled or routed |
 | 8 | Quality gates | Strict real-content gates green; exact tested build passed live T0 and T+10 acceptance | Keep the same budgets for every Phase 4 rollout; no production acceptance yet |
 | 9 | Production cutover | Fail-closed canary scaffold merged via #471 and remains inactive/source-only | Not built/pinned/deployed; Quartz remains authoritative; Jason APPLY required |
@@ -206,8 +206,15 @@ Phase 4 — **Feature completion (owner: codex, critical-path order below).**
    hard-gated on the 4c producer contract.
 4. **4d Exact parity:** recreate the SVG-title comparator fix (+8 tests),
    rebuild Quartz+Astro from the same immutable snapshot, burn down real
-   findings, and disposition the nine unavailable historical references. Its
-   final live proof depends on 4c+4b materializing the same-snapshot fallbacks.
+   findings, and disposition the nine unavailable historical references. The
+   exact frozen-input evidence and per-reference dispositions are recorded in
+   `docs/reviews/lab-astro-same-snapshot-parity-2026-07-13.md`. Its
+   code-level diagnostic now has 240/240 routes and 84/84 aliases with 442
+   fully accounted findings: 429 graph-fallback findings, the nine frozen
+   historical references, and two current-camera occurrences. Final live proof
+   depends on 4c+4b materializing the same-snapshot fallbacks, a regenerated
+   source snapshot reflecting the historical-reference dispositions, and an
+   approval-eligible immutable attestation.
 
 GATE per implementation slice: PR merged + `make ci` green + in-cluster build
 green. That gate does not close S3/4c: S3 remains open until the joint S3+S7

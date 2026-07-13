@@ -32,6 +32,59 @@ def test_plan_index_and_lessons_share_public_prose_redaction():
     assert "canna" in plans.public_text("canna remains public")
 
 
+def test_crop_profiles_keep_observation_metadata_without_inventing_missing_images(tmp_path):
+    crops = load_script("render-crop-profiles.py")
+    source = tmp_path / "source.jpg"
+    source.write_bytes(b"original")
+    retained = tmp_path / "public" / "lettuce-2.jpg"
+    retained.parent.mkdir()
+    retained.write_bytes(b"retained")
+    rows = [
+        {
+            "id": 1,
+            "image_path": str(source),
+            "ts": "2026-06-07 06:00:00",
+            "camera": "greenhouse_2",
+            "zone": "east",
+            "crop_name": "lettuce",
+            "notes": "Original image remains available.",
+            "health_score": "8",
+        },
+        {
+            "id": 2,
+            "image_path": str(tmp_path / "missing-retained-source.jpg"),
+            "ts": "2026-06-07 02:00:00",
+            "camera": "greenhouse_2",
+            "zone": "east",
+            "crop_name": "lettuce",
+            "notes": "Same-ID retained copy remains available.",
+            "health_score": "8",
+        },
+        {
+            "id": 3,
+            "image_path": str(tmp_path / "missing.jpg"),
+            "ts": "2026-06-06 22:00:00",
+            "camera": "greenhouse_2",
+            "zone": "east",
+            "crop_name": "lettuce",
+            "notes": "Observation notes remain available.",
+            "health_score": "7",
+        },
+    ]
+
+    refs, assets = crops._vision_publication_assets("lettuce", rows, retained.parent)
+    rendered = crops._render_latest_vision(rows, refs, "Lettuce")
+
+    assert refs == {1: "/static/vision/lettuce-1.jpg", 2: "/static/vision/lettuce-2.jpg"}
+    assert [dest.name for _source, dest in assets] == ["lettuce-1.jpg", "lettuce-2.jpg"]
+    assert 'src="/static/vision/lettuce-1.jpg"' in rendered
+    assert 'src="/static/vision/lettuce-2.jpg"' in rendered
+    assert "lettuce-3.jpg" not in rendered
+    assert "Historical image unavailable" in rendered
+    assert "Observation notes remain available." in rendered
+    assert "2026-06-06 22:00" in rendered
+
+
 def test_evidence_snapshot_redacts_latest_lesson_fields():
     excluded = next(iter(policy.PUBLIC_CROP_EXCLUDE_SLUGS))
     evidence = load_script("update-evidence-snapshots.py")

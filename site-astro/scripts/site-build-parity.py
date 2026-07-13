@@ -9,10 +9,10 @@ formats use Pillow when it is already available, otherwise failing closed.
 
 Examples::
 
-    python scripts/site-build-parity.py manifest public-quartz -o quartz.json
-    python scripts/site-build-parity.py manifest dist-astro -o astro.json
-    python scripts/site-build-parity.py compare quartz.json astro.json -o parity.json
-    python scripts/site-build-parity.py compare quartz.json astro.json --allow-provisional -o parity.json
+    python scripts/site-build-parity.py manifest public-quartz --snapshot-root .snapshot -o quartz.json
+    python scripts/site-build-parity.py manifest dist-astro --snapshot-root .snapshot -o astro.json
+    python scripts/site-build-parity.py compare quartz.json astro.json --snapshot-root .snapshot -o parity.json
+    python scripts/site-build-parity.py compare quartz.json astro.json --snapshot-root .snapshot --allow-provisional -o parity.json
 
 ``manifest`` preflights the complete tree without following links or reading
 file content, with closed limits for total/per-directory entries, directory
@@ -53,13 +53,16 @@ the canonical baseline-manifest digest and the full current failure digest,
 with an allowed category, concrete owner, approval issue and explicit approval
 attestation. Tree/integrity/duplicate failures are never waivable.
 
-Local manifests are cooperative-lock evidence only, so they are always marked
-``provisional-only`` and are never approval-eligible. An approved immutable
-filesystem/object-store snapshot attestation is the mandatory approval
-boundary. Accordingly, a structurally compatible ``compare`` exits 3 by
-default instead of claiming approval. ``--allow-provisional`` changes that
-diagnostic exit to 0 but leaves the report explicitly non-approval-eligible.
-Structural mismatch exits 1; malformed input or operational failure exits 2.
+Every manifest and comparison must re-read the same bounded snapshot root. The
+manifest records the exact content-manifest and attestation byte digests; a
+mismatch is an unwaivable failure. The currently supported attestation contract
+is explicitly ``provisional-only`` and never approval-eligible. A future
+approved immutable filesystem/object-store attestation requires its own trusted
+resolver before this tool may accept it. Accordingly, a structurally compatible
+comparison of the current snapshot exits 3 instead of claiming approval.
+``--allow-provisional`` changes that diagnostic exit to 0 but leaves the report
+explicitly non-approval-eligible. Structural mismatch exits 1; malformed input
+or operational failure exits 2.
 """
 
 from __future__ import annotations
@@ -91,10 +94,15 @@ from typing import Any
 from urllib.parse import parse_qsl, unquote, urljoin, urlsplit, urlunsplit
 
 CONTRACT = "verdify.static-site-parity"
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 EXCEPTIONS_CONTRACT = "verdify.static-site-parity-exceptions"
 EXCEPTIONS_SCHEMA_VERSION = 2
 DEFAULT_ORIGIN = "https://lab.verdify.ai"
+SNAPSHOT_ATTESTATION_CONTRACT = "verdify.lab-stage-sanitized-snapshot"
+SNAPSHOT_ATTESTATION_SCHEMA_VERSION = 1
+SNAPSHOT_ATTESTATION_MAX_BYTES = 64 * 1024
+SNAPSHOT_MANIFEST_MAX_BYTES = 8 * 1024 * 1024
+SNAPSHOT_MANIFEST_MAX_FILES = 10_000
 SEMANTIC_ASSET_KINDS = frozenset({"download", "media", "metadata", "public"})
 REQUIRED_RUNTIME_ASSET_KINDS = frozenset(
     {
@@ -539,12 +547,39 @@ COMPATIBLE_PUNCTUATION = str.maketrans(
         "–": "-",
         "—": "-",
         "…": "...",
+        "→": "->",
+        "←": "<-",
+        "⇒": "=>",
+        "⇐": "<=",
     }
 )
+PLACEHOLDER_METADATA_TEXT = frozenset({"no description provided"})
 
 
 def compatible_text(value: str) -> str:
-    return normalize_text(value).translate(COMPATIBLE_PUNCTUATION)
+    translated = normalize_text(value).translate(COMPATIBLE_PUNCTUATION)
+    # Quartz's smartypants transform treats doubled backticks in rendered
+    # prose as an opening double quote. Astro preserves the frozen source
+    # bytes, so normalize that presentation-only difference without weakening
+    # single-backtick/code-token comparisons.
+    return re.sub(r"`{2,}", '"', translated)
+
+
+def meaningful_metadata_text(value: Any) -> str:
+    normalized = compatible_text(value) if isinstance(value, str) else ""
+    return "" if normalized.casefold() in PLACEHOLDER_METADATA_TEXT else normalized
+
+
+def _is_not_found_metadata_upgrade(route: str, field: str, baseline: Any, candidate: Any) -> bool:
+    """Recognize the bounded SEO correction applied to the generated 404 page."""
+
+    if route != "/404":
+        return False
+    if field == "canonical":
+        return baseline == "/" and candidate == "/404"
+    if field == "noindex":
+        return baseline is False and candidate is True
+    return False
 
 
 def semantic_tokens(value: str) -> list[str]:
@@ -925,6 +960,16 @@ def _matches_canonical_authority(value: Any, serialized: str) -> bool:
         return canonical_json(value) == serialized
     except (OverflowError, RecursionError, TypeError, ValueError):
         return False
+
+
+def _verification_scope_for(source_snapshot: dict[str, Any]) -> dict[str, Any]:
+    """Return static policy with status derived from the verified source binding."""
+
+    scope = _authority_copy(_VERIFICATION_SCOPE_AUTHORITY_JSON)
+    boundary = scope["snapshot_boundary"]
+    boundary["local_evidence_status"] = source_snapshot["evidence_status"]
+    boundary["approval_eligible"] = source_snapshot["approval_eligible"]
+    return scope
 
 
 def _json_deep_copy(value: Any) -> Any:
@@ -1802,10 +1847,16 @@ def _tree_preflight(
     )
 
 
-def _empty_manifest(origin: str, findings: list[dict[str, Any]], limits: dict[str, int]) -> dict[str, Any]:
+def _empty_manifest(
+    origin: str,
+    findings: list[dict[str, Any]],
+    limits: dict[str, int],
+    source_snapshot: dict[str, Any],
+) -> dict[str, Any]:
     return {
         "contract": CONTRACT,
         "schema_version": SCHEMA_VERSION,
+        "source_snapshot": _json_deep_copy(source_snapshot),
         "origin": origin.rstrip("/"),
         "limits": limits,
         "routes": {},
@@ -1830,7 +1881,7 @@ def _empty_manifest(origin: str, findings: list[dict[str, Any]], limits: dict[st
             for name in FEATURE_NAMES
         },
         "integrity": {"missing_assets": [], "findings": findings},
-        "verification_scope": _authority_copy(_VERIFICATION_SCOPE_AUTHORITY_JSON),
+        "verification_scope": _verification_scope_for(source_snapshot),
     }
 
 
@@ -1883,6 +1934,7 @@ class ContentCollector:
     media: list[dict[str, Any]] = field(default_factory=list)
     grafana: list[dict[str, str]] = field(default_factory=list)
     asset_refs: set[tuple[str, str]] = field(default_factory=set)
+    fragment_targets: set[str] = field(default_factory=set)
     heading_level: int | None = None
     heading_parts: list[str] = field(default_factory=list)
     active_link: dict[str, Any] | None = None
@@ -1900,11 +1952,22 @@ class ContentCollector:
     ) -> None:
         if tag in TEXT_BOUNDARY_TAGS:
             self.text_parts.append(" ")
+        element_id = html.unescape(attrs.get("id", "")).strip()
+        legacy_name = html.unescape(attrs.get("name", "")).strip() if tag == "a" else ""
+        if element_id:
+            self.fragment_targets.add(element_id)
+        if legacy_name:
+            self.fragment_targets.add(legacy_name)
         if re.fullmatch(r"h[1-6]", tag):
             self.heading_level = int(tag[1])
             self.heading_parts = []
 
-        if tag in {"a", "area"} and attrs.get("href"):
+        decorative_heading_anchor = (
+            tag == "a"
+            and attrs.get("role", "").strip().lower() == "anchor"
+            and attrs.get("aria-hidden", "").strip().lower() == "true"
+        )
+        if tag in {"a", "area"} and attrs.get("href") and not decorative_heading_anchor:
             href = normalize_reference(attrs["href"], route=route, origin=origin, route_like=True, base_url=base_url)
             active_link = {
                 "href": href,
@@ -2796,7 +2859,13 @@ class StaticPageParser(HTMLParser):
                 )
         if tag == "html":
             self.lang = normalize_text(attrs.get("lang", "")).lower()
-        elif tag == "title":
+        elif tag == "title" and location == "head" and not self.suppressed_tags:
+            # Only the document's head title contributes page metadata. SVG
+            # and template subtrees may carry their own accessibility titles;
+            # those tags are inspected before the suppression stack is
+            # updated, so accepting every <title> here leaks following page
+            # text into the document title when their suppressed end tag
+            # returns early.
             self.in_title = True
         elif tag == "meta":
             key = (attrs.get("name") or attrs.get("property") or "").lower()
@@ -3240,13 +3309,19 @@ class StaticPageParser(HTMLParser):
 
 def _merge_collectors(collectors: list[ContentCollector]) -> dict[str, Any]:
     return {
-        "text": normalize_text(" ".join(" ".join(collector.text_parts) for collector in collectors)),
+        # HTML data callbacks and inline presentation elements do not create a
+        # rendered word boundary. ContentCollector.start() already inserts one
+        # for block/boundary tags, so adding spaces between every callback here
+        # makes entity encoding and syntax-highlighter span choices look like
+        # semantic text changes (for example ``<ref>`` versus ``<re f>``).
+        "text": normalize_text(" ".join("".join(collector.text_parts) for collector in collectors)),
         "headings": [item for collector in collectors for item in collector.headings],
         "tables": [item for collector in collectors for item in collector.tables],
         "links": [item for collector in collectors for item in collector.links],
         "downloads": [item for collector in collectors for item in collector.downloads],
         "media": [item for collector in collectors for item in collector.media],
         "asset_refs": sorted({item for collector in collectors for item in collector.asset_refs}),
+        "fragment_targets": sorted({item for collector in collectors for item in collector.fragment_targets}),
     }
 
 
@@ -3267,9 +3342,11 @@ def _page_manifest(parser: StaticPageParser, *, source: str) -> tuple[str, dict[
     merged = _merge_collectors(parser.selected_collectors())
     revealable: list[dict[str, Any]] = []
     revealable_asset_refs: set[tuple[str, str]] = set()
+    revealable_fragment_targets: set[str] = set()
     for capture in parser.revealable_captures:
         content = _merge_collectors([capture.collector])
         revealable_asset_refs.update(content.pop("asset_refs"))
+        revealable_fragment_targets.update(content.pop("fragment_targets"))
         revealable.append(
             {
                 "kind": capture.tag,
@@ -3286,6 +3363,7 @@ def _page_manifest(parser: StaticPageParser, *, source: str) -> tuple[str, dict[
         "links": merged["links"],
         "downloads": merged["downloads"],
         "media": merged["media"],
+        "fragment_targets": sorted({*merged["fragment_targets"], *revealable_fragment_targets}),
         "grafana": parser.grafana_occurrences,
         "runtime": parser.runtime_references,
         "native_visibility": parser.native_visibility,
@@ -6515,6 +6593,7 @@ def _feature_record(
 def _build_manifest_under_lease(
     root: Path,
     *,
+    source_snapshot: dict[str, Any],
     origin: str = DEFAULT_ORIGIN,
     limits: dict[str, int] | None = None,
 ) -> dict[str, Any]:
@@ -6523,7 +6602,7 @@ def _build_manifest_under_lease(
     limits = _resolved_limits(limits)
     root, tree_files, unsafe_findings, tree_snapshot = _tree_preflight(root, limits)
     if unsafe_findings:
-        return _empty_manifest(origin, unsafe_findings, limits)
+        return _empty_manifest(origin, unsafe_findings, limits, source_snapshot)
     if tree_snapshot is None:
         return _empty_manifest(
             origin,
@@ -6535,6 +6614,7 @@ def _build_manifest_under_lease(
                 }
             ],
             limits,
+            source_snapshot,
         )
     verifier = StageBoundaryVerifier(root, tree_snapshot, limits)
     available_tree_paths = {f"/{path.relative_to(root).as_posix()}": path for path in tree_files}
@@ -6914,11 +6994,12 @@ def _build_manifest_under_lease(
     integrity_findings.extend(_grafana_fallback_file_findings(routes, assets))
     stage_findings = verifier.verify()
     if stage_findings:
-        return _empty_manifest(origin, stage_findings, limits)
+        return _empty_manifest(origin, stage_findings, limits, source_snapshot)
     missing_assets = sorted(path for path, record in assets.items() if not record["exists"])
     return {
         "contract": CONTRACT,
         "schema_version": SCHEMA_VERSION,
+        "source_snapshot": _json_deep_copy(source_snapshot),
         "origin": origin,
         "limits": limits,
         "routes": dict(sorted(routes.items())),
@@ -6946,13 +7027,14 @@ def _build_manifest_under_lease(
             "missing_assets": missing_assets,
             "findings": sorted(integrity_findings, key=canonical_json),
         },
-        "verification_scope": _authority_copy(_VERIFICATION_SCOPE_AUTHORITY_JSON),
+        "verification_scope": _verification_scope_for(source_snapshot),
     }
 
 
 def build_manifest(
     root: Path,
     *,
+    source_snapshot: dict[str, Any],
     origin: str = DEFAULT_ORIGIN,
     limits: dict[str, int] | None = None,
 ) -> dict[str, Any]:
@@ -6966,6 +7048,7 @@ def build_manifest(
             lease.verify()
             manifest = _build_manifest_under_lease(
                 root,
+                source_snapshot=source_snapshot,
                 origin=normalized_origin,
                 limits=resolved_limits,
             )
@@ -6994,7 +7077,7 @@ def build_manifest(
                 key=canonical_json,
             )
             return manifest
-        return _empty_manifest(normalized_origin, [finding], resolved_limits)
+        return _empty_manifest(normalized_origin, [finding], resolved_limits, source_snapshot)
 
 
 def _missing_multiset(baseline: list[Any], candidate: list[Any]) -> list[Any]:
@@ -7022,6 +7105,41 @@ def _additional_multiset(baseline: list[Any], candidate: list[Any]) -> list[Any]
     return additional
 
 
+def _missing_links(baseline: list[dict[str, Any]], candidate: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Match link identity exactly while allowing candidate link-text additions."""
+
+    remaining = list(candidate)
+    unmatched: list[dict[str, Any]] = []
+    for item in baseline:
+        key = canonical_json(item)
+        exact = next(
+            (index for index, candidate_item in enumerate(remaining) if canonical_json(candidate_item) == key), None
+        )
+        if exact is None:
+            unmatched.append(item)
+        else:
+            remaining.pop(exact)
+
+    missing: list[dict[str, Any]] = []
+    for item in unmatched:
+        identity = {key: value for key, value in item.items() if key != "text"}
+        baseline_tokens = semantic_tokens(item.get("text", ""))
+        matches: list[tuple[int, int, str]] = []
+        for index, candidate_item in enumerate(remaining):
+            if {key: value for key, value in candidate_item.items() if key != "text"} != identity:
+                continue
+            candidate_tokens = semantic_tokens(candidate_item.get("text", ""))
+            missing_tokens, _additional_tokens = _subsequence_delta(baseline_tokens, candidate_tokens)
+            if not missing_tokens:
+                matches.append((len(candidate_tokens), index, canonical_json(candidate_item)))
+        if not matches:
+            missing.append(item)
+            continue
+        _length, index, _canonical = min(matches)
+        remaining.pop(index)
+    return missing
+
+
 def _comparison_items(field: str, items: list[Any]) -> list[Any]:
     if field == "headings":
         return [{**item, "text": compatible_text(item.get("text", ""))} for item in items]
@@ -7038,14 +7156,23 @@ def _comparison_items(field: str, items: list[Any]) -> list[Any]:
             for item in items
         ]
     if field == "links":
-        return [
-            {**item, "text": compatible_text(item.get("text", ""))}
-            for item in items
-            if not (not item.get("text") and re.fullmatch(r"/[^?#]+\.html#[^#]+", item.get("href", "")))
-        ]
+        return [{**item, "text": compatible_text(item.get("text", ""))} for item in items]
     if field == "media":
         projected = []
         for item in items:
+            media_source = item.get("src", "")
+            media_parts = urlsplit(media_source)
+            if (
+                item.get("kind") == "iframe"
+                and media_parts.scheme == "https"
+                and media_parts.netloc == urlsplit(GRAFANA_APPROVED_ORIGIN).netloc
+                and GRAFANA_PATH_RE.match(media_parts.path)
+            ):
+                # Grafana presentation is compared once through its normalized
+                # panel semantics below. Requiring the legacy iframe as media
+                # as well would reject the supported live-link/local-fallback
+                # representation despite an identical dashboard and panel.
+                continue
             source_attribute = item.get("source_attribute", "")
             role = source_attribute or "src"
             value = {
@@ -7093,7 +7220,7 @@ def _semantic_asset_paths(manifest: dict[str, Any]) -> set[str]:
         path
         for path, record in manifest.get("assets", {}).items()
         if any(
-            reference.get("kind") in SEMANTIC_ASSET_KINDS | REQUIRED_RUNTIME_ASSET_KINDS | HLS_ASSET_KINDS
+            reference.get("kind") in SEMANTIC_ASSET_KINDS | HLS_ASSET_KINDS
             for reference in record.get("references", [])
         )
     }
@@ -8822,6 +8949,35 @@ def _grafana_findings_from_manifest(manifest: dict[str, Any]) -> list[dict[str, 
     return sorted(findings, key=canonical_json)
 
 
+def _validate_source_snapshot(value: Any, *, label: str, path: str = "source_snapshot") -> dict[str, Any]:
+    snapshot = _exact_object(
+        value,
+        {
+            "approval_eligible",
+            "attestation_contract",
+            "attestation_schema_version",
+            "attestation_sha256",
+            "evidence_status",
+            "manifest_sha256",
+        },
+        label=label,
+        path=path,
+    )
+    if snapshot["attestation_contract"] != SNAPSHOT_ATTESTATION_CONTRACT:
+        _manifest_schema_error(label, f"{path}.attestation_contract", "uses an unsupported attestation contract")
+    if snapshot["attestation_schema_version"] != SNAPSHOT_ATTESTATION_SCHEMA_VERSION:
+        _manifest_schema_error(label, f"{path}.attestation_schema_version", "uses an unsupported schema version")
+    for key in ("attestation_sha256", "manifest_sha256"):
+        value = _string(snapshot[key], label=label, path=f"{path}.{key}", nonempty=True)
+        if SHA256_RE.fullmatch(value) is None:
+            _manifest_schema_error(label, f"{path}.{key}", "must be lowercase sha256:<64 hex>")
+    if snapshot["evidence_status"] != "provisional-only":
+        _manifest_schema_error(label, f"{path}.evidence_status", "is not trusted by the supported v1 resolver")
+    if snapshot["approval_eligible"] is not False:
+        _manifest_schema_error(label, f"{path}.approval_eligible", "cannot be true for the supported v1 attestation")
+    return snapshot
+
+
 def _validate_manifest(manifest: dict[str, Any], label: str) -> None:
     try:
         _json_shape(
@@ -8842,6 +8998,7 @@ def _validate_manifest(manifest: dict[str, Any], label: str) -> None:
         "origin",
         "routes",
         "schema_version",
+        "source_snapshot",
         "verification_scope",
     }
     manifest = _exact_object(manifest, top_keys, label=label, path="root")
@@ -8856,11 +9013,13 @@ def _validate_manifest(manifest: dict[str, Any], label: str) -> None:
         _manifest_schema_error(label, "origin", str(exc))
     if normalized_origin != origin:
         _manifest_schema_error(label, "origin", "must be the exact normalized origin")
+    source_snapshot = _validate_source_snapshot(manifest["source_snapshot"], label=label)
     limits = _exact_object(manifest["limits"], set(DEFAULT_LIMITS), label=label, path="limits")
     for name, value in limits.items():
         _integer(value, label=label, path=f"limits.{name}", minimum=1)
-    if not _matches_canonical_authority(manifest["verification_scope"], _VERIFICATION_SCOPE_AUTHORITY_JSON):
-        _manifest_schema_error(label, "verification_scope", "must exactly match the schema v1 verification policy")
+    expected_scope = _verification_scope_for(source_snapshot)
+    if canonical_json(manifest["verification_scope"]) != canonical_json(expected_scope):
+        _manifest_schema_error(label, "verification_scope", "must exactly match the derived schema v2 policy")
 
     routes = manifest["routes"]
     if not isinstance(routes, dict):
@@ -8868,6 +9027,7 @@ def _validate_manifest(manifest: dict[str, Any], label: str) -> None:
     page_keys = {
         "downloads",
         "form_controls",
+        "fragment_targets",
         "grafana",
         "headings",
         "links",
@@ -8888,6 +9048,7 @@ def _validate_manifest(manifest: dict[str, Any], label: str) -> None:
         page = _exact_object(page, page_keys, label=label, path=route_path)
         _string(page["source"], label=label, path=f"{route_path}.source", nonempty=True)
         _string(page["text"], label=label, path=f"{route_path}.text")
+        _string_list(page["fragment_targets"], label=label, path=f"{route_path}.fragment_targets")
         _validate_metadata(page["metadata"], label=label, path=f"{route_path}.metadata")
         _validate_page_collections(page, label=label, route_path=route_path)
         _validate_grafana(
@@ -9403,12 +9564,17 @@ def compare_manifests(
     baseline: dict[str, Any],
     candidate: dict[str, Any],
     *,
+    trusted_source_snapshot: dict[str, Any],
     exceptions: dict[str, Any] | None = None,
     today: date | None = None,
 ) -> dict[str, Any]:
     """Compare a required baseline with a candidate; additions do not fail."""
     _validate_manifest(baseline, "baseline")
     _validate_manifest(candidate, "candidate")
+    trusted_source_snapshot = _validate_source_snapshot(
+        trusted_source_snapshot,
+        label="trusted source snapshot",
+    )
     failures: list[dict[str, Any]] = []
     additions: dict[str, Any] = {
         "routes": sorted(set(candidate["routes"]) - set(baseline["routes"])),
@@ -9422,6 +9588,14 @@ def compare_manifests(
     def fail(code: str, *, expected_baseline: Any, **details: Any) -> None:
         failures.append({"code": code, "expected_baseline": expected_baseline, **details})
 
+    for label, manifest in (("baseline", baseline), ("candidate", candidate)):
+        if manifest["source_snapshot"] != trusted_source_snapshot:
+            fail(
+                f"{label}-source-snapshot-mismatch",
+                expected=trusted_source_snapshot,
+                actual=manifest["source_snapshot"],
+                expected_baseline=trusted_source_snapshot,
+            )
     if candidate["origin"] != baseline["origin"]:
         fail(
             "origin-mismatch",
@@ -9499,6 +9673,7 @@ def compare_manifests(
 
     required_metadata = ("title", "description", "canonical", "lang", "base_href")
     collection_fields = (
+        ("fragment_targets", "fragment-target-missing"),
         ("headings", "heading-missing"),
         ("tables", "table-missing"),
         ("links", "link-missing"),
@@ -9534,7 +9709,11 @@ def compare_manifests(
             if collection_field in {"form_controls", "native_visibility", "revealable"}:
                 baseline_items = [item for item in baseline_items if item.get("location") == "content"]
                 candidate_items = [item for item in candidate_items if item.get("location") == "content"]
-            missing = _missing_multiset(baseline_items, candidate_items)
+            missing = (
+                _missing_links(baseline_items, candidate_items)
+                if collection_field == "links"
+                else _missing_multiset(baseline_items, candidate_items)
+            )
             if missing:
                 fail(code, route=route, missing=missing, expected_baseline=missing)
             additional = _additional_multiset(baseline_items, candidate_items)
@@ -9546,7 +9725,14 @@ def compare_manifests(
         for metadata_field in required_metadata:
             baseline_value = baseline_meta.get(metadata_field)
             candidate_value = candidate_meta.get(metadata_field)
-            if baseline_value and baseline_value != candidate_value:
+            if metadata_field == "description":
+                baseline_value = meaningful_metadata_text(baseline_value)
+                candidate_value = meaningful_metadata_text(candidate_value)
+            if (
+                baseline_value
+                and baseline_value != candidate_value
+                and not _is_not_found_metadata_upgrade(route, metadata_field, baseline_value, candidate_value)
+            ):
                 fail(
                     "metadata-mismatch",
                     route=route,
@@ -9557,7 +9743,14 @@ def compare_manifests(
                 )
             elif not baseline_value and candidate_value:
                 page_additions.setdefault("metadata", {})[metadata_field] = candidate_value
-        if baseline_meta.get("noindex", False) != candidate_meta.get("noindex", False):
+        if baseline_meta.get("noindex", False) != candidate_meta.get(
+            "noindex", False
+        ) and not _is_not_found_metadata_upgrade(
+            route,
+            "noindex",
+            baseline_meta.get("noindex", False),
+            candidate_meta.get("noindex", False),
+        ):
             fail(
                 "metadata-mismatch",
                 route=route,
@@ -9569,6 +9762,9 @@ def compare_manifests(
         for group in ("open_graph", "twitter"):
             for metadata_field, baseline_value in baseline_meta.get(group, {}).items():
                 candidate_value = candidate_meta.get(group, {}).get(metadata_field, "")
+                if metadata_field == "description":
+                    baseline_value = meaningful_metadata_text(baseline_value)
+                    candidate_value = meaningful_metadata_text(candidate_value)
                 if baseline_value and candidate_value != baseline_value:
                     fail(
                         "metadata-mismatch",
@@ -9783,25 +9979,33 @@ def compare_manifests(
     additions["content"] = dict(sorted(additions["content"].items()))
     baseline_boundary = baseline["verification_scope"]["snapshot_boundary"]
     candidate_boundary = candidate["verification_scope"]["snapshot_boundary"]
-    approval_eligible = bool(baseline_boundary["approval_eligible"] and candidate_boundary["approval_eligible"])
+    approval_eligible = bool(
+        trusted_source_snapshot["approval_eligible"]
+        and baseline["source_snapshot"] == trusted_source_snapshot
+        and candidate["source_snapshot"] == trusted_source_snapshot
+        and baseline_boundary["approval_eligible"]
+        and candidate_boundary["approval_eligible"]
+    )
     approval = {
         "status": "approval-eligible" if approval_eligible else "approval-blocked-provisional-evidence",
         "approval_eligible": approval_eligible,
         "baseline_local_evidence_status": baseline_boundary["local_evidence_status"],
         "candidate_local_evidence_status": candidate_boundary["local_evidence_status"],
         "mandatory_approval_boundary": baseline_boundary["mandatory_approval_boundary"],
+        "source_snapshot_revalidated": True,
         "exception_waivable": False,
     }
     return {
         "contract": CONTRACT,
         "schema_version": SCHEMA_VERSION,
+        "source_snapshot": _json_deep_copy(trusted_source_snapshot),
         "baseline_manifest_digest": canonical_digest(baseline),
         "compatible": not failures,
         "approval": approval,
         "failures": failures,
         "applied_exceptions": applied_exceptions,
         "additions": additions,
-        "comparison_policy": _authority_copy(_VERIFICATION_SCOPE_AUTHORITY_JSON),
+        "comparison_policy": _verification_scope_for(trusted_source_snapshot),
         "exception_policy": {
             "contract": EXCEPTIONS_CONTRACT,
             "schema_version": EXCEPTIONS_SCHEMA_VERSION,
@@ -9835,6 +10039,194 @@ def _strict_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
             raise ValueError(f"duplicate JSON key {key!r}")
         value[key] = item
     return value
+
+
+def _strict_json_bytes(value: bytes, *, label: str, maximum_nodes: int) -> dict[str, Any]:
+    try:
+        document = json.loads(
+            value.decode("utf-8", errors="strict"),
+            object_pairs_hook=_strict_json_object,
+            parse_constant=_reject_json_constant,
+        )
+        _json_shape(
+            document,
+            maximum_depth=DEFAULT_LIMITS["manifest_depth"],
+            maximum_nodes=maximum_nodes,
+        )
+    except (
+        MemoryError,
+        OverflowError,
+        RecursionError,
+        UnicodeDecodeError,
+        ValueError,
+        json.JSONDecodeError,
+    ) as exc:
+        detail = str(exc) or "bounded JSON parse exhausted memory"
+        raise ValueError(f"{label} is invalid: {detail}") from exc
+    if not isinstance(document, dict):
+        raise ValueError(f"{label} must contain a JSON object")
+    return document
+
+
+def _verify_source_snapshot_content(root: Path, expected_files: dict[str, str]) -> None:
+    """Bind a content manifest to one stable, bounded, no-follow tree scan."""
+
+    content_root = root / "content"
+    limits = dict(DEFAULT_LIMITS)
+    try:
+        with StageSnapshotLease(content_root) as lease:
+            lease.verify()
+            verified_root, paths, findings, tree_snapshot = _tree_preflight(content_root, limits)
+            if findings or tree_snapshot is None:
+                code = findings[0]["code"] if findings else "unsafe-tree-read-error"
+                raise ValueError(f"source snapshot content tree is unsafe: {code}")
+
+            actual_files = {path.relative_to(verified_root).as_posix(): path for path in paths}
+            expected_paths = set(expected_files)
+            actual_paths = set(actual_files)
+            if actual_paths != expected_paths:
+                missing = sorted(expected_paths - actual_paths)[:5]
+                extra = sorted(actual_paths - expected_paths)[:5]
+                raise ValueError(
+                    "source snapshot content tree membership does not match its manifest "
+                    f"(missing={missing}, extra={extra})"
+                )
+
+            verifier = StageBoundaryVerifier(verified_root, tree_snapshot, limits)
+            for relative in sorted(expected_files):
+                _size, digest = verifier.sha256_file(actual_files[relative], limits["asset_bytes"])
+                if digest != expected_files[relative]:
+                    raise ValueError(f"source snapshot content digest mismatch: {relative}")
+            boundary_findings = verifier.verify()
+            if boundary_findings:
+                raise ValueError(
+                    f"source snapshot content tree changed during verification: {boundary_findings[0]['code']}"
+                )
+            lease.verify()
+    except SafeFileError as exc:
+        raise ValueError(f"source snapshot content tree is unsafe: {exc.code}") from exc
+
+
+def read_source_snapshot(root: Path) -> dict[str, Any]:
+    """Resolve the currently trusted provisional snapshot into a closed identity."""
+
+    attestation_bytes = _bounded_bytes(root / "attestation.json", SNAPSHOT_ATTESTATION_MAX_BYTES)
+    manifest_bytes = _bounded_bytes(root / "manifests" / "content.json", SNAPSHOT_MANIFEST_MAX_BYTES)
+    attestation = _strict_json_bytes(
+        attestation_bytes,
+        label="source snapshot attestation",
+        maximum_nodes=1_000,
+    )
+    content_manifest = _strict_json_bytes(
+        manifest_bytes,
+        label="source snapshot content manifest",
+        maximum_nodes=SNAPSHOT_MANIFEST_MAX_FILES * 3,
+    )
+
+    attestation_keys = {
+        "approvalEligible",
+        "contract",
+        "evidenceStatus",
+        "guardFindings",
+        "guardReportSha256",
+        "guardSchemaVersion",
+        "policyVersion",
+        "sanitizedFileCount",
+        "sanitizedManifestSha256",
+        "schemaVersion",
+        "sourceFileCount",
+        "sourceManifestSha256",
+        "transformations",
+    }
+    if set(attestation) != attestation_keys:
+        raise ValueError("source snapshot attestation does not use the closed v1 shape")
+    canonical_attestation = json.dumps(attestation, ensure_ascii=False, indent=2) + "\n"
+    if canonical_attestation.encode("utf-8") != attestation_bytes:
+        raise ValueError("source snapshot attestation is not canonical JSON")
+    if (
+        attestation["contract"] != SNAPSHOT_ATTESTATION_CONTRACT
+        or attestation["schemaVersion"] != SNAPSHOT_ATTESTATION_SCHEMA_VERSION
+        or attestation["evidenceStatus"] != "provisional-only"
+        or attestation["approvalEligible"] is not False
+    ):
+        raise ValueError("source snapshot attestation is not trusted by the supported v1 resolver")
+
+    manifest_digest = hashlib.sha256(manifest_bytes).hexdigest()
+    if (
+        not isinstance(attestation["sanitizedManifestSha256"], str)
+        or re.fullmatch(r"[0-9a-f]{64}", attestation["sanitizedManifestSha256"]) is None
+        or attestation["sanitizedManifestSha256"] != manifest_digest
+    ):
+        raise ValueError("source snapshot attestation does not bind the supplied content manifest")
+    if (
+        set(content_manifest) != {"files", "version"}
+        or content_manifest["version"] != 1
+        or not isinstance(content_manifest["files"], dict)
+    ):
+        raise ValueError("source snapshot content manifest does not use the closed v1 shape")
+    files = content_manifest["files"]
+    if len(files) > SNAPSHOT_MANIFEST_MAX_FILES:
+        raise ValueError("source snapshot content manifest exceeds the file-count limit")
+    if type(attestation["sanitizedFileCount"]) is not int or attestation["sanitizedFileCount"] != len(files):
+        raise ValueError("source snapshot attestation file count does not match its content manifest")
+    if type(attestation["sourceFileCount"]) is not int or attestation["sourceFileCount"] < len(files):
+        raise ValueError("source snapshot attestation source file count is invalid")
+    for relative, digest in files.items():
+        relative_parts = relative.split("/") if isinstance(relative, str) else []
+        if (
+            not isinstance(relative, str)
+            or not relative
+            or len(relative.encode("utf-8")) > DEFAULT_LIMITS["path_bytes"]
+            or "\x00" in relative
+            or "\\" in relative
+            or relative.startswith("/")
+            or any(part in {"", ".", ".."} for part in relative_parts)
+            or posixpath.normpath(relative) != relative
+            or not isinstance(digest, str)
+            or re.fullmatch(r"[0-9a-f]{64}", digest) is None
+        ):
+            raise ValueError("source snapshot content manifest contains an invalid file record")
+    for key in ("guardReportSha256", "sourceManifestSha256"):
+        if not isinstance(attestation[key], str) or re.fullmatch(r"[0-9a-f]{64}", attestation[key]) is None:
+            raise ValueError(f"source snapshot attestation {key} is invalid")
+    if (
+        not isinstance(attestation["policyVersion"], str)
+        or not attestation["policyVersion"]
+        or type(attestation["guardSchemaVersion"]) is not int
+        or attestation["guardSchemaVersion"] < 1
+        or attestation["guardFindings"] != 0
+    ):
+        raise ValueError("source snapshot attestation public-output policy evidence is invalid")
+    transformations = attestation["transformations"]
+    transformation_keys = {
+        "changedFiles",
+        "hlsFilesPreserved",
+        "invalidValueRepairFiles",
+        "pngReencodeFiles",
+        "textRedactionFiles",
+    }
+    if (
+        not isinstance(transformations, dict)
+        or set(transformations) != transformation_keys
+        or any(type(value) is not int or value < 0 for value in transformations.values())
+    ):
+        raise ValueError("source snapshot attestation transformation evidence is invalid")
+
+    _verify_source_snapshot_content(root, files)
+    if (
+        _bounded_bytes(root / "attestation.json", SNAPSHOT_ATTESTATION_MAX_BYTES) != attestation_bytes
+        or _bounded_bytes(root / "manifests" / "content.json", SNAPSHOT_MANIFEST_MAX_BYTES) != manifest_bytes
+    ):
+        raise ValueError("source snapshot metadata changed during content verification")
+
+    return {
+        "attestation_contract": attestation["contract"],
+        "attestation_schema_version": attestation["schemaVersion"],
+        "attestation_sha256": f"sha256:{hashlib.sha256(attestation_bytes).hexdigest()}",
+        "manifest_sha256": f"sha256:{manifest_digest}",
+        "evidence_status": attestation["evidenceStatus"],
+        "approval_eligible": False,
+    }
 
 
 def read_manifest(
@@ -9891,6 +10283,12 @@ def build_parser() -> argparse.ArgumentParser:
     manifest_parser.add_argument("-o", "--output", type=Path, help="write JSON here instead of stdout")
     manifest_parser.add_argument("--origin", default=DEFAULT_ORIGIN, help="canonical site origin")
     manifest_parser.add_argument(
+        "--snapshot-root",
+        required=True,
+        type=Path,
+        help="verified source snapshot containing attestation.json and manifests/content.json",
+    )
+    manifest_parser.add_argument(
         "--limit",
         action="append",
         default=[],
@@ -9908,6 +10306,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     compare_parser.add_argument("baseline", type=Path)
     compare_parser.add_argument("candidate", type=Path)
+    compare_parser.add_argument(
+        "--snapshot-root",
+        required=True,
+        type=Path,
+        help="revalidate the exact source snapshot recorded by both manifests",
+    )
     compare_parser.add_argument(
         "--exceptions",
         type=Path,
@@ -9941,8 +10345,10 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         if args.command == "manifest":
+            source_snapshot = read_source_snapshot(args.snapshot_root)
             manifest = build_manifest(
                 args.build,
+                source_snapshot=source_snapshot,
                 origin=args.origin,
                 limits=_parse_limit_overrides(args.limit),
             )
@@ -9952,6 +10358,7 @@ def main(argv: list[str] | None = None) -> int:
         report = compare_manifests(
             read_manifest(args.baseline),
             read_manifest(args.candidate),
+            trusted_source_snapshot=read_source_snapshot(args.snapshot_root),
             exceptions=exception_document,
         )
         write_json(report, args.output)

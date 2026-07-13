@@ -10,6 +10,7 @@ import {
   cameraSnapshotAsset,
   folderRecords,
   imageDimensions,
+  inferredDescription,
   normalizeRoute,
   renderMarkdown,
   routeFromSource,
@@ -100,6 +101,23 @@ test("route contract distinguishes root, leaf, and folder physical outputs", () 
   assert.throws(() => normalizeRoute("../outside"), /unsafe route/);
 });
 
+test("missing frontmatter descriptions use Quartz-compatible rendered prose", async () => {
+  const rendered = await renderMarkdown(
+    "# Citrus in an Automated Greenhouse\n\n> Rendered from DB: `crop_catalog` + `crop_target_profiles` + `v_position_current` + `v_crop_history`.\n> Do not edit by hand — run `scripts/render-crop-profiles.py` to regenerate.",
+    { relative: "greenhouse/crops/citrus.md", route: "/greenhouse/crops/citrus" },
+    new Map(),
+    new Map([["greenhouse/crops/citrus.md", "/greenhouse/crops/citrus"]]),
+    new Set(),
+    new Map(),
+    new Map(),
+  );
+  assert.equal(
+    rendered.description,
+    "Citrus in an Automated Greenhouse Rendered from DB: crop_catalog + crop_target_profiles + v_position_current + v_crop_history.",
+  );
+  assert.equal(inferredDescription({ type: "root", children: [] }), "");
+});
+
 test("camera snapshots require a same-origin last-known-good artifact", () => {
   const source = "https://api.verdify.ai/api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080";
   assert.deepEqual(cameraSnapshotAsset(source, new Set()), {
@@ -135,7 +153,7 @@ test("camera rendering fails closed without a selected CAS generation and remove
 
 test("missing local routes and images become explicit non-broken publication states", async () => {
   const rendered = await renderMarkdown(
-    "[Missing plan](/plans/2099-01-01)\n\n![Missing proof](/static/vision/missing.jpg)",
+    '[Missing plan](/plans/2099-01-01)\n\n<div><img src="/static/vision/missing.jpg" alt="Missing proof"><strong>2026-06-06</strong></div>',
     { relative: "index.md" },
     new Map(),
     new Map([["index.md", "/"]]),
@@ -146,6 +164,7 @@ test("missing local routes and images become explicit non-broken publication sta
   );
   assert.match(rendered.html, /class="unavailable-reference"/);
   assert.match(rendered.html, /class="media-unavailable" role="img"/);
+  assert.match(rendered.html, /publication\. <\/span><strong>2026-06-06<\/strong>/);
   assert.doesNotMatch(rendered.html, /href="\/plans\/2099-01-01"|src="\/static\/vision\/missing\.jpg"/);
   assert.deepEqual(rendered.unavailable.map((item) => item.kind), ["link", "image"]);
 });

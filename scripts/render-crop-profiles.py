@@ -367,16 +367,42 @@ def _render_latest_vision(rows: list[dict], public_refs: dict[int, str], crop_la
         )
     lines = ['<div class="data-table vision-gallery">']
     for row in rows:
-        image_ref = public_refs[row["id"]]
+        image_ref = public_refs.get(row["id"])
         score = row.get("health_score") or "—"
         notes = row.get("notes") or "No notes recorded."
+        image = (
+            f'<img src="{image_ref}" alt="Latest {row["crop_name"]} camera observation from {row["camera"]}"/>'
+            if image_ref
+            else '<span class="media-unavailable" role="img">Historical image unavailable. '
+            "Observation metadata retained; no substitute image was generated.</span>"
+        )
         lines.append(
-            f'  <div class="data-row"><img src="{image_ref}" alt="Latest {row["crop_name"]} camera observation from {row["camera"]}"/>'
+            f'  <div class="data-row">{image}'
             f"<strong>{str(row['ts'])[:16]}</strong><span>{row['camera']} · {row['zone']} · health {score}/10</span>"
             f"<p><strong>{crop_label}:</strong> {notes}</p></div>"
         )
     lines.append("</div>")
     return "\n".join(lines)
+
+
+def _vision_publication_assets(
+    slug: str,
+    rows: list[dict],
+    vision_out: Path | None = None,
+) -> tuple[dict[int, str], list[tuple[Path, Path]]]:
+    """Select only original or retained same-ID public observation images."""
+
+    output = vision_out or DEFAULT_VISION_OUT
+    public_refs: dict[int, str] = {}
+    assets: list[tuple[Path, Path]] = []
+    for row in rows:
+        src = Path(row["image_path"])
+        dest = output / f"{slug}-{row['id']}{src.suffix or '.jpg'}"
+        if not src.is_file() and not dest.is_file():
+            continue
+        public_refs[row["id"]] = f"/static/vision/{dest.name}"
+        assets.append((src, dest))
+    return public_refs, assets
 
 
 async def render_crop(
@@ -427,13 +453,8 @@ async def render_crop(
         """,
         sorted(crop_names),
     )
-    public_refs: dict[int, str] = {}
-    vision_assets: list[tuple[Path, Path]] = []
-    for row in vision_rows:
-        src = Path(row["image_path"])
-        dest = DEFAULT_VISION_OUT / f"{slug}-{row['id']}{src.suffix or '.jpg'}"
-        public_refs[row["id"]] = f"/static/vision/{dest.name}"
-        vision_assets.append((src, dest))
+    vision_dicts = [dict(row) for row in vision_rows]
+    public_refs, vision_assets = _vision_publication_assets(slug, vision_dicts)
 
     fm = {
         "title": d["common_name"],
@@ -458,7 +479,7 @@ async def render_crop(
             [dict(r) for r in current], CROP_LABELS.get(slug, d["common_name"])
         ),
         "latest-vision": _render_latest_vision(
-            [dict(r) for r in vision_rows],
+            vision_dicts,
             public_refs,
             CROP_LABELS.get(slug, d["common_name"]),
         ),
@@ -539,10 +560,12 @@ async def run(args: argparse.Namespace) -> int:
             expected_vision_assets.update(dest for _src, dest in vision_assets)
             if not args.dry_run:
                 for src, dest in vision_assets:
-                    if src.exists():
+                    if src.is_file():
                         dest.parent.mkdir(parents=True, exist_ok=True)
                         if not dest.exists() or src.stat().st_mtime_ns != dest.stat().st_mtime_ns:
                             shutil.copy2(src, dest)
+                    elif not dest.is_file():
+                        raise RuntimeError(f"vision source and retained public asset disappeared: {dest.name}")
             target = out_dir / filename
             existing = target.read_text() if target.exists() else ""
             mode = "full page"

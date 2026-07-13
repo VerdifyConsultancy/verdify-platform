@@ -255,6 +255,29 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
+function inferredDescription(tree, { descriptionLength = 150, maxDescriptionLength = 300 } = {}) {
+  const pending = [tree];
+  const text = [];
+  while (pending.length > 0) {
+    const node = pending.pop();
+    if (node?.type === "text" && typeof node.value === "string") text.push(node.value);
+    if (Array.isArray(node?.children)) pending.push(...node.children.toReversed());
+  }
+  const normalized = text.join("").replace(/\s+/gu, " ").trim();
+  const sentences = normalized.split(/\.\s/u);
+  let description = "";
+  for (const sentence of sentences) {
+    if (!sentence) break;
+    const current = sentence.endsWith(".") ? sentence : `${sentence}.`;
+    const nextLength = description.length + current.length + (description ? 1 : 0);
+    if (nextLength > descriptionLength && description) break;
+    description += `${description ? " " : ""}${current}`;
+  }
+  return description.length > maxDescriptionLength
+    ? `${description.slice(0, maxDescriptionLength)}...`
+    : description;
+}
+
 async function verifyCompatAssets() {
   const manifestBytes = await readFile(path.join(COMPAT_PUBLIC_ROOT, "manifest.json"));
   let manifest;
@@ -521,7 +544,11 @@ function rehypeUnavailableLocalReferences(assetPaths, availableRoutes, unavailab
           role: "img",
           ariaLabel: `${alt} — image unavailable in this publication`,
         };
-        node.children = [{ type: "text", value: `${alt} — image unavailable in this publication` }];
+        // Preserve a rendered boundary before an adjacent inline timestamp or
+        // caption. Generated crop cards place <strong> immediately after the
+        // image, and omitting this trailing space would merge publication and
+        // date into one semantic token.
+        node.children = [{ type: "text", value: `${alt} — image unavailable in this publication. ` }];
         return;
       }
       node.tagName = "span";
@@ -903,6 +930,7 @@ async function renderMarkdown(
   const result = await processor.run(tree);
   return {
     html: toHtml(result, { allowDangerousHtml: true }),
+    description: inferredDescription(result),
     grafana: grafanaOccurrences,
     currentMedia: currentMediaOccurrences,
     unavailable,
@@ -1138,24 +1166,34 @@ function xmlEscape(value) {
   return escapeHtml(value);
 }
 
+function xmlCdata(value) {
+  return String(value).replaceAll("]]>", "]]]]><![CDATA[>");
+}
+
 async function writeIndexes(records, build) {
   const canonical = records.filter((record) => record.kind !== "alias" && !record.noindex);
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${canonical
-    .map((record) => `<url><loc>${xmlEscape(record.canonicalUrl)}</loc></url>`)
+    .map((record) => `<url><loc>${xmlEscape(record.canonicalUrl)}</loc>${record.date ? `<lastmod>${new Date(record.date).toISOString()}</lastmod>` : ""}</url>`)
     .join("")}</urlset>\n`;
   const dated = records
     .filter((record) => record.kind !== "alias" && !record.noindex && record.date)
-    .sort((left, right) => String(right.date).localeCompare(String(left.date)))
+    .sort((left, right) => (
+      String(right.date).localeCompare(String(left.date))
+      || left.route.localeCompare(right.route)
+    ))
     .slice(0, 10);
-  const rss = `<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0"><channel><title>Verdify Lab</title><link>${SITE_ORIGIN}/</link><description>Public greenhouse evidence</description>${dated
-    .map((record) => `<item><title>${xmlEscape(record.title)}</title><link>${xmlEscape(record.canonicalUrl)}</link><guid>${xmlEscape(record.canonicalUrl)}</guid><pubDate>${new Date(record.date).toUTCString()}</pubDate></item>`)
+  const rss = `<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0"><channel><title>Verdify Lab</title><link>${SITE_ORIGIN}</link><description>Last 10 notes on Verdify Lab</description><generator>Verdify public site</generator>${dated
+    .map((record) => `<item><title>${xmlEscape(record.title)}</title><link>${xmlEscape(record.canonicalUrl)}</link><guid>${xmlEscape(record.canonicalUrl)}</guid><description><![CDATA[ ${xmlCdata(record.description)} ]]></description><pubDate>${new Date(record.date).toUTCString()}</pubDate></item>`)
     .join("")}</channel></rss>\n`;
   await writeFile(path.join(PUBLIC_ROOT, "sitemap.xml"), sitemap);
   await writeFile(path.join(PUBLIC_ROOT, "rss.xml"), rss);
   await writeFile(path.join(PUBLIC_ROOT, "index.xml"), rss);
+  const robotsPolicy = STAGE_GLOBAL_NOINDEX
+    ? "Disallow: /"
+    : "Allow: /\nDisallow: /static/vision/\nDisallow: /greenhouse/lessons/raw";
   await writeFile(
     path.join(PUBLIC_ROOT, "robots.txt"),
-    `User-agent: *\n${STAGE_GLOBAL_NOINDEX ? "Disallow: /" : "Allow: /"}\nSitemap: ${SITE_ORIGIN}/sitemap.xml\n`,
+    `User-agent: *\n${robotsPolicy}\n\nSitemap: ${SITE_ORIGIN}/sitemap.xml\n`,
   );
   await writeFile(path.join(PUBLIC_ROOT, "static-build.json"), `${JSON.stringify(build, null, 2)}\n`);
 }
@@ -1259,7 +1297,7 @@ async function main({ occurrenceStoreFactory = null } = {}) {
       kind: source.kind,
       source: source.relative,
       title,
-      description: String(source.frontmatter.description ?? ""),
+      description: String(source.frontmatter.description ?? "").trim() || rendered.description,
       html: rendered.html,
       aliases,
       tags,
@@ -1390,6 +1428,7 @@ export {
   cameraSnapshotAsset,
   folderRecords,
   imageDimensions,
+  inferredDescription,
   loadCompilerOccurrenceBinding,
   main,
   normalizeRoute,
