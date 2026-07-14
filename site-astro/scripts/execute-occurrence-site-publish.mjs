@@ -52,10 +52,25 @@ function canonical(value) {
     return `${JSON.stringify(value, null, 2)}\n`;
 }
 
+function boundInputDocuments(value) {
+    if (value === null) return null;
+    if (
+        value === null ||
+        typeof value !== "object" ||
+        Array.isArray(value) ||
+        Object.getPrototypeOf(value) !== Object.prototype ||
+        Object.keys(value).join(",") !== "event,policy"
+    ) {
+        throw new Error("bound occurrence site input documents are invalid");
+    }
+    return value;
+}
+
 export async function runOccurrenceSitePublishCli(
     argv,
     {
         readDocument = readCanonicalExportDocument,
+        boundDocuments = null,
         createRuntime = null,
         runDelivery = runOccurrenceSitePublisherDelivery,
         processEvent,
@@ -64,14 +79,17 @@ export async function runOccurrenceSitePublishCli(
     const { command, values } = options(argv);
     if (command !== "execute") throw new Error(usage());
     exactOptions(values);
+    const bound = boundInputDocuments(boundDocuments);
 
     const [event, producerResult, policy, manifest] = await Promise.all([
-        readDocument(values.get("--event"), "occurrence site event"),
+        bound?.event ??
+            readDocument(values.get("--event"), "occurrence site event"),
         readDocument(
             values.get("--producer-result"),
             "occurrence producer result",
         ),
-        readDocument(values.get("--policy"), "occurrence export policy"),
+        bound?.policy ??
+            readDocument(values.get("--policy"), "occurrence export policy"),
         readDocument(values.get("--manifest"), "static occurrence manifest"),
     ]);
     return runDelivery(

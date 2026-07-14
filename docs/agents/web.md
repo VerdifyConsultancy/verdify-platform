@@ -169,8 +169,9 @@ Kubernetes manifest or Secret values, endpoint probe, network call, replica,
 egress, route, sync, activation, distributed lease, retention/GC, or credential
 provisioning. Merging this source prerequisite does not activate it.
 
-`site-astro/Dockerfile.release-runtime` also carries an offline-default
-`occurrence-exporter` target. It derives from the locked dependency stage. Its
+`site-astro/Dockerfile.occurrence-exporter` independently builds the
+offline-default `occurrence-exporter`; Kaniko does not traverse the
+release-runtime build stage or require its arguments. Its
 default surface copies only an offline verifier and the shared contract module
 under `/app/scripts`; its explicit `/app/runtime-source` tree carries the
 reviewed Astro source, snapshot, policy, and publisher runtime. Its

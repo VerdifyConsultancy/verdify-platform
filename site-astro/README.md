@@ -215,12 +215,15 @@ that the default command invokes it. The approved Pass 1 publisher must be selec
 execute ...`. That command consumes canonical event, producer-result, policy,
 and manifest documents plus disjoint candidate/workspace roots. Before runtime
 or store construction, the selected policy digest must equal the canonical
-policy baked under `/app/runtime-source/config`; a policy revision therefore
-requires a reviewed image revision. It binds the
+policy baked under `/app/runtime-source/config`, and the event builder commit
+must equal `/app/occurrence-exporter-image.json`. The event and policy are each
+read once and those exact canonical values reach delivery; a policy revision
+therefore requires a reviewed image revision. It binds the
 packaged immutable snapshot to the selected occurrence store, runs the compiler,
 Astro, Pagefind, and the global-noindex verifier, then publishes through the
 explicit S3 release writer. Child process groups receive bounded TERM then KILL,
-failed attempts clean only their inode-owned workspace, and event checkpoints
+failed attempts clean only their identity-bound build tree for same-workspace
+retry while successful artifacts remain, and event checkpoints
 are immutable records in the same site release store.
 
 The inert graph-producer library adds one pure planner that verifies the exact

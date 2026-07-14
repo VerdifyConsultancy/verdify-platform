@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { lstat, realpath } from "node:fs/promises";
+import { lstat, realpath, rm } from "node:fs/promises";
 import path from "node:path";
 
 import {
@@ -118,6 +118,86 @@ function rootsOverlap(first, second) {
             !relative.startsWith(`..${path.sep}`) &&
             !path.isAbsolute(relative))
     );
+}
+
+function sameIdentity(first, second) {
+    return first.dev === second.dev && first.ino === second.ino;
+}
+
+async function captureOwnedBuildTree(
+    workspaceRoot,
+    workspaceIdentity,
+    buildResult,
+) {
+    if (
+        buildResult === null ||
+        typeof buildResult !== "object" ||
+        typeof buildResult.buildRoot !== "string"
+    ) {
+        return null;
+    }
+    const buildRoot = path.resolve(buildResult.buildRoot);
+    const relative = path.relative(workspaceRoot, buildRoot);
+    if (
+        relative === "" ||
+        relative === ".." ||
+        relative.startsWith(`..${path.sep}`) ||
+        path.isAbsolute(relative)
+    ) {
+        return null;
+    }
+    const currentWorkspace = await lstat(workspaceRoot, { bigint: true });
+    if (
+        !currentWorkspace.isDirectory() ||
+        currentWorkspace.isSymbolicLink() ||
+        !sameIdentity(currentWorkspace, workspaceIdentity)
+    ) {
+        throw new Error(
+            "occurrence publisher workspace changed during the build",
+        );
+    }
+    const ownedRoot = path.join(workspaceRoot, relative.split(path.sep)[0]);
+    const identity = await lstat(ownedRoot, { bigint: true });
+    if (
+        !identity.isDirectory() ||
+        identity.isSymbolicLink() ||
+        (await realpath(ownedRoot)) !== ownedRoot
+    ) {
+        throw new Error(
+            "occurrence publisher build tree is not an owned directory",
+        );
+    }
+    return { workspaceRoot, workspaceIdentity, ownedRoot, identity };
+}
+
+async function removeOwnedBuildTree(owned) {
+    const workspace = await lstat(owned.workspaceRoot, { bigint: true });
+    if (
+        !workspace.isDirectory() ||
+        workspace.isSymbolicLink() ||
+        !sameIdentity(workspace, owned.workspaceIdentity)
+    ) {
+        throw new Error(
+            "occurrence publisher refused to clean a replaced workspace",
+        );
+    }
+    let selected;
+    try {
+        selected = await lstat(owned.ownedRoot, { bigint: true });
+    } catch (error) {
+        if (error.code === "ENOENT") return;
+        throw error;
+    }
+    if (
+        !selected.isDirectory() ||
+        selected.isSymbolicLink() ||
+        !sameIdentity(selected, owned.identity)
+    ) {
+        throw new Error(
+            "occurrence publisher refused to clean a replaced build tree",
+        );
+    }
+    await rm(owned.ownedRoot, { recursive: true, force: false });
 }
 
 function operationProfileMatches(operation, kind, eventSha256) {
@@ -259,6 +339,7 @@ export async function runOccurrenceSitePublisherDelivery(
         rawWorkspaceRoot,
         "occurrence publisher workspace root",
     );
+    const workspaceIdentity = await lstat(workspaceRoot, { bigint: true });
     if (
         rootsOverlap(candidateRoot, workspaceRoot) ||
         rootsOverlap(workspaceRoot, candidateRoot)
@@ -317,31 +398,60 @@ export async function runOccurrenceSitePublisherDelivery(
         }),
         event,
     );
-    const publication = validatePublicationResult(
-        await processEvent({
-            event,
-            producerResult,
-            policy,
-            manifest,
-            manifestSha256: manifestValue.sha256,
-            occurrenceStore: runtime.occurrenceStore,
-            candidateRoot,
-            workspaceRoot,
-            buildOperation: runtime.buildOperation,
-            verificationOperation: runtime.verificationOperation,
-            checkpointOperations: runtime.checkpointOperations,
-            publicationOperation: runtime.publicationOperation,
-        }),
-        event,
-    );
-    return {
-        contract: "verdify.lab-stage-occurrence-site-execution-result",
-        schemaVersion: 1,
-        siteOrigin: STAGE_ORIGIN,
-        stageGlobalNoindex: true,
-        publicationProfile: STAGE_PROFILE,
-        publication,
+    let ownedBuildTree = null;
+    let completed = false;
+    const buildOperation = {
+        ...runtime.buildOperation,
+        build: async (request) => {
+            const result = await runtime.buildOperation.build(request);
+            const selected = await captureOwnedBuildTree(
+                workspaceRoot,
+                workspaceIdentity,
+                result,
+            );
+            if (selected !== null) {
+                if (ownedBuildTree !== null) {
+                    throw new Error(
+                        "occurrence publisher build operation ran more than once",
+                    );
+                }
+                ownedBuildTree = selected;
+            }
+            return result;
+        },
     };
+    try {
+        const publication = validatePublicationResult(
+            await processEvent({
+                event,
+                producerResult,
+                policy,
+                manifest,
+                manifestSha256: manifestValue.sha256,
+                occurrenceStore: runtime.occurrenceStore,
+                candidateRoot,
+                workspaceRoot,
+                buildOperation,
+                verificationOperation: runtime.verificationOperation,
+                checkpointOperations: runtime.checkpointOperations,
+                publicationOperation: runtime.publicationOperation,
+            }),
+            event,
+        );
+        completed = true;
+        return {
+            contract: "verdify.lab-stage-occurrence-site-execution-result",
+            schemaVersion: 1,
+            siteOrigin: STAGE_ORIGIN,
+            stageGlobalNoindex: true,
+            publicationProfile: STAGE_PROFILE,
+            publication,
+        };
+    } finally {
+        if (!completed && ownedBuildTree !== null) {
+            await removeOwnedBuildTree(ownedBuildTree);
+        }
+    }
 }
 
 export const occurrenceSitePublisherRunnerContract = Object.freeze({

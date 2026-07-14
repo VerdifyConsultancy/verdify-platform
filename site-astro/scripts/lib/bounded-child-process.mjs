@@ -122,13 +122,28 @@ export async function runBoundedChildProcess({
         let killTimer = null;
         let timeout = null;
         let settled = false;
+        let closeObserved = false;
+        let killDeadlineReached = false;
+
+        const finishTerminated = () => {
+            if (
+                terminalError !== null &&
+                closeObserved &&
+                killDeadlineReached
+            ) {
+                finish(terminalError);
+            }
+        };
 
         const terminate = (error) => {
             if (terminalError !== null || settled) return;
             terminalError = error;
             signalProcessTree(child, "SIGTERM");
             killTimer = setTimeout(() => {
+                killTimer = null;
                 signalProcessTree(child, "SIGKILL");
+                killDeadlineReached = true;
+                finishTerminated();
             }, terminationGraceMs);
         };
         const onParentTerm = () =>
@@ -170,7 +185,8 @@ export async function runBoundedChildProcess({
         );
         child.once("close", (code, signal) => {
             if (terminalError !== null) {
-                finish(terminalError);
+                closeObserved = true;
+                finishTerminated();
                 return;
             }
             if (code !== 0) {

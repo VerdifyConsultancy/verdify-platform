@@ -9,6 +9,7 @@ import {
     createStageOutputVerificationOperation,
 } from "./lib/occurrence-site-stage-operations.mjs";
 import { createOccurrenceSiteStageRuntimeFactory } from "./lib/occurrence-site-stage-runtime.mjs";
+import { verifyOccurrenceExporterImage } from "./verify-occurrence-exporter-image.mjs";
 
 const SCRIPT_ROOT = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_SOURCE_ROOT = path.resolve(SCRIPT_ROOT, "..");
@@ -49,13 +50,18 @@ export async function resolvePackagedStagePublisherPaths(
                 sourceRoot: canonicalSource,
                 snapshotRoot: path.join(canonicalSource, ".snapshot"),
                 nodeModulesRoot,
+                metadataPath: path.resolve(
+                    canonicalSource,
+                    "..",
+                    "occurrence-exporter-image.json",
+                ),
             };
         }
     }
     throw new Error("packaged stage publisher Node modules are unavailable");
 }
 
-function policyArgument(argv) {
+function publisherArguments(argv) {
     if (
         !Array.isArray(argv) ||
         argv[0] !== "execute" ||
@@ -80,32 +86,50 @@ function policyArgument(argv) {
     if (EXECUTE_OPTIONS.some((name) => !values.has(name))) {
         throw new Error("stage publisher arguments are invalid");
     }
-    return values.get("--policy");
+    return values;
 }
 
-/** Bind a delivery to the exact canonical policy packaged in this image. */
-export async function assertPackagedStagePolicy(argv, sourceRoot) {
-    const selectedPolicyPath = policyArgument(argv);
+/** Read and bind the delivery inputs to the exact canonical packaged image. */
+export async function readPackagedStageBindings(argv, paths) {
+    const values = publisherArguments(argv);
     const packagedPolicyPath = path.join(
-        path.resolve(sourceRoot),
+        path.resolve(paths.sourceRoot),
         PACKAGED_POLICY,
     );
-    const [packaged, selected] = await Promise.all([
-        readCanonicalExportDocument(
-            packagedPolicyPath,
-            "packaged stage occurrence policy",
-        ),
-        readCanonicalExportDocument(
-            selectedPolicyPath,
-            "selected stage occurrence policy",
-        ),
-    ]);
-    if (selected.sha256 !== packaged.sha256) {
+    const [packagedPolicy, selectedPolicy, event, metadata] =
+        await Promise.all([
+            readCanonicalExportDocument(
+                packagedPolicyPath,
+                "packaged stage occurrence policy",
+            ),
+            readCanonicalExportDocument(
+                values.get("--policy"),
+                "selected stage occurrence policy",
+            ),
+            readCanonicalExportDocument(
+                values.get("--event"),
+                "selected stage occurrence event",
+            ),
+            readCanonicalExportDocument(
+                paths.metadataPath,
+                "packaged occurrence exporter metadata",
+            ),
+        ]);
+    if (selectedPolicy.sha256 !== packagedPolicy.sha256) {
         throw new Error(
             "selected stage occurrence policy does not match the packaged policy",
         );
     }
-    return packaged.sha256;
+    const image = verifyOccurrenceExporterImage(metadata.document);
+    if (event.document?.builderCommit !== image.source.builderCommit) {
+        throw new Error(
+            "selected stage occurrence event builder commit does not match the packaged image",
+        );
+    }
+    return Object.freeze({
+        event,
+        policy: selectedPolicy,
+    });
 }
 
 /** Construct the approved stage runtime without invoking an operation. */
@@ -160,12 +184,15 @@ export async function runExecutableStagePublisher(
     }
     const selectedPaths =
         paths ?? (await resolvePackagedStagePublisherPaths());
-    await assertPackagedStagePolicy(argv, selectedPaths.sourceRoot);
+    const boundDocuments = await readPackagedStageBindings(
+        argv,
+        selectedPaths,
+    );
     const runtime = createRuntime({
         environment,
         ...selectedPaths,
     });
-    return runCli(argv, { createRuntime: runtime });
+    return runCli(argv, { createRuntime: runtime, boundDocuments });
 }
 
 async function main() {

@@ -161,9 +161,9 @@ source-only merge needs no service restart. Any stage rollout needs the
 normal stage acceptance and delayed durability probes; production sync, public
 cutover, and Quartz retirement remain human-gated.
 
-The release-runtime Dockerfile contains an offline-default
-`occurrence-exporter` packaging target. It derives from the locked Node
-dependencies stage. Its no-argument surface still copies only the offline
+The dedicated `site-astro/Dockerfile.occurrence-exporter` packages the
+offline-default `occurrence-exporter` without traversing the release-runtime
+build stage or requiring its build arguments. Its no-argument surface still copies only the offline
 verifier and shared producer-contract module under `/app/scripts`, runs as `101:101`,
 and defaults to `verify-occurrence-exporter-image.mjs`. That verifier imports
 and checks the existing graph, camera, and joint runner contracts, emits a
@@ -182,8 +182,11 @@ execute ...`, mount the six canonical input paths and disjoint
 candidate/workspace roots, and bind only `LAB_OCCURRENCE_STORE`,
 `LAB_RELEASE_STORE`, `LAB_S3_ENDPOINT_URL`, `AWS_DEFAULT_REGION`,
 `AWS_ACCESS_KEY_ID`, and `AWS_SECRET_ACCESS_KEY`.
-Before runtime or store construction, the command requires the selected policy
-digest to match the canonical policy baked in that image. A future policy
+Before runtime or store construction, the command reads the selected event and
+policy once, requires the policy digest to match the canonical policy baked in
+that image, and requires the event builder commit to match the canonical image
+metadata. Those exact in-memory canonical documents reach delivery, so changing
+an input path after binding cannot change the delivered identity. A future policy
 revision must therefore ship as reviewed source in a new image.
 The build requires a 40/64-hex source revision and canonical UTC release time,
 binds them to OCI revision/created labels, and writes the same values into a
@@ -192,8 +195,10 @@ canonical metadata record that the default verifier validates and emits.
 The explicit publisher copies only its owned packaged inputs into an exclusive
 workspace, compiles the selected release, runs Astro and Pagefind, verifies the
 global-noindex output, then publishes through the typed S3 stores. Child
-commands run in one process group with bounded TERM-then-KILL handling; a failed
-attempt removes only the inode-owned workspace so the immutable event can retry.
+commands run in one process group with bounded TERM-then-KILL handling, including
+when the direct child exits before a TERM-resistant descendant. A failed attempt
+removes only the identity-bound build tree so the immutable event can retry in
+the same workspace; successful build artifacts remain available.
 Per-event checkpoints are immutable records in the site release store. Source
 presence still is not a deployment claim: no workload selects this command and
 no endpoint, credential, route, or replica is added here.

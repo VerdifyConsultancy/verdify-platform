@@ -8,6 +8,7 @@ import {
     readFile,
     readdir,
     readlink,
+    rename,
     rm,
     symlink,
     writeFile,
@@ -1820,6 +1821,77 @@ test("stage execution wrapper publishes one canonical delivery and rejects unbou
             }),
         }),
         /did not return the exact event-bound result/,
+    );
+
+    const buildForInjectedFailure = (request) =>
+        request.buildOperation.build({
+            contract: "verdify.lab-profiled-selected-astro-build-request",
+            schemaVersion: 2,
+            publicationProfile: structuredClone(profile),
+            event: structuredClone(request.event),
+            checkpoint: {},
+            workspaceRoot: request.workspaceRoot,
+            policy: structuredClone(request.policy),
+            manifest: structuredClone(request.manifest),
+            occurrenceStore: request.occurrenceStore,
+        });
+    for (const [label, message] of [
+        ["semantic-verifier", "simulated post-build semantic verifier failure"],
+        ["publication-read", "simulated post-build publication read failure"],
+    ]) {
+        const retryInputs = await inputsFor(`${label}-retry-workspace`);
+        let fail = true;
+        const processor = async (request) => {
+            await buildForInjectedFailure(request);
+            if (fail) {
+                fail = false;
+                throw new Error(message);
+            }
+            return structuredClone(result.publication);
+        };
+        await assert.rejects(
+            runOccurrenceSitePublisherDelivery(retryInputs, {
+                createRuntime,
+                processEvent: processor,
+            }),
+            new RegExp(message),
+        );
+        assert.deepEqual(await readdir(retryInputs.workspaceRoot), []);
+        const retried = await runOccurrenceSitePublisherDelivery(retryInputs, {
+            createRuntime,
+            processEvent: processor,
+        });
+        assert.equal(retried.publication.eventSha256, inputs.event.sha256);
+        assert.deepEqual(await readdir(retryInputs.workspaceRoot), [
+            "selected-build",
+        ]);
+    }
+
+    const replacedInputs = await inputsFor("replaced-build-workspace");
+    const replacementMarker = path.join(
+        replacedInputs.workspaceRoot,
+        "selected-build",
+        "replacement-marker",
+    );
+    await assert.rejects(
+        runOccurrenceSitePublisherDelivery(replacedInputs, {
+            createRuntime,
+            processEvent: async (request) => {
+                const built = await buildForInjectedFailure(request);
+                await rename(
+                    built.buildRoot,
+                    path.join(request.workspaceRoot, "displaced-owned-build"),
+                );
+                await mkdir(built.buildRoot);
+                await writeFile(replacementMarker, "unowned replacement\n");
+                throw new Error("simulated failure after build replacement");
+            },
+        }),
+        /refused to clean a replaced build tree/,
+    );
+    assert.equal(
+        await readFile(replacementMarker, "utf8"),
+        "unowned replacement\n",
     );
 });
 

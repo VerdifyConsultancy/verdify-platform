@@ -14,7 +14,11 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { runExecutableStagePublisher } from "../scripts/run-stage-occurrence-site-publisher.mjs";
+import { runOccurrenceSitePublishCli } from "../scripts/execute-occurrence-site-publish.mjs";
+import {
+    resolvePackagedStagePublisherPaths,
+    runExecutableStagePublisher,
+} from "../scripts/run-stage-occurrence-site-publisher.mjs";
 import { runBoundedChildProcess } from "../scripts/lib/bounded-child-process.mjs";
 import { createOccurrenceReleaseStore } from "../scripts/lib/occurrence-release-store.mjs";
 import {
@@ -30,6 +34,7 @@ const POLICY_PATH = new URL(
     "../config/lab-stage-occurrence-export-policy.json",
     import.meta.url,
 );
+const BUILDER_COMMIT = "1".repeat(40);
 
 function sha256(bytes) {
     return createHash("sha256").update(bytes).digest("hex");
@@ -39,10 +44,74 @@ function canonical(document) {
     return `${JSON.stringify(document, null, 2)}\n`;
 }
 
+function canonicalDocument(document) {
+    const bytes = Buffer.from(canonical(document));
+    return { document, bytes, sha256: sha256(bytes) };
+}
+
 async function temporaryRoot(context, prefix) {
     const root = await mkdtemp(path.join(tmpdir(), prefix));
     context.after(() => rm(root, { recursive: true, force: true }));
     return root;
+}
+
+async function publisherBindingFixture(
+    context,
+    prefix,
+    { eventBuilderCommit = BUILDER_COMMIT } = {},
+) {
+    const root = await temporaryRoot(context, prefix);
+    const sourceRoot = path.join(root, "source");
+    await mkdir(path.join(sourceRoot, "config"), { recursive: true });
+    const policyBytes = await readFile(POLICY_PATH);
+    const policyPath = path.join(root, "selected-policy.json");
+    const eventPath = path.join(root, "event.json");
+    const metadataPath = path.join(root, "occurrence-exporter-image.json");
+    await Promise.all([
+        writeFile(
+            path.join(
+                sourceRoot,
+                "config/lab-stage-occurrence-export-policy.json",
+            ),
+            policyBytes,
+        ),
+        writeFile(policyPath, policyBytes),
+        writeFile(
+            eventPath,
+            canonical({ builderCommit: eventBuilderCommit }),
+        ),
+        writeFile(
+            metadataPath,
+            canonical({
+                contract: "verdify.lab-occurrence-exporter-image-metadata",
+                schemaVersion: 1,
+                builderCommit: BUILDER_COMMIT,
+                releasedAt: "2026-07-14T01:34:00Z",
+            }),
+        ),
+    ]);
+    const paths = {
+        sourceRoot,
+        snapshotRoot: path.join(sourceRoot, ".snapshot"),
+        nodeModulesRoot: "/app/node_modules",
+        metadataPath,
+    };
+    const argv = [
+        "execute",
+        "--event",
+        eventPath,
+        "--producer-result",
+        "/input/producer.json",
+        "--policy",
+        policyPath,
+        "--manifest",
+        "/input/manifest.json",
+        "--candidate-root",
+        "/work/candidates",
+        "--workspace-root",
+        "/work/build",
+    ];
+    return { root, sourceRoot, policyPath, eventPath, metadataPath, paths, argv };
 }
 
 test("bounded child termination kills the complete process group", async (context) => {
@@ -74,6 +143,45 @@ test("bounded child termination kills the complete process group", async (contex
         /exceeded 75ms/,
     );
     await new Promise((resolve) => setTimeout(resolve, 450));
+    await assert.rejects(access(marker), /ENOENT/);
+});
+
+test("bounded child keeps its group KILL deadline after the direct child exits", async (context) => {
+    const root = await temporaryRoot(context, "verdify-bounded-descendant-");
+    const marker = path.join(root, "term-resistant-marker");
+    const parent = path.join(root, "exiting-parent.mjs");
+    const grandchild = [
+        'process.on("SIGTERM", () => {});',
+        `setTimeout(() => require("node:fs").writeFileSync(${JSON.stringify(marker)}, "survived"), 350);`,
+        "setInterval(() => {}, 1000);",
+    ].join("\n");
+    await writeFile(
+        parent,
+        [
+            'import { spawn } from "node:child_process";',
+            `spawn(process.execPath, ["-e", ${JSON.stringify(grandchild)}], { stdio: "ignore" });`,
+            'process.on("SIGTERM", () => process.exit(0));',
+            "setInterval(() => {}, 1000);",
+            "",
+        ].join("\n"),
+    );
+    await assert.rejects(
+        runBoundedChildProcess({
+            label: "exiting-parent-process-tree-proof",
+            executable: process.execPath,
+            arguments: [parent],
+            cwd: root,
+            environment: {
+                PATH: process.env.PATH ?? "/usr/local/bin:/usr/bin",
+            },
+            timeoutMs: 75,
+            terminationGraceMs: 75,
+            maximumOutputBytes: 1024,
+            forwardOutput: false,
+        }),
+        /exceeded 75ms/,
+    );
+    await new Promise((resolve) => setTimeout(resolve, 350));
     await assert.rejects(access(marker), /ENOENT/);
 });
 
@@ -353,48 +461,17 @@ test("site checkpoints are immutable and idempotent in the exact S3 release stor
 });
 
 test("explicit stage publisher composition selects a runtime without hiding the command", async (context) => {
-    const root = await temporaryRoot(context, "verdify-stage-policy-");
-    const sourceRoot = path.join(root, "source");
-    await mkdir(path.join(sourceRoot, "config"), { recursive: true });
-    const policyBytes = await readFile(POLICY_PATH);
-    const policyPath = path.join(root, "selected-policy.json");
-    await Promise.all([
-        writeFile(
-            path.join(
-                sourceRoot,
-                "config/lab-stage-occurrence-export-policy.json",
-            ),
-            policyBytes,
-        ),
-        writeFile(policyPath, policyBytes),
-    ]);
+    const fixture = await publisherBindingFixture(
+        context,
+        "verdify-stage-policy-",
+    );
     const environment = { LAB_RELEASE_STORE: "binding" };
-    const paths = {
-        sourceRoot,
-        snapshotRoot: path.join(sourceRoot, ".snapshot"),
-        nodeModulesRoot: "/app/node_modules",
-    };
     const runtime = async () => ({ contract: "runtime" });
     let construction = null;
     let invocation = null;
-    const argv = [
-        "execute",
-        "--event",
-        "/input/event.json",
-        "--producer-result",
-        "/input/producer.json",
-        "--policy",
-        policyPath,
-        "--manifest",
-        "/input/manifest.json",
-        "--candidate-root",
-        "/work/candidates",
-        "--workspace-root",
-        "/work/build",
-    ];
-    const result = await runExecutableStagePublisher(argv, {
+    const result = await runExecutableStagePublisher(fixture.argv, {
         environment,
-        paths,
+        paths: fixture.paths,
         createRuntime: (options) => {
             construction = options;
             return runtime;
@@ -405,53 +482,48 @@ test("explicit stage publisher composition selects a runtime without hiding the 
         },
     });
     assert.deepEqual(result, { status: "selected" });
-    assert.deepEqual(construction, { environment, ...paths });
-    assert.deepEqual(invocation.argv, argv);
+    assert.deepEqual(construction, { environment, ...fixture.paths });
+    assert.deepEqual(invocation.argv, fixture.argv);
     assert.equal(invocation.dependencies.createRuntime, runtime);
+    assert.equal(
+        invocation.dependencies.boundDocuments.event.document.builderCommit,
+        BUILDER_COMMIT,
+    );
+    assert.equal(
+        invocation.dependencies.boundDocuments.policy.sha256,
+        sha256(await readFile(POLICY_PATH)),
+    );
+});
+
+test("packaged path resolution includes the image metadata beside runtime source", async (context) => {
+    const root = await temporaryRoot(context, "verdify-stage-paths-");
+    const sourceRoot = path.join(root, "runtime-source");
+    await mkdir(path.join(sourceRoot, "node_modules"), { recursive: true });
+    assert.deepEqual(await resolvePackagedStagePublisherPaths(sourceRoot), {
+        sourceRoot,
+        snapshotRoot: path.join(sourceRoot, ".snapshot"),
+        nodeModulesRoot: path.join(sourceRoot, "node_modules"),
+        metadataPath: path.join(root, "occurrence-exporter-image.json"),
+    });
 });
 
 test("executable rejects a different approved policy before runtime construction", async (context) => {
-    const root = await temporaryRoot(context, "verdify-stage-policy-drift-");
-    const sourceRoot = path.join(root, "source");
-    await mkdir(path.join(sourceRoot, "config"), { recursive: true });
+    const fixture = await publisherBindingFixture(
+        context,
+        "verdify-stage-policy-drift-",
+    );
     const packaged = JSON.parse(await readFile(POLICY_PATH, "utf8"));
     const selected = structuredClone(packaged);
     selected.reviewedAt = "2026-07-13T07:36:31Z";
-    const packagedPath = path.join(
-        sourceRoot,
-        "config/lab-stage-occurrence-export-policy.json",
-    );
-    const selectedPath = path.join(root, "selected-policy.json");
-    await Promise.all([
-        writeFile(packagedPath, canonical(packaged)),
-        writeFile(selectedPath, canonical(selected)),
-    ]);
+    await writeFile(fixture.policyPath, canonical(selected));
     let runtimeConstructions = 0;
     let cliInvocations = 0;
     await assert.rejects(
         runExecutableStagePublisher(
-            [
-                "execute",
-                "--event",
-                "/input/event.json",
-                "--producer-result",
-                "/input/producer.json",
-                "--policy",
-                selectedPath,
-                "--manifest",
-                "/input/manifest.json",
-                "--candidate-root",
-                "/work/candidates",
-                "--workspace-root",
-                "/work/build",
-            ],
+            fixture.argv,
             {
                 environment: {},
-                paths: {
-                    sourceRoot,
-                    snapshotRoot: path.join(sourceRoot, ".snapshot"),
-                    nodeModulesRoot: "/app/node_modules",
-                },
+                paths: fixture.paths,
                 createRuntime: () => {
                     runtimeConstructions += 1;
                     return async () => ({});
@@ -468,14 +540,83 @@ test("executable rejects a different approved policy before runtime construction
     assert.equal(cliInvocations, 0);
 });
 
+test("executable delivers its single-read policy when the path changes after binding", async (context) => {
+    const fixture = await publisherBindingFixture(
+        context,
+        "verdify-stage-policy-single-read-",
+    );
+    const packaged = JSON.parse(await readFile(POLICY_PATH, "utf8"));
+    const changed = structuredClone(packaged);
+    changed.reviewedAt = "2026-07-13T07:36:31Z";
+    let runtimeRequests = 0;
+    let deliveredPolicy = null;
+    const result = await runExecutableStagePublisher(fixture.argv, {
+        environment: {},
+        paths: fixture.paths,
+        createRuntime: () => async (request) => {
+            runtimeRequests += 1;
+            assert.deepEqual(request.policy, packaged);
+            return { contract: "unused-runtime" };
+        },
+        runCli: async (argv, dependencies) => {
+            await writeFile(fixture.policyPath, canonical(changed));
+            return runOccurrenceSitePublishCli(argv, {
+                ...dependencies,
+                readDocument: async (_file, label) =>
+                    canonicalDocument({ label }),
+                runDelivery: async (inputs, deliveryDependencies) => {
+                    deliveredPolicy = inputs.policy;
+                    await deliveryDependencies.createRuntime({
+                        policy: inputs.policy.document,
+                    });
+                    return { status: "single-read" };
+                },
+            });
+        },
+    });
+    assert.deepEqual(result, { status: "single-read" });
+    assert.deepEqual(deliveredPolicy.document, packaged);
+    assert.equal(deliveredPolicy.sha256, sha256(Buffer.from(canonical(packaged))));
+    assert.notEqual(
+        deliveredPolicy.sha256,
+        sha256(await readFile(fixture.policyPath)),
+    );
+    assert.equal(runtimeRequests, 1);
+});
+
+test("executable rejects an event from a different builder before runtime construction", async (context) => {
+    const fixture = await publisherBindingFixture(
+        context,
+        "verdify-stage-builder-drift-",
+        { eventBuilderCommit: "2".repeat(40) },
+    );
+    let runtimeConstructions = 0;
+    let cliInvocations = 0;
+    await assert.rejects(
+        runExecutableStagePublisher(fixture.argv, {
+            environment: {},
+            paths: fixture.paths,
+            createRuntime: () => {
+                runtimeConstructions += 1;
+                return async () => ({});
+            },
+            runCli: async () => {
+                cliInvocations += 1;
+                return {};
+            },
+        }),
+        /builder commit does not match the packaged image/,
+    );
+    assert.equal(runtimeConstructions, 0);
+    assert.equal(cliInvocations, 0);
+});
+
 test("packaged exporter keeps the offline verifier as its no-argument default", async () => {
     const dockerfile = await readFile(
-        new URL("../Dockerfile.release-runtime", import.meta.url),
+        new URL("../Dockerfile.occurrence-exporter", import.meta.url),
         "utf8",
     );
-    const exporter = dockerfile.slice(
-        dockerfile.indexOf("FROM dependencies AS occurrence-exporter"),
-    );
+    const exporter = dockerfile;
     assert.match(
         exporter,
         /CMD \["node", "\/app\/scripts\/verify-occurrence-exporter-image\.mjs"\]\s*$/u,
