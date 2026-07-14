@@ -2,9 +2,10 @@
 
 This nested Kustomize overlay records the exact Phase 4c pass-1 integration
 contract. It is deliberately absent from the parent `lab-stage` kustomization,
-creates no public route, and renders both Deployments at `replicas: 0`. Nothing
-in this directory is evidence that a reporting feed, credential, image,
-object-store binding, or live 143+2 release exists.
+creates no public route, and renders the reporting Deployment at `replicas: 0`
+plus the occurrence producer CronJob as suspended. Nothing in this directory is
+evidence that a reporting feed, credential, image, object-store binding, or live
+143+2 release exists.
 
 The resource-name contract is fixed:
 
@@ -17,8 +18,10 @@ The resource-name contract is fixed:
   `verdify_lab_reporting_stage`;
 - Grafana runtime: `verdify-lab-reporting-runtime` with
   `GRAFANA_ADMIN_PASSWORD` and `GRAFANA_RENDERER_TOKEN`;
-- one-shot producer: ServiceAccount and Deployment
-  `verdify-lab-occurrence-producer`, with command
+- bounded producer: ServiceAccount and suspended CronJob
+  `verdify-lab-occurrence-producer`, scheduled every 15 minutes with
+  `concurrencyPolicy: Forbid`, a 14-minute active deadline, no same-Job retry,
+  and one invocation of
   `node /app/scripts/run-reporting-occurrence-producer.mjs once`;
 - existing occurrence-store name contract:
   `verdify-lab-occurrence-store-metadata` and
@@ -33,11 +36,12 @@ no superuser/createdb/createrole/replication/bypass-RLS attribute, and no role
 membership in either direction. It permits only the inventoried selectable
 views/materialized views in `lab_reporting`; sequences and every other
 `pg_class` object class fail readiness. The reader must have no object-creation
-privilege on the database or reporting schema and no relation-write privilege,
-no selectable non-system relation or sequence outside `lab_reporting`, and no
-effective `EXECUTE` on any non-system routine outside it. That effective check
-includes default or explicit `PUBLIC EXECUTE` grants while leaving `pg_catalog`
-and other system-schema operations available.
+privilege on the database or any non-system schema and no effective table- or
+column-level relation-write privilege, no selectable or writable non-system
+relation or sequence outside `lab_reporting`, and no effective `EXECUTE` on any
+non-system routine outside it. Those checks include owner, membership, and
+default or explicit `PUBLIC` rights while leaving `pg_catalog` and other
+system-schema operations available.
 The reader's default schema must be `lab_reporting`, so the existing dashboards'
 unqualified table/view names cannot resolve against a primary schema. The
 projection must expose exactly one canonical `lab-public-v1` source-watermark
@@ -69,10 +73,10 @@ liveness can intervene. No Ingress or IngressRoute is present.
 
 ## Deliberate activation blockers
 
-It is not safe to raise either replica count from zero yet. The overlay carries
-a zero-digest exporter sentinel; its current packaged exporter target is
-offline-only and does not contain the runtime command. The canonical source
-manifest and approved-policy ConfigMaps are also intentionally absent. The
+It is not safe to raise the reporting replicas or unsuspend the producer yet.
+The overlay carries a zero-digest exporter sentinel; its current packaged
+exporter target is offline-only and does not contain the runtime command. The
+canonical source manifest and approved-policy ConfigMaps are also intentionally absent. The
 library validates policy/manifest semantics and the canonical manifest digest,
 but no exporter image yet bakes and verifies the exact Jason-approved policy
 byte digest. A mutable ConfigMap alone does not satisfy that executable binding.
@@ -87,8 +91,9 @@ Before any activation patch, independently render this directory and require:
 1. the projection verifier passes using the reporting reader without logging
    credential values;
 2. the projection Service has ready endpoints on both named ports;
-3. a reviewed exporter digest packages the one-shot runtime and matches the
-   exact source revision;
+3. a reviewed exporter digest packages the one-shot runtime, matches the exact
+   source revision, and finishes one full 143+2 cycle inside the CronJob's
+   14-minute deadline;
 4. the canonical source manifest and Jason-approved policy are mounted;
 5. camera and object-store egress are constrained through reviewed endpoints;
 6. object-store selector reads and conditional writes pass against the real

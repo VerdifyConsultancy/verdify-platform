@@ -2,8 +2,9 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 # Source-only nested overlay. The parent lab-stage kustomization deliberately
-# does not reference this directory. Even when rendered independently, both
-# workloads remain at zero replicas and no public route is created.
+# does not reference this directory. Even when rendered independently, the
+# reporting Deployment remains at zero replicas, the producer CronJob remains
+# suspended, and no public route is created.
 namespace: verdify-platform
 
 resources:

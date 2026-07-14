@@ -82,8 +82,8 @@ test("reporting tier is a standalone source-only overlay with no route or Secret
       "ConfigMap/verdify-lab-reporting-targets",
       "Service/verdify-lab-reporting-projection",
       "Service/verdify-lab-reporting-tier",
-      "Deployment/verdify-lab-occurrence-producer",
       "Deployment/verdify-lab-reporting-tier",
+      "CronJob/verdify-lab-occurrence-producer",
       "NetworkPolicy/verdify-lab-occurrence-producer-isolated",
       "NetworkPolicy/verdify-lab-reporting-projection-ingress",
       "NetworkPolicy/verdify-lab-reporting-tier-isolated",
@@ -93,8 +93,9 @@ test("reporting tier is a standalone source-only overlay with no route or Secret
   assert.equal(resources.every(({ metadata }) => (
     metadata.labels["verdify.ai/activation-state"] === "source-only"
   )), true);
-  assert.equal(resources.some(({ kind }) => ["Secret", "Ingress", "IngressRoute", "CronJob", "Job"].includes(kind)), false);
+  assert.equal(resources.some(({ kind }) => ["Secret", "Ingress", "IngressRoute", "Job"].includes(kind)), false);
   assert.equal(resources.filter(({ kind }) => kind === "Deployment").every(({ spec }) => spec.replicas === 0), true);
+  assert.equal(resources.filter(({ kind }) => kind === "CronJob").every(({ spec }) => spec.suspend === true), true);
 
   const parent = YAML.parse(await readFile(PARENT_KUSTOMIZATION, "utf8"));
   assert.equal(parent.resources.some((resource) => /reporting-tier/u.test(resource)), false);
@@ -182,6 +183,54 @@ test("projection verifier rejects effective PUBLIC routine execution outside rep
   assert.doesNotMatch(routineIsolation, /p\.proacl/u);
   assert.match(sql, /\) AS no_non_reporting_routine_execute/u);
   assert.match(sql, /\\if :isolation_no_non_reporting_routine_execute/u);
+});
+
+test("projection verifier rejects effective writes and create outside its read boundary", () => {
+  const { resources } = renderOverlay();
+  const sql = one(resources, "ConfigMap", "verdify-lab-reporting-projection-readiness")
+    .data["projection-readiness.sql"];
+  const isolation = sql.slice(
+    sql.indexOf("SELECT\n  NOT EXISTS ("),
+    sql.indexOf("\\gset isolation_"),
+  );
+  assert.match(isolation, /AS no_non_reporting_relation_write/u);
+  assert.match(isolation, /AS no_non_system_schema_create/u);
+  assert.match(isolation, /FROM pg_namespace AS n/u);
+  assert.match(
+    isolation,
+    /has_schema_privilege\(current_user, n\.oid, 'CREATE'\)/u,
+  );
+  for (const privilege of ["INSERT", "UPDATE", "DELETE", "TRUNCATE", "REFERENCES", "TRIGGER"]) {
+    assert.match(
+      isolation,
+      new RegExp(`has_table_privilege\\(current_user, c\\.oid, '${privilege}'\\)`, "u"),
+    );
+  }
+  for (const privilege of ["INSERT", "UPDATE", "REFERENCES"]) {
+    assert.match(
+      isolation,
+      new RegExp(`has_any_column_privilege\\(current_user, c\\.oid, '${privilege}'\\)`, "u"),
+    );
+  }
+  assert.match(sql, /\\if :isolation_no_non_reporting_relation_write/u);
+  assert.match(sql, /\\if :isolation_no_non_system_schema_create/u);
+
+  const reportingPrivileges = sql.slice(
+    sql.indexOf("), privilege_summary AS ("),
+    sql.indexOf("), false) AS no_relation_writes") + "), false) AS no_relation_writes".length,
+  );
+  for (const privilege of ["INSERT", "UPDATE", "DELETE", "TRUNCATE", "REFERENCES", "TRIGGER"]) {
+    assert.match(
+      reportingPrivileges,
+      new RegExp(`has_table_privilege\\(current_user, oid, '${privilege}'\\)`, "u"),
+    );
+  }
+  for (const privilege of ["INSERT", "UPDATE", "REFERENCES"]) {
+    assert.match(
+      reportingPrivileges,
+      new RegExp(`has_any_column_privilege\\(current_user, oid, '${privilege}'\\)`, "u"),
+    );
+  }
 });
 
 test("projection verifier rejects sequences and every unapproved pg_class kind", () => {
@@ -301,13 +350,24 @@ test("Grafana is private, anonymous-disabled, proxy-authenticated, and projectio
   ]);
 });
 
-test("producer contract is zero-replica, zero-digest, and missing every activation authority", () => {
+test("producer contract is suspended, bounded, zero-digest, and missing every activation authority", () => {
   const { resources } = renderOverlay();
-  const producer = one(resources, "Deployment", "verdify-lab-occurrence-producer");
-  assert.equal(producer.spec.replicas, 0);
-  assert.equal(producer.spec.template.spec.automountServiceAccountToken, false);
-  assert.equal(producer.spec.template.spec.serviceAccountName, "verdify-lab-occurrence-producer");
-  const container = producer.spec.template.spec.containers[0];
+  const producer = one(resources, "CronJob", "verdify-lab-occurrence-producer");
+  assert.equal(producer.spec.suspend, true);
+  assert.equal(producer.spec.schedule, "*/15 * * * *");
+  assert.equal(producer.spec.timeZone, "Etc/UTC");
+  assert.equal(producer.spec.concurrencyPolicy, "Forbid");
+  assert.equal(producer.spec.startingDeadlineSeconds, 300);
+  assert.equal(producer.spec.successfulJobsHistoryLimit, 1);
+  assert.equal(producer.spec.failedJobsHistoryLimit, 3);
+  assert.equal(producer.spec.jobTemplate.spec.activeDeadlineSeconds, 840);
+  assert.equal(producer.spec.jobTemplate.spec.backoffLimit, 0);
+  assert.equal(producer.spec.jobTemplate.spec.ttlSecondsAfterFinished, 3600);
+  const pod = producer.spec.jobTemplate.spec.template.spec;
+  assert.equal(pod.restartPolicy, "Never");
+  assert.equal(pod.automountServiceAccountToken, false);
+  assert.equal(pod.serviceAccountName, "verdify-lab-occurrence-producer");
+  const container = pod.containers[0];
   assert.equal(
     container.image,
     `registry.vallery.net/verdifyconsultancy/verdify-lab-occurrence-exporter@sha256:${ZERO_DIGEST}`,
@@ -339,7 +399,7 @@ test("producer contract is zero-replica, zero-digest, and missing every activati
       key,
     });
   }
-  const volumeConfigMaps = producer.spec.template.spec.volumes
+  const volumeConfigMaps = pod.volumes
     .filter(({ configMap }) => configMap)
     .map(({ configMap }) => configMap.name);
   assert.deepEqual(volumeConfigMaps, [

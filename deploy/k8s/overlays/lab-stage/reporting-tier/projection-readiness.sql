@@ -143,6 +143,33 @@ SELECT
         )
       )
   ) AS no_non_reporting_relation_select,
+  NOT EXISTS (
+    SELECT 1
+    FROM pg_class AS c
+    JOIN pg_namespace AS n ON n.oid = c.relnamespace
+    WHERE n.nspname <> 'lab_reporting'
+      AND n.nspname <> 'information_schema'
+      AND n.nspname NOT LIKE 'pg\_%' ESCAPE '\'
+      AND c.relkind IN ('r', 'p', 'v', 'm', 'f')
+      AND (
+        has_table_privilege(current_user, c.oid, 'INSERT')
+        OR has_table_privilege(current_user, c.oid, 'UPDATE')
+        OR has_table_privilege(current_user, c.oid, 'DELETE')
+        OR has_table_privilege(current_user, c.oid, 'TRUNCATE')
+        OR has_table_privilege(current_user, c.oid, 'REFERENCES')
+        OR has_table_privilege(current_user, c.oid, 'TRIGGER')
+        OR has_any_column_privilege(current_user, c.oid, 'INSERT')
+        OR has_any_column_privilege(current_user, c.oid, 'UPDATE')
+        OR has_any_column_privilege(current_user, c.oid, 'REFERENCES')
+      )
+  ) AS no_non_reporting_relation_write,
+  NOT EXISTS (
+    SELECT 1
+    FROM pg_namespace AS n
+    WHERE n.nspname <> 'information_schema'
+      AND n.nspname NOT LIKE 'pg\_%' ESCAPE '\'
+      AND has_schema_privilege(current_user, n.oid, 'CREATE')
+  ) AS no_non_system_schema_create,
   -- Effective privilege inspection includes owner, membership, and PUBLIC
   -- grants. System namespaces stay available for normal PostgreSQL operation.
   NOT EXISTS (
@@ -159,6 +186,16 @@ SELECT
 \if :isolation_no_non_reporting_relation_select
 \else
   \echo 'projection readiness failed: reporting reader can select a non-reporting relation'
+  \quit 3
+\endif
+\if :isolation_no_non_reporting_relation_write
+\else
+  \echo 'projection readiness failed: reporting reader can write a non-reporting relation'
+  \quit 3
+\endif
+\if :isolation_no_non_system_schema_create
+\else
+  \echo 'projection readiness failed: reporting reader can create objects in a non-system schema'
   \quit 3
 \endif
 \if :isolation_no_non_reporting_routine_execute
@@ -250,10 +287,16 @@ WITH required_relations(name) AS (
     ), false) AS all_relations_selectable,
     COALESCE(bool_and(
       CASE
-        WHEN relkind IN ('v', 'm') THEN NOT has_table_privilege(
-          current_user,
-          oid,
-          'INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER'
+        WHEN relkind IN ('v', 'm') THEN NOT (
+          has_table_privilege(current_user, oid, 'INSERT')
+          OR has_table_privilege(current_user, oid, 'UPDATE')
+          OR has_table_privilege(current_user, oid, 'DELETE')
+          OR has_table_privilege(current_user, oid, 'TRUNCATE')
+          OR has_table_privilege(current_user, oid, 'REFERENCES')
+          OR has_table_privilege(current_user, oid, 'TRIGGER')
+          OR has_any_column_privilege(current_user, oid, 'INSERT')
+          OR has_any_column_privilege(current_user, oid, 'UPDATE')
+          OR has_any_column_privilege(current_user, oid, 'REFERENCES')
         )
         ELSE true
       END
