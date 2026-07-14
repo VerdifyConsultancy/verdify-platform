@@ -134,6 +134,17 @@ site release can publish. The command deliberately has no default runtime,
 store, endpoint, credential, or network client, so this source slice cannot
 publish or activate anything by itself.
 
+The packaged occurrence-exporter image has a separate explicit composition
+command at
+`/app/runtime-source/scripts/run-stage-occurrence-site-publisher.mjs`. It is
+not the Docker `ENTRYPOINT` or `CMD`: the no-argument image contract remains the
+offline verifier. A Pass 1 Deployment must deliberately invoke the script with
+the canonical event, producer-result, approved-policy, manifest, candidate-root,
+and workspace-root arguments. The executable binds the real selected-snapshot
+compiler, Astro/Pagefind/noindex verifier, immutable S3 checkpoint adapter, and
+the existing occurrence/site writer stores. It uses bounded process-group
+termination and cleans only its owned failed workspace before a retry.
+
 Phase 4b PR #525 carries the next source-only object-store/runtime
 prerequisite. The S3 binding accepts only the fixed
 `https://s3-hdd.vallery.net` endpoint and `garage` region, requires the explicit
@@ -145,24 +156,26 @@ writer roles are enforced by the store primitive: `prepare` needs no store;
 writers. The release reconciler gives its CLI child exactly the four S3 keys,
 or an empty environment for a local store.
 
-The same branch provides a construction-only stage publisher factory. Both
-occurrence and built-site locations must be explicit shared-S3 locations and
-must match the event identities; build, verifier, and checkpoint operations
-remain explicit caller dependencies with no defaults. The factory invokes no
-operation and is not selected by a workload or by the executable's default
-path. This local prerequisite has not passed a PR/merge gate and adds no
+The stage publisher factory requires both
+occurrence and built-site locations to be explicit shared-S3 locations that
+must match the event identities. The separate explicit executable supplies the
+packaged build/verifier operations and derives immutable checkpoint operations
+from the exact site writer; merely constructing the factory invokes no
+operation. No workload selects the executable through the image's default
+path. This source adds no
 Kubernetes manifest or Secret values, endpoint probe, network call, replica,
 egress, route, sync, activation, distributed lease, retention/GC, or credential
 provisioning. Merging this source prerequisite does not activate it.
 
-`site-astro/Dockerfile.release-runtime` also carries a source-only
-`occurrence-exporter` target. It derives from the locked dependency stage and
-copies only two project-source files: an offline verifier and the shared
-contract module imported by the real graph, camera, and joint producers. Its
+`site-astro/Dockerfile.release-runtime` also carries an offline-default
+`occurrence-exporter` target. It derives from the locked dependency stage. Its
+default surface copies only an offline verifier and the shared contract module
+under `/app/scripts`; its explicit `/app/runtime-source` tree carries the
+reviewed Astro source, snapshot, policy, and publisher runtime. Its
 default command reports `packaged` / `runtime-unbound`
 after checking the 143-graph, two-camera, and joint runner contracts. The target
-runs as `101:101`, grants no release/device/live authority, and bakes no policy,
-runtime configuration, object-store endpoint, credential, or reporting feed.
+runs as `101:101` and grants no release/device/live authority through that
+default command. No credential value or reporting feed is baked into the image.
 Its required build revision and release instant are syntax-checked, recorded in
 OCI revision/created labels, and repeated in canonical metadata that the
 verifier validates and emits.

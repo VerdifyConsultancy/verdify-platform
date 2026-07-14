@@ -197,14 +197,26 @@ cookies, authentication, device/VLAN access, Frigate, and go2rtc are forbidden,
 and JPEG input must be decoded and cleanly re-encoded without metadata before it
 enters the candidate directory.
 
-The checked-in policy has `activation.state=blocked`. Validation is available,
-but request preparation refuses it. The matching Kubernetes Component under
+The checked-in policy has the exact stage-only approval
+`approved:jason:2026-07-14T01:34:00Z`. The matching Kubernetes Component under
 `deploy/k8s/components/lab-occurrence-reporting-boundary/` is referenced by no
-overlay, defines no workload or Secret, and is deny-all. A separate Jason-gated
-change must approve and create the isolated reporting feed/tier, its
-least-privilege credential, occurrence-store access, and egress limited to that
-store plus `api.verdify.ai:443`. Existing anonymous `graphs.verdify.ai` and the
-Track A primary database role are explicitly ineligible.
+overlay, defines no workload or Secret, and is deny-all. The approval does not
+prove or create the isolated reporting feed/tier, least-privilege credential,
+occurrence-store access, or restricted egress; the deployment must verify those
+gates before invoking the producer. Existing anonymous `graphs.verdify.ai` and
+the Track A primary database role remain explicitly ineligible.
+
+The `occurrence-exporter` image remains inert when started without arguments:
+its Docker `CMD` is the offline contract verifier and it has no publisher
+`ENTRYPOINT`. The approved Pass 1 publisher must be selected explicitly with
+`node /app/runtime-source/scripts/run-stage-occurrence-site-publisher.mjs
+execute ...`. That command consumes canonical event, producer-result, policy,
+and manifest documents plus disjoint candidate/workspace roots. It binds the
+packaged immutable snapshot to the selected occurrence store, runs the compiler,
+Astro, Pagefind, and the global-noindex verifier, then publishes through the
+explicit S3 release writer. Child process groups receive bounded TERM then KILL,
+failed attempts clean only their inode-owned workspace, and event checkpoints
+are immutable records in the same site release store.
 
 The inert graph-producer library adds one pure planner that verifies the exact
 occurrence-manifest bytes against that policy and emits all 143 render targets in

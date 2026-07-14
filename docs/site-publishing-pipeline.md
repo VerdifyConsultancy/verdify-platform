@@ -116,7 +116,8 @@ success, including committed responses that were not observed by the writer.
 Offline tests exercise the same operation surface with local and injected fake
 S3 stores; they perform no network request and supply no endpoint or credential.
 
-The checked-in policy is blocked and byte-binds the accepted stage occurrence
+The checked-in policy carries Jason's stage-only approval recorded at
+`2026-07-14T01:34:00Z` and byte-binds the accepted stage occurrence
 manifest: 143 graph fingerprints plus two opaque camera fingerprints. Every batch
 also binds the exact canonical policy SHA-256. The compiler requires a named
 operator-owned, one-way, read-only public reporting feed and rejects reuse of
@@ -144,11 +145,12 @@ selection, freshness, and rollback instants must round-trip as canonical UTC wit
 either whole seconds or exactly three milliseconds; impossible dates are rejected.
 
 `deploy/k8s/components/lab-occurrence-reporting-boundary/` records the future
-boundary but is deliberately inert: no overlay reference, workload, Secret,
-Service, or Ingress, and deny-all egress. Request preparation also refuses the
-blocked policy. A separate Jason-gated change must approve and provide the
-reporting tier/feed, reporting-only credential, occurrence-store route, and
-egress restricted to that store plus `api.verdify.ai:443`.
+boundary but remains deliberately inert: no overlay reference, workload,
+Secret, Service, or Ingress, and deny-all egress. Approval makes the exact
+policy eligible for the reviewed stage path; it does not claim that the
+reporting tier/feed, reporting-only credential, occurrence-store route, or
+restricted egress are present. Those runtime gates must be proven before a
+producer invocation.
 
 This implementation does not grant export authority or prove live freshness.
 Before stage can select a real occurrence release, separate work must provide a
@@ -159,25 +161,37 @@ source-only merge needs no service restart. Any stage rollout needs the
 normal stage acceptance and delayed durability probes; production sync, public
 cutover, and Quartz retirement remain human-gated.
 
-The release-runtime Dockerfile contains a source-only
+The release-runtime Dockerfile contains an offline-default
 `occurrence-exporter` packaging target. It derives from the locked Node
-dependencies stage and copies only two project-source files into it: an
-offline verifier and the shared contract module consumed by the real graph,
-camera, and joint producers. It runs as `101:101`
+dependencies stage. Its no-argument surface still copies only the offline
+verifier and shared producer-contract module under `/app/scripts`, runs as `101:101`,
 and defaults to `verify-occurrence-exporter-image.mjs`. That verifier imports
 and checks the existing graph, camera, and joint runner contracts, emits a
 deterministic `packaged` / `runtime-unbound` status, and invokes no network,
 store, capture, or render operation. The target grants no release, device, or
-live authority and contains no policy, runtime configuration, endpoint,
-credential, or reporting feed.
+live authority through its default command.
+
+The same image now packages the reviewed Astro source, immutable sanitized
+snapshot, approved policy, and stage publisher modules under
+`/app/runtime-source`. There is deliberately no publisher `ENTRYPOINT` and no
+implicit command switch. Pass 1 must explicitly run
+`node /app/runtime-source/scripts/run-stage-occurrence-site-publisher.mjs
+execute ...`, mount the six canonical input paths and disjoint
+candidate/workspace roots, and bind only `LAB_OCCURRENCE_STORE`,
+`LAB_RELEASE_STORE`, `LAB_S3_ENDPOINT_URL`, `AWS_DEFAULT_REGION`,
+`AWS_ACCESS_KEY_ID`, and `AWS_SECRET_ACCESS_KEY`.
 The build requires a 40/64-hex source revision and canonical UTC release time,
 binds them to OCI revision/created labels, and writes the same values into a
 canonical metadata record that the default verifier validates and emits.
 
-This is not a deployable exporter runtime claim. No graph renderer or other
-runtime dependency is selected, no Kubernetes workload or overlay image
-sentinel references the target, and no build digest or pin exists for it yet.
-Those remain separate source, CI, GitOps, and Jason-gated activation steps.
+The explicit publisher copies only its owned packaged inputs into an exclusive
+workspace, compiles the selected release, runs Astro and Pagefind, verifies the
+global-noindex output, then publishes through the typed S3 stores. Child
+commands run in one process group with bounded TERM-then-KILL handling; a failed
+attempt removes only the inode-owned workspace so the immutable event can retry.
+Per-event checkpoints are immutable records in the site release store. Source
+presence still is not a deployment claim: no workload selects this command and
+no endpoint, credential, route, or replica is added here.
 
 The specialist-occurrence fixture is separate from the complete built-tree release
 store below. It retains ten occurrence manifests and two selected media generations,

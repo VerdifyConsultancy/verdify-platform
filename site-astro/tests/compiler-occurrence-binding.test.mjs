@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { cp, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
+import { access, cp, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -13,6 +13,7 @@ import {
   verifyCompilerOccurrenceDiscovery,
   verifyCompleteSelectedOccurrenceEvidence,
 } from "../scripts/compile-snapshot.mjs";
+import { runBoundedChildProcess } from "../scripts/lib/bounded-child-process.mjs";
 import {
   draftBlockedOccurrenceExportPolicy,
   occurrenceExportPolicySha256,
@@ -28,7 +29,12 @@ import {
   publishOccurrenceRelease,
   staticOccurrenceManifest,
 } from "../scripts/lib/occurrence-release.mjs";
-import { S3OccurrenceReleaseStore } from "../scripts/lib/occurrence-release-store.mjs";
+import {
+  S3OccurrenceReleaseStore,
+  createOccurrenceReleaseStore,
+} from "../scripts/lib/occurrence-release-store.mjs";
+import { createStageAstroBuildOperation } from "../scripts/lib/occurrence-site-stage-operations.mjs";
+import { occurrenceSitePublicationProfiles } from "../scripts/lib/occurrence-site-publisher.mjs";
 import { verifySelectedEvidence } from "../scripts/verify-production-output.mjs";
 
 const SITE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -548,7 +554,13 @@ test("compiler builds and materializes a selected 143 plus 2 release through one
   await mkdir(projectRoot);
   await mkdir(path.join(projectRoot, "vendor"));
   await Promise.all([
+    cp(path.join(SITE_ROOT, "astro.config.mjs"), path.join(projectRoot, "astro.config.mjs")),
+    cp(path.join(SITE_ROOT, "package.json"), path.join(projectRoot, "package.json")),
+    cp(path.join(SITE_ROOT, "package-lock.json"), path.join(projectRoot, "package-lock.json")),
+    cp(path.join(SITE_ROOT, "postcss.config.mjs"), path.join(projectRoot, "postcss.config.mjs")),
+    cp(path.join(SITE_ROOT, "tsconfig.json"), path.join(projectRoot, "tsconfig.json")),
     cp(path.join(SITE_ROOT, "scripts"), path.join(projectRoot, "scripts"), { recursive: true }),
+    cp(path.join(SITE_ROOT, "src"), path.join(projectRoot, "src"), { recursive: true }),
     cp(path.join(SITE_ROOT, "vendor", "compat-public"), path.join(projectRoot, "vendor", "compat-public"), { recursive: true }),
     cp(path.join(SITE_ROOT, "vendor", "site-shell"), path.join(projectRoot, "vendor", "site-shell"), { recursive: true }),
     cp(path.join(SITE_ROOT, "tests", "fixtures", "snapshot"), path.join(projectRoot, "snapshot"), { recursive: true }),
@@ -830,4 +842,56 @@ test("compiler builds and materializes a selected 143 plus 2 release through one
   assert.equal((await readFile(
     path.join(projectRoot, ".generated", "public", "evidence", "blobs", "sha256", `${imageSha256}.png`),
   )).compare(imageBytes), 0);
+
+  // Exercise the exact packaged publisher build path, including the selected
+  // compiler, Astro, Pagefind, and global-noindex output. The corpus-specific
+  // frozen-snapshot verifier is skipped here because this test deliberately
+  // constructs a smaller approval-ineligible snapshot; the semantic assertions
+  // below cover the target-independent runtime boundary.
+  const publisherWorkspace = path.join(root, "publisher-workspace");
+  await mkdir(publisherWorkspace);
+  const buildOperation = createStageAstroBuildOperation({
+    sourceRoot: projectRoot,
+    snapshotRoot,
+    nodeModulesRoot: path.join(SITE_ROOT, "node_modules"),
+    environment: {
+      PATH: process.env.PATH ?? "/usr/local/bin:/usr/bin",
+      LAB_OCCURRENCE_STORE: storeRoot,
+    },
+    timeoutMs: 3 * 60 * 1000,
+    runCommand: (request) => (
+      request.label === "verify selected global-noindex stage output"
+        ? Promise.resolve()
+        : runBoundedChildProcess({
+            ...request,
+            maximumOutputBytes: 4 * 1024 * 1024,
+            forwardOutput: false,
+          })
+    ),
+  });
+  const buildResult = await buildOperation.build({
+    contract: "verdify.lab-profiled-selected-astro-build-request",
+    schemaVersion: 2,
+    publicationProfile: structuredClone(occurrenceSitePublicationProfiles.stage),
+    event: { sourceSnapshotManifestSha256 },
+    checkpoint: {},
+    workspaceRoot: publisherWorkspace,
+    policy,
+    manifest: discoveryManifest,
+    occurrenceStore: createOccurrenceReleaseStore(storeRoot),
+  });
+  const built = JSON.parse(await readFile(path.join(buildResult.buildRoot, "static-build.json"), "utf8"));
+  const builtOccurrences = JSON.parse(await readFile(
+    path.join(buildResult.buildRoot, "occurrence-manifest.json"),
+    "utf8",
+  ));
+  const builtHome = await readFile(path.join(buildResult.buildRoot, "index.html"), "utf8");
+  assert.equal(built.siteOrigin, "https://lab-stage.verdify.ai");
+  assert.equal(built.stageGlobalNoindex, true);
+  assert.equal(built.grafanaOccurrenceCount, 143);
+  assert.equal(built.currentMediaOccurrenceCount, 2);
+  assert.equal(builtOccurrences.graphs.filter((item) => item.selected?.fallback).length, 143);
+  assert.equal(builtOccurrences.currentMedia.filter((item) => item.selected?.fallback).length, 2);
+  assert.match(builtHome, /<meta name="robots" content="noindex,follow">/u);
+  await access(path.join(buildResult.buildRoot, "pagefind", "pagefind-entry.json"));
 });

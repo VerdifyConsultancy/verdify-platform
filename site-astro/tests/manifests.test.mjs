@@ -312,8 +312,20 @@ test("site target precedes the independent occurrence exporter target for Kaniko
   assert.match(exporter, /\^\[0-9a-f\]\{40\}\(\[0-9a-f\]\{24\}\)\?\$/u);
   assert.match(exporter, /USER 101:101/u);
   assert.match(exporter, /CMD \["node", "\/app\/scripts\/verify-occurrence-exporter-image\.mjs"\]/u);
+  assert.doesNotMatch(exporter, /^ENTRYPOINT/imu);
   assert.doesNotMatch(exporter, /^ENV\s/mu);
-  assert.doesNotMatch(exporter, /COPY\s+\.\s|COPY[^\n]*(?:config|policy|credential|feed)|https?:\/\/|AWS_|LAB_S3_/u);
+  assert.doesNotMatch(exporter, /COPY\s+\.\s/u);
+  for (const packaged of [
+    "config/ /app/runtime-source/config/",
+    "scripts/ /app/runtime-source/scripts/",
+    "src/ /app/runtime-source/src/",
+    "vendor/ /app/runtime-source/vendor/",
+    ".snapshot/ /app/runtime-source/.snapshot/",
+  ]) {
+    assert.match(exporter, new RegExp(`COPY ${packaged.replaceAll("/", "\\/").replaceAll(".", "\\.")}`));
+  }
+  assert.match(exporter, /run-stage-occurrence-site-publisher\.mjs/u);
+  assert.match(exporter, /approved:jason:2026-07-14T01:34:00Z/u);
 
   const copiedScripts = [...exporter.matchAll(/^COPY\s+(scripts\/[^\s]+)\s+\/app\/scripts\//gmu)]
     .map((match) => match[1]);
