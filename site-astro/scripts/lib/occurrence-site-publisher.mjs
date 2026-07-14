@@ -36,6 +36,22 @@ const RELEASE_EVENT_ID_RE = /^evt_[A-Za-z0-9_-]{8,128}$/u;
 const ISO_INSTANT_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/u;
 const COMMIT_RE = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/u;
 const PROVENANCE_PATH = "occurrence-publish-provenance.json";
+const PUBLICATION_PROFILE_KEYS = [
+    "siteOrigin",
+    "stageGlobalNoindex",
+    "policyVersion",
+];
+
+const PRODUCTION_PUBLICATION_PROFILE = Object.freeze({
+    siteOrigin: "https://lab.verdify.ai",
+    stageGlobalNoindex: false,
+    policyVersion: "occurrence-selected-production-v1",
+});
+const STAGE_PUBLICATION_PROFILE = Object.freeze({
+    siteOrigin: "https://lab-stage.verdify.ai",
+    stageGlobalNoindex: true,
+    policyVersion: "occurrence-selected-stage-v1",
+});
 
 const EVENT_KEYS = [
     "contract",
@@ -112,6 +128,42 @@ function exactKeys(value, keys) {
         Object.keys(value).join(",") === keys.join(",")
     );
 }
+
+function validatePublicationProfile(value) {
+    if (!exactKeys(value, PUBLICATION_PROFILE_KEYS)) {
+        throw new Error(
+            "site publication profile does not use the closed v1 shape",
+        );
+    }
+    const canonical = canonicalBytes(value);
+    if (
+        !canonical.equals(canonicalBytes(PRODUCTION_PUBLICATION_PROFILE)) &&
+        !canonical.equals(canonicalBytes(STAGE_PUBLICATION_PROFILE))
+    ) {
+        throw new Error("site publication profile is not an approved target");
+    }
+    return structuredClone(value);
+}
+
+export function occurrenceSiteOperationSha256(kind, rawProfile) {
+    if (!["build", "verification"].includes(kind)) {
+        throw new Error("occurrence site operation kind is invalid");
+    }
+    const publicationProfile = validatePublicationProfile(rawProfile);
+    return sha256(
+        canonicalBytes({
+            contract: "verdify.lab-occurrence-site-operation-identity",
+            schemaVersion: 1,
+            kind,
+            publicationProfile,
+        }),
+    );
+}
+
+export const occurrenceSitePublicationProfiles = Object.freeze({
+    production: PRODUCTION_PUBLICATION_PROFILE,
+    stage: STAGE_PUBLICATION_PROFILE,
+});
 
 function safeText(value, label, maximum = 512) {
     if (
@@ -303,44 +355,90 @@ function validateProducerResult(
 }
 
 function validateBuildOperation(operation, event) {
-    if (
-        !exactKeys(operation, [
+    const legacy =
+        exactKeys(operation, [
             "contract",
             "schemaVersion",
             "operationSha256",
             "build",
-        ]) ||
+        ]) && operation.schemaVersion === 1;
+    const profiled =
+        exactKeys(operation, [
+            "contract",
+            "schemaVersion",
+            "operationSha256",
+            "publicationProfile",
+            "build",
+        ]) && operation.schemaVersion === 2;
+    if (
+        (!legacy && !profiled) ||
         operation.contract !== "verdify.lab-selected-astro-build-operation" ||
-        operation.schemaVersion !== 1 ||
         operation.operationSha256 !== event.buildOperationSha256 ||
         !SHA256_RE.test(operation.operationSha256) ||
         typeof operation.build !== "function"
-    )
+    ) {
         throw new Error(
             "Astro build operation does not use the bound v1 contract",
         );
-    return operation;
+    }
+    const publicationProfile = profiled
+        ? validatePublicationProfile(operation.publicationProfile)
+        : structuredClone(PRODUCTION_PUBLICATION_PROFILE);
+    if (
+        profiled &&
+        occurrenceSiteOperationSha256("build", publicationProfile) !==
+            operation.operationSha256
+    ) {
+        throw new Error(
+            "Astro build operation identity does not bind its publication profile",
+        );
+    }
+    return { operation, publicationProfile, targetAttested: profiled };
 }
 
 function validateVerificationOperation(operation, event) {
-    if (
-        !exactKeys(operation, [
+    const legacy =
+        exactKeys(operation, [
             "contract",
             "schemaVersion",
             "operationSha256",
             "verify",
-        ]) ||
-        operation.contract !==
-            "verdify.lab-production-output-verification-operation" ||
-        operation.schemaVersion !== 1 ||
+        ]) &&
+        operation.contract ===
+            "verdify.lab-production-output-verification-operation" &&
+        operation.schemaVersion === 1;
+    const profiled =
+        exactKeys(operation, [
+            "contract",
+            "schemaVersion",
+            "operationSha256",
+            "publicationProfile",
+            "verify",
+        ]) &&
+        operation.contract ===
+            "verdify.lab-site-output-verification-operation" &&
+        operation.schemaVersion === 2;
+    if (
+        (!legacy && !profiled) ||
         operation.operationSha256 !== event.verificationOperationSha256 ||
         !SHA256_RE.test(operation.operationSha256) ||
         typeof operation.verify !== "function"
-    )
+    ) {
+        throw new Error("site output verifier does not use a bound contract");
+    }
+    const publicationProfile = profiled
+        ? validatePublicationProfile(operation.publicationProfile)
+        : structuredClone(PRODUCTION_PUBLICATION_PROFILE);
+    if (
+        profiled &&
+        occurrenceSiteOperationSha256("verification", publicationProfile) !==
+            operation.operationSha256
+    ) {
         throw new Error(
-            "production output verifier does not use the bound v1 contract",
+            "site output verifier identity does not bind its publication profile",
         );
-    return operation;
+    }
+    return { operation, publicationProfile, targetAttested: profiled };
 }
 
 function validateCheckpointOperations(operation, event) {
@@ -1005,6 +1103,8 @@ async function verifySelectedBuild({
     policy,
     selected,
     inventory,
+    publicationProfile,
+    targetAttested,
 }) {
     const [buildValue, occurrenceValue, provenanceValue] = await Promise.all([
         readCanonicalJson(
@@ -1022,6 +1122,15 @@ async function verifySelectedBuild({
     ]);
     const build = buildValue.document;
     const occurrenceManifest = occurrenceValue.document;
+    if (
+        targetAttested &&
+        (build.siteOrigin !== publicationProfile.siteOrigin ||
+            build.stageGlobalNoindex !== publicationProfile.stageGlobalNoindex)
+    ) {
+        throw new Error(
+            "Astro build does not attest the bound site publication target",
+        );
+    }
     for (const [relative, value] of [
         ["static-build.json", buildValue],
         ["occurrence-manifest.json", occurrenceValue],
@@ -1101,24 +1210,41 @@ async function verifySelectedBuild({
     };
 }
 
-function validateVerificationResult(value, expected) {
-    if (
-        !exactKeys(value, [
+function validateVerificationResult(value, expected, targetAttested) {
+    const identityKeys = [
+        "buildInventorySha256",
+        "buildContentIdentitySha256",
+        "staticBuildSha256",
+        "occurrenceOutputManifestSha256",
+        "occurrenceSelectionSha256",
+        "occurrenceManifestSha256",
+        "provenanceSha256",
+        "siteEventSha256",
+        "sitePayloadSha256",
+    ];
+    const legacy =
+        !targetAttested &&
+        exactKeys(value, ["contract", "schemaVersion", ...identityKeys]) &&
+        value.contract ===
+            "verdify.lab-production-output-verification-result" &&
+        value.schemaVersion === 1;
+    const profiled =
+        targetAttested &&
+        exactKeys(value, [
             "contract",
             "schemaVersion",
-            "buildInventorySha256",
-            "buildContentIdentitySha256",
-            "staticBuildSha256",
-            "occurrenceOutputManifestSha256",
-            "occurrenceSelectionSha256",
-            "occurrenceManifestSha256",
-            "provenanceSha256",
-            "siteEventSha256",
-            "sitePayloadSha256",
-        ]) ||
-        value.contract !==
-            "verdify.lab-production-output-verification-result" ||
-        value.schemaVersion !== 1 ||
+            "siteOrigin",
+            "stageGlobalNoindex",
+            "policyVersion",
+            ...identityKeys,
+        ]) &&
+        value.contract === "verdify.lab-site-output-verification-result" &&
+        value.schemaVersion === 2 &&
+        value.siteOrigin === expected.siteOrigin &&
+        value.stageGlobalNoindex === expected.stageGlobalNoindex &&
+        value.policyVersion === expected.policyVersion;
+    if (
+        (!legacy && !profiled) ||
         value.buildInventorySha256 !== expected.buildInventorySha256 ||
         value.buildContentIdentitySha256 !==
             expected.buildContentIdentitySha256 ||
@@ -1133,12 +1259,12 @@ function validateVerificationResult(value, expected) {
         value.sitePayloadSha256 !== expected.sitePayloadSha256
     )
         throw new Error(
-            "production output verifier did not attest the exact selected build",
+            "site output verifier did not attest the exact selected build and target",
         );
     return value;
 }
 
-function siteEvent(event, contentIdentitySha256) {
+function siteEvent(event, contentIdentitySha256, policyVersion) {
     return {
         contract: "verdify.lab-release-trigger",
         schemaVersion: 1,
@@ -1149,7 +1275,7 @@ function siteEvent(event, contentIdentitySha256) {
         occurredAt: event.occurredAt,
         payloadSha256: siteReleasePayloadSha256({
             sourceSnapshotManifestSha256: event.sourceSnapshotManifestSha256,
-            policyVersion: "occurrence-selected-production-v1",
+            policyVersion,
             builderCommit: event.builderCommit,
             contentIdentitySha256,
         }),
@@ -1262,7 +1388,12 @@ function assertEventOrder(event, current) {
     }
 }
 
-async function publishedEventState(publication, event, checkpoint) {
+async function publishedEventState(
+    publication,
+    event,
+    checkpoint,
+    publicationProfile,
+) {
     const intent = await publication.readEventIntent(event.eventId);
     if (intent === null) return null;
     if (
@@ -1304,7 +1435,8 @@ async function publishedEventState(publication, event, checkpoint) {
         manifest.event.occurredAt !== event.occurredAt ||
         manifest.sourceSnapshotManifestSha256 !==
             event.sourceSnapshotManifestSha256 ||
-        manifest.builderCommit !== event.builderCommit
+        manifest.builderCommit !== event.builderCommit ||
+        manifest.policyVersion !== publicationProfile.policyVersion
     )
         throw new Error(
             "published site release does not match the exact event envelope",
@@ -1381,7 +1513,7 @@ function publicResult({
 
 /**
  * Join one already-produced occurrence result to the selected occurrence store,
- * a single-use Astro workspace, production verification, and full-site release.
+ * a single-use Astro workspace, target-profiled verification, and full-site release.
  * Every I/O-capable dependency is explicit; this module constructs no client,
  * transport, command, environment binding, route, workload, or activation.
  */
@@ -1427,11 +1559,25 @@ export async function processOccurrenceSitePublishEvent({
         manifestSha256,
         manifest,
     );
-    const buildOperation = validateBuildOperation(rawBuildOperation, event);
-    const verificationOperation = validateVerificationOperation(
+    const buildBinding = validateBuildOperation(rawBuildOperation, event);
+    const verificationBinding = validateVerificationOperation(
         rawVerificationOperation,
         event,
     );
+    if (
+        buildBinding.targetAttested !== verificationBinding.targetAttested ||
+        !canonicalBytes(buildBinding.publicationProfile).equals(
+            canonicalBytes(verificationBinding.publicationProfile),
+        )
+    ) {
+        throw new Error(
+            "Astro build and verification operations target different publication profiles",
+        );
+    }
+    const buildOperation = buildBinding.operation;
+    const verificationOperation = verificationBinding.operation;
+    const publicationProfile = buildBinding.publicationProfile;
+    const targetAttested = buildBinding.targetAttested;
     const checkpointOperations = validateCheckpointOperations(
         rawCheckpointOperations,
         event,
@@ -1520,6 +1666,7 @@ export async function processOccurrenceSitePublishEvent({
         publication,
         event,
         checkpoint,
+        publicationProfile,
     );
     if (alreadyPublished?.state === "selected") {
         return publicResult({
@@ -1533,8 +1680,13 @@ export async function processOccurrenceSitePublishEvent({
 
     const workspace = await canonicalEmptyWorkspace(workspaceRoot);
     const buildResult = await buildOperation.build({
-        contract: "verdify.lab-selected-astro-build-request",
-        schemaVersion: 1,
+        contract: targetAttested
+            ? "verdify.lab-profiled-selected-astro-build-request"
+            : "verdify.lab-selected-astro-build-request",
+        schemaVersion: targetAttested ? 2 : 1,
+        ...(targetAttested
+            ? { publicationProfile: structuredClone(publicationProfile) }
+            : {}),
         event: structuredClone(event),
         checkpoint: structuredClone(checkpoint),
         workspaceRoot: workspace,
@@ -1554,6 +1706,8 @@ export async function processOccurrenceSitePublishEvent({
         policy,
         selected,
         inventory: beforeSemanticReads,
+        publicationProfile,
+        targetAttested,
     });
     const afterSemanticReads = await inventoryBuiltSite(buildRoot);
     if (
@@ -1566,12 +1720,19 @@ export async function processOccurrenceSitePublishEvent({
     const files = publicInventory(beforeVerification);
     const contentIdentitySha256 = siteContentIdentitySha256({
         sourceSnapshotManifestSha256: event.sourceSnapshotManifestSha256,
-        policyVersion: "occurrence-selected-production-v1",
+        policyVersion: publicationProfile.policyVersion,
         builderCommit: event.builderCommit,
         files,
     });
-    const releaseEvent = siteEvent(event, contentIdentitySha256);
+    const releaseEvent = siteEvent(
+        event,
+        contentIdentitySha256,
+        publicationProfile.policyVersion,
+    );
     const verificationExpected = {
+        siteOrigin: publicationProfile.siteOrigin,
+        stageGlobalNoindex: publicationProfile.stageGlobalNoindex,
+        policyVersion: publicationProfile.policyVersion,
         buildInventorySha256: inventoryIdentity(beforeVerification),
         buildContentIdentitySha256: contentIdentitySha256,
         staticBuildSha256: buildEvidence.buildSha256,
@@ -1585,8 +1746,17 @@ export async function processOccurrenceSitePublishEvent({
     };
     validateVerificationResult(
         await verificationOperation.verify({
-            contract: "verdify.lab-production-output-verification-request",
-            schemaVersion: 1,
+            contract: targetAttested
+                ? "verdify.lab-site-output-verification-request"
+                : "verdify.lab-production-output-verification-request",
+            schemaVersion: targetAttested ? 2 : 1,
+            ...(targetAttested
+                ? {
+                      siteOrigin: publicationProfile.siteOrigin,
+                      stageGlobalNoindex: publicationProfile.stageGlobalNoindex,
+                      policyVersion: publicationProfile.policyVersion,
+                  }
+                : {}),
             event: structuredClone(event),
             buildRoot,
             buildContentIdentitySha256: contentIdentitySha256,
@@ -1601,13 +1771,14 @@ export async function processOccurrenceSitePublishEvent({
             sitePayloadSha256: verificationExpected.sitePayloadSha256,
         }),
         verificationExpected,
+        targetAttested,
     );
     const afterVerification = await inventoryBuiltSite(buildRoot);
     if (
         inventoryIdentity(beforeVerification) !==
         inventoryIdentity(afterVerification)
     ) {
-        throw new Error("Astro build changed during production verification");
+        throw new Error("Astro build changed during site output verification");
     }
     await validateSelectedOccurrence(occurrenceOperations, checkpoint, policy);
 
@@ -1617,7 +1788,7 @@ export async function processOccurrenceSitePublishEvent({
             buildRoot,
             event: releaseEvent,
             sourceSnapshotManifestSha256: event.sourceSnapshotManifestSha256,
-            policyVersion: "occurrence-selected-production-v1",
+            policyVersion: publicationProfile.policyVersion,
             builderCommit: event.builderCommit,
             releasedAt: event.releasedAt,
             expectedSelectionSha256: event.expectedSiteSelectionSha256,
@@ -1627,7 +1798,12 @@ export async function processOccurrenceSitePublishEvent({
     }
     let published;
     try {
-        published = await publishedEventState(publication, event, checkpoint);
+        published = await publishedEventState(
+            publication,
+            event,
+            checkpoint,
+            publicationProfile,
+        );
     } catch (readError) {
         if (publicationError !== null) throw publicationError;
         throw readError;

@@ -20,9 +20,16 @@ import { deflateSync } from "node:zlib";
 
 import {
     createOccurrenceSitePublishEvent,
+    occurrenceSiteOperationSha256,
+    occurrenceSitePublicationProfiles,
     occurrenceSitePublisherContract,
     processOccurrenceSitePublishEvent,
 } from "../scripts/lib/occurrence-site-publisher.mjs";
+import {
+    occurrenceSitePublisherRunnerContract,
+    runOccurrenceSitePublisherDelivery,
+} from "../scripts/lib/occurrence-site-publisher-runner.mjs";
+import { runOccurrenceSitePublishCli } from "../scripts/execute-occurrence-site-publish.mjs";
 import {
     draftBlockedOccurrenceExportPolicy,
     occurrenceExportPolicySha256,
@@ -127,6 +134,15 @@ function canonicalBytes(value) {
 
 function sha256(value) {
     return createHash("sha256").update(value).digest("hex");
+}
+
+function canonicalDocument(document) {
+    const bytes = canonicalBytes(document);
+    return {
+        document: structuredClone(document),
+        bytes,
+        sha256: sha256(bytes),
+    };
 }
 
 function missing() {
@@ -613,11 +629,20 @@ function publicationOperation(
     };
 }
 
-function buildOperation() {
+function buildOperation(
+    publicationProfile = null,
+    { targetOverride = null } = {},
+) {
+    const profiled = publicationProfile !== null;
     return {
         contract: "verdify.lab-selected-astro-build-operation",
-        schemaVersion: 1,
-        operationSha256: BUILD_OPERATION_SHA256,
+        schemaVersion: profiled ? 2 : 1,
+        operationSha256: profiled
+            ? occurrenceSiteOperationSha256("build", publicationProfile)
+            : BUILD_OPERATION_SHA256,
+        ...(profiled
+            ? { publicationProfile: structuredClone(publicationProfile) }
+            : {}),
         build: async (request) => {
             const buildRoot = path.join(
                 request.workspaceRoot,
@@ -644,7 +669,9 @@ function buildOperation() {
             await Promise.all([
                 writeFile(
                     path.join(buildRoot, "index.html"),
-                    "<!doctype html><title>Selected Astro proof</title>\n",
+                    profiled
+                        ? '<!doctype html><meta name="robots" content="noindex,follow"><title>Selected Astro stage proof</title>\n'
+                        : "<!doctype html><title>Selected Astro proof</title>\n",
                 ),
                 writeFile(
                     path.join(buildRoot, "occurrence-manifest.json"),
@@ -653,6 +680,18 @@ function buildOperation() {
                 writeFile(
                     path.join(buildRoot, "static-build.json"),
                     canonicalBytes({
+                        ...(profiled
+                            ? {
+                                  contract: "verdify.lab-astro-stage-build",
+                                  schemaVersion: 1,
+                                  siteOrigin:
+                                      targetOverride?.siteOrigin ??
+                                      publicationProfile.siteOrigin,
+                                  stageGlobalNoindex:
+                                      targetOverride?.stageGlobalNoindex ??
+                                      publicationProfile.stageGlobalNoindex,
+                              }
+                            : {}),
                         snapshotManifestDigest: `sha256:${request.event.sourceSnapshotManifestSha256}`,
                         selectedOccurrenceManifestSha256: `sha256:${selected.selection.current.manifestSha256}`,
                         grafanaOccurrenceCount:
@@ -871,11 +910,22 @@ function realCompilerBuildOperation(value, calls) {
     };
 }
 
-function verificationOperation() {
+function verificationOperation(
+    publicationProfile = null,
+    { resultOverride = null } = {},
+) {
+    const profiled = publicationProfile !== null;
     return {
-        contract: "verdify.lab-production-output-verification-operation",
-        schemaVersion: 1,
-        operationSha256: VERIFICATION_OPERATION_SHA256,
+        contract: profiled
+            ? "verdify.lab-site-output-verification-operation"
+            : "verdify.lab-production-output-verification-operation",
+        schemaVersion: profiled ? 2 : 1,
+        operationSha256: profiled
+            ? occurrenceSiteOperationSha256("verification", publicationProfile)
+            : VERIFICATION_OPERATION_SHA256,
+        ...(profiled
+            ? { publicationProfile: structuredClone(publicationProfile) }
+            : {}),
         verify: async (request) => {
             const build = JSON.parse(
                 await readFile(
@@ -890,9 +940,45 @@ function verificationOperation() {
                 ),
             );
             verifySelectedEvidence(build, occurrenceManifest);
+            if (
+                profiled &&
+                (request.siteOrigin !== publicationProfile.siteOrigin ||
+                    request.stageGlobalNoindex !==
+                        publicationProfile.stageGlobalNoindex ||
+                    request.policyVersion !==
+                        publicationProfile.policyVersion ||
+                    build.siteOrigin !== publicationProfile.siteOrigin ||
+                    build.stageGlobalNoindex !==
+                        publicationProfile.stageGlobalNoindex ||
+                    !(
+                        await readFile(
+                            path.join(request.buildRoot, "index.html"),
+                            "utf8",
+                        )
+                    ).includes('<meta name="robots" content="noindex,follow">'))
+            ) {
+                throw new Error(
+                    "stage verifier did not observe the bound origin and noindex output",
+                );
+            }
             return {
-                contract: "verdify.lab-production-output-verification-result",
-                schemaVersion: 1,
+                contract: profiled
+                    ? "verdify.lab-site-output-verification-result"
+                    : "verdify.lab-production-output-verification-result",
+                schemaVersion: profiled ? 2 : 1,
+                ...(profiled
+                    ? {
+                          siteOrigin:
+                              resultOverride?.siteOrigin ??
+                              publicationProfile.siteOrigin,
+                          stageGlobalNoindex:
+                              resultOverride?.stageGlobalNoindex ??
+                              publicationProfile.stageGlobalNoindex,
+                          policyVersion:
+                              resultOverride?.policyVersion ??
+                              publicationProfile.policyVersion,
+                      }
+                    : {}),
                 buildInventorySha256: request.buildInventorySha256,
                 buildContentIdentitySha256: request.buildContentIdentitySha256,
                 staticBuildSha256: request.staticBuildSha256,
@@ -996,6 +1082,10 @@ function eventFor(
     value,
     expectedSiteSelectionSha256,
     producerResult = value.producerResult,
+    operationIdentities = {
+        build: BUILD_OPERATION_SHA256,
+        verification: VERIFICATION_OPERATION_SHA256,
+    },
 ) {
     return createOccurrenceSitePublishEvent({
         sourceId: producerResult.exportBatch.reportingFeed.sourceId,
@@ -1009,8 +1099,8 @@ function eventFor(
         occurrenceStoreIdentitySha256: value.occurrenceStore.identity.sha256,
         producerResultSha256: sha256(canonicalBytes(producerResult)),
         builderCommit: BUILDER_COMMIT,
-        buildOperationSha256: BUILD_OPERATION_SHA256,
-        verificationOperationSha256: VERIFICATION_OPERATION_SHA256,
+        buildOperationSha256: operationIdentities.build,
+        verificationOperationSha256: operationIdentities.verification,
         siteStoreIdentitySha256: value.siteStore.identity.sha256,
         expectedSiteSelectionSha256,
     });
@@ -1574,5 +1664,244 @@ test("publisher has no default client, command, environment, or activation surfa
         verificationOperation: null,
         checkpointOperations: null,
         publicationOperation: null,
+    });
+});
+
+test("stage execution wrapper publishes one canonical delivery and rejects unbound execution", async (context) => {
+    const value = await fixture(context);
+    const profile = occurrenceSitePublicationProfiles.stage;
+    const stageBuild = buildOperation(profile);
+    const stageVerification = verificationOperation(profile);
+    const event = eventFor(value, null, value.producerResult, {
+        build: stageBuild.operationSha256,
+        verification: stageVerification.operationSha256,
+    });
+    const canonicalInputs = {
+        event: canonicalDocument(event),
+        producerResult: canonicalDocument(value.producerResult),
+        policy: canonicalDocument(value.policy),
+        manifest: canonicalDocument(value.manifest),
+        candidateRoot: value.candidateRoot,
+    };
+    const inputsFor = async (name) => {
+        const workspaceRoot = path.join(value.root, name);
+        await mkdir(workspaceRoot);
+        return { ...canonicalInputs, workspaceRoot };
+    };
+    const checkpoints = checkpointOperations(value.siteStore.identity.sha256);
+    const publication = publicationOperation(value.siteStore);
+    let runtimeCalls = 0;
+    const runtimeFactory =
+        ({
+            build = stageBuild,
+            verification = stageVerification,
+            siteOrigin = profile.siteOrigin,
+        } = {}) =>
+        async (request) => {
+            runtimeCalls += 1;
+            assert.equal(
+                request.contract,
+                "verdify.lab-stage-occurrence-site-runtime-request",
+            );
+            assert.deepEqual(request.publicationProfile, profile);
+            return {
+                contract: "verdify.lab-stage-occurrence-site-runtime",
+                schemaVersion: 1,
+                siteOrigin,
+                stageGlobalNoindex: true,
+                occurrenceStore: value.occurrenceStore,
+                buildOperation: build,
+                verificationOperation: verification,
+                checkpointOperations: checkpoints,
+                publicationOperation: publication,
+            };
+        };
+
+    await assert.rejects(
+        runOccurrenceSitePublisherDelivery(await inputsFor("wrong-target"), {
+            createRuntime: runtimeFactory({
+                build: buildOperation(profile, {
+                    targetOverride: {
+                        siteOrigin: "https://lab.verdify.ai",
+                        stageGlobalNoindex: false,
+                    },
+                }),
+            }),
+        }),
+        /build does not attest the bound site publication target/,
+    );
+
+    await assert.rejects(
+        runOccurrenceSitePublisherDelivery(await inputsFor("wrong-proof"), {
+            createRuntime: runtimeFactory({
+                verification: verificationOperation(profile, {
+                    resultOverride: {
+                        siteOrigin: "https://lab.verdify.ai",
+                    },
+                }),
+            }),
+        }),
+        /verifier did not attest the exact selected build and target/,
+    );
+
+    const inputs = await inputsFor("stage-execution-workspace");
+    const createRuntime = runtimeFactory();
+    const result = await runOccurrenceSitePublisherDelivery(inputs, {
+        createRuntime,
+    });
+    assert.equal(
+        result.contract,
+        occurrenceSitePublisherRunnerContract.result.contract,
+    );
+    assert.equal(result.siteOrigin, "https://lab-stage.verdify.ai");
+    assert.equal(result.stageGlobalNoindex, true);
+    assert.deepEqual(result.publicationProfile, profile);
+    assert.equal(result.publication.status, "published");
+    assert.equal(result.publication.eventSha256, inputs.event.sha256);
+    assert.equal(runtimeCalls, 3);
+
+    await assert.rejects(
+        runOccurrenceSitePublisherDelivery(inputs),
+        /runtime is not configured; no default live action is available/,
+    );
+    assert.equal(runtimeCalls, 3);
+
+    const blockedPolicy = structuredClone(value.policy);
+    blockedPolicy.activation = {
+        ...blockedPolicy.activation,
+        state: "blocked",
+        approvedBy: null,
+        approvedAt: null,
+    };
+    await assert.rejects(
+        runOccurrenceSitePublisherDelivery(
+            { ...inputs, policy: canonicalDocument(blockedPolicy) },
+            { createRuntime },
+        ),
+        /publication is disabled by the supplied policy/,
+    );
+    assert.equal(runtimeCalls, 3);
+
+    await assert.rejects(
+        runOccurrenceSitePublisherDelivery(
+            { ...inputs, event: { ...inputs.event, sha256: "f".repeat(64) } },
+            { createRuntime },
+        ),
+        /canonical identity mismatch/,
+    );
+    assert.equal(runtimeCalls, 3);
+
+    const nestedWorkspace = path.join(value.candidateRoot, "nested-workspace");
+    await mkdir(nestedWorkspace);
+    await assert.rejects(
+        runOccurrenceSitePublisherDelivery(
+            { ...canonicalInputs, workspaceRoot: nestedWorkspace },
+            { createRuntime },
+        ),
+        /roots must be disjoint/,
+    );
+    assert.equal(runtimeCalls, 3);
+
+    await assert.rejects(
+        runOccurrenceSitePublisherDelivery(inputs, {
+            createRuntime: runtimeFactory({
+                siteOrigin: "https://lab.verdify.ai",
+            }),
+        }),
+        /does not preserve the closed noindex Lab stage contract/,
+    );
+
+    await assert.rejects(
+        runOccurrenceSitePublisherDelivery(inputs, {
+            createRuntime,
+            processEvent: async () => ({
+                ...result.publication,
+                eventSha256: "e".repeat(64),
+            }),
+        }),
+        /did not return the exact event-bound result/,
+    );
+});
+
+test("stage execution CLI keeps document reads and runtime creation explicit", async () => {
+    const paths = new Map([
+        ["event.json", { name: "event" }],
+        ["producer.json", { name: "producer" }],
+        ["policy.json", { name: "policy" }],
+        ["manifest.json", { name: "manifest" }],
+    ]);
+    const reads = [];
+    const runtime = async () => ({ configured: true });
+    let delivery;
+    const result = await runOccurrenceSitePublishCli(
+        [
+            "execute",
+            "--event",
+            "event.json",
+            "--producer-result",
+            "producer.json",
+            "--policy",
+            "policy.json",
+            "--manifest",
+            "manifest.json",
+            "--candidate-root",
+            "candidate",
+            "--workspace-root",
+            "workspace",
+        ],
+        {
+            readDocument: async (file, label) => {
+                reads.push([file, label]);
+                return paths.get(file);
+            },
+            createRuntime: runtime,
+            runDelivery: async (inputs, dependencies) => {
+                delivery = { inputs, dependencies };
+                return { status: "accepted" };
+            },
+        },
+    );
+    assert.deepEqual(result, { status: "accepted" });
+    assert.deepEqual(
+        reads.map(([file]) => file),
+        ["event.json", "producer.json", "policy.json", "manifest.json"],
+    );
+    assert.equal(delivery.inputs.event.name, "event");
+    assert.equal(delivery.inputs.producerResult.name, "producer");
+    assert.equal(delivery.dependencies.createRuntime, runtime);
+    assert.equal(delivery.dependencies.processEvent, undefined);
+    assert.equal(delivery.inputs.candidateRoot, path.resolve("candidate"));
+    assert.equal(delivery.inputs.workspaceRoot, path.resolve("workspace"));
+
+    await assert.rejects(runOccurrenceSitePublishCli(["status"]), /Usage:/);
+    await assert.rejects(
+        runOccurrenceSitePublishCli(["execute", "--event", "event.json"]),
+        /Usage:/,
+    );
+});
+
+test("stage execution source has no implicit live integration surface", async () => {
+    const source = await Promise.all([
+        readFile(
+            new URL(
+                "../scripts/lib/occurrence-site-publisher-runner.mjs",
+                import.meta.url,
+            ),
+            "utf8",
+        ),
+        readFile(
+            new URL(
+                "../scripts/execute-occurrence-site-publish.mjs",
+                import.meta.url,
+            ),
+            "utf8",
+        ),
+    ]);
+    assert.doesNotMatch(
+        source.join("\n"),
+        /process\.env|node:child_process|spawnSync|execFile|fetch\s*\(|@aws-sdk|kubectl|kubernetes|argocd|replicas?:/iu,
+    );
+    assert.deepEqual(occurrenceSitePublisherRunnerContract.defaults, {
+        createRuntime: null,
     });
 });

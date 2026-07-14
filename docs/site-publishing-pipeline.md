@@ -251,7 +251,7 @@ source does not alter the live cluster; even an operator sync cannot schedule th
 zero-replica workload.
 
 This storage foundation and source-only operation adapter do not change the
-credential-free local CLI or deploy anything. The built-site CLI/publisher factory,
+credential-free local CLI or deploy anything. The built-site runtime factory,
 bounded cache hydration from object bytes, distributed lease, bounded retention
 and GC, event agent, resource accounting, endpoint configuration, actual
 resource/value binding (the #501 readiness slice fixes names only), and real-endpoint
@@ -260,6 +260,30 @@ the compatible store preserves the tested conditional semantics before any write
 activated. Activation additionally requires reviewed store/egress wiring, an explicit
 replicas change, and live cache/freshness/alert proof. Those are deployment and data
 authority concerns, not hidden claims of either backend.
+
+The source tree now includes the built-site event consumer command:
+
+```bash
+cd site-astro
+npm run occurrence:site:execute -- execute \
+  --event /path/to/event.json \
+  --producer-result /path/to/producer-result.json \
+  --policy /path/to/policy.json \
+  --manifest /path/to/static-occurrence-manifest.json \
+  --candidate-root /absolute/candidates \
+  --workspace-root /absolute/workspace
+```
+
+It validates canonical file identities, disjoint canonical roots, and Jason's
+closed approval record before requesting a construction-only runtime resolver.
+The returned build and verifier operations must share digest-identified profile
+bindings for the fixed `https://lab-stage.verdify.ai` target with global
+noindex. The processor independently requires the selected build record and
+verifier result to attest that profile before publication. The shipped command
+supplies no runtime factory, store, endpoint, credential, environment reader,
+or network client; therefore the command intentionally stops without taking
+live action. The following S3 injection slice must supply those capabilities
+explicitly and remains separate from activation.
 
 ### Astro occurrence-store binding names (source-only)
 

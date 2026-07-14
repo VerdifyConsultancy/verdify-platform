@@ -21,6 +21,7 @@
     "occurrence:media:rollback": "node scripts/manage-occurrence-release.mjs rollback-media",
     "occurrence:export": "node scripts/prepare-occurrence-export.mjs",
     "occurrence:execute": "node scripts/execute-occurrence-export.mjs",
+    "occurrence:site:execute": "node scripts/execute-occurrence-site-publish.mjs",
     "camera:export": "node scripts/export-camera-occurrence.mjs capture",
     "object-store:binding-readiness": "node scripts/check-object-store-binding-readiness.mjs",
     "site-release:prepare": "node scripts/manage-site-release.mjs prepare",
