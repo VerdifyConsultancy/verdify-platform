@@ -350,6 +350,24 @@ but activation additionally requires the executable writer to derive the full
 payload envelope, import the closed checkpoint contract, and enforce the fence at
 the actual mutation boundary.
 
+The source tree now contains the first deterministic packed-layout prerequisite.
+`scripts/lib/deterministic-release-pack.mjs` uses fixed `VLABPACK`/v1 framing, one
+canonical sorted JSON index, exact uncompressed byte frames, and no time, ownership,
+mode, or link metadata. It rejects malformed framing, unsafe/duplicate/colliding
+paths, links, digest mismatches, and every configured size/count overrun before
+materializing a newly created tree. `packed-release-selected-root.mjs` makes one
+current/rollback root select a complete occurrence-pack plus site-pack pair, never
+one side independently.
+
+`packed-release-capacity.mjs` deterministically simulates 16 days and 1,536 events.
+With the documented retention and attempt envelopes it proves 4,328 retained objects
+and 17,672 requests/day. Real pack and control-object byte sizes remain mandatory
+inputs to the 10-GiB retained, 5-GiB/day write, and 10-GiB/day egress gates. Tests also
+hydrate an occurrence pack back to all 143 graph and two camera
+`/evidence/blobs/sha256/<digest>.png` files. This is source-only format and capacity
+proof: it does not wire S3, mutate a selector, start a publisher, deploy a workload,
+or establish live two-cache convergence.
+
 The stage vendors the reviewed offline parity comparator at
 `scripts/site-build-parity.py` (SHA-256
 `9ffa966a8d36a1a98a56b941588a340f2e23cc7ee38389e1056717204fadf92c`):
