@@ -10,6 +10,7 @@ SET LOCAL statement_timeout = '10s';
 SELECT
   current_database() = 'verdify_lab_reporting_stage' AS exact_database,
   current_user = 'verdify_lab_reporting_reader' AS exact_reader,
+  session_user = current_user AS direct_session,
   NOT has_database_privilege(current_user, current_database(), 'CREATE') AS no_database_create,
   to_regnamespace('lab_reporting') IS NOT NULL AS reporting_schema_present,
   current_schema() = 'lab_reporting' AS reporting_search_path,
@@ -25,6 +26,11 @@ SELECT
 \if :projection_exact_reader
 \else
   \echo 'projection readiness failed: expected the dedicated stage reporting reader'
+  \quit 3
+\endif
+\if :projection_direct_session
+\else
+  \echo 'projection readiness failed: reporting reader was reached through SET ROLE'
   \quit 3
 \endif
 \if :projection_no_database_create
@@ -53,21 +59,111 @@ SELECT
   \quit 3
 \endif
 
-SELECT NOT EXISTS (
-  SELECT 1
-  FROM pg_class AS c
-  JOIN pg_namespace AS n ON n.oid = c.relnamespace
-  WHERE c.relkind IN ('r', 'p', 'v', 'm', 'f')
-    AND n.nspname <> 'lab_reporting'
-    AND n.nspname <> 'information_schema'
-    AND n.nspname NOT LIKE 'pg\_%' ESCAPE '\'
-    AND has_table_privilege(current_user, c.oid, 'SELECT')
-) AS no_non_reporting_relation_select
+WITH exact_role AS (
+  SELECT oid, rolsuper, rolcreatedb, rolcreaterole, rolreplication, rolbypassrls
+  FROM pg_roles
+  WHERE rolname = 'verdify_lab_reporting_reader'
+)
+SELECT
+  count(*) = 1 AS exact_role_present,
+  COALESCE(bool_and(NOT rolsuper), false) AS no_superuser,
+  COALESCE(bool_and(NOT rolcreatedb), false) AS no_createdb,
+  COALESCE(bool_and(NOT rolcreaterole), false) AS no_createrole,
+  COALESCE(bool_and(NOT rolreplication), false) AS no_replication,
+  COALESCE(bool_and(NOT rolbypassrls), false) AS no_bypassrls,
+  NOT EXISTS (
+    SELECT 1
+    FROM pg_auth_members AS membership
+    JOIN exact_role AS reporting_role
+      ON membership.member = reporting_role.oid
+      OR membership.roleid = reporting_role.oid
+  ) AS no_memberships
+FROM exact_role
+\gset role_
+
+\if :role_exact_role_present
+\else
+  \echo 'projection readiness failed: exact reporting role is absent'
+  \quit 3
+\endif
+\if :role_no_superuser
+\else
+  \echo 'projection readiness failed: reporting reader is a superuser'
+  \quit 3
+\endif
+\if :role_no_createdb
+\else
+  \echo 'projection readiness failed: reporting reader can create databases'
+  \quit 3
+\endif
+\if :role_no_createrole
+\else
+  \echo 'projection readiness failed: reporting reader can create roles'
+  \quit 3
+\endif
+\if :role_no_replication
+\else
+  \echo 'projection readiness failed: reporting reader has replication authority'
+  \quit 3
+\endif
+\if :role_no_bypassrls
+\else
+  \echo 'projection readiness failed: reporting reader can bypass row security'
+  \quit 3
+\endif
+\if :role_no_memberships
+\else
+  \echo 'projection readiness failed: reporting reader participates in role membership'
+  \quit 3
+\endif
+
+SELECT
+  NOT EXISTS (
+    SELECT 1
+    FROM pg_class AS c
+    JOIN pg_namespace AS n ON n.oid = c.relnamespace
+    WHERE n.nspname <> 'lab_reporting'
+      AND n.nspname <> 'information_schema'
+      AND n.nspname NOT LIKE 'pg\_%' ESCAPE '\'
+      AND (
+        (
+          c.relkind IN ('r', 'p', 'v', 'm', 'f')
+          AND (
+            has_table_privilege(current_user, c.oid, 'SELECT')
+            OR has_any_column_privilege(current_user, c.oid, 'SELECT')
+          )
+        )
+        OR (
+          c.relkind = 'S'
+          AND (
+            has_sequence_privilege(current_user, c.oid, 'USAGE')
+            OR has_sequence_privilege(current_user, c.oid, 'SELECT')
+            OR has_sequence_privilege(current_user, c.oid, 'UPDATE')
+          )
+        )
+      )
+  ) AS no_non_reporting_relation_select,
+  -- Effective privilege inspection includes owner, membership, and PUBLIC
+  -- grants. System namespaces stay available for normal PostgreSQL operation.
+  NOT EXISTS (
+    SELECT 1
+    FROM pg_proc AS p
+    JOIN pg_namespace AS n ON n.oid = p.pronamespace
+    WHERE n.nspname <> 'lab_reporting'
+      AND n.nspname <> 'information_schema'
+      AND n.nspname NOT LIKE 'pg\_%' ESCAPE '\'
+      AND has_function_privilege(current_user, p.oid, 'EXECUTE')
+  ) AS no_non_reporting_routine_execute
 \gset isolation_
 
 \if :isolation_no_non_reporting_relation_select
 \else
   \echo 'projection readiness failed: reporting reader can select a non-reporting relation'
+  \quit 3
+\endif
+\if :isolation_no_non_reporting_routine_execute
+\else
+  \echo 'projection readiness failed: reporting reader can execute a non-reporting routine'
   \quit 3
 \endif
 
@@ -125,37 +221,48 @@ WITH required_relations(name) AS (
   SELECT name FROM required_relations
   UNION ALL
   VALUES ('source_watermark_v1'::name)
-), actual_relations AS (
+), actual_objects AS (
+  -- Deliberately inventory every pg_class kind. Filtering here would let a
+  -- sequence, index, table, or other unapproved schema object evade readiness.
   SELECT c.oid, c.relname::name AS name, c.relkind
   FROM pg_class AS c
   JOIN pg_namespace AS n ON n.oid = c.relnamespace
   WHERE n.nspname = 'lab_reporting'
-    AND c.relkind IN ('r', 'p', 'v', 'm', 'f')
 ), privilege_summary AS (
   SELECT
     NOT EXISTS (
       SELECT required.name
       FROM approved_relations AS required
-      LEFT JOIN actual_relations AS actual USING (name)
+      LEFT JOIN actual_objects AS actual USING (name)
       WHERE actual.name IS NULL
     ) AS no_missing_relations,
     NOT EXISTS (
       SELECT actual.name
-      FROM actual_relations AS actual
+      FROM actual_objects AS actual
       LEFT JOIN approved_relations AS approved USING (name)
       WHERE approved.name IS NULL
     ) AS no_extra_relations,
-    COALESCE(bool_and(has_table_privilege(current_user, oid, 'SELECT')), false) AS all_relations_selectable,
-    COALESCE(bool_and(NOT has_table_privilege(
-      current_user,
-      oid,
-      'INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER'
-    )), false) AS no_relation_writes,
-    COALESCE(bool_and(relkind IN ('v', 'm')), false) AS views_only
-  FROM actual_relations
+    COALESCE(bool_and(
+      CASE
+        WHEN relkind IN ('v', 'm') THEN has_table_privilege(current_user, oid, 'SELECT')
+        ELSE true
+      END
+    ), false) AS all_relations_selectable,
+    COALESCE(bool_and(
+      CASE
+        WHEN relkind IN ('v', 'm') THEN NOT has_table_privilege(
+          current_user,
+          oid,
+          'INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER'
+        )
+        ELSE true
+      END
+    ), false) AS no_relation_writes,
+    COALESCE(bool_and(relkind IN ('v', 'm')), false) AS approved_object_classes_only
+  FROM actual_objects
 )
 SELECT no_missing_relations, no_extra_relations,
-       all_relations_selectable, no_relation_writes, views_only
+       all_relations_selectable, no_relation_writes, approved_object_classes_only
 FROM privilege_summary
 \gset dependencies_
 
@@ -179,9 +286,9 @@ FROM privilege_summary
   \echo 'projection readiness failed: reporting reader has write privileges'
   \quit 3
 \endif
-\if :dependencies_views_only
+\if :dependencies_approved_object_classes_only
 \else
-  \echo 'projection readiness failed: reporting schema contains non-projection relations'
+  \echo 'projection readiness failed: reporting schema contains an unapproved object class'
   \quit 3
 \endif
 

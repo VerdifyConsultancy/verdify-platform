@@ -136,6 +136,76 @@ test("projection Service and verifier are fixed, read-only, and have no backing 
   assert.doesNotMatch(sql, /^\s*(?:CREATE|ALTER|DROP|GRANT|REVOKE|INSERT|UPDATE|DELETE|TRUNCATE)\b/imu);
 });
 
+test("projection verifier rejects elevated roles, memberships, and indirect sessions", () => {
+  const { resources } = renderOverlay();
+  const sql = one(resources, "ConfigMap", "verdify-lab-reporting-projection-readiness")
+    .data["projection-readiness.sql"];
+  assert.match(sql, /session_user = current_user AS direct_session/u);
+  assert.match(sql, /\\if :projection_direct_session/u);
+  assert.match(sql, /FROM pg_roles/u);
+  assert.match(sql, /WHERE rolname = 'verdify_lab_reporting_reader'/u);
+  assert.match(sql, /\\if :role_exact_role_present/u);
+  for (const [attribute, result] of [
+    ["rolsuper", "no_superuser"],
+    ["rolcreatedb", "no_createdb"],
+    ["rolcreaterole", "no_createrole"],
+    ["rolreplication", "no_replication"],
+    ["rolbypassrls", "no_bypassrls"],
+  ]) {
+    assert.match(sql, new RegExp(`bool_and\\(NOT ${attribute}\\), false\\) AS ${result}`, "u"));
+    assert.match(sql, new RegExp(`\\\\if :role_${result}`, "u"));
+  }
+  assert.match(sql, /FROM pg_auth_members AS membership/u);
+  assert.match(sql, /membership\.member = reporting_role\.oid/u);
+  assert.match(sql, /membership\.roleid = reporting_role\.oid/u);
+  assert.match(sql, /\) AS no_memberships/u);
+  assert.match(sql, /\\if :role_no_memberships/u);
+});
+
+test("projection verifier rejects effective PUBLIC routine execution outside reporting", () => {
+  const { resources } = renderOverlay();
+  const sql = one(resources, "ConfigMap", "verdify-lab-reporting-projection-readiness")
+    .data["projection-readiness.sql"];
+  const routineIsolation = sql.slice(
+    sql.indexOf("-- Effective privilege inspection"),
+    sql.indexOf("\\gset isolation_"),
+  );
+  assert.match(routineIsolation, /PUBLIC/u);
+  assert.match(routineIsolation, /FROM pg_proc AS p/u);
+  assert.match(routineIsolation, /n\.nspname <> 'lab_reporting'/u);
+  assert.match(routineIsolation, /n\.nspname <> 'information_schema'/u);
+  assert.equal(routineIsolation.includes("n.nspname NOT LIKE 'pg\\_%' ESCAPE '\\'"), true);
+  assert.match(
+    routineIsolation,
+    /has_function_privilege\(current_user, p\.oid, 'EXECUTE'\)/u,
+  );
+  assert.doesNotMatch(routineIsolation, /p\.proacl/u);
+  assert.match(sql, /\) AS no_non_reporting_routine_execute/u);
+  assert.match(sql, /\\if :isolation_no_non_reporting_routine_execute/u);
+});
+
+test("projection verifier rejects sequences and every unapproved pg_class kind", () => {
+  const { resources } = renderOverlay();
+  const sql = one(resources, "ConfigMap", "verdify-lab-reporting-projection-readiness")
+    .data["projection-readiness.sql"];
+  assert.match(sql, /c\.relkind = 'S'/u);
+  for (const privilege of ["USAGE", "SELECT", "UPDATE"]) {
+    assert.match(
+      sql,
+      new RegExp(`has_sequence_privilege\\(current_user, c\\.oid, '${privilege}'\\)`, "u"),
+    );
+  }
+  const objectInventory = sql.slice(
+    sql.indexOf("), actual_objects AS ("),
+    sql.indexOf("), privilege_summary AS ("),
+  );
+  assert.match(objectInventory, /SELECT c\.oid, c\.relname::name AS name, c\.relkind/u);
+  assert.match(objectInventory, /WHERE n\.nspname = 'lab_reporting'/u);
+  assert.doesNotMatch(objectInventory, /AND c\.relkind/u);
+  assert.match(sql, /bool_and\(relkind IN \('v', 'm'\)\).*approved_object_classes_only/su);
+  assert.match(sql, /\\if :dependencies_approved_object_classes_only/u);
+});
+
 test("Grafana is private, anonymous-disabled, proxy-authenticated, and projection-only", () => {
   const { resources } = renderOverlay();
   const deployment = one(resources, "Deployment", "verdify-lab-reporting-tier");

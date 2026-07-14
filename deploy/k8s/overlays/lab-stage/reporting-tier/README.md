@@ -28,13 +28,22 @@ The operator projection is not implemented here. The Service has a selector but
 no matching workload, so it has no endpoints. `projection-readiness.sql` is a
 verification-only, read-only transaction: it creates no role, database, schema,
 view, table, grant, or credential. It requires those exact isolated identities,
-only selectable views/materialized views, no object-creation or relation-write
-privileges, no selectable non-system relation outside `lab_reporting`, and
-exactly one canonical `lab-public-v1` source-watermark row. The reader's
-default schema must be `lab_reporting`, so the existing dashboards' unqualified
-table/view names cannot resolve against a primary schema. The private HTTP
-adapter must expose that same row at `/v1/source-watermark` using the closed
-response consumed by `reporting-tier-runtime.mjs`.
+an authenticated session that has not reached the reader through `SET ROLE`,
+no superuser/createdb/createrole/replication/bypass-RLS attribute, and no role
+membership in either direction. It permits only the inventoried selectable
+views/materialized views in `lab_reporting`; sequences and every other
+`pg_class` object class fail readiness. The reader must have no object-creation
+privilege on the database or reporting schema and no relation-write privilege,
+no selectable non-system relation or sequence outside `lab_reporting`, and no
+effective `EXECUTE` on any non-system routine outside it. That effective check
+includes default or explicit `PUBLIC EXECUTE` grants while leaving `pg_catalog`
+and other system-schema operations available.
+The reader's default schema must be `lab_reporting`, so the existing dashboards'
+unqualified table/view names cannot resolve against a primary schema. The
+projection must expose exactly one canonical `lab-public-v1` source-watermark
+row, and the private HTTP adapter must expose that same row at
+`/v1/source-watermark` using the closed response consumed by
+`reporting-tier-runtime.mjs`.
 
 The generated assets pin 18 dashboards, 139 unique panels, and 143 graph
 occurrences to source manifest
@@ -45,7 +54,8 @@ closes the projection to 48 dashboard relations, six callable projection
 functions, and the separate `source_watermark_v1` runtime control view. The
 verifier compares that inventory to the complete
 `lab_reporting` schema and fails on missing or extra relations/functions,
-ambiguous overloads, volatile/definer functions, or privilege drift.
+unapproved object classes, ambiguous overloads, volatile/definer functions,
+or privilege drift.
 Grafana 12.4.5 and renderer 5.10.0 are immutable-digest pinned. Anonymous and
 basic auth are off. Only the loopback nginx gateway supplies the fixed auth
 proxy identity, and it exposes only `/healthz` plus the 18 exact no-slug
