@@ -3,6 +3,7 @@ import path from "node:path";
 
 import sharp from "sharp";
 
+import { cameraExportProducerContract } from "./occurrence-producer-contracts.mjs";
 import {
   occurrenceExportPolicySha256,
   validateOccurrenceExportPolicy,
@@ -16,18 +17,18 @@ import { decodePng, validatePngFile } from "./png-validation.mjs";
 
 const SHA256_RE = /^[0-9a-f]{64}$/;
 const ISO_INSTANT_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
-const MAX_TIMEOUT_MS = 15_000;
-const DEFAULT_TIMEOUT_MS = 10_000;
+const MAX_TIMEOUT_MS = cameraExportProducerContract.maxTimeoutMs;
+const DEFAULT_TIMEOUT_MS = cameraExportProducerContract.defaultTimeoutMs;
 const PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 
 // #483 deliberately approved exactly these two public, read-only requests. Keep
 // this producer closed if a later policy is broadened accidentally.
 const APPROVED_CAMERA_REQUESTS = new Map([
-  ["media_024bdac9f86794c7d1f36d48", {
+  [cameraExportProducerContract.approvedOccurrenceIds[0], {
     url: "https://api.verdify.ai/api/v1/public/cameras/greenhouse_2/latest.jpg?h=1080",
     requestProvenanceSha256: "34d53abda8ab745e106c0719534a554769a9b1017f22b7bb40e5895a6be74a34",
   }],
-  ["media_4e973f995789201d00aed8fd", {
+  [cameraExportProducerContract.approvedOccurrenceIds[1], {
     url: "https://api.verdify.ai/api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080",
     requestProvenanceSha256: "0667d58e2f39c22e68bd906d3e4c754de1b41a845487eb55654aadba37c76fe0",
   }],
@@ -427,8 +428,4 @@ export async function captureCameraOccurrence({
   };
 }
 
-export const cameraExportProducerContract = {
-  approvedOccurrenceIds: [...APPROVED_CAMERA_REQUESTS.keys()],
-  defaultTimeoutMs: DEFAULT_TIMEOUT_MS,
-  maxTimeoutMs: MAX_TIMEOUT_MS,
-};
+export { cameraExportProducerContract };

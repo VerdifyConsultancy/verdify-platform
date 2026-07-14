@@ -159,6 +159,26 @@ source-only merge needs no service restart. Any stage rollout needs the
 normal stage acceptance and delayed durability probes; production sync, public
 cutover, and Quartz retirement remain human-gated.
 
+The release-runtime Dockerfile contains a source-only
+`occurrence-exporter` packaging target. It derives from the locked Node
+dependencies stage and copies only two project-source files into it: an
+offline verifier and the shared contract module consumed by the real graph,
+camera, and joint producers. It runs as `101:101`
+and defaults to `verify-occurrence-exporter-image.mjs`. That verifier imports
+and checks the existing graph, camera, and joint runner contracts, emits a
+deterministic `packaged` / `runtime-unbound` status, and invokes no network,
+store, capture, or render operation. The target grants no release, device, or
+live authority and contains no policy, runtime configuration, endpoint,
+credential, or reporting feed.
+The build requires a 40/64-hex source revision and canonical UTC release time,
+binds them to OCI revision/created labels, and writes the same values into a
+canonical metadata record that the default verifier validates and emits.
+
+This is not a deployable exporter runtime claim. No graph renderer or other
+runtime dependency is selected, no Kubernetes workload or overlay image
+sentinel references the target, and no build digest or pin exists for it yet.
+Those remain separate source, CI, GitOps, and Jason-gated activation steps.
+
 The specialist-occurrence fixture is separate from the complete built-tree release
 store below. It retains ten occurrence manifests and two selected media generations,
 but does not claim a deployed object-store adapter or distributed lease.

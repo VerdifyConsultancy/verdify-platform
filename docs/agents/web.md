@@ -155,6 +155,21 @@ Kubernetes manifest or Secret values, endpoint probe, network call, replica,
 egress, route, sync, activation, distributed lease, retention/GC, or credential
 provisioning. Merging this source prerequisite does not activate it.
 
+`site-astro/Dockerfile.release-runtime` also carries a source-only
+`occurrence-exporter` target. It derives from the locked dependency stage and
+copies only two project-source files: an offline verifier and the shared
+contract module imported by the real graph, camera, and joint producers. Its
+default command reports `packaged` / `runtime-unbound`
+after checking the 143-graph, two-camera, and joint runner contracts. The target
+runs as `101:101`, grants no release/device/live authority, and bakes no policy,
+runtime configuration, object-store endpoint, credential, or reporting feed.
+Its required build revision and release instant are syntax-checked, recorded in
+OCI revision/created labels, and repeated in canonical metadata that the
+verifier validates and emits.
+It is not a runnable graph renderer: there is no runtime binding, workload,
+overlay image sentinel, built digest, pin, route, or activation for this target
+yet.
+
 `scripts/rebuild-site.sh` builds Quartz into a staged `public.*` directory,
 verifies the staged `index.html`, then rsyncs the complete staged output into
 the live public tree with delayed deletes. In k3s, nginx reload is skipped

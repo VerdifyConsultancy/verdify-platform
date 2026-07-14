@@ -13,6 +13,9 @@ make no endpoint, value, credential, deployment, or activation claim.
 Phase 4b PR #525 carries strict runtime S3 dependency injection. It is a
 source-only prerequisite and does not change the live stage or satisfy a
 build, pin, rollout, or activation gate.
+The source tree also defines an offline-default `occurrence-exporter` image target;
+it has no renderer/runtime binding, workload, digest, or pin and is not part of
+the latest completed image chain.
 Owner: platform agent (Claude outer loop plans/verifies; Codex executes on
 xhigh). Human gate: Jason (prod sync, DNS/edge, Quartz retirement, credential
 work). Epic: #351 (L9, G3). This file is the single source of truth for the
@@ -25,7 +28,7 @@ changes state.
 |---|---|
 | `lab.verdify.ai` (prod) | Quartz. `verdify-lab` Deployment in `verdify-prod` (ghcr image — pre-ADR-0021 holdover), `verdify-lab-publisher` CronJob republished every 10 min (mutable, shared RWO PVC, both replicas node-pinned). Healthy and fresh; had a 5-job BackoffLimitExceeded streak before recovering. |
 | `lab-stage.verdify.ai` (canary) | Astro. `verdify-lab-astro-stage` in ns `verdify-platform`, 2/2 Ready with zero restarts on distinct nodes, exact image and pod image IDs `verdify-lab-astro@sha256:ee36941f20028fcfe06f12bf253e7139c00e3d5de1949eb8b12bb1d4ebe60b99` (pin PR #468), shell contract **1.1.0**, content frozen at the 2026-07-12 snapshot. Live T0/T+10 acceptance passed and the ArgoCD app returned to manual-sync. |
-| `main` | Astro source includes the accepted static implementation, dormant release/cache runtime, offline camera producer (#487), complete offline 143-graph producer (#492), inactive S3 conditional-store foundation (#496), typed occurrence store (#502), and the closed 143+2 caller (#507). The concrete store-operation adapter and execute CLI in this source tree require an explicit store plus canonical Jason-approved policy before initialization. Runtime pin #500 binds the dormant agent/nginx pair to the latest completed relevant source chain; later source changes are not automatically staged. The source-only name-readiness contract is carried by #501, not yet a deployed binding. The live stage remains the static image above; endpoint binding, event delivery, exact parity, and production cutover remain. |
+| `main` | Astro source includes the accepted static implementation, dormant release/cache runtime, offline camera producer (#487), complete offline 143-graph producer (#492), inactive S3 conditional-store foundation (#496), typed occurrence store (#502), and the closed 143+2 caller (#507). The concrete store-operation adapter and execute CLI in this source tree require an explicit store plus canonical Jason-approved policy before initialization. Runtime pin #500 binds the dormant agent/nginx pair to the latest completed relevant source chain; later source changes are not automatically staged. A fourth source-only `occurrence-exporter` Docker target packages the producer contracts behind an offline verifier, but has no renderer/runtime binding, workload, built digest, or pin. The source-only name-readiness contract is carried by #501, not yet a deployed binding. The live stage remains the static image above; endpoint binding, event delivery, exact parity, and production cutover remain. |
 | Phase 4b PR #525 | Strict source-only S3 injection fixes endpoint `https://s3-hdd.vallery.net` and region `garage`, enforces reader/writer roles, and adds explicit CLI/reconciler and construction-only stage-publisher bindings. It selects no workload and authorizes no activation. |
 | In-cluster CI | **Green for the latest completed Lab source/pin chain.** Workflow `verdify-platform-ci-crv96` completed 17/17 Lab Pod gates for `6729cc2...`: 12 browser quality tests, static/agent/nginx builds, metadata hydration, exact static probe, and paired runtime probe. Pin #500 passed exact-head PR CI/render/kubeconform and its digest-only follow-up workflow passed. Later exact-main workflows do not authorize stage sync or runtime activation. Earlier Playwright fixes #463/#464 and agents#2969/#2970 remain enforced without relaxing quality budgets. |
 
@@ -182,6 +185,16 @@ Phase 4 — **Feature completion (owner: codex, critical-path order below).**
    `verdify-platform-ci-crv96` and #500. This proves the packaged source pair
    only; no stage sync,
    reporting feed, producer request, route, or runtime activation occurred.
+   The source tree now also defines an `occurrence-exporter` target derived from
+   the locked dependencies image. It copies only two additional project-source
+   files: an offline verifier and the shared contract module consumed by the
+   real graph, camera, and joint producers. It runs as `101:101`, grants no
+   release/device/live authority, and defaults to
+   an offline contract verifier. This is packaging source only: no runnable
+   renderer, runtime binding, workload, overlay image sentinel, built digest,
+   pin, endpoint, credential, policy, reporting feed, or activation exists for
+   it yet. Required build revision/release-time arguments are validated and
+   bound into OCI labels plus canonical verifier-emitted image metadata.
 2. **4a Release runtime:** `d91737d` landed via #473 with init hydration,
    atomic runtime, readiness, metrics, and tests. The follow-through makes the
    candidate visible in the Lab stage GitOps source only as a truly disconnected
