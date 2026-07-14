@@ -15,6 +15,10 @@ image digests, no route, no object-store/AWS environment, and no egress. It has
 not been activated or synced by this source change. Program tracker:
 `docs/plans/lab-astro-migration.md`.
 
+An unmerged Phase 4b working branch now implements the next source-only S3
+runtime prerequisite described below. It has not changed a Kubernetes manifest
+or the live candidate and is not evidence of a passed merge or rollout gate.
+
 ## Astro specialist-occurrence release contract (source-only)
 
 The Astro candidate owns an offline specialist-evidence release interface under
@@ -201,7 +205,7 @@ baked bundle is the cold-start known-good when the store is unavailable. Status 
 readiness, source/degraded fallback state, release identity, and planner freshness using
 the five-minute target and fifteen-minute alert thresholds.
 
-The credential-free CLI is:
+The CLI remains credential-free when its store is local:
 
 ```bash
 cd site-astro
@@ -212,6 +216,13 @@ node scripts/manage-site-release.mjs rollback --store /path/to/store --expected 
 node scripts/manage-site-release.mjs bundle --store /path/to/store --release <release-sha256> --destination /image/known-good
 node scripts/manage-site-release.mjs hydrate --store /path/to/store --cache /srv/lab-cache --baked /image/known-good
 ```
+
+On the unmerged Phase 4b branch, those same commands have explicit store roles.
+`prepare` inventories the build without constructing a store. `status`,
+`bundle`, and `hydrate` construct a reader; `publish` and `rollback` construct
+a writer. The S3 object-store primitive enforces that distinction in code:
+reader instances can read and list, while a mutation is rejected before any
+client request. Local construction does not inspect an environment object.
 
 The focused tests inject failures after blob import, manifest publication, event-intent
 publication, and immediately before selection; exercise concurrent and dead-owner
@@ -250,16 +261,37 @@ object-store authority. The Lab stage ArgoCD app remains manual-sync, so merging
 source does not alter the live cluster; even an operator sync cannot schedule the
 zero-replica workload.
 
-This storage foundation and source-only operation adapter do not change the
-credential-free local CLI or deploy anything. The built-site runtime factory,
-bounded cache hydration from object bytes, distributed lease, bounded retention
-and GC, event agent, resource accounting, endpoint configuration, actual
-resource/value binding (the #501 readiness slice fixes names only), and real-endpoint
-conditional-write proof remain separate Phase 4b work. The endpoint proof must confirm
-the compatible store preserves the tested conditional semantics before any writer is
-activated. Activation additionally requires reviewed store/egress wiring, an explicit
-replicas change, and live cache/freshness/alert proof. Those are deployment and data
-authority concerns, not hidden claims of either backend.
+The unmerged Phase 4b runtime binding fixes the only accepted client endpoint
+and region to `https://s3-hdd.vallery.net` and `garage`. S3 client construction
+reads only these four explicitly supplied keys:
+
+- `LAB_S3_ENDPOINT_URL`
+- `AWS_DEFAULT_REGION`
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+
+Unrelated environment properties are not read; no ambient SDK credential chain
+or session token is used. The release reconciler derives the same exact
+allowlist and gives only those four keys to
+its built-site CLI child; a local-store child receives an empty environment.
+Store locations continue to travel as explicit command data, not as additional
+child-process authority.
+
+This branch also adds a construction-only stage publisher runtime factory. It
+requires explicit shared-S3 occurrence and built-site locations whose identities
+match the event, writer-role stores, and caller-supplied build, verifier, and
+checkpoint operations. It does not supply defaults for those operations and is
+not wired as the executable's default runtime. Constructing it invokes none of
+the operations.
+
+This is source-only dependency injection, not activation. It adds no Kubernetes
+manifest or Secret values, workload selection, endpoint probe, network call,
+replica, egress, route, sync, activation, distributed lease, retention/GC, or
+credential provisioning. Bounded cache hydration from object bytes, distributed
+coordination, bounded retention/GC, the event agent, resource accounting,
+real-endpoint conditional-write proof, and live cache/freshness/alert proof
+remain separate gates. The endpoint proof must confirm that the compatible store
+preserves the tested conditional semantics before any writer is activated.
 
 The source tree now includes the built-site event consumer command:
 
@@ -279,11 +311,11 @@ closed approval record before requesting a construction-only runtime resolver.
 The returned build and verifier operations must share digest-identified profile
 bindings for the fixed `https://lab-stage.verdify.ai` target with global
 noindex. The processor independently requires the selected build record and
-verifier result to attest that profile before publication. The shipped command
-supplies no runtime factory, store, endpoint, credential, environment reader,
-or network client; therefore the command intentionally stops without taking
-live action. The following S3 injection slice must supply those capabilities
-explicitly and remains separate from activation.
+verifier result to attest that profile before publication. The merged command
+supplies no default runtime factory, store, endpoint, credential, environment
+reader, or network client; therefore it intentionally stops without taking live
+action. The unmerged factory above is an explicit construction dependency only
+and does not change that executable default.
 
 ### Astro occurrence-store binding names (source-only)
 

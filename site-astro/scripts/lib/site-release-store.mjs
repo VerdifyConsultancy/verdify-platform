@@ -633,10 +633,12 @@ export class S3SiteReleaseStore extends SiteReleaseStore {
     this.objects = new S3ObjectStore({
       bucket: parsed.bucket,
       prefix: parsed.prefix,
+      accessMode: options.accessMode ?? "writer",
       client: options.client ?? null,
       clientConfig: options.clientConfig ?? {},
       clientFactory: options.clientFactory,
     });
+    this.accessMode = this.objects.accessMode;
   }
 
   async initialize(_options = {}) {

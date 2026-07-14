@@ -132,8 +132,28 @@ same digest-identified `https://lab-stage.verdify.ai` global-noindex profile;
 the selected build record and verifier result must attest that profile before a
 site release can publish. The command deliberately has no default runtime,
 store, endpoint, credential, or network client, so this source slice cannot
-publish or activate anything by itself. Explicit object-store/runtime binding
-remains the next gated Phase 4b slice.
+publish or activate anything by itself.
+
+The current unmerged Phase 4b working branch implements the next source-only
+object-store/runtime prerequisite. The S3 binding accepts only the fixed
+`https://s3-hdd.vallery.net` endpoint and `garage` region, requires the explicit
+four-key client allowlist (`LAB_S3_ENDPOINT_URL`, `AWS_DEFAULT_REGION`,
+`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`), and uses no ambient SDK
+credential chain. Local stores do not inspect environment data. Reader and
+writer roles are enforced by the store primitive: `prepare` needs no store;
+`status`, `bundle`, and `hydrate` use readers; and `publish` and `rollback` use
+writers. The release reconciler gives its CLI child exactly the four S3 keys,
+or an empty environment for a local store.
+
+The same branch provides a construction-only stage publisher factory. Both
+occurrence and built-site locations must be explicit shared-S3 locations and
+must match the event identities; build, verifier, and checkpoint operations
+remain explicit caller dependencies with no defaults. The factory invokes no
+operation and is not selected by a workload or by the executable's default
+path. This local prerequisite has not passed a PR/merge gate and adds no
+Kubernetes manifest or Secret values, endpoint probe, network call, replica,
+egress, route, sync, activation, distributed lease, retention/GC, or credential
+provisioning.
 
 `scripts/rebuild-site.sh` builds Quartz into a staged `public.*` directory,
 verifies the staged `index.html`, then rsyncs the complete staged output into

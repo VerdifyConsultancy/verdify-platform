@@ -14,6 +14,8 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { pathToFileURL } from "node:url";
 
+import { siteReleaseCliEnvironment } from "../scripts/lib/runtime-s3-binding.mjs";
+
 const execFile = promisify(execFileCallback);
 const SHA256_RE = /^[0-9a-f]{64}$/;
 const ISO_INSTANT_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
@@ -79,12 +81,9 @@ function validateStore(value) {
 
 export function runtimeConfig(environment = process.env) {
   const store = validateStore(environment.LAB_RELEASE_STORE);
-  const objectStoreEndpoint = environment.LAB_S3_ENDPOINT_URL ?? null;
-  if (store.startsWith("s3://") && objectStoreEndpoint !== "https://s3-hdd.vallery.net") {
-    throw new Error("s3 release stores require the pinned Verdify object-store endpoint");
-  }
   return {
     store,
+    cliEnvironment: siteReleaseCliEnvironment(store, { environment }),
     cacheRoot: path.resolve(environment.LAB_RELEASE_CACHE ?? "/srv/lab-cache"),
     bakedBundleRoot: path.resolve(environment.LAB_RELEASE_BAKED_BUNDLE ?? "/opt/verdify/lab-known-good"),
     stateRoot: path.resolve(environment.LAB_RELEASE_RUNTIME_STATE ?? "/run/verdify-lab-release"),
@@ -145,11 +144,15 @@ function parseCliJson(stdout, label) {
 }
 
 export async function runReleaseCli(config, args) {
+  const environment = siteReleaseCliEnvironment(config.store, {
+    environment: config.cliEnvironment,
+  });
   const { stdout } = await execFile(process.execPath, [config.cli, ...args], {
     timeout: config.cliTimeoutSeconds * 1000,
     maxBuffer: MAX_CLI_BYTES,
     encoding: "utf8",
     windowsHide: true,
+    env: environment,
   });
   return parseCliJson(stdout, `site release ${args[0]}`);
 }

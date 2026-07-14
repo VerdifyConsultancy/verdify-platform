@@ -6,6 +6,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 import test from "node:test";
 
+import { runSiteReleaseCommand } from "../scripts/manage-site-release.mjs";
 import { createBakedSiteBundle, hydrateSiteCache } from "../scripts/lib/site-release-cache.mjs";
 import {
   LocalSiteReleaseStore,
@@ -432,4 +433,160 @@ test("site release CLI completes prepare, publish, status, hydrate, bundle, and 
     "2026-07-12T13:03:00Z",
   );
   assert.equal(rolledBack.currentReleaseSha256, first.releaseSha256);
+});
+
+test("in-process site release commands validate before selecting reader or writer authority", async (t) => {
+  const value = await fixture();
+  t.after(() => rm(value.root, { recursive: true, force: true }));
+  const publishRequest = await request({ ...value, sequence: 62 });
+  const reader = Object.freeze({ role: "reader" });
+  const writer = Object.freeze({ role: "writer" });
+  const environment = Object.freeze({ AMBIENT_VALUE: "must-not-be-forwarded" });
+  const factoryCalls = [];
+  const emitted = [];
+  const dependencies = {
+    environment,
+    async createReaderStore(storeRoot, options) {
+      factoryCalls.push({ role: "reader", storeRoot, options });
+      return reader;
+    },
+    async createWriterStore(storeRoot, options) {
+      factoryCalls.push({ role: "writer", storeRoot, options });
+      return writer;
+    },
+    readRequest: async () => publishRequest,
+    async publishRelease(input) {
+      assert.equal(input.store, writer);
+      return {
+        releaseSha256: "1".repeat(64),
+        selectionSha256: "2".repeat(64),
+        idempotent: false,
+        retained: true,
+      };
+    },
+    async readStatus(input) {
+      assert.equal(input.store, reader);
+      return { contract: "test-status", storeRoot: input.storeRoot };
+    },
+    async rollbackRelease(input) {
+      assert.equal(input.store, writer);
+      return {
+        selectionSha256: "3".repeat(64),
+        selection: {
+          generation: 2,
+          current: { releaseSha256: "4".repeat(64) },
+          previous: { releaseSha256: "5".repeat(64) },
+        },
+      };
+    },
+    async bakeBundle(input) {
+      assert.equal(input.store, reader);
+      return {
+        releaseSha256: input.releaseSha256,
+        manifestSha256: input.releaseSha256,
+        fileCount: 2,
+        totalBytes: 42,
+      };
+    },
+    async hydrateCache(input) {
+      assert.equal(input.store, reader);
+      return { contract: "test-hydration", ready: true };
+    },
+  };
+
+  const prepared = await runSiteReleaseCommand([
+    "prepare",
+    "--build", value.buildRoot,
+    "--snapshot", SNAPSHOT,
+    "--policy", "verdify-site-v1",
+    "--commit", COMMIT,
+  ], dependencies);
+  assert.equal(prepared.contract, "verdify.lab-site-release-preparation");
+  assert.equal(factoryCalls.length, 0, "prepare has no release-store authority");
+
+  const published = await runSiteReleaseCommand(["publish", "--request", "unused.json"], {
+    ...dependencies,
+    outputWriter: async (bytes) => emitted.push(bytes),
+  });
+  assert.equal(published.contract, "verdify.lab-site-publish-result");
+  assert.equal(emitted[0], `${JSON.stringify(published, null, 2)}\n`);
+  await runSiteReleaseCommand(["status", "--store", value.storeRoot], dependencies);
+  await runSiteReleaseCommand([
+    "rollback",
+    "--store", value.storeRoot,
+    "--expected", "2".repeat(64),
+    "--at", "2026-07-12T13:03:00Z",
+  ], dependencies);
+  await runSiteReleaseCommand([
+    "bundle",
+    "--store", value.storeRoot,
+    "--release", "1".repeat(64),
+    "--destination", path.join(value.root, "bundle-output"),
+  ], dependencies);
+  await runSiteReleaseCommand([
+    "hydrate",
+    "--store", value.storeRoot,
+    "--cache", value.cacheRoot,
+  ], dependencies);
+
+  assert.deepEqual(factoryCalls.map(({ role }) => role), [
+    "writer",
+    "reader",
+    "writer",
+    "reader",
+    "reader",
+  ]);
+  assert.equal(factoryCalls[0].options.create, true);
+  for (const call of factoryCalls) assert.equal(call.options.environment, environment);
+
+  const callsBeforeInvalidRequest = factoryCalls.length;
+  await assert.rejects(
+    runSiteReleaseCommand(["publish", "--request", "unused.json"], {
+      ...dependencies,
+      readRequest: async () => ({ ...publishRequest, builderCommit: "invalid" }),
+    }),
+    /builder commit is invalid/u,
+  );
+  assert.equal(factoryCalls.length, callsBeforeInvalidRequest, "an invalid request never constructs a writer");
+
+  let implicitEnvironment = "not-called";
+  await runSiteReleaseCommand(["status", "--store", value.storeRoot], {
+    async createReaderStore(_storeRoot, options) {
+      implicitEnvironment = options.environment;
+      return reader;
+    },
+    readStatus: async () => ({ contract: "test-status" }),
+  });
+  assert.equal(implicitEnvironment, undefined, "library composition never selects the ambient process environment");
+
+  const missingStore = new Error("local store is absent");
+  missingStore.code = "ENOENT";
+  let fallbackInput = null;
+  const fallback = await runSiteReleaseCommand([
+    "hydrate",
+    "--store", path.join(value.root, "absent-store"),
+    "--cache", value.cacheRoot,
+    "--baked", path.join(value.root, "known-good"),
+  ], {
+    createReaderStore: async () => { throw missingStore; },
+    hydrateCache: async (input) => {
+      fallbackInput = input;
+      return { contract: "test-hydration", source: "baked-known-good" };
+    },
+  });
+  assert.equal(fallback.source, "baked-known-good");
+  assert.equal(fallbackInput.store, null, "only an absent local reader delegates to the baked fallback");
+
+  await assert.rejects(
+    runSiteReleaseCommand([
+      "hydrate",
+      "--store", value.storeRoot,
+      "--cache", value.cacheRoot,
+      "--baked", path.join(value.root, "known-good"),
+    ], {
+      createReaderStore: async () => { throw new Error("reader configuration is invalid"); },
+      hydrateCache: async () => { throw new Error("hydrate must not run"); },
+    }),
+    /reader configuration is invalid/u,
+  );
 });

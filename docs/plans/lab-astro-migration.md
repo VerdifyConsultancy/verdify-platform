@@ -1,7 +1,7 @@
 # Lab Astro Migration — Consolidated Program Tracker
 
-Last updated: 2026-07-13 (stage now serves `814eafff`: P0 scroll-fix
-PR #504/pin #505 — user-reported viewport scroll-lock from body-level
+Last updated: 2026-07-14. The latest recorded stage rollout serves `814eafff`
+(P0 scroll-fix PR #504/pin #505 — user-reported viewport scroll-lock from body-level
 `overflow:clip`, fixed + regression-tested; roll also shipped #487/#496/#501/
 #502 content. Phases 1-3 PASSED; Phase 4 in flight.)
 build/probe/pin gates passed; Phase 4b S3 foundation merged; occurrence
@@ -10,6 +10,9 @@ carried by #501. The occurrence-export caller is merged through #507. The
 concrete operation adapter and explicit execute CLI in this source tree remain
 caller-disabled without an approved policy and explicit store location; they
 make no endpoint, value, credential, deployment, or activation claim.
+An isolated Phase 4b worktree now implements strict runtime S3 dependency
+injection, but it is unmerged and has not passed a PR, build, pin, or rollout
+gate. It does not change the live stage.
 Owner: platform agent (Claude outer loop plans/verifies; Codex executes on
 xhigh). Human gate: Jason (prod sync, DNS/edge, Quartz retirement, credential
 work). Epic: #351 (L9, G3). This file is the single source of truth for the
@@ -23,6 +26,7 @@ changes state.
 | `lab.verdify.ai` (prod) | Quartz. `verdify-lab` Deployment in `verdify-prod` (ghcr image — pre-ADR-0021 holdover), `verdify-lab-publisher` CronJob republished every 10 min (mutable, shared RWO PVC, both replicas node-pinned). Healthy and fresh; had a 5-job BackoffLimitExceeded streak before recovering. |
 | `lab-stage.verdify.ai` (canary) | Astro. `verdify-lab-astro-stage` in ns `verdify-platform`, 2/2 Ready with zero restarts on distinct nodes, exact image and pod image IDs `verdify-lab-astro@sha256:ee36941f20028fcfe06f12bf253e7139c00e3d5de1949eb8b12bb1d4ebe60b99` (pin PR #468), shell contract **1.1.0**, content frozen at the 2026-07-12 snapshot. Live T0/T+10 acceptance passed and the ArgoCD app returned to manual-sync. |
 | `main` | Astro source includes the accepted static implementation, dormant release/cache runtime, offline camera producer (#487), complete offline 143-graph producer (#492), inactive S3 conditional-store foundation (#496), typed occurrence store (#502), and the closed 143+2 caller (#507). The concrete store-operation adapter and execute CLI in this source tree require an explicit store plus canonical Jason-approved policy before initialization. Runtime pin #500 binds the dormant agent/nginx pair to the latest completed relevant source chain; later source changes are not automatically staged. The source-only name-readiness contract is carried by #501, not yet a deployed binding. The live stage remains the static image above; endpoint binding, event delivery, exact parity, and production cutover remain. |
+| Phase 4b worktree | **Local and unmerged.** Strict source-only S3 injection fixes endpoint `https://s3-hdd.vallery.net` and region `garage`, enforces reader/writer roles, and adds explicit CLI/reconciler and construction-only stage-publisher bindings. This is not on `main`, selected by a workload, or authorized for activation. |
 | In-cluster CI | **Green for the latest completed Lab source/pin chain.** Workflow `verdify-platform-ci-crv96` completed 17/17 Lab Pod gates for `6729cc2...`: 12 browser quality tests, static/agent/nginx builds, metadata hydration, exact static probe, and paired runtime probe. Pin #500 passed exact-head PR CI/render/kubeconform and its digest-only follow-up workflow passed. Later exact-main workflows do not authorize stage sync or runtime activation. Earlier Playwright fixes #463/#464 and agents#2969/#2970 remain enforced without relaxing quality budgets. |
 
 ## Completed (do not re-plan)
@@ -199,9 +203,20 @@ Phase 4 — **Feature completion (owner: codex, critical-path order below).**
    validates canonical key-name inventories without reading values, and makes no
    existence, endpoint, deployment, or authority claim. The source-only 4c
    caller and adapter supply a closed store-operation contract without endpoint,
-   value, credential, deployment, or activation wiring. Next prove real-endpoint
-   conditional writes and a
-   distributed lease (credential presence by name only), event-driven publishing, bounded
+   value, credential, deployment, or activation wiring. The current isolated
+   worktree implements, but has not merged, the next runtime prerequisite:
+   fixed `https://s3-hdd.vallery.net`/`garage` client configuration; an explicit
+   four-key S3 environment only; no environment read for local stores; code-level
+   reader/writer enforcement; no-store `prepare`; reader `status`/`bundle`/
+   `hydrate`; writer `publish`/`rollback`; and an exact four-key reconciler child
+   allowlist. Its construction-only stage publisher factory requires explicit
+   shared-S3 occurrence/site stores plus caller-supplied build, verifier, and
+   checkpoint operations, with no operation defaults. It adds no Kubernetes
+   manifest or Secret values, workload selection, endpoint probe, network call,
+   replica, egress, route, sync, activation, distributed lease, retention/GC,
+   or credential provisioning. After this prerequisite passes its own merge
+   gate, next prove real-endpoint conditional writes and a distributed lease
+   (credential presence by name only), event-driven publishing, bounded
    retention/GC, and resource metrics. S3 occurrence wiring and S7 closure are
    hard-gated on the 4c producer contract.
 4. **4d Exact parity:** recreate the SVG-title comparator fix (+8 tests),
@@ -215,6 +230,8 @@ Phase 4 — **Feature completion (owner: codex, critical-path order below).**
    depends on 4c+4b materializing the same-snapshot fallbacks, a regenerated
    source snapshot reflecting the historical-reference dispositions, and an
    approval-eligible immutable attestation.
+   Issue #479 is open for this final gated proof; the earlier automatic close
+   did not satisfy it.
 
 GATE per implementation slice: PR merged + `make ci` green + in-cluster build
 green. That gate does not close S3/4c: S3 remains open until the joint S3+S7
@@ -316,6 +333,15 @@ operation adapter plus explicit execute CLI, with offline local/injected-S3
 proof. These source artifacts do not bind a resource, endpoint, credential,
 workload, route, replica, or environment; real-endpoint proof, a distributed
 lease, bounded GC, event delivery, and any stage selection remain open gates.
+
+CURRENT LOCAL PREREQUISITE (2026-07-14, unmerged): the Phase 4b runtime S3
+injection described above exists only in an isolated worktree. It fixes the
+endpoint/region and explicit four-key client environment, enforces reader and
+writer roles through the built-site CLI/reconciler, and provides a
+construction-only shared-S3 stage runtime with explicit build, verifier, and
+checkpoint dependencies. It has not passed a PR/merge/build gate and performs
+no endpoint probe, network or cluster action, credential provisioning, or
+activation.
 
 ## Operating cadence
 
