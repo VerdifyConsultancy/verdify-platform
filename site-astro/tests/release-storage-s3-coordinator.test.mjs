@@ -824,6 +824,7 @@ test("fourteen-day reservations and 48-hour confirmations converge with fenced a
   });
   assert.equal(status.state, "complete");
   assert.equal(status.deletedObjects, 194);
+  assert.ok(status.retainedBytes < releaseStorageS3CoordinatorContract.budgets.retainedBytes);
   assert.ok(status.thresholds.find(({ name }) => name === "requestsPerDay").value < 25_000);
   const keys = [...value.client.objects.keys()];
   assert.equal(keys.some((key) => key.includes(`/usage/${reservationDays.at(-1)}/reservations/`)), false);
