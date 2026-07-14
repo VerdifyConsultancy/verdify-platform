@@ -17,6 +17,18 @@ import {
   siteContentIdentitySha256,
   siteReleasePayloadSha256,
 } from "../scripts/lib/site-release-store.mjs";
+import { cameraExportProducerContract as cameraImplementationContract } from "../scripts/lib/camera-export-producer.mjs";
+import { graphExportProducerContract as graphImplementationContract } from "../scripts/lib/graph-export-producer.mjs";
+import {
+  cameraExportProducerContract,
+  graphExportProducerContract,
+  occurrenceProducerRunnerContract,
+} from "../scripts/lib/occurrence-producer-contracts.mjs";
+import { occurrenceProducerRunnerContract as runnerImplementationContract } from "../scripts/lib/occurrence-producer-runner.mjs";
+import {
+  verifyOccurrenceExporterImage,
+  verifyPackagedOccurrenceExporterImage,
+} from "../scripts/verify-occurrence-exporter-image.mjs";
 
 const SITE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const REPO_ROOT = path.resolve(SITE_ROOT, "..");
@@ -272,6 +284,93 @@ test("release runtime images bake a real digest-bound fallback and serve only th
     AWS_SECRET_ACCESS_KEY: "fixture-secret-key",
   });
   assert.equal(Object.isFrozen(config.cliEnvironment), true);
+});
+
+test("occurrence exporter image is packaged offline before the unchanged default site target", async () => {
+  const dockerfile = await readFile(path.join(SITE_ROOT, "Dockerfile.release-runtime"), "utf8");
+  const stages = [...dockerfile.matchAll(/^FROM\s+\S+(?:\s+AS\s+(\S+))?\s*$/gmi)]
+    .map((match) => match[1] ?? "");
+  assert.deepEqual(stages, ["dependencies", "build", "agent", "occurrence-exporter", "site"]);
+  assert.equal(stages.at(-1), "site", "the final implicit release-runtime target must remain the site server");
+
+  const exporterStart = dockerfile.indexOf("FROM dependencies AS occurrence-exporter");
+  const exporterEnd = dockerfile.indexOf("FROM nginxinc/nginx-unprivileged", exporterStart);
+  const exporter = dockerfile.slice(exporterStart, exporterEnd);
+  assert.match(exporter, /ai\.verdify\.release-authority="none"/u);
+  assert.match(exporter, /ai\.verdify\.device-authority="none"/u);
+  assert.match(exporter, /ai\.verdify\.live-authority="none"/u);
+  assert.match(exporter, /ARG LAB_EXPORTER_BUILDER_COMMIT/u);
+  assert.match(exporter, /ARG LAB_EXPORTER_RELEASED_AT/u);
+  assert.match(exporter, /org\.opencontainers\.image\.revision="\$\{LAB_EXPORTER_BUILDER_COMMIT\}"/u);
+  assert.match(exporter, /org\.opencontainers\.image\.created="\$\{LAB_EXPORTER_RELEASED_AT\}"/u);
+  assert.match(exporter, /verdify\.lab-occurrence-exporter-image-metadata/u);
+  assert.match(exporter, /\^\[0-9a-f\]\{40\}\(\[0-9a-f\]\{24\}\)\?\$/u);
+  assert.match(exporter, /USER 101:101/u);
+  assert.match(exporter, /CMD \["node", "\/app\/scripts\/verify-occurrence-exporter-image\.mjs"\]/u);
+  assert.doesNotMatch(exporter, /^ENV\s/mu);
+  assert.doesNotMatch(exporter, /COPY\s+\.\s|COPY[^\n]*(?:config|policy|credential|feed)|https?:\/\/|AWS_|LAB_S3_/u);
+
+  const copiedScripts = [...exporter.matchAll(/^COPY\s+(scripts\/[^\s]+)\s+\/app\/scripts\//gmu)]
+    .map((match) => match[1]);
+  assert.deepEqual(copiedScripts, [
+    "scripts/verify-occurrence-exporter-image.mjs",
+    "scripts/lib/occurrence-producer-contracts.mjs",
+  ]);
+  assert.strictEqual(graphImplementationContract, graphExportProducerContract);
+  assert.strictEqual(cameraImplementationContract, cameraExportProducerContract);
+  assert.strictEqual(runnerImplementationContract, occurrenceProducerRunnerContract);
+  const packagedSource = await Promise.all(copiedScripts.map((relative) => readFile(path.join(SITE_ROOT, relative), "utf8")));
+  assert.doesNotMatch(
+    packagedSource.join("\n"),
+    /https?:\/\/|AWS_|LAB_S3_|S3Client|process\.env|\bfetch\s*\(|\bsharp\b/u,
+  );
+
+  const metadata = {
+    contract: "verdify.lab-occurrence-exporter-image-metadata",
+    schemaVersion: 1,
+    builderCommit: "1".repeat(40),
+    releasedAt: "2026-07-14T01:02:03Z",
+  };
+  const expected = {
+    contract: "verdify.lab-occurrence-exporter-image-status",
+    schemaVersion: 1,
+    status: "packaged",
+    runtime: "runtime-unbound",
+    source: {
+      builderCommit: "1".repeat(40),
+      releasedAt: "2026-07-14T01:02:03Z",
+    },
+    authorities: { release: "none", device: "none", live: "none" },
+    operations: {
+      network: "not-invoked",
+      store: "not-invoked",
+      capture: "not-invoked",
+      render: "not-invoked",
+    },
+    producerContracts: {
+      graphs: "verified-143",
+      cameras: "verified-2",
+      runner: "verified-143-plus-2",
+    },
+  };
+  assert.deepEqual(verifyOccurrenceExporterImage(metadata), expected);
+  assert.throws(
+    () => verifyOccurrenceExporterImage({ ...metadata, builderCommit: "1".repeat(39) }),
+    /source metadata contract is invalid/u,
+  );
+  assert.throws(
+    () => verifyOccurrenceExporterImage({ ...metadata, releasedAt: "2026-02-30T01:02:03Z" }),
+    /source metadata time contract is invalid/u,
+  );
+
+  const metadataRoot = await mkdtemp(path.join(tmpdir(), "verdify-occurrence-exporter-image-"));
+  try {
+    const metadataPath = path.join(metadataRoot, "occurrence-exporter-image.json");
+    await writeFile(metadataPath, `${JSON.stringify(metadata, null, 2)}\n`);
+    assert.deepEqual(await verifyPackagedOccurrenceExporterImage(metadataPath), expected);
+  } finally {
+    await rm(metadataRoot, { recursive: true, force: true });
+  }
 });
 
 test("release reconciler CLI forwards only the store-specific environment allowlist", async (context) => {

@@ -19,24 +19,25 @@ import {
   captureCameraOccurrence,
   validateCameraExportRequest,
 } from "./camera-export-producer.mjs";
+import { occurrenceProducerRunnerContract } from "./occurrence-producer-contracts.mjs";
 import { validateOccurrenceProducerResult } from "./occurrence-producer-result-contract.mjs";
 
 const SHA256_RE = /^[0-9a-f]{64}$/u;
 const ISO_INSTANT_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/u;
-const EXPECTED_GRAPH_COUNT = graphExportBatchContract.expectedGraphCount;
-const EXPECTED_CURRENT_MEDIA_COUNT = graphExportBatchContract.expectedCurrentMediaCount;
-const EXPECTED_LEGACY_OVERRIDE_COUNT = 40;
-const EXPECTED_REPORTING_DEFAULT_COUNT = 103;
-const DEFAULT_CAMERA_CONCURRENCY = 2;
-const MAX_CAMERA_CONCURRENCY = 2;
-const DEFAULT_CAMERA_MAX_ATTEMPTS = 2;
-const MAX_CAMERA_MAX_ATTEMPTS = 3;
-const RETRYABLE_CAMERA_STATUSES = Object.freeze([
-  "timeout",
-  "http-error",
-  "decode-error",
-  "missing",
-]);
+const EXPECTED_GRAPH_COUNT = occurrenceProducerRunnerContract.expectedGraphCount;
+const EXPECTED_CURRENT_MEDIA_COUNT = occurrenceProducerRunnerContract.expectedCurrentMediaCount;
+const EXPECTED_LEGACY_OVERRIDE_COUNT = occurrenceProducerRunnerContract.expectedLegacyOverrideCount;
+const EXPECTED_REPORTING_DEFAULT_COUNT = occurrenceProducerRunnerContract.expectedReportingDefaultCount;
+const DEFAULT_CAMERA_CONCURRENCY = occurrenceProducerRunnerContract.defaultCameraConcurrency;
+const MAX_CAMERA_CONCURRENCY = occurrenceProducerRunnerContract.maxCameraConcurrency;
+const DEFAULT_CAMERA_MAX_ATTEMPTS = occurrenceProducerRunnerContract.defaultCameraMaxAttempts;
+const MAX_CAMERA_MAX_ATTEMPTS = occurrenceProducerRunnerContract.maxCameraMaxAttempts;
+const RETRYABLE_CAMERA_STATUSES = occurrenceProducerRunnerContract.retryableCameraStatuses;
+
+if (
+  EXPECTED_GRAPH_COUNT !== graphExportBatchContract.expectedGraphCount
+  || EXPECTED_CURRENT_MEDIA_COUNT !== graphExportBatchContract.expectedCurrentMediaCount
+) throw new Error("occurrence producer runner and export batch contracts disagree");
 
 function canonicalBytes(value) {
   return Buffer.from(`${JSON.stringify(value, null, 2)}\n`);
@@ -523,22 +524,4 @@ export async function runOccurrenceProducer({
   return result;
 }
 
-export const occurrenceProducerRunnerContract = Object.freeze({
-  expectedGraphCount: EXPECTED_GRAPH_COUNT,
-  expectedCurrentMediaCount: EXPECTED_CURRENT_MEDIA_COUNT,
-  expectedLegacyOverrideCount: EXPECTED_LEGACY_OVERRIDE_COUNT,
-  expectedReportingDefaultCount: EXPECTED_REPORTING_DEFAULT_COUNT,
-  defaultCameraConcurrency: DEFAULT_CAMERA_CONCURRENCY,
-  maxCameraConcurrency: MAX_CAMERA_CONCURRENCY,
-  defaultCameraMaxAttempts: DEFAULT_CAMERA_MAX_ATTEMPTS,
-  maxCameraMaxAttempts: MAX_CAMERA_MAX_ATTEMPTS,
-  retryableCameraStatuses: RETRYABLE_CAMERA_STATUSES,
-  selectorReader: Object.freeze({
-    contract: "verdify.lab-occurrence-selector-precondition-reader",
-    schemaVersion: 1,
-  }),
-  result: Object.freeze({
-    contract: "verdify.lab-occurrence-producer-run",
-    schemaVersion: 1,
-  }),
-});
+export { occurrenceProducerRunnerContract };

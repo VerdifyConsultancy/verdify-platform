@@ -3,6 +3,7 @@ import path from "node:path";
 
 import sharp from "sharp";
 
+import { graphExportProducerContract } from "./occurrence-producer-contracts.mjs";
 import {
   occurrenceExportPolicySha256,
   reportingFeedEnvelopeSha256,
@@ -15,24 +16,18 @@ import {
 } from "./occurrence-candidate-store.mjs";
 import { decodePng } from "./png-validation.mjs";
 
-const EXPECTED_GRAPH_COUNT = 143;
-const MAX_CONCURRENCY = 4;
-const DEFAULT_CONCURRENCY = 4;
-const MAX_TIMEOUT_MS = 15_000;
-const DEFAULT_TIMEOUT_MS = 10_000;
-const MAX_SETTLEMENT_GRACE_MS = 250;
-const DEFAULT_SETTLEMENT_GRACE_MS = 50;
+const EXPECTED_GRAPH_COUNT = graphExportProducerContract.expectedGraphCount;
+const MAX_CONCURRENCY = graphExportProducerContract.maxConcurrency;
+const DEFAULT_CONCURRENCY = graphExportProducerContract.defaultConcurrency;
+const MAX_TIMEOUT_MS = graphExportProducerContract.maxTimeoutMs;
+const DEFAULT_TIMEOUT_MS = graphExportProducerContract.defaultTimeoutMs;
+const MAX_SETTLEMENT_GRACE_MS = graphExportProducerContract.maxSettlementGraceMs;
+const DEFAULT_SETTLEMENT_GRACE_MS = graphExportProducerContract.defaultSettlementGraceMs;
 const SHA256_RE = /^[0-9a-f]{64}$/;
 const ISO_INSTANT_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
 const PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 const WAIT_TIMEOUT = Symbol("wait-timeout");
-const LEGACY_DATASOURCE_DASHBOARD_UIDS = Object.freeze([
-  "greenhouse-equipment",
-  "greenhouse-hydroponics",
-  "greenhouse-lighting",
-  "greenhouse-soil",
-  "greenhouse-weather",
-]);
+const LEGACY_DATASOURCE_DASHBOARD_UIDS = graphExportProducerContract.legacyDatasourceDashboardUids;
 const LEGACY_DATASOURCE_DASHBOARD_UID_SET = new Set(LEGACY_DATASOURCE_DASHBOARD_UIDS);
 const FORBIDDEN_DATASOURCE_IDENTITIES = new Set([
   "P44368ADAD746BC27",
@@ -690,23 +685,4 @@ export async function produceGraphExportCandidates({
   };
 }
 
-export const graphExportProducerContract = Object.freeze({
-  expectedGraphCount: EXPECTED_GRAPH_COUNT,
-  defaultConcurrency: DEFAULT_CONCURRENCY,
-  maxConcurrency: MAX_CONCURRENCY,
-  defaultTimeoutMs: DEFAULT_TIMEOUT_MS,
-  maxTimeoutMs: MAX_TIMEOUT_MS,
-  defaultSettlementGraceMs: DEFAULT_SETTLEMENT_GRACE_MS,
-  maxSettlementGraceMs: MAX_SETTLEMENT_GRACE_MS,
-  renderer: Object.freeze({
-    contract: "verdify.lab-graph-renderer",
-    schemaVersion: 3,
-    sourceClass: "operator-owned-reporting-tier",
-    anonymousAccess: false,
-    reportingFeedSha256: "required-exact-plan-digest",
-    reportingDatasourceIdentitySha256: "required-dedicated-identity-digest",
-    abortCooperation: "settle-within-grace-after-abort",
-  }),
-  legacyDatasourceDashboardUids: LEGACY_DATASOURCE_DASHBOARD_UIDS,
-  probeStatuses: Object.freeze(["success", "timeout", "http-error", "decode-error", "missing"]),
-});
+export { graphExportProducerContract };
