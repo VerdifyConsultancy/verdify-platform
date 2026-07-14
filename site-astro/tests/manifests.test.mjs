@@ -286,16 +286,21 @@ test("release runtime images bake a real digest-bound fallback and serve only th
   assert.equal(Object.isFrozen(config.cliEnvironment), true);
 });
 
-test("occurrence exporter image is packaged offline before the unchanged default site target", async () => {
+test("site target precedes the independent occurrence exporter target for Kaniko", async () => {
   const dockerfile = await readFile(path.join(SITE_ROOT, "Dockerfile.release-runtime"), "utf8");
   const stages = [...dockerfile.matchAll(/^FROM\s+\S+(?:\s+AS\s+(\S+))?\s*$/gmi)]
     .map((match) => match[1] ?? "");
-  assert.deepEqual(stages, ["dependencies", "build", "agent", "occurrence-exporter", "site"]);
-  assert.equal(stages.at(-1), "site", "the final implicit release-runtime target must remain the site server");
+  assert.deepEqual(stages, ["dependencies", "build", "agent", "site", "occurrence-exporter"]);
+  for (const target of ["agent", "site", "occurrence-exporter"]) {
+    assert.equal(stages.filter((stage) => stage === target).length, 1, `${target} must be declared exactly once`);
+  }
+  assert.ok(
+    stages.indexOf("agent") < stages.indexOf("site") && stages.indexOf("site") < stages.indexOf("occurrence-exporter"),
+    "--target site must stop before exporter-only required build arguments",
+  );
 
   const exporterStart = dockerfile.indexOf("FROM dependencies AS occurrence-exporter");
-  const exporterEnd = dockerfile.indexOf("FROM nginxinc/nginx-unprivileged", exporterStart);
-  const exporter = dockerfile.slice(exporterStart, exporterEnd);
+  const exporter = dockerfile.slice(exporterStart);
   assert.match(exporter, /ai\.verdify\.release-authority="none"/u);
   assert.match(exporter, /ai\.verdify\.device-authority="none"/u);
   assert.match(exporter, /ai\.verdify\.live-authority="none"/u);
