@@ -103,11 +103,14 @@ immutable input.
 
 ## Remaining parity boundaries
 
-- The repaired deterministic Quartz/Astro feeds and sitemaps, document-title
-  parsing, rendered-text normalization, 404 preservation, robots policy, and
-  decorative heading-anchor treatment are code-level Phase 4d work.
+- Deterministic Quartz/Astro feeds and sitemaps, document-title parsing,
+  rendered-text normalization, 404 preservation, robots policy, and decorative
+  heading-anchor treatment are complete at the code level; the comparison
+  above has no remaining finding in those classes.
 - Selected same-origin evidence is still absent for 143 graph and two current
   camera occurrences. That is the gated #476/#480 release-materialization
   boundary; this review does not weaken or waive it.
-- Final #479 evidence must run without `--allow-provisional`, report zero
-  unexplained semantic findings, and use an approved immutable snapshot.
+- Final #479 evidence must use a regenerated snapshot that reflects the nine
+  dispositions, materialize the gated 143+2 evidence, run without
+  `--allow-provisional`, report zero unexplained findings, and carry an
+  approved immutable snapshot identity.

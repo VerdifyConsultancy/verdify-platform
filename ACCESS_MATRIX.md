@@ -1,6 +1,6 @@
 # Verdify Platform Access Matrix
 
-Last updated: 2026-06-16
+Last updated: 2026-07-14
 
 Agent name: `verdify-platform`
 
@@ -11,9 +11,10 @@ does not include raw secret values.
 |---|---|---|---|---|---|
 | `VerdifyConsultancy/verdify-platform` checkout | Local read/write | Read/write repo files | Single repo | Verdify repo admins | Granted locally |
 | GitHub issues/PRs | Auth via local `gh` as `jvallery` | Repo-scoped issue/PR read/write | Single repo | Verdify repo admins | Available |
-| GitHub Project Board | Project scope available through local `gh`; project #5 updated with #343-#352 | Maintain lane board and epic cards | Project only | Verdify org/project admins | Available |
-| GitHub Actions | Workflow files local; `gh` dispatch possible with token | Dispatch only when task calls for it | Single repo | Repo admins | Available/gated |
-| GHCR app packages | CI publishes; manifests reference digest pins | Package read/write through CI | Verdify packages | Repo/org admins | CI-owned |
+| GitHub Project Board | Project scope available through local `gh`; project #5 includes lane epics and current Lab children | Maintain issue fields, native parents, and blockers | Project only | Verdify org/project admins | Available |
+| In-cluster CI/publishing | Argo Events/Workflows + Kaniko; exact revisions publish to Zot | Submit/observe reviewed repo-build workflows; no GitHub Actions publishing | `agent-fleet-ci` / repo scope | Agent Fleet + repo owners | Available through the fixed pipeline |
+| Zot application images | `registry.vallery.net` digest pins; in-cluster origin push | Resolve/pin immutable digests through CI | Verdify image namespace | Agent Fleet / registry owners | CI-owned |
+| GHCR holdovers | Read-only legacy production references only | Retire through the gated migration; never publish new images | Legacy Quartz runtime | Repo/Jason | Retirement pending #482 |
 | `verdify-prod` namespace | Repo manifests; no live write used in this docs pass | Read for diagnostics; writes Jason-gated through GitOps | Namespace | Jason + Platform/GitOps owners | Gated |
 | ArgoCD apps | App YAML in repo | Read app health; sync prod only with Jason approval | `verdify-prod-dark` | Platform/GitOps owners | Gated |
 | Kubernetes Secrets | Names/key contracts only | Metadata/status only; no values | Namespace-local | Secret-delivery owner | Values out of scope |
@@ -22,7 +23,8 @@ does not include raw secret values.
 | DNS/Cloudflare/Ingress controller/device VLAN | Manifest references only | Coordination request | Routes/network | `network-infra` + Jason | Out of scope |
 | Home Assistant / Frigate / Lutron | App references and issue tracking only | Contract review and named integration path | Greenhouse integrations | Jason / integration owners | Needs L7 review |
 | Shared monitoring/logging | App dashboard manifests only | Coordination request | Shared platform | `monitoring-stack` | Out of scope |
-| S3 lab content store | Secret names/key contracts only | Metadata/status and publisher contract | Lab notebook publishing | Secret-delivery owner / web lane | Needs L9 review |
+| Astro stage occurrence store | Secret names/key contracts only; no values/admin path | Protected #533 bucket + reader/writer delivery and name-only verification | Lab stage only | storage-infra / Secret-delivery owner | Approved; delivery pending |
+| Isolated reporting tier/feed | Repo contracts only; no live projection/credential | Execute protected #534 anonymous-disabled tier + read-only feed delivery under the recorded stage-only approval | Lab stage only | `verdify-platform` executor | Approved; executor delivery pending |
 | ESP32 firmware OTA/device write | Source/validation only | Jason-approved operation only | Live greenhouse device | Jason | Hard gated |
 
 ## GitHub Credential Notes
