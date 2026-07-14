@@ -45,6 +45,24 @@ USER 101:101
 ENTRYPOINT ["/app/release-runtime/entrypoint.sh"]
 CMD ["reconcile"]
 
+FROM nginxinc/nginx-unprivileged:1.29.3-alpine@sha256:f7d0d0f2ebc0486dc110278672b9073f7fd641e58376b112b0c8865cf36d2e36 AS site
+
+LABEL org.opencontainers.image.title="Verdify Lab atomic release server" \
+      org.opencontainers.image.description="Nginx serving a verified per-pod atomic Lab release cache" \
+      ai.verdify.release-authority="none" \
+      ai.verdify.device-authority="none"
+
+COPY release-runtime/nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx/security-headers.inc /etc/nginx/conf.d/security-headers.inc
+
+USER 101:101
+EXPOSE 8080
+STOPSIGNAL SIGQUIT
+CMD ["nginx", "-g", "daemon off;"]
+
+# Keep this independent target after `site`: Kaniko evaluates every preceding
+# stage even when --target is set, so exporter-only required build arguments
+# must never be traversed by the site-image build.
 FROM dependencies AS occurrence-exporter
 
 ARG LAB_EXPORTER_BUILDER_COMMIT
@@ -69,18 +87,3 @@ RUN printf '%s' "${LAB_EXPORTER_BUILDER_COMMIT}" | grep -Eq '^[0-9a-f]{40}([0-9a
 
 USER 101:101
 CMD ["node", "/app/scripts/verify-occurrence-exporter-image.mjs"]
-
-FROM nginxinc/nginx-unprivileged:1.29.3-alpine@sha256:f7d0d0f2ebc0486dc110278672b9073f7fd641e58376b112b0c8865cf36d2e36 AS site
-
-LABEL org.opencontainers.image.title="Verdify Lab atomic release server" \
-      org.opencontainers.image.description="Nginx serving a verified per-pod atomic Lab release cache" \
-      ai.verdify.release-authority="none" \
-      ai.verdify.device-authority="none"
-
-COPY release-runtime/nginx.conf /etc/nginx/conf.d/default.conf
-COPY nginx/security-headers.inc /etc/nginx/conf.d/security-headers.inc
-
-USER 101:101
-EXPOSE 8080
-STOPSIGNAL SIGQUIT
-CMD ["nginx", "-g", "daemon off;"]
