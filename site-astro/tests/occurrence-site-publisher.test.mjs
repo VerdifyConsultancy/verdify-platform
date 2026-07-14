@@ -1697,6 +1697,7 @@ test("stage execution wrapper publishes one canonical delivery and rejects unbou
             build = stageBuild,
             verification = stageVerification,
             siteOrigin = profile.siteOrigin,
+            selectedPublication = publication,
         } = {}) =>
         async (request) => {
             runtimeCalls += 1;
@@ -1714,7 +1715,7 @@ test("stage execution wrapper publishes one canonical delivery and rejects unbou
                 buildOperation: build,
                 verificationOperation: verification,
                 checkpointOperations: checkpoints,
-                publicationOperation: publication,
+                publicationOperation: selectedPublication,
             };
         };
 
@@ -1732,8 +1733,9 @@ test("stage execution wrapper publishes one canonical delivery and rejects unbou
         /build does not attest the bound site publication target/,
     );
 
+    const wrongProofInputs = await inputsFor("wrong-proof");
     await assert.rejects(
-        runOccurrenceSitePublisherDelivery(await inputsFor("wrong-proof"), {
+        runOccurrenceSitePublisherDelivery(wrongProofInputs, {
             createRuntime: runtimeFactory({
                 verification: verificationOperation(profile, {
                     resultOverride: {
@@ -1744,9 +1746,20 @@ test("stage execution wrapper publishes one canonical delivery and rejects unbou
         }),
         /verifier did not attest the exact selected build and target/,
     );
+    assert.deepEqual(await readdir(wrongProofInputs.workspaceRoot), []);
 
     const inputs = await inputsFor("stage-execution-workspace");
-    const createRuntime = runtimeFactory();
+    const outage = { armed: true };
+    const createRuntime = runtimeFactory({
+        selectedPublication: publicationOperation(value.siteStore, {
+            failBeforePublish: outage,
+        }),
+    });
+    await assert.rejects(
+        runOccurrenceSitePublisherDelivery(inputs, { createRuntime }),
+        /simulated downstream site-store outage/,
+    );
+    assert.deepEqual(await readdir(inputs.workspaceRoot), []);
     const result = await runOccurrenceSitePublisherDelivery(inputs, {
         createRuntime,
     });
@@ -1759,13 +1772,14 @@ test("stage execution wrapper publishes one canonical delivery and rejects unbou
     assert.deepEqual(result.publicationProfile, profile);
     assert.equal(result.publication.status, "published");
     assert.equal(result.publication.eventSha256, inputs.event.sha256);
-    assert.equal(runtimeCalls, 3);
+    assert.deepEqual(await readdir(inputs.workspaceRoot), ["selected-build"]);
+    assert.equal(runtimeCalls, 4);
 
     await assert.rejects(
         runOccurrenceSitePublisherDelivery(inputs),
         /runtime is not configured; no default live action is available/,
     );
-    assert.equal(runtimeCalls, 3);
+    assert.equal(runtimeCalls, 4);
 
     const blockedPolicy = structuredClone(value.policy);
     blockedPolicy.activation = {
@@ -1781,7 +1795,7 @@ test("stage execution wrapper publishes one canonical delivery and rejects unbou
         ),
         /publication is disabled by the supplied policy/,
     );
-    assert.equal(runtimeCalls, 3);
+    assert.equal(runtimeCalls, 4);
 
     await assert.rejects(
         runOccurrenceSitePublisherDelivery(
@@ -1790,7 +1804,7 @@ test("stage execution wrapper publishes one canonical delivery and rejects unbou
         ),
         /canonical identity mismatch/,
     );
-    assert.equal(runtimeCalls, 3);
+    assert.equal(runtimeCalls, 4);
 
     const nestedWorkspace = path.join(value.candidateRoot, "nested-workspace");
     await mkdir(nestedWorkspace);
@@ -1801,7 +1815,7 @@ test("stage execution wrapper publishes one canonical delivery and rejects unbou
         ),
         /roots must be disjoint/,
     );
-    assert.equal(runtimeCalls, 3);
+    assert.equal(runtimeCalls, 4);
 
     await assert.rejects(
         runOccurrenceSitePublisherDelivery(inputs, {
@@ -1835,38 +1849,6 @@ test("stage execution wrapper publishes one canonical delivery and rejects unbou
             manifest: structuredClone(request.manifest),
             occurrenceStore: request.occurrenceStore,
         });
-    for (const [label, message] of [
-        ["semantic-verifier", "simulated post-build semantic verifier failure"],
-        ["publication-read", "simulated post-build publication read failure"],
-    ]) {
-        const retryInputs = await inputsFor(`${label}-retry-workspace`);
-        let fail = true;
-        const processor = async (request) => {
-            await buildForInjectedFailure(request);
-            if (fail) {
-                fail = false;
-                throw new Error(message);
-            }
-            return structuredClone(result.publication);
-        };
-        await assert.rejects(
-            runOccurrenceSitePublisherDelivery(retryInputs, {
-                createRuntime,
-                processEvent: processor,
-            }),
-            new RegExp(message),
-        );
-        assert.deepEqual(await readdir(retryInputs.workspaceRoot), []);
-        const retried = await runOccurrenceSitePublisherDelivery(retryInputs, {
-            createRuntime,
-            processEvent: processor,
-        });
-        assert.equal(retried.publication.eventSha256, inputs.event.sha256);
-        assert.deepEqual(await readdir(retryInputs.workspaceRoot), [
-            "selected-build",
-        ]);
-    }
-
     const replacedInputs = await inputsFor("replaced-build-workspace");
     const replacementMarker = path.join(
         replacedInputs.workspaceRoot,
