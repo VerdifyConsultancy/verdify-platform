@@ -271,12 +271,13 @@ an explicitly injected adapter. The legacy credential-free occurrence CLI delibe
 refuses implicit S3 access; only the separate approved-policy `execute` path can
 construct an explicit S3 operation adapter, and no workload invokes it.
 
-The source-only S3 coordinator closes the shared storage lifecycle without changing
+The source-only S3 coordinator defines the shared storage lifecycle without changing
 the local-store policy. The coordinator itself requires initialized writer stores in
 one bucket with three pairwise distinct, non-nested built-site, typed-occurrence, and
-coordination prefixes before any clock or object-store I/O. It takes a complete,
-fail-closed inventory of the two release roots, obtains one monotonic object-store fence, and
-conditionally removes only objects outside the current/rollback reachability graph
+coordination prefixes before any clock or object-store I/O. It obtains one monotonic
+object-store admission fence before inventory or budget reservations, binds that same
+token to the completed plan, and takes a complete, fail-closed inventory of the two
+release roots. It conditionally removes only objects outside the current/rollback reachability graph
 and strictly older than the 48-hour recovery window. Every delete is preceded by an
 immutable daily usage reservation, a current UTC-budget-day check, and a current
 lease/fence check; HEAD metadata and its entity tag must still match the complete
@@ -287,17 +288,39 @@ conditional delete request.
 Inventory I/O is part of the daily budget rather than an uncounted preflight. Each
 site or occurrence `ListObjectsV2` page gets its own immutable reservation before
 that page request, with a two-MiB response envelope and an exact page cardinality.
+Coordination-root inventory uses a maximum 100-page reservation before listing, then
+records the actual returned page count; this remains conservative when an endpoint
+legally returns short pages.
 The complete listing then determines the exact selector, release manifest,
 occurrence manifest, media generation, and site-publisher checkpoint GET count and
 listed byte total. One second reservation is committed before any of those canonical
 GETs. A crash between either reservation and its I/O leaves the conservative usage
 durable. If retained canonical history would reach a hard daily limit, the
 coordinator returns a names-safe typed budget failure before those reads; it never
-silently discovers the overrun afterward. The approved 143-graph plus two-camera
-cardinality stays within one page per release root and well below the tracker request
-budget. The same pre-I/O gate projects coordination-journal cardinality and refuses
-to create object 25,001, so a full journal cannot make its next complete inventory
-unlistable.
+silently discovers the overrun afterward. Admission is serialized by the distributed
+fence, so two near-budget coordinators cannot both append reservations from one stale
+snapshot. The physical coordination listing limit remains 25,000 objects, while
+ordinary admission stops at 23,976 to preserve 1,024 cleanup slots.
+
+The current per-file publication format is **not activation-ready at 96 full
+publications/day**. One 143-graph plus two-camera occurrence publication adds at
+least 148 payload objects. Strict 48-hour retention holds 193 samples, or 28,564
+occurrence payload objects before events, checkpoints, site releases, and selectors.
+The quantified lower bound is 32,887 occurrence objects, 63,946 combined objects,
+29,088 write requests/day, and 212,736 canonical inventory reads/day. Those figures
+exceed the approved 25,000-object and 25,000-request defaults. The operator CLI
+therefore reports the endpoint conditional-semantics proof but exits nonzero with a
+machine-readable activation gate. Deterministic occurrence/site packs plus
+selected-root inventory are a required follow-up; a single 143+2 snapshot test is
+only a functional check and is not convergence evidence. The 96-sample reporting
+freshness KPI remains unchanged and must not be reinterpreted as 96 full publishes.
+The executable publisher boundary is a second explicit activation prerequisite:
+this dormant coordinator still receives the payload estimate/result from its caller.
+The refreshed writer must derive the complete payload envelope, import the closed
+checkpoint contract, and enforce the fence at each actual write. Coordinator-owned
+reservation-journal and pre/post-fence overhead is already added structurally and
+cannot be reduced by the caller, but that does not validate caller-reported payload
+usage.
 
 S3 event tombstones are deliberately bounded rather than permanent: exact event
 replay is protected for 14 days (seven times the recovery window), after which the
@@ -326,16 +349,24 @@ permit the next complete inventory/coordinator cycle.
 Coordination history is bounded under the same fence. Publication/GC usage
 reservations remain for 14 days; deletion confirmations remain for 48 hours.
 Expiration is based on a complete UTC day, conservatively retaining up to one extra
-day. Expired coordination objects receive their own durable pre-mutation budget
-reservation and HEAD/entity-tag conditional deletion. Reservation deltas are encoded
+day. Up to 1,000 expired coordination objects share one attempt-bound batch
+reservation, then receive individual HEAD/entity-tag conditional deletion checks.
+This bounded batch can consume the reserved cleanup headroom and shrink a saturated
+journal rather than replacing every deleted record one-for-one. Reservation deltas are encoded
 in their content-addressed keys, allowing daily counters to be reconstructed from a
 bounded listing without rereading every journal body; a retry of the exact key still
-validates the canonical body. The hard complete-list cap remains 25,000. The
-steady-state proof covers 96 no-deletion events per day, each retaining two
-list-page, one exact-read, one GC-preflight, and one publication reservation. The
-resulting 7,200 reservation records across fifteen conservative UTC days remain below
-the complete-list cap; one expired day is collected below the 25,000-request daily
-budget, and old reservation/confirmation counts and retained bytes converge.
+validates the canonical body. The saturation regression starts at the admitted
+23,976-object boundary, deletes one bounded batch, and proves the journal returns
+below ordinary admission without exceeding the physical 25,000-object cap.
+
+Publication, GC, and terminal reservations include the fencing token so a later
+whole-coordinator retry of the same event is charged again while response-loss retry
+inside one attempt remains idempotent. Terminal output is also token-monotonic:
+fail-closed metrics are written first, then `status.json`, then terminal metrics.
+A delayed lower token cannot overwrite either output, and a budget-blocked cycle
+replaces a prior allow metric. The finalization envelope covers all eight CAS
+attempts for the two metric phases and status, fence acquire/bind/release, and the
+reservation journal.
 
 The complete local filesystem primitive is present, and its candidate manifest is
 included by the Lab stage overlay only at `replicas: 0`. The overlay deliberately

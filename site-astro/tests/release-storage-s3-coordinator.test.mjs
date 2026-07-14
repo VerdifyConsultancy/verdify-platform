@@ -82,6 +82,10 @@ class FakeS3Client {
     this.deniedPrefix = null;
     this.failNextGetPrefix = null;
     this.deniedDeletePrefix = null;
+    this.ignoreIfNoneMatch = false;
+    this.failAfterPutPrefix = null;
+    this.outputCasFailuresPerBody = 0;
+    this.outputCasFailures = new Map();
     this.onCommand = null;
   }
 
@@ -112,7 +116,17 @@ class FakeS3Client {
     if (name === "PutObjectCommand") {
       const identity = this.identity(input);
       const current = this.objects.get(identity);
-      if (input.IfNoneMatch === "*" && current !== undefined) throw precondition();
+      const bodyIdentity = `${input.Key}\u0000${sha256(Buffer.from(input.Body))}`;
+      const outputKey = input.Key === `${COORDINATION_PREFIX}/status.json`
+        || input.Key === `${COORDINATION_PREFIX}/metrics/latest.prom`;
+      const failures = this.outputCasFailures.get(bodyIdentity) ?? 0;
+      if (outputKey && failures < this.outputCasFailuresPerBody) {
+        this.outputCasFailures.set(bodyIdentity, failures + 1);
+        throw precondition();
+      }
+      if (input.IfNoneMatch === "*" && current !== undefined && !this.ignoreIfNoneMatch) {
+        throw precondition();
+      }
       if (input.IfMatch !== undefined && current?.etag !== input.IfMatch) throw precondition();
       const bytes = Buffer.from(command.input.Body);
       assert.equal(input.ContentLength, bytes.length);
@@ -123,6 +137,10 @@ class FakeS3Client {
         lastModified: new Date(AS_OF),
       };
       this.objects.set(identity, value);
+      if (this.failAfterPutPrefix !== null && input.Key.startsWith(this.failAfterPutPrefix)) {
+        this.failAfterPutPrefix = null;
+        throw new Error("injected response loss after put");
+      }
       return { ETag: value.etag };
     }
     if (name === "GetObjectCommand") {
@@ -643,6 +661,60 @@ test("usage reservations are immutable, idempotent, and never decrease daily cou
   assert.equal(loaded.reservationCount, 1);
 });
 
+test("reservation response-loss recovery reuses its bounded canonical read", async () => {
+  const value = await fixture({ includeOrphans: false });
+  value.client.commands.length = 0;
+  value.client.failAfterPutPrefix = `${COORDINATION_PREFIX}/usage/`;
+  const reservation = await reserveReleaseStorageS3Usage({
+    coordinationStore: value.coordinationStore,
+    kind: "publication",
+    operationSha256: sha256("response-loss-reservation"),
+    createdAt: AS_OF,
+    delta: { writtenBytes: 1, deletedBytes: 0, egressBytes: 1, requests: 1 },
+  });
+  assert.equal(reservation.created, true);
+  assert.deepEqual(
+    value.client.commands.map(({ name }) => name),
+    ["GetObjectCommand", "PutObjectCommand", "GetObjectCommand"],
+  );
+  assert.equal(
+    value.client.objects.has(`${BUCKET}/${COORDINATION_PREFIX}/${reservation.key}`),
+    true,
+  );
+});
+
+test("coordination inventory records actual short-page pagination under a maximum-page reservation", async () => {
+  const value = await fixture({ includeOrphans: false });
+  for (let index = 0; index < 5; index += 1) {
+    await reserveReleaseStorageS3Usage({
+      coordinationStore: value.coordinationStore,
+      kind: "publication",
+      operationSha256: sha256(`short-page-${index}`),
+      createdAt: AS_OF,
+      delta: { writtenBytes: 1, deletedBytes: 0, egressBytes: 1, requests: 1 },
+    });
+  }
+  value.client.pageSize = 2;
+  value.client.commands.length = 0;
+  const usage = await loadReleaseStorageS3Usage({
+    coordinationStore: value.coordinationStore,
+    asOf: AS_OF,
+  });
+  assert.equal(usage.inventoryPageCount, 3);
+  assert.equal(
+    value.client.commands.filter(({ name }) => name === "ListObjectsV2Command").length,
+    3,
+  );
+  assert.equal(
+    releaseStorageS3CoordinatorContract.coordinationInventoryUsage.requests,
+    105,
+  );
+  assert.ok(
+    releaseStorageS3CoordinatorContract.coordinationInventoryUsage.requests
+      > usage.inventoryPageCount,
+  );
+});
+
 test("every inventory list page is durably reserved before its request", async () => {
   const value = await fixture({ includeOrphans: false });
   value.client.commands.length = 0;
@@ -677,18 +749,82 @@ test("every inventory list page is durably reserved before its request", async (
   );
   assert.equal(
     [...value.client.objects.keys()].filter((key) => key.includes("/reservations/inventory-list/")).length,
-    1,
+    2,
   );
   const usage = await loadReleaseStorageS3Usage({
     coordinationStore: value.coordinationStore,
     asOf: "2026-07-14T12:10:00.000Z",
   });
   assert.deepEqual(usage.state.counters, {
-    writtenBytes: 2048,
+    writtenBytes: COORDINATION_FINALIZATION_USAGE.writtenBytes + 4096,
     deletedBytes: 0,
-    egressBytes: (2 * 1024 * 1024) + 2048,
-    requests: 4,
+    egressBytes: COORDINATION_FINALIZATION_USAGE.egressBytes
+      + (202 * 1024 * 1024) + (128 * 1024) + 4096,
+    requests: COORDINATION_FINALIZATION_USAGE.requests + 111,
   });
+});
+
+test("the admission fence serializes concurrent near-budget inventory reservations", async () => {
+  const value = await fixture({ includeOrphans: false });
+  value.client.pageSize = 1000;
+  await reserveReleaseStorageS3Usage({
+    coordinationStore: value.coordinationStore,
+    kind: "publication",
+    operationSha256: sha256("near-budget-admission"),
+    createdAt: AS_OF,
+    delta: { writtenBytes: 0, deletedBytes: 0, egressBytes: 0, requests: 24_700 },
+  });
+  let reachedReservation;
+  const paused = new Promise((resolve) => {
+    reachedReservation = resolve;
+  });
+  let resumeFirst;
+  const resume = new Promise((resolve) => {
+    resumeFirst = resolve;
+  });
+  const firstPromise = coordinateReleaseStorageS3Publication({
+    siteStore: value.siteStore,
+    occurrenceStore: value.occurrenceStore,
+    coordinationStore: value.coordinationStore,
+    publication: estimate(),
+    eventIdentitySha256: sha256("admission-first"),
+    ownerIdentity: "stage-producer-admission-first",
+    clock: async () => AS_OF,
+    inventoryNonce: "inventory_admission_first",
+    leaseNonce: "coordinator_admission_first",
+    async publisher() {
+      assert.fail("near-budget first attempt must block before publication");
+    },
+    async checkpoint({ phase }) {
+      if (phase === "after-inventory-list-page-reservation") {
+        reachedReservation();
+        await resume;
+      }
+    },
+  });
+  await paused;
+  const before = storedReservations(value, "inventory-list").length;
+  await assert.rejects(
+    coordinateReleaseStorageS3Publication({
+      siteStore: value.siteStore,
+      occurrenceStore: value.occurrenceStore,
+      coordinationStore: value.coordinationStore,
+      publication: estimate(),
+      eventIdentitySha256: sha256("admission-second"),
+      ownerIdentity: "stage-producer-admission-second",
+      clock: async () => AS_OF,
+      inventoryNonce: "inventory_admission_second",
+      leaseNonce: "coordinator_admission_second",
+      async publisher() {
+        assert.fail("competing attempt cannot publish");
+      },
+    }),
+    /another release storage publication lease is active/u,
+  );
+  assert.equal(storedReservations(value, "inventory-list").length, before);
+  resumeFirst();
+  const first = await firstPromise;
+  assert.equal(first.state, "blocked");
 });
 
 test("retained canonical history blocks exact reads before the daily request budget can be crossed", async () => {
@@ -707,7 +843,7 @@ test("retained canonical history blocks exact reads before the daily request bud
     kind: "publication",
     operationSha256: sha256("near-request-budget"),
     createdAt: AS_OF,
-    delta: { writtenBytes: 0, deletedBytes: 0, egressBytes: 0, requests: 24_960 },
+    delta: { writtenBytes: 0, deletedBytes: 0, egressBytes: 0, requests: 24_766 },
   });
   value.client.commands.length = 0;
   let publisherCalls = 0;
@@ -751,20 +887,41 @@ test("retained canonical history blocks exact reads before the daily request bud
   );
   assert.equal(
     [...value.client.objects.keys()].filter((key) => key.includes("/reservations/inventory-list/")).length,
-    2,
+    3,
   );
 });
 
-test("a full coordination journal blocks before creating an unlistable reservation", async () => {
+test("complete history cleanup is admitted before mutation when mutation alone would fit", async () => {
   const value = await fixture({ includeOrphans: false });
   value.client.pageSize = 1000;
-  for (let index = 0; index < 25_000; index += 1) {
-    value.client.seed(
-      `${COORDINATION_PREFIX}/gc/confirmations/2026-07-14/${sha256(`capacity-plan-${index}`)}/site/${sha256(`capacity-key-${index}`)}.json`,
-      canonicalBytes({ index }),
-      { lastModified: AS_OF },
-    );
-  }
+  const expiredKey = `gc/confirmations/2026-06-29/${sha256("budgeted-history-plan")}/site/${sha256("budgeted-history-key")}.json`;
+  value.client.seed(
+    `${COORDINATION_PREFIX}/${expiredKey}`,
+    canonicalBytes({ expired: true }),
+    { lastModified: "2026-06-29T12:00:00.000Z" },
+  );
+  const mutationRequests = releaseStorageS3CoordinatorContract.gcMutationUsage.requests
+    + releaseStorageS3CoordinatorContract.inventory.reservationJournalUsage.requests
+    + 2;
+  const nearBudgetRequests = releaseStorageS3CoordinatorContract.budgets.requestsPerDay
+    - COORDINATION_FINALIZATION_USAGE.requests
+    - releaseStorageS3CoordinatorContract.coordinationInventoryUsage.requests
+    - mutationRequests
+    - 1;
+  const requestsAtCleanupAdmission = nearBudgetRequests
+    + COORDINATION_FINALIZATION_USAGE.requests
+    + releaseStorageS3CoordinatorContract.coordinationInventoryUsage.requests;
+  assert.equal(
+    requestsAtCleanupAdmission + mutationRequests,
+    releaseStorageS3CoordinatorContract.budgets.requestsPerDay - 1,
+  );
+  await reserveReleaseStorageS3Usage({
+    coordinationStore: value.coordinationStore,
+    kind: "publication",
+    operationSha256: sha256("history-cleanup-near-budget"),
+    createdAt: AS_OF,
+    delta: { writtenBytes: 0, deletedBytes: 0, egressBytes: 0, requests: nearBudgetRequests },
+  });
   value.client.commands.length = 0;
   await assert.rejects(
     coordinateReleaseStorageS3Publication({
@@ -772,35 +929,113 @@ test("a full coordination journal blocks before creating an unlistable reservati
       occurrenceStore: value.occurrenceStore,
       coordinationStore: value.coordinationStore,
       publication: estimate(),
-      eventIdentitySha256: sha256("coordination-capacity"),
-      ownerIdentity: "stage-producer-coordination-capacity",
+      eventIdentitySha256: sha256("history-cleanup-budget-block"),
+      ownerIdentity: "stage-producer-history-budget-block",
       clock: clock(),
-      inventoryNonce: "inventory_capacity_0001",
-      leaseNonce: "coordinator_capacity_0001",
+      inventoryNonce: "inventory_history_budget_block",
+      leaseNonce: "coordinator_history_budget_block",
       async publisher() {
-        return publisherResult();
+        assert.fail("history cleanup budget block cannot call the publisher");
       },
     }),
     (error) => {
       assert.ok(error instanceof ReleaseStorageInventoryBudgetError);
-      assert.equal(error.result.phase, "listing");
-      assert.deepEqual(error.result.reasons, ["coordinationObjects-capacity"]);
-      assert.equal(error.result.projected.coordinationObjects, 25_001);
-      assert.equal(error.result.limits.coordinationObjects, 25_000);
+      assert.equal(error.result.phase, "coordination-history-gc");
+      assert.deepEqual(error.result.reasons, ["requestsPerDay-budget"]);
+      assert.ok(
+        error.result.projected.requests
+          > releaseStorageS3CoordinatorContract.budgets.requestsPerDay,
+      );
       return true;
     },
   );
-  assert.equal(storedReservations(value, "inventory-list").length, 0);
-  assert.equal(
-    value.client.commands.some(({ name, input }) => (
-      name === "ListObjectsV2Command"
-      && (input.Prefix.startsWith(`${SITE_PREFIX}/`) || input.Prefix.startsWith(`${OCCURRENCE_PREFIX}/`))
-    )),
-    false,
+  assert.ok(value.client.objects.has(`${BUCKET}/${COORDINATION_PREFIX}/${expiredKey}`));
+  assert.equal(value.client.commands.some(({ name }) => name === "DeleteObjectCommand"), false);
+  assert.equal(storedReservations(value, "gc-mutation").length, 0);
+  assert.equal(storedReservations(value, "inventory-list").length, 1);
+  const persisted = JSON.parse(
+    value.client.objects.get(`${BUCKET}/${COORDINATION_PREFIX}/status.json`).bytes.toString("utf8"),
+  );
+  const metrics = value.client.objects.get(
+    `${BUCKET}/${COORDINATION_PREFIX}/metrics/latest.prom`,
+  ).bytes.toString("utf8");
+  assert.equal(persisted.state, "blocked");
+  assert.equal(persisted.deletedObjects, 0);
+  assert.notEqual(persisted.leaseReleasedAt, null);
+  assert.match(metrics, /^verdify_lab_release_storage_publication_allowed 0$/mu);
+});
+
+test("reserved cleanup headroom recovers a saturated coordination journal in one bounded batch", async () => {
+  const value = await fixture({ includeOrphans: false });
+  value.client.pageSize = 1000;
+  for (let index = 0; index < 23_975; index += 1) {
+    value.client.seed(
+      `${COORDINATION_PREFIX}/gc/confirmations/2026-06-29/${sha256(`capacity-plan-${index}`)}/site/${sha256(`capacity-key-${index}`)}.json`,
+      canonicalBytes({ index }),
+      { lastModified: "2026-06-29T12:00:00.000Z" },
+    );
+  }
+  value.client.commands.length = 0;
+  const status = await coordinateReleaseStorageS3Publication({
+    siteStore: value.siteStore,
+    occurrenceStore: value.occurrenceStore,
+    coordinationStore: value.coordinationStore,
+    publication: estimate(),
+    eventIdentitySha256: sha256("coordination-capacity"),
+    ownerIdentity: "stage-producer-coordination-capacity",
+    clock: async () => AS_OF,
+    inventoryNonce: "inventory_capacity_0001",
+    leaseNonce: "coordinator_capacity_0001",
+    async publisher() {
+      return publisherResult();
+    },
+  });
+  assert.equal(status.state, "complete");
+  assert.equal(status.deletedObjects, 1000);
+  assert.equal(storedReservations(value, "gc-mutation").length, 1);
+  assert.ok(
+    [...value.client.objects.keys()].filter((key) => (
+      key.startsWith(`${BUCKET}/${COORDINATION_PREFIX}/`)
+    )).length < 23_976,
   );
 });
 
-test("the normal 143-graph plus two-camera object cardinality remains usable", async () => {
+test("a later plan block reports coordination history already deleted by the attempt", async () => {
+  const value = await fixture({ includeOrphans: false });
+  value.client.pageSize = 1000;
+  const expiredKey = `gc/confirmations/2026-06-29/${sha256("blocked-history-plan")}/site/${sha256("blocked-history-key")}.json`;
+  const expiredBytes = canonicalBytes({ expired: true });
+  value.client.seed(
+    `${COORDINATION_PREFIX}/${expiredKey}`,
+    expiredBytes,
+    { lastModified: "2026-06-29T12:00:00.000Z" },
+  );
+  const status = await coordinateReleaseStorageS3Publication({
+    siteStore: value.siteStore,
+    occurrenceStore: value.occurrenceStore,
+    coordinationStore: value.coordinationStore,
+    publication: estimate({ requests: 25_000 }),
+    eventIdentitySha256: sha256("blocked-after-history-cleanup"),
+    ownerIdentity: "stage-producer-blocked-history-cleanup",
+    clock: clock(),
+    inventoryNonce: "inventory_blocked_history_cleanup",
+    leaseNonce: "coordinator_blocked_history_cleanup",
+    async publisher() {
+      assert.fail("later plan block cannot call the publisher");
+    },
+  });
+  assert.equal(status.state, "blocked");
+  assert.equal(status.deletedObjects, 1);
+  assert.equal(status.plannedDeletedBytes, expiredBytes.length);
+  assert.equal(value.client.objects.has(`${BUCKET}/${COORDINATION_PREFIX}/${expiredKey}`), false);
+  const persisted = JSON.parse(
+    value.client.objects.get(`${BUCKET}/${COORDINATION_PREFIX}/status.json`).bytes.toString("utf8"),
+  );
+  assert.equal(persisted.deletedObjects, 1);
+  assert.equal(persisted.plannedDeletedBytes, expiredBytes.length);
+});
+
+test("one 143-plus-2 snapshot is processable but the 96-publication format is activation-blocked", async () => {
   const value = await fixture({ includeOrphans: false });
   value.client.pageSize = 1000;
   // The fixture already carries graph/media blobs for current and rollback.
@@ -831,8 +1066,22 @@ test("the normal 143-graph plus two-camera object cardinality remains usable", a
   assert.equal(status.state, "complete");
   assert.equal(status.deletedObjects, 0);
   assert.ok(status.dailyUsage.requests < 1000);
-  assert.equal(storedReservations(value, "inventory-list").length, 2);
+  assert.equal(storedReservations(value, "inventory-list").length, 4);
   assert.equal(storedReservations(value, "inventory-read").length, 1);
+  assert.equal(releaseStoragePassOneContract.activationGate.status, "blocked");
+  assert.equal(
+    releaseStoragePassOneContract.activationGate.occurrenceObjectsPerPublication
+      * releaseStoragePassOneContract.activationGate.retainedSamplesAtStrict48Hours,
+    releaseStoragePassOneContract.activationGate.occurrencePayloadObjectsAtRecoveryHorizon,
+  );
+  assert.ok(
+    releaseStoragePassOneContract.activationGate.occurrencePayloadObjectsAtRecoveryHorizon
+      > releaseStoragePassOneContract.activationGate.maximumInventoryObjects,
+  );
+  assert.ok(
+    releaseStoragePassOneContract.activationGate.canonicalInventoryReadsPerDay
+      > releaseStoragePassOneContract.activationGate.requestsPerDayBudget,
+  );
 });
 
 test("coordinator performs fenced 48-hour GC, reserves before mutations, and emits names-safe status metrics", async () => {
@@ -877,10 +1126,357 @@ test("coordinator performs fenced 48-hour GC, reserves before mutations, and emi
   const metrics = renderReleaseStorageS3Metrics(status);
   assert.match(metrics, /verdify_lab_release_storage_requests_day/u);
   assert.doesNotMatch(metrics, /stage-producer-pod|verdify-lab-occurrences|lab-stage\//u);
-  assert.equal(COORDINATION_FINALIZATION_USAGE.egressBytes, 256 * 1024);
-  assert.equal(COORDINATION_FINALIZATION_USAGE.requests, 32);
+  assert.equal(COORDINATION_FINALIZATION_USAGE.egressBytes, 3 * 1024 * 1024);
+  assert.equal(COORDINATION_FINALIZATION_USAGE.requests, 80);
   assert.ok(COORDINATION_FINALIZATION_USAGE.egressBytes < 512 * 1024 * 1024);
   assert.ok(COORDINATION_FINALIZATION_USAGE.requests < 1000);
+});
+
+test("terminal status and metrics cannot be overwritten by a delayed lower fencing token", async () => {
+  const value = await fixture({ includeOrphans: false });
+  value.client.pageSize = 1000;
+  let reachedRelease;
+  const released = new Promise((resolve) => {
+    reachedRelease = resolve;
+  });
+  let resumeFirst;
+  const resume = new Promise((resolve) => {
+    resumeFirst = resolve;
+  });
+  const firstPromise = coordinateReleaseStorageS3Publication({
+    siteStore: value.siteStore,
+    occurrenceStore: value.occurrenceStore,
+    coordinationStore: value.coordinationStore,
+    publication: estimate(),
+    eventIdentitySha256: sha256("terminal-order-first"),
+    ownerIdentity: "stage-producer-terminal-order-first",
+    clock: clock(),
+    inventoryNonce: "inventory_terminal_order_first",
+    leaseNonce: "coordinator_terminal_order_first",
+    async publisher() {
+      return publisherResult({ siteReleaseSha256: "1".repeat(64) });
+    },
+    async checkpoint({ phase }) {
+      if (phase === "after-release") {
+        reachedRelease();
+        await resume;
+      }
+    },
+  });
+  await released;
+  const second = await coordinateReleaseStorageS3Publication({
+    siteStore: value.siteStore,
+    occurrenceStore: value.occurrenceStore,
+    coordinationStore: value.coordinationStore,
+    publication: estimate(),
+    eventIdentitySha256: sha256("terminal-order-second"),
+    ownerIdentity: "stage-producer-terminal-order-second",
+    clock: clock("2026-07-14T12:02:00.000Z"),
+    inventoryNonce: "inventory_terminal_order_second",
+    leaseNonce: "coordinator_terminal_order_second",
+    async publisher() {
+      return publisherResult({ siteReleaseSha256: "2".repeat(64) });
+    },
+  });
+  resumeFirst();
+  const first = await firstPromise;
+  assert.equal(first.fencingToken, 1);
+  assert.equal(second.fencingToken, 2);
+  const persisted = JSON.parse(
+    value.client.objects.get(`${BUCKET}/${COORDINATION_PREFIX}/status.json`).bytes.toString("utf8"),
+  );
+  const metrics = value.client.objects.get(
+    `${BUCKET}/${COORDINATION_PREFIX}/metrics/latest.prom`,
+  ).bytes.toString("utf8");
+  assert.equal(persisted.fencingToken, 2);
+  assert.equal(persisted.selectedSiteReleaseSha256, "2".repeat(64));
+  assert.match(metrics, /^verdify_lab_release_storage_fencing_token 2$/mu);
+  assert.match(metrics, /^verdify_lab_release_storage_terminal_output_complete 1$/mu);
+});
+
+test("a fenced budget block replaces a prior allow status and metric", async () => {
+  const value = await fixture({ includeOrphans: false });
+  value.client.pageSize = 1000;
+  const allowed = await coordinateReleaseStorageS3Publication({
+    siteStore: value.siteStore,
+    occurrenceStore: value.occurrenceStore,
+    coordinationStore: value.coordinationStore,
+    publication: estimate(),
+    eventIdentitySha256: sha256("status-allow"),
+    ownerIdentity: "stage-producer-status-allow",
+    clock: clock(),
+    inventoryNonce: "inventory_status_allow",
+    leaseNonce: "coordinator_status_allow",
+    async publisher() {
+      return publisherResult();
+    },
+  });
+  assert.equal(allowed.publicationDecision, "allow");
+  const blocked = await coordinateReleaseStorageS3Publication({
+    siteStore: value.siteStore,
+    occurrenceStore: value.occurrenceStore,
+    coordinationStore: value.coordinationStore,
+    publication: estimate({ requests: 25_000 }),
+    eventIdentitySha256: sha256("status-block"),
+    ownerIdentity: "stage-producer-status-block",
+    clock: clock("2026-07-14T12:03:00.000Z"),
+    inventoryNonce: "inventory_status_block",
+    leaseNonce: "coordinator_status_block",
+    async publisher() {
+      assert.fail("blocked publication cannot call the publisher");
+    },
+  });
+  assert.equal(blocked.state, "blocked");
+  assert.equal(blocked.fencingToken, 2);
+  const persisted = JSON.parse(
+    value.client.objects.get(`${BUCKET}/${COORDINATION_PREFIX}/status.json`).bytes.toString("utf8"),
+  );
+  const metrics = value.client.objects.get(
+    `${BUCKET}/${COORDINATION_PREFIX}/metrics/latest.prom`,
+  ).bytes.toString("utf8");
+  assert.equal(persisted.state, "blocked");
+  assert.equal(persisted.fencingToken, 2);
+  assert.match(metrics, /^verdify_lab_release_storage_publication_allowed 0$/mu);
+  assert.match(metrics, /^verdify_lab_release_storage_fencing_token 2$/mu);
+  assert.match(metrics, /^verdify_lab_release_storage_terminal_output_complete 1$/mu);
+});
+
+test("a typed listing admission block replaces prior allow output and releases its fence", async () => {
+  const value = await fixture({ includeOrphans: false });
+  value.client.pageSize = 1000;
+  const allowed = await coordinateReleaseStorageS3Publication({
+    siteStore: value.siteStore,
+    occurrenceStore: value.occurrenceStore,
+    coordinationStore: value.coordinationStore,
+    publication: estimate(),
+    eventIdentitySha256: sha256("typed-status-allow"),
+    ownerIdentity: "stage-producer-typed-status-allow",
+    clock: clock(),
+    inventoryNonce: "inventory_typed_status_allow",
+    leaseNonce: "coordinator_typed_status_allow",
+    async publisher() {
+      return publisherResult();
+    },
+  });
+  assert.equal(allowed.publicationDecision, "allow");
+  const before = await loadReleaseStorageS3Usage({
+    coordinationStore: value.coordinationStore,
+    asOf: "2026-07-14T12:03:00.000Z",
+  });
+  const nearBudgetRequests = releaseStorageS3CoordinatorContract.budgets.requestsPerDay
+    - before.state.counters.requests
+    - COORDINATION_FINALIZATION_USAGE.requests
+    - releaseStorageS3CoordinatorContract.coordinationInventoryUsage.requests
+    - 1;
+  assert.ok(nearBudgetRequests > 0);
+  await reserveReleaseStorageS3Usage({
+    coordinationStore: value.coordinationStore,
+    kind: "publication",
+    operationSha256: sha256("typed-status-near-budget"),
+    createdAt: "2026-07-14T12:03:00.000Z",
+    delta: { writtenBytes: 0, deletedBytes: 0, egressBytes: 0, requests: nearBudgetRequests },
+  });
+  await assert.rejects(
+    coordinateReleaseStorageS3Publication({
+      siteStore: value.siteStore,
+      occurrenceStore: value.occurrenceStore,
+      coordinationStore: value.coordinationStore,
+      publication: estimate(),
+      eventIdentitySha256: sha256("typed-status-block"),
+      ownerIdentity: "stage-producer-typed-status-block",
+      clock: clock("2026-07-14T12:03:00.000Z"),
+      inventoryNonce: "inventory_typed_status_block",
+      leaseNonce: "coordinator_typed_status_block",
+      async publisher() {
+        assert.fail("typed admission block cannot call the publisher");
+      },
+    }),
+    (error) => {
+      assert.ok(error instanceof ReleaseStorageInventoryBudgetError);
+      assert.equal(error.result.phase, "listing");
+      return true;
+    },
+  );
+  const persisted = JSON.parse(
+    value.client.objects.get(`${BUCKET}/${COORDINATION_PREFIX}/status.json`).bytes.toString("utf8"),
+  );
+  const metrics = value.client.objects.get(
+    `${BUCKET}/${COORDINATION_PREFIX}/metrics/latest.prom`,
+  ).bytes.toString("utf8");
+  const fence = JSON.parse(
+    value.client.objects.get(`${BUCKET}/${COORDINATION_PREFIX}/fence.json`).bytes.toString("utf8"),
+  );
+  assert.equal(persisted.state, "blocked");
+  assert.equal(persisted.fencingToken, 2);
+  assert.equal(persisted.planSha256, null);
+  assert.equal(persisted.inventorySha256, null);
+  assert.equal(persisted.retainedBytes, null);
+  assert.equal(persisted.retainedBytesKnown, false);
+  assert.deepEqual(persisted.publicationReasons, ["listing-admission", "requestsPerDay-budget"]);
+  assert.notEqual(persisted.leaseReleasedAt, null);
+  assert.equal(fence.releasedAt, persisted.leaseReleasedAt);
+  assert.match(metrics, /^verdify_lab_release_storage_publication_allowed 0$/mu);
+  assert.match(metrics, /^verdify_lab_release_storage_retained_bytes NaN$/mu);
+  assert.match(metrics, /^verdify_lab_release_storage_retained_bytes_known 0$/mu);
+  assert.match(metrics, /^verdify_lab_release_storage_budget_ratio\{resource="retained"\} NaN$/mu);
+  assert.match(metrics, /^verdify_lab_release_storage_fencing_token 2$/mu);
+  assert.match(metrics, /^verdify_lab_release_storage_terminal_output_complete 1$/mu);
+});
+
+test("typed admission fallback persists prior-day unknown status across rollover or clock failure", async () => {
+  for (const failureMode of ["rollover", "clock-failure"]) {
+    const value = await fixture({ includeOrphans: false });
+    value.client.pageSize = 1000;
+    const nearBudgetRequests = releaseStorageS3CoordinatorContract.budgets.requestsPerDay
+      - COORDINATION_FINALIZATION_USAGE.requests
+      - releaseStorageS3CoordinatorContract.coordinationInventoryUsage.requests
+      - 1;
+    await reserveReleaseStorageS3Usage({
+      coordinationStore: value.coordinationStore,
+      kind: "publication",
+      operationSha256: sha256(`typed-fallback-${failureMode}`),
+      createdAt: AS_OF,
+      delta: { writtenBytes: 0, deletedBytes: 0, egressBytes: 0, requests: nearBudgetRequests },
+    });
+    let listingFenceSeen = false;
+    let failReleaseClock = false;
+    value.client.onCommand = async (name, input) => {
+      if (
+        name !== "GetObjectCommand"
+        || input.Key !== `${COORDINATION_PREFIX}/fence.json`
+        || storedReservations(value, "inventory-list").length !== 1
+      ) return;
+      if (!listingFenceSeen) listingFenceSeen = true;
+      else failReleaseClock = true;
+    };
+    const selectedClock = async () => {
+      if (!failReleaseClock) return AS_OF;
+      if (failureMode === "clock-failure") throw new Error("injected clock failure");
+      return "2026-07-15T00:00:00.000Z";
+    };
+    await assert.rejects(
+      coordinateReleaseStorageS3Publication({
+        siteStore: value.siteStore,
+        occurrenceStore: value.occurrenceStore,
+        coordinationStore: value.coordinationStore,
+        publication: estimate(),
+        eventIdentitySha256: sha256(`typed-fallback-event-${failureMode}`),
+        ownerIdentity: `stage-producer-typed-fallback-${failureMode}`,
+        clock: selectedClock,
+        inventoryNonce: `inventory_typed_fallback_${failureMode.replace("-", "_")}`,
+        leaseNonce: `coordinator_typed_fallback_${failureMode.replace("-", "_")}`,
+        async publisher() {
+          assert.fail("typed admission fallback cannot call the publisher");
+        },
+      }),
+      (error) => {
+        assert.ok(error instanceof ReleaseStorageInventoryBudgetError);
+        assert.equal(error.result.phase, "listing");
+        assert.equal(error.result.observedAt, AS_OF);
+        return true;
+      },
+    );
+    assert.equal(listingFenceSeen, true);
+    assert.equal(failReleaseClock, true);
+    const persisted = JSON.parse(
+      value.client.objects.get(`${BUCKET}/${COORDINATION_PREFIX}/status.json`).bytes.toString("utf8"),
+    );
+    const metrics = value.client.objects.get(
+      `${BUCKET}/${COORDINATION_PREFIX}/metrics/latest.prom`,
+    ).bytes.toString("utf8");
+    const fence = JSON.parse(
+      value.client.objects.get(`${BUCKET}/${COORDINATION_PREFIX}/fence.json`).bytes.toString("utf8"),
+    );
+    assert.equal(persisted.observedAt, AS_OF);
+    assert.equal(persisted.leaseReleasedAt, null);
+    assert.equal(persisted.planSha256, null);
+    assert.equal(persisted.retainedBytes, null);
+    assert.equal(persisted.retainedBytesKnown, false);
+    assert.equal(fence.releasedAt, null);
+    assert.match(metrics, /^verdify_lab_release_storage_retained_bytes NaN$/mu);
+    assert.match(metrics, /^verdify_lab_release_storage_retained_bytes_known 0$/mu);
+    assert.match(metrics, /^verdify_lab_release_storage_publication_allowed 0$/mu);
+  }
+});
+
+test("same-event publication retries charge distinct fence-bound attempts", async () => {
+  const value = await fixture({ includeOrphans: false });
+  value.client.pageSize = 1000;
+  let publisherCalls = 0;
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    const status = await coordinateReleaseStorageS3Publication({
+      siteStore: value.siteStore,
+      occurrenceStore: value.occurrenceStore,
+      coordinationStore: value.coordinationStore,
+      publication: estimate(),
+      eventIdentitySha256: sha256("same-event-retry"),
+      ownerIdentity: `stage-producer-same-event-${attempt}`,
+      clock: clock(`2026-07-14T12:0${attempt}:00.000Z`),
+      inventoryNonce: "inventory_same_event_retry",
+      leaseNonce: `coordinator_same_event_${attempt}`,
+      async publisher() {
+        publisherCalls += 1;
+        return publisherResult({ status: attempt === 1 ? "published" : "idempotent" });
+      },
+    });
+    assert.equal(status.fencingToken, attempt);
+  }
+  assert.equal(publisherCalls, 2);
+  const reservations = storedReservations(value, "publication");
+  assert.equal(reservations.length, 2);
+  assert.equal(new Set(reservations.map(({ reservationId }) => reservationId)).size, 2);
+  assert.deepEqual(
+    reservations.map(({ delta }) => delta.requests),
+    [
+      estimate().requests + 5,
+      estimate().requests + 5,
+    ],
+  );
+  assert.equal(storedReservations(value, "finalization").length, 2);
+  const listReservations = storedReservations(value, "inventory-list");
+  const readReservations = storedReservations(value, "inventory-read");
+  assert.equal(listReservations.length, 8);
+  assert.equal(new Set(listReservations.map(({ reservationId }) => reservationId)).size, 8);
+  assert.equal(readReservations.length, 2);
+  assert.equal(new Set(readReservations.map(({ reservationId }) => reservationId)).size, 2);
+  assert.deepEqual(
+    reservations.map(({ delta }) => delta),
+    [
+      { writtenBytes: 4096, deletedBytes: 0, egressBytes: 71_680, requests: 10 },
+      { writtenBytes: 4096, deletedBytes: 0, egressBytes: 71_680, requests: 10 },
+    ],
+  );
+});
+
+test("worst-case terminal CAS contention remains inside its durable envelope", async () => {
+  const value = await fixture({ includeOrphans: false });
+  value.client.pageSize = 1000;
+  value.client.outputCasFailuresPerBody = 7;
+  const status = await coordinateReleaseStorageS3Publication({
+    siteStore: value.siteStore,
+    occurrenceStore: value.occurrenceStore,
+    coordinationStore: value.coordinationStore,
+    publication: estimate(),
+    eventIdentitySha256: sha256("terminal-contention"),
+    ownerIdentity: "stage-producer-terminal-contention",
+    clock: clock(),
+    inventoryNonce: "inventory_terminal_contention",
+    leaseNonce: "coordinator_terminal_contention",
+    async publisher() {
+      return publisherResult();
+    },
+  });
+  assert.equal(status.state, "complete");
+  const outputCommands = value.client.commands.filter(({ input }) => (
+    input.Key === `${COORDINATION_PREFIX}/status.json`
+    || input.Key === `${COORDINATION_PREFIX}/metrics/latest.prom`
+  ));
+  assert.equal(outputCommands.length, 52);
+  const outputWrittenUpperBound = 8 * ((2 * 32 * 1024) + (64 * 1024));
+  const outputEgressUpperBound = (9 * ((2 * 32 * 1024) + (64 * 1024))) + (64 * 1024);
+  assert.ok(COORDINATION_FINALIZATION_USAGE.writtenBytes >= outputWrittenUpperBound);
+  assert.ok(COORDINATION_FINALIZATION_USAGE.egressBytes >= outputEgressUpperBound);
+  assert.ok(COORDINATION_FINALIZATION_USAGE.requests >= outputCommands.length);
 });
 
 async function exactNextRequestBlock(value, nextAt) {
@@ -981,6 +1577,7 @@ test("a crash after GC retains every pre-mutation reservation and the next coord
   const inventoryUsage = sumUsage([
     ...storedReservations(value, "inventory-list"),
     ...storedReservations(value, "inventory-read"),
+    ...storedReservations(value, "finalization"),
   ]);
   assert.deepEqual(usageAfterCrash.state.counters, {
     writtenBytes: gcUsageUpperBound.writtenBytes + inventoryUsage.writtenBytes,
@@ -996,7 +1593,7 @@ test("a crash after GC retains every pre-mutation reservation and the next coord
 test("UTC rollover before GC preflight leaves only pre-I/O inventory reservations", async () => {
   const value = await fixture();
   value.client.pageSize = 1000;
-  const instants = [...Array(7).fill(AS_OF), "2026-07-15T00:00:00.000Z"];
+  let now = AS_OF;
   let publisherCalls = 0;
   await assert.rejects(
     coordinateReleaseStorageS3Publication({
@@ -1006,11 +1603,14 @@ test("UTC rollover before GC preflight leaves only pre-I/O inventory reservation
       publication: estimate(),
       eventIdentitySha256: "a".repeat(64),
       ownerIdentity: "stage-producer-pod-preflight-rollover",
-      clock: async () => instants.shift() ?? instants.at(-1),
+      clock: async () => now,
       leaseNonce: "coordinator_nonce_preflight_rollover",
       async publisher() {
         publisherCalls += 1;
         return publisherResult();
+      },
+      async checkpoint({ phase }) {
+        if (phase === "after-plan-bound") now = "2026-07-15T00:00:00.000Z";
       },
     }),
     /GC preflight crossed the planned UTC budget day/u,
@@ -1030,7 +1630,13 @@ test("UTC rollover during GC stops before deletion and leaves the full read enve
   const value = await fixture();
   const expectedPlan = await safetyPlan(value);
   value.client.pageSize = 1000;
-  const instants = [...Array(9).fill(AS_OF), "2026-07-15T00:00:00.000Z"];
+  let now = AS_OF;
+  value.client.onCommand = async (name, input) => {
+    if (
+      name === "HeadObjectCommand"
+      && (input.Key.startsWith(`${SITE_PREFIX}/`) || input.Key.startsWith(`${OCCURRENCE_PREFIX}/`))
+    ) now = "2026-07-15T00:00:00.000Z";
+  };
   value.client.commands.length = 0;
   await assert.rejects(
     coordinateReleaseStorageS3Publication({
@@ -1040,7 +1646,7 @@ test("UTC rollover during GC stops before deletion and leaves the full read enve
       publication: estimate(),
       eventIdentitySha256: "b".repeat(64),
       ownerIdentity: "stage-producer-pod-gc-rollover",
-      clock: async () => instants.shift() ?? "2026-07-15T00:00:00.000Z",
+      clock: async () => now,
       leaseNonce: "coordinator_nonce_gc_rollover",
       async publisher() {
         return publisherResult();
@@ -1058,6 +1664,7 @@ test("UTC rollover during GC stops before deletion and leaves the full read enve
   const inventoryUsage = sumUsage([
     ...storedReservations(value, "inventory-list"),
     ...storedReservations(value, "inventory-read"),
+    ...storedReservations(value, "finalization"),
   ]);
   assert.deepEqual(usage.state.counters, {
     writtenBytes: expectedPlan.document.accounting.gcUsageUpperBound.writtenBytes
@@ -1077,12 +1684,22 @@ test("UTC rollover during GC stops before deletion and leaves the full read enve
   );
 });
 
-test("lease expiry after object inspection is rechecked immediately before conditional deletion", async () => {
+test("lease expiry during the final fence read is observed before conditional deletion", async () => {
   const value = await fixture();
   value.client.pageSize = 1000;
   let now = AS_OF;
+  let expireOnFenceRead = false;
   const headCounts = new Map();
   value.client.onCommand = async (name, input) => {
+    if (
+      expireOnFenceRead
+      && name === "GetObjectCommand"
+      && input.Key === `${COORDINATION_PREFIX}/fence.json`
+    ) {
+      now = "2026-07-14T12:01:01.000Z";
+      expireOnFenceRead = false;
+      return;
+    }
     if (
       name !== "HeadObjectCommand"
       || (!input.Key.startsWith(`${SITE_PREFIX}/`) && !input.Key.startsWith(`${OCCURRENCE_PREFIX}/`))
@@ -1090,8 +1707,9 @@ test("lease expiry after object inspection is rechecked immediately before condi
     const count = (headCounts.get(input.Key) ?? 0) + 1;
     headCounts.set(input.Key, count);
     // GC first HEADs every planned candidate, then re-HEADs the selected
-    // object inside deleteObject. Expire the lease in that intervening window.
-    if (count === 2) now = "2026-07-14T12:01:01.000Z";
+    // object inside deleteObject. The following fence GET spans expiry; the
+    // implementation must sample time after that GET rather than before it.
+    if (count === 2) expireOnFenceRead = true;
   };
   await assert.rejects(
     coordinateReleaseStorageS3Publication({
@@ -1120,6 +1738,64 @@ test("lease expiry after object inspection is rechecked immediately before condi
     false,
   );
   assert.ok(storedReservations(value, "gc-mutation").length >= 1);
+});
+
+test("coordination history GC rechecks lease time after reservation and immediately before deletion", async () => {
+  for (const expiryPhase of ["reservation", "head"]) {
+    const value = await fixture({ includeOrphans: false });
+    value.client.pageSize = 1000;
+    const expired = await reserveReleaseStorageS3Usage({
+      coordinationStore: value.coordinationStore,
+      kind: "publication",
+      operationSha256: sha256(`expired-history-${expiryPhase}`),
+      createdAt: "2026-06-29T12:00:00.000Z",
+      delta: { writtenBytes: 1, deletedBytes: 0, egressBytes: 1, requests: 1 },
+    });
+    const physicalHistoryKey = `${COORDINATION_PREFIX}/${expired.key}`;
+    let now = AS_OF;
+    value.client.commands.length = 0;
+    value.client.onCommand = async (name, input) => {
+      const expireDuringReservation = expiryPhase === "reservation"
+        && name === "PutObjectCommand"
+        && input.Key.includes("/reservations/gc-mutation/");
+      const expireDuringHead = expiryPhase === "head"
+        && name === "HeadObjectCommand"
+        && input.Key === physicalHistoryKey;
+      if (expireDuringReservation || expireDuringHead) {
+        now = "2026-07-14T12:01:01.000Z";
+      }
+    };
+    let publisherCalls = 0;
+    await assert.rejects(
+      coordinateReleaseStorageS3Publication({
+        siteStore: value.siteStore,
+        occurrenceStore: value.occurrenceStore,
+        coordinationStore: value.coordinationStore,
+        publication: estimate(),
+        eventIdentitySha256: sha256(`history-expiry-${expiryPhase}`),
+        ownerIdentity: `stage-producer-history-expiry-${expiryPhase}`,
+        clock: async () => now,
+        leaseSeconds: 60,
+        inventoryNonce: `inventory_history_expiry_${expiryPhase}`,
+        leaseNonce: `coordinator_history_expiry_${expiryPhase}`,
+        async publisher() {
+          publisherCalls += 1;
+          return publisherResult();
+        },
+      }),
+      /publication lease is no longer current/u,
+    );
+    assert.equal(publisherCalls, 0);
+    assert.equal(
+      value.client.objects.has(`${BUCKET}/${physicalHistoryKey}`),
+      true,
+    );
+    assert.equal(
+      value.client.commands.some(({ name }) => name === "DeleteObjectCommand"),
+      false,
+    );
+    assert.ok(storedReservations(value, "gc-mutation").length >= 1);
+  }
 });
 
 test("an expired fence blocks the publisher after its conservative reservation", async () => {
@@ -1375,6 +2051,7 @@ test("activation proof mutates and cleans all three prefixes and fails closed wh
   });
   assert.equal(result.dedicatedPrefixesVerified, true);
   assert.equal(result.boundedCreateReadHeadDelete, true);
+  assert.equal(result.absentOnlySemanticsVerified, true);
   assert.equal(result.staleConditionalOperationsRejected, true);
   assert.equal(result.cleanupComplete, true);
   for (const evidence of Object.values(result.prefixes)) {
@@ -1382,6 +2059,8 @@ test("activation proof mutates and cleans all three prefixes and fails closed wh
       created: true,
       read: true,
       head: true,
+      existingKeyCreateRejected: true,
+      existingKeyPreserved: true,
       conditionalWrite: true,
       staleWriteRejected: true,
       staleDeleteRejected: true,
@@ -1391,6 +2070,34 @@ test("activation proof mutates and cleans all three prefixes and fails closed wh
       cleanupComplete: true,
     });
   }
+  assert.equal(
+    [...value.client.objects.keys()].some((key) => key.includes("activation-proof/")),
+    false,
+  );
+
+  value.client.ignoreIfNoneMatch = true;
+  await assert.rejects(
+    proveReleaseStorageS3Activation({
+      siteObjects: value.siteStore.objects,
+      occurrenceObjects: value.occurrenceStore.objects,
+      coordinationObjects: value.coordinationStore,
+      nonce: "activation_nonce_absent_only_ignored",
+      probedAt: AS_OF,
+    }),
+    (error) => {
+      assert.ok(error instanceof ReleaseStorageS3ActivationProofError);
+      assert.equal(error.result.absentOnlySemanticsVerified, false);
+      assert.equal(error.result.dedicatedPrefixesVerified, false);
+      for (const evidence of Object.values(error.result.prefixes)) {
+        assert.equal(evidence.created, true);
+        assert.equal(evidence.existingKeyCreateRejected, false);
+        assert.equal(evidence.existingKeyPreserved, false);
+        assert.equal(evidence.cleanupComplete, true);
+      }
+      return true;
+    },
+  );
+  value.client.ignoreIfNoneMatch = false;
   assert.equal(
     [...value.client.objects.keys()].some((key) => key.includes("activation-proof/")),
     false,
@@ -1485,5 +2192,10 @@ test("Pass 1 contract separates names-only readiness from explicit mutating acti
   assert.equal(releaseStoragePassOneContract.writerSecret, "verdify-lab-occurrence-store-writer");
   assert.ok(releaseStoragePassOneContract.writerEnvironmentNames.includes("LAB_RELEASE_COORDINATION_STORE"));
   assert.ok(!releaseStoragePassOneContract.readerEnvironmentNames.includes("LAB_RELEASE_COORDINATION_STORE"));
+  assert.equal(releaseStoragePassOneContract.activationGate.status, "blocked");
+  assert.equal(
+    releaseStoragePassOneContract.activationGate.prerequisite,
+    "deterministic-occurrence-and-site-packs-with-selected-root-inventory",
+  );
   assert.doesNotMatch(JSON.stringify(releaseStoragePassOneContract), /s3:\/\/|AWS_SECRET_ACCESS_KEY":"/u);
 });

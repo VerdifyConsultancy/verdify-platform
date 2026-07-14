@@ -58,6 +58,7 @@ export async function main(argv = process.argv.slice(2), environment = process.e
       status: "source-contract-only",
       readiness: releaseStoragePassOneContract.readiness,
       activationProof: releaseStoragePassOneContract.activationProof,
+      activationGate: releaseStoragePassOneContract.activationGate,
       configMap: releaseStoragePassOneContract.configMap,
       readerSecret: releaseStoragePassOneContract.readerSecret,
       writerSecret: releaseStoragePassOneContract.writerSecret,
@@ -95,13 +96,24 @@ export async function main(argv = process.argv.slice(2), environment = process.e
     }),
   ]);
   try {
-    print(await proveReleaseStorageS3Activation({
+    const endpointProof = await proveReleaseStorageS3Activation({
       siteObjects: siteStore.objects,
       occurrenceObjects: occurrenceStore.objects,
       coordinationObjects,
       nonce: randomUUID(),
       probedAt: new Date().toISOString(),
-    }));
+    });
+    print({
+      contract: "verdify.lab-release-storage-pass-one-activation-result",
+      schemaVersion: 1,
+      status: "blocked",
+      activationAuthorized: false,
+      activationGate: releaseStoragePassOneContract.activationGate,
+      endpointProof,
+    });
+    throw new Error(
+      "release storage activation is blocked until the packed-release capacity prerequisite lands",
+    );
   } catch (error) {
     if (error instanceof ReleaseStorageS3ActivationProofError) {
       print(error.result);
@@ -122,4 +134,5 @@ export const releaseStorageS3CliContract = Object.freeze({
   mutatingActivationCommand: "activation-proof --acknowledge-stage-mutation",
   environmentNames: Object.freeze([...ENVIRONMENT_NAMES]),
   activationProof: releaseStorageS3ActivationProofContract,
+  activationGate: releaseStoragePassOneContract.activationGate,
 });

@@ -54,6 +54,8 @@ function emptyEvidence() {
     created: false,
     read: false,
     head: false,
+    existingKeyCreateRejected: false,
+    existingKeyPreserved: false,
     conditionalWrite: false,
     staleWriteRejected: false,
     staleDeleteRejected: false,
@@ -106,7 +108,19 @@ async function probePrefix(store, role, nonce, probedAt) {
     probedAt,
     phase: "conditional-replacement",
   });
-  if (bytes.length > MAX_PROOF_BYTES || conditionalBytes.length > MAX_PROOF_BYTES) {
+  const absentOnlyBytes = canonicalBytes({
+    contract: "verdify.lab-release-storage-activation-probe",
+    schemaVersion: 1,
+    role,
+    nonceSha256: sha256(Buffer.from(nonce)),
+    probedAt,
+    phase: "must-not-replace-existing-key",
+  });
+  if (
+    bytes.length > MAX_PROOF_BYTES
+    || conditionalBytes.length > MAX_PROOF_BYTES
+    || absentOnlyBytes.length > MAX_PROOF_BYTES
+  ) {
     throw new Error("release storage activation proof body exceeds its bound");
   }
   let etag = null;
@@ -126,6 +140,16 @@ async function probePrefix(store, role, nonce, probedAt) {
       label: "release storage activation proof object",
     });
     evidence.head = head.bytes === bytes.length && head.etag === etag;
+    const absentOnly = await store.putIfAbsent(key, absentOnlyBytes, {
+      contentType: "application/json",
+    });
+    evidence.existingKeyCreateRejected = absentOnly.written === false;
+    const preserved = await store.read(key, {
+      maximumBytes: MAX_PROOF_BYTES,
+      label: "release storage activation proof absent-only object",
+    });
+    evidence.existingKeyPreserved = preserved.bytes.equals(bytes) && preserved.etag === etag;
+    if (!evidence.existingKeyCreateRejected || !evidence.existingKeyPreserved) return evidence;
     const replaced = await store.putIfMatch(key, conditionalBytes, etag, {
       contentType: "application/json",
     });
@@ -157,7 +181,7 @@ async function probePrefix(store, role, nonce, probedAt) {
   } catch {
     return evidence;
   } finally {
-    await cleanupProbe(store, key, [bytes, conditionalBytes], evidence);
+    await cleanupProbe(store, key, [bytes, absentOnlyBytes, conditionalBytes], evidence);
   }
 }
 
@@ -165,6 +189,8 @@ function verified(evidence) {
   return evidence.created
     && evidence.read
     && evidence.head
+    && evidence.existingKeyCreateRejected
+    && evidence.existingKeyPreserved
     && evidence.conditionalWrite
     && evidence.staleWriteRejected
     && evidence.staleDeleteRejected
@@ -207,9 +233,14 @@ export async function proveReleaseStorageS3Activation({
       evidence.created && evidence.read && evidence.head && evidence.deleted
     )),
     staleConditionalOperationsRejected: results.every((evidence) => (
-      evidence.conditionalWrite
+      evidence.existingKeyCreateRejected
+      && evidence.existingKeyPreserved
+      && evidence.conditionalWrite
       && evidence.staleWriteRejected
       && evidence.staleDeleteRejected
+    )),
+    absentOnlySemanticsVerified: results.every((evidence) => (
+      evidence.existingKeyCreateRejected && evidence.existingKeyPreserved
     )),
     cleanupComplete: results.every((evidence) => evidence.cleanupComplete),
     dedicatedPrefixesVerified: results.every(verified),
@@ -225,6 +256,8 @@ export const releaseStorageS3ActivationProofContract = Object.freeze({
   mutating: true,
   maximumObjectBytes: MAX_PROOF_BYTES,
   conditionalSemantics: Object.freeze([
+    "existing-key-create-rejected",
+    "existing-key-preserved",
     "current-write-succeeds",
     "stale-write-rejected",
     "stale-delete-rejected",
