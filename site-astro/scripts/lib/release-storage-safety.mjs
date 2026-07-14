@@ -25,7 +25,7 @@ const BUDGETS = Object.freeze({
   warningFraction: 0.8,
 });
 
-const GC_KINDS = new Set(["release", "manifest", "generation", "blob", "event"]);
+const GC_KINDS = new Set(["release", "manifest", "generation", "blob", "event", "checkpoint"]);
 const ALL_KINDS = new Set(GC_KINDS);
 
 function canonicalBytes(value) {
@@ -122,11 +122,13 @@ function objectKey(value, namespaceValue, kind, label = "release storage object 
           ? /^occurrences\/(media_[0-9a-f]{24})\/generations\/sha256\/([0-9a-f]{64})\.json$/u.exec(value)
           : kind === "event" && namespaceValue === "site"
             ? /^events\/sha256\/([0-9a-f]{64})\.json$/u.exec(value)
-            : kind === "event"
-              ? /^(?:events\/sha256\/([0-9a-f]{64})|occurrences\/media_[0-9a-f]{24}\/events\/sha256\/([0-9a-f]{64}))\.json$/u.exec(value)
-              : null;
+            : kind === "checkpoint" && namespaceValue === "site"
+              ? /^checkpoints\/sha256\/([0-9a-f]{64})\.json$/u.exec(value)
+              : kind === "event"
+                ? /^(?:events\/sha256\/([0-9a-f]{64})|occurrences\/media_[0-9a-f]{24}\/events\/sha256\/([0-9a-f]{64}))\.json$/u.exec(value)
+                : null;
   if (keyedDigest === null) throw new Error(`${label} does not match its object kind`);
-  if (namespaceValue === "site" && !["release", "blob", "event"].includes(kind)) {
+  if (namespaceValue === "site" && !["release", "blob", "event", "checkpoint"].includes(kind)) {
     throw new Error("site release storage object kind is invalid");
   }
   if (namespaceValue === "occurrence" && !["manifest", "generation", "blob", "event"].includes(kind)) {
@@ -177,8 +179,8 @@ function validateObject(raw) {
   if (raw.kind === "blob" && raw.references.length !== 0) {
     throw new Error("release storage blob cannot reference another object");
   }
-  if (raw.kind === "event" && raw.references.length !== 0) {
-    throw new Error("release storage event tombstone cannot retain immutable payload objects");
+  if (["event", "checkpoint"].includes(raw.kind) && raw.references.length !== 0) {
+    throw new Error("release storage idempotency tombstone cannot retain immutable payload objects");
   }
   return raw;
 }
@@ -586,7 +588,7 @@ export function planReleaseStorageSafety(input) {
   for (const [identity, object] of objects) {
     const age = Date.parse(asOf) - Date.parse(object.createdAt);
     if (age < 0) throw new Error("release storage object is from the future");
-    const retentionHorizon = object.kind === "event"
+    const retentionHorizon = ["event", "checkpoint"].includes(object.kind)
       ? EVENT_IDEMPOTENCY_HORIZON_MS
       : RECOVERY_GRACE_MS;
     if (age <= retentionHorizon) roots.push(identity);
