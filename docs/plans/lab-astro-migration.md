@@ -355,6 +355,20 @@ checkpoint dependencies. Its source gate does not prove an endpoint, build or
 pin the next images, perform a network or cluster action, provision a
 credential, or authorize activation.
 
+## Activation status (2026-07-14 ~11:30Z)
+
+Jason approved the lab-stage occurrence activation 2026-07-14. Pass 1
+repo/pipeline prerequisites are COMPLETE (exporter contract image, runtime
+pins, publisher, AppProject CronJob permission, acceptance tooling, probe
+deadline/scheduling hardening). Remaining blockers are EXTERNAL:
+`jvallery/storage-infra#53` (private `verdify-lab-occurrences` bucket +
+scoped reader/writer identities + contracted Secret delivery) and the
+anonymous-disabled reporting tier read-only credential. After delivery:
+~60-90 min two-pass activation (producer/runtime unrouted → 143+2 both-cache
+convergence → reviewed route switch) then the 24h/96-sample freshness soak.
+Known infra risk: multi-node Init/sandbox wedge in agent-fleet-ci (RCA
+`jvallery/agents#3002`) — prod and stage serving are unaffected.
+
 ## Operating cadence
 
 - Outer loop (Claude): 5-minute drive loop — check codex progress, unblock,
