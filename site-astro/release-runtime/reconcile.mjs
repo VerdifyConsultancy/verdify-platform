@@ -14,6 +14,8 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { pathToFileURL } from "node:url";
 
+import { siteReleaseCliEnvironment } from "../scripts/lib/runtime-s3-binding.mjs";
+
 const execFile = promisify(execFileCallback);
 const SHA256_RE = /^[0-9a-f]{64}$/;
 const ISO_INSTANT_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
@@ -77,14 +79,14 @@ function validateStore(value) {
   return value;
 }
 
-export function runtimeConfig(environment = process.env) {
-  const store = validateStore(environment.LAB_RELEASE_STORE);
-  const objectStoreEndpoint = environment.LAB_S3_ENDPOINT_URL ?? null;
-  if (store.startsWith("s3://") && objectStoreEndpoint !== "https://s3-hdd.vallery.net") {
-    throw new Error("s3 release stores require the pinned Verdify object-store endpoint");
+export function runtimeConfig(environment) {
+  if (environment === null || typeof environment !== "object" || Array.isArray(environment)) {
+    throw new Error("release runtime environment is required");
   }
+  const store = validateStore(environment.LAB_RELEASE_STORE);
   return {
     store,
+    cliEnvironment: siteReleaseCliEnvironment(store, { environment }),
     cacheRoot: path.resolve(environment.LAB_RELEASE_CACHE ?? "/srv/lab-cache"),
     bakedBundleRoot: path.resolve(environment.LAB_RELEASE_BAKED_BUNDLE ?? "/opt/verdify/lab-known-good"),
     stateRoot: path.resolve(environment.LAB_RELEASE_RUNTIME_STATE ?? "/run/verdify-lab-release"),
@@ -145,11 +147,15 @@ function parseCliJson(stdout, label) {
 }
 
 export async function runReleaseCli(config, args) {
+  const environment = siteReleaseCliEnvironment(config.store, {
+    environment: config.cliEnvironment,
+  });
   const { stdout } = await execFile(process.execPath, [config.cli, ...args], {
     timeout: config.cliTimeoutSeconds * 1000,
     maxBuffer: MAX_CLI_BYTES,
     encoding: "utf8",
     windowsHide: true,
+    env: environment,
   });
   return parseCliJson(stdout, `site release ${args[0]}`);
 }
@@ -424,7 +430,7 @@ async function main() {
   if (!new Set(["init", "reconcile"]).has(mode) || process.argv.length !== 3) {
     throw new Error("Usage: release-runtime-entrypoint init|reconcile");
   }
-  const config = runtimeConfig();
+  const config = runtimeConfig(process.env);
   if (mode === "init") {
     await reconcileOnce(config, { initial: true });
     return;

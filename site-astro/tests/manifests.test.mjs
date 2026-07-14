@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 
 import YAML from "yaml";
 
-import { reconcileOnce, recordReconcileFailure, runtimeConfig } from "../release-runtime/reconcile.mjs";
+import { reconcileOnce, recordReconcileFailure, runReleaseCli, runtimeConfig } from "../release-runtime/reconcile.mjs";
 import { buildBakedSiteBundle } from "../scripts/build-baked-site-bundle.mjs";
 import {
   inventoryBuiltSite,
@@ -248,13 +248,75 @@ test("release runtime images bake a real digest-bound fallback and serve only th
   assert.match(nginx, /location = \/readyz/u);
 
   assert.throws(
-    () => runtimeConfig({ LAB_RELEASE_STORE: "s3://verdify-platform/lab/releases" }),
-    /pinned Verdify object-store endpoint/u,
+    () => runtimeConfig(),
+    /release runtime environment is required/u,
   );
-  assert.equal(runtimeConfig({
+
+  assert.throws(
+    () => runtimeConfig({ LAB_RELEASE_STORE: "s3://verdify-platform/lab/releases" }),
+    /runtime S3 LAB_S3_ENDPOINT_URL is required/u,
+  );
+  const s3Environment = {
     LAB_RELEASE_STORE: "s3://verdify-platform/lab/releases",
     LAB_S3_ENDPOINT_URL: "https://s3-hdd.vallery.net",
-  }).store, "s3://verdify-platform/lab/releases");
+    AWS_DEFAULT_REGION: "garage",
+    AWS_ACCESS_KEY_ID: "fixture-access-key",
+    AWS_SECRET_ACCESS_KEY: "fixture-secret-key",
+  };
+  const config = runtimeConfig(s3Environment);
+  assert.equal(config.store, "s3://verdify-platform/lab/releases");
+  assert.deepEqual(config.cliEnvironment, {
+    LAB_S3_ENDPOINT_URL: "https://s3-hdd.vallery.net",
+    AWS_DEFAULT_REGION: "garage",
+    AWS_ACCESS_KEY_ID: "fixture-access-key",
+    AWS_SECRET_ACCESS_KEY: "fixture-secret-key",
+  });
+  assert.equal(Object.isFrozen(config.cliEnvironment), true);
+});
+
+test("release reconciler CLI forwards only the store-specific environment allowlist", async (context) => {
+  const root = await mkdtemp(path.join(tmpdir(), "verdify-release-cli-environment-"));
+  context.after(() => rm(root, { recursive: true, force: true }));
+  const cli = path.join(root, "report-environment.mjs");
+  await writeFile(cli, [
+    "const result = { keys: Object.keys(process.env).sort() };",
+    "process.stdout.write(`${JSON.stringify(result, null, 2)}\\n`);",
+    "",
+  ].join("\n"));
+  const base = {
+    cli,
+    cliTimeoutSeconds: 5,
+  };
+
+  const local = await runReleaseCli({
+    ...base,
+    store: path.join(root, "local-store"),
+    cliEnvironment: {
+      AWS_ACCESS_KEY_ID: "ambient-access-key",
+      AWS_SECRET_ACCESS_KEY: "ambient-secret-key",
+      AWS_SESSION_TOKEN: "ambient-session-token",
+    },
+  }, ["ignored"]);
+  assert.deepEqual(local.keys, []);
+
+  const s3 = await runReleaseCli({
+    ...base,
+    store: "s3://verdify-platform/lab/releases",
+    cliEnvironment: {
+      LAB_S3_ENDPOINT_URL: "https://s3-hdd.vallery.net",
+      AWS_DEFAULT_REGION: "garage",
+      AWS_ACCESS_KEY_ID: "fixture-access-key",
+      AWS_SECRET_ACCESS_KEY: "fixture-secret-key",
+      AWS_SESSION_TOKEN: "must-not-be-forwarded",
+      HOME: "/must/not/be/forwarded",
+    },
+  }, ["ignored"]);
+  assert.deepEqual(s3.keys, [
+    "AWS_ACCESS_KEY_ID",
+    "AWS_DEFAULT_REGION",
+    "AWS_SECRET_ACCESS_KEY",
+    "LAB_S3_ENDPOINT_URL",
+  ]);
 });
 
 function sha256(bytes) {

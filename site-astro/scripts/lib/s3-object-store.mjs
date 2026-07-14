@@ -15,6 +15,7 @@ const ETAG_RE = /^"[^"\\\u0000-\u001f\u007f]{1,512}"$/u;
 const MAX_KEY_BYTES = 1024;
 const MAX_LIST_PAGES = 100;
 const MAX_CONTINUATION_TOKEN_BYTES = 4096;
+const ACCESS_MODES = new Set(["reader", "writer"]);
 
 function validBucket(bucket) {
     return (
@@ -171,6 +172,7 @@ export class S3ObjectStore {
     constructor({
         bucket,
         prefix,
+        accessMode = "writer",
         client = null,
         clientConfig = {},
         clientFactory = (config) => new S3Client(config),
@@ -190,6 +192,9 @@ export class S3ObjectStore {
             throw new Error("S3 client is invalid");
         if (typeof clientFactory !== "function")
             throw new Error("S3 client factory is invalid");
+        if (!ACCESS_MODES.has(accessMode))
+            throw new Error("S3 object-store access mode is invalid");
+        this.accessMode = accessMode;
         this.client = client;
         this.clientConfig = { ...clientConfig };
         this.clientFactory = clientFactory;
@@ -239,6 +244,8 @@ export class S3ObjectStore {
         bytes,
         { contentType = "application/octet-stream" } = {},
     ) {
+        if (this.accessMode !== "writer")
+            throw new Error("S3 object store is not configured for writes");
         if (!Buffer.isBuffer(bytes) || bytes.length < 1)
             throw new Error("S3 object body is invalid");
         const Key = this.objectKey(relative);
@@ -266,6 +273,8 @@ export class S3ObjectStore {
         expectedETag,
         { contentType = "application/json" } = {},
     ) {
+        if (this.accessMode !== "writer")
+            throw new Error("S3 object store is not configured for writes");
         if (!Buffer.isBuffer(bytes) || bytes.length < 1)
             throw new Error("S3 object body is invalid");
         validateETag(expectedETag, "S3 compare-and-swap entity tag");

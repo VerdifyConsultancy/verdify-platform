@@ -942,10 +942,12 @@ export class S3OccurrenceReleaseStore extends OccurrenceReleaseStore {
     this.objects = new S3ObjectStore({
       bucket: normalized.bucket,
       prefix: normalized.prefix,
+      accessMode: options.accessMode ?? "writer",
       client: options.client ?? null,
       clientConfig: options.clientConfig ?? {},
       clientFactory: options.clientFactory,
     });
+    this.accessMode = this.objects.accessMode;
   }
 
   async initialize(_options = {}) {
