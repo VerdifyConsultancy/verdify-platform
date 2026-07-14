@@ -360,8 +360,10 @@ focused VPD/dehum policy lane (#383).
   parity; immutable event-driven S3 publishing; quality gates; production
   cutover and Quartz retirement. Master plan and phase gates:
   `docs/plans/lab-astro-migration.md` (the authoritative tracker).
-- Non-goals: marketing site (`verdify-www`), CRM, DNS/Cloudflare changes, or raw
-  S3 credential handling.
+- Non-goals: merging the independent `verdify-www` repo/deployment, CRM,
+  DNS/Cloudflare changes, or raw S3 credential handling. The versioned shell and
+  common in-cluster Astro/Kaniko/Zot/ArgoCD delivery model are deliberate
+  cross-stack interfaces; see `jvallery/agents#2907/#2930`.
 - Acceptance criteria (see the tracker's KPI bar for the measurable form):
   - Stage serves the latest main Astro digest; the five deployed-stage defects
     are cleared with a full acceptance run against the deployed build.
@@ -379,14 +381,16 @@ focused VPD/dehum policy lane (#383).
 - Related files/issues/PRs: #351, #459, #460, #461, #462, verdify-www#33,
   `site-astro/`, `docs/plans/lab-astro-migration.md`, `site/`,
   `scripts/lab-publish-k3s.sh`.
-- Dependencies: in-cluster `build-lab-astro` green (current P0 blocker);
-  network-infra for route truth; secret locations by name/key only; Jason for
-  production cutover.
-- Risks: stage drifting from main while the pipeline is red; parity comparator
-  false positives masking real gaps; legacy anonymous Grafana being reused as
-  the graph authority instead of an isolated reporting tier.
-- Evidence: `docs/plans/lab-astro-migration.md` ground-truth table; web
-  subsystem docs and service map.
+- Dependencies: #533/#534 protected stage-store and reporting-feed delivery;
+  #535/#537/#540/#542 source completion; #541 two-pass stage proof;
+  network-infra for production route truth; Jason for production cutover.
+- Risks: reviewed local Phase 4 source being mistaken for main; activating the
+  former per-object layout beyond its budget; parity evidence preceding 143+2
+  materialization; legacy anonymous Grafana being reused instead of the
+  isolated reporting tier.
+- Evidence: `docs/plans/lab-astro-migration.md` ground-truth/work register;
+  `docs/reviews/lab-astro-stage-acceptance-2026-07-14.md`; web subsystem
+  docs and service map.
 
 ### L10 Testing And Research
 

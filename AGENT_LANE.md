@@ -70,7 +70,8 @@ product evolution. Track A wins whenever they conflict.
 - External systems referenced by code or manifests: ESP32 `192.168.10.111`,
   Home Assistant, Frigate, MQTT/Mosquitto, TimescaleDB/PostgreSQL, Grafana,
   Hermes/OpenAI planner gateway, Slack alerts, Tempest, Open-Meteo, S3-compatible
-  lab storage, GHCR, Cloudflare/TLS/edge routes, and NAS-backed storage paths.
+  lab storage, Zot (plus legacy GHCR references pending retirement),
+  Cloudflare/TLS/edge routes, and NAS-backed storage paths.
 
 This lane owns the app contracts and repo references for those systems, not the
 shared providers themselves.

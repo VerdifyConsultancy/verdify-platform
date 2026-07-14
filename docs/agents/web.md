@@ -12,9 +12,10 @@ current Quartz production site, and the Astro replacement staged for
 - `site/` — full Quartz source tree, docs, package lock, build config, and nginx config
 - `site-astro/` — Astro compiler/runtime, shared-shell consumer, immutable
   snapshot/occurrence/release contracts, and parity/browser quality gates
-- `deploy/k8s/components/lab-astro-stage/` and
-  `deploy/k8s/overlays/lab-stage/` — isolated static canary workload and its
-  reviewed zot digest pin
+- `deploy/k8s/components/lab-astro-stage/`,
+  `deploy/k8s/components/lab-release-runtime/`, future reviewed reporting
+  boundary components, and `deploy/k8s/overlays/lab-stage/` — isolated static
+  canary plus dormant release path and reviewed Zot digest pins
 - S3-backed lab content store — source/public/state for the k3s lab publisher
   (`deploy/k8s/components/lab-site/lab-publisher.yaml`)
 - Legacy `/mnt/iris/verdify-vault/` paths — compatibility paths for generators;
@@ -92,15 +93,14 @@ pin lands in `deploy/k8s/overlays/lab-stage/kustomization.yaml`. ArgoCD serves
 the static nginx image with no PVC, runtime Secret, service-account token, DB,
 Grafana, object-store access, or egress.
 
-The Phase 2 checkpoint accepted digest
-`sha256:ee36941f20028fcfe06f12bf253e7139c00e3d5de1949eb8b12bb1d4ebe60b99`
-on 2026-07-13: 2/2 Ready, zero restarts, distinct nodes, shell 1.1.0, 323
-routes, and live Pagefind/media/lightbox/mobile checks with identical T0/T+10
-evidence. The stage app returned to manual-sync afterward. This is a dated
-checkpoint, not a cutover claim: content is still the frozen snapshot, and all
-143 graph plus 2 camera occurrences have no selected same-origin evidence
-release or materialized fallback blobs. Graph/camera parity is carried by Phase
-4c in `docs/plans/lab-astro-migration.md`.
+The latest accepted static digest is
+`sha256:878c522740a44df44369dae1154b162b485a29d4b4b45d9ad48e20a44f22d56b`
+(#530). On 2026-07-14 it was 2/2 Ready with zero restarts on distinct nodes and
+passed identical T0/T+10 evidence for Pagefind, scrollability, media/lightbox,
+mobile navigation, 323 routes, and 145 DOM occurrences. See
+`docs/reviews/lab-astro-stage-acceptance-2026-07-14.md`. This remains a static
+checkpoint: all 143 graph plus two camera occurrences lack a selected release
+and materialized fallback. #533-#542 own the remaining Phase 4 path.
 
 Current production Quartz build/publish unit:
 
@@ -134,8 +134,8 @@ site release can publish. The command deliberately has no default runtime,
 store, endpoint, credential, or network client, so this source slice cannot
 publish or activate anything by itself.
 
-Phase 4b PR #525 carries the next source-only object-store/runtime
-prerequisite. The S3 binding accepts only the fixed
+PR #525 merged the source-only object-store/runtime prerequisite. The S3
+binding accepts only the fixed
 `https://s3-hdd.vallery.net` endpoint and `garage` region, requires the explicit
 four-key client allowlist (`LAB_S3_ENDPOINT_URL`, `AWS_DEFAULT_REGION`,
 `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`), and uses no ambient SDK
@@ -145,18 +145,17 @@ writer roles are enforced by the store primitive: `prepare` needs no store;
 writers. The release reconciler gives its CLI child exactly the four S3 keys,
 or an empty environment for a local store.
 
-The same branch provides a construction-only stage publisher factory. Both
+Main now provides a construction-only stage publisher factory. Both
 occurrence and built-site locations must be explicit shared-S3 locations and
 must match the event identities; build, verifier, and checkpoint operations
 remain explicit caller dependencies with no defaults. The factory invokes no
 operation and is not selected by a workload or by the executable's default
-path. This local prerequisite has not passed a PR/merge gate and adds no
-Kubernetes manifest or Secret values, endpoint probe, network call, replica,
+path. Its merge added no Secret values, endpoint probe, network call, replica,
 egress, route, sync, activation, distributed lease, retention/GC, or credential
-provisioning. Merging this source prerequisite does not activate it.
+provisioning. #537/#540/#542 own those remaining source and proof steps.
 
-`site-astro/Dockerfile.release-runtime` also carries a source-only
-`occurrence-exporter` target. It derives from the locked dependency stage and
+`site-astro/Dockerfile.occurrence-exporter` packages the source-only
+`occurrence-exporter` image. It derives from the locked dependency stage and
 copies only two project-source files: an offline verifier and the shared
 contract module imported by the real graph, camera, and joint producers. Its
 default command reports `packaged` / `runtime-unbound`
@@ -166,9 +165,10 @@ runtime configuration, object-store endpoint, credential, or reporting feed.
 Its required build revision and release instant are syntax-checked, recorded in
 OCI revision/created labels, and repeated in canonical metadata that the
 verifier validates and emits.
-It is not a runnable graph renderer: there is no runtime binding, workload,
-overlay image sentinel, built digest, pin, route, or activation for this target
-yet.
+It is built and pinned through #532 as `a809d11c…de4a`, and the canonical
+offline exact-source probe passed. It is still not a runnable graph renderer:
+there is no producer binding or active workload, route, endpoint, credential,
+or reporting feed. #535 owns that transition.
 
 `scripts/rebuild-site.sh` builds Quartz into a staged `public.*` directory,
 verifies the staged `index.html`, then rsyncs the complete staged output into

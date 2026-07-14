@@ -75,7 +75,9 @@ make planner-dry       # Render planner prompt (no API call)
 make help              # List all targets
 ```
 
-**Tooling:** ruff (lint + format), pytest, pre-commit hooks, GitHub Actions CI.
+**Tooling:** ruff (lint + format), pytest, pre-commit hooks, and in-cluster
+Argo Workflows/Kaniko CI. GitHub Actions publishing was removed; application
+images publish to Zot and are promoted by reviewed digest pins.
 **Config:** `pyproject.toml` is the single source of truth for deps, lint rules, and test config. `make setup` reads it directly; there is no checked-in duplicate requirements file for local tooling.
 
 ### Codex quickstart
