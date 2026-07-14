@@ -1,36 +1,28 @@
 # Lab Astro Migration — Consolidated Program Tracker
 
-Last updated: 2026-07-14. The latest recorded stage rollout serves `814eafff`
-(P0 scroll-fix PR #504/pin #505 — user-reported viewport scroll-lock from body-level
-`overflow:clip`, fixed + regression-tested; roll also shipped #487/#496/#501/
-#502 content. Phases 1-3 PASSED; Phase 4 in flight.)
-build/probe/pin gates passed; Phase 4b S3 foundation merged; occurrence
-adapter is carried by #502; the source-only binding-name readiness contract is
-carried by #501. The occurrence-export caller is merged through #507. The
-concrete operation adapter and explicit execute CLI in this source tree remain
-caller-disabled without an approved policy and explicit store location; they
-make no endpoint, value, credential, deployment, or activation claim.
-Phase 4b PR #525 carries strict runtime S3 dependency injection. It is a
-source-only prerequisite and does not change the live stage or satisfy a
-build, pin, rollout, or activation gate.
-The source tree also defines an offline-default `occurrence-exporter` image target;
-it has no renderer/runtime binding, workload, digest, or pin and is not part of
-the latest completed image chain.
+Last updated: 2026-07-14 09:55 UTC. Phases 1-3 are PASSED; Phase 4 is
+in progress. The static Astro canary is healthy, but occurrence activation
+Pass 1 is **not repo-ready**: image packaging/pins and acceptance tooling are
+complete, while four reviewed source lanes remain off main, one protected
+store is externally delivered, and one protected reporting resource is
+executor-delivered under approval. The current work register below is the
+authoritative execution view.
+
 Owner: platform agent (Claude outer loop plans/verifies; Codex executes on
 xhigh). Human gate: Jason (prod sync, DNS/edge, Quartz retirement, credential
 work). Epic: #351 (L9, G3). This file is the single source of truth for the
 Quartz→Astro migration of lab.verdify.ai; update it whenever a phase gate
 changes state.
 
-## Ground truth (stage verified live ~07:04 UTC; repo/CI refreshed ~16:15 UTC)
+## Ground truth (live and Git checked 2026-07-14 ~09:41 UTC)
 
 | Surface | State |
 |---|---|
 | `lab.verdify.ai` (prod) | Quartz. `verdify-lab` Deployment in `verdify-prod` (ghcr image — pre-ADR-0021 holdover), `verdify-lab-publisher` CronJob republished every 10 min (mutable, shared RWO PVC, both replicas node-pinned). Healthy and fresh; had a 5-job BackoffLimitExceeded streak before recovering. |
-| `lab-stage.verdify.ai` (canary) | Astro. `verdify-lab-astro-stage` in ns `verdify-platform`, 2/2 Ready with zero restarts on distinct nodes, exact image and pod image IDs `verdify-lab-astro@sha256:ee36941f20028fcfe06f12bf253e7139c00e3d5de1949eb8b12bb1d4ebe60b99` (pin PR #468), shell contract **1.1.0**, content frozen at the 2026-07-12 snapshot. Live T0/T+10 acceptance passed and the ArgoCD app returned to manual-sync. |
-| `main` | Astro source includes the accepted static implementation, dormant release/cache runtime, offline camera producer (#487), complete offline 143-graph producer (#492), inactive S3 conditional-store foundation (#496), typed occurrence store (#502), and the closed 143+2 caller (#507). The concrete store-operation adapter and execute CLI in this source tree require an explicit store plus canonical Jason-approved policy before initialization. Runtime pin #500 binds the dormant agent/nginx pair to the latest completed relevant source chain; later source changes are not automatically staged. A fourth source-only `occurrence-exporter` Docker target packages the producer contracts behind an offline verifier, but has no renderer/runtime binding, workload, built digest, or pin. The source-only name-readiness contract is carried by #501, not yet a deployed binding. The live stage remains the static image above; endpoint binding, event delivery, exact parity, and production cutover remain. |
-| Phase 4b PR #525 | Strict source-only S3 injection fixes endpoint `https://s3-hdd.vallery.net` and region `garage`, enforces reader/writer roles, and adds explicit CLI/reconciler and construction-only stage-publisher bindings. It selects no workload and authorizes no activation. |
-| In-cluster CI | **Green for the latest completed Lab source/pin chain.** Workflow `verdify-platform-ci-crv96` completed 17/17 Lab Pod gates for `6729cc2...`: 12 browser quality tests, static/agent/nginx builds, metadata hydration, exact static probe, and paired runtime probe. Pin #500 passed exact-head PR CI/render/kubeconform and its digest-only follow-up workflow passed. Later exact-main workflows do not authorize stage sync or runtime activation. Earlier Playwright fixes #463/#464 and agents#2969/#2970 remain enforced without relaxing quality budgets. |
+| `lab-stage.verdify.ai` (canary) | Astro static Deployment `verdify-lab-astro-stage` in `verdify-platform`: 2/2 Ready, zero restarts, distinct nodes, exact image and pod image IDs `verdify-lab-astro@sha256:878c522740a44df44369dae1154b162b485a29d4b4b45d9ad48e20a44f22d56b` (#530). T0 04:06:45Z and T+10 04:17:47Z passed with identical stable evidence, including scroll, Pagefind, media, mobile navigation, and all 145 DOM occurrences. The output still has zero materialized occurrence blobs and no selected occurrence release. |
+| `main` desired state | #525, #528, and #532 are merged. The overlay preserves static `878c522…d56b` and pins dormant release-agent `b9df7c23…c861`, release-nginx `88ba3cb8…8cb1`, and offline-contract occurrence-exporter `a809d11c…de4a`. The exporter is built and exact-source-probed, but it is not yet a runnable producer. |
+| Live dormant runtime | `verdify-lab-release-runtime` exists at `replicas: 0`, is unrouted, and still shows the older live agent/nginx desired images because #532 has not been stage-synced. No runtime pod, endpoint, credential, or store is active. |
+| In-cluster CI | Canonical exporter workflow `verdify-exporter-probe-projected-token-ql5cw` succeeded on node4 at 09:04:38Z after agents#3006 fixed the Argo projected-token boundary; agents#3002 is closed. Exact PR workflows for #532 (`verdify-platform-pr-ci-tljsz`) and #528 (`verdify-platform-pr-ci-74x44`) succeeded. The 13/13 browser suite includes the #504 scrollability regression. |
 
 ## Completed (do not re-plan)
 
@@ -45,7 +37,7 @@ changes state.
   dims, planner/forecast/archive/evidence/contact templates, route/alias/RSS/
   social preservation, authored-content parity comparator, immutable local
   release manifests + rollback + two-generation cache, quality gates. Proof:
-  58 release/unit + 7 parity tests, 12/12 fixture and 12/12 real-content
+  58 release/unit + 7 parity tests, 13/13 fixture and 13/13 real-content
   browser gates, real build 152 sources → 323 routes, repo `make ci` green,
   in-cluster PR validation green.
 - Route/alias parity: 240/240 canonical routes, 84/84 aliases, 15,450
@@ -64,8 +56,8 @@ Child issues (persisted 2026-07-13 post-consensus): 1→#474, 2→#475, 3→#476
 | 4 | Media & lightbox | Responsive images, intrinsic sizing, and lightbox accepted on stage | Production remains Quartz until Phase 5 |
 | 5 | Planner/evidence templates | Accepted on stage against the full frozen snapshot | Event-driven content refresh remains Phase 4b |
 | 6 | Semantic parity | Same-snapshot schema-v2 diagnostic implemented; 240/240 canonical routes and 84/84 aliases compare from one frozen input, with SVG-title, feed/sitemap, heading-fragment, robots, and ambiguous sibling-link drift cleared | The diagnostic has 442 fully accounted findings: 429 gated graph-fallback findings, nine unavailable historical source references pending a regenerated snapshot, and two gated current-camera occurrences; final proof also requires an approval-eligible immutable snapshot |
-| 7 | Immutable publishing | Local-filesystem CAS/release/cache engine, inactive S3 conditional-store foundation (#496), typed occurrence store (#502), closed caller (#507), and source-only concrete operation adapter/explicit CLI are present; 4a runtime is source-visible with exact source-bound images as a disconnected `replicas: 0` workload; the source-only #501 readiness contract fixes future reader/writer Secret resource names plus non-secret metadata ConfigMap/key names without inspecting values | Actual resource/value binding, real-endpoint proof, distributed coordination, retention/GC, event producer, and stage activation remain; no runtime pod is scheduled or routed |
-| 8 | Quality gates | Strict real-content gates green; exact tested build passed live T0 and T+10 acceptance | Keep the same budgets for every Phase 4 rollout; no production acceptance yet |
+| 7 | Immutable publishing | Local-filesystem CAS/release/cache engine, S3 conditional stores, typed occurrence store, closed caller, runtime injection (#525), exact runtime/exporter pins (#532), and live acceptance tooling (#528) are on main; the runtime remains disconnected at `replicas: 0` | #533/#537/#540/#542 own protected storage, deterministic packs, distributed coordination/GC, and executable publisher/runtime; no runtime pod is scheduled or routed |
+| 8 | Quality gates | Strict 13/13 real-content gates green; exact tested static build passed live T0 and T+10 acceptance; #528 closes selected-release identity/path/completeness checks | Repeat the same gates for #541 Pass 1/Pass 2; no production acceptance yet |
 | 9 | Production cutover | Fail-closed canary scaffold merged via #471 and remains inactive/source-only | Not built/pinned/deployed; Quartz remains authoritative; Jason APPLY required |
 
 ## Execution phases and gates
@@ -180,21 +172,13 @@ Phase 4 — **Feature completion (owner: codex, critical-path order below).**
    freshness alerts, LKG behavior, and joint live proof. Inert Phase 4b
    implementation may proceed, but live reporting or occurrence activation
    remains separately Jason-gated.
-   Their exact-source static/agent/nginx build, metadata, static-image, paired
-   runtime, and latest completed dormant digest-pin chain passed via
-   `verdify-platform-ci-crv96` and #500. This proves the packaged source pair
-   only; no stage sync,
-   reporting feed, producer request, route, or runtime activation occurred.
-   The source tree now also defines an `occurrence-exporter` target derived from
-   the locked dependencies image. It copies only two additional project-source
-   files: an offline verifier and the shared contract module consumed by the
-   real graph, camera, and joint producers. It runs as `101:101`, grants no
-   release/device/live authority, and defaults to
-   an offline contract verifier. This is packaging source only: no runnable
-   renderer, runtime binding, workload, overlay image sentinel, built digest,
-   pin, endpoint, credential, policy, reporting feed, or activation exists for
-   it yet. Required build revision/release-time arguments are validated and
-   bound into OCI labels plus canonical verifier-emitted image metadata.
+   The current exact-source static/agent/nginx/exporter chain is built and
+   pinned through #532. Canonical workflow
+   `verdify-exporter-probe-projected-token-ql5cw` proved the exporter image
+   contains the exact source and 143+2 offline contract. This proves packaging,
+   not production: the exporter still has no runnable producer binding, and no
+   reporting feed, endpoint, credential, producer request, route, or runtime
+   activation occurred. #534/#535 own the reporting resource and executable.
 2. **4a Release runtime:** `d91737d` landed via #473 with init hydration,
    atomic runtime, readiness, metrics, and tests. The follow-through makes the
    candidate visible in the Lab stage GitOps source only as a truly disconnected
@@ -202,8 +186,9 @@ Phase 4 — **Feature completion (owner: codex, critical-path order below).**
    digests, no route, no object-store/AWS environment, and deny-all egress.
    Merging that source is not a live rollout: the Lab stage ArgoCD app remains
    manual-sync, and an operator sync is a separately recorded boundary. A later
-   activation must pin both runtime images, add the reviewed 4b store/egress
-   contract, explicitly raise replicas, and pass stage acceptance.
+   activation must apply the reviewed #532 runtime pins, add the #542
+   store/egress/runtime contract, explicitly raise replicas, and pass #541
+   stage acceptance.
 3. **4b S3 backend and event wiring:** the inactive full-site S3
    conditional-store foundation merged through #496, #502 carries the distinct
    typed occurrence store, and #507 carries the closed 143+2 caller. The
@@ -216,8 +201,8 @@ Phase 4 — **Feature completion (owner: codex, critical-path order below).**
    validates canonical key-name inventories without reading values, and makes no
    existence, endpoint, deployment, or authority claim. The source-only 4c
    caller and adapter supply a closed store-operation contract without endpoint,
-   value, credential, deployment, or activation wiring. PR #525 carries the
-   next runtime prerequisite:
+   value, credential, deployment, or activation wiring. PR #525 merged the
+   runtime prerequisite:
    fixed `https://s3-hdd.vallery.net`/`garage` client configuration; an explicit
    four-key S3 environment only; no environment read for local stores; code-level
    reader/writer enforcement; no-store `prepare`; reader `status`/`bundle`/
@@ -227,11 +212,11 @@ Phase 4 — **Feature completion (owner: codex, critical-path order below).**
    checkpoint operations, with no operation defaults. It adds no Kubernetes
    manifest or Secret values, workload selection, endpoint probe, network call,
    replica, egress, route, sync, activation, distributed lease, retention/GC,
-   or credential provisioning. After this prerequisite passes its own gate,
-   next prove real-endpoint conditional writes and a distributed lease
-   (credential presence by name only), event-driven publishing, bounded
-   retention/GC, and resource metrics. S3 occurrence wiring and S7 closure are
-   hard-gated on the 4c producer contract.
+   or credential provisioning. #533 owns protected store delivery, #537 the
+   deterministic packed format and budget proof, #540 distributed
+   coordination/retention/GC and real-endpoint semantics, and #542 the
+   executable publisher/two-pod runtime. S7 closes only after #541 proves the
+   joint 143+2 rollout.
 4. **4d Exact parity:** recreate the SVG-title comparator fix (+8 tests),
    rebuild Quartz+Astro from the same immutable snapshot, burn down real
    findings, and disposition the nine unavailable historical references. The
@@ -355,19 +340,73 @@ checkpoint dependencies. Its source gate does not prove an endpoint, build or
 pin the next images, perform a network or cluster action, provision a
 credential, or authorize activation.
 
-## Activation status (2026-07-14 ~11:30Z)
+## Current Phase 4 work register
 
-Jason approved the lab-stage occurrence activation 2026-07-14. Pass 1
-repo/pipeline prerequisites are COMPLETE (exporter contract image, runtime
-pins, publisher, AppProject CronJob permission, acceptance tooling, probe
-deadline/scheduling hardening). Remaining blockers are EXTERNAL:
-`jvallery/storage-infra#53` (private `verdify-lab-occurrences` bucket +
-scoped reader/writer identities + contracted Secret delivery) and the
-anonymous-disabled reporting tier read-only credential. After delivery:
-~60-90 min two-pass activation (producer/runtime unrouted → 143+2 both-cache
-convergence → reviewed route switch) then the 24h/96-sample freshness soak.
-Known infra risk: multi-node Init/sandbox wedge in agent-fleet-ci (RCA
-`jvallery/agents#3002`) — prod and stage serving are unaffected.
+Jason approved the exact stage-only #476/#480 activation scope on 2026-07-14.
+That approval does not convert incomplete source or protected delivery into a
+passed gate. Every independently executable unit now has one issue with
+What/Why/How/Test/Success and complete Project #5 fields:
+
+| Issue | Work item | Current state | Blocks / evidence |
+|---|---|---|---|
+| #533 | Dedicated private stage store and separate reader/writer delivery | Backlog; protected operator delivery | Cross-linked to `jvallery/storage-infra#53`; blocks #540/#541; #537/#540 own capacity and endpoint integration |
+| #534 | Anonymous-disabled reporting tier, one-way read-only feed, and separate credential | Backlog; `verdify-platform` executor under approval | Independent reporting-resource delivery; blocks #541 live proof, not inert #535 source |
+| #535 | Executable 143+2 producer and dormant reporting GitOps | In Progress; reviewed partial substrate `e79a978`, no PR | Missing the executable, final exporter binding, required ConfigMaps, and camera/store egress; no source-start blocker |
+| #537 | Deterministic occurrence/site packs and approved-budget proof | In Progress; reviewed source commit `f6348bf`, no PR | Reconstruct that commit only onto current main; never merge its inherited #540 ancestry; blocks #540/#542/#541 |
+| #540 | Distributed S3 lease/fence, retention/GC, accounting, real-endpoint proof | In Progress; reviewed source commits through `d3ccea9`, no PR | Reconstruct on merged #537; blocked by #533/#537; blocks #542/#541 |
+| #542 | Executable packed publisher and dormant two-pod runtime | In Progress; reviewed local head `448d556`, no PR | Blocked by #535/#537/#540; blocks #541 |
+| #541 | Two-pass stage activation, 143+2/both-cache proof, route switch, T0/T+10, and 24h/96-sample soak | Backlog; no activation started | Blocked by #533/#534/#535/#537/#540/#542 |
+| #536 | Public-output/media-contract follow-ups from #458 | Ready; non-critical path | Native child of #475 |
+
+The local `phase4c/deterministic-release-packs@f6348bf` ref is a mixed review
+vehicle, not a safe PR head: its ancestry contains the #540 source commits
+`a288c40`, `9faead5`, `0b9473f`, `bae3bde`, `b632a3d`, `8228a94`, and
+`d3ccea9`, followed by the single #537 commit `f6348bf`. Preserve the approved
+dependency order by reconstructing/cherry-picking only `f6348bf` onto current
+main for #537, keeping current main's live-acceptance package entry and
+resolving only the packed-release additions in the publishing doc/package
+manifest. Review and land #537 first. Then replay the seven listed #540
+non-merge commits explicitly and in order on that merged base; exclude
+historical merge commits `fd3b6ed` and `51e1828`, whose main-side content is
+already present. Do not open or merge the mixed branch wholesale or use a
+contiguous range that captures those merges. The implementation modules do not
+overlap; rerun each issue's full tests after reconstruction before opening
+either PR.
+
+Completed prerequisites are #525 (runtime S3 injection), #527/#531 (exact
+exporter packaging), #532 (dormant runtime/exporter pins), #528 (bounded live
+143+2 verifier), agents#3001 (CronJob kind permission), and agents#3006
+(canonical projected-token probe fix). agents#3002 is resolved and closed; no
+node-placement workaround remains.
+
+Pass 1 may begin only after the six blockers on #541 are green, reviewed source
+and exact digest pins are on main, protected resources are delivered by name,
+and real-endpoint lease/GC tests pass. For **each** pass, freeze and record one
+immutable Platform commit and exact pin-set, the complete rendered resource
+inventory/hash, the previous known-good Platform rollback revision and manual
+rollback trigger, and the reviewed `jvallery/agents` actuator commit. Before
+reconciliation, prove the live fleet AppProject admits every expected kind,
+including `CronJob`. The fleet-owned Application must target only the frozen
+commit, reach `Synced` + `Healthy`, and contain no resource outside the reviewed
+inventory. After T+10, a separate reviewed fleet PR restores
+`targetRevision: main`, autosync disabled, `prune:false`, and `selfHeal:false`;
+this repeats the proven agents#2998/#2999 pattern and never syncs moving `main`
+directly. Pass 1 activates the producer and two-pod runtime **unrouted**. Pass
+2 changes the stage route only after exact 143+2 and both-cache convergence.
+Production, DNS/edge, Quartz, devices, and Track A credentials remain out of
+scope.
+
+## WWW / Lab stack interface
+
+The original unification goal is one presentation/build model, not one repo or
+failure domain. The shared Verdify shell is merged in
+`VerdifyConsultancy/verdify-www#33` and consumed by Lab surface #474.
+`jvallery/agents#2907` is complete: WWW now builds in-cluster, publishes to
+Zot, and reconciles through ArgoCD. The cross-program umbrella is
+`jvallery/agents#2930`; this tracker and #351 own Lab execution. WWW and Lab
+remain separate release artifacts, deployments, and repositories while sharing
+Astro, the versioned shell, fonts/tokens/navigation, and the in-cluster
+Kaniko/Zot/ArgoCD delivery model.
 
 ## Operating cadence
 
@@ -379,7 +418,12 @@ Known infra risk: multi-node Init/sandbox wedge in agent-fleet-ci (RCA
   without Jason.
 - Consensus ceremony: completed in Phase 3 at frozen commit `1e7dc6c`; the
   report and ledger are `.agent-workflow/consensus/lab-astro-migration.*`.
-  Issues #474-#482 were persisted only after the full gate passed.
+  Issues #474-#482 were persisted only after the full gate passed. The current
+  #533-#542 records are implementation decomposition of those approved
+  surfaces, not a new architecture or gate decision; the historical report is
+  not relabelled as consensus on later execution facts. The six-seat factual
+  execution review and exact branch/issue reconciliation are recorded in
+  `docs/reviews/lab-astro-program-tracking-audit-2026-07-14.md`.
 
 ## KPIs / done bar
 

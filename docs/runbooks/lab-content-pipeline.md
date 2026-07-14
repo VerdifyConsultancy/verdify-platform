@@ -1,6 +1,14 @@
-# Runbook: vault -> lab.verdify.ai content/build pipeline (#124 / #219)
+# Legacy Runbook: Quartz vault -> lab.verdify.ai pipeline (#124 / #219)
 
-Current production direction (2026-06-14): `lab.verdify.ai` content is published
+> **Legacy production-only path.** This document preserves the current Quartz
+> recovery/diagnostic procedure until #482 retires it. Its GitHub Actions,
+> GHCR, dev/staging overlay, and cross-repo image-publish instructions are
+> historical and must not be used for a new release. Current Astro build/pin/
+> stage work uses in-cluster Argo Workflows, Kaniko, Zot, and ArgoCD as tracked
+> in `docs/plans/lab-astro-migration.md` and
+> `docs/site-publishing-pipeline.md`.
+
+Current legacy production state (2026-07-14): `lab.verdify.ai` content is published
 by the k3s `verdify-lab-publisher` CronJob with S3-compatible object storage as
 the durable content/public/state store. The `verdify-lab` image is now a serving
 runtime and bootstrap fallback; routine content changes should not require a new

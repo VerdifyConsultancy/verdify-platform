@@ -101,7 +101,7 @@ Verification:
 
 ### S6: Data, Observability, And Planner Contracts
 
-Status: `Ready`
+Status: `In Progress`
 
 Goal: define source-of-truth contracts, read/write authority, drift detection,
 dashboard/KPI truth, and the bounded planner tunable contract.
@@ -139,7 +139,8 @@ Primary lanes:
 Verification:
 
 - Irrigation: targeted Makefile irrigation checks from the issue.
-- Lab/site: `make site-lint`, `make site-doctor`, or relevant site command.
+- Lab/site: relevant `site-astro/package.json` gates plus `make ci`; use
+  `make site-lint`/`make site-doctor` only for the legacy Quartz path.
 - Firmware/test harness: firmware gates plus all-year/extreme scenario outputs.
 
 ### S8: Vanda Night Dehum (vent+reheat + telemetry + gated activation)

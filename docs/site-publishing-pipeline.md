@@ -7,17 +7,18 @@ Production still uses the Quartz path documented below. The isolated Astro
 candidate at `lab-stage.verdify.ai` is a separate, provisional image and must not
 be treated as production authority or as permission to retire this path.
 
-Status 2026-07-13: the accepted static Astro stage runs digest `ee36941f…`
-(shell 1.1.0) after its in-cluster gates and T0/T+10 checks passed. The local
+Status 2026-07-14: the accepted static Astro stage runs digest
+`878c522…d56b` (shell 1.1.0) after its in-cluster gates and T0/T+10 checks
+passed. The local
 release/cache runtime is now represented in the Lab stage GitOps source only as
 a disconnected dormant workload: `replicas: 0`, exact source-bound agent/site
 image digests, no route, no object-store/AWS environment, and no egress. It has
 not been activated or synced by this source change. Program tracker:
 `docs/plans/lab-astro-migration.md`.
 
-Phase 4b PR #525 carries the next source-only S3 runtime prerequisite described
-below. It changes no Kubernetes manifest or live candidate and is not evidence
-of a rollout or activation gate.
+PR #525 merged the source-only S3 runtime prerequisite described below. #532
+pins the dormant agent/nginx/exporter images in Git and #528 supplies bounded
+live acceptance. None is evidence of an active publisher or route.
 
 ## Astro specialist-occurrence release contract (source-only)
 
@@ -159,8 +160,8 @@ source-only merge needs no service restart. Any stage rollout needs the
 normal stage acceptance and delayed durability probes; production sync, public
 cutover, and Quartz retirement remain human-gated.
 
-The release-runtime Dockerfile contains a source-only
-`occurrence-exporter` packaging target. It derives from the locked Node
+`site-astro/Dockerfile.occurrence-exporter` packages the source-only
+`occurrence-exporter` image. It derives from the locked Node
 dependencies stage and copies only two project-source files into it: an
 offline verifier and the shared contract module consumed by the real graph,
 camera, and joint producers. It runs as `101:101`
@@ -174,10 +175,10 @@ The build requires a 40/64-hex source revision and canonical UTC release time,
 binds them to OCI revision/created labels, and writes the same values into a
 canonical metadata record that the default verifier validates and emits.
 
-This is not a deployable exporter runtime claim. No graph renderer or other
-runtime dependency is selected, no Kubernetes workload or overlay image
-sentinel references the target, and no build digest or pin exists for it yet.
-Those remain separate source, CI, GitOps, and Jason-gated activation steps.
+This is not a deployable exporter runtime claim. #532 built and pinned exact
+digest `a809d11c…de4a`, and its offline exact-source 143+2 probe passed, but no
+graph renderer/runtime dependency or active workload selects it. #535 owns the
+executable and dormant GitOps binding; #541 owns activation.
 
 The specialist-occurrence fixture is separate from the complete built-tree release
 store below. It retains ten occurrence manifests and two selected media generations,
@@ -222,8 +223,8 @@ the prior complete generation through `previous`, prunes older cache generations
 leaves the served symlink untouched if hydration fails. A corrupt current store release
 falls back to the verified previous release. An independently created, byte-verified
 baked bundle is the cold-start known-good when the store is unavailable. Status reports
-readiness, source/degraded fallback state, release identity, and planner freshness using
-the five-minute target and fifteen-minute alert thresholds.
+readiness, source/degraded fallback state, release identity, and planner
+freshness using the five-minute target and fifteen-minute alert thresholds.
 
 The CLI remains credential-free when its store is local:
 
@@ -237,7 +238,7 @@ node scripts/manage-site-release.mjs bundle --store /path/to/store --release <re
 node scripts/manage-site-release.mjs hydrate --store /path/to/store --cache /srv/lab-cache --baked /image/known-good
 ```
 
-In the Phase 4b PR #525 source, those commands have explicit store roles.
+On main after #525, those commands have explicit store roles.
 `prepare` inventories the build without constructing a store. `status`,
 `bundle`, and `hydrate` construct a reader; `publish` and `rollback` construct
 a writer. The S3 object-store primitive enforces that distinction in code:
@@ -297,7 +298,7 @@ its built-site CLI child; a local-store child receives an empty environment.
 Store locations continue to travel as explicit command data, not as additional
 child-process authority.
 
-This branch also adds a construction-only stage publisher runtime factory. It
+Main also contains a construction-only stage publisher runtime factory. It
 requires explicit shared-S3 occurrence and built-site locations whose identities
 match the event, writer-role stores, and caller-supplied build, verifier, and
 checkpoint operations. It does not supply defaults for those operations and is

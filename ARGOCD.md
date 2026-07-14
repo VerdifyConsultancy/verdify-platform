@@ -1,6 +1,6 @@
 # Verdify Platform ArgoCD
 
-Last updated: 2026-06-16
+Last updated: 2026-07-14
 
 Agent name: `verdify-platform`
 
@@ -31,6 +31,9 @@ Verdify is single-env as of 2026-06-16.
 
 `verdify-dev`, staging, and `live/platform-main` are retired/deleted. Do not add
 new work under deleted dev/staging overlays or revive the old branch model.
+The isolated `verdify-platform-lab-stage` web canary is not a second
+greenhouse/data-plane environment: it has no device writer, database, or Track
+A authority and exists only for the Lab Astro migration.
 
 ## Applications
 
@@ -38,10 +41,16 @@ new work under deleted dev/staging overlays or revive the old branch model.
 |---|---|---|---|---|
 | `verdify-prod-dark` | `verdify-prod` | `deploy/k8s/overlays/prod` | Manual | Legacy live app name; currently the real production writer. Sync requires Jason. |
 | `verdify-prod` | `verdify-prod` | `deploy/k8s/overlays/prod` | Manual | Intended rename target only. Apply through a gated orphan/readopt procedure if ever scheduled. |
+| `verdify-platform-lab-stage` | `verdify-platform` | `deploy/k8s/overlays/lab-stage` | Manual | Fleet-owned isolated Astro canary. This repo owns the rendered overlay; `jvallery/agents` owns the Application/AppProject. `prune:false`, `selfHeal:false`; explicit exact-revision actuation plus T0/T+10 proof. |
 
-Application manifests live in `deploy/k8s/argocd/apps/`. The active app CR
-placement and AppProject definition also depend on the fleet GitOps source of
-truth outside this repo; see `docs/runbooks/laptop-operator.md`.
+Production Application manifests live in `deploy/k8s/argocd/apps/`. The Lab
+stage Application and AppProject do **not**: their fleet GitOps sources of truth
+are respectively
+`jvallery/agents/platform/gitops/applications/local-staging/verdify-platform-lab-stage.yaml`
+and
+`jvallery/agents/platform/gitops/projects/verdify-platform-lab-stage.yaml`.
+This repo owns only their rendered source path,
+`deploy/k8s/overlays/lab-stage`. See `docs/runbooks/laptop-operator.md`.
 
 ## Owned Desired State
 
@@ -62,21 +71,32 @@ truth outside this repo; see `docs/runbooks/laptop-operator.md`.
 
 ## Promotion Model
 
-Every push to `main` publishes impacted images to GHCR with immutable
-`sha-<sha>` and mutable `branch-main` tags. Prod is advanced by
-`.github/workflows/prod-promote.yml`, which resolves the `branch-main` digests,
-bumps `deploy/k8s/overlays/prod`, and opens a `prod-promote` PR.
+GitHub Actions no longer publishes this repo. A fleet Argo Event submits the
+exact `main` revision to the `repo-build` WorkflowTemplate in
+`agent-fleet-ci`; Kaniko pushes to the in-cluster Zot origin and the resulting
+`registry.vallery.net/...@sha256:` identities are committed through reviewed,
+CI-gated digest-pin PRs. Stage and production overlay pins are distinct.
 
-`.github/workflows/promote-diff-guard.yml` enforces the digest-only change
-surface. Merge changes Git only. The live sync remains a separate Jason-gated
-operator action.
+Merging a pin changes Git only. `verdify-platform-lab-stage` requires an
+explicit reviewed exact-revision actuator and T0/T+10 durability proof. For
+each Lab pass, record one immutable Platform commit and image pin-set, its
+complete rendered inventory, the previous known-good rollback commit/trigger,
+and the reviewed `jvallery/agents` actuator commit. The actuator temporarily
+sets the fleet-owned Application annotation/`targetRevision` to that immutable
+commit; verify the live AppProject admits every rendered kind and require Argo
+`Synced` + `Healthy` with no unexpected resources. After T+10, a separate
+reviewed fleet PR restores `targetRevision: main`, autosync disabled,
+`prune:false`, and `selfHeal:false`. This is the proven #2998/#2999 pattern;
+never sync moving `main` directly for an activation pass. Production remains a
+separate Jason-gated `argocd app sync verdify-prod-dark`; no image build or pin
+authorizes that sync.
 
 ## Verification
 
 - Render prod manifests before PRs that touch desired state:
   `kustomize build deploy/k8s/overlays/prod`.
-- CI gate: `.github/workflows/k8s-manifests.yml` renders and validates overlays
-  with kubeconform.
-- Prod promotion must use `.github/workflows/prod-promote.yml` and
-  `.github/workflows/promote-diff-guard.yml`; merge changes Git only. The manual
-  prod sync remains Jason-gated.
+- CI gate: `make ci` plus the in-cluster repo-build/PR-CI render and policy
+  checks.
+- Promotion must use exact Zot digests and the reviewed pin workflow described
+  in `docs/runbooks/prod-promotion.md`; merge changes Git only. The manual prod
+  sync remains Jason-gated.

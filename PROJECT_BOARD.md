@@ -1,6 +1,6 @@
 # Verdify Platform Project Board
 
-Last updated: 2026-07-13
+Last updated: 2026-07-14
 
 Agent name: `verdify-platform`
 
@@ -9,7 +9,7 @@ Agent name: `verdify-platform`
 - Required board: `verdify-platform`.
 - Current board: `VerdifyConsultancy` project #5,
   <https://github.com/orgs/VerdifyConsultancy/projects/5>.
-- Current finding: the exact `verdify-platform` board exists with 27 issue
+- Current finding: the exact `verdify-platform` board exists with 45 issue
   cards and 22 fields.
 - Repository link: linked to `VerdifyConsultancy/verdify-platform`.
 - Current planning surface: the ten controller-replan lane epics #343-#352,
@@ -107,7 +107,7 @@ Immediate planning changes:
 | Ready | P1 | #348 L6 Observability, Dashboards, and KPIs | S6 data-observability-planner-contracts | G2 - Data Contracts and Observability |
 | Ready | P1 | #349 L7 Lighting and Occupancy | S5 firmware-first-climate-core | G1 - Firmware-First Determinism |
 | Ready | P1 | #350 L8 Irrigation, Fertilization, and Orchids | S7 irrigation-lab-testing-hardening | G3 - Planner, Irrigation, Lab, and Research |
-| Ready | P2 | #351 L9 Lab Notebook, Website, and Publishing | S7 irrigation-lab-testing-hardening | G3 - Planner, Irrigation, Lab, and Research |
+| In Progress | P1 | #351 L9 Lab Notebook, Website, and Publishing | S7 irrigation-lab-testing-hardening | G3 - Planner, Irrigation, Lab, and Research |
 | Ready | P1 | #352 L10 Testing and Research | S7 irrigation-lab-testing-hardening | G3 - Planner, Irrigation, Lab, and Research |
 
 ## Legacy And Evidence Cards
