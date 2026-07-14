@@ -164,6 +164,20 @@ these local selectors: a deployed no-build pointer update/rollback still require
 future runtime/object-store adapter and end-to-end proof. No service restart is
 required by this source-only change.
 
+After a separately reviewed stage rollout has selected and materialized an occurrence
+release, run the GET-only live acceptance check at T0 and T+10:
+
+```bash
+npm run verify:live:occurrences -- --origin https://lab-stage.verdify.ai
+```
+
+The verifier follows no redirects and fetches only the supplied origin's build and
+occurrence manifests plus their canonical same-origin content-addressed PNG paths. It
+requires all 143 graph and both camera fallbacks, reconciles the raw/prefixed selected
+release identities, and checks immutable cache headers, exact byte counts, and byte
+digests. It is acceptance tooling only: it does not render, publish, mutate a store,
+read a credential, or activate a workload.
+
 ### Phase 4c producer boundary (inactive)
 
 `scripts/prepare-occurrence-export.mjs` now closes the offline handoff that a
