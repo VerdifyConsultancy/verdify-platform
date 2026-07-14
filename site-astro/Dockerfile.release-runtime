@@ -72,7 +72,7 @@ LABEL org.opencontainers.image.title="Verdify Lab occurrence exporter" \
       org.opencontainers.image.description="Offline-default occurrence contracts with an explicitly selected stage publisher" \
       org.opencontainers.image.revision="${LAB_EXPORTER_BUILDER_COMMIT}" \
       org.opencontainers.image.created="${LAB_EXPORTER_RELEASED_AT}" \
-      ai.verdify.release-authority="none" \
+      ai.verdify.release-authority="explicit-stage-only" \
       ai.verdify.device-authority="none" \
       ai.verdify.live-authority="none"
 

@@ -176,8 +176,9 @@ under `/app/scripts`; its explicit `/app/runtime-source` tree carries the
 reviewed Astro source, snapshot, policy, and publisher runtime. Its
 default command reports `packaged` / `runtime-unbound`
 after checking the 143-graph, two-camera, and joint runner contracts. The target
-runs as `101:101` and grants no release/device/live authority through that
-default command. No credential value or reporting feed is baked into the image.
+runs as `101:101`; its release authority is labeled `explicit-stage-only`, while
+device and live authority remain `none`. The default command invokes no release,
+device, or live operation. No credential value or reporting feed is baked into the image.
 Its required build revision and release instant are syntax-checked, recorded in
 OCI revision/created labels, and repeated in canonical metadata that the
 verifier validates and emits.

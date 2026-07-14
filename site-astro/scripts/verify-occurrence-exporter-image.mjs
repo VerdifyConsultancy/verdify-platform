@@ -76,7 +76,7 @@ export function verifyOccurrenceExporterImage(metadata) {
       releasedAt: metadata.releasedAt,
     }),
     authorities: Object.freeze({
-      release: "none",
+      release: "explicit-stage-only",
       device: "none",
       live: "none",
     }),

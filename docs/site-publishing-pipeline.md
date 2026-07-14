@@ -169,7 +169,9 @@ and defaults to `verify-occurrence-exporter-image.mjs`. That verifier imports
 and checks the existing graph, camera, and joint runner contracts, emits a
 deterministic `packaged` / `runtime-unbound` status, and invokes no network,
 store, capture, or render operation. The target grants no release, device, or
-live authority through its default command.
+live operation through its default command. Its release-authority label and
+status value are `explicit-stage-only`, truthfully recording the separately
+packaged command; device and live authority remain `none`.
 
 The same image now packages the reviewed Astro source, immutable sanitized
 snapshot, approved policy, and stage publisher modules under

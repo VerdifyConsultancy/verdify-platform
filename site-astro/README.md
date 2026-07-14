@@ -208,7 +208,9 @@ the Track A primary database role remain explicitly ineligible.
 
 The `occurrence-exporter` image remains inert when started without arguments:
 its Docker `CMD` is the offline contract verifier and it has no publisher
-`ENTRYPOINT`. The approved Pass 1 publisher must be selected explicitly with
+`ENTRYPOINT`. Its release-authority label and verifier status are
+`explicit-stage-only`, describing the packaged capability rather than claiming
+that the default command invokes it. The approved Pass 1 publisher must be selected explicitly with
 `node /app/runtime-source/scripts/run-stage-occurrence-site-publisher.mjs
 execute ...`. That command consumes canonical event, producer-result, policy,
 and manifest documents plus disjoint candidate/workspace roots. Before runtime

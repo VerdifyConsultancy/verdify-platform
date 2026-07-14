@@ -489,4 +489,8 @@ test("packaged exporter keeps the offline verifier as its no-argument default", 
         exporter,
         /run-stage-occurrence-site-publisher\.mjs/u,
     );
+    assert.match(
+        exporter,
+        /ai\.verdify\.release-authority="explicit-stage-only"/u,
+    );
 });

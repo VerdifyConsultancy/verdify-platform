@@ -301,7 +301,7 @@ test("site target precedes the independent occurrence exporter target for Kaniko
 
   const exporterStart = dockerfile.indexOf("FROM dependencies AS occurrence-exporter");
   const exporter = dockerfile.slice(exporterStart);
-  assert.match(exporter, /ai\.verdify\.release-authority="none"/u);
+  assert.match(exporter, /ai\.verdify\.release-authority="explicit-stage-only"/u);
   assert.match(exporter, /ai\.verdify\.device-authority="none"/u);
   assert.match(exporter, /ai\.verdify\.live-authority="none"/u);
   assert.match(exporter, /ARG LAB_EXPORTER_BUILDER_COMMIT/u);
@@ -357,7 +357,11 @@ test("site target precedes the independent occurrence exporter target for Kaniko
       builderCommit: "1".repeat(40),
       releasedAt: "2026-07-14T01:02:03Z",
     },
-    authorities: { release: "none", device: "none", live: "none" },
+    authorities: {
+      release: "explicit-stage-only",
+      device: "none",
+      live: "none",
+    },
     operations: {
       network: "not-invoked",
       store: "not-invoked",
