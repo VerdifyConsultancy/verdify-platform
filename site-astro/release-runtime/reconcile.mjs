@@ -79,7 +79,10 @@ function validateStore(value) {
   return value;
 }
 
-export function runtimeConfig(environment = process.env) {
+export function runtimeConfig(environment) {
+  if (environment === null || typeof environment !== "object" || Array.isArray(environment)) {
+    throw new Error("release runtime environment is required");
+  }
   const store = validateStore(environment.LAB_RELEASE_STORE);
   return {
     store,
@@ -427,7 +430,7 @@ async function main() {
   if (!new Set(["init", "reconcile"]).has(mode) || process.argv.length !== 3) {
     throw new Error("Usage: release-runtime-entrypoint init|reconcile");
   }
-  const config = runtimeConfig();
+  const config = runtimeConfig(process.env);
   if (mode === "init") {
     await reconcileOnce(config, { initial: true });
     return;

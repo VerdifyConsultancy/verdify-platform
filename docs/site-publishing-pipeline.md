@@ -15,9 +15,9 @@ image digests, no route, no object-store/AWS environment, and no egress. It has
 not been activated or synced by this source change. Program tracker:
 `docs/plans/lab-astro-migration.md`.
 
-An unmerged Phase 4b working branch now implements the next source-only S3
-runtime prerequisite described below. It has not changed a Kubernetes manifest
-or the live candidate and is not evidence of a passed merge or rollout gate.
+Phase 4b PR #525 carries the next source-only S3 runtime prerequisite described
+below. It changes no Kubernetes manifest or live candidate and is not evidence
+of a rollout or activation gate.
 
 ## Astro specialist-occurrence release contract (source-only)
 
@@ -217,7 +217,7 @@ node scripts/manage-site-release.mjs bundle --store /path/to/store --release <re
 node scripts/manage-site-release.mjs hydrate --store /path/to/store --cache /srv/lab-cache --baked /image/known-good
 ```
 
-On the unmerged Phase 4b branch, those same commands have explicit store roles.
+In the Phase 4b PR #525 source, those commands have explicit store roles.
 `prepare` inventories the build without constructing a store. `status`,
 `bundle`, and `hydrate` construct a reader; `publish` and `rollback` construct
 a writer. The S3 object-store primitive enforces that distinction in code:
@@ -261,7 +261,7 @@ object-store authority. The Lab stage ArgoCD app remains manual-sync, so merging
 source does not alter the live cluster; even an operator sync cannot schedule the
 zero-replica workload.
 
-The unmerged Phase 4b runtime binding fixes the only accepted client endpoint
+The Phase 4b runtime binding fixes the only accepted client endpoint
 and region to `https://s3-hdd.vallery.net` and `garage`. S3 client construction
 reads only these four explicitly supplied keys:
 
@@ -314,7 +314,7 @@ noindex. The processor independently requires the selected build record and
 verifier result to attest that profile before publication. The merged command
 supplies no default runtime factory, store, endpoint, credential, environment
 reader, or network client; therefore it intentionally stops without taking live
-action. The unmerged factory above is an explicit construction dependency only
+action. The factory above is an explicit construction dependency only
 and does not change that executable default.
 
 ### Astro occurrence-store binding names (source-only)

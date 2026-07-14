@@ -248,6 +248,11 @@ test("release runtime images bake a real digest-bound fallback and serve only th
   assert.match(nginx, /location = \/readyz/u);
 
   assert.throws(
+    () => runtimeConfig(),
+    /release runtime environment is required/u,
+  );
+
+  assert.throws(
     () => runtimeConfig({ LAB_RELEASE_STORE: "s3://verdify-platform/lab/releases" }),
     /runtime S3 LAB_S3_ENDPOINT_URL is required/u,
   );

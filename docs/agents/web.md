@@ -134,8 +134,8 @@ site release can publish. The command deliberately has no default runtime,
 store, endpoint, credential, or network client, so this source slice cannot
 publish or activate anything by itself.
 
-The current unmerged Phase 4b working branch implements the next source-only
-object-store/runtime prerequisite. The S3 binding accepts only the fixed
+Phase 4b PR #525 carries the next source-only object-store/runtime
+prerequisite. The S3 binding accepts only the fixed
 `https://s3-hdd.vallery.net` endpoint and `garage` region, requires the explicit
 four-key client allowlist (`LAB_S3_ENDPOINT_URL`, `AWS_DEFAULT_REGION`,
 `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`), and uses no ambient SDK
@@ -153,7 +153,7 @@ operation and is not selected by a workload or by the executable's default
 path. This local prerequisite has not passed a PR/merge gate and adds no
 Kubernetes manifest or Secret values, endpoint probe, network call, replica,
 egress, route, sync, activation, distributed lease, retention/GC, or credential
-provisioning.
+provisioning. Merging this source prerequisite does not activate it.
 
 `scripts/rebuild-site.sh` builds Quartz into a staged `public.*` directory,
 verifies the staged `index.html`, then rsyncs the complete staged output into
