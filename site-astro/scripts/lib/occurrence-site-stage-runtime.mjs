@@ -12,6 +12,7 @@ import {
     createSiteReleaseWriterStore,
 } from "./runtime-s3-binding.mjs";
 import { createSiteReleasePublicationOperation } from "./site-release-publication-operation.mjs";
+import { createSiteReleaseCheckpointOperations } from "./site-release-checkpoint-operations.mjs";
 import {
     S3SiteReleaseStore,
     createSiteReleaseStore,
@@ -119,11 +120,12 @@ export function createOccurrenceSiteStageRuntimeFactory({
     environment,
     buildOperation,
     verificationOperation,
-    checkpointOperations,
+    checkpointOperations = null,
     clientFactory,
     createOccurrenceStore = createOccurrenceReleaseWriterStore,
     createSiteStore = createSiteReleaseWriterStore,
     createPublicationOperation = createSiteReleasePublicationOperation,
+    createCheckpointOperations = createSiteReleaseCheckpointOperations,
 } = {}) {
     dependency(buildOperation, "build", "stage Astro build operation");
     dependency(
@@ -131,18 +133,23 @@ export function createOccurrenceSiteStageRuntimeFactory({
         "verify",
         "stage output verification operation",
     );
-    dependency(
-        checkpointOperations,
-        "read",
-        "occurrence site checkpoint operations",
-    );
-    if (typeof checkpointOperations.write !== "function") {
-        throw new Error("occurrence site checkpoint operations are not configured");
+    if (checkpointOperations !== null) {
+        dependency(
+            checkpointOperations,
+            "read",
+            "occurrence site checkpoint operations",
+        );
+        if (typeof checkpointOperations.write !== "function") {
+            throw new Error(
+                "occurrence site checkpoint operations are not configured",
+            );
+        }
     }
     if (
         typeof createOccurrenceStore !== "function" ||
         typeof createSiteStore !== "function" ||
-        typeof createPublicationOperation !== "function"
+        typeof createPublicationOperation !== "function" ||
+        typeof createCheckpointOperations !== "function"
     ) {
         throw new Error("occurrence site runtime store factories are invalid");
     }
@@ -188,8 +195,9 @@ export function createOccurrenceSiteStageRuntimeFactory({
                 request.event.occurrenceStoreIdentitySha256 ||
             siteStore?.identity?.sha256 !==
                 request.event.siteStoreIdentitySha256 ||
-            checkpointOperations.storeIdentitySha256 !==
-                request.event.siteStoreIdentitySha256
+            (checkpointOperations !== null &&
+                checkpointOperations.storeIdentitySha256 !==
+                    request.event.siteStoreIdentitySha256)
         ) {
             throw new Error(
                 "occurrence site runtime stores do not match the exact event identities",
@@ -199,9 +207,16 @@ export function createOccurrenceSiteStageRuntimeFactory({
             storeRoot: siteStoreRoot,
             store: siteStore,
         });
+        const selectedCheckpointOperations =
+            checkpointOperations ??
+            createCheckpointOperations({ store: siteStore });
         if (
             publicationOperation?.storeIdentitySha256 !==
-            request.event.siteStoreIdentitySha256
+                request.event.siteStoreIdentitySha256 ||
+            selectedCheckpointOperations?.storeIdentitySha256 !==
+                request.event.siteStoreIdentitySha256 ||
+            typeof selectedCheckpointOperations?.read !== "function" ||
+            typeof selectedCheckpointOperations?.write !== "function"
         ) {
             throw new Error(
                 "occurrence site publication does not match the exact event store",
@@ -215,7 +230,7 @@ export function createOccurrenceSiteStageRuntimeFactory({
             occurrenceStore,
             buildOperation,
             verificationOperation,
-            checkpointOperations,
+            checkpointOperations: selectedCheckpointOperations,
             publicationOperation,
         };
     };
