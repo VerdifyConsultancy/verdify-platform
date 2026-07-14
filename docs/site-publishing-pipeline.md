@@ -271,6 +271,38 @@ an explicitly injected adapter. The legacy credential-free occurrence CLI delibe
 refuses implicit S3 access; only the separate approved-policy `execute` path can
 construct an explicit S3 operation adapter, and no workload invokes it.
 
+The source-only S3 coordinator closes the shared storage lifecycle without changing
+the local-store policy. It takes a complete, fail-closed inventory of the distinct
+built-site and typed occurrence roots, obtains one monotonic object-store fence, and
+conditionally removes only objects outside the current/rollback reachability graph
+and strictly older than the 48-hour recovery window. Every delete is preceded by an
+immutable daily usage reservation, a current UTC-budget-day check, and a current
+lease/fence check; HEAD metadata and its entity tag must still match the complete
+inventory before conditional deletion.
+
+S3 event tombstones are deliberately bounded rather than permanent: exact event
+replay is protected for 14 days (seven times the recovery window), after which the
+tombstone becomes GC-eligible. Complete inventory derives old event identity from
+its immutable key and listing metadata, so it does not GET every retained event
+body. The exact event reader still validates canonical bytes and payload binding
+when that event ID is replayed. A replay after expiry is handled as a new fenced
+attempt: immutable content identities and selector compare-and-swap still make an
+exact replay idempotent and prevent it from replacing a competing selection. This
+14-day S3 policy replaces the local backend's permanent-tombstone behavior for the
+distributed store only.
+
+Coordination history is bounded under the same fence. Publication/GC usage
+reservations remain for 14 days; deletion confirmations remain for 48 hours.
+Expiration is based on a complete UTC day, conservatively retaining up to one extra
+day. Expired coordination objects receive their own durable pre-mutation budget
+reservation and HEAD/entity-tag conditional deletion. Reservation deltas are encoded
+in their content-addressed keys, allowing daily counters to be reconstructed from a
+bounded listing without rereading every journal body; a retry of the exact key still
+validates the canonical body. The hard complete-list cap remains 25,000. The steady
+state proof covers four 96-event/day streams: 5,760 event tombstones are retained,
+one expired day is collected below the 25,000-request daily budget, and old
+reservation/confirmation counts and retained bytes converge.
+
 The complete local filesystem primitive is present, and its candidate manifest is
 included by the Lab stage overlay only at `replicas: 0`. The overlay deliberately
 uses exact source-bound zot digests for the release agent and nginx site images. The
@@ -304,14 +336,14 @@ checkpoint operations. It does not supply defaults for those operations and is
 not wired as the executable's default runtime. Constructing it invokes none of
 the operations.
 
-This is source-only dependency injection, not activation. It adds no Kubernetes
-manifest or Secret values, workload selection, endpoint probe, network call,
-replica, egress, route, sync, activation, distributed lease, retention/GC, or
-credential provisioning. Bounded cache hydration from object bytes, distributed
-coordination, bounded retention/GC, the event agent, resource accounting,
-real-endpoint conditional-write proof, and live cache/freshness/alert proof
-remain separate gates. The endpoint proof must confirm that the compatible store
-preserves the tested conditional semantics before any writer is activated.
+This remains source-only dependency injection, not activation. It adds no Kubernetes
+manifest or Secret values, workload selection, live network call, replica, egress,
+route, sync, activation, or credential provisioning. The distributed lease,
+retention, accounting, and bounded three-prefix create/read/HEAD/delete proof are
+offline-injected code paths only. Deployment wiring, the acknowledged real-endpoint
+proof, event-agent activation, and live cache/freshness/alert proof remain separate
+gates. The endpoint proof must confirm that the compatible store preserves the
+tested conditional semantics before any writer is activated.
 
 The source tree now includes the built-site event consumer command:
 

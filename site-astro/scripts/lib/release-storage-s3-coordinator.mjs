@@ -13,14 +13,18 @@ import { S3ObjectStore } from "./s3-object-store.mjs";
 const SHA256_RE = /^[0-9a-f]{64}$/u;
 const SAFE_ID_RE = /^[A-Za-z0-9_-]{8,128}$/u;
 const MAX_COORDINATION_OBJECTS = 25_000;
-const MAX_RESERVATION_BYTES = 16 * 1024;
+const MAX_RESERVATION_BYTES = 2 * 1024;
 const MAX_FENCE_BYTES = 32 * 1024;
 const MAX_STATUS_BYTES = 64 * 1024;
 const MAX_METRICS_BYTES = 32 * 1024;
 const MAX_CAS_ATTEMPTS = 8;
 const MAX_LEASE_SECONDS = 15 * 60;
 const MIN_LEASE_SECONDS = 60;
+const IDEMPOTENCY_HORIZON_MS = 14 * 24 * 60 * 60 * 1000;
+const GC_CONFIRMATION_HORIZON_MS = 48 * 60 * 60 * 1000;
 const ADAPTER_USAGE_LIMITS = releaseStorageSafetyContract.adapterOperation.usageLimits;
+const RESERVATION_KEY_RE = /^usage\/(\d{4}-\d{2}-\d{2})\/reservations\/(gc-preflight|gc-mutation|publication)\/([0-9a-f]{64})\/((?:0|[1-9]\d*))-((?:0|[1-9]\d*))-((?:0|[1-9]\d*))-((?:0|[1-9]\d*))-([0-9a-f]{64})\.json$/u;
+const CONFIRMATION_KEY_RE = /^gc\/confirmations\/(\d{4}-\d{2}-\d{2})\/([0-9a-f]{64})\/(site|occurrence)\/([0-9a-f]{64})\.json$/u;
 
 // One event finalization performs at most eight bounded canonical reads/writes.
 // This 2x envelope leaves room for four conditional retries while permitting
@@ -113,6 +117,24 @@ function addUsage(left, right, label) {
   };
 }
 
+function multiplyUsage(value, count, label) {
+  safeInteger(count, `${label} operation count`);
+  return {
+    writtenBytes: safeInteger(value.writtenBytes * count, `${label} written bytes`),
+    deletedBytes: safeInteger(value.deletedBytes * count, `${label} deleted bytes`),
+    egressBytes: safeInteger(value.egressBytes * count, `${label} egress bytes`),
+    requests: safeInteger(value.requests * count, `${label} requests`),
+  };
+}
+
+function gcPreflightReservation(plan) {
+  const deletionCount = plan.document.deletions.length;
+  const operationCount = deletionCount === 0
+    ? 1
+    : 1 + plan.document.selectors.length + (2 * deletionCount);
+  return multiplyUsage(GC_PREFLIGHT_USAGE, operationCount, "release storage GC preflight reservation");
+}
+
 function reservationPayload({ kind, operationSha256, createdAt, delta }) {
   if (!RESERVATION_KINDS.has(kind)) throw new Error("release storage reservation kind is invalid");
   digest(operationSha256, "release storage reservation operation digest");
@@ -142,8 +164,32 @@ function reservationDocument(input) {
   return {
     document: { ...payload, reservationId },
     reservationId,
-    key: `usage/${payload.day}/reservations/${reservationId}.json`,
+    key: `usage/${payload.day}/reservations/${payload.kind}/${payload.operationSha256}/${payload.delta.writtenBytes}-${payload.delta.deletedBytes}-${payload.delta.egressBytes}-${payload.delta.requests}-${reservationId}.json`,
   };
+}
+
+function parseReservationKey(key) {
+  const match = RESERVATION_KEY_RE.exec(key);
+  if (match === null) return null;
+  const [, day, kind, operationSha256, written, deleted, egress, requests, reservationId] = match;
+  const delta = {
+    writtenBytes: safeInteger(Number(written), "release storage reservation-key written bytes"),
+    deletedBytes: safeInteger(Number(deleted), "release storage reservation-key deleted bytes"),
+    egressBytes: safeInteger(Number(egress), "release storage reservation-key egress bytes"),
+    requests: safeInteger(Number(requests), "release storage reservation-key requests"),
+  };
+  const expected = sha256(canonicalBytes({
+    contract: "verdify.lab-release-storage-usage-reservation-identity",
+    schemaVersion: 1,
+    kind,
+    day,
+    operationSha256,
+    delta,
+  }));
+  if (reservationId !== expected) {
+    throw new Error("release storage reservation key identity is invalid");
+  }
+  return { day, kind, operationSha256, delta, reservationId };
 }
 
 function validateReservation(document, key, asOf) {
@@ -172,7 +218,7 @@ function validateReservation(document, key, asOf) {
     || document.schemaVersion !== 1
     || document.day !== document.createdAt.slice(0, 10)
     || reservationId !== expectedReservationId
-    || key !== `usage/${document.day}/reservations/${reservationId}.json`
+    || key !== reservationDocument(document).key
     || Date.parse(document.createdAt) > Date.parse(asOf)
   ) throw new Error("release storage usage reservation identity is invalid");
   return document;
@@ -268,8 +314,8 @@ async function coordinationInventory(store) {
       entry.key === "fence.json"
       || entry.key === "status.json"
       || entry.key === "metrics/latest.prom"
-      || /^usage\/\d{4}-\d{2}-\d{2}\/reservations\/[0-9a-f]{64}\.json$/u.test(entry.key)
-      || /^gc\/confirmations\/[0-9a-f]{64}\/(?:site|occurrence)\/[0-9a-f]{64}\.json$/u.test(entry.key)
+      || parseReservationKey(entry.key) !== null
+      || CONFIRMATION_KEY_RE.test(entry.key)
     ) continue;
     throw new Error("release storage coordination inventory contains bytes outside the closed root layout");
   }
@@ -285,23 +331,69 @@ export async function loadReleaseStorageS3Usage({ coordinationStore, asOf }) {
   const dayPrefix = `usage/${asOf.slice(0, 10)}/reservations/`;
   let state = createReleaseStorageUsageState(asOf);
   for (const entry of entries.filter(({ key }) => key.startsWith(dayPrefix))) {
-    const value = await readCanonical(
-      coordinationStore,
-      entry.key,
-      MAX_RESERVATION_BYTES,
-      "release storage usage reservation",
-    );
-    if (value.etag !== entry.etag || value.bytes.length !== entry.bytes) {
-      throw new Error("release storage usage reservation changed during complete inventory");
+    const reservation = parseReservationKey(entry.key);
+    if (reservation === null || reservation.day !== asOf.slice(0, 10)) {
+      throw new Error("release storage usage reservation listing identity is invalid");
     }
-    const reservation = validateReservation(value.document, entry.key, asOf);
     state = recordReleaseStorageUsage(state, reservation.delta, asOf);
   }
   const retainedBytes = entries.reduce(
     (total, entry) => add(total, entry.bytes, "release storage coordination retained bytes"),
     0,
   );
-  return { state, retainedBytes, reservationCount: entries.filter(({ key }) => key.startsWith(dayPrefix)).length };
+  return {
+    state,
+    retainedBytes,
+    reservationCount: entries.filter(({ key }) => key.startsWith(dayPrefix)).length,
+    inventoryEntries: entries,
+  };
+}
+
+function wholeDayExpired(day, asOf, horizonMs) {
+  const endOfDay = Date.parse(`${day}T23:59:59.999Z`);
+  if (!Number.isFinite(endOfDay)) throw new Error("release storage coordination history day is invalid");
+  return endOfDay < Date.parse(asOf) - horizonMs;
+}
+
+function planCoordinationHistory(entries, asOf) {
+  const candidates = [];
+  for (const entry of entries) {
+    const reservation = parseReservationKey(entry.key);
+    const confirmation = CONFIRMATION_KEY_RE.exec(entry.key);
+    if (
+      (reservation !== null && wholeDayExpired(reservation.day, asOf, IDEMPOTENCY_HORIZON_MS))
+      || (confirmation !== null && wholeDayExpired(confirmation[1], asOf, GC_CONFIRMATION_HORIZON_MS))
+    ) candidates.push(entry);
+  }
+  candidates.sort((left, right) => left.key.localeCompare(right.key));
+  const deletedBytes = candidates.reduce(
+    (total, entry) => add(total, entry.bytes, "release storage coordination history deleted bytes"),
+    0,
+  );
+  const listPages = Math.max(1, Math.ceil(entries.length / 1000));
+  // The safety plan's first non-mutation operation already reserves sixteen
+  // requests and 1 MiB egress for the fence plus up to fifteen list pages.
+  const extraObservationOperations = Math.max(
+    0,
+    Math.ceil((listPages + 1) / ADAPTER_USAGE_LIMITS.requests) - 1,
+  );
+  return Object.freeze({
+    candidates: Object.freeze(candidates.map((entry) => Object.freeze({ ...entry }))),
+    deletedBytes,
+    usageUpperBound: Object.freeze({
+      ...multiplyUsage(
+        GC_MUTATION_USAGE,
+        candidates.length,
+        "release storage coordination history GC",
+      ),
+      deletedBytes,
+    }),
+    observationExtraUsage: Object.freeze(multiplyUsage(
+      GC_PREFLIGHT_USAGE,
+      extraObservationOperations,
+      "release storage coordination history observation",
+    )),
+  });
 }
 
 function validateFence(document) {
@@ -496,8 +588,8 @@ function selectStore(namespace, siteStore, occurrenceStore) {
   throw new Error("release storage adapter namespace is invalid");
 }
 
-function confirmationKey(planSha256, namespace, key) {
-  return `gc/confirmations/${planSha256}/${namespace}/${sha256(Buffer.from(key))}.json`;
+function confirmationKey(day, planSha256, namespace, key) {
+  return `gc/confirmations/${day}/${planSha256}/${namespace}/${sha256(Buffer.from(key))}.json`;
 }
 
 function currentLeaseMatches(document, expected) {
@@ -519,12 +611,64 @@ async function assertCurrentPublicationLease(coordinationStore, acquired, curren
   return current;
 }
 
+async function compactCoordinationHistory({
+  coordinationStore,
+  acquired,
+  history,
+  plannedAt,
+  clock,
+}) {
+  let deletedBytes = 0;
+  for (const entry of history.candidates) {
+    const mutationAt = await currentForBudgetDay(
+      clock,
+      plannedAt,
+      "release storage coordination history GC",
+    );
+    await reserveReleaseStorageS3Usage({
+      coordinationStore,
+      kind: "gc-mutation",
+      operationSha256: sha256(canonicalBytes({
+        contract: "verdify.lab-release-storage-coordination-history-gc-identity",
+        schemaVersion: 1,
+        keySha256: sha256(Buffer.from(entry.key)),
+        etagSha256: sha256(Buffer.from(entry.etag)),
+        bytes: entry.bytes,
+      })),
+      createdAt: mutationAt,
+      delta: { ...GC_MUTATION_USAGE, deletedBytes: entry.bytes },
+    });
+    await assertCurrentPublicationLease(coordinationStore, acquired, mutationAt);
+    const current = await coordinationStore.head(entry.key, {
+      label: "release storage coordination history object",
+    });
+    if (
+      current.etag !== entry.etag
+      || current.bytes !== entry.bytes
+      || current.lastModified !== entry.lastModified
+    ) throw new Error("release storage coordination history changed before GC");
+    if (!(await coordinationStore.deleteIfMatch(entry.key, current.etag)).deleted) {
+      throw new Error("release storage coordination history CAS deletion failed");
+    }
+    if (await coordinationStore.head(entry.key, {
+      missing: true,
+      label: "release storage coordination history object",
+    }) !== null) throw new Error("release storage coordination history deletion is unconfirmed");
+    deletedBytes = add(deletedBytes, entry.bytes, "release storage coordination history deleted bytes");
+  }
+  if (deletedBytes !== history.deletedBytes) {
+    throw new Error("release storage coordination history GC did not match its plan");
+  }
+  return Object.freeze({ deletedObjects: history.candidates.length, deletedBytes });
+}
+
 function createS3GcAdapter({
   siteStore,
   occurrenceStore,
   coordinationStore,
   lease,
   planSha256,
+  plannedAt,
   mutationInstant,
 }) {
   const etags = new Map();
@@ -568,7 +712,7 @@ function createS3GcAdapter({
       }, readDelta(1024));
     },
     async readDeletionConfirmation(request) {
-      const key = confirmationKey(planSha256, request.namespace, request.key);
+      const key = confirmationKey(plannedAt.slice(0, 10), planSha256, request.namespace, request.key);
       const value = await readCanonical(
         coordinationStore,
         key,
@@ -585,6 +729,7 @@ function createS3GcAdapter({
       );
     },
     async deleteObject(request) {
+      const mutationAt = await mutationInstant();
       const operationSha256 = sha256(canonicalBytes({
         contract: "verdify.lab-release-storage-gc-mutation-identity",
         schemaVersion: 1,
@@ -596,7 +741,7 @@ function createS3GcAdapter({
         coordinationStore,
         kind: "gc-mutation",
         operationSha256,
-        createdAt: await mutationInstant(),
+        createdAt: mutationAt,
         delta: { ...GC_MUTATION_USAGE, deletedBytes: request.expected.bytes },
       });
       const fence = await readFence(coordinationStore, { missing: false });
@@ -646,11 +791,11 @@ function createS3GcAdapter({
         objectSha256: request.expected.sha256,
         deletedBytes: request.expected.bytes,
         fencingToken: request.lease.fencingToken,
-        confirmedAt: await mutationInstant(),
+        confirmedAt: mutationAt,
       };
       const committed = await putCanonicalAbsent(
         coordinationStore,
-        confirmationKey(planSha256, request.namespace, request.key),
+        confirmationKey(plannedAt.slice(0, 10), planSha256, request.namespace, request.key),
         confirmation,
         MAX_RESERVATION_BYTES,
         "release storage deletion confirmation",
@@ -663,7 +808,7 @@ function createS3GcAdapter({
   };
 }
 
-function effectivePublication(publication, coordinationRetainedBytes) {
+function effectivePublication(publication, coordinationRetainedBytes, history, reservationCount) {
   if (!exactKeys(publication, [
     "contract",
     "schemaVersion",
@@ -672,25 +817,41 @@ function effectivePublication(publication, coordinationRetainedBytes) {
     "egressBytes",
     "requests",
   ])) throw new Error("release storage publication estimate does not use the closed v1 shape");
+  safeInteger(reservationCount, "release storage retained reservation count");
+  const coordinationAfterGc = coordinationRetainedBytes - history.deletedBytes;
+  if (coordinationAfterGc < 0) throw new Error("release storage coordination GC exceeds retained bytes");
+  const retainedReservationBytes = safeInteger(
+    reservationCount * MAX_RESERVATION_BYTES,
+    "release storage retained reservation bytes",
+  );
+  const coordinationUsage = addUsage(
+    history.usageUpperBound,
+    history.observationExtraUsage,
+    "release storage coordination GC usage",
+  );
   return {
     ...publication,
     retainedBytesAdded: add(
-      add(publication.retainedBytesAdded, coordinationRetainedBytes, "release storage total retained bytes"),
+      add(
+        add(publication.retainedBytesAdded, coordinationAfterGc, "release storage total retained bytes"),
+        retainedReservationBytes,
+        "release storage reservation retained bytes",
+      ),
       COORDINATION_FINALIZATION_USAGE.writtenBytes,
       "release storage finalization retained bytes",
     ),
     writtenBytes: add(
-      publication.writtenBytes,
+      add(publication.writtenBytes, coordinationUsage.writtenBytes, "release storage coordination writes"),
       COORDINATION_FINALIZATION_USAGE.writtenBytes,
       "release storage finalization written bytes",
     ),
     egressBytes: add(
-      publication.egressBytes,
+      add(publication.egressBytes, coordinationUsage.egressBytes, "release storage coordination egress"),
       COORDINATION_FINALIZATION_USAGE.egressBytes,
       "release storage finalization egress bytes",
     ),
     requests: add(
-      publication.requests,
+      add(publication.requests, coordinationUsage.requests, "release storage coordination requests"),
       COORDINATION_FINALIZATION_USAGE.requests,
       "release storage finalization requests",
     ),
@@ -735,7 +896,9 @@ function validatePublisherResult(result, estimate) {
 }
 
 function statusDocument({ state, observedAt, plan, usageSnapshot, fenceToken = null, gc = null, publication = null }) {
-  const thresholds = plan.document.thresholds.map(({ name, limit, status }) => ({ name, limit, status }));
+  const thresholds = plan.document.thresholds.map(
+    ({ name, value, limit, ratio, status }) => ({ name, value, limit, ratio, status }),
+  );
   return {
     contract: "verdify.lab-release-storage-coordinator-status",
     schemaVersion: 1,
@@ -748,7 +911,11 @@ function statusDocument({ state, observedAt, plan, usageSnapshot, fenceToken = n
     publicationReasons: [...plan.document.publication.reasons],
     preservesLastKnownGood: true,
     retainedBytes: plan.document.accounting.projected.retainedBytes,
-    plannedDeletedBytes: plan.document.accounting.plannedDeletedBytes,
+    plannedDeletedBytes: add(
+      plan.document.accounting.plannedDeletedBytes,
+      gc?.coordinationDeletedBytes ?? 0,
+      "release storage status planned deleted bytes",
+    ),
     deletedObjects: gc?.deletedObjects ?? 0,
     dailyUsage: structuredClone(usageSnapshot.state.counters),
     usageReservationCount: usageSnapshot.reservationCount,
@@ -843,6 +1010,14 @@ async function currentFrom(clock) {
   return instant(await clock(), "release storage coordinator time");
 }
 
+async function currentForBudgetDay(clock, plannedAt, label) {
+  const current = await currentFrom(clock);
+  if (current.slice(0, 10) !== plannedAt.slice(0, 10)) {
+    throw new Error(`${label} crossed the planned UTC budget day`);
+  }
+  return current;
+}
+
 export async function coordinateReleaseStorageS3Publication({
   siteStore,
   occurrenceStore,
@@ -870,13 +1045,37 @@ export async function coordinateReleaseStorageS3Publication({
     capturedAt: plannedAt,
   });
   const usageBefore = await loadReleaseStorageS3Usage({ coordinationStore, asOf: plannedAt });
-  const effective = effectivePublication(publication, usageBefore.retainedBytes);
+  const coordinationHistory = planCoordinationHistory(usageBefore.inventoryEntries, plannedAt);
+  const preliminaryEffective = effectivePublication(
+    publication,
+    usageBefore.retainedBytes,
+    coordinationHistory,
+    coordinationHistory.candidates.length + 2,
+  );
+  const preliminaryPlan = planReleaseStorageSafety({
+    snapshot: inventory,
+    usageState: usageBefore.state,
+    publication: preliminaryEffective,
+    asOf: plannedAt,
+  });
+  const retainedJournalCount = 2
+    + (2 * preliminaryPlan.document.deletions.length)
+    + coordinationHistory.candidates.length;
+  const effective = effectivePublication(
+    publication,
+    usageBefore.retainedBytes,
+    coordinationHistory,
+    retainedJournalCount,
+  );
   const plan = planReleaseStorageSafety({
     snapshot: inventory,
     usageState: usageBefore.state,
     publication: effective,
     asOf: plannedAt,
   });
+  if (JSON.stringify(plan.document.deletions) !== JSON.stringify(preliminaryPlan.document.deletions)) {
+    throw new Error("release storage GC membership changed during retained-journal accounting");
+  }
   if (plan.document.publication.decision === "block") {
     return statusDocument({
       state: "blocked",
@@ -893,7 +1092,16 @@ export async function coordinateReleaseStorageS3Publication({
     leaseSeconds,
     nonce: leaseNonce,
   });
-  const gcReservationTime = await currentFrom(clock);
+  const gcReservationTime = await currentForBudgetDay(
+    clock,
+    plannedAt,
+    "release storage GC preflight",
+  );
+  const gcPreflight = addUsage(
+    gcPreflightReservation(plan),
+    coordinationHistory.observationExtraUsage,
+    "release storage complete GC preflight reservation",
+  );
   await reserveReleaseStorageS3Usage({
     coordinationStore,
     kind: "gc-preflight",
@@ -904,9 +1112,13 @@ export async function coordinateReleaseStorageS3Publication({
       fencingToken: acquired.record.fencingToken,
     })),
     createdAt: gcReservationTime,
-    delta: GC_PREFLIGHT_USAGE,
+    delta: gcPreflight,
   });
-  const mutationInstant = () => currentFrom(clock);
+  const mutationInstant = () => currentForBudgetDay(
+    clock,
+    plannedAt,
+    "release storage GC mutation",
+  );
   const gc = await executeReleaseStorageGcPlan({
     plan,
     adapter: createS3GcAdapter({
@@ -915,21 +1127,47 @@ export async function coordinateReleaseStorageS3Publication({
       coordinationStore,
       lease: acquired.record,
       planSha256: plan.sha256,
+      plannedAt,
       mutationInstant,
     }),
     lease: acquired.lease,
     currentInstant: async () => ({
       contract: "verdify.lab-current-instant",
       schemaVersion: 1,
-      instant: await currentFrom(clock),
+      instant: await currentForBudgetDay(
+        clock,
+        plannedAt,
+        "release storage GC execution",
+      ),
     }),
     progress: null,
   });
-  await checkpoint(Object.freeze({ phase: "after-gc", planSha256: plan.sha256 }));
-  const publicationTime = await currentFrom(clock);
-  if (publicationTime.slice(0, 10) !== plannedAt.slice(0, 10)) {
-    throw new Error("release storage publication crossed its UTC budget day");
-  }
+  const coordinationGc = await compactCoordinationHistory({
+    coordinationStore,
+    acquired,
+    history: coordinationHistory,
+    plannedAt,
+    clock,
+  });
+  const totalGcUsageUpperBound = addUsage(
+    addUsage(
+      plan.document.accounting.gcUsageUpperBound,
+      coordinationHistory.usageUpperBound,
+      "release storage site and coordination GC upper bound",
+    ),
+    coordinationHistory.observationExtraUsage,
+    "release storage complete GC upper bound",
+  );
+  await checkpoint(Object.freeze({
+    phase: "after-gc",
+    planSha256: plan.sha256,
+    gcUsageUpperBound: Object.freeze(totalGcUsageUpperBound),
+  }));
+  const publicationTime = await currentForBudgetDay(
+    clock,
+    plannedAt,
+    "release storage publication",
+  );
   await reserveReleaseStorageS3Usage({
     coordinationStore,
     kind: "publication",
@@ -944,7 +1182,11 @@ export async function coordinateReleaseStorageS3Publication({
   await assertCurrentPublicationLease(
     coordinationStore,
     acquired,
-    await currentFrom(clock),
+    await currentForBudgetDay(
+      clock,
+      plannedAt,
+      "release storage publication fence check",
+    ),
   );
   const published = validatePublisherResult(await publisher(Object.freeze({
     contract: "verdify.lab-release-storage-publication-authority",
@@ -964,7 +1206,11 @@ export async function coordinateReleaseStorageS3Publication({
     plan,
     usageSnapshot: usageAfter,
     fenceToken: acquired.record.fencingToken,
-    gc,
+    gc: Object.freeze({
+      ...gc,
+      deletedObjects: gc.deletedObjects + coordinationGc.deletedObjects,
+      coordinationDeletedBytes: coordinationGc.deletedBytes,
+    }),
     publication: published,
   });
   await persistStatus(coordinationStore, status);
@@ -1016,6 +1262,12 @@ export const releaseStoragePassOneContract = Object.freeze({
 
 export const releaseStorageS3CoordinatorContract = Object.freeze({
   leaseSeconds: Object.freeze({ minimum: MIN_LEASE_SECONDS, maximum: MAX_LEASE_SECONDS }),
+  retention: Object.freeze({
+    eventIdempotencySeconds: releaseStorageSafetyContract.eventIdempotencyHorizonSeconds,
+    reservationIdempotencySeconds: IDEMPOTENCY_HORIZON_MS / 1000,
+    deletionConfirmationSeconds: GC_CONFIRMATION_HORIZON_MS / 1000,
+    maximumInventoryObjects: MAX_COORDINATION_OBJECTS,
+  }),
   finalizationUsage: COORDINATION_FINALIZATION_USAGE,
   gcPreflightUsage: GC_PREFLIGHT_USAGE,
   gcMutationUsage: GC_MUTATION_USAGE,

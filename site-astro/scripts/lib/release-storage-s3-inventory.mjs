@@ -23,7 +23,6 @@ const MEDIA_GENERATION_RE = /^occurrences\/(media_[0-9a-f]{24})\/generations\/sh
 const MEDIA_EVENT_RE = /^occurrences\/(media_[0-9a-f]{24})\/events\/sha256\/([0-9a-f]{64})\.json$/u;
 const MAX_SITE_SELECTION_BYTES = 64 * 1024;
 const MAX_SITE_MANIFEST_BYTES = 16 * 1024 * 1024;
-const MAX_SITE_EVENT_BYTES = 32 * 1024;
 const MAX_INVENTORY_OBJECTS = 25_000;
 
 function canonicalBytes(value) {
@@ -49,19 +48,6 @@ function digest(value, label) {
     throw new Error(`${label} is invalid`);
   }
   return value;
-}
-
-function canonicalDocument(bytes, label) {
-  let document;
-  try {
-    document = JSON.parse(bytes.toString("utf8"));
-  } catch {
-    throw new Error(`${label} is not valid JSON`);
-  }
-  if (!canonicalBytes(document).equals(bytes)) {
-    throw new Error(`${label} is not canonical JSON`);
-  }
-  return document;
 }
 
 function references(values, label) {
@@ -173,19 +159,10 @@ async function siteInventory(store, maximumObjects) {
     }
     const event = SITE_EVENT_RE.exec(entry.key);
     if (event !== null) {
-      const value = await exactRead(
-        store.objects,
-        entry,
-        MAX_SITE_EVENT_BYTES,
-        "site release event",
-      );
-      const document = canonicalDocument(value.bytes, "site release event");
-      if (
-        typeof document.eventId !== "string"
-        || sha256(Buffer.from(document.eventId)) !== event[1]
-        || JSON.stringify(await store.readEventIntent(document.eventId)) !== JSON.stringify(document)
-      ) throw new Error("site release event identity is invalid");
-      objects.push(immutable("site", entry.key, "event", sha256(value.bytes), entry));
+      // Event bodies are validated when their exact idempotency key is replayed.
+      // Complete inventory uses immutable key identity plus listing metadata so a
+      // bounded tombstone horizon does not GET every retained event each cycle.
+      objects.push(immutable("site", entry.key, "event", event[1], entry));
       continue;
     }
     throw new Error("site release inventory contains bytes outside the closed root layout");
@@ -335,25 +312,13 @@ async function occurrenceInventory(store, maximumObjects) {
     const aggregateEvent = OCCURRENCE_EVENT_RE.exec(entry.key);
     const mediaEvent = MEDIA_EVENT_RE.exec(entry.key);
     if (aggregateEvent !== null || mediaEvent !== null) {
-      const value = await exactRead(
-        store.objects,
+      objects.push(immutable(
+        "occurrence",
+        entry.key,
+        "event",
+        aggregateEvent?.[1] ?? mediaEvent[2],
         entry,
-        occurrenceReleaseStoreContract.maximumEventBytes,
-        "occurrence event",
-      );
-      const document = canonicalDocument(value.bytes, "occurrence event");
-      const eventId = document.eventId;
-      if (
-        typeof eventId !== "string"
-        || sha256(Buffer.from(eventId)) !== (aggregateEvent?.[1] ?? mediaEvent[2])
-      ) throw new Error("occurrence event identity is invalid");
-      const selected = aggregateEvent !== null
-        ? await store.readAggregateEventIntent(eventId)
-        : await store.readCurrentMediaEventIntent(mediaEvent[1], eventId);
-      if (selected === null || !selected.bytes.equals(value.bytes)) {
-        throw new Error("occurrence event changed during complete inventory");
-      }
-      objects.push(immutable("occurrence", entry.key.replace(/\.png$/u, ""), "event", sha256(value.bytes), entry));
+      ));
       continue;
     }
     throw new Error("occurrence release inventory contains bytes outside the closed nested-root layout");
