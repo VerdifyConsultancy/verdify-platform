@@ -30,15 +30,18 @@ function canonicalDigest(value) {
 }
 
 function immutable(namespace, kind, label, { bytes = 100, createdAt = OLD, references = [] } = {}) {
-  const sha256 = digest(label);
+  let sha256 = digest(label);
   let key;
   if (kind === "blob") key = `blobs/sha256/${sha256}`;
   if (kind === "release") key = `releases/sha256/${sha256}.json`;
   if (kind === "manifest") key = `manifests/sha256/${sha256}.json`;
   if (kind === "generation") key = `occurrences/${CAMERA_ID}/generations/sha256/${sha256}.json`;
-  if (kind === "event") key = namespace === "site"
-    ? `events/sha256/${digest(`${label}-key`)}.json`
-    : `occurrences/${CAMERA_ID}/events/sha256/${digest(`${label}-key`)}.json`;
+  if (kind === "event") {
+    sha256 = digest(`${label}-key`);
+    key = namespace === "site"
+      ? `events/sha256/${sha256}.json`
+      : `occurrences/${CAMERA_ID}/events/sha256/${sha256}.json`;
+  }
   return {
     namespace,
     key,
@@ -371,6 +374,50 @@ test("objects become eligible only strictly after the 48-hour recovery boundary"
   assert.ok(!keys.includes(`blobs/sha256/${digest("site-orphan-blob")}`), "boundary release keeps its old child blob");
   assert.ok(!keys.includes(`occurrences/${CAMERA_ID}/generations/sha256/${digest("camera-orphan")}.json`));
   assert.ok(keys.includes(`manifests/sha256/${digest("occurrence-orphan")}.json`));
+});
+
+test("four 96-per-day event streams converge after fourteen days within request and object caps", () => {
+  function steadySnapshot(asOf) {
+    return inventory({
+      asOf,
+      mutate(value) {
+        for (let day = 0; day <= 15; day += 1) {
+          const createdAt = new Date(Date.parse(asOf) - (day * 24 * 60 * 60 * 1000)).toISOString();
+          for (let sample = 0; sample < 96; sample += 1) {
+            value.objects.push(immutable("site", "event", `steady-site-${asOf}-${day}-${sample}`, { createdAt }));
+            for (let stream = 0; stream < 3; stream += 1) {
+              value.objects.push(immutable(
+                "occurrence",
+                "event",
+                `steady-occurrence-${stream}-${asOf}-${day}-${sample}`,
+                { createdAt },
+              ));
+            }
+          }
+        }
+      },
+    });
+  }
+
+  const observations = ["2026-07-29T12:00:00.000Z", "2026-09-12T12:00:00.000Z"];
+  const retainedCounts = [];
+  for (const asOf of observations) {
+    const value = planReleaseStorageSafety({
+      snapshot: steadySnapshot(asOf),
+      usageState: createReleaseStorageUsageState(asOf),
+      publication: estimate(),
+      asOf,
+    });
+    const totalEvents = value.document.deletions.filter(({ kind }) => kind === "event").length
+      + (15 * 4 * 96);
+    const deletedEvents = value.document.deletions.filter(({ kind }) => kind === "event").length;
+    retainedCounts.push(totalEvents - deletedEvents);
+    assert.equal(totalEvents - deletedEvents, 15 * 4 * 96);
+    assert.ok(totalEvents - deletedEvents < 25_000);
+    assert.ok(value.document.accounting.gcUsageUpperBound.requests < releaseStorageSafetyContract.budgets.requestsPerDay);
+    assert.notEqual(value.document.publication.decision, "block");
+  }
+  assert.deepEqual(retainedCounts, [5760, 5760]);
 });
 
 test("an incomplete namespace listing blocks publication and emits no deletion plan", () => {
