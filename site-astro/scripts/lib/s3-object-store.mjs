@@ -353,7 +353,15 @@ export class S3ObjectStore {
         }
     }
 
-    async listInventory(relativePrefix = "", { maximumObjects = 1000 } = {}) {
+    async listInventory(
+        relativePrefix = "",
+        {
+            maximumObjects = 1000,
+            maximumPages = MAX_LIST_PAGES,
+            beforePage = null,
+            includePageCount = false,
+        } = {},
+    ) {
         if (relativePrefix !== "")
             validateRelativeObjectKey(relativePrefix, {
                 allowTrailingSlash: true,
@@ -365,6 +373,19 @@ export class S3ObjectStore {
         ) {
             throw new Error("S3 object listing limit is invalid");
         }
+        if (
+            !Number.isSafeInteger(maximumPages) ||
+            maximumPages < 1 ||
+            maximumPages > MAX_LIST_PAGES
+        ) {
+            throw new Error("S3 object listing page limit is invalid");
+        }
+        if (beforePage !== null && typeof beforePage !== "function") {
+            throw new Error("S3 object listing page callback is invalid");
+        }
+        if (typeof includePageCount !== "boolean") {
+            throw new Error("S3 object listing evidence mode is invalid");
+        }
         const Prefix =
             relativePrefix === ""
                 ? `${this.prefix}/`
@@ -375,7 +396,10 @@ export class S3ObjectStore {
         const seenKeys = new Set();
         const seenTokens = new Set();
         let ContinuationToken;
-        for (let page = 0; page < MAX_LIST_PAGES; page += 1) {
+        for (let page = 0; page < maximumPages; page += 1) {
+            if (beforePage !== null) {
+                await beforePage(Object.freeze({ pageNumber: page + 1 }));
+            }
             const result = await this.client.send(
                 new ListObjectsV2Command({
                     Bucket: this.bucket,
@@ -429,7 +453,12 @@ export class S3ObjectStore {
                     result.IsTruncated !== undefined
                 )
                     throw new Error("S3 object listing pagination is invalid");
-                return objects;
+                return includePageCount
+                    ? Object.freeze({
+                        objects: Object.freeze(objects),
+                        pageCount: page + 1,
+                    })
+                    : objects;
             }
             const token = result.NextContinuationToken;
             if (

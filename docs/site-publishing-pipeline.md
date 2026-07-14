@@ -272,13 +272,32 @@ refuses implicit S3 access; only the separate approved-policy `execute` path can
 construct an explicit S3 operation adapter, and no workload invokes it.
 
 The source-only S3 coordinator closes the shared storage lifecycle without changing
-the local-store policy. It takes a complete, fail-closed inventory of the distinct
-built-site and typed occurrence roots, obtains one monotonic object-store fence, and
+the local-store policy. The coordinator itself requires initialized writer stores in
+one bucket with three pairwise distinct, non-nested built-site, typed-occurrence, and
+coordination prefixes before any clock or object-store I/O. It takes a complete,
+fail-closed inventory of the two release roots, obtains one monotonic object-store fence, and
 conditionally removes only objects outside the current/rollback reachability graph
 and strictly older than the 48-hour recovery window. Every delete is preceded by an
 immutable daily usage reservation, a current UTC-budget-day check, and a current
 lease/fence check; HEAD metadata and its entity tag must still match the complete
-inventory before conditional deletion.
+inventory before conditional deletion. Lease time and the fence are checked again
+after reservation I/O and immediately after final object inspection, before the
+conditional delete request.
+
+Inventory I/O is part of the daily budget rather than an uncounted preflight. Each
+site or occurrence `ListObjectsV2` page gets its own immutable reservation before
+that page request, with a two-MiB response envelope and an exact page cardinality.
+The complete listing then determines the exact selector, release manifest,
+occurrence manifest, media generation, and site-publisher checkpoint GET count and
+listed byte total. One second reservation is committed before any of those canonical
+GETs. A crash between either reservation and its I/O leaves the conservative usage
+durable. If retained canonical history would reach a hard daily limit, the
+coordinator returns a names-safe typed budget failure before those reads; it never
+silently discovers the overrun afterward. The approved 143-graph plus two-camera
+cardinality stays within one page per release root and well below the tracker request
+budget. The same pre-I/O gate projects coordination-journal cardinality and refuses
+to create object 25,001, so a full journal cannot make its next complete inventory
+unlistable.
 
 S3 event tombstones are deliberately bounded rather than permanent: exact event
 replay is protected for 14 days (seven times the recovery window), after which the
@@ -291,6 +310,19 @@ exact replay idempotent and prevent it from replacing a competing selection. Thi
 14-day S3 policy replaces the local backend's permanent-tombstone behavior for the
 distributed store only.
 
+The occurrence-to-site publisher checkpoint is a separate closed idempotency
+tombstone, not a generic whitelisted object and not the site release event intent.
+Its key is exactly `checkpoints/sha256/<sha256(eventId)>.json`; its canonical body is
+limited to 64 KiB and must use the closed publisher-checkpoint v1 schema with the key
+event identity and digest fields. It carries no reachability references, remains
+retained for the same 14-day idempotency horizon, participates in complete inventory
+read accounting, and is deleted only by the fenced conditional GC path after expiry.
+The S3 coordinator branch defines this canonical contract. When the executable stage
+publisher branch is refreshed onto this head, its checkpoint writer must import this
+contract and reject any non-canonical body before its PR can merge; the coordinator
+regression already proves publisher-compatible bytes survive a successful cycle and
+permit the next complete inventory/coordinator cycle.
+
 Coordination history is bounded under the same fence. Publication/GC usage
 reservations remain for 14 days; deletion confirmations remain for 48 hours.
 Expiration is based on a complete UTC day, conservatively retaining up to one extra
@@ -298,10 +330,12 @@ day. Expired coordination objects receive their own durable pre-mutation budget
 reservation and HEAD/entity-tag conditional deletion. Reservation deltas are encoded
 in their content-addressed keys, allowing daily counters to be reconstructed from a
 bounded listing without rereading every journal body; a retry of the exact key still
-validates the canonical body. The hard complete-list cap remains 25,000. The steady
-state proof covers four 96-event/day streams: 5,760 event tombstones are retained,
-one expired day is collected below the 25,000-request daily budget, and old
-reservation/confirmation counts and retained bytes converge.
+validates the canonical body. The hard complete-list cap remains 25,000. The
+steady-state proof covers 96 no-deletion events per day, each retaining two
+list-page, one exact-read, one GC-preflight, and one publication reservation. The
+resulting 7,200 reservation records across fifteen conservative UTC days remain below
+the complete-list cap; one expired day is collected below the 25,000-request daily
+budget, and old reservation/confirmation counts and retained bytes converge.
 
 The complete local filesystem primitive is present, and its candidate manifest is
 included by the Lab stage overlay only at `replicas: 0`. The overlay deliberately
@@ -339,11 +373,21 @@ the operations.
 This remains source-only dependency injection, not activation. It adds no Kubernetes
 manifest or Secret values, workload selection, live network call, replica, egress,
 route, sync, activation, or credential provisioning. The distributed lease,
-retention, accounting, and bounded three-prefix create/read/HEAD/delete proof are
+retention, accounting, and bounded three-prefix
+create/read/HEAD/conditional-update/delete proof are
 offline-injected code paths only. Deployment wiring, the acknowledged real-endpoint
 proof, event-agent activation, and live cache/freshness/alert proof remain separate
-gates. The endpoint proof must confirm that the compatible store preserves the
-tested conditional semantics before any writer is activated.
+gates. The endpoint proof must confirm that the compatible store preserves the tested
+conditional semantics before any writer is activated: an exact conditional update
+must succeed, stale conditional update and delete requests must both be rejected, and
+the current entity tag must still authorize bounded cleanup.
+
+After the injected publisher returns, the coordinator rechecks the same UTC budget
+day, current fencing token, and unexpired lease before any terminal action. It repeats
+that check after loading final usage, releases the lease first, records the exact
+release instant in the terminal document, and only then persists `state=complete`
+status and metrics. A publisher that returns after lease expiry or UTC midnight can
+produce neither a released fence nor a complete status.
 
 The source tree now includes the built-site event consumer command:
 
