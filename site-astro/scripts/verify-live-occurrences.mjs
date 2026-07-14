@@ -124,6 +124,7 @@ async function fetchJson(origin, pathname, fetchImpl, timeoutMs) {
     signal: AbortSignal.timeout(timeoutMs),
     headers: {
       Accept: "application/json",
+      "Accept-Encoding": "identity",
       "User-Agent": "verdify-lab-live-occurrence-acceptance/1",
     },
   });
@@ -145,6 +146,7 @@ async function verifyBlob(asset, fetchImpl, timeoutMs) {
     signal: AbortSignal.timeout(timeoutMs),
     headers: {
       Accept: "image/png",
+      "Accept-Encoding": "identity",
       "User-Agent": "verdify-lab-live-occurrence-acceptance/1",
     },
   });

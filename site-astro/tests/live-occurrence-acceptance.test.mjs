@@ -209,7 +209,11 @@ async function localServer(context) {
   };
   const server = createServer((request, response) => {
     const pathname = new URL(request.url, "http://fixture.invalid").pathname;
-    state.requests.push({ method: request.method, pathname });
+    state.requests.push({
+      method: request.method,
+      pathname,
+      acceptEncoding: request.headers["accept-encoding"],
+    });
     if (state.documentRedirect && pathname === "/static-build.json") {
       response.writeHead(302, { Location: "/redirect-target" });
       response.end();
@@ -399,6 +403,7 @@ test("bounded live verifier accepts 143 graphs, two cameras, and every unique im
   assert.equal(result.totalBlobBytes, [...state.fixture.assets.values()].reduce((total, value) => total + value.length, 0));
   assert.equal(state.requests.filter(({ pathname }) => state.fixture.assets.has(pathname)).length, 3);
   assert.equal(state.requests.every(({ method }) => method === "GET"), true);
+  assert.equal(state.requests.every(({ acceptEncoding }) => acceptEncoding === "identity"), true);
 });
 
 test("executable verifier emits the canonical acceptance report against a local fixture", async (context) => {
