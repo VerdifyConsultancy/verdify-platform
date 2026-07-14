@@ -286,21 +286,25 @@ test("release runtime images bake a real digest-bound fallback and serve only th
   assert.equal(Object.isFrozen(config.cliEnvironment), true);
 });
 
-test("site target precedes the independent occurrence exporter target for Kaniko", async () => {
+test("release targets stay ordered and the occurrence exporter has an independent Dockerfile", async () => {
   const dockerfile = await readFile(path.join(SITE_ROOT, "Dockerfile.release-runtime"), "utf8");
   const stages = [...dockerfile.matchAll(/^FROM\s+\S+(?:\s+AS\s+(\S+))?\s*$/gmi)]
     .map((match) => match[1] ?? "");
-  assert.deepEqual(stages, ["dependencies", "build", "agent", "site", "occurrence-exporter"]);
-  for (const target of ["agent", "site", "occurrence-exporter"]) {
+  assert.deepEqual(stages, ["dependencies", "build", "agent", "site"]);
+  for (const target of ["agent", "site"]) {
     assert.equal(stages.filter((stage) => stage === target).length, 1, `${target} must be declared exactly once`);
   }
   assert.ok(
-    stages.indexOf("agent") < stages.indexOf("site") && stages.indexOf("site") < stages.indexOf("occurrence-exporter"),
-    "--target site must stop before exporter-only required build arguments",
+    stages.indexOf("agent") < stages.indexOf("site"),
+    "release agent must precede the site target",
   );
+  assert.doesNotMatch(dockerfile, /occurrence-exporter|LAB_EXPORTER_/u);
 
-  const exporterStart = dockerfile.indexOf("FROM dependencies AS occurrence-exporter");
-  const exporter = dockerfile.slice(exporterStart);
+  const exporter = await readFile(path.join(SITE_ROOT, "Dockerfile.occurrence-exporter"), "utf8");
+  const exporterStages = [...exporter.matchAll(/^FROM\s+\S+(?:\s+AS\s+(\S+))?\s*$/gmi)]
+    .map((match) => match[1] ?? "");
+  assert.deepEqual(exporterStages, ["dependencies", ""]);
+  assert.doesNotMatch(exporter, /LAB_RUNTIME_|AS\s+build|Dockerfile\.release-runtime/u);
   assert.match(exporter, /ai\.verdify\.release-authority="none"/u);
   assert.match(exporter, /ai\.verdify\.device-authority="none"/u);
   assert.match(exporter, /ai\.verdify\.live-authority="none"/u);
