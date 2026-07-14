@@ -59,31 +59,3 @@ USER 101:101
 EXPOSE 8080
 STOPSIGNAL SIGQUIT
 CMD ["nginx", "-g", "daemon off;"]
-
-# Keep this independent target after `site`: Kaniko evaluates every preceding
-# stage even when --target is set, so exporter-only required build arguments
-# must never be traversed by the site-image build.
-FROM dependencies AS occurrence-exporter
-
-ARG LAB_EXPORTER_BUILDER_COMMIT
-ARG LAB_EXPORTER_RELEASED_AT
-
-LABEL org.opencontainers.image.title="Verdify Lab occurrence exporter" \
-      org.opencontainers.image.description="Packaged offline producer contracts with no runtime binding" \
-      org.opencontainers.image.revision="${LAB_EXPORTER_BUILDER_COMMIT}" \
-      org.opencontainers.image.created="${LAB_EXPORTER_RELEASED_AT}" \
-      ai.verdify.release-authority="none" \
-      ai.verdify.device-authority="none" \
-      ai.verdify.live-authority="none"
-
-COPY scripts/verify-occurrence-exporter-image.mjs /app/scripts/verify-occurrence-exporter-image.mjs
-COPY scripts/lib/occurrence-producer-contracts.mjs /app/scripts/lib/occurrence-producer-contracts.mjs
-RUN printf '%s' "${LAB_EXPORTER_BUILDER_COMMIT}" | grep -Eq '^[0-9a-f]{40}([0-9a-f]{24})?$' \
-    && printf '%s' "${LAB_EXPORTER_RELEASED_AT}" | grep -Eq '^20[0-9]{2}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]{3})?Z$' \
-    && printf '{\n  "contract": "verdify.lab-occurrence-exporter-image-metadata",\n  "schemaVersion": 1,\n  "builderCommit": "%s",\n  "releasedAt": "%s"\n}\n' \
-      "${LAB_EXPORTER_BUILDER_COMMIT}" "${LAB_EXPORTER_RELEASED_AT}" \
-      > /app/occurrence-exporter-image.json \
-    && node /app/scripts/verify-occurrence-exporter-image.mjs > /dev/null
-
-USER 101:101
-CMD ["node", "/app/scripts/verify-occurrence-exporter-image.mjs"]
