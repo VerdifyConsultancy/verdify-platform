@@ -1,0 +1,316 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-lab-reporting-tier
+  labels:
+    app.kubernetes.io/name: verdify-lab-reporting-tier
+    app.kubernetes.io/component: lab-reporting-tier
+    app.kubernetes.io/part-of: verdify
+  annotations:
+    verdify.ai/activation-prerequisite: operator-projection-readiness-and-secret-presence
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: verdify-lab-reporting-tier
+      app.kubernetes.io/component: lab-reporting-tier
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: verdify-lab-reporting-tier
+        app.kubernetes.io/component: lab-reporting-tier
+        app.kubernetes.io/part-of: verdify
+      annotations:
+        verdify.ai/public-route: none
+        verdify.ai/reporting-feed: isolated-read-only-projection
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 472
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: grafana
+          image: grafana/grafana:12.4.5@sha256:26b8f35a9e4e4431995cf64c3f396505a4faf17bcfc19f9ed84943ec6bfd5ecd
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: grafana
+              containerPort: 3000
+          env:
+            - name: GF_SERVER_ROOT_URL
+              value: http://127.0.0.1:3000
+            - name: GF_SERVER_SERVE_FROM_SUB_PATH
+              value: "false"
+            - name: GF_AUTH_ANONYMOUS_ENABLED
+              value: "false"
+            - name: GF_AUTH_BASIC_ENABLED
+              value: "false"
+            - name: GF_AUTH_PROXY_ENABLED
+              value: "true"
+            - name: GF_AUTH_PROXY_HEADER_NAME
+              value: X-WEBAUTH-USER
+            - name: GF_AUTH_PROXY_HEADER_PROPERTY
+              value: username
+            - name: GF_AUTH_PROXY_AUTO_SIGN_UP
+              value: "true"
+            - name: GF_AUTH_PROXY_WHITELIST
+              value: 127.0.0.1
+            - name: GF_AUTH_PROXY_SYNC_TTL
+              value: "0"
+            - name: GF_AUTH_PROXY_ENABLE_LOGIN_TOKEN
+              value: "false"
+            - name: GF_USERS_ALLOW_SIGN_UP
+              value: "false"
+            - name: GF_USERS_AUTO_ASSIGN_ORG
+              value: "true"
+            - name: GF_USERS_AUTO_ASSIGN_ORG_ROLE
+              value: Viewer
+            - name: GF_USERS_VIEWERS_CAN_EDIT
+              value: "false"
+            - name: GF_SECURITY_ALLOW_EMBEDDING
+              value: "false"
+            - name: GF_SECURITY_DISABLE_GRAVATAR
+              value: "true"
+            - name: GF_SECURITY_ADMIN_USER
+              value: admin
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-lab-reporting-runtime
+                  key: GRAFANA_ADMIN_PASSWORD
+            - name: GF_SNAPSHOTS_EXTERNAL_ENABLED
+              value: "false"
+            - name: GF_EXPLORE_ENABLED
+              value: "false"
+            - name: GF_ALERTING_ENABLED
+              value: "false"
+            - name: GF_UNIFIED_ALERTING_ENABLED
+              value: "false"
+            - name: GF_HIDE_VERSION
+              value: "true"
+            - name: GF_ANALYTICS_REPORTING_ENABLED
+              value: "false"
+            - name: GF_ANALYTICS_CHECK_FOR_UPDATES
+              value: "false"
+            - name: GF_PLUGINS_PREINSTALL_DISABLED
+              value: "true"
+            - name: GF_RENDERING_SERVER_URL
+              value: http://127.0.0.1:8081/render
+            - name: GF_RENDERING_CALLBACK_URL
+              value: http://127.0.0.1:3000/
+            - name: GF_RENDERING_RENDERER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-lab-reporting-runtime
+                  key: GRAFANA_RENDERER_TOKEN
+            - name: GF_RENDERING_CONCURRENT_RENDER_REQUEST_LIMIT
+              value: "4"
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-lab-reporting-reader
+                  key: PGUSER
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-lab-reporting-reader
+                  key: PGPASSWORD
+            - name: PGDATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-lab-reporting-reader
+                  key: PGDATABASE
+          securityContext:
+            runAsUser: 472
+            runAsGroup: 472
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 768Mi
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: grafana
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: grafana
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          volumeMounts:
+            - name: grafana-data
+              mountPath: /var/lib/grafana
+            - name: grafana-tmp
+              mountPath: /tmp
+            - name: provisioning
+              mountPath: /etc/grafana/provisioning/datasources/datasources.yaml
+              subPath: datasources.yaml
+              readOnly: true
+            - name: provisioning
+              mountPath: /etc/grafana/provisioning/dashboards/dashboards.yaml
+              subPath: dashboards.yaml
+              readOnly: true
+            - name: dashboards-0
+              mountPath: /etc/grafana/provisioning/dashboards/json/bucket0
+              readOnly: true
+            - name: dashboards-1
+              mountPath: /etc/grafana/provisioning/dashboards/json/bucket1
+              readOnly: true
+        - name: renderer
+          image: grafana/grafana-image-renderer:v5.10.0@sha256:c0eb7b915a181c7bbe451718f9b633843678bef93703b5ed5fda2f28fa508986
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: renderer
+              containerPort: 8081
+          env:
+            - name: SERVER_ADDR
+              value: :8081
+            - name: AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-lab-reporting-runtime
+                  key: GRAFANA_RENDERER_TOKEN
+            - name: LOG_LEVEL
+              value: warn
+            - name: RATE_LIMIT_MAX_LIMIT
+              value: "4"
+            - name: RATE_LIMIT_MIN_LIMIT
+              value: "1"
+            - name: BROWSER_READINESS_TIMEOUT
+              value: 30s
+            - name: BROWSER_TIMEZONE
+              value: America/Denver
+            - name: HOME
+              value: /tmp
+          securityContext:
+            runAsUser: 65532
+            runAsGroup: 472
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: renderer
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: renderer
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          volumeMounts:
+            - name: renderer-tmp
+              mountPath: /tmp
+            - name: renderer-shm
+              mountPath: /dev/shm
+        - name: gateway
+          image: nginxinc/nginx-unprivileged:1.29.3-alpine@sha256:f7d0d0f2ebc0486dc110278672b9073f7fd641e58376b112b0c8865cf36d2e36
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: gateway
+              containerPort: 8080
+          securityContext:
+            runAsUser: 101
+            runAsGroup: 101
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: gateway
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: gateway
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          volumeMounts:
+            - name: gateway-config
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: default.conf
+              readOnly: true
+            - name: gateway-cache
+              mountPath: /var/cache/nginx
+            - name: gateway-tmp
+              mountPath: /tmp
+      volumes:
+        - name: grafana-data
+          emptyDir: {}
+        - name: grafana-tmp
+          emptyDir: {}
+        - name: renderer-tmp
+          emptyDir: {}
+        - name: renderer-shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 256Mi
+        - name: gateway-cache
+          emptyDir: {}
+        - name: gateway-tmp
+          emptyDir: {}
+        - name: gateway-config
+          configMap:
+            name: verdify-lab-reporting-gateway
+        - name: provisioning
+          configMap:
+            name: verdify-lab-reporting-provisioning
+        - name: dashboards-0
+          configMap:
+            name: verdify-lab-reporting-dashboards-0
+        - name: dashboards-1
+          configMap:
+            name: verdify-lab-reporting-dashboards-1
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: verdify-lab-reporting-tier
+  labels:
+    app.kubernetes.io/name: verdify-lab-reporting-tier
+    app.kubernetes.io/component: lab-reporting-tier
+    app.kubernetes.io/part-of: verdify
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: verdify-lab-reporting-tier
+    app.kubernetes.io/component: lab-reporting-tier
+  ports:
+    - name: http
+      port: 8080
+      targetPort: gateway
+      protocol: TCP

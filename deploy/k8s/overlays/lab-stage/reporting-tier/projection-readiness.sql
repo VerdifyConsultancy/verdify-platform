@@ -12,6 +12,7 @@ SELECT
   current_user <> 'verdify' AS distinct_reader,
   NOT has_database_privilege(current_user, current_database(), 'CREATE') AS no_database_create,
   to_regnamespace('lab_reporting') IS NOT NULL AS reporting_schema_present,
+  current_schema() = 'lab_reporting' AS reporting_search_path,
   NOT has_schema_privilege(current_user, 'lab_reporting', 'CREATE') AS no_schema_create,
   to_regclass('lab_reporting.source_watermark_v1') IS NOT NULL AS watermark_view_present
 \gset projection_
@@ -34,6 +35,11 @@ SELECT
 \if :projection_reporting_schema_present
 \else
   \echo 'projection readiness failed: lab_reporting schema is absent'
+  \quit 3
+\endif
+\if :projection_reporting_search_path
+\else
+  \echo 'projection readiness failed: unqualified dashboard queries do not resolve inside lab_reporting'
   \quit 3
 \endif
 \if :projection_no_schema_create

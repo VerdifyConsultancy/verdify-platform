@@ -1,0 +1,113 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: verdify-lab-reporting-tier-isolated
+  labels:
+    app.kubernetes.io/name: verdify-lab-reporting-tier
+    app.kubernetes.io/component: lab-reporting-tier
+    app.kubernetes.io/part-of: verdify
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: verdify-lab-reporting-tier
+      app.kubernetes.io/component: lab-reporting-tier
+  policyTypes: ["Ingress", "Egress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: verdify-lab-occurrence-producer
+              app.kubernetes.io/component: lab-occurrence-producer
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: verdify-lab-reporting-projection
+              app.kubernetes.io/component: lab-reporting-projection
+      ports:
+        - protocol: TCP
+          port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: verdify-lab-reporting-projection-ingress
+  labels:
+    app.kubernetes.io/name: verdify-lab-reporting-projection
+    app.kubernetes.io/component: lab-reporting-projection
+    app.kubernetes.io/part-of: verdify
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: verdify-lab-reporting-projection
+      app.kubernetes.io/component: lab-reporting-projection
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: verdify-lab-reporting-tier
+              app.kubernetes.io/component: lab-reporting-tier
+      ports:
+        - protocol: TCP
+          port: 5432
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: verdify-lab-occurrence-producer
+              app.kubernetes.io/component: lab-occurrence-producer
+      ports:
+        - protocol: TCP
+          port: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: verdify-lab-occurrence-producer-isolated
+  labels:
+    app.kubernetes.io/name: verdify-lab-occurrence-producer
+    app.kubernetes.io/component: lab-occurrence-producer
+    app.kubernetes.io/part-of: verdify
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: verdify-lab-occurrence-producer
+      app.kubernetes.io/component: lab-occurrence-producer
+  policyTypes: ["Ingress", "Egress"]
+  ingress: []
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: verdify-lab-reporting-tier
+              app.kubernetes.io/component: lab-reporting-tier
+      ports:
+        - protocol: TCP
+          port: 8080

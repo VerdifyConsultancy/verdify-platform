@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: verdify-lab-reporting-projection
+  labels:
+    app.kubernetes.io/name: verdify-lab-reporting-projection
+    app.kubernetes.io/component: lab-reporting-projection
+    app.kubernetes.io/part-of: verdify
+  annotations:
+    verdify.ai/operator-provisioned-backend: required
+    verdify.ai/track-a-primary-credential: forbidden
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: verdify-lab-reporting-projection
+    app.kubernetes.io/component: lab-reporting-projection
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+      protocol: TCP
+    - name: watermark
+      port: 8080
+      targetPort: watermark
+      protocol: TCP

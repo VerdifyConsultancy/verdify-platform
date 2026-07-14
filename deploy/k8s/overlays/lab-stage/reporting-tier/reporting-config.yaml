@@ -1,0 +1,135 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: verdify-lab-reporting-provisioning
+  labels:
+    app.kubernetes.io/name: verdify-lab-reporting-tier
+    app.kubernetes.io/component: lab-reporting-tier
+    app.kubernetes.io/part-of: verdify
+data:
+  datasources.yaml: |
+    apiVersion: 1
+    deleteDatasources:
+      - name: Verdify Lab reporting projection
+        orgId: 1
+      - name: Verdify Lab legacy reporting projection
+        orgId: 1
+    datasources:
+      - name: Verdify Lab reporting projection
+        type: postgres
+        uid: verdify-tsdb
+        access: proxy
+        url: verdify-lab-reporting-projection.verdify-platform.svc.cluster.local:5432
+        database: ${PGDATABASE}
+        user: ${PGUSER}
+        secureJsonData:
+          password: ${PGPASSWORD}
+        jsonData:
+          database: ${PGDATABASE}
+          sslmode: require
+          postgresVersion: 1600
+          timescaledb: true
+        isDefault: true
+        editable: false
+      - name: Verdify Lab legacy reporting projection
+        type: postgres
+        uid: P44368ADAD746BC27
+        access: proxy
+        url: verdify-lab-reporting-projection.verdify-platform.svc.cluster.local:5432
+        database: ${PGDATABASE}
+        user: ${PGUSER}
+        secureJsonData:
+          password: ${PGPASSWORD}
+        jsonData:
+          database: ${PGDATABASE}
+          sslmode: require
+          postgresVersion: 1600
+          timescaledb: true
+        isDefault: false
+        editable: false
+  dashboards.yaml: |
+    apiVersion: 1
+    providers:
+      - name: Verdify Lab public reporting
+        type: file
+        orgId: 1
+        folder: Lab reporting
+        folderUid: lab-reporting
+        disableDeletion: true
+        updateIntervalSeconds: 300
+        allowUiUpdates: false
+        options:
+          path: /etc/grafana/provisioning/dashboards/json
+          foldersFromFilesStructure: false
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: verdify-lab-reporting-gateway
+  labels:
+    app.kubernetes.io/name: verdify-lab-reporting-tier
+    app.kubernetes.io/component: lab-reporting-tier
+    app.kubernetes.io/part-of: verdify
+data:
+  default.conf: |
+    server {
+      listen 8080;
+      server_name _;
+      server_tokens off;
+
+      location = /healthz {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok\n";
+      }
+
+      location ~ ^/render/d-solo/(greenhouse-equipment|greenhouse-hydroponics|greenhouse-lighting|greenhouse-soil|greenhouse-weather|site-climate|site-climate-lighting|site-evidence-economics|site-evidence-operations|site-evidence-planning-quality|site-greenhouse-crops|site-greenhouse-equipment|site-greenhouse-zones|site-home|site-inference-infra|site-intelligence|site-intelligence-planning|site-irrigation)/$ {
+        limit_except GET { deny all; }
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host 127.0.0.1:3000;
+        proxy_set_header X-WEBAUTH-USER verdify-lab-renderer;
+        proxy_set_header Authorization "";
+        proxy_set_header Cookie "";
+        proxy_set_header X-Forwarded-For "";
+        proxy_set_header X-Forwarded-Proto http;
+        proxy_hide_header Set-Cookie;
+        proxy_intercept_errors on;
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 60s;
+        proxy_send_timeout 60s;
+      }
+
+      location / {
+        return 404;
+      }
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: verdify-lab-reporting-runtime-contract
+  labels:
+    app.kubernetes.io/name: verdify-lab-reporting-tier
+    app.kubernetes.io/component: lab-reporting-tier
+    app.kubernetes.io/part-of: verdify
+data:
+  contract: verdify.lab-reporting-runtime/v1
+  dashboardCount: "18"
+  uniquePanelCount: "139"
+  occurrenceCount: "143"
+  currentMediaCount: "2"
+  sourceOccurrenceManifestSha256: e455309736cf785914141d1641ec2569f623e048cf9073b3ea6fce181726160d
+  datasourceIdentity: verdify-lab-reporting-stage-v1
+  projectionService: verdify-lab-reporting-projection
+  projectionDatabasePort: "5432"
+  projectionWatermarkPort: "8080"
+  projectionWatermarkPath: /v1/source-watermark
+  reportingReaderSecret: verdify-lab-reporting-reader
+  reportingReaderSecretKeys: PGUSER,PGPASSWORD,PGDATABASE
+  reportingRuntimeSecret: verdify-lab-reporting-runtime
+  reportingRuntimeSecretKeys: GRAFANA_ADMIN_PASSWORD,GRAFANA_RENDERER_TOKEN
+  producerServiceAccount: verdify-lab-occurrence-producer
+  producerImageState: digest-required-before-activation
+  producerRuntimeState: store-selector-binding-required-before-activation
+  liveSuccessState: unproven-requires-143-plus-2-t0-and-t10

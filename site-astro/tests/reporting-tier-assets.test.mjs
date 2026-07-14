@@ -56,7 +56,10 @@ test("reporting dashboard ConfigMaps are deterministic and each stays below 900 
     },
     { dashboards: 18, panels: 139, occurrences: 143 },
   );
-  assert.equal(status.configMaps.length, 2);
+  assert.deepEqual(
+    status.configMaps.map(({ name }) => name),
+    ["targets-cm.yaml", "dashboards-cm-0.yaml", "dashboards-cm-1.yaml"],
+  );
   assert.equal(status.configMaps.every(({ bytes }) => bytes <= CONFIG_MAP_BYTE_BUDGET), true);
   assert.equal(status.configMaps.every(({ bytes }) => bytes < 1024 * 1024), true);
 });

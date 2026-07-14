@@ -372,6 +372,23 @@ function renderConfigMap(index, dashboards) {
   return `${header.join("\n")}\n`;
 }
 
+function renderTargetsConfigMap(targets) {
+  return `${[
+    "apiVersion: v1",
+    "kind: ConfigMap",
+    "metadata:",
+    "  name: verdify-lab-reporting-targets",
+    "  labels:",
+    "    app.kubernetes.io/name: verdify-lab-reporting-tier",
+    "    app.kubernetes.io/component: lab-reporting-tier",
+    "    app.kubernetes.io/part-of: verdify",
+    "    verdify.ai/generated-by: generate-reporting-tier-assets",
+    "data:",
+    "  reporting-targets.json: |-",
+    blockScalar(canonicalBytes(targets).toString("utf8")),
+  ].join("\n")}\n`;
+}
+
 function shardDashboards(dashboards) {
   const shards = [];
   let current = [];
@@ -396,10 +413,13 @@ function shardDashboards(dashboards) {
 async function expectedGeneratedFiles(targets) {
   const dashboards = await validateDashboardSources(targets);
   const shards = shardDashboards(dashboards);
-  return new Map(shards.map((shard, index) => [
-    `dashboards-cm-${index}.yaml`,
-    renderConfigMap(index, shard),
-  ]));
+  return new Map([
+    ["targets-cm.yaml", renderTargetsConfigMap(targets)],
+    ...shards.map((shard, index) => [
+      `dashboards-cm-${index}.yaml`,
+      renderConfigMap(index, shard),
+    ]),
+  ]);
 }
 
 async function readCanonicalJson(file, label) {

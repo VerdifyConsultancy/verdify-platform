@@ -1,0 +1,134 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: verdify-lab-occurrence-producer
+  labels:
+    app.kubernetes.io/name: verdify-lab-occurrence-producer
+    app.kubernetes.io/component: lab-occurrence-producer
+    app.kubernetes.io/part-of: verdify
+automountServiceAccountToken: false
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-lab-occurrence-producer
+  labels:
+    app.kubernetes.io/name: verdify-lab-occurrence-producer
+    app.kubernetes.io/component: lab-occurrence-producer
+    app.kubernetes.io/part-of: verdify
+  annotations:
+    verdify.ai/activation-prerequisite: runnable-image-projection-store-and-egress-review
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: verdify-lab-occurrence-producer
+      app.kubernetes.io/component: lab-occurrence-producer
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: verdify-lab-occurrence-producer
+        app.kubernetes.io/component: lab-occurrence-producer
+        app.kubernetes.io/part-of: verdify
+      annotations:
+        verdify.ai/runtime-state: unrunnable-source-contract
+        verdify.ai/camera-egress-state: absent-until-reviewed-activation
+        verdify.ai/object-store-egress-state: absent-until-reviewed-activation
+    spec:
+      serviceAccountName: verdify-lab-occurrence-producer
+      automountServiceAccountToken: false
+      imagePullSecrets:
+        - name: zot-origin-cluster-pull
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        fsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: producer
+          image: registry.vallery.net/verdifyconsultancy/verdify-lab-occurrence-exporter@sha256:0000000000000000000000000000000000000000000000000000000000000000
+          imagePullPolicy: IfNotPresent
+          command: ["node"]
+          args: ["/app/scripts/run-reporting-occurrence-producer.mjs", "once"]
+          env:
+            - name: LAB_OCCURRENCE_MANIFEST
+              value: /etc/verdify/reporting/source/occurrence-manifest.json
+            - name: LAB_OCCURRENCE_POLICY
+              value: /etc/verdify/reporting/policy/occurrence-export-policy.json
+            - name: LAB_REPORTING_TARGETS
+              value: /etc/verdify/reporting/targets/reporting-targets.json
+            - name: LAB_OCCURRENCE_OUTPUT_ROOT
+              value: /work/candidates
+            - name: LAB_OCCURRENCE_STORE
+              valueFrom:
+                configMapKeyRef:
+                  name: verdify-lab-occurrence-store-metadata
+                  key: LAB_OCCURRENCE_STORE
+            - name: LAB_S3_ENDPOINT_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: verdify-lab-occurrence-store-metadata
+                  key: LAB_S3_ENDPOINT_URL
+            - name: AWS_DEFAULT_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: verdify-lab-occurrence-store-metadata
+                  key: AWS_DEFAULT_REGION
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-lab-occurrence-store-writer
+                  key: AWS_ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-lab-occurrence-store-writer
+                  key: AWS_SECRET_ACCESS_KEY
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+          volumeMounts:
+            - name: source-manifest
+              mountPath: /etc/verdify/reporting/source
+              readOnly: true
+            - name: policy
+              mountPath: /etc/verdify/reporting/policy
+              readOnly: true
+            - name: targets
+              mountPath: /etc/verdify/reporting/targets
+              readOnly: true
+            - name: work
+              mountPath: /work
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        # The first two ConfigMaps are intentionally absent from this source-only
+        # overlay. A reviewed activation must bind the canonical immutable source
+        # manifest and Jason-approved policy; raising replicas before that fails.
+        - name: source-manifest
+          configMap:
+            name: verdify-lab-occurrence-source-manifest
+        - name: policy
+          configMap:
+            name: verdify-lab-occurrence-export-policy
+        - name: targets
+          configMap:
+            name: verdify-lab-reporting-targets
+        - name: work
+          emptyDir:
+            sizeLimit: 3Gi
+        - name: tmp
+          emptyDir: {}
