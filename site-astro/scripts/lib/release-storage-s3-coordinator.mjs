@@ -509,6 +509,16 @@ function currentLeaseMatches(document, expected) {
     && document.expiresAt === expected.expiresAt;
 }
 
+async function assertCurrentPublicationLease(coordinationStore, acquired, currentTime) {
+  const current = await readFence(coordinationStore, { missing: false });
+  if (
+    !currentLeaseMatches(current.document, acquired.record)
+    || Date.parse(current.document.issuedAt) > Date.parse(currentTime)
+    || Date.parse(currentTime) >= Date.parse(current.document.expiresAt)
+  ) throw new Error("release storage publication lease is no longer current");
+  return current;
+}
+
 function createS3GcAdapter({
   siteStore,
   occurrenceStore,
@@ -737,7 +747,7 @@ function statusDocument({ state, observedAt, plan, usageSnapshot, fenceToken = n
     publicationDecision: plan.document.publication.decision,
     publicationReasons: [...plan.document.publication.reasons],
     preservesLastKnownGood: true,
-    retainedBytes: plan.document.accounting.observedRetainedBytes,
+    retainedBytes: plan.document.accounting.projected.retainedBytes,
     plannedDeletedBytes: plan.document.accounting.plannedDeletedBytes,
     deletedObjects: gc?.deletedObjects ?? 0,
     dailyUsage: structuredClone(usageSnapshot.state.counters),
@@ -917,6 +927,9 @@ export async function coordinateReleaseStorageS3Publication({
   });
   await checkpoint(Object.freeze({ phase: "after-gc", planSha256: plan.sha256 }));
   const publicationTime = await currentFrom(clock);
+  if (publicationTime.slice(0, 10) !== plannedAt.slice(0, 10)) {
+    throw new Error("release storage publication crossed its UTC budget day");
+  }
   await reserveReleaseStorageS3Usage({
     coordinationStore,
     kind: "publication",
@@ -928,6 +941,11 @@ export async function coordinateReleaseStorageS3Publication({
     createdAt: publicationTime,
     delta: publisherReservation(publication),
   });
+  await assertCurrentPublicationLease(
+    coordinationStore,
+    acquired,
+    await currentFrom(clock),
+  );
   const published = validatePublisherResult(await publisher(Object.freeze({
     contract: "verdify.lab-release-storage-publication-authority",
     schemaVersion: 1,

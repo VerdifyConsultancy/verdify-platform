@@ -72,6 +72,8 @@ class FakeS3Client {
     this.sequence = 0;
     this.pageSize = 3;
     this.deniedPrefix = null;
+    this.failNextGetPrefix = null;
+    this.deniedDeletePrefix = null;
   }
 
   identity(input) {
@@ -114,6 +116,10 @@ class FakeS3Client {
       return { ETag: value.etag };
     }
     if (name === "GetObjectCommand") {
+      if (this.failNextGetPrefix !== null && input.Key.startsWith(this.failNextGetPrefix)) {
+        this.failNextGetPrefix = null;
+        throw new Error("injected read failure");
+      }
       const value = this.objects.get(this.identity(input));
       if (value === undefined) throw missing();
       return {
@@ -134,6 +140,9 @@ class FakeS3Client {
       };
     }
     if (name === "DeleteObjectCommand") {
+      if (this.deniedDeletePrefix !== null && input.Key.startsWith(this.deniedDeletePrefix)) {
+        throw denied();
+      }
       const identity = this.identity(input);
       const value = this.objects.get(identity);
       if (value === undefined) throw missing();
@@ -616,6 +625,39 @@ test("a crash after GC retains every pre-mutation reservation and the next coord
   await exactNextRequestBlock(value, "2026-07-14T12:20:00.000Z");
 });
 
+test("an expired fence blocks the publisher after its conservative reservation", async () => {
+  const value = await fixture({ includeOrphans: false });
+  let now = AS_OF;
+  let publisherCalls = 0;
+  await assert.rejects(
+    coordinateReleaseStorageS3Publication({
+      siteStore: value.siteStore,
+      occurrenceStore: value.occurrenceStore,
+      coordinationStore: value.coordinationStore,
+      publication: estimate(),
+      eventIdentitySha256: "7".repeat(64),
+      ownerIdentity: "stage-producer-pod-expired",
+      clock: async () => now,
+      leaseSeconds: 60,
+      leaseNonce: "coordinator_nonce_expired",
+      async publisher() {
+        publisherCalls += 1;
+        return publisherResult();
+      },
+      async checkpoint({ phase }) {
+        if (phase === "after-gc") now = "2026-07-14T12:01:01.000Z";
+      },
+    }),
+    /publication lease is no longer current/u,
+  );
+  assert.equal(publisherCalls, 0);
+  const usage = await loadReleaseStorageS3Usage({
+    coordinationStore: value.coordinationStore,
+    asOf: "2026-07-14T12:02:00.000Z",
+  });
+  assert.ok(usage.state.counters.writtenBytes >= COORDINATION_FINALIZATION_USAGE.writtenBytes);
+});
+
 test("activation proof mutates and cleans all three prefixes and fails closed when one prefix is denied", async () => {
   const value = await fixture({ includeOrphans: false });
   const result = await proveReleaseStorageS3Activation({
@@ -665,6 +707,63 @@ test("activation proof mutates and cleans all three prefixes and fails closed wh
   assert.equal(
     [...value.client.objects.keys()].some((key) => key.includes("activation-proof/")),
     false,
+  );
+});
+
+test("activation proof cleans every created key after an intermediate read failure", async () => {
+  const value = await fixture({ includeOrphans: false });
+  value.client.failNextGetPrefix = `${SITE_PREFIX}/activation-proof/`;
+  await assert.rejects(
+    proveReleaseStorageS3Activation({
+      siteObjects: value.siteStore.objects,
+      occurrenceObjects: value.occurrenceStore.objects,
+      coordinationObjects: value.coordinationStore,
+      nonce: "activation_nonce_read_failure",
+      probedAt: AS_OF,
+    }),
+    (error) => {
+      assert.ok(error instanceof ReleaseStorageS3ActivationProofError);
+      assert.equal(error.result.status, "failed");
+      assert.equal(error.result.dedicatedPrefixesVerified, false);
+      assert.equal(error.result.prefixes.site.created, true);
+      assert.equal(error.result.prefixes.site.read, false);
+      for (const evidence of Object.values(error.result.prefixes)) {
+        assert.equal(evidence.cleanupAttempted, true);
+        assert.equal(evidence.cleanupComplete, true);
+      }
+      return true;
+    },
+  );
+  assert.equal(
+    [...value.client.objects.keys()].some((key) => key.includes("activation-proof/")),
+    false,
+  );
+});
+
+test("activation proof cannot report success when final cleanup is denied", async () => {
+  const value = await fixture({ includeOrphans: false });
+  value.client.deniedDeletePrefix = `${OCCURRENCE_PREFIX}/activation-proof/`;
+  await assert.rejects(
+    proveReleaseStorageS3Activation({
+      siteObjects: value.siteStore.objects,
+      occurrenceObjects: value.occurrenceStore.objects,
+      coordinationObjects: value.coordinationStore,
+      nonce: "activation_nonce_cleanup_denied",
+      probedAt: AS_OF,
+    }),
+    (error) => {
+      assert.ok(error instanceof ReleaseStorageS3ActivationProofError);
+      assert.equal(error.result.status, "failed");
+      assert.equal(error.result.cleanupComplete, false);
+      assert.equal(error.result.dedicatedPrefixesVerified, false);
+      assert.equal(error.result.prefixes.occurrence.cleanupAttempted, true);
+      assert.equal(error.result.prefixes.occurrence.cleanupComplete, false);
+      return true;
+    },
+  );
+  assert.equal(
+    [...value.client.objects.keys()].filter((key) => key.includes("activation-proof/")).length,
+    1,
   );
 });
 
