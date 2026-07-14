@@ -62,12 +62,21 @@ class FakeS3Client {
         return `${input.Bucket}/${input.Key}`;
     }
 
-    seed(key, bytes, { etag = null, omitContentLength = false } = {}) {
+    seed(
+        key,
+        bytes,
+        {
+            etag = null,
+            omitContentLength = false,
+            lastModified = new Date("2026-07-12T12:00:00.000Z"),
+        } = {},
+    ) {
         this.sequence += 1;
         this.objects.set(`${BUCKET}/${key}`, {
             bytes: Buffer.from(bytes),
             etag: etag ?? `"fake-${this.sequence}"`,
             omitContentLength,
+            lastModified,
         });
     }
 
@@ -91,6 +100,7 @@ class FakeS3Client {
                 bytes,
                 etag,
                 omitContentLength: false,
+                lastModified: new Date("2026-07-12T12:00:00.000Z"),
             });
             return { ETag: etag };
         }
@@ -109,6 +119,23 @@ class FakeS3Client {
                 })(),
             };
         }
+        if (name === "HeadObjectCommand") {
+            const value = this.objects.get(this.identity(input));
+            if (value === undefined) throw missing();
+            return {
+                ETag: value.etag,
+                ContentLength: value.bytes.length,
+                LastModified: value.lastModified,
+            };
+        }
+        if (name === "DeleteObjectCommand") {
+            const identity = this.identity(input);
+            const value = this.objects.get(identity);
+            if (value === undefined) throw missing();
+            if (value.etag !== input.IfMatch) throw precondition();
+            this.objects.delete(identity);
+            return {};
+        }
         if (name === "ListObjectsV2Command") {
             const keys = [...this.objects.keys()]
                 .map((identity) => identity.slice(`${input.Bucket}/`.length))
@@ -122,7 +149,15 @@ class FakeS3Client {
             const page = keys.slice(offset, offset + limit);
             const next = offset + page.length;
             return {
-                Contents: page.map((Key) => ({ Key })),
+                Contents: page.map((Key) => {
+                    const value = this.objects.get(`${input.Bucket}/${Key}`);
+                    return {
+                        Key,
+                        Size: value.bytes.length,
+                        LastModified: value.lastModified,
+                        ETag: value.etag,
+                    };
+                }),
                 IsTruncated: next < keys.length,
                 ...(next < keys.length
                     ? { NextContinuationToken: String(next) }
@@ -581,6 +616,81 @@ test("S3 release listing consumes continuation pages and bounds membership", asy
     await assert.rejects(
         oversizedTokenObjects.list("releases/sha256/"),
         /listing continuation is invalid/,
+    );
+});
+
+test("whole-prefix inventory, HEAD, and conditional delete retain bounded object identity", async () => {
+    const client = new FakeS3Client({ pageSize: 1 });
+    const firstKey = `${PREFIX}/blobs/sha256/${"1".repeat(64)}`;
+    const secondKey = `${PREFIX}/nested/events/${"2".repeat(64)}.json`;
+    client.seed(firstKey, Buffer.from("first"), {
+        etag: '"first-etag"',
+        lastModified: new Date("2026-07-12T12:00:00.000Z"),
+    });
+    client.seed(secondKey, Buffer.from("second"), {
+        etag: '"second-etag"',
+        lastModified: new Date("2026-07-12T12:01:00.000Z"),
+    });
+    const objects = await new S3ObjectStore({
+        bucket: BUCKET,
+        prefix: PREFIX,
+        client,
+    }).initialize();
+
+    assert.deepEqual(await objects.listInventory("", { maximumObjects: 2 }), [
+        {
+            key: `blobs/sha256/${"1".repeat(64)}`,
+            bytes: 5,
+            lastModified: "2026-07-12T12:00:00.000Z",
+            etag: '"first-etag"',
+        },
+        {
+            key: `nested/events/${"2".repeat(64)}.json`,
+            bytes: 6,
+            lastModified: "2026-07-12T12:01:00.000Z",
+            etag: '"second-etag"',
+        },
+    ]);
+    assert.deepEqual(
+        await objects.head(`blobs/sha256/${"1".repeat(64)}`),
+        {
+            bytes: 5,
+            lastModified: "2026-07-12T12:00:00.000Z",
+            etag: '"first-etag"',
+        },
+    );
+    assert.deepEqual(
+        await objects.deleteIfMatch(
+            `blobs/sha256/${"1".repeat(64)}`,
+            '"wrong-etag"',
+        ),
+        { deleted: false },
+    );
+    assert.notEqual(
+        await objects.head(`blobs/sha256/${"1".repeat(64)}`, {
+            missing: true,
+        }),
+        null,
+    );
+    assert.deepEqual(
+        await objects.deleteIfMatch(
+            `blobs/sha256/${"1".repeat(64)}`,
+            '"first-etag"',
+        ),
+        { deleted: true },
+    );
+    assert.equal(
+        await objects.head(`blobs/sha256/${"1".repeat(64)}`, {
+            missing: true,
+        }),
+        null,
+    );
+    assert.deepEqual(
+        await objects.deleteIfMatch(
+            `blobs/sha256/${"1".repeat(64)}`,
+            '"first-etag"',
+        ),
+        { deleted: false },
     );
 });
 
