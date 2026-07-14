@@ -769,7 +769,7 @@ function validatePlan(plan) {
       "release storage GC deletion bytes",
     );
     instant(deletion.createdAt, "release storage GC deletion creation time");
-    const deletionHorizon = deletion.kind === "event"
+    const deletionHorizon = ["event", "checkpoint"].includes(deletion.kind)
       ? EVENT_IDEMPOTENCY_HORIZON_MS
       : RECOVERY_GRACE_MS;
     if (Date.parse(document.plannedAt) - Date.parse(deletion.createdAt) <= deletionHorizon) {
@@ -1223,9 +1223,10 @@ export async function executeReleaseStorageGcPlan(input) {
   const injected = validateAdapter(adapter);
   const firstInstant = await injectedCurrentInstant(currentInstant);
   const fence = validateLease(lease, plan.sha256, firstInstant);
-  if (Date.parse(fence.issuedAt) < Date.parse(document.plannedAt)) {
-    throw new Error("release storage GC lease predates its plan");
-  }
+  // Distributed callers acquire the same fence before inventory admission so
+  // concurrent page/read reservations cannot race the daily budget. The
+  // current-fence operation below proves that this exact token was then bound
+  // to the completed plan before any GC mutation.
   const resumed = validateProgress(progress, plan, document);
   if (resumed !== null && Date.parse(resumed.document.updatedAt) > Date.parse(firstInstant)) {
     throw new Error("release storage GC progress is from the future");

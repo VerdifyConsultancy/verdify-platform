@@ -369,11 +369,24 @@ implements same-bucket/non-overlapping-prefix enforcement, pre-I/O inventory
 reservations, distributed fencing, 14-day idempotency records, 48-hour reachability
 GC, and daily resource accounting. Its closed site-publisher checkpoint contract must
 still be imported by the executable publisher writer when that branch is refreshed.
-Object-store CLI wiring and bounded site cache materialization, the event agent,
-real-endpoint stale-conditional proof, actual resource/value binding, store/egress
-wiring, and alert routing remain required before activation. The #501 slice fixes
+The operator proof now also verifies that a second absent-only write cannot replace
+an existing object, but endpoint correctness is not capacity authorization. The
+current per-file 143+2 format is machine-readably activation-blocked: at 96 full
+publications/day its strict 48-hour occurrence payload alone reaches 28,564 objects,
+above the 25,000 complete-inventory cap, and its canonical reads exceed the daily
+request budget. Deterministic occurrence/site packs and selected-root inventory must
+land before this gate can open; the 96-sample reporting freshness KPI does not imply
+96 full object publications. Object-store CLI wiring and bounded site cache
+materialization, the event agent, real-endpoint proof, actual resource/value binding,
+store/egress wiring, and alert routing also remain required. The #501 slice fixes
 names only; none of this source configures an endpoint or credential, deploys a
 binding, activates a writer, or alters production.
+
+The dormant coordinator also still accepts the publisher payload estimate/result
+from its injected caller. Its own reservation and fence overhead is always added,
+but activation additionally requires the executable writer to derive the full
+payload envelope, import the closed checkpoint contract, and enforce the fence at
+the actual mutation boundary.
 
 The source tree now contains the first deterministic packed-layout prerequisite.
 `scripts/lib/deterministic-release-pack.mjs` uses fixed `VLABPACK`/v1 framing, one
