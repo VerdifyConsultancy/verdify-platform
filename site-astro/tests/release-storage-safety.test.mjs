@@ -401,6 +401,7 @@ test("four 96-per-day event streams converge after fourteen days within request 
 
   const observations = ["2026-07-29T12:00:00.000Z", "2026-09-12T12:00:00.000Z"];
   const retainedCounts = [];
+  const retainedBytes = [];
   for (const asOf of observations) {
     const value = planReleaseStorageSafety({
       snapshot: steadySnapshot(asOf),
@@ -412,12 +413,14 @@ test("four 96-per-day event streams converge after fourteen days within request 
       + (15 * 4 * 96);
     const deletedEvents = value.document.deletions.filter(({ kind }) => kind === "event").length;
     retainedCounts.push(totalEvents - deletedEvents);
+    retainedBytes.push(value.document.accounting.retainedBytesAfterGc);
     assert.equal(totalEvents - deletedEvents, 15 * 4 * 96);
     assert.ok(totalEvents - deletedEvents < 25_000);
     assert.ok(value.document.accounting.gcUsageUpperBound.requests < releaseStorageSafetyContract.budgets.requestsPerDay);
     assert.notEqual(value.document.publication.decision, "block");
   }
   assert.deepEqual(retainedCounts, [5760, 5760]);
+  assert.equal(retainedBytes[0], retainedBytes[1]);
 });
 
 test("an incomplete namespace listing blocks publication and emits no deletion plan", () => {
