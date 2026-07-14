@@ -171,12 +171,28 @@ release, run the GET-only live acceptance check at T0 and T+10:
 npm run verify:live:occurrences -- --origin https://lab-stage.verdify.ai
 ```
 
+To verify one unrouted release-runtime pod through a local port-forward while
+retaining the public attestation identity, supply a credential-free transport
+origin:
+
+```bash
+npm run verify:live:occurrences -- \
+  --origin https://lab-stage.verdify.ai \
+  --transport-origin http://127.0.0.1:18080
+```
+
 The verifier follows no redirects and fetches only the supplied origin's build and
 occurrence manifests plus their canonical same-origin content-addressed PNG paths. It
 requires all 143 graph and both camera fallbacks, reconciles the raw/prefixed selected
 release identities, and checks immutable cache headers, exact byte counts, and byte
-digests. It is acceptance tooling only: it does not render, publish, mutate a store,
-read a credential, or activate a workload.
+digests. The optional transport changes only the connection origin: the documents and
+asset paths must still attest exactly `https://lab-stage.verdify.ai`. Explicit
+transport is limited to canonical literal loopback hosts in `127.0.0.0/8` or `[::1]`
+for a local per-pod port-forward. DNS names, other IP addresses, credentials, and any
+path, query, or fragment are rejected. Requests follow no redirects, omit credentials
+and referrers, use only the connection's Host, and do not send an Origin header. It is
+acceptance tooling only: it does not render, publish, mutate a store, read a credential,
+or activate a workload.
 
 ### Phase 4c producer boundary (inactive)
 

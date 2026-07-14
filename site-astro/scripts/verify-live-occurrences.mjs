@@ -4,8 +4,10 @@ import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
 
 import {
+  LIVE_OCCURRENCE_ATTESTED_ORIGIN,
   LIVE_OCCURRENCE_EXPECTATIONS,
   normalizeLiveOccurrenceOrigin,
+  normalizeLiveOccurrenceTransportOrigin,
   validateLiveOccurrenceDocuments,
 } from "./lib/live-occurrence-acceptance.mjs";
 
@@ -19,14 +21,27 @@ const PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 const textDecoder = new TextDecoder("utf-8", { fatal: true });
 
 function usage() {
-  return "Usage: node scripts/verify-live-occurrences.mjs --origin https://lab-stage.verdify.ai";
+  return "Usage: node scripts/verify-live-occurrences.mjs --origin https://lab-stage.verdify.ai [--transport-origin http://127.0.0.1:PORT]";
 }
 
 function parseArgs(values) {
-  if (values.length !== 2 || values[0] !== "--origin" || !values[1]) {
-    throw new Error(usage());
+  if (![2, 4].includes(values.length)) throw new Error(usage());
+  const parsed = new Map();
+  for (let index = 0; index < values.length; index += 2) {
+    const flag = values[index];
+    const value = values[index + 1];
+    if (!["--origin", "--transport-origin"].includes(flag) || !value || parsed.has(flag)) {
+      throw new Error(usage());
+    }
+    parsed.set(flag, value);
   }
-  return { origin: normalizeLiveOccurrenceOrigin(values[1]) };
+  if (!parsed.has("--origin")) throw new Error(usage());
+  return {
+    origin: normalizeLiveOccurrenceOrigin(parsed.get("--origin")),
+    ...(parsed.has("--transport-origin")
+      ? { transportOrigin: normalizeLiveOccurrenceTransportOrigin(parsed.get("--transport-origin")) }
+      : {}),
+  };
 }
 
 function contentType(response) {
@@ -116,18 +131,46 @@ async function readBoundedBody(response, maximumBytes, { expectedBytes = null, c
   };
 }
 
-async function fetchJson(origin, pathname, fetchImpl, timeoutMs) {
-  const url = new URL(pathname, `${origin}/`).href;
-  const response = await fetchImpl(url, {
+function requestUrl(canonicalUrl, origin, transportOrigin) {
+  const canonical = new URL(canonicalUrl);
+  if (
+    canonical.origin !== origin
+    || canonical.username
+    || canonical.password
+    || canonical.search
+    || canonical.hash
+  ) {
+    throw new Error("live occurrence request is not bound to a canonical attested-origin path");
+  }
+  return new URL(canonical.pathname, `${transportOrigin}/`).href;
+}
+
+function requestHeaders(accept) {
+  return {
+    Accept: accept,
+    "Accept-Encoding": "identity",
+    "User-Agent": "verdify-lab-live-occurrence-acceptance/1",
+  };
+}
+
+function requestOptions(timeoutMs, accept) {
+  return {
     method: "GET",
     redirect: "manual",
+    credentials: "omit",
+    referrerPolicy: "no-referrer",
     signal: AbortSignal.timeout(timeoutMs),
-    headers: {
-      Accept: "application/json",
-      "Accept-Encoding": "identity",
-      "User-Agent": "verdify-lab-live-occurrence-acceptance/1",
-    },
-  });
+    headers: requestHeaders(accept),
+  };
+}
+
+async function fetchJson(origin, transportOrigin, pathname, fetchImpl, timeoutMs) {
+  const canonicalUrl = new URL(pathname, `${origin}/`).href;
+  const url = requestUrl(canonicalUrl, origin, transportOrigin);
+  const response = await fetchImpl(
+    url,
+    requestOptions(timeoutMs, "application/json"),
+  );
   await requireResponse(url, response, "application/json");
   const body = await readBoundedBody(response, MAX_JSON_BYTES[pathname], { collect: true });
   let document;
@@ -139,18 +182,13 @@ async function fetchJson(origin, pathname, fetchImpl, timeoutMs) {
   return { document, bytes: body.body };
 }
 
-async function verifyBlob(asset, fetchImpl, timeoutMs) {
-  const response = await fetchImpl(asset.url, {
-    method: "GET",
-    redirect: "manual",
-    signal: AbortSignal.timeout(timeoutMs),
-    headers: {
-      Accept: "image/png",
-      "Accept-Encoding": "identity",
-      "User-Agent": "verdify-lab-live-occurrence-acceptance/1",
-    },
-  });
-  await requireResponse(asset.url, response, "image/png");
+async function verifyBlob(asset, origin, transportOrigin, fetchImpl, timeoutMs) {
+  const url = requestUrl(asset.url, origin, transportOrigin);
+  const response = await fetchImpl(
+    url,
+    requestOptions(timeoutMs, "image/png"),
+  );
+  await requireResponse(url, response, "image/png");
   if (response.headers.get("cache-control") !== LIVE_OCCURRENCE_EXPECTATIONS.immutableCacheControl) {
     await response.body.cancel().catch(() => {});
     throw new Error(`live occurrence blob is not served with immutable caching: ${asset.publicPath}`);
@@ -198,11 +236,18 @@ async function mapBounded(values, concurrency, operation) {
 
 export async function verifyLiveOccurrences({
   origin,
+  transportOrigin,
   fetchImpl = globalThis.fetch,
   timeoutMs = DEFAULT_TIMEOUT_MS,
   concurrency = DEFAULT_CONCURRENCY,
 } = {}) {
   const normalizedOrigin = normalizeLiveOccurrenceOrigin(origin);
+  if (normalizedOrigin !== LIVE_OCCURRENCE_ATTESTED_ORIGIN) {
+    throw new Error(`live occurrence acceptance is bound to ${LIVE_OCCURRENCE_ATTESTED_ORIGIN}`);
+  }
+  const normalizedTransportOrigin = transportOrigin === undefined
+    ? normalizedOrigin
+    : normalizeLiveOccurrenceTransportOrigin(transportOrigin);
   if (typeof fetchImpl !== "function") throw new Error("live occurrence verifier requires a fetch implementation");
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 100 || timeoutMs > 30_000) {
     throw new Error("live occurrence request timeout must be between 100 and 30000 milliseconds");
@@ -212,8 +257,8 @@ export async function verifyLiveOccurrences({
   }
 
   const [buildValue, occurrenceValue] = await Promise.all([
-    fetchJson(normalizedOrigin, "/static-build.json", fetchImpl, timeoutMs),
-    fetchJson(normalizedOrigin, "/occurrence-manifest.json", fetchImpl, timeoutMs),
+    fetchJson(normalizedOrigin, normalizedTransportOrigin, "/static-build.json", fetchImpl, timeoutMs),
+    fetchJson(normalizedOrigin, normalizedTransportOrigin, "/occurrence-manifest.json", fetchImpl, timeoutMs),
   ]);
   const documents = validateLiveOccurrenceDocuments({
     origin: normalizedOrigin,
@@ -224,7 +269,7 @@ export async function verifyLiveOccurrences({
   const blobs = await mapBounded(
     documents.assets,
     concurrency,
-    (asset) => verifyBlob(asset, fetchImpl, timeoutMs),
+    (asset) => verifyBlob(asset, normalizedOrigin, normalizedTransportOrigin, fetchImpl, timeoutMs),
   );
   const totalBlobBytes = blobs.reduce((total, blob) => total + blob.bytes, 0);
   return Object.freeze({
@@ -241,8 +286,8 @@ export async function verifyLiveOccurrences({
 }
 
 async function main() {
-  const { origin } = parseArgs(process.argv.slice(2));
-  const report = await verifyLiveOccurrences({ origin });
+  const { origin, transportOrigin } = parseArgs(process.argv.slice(2));
+  const report = await verifyLiveOccurrences({ origin, transportOrigin });
   process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
 }
 

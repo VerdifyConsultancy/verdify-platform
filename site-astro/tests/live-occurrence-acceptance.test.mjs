@@ -9,7 +9,9 @@ import { deflateSync } from "node:zlib";
 
 import {
   canonicalEvidenceBlobUrl,
+  LIVE_OCCURRENCE_ATTESTED_ORIGIN,
   normalizeLiveOccurrenceOrigin,
+  normalizeLiveOccurrenceTransportOrigin,
   normalizeSha256,
   validateLiveOccurrenceDocuments,
 } from "../scripts/lib/live-occurrence-acceptance.mjs";
@@ -23,6 +25,7 @@ const execFileAsync = promisify(execFile);
 const SITE_ROOT = path.resolve(import.meta.dirname, "..");
 const CLI = path.join(SITE_ROOT, "scripts/verify-live-occurrences.mjs");
 const IMMUTABLE_CACHE = "public, max-age=31536000, immutable";
+const ATTESTED_ORIGIN = LIVE_OCCURRENCE_ATTESTED_ORIGIN;
 
 const CRC_TABLE = Array.from({ length: 256 }, (_, value) => {
   let crc = value;
@@ -213,6 +216,11 @@ async function localServer(context) {
       method: request.method,
       pathname,
       acceptEncoding: request.headers["accept-encoding"],
+      host: request.headers.host,
+      authorization: request.headers.authorization,
+      cookie: request.headers.cookie,
+      origin: request.headers.origin,
+      referer: request.headers.referer,
     });
     if (state.documentRedirect && pathname === "/static-build.json") {
       response.writeHead(302, { Location: "/redirect-target" });
@@ -294,10 +302,25 @@ async function localServer(context) {
     server.closeAllConnections();
   }));
   const address = server.address();
-  const origin = `http://127.0.0.1:${address.port}`;
-  state.fixture = fixture(origin);
+  const transportOrigin = `http://127.0.0.1:${address.port}`;
+  state.fixture = fixture(ATTESTED_ORIGIN);
   state.affectedPath = [...state.fixture.assets.keys()][0];
-  return { origin, state };
+  return { transportOrigin, state };
+}
+
+function publicFixtureFetch(transportOrigin, requests) {
+  return async (url, options) => {
+    requests.push({ url, options });
+    const canonical = new URL(url);
+    const response = await fetch(new URL(canonical.pathname, `${transportOrigin}/`), options);
+    return {
+      status: response.status,
+      redirected: response.redirected,
+      url,
+      headers: response.headers,
+      body: response.body,
+    };
+  };
 }
 
 test("digest and origin normalization preserve the raw/prefixed selection contract", () => {
@@ -309,6 +332,10 @@ test("digest and origin normalization preserve the raw/prefixed selection contra
   assert.equal(normalizeLiveOccurrenceOrigin("https://lab-stage.verdify.ai/"), "https://lab-stage.verdify.ai");
   assert.throws(() => normalizeLiveOccurrenceOrigin("https://lab-stage.verdify.ai/path"), /origin/u);
   assert.throws(() => normalizeLiveOccurrenceOrigin("https://user@example.com/"), /origin/u);
+  assert.equal(normalizeLiveOccurrenceTransportOrigin("http://127.0.0.1:18080"), "http://127.0.0.1:18080");
+  assert.equal(normalizeLiveOccurrenceTransportOrigin("https://127.42.7.9:18443"), "https://127.42.7.9:18443");
+  assert.equal(normalizeLiveOccurrenceTransportOrigin("http://[::1]:18080"), "http://[::1]:18080");
+  assert.throws(() => normalizeLiveOccurrenceTransportOrigin("http://127.0.0.1:18080/."), /transport origin/u);
 });
 
 test("pure document acceptance requires complete 143+2 selected evidence and canonical unique blobs", () => {
@@ -388,10 +415,30 @@ test("pure document acceptance binds the exact served occurrence-manifest bytes"
   assert.throws(() => validate(value, origin), /manifest bytes/u);
 });
 
-test("bounded live verifier accepts 143 graphs, two cameras, and every unique immutable PNG", async (context) => {
-  const { origin, state } = await localServer(context);
-  const result = await verifyLiveOccurrences({ origin });
+test("public-default verifier requests only canonical attested-origin paths", async (context) => {
+  const { transportOrigin, state } = await localServer(context);
+  const requests = [];
+  const result = await verifyLiveOccurrences({
+    origin: ATTESTED_ORIGIN,
+    fetchImpl: publicFixtureFetch(transportOrigin, requests),
+  });
+  assert.equal(result.origin, ATTESTED_ORIGIN);
+  assert.equal(requests.length, 5);
+  assert.equal(requests.every(({ url }) => new URL(url).origin === ATTESTED_ORIGIN), true);
+  assert.equal(requests.every(({ options }) => options.credentials === "omit"), true);
+  assert.equal(requests.every(({ options }) => options.referrerPolicy === "no-referrer"), true);
+  assert.equal(requests.every(({ options }) => !Object.hasOwn(options.headers, "Host")), true);
+  assert.equal(requests.every(({ options }) => !Object.hasOwn(options.headers, "Origin")), true);
+  assert.equal(requests.every(({ options }) => !Object.hasOwn(options.headers, "Authorization")), true);
+  assert.equal(requests.every(({ options }) => !Object.hasOwn(options.headers, "Cookie")), true);
+  assert.equal(state.requests.every(({ acceptEncoding }) => acceptEncoding === "identity"), true);
+});
+
+test("explicit internal transport accepts 143 graphs, two cameras, and every canonical immutable PNG", async (context) => {
+  const { transportOrigin, state } = await localServer(context);
+  const result = await verifyLiveOccurrences({ origin: ATTESTED_ORIGIN, transportOrigin });
   assert.equal(result.contract, "verdify.lab-live-occurrence-acceptance");
+  assert.equal(result.origin, ATTESTED_ORIGIN);
   assert.deepEqual(result.counts, {
     graphs: 143,
     currentMedia: 2,
@@ -404,20 +451,89 @@ test("bounded live verifier accepts 143 graphs, two cameras, and every unique im
   assert.equal(state.requests.filter(({ pathname }) => state.fixture.assets.has(pathname)).length, 3);
   assert.equal(state.requests.every(({ method }) => method === "GET"), true);
   assert.equal(state.requests.every(({ acceptEncoding }) => acceptEncoding === "identity"), true);
+  assert.deepEqual([...new Set(state.requests.map(({ host }) => host))], [new URL(transportOrigin).host]);
+  assert.equal(state.requests.every(({ authorization, cookie, origin, referer }) => (
+    authorization === undefined
+    && cookie === undefined
+    && origin === undefined
+    && referer === undefined
+  )), true);
 });
 
 test("executable verifier emits the canonical acceptance report against a local fixture", async (context) => {
-  const { origin } = await localServer(context);
-  const { stdout, stderr } = await execFileAsync(process.execPath, [CLI, "--origin", origin], {
+  const { transportOrigin } = await localServer(context);
+  const { stdout, stderr } = await execFileAsync(process.execPath, [
+    CLI,
+    "--origin",
+    ATTESTED_ORIGIN,
+    "--transport-origin",
+    transportOrigin,
+  ], {
     cwd: SITE_ROOT,
     timeout: 30_000,
   });
   assert.equal(stderr, "");
   const report = JSON.parse(stdout);
   assert.equal(report.contract, "verdify.lab-live-occurrence-acceptance");
-  assert.equal(report.origin, origin);
+  assert.equal(report.origin, ATTESTED_ORIGIN);
   assert.equal(report.counts.occurrences, 145);
 });
+
+test("live verifier rejects an attested-origin mismatch before accepting transported documents", async (context) => {
+  const { transportOrigin, state } = await localServer(context);
+  state.fixture.build.siteOrigin = "https://other.invalid";
+  await assert.rejects(
+    () => verifyLiveOccurrences({ origin: ATTESTED_ORIGIN, transportOrigin }),
+    /live origin/u,
+  );
+
+  let requests = 0;
+  await assert.rejects(
+    () => verifyLiveOccurrences({
+      origin: "https://other.invalid",
+      transportOrigin,
+      fetchImpl: async () => {
+        requests += 1;
+        throw new Error("must not request");
+      },
+    }),
+    /bound to https:\/\/lab-stage\.verdify\.ai/u,
+  );
+  assert.equal(requests, 0);
+});
+
+for (const transportOrigin of [
+  "ftp://127.0.0.1:18080",
+  "http://user@127.0.0.1:18080",
+  "http://127.0.0.1:18080/path",
+  "http://127.0.0.1:18080?query=1",
+  "http://127.0.0.1:18080#fragment",
+  "http://localhost:18080",
+  "http://pod.internal:18080",
+  "http://10.0.0.1:18080",
+  "http://172.16.0.1:18080",
+  "http://192.168.1.1:18080",
+  "http://8.8.8.8:18080",
+  "http://[::2]:18080",
+  "http://[fd00::1]:18080",
+  "http://[::ffff:127.0.0.1]:18080",
+]) {
+  test(`live verifier rejects unsafe explicit transport ${transportOrigin}`, async () => {
+    let requests = 0;
+    await assert.rejects(
+      () => verifyLiveOccurrences({
+        origin: ATTESTED_ORIGIN,
+        transportOrigin,
+        fetchImpl: async () => {
+          requests += 1;
+          throw new Error("must not request");
+        },
+      }),
+      /transport origin/u,
+    );
+    assert.equal(requests, 0);
+  });
+}
 
 for (const [mode, pattern] of [
   ["redirect", /unredirected HTTP 200/u],
@@ -430,9 +546,12 @@ for (const [mode, pattern] of [
   ["encoding", /unsupported content encoding/u],
 ]) {
   test(`bounded live verifier rejects blob ${mode} drift`, async (context) => {
-    const { origin, state } = await localServer(context);
+    const { transportOrigin, state } = await localServer(context);
     state.blobMode = mode;
-    await assert.rejects(() => verifyLiveOccurrences({ origin }), pattern);
+    await assert.rejects(
+      () => verifyLiveOccurrences({ origin: ATTESTED_ORIGIN, transportOrigin }),
+      pattern,
+    );
     if (mode === "redirect") {
       assert.equal(state.requests.some(({ pathname }) => pathname === "/redirect-target"), false);
     }
@@ -440,7 +559,7 @@ for (const [mode, pattern] of [
 }
 
 test("Content-Length rejection cancels the unread blob response body", async (context) => {
-  const { origin } = await localServer(context);
+  const { transportOrigin } = await localServer(context);
   let cancellations = 0;
   const fetchImpl = async (url, options) => {
     if (!new URL(url).pathname.startsWith("/evidence/blobs/sha256/")) {
@@ -463,24 +582,36 @@ test("Content-Length rejection cancels the unread blob response body", async (co
     };
   };
   await assert.rejects(
-    () => verifyLiveOccurrences({ origin, fetchImpl, concurrency: 1 }),
+    () => verifyLiveOccurrences({
+      origin: ATTESTED_ORIGIN,
+      transportOrigin,
+      fetchImpl,
+      concurrency: 1,
+    }),
     /Content-Length differs/u,
   );
   assert.equal(cancellations, 1);
 });
 
 test("live blob requests never exceed the fixed concurrency ceiling", async (context) => {
-  const { origin, state } = await localServer(context);
+  const { transportOrigin, state } = await localServer(context);
   addUniqueGraphAssets(state.fixture, 8);
   state.blobMode = "delay";
-  const report = await verifyLiveOccurrences({ origin, concurrency: 4 });
+  const report = await verifyLiveOccurrences({
+    origin: ATTESTED_ORIGIN,
+    transportOrigin,
+    concurrency: 4,
+  });
   assert.equal(report.counts.materializedBlobs, 11);
   assert.equal(state.maximumActiveBlobs, 4);
 });
 
 test("bounded live verifier refuses document redirects without following them", async (context) => {
-  const { origin, state } = await localServer(context);
+  const { transportOrigin, state } = await localServer(context);
   state.documentRedirect = true;
-  await assert.rejects(() => verifyLiveOccurrences({ origin }), /unredirected HTTP 200/u);
+  await assert.rejects(
+    () => verifyLiveOccurrences({ origin: ATTESTED_ORIGIN, transportOrigin }),
+    /unredirected HTTP 200/u,
+  );
   assert.equal(state.requests.some(({ pathname }) => pathname === "/redirect-target"), false);
 });

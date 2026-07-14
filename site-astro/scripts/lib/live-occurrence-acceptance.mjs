@@ -10,6 +10,8 @@ export const LIVE_OCCURRENCE_EXPECTATIONS = Object.freeze({
   immutableCacheControl: "public, max-age=31536000, immutable",
 });
 
+export const LIVE_OCCURRENCE_ATTESTED_ORIGIN = "https://lab-stage.verdify.ai";
+
 const SHA256_RE = /^(?:sha256:)?([0-9a-f]{64})$/u;
 const PNG_PATH_RE = /^\/evidence\/blobs\/sha256\/([0-9a-f]{64})\.png$/u;
 const ISO_INSTANT_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/u;
@@ -113,12 +115,12 @@ export function normalizeSha256(value, label = "SHA-256") {
   return match[1];
 }
 
-export function normalizeLiveOccurrenceOrigin(value) {
+function normalizeHttpOrigin(value, label) {
   let parsed;
   try {
     parsed = new URL(value);
   } catch {
-    throw new Error("live occurrence origin is not a URL");
+    throw new Error(`${label} is not a URL`);
   }
   if (
     !["http:", "https:"].includes(parsed.protocol)
@@ -127,10 +129,28 @@ export function normalizeLiveOccurrenceOrigin(value) {
     || parsed.pathname !== "/"
     || parsed.search
     || parsed.hash
+    || (value !== parsed.origin && value !== `${parsed.origin}/`)
   ) {
-    throw new Error("live occurrence origin must be an HTTP(S) origin without credentials, path, query, or fragment");
+    throw new Error(`${label} must be a canonical HTTP(S) origin without credentials, path, query, or fragment`);
   }
   return parsed.origin;
+}
+
+export function normalizeLiveOccurrenceOrigin(value) {
+  return normalizeHttpOrigin(value, "live occurrence origin");
+}
+
+export function normalizeLiveOccurrenceTransportOrigin(value) {
+  const origin = normalizeHttpOrigin(value, "live occurrence transport origin");
+  const { hostname } = new URL(origin);
+  const octets = hostname.split(".");
+  const ipv4Loopback = octets.length === 4
+    && octets[0] === "127"
+    && octets.every((octet) => /^(?:0|[1-9][0-9]{0,2})$/u.test(octet) && Number(octet) <= 255);
+  if (!ipv4Loopback && hostname !== "[::1]") {
+    throw new Error("live occurrence transport origin must use a canonical literal loopback host in 127/8 or [::1]");
+  }
+  return origin;
 }
 
 export function canonicalEvidenceBlobUrl(origin, fallback) {
@@ -281,6 +301,9 @@ export function validateLiveOccurrenceDocuments({
   occurrenceManifestBytes,
 }) {
   const normalizedOrigin = normalizeLiveOccurrenceOrigin(origin);
+  if (normalizedOrigin !== LIVE_OCCURRENCE_ATTESTED_ORIGIN) {
+    throw new Error(`live occurrence acceptance is bound to ${LIVE_OCCURRENCE_ATTESTED_ORIGIN}`);
+  }
   requireRecord(build, "static build");
   requireRecord(occurrenceManifest, "occurrence manifest");
   if (!Buffer.isBuffer(occurrenceManifestBytes) || occurrenceManifestBytes.length < 1) {
