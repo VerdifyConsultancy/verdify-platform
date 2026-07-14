@@ -7,7 +7,10 @@ import {
   staticOccurrenceDiscoveryProjection,
   staticOccurrenceDiscoverySha256,
 } from "./lib/occurrence-export-contract.mjs";
-import { planGraphExportRequests } from "./lib/graph-export-producer.mjs";
+import {
+  planGraphExportRequests,
+  reportingDatasourceIdentitySha256,
+} from "./lib/graph-export-producer.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DIST = path.join(ROOT, "dist");
@@ -34,11 +37,15 @@ const OFFLINE_NON_LIVE_REPORTING_FEED = Object.freeze({
   sourceWatermarkAt: "2026-07-13T00:00:00Z",
 });
 const reportingFeedSha256 = reportingFeedEnvelopeSha256(OFFLINE_NON_LIVE_REPORTING_FEED);
+const offlineReportingDatasourceSha256 = reportingDatasourceIdentitySha256(
+  "lab-stage-offline-dedicated-reporting-proof",
+);
 const graphPlan = planGraphExportRequests({
   policy: occurrencePolicy,
   manifest: discoveryOccurrenceManifest,
   manifestSha256: discoveryOccurrenceManifestSha256,
   reportingFeedSha256,
+  reportingDatasourceIdentitySha256: offlineReportingDatasourceSha256,
 });
 
 function verifySelectedBuild() {

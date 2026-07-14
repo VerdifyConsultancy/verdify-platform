@@ -290,12 +290,21 @@ function fullBatch({
   };
 }
 
-test("checked-in Phase 4c policy is an exact blocked 143+2 allowlist", async () => {
+test("checked-in Phase 4c policy is the exact Jason-approved 143+2 allowlist", async () => {
   const policy = JSON.parse(await readFile(new URL("../config/lab-stage-occurrence-export-policy.json", import.meta.url)));
   validateOccurrenceExportPolicy(policy);
   assert.equal(policy.schemaVersion, 2);
   assert.equal(policy.policyVersion, "lab-public-reporting-v2");
-  assert.equal(policy.activation.state, "blocked");
+  assert.deepEqual(policy.activation, {
+    state: "approved",
+    approvedBy: "jason",
+    approvedAt: "2026-07-14T01:34:00Z",
+    requiredGates: [
+      "jason-approval",
+      "operator-owned-reporting-feed",
+      "least-privilege-reporting-credential",
+    ],
+  });
   assert.equal(policy.reportingFeed.authority, "operator-owned");
   assert.equal(policy.reportingFeed.existingAnonymousGraphsAllowed, false);
   assert.equal(policy.reportingFeed.trackAPrimaryRoleAllowed, false);

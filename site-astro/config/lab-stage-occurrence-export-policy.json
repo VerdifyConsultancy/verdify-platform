@@ -3,9 +3,9 @@
   "schemaVersion": 2,
   "policyVersion": "lab-public-reporting-v2",
   "activation": {
-    "state": "blocked",
-    "approvedBy": null,
-    "approvedAt": null,
+    "state": "approved",
+    "approvedBy": "jason",
+    "approvedAt": "2026-07-14T01:34:00Z",
     "requiredGates": [
       "jason-approval",
       "operator-owned-reporting-feed",
