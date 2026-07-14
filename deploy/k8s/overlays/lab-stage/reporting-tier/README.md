@@ -27,7 +27,8 @@ no matching workload, so it has no endpoints. `projection-readiness.sql` is a
 verification-only, read-only transaction: it creates no role, schema, view,
 table, grant, or credential. It requires a distinct non-Track-A reader, only
 selectable views/materialized views, no object-creation or relation-write
-privileges, and exactly one canonical `lab-public-v1` source-watermark row. The
+privileges, no selectable non-system relation outside `lab_reporting`, and
+exactly one canonical `lab-public-v1` source-watermark row. The
 reader's default schema must be `lab_reporting`, so the existing dashboards'
 unqualified table/view names cannot resolve against a primary schema. The
 private HTTP adapter must expose that same row at `/v1/source-watermark` using
@@ -57,8 +58,9 @@ but no exporter image yet bakes and verifies the exact Jason-approved policy
 byte digest. A mutable ConfigMap alone does not satisfy that executable binding.
 operator projection, both Secrets, and occurrence-store metadata/writer binding
 must exist and pass their separate reviews. NetworkPolicy currently permits the
-producer to reach only DNS and the private reporting gateway; public-camera and
-object-store egress remain absent until their reviewed integration is added.
+producer to reach only DNS, the private reporting gateway, and the projection's
+private watermark endpoint; public-camera and object-store egress remain absent
+until their reviewed integration is added.
 
 Before any activation patch, independently render this directory and require:
 

@@ -111,3 +111,11 @@ spec:
       ports:
         - protocol: TCP
           port: 8080
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: verdify-lab-reporting-projection
+              app.kubernetes.io/component: lab-reporting-projection
+      ports:
+        - protocol: TCP
+          port: 8080

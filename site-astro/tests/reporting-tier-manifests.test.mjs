@@ -119,6 +119,7 @@ test("projection Service and verifier are fixed, read-only, and have no backing 
   assert.match(sql, /current_database\(\) <> 'verdify'/u);
   assert.match(sql, /current_schema\(\) = 'lab_reporting' AS reporting_search_path/u);
   assert.match(sql, /no_relation_writes/u);
+  assert.match(sql, /no_non_reporting_relation_select/u);
   assert.match(sql, /count\(\*\) = 1 AS exactly_one/u);
   assert.match(sql, /LIMIT 2;/u);
   assert.doesNotMatch(sql, /^\s*(?:CREATE|ALTER|DROP|GRANT|REVOKE|INSERT|UPDATE|DELETE|TRUNCATE)\b/imu);
@@ -289,11 +290,18 @@ test("NetworkPolicies expose only projection, gateway, and DNS before activation
   const producer = one(resources, "NetworkPolicy", "verdify-lab-occurrence-producer-isolated");
   assert.deepEqual(producer.spec.policyTypes, ["Ingress", "Egress"]);
   assert.deepEqual(producer.spec.ingress, []);
-  assert.equal(producer.spec.egress.length, 2);
+  assert.equal(producer.spec.egress.length, 3);
   assert.deepEqual(producer.spec.egress[1], {
     to: [{ podSelector: { matchLabels: {
       "app.kubernetes.io/name": "verdify-lab-reporting-tier",
       "app.kubernetes.io/component": "lab-reporting-tier",
+    } } }],
+    ports: [{ protocol: "TCP", port: 8080 }],
+  });
+  assert.deepEqual(producer.spec.egress[2], {
+    to: [{ podSelector: { matchLabels: {
+      "app.kubernetes.io/name": "verdify-lab-reporting-projection",
+      "app.kubernetes.io/component": "lab-reporting-projection",
     } } }],
     ports: [{ protocol: "TCP", port: 8080 }],
   });

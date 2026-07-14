@@ -53,6 +53,24 @@ SELECT
   \quit 3
 \endif
 
+SELECT NOT EXISTS (
+  SELECT 1
+  FROM pg_class AS c
+  JOIN pg_namespace AS n ON n.oid = c.relnamespace
+  WHERE c.relkind IN ('r', 'p', 'v', 'm', 'f')
+    AND n.nspname <> 'lab_reporting'
+    AND n.nspname <> 'information_schema'
+    AND n.nspname NOT LIKE 'pg\_%' ESCAPE '\'
+    AND has_table_privilege(current_user, c.oid, 'SELECT')
+) AS no_non_reporting_relation_select
+\gset isolation_
+
+\if :isolation_no_non_reporting_relation_select
+\else
+  \echo 'projection readiness failed: reporting reader can select a non-reporting relation'
+  \quit 3
+\endif
+
 WITH relations AS (
   SELECT c.oid, c.relkind
   FROM pg_class AS c
