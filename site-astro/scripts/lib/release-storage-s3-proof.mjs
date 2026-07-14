@@ -61,15 +61,19 @@ function emptyEvidence() {
   };
 }
 
-async function cleanupProbe(store, key, etag, evidence) {
+async function cleanupProbe(store, key, expectedBytes, evidence) {
   evidence.cleanupAttempted = true;
   try {
-    const current = await store.head(key, {
+    const current = await store.read(key, {
       missing: true,
+      maximumBytes: MAX_PROOF_BYTES,
       label: "release storage activation proof object",
     });
     if (current !== null) {
-      const deleted = await store.deleteIfMatch(key, current.etag ?? etag);
+      // A failed absent-only create may have collided with unrelated bytes. Only
+      // the exact bounded probe body is owned by this proof and safe to remove.
+      if (!current.bytes.equals(expectedBytes)) return;
+      const deleted = await store.deleteIfMatch(key, current.etag);
       if (!deleted.deleted) return;
     }
     evidence.cleanupComplete = await store.head(key, {
@@ -121,7 +125,7 @@ async function probePrefix(store, role, nonce, probedAt) {
   } catch {
     return evidence;
   } finally {
-    await cleanupProbe(store, key, etag, evidence);
+    await cleanupProbe(store, key, bytes, evidence);
   }
 }
 

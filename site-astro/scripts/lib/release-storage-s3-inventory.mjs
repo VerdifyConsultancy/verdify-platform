@@ -362,11 +362,15 @@ async function occurrenceInventory(store, maximumObjects) {
 }
 
 function storePair(siteStore, occurrenceStore) {
+  const sitePrefix = siteStore?.objects?.prefix;
+  const occurrencePrefix = occurrenceStore?.objects?.prefix;
   if (
     !(siteStore instanceof S3SiteReleaseStore)
     || !(occurrenceStore instanceof S3OccurrenceReleaseStore)
     || siteStore.objects.bucket !== occurrenceStore.objects.bucket
-    || siteStore.objects.prefix === occurrenceStore.objects.prefix
+    || sitePrefix === occurrencePrefix
+    || sitePrefix.startsWith(`${occurrencePrefix}/`)
+    || occurrencePrefix.startsWith(`${sitePrefix}/`)
   ) throw new Error("release inventory requires distinct S3 site and occurrence stores in one bucket");
 }
 
