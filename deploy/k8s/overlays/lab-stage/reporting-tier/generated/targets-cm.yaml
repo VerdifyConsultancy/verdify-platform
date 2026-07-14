@@ -271,7 +271,7 @@ data:
           "occurrenceId": "graph_8916988c29a61040f267cc5d",
           "uid": "greenhouse-weather",
           "panelId": "20",
-          "renderPath": "/render/d-solo/greenhouse-weather/",
+          "renderPath": "/render/d-solo/greenhouse-weather",
           "query": {
             "from": [
               "now-24h"
@@ -299,7 +299,7 @@ data:
           "occurrenceId": "graph_dc3a3d8417d474f6226a49c1",
           "uid": "greenhouse-weather",
           "panelId": "31",
-          "renderPath": "/render/d-solo/greenhouse-weather/",
+          "renderPath": "/render/d-solo/greenhouse-weather",
           "query": {
             "from": [
               "now-24h"
@@ -327,7 +327,7 @@ data:
           "occurrenceId": "graph_671e385043b07c8340edeca5",
           "uid": "greenhouse-weather",
           "panelId": "32",
-          "renderPath": "/render/d-solo/greenhouse-weather/",
+          "renderPath": "/render/d-solo/greenhouse-weather",
           "query": {
             "from": [
               "now-24h"
@@ -355,7 +355,7 @@ data:
           "occurrenceId": "graph_5a879b6046139e6b0d974484",
           "uid": "greenhouse-weather",
           "panelId": "50",
-          "renderPath": "/render/d-solo/greenhouse-weather/",
+          "renderPath": "/render/d-solo/greenhouse-weather",
           "query": {
             "from": [
               "now-24h"
@@ -383,7 +383,7 @@ data:
           "occurrenceId": "graph_1d7356340f879ae721f127cf",
           "uid": "greenhouse-weather",
           "panelId": "52",
-          "renderPath": "/render/d-solo/greenhouse-weather/",
+          "renderPath": "/render/d-solo/greenhouse-weather",
           "query": {
             "from": [
               "now-24h"
@@ -411,7 +411,7 @@ data:
           "occurrenceId": "graph_3c55067fa0e34e115fcb4bd6",
           "uid": "greenhouse-weather",
           "panelId": "40",
-          "renderPath": "/render/d-solo/greenhouse-weather/",
+          "renderPath": "/render/d-solo/greenhouse-weather",
           "query": {
             "from": [
               "now-24h"
@@ -439,7 +439,7 @@ data:
           "occurrenceId": "graph_b137a9438d62561dbf18918e",
           "uid": "greenhouse-weather",
           "panelId": "910",
-          "renderPath": "/render/d-solo/greenhouse-weather/",
+          "renderPath": "/render/d-solo/greenhouse-weather",
           "query": {
             "from": [
               "now-7d"
@@ -467,7 +467,7 @@ data:
           "occurrenceId": "graph_a4eea29a50c2b51ef61f1a0d",
           "uid": "greenhouse-equipment",
           "panelId": "900",
-          "renderPath": "/render/d-solo/greenhouse-equipment/",
+          "renderPath": "/render/d-solo/greenhouse-equipment",
           "query": {
             "orgId": [
               "1"
@@ -489,7 +489,7 @@ data:
           "occurrenceId": "graph_905f40ebaf3874ac709ffaea",
           "uid": "site-evidence-operations",
           "panelId": "4",
-          "renderPath": "/render/d-solo/site-evidence-operations/",
+          "renderPath": "/render/d-solo/site-evidence-operations",
           "query": {
             "orgId": [
               "1"
@@ -514,7 +514,7 @@ data:
           "occurrenceId": "graph_0837d0969ef95509c386ebb4",
           "uid": "site-evidence-operations",
           "panelId": "5",
-          "renderPath": "/render/d-solo/site-evidence-operations/",
+          "renderPath": "/render/d-solo/site-evidence-operations",
           "query": {
             "from": [
               "now-24h"
@@ -542,7 +542,7 @@ data:
           "occurrenceId": "graph_5d6cf87ffc363274e24a718b",
           "uid": "site-evidence-operations",
           "panelId": "6",
-          "renderPath": "/render/d-solo/site-evidence-operations/",
+          "renderPath": "/render/d-solo/site-evidence-operations",
           "query": {
             "from": [
               "now-24h"
@@ -570,7 +570,7 @@ data:
           "occurrenceId": "graph_c1944bf13e009d6a07a39a76",
           "uid": "site-evidence-operations",
           "panelId": "7",
-          "renderPath": "/render/d-solo/site-evidence-operations/",
+          "renderPath": "/render/d-solo/site-evidence-operations",
           "query": {
             "orgId": [
               "1"
@@ -592,7 +592,7 @@ data:
           "occurrenceId": "graph_edd3631d9a62a05f28f47b1b",
           "uid": "site-evidence-operations",
           "panelId": "15",
-          "renderPath": "/render/d-solo/site-evidence-operations/",
+          "renderPath": "/render/d-solo/site-evidence-operations",
           "query": {
             "orgId": [
               "1"
@@ -614,7 +614,7 @@ data:
           "occurrenceId": "graph_3bace4aeaceaf267e1537d0b",
           "uid": "greenhouse-equipment",
           "panelId": "910",
-          "renderPath": "/render/d-solo/greenhouse-equipment/",
+          "renderPath": "/render/d-solo/greenhouse-equipment",
           "query": {
             "orgId": [
               "1"
@@ -636,7 +636,7 @@ data:
           "occurrenceId": "graph_c664a6a16210c9f60d2a217c",
           "uid": "greenhouse-equipment",
           "panelId": "17",
-          "renderPath": "/render/d-solo/greenhouse-equipment/",
+          "renderPath": "/render/d-solo/greenhouse-equipment",
           "query": {
             "from": [
               "now-30d"
@@ -664,7 +664,7 @@ data:
           "occurrenceId": "graph_6c23c8bbe07119f24185f134",
           "uid": "site-climate",
           "panelId": "121",
-          "renderPath": "/render/d-solo/site-climate/",
+          "renderPath": "/render/d-solo/site-climate",
           "query": {
             "from": [
               "now-30d"
@@ -692,7 +692,7 @@ data:
           "occurrenceId": "graph_13eb5811f50628163aa56a86",
           "uid": "greenhouse-equipment",
           "panelId": "26",
-          "renderPath": "/render/d-solo/greenhouse-equipment/",
+          "renderPath": "/render/d-solo/greenhouse-equipment",
           "query": {
             "from": [
               "now-30d"
@@ -720,7 +720,7 @@ data:
           "occurrenceId": "graph_d0d37a801c0914e7bc7879ff",
           "uid": "greenhouse-equipment",
           "panelId": "25",
-          "renderPath": "/render/d-solo/greenhouse-equipment/",
+          "renderPath": "/render/d-solo/greenhouse-equipment",
           "query": {
             "from": [
               "now-7d"
@@ -748,7 +748,7 @@ data:
           "occurrenceId": "graph_a8a45a45212ff3fb9791e7a5",
           "uid": "site-climate",
           "panelId": "19",
-          "renderPath": "/render/d-solo/site-climate/",
+          "renderPath": "/render/d-solo/site-climate",
           "query": {
             "from": [
               "now-24h"
@@ -776,7 +776,7 @@ data:
           "occurrenceId": "graph_41411d4d550a2f138da628de",
           "uid": "site-evidence-operations",
           "panelId": "19",
-          "renderPath": "/render/d-solo/site-evidence-operations/",
+          "renderPath": "/render/d-solo/site-evidence-operations",
           "query": {
             "from": [
               "now-24h"
@@ -804,7 +804,7 @@ data:
           "occurrenceId": "graph_be64b4bc6df9c31b722cb7e3",
           "uid": "site-evidence-operations",
           "panelId": "20",
-          "renderPath": "/render/d-solo/site-evidence-operations/",
+          "renderPath": "/render/d-solo/site-evidence-operations",
           "query": {
             "from": [
               "now-2h"
@@ -832,7 +832,7 @@ data:
           "occurrenceId": "graph_9fae40c075babe4af60a4838",
           "uid": "site-evidence-operations",
           "panelId": "21",
-          "renderPath": "/render/d-solo/site-evidence-operations/",
+          "renderPath": "/render/d-solo/site-evidence-operations",
           "query": {
             "from": [
               "now-24h"
@@ -860,7 +860,7 @@ data:
           "occurrenceId": "graph_5fd353f2e75933165f74f308",
           "uid": "site-evidence-operations",
           "panelId": "17",
-          "renderPath": "/render/d-solo/site-evidence-operations/",
+          "renderPath": "/render/d-solo/site-evidence-operations",
           "query": {
             "orgId": [
               "1"
@@ -882,7 +882,7 @@ data:
           "occurrenceId": "graph_2688be2bc4394375bc308a4a",
           "uid": "site-evidence-operations",
           "panelId": "18",
-          "renderPath": "/render/d-solo/site-evidence-operations/",
+          "renderPath": "/render/d-solo/site-evidence-operations",
           "query": {
             "orgId": [
               "1"
@@ -904,7 +904,7 @@ data:
           "occurrenceId": "graph_e3649f64408d9bd61b0200ff",
           "uid": "site-evidence-planning-quality",
           "panelId": "2",
-          "renderPath": "/render/d-solo/site-evidence-planning-quality/",
+          "renderPath": "/render/d-solo/site-evidence-planning-quality",
           "query": {
             "orgId": [
               "1"
@@ -926,7 +926,7 @@ data:
           "occurrenceId": "graph_a208f6f44312bfe1d475ec8b",
           "uid": "site-evidence-planning-quality",
           "panelId": "3",
-          "renderPath": "/render/d-solo/site-evidence-planning-quality/",
+          "renderPath": "/render/d-solo/site-evidence-planning-quality",
           "query": {
             "orgId": [
               "1"
@@ -948,7 +948,7 @@ data:
           "occurrenceId": "graph_118080d42bc3165f434f9768",
           "uid": "site-evidence-planning-quality",
           "panelId": "4",
-          "renderPath": "/render/d-solo/site-evidence-planning-quality/",
+          "renderPath": "/render/d-solo/site-evidence-planning-quality",
           "query": {
             "orgId": [
               "1"
@@ -970,7 +970,7 @@ data:
           "occurrenceId": "graph_1ffdfc79f485376896fe1b46",
           "uid": "site-evidence-planning-quality",
           "panelId": "5",
-          "renderPath": "/render/d-solo/site-evidence-planning-quality/",
+          "renderPath": "/render/d-solo/site-evidence-planning-quality",
           "query": {
             "orgId": [
               "1"
@@ -992,7 +992,7 @@ data:
           "occurrenceId": "graph_95b03b2523026fc08bae2802",
           "uid": "site-evidence-planning-quality",
           "panelId": "6",
-          "renderPath": "/render/d-solo/site-evidence-planning-quality/",
+          "renderPath": "/render/d-solo/site-evidence-planning-quality",
           "query": {
             "orgId": [
               "1"
@@ -1014,7 +1014,7 @@ data:
           "occurrenceId": "graph_fce53904c73f43a35173fc64",
           "uid": "site-evidence-planning-quality",
           "panelId": "7",
-          "renderPath": "/render/d-solo/site-evidence-planning-quality/",
+          "renderPath": "/render/d-solo/site-evidence-planning-quality",
           "query": {
             "orgId": [
               "1"
@@ -1036,7 +1036,7 @@ data:
           "occurrenceId": "graph_c2499ad79e85dfab6f3ebdcf",
           "uid": "site-evidence-planning-quality",
           "panelId": "10",
-          "renderPath": "/render/d-solo/site-evidence-planning-quality/",
+          "renderPath": "/render/d-solo/site-evidence-planning-quality",
           "query": {
             "from": [
               "now-30d"
@@ -1064,7 +1064,7 @@ data:
           "occurrenceId": "graph_71a223ba6efe4c3a37dc41bf",
           "uid": "site-evidence-planning-quality",
           "panelId": "20",
-          "renderPath": "/render/d-solo/site-evidence-planning-quality/",
+          "renderPath": "/render/d-solo/site-evidence-planning-quality",
           "query": {
             "from": [
               "now-30d"
@@ -1092,7 +1092,7 @@ data:
           "occurrenceId": "graph_3d369824ea488640199d6c6b",
           "uid": "site-evidence-planning-quality",
           "panelId": "11",
-          "renderPath": "/render/d-solo/site-evidence-planning-quality/",
+          "renderPath": "/render/d-solo/site-evidence-planning-quality",
           "query": {
             "from": [
               "now-72h"
@@ -1120,7 +1120,7 @@ data:
           "occurrenceId": "graph_dbb6e9fa52f8e2c86df0cac5",
           "uid": "site-evidence-planning-quality",
           "panelId": "12",
-          "renderPath": "/render/d-solo/site-evidence-planning-quality/",
+          "renderPath": "/render/d-solo/site-evidence-planning-quality",
           "query": {
             "from": [
               "now-72h"
@@ -1148,7 +1148,7 @@ data:
           "occurrenceId": "graph_b8fe97239c7c0c0cfc5f4dce",
           "uid": "site-evidence-planning-quality",
           "panelId": "13",
-          "renderPath": "/render/d-solo/site-evidence-planning-quality/",
+          "renderPath": "/render/d-solo/site-evidence-planning-quality",
           "query": {
             "from": [
               "now-14d"
@@ -1176,7 +1176,7 @@ data:
           "occurrenceId": "graph_77a83bdb31b9261baa47174f",
           "uid": "site-evidence-planning-quality",
           "panelId": "14",
-          "renderPath": "/render/d-solo/site-evidence-planning-quality/",
+          "renderPath": "/render/d-solo/site-evidence-planning-quality",
           "query": {
             "from": [
               "now-30d"
@@ -1204,7 +1204,7 @@ data:
           "occurrenceId": "graph_7ac60c35a82890d8571da45b",
           "uid": "site-evidence-planning-quality",
           "panelId": "15",
-          "renderPath": "/render/d-solo/site-evidence-planning-quality/",
+          "renderPath": "/render/d-solo/site-evidence-planning-quality",
           "query": {
             "from": [
               "now-30d"
@@ -1232,7 +1232,7 @@ data:
           "occurrenceId": "graph_98de5e134751361282c8e3f9",
           "uid": "site-evidence-planning-quality",
           "panelId": "16",
-          "renderPath": "/render/d-solo/site-evidence-planning-quality/",
+          "renderPath": "/render/d-solo/site-evidence-planning-quality",
           "query": {
             "from": [
               "now-30d"
@@ -1260,7 +1260,7 @@ data:
           "occurrenceId": "graph_1185325ac8c7a34131757f2a",
           "uid": "site-evidence-planning-quality",
           "panelId": "17",
-          "renderPath": "/render/d-solo/site-evidence-planning-quality/",
+          "renderPath": "/render/d-solo/site-evidence-planning-quality",
           "query": {
             "orgId": [
               "1"
@@ -1282,7 +1282,7 @@ data:
           "occurrenceId": "graph_be9e44a0914b594b741ed4cd",
           "uid": "site-evidence-planning-quality",
           "panelId": "18",
-          "renderPath": "/render/d-solo/site-evidence-planning-quality/",
+          "renderPath": "/render/d-solo/site-evidence-planning-quality",
           "query": {
             "orgId": [
               "1"
@@ -1304,7 +1304,7 @@ data:
           "occurrenceId": "graph_d4328cbb8e6fe2f7ca38ff12",
           "uid": "site-evidence-planning-quality",
           "panelId": "19",
-          "renderPath": "/render/d-solo/site-evidence-planning-quality/",
+          "renderPath": "/render/d-solo/site-evidence-planning-quality",
           "query": {
             "orgId": [
               "1"
@@ -1326,7 +1326,7 @@ data:
           "occurrenceId": "graph_e23a24dbaa2c1b248ad0e3e5",
           "uid": "site-greenhouse-crops",
           "panelId": "2",
-          "renderPath": "/render/d-solo/site-greenhouse-crops/",
+          "renderPath": "/render/d-solo/site-greenhouse-crops",
           "query": {
             "from": [
               "now-24h"
@@ -1354,7 +1354,7 @@ data:
           "occurrenceId": "graph_12574e6164118d6e5cad660c",
           "uid": "site-greenhouse-crops",
           "panelId": "3",
-          "renderPath": "/render/d-solo/site-greenhouse-crops/",
+          "renderPath": "/render/d-solo/site-greenhouse-crops",
           "query": {
             "from": [
               "now-24h"
@@ -1382,7 +1382,7 @@ data:
           "occurrenceId": "graph_fa031f45ce7d7c5ae987ffb1",
           "uid": "site-greenhouse-crops",
           "panelId": "4",
-          "renderPath": "/render/d-solo/site-greenhouse-crops/",
+          "renderPath": "/render/d-solo/site-greenhouse-crops",
           "query": {
             "from": [
               "now-24h"
@@ -1410,7 +1410,7 @@ data:
           "occurrenceId": "graph_5edac7d30bcfb2d7cd6ba7a2",
           "uid": "site-greenhouse-crops",
           "panelId": "8",
-          "renderPath": "/render/d-solo/site-greenhouse-crops/",
+          "renderPath": "/render/d-solo/site-greenhouse-crops",
           "query": {
             "from": [
               "now-24h"
@@ -1438,7 +1438,7 @@ data:
           "occurrenceId": "graph_00dc2281841c93f9d0e3d1ee",
           "uid": "site-greenhouse-crops",
           "panelId": "13",
-          "renderPath": "/render/d-solo/site-greenhouse-crops/",
+          "renderPath": "/render/d-solo/site-greenhouse-crops",
           "query": {
             "from": [
               "now-24h"
@@ -1466,7 +1466,7 @@ data:
           "occurrenceId": "graph_0bef09d81405dc7b9f9afc5e",
           "uid": "site-greenhouse-equipment",
           "panelId": "2",
-          "renderPath": "/render/d-solo/site-greenhouse-equipment/",
+          "renderPath": "/render/d-solo/site-greenhouse-equipment",
           "query": {
             "from": [
               "now-30d"
@@ -1494,7 +1494,7 @@ data:
           "occurrenceId": "graph_e857ff05c4e303daaf6c808b",
           "uid": "site-greenhouse-equipment",
           "panelId": "3",
-          "renderPath": "/render/d-solo/site-greenhouse-equipment/",
+          "renderPath": "/render/d-solo/site-greenhouse-equipment",
           "query": {
             "from": [
               "now-30d"
@@ -1522,7 +1522,7 @@ data:
           "occurrenceId": "graph_7cde53d26bdc04f99cda0065",
           "uid": "site-greenhouse-equipment",
           "panelId": "4",
-          "renderPath": "/render/d-solo/site-greenhouse-equipment/",
+          "renderPath": "/render/d-solo/site-greenhouse-equipment",
           "query": {
             "from": [
               "now-30d"
@@ -1550,7 +1550,7 @@ data:
           "occurrenceId": "graph_0fb5cc09f819fc5e7886e570",
           "uid": "site-greenhouse-equipment",
           "panelId": "5",
-          "renderPath": "/render/d-solo/site-greenhouse-equipment/",
+          "renderPath": "/render/d-solo/site-greenhouse-equipment",
           "query": {
             "from": [
               "now-30d"
@@ -1578,7 +1578,7 @@ data:
           "occurrenceId": "graph_de6b39a830c232f5c5d1ad4a",
           "uid": "site-greenhouse-equipment",
           "panelId": "6",
-          "renderPath": "/render/d-solo/site-greenhouse-equipment/",
+          "renderPath": "/render/d-solo/site-greenhouse-equipment",
           "query": {
             "from": [
               "now-30d"
@@ -1606,7 +1606,7 @@ data:
           "occurrenceId": "graph_513325baf03581823d347378",
           "uid": "site-greenhouse-equipment",
           "panelId": "7",
-          "renderPath": "/render/d-solo/site-greenhouse-equipment/",
+          "renderPath": "/render/d-solo/site-greenhouse-equipment",
           "query": {
             "from": [
               "now-30d"
@@ -1634,7 +1634,7 @@ data:
           "occurrenceId": "graph_a3761ccce04da31aaf6e4c9e",
           "uid": "site-greenhouse-equipment",
           "panelId": "8",
-          "renderPath": "/render/d-solo/site-greenhouse-equipment/",
+          "renderPath": "/render/d-solo/site-greenhouse-equipment",
           "query": {
             "from": [
               "now-30d"
@@ -1662,7 +1662,7 @@ data:
           "occurrenceId": "graph_48478caf35a6779da0653aa2",
           "uid": "site-greenhouse-equipment",
           "panelId": "10",
-          "renderPath": "/render/d-solo/site-greenhouse-equipment/",
+          "renderPath": "/render/d-solo/site-greenhouse-equipment",
           "query": {
             "from": [
               "now-30d"
@@ -1690,7 +1690,7 @@ data:
           "occurrenceId": "graph_254647a468be5b9b3a7ecf09",
           "uid": "site-greenhouse-equipment",
           "panelId": "11",
-          "renderPath": "/render/d-solo/site-greenhouse-equipment/",
+          "renderPath": "/render/d-solo/site-greenhouse-equipment",
           "query": {
             "from": [
               "now-30d"
@@ -1718,7 +1718,7 @@ data:
           "occurrenceId": "graph_ae01e8206b07e2c8b231c732",
           "uid": "greenhouse-hydroponics",
           "panelId": "6",
-          "renderPath": "/render/d-solo/greenhouse-hydroponics/",
+          "renderPath": "/render/d-solo/greenhouse-hydroponics",
           "query": {
             "from": [
               "now-7d"
@@ -1746,7 +1746,7 @@ data:
           "occurrenceId": "graph_07469bcc2d4d64428fb7d57f",
           "uid": "greenhouse-hydroponics",
           "panelId": "10",
-          "renderPath": "/render/d-solo/greenhouse-hydroponics/",
+          "renderPath": "/render/d-solo/greenhouse-hydroponics",
           "query": {
             "from": [
               "now-7d"
@@ -1774,7 +1774,7 @@ data:
           "occurrenceId": "graph_759583607f7307c2e7c07c7e",
           "uid": "greenhouse-hydroponics",
           "panelId": "7",
-          "renderPath": "/render/d-solo/greenhouse-hydroponics/",
+          "renderPath": "/render/d-solo/greenhouse-hydroponics",
           "query": {
             "from": [
               "now-7d"
@@ -1802,7 +1802,7 @@ data:
           "occurrenceId": "graph_d9c3524cd5ca19140b70460f",
           "uid": "greenhouse-hydroponics",
           "panelId": "8",
-          "renderPath": "/render/d-solo/greenhouse-hydroponics/",
+          "renderPath": "/render/d-solo/greenhouse-hydroponics",
           "query": {
             "from": [
               "now-7d"
@@ -1830,7 +1830,7 @@ data:
           "occurrenceId": "graph_313ba2a3cc7787afa1102031",
           "uid": "site-climate-lighting",
           "panelId": "15",
-          "renderPath": "/render/d-solo/site-climate-lighting/",
+          "renderPath": "/render/d-solo/site-climate-lighting",
           "query": {
             "from": [
               "now-7d"
@@ -1858,7 +1858,7 @@ data:
           "occurrenceId": "graph_5c8675d2c5a1d9f86c9ac0af",
           "uid": "greenhouse-hydroponics",
           "panelId": "910",
-          "renderPath": "/render/d-solo/greenhouse-hydroponics/",
+          "renderPath": "/render/d-solo/greenhouse-hydroponics",
           "query": {
             "from": [
               "now-7d"
@@ -1886,7 +1886,7 @@ data:
           "occurrenceId": "graph_f7679158959ed597b4c2ec01",
           "uid": "site-irrigation",
           "panelId": "1",
-          "renderPath": "/render/d-solo/site-irrigation/",
+          "renderPath": "/render/d-solo/site-irrigation",
           "query": {
             "from": [
               "now-7d"
@@ -1914,7 +1914,7 @@ data:
           "occurrenceId": "graph_eb5af080c1454b7b7eb23019",
           "uid": "site-irrigation",
           "panelId": "2",
-          "renderPath": "/render/d-solo/site-irrigation/",
+          "renderPath": "/render/d-solo/site-irrigation",
           "query": {
             "from": [
               "now-7d"
@@ -1942,7 +1942,7 @@ data:
           "occurrenceId": "graph_873f57b5c56c71265fa8bc60",
           "uid": "site-irrigation",
           "panelId": "3",
-          "renderPath": "/render/d-solo/site-irrigation/",
+          "renderPath": "/render/d-solo/site-irrigation",
           "query": {
             "from": [
               "now-7d"
@@ -1970,7 +1970,7 @@ data:
           "occurrenceId": "graph_ff502a5c6bfe1815add0696a",
           "uid": "site-irrigation",
           "panelId": "4",
-          "renderPath": "/render/d-solo/site-irrigation/",
+          "renderPath": "/render/d-solo/site-irrigation",
           "query": {
             "from": [
               "now-7d"
@@ -1998,7 +1998,7 @@ data:
           "occurrenceId": "graph_caa2301311befa7d0101711d",
           "uid": "site-irrigation",
           "panelId": "5",
-          "renderPath": "/render/d-solo/site-irrigation/",
+          "renderPath": "/render/d-solo/site-irrigation",
           "query": {
             "from": [
               "now-7d"
@@ -2026,7 +2026,7 @@ data:
           "occurrenceId": "graph_509ac44ae7291a9bc11b137b",
           "uid": "site-irrigation",
           "panelId": "6",
-          "renderPath": "/render/d-solo/site-irrigation/",
+          "renderPath": "/render/d-solo/site-irrigation",
           "query": {
             "from": [
               "now-7d"
@@ -2054,7 +2054,7 @@ data:
           "occurrenceId": "graph_2b76a30e0187e94f191b68d7",
           "uid": "site-irrigation",
           "panelId": "7",
-          "renderPath": "/render/d-solo/site-irrigation/",
+          "renderPath": "/render/d-solo/site-irrigation",
           "query": {
             "from": [
               "now-30d"
@@ -2082,7 +2082,7 @@ data:
           "occurrenceId": "graph_8186e3a94a49d5ffca124a2a",
           "uid": "site-irrigation",
           "panelId": "8",
-          "renderPath": "/render/d-solo/site-irrigation/",
+          "renderPath": "/render/d-solo/site-irrigation",
           "query": {
             "from": [
               "now-30d"
@@ -2110,7 +2110,7 @@ data:
           "occurrenceId": "graph_95d44a6405748f59607081fd",
           "uid": "site-irrigation",
           "panelId": "9",
-          "renderPath": "/render/d-solo/site-irrigation/",
+          "renderPath": "/render/d-solo/site-irrigation",
           "query": {
             "cachebust": [
               "relay-dense-20260522"
@@ -2141,7 +2141,7 @@ data:
           "occurrenceId": "graph_b7c9f2a75bccbc35352b7e92",
           "uid": "site-irrigation",
           "panelId": "10",
-          "renderPath": "/render/d-solo/site-irrigation/",
+          "renderPath": "/render/d-solo/site-irrigation",
           "query": {
             "from": [
               "now-7d"
@@ -2169,7 +2169,7 @@ data:
           "occurrenceId": "graph_26808bbe851b18c864ee5e92",
           "uid": "site-irrigation",
           "panelId": "11",
-          "renderPath": "/render/d-solo/site-irrigation/",
+          "renderPath": "/render/d-solo/site-irrigation",
           "query": {
             "from": [
               "now-7d"
@@ -2197,7 +2197,7 @@ data:
           "occurrenceId": "graph_d7e3095151d9a2e05fa7477d",
           "uid": "site-irrigation",
           "panelId": "12",
-          "renderPath": "/render/d-solo/site-irrigation/",
+          "renderPath": "/render/d-solo/site-irrigation",
           "query": {
             "from": [
               "now-7d"
@@ -2225,7 +2225,7 @@ data:
           "occurrenceId": "graph_756ff3290f90847daa17b3ad",
           "uid": "site-irrigation",
           "panelId": "13",
-          "renderPath": "/render/d-solo/site-irrigation/",
+          "renderPath": "/render/d-solo/site-irrigation",
           "query": {
             "from": [
               "now-7d"
@@ -2253,7 +2253,7 @@ data:
           "occurrenceId": "graph_fb24bf47bbb151e538766c3e",
           "uid": "site-irrigation",
           "panelId": "14",
-          "renderPath": "/render/d-solo/site-irrigation/",
+          "renderPath": "/render/d-solo/site-irrigation",
           "query": {
             "from": [
               "now-7d"
@@ -2281,7 +2281,7 @@ data:
           "occurrenceId": "graph_f9a4730e64b60728fb8318ff",
           "uid": "site-irrigation",
           "panelId": "15",
-          "renderPath": "/render/d-solo/site-irrigation/",
+          "renderPath": "/render/d-solo/site-irrigation",
           "query": {
             "from": [
               "now-7d"
@@ -2309,7 +2309,7 @@ data:
           "occurrenceId": "graph_4dfac91f95eaf4ad0a6be5fe",
           "uid": "greenhouse-lighting",
           "panelId": "1",
-          "renderPath": "/render/d-solo/greenhouse-lighting/",
+          "renderPath": "/render/d-solo/greenhouse-lighting",
           "query": {
             "from": [
               "now-2d"
@@ -2337,7 +2337,7 @@ data:
           "occurrenceId": "graph_a6448f7d96cbf5c37c1f48a6",
           "uid": "greenhouse-lighting",
           "panelId": "2",
-          "renderPath": "/render/d-solo/greenhouse-lighting/",
+          "renderPath": "/render/d-solo/greenhouse-lighting",
           "query": {
             "from": [
               "now-2d"
@@ -2365,7 +2365,7 @@ data:
           "occurrenceId": "graph_c1f9a33de091e655d94dea05",
           "uid": "greenhouse-lighting",
           "panelId": "4",
-          "renderPath": "/render/d-solo/greenhouse-lighting/",
+          "renderPath": "/render/d-solo/greenhouse-lighting",
           "query": {
             "from": [
               "now-2d"
@@ -2393,7 +2393,7 @@ data:
           "occurrenceId": "graph_dcb04872369716fcfab43a0b",
           "uid": "greenhouse-lighting",
           "panelId": "8",
-          "renderPath": "/render/d-solo/greenhouse-lighting/",
+          "renderPath": "/render/d-solo/greenhouse-lighting",
           "query": {
             "from": [
               "now-2d"
@@ -2421,7 +2421,7 @@ data:
           "occurrenceId": "graph_4865bcb3181f3c11c3182269",
           "uid": "greenhouse-lighting",
           "panelId": "9",
-          "renderPath": "/render/d-solo/greenhouse-lighting/",
+          "renderPath": "/render/d-solo/greenhouse-lighting",
           "query": {
             "from": [
               "now-2d"
@@ -2449,7 +2449,7 @@ data:
           "occurrenceId": "graph_555ee22a4e7d2ea9328ca722",
           "uid": "greenhouse-lighting",
           "panelId": "11",
-          "renderPath": "/render/d-solo/greenhouse-lighting/",
+          "renderPath": "/render/d-solo/greenhouse-lighting",
           "query": {
             "from": [
               "now-2d"
@@ -2477,7 +2477,7 @@ data:
           "occurrenceId": "graph_e6ca4b6b907a1dacb17ffc45",
           "uid": "greenhouse-lighting",
           "panelId": "13",
-          "renderPath": "/render/d-solo/greenhouse-lighting/",
+          "renderPath": "/render/d-solo/greenhouse-lighting",
           "query": {
             "from": [
               "now-2d"
@@ -2505,7 +2505,7 @@ data:
           "occurrenceId": "graph_c7888fc9984f86fa8ebc091b",
           "uid": "greenhouse-lighting",
           "panelId": "10",
-          "renderPath": "/render/d-solo/greenhouse-lighting/",
+          "renderPath": "/render/d-solo/greenhouse-lighting",
           "query": {
             "from": [
               "now-30d"
@@ -2533,7 +2533,7 @@ data:
           "occurrenceId": "graph_7bebc9b9ef93f19f9c29ab15",
           "uid": "greenhouse-lighting",
           "panelId": "15",
-          "renderPath": "/render/d-solo/greenhouse-lighting/",
+          "renderPath": "/render/d-solo/greenhouse-lighting",
           "query": {
             "from": [
               "now-2d"
@@ -2561,7 +2561,7 @@ data:
           "occurrenceId": "graph_10bc787adf06c03878ef3233",
           "uid": "greenhouse-lighting",
           "panelId": "16",
-          "renderPath": "/render/d-solo/greenhouse-lighting/",
+          "renderPath": "/render/d-solo/greenhouse-lighting",
           "query": {
             "from": [
               "now-2d"
@@ -2589,7 +2589,7 @@ data:
           "occurrenceId": "graph_6d07d7d0a3631184924fa5eb",
           "uid": "site-climate-lighting",
           "panelId": "16",
-          "renderPath": "/render/d-solo/site-climate-lighting/",
+          "renderPath": "/render/d-solo/site-climate-lighting",
           "query": {
             "from": [
               "now-24h"
@@ -2617,7 +2617,7 @@ data:
           "occurrenceId": "graph_4121fd059cb9a92da9c3e47d",
           "uid": "site-climate-lighting",
           "panelId": "17",
-          "renderPath": "/render/d-solo/site-climate-lighting/",
+          "renderPath": "/render/d-solo/site-climate-lighting",
           "query": {
             "from": [
               "now-24h"
@@ -2645,7 +2645,7 @@ data:
           "occurrenceId": "graph_0209e13f9240f1ca6c7e32b8",
           "uid": "greenhouse-lighting",
           "panelId": "21",
-          "renderPath": "/render/d-solo/greenhouse-lighting/",
+          "renderPath": "/render/d-solo/greenhouse-lighting",
           "query": {
             "from": [
               "now-7d"
@@ -2673,7 +2673,7 @@ data:
           "occurrenceId": "graph_49cd69412b12e078222617c1",
           "uid": "greenhouse-lighting",
           "panelId": "18",
-          "renderPath": "/render/d-solo/greenhouse-lighting/",
+          "renderPath": "/render/d-solo/greenhouse-lighting",
           "query": {
             "from": [
               "now-7d"
@@ -2701,7 +2701,7 @@ data:
           "occurrenceId": "graph_27ff680dde91dd268a48eaed",
           "uid": "greenhouse-lighting",
           "panelId": "19",
-          "renderPath": "/render/d-solo/greenhouse-lighting/",
+          "renderPath": "/render/d-solo/greenhouse-lighting",
           "query": {
             "from": [
               "now-24h"
@@ -2729,7 +2729,7 @@ data:
           "occurrenceId": "graph_50c5b5d05021bd6bb86be3b5",
           "uid": "greenhouse-soil",
           "panelId": "1",
-          "renderPath": "/render/d-solo/greenhouse-soil/",
+          "renderPath": "/render/d-solo/greenhouse-soil",
           "query": {
             "from": [
               "now-7d"
@@ -2757,7 +2757,7 @@ data:
           "occurrenceId": "graph_8c10dc40ba068bda2460f5b4",
           "uid": "greenhouse-soil",
           "panelId": "4",
-          "renderPath": "/render/d-solo/greenhouse-soil/",
+          "renderPath": "/render/d-solo/greenhouse-soil",
           "query": {
             "from": [
               "now-7d"
@@ -2785,7 +2785,7 @@ data:
           "occurrenceId": "graph_e822bed622b7181d4d2655e2",
           "uid": "greenhouse-soil",
           "panelId": "6",
-          "renderPath": "/render/d-solo/greenhouse-soil/",
+          "renderPath": "/render/d-solo/greenhouse-soil",
           "query": {
             "from": [
               "now-7d"
@@ -2813,7 +2813,7 @@ data:
           "occurrenceId": "graph_ae271e05a0861dde912e09d2",
           "uid": "greenhouse-soil",
           "panelId": "2",
-          "renderPath": "/render/d-solo/greenhouse-soil/",
+          "renderPath": "/render/d-solo/greenhouse-soil",
           "query": {
             "from": [
               "now-7d"
@@ -2841,7 +2841,7 @@ data:
           "occurrenceId": "graph_62b126464e3fbdc3a1c12088",
           "uid": "greenhouse-soil",
           "panelId": "5",
-          "renderPath": "/render/d-solo/greenhouse-soil/",
+          "renderPath": "/render/d-solo/greenhouse-soil",
           "query": {
             "from": [
               "now-7d"
@@ -2869,7 +2869,7 @@ data:
           "occurrenceId": "graph_7067e6c68746d7b75b8b3a42",
           "uid": "greenhouse-soil",
           "panelId": "3",
-          "renderPath": "/render/d-solo/greenhouse-soil/",
+          "renderPath": "/render/d-solo/greenhouse-soil",
           "query": {
             "from": [
               "now-7d"
@@ -2897,7 +2897,7 @@ data:
           "occurrenceId": "graph_df954e0f46c2405f7d2b0e7b",
           "uid": "greenhouse-soil",
           "panelId": "10",
-          "renderPath": "/render/d-solo/greenhouse-soil/",
+          "renderPath": "/render/d-solo/greenhouse-soil",
           "query": {
             "from": [
               "now-7d"
@@ -2925,7 +2925,7 @@ data:
           "occurrenceId": "graph_5b0389ebdb868755cb89b614",
           "uid": "greenhouse-soil",
           "panelId": "11",
-          "renderPath": "/render/d-solo/greenhouse-soil/",
+          "renderPath": "/render/d-solo/greenhouse-soil",
           "query": {
             "from": [
               "now-7d"
@@ -2953,7 +2953,7 @@ data:
           "occurrenceId": "graph_e01e8edb5a0e46b3a5e517e8",
           "uid": "greenhouse-soil",
           "panelId": "12",
-          "renderPath": "/render/d-solo/greenhouse-soil/",
+          "renderPath": "/render/d-solo/greenhouse-soil",
           "query": {
             "from": [
               "now-7d"
@@ -2981,7 +2981,7 @@ data:
           "occurrenceId": "graph_08ab434f05053cb49634d904",
           "uid": "greenhouse-soil",
           "panelId": "13",
-          "renderPath": "/render/d-solo/greenhouse-soil/",
+          "renderPath": "/render/d-solo/greenhouse-soil",
           "query": {
             "from": [
               "now-7d"
@@ -3009,7 +3009,7 @@ data:
           "occurrenceId": "graph_66f796ba0f5e5c983f555542",
           "uid": "site-climate-lighting",
           "panelId": "9",
-          "renderPath": "/render/d-solo/site-climate-lighting/",
+          "renderPath": "/render/d-solo/site-climate-lighting",
           "query": {
             "orgId": [
               "1"
@@ -3031,7 +3031,7 @@ data:
           "occurrenceId": "graph_aa9671216ae41953a29a28b0",
           "uid": "site-climate-lighting",
           "panelId": "14",
-          "renderPath": "/render/d-solo/site-climate-lighting/",
+          "renderPath": "/render/d-solo/site-climate-lighting",
           "query": {
             "from": [
               "now-24h"
@@ -3059,7 +3059,7 @@ data:
           "occurrenceId": "graph_df351e8a0fe1eab42f338b89",
           "uid": "site-greenhouse-zones",
           "panelId": "11",
-          "renderPath": "/render/d-solo/site-greenhouse-zones/",
+          "renderPath": "/render/d-solo/site-greenhouse-zones",
           "query": {
             "from": [
               "now-24h"
@@ -3087,7 +3087,7 @@ data:
           "occurrenceId": "graph_4f31369a7ab7a5e18a520ef9",
           "uid": "site-greenhouse-zones",
           "panelId": "12",
-          "renderPath": "/render/d-solo/site-greenhouse-zones/",
+          "renderPath": "/render/d-solo/site-greenhouse-zones",
           "query": {
             "from": [
               "now-24h"
@@ -3115,7 +3115,7 @@ data:
           "occurrenceId": "graph_5f4ff0b6b04dc01c3d93b696",
           "uid": "site-home",
           "panelId": "30",
-          "renderPath": "/render/d-solo/site-home/",
+          "renderPath": "/render/d-solo/site-home",
           "query": {
             "from": [
               "now-72h"
@@ -3143,7 +3143,7 @@ data:
           "occurrenceId": "graph_2f5604a0a8da68a8a5f063e5",
           "uid": "site-home",
           "panelId": "31",
-          "renderPath": "/render/d-solo/site-home/",
+          "renderPath": "/render/d-solo/site-home",
           "query": {
             "from": [
               "now-72h"
@@ -3171,7 +3171,7 @@ data:
           "occurrenceId": "graph_54d192066e6da12b8e063a9f",
           "uid": "site-home",
           "panelId": "36",
-          "renderPath": "/render/d-solo/site-home/",
+          "renderPath": "/render/d-solo/site-home",
           "query": {
             "from": [
               "now-72h"
@@ -3199,7 +3199,7 @@ data:
           "occurrenceId": "graph_2bdb3731fc67b66c58fa84fb",
           "uid": "site-evidence-economics",
           "panelId": "310",
-          "renderPath": "/render/d-solo/site-evidence-economics/",
+          "renderPath": "/render/d-solo/site-evidence-economics",
           "query": {
             "from": [
               "now-72h"
@@ -3227,7 +3227,7 @@ data:
           "occurrenceId": "graph_040d4d9677dcb9608a9a0522",
           "uid": "site-home",
           "panelId": "127",
-          "renderPath": "/render/d-solo/site-home/",
+          "renderPath": "/render/d-solo/site-home",
           "query": {
             "from": [
               "now-72h"
@@ -3255,7 +3255,7 @@ data:
           "occurrenceId": "graph_6477d40a3b3611204294f17c",
           "uid": "site-home",
           "panelId": "128",
-          "renderPath": "/render/d-solo/site-home/",
+          "renderPath": "/render/d-solo/site-home",
           "query": {
             "from": [
               "now-72h"
@@ -3283,7 +3283,7 @@ data:
           "occurrenceId": "graph_9bda5ec2ccc9c7397bf330ee",
           "uid": "site-evidence-economics",
           "panelId": "312",
-          "renderPath": "/render/d-solo/site-evidence-economics/",
+          "renderPath": "/render/d-solo/site-evidence-economics",
           "query": {
             "from": [
               "now-30d"
@@ -3311,7 +3311,7 @@ data:
           "occurrenceId": "graph_909407920d35a38538ab902e",
           "uid": "site-intelligence",
           "panelId": "2",
-          "renderPath": "/render/d-solo/site-intelligence/",
+          "renderPath": "/render/d-solo/site-intelligence",
           "query": {
             "orgId": [
               "1"
@@ -3333,7 +3333,7 @@ data:
           "occurrenceId": "graph_220b9ddd8ea2b79f9826cf08",
           "uid": "site-intelligence",
           "panelId": "3",
-          "renderPath": "/render/d-solo/site-intelligence/",
+          "renderPath": "/render/d-solo/site-intelligence",
           "query": {
             "orgId": [
               "1"
@@ -3355,7 +3355,7 @@ data:
           "occurrenceId": "graph_7b5d3116a0ff3f25876d952a",
           "uid": "site-intelligence-planning",
           "panelId": "10",
-          "renderPath": "/render/d-solo/site-intelligence-planning/",
+          "renderPath": "/render/d-solo/site-intelligence-planning",
           "query": {
             "from": [
               "now-30d"
@@ -3383,7 +3383,7 @@ data:
           "occurrenceId": "graph_75db23fe84188453dfc7e966",
           "uid": "site-intelligence-planning",
           "panelId": "5",
-          "renderPath": "/render/d-solo/site-intelligence-planning/",
+          "renderPath": "/render/d-solo/site-intelligence-planning",
           "query": {
             "orgId": [
               "1"
@@ -3405,7 +3405,7 @@ data:
           "occurrenceId": "graph_71af417ef92710388c3a0587",
           "uid": "site-intelligence-planning",
           "panelId": "12",
-          "renderPath": "/render/d-solo/site-intelligence-planning/",
+          "renderPath": "/render/d-solo/site-intelligence-planning",
           "query": {
             "from": [
               "now-30d"
@@ -3433,7 +3433,7 @@ data:
           "occurrenceId": "graph_233d202215475b934f9284c4",
           "uid": "site-intelligence-planning",
           "panelId": "114",
-          "renderPath": "/render/d-solo/site-intelligence-planning/",
+          "renderPath": "/render/d-solo/site-intelligence-planning",
           "query": {
             "from": [
               "now-6h"
@@ -3461,7 +3461,7 @@ data:
           "occurrenceId": "graph_ed8799fe8c8bdecea641e110",
           "uid": "site-evidence-operations",
           "panelId": "2",
-          "renderPath": "/render/d-solo/site-evidence-operations/",
+          "renderPath": "/render/d-solo/site-evidence-operations",
           "query": {
             "orgId": [
               "1"
@@ -3483,7 +3483,7 @@ data:
           "occurrenceId": "graph_72ce1c9ccfe47756e36ebcc1",
           "uid": "site-evidence-operations",
           "panelId": "3",
-          "renderPath": "/render/d-solo/site-evidence-operations/",
+          "renderPath": "/render/d-solo/site-evidence-operations",
           "query": {
             "orgId": [
               "1"
@@ -3505,7 +3505,7 @@ data:
           "occurrenceId": "graph_742a603399b8cd93683fbae1",
           "uid": "site-climate",
           "panelId": "113",
-          "renderPath": "/render/d-solo/site-climate/",
+          "renderPath": "/render/d-solo/site-climate",
           "query": {
             "from": [
               "now-24h"
@@ -3533,7 +3533,7 @@ data:
           "occurrenceId": "graph_cb94f234d3c2da6b1218ef9f",
           "uid": "site-climate",
           "panelId": "130",
-          "renderPath": "/render/d-solo/site-climate/",
+          "renderPath": "/render/d-solo/site-climate",
           "query": {
             "from": [
               "now-24h"
@@ -3561,7 +3561,7 @@ data:
           "occurrenceId": "graph_29f61270eb63ce828f0dc272",
           "uid": "site-climate",
           "panelId": "131",
-          "renderPath": "/render/d-solo/site-climate/",
+          "renderPath": "/render/d-solo/site-climate",
           "query": {
             "from": [
               "now-24h"
@@ -3589,7 +3589,7 @@ data:
           "occurrenceId": "graph_400f0c83ec8f01118dff52a3",
           "uid": "site-climate",
           "panelId": "132",
-          "renderPath": "/render/d-solo/site-climate/",
+          "renderPath": "/render/d-solo/site-climate",
           "query": {
             "from": [
               "now-24h"
@@ -3617,7 +3617,7 @@ data:
           "occurrenceId": "graph_c8c6eb96ecc0d66664fb8a2a",
           "uid": "site-climate",
           "panelId": "11",
-          "renderPath": "/render/d-solo/site-climate/",
+          "renderPath": "/render/d-solo/site-climate",
           "query": {
             "from": [
               "now-72h"
@@ -3645,7 +3645,7 @@ data:
           "occurrenceId": "graph_05c271913d5b6a31b7b3d8c0",
           "uid": "site-climate",
           "panelId": "12",
-          "renderPath": "/render/d-solo/site-climate/",
+          "renderPath": "/render/d-solo/site-climate",
           "query": {
             "from": [
               "now-72h"
@@ -3673,7 +3673,7 @@ data:
           "occurrenceId": "graph_3c752c6f9c0a711c05b0777c",
           "uid": "site-evidence-economics",
           "panelId": "301",
-          "renderPath": "/render/d-solo/site-evidence-economics/",
+          "renderPath": "/render/d-solo/site-evidence-economics",
           "query": {
             "orgId": [
               "1"
@@ -3695,7 +3695,7 @@ data:
           "occurrenceId": "graph_eb35b66dd799c912f27d833a",
           "uid": "site-evidence-economics",
           "panelId": "304",
-          "renderPath": "/render/d-solo/site-evidence-economics/",
+          "renderPath": "/render/d-solo/site-evidence-economics",
           "query": {
             "orgId": [
               "1"
@@ -3717,7 +3717,7 @@ data:
           "occurrenceId": "graph_59cb81f934815030a293d1f4",
           "uid": "site-evidence-economics",
           "panelId": "305",
-          "renderPath": "/render/d-solo/site-evidence-economics/",
+          "renderPath": "/render/d-solo/site-evidence-economics",
           "query": {
             "orgId": [
               "1"
@@ -3739,7 +3739,7 @@ data:
           "occurrenceId": "graph_2db4b278b226e54309774733",
           "uid": "site-evidence-economics",
           "panelId": "302",
-          "renderPath": "/render/d-solo/site-evidence-economics/",
+          "renderPath": "/render/d-solo/site-evidence-economics",
           "query": {
             "orgId": [
               "1"
@@ -3761,7 +3761,7 @@ data:
           "occurrenceId": "graph_52177193c89f5e994ae62227",
           "uid": "site-evidence-economics",
           "panelId": "303",
-          "renderPath": "/render/d-solo/site-evidence-economics/",
+          "renderPath": "/render/d-solo/site-evidence-economics",
           "query": {
             "orgId": [
               "1"
@@ -3783,7 +3783,7 @@ data:
           "occurrenceId": "graph_4357fefce98b19de8ae04d4f",
           "uid": "site-evidence-economics",
           "panelId": "306",
-          "renderPath": "/render/d-solo/site-evidence-economics/",
+          "renderPath": "/render/d-solo/site-evidence-economics",
           "query": {
             "from": [
               "now-30d"
@@ -3811,7 +3811,7 @@ data:
           "occurrenceId": "graph_dbb33d12fbdb11c1b3bbb63b",
           "uid": "site-evidence-economics",
           "panelId": "201",
-          "renderPath": "/render/d-solo/site-evidence-economics/",
+          "renderPath": "/render/d-solo/site-evidence-economics",
           "query": {
             "orgId": [
               "1"
@@ -3833,7 +3833,7 @@ data:
           "occurrenceId": "graph_3624ad05d8632f1e391f34d5",
           "uid": "site-evidence-economics",
           "panelId": "202",
-          "renderPath": "/render/d-solo/site-evidence-economics/",
+          "renderPath": "/render/d-solo/site-evidence-economics",
           "query": {
             "orgId": [
               "1"
@@ -3855,7 +3855,7 @@ data:
           "occurrenceId": "graph_10cb4c37add2b6cd9d67f7e7",
           "uid": "site-evidence-economics",
           "panelId": "203",
-          "renderPath": "/render/d-solo/site-evidence-economics/",
+          "renderPath": "/render/d-solo/site-evidence-economics",
           "query": {
             "orgId": [
               "1"
@@ -3877,7 +3877,7 @@ data:
           "occurrenceId": "graph_f593a2c772002b6543f0a481",
           "uid": "site-evidence-economics",
           "panelId": "204",
-          "renderPath": "/render/d-solo/site-evidence-economics/",
+          "renderPath": "/render/d-solo/site-evidence-economics",
           "query": {
             "orgId": [
               "1"
@@ -3899,7 +3899,7 @@ data:
           "occurrenceId": "graph_3ef9973c6157411187bd3034",
           "uid": "site-evidence-economics",
           "panelId": "310",
-          "renderPath": "/render/d-solo/site-evidence-economics/",
+          "renderPath": "/render/d-solo/site-evidence-economics",
           "query": {
             "from": [
               "now-7d"
@@ -3927,7 +3927,7 @@ data:
           "occurrenceId": "graph_4146497983fc02cbcb05949e",
           "uid": "site-home",
           "panelId": "127",
-          "renderPath": "/render/d-solo/site-home/",
+          "renderPath": "/render/d-solo/site-home",
           "query": {
             "from": [
               "now-7d"
@@ -3955,7 +3955,7 @@ data:
           "occurrenceId": "graph_750eea767e9f743059800c73",
           "uid": "site-home",
           "panelId": "128",
-          "renderPath": "/render/d-solo/site-home/",
+          "renderPath": "/render/d-solo/site-home",
           "query": {
             "from": [
               "now-7d"
@@ -3983,7 +3983,7 @@ data:
           "occurrenceId": "graph_85d9f902406a6f8005240d2c",
           "uid": "site-evidence-economics",
           "panelId": "312",
-          "renderPath": "/render/d-solo/site-evidence-economics/",
+          "renderPath": "/render/d-solo/site-evidence-economics",
           "query": {
             "from": [
               "now-30d"
@@ -4011,7 +4011,7 @@ data:
           "occurrenceId": "graph_428d24635cde358815131633",
           "uid": "site-evidence-economics",
           "panelId": "10",
-          "renderPath": "/render/d-solo/site-evidence-economics/",
+          "renderPath": "/render/d-solo/site-evidence-economics",
           "query": {
             "from": [
               "now-6M/M"
@@ -4039,7 +4039,7 @@ data:
           "occurrenceId": "graph_0f04844157db91f656f5afa8",
           "uid": "site-evidence-economics",
           "panelId": "219",
-          "renderPath": "/render/d-solo/site-evidence-economics/",
+          "renderPath": "/render/d-solo/site-evidence-economics",
           "query": {
             "from": [
               "now-30d"
@@ -4067,7 +4067,7 @@ data:
           "occurrenceId": "graph_47281bd6f4bbb670827f7703",
           "uid": "site-inference-infra",
           "panelId": "20",
-          "renderPath": "/render/d-solo/site-inference-infra/",
+          "renderPath": "/render/d-solo/site-inference-infra",
           "query": {
             "from": [
               "now-30d"

@@ -31,6 +31,7 @@ import {
 const SITE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const REPO_ROOT = path.resolve(SITE_ROOT, "..");
 const TARGETS_FILE = path.join(SITE_ROOT, "config/lab-stage-reporting-targets.json");
+const DEPENDENCIES_FILE = path.join(SITE_ROOT, "config/lab-stage-reporting-dependencies.json");
 const READINESS_SQL_FILE = path.join(
   REPO_ROOT,
   "deploy/k8s/overlays/lab-stage/reporting-tier/projection-readiness.sql",
@@ -267,7 +268,7 @@ test("renderer permits one inventory-bound private PNG route with fixed render c
   assert.equal(calls.length, 1);
   const url = new URL(calls[0][0]);
   assert.equal(url.origin, REPORTING_GATEWAY_ORIGIN);
-  assert.equal(url.pathname, `/render/d-solo/${target.uid}/`);
+  assert.equal(url.pathname, `/render/d-solo/${target.uid}`);
   assert.equal(url.searchParams.get("panelId"), target.panelId);
   assert.equal(url.searchParams.get("width"), "1000");
   assert.equal(url.searchParams.get("height"), "400");
@@ -354,9 +355,26 @@ test("one-shot seam makes no request when approval or source binding is absent",
 
 test("projection bootstrap carries the exact runtime watermark query and no mutations", async () => {
   const sql = await readFile(READINESS_SQL_FILE, "utf8");
+  const dependencies = JSON.parse(await readFile(DEPENDENCIES_FILE, "utf8"));
+  const requiredRelations = sql.slice(
+    sql.indexOf("WITH required_relations(name)"),
+    sql.indexOf("), approved_relations(name)"),
+  ).match(/'([a-z_][a-z0-9_]*)'::name/gu).map((entry) => entry.slice(1, entry.indexOf("'", 1)));
+  const requiredFunctions = sql.slice(
+    sql.indexOf("WITH required_functions(name)"),
+    sql.indexOf("), actual_functions AS"),
+  ).match(/'([a-z_][a-z0-9_]*)'::name/gu).map((entry) => entry.slice(1, entry.indexOf("'", 1)));
   assert.match(sql, /BEGIN TRANSACTION READ ONLY;/u);
   assert.match(sql, /ROLLBACK;\n$/u);
+  assert.match(sql, /current_database\(\) = 'verdify_lab_reporting_stage'/u);
+  assert.match(sql, /current_user = 'verdify_lab_reporting_reader'/u);
   assert.match(sql, /to_regclass\('lab_reporting\.source_watermark_v1'\)/u);
+  assert.deepEqual(requiredRelations, dependencies.relations);
+  assert.deepEqual(requiredFunctions, dependencies.callableProjectionFunctions);
+  assert.match(sql, /no_missing_relations/u);
+  assert.match(sql, /no_extra_relations/u);
+  assert.match(sql, /no_missing_functions/u);
+  assert.match(sql, /no_extra_functions/u);
   assert.match(sql, /count\(\*\) = 1 AS exactly_one/u);
   assert.match(sql, new RegExp(REPORTING_WATERMARK_SQL.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"), "u"));
   assert.doesNotMatch(sql, /^\s*(?:CREATE|ALTER|DROP|GRANT|REVOKE|INSERT|UPDATE|DELETE|TRUNCATE)\b/imu);

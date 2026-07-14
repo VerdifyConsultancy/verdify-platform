@@ -8,6 +8,7 @@ namespace: verdify-platform
 
 resources:
   - generated/targets-cm.yaml
+  - generated/dependencies-cm.yaml
   - generated/dashboards-cm-0.yaml
   - generated/dashboards-cm-1.yaml
   - reporting-config.yaml

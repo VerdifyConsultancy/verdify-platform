@@ -9,13 +9,16 @@ import {
   EXPECTED_DASHBOARD_COUNT,
   EXPECTED_OCCURRENCE_COUNT,
   EXPECTED_UNIQUE_PANEL_COUNT,
+  reportingDependenciesFromTargets,
   runReportingAssetGenerator,
+  validateReportingDependencies,
   validateReportingTargets,
 } from "../scripts/generate-reporting-tier-assets.mjs";
 
 const SITE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const REPO_ROOT = path.resolve(SITE_ROOT, "..");
 const TARGETS_FILE = path.join(SITE_ROOT, "config/lab-stage-reporting-targets.json");
+const DEPENDENCIES_FILE = path.join(SITE_ROOT, "config/lab-stage-reporting-dependencies.json");
 const POLICY_FILE = path.join(SITE_ROOT, "config/lab-stage-occurrence-export-policy.json");
 const GENERATED_ROOT = path.join(REPO_ROOT, "deploy/k8s/overlays/lab-stage/reporting-tier/generated");
 
@@ -35,8 +38,36 @@ test("reporting target inventory is the exact immutable 18/139/143 source projec
   assert.equal(new Set(value.occurrences.map(({ uid }) => uid)).size, 18);
   assert.equal(new Set(value.occurrences.map(({ uid, panelId }) => `${uid}/${panelId}`)).size, 139);
   assert.equal(value.occurrences.every(({ renderPath, uid }) => (
-    renderPath === `/render/d-solo/${uid}/`
+    renderPath === `/render/d-solo/${uid}`
   )), true);
+  assert.equal(value.occurrences.every(({ renderPath }) => !renderPath.endsWith("/")), true);
+});
+
+test("reporting dependency inventory is generated from every exact dashboard query", async () => {
+  const targetValue = validateReportingTargets(await targets());
+  const committed = validateReportingDependencies(
+    JSON.parse(await readFile(DEPENDENCIES_FILE, "utf8")),
+    targetValue,
+  );
+  assert.deepEqual(committed, await reportingDependenciesFromTargets(targetValue));
+  assert.deepEqual(
+    {
+      queries: committed.queryCount,
+      relations: committed.relations.length,
+      functions: committed.callableProjectionFunctions.length,
+      controls: committed.runtimeControlRelations,
+    },
+    { queries: 594, relations: 48, functions: 6, controls: ["source_watermark_v1"] },
+  );
+  assert.equal(committed.relations.includes("prev_value"), false);
+  assert.deepEqual(committed.callableProjectionFunctions, [
+    "fn_band_timeline",
+    "fn_forecast_correction",
+    "fn_lighting_policy",
+    "fn_lighting_timeline",
+    "fn_planner_scorecard",
+    "fn_runtime_power_30m",
+  ]);
 });
 
 test("reporting dashboard ConfigMaps are deterministic and each stays below 900 KiB", async () => {
@@ -58,7 +89,11 @@ test("reporting dashboard ConfigMaps are deterministic and each stays below 900 
   );
   assert.deepEqual(
     status.configMaps.map(({ name }) => name),
-    ["targets-cm.yaml", "dashboards-cm-0.yaml", "dashboards-cm-1.yaml"],
+    ["targets-cm.yaml", "dependencies-cm.yaml", "dashboards-cm-0.yaml", "dashboards-cm-1.yaml"],
+  );
+  assert.deepEqual(
+    [status.queryCount, status.relationCount, status.callableProjectionFunctionCount],
+    [594, 48, 6],
   );
   assert.equal(status.configMaps.every(({ bytes }) => bytes <= CONFIG_MAP_BYTE_BUDGET), true);
   assert.equal(status.configMaps.every(({ bytes }) => bytes < 1024 * 1024), true);

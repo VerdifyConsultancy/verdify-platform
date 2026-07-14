@@ -13,6 +13,8 @@ import { fileURLToPath } from "node:url";
 
 export const REPORTING_TARGET_CONTRACT = "verdify.lab-reporting-targets";
 export const REPORTING_TARGET_SCHEMA_VERSION = 1;
+export const REPORTING_DEPENDENCY_CONTRACT = "verdify.lab-reporting-projection-dependencies";
+export const REPORTING_DEPENDENCY_SCHEMA_VERSION = 1;
 export const EXPECTED_DASHBOARD_COUNT = 18;
 export const EXPECTED_UNIQUE_PANEL_COUNT = 139;
 export const EXPECTED_OCCURRENCE_COUNT = 143;
@@ -26,6 +28,10 @@ const SAFE_QUERY_KEY_RE = /^[A-Za-z][A-Za-z0-9_.-]{0,127}$/u;
 const SITE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const REPO_ROOT = path.resolve(SITE_ROOT, "..");
 const DEFAULT_TARGET_PATH = path.join(SITE_ROOT, "config/lab-stage-reporting-targets.json");
+const DEFAULT_DEPENDENCY_PATH = path.join(
+  SITE_ROOT,
+  "config/lab-stage-reporting-dependencies.json",
+);
 const DEFAULT_GENERATED_ROOT = path.join(
   REPO_ROOT,
   "deploy/k8s/overlays/lab-stage/reporting-tier/generated",
@@ -170,6 +176,7 @@ async function dashboardInventory() {
         file,
         sourceFile: normalizeRelativeFile(file),
         raw: raw.endsWith("\n") ? raw : `${raw}\n`,
+        dashboard,
         panelIds: collectPanelIds(dashboard),
       });
     }
@@ -263,7 +270,7 @@ export function validateReportingTargets(targets) {
       || occurrenceIds.has(occurrence.occurrenceId)
       || !UID_RE.test(occurrence.uid)
       || !PANEL_ID_RE.test(occurrence.panelId)
-      || occurrence.renderPath !== `/render/d-solo/${occurrence.uid}/`
+      || occurrence.renderPath !== `/render/d-solo/${occurrence.uid}`
       || !exactKeys(occurrence.timeRange, ["from", "to"])
       || occurrence.timeRange.from !== (occurrence.query?.from?.[0] ?? "")
       || occurrence.timeRange.to !== (occurrence.query?.to?.[0] ?? "")
@@ -308,7 +315,7 @@ export async function reportingTargetsFromManifest(manifest) {
       occurrenceId: occurrence.occurrenceId,
       uid: occurrence.uid,
       panelId: occurrence.panelId,
-      renderPath: `/render/d-solo/${occurrence.uid}/`,
+      renderPath: `/render/d-solo/${occurrence.uid}`,
       query: orderedMap(occurrence.query),
       variables: orderedMap(occurrence.variables),
       timeRange: { ...occurrence.timeRange },
@@ -344,6 +351,358 @@ async function validateDashboardSources(targets) {
     ) throw new Error(`reporting dashboard source drifted: ${target.uid}`);
     return source;
   });
+}
+
+function collectDashboardPanels(value, result = []) {
+  if (value === null || typeof value !== "object") return result;
+  if (Array.isArray(value.panels)) {
+    for (const panel of value.panels) {
+      if (Number.isSafeInteger(panel?.id) && panel.id >= 0) result.push(panel);
+      collectDashboardPanels(panel, result);
+    }
+  }
+  return result;
+}
+
+function collectRawSql(value, result = []) {
+  if (value === null || typeof value !== "object") return result;
+  if (Array.isArray(value)) {
+    for (const entry of value) collectRawSql(entry, result);
+    return result;
+  }
+  if (typeof value.rawSql === "string" && value.rawSql.trim().length > 0) {
+    result.push(value.rawSql);
+  }
+  for (const [key, entry] of Object.entries(value)) {
+    if (key !== "rawSql" && key !== "panels") collectRawSql(entry, result);
+  }
+  return result;
+}
+
+function sqlTokens(sql) {
+  const tokens = [];
+  let index = 0;
+  while (index < sql.length) {
+    const character = sql[index];
+    if (/\s/u.test(character)) {
+      index += 1;
+    } else if (character === "-" && sql[index + 1] === "-") {
+      index += 2;
+      while (index < sql.length && sql[index] !== "\n") index += 1;
+    } else if (character === "/" && sql[index + 1] === "*") {
+      let commentDepth = 1;
+      index += 2;
+      while (index < sql.length && commentDepth > 0) {
+        if (sql[index] === "/" && sql[index + 1] === "*") {
+          commentDepth += 1;
+          index += 2;
+        } else if (sql[index] === "*" && sql[index + 1] === "/") {
+          commentDepth -= 1;
+          index += 2;
+        } else {
+          index += 1;
+        }
+      }
+      if (commentDepth !== 0) throw new Error("reporting dashboard SQL has an unterminated comment");
+    } else if (character === "'") {
+      let closed = false;
+      index += 1;
+      while (index < sql.length) {
+        if (sql[index] === "'" && sql[index + 1] === "'") {
+          index += 2;
+        } else if (sql[index] === "'") {
+          index += 1;
+          closed = true;
+          break;
+        } else {
+          index += 1;
+        }
+      }
+      if (!closed) throw new Error("reporting dashboard SQL has an unterminated string");
+      tokens.push({ value: "<string>", type: "string" });
+    } else if (character === "$") {
+      const delimiter = sql.slice(index).match(/^\$(?:[A-Za-z_][A-Za-z0-9_]*)?\$/u)?.[0];
+      if (delimiter !== undefined) {
+        const end = sql.indexOf(delimiter, index + delimiter.length);
+        if (end === -1) throw new Error("reporting dashboard SQL has an unterminated dollar string");
+        index = end + delimiter.length;
+        tokens.push({ value: "<string>", type: "string" });
+      } else {
+        let value = "";
+        while (index < sql.length && /[A-Za-z0-9_$]/u.test(sql[index])) {
+          value += sql[index];
+          index += 1;
+        }
+        tokens.push({ value: value.toLowerCase(), type: "identifier" });
+      }
+    } else if (character === "\"") {
+      let value = "";
+      let closed = false;
+      index += 1;
+      while (index < sql.length) {
+        if (sql[index] === "\"" && sql[index + 1] === "\"") {
+          value += "\"";
+          index += 2;
+        } else if (sql[index] === "\"") {
+          index += 1;
+          closed = true;
+          break;
+        } else {
+          value += sql[index];
+          index += 1;
+        }
+      }
+      if (!closed) throw new Error("reporting dashboard SQL has an unterminated identifier");
+      tokens.push({ value: value.toLowerCase(), type: "identifier" });
+    } else if (/[A-Za-z_]/u.test(character)) {
+      let value = "";
+      while (index < sql.length && /[A-Za-z0-9_$]/u.test(sql[index])) {
+        value += sql[index];
+        index += 1;
+      }
+      tokens.push({ value: value.toLowerCase(), type: "identifier" });
+    } else if (/[0-9]/u.test(character)) {
+      let value = "";
+      while (index < sql.length && /[A-Za-z0-9_.]/u.test(sql[index])) {
+        value += sql[index];
+        index += 1;
+      }
+      tokens.push({ value, type: "number" });
+    } else {
+      tokens.push({ value: character, type: "punctuation" });
+      index += 1;
+    }
+  }
+
+  let depth = 0;
+  const contexts = [];
+  for (let tokenIndex = 0; tokenIndex < tokens.length; tokenIndex += 1) {
+    const token = tokens[tokenIndex];
+    token.depth = depth;
+    token.context = contexts.at(-1) ?? null;
+    if (token.value === "(") {
+      const prior = tokens[tokenIndex - 1];
+      contexts.push(prior?.type === "identifier" ? prior.value : null);
+      depth += 1;
+    } else if (token.value === ")") {
+      depth -= 1;
+      contexts.pop();
+      token.depth = depth;
+      if (depth < 0) throw new Error("reporting dashboard SQL has unbalanced parentheses");
+    }
+  }
+  if (depth !== 0) throw new Error("reporting dashboard SQL has unbalanced parentheses");
+  return tokens;
+}
+
+function matchingCloseParenthesis(tokens, openingIndex) {
+  let depth = 0;
+  for (let index = openingIndex; index < tokens.length; index += 1) {
+    if (tokens[index].value === "(") depth += 1;
+    if (tokens[index].value === ")" && (depth -= 1) === 0) return index;
+  }
+  return -1;
+}
+
+function sqlCteNames(tokens) {
+  const result = new Set();
+  for (let index = 0; index < tokens.length; index += 1) {
+    if (tokens[index].value !== "with") continue;
+    let cursor = index + 1;
+    if (tokens[cursor]?.value === "recursive") cursor += 1;
+    while (tokens[cursor]?.type === "identifier") {
+      const name = tokens[cursor].value;
+      cursor += 1;
+      if (tokens[cursor]?.value === "(") {
+        const closing = matchingCloseParenthesis(tokens, cursor);
+        if (closing === -1) break;
+        cursor = closing + 1;
+      }
+      if (tokens[cursor]?.value !== "as") break;
+      cursor += 1;
+      if (tokens[cursor]?.value === "not") cursor += 1;
+      if (tokens[cursor]?.value === "materialized") cursor += 1;
+      if (tokens[cursor]?.value !== "(") break;
+      result.add(name);
+      const closing = matchingCloseParenthesis(tokens, cursor);
+      if (closing === -1) break;
+      cursor = closing + 1;
+      if (tokens[cursor]?.value !== ",") break;
+      cursor += 1;
+    }
+  }
+  return result;
+}
+
+function sqlSourceAt(tokens, start) {
+  let index = start;
+  while (["lateral", "only"].includes(tokens[index]?.value)) index += 1;
+  if (tokens[index]?.type !== "identifier") return null;
+  const names = [tokens[index].value];
+  index += 1;
+  while (tokens[index]?.value === "." && tokens[index + 1]?.type === "identifier") {
+    names.push(tokens[index + 1].value);
+    index += 2;
+  }
+  return {
+    names,
+    kind: tokens[index]?.value === "(" ? "function" : "relation",
+  };
+}
+
+function projectionName(names, label) {
+  if (names.length > 2 || (names.length === 2 && names[0] !== "lab_reporting")) {
+    throw new Error(`reporting dashboard SQL uses an out-of-projection ${label}`);
+  }
+  return names.at(-1);
+}
+
+function queryProjectionDependencies(sql) {
+  const tokens = sqlTokens(sql);
+  const cteNames = sqlCteNames(tokens);
+  const relations = new Set();
+  const callableProjectionFunctions = new Set();
+  const stopKeywords = new Set([
+    "except",
+    "fetch",
+    "for",
+    "group",
+    "having",
+    "intersect",
+    "limit",
+    "offset",
+    "order",
+    "returning",
+    "union",
+    "where",
+    "window",
+  ]);
+  const nonSourceContexts = new Set(["extract", "substring", "trim"]);
+
+  const addSource = (source) => {
+    if (source === null) return;
+    const name = projectionName(source.names, source.kind);
+    if (source.kind === "relation") {
+      if (!cteNames.has(name)) relations.add(name);
+    } else if (name.startsWith("fn_")) {
+      callableProjectionFunctions.add(name);
+    } else if (name !== "generate_series") {
+      throw new Error(`reporting dashboard SQL uses an unclassified source function: ${name}`);
+    }
+  };
+
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index];
+    if (token.type === "identifier") {
+      let cursor = index + 1;
+      const names = [token.value];
+      if (tokens[cursor]?.value === "." && tokens[cursor + 1]?.type === "identifier") {
+        names.push(tokens[cursor + 1].value);
+        cursor += 2;
+      }
+      if (names.at(-1).startsWith("fn_") && tokens[cursor]?.value === "(") {
+        callableProjectionFunctions.add(projectionName(names, "function"));
+      }
+    }
+    if (!["from", "join"].includes(token.value)) continue;
+    if (
+      (token.value === "from" && nonSourceContexts.has(token.context))
+      || tokens[index - 1]?.value === "distinct"
+    ) continue;
+    const sourceDepth = token.depth;
+    addSource(sqlSourceAt(tokens, index + 1));
+    if (token.value !== "from") continue;
+    for (let cursor = index + 1; cursor < tokens.length; cursor += 1) {
+      if (tokens[cursor].depth < sourceDepth) break;
+      if (tokens[cursor].depth === sourceDepth && stopKeywords.has(tokens[cursor].value)) break;
+      if (tokens[cursor].depth === sourceDepth && tokens[cursor].value === ",") {
+        addSource(sqlSourceAt(tokens, cursor + 1));
+      }
+    }
+  }
+  return { relations, callableProjectionFunctions };
+}
+
+export function validateReportingDependencies(dependencies, targets) {
+  const reportingTargetsSha256 = sha256(canonicalBytes(targets));
+  if (
+    !exactKeys(dependencies, [
+      "contract",
+      "schemaVersion",
+      "reportingTargetsSha256",
+      "dashboardCount",
+      "uniquePanelCount",
+      "occurrenceCount",
+      "queryCount",
+      "relations",
+      "callableProjectionFunctions",
+      "runtimeControlRelations",
+    ])
+    || dependencies.contract !== REPORTING_DEPENDENCY_CONTRACT
+    || dependencies.schemaVersion !== REPORTING_DEPENDENCY_SCHEMA_VERSION
+    || dependencies.reportingTargetsSha256 !== reportingTargetsSha256
+    || dependencies.dashboardCount !== targets.dashboardCount
+    || dependencies.uniquePanelCount !== targets.uniquePanelCount
+    || dependencies.occurrenceCount !== targets.occurrenceCount
+    || !Number.isSafeInteger(dependencies.queryCount)
+    || dependencies.queryCount < targets.uniquePanelCount
+    || !Array.isArray(dependencies.relations)
+    || dependencies.relations.length === 0
+    || !Array.isArray(dependencies.callableProjectionFunctions)
+    || dependencies.callableProjectionFunctions.length === 0
+    || JSON.stringify(dependencies.runtimeControlRelations) !== JSON.stringify(["source_watermark_v1"])
+  ) throw new Error("reporting projection dependencies do not use the closed v1 shape");
+  for (const [label, values] of [
+    ["relation", dependencies.relations],
+    ["function", dependencies.callableProjectionFunctions],
+  ]) {
+    if (
+      values.some((value) => typeof value !== "string" || !/^[a-z_][a-z0-9_]*$/u.test(value))
+      || new Set(values).size !== values.length
+      || JSON.stringify(values) !== JSON.stringify([...values].sort())
+    ) throw new Error(`reporting projection ${label} dependencies are not canonical`);
+  }
+  return dependencies;
+}
+
+export async function reportingDependenciesFromTargets(targets) {
+  const sources = await validateDashboardSources(targets);
+  const relations = new Set();
+  const callableProjectionFunctions = new Set();
+  let queryCount = 0;
+  for (const [dashboardIndex, target] of targets.dashboards.entries()) {
+    const panels = collectDashboardPanels(sources[dashboardIndex].dashboard);
+    for (const panelId of target.panelIds) {
+      const matchingPanels = panels.filter((panel) => String(panel.id) === panelId);
+      if (
+        matchingPanels.length === 0
+        || matchingPanels.flatMap((panel) => collectRawSql(panel)).length === 0
+      ) {
+        throw new Error(`reporting panel has no SQL dependency surface: ${target.uid}/${panelId}`);
+      }
+    }
+    const queries = panels.flatMap((panel) => collectRawSql(panel));
+    queryCount += queries.length;
+    for (const query of queries) {
+      const dependencies = queryProjectionDependencies(query);
+      for (const relation of dependencies.relations) relations.add(relation);
+      for (const name of dependencies.callableProjectionFunctions) {
+        callableProjectionFunctions.add(name);
+      }
+    }
+  }
+  return validateReportingDependencies({
+    contract: REPORTING_DEPENDENCY_CONTRACT,
+    schemaVersion: REPORTING_DEPENDENCY_SCHEMA_VERSION,
+    reportingTargetsSha256: sha256(canonicalBytes(targets)),
+    dashboardCount: targets.dashboardCount,
+    uniquePanelCount: targets.uniquePanelCount,
+    occurrenceCount: targets.occurrenceCount,
+    queryCount,
+    relations: [...relations].sort(),
+    callableProjectionFunctions: [...callableProjectionFunctions].sort(),
+    runtimeControlRelations: ["source_watermark_v1"],
+  }, targets);
 }
 
 function blockScalar(raw) {
@@ -389,6 +748,23 @@ function renderTargetsConfigMap(targets) {
   ].join("\n")}\n`;
 }
 
+function renderDependenciesConfigMap(dependencies) {
+  return `${[
+    "apiVersion: v1",
+    "kind: ConfigMap",
+    "metadata:",
+    "  name: verdify-lab-reporting-dependencies",
+    "  labels:",
+    "    app.kubernetes.io/name: verdify-lab-reporting-projection",
+    "    app.kubernetes.io/component: lab-reporting-projection",
+    "    app.kubernetes.io/part-of: verdify",
+    "    verdify.ai/generated-by: generate-reporting-tier-assets",
+    "data:",
+    "  reporting-dependencies.json: |-",
+    blockScalar(canonicalBytes(dependencies).toString("utf8")),
+  ].join("\n")}\n`;
+}
+
 function shardDashboards(dashboards) {
   const shards = [];
   let current = [];
@@ -410,11 +786,12 @@ function shardDashboards(dashboards) {
   return shards;
 }
 
-async function expectedGeneratedFiles(targets) {
+async function expectedGeneratedFiles(targets, dependencies) {
   const dashboards = await validateDashboardSources(targets);
   const shards = shardDashboards(dashboards);
   return new Map([
     ["targets-cm.yaml", renderTargetsConfigMap(targets)],
+    ["dependencies-cm.yaml", renderDependenciesConfigMap(dependencies)],
     ...shards.map((shard, index) => [
       `dashboards-cm-${index}.yaml`,
       renderConfigMap(index, shard),
@@ -440,6 +817,7 @@ function parseArguments(argv) {
     write: false,
     manifest: null,
     targetPath: DEFAULT_TARGET_PATH,
+    dependencyPath: DEFAULT_DEPENDENCY_PATH,
     generatedRoot: DEFAULT_GENERATED_ROOT,
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -450,12 +828,13 @@ function parseArguments(argv) {
     } else if (argument === "--write") {
       result.write = true;
       result.check = false;
-    } else if (["--manifest", "--targets", "--generated-root"].includes(argument)) {
+    } else if (["--manifest", "--targets", "--dependencies", "--generated-root"].includes(argument)) {
       const value = argv[index + 1];
       if (!value) throw new Error(`${argument} requires a path`);
       index += 1;
       if (argument === "--manifest") result.manifest = path.resolve(value);
       if (argument === "--targets") result.targetPath = path.resolve(value);
+      if (argument === "--dependencies") result.dependencyPath = path.resolve(value);
       if (argument === "--generated-root") result.generatedRoot = path.resolve(value);
     } else {
       throw new Error(`unknown argument: ${argument}`);
@@ -516,7 +895,21 @@ export async function runReportingAssetGenerator(argv = process.argv.slice(2)) {
       (await readCanonicalJson(options.targetPath, "reporting targets")).value,
     );
   }
-  const generated = await expectedGeneratedFiles(targets);
+  const dependencies = await reportingDependenciesFromTargets(targets);
+  if (options.write) {
+    await mkdir(path.dirname(options.dependencyPath), { recursive: true });
+    await writeFile(options.dependencyPath, canonicalBytes(dependencies));
+  } else {
+    const committed = await readCanonicalJson(
+      options.dependencyPath,
+      "reporting projection dependencies",
+    );
+    validateReportingDependencies(committed.value, targets);
+    if (!canonicalBytes(dependencies).equals(committed.bytes)) {
+      throw new Error("reporting projection dependencies drifted from the dashboard targets");
+    }
+  }
+  const generated = await expectedGeneratedFiles(targets, dependencies);
   if (options.write) await writeGeneratedFiles(options.generatedRoot, generated);
   else await compareGeneratedFiles(options.generatedRoot, generated);
   const sizes = [...generated].map(([name, content]) => ({ name, bytes: Buffer.byteLength(content) }));
@@ -528,6 +921,9 @@ export async function runReportingAssetGenerator(argv = process.argv.slice(2)) {
     dashboardCount: targets.dashboardCount,
     uniquePanelCount: targets.uniquePanelCount,
     occurrenceCount: targets.occurrenceCount,
+    queryCount: dependencies.queryCount,
+    relationCount: dependencies.relations.length,
+    callableProjectionFunctionCount: dependencies.callableProjectionFunctions.length,
     configMaps: sizes,
   };
 }

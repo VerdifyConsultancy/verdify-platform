@@ -83,7 +83,7 @@ data:
         return 200 "ok\n";
       }
 
-      location ~ ^/render/d-solo/(greenhouse-equipment|greenhouse-hydroponics|greenhouse-lighting|greenhouse-soil|greenhouse-weather|site-climate|site-climate-lighting|site-evidence-economics|site-evidence-operations|site-evidence-planning-quality|site-greenhouse-crops|site-greenhouse-equipment|site-greenhouse-zones|site-home|site-inference-infra|site-intelligence|site-intelligence-planning|site-irrigation)/$ {
+      location ~ ^/render/d-solo/(greenhouse-equipment|greenhouse-hydroponics|greenhouse-lighting|greenhouse-soil|greenhouse-weather|site-climate|site-climate-lighting|site-evidence-economics|site-evidence-operations|site-evidence-planning-quality|site-greenhouse-crops|site-greenhouse-equipment|site-greenhouse-zones|site-home|site-inference-infra|site-intelligence|site-intelligence-planning|site-irrigation)$ {
         limit_except GET { deny all; }
         proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
@@ -127,6 +127,10 @@ data:
   projectionWatermarkPath: /v1/source-watermark
   reportingReaderSecret: verdify-lab-reporting-reader
   reportingReaderSecretKeys: PGUSER,PGPASSWORD,PGDATABASE
+  reportingReaderRole: verdify_lab_reporting_reader
+  reportingDatabase: verdify_lab_reporting_stage
+  reportingSchema: lab_reporting
+  projectionDependencyContract: verdify.lab-reporting-projection-dependencies/v1
   reportingRuntimeSecret: verdify-lab-reporting-runtime
   reportingRuntimeSecretKeys: GRAFANA_ADMIN_PASSWORD,GRAFANA_RENDERER_TOKEN
   graphRenderConcurrency: "2"

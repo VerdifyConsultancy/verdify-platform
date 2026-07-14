@@ -7,7 +7,10 @@ import { fileURLToPath } from "node:url";
 
 import YAML from "yaml";
 
-import { validateReportingTargets } from "../scripts/generate-reporting-tier-assets.mjs";
+import {
+  validateReportingDependencies,
+  validateReportingTargets,
+} from "../scripts/generate-reporting-tier-assets.mjs";
 
 const SITE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const REPO_ROOT = path.resolve(SITE_ROOT, "..");
@@ -71,6 +74,7 @@ test("reporting tier is a standalone source-only overlay with no route or Secret
       "ServiceAccount/verdify-lab-occurrence-producer",
       "ConfigMap/verdify-lab-reporting-dashboards-0",
       "ConfigMap/verdify-lab-reporting-dashboards-1",
+      "ConfigMap/verdify-lab-reporting-dependencies",
       "ConfigMap/verdify-lab-reporting-gateway",
       "ConfigMap/verdify-lab-reporting-projection-readiness",
       "ConfigMap/verdify-lab-reporting-provisioning",
@@ -116,10 +120,17 @@ test("projection Service and verifier are fixed, read-only, and have no backing 
   const sql = one(resources, "ConfigMap", "verdify-lab-reporting-projection-readiness")
     .data["projection-readiness.sql"];
   assert.match(sql, /BEGIN TRANSACTION READ ONLY;/u);
-  assert.match(sql, /current_database\(\) <> 'verdify'/u);
+  assert.match(sql, /current_database\(\) = 'verdify_lab_reporting_stage'/u);
+  assert.match(sql, /current_user = 'verdify_lab_reporting_reader'/u);
   assert.match(sql, /current_schema\(\) = 'lab_reporting' AS reporting_search_path/u);
   assert.match(sql, /no_relation_writes/u);
   assert.match(sql, /no_non_reporting_relation_select/u);
+  assert.match(sql, /no_missing_relations/u);
+  assert.match(sql, /no_extra_relations/u);
+  assert.match(sql, /no_missing_functions/u);
+  assert.match(sql, /no_extra_functions/u);
+  assert.match(sql, /no_volatile_functions/u);
+  assert.match(sql, /invoker_only/u);
   assert.match(sql, /count\(\*\) = 1 AS exactly_one/u);
   assert.match(sql, /LIMIT 2;/u);
   assert.doesNotMatch(sql, /^\s*(?:CREATE|ALTER|DROP|GRANT|REVOKE|INSERT|UPDATE|DELETE|TRUNCATE)\b/imu);
@@ -207,6 +218,8 @@ test("Grafana is private, anonymous-disabled, proxy-authenticated, and projectio
 
   const gateway = one(resources, "ConfigMap", "verdify-lab-reporting-gateway").data["default.conf"];
   for (const uid of DASHBOARD_UIDS) assert.match(gateway, new RegExp(`(?:\\||\\()${uid}(?:\\||\\))`, "u"));
+  assert.match(gateway, /site-irrigation\)\$ \{/u);
+  assert.doesNotMatch(gateway, /site-irrigation\)\/\$ \{/u);
   assert.match(gateway, /X-WEBAUTH-USER verdify-lab-renderer;/u);
   assert.match(gateway, /proxy_set_header Authorization "";/u);
   assert.match(gateway, /proxy_set_header Cookie "";/u);
@@ -270,6 +283,13 @@ test("producer contract is zero-replica, zero-digest, and missing every activati
   assert.equal(renderedConfigMaps.has("verdify-lab-occurrence-store-metadata"), false);
   const runtimeContract = one(resources, "ConfigMap", "verdify-lab-reporting-runtime-contract").data;
   assert.equal(runtimeContract.graphRenderConcurrency, "2");
+  assert.equal(runtimeContract.reportingReaderRole, "verdify_lab_reporting_reader");
+  assert.equal(runtimeContract.reportingDatabase, "verdify_lab_reporting_stage");
+  assert.equal(runtimeContract.reportingSchema, "lab_reporting");
+  assert.equal(
+    runtimeContract.projectionDependencyContract,
+    "verdify.lab-reporting-projection-dependencies/v1",
+  );
   assert.equal(
     runtimeContract.producerPolicyByteBindingState,
     "baked-approved-policy-digest-required-before-activation",
@@ -282,6 +302,15 @@ test("producer contract is zero-replica, zero-digest, and missing every activati
   assert.deepEqual(
     [targets.dashboardCount, targets.uniquePanelCount, targets.occurrenceCount],
     [18, 139, 143],
+  );
+  const dependencyDocument = JSON.parse(
+    one(resources, "ConfigMap", "verdify-lab-reporting-dependencies")
+      .data["reporting-dependencies.json"],
+  );
+  const dependencies = validateReportingDependencies(dependencyDocument, targets);
+  assert.deepEqual(
+    [dependencies.queryCount, dependencies.relations.length, dependencies.callableProjectionFunctions.length],
+    [594, 48, 6],
   );
 });
 

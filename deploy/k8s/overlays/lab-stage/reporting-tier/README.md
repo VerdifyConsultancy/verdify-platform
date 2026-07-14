@@ -12,7 +12,9 @@ The resource-name contract is fixed:
 - operator projection: `verdify-lab-reporting-projection`, PostgreSQL on 5432
   and the closed source-watermark endpoint on 8080;
 - reporting reader: `verdify-lab-reporting-reader` with `PGUSER`, `PGPASSWORD`,
-  and `PGDATABASE`;
+  and `PGDATABASE`, resolving to the exact non-secret role
+  `verdify_lab_reporting_reader` and database
+  `verdify_lab_reporting_stage`;
 - Grafana runtime: `verdify-lab-reporting-runtime` with
   `GRAFANA_ADMIN_PASSWORD` and `GRAFANA_RENDERER_TOKEN`;
 - one-shot producer: ServiceAccount and Deployment
@@ -24,23 +26,31 @@ The resource-name contract is fixed:
 
 The operator projection is not implemented here. The Service has a selector but
 no matching workload, so it has no endpoints. `projection-readiness.sql` is a
-verification-only, read-only transaction: it creates no role, schema, view,
-table, grant, or credential. It requires a distinct non-Track-A reader, only
-selectable views/materialized views, no object-creation or relation-write
+verification-only, read-only transaction: it creates no role, database, schema,
+view, table, grant, or credential. It requires those exact isolated identities,
+only selectable views/materialized views, no object-creation or relation-write
 privileges, no selectable non-system relation outside `lab_reporting`, and
-exactly one canonical `lab-public-v1` source-watermark row. The
-reader's default schema must be `lab_reporting`, so the existing dashboards'
-unqualified table/view names cannot resolve against a primary schema. The
-private HTTP adapter must expose that same row at `/v1/source-watermark` using
-the closed response consumed by `reporting-tier-runtime.mjs`.
+exactly one canonical `lab-public-v1` source-watermark row. The reader's
+default schema must be `lab_reporting`, so the existing dashboards' unqualified
+table/view names cannot resolve against a primary schema. The private HTTP
+adapter must expose that same row at `/v1/source-watermark` using the closed
+response consumed by `reporting-tier-runtime.mjs`.
 
 The generated assets pin 18 dashboards, 139 unique panels, and 143 graph
 occurrences to source manifest
 `e455309736cf785914141d1641ec2569f623e048cf9073b3ea6fce181726160d`.
+`lab-stage-reporting-dependencies.json` is generated from all 594 SQL queries
+in those exact dashboard documents (including the 139 targeted panels). It
+closes the projection to 48 dashboard relations, six callable projection
+functions, and the separate `source_watermark_v1` runtime control view. The
+verifier compares that inventory to the complete
+`lab_reporting` schema and fails on missing or extra relations/functions,
+ambiguous overloads, volatile/definer functions, or privilege drift.
 Grafana 12.4.5 and renderer 5.10.0 are immutable-digest pinned. Anonymous and
 basic auth are off. Only the loopback nginx gateway supplies the fixed auth
-proxy identity, and it exposes only `/healthz` plus the 18 exact dashboard UID
-render paths. The renderer reuses the 5.10 environment contract already pinned
+proxy identity, and it exposes only `/healthz` plus the 18 exact no-slug
+`/render/d-solo/<uid>` paths registered by the pinned Grafana release. The
+renderer reuses the 5.10 environment contract already pinned
 by the production Grafana component (`SERVER_ADDR`, `AUTH_TOKEN`, `LOG_LEVEL`,
 `RATE_LIMIT_*`, readiness timeout, timezone, and `HOME`). Pass 1 limits both
 Grafana and the renderer to two concurrent renders, gives Chromium a 4 GiB / 2
@@ -56,7 +66,7 @@ manifest and approved-policy ConfigMaps are also intentionally absent. The
 library validates policy/manifest semantics and the canonical manifest digest,
 but no exporter image yet bakes and verifies the exact Jason-approved policy
 byte digest. A mutable ConfigMap alone does not satisfy that executable binding.
-operator projection, both Secrets, and occurrence-store metadata/writer binding
+The operator projection, both Secrets, and occurrence-store metadata/writer binding
 must exist and pass their separate reviews. NetworkPolicy currently permits the
 producer to reach only DNS, the private reporting gateway, and the projection's
 private watermark endpoint; public-camera and object-store egress remain absent
