@@ -211,7 +211,10 @@ its Docker `CMD` is the offline contract verifier and it has no publisher
 `ENTRYPOINT`. The approved Pass 1 publisher must be selected explicitly with
 `node /app/runtime-source/scripts/run-stage-occurrence-site-publisher.mjs
 execute ...`. That command consumes canonical event, producer-result, policy,
-and manifest documents plus disjoint candidate/workspace roots. It binds the
+and manifest documents plus disjoint candidate/workspace roots. Before runtime
+or store construction, the selected policy digest must equal the canonical
+policy baked under `/app/runtime-source/config`; a policy revision therefore
+requires a reviewed image revision. It binds the
 packaged immutable snapshot to the selected occurrence store, runs the compiler,
 Astro, Pagefind, and the global-noindex verifier, then publishes through the
 explicit S3 release writer. Child process groups receive bounded TERM then KILL,

@@ -7,6 +7,7 @@ import {
     readFile,
     readdir,
     rm,
+    symlink,
     writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -25,9 +26,17 @@ import { createSiteReleaseCheckpointOperations } from "../scripts/lib/site-relea
 import { createSiteReleaseWriterStore } from "../scripts/lib/runtime-s3-binding.mjs";
 
 const PROFILE = occurrenceSitePublicationProfiles.stage;
+const POLICY_PATH = new URL(
+    "../config/lab-stage-occurrence-export-policy.json",
+    import.meta.url,
+);
 
 function sha256(bytes) {
     return createHash("sha256").update(bytes).digest("hex");
+}
+
+function canonical(document) {
+    return `${JSON.stringify(document, null, 2)}\n`;
 }
 
 async function temporaryRoot(context, prefix) {
@@ -133,6 +142,76 @@ test("stage build removes only its owned failed workspace and can retry", async 
     assert.equal((await readdir(workspaceRoot)).join(","), "site-astro");
     assert.ok(labels.includes("index selected-stage Pagefind"));
     assert.ok(labels.includes("verify selected global-noindex stage output"));
+});
+
+test("stage build rejects nested source and snapshot links before copying", async (context) => {
+    for (const selectedTree of ["source", "snapshot"]) {
+        const root = await temporaryRoot(
+            context,
+            `verdify-stage-linked-${selectedTree}-`,
+        );
+        const sourceRoot = path.join(root, "source");
+        const snapshotRoot = path.join(root, "snapshot");
+        const nodeModulesRoot = path.join(root, "node_modules");
+        const workspaceRoot = path.join(root, "workspace");
+        const occurrenceStoreRoot = path.join(root, "occurrences");
+        await Promise.all([
+            mkdir(sourceRoot),
+            mkdir(snapshotRoot),
+            mkdir(nodeModulesRoot),
+            mkdir(workspaceRoot),
+            mkdir(occurrenceStoreRoot),
+        ]);
+        for (const directory of ["scripts", "src", "vendor"]) {
+            await mkdir(path.join(sourceRoot, directory));
+        }
+        for (const file of [
+            "astro.config.mjs",
+            "package-lock.json",
+            "package.json",
+            "postcss.config.mjs",
+            "tsconfig.json",
+        ]) {
+            await writeFile(path.join(sourceRoot, file), "{}\n");
+        }
+        await writeFile(path.join(snapshotRoot, "attestation.json"), "{}\n");
+        const linkedRoot =
+            selectedTree === "source"
+                ? path.join(sourceRoot, "scripts")
+                : snapshotRoot;
+        await mkdir(path.join(linkedRoot, "nested"));
+        await symlink(
+            path.join(root, "outside"),
+            path.join(linkedRoot, "nested", "linked"),
+        );
+
+        const operation = createStageAstroBuildOperation({
+            sourceRoot,
+            snapshotRoot,
+            nodeModulesRoot,
+            environment: { LAB_OCCURRENCE_STORE: occurrenceStoreRoot },
+            runCommand: async () => {
+                assert.fail("linked packaged trees must fail before a command");
+            },
+        });
+        const sourceSnapshotManifestSha256 = "1".repeat(64);
+        await assert.rejects(
+            operation.build({
+                contract: "verdify.lab-profiled-selected-astro-build-request",
+                schemaVersion: 2,
+                publicationProfile: structuredClone(PROFILE),
+                event: { sourceSnapshotManifestSha256 },
+                checkpoint: {},
+                workspaceRoot,
+                policy: { sourceSnapshotManifestSha256 },
+                manifest: {},
+                occurrenceStore:
+                    createOccurrenceReleaseStore(occurrenceStoreRoot),
+            }),
+            /contains a link/,
+        );
+        assert.deepEqual(await readdir(workspaceRoot), []);
+    }
 });
 
 test("stage verifier runs the real verifier boundary and returns only bound identities", async (context) => {
@@ -273,17 +352,47 @@ test("site checkpoints are immutable and idempotent in the exact S3 release stor
     );
 });
 
-test("explicit stage publisher composition selects a runtime without hiding the command", async () => {
+test("explicit stage publisher composition selects a runtime without hiding the command", async (context) => {
+    const root = await temporaryRoot(context, "verdify-stage-policy-");
+    const sourceRoot = path.join(root, "source");
+    await mkdir(path.join(sourceRoot, "config"), { recursive: true });
+    const policyBytes = await readFile(POLICY_PATH);
+    const policyPath = path.join(root, "selected-policy.json");
+    await Promise.all([
+        writeFile(
+            path.join(
+                sourceRoot,
+                "config/lab-stage-occurrence-export-policy.json",
+            ),
+            policyBytes,
+        ),
+        writeFile(policyPath, policyBytes),
+    ]);
     const environment = { LAB_RELEASE_STORE: "binding" };
     const paths = {
-        sourceRoot: "/opt/source",
-        snapshotRoot: "/opt/source/.snapshot",
+        sourceRoot,
+        snapshotRoot: path.join(sourceRoot, ".snapshot"),
         nodeModulesRoot: "/app/node_modules",
     };
     const runtime = async () => ({ contract: "runtime" });
     let construction = null;
     let invocation = null;
-    const result = await runExecutableStagePublisher(["execute"], {
+    const argv = [
+        "execute",
+        "--event",
+        "/input/event.json",
+        "--producer-result",
+        "/input/producer.json",
+        "--policy",
+        policyPath,
+        "--manifest",
+        "/input/manifest.json",
+        "--candidate-root",
+        "/work/candidates",
+        "--workspace-root",
+        "/work/build",
+    ];
+    const result = await runExecutableStagePublisher(argv, {
         environment,
         paths,
         createRuntime: (options) => {
@@ -297,8 +406,66 @@ test("explicit stage publisher composition selects a runtime without hiding the 
     });
     assert.deepEqual(result, { status: "selected" });
     assert.deepEqual(construction, { environment, ...paths });
-    assert.deepEqual(invocation.argv, ["execute"]);
+    assert.deepEqual(invocation.argv, argv);
     assert.equal(invocation.dependencies.createRuntime, runtime);
+});
+
+test("executable rejects a different approved policy before runtime construction", async (context) => {
+    const root = await temporaryRoot(context, "verdify-stage-policy-drift-");
+    const sourceRoot = path.join(root, "source");
+    await mkdir(path.join(sourceRoot, "config"), { recursive: true });
+    const packaged = JSON.parse(await readFile(POLICY_PATH, "utf8"));
+    const selected = structuredClone(packaged);
+    selected.reviewedAt = "2026-07-13T07:36:31Z";
+    const packagedPath = path.join(
+        sourceRoot,
+        "config/lab-stage-occurrence-export-policy.json",
+    );
+    const selectedPath = path.join(root, "selected-policy.json");
+    await Promise.all([
+        writeFile(packagedPath, canonical(packaged)),
+        writeFile(selectedPath, canonical(selected)),
+    ]);
+    let runtimeConstructions = 0;
+    let cliInvocations = 0;
+    await assert.rejects(
+        runExecutableStagePublisher(
+            [
+                "execute",
+                "--event",
+                "/input/event.json",
+                "--producer-result",
+                "/input/producer.json",
+                "--policy",
+                selectedPath,
+                "--manifest",
+                "/input/manifest.json",
+                "--candidate-root",
+                "/work/candidates",
+                "--workspace-root",
+                "/work/build",
+            ],
+            {
+                environment: {},
+                paths: {
+                    sourceRoot,
+                    snapshotRoot: path.join(sourceRoot, ".snapshot"),
+                    nodeModulesRoot: "/app/node_modules",
+                },
+                createRuntime: () => {
+                    runtimeConstructions += 1;
+                    return async () => ({});
+                },
+                runCli: async () => {
+                    cliInvocations += 1;
+                    return {};
+                },
+            },
+        ),
+        /does not match the packaged policy/,
+    );
+    assert.equal(runtimeConstructions, 0);
+    assert.equal(cliInvocations, 0);
 });
 
 test("packaged exporter keeps the offline verifier as its no-argument default", async () => {

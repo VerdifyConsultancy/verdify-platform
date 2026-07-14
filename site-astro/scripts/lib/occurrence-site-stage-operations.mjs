@@ -201,6 +201,44 @@ async function copyEntry(sourceRoot, projectRoot, relative) {
     });
 }
 
+async function assertLinkFreeTree(root, label) {
+    const pending = [{ absolute: root, relative: "." }];
+    while (pending.length > 0) {
+        const selected = pending.pop();
+        const metadata = await lstat(selected.absolute);
+        if (metadata.isSymbolicLink()) {
+            throw new Error(`${label} contains a link: ${selected.relative}`);
+        }
+        if (metadata.isFile()) continue;
+        if (!metadata.isDirectory()) {
+            throw new Error(
+                `${label} contains a non-file entry: ${selected.relative}`,
+            );
+        }
+        const entries = await readdir(selected.absolute);
+        entries.sort().reverse();
+        for (const name of entries) {
+            pending.push({
+                absolute: path.join(selected.absolute, name),
+                relative:
+                    selected.relative === "."
+                        ? name
+                        : path.join(selected.relative, name),
+            });
+        }
+    }
+}
+
+async function assertPackagedTreesLinkFree(sourceRoot, snapshotRoot) {
+    for (const relative of SOURCE_ENTRIES) {
+        await assertLinkFreeTree(
+            path.join(sourceRoot, relative),
+            `stage build source entry ${relative}`,
+        );
+    }
+    await assertLinkFreeTree(snapshotRoot, "stage build snapshot");
+}
+
 async function removeOwnedProject(projectRoot, identity) {
     let current;
     try {
@@ -342,6 +380,7 @@ export function createStageAstroBuildOperation({
                 path.resolve(nodeModulesRoot),
                 "stage build Node modules root",
             );
+            await assertPackagedTreesLinkFree(source.path, snapshot.path);
             const projectRoot = path.join(workspace.path, "site-astro");
             await mkdir(projectRoot, { mode: 0o700 });
             const projectIdentity = await lstat(projectRoot, { bigint: true });

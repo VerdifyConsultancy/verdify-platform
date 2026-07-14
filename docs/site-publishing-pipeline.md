@@ -180,6 +180,9 @@ execute ...`, mount the six canonical input paths and disjoint
 candidate/workspace roots, and bind only `LAB_OCCURRENCE_STORE`,
 `LAB_RELEASE_STORE`, `LAB_S3_ENDPOINT_URL`, `AWS_DEFAULT_REGION`,
 `AWS_ACCESS_KEY_ID`, and `AWS_SECRET_ACCESS_KEY`.
+Before runtime or store construction, the command requires the selected policy
+digest to match the canonical policy baked in that image. A future policy
+revision must therefore ship as reviewed source in a new image.
 The build requires a 40/64-hex source revision and canonical UTC release time,
 binds them to OCI revision/created labels, and writes the same values into a
 canonical metadata record that the default verifier validates and emits.

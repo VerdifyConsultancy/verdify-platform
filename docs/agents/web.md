@@ -142,7 +142,9 @@ offline verifier. A Pass 1 Deployment must deliberately invoke the script with
 the canonical event, producer-result, approved-policy, manifest, candidate-root,
 and workspace-root arguments. The executable binds the real selected-snapshot
 compiler, Astro/Pagefind/noindex verifier, immutable S3 checkpoint adapter, and
-the existing occurrence/site writer stores. It uses bounded process-group
+the existing occurrence/site writer stores. It rejects any selected policy
+whose canonical digest differs from the policy baked in that image before
+constructing the runtime or stores. It uses bounded process-group
 termination and cleans only its owned failed workspace before a retry.
 
 Phase 4b PR #525 carries the next source-only object-store/runtime

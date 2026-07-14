@@ -263,7 +263,7 @@ test("request validation rejects URL, query, method, redirect, auth, cookie, and
     request: original,
     outputRoot: root,
     transport: async () => { calls += 1; },
-  }), /not activated/);
+  }), /predates policy activation/);
   assert.equal(calls, 0);
 
   await assert.rejects(captureCameraOccurrence({
