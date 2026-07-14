@@ -14,6 +14,8 @@ export const REPORTING_GATEWAY_ORIGIN =
 export const REPORTING_DATASOURCE_IDENTITY = "verdify-lab-reporting-stage-v1";
 export const REPORTING_FEED_ID = "lab-public-v1";
 export const REPORTING_WATERMARK_PATH = "/v1/source-watermark";
+export const REPORTING_WATERMARK_TIMEOUT_MS = 5_000;
+export const REPORTING_GRAPH_CONCURRENCY = 2;
 export const REPORTING_WATERMARK_SQL = [
   "SELECT feed_id, source_watermark,",
   "       to_char(source_watermark_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"') AS source_watermark_at,",
@@ -92,7 +94,7 @@ function contentLength(response) {
   return Number.isSafeInteger(result) ? result : null;
 }
 
-async function boundedResponseBytes(response, maximumBytes) {
+async function boundedResponseBytes(response, maximumBytes, registerCancel = () => {}) {
   const declared = contentLength(response);
   if (declared !== null && declared > maximumBytes) {
     await response.body?.cancel?.().catch(() => {});
@@ -100,6 +102,7 @@ async function boundedResponseBytes(response, maximumBytes) {
   }
   if (response.body?.getReader instanceof Function) {
     const reader = response.body.getReader();
+    registerCancel(() => reader.cancel());
     const chunks = [];
     let length = 0;
     try {
@@ -117,6 +120,7 @@ async function boundedResponseBytes(response, maximumBytes) {
         chunks.push(Buffer.from(value));
       }
     } finally {
+      registerCancel(null);
       reader.releaseLock();
     }
     if (declared !== null && declared !== length) {
@@ -156,15 +160,29 @@ function validateWatermarkDocument(value) {
   return value;
 }
 
-export async function readReportingProjectionWatermark({ fetchImpl = globalThis.fetch } = {}) {
-  if (typeof fetchImpl !== "function") throw new Error("reporting projection transport is unavailable");
+function cancelResponseBody(response) {
+  try {
+    Promise.resolve(response?.body?.cancel?.()).catch(() => {});
+  } catch {
+    // Deadline cleanup is best effort after the transport has been aborted.
+  }
+}
+
+async function fetchReportingProjectionWatermark(fetchImpl, signal, observeResponse, registerCancel) {
   const url = `${REPORTING_PROJECTION_ORIGIN}${REPORTING_WATERMARK_PATH}`;
   const response = await fetchImpl(url, {
     method: "GET",
     redirect: "error",
     credentials: "omit",
     headers: { accept: "application/json" },
+    signal,
   });
+  observeResponse(response);
+  registerCancel(() => response?.body?.cancel?.());
+  if (signal.aborted) {
+    cancelResponseBody(response);
+    throw new Error("reporting projection watermark request exceeded its deadline");
+  }
   if (response?.status !== 200 || response.redirected !== false) {
     await response?.body?.cancel?.().catch(() => {});
     throw new Error("reporting projection watermark endpoint is unavailable");
@@ -174,7 +192,8 @@ export async function readReportingProjectionWatermark({ fetchImpl = globalThis.
     await response.body?.cancel?.().catch(() => {});
     throw new Error("reporting projection watermark response is not JSON");
   }
-  const bytes = await boundedResponseBytes(response, MAX_WATERMARK_RESPONSE_BYTES);
+  const bytes = await boundedResponseBytes(response, MAX_WATERMARK_RESPONSE_BYTES, registerCancel);
+  registerCancel(null);
   let document;
   try {
     document = JSON.parse(bytes.toString("utf8"));
@@ -192,6 +211,49 @@ export async function readReportingProjectionWatermark({ fetchImpl = globalThis.
     sourceWatermark: document.sourceWatermark,
     sourceWatermarkAt: document.sourceWatermarkAt,
   };
+}
+
+export async function readReportingProjectionWatermark({
+  fetchImpl = globalThis.fetch,
+  timeoutMs = REPORTING_WATERMARK_TIMEOUT_MS,
+} = {}) {
+  if (typeof fetchImpl !== "function") throw new Error("reporting projection transport is unavailable");
+  if (
+    !Number.isSafeInteger(timeoutMs)
+    || timeoutMs < 1
+    || timeoutMs > REPORTING_WATERMARK_TIMEOUT_MS
+  ) throw new Error("reporting projection watermark deadline is invalid");
+  const controller = new AbortController();
+  let response = null;
+  let cancelActiveRead = null;
+  let timeout;
+  const operation = fetchReportingProjectionWatermark(
+    fetchImpl,
+    controller.signal,
+    (value) => { response = value; },
+    (cancel) => { cancelActiveRead = cancel; },
+  ).then(
+    (value) => ({ state: "fulfilled", value }),
+    (error) => ({ state: "rejected", error }),
+  );
+  const deadline = new Promise((resolve) => {
+    timeout = setTimeout(() => {
+      controller.abort();
+      try {
+        Promise.resolve(cancelActiveRead?.()).catch(() => {});
+      } catch {
+        cancelResponseBody(response);
+      }
+      resolve({ state: "deadline" });
+    }, timeoutMs);
+  });
+  const outcome = await Promise.race([operation, deadline]);
+  clearTimeout(timeout);
+  if (outcome.state === "deadline") {
+    throw new Error("reporting projection watermark request exceeded its deadline");
+  }
+  if (outcome.state === "rejected") throw outcome.error;
+  return outcome.value;
 }
 
 function sameJson(left, right) {
@@ -339,5 +401,6 @@ export async function runReportingOccurrenceProducerOnce({
     cameraTransport: cameraTransport(fetchImpl),
     selectorPreconditionReader,
     now,
+    graphConcurrency: REPORTING_GRAPH_CONCURRENCY,
   });
 }

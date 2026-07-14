@@ -110,7 +110,7 @@ spec:
                   name: verdify-lab-reporting-runtime
                   key: GRAFANA_RENDERER_TOKEN
             - name: GF_RENDERING_CONCURRENT_RENDER_REQUEST_LIMIT
-              value: "4"
+              value: "2"
             - name: PGUSER
               valueFrom:
                 secretKeyRef:
@@ -135,11 +135,17 @@ spec:
               drop: ["ALL"]
           resources:
             requests:
-              cpu: 100m
-              memory: 256Mi
+              cpu: 250m
+              memory: 512Mi
             limits:
-              cpu: "1"
-              memory: 768Mi
+              cpu: "2"
+              memory: 2Gi
+          startupProbe:
+            httpGet:
+              path: /api/health
+              port: grafana
+            failureThreshold: 60
+            periodSeconds: 5
           readinessProbe:
             httpGet:
               path: /api/health
@@ -188,7 +194,7 @@ spec:
             - name: LOG_LEVEL
               value: warn
             - name: RATE_LIMIT_MAX_LIMIT
-              value: "4"
+              value: "2"
             - name: RATE_LIMIT_MIN_LIMIT
               value: "1"
             - name: BROWSER_READINESS_TIMEOUT
@@ -206,11 +212,17 @@ spec:
               drop: ["ALL"]
           resources:
             requests:
-              cpu: 100m
-              memory: 256Mi
-            limits:
-              cpu: "1"
+              cpu: 500m
               memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 4Gi
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: renderer
+            failureThreshold: 60
+            periodSeconds: 5
           readinessProbe:
             httpGet:
               path: /healthz
@@ -278,7 +290,7 @@ spec:
         - name: renderer-shm
           emptyDir:
             medium: Memory
-            sizeLimit: 256Mi
+            sizeLimit: 512Mi
         - name: gateway-cache
           emptyDir: {}
         - name: gateway-tmp

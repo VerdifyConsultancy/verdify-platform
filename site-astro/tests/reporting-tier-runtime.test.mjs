@@ -18,9 +18,11 @@ import {
 import {
   REPORTING_DATASOURCE_IDENTITY,
   REPORTING_GATEWAY_ORIGIN,
+  REPORTING_GRAPH_CONCURRENCY,
   REPORTING_PROJECTION_ORIGIN,
   REPORTING_WATERMARK_PATH,
   REPORTING_WATERMARK_SQL,
+  REPORTING_WATERMARK_TIMEOUT_MS,
   createReportingTierRenderer,
   readReportingProjectionWatermark,
   runReportingOccurrenceProducerOnce,
@@ -178,7 +180,10 @@ test("projection watermark uses one closed read-only response and the fixed priv
     redirect: "error",
     credentials: "omit",
     headers: { accept: "application/json" },
+    signal: calls[0][1].signal,
   });
+  assert.equal(calls[0][1].signal instanceof AbortSignal, true);
+  assert.equal(calls[0][1].signal.aborted, false);
 });
 
 test("projection watermark fails closed on shape, authority, media type, and size drift", async () => {
@@ -194,6 +199,49 @@ test("projection watermark fails closed on shape, authority, media type, and siz
       /reporting projection/u,
     );
   }
+});
+
+test("projection watermark deadline aborts transport and cancels an unsettled body", async () => {
+  let signal;
+  let cancellations = 0;
+  const startedAt = Date.now();
+  await assert.rejects(
+    readReportingProjectionWatermark({
+      timeoutMs: 20,
+      fetchImpl: async (_url, options) => {
+        signal = options.signal;
+        return {
+          status: 200,
+          redirected: false,
+          headers: { get: (name) => name === "content-type" ? "application/json" : null },
+          body: {
+            cancel: async () => { cancellations += 1; },
+            getReader: () => ({
+              read: async () => new Promise(() => {}),
+              cancel: async () => { cancellations += 1; },
+              releaseLock: () => {},
+            }),
+          },
+        };
+      },
+    }),
+    /exceeded its deadline/u,
+  );
+  assert.equal(signal instanceof AbortSignal, true);
+  assert.equal(signal.aborted, true);
+  assert.equal(cancellations, 1);
+  assert.equal(Date.now() - startedAt < 500, true);
+  await assert.rejects(
+    readReportingProjectionWatermark({ fetchImpl: async () => response(WATERMARK_DOCUMENT), timeoutMs: 0 }),
+    /deadline is invalid/u,
+  );
+  await assert.rejects(
+    readReportingProjectionWatermark({
+      fetchImpl: async () => response(WATERMARK_DOCUMENT),
+      timeoutMs: REPORTING_WATERMARK_TIMEOUT_MS + 1,
+    }),
+    /deadline is invalid/u,
+  );
 });
 
 test("renderer permits one inventory-bound private PNG route with fixed render controls", async () => {
@@ -279,6 +327,7 @@ test("one-shot seam binds approval, exact manifest bytes, projection, and produc
   assert.equal(calls[1][1].selectorPreconditionReader, selectorPreconditionReader);
   assert.equal(calls[1][1].renderer.anonymousAccess, false);
   assert.equal(typeof calls[1][1].cameraTransport, "function");
+  assert.equal(calls[1][1].graphConcurrency, REPORTING_GRAPH_CONCURRENCY);
 });
 
 test("one-shot seam makes no request when approval or source binding is absent", async () => {

@@ -150,6 +150,7 @@ test("Grafana is private, anonymous-disabled, proxy-authenticated, and projectio
   assert.equal(grafanaEnv.get("GF_AUTH_PROXY_WHITELIST").value, "127.0.0.1");
   assert.equal(grafanaEnv.get("GF_USERS_AUTO_ASSIGN_ORG_ROLE").value, "Viewer");
   assert.equal(grafanaEnv.get("GF_SECURITY_ALLOW_EMBEDDING").value, "false");
+  assert.equal(grafanaEnv.get("GF_RENDERING_CONCURRENT_RENDER_REQUEST_LIMIT").value, "2");
   for (const [name, secret, key] of [
     ["GF_SECURITY_ADMIN_PASSWORD", "verdify-lab-reporting-runtime", "GRAFANA_ADMIN_PASSWORD"],
     ["GF_RENDERING_RENDERER_TOKEN", "verdify-lab-reporting-runtime", "GRAFANA_RENDERER_TOKEN"],
@@ -160,9 +161,37 @@ test("Grafana is private, anonymous-disabled, proxy-authenticated, and projectio
     assert.deepEqual(grafanaEnv.get(name).valueFrom.secretKeyRef, { name: secret, key });
   }
   assert.equal(byName.get("grafana").envFrom, undefined);
+  const rendererEnv = environment(byName.get("renderer"));
+  assert.deepEqual([...rendererEnv.keys()], [
+    "SERVER_ADDR",
+    "AUTH_TOKEN",
+    "LOG_LEVEL",
+    "RATE_LIMIT_MAX_LIMIT",
+    "RATE_LIMIT_MIN_LIMIT",
+    "BROWSER_READINESS_TIMEOUT",
+    "BROWSER_TIMEZONE",
+    "HOME",
+  ]);
   assert.deepEqual(
-    environment(byName.get("renderer")).get("AUTH_TOKEN").valueFrom.secretKeyRef,
+    rendererEnv.get("AUTH_TOKEN").valueFrom.secretKeyRef,
     { name: "verdify-lab-reporting-runtime", key: "GRAFANA_RENDERER_TOKEN" },
+  );
+  assert.equal(rendererEnv.get("RATE_LIMIT_MAX_LIMIT").value, "2");
+  assert.deepEqual(byName.get("grafana").resources, {
+    requests: { cpu: "250m", memory: "512Mi" },
+    limits: { cpu: "2", memory: "2Gi" },
+  });
+  assert.deepEqual(byName.get("renderer").resources, {
+    requests: { cpu: "500m", memory: "1Gi" },
+    limits: { cpu: "2", memory: "4Gi" },
+  });
+  for (const name of ["grafana", "renderer"]) {
+    assert.equal(byName.get(name).startupProbe.failureThreshold, 60);
+    assert.equal(byName.get(name).startupProbe.periodSeconds, 5);
+  }
+  assert.equal(
+    deployment.spec.template.spec.volumes.find(({ name }) => name === "renderer-shm").emptyDir.sizeLimit,
+    "512Mi",
   );
 
   const provisioning = one(resources, "ConfigMap", "verdify-lab-reporting-provisioning");
@@ -238,6 +267,12 @@ test("producer contract is zero-replica, zero-digest, and missing every activati
   assert.equal(renderedConfigMaps.has("verdify-lab-occurrence-source-manifest"), false);
   assert.equal(renderedConfigMaps.has("verdify-lab-occurrence-export-policy"), false);
   assert.equal(renderedConfigMaps.has("verdify-lab-occurrence-store-metadata"), false);
+  const runtimeContract = one(resources, "ConfigMap", "verdify-lab-reporting-runtime-contract").data;
+  assert.equal(runtimeContract.graphRenderConcurrency, "2");
+  assert.equal(
+    runtimeContract.producerPolicyByteBindingState,
+    "baked-approved-policy-digest-required-before-activation",
+  );
 
   const targetDocument = JSON.parse(
     one(resources, "ConfigMap", "verdify-lab-reporting-targets").data["reporting-targets.json"],

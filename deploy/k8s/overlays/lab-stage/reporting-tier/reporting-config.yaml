@@ -129,7 +129,10 @@ data:
   reportingReaderSecretKeys: PGUSER,PGPASSWORD,PGDATABASE
   reportingRuntimeSecret: verdify-lab-reporting-runtime
   reportingRuntimeSecretKeys: GRAFANA_ADMIN_PASSWORD,GRAFANA_RENDERER_TOKEN
+  graphRenderConcurrency: "2"
+  rendererEnvironmentContract: SERVER_ADDR,AUTH_TOKEN,LOG_LEVEL,RATE_LIMIT_MAX_LIMIT,RATE_LIMIT_MIN_LIMIT,BROWSER_READINESS_TIMEOUT,BROWSER_TIMEZONE,HOME
   producerServiceAccount: verdify-lab-occurrence-producer
   producerImageState: digest-required-before-activation
   producerRuntimeState: store-selector-binding-required-before-activation
+  producerPolicyByteBindingState: baked-approved-policy-digest-required-before-activation
   liveSuccessState: unproven-requires-143-plus-2-t0-and-t10

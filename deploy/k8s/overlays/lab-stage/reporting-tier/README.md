@@ -39,7 +39,12 @@ occurrences to source manifest
 Grafana 12.4.5 and renderer 5.10.0 are immutable-digest pinned. Anonymous and
 basic auth are off. Only the loopback nginx gateway supplies the fixed auth
 proxy identity, and it exposes only `/healthz` plus the 18 exact dashboard UID
-render paths. No Ingress or IngressRoute is present.
+render paths. The renderer reuses the 5.10 environment contract already pinned
+by the production Grafana component (`SERVER_ADDR`, `AUTH_TOKEN`, `LOG_LEVEL`,
+`RATE_LIMIT_*`, readiness timeout, timezone, and `HOME`). Pass 1 limits both
+Grafana and the renderer to two concurrent renders, gives Chromium a 4 GiB / 2
+CPU ceiling plus 512 MiB `/dev/shm`, and allows five minutes of startup before
+liveness can intervene. No Ingress or IngressRoute is present.
 
 ## Deliberate activation blockers
 
@@ -47,6 +52,9 @@ It is not safe to raise either replica count from zero yet. The overlay carries
 a zero-digest exporter sentinel; its current packaged exporter target is
 offline-only and does not contain the runtime command. The canonical source
 manifest and approved-policy ConfigMaps are also intentionally absent. The
+library validates policy/manifest semantics and the canonical manifest digest,
+but no exporter image yet bakes and verifies the exact Jason-approved policy
+byte digest. A mutable ConfigMap alone does not satisfy that executable binding.
 operator projection, both Secrets, and occurrence-store metadata/writer binding
 must exist and pass their separate reviews. NetworkPolicy currently permits the
 producer to reach only DNS and the private reporting gateway; public-camera and
