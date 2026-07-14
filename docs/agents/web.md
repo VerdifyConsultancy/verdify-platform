@@ -122,6 +122,19 @@ presence is not a deployment or activation claim: no Lab workload invokes it,
 and no endpoint, credential, environment binding, route, or replica is supplied
 by the source adapter.
 
+The separate built-site consumer command is
+`site-astro/scripts/execute-occurrence-site-publish.mjs`. It accepts only the
+literal `execute` command, canonical event/producer/policy/manifest documents,
+and disjoint canonical candidate/workspace roots. It checks the exact document
+identities and closed Jason approval record before asking a construction-only
+runtime resolver. The returned build and verifier operations must both bind the
+same digest-identified `https://lab-stage.verdify.ai` global-noindex profile;
+the selected build record and verifier result must attest that profile before a
+site release can publish. The command deliberately has no default runtime,
+store, endpoint, credential, or network client, so this source slice cannot
+publish or activate anything by itself. Explicit object-store/runtime binding
+remains the next gated Phase 4b slice.
+
 `scripts/rebuild-site.sh` builds Quartz into a staged `public.*` directory,
 verifies the staged `index.html`, then rsyncs the complete staged output into
 the live public tree with delayed deletes. In k3s, nginx reload is skipped
