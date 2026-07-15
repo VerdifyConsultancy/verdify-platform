@@ -9,20 +9,22 @@ kind: Component
 # Resources:
 #   - grafana.yaml            : Deployment (stateless, emptyDir) + Service +
 #                               NetworkPolicy
+#   - grafana-render-cache.yaml: HA bounded nginx cache for public `/render/` PNGs
 #   - graphs-ingressroute.yaml: tier-2 verdify-traefik IngressRoute for
-#                               Host(graphs.verdify.ai) -> verdify-grafana:3000
+#                               interactive Grafana plus the cached PNG split
 #   - generated/provisioning-cm.yaml: datasource (uid verdify-tsdb ->
 #                               verdify-db:5432) + dashboard provider ConfigMap
 #   - generated/dashboards-cm-{0,1,2,3}.yaml: provisioned public dashboards
 #                               (split to stay under the 1MiB limit)
 #
-# Upstream Grafana and image-renderer images are immutable-digest-pinned in the
-# Deployment (NOT transformer-rewritten — not verdify-* names). Required
+# Upstream Grafana, image-renderer, and nginx images are immutable-digest-pinned
+# in their Deployments (NOT transformer-rewritten — not verdify-* names). Required
 # admin/database/renderer keys come via secretKeyRef. Grafana and the renderer
 # share verdify-grafana-secrets/GRAFANA_RENDERER_TOKEN; its value is delivered
 # out of band and never committed. Renderer port isolation remains mandatory.
 resources:
   - grafana.yaml
+  - grafana-render-cache.yaml
   - graphs-ingressroute.yaml
   - generated/provisioning-cm.yaml
   - generated/dashboards-cm-0.yaml
@@ -30,3 +32,8 @@ resources:
   - generated/dashboards-cm-2.yaml
   - generated/dashboards-cm-3.yaml
   - band-curve-refresh-cronjob.yaml
+
+configMapGenerator:
+  - name: verdify-grafana-render-cache-config
+    files:
+      - default.conf=nginx-render-cache.conf

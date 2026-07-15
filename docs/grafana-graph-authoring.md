@@ -35,7 +35,10 @@ Grafana pod (ns verdify-prod, deploy/verdify-grafana)
     (no defaults; missing Secret/key leaves a new pod CreateContainerConfigError)
   • image-renderer sidecar → server-side PNG via /render/d-solo/...
         ▼
-graphs.verdify.ai (landing/Home)  +  lab.verdify.ai (/d-solo iframe embeds)
+verdify-grafana-render-cache (five-minute PNG cache; one-minute browser freshness)
+        ▼
+graphs.verdify.ai (interactive dashboards) + lab.verdify.ai (automatic PNGs;
+explicit interactive-panel action)
 ```
 
 Key facts:
@@ -52,6 +55,10 @@ Key facts:
   A client-side `kubectl apply` stores a `last-applied-configuration` annotation
   that doubles the size and **exceeds the etcd object limit** → fails. ArgoCD
   already annotates the CM `ServerSideApply=true`.
+- `/render/` is intentionally routed through the dedicated cache while every
+  other Grafana path goes directly to `verdify-grafana`. A warm response carries
+  `X-Cache-Status: HIT`; a cold first render is `MISS`. Cache identity includes
+  the full query string, so never omit panel variables, theme, range, or size.
 
 ---
 
