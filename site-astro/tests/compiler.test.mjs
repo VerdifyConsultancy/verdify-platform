@@ -322,6 +322,8 @@ test("specialist renderer uses only selected same-origin decoded fallbacks", asy
   assert.match(rendered.html, /src="\/evidence\/blobs\/sha256\/1{64}\.png"/);
   assert.match(rendered.html, /data-current-media-target="\/evidence\/current\/media_[0-9a-f]{24}"/);
   assert.match(rendered.html, /data-image-sha256="1{64}"/);
+  assert.equal(rendered.html.match(/loading="eager"/g)?.length, 2);
+  assert.doesNotMatch(rendered.html, /loading="lazy"/);
   assert.doesNotMatch(rendered.html, /data-image-src="https:\/\/graphs\.verdify\.ai/);
   assert.equal(rendered.grafana.length, 1);
   assert.equal(rendered.currentMedia.length, 1);
