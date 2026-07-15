@@ -7,7 +7,7 @@
 
 ## 2026-04-20 Updates (since 2026-03-29)
 
-Consolidated delta from the dual-Iris rollout + overnight incidents. The gateway section is historical; production planning now routes through Hermes/GPT-5.6 Sol xhigh. Read these before debugging any planner/alert-related issue.
+Consolidated delta from the dual-Iris rollout + overnight incidents. The gateway section is historical; production planning routes through Hermes. Repo source selects GPT-5.6 Sol xhigh as the pending profile, but live activation is separately gated, and Hermes remains on the prior deployed profile until approved. Read these before debugging any planner/alert-related issue.
 
 ### Contract v1.4 + dual-Iris plumbing
 

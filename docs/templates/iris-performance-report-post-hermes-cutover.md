@@ -6,6 +6,10 @@
 **Baseline:** `/mnt/iris/vault/iris-baseline-2026-05-10.md`
 **Method:** read-only DB pulls from `verdify-timescaledb`; same queries as the 2026-05-10 baseline (§7) re-run against the post-cutover window.
 
+> Use the GPT-5.6 Sol/xhigh subject only for a window after separately approved
+> live activation is verified. Until then, replace it with the actual deployed
+> profile recorded for the reporting window.
+
 This file is a template — fill in the bracketed values from the actual queries during Phase 8. The baseline-comparison table at the top of each section is the binding acceptance gate.
 
 ---

@@ -2,9 +2,10 @@
 iris_planner.py — Send planning events to Iris via the Hermes gateway.
 
 Assembles greenhouse context by running gather-plan-context.sh, then delivers
-it to Hermes's API server (POST /v1/runs). Hermes drives GPT-5.6 Sol with xhigh
-reasoning over the Verdify MCP toolset; the gathered context pack is the
-planner memory source of truth.
+it to Hermes's API server (POST /v1/runs). Repo source selects GPT-5.6 Sol with
+xhigh reasoning for a separately gated future activation; live Hermes remains
+on the prior deployed profile until approved. Hermes reasons over the Verdify MCP
+toolset, and the gathered context pack is the planner memory source of truth.
 """
 
 import json
