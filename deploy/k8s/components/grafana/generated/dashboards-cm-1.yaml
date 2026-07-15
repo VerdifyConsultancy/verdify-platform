@@ -155,7 +155,7 @@ data:
           },
           "targets": [
             {
-              "rawSql": "SELECT temp_case AS \"\u00b0F\" FROM climate WHERE temp_case IS NOT NULL ORDER BY ts DESC LIMIT 1",
+              "rawSql": "SELECT temp_case AS \"\u00b0F\" FROM climate WHERE temp_case IS NOT NULL AND ts > now() - interval '48 hours' ORDER BY ts DESC LIMIT 1",
               "refId": "A",
               "format": "table",
               "datasource": {
@@ -2739,7 +2739,7 @@ data:
               "editorMode": "code",
               "format": "time_series",
               "rawQuery": true,
-              "rawSql": "SELECT now() AS time, initcap(availability) || ' — ' || unavailable_reason AS \"Interior DLI\" FROM v_dli_current WHERE greenhouse_id = 'vallery'",
+              "rawSql": "SELECT now() AS time, initcap(availability) || ' \u2014 ' || unavailable_reason AS \"Interior DLI\" FROM v_dli_current WHERE greenhouse_id = 'vallery'",
               "refId": "A",
               "sql": {
                 "columns": [
@@ -2767,7 +2767,7 @@ data:
               "editorMode": "code",
               "format": "time_series",
               "rawQuery": true,
-              "rawSql": "SELECT now() AS time, provenance || ' · ' || validity_revision AS \"DLI Provenance\" FROM v_dli_current WHERE greenhouse_id = 'vallery'",
+              "rawSql": "SELECT now() AS time, provenance || ' \u00b7 ' || validity_revision AS \"DLI Provenance\" FROM v_dli_current WHERE greenhouse_id = 'vallery'",
               "refId": "B",
               "sql": {
                 "columns": [
@@ -2795,7 +2795,7 @@ data:
               "editorMode": "code",
               "format": "time_series",
               "rawQuery": true,
-              "rawSql": "SELECT now() AS time, valid_from::text || ' → ' || COALESCE(valid_to::text, 'open') AS \"DLI Validity\" FROM v_dli_current WHERE greenhouse_id = 'vallery'",
+              "rawSql": "SELECT now() AS time, valid_from::text || ' \u2192 ' || COALESCE(valid_to::text, 'open') AS \"DLI Validity\" FROM v_dli_current WHERE greenhouse_id = 'vallery'",
               "refId": "C",
               "sql": {
                 "columns": [
@@ -2816,7 +2816,7 @@ data:
               }
             }
           ],
-          "title": "Interior DLI — Unavailable",
+          "title": "Interior DLI \u2014 Unavailable",
           "type": "timeseries",
           "transparent": true
         },
@@ -2894,7 +2894,7 @@ data:
                 "uid": "verdify-tsdb"
               },
               "format": "time_series",
-              "rawSql": "SELECT now() AS time, initcap(availability) || ' — ' || unavailable_reason AS \"Interior DLI\" FROM v_dli_current WHERE greenhouse_id = 'vallery'",
+              "rawSql": "SELECT now() AS time, initcap(availability) || ' \u2014 ' || unavailable_reason AS \"Interior DLI\" FROM v_dli_current WHERE greenhouse_id = 'vallery'",
               "refId": "A"
             },
             {
@@ -2903,11 +2903,11 @@ data:
                 "uid": "verdify-tsdb"
               },
               "format": "time_series",
-              "rawSql": "SELECT now() AS time, provenance || ' · ' || validity_revision AS \"DLI Provenance\" FROM v_dli_current WHERE greenhouse_id = 'vallery'",
+              "rawSql": "SELECT now() AS time, provenance || ' \u00b7 ' || validity_revision AS \"DLI Provenance\" FROM v_dli_current WHERE greenhouse_id = 'vallery'",
               "refId": "B"
             }
           ],
-          "title": "Interior DLI — Unavailable",
+          "title": "Interior DLI \u2014 Unavailable",
           "type": "timeseries",
           "transparent": true
         },
@@ -3574,7 +3574,7 @@ data:
         {
           "id": 102,
           "type": "stat",
-          "title": "Electric",
+          "title": "Electric (est)",
           "datasource": {
             "uid": "verdify-tsdb",
             "type": "grafana-postgresql-datasource"
@@ -3591,7 +3591,7 @@ data:
                 "uid": "verdify-tsdb",
                 "type": "grafana-postgresql-datasource"
               },
-              "rawSql": "SELECT now() AS time, SUM(cost_electric) AS v FROM mv_daily_kpi WHERE resource_terms_available AND $__timeFilter((date + time '12:00')::timestamptz)",
+              "rawSql": "SELECT now() AS time, SUM(cost_electric_est) AS v FROM mv_daily_kpi WHERE $__timeFilter((date + time '12:00')::timestamptz)",
               "format": "table",
               "refId": "A"
             }
@@ -5509,7 +5509,7 @@ data:
                 "uid": "verdify-tsdb"
               },
               "format": "table",
-              "rawSql": "SELECT ts AS time, soil_moisture_south_1 AS value FROM climate WHERE soil_moisture_south_1 IS NOT NULL ORDER BY ts DESC LIMIT 1"
+              "rawSql": "SELECT ts AS time, soil_moisture_south_1 AS value FROM climate WHERE soil_moisture_south_1 IS NOT NULL AND ts > now() - interval '48 hours' ORDER BY ts DESC LIMIT 1"
             }
           ],
           "title": "South 1 Moisture",
@@ -7178,7 +7178,7 @@ data:
         {
           "id": 108,
           "type": "stat",
-          "title": "$/Day (30-Day Average)",
+          "title": "$/Day (30-Day Average) (est)",
           "datasource": {
             "uid": "verdify-tsdb",
             "type": "grafana-postgresql-datasource"
@@ -7195,7 +7195,7 @@ data:
                 "uid": "verdify-tsdb",
                 "type": "grafana-postgresql-datasource"
               },
-              "rawSql": "SELECT now() AS time, ROUND(AVG(cost_total)::numeric, 2) AS v FROM mv_daily_kpi WHERE date >= current_date - interval '30 days' AND date < current_date AND resource_terms_available",
+              "rawSql": "SELECT now() AS time, ROUND(AVG(cost_total_est)::numeric, 2) AS v FROM mv_daily_kpi WHERE date >= current_date - interval '30 days' AND date < current_date",
               "format": "table",
               "refId": "A"
             }
@@ -7422,7 +7422,7 @@ data:
         {
           "id": 106,
           "type": "stat",
-          "title": "Therms/day (30-Day Avg)",
+          "title": "Therms/day (30-Day Avg) (est)",
           "datasource": {
             "uid": "verdify-tsdb",
             "type": "grafana-postgresql-datasource"
@@ -7440,7 +7440,7 @@ data:
                 "uid": "verdify-tsdb"
               },
               "format": "table",
-              "rawSql": "SELECT now() AS time,\n  ROUND(AVG(therms)::numeric, 2) AS v\nFROM mv_daily_kpi\nWHERE date >= current_date - interval '30 days'\n  AND date < current_date\n  AND resource_terms_available",
+              "rawSql": "SELECT now() AS time,\n  ROUND(AVG(therms_modeled)::numeric, 2) AS v\nFROM mv_daily_kpi\nWHERE date >= current_date - interval '30 days'\n  AND date < current_date",
               "refId": "A"
             }
           ],
