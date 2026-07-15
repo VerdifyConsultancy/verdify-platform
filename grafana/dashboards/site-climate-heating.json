@@ -7,7 +7,7 @@
     {
       "id": 3,
       "type": "stat",
-      "title": "Gas",
+      "title": "Gas (est)",
       "datasource": {
         "uid": "verdify-tsdb",
         "type": "grafana-postgresql-datasource"
@@ -24,7 +24,7 @@
             "uid": "verdify-tsdb",
             "type": "grafana-postgresql-datasource"
           },
-          "rawSql": "SELECT now() AS time, SUM(cost_gas) AS v FROM mv_daily_kpi WHERE $__timeFilter((date + time '12:00')::timestamptz) AND resource_terms_available",
+          "rawSql": "SELECT now() AS time, SUM(cost_gas_est) AS v FROM mv_daily_kpi WHERE $__timeFilter((date + time '12:00')::timestamptz)",
           "format": "table",
           "refId": "A"
         }
@@ -54,7 +54,7 @@
     {
       "id": 6,
       "type": "stat",
-      "title": "Therms",
+      "title": "Therms (est)",
       "datasource": {
         "uid": "verdify-tsdb",
         "type": "grafana-postgresql-datasource"
@@ -71,7 +71,7 @@
             "uid": "verdify-tsdb",
             "type": "grafana-postgresql-datasource"
           },
-          "rawSql": "SELECT now() AS time, SUM(therms) AS v FROM mv_daily_kpi WHERE $__timeFilter((date + time '12:00')::timestamptz) AND resource_terms_available",
+          "rawSql": "SELECT now() AS time, SUM(therms_modeled) AS v FROM mv_daily_kpi WHERE $__timeFilter((date + time '12:00')::timestamptz)",
           "format": "table",
           "refId": "A"
         }
@@ -100,7 +100,7 @@
     {
       "id": 8,
       "type": "stat",
-      "title": "$/Day (30-Day Average)",
+      "title": "$/Day (30-Day Average) (est)",
       "datasource": {
         "uid": "verdify-tsdb",
         "type": "grafana-postgresql-datasource"
@@ -117,7 +117,7 @@
             "uid": "verdify-tsdb",
             "type": "grafana-postgresql-datasource"
           },
-          "rawSql": "SELECT now() AS time, ROUND(AVG(cost_total)::numeric, 2) AS v FROM mv_daily_kpi WHERE date >= current_date - interval '30 days' AND date < current_date AND resource_terms_available",
+          "rawSql": "SELECT now() AS time, ROUND(AVG(cost_total_est)::numeric, 2) AS v FROM mv_daily_kpi WHERE date >= current_date - interval '30 days' AND date < current_date",
           "format": "table",
           "refId": "A"
         }
@@ -352,7 +352,7 @@
     {
       "id": 21,
       "type": "timeseries",
-      "title": "Gas Therms vs Outdoor Temperature",
+      "title": "Gas Therms vs Outdoor Temperature (est)",
       "datasource": {
         "uid": "verdify-tsdb",
         "type": "grafana-postgresql-datasource"
@@ -369,7 +369,7 @@
             "uid": "verdify-tsdb",
             "type": "grafana-postgresql-datasource"
           },
-          "rawSql": "SELECT (date + time '12:00')::timestamptz AS time, therms AS \"Therms\"\nFROM mv_daily_kpi WHERE $__timeFilter((date + time '12:00')::timestamptz) AND resource_terms_available ORDER BY date",
+          "rawSql": "SELECT (date + time '12:00')::timestamptz AS time, therms_modeled AS \"Therms\"\nFROM mv_daily_kpi WHERE $__timeFilter((date + time '12:00')::timestamptz) ORDER BY date",
           "format": "time_series",
           "refId": "A"
         },
@@ -1684,7 +1684,7 @@
             "uid": "verdify-tsdb"
           },
           "format": "time_series",
-          "rawSql": "SELECT date_trunc('month',date)::timestamptz AS time, ROUND(SUM(cost_electric)::numeric,2) AS \"Electric\"\nFROM mv_daily_kpi WHERE resource_terms_available AND $__timeFilter((date + time '12:00')::timestamptz) GROUP BY 1 ORDER BY 1",
+          "rawSql": "SELECT date_trunc('month',date)::timestamptz AS time, ROUND(SUM(cost_electric_est)::numeric,2) AS \"Electric\"\nFROM mv_daily_kpi WHERE $__timeFilter((date + time '12:00')::timestamptz) GROUP BY 1 ORDER BY 1",
           "refId": "A"
         },
         {
@@ -1693,7 +1693,7 @@
             "uid": "verdify-tsdb"
           },
           "format": "time_series",
-          "rawSql": "SELECT date_trunc('month',date)::timestamptz AS time, ROUND(SUM(cost_gas)::numeric,2) AS \"Gas\"\nFROM mv_daily_kpi WHERE resource_terms_available AND $__timeFilter((date + time '12:00')::timestamptz) GROUP BY 1 ORDER BY 1",
+          "rawSql": "SELECT date_trunc('month',date)::timestamptz AS time, ROUND(SUM(cost_gas_est)::numeric,2) AS \"Gas\"\nFROM mv_daily_kpi WHERE $__timeFilter((date + time '12:00')::timestamptz) GROUP BY 1 ORDER BY 1",
           "refId": "B"
         },
         {
@@ -1702,11 +1702,11 @@
             "uid": "verdify-tsdb"
           },
           "format": "time_series",
-          "rawSql": "SELECT date_trunc('month',date)::timestamptz AS time, ROUND(SUM(cost_water)::numeric,2) AS \"Water\"\nFROM mv_daily_kpi WHERE resource_terms_available AND $__timeFilter((date + time '12:00')::timestamptz) GROUP BY 1 ORDER BY 1",
+          "rawSql": "SELECT date_trunc('month',date)::timestamptz AS time, ROUND(SUM(cost_water_est)::numeric,2) AS \"Water\"\nFROM mv_daily_kpi WHERE $__timeFilter((date + time '12:00')::timestamptz) GROUP BY 1 ORDER BY 1",
           "refId": "C"
         }
       ],
-      "title": "Monthly Cost by Category",
+      "title": "Monthly Cost by Category (est)",
       "type": "timeseries",
       "transparent": true
     }

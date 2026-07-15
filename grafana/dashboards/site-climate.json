@@ -1474,7 +1474,7 @@
     {
       "id": 108,
       "type": "stat",
-      "title": "$/Day (30-Day Average)",
+      "title": "$/Day (30-Day Average) (est)",
       "datasource": {
         "uid": "verdify-tsdb",
         "type": "grafana-postgresql-datasource"
@@ -1491,7 +1491,7 @@
             "uid": "verdify-tsdb",
             "type": "grafana-postgresql-datasource"
           },
-          "rawSql": "SELECT now() AS time, ROUND(AVG(cost_total)::numeric, 2) AS v FROM mv_daily_kpi WHERE date >= current_date - interval '30 days' AND date < current_date AND resource_terms_available",
+          "rawSql": "SELECT now() AS time, ROUND(AVG(cost_total_est)::numeric, 2) AS v FROM mv_daily_kpi WHERE date >= current_date - interval '30 days' AND date < current_date",
           "format": "table",
           "refId": "A"
         }
@@ -1718,7 +1718,7 @@
     {
       "id": 106,
       "type": "stat",
-      "title": "Therms/day (30-Day Avg)",
+      "title": "Therms/day (30-Day Avg) (est)",
       "datasource": {
         "uid": "verdify-tsdb",
         "type": "grafana-postgresql-datasource"
@@ -1736,7 +1736,7 @@
             "uid": "verdify-tsdb"
           },
           "format": "table",
-          "rawSql": "SELECT now() AS time,\n  ROUND(AVG(therms)::numeric, 2) AS v\nFROM mv_daily_kpi\nWHERE date >= current_date - interval '30 days'\n  AND date < current_date\n  AND resource_terms_available",
+          "rawSql": "SELECT now() AS time,\n  ROUND(AVG(therms_modeled)::numeric, 2) AS v\nFROM mv_daily_kpi\nWHERE date >= current_date - interval '30 days'\n  AND date < current_date",
           "refId": "A"
         }
       ],

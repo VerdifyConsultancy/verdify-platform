@@ -2866,7 +2866,7 @@
     {
       "id": 16,
       "type": "timeseries",
-      "title": "Water and Mist Response",
+      "title": "Water and Mist Response (est)",
       "description": "Connects water use to active misting behavior. Runtime is scaled x10 for comparison.",
       "datasource": {
         "type": "grafana-postgresql-datasource",
@@ -2887,7 +2887,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT (date + time '12:00')::timestamptz AS time, water_gal AS \"Water Used (gal)\" FROM mv_daily_kpi WHERE date >= current_date - interval '30 days' AND resource_terms_available ORDER BY date",
+          "rawSql": "SELECT (date + time '12:00')::timestamptz AS time, water_gal_est AS \"Water Used (gal)\" FROM mv_daily_kpi WHERE date >= current_date - interval '30 days' ORDER BY date",
           "editorMode": "code"
         },
         {
@@ -2898,7 +2898,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT (date + time '12:00')::timestamptz AS time, mister_water_gal AS \"Mister Water (gal)\" FROM mv_daily_kpi WHERE date >= current_date - interval '30 days' AND resource_terms_available ORDER BY date",
+          "rawSql": "SELECT (date + time '12:00')::timestamptz AS time, mister_water_gal AS \"Mister Water (gal)\" FROM mv_daily_kpi WHERE date >= current_date - interval '30 days' ORDER BY date",
           "editorMode": "code"
         },
         {

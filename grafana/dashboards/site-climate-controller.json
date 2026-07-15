@@ -144,7 +144,7 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT temp_case AS \"\u00b0F\" FROM climate WHERE temp_case IS NOT NULL ORDER BY ts DESC LIMIT 1",
+          "rawSql": "SELECT temp_case AS \"\u00b0F\" FROM climate WHERE temp_case IS NOT NULL AND ts > now() - interval '48 hours' ORDER BY ts DESC LIMIT 1",
           "refId": "A",
           "format": "table",
           "datasource": {
