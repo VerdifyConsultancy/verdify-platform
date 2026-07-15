@@ -80,7 +80,7 @@ class TestPlannerConfig:
         sys.path.insert(0, str(repo_root / "ingestor"))
         from ai_config import ai
 
-        assert ai.model_name("planner") == "gpt-5.5"
+        assert ai.model_name("planner") == "gpt-5.6-sol"
         assert ai.config["models"]["planner"]["provider"] == "openai"
 
     def test_anthropic_key_exists(self):

@@ -12,7 +12,7 @@
 # 200 on api.openai.com + a gpt-5.5 completion). The bug was the drifted profile
 # pointing at the wrong provider/model, NOT a missing/bad key.
 #
-# This is the repo-canonical hermes/iris/config.yaml (gpt-5.5 / provider custom /
+# This is the repo-canonical hermes/iris/config.yaml (gpt-5.6-sol / provider custom /
 # base_url api.openai.com — OPENAI_API_KEY auto-picked-up) with ONE k3s edit: the
 # mcp_servers.verdify_greenhouse.url is the in-cluster ClusterIP
 # verdify-mcp.verdify-prod.svc:8000/mcp (was the VM compose host.docker.internal).
@@ -203,7 +203,7 @@ data:
 
   config.yaml: |
     # Hermes profile config for the Verdify Iris planner — single profile,
-    # OpenAI GPT-5.5 with reasoning_effort=high, MCP-only tool surface.
+    # OpenAI GPT-5.6 Sol with reasoning_effort=xhigh, MCP-only tool surface.
     #
     # Canonical source: hermes/iris/config.yaml (this repo).
     # Runtime location: /var/lib/verdify/hermes/iris/config.yaml (bind-mounted into
@@ -218,12 +218,14 @@ data:
       # Hermes doesn't expose a generic "openai" provider — direct OpenAI access
       # goes through the "custom" provider with an OpenAI-compatible base_url.
       # OPENAI_API_KEY is picked up automatically.
-      default: "gpt-5.5"
+      default: "gpt-5.6-sol"
       provider: "custom"
       base_url: "https://api.openai.com/v1"
-      reasoning_effort: high
 
     agent:
+      # Hermes reads reasoning effort from agent.reasoning_effort. Placing it
+      # under model is silently ignored and falls back to medium.
+      reasoning_effort: xhigh
       # Iris's longest cycles (SUNRISE/SUNSET) read ~6-10 MCP tools in sequence
       # plus write a plan. 30 turns is generous; over that, suspect a tool-call
       # loop and surface as a Hermes alert instead of letting the cycle run away.

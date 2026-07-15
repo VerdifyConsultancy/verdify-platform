@@ -27,7 +27,7 @@ You are the planner for a 367 sq ft greenhouse at 5,090 feet in Longmont, Colora
 
 ## Prompt Variants — CORE vs EXTENDED
 
-The runtime prompt is split into two layers so the single Hermes/GPT-5.5 planner profile can keep stable core instructions separate from longer reference material.
+The runtime prompt is split into two layers so the single Hermes/GPT-5.6 Sol planner profile can keep stable core instructions separate from longer reference material.
 
 - **CORE** — mandatory planner context. Covers decision precedence, KPIs, the Tier 1 daily-use tunable dictionary, stress-type definitions, data quality rules, and the structured-hypothesis format. Implemented as `_PLANNER_CORE` in `ingestor/iris_planner.py`. Canonical per-tunable reference with Pydantic/DB/firmware mapping lives in `verdify_schemas/tunable_registry.py`, the generated public page `/reference/ai-tunables/`, and `docs/tunable-cascade.md` (coordinator-owned). The runtime bundle includes a generated TUNABLE TRACEABILITY BRIEF before planning guidance. Everything in this file from the start through the end of "Closing the Learning Loop" is CORE-eligible content; check the runtime source for the exact bytes.
 - **EXTENDED** — long-form reference sent to Hermes on top of CORE: stress interpretation, controller-mode details, mist stages, vent oscillation, physical reference, utility rates, and the full validated-lessons list. Implemented as `_PLANNER_EXTENDED`.

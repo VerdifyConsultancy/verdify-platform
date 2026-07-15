@@ -2,7 +2,7 @@
 
 > Historical contract: this document describes the pre-2026-05-11 OpenClaw /
 > local-Gemma planner path. Production planning now routes through Hermes
-> (`hermes-iris`) with OpenAI GPT-5.5 high-reasoning and the MCP-only tool
+> (`hermes-iris`) with OpenAI GPT-5.6 Sol xhigh-reasoning and the MCP-only tool
 > allowlist in `hermes/iris/config.yaml`. Use `plan_delivery_log.hermes_run_id`
 > as the active gateway correlation field.
 >
@@ -12,7 +12,7 @@
 > The ledger / exact-trigger-correlation / registry-validation semantics in *this*
 > doc remain active; the gateway/model details below are historical.
 
-**Status:** historical v1.5 by coordinator, 2026-05-04. It ratified the local-first OpenClaw/Gemma path that was superseded on 2026-05-11 by Hermes `hermes-iris` with OpenAI GPT-5.5 high-reasoning. The trigger-ledger, exact-correlation, lifecycle-status, and registry-validation rules remain active; the gateway/model details below are historical.
+**Status:** historical v1.5 by coordinator, 2026-05-04. It ratified the local-first OpenClaw/Gemma path that was superseded on 2026-05-11 by Hermes `hermes-iris`; the current profile is OpenAI GPT-5.6 Sol xhigh-reasoning. The trigger-ledger, exact-correlation, lifecycle-status, and registry-validation rules remain active; the gateway/model details below are historical.
 
 **v1.5 change log (2026-05-04):** makes local Gemma4-on-cortext the default production planner path, defines the trigger ledger shape before more code changes, and closes the unsafe correlation rule: new planner rows correlate to triggers by exact `trigger_id` only. Legacy time-window fallback is permitted only for historical rows where both sides lack a UUID.
 

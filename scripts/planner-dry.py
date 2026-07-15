@@ -15,7 +15,7 @@ Checks:
      table (prevents duplication).
   5. Every event-type prompt builder renders a non-empty string for BOTH
      instances (opus, local). Assertions:
-      - opus and local audit labels render the same Hermes/GPT-5.5 prompt.
+      - opus and local audit labels render the same Hermes/GPT-5.6 Sol prompt.
       - preamble ≤ ~52000 Claude tokens (≈ 208000 chars at 4:1; we
          approximate with char-length since the anthropic tokenizer hits
          the network and this script must stay offline).
@@ -69,7 +69,7 @@ assert "Tunable Dictionary" not in p._PLANNER_EXTENDED, (
 # Preamble sanity for both instances.
 opus_preamble = p._compose_preamble("opus")
 local_preamble = p._compose_preamble("local")
-assert opus_preamble == local_preamble, "Hermes uses one GPT-5.5 prompt for both audit labels"
+assert opus_preamble == local_preamble, "Hermes uses one GPT-5.6 Sol prompt for both audit labels"
 assert len(local_preamble) <= PREAMBLE_MAX_CHARS, (
     f"preamble {len(local_preamble)} chars > {PREAMBLE_MAX_CHARS} char budget (≈ 52k Claude tokens)"
 )

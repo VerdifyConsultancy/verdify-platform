@@ -1,7 +1,7 @@
 # Iris planner — post-cutover performance report (TEMPLATE)
 
 **Window:** `<post-cutover-start>` → `<post-cutover-end>` (30 days)
-**Subject:** Iris on Hermes + OpenAI GPT-5.5 (reasoning_effort=high)
+**Subject:** Iris on Hermes + OpenAI GPT-5.6 Sol (reasoning_effort=xhigh)
 **Author:** `<author>`
 **Baseline:** `/mnt/iris/vault/iris-baseline-2026-05-10.md`
 **Method:** read-only DB pulls from `verdify-timescaledb`; same queries as the 2026-05-10 baseline (§7) re-run against the post-cutover window.
@@ -30,8 +30,8 @@ This file is a template — fill in the bracketed values from the actual queries
 Same as `/mnt/iris/vault/iris-performance-report-2026-05-10.md` §2, with the
 following deltas:
 
-- All cycles in this window routed through `hermes-iris` (OpenAI GPT-5.5,
-  reasoning_effort=high). Verify via `SELECT COUNT(*) FILTER (WHERE hermes_run_id IS NOT NULL)` from `plan_delivery_log`.
+- All cycles in this window routed through `hermes-iris` (OpenAI GPT-5.6 Sol,
+  reasoning_effort=xhigh). Verify via `SELECT COUNT(*) FILTER (WHERE hermes_run_id IS NOT NULL)` from `plan_delivery_log`.
 - Causal attribution: `v_plan_execution_intervals` is live (migration 111).
   Outcome scoring uses `fn_plan_anchor_score()` for the deterministic anchor.
 - Trigger taxonomy is the closed set: SUNRISE / SUNSET / SOLAR_MAX /
@@ -73,7 +73,7 @@ guarantee).>`
 ### 3.5 Cost & utility
 
 `<TODO: total $/day, gas/electric/water breakdown, surface
-GPT-5.5-high-reasoning per-cycle cost from Hermes telemetry separately.
+GPT-5.6-Sol-xhigh-reasoning per-cycle cost from Hermes telemetry separately.
 Note: cost-side gates from the plan are descriptive, not binding —
 greenhouse outcomes drive acceptance.>`
 
@@ -85,7 +85,7 @@ greenhouse outcomes drive acceptance.>`
 
 `<TODO: the only honest answer comes from the anchor-vs-Iris deviation
 delta + the absolute compliance numbers. Compare with the baseline's
-key finding: "Iris over-grades by mean +1.0 point". Did GPT-5.5 close
+key finding: "Iris over-grades by mean +1.0 point". Did GPT-5.6 Sol close
 that gap?>`
 
 ### 4.2 Lesson quality
@@ -98,7 +98,7 @@ inactive / superseded ratio now?>`
 
 `<TODO: how often did Iris call lessons_search vs falling back to the
 static top-10? knowledge_search call rate against playbook vs site_doc?
-Did GPT-5.5 use the FORECAST CALIBRATION block to discount the +47 W/m²
+Did GPT-5.6 Sol use the FORECAST CALIBRATION block to discount the +47 W/m²
 solar bias?>`
 
 ### 4.4 Incident response

@@ -6,7 +6,7 @@ Hermes is now the only production route for Iris planning cycles.
 
 ## Files
 
-- `config.yaml` — Hermes profile config. OpenAI GPT-5.5 high-reasoning,
+- `config.yaml` — Hermes profile config. OpenAI GPT-5.6 Sol xhigh-reasoning,
   single profile, MCP-only tool surface. Allowlist tightens the toolset
   to Verdify's MCP server; `query` (raw SQL) is excluded.
 - `SOUL.md` — durable identity, authoritative-source priority order,
