@@ -36,6 +36,14 @@ data:
           sslmode: disable
           postgresVersion: 1600
           timescaledb: true
+          # Cap Grafana's concurrent DB fan-out: dashboard pages fire every
+          # panel query at once (site-home has ~79 targets), and unbounded
+          # concurrency against heavy SQL OOM-crashed verdify-db on
+          # 2026-07-14/15 (backends killed by signal 9 -> "database system is
+          # in recovery mode" on every panel). Excess queries queue instead.
+          maxOpenConns: 10
+          maxIdleConns: 5
+          connMaxLifetime: 3600
   dashboards.yaml: |-
     apiVersion: 1
     providers:
