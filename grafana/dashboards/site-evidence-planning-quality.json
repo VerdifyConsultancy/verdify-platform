@@ -2887,7 +2887,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT (date + time '12:00')::timestamptz AS time, water_gal AS \"Water Used (gal)\" FROM v_daily_kpi WHERE date >= current_date - interval '30 days' AND resource_terms_available ORDER BY date",
+          "rawSql": "SELECT (date + time '12:00')::timestamptz AS time, water_gal AS \"Water Used (gal)\" FROM mv_daily_kpi WHERE date >= current_date - interval '30 days' AND resource_terms_available ORDER BY date",
           "editorMode": "code"
         },
         {
@@ -2898,7 +2898,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT (date + time '12:00')::timestamptz AS time, mister_water_gal AS \"Mister Water (gal)\" FROM v_daily_kpi WHERE date >= current_date - interval '30 days' AND resource_terms_available ORDER BY date",
+          "rawSql": "SELECT (date + time '12:00')::timestamptz AS time, mister_water_gal AS \"Mister Water (gal)\" FROM mv_daily_kpi WHERE date >= current_date - interval '30 days' AND resource_terms_available ORDER BY date",
           "editorMode": "code"
         },
         {
