@@ -335,7 +335,7 @@
     {
       "id": 108,
       "type": "stat",
-      "title": "$/Day (30-Day Avg)",
+      "title": "$/Day (30-Day Avg) (est)",
       "datasource": {
         "uid": "verdify-tsdb",
         "type": "grafana-postgresql-datasource"
@@ -352,7 +352,7 @@
             "uid": "verdify-tsdb",
             "type": "grafana-postgresql-datasource"
           },
-          "rawSql": "SELECT now() AS time, ROUND(AVG(cost_total)::numeric, 2) AS v FROM mv_daily_kpi WHERE date >= current_date - interval '30 days' AND date < current_date AND resource_terms_available",
+          "rawSql": "SELECT now() AS time, ROUND(AVG(cost_total_est)::numeric, 2) AS v FROM mv_daily_kpi WHERE date >= current_date - interval '30 days' AND date < current_date",
           "format": "table",
           "refId": "A"
         }
@@ -382,7 +382,7 @@
     {
       "id": 113,
       "type": "stat",
-      "title": "Today Cost",
+      "title": "Today Cost (est)",
       "datasource": {
         "uid": "verdify-tsdb",
         "type": "grafana-postgresql-datasource"
@@ -399,7 +399,7 @@
             "uid": "verdify-tsdb",
             "type": "grafana-postgresql-datasource"
           },
-          "rawSql": "SELECT now() AS time, ROUND(cost_total::numeric, 2) AS v FROM mv_daily_kpi WHERE date = (now() AT TIME ZONE 'America/Denver')::date AND resource_terms_available",
+          "rawSql": "SELECT now() AS time, ROUND(cost_total_est::numeric, 2) AS v FROM mv_daily_kpi WHERE date = (now() AT TIME ZONE 'America/Denver')::date",
           "format": "table",
           "refId": "A"
         }
@@ -429,7 +429,7 @@
     {
       "id": 114,
       "type": "stat",
-      "title": "30-Day Total Cost",
+      "title": "30-Day Total Cost (est)",
       "datasource": {
         "uid": "verdify-tsdb",
         "type": "grafana-postgresql-datasource"
@@ -446,7 +446,7 @@
             "uid": "verdify-tsdb",
             "type": "grafana-postgresql-datasource"
           },
-          "rawSql": "SELECT now() AS time, ROUND(SUM(cost_total)::numeric, 2) AS v FROM mv_daily_kpi WHERE date >= current_date - interval '30 days' AND date < current_date AND resource_terms_available",
+          "rawSql": "SELECT now() AS time, ROUND(SUM(cost_total_est)::numeric, 2) AS v FROM mv_daily_kpi WHERE date >= current_date - interval '30 days' AND date < current_date",
           "format": "table",
           "refId": "A"
         }
@@ -476,7 +476,7 @@
     {
       "id": 115,
       "type": "stat",
-      "title": "Runtime-Modeled kWh/day (30-Day Avg)",
+      "title": "Runtime-Modeled kWh/day (30-Day Avg) (est)",
       "datasource": {
         "uid": "verdify-tsdb",
         "type": "grafana-postgresql-datasource"
@@ -493,7 +493,7 @@
             "uid": "verdify-tsdb",
             "type": "grafana-postgresql-datasource"
           },
-          "rawSql": "SELECT now() AS time, ROUND(AVG(kwh)::numeric, 2) AS v FROM mv_daily_kpi WHERE date >= current_date - interval '30 days' AND date < current_date AND resource_terms_available",
+          "rawSql": "SELECT now() AS time, ROUND(AVG(kwh_modeled)::numeric, 2) AS v FROM mv_daily_kpi WHERE date >= current_date - interval '30 days' AND date < current_date",
           "format": "table",
           "refId": "A"
         }
@@ -523,7 +523,7 @@
     {
       "id": 116,
       "type": "stat",
-      "title": "Therms/day (30-Day Avg)",
+      "title": "Therms/day (30-Day Avg) (est)",
       "datasource": {
         "uid": "verdify-tsdb",
         "type": "grafana-postgresql-datasource"
@@ -540,7 +540,7 @@
             "uid": "verdify-tsdb",
             "type": "grafana-postgresql-datasource"
           },
-          "rawSql": "SELECT now() AS time, ROUND(AVG(therms)::numeric, 2) AS v FROM mv_daily_kpi WHERE date >= current_date - interval '30 days' AND date < current_date AND resource_terms_available",
+          "rawSql": "SELECT now() AS time, ROUND(AVG(therms_modeled)::numeric, 2) AS v FROM mv_daily_kpi WHERE date >= current_date - interval '30 days' AND date < current_date",
           "format": "table",
           "refId": "A"
         }
@@ -584,7 +584,7 @@
     {
       "id": 117,
       "type": "stat",
-      "title": "Water gal/day (30-Day Avg)",
+      "title": "Water gal/day (30-Day Avg) (est)",
       "datasource": {
         "uid": "verdify-tsdb",
         "type": "grafana-postgresql-datasource"
@@ -601,7 +601,7 @@
             "uid": "verdify-tsdb",
             "type": "grafana-postgresql-datasource"
           },
-          "rawSql": "SELECT now() AS time, ROUND(AVG(water_gal)::numeric, 0) AS v FROM mv_daily_kpi WHERE date >= current_date - interval '30 days' AND date < current_date AND resource_terms_available",
+          "rawSql": "SELECT now() AS time, ROUND(AVG(water_gal_est)::numeric, 0) AS v FROM mv_daily_kpi WHERE date >= current_date - interval '30 days' AND date < current_date",
           "format": "table",
           "refId": "A"
         }
@@ -737,7 +737,7 @@
             "uid": "verdify-tsdb"
           },
           "format": "time_series",
-          "rawSql": "SELECT (date + time '12:00')::timestamptz AS time, cost_electric AS \"Electric\"\nFROM mv_daily_kpi WHERE resource_terms_available AND $__timeFilter((date + time '12:00')::timestamptz) ORDER BY date",
+          "rawSql": "SELECT (date + time '12:00')::timestamptz AS time, cost_electric_est AS \"Electric\"\nFROM mv_daily_kpi WHERE $__timeFilter((date + time '12:00')::timestamptz) ORDER BY date",
           "refId": "A"
         },
         {
@@ -746,7 +746,7 @@
             "uid": "verdify-tsdb"
           },
           "format": "time_series",
-          "rawSql": "SELECT (date + time '12:00')::timestamptz AS time, cost_gas AS \"Gas\"\nFROM mv_daily_kpi WHERE resource_terms_available AND $__timeFilter((date + time '12:00')::timestamptz) ORDER BY date",
+          "rawSql": "SELECT (date + time '12:00')::timestamptz AS time, cost_gas_est AS \"Gas\"\nFROM mv_daily_kpi WHERE $__timeFilter((date + time '12:00')::timestamptz) ORDER BY date",
           "refId": "B"
         },
         {
@@ -755,11 +755,11 @@
             "uid": "verdify-tsdb"
           },
           "format": "time_series",
-          "rawSql": "SELECT (date + time '12:00')::timestamptz AS time, cost_water AS \"Water\"\nFROM mv_daily_kpi WHERE resource_terms_available AND $__timeFilter((date + time '12:00')::timestamptz) ORDER BY date",
+          "rawSql": "SELECT (date + time '12:00')::timestamptz AS time, cost_water_est AS \"Water\"\nFROM mv_daily_kpi WHERE $__timeFilter((date + time '12:00')::timestamptz) ORDER BY date",
           "refId": "C"
         }
       ],
-      "title": "Daily Cost by Type",
+      "title": "Daily Cost by Type (est)",
       "type": "timeseries",
       "transparent": true
     },
@@ -4790,12 +4790,12 @@
             "uid": "verdify-tsdb",
             "type": "grafana-postgresql-datasource"
           },
-          "rawSql": "SELECT now() AS time, ROUND(SUM(kwh)::numeric, 1) AS v FROM mv_daily_kpi WHERE date >= current_date - interval '30 days' AND date < current_date AND resource_terms_available",
+          "rawSql": "SELECT now() AS time, ROUND(SUM(kwh_modeled)::numeric, 1) AS v FROM mv_daily_kpi WHERE date >= current_date - interval '30 days' AND date < current_date",
           "format": "table",
           "refId": "A"
         }
       ],
-      "title": "30-Day Runtime-Modeled kWh",
+      "title": "30-Day Runtime-Modeled kWh (est)",
       "type": "stat",
       "transparent": true
     },
@@ -4837,12 +4837,12 @@
             "uid": "verdify-tsdb",
             "type": "grafana-postgresql-datasource"
           },
-          "rawSql": "SELECT now() AS time, ROUND(SUM(therms)::numeric, 2) AS v FROM mv_daily_kpi WHERE date >= current_date - interval '30 days' AND date < current_date AND resource_terms_available",
+          "rawSql": "SELECT now() AS time, ROUND(SUM(therms_modeled)::numeric, 2) AS v FROM mv_daily_kpi WHERE date >= current_date - interval '30 days' AND date < current_date",
           "format": "table",
           "refId": "A"
         }
       ],
-      "title": "30-Day Total Therms",
+      "title": "30-Day Total Therms (est)",
       "type": "stat",
       "transparent": true
     },
@@ -4884,12 +4884,12 @@
             "uid": "verdify-tsdb",
             "type": "grafana-postgresql-datasource"
           },
-          "rawSql": "SELECT now() AS time, ROUND(SUM(water_gal)::numeric, 0) AS v FROM mv_daily_kpi WHERE date >= current_date - interval '30 days' AND date < current_date AND resource_terms_available",
+          "rawSql": "SELECT now() AS time, ROUND(SUM(water_gal_est)::numeric, 0) AS v FROM mv_daily_kpi WHERE date >= current_date - interval '30 days' AND date < current_date",
           "format": "table",
           "refId": "A"
         }
       ],
-      "title": "30-Day Total Water gal",
+      "title": "30-Day Total Water gal (est)",
       "type": "stat",
       "transparent": true
     },
@@ -4932,12 +4932,12 @@
             "uid": "verdify-tsdb",
             "type": "grafana-postgresql-datasource"
           },
-          "rawSql": "SELECT now() AS time, ROUND(SUM(cost_electric)::numeric, 2) AS v FROM mv_daily_kpi WHERE date >= current_date - interval '30 days' AND date < current_date AND resource_terms_available",
+          "rawSql": "SELECT now() AS time, ROUND(SUM(cost_electric_est)::numeric, 2) AS v FROM mv_daily_kpi WHERE date >= current_date - interval '30 days' AND date < current_date",
           "format": "table",
           "refId": "A"
         }
       ],
-      "title": "30-Day Electric Cost",
+      "title": "30-Day Electric Cost (est)",
       "type": "stat",
       "transparent": true
     },
@@ -4980,12 +4980,12 @@
             "uid": "verdify-tsdb",
             "type": "grafana-postgresql-datasource"
           },
-          "rawSql": "SELECT now() AS time, ROUND(SUM(cost_gas)::numeric, 2) AS v FROM mv_daily_kpi WHERE date >= current_date - interval '30 days' AND date < current_date AND resource_terms_available",
+          "rawSql": "SELECT now() AS time, ROUND(SUM(cost_gas_est)::numeric, 2) AS v FROM mv_daily_kpi WHERE date >= current_date - interval '30 days' AND date < current_date",
           "format": "table",
           "refId": "A"
         }
       ],
-      "title": "30-Day Gas Cost",
+      "title": "30-Day Gas Cost (est)",
       "type": "stat",
       "transparent": true
     },
@@ -5028,12 +5028,12 @@
             "uid": "verdify-tsdb",
             "type": "grafana-postgresql-datasource"
           },
-          "rawSql": "SELECT now() AS time, ROUND(SUM(cost_water)::numeric, 2) AS v FROM mv_daily_kpi WHERE date >= current_date - interval '30 days' AND date < current_date AND resource_terms_available",
+          "rawSql": "SELECT now() AS time, ROUND(SUM(cost_water_est)::numeric, 2) AS v FROM mv_daily_kpi WHERE date >= current_date - interval '30 days' AND date < current_date",
           "format": "table",
           "refId": "A"
         }
       ],
-      "title": "30-Day Water Cost",
+      "title": "30-Day Water Cost (est)",
       "type": "stat",
       "transparent": true
     },

@@ -1217,7 +1217,7 @@
             "uid": "verdify-tsdb"
           },
           "format": "table",
-          "rawSql": "SELECT ts AS time, soil_moisture_south_1 AS value FROM climate WHERE soil_moisture_south_1 IS NOT NULL ORDER BY ts DESC LIMIT 1"
+          "rawSql": "SELECT ts AS time, soil_moisture_south_1 AS value FROM climate WHERE soil_moisture_south_1 IS NOT NULL AND ts > now() - interval '48 hours' ORDER BY ts DESC LIMIT 1"
         }
       ],
       "title": "South 1 Moisture",
