@@ -52,7 +52,7 @@ class TestComposePreamble:
         assert isinstance(local, str) and len(local) > 1000
 
     def test_both_instances_include_core(self, iris_planner):
-        """Both audit labels produce the same prompt under Hermes/GPT-5.5."""
+        """Both audit labels produce the same prompt under Hermes/GPT-5.6 Sol."""
         opus = iris_planner._compose_preamble("opus")
         local = iris_planner._compose_preamble("local")
         assert iris_planner._STANDING_DIRECTIVES in opus
@@ -218,7 +218,7 @@ class TestPromptBuilders:
 
     @pytest.mark.parametrize("event", PROMPT_EVENTS)
     def test_prompt_is_identical_across_instances_for_every_event(self, iris_planner, event):
-        """Both audit labels collapse to the same Hermes/GPT-5.5 prompt."""
+        """Both audit labels collapse to the same Hermes/GPT-5.6 Sol prompt."""
         builder = iris_planner._PROMPT_BUILDERS[event]
         opus_msg = builder("<context stub>", "<label stub>", "opus")
         local_msg = builder("<context stub>", "<label stub>", "local")

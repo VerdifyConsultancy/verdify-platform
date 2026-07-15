@@ -245,7 +245,7 @@ def test_public_planner_health_schema_includes_status_surface_fields():
         "resulting_plan_id": None,
         "plan_written_at": None,
         "planner_gateway": "hermes-iris",
-        "planner_model_label": "hermes-iris/openai:gpt-5.5/high",
+        "planner_model_label": "hermes-iris/openai:gpt-5.6-sol/xhigh",
     }
 
     response = PublicPlannerHealthResponse.model_validate(
@@ -268,7 +268,7 @@ def test_public_planner_health_schema_includes_status_surface_fields():
                 "overdue_gt_1h": 0,
             },
             "current_session_key": "hermes:iris:main:trigger:00000000-0000-0000-0000-000000000000",
-            "current_model_label": "hermes-iris/openai:gpt-5.5/high",
+            "current_model_label": "hermes-iris/openai:gpt-5.6-sol/xhigh",
             "current_hermes_run_id": "run_test",
             "active_plan_range_violation_count": 0,
             "recent_deliveries": [delivery],
@@ -280,7 +280,7 @@ def test_public_planner_health_schema_includes_status_surface_fields():
     assert response.last_delivered_trigger is not None
     assert response.last_resolved_trigger is not None
     assert response.pending_by_sla_age["within_sla"] == 2
-    assert response.current_model_label == "hermes-iris/openai:gpt-5.5/high"
+    assert response.current_model_label == "hermes-iris/openai:gpt-5.6-sol/xhigh"
     assert response.recent_deliveries[0].planner_gateway == "hermes-iris"
     assert response.active_plan_range_violation_count == 0
 
@@ -295,13 +295,13 @@ def test_public_planner_delivery_schema_proves_gateway_model_session():
             "session_key": "hermes:iris:main:trigger:00000000-0000-0000-0000-000000000000",
             "hermes_run_id": "run_test",
             "planner_gateway": "hermes-iris",
-            "planner_model_label": "hermes-iris/openai:gpt-5.5/high",
+            "planner_model_label": "hermes-iris/openai:gpt-5.6-sol/xhigh",
         }
     )
 
     assert delivery.session_key is not None
     assert delivery.hermes_run_id == "run_test"
-    assert delivery.planner_model_label == "hermes-iris/openai:gpt-5.5/high"
+    assert delivery.planner_model_label == "hermes-iris/openai:gpt-5.6-sol/xhigh"
 
 
 def test_public_planner_health_endpoint_queries_i_p1_1_sources():
@@ -325,6 +325,7 @@ def test_public_planner_health_endpoint_queries_i_p1_1_sources():
     assert "registry_value_error" in api_source
     assert "planner_gateway" in api_source
     assert "planner_model_label" in api_source
+    assert '"hermes-iris/openai:gpt-5.6-sol/xhigh"' in api_source
 
 
 def _hermes_config_documents() -> tuple[dict, dict, str]:
@@ -332,6 +333,31 @@ def _hermes_config_documents() -> tuple[dict, dict, str]:
     profile = yaml.safe_load(manifest["data"]["config.yaml"])
     readiness_source = manifest["data"]["tool-readiness.py"]
     return manifest, profile, readiness_source
+
+
+def test_hermes_profile_pins_gpt_5_6_sol_xhigh_at_the_runtime_key():
+    _manifest, embedded, _readiness_source = _hermes_config_documents()
+    canonical = yaml.safe_load((REPO_ROOT / "hermes/iris/config.yaml").read_text())
+
+    assert (
+        embedded["model"]
+        == canonical["model"]
+        == {
+            "default": "gpt-5.6-sol",
+            "provider": "custom",
+            "base_url": "https://api.openai.com/v1",
+        }
+    )
+    assert "reasoning_effort" not in embedded["model"]
+    assert "reasoning_effort" not in canonical["model"]
+    assert embedded["agent"]["reasoning_effort"] == "xhigh"
+    assert canonical["agent"]["reasoning_effort"] == "xhigh"
+
+    # The embedded k3s profile must remain structurally equivalent as parsed,
+    # except for the intentionally environment-specific MCP endpoint.
+    normalized = json.loads(json.dumps(embedded))
+    normalized["mcp_servers"]["verdify_greenhouse"]["url"] = canonical["mcp_servers"]["verdify_greenhouse"]["url"]
+    assert normalized == canonical
 
 
 def _readiness_required_tools(source: str) -> set[str]:
