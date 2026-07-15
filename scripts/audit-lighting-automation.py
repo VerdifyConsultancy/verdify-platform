@@ -32,6 +32,15 @@ PUBLIC_LIGHTING = REPO_ROOT / "verdify-site" / "public" / "greenhouse" / "lighti
 PUBLIC_HOME = REPO_ROOT / "verdify-site" / "public" / "index.html"
 GRAFANA_RENDER_BASE = "https://graphs.verdify.ai"
 PUBLIC_SITE_BASE = "https://lab.verdify.ai"
+HOMEPAGE_LIGHTING_THRESHOLD_SERIES = (
+    "Main Light Threshold",
+    "Main Light Threshold Hold",
+    "Grow Light Threshold",
+    "Grow Light Threshold Hold",
+)
+HOMEPAGE_LIGHTING_THRESHOLD_OUTPUT_TOKENS = tuple(
+    f"'{label}'::text" for label in HOMEPAGE_LIGHTING_THRESHOLD_SERIES
+) + ("SELECT time, metric, value FROM thresholds",)
 
 PER_CIRCUIT_PARAMS = (
     "gl_main_target_light_minutes",
@@ -550,19 +559,21 @@ def static_checks(audit: Audit) -> None:
     home_panel = panel_by_id(site_home, 36)
     policy_panel = panel_by_id(site_climate_lighting, 16)
     forecast_panel = panel_by_id(site_climate_lighting, 17)
+    home_panel_sql = panel_sql(home_panel) if home_panel else ""
     audit.check(
         home_panel
-        and home_panel.get("title") == "Lighting: Lux, Thresholds & Switch State"
-        and "setpoint_snapshot" in panel_sql(home_panel)
-        and "setpoint_changes" in panel_sql(home_panel)
-        and "'Solar'::text AS metric" in panel_sql(home_panel)
-        and "'Solar Forecast'::text AS metric" in panel_sql(home_panel)
-        and "weather_forecast" in panel_sql(home_panel)
-        and "equipment_state" in panel_sql(home_panel)
-        and "fn_lighting_timeline" not in panel_sql(home_panel),
+        and home_panel.get("title") == "Lighting: Lux & Switch State"
+        and "setpoint_snapshot" in home_panel_sql
+        and "setpoint_changes" in home_panel_sql
+        and "'Solar'::text AS metric" in home_panel_sql
+        and "'Solar Forecast'::text AS metric" in home_panel_sql
+        and "weather_forecast" in home_panel_sql
+        and "equipment_state" in home_panel_sql
+        and "fn_lighting_timeline" not in home_panel_sql
+        and not any(token in home_panel_sql for token in HOMEPAGE_LIGHTING_THRESHOLD_OUTPUT_TOKENS),
         "home lighting state graph",
-        "site-home panel 36 renders observed/forecast solar lux, direct readback threshold band, and actual switch ON windows without fn_lighting_timeline",
-        "site-home panel 36 is missing, stale, or still bound to heavy lighting timeline/function calls",
+        "site-home panel 36 renders observed/forecast solar lux and readback-positioned switch ON fades without threshold output",
+        "site-home panel 36 is missing, stale, renders threshold bands, or still uses the heavy lighting timeline",
     )
     audit.check(
         policy_panel
@@ -584,14 +595,15 @@ def static_checks(audit: Audit) -> None:
     home_state_tokens = (
         "Solar",
         "Solar Forecast",
-        "Grow Light Threshold",
+        "Main Light On",
         "Grow Light On",
         "setpoint_snapshot",
         "setpoint_changes",
         "equipment_state",
         "weather_forecast",
         "axisPlacement",
-        "custom.fillBelowTo",
+        "custom.gradientMode",
+        "opacity",
     )
     forecast_label_tokens = (
         "Tempest/Forecast Lux",
@@ -607,10 +619,11 @@ def static_checks(audit: Audit) -> None:
         home_panel
         and forecast_panel
         and all(token in home_panel_contract for token in home_state_tokens)
+        and not any(label in home_panel_contract for label in HOMEPAGE_LIGHTING_THRESHOLD_SERIES)
         and all(token in forecast_panel_contract for token in forecast_label_tokens),
         "lighting state graph labels and fills",
-        "home graph labels observed/forecast solar lux, threshold band, actual switch ON windows, and shaded hysteresis/state fills",
-        "lighting state or forecast graphs are missing user-facing labels or shaded band fill configuration",
+        "home graph shows only observed/forecast solar and faded actual ON windows; detailed forecast graph retains hysteresis bands",
+        "home state-only or detailed forecast-band graph contracts are missing or mixed together",
     )
 
     greenhouse_lighting = json.loads(
@@ -885,17 +898,18 @@ def live_checks(audit: Audit, require_ota: bool) -> None:
         home_live_sql = panel_sql(home_live_panel) if home_live_panel else ""
         audit.check(
             home_live_panel
-            and home_live_panel.get("title") == "Lighting: Lux, Thresholds & Switch State"
+            and home_live_panel.get("title") == "Lighting: Lux & Switch State"
             and "setpoint_snapshot" in home_live_sql
             and "setpoint_changes" in home_live_sql
             and "'Solar'::text AS metric" in home_live_sql
             and "'Solar Forecast'::text AS metric" in home_live_sql
             and "weather_forecast" in home_live_sql
             and "equipment_state" in home_live_sql
-            and "fn_lighting_timeline" not in home_live_sql,
+            and "fn_lighting_timeline" not in home_live_sql
+            and not any(token in home_live_sql for token in HOMEPAGE_LIGHTING_THRESHOLD_OUTPUT_TOKENS),
             "live home Grafana panel",
-            "site-home panel 36 is live and bound to observed/forecast solar lux, direct readback threshold band, and actual switch state",
-            "site-home panel 36 missing or stale in live Grafana",
+            "site-home panel 36 is live with observed/forecast solar lux and faded actual switch ON windows only",
+            "site-home panel 36 is missing, stale, or still renders threshold output in live Grafana",
         )
         audit.check(
             panel_by_id(lighting, 16)
