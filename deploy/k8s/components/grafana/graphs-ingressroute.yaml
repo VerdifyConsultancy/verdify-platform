@@ -22,6 +22,17 @@ metadata:
 spec:
   entryPoints: [verdify-web]
   routes:
+    # Server-rendered PNGs are browser-neutral but expensive to produce. Route
+    # only this public path through the bounded shared cache; interactive
+    # dashboards and API requests continue to reach Grafana directly.
+    - kind: Rule
+      match: Host(`graphs.verdify.ai`) && PathPrefix(`/render/`)
+      priority: 100
+      middlewares:
+        - name: verdify-strip-identity-headers
+      services:
+        - name: verdify-grafana-render-cache
+          port: 8080
     - kind: Rule
       match: Host(`graphs.verdify.ai`)
       middlewares:

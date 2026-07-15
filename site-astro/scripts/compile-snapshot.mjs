@@ -792,6 +792,8 @@ function rehypeSpecialistEvidence({ route, grafanaOccurrences, currentMediaOccur
           node.properties.src = selected.fallback.publicPath;
           node.properties.width = selected.fallback.width;
           node.properties.height = selected.fallback.height;
+          node.properties.loading = "eager";
+          node.properties.decoding = "async";
           node.properties["data-occurrence-id"] = discovered.occurrenceId;
           node.properties["data-current-media-target"] = discovered.stableTarget;
           node.properties["data-fallback-verified-at"] = selected.fallback.verifiedAt;
@@ -856,7 +858,10 @@ function rehypeSpecialistEvidence({ route, grafanaOccurrences, currentMediaOccur
             alt: title,
             width: fallback.width,
             height: fallback.height,
-            loading: "lazy",
+            // Selected evidence is already same-origin, immutable, and bounded.
+            // Load it automatically in every browser instead of delegating
+            // visibility to browser-specific native lazy-load heuristics.
+            loading: "eager",
             decoding: "async",
           },
           children: [],

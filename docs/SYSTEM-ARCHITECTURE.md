@@ -335,8 +335,7 @@ The `/setpoints` endpoint is kept aligned with the live dispatcher. It computes 
     datasources/timescaledb.yml        # verdify-tsdb datasource
     dashboards/provider.yml            # Dashboard folder config
     dashboards/json/                   # 54 dashboard JSON files
-  grafana-custom/                      # Grafana branding
-    nginx-grafana.conf                 # Proxy config with CSS injection
+  grafana-custom/                      # Historical VM-era Grafana branding assets
     build/custom/                      # Custom CSS/JS
   api/                                 # Crop catalog API
     main.py                            # FastAPI app (491 lines)
