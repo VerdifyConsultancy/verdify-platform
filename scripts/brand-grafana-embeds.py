@@ -85,6 +85,21 @@ HOMEPAGE_LIGHTING_PANEL_TITLES = {
     "Lighting: Overhead vs Grow Circuit — Lux, Thresholds & Switch State",
     "Lighting: Overhead vs Grow Circuit — Lux & Switch State",
 }
+HOMEPAGE_LIGHTING_STATE_PANEL_TITLES = {
+    "Lighting: Lux, Thresholds & Switch State",
+    "Lighting: Lux & Switch State",
+}
+HOMEPAGE_LIGHTING_STATE_PANEL_TITLE = "Lighting: Lux & Switch State"
+HOMEPAGE_LIGHTING_STATE_PANEL_DESCRIPTION = (
+    "Observed and forecast solar lux with actual per-circuit Lutron switch-state lanes. "
+    "Green and blue opacity fades render only while each circuit is on; transparent periods are off."
+)
+HOMEPAGE_LIGHTING_STATE_THRESHOLD_SERIES = {
+    "Main Light Threshold",
+    "Main Light Threshold Hold",
+    "Grow Light Threshold",
+    "Grow Light Threshold Hold",
+}
 RELAY_STATE_LINE_WIDTH = 0
 # Faint, semi-transparent canopy green — a subtle reference line, not a bold one
 # (Jason 2026-06-19: the full-opacity #2E7D32 lw2 read too dark/bold on the
@@ -1422,6 +1437,33 @@ def simplify_homepage_lighting_solar_target(panel: dict[str, Any]) -> None:
         return
 
 
+def remove_homepage_lighting_threshold_output(panel: dict[str, Any]) -> None:
+    """Keep readback-backed lane placement without plotting policy thresholds."""
+
+    for target in panel.get("targets", []) or []:
+        if not isinstance(target, dict) or target.get("refId") != "B":
+            continue
+        raw_sql = target.get("rawSql")
+        if not isinstance(raw_sql, str):
+            continue
+
+        threshold_start = raw_sql.find("thresholds AS MATERIALIZED (\n")
+        if threshold_start >= 0:
+            lane_start = raw_sql.find("lane_metrics AS MATERIALIZED (\n", threshold_start)
+            if lane_start > threshold_start:
+                raw_sql = raw_sql[:threshold_start] + raw_sql[lane_start:]
+
+        raw_sql = raw_sql.replace(
+            "SELECT time, metric, value FROM thresholds\n"
+            "UNION ALL\n"
+            "SELECT time, metric, value FROM lanes\n"
+            "ORDER BY time, metric",
+            "SELECT time, metric, value FROM lanes ORDER BY time, metric",
+        )
+        target["rawSql"] = raw_sql
+        return
+
+
 def target_uses_equipment_state_lane(
     target: dict[str, Any], lanes: tuple[tuple[str, str, str, float, float], ...]
 ) -> bool:
@@ -1673,7 +1715,10 @@ def normalize_public_panel_schema(panel: dict[str, Any]) -> None:
     if title in HOMEPAGE_LIGHTING_PANEL_TITLES:
         strengthen_homepage_lighting_lanes(panel)
 
-    if title == "Lighting: Lux, Thresholds & Switch State" and panel.get("type") == "timeseries":
+    if title in HOMEPAGE_LIGHTING_STATE_PANEL_TITLES and panel.get("type") == "timeseries":
+        panel["title"] = HOMEPAGE_LIGHTING_STATE_PANEL_TITLE
+        panel["description"] = HOMEPAGE_LIGHTING_STATE_PANEL_DESCRIPTION
+        remove_homepage_lighting_threshold_output(panel)
         lux_label = "Solar"
         rename_override_label(panel, "Natural Lux (10m avg)", lux_label)
         rename_override_label(panel, "Solar / Tempest Exterior Lux (10m avg)", lux_label)
@@ -1703,6 +1748,7 @@ def normalize_public_panel_schema(panel: dict[str, Any]) -> None:
                 "Main ON Threshold",
                 "Grow OFF Threshold",
                 "Grow ON Threshold",
+                *HOMEPAGE_LIGHTING_STATE_THRESHOLD_SERIES,
             },
         )
 
@@ -1722,28 +1768,27 @@ def normalize_public_panel_schema(panel: dict[str, Any]) -> None:
         upsert_override_property(forecast_override, "custom.hideFrom", {"legend": True, "tooltip": False, "viz": False})
         upsert_override_property(forecast_override, "unit", "lux")
 
-        threshold_base_override = override_for_label(panel, "Grow Light Threshold Base")
-        upsert_override_property(threshold_base_override, "color", {"fixedColor": BRAND["leaf"], "mode": "fixed"})
-        upsert_override_property(threshold_base_override, "custom.lineWidth", 0)
-        upsert_override_property(threshold_base_override, "custom.fillOpacity", 0)
-        upsert_override_property(threshold_base_override, "custom.gradientMode", "none")
-        upsert_override_property(
-            threshold_base_override,
-            "custom.hideFrom",
-            {"legend": True, "tooltip": True, "viz": False},
-        )
-
-        threshold_override = override_for_label(panel, "Grow Light Threshold")
-        upsert_override_property(threshold_override, "color", {"fixedColor": BRAND["leaf"], "mode": "fixed"})
-        upsert_override_property(threshold_override, "custom.lineWidth", 0)
-        upsert_override_property(threshold_override, "custom.fillBelowTo", "Grow Light Threshold Base")
-        upsert_override_property(threshold_override, "custom.fillOpacity", LIGHTING_THRESHOLD_BAND_FILL_OPACITY)
-        upsert_override_property(threshold_override, "custom.gradientMode", "none")
-        upsert_override_property(
-            threshold_override,
-            "custom.hideFrom",
-            {"legend": False, "tooltip": True, "viz": False},
-        )
+        for label, color in {
+            "Main Light On": HOMEPAGE_LIGHTING_OVERHEAD_STATE_COLOR,
+            "Grow Light On": HOMEPAGE_LIGHTING_GROW_STATE_COLOR,
+        }.items():
+            override = override_for_label(panel, label)
+            upsert_override_property(override, "color", {"fixedColor": color, "mode": "fixed"})
+            upsert_override_property(override, "custom.drawStyle", "line")
+            upsert_override_property(override, "custom.lineInterpolation", "stepAfter")
+            upsert_override_property(override, "custom.lineWidth", HOMEPAGE_LIGHTING_STATE_LINE_WIDTH)
+            upsert_override_property(override, "custom.fillOpacity", HOMEPAGE_LIGHTING_STATE_FILL_OPACITY)
+            upsert_override_property(override, "custom.gradientMode", "opacity")
+            upsert_override_property(override, "custom.spanNulls", False)
+            upsert_override_property(override, "custom.showPoints", "never")
+            upsert_override_property(override, "custom.pointSize", 0)
+            upsert_override_property(
+                override,
+                "custom.hideFrom",
+                {"legend": False, "tooltip": True, "viz": False},
+            )
+            remove_override_property(override, "custom.fillBelowTo")
+            remove_override_property(override, "custom.lineStyle")
 
     if title == "Per-Circuit Lighting Forecast Bands" and panel.get("type") == "timeseries":
         lux_override = override_for_label(panel, "Tempest/Forecast Lux")

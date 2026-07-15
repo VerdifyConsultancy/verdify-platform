@@ -120,7 +120,8 @@ def test_homepage_lighting_state_is_on_only_policy_placed_fill():
     solar_sql = next(target["rawSql"] for target in lighting["targets"] if target.get("refId") == "A")
     state_sql = next(target["rawSql"] for target in lighting["targets"] if target.get("refId") == "B")
 
-    assert lighting["title"] == "Lighting: Lux, Thresholds & Switch State"
+    assert lighting["title"] == "Lighting: Lux & Switch State"
+    assert "opacity fades render only while each circuit is on" in lighting["description"]
     assert "Solar Forecast" in solar_sql
     assert "Threshold" not in solar_sql
     assert "fn_lighting_circuit_policy" not in solar_sql
@@ -130,9 +131,71 @@ def test_homepage_lighting_state_is_on_only_policy_placed_fill():
     assert "gl_grow_lux_threshold" in state_sql
     assert ") THEN m.value_when_on ELSE NULL::double precision END AS value" in state_sql
     assert "Base" not in state_sql
+    assert "thresholds AS MATERIALIZED" not in state_sql
+    assert "SELECT time, metric, value FROM thresholds" not in state_sql
+    assert "Main Light On" in state_sql
+    assert "Grow Light On" in state_sql
     assert "fillBelowTo" not in _override_props(lighting, "Main Light On")
     assert "fillBelowTo" not in _override_props(lighting, "Grow Light On")
-    for label in ("Main Light Threshold Base", "Grow Light Threshold Base"):
+    for label in (
+        "Main Light Threshold",
+        "Main Light Threshold Hold",
+        "Grow Light Threshold",
+        "Grow Light Threshold Hold",
+    ):
+        assert f"'{label}'::text" not in state_sql
+        assert not _override_props(lighting, label)
+    for label in ("Main Light On", "Grow Light On"):
+        props = _override_props(lighting, label)
+        assert props["custom.lineWidth"] == 0
+        assert props["custom.fillOpacity"] == 90
+        assert props["custom.gradientMode"] == "opacity"
+        assert props["custom.spanNulls"] is False
+
+
+def test_homepage_lighting_brand_normalizer_removes_threshold_output():
+    script_path = REPO_ROOT / "scripts/brand-grafana-embeds.py"
+    spec = importlib.util.spec_from_file_location("brand_grafana_embeds_lighting_test", script_path)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    lighting = json.loads(json.dumps(_panel(_dashboard("grafana/dashboards/site-home.json"), 36)))
+    lighting["title"] = "Lighting: Lux, Thresholds & Switch State"
+    threshold_labels = (
+        "Main Light Threshold",
+        "Main Light Threshold Hold",
+        "Grow Light Threshold",
+        "Grow Light Threshold Hold",
+    )
+    lighting["fieldConfig"]["overrides"].extend(
+        {"matcher": {"id": "byName", "options": label}, "properties": []} for label in threshold_labels
+    )
+    state_target = next(target for target in lighting["targets"] if target.get("refId") == "B")
+    state_target["rawSql"] = (
+        state_target["rawSql"]
+        .replace(
+            "lane_metrics AS MATERIALIZED (\n",
+            "thresholds AS MATERIALIZED (\n  SELECT NULL\n),\nlane_metrics AS MATERIALIZED (\n",
+            1,
+        )
+        .replace(
+            "SELECT time, metric, value FROM lanes ORDER BY time, metric",
+            "SELECT time, metric, value FROM thresholds\n"
+            "UNION ALL\n"
+            "SELECT time, metric, value FROM lanes\n"
+            "ORDER BY time, metric",
+            1,
+        )
+    )
+
+    module.normalize_public_panel_schema(lighting)
+
+    assert lighting["title"] == "Lighting: Lux & Switch State"
+    normalized_sql = next(target["rawSql"] for target in lighting["targets"] if target.get("refId") == "B")
+    assert "thresholds AS MATERIALIZED" not in normalized_sql
+    assert "SELECT time, metric, value FROM thresholds" not in normalized_sql
+    for label in threshold_labels:
         assert not _override_props(lighting, label)
     for label in ("Main Light On", "Grow Light On"):
         props = _override_props(lighting, label)

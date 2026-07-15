@@ -1154,8 +1154,8 @@ def test_lighting_automation_audit_checks_live_public_site():
 
 
 def test_lighting_automation_audit_checks_state_graph_labels():
-    """The lighting graph proof should include the user-facing labels and
-    shaded hysteresis fills, not only the backing SQL sources.
+    """The lighting proof separates the simple home state fades from the
+    detailed forecast panel's shaded hysteresis bands.
     """
     src = Path("scripts/audit-lighting-automation.py").read_text()
 
@@ -1163,12 +1163,15 @@ def test_lighting_automation_audit_checks_state_graph_labels():
     for token in (
         "Solar Forecast",
         "Tempest/Forecast Lux",
-        "Grow Light Threshold",
+        "Main Light On",
         "Grow Light On",
+        "Main ON Threshold",
+        "Grow ON Threshold",
         "fn_lighting_minutes_policy",
         "equipment_state",
         "weather_forecast",
         "axisPlacement",
+        "custom.gradientMode",
         "custom.fillBelowTo",
     ):
         assert token in src
