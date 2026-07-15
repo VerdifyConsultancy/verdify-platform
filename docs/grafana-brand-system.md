@@ -56,7 +56,8 @@ Series colors are not forced into the site palette. They stay domain-coded:
 - Bargauge and state-timeline panels keep domain-coded series colors just like timeseries panels.
 - Fixed series colors are mapped by semantic labels such as solar, forecast, heat, gas, water, fan, threshold, target, VPD, and fault. Do not replace these with the site palette or a generic palette cycle.
 - Zone comparison panels keep zone colors for zone sensor lines. Equipment overlays in those same panels use actuator-family shades that do not reuse the zone colors.
-- The homepage lighting threshold panel uses the solar/daylight fill as context and hides the historical `Natural Lux (10m avg)` trace from the public embed so it does not add a second yellow line over the filled backdrop.
+- The homepage lighting panel uses the solar/daylight fill as context and hides the historical `Natural Lux (10m avg)` trace from the public embed so it does not add a second yellow line over the filled backdrop.
+- Homepage lighting renders only confirmed main/grow ON windows as line-free opacity fades; OFF periods are `NULL` and therefore transparent. Do not render policy threshold lines or hysteresis bands on this summary panel. Detailed ON/OFF threshold evidence remains on `site-climate-lighting` panel 17.
 - VPD context is semantic, not palette-driven: indoor/actual indoor VPD is purple, observed outdoor VPD is solid gray, and outdoor VPD forecast is dashed gray.
 - VPD labels win over neighboring humidity/dew-point context; a panel title containing dew point must not recolor a `VPD` series as humidity teal.
 - Mixed VPD/dew-spread panels pin VPD to the left `kPa` axis and dew spread to a right `°F` axis.
