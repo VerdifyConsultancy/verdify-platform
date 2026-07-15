@@ -25,6 +25,23 @@ spec:
             app.kubernetes.io/component: vision
         spec:
           restartPolicy: Never
+          # PodSecurity "restricted:latest" is namespace-enforced on
+          # verdify-prod: without runAsNonRoot + seccompProfile the
+          # job-controller's pod creates are rejected at admission (the
+          # 2026-07-11T21:00Z verdify-vision-29730060 wedge — active Job,
+          # zero pods, concurrencyPolicy Forbid blocks every later run).
+          # runAsUser MUST be numeric-explicit here: the ingestor image's
+          # USER is the non-numeric "appuser" (uid 1000, ingestor/Dockerfile),
+          # and kubelet cannot verify runAsNonRoot from a named user alone.
+          # Same shape as base/ingestor-deployment.yaml (same image, passes
+          # restricted today).
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000   # appuser in ingestor/Dockerfile
+            runAsGroup: 1000
+            fsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
           # zot origin only (ADR-0021 — GHCR is retired). The overlay rewrites
           # the canonical image name below to registry.vallery.net@sha256, so
           # the scoped zot pull credential is the ONLY one this pod needs; the
@@ -84,6 +101,9 @@ spec:
                 allowPrivilegeEscalation: false
                 capabilities:
                   drop: ["ALL"]
+                runAsNonRoot: true
+                seccompProfile:
+                  type: RuntimeDefault
               volumeMounts:
                 - name: vsrc
                   mountPath: /vsrc
