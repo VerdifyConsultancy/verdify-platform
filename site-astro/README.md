@@ -29,12 +29,20 @@ checks WCAG A/AA rules with Axe, horizontal overflow, default-light and
 explicit-dark surface rules, console/request failures, bounded DOM/asset/JS
 budgets, FCP/LCP/CLS/long-task budgets, semantic page enhancements, skip-link
 and mobile-navigation focus, form boundaries, reduced motion, responsive image
-geometry, and native-dialog lightbox focus restoration. Chromium must be
-installed once in a fresh tool image with `npx playwright install chromium`.
-For a focused rebuild and quality run, use:
+geometry, and native-dialog lightbox focus restoration. The standard quality
+gate uses pinned Chromium; the focused media-autoload gate also uses pinned
+WebKit so Chromium and Safari-class loading behavior cannot drift. The npm
+commands install only their required pinned browsers and OS dependencies when
+they are absent. For a focused rebuild and quality run, use:
 
 ```bash
 npm run test:quality
+```
+
+To run only the offline Quartz graph/camera loader contract in both browsers:
+
+```bash
+npm run test:media:cross-browser
 ```
 
 The pinned browser fixture mirrors the immutable page-primitives visual
@@ -417,8 +425,15 @@ The browser regression gate exercises real Pagefind WASM under the nginx CSP,
 same-origin KaTeX fonts, and computed contact-form visibility/focus styles:
 
 ```bash
-npx playwright install chromium
+npx playwright install --with-deps chromium
 npm run test:browser
+```
+
+The cross-browser media gate prepares only Chromium and WebKit with the same
+`--with-deps` flow; it never installs Firefox:
+
+```bash
+npm run test:media:cross-browser
 ```
 
 ## Stage image contract

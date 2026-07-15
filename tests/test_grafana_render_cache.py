@@ -32,7 +32,7 @@ def test_public_render_path_uses_cache_without_becoming_a_second_grafana_front_d
     assert "proxy_pass http://verdify-grafana:3000;" in config
 
 
-def test_render_cache_coalesces_cold_renders_and_serves_bounded_stale_images():
+def test_render_cache_coalesces_cold_renders_without_unbounded_server_stale():
     config = (COMPONENT / "nginx-render-cache.conf").read_text(encoding="utf-8")
 
     for contract in (
@@ -40,9 +40,9 @@ def test_render_cache_coalesces_cold_renders_and_serves_bounded_stale_images():
         "inactive=24h",
         "proxy_cache_lock on;",
         "proxy_cache_lock_age 65s;",
-        "proxy_cache_background_update on;",
-        "proxy_cache_use_stale updating timeout error",
-        "proxy_cache_valid 200 1m;",
+        'if ($cache_key_uri ~ "^(.*)([?&])_qts=[^&]*&(.*)$")',
+        'if ($cache_key_uri ~ "^(.*)[?&]_qts=[^&]*$")',
+        "proxy_cache_valid 200 5m;",
         'Cache-Control "public, max-age=60, stale-while-revalidate=300"',
         "X-Cache-Status $upstream_cache_status",
         'proxy_set_header Authorization "";',
@@ -51,15 +51,26 @@ def test_render_cache_coalesces_cold_renders_and_serves_bounded_stale_images():
     ):
         assert contract in config
 
+    assert 'Cache-Control "public, max-age=60, stale-while-revalidate=300" always' not in config
+    assert "proxy_cache_use_stale" not in config
+    assert "proxy_cache_background_update" not in config
+
 
 def test_render_cache_runtime_is_pinned_unprivileged_and_credential_free():
     documents = _documents("grafana-render-cache.yaml")
     deployment = next(document for document in documents if document["kind"] == "Deployment")
+    disruption_budget = next(document for document in documents if document["kind"] == "PodDisruptionBudget")
     service = next(document for document in documents if document["kind"] == "Service")
     policy = next(document for document in documents if document["kind"] == "NetworkPolicy")
     pod = deployment["spec"]["template"]["spec"]
     container = pod["containers"][0]
 
+    assert deployment["spec"]["replicas"] == 2
+    assert pod["topologySpreadConstraints"][0]["topologyKey"] == "kubernetes.io/hostname"
+    assert pod["topologySpreadConstraints"][0]["minDomains"] == 2
+    assert pod["topologySpreadConstraints"][0]["whenUnsatisfiable"] == "DoNotSchedule"
+    assert pod["automountServiceAccountToken"] is False
+    assert disruption_budget["spec"]["minAvailable"] == 1
     assert container["image"].startswith("nginxinc/nginx-unprivileged:1.29-alpine@sha256:")
     assert container["securityContext"]["readOnlyRootFilesystem"] is True
     assert container["securityContext"]["allowPrivilegeEscalation"] is False

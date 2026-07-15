@@ -35,7 +35,7 @@ Grafana pod (ns verdify-prod, deploy/verdify-grafana)
     (no defaults; missing Secret/key leaves a new pod CreateContainerConfigError)
   • image-renderer sidecar → server-side PNG via /render/d-solo/...
         ▼
-verdify-grafana-render-cache (one-minute PNG cache + background refresh)
+verdify-grafana-render-cache (five-minute PNG cache; one-minute browser freshness)
         ▼
 graphs.verdify.ai (interactive dashboards) + lab.verdify.ai (automatic PNGs;
 explicit interactive-panel action)

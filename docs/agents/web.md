@@ -208,8 +208,11 @@ Quartz transforms those embeds into browser-neutral placeholders. The
 `GrafanaEmbeds` component automatically loads the corresponding
 `/render/d-solo/...` PNG in every browser; interactive Grafana is an explicit
 action. The public `/render/` route passes through
-`verdify-grafana-render-cache`, whose one-minute cache and background refresh
-prevent each Chrome/Safari page view from launching a fresh headless browser.
+the two-replica `verdify-grafana-render-cache`, whose five-minute shared render
+entries prevent each Chrome/Safari page view from
+launching a fresh headless browser. Browsers revalidate after one minute and
+may retain their own stale copy for at most five more; the proxy never serves
+an expired entry during a persistent renderer failure.
 Keep the image URLs stable and query-complete (dashboard, panel, range, theme,
 variables, and dimensions all belong in the cache identity).
 

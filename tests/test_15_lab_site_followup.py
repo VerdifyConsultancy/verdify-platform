@@ -365,6 +365,11 @@ def test_quartz_graphs_and_cameras_autoload_with_cached_images_on_every_browser(
     assert "IMG_MAX_INFLIGHT = 2" in embeds
     assert "rootMargin: '1200px 0px'" in embeds
     assert "if (!loaded.has(el)) return" in embeds
+    assert "unavailable.parentNode.replaceChild(img, unavailable)" in embeds
+    assert "var renderGenerations = new WeakMap()" in embeds
+    assert "if (job.el === el && job.generation !== generation) job.cancel(false)" in embeds
+    assert "job.img.removeEventListener('load', onLoad)" in embeds
+    assert "job.img.removeEventListener('error', onError)" in embeds
 
     # There are only two current camera snapshots, so native lazy-loading is
     # deliberately overridden to avoid Safari/Chrome viewport heuristics. A
@@ -374,6 +379,8 @@ def test_quartz_graphs_and_cameras_autoload_with_cached_images_on_every_browser(
     assert "if (!img.getAttribute('src'))" in embeds
     assert "var probe = new Image()" in embeds
     assert "probe.naturalWidth > 0" in embeds
+    assert "probe.decode().then(commitProbe, releaseProbe)" in embeds
+    assert "state.inFlight" in embeds
     assert "img.removeAttribute('data-camera-src')" in embeds
 
 

@@ -1,6 +1,6 @@
-# Shared PNG cache for public Grafana renders. The live interactive Grafana
-# route continues to target verdify-grafana directly; only `/render/` enters
-# this small proxy. No database or credential is mounted here.
+# Two-replica PNG cache for public Grafana renders. The live interactive
+# Grafana route continues to target verdify-grafana directly; only `/render/`
+# enters this small proxy. No database or credential is mounted here.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -9,7 +9,7 @@ metadata:
     app.kubernetes.io/part-of: verdify
     app.kubernetes.io/component: grafana-render-cache
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app.kubernetes.io/component: grafana-render-cache
@@ -24,10 +24,19 @@ spec:
         app.kubernetes.io/part-of: verdify
         app.kubernetes.io/component: grafana-render-cache
     spec:
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         seccompProfile:
           type: RuntimeDefault
+      topologySpreadConstraints:
+        - maxSkew: 1
+          minDomains: 2
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/component: grafana-render-cache
       containers:
         - name: render-cache
           image: nginxinc/nginx-unprivileged:1.29-alpine@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6
@@ -76,6 +85,19 @@ spec:
         - name: tmp
           emptyDir:
             sizeLimit: 16Mi
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: verdify-grafana-render-cache
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: grafana-render-cache
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: grafana-render-cache
 ---
 apiVersion: v1
 kind: Service

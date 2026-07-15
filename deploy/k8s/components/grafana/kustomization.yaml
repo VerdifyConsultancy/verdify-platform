@@ -9,7 +9,7 @@ kind: Component
 # Resources:
 #   - grafana.yaml            : Deployment (stateless, emptyDir) + Service +
 #                               NetworkPolicy
-#   - grafana-render-cache.yaml: bounded nginx cache for public `/render/` PNGs
+#   - grafana-render-cache.yaml: HA bounded nginx cache for public `/render/` PNGs
 #   - graphs-ingressroute.yaml: tier-2 verdify-traefik IngressRoute for
 #                               interactive Grafana plus the cached PNG split
 #   - generated/provisioning-cm.yaml: datasource (uid verdify-tsdb ->
