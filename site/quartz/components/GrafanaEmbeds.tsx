@@ -2,10 +2,11 @@ import { QuartzComponentConstructor } from "./types"
 
 // GrafanaEmbeds — progressive-enhancement upgrader for placeholder
 // <div class="grafana-embed"> nodes emitted by the GrafanaDefer
-// transformer. Desktop browsers get live Grafana iframes by default.
-// iOS, narrow touch/mobile devices, and timed-out iframes get stable
-// cached PNGs from Grafana's `/render/d-solo/...` endpoint with an
-// explicit "Open in Grafana" escape hatch.
+// transformer. Every browser gets a stable cached PNG from Grafana's
+// `/render/d-solo/...` endpoint by default. Interactive Grafana is an
+// explicit action: cross-origin iframes are considerably heavier and their
+// load event does not prove that the panel actually rendered in Chrome or
+// Safari.
 //
 // The component itself emits no DOM (returns null) — the render is
 // done client-side by the afterDOMLoaded script below, which scans
@@ -79,16 +80,6 @@ export default (() => {
 
   GrafanaEmbeds.afterDOMLoaded = `
 (function () {
-  function shouldUseStaticImages() {
-    if (typeof navigator === 'undefined') return false;
-    var ua = navigator.userAgent || '';
-    var ios = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    var mobile = /Android|Mobile/.test(ua);
-    var coarse = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
-    var narrow = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 820px)').matches;
-    return ios || mobile || (coarse && narrow);
-  }
-
   function sizedRenderUrl(url, cssWidth, cssHeight) {
     try {
       var u = new URL(url, window.location.href);
@@ -147,12 +138,61 @@ export default (() => {
   }
 
   function setup() {
-    var embeds = Array.from(document.querySelectorAll('.grafana-embed:not([data-grafana-enhanced])[data-iframe-src], .grafana-embed:not([data-grafana-enhanced])[data-image-src]'));
-    if (!embeds.length) return;
-
-    var staticImages = shouldUseStaticImages();
-    var loaded = new WeakMap();
     var timers = [];
+    var cameraSnapshots = Array.from(document.querySelectorAll('img.camera-snapshot[data-camera-src]'));
+
+    function restoreCameraSources() {
+      cameraSnapshots.forEach(function (img) {
+        var base = img.getAttribute('data-camera-autoload-src');
+        if (base) img.setAttribute('data-camera-src', base);
+        img.removeAttribute('data-camera-autoload-src');
+      });
+    }
+
+    function refreshCameraAfterLoad(img, base) {
+      var probe = new Image();
+      probe.decoding = 'async';
+      probe.addEventListener('load', function () {
+        // Swap only after the replacement decoded enough to report a valid
+        // image. A failed refresh leaves the last-known-good frame visible.
+        if (document.body.contains(img) && probe.naturalWidth > 0) img.src = probe.src;
+      }, { once: true });
+      probe.src = base + (base.indexOf('?') === -1 ? '?' : '&') + '_=' + Date.now();
+    }
+
+    // The public homepage has only two camera snapshots. Ask every browser to
+    // fetch them immediately instead of relying on divergent native lazy-load
+    // heuristics, especially Safari's treatment of below-the-fold images. The
+    // legacy static refresher sees no data-camera-src after this enhancement;
+    // replacements are preloaded here and swapped atomically instead.
+    cameraSnapshots.forEach(function (img) {
+      var cameraSrc = img.getAttribute('data-camera-src');
+      if (!cameraSrc) return;
+      img.loading = 'eager';
+      img.decoding = 'async';
+      img.setAttribute('data-camera-autoload-src', cameraSrc);
+      img.removeAttribute('data-camera-src');
+      if (!img.getAttribute('src')) img.src = cameraSrc;
+      img.addEventListener('error', function () {
+        window.setTimeout(function () { refreshCameraAfterLoad(img, cameraSrc); }, 5000);
+      }, { once: true });
+      timers.push(window.setInterval(function () {
+        if (document.body.contains(img)) refreshCameraAfterLoad(img, cameraSrc);
+      }, 30000));
+    });
+
+    var embeds = Array.from(document.querySelectorAll('.grafana-embed:not([data-grafana-enhanced])[data-iframe-src], .grafana-embed:not([data-grafana-enhanced])[data-image-src]'));
+    if (!embeds.length) {
+      if (window.addCleanup) {
+        window.addCleanup(function () {
+          for (var cameraTimerIndex = 0; cameraTimerIndex < timers.length; cameraTimerIndex++) window.clearInterval(timers[cameraTimerIndex]);
+          restoreCameraSources();
+        });
+      }
+      return;
+    }
+
+    var loaded = new WeakMap();
     var elementTimers = new WeakMap();
     var observer = null;
 
@@ -233,6 +273,7 @@ export default (() => {
       // the IMG_MAX_INFLIGHT cap and don't dogpile.
       var attempts = 0;
       var maxAttempts = 3;
+      img.addEventListener('load', function () { attempts = 0; });
       img.addEventListener('error', function () {
         attempts++;
         if (attempts <= maxAttempts) {
@@ -278,7 +319,9 @@ export default (() => {
       f.height = String(height);
       f.style.height = height + 'px';
       f.frameBorder = '0';
-      f.loading = 'lazy';
+      // Interactive panels are created only after an explicit user action, so
+      // there is no reason to defer that requested navigation again.
+      f.loading = 'eager';
       f.referrerPolicy = 'no-referrer-when-downgrade';
 
       var settled = false;
@@ -323,7 +366,7 @@ export default (() => {
         return;
       }
 
-      if (staticImages && imageSrc) {
+      if (imageSrc) {
         renderImage(el, imageSrc, iframeSrc, liveSrc, title, height, refreshMs);
       } else if (iframeSrc) {
         renderIframe(el, iframeSrc, liveSrc, title, height, imageSrc, refreshMs);
@@ -349,7 +392,9 @@ export default (() => {
             observer.unobserve(entries[i].target);
           }
         }
-      }, { rootMargin: '300px 0px', threshold: 0 });
+      // Start the bounded image queue before a panel reaches the viewport so a
+      // normal scroll does not expose an avoidable blank/loading interval.
+      }, { rootMargin: '1200px 0px', threshold: 0 });
       embeds.forEach(function (el) { observer.observe(el); });
     } else {
       embeds.forEach(load);
@@ -357,6 +402,9 @@ export default (() => {
 
     function reloadForThemeChange() {
       Array.from(document.querySelectorAll('.grafana-embed[data-grafana-enhanced]')).forEach(function (el) {
+        // The initial theme event fires before IntersectionObserver has brought
+        // distant panels into scope. Do not let it fan out every graph request.
+        if (!loaded.has(el)) return;
         loaded.delete(el);
         load(el);
       });
@@ -367,6 +415,7 @@ export default (() => {
       window.addCleanup(function () {
         if (observer) observer.disconnect();
         for (var i = 0; i < timers.length; i++) window.clearInterval(timers[i]);
+        restoreCameraSources();
         document.removeEventListener('themechange', reloadForThemeChange);
       });
     }

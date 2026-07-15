@@ -62,7 +62,7 @@ All source-of-truth content lives on NFS (`/mnt/iris/` or `/mnt/jason/`). Three 
 │   │   ├── dashboards/json/*.json      55 dashboard files — SINGLE SOURCE OF TRUTH
 │   │   ├── dashboards/provider.yml
 │   │   └── datasources/
-│   └── custom/                         CSS + branding + nginx-grafana.conf
+│   └── custom/                         legacy CSS assets (live render cache is under deploy/k8s)
 │
 ├── db/
 │   ├── schema.sql                      authoritative dump (make db-dump)

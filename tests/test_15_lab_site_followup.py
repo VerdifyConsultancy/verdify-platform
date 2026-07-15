@@ -352,6 +352,31 @@ def test_quartz_dark_mode_contract_is_user_theme_driven():
     assert "themechange" in embeds
 
 
+def test_quartz_graphs_and_cameras_autoload_with_cached_images_on_every_browser():
+    embeds = (REPO_ROOT / "site/quartz/components/GrafanaEmbeds.tsx").read_text(encoding="utf-8")
+
+    # Browser sniffing previously sent desktop Chrome/Safari down the heavier
+    # cross-origin iframe path. Rendered images are now the universal default;
+    # the iframe remains available only through the explicit action.
+    assert "shouldUseStaticImages" not in embeds
+    assert "var staticImages" not in embeds
+    assert "if (imageSrc) {" in embeds
+    assert "Load interactive panel" in embeds
+    assert "IMG_MAX_INFLIGHT = 2" in embeds
+    assert "rootMargin: '1200px 0px'" in embeds
+    assert "if (!loaded.has(el)) return" in embeds
+
+    # There are only two current camera snapshots, so native lazy-loading is
+    # deliberately overridden to avoid Safari/Chrome viewport heuristics. A
+    # refresh is swapped in only after a detached Image proves it loaded.
+    assert "img.camera-snapshot[data-camera-src]" in embeds
+    assert "img.loading = 'eager'" in embeds
+    assert "if (!img.getAttribute('src'))" in embeds
+    assert "var probe = new Image()" in embeds
+    assert "probe.naturalWidth > 0" in embeds
+    assert "img.removeAttribute('data-camera-src')" in embeds
+
+
 def test_architecture_page_removes_stale_sections_and_svg_return_path_is_behind_ingestor():
     architecture = (VAULT_ROOT / "reference/architecture.md").read_text(encoding="utf-8")
     svg = (VAULT_ROOT / "static/verdify-architecture.svg").read_text(encoding="utf-8")
