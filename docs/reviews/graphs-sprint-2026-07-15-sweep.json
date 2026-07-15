@@ -1,0 +1,5492 @@
+[
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 10,
+  "panel_title": "WiFi RSSI",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 112.393
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 11,
+  "panel_title": "Free Heap",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 8.11
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 12,
+  "panel_title": "Uptime",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 6.828
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 13,
+  "panel_title": "Case Temp",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 2.923
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 14,
+  "panel_title": "Reboots (30d)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 22.08
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 15,
+  "panel_title": "Last Reset",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.441
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 16,
+  "panel_title": "Heap + RSSI (30d)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 1.487
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 16,
+  "panel_title": "Heap + RSSI (30d)",
+  "ref": "B",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 1.426
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 17,
+  "panel_title": "Case Temp + Uptime (30d)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 1.9
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 17,
+  "panel_title": "Case Temp + Uptime (30d)",
+  "ref": "B",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 1.628
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 24,
+  "panel_title": "Transition Rate (hourly)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 8,
+  "ms": 14.366
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 25,
+  "panel_title": "State Distribution (24h)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 3,
+  "ms": 3.094
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 45,
+  "panel_title": "Oscillation Heatmap (param \u00d7 hour)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 51,
+  "ms": 1634.135
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 119,
+  "panel_title": "Controller State Timeline",
+  "ref": "A",
+  "status": "ok",
+  "rows": 66,
+  "ms": 1.476
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 114,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.568
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 114,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "B",
+  "status": "ok",
+  "rows": 73,
+  "ms": 461.509
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 114,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "C",
+  "status": "ok",
+  "rows": 49,
+  "ms": 291.519
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 114,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "D",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 1.948
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 114,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "J",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 1.922
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 114,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "K",
+  "status": "ok",
+  "rows": 73,
+  "ms": 66.17
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 114,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "G",
+  "status": "empty",
+  "rows": 0,
+  "ms": 2.397
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 114,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "I",
+  "status": "empty",
+  "rows": 0,
+  "ms": 0.901
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 114,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "E",
+  "status": "ok",
+  "rows": 42,
+  "ms": 1.282
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 114,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "F",
+  "status": "ok",
+  "rows": 36,
+  "ms": 1.424
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 114,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "H",
+  "status": "ok",
+  "rows": 190,
+  "ms": 1.481
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 114,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "L",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.16
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 114,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "M",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.548
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 115,
+  "panel_title": "VPD Compliance Band",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.363
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 115,
+  "panel_title": "VPD Compliance Band",
+  "ref": "B",
+  "status": "ok",
+  "rows": 73,
+  "ms": 61.967
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 115,
+  "panel_title": "VPD Compliance Band",
+  "ref": "C",
+  "status": "ok",
+  "rows": 49,
+  "ms": 256.535
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 115,
+  "panel_title": "VPD Compliance Band",
+  "ref": "D",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.661
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 115,
+  "panel_title": "VPD Compliance Band",
+  "ref": "E",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.74
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 115,
+  "panel_title": "VPD Compliance Band",
+  "ref": "F",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.881
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 115,
+  "panel_title": "VPD Compliance Band",
+  "ref": "G",
+  "status": "ok",
+  "rows": 168,
+  "ms": 2.403
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 115,
+  "panel_title": "VPD Compliance Band",
+  "ref": "H",
+  "status": "ok",
+  "rows": 190,
+  "ms": 1.998
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 210,
+  "panel_title": "Enthalpy Delta (Outdoor \u2212 Indoor)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 3.273
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 211,
+  "panel_title": "Economiser Activity",
+  "ref": "A",
+  "status": "ok",
+  "rows": 25,
+  "ms": 165.085
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 211,
+  "panel_title": "Economiser Activity",
+  "ref": "B",
+  "status": "ok",
+  "rows": 1,
+  "ms": 32.794
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 310,
+  "panel_title": "Plan Score Trend & Planning Volume",
+  "ref": "A",
+  "status": "ok",
+  "rows": 14,
+  "ms": 2.36
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 310,
+  "panel_title": "Plan Score Trend & Planning Volume",
+  "ref": "B",
+  "status": "ok",
+  "rows": 14,
+  "ms": 1.511
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 312,
+  "panel_title": "Forecast Bias (temp)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 2164.572
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 305,
+  "panel_title": "Last 10 Plans",
+  "ref": "A",
+  "status": "ok",
+  "rows": 10,
+  "ms": 1.353
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 414,
+  "panel_title": "Write Rate + Oscillations",
+  "ref": "A",
+  "status": "ok",
+  "rows": 23,
+  "ms": 1648.069
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 414,
+  "panel_title": "Write Rate + Oscillations",
+  "ref": "B",
+  "status": "ok",
+  "rows": 23,
+  "ms": 1574.903
+ },
+ {
+  "dashboard": "site-climate-controller.json",
+  "panel_id": 415,
+  "panel_title": "Band: Device (on-chip) vs DB (served) \u2014 VPD  [issue 2: device truth, not just DB intent]",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 7.975
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 2,
+  "panel_title": "Eligible Electric Cost (est)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 1.799
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 5,
+  "panel_title": "Eligible Runtime-Modeled kWh (est)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.798
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 8,
+  "panel_title": "$/Day (30-Day Average) (est)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 1.347
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 111,
+  "panel_title": "Forecast vs Actual Solar Radiation",
+  "ref": "A",
+  "status": "ok",
+  "rows": 15718,
+  "ms": 9.358
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 111,
+  "panel_title": "Forecast vs Actual Solar Radiation",
+  "ref": "B",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.673
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 211,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "A",
+  "status": "ok",
+  "rows": 9793,
+  "ms": 7.288
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 211,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "B",
+  "status": "ok",
+  "rows": 9793,
+  "ms": 6.583
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 211,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "C",
+  "status": "ok",
+  "rows": 9793,
+  "ms": 6.778
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 211,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "D",
+  "status": "ok",
+  "rows": 49,
+  "ms": 300.603
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 211,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "E",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.935
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 211,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "F",
+  "status": "ok",
+  "rows": 73,
+  "ms": 75.462
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 211,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "G",
+  "status": "ok",
+  "rows": 42,
+  "ms": 1.725
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 211,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "H",
+  "status": "ok",
+  "rows": 36,
+  "ms": 1.317
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 211,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "I",
+  "status": "ok",
+  "rows": 190,
+  "ms": 1.916
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 211,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "J",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.58
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 211,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "K",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.519
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 109,
+  "panel_title": "Indoor vs Outdoor Temperature",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.692
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 109,
+  "panel_title": "Indoor vs Outdoor Temperature",
+  "ref": "B",
+  "status": "ok",
+  "rows": 24,
+  "ms": 2.136
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 109,
+  "panel_title": "Indoor vs Outdoor Temperature",
+  "ref": "C",
+  "status": "ok",
+  "rows": 288,
+  "ms": 5.033
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 109,
+  "panel_title": "Indoor vs Outdoor Temperature",
+  "ref": "D",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 7.393
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 109,
+  "panel_title": "Indoor vs Outdoor Temperature",
+  "ref": "E",
+  "status": "ok",
+  "rows": 288,
+  "ms": 2.801
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 937,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.285
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 937,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "B",
+  "status": "ok",
+  "rows": 73,
+  "ms": 67.743
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 937,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "C",
+  "status": "ok",
+  "rows": 49,
+  "ms": 285.933
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 937,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "D",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.904
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 937,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "J",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.511
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 937,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "K",
+  "status": "ok",
+  "rows": 73,
+  "ms": 89.672
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 937,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "G",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.765
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 937,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "I",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.381
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 937,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "E",
+  "status": "ok",
+  "rows": 42,
+  "ms": 1.365
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 937,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "F",
+  "status": "ok",
+  "rows": 36,
+  "ms": 1.467
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 937,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "H",
+  "status": "ok",
+  "rows": 190,
+  "ms": 2.089
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 937,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "L",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.037
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 937,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "M",
+  "status": "empty",
+  "rows": 0,
+  "ms": 0.74
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 938,
+  "panel_title": "Cooling Equipment State",
+  "ref": "A",
+  "status": "ok",
+  "rows": 42,
+  "ms": 1.231
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 938,
+  "panel_title": "Cooling Equipment State",
+  "ref": "B",
+  "status": "ok",
+  "rows": 36,
+  "ms": 1.119
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 938,
+  "panel_title": "Cooling Equipment State",
+  "ref": "C",
+  "status": "ok",
+  "rows": 25,
+  "ms": 16.502
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 938,
+  "panel_title": "Cooling Equipment State",
+  "ref": "D",
+  "status": "ok",
+  "rows": 190,
+  "ms": 1.879
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 939,
+  "panel_title": "Cooling Runtime by Day",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 2.535
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 939,
+  "panel_title": "Cooling Runtime by Day",
+  "ref": "B",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.835
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 939,
+  "panel_title": "Cooling Runtime by Day",
+  "ref": "C",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.888
+ },
+ {
+  "dashboard": "site-climate-cooling.json",
+  "panel_id": 939,
+  "panel_title": "Cooling Runtime by Day",
+  "ref": "D",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.622
+ },
+ {
+  "dashboard": "site-climate-heating.json",
+  "panel_id": 3,
+  "panel_title": "Gas (est)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.606
+ },
+ {
+  "dashboard": "site-climate-heating.json",
+  "panel_id": 6,
+  "panel_title": "Therms (est)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.495
+ },
+ {
+  "dashboard": "site-climate-heating.json",
+  "panel_id": 8,
+  "panel_title": "$/Day (30-Day Average) (est)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.564
+ },
+ {
+  "dashboard": "site-climate-heating.json",
+  "panel_id": 19,
+  "panel_title": "Runtime Hours by Equipment",
+  "ref": "A",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.66
+ },
+ {
+  "dashboard": "site-climate-heating.json",
+  "panel_id": 21,
+  "panel_title": "Gas Therms vs Outdoor Temperature (est)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.988
+ },
+ {
+  "dashboard": "site-climate-heating.json",
+  "panel_id": 21,
+  "panel_title": "Gas Therms vs Outdoor Temperature (est)",
+  "ref": "B",
+  "status": "empty",
+  "rows": 0,
+  "ms": 2.04
+ },
+ {
+  "dashboard": "site-climate-heating.json",
+  "panel_id": 920,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.214
+ },
+ {
+  "dashboard": "site-climate-heating.json",
+  "panel_id": 920,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "B",
+  "status": "ok",
+  "rows": 73,
+  "ms": 56.799
+ },
+ {
+  "dashboard": "site-climate-heating.json",
+  "panel_id": 920,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "C",
+  "status": "ok",
+  "rows": 49,
+  "ms": 311.056
+ },
+ {
+  "dashboard": "site-climate-heating.json",
+  "panel_id": 920,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "D",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 5.419
+ },
+ {
+  "dashboard": "site-climate-heating.json",
+  "panel_id": 920,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "J",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 9.351
+ },
+ {
+  "dashboard": "site-climate-heating.json",
+  "panel_id": 920,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "K",
+  "status": "ok",
+  "rows": 73,
+  "ms": 63.077
+ },
+ {
+  "dashboard": "site-climate-heating.json",
+  "panel_id": 920,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "G",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.323
+ },
+ {
+  "dashboard": "site-climate-heating.json",
+  "panel_id": 920,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "I",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.021
+ },
+ {
+  "dashboard": "site-climate-heating.json",
+  "panel_id": 920,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "E",
+  "status": "ok",
+  "rows": 42,
+  "ms": 0.999
+ },
+ {
+  "dashboard": "site-climate-heating.json",
+  "panel_id": 920,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "F",
+  "status": "ok",
+  "rows": 36,
+  "ms": 0.985
+ },
+ {
+  "dashboard": "site-climate-heating.json",
+  "panel_id": 920,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "H",
+  "status": "ok",
+  "rows": 190,
+  "ms": 1.591
+ },
+ {
+  "dashboard": "site-climate-heating.json",
+  "panel_id": 920,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "L",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.256
+ },
+ {
+  "dashboard": "site-climate-heating.json",
+  "panel_id": 920,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "M",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.099
+ },
+ {
+  "dashboard": "site-climate-heating.json",
+  "panel_id": 109,
+  "panel_title": "Indoor vs Outdoor Temperature",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 1.973
+ },
+ {
+  "dashboard": "site-climate-heating.json",
+  "panel_id": 109,
+  "panel_title": "Indoor vs Outdoor Temperature",
+  "ref": "B",
+  "status": "ok",
+  "rows": 24,
+  "ms": 2.056
+ },
+ {
+  "dashboard": "site-climate-heating.json",
+  "panel_id": 109,
+  "panel_title": "Indoor vs Outdoor Temperature",
+  "ref": "C",
+  "status": "ok",
+  "rows": 288,
+  "ms": 2.601
+ },
+ {
+  "dashboard": "site-climate-heating.json",
+  "panel_id": 109,
+  "panel_title": "Indoor vs Outdoor Temperature",
+  "ref": "D",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.147
+ },
+ {
+  "dashboard": "site-climate-heating.json",
+  "panel_id": 109,
+  "panel_title": "Indoor vs Outdoor Temperature",
+  "ref": "E",
+  "status": "ok",
+  "rows": 288,
+  "ms": 2.972
+ },
+ {
+  "dashboard": "site-climate-heating.json",
+  "panel_id": 141,
+  "panel_title": "DIF \u2014 Day/Night Temperature Differential",
+  "ref": "A",
+  "status": "ok",
+  "rows": 13,
+  "ms": 223.625
+ },
+ {
+  "dashboard": "site-climate-heating.json",
+  "panel_id": 210,
+  "panel_title": "Monthly Cost by Category (est)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 1.288
+ },
+ {
+  "dashboard": "site-climate-heating.json",
+  "panel_id": 210,
+  "panel_title": "Monthly Cost by Category (est)",
+  "ref": "B",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.916
+ },
+ {
+  "dashboard": "site-climate-heating.json",
+  "panel_id": 210,
+  "panel_title": "Monthly Cost by Category (est)",
+  "ref": "C",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.833
+ },
+ {
+  "dashboard": "site-climate-humidity.json",
+  "panel_id": 15,
+  "panel_title": "VPD Compliance Band",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.216
+ },
+ {
+  "dashboard": "site-climate-humidity.json",
+  "panel_id": 15,
+  "panel_title": "VPD Compliance Band",
+  "ref": "B",
+  "status": "ok",
+  "rows": 73,
+  "ms": 68.941
+ },
+ {
+  "dashboard": "site-climate-humidity.json",
+  "panel_id": 15,
+  "panel_title": "VPD Compliance Band",
+  "ref": "C",
+  "status": "ok",
+  "rows": 49,
+  "ms": 314.295
+ },
+ {
+  "dashboard": "site-climate-humidity.json",
+  "panel_id": 15,
+  "panel_title": "VPD Compliance Band",
+  "ref": "D",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.885
+ },
+ {
+  "dashboard": "site-climate-humidity.json",
+  "panel_id": 15,
+  "panel_title": "VPD Compliance Band",
+  "ref": "E",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.323
+ },
+ {
+  "dashboard": "site-climate-humidity.json",
+  "panel_id": 15,
+  "panel_title": "VPD Compliance Band",
+  "ref": "F",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.46
+ },
+ {
+  "dashboard": "site-climate-humidity.json",
+  "panel_id": 15,
+  "panel_title": "VPD Compliance Band",
+  "ref": "G",
+  "status": "ok",
+  "rows": 168,
+  "ms": 1.69
+ },
+ {
+  "dashboard": "site-climate-humidity.json",
+  "panel_id": 15,
+  "panel_title": "VPD Compliance Band",
+  "ref": "H",
+  "status": "ok",
+  "rows": 190,
+  "ms": 2.667
+ },
+ {
+  "dashboard": "site-climate-humidity.json",
+  "panel_id": 120,
+  "panel_title": "VPD Heatmap (Hour \u00d7 Day)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 337,
+  "ms": 19.075
+ },
+ {
+  "dashboard": "site-climate-humidity.json",
+  "panel_id": 12,
+  "panel_title": "VPD Compliance Band",
+  "ref": "A",
+  "status": "ok",
+  "rows": 9793,
+  "ms": 7.38
+ },
+ {
+  "dashboard": "site-climate-humidity.json",
+  "panel_id": 12,
+  "panel_title": "VPD Compliance Band",
+  "ref": "B",
+  "status": "ok",
+  "rows": 9793,
+  "ms": 7.635
+ },
+ {
+  "dashboard": "site-climate-humidity.json",
+  "panel_id": 12,
+  "panel_title": "VPD Compliance Band",
+  "ref": "C",
+  "status": "ok",
+  "rows": 9793,
+  "ms": 6.229
+ },
+ {
+  "dashboard": "site-climate-humidity.json",
+  "panel_id": 12,
+  "panel_title": "VPD Compliance Band",
+  "ref": "D",
+  "status": "ok",
+  "rows": 49,
+  "ms": 267.898
+ },
+ {
+  "dashboard": "site-climate-humidity.json",
+  "panel_id": 12,
+  "panel_title": "VPD Compliance Band",
+  "ref": "E",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.498
+ },
+ {
+  "dashboard": "site-climate-humidity.json",
+  "panel_id": 12,
+  "panel_title": "VPD Compliance Band",
+  "ref": "F",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.496
+ },
+ {
+  "dashboard": "site-climate-humidity.json",
+  "panel_id": 12,
+  "panel_title": "VPD Compliance Band",
+  "ref": "G",
+  "status": "ok",
+  "rows": 168,
+  "ms": 2.052
+ },
+ {
+  "dashboard": "site-climate-humidity.json",
+  "panel_id": 12,
+  "panel_title": "VPD Compliance Band",
+  "ref": "H",
+  "status": "ok",
+  "rows": 190,
+  "ms": 1.389
+ },
+ {
+  "dashboard": "site-climate-humidity.json",
+  "panel_id": 209,
+  "panel_title": "Mister Effectiveness by Zone",
+  "ref": "A",
+  "status": "ok",
+  "rows": 3,
+  "ms": 1119.363
+ },
+ {
+  "dashboard": "site-climate-humidity.json",
+  "panel_id": 210,
+  "panel_title": "Mister Zone Runtimes",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 1.181
+ },
+ {
+  "dashboard": "site-climate-humidity.json",
+  "panel_id": 210,
+  "panel_title": "Mister Zone Runtimes",
+  "ref": "B",
+  "status": "ok",
+  "rows": 1,
+  "ms": 1.044
+ },
+ {
+  "dashboard": "site-climate-humidity.json",
+  "panel_id": 210,
+  "panel_title": "Mister Zone Runtimes",
+  "ref": "C",
+  "status": "ok",
+  "rows": 1,
+  "ms": 1.043
+ },
+ {
+  "dashboard": "site-climate-lighting.json",
+  "panel_id": 9,
+  "panel_title": "Interior DLI \u2014 Unavailable",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 44.933
+ },
+ {
+  "dashboard": "site-climate-lighting.json",
+  "panel_id": 9,
+  "panel_title": "Interior DLI \u2014 Unavailable",
+  "ref": "B",
+  "status": "ok",
+  "rows": 1,
+  "ms": 44.492
+ },
+ {
+  "dashboard": "site-climate-lighting.json",
+  "panel_id": 9,
+  "panel_title": "Interior DLI \u2014 Unavailable",
+  "ref": "C",
+  "status": "ok",
+  "rows": 1,
+  "ms": 45.908
+ },
+ {
+  "dashboard": "site-climate-lighting.json",
+  "panel_id": 10,
+  "panel_title": "Interior DLI \u2014 Unavailable",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 50.816
+ },
+ {
+  "dashboard": "site-climate-lighting.json",
+  "panel_id": 10,
+  "panel_title": "Interior DLI \u2014 Unavailable",
+  "ref": "B",
+  "status": "ok",
+  "rows": 1,
+  "ms": 45.211
+ },
+ {
+  "dashboard": "site-climate-lighting.json",
+  "panel_id": 11,
+  "panel_title": "Forecast vs Actual Solar Radiation",
+  "ref": "A",
+  "status": "ok",
+  "rows": 15718,
+  "ms": 6.639
+ },
+ {
+  "dashboard": "site-climate-lighting.json",
+  "panel_id": 11,
+  "panel_title": "Forecast vs Actual Solar Radiation",
+  "ref": "B",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.303
+ },
+ {
+  "dashboard": "site-climate-lighting.json",
+  "panel_id": 14,
+  "panel_title": "Solar Position",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 3.39
+ },
+ {
+  "dashboard": "site-climate-lighting.json",
+  "panel_id": 14,
+  "panel_title": "Solar Position",
+  "ref": "B",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.472
+ },
+ {
+  "dashboard": "site-climate-lighting.json",
+  "panel_id": 15,
+  "panel_title": "Lighting Control State",
+  "ref": "A",
+  "status": "ok",
+  "rows": 294,
+  "ms": 1.599
+ },
+ {
+  "dashboard": "site-climate-lighting.json",
+  "panel_id": 15,
+  "panel_title": "Lighting Control State",
+  "ref": "B",
+  "status": "ok",
+  "rows": 294,
+  "ms": 1.568
+ },
+ {
+  "dashboard": "site-climate-lighting.json",
+  "panel_id": 15,
+  "panel_title": "Lighting Control State",
+  "ref": "C",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 8.838
+ },
+ {
+  "dashboard": "site-climate-lighting.json",
+  "panel_id": 15,
+  "panel_title": "Lighting Control State",
+  "ref": "D",
+  "status": "ok",
+  "rows": 286,
+  "ms": 1.605
+ },
+ {
+  "dashboard": "site-climate-lighting.json",
+  "panel_id": 15,
+  "panel_title": "Lighting Control State",
+  "ref": "E",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.485
+ },
+ {
+  "dashboard": "site-climate-lighting.json",
+  "panel_id": 102,
+  "panel_title": "Electric (est)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.823
+ },
+ {
+  "dashboard": "site-climate-lighting.json",
+  "panel_id": 310,
+  "panel_title": "Runtime-Modeled Power vs Solar Irradiance",
+  "ref": "A",
+  "status": "ok",
+  "rows": 49,
+  "ms": 48.938
+ },
+ {
+  "dashboard": "site-climate-lighting.json",
+  "panel_id": 310,
+  "panel_title": "Runtime-Modeled Power vs Solar Irradiance",
+  "ref": "B",
+  "status": "ok",
+  "rows": 49,
+  "ms": 2.995
+ },
+ {
+  "dashboard": "site-climate-lighting.json",
+  "panel_id": 16,
+  "panel_title": "Lighting Demand Now",
+  "ref": "A",
+  "status": "ok",
+  "rows": 2,
+  "ms": 11690.323
+ },
+ {
+  "dashboard": "site-climate-lighting.json",
+  "panel_id": 17,
+  "panel_title": "Per-Circuit Lighting Forecast Bands",
+  "ref": "A",
+  "status": "ok",
+  "rows": 35,
+  "ms": 9744.961
+ },
+ {
+  "dashboard": "site-climate-lighting.json",
+  "panel_id": 17,
+  "panel_title": "Per-Circuit Lighting Forecast Bands",
+  "ref": "B",
+  "status": "ok",
+  "rows": 49,
+  "ms": 7582.197
+ },
+ {
+  "dashboard": "site-climate-lighting.json",
+  "panel_id": 17,
+  "panel_title": "Per-Circuit Lighting Forecast Bands",
+  "ref": "C",
+  "status": "ok",
+  "rows": 49,
+  "ms": 7091.351
+ },
+ {
+  "dashboard": "site-climate-water.json",
+  "panel_id": 4,
+  "panel_title": "Eligible Meter Water Cost",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 1063.89
+ },
+ {
+  "dashboard": "site-climate-water.json",
+  "panel_id": 7,
+  "panel_title": "Accepted Meter Gallons",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 988.265
+ },
+ {
+  "dashboard": "site-climate-water.json",
+  "panel_id": 8,
+  "panel_title": "Eligible Water $/Day (30d)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 975.125
+ },
+ {
+  "dashboard": "site-climate-water.json",
+  "panel_id": 107,
+  "panel_title": "Meter-Conserving Water Attribution",
+  "ref": "A",
+  "status": "error",
+  "error": "syntax error at or near \"AS\"",
+  "ms": 0.18
+ },
+ {
+  "dashboard": "site-climate-water.json",
+  "panel_id": 108,
+  "panel_title": "VPD Compliance Band",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 1.9
+ },
+ {
+  "dashboard": "site-climate-water.json",
+  "panel_id": 108,
+  "panel_title": "VPD Compliance Band",
+  "ref": "B",
+  "status": "ok",
+  "rows": 73,
+  "ms": 54.209
+ },
+ {
+  "dashboard": "site-climate-water.json",
+  "panel_id": 108,
+  "panel_title": "VPD Compliance Band",
+  "ref": "C",
+  "status": "ok",
+  "rows": 49,
+  "ms": 266.285
+ },
+ {
+  "dashboard": "site-climate-water.json",
+  "panel_id": 108,
+  "panel_title": "VPD Compliance Band",
+  "ref": "D",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.677
+ },
+ {
+  "dashboard": "site-climate-water.json",
+  "panel_id": 108,
+  "panel_title": "VPD Compliance Band",
+  "ref": "E",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.39
+ },
+ {
+  "dashboard": "site-climate-water.json",
+  "panel_id": 108,
+  "panel_title": "VPD Compliance Band",
+  "ref": "F",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.058
+ },
+ {
+  "dashboard": "site-climate-water.json",
+  "panel_id": 108,
+  "panel_title": "VPD Compliance Band",
+  "ref": "G",
+  "status": "ok",
+  "rows": 168,
+  "ms": 1.615
+ },
+ {
+  "dashboard": "site-climate-water.json",
+  "panel_id": 108,
+  "panel_title": "VPD Compliance Band",
+  "ref": "H",
+  "status": "ok",
+  "rows": 190,
+  "ms": 1.23
+ },
+ {
+  "dashboard": "site-climate-water.json",
+  "panel_id": 109,
+  "panel_title": "Mister Effectiveness by Zone",
+  "ref": "A",
+  "status": "ok",
+  "rows": 3,
+  "ms": 780.928
+ },
+ {
+  "dashboard": "site-climate-water.json",
+  "panel_id": 110,
+  "panel_title": "Mister Zone Runtimes",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.979
+ },
+ {
+  "dashboard": "site-climate-water.json",
+  "panel_id": 110,
+  "panel_title": "Mister Zone Runtimes",
+  "ref": "B",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.769
+ },
+ {
+  "dashboard": "site-climate-water.json",
+  "panel_id": 110,
+  "panel_title": "Mister Zone Runtimes",
+  "ref": "C",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.822
+ },
+ {
+  "dashboard": "site-climate-water.json",
+  "panel_id": 112,
+  "panel_title": "Soil Moisture by Zone",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 3.422
+ },
+ {
+  "dashboard": "site-climate-water.json",
+  "panel_id": 112,
+  "panel_title": "Soil Moisture by Zone",
+  "ref": "B",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.518
+ },
+ {
+  "dashboard": "site-climate-water.json",
+  "panel_id": 112,
+  "panel_title": "Soil Moisture by Zone",
+  "ref": "C",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.117
+ },
+ {
+  "dashboard": "site-climate-water.json",
+  "panel_id": 215,
+  "panel_title": "Soil Moisture by Zone",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.569
+ },
+ {
+  "dashboard": "site-climate-water.json",
+  "panel_id": 215,
+  "panel_title": "Soil Moisture by Zone",
+  "ref": "B",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.281
+ },
+ {
+  "dashboard": "site-climate-water.json",
+  "panel_id": 215,
+  "panel_title": "Soil Moisture by Zone",
+  "ref": "C",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 1.885
+ },
+ {
+  "dashboard": "site-climate-water.json",
+  "panel_id": 216,
+  "panel_title": "Soil EC \u2014 South 1",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 1.836
+ },
+ {
+  "dashboard": "site-climate-water.json",
+  "panel_id": 217,
+  "panel_title": "South 1 Moisture",
+  "ref": null,
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.886
+ },
+ {
+  "dashboard": "site-climate-water.json",
+  "panel_id": 218,
+  "panel_title": "Soil Moisture vs VPD",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 1.645
+ },
+ {
+  "dashboard": "site-climate-water.json",
+  "panel_id": 218,
+  "panel_title": "Soil Moisture vs VPD",
+  "ref": "B",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.314
+ },
+ {
+  "dashboard": "site-climate-water.json",
+  "panel_id": 218,
+  "panel_title": "Soil Moisture vs VPD",
+  "ref": "C",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.406
+ },
+ {
+  "dashboard": "site-climate-water.json",
+  "panel_id": 218,
+  "panel_title": "Soil Moisture vs VPD",
+  "ref": "D",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 1.381
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 30,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 1.25
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 30,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "B",
+  "status": "ok",
+  "rows": 73,
+  "ms": 49.359
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 30,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "C",
+  "status": "ok",
+  "rows": 49,
+  "ms": 249.06
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 30,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "D",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.284
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 30,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "G",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.247
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 30,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "I",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.564
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 30,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "E",
+  "status": "ok",
+  "rows": 42,
+  "ms": 1.567
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 30,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "F",
+  "status": "ok",
+  "rows": 36,
+  "ms": 1.214
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 30,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "H",
+  "status": "ok",
+  "rows": 190,
+  "ms": 1.541
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 30,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "J",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.157
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 30,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "K",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.16
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 31,
+  "panel_title": "VPD Compliance Band",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.158
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 31,
+  "panel_title": "VPD Compliance Band",
+  "ref": "B",
+  "status": "ok",
+  "rows": 73,
+  "ms": 64.388
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 31,
+  "panel_title": "VPD Compliance Band",
+  "ref": "C",
+  "status": "ok",
+  "rows": 49,
+  "ms": 290.751
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 31,
+  "panel_title": "VPD Compliance Band",
+  "ref": "D",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.682
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 31,
+  "panel_title": "VPD Compliance Band",
+  "ref": "E",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.777
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 31,
+  "panel_title": "VPD Compliance Band",
+  "ref": "F",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.224
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 31,
+  "panel_title": "VPD Compliance Band",
+  "ref": "G",
+  "status": "ok",
+  "rows": 168,
+  "ms": 1.791
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 31,
+  "panel_title": "VPD Compliance Band",
+  "ref": "H",
+  "status": "ok",
+  "rows": 190,
+  "ms": 1.369
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 2,
+  "panel_title": "Indoor Avg Temp",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 303.601
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 108,
+  "panel_title": "$/Day (30-Day Average) (est)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.812
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 113,
+  "panel_title": "Solar Irradiance Over Time",
+  "ref": "A",
+  "status": "ok",
+  "rows": 97,
+  "ms": 3.336
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 113,
+  "panel_title": "Solar Irradiance Over Time",
+  "ref": "B",
+  "status": "ok",
+  "rows": 22,
+  "ms": 64.67
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 105,
+  "panel_title": "Runtime-Modeled kWh/day (30d)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 4.495
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 106,
+  "panel_title": "Therms/day (30-Day Avg) (est)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.54
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 107,
+  "panel_title": "Accepted Meter gal/day (30d)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 1058.829
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 19,
+  "panel_title": "Controller State Table (24h)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 7,
+  "ms": 1.865
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 9,
+  "panel_title": "Indoor vs Outdoor Temperature",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.894
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 9,
+  "panel_title": "Indoor vs Outdoor Temperature",
+  "ref": "B",
+  "status": "ok",
+  "rows": 24,
+  "ms": 1.843
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 9,
+  "panel_title": "Indoor vs Outdoor Temperature",
+  "ref": "C",
+  "status": "ok",
+  "rows": 288,
+  "ms": 2.73
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 9,
+  "panel_title": "Indoor vs Outdoor Temperature",
+  "ref": "D",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 1.774
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 9,
+  "panel_title": "Indoor vs Outdoor Temperature",
+  "ref": "E",
+  "status": "ok",
+  "rows": 288,
+  "ms": 3.013
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 10,
+  "panel_title": "Indoor vs Outdoor Humidity",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.559
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 10,
+  "panel_title": "Indoor vs Outdoor Humidity",
+  "ref": "B",
+  "status": "ok",
+  "rows": 24,
+  "ms": 2.02
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 120,
+  "panel_title": "VPD Heatmap (Hour \u00d7 Day)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 337,
+  "ms": 13.544
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 11,
+  "panel_title": "Zone Temperature Comparison",
+  "ref": "A",
+  "status": "ok",
+  "rows": 9793,
+  "ms": 5.681
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 11,
+  "panel_title": "Zone Temperature Comparison",
+  "ref": "B",
+  "status": "ok",
+  "rows": 9793,
+  "ms": 5.879
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 11,
+  "panel_title": "Zone Temperature Comparison",
+  "ref": "C",
+  "status": "ok",
+  "rows": 9793,
+  "ms": 5.219
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 12,
+  "panel_title": "Zone VPD Comparison",
+  "ref": "A",
+  "status": "ok",
+  "rows": 9793,
+  "ms": 5.145
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 12,
+  "panel_title": "Zone VPD Comparison",
+  "ref": "B",
+  "status": "ok",
+  "rows": 9793,
+  "ms": 4.997
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 12,
+  "panel_title": "Zone VPD Comparison",
+  "ref": "C",
+  "status": "ok",
+  "rows": 9793,
+  "ms": 5.435
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 121,
+  "panel_title": "Runtime-Modeled Electric by Device (30d)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 7,
+  "ms": 3.497
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 130,
+  "panel_title": "Temp Target Delta & Band Error",
+  "ref": "A",
+  "status": "ok",
+  "rows": 289,
+  "ms": 4.851
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 131,
+  "panel_title": "VPD Target Delta & Band Error",
+  "ref": "A",
+  "status": "ok",
+  "rows": 289,
+  "ms": 3.069
+ },
+ {
+  "dashboard": "site-climate.json",
+  "panel_id": 132,
+  "panel_title": "Climate Action Mode Mix",
+  "ref": "A",
+  "status": "ok",
+  "rows": 5,
+  "ms": 2.709
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 839,
+  "panel_title": "Indoor Temp",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 307.582
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 846,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "A",
+  "status": "ok",
+  "rows": 9793,
+  "ms": 5.495
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 846,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "B",
+  "status": "ok",
+  "rows": 9793,
+  "ms": 5.769
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 846,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "C",
+  "status": "ok",
+  "rows": 9793,
+  "ms": 4.931
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 846,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "D",
+  "status": "ok",
+  "rows": 49,
+  "ms": 224.464
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 846,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "E",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 1.897
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 846,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "F",
+  "status": "ok",
+  "rows": 73,
+  "ms": 48.823
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 846,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "G",
+  "status": "ok",
+  "rows": 42,
+  "ms": 1.116
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 846,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "H",
+  "status": "ok",
+  "rows": 36,
+  "ms": 1.054
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 846,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "I",
+  "status": "ok",
+  "rows": 190,
+  "ms": 1.08
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 846,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "J",
+  "status": "empty",
+  "rows": 0,
+  "ms": 0.852
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 846,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "K",
+  "status": "empty",
+  "rows": 0,
+  "ms": 0.675
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 848,
+  "panel_title": "Botrytis Risk",
+  "ref": "A",
+  "status": "ok",
+  "rows": 24,
+  "ms": 2.656
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 848,
+  "panel_title": "Botrytis Risk",
+  "ref": "B",
+  "status": "ok",
+  "rows": 24,
+  "ms": 2.086
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 849,
+  "panel_title": "Soil Moisture by Zone",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 1.717
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 849,
+  "panel_title": "Soil Moisture by Zone",
+  "ref": "B",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 1.689
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 849,
+  "panel_title": "Soil Moisture by Zone",
+  "ref": "C",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 1.85
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 438,
+  "panel_title": "VPD Compliance Band",
+  "ref": "A",
+  "status": "ok",
+  "rows": 9793,
+  "ms": 4.66
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 438,
+  "panel_title": "VPD Compliance Band",
+  "ref": "B",
+  "status": "ok",
+  "rows": 9793,
+  "ms": 4.489
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 438,
+  "panel_title": "VPD Compliance Band",
+  "ref": "C",
+  "status": "ok",
+  "rows": 9793,
+  "ms": 4.311
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 438,
+  "panel_title": "VPD Compliance Band",
+  "ref": "D",
+  "status": "ok",
+  "rows": 49,
+  "ms": 231.843
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 438,
+  "panel_title": "VPD Compliance Band",
+  "ref": "E",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.26
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 438,
+  "panel_title": "VPD Compliance Band",
+  "ref": "F",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.031
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 438,
+  "panel_title": "VPD Compliance Band",
+  "ref": "G",
+  "status": "ok",
+  "rows": 168,
+  "ms": 1.418
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 438,
+  "panel_title": "VPD Compliance Band",
+  "ref": "H",
+  "status": "ok",
+  "rows": 190,
+  "ms": 1.505
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 443,
+  "panel_title": "Botrytis Risk",
+  "ref": "A",
+  "status": "ok",
+  "rows": 24,
+  "ms": 2.782
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 443,
+  "panel_title": "Botrytis Risk",
+  "ref": "B",
+  "status": "ok",
+  "rows": 24,
+  "ms": 2.817
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 50,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 1.744
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 50,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "B",
+  "status": "ok",
+  "rows": 73,
+  "ms": 53.4
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 50,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "C",
+  "status": "ok",
+  "rows": 49,
+  "ms": 243.142
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 50,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "D",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.521
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 50,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "J",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.369
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 50,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "K",
+  "status": "ok",
+  "rows": 73,
+  "ms": 47.994
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 50,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "G",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.076
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 50,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "I",
+  "status": "empty",
+  "rows": 0,
+  "ms": 0.885
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 50,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "E",
+  "status": "ok",
+  "rows": 42,
+  "ms": 0.735
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 50,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "F",
+  "status": "ok",
+  "rows": 36,
+  "ms": 0.661
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 50,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "H",
+  "status": "ok",
+  "rows": 190,
+  "ms": 0.889
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 50,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "L",
+  "status": "empty",
+  "rows": 0,
+  "ms": 0.641
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 50,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "M",
+  "status": "empty",
+  "rows": 0,
+  "ms": 0.614
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 51,
+  "panel_title": "VPD Compliance Band",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 1.609
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 51,
+  "panel_title": "VPD Compliance Band",
+  "ref": "B",
+  "status": "ok",
+  "rows": 73,
+  "ms": 63.66
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 51,
+  "panel_title": "VPD Compliance Band",
+  "ref": "C",
+  "status": "ok",
+  "rows": 49,
+  "ms": 262.472
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 51,
+  "panel_title": "VPD Compliance Band",
+  "ref": "D",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.739
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 51,
+  "panel_title": "VPD Compliance Band",
+  "ref": "E",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.274
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 51,
+  "panel_title": "VPD Compliance Band",
+  "ref": "F",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.02
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 51,
+  "panel_title": "VPD Compliance Band",
+  "ref": "G",
+  "status": "ok",
+  "rows": 168,
+  "ms": 1.622
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 51,
+  "panel_title": "VPD Compliance Band",
+  "ref": "H",
+  "status": "ok",
+  "rows": 190,
+  "ms": 1.566
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 452,
+  "panel_title": "Plan Compliance",
+  "ref": "A",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.437
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 452,
+  "panel_title": "Plan Compliance",
+  "ref": "B",
+  "status": "empty",
+  "rows": 0,
+  "ms": 0.715
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 152,
+  "panel_title": "Indoor vs Outdoor Temperature",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.26
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 152,
+  "panel_title": "Indoor vs Outdoor Temperature",
+  "ref": "B",
+  "status": "ok",
+  "rows": 24,
+  "ms": 1.824
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 152,
+  "panel_title": "Indoor vs Outdoor Temperature",
+  "ref": "C",
+  "status": "ok",
+  "rows": 288,
+  "ms": 2.083
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 152,
+  "panel_title": "Indoor vs Outdoor Temperature",
+  "ref": "D",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.095
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 152,
+  "panel_title": "Indoor vs Outdoor Temperature",
+  "ref": "E",
+  "status": "ok",
+  "rows": 288,
+  "ms": 1.926
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 157,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "A",
+  "status": "ok",
+  "rows": 34202,
+  "ms": 10.516
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 157,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "B",
+  "status": "ok",
+  "rows": 4222,
+  "ms": 3.483
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 157,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "C",
+  "status": "ok",
+  "rows": 49,
+  "ms": 228.58
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 157,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "E",
+  "status": "ok",
+  "rows": 42,
+  "ms": 1.869
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 157,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "F",
+  "status": "ok",
+  "rows": 36,
+  "ms": 1.191
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 157,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "H",
+  "status": "ok",
+  "rows": 190,
+  "ms": 1.123
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 157,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "G",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.111
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 157,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "I",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.294
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 814,
+  "panel_title": "Cost Today",
+  "ref": "A",
+  "status": "empty",
+  "rows": 0,
+  "ms": 0.677
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 815,
+  "panel_title": "$/Day (30-Day Average)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.574
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 817,
+  "panel_title": "Indoor Temp",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 283.124
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 821,
+  "panel_title": "Monthly Cost by Category",
+  "ref": "A",
+  "status": "empty",
+  "rows": 0,
+  "ms": 0.816
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 821,
+  "panel_title": "Monthly Cost by Category",
+  "ref": "B",
+  "status": "empty",
+  "rows": 0,
+  "ms": 0.627
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 821,
+  "panel_title": "Monthly Cost by Category",
+  "ref": "C",
+  "status": "empty",
+  "rows": 0,
+  "ms": 0.786
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 823,
+  "panel_title": "Seasonal Arc",
+  "ref": "A",
+  "status": "ok",
+  "rows": 12,
+  "ms": 142.327
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 823,
+  "panel_title": "Seasonal Arc",
+  "ref": "B",
+  "status": "ok",
+  "rows": 12,
+  "ms": 149.962
+ },
+ {
+  "dashboard": "site-evidence-dashboards.json",
+  "panel_id": 823,
+  "panel_title": "Seasonal Arc",
+  "ref": "C",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.209
+ },
+ {
+  "dashboard": "site-evidence-economics.json",
+  "panel_id": 2,
+  "panel_title": "Cost Today (est)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.709
+ },
+ {
+  "dashboard": "site-evidence-economics.json",
+  "panel_id": 3,
+  "panel_title": "Runtime Electric $/Day (30-Day Avg) (est)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.69
+ },
+ {
+  "dashboard": "site-evidence-economics.json",
+  "panel_id": 4,
+  "panel_title": "Gas $/Day (30-Day Average) (est)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.591
+ },
+ {
+  "dashboard": "site-evidence-economics.json",
+  "panel_id": 5,
+  "panel_title": "Water $/Day (30-Day Average) (est)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.474
+ },
+ {
+  "dashboard": "site-evidence-economics.json",
+  "panel_id": 7,
+  "panel_title": "Total $/Day (30-Day Average) (est)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.389
+ },
+ {
+  "dashboard": "site-evidence-economics.json",
+  "panel_id": 9,
+  "panel_title": "Daily Cost by Type (est)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.52
+ },
+ {
+  "dashboard": "site-evidence-economics.json",
+  "panel_id": 9,
+  "panel_title": "Daily Cost by Type (est)",
+  "ref": "B",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.671
+ },
+ {
+  "dashboard": "site-evidence-economics.json",
+  "panel_id": 9,
+  "panel_title": "Daily Cost by Type (est)",
+  "ref": "C",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.743
+ },
+ {
+  "dashboard": "site-evidence-economics.json",
+  "panel_id": 10,
+  "panel_title": "Monthly Resource Cost by Source (6 Months) (est)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 6,
+  "ms": 1.044
+ },
+ {
+  "dashboard": "site-evidence-economics.json",
+  "panel_id": 11,
+  "panel_title": "Utility Split (est)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.877
+ },
+ {
+  "dashboard": "site-evidence-economics.json",
+  "panel_id": 11,
+  "panel_title": "Utility Split (est)",
+  "ref": "B",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.642
+ },
+ {
+  "dashboard": "site-evidence-economics.json",
+  "panel_id": 11,
+  "panel_title": "Utility Split (est)",
+  "ref": "C",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.697
+ },
+ {
+  "dashboard": "site-evidence-economics.json",
+  "panel_id": 12,
+  "panel_title": "Cost of One Action",
+  "ref": "A",
+  "status": "ok",
+  "rows": 5,
+  "ms": 0.377
+ },
+ {
+  "dashboard": "site-evidence-economics.json",
+  "panel_id": 219,
+  "panel_title": "Runtime Hours by Equipment",
+  "ref": "A",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.307
+ },
+ {
+  "dashboard": "site-evidence-economics.json",
+  "panel_id": 221,
+  "panel_title": "Gas Therms vs Outdoor Temperature (est)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.549
+ },
+ {
+  "dashboard": "site-evidence-economics.json",
+  "panel_id": 221,
+  "panel_title": "Gas Therms vs Outdoor Temperature (est)",
+  "ref": "B",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.225
+ },
+ {
+  "dashboard": "site-evidence-economics.json",
+  "panel_id": 310,
+  "panel_title": "Runtime-Modeled Power vs Solar Irradiance",
+  "ref": "A",
+  "status": "ok",
+  "rows": 49,
+  "ms": 36.62
+ },
+ {
+  "dashboard": "site-evidence-economics.json",
+  "panel_id": 310,
+  "panel_title": "Runtime-Modeled Power vs Solar Irradiance",
+  "ref": "B",
+  "status": "ok",
+  "rows": 49,
+  "ms": 3.226
+ },
+ {
+  "dashboard": "site-evidence-economics.json",
+  "panel_id": 301,
+  "panel_title": "30-Day Solar-Aligned Runtime Load",
+  "ref": null,
+  "status": "ok",
+  "rows": 1,
+  "ms": 146.356
+ },
+ {
+  "dashboard": "site-evidence-economics.json",
+  "panel_id": 305,
+  "panel_title": "30-Day Powerwall Coverage",
+  "ref": null,
+  "status": "ok",
+  "rows": 1,
+  "ms": 147.201
+ },
+ {
+  "dashboard": "site-evidence-economics.json",
+  "panel_id": 302,
+  "panel_title": "Runtime Daytime Watts (30-Day Avg)",
+  "ref": null,
+  "status": "ok",
+  "rows": 1,
+  "ms": 142.553
+ },
+ {
+  "dashboard": "site-evidence-economics.json",
+  "panel_id": 303,
+  "panel_title": "Runtime Night Watts (30-Day Avg)",
+  "ref": null,
+  "status": "ok",
+  "rows": 1,
+  "ms": 165.513
+ },
+ {
+  "dashboard": "site-evidence-economics.json",
+  "panel_id": 304,
+  "panel_title": "Runtime-Modeled kWh/day (30-Day Avg) (est)",
+  "ref": null,
+  "status": "ok",
+  "rows": 1,
+  "ms": 1.048
+ },
+ {
+  "dashboard": "site-evidence-economics.json",
+  "panel_id": 306,
+  "panel_title": "Peak Solar (W/m\u00b2)",
+  "ref": null,
+  "status": "ok",
+  "rows": 1,
+  "ms": 1.7
+ },
+ {
+  "dashboard": "site-evidence-economics.json",
+  "panel_id": 311,
+  "panel_title": "Runtime Power by Device Group",
+  "ref": null,
+  "status": "ok",
+  "rows": 49,
+  "ms": 33.018
+ },
+ {
+  "dashboard": "site-evidence-economics.json",
+  "panel_id": 312,
+  "panel_title": "Daily Cost by Source (est)",
+  "ref": null,
+  "status": "ok",
+  "rows": 1,
+  "ms": 1.013
+ },
+ {
+  "dashboard": "site-evidence-economics.json",
+  "panel_id": 201,
+  "panel_title": "Total $/Day (30-Day Average) (est)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.832
+ },
+ {
+  "dashboard": "site-evidence-economics.json",
+  "panel_id": 203,
+  "panel_title": "Gas $/Day (30-Day Average) (est)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 1.04
+ },
+ {
+  "dashboard": "site-evidence-economics.json",
+  "panel_id": 204,
+  "panel_title": "Water $/Day (30-Day Average) (est)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.853
+ },
+ {
+  "dashboard": "site-evidence-economics.json",
+  "panel_id": 202,
+  "panel_title": "Runtime Electric $/Day (30-Day Avg) (est)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.682
+ },
+ {
+  "dashboard": "site-evidence-operations.json",
+  "panel_id": 2,
+  "panel_title": "Indoor Temp",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 342.258
+ },
+ {
+  "dashboard": "site-evidence-operations.json",
+  "panel_id": 3,
+  "panel_title": "Indoor VPD",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 313.494
+ },
+ {
+  "dashboard": "site-evidence-operations.json",
+  "panel_id": 4,
+  "panel_title": "Current Controller State",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 3.966
+ },
+ {
+  "dashboard": "site-evidence-operations.json",
+  "panel_id": 5,
+  "panel_title": "WiFi Signal",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.63
+ },
+ {
+  "dashboard": "site-evidence-operations.json",
+  "panel_id": 6,
+  "panel_title": "Free Heap",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.256
+ },
+ {
+  "dashboard": "site-evidence-operations.json",
+  "panel_id": 7,
+  "panel_title": "Open Alerts",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 286.024
+ },
+ {
+  "dashboard": "site-evidence-operations.json",
+  "panel_id": 9,
+  "panel_title": "Multi-Axis Controller Timeline",
+  "ref": "A",
+  "status": "ok",
+  "rows": 66,
+  "ms": 1.119
+ },
+ {
+  "dashboard": "site-evidence-operations.json",
+  "panel_id": 9,
+  "panel_title": "Multi-Axis Controller Timeline",
+  "ref": "B",
+  "status": "ok",
+  "rows": 392,
+  "ms": 1.062
+ },
+ {
+  "dashboard": "site-evidence-operations.json",
+  "panel_id": 9,
+  "panel_title": "Multi-Axis Controller Timeline",
+  "ref": "C",
+  "status": "ok",
+  "rows": 392,
+  "ms": 1.069
+ },
+ {
+  "dashboard": "site-evidence-operations.json",
+  "panel_id": 10,
+  "panel_title": "Plan Compliance",
+  "ref": "A",
+  "status": "empty",
+  "rows": 0,
+  "ms": 0.529
+ },
+ {
+  "dashboard": "site-evidence-operations.json",
+  "panel_id": 10,
+  "panel_title": "Plan Compliance",
+  "ref": "B",
+  "status": "empty",
+  "rows": 0,
+  "ms": 0.415
+ },
+ {
+  "dashboard": "site-evidence-operations.json",
+  "panel_id": 11,
+  "panel_title": "Writes (24h)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.772
+ },
+ {
+  "dashboard": "site-evidence-operations.json",
+  "panel_id": 12,
+  "panel_title": "Write Source Split",
+  "ref": "A",
+  "status": "ok",
+  "rows": 4,
+  "ms": 1.01
+ },
+ {
+  "dashboard": "site-evidence-operations.json",
+  "panel_id": 14,
+  "panel_title": "Active Plan",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 21.722
+ },
+ {
+  "dashboard": "site-evidence-operations.json",
+  "panel_id": 15,
+  "panel_title": "Plan Age",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 1.92
+ },
+ {
+  "dashboard": "site-evidence-operations.json",
+  "panel_id": 16,
+  "panel_title": "Last 10 Plans",
+  "ref": "A",
+  "status": "ok",
+  "rows": 10,
+  "ms": 0.529
+ },
+ {
+  "dashboard": "site-evidence-operations.json",
+  "panel_id": 17,
+  "panel_title": "Reset Reasons Over Time",
+  "ref": "A",
+  "status": "ok",
+  "rows": 19599,
+  "ms": 6.786
+ },
+ {
+  "dashboard": "site-evidence-operations.json",
+  "panel_id": 17,
+  "panel_title": "Reset Reasons Over Time",
+  "ref": "B",
+  "status": "ok",
+  "rows": 19599,
+  "ms": 6.83
+ },
+ {
+  "dashboard": "site-evidence-operations.json",
+  "panel_id": 18,
+  "panel_title": "Health Components",
+  "ref": "A",
+  "status": "ok",
+  "rows": 4,
+  "ms": 20.231
+ },
+ {
+  "dashboard": "site-evidence-operations.json",
+  "panel_id": 19,
+  "panel_title": "ClimateIntent Action Timeline",
+  "ref": "A",
+  "status": "ok",
+  "rows": 2012,
+  "ms": 2.423
+ },
+ {
+  "dashboard": "site-evidence-operations.json",
+  "panel_id": 19,
+  "panel_title": "ClimateIntent Action Timeline",
+  "ref": "B",
+  "status": "ok",
+  "rows": 2012,
+  "ms": 2.099
+ },
+ {
+  "dashboard": "site-evidence-operations.json",
+  "panel_id": 19,
+  "panel_title": "ClimateIntent Action Timeline",
+  "ref": "C",
+  "status": "ok",
+  "rows": 2012,
+  "ms": 2.321
+ },
+ {
+  "dashboard": "site-evidence-operations.json",
+  "panel_id": 19,
+  "panel_title": "ClimateIntent Action Timeline",
+  "ref": "D",
+  "status": "ok",
+  "rows": 2012,
+  "ms": 2.081
+ },
+ {
+  "dashboard": "site-evidence-operations.json",
+  "panel_id": 19,
+  "panel_title": "ClimateIntent Action Timeline",
+  "ref": "E",
+  "status": "ok",
+  "rows": 2012,
+  "ms": 2.657
+ },
+ {
+  "dashboard": "site-evidence-operations.json",
+  "panel_id": 20,
+  "panel_title": "Latest ClimateIntent Decision Proof",
+  "ref": "A",
+  "status": "ok",
+  "rows": 40,
+  "ms": 1.615
+ },
+ {
+  "dashboard": "site-evidence-operations.json",
+  "panel_id": 21,
+  "panel_title": "Wet/Fog Authority Blocks",
+  "ref": "A",
+  "status": "ok",
+  "rows": 9,
+  "ms": 5.377
+ },
+ {
+  "dashboard": "site-evidence-planning-quality.json",
+  "panel_id": 2,
+  "panel_title": "Planner Score Today",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 6.108
+ },
+ {
+  "dashboard": "site-evidence-planning-quality.json",
+  "panel_id": 3,
+  "panel_title": "7d Avg Score",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 3.245
+ },
+ {
+  "dashboard": "site-evidence-planning-quality.json",
+  "panel_id": 4,
+  "panel_title": "Compliance Today",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 4.372
+ },
+ {
+  "dashboard": "site-evidence-planning-quality.json",
+  "panel_id": 5,
+  "panel_title": "Stress Hours Today",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 3.096
+ },
+ {
+  "dashboard": "site-evidence-planning-quality.json",
+  "panel_id": 6,
+  "panel_title": "Cost Today",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 3.866
+ },
+ {
+  "dashboard": "site-evidence-planning-quality.json",
+  "panel_id": 7,
+  "panel_title": "Water Today",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 4.565
+ },
+ {
+  "dashboard": "site-evidence-planning-quality.json",
+  "panel_id": 10,
+  "panel_title": "Firmware Band Compliance \u2014 Temp, VPD, Both",
+  "ref": "A",
+  "status": "ok",
+  "rows": 30,
+  "ms": 291.238
+ },
+ {
+  "dashboard": "site-evidence-planning-quality.json",
+  "panel_id": 20,
+  "panel_title": "Planner Stress-Category Hours \u2014 Temp, VPD, Total",
+  "ref": "A",
+  "status": "ok",
+  "rows": 30,
+  "ms": 281.938
+ },
+ {
+  "dashboard": "site-evidence-planning-quality.json",
+  "panel_id": 11,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "A",
+  "status": "ok",
+  "rows": 34202,
+  "ms": 12.846
+ },
+ {
+  "dashboard": "site-evidence-planning-quality.json",
+  "panel_id": 11,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "B",
+  "status": "ok",
+  "rows": 4222,
+  "ms": 3.36
+ },
+ {
+  "dashboard": "site-evidence-planning-quality.json",
+  "panel_id": 11,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "C",
+  "status": "ok",
+  "rows": 1441,
+  "ms": 5267.972
+ },
+ {
+  "dashboard": "site-evidence-planning-quality.json",
+  "panel_id": 11,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "E",
+  "status": "ok",
+  "rows": 86400,
+  "ms": 80.113
+ },
+ {
+  "dashboard": "site-evidence-planning-quality.json",
+  "panel_id": 12,
+  "panel_title": "VPD Compliance Band",
+  "ref": "A",
+  "status": "ok",
+  "rows": 34202,
+  "ms": 12.655
+ },
+ {
+  "dashboard": "site-evidence-planning-quality.json",
+  "panel_id": 12,
+  "panel_title": "VPD Compliance Band",
+  "ref": "B",
+  "status": "ok",
+  "rows": 4222,
+  "ms": 3.394
+ },
+ {
+  "dashboard": "site-evidence-planning-quality.json",
+  "panel_id": 12,
+  "panel_title": "VPD Compliance Band",
+  "ref": "C",
+  "status": "ok",
+  "rows": 1441,
+  "ms": 5276.418
+ },
+ {
+  "dashboard": "site-evidence-planning-quality.json",
+  "panel_id": 12,
+  "panel_title": "VPD Compliance Band",
+  "ref": "E",
+  "status": "ok",
+  "rows": 103680,
+  "ms": 88.952
+ },
+ {
+  "dashboard": "site-evidence-planning-quality.json",
+  "panel_id": 13,
+  "panel_title": "Plan Compliance \u2014 Last 14 Days",
+  "ref": "A",
+  "status": "ok",
+  "rows": 14,
+  "ms": 4.735
+ },
+ {
+  "dashboard": "site-evidence-planning-quality.json",
+  "panel_id": 14,
+  "panel_title": "Plan Accuracy by Day",
+  "ref": "A",
+  "status": "ok",
+  "rows": 5,
+  "ms": 3.943
+ },
+ {
+  "dashboard": "site-evidence-planning-quality.json",
+  "panel_id": 15,
+  "panel_title": "Cost vs Stress Tradeoff",
+  "ref": "A",
+  "status": "ok",
+  "rows": 31,
+  "ms": 258.655
+ },
+ {
+  "dashboard": "site-evidence-planning-quality.json",
+  "panel_id": 15,
+  "panel_title": "Cost vs Stress Tradeoff",
+  "ref": "B",
+  "status": "ok",
+  "rows": 31,
+  "ms": 254.566
+ },
+ {
+  "dashboard": "site-evidence-planning-quality.json",
+  "panel_id": 15,
+  "panel_title": "Cost vs Stress Tradeoff",
+  "ref": "C",
+  "status": "ok",
+  "rows": 31,
+  "ms": 254.52
+ },
+ {
+  "dashboard": "site-evidence-planning-quality.json",
+  "panel_id": 16,
+  "panel_title": "Water and Mist Response (est)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 31,
+  "ms": 0.816
+ },
+ {
+  "dashboard": "site-evidence-planning-quality.json",
+  "panel_id": 16,
+  "panel_title": "Water and Mist Response (est)",
+  "ref": "B",
+  "status": "ok",
+  "rows": 31,
+  "ms": 0.651
+ },
+ {
+  "dashboard": "site-evidence-planning-quality.json",
+  "panel_id": 16,
+  "panel_title": "Water and Mist Response (est)",
+  "ref": "C",
+  "status": "ok",
+  "rows": 29,
+  "ms": 1.008
+ },
+ {
+  "dashboard": "site-evidence-planning-quality.json",
+  "panel_id": 17,
+  "panel_title": "Latest Planner Scorecard",
+  "ref": "A",
+  "status": "ok",
+  "rows": 27,
+  "ms": 1.42
+ },
+ {
+  "dashboard": "site-evidence-planning-quality.json",
+  "panel_id": 18,
+  "panel_title": "Recent Planning Cycles and Outcomes",
+  "ref": "A",
+  "status": "ok",
+  "rows": 12,
+  "ms": 0.707
+ },
+ {
+  "dashboard": "site-evidence-planning-quality.json",
+  "panel_id": 19,
+  "panel_title": "Recent Lessons Extracted",
+  "ref": "A",
+  "status": "ok",
+  "rows": 10,
+  "ms": 1.225
+ },
+ {
+  "dashboard": "site-greenhouse-crops.json",
+  "panel_id": 2,
+  "panel_title": "VPD Stress Hours",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.891
+ },
+ {
+  "dashboard": "site-greenhouse-crops.json",
+  "panel_id": 3,
+  "panel_title": "Heat Stress Hours",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.661
+ },
+ {
+  "dashboard": "site-greenhouse-crops.json",
+  "panel_id": 4,
+  "panel_title": "Cold Stress Hours",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.644
+ },
+ {
+  "dashboard": "site-greenhouse-crops.json",
+  "panel_id": 8,
+  "panel_title": "VPD Compliance Band",
+  "ref": "A",
+  "status": "ok",
+  "rows": 9793,
+  "ms": 4.7
+ },
+ {
+  "dashboard": "site-greenhouse-crops.json",
+  "panel_id": 8,
+  "panel_title": "VPD Compliance Band",
+  "ref": "B",
+  "status": "ok",
+  "rows": 9793,
+  "ms": 5.634
+ },
+ {
+  "dashboard": "site-greenhouse-crops.json",
+  "panel_id": 8,
+  "panel_title": "VPD Compliance Band",
+  "ref": "C",
+  "status": "ok",
+  "rows": 9793,
+  "ms": 5.797
+ },
+ {
+  "dashboard": "site-greenhouse-crops.json",
+  "panel_id": 8,
+  "panel_title": "VPD Compliance Band",
+  "ref": "D",
+  "status": "ok",
+  "rows": 49,
+  "ms": 254.572
+ },
+ {
+  "dashboard": "site-greenhouse-crops.json",
+  "panel_id": 8,
+  "panel_title": "VPD Compliance Band",
+  "ref": "E",
+  "status": "ok",
+  "rows": 3456,
+  "ms": 25.947
+ },
+ {
+  "dashboard": "site-greenhouse-crops.json",
+  "panel_id": 13,
+  "panel_title": "Botrytis Risk",
+  "ref": "A",
+  "status": "ok",
+  "rows": 24,
+  "ms": 3.696
+ },
+ {
+  "dashboard": "site-greenhouse-crops.json",
+  "panel_id": 13,
+  "panel_title": "Botrytis Risk",
+  "ref": "B",
+  "status": "ok",
+  "rows": 24,
+  "ms": 3.56
+ },
+ {
+  "dashboard": "site-greenhouse-crops.json",
+  "panel_id": 15,
+  "panel_title": "Soil Moisture by Zone",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.077
+ },
+ {
+  "dashboard": "site-greenhouse-crops.json",
+  "panel_id": 15,
+  "panel_title": "Soil Moisture by Zone",
+  "ref": "B",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.243
+ },
+ {
+  "dashboard": "site-greenhouse-crops.json",
+  "panel_id": 15,
+  "panel_title": "Soil Moisture by Zone",
+  "ref": "C",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.15
+ },
+ {
+  "dashboard": "site-greenhouse-crops.json",
+  "panel_id": 16,
+  "panel_title": "Soil EC \u2014 South 1",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.246
+ },
+ {
+  "dashboard": "site-greenhouse-crops.json",
+  "panel_id": 17,
+  "panel_title": "South 1 Moisture",
+  "ref": null,
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.997
+ },
+ {
+  "dashboard": "site-greenhouse-crops.json",
+  "panel_id": 109,
+  "panel_title": "Interior DLI \u2014 Unavailable",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 34.272
+ },
+ {
+  "dashboard": "site-greenhouse-crops.json",
+  "panel_id": 109,
+  "panel_title": "Interior DLI \u2014 Unavailable",
+  "ref": "B",
+  "status": "ok",
+  "rows": 1,
+  "ms": 35.007
+ },
+ {
+  "dashboard": "site-greenhouse-crops.json",
+  "panel_id": 109,
+  "panel_title": "Interior DLI \u2014 Unavailable",
+  "ref": "C",
+  "status": "ok",
+  "rows": 1,
+  "ms": 41.781
+ },
+ {
+  "dashboard": "site-greenhouse-crops.json",
+  "panel_id": 105,
+  "panel_title": "Grow Light Runtime (24h)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 1.19
+ },
+ {
+  "dashboard": "site-greenhouse-equipment.json",
+  "panel_id": 2,
+  "panel_title": "Heat 1",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.598
+ },
+ {
+  "dashboard": "site-greenhouse-equipment.json",
+  "panel_id": 3,
+  "panel_title": "Heat 2",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.634
+ },
+ {
+  "dashboard": "site-greenhouse-equipment.json",
+  "panel_id": 4,
+  "panel_title": "Fan 1",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.681
+ },
+ {
+  "dashboard": "site-greenhouse-equipment.json",
+  "panel_id": 5,
+  "panel_title": "Fan 2",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.598
+ },
+ {
+  "dashboard": "site-greenhouse-equipment.json",
+  "panel_id": 6,
+  "panel_title": "Fog",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.542
+ },
+ {
+  "dashboard": "site-greenhouse-equipment.json",
+  "panel_id": 7,
+  "panel_title": "Vent",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.593
+ },
+ {
+  "dashboard": "site-greenhouse-equipment.json",
+  "panel_id": 8,
+  "panel_title": "Grow Light",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.578
+ },
+ {
+  "dashboard": "site-greenhouse-equipment.json",
+  "panel_id": 10,
+  "panel_title": "Runtime (hours)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.79
+ },
+ {
+  "dashboard": "site-greenhouse-equipment.json",
+  "panel_id": 10,
+  "panel_title": "Runtime (hours)",
+  "ref": "B",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.467
+ },
+ {
+  "dashboard": "site-greenhouse-equipment.json",
+  "panel_id": 10,
+  "panel_title": "Runtime (hours)",
+  "ref": "C",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.485
+ },
+ {
+  "dashboard": "site-greenhouse-equipment.json",
+  "panel_id": 10,
+  "panel_title": "Runtime (hours)",
+  "ref": "D",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.49
+ },
+ {
+  "dashboard": "site-greenhouse-equipment.json",
+  "panel_id": 10,
+  "panel_title": "Runtime (hours)",
+  "ref": "E",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.469
+ },
+ {
+  "dashboard": "site-greenhouse-equipment.json",
+  "panel_id": 10,
+  "panel_title": "Runtime (hours)",
+  "ref": "F",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.51
+ },
+ {
+  "dashboard": "site-greenhouse-equipment.json",
+  "panel_id": 10,
+  "panel_title": "Runtime (hours)",
+  "ref": "G",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.677
+ },
+ {
+  "dashboard": "site-greenhouse-equipment.json",
+  "panel_id": 10,
+  "panel_title": "Runtime (hours)",
+  "ref": "H",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.53
+ },
+ {
+  "dashboard": "site-greenhouse-equipment.json",
+  "panel_id": 10,
+  "panel_title": "Runtime (hours)",
+  "ref": "I",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.579
+ },
+ {
+  "dashboard": "site-greenhouse-equipment.json",
+  "panel_id": 10,
+  "panel_title": "Runtime (hours)",
+  "ref": "J",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.536
+ },
+ {
+  "dashboard": "site-greenhouse-equipment.json",
+  "panel_id": 10,
+  "panel_title": "Runtime (hours)",
+  "ref": "K",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.474
+ },
+ {
+  "dashboard": "site-greenhouse-equipment.json",
+  "panel_id": 10,
+  "panel_title": "Runtime (hours)",
+  "ref": "L",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.456
+ },
+ {
+  "dashboard": "site-greenhouse-equipment.json",
+  "panel_id": 11,
+  "panel_title": "Cycles",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.485
+ },
+ {
+  "dashboard": "site-greenhouse-equipment.json",
+  "panel_id": 11,
+  "panel_title": "Cycles",
+  "ref": "B",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.454
+ },
+ {
+  "dashboard": "site-greenhouse-equipment.json",
+  "panel_id": 11,
+  "panel_title": "Cycles",
+  "ref": "C",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.424
+ },
+ {
+  "dashboard": "site-greenhouse-equipment.json",
+  "panel_id": 11,
+  "panel_title": "Cycles",
+  "ref": "D",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.388
+ },
+ {
+  "dashboard": "site-greenhouse-equipment.json",
+  "panel_id": 11,
+  "panel_title": "Cycles",
+  "ref": "E",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.386
+ },
+ {
+  "dashboard": "site-greenhouse-equipment.json",
+  "panel_id": 11,
+  "panel_title": "Cycles",
+  "ref": "F",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.449
+ },
+ {
+  "dashboard": "site-greenhouse-equipment.json",
+  "panel_id": 11,
+  "panel_title": "Cycles",
+  "ref": "G",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.597
+ },
+ {
+  "dashboard": "site-greenhouse-zones.json",
+  "panel_id": 11,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "A",
+  "status": "ok",
+  "rows": 9793,
+  "ms": 5.258
+ },
+ {
+  "dashboard": "site-greenhouse-zones.json",
+  "panel_id": 11,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "B",
+  "status": "ok",
+  "rows": 9793,
+  "ms": 5.802
+ },
+ {
+  "dashboard": "site-greenhouse-zones.json",
+  "panel_id": 11,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "C",
+  "status": "ok",
+  "rows": 9793,
+  "ms": 5.458
+ },
+ {
+  "dashboard": "site-greenhouse-zones.json",
+  "panel_id": 11,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "D",
+  "status": "ok",
+  "rows": 49,
+  "ms": 273.879
+ },
+ {
+  "dashboard": "site-greenhouse-zones.json",
+  "panel_id": 11,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "E",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.14
+ },
+ {
+  "dashboard": "site-greenhouse-zones.json",
+  "panel_id": 11,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "F",
+  "status": "ok",
+  "rows": 73,
+  "ms": 49.069
+ },
+ {
+  "dashboard": "site-greenhouse-zones.json",
+  "panel_id": 11,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "G",
+  "status": "ok",
+  "rows": 2880,
+  "ms": 24.188
+ },
+ {
+  "dashboard": "site-greenhouse-zones.json",
+  "panel_id": 12,
+  "panel_title": "VPD Compliance Band",
+  "ref": "A",
+  "status": "ok",
+  "rows": 9793,
+  "ms": 5.384
+ },
+ {
+  "dashboard": "site-greenhouse-zones.json",
+  "panel_id": 12,
+  "panel_title": "VPD Compliance Band",
+  "ref": "B",
+  "status": "ok",
+  "rows": 9793,
+  "ms": 4.767
+ },
+ {
+  "dashboard": "site-greenhouse-zones.json",
+  "panel_id": 12,
+  "panel_title": "VPD Compliance Band",
+  "ref": "C",
+  "status": "ok",
+  "rows": 9793,
+  "ms": 4.75
+ },
+ {
+  "dashboard": "site-greenhouse-zones.json",
+  "panel_id": 12,
+  "panel_title": "VPD Compliance Band",
+  "ref": "D",
+  "status": "ok",
+  "rows": 49,
+  "ms": 236.839
+ },
+ {
+  "dashboard": "site-greenhouse-zones.json",
+  "panel_id": 12,
+  "panel_title": "VPD Compliance Band",
+  "ref": "E",
+  "status": "ok",
+  "rows": 3456,
+  "ms": 32.514
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 2,
+  "panel_title": "Indoor Avg Temp",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 289.46
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 4,
+  "panel_title": "Indoor VPD",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 302.124
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 118,
+  "panel_title": "Controller State",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 3.493
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 108,
+  "panel_title": "$/Day (30-Day Avg) (est)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.567
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 113,
+  "panel_title": "Today Cost (est)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.375
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 114,
+  "panel_title": "30-Day Total Cost (est)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.396
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 115,
+  "panel_title": "Runtime-Modeled kWh/day (30-Day Avg) (est)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.374
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 116,
+  "panel_title": "Therms/day (30-Day Avg) (est)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.453
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 117,
+  "panel_title": "Water gal/day (30-Day Avg) (est)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.427
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 109,
+  "panel_title": "Daily Cost by Type (est)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 3,
+  "ms": 0.516
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 109,
+  "panel_title": "Daily Cost by Type (est)",
+  "ref": "B",
+  "status": "ok",
+  "rows": 3,
+  "ms": 0.389
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 109,
+  "panel_title": "Daily Cost by Type (est)",
+  "ref": "C",
+  "status": "ok",
+  "rows": 3,
+  "ms": 0.448
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 110,
+  "panel_title": "Electric Load vs Solar Irradiance",
+  "ref": "A",
+  "status": "ok",
+  "rows": 145,
+  "ms": 2.231
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 110,
+  "panel_title": "Electric Load vs Solar Irradiance",
+  "ref": "B",
+  "status": "ok",
+  "rows": 145,
+  "ms": 4.326
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 111,
+  "panel_title": "Firmware Band Compliance \u2014 Temp, VPD, Both",
+  "ref": "A",
+  "status": "ok",
+  "rows": 3,
+  "ms": 312.675
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 112,
+  "panel_title": "Planner Stress-Category Hours \u2014 Temp, VPD, Total",
+  "ref": "A",
+  "status": "ok",
+  "rows": 3,
+  "ms": 271.06
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 30,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "J",
+  "status": "ok",
+  "rows": 4222,
+  "ms": 4.332
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 30,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "K",
+  "status": "ok",
+  "rows": 73,
+  "ms": 60.055
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 30,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "C",
+  "status": "ok",
+  "rows": 288,
+  "ms": 1.775
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 30,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "A",
+  "status": "ok",
+  "rows": 4222,
+  "ms": 3.661
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 30,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "D",
+  "status": "ok",
+  "rows": 4222,
+  "ms": 4.511
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 30,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "B",
+  "status": "ok",
+  "rows": 73,
+  "ms": 54.818
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 30,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "E",
+  "status": "ok",
+  "rows": 92,
+  "ms": 14.469
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 30,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "F",
+  "status": "ok",
+  "rows": 135,
+  "ms": 1.252
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 30,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "G",
+  "status": "ok",
+  "rows": 137,
+  "ms": 1.182
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 30,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "H",
+  "status": "ok",
+  "rows": 523,
+  "ms": 1.349
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 30,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "I",
+  "status": "ok",
+  "rows": 1,
+  "ms": 1.293
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 30,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "N",
+  "status": "ok",
+  "rows": 1,
+  "ms": 1.23
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 30,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "O",
+  "status": "ok",
+  "rows": 489,
+  "ms": 1.53
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 30,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "L",
+  "status": "ok",
+  "rows": 1,
+  "ms": 1.38
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 30,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "M",
+  "status": "ok",
+  "rows": 1,
+  "ms": 1.763
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 31,
+  "panel_title": "VPD Compliance Band",
+  "ref": "J",
+  "status": "ok",
+  "rows": 4222,
+  "ms": 5.296
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 31,
+  "panel_title": "VPD Compliance Band",
+  "ref": "K",
+  "status": "ok",
+  "rows": 73,
+  "ms": 59.595
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 31,
+  "panel_title": "VPD Compliance Band",
+  "ref": "C",
+  "status": "ok",
+  "rows": 288,
+  "ms": 1.142
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 31,
+  "panel_title": "VPD Compliance Band",
+  "ref": "A",
+  "status": "ok",
+  "rows": 4222,
+  "ms": 3.016
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 31,
+  "panel_title": "VPD Compliance Band",
+  "ref": "D",
+  "status": "ok",
+  "rows": 4222,
+  "ms": 3.726
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 31,
+  "panel_title": "VPD Compliance Band",
+  "ref": "B",
+  "status": "ok",
+  "rows": 73,
+  "ms": 53.295
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 31,
+  "panel_title": "VPD Compliance Band",
+  "ref": "E",
+  "status": "ok",
+  "rows": 523,
+  "ms": 1.48
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 31,
+  "panel_title": "VPD Compliance Band",
+  "ref": "F",
+  "status": "ok",
+  "rows": 1,
+  "ms": 1.276
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 31,
+  "panel_title": "VPD Compliance Band",
+  "ref": "N",
+  "status": "ok",
+  "rows": 1,
+  "ms": 1.078
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 31,
+  "panel_title": "VPD Compliance Band",
+  "ref": "O",
+  "status": "ok",
+  "rows": 489,
+  "ms": 1.551
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 31,
+  "panel_title": "VPD Compliance Band",
+  "ref": "G",
+  "status": "ok",
+  "rows": 92,
+  "ms": 15.674
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 31,
+  "panel_title": "VPD Compliance Band",
+  "ref": "H",
+  "status": "ok",
+  "rows": 135,
+  "ms": 1.245
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 31,
+  "panel_title": "VPD Compliance Band",
+  "ref": "I",
+  "status": "ok",
+  "rows": 137,
+  "ms": 1.077
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 31,
+  "panel_title": "VPD Compliance Band",
+  "ref": "L",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.915
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 31,
+  "panel_title": "VPD Compliance Band",
+  "ref": "M",
+  "status": "ok",
+  "rows": 1,
+  "ms": 1.094
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 35,
+  "panel_title": "Light Evidence \u2014 Interior DLI Unavailable",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 40.532
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 35,
+  "panel_title": "Light Evidence \u2014 Interior DLI Unavailable",
+  "ref": "B",
+  "status": "ok",
+  "rows": 4222,
+  "ms": 5.112
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 35,
+  "panel_title": "Light Evidence \u2014 Interior DLI Unavailable",
+  "ref": "C",
+  "status": "ok",
+  "rows": 1,
+  "ms": 33.929
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 35,
+  "panel_title": "Light Evidence \u2014 Interior DLI Unavailable",
+  "ref": "E",
+  "status": "ok",
+  "rows": 73,
+  "ms": 52.764
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 35,
+  "panel_title": "Light Evidence \u2014 Interior DLI Unavailable",
+  "ref": "D",
+  "status": "ok",
+  "rows": 893,
+  "ms": 13.291
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 35,
+  "panel_title": "Light Evidence \u2014 Interior DLI Unavailable",
+  "ref": "F",
+  "status": "ok",
+  "rows": 893,
+  "ms": 13.665
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 121,
+  "panel_title": "30-Day Runtime-Modeled kWh (est)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.793
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 122,
+  "panel_title": "30-Day Total Therms (est)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.971
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 123,
+  "panel_title": "30-Day Total Water gal (est)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.961
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 124,
+  "panel_title": "30-Day Electric Cost (est)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.946
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 125,
+  "panel_title": "30-Day Gas Cost (est)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 0.8
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 126,
+  "panel_title": "30-Day Water Cost (est)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 1.105
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 127,
+  "panel_title": "Gas Therms/min vs Solar Irradiance",
+  "ref": "A",
+  "status": "ok",
+  "rows": 4320,
+  "ms": 28.408
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 127,
+  "panel_title": "Gas Therms/min vs Solar Irradiance",
+  "ref": "B",
+  "status": "ok",
+  "rows": 4219,
+  "ms": 71.601
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 128,
+  "panel_title": "Water GPM vs Solar Irradiance",
+  "ref": "A",
+  "status": "ok",
+  "rows": 4219,
+  "ms": 87.937
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 128,
+  "panel_title": "Water GPM vs Solar Irradiance",
+  "ref": "B",
+  "status": "ok",
+  "rows": 4219,
+  "ms": 87.119
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 36,
+  "panel_title": "Lighting: Lux, Thresholds & Switch State",
+  "ref": "A",
+  "status": "ok",
+  "rows": 433,
+  "ms": 44.947
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 36,
+  "panel_title": "Lighting: Lux, Thresholds & Switch State",
+  "ref": "B",
+  "status": "ok",
+  "rows": 2592,
+  "ms": 800.256
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 40,
+  "panel_title": "Zone Temperature vs House Band",
+  "ref": "A",
+  "status": "ok",
+  "rows": 288,
+  "ms": 1.94
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 40,
+  "panel_title": "Zone Temperature vs House Band",
+  "ref": "B",
+  "status": "ok",
+  "rows": 4222,
+  "ms": 4.235
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 40,
+  "panel_title": "Zone Temperature vs House Band",
+  "ref": "C",
+  "status": "ok",
+  "rows": 4222,
+  "ms": 3.67
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 40,
+  "panel_title": "Zone Temperature vs House Band",
+  "ref": "D",
+  "status": "ok",
+  "rows": 4222,
+  "ms": 4.35
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 40,
+  "panel_title": "Zone Temperature vs House Band",
+  "ref": "E",
+  "status": "ok",
+  "rows": 4222,
+  "ms": 4.055
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 40,
+  "panel_title": "Zone Temperature vs House Band",
+  "ref": "F",
+  "status": "ok",
+  "rows": 4222,
+  "ms": 4.006
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 41,
+  "panel_title": "Zone VPD vs Per-Zone Targets",
+  "ref": "A",
+  "status": "ok",
+  "rows": 288,
+  "ms": 1.068
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 41,
+  "panel_title": "Zone VPD vs Per-Zone Targets",
+  "ref": "B",
+  "status": "ok",
+  "rows": 4222,
+  "ms": 5.131
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 41,
+  "panel_title": "Zone VPD vs Per-Zone Targets",
+  "ref": "C",
+  "status": "ok",
+  "rows": 4222,
+  "ms": 4.487
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 41,
+  "panel_title": "Zone VPD vs Per-Zone Targets",
+  "ref": "D",
+  "status": "ok",
+  "rows": 4222,
+  "ms": 4.245
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 41,
+  "panel_title": "Zone VPD vs Per-Zone Targets",
+  "ref": "E",
+  "status": "ok",
+  "rows": 4222,
+  "ms": 4.686
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 42,
+  "panel_title": "Climate Delta & State Machine (normalized)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 288,
+  "ms": 84.014
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 42,
+  "panel_title": "Climate Delta & State Machine (normalized)",
+  "ref": "C",
+  "status": "ok",
+  "rows": 289,
+  "ms": 0.769
+ },
+ {
+  "dashboard": "site-home.json",
+  "panel_id": 42,
+  "panel_title": "Climate Delta & State Machine (normalized)",
+  "ref": "B",
+  "status": "ok",
+  "rows": 3456,
+  "ms": 13.842
+ },
+ {
+  "dashboard": "site-inference-infra.json",
+  "panel_id": 10,
+  "panel_title": "GPU Watts Now",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 422.941
+ },
+ {
+  "dashboard": "site-inference-infra.json",
+  "panel_id": 11,
+  "panel_title": "GPUs Streaming",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 430.81
+ },
+ {
+  "dashboard": "site-inference-infra.json",
+  "panel_id": 12,
+  "panel_title": "Average GPU Utilization",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 546.187
+ },
+ {
+  "dashboard": "site-inference-infra.json",
+  "panel_id": 13,
+  "panel_title": "Average CPU Utilization",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 537.194
+ },
+ {
+  "dashboard": "site-inference-infra.json",
+  "panel_id": 20,
+  "panel_title": "GPU Board Power by Host",
+  "ref": "A",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.027
+ },
+ {
+  "dashboard": "site-inference-infra.json",
+  "panel_id": 20,
+  "panel_title": "GPU Board Power by Host",
+  "ref": "B",
+  "status": "empty",
+  "rows": 0,
+  "ms": 0.797
+ },
+ {
+  "dashboard": "site-inference-infra.json",
+  "panel_id": 20,
+  "panel_title": "GPU Board Power by Host",
+  "ref": "C",
+  "status": "empty",
+  "rows": 0,
+  "ms": 0.759
+ },
+ {
+  "dashboard": "site-inference-infra.json",
+  "panel_id": 21,
+  "panel_title": "GPU Utilization by Host",
+  "ref": "A",
+  "status": "empty",
+  "rows": 0,
+  "ms": 0.774
+ },
+ {
+  "dashboard": "site-inference-infra.json",
+  "panel_id": 21,
+  "panel_title": "GPU Utilization by Host",
+  "ref": "B",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.174
+ },
+ {
+  "dashboard": "site-inference-infra.json",
+  "panel_id": 21,
+  "panel_title": "GPU Utilization by Host",
+  "ref": "C",
+  "status": "empty",
+  "rows": 0,
+  "ms": 0.865
+ },
+ {
+  "dashboard": "site-inference-infra.json",
+  "panel_id": 22,
+  "panel_title": "CPU Utilization by Host",
+  "ref": "A",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.774
+ },
+ {
+  "dashboard": "site-inference-infra.json",
+  "panel_id": 22,
+  "panel_title": "CPU Utilization by Host",
+  "ref": "B",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.937
+ },
+ {
+  "dashboard": "site-inference-infra.json",
+  "panel_id": 22,
+  "panel_title": "CPU Utilization by Host",
+  "ref": "C",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.981
+ },
+ {
+  "dashboard": "site-inference-infra.json",
+  "panel_id": 22,
+  "panel_title": "CPU Utilization by Host",
+  "ref": "D",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.774
+ },
+ {
+  "dashboard": "site-inference-infra.json",
+  "panel_id": 22,
+  "panel_title": "CPU Utilization by Host",
+  "ref": "E",
+  "status": "ok",
+  "rows": 288,
+  "ms": 2.103
+ },
+ {
+  "dashboard": "site-inference-infra.json",
+  "panel_id": 22,
+  "panel_title": "CPU Utilization by Host",
+  "ref": "F",
+  "status": "ok",
+  "rows": 288,
+  "ms": 1.919
+ },
+ {
+  "dashboard": "site-inference-infra.json",
+  "panel_id": 22,
+  "panel_title": "CPU Utilization by Host",
+  "ref": "G",
+  "status": "ok",
+  "rows": 288,
+  "ms": 2.243
+ },
+ {
+  "dashboard": "site-inference-infra.json",
+  "panel_id": 22,
+  "panel_title": "CPU Utilization by Host",
+  "ref": "H",
+  "status": "ok",
+  "rows": 288,
+  "ms": 2.307
+ },
+ {
+  "dashboard": "site-inference-infra.json",
+  "panel_id": 22,
+  "panel_title": "CPU Utilization by Host",
+  "ref": "I",
+  "status": "ok",
+  "rows": 288,
+  "ms": 2.15
+ },
+ {
+  "dashboard": "site-inference-infra.json",
+  "panel_id": 30,
+  "panel_title": "Latest Compute by Host",
+  "ref": "A",
+  "status": "ok",
+  "rows": 10,
+  "ms": 922.937
+ },
+ {
+  "dashboard": "site-intelligence-data.json",
+  "panel_id": 10,
+  "panel_title": "Plan Score Trend & Planning Volume",
+  "ref": "A",
+  "status": "ok",
+  "rows": 14,
+  "ms": 1.175
+ },
+ {
+  "dashboard": "site-intelligence-data.json",
+  "panel_id": 10,
+  "panel_title": "Plan Score Trend & Planning Volume",
+  "ref": "B",
+  "status": "ok",
+  "rows": 14,
+  "ms": 0.943
+ },
+ {
+  "dashboard": "site-intelligence-data.json",
+  "panel_id": 114,
+  "panel_title": "Write Rate + Oscillations",
+  "ref": "A",
+  "status": "ok",
+  "rows": 23,
+  "ms": 1679.317
+ },
+ {
+  "dashboard": "site-intelligence-data.json",
+  "panel_id": 114,
+  "panel_title": "Write Rate + Oscillations",
+  "ref": "B",
+  "status": "ok",
+  "rows": 23,
+  "ms": 1522.725
+ },
+ {
+  "dashboard": "site-intelligence-data.json",
+  "panel_id": 102,
+  "panel_title": "Current Controller State",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 4.232
+ },
+ {
+  "dashboard": "site-intelligence-data.json",
+  "panel_id": 202,
+  "panel_title": "Free Heap",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.474
+ },
+ {
+  "dashboard": "site-intelligence-data.json",
+  "panel_id": 203,
+  "panel_title": "Uptime",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.71
+ },
+ {
+  "dashboard": "site-intelligence-planning.json",
+  "panel_id": 10,
+  "panel_title": "Plan Score Trend & Planning Volume",
+  "ref": "A",
+  "status": "ok",
+  "rows": 14,
+  "ms": 0.949
+ },
+ {
+  "dashboard": "site-intelligence-planning.json",
+  "panel_id": 10,
+  "panel_title": "Plan Score Trend & Planning Volume",
+  "ref": "B",
+  "status": "ok",
+  "rows": 14,
+  "ms": 0.796
+ },
+ {
+  "dashboard": "site-intelligence-planning.json",
+  "panel_id": 5,
+  "panel_title": "Last 10 Plans",
+  "ref": "A",
+  "status": "ok",
+  "rows": 10,
+  "ms": 0.904
+ },
+ {
+  "dashboard": "site-intelligence-planning.json",
+  "panel_id": 7,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "A",
+  "status": "ok",
+  "rows": 34202,
+  "ms": 13.957
+ },
+ {
+  "dashboard": "site-intelligence-planning.json",
+  "panel_id": 7,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "B",
+  "status": "ok",
+  "rows": 4222,
+  "ms": 4.19
+ },
+ {
+  "dashboard": "site-intelligence-planning.json",
+  "panel_id": 7,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "C",
+  "status": "ok",
+  "rows": 49,
+  "ms": 293.425
+ },
+ {
+  "dashboard": "site-intelligence-planning.json",
+  "panel_id": 7,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "E",
+  "status": "ok",
+  "rows": 43,
+  "ms": 1.351
+ },
+ {
+  "dashboard": "site-intelligence-planning.json",
+  "panel_id": 7,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "F",
+  "status": "ok",
+  "rows": 36,
+  "ms": 1.305
+ },
+ {
+  "dashboard": "site-intelligence-planning.json",
+  "panel_id": 7,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "H",
+  "status": "ok",
+  "rows": 190,
+  "ms": 1.419
+ },
+ {
+  "dashboard": "site-intelligence-planning.json",
+  "panel_id": 7,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "G",
+  "status": "empty",
+  "rows": 0,
+  "ms": 0.791
+ },
+ {
+  "dashboard": "site-intelligence-planning.json",
+  "panel_id": 7,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "I",
+  "status": "empty",
+  "rows": 0,
+  "ms": 0.879
+ },
+ {
+  "dashboard": "site-intelligence-planning.json",
+  "panel_id": 8,
+  "panel_title": "VPD Compliance Band",
+  "ref": "A",
+  "status": "ok",
+  "rows": 34202,
+  "ms": 11.377
+ },
+ {
+  "dashboard": "site-intelligence-planning.json",
+  "panel_id": 8,
+  "panel_title": "VPD Compliance Band",
+  "ref": "B",
+  "status": "ok",
+  "rows": 4222,
+  "ms": 3.192
+ },
+ {
+  "dashboard": "site-intelligence-planning.json",
+  "panel_id": 8,
+  "panel_title": "VPD Compliance Band",
+  "ref": "C",
+  "status": "ok",
+  "rows": 49,
+  "ms": 269.22
+ },
+ {
+  "dashboard": "site-intelligence-planning.json",
+  "panel_id": 8,
+  "panel_title": "VPD Compliance Band",
+  "ref": "E",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.074
+ },
+ {
+  "dashboard": "site-intelligence-planning.json",
+  "panel_id": 8,
+  "panel_title": "VPD Compliance Band",
+  "ref": "F",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.104
+ },
+ {
+  "dashboard": "site-intelligence-planning.json",
+  "panel_id": 8,
+  "panel_title": "VPD Compliance Band",
+  "ref": "G",
+  "status": "ok",
+  "rows": 168,
+  "ms": 1.799
+ },
+ {
+  "dashboard": "site-intelligence-planning.json",
+  "panel_id": 8,
+  "panel_title": "VPD Compliance Band",
+  "ref": "H",
+  "status": "ok",
+  "rows": 190,
+  "ms": 1.314
+ },
+ {
+  "dashboard": "site-intelligence-planning.json",
+  "panel_id": 12,
+  "panel_title": "Forecast Bias (temp)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 2179.286
+ },
+ {
+  "dashboard": "site-intelligence-planning.json",
+  "panel_id": 114,
+  "panel_title": "Write Rate + Oscillations",
+  "ref": "A",
+  "status": "ok",
+  "rows": 23,
+  "ms": 1502.335
+ },
+ {
+  "dashboard": "site-intelligence-planning.json",
+  "panel_id": 114,
+  "panel_title": "Write Rate + Oscillations",
+  "ref": "B",
+  "status": "ok",
+  "rows": 23,
+  "ms": 1392.511
+ },
+ {
+  "dashboard": "site-intelligence-planning.json",
+  "panel_id": 115,
+  "panel_title": "Plans per day by instance (contract \u00a72.F)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 2,
+  "ms": 0.991
+ },
+ {
+  "dashboard": "site-intelligence-planning.json",
+  "panel_id": 116,
+  "panel_title": "SLA breaches (last 24h)",
+  "ref": "A",
+  "status": "empty",
+  "rows": 0,
+  "ms": 2.237
+ },
+ {
+  "dashboard": "site-intelligence-planning.json",
+  "panel_id": 117,
+  "panel_title": "Plan-write latency by instance (trigger_id join)",
+  "ref": "A",
+  "status": "ok",
+  "rows": 3,
+  "ms": 2.499
+ },
+ {
+  "dashboard": "site-intelligence.json",
+  "panel_id": 2,
+  "panel_title": "Planning Health",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 254.677
+ },
+ {
+  "dashboard": "site-intelligence.json",
+  "panel_id": 3,
+  "panel_title": "Active Plan",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 4.045
+ },
+ {
+  "dashboard": "site-intelligence.json",
+  "panel_id": 4,
+  "panel_title": "Plan Age",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 2.387
+ },
+ {
+  "dashboard": "site-intelligence.json",
+  "panel_id": 30,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.219
+ },
+ {
+  "dashboard": "site-intelligence.json",
+  "panel_id": 30,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "B",
+  "status": "ok",
+  "rows": 73,
+  "ms": 61.82
+ },
+ {
+  "dashboard": "site-intelligence.json",
+  "panel_id": 30,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "C",
+  "status": "ok",
+  "rows": 49,
+  "ms": 220.219
+ },
+ {
+  "dashboard": "site-intelligence.json",
+  "panel_id": 30,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "D",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.731
+ },
+ {
+  "dashboard": "site-intelligence.json",
+  "panel_id": 30,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "J",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 3.113
+ },
+ {
+  "dashboard": "site-intelligence.json",
+  "panel_id": 30,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "K",
+  "status": "ok",
+  "rows": 73,
+  "ms": 60.1
+ },
+ {
+  "dashboard": "site-intelligence.json",
+  "panel_id": 30,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "G",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.086
+ },
+ {
+  "dashboard": "site-intelligence.json",
+  "panel_id": 30,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "I",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.095
+ },
+ {
+  "dashboard": "site-intelligence.json",
+  "panel_id": 30,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "E",
+  "status": "ok",
+  "rows": 43,
+  "ms": 1.288
+ },
+ {
+  "dashboard": "site-intelligence.json",
+  "panel_id": 30,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "F",
+  "status": "ok",
+  "rows": 36,
+  "ms": 1.096
+ },
+ {
+  "dashboard": "site-intelligence.json",
+  "panel_id": 30,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "H",
+  "status": "ok",
+  "rows": 190,
+  "ms": 1.294
+ },
+ {
+  "dashboard": "site-intelligence.json",
+  "panel_id": 30,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "L",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.008
+ },
+ {
+  "dashboard": "site-intelligence.json",
+  "panel_id": 30,
+  "panel_title": "Temperature Compliance Band",
+  "ref": "M",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.436
+ },
+ {
+  "dashboard": "site-intelligence.json",
+  "panel_id": 31,
+  "panel_title": "VPD Compliance Band",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 2.108
+ },
+ {
+  "dashboard": "site-intelligence.json",
+  "panel_id": 31,
+  "panel_title": "VPD Compliance Band",
+  "ref": "B",
+  "status": "ok",
+  "rows": 73,
+  "ms": 65.584
+ },
+ {
+  "dashboard": "site-intelligence.json",
+  "panel_id": 31,
+  "panel_title": "VPD Compliance Band",
+  "ref": "C",
+  "status": "ok",
+  "rows": 49,
+  "ms": 234.702
+ },
+ {
+  "dashboard": "site-intelligence.json",
+  "panel_id": 31,
+  "panel_title": "VPD Compliance Band",
+  "ref": "D",
+  "status": "ok",
+  "rows": 1418,
+  "ms": 3.576
+ },
+ {
+  "dashboard": "site-intelligence.json",
+  "panel_id": 31,
+  "panel_title": "VPD Compliance Band",
+  "ref": "E",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.082
+ },
+ {
+  "dashboard": "site-intelligence.json",
+  "panel_id": 31,
+  "panel_title": "VPD Compliance Band",
+  "ref": "F",
+  "status": "empty",
+  "rows": 0,
+  "ms": 1.248
+ },
+ {
+  "dashboard": "site-intelligence.json",
+  "panel_id": 31,
+  "panel_title": "VPD Compliance Band",
+  "ref": "G",
+  "status": "ok",
+  "rows": 168,
+  "ms": 1.359
+ },
+ {
+  "dashboard": "site-intelligence.json",
+  "panel_id": 31,
+  "panel_title": "VPD Compliance Band",
+  "ref": "H",
+  "status": "ok",
+  "rows": 190,
+  "ms": 1.644
+ },
+ {
+  "dashboard": "site-irrigation.json",
+  "panel_id": 1,
+  "panel_title": "Canonical Schedule",
+  "ref": "A",
+  "status": "ok",
+  "rows": 2,
+  "ms": 2514.471
+ },
+ {
+  "dashboard": "site-irrigation.json",
+  "panel_id": 2,
+  "panel_title": "Last Run Age",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 3156.685
+ },
+ {
+  "dashboard": "site-irrigation.json",
+  "panel_id": 3,
+  "panel_title": "Master Overlap",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 2728.382
+ },
+ {
+  "dashboard": "site-irrigation.json",
+  "panel_id": 4,
+  "panel_title": "Fertigation Water Today",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 2966.154
+ },
+ {
+  "dashboard": "site-irrigation.json",
+  "panel_id": 5,
+  "panel_title": "Flagged Runs",
+  "ref": "A",
+  "status": "ok",
+  "rows": 1,
+  "ms": 2842.958
+ },
+ {
+  "dashboard": "site-irrigation.json",
+  "panel_id": 6,
+  "panel_title": "Latest Fertigation Runs",
+  "ref": "A",
+  "status": "ok",
+  "rows": 24,
+  "ms": 3077.926
+ },
+ {
+  "dashboard": "site-irrigation.json",
+  "panel_id": 7,
+  "panel_title": "Daily Irrigation Water",
+  "ref": "A",
+  "status": "empty",
+  "rows": 0,
+  "ms": 2981.362
+ },
+ {
+  "dashboard": "site-irrigation.json",
+  "panel_id": 8,
+  "panel_title": "Daily Irrigation Runtime",
+  "ref": "A",
+  "status": "ok",
+  "rows": 6,
+  "ms": 1.059
+ },
+ {
+  "dashboard": "site-irrigation.json",
+  "panel_id": 9,
+  "panel_title": "Relay State",
+  "ref": "A",
+  "status": "ok",
+  "rows": 50400,
+  "ms": 55.002
+ },
+ {
+  "dashboard": "site-irrigation.json",
+  "panel_id": 10,
+  "panel_title": "Root-Zone Response",
+  "ref": "A",
+  "status": "ok",
+  "rows": 9794,
+  "ms": 5.599
+ },
+ {
+  "dashboard": "site-irrigation.json",
+  "panel_id": 11,
+  "panel_title": "Flow And Meter",
+  "ref": "A",
+  "status": "ok",
+  "rows": 9794,
+  "ms": 6.714
+ },
+ {
+  "dashboard": "site-irrigation.json",
+  "panel_id": 12,
+  "panel_title": "Feedback Sensor Gaps",
+  "ref": "A",
+  "status": "ok",
+  "rows": 4,
+  "ms": 242.923
+ },
+ {
+  "dashboard": "site-irrigation.json",
+  "panel_id": 13,
+  "panel_title": "Feedback Field Work",
+  "ref": "A",
+  "status": "ok",
+  "rows": 2,
+  "ms": 2.074
+ },
+ {
+  "dashboard": "site-irrigation.json",
+  "panel_id": 14,
+  "panel_title": "Feedback Registry Targets",
+  "ref": "A",
+  "status": "ok",
+  "rows": 6,
+  "ms": 1.101
+ },
+ {
+  "dashboard": "site-irrigation.json",
+  "panel_id": 15,
+  "panel_title": "Feedback Acceptance Closure",
+  "ref": "A",
+  "status": "ok",
+  "rows": 14,
+  "ms": 255.277
+ }
+]
