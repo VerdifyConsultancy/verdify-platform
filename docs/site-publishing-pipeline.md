@@ -577,9 +577,35 @@ regenerating only today's page will not clear them. A genuinely new finding
 means a live generator defect: fix the generator.
 
 An `unsupported-compressed-container` finding on a screenshot usually means an
-ancillary chunk missing from `PNG_SAFE_BINARY_ANCILLARY_CHUNKS` — macOS
-`screencapture` emits `cICP` and `iDOT`. Whitelist the chunk if it is binary and
-bounded; do not strip metadata from source assets as a habit.
+ancillary PNG chunk the scanner does not parse — macOS `screencapture` emits
+`cICP` and `iDOT`. Do **not** answer that by adding the chunk to
+`PNG_SAFE_BINARY_ANCILLARY_CHUNKS`: membership there skips payload inspection
+entirely, so a chunk of that type with any length or content would publish
+unscanned. Give the chunk a bounded parser instead — `cICP` is validated
+structurally (exactly four bytes, at most one, before `PLTE`/`IDAT`, identity
+matrix coefficients, boolean full-range flag), which is what makes it safe to
+accept. Do not strip metadata from source assets as a habit.
+
+### What this does and does not fix
+
+The corpus guard stays **intentionally fail-closed**: a prohibited artifact
+anywhere in the corpus still blocks promotion, and that is the desired
+behaviour — the alternative is publishing known-bad output. Repairing the
+2026-07-26 corpus and giving `cICP` a parser cleared *that* wedge; neither
+change removes the structural risk that some future historical artifact wedges
+the pipeline again. The durable fixes for that are a pre-pin canary that runs a
+candidate publisher image against the whole historical corpus before the digest
+is pinned, and versioned idempotent migrations (or full regeneration) for the
+derived plan archive. Both are tracked on #551, neither is implemented.
+
+Likewise, `is_lab_site_tree()` stops a *foreign* tree from being installed, but
+the `verdify-lab` image's baked fallback is still Quartz's own documentation:
+`Dockerfile.k3s` in verdify-site-legacy seeds `docs/` whenever `content/` is
+absent, and `content` is a symlink to the decommissioned iris vault
+(`/mnt/iris/verdify-vault/website`), so every CI build takes that branch. Until
+that image is corrected and re-pinned, **a cold cache is fail-closed, not
+self-recovering**: init refuses the bootstrap and the rollout fails loudly
+rather than serving the wrong site.
 
 ## Normal Checks
 

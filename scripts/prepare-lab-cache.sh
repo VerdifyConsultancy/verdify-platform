@@ -208,13 +208,41 @@ has_regular_homepage() {
 # content-policy scanner passes that tree happily — nothing in it is
 # prohibited, it is simply the wrong site — so on 2026-07-26 an emptied cache
 # PVC seeded it and lab.verdify.ai served Quartz's documentation under the
-# Verdify brand.  Require the daily plan archive, which every real build emits
-# and no upstream Quartz build has.
+# Verdify brand.
+#
+# Neither directory names nor homepage metadata discriminate.  `advanced/`,
+# `features/`, `plugins/`, `images/`, `static/` and `tags/` exist in BOTH trees,
+# and quartz.config.ts stamps og:site_name "Verdify Lab" plus the Verdify
+# description onto a contentless build too.  Only content-derived routes do.
+#
+# INTERIM CHECK.  The canonical signal should be a build-owned identity marker
+# emitted by verdify-site-legacy; that repo's sibling PR adds it, and this check
+# tightens to require it once the corrected image is built and pinned.  Until
+# then the route evidence below is the discriminator.
+LAB_IDENTITY_ROUTES=(
+  "plans/index.html"
+  "data/forecast/index.html"
+  "start/index.html"
+  "greenhouse/index.html"
+)
+
 is_lab_site_tree() {
   local source="$1"
+  local route
+
   [[ ! -L "$source/index.html" && -f "$source/index.html" ]] || return 1
+
+  # Require the whole route set, not one marker: a single dummy plan page
+  # dropped into a stock Quartz tree must not be able to satisfy this.
+  for route in "${LAB_IDENTITY_ROUTES[@]}"; do
+    [[ ! -L "$source/$route" && -f "$source/$route" ]] || return 1
+  done
+
+  # Strict YYYY-MM-DD.html.  A `????-??-??` glob also matches e.g.
+  # `plan-x-y.html`, so spell the digits out.
   [[ ! -L "$source/plans" && -d "$source/plans" ]] || return 1
-  [[ -n "$(find "$source/plans" -maxdepth 1 -type f -name '????-??-??.html' -print -quit)" ]]
+  [[ -n "$(find "$source/plans" -maxdepth 1 -type f \
+    -name '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9].html' -print -quit)" ]]
 }
 
 replace_public_from() {
@@ -230,6 +258,16 @@ replace_public_from() {
   chmod 0755 -- "$candidate"
   if ! validate_public_tree "$candidate"; then
     rm -rf -- "$candidate"
+    return 1
+  fi
+  # Identity is checked on the exact tree about to be installed, never only on
+  # the pre-copy source: the candidate is what becomes the public site, and a
+  # source-only check leaves a window where the two differ.  This covers the
+  # legacy promotion path too — on 2026-07-26 the legacy directory was itself
+  # the stock Quartz tree, so promoting it unchecked would have republished it.
+  if ! is_lab_site_tree "$candidate"; then
+    rm -rf -- "$candidate"
+    echo "Lab cache candidate is not a Verdify Lab build; refusing to install it" >&2
     return 1
   fi
 
@@ -260,15 +298,12 @@ chmod_public_directory
 # Only the Lab Deployment supplies a baked bootstrap.  It is installed while
 # holding the same lock used by the publisher main process, and only when the
 # completed live tree has no homepage.  Thus pod order is irrelevant.
+# Refuse a foreign tree rather than publish it.  replace_public_from validates
+# the copied candidate and returns non-zero, so `set -e` fails init here: that
+# keeps an already-serving pod in place (maxUnavailable: 0) and makes an
+# unusable bootstrap a loud, alertable rollout failure instead of a silently
+# wrong public site.
 if [[ -n "$BOOTSTRAP" ]] && ! has_regular_homepage && tree_has_entries "$BOOTSTRAP"; then
-  # Refuse a foreign tree rather than publish it.  Failing init keeps any
-  # already-serving pod in place (maxUnavailable: 0) and makes an unusable
-  # bootstrap a loud, alertable rollout failure instead of a silently wrong
-  # public site.
-  if ! is_lab_site_tree "$BOOTSTRAP"; then
-    echo "Lab cache bootstrap is not a Verdify Lab build; refusing to seed it" >&2
-    exit 1
-  fi
   replace_public_from "$BOOTSTRAP"
 fi
 

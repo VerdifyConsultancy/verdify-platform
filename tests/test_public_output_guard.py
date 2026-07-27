@@ -888,9 +888,9 @@ def test_png_macos_screenshot_colour_chunks_are_publishable():
     """A macOS screenshot must not wedge the publish.
 
     screencapture emits cICP (four numeric colour code points) next to iDOT.
-    cICP was missing from the safe-ancillary set, so three vault screenshots
-    scanned as unsupported-compressed-container; because the guard scans the
-    whole corpus and fails closed, that blocked every lab.verdify.ai publish.
+    cICP was unhandled, so three vault screenshots scanned as
+    unsupported-compressed-container; because the guard scans the whole corpus
+    and fails closed, that blocked every lab.verdify.ai publish.
     """
     guard = load_guard()
     # colour primaries / transfer function / matrix coefficients / range flag
@@ -899,14 +899,78 @@ def test_png_macos_screenshot_colour_chunks_are_publishable():
         + png_chunk(b"cICP", bytes([1, 13, 0, 1]))
         + png_chunk(b"iDOT", b"\x00" * 24)
         + png_chunk(b"pHYs", struct.pack(">IIB", 2835, 2835, 1))
+        + png_chunk(b"IDAT", b"pixels")
         + png_chunk(b"IEND", b"")
     )
 
     assert guard._scan_png_bytes(screenshot) == set()
-    assert b"cICP" in guard.PNG_SAFE_BINARY_ANCILLARY_CHUNKS
-    # Whitelisting cICP must not open the door to arbitrary ancillary chunks.
-    unknown = guard.PNG_SIGNATURE + png_chunk(b"prVt", b"opaque") + png_chunk(b"IEND", b"")
-    assert guard._scan_png_bytes(unknown) == {"unsupported-compressed-container"}
+    # Both boolean range flags and the sRGB/BT.709 primaries are conforming.
+    for primaries, transfer, full_range in ((1, 13, 1), (1, 13, 0), (9, 16, 0)):
+        conforming = (
+            guard.PNG_SIGNATURE
+            + png_chunk(b"cICP", bytes([primaries, transfer, 0, full_range]))
+            + png_chunk(b"IEND", b"")
+        )
+        assert guard._scan_png_bytes(conforming) == set()
+
+
+def test_png_cicp_is_structurally_validated_not_blanket_whitelisted():
+    """cICP must never be a hole in the scanner.
+
+    Membership in PNG_SAFE_BINARY_ANCILLARY_CHUNKS skips payload inspection
+    entirely, so a cICP-shaped container of arbitrary length would smuggle
+    unscanned bytes onto the public site. Only a spec-conforming four-byte
+    chunk is accepted.
+    """
+    guard = load_guard()
+    excluded = next(iter(policy.PUBLIC_CROP_EXCLUDE_SLUGS)).encode()
+
+    # The whole point: cICP is handled explicitly, NOT blanket-whitelisted.
+    assert b"cICP" not in guard.PNG_SAFE_BINARY_ANCILLARY_CHUNKS
+
+    def scan(*chunks: bytes) -> set[str]:
+        return guard._scan_png_bytes(guard.PNG_SIGNATURE + b"".join(chunks) + png_chunk(b"IEND", b""))
+
+    malformed = "malformed-compressed-metadata"
+
+    # Oversized / text-bearing: the payload that motivated dropping the whitelist.
+    assert scan(png_chunk(b"cICP", bytes([1, 13, 0, 1]) + b"note " + excluded)) == {malformed}
+    assert scan(png_chunk(b"cICP", b"x" * 4096)) == {malformed}
+    # Undersized and empty.
+    assert scan(png_chunk(b"cICP", bytes([1, 13, 0]))) == {malformed}
+    assert scan(png_chunk(b"cICP", b"")) == {malformed}
+    # Duplicated: at most one occurrence.
+    assert scan(png_chunk(b"cICP", bytes([1, 13, 0, 1])), png_chunk(b"cICP", bytes([1, 13, 0, 1]))) == {malformed}
+    # Late: cICP must precede PLTE/IDAT.
+    assert scan(png_chunk(b"IDAT", b"pixels"), png_chunk(b"cICP", bytes([1, 13, 0, 1]))) == {malformed}
+    assert scan(png_chunk(b"PLTE", b"\x00\x00\x00"), png_chunk(b"cICP", bytes([1, 13, 0, 1]))) == {malformed}
+    # Non-identity matrix coefficients (PNG is RGB) and non-boolean range flag.
+    assert scan(png_chunk(b"cICP", bytes([1, 13, 1, 1]))) == {malformed}
+    assert scan(png_chunk(b"cICP", bytes([1, 13, 0, 2]))) == {malformed}
+
+    # A rejected cICP must not mask the protected value if one is also present
+    # in a chunk the scanner does parse.
+    both = scan(
+        png_chunk(b"cICP", b"x" * 64),
+        png_chunk(b"eXIf", b"camera note " + excluded),
+    )
+    assert both == {malformed, "content"}
+
+    # Handling cICP explicitly must not open the door to other ancillary chunks.
+    assert scan(png_chunk(b"prVt", b"opaque")) == {"unsupported-compressed-container"}
+
+
+def test_png_cicp_rejection_is_reported_without_echoing_the_payload(tmp_path):
+    """A rejected chunk must not leak its own bytes into the report."""
+    guard = load_guard()
+    excluded = next(iter(policy.PUBLIC_CROP_EXCLUDE_SLUGS)).encode()
+    png = guard.PNG_SIGNATURE + png_chunk(b"cICP", bytes([1, 13, 0, 1]) + b" " + excluded) + png_chunk(b"IEND", b"")
+    (tmp_path / "shot.png").write_bytes(png)
+
+    findings = guard.scan_root(tmp_path)
+
+    assert [(finding.path, finding.reason) for finding in findings] == [("shot.png", "malformed-compressed-metadata")]
+    assert excluded.decode() not in "".join(f"{finding.path}{finding.reason}" for finding in findings).casefold()
 
 
 def test_png_textual_metadata_parse_and_size_bounds_fail_closed(monkeypatch):

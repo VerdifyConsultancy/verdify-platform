@@ -84,19 +84,49 @@ def _resource(documents: list[dict], kind: str, name: str) -> dict:
     )
 
 
+# Must stay in step with LAB_IDENTITY_ROUTES in scripts/prepare-lab-cache.sh.
+LAB_IDENTITY_ROUTES = (
+    "plans/index.html",
+    "data/forecast/index.html",
+    "start/index.html",
+    "greenhouse/index.html",
+)
+
+
 def _write_lab_site_tree(root: Path, homepage: str = "baked fallback") -> None:
-    """Smallest tree prepare-lab-cache will accept as a Verdify Lab bootstrap.
+    """Smallest tree prepare-lab-cache will accept as a Verdify Lab build.
 
     A bare index.html is exactly the shape of the Quartz-stock-docs build that
     the verdify-lab image baked and that reached lab.verdify.ai on 2026-07-26,
-    so is_lab_site_tree() now also requires the dated plan archive that every
-    real build emits.
+    so is_lab_site_tree() requires content-derived routes plus the dated plan
+    archive that every real build emits.
     """
     root.mkdir(parents=True, exist_ok=True)
     (root / "index.html").write_text(homepage, encoding="utf-8")
-    plans = root / "plans"
-    plans.mkdir(exist_ok=True)
-    (plans / "2026-07-25.html").write_text("plan archive page", encoding="utf-8")
+    for route in LAB_IDENTITY_ROUTES:
+        target = root / route
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(f"verdify {route}", encoding="utf-8")
+    (root / "plans" / "2026-07-25.html").write_text("plan archive page", encoding="utf-8")
+
+
+def _write_stock_quartz_tree(root: Path) -> None:
+    """An upstream `npx quartz build` with no Verdify content tree.
+
+    quartz.config.ts still stamps og:site_name "Verdify Lab" onto this build,
+    and advanced/ features/ plugins/ exist in both trees, so branding and
+    directory names cannot discriminate — only content-derived routes can.
+    """
+    root.mkdir(parents=True, exist_ok=True)
+    (root / "index.html").write_text(
+        '<title>Welcome to Quartz 4 — Verdify Lab</title><meta name="og:site_name" content="Verdify Lab"/>',
+        encoding="utf-8",
+    )
+    for page in ("philosophy.html", "authoring-content.html", "migrating-from-Quartz-3.html"):
+        (root / page).write_text("upstream quartz docs", encoding="utf-8")
+    for directory in ("advanced", "features", "plugins", "static", "tags"):
+        (root / directory).mkdir(exist_ok=True)
+        (root / directory / "index.html").write_text("quartz section", encoding="utf-8")
 
 
 def test_manifest_loader_rejects_duplicate_keys():
@@ -341,10 +371,8 @@ def test_cache_initializer_preserves_legacy_last_good_and_private_layout(tmp_pat
     work = tmp_path / "work"
     legacy = work / "public"
     bootstrap = tmp_path / "bootstrap"
-    legacy.mkdir(parents=True)
-    bootstrap.mkdir()
-    (legacy / "index.html").write_text("legacy last-good", encoding="utf-8")
-    (bootstrap / "index.html").write_text("baked fallback", encoding="utf-8")
+    _write_lab_site_tree(legacy, homepage="legacy last-good")
+    _write_lab_site_tree(bootstrap)
     work.chmod(0o770)  # Models the fsGroup-writable PVC root.
 
     proc = subprocess.run(
@@ -814,21 +842,55 @@ def test_cache_initializer_rejects_unsafe_bootstrap_and_preserves_live(tmp_path:
     assert not list((work / "publisher").glob(".layout-v2-init.*"))
 
 
-def test_cache_initializer_refuses_a_bootstrap_that_is_not_the_lab_site(tmp_path: Path):
+def _seed_identity_variant(bootstrap: Path, variant: str) -> None:
+    if variant == "stock-quartz":
+        _write_stock_quartz_tree(bootstrap)
+    elif variant == "stock-quartz-plus-dummy-plan":
+        # The obvious bypass: bolt one plan page onto the stock tree.
+        _write_stock_quartz_tree(bootstrap)
+        (bootstrap / "plans").mkdir(exist_ok=True)
+        (bootstrap / "plans" / "2026-07-25.html").write_text("dummy", encoding="utf-8")
+    elif variant == "non-date-plan-filename":
+        # `????-??-??.html` also matches this; strict digits must not.
+        _write_lab_site_tree(bootstrap)
+        for stale in (bootstrap / "plans").glob("[0-9]*.html"):
+            stale.unlink()
+        (bootstrap / "plans" / "plan-x-y.html").write_text("not a dated page", encoding="utf-8")
+    elif variant == "missing-one-identity-route":
+        _write_lab_site_tree(bootstrap)
+        (bootstrap / "greenhouse" / "index.html").unlink()
+    elif variant == "symlinked-identity-route":
+        _write_lab_site_tree(bootstrap)
+        target = bootstrap / "start" / "index.html"
+        target.unlink()
+        target.symlink_to(bootstrap / "index.html")
+    else:  # pragma: no cover - guards against a typo in the parametrisation
+        raise AssertionError(f"unknown variant {variant}")
+
+
+@pytest.mark.parametrize(
+    "variant",
+    [
+        "stock-quartz",
+        "stock-quartz-plus-dummy-plan",
+        "non-date-plan-filename",
+        "missing-one-identity-route",
+        "symlinked-identity-route",
+    ],
+)
+def test_cache_initializer_refuses_a_bootstrap_that_is_not_the_lab_site(tmp_path: Path, variant: str):
     """Regression for 2026-07-26: an emptied cache PVC seeded Quartz's own docs.
 
     The content-policy scanner passes an upstream Quartz build — nothing in it
     is prohibited, it is simply not this site — so lab.verdify.ai served
-    "Welcome to Quartz 4". Identity has to be checked separately, and a foreign
-    tree must fail the rollout rather than reach the public site.
+    "Welcome to Quartz 4". Identity is checked separately, on the exact copied
+    candidate, and a foreign tree fails the rollout rather than reaching the
+    public site.
     """
     work = tmp_path / "work"
     work.mkdir(mode=0o770)  # Models the fsGroup-writable PVC root.
     bootstrap = tmp_path / "bootstrap"
-    bootstrap.mkdir()
-    # Shape of `npx quartz build` run without the Verdify content tree.
-    (bootstrap / "index.html").write_text("<title>Welcome to Quartz 4</title>", encoding="utf-8")
-    (bootstrap / "philosophy.html").write_text("upstream docs", encoding="utf-8")
+    _seed_identity_variant(bootstrap, variant)
 
     proc = subprocess.run(
         [
@@ -846,9 +908,48 @@ def test_cache_initializer_refuses_a_bootstrap_that_is_not_the_lab_site(tmp_path
     )
 
     assert proc.returncode != 0
-    assert proc.stderr.strip() == "Lab cache bootstrap is not a Verdify Lab build; refusing to seed it"
     assert not (work / "publisher" / "public" / "index.html").exists()
     assert not (work / "publisher" / ".layout-v2-scanned-ready").exists()
+    assert not list((work / "publisher").glob(".layout-v2-init.*"))
+    if variant == "symlinked-identity-route":
+        # The policy scanner owns symlink hazards and rejects first.
+        assert proc.stderr.strip() == "Lab cache public tree validation failed"
+    else:
+        assert proc.stderr.strip() == "Lab cache candidate is not a Verdify Lab build; refusing to install it"
+
+
+def test_cache_initializer_refuses_to_promote_a_foreign_legacy_tree(tmp_path: Path):
+    """The legacy path needs the same identity gate as the bootstrap path.
+
+    On 2026-07-26 the legacy directory was itself the stock Quartz tree, so a
+    v1 -> v2 promotion of it would have republished exactly what the incident
+    put on the public site.
+    """
+    work = tmp_path / "work"
+    work.mkdir(mode=0o770)
+    legacy = work / "public"
+    _write_stock_quartz_tree(legacy)
+
+    proc = subprocess.run(
+        [
+            "bash",
+            str(PREPARE_CACHE),
+            "--root",
+            str(work / "publisher"),
+            "--legacy",
+            str(legacy),
+        ],
+        env=_prepare_environment(),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert proc.returncode != 0
+    assert proc.stderr.strip() == "Lab cache candidate is not a Verdify Lab build; refusing to install it"
+    assert not (work / "publisher" / "public" / "index.html").exists()
+    # The legacy tree itself is left untouched for the operator to inspect.
+    assert (legacy / "index.html").is_file()
 
 
 def test_cache_initializer_scans_copied_candidate_before_install(tmp_path: Path):
@@ -985,6 +1086,21 @@ def test_deployed_cache_layout_is_unique_restricted_and_preserves_time_budget():
 
     assert publisher_spec["securityContext"]["fsGroupChangePolicy"] == "OnRootMismatch"
     assert site_spec["securityContext"]["fsGroupChangePolicy"] == "OnRootMismatch"
+
+    # STORAGE PLACEMENT. The cache PVC is ReadWriteOnce and node-attached, so an
+    # RWO volume is only co-mountable by pods sharing a node. Both workloads must
+    # therefore pin the same node, and the Deployment's surge pod (maxSurge 1,
+    # maxUnavailable 0 with replicas 1 starts before the old pod drains) must land
+    # there too or the rollout stalls on a failed attach. This was live only as an
+    # unrecorded hand patch until 2026-07-27; assert it so a sync cannot drop it.
+    assert deployment["spec"]["replicas"] == 1
+    assert deployment["spec"]["strategy"]["rollingUpdate"] == {"maxUnavailable": 0, "maxSurge": 1}
+    for pod_spec in (publisher_spec, site_spec):
+        assert pod_spec["nodeSelector"] == {"kubernetes.io/hostname": "vm-k3s-node6"}
+        cache_volume = next(volume for volume in pod_spec["volumes"] if volume["name"] == "lab-cache")
+        assert cache_volume["persistentVolumeClaim"]["claimName"] == "verdify-lab-site-cache"
+    cache_pvc = _resource(publisher_docs, "PersistentVolumeClaim", "verdify-lab-site-cache")
+    assert cache_pvc["spec"]["accessModes"] == ["ReadWriteOnce"]
     assert [item["name"] for item in publisher_spec["initContainers"]] == ["prepare-private-work-root"]
     assert [item["name"] for item in site_spec["initContainers"]] == [
         "extract-baked-public",
