@@ -121,7 +121,15 @@ spec:
   strategy:
     # Stateless static site — a rolling replace is safe (no single-writer/device
     # constraint; the api/mcp/ingestor safety posture does not apply here).
+    #
+    # Spelled out rather than left to the 25% defaults, because the rounding is
+    # load-bearing here: with replicas 1 the surge pod starts BEFORE the old pod
+    # drains, so both hold the cache PVC at once. That is only legal while both
+    # land on the same node — see nodeSelector below.
     type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   template:
     metadata:
       labels:
@@ -131,6 +139,22 @@ spec:
       imagePullSecrets:
         - name: zot-origin-cluster-pull  # zot origin (ADR-0021); ghcr kept during transition
         - name: ghcr-jvallery-readonly
+      # STORAGE PLACEMENT (load-bearing). verdify-lab-site-cache is
+      # ReadWriteOnce on longhorn-v1-rebuildable-rwo and attached to node6. An
+      # RWO volume can be mounted by several pods only when they share a node,
+      # so the surge pod of a rolling update must land on the same node as the
+      # pod it replaces. Without this pin the new pod can be scheduled
+      # elsewhere, fail to attach, and stall the rollout indefinitely (the old
+      # pod keeps serving, so it fails quietly rather than loudly). Was live as
+      # an unrecorded hand patch until 2026-07-27; codified here so a sync
+      # cannot drop it.
+      nodeSelector:
+        kubernetes.io/hostname: vm-k3s-node6
+      tolerations:
+        - key: maintenance.vallery.net/longhorn-recovery
+          operator: Equal
+          value: "true"
+          effect: NoSchedule
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000

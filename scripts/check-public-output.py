@@ -128,6 +128,18 @@ PNG_SAFE_BINARY_ANCILLARY_CHUNKS = frozenset(
     }
 )
 PNG_CRITICAL_CHUNKS = frozenset({b"IDAT", b"IEND", b"IHDR", b"PLTE"})
+# cICP is structurally four bytes — colour primaries, transfer function, matrix
+# coefficients, video full-range flag (W3C PNG Third Edition, ITU-T H.273 code
+# points). macOS `screencapture` emits it next to the already-safe iDOT, so the
+# guard must accept it or every macOS screenshot in the vault is unpublishable.
+# It is deliberately NOT in PNG_SAFE_BINARY_ANCILLARY_CHUNKS: membership there
+# skips payload inspection entirely, which would let an oversized or duplicated
+# cICP smuggle arbitrary unscanned bytes past the guard. Validate the structure
+# instead — a conforming chunk is exactly four bytes and cannot carry text.
+PNG_CICP_LENGTH = 4
+# PNG images are RGB, so the matrix-coefficients byte must be 0 (identity).
+PNG_CICP_IDENTITY_MATRIX = 0
+PNG_CICP_FULL_RANGE_FLAGS = frozenset({0, 1})
 UNSUPPORTED_COMPRESSED_SUFFIXES = frozenset({".7z", ".br", ".bz2", ".rar", ".tgz", ".xz", ".zip", ".zst", ".zstd"})
 UNSUPPORTED_COMPRESSED_MAGICS = (
     b"PK\x03\x04",
@@ -1277,6 +1289,8 @@ def _scan_png_bytes(data: bytes) -> set[str]:
     offset = len(PNG_SIGNATURE)
     chunk_count = 0
     saw_iend = False
+    saw_cicp = False
+    saw_pixel_data = False
     while offset + 12 <= len(data):
         chunk_count += 1
         if chunk_count > PNG_MAX_CHUNKS:
@@ -1366,10 +1380,27 @@ def _scan_png_bytes(data: bytes) -> set[str]:
                 if not remainder[1:] or len(remainder[1:]) % entry_size:
                     reasons.add("malformed-compressed-metadata")
                 reasons.update(_scan_decoded_bytes(palette_name, "latin-1", "malformed-compressed-metadata"))
+        elif chunk_type == b"cICP":
+            # Accept ONLY a spec-conforming chunk. Anything else — wrong length,
+            # a second occurrence, one placed after PLTE/IDAT, a non-identity
+            # matrix, or a non-boolean range flag — is rejected rather than
+            # skipped, so a cICP-shaped container can never carry unscanned
+            # bytes onto the public site.
+            if (
+                length != PNG_CICP_LENGTH
+                or saw_cicp
+                or saw_pixel_data
+                or payload[2] != PNG_CICP_IDENTITY_MATRIX
+                or payload[3] not in PNG_CICP_FULL_RANGE_FLAGS
+            ):
+                reasons.add("malformed-compressed-metadata")
+            saw_cicp = True
         elif chunk_type not in PNG_CRITICAL_CHUNKS and chunk_type not in PNG_SAFE_BINARY_ANCILLARY_CHUNKS:
             # Unknown ancillary chunks may carry textual application metadata.
             # Without a bounded parser their content is not eligible to publish.
             reasons.add("unsupported-compressed-container")
+        if chunk_type in {b"PLTE", b"IDAT"}:
+            saw_pixel_data = True
         offset = chunk_end
         if chunk_type == b"IEND":
             saw_iend = True
