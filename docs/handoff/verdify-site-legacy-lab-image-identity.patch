@@ -1,0 +1,158 @@
+From 636a1b6ba575c224159711ac59acd8b27cbfcc33 Mon Sep 17 00:00:00 2001
+From: agent <agent@agents.vallery.net>
+Date: Mon, 27 Jul 2026 16:52:04 +0000
+Subject: [PATCH] fix(lab-image): stop baking Quartz's own manual as the site
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+`content` is a git symlink to /mnt/iris/verdify-vault/website — the
+decommissioned iris VM — so it never resolves in CI. Dockerfile.k3s fell back to
+the in-repo `docs/` tree whenever content/ had no markdown, and docs/ is Quartz's
+own manual (philosophy.md, "migrating from Quartz 3.md", ...). Every build
+therefore took the fallback branch and published an image serving Quartz's
+documentation under Verdify branding — quartz.config.ts stamps og:site_name
+"Verdify Lab" and the Verdify description onto it, so it looks superficially
+correct and the content-policy scanner passes it (nothing in it is prohibited;
+it is simply a different site).
+
+On 2026-07-26 verdify-platform's Lab cache PVC was recreated, the Deployment's
+init seeded this baked tree, and lab.verdify.ai served "Welcome to Quartz 4"
+until 2026-07-27. See VerdifyConsultancy/verdify-platform#551.
+
+A fallback that is silently a different site is worse than no fallback:
+
+- The placeholder branch now emits one explicit "Verdify Lab is temporarily
+  unavailable" page instead of copying docs/. It cannot be mistaken for the site.
+- Every build stamps public/.verdify-site-identity recording whether the content
+  came from the repository or is a placeholder, so consumers can verify identity
+  directly instead of inferring it from routes.
+- A second RUN asserts the built tree before the image can be published: the
+  identity marker must be present; Quartz starter routes (philosophy.html,
+  "migrating from Quartz 3.html", upgrading.html) must be absent from BOTH
+  branches; a repository build must carry plans/, data/forecast/, start/ and
+  greenhouse/ plus a strictly dated plan page; a placeholder must carry no
+  plans tree. Branding is deliberately not asserted — it does not discriminate.
+
+This does not restore a *useful* fallback. That needs a real content source in
+CI now that the vault is gone; the live corpus is the durable object store the
+in-cluster publisher already syncs, which would require scoped read credentials.
+Until then a cold cache is fail-closed by design: verdify-platform#552 makes
+prepare-lab-cache refuse to install a tree that is not a real Lab build, so a
+placeholder image fails the rollout loudly rather than publishing the wrong site.
+
+Verification: the assertion logic was exercised standalone against eight fixture
+trees — real build and placeholder accepted; the 2026-07-26 Quartz-manual
+artifact, a Quartz manual claiming to be a repository build, a build missing one
+route, a build whose only plan file is not date-named, a placeholder smuggling a
+plans tree, and a missing identity marker all rejected. The image itself was NOT
+built: no container runtime is available in the authoring environment, so the
+Docker build must be exercised by CI before this is pinned anywhere.
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+---
+ Dockerfile.k3s | 75 ++++++++++++++++++++++++++++++++++++++++++--------
+ 1 file changed, 63 insertions(+), 12 deletions(-)
+
+diff --git a/Dockerfile.k3s b/Dockerfile.k3s
+index 1ac0cba..9ccad8c 100644
+--- a/Dockerfile.k3s
++++ b/Dockerfile.k3s
+@@ -13,11 +13,26 @@
+ #
+ # CONTENT (load-bearing): the production content lives in the external vault
+ # (the `content` symlink -> /mnt/iris/verdify-vault/website), which is NOT in the
+-# CI build context. The build below therefore seeds content from the in-repo
+-# `docs/` Quartz tree whenever `content/` is absent/empty in the context, so the
+-# image is always buildable from a clean checkout. A real content rebuild is the
+-# vault->lab follow-up trigger (a scheduled/dispatch rebuild that injects the
+-# vault tree) — see publish-lab-image.yml header.
++# CI build context — and that VM has been decommissioned, so the symlink now
++# never resolves anywhere.
++#
++# This build USED TO fall back to the in-repo `docs/` tree, which is Quartz's own
++# manual (philosophy.md, "migrating from Quartz 3.md", ...). Because the symlink
++# never resolves, EVERY build took that branch, and the published image served
++# Quartz's documentation under Verdify branding — quartz.config.ts still stamps
++# og:site_name "Verdify Lab" onto it, so it looks superficially correct. On
++# 2026-07-26 verdify-platform's Lab cache PVC was recreated, the Deployment
++# seeded this baked tree, and lab.verdify.ai served "Welcome to Quartz 4"
++# (VerdifyConsultancy/verdify-platform#551).
++#
++# A fallback that is silently a DIFFERENT SITE is worse than no fallback. The
++# build now emits an explicit, clearly-labelled unavailable placeholder instead,
++# stamps a machine-checkable identity marker, and asserts the result before the
++# image can be published. Consumers gate on the marker: verdify-platform's
++# prepare-lab-cache refuses to install a tree that is not a real Lab build, so a
++# placeholder image fails the rollout loudly instead of publishing the wrong
++# site. Restoring a USEFUL fallback needs a real content source in CI (the
++# durable object store the in-cluster publisher already syncs).
+ 
+ # node:22-slim (Debian) NOT alpine: Quartz's bin shebang is
+ # `#!/usr/bin/env -S node --no-deprecation`, and BusyBox `env` (alpine) does not
+@@ -33,19 +48,55 @@ RUN npm ci --no-audit --no-fund
+ # Quartz sources + config + the in-repo docs/ fallback content.
+ COPY . .
+ 
+-# Seed content: use the checked-in content/ if it carries markdown, otherwise
+-# fall back to the in-repo docs/ Quartz tree. The vault symlink is external and
+-# never resolves in the build context, so this guarantees a valid build.
++# Seed content: use the checked-in content/ if it carries markdown. Otherwise
++# build an explicit placeholder — NEVER Quartz's own docs/ manual, which is a
++# different site wearing this site's branding.
+ RUN set -eux; \
+     if [ -d content ] && find content -name '*.md' -type f -print -quit | grep -q .; then \
+       echo "using checked-in content/"; \
++      CONTENT_SOURCE=repository; \
+     else \
+-      echo "content/ empty or missing (vault symlink not in context); seeding from docs/"; \
+-      rm -rf content; \
+-      cp -r docs content; \
++      echo "content/ unavailable (vault symlink does not resolve); building placeholder"; \
++      CONTENT_SOURCE=placeholder; \
++      rm -rf content; mkdir -p content; \
++      printf '%s\n' \
++        '---' \
++        'title: Verdify Lab is temporarily unavailable' \
++        '---' \
++        '' \
++        'This image was built without the Verdify Lab content tree, so it carries' \
++        'no site. It is a placeholder, not the Lab.' \
++        '' \
++        'The live site is published from the durable content store by the' \
++        'in-cluster Lab publisher. See VerdifyConsultancy/verdify-platform#551.' \
++        > content/index.md; \
+     fi; \
+     npx quartz build; \
+-    test -f public/index.html
++    test -f public/index.html; \
++    printf '{"contract":"verdify.lab-site-identity","schema_version":1,"content_source":"%s"}\n' \
++      "$CONTENT_SOURCE" > public/.verdify-site-identity; \
++    echo "$CONTENT_SOURCE" > /content-source
++
++# Assert the built tree before it can ever be published. A repository build must
++# carry the Lab's content-derived routes and must NOT carry Quartz starter
++# routes; a placeholder build must carry neither, so it can never be mistaken
++# for the site. Branding is not checked because it does not discriminate:
++# quartz.config.ts stamps "Verdify Lab" onto any build.
++RUN set -eux; \
++    CONTENT_SOURCE="$(cat /content-source)"; \
++    grep -q '"contract":"verdify.lab-site-identity"' public/.verdify-site-identity; \
++    for quartz_route in philosophy.html "migrating from Quartz 3.html" upgrading.html; do \
++      test ! -e "public/$quartz_route"; \
++    done; \
++    if [ "$CONTENT_SOURCE" = repository ]; then \
++      for route in plans/index.html data/forecast/index.html start/index.html greenhouse/index.html; do \
++        test -f "public/$route"; \
++      done; \
++      find public/plans -maxdepth 1 -type f \
++        -name '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9].html' -print -quit | grep -q .; \
++    else \
++      test ! -e public/plans; \
++    fi
+ 
+ # ---- runtime ----------------------------------------------------------------
+ # nginx-unprivileged: master + workers run as uid 101 (non-root), default listen
+-- 
+2.39.5
+

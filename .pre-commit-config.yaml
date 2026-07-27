@@ -13,10 +13,12 @@ repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
+      # Patch files must stay byte-exact or `git apply` fails: git's format is
+      # whitespace-significant (context lines, the "-- " signature terminator).
       - id: trailing-whitespace
-        exclude: '\.md$'
+        exclude: '\.md$|\.patch$'
       - id: end-of-file-fixer
-        exclude: '\.md$'
+        exclude: '\.md$|\.patch$'
       - id: check-yaml
         args: [--allow-multiple-documents]
         exclude: 'firmware/'  # ESPHome YAML has special syntax

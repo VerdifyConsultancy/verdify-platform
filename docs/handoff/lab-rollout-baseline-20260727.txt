@@ -1,0 +1,37 @@
+capture at 20260727T174454Z
+=== UTC 2026-07-27T17:44:54Z ===
+--- Deployment/verdify-lab ---
+image=ghcr.io/verdifyconsultancy/verdify-lab@sha256:98ac23b6affa3b8af3ebb5c7f1c7abe31d00e2379c070f4d61b409130dae9845
+replicas=1
+strategy={"rollingUpdate":{"maxSurge":1,"maxUnavailable":0},"type":"RollingUpdate"}
+nodeSelector={"kubernetes.io/hostname":"vm-k3s-node6"}
+fsGroupChangePolicy=
+generation=38
+--- lab pods ---
+verdify-lab-78b75786bb-qvt9x   a34be4e3-2b6a-4684-a1ee-5dee604537f5   vm-k3s-node6   Running
+--- CronJob/verdify-lab-publisher ---
+suspend=true
+image=registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:a4b73e82c7619cb3eccd5f4331ab4a5be62aedd0fea36540c42aab509241523f
+nodeSelector=
+lastSuccess=2026-07-25T09:58:47Z
+--- nginx ConfigMap root ---
+    root /usr/share/nginx/html;
+--- PVC identity ---
+uid=44628bd0-7023-4268-9390-f6fbe1fffb0a
+volume=pvc-44628bd0-7023-4268-9390-f6fbe1fffb0a
+modes=["ReadWriteOnce"]
+sc=longhorn-v1-rebuildable-rwo
+--- DB / ingestor / writer baseline (must not change) ---
+db_restarts=0
+ingestor_image=registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:fcd13ad7aa91650db371b92f72bcf60caae61b6b1b9f1f79f69e6718541025e3
+ingestor_replicas=1
+verdify-ingestor-7f85bc85d6-6v55g   2095c270-0e98-4d4c-a6b2-5992292a3647   0
+drwxrwsr-x 2775 root:node /work
+drwxrwsr-x 2775 node:node /work/public
+drwxrws--- 2770 node:node /work/publisher
+drwxrws--- 2770 node:node /work/publisher/locks
+-rw-rw---- 660 node:node /work/publisher/locks/publish-wrapper.lock
+-rw-rw---- 660 node:node /work/publisher/locks/publish.lock
+-rw-rw-r-- 664 node:node /work/publisher/locks/site-build.lock
+drwxrwsr-x 2775 node:node /work/publisher/public
+drwxrwsr-x 2775 node:node /work/publisher/content
