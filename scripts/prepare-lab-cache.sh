@@ -201,6 +201,22 @@ has_regular_homepage() {
   [[ ! -L "$PUBLIC/index.html" && -f "$PUBLIC/index.html" ]]
 }
 
+# The baked fallback is only a fallback if it is actually THIS site.  The
+# verdify-lab image is built in verdify-site-legacy, and when its Quartz build
+# runs without the Verdify content tree it emits Quartz's own upstream docs
+# ("Welcome to Quartz 4", philosophy/, migrating-from-Quartz-3/...).  The
+# content-policy scanner passes that tree happily — nothing in it is
+# prohibited, it is simply the wrong site — so on 2026-07-26 an emptied cache
+# PVC seeded it and lab.verdify.ai served Quartz's documentation under the
+# Verdify brand.  Require the daily plan archive, which every real build emits
+# and no upstream Quartz build has.
+is_lab_site_tree() {
+  local source="$1"
+  [[ ! -L "$source/index.html" && -f "$source/index.html" ]] || return 1
+  [[ ! -L "$source/plans" && -d "$source/plans" ]] || return 1
+  [[ -n "$(find "$source/plans" -maxdepth 1 -type f -name '????-??-??.html' -print -quit)" ]]
+}
+
 replace_public_from() {
   local source="$1"
   local candidate
@@ -245,6 +261,14 @@ chmod_public_directory
 # holding the same lock used by the publisher main process, and only when the
 # completed live tree has no homepage.  Thus pod order is irrelevant.
 if [[ -n "$BOOTSTRAP" ]] && ! has_regular_homepage && tree_has_entries "$BOOTSTRAP"; then
+  # Refuse a foreign tree rather than publish it.  Failing init keeps any
+  # already-serving pod in place (maxUnavailable: 0) and makes an unusable
+  # bootstrap a loud, alertable rollout failure instead of a silently wrong
+  # public site.
+  if ! is_lab_site_tree "$BOOTSTRAP"; then
+    echo "Lab cache bootstrap is not a Verdify Lab build; refusing to seed it" >&2
+    exit 1
+  fi
   replace_public_from "$BOOTSTRAP"
 fi
 

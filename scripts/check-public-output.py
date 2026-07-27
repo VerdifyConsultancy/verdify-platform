@@ -115,6 +115,12 @@ PNG_SAFE_BINARY_ANCILLARY_CHUNKS = frozenset(
         b"acTL",
         b"bKGD",
         b"cHRM",
+        # cICP carries four numeric code points (colour primaries, transfer
+        # function, matrix coefficients, full-range flag) and no text. macOS
+        # screencapture emits it alongside iDOT, so leaving it out made every
+        # macOS screenshot in the vault unpublishable and wedged the whole
+        # publish — the guard scans the entire corpus and fails closed.
+        b"cICP",
         b"fcTL",
         b"fdAT",
         b"gAMA",

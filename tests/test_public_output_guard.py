@@ -884,6 +884,31 @@ def test_png_iccp_exif_and_unknown_ancillary_metadata_fail_closed():
     assert guard._scan_png_bytes(unknown) == {"unsupported-compressed-container"}
 
 
+def test_png_macos_screenshot_colour_chunks_are_publishable():
+    """A macOS screenshot must not wedge the publish.
+
+    screencapture emits cICP (four numeric colour code points) next to iDOT.
+    cICP was missing from the safe-ancillary set, so three vault screenshots
+    scanned as unsupported-compressed-container; because the guard scans the
+    whole corpus and fails closed, that blocked every lab.verdify.ai publish.
+    """
+    guard = load_guard()
+    # colour primaries / transfer function / matrix coefficients / range flag
+    screenshot = (
+        guard.PNG_SIGNATURE
+        + png_chunk(b"cICP", bytes([1, 13, 0, 1]))
+        + png_chunk(b"iDOT", b"\x00" * 24)
+        + png_chunk(b"pHYs", struct.pack(">IIB", 2835, 2835, 1))
+        + png_chunk(b"IEND", b"")
+    )
+
+    assert guard._scan_png_bytes(screenshot) == set()
+    assert b"cICP" in guard.PNG_SAFE_BINARY_ANCILLARY_CHUNKS
+    # Whitelisting cICP must not open the door to arbitrary ancillary chunks.
+    unknown = guard.PNG_SIGNATURE + png_chunk(b"prVt", b"opaque") + png_chunk(b"IEND", b"")
+    assert guard._scan_png_bytes(unknown) == {"unsupported-compressed-container"}
+
+
 def test_png_textual_metadata_parse_and_size_bounds_fail_closed(monkeypatch):
     guard = load_guard()
     monkeypatch.setattr(guard, "COMPRESSED_METADATA_MAX_BYTES", 16)

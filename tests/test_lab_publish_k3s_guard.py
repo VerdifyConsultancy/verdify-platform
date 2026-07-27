@@ -84,6 +84,21 @@ def _resource(documents: list[dict], kind: str, name: str) -> dict:
     )
 
 
+def _write_lab_site_tree(root: Path, homepage: str = "baked fallback") -> None:
+    """Smallest tree prepare-lab-cache will accept as a Verdify Lab bootstrap.
+
+    A bare index.html is exactly the shape of the Quartz-stock-docs build that
+    the verdify-lab image baked and that reached lab.verdify.ai on 2026-07-26,
+    so is_lab_site_tree() now also requires the dated plan archive that every
+    real build emits.
+    """
+    root.mkdir(parents=True, exist_ok=True)
+    (root / "index.html").write_text(homepage, encoding="utf-8")
+    plans = root / "plans"
+    plans.mkdir(exist_ok=True)
+    (plans / "2026-07-25.html").write_text("plan archive page", encoding="utf-8")
+
+
 def test_manifest_loader_rejects_duplicate_keys():
     with pytest.raises(ConstructorError, match="duplicate key 'initContainers'"):
         yaml.load(
@@ -799,14 +814,50 @@ def test_cache_initializer_rejects_unsafe_bootstrap_and_preserves_live(tmp_path:
     assert not list((work / "publisher").glob(".layout-v2-init.*"))
 
 
+def test_cache_initializer_refuses_a_bootstrap_that_is_not_the_lab_site(tmp_path: Path):
+    """Regression for 2026-07-26: an emptied cache PVC seeded Quartz's own docs.
+
+    The content-policy scanner passes an upstream Quartz build — nothing in it
+    is prohibited, it is simply not this site — so lab.verdify.ai served
+    "Welcome to Quartz 4". Identity has to be checked separately, and a foreign
+    tree must fail the rollout rather than reach the public site.
+    """
+    work = tmp_path / "work"
+    work.mkdir(mode=0o770)  # Models the fsGroup-writable PVC root.
+    bootstrap = tmp_path / "bootstrap"
+    bootstrap.mkdir()
+    # Shape of `npx quartz build` run without the Verdify content tree.
+    (bootstrap / "index.html").write_text("<title>Welcome to Quartz 4</title>", encoding="utf-8")
+    (bootstrap / "philosophy.html").write_text("upstream docs", encoding="utf-8")
+
+    proc = subprocess.run(
+        [
+            "bash",
+            str(PREPARE_CACHE),
+            "--root",
+            str(work / "publisher"),
+            "--bootstrap",
+            str(bootstrap),
+        ],
+        env=_prepare_environment(),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert proc.returncode != 0
+    assert proc.stderr.strip() == "Lab cache bootstrap is not a Verdify Lab build; refusing to seed it"
+    assert not (work / "publisher" / "public" / "index.html").exists()
+    assert not (work / "publisher" / ".layout-v2-scanned-ready").exists()
+
+
 def test_cache_initializer_scans_copied_candidate_before_install(tmp_path: Path):
     work = tmp_path / "work"
     live = work / "publisher" / "public"
     bootstrap = tmp_path / "bootstrap"
     live.mkdir(parents=True)
-    bootstrap.mkdir()
     (live / "old-only.html").write_text("existing last-good", encoding="utf-8")
-    (bootstrap / "index.html").write_text("baked fallback", encoding="utf-8")
+    _write_lab_site_tree(bootstrap)
     guard_count = tmp_path / "guard-count"
     guard = tmp_path / "guard.sh"
     guard.write_text(
@@ -856,8 +907,7 @@ def test_cache_initializer_is_independent_of_pod_start_order(tmp_path: Path, sit
     work = tmp_path / "work"
     work.mkdir(mode=0o770)
     bootstrap = tmp_path / "bootstrap"
-    bootstrap.mkdir()
-    (bootstrap / "index.html").write_text("baked fallback", encoding="utf-8")
+    _write_lab_site_tree(bootstrap)
     common = [
         "bash",
         str(PREPARE_CACHE),
@@ -886,8 +936,7 @@ def test_site_initializer_waits_for_active_publisher_lock(harness, tmp_path: Pat
         text=True,
     )
     bootstrap = tmp_path / "bootstrap"
-    bootstrap.mkdir()
-    (bootstrap / "index.html").write_text("baked fallback", encoding="utf-8")
+    _write_lab_site_tree(bootstrap)
 
     publisher = harness.start(run_id="publisher", block_sync=True)
     initializer = None
