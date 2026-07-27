@@ -12,7 +12,7 @@
 # BuildKit COPY heredoc, which Kaniko does NOT support — the in-cluster zot
 # build failed with exit 1. The old reason for inlining, an unreliable
 # NFS-backed worktree, retired with the VM).
-FROM postgres:16-alpine
+FROM postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
 COPY db/schema.sql /db/schema.sql
 COPY db/migrations/000-fresh-schema-hypertable-repair.sql /db/000-fresh-schema-hypertable-repair.sql
 COPY db/migrate.sh /usr/local/bin/migrate.sh

@@ -13,7 +13,7 @@
 # migration), tracked separately on issue #34 as needs:root.
 
 # ── stage 1: compile the gated --stream harness (replay_emit_follow) ──────────
-FROM gcc:13-bookworm AS build
+FROM gcc:13-bookworm@sha256:3e239a5ea77200b9163c825a0a5ebc17ca99f3bbb4d08241ee0fb9c174325880 AS build
 WORKDIR /src
 # Only the firmware sources are needed; greenhouse_logic.h is header-only.
 COPY firmware/lib /src/firmware/lib
@@ -29,7 +29,7 @@ RUN g++ -std=c++17 -O2 -DREPLAY_EMIT_STREAM \
 # ── stage 2: minimal hardened runtime ─────────────────────────────────────────
 # python:3.12-slim gives us psycopg for the INSERT-only sink without pulling a
 # compiler into the runtime image. No docker.sock, no actuation client.
-FROM python:3.12-slim AS runtime
+FROM python:3.12-slim@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de AS runtime
 RUN pip install --no-cache-dir "psycopg[binary]>=3.1" \
     && useradd --create-home --uid 10001 twin
 COPY --from=build /src/replay_emit_follow /usr/local/bin/replay_emit_follow
