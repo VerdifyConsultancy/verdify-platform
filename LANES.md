@@ -1,14 +1,16 @@
 # Verdify — Floating-Corridor Replan: Lanes, Waves & Worktree Kickoff
 
-> **Lab-lane staleness notice (2026-07-13):** This file is a generated
-> 2026-06-22 floating-corridor planning snapshot. Its L8/#351 Lab entries and
-> the worktree kickoff below are not the execution plan for the Quartz-to-Astro
-> migration. Use GitHub epic #351 and
-> `docs/plans/lab-astro-migration.md`; they record the accepted Astro stage,
-> current Phase 3–5 dependencies, and Jason gates. This notice does not
-> supersede the non-Lab control/greenhouse lane content.
+> **HISTORICAL SNAPSHOT — DO NOT EXECUTE (2026-07-28):** This entire generated
+> 2026-06-22 lane/worktree plan is superseded. GitHub issues are the live tracker;
+> use `AGENTS.md`, the current root lane indexes, and current runbooks. In
+> particular, every GitHub Actions, GHCR-publish, `prod-promote`, PAT, dev/stage,
+> and worktree instruction below is historical and must not be revived. For the
+> Lab migration specifically, use GitHub epic #351 and
+> `docs/plans/lab-astro-migration.md`.
 
-_Generated 2026-06-22 from the ADR-0004 adversarial replan. Source of truth: `planning/backlog.yaml` (validated by `planning/schema.py`, `make planning-validate`). North star: ADR-0004 floating-corridor (epic #359). User priority #1: **reduce device cycling / minimize runtime**._
+_Generated 2026-06-22 from the ADR-0004 adversarial replan and retained only as
+a decision-history snapshot. `planning/backlog.yaml` validates its historical
+shape; it is not the current source of work or operations._
 
 ## How to read this
 The backlog is carved into **9 worktree-ready lanes** (L0 schema + L1-L8) sequenced across **4 waves**. Each lane = one `git worktree` off `origin/main`, one PR. Each work item states what / why / how / acceptance / dependencies and is tracked as a GitHub issue.

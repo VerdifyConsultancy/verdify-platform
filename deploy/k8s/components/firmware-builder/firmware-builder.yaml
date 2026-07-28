@@ -23,7 +23,13 @@
 #   verdify-app-secrets/ESP32_API_KEY        (exists — the device Noise PSK)
 #   verdify-firmware-wifi/{wifi_ssid,wifi_password}  (one-time operator create;
 #     the WLAN passphrase never lived in-cluster before)
-#   verdify-github-token/GITHUB_TOKEN        (read-only clone token)
+#
+# Source acquisition is intentionally credentialless: this non-repo-pod Job
+# reads the public repository over HTTPS and has no GitHub credential fallback.
+# If the repository becomes private, the Job must fail until source delivery is
+# moved behind a reviewed fleet-owned artifact path; do not add a PAT or App
+# Secret here. Agent Git/gh authentication belongs to Agent Fleet's uniform
+# repo-pod runtime contract, not to this production workload.
 #
 # Artifacts: firmware/artifacts moves OFF the laptop onto the
 # verdify-firmware-artifacts PVC — archive-firmware-artifacts.sh runs with
@@ -134,8 +140,6 @@ spec:
                   value: ""            # empty = derive YYYY.M.D.HHMM.<short-sha>
                 - name: DEVICE_IP
                   value: "192.168.10.111"
-                - name: GIT_TOKEN
-                  valueFrom: {secretKeyRef: {name: verdify-github-token, key: GITHUB_TOKEN}}
                 - name: OTA_PASSWORD
                   valueFrom: {secretKeyRef: {name: verdify-firmware-ota, key: ota_password}}
                 - name: API_ENCRYPTION_KEY
@@ -154,8 +158,26 @@ spec:
               args:
                 - |
                   echo "[builder] cloning verdify-platform @ ${FW_REVISION}"
-                  git clone --filter=blob:none "https://x-access-token:${GIT_TOKEN}@github.com/VerdifyConsultancy/verdify-platform.git" /work
-                  cd /work && git checkout -q "${FW_REVISION}"
+                  # Public source read, not an authentication fallback. Disable
+                  # every ambient auth/config input so a private-repo transition
+                  # fails instead of discovering a credential.
+                  PUBLIC_GIT_HOME="$(mktemp -d /tmp/verdify-public-git-home.XXXXXX)"
+                  env -i \
+                    PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+                    HOME="${PUBLIC_GIT_HOME}" \
+                    GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null \
+                    GIT_ASKPASS=/bin/false SSH_ASKPASS=/bin/false GIT_TERMINAL_PROMPT=0 \
+                    git -c credential.helper= -c core.askPass=/bin/false -c http.extraHeader= \
+                    clone \
+                    "https://github.com/VerdifyConsultancy/verdify-platform.git" /work
+                  env -i \
+                    PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+                    HOME="${PUBLIC_GIT_HOME}" \
+                    GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null \
+                    GIT_ASKPASS=/bin/false SSH_ASKPASS=/bin/false GIT_TERMINAL_PROMPT=0 \
+                    git -C /work -c credential.helper= -c core.askPass=/bin/false -c http.extraHeader= \
+                    checkout -q "${FW_REVISION}"
+                  cd /work
                   SHORT_SHA="$(git rev-parse --short HEAD)"
                   if [ -z "${FW_VERSION}" ]; then
                     FW_VERSION="$(date +%Y.%-m.%-d.%H%M).${SHORT_SHA}"

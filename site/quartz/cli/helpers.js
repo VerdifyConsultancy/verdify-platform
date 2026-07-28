@@ -1,7 +1,6 @@
 import { isCancel, outro } from "@clack/prompts"
 import { styleText } from "util"
 import { contentCacheFolder } from "./constants.js"
-import { spawnSync } from "child_process"
 import fs from "fs"
 
 export function escapePath(fp) {
@@ -30,16 +29,6 @@ export async function stashContentFolder(contentFolder) {
     preserveTimestamps: true,
   })
   await fs.promises.rm(contentFolder, { force: true, recursive: true })
-}
-
-export function gitPull(origin, branch) {
-  const flags = ["--no-rebase", "--autostash", "-s", "recursive", "-X", "ours", "--no-edit"]
-  const out = spawnSync("git", ["pull", ...flags, origin, branch], { stdio: "inherit" })
-  if (out.stderr) {
-    throw new Error(styleText("red", `Error while pulling updates: ${out.stderr}`))
-  } else if (out.status !== 0) {
-    throw new Error(styleText("red", "Error while pulling updates"))
-  }
 }
 
 export async function popContentFolder(contentFolder) {

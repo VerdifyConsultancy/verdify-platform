@@ -16,13 +16,8 @@ import { randomUUID } from "crypto"
 import { Mutex } from "async-mutex"
 import { CreateArgv } from "./args.js"
 import { globby } from "globby"
-import {
-  exitIfCancel,
-  escapePath,
-  gitPull,
-  popContentFolder,
-  stashContentFolder,
-} from "./helpers.js"
+import { exitIfCancel, escapePath, popContentFolder, stashContentFolder } from "./helpers.js"
+import { ensureCredentialFreeRemote, gitPublicPull, gitPull, gitPush } from "./git.js"
 import {
   UPSTREAM_NAME,
   QUARTZ_SOURCE_BRANCH,
@@ -216,10 +211,7 @@ See the [documentation](https://quartz.jzhao.xyz) for how to get started.
   await fs.promises.writeFile(configFilePath, configContent)
 
   // setup remote
-  execSync(
-    `git remote show upstream || git remote add upstream https://github.com/jackyzha0/quartz.git`,
-    { stdio: "ignore" },
-  )
+  ensureCredentialFreeRemote(UPSTREAM_NAME, "https://github.com/jackyzha0/quartz.git")
 
   outro(`You're all set! Not sure what to do next? Try:
   • Customizing Quartz a bit more by editing \`quartz.config.ts\`
@@ -494,20 +486,18 @@ export async function handleUpdate(argv) {
   const contentFolder = resolveContentPath(argv.directory)
   console.log(`\n${styleText(["bgGreen", "black"], ` Quartz v${version} `)} \n`)
   console.log("Backing up your content")
-  execSync(
-    `git remote show upstream || git remote add upstream https://github.com/jackyzha0/quartz.git`,
-  )
+  ensureCredentialFreeRemote(UPSTREAM_NAME, "https://github.com/jackyzha0/quartz.git")
   await stashContentFolder(contentFolder)
   console.log(
     "Pulling updates... you may need to resolve some `git` conflicts if you've made changes to components or plugins.",
   )
 
   try {
-    gitPull(UPSTREAM_NAME, QUARTZ_SOURCE_BRANCH)
-  } catch {
+    gitPublicPull(UPSTREAM_NAME, QUARTZ_SOURCE_BRANCH)
+  } catch (error) {
     console.log(styleText("red", "An error occurred above while pulling updates."))
     await popContentFolder(contentFolder)
-    return
+    throw error
   }
 
   await popContentFolder(contentFolder)
@@ -594,10 +584,10 @@ export async function handleSync(argv) {
     )
     try {
       gitPull(ORIGIN_NAME, QUARTZ_SOURCE_BRANCH)
-    } catch {
+    } catch (error) {
       console.log(styleText("red", "An error occurred above while pulling updates."))
       await popContentFolder(contentFolder)
-      return
+      throw error
     }
   }
 
@@ -605,15 +595,7 @@ export async function handleSync(argv) {
   if (argv.push) {
     console.log("Pushing your changes")
     const currentBranch = execSync("git rev-parse --abbrev-ref HEAD").toString().trim()
-    const res = spawnSync("git", ["push", "-uf", ORIGIN_NAME, currentBranch], {
-      stdio: "inherit",
-    })
-    if (res.status !== 0) {
-      console.log(
-        styleText("red", `An error occurred above while pushing to remote ${ORIGIN_NAME}.`),
-      )
-      return
-    }
+    gitPush(ORIGIN_NAME, currentBranch)
   }
 
   console.log(styleText("green", "Done!"))

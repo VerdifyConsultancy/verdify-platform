@@ -144,15 +144,15 @@ Handoff protocol:
   `verdify-crm` are SEPARATE products in SEPARATE repos — unrelated to the
   greenhouse, do not touch.
 - **Pipeline (single-env, ZOT as of 2026-07-11 / ADR-0021):** GitHub Actions
-  VALIDATES only — `Container Publish` builds every image with `push: false`
-  (a Dockerfile/COPY break still fails the push/PR). PUBLISHING is in-cluster:
-  `repo-build` Argo Workflows in ns `agent-fleet-ci` (Kaniko) build the exact
-  main revision and push `registry.vallery.net/verdifyconsultancy/<image>@sha256`
-  to the zot origin; digests are pinned into `overlays/prod/kustomization.yaml`
-  by a digest-only commit (procedure: `docs/runbooks/prod-promotion.md`).
-  GHCR is retired for publishing. A human reviews the pin commit and an
-  operator runs the gated `argocd app sync verdify-prod-dark`. Workloads pull
-  with the `zot-origin-cluster-pull` secret.
+  workflows are removed. `make ci` is the validation gate. Publishing is
+  in-cluster: `repo-build` Argo Workflows in ns `agent-fleet-ci` (Kaniko) build
+  the exact main revision and push
+  `registry.vallery.net/verdifyconsultancy/<image>@sha256` to the zot origin;
+  digests are pinned into `overlays/prod/kustomization.yaml` by a digest-only
+  commit (procedure: `docs/runbooks/prod-promotion.md`). GHCR is retired for
+  publishing. A human reviews the pin commit and an operator runs the gated
+  `argocd app sync verdify-prod-dark`. Workloads pull with the
+  `zot-origin-cluster-pull` secret.
 - **No dev device / no dev DB.** Firmware is hot-staged direct to prod. There is
   no nightly prod-restore copy anymore (it lived in dev).
 - **Operating from the laptop:** see `docs/runbooks/laptop-operator.md` for
@@ -221,9 +221,9 @@ The guard is codified, not prose-only:
 
 ## Branches, working copy & memory
 
-- Work lands on `main` (direct commits for routine work, PRs when review is
-  useful or a workflow generates them, e.g. prod-promote). Topic branches are
-  free-form; no sprint counters (retired with the multi-agent model — the
+- Work lands on `main` (direct commits for routine work; use PRs when review is
+  useful, including reviewed digest-pin changes). Topic branches are free-form;
+  no sprint counters (retired with the multi-agent model — the
   iris-VM worktrees at `/mnt/iris/...` are gone with the .150 VM).
 - The working copy is `~/repos/verdify-platform` on Jason's laptop; persistent
   agent memory lives in the laptop project-memory directory and survives

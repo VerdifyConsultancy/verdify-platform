@@ -97,7 +97,7 @@ laptop. (Firmware OTA is the exception — see §4.)
 | Surface | Source of truth in git | Drift watch |
 |---|---|---|
 | k8s manifests | `deploy/k8s/overlays/prod` + components | `kustomize build … \| kubectl diff` |
-| Image digests | `overlays/prod/kustomization.yaml` (advanced only by `prod-promote`) | live pod `@sha256` == overlay pins |
+| Image digests | `overlays/prod/kustomization.yaml` (in-cluster Kaniko/Zot build, reviewed digest-only pin) | live pod `@sha256` == overlay pins |
 | Grafana dashboards | `grafana/dashboards/*.json` → generated CMs | **UI edits do NOT sync back — always edit the JSON** |
 | DB migrations | `db/migrations/` (sequential) | applied by the `verdify-migrate` Job; CI `migration-rollback-safety` gate |
 | Firmware (source) | `firmware/**` | `diagnostics.firmware_version` == intended (see §4) |
@@ -191,14 +191,29 @@ are infra work, gated and tracked — do **not** try to fix them in a code sessi
    (`kubectl -n verdify-prod create job --from=cronjob/verdify-firmware-builder …`)
    runs the official esphome image, assembles `secrets.yaml` from k8s Secrets
    (`verdify-firmware-ota`, `verdify-app-secrets/ESP32_API_KEY`,
-   `verdify-firmware-wifi`, `verdify-github-token`), compiles with the
+   `verdify-firmware-wifi`), reads this public repository over credentialless
+   HTTPS with prompts and credential helpers disabled, compiles with the
    toolchain cached on a PVC, archives to the `verdify-firmware-artifacts`
    PVC (**the rollback floor `last-good.ota.bin` now lives THERE, not on the
    laptop**), and — only with `FLASH=1`, which stays Jason-gated — uploads to
    192.168.10.111:3232 through its own scoped egress NetworkPolicy. The
-   preflight/verify steps (`firmware-deploy-preflight.sh`,
+   source fetch has no PAT/App/ambient fallback: if the repository becomes
+   private, move source delivery to a reviewed fleet-owned artifact path rather
+   than adding a workload-specific GitHub credential.
+   Preflight/verify steps (`firmware-deploy-preflight.sh`,
    `wait-for-firmware-version.sh`, `make sensor-health`) already run
    kube-backend from any cluster pod.
+
+   **Credential-removal rollout state (2026-07-28):** the repo manifest is only
+   desired state until the Jason-gated prod sync. The pre-sync live CronJob still
+   references Secret `verdify-github-token`, key `GITHUB_TOKEN`, and that Opaque
+   Secret still exists; only name/key metadata was inspected. Do not claim live
+   removal from the Git commit alone. The gated cleanup sequence is: (1) review
+   and sync the desired CronJob; (2) verify the rendered and live CronJob have
+   zero GitHub token env/Secret references; (3) inventory the namespace for any
+   remaining consumers; then (4) have the authorized operator delete/revoke
+   `verdify-github-token`. ArgoCD uses `prune:false`, so the final deletion is
+   intentionally not automatic.
 2. **Secret sealing / source reconciliation** — `docs/runbooks/verdify-secret-sealing-plan.md`
    lists source path/name mismatches (MQTT_*, HERMES_IRIS_API_KEY,
    API_WRITE_TOKEN↔VERDIFY_WRITE_API_KEY) to reconcile before SOPS/age sealing.

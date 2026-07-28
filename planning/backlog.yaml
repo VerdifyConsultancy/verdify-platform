@@ -1,5 +1,9 @@
-# Verdify backlog — floating-corridor replan (ADR-0004). Generated 2026-06-22.
-# Validated by planning/schema.py (pydantic). Source of truth for the lane/wave plan.
+# HISTORICAL SNAPSHOT — floating-corridor replan (ADR-0004), generated 2026-06-22.
+# Retained as a schema-validated decision record, not as the live tracker or an
+# operator runbook. GitHub issues are authoritative. In particular, every
+# GitHub Actions, GHCR-publish, prod-promote, PAT, and worktree instruction below
+# is superseded by AGENTS.md and docs/runbooks/prod-promotion.md; do not execute
+# or revive it. The #320 record is updated only to remove its unsafe PAT fallback.
 meta:
   generated: 2026-06-22
   north_star: "ADR-0004 floating-corridor (docs/adr/0004-floating-corridor-control.md, epic #359)"
@@ -748,11 +752,11 @@ lanes:
             schema_touch: false
             new_properties: []
           - issue_ref: "#320"
-            title: "Resolve Actions-cannot-create-PR org blocker for prod-promote"
-            what: "The VerdifyConsultancy org Actions setting 'Allow GitHub Actions to create and approve pull requests' is OFF, so prod-promote.yml's `gh pr create` 409s (#313/#314 had to be opened manually). Either toggle the org setting or wire a scoped PAT secret for the workflow."
-            why: "Issue #320 (gate:jason, P2): the one-click prod-promote button (#220) cannot actually open its PR, defeating its purpose and forcing hand-edited overlay digests — the exact toil prod-promote.yml was built to remove."
-            how: "Two paths, both surfaced for Jason: (a) org admin toggles Settings->Actions->General 'Allow GitHub Actions to create and approve pull requests' (or PUT actions/permissions/workflow can_approve_pull_request_reviews) — Jason-gated org setting; OR (b) add a scoped PAT secret with `repo` PR-create scope and reference it in prod-promote.yml's gh step. This lane can implement (b) end-to-end (workflow change is in owns_paths) and document (a) for Jason; the org toggle itself is the gate."
-            acceptance: ["prod-promote.yml mode=pull-request opens a prod-promote PR without a 409 (either via the org toggle or the scoped PAT path).", "No raw secret printed/committed; PAT referenced via secret name only.", "promote-diff-guard still asserts digests-only change-surface on the generated PR."]
+            title: "Retire the Actions-era prod-promote PR-auth blocker"
+            what: "Repo-side path superseded: GitHub Actions publishing/promotion was removed on 2026-07-11. Do not revive the workflow or add a PAT; digest pins now come through the in-cluster Kaniko/Zot pipeline and repository-scoped Agent Fleet GitHub App contract. The authoritative GitHub issue still needs a compliant update/closure after external App activation."
+            why: "The old 409 and its proposed PAT workaround belong to a retired workflow. Keeping that fallback in the active plan would recreate a repo-specific static credential path."
+            how: "Close or disposition #320 against the current prod-promotion runbook. Any repository PR operation uses the centrally supplied repo-agent-standard identity after external activation; any cross-repo or org-level operation is a blocker, not a broader credential request."
+            acceptance: ["No active workflow or runbook depends on prod-promote.yml.", "No PAT or named GitHub token Secret is introduced.", "The in-cluster digest-pin path remains guarded by make ci and human review.", "GitHub issue #320 is dispositioned using the activated standard identity; this remains externally blocked while activation is gated."]
             depends_on: []
             gate: jason-infra
             effort: S

@@ -23,8 +23,8 @@
 #   2. synology-iscsi-ssd StorageClass present; prod gets its OWN TimescaleDB STS.
 #   3. The §3.4 device-VLAN reachability/latency spike signed off AND the live VM
 #      control-loop cutover explicitly approved — BOTH are separate Jason gates.
-#   4. Image digests are real/pullable; container-publish or external image
-#      workflows have completed before the operator syncs prod.
+#   4. Image digests are real/pullable; the in-cluster repo-build/pin flow has
+#      completed before the operator syncs prod.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:

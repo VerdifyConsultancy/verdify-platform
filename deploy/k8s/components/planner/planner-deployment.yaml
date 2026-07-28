@@ -43,9 +43,10 @@ spec:
         app.kubernetes.io/part-of: verdify
         app.kubernetes.io/component: planner
     spec:
-      # Same in-org pull secret as the other workloads (ghcr.io host-level auth).
+      # Zot is current; the GHCR entry is separate kubelet compatibility pending
+      # gated #482 cleanup, not repository Git/gh authentication.
       imagePullSecrets:
-        - name: zot-origin-cluster-pull  # zot origin (ADR-0021); ghcr kept during transition
+        - name: zot-origin-cluster-pull  # Zot; GHCR below is separate kubelet compatibility (#482)
         - name: ghcr-jvallery-readonly
       securityContext:
         runAsNonRoot: true

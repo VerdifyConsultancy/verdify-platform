@@ -1,6 +1,6 @@
 # Verdify Platform Agent Lane
 
-Last updated: 2026-06-17
+Last updated: 2026-07-28
 
 Agent name: `verdify-platform`
 
@@ -27,10 +27,10 @@ product evolution. Track A wins whenever they conflict.
 - Live production namespace: `verdify-prod`.
 - Live production ArgoCD app: `verdify-prod-dark` (legacy name) pointing at
   `deploy/k8s/overlays/prod`, manual-sync behind the device-write gate.
-- CI/CD: `.github/workflows/ci.yml`, `container-publish.yml`,
-  `k8s-manifests.yml`, `prod-promote.yml`, `promote-diff-guard.yml`,
-  `cnpg-image.yml`, `lab-content-pipeline.yml`, and
-  `reusable-container-build.yml`.
+- CI/CD: `make ci` / `scripts/ci-local.sh` is the validation gate; fleet
+  `repo-build` Argo Workflows publish exact revisions with Kaniko to Zot;
+  reviewed digest-only pins precede the human-gated prod ArgoCD sync. Repo
+  GitHub Actions workflows are removed.
 - App secret contracts by name and key only: see `deploy/k8s/SECRETS.md`.
 - Service contracts and architecture pointers: `README.md`,
   `docs/SERVICE_MAP.md`, `docs/runbooks/laptop-operator.md`,
@@ -39,8 +39,8 @@ product evolution. Track A wins whenever they conflict.
   `docs/agents/`, and `docs/reviews/data-path-adversarial-review-2026-06-16.md`.
 - Dashboards authored in this repo: Grafana manifests/generated ConfigMaps and
   `docs/grafana-panel-catalog.md`.
-- Lab notebook and publishing code: `site/`, `scripts/lab-publish-k3s.sh`,
-  `lab-content-pipeline.yml`, and S3-backed lab publisher manifests.
+- Lab notebook and publishing code: `site/`, `site-astro/`,
+  `scripts/lab-publish-k3s.sh`, and S3-backed lab publisher manifests.
 
 ## Current Lanes
 

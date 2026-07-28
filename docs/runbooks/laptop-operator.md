@@ -6,8 +6,10 @@
 and staging are DECOMMISSIONED and DELETED — prod (`verdify-prod`, ArgoCD app
 `verdify-prod-dark`, manual-sync behind the device-write gate) is the ONLY
 environment** (serves lab/graphs/api.verdify.ai). Prod is advanced by the
-`prod-promote` workflow off published image digests (ZOT as of 2026-07-11 — see docs/runbooks/prod-promotion.md; GHCR is retired per ADR-0021)
-(no more `bump-dev-digests` / dev render / dev-equality guard). Any section
+in-cluster Kaniko-to-Zot build and reviewed digest-pin path (see
+`docs/runbooks/prod-promotion.md`; GHCR publishing is retired per ADR-0021),
+followed by the human-gated ArgoCD sync (no more `prod-promote`,
+`bump-dev-digests`, dev render, or dev-equality guard). Any section
 below that mentions a dev environment, `overlays/dev`, dev DB restore, or the
 dev proving flow is HISTORICAL — those resources no longer exist.
 
@@ -55,26 +57,23 @@ Historical derived-data reconciliation lives in
 [`derived-history-reconcile.md`](./derived-history-reconcile.md). It dry-runs
 by default; any prod apply requires an explicit operator gate.
 
-## 2. CI/CD: push publishes, dispatch promotes to prod (single-env)
+## 2. CI/CD: local gate, in-cluster publish, reviewed digest pin (single-env)
 
-- **Push to `main`** (or merge a PR): `container-publish.yml` builds the
-  impacted images (api/mcp/ingestor/migrate/planner + artifact-only
-  setpoint-server) and validated them build-only on GHCR-era CI; as of 2026-07-11 publishing is the in-cluster Kaniko→zot flow (immutable
-  `:sha-<sha>` + mutable `:branch-main`). There is **no environment write-back**
-  — `bump-dev-digests` / dev auto-sync are removed (dev is gone). `ci.yml` (all
-  gates), `k8s-manifests.yml` (kubeconform) and `cnpg-image.yml` fire on `main` too.
-- **Full-pipeline button:** `gh workflow run container-publish.yml --ref main`
-  — a manual dispatch builds + publishes ALL images.
-- **Promote to prod:**
-  `gh workflow run prod-promote.yml --ref main -f mode=pull-request`
-  (or `mode=dry-run`). Resolves each promotable image's `:branch-main` digest
-  from the zot origin (registry.vallery.net), surgically bumps `overlays/prod/kustomization.yaml`,
-  runs the Device-Write-Safety-Gate, opens a `prod-promote` PR.
-  `promote-diff-guard` (required check) re-asserts a **digests-only** change
-  surface. Merge = git change only; then the gated sync below.
-  - Known race: `verdify-migrate` rebuilds on every publish, so a push that
-    lands while a promote PR is open can advance the published `:branch-main`
-    migrate digest. Re-run prod-promote after the pipeline settles.
+- **Before merge:** run `make ci`. GitHub Actions workflows were removed on
+  2026-07-11; do not dispatch the retired `container-publish.yml` or
+  `prod-promote.yml` workflows.
+- **GitHub operations from a repo pod:** only after external Fleet activation,
+  use ordinary HTTPS Git and `gh` from `PATH`; the activated runtime supplies
+  rotating askpass and wrapper paths. If the wrapper/file handles are absent or
+  stock `gh` resolves instead, authenticated operations are blocked. Do not use
+  legacy token environment, run `gh auth login`, export token values, or use a
+  host keyring/credential helper. This repo cannot perform activation.
+- **Publish and pin:** after merge, the fleet Argo Event/Workflow path builds
+  the exact `main` revision with Kaniko, pushes immutable images to Zot, and
+  opens or prepares a digest-only pin change. Follow
+  [`prod-promotion.md`](./prod-promotion.md); do not create a repo-specific
+  GitHub dispatch or credential path.
+- **Merge of a pin is Git only.** It does not authorize the gated sync below.
 - **The gated prod sync (the ONLY step that touches the live writer):**
   ```bash
   kubectl patch application verdify-prod-dark -n argocd --type merge \

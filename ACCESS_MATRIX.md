@@ -1,6 +1,6 @@
 # Verdify Platform Access Matrix
 
-Last updated: 2026-07-14
+Last updated: 2026-07-28
 
 Agent name: `verdify-platform`
 
@@ -9,9 +9,9 @@ does not include raw secret values.
 
 | Resource | Current access | Required access | Scope | Owner | Status |
 |---|---|---|---|---|---|
-| `VerdifyConsultancy/verdify-platform` checkout | Local read/write | Read/write repo files | Single repo | Verdify repo admins | Granted locally |
-| GitHub issues/PRs | Auth via local `gh` as `jvallery` | Repo-scoped issue/PR read/write | Single repo | Verdify repo admins | Available |
-| GitHub Project Board | Project scope available through local `gh`; project #5 includes lane epics and current Lab children | Maintain issue fields, native parents, and blockers | Project only | Verdify org/project admins | Available |
+| `VerdifyConsultancy/verdify-platform` checkout | Public HTTPS reads work; authenticated Git still has legacy runtime plumbing | Repo-scoped contents read/write through the rotating runtime askpass | Single repo | Agent Fleet + Verdify repo admins | Declared centrally, not activated; writes blocked |
+| GitHub issues/PRs/statuses/workflows | Current pod has stock `gh`, not the rotating runtime wrapper | Operations allowed by the central `repo-agent-standard` profile | Single repo | Agent Fleet + Verdify repo admins | Declared centrally, not activated; writes blocked |
+| GitHub Project Board | Not included in the repository-scoped standard profile | Org Project mutation only through a separately authorized operator/control-plane path | Org project #5 | Verdify org/project admins | Outside standard profile; report as a blocker |
 | In-cluster CI/publishing | Argo Events/Workflows + Kaniko; exact revisions publish to Zot | Submit/observe reviewed repo-build workflows; no GitHub Actions publishing | `agent-fleet-ci` / repo scope | Agent Fleet + repo owners | Available through the fixed pipeline |
 | Zot application images | `registry.vallery.net` digest pins; in-cluster origin push | Resolve/pin immutable digests through CI | Verdify image namespace | Agent Fleet / registry owners | CI-owned |
 | GHCR holdovers | Read-only legacy production references only | Retire through the gated migration; never publish new images | Legacy Quartz runtime | Repo/Jason | Retirement pending #482 |
@@ -29,13 +29,48 @@ does not include raw secret values.
 
 ## GitHub Credential Notes
 
-- Local `gh` is authenticated as `jvallery` through the macOS keyring and has
-  repo/project/workflow scopes sufficient for issue, milestone, and Project
-  Board maintenance.
-- The 2026-06-16 replan created GitHub milestones G0-G3, issues #343-#352, and
-  Project #5 metadata without printing raw token values.
-- Do not replace the keyring token with alternate token files unless Jason
-  explicitly asks for credential maintenance.
+- The GitHub authentication authority is the Agent Fleet registry change in
+  `jvallery/agents` commit
+  [`7570d1c222b472c091c7378181f9974ed7955bd8`](https://github.com/jvallery/agents/commit/7570d1c222b472c091c7378181f9974ed7955bd8)
+  (#3189). Its Verdify record selects the uniform GitHub App installation mode,
+  the standard repo-agent permission profile, and gated activation. This repo
+  must not duplicate that declaration, name its generated Secret, or add an App
+  ID, installation ID, private key, PAT, or custom permission profile.
+- As of 2026-07-28, the current repo pod has not received the rotating `gh`
+  wrapper, runtime askpass handle, or token-file handles. Legacy token
+  plumbing is present but is not authority for a write; credential values were
+  not inspected. Local commits and deliberate public reads are available, but
+  push, PR, issue, status, workflow, and other authenticated GitHub operations
+  are blocked until the Fleet activation and rollout happen externally.
+- Once activation is performed externally, ordinary HTTPS Git uses the runtime
+  `GIT_ASKPASS`, and `gh` resolves through the runtime-provided wrapper. Both
+  obtain the current one-hour credential at operation time. File-aware clients
+  may read `GITHUB_TOKEN_FILE` for each operation but must not cache its value.
+- While activation remains gated, the presence of a legacy token environment or
+  a stock `gh` binary is not authority to perform a GitHub write. Do not write
+  `hosts.yml`, install a credential helper, or run `gh auth login`; do not fall
+  back to a host keyring, SSH identity, anonymous write, or broader credential.
+- Organization Project mutations and cross-repository writes are outside the
+  standard repository profile. Record them as blockers; do not request a
+  Verdify-specific authentication exception.
+
+## GitHub Consumer Inventory
+
+| Consumer | Execution context | Authentication boundary |
+|---|---|---|
+| Interactive repo checkout and `gh` commands | Agent Fleet repo pod | Ordinary HTTPS Git and `gh` from `PATH`; authenticated operations remain blocked until the central runtime is activated |
+| Vendored Quartz `update` / `sync` CLI | Manual, not invoked by CI or deployment | Validates credential-free GitHub HTTPS remotes immediately before each operation, suppresses ambient helpers/headers, uses a scrubbed public-upstream pull, and otherwise spawns ordinary Git separately so the runtime resolves each authenticated pull/push; failures propagate nonzero |
+| Firmware-builder source clone | Operator-created production CronJob | Intentional public read with all helpers, askpass, and prompts disabled; never receives the repo-pod App credential |
+| Astro stage-snapshot download | One-shot build script | Intentional credential-free public release read; rejects URL credentials and verifies size, digest, and attestation |
+| Pre-commit hook downloads | Developer/bootstrap process | Intentional public dependency reads; no token storage or protected-repo fallback |
+| Quartz citation locale download | Build-time branch, inactive for current `en-US` configuration | Intentional public `raw.githubusercontent.com` read only |
+| ArgoCD repository URLs and fleet `repo-build` source | External long-lived controllers | Controller-owned source acquisition; this repo must not inject its App credential |
+| Legacy GHCR image pulls | Kubelet/container registry path | Separate registry credential contract, not Git/`gh`/API auth; retirement remains #482 |
+| GitHub Actions | No workflows are present | Per-job `GITHUB_TOKEN` remains a separate unchanged contract if a reviewed workflow is ever restored |
+
+No repo-owned service or watch process performs GitHub operations. No direct
+`api.github.com` client, authenticated GitHub `curl`, local App client, or
+credential-aware long-lived process remains.
 
 ## Secrets Policy
 

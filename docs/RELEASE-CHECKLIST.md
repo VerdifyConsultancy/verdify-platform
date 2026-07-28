@@ -1,6 +1,6 @@
 # Verdify Release Checklist
 
-Last updated: 2026-07-03 (#413: §B pinch-decision + bake-record steps). Companion to `docs/runbooks/laptop-operator.md` (the how-to) and
+Last updated: 2026-07-28 (in-cluster CI/Zot promotion path). Companion to `docs/runbooks/laptop-operator.md` (the how-to) and
 `docs/reviews/lane1-architecture-audit-2026-06-16.md` (the why). Single-env-prod model: `main`
 is the only branch; prod is ArgoCD app `verdify-prod-dark` (ns `verdify-prod`), manual-sync
 behind the device-write gate.
@@ -21,17 +21,17 @@ prod `argocd app sync`, device-VLAN actions, destructive prod DB work, and outwa
       PR body / commit message states **which services must bounce** post-merge
       (e.g. `Post-merge restart: verdify-mcp, verdify-ingestor`). `service-restart-drift-guard`
       will check for it.
-- [ ] CI green: `ci.yml` (lint, schemas+drift, device-write-gate, migration-rollback-safety),
-      `container-publish.yml` (smoke-import), `k8s-manifests.yml` (kustomize+kubeconform).
+- [ ] `make ci` green. GitHub Actions workflows are removed; do not substitute a
+      hosted workflow result for the local/in-cluster gate.
 
 **Publish → promote → sync:**
-- [ ] Merge to `main` → `container-publish` publishes digest-pinned images to GHCR
-      (`sha-<sha>` + `branch-main`).
-- [ ] Run `prod-promote` (dry-run first; review the digest delta) → `mode=pull-request`. The
-      **Device-Write-Safety-Gate** must PASS (render-equality, digests-only, interlock/egress
-      assertions).
-- [ ] On the `prod-promote` PR: `promote-diff-guard` PASS (only digest/comment/component-ref
-      lines changed). Human review + merge — git only, cluster untouched.
+- [ ] Merge to `main` → the fleet `repo-build` path builds the exact revision with
+      Kaniko and publishes immutable digests to the Zot origin.
+- [ ] Collect the workflow digest outputs and prepare the digest-only
+      `deploy/k8s/overlays/prod/kustomization.yaml` pin change described in
+      `docs/runbooks/prod-promotion.md`; run `make ci` on that change.
+- [ ] Human review + merge of the digest-only commit/PR — git only, cluster
+      untouched.
 - [ ] **[Jason gate]** Operator runs `argocd app sync verdify-prod-dark`.
 - [ ] Post-sync verify: app Synced/Healthy; single-writer intact (`replicas:1`, exactly one
       ingestor pod, `sum(verdify_esp32_writer_estab)==1`); restart the services named above; tail

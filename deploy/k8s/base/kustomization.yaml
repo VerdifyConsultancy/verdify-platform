@@ -38,12 +38,11 @@ resources:
   - ingestor-rbac.yaml
   - networkpolicy.yaml
 
-# Image namespace. Canonical org namespace is
-# ghcr.io/verdifyconsultancy/verdify-{api,mcp,ingestor,migrate} (NEVER
-# jvallery/*). The base leaves these UNPINNED (image name only, no tag); the
-# overlays' `images:` transformer pins each to an immutable @sha256 digest.
-# prod-promote updates overlays/prod by reviewed digest-only PR. No mutable
-# :latest/:staging tag is ever rendered.
+# Logical image keys retain the pre-ADR-0021 ghcr.io names so existing
+# Kustomize transformers continue to match. The prod overlay rewrites them to
+# registry.vallery.net and pins immutable Zot digests. The in-cluster pipeline
+# advances those pins by reviewed digest-only commits; no mutable tag or GHCR
+# publication is part of the current path.
 images:
   - name: ghcr.io/verdifyconsultancy/verdify-api
   - name: ghcr.io/verdifyconsultancy/verdify-mcp

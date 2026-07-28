@@ -186,10 +186,10 @@ patches:
   # stay at replicas:1. ingestor/setpoint-server are NOT in this patch.
   - path: ha-stateless-spread.patch.yaml
 
-# Image digest pins. Same canonical namespace as staging
-# (ghcr.io/verdifyconsultancy/verdify-*), pinned to immutable @sha256 digests
-# (NEVER :latest/:staging). PLACEHOLDER digests; the promotion flow writes real
-# GHCR digests in-repo.
+# Image digest pins. Legacy ghcr.io names are Kustomize match keys; `newName`
+# rewrites current app images to the Zot origin at registry.vallery.net and
+# immutable @sha256 digests (never mutable tags). The in-cluster pipeline writes
+# reviewed digest-pin commits.
 images:
   - name: ghcr.io/verdifyconsultancy/verdify-api
     newName: registry.vallery.net/verdifyconsultancy/verdify-api
@@ -203,19 +203,17 @@ images:
   - name: ghcr.io/verdifyconsultancy/verdify-migrate
     newName: registry.vallery.net/verdifyconsultancy/verdify-migrate
     digest: sha256:915c9c44b608816486d583f6cb4eaf4a02d70c9193f21c8f8c8895961a7117c8
-  # verdify-planner (#117): real published GHCR digest, resolved read-only via
-  # `gh api orgs/VerdifyConsultancy/packages/container/verdify-planner/versions`
-  # (the `branch-live-platform-main` build of planner_graph/). The planner image is
-  # env-agnostic (it carries its own planner_graph package; per-env DB/secrets come
-  # from each overlay's verdify-config + sealed secret). prod is human-gated and
-  # its digest is advanced only by a reviewed prod-promote PR.
+  # verdify-planner is published by the in-cluster Kaniko pipeline to Zot. The
+  # image is environment-agnostic (it carries planner_graph; runtime DB/secrets
+  # come from the overlay). Prod remains human-gated, and this digest advances
+  # only through a reviewed pin commit.
   - name: ghcr.io/verdifyconsultancy/verdify-planner
     newName: registry.vallery.net/verdifyconsultancy/verdify-planner
     digest: sha256:9b0c474e491a09d62bb199c759a5eb602871d34e052a7983e044f5664de211b8
   # verdify-setpoint-server (#118): grow-light writer + setpoint-diagnostics image
   # built from scripts/Dockerfile.setpoint-server. setpoint-server is a PROD-ONLY
-  # device-affecting Component, so it is excluded from prod-promote and remains
-  # hand-pinned. A rebuild alone does not advance it.
+  # device-affecting Component, so its pin remains separately reviewed. A rebuild
+  # alone does not advance it.
   #
   # #447 HAND-PIN ADVANCE (2026-07-13): f5ac817 is the zot-origin build carrying
   # commit 7e0d8c0 — /setpoints queries through the asyncpg pool (_db_text_safe);
@@ -236,28 +234,13 @@ images:
   - name: ghcr.io/verdifyconsultancy/verdify-setpoint-server
     newName: registry.vallery.net/verdifyconsultancy/verdify-setpoint-server
     digest: sha256:1988ba5ee396ac51abc0e27b35ececf7c516be9416e3b232046816460cf7c682
-  # verdify-lab (#124): real GHCR digest of the Quartz research-site image built
-  # from the verdify-site-legacy repo's Dockerfile.k3s (Quartz `npx quartz build`
-  # -> static public/ -> nginx-unprivileged on :8080). Published + repo-linked by
-  # verdify-site-legacy's publish-lab-image.yml workflow (package repository.name
-  # == verdify-site-legacy) and verified pullable 2026-06-04 — REPLACES the prior
-  # all-zeros placeholder pin whose package 404'd (verdify-site was an orphan GHCR
-  # repo). lab is externally built and hand-pinned here; prod-promote excludes it.
-  # A content/runtime rebuild in verdify-site-legacy advances this digest.
-  #
-  # 2026-06-07 ONE-OFF VAULT RESTORE (laptop-root): the prior 92ab47.. image was
-  # built from a synthetic CI temp-vault (docs/ fallback in Dockerfile.k3s), so it
-  # served the DEFAULT "Welcome to Quartz 4" starter — empty content/ in
-  # verdify-platform. Rebuilt the runtime image from the REAL synced vault
-  # (/Users/jason/Iris/verdify-vault/website, 121 .md -> npx quartz build -> 566
-  # files -> nginx-unprivileged :8080) and pushed to the same GHCR package. The
-  # durable fix (CI sourcing the real vault) is Iris #124; this only advances the
-  # pin so ArgoCD serves the real lab site now.
+  # verdify-lab is the one legacy Quartz GHCR holdover. Its frozen hand-pin uses
+  # the separate kubelet registry credential; no repo-pod GitHub App credential
+  # or current publishing workflow is involved. Retirement is tracked in #482.
   - name: ghcr.io/verdifyconsultancy/verdify-lab
     digest: sha256:98ac23b6affa3b8af3ebb5c7f1c7abe31d00e2379c070f4d61b409130dae9845
   # verdify-lab-publisher: k3s-owned generated-content and S3 sync workflow for
-  # lab.verdify.ai. The k3s-suffixed GHCR package is linked to this repo so
-  # GITHUB_TOKEN can publish immutable CI-built digests.
+  # lab.verdify.ai. The in-cluster Kaniko pipeline publishes it to Zot.
   - name: ghcr.io/verdifyconsultancy/verdify-lab-publisher-k3s
     newName: registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s
     digest: sha256:c6085836d0cb3a5bd083add258989502c84f5a07a6182f0e501aee0ffac4cee0

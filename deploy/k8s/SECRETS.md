@@ -164,12 +164,27 @@ cluster-admin.** The device writer (ingestor `replicas:1` + the gated
 
 | Principal | Scope held | Scope needed | Device-write? | Cluster-admin? | Verdict |
 |---|---|---|---|---|---|
-| CI `GITHUB_TOKEN` (per-job) | `contents:read`+`packages:write` (publish jobs); `contents:write`+`packages:read` (prod-promote PR); `contents:read` (k8s-manifests) | same | no (CI never touches the cluster/device) | no | ✅ already least-privilege |
-| `LAB_REPO_TOKEN` (external PAT) | pushes lab content to the lab repo | `contents:write` on the **one** lab repo, fine-grained | no | no | ⚠️ **confirm it's fine-grained + single-repo** (org-level check — Jason) |
+| GitHub Actions `GITHUB_TOKEN` (per-job) | Historical workflow-local token; no live workflows remain in this repo | Leave unchanged if a reviewed workflow is ever reintroduced | no | no | Separate GitHub Actions contract; not Agent Fleet repo-pod auth |
+| Agent Fleet repo-pod GitHub | Central rotating installation-token contract; no credential or generated Secret is declared here | Standard single-repository Git/issue/PR/status/workflow operations | no | no | ✅ centrally owned; activation remains externally gated |
+| Retired Quartz cross-repo publisher | No standing credential; the cross-repo writer was removed | None in this repo | no | no | ✅ no PAT/static-token fallback |
 | `ghcr-jvallery-readonly` | `.dockerconfigjson` image **pull** | same | no | no | ✅ read-only |
 | `verdify-agent-secrets` / `agent_ro` DSN | `pg_read_all_data` (SELECT all, no write) | read prod | no | no | ✅ least-privilege (migration 184, #302) |
 | Grafana datasource | connects as `verdify` **SUPERUSER** (`POSTGRES_PASSWORD`), read-only *by intent* | SELECT-only | no | no | ⚠️ **over-grant** — repoint to `agent_ro` (a panel could issue DML today) |
 | Agent kubeconfig (context `vallery`) | full **cluster-admin** | namespaced read + `exec` into `verdify-db-0` | only if device-egress enabled (gated) | **yes** | ⚠️ **the real admin surface** — prefer the `agent_ro` DSN (#302) + a narrow RBAC `Role` over the admin kubeconfig |
 | `verdify-firmware-ota` / `ota_password` | flash the ESP32 via `make firmware-deploy` | operator OTA | **yes (flash)** | no | 🔒 device-affecting — stays Jason-gated; not held by CI |
 
-**CI is already least-privilege** (built-in `GITHUB_TOKEN` + scoped per-job `permissions:`; no kube credential; the gated `argocd app sync` is run by a human off-CI). The two open hardening recommendations (own follow-ups): **(a)** repoint the Grafana datasource off the `verdify` superuser onto `agent_ro`/`pg_read_all_data`; **(b)** issue agents the `agent_ro` DSN + a narrow namespaced RBAC `Role` (`get/list` + `pods/exec` scoped to `verdify-db-0`) instead of the cluster-admin kubeconfig. **(c)** confirm `LAB_REPO_TOKEN` is a fine-grained single-repo PAT (Jason, org settings).
+Agent Fleet GitHub authentication is defined centrally by `jvallery/agents#3189`;
+this repo must not declare App/installation IDs, permission maps, generated
+Secret names, PATs, or value-bearing token environment. GitHub Actions' per-job
+token remains a separate contract and is unchanged. The two non-GitHub
+hardening recommendations remain: **(a)** repoint the Grafana datasource off the
+`verdify` superuser onto `agent_ro`/`pg_read_all_data`; **(b)** issue agents the
+`agent_ro` DSN + a narrow namespaced RBAC `Role` (`get/list` + `pods/exec`
+scoped to `verdify-db-0`) instead of the cluster-admin kubeconfig.
+
+The GitHub cleanup in the 2026-07-28 desired manifest is not a live Secret
+rotation. Until the Jason-gated prod sync is reviewed and applied, the live
+firmware CronJob still references Secret `verdify-github-token`, key
+`GITHUB_TOKEN`; only the name/key metadata was inspected. After the sync, an
+authorized operator must verify zero consumers before deleting or revoking that
+orphan. ArgoCD `prune:false` will not remove it automatically.
