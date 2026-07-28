@@ -62,6 +62,7 @@ $PY -m pytest -q \
   tests/test_grafana_manifest_security.py \
   tests/test_lab_publish_k3s_guard.py \
   tests/test_mqtt_fanout.py \
+  tests/test_no_hosted_runner_workflows.py \
   tests/test_planner_memory_ingest.py \
   tests/test_psql_verdify_backend.py \
   tests/test_publish_site_content_guard.py \

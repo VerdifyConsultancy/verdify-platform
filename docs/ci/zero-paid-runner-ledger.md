@@ -1,0 +1,309 @@
+# Zero-paid-runner CI ledger — `VerdifyConsultancy/verdify-platform`
+
+**Verdict: `REPO_ZERO_PAID_READY`** (with two documented exceptions and one
+open residual risk — see §6 and §7).
+
+Probed 2026-07-28. Every claim below is backed by a literal probe recorded in
+§8; re-run those to re-verify.
+
+GitHub remains the source, issue, PR, review and check authority. No change in
+this ledger alters that.
+
+---
+
+## 1. Headline finding
+
+**There is nothing to migrate.** GitHub Actions execution was removed from this
+repo on 2026-07-11 (commit `6c7abe1`, operator directive: no external CI
+dependency). `.github/workflows/` does not exist on `main` — only
+`.github/CODEOWNERS`. The pre-merge gate is `scripts/ci-local.sh`, executed
+in-cluster by the `verdify-platform-ci` Argo Workflow (ns `agent-fleet-ci`),
+which reports the required check via the commit-status API.
+
+Two premises in the original goal do not hold for this repo, and they change
+the work materially:
+
+| Premise | Actual | Consequence |
+| --- | --- | --- |
+| "active **private**-repository job" | Repo is **public** (`"private": false`) | GitHub-hosted standard runners are **free** here. Paid-runner exposure was already **$0** even before the 2026-07-11 cutover. |
+| Jobs exist to move onto ARC profiles | **0** repo-owned workflow files on `main` | The `MIGRATE_ARC` disposition set is **empty**. Zero-paid was reached by *removing* Actions execution, not by re-hosting it. |
+
+Consequently this ledger records dispositions, evidence, measurements and
+rollback rather than a migration. No ARC scale sets, namespaces, runner images
+or Kubernetes resources were created (all four were out of scope).
+
+## 2. Workflow ledger — dispositions
+
+### 2.1 Live surface (registered with GitHub today)
+
+| Workflow | Path | Trigger | Runner | Disposition | Rationale |
+| --- | --- | --- | --- | --- | --- |
+| `Dependency Graph` | `dynamic/dependabot/update-graph` | `dynamic` (GitHub-managed) | GitHub-managed, not an Actions runner | **KEEP_FREE_GITHUB_NATIVE** | Synthesized by GitHub, not a repo file. Cannot be redirected to ARC and consumes no Actions minutes. Last run 2026-07-18. |
+
+That is the **entire** registered workflow surface: `actions/workflows` returns
+`total_count: 1`.
+
+### 2.2 Retired surface (removed from `main` 2026-07-11)
+
+All eight are gone from `main`. They are listed because they still exist on
+stale branches (§7) and their replacement must be traceable.
+
+| Workflow | Old runner | Disposition | Replaced by |
+| --- | --- | --- | --- |
+| `ci.yml` (**CI** — principal workflow) | `ubuntu-latest` ×8 jobs | **RETIRE** | `scripts/ci-local.sh` via `verdify-platform-ci` Argo Workflow |
+| `container-publish.yml` | `ubuntu-latest` | **RETIRE** | `repo-build` Kaniko Workflows → zot origin (ADR-0021) |
+| `reusable-container-build.yml` (`workflow_call`) | `ubuntu-latest` ×3 | **RETIRE** | same |
+| `cnpg-image.yml` | `ubuntu-latest` | **RETIRE** | same |
+| `k8s-manifests.yml` | `ubuntu-latest` | **RETIRE** | `kustomize build overlays/prod` step in `ci-local.sh` |
+| `promote-diff-guard.yml` | `ubuntu-latest` ×2 | **RETIRE** | digest-pin review in `docs/runbooks/prod-promotion.md` |
+| `prod-promote.yml` | `ubuntu-latest` | **RETIRE** | gated `argocd app sync verdify-prod-dark` (human gate) |
+| `lab-content-pipeline.yml` | `ubuntu-latest` ×2 | **RETIRE** | in-cluster lab publisher |
+
+**No workflow carries a `MIGRATE_ARC`, `BLOCKED_PLATFORM` or
+`EXPLICIT_EXCEPTION` disposition**, because none survives to be migrated.
+
+## 3. Security floor — current state
+
+Assessed against the repo as it stands, not against a hypothetical migration.
+
+| Control | State | Evidence |
+| --- | --- | --- |
+| No production / Kubernetes / package-write secrets in validation | **PASS** | `actions/secrets` `total_count: 0`; `actions/variables` `total_count: 0` |
+| Build / deployment / release identities separate | **PASS** | Build pushes with `zot-origin-verdifyconsultancy-ci-dockerconfig` (in-cluster, never readable by this cell); workloads pull with the read-only `zot-origin-cluster-pull`; prod sync is a human-gated ArgoCD action |
+| No untrusted PR code on privileged runners | **PASS** | No repo-owned workflow executes on any runner |
+| Minimal explicit `permissions:` | **N/A today**, enforced on reintroduction | `tests/test_no_hosted_runner_workflows.py` |
+| Third-party Actions SHA-pinned | **N/A today**, enforced on reintroduction | same |
+| Deployment safety / rollback | Unchanged | ArgoCD `prune:false`, manual sync behind the device-write gate |
+
+Repo Actions policy is currently `enabled: true`, `allowed_actions: "all"`,
+`sha_pinning_required: false`. That is permissive, and it is what makes §7
+reachable.
+
+## 4. Required check — still effective
+
+`main` branch protection requires exactly one context:
+
+```
+Verdify Platform / Argo PR CI   (app_id: null, strict: true)
+```
+
+`strict: true` (branch must be current), `required_linear_history: true`,
+`allow_force_pushes: false`, `allow_deletions: false`. **0** environments and
+**0** rulesets exist, so there are no environment approvals to preserve.
+
+`app_id: null` means the context is posted through the commit-status API by the
+in-cluster Argo Events sensor authenticating as `jvallery`, **not** by a GitHub
+App with a pinned identity. Any actor holding write on this repo can post a
+green `Verdify Platform / Argo PR CI` status. This is a **pre-existing property
+of the 2026-07-11 design, not introduced here**, but it is the weakest link in
+the check chain and is called out in §7.
+
+## 5. Measurements — before / after
+
+Durations in seconds. Hosted baseline from the GitHub Actions API (600 runs
+sampled, 2026-06-23 → 2026-07-18). In-cluster figures from `pending → terminal`
+commit-status transitions, i.e. **inclusive of webhook and queue latency**.
+
+### Hosted baseline (retired Actions workflows)
+
+| Workflow | n | p50 | p95 | Conclusions |
+| --- | --- | --- | --- | --- |
+| **CI** (principal) | 211 | **88** | **110** | 189 success / 22 failure |
+| Container Publish | 212 | 15 | 254 | 206 success / 6 cancelled |
+| Promote Diff Guard | 85 | 12 | 23 | 85 success |
+| K8s Manifests | 79 | 16 | 20 | 79 success |
+| Prod Promote | 11 | 28 | 46 | 2 success / 9 failure |
+
+### In-cluster replacement (`Verdify Platform / Argo PR CI`)
+
+Unbiased sample over **60 PR head SHAs** (includes non-merged PRs, so failures
+are represented):
+
+| Metric | Value |
+| --- | --- |
+| Runs measured | 61 status transitions across 60 head SHAs |
+| Outcomes | 58 success / 3 failure |
+| **Lost or stuck-pending statuses** | **0** |
+| p50 | **200** |
+| p95 | **882** |
+| max | 3606 (a 1-hour step budget expiry) |
+
+A merged-commit-only sample (50 commits on `main`) gives p50 **210**, p95
+**739**, 50/50 success — consistent, and biased optimistic, which is why the
+PR-head sample above is the one of record.
+
+### Reliability verdict
+
+- **≥20 representative runs: PASS** (60).
+- **No lost status: PASS** (0 stuck-pending; every run reached a terminal state).
+- **<1% infrastructure failure: NOT PROVEN.** 3 of 61 (4.9%) ended `failure`.
+  These are terminal, correctly-reported non-green results, so no status was
+  lost — but the 3606 s outlier is a step-budget expiry, which is an
+  infrastructure-class failure rather than a genuine test failure. The retained
+  Argo objects corroborate this: `verdify-platform-ci-retry-mtlvw` ran ~2 h
+  before failing. **The <1% bar is not met on this sample.**
+
+### Performance verdict
+
+- **Principal workflow p95 no worse than hosted baseline: FAIL.**
+  CI p95 went **110 s → 882 s (≈8×)**; p50 **88 s → 200 s (≈2.3×)**.
+  Caveats that make this not strictly like-for-like: the in-cluster figure
+  includes webhook delivery and Argo queue time, and `ci-local.sh` runs a
+  superset of the old `ci.yml` (migration rollback-safety classification, twin
+  `g++` compile, prod overlay render). It is nonetheless a real wall-clock
+  regression for a contributor waiting on the gate, and it is **not** an
+  artifact of measurement bias — both samples agree.
+
+This regression is inherited from the 2026-07-11 cutover; nothing in this
+change causes or worsens it. It is recorded here because the goal asked for the
+comparison, and it should be treated as a follow-up against the in-cluster CI
+templates (owned by `jvallery/agents`, not this repo).
+
+## 6. Residual free GitHub-native jobs and exceptions
+
+1. **`Dependency Graph` (`dynamic/dependabot/update-graph`)** —
+   `KEEP_FREE_GITHUB_NATIVE`. GitHub-synthesized, no repo file, no Actions
+   minutes, cannot target a self-hosted runner. Last observed 2026-07-18.
+2. **`ghcr.io/verdifyconsultancy/verdify-lab`** — the single remaining GHCR
+   pull in `overlays/prod/kustomization.yaml`. A registry exception under
+   ADR-0021, *not* a runner exception; it consumes no CI compute. Its source
+   repo is archived and it cannot be rebuilt in place.
+
+## 7. Open residual risk — workflow reintroduction via stale branches
+
+**77 of 95 remote branches still contain the retired `ubuntu-latest` workflow
+files; 42 of those are outside `archive/`.**
+
+GitHub evaluates `pull_request` workflows from the PR's **merge ref**, not from
+the base branch. Because `main` no longer contains `.github/workflows/`, but
+those branches do, **opening a PR from any of the 42 would re-activate
+`ci.yml`, `container-publish.yml` and friends on `ubuntu-latest`** — restoring
+hosted execution, GHCR pushes that ADR-0021 bans, and hosted-runner exposure to
+whatever secrets those workflows referenced.
+
+Today this costs nothing (public repo ⇒ free minutes), so it is a **correctness
+and supply-chain** risk rather than a billing one. **It becomes a paid-runner
+regression the moment this repo is made private.**
+
+Mitigations, in order of strength — the first two are **outside this repo's
+autonomy** and need Jason's gate (repo settings / ref deletion):
+
+1. **Repo setting (strongest, gated):** set Actions permissions to
+   `disabled`, or `allowed_actions: selected` with an empty allowlist. Kills
+   reactivation at the platform, independent of branch contents.
+   Caveat: confirm Dependabot's dependency-graph update survives the change.
+2. **Branch hygiene (gated):** delete or re-`archive/`-prefix the 42 stale
+   non-archive branches carrying workflow files. Ref deletion is destructive
+   and is explicitly reserved for Jason under `CLAUDE.md`.
+3. **Repo-side guard (landed with this ledger, autonomous):**
+   `tests/test_no_hosted_runner_workflows.py`, wired into
+   `scripts/ci-local.sh`. It fails the required gate if `.github/workflows/`
+   reappears, if any job targets a hosted label, if a workflow omits explicit
+   `permissions:`, or if a third-party Action is not SHA-pinned. This does not
+   *prevent* a stale-branch PR from spending hosted compute, but it makes the
+   reintroduction **non-mergeable**.
+
+## 8. Rollback
+
+### 8.1 Rolling back *this* change
+
+This change adds one guard test, one `ci-local.sh` line, and this document. It
+touches no runtime, deployment or firmware path.
+
+```bash
+git revert <merge-sha>          # restores ci-local.sh; guard test stops running
+```
+
+Pre-change revision: **`417bfe0bf86b04046d3237a7bfd313918b57d96b`** (`main` at
+2026-07-28). Tag before cutover if a named anchor is wanted:
+
+```bash
+git tag -a ci/pre-zero-paid-ledger 417bfe0 -m "main before zero-paid-runner ledger"
+git push origin ci/pre-zero-paid-ledger
+```
+
+### 8.2 Zero-paid rollback procedure (if CI must be restored)
+
+The rule is: **rollback must never land on `ubuntu-latest`.** The retired
+workflows in §2.2 are *not* a valid rollback target — they are hosted-runner
+definitions and restoring them re-introduces exactly what was removed.
+
+Approved rollback order:
+
+1. **Re-run the gate out-of-band (no GitHub compute).** `scripts/ci-local.sh`
+   is host-portable by design — any kubectl host or agent pod:
+   ```bash
+   make ci                       # full gate
+   CI_BASE_REF=origin/main make ci   # adds replay-diff + fire-and-forget gates
+   ```
+   Post the resulting status manually if the required check must be satisfied.
+2. **Re-submit the in-cluster workflow directly**, bypassing the webhook:
+   ```bash
+   kubectl create -n agent-fleet-ci -f - <<'EOF'
+   # workflowTemplateRef: verdify-platform-ci, with the target revision
+   EOF
+   ```
+   (Template is owned by `jvallery/agents`; see
+   `platform/kubernetes/ci/agent-fleet-ci/workflows/`.)
+3. **Only if the cluster is unavailable** and a merge genuinely cannot wait:
+   restoring a hosted workflow is a deliberate, operator-approved exception. It
+   requires Jason's sign-off, a self-hosted/ARC label rather than
+   `ubuntu-latest`, and a matching update to this ledger. There is no approved
+   ARC profile registered to this repo today (§9), so this path is currently
+   **BLOCKED_PLATFORM** and step 1 is the real fallback.
+
+## 9. What could not be verified from this cell
+
+Stated plainly rather than assumed:
+
+- **ARC runner profiles.** ARC *is* installed cluster-wide (CRDs
+  `autoscalingrunnersets`, `ephemeralrunners`, `autoscalinglisteners` in
+  `actions.github.com/v1alpha1`), but this cell's RBAC denies `list` on
+  `autoscalingrunnersets` in every reachable namespace, and
+  `orgs/.../actions/runners` returns 403 (needs `admin:org`). **No approved ARC
+  profile is registered to this repo** — `repos/.../actions/runners` returns
+  `total_count: 0` — so profile selection ("unprivileged validation",
+  "browser/E2E", "trusted container build", …) could not be exercised and is
+  moot while the migration set is empty.
+- **Actions billing endpoints** return 404 for this token scope. The zero-paid
+  claim rests on the stronger structural facts instead: repo is public, and
+  zero repo-owned workflows execute.
+- **Argo Events sensor/eventsource definitions** — `list` denied in
+  `agent-fleet-ci`; concurrency-cancellation behaviour for superseded SHAs
+  therefore could not be inspected at the source. Observationally, 0 of 60
+  runs were left stuck pending. Those templates are owned by `jvallery/agents`.
+
+## 10. Probe log (re-runnable)
+
+```bash
+export GH_TOKEN=...   # via $GIT_ASKPASS / git credential fill
+R=VerdifyConsultancy/verdify-platform
+
+gh api repos/$R -q '{private,visibility,default_branch}'
+gh api repos/$R/actions/workflows -q '.total_count, (.workflows[]|{name,path,state})'
+gh api repos/$R/actions/runners   -q '.total_count'        # 0
+gh api repos/$R/actions/permissions                        # enabled/all/no-sha-pinning
+gh api repos/$R/environments      -q '.total_count'        # 0
+gh api repos/$R/actions/secrets   -q '.total_count'        # 0
+gh api repos/$R/actions/variables -q '.total_count'        # 0
+gh api repos/$R/rulesets                                   # []
+gh api repos/$R/branches/main/protection
+gh api repos/$R/hooks -q '.[]|{url:.config.url,events}'
+git ls-tree -r --name-only origin/main -- .github/         # CODEOWNERS only
+
+# stale-branch reactivation surface (§7)
+git branch -r --format='%(refname:short)' | grep -v HEAD | while read b; do
+  n=$(git ls-tree -r --name-only "$b" -- .github/workflows/ | wc -l)
+  [ "$n" -gt 0 ] && echo "$b ($n)"
+done
+
+# in-cluster CI evidence
+kubectl get workflows -n agent-fleet-ci | grep verdify-platform
+kubectl api-resources | grep actions.github            # ARC CRDs present
+```
+
+---
+
+Related: `docs/runbooks/prod-promotion.md` (digest-pin + gated sync),
+`docs/runbooks/laptop-operator.md` (host-portable dev loop),
+`scripts/ci-local.sh` (the gate itself).
