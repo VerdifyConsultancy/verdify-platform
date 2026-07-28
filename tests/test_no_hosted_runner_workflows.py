@@ -25,13 +25,12 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW_DIR = ROOT / ".github" / "workflows"
 
-# GitHub-hosted runner labels. On a public repo these are free, but they are
-# still *hosted* execution: outside the cluster, outside the zot/ArgoCD
-# pipeline, and billable the moment the repo turns private.
-HOSTED_LABEL_RE = re.compile(
-    r"^(ubuntu|windows|macos)-(latest|\d[\w.]*)(-\d+core|-arm|-xl|-large)?$",
-    re.IGNORECASE,
-)
+# GitHub-hosted labels evolve, but their OS-family prefixes are stable. Treat
+# every current or future ubuntu/windows/macos family label as hosted rather
+# than maintaining an inevitably incomplete suffix allowlist. On a public repo
+# these are free, but they are still outside the cluster and zot/ArgoCD
+# pipeline, and become billable if the repo turns private.
+HOSTED_LABEL_PREFIXES = ("ubuntu-", "windows-", "macos-")
 
 # Actions published by GitHub itself are exempt from SHA pinning; anything
 # else is third-party and must be pinned to a reviewed commit SHA.
@@ -60,8 +59,15 @@ def _runs_on_labels(spec: dict) -> list[str]:
         return [label for label in runs_on if isinstance(label, str)]
     if isinstance(runs_on, dict):  # { group: ..., labels: [...] }
         labels = runs_on.get("labels") or []
-        return [labels] if isinstance(labels, str) else list(labels)
+        if isinstance(labels, str):
+            return [labels]
+        if isinstance(labels, list):
+            return [label for label in labels if isinstance(label, str)]
     return []
+
+
+def _is_github_hosted_label(label: str) -> bool:
+    return label.strip().lower().startswith(HOSTED_LABEL_PREFIXES)
 
 
 def _steps(spec: dict) -> list[dict]:
@@ -77,13 +83,36 @@ def test_no_workflow_uses_a_github_hosted_runner():
             for label in _runs_on_labels(spec):
                 # `${{ ... }}` expressions can resolve to a hosted label at run
                 # time; require a literal, auditable self-hosted label instead.
-                if "${{" in label or HOSTED_LABEL_RE.match(label.strip()):
+                if "${{" in label or _is_github_hosted_label(label):
                     offenders.append(f"{path.name}:{job_name} runs-on={label!r}")
     assert not offenders, (
         "GitHub-hosted runner labels reintroduced — this repo runs zero hosted CI compute.\n"
         "Use a platform-approved self-hosted/ARC label, or retire the workflow.\n"
         "See docs/ci/zero-paid-runner-ledger.md.\n  " + "\n  ".join(offenders)
     )
+
+
+def test_hosted_runner_classifier_rejects_current_official_variants():
+    """New official suffixes must not reopen hosted execution."""
+    rejected_labels = (
+        "ubuntu-slim",
+        "macos-15-intel",
+        "macos-26-intel",
+        "windows-11-vs2026-arm",
+    )
+    assert all(_is_github_hosted_label(label) for label in rejected_labels)
+    assert not _is_github_hosted_label("self-hosted")
+    assert not _is_github_hosted_label("agent-fleet-ci")
+
+
+def test_runs_on_dict_ignores_non_string_labels():
+    spec = {
+        "runs-on": {
+            "group": "agent-fleet",
+            "labels": ["self-hosted", {"unexpected": "mapping"}, 42, None],
+        }
+    }
+    assert _runs_on_labels(spec) == ["self-hosted"]
 
 
 def test_every_workflow_declares_explicit_minimal_permissions():
