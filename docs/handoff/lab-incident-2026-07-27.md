@@ -61,11 +61,12 @@ narrow:
      /path/to/verdify-platform/docs/handoff/verdify-site-legacy-lab-image-identity.patch
    ```
 
-The pre-commit configuration excludes `*.patch` only from the two
-whitespace-mutating hooks (`trailing-whitespace` and `end-of-file-fixer`).
-YAML/JSON, merge-conflict, and private-key checks are not relaxed, and the
-patch-application proof replaces—not removes—the integrity check for this
-artifact.
+The pre-commit configuration excludes only
+`docs/handoff/verdify-site-legacy-lab-image-identity.patch` from the two
+whitespace-mutating hooks (`trailing-whitespace` and `end-of-file-fixer`);
+future or unrelated `.patch` files remain covered. YAML/JSON, merge-conflict,
+and private-key checks are not relaxed, and the patch-application proof
+replaces—not removes—the integrity check for this artifact.
 
 ## Open threads
 
