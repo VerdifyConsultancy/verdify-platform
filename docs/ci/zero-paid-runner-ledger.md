@@ -196,11 +196,39 @@ Duration is therefore uncorrelated with what changed. The old hosted `ci.yml`
 also ran **8 jobs in parallel**, so its 110 s p95 was the slowest of eight
 concurrent jobs; `ci-local.sh` runs every step sequentially in one pod.
 
-**Repo-side optimizations were evaluated and rejected on evidence:**
-consolidating the three `pytest` invocations into one measured *slower*
-(77 s vs 70 s split), so it was not made. Parallelising independent gate steps
-would save ~15 s of a 212 s run (~7 %) while making a production gate's failure
-output interleaved — not a good trade, and it cannot close a 110 s-vs-796 s gap.
+Measured breakdown of the 160 s `validate` pod:
+
+| Segment | Time | Verdict |
+| --- | --- | --- |
+| `apt-get install g++ git curl` | 6 s | **redundant — removed**, see below |
+| kustomize download | 1 s | keep |
+| `git clone` | 6 s | keep |
+| `venv` create | 6 s | keep |
+| **`pip install`** | **42 s** | needs a pre-baked image |
+| `ci-local.sh` (the gate) | 77 s | keep |
+
+**Optimizations measured and REJECTED rather than assumed:**
+
+- **pip wheel cache** — cold 42 s vs warm-cache 41 s. The cost is unpacking
+  wheels into the venv, not downloading them. ~1 s for a shared-volume failure
+  mode: not worth it.
+- **Consolidating the three `pytest` invocations** — measured *slower*
+  (77 s vs 70 s split). `ci-local.sh` left unchanged.
+- **Parallelising independent gate steps** — saves ~15 s of 212 s (~7 %) while
+  interleaving failure output on a production gate. Bad trade.
+
+**Optimization measured and SHIPPED:** `python:3.13-bookworm` already ships
+`g++`, `git`, `curl` and `tar` (probed against that exact image), so the
+`apt-get` was pure waste on every run. Filed as **`jvallery/agents#3181`** —
+replaced with a *fail-closed assertion* rather than a plain deletion, because
+`ci-local.sh` **skips** the twin `g++` compile when the compiler is absent, so
+a silent deletion could have dropped a gate instead of failing.
+
+**The arithmetic that makes this bar unreachable:** even with setup reduced to
+zero, four sequential pods cost ~45 s of scheduling plus the 77 s gate ≈
+**122 s** — still above the 110 s hosted p95, before any queue variance. The
+only remaining lever is pre-baking dependencies into a CI image and collapsing
+the pods, both of which live in `jvallery/agents`.
 
 **Disposition: `BLOCKED_PLATFORM` for the performance and infra-reliability
 bars.** The fix belongs to the Argo templates in `jvallery/agents`
