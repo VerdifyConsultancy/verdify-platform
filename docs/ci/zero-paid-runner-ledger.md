@@ -359,3 +359,5 @@ kubectl api-resources | grep actions.github            # ARC CRDs present
 Related: `docs/runbooks/prod-promotion.md` (digest-pin + gated sync),
 `docs/runbooks/laptop-operator.md` (host-portable dev loop),
 `scripts/ci-local.sh` (the gate itself).
+
+<!-- cancellation probe A -->
