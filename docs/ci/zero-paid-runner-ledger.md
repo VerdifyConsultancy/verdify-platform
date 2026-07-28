@@ -361,3 +361,4 @@ Related: `docs/runbooks/prod-promotion.md` (digest-pin + gated sync),
 `scripts/ci-local.sh` (the gate itself).
 
 <!-- cancellation probe A -->
+<!-- cancellation probe B -->
