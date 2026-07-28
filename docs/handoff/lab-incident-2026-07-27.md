@@ -33,6 +33,40 @@ Three of the 22 findings were a live non-public-crop leak on the public site, ex
 | `verdify-site-legacy-lab-image-identity.patch` | Corrected `Dockerfile.k3s` for the sibling repo. **Unpushable**: `verdify-site-legacy` is archived (read-only, 403). Held here so the work is not lost. |
 | `lab-rollout-baseline-20260727.txt` | Pre-rollout capture: manifests, pod UIDs, digests, node placement, PVC identity and modes, DB restarts, ingestor baseline. |
 
+### Byte-sensitive embedded patch verification
+
+`verdify-site-legacy-lab-image-identity.patch` is an exact `git format-patch`
+artifact. Its context lines and `-- ` signature terminator contain
+format-significant trailing spaces, so a whole-diff `git diff --check` reports
+that one file even when the patch is intact. The exception is deliberately
+narrow:
+
+1. Run the normal whitespace gate while excluding only the byte-sensitive
+   artifact; every other changed path remains covered:
+
+   ```bash
+   git diff --check origin/main...HEAD -- . \
+     ':(exclude)docs/handoff/verdify-site-legacy-lab-image-identity.patch'
+   ```
+
+2. Verify the embedded patch SHA-256 is
+   `6abe0f89da7761f9f111bf85b91f9640f3c894b41945963fbaf22c366c076473`.
+3. Run `git apply --check` with the byte-exact artifact against archived
+   `VerdifyConsultancy/verdify-site-legacy@15f947a0d86f0ecb8867ff4d89c9d3d692f420ef`
+   (`v4`):
+
+   ```bash
+   shasum -a 256 docs/handoff/verdify-site-legacy-lab-image-identity.patch
+   git -C /path/to/verdify-site-legacy apply --check \
+     /path/to/verdify-platform/docs/handoff/verdify-site-legacy-lab-image-identity.patch
+   ```
+
+The pre-commit configuration excludes `*.patch` only from the two
+whitespace-mutating hooks (`trailing-whitespace` and `end-of-file-fixer`).
+YAML/JSON, merge-conflict, and private-key checks are not relaxed, and the
+patch-application proof replaces—not removes—the integrity check for this
+artifact.
+
 ## Open threads
 
 - **The `verdify-lab` fallback cannot be rebuilt.** `verdify-site-legacy` is archived and its

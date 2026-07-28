@@ -23,7 +23,10 @@ the fixed generator emits:
      macOS screenshots emit; it is not in the guard's safe-ancillary
      whitelist, so those screenshots are unpublishable. Colour rendering is
      preserved by the iCCP profile present in all three files. The durable fix
-     is whitelisting cICP in the guard; this unblocks the corpus meanwhile.
+     merged in #552 is explicit structural cICP validation in the guard, not
+     adding cICP to the safe whitelist (whose members bypass payload
+     inspection). This one-time repair stripped the chunks to unblock the
+     legacy corpus before that validated parser was available.
 
 Idempotent: a second run reports 0 changes.
 """
