@@ -277,9 +277,31 @@ the head SHA got its own independent result. Mergeability follows the head SHA.
 No false green, no lost status, no cross-contamination. The cost is one wasted
 full run per superseded push.
 
-**Disposition: `BLOCKED_PLATFORM`** — the fix is a `synchronization` mutex keyed
-on `{repository}/{head-ref}` in the WorkflowTemplate, which lives in
-`jvallery/agents`. Folded into `jvallery/agents#3173`.
+**Disposition: `BLOCKED_PLATFORM` — blocked on exactly one RBAC verb.**
+
+Argo has no native `cancel-in-progress`. A `synchronization.mutex` *serializes*
+(the newer run queues behind the older), which is worse for latency, not
+supersede. The only correct fix is a `stop-superseded` step that terminates
+older Running workflows for the same `{repository}/{head-ref}` — and the CI
+identities cannot do that today:
+
+```yaml
+# platform/kubernetes/ci/agent-fleet-ci/bootstrap/sensor-rbac.yaml
+kind: Role
+metadata: {name: argo-ci-events-submit-workflows}
+rules:
+  - apiGroups: [argoproj.io]
+    resources: [workflows, workflowtemplates]
+    verbs: [create, get, list, watch]     # <-- no patch / update / delete
+```
+
+Adding `patch` alone is sufficient (Argo terminates by patching
+`spec.shutdown: Terminate`; no `delete`, no objects destroyed). But
+`agent-fleet-ci` is outside this cell's `kubernetes_access` scope and RBAC goes
+through the registry, never a hand-authored Role — and these identities are
+shared by every repo's CI. Widening them to fix a **pure resource-waste issue
+with no correctness impact** is an operator decision. Filed with the exact
+proposed diff in `jvallery/agents#3173`.
 
 #### Rollback path — executed, not just documented
 
