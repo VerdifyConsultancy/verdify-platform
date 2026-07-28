@@ -136,28 +136,80 @@ PR-head sample above is the one of record.
 
 - **≥20 representative runs: PASS** (60).
 - **No lost status: PASS** (0 stuck-pending; every run reached a terminal state).
-- **<1% infrastructure failure: NOT PROVEN.** 3 of 61 (4.9%) ended `failure`.
-  These are terminal, correctly-reported non-green results, so no status was
-  lost — but the 3606 s outlier is a step-budget expiry, which is an
-  infrastructure-class failure rather than a genuine test failure. The retained
-  Argo objects corroborate this: `verdify-platform-ci-retry-mtlvw` ran ~2 h
-  before failing. **The <1% bar is not met on this sample.**
+- **<1% infrastructure failure: NOT MET, and `BLOCKED_PLATFORM`.** 3 of 61
+  (4.9%) ended `failure`. All three are terminal, correctly-reported non-green
+  results, so **no status was lost** and nothing false-greened. The worst is
+  PR #553 at **3606 s** — a step-budget expiry, i.e. an infrastructure-class
+  failure, not a test failure. The retained Argo objects corroborate the
+  pattern: `verdify-platform-ci-retry-mtlvw` ran ~2 h before failing.
+
+  The cause is the same template-owned overhead measured in §5.1 — runs that
+  stall in scheduling or dependency install run out the step budget. It cannot
+  be fixed by changing `ci-local.sh`, which completes in 77 s. Fixing the
+  budget expiry requires the same `jvallery/agents` template work.
 
 ### Performance verdict
 
-- **Principal workflow p95 no worse than hosted baseline: FAIL.**
-  CI p95 went **110 s → 882 s (≈8×)**; p50 **88 s → 200 s (≈2.3×)**.
-  Caveats that make this not strictly like-for-like: the in-cluster figure
-  includes webhook delivery and Argo queue time, and `ci-local.sh` runs a
-  superset of the old `ci.yml` (migration rollback-safety classification, twin
-  `g++` compile, prod overlay render). It is nonetheless a real wall-clock
-  regression for a contributor waiting on the gate, and it is **not** an
-  artifact of measurement bias — both samples agree.
+- **Principal workflow p95 no worse than hosted baseline: FAIL**, and
+  **not closable from this repo** (proof below).
+  Separating pure PR validation from runs that also triggered the post-merge
+  build (both post the same status context):
 
-This regression is inherited from the 2026-07-11 cutover; nothing in this
-change causes or worsens it. It is recorded here because the goal asked for the
-comparison, and it should be treated as a follow-up against the in-cluster CI
-templates (owned by `jvallery/agents`, not this repo).
+  | Sample | n | p50 | p95 | max |
+  | --- | --- | --- | --- | --- |
+  | PR-only head SHAs (pure `pr-ci`) | 29 | 191 | 796 | 3606 |
+  | Head SHAs also on `main` (`pr-ci` + build) | 32 | 206 | 597 | 1463 |
+
+  Both are far above the hosted CI p95 of 110 s.
+
+### 5.1 Where the time actually goes — and who owns it
+
+Node-level timings from `verdify-platform-pr-ci-h47pj` (this ledger's own PR,
+2026-07-28), cross-checked against the gate measured directly on a 48-core host:
+
+| Segment | Time | Owner |
+| --- | --- | --- |
+| `report-pending` pod | 9 s (+12 s scheduling) | template |
+| `trusted-precheck` pod | 7 s (+13 s scheduling) | template |
+| `validate` pod | **160 s** — of which **~77 s is `ci-local.sh`** and **~83 s is clone + venv/dependency setup** | split |
+| `report` pod | 10 s (+10 s scheduling) | template |
+| **Total** | **212 s** | |
+
+Measured directly, the whole gate is **~77 s**: ruff <1 s, schema suite 8 s,
+device-write gate 2 s, the 40-file logic suite 60 s, migration safety 1 s,
+grafana CM check 3 s, solar constants <1 s, twin `g++` 2 s, overlay render 1 s.
+
+**~135 s of every run is template-owned overhead** — four sequential pods each
+paying scheduling and image-pull cost, plus an uncached dependency install.
+Even if `ci-local.sh` were reduced to zero, a run could not beat the 110 s
+hosted baseline. **The p95 bar is structurally unreachable from this repo.**
+
+The long tail confirms this is infrastructure variance, not gate work:
+
+- **PR #532 changed exactly one file** (a `deploy/` digest pin) and took
+  **982 s** — the cheapest possible diff, ~13× the gate's runtime.
+- PR #547 (grafana JSON + tests) took 882 s; PR #548 took 1463 s.
+- None of the slow runs touched firmware, so the expensive replay-diff gates
+  were not even active.
+
+Duration is therefore uncorrelated with what changed. The old hosted `ci.yml`
+also ran **8 jobs in parallel**, so its 110 s p95 was the slowest of eight
+concurrent jobs; `ci-local.sh` runs every step sequentially in one pod.
+
+**Repo-side optimizations were evaluated and rejected on evidence:**
+consolidating the three `pytest` invocations into one measured *slower*
+(77 s vs 70 s split), so it was not made. Parallelising independent gate steps
+would save ~15 s of a 212 s run (~7 %) while making a production gate's failure
+output interleaved — not a good trade, and it cannot close a 110 s-vs-796 s gap.
+
+**Disposition: `BLOCKED_PLATFORM` for the performance and infra-reliability
+bars.** The fix belongs to the Argo templates in `jvallery/agents`
+(`platform/kubernetes/ci/agent-fleet-ci/workflows/`): collapse the four
+sequential pods, pre-bake the CI image with dependencies installed, and cache
+the venv. **Filed with this evidence as `jvallery/agents#3173`.**
+
+Nothing in this change causes or worsens the regression; it is inherited from
+the 2026-07-11 cutover.
 
 ## 6. Residual free GitHub-native jobs and exceptions
 
