@@ -453,7 +453,8 @@ Stated plainly rather than assumed:
 ## 10. Probe log (re-runnable)
 
 ```bash
-export GH_TOKEN=...   # via $GIT_ASKPASS / git credential fill
+# Run from an activated Agent Fleet repo pod. Invoke the runtime `gh` from
+# PATH directly; it resolves a rotating credential for each operation.
 R=VerdifyConsultancy/verdify-platform
 
 gh api repos/$R -q '{private,visibility,default_branch}'
