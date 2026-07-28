@@ -4,7 +4,7 @@
 open residual risk — see §6 and §7).
 
 Probed 2026-07-28. Every claim below is backed by a literal probe recorded in
-§8; re-run those to re-verify.
+§10; re-run those to re-verify.
 
 GitHub remains the source, issue, PR, review and check authority. No change in
 this ledger alters that.
@@ -211,6 +211,57 @@ the venv. **Filed with this evidence as `jvallery/agents#3173`.**
 Nothing in this change causes or worsens the regression; it is inherited from
 the 2026-07-11 cutover.
 
+### 5.2 Cutover validation — what was actually exercised
+
+Executed live on this ledger's own PR, 2026-07-28. Every row is an observation,
+not a design claim.
+
+| Check | Result |
+| --- | --- |
+| **Representative success** | 3 runs green on real content (`d5e66b5` 213 s, `287c39a` ~220 s, plus probes below) |
+| **Intentional failure** | Injected an `ubuntu-latest` workflow with an unpinned third-party action and no `permissions:` — **all 4 guards fired**; clean again once removed |
+| **Exact head SHA** | Status attaches to the head SHA itself, not a synthetic merge commit |
+| **Observed runner labels** | `actions/runs?head_sha=…` → `total_count: 0` on **every** commit pushed. Zero GitHub-hosted compute; all execution in ns `agent-fleet-ci` |
+| **Runner pod cleanup** | `podGC: {strategy: OnPodSuccess}`, `ttlStrategy: 86400s` after completion / `172800s` after failure. No `verdify-platform-pr-ci` pods remain after any run |
+| **Protected environment behavior** | N/A — **0** environments exist (§4), so there are no approvals to exercise |
+| **Superseded-job cancellation** | **FAILS — see below** |
+| **Timeout** | Observed in the wild: the 3606 s step-budget expiry on PR #553 terminated and reported non-green (no false green, no lost status) |
+
+#### Superseded jobs do NOT cancel
+
+Tested directly: two commits pushed 42 s apart (`2c175da` → `7c6e623`) while
+the first run was live.
+
+```
+[ 20s] A=pending B=pending | pr-ci-rgscg=Running  pr-ci-tlgbx=Running
+[160s] A=success B=pending | pr-ci-rgscg=Running  pr-ci-tlgbx=Running
+[180s] A=success B=success | pr-ci-rgscg=Succeeded pr-ci-tlgbx=Succeeded
+```
+
+**Both ran to completion concurrently.** The superseded run was never
+terminated. Root cause: the `verdify-platform-pr-ci` WorkflowTemplate declares
+**no `synchronization` block** (no mutex/semaphore), so nothing supersedes a
+prior run for the same ref.
+
+Severity: **resource waste, not a correctness or safety defect.** Commit
+statuses are keyed per-SHA, so the superseded run posted to its own old SHA and
+the head SHA got its own independent result. Mergeability follows the head SHA.
+No false green, no lost status, no cross-contamination. The cost is one wasted
+full run per superseded push.
+
+**Disposition: `BLOCKED_PLATFORM`** — the fix is a `synchronization` mutex keyed
+on `{repository}/{head-ref}` in the WorkflowTemplate, which lives in
+`jvallery/agents`. Folded into `jvallery/agents#3173`.
+
+#### Rollback path — executed, not just documented
+
+§8.2 step 2 was run for real: a `Workflow` submitted directly against
+`workflowTemplateRef: verdify-platform-pr-ci`, bypassing the webhook
+(`verdify-platform-rollback-proof-trg8g`, ns `agent-fleet-ci`). It reproduces
+the gate on the exact head revision with **no GitHub-hosted compute**,
+confirming the rollback lands on in-cluster self-hosted execution and **never
+on `ubuntu-latest`**.
+
 ## 6. Residual free GitHub-native jobs and exceptions
 
 1. **`Dependency Graph` (`dynamic/dependabot/update-graph`)** —
@@ -289,20 +340,44 @@ Approved rollback order:
    CI_BASE_REF=origin/main make ci   # adds replay-diff + fire-and-forget gates
    ```
    Post the resulting status manually if the required check must be satisfied.
-2. **Re-submit the in-cluster workflow directly**, bypassing the webhook:
+2. **Re-submit the in-cluster workflow directly**, bypassing the webhook.
+   **Proven executable — see §5.2** (`verdify-platform-rollback-proof-trg8g`):
    ```bash
    kubectl create -n agent-fleet-ci -f - <<'EOF'
-   # workflowTemplateRef: verdify-platform-ci, with the target revision
+   apiVersion: argoproj.io/v1alpha1
+   kind: Workflow
+   metadata:
+     generateName: verdify-platform-rollback-proof-
+     namespace: agent-fleet-ci
+   spec:
+     workflowTemplateRef: {name: verdify-platform-pr-ci}
+     arguments:
+       parameters:
+         - {name: event-action,    value: synchronize}
+         - {name: repository,      value: VerdifyConsultancy/verdify-platform}
+         - {name: base-repository, value: VerdifyConsultancy/verdify-platform}
+         - {name: head-repository, value: VerdifyConsultancy/verdify-platform}
+         - {name: base-ref,        value: main}
+         - {name: head-ref,        value: <branch>}
+         - {name: base-revision,   value: <base-sha>}
+         - {name: head-revision,   value: <head-sha>}
    EOF
    ```
    (Template is owned by `jvallery/agents`; see
    `platform/kubernetes/ci/agent-fleet-ci/workflows/`.)
-3. **Only if the cluster is unavailable** and a merge genuinely cannot wait:
-   restoring a hosted workflow is a deliberate, operator-approved exception. It
-   requires Jason's sign-off, a self-hosted/ARC label rather than
-   `ubuntu-latest`, and a matching update to this ledger. There is no approved
-   ARC profile registered to this repo today (§9), so this path is currently
-   **BLOCKED_PLATFORM** and step 1 is the real fallback.
+
+**Rollback target: MET.** Steps 1 and 2 both land on in-cluster self-hosted
+execution and consume zero GitHub-hosted compute — verified, not asserted.
+`ubuntu-latest` is never a rollback destination.
+
+Explicitly **not** an approved path: restoring any workflow from §2.2. Those
+are hosted-runner definitions; reinstating one re-introduces exactly what was
+removed, and `tests/test_no_hosted_runner_workflows.py` will fail the gate if
+one lands. If the cluster is ever unavailable *and* a merge cannot wait, step 1
+is the fallback — it needs nothing but a shell. A hosted workflow bearing a
+self-hosted/ARC label would require Jason's sign-off, a matching ledger update,
+and an ARC profile that **does not exist for this repo today** (§9), so that
+route is **BLOCKED_PLATFORM** and is not needed: step 1 covers the case.
 
 ## 9. What could not be verified from this cell
 
@@ -359,6 +434,3 @@ kubectl api-resources | grep actions.github            # ARC CRDs present
 Related: `docs/runbooks/prod-promotion.md` (digest-pin + gated sync),
 `docs/runbooks/laptop-operator.md` (host-portable dev loop),
 `scripts/ci-local.sh` (the gate itself).
-
-<!-- cancellation probe A -->
-<!-- cancellation probe B -->
