@@ -566,6 +566,12 @@ Verdify-local status publisher. No verified central issue currently owns that
 specific provenance defect. Filing or updating its exact `jvallery/agents`
 issue is itself blocked by #3189; the first authorized GitHub write must attach
 the SHA/status evidence above to #3189 or create the dedicated platform issue.
+The retained #553 Workflow is `verdify-platform-pr-ci-lp8z4`, exact head
+`aaf8687be75cb2e4223356be7994157e42ddc763`; its `validate` Pod failed after
+3606 seconds with `Pod was active on the node longer than the specified
+deadline`. The Pod has since been garbage-collected, while the Workflow and
+terminal failure status remain. Because the publisher supplied no target URL,
+the Workflow name plus retained object is the only durable run reference.
 
 No direct workflow submission, production sync/restart, image push, digest pin,
 database mutation, or device request was performed. After publication and
@@ -577,6 +583,36 @@ requires reviewed image pins for `verdify-api`, `verdify-ingestor`, and
 documented `verdify-mcp` plus Jason-gated single-writer `verdify-ingestor`
 restart. The production lesson cleanup is part of that gated reconciliation;
 it must not be applied directly from this cell.
+
+### Shared T+65 read-only durability proof
+
+Re-probed at **2026-07-29T07:01:32Z–07:03:00Z**, more than seven hours after
+PR #555 merged and more than six hours after its generated digest-pin PR #556
+merged. The public default branch remained
+`eb3ac9cf33001fa6c5271412284382b36c6abf9e`; #555 and #556 remained merged,
+and their exact-head `Verdify Platform / Argo PR CI` statuses remained
+successful. Their validation/post-merge workflows
+`verdify-platform-pr-ci-kk8tk`, `verdify-platform-ci-ft8l9`,
+`verdify-platform-pr-ci-twxtq`, and `verdify-platform-ci-trmfj` all remained
+`Succeeded`, with no active Verdify workflow.
+
+The production core remained available: both API and MCP replicas, the single
+ingestor, planner, setpoint server, database, Grafana, and both lab replicas
+were `Running` and ready; the ingestor still had zero restarts. This is a
+durability/health observation, **not** a deployment claim. The reviewed prod
+overlay contains the newer #555 Zot digests (`verdify-api` `d28c45ce…`,
+`verdify-mcp` `e3f37fc9…`, `verdify-ingestor` `08338624…`, and planner
+`735cb005…`), while the running Deployments still use the older gated digests
+(`984ba493…`, `8cc8d747…`, `fcd13ad7…`, and `ff7de32d…`). The service account
+cannot read the `verdify-prod-dark` Argo Application, so `Synced + Healthy`
+cannot be asserted; the digest mismatch independently proves that reviewed
+desired state has not been reconciled. No sync or workload mutation was
+attempted.
+
+At the same probe, #553 remained the only open PR with its unchanged central
+Argo timeout failure, status target URLs remained null, the generated GitHub
+token-file/wrapper contract remained absent, all 15 shared Git worktrees were
+clean, and no task-prefixed `/tmp/verdify-*` artifacts remained.
 
 ---
 
