@@ -47,6 +47,7 @@ planner-graph = [
     "uvicorn>=0.32.0",
 ]
 dev = [
+    "pillow>=11.0",
     "pytest>=9.0",
     "pytest-asyncio>=0.24",
     "ruff>=0.11",
@@ -109,4 +110,12 @@ indent-style = "space"
 [tool.pytest.ini_options]
 testpaths = ["tests", "verdify_schemas/tests"]
 python_files = ["test_*.py"]
-addopts = "--tb=short -q"
+addopts = "--tb=short -q --strict-markers -ra"
+markers = [
+    "live: read-only checks against the current production stack; requires --run-live",
+    "device_live: production endpoint checks that can emit an operational alert; requires --run-device-live and operator approval",
+    "writable_fixture: mutation checks requiring an explicitly acknowledged disposable test database; requires --run-writable",
+    "legacy_vm: historical checks for the retired iris-VM Docker/systemd stack",
+    "external_fixture: checks that require --run-external and an explicitly supplied external content fixture",
+    "container_fixture: self-contained checks that create disposable local containers; requires --run-container-fixture",
+]

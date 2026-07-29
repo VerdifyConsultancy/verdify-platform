@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import os
-import subprocess
 from datetime import date
 from decimal import Decimal
 
@@ -29,6 +27,7 @@ from verdify_schemas.mcp_responses import (
     ToolError,
 )
 from verdify_schemas.telemetry import DliEvidence
+from verdify_schemas.tests.live_db import db_query_rows
 
 
 class TestClimateSnapshot:
@@ -336,55 +335,14 @@ class TestOutcomeKpi:
 
 
 # ── Drift guard: live fn_planner_scorecard() metric names must be a subset of
-#    ScorecardResponse.metric_names(). Skips if no DB is reachable. ─────
-def _docker_timescaledb_reachable() -> bool:
-    import shutil
-
-    if not shutil.which("docker"):
-        return False
-    r = subprocess.run(
-        ["docker", "inspect", "-f", "{{.State.Running}}", "verdify-timescaledb"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    return r.returncode == 0 and r.stdout.strip() == "true"
-
-
-def _ci_postgres_reachable() -> bool:
-    return bool(os.environ.get("POSTGRES_HOST"))
-
-
-@pytest.mark.skipif(
-    not (_ci_postgres_reachable() or _docker_timescaledb_reachable()),
-    reason="no DB backend available",
-)
+#    ScorecardResponse.metric_names(). ────────────────────────────────────────
+@pytest.mark.live
 def test_scorecard_metric_names_match_live_function():
     """Every metric fn_planner_scorecard() emits must be modelled in
     ScorecardResponse. A new DB-side metric without a schema field is
     the exact drift case this test is here to catch."""
     sql = "SELECT DISTINCT metric FROM fn_planner_scorecard()"
-    if _ci_postgres_reachable():
-        env = os.environ.copy()
-        env.setdefault("PGHOST", env.get("POSTGRES_HOST", "localhost"))
-        env.setdefault("PGPORT", env.get("POSTGRES_PORT", "5432"))
-        env.setdefault("PGUSER", env.get("POSTGRES_USER", "verdify"))
-        env.setdefault("PGPASSWORD", env.get("POSTGRES_PASSWORD", "verdify"))
-        env.setdefault("PGDATABASE", env.get("POSTGRES_DB", "verdify"))
-        r = subprocess.run(["psql", "-t", "-A", "-c", sql], capture_output=True, text=True, timeout=15, env=env)
-        if r.returncode != 0:
-            if 'relation "v_daily_kpi" does not exist' in r.stderr:
-                pytest.skip("CI Postgres bootstrap did not create v_daily_kpi")
-            r.check_returncode()
-    else:
-        r = subprocess.run(
-            ["docker", "exec", "verdify-timescaledb", "psql", "-U", "verdify", "-d", "verdify", "-t", "-A", "-c", sql],
-            capture_output=True,
-            text=True,
-            timeout=15,
-            check=True,
-        )
-    live = {ln.strip() for ln in r.stdout.splitlines() if ln.strip()}
+    live = {line.strip() for line in db_query_rows(sql)}
     if not live:
         pytest.skip("fn_planner_scorecard() returned 0 rows for today (not enough data)")
     modeled = ScorecardResponse.metric_names()

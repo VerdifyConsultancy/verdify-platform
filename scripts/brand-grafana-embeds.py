@@ -231,19 +231,26 @@ ORDER BY date"""
 
 DAILY_COST_BY_SOURCE_SQL = """SELECT
   (date + time '12:00')::timestamptz AS time,
-  ROUND(cost_electric::numeric, 2) AS "Runtime Electric ($)",
-  ROUND(cost_gas::numeric, 2) AS "Gas ($)",
-  ROUND(cost_water::numeric, 2) AS "Water ($)"
-FROM v_daily_kpi
-WHERE resource_terms_available
-  AND $__timeFilter((date + time '12:00')::timestamptz)
+  ROUND(cost_electric_est::numeric, 2) AS "Runtime Electric ($)",
+  ROUND(cost_gas_est::numeric, 2) AS "Gas ($)",
+  ROUND(cost_water_est::numeric, 2) AS "Water ($)"
+FROM mv_daily_kpi
+WHERE $__timeFilter((date + time '12:00')::timestamptz)
 ORDER BY date"""
 
 RUNTIME_MODELED_KWH_30D_SQL = (
-    "SELECT now() AS time, ROUND(AVG(kwh)::numeric, 1) AS value FROM v_daily_kpi "
-    "WHERE date >= current_date - interval '30 days' AND date < current_date "
-    "AND resource_terms_available"
+    "SELECT now() AS time, ROUND(AVG(kwh_modeled)::numeric, 1) AS value FROM mv_daily_kpi "
+    "WHERE date >= current_date - interval '30 days' AND date < current_date"
 )
+
+DAILY_COST_BY_TYPE_SQL = {
+    "A": """SELECT (date + time '12:00')::timestamptz AS time, cost_electric_est AS "Runtime Electric"
+FROM mv_daily_kpi WHERE $__timeFilter((date + time '12:00')::timestamptz) ORDER BY date""",
+    "B": """SELECT (date + time '12:00')::timestamptz AS time, cost_gas_est AS "Gas"
+FROM mv_daily_kpi WHERE $__timeFilter((date + time '12:00')::timestamptz) ORDER BY date""",
+    "C": """SELECT (date + time '12:00')::timestamptz AS time, cost_water_est AS "Water"
+FROM mv_daily_kpi WHERE $__timeFilter((date + time '12:00')::timestamptz) ORDER BY date""",
+}
 
 MONTHLY_RESOURCE_COST_SQL = """WITH months AS (
   SELECT generate_series(
@@ -254,13 +261,12 @@ MONTHLY_RESOURCE_COST_SQL = """WITH months AS (
 ), costs AS (
   SELECT
     date_trunc('month', date)::date AS month_start,
-    ROUND(SUM(cost_electric)::numeric, 2) AS electric_cost_usd,
-    ROUND(SUM(cost_gas)::numeric, 2) AS gas_cost_usd,
-    ROUND(SUM(cost_water)::numeric, 2) AS water_cost_usd,
-    ROUND(SUM(cost_total)::numeric, 2) AS total_cost_usd
-  FROM v_daily_kpi
-  WHERE resource_terms_available
-    AND date >= (SELECT min(month_start) FROM months)
+    ROUND(SUM(cost_electric_est)::numeric, 2) AS electric_cost_usd,
+    ROUND(SUM(cost_gas_est)::numeric, 2) AS gas_cost_usd,
+    ROUND(SUM(cost_water_est)::numeric, 2) AS water_cost_usd,
+    ROUND(SUM(cost_total_est)::numeric, 2) AS total_cost_usd
+  FROM mv_daily_kpi
+  WHERE date >= (SELECT min(month_start) FROM months)
     AND date < ((SELECT max(month_start) FROM months) + interval '1 month')::date
   GROUP BY 1
 )
@@ -1643,8 +1649,16 @@ def normalize_runtime_electric_sources(panel: dict[str, Any]) -> None:
         )
         replace_first_target_sql(panel, RUNTIME_POWERWALL_COVERAGE_SQL)
 
-    if title == "Runtime-Modeled kWh/day (30-Day Avg)":
-        replace_first_target_sql(panel, RUNTIME_MODELED_KWH_30D_SQL)
+    if title in {
+        "Runtime-Modeled kWh/day (30-Day Avg)",
+        "Runtime-Modeled kWh/day (30-Day Avg) (est)",
+    }:
+        panel["title"] = "Runtime-Modeled kWh/day (30-Day Avg) (est)"
+        panel["description"] = (
+            "Average whole controlled-equipment runtime estimate across the last 30 completed daily summaries."
+        )
+        if title == "Runtime-Modeled kWh/day (30-Day Avg)":
+            replace_first_target_sql(panel, RUNTIME_MODELED_KWH_30D_SQL)
 
     if title in {
         "Runtime-Modeled Power vs Solar Irradiance",
@@ -1667,29 +1681,47 @@ def normalize_runtime_electric_sources(panel: dict[str, Any]) -> None:
         rename_override_label(panel, "Shelly Fans Estimate", "Runtime Fans (W)")
         rename_override_label(panel, "Shelly General Channel", "Runtime Other (fog/lights/vent)")
 
-    if title == "Daily Cost by Type" and panel.get("type") == "timeseries":
+    if title in {"Daily Cost by Type", "Daily Cost by Type (est)"} and panel.get("type") == "timeseries":
+        panel["title"] = "Daily Cost by Type (est)"
         panel["description"] = (
-            "Eligible daily cost by utility type. Electric uses transition-derived runtime and date-valid "
-            "coefficient evidence."
+            "Daily modeled utility-cost estimates. Electric uses transition-derived runtime; gas and water "
+            "use the published rate assumptions."
         )
+        for ref_id, raw_sql in DAILY_COST_BY_TYPE_SQL.items():
+            replace_target_sql(panel, ref_id, raw_sql)
         rename_override_label(panel, "Shelly Electric", "Runtime Electric")
-        for target in panel.get("targets", []) or []:
-            raw_sql = target.get("rawSql")
-            if isinstance(raw_sql, str):
-                target["rawSql"] = raw_sql.replace('AS "Shelly Electric"', 'AS "Runtime Electric"')
-
-    if title == "Monthly Resource Cost by Source (6 Months)" and panel.get("type") == "barchart":
-        panel["description"] = (
-            "Monthly eligible greenhouse utility cost. Missing or low-confidence days stay blank; electric "
-            "requires transition runtime and date-valid coefficients, while gas and water use the published "
-            "rate assumptions."
+        rename_override_label(panel, "Electric", "Runtime Electric")
+        upsert_override_property(
+            override_for_label(panel, "Runtime Electric"),
+            "color",
+            {"fixedColor": BRAND["leaf"], "mode": "fixed"},
         )
-        replace_first_target_sql(panel, MONTHLY_RESOURCE_COST_SQL)
+
+    if (
+        title
+        in {
+            "Monthly Resource Cost by Source (6 Months)",
+            "Monthly Resource Cost by Source (6 Months) (est)",
+        }
+        and panel.get("type") == "barchart"
+    ):
+        panel["title"] = "Monthly Resource Cost by Source (6 Months) (est)"
+        panel["description"] = (
+            "Monthly modeled greenhouse utility-cost estimates. Electric uses transition-derived runtime; "
+            "gas and water use the published rate assumptions."
+        )
+        if title == "Monthly Resource Cost by Source (6 Months)":
+            replace_first_target_sql(panel, MONTHLY_RESOURCE_COST_SQL)
         rename_override_label(panel, "Shelly Electric ($)", "Runtime Electric ($)")
         rename_override_label(panel, "Electric ($)", "Runtime Electric ($)")
 
-    if title == "Daily Cost by Source" and panel.get("type") == "timeseries":
-        replace_first_target_sql(panel, DAILY_COST_BY_SOURCE_SQL)
+    if title in {"Daily Cost by Source", "Daily Cost by Source (est)"} and panel.get("type") == "timeseries":
+        panel["title"] = "Daily Cost by Source (est)"
+        panel["description"] = (
+            "Daily modeled utility-cost estimates from runtime, usage, and published rate assumptions."
+        )
+        if title == "Daily Cost by Source":
+            replace_first_target_sql(panel, DAILY_COST_BY_SOURCE_SQL)
         rename_override_label(panel, "Shelly Electric ($)", "Runtime Electric ($)")
         rename_override_label(panel, "Electric ($)", "Runtime Electric ($)")
 
@@ -2861,15 +2893,85 @@ def check_explicit_graph_series_colors(label: str, panel: dict[str, Any]) -> lis
     return findings
 
 
+def sql_code_without_noise(sql: str) -> str:
+    """Blank PostgreSQL comments and literals before provenance inspection."""
+
+    out: list[str] = []
+    index = 0
+    length = len(sql)
+    dollar_tag = re.compile(r"\$[A-Za-z_][A-Za-z0-9_]*\$|\$\$")
+
+    def blank(segment: str) -> str:
+        return "".join("\n" if char == "\n" else " " for char in segment)
+
+    while index < length:
+        char = sql[index]
+        pair = sql[index : index + 2]
+        if pair == "--":
+            end = sql.find("\n", index)
+            if end == -1:
+                out.append(" " * (length - index))
+                break
+            out.append(" " * (end - index))
+            index = end
+            continue
+        if pair == "/*":
+            depth = 1
+            end = index + 2
+            while end < length and depth:
+                if sql[end : end + 2] == "/*":
+                    depth += 1
+                    end += 2
+                elif sql[end : end + 2] == "*/":
+                    depth -= 1
+                    end += 2
+                else:
+                    end += 1
+            out.append(blank(sql[index:end]))
+            index = end
+            continue
+        if char == "$":
+            match = dollar_tag.match(sql, index)
+            if match:
+                tag = match.group(0)
+                close = sql.find(tag, match.end())
+                end = length if close == -1 else close + len(tag)
+                out.append(blank(sql[index:end]))
+                index = end
+                continue
+        if char in {"'", '"'}:
+            quote = char
+            end = index + 1
+            while end < length:
+                if sql[end : end + 2] == quote * 2:
+                    end += 2
+                    continue
+                if sql[end] == quote:
+                    end += 1
+                    break
+                end += 1
+            out.append(blank(sql[index:end]))
+            index = end
+            continue
+        out.append(char)
+        index += 1
+    return "".join(out)
+
+
 def check_resource_accounting_generator_parity(label: str, dashboard: dict[str, Any]) -> list[str]:
     """Reject resource SQL that is unsafe now or after the normal branding rewrite."""
 
     findings: list[str] = []
-    managed_titles = {
-        "Runtime-Modeled kWh/day (30-Day Avg)",
-        "Daily Cost by Type",
-        "Monthly Resource Cost by Source (6 Months)",
-        "Daily Cost by Source",
+    required_estimate_fields = {
+        "Runtime-Modeled kWh/day (30-Day Avg) (est)": {"kwh_modeled"},
+        "Daily Cost by Type (est)": {"cost_electric_est", "cost_gas_est", "cost_water_est"},
+        "Monthly Resource Cost by Source (6 Months) (est)": {
+            "cost_electric_est",
+            "cost_gas_est",
+            "cost_water_est",
+            "cost_total_est",
+        },
+        "Daily Cost by Source (est)": {"cost_electric_est", "cost_gas_est", "cost_water_est"},
     }
     legacy_terms = ("runtime_", "cost_", "kwh", "therm", "water_used_gal", "mister_water_gal")
 
@@ -2877,7 +2979,7 @@ def check_resource_accounting_generator_parity(label: str, dashboard: dict[str, 
         panel = deepcopy(source_panel)
         normalize_runtime_electric_sources(panel)
         title = str(panel.get("title") or "")
-        if title not in managed_titles:
+        if title not in required_estimate_fields:
             continue
         for stage, candidate in (("source", source_panel), ("normalized", panel)):
             queries = [
@@ -2885,21 +2987,45 @@ def check_resource_accounting_generator_parity(label: str, dashboard: dict[str, 
                 for target in candidate.get("targets", []) or []
                 if isinstance(target, dict) and isinstance(target.get("rawSql"), str)
             ]
-            for raw_sql in queries:
-                if "daily_summary" in raw_sql and any(term in raw_sql for term in legacy_terms):
+            for query_index, raw_sql in enumerate(queries, start=1):
+                code = sql_code_without_noise(raw_sql)
+                code_lower = code.lower()
+                if "daily_summary" in code_lower and any(term in code_lower for term in legacy_terms):
                     findings.append(
                         f"{label}: panel {candidate.get('id')} {title!r} {stage} SQL bypasses resource provenance"
                     )
-            if queries:
-                combined = "\n".join(queries)
-                if "v_daily_kpi" not in combined or "resource_terms_available" not in combined:
+                relation = re.search(
+                    r"\b(?:FROM|JOIN)\s+(?:public\s*\.\s*)?mv_daily_kpi\b",
+                    code,
+                    re.IGNORECASE,
+                )
+                shadow_cte = re.search(r"\bmv_daily_kpi\s+AS\s*\(", code, re.IGNORECASE)
+                if relation is None or shadow_cte is not None:
                     findings.append(
-                        f"{label}: panel {candidate.get('id')} {title!r} {stage} SQL is not availability-gated"
+                        f"{label}: panel {candidate.get('id')} {title!r} {stage} target {query_index} "
+                        "SQL does not use mv_daily_kpi"
                     )
-                if title == "Monthly Resource Cost by Source (6 Months)" and "COALESCE(c." in combined:
-                    findings.append(
-                        f"{label}: panel {candidate.get('id')} {title!r} {stage} SQL zero-fills unavailable months"
-                    )
+            if not queries:
+                findings.append(f"{label}: panel {candidate.get('id')} {title!r} {stage} has no SQL targets")
+                continue
+            combined = "\n".join(queries)
+            code = sql_code_without_noise(combined)
+            code_lower = code.lower()
+            if re.search(r"\bv_daily_kpi\b", code, re.IGNORECASE) or "resource_terms_available" in code_lower:
+                findings.append(
+                    f"{label}: panel {candidate.get('id')} {title!r} {stage} SQL reintroduces the retired "
+                    "availability-gated display contract"
+                )
+            missing = sorted(required_estimate_fields[title] - set(re.findall(r"\b[a-z_]+\b", code_lower)))
+            if missing:
+                findings.append(
+                    f"{label}: panel {candidate.get('id')} {title!r} {stage} SQL lacks estimate fields "
+                    f"{', '.join(missing)}"
+                )
+            if title == "Monthly Resource Cost by Source (6 Months) (est)" and "coalesce(c." in code_lower:
+                findings.append(
+                    f"{label}: panel {candidate.get('id')} {title!r} {stage} SQL zero-fills unavailable months"
+                )
     return findings
 
 
@@ -3068,7 +3194,7 @@ def check_dashboard_data(label: str, dashboard: dict[str, Any], embedded_ids: se
                 findings.append(
                     f"{label}: panel {panel['id']} 'Plan Accuracy by Day' does not use compact 14-day labels"
                 )
-        if panel.get("type") == "timeseries" and panel.get("title") == "Daily Cost by Source":
+        if panel.get("type") == "timeseries" and panel.get("title") == "Daily Cost by Source (est)":
             raw_sql = next(
                 (
                     target.get("rawSql")
@@ -3079,7 +3205,7 @@ def check_dashboard_data(label: str, dashboard: dict[str, Any], embedded_ids: se
             )
             if raw_sql != DAILY_COST_BY_SOURCE_SQL:
                 findings.append(
-                    f"{label}: panel {panel['id']} 'Daily Cost by Source' does not use provenance-gated cost fields"
+                    f"{label}: panel {panel['id']} 'Daily Cost by Source (est)' does not use estimated cost fields"
                 )
         if panel.get("type") == "stat" and panel.get("title") == "Free Heap":
             defaults = panel.get("fieldConfig", {}).get("defaults", {})

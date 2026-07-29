@@ -50,6 +50,11 @@ from verdify_schemas.tunable_registry import (  # noqa: E402
 )
 from verdify_schemas.tunables import ALL_TUNABLES  # noqa: E402
 
+READ_ONLY_SERVER_SETTINGS = {
+    "default_transaction_read_only": "on",
+    "statement_timeout": "30000",
+}
+
 RESERVED_NO_EFFECT = {
     "bias_cool",
     "bias_heat",
@@ -389,7 +394,7 @@ def _static_firmware_hits() -> dict[str, dict[str, int]]:
 
 
 async def _load_evidence(params: list[str]) -> dict[str, Evidence]:
-    conn = await asyncpg.connect(DB_DSN)
+    conn = await asyncpg.connect(DB_DSN, server_settings=READ_ONLY_SERVER_SETTINGS)
     try:
         evidence = {param: Evidence() for param in params}
 
@@ -565,7 +570,7 @@ async def _load_evidence(params: list[str]) -> dict[str, Evidence]:
 
 
 async def _load_summary() -> dict[str, Any]:
-    conn = await asyncpg.connect(DB_DSN)
+    conn = await asyncpg.connect(DB_DSN, server_settings=READ_ONLY_SERVER_SETTINGS)
     try:
         row = await conn.fetchrow(
             """

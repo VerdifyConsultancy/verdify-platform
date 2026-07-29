@@ -1,6 +1,6 @@
 # Verdify Platform Access Matrix
 
-Last updated: 2026-07-28
+Last updated: 2026-07-29
 
 Agent name: `verdify-platform`
 
@@ -42,6 +42,13 @@ does not include raw secret values.
   not inspected. Local commits and deliberate public reads are available, but
   push, PR, issue, status, workflow, and other authenticated GitHub operations
   are blocked until the Fleet activation and rollout happen externally.
+- Re-probed at `2026-07-29T05:17:21Z`: `gh` still resolves to stock
+  `/usr/bin/gh` (`2.96.0`); neither `GITHUB_TOKEN_FILE` nor
+  `AGENT_GITHUB_TOKEN_FILE` is present; no runtime wrapper exists at the
+  declared user-local path. `GIT_ASKPASS` names the legacy helper only. No
+  credential value was read. This is the exact central activation blocker in
+  `jvallery/agents#3189`; legacy ambient token names are not authorization for
+  push, PR, issue, review, or status writes.
 - Once activation is performed externally, ordinary HTTPS Git uses the runtime
   `GIT_ASKPASS`, and `gh` resolves through the runtime-provided wrapper. Both
   obtain the current one-hour credential at operation time. File-aware clients

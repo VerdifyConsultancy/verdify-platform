@@ -24,28 +24,36 @@ PY="${PYTHON:-.venv/bin/python}"
 RUFF="${RUFF:-.venv/bin/ruff}"
 if [ ! -x "$PY" ]; then PY=python3; fi
 if [ ! -x "$RUFF" ]; then RUFF="$PY -m ruff"; fi
+# The generated validation contract is deterministic and never inherits an
+# operator shell's pytest opt-in flags (especially --run-live/device/writable).
+export PYTEST_ADDOPTS=""
+PORTABLE_MARKERS="not live and not device_live and not writable_fixture and not container_fixture and not legacy_vm and not external_fixture"
 
 step() { printf '\n== %s ==\n' "$1"; }
 
 step "ruff lint"
-$RUFF check ingestor/ api/ mcp/ scripts/*.py tests/ verdify_public/ verdify_schemas/
+$RUFF check conftest.py ingestor/ api/ mcp/ scripts/*.py tests/ verdify_public/ verdify_schemas/
 
 step "ruff format"
-$RUFF format --check ingestor/ api/ mcp/ scripts/*.py tests/ verdify_public/ verdify_schemas/
+$RUFF format --check conftest.py ingestor/ api/ mcp/ scripts/*.py tests/ verdify_public/ verdify_schemas/
 
-step "schema suites (incl. drift guards + producer payload round-trips)"
-$PY -m pytest -q verdify_schemas/tests/
+step "schema source/contracts (DB-backed current-prod drift runs in make test-live)"
+$PY -m pytest -q -m "$PORTABLE_MARKERS" verdify_schemas/tests/
 
 step "device write gate"
 $PY -m pytest -q tests/test_device_write_gate.py
 
 step "pure-logic / contract tests"
-$PY -m pytest -q \
+$PY -m pytest -q -m "$PORTABLE_MARKERS" \
+  tests/test_02_database.py::test_explicit_scope_table_writers_always_supply_greenhouse_id \
+  tests/test_03_api.py \
+  tests/test_08_observability.py \
   tests/test_10_planner_routing.py \
   tests/test_11_planner_milestones.py \
   tests/test_13_grafana_band_traceability.py \
   tests/test_14_shadow_mode.py \
   tests/test_14_site_doctor.py \
+  tests/test_15_lab_site_followup.py \
   tests/test_17_planner_health_surface.py \
   tests/test_18_twin_divergence_dashboard.py \
   tests/test_19_firmware_twin_shadow_src_sync.py \
@@ -54,9 +62,9 @@ $PY -m pytest -q \
   tests/test_api_public_output_policy.py \
   tests/test_climate_intent_replay_evaluator.py \
   tests/test_compliance_feasibility_classifier.py \
+  tests/test_dli_availability.py \
   tests/test_firmware_crop_agnostic_guard.py \
   tests/test_forecast_action_engine_path.py \
-  tests/test_g5_dualwrite_validation.py \
   tests/test_generate_daily_plan.py \
   tests/test_agent_fleet_github_auth.py \
   tests/test_grafana_cm_check.py \

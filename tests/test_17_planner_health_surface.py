@@ -15,6 +15,8 @@ from uuid import uuid4
 import pytest
 import yaml
 
+from conftest import require_writable_fixture_dsn
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
@@ -740,11 +742,10 @@ def test_all_terminal_actions_share_locked_attempt_and_conditional_pair_fences()
 
 
 @pytest.mark.asyncio
+@pytest.mark.writable_fixture
 @pytest.mark.parametrize("winner_status", ["plan_written", "action_completed", "acked"])
 async def test_two_connection_terminal_winner_fences_late_competitor(mcp_server, winner_status):
-    dsn = os.environ.get("PLANNER_FENCE_TEST_DSN")
-    if not dsn:
-        pytest.skip("PLANNER_FENCE_TEST_DSN is required for real two-connection fencing proof")
+    dsn = require_writable_fixture_dsn("VERDIFY_WRITABLE_TEST_DSN")
     asyncpg = pytest.importorskip("asyncpg")
     schema = f"planner_fence_{uuid4().hex}"
     admin = await asyncpg.connect(dsn)

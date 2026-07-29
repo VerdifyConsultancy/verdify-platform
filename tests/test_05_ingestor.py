@@ -3,6 +3,7 @@ Test 05: Ingestor — Service health, task execution, data pipeline.
 """
 
 import asyncio
+import json
 import os
 import subprocess
 import sys
@@ -11,6 +12,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+
 from conftest import db_query
 
 INGESTOR_PATH = str(Path(__file__).resolve().parent.parent / "ingestor")
@@ -76,28 +78,52 @@ def _entity_state(key: int, value):
     return SimpleNamespace(key=key, state=value)
 
 
+@pytest.mark.live
 class TestIngestorService:
-    """Ingestor systemd service must be healthy."""
+    """The current k3s ingestor Deployment must be healthy."""
 
-    def test_service_active(self):
+    @staticmethod
+    def _kubectl_json(resource: str) -> dict:
         result = subprocess.run(
-            ["systemctl", "is-active", "verdify-ingestor"], capture_output=True, text=True, timeout=5
-        )
-        assert result.stdout.strip() == "active"
-
-    def test_no_recent_crashes(self):
-        """No restarts in the last hour."""
-        result = subprocess.run(
-            ["journalctl", "-u", "verdify-ingestor", "--since", "1 hour ago", "--no-pager", "-q", "-o", "cat"],
+            ["kubectl", "get", resource, "-n", "verdify-prod", "-o", "json"],
             capture_output=True,
             text=True,
-            timeout=10,
+            timeout=20,
+            check=True,
         )
-        assert "Started" not in result.stdout or result.stdout.count("Started") <= 1, (
-            "Ingestor restarted in the last hour"
+        return json.loads(result.stdout)
+
+    def test_service_active(self):
+        deployment = self._kubectl_json("deployment/verdify-ingestor")
+        assert deployment["status"].get("readyReplicas") == deployment["spec"].get("replicas") == 1
+        assert not deployment["status"].get("unavailableReplicas", 0)
+
+    def test_no_recent_crashes(self):
+        """The active single-writer pod has not restarted."""
+        result = subprocess.run(
+            [
+                "kubectl",
+                "get",
+                "pods",
+                "-n",
+                "verdify-prod",
+                "-l",
+                "app.kubernetes.io/component=ingestor",
+                "-o",
+                "json",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=20,
+            check=True,
         )
+        pods = json.loads(result.stdout)["items"]
+        assert len(pods) == 1, "the greenhouse must have exactly one ingestor writer pod"
+        restarts = sum(status["restartCount"] for status in pods[0]["status"].get("containerStatuses", []))
+        assert restarts == 0, f"ingestor pod has {restarts} container restart(s)"
 
 
+@pytest.mark.live
 class TestESP32Connection:
     """ESP32 data must be flowing through the ingestor."""
 
@@ -201,6 +227,7 @@ class TestIngestorTasks:
         assert pool.conn.execute_calls[0][1][0] == old_ts
         assert pool.conn.execute_calls[1][1][0] == new_ts
 
+    @pytest.mark.live
     def test_setpoint_dispatcher_recent(self):
         """Setpoint dispatcher must have produced recent write-side evidence."""
         age = db_query(
@@ -220,35 +247,35 @@ class TestIngestorTasks:
         # Dispatcher runs every 5 min; allow 15 min tolerance. During active
         # heap pressure it may intentionally hold setpoint_changes while still
         # writing clamp/audit evidence. If there are no rows to write, require
-        # recent journal evidence instead.
+        # recent pod-log evidence instead.
         if int(age) >= 900:
             result = subprocess.run(
                 [
-                    "journalctl",
-                    "-u",
-                    "verdify-ingestor",
+                    "kubectl",
+                    "-n",
+                    "verdify-prod",
+                    "logs",
+                    "deploy/verdify-ingestor",
                     "--since",
-                    "15 minutes ago",
-                    "--no-pager",
-                    "-q",
-                    "-o",
-                    "cat",
+                    "15m",
                 ],
                 capture_output=True,
                 text=True,
                 timeout=10,
             )
             assert "Dispatcher:" in result.stdout, (
-                f"Last dispatch DB write was {age}s ago and no recent journal evidence"
+                f"Last dispatch DB write was {age}s ago and no recent pod-log evidence"
             )
             return
         assert int(age) < 900, f"Last dispatch was {age}s ago (>15min)"
 
+    @pytest.mark.live
     def test_forecast_sync_recent(self):
         """Forecast must have been synced in last 2 hours."""
         age = db_query("SELECT extract(epoch FROM now() - max(fetched_at))::int FROM weather_forecast")
         assert int(age) < 7200, f"Last forecast sync was {age}s ago (>2h)"
 
+    @pytest.mark.live
     def test_alert_monitor_runs(self):
         """Alert log should have entries (even if no active alerts)."""
         count = db_query("SELECT count(*) FROM alert_log WHERE ts > now() - interval '24 hours'")
@@ -256,6 +283,7 @@ class TestIngestorTasks:
         assert count is not None
 
 
+@pytest.mark.live
 class TestDataIntegrity:
     """Data quality checks."""
 

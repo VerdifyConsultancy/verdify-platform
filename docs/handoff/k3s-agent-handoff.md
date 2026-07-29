@@ -38,12 +38,34 @@ laptop. (Firmware OTA is the exception — see §4.)
   - `make setup` creates/updates the repo-local `.venv` from `pyproject.toml`
     (Python 3.12+ required; 3.13 preferred for parity).
   - `make lint` (ruff) — required.
-  - `make test` (pytest) — required; 1 pre-existing flaky timeout
-    (`test_dew_point_risk_computes`) is tolerated, everything else must pass.
-  - DB-backed targets default to `VERDIFY_DB_BACKEND=kube` (Makefile) → they hit
-    the in-cluster DB. Python tooling runs from the repo `.venv` by default;
-    the legacy `/srv/greenhouse/.venv` is used only if it exists or `VENV=...`
-    is passed explicitly.
+  - `make test` (pytest) — required portable source/unit/contract suite. It does
+    not auto-discover Docker, kubectl, production, the retired iris VM, or an
+    external content vault. Explicitly classified environment checks are
+    deselected and reported separately from the portable result.
+  - `make test-container` — opt-in checks that create and remove their own
+    disposable local containers. The portable suite and in-cluster `make ci`
+    gate do not probe for or depend on a Docker daemon.
+  - `make test-live` — opt-in, read-only checks against the current production
+    stack. SQL accepts only `SELECT`/`WITH`/`SHOW` shapes and PostgreSQL also
+    enforces `default_transaction_read_only=on`; this includes the DB-backed
+    schema drift/relationship/view guards. Public HTTPS probes verify TLS.
+    `/setpoints` and device-VLAN checks are excluded because even a GET can emit
+    an operational alert row.
+  - `make test-writable` — mutation E2Es only. It requires
+    `VERDIFY_WRITABLE_TEST_ACK=disposable` and
+    `VERDIFY_WRITABLE_TEST_DSN=postgresql://.../<name-containing-test>`;
+    production-looking hosts fail closed. All writable cases use that one DSN.
+    There is no disposable DB in the single production environment, so
+    provision one outside prod before invoking this target.
+  - The planner context collector and shared PostgreSQL helper are mounted into
+    `verdify-ingestor` with `subPath`. A change to
+    `scripts/gather-plan-context.sh` or `scripts/lib/psql-verdify.sh` therefore
+    requires the generated ConfigMap mirror plus a gated `verdify-ingestor`
+    rollout; a ConfigMap sync by itself does not update either running file.
+    Record `Post-merge restart: verdify-ingestor` and leave the writer restart
+    to Jason.
+  - Python tooling runs from the repo `.venv` by default; the legacy
+    `/srv/greenhouse/.venv` is used only if it exists or `VENV=...` is passed.
 - **Database access** (read-only is safe; destructive prod is Jason-gated):
   ```bash
   scripts/verdify-db.sh prod -c "SELECT count(*) FROM climate;"   # one-shot

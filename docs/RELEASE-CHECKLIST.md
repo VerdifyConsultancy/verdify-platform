@@ -1,6 +1,6 @@
 # Verdify Release Checklist
 
-Last updated: 2026-07-28 (in-cluster CI/Zot promotion path). Companion to `docs/runbooks/laptop-operator.md` (the how-to) and
+Last updated: 2026-07-29 (in-cluster CI/Zot promotion path). Companion to `docs/runbooks/laptop-operator.md` (the how-to) and
 `docs/reviews/lane1-architecture-audit-2026-06-16.md` (the why). Single-env-prod model: `main`
 is the only branch; prod is ArgoCD app `verdify-prod-dark` (ns `verdify-prod`), manual-sync
 behind the device-write gate.
@@ -14,7 +14,19 @@ prod `argocd app sync`, device-VLAN actions, destructive prod DB work, and outwa
 
 **Pre-merge (on a topic branch or direct to `main`):**
 - [ ] `make lint` and `make test` green (the 1 known-flaky `test_dew_point_risk_computes`
-      timeout is tolerated; nothing else).
+      timeout is tolerated; nothing else). `make test` is portable and never
+      auto-discovers production.
+- [ ] When runtime/live behavior is relevant, run `make test-live` as a separate
+      read-only **current-production** baseline. Record any failure; it is not
+      proof of an unmerged branch. `/setpoints`/device probes remain operator-gated.
+- [ ] Mutation E2Es run only via `make test-writable` against an acknowledged
+      disposable `*test*` database supplied in `VERDIFY_WRITABLE_TEST_DSN` with
+      `VERDIFY_WRITABLE_TEST_ACK=disposable`; never use prod.
+- [ ] If `scripts/gather-plan-context.sh` or `scripts/lib/psql-verdify.sh` changes,
+      its checked-in ConfigMap mirror is byte-identical and the rollout notes say
+      `Post-merge restart: verdify-ingestor`. Both files are mounted with
+      `subPath`, so a ConfigMap update alone does not activate either one; the
+      writer restart remains Jason-gated.
 - [ ] **Schema-first ordering:** if this touches `verdify_schemas/**`, the schema change lands
       *before* its consumers; `verdify_schemas/tests/test_drift_guards.py` green.
 - [ ] If schema touched (`verdify_schemas/**`, `ingestor/entity_map.py`, `mcp/server.py`): the
@@ -42,7 +54,8 @@ prod `argocd app sync`, device-VLAN actions, destructive prod DB work, and outwa
 ## B. Firmware OTA (Jason-gated, ≤1/week, 48 h bake)
 
 **Pre-deploy validation (local — CI does not gate firmware fully):**
-- [ ] On `main`, clean tree (`git status --short`). `make lint && make test`.
+- [ ] On `main`, clean tree (`git status --short`). `make lint && make test`
+      (portable suite).
 - [ ] `make test-firmware` (native C++ unit + replay) — green.
 - [ ] Corpus fresh: if `firmware/test/data/replay_overrides.csv.gz` max-ts is > ~3 weeks old,
       `make replay-corpus-refresh` first.

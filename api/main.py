@@ -2704,11 +2704,28 @@ async def public_gpu_power(
         generated_at = await conn.fetchval("SELECT now()")
         latest_rows = await conn.fetch(
             """
-            SELECT ts, host, vm_name, purpose, gpu, device, model_name, watts,
-                   gpu_util_pct, temperature_c, memory_used_mb, memory_free_mb, age_s
-              FROM v_gpu_power_latest
-             WHERE greenhouse_id = $1
-             ORDER BY host, gpu
+            SELECT latest.ts, latest.host, latest.vm_name, latest.purpose,
+                   latest.gpu, latest.device, latest.model_name, latest.watts,
+                   latest.gpu_util_pct, latest.temperature_c,
+                   latest.memory_used_mb, latest.memory_free_mb,
+                   extract(epoch FROM now() - latest.ts)::integer AS age_s
+              FROM (
+                    SELECT DISTINCT host, gpu
+                      FROM gpu_power
+                     WHERE greenhouse_id = $1
+                   ) AS keys
+              CROSS JOIN LATERAL (
+                    SELECT g.ts, g.host, g.vm_name, g.purpose, g.gpu,
+                           g.device, g.model_name, g.watts, g.gpu_util_pct,
+                           g.temperature_c, g.memory_used_mb, g.memory_free_mb
+                      FROM gpu_power g
+                     WHERE g.greenhouse_id = $1
+                       AND g.host = keys.host
+                       AND g.gpu = keys.gpu
+                     ORDER BY g.ts DESC
+                     LIMIT 1
+                   ) AS latest
+             ORDER BY latest.host, latest.gpu
             """,
             greenhouse_id,
         )
@@ -2756,11 +2773,25 @@ async def public_gpu_power(
         )
         cpu_latest_rows = await conn.fetch(
             """
-            SELECT ts, host, vm_name, purpose, cpu_util_pct, load1, cores,
-                   memory_used_pct, age_s
-              FROM v_infra_cpu_latest
-             WHERE greenhouse_id = $1
-             ORDER BY host
+            SELECT latest.ts, latest.host, latest.vm_name, latest.purpose,
+                   latest.cpu_util_pct, latest.load1, latest.cores,
+                   latest.memory_used_pct,
+                   extract(epoch FROM now() - latest.ts)::integer AS age_s
+              FROM (
+                    SELECT DISTINCT host
+                      FROM infra_cpu
+                     WHERE greenhouse_id = $1
+                   ) AS keys
+              CROSS JOIN LATERAL (
+                    SELECT c.ts, c.host, c.vm_name, c.purpose,
+                           c.cpu_util_pct, c.load1, c.cores, c.memory_used_pct
+                      FROM infra_cpu c
+                     WHERE c.greenhouse_id = $1
+                       AND c.host = keys.host
+                     ORDER BY c.ts DESC
+                     LIMIT 1
+                   ) AS latest
+             ORDER BY latest.host
             """,
             greenhouse_id,
         )

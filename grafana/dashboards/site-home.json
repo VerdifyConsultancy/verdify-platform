@@ -517,7 +517,7 @@
         "colorMode": "value",
         "graphMode": "none"
       },
-      "description": "Average whole controlled-equipment runtime model across eligible completed days; partial Shelly measurement is not substituted.",
+      "description": "Average whole controlled-equipment runtime estimate across the last 30 completed daily summaries.",
       "transparent": true
     },
     {
@@ -647,7 +647,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "verdify-tsdb"
       },
-      "description": "Eligible daily cost by utility type. Electric uses transition-derived runtime and date-valid coefficient evidence.",
+      "description": "Daily modeled utility-cost estimates. Electric uses transition-derived runtime; gas and water use the published rate assumptions.",
       "fieldConfig": {
         "defaults": {
           "custom": {
@@ -668,13 +668,13 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Electric"
+              "options": "Runtime Electric"
             },
             "properties": [
               {
                 "id": "color",
                 "value": {
-                  "fixedColor": "#FF9800",
+                  "fixedColor": "#73BF69",
                   "mode": "fixed"
                 }
               }
@@ -737,7 +737,7 @@
             "uid": "verdify-tsdb"
           },
           "format": "time_series",
-          "rawSql": "SELECT (date + time '12:00')::timestamptz AS time, cost_electric_est AS \"Electric\"\nFROM mv_daily_kpi WHERE $__timeFilter((date + time '12:00')::timestamptz) ORDER BY date",
+          "rawSql": "SELECT (date + time '12:00')::timestamptz AS time, cost_electric_est AS \"Runtime Electric\"\nFROM mv_daily_kpi WHERE $__timeFilter((date + time '12:00')::timestamptz) ORDER BY date",
           "refId": "A"
         },
         {

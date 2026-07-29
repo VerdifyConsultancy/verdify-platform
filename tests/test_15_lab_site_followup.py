@@ -1,27 +1,21 @@
 from __future__ import annotations
 
+import copy
 import importlib.util
 import json
 import os
 import re
 from pathlib import Path
 
+import pytest
 import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _vault_root() -> Path:
-    candidates = [
-        os.environ.get("VERDIFY_SITE_VAULT"),
-        "/mnt/iris/verdify-vault/website",
-        str(Path.home() / "Iris/verdify-vault/website"),
-        "/Users/jason/Iris/verdify-vault/website",
-    ]
-    for candidate in candidates:
-        if candidate and Path(candidate).exists():
-            return Path(candidate)
-    return Path("/mnt/iris/verdify-vault/website")
+    configured = os.environ.get("VERDIFY_SITE_VAULT")
+    return Path(configured) if configured else Path("__missing_external_vault__")
 
 
 VAULT_ROOT = _vault_root()
@@ -81,6 +75,7 @@ def test_overview_nav_promotes_greenhouse_evidence_pages():
     assert 'pageLink("Soil Sensors", "greenhouse/soil")' not in greenhouse
 
 
+@pytest.mark.external_fixture
 def test_homepage_core_graphs_share_window_and_embed_scale():
     homepage = (VAULT_ROOT / "index.md").read_text(encoding="utf-8")
 
@@ -92,6 +87,7 @@ def test_homepage_core_graphs_share_window_and_embed_scale():
         assert match, f"homepage panel {panel_id} does not use the shared 72h/620px embed scale"
 
 
+@pytest.mark.external_fixture
 def test_homepage_resource_graphs_follow_lighting_before_cameras():
     homepage = (VAULT_ROOT / "index.md").read_text(encoding="utf-8")
 
@@ -205,6 +201,7 @@ def test_homepage_lighting_brand_normalizer_removes_threshold_output():
         assert props["custom.spanNulls"] is False
 
 
+@pytest.mark.external_fixture
 def test_resource_use_restores_individual_solar_alignment_panels():
     page = (VAULT_ROOT / "start/resource-use.md").read_text(encoding="utf-8")
 
@@ -219,20 +216,26 @@ def test_resource_use_restores_individual_solar_alignment_panels():
 
 def test_resource_use_cost_panels_use_canonical_runtime_cost_fields():
     economics = _dashboard("grafana/dashboards/site-evidence-economics.json")
-    baseline_page = (VAULT_ROOT / "data/baseline-vs-iris.md").read_text(encoding="utf-8")
     daily_cost = _panel(economics, 312)
     monthly_cost = _panel(economics, 10)
     solar_load = _panel(economics, 310)
     daily_sql = daily_cost["targets"][0]["rawSql"]
 
     assert "Runtime Electric ($)" in daily_sql
-    assert "cost_electric::numeric" in daily_sql
+    assert "cost_electric_est::numeric" in daily_sql
+    assert "FROM mv_daily_kpi" in daily_sql
     assert "kwh_estimated * 0.111" not in daily_sql
     assert "fn_runtime_power_30m" in solar_load["targets"][0]["rawSql"]
     assert "fn_equip_at" not in solar_load["targets"][0]["rawSql"]
     assert "Runtime Load (W)" in solar_load["targets"][0]["rawSql"]
     assert "energy e" not in solar_load["targets"][0]["rawSql"]
     assert monthly_cost["options"]["showValue"] == "never"
+
+
+@pytest.mark.external_fixture
+def test_resource_use_baseline_copy_uses_runtime_model_terms():
+    baseline_page = (VAULT_ROOT / "data/baseline-vs-iris.md").read_text(encoding="utf-8")
+
     assert "Runtime-modeled electric energy/day" in baseline_page
     assert "Metered electric energy/day" not in baseline_page
 
@@ -242,8 +245,6 @@ def test_lighting_dashboard_visual_contract():
     lux_panel = _panel(lighting, 9)
     altitude_panel = _panel(lighting, 14)
     decision_panel = _panel(lighting, 16)
-    lighting_page = (VAULT_ROOT / "greenhouse/lighting.md").read_text(encoding="utf-8")
-
     assert _override_props(lux_panel, "Indoor Lux")["custom.fillOpacity"] == 85
     assert _override_props(lux_panel, "Outdoor Lux")["custom.fillOpacity"] == 55
     altitude = _override_props(lux_panel, "Sun Altitude")
@@ -255,6 +256,12 @@ def test_lighting_dashboard_visual_contract():
     assert _mapped_color(decision_panel, "Occupancy", "empty") == "rgba(253,216,53,0.30)"
     assert _mapped_color(decision_panel, "Sun", "Day") == "#FDD835"
     assert _mapped_color(decision_panel, "Sun", "Night") == "#112231"
+
+
+@pytest.mark.external_fixture
+def test_lighting_page_embeds_monthly_panel():
+    lighting_page = (VAULT_ROOT / "greenhouse/lighting.md").read_text(encoding="utf-8")
+
     assert "panelId=10&theme=light&from=now-30d&to=now" in lighting_page
 
 
@@ -302,6 +309,7 @@ def test_resource_dashboards_label_scope_quality_and_no_legacy_catalog():
     equipment = _dashboard("grafana/dashboards/site-greenhouse-equipment.json")
 
     climate_text = json.dumps(climate)
+    climate_cost_sql = _panel(climate, 108)["targets"][0]["rawSql"]
     water_text = json.dumps(water)
     equipment_text = json.dumps(equipment)
 
@@ -310,10 +318,9 @@ def test_resource_dashboards_label_scope_quality_and_no_legacy_catalog():
     assert "coefficient_revision" in climate_text
     assert "Modeled kWh low" in climate_text
     assert "partial Shelly" in climate_text
-    assert "v_daily_kpi" in climate_text
-    assert "resource_terms_available" in climate_text
-    assert "AVG(cost_total)::numeric, 2) AS v FROM daily_summary" not in climate_text
-    assert "AVG(cost_total)::numeric, 2) AS v FROM v_daily_kpi" in climate_text
+    assert "AVG(cost_total_est)::numeric, 2) AS v FROM mv_daily_kpi" in climate_cost_sql
+    assert "resource_terms_available" not in climate_cost_sql
+    assert "daily_summary" not in climate_cost_sql
 
     assert "v_water_attribution_daily" in water_text
     assert "Meter-Conserving Water Attribution" in water_text
@@ -377,26 +384,159 @@ def test_snapshot_and_metrics_preserve_resource_unavailability():
     assert "verdify_planner_score_resource_weight_pct" in metrics
 
 
-def test_grafana_brand_generator_preserves_resource_accounting_gates():
+def test_grafana_brand_generator_preserves_estimated_resource_displays():
     script_path = REPO_ROOT / "scripts/brand-grafana-embeds.py"
     spec = importlib.util.spec_from_file_location("brand_grafana_embeds_resource_test", script_path)
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
 
+    matched_panels: set[tuple[str, int]] = set()
+    managed_titles = {
+        "Runtime-Modeled kWh/day (30-Day Avg) (est)",
+        "Daily Cost by Type (est)",
+        "Monthly Resource Cost by Source (6 Months) (est)",
+        "Daily Cost by Source (est)",
+    }
     for path in _site_dashboard_paths():
         dashboard = json.loads(path.read_text(encoding="utf-8"))
         findings = module.check_resource_accounting_generator_parity(path.name, dashboard)
         assert findings == []
+        matched_panels.update(
+            (path.name, panel["id"])
+            for panel in module.iter_panels(dashboard.get("panels", []))
+            if panel.get("title") in managed_titles
+        )
+
+    assert matched_panels == {
+        ("site-evidence-economics.json", 9),
+        ("site-evidence-economics.json", 10),
+        ("site-evidence-economics.json", 304),
+        ("site-evidence-economics.json", 312),
+        ("site-home.json", 109),
+        ("site-home.json", 115),
+    }
+
+    home_cost = _panel(_dashboard("grafana/dashboards/site-home.json"), 109)
+    home_electric_sql = next(target["rawSql"] for target in home_cost["targets"] if target.get("refId") == "A")
+    assert 'AS "Runtime Electric"' in home_electric_sql
+    assert 'AS "Electric"' not in home_electric_sql
+    assert _override_props(home_cost, "Runtime Electric")["color"]["fixedColor"] == module.BRAND["leaf"]
+
+    # The checked-in dashboard must already be the generator's fixed point;
+    # otherwise its SQL series and field override can silently drift apart.
+    first_pass = copy.deepcopy(home_cost)
+    module.normalize_runtime_electric_sources(first_pass)
+    assert first_pass == home_cost
+    second_pass = copy.deepcopy(first_pass)
+    module.normalize_runtime_electric_sources(second_pass)
+    assert second_pass == first_pass
+
+    no_targets = {"panels": [{"id": 1, "type": "timeseries", "title": "Daily Cost by Source (est)", "targets": []}]}
+    assert any(
+        "has no SQL targets" in finding
+        for finding in module.check_resource_accounting_generator_parity("bad", no_targets)
+    )
+
+    wrong_table = {
+        "panels": [
+            {
+                "id": 2,
+                "type": "stat",
+                "title": "Runtime-Modeled kWh/day (30-Day Avg) (est)",
+                "targets": [{"rawSql": "SELECT kwh_modeled FROM not_mv_daily_kpi"}],
+            }
+        ]
+    }
+    assert any(
+        "does not use mv_daily_kpi" in finding
+        for finding in module.check_resource_accounting_generator_parity("bad", wrong_table)
+    )
+
+    quoted_decoys = {
+        "panels": [
+            {
+                "id": 3,
+                "type": "stat",
+                "title": "Runtime-Modeled kWh/day (30-Day Avg) (est)",
+                "targets": [{"rawSql": "SELECT 'kwh_modeled' AS label /* FROM mv_daily_kpi */ FROM another_table"}],
+            }
+        ]
+    }
+    decoy_findings = module.check_resource_accounting_generator_parity("bad", quoted_decoys)
+    assert any("does not use mv_daily_kpi" in finding for finding in decoy_findings)
+    assert any("lacks estimate fields kwh_modeled" in finding for finding in decoy_findings)
+
+    shadowed_relation = {
+        "panels": [
+            {
+                "id": 4,
+                "type": "stat",
+                "title": "Runtime-Modeled kWh/day (30-Day Avg) (est)",
+                "targets": [
+                    {
+                        "rawSql": (
+                            "WITH mv_daily_kpi AS (SELECT 0::numeric AS kwh_modeled) "
+                            "SELECT kwh_modeled FROM mv_daily_kpi"
+                        )
+                    }
+                ],
+            }
+        ]
+    }
+    assert any(
+        "does not use mv_daily_kpi" in finding
+        for finding in module.check_resource_accounting_generator_parity("bad", shadowed_relation)
+    )
+
+    quoted_field = {
+        "panels": [
+            {
+                "id": 5,
+                "type": "stat",
+                "title": "Runtime-Modeled kWh/day (30-Day Avg) (est)",
+                "targets": [{"rawSql": "SELECT 'kwh_modeled' FROM mv_daily_kpi"}],
+            }
+        ]
+    }
+    assert any(
+        "lacks estimate fields kwh_modeled" in finding
+        for finding in module.check_resource_accounting_generator_parity("bad", quoted_field)
+    )
+
+    mixed_source = {
+        "panels": [
+            {
+                "id": 6,
+                "type": "timeseries",
+                "title": "Daily Cost by Type (est)",
+                "targets": [
+                    {"refId": "A", "rawSql": "SELECT cost_electric_est FROM mv_daily_kpi"},
+                    {"refId": "B", "rawSql": "SELECT cost_gas_est FROM unrelated_table"},
+                    {"refId": "C", "rawSql": "SELECT cost_water_est FROM unrelated_table"},
+                ],
+            }
+        ]
+    }
+    mixed_findings = module.check_resource_accounting_generator_parity("bad", mixed_source)
+    assert sum("does not use mv_daily_kpi" in finding for finding in mixed_findings) == 2
 
     for sql in (
         module.RUNTIME_MODELED_KWH_30D_SQL,
         module.DAILY_COST_BY_SOURCE_SQL,
         module.MONTHLY_RESOURCE_COST_SQL,
+        *module.DAILY_COST_BY_TYPE_SQL.values(),
     ):
-        assert "v_daily_kpi" in sql
-        assert "resource_terms_available" in sql
+        assert re.search(r"\bmv_daily_kpi\b", sql)
+        assert re.search(r"\bv_daily_kpi\b", sql) is None
+        assert "resource_terms_available" not in sql
         assert "daily_summary" not in sql
+    assert "kwh_modeled" in module.RUNTIME_MODELED_KWH_30D_SQL
+    for sql in (module.DAILY_COST_BY_SOURCE_SQL, module.MONTHLY_RESOURCE_COST_SQL):
+        assert "cost_electric_est" in sql
+        assert "cost_gas_est" in sql
+        assert "cost_water_est" in sql
+    assert "cost_total_est" in module.MONTHLY_RESOURCE_COST_SQL
     assert "COALESCE(c." not in module.MONTHLY_RESOURCE_COST_SQL
 
 
@@ -447,6 +587,7 @@ def test_quartz_graphs_and_cameras_autoload_with_cached_images_on_every_browser(
     assert "img.removeAttribute('data-camera-src')" in embeds
 
 
+@pytest.mark.external_fixture
 def test_architecture_page_removes_stale_sections_and_svg_return_path_is_behind_ingestor():
     architecture = (VAULT_ROOT / "reference/architecture.md").read_text(encoding="utf-8")
     svg = (VAULT_ROOT / "static/verdify-architecture.svg").read_text(encoding="utf-8")

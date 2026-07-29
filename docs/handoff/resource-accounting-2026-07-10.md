@@ -12,10 +12,23 @@ Issue [#437](https://github.com/VerdifyConsultancy/verdify-platform/issues/437) 
 - Complete raw coverage is insufficient by itself: daily water remains `ledger_incomplete` until the materializer watermark covers the final raw sample. Two sequential runs of one relay inside a coarse meter interval are ambiguous at event and run level. Wall-fertigation attribution requires wall-fert relay evidence, fertilizer-master overlap, and a current `fertigation_commissioning_eligible` state; otherwise it is unsupported/degraded.
 - Runtime-modeled electric energy has low/nominal/high kWh plus coefficient revisions and accepts only complete transition-derived runtime. Populated legacy summary fields are never proof. The two-channel Shelly integration remains separately labeled `partial_shelly_two_channels` with temporal coverage. No comparison claims either is a facility total.
 - Daily summaries, MCP, API, every site Grafana resource panel, Prometheus, and the generated equipment page consume the new scope/quality contract. The legacy snapshot writer no longer writes resource fields, and `v_cost_today` preserves unavailable values as `NULL`. Stale or low-confidence terms are visible but excluded from scalar scoring.
-- The normal Grafana branding generator preserves the same gates, and its check path simulates the rewrite before accepting source SQL. Therms and gas cost also remain `NULL` unless aggregate resource evidence is eligible.
+- The normal Grafana branding generator preserves the same gates, and its check path simulates the rewrite before accepting source SQL. Therms and gas cost also remain `NULL` unless aggregate resource evidence is eligible. **Superseded for public display panels by the migration-204 correction below; scoring/evidence gates remain unchanged.**
 - The planner score no longer treats missing resources as free. It uses the established 80/20 climate/cost formula only when conserved water and the whole-runtime energy model are eligible; otherwise it emits a labeled climate-only normalized score with zero resource weight and `NULL` resource costs.
 
 ## Current evidence
+
+### Post-handoff display correction (migrations 203/204/206)
+
+The public dashboards now distinguish two contracts that this original
+handoff conflated. Evidence-tier and planner-scoring fields remain
+availability-gated and `NULL` when evidence is ineligible. Panels explicitly
+labeled `(est)` are display estimates: they read `kwh_modeled` and
+`cost_*_est` from `mv_daily_kpi` without `resource_terms_available`, so a
+structurally unavailable eligibility flag does not blank an honestly labeled
+estimate. The branding generator and its parity check preserve that split and
+reject either bare `v_daily_kpi` or reintroduced availability gating on the
+managed `(est)` panels. This changes presentation, not the fail-closed scoring
+contract above.
 
 Before implementation, production raw totalizer telemetry was current while `water_meter_events` stopped at 2026-05-01. Recent modeled energy was approximately 13–19 kWh/day while partial Shelly integration was approximately 2–6 kWh/day; these are different scopes, not a divergence verdict.
 

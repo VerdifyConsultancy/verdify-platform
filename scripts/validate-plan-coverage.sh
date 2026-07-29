@@ -5,10 +5,12 @@ set -euo pipefail
 PYTHON_BIN="${PYTHON:-python3}"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # #24: DB access via the shared psql-verdify abstraction (docker-exec default
-# preserves prior VM argv). Build an argv array; call sites use "${DB[@]}".
+# preserves prior VM argv). The validator is always read-only and bounded even
+# when nested under the live context-gathering test. Build an argv array; call
+# sites use "${DB[@]}".
 . "$REPO_ROOT/scripts/lib/psql-verdify.sh"
-mapfile -t DB < <(verdify_psql_cmd)
-DB+=(-t -A -c)
+mapfile -t DB < <(verdify_psql_cmd -e "PGOPTIONS=-c statement_timeout=15000 -c default_transaction_read_only=on")
+DB+=(-X -t -A -c)
 
 # The tactical Tier 1 params and dispatcher-owned exclusion set come from the
 # tunable registry. This keeps plan coverage validation aligned with MCP,

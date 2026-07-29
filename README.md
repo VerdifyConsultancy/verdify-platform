@@ -58,7 +58,7 @@ weather, optional heavyweight reasoning, and public delivery support.
 ## Development
 
 ```bash
-# Prerequisites: Docker, Python 3.12+ (3.13 preferred for parity with CI/runtime)
+# Prerequisites: Python 3.12+ (3.13 preferred); kubectl only for live checks
 
 # Create/update repo-local tooling environment (.venv)
 make setup
@@ -69,7 +69,10 @@ make check
 # Individual commands
 make lint              # Ruff linter (0 errors)
 make format            # Auto-format Python
-make test              # 324 Python tests (~65s)
+make test              # Portable source/unit/contract suite; never auto-discovers prod
+make test-live         # Explicit read-only checks against the current prod stack
+make test-writable     # Mutation E2Es; requires ACK + VERDIFY_WRITABLE_TEST_DSN to a disposable *_test DB
+make test-container    # Opt-in checks that create and remove disposable local containers
 make firmware-check    # Compile ESP32 firmware
 make planner-dry       # Render planner prompt (no API call)
 make help              # List all targets

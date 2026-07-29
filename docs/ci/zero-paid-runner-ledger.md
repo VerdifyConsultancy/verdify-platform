@@ -1,10 +1,14 @@
 # Zero-paid-runner CI ledger — `VerdifyConsultancy/verdify-platform`
 
-**Verdict: `REPO_ZERO_PAID_READY`** (with two documented exceptions and one
-open residual risk — see §6 and §7).
+**Execution verdict: `REPO_ZERO_PAID_READY`. Publication verdict:
+`BLOCKED_PLATFORM`** on the generated GitHub credential/status-provenance
+contract (see §11). The two documented execution exceptions and stale-branch
+risk remain in §6 and §7.
 
-Probed 2026-07-28. Every claim below is backed by a literal probe recorded in
-§10; re-run those to re-verify.
+Initially probed 2026-07-28 and refreshed 2026-07-29. Section 11 supersedes
+older dynamic SHA, timing, PR, authentication and live-state observations.
+Every claim is backed by a literal probe recorded in §10/§11; re-run those to
+re-verify.
 
 GitHub remains the source, issue, PR, review and check authority. No change in
 this ledger alters that.
@@ -145,7 +149,8 @@ PR-head sample above is the one of record.
 
   The cause is the same template-owned overhead measured in §5.1 — runs that
   stall in scheduling or dependency install run out the step budget. It cannot
-  be fixed by changing `ci-local.sh`, which completes in 77 s. Fixing the
+  be fixed by changing `ci-local.sh`, which completed in 77 s in the original
+  2026-07-28 measurement (96.312 s after the 2026-07-29 gate expansion). Fixing the
   budget expiry requires the same `jvallery/agents` template work.
 
 ### Performance verdict
@@ -165,7 +170,8 @@ PR-head sample above is the one of record.
 ### 5.1 Where the time actually goes — and who owns it
 
 Node-level timings from `verdify-platform-pr-ci-h47pj` (this ledger's own PR,
-2026-07-28), cross-checked against the gate measured directly on a 48-core host:
+2026-07-28), cross-checked against the gate measured directly on a 48-core host.
+These rows are the original cutover baseline, not the current gate timing:
 
 | Segment | Time | Owner |
 | --- | --- | --- |
@@ -175,9 +181,13 @@ Node-level timings from `verdify-platform-pr-ci-h47pj` (this ledger's own PR,
 | `report` pod | 10 s (+10 s scheduling) | template |
 | **Total** | **212 s** | |
 
-Measured directly, the whole gate is **~77 s**: ruff <1 s, schema suite 8 s,
-device-write gate 2 s, the 40-file logic suite 60 s, migration safety 1 s,
-grafana CM check 3 s, solar constants <1 s, twin `g++` 2 s, overlay render 1 s.
+Measured directly on 2026-07-28, the whole gate was **~77 s**: ruff <1 s,
+schema suite 8 s, device-write gate 2 s, the then-40-entry logic selector 60 s,
+migration safety 1 s, Grafana CM check 3 s, solar constants <1 s, twin `g++`
+2 s, and overlay render 1 s. The 2026-07-29 source/contract expansion widened
+that selector to **45 entries**; the current `scripts/ci-local.sh` completed
+green in **96.312 s**. The older number remains here only as the cutover
+comparison baseline.
 
 **~135 s of every run is template-owned overhead** — four sequential pods each
 paying scheduling and image-pull cost, plus an uncached dependency install.
@@ -213,7 +223,8 @@ Measured breakdown of the 160 s `validate` pod:
   wheels into the venv, not downloading them. ~1 s for a shared-volume failure
   mode: not worth it.
 - **Consolidating the three `pytest` invocations** — measured *slower*
-  (77 s vs 70 s split). `ci-local.sh` left unchanged.
+  (77 s vs 70 s split) on 2026-07-28, so that invocation shape was left
+  unchanged. The selected contract set was widened on 2026-07-29.
 - **Parallelising independent gate steps** — saves ~15 s of 212 s (~7 %) while
   interleaving failure output on a production gate. Bad trade.
 
@@ -225,8 +236,8 @@ replaced with a *fail-closed assertion* rather than a plain deletion, because
 a silent deletion could have dropped a gate instead of failing.
 
 **The arithmetic that makes this bar unreachable:** even with setup reduced to
-zero, four sequential pods cost ~45 s of scheduling plus the 77 s gate ≈
-**122 s** — still above the 110 s hosted p95, before any queue variance. The
+zero, four sequential pods cost ~45 s of scheduling plus the current 96.312 s
+gate ≈ **141 s** — still above the 110 s hosted p95, before any queue variance. The
 only remaining lever is pre-baking dependencies into a CI image and collapsing
 the pods, both of which live in `jvallery/agents`.
 

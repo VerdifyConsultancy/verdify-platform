@@ -10,15 +10,13 @@ Each guard:
   - Flags fields the schema declares but the DB doesn't have (renamed /
     dropped) — this is the real regression path.
 
-Runs against live Docker Postgres. If `docker` isn't available, these skip
-(for example on a CI runner that builds schemas without a DB attached).
+Runs only in the explicit current-production `make test-live` lane through the
+shared fail-closed kube/read-only database transport.
 """
 
 from __future__ import annotations
 
 import ast
-import os
-import subprocess
 import sys
 from pathlib import Path
 
@@ -79,52 +77,14 @@ from verdify_schemas.telemetry import (
     OverrideEvent,
     SystemStateRow,
 )
+from verdify_schemas.tests.live_db import db_query_rows
 
-
-def _docker_available() -> bool:
-    import shutil
-
-    if not shutil.which("docker"):
-        return False
-    r = subprocess.run(["docker", "ps"], capture_output=True, text=True, check=False)
-    return r.returncode == 0
-
-
-def _ci_postgres_reachable() -> bool:
-    """In GitHub Actions a Postgres service container is reachable at
-    $POSTGRES_HOST:$POSTGRES_PORT (or defaults). When that env is present we
-    run psql against it directly; otherwise we expect a local docker-compose
-    stack and shell out to `docker exec`.
-    """
-    return bool(os.environ.get("POSTGRES_HOST"))
-
-
-pytestmark = pytest.mark.skipif(
-    not (_ci_postgres_reachable() or _docker_available()),
-    reason="no DB backend available (need POSTGRES_HOST env or local docker)",
-)
+pytestmark = pytest.mark.live
 
 
 def _table_columns(table: str) -> set[str]:
     sql = f"SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='{table}'"
-    if _ci_postgres_reachable():
-        env = os.environ.copy()
-        env.setdefault("PGHOST", env.get("POSTGRES_HOST", "localhost"))
-        env.setdefault("PGPORT", env.get("POSTGRES_PORT", "5432"))
-        env.setdefault("PGUSER", env.get("POSTGRES_USER", "verdify"))
-        env.setdefault("PGPASSWORD", env.get("POSTGRES_PASSWORD", "verdify"))
-        env.setdefault("PGDATABASE", env.get("POSTGRES_DB", "verdify"))
-        cmd = ["psql", "-t", "-A", "-c", sql]
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=15, check=True, env=env)
-    else:
-        r = subprocess.run(
-            ["docker", "exec", "verdify-timescaledb", "psql", "-U", "verdify", "-d", "verdify", "-t", "-A", "-c", sql],
-            capture_output=True,
-            text=True,
-            timeout=15,
-            check=True,
-        )
-    return {ln.strip() for ln in r.stdout.splitlines() if ln.strip()}
+    return {line.strip() for line in db_query_rows(sql)}
 
 
 def _tasks_route_target_columns(repo_root: Path, *mapping_names: str) -> set[str]:

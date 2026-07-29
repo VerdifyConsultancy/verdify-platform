@@ -8,6 +8,7 @@ from datetime import date
 import pytest
 from pydantic import ValidationError
 
+from verdify_schemas.tests.live_db import db_query
 from verdify_schemas.views import (
     BandTraceRow,
     ClampActivity24h,
@@ -25,30 +26,11 @@ from verdify_schemas.views import (
 
 def _psql_json(sql: str) -> list[dict]:
     """Minimal wrapper to read rows as JSON."""
-    r = subprocess.run(
-        [
-            "docker",
-            "exec",
-            "verdify-timescaledb",
-            "psql",
-            "-U",
-            "verdify",
-            "-d",
-            "verdify",
-            "-t",
-            "-A",
-            "-c",
-            f"SELECT row_to_json(x) FROM ({sql}) x",
-        ],
-        capture_output=True,
-        text=True,
-        timeout=20,
-        check=True,
-    )
+    raw = db_query(f"SELECT row_to_json(x) FROM ({sql}) x")
     import json as _json
 
     out = []
-    for line in r.stdout.strip().splitlines():
+    for line in raw.splitlines():
         if line:
             out.append(_json.loads(line))
     return out
@@ -183,22 +165,7 @@ class TestZoneBandGradeRollupBasic:
 # If the DB view drops / renames a column we depend on, these fail.
 
 
-def _has_docker() -> bool:
-    # FileNotFoundError guard (2026-07-11): in-cluster CI images have no
-    # docker binary AT ALL — a bare subprocess.run exploded at pytest
-    # COLLECTION time and took five schema test modules with it.
-    import shutil
-
-    if not shutil.which("docker"):
-        return False
-    r = subprocess.run(["docker", "ps"], capture_output=True, text=True, check=False)
-    return r.returncode == 0
-
-
-pytestmark_live = pytest.mark.skipif(not _has_docker(), reason="docker not available")
-
-
-@pytestmark_live
+@pytest.mark.live
 class TestLiveProjection:
     def test_planner_performance_live_rows(self):
         rows = _psql_json("SELECT * FROM v_planner_performance ORDER BY date DESC LIMIT 3")

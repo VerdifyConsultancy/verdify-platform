@@ -1304,18 +1304,19 @@ def test_pdf_dct_image_and_supported_pre_filters_scan_jpeg_metadata():
 
 
 def test_post_sos_jpeg_comment_is_pillow_valid_and_scanned_directly_and_through_pdf():
-    image_module = pytest.importorskip("PIL.Image")
+    from PIL import Image
+
     guard = load_guard()
     excluded = next(iter(policy.PUBLIC_CROP_EXCLUDE_SLUGS)).encode()
     buffer = io.BytesIO()
-    image_module.new("RGB", (16, 16), color=(21, 84, 42)).save(buffer, format="JPEG", progressive=True)
+    Image.new("RGB", (16, 16), color=(21, 84, 42)).save(buffer, format="JPEG", progressive=True)
     encoded = buffer.getvalue()
     assert encoded.count(b"\xff\xda") > 1
     eoi = encoded.rfind(b"\xff\xd9")
     assert eoi == len(encoded) - 2
     comment = b"public review " + excluded
     jpeg = encoded[:eoi] + b"\xff\xfe" + struct.pack(">H", len(comment) + 2) + comment + encoded[eoi:]
-    image_module.open(io.BytesIO(jpeg)).verify()
+    Image.open(io.BytesIO(jpeg)).verify()
 
     direct_dictionary = b"<< /Length " + str(len(jpeg)).encode() + b" /Subtype /Image /Filter /DCTDecode >>"
     compressed = zlib.compress(jpeg)

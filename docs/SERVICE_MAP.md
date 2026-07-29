@@ -1,6 +1,6 @@
 # Verdify Service Map
 
-Last updated: 2026-06-16
+Last updated: 2026-07-29
 
 This is the current k3s-era service map for the `verdify-platform` lane. Treat
 `AGENTS.md`, `docs/runbooks/laptop-operator.md`, `deploy/k8s/`, this file, and
@@ -44,17 +44,22 @@ new approved issue.
 | `verdify-migrate` | `db/Dockerfile.migrate`, `/usr/local/bin/migrate.sh` | `deploy/k8s/base/migration-job.yaml` | `registry.vallery.net/verdifyconsultancy/verdify-migrate` | ArgoCD PreSync Job | Replays `db/schema.sql` plus migration bootstrap against `verdify-db`; not the prod data restore path. |
 | `verdify-api` | `api/main.py`, `uvicorn main:app --port 8080` | `deploy/k8s/base/api-deployment.yaml` | `registry.vallery.net/verdifyconsultancy/verdify-api` | `8080`, ClusterIP; prod `api.verdify.ai` | `verdify-config`; `verdify-app-secrets` keys `POSTGRES_PASSWORD`, `VERDIFY_WRITE_API_KEY`; TimescaleDB. |
 | `verdify-mcp` | `mcp/server.py`, FastMCP streamable HTTP | `deploy/k8s/base/mcp-deployment.yaml` | `registry.vallery.net/verdifyconsultancy/verdify-mcp` | `8000`, ClusterIP; prod `mcp.verdify.ai` | `verdify-config`; `verdify-app-secrets/POSTGRES_PASSWORD`; planner tool surface. |
-| `verdify-ingestor` | `ingestor/ingestor.py` | `deploy/k8s/base/ingestor-deployment.yaml` plus prod patches | `registry.vallery.net/verdifyconsultancy/verdify-ingestor` | No inbound service; connect-out worker | ESP32 `192.168.10.111:6053`, HA `192.168.30.107:8123`, MQTT, TimescaleDB, Open-Meteo, Slack, Hermes. Single-writer invariant: replicas `1`, strategy `Recreate`. |
+| `verdify-ingestor` | `ingestor/ingestor.py`; planner context scripts under `scripts/` | `deploy/k8s/base/ingestor-deployment.yaml` plus prod patches | `registry.vallery.net/verdifyconsultancy/verdify-ingestor` | No inbound service; connect-out worker | ESP32 `192.168.10.111:6053`, HA `192.168.30.107:8123`, MQTT, TimescaleDB, Open-Meteo, Slack, Hermes. Single-writer invariant: replicas `1`, strategy `Recreate`. |
 | `verdify-planner` | `planner_graph/`, `python -m planner_graph.server` | `deploy/k8s/components/planner/planner-deployment.yaml` | `registry.vallery.net/verdifyconsultancy/verdify-planner` | `8080`, ClusterIP, `/health` | TimescaleDB run store; optional `OPENAI_API_KEY`; reached by Hermes/Iris and cron replan paths. |
 | `verdify-setpoint-server` | `scripts/setpoint-server.py` | `deploy/k8s/components/setpoint-server/setpoint-server.yaml` | `registry.vallery.net/verdifyconsultancy/verdify-setpoint-server` | `8200`, ClusterIP | Prod-only grow-light writer and diagnostics; HA token Secret mount; TimescaleDB. Device-affecting cutover is Jason-gated. |
 | `verdify-hermes-iris` | upstream Hermes gateway, args `gateway run` | `deploy/k8s/components/hermes-iris/hermes-iris.yaml` | `nousresearch/hermes-agent@sha256:...` | `8642`, ClusterIP | Secret `verdify-hermes`, optional `verdify-hermes-slack`, PVC `verdify-hermes-iris-data`, MCP URL to `verdify-mcp`. |
 | `verdify-mqtt` | Mosquitto fan-out broker | `deploy/k8s/components/mqtt-broker/mqtt-broker.yaml` | `eclipse-mosquitto:2` | `1883`, ClusterIP | In-cluster telemetry fan-out; separate from HAOS/Sentinel broker; no persistence. |
 | `verdify-lab` | static Quartz nginx runtime | `deploy/k8s/components/lab-site/lab-site.yaml` | `ghcr.io/verdifyconsultancy/verdify-lab` | `8080`, ClusterIP; prod lab hosts | Public research site. Serves the `verdify-lab-site-cache` PVC read-only; baked image content is bootstrap fallback. |
-| `verdify-lab-publisher` | `scripts/lab-publish-k3s.sh` | `deploy/k8s/components/lab-site/lab-publisher.yaml` | `registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s` | CronJob, no inbound service | S3 content/public/state store, TimescaleDB, Quartz build toolchain; writes only the lab cache PVC and S3 prefixes. |
+| `verdify-lab-publisher` | `scripts/lab-publish-k3s.sh` plus shared generators including `generate-ai-tunables-page.py` | `deploy/k8s/components/lab-site/lab-publisher.yaml` | `registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s` | CronJob, no inbound service | S3 content/public/state store, TimescaleDB, Quartz build toolchain; writes only the lab cache PVC and S3 prefixes. |
 | `verdify-grafana` | Grafana plus image-renderer sidecar | `deploy/k8s/components/grafana/grafana.yaml` | digest-pinned `grafana/grafana:12.4.5`, `grafana/grafana-image-renderer:v5.10.0` | `3000`, ClusterIP; prod `graphs.verdify.ai` | Provisioned dashboards/config from git; legacy application-credential datasource (not a reporting-only security boundary); required admin/database/renderer Secret keys; shared Secret-sourced renderer token plus port isolation; surge-first rollout. |
 
 App Secret contracts are documented by name and key in `deploy/k8s/SECRETS.md`.
 Do not print or commit raw secret values.
+
+The lab-publisher Dockerfile copies the full `scripts/` tree also consumed by
+the ingestor image. A shared generator change must therefore build and pin both
+`verdify-ingestor` and `verdify-lab-publisher-k3s`; the latter activates on its
+next CronJob run, while the single-writer ingestor rollout remains Jason-gated.
 
 ## Operational Components
 
@@ -149,7 +154,8 @@ Use `AGENTS.md` for the full command order.
 | Change type | Commands |
 |---|---|
 | Docs-only | `git diff --check` |
-| Python/runtime | `make lint`, then `make test` |
+| Python/runtime | `make lint`, then portable `make test`; add `make test-live` for a separately recorded read-only current-prod baseline |
+| Writable DB E2E | `make test-writable` against an acknowledged disposable database whose name contains `test`; never prod |
 | Schema or migration | `make migration-rollback-safety`, plus the targeted rollback proof |
 | Firmware | `make test-firmware`, `make firmware-invariants`, `make firmware-replay OLD=<base> NEW=HEAD`, `make firmware-check` |
 | Site/UI | Relevant `Makefile` or `site/package.json` command plus local render check |

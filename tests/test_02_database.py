@@ -2,13 +2,32 @@
 Test 02: Database — Schema integrity, views, functions, data freshness.
 """
 
+import re
 from pathlib import Path
+
+import pytest
 
 from conftest import db_query, db_query_rows
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_explicit_scope_table_writers_always_supply_greenhouse_id():
+    for relative_path, table in (
+        ("db/migrations/193-canonical-resource-coefficients.sql", "equipment_aliases"),
+        ("db/migrations/194-scope-aware-resource-accounting.sql", "water_meter_materializer_state"),
+    ):
+        source = (REPO_ROOT / relative_path).read_text()
+        column_lists = re.findall(
+            rf"INSERT\s+INTO\s+(?:public\.)?{table}\s*\(([^)]*)\)",
+            source,
+            flags=re.IGNORECASE | re.DOTALL,
+        )
+        assert column_lists, f"no {table} writers found in {relative_path}"
+        assert all(re.search(r"\bgreenhouse_id\b", columns) for columns in column_lists)
+
+
+@pytest.mark.live
 class TestSchemaIntegrity:
     """Core tables and views must exist with expected structure."""
 
@@ -305,6 +324,7 @@ class TestResourceAccountingContractSources:
         assert "water_today_available_for_scoring" in api
 
 
+@pytest.mark.live
 class TestDataFreshness:
     """Live data must be flowing — no stale readings."""
 
@@ -329,6 +349,7 @@ class TestDataFreshness:
         assert int(age) < 21600, f"Forecast data is {age}s old (>6h)"
 
 
+@pytest.mark.live
 class TestViewsCompute:
     """Key views must return data without errors."""
 
@@ -364,9 +385,13 @@ class TestViewsCompute:
         )
         assert len(rows) >= 1, "v_dew_point_risk returned no rows"
 
-    def test_greenhouse_id_defaults_complete(self):
-        missing = db_query("SELECT count(*) FROM v_greenhouse_id_default_audit WHERE NOT has_default")
-        assert int(missing) == 0, "tenant-scoped tables with greenhouse_id must have a default"
+    def test_greenhouse_id_defaults_or_explicit_scope_exceptions(self):
+        missing = db_query_rows(
+            "SELECT table_name FROM v_greenhouse_id_default_audit WHERE NOT has_default ORDER BY table_name"
+        )
+        # These post-audit tables deliberately require an explicit scope on
+        # every write; the single-site default exists only for legacy callers.
+        assert missing == ["equipment_aliases", "water_meter_materializer_state"]
 
     def test_planner_performance_computes(self):
         rows = db_query_rows(
@@ -394,12 +419,8 @@ class TestViewsCompute:
         assert recent_plan_rows >= 1, "Planning Quality 14d plan panels have no recent source rows"
 
     def test_band_setpoints_returns(self):
-        """fn_band_setpoints may require args or return empty if no crops — just verify it doesn't error."""
-        try:
-            db_query("SELECT * FROM fn_band_setpoints() LIMIT 1")
-        except RuntimeError:
-            # Function might have required args — try with defaults
-            db_query("SELECT 1")  # Just verify DB is up
+        """The production band function exists and executes for the current timestamp."""
+        db_query("SELECT * FROM fn_band_setpoints(now()) LIMIT 1")
 
     def test_house_vpd_control_band_returns(self):
         row = db_query_rows(
@@ -902,6 +923,7 @@ class TestViewsCompute:
             SELECT rh_avg, outdoor_temp_min, outdoor_temp_max, kwh_total
             FROM daily_summary
             WHERE date >= (now() AT TIME ZONE 'America/Denver')::date - 7
+              AND date < (now() AT TIME ZONE 'America/Denver')::date
             ORDER BY date DESC
             LIMIT 1
             """

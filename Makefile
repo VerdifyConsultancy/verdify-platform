@@ -48,7 +48,8 @@ REPLAY_CORPUS_TMP ?= /tmp/verdify-replay-overrides.csv
 HERMES_IRIS_RUNTIME_DIR ?= /var/lib/verdify/hermes/iris
 HERMES_IRIS_ENV_FILE ?= /etc/verdify/hermes-iris.env
 
-.PHONY: help setup venv-check tool-check test lint format check lighting-audit-static lighting-audit-current lighting-audit-live lighting-audit-complete climate-intent-replay-report climate-authority-post-deploy-proof-plan climate-authority-post-deploy-proof firmware-check firmware-check-worktree firmware-check-all firmware-invariants firmware-replay firmware-replay-worktree firmware-replay-stream-check firmware-audit-traceability-proof firmware-audit-worktree-proof firmware-dwell-preview firmware-deploy firmware-archive-artifacts firmware-promote-last-good smoke hermes-deploy-config hermes-restart hermes-smoke clean migration-rollback-safety irrigation-migration-check irrigation-migration-proof irrigation-field-diagnostics irrigation-field-sensor-health-proof irrigation-stack-software-check irrigation-stack-check irrigation-feedback-check irrigation-feedback-discover irrigation-feedback-discovery-proof irrigation-feedback-work-order irrigation-feedback-work-order-proof irrigation-feedback-clear-stale-retained irrigation-feedback-clear-stale-near-misses irrigation-feedback-watch irrigation-feedback-watch-field irrigation-feedback-watch-field-proof irrigation-feedback-finalize-dry-run irrigation-feedback-finalize-dry-run-proof irrigation-feedback-finalize irrigation-feedback-finalize-proof irrigation-feedback-proof-json irrigation-sensor-health-proof irrigation-stack-proof irrigation-completion-audit irrigation-completion-audit-proof irrigation-acceptance irrigation-full-acceptance irrigation-post-deploy-acceptance-plan irrigation-post-deploy-acceptance
+.PHONY: help setup venv-check tool-check test test-live test-writable test-fast lint format check lighting-audit-static lighting-audit-current lighting-audit-live lighting-audit-complete climate-intent-replay-report climate-authority-post-deploy-proof-plan climate-authority-post-deploy-proof firmware-check firmware-check-worktree firmware-check-all firmware-invariants firmware-replay firmware-replay-worktree firmware-replay-stream-check firmware-audit-traceability-proof firmware-audit-worktree-proof firmware-dwell-preview firmware-deploy firmware-archive-artifacts firmware-promote-last-good smoke hermes-deploy-config hermes-restart hermes-smoke clean migration-rollback-safety irrigation-migration-check irrigation-migration-proof irrigation-field-diagnostics irrigation-field-sensor-health-proof irrigation-stack-software-check irrigation-stack-check irrigation-feedback-check irrigation-feedback-discover irrigation-feedback-discovery-proof irrigation-feedback-work-order irrigation-feedback-work-order-proof irrigation-feedback-clear-stale-retained irrigation-feedback-clear-stale-near-misses irrigation-feedback-watch irrigation-feedback-watch-field irrigation-feedback-watch-field-proof irrigation-feedback-finalize-dry-run irrigation-feedback-finalize-dry-run-proof irrigation-feedback-finalize irrigation-feedback-finalize-proof irrigation-feedback-proof-json irrigation-sensor-health-proof irrigation-stack-proof irrigation-completion-audit irrigation-completion-audit-proof irrigation-acceptance irrigation-full-acceptance irrigation-post-deploy-acceptance-plan irrigation-post-deploy-acceptance
+.PHONY: test-container
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -75,11 +76,11 @@ tool-check: venv-check
 # ── Quality ─────────────────────────────────────────────────────────
 
 lint: tool-check ## Run ruff linter on all Python files
-	$(RUFF) check ingestor/ api/ mcp/ scripts/*.py tests/ verdify_schemas/
+	$(RUFF) check conftest.py ingestor/ api/ mcp/ scripts/*.py tests/ verdify_schemas/
 
 format: tool-check ## Auto-format Python files with ruff
-	$(RUFF) format ingestor/ api/ mcp/ scripts/*.py tests/ verdify_schemas/
-	$(RUFF) check --fix ingestor/ api/ mcp/ scripts/*.py tests/ verdify_schemas/
+	$(RUFF) format conftest.py ingestor/ api/ mcp/ scripts/*.py tests/ verdify_schemas/
+	$(RUFF) check --fix conftest.py ingestor/ api/ mcp/ scripts/*.py tests/ verdify_schemas/
 
 check: lint test lighting-audit-static test-firmware firmware-check ## Run all checks (lint + test + lighting audit + native firmware tests + firmware compile)
 	@echo ""
@@ -99,11 +100,22 @@ lighting-audit-complete: ## Final lighting audit; requires OTA/post-OTA proof wi
 
 # ── Testing ─────────────────────────────────────────────────────────
 
-test: venv-check ## Run full smoke test suite against live stack
-	$(PYTEST) tests/
+PORTABLE_TEST_MARKERS := not live and not device_live and not writable_fixture and not container_fixture and not legacy_vm and not external_fixture
 
-test-fast: venv-check ## Run tests excluding slow planner tests
-	$(PYTEST) tests/ -k "not Planner and not Context"
+test: venv-check ## Run the portable source/unit/contract suite (ambient pytest opt-ins are ignored)
+	PYTEST_ADDOPTS= $(PYTEST) -m "$(PORTABLE_TEST_MARKERS)" tests/
+
+test-live: venv-check ## Run explicit read-only production checks through the k3s DB transport
+	PYTEST_ADDOPTS= PGOPTIONS= VERDIFY_PSQL_MODE= VERDIFY_INSECURE_TEST_TLS= VERDIFY_INGRESS_BASE_URL= VERDIFY_API_BASE_URL=https://api.verdify.ai VERDIFY_DB_BACKEND=kube VERDIFY_DB_USER=verdify VERDIFY_DB_NAME=verdify VERDIFY_DB_NAMESPACE=verdify-prod VERDIFY_DB_POD=verdify-db-0 VERDIFY_DB_PGCONTAINER=postgres $(PYTEST) --run-live -m live tests/ verdify_schemas/tests/
+
+test-writable: venv-check ## Run mutations with ACK + VERDIFY_WRITABLE_TEST_DSN to a disposable *_test DB
+	PYTEST_ADDOPTS= $(PYTEST) --run-writable -m writable_fixture tests/
+
+test-container: venv-check ## Run explicitly opted-in self-contained disposable-container checks
+	PYTEST_ADDOPTS= $(PYTEST) --run-container-fixture -m container_fixture tests/
+
+test-fast: venv-check ## Run portable tests excluding slow planner tests
+	PYTEST_ADDOPTS= $(PYTEST) -m "$(PORTABLE_TEST_MARKERS)" tests/ -k "not Planner and not Context"
 
 climate-intent-replay-report: ## Replay ClimateIntent actions over the firmware corpus
 	$(PYTHON) scripts/climate_intent_replay_evaluator.py --csv $(REPLAY_CORPUS_GZ)
@@ -212,7 +224,7 @@ replay-corpus-refresh: ## Refresh the replay corpus .csv.gz from live DB + valid
 	@echo "✓ refreshed corpus archived at firmware/test/data/replay_overrides.csv.gz"
 
 test-v: ## Run tests with verbose output
-	$(PYTEST) tests/ -v --tb=long
+	PYTEST_ADDOPTS= $(PYTEST) -m "$(PORTABLE_TEST_MARKERS)" tests/ -v --tb=long
 
 # ── Firmware ────────────────────────────────────────────────────────
 

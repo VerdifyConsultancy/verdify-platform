@@ -14,13 +14,17 @@ fi
 DB_STATEMENT_TIMEOUT_MS="${VERDIFY_PLANNER_CONTEXT_DB_STATEMENT_TIMEOUT_MS:-15000}"
 DB_OPTIONAL_STATEMENT_TIMEOUT_MS="${VERDIFY_PLANNER_OPTIONAL_DB_STATEMENT_TIMEOUT_MS:-3000}"
 # #24: DB access via the shared psql-verdify abstraction (docker-exec default
-# preserves prior VM argv). The PGOPTIONS statement-timeout is injected as a
-# docker-exec extra flag in docker-exec mode. Call sites add -c "...".
+# preserves prior VM argv). PGOPTIONS makes every context connection read-only
+# and bounds query time. Call sites add -c "...".
 . "$(dirname "${BASH_SOURCE[0]}")/lib/psql-verdify.sh"
-mapfile -t DB < <(verdify_psql_cmd -e "PGOPTIONS=-c statement_timeout=${DB_STATEMENT_TIMEOUT_MS}")
-DB+=(-t -A)
-mapfile -t DB_OPTIONAL < <(verdify_psql_cmd -e "PGOPTIONS=-c statement_timeout=${DB_OPTIONAL_STATEMENT_TIMEOUT_MS}")
-DB_OPTIONAL+=(-t -A)
+mapfile -t DB < <(
+    verdify_psql_cmd -e "PGOPTIONS=-c statement_timeout=${DB_STATEMENT_TIMEOUT_MS} -c default_transaction_read_only=on"
+)
+DB+=(-X -t -A)
+mapfile -t DB_OPTIONAL < <(
+    verdify_psql_cmd -e "PGOPTIONS=-c statement_timeout=${DB_OPTIONAL_STATEMENT_TIMEOUT_MS} -c default_transaction_read_only=on"
+)
+DB_OPTIONAL+=(-X -t -A)
 HA_TOKEN=$(cat /mnt/agents/shared/credentials/ha_token.txt 2>/dev/null || echo "")
 HA_URL="http://192.168.30.107:8123"
 SCRIPT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -620,7 +624,7 @@ echo ""
 # ── 18. ESP32 FIRMWARE MIN/MAX CONSTRAINTS ────────────────────────
 echo "--- TUNABLE CONSTRAINTS (min/max/step) ---"
 if [ -n "$HA_TOKEN" ]; then
-  if ! curl -fsS -H "Authorization: Bearer $HA_TOKEN" "$HA_URL/api/states" 2>/dev/null | python3 -c "
+  if ! curl -q -fsS -H "Authorization: Bearer $HA_TOKEN" "$HA_URL/api/states" 2>/dev/null | python3 -c "
 import json, sys
 try:
     data = json.load(sys.stdin)

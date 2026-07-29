@@ -18,7 +18,9 @@ from verdify_schemas.tunable_registry import REGISTRY, normalize_planner_value, 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "ingestor"))
-CONTEXT_TIMEOUT_S = int(os.environ.get("VERDIFY_CONTEXT_TEST_TIMEOUT_S", "90"))
+# The kube transport executes many bounded queries through separate kubectl
+# calls; the complete read-only packet currently takes about 105 seconds.
+CONTEXT_TIMEOUT_S = int(os.environ.get("VERDIFY_CONTEXT_TEST_TIMEOUT_S", "150"))
 
 
 class TestPlannerBoundIntersection:
@@ -193,11 +195,13 @@ class TestPlanValidity:
         assert plan_current_coverage_error(plan, now) is None
 
 
+@pytest.mark.live
 class TestContextGathering:
     """gather-plan-context.sh must produce valid, complete context."""
 
     @pytest.fixture(scope="class")
-    def context(self):
+    @classmethod
+    def context(cls):
         env = {**os.environ, "PATH": os.environ.get("PATH", "")}
         auto_backend = not env.get("VERDIFY_DB_BACKEND")
         if auto_backend:
@@ -222,6 +226,12 @@ class TestContextGathering:
                 if kube.returncode != 0:
                     pytest.skip("planner context test requires a reachable read-only DB backend")
                 env["VERDIFY_DB_BACKEND"] = "kube"
+        if env.get("VERDIFY_DB_BACKEND") in {"kube", "kubectl", "kube-exec"}:
+            # Other portable test modules set harmless DB_USER/DB_NAME defaults
+            # at collection time. Keep those process-global test imports from
+            # changing the explicit production read-only kube transport.
+            env["VERDIFY_DB_USER"] = "verdify"
+            env["VERDIFY_DB_NAME"] = "verdify"
         result = subprocess.run(
             ["bash", str(REPO_ROOT / "scripts" / "gather-plan-context.sh")],
             capture_output=True,
@@ -275,7 +285,8 @@ class TestPlannerPrompt:
     """The Iris planner prompt (iris_planner.py) must contain essential knowledge."""
 
     @pytest.fixture(scope="class")
-    def preamble(self):
+    @classmethod
+    def preamble(cls):
         import sys
 
         sys.path.insert(0, str(REPO_ROOT / "ingestor"))
@@ -385,14 +396,6 @@ class TestMCPToolAvailability:
     """The MCP server must expose all 17 planning tools."""
 
     def test_mcp_server_running(self):
-        import subprocess
-
-        if shutil.which("systemctl") and os.path.isdir("/run/systemd/system"):
-            result = subprocess.run(
-                ["systemctl", "is-active", "verdify-mcp"], capture_output=True, text=True, timeout=5
-            )
-            assert result.stdout.strip() == "active", "MCP server not running"
-            return
         source = (REPO_ROOT / "mcp" / "server.py").read_text()
         manifest = (REPO_ROOT / "deploy/k8s/base/mcp-deployment.yaml").read_text()
         # Route registration goes through the compatibility wrapper so the
@@ -431,6 +434,7 @@ class TestMCPToolAvailability:
         assert "22 MCP tools" in body, "Playbook tool count out of sync with _STANDING_DIRECTIVES"
         assert "READ → DIAGNOSE → DECIDE → ACT → REPORT" in body, "Playbook planning cycle section missing"
 
+    @pytest.mark.external_fixture
     def test_vendored_and_host_playbooks_in_sync(self):
         """When both copies are readable, they must be byte-identical. If the
         host copy drifts ahead of the repo, the next PR that vendors will

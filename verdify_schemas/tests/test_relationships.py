@@ -15,10 +15,9 @@ Four drift-guards now triangulate firmware ↔ ingestor ↔ schema ↔ DB ↔ do
 
 from __future__ import annotations
 
-import os
-import subprocess
-
 import pytest
+
+from verdify_schemas.tests.live_db import db_query_rows
 
 # Each tuple: (parent_table, parent_col, child_table, child_col).
 # These mirror the "Hard constraints" table in RELATIONSHIPS.md. If a row here
@@ -40,59 +39,11 @@ HARD_FKS = [
 ]
 
 
-def _docker_available() -> bool:
-    import shutil
-
-    if not shutil.which("docker"):
-        return False
-    r = subprocess.run(["docker", "ps"], capture_output=True, text=True, check=False)
-    return r.returncode == 0
-
-
-def _ci_postgres_reachable() -> bool:
-    return bool(os.environ.get("POSTGRES_HOST"))
-
-
-pytestmark = pytest.mark.skipif(
-    not (_ci_postgres_reachable() or _docker_available()),
-    reason="no DB backend available (need POSTGRES_HOST env or local docker)",
-)
+pytestmark = pytest.mark.live
 
 
 def _psql(sql: str) -> list[list[str]]:
-    if _ci_postgres_reachable():
-        env = os.environ.copy()
-        env.setdefault("PGHOST", env.get("POSTGRES_HOST", "localhost"))
-        env.setdefault("PGPORT", env.get("POSTGRES_PORT", "5432"))
-        env.setdefault("PGUSER", env.get("POSTGRES_USER", "verdify"))
-        env.setdefault("PGPASSWORD", env.get("POSTGRES_PASSWORD", "verdify"))
-        env.setdefault("PGDATABASE", env.get("POSTGRES_DB", "verdify"))
-        cmd = ["psql", "-t", "-A", "-F", "|", "-c", sql]
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=15, check=True, env=env)
-    else:
-        r = subprocess.run(
-            [
-                "docker",
-                "exec",
-                "verdify-timescaledb",
-                "psql",
-                "-U",
-                "verdify",
-                "-d",
-                "verdify",
-                "-t",
-                "-A",
-                "-F",
-                "|",
-                "-c",
-                sql,
-            ],
-            capture_output=True,
-            text=True,
-            timeout=15,
-            check=True,
-        )
-    return [ln.split("|") for ln in r.stdout.splitlines() if ln.strip()]
+    return [line.split("|") for line in db_query_rows(sql)]
 
 
 def _actual_fks() -> set[tuple[str, str, str, str]]:

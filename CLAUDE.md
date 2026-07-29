@@ -102,7 +102,11 @@ Verification order:
 
 1. For docs-only changes, run `git diff --check`. There is no repo-level
    markdown lint configured as of 2026-06-12.
-2. For Python/runtime changes, run `make lint`, then `make test`.
+2. For Python/runtime changes, run `make lint`, then the portable `make test`.
+   Run `make test-live` separately when current-production read-only evidence is
+   relevant; do not blur a current-prod result with exact-branch validation.
+   Mutation E2Es use `make test-writable` only with an acknowledged disposable
+   test database, never prod.
 3. For schema or migration changes, also run `make migration-rollback-safety`
    and the targeted rollback proof described by the migration.
 4. For firmware logic or ESPHome changes, run `make test-firmware`,
@@ -239,7 +243,17 @@ them in this repo.
 ## Checks before commit
 
 - `make lint` (ruff) — required, no exceptions.
-- `make test` — required; 1 pre-existing flaky timeout (`test_dew_point_risk_computes`) is tolerated, everything else must pass.
+- `make test` — required portable suite; 1 pre-existing flaky timeout
+  (`test_dew_point_risk_computes`) is tolerated. The strict #382 xfail records
+  the gated ingestor `emptyDir` → PVC recovery; every other result must pass.
+- `make test-live` — explicit current-production read-only suite. Device-path
+  probes that can emit an alert are deliberately excluded and remain
+  operator-gated.
+- `make test-writable` — disposable-database mutation suite; never point it at
+  the single production database.
+- `make test-container` — opt-in self-contained checks that create and remove
+  disposable local containers; the portable/in-cluster gate does not require
+  Docker.
 - `make firmware-check` — required for `firmware` agent only.
 - For UI/site changes, verify render locally; type-checks and tests don't catch visual regressions.
 

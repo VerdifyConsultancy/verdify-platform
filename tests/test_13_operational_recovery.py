@@ -10,11 +10,14 @@ Covers fixes from ingestor/sprint-25.1:
 from __future__ import annotations
 
 import asyncio
-import subprocess
 import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+import pytest
+import yaml
+
+from conftest import db_query_rows
 from verdify_schemas.tunable_registry import (
     BAND_OWNED_REG,
     CROP_BAND_REG,
@@ -142,15 +145,22 @@ def test_daily_summary_refresh_skips_incomplete_compliance_rows():
     assert src.index(guard) < src.index('vpd = float(r["vpd_avg"])')
 
 
-def test_prod_ingestor_state_is_durable_pvc():
+def test_prod_ingestor_state_pvc_uses_current_durable_tier():
     pvc_src = Path("deploy/k8s/overlays/prod/ingestor-state-pvc.yaml").read_text()
-    patch_src = Path("deploy/k8s/overlays/prod/ingestor-state-volume.yaml").read_text()
     assert "kind: PersistentVolumeClaim" in pvc_src
     assert "name: verdify-ingestor-state" in pvc_src
-    assert "storageClassName: synology-iscsi" in pvc_src
-    assert "persistentVolumeClaim:" in patch_src
-    assert "claimName: verdify-ingestor-state" in patch_src
-    assert "emptyDir: {}" not in patch_src
+    assert "storageClassName: longhorn-v1-workspace-rwo" in pvc_src
+
+
+@pytest.mark.xfail(strict=True, reason="#382: restoring the single-writer state PVC requires a gated prod restart")
+def test_prod_ingestor_mounts_durable_state_pvc():
+    patch = yaml.safe_load(Path("deploy/k8s/overlays/prod/ingestor-state-volume.yaml").read_text())
+    volumes = patch["spec"]["template"]["spec"]["volumes"]
+    state = next(volume for volume in volumes if volume.get("name") == "state")
+    assert state == {
+        "name": "state",
+        "persistentVolumeClaim": {"claimName": "verdify-ingestor-state"},
+    }
 
 
 def test_echo_suppression_covers_delayed_esphome_state_publish():
@@ -266,6 +276,7 @@ def test_manual_overlay_source_classification_still_precedes_band_source():
     assert tasks._dispatch_source("mister_all_kpa", {}, {"mister_all_kpa"}) == "manual"
 
 
+@pytest.mark.live
 def test_live_active_plan_params_are_pushable():
     """The current planner surface should only contain params the dispatcher
     knows how to handle. This catches stale setpoint_plan rows that still have
@@ -279,33 +290,13 @@ def test_live_active_plan_params_are_pushable():
     they must be tolerated here rather than flagged as stale orphans.
     """
 
-    result = subprocess.run(
-        [
-            "docker",
-            "exec",
-            "-i",
-            "verdify-timescaledb",
-            "psql",
-            "-U",
-            "verdify",
-            "-d",
-            "verdify",
-            "-t",
-            "-A",
-            "-c",
-            "COPY (SELECT DISTINCT parameter FROM v_active_plan ORDER BY 1) TO STDOUT",
-        ],
-        capture_output=True,
-        text=True,
-        timeout=10,
-        check=True,
-    )
-    active = {line.strip() for line in result.stdout.splitlines() if line.strip()}
+    active = set(db_query_rows("SELECT DISTINCT parameter FROM v_active_plan ORDER BY 1"))
 
     known = set(PLANNER_PUSHABLE_REG) | set(SCHEDULED_POLICY_REG) | set(BAND_OWNED_REG)
     assert sorted(active - known) == []
 
 
+@pytest.mark.live
 def test_live_active_plan_has_no_band_owned_rows():
     """Crop-band params are dispatcher-owned context, not planner waypoints.
 
@@ -316,35 +307,14 @@ def test_live_active_plan_has_no_band_owned_rows():
         "'" + param.replace("'", "''") + "'"
         for param in sorted(p for p in CROP_BAND_REG if p.startswith("temp_") or p in {"vpd_low", "vpd_high"})
     )
-    result = subprocess.run(
-        [
-            "docker",
-            "exec",
-            "-i",
-            "verdify-timescaledb",
-            "psql",
-            "-U",
-            "verdify",
-            "-d",
-            "verdify",
-            "-t",
-            "-A",
-            "-c",
-            f"""
-            COPY (
-                SELECT parameter || ':' || coalesce(plan_id, '<null>') || ':' || coalesce(source, '<null>')
-                  FROM setpoint_plan
-                 WHERE is_active = true
-                   AND parameter IN ({band_sql})
-                 ORDER BY 1
-            ) TO STDOUT
-            """,
-        ],
-        capture_output=True,
-        text=True,
-        timeout=10,
-        check=True,
+    offenders = db_query_rows(
+        f"""
+        SELECT parameter || ':' || coalesce(plan_id, '<null>') || ':' || coalesce(source, '<null>')
+          FROM setpoint_plan
+         WHERE is_active = true
+           AND parameter IN ({band_sql})
+         ORDER BY 1
+        """
     )
-    offenders = [line.strip() for line in result.stdout.splitlines() if line.strip()]
 
     assert offenders == []

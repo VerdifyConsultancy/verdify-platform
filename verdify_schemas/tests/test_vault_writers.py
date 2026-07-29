@@ -10,6 +10,7 @@ have shipped silently.
 
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 
@@ -23,7 +24,7 @@ from verdify_schemas.vault import (
     LessonsVaultFrontmatter,
 )
 
-VAULT_ROOT = Path("/mnt/iris/verdify-vault")
+VAULT_ROOT = Path(os.environ.get("VERDIFY_SITE_VAULT", "/mnt/iris/verdify-vault"))
 FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---", re.DOTALL)
 
 
@@ -42,7 +43,7 @@ def _live(subpath: str) -> list[Path]:
     return sorted(p.glob("*.md"))
 
 
-pytestmark = pytest.mark.skipif(not VAULT_ROOT.exists(), reason="vault not mounted")
+pytestmark = pytest.mark.external_fixture
 
 
 class TestDailyVaultRoundTrip:

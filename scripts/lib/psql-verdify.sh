@@ -92,6 +92,25 @@ VERDIFY_DB_CONTAINER="${VERDIFY_DB_CONTAINER:-verdify-timescaledb}"
 VERDIFY_DB_USER="${VERDIFY_DB_USER:-${DB_USER:-verdify}}"
 VERDIFY_DB_NAME="${VERDIFY_DB_NAME:-${DB_NAME:-verdify}}"
 
+# Direct-mode routing must be exported while this library is sourced in the
+# caller shell. Exporting inside verdify_psql_cmd is too late for the documented
+# `mapfile < <(verdify_psql_cmd)` shape because process substitution runs the
+# function in a subshell. Keep passwords in the inherited environment rather
+# than emitting them in argv.
+if [[ "$VERDIFY_PSQL_MODE" == "direct" || "$VERDIFY_PSQL_MODE" == "in-cluster" ]]; then
+    export PGHOST="${PGHOST:-${DB_HOST:-localhost}}"
+    export PGPORT="${PGPORT:-${DB_PORT:-5432}}"
+    export PGDATABASE="${PGDATABASE:-$VERDIFY_DB_NAME}"
+    export PGUSER="${PGUSER:-$VERDIFY_DB_USER}"
+    if [[ -z "${PGPASSWORD:-}" ]]; then
+        if [[ -n "${POSTGRES_PASSWORD:-}" ]]; then
+            export PGPASSWORD="$POSTGRES_PASSWORD"
+        elif [[ -n "${DB_PASS:-}" ]]; then
+            export PGPASSWORD="$DB_PASS"
+        fi
+    fi
+fi
+
 # kube-exec backend knobs (#254 — re-home the VM-era `docker exec verdify-
 # timescaledb` firmware preflight DB handle to the k3s prod DB from a tooling
 # host that has kubectl, NOT a Postgres socket). Defaults target verdify-prod/
@@ -125,8 +144,8 @@ _verdify_pgoptions_from_extra() {
 # verdify_psql_cmd — print the connection-prefix argv (one token per line) for
 # the active mode. Call sites that keep a `DB=(...)` array do:
 #     mapfile -t DB < <(verdify_psql_cmd); "${DB[@]}" -t -A -c "SELECT 1"
-# Pass extra `docker exec` flags (e.g. -e PGOPTIONS=...) as args; they are
-# inserted right after `docker exec` in docker-exec mode and ignored otherwise.
+# Pass extra `docker exec` flags (e.g. -e PGOPTIONS=...) as args. Docker receives
+# them directly; direct/kube modes translate PGOPTIONS into the launched process.
 verdify_psql_cmd() {
     local -a docker_extra=("$@")
     case "$VERDIFY_PSQL_MODE" in
@@ -142,20 +161,8 @@ verdify_psql_cmd() {
             printf '%s\n' "$VERDIFY_DB_CONTAINER" psql -U "$VERDIFY_DB_USER" -d "$VERDIFY_DB_NAME"
             ;;
         direct|in-cluster)
-            # Resolve connection from the k3s ConfigMap/Secret contract, falling
-            # back to PG* if already set. psql reads PG* env, so export them and
-            # emit a bare `psql`.
-            export PGHOST="${PGHOST:-${DB_HOST:-localhost}}"
-            export PGPORT="${PGPORT:-${DB_PORT:-5432}}"
-            export PGDATABASE="${PGDATABASE:-$VERDIFY_DB_NAME}"
-            export PGUSER="${PGUSER:-$VERDIFY_DB_USER}"
-            if [[ -z "${PGPASSWORD:-}" ]]; then
-                if [[ -n "${POSTGRES_PASSWORD:-}" ]]; then
-                    export PGPASSWORD="$POSTGRES_PASSWORD"
-                elif [[ -n "${DB_PASS:-}" ]]; then
-                    export PGPASSWORD="$DB_PASS"
-                fi
-            fi
+            # Connection routing was exported at source time in the caller
+            # shell, so it survives process-substitution/mapfile consumers.
             # #254: don't drop a caller's `-e PGOPTIONS=...` (e.g. the planner
             # context statement_timeout). This function is normally consumed by
             # `mapfile < <(verdify_psql_cmd ...)`, so an export here occurs in a
@@ -163,8 +170,11 @@ verdify_psql_cmd() {
             # process. Emit `env PGOPTIONS=... psql` as command argv instead.
             local _pgopt
             _pgopt="$(_verdify_pgoptions_from_extra "${docker_extra[@]}")"
-            if [[ -n "$_pgopt" && -z "${PGOPTIONS:-}" ]]; then
-                printf '%s\n' env "PGOPTIONS=${_pgopt}"
+            if [[ -n "$_pgopt" ]]; then
+                # Caller safety settings are appended so they win over stale
+                # ambient values (for example read_only=off) instead of being
+                # silently discarded in direct/DSN mode.
+                printf '%s\n' env "PGOPTIONS=${PGOPTIONS:+${PGOPTIONS} }${_pgopt}"
             fi
             printf '%s\n' psql
             ;;

@@ -15,7 +15,8 @@ import sys
 from pathlib import Path
 
 import pytest
-from conftest import db_query
+
+from conftest import db_query, require_writable_fixture_dsn
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "ingestor"))
@@ -33,7 +34,7 @@ def _tasks_source() -> str:
     pkg = REPO_ROOT / "ingestor" / "tasks"
     if pkg.is_dir():
         return "\n".join(p.read_text() for p in sorted(pkg.glob("*.py")))
-    return _tasks_source()
+    return (REPO_ROOT / "ingestor" / "tasks.py").read_text()
 
 
 def _tasks_assign_path(name: str) -> Path:
@@ -87,6 +88,7 @@ def _repo_entity_map():
     return entity_map
 
 
+@pytest.mark.live
 class TestSchema:
     """Migration 080 artifacts must exist."""
 
@@ -316,7 +318,8 @@ class TestHeapPressureObservability:
         assert "largest=%.1f kB" in body
         assert "id: heap_min_free" in sensors
         assert "id: heap_largest_free_block" in sensors
-        assert 'ESP_LOGD("heap", "Heap profile: free=%.1f kB min=%.1f kB largest=%.1f kB"' in controls
+        assert 'ESP_LOGW("heap_profile"' in controls
+        assert "lifetime_min=%.1fKB largest=%.1fKB" in controls
 
     def test_firmware_logger_defaults_to_warn_for_heap_protection(self):
         body = (REPO_ROOT / "firmware/greenhouse.yaml").read_text()
@@ -485,6 +488,7 @@ class TestHeapPressureObservability:
 class TestBandFirstControlDiagnostics:
     """band-first controller timers and assist flags must be observable."""
 
+    @pytest.mark.live
     def test_migration_094_applied(self):
         cols = db_query(
             "SELECT string_agg(column_name, ',' ORDER BY column_name) "
@@ -516,6 +520,7 @@ class TestBandFirstControlDiagnostics:
             assert f'"{col}": "{col}"' in entity_map
             assert col in ingestor
 
+    @pytest.mark.live
     def test_effective_control_diagnostics_are_persisted(self):
         cols = db_query(
             "SELECT string_agg(column_name, ',' ORDER BY column_name) "
@@ -612,13 +617,14 @@ class TestContractDriftGuardrails:
 
     def test_firmware_holds_vent_open_while_fan_dwell_clears(self):
         controls_source = (REPO_ROOT / "firmware" / "greenhouse" / "controls.yaml").read_text()
+        logic_source = (REPO_ROOT / "firmware" / "lib" / "greenhouse_logic.h").read_text()
         assert "fan_vent_interlock_active" in controls_source
-        assert "fan_requires_vent" in controls_source
-        assert "mode != SAFETY_HEAT" in controls_source
+        assert "fan_requires_open_vent(mode, fan_physically_on || fan_wanted, vent_bypass_eff)" in controls_source
+        assert "mode != SAFETY_HEAT" in logic_source
         assert "id(fan1_rly)->state || id(fan2_rly)->state" in controls_source
         assert "willVent = true;" in controls_source
         vent_apply = "set_relay(R[5], willVent, fan_requires_vent, sensor_fault_relay_lock)"
-        fan_apply = "set_relay(R[2], willFan1, false, sensor_fault_relay_lock)"
+        fan_apply = "set_relay(R[2], willFan1, manual_fan_force, sensor_fault_relay_lock)"
         assert vent_apply in controls_source
         assert fan_apply in controls_source
         assert controls_source.index(vent_apply) < controls_source.index(fan_apply)
@@ -626,7 +632,8 @@ class TestContractDriftGuardrails:
     def test_firmware_suppresses_non_safety_heat_while_vent_open(self):
         controls_source = (REPO_ROOT / "firmware" / "greenhouse" / "controls.yaml").read_text()
         assert "heat_vent_interlock_active" in controls_source
-        assert "mode != SAFETY_HEAT" in controls_source
+        assert "const bool heat_air_exchange_exempt = (mode == SAFETY_HEAT) || (mode == DEHUM_VENT);" in controls_source
+        assert "!heat_air_exchange_exempt" in controls_source
         assert "(vent_is_open || willVent)" in controls_source
         assert "willHeat1 = false;" in controls_source
         assert "willHeat2 = false;" in controls_source
@@ -642,7 +649,7 @@ class TestContractDriftGuardrails:
             in controls_source
         )
         assert (
-            "const bool climate_wet_assist_demand = (mode == SEALED_MIST) || ctl_state.vent_mist_assist_active;"
+            "((mode == SEALED_MIST) && fsm_escalated_to_misters) || ctl_state.vent_mist_assist_active;"
             in controls_source
         )
         assert "bool humidity_demand = climate_wet_assist_demand && mister_vent_ok;" in controls_source
@@ -865,12 +872,14 @@ class TestSprint18Wiring:
         assert "STDDEV(delta)" in body, "PL-5 must compute STDDEV over forecast_deviation_log"
 
     # ── FW-2: oscillation views ──
+    @pytest.mark.live
     def test_fw2_view_v_daily_oscillation(self):
         from conftest import db_query
 
         val = db_query("SELECT to_regclass('v_daily_oscillation')::text")
         assert val == "v_daily_oscillation", "FW-2: v_daily_oscillation view missing"
 
+    @pytest.mark.live
     def test_fw2_view_summary(self):
         from conftest import db_query
 
@@ -901,6 +910,7 @@ class TestSprint18Wiring:
             assert tasks._PHYSICS_INVARIANTS[param] == (spec.fw_clamp_lo, spec.fw_clamp_hi)
 
     # ── OBS-3: relief-cycle state to DB ──
+    @pytest.mark.live
     def test_obs3_migration_082_applied(self):
         from conftest import db_query
 
@@ -953,6 +963,7 @@ class TestProbeStalenessWiring:
             return _tasks_source()
         return path.read_text()
 
+    @pytest.mark.live
     def test_migration_081_applied(self):
         from conftest import db_query
 
@@ -1075,6 +1086,7 @@ class TestOverrideEventsWiring:
 class TestSetpointConfirmation:
     """FW-4 + FB-1 (Sprint 20): setpoint_changes.confirmed_at wiring."""
 
+    @pytest.mark.live
     def test_migration_084_applied(self):
         val = db_query(
             "SELECT column_name FROM information_schema.columns "
@@ -1082,6 +1094,7 @@ class TestSetpointConfirmation:
         )
         assert val == "confirmed_at", "migration 084 did not apply — setpoint_changes.confirmed_at missing"
 
+    @pytest.mark.live
     def test_plan_journal_structured_column(self):
         val = db_query(
             "SELECT column_name FROM information_schema.columns "
@@ -1091,6 +1104,7 @@ class TestSetpointConfirmation:
             "migration 084 did not apply — plan_journal.hypothesis_structured missing"
         )
 
+    @pytest.mark.live
     def test_confirmations_happening_in_real_time(self):
         """After ingestor restart + a full cfg_snapshot cycle (~60s), recent
         setpoint_changes rows for readbackable params should be confirmed.
@@ -1202,27 +1216,22 @@ class TestSetpointConfirmation:
         assert "newer.ts <= latest_readback.ts" in migration
 
 
+@pytest.mark.external_fixture
 class TestForecastPageGeneration:
     """Phase 7 (Sprint 20): forecast website page exists + non-empty."""
 
-    PAGE_PATH = "/mnt/iris/verdify-vault/website/data/forecast/index.md"
+    PAGE_PATH = Path(os.environ.get("VERDIFY_SITE_VAULT", "__missing_external_vault__")) / "data/forecast/index.md"
 
     def test_forecast_page_exists(self):
-        import os
-
-        assert os.path.isfile(self.PAGE_PATH), (
-            f"forecast page missing at {self.PAGE_PATH} — run generate-forecast-page.py"
-        )
+        assert self.PAGE_PATH.is_file(), f"forecast page missing at {self.PAGE_PATH} — run generate-forecast-page.py"
 
     def test_forecast_page_has_sections(self):
-        with open(self.PAGE_PATH) as f:
-            body = f.read()
+        body = self.PAGE_PATH.read_text()
         for section in ("# Greenhouse Weather Forecast", "## Hourly — next 72 h", "## Days 4\u20137 outlook"):
             assert section in body, f"forecast page missing section: {section!r}"
 
     def test_forecast_page_has_short_route_alias(self):
-        with open(self.PAGE_PATH) as f:
-            body = f.read()
+        body = self.PAGE_PATH.read_text()
         assert "aliases:" in body
         assert ("  - forecast" in body) or ("- forecast" in body) or ("aliases: [forecast]" in body)
         assert "## Hourly — next 72 h" in body
@@ -1299,12 +1308,14 @@ class TestEntityMapCoverage:
         assert not dupes, f"Duplicate param names in SETPOINT_MAP (silent-overwrite risk): {dupes}"
 
 
+@pytest.mark.writable_fixture
 class TestPlannerToDispatcherE2E:
     """TE-2 (Sprint 19): seed a setpoint_plan row → run dispatcher → assert a
     setpoint_changes row lands with source='plan' and the correct value.
 
     Exercises the full v_active_plan → setpoint_dispatcher → DB path.
-    Mocks push_to_esp32 so the test doesn't drive real hardware.
+    Mocks the dispatcher-owned detailed push helper and also forces the device
+    gate closed, so this disposable-DB fixture can never drive real hardware.
     """
 
     TEST_PARAM = "mister_vpd_weight"
@@ -1315,64 +1326,76 @@ class TestPlannerToDispatcherE2E:
     DRIFT_READBACK = 123.0
     DRIFT_PLAN_ID = "te2-readback-drift-test"
 
-    def _cleanup(self):
-        for sql in (
-            f"DELETE FROM setpoint_plan WHERE plan_id = '{self.TEST_PLAN_ID}'",
-            f"DELETE FROM setpoint_plan WHERE plan_id = '{self.DRIFT_PLAN_ID}'",
-            # Remove any setpoint_changes row created by the test
-            f"DELETE FROM setpoint_changes WHERE parameter = '{self.TEST_PARAM}' "
-            f"AND abs(value - {self.TEST_VALUE}) < 1e-6 AND ts > now() - interval '5 min'",
-            f"DELETE FROM setpoint_changes WHERE parameter = '{self.DRIFT_PARAM}' "
-            f"AND abs(value - {self.DRIFT_VALUE}) < 1e-6 AND ts > now() - interval '5 min'",
-        ):
-            subprocess.run(
-                [
-                    "docker",
-                    "exec",
-                    "verdify-timescaledb",
-                    "psql",
-                    "-U",
-                    "verdify",
-                    "-d",
-                    "verdify",
-                    "-c",
-                    sql,
-                ],
-                check=False,
-                capture_output=True,
-            )
+    def _cleanup(self, dsn: str):
+        import asyncio
 
-    def test_plan_row_becomes_setpoint_change_with_plan_source(self):
+        import asyncpg
+
+        async def cleanup():
+            conn = await asyncpg.connect(dsn)
+            try:
+                await conn.execute(
+                    "DELETE FROM setpoint_plan WHERE plan_id = ANY($1::text[])",
+                    [self.TEST_PLAN_ID, self.DRIFT_PLAN_ID],
+                )
+                await conn.execute(
+                    "DELETE FROM setpoint_changes "
+                    "WHERE ((parameter = $1 AND abs(value - $2) < 1e-6) "
+                    "OR (parameter = $3 AND abs(value - $4) < 1e-6)) "
+                    "AND ts > now() - interval '5 min'",
+                    self.TEST_PARAM,
+                    self.TEST_VALUE,
+                    self.DRIFT_PARAM,
+                    self.DRIFT_VALUE,
+                )
+            finally:
+                await conn.close()
+
+        asyncio.run(cleanup())
+
+    def test_plan_row_becomes_setpoint_change_with_plan_source(self, monkeypatch, tmp_path):
         import asyncio
 
         import asyncpg
         import tasks as tasks_mod
+        from esp32_push import DeviceCommandOutcome, PushBatchResult
 
         from ingestor import State  # noqa: F401  (ensure ingestor module importable)
 
-        if os.environ.get("RUN_LIVE_DB_MUTATION_TESTS") != "1":
-            pytest.skip("live DB mutation test; enable with RUN_LIVE_DB_MUTATION_TESTS=1 in an isolated environment")
+        dsn = require_writable_fixture_dsn("VERDIFY_WRITABLE_TEST_DSN")
 
-        # Intercept ESP32 push so the test doesn't drive real hardware
-        async def _fake_push(changes):
-            return len(changes)
+        # Default-deny twice: close the real write gate, then intercept the
+        # symbol actually called by tasks.dispatcher after the issue #46 split.
+        monkeypatch.setenv("VERDIFY_DEVICE_WRITE_ENABLED", "0")
+        state_dir = tmp_path / "state"
+        state_dir.mkdir()
+        monkeypatch.setattr(tasks_mod.dispatcher, "STATE_DIR", state_dir)
+        pushed = []
 
-        original_push = getattr(tasks_mod, "push_to_esp32", None)
-        tasks_mod.push_to_esp32 = _fake_push
+        async def _fake_push(changes, *, attempt, on_state, command_versions):
+            pushed.extend(changes)
+            outcomes = tuple(
+                DeviceCommandOutcome(
+                    index=index,
+                    object_id=object_id,
+                    value=float(value),
+                    entity_type=entity_type,
+                    parameter=object_id,
+                    status="sent",
+                    reason="writable_test_fixture",
+                    attempt=attempt,
+                    connection_generation=0,
+                    logical_version=command_versions[index],
+                )
+                for index, (object_id, value, entity_type) in enumerate(changes)
+            )
+            await on_state(outcomes)
+            return PushBatchResult(outcomes)
+
+        monkeypatch.setattr(tasks_mod.dispatcher, "push_to_esp32_detailed", _fake_push)
 
         # Clear the dispatcher's in-memory dedup for our test param
         tasks_mod._last_pushed.pop(self.TEST_PARAM, None)
-
-        # Build DSN from the ingestor .env so the test uses real creds
-        env = {}
-        with open("/srv/verdify/ingestor/.env") as f:
-            for line in f:
-                line = line.strip()
-                if not line or line.startswith("#") or "=" not in line:
-                    continue
-                k, v = line.split("=", 1)
-                env[k] = v
-        dsn = f"postgresql://{env['DB_USER']}:{env['DB_PASSWORD']}@localhost:{env['DB_PORT']}/{env['DB_NAME']}"
 
         async def run():
             pool = await asyncpg.create_pool(dsn, min_size=1, max_size=2)
@@ -1409,39 +1432,50 @@ class TestPlannerToDispatcherE2E:
             assert row["source"] == "plan", (
                 f"setpoint_changes.source must be 'plan' for planner-driven param, got {row['source']!r}"
             )
+            assert pushed, "dispatcher did not invoke the mocked detailed push helper"
         finally:
-            if original_push is not None:
-                tasks_mod.push_to_esp32 = original_push
-            self._cleanup()
+            self._cleanup(dsn)
 
-    def test_cfg_readback_drift_forces_repush_even_when_last_pushed_matches(self):
+    def test_cfg_readback_drift_forces_repush_even_when_last_pushed_matches(self, monkeypatch, tmp_path):
         import asyncio
 
         import asyncpg
         import tasks as tasks_mod
+        from esp32_push import DeviceCommandOutcome, PushBatchResult
 
-        if os.environ.get("RUN_LIVE_DB_MUTATION_TESTS") != "1":
-            pytest.skip("live DB mutation test; enable with RUN_LIVE_DB_MUTATION_TESTS=1 in an isolated environment")
+        dsn = require_writable_fixture_dsn("VERDIFY_WRITABLE_TEST_DSN")
 
-        async def _fake_push(changes):
-            return len(changes)
+        monkeypatch.setenv("VERDIFY_DEVICE_WRITE_ENABLED", "0")
+        state_dir = tmp_path / "state"
+        state_dir.mkdir()
+        monkeypatch.setattr(tasks_mod.dispatcher, "STATE_DIR", state_dir)
+        pushed = []
 
-        original_push = getattr(tasks_mod, "push_to_esp32", None)
+        async def _fake_push(changes, *, attempt, on_state, command_versions):
+            pushed.extend(changes)
+            outcomes = tuple(
+                DeviceCommandOutcome(
+                    index=index,
+                    object_id=object_id,
+                    value=float(value),
+                    entity_type=entity_type,
+                    parameter=object_id,
+                    status="sent",
+                    reason="writable_test_fixture",
+                    attempt=attempt,
+                    connection_generation=0,
+                    logical_version=command_versions[index],
+                )
+                for index, (object_id, value, entity_type) in enumerate(changes)
+            )
+            await on_state(outcomes)
+            return PushBatchResult(outcomes)
+
         original_last = tasks_mod._last_pushed.get(self.DRIFT_PARAM)
         original_readback = tasks_mod.shared.cfg_readback.get(self.DRIFT_PARAM)
-        tasks_mod.push_to_esp32 = _fake_push
+        monkeypatch.setattr(tasks_mod.dispatcher, "push_to_esp32_detailed", _fake_push)
         tasks_mod._last_pushed[self.DRIFT_PARAM] = self.DRIFT_VALUE
         tasks_mod.shared.cfg_readback[self.DRIFT_PARAM] = self.DRIFT_READBACK
-
-        env = {}
-        with open("/srv/verdify/ingestor/.env") as f:
-            for line in f:
-                line = line.strip()
-                if not line or line.startswith("#") or "=" not in line:
-                    continue
-                k, v = line.split("=", 1)
-                env[k] = v
-        dsn = f"postgresql://{env['DB_USER']}:{env['DB_PASSWORD']}@localhost:{env['DB_PORT']}/{env['DB_NAME']}"
 
         async def run():
             pool = await asyncpg.create_pool(dsn, min_size=1, max_size=2)
@@ -1474,9 +1508,8 @@ class TestPlannerToDispatcherE2E:
             row = asyncio.run(run())
             assert row is not None, "cfg readback drift did not force a planner value re-push"
             assert row["source"] == "plan"
+            assert pushed, "readback drift did not invoke the mocked detailed push helper"
         finally:
-            if original_push is not None:
-                tasks_mod.push_to_esp32 = original_push
             if original_last is None:
                 tasks_mod._last_pushed.pop(self.DRIFT_PARAM, None)
             else:
@@ -1485,7 +1518,7 @@ class TestPlannerToDispatcherE2E:
                 tasks_mod.shared.cfg_readback.pop(self.DRIFT_PARAM, None)
             else:
                 tasks_mod.shared.cfg_readback[self.DRIFT_PARAM] = original_readback
-            self._cleanup()
+            self._cleanup(dsn)
 
 
 def test_second_based_cfg_readback_rounding_does_not_force_repush():
@@ -1523,16 +1556,18 @@ class TestSetpointsFailLoud:
         )
         assert "status_code=503" in body, "/setpoints must raise HTTP 503 when band_row is NULL (Tier 1 #3)"
 
+    @pytest.mark.device_live
     def test_setpoints_still_200_under_normal_conditions(self):
         """Under normal operation the endpoint must not regress to 503."""
-        target = os.environ.get("VERDIFY_API_SETPOINTS_URL", "https://127.0.0.1/setpoints")
+        target = os.environ.get("VERDIFY_API_SETPOINTS_URL", "https://api.verdify.ai/setpoints")
+        tls_args = ["-k"] if os.environ.get("VERDIFY_INSECURE_TEST_TLS") == "1" else []
         result = subprocess.run(
             [
                 "curl",
-                "-sk",
+                "-q",
+                "-sS",
+                *tls_args,
                 target,
-                "-H",
-                "Host: api.verdify.ai",
                 "-w",
                 "\n%{http_code}",
             ],

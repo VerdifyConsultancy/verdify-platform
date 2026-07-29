@@ -9,6 +9,7 @@ downstream consumers (or the OpenAPI docs).
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 
 import pytest
@@ -24,10 +25,14 @@ from verdify_schemas import (
     ZoneListItem,
 )
 
+pytestmark = pytest.mark.live
+API_BASE_URL = os.environ.get("VERDIFY_API_BASE_URL", "https://api.verdify.ai").rstrip("/")
+
 
 def _curl_json(path: str) -> object:
+    tls_args = ["-k"] if os.environ.get("VERDIFY_INSECURE_TEST_TLS") == "1" else []
     r = subprocess.run(
-        ["curl", "-sk", "-H", "Host: api.verdify.ai", f"https://127.0.0.1{path}"],
+        ["curl", "-q", "-sS", *tls_args, f"{API_BASE_URL}{path}"],
         capture_output=True,
         text=True,
         timeout=10,

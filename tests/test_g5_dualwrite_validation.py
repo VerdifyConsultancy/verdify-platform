@@ -17,8 +17,9 @@ timestamps are UTC (``...Z``), matching the captured_at the ingestor writes.
 The live ">=3 consecutive completed runs" observation is the DEPLOYED /
 verify-later step (no external owner — just time); it is NOT exercised here.
 
-Run: ``pytest tests/test_g5_dualwrite_validation.py -v``
-Requires docker + the ``postgres`` image; skips cleanly if unavailable.
+Run: ``make test-container``
+Requires Docker + the ``postgres`` image; an explicitly requested run fails
+closed if the disposable fixture cannot start.
 NEVER touches the live database — it stands up and tears down its own throwaway.
 """
 
@@ -31,6 +32,8 @@ import uuid
 from pathlib import Path
 
 import pytest
+
+pytestmark = pytest.mark.container_fixture
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CHECK_SQL = REPO_ROOT / "scripts" / "check-g5-dualwrite.sql"
@@ -162,7 +165,7 @@ def _psql(container: str, sql_args: list[str], *, stdin: str | None = None) -> s
 def disposable_db():
     """A throwaway postgres container seeded with the G5 fixture. NEVER live."""
     if not _docker_available():
-        pytest.skip("docker unavailable — disposable-DB G5 check test skipped")
+        pytest.fail("docker unavailable — explicit disposable-container checks did not run")
     if not CHECK_SQL.exists():
         pytest.fail(f"check SQL missing: {CHECK_SQL}")
 
@@ -188,7 +191,7 @@ def disposable_db():
         timeout=120,
     )
     if run.returncode != 0:
-        pytest.skip(f"could not start disposable postgres ({PG_IMAGE}): {run.stderr.strip()}")
+        pytest.fail(f"could not start disposable postgres ({PG_IMAGE}): {run.stderr.strip()}")
 
     try:
         # Wait for readiness. The postgres image starts a TEMPORARY server to run
@@ -212,7 +215,7 @@ def disposable_db():
                 consecutive = 0
             time.sleep(1)
         else:
-            pytest.skip("disposable postgres did not become stably ready in time")
+            pytest.fail("disposable postgres did not become stably ready in time")
 
         _psql(name, ["-q"], stdin=SCHEMA_SQL)
         _psql(name, ["-q"], stdin=SEED_SQL)

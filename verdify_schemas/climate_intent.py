@@ -45,6 +45,14 @@ FogBlockReason = Literal[
     "occupancy",
     "relay_min_off",
     "resource_budget",
+    "served",
+    "irrigation",
+    "vent_interlock",
+    "time_invalid",
+    "leak_detected",
+    "feed_hold",
+    "dusk_cutoff",
+    "wet_taper",
 ]
 
 CLIMATE_ACTIONS: tuple[str, ...] = (
@@ -264,7 +272,9 @@ CLIMATE_RELAY_FIELD_DENYLIST: frozenset[str] = frozenset(
 # `feed_hold`/`dusk_cutoff`/`below_threshold`/`dew_margin`/`time_window`/
 # `rh_ceiling`/`temp_low`/`occupancy`) plus the ESPHome manual/safety + interlock
 # path (firmware/greenhouse/controls.yaml → `served`/`vent_interlock`/
-# `irrigation`/`resource_budget`/`time_invalid`/`leak_detected`/`relay_min_off`).
+# `irrigation`/`resource_budget`/`time_invalid`/`leak_detected`/`relay_min_off`/
+# `wet_taper`). Historical rows remain part of the decoder contract even after
+# a firmware path becomes inert.
 # test_climate_intent.test_fog_block_reasons_cover_stored_db_values guards this
 # against the live climate_action_log column.
 FOG_BLOCK_REASONS: tuple[str, ...] = (
@@ -285,6 +295,7 @@ FOG_BLOCK_REASONS: tuple[str, ...] = (
     "leak_detected",  # leak-detect safety lock
     "feed_hold",  # FRT-6 absorption hold after a feed
     "dusk_cutoff",  # SAF-3 VPD-independent dusk cutoff rail
+    "wet_taper",  # historical/current controls.yaml evening-wetting block
 )
 
 

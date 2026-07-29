@@ -316,7 +316,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "verdify-tsdb"
       },
-      "description": "Eligible daily cost by utility type. Electric requires transition-derived runtime and date-valid coefficient evidence.",
+      "description": "Daily modeled utility-cost estimates. Electric uses transition-derived runtime; gas and water use the published rate assumptions.",
       "fieldConfig": {
         "defaults": {
           "custom": {
@@ -342,7 +342,7 @@
               {
                 "id": "color",
                 "value": {
-                  "fixedColor": "#FF9800",
+                  "fixedColor": "#73BF69",
                   "mode": "fixed"
                 }
               }
@@ -436,7 +436,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "verdify-tsdb"
       },
-      "description": "Monthly eligible greenhouse utility cost. Missing or low-confidence days stay blank; electric requires transition runtime and date-valid coefficients, while gas and water use the published rate assumptions.",
+      "description": "Monthly modeled greenhouse utility-cost estimates. Electric uses transition-derived runtime; gas and water use the published rate assumptions.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1491,6 +1491,7 @@
         }
       ],
       "title": "Runtime-Modeled kWh/day (30-Day Avg) (est)",
+      "description": "Average whole controlled-equipment runtime estimate across the last 30 completed daily summaries.",
       "type": "stat",
       "transparent": true,
       "options": {
@@ -1744,6 +1745,7 @@
         }
       ],
       "title": "Daily Cost by Source (est)",
+      "description": "Daily modeled utility-cost estimates from runtime, usage, and published rate assumptions.",
       "type": "timeseries",
       "options": {
         "tooltip": {

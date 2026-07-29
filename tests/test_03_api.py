@@ -3,16 +3,26 @@ Test 03: API — All endpoints respond correctly.
 Tests the FastAPI application at api.verdify.ai via localhost.
 """
 
+import asyncio
 import json
+import os
 import subprocess
+from pathlib import Path
+
+import pytest
+from fastapi import HTTPException, Request
 
 from conftest import db_query_rows
 
+API_BASE_URL = os.environ.get("VERDIFY_API_BASE_URL", "https://api.verdify.ai").rstrip("/")
+
 
 def api_get(path: str, host: str = "api.verdify.ai") -> tuple[int, str]:
-    """Hit the API via curl through Traefik."""
+    """Hit the current public API, or an explicitly configured test endpoint."""
+    del host  # retained for backwards-compatible call sites
+    tls_args = ["-k"] if os.environ.get("VERDIFY_INSECURE_TEST_TLS") == "1" else []
     result = subprocess.run(
-        ["curl", "-sk", f"https://127.0.0.1{path}", "-H", f"Host: {host}", "-w", "\n%{http_code}"],
+        ["curl", "-q", "-sS", *tls_args, f"{API_BASE_URL}{path}", "-w", "\n%{http_code}"],
         capture_output=True,
         text=True,
         timeout=20,
@@ -23,36 +33,7 @@ def api_get(path: str, host: str = "api.verdify.ai") -> tuple[int, str]:
     return status, body
 
 
-def api_post_json(path: str, payload: dict, host: str = "api.verdify.ai") -> tuple[int, str]:
-    """POST JSON to the public API via Traefik."""
-    result = subprocess.run(
-        [
-            "curl",
-            "-sk",
-            "-X",
-            "POST",
-            f"https://127.0.0.1{path}",
-            "-H",
-            f"Host: {host}",
-            "-H",
-            "Origin: https://verdify.ai",
-            "-H",
-            "Content-Type: application/json",
-            "--data",
-            json.dumps(payload),
-            "-w",
-            "\n%{http_code}",
-        ],
-        capture_output=True,
-        text=True,
-        timeout=10,
-    )
-    lines = result.stdout.strip().rsplit("\n", 1)
-    body = lines[0] if len(lines) > 1 else ""
-    status = int(lines[-1]) if lines[-1].isdigit() else 0
-    return status, body
-
-
+@pytest.mark.live
 class TestAPIHealth:
     """API must be reachable and healthy."""
 
@@ -113,42 +94,76 @@ class TestAPIHealth:
         status, body = api_get("/api/v1/public/gpu-power?hours=168&step_minutes=1")
         assert status == 400, f"Unbounded GPU power request returned {status}: {body}"
 
-    def test_public_contact_honeypot_noop_accepts_request(self):
-        status, body = api_post_json(
-            "/api/v1/public/contact",
+
+class TestAPIOfflineGuards:
+    """Exercise write guards without sending a request to production."""
+
+    @staticmethod
+    def _json_request(payload: dict) -> Request:
+        body = json.dumps(payload).encode()
+        delivered = False
+
+        async def receive():
+            nonlocal delivered
+            if delivered:
+                return {"type": "http.disconnect"}
+            delivered = True
+            return {"type": "http.request", "body": body, "more_body": False}
+
+        return Request(
+            {
+                "type": "http",
+                "http_version": "1.1",
+                "method": "POST",
+                "scheme": "https",
+                "path": "/api/v1/public/contact",
+                "raw_path": b"/api/v1/public/contact",
+                "query_string": b"",
+                "headers": [(b"content-type", b"application/json")],
+                "client": ("127.0.0.1", 12345),
+                "server": ("testserver", 443),
+            },
+            receive,
+        )
+
+    def test_public_contact_honeypot_returns_before_database_access(self):
+        from api import main as api_main
+
+        request = self._json_request(
             {
                 "name": "Verdify Test",
                 "email": "test@example.invalid",
                 "topic": "other",
-                "message": "This honeypot-filled request should be accepted without creating a contact row.",
+                "message": "This honeypot-filled request must not create a contact row.",
                 "website": "https://example.invalid",
-            },
+            }
         )
-        assert status == 202, f"Public contact honeypot path returned {status}: {body}"
-        data = json.loads(body)
-        assert data["ok"] is True
+        result = asyncio.run(api_main.public_contact_submission(request))
+        assert result == {"ok": True, "status": "received"}
 
-    def test_mutating_routes_require_operator_key(self):
-        result = subprocess.run(
-            [
-                "curl",
-                "-sk",
-                "-X",
-                "POST",
-                "https://127.0.0.1/api/v1/greenhouses/vallery/lights/main/on",
-                "-H",
-                "Host: api.verdify.ai",
-                "-w",
-                "\n%{http_code}",
-            ],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-        status = int(result.stdout.strip().rsplit("\n", 1)[-1])
-        assert status == 403, f"Unauthenticated mutating route returned {status}"
+    def test_mutating_routes_fail_closed_without_operator_key(self, monkeypatch):
+        from api import main as api_main
+
+        monkeypatch.delenv(api_main.ALLOW_UNAUTHENTICATED_WRITES_ENV, raising=False)
+        monkeypatch.delenv(api_main.WRITE_API_KEY_ENV, raising=False)
+        request = self._json_request({})
+        with pytest.raises(HTTPException) as exc_info:
+            asyncio.run(api_main.require_write_access(request, None))
+        assert exc_info.value.status_code == 403
+
+    def test_gpu_power_latest_queries_use_indexable_lateral_lookups(self):
+        source = (Path(__file__).resolve().parents[1] / "api" / "main.py").read_text()
+        body = source[
+            source.index("async def public_gpu_power(") : source.index(
+                "@app.get", source.index("async def public_gpu_power(")
+            )
+        ]
+        assert body.count("CROSS JOIN LATERAL") == 2
+        assert "FROM v_gpu_power_latest" not in body
+        assert "FROM v_infra_cpu_latest" not in body
 
 
+@pytest.mark.device_live
 class TestAPISetpoints:
     """Setpoint endpoint must return valid key=value data for ESP32."""
 
@@ -173,6 +188,7 @@ class TestAPISetpoints:
 
     def test_setpoints_has_required_params(self):
         status, body = api_get("/setpoints")
+        assert status == 200, f"Setpoints returned {status}"
         data = self._parse_setpoints(body)
         required = ["temp_high", "temp_low", "vpd_high", "vpd_low"]
         for param in required:
@@ -180,11 +196,12 @@ class TestAPISetpoints:
 
     def test_setpoints_values_sane(self):
         status, body = api_get("/setpoints")
+        assert status == 200, f"Setpoints returned {status}"
         data = self._parse_setpoints(body)
-        if "temp_high" in data and isinstance(data["temp_high"], float):
-            assert 50 <= data["temp_high"] <= 100, f"temp_high={data['temp_high']} out of range"
-        if "vpd_high" in data and isinstance(data["vpd_high"], float):
-            assert 0.3 <= data["vpd_high"] <= 3.0, f"vpd_high={data['vpd_high']} out of range"
+        assert isinstance(data.get("temp_high"), float)
+        assert isinstance(data.get("vpd_high"), float)
+        assert 50 <= data["temp_high"] <= 100, f"temp_high={data['temp_high']} out of range"
+        assert 0.3 <= data["vpd_high"] <= 3.0, f"vpd_high={data['vpd_high']} out of range"
 
     def test_setpoints_vpd_matches_house_control_band(self):
         status, body = api_get("/setpoints")
@@ -202,6 +219,7 @@ class TestAPISetpoints:
         assert round(abs(data["vpd_high"] - expected_high), 2) <= 0.01
 
 
+@pytest.mark.live
 class TestAPICrops:
     """Crop catalog endpoints."""
 
@@ -216,6 +234,7 @@ class TestAPICrops:
         assert status == 200
 
 
+@pytest.mark.live
 class TestAPIPlans:
     """Plan-related endpoints."""
 
