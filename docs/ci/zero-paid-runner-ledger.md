@@ -491,6 +491,93 @@ kubectl get workflows -n agent-fleet-ci | grep verdify-platform
 kubectl api-resources | grep actions.github            # ARC CRDs present
 ```
 
+## 11. 2026-07-29 closeout refresh
+
+Evidence timestamp: **2026-07-29T06:45:02Z**. This refresh was read-only with
+respect to GitHub, Argo, Kubernetes workloads, the device, and production data.
+
+### Exact git state
+
+- Refreshed public default branch:
+  `eb3ac9cf33001fa6c5271412284382b36c6abf9e` (PR #556 merge).
+- Clean local branch: `auth/uniform-github-app-7570d1c`.
+- Repository-owned validation fix:
+  `60740ba2dbaa24600f49c0f35c394b360ee0a602`.
+- The requested auth work remains preserved as ancestor
+  `eb9bfbb7735d3e418672aa7b2b6957657a1d3728`; PR #555's merged lane was not
+  modified or reopened.
+- The branch is seven commits ahead of refreshed `origin/main` (the auth work,
+  three deliberate main reconciliations, its contract-doc follow-up, the
+  validation fix, and this evidence follow-up). `git status --porcelain=v1` is
+  empty; the machine-managed runtime briefing remains local behind the existing `CLAUDE.md`/
+  `AGENTS.md` skip-worktree contract and was not committed.
+
+### Load-bearing execution classification
+
+| Class | Current Verdify surface | Closeout disposition |
+| --- | --- | --- |
+| Generated ARC validation | None registered for this repo; repository runner inventory is zero and runner-profile RBAC is not granted to this cell | **NONE TO MIGRATE**; do not invent a profile or runner label |
+| Argo validation | `verdify-platform-pr-ci` posts stable context `Verdify Platform / Argo PR CI` | **KEEP / REQUIRED**, but publication provenance is centrally blocked below |
+| Argo build/publish | `verdify-platform-ci` post-merge validation and `repo-build` Kaniko jobs publish exact revisions to Zot; digest-only pin PR follows | **KEEP ZERO-PAID** |
+| Dispatch-only | Generated GitHub event/sensor dispatch into the Argo templates | **KEEP PLATFORM-OWNED**; definitions are RBAC-hidden from this cell |
+| Retired | Eight historical `ubuntu-latest` workflows in §2.2 | **REMAIN RETIRED**; repo guard prevents reintroduction |
+| GitHub-native | Dynamic Dependency Graph | **KEEP FREE GITHUB-NATIVE**, non-load-bearing |
+
+### Exact local and live validation
+
+- `make lint`: green.
+- `make test`: **1170 passed, 154 deselected, 1 strict xfail** (#382 gated
+  ingestor PVC recovery), 85.19 s pytest / 88 s wall.
+- `make ci`: **ALL GATES GREEN**, 96.312 s measured directly; the pure-contract
+  selector has 45 entries. This run did not request diff-mode gates.
+- Read-only schema live lane after the source fix: **164 passed, 560
+  deselected**, 52.46 s. It proved that the production-persisted historical
+  `wet_taper` fog-block reason now decodes through the strict schema.
+- Broad `make test-live` before that one-line schema correction: **280 passed,
+  3 explicitly owned-elsewhere skips, 2 failed, 1764 deselected** in 365.91 s.
+  The schema failure is closed by the recheck above. The sole remaining live
+  failure is **148 active planner lessons** (limit 25), which is current-prod
+  rollout drift covered by existing migration 156, not an unmerged-branch
+  source failure.
+- `make test-container` was explicitly probed without Docker and failed closed
+  rather than reporting an unexecuted green. Writable and device-live lanes
+  were not run: no disposable writable DSN was supplied, and the device path
+  remains operator-gated.
+
+### Publication and status-provenance blocker
+
+The generated Agent Fleet GitHub credential contract is unavailable in this
+pod: no generated token-file environment/wrapper is present. Legacy ambient
+`GH_TOKEN`/`GITHUB_TOKEN`, PATs, `GIT_ASKPASS`, handwritten Secrets, and
+repo-local credential fallbacks are intentionally rejected. Central issue
+[`jvallery/agents#3189`](https://github.com/jvallery/agents/issues/3189) owns
+that contract failure. Consequently this cell cannot push `60740ba`, create or
+update its PR/issue, request the required independent GitHub review, or publish
+an exact-head status.
+
+The last public inventory found one open PR, #553 (`ci/pin-base-image-digests`,
+head `aaf8687…`), with a stale infrastructure timeout tracked centrally by
+[`jvallery/agents#3049`](https://github.com/jvallery/agents/issues/3049). PR
+#556 is merged at `eb3ac9c…`; its exact-head Argo status succeeded, but the
+commit-status `target_url` is null. The required context is stable by name but
+still has `app_id: null`; durable run/job/log target URLs and publisher
+identity must come from the common generated platform contract, never a
+Verdify-local status publisher. No verified central issue currently owns that
+specific provenance defect. Filing or updating its exact `jvallery/agents`
+issue is itself blocked by #3189; the first authorized GitHub write must attach
+the SHA/status evidence above to #3189 or create the dedicated platform issue.
+
+No direct workflow submission, production sync/restart, image push, digest pin,
+database mutation, or device request was performed. After publication and
+merge, the authorized delivery proof remains: Argo validation → post-merge
+Kaniko builds → Zot digests → reviewed digest-pin PR → Jason-gated
+`verdify-prod-dark` reconciliation → live digest/health proof. This change
+requires reviewed image pins for `verdify-api`, `verdify-ingestor`, and
+`verdify-lab-publisher-k3s`, the generated Grafana ConfigMap, and the explicitly
+documented `verdify-mcp` plus Jason-gated single-writer `verdify-ingestor`
+restart. The production lesson cleanup is part of that gated reconciliation;
+it must not be applied directly from this cell.
+
 ---
 
 Related: `docs/runbooks/prod-promotion.md` (digest-pin + gated sync),
