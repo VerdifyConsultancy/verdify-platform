@@ -19,13 +19,13 @@ images:
   # replicas; digest presence alone is not rollout authority.
   - name: registry.vallery.net/verdifyconsultancy/verdify-lab-release-agent
     newName: registry.vallery.net/verdifyconsultancy/verdify-lab-release-agent
-    digest: sha256:183629db4544015017a7f8a2b0bab1ca081a86340eead9e166c7695a7372ba4a
+    digest: sha256:e5e20f942003bbb9405b0918169f7c43ac2ea342de9481be6bf626ae169d9d28
   - name: registry.vallery.net/verdifyconsultancy/verdify-lab-release-nginx
     newName: registry.vallery.net/verdifyconsultancy/verdify-lab-release-nginx
-    digest: sha256:1c49ab00f3fcec4f40d86149f6bb18e201ddfa2db1710b49498835b7caa0a152
+    digest: sha256:0b49d3977b50c55745c05a25a74cc040df39bb0236dabd7ba536a15ae78a67cb
   - name: registry.vallery.net/verdifyconsultancy/verdify-lab-occurrence-exporter
     newName: registry.vallery.net/verdifyconsultancy/verdify-lab-occurrence-exporter
-    digest: sha256:b67c2aa53992fe8a112b2295d1d159a602912ebf0a4168fc44731794d3f6c455
+    digest: sha256:35da85cf7798b2f2e88ec0adde57209fe3f7cd29be0d1286df2464ea9b5fba01
 
 patches:
   - path: lab-release-runtime-dormant.patch.yaml
