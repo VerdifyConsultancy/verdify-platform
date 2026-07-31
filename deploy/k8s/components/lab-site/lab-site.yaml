@@ -125,7 +125,7 @@ spec:
     # Spelled out rather than left to the 25% defaults, because the rounding is
     # load-bearing here: with replicas 1 the surge pod starts BEFORE the old pod
     # drains, so both hold the cache PVC at once. That is only legal while both
-    # land on the same node — see nodeSelector below.
+    # land on the same node — see the required pod affinity below.
     type: RollingUpdate
     rollingUpdate:
       maxUnavailable: 0
@@ -139,22 +139,19 @@ spec:
       imagePullSecrets:
         - name: zot-origin-cluster-pull  # zot origin (ADR-0021); ghcr kept during transition
         - name: ghcr-jvallery-readonly
-      # STORAGE PLACEMENT (load-bearing). verdify-lab-site-cache is
-      # ReadWriteOnce on longhorn-v1-rebuildable-rwo and attached to node6. An
-      # RWO volume can be mounted by several pods only when they share a node,
-      # so the surge pod of a rolling update must land on the same node as the
-      # pod it replaces. Without this pin the new pod can be scheduled
-      # elsewhere, fail to attach, and stall the rollout indefinitely (the old
-      # pod keeps serving, so it fails quietly rather than loudly). Was live as
-      # an unrecorded hand patch until 2026-07-27; codified here so a sync
-      # cannot drop it.
-      nodeSelector:
-        kubernetes.io/hostname: vm-k3s-node6
-      tolerations:
-        - key: maintenance.vallery.net/longhorn-recovery
-          operator: Equal
-          value: "true"
-          effect: NoSchedule
+      # STORAGE CO-LOCATION (load-bearing). verdify-lab-site-cache is
+      # ReadWriteOnce, so every replica and rolling surge pod must share one
+      # node while they co-mount it. Required self-affinity expresses that
+      # relationship without pinning the workload to a named machine:
+      # Kubernetes permits the first matching pod to seed the group, then
+      # schedules every later matching pod into the same hostname topology.
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app.kubernetes.io/component: lab-site
+              topologyKey: kubernetes.io/hostname
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
