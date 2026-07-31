@@ -129,6 +129,44 @@ Handoff protocol:
   chat. Keep context dumps concise; link to deeper docs instead of copying them
   into multiple places.
 
+## CI/CD in this repo (agent-fleet platform)
+
+- **AUTH:** `git` and `gh` in this pod use a rotating, exact-repository GitHub
+  App token minted in-cluster. Cross-repository access fails by design. Never
+  add a PAT, echo a token, or persist a token in repo or tool configuration.
+- **VALIDATE:** Run `make lint` for Ruff, `make test` for the portable
+  source/unit/contract suite, and `make ci` for the authoritative full
+  pre-merge gate. Live, writable, device, and container checks remain explicit
+  opt-ins and are not part of portable branch validation. This repo currently
+  has no GitHub Actions workflow; any workflow validation added later must run
+  on the fleet ARC label with `runs-on: validation-standard`, never
+  `ubuntu-latest`. Hosted runners are retired by the zero-paid policy. A red
+  check with `runner_id=0` and no steps is a scheduler rejection, not a source
+  bug.
+- **BUILD:** This repo ships images. Its agent-fleet build definition is
+  `.agent-fleet/ci.yaml`; if that file is absent, there is no pod-submittable
+  build definition and the path fails closed. The designed interface is
+  `agent-ci-build --repo-dir <clone> --submit --wait`, which returns a pinnable
+  `registry.vallery.net/...@sha256:...` digest. Pod-initiated submission is
+  currently **HELD** by the post-incident contract (`jvallery/agents#3209`);
+  the fixed-identity CI broker (`jvallery/agents#3192`) is the exit. Until then,
+  builds go through the platform trusted lane: file an issue in
+  `jvallery/agents` or use this repo's Argo sensor. Never work around the hold
+  with separate credentials or hand-applied resources, including older direct
+  `kubectl` submission examples. GitHub Actions never builds or pushes images,
+  regardless of the hold state.
+- **DEPLOY:** This repo is GitOps-delivered. Pin immutable digests, never tags,
+  in the declaring overlay (`deploy/k8s/overlays/prod/kustomization.yaml` or
+  `deploy/k8s/overlays/lab-stage/kustomization.yaml`) through a CI-gated PR;
+  ArgoCD rolls the approved pin. Verify the running pods' container
+  `status.containerStatuses[].imageID` values match the new digest and the
+  owning ArgoCD Application is `Synced` and `Healthy`. Production sync remains
+  Jason-gated.
+- **DISCIPLINE:** Every green claim carries a UTC timestamp and the literal
+  probe, then repeats that probe at least 10 minutes later. Destructive cluster
+  actions go through the platform change-gate and are never performed directly
+  by a repo agent.
+
 ## Branch & deployment model (Jason, 2026-06-10; SINGLE-ENV 2026-06-16)
 
 - **`main` is the single canonical branch.** PRs land on main; all CI
