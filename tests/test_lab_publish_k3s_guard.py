@@ -1084,6 +1084,7 @@ def test_deployed_cache_layout_is_unique_restricted_and_preserves_time_budget():
     publisher_spec = cronjob["spec"]["jobTemplate"]["spec"]["template"]["spec"]
     site_spec = deployment["spec"]["template"]["spec"]
 
+    assert cronjob["spec"]["startingDeadlineSeconds"] == 30
     assert publisher_spec["securityContext"]["fsGroupChangePolicy"] == "OnRootMismatch"
     assert site_spec["securityContext"]["fsGroupChangePolicy"] == "OnRootMismatch"
 

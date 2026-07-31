@@ -42,6 +42,9 @@ spec:
   # deltas completed, and the database restart count remained unchanged.
   suspend: false
   concurrencyPolicy: Forbid
+  # Temporary maintenance suspension must not release a catch-up publisher
+  # after the quiet window. Skip any missed start older than 30 seconds.
+  startingDeadlineSeconds: 30
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 5
   jobTemplate:
