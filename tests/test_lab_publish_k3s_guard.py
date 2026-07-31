@@ -1087,16 +1087,29 @@ def test_deployed_cache_layout_is_unique_restricted_and_preserves_time_budget():
     assert publisher_spec["securityContext"]["fsGroupChangePolicy"] == "OnRootMismatch"
     assert site_spec["securityContext"]["fsGroupChangePolicy"] == "OnRootMismatch"
 
-    # STORAGE PLACEMENT. The cache PVC is ReadWriteOnce and node-attached, so an
-    # RWO volume is only co-mountable by pods sharing a node. Both workloads must
-    # therefore pin the same node, and the Deployment's surge pod (maxSurge 1,
-    # maxUnavailable 0 with replicas 1 starts before the old pod drains) must land
-    # there too or the rollout stalls on a failed attach. This was live only as an
-    # unrecorded hand patch until 2026-07-27; assert it so a sync cannot drop it.
+    # STORAGE CO-LOCATION. The cache PVC is ReadWriteOnce, so the serving pods,
+    # rollout surge, and publisher must share a hostname. Required pod affinity
+    # preserves that relationship without pinning the group to one named worker.
     assert deployment["spec"]["replicas"] == 1
     assert deployment["spec"]["strategy"]["rollingUpdate"] == {"maxUnavailable": 0, "maxSurge": 1}
+    expected_co_location = {
+        "podAffinity": {
+            "requiredDuringSchedulingIgnoredDuringExecution": [
+                {
+                    "labelSelector": {
+                        "matchLabels": {
+                            "app.kubernetes.io/component": "lab-site",
+                        },
+                    },
+                    "topologyKey": "kubernetes.io/hostname",
+                },
+            ],
+        },
+    }
     for pod_spec in (publisher_spec, site_spec):
-        assert pod_spec["nodeSelector"] == {"kubernetes.io/hostname": "vm-k3s-node6"}
+        assert "nodeSelector" not in pod_spec
+        assert pod_spec["affinity"] == expected_co_location
+        assert not pod_spec.get("tolerations")
         cache_volume = next(volume for volume in pod_spec["volumes"] if volume["name"] == "lab-cache")
         assert cache_volume["persistentVolumeClaim"]["claimName"] == "verdify-lab-site-cache"
     cache_pvc = _resource(publisher_docs, "PersistentVolumeClaim", "verdify-lab-site-cache")
