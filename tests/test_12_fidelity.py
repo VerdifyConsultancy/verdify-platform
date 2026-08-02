@@ -1133,6 +1133,42 @@ def test_lighting_completion_make_target_requires_ota_proof():
     assert "scripts/audit-lighting-automation.py --live --require-ota" in makefile
 
 
+def test_delivery_helpers_use_k3s_runtime_and_post_ota_db_backend():
+    """Portable delivery helpers must not fall back to retired host services or
+    query a nonexistent Docker DB during post-OTA acceptance.
+    """
+    makefile = Path("Makefile").read_text()
+
+    firmware_deploy = makefile[makefile.index("firmware-deploy:") : makefile.index("firmware-rollback:")]
+    sensor_health = makefile[makefile.index("sensor-health:") : makefile.index("greenhouse-quiet-on:")]
+    hermes = makefile[makefile.index("hermes-deploy-config:") : makefile.index("# ── Stack")]
+    ingestor = makefile[makefile.index("ingestor-restart:") : makefile.index("# ── Database")]
+
+    assert "VERDIFY_DB_BACKEND=$(FIRMWARE_DB_BACKEND) bash scripts/wait-for-firmware-version.sh" in firmware_deploy
+    assert "VERDIFY_DB_BACKEND=$(FIRMWARE_DB_BACKEND)" in sensor_health
+    assert "kubectl kustomize deploy/k8s/overlays/prod" in hermes
+    assert "CONFIRM_PROD_RESTART" in hermes
+    assert "deployment/verdify-hermes-iris" in hermes
+    assert "CONFIRM_PROD_RESTART" in ingestor
+    assert "deployment/verdify-ingestor" in ingestor
+    assert "systemctl" not in hermes
+    assert "systemctl" not in ingestor
+    assert "journalctl" not in ingestor
+
+
+def test_make_test_separates_portable_and_current_live_suites():
+    makefile = Path("Makefile").read_text()
+    portable = makefile[makefile.index("test: venv-check") : makefile.index("test-fast:")]
+    live = makefile[makefile.index("test-live:") : makefile.index("climate-intent-replay-report:")]
+
+    assert "PORTABLE_TEST_IGNORES" in portable
+    assert "VERDIFY_TEST_LIVE=1" in live
+    assert "tests/test_live_readonly.py" in live
+    assert "test_01_infrastructure.py" in makefile
+    assert "test_07_cron_replan.py" in makefile
+    assert "test_15_lab_site_followup.py" in makefile
+
+
 def test_lighting_automation_audit_checks_live_public_site():
     """The live lighting proof should verify the served lab.verdify.ai pages, not
     only local build artifacts.

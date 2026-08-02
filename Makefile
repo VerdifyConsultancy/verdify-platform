@@ -48,7 +48,24 @@ REPLAY_CORPUS_TMP ?= /tmp/verdify-replay-overrides.csv
 HERMES_IRIS_RUNTIME_DIR ?= /var/lib/verdify/hermes/iris
 HERMES_IRIS_ENV_FILE ?= /etc/verdify/hermes-iris.env
 
-.PHONY: help setup venv-check tool-check test lint format check lighting-audit-static lighting-audit-current lighting-audit-live lighting-audit-complete climate-intent-replay-report climate-authority-post-deploy-proof-plan climate-authority-post-deploy-proof firmware-check firmware-check-worktree firmware-check-all firmware-invariants firmware-replay firmware-replay-worktree firmware-replay-stream-check firmware-audit-traceability-proof firmware-audit-worktree-proof firmware-dwell-preview firmware-deploy firmware-archive-artifacts firmware-promote-last-good smoke hermes-deploy-config hermes-restart hermes-smoke clean migration-rollback-safety irrigation-migration-check irrigation-migration-proof irrigation-field-diagnostics irrigation-field-sensor-health-proof irrigation-stack-software-check irrigation-stack-check irrigation-feedback-check irrigation-feedback-discover irrigation-feedback-discovery-proof irrigation-feedback-work-order irrigation-feedback-work-order-proof irrigation-feedback-clear-stale-retained irrigation-feedback-clear-stale-near-misses irrigation-feedback-watch irrigation-feedback-watch-field irrigation-feedback-watch-field-proof irrigation-feedback-finalize-dry-run irrigation-feedback-finalize-dry-run-proof irrigation-feedback-finalize irrigation-feedback-finalize-proof irrigation-feedback-proof-json irrigation-sensor-health-proof irrigation-stack-proof irrigation-completion-audit irrigation-completion-audit-proof irrigation-acceptance irrigation-full-acceptance irrigation-post-deploy-acceptance-plan irrigation-post-deploy-acceptance
+.PHONY: help setup venv-check tool-check test test-fast test-live lint format check lighting-audit-static lighting-audit-current lighting-audit-live lighting-audit-complete climate-intent-replay-report climate-authority-post-deploy-proof-plan climate-authority-post-deploy-proof firmware-check firmware-check-worktree firmware-check-all firmware-invariants firmware-replay firmware-replay-worktree firmware-replay-stream-check firmware-audit-traceability-proof firmware-audit-worktree-proof firmware-dwell-preview firmware-deploy firmware-archive-artifacts firmware-promote-last-good smoke hermes-deploy-config hermes-restart hermes-smoke clean migration-rollback-safety irrigation-migration-check irrigation-migration-proof irrigation-field-diagnostics irrigation-field-sensor-health-proof irrigation-stack-software-check irrigation-stack-check irrigation-feedback-check irrigation-feedback-discover irrigation-feedback-discovery-proof irrigation-feedback-work-order irrigation-feedback-work-order-proof irrigation-feedback-clear-stale-retained irrigation-feedback-clear-stale-near-misses irrigation-feedback-watch irrigation-feedback-watch-field irrigation-feedback-watch-field-proof irrigation-feedback-finalize-dry-run irrigation-feedback-finalize-dry-run-proof irrigation-feedback-finalize irrigation-feedback-finalize-proof irrigation-feedback-proof-json irrigation-sensor-health-proof irrigation-stack-proof irrigation-completion-audit irrigation-completion-audit-proof irrigation-acceptance irrigation-full-acceptance irrigation-post-deploy-acceptance-plan irrigation-post-deploy-acceptance
+
+# These files are the retired VM/live smoke suite or depend on the removed
+# laptop vault. They are not portable branch validation. Current-production
+# read-only proof has its own explicit target below; mutation suites remain
+# separately disposable-DB-gated.
+PORTABLE_TEST_IGNORES := \
+	--ignore=tests/test_01_infrastructure.py \
+	--ignore=tests/test_02_database.py \
+	--ignore=tests/test_03_api.py \
+	--ignore=tests/test_04_planner.py \
+	--ignore=tests/test_05_ingestor.py \
+	--ignore=tests/test_06_website.py \
+	--ignore=tests/test_07_cron_replan.py \
+	--ignore=tests/test_08_observability.py \
+	--ignore=tests/test_09_api_responses.py \
+	--ignore=tests/test_13_operational_recovery.py \
+	--ignore=tests/test_15_lab_site_followup.py
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -99,11 +116,14 @@ lighting-audit-complete: ## Final lighting audit; requires OTA/post-OTA proof wi
 
 # ── Testing ─────────────────────────────────────────────────────────
 
-test: venv-check ## Run full smoke test suite against live stack
-	$(PYTEST) tests/
+test: venv-check ## Run the portable branch-validation suite (no live or writable dependencies)
+	VERDIFY_DB_BACKEND=kube $(PYTEST) tests/ verdify_schemas/tests/ $(PORTABLE_TEST_IGNORES)
 
 test-fast: venv-check ## Run tests excluding slow planner tests
-	$(PYTEST) tests/ -k "not Planner and not Context"
+	VERDIFY_DB_BACKEND=kube $(PYTEST) tests/ verdify_schemas/tests/ $(PORTABLE_TEST_IGNORES) -k "not Planner and not Context"
+
+test-live: venv-check ## Run the explicit current-production read-only suite (no device/setpoints probe)
+	VERDIFY_TEST_LIVE=1 VERDIFY_DB_BACKEND=kube $(PYTEST) tests/test_live_readonly.py
 
 climate-intent-replay-report: ## Replay ClimateIntent actions over the firmware corpus
 	$(PYTHON) scripts/climate_intent_replay_evaluator.py --csv $(REPLAY_CORPUS_GZ)
@@ -451,7 +471,7 @@ firmware-deploy: ## Compile + OTA deploy to ESP32 + post-deploy sensor-health sw
 	# Rollback target stays on the prior last-good until an explicit
 	# firmware-promote-last-good after the 48-hour bake.
 	# Fail → flash last-good back to ESP32 via firmware-rollback.sh.
-	@if bash scripts/wait-for-firmware-version.sh "$$(cat firmware/artifacts/pending-fw-version.txt)" --timeout 180 && \
+	@if VERDIFY_DB_BACKEND=$(FIRMWARE_DB_BACKEND) bash scripts/wait-for-firmware-version.sh "$$(cat firmware/artifacts/pending-fw-version.txt)" --timeout 180 && \
 		EXPECTED_FW_VERSION="$$(cat firmware/artifacts/pending-fw-version.txt)" $(MAKE) sensor-health SINCE='5 minutes'; then \
 		FIRMWARE_DEPLOYED_AT="$$(date '+%Y-%m-%dT%H:%M:%S%z')" bash scripts/archive-firmware-artifacts.sh "$$(cat firmware/artifacts/pending-fw-version.txt)" ; \
 		mkdir -p /srv/verdify/state ; \
@@ -473,7 +493,7 @@ firmware-rollback: ## Manually flash the saved last-good.ota.bin back onto the E
 	bash scripts/firmware-rollback.sh firmware/artifacts/last-good.ota.bin
 
 sensor-health: ## Run sensor health sweep (layer 3 of Firmware Change Protocol)
-	SINCE='$(or $(SINCE),5 minutes)' EXPECTED_FW_VERSION='$(EXPECTED_FW_VERSION)' bash scripts/sensor-health-sweep.sh
+	VERDIFY_DB_BACKEND=$(FIRMWARE_DB_BACKEND) SINCE='$(or $(SINCE),5 minutes)' EXPECTED_FW_VERSION='$(EXPECTED_FW_VERSION)' bash scripts/sensor-health-sweep.sh
 
 greenhouse-quiet-on: ## Temporarily suppress routine greenhouse automations for recording (QUIET_MINUTES=30)
 	$(PYTHON) scripts/greenhouse-quiet-mode.py enable --minutes $(QUIET_MINUTES)
@@ -494,26 +514,37 @@ planner-dry: ## Dry-run planner prompts — render every event type and assert G
 
 # ── Hermes ─────────────────────────────────────────────────────────
 
-hermes-deploy-config: ## Sync versioned Hermes config/SOUL into the host runtime
-	HERMES_IRIS_RUNTIME_DIR='$(HERMES_IRIS_RUNTIME_DIR)' HERMES_IRIS_ENV_FILE='$(HERMES_IRIS_ENV_FILE)' bash scripts/hermes-deploy-config.sh
+hermes-deploy-config: ## Validate the GitOps-managed Hermes config (live delivery requires the gated prod sync)
+	@kubectl kustomize deploy/k8s/overlays/prod >/dev/null
+	@echo "✓ Hermes ConfigMap renders from the prod overlay; no live mutation performed."
+	@echo "  Merge the reviewed desired state, then use the gated verdify-prod-dark sync."
 
-hermes-restart: hermes-deploy-config ## Recreate Hermes after config changes
+hermes-restart: ## Restart the k3s Hermes Deployment after its GitOps config is synced (CONFIRM_PROD_RESTART=1)
+	@if [ "$(CONFIRM_PROD_RESTART)" != "1" ]; then \
+		echo "Refusing prod Hermes restart without CONFIRM_PROD_RESTART=1"; \
+		exit 2; \
+	fi
 	kubectl -n verdify-prod rollout restart deployment/verdify-hermes-iris
+	kubectl -n verdify-prod rollout status deployment/verdify-hermes-iris --timeout=180s
 
-hermes-smoke: ## Check the local Hermes gateway health endpoint
-	curl -fsS http://127.0.0.1:8642/health
+hermes-smoke: ## Wait for the k3s Hermes Deployment to report Available
+	kubectl -n verdify-prod wait --for=condition=Available deployment/verdify-hermes-iris --timeout=120s
 
 # ── Stack ───────────────────────────────────────────────────────────
 # The VM-era `docker compose` lifecycle targets (up/down/ps/logs) were removed
 # with the docker-compose.yml stack on the k3s single-env migration. Use
 # `kubectl -n verdify-prod ...` / ArgoCD for the live stack.
 
-ingestor-restart: ## Restart the ingestor service
-	sudo systemctl restart verdify-ingestor
-	systemctl status verdify-ingestor --no-pager | head -5
+ingestor-restart: ## Restart the sole-writer k3s Deployment (CONFIRM_PROD_RESTART=1; device gate applies)
+	@if [ "$(CONFIRM_PROD_RESTART)" != "1" ]; then \
+		echo "Refusing prod ingestor restart without CONFIRM_PROD_RESTART=1"; \
+		exit 2; \
+	fi
+	kubectl -n verdify-prod rollout restart deployment/verdify-ingestor
+	kubectl -n verdify-prod rollout status deployment/verdify-ingestor --timeout=180s
 
-ingestor-logs: ## Tail ingestor logs
-	journalctl -u verdify-ingestor -f
+ingestor-logs: ## Tail the sole-writer k3s Deployment logs
+	kubectl -n verdify-prod logs deployment/verdify-ingestor --all-containers=true --tail=200 -f
 
 # ── Database ────────────────────────────────────────────────────────
 

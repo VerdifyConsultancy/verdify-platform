@@ -99,7 +99,7 @@ laptop. (Firmware OTA is the exception — see §4.)
 | k8s manifests | `deploy/k8s/overlays/prod` + components | `kustomize build … \| kubectl diff` |
 | Image digests | `overlays/prod/kustomization.yaml` (advanced only by `prod-promote`) | live pod `@sha256` == overlay pins |
 | Grafana dashboards | `grafana/dashboards/*.json` → generated CMs | **UI edits do NOT sync back — always edit the JSON** |
-| DB migrations | `db/migrations/` (sequential) | applied by the `verdify-migrate` Job; CI `migration-rollback-safety` gate |
+| DB migrations | `db/migrations/` (sequential) | apply one at a time through pod-local `psql` after the CI `migration-rollback-safety` and migration-specific rollback proof; `verdify-migrate` only bootstraps a fresh DB or verifies a populated one |
 | Firmware (source) | `firmware/**` | `diagnostics.firmware_version` == intended (see §4) |
 | Secrets | SOPS-encrypted `deploy/k8s/*.sops.yaml` (age key in the fleet store) | sealing is partially pending — see §5 |
 
@@ -109,12 +109,13 @@ laptop. (Firmware OTA is the exception — see §4.)
 
 ---
 
-## 4. Firmware OTA (Jason-gated) — the laptop-tribal knowledge, captured
+## 4. Firmware OTA (Jason-gated) — portable host and in-cluster paths
 
-The OTA is the one workflow not yet portable to a k3s agent (toolchain +
-device-VLAN + secrets). Until that's built (§5), the agent prepares the change +
-the evidence (replay-diff, invariants, unit-test delta) and an operator runs the
-flash. The procedure and its traps:
+The suspended `verdify-firmware-builder` CronJob now provides the portable
+in-cluster compile/archive path and an explicitly gated `FLASH=1` path (§5).
+The worktree-host procedure below remains supported. Both require the same
+replay, invariant, unit, compile, alert, bake, weekly-limit, and human device
+gates.
 
 - **Device:** ESP32 `192.168.10.111` (OTA `:3232`, native API `:6053`). As of
   2026-07-13 it runs **`2026.7.10.1500.09ee886`** (the 2026-07-10 software-recovery
@@ -152,13 +153,11 @@ flash. The procedure and its traps:
     192.168.10.0/24); `wifi_password` ← that WLAN's passphrase in the fleet net
     audit (`~/Agents/nexus/state/net-audit-*/raw/wlanconf.json` on the laptop;
     re-home this into a k8s Secret for k3s).
-- **THE false-rollback gotcha:** `make firmware-deploy` passes
-  `VERDIFY_DB_BACKEND=kube` only to the **preflight**, not to the post-OTA
-  `wait-for-firmware-version.sh` / `sensor-health` calls. From a non-laptop host
-  those default to docker-exec (no `verdify-timescaledb` container) → the version
-  query returns empty → 180 s timeout → the `else` branch **flashes last-good
-  back, rolling back a perfectly healthy OTA**. **Mitigation — run the steps by
-  hand with the kube backend exported throughout:**
+- **Post-OTA DB backend:** `make firmware-deploy` now passes
+  `FIRMWARE_DB_BACKEND` (default `kube`) through the version wait and
+  sensor-health acceptance path as well as preflight. This closes the former
+  false rollback where an off-laptop run queried a nonexistent Docker DB and
+  flashed last-good over a healthy OTA. For an operator-directed manual sequence:
   1. `VERDIFY_DB_BACKEND=kube FIRMWARE_OTA_FREEZE_OVERRIDE_REASON="…" bash scripts/firmware-deploy-preflight.sh`
   2. `FW_VERSION="$(date +%Y.%-m.%-d.%H%M).$(git rev-parse --short HEAD)"; echo "$FW_VERSION" > firmware/artifacts/pending-fw-version.txt`
   3. `ESPHOME_BIN=<esphome> SECRETS_SRC=<secrets.yaml> scripts/firmware-esphome-worktree.sh -s fw_version "$FW_VERSION" compile && … upload --device 192.168.10.111`

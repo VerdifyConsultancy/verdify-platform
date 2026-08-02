@@ -101,7 +101,10 @@ Ruff check/format, schema tests, device-writer guards, selected pure-logic
 tests, migration rollback classification, generated-config checks, twin syntax
 compiles, production Kustomize rendering, and diff-sensitive firmware gates
 when `CI_BASE_REF` is provided. It does not imply the live, writable, device,
-container, full firmware, or full site suites.
+container, full firmware, or full site suites. This branch also repairs the
+documented test split: `make test` is now portable (1,521 passed, 181 skipped),
+while `make test-live` is an explicit six-probe read-only prod suite; the old
+Docker/systemd/crontab/vault smoke files are no longer mislabeled as portable.
 
 The live push workflow builds these exact image definitions:
 
@@ -119,9 +122,38 @@ The live push workflow builds these exact image definitions:
 | `verdify-lab-release-nginx` | `site-astro/Dockerfile.release-runtime` | `site-astro` | target `site`; source SHA/time build arguments | Lab-stage overlay, dormant runtime |
 | `verdify-lab-occurrence-exporter` | `site-astro/Dockerfile.occurrence-exporter` | `site-astro` | source SHA/time build arguments | pinned in Lab-stage overlay |
 
-Current coverage excludes the twin, custom CNPG image,
-`site-astro/Dockerfile.production`, and retired Quartz build. The Quartz
-runtime remains an explicit legacy GHCR digest pull.
+The Git tree and filesystem independently contain exactly thirteen Dockerfiles
+and no Containerfiles. Their complete disposition is:
+
+| Dockerfile | Build / publish disposition | Deployment disposition |
+| --- | --- | --- |
+| `api/Dockerfile` | Built as `verdify-api` | Prod API Deployment |
+| `db/Dockerfile.migrate` | Built as `verdify-migrate` | Prod Argo `PreSync` fresh-schema/verification Job |
+| `deploy/k8s/cnpg/image/Dockerfile` | **No current caller or artifact**; the named GitHub workflow does not exist | Retired dev/CNPG candidate only; prod uses upstream TimescaleDB |
+| `ingestor/Dockerfile` | Built as `verdify-ingestor` | Prod sole-writer Deployment plus HA-gap and vision CronJobs |
+| `mcp/Dockerfile` | Built as `verdify-mcp` | Prod MCP Deployment |
+| `planner_graph/Dockerfile` | Built as `verdify-planner` | Prod planner Deployment |
+| `scripts/Dockerfile.lab-publisher` | Built as `verdify-lab-publisher-k3s` | Prod publisher CronJob and publisher sidecar |
+| `scripts/Dockerfile.setpoint-server` | Built as `verdify-setpoint-server` | Prod-only, device-writing setpoint Deployment |
+| `site-astro/Dockerfile` | Built as `verdify-lab-astro`; developer-only `fixture-runtime` is not published | Active Lab-stage Deployment |
+| `site-astro/Dockerfile.occurrence-exporter` | Built and pinned as `verdify-lab-occurrence-exporter` | **No workload consumes it**; publish-only contract artifact |
+| `site-astro/Dockerfile.production` | **No current caller or artifact** | Disconnected zero-digest candidate, absent from every overlay |
+| `site-astro/Dockerfile.release-runtime` | Built twice, targets `agent` and `site` | Digests pinned in Lab-stage; candidate Deployment deliberately remains at zero replicas |
+| `twin/Dockerfile` | **No current caller or artifact**; `make ci` compiles the source but does not build this image | No live twin Deployment; the disconnected component would compile inline instead |
+
+The seven core prod image tasks have an empty per-image test command: their
+proof is the shared `make ci` followed by a successful Kaniko build. The Astro
+task runs its full npm suite; its release and occurrence tasks additionally
+hydrate the exact snapshot and enforce source/release metadata in their
+Dockerfiles. PR CI validates only and never builds or publishes.
+
+The rendered prod overlay also consumes images this repository does not build:
+Traefik `v3.7.1`, Mosquitto `2`, ESPHome `2025.6.3`, the legacy immutable
+Quartz Lab GHCR digest, immutable Grafana `12.4.5` and renderer `5.10.0`, an
+immutable unprivileged nginx `1.29` image, immutable Hermes Agent, and the
+upstream `postgres:16`, `python:3.12-alpine`, `python:3.13-alpine`, and
+TimescaleDB `2.25.2-pg16` images. The unpinned tags are a desired-state supply
+chain gap; none has a hidden repo build or Zot publication path.
 
 Publish goes to in-cluster
 `registry-origin.registry-origin.svc.cluster.local:5000` and yields immutable
@@ -131,6 +163,50 @@ helper mapping contains the correct `verdifyconsultancy` Zot scope and push
 Secret name. A new exact-SHA registry digest was not produced in this proof
 because source checkout fails before code runs and this pod cannot submit a
 Workflow.
+
+## Non-image delivery and publication inventory
+
+Image promotion is only one of this repository's delivery surfaces. The active
+or operator-addressable non-image paths are:
+
+| Surface | Caller / trigger and target | Gate and credential references (names only) | Verification and rollback |
+| --- | --- | --- | --- |
+| Firmware OTA, worktree path | Operator runs `make firmware-deploy`; ESPHome compiles the exact worktree and uploads to the ESP32 | Jason/device gate; alert, 48-hour bake, weekly limit, clean-tree, replay, invariant, unit and compile gates; `verdify-firmware-ota`, `verdify-app-secrets` | Firmware-version wait plus sensor-health sweep; failure auto-flashes `firmware/artifacts/last-good.ota.bin`; `make firmware-rollback` is the manual handle |
+| Firmware build/OTA, in-cluster path | Explicit Job created from suspended `verdify-firmware-builder`; `FLASH=0` compiles and archives, `FLASH=1` contacts the device | Flash remains Jason-gated; `verdify-github-token`, `verdify-firmware-ota`, `verdify-app-secrets`, `verdify-firmware-wifi` | Durable artifact/cache PVCs; promote only after bake; rollback uses the durable last-good binary and the same OTA gate |
+| Plans and tunables | Ingestor trigger to Hermes to MCP `set_plan` / `set_tunable`, or an audited manual MCP trigger; DB plan rows reach the sole-writer dispatcher and ESP32 | Bounded registry, trigger ID, planner identity and lifecycle fences; `verdify-hermes`, `verdify-app-secrets`, `verdify-ha-token` | `cfg_*` device readback closes the loop; a later audited bounded plan/tunable compensates or supersedes, never a raw device write |
+| Incremental migrations | Reviewed operator pipes one serialized `db/migrations/*.sql` file through `psql` in `verdify-db-0` | Prod DB gate; Kubernetes operator identity; workloads use `verdify-app-secrets` | Classify with `make migration-rollback-safety`, run the migration-specific proof, and use migration-specific down/compensating SQL or gated restore; never outer-wrap a self-committing migration |
+| Fresh schema bootstrap | Manual prod Argo sync invokes `verdify-migrate` as a `PreSync` hook | Same prod/device sync gate; `verdify-app-secrets`, `zot-origin-cluster-pull`, transitional `ghcr-jvallery-readonly` | Builds a fresh DB or verifies core objects; **deliberately no-ops on populated prod and does not apply the sequential incremental migrations**; data restore is a separate human-gated runbook |
+| Quartz Lab content | `verdify-lab-publisher` runs every ten minutes or as an explicit one-shot Job; it generates content, builds a guarded private candidate, then updates cache/S3 public, content and state | Forbid concurrency, bounded query/step timeouts and public-output guard; `verdify-lab-publisher-s3`, `verdify-app-secrets`, image pull names | Failed generation/build leaves the served tree unchanged. Content rollback restores a prior S3/cache generation and republishes; code rollback re-pins the publisher image. There is no first-class current/previous content selector |
+| Planner Lab refresh / manual Quartz wrapper | `make planner-publish` and `make site-rebuild` address the old absolute host path; the live k3s authority is the ten-minute publisher CronJob | Same Lab credentials; these wrappers are compatibility paths, not independent k3s delivery proof | Same guarded candidate/content recovery; the host trigger is classified stale rather than silently treated as live |
+| Hermes profile | Git changes the in-tree ConfigMap; a gated prod Argo sync/restart makes the init container seed the PVC | `verdify-hermes`, `verdify-hermes-slack`, image pull names | Revert the ConfigMap/config commit, sync, and restart. This branch changes `make hermes-deploy-config` from a retired host copy into non-mutating prod-overlay validation |
+| Grafana dashboards | Edit JSON, regenerate committed ConfigMaps, then gated Argo sync; a documented targeted server-side apply is an imperative fast-iteration path | `make grafana-cm-check`, render/brand checks; `verdify-grafana-secrets`, `verdify-app-secrets` | Provisioner reload is 300 seconds or a guarded rollout restart; rollback reverts JSON/generated ConfigMaps and re-syncs/reloads |
+| Schema consumer rollout | Schema-first merge, compatible consumer image pins, then gated Argo reconcile; MCP/ingestor restarts must be documented | Service-restart drift guard; normal workload credential names | Re-pin compatible images. DB rollback remains migration-specific. This branch replaces the stale systemd ingestor helper with a confirmation-gated k3s rollout and status wait |
+| Secret material | SOPS-encrypted, out-of-kustomization manifests are applied by an authorized operator | Rotation/apply is explicitly human-gated; only Secret names are inventoried here | Provider-specific rotation/restore runbook; no CI decrypt, ambient credential, or autonomous revocation path |
+
+Generic Cloud Run planner scaffolding, the retired cross-repo vault-to-GHCR
+publisher, local Astro release-manager contracts, retired CNPG dev fixtures,
+and direct systemd/Docker host commands have no live caller. Quiet-mode and
+retained-MQTT cleanup commands are operator mutations, not releases; they retain
+their explicit confirmation/expiry rules and are not represented as CI/CD.
+
+### Scheduled delivery and mutation callers
+
+Live schedules were reconciled at `2026-08-02T19:03:05Z`:
+
+| CronJob | Trigger and output | Image/build authority | Credential names and containment / rollback |
+| --- | --- | --- | --- |
+| `verdify-band-curve-refresh` | Every 10 min; refreshes derived materialized views | Upstream TimescaleDB image | `verdify-app-secrets`; repair source and refresh again, or revert/suspend |
+| `verdify-db-backup` | Daily 02:17; atomic dump to backup PVC with retention | Upstream TimescaleDB image | `verdify-app-secrets`, pull names; restore is separate, destructive and human-gated |
+| `verdify-db-watchdog` | Every 2 min; narrowly recycles a proven-unhealthy DB pod | Upstream Python image | Kubernetes SA `verdify-db-watchdog`; StatefulSet recovery; revert/suspend disables it |
+| `verdify-writer-watchdog` | Every 2 min; emits Events and manages writer/telemetry alert rows | Upstream Python and TimescaleDB images | SA `verdify-writer-watchdog`, `verdify-app-secrets`; health resolves alerts; revert/suspend |
+| `verdify-ha-gap-backfill` | Hourly at :23; bounded historical HA backfill | Repo-built ingestor image | `verdify-app-secrets`, `verdify-ha-token`, pull names; data undo/restore is separately DB-gated |
+| `verdify-lab-publisher` | Every 10 min; Quartz/S3/PVC/public-site publication | Repo-built publisher image | Lab/DB credential names above; staged fail-closed publish and content recovery above |
+| `verdify-vision` | 00:00, 15:00, 18:00 and 21:00 UTC; captures/analyzes observations | Repo-built ingestor image | `verdify-vision-key`, `verdify-app-secrets`, `zot-origin-cluster-pull`; revert/suspend/repin, with DB deletion separately gated |
+| `verdify-firmware-builder` | Suspended with impossible Feb-31 schedule; manual Job template only | Upstream ESPHome image | Firmware names above; `FLASH=0` default and last-good OTA rollback |
+| `descheduler` (`verdify-descheduler`) | Every 30 min; currently `--dry-run`, so it only reports candidates | Immutable upstream descheduler image | SA `descheduler`, no Secret; enforcement needs its separate arm gate; rollback retains/restores dry-run |
+
+The old CNPG daily-backup source under `deploy/k8s/cnpg/dev` has no live target
+because the dev environment was decommissioned; it is not a hidden scheduler.
 
 ## Contract-to-reality reconciliation
 
@@ -147,10 +223,34 @@ Workflow.
 | Managed branch identity | Live Agent Fleet inventory still configures agents for retired `live/platform-main`; GitHub and this repo use `main` | **No** |
 | Managed CI prose | Claims GitHub Actions validates, while no repo workflow or Actions run exists; actual required status comes from Argo | **No** |
 | Pin-review contract | Lab-stage opens a reviewed pin PR, but the prod pin step pushes directly to `main`; commit `ae13b911...` has no associated PR | **No** |
+| Incremental migration authority | The handoff claimed the `PreSync` Job applies sequential migrations, but `db/migrate.sh` proves it verify-no-ops on populated prod | **Fixed on this branch** — the handoff now names serialized pod-local `psql`; a standard automated incremental path remains absent |
+| Repo runtime/test helpers | Hermes copied to retired host paths; ingestor used systemd/journalctl; firmware post-checks could fall back to the wrong DB backend; `make test` ran retired live-host tests | **Fixed on this branch** — GitOps validation, confirmation-gated k3s restart/log helpers, end-to-end `FIRMWARE_DB_BACKEND` propagation, portable `make test`, explicit `make test-live` |
 
 The generic schema and Workflow-create authorization are central interfaces.
 This repository must not invent target/build-argument extensions, credentials,
 RBAC, or a Verdify-specific broker to compensate.
+
+## Repository-owned corrections in this lane
+
+The evidence pass found four locally correctable contract defects. This PR:
+
+- carries `FIRMWARE_DB_BACKEND` through the post-OTA version wait and
+  sensor-health path, preventing a non-laptop run from querying a nonexistent
+  Docker DB and falsely rolling a healthy device back;
+- replaces retired host-copy/systemd/journalctl Hermes and ingestor helpers
+  with non-mutating GitOps validation, explicit confirmation-gated Kubernetes
+  restarts, rollout waits, and Kubernetes logs;
+- corrects the handoff to distinguish serialized incremental migration apply
+  from the `PreSync` fresh-schema/verify Job; and
+- restores the promised portable/current-live test separation, with a bounded
+  TLS/public-route plus pod-local `SELECT` suite that excludes `/setpoints` and
+  every device-affecting path.
+
+The changed surfaces are `Makefile`, `tests/test_12_fidelity.py`,
+`tests/test_live_readonly.py`, `docs/handoff/k3s-agent-handoff.md`,
+`docs/runbooks/laptop-operator.md`, and this report. The fidelity test locks
+the portable-helper invariants. No target that
+restarts a workload, writes the DB, syncs Argo, or contacts the device was run.
 
 ## Credential reference inventory (names only)
 
@@ -172,6 +272,10 @@ Runtime manifests also reference, by name only:
 `verdify-github-token`. The last name is still referenced by the firmware
 builder despite the rendered no-ambient-token statement; its removal rollout
 is incomplete. No value or Secret annotation was inspected.
+
+Inactive or disconnected candidates name `verdify-twin-secrets`,
+`verdify-umami-secrets`, `minio-dev-creds`, and `verdify-agent-secrets`; none is
+an active CI credential or a live target proven by this lane.
 
 ## Exact-SHA proof and failure classification
 
@@ -195,6 +299,13 @@ specs retained `agent-fleet-ci-github-app` for checkout and
 `agent-fleet-repo-github-app` for status/write. Reproducing the same error while
 the separate status writer succeeded isolates the fault to the standard
 read/checkout installation contract rather than repo code.
+
+This is the intentional terminal-failure path: it exercises the supported
+`reopened` trigger and status reporter without a code retry. The live templates
+declare neither superseded-run cancellation nor a repository-specific timeout
+acceptance contract, so no artificial cancel/timeout was manufactured. The
+failed validation pod is terminal, not running, and is retained only by the
+declared 48-hour failure TTL for diagnosis.
 
 Self-service was probed at `2026-08-02T18:16:15Z` against exact default SHA
 `eb3ac9cf33001fa6c5271412284382b36c6abf9e`:
@@ -254,6 +365,11 @@ https://mcp.verdify.ai/mcp                    406 (expected unauthenticated GET;
 https://lab-stage.verdify.ai/                 200
 ```
 
+The new bounded `make test-live` repeated those five TLS-verified route checks
+and a pod-local read-only `SELECT current_database()` at
+`2026-08-02T19:17:00Z`: **6 passed**. It deliberately contains no `/setpoints`,
+device, writable API, alert-emitting, or mutation probe.
+
 No `/setpoints` or device-path probe was attempted because it can emit an
 operational alert. No runtime was changed, so there is no new-live-delivery
 `GREEN at <UTC>, re-verified at <UTC+10>` claim. The stage baseline was
@@ -281,6 +397,12 @@ observed, not promoted.
 5. Correct the centrally rendered `live/platform-main`, GitHub Actions, and
    unavailable-auth claims. Remove the obsolete runtime GitHub-token and GHCR
    references through their owner-approved standard migrations.
+6. After this branch lands, separately close the remaining repo-owned delivery
+   gaps: make Hermes config one generated source instead of duplicated YAML,
+   define an auditable incremental-migration delivery mechanism, add a
+   first-class Quartz content generation selector, and pin the remaining
+   upstream runtime tags. The stale restart and post-OTA backend defects are
+   fixed in this PR but cannot merge while the required platform check is red.
 
 Until the checkout identity, standard config schema, submission capability,
 and protected-check provenance are repaired, this repository cannot prove the

@@ -102,12 +102,11 @@ scripts/verdify-db.sh prod -c "SELECT firmware_version, max(ts) FROM diagnostics
   WHERE firmware_version IS NOT NULL GROUP BY 1 ORDER BY 2 DESC LIMIT 1;"
 ```
 
-The secrets
-reconstruction (k3s sources) and the **false-rollback gotcha** (the post-OTA
-checks default to the wrong DB backend off-laptop and can auto-rollback a
-healthy OTA) are documented in
+The secrets reconstruction (k3s sources), portable in-cluster builder, and the
+post-OTA DB-backend invariant are documented in
 [`../handoff/k3s-agent-handoff.md`](../handoff/k3s-agent-handoff.md) §4 — read it
-before flashing.
+before flashing. `make firmware-deploy` now carries the default kube backend
+through preflight, firmware-version wait, and sensor-health acceptance.
 
 **Pinch resets on every flash (#413/#377):** `band_track_fraction` is
 `restore_value: no` in `firmware/greenhouse/globals.yaml`, so an OTA/reboot
