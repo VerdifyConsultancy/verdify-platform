@@ -143,16 +143,20 @@ Handoff protocol:
   device-write gate**. NOTE: `verdify-www` (verdify.ai/www marketing) and
   `verdify-crm` are SEPARATE products in SEPARATE repos — unrelated to the
   greenhouse, do not touch.
-- **Pipeline (single-env, ZOT as of 2026-07-11 / ADR-0021):** GitHub Actions
-  VALIDATES only — `Container Publish` builds every image with `push: false`
-  (a Dockerfile/COPY break still fails the push/PR). PUBLISHING is in-cluster:
-  `repo-build` Argo Workflows in ns `agent-fleet-ci` (Kaniko) build the exact
-  main revision and push `registry.vallery.net/verdifyconsultancy/<image>@sha256`
-  to the zot origin; digests are pinned into `overlays/prod/kustomization.yaml`
-  by a digest-only commit (procedure: `docs/runbooks/prod-promotion.md`).
-  GHCR is retired for publishing. A human reviews the pin commit and an
-  operator runs the gated `argocd app sync verdify-prod-dark`. Workloads pull
-  with the `zot-origin-cluster-pull` secret.
+- **Pipeline (single-env, ZOT as of 2026-07-11 / ADR-0021):** repository GitHub
+  Actions workflows are removed; `make ci` is the source gate. Centrally
+  rendered Argo Workflows validate the exact revision. For builds, Kaniko makes
+  an isolated no-push image archive and pinned Crane publishes an immutable
+  `registry.vallery.net/verdifyconsultancy/<image>@sha256` reference to the zot
+  origin. The required promotion policy is a reviewed digest-only change to
+  `overlays/prod/kustomization.yaml`, followed by an operator-gated
+  `argocd app sync verdify-prod-dark`; see
+  `docs/runbooks/prod-promotion.md`. As of 2026-08-02 the central checkout,
+  incompatible generic self-service profile, and direct-main prod-pin behavior
+  are `BLOCKED_PLATFORM`; the bespoke Verdify caller's owner-scoped publisher
+  declaration does match. Do not invent repo credentials/RBAC or treat the
+  direct pin as approval. GHCR is retired for publishing. Workloads pull with
+  `zot-origin-cluster-pull`.
 - **No dev device / no dev DB.** Firmware is hot-staged direct to prod. There is
   no nightly prod-restore copy anymore (it lived in dev).
 - **Operating from the laptop:** see `docs/runbooks/laptop-operator.md` for
@@ -222,7 +226,7 @@ The guard is codified, not prose-only:
 ## Branches, working copy & memory
 
 - Work lands on `main` (direct commits for routine work, PRs when review is
-  useful or a workflow generates them, e.g. prod-promote). Topic branches are
+  useful or automation generates a reviewed desired-state change). Topic branches are
   free-form; no sprint counters (retired with the multi-agent model — the
   iris-VM worktrees at `/mnt/iris/...` are gone with the .150 VM).
 - The working copy is `~/repos/verdify-platform` on Jason's laptop; persistent

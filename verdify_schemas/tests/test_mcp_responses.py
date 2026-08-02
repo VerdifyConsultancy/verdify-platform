@@ -355,10 +355,15 @@ def _ci_postgres_reachable() -> bool:
     return bool(os.environ.get("POSTGRES_HOST"))
 
 
+def _disposable_db_probe_enabled() -> bool:
+    return os.environ.get("VERDIFY_TEST_DISPOSABLE_DB") == "1"
+
+
 @pytest.mark.skipif(
-    not (_ci_postgres_reachable() or _docker_timescaledb_reachable()),
-    reason="no DB backend available",
+    not (_disposable_db_probe_enabled() and (_ci_postgres_reachable() or _docker_timescaledb_reachable())),
+    reason="set VERDIFY_TEST_DISPOSABLE_DB=1 with POSTGRES_HOST or local docker",
 )
+@pytest.mark.live_db
 def test_scorecard_metric_names_match_live_function():
     """Every metric fn_planner_scorecard() emits must be modelled in
     ScorecardResponse. A new DB-side metric without a schema field is

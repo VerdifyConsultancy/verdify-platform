@@ -193,6 +193,7 @@ class TestPlanValidity:
         assert plan_current_coverage_error(plan, now) is None
 
 
+@pytest.mark.legacy_host
 class TestContextGathering:
     """gather-plan-context.sh must produce valid, complete context."""
 
@@ -385,14 +386,7 @@ class TestMCPToolAvailability:
     """The MCP server must expose all 17 planning tools."""
 
     def test_mcp_server_running(self):
-        import subprocess
-
-        if shutil.which("systemctl") and os.path.isdir("/run/systemd/system"):
-            result = subprocess.run(
-                ["systemctl", "is-active", "verdify-mcp"], capture_output=True, text=True, timeout=5
-            )
-            assert result.stdout.strip() == "active", "MCP server not running"
-            return
+        """The current k3s desired state must expose the MCP readiness route."""
         source = (REPO_ROOT / "mcp" / "server.py").read_text()
         manifest = (REPO_ROOT / "deploy/k8s/base/mcp-deployment.yaml").read_text()
         # Route registration goes through the compatibility wrapper so the
@@ -431,6 +425,7 @@ class TestMCPToolAvailability:
         assert "22 MCP tools" in body, "Playbook tool count out of sync with _STANDING_DIRECTIVES"
         assert "READ → DIAGNOSE → DECIDE → ACT → REPORT" in body, "Playbook planning cycle section missing"
 
+    @pytest.mark.external_vault
     def test_vendored_and_host_playbooks_in_sync(self):
         """When both copies are readable, they must be byte-identical. If the
         host copy drifts ahead of the repo, the next PR that vendors will

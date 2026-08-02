@@ -65,8 +65,10 @@ Status legend: `active` is implemented in deterministic Python, MCP, or OpenClaw
 
    ```bash
    make hermes-deploy-config
-   systemctl --user restart openclaw-gateway.service
-   sudo systemctl restart verdify-ingestor.service verdify-mcp.service
+   # Merge the reviewed desired-state change, then use the operator-gated
+   # verdify-prod-dark Argo sync. The profile checksum declaratively rolls the
+   # Hermes pod so its init container reseeds the runtime PVC.
+   make hermes-smoke
    ```
 
 5. Live Slack smoke: post one marked Iris test message only after the local Iris bot token is readable by the runtime user.

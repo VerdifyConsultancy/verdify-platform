@@ -71,11 +71,16 @@ This repo owns only their rendered source path,
 
 ## Promotion Model
 
-GitHub Actions no longer publishes this repo. A fleet Argo Event submits the
-exact `main` revision to the `repo-build` WorkflowTemplate in
-`agent-fleet-ci`; Kaniko pushes to the in-cluster Zot origin and the resulting
-`registry.vallery.net/...@sha256:` identities are committed through reviewed,
-CI-gated digest-pin PRs. Stage and production overlay pins are distinct.
+GitHub Actions no longer publishes this repo. A fleet Argo Event is intended to
+submit the exact `main` revision through `verdify-platform-ci` to
+`repo-build/build` in `agent-fleet-ci`; Kaniko creates a no-push image archive
+and pinned Crane publishes it to the in-cluster Zot origin. The bespoke caller
+declares the correct owner-scoped Zot binding, but source checkout is currently
+`BLOCKED_PLATFORM`, so a new exact-SHA digest has not been proved. The live prod
+pin step also pushes directly to `main` instead of opening the required reviewed
+digest-only PR; only the Lab-stage path currently opens a pin PR. See
+`docs/ci/fleet-cicd-convergence-2026-08-02.md` and
+`docs/runbooks/prod-promotion.md` for the exact evidence and standard fix.
 
 Merging a pin changes Git only. `verdify-platform-lab-stage` requires an
 explicit reviewed exact-revision actuator and T0/T+10 durability proof. For
@@ -95,8 +100,8 @@ authorizes that sync.
 
 - Render prod manifests before PRs that touch desired state:
   `kustomize build deploy/k8s/overlays/prod`.
-- CI gate: `make ci` plus the in-cluster repo-build/PR-CI render and policy
-  checks.
+- CI gate: local `make ci` plus the exact-head in-cluster PR status; the latter
+  is currently blocked before checkout and must not be bypassed.
 - Promotion must use exact Zot digests and the reviewed pin workflow described
   in `docs/runbooks/prod-promotion.md`; merge changes Git only. The manual prod
   sync remains Jason-gated.

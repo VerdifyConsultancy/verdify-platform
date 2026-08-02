@@ -16,14 +16,14 @@ REPO_ROOT="${REPO_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
 ROLLBACK_BIN="${1:-$REPO_ROOT/firmware/artifacts/last-good.ota.bin}"
 ESP32_HOST="${ESP32_HOST:-192.168.10.111}"
 ESP32_OTA_PORT="${ESP32_OTA_PORT:-3232}"
-# #254 re-home: prefer an env-provided OTA_PW (fed on the tooling host from a k3s
-# secret once `ota_password` is sealed — GATED on Jason, it is device-affecting
-# like ESP32_API_KEY). Fall back to the legacy /srv/greenhouse/esphome/
+# #254 re-home: prefer an env-provided OTA_PW (the Make target resolves it by
+# name from verdify-prod/verdify-firmware-ota — GATED on Jason because it is
+# device-affecting like ESP32_API_KEY). Fall back to the legacy /srv/greenhouse/esphome/
 # secrets.yaml that lived on the now-powered-off .150 VM, so a host that still
-# carries it keeps working. The OTA password is NOT yet in any k3s secret.
+# carries it keeps working.
 OTA_PW="${OTA_PW:-}"
 SECRETS_YAML="${SECRETS_YAML:-/srv/greenhouse/esphome/secrets.yaml}"
-LOG="${FIRMWARE_ROLLBACK_LOG:-/var/local/verdify/state/firmware-rollback.log}"
+LOG="${FIRMWARE_ROLLBACK_LOG:-$REPO_ROOT/firmware/artifacts/firmware-rollback.log}"
 mkdir -p "$(dirname "$LOG")"
 
 exec > >(tee -a "$LOG") 2>&1
@@ -47,8 +47,8 @@ fi
 if [[ -z "$OTA_PW" ]]; then
     if [[ ! -f "$SECRETS_YAML" ]]; then
         echo "  ✗ No OTA_PW env and secrets.yaml not found at $SECRETS_YAML"
-        echo "    (#254) The .150 esphome secrets are gone. Provide OTA_PW from a"
-        echo "    k3s-sealed ota_password (GATED on Jason) or a host that still"
+        echo "    (#254) The .150 esphome secrets are gone. Provide OTA_PW from"
+        echo "    verdify-prod/verdify-firmware-ota (GATED on Jason) or a host that still"
         echo "    holds secrets.yaml. Cannot auto-roll-back without it."
         exit 1
     fi
@@ -77,15 +77,18 @@ if [[ -z "$FIRMWARE_PYTHON" ]]; then
         FIRMWARE_PYTHON="$(command -v python3 || command -v python)"
     fi
 fi
-"$FIRMWARE_PYTHON" - <<PYEOF
+export ESP32_HOST ESP32_OTA_PORT OTA_PW ROLLBACK_BIN
+"$FIRMWARE_PYTHON" - <<'PYEOF'
+import os
 import sys
 from pathlib import Path
 from esphome import espota2
+
 rc, version = espota2.run_ota(
-    remote_host="$ESP32_HOST",
-    remote_port=$ESP32_OTA_PORT,
-    password="$OTA_PW",
-    filename=Path("$ROLLBACK_BIN"),
+    remote_host=os.environ["ESP32_HOST"],
+    remote_port=int(os.environ["ESP32_OTA_PORT"]),
+    password=os.environ["OTA_PW"],
+    filename=Path(os.environ["ROLLBACK_BIN"]),
 )
 sys.exit(rc)
 PYEOF

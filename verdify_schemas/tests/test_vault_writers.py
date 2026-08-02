@@ -42,7 +42,10 @@ def _live(subpath: str) -> list[Path]:
     return sorted(p.glob("*.md"))
 
 
-pytestmark = pytest.mark.skipif(not VAULT_ROOT.exists(), reason="vault not mounted")
+pytestmark = [
+    pytest.mark.external_vault,
+    pytest.mark.skipif(not VAULT_ROOT.exists(), reason="vault not mounted"),
+]
 
 
 class TestDailyVaultRoundTrip:

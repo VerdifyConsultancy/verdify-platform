@@ -22,18 +22,17 @@
 # the surface is ClusterIP + NetworkPolicy (never an LB, never WAN) — same posture
 # as the loopback bind it replaces.
 #
-# MCP-URL GATE (migration doc R7): the MCP URL hermes calls lives in the
-# out-of-band /etc/verdify/hermes-iris.env (verdify-hermes Secret), NOT in this
-# repo. It MUST be repointed to verdify-mcp.<ns>.svc:8000 in that sealed env
-# BEFORE the systemd MCP is stopped, or hermes fails at tool-call time (not
-# startup). This manifest is the reviewable target shape; the env repoint is a
-# gated handoff step.
+# MCP-URL GATE (migration doc R7): the repo-owned ConfigMap profile declares
+# mcp_servers.verdify_greenhouse.url as verdify-mcp.<ns>.svc:8000. The profile
+# checksum below makes a gated Argo sync roll Hermes when that endpoint changes;
+# the verdify-hermes Secret is not the MCP URL authority.
 #
 # STATE PVC: compose mounts host /var/lib/verdify/hermes/iris -> /opt/data. In
 # k3s this is a PVC on rebuildable Longhorn RWO storage. The slack.yaml
 # referenced by VERDIFY_SLACK_CONFIG=/opt/data/slack.yaml lives on that PVC;
-# the NON-SECRET slack channel config is also available from the
-# verdify-hermes-slack mount.
+# the optional Slack channel config is also available from the
+# verdify-hermes-slack Secret mount. Treat the whole Secret as secret-bearing;
+# never inspect or print its fields or annotations.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -75,6 +74,11 @@ spec:
       labels:
         app.kubernetes.io/part-of: verdify
         app.kubernetes.io/component: hermes-iris
+      annotations:
+        # sha256(data.config.yaml) from hermes-config.yaml. The drift guard in
+        # test_17 makes profile changes fail until this declarative rollout
+        # handle is updated, so the gated Argo sync reseeds the PVC.
+        verdify.ai/hermes-profile-sha256: a7f675c1b70cf5cf614ec3c2d70a325d7feb235701993e7128ac4b3d4448a412
     spec:
       imagePullSecrets:
         - name: zot-origin-cluster-pull  # zot origin (ADR-0021); ghcr kept during transition
@@ -133,10 +137,9 @@ spec:
             - name: gateway
               containerPort: 8642
           envFrom:
-            # The OpenAI key + any HERMES_* runtime env (compose env_file
-            # /etc/verdify/hermes-iris.env) come from this Secret. Provided
-            # out-of-band by the SOPS backend; referenced BY NAME only. The MCP
-            # URL inside it MUST point at verdify-mcp.<ns>.svc:8000 (R7 gate).
+            # The OpenAI key + any secret HERMES_* runtime env come from this
+            # Secret. Provided out-of-band by the SOPS backend; referenced BY
+            # NAME only. The MCP URL is repo-owned in the ConfigMap profile.
             - secretRef:
                 name: verdify-hermes
           env:
@@ -168,7 +171,8 @@ spec:
             - name: hermes-config
               mountPath: /etc/verdify/hermes-config
               readOnly: true
-            # NON-SECRET slack channel config (compose:371 /etc/verdify/slack RO).
+            # Secret-backed Slack channel config (compose:371
+            # /etc/verdify/slack RO). Never inspect or print the Secret.
             - name: slack-config
               mountPath: /etc/verdify/slack
               readOnly: true

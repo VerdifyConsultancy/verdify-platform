@@ -53,10 +53,17 @@ def _ci_postgres_reachable() -> bool:
     return bool(os.environ.get("POSTGRES_HOST"))
 
 
-pytestmark = pytest.mark.skipif(
-    not (_ci_postgres_reachable() or _docker_available()),
-    reason="no DB backend available (need POSTGRES_HOST env or local docker)",
-)
+def _disposable_db_probe_enabled() -> bool:
+    return os.environ.get("VERDIFY_TEST_DISPOSABLE_DB") == "1"
+
+
+pytestmark = [
+    pytest.mark.live_db,
+    pytest.mark.skipif(
+        not (_disposable_db_probe_enabled() and (_ci_postgres_reachable() or _docker_available())),
+        reason="set VERDIFY_TEST_DISPOSABLE_DB=1 with POSTGRES_HOST or local docker",
+    ),
+]
 
 
 def _psql(sql: str) -> list[list[str]]:

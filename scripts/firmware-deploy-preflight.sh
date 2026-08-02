@@ -173,6 +173,7 @@ else
 fi
 
 last_good="firmware/artifacts/last-good.ota.bin"
+last_good_version_file="firmware/artifacts/last-good.version"
 if [[ -f "$last_good" ]]; then
     age_s=$(( $(date +%s) - $(mtime_of "$last_good") ))
     if (( age_s < 172800 )); then
@@ -183,6 +184,16 @@ if [[ -f "$last_good" ]]; then
     fi
 else
     guard_or_fail "No last-good rollback artifact at $last_good; auto-rollback would be unavailable"
+fi
+
+last_good_version=""
+if [[ -s "$last_good_version_file" ]]; then
+    IFS= read -r last_good_version < "$last_good_version_file" || true
+fi
+if [[ -n "$last_good_version" ]]; then
+    pass "Last-good rollback version metadata is present"
+else
+    guard_or_fail "No nonempty last-good rollback version at $last_good_version_file; exact rollback verification would be unavailable"
 fi
 
 week_versions="$("${DB[@]}" \

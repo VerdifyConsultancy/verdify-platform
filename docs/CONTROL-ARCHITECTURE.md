@@ -214,9 +214,12 @@ important control lever and is the intended (but see §9a) arbitration axis.
 | **Firmware logic / curve math / a new entity** | edit `firmware/**`, run replay-diff + invariants + `firmware-check` | **Yes** | `make firmware-deploy` (gated: alerts, 48h bake, ≤1/wk, sensor-health auto-rollback) |
 | **Make the device obey the DB band** | `VERDIFY_BAND_SOURCE=anchors` on the prod ingestor + roll | No (firmware must already expose the anchor entities/service) | — |
 
-Pipeline: push to `main` → CI builds/validates → `bump-dev-digests` → dev
-auto-syncs → `prod-promote` (digest-pinned, operator-gated sync) for prod. The
-ingestor's state PVC is being migrated to Synology — coordinate before touching it.
+Pipeline target: exact-head central validation → main exact-SHA Kaniko archive
+builds → pinned Crane Zot publication → reviewed digest-only desired-state PR →
+operator-gated prod sync. The current central checkout/publisher/direct-pin path
+is `BLOCKED_PLATFORM`; do not recreate the retired dev or `prod-promote`
+workflow. The ingestor state mount is temporary #382 `emptyDir`, not a PVC;
+coordinate before touching it.
 
 **Gotchas worth knowing** (learned the hard way): incremental DB migrations are
 applied **by hand** (`kubectl exec -i … psql < file`) — the migrate job is

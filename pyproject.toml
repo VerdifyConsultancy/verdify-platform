@@ -109,4 +109,13 @@ indent-style = "space"
 [tool.pytest.ini_options]
 testpaths = ["tests", "verdify_schemas/tests"]
 python_files = ["test_*.py"]
-addopts = "--tb=short -q"
+addopts = "--tb=short -q --strict-markers"
+markers = [
+  "live_db: reads current production database state; never part of portable validation",
+  "live_http: reads a current production HTTP endpoint; never part of portable validation",
+  "operator_probe: probes a device/write-adjacent production path and requires an operator gate",
+  "legacy_host: depends on retired host services, paths, or credentials",
+  "external_vault: depends on the out-of-repo site/vault working tree",
+  "writable_db: mutates an explicitly disposable database; never production",
+  "container_db: creates and removes a disposable local database container",
+]

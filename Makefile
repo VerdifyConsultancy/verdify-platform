@@ -43,29 +43,31 @@ FIRMWARE_OTA_BIN := firmware/.esphome/build/greenhouse/.pioenvs/greenhouse/firmw
 # Override to `docker` only if a local verdify-timescaledb container is reachable
 # (legacy VM), or `dsn` when running in-cluster with PG*/POSTGRES_PASSWORD set.
 FIRMWARE_DB_BACKEND ?= kube
+# Authoritative for the current live ingestor pod. The mount remains temporary
+# emptyDir under #382, so this pin is not durable across pod replacement yet.
+FIRMWARE_STATE_DIR ?= /srv/verdify/state
+FIRMWARE_EXPECTED_VERSION_FILE ?= $(FIRMWARE_STATE_DIR)/expected-firmware-version
+FIRMWARE_STATE_NAMESPACE ?= verdify-prod
+FIRMWARE_STATE_RESOURCE ?= deployment/verdify-ingestor
+FIRMWARE_STATE_CONTAINER ?= ingestor
 REPLAY_CORPUS_GZ := firmware/test/data/replay_overrides.csv.gz
 REPLAY_CORPUS_TMP ?= /tmp/verdify-replay-overrides.csv
 HERMES_IRIS_RUNTIME_DIR ?= /var/lib/verdify/hermes/iris
 HERMES_IRIS_ENV_FILE ?= /etc/verdify/hermes-iris.env
 
-.PHONY: help setup venv-check tool-check test test-fast test-live lint format check lighting-audit-static lighting-audit-current lighting-audit-live lighting-audit-complete climate-intent-replay-report climate-authority-post-deploy-proof-plan climate-authority-post-deploy-proof firmware-check firmware-check-worktree firmware-check-all firmware-invariants firmware-replay firmware-replay-worktree firmware-replay-stream-check firmware-audit-traceability-proof firmware-audit-worktree-proof firmware-dwell-preview firmware-deploy firmware-archive-artifacts firmware-promote-last-good smoke hermes-deploy-config hermes-restart hermes-smoke clean migration-rollback-safety irrigation-migration-check irrigation-migration-proof irrigation-field-diagnostics irrigation-field-sensor-health-proof irrigation-stack-software-check irrigation-stack-check irrigation-feedback-check irrigation-feedback-discover irrigation-feedback-discovery-proof irrigation-feedback-work-order irrigation-feedback-work-order-proof irrigation-feedback-clear-stale-retained irrigation-feedback-clear-stale-near-misses irrigation-feedback-watch irrigation-feedback-watch-field irrigation-feedback-watch-field-proof irrigation-feedback-finalize-dry-run irrigation-feedback-finalize-dry-run-proof irrigation-feedback-finalize irrigation-feedback-finalize-proof irrigation-feedback-proof-json irrigation-sensor-health-proof irrigation-stack-proof irrigation-completion-audit irrigation-completion-audit-proof irrigation-acceptance irrigation-full-acceptance irrigation-post-deploy-acceptance-plan irrigation-post-deploy-acceptance
+.PHONY: help setup venv-check tool-check test test-fast test-live test-container lint format check lighting-audit-static lighting-audit-current lighting-audit-live lighting-audit-complete climate-intent-replay-report climate-authority-post-deploy-proof-plan climate-authority-post-deploy-proof firmware-check firmware-check-worktree firmware-check-all firmware-invariants firmware-replay firmware-replay-worktree firmware-replay-stream-check firmware-audit-traceability-proof firmware-audit-worktree-proof firmware-dwell-preview firmware-deploy firmware-archive-artifacts firmware-promote-last-good smoke hermes-deploy-config hermes-restart hermes-smoke clean migration-rollback-safety irrigation-migration-check irrigation-migration-proof irrigation-field-diagnostics irrigation-field-sensor-health-proof irrigation-stack-software-check irrigation-stack-check irrigation-feedback-check irrigation-feedback-discover irrigation-feedback-discovery-proof irrigation-feedback-work-order irrigation-feedback-work-order-proof irrigation-feedback-clear-stale-retained irrigation-feedback-clear-stale-near-misses irrigation-feedback-watch irrigation-feedback-watch-field irrigation-feedback-watch-field-proof irrigation-feedback-finalize-dry-run irrigation-feedback-finalize-dry-run-proof irrigation-feedback-finalize irrigation-feedback-finalize-proof irrigation-feedback-proof-json irrigation-sensor-health-proof irrigation-stack-proof irrigation-completion-audit irrigation-completion-audit-proof irrigation-acceptance irrigation-full-acceptance irrigation-post-deploy-acceptance-plan irrigation-post-deploy-acceptance
 
-# These files are the retired VM/live smoke suite or depend on the removed
-# laptop vault. They are not portable branch validation. Current-production
-# read-only proof has its own explicit target below; mutation suites remain
-# separately disposable-DB-gated.
+# These whole files are retired VM/live smoke suites. Mixed modules use the
+# registered markers below so their static invariants remain in portable CI.
+# The curated current-production suite is named explicitly by test-live; ignore
+# it here as defense in depth against an ambient VERDIFY_TEST_LIVE=1.
 PORTABLE_TEST_IGNORES := \
 	--ignore=tests/test_01_infrastructure.py \
-	--ignore=tests/test_02_database.py \
 	--ignore=tests/test_03_api.py \
-	--ignore=tests/test_04_planner.py \
-	--ignore=tests/test_05_ingestor.py \
 	--ignore=tests/test_06_website.py \
-	--ignore=tests/test_07_cron_replan.py \
-	--ignore=tests/test_08_observability.py \
 	--ignore=tests/test_09_api_responses.py \
-	--ignore=tests/test_13_operational_recovery.py \
-	--ignore=tests/test_15_lab_site_followup.py
+	--ignore=tests/test_live_readonly.py
+PORTABLE_TEST_MARKERS := not live_db and not live_http and not operator_probe and not legacy_host and not external_vault and not writable_db and not container_db
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -117,13 +119,16 @@ lighting-audit-complete: ## Final lighting audit; requires OTA/post-OTA proof wi
 # ── Testing ─────────────────────────────────────────────────────────
 
 test: venv-check ## Run the portable branch-validation suite (no live or writable dependencies)
-	VERDIFY_DB_BACKEND=kube $(PYTEST) tests/ verdify_schemas/tests/ $(PORTABLE_TEST_IGNORES)
+	$(PYTEST) tests/ verdify_schemas/tests/ $(PORTABLE_TEST_IGNORES) -m '$(PORTABLE_TEST_MARKERS)'
 
 test-fast: venv-check ## Run tests excluding slow planner tests
-	VERDIFY_DB_BACKEND=kube $(PYTEST) tests/ verdify_schemas/tests/ $(PORTABLE_TEST_IGNORES) -k "not Planner and not Context"
+	$(PYTEST) tests/ verdify_schemas/tests/ $(PORTABLE_TEST_IGNORES) -m '$(PORTABLE_TEST_MARKERS)' -k "not Planner and not Context"
 
 test-live: venv-check ## Run the explicit current-production read-only suite (no device/setpoints probe)
 	VERDIFY_TEST_LIVE=1 VERDIFY_DB_BACKEND=kube $(PYTEST) tests/test_live_readonly.py
+
+test-container: venv-check ## Run opt-in tests that create and remove disposable local containers
+	$(PYTEST) tests/test_g5_dualwrite_validation.py -m container_db
 
 climate-intent-replay-report: ## Replay ClimateIntent actions over the firmware corpus
 	$(PYTHON) scripts/climate_intent_replay_evaluator.py --csv $(REPLAY_CORPUS_GZ)
@@ -440,8 +445,17 @@ irrigation-post-deploy-acceptance-plan: ## Print non-mutating post-deploy accept
 
 irrigation-post-deploy-acceptance: irrigation-full-acceptance ## Post-deploy production proof after merge/restart/site publish
 
+# Safety: spell nested calls below as plain `make`, not the special $(MAKE)
+# variable. GNU Make executes any recipe line containing $(MAKE) even under
+# `make -n`; this target's acceptance chain must remain a true no-op in dry-run.
 firmware-deploy: ## Compile + OTA deploy to ESP32 + post-deploy sensor-health sweep + auto-rollback on failure
 	VERDIFY_DB_BACKEND=$(FIRMWARE_DB_BACKEND) bash scripts/firmware-deploy-preflight.sh
+	@kubectl -n '$(FIRMWARE_STATE_NAMESPACE)' exec '$(FIRMWARE_STATE_RESOURCE)' -c '$(FIRMWARE_STATE_CONTAINER)' -- \
+		sh -ceu 'test -d "$$1" && test -w "$$1"' -- '$(FIRMWARE_STATE_DIR)' || { \
+		echo "✗ Live ingestor state dir is not reachable and writable: $(FIRMWARE_STATE_DIR)"; \
+		echo "  Refusing OTA because the authoritative expected-version pin could not be updated."; \
+		exit 1; \
+	}
 	@mkdir -p firmware/artifacts
 	@DIRTY="$$(git diff --quiet -- . && git diff --cached --quiet -- . || echo .dirty)"; \
 	if [ -n "$$DIRTY" ] && [ "$(ALLOW_DIRTY_FIRMWARE_DEPLOY)" != "1" ]; then \
@@ -455,11 +469,16 @@ firmware-deploy: ## Compile + OTA deploy to ESP32 + post-deploy sensor-health sw
 	FW_VERSION="$$(date +%Y.%-m.%-d.%H%M).$$(git rev-parse --short HEAD)$$DIRTY"; \
 	echo "$$FW_VERSION" > firmware/artifacts/pending-fw-version.txt; \
 	echo "─── Deploying fw_version=$$FW_VERSION ───"; \
-	: "#301 — auto-source the OTA password from k3s when unset, and export it so the"; \
-	: "auto-rollback path (scripts/firmware-rollback.sh) inherits it. Runs only here,"; \
+	: "#301 — auto-source the OTA password from k3s when unset for this compile/upload"; \
+	: "shell. The recursive rollback target resolves it independently because Make"; \
+	: "recipes run in separate shells. Resolution runs only here,"; \
 	: "no parse-time kubectl. The ESPHome upload still reads ota_password from the"; \
 	: "reconstructed secrets.yaml (SECRETS_SRC); see docs/runbooks/laptop-operator.md."; \
 	: "$${OTA_PW:=$$(kubectl -n verdify-prod get secret verdify-firmware-ota -o jsonpath='{.data.ota_password}' 2>/dev/null | base64 -d)}"; \
+	test -n "$$OTA_PW" || { \
+		echo "✗ Rollback OTA password unavailable from env or verdify-firmware-ota; refusing upload." ; \
+		exit 1 ; \
+	} ; \
 	export OTA_PW; \
 	$(FIRMWARE_ESPHOME) -s fw_version "$$FW_VERSION" compile && \
 	$(FIRMWARE_ESPHOME) -s fw_version "$$FW_VERSION" upload --device "$(ESP32_DEVICE)"
@@ -472,25 +491,46 @@ firmware-deploy: ## Compile + OTA deploy to ESP32 + post-deploy sensor-health sw
 	# firmware-promote-last-good after the 48-hour bake.
 	# Fail → flash last-good back to ESP32 via firmware-rollback.sh.
 	@if VERDIFY_DB_BACKEND=$(FIRMWARE_DB_BACKEND) bash scripts/wait-for-firmware-version.sh "$$(cat firmware/artifacts/pending-fw-version.txt)" --timeout 180 && \
-		EXPECTED_FW_VERSION="$$(cat firmware/artifacts/pending-fw-version.txt)" $(MAKE) sensor-health SINCE='5 minutes'; then \
-		FIRMWARE_DEPLOYED_AT="$$(date '+%Y-%m-%dT%H:%M:%S%z')" bash scripts/archive-firmware-artifacts.sh "$$(cat firmware/artifacts/pending-fw-version.txt)" ; \
-		mkdir -p /srv/verdify/state ; \
-		cp firmware/artifacts/pending-fw-version.txt /srv/verdify/state/expected-firmware-version ; \
+		EXPECTED_FW_VERSION="$$(cat firmware/artifacts/pending-fw-version.txt)" make sensor-health SINCE='5 minutes' && \
+		FIRMWARE_DEPLOYED_AT="$$(date '+%Y-%m-%dT%H:%M:%S%z')" bash scripts/archive-firmware-artifacts.sh "$$(cat firmware/artifacts/pending-fw-version.txt)" && \
+		kubectl -n '$(FIRMWARE_STATE_NAMESPACE)' exec -i '$(FIRMWARE_STATE_RESOURCE)' -c '$(FIRMWARE_STATE_CONTAINER)' -- \
+			sh -ceu 'target="$$1"; tmp="$$target.tmp"; cat > "$$tmp"; chmod 0644 "$$tmp"; mv "$$tmp" "$$target"' \
+			-- '$(FIRMWARE_EXPECTED_VERSION_FILE)' < firmware/artifacts/pending-fw-version.txt; then \
 		echo "✓ Deploy accepted. Archived build outputs + promoted expected firmware pin. Rollback target unchanged while this build bakes." ; \
 	else \
 		echo "" ; \
 		echo "▓▓▓  SENSOR-HEALTH FAILED POST-OTA  —  initiating auto-rollback  ▓▓▓" ; \
-		bash scripts/firmware-rollback.sh firmware/artifacts/last-good.ota.bin ; \
+		ROLLBACK_VERSION="$$(cat firmware/artifacts/last-good.version 2>/dev/null)" ; \
+		make firmware-rollback || { \
+			echo "✗ Rollback flash failed; rejected firmware may still be running." ; \
+			exit 1 ; \
+		} ; \
 		echo "" ; \
 		echo "Waiting 60s for ESP32 to reboot onto rolled-back firmware..." ; \
 		sleep 60 ; \
-		echo "Re-running sensor-health against rolled-back firmware:" ; \
-		$(MAKE) sensor-health SINCE='5 minutes' ; \
+		if [ -n "$$ROLLBACK_VERSION" ]; then \
+			echo "Verifying rolled-back firmware version and sensor health:" ; \
+			VERDIFY_DB_BACKEND=$(FIRMWARE_DB_BACKEND) bash scripts/wait-for-firmware-version.sh "$$ROLLBACK_VERSION" --timeout 180 && \
+			EXPECTED_FW_VERSION="$$ROLLBACK_VERSION" make sensor-health SINCE='5 minutes' || { \
+				echo "✗ Rollback flash completed but recovery verification failed." ; \
+				exit 1 ; \
+			} ; \
+		else \
+			echo "⚠ Rollback flashed, but last-good.version is missing; exact-version verification is unavailable." ; \
+			make sensor-health SINCE='5 minutes' || { \
+				echo "✗ Rollback flash completed but sensor-health recovery verification failed." ; \
+				exit 1 ; \
+			} ; \
+		fi ; \
 		exit 1 ; \
 	fi
 
 firmware-rollback: ## Manually flash the saved last-good.ota.bin back onto the ESP32
-	bash scripts/firmware-rollback.sh firmware/artifacts/last-good.ota.bin
+	@OTA_PW="$${OTA_PW:-$$(kubectl -n verdify-prod get secret verdify-firmware-ota -o jsonpath='{.data.ota_password}' 2>/dev/null | base64 -d)}"; \
+		test -n "$$OTA_PW" || { echo "✗ OTA password unavailable from env or verdify-firmware-ota"; exit 1; }; \
+		export OTA_PW; \
+		FIRMWARE_ROLLBACK_LOG="$${FIRMWARE_ROLLBACK_LOG:-firmware/artifacts/firmware-rollback.log}" \
+		bash scripts/firmware-rollback.sh firmware/artifacts/last-good.ota.bin
 
 sensor-health: ## Run sensor health sweep (layer 3 of Firmware Change Protocol)
 	VERDIFY_DB_BACKEND=$(FIRMWARE_DB_BACKEND) SINCE='$(or $(SINCE),5 minutes)' EXPECTED_FW_VERSION='$(EXPECTED_FW_VERSION)' bash scripts/sensor-health-sweep.sh
@@ -514,10 +554,11 @@ planner-dry: ## Dry-run planner prompts — render every event type and assert G
 
 # ── Hermes ─────────────────────────────────────────────────────────
 
-hermes-deploy-config: ## Validate the GitOps-managed Hermes config (live delivery requires the gated prod sync)
+hermes-deploy-config: venv-check ## Validate the GitOps-managed Hermes config (live delivery requires the gated prod sync)
+	@$(PYTEST) tests/test_17_planner_health_surface.py -k hermes_profile_pins_gpt_5_6_sol_xhigh_at_the_runtime_key
 	@kubectl kustomize deploy/k8s/overlays/prod >/dev/null
-	@echo "✓ Hermes ConfigMap renders from the prod overlay; no live mutation performed."
-	@echo "  Merge the reviewed desired state, then use the gated verdify-prod-dark sync."
+	@echo "✓ Canonical Hermes profile matches its k3s ConfigMap mirror and the prod overlay renders; no live mutation performed."
+	@echo "  Merge the reviewed desired state, use the gated verdify-prod-dark sync (the profile checksum rolls and reseeds Hermes), then run make hermes-smoke."
 
 hermes-restart: ## Restart the k3s Hermes Deployment after its GitOps config is synced (CONFIRM_PROD_RESTART=1)
 	@if [ "$(CONFIRM_PROD_RESTART)" != "1" ]; then \
@@ -527,7 +568,37 @@ hermes-restart: ## Restart the k3s Hermes Deployment after its GitOps config is 
 	kubectl -n verdify-prod rollout restart deployment/verdify-hermes-iris
 	kubectl -n verdify-prod rollout status deployment/verdify-hermes-iris --timeout=180s
 
-hermes-smoke: ## Wait for the k3s Hermes Deployment to report Available
+hermes-smoke: ## Wait for the desired Hermes ConfigMap/profile checksum, rollout, and availability
+	@EXPECTED="$$(awk '/verdify.ai\/hermes-profile-sha256:/ {print $$2; exit}' deploy/k8s/components/hermes-iris/hermes-iris.yaml)"; \
+		test -n "$$EXPECTED" || { echo "Missing desired Hermes profile checksum"; exit 1; }; \
+		if command -v sha256sum >/dev/null 2>&1; then \
+			HASHER=sha256sum; \
+		elif command -v shasum >/dev/null 2>&1; then \
+			HASHER="shasum -a 256"; \
+		else \
+			echo "Hermes smoke requires sha256sum or shasum"; \
+			exit 1; \
+		fi; \
+		DEADLINE=$$((SECONDS + 180)); \
+		while :; do \
+			if ! LIVE_CONFIG_HASH="$$(set -o pipefail; \
+				kubectl -n verdify-prod get configmap/verdify-hermes-iris-config \
+					-o go-template='{{index .data "config.yaml"}}' \
+					| $$HASHER | awk '{print $$1}')"; then \
+				echo "Could not read and hash the live Hermes ConfigMap"; \
+				exit 1; \
+			fi; \
+			[ "$$LIVE_CONFIG_HASH" = "$$EXPECTED" ] && break; \
+			(( SECONDS < DEADLINE )) || { \
+				echo "Live Hermes ConfigMap did not converge to the reviewed profile within 180s"; \
+				exit 1; \
+			}; \
+			sleep 2; \
+		done; \
+		kubectl -n verdify-prod wait \
+			--for="jsonpath={.spec.template.metadata.annotations.verdify\\.ai/hermes-profile-sha256}=$$EXPECTED" \
+			deployment/verdify-hermes-iris --timeout=180s
+	kubectl -n verdify-prod rollout status deployment/verdify-hermes-iris --timeout=180s
 	kubectl -n verdify-prod wait --for=condition=Available deployment/verdify-hermes-iris --timeout=120s
 
 # ── Stack ───────────────────────────────────────────────────────────

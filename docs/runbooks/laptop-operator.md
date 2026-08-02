@@ -5,8 +5,10 @@
 **State of the world:** `main` is the single canonical branch. **`verdify-dev`
 and staging are DECOMMISSIONED and DELETED — prod (`verdify-prod`, ArgoCD app
 `verdify-prod-dark`, manual-sync behind the device-write gate) is the ONLY
-environment** (serves lab/graphs/api.verdify.ai). Prod is advanced by the
-`prod-promote` workflow off published image digests (ZOT as of 2026-07-11 — see docs/runbooks/prod-promotion.md; GHCR is retired per ADR-0021)
+environment** (serves lab/graphs/api.verdify.ai). The required delivery policy
+is exact-SHA Kaniko builds, reviewed Zot digest pins, then a gated manual sync;
+the current central path is `BLOCKED_PLATFORM` and must not be described as a
+working `prod-promote` workflow (see `docs/runbooks/prod-promotion.md`; GHCR is retired per ADR-0021)
 (no more `bump-dev-digests` / dev render / dev-equality guard). Any section
 below that mentions a dev environment, `overlays/dev`, dev DB restore, or the
 dev proving flow is HISTORICAL — those resources no longer exist.
@@ -16,7 +18,10 @@ dev proving flow is HISTORICAL — those resources no longer exist.
 > title is historical). The k3s-agent operating model, the portable dev loop, and
 > the firmware-OTA tribal knowledge are consolidated in
 > [`../handoff/k3s-agent-handoff.md`](../handoff/k3s-agent-handoff.md) — read that
-> first. The only laptop-bound workflow is the firmware OTA toolchain itself (§3).
+> first. No workflow is inherently laptop-bound: §3 documents the workstation
+> OTA path, while the suspended in-cluster builder can compile/flash a selected
+> revision. The cluster path still lacks an actuator that flashes its stored
+> last-good artifact, so rollback capability is not equivalent.
 
 ## 0. One-time host setup
 
@@ -55,26 +60,28 @@ Historical derived-data reconciliation lives in
 [`derived-history-reconcile.md`](./derived-history-reconcile.md). It dry-runs
 by default; any prod apply requires an explicit operator gate.
 
-## 2. CI/CD: push publishes, dispatch promotes to prod (single-env)
+## 2. CI/CD: central Argo validates and publishes (single-env)
 
-- **Push to `main`** (or merge a PR): `container-publish.yml` builds the
-  impacted images (api/mcp/ingestor/migrate/planner + artifact-only
-  setpoint-server) and validated them build-only on GHCR-era CI; as of 2026-07-11 publishing is the in-cluster Kaniko→zot flow (immutable
-  `:sha-<sha>` + mutable `:branch-main`). There is **no environment write-back**
-  — `bump-dev-digests` / dev auto-sync are removed (dev is gone). `ci.yml` (all
-  gates), `k8s-manifests.yml` (kubeconform) and `cnpg-image.yml` fire on `main` too.
-- **Full-pipeline button:** `gh workflow run container-publish.yml --ref main`
-  — a manual dispatch builds + publishes ALL images.
-- **Promote to prod:**
-  `gh workflow run prod-promote.yml --ref main -f mode=pull-request`
-  (or `mode=dry-run`). Resolves each promotable image's `:branch-main` digest
-  from the zot origin (registry.vallery.net), surgically bumps `overlays/prod/kustomization.yaml`,
-  runs the Device-Write-Safety-Gate, opens a `prod-promote` PR.
-  `promote-diff-guard` (required check) re-asserts a **digests-only** change
-  surface. Merge = git change only; then the gated sync below.
-  - Known race: `verdify-migrate` rebuilds on every publish, so a push that
-    lands while a promote PR is open can advance the published `:branch-main`
-    migrate digest. Re-run prod-promote after the pipeline settles.
+- There are no repository GitHub Actions workflows and no `gh workflow run`
+  entrypoint. `make ci` is the local/in-cluster validation gate.
+- Pull requests are validated at their exact head by the centrally rendered
+  `verdify-platform-pr-ci` Argo Workflow, which reports the required
+  `Verdify Platform / Argo PR CI` status. Pushes to `main` trigger
+  `verdify-platform-ci`; it reruns validation and calls the standard
+  `repo-build` template, where Kaniko builds no-push archives and pinned Crane
+  is the publisher for the repository image matrix.
+- Successful builds are intended to push immutable digests to the Zot origin at
+  `registry.vallery.net/verdifyconsultancy/...`, never GHCR. The bespoke caller
+  declares the correct owner-scoped publisher, but live checkout is blocked and
+  the generic self-service helper/profile contracts are mismatched. The live
+  prod pin step also bypasses review by pushing directly to `main`; do not use
+  that as approval. The required correction and reviewed digest-only procedure
+  are in [`prod-promotion.md`](./prod-promotion.md), followed by the gate below.
+- Repo-agent self-service remains fail-closed while `.agent-fleet/ci.yaml` is
+  absent and this repo ServiceAccount lacks Workflow-create RBAC. Do not add a
+  repo-local Role or a partial build spec; CI platform gaps are tracked in
+  `VerdifyConsultancy/verdify-platform#561` and `jvallery/agents#3088`.
+
 - **The gated prod sync (the ONLY step that touches the live writer):**
   ```bash
   kubectl patch application verdify-prod-dark -n argocd --type merge \

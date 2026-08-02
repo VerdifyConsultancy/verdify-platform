@@ -21,17 +21,18 @@ prod `argocd app sync`, device-VLAN actions, destructive prod DB work, and outwa
       PR body / commit message states **which services must bounce** post-merge
       (e.g. `Post-merge restart: verdify-mcp, verdify-ingestor`). `service-restart-drift-guard`
       will check for it.
-- [ ] CI green: `ci.yml` (lint, schemas+drift, device-write-gate, migration-rollback-safety),
-      `container-publish.yml` (smoke-import), `k8s-manifests.yml` (kustomize+kubeconform).
+- [ ] CI green: `CI_BASE_REF=<base> make ci` locally and the exact-head
+      `Verdify Platform / Argo PR CI` status. Run acknowledged disposable-DB
+      drift guards separately when that backend is provisioned.
 
 **Publish → promote → sync:**
-- [ ] Merge to `main` → `container-publish` publishes digest-pinned images to GHCR
-      (`sha-<sha>` + `branch-main`).
-- [ ] Run `prod-promote` (dry-run first; review the digest delta) → `mode=pull-request`. The
-      **Device-Write-Safety-Gate** must PASS (render-equality, digests-only, interlock/egress
-      assertions).
-- [ ] On the `prod-promote` PR: `promote-diff-guard` PASS (only digest/comment/component-ref
-      lines changed). Human review + merge — git only, cluster untouched.
+- [ ] After the central contract is green, merge to `main` → exact-SHA Kaniko
+      archive builds → pinned Crane publishes immutable Zot digests. The current
+      platform is blocked; do not use its direct-main prod-pin step as approval.
+- [ ] Open a reviewed digest-only desired-state PR. Verify only the intended
+      digest/comment/component-ref lines changed and all device-write interlock,
+      egress, and render invariants still hold. Human review + merge changes git
+      only; the cluster remains untouched.
 - [ ] **[Jason gate]** Operator runs `argocd app sync verdify-prod-dark`.
 - [ ] Post-sync verify: app Synced/Healthy; single-writer intact (`replicas:1`, exactly one
       ingestor pod, `sum(verdify_esp32_writer_estab)==1`); restart the services named above; tail
@@ -61,8 +62,8 @@ prod `argocd app sync`, device-VLAN actions, destructive prod DB work, and outwa
 - [ ] Climate ≤300 s fresh; `climate_action_log` fresh + complete.
 - [ ] 48 h bake since `last-good.ota.bin` (override needs a ≥12-char logged reason).
 - [ ] ≤1 OTA this calendar week (resets Mon 00:00 MDT).
-- [ ] `last-good.ota.bin` present and `OTA_PW` / rollback secret reachable (auto-rollback depends
-      on it — do not deploy if rollback can't run).
+- [ ] `last-good.ota.bin` and a nonempty `last-good.version` present, and `OTA_PW` / rollback
+      secret reachable (auto-rollback depends on all three — do not deploy if rollback can't run).
 - [ ] Outdoor-temp >85°F forecast is a warning, not a blocker — note it.
 
 **Deploy + post:**

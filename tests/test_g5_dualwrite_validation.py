@@ -32,6 +32,8 @@ from pathlib import Path
 
 import pytest
 
+pytestmark = pytest.mark.container_db
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CHECK_SQL = REPO_ROOT / "scripts" / "check-g5-dualwrite.sql"
 

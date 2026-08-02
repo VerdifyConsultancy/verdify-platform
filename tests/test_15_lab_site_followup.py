@@ -6,6 +6,7 @@ import os
 import re
 from pathlib import Path
 
+import pytest
 import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -81,6 +82,7 @@ def test_overview_nav_promotes_greenhouse_evidence_pages():
     assert 'pageLink("Soil Sensors", "greenhouse/soil")' not in greenhouse
 
 
+@pytest.mark.external_vault
 def test_homepage_core_graphs_share_window_and_embed_scale():
     homepage = (VAULT_ROOT / "index.md").read_text(encoding="utf-8")
 
@@ -92,6 +94,7 @@ def test_homepage_core_graphs_share_window_and_embed_scale():
         assert match, f"homepage panel {panel_id} does not use the shared 72h/620px embed scale"
 
 
+@pytest.mark.external_vault
 def test_homepage_resource_graphs_follow_lighting_before_cameras():
     homepage = (VAULT_ROOT / "index.md").read_text(encoding="utf-8")
 
@@ -205,6 +208,7 @@ def test_homepage_lighting_brand_normalizer_removes_threshold_output():
         assert props["custom.spanNulls"] is False
 
 
+@pytest.mark.external_vault
 def test_resource_use_restores_individual_solar_alignment_panels():
     page = (VAULT_ROOT / "start/resource-use.md").read_text(encoding="utf-8")
 
@@ -219,20 +223,24 @@ def test_resource_use_restores_individual_solar_alignment_panels():
 
 def test_resource_use_cost_panels_use_canonical_runtime_cost_fields():
     economics = _dashboard("grafana/dashboards/site-evidence-economics.json")
-    baseline_page = (VAULT_ROOT / "data/baseline-vs-iris.md").read_text(encoding="utf-8")
     daily_cost = _panel(economics, 312)
     monthly_cost = _panel(economics, 10)
     solar_load = _panel(economics, 310)
     daily_sql = daily_cost["targets"][0]["rawSql"]
 
     assert "Runtime Electric ($)" in daily_sql
-    assert "cost_electric::numeric" in daily_sql
+    assert "cost_electric_est::numeric" in daily_sql
     assert "kwh_estimated * 0.111" not in daily_sql
     assert "fn_runtime_power_30m" in solar_load["targets"][0]["rawSql"]
     assert "fn_equip_at" not in solar_load["targets"][0]["rawSql"]
     assert "Runtime Load (W)" in solar_load["targets"][0]["rawSql"]
     assert "energy e" not in solar_load["targets"][0]["rawSql"]
     assert monthly_cost["options"]["showValue"] == "never"
+
+
+@pytest.mark.external_vault
+def test_resource_use_vault_labels_runtime_cost_fields():
+    baseline_page = (VAULT_ROOT / "data/baseline-vs-iris.md").read_text(encoding="utf-8")
     assert "Runtime-modeled electric energy/day" in baseline_page
     assert "Metered electric energy/day" not in baseline_page
 
@@ -242,7 +250,6 @@ def test_lighting_dashboard_visual_contract():
     lux_panel = _panel(lighting, 9)
     altitude_panel = _panel(lighting, 14)
     decision_panel = _panel(lighting, 16)
-    lighting_page = (VAULT_ROOT / "greenhouse/lighting.md").read_text(encoding="utf-8")
 
     assert _override_props(lux_panel, "Indoor Lux")["custom.fillOpacity"] == 85
     assert _override_props(lux_panel, "Outdoor Lux")["custom.fillOpacity"] == 55
@@ -255,6 +262,11 @@ def test_lighting_dashboard_visual_contract():
     assert _mapped_color(decision_panel, "Occupancy", "empty") == "rgba(253,216,53,0.30)"
     assert _mapped_color(decision_panel, "Sun", "Day") == "#FDD835"
     assert _mapped_color(decision_panel, "Sun", "Night") == "#112231"
+
+
+@pytest.mark.external_vault
+def test_lighting_vault_embeds_canonical_history_panel():
+    lighting_page = (VAULT_ROOT / "greenhouse/lighting.md").read_text(encoding="utf-8")
     assert "panelId=10&theme=light&from=now-30d&to=now" in lighting_page
 
 
@@ -311,9 +323,11 @@ def test_resource_dashboards_label_scope_quality_and_no_legacy_catalog():
     assert "Modeled kWh low" in climate_text
     assert "partial Shelly" in climate_text
     assert "v_daily_kpi" in climate_text
-    assert "resource_terms_available" in climate_text
+    assert "cost_total_est" in climate_text
+    assert "therms_modeled" in climate_text
+    assert "$/Day (30-Day Average) (est)" in climate_text
     assert "AVG(cost_total)::numeric, 2) AS v FROM daily_summary" not in climate_text
-    assert "AVG(cost_total)::numeric, 2) AS v FROM v_daily_kpi" in climate_text
+    assert "AVG(cost_total_est)::numeric, 2) AS v FROM mv_daily_kpi" in climate_text
 
     assert "v_water_attribution_daily" in water_text
     assert "Meter-Conserving Water Attribution" in water_text
@@ -447,6 +461,7 @@ def test_quartz_graphs_and_cameras_autoload_with_cached_images_on_every_browser(
     assert "img.removeAttribute('data-camera-src')" in embeds
 
 
+@pytest.mark.external_vault
 def test_architecture_page_removes_stale_sections_and_svg_return_path_is_behind_ingestor():
     architecture = (VAULT_ROOT / "reference/architecture.md").read_text(encoding="utf-8")
     svg = (VAULT_ROOT / "static/verdify-architecture.svg").read_text(encoding="utf-8")

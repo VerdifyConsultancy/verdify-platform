@@ -31,8 +31,11 @@ is in the repo (`docs/`), and this doc is the index for the handoff.
 
 ## 2. The dev loop — runnable from any kubectl host (k3s-portable)
 
-Everything below works from a kubectl-equipped pod/host; none of it needs the
-laptop. (Firmware OTA is the exception — see §4.)
+Everything below works from a kubectl-equipped pod/host; none inherently needs
+the laptop. The worktree `make firmware-deploy` path additionally needs an
+ESPHome-capable tooling host with device-LAN reachability. The in-cluster builder
+can compile/flash a selected revision, but still lacks stored-last-good rollback
+actuation; see §4.
 
 - **Build / test / lint:**
   - `make setup` creates/updates the repo-local `.venv` from `pyproject.toml`
@@ -58,6 +61,8 @@ laptop. (Firmware OTA is the exception — see §4.)
     `kubectl exec -i -n verdify-prod verdify-db-0 -c postgres -- psql -U verdify -d verdify -v ON_ERROR_STOP=1 < file.sql`.
 - **Deploy / GitOps (one greenhouse environment, plus an isolated static Lab
   canary):**
+  Required target flow (the current central path is `BLOCKED_PLATFORM` and its
+  prod pin step pushes directly to `main`, so it does not yet implement this):
   ```text
   merge main with make ci green
     → in-cluster verdify-platform-ci / repo-build WorkflowTemplate
@@ -69,7 +74,8 @@ laptop. (Firmware OTA is the exception — see §4.)
        acceptance, then restore the manual-sync posture
   ```
   GitHub Actions and GHCR publishing are retired; do not create new GHCR pins.
-  See `docs/runbooks/prod-promotion.md` for the current Kaniko→zot procedure.
+  See `docs/runbooks/prod-promotion.md` for the current
+  Kaniko→Crane→zot contract and blockers.
   The prod sync remains the only step that can touch the live writer.
   The gated sync, from any kubectl host:
   ```bash
@@ -78,8 +84,10 @@ laptop. (Firmware OTA is the exception — see §4.)
   ```
   Pre-check: `kustomize build deploy/k8s/overlays/prod | kubectl diff -f -`; confirm
   the **ingestor Deployment** (the single device writer) only changes when intended.
-  Prod promotable set = api/mcp/ingestor/migrate/planner; setpoint-server and
-  the current Quartz lab images remain hand-pinned. ArgoCD app
+  The live central core matrix is
+  api/mcp/ingestor/migrate/planner/setpoint-server/lab-publisher; all seven need
+  immutable reviewed prod pins under the target policy. The four Astro-stage
+  images use their separate reviewed stage pin. ArgoCD app
   `verdify-prod-dark` is **manual-sync, prune:false**. The Astro canary is a
   static, no-device/no-DB surface, not a second greenhouse environment. Its
   reviewed zot digest is pinned in
@@ -97,7 +105,7 @@ laptop. (Firmware OTA is the exception — see §4.)
 | Surface | Source of truth in git | Drift watch |
 |---|---|---|
 | k8s manifests | `deploy/k8s/overlays/prod` + components | `kustomize build … \| kubectl diff` |
-| Image digests | `overlays/prod/kustomization.yaml` (advanced only by `prod-promote`) | live pod `@sha256` == overlay pins |
+| Image digests | `overlays/prod/kustomization.yaml` (required: reviewed digest-only change; the current central direct-main pin is nonconformant) | live pod `@sha256` == overlay pins |
 | Grafana dashboards | `grafana/dashboards/*.json` → generated CMs | **UI edits do NOT sync back — always edit the JSON** |
 | DB migrations | `db/migrations/` (sequential) | apply one at a time through pod-local `psql` after the CI `migration-rollback-safety` and migration-specific rollback proof; `verdify-migrate` only bootstraps a fresh DB or verifies a populated one |
 | Firmware (source) | `firmware/**` | `diagnostics.firmware_version` == intended (see §4) |
@@ -157,13 +165,24 @@ gates.
   `FIRMWARE_DB_BACKEND` (default `kube`) through the version wait and
   sensor-health acceptance path as well as preflight. This closes the former
   false rollback where an off-laptop run queried a nonexistent Docker DB and
-  flashed last-good over a healthy OTA. For an operator-directed manual sequence:
+  flashed last-good over a healthy OTA. Prefer `make firmware-deploy`. In an
+  operator-directed manual sequence, any failure after upload in steps 4–6 must
+  stop the sequence and immediately run `make firmware-rollback`; do not archive,
+  pin, or begin the bake for the rejected candidate:
   1. `VERDIFY_DB_BACKEND=kube FIRMWARE_OTA_FREEZE_OVERRIDE_REASON="…" bash scripts/firmware-deploy-preflight.sh`
   2. `FW_VERSION="$(date +%Y.%-m.%-d.%H%M).$(git rev-parse --short HEAD)"; echo "$FW_VERSION" > firmware/artifacts/pending-fw-version.txt`
   3. `ESPHOME_BIN=<esphome> SECRETS_SRC=<secrets.yaml> scripts/firmware-esphome-worktree.sh -s fw_version "$FW_VERSION" compile && … upload --device 192.168.10.111`
-  4. `VERDIFY_DB_BACKEND=kube bash scripts/wait-for-firmware-version.sh "$FW_VERSION" --timeout 180` then `VERDIFY_DB_BACKEND=kube EXPECTED_FW_VERSION="$FW_VERSION" make sensor-health SINCE='5 minutes'`
+  4. `VERDIFY_DB_BACKEND=kube bash scripts/wait-for-firmware-version.sh "$FW_VERSION" --timeout 180` then `FIRMWARE_DB_BACKEND=kube EXPECTED_FW_VERSION="$FW_VERSION" make sensor-health SINCE='5 minutes'`
   5. `bash scripts/archive-firmware-artifacts.sh "$FW_VERSION"` — **NOT** `--promote-last-good` (last-good stays on the prior baked binary through the 48 h bake; promote only after).
-  6. **Pinch decision + bake record (#413):** the flash just cold-started
+  6. Atomically pin the accepted version in the authoritative current live
+     ingestor state mount (not a tooling-host `/srv` path):
+     `printf '%s\n' "$FW_VERSION" | kubectl -n verdify-prod exec -i deployment/verdify-ingestor -c ingestor -- sh -ceu 'target="$1"; tmp="$target.tmp"; cat > "$tmp"; chmod 0644 "$tmp"; mv "$tmp" "$target"' -- /srv/verdify/state/expected-firmware-version`.
+     The prod mount is still temporary `emptyDir` under #382, so the pin is lost
+     on pod replacement; the strict PVC-recovery xfail remains open. Re-verify
+     telemetry after any replacement and do not call this durable state.
+     Prefer the fail-closed `make firmware-deploy` target, which performs steps
+     4–6 as one acceptance chain and verifies last-good after an auto-rollback.
+  7. **Pinch decision + bake record (#413):** the flash just cold-started
      `band_track_fraction` to `0.0` (see the pinch-reset bullet above). Execute the
      g-377 decision, then record in the bake report: `band_track_fraction`
      (readback proof from `setpoint_snapshot`), `dehum_vent_hold_enabled`
@@ -185,19 +204,22 @@ gates.
 These are why the repo is "self-documenting" but not yet "100% laptop-free." Most
 are infra work, gated and tracked — do **not** try to fix them in a code session:
 
-1. **Firmware OTA in-cluster** — CLOSED 2026-07-13 (operator-directed).
+1. **Firmware current-revision compile/OTA in-cluster** — CLOSED 2026-07-13
+   (operator-directed); **stored last-good rollback actuation remains OPEN**.
    `deploy/k8s/components/firmware-builder/`: a suspended-CronJob job template
    (`kubectl -n verdify-prod create job --from=cronjob/verdify-firmware-builder …`)
    runs the official esphome image, assembles `secrets.yaml` from k8s Secrets
    (`verdify-firmware-ota`, `verdify-app-secrets/ESP32_API_KEY`,
    `verdify-firmware-wifi`, `verdify-github-token`), compiles with the
    toolchain cached on a PVC, archives to the `verdify-firmware-artifacts`
-   PVC (**the rollback floor `last-good.ota.bin` now lives THERE, not on the
-   laptop**), and — only with `FLASH=1`, which stays Jason-gated — uploads to
+   PVC (the rollback-floor `last-good.ota.bin` is stored there), and — only with
+   `FLASH=1`, which stays Jason-gated — uploads the selected `FW_REVISION` to
    192.168.10.111:3232 through its own scoped egress NetworkPolicy. The
    preflight/verify steps (`firmware-deploy-preflight.sh`,
    `wait-for-firmware-version.sh`, `make sensor-health`) already run
-   kube-backend from any cluster pod.
+   kube-backend from any cluster pod. The template has no command that flashes
+   the already-stored last-good binary, so do not claim in-cluster rollback
+   parity until a gated actuator and verification path exist.
 2. **Secret sealing / source reconciliation** — `docs/runbooks/verdify-secret-sealing-plan.md`
    lists source path/name mismatches (MQTT_*, HERMES_IRIS_API_KEY,
    API_WRITE_TOKEN↔VERDIFY_WRITE_API_KEY) to reconcile before SOPS/age sealing.

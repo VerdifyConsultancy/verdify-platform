@@ -76,6 +76,7 @@ def _entity_state(key: int, value):
     return SimpleNamespace(key=key, state=value)
 
 
+@pytest.mark.legacy_host
 class TestIngestorService:
     """Ingestor systemd service must be healthy."""
 
@@ -98,6 +99,7 @@ class TestIngestorService:
         )
 
 
+@pytest.mark.live_db
 class TestESP32Connection:
     """ESP32 data must be flowing through the ingestor."""
 
@@ -201,6 +203,7 @@ class TestIngestorTasks:
         assert pool.conn.execute_calls[0][1][0] == old_ts
         assert pool.conn.execute_calls[1][1][0] == new_ts
 
+    @pytest.mark.live_db
     def test_setpoint_dispatcher_recent(self):
         """Setpoint dispatcher must have produced recent write-side evidence."""
         age = db_query(
@@ -244,11 +247,13 @@ class TestIngestorTasks:
             return
         assert int(age) < 900, f"Last dispatch was {age}s ago (>15min)"
 
+    @pytest.mark.live_db
     def test_forecast_sync_recent(self):
         """Forecast must have been synced in last 2 hours."""
         age = db_query("SELECT extract(epoch FROM now() - max(fetched_at))::int FROM weather_forecast")
         assert int(age) < 7200, f"Last forecast sync was {age}s ago (>2h)"
 
+    @pytest.mark.live_db
     def test_alert_monitor_runs(self):
         """Alert log should have entries (even if no active alerts)."""
         count = db_query("SELECT count(*) FROM alert_log WHERE ts > now() - interval '24 hours'")
@@ -256,6 +261,7 @@ class TestIngestorTasks:
         assert count is not None
 
 
+@pytest.mark.live_db
 class TestDataIntegrity:
     """Data quality checks."""
 

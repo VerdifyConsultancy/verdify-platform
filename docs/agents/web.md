@@ -88,8 +88,9 @@ work; treat `/srv` paths as historical/break-glass context only.
 `lab-stage.verdify.ai` is the isolated Astro canary. Its build path is the exact
 `verdify-platform` revision through the in-cluster `verdify-platform-ci` /
 `repo-build` WorkflowTemplate: the sanitized snapshot is hydrated and verified
-before Kaniko, Kaniko pushes the image to the zot origin, and a reviewed digest
-pin lands in `deploy/k8s/overlays/lab-stage/kustomization.yaml`. ArgoCD serves
+before Kaniko, Kaniko writes a no-push image archive, pinned Crane publishes it
+to the zot origin, and a reviewed digest pin lands in
+`deploy/k8s/overlays/lab-stage/kustomization.yaml`. ArgoCD serves
 the static nginx image with no PVC, runtime Secret, service-account token, DB,
 Grafana, object-store access, or egress.
 

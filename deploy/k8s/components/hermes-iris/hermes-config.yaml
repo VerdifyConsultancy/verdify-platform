@@ -206,13 +206,13 @@ data:
     # OpenAI GPT-5.6 Sol with reasoning_effort=xhigh, MCP-only tool surface.
     #
     # Canonical source: hermes/iris/config.yaml (this repo).
-    # Runtime location: /var/lib/verdify/hermes/iris/config.yaml (bind-mounted into
-    # the hermes-iris Docker container per docker-compose.yml).
+    # Runtime location: /opt/data/config.yaml in the k3s Hermes container. This
+    # ConfigMap is seeded onto the runtime PVC by the init container.
     #
-    # Deploy: this file is copied to the runtime location via
-    # `make hermes-deploy-config`. Runtime secrets live in
-    # /etc/verdify/hermes-iris.env, are injected by docker-compose.yml, and are
-    # NEVER versioned.
+    # Deploy: `make hermes-deploy-config` validates this environment-specific
+    # mirror against hermes/iris/config.yaml and its pod-template checksum, then
+    # renders prod; it does not mutate the cluster. Runtime Secret references are `verdify-hermes` and
+    # `verdify-hermes-slack` (names only) and are NEVER versioned here.
 
     model:
       # Hermes doesn't expose a generic "openai" provider — direct OpenAI access
@@ -287,7 +287,8 @@ data:
       # in ingestor/iris_planner.py. Guarding new skills protects against drift.
       guard_agent_created: true
 
-    # API server: loopback only. The ingestor calls /v1/runs from the same host.
+    # API server: bind the pod interfaces so ingestor can call /v1/runs through the
+    # ClusterIP. Service and NetworkPolicy keep this internal; it is never WAN-bound.
     # api_server platform: Hermes reads under platforms.<name>.extra (see
     # /opt/hermes/gateway/config.py:PlatformConfig). API_SERVER_KEY env var
     # is the actual auth source — config.api_key_env is not a Hermes schema.
@@ -295,7 +296,7 @@ data:
       api_server:
         enabled: true
         extra:
-          host: "0.0.0.0"   # container-internal; docker-compose binds 127.0.0.1
+          host: "0.0.0.0"   # pod/container interfaces; exposure is separately bounded
           port: 8642
 
     # Dashboard off — the API server is the only interface. Avoids accidental

@@ -1,6 +1,8 @@
-"""
-Shared fixtures for Verdify smoke tests.
-All tests run against the live production stack.
+"""Shared fixtures for Verdify tests.
+
+Portable tests are the default. Legacy tests that use :func:`db_query` must be
+marked ``live_db`` and are excluded from ``make test``; the curated production
+proof has its own transaction-read-only target.
 """
 
 import asyncio
@@ -46,6 +48,8 @@ def tasks_module_path(repo_root: Path | str | None = None) -> Path:
 # Docker exec wrapper for DB queries (works even if pg port isn't exposed to host)
 def db_query(sql: str) -> str:
     """Run a SQL query via docker exec and return stdout."""
+    if os.environ.get("VERDIFY_TEST_LIVE") != "1":
+        raise RuntimeError("live DB query refused; use an explicit live/disposable test target")
     if os.environ.get("VERDIFY_DB_QUERY_MODE") == "direct" and shutil.which("psql"):
         cmd = ["psql", "-t", "-A", "-c", sql]
     elif os.environ.get("VERDIFY_DB_BACKEND") == "kube" or not shutil.which("docker"):

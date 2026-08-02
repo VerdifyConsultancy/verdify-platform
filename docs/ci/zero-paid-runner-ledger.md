@@ -51,7 +51,7 @@ stale branches (§7) and their replacement must be traceable.
 | Workflow | Old runner | Disposition | Replaced by |
 | --- | --- | --- | --- |
 | `ci.yml` (**CI** — principal workflow) | `ubuntu-latest` ×8 jobs | **RETIRE** | `scripts/ci-local.sh` via `verdify-platform-ci` Argo Workflow |
-| `container-publish.yml` | `ubuntu-latest` | **RETIRE** | `repo-build` Kaniko Workflows → zot origin (ADR-0021) |
+| `container-publish.yml` | `ubuntu-latest` | **RETIRE** | `repo-build` Kaniko archive + pinned Crane publisher → zot origin (ADR-0021) |
 | `reusable-container-build.yml` (`workflow_call`) | `ubuntu-latest` ×3 | **RETIRE** | same |
 | `cnpg-image.yml` | `ubuntu-latest` | **RETIRE** | same |
 | `k8s-manifests.yml` | `ubuntu-latest` | **RETIRE** | `kustomize build overlays/prod` step in `ci-local.sh` |
@@ -69,7 +69,7 @@ Assessed against the repo as it stands, not against a hypothetical migration.
 | Control | State | Evidence |
 | --- | --- | --- |
 | No production / Kubernetes / package-write secrets in validation | **PASS** | `actions/secrets` `total_count: 0`; `actions/variables` `total_count: 0` |
-| Build / deployment / release identities separate | **PASS** | Build pushes with `zot-origin-verdifyconsultancy-ci-dockerconfig` (in-cluster, never readable by this cell); workloads pull with the read-only `zot-origin-cluster-pull`; prod sync is a human-gated ArgoCD action |
+| Build / deployment / release identities separate | **PASS (rendered); E2E blocked elsewhere (2026-08-02)** | Live generation 33 supplies `zot-origin-verdifyconsultancy-ci-dockerconfig` to the direct `repo-build/build` template, which separates no-push Kaniko from pinned Crane; workloads pull with `zot-origin-cluster-pull`, and prod sync remains human-gated. The generic `repo-build` self-service profile is incompatible, but is not the bespoke Verdify caller |
 | No untrusted PR code on privileged runners | **PASS** | No repo-owned workflow executes on any runner |
 | Minimal explicit `permissions:` | **N/A today**, enforced on reintroduction | `tests/test_no_hosted_runner_workflows.py` |
 | Third-party Actions SHA-pinned | **N/A today**, enforced on reintroduction | same |
@@ -91,12 +91,12 @@ Verdify Platform / Argo PR CI   (app_id: null, strict: true)
 `allow_force_pushes: false`, `allow_deletions: false`. **0** environments and
 **0** rulesets exist, so there are no environment approvals to preserve.
 
-`app_id: null` means the context is posted through the commit-status API by the
-in-cluster Argo Events sensor authenticating as `jvallery`, **not** by a GitHub
-App with a pinned identity. Any actor holding write on this repo can post a
-green `Verdify Platform / Argo PR CI` status. This is a **pre-existing property
-of the 2026-07-11 design, not introduced here**, but it is the weakest link in
-the check chain and is called out in §7.
+`app_id: null` means branch protection does not bind the context to one App.
+The current in-cluster workflow posts it with `agent-fleet-repo-github-app`, but
+another actor holding repository write authority could post the same context.
+This unbound provenance is a **pre-existing property of the 2026-07-11 design,
+not introduced here**, and remains the weakest link in the check chain called
+out in §7.
 
 ## 5. Measurements — before / after
 
@@ -250,7 +250,7 @@ not a design claim.
 | **Intentional failure** | Injected an `ubuntu-latest` workflow with an unpinned third-party action and no `permissions:` — **all 4 guards fired**; clean again once removed |
 | **Exact head SHA** | Status attaches to the head SHA itself, not a synthetic merge commit |
 | **Observed runner labels** | `actions/runs?head_sha=…` → `total_count: 0` on **every** commit pushed. Zero GitHub-hosted compute; all execution in ns `agent-fleet-ci` |
-| **Runner pod cleanup** | `podGC: {strategy: OnPodSuccess}`, `ttlStrategy: 86400s` after completion / `172800s` after failure. No `verdify-platform-pr-ci` pods remain after any run |
+| **Runner pod cleanup** | `podGC: {strategy: OnPodSuccess}`, `ttlStrategy: 86400s` after completion / `172800s` after failure. Successful pods are removed; failed pods may remain until the 48-hour failed-Workflow TTL (as observed for the 2026-08-02 `bvhpw` proof) |
 | **Protected environment behavior** | N/A — **0** environments exist (§4), so there are no approvals to exercise |
 | **Superseded-job cancellation** | **FAILS — see below** |
 | **Timeout** | Observed in the wild: the 3606 s step-budget expiry on PR #553 terminated and reported non-green (no false green, no lost status) |

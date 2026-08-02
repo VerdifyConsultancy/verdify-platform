@@ -10,6 +10,7 @@ import pytest
 from conftest import db_query
 
 
+@pytest.mark.legacy_host
 class TestCronJobs:
     """All expected cron jobs must be configured."""
 
@@ -36,6 +37,7 @@ class TestCronJobs:
         assert "pg_dump" in crontab or "backup" in crontab.lower(), "Backup cron not found"
 
 
+@pytest.mark.legacy_host
 class TestReplanFlow:
     """Deviation detection → replan trigger → planner invocation chain."""
 
@@ -83,13 +85,14 @@ class TestPlannerConfig:
         assert ai.model_name("planner") == "gpt-5.6-sol"
         assert ai.config["models"]["planner"]["provider"] == "openai"
 
-    def test_anthropic_key_exists(self):
-        key_path = "/mnt/agents/shared/credentials/anthropic_api_key.txt"
-        assert os.path.isfile(key_path), "Anthropic API key file missing"
-        with open(key_path) as f:
-            key = f.read().strip()
-        assert key.startswith("sk-ant-"), "Anthropic key doesn't start with sk-ant-"
+    def test_hermes_runtime_references_secret_by_name(self):
+        manifest = Path("deploy/k8s/components/hermes-iris/hermes-iris.yaml").read_text()
+        assert "envFrom:" in manifest
+        assert "secretRef:" in manifest
+        assert "name: verdify-hermes" in manifest
+        assert "anthropic_api_key.txt" not in manifest
 
+    @pytest.mark.live_db
     def test_planner_lessons_not_excessive(self):
         """Active lessons should be <= 25 (query caps at 10, but DB may have more).
 

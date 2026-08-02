@@ -1161,6 +1161,7 @@ def test_publisher_image_and_ci_own_the_canonical_cache_scanner_and_shared_packa
     dockerfile = (REPO_ROOT / "scripts" / "Dockerfile.lab-publisher").read_text(encoding="utf-8")
     initializer = PREPARE_CACHE.read_text(encoding="utf-8")
     ci_gate = (REPO_ROOT / "scripts" / "ci-local.sh").read_text(encoding="utf-8")
+    makefile = (REPO_ROOT / "Makefile").read_text(encoding="utf-8")
 
     assert "install -m 0755 /app/scripts/check-public-output.py /usr/local/bin/check-public-output" in dockerfile
     assert "VERDIFY_PUBLIC_OUTPUT_GUARD=/usr/local/bin/check-public-output" in dockerfile
@@ -1177,15 +1178,6 @@ def test_publisher_image_and_ci_own_the_canonical_cache_scanner_and_shared_packa
     ruff_lines = [line for line in ci_gate.splitlines() if line.startswith("$RUFF ")]
     assert len(ruff_lines) == 2
     assert all("verdify_public/" in line for line in ruff_lines)
-    for test_file in (
-        "test_api_public_output_policy.py",
-        "test_generate_daily_plan.py",
-        "test_lab_publish_k3s_guard.py",
-        "test_publish_site_content_guard.py",
-        "test_public_output_generators.py",
-        "test_public_output_guard.py",
-        "test_public_output_policy.py",
-        "test_public_output_remediation.py",
-        "test_public_zone_renderer.py",
-    ):
-        assert f"tests/{test_file}" in ci_gate
+    assert 'make PYTHON="$PY" test' in ci_gate
+    portable_test = makefile[makefile.index("test: venv-check") : makefile.index("test-fast:")]
+    assert "$(PYTEST) tests/ verdify_schemas/tests/" in portable_test

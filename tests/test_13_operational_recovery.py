@@ -15,6 +15,8 @@ import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+import pytest
+
 from verdify_schemas.tunable_registry import (
     BAND_OWNED_REG,
     CROP_BAND_REG,
@@ -142,12 +144,16 @@ def test_daily_summary_refresh_skips_incomplete_compliance_rows():
     assert src.index(guard) < src.index('vpd = float(r["vpd_avg"])')
 
 
+@pytest.mark.xfail(
+    reason="#382: prod ingestor state is temporarily emptyDir until the reviewed PVC recovery is deployed",
+    strict=True,
+)
 def test_prod_ingestor_state_is_durable_pvc():
     pvc_src = Path("deploy/k8s/overlays/prod/ingestor-state-pvc.yaml").read_text()
     patch_src = Path("deploy/k8s/overlays/prod/ingestor-state-volume.yaml").read_text()
     assert "kind: PersistentVolumeClaim" in pvc_src
     assert "name: verdify-ingestor-state" in pvc_src
-    assert "storageClassName: synology-iscsi" in pvc_src
+    assert "storageClassName: longhorn-v1-workspace-rwo" in pvc_src
     assert "persistentVolumeClaim:" in patch_src
     assert "claimName: verdify-ingestor-state" in patch_src
     assert "emptyDir: {}" not in patch_src
@@ -266,6 +272,7 @@ def test_manual_overlay_source_classification_still_precedes_band_source():
     assert tasks._dispatch_source("mister_all_kpa", {}, {"mister_all_kpa"}) == "manual"
 
 
+@pytest.mark.live_db
 def test_live_active_plan_params_are_pushable():
     """The current planner surface should only contain params the dispatcher
     knows how to handle. This catches stale setpoint_plan rows that still have
@@ -306,6 +313,7 @@ def test_live_active_plan_params_are_pushable():
     assert sorted(active - known) == []
 
 
+@pytest.mark.live_db
 def test_live_active_plan_has_no_band_owned_rows():
     """Crop-band params are dispatcher-owned context, not planner waypoints.
 

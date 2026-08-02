@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import asyncio
+import hashlib
 import importlib.util
 import json
 import os
@@ -336,7 +337,7 @@ def _hermes_config_documents() -> tuple[dict, dict, str]:
 
 
 def test_hermes_profile_pins_gpt_5_6_sol_xhigh_at_the_runtime_key():
-    _manifest, embedded, _readiness_source = _hermes_config_documents()
+    manifest, embedded, _readiness_source = _hermes_config_documents()
     canonical = yaml.safe_load((REPO_ROOT / "hermes/iris/config.yaml").read_text())
 
     assert (
@@ -358,6 +359,16 @@ def test_hermes_profile_pins_gpt_5_6_sol_xhigh_at_the_runtime_key():
     normalized = json.loads(json.dumps(embedded))
     normalized["mcp_servers"]["verdify_greenhouse"]["url"] = canonical["mcp_servers"]["verdify_greenhouse"]["url"]
     assert normalized == canonical
+
+    deployment_docs = list(
+        yaml.safe_load_all((REPO_ROOT / "deploy/k8s/components/hermes-iris/hermes-iris.yaml").read_text())
+    )
+    deployment = next(doc for doc in deployment_docs if doc.get("kind") == "Deployment")
+    annotation = deployment["spec"]["template"]["metadata"]["annotations"]
+    assert (
+        annotation["verdify.ai/hermes-profile-sha256"]
+        == hashlib.sha256(manifest["data"]["config.yaml"].encode()).hexdigest()
+    )
 
 
 def _readiness_required_tools(source: str) -> set[str]:

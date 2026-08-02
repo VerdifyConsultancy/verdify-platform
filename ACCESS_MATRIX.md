@@ -10,10 +10,10 @@ does not include raw secret values.
 | Resource | Current access | Required access | Scope | Owner | Status |
 |---|---|---|---|---|---|
 | `VerdifyConsultancy/verdify-platform` checkout | Local read/write | Read/write repo files | Single repo | Verdify repo admins | Granted locally |
-| GitHub issues/PRs | Auth via local `gh` as `jvallery` | Repo-scoped issue/PR read/write | Single repo | Verdify repo admins | Available |
-| GitHub Project Board | Project scope available through local `gh`; project #5 includes lane epics and current Lab children | Maintain issue fields, native parents, and blockers | Project only | Verdify org/project admins | Available |
-| In-cluster CI/publishing | Argo Events/Workflows + Kaniko; exact revisions publish to Zot | Submit/observe reviewed repo-build workflows; no GitHub Actions publishing | `agent-fleet-ci` / repo scope | Agent Fleet + repo owners | Available through the fixed pipeline |
-| Zot application images | `registry.vallery.net` digest pins; in-cluster origin push | Resolve/pin immutable digests through CI | Verdify image namespace | Agent Fleet / registry owners | CI-owned |
+| GitHub issues/PRs | Generated exact-repository GitHub App auth; no ambient PAT | Repo-scoped issue/PR read/write | Single repo | Verdify repo admins | Available for this repository |
+| GitHub Project Board / cross-repo issue | Current App cannot inspect the board or write `jvallery/agents#3088` (404 under exact-repo scope) | Report platform findings through the standard cross-repo coordination authority | Project / one coordination issue | Verdify org/project admins | `BLOCKED_PLATFORM`; evidence mirrored on repo #561 |
+| In-cluster CI/publishing | Centrally rendered Argo Events/Workflows; PR checkout fails before tests because the standard CI App lacks the owner installation. Repo SA cannot create Workflows | Submit/observe reviewed exact-revision workflows; no GitHub Actions publishing | `agent-fleet-ci` / repo scope | Agent Fleet + repo owners | `BLOCKED_PLATFORM` |
+| Zot application images | Bespoke caller declares owner-scoped publisher; Kaniko archive + pinned Crane publication is unproved because checkout fails. Generic self-service is incompatible | Resolve/pin immutable digests through corrected CI | Verdify image namespace | Agent Fleet / registry owners | Declaration matches; E2E `BLOCKED_PLATFORM` |
 | GHCR holdovers | Read-only legacy production references only | Retire through the gated migration; never publish new images | Legacy Quartz runtime | Repo/Jason | Retirement pending #482 |
 | `verdify-prod` namespace | Repo manifests; no live write used in this docs pass | Read for diagnostics; writes Jason-gated through GitOps | Namespace | Jason + Platform/GitOps owners | Gated |
 | ArgoCD apps | App YAML in repo | Read app health; sync prod only with Jason approval | `verdify-prod-dark` | Platform/GitOps owners | Gated |
@@ -29,13 +29,13 @@ does not include raw secret values.
 
 ## GitHub Credential Notes
 
-- Local `gh` is authenticated as `jvallery` through the macOS keyring and has
-  repo/project/workflow scopes sufficient for issue, milestone, and Project
-  Board maintenance.
-- The 2026-06-16 replan created GitHub milestones G0-G3, issues #343-#352, and
-  Project #5 metadata without printing raw token values.
-- Do not replace the keyring token with alternate token files unless Jason
-  explicitly asks for credential maintenance.
+- This pod uses generated exact-repository GitHub App authentication. The App
+  can maintain this repository's issue/PR lane but cannot use the generic
+  `/user` endpoint or write the cross-repo estate issue.
+- The 2026-06-16 milestone/Project operations are historical evidence from a
+  broader laptop credential and do not describe current scope.
+- Do not add an alternate PAT, broaden the App, or invent a token file. Report
+  the missing cross-repo capability through the Agent Fleet contract.
 
 ## Secrets Policy
 

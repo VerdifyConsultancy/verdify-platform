@@ -4,11 +4,13 @@ Test 02: Database — Schema integrity, views, functions, data freshness.
 
 from pathlib import Path
 
+import pytest
 from conftest import db_query, db_query_rows
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
+@pytest.mark.live_db
 class TestSchemaIntegrity:
     """Core tables and views must exist with expected structure."""
 
@@ -305,6 +307,7 @@ class TestResourceAccountingContractSources:
         assert "water_today_available_for_scoring" in api
 
 
+@pytest.mark.live_db
 class TestDataFreshness:
     """Live data must be flowing — no stale readings."""
 
@@ -329,6 +332,7 @@ class TestDataFreshness:
         assert int(age) < 21600, f"Forecast data is {age}s old (>6h)"
 
 
+@pytest.mark.live_db
 class TestViewsCompute:
     """Key views must return data without errors."""
 

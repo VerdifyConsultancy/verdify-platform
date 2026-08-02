@@ -1138,6 +1138,9 @@ def test_delivery_helpers_use_k3s_runtime_and_post_ota_db_backend():
     query a nonexistent Docker DB during post-OTA acceptance.
     """
     makefile = Path("Makefile").read_text()
+    preflight = Path("scripts/firmware-deploy-preflight.sh").read_text()
+    rollback = Path("scripts/firmware-rollback.sh").read_text()
+    hermes_helper = Path("scripts/hermes-deploy-config.sh").read_text()
 
     firmware_deploy = makefile[makefile.index("firmware-deploy:") : makefile.index("firmware-rollback:")]
     sensor_health = makefile[makefile.index("sensor-health:") : makefile.index("greenhouse-quiet-on:")]
@@ -1146,27 +1149,128 @@ def test_delivery_helpers_use_k3s_runtime_and_post_ota_db_backend():
 
     assert "VERDIFY_DB_BACKEND=$(FIRMWARE_DB_BACKEND) bash scripts/wait-for-firmware-version.sh" in firmware_deploy
     assert "VERDIFY_DB_BACKEND=$(FIRMWARE_DB_BACKEND)" in sensor_health
+    assert "FIRMWARE_STATE_RESOURCE ?= deployment/verdify-ingestor" in makefile
+    assert "kubectl -n '$(FIRMWARE_STATE_NAMESPACE)' exec '$(FIRMWARE_STATE_RESOURCE)'" in firmware_deploy
+    assert "authoritative expected-version pin" in firmware_deploy
+    assert "FIRMWARE_EXPECTED_VERSION_FILE" in firmware_deploy
+    assert "archive-firmware-artifacts.sh" in firmware_deploy
+    assert "Rollback OTA password unavailable" in firmware_deploy
+    assert firmware_deploy.index("Rollback OTA password unavailable") < firmware_deploy.index("upload --device")
+    assert "make firmware-rollback" in firmware_deploy
+    assert "make firmware-rollback || {" in firmware_deploy
+    assert firmware_deploy.index("make firmware-rollback") < firmware_deploy.index('if [ -n "$$ROLLBACK_VERSION" ]')
+    assert "Rollback flash failed; rejected firmware may still be running" in firmware_deploy
+    assert "$(MAKE)" not in firmware_deploy
+    assert 'last_good_version_file="firmware/artifacts/last-good.version"' in preflight
+    assert "No nonempty last-good rollback version" in preflight
+    assert "<<'PYEOF'" in rollback
+    assert 'password=os.environ["OTA_PW"]' in rollback
+    assert 'password="$OTA_PW"' not in rollback
     assert "kubectl kustomize deploy/k8s/overlays/prod" in hermes
+    assert "hermes_profile_pins_gpt_5_6_sol_xhigh_at_the_runtime_key" in hermes
     assert "CONFIRM_PROD_RESTART" in hermes
     assert "deployment/verdify-hermes-iris" in hermes
+    assert "hermes-profile-sha256" in hermes
+    assert "configmap/verdify-hermes-iris-config" in hermes
+    assert "LIVE_CONFIG_HASH" in hermes
+    assert "shasum -a 256" in hermes
+    assert "kubectl -n verdify-prod wait" in hermes
+    assert "rollout status deployment/verdify-hermes-iris" in hermes
     assert "CONFIRM_PROD_RESTART" in ingestor
     assert "deployment/verdify-ingestor" in ingestor
     assert "systemctl" not in hermes
     assert "systemctl" not in ingestor
     assert "journalctl" not in ingestor
+    assert "sudo" not in hermes_helper
+    assert 'exec make -C "$ROOT" hermes-deploy-config' in hermes_helper
+    assert "gated prod Argo sync" in hermes_helper
+
+
+def test_firmware_deploy_dry_run_executes_no_recipe_shell():
+    """GNU Make must not treat the OTA acceptance block as recursive under -n."""
+    import subprocess
+
+    result = subprocess.run(
+        ["make", "-n", "SHELL=/bin/false", "firmware-deploy"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_portable_collection_does_not_probe_docker(tmp_path):
+    """Deselected DB tests must not touch Docker while pytest imports modules."""
+    import subprocess
+
+    called = tmp_path / "docker-called"
+    docker = tmp_path / "docker"
+    docker.write_text(f"#!/bin/sh\n: > '{called}'\nexit 91\n")
+    docker.chmod(0o755)
+    env = os.environ.copy()
+    env.pop("VERDIFY_TEST_DISPOSABLE_DB", None)
+    env.pop("POSTGRES_HOST", None)
+    env["PATH"] = f"{tmp_path}:{env['PATH']}"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "--collect-only",
+            "-q",
+            "verdify_schemas/tests/test_relationships.py",
+            "verdify_schemas/tests/test_drift_guards.py",
+            "verdify_schemas/tests/test_views.py",
+            "verdify_schemas/tests/test_climate_intent.py",
+            "verdify_schemas/tests/test_mcp_responses.py",
+            "-m",
+            "not live_db",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+        env=env,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert not called.exists(), "portable collection invoked docker"
 
 
 def test_make_test_separates_portable_and_current_live_suites():
     makefile = Path("Makefile").read_text()
+    ci_script = Path("scripts/ci-local.sh").read_text()
     portable = makefile[makefile.index("test: venv-check") : makefile.index("test-fast:")]
     live = makefile[makefile.index("test-live:") : makefile.index("climate-intent-replay-report:")]
 
     assert "PORTABLE_TEST_IGNORES" in portable
+    assert "PORTABLE_TEST_MARKERS" in portable
+    assert "VERDIFY_DB_BACKEND" not in portable
+    assert "--ignore=tests/test_live_readonly.py" in makefile
+    assert "not live_db" in makefile
+    assert "not writable_db" in makefile
+    assert "not operator_probe" in makefile
+    assert "--strict-markers" in Path("pyproject.toml").read_text()
+    assert 'make PYTHON="$PY" test' in ci_script
+    assert 'command -v "$PY"' in ci_script
+    assert "VERDIFY_TEST_DISPOSABLE_DB" in ci_script
+    assert "verdify_schemas/tests/test_drift_guards.py" in ci_script
+    assert "tests/test_g5_dualwrite_validation.py" not in ci_script
     assert "VERDIFY_TEST_LIVE=1" in live
     assert "tests/test_live_readonly.py" in live
     assert "test_01_infrastructure.py" in makefile
-    assert "test_07_cron_replan.py" in makefile
-    assert "test_15_lab_site_followup.py" in makefile
+    assert "test_04_planner.py" not in makefile
+    assert "test_07_cron_replan.py" not in makefile
+    assert "test_15_lab_site_followup.py" not in makefile
+
+
+def test_shared_db_query_requires_explicit_live_opt_in(monkeypatch):
+    from conftest import db_query
+
+    monkeypatch.delenv("VERDIFY_TEST_LIVE", raising=False)
+    with pytest.raises(RuntimeError, match="live DB query refused"):
+        db_query("SELECT 1")
 
 
 def test_lighting_automation_audit_checks_live_public_site():

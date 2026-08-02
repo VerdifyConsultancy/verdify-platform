@@ -27,10 +27,12 @@ product evolution. Track A wins whenever they conflict.
 - Live production namespace: `verdify-prod`.
 - Live production ArgoCD app: `verdify-prod-dark` (legacy name) pointing at
   `deploy/k8s/overlays/prod`, manual-sync behind the device-write gate.
-- CI/CD: `.github/workflows/ci.yml`, `container-publish.yml`,
-  `k8s-manifests.yml`, `prod-promote.yml`, `promote-diff-guard.yml`,
-  `cnpg-image.yml`, `lab-content-pipeline.yml`, and
-  `reusable-container-build.yml`.
+- CI/CD: repository gate `make ci` / `scripts/ci-local.sh`; centrally rendered
+  `verdify-platform-pr-ci` and `verdify-platform-ci` Argo WorkflowTemplates;
+  shared `repo-build` / `repo-validate`; and the reviewed desired-state plus
+  gated Argo procedure in `docs/runbooks/prod-promotion.md`. Repository GitHub
+  Actions workflows are retired and absent. Current platform mismatches and
+  exact evidence live in `docs/ci/fleet-cicd-convergence-2026-08-02.md`.
 - App secret contracts by name and key only: see `deploy/k8s/SECRETS.md`.
 - Service contracts and architecture pointers: `README.md`,
   `docs/SERVICE_MAP.md`, `docs/runbooks/laptop-operator.md`,
@@ -39,8 +41,9 @@ product evolution. Track A wins whenever they conflict.
   `docs/agents/`, and `docs/reviews/data-path-adversarial-review-2026-06-16.md`.
 - Dashboards authored in this repo: Grafana manifests/generated ConfigMaps and
   `docs/grafana-panel-catalog.md`.
-- Lab notebook and publishing code: `site/`, `scripts/lab-publish-k3s.sh`,
-  `lab-content-pipeline.yml`, and S3-backed lab publisher manifests.
+- Lab notebook and publishing code: `site/`, `scripts/lab-publish-k3s.sh`, and
+  S3-backed lab publisher manifests; the old `lab-content-pipeline.yml` is
+  retired.
 
 ## Current Lanes
 

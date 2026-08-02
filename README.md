@@ -69,7 +69,7 @@ make check
 # Individual commands
 make lint              # Ruff linter (0 errors)
 make format            # Auto-format Python
-make test              # 324 Python tests (~65s)
+make test              # Portable Python suite (no live, writable, or container probes)
 make firmware-check    # Compile ESP32 firmware
 make planner-dry       # Render planner prompt (no API call)
 make help              # List all targets
@@ -77,7 +77,9 @@ make help              # List all targets
 
 **Tooling:** ruff (lint + format), pytest, pre-commit hooks, and in-cluster
 Argo Workflows/Kaniko CI. GitHub Actions publishing was removed; application
-images publish to Zot and are promoted by reviewed digest pins.
+images are built as no-push Kaniko archives, published to Zot by pinned Crane,
+and must be promoted by reviewed digest pins. The exact current platform
+blockers are recorded in `docs/ci/fleet-cicd-convergence-2026-08-02.md`.
 **Config:** `pyproject.toml` is the single source of truth for deps, lint rules, and test config. `make setup` reads it directly; there is no checked-in duplicate requirements file for local tooling.
 
 ### Codex quickstart
@@ -92,7 +94,8 @@ the root lane docs (`AGENT_LANE.md`, `PROJECT_BOARD.md`, `EPICS.md`,
 `MILESTONES.md`, `SPRINTS.md`, `HISTORY.md`, `ARGOCD.md`,
 `ACCESS_MATRIX.md`, `COORDINATION_REQUESTS.md`),
 `docs/runbooks/laptop-operator.md`, `Makefile`, `pyproject.toml`,
-`.github/workflows/ci.yml`, and the Orbit dump manifest if available; then
+`scripts/ci-local.sh`, `docs/ci/fleet-cicd-convergence-2026-08-02.md`, and the
+Orbit dump manifest if available; then
 report branch/worktree state, access assumptions, current goal, safety gates,
 and verification plan before editing.
 

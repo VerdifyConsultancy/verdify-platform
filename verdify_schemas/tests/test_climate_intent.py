@@ -370,6 +370,10 @@ def _ci_postgres_reachable() -> bool:
     return bool(os.environ.get("POSTGRES_HOST"))
 
 
+def _disposable_db_probe_enabled() -> bool:
+    return os.environ.get("VERDIFY_TEST_DISPOSABLE_DB") == "1"
+
+
 def _stored_fog_block_reasons() -> set[str]:
     """Distinct fog_block_reason atoms persisted in the live climate_action_log.
 
@@ -403,9 +407,10 @@ def _stored_fog_block_reasons() -> set[str]:
 
 
 @pytest.mark.skipif(
-    not (_ci_postgres_reachable() or _docker_available()),
-    reason="no DB backend available (need POSTGRES_HOST env or local docker)",
+    not (_disposable_db_probe_enabled() and (_ci_postgres_reachable() or _docker_available())),
+    reason="set VERDIFY_TEST_DISPOSABLE_DB=1 with POSTGRES_HOST or local docker",
 )
+@pytest.mark.live_db
 def test_fog_block_reasons_cover_stored_db_values() -> None:
     """Every fog_block_reason atom the firmware has persisted must be a member
     of FOG_BLOCK_REASONS. Otherwise the strict ClimateActionDecision validator

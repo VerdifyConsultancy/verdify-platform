@@ -87,6 +87,7 @@ def _repo_entity_map():
     return entity_map
 
 
+@pytest.mark.live_db
 class TestSchema:
     """Migration 080 artifacts must exist."""
 
@@ -316,7 +317,13 @@ class TestHeapPressureObservability:
         assert "largest=%.1f kB" in body
         assert "id: heap_min_free" in sensors
         assert "id: heap_largest_free_block" in sensors
-        assert 'ESP_LOGD("heap", "Heap profile: free=%.1f kB min=%.1f kB largest=%.1f kB"' in controls
+        assert 'ESP_LOGW("heap_profile"' in controls
+        assert "gh_free_heap_kb()" in controls
+        assert "gh_min_free_heap_kb()" in controls
+        assert "gh_largest_free_heap_block_kb()" in controls
+        assert "gh_pre_ota_heap_floor_met" in controls
+        assert "interval: 900s" in controls
+        assert "loop_15m_overruns" in controls
 
     def test_firmware_logger_defaults_to_warn_for_heap_protection(self):
         body = (REPO_ROOT / "firmware/greenhouse.yaml").read_text()
@@ -485,6 +492,7 @@ class TestHeapPressureObservability:
 class TestBandFirstControlDiagnostics:
     """band-first controller timers and assist flags must be observable."""
 
+    @pytest.mark.live_db
     def test_migration_094_applied(self):
         cols = db_query(
             "SELECT string_agg(column_name, ',' ORDER BY column_name) "
@@ -516,6 +524,7 @@ class TestBandFirstControlDiagnostics:
             assert f'"{col}": "{col}"' in entity_map
             assert col in ingestor
 
+    @pytest.mark.live_db
     def test_effective_control_diagnostics_are_persisted(self):
         cols = db_query(
             "SELECT string_agg(column_name, ',' ORDER BY column_name) "
@@ -588,7 +597,9 @@ class TestContractDriftGuardrails:
         assert 'else "high"' not in tasks_source
         assert "diag.firmware_version" in tasks_source
         assert "/srv/verdify/state/expected-firmware-version" in config_source
-        assert "/srv/verdify/state/expected-firmware-version" in makefile
+        assert "FIRMWARE_STATE_DIR ?= /srv/verdify/state" in makefile
+        assert "FIRMWARE_EXPECTED_VERSION_FILE ?= $(FIRMWARE_STATE_DIR)/expected-firmware-version" in makefile
+        assert "'$(FIRMWARE_EXPECTED_VERSION_FILE)'" in makefile
         assert "pending-fw-version.txt" in makefile
 
     def test_sw_mister_closes_vent_routes_end_to_end(self):
@@ -612,22 +623,28 @@ class TestContractDriftGuardrails:
 
     def test_firmware_holds_vent_open_while_fan_dwell_clears(self):
         controls_source = (REPO_ROOT / "firmware" / "greenhouse" / "controls.yaml").read_text()
+        logic_source = (REPO_ROOT / "firmware" / "lib" / "greenhouse_logic.h").read_text()
         assert "fan_vent_interlock_active" in controls_source
         assert "fan_requires_vent" in controls_source
-        assert "mode != SAFETY_HEAT" in controls_source
         assert "id(fan1_rly)->state || id(fan2_rly)->state" in controls_source
         assert "willVent = true;" in controls_source
+        assert "inline bool fan_requires_open_vent" in logic_source
+        assert "mode != SENSOR_FAULT" in logic_source
+        assert "mode != SAFETY_HEAT" in logic_source
+        assert "!vent_bypass_active" in logic_source
         vent_apply = "set_relay(R[5], willVent, fan_requires_vent, sensor_fault_relay_lock)"
-        fan_apply = "set_relay(R[2], willFan1, false, sensor_fault_relay_lock)"
+        fan_apply = "set_relay(R[2], willFan1, manual_fan_force, sensor_fault_relay_lock)"
         assert vent_apply in controls_source
         assert fan_apply in controls_source
         assert controls_source.index(vent_apply) < controls_source.index(fan_apply)
 
-    def test_firmware_suppresses_non_safety_heat_while_vent_open(self):
+    def test_firmware_suppresses_non_exempt_heat_while_air_exchange_is_open(self):
         controls_source = (REPO_ROOT / "firmware" / "greenhouse" / "controls.yaml").read_text()
         assert "heat_vent_interlock_active" in controls_source
-        assert "mode != SAFETY_HEAT" in controls_source
+        assert "const bool heat_air_exchange_exempt = (mode == SAFETY_HEAT) || (mode == DEHUM_VENT);" in controls_source
+        assert "!heat_air_exchange_exempt" in controls_source
         assert "(vent_is_open || willVent)" in controls_source
+        assert "heat_fan_interlock_active" in controls_source
         assert "willHeat1 = false;" in controls_source
         assert "willHeat2 = false;" in controls_source
 
@@ -641,10 +658,9 @@ class TestContractDriftGuardrails:
             "const bool mister_vent_ok = open_vent_mister_assist || !id(mister_closes_vent) || !vent_is_open;"
             in controls_source
         )
-        assert (
-            "const bool climate_wet_assist_demand = (mode == SEALED_MIST) || ctl_state.vent_mist_assist_active;"
-            in controls_source
-        )
+        assert "(ctl_state.mist_stage == MIST_S1) || (ctl_state.mist_stage == MIST_S2)" in controls_source
+        assert "((mode == SEALED_MIST) && fsm_escalated_to_misters)" in controls_source
+        assert "|| ctl_state.vent_mist_assist_active;" in controls_source
         assert "bool humidity_demand = climate_wet_assist_demand && mister_vent_ok;" in controls_source
 
     def test_post_boot_readback_repair_covers_static_and_planner_paths(self):
@@ -865,12 +881,14 @@ class TestSprint18Wiring:
         assert "STDDEV(delta)" in body, "PL-5 must compute STDDEV over forecast_deviation_log"
 
     # ── FW-2: oscillation views ──
+    @pytest.mark.live_db
     def test_fw2_view_v_daily_oscillation(self):
         from conftest import db_query
 
         val = db_query("SELECT to_regclass('v_daily_oscillation')::text")
         assert val == "v_daily_oscillation", "FW-2: v_daily_oscillation view missing"
 
+    @pytest.mark.live_db
     def test_fw2_view_summary(self):
         from conftest import db_query
 
@@ -901,6 +919,7 @@ class TestSprint18Wiring:
             assert tasks._PHYSICS_INVARIANTS[param] == (spec.fw_clamp_lo, spec.fw_clamp_hi)
 
     # ── OBS-3: relief-cycle state to DB ──
+    @pytest.mark.live_db
     def test_obs3_migration_082_applied(self):
         from conftest import db_query
 
@@ -953,6 +972,7 @@ class TestProbeStalenessWiring:
             return _tasks_source()
         return path.read_text()
 
+    @pytest.mark.live_db
     def test_migration_081_applied(self):
         from conftest import db_query
 
@@ -1075,6 +1095,7 @@ class TestOverrideEventsWiring:
 class TestSetpointConfirmation:
     """FW-4 + FB-1 (Sprint 20): setpoint_changes.confirmed_at wiring."""
 
+    @pytest.mark.live_db
     def test_migration_084_applied(self):
         val = db_query(
             "SELECT column_name FROM information_schema.columns "
@@ -1082,6 +1103,7 @@ class TestSetpointConfirmation:
         )
         assert val == "confirmed_at", "migration 084 did not apply — setpoint_changes.confirmed_at missing"
 
+    @pytest.mark.live_db
     def test_plan_journal_structured_column(self):
         val = db_query(
             "SELECT column_name FROM information_schema.columns "
@@ -1091,6 +1113,7 @@ class TestSetpointConfirmation:
             "migration 084 did not apply — plan_journal.hypothesis_structured missing"
         )
 
+    @pytest.mark.live_db
     def test_confirmations_happening_in_real_time(self):
         """After ingestor restart + a full cfg_snapshot cycle (~60s), recent
         setpoint_changes rows for readbackable params should be confirmed.
@@ -1202,6 +1225,7 @@ class TestSetpointConfirmation:
         assert "newer.ts <= latest_readback.ts" in migration
 
 
+@pytest.mark.external_vault
 class TestForecastPageGeneration:
     """Phase 7 (Sprint 20): forecast website page exists + non-empty."""
 
@@ -1299,6 +1323,7 @@ class TestEntityMapCoverage:
         assert not dupes, f"Duplicate param names in SETPOINT_MAP (silent-overwrite risk): {dupes}"
 
 
+@pytest.mark.writable_db
 class TestPlannerToDispatcherE2E:
     """TE-2 (Sprint 19): seed a setpoint_plan row → run dispatcher → assert a
     setpoint_changes row lands with source='plan' and the correct value.
@@ -1523,6 +1548,7 @@ class TestSetpointsFailLoud:
         )
         assert "status_code=503" in body, "/setpoints must raise HTTP 503 when band_row is NULL (Tier 1 #3)"
 
+    @pytest.mark.operator_probe
     def test_setpoints_still_200_under_normal_conditions(self):
         """Under normal operation the endpoint must not regress to 503."""
         target = os.environ.get("VERDIFY_API_SETPOINTS_URL", "https://127.0.0.1/setpoints")

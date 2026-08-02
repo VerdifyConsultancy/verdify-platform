@@ -101,7 +101,7 @@ spec:
     - from:
         # hermes-iris (#213): the planner gateway is an MCP CLIENT — its Iris
         # profile reaches the MCP tool surface at verdify-mcp:8000/mcp
-        # (HERMES_MCP_URL / config mcp_servers). It was missing from this allow,
+        # (repo-owned config mcp_servers). It was missing from this allow,
         # so every hermes->MCP connect was refused ([Errno 111]) the moment the
         # LLM-provider fix let a run reach tool-call time. hermes-iris is a
         # prod-only Component (no such pod in dev/staging), so adding it to this

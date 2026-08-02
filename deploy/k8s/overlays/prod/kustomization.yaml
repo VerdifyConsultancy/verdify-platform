@@ -208,14 +208,15 @@ images:
   # (the `branch-live-platform-main` build of planner_graph/). The planner image is
   # env-agnostic (it carries its own planner_graph package; per-env DB/secrets come
   # from each overlay's verdify-config + sealed secret). prod is human-gated and
-  # its digest is advanced only by a reviewed prod-promote PR.
+  # its digest must advance only through a reviewed digest-only desired-state PR.
   - name: ghcr.io/verdifyconsultancy/verdify-planner
     newName: registry.vallery.net/verdifyconsultancy/verdify-planner
     digest: sha256:735cb005d436e067b013d606e037aa1a1b8cbee6a6af96187bc316e29cd68d73
   # verdify-setpoint-server (#118): grow-light writer + setpoint-diagnostics image
   # built from scripts/Dockerfile.setpoint-server. setpoint-server is a PROD-ONLY
-  # device-affecting Component, so it is excluded from prod-promote and remains
-  # hand-pinned. A rebuild alone does not advance it.
+  # device-affecting Component. The live central core matrix builds it, but the
+  # required policy still needs a reviewed digest-only pin before a gated sync;
+  # a rebuild alone must not advance the live writer.
   #
   # #447 HAND-PIN ADVANCE (2026-07-13): f5ac817 is the zot-origin build carrying
   # commit 7e0d8c0 — /setpoints queries through the asyncpg pool (_db_text_safe);
@@ -242,7 +243,7 @@ images:
   # verdify-site-legacy's publish-lab-image.yml workflow (package repository.name
   # == verdify-site-legacy) and verified pullable 2026-06-04 — REPLACES the prior
   # all-zeros placeholder pin whose package 404'd (verdify-site was an orphan GHCR
-  # repo). lab is externally built and hand-pinned here; prod-promote excludes it.
+  # repo). lab is externally built and hand-pinned here; the core pin path excludes it.
   # A content/runtime rebuild in verdify-site-legacy advances this digest.
   #
   # 2026-06-07 ONE-OFF VAULT RESTORE (laptop-root): the prior 92ab47.. image was

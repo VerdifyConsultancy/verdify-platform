@@ -2,7 +2,7 @@
 
 This file is skipped during portable branch validation. ``make test-live`` is
 the only supported caller; it enables these bounded public-route and pod-local
-SELECT probes without touching the device/setpoints path.
+transaction-read-only SELECT probes without touching the device/setpoints path.
 """
 
 from __future__ import annotations
@@ -29,12 +29,14 @@ pytestmark = pytest.mark.skipif(
         ("https://lab-stage.verdify.ai/", 200),
     ],
 )
+@pytest.mark.live_http
 def test_public_route_and_tls(url: str, expected_status: int):
     response = httpx.get(url, timeout=15, follow_redirects=False)
     assert response.status_code == expected_status
 
 
-def test_prod_database_accepts_read_only_query():
+@pytest.mark.live_db
+def test_prod_database_accepts_transaction_read_only_query():
     result = subprocess.run(
         [
             "kubectl",
@@ -55,11 +57,11 @@ def test_prod_database_accepts_read_only_query():
             "-v",
             "ON_ERROR_STOP=1",
             "-c",
-            "SELECT current_database()",
+            "BEGIN READ ONLY; SELECT current_database(), current_setting('transaction_read_only'); ROLLBACK;",
         ],
         capture_output=True,
         text=True,
         timeout=20,
         check=True,
     )
-    assert result.stdout.strip() == "verdify"
+    assert "verdify|on" in result.stdout.splitlines()

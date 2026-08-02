@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 from datetime import date
 
@@ -195,10 +196,18 @@ def _has_docker() -> bool:
     return r.returncode == 0
 
 
-pytestmark_live = pytest.mark.skipif(not _has_docker(), reason="docker not available")
+def _disposable_db_probe_enabled() -> bool:
+    return os.environ.get("VERDIFY_TEST_DISPOSABLE_DB") == "1"
+
+
+pytestmark_live = pytest.mark.skipif(
+    not (_disposable_db_probe_enabled() and _has_docker()),
+    reason="set VERDIFY_TEST_DISPOSABLE_DB=1 with local docker",
+)
 
 
 @pytestmark_live
+@pytest.mark.live_db
 class TestLiveProjection:
     def test_planner_performance_live_rows(self):
         rows = _psql_json("SELECT * FROM v_planner_performance ORDER BY date DESC LIMIT 3")

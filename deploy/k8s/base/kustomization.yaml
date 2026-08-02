@@ -17,8 +17,8 @@ kind: Kustomization
 # overlay layers a config.kubernetes.io/local-config placeholder so the tree
 # renders + lints without the secret backend.
 #
-# The `labels:` transformer below is why kustomize v5.4.3 is required (the
-# k8s-manifests.yml CI gate pins that version).
+# The `labels:` transformer below is why kustomize v5.4.3 is required; the
+# in-cluster `make ci` manifest gate validates the rendered overlays.
 
 labels:
   - pairs:
@@ -42,8 +42,8 @@ resources:
 # ghcr.io/verdifyconsultancy/verdify-{api,mcp,ingestor,migrate} (NEVER
 # jvallery/*). The base leaves these UNPINNED (image name only, no tag); the
 # overlays' `images:` transformer pins each to an immutable @sha256 digest.
-# prod-promote updates overlays/prod by reviewed digest-only PR. No mutable
-# :latest/:staging tag is ever rendered.
+# The required promotion policy updates overlays/prod by reviewed digest-only
+# PR. No mutable :latest/:staging tag is ever rendered.
 images:
   - name: ghcr.io/verdifyconsultancy/verdify-api
   - name: ghcr.io/verdifyconsultancy/verdify-mcp

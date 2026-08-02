@@ -1,13 +1,19 @@
-# Verdify k3s secret contract (per-env)
+# Verdify k3s secret contract (current prod)
 
-Owner: **Iris** (the CONTRACT — key names, per-env matrix, the two invariants, the
-sealed-artifact shape). Delivery MECHANISM is **Root** (`needs:root`): the SOPS+age
-sealing, the registry secret-meta, and the out-of-band apply step. Tracked under
-the secrets-out-of-.env umbrella **#30**; the concrete SOPS structure + staging
-seal + named prod inventory deliverable is **#66**.
+The repository's single owning agent maintains the key-name contract and
+manifests. Secret delivery remains an out-of-band, operator-controlled Fleet
+SOPS+age responsibility. Historical Iris/Root ownership language is retired.
 
-This file is the single source of truth for **which Secret carries which key in
-which env, and how the manifests reference it**. It contains **NO real secret
+> **Current scope (2026-08-02): prod only.** `verdify-dev` and
+> `verdify-staging` were deleted on 2026-06-16. Any dev/staging column or event
+> below is historical evidence, not a live target or permission grant. The only
+> current runtime namespace is `verdify-prod`; `prod-dark` is a legacy Argo app
+> name/overlay variant for that same namespace. Current CI identity and checkout
+> blockers are recorded in
+> [`docs/ci/fleet-cicd-convergence-2026-08-02.md`](../../docs/ci/fleet-cicd-convergence-2026-08-02.md).
+
+This file is the current source of truth for **which Secret carries which key in
+prod, and how the manifests reference it**. It contains **NO real secret
 material** — keys/refs only. The deploy manifests reference every Secret BY NAME;
 the real value arrives out-of-band from the fleet SOPS+age backend
 (`jvallery/agent-fleet-control`) BEFORE the ArgoCD app reconciles. `kustomize`
@@ -19,8 +25,8 @@ cannot decrypt SOPS, so the in-repo `*.placeholder.yaml` files exist ONLY so
 k3s/ArgoCD migration design **§2.4** re-scopes secrets from GCP Secret Manager to
 **in-cluster secrets** (SOPS+age source-of-truth, a SOPS→reconciler / sealed-secrets
 controller in-cluster). Do NOT invent a second secrets system — reuse the fleet
-stack Root deploys for the other agents. Until that controller is confirmed live,
-the interim is a one-time out-of-band apply per the seal list; the GitOps
+stack. Until that controller is confirmed live, the interim is an authorized
+out-of-band apply per the seal list; the GitOps
 secret-delivery step is the fast-follow.
 
 ## The two invariants (CONTRACT, enforced by review + `kustomize build`)
@@ -41,17 +47,16 @@ secret-delivery step is the fast-follow.
 
    A mismatch does NOT error — the sealed Secret silently never lands in the
    workload's namespace and the pod starts without its credentials (or CrashLoops on
-   a missing key). The pinned namespaces are `verdify-dev`, `verdify-staging`,
-   `verdify-prod`.
+   a missing key). The only current pinned namespace is `verdify-prod`.
 
 ## Never
 
 - **Never** commit a real secret value, key, token, or password to this repo.
 - **Never** bake credentials into a container image (the manifests inject every
   credential via `secretKeyRef` / `secretRef` / a mounted Secret volume at runtime).
-- **Never** set `DEVICE_WRITE=1` / an ESP32-egress allow in dev or staging — those
-  envs are device-dark. The device-write path + `ESP32_API_KEY` use live ONLY in
-  `verdify-prod`.
+- **Never** recreate a dev/staging device writer or ESP32-egress path. Those
+  environments are deleted. The device-write path + `ESP32_API_KEY` are live
+  only in `verdify-prod`.
 - **Never** rotate/seal `ESP32_API_KEY` without explicit Jason confirmation of the
   canonical value; it is the ESP32 Noise PSK and must never trigger a re-flash
   (handoff §6). The live `.env` and the esphome `secrets.yaml` have DRIFTED (two
@@ -61,7 +66,7 @@ secret-delivery step is the fast-follow.
 
 Service → Secret → key wiring as authored in `deploy/k8s/{base,components}`:
 
-| Secret | Key | Consumed by (ref type) | dev | staging | prod |
+| Secret | Key | Consumed by (ref type) | dev (deleted) | staging (deleted) | prod |
 |---|---|---|---|---|---|
 | `verdify-app-secrets` | `POSTGRES_PASSWORD` | db / api / mcp / ingestor / migrate / planner / setpoint-server (`secretKeyRef`) | ✓ | ✓ | ✓ |
 | `verdify-app-secrets` | `VERDIFY_WRITE_API_KEY` | api (`secretKeyRef`; write guard `api/main.py`) | ✓ | ✓ | ✓ |
@@ -70,8 +75,11 @@ Service → Secret → key wiring as authored in `deploy/k8s/{base,components}`:
 | `verdify-app-secrets` | `ESP32_API_KEY` | ingestor (`secretKeyRef`); **device-affecting** | ref-only¹ | ref-only¹ | ✓ |
 | `verdify-app-secrets` | `OPENAI_API_KEY` | planner (`secretKeyRef`, `optional: true`) | ✓ | — | ✓ |
 | `verdify-ha-token` | `ha_token.txt` | setpoint-server (volume mount); **device-affecting** | — | — | ✓ |
-| `verdify-hermes` | `OPENAI_API_KEY`, `HERMES_MCP_URL`² | hermes-iris (`envFrom.secretRef`) | — | — | ✓ |
-| `verdify-hermes-slack` | slack channel config | hermes-iris (optional volume mount; **non-secret** channel cfg) | — | — | opt |
+| `verdify-hermes` | `OPENAI_API_KEY` | hermes-iris LLM provider (`envFrom.secretRef`) | — | — | ✓ |
+| `verdify-hermes` | `VERDIFY_MCP_TOKEN` | hermes-iris MCP bearer header (`envFrom.secretRef`) | — | — | ✓ |
+| `verdify-hermes` | `API_SERVER_KEY` | hermes-iris gateway API auth (`envFrom.secretRef`) | — | — | ✓ |
+| `verdify-hermes` | `HERMES_IRIS_API_KEY` | ingestor caller auth (`secretKeyRef`); must be coordinated out-of-band with the gateway's `API_SERVER_KEY` | — | — | ✓ |
+| `verdify-hermes-slack` | slack channel config | hermes-iris (optional Secret-backed volume mount; never inspect/print) | — | — | opt |
 | `verdify-lab-publisher-s3` | `LAB_S3_BUCKET`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, optional `LAB_S3_ENDPOINT_URL` | lab-publisher (`envFrom.secretRef`) | ✓ | — | ✓ |
 | `verdify-grafana-secrets` | `GRAFANA_ADMIN_PASSWORD` | grafana (`secretKeyRef`, required; pod fails closed when absent) | — | — | ✓ |
 | `verdify-grafana-secrets` | `GRAFANA_RENDERER_TOKEN` | grafana + image-renderer (`secretKeyRef`, required shared token; pod fails closed when absent) | — | — | ✓ |
@@ -79,12 +87,16 @@ Service → Secret → key wiring as authored in `deploy/k8s/{base,components}`:
 | `verdify-agent-secrets` | `AGENT_RO_DSN` | dev/coding agent (read-only `agent_ro`/`pg_read_all_data`, migration 184; **read-only, no device path**) | — | — | ✓ |
 | `verdify-firmware-ota` | `ota_password` | `make firmware-deploy` ESPHome OTA upload + `firmware-rollback.sh`; **device-affecting** (flash gate) | — | — | ✓ |
 
-¹ dev/staging are device-dark: the ingestor runs `replicas: 0` and egress to the
-device VLAN is denied. The key may be present in the sealed secret for shape parity
-but is never exercised — those envs never connect to the live ESP32.
+¹ Historical only: dev/staging were device-dark before deletion. They no longer
+have an ingestor, Secret delivery, or device route.
 
-² `HERMES_MCP_URL` is the migration doc **R7** gate: it must point at
-`verdify-mcp.verdify-prod.svc:8000` and is repointed at SEAL time, never committed.
+The migration-doc R7 MCP endpoint is now repo-owned at
+`mcp_servers.verdify_greenhouse.url` in the Hermes ConfigMap profile. A legacy
+`HERMES_MCP_URL` key in an already-delivered Secret is unused by the runtime and
+is not part of the current sealed-key contract. The gateway/caller pair uses
+the differently named `API_SERVER_KEY` and `HERMES_IRIS_API_KEY`; their values
+must be coordinated by the authorized secret-delivery workflow without being
+placed in Git or inspected during ordinary validation.
 
 `DB_PASS` / `DB_PASSWORD` / `DB_DSN` / `VERDIFY_DB_DSN` are derived in-manifest from
 `POSTGRES_PASSWORD` + the non-secret connection fields in the `verdify-config`
@@ -92,22 +104,22 @@ ConfigMap (`$(VAR)` interpolation); they are NOT separate secret keys.
 
 `verdify-lab-publisher-s3` is non-device but required before enabling the
 `verdify-lab-publisher` CronJob. The durable prod prefixes are
-`s3://verdify-platform/lab/content`, `.../public`, and `.../state`; dev uses the
-same bucket under `lab-dev/*` so the auto-syncing dev publisher cannot overwrite
-the public prod tree. For the current S3-compatible endpoint, set
+`s3://verdify-platform/lab/content`, `.../public`, and `.../state`. The old
+`lab-dev/*` prefix is unused because dev was deleted. For the current
+S3-compatible endpoint, set
 `LAB_S3_BUCKET=verdify-platform`, `AWS_DEFAULT_REGION=garage`, and
 `LAB_S3_ENDPOINT_URL=https://s3-hdd.vallery.net` with the Verdify-scoped key.
 
 `verdify-grafana-secrets` is a prod-only, out-of-band prerequisite for the
-Grafana Deployment. Root must seal and deliver the two named keys before an
-ArgoCD sync; there is deliberately no in-repo placeholder, default password, or
+Grafana Deployment. The authorized secret-delivery workflow must supply the two
+named keys before an ArgoCD sync; there is deliberately no in-repo placeholder, default password, or
 default renderer token. Before any sync, verify only the Secret name and both
 required key names (never their values), then obtain Jason's explicit approval
 for the manual `verdify-prod-dark` sync. A missing Secret or key leaves new pods
 in `CreateContainerConfigError`; Kubernetes still accepts the Deployment object,
 but its rollout cannot complete.
 
-## Sealed-artifact shape (Root delivers; Iris specifies)
+## Sealed-artifact shape
 
 Each Secret above maps to a fleet sealed artifact:
 
@@ -119,11 +131,10 @@ agent-fleet-control/
 
 The canonical sealed source for `verdify-app-secrets` is
 `agent-fleet-control/secrets/encrypted/verdify-app-secrets.enc.yaml`, sealed to the
-fleet age key and applied by the GitOps secret-delivery step BEFORE the app
-reconciles. As of 2026-05-31 it is ALREADY present in `verdify-staging` and decrypts
-byte-identical (`POSTGRES_PASSWORD`, `VERDIFY_WRITE_API_KEY`, `ESP32_API_KEY`,
-`MQTT_USER/PASS`) — re-applying is a no-op (avoid DB-auth drift). The dev + prod
-sealed artifacts land with their envs at **M3** (`needs:root`).
+fleet age key and applied by the authorized secret-delivery step BEFORE the app
+reconciles. The 2026-05-31 staging delivery record is historical; staging and dev
+are deleted. Never infer current prod contents from that record or inspect values
+to compare them.
 
 For a REAL apply, drop the `- *.placeholder.yaml` lines from the overlay's
 `kustomization.yaml`; the sealed Secret is already in-cluster from the delivery step.
@@ -132,19 +143,24 @@ For a REAL apply, drop the `- *.placeholder.yaml` lines from the overlay's
 
 | File | Secret | Envs |
 |---|---|---|
-| `overlays/dev/secrets.placeholder.yaml` | `verdify-app-secrets` | dev |
-| `overlays/staging/secrets.placeholder.yaml` | `verdify-app-secrets` | staging |
 | `overlays/prod/secrets.placeholder.yaml` | `verdify-app-secrets` | prod |
 | `overlays/prod/ha-token.placeholder.yaml` | `verdify-ha-token` | prod |
 | `overlays/prod/hermes-secret.placeholder.yaml` | `verdify-hermes` | prod |
+| `overlays/prod-dark/secrets.placeholder.yaml` | `verdify-app-secrets` | prod (legacy app variant) |
+| `overlays/prod-dark/ha-token.placeholder.yaml` | `verdify-ha-token` | prod (legacy app variant) |
+| `overlays/prod-dark/hermes-secret.placeholder.yaml` | `verdify-hermes` | prod (legacy app variant) |
 
-`verdify-hermes-slack` (optional, non-secret channel config) and
-`ghcr-jvallery-readonly` (image-pull, delivered out-of-band by Root) have no
+`verdify-hermes-slack` (optional Secret-backed channel config) and
+`ghcr-jvallery-readonly` (image-pull, delivered out-of-band) have no
 placeholder — the workloads reference them as `optional` / `imagePullSecrets`, so
 `kustomize build` is complete without an in-repo stand-in. The required
 `verdify-grafana-secrets` also has no placeholder: local rendering validates the
-reference, while real pod startup intentionally fails closed until Root delivers
-the sealed prod Secret.
+reference, while real pod startup intentionally fails closed until the
+authorized secret-delivery workflow supplies the sealed prod Secret.
+
+Every Kubernetes Secret object is secret-bearing in full even when a consumer
+expects only channel configuration. Never inspect, print, or summarize any
+`verdify-hermes-slack` field, value, or annotation.
 
 ## History
 
@@ -155,7 +171,15 @@ the sealed prod Secret.
   placeholder; codified the two invariants above. Every overlay now renders ZERO
   `kind: Secret`.
 
-## Access / least-privilege matrix (#305, 2026-06-20)
+## Historical access / least-privilege matrix (#305, 2026-06-20; superseded)
+
+This matrix records the retired GitHub Actions/laptop operating model and is
+not current access authority. Repository Actions workflows and `prod-promote`
+no longer exist; the current bounded Agent Fleet identities, credential names,
+checkout blocker, Zot bindings, and namespace-scoped Kubernetes access are
+inventoried in
+[`docs/ci/fleet-cicd-convergence-2026-08-02.md`](../../docs/ci/fleet-cicd-convergence-2026-08-02.md).
+Do not infer present permissions from the rows below.
 
 Review of every standing token/credential that an agent or CI can use, vs what it
 needs. **Hard invariant: no agent/CI principal may have device-write reach or
@@ -172,4 +196,10 @@ cluster-admin.** The device writer (ingestor `replicas:1` + the gated
 | Agent kubeconfig (context `vallery`) | full **cluster-admin** | namespaced read + `exec` into `verdify-db-0` | only if device-egress enabled (gated) | **yes** | ⚠️ **the real admin surface** — prefer the `agent_ro` DSN (#302) + a narrow RBAC `Role` over the admin kubeconfig |
 | `verdify-firmware-ota` / `ota_password` | flash the ESP32 via `make firmware-deploy` | operator OTA | **yes (flash)** | no | 🔒 device-affecting — stays Jason-gated; not held by CI |
 
-**CI is already least-privilege** (built-in `GITHUB_TOKEN` + scoped per-job `permissions:`; no kube credential; the gated `argocd app sync` is run by a human off-CI). The two open hardening recommendations (own follow-ups): **(a)** repoint the Grafana datasource off the `verdify` superuser onto `agent_ro`/`pg_read_all_data`; **(b)** issue agents the `agent_ro` DSN + a narrow namespaced RBAC `Role` (`get/list` + `pods/exec` scoped to `verdify-db-0`) instead of the cluster-admin kubeconfig. **(c)** confirm `LAB_REPO_TOKEN` is a fine-grained single-repo PAT (Jason, org settings).
+The historical conclusion was that GitHub Actions CI was least-privilege. It is
+superseded and must not be used to assess the current Argo Workflow path. The
+remaining recommendations from that snapshot were: **(a)** repoint the Grafana
+datasource off the `verdify` superuser onto `agent_ro`/`pg_read_all_data`;
+**(b)** replace broad legacy agent kubeconfigs with scoped access; and **(c)**
+confirm `LAB_REPO_TOKEN` is fine-grained and single-repository. Current access
+changes belong in the fleet registry, never a hand-applied Role.
