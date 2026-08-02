@@ -319,6 +319,11 @@ release/control/k3s/laptop/promotion/Slack/web operator docs; and this report.
 Fidelity tests lock the portable and delivery helper invariants. No target that
 restarts a workload, writes the DB, syncs Argo, or contacts the device was run.
 
+**Restart: none** — the files changed under `verdify_schemas/` are test-only
+marker/collection contract updates. No runtime schema, `ingestor/entity_map.py`,
+or `mcp/server.py` consumer changed, so bouncing `verdify-mcp` or
+`verdify-ingestor` would create unnecessary production churn.
+
 ## Credential reference inventory (names only)
 
 CI and publishing references:
