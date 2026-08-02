@@ -55,8 +55,8 @@ Actual validation and publishing run in namespace `agent-fleet-ci`:
 | WorkflowTemplate | Caller / trigger | Work performed | Runner identity | Deadline / cleanup | Artifact and cache behavior | Credential references (names only) |
 | --- | --- | --- | --- | --- | --- | --- |
 | `verdify-platform-pr-ci` generation 13 | The centrally rendered PR sensor filters this repository, base `main`, and actions `opened`, `reopened`, `synchronize`; exact live Sensor reads are RBAC-forbidden | Reports pending, performs trusted precheck, calls `verdify-platform-ci/validate` for the exact head, then reports the terminal required context | Kubernetes SA `argo-ci-workflow`; no node selector; observed failed pod on `vm-k3s-node4`; no ARC runner | 3,600 s; `podGC: OnPodSuccess`; TTL 24 h success / 48 h failure; no supersession/cancel synchronization | No GitHub artifact/cache and no Argo artifact repository | `agent-fleet-ci-github-app` for precheck/read; `agent-fleet-repo-github-app` for status |
-| `verdify-platform-ci` generation 30 | The centrally rendered push sensor filters non-deleted pushes to `refs/heads/main`; PR CI also calls its `validate` template | Classifies push, runs `make ci`, builds eleven images, probes Lab images, pins prod images, and opens a Lab-stage pin PR | Kubernetes SA `argo-ci-workflow`; validate has no node selector; build tasks call `repo-build` | 7,200 s; `podGC: OnPodSuccess`; TTL 24 h success / 48 h failure; no top-level synchronization | Workflow-local validation `emptyDir`; build outputs are parameters; no external artifacts/cache | `agent-fleet-ci-github-app` for classify/read/validate; `agent-fleet-repo-github-app` for pin writes; `zot-origin-verdifyconsultancy-ci-dockerconfig` for publish |
-| `repo-build` generation 16 | Called eleven times by `verdify-platform-ci`; intended self-service caller is `agent-ci-build` | Exact-revision checkout, optional test, Kaniko build and Zot push | Kubernetes SA `argo-ci-workflow`; build selector `agentfleet.vallery.net/runner-eligible=true` | 3,600 s; `podGC: OnPodCompletion`; TTL 24 h success / 48 h failure | Workflow-scoped 20 Gi rebuildable Longhorn RWO workdir; no Argo artifact repository; Kaniko compressed cache disabled; emits digest, canonical image ref, short SHA, source revision and release time | `agent-fleet-ci-github-app`; caller-supplied push Secret, correctly `zot-origin-verdifyconsultancy-ci-dockerconfig` here |
+| `verdify-platform-ci` generation 31 | The centrally rendered push sensor filters non-deleted pushes to `refs/heads/main`; PR CI also calls its `validate` template | Classifies push, runs `make ci`, builds eleven images, probes Lab images, pins prod images, and opens a Lab-stage pin PR | Kubernetes SA `argo-ci-workflow`; validate has no node selector; build tasks call `repo-build` | 7,200 s; `podGC: OnPodSuccess`; TTL 24 h success / 48 h failure; no top-level synchronization | Workflow-local validation `emptyDir`; build outputs are parameters; no external artifacts/cache | `agent-fleet-ci-github-app` for classify/read/validate; `agent-fleet-repo-github-app` for pin writes; `zot-origin-verdifyconsultancy-ci-dockerconfig` for publish |
+| `repo-build` generation 17 | Called eleven times by `verdify-platform-ci`; intended self-service caller is `agent-ci-build` | Exact-revision checkout, optional test, Kaniko build and Zot push | Kubernetes SA `argo-ci-workflow`; build selector `agentfleet.vallery.net/runner-eligible=true` | 3,600 s; `podGC: OnPodCompletion`; TTL 24 h success / 48 h failure | Workflow-scoped 20 Gi rebuildable Longhorn RWO workdir; no Argo artifact repository; Kaniko compressed cache disabled; emits digest, canonical image ref, short SHA, source revision and release time | `agent-fleet-ci-github-app`; caller-supplied push Secret, correctly `zot-origin-verdifyconsultancy-ci-dockerconfig` here |
 | `repo-validate` generation 24 | Intended self-service caller is `agent-ci-validate`; this repo has no active caller because its config is absent | Executes declared checks and emits conclusion plus per-check report | Kubernetes SA `argo-ci-workflow`; no node selector; default runtime is the pinned Agent Fleet dev runtime | 3,600 s; per-check 900 s and one retry; `podGC: OnPodCompletion`; TTL 24 h success / 48 h failure | No GitHub artifact/cache and no Argo artifact repository; result is Workflow output parameters | `agent-fleet-ci-github-app` |
 
 The live immutable build/validation tooling includes:
@@ -175,23 +175,26 @@ is incomplete. No value or Secret annotation was inspected.
 
 ## Exact-SHA proof and failure classification
 
-The latest observed central run failed before checkout:
+The latest observed exact-head retry failed before checkout even after the
+central templates advanced from `repo-build` generation 16 to 17 and
+`verdify-platform-ci` generation 30 to 31:
 
-- Workflow: `verdify-platform-pr-ci-5brpl`.
-- Head: `e61c514...` (PR #562).
-- Started: `2026-08-02T10:22:54Z`; terminal failure at
-  `2026-08-02T10:23:55Z`.
-- Failing node/container:
-  `verdify-platform-pr-ci-5brpl-validate-242330318` /
-  `fetch-validate-context`.
+- Workflow: `verdify-platform-pr-ci-qgsj6` (`event-action=reopened`).
+- Head: `f30dcc4c72e5c8c80e3121c8567753cb63ac9837` (PR #559).
+- Started: `2026-08-02T18:52:25Z`; terminal failure at
+  `2026-08-02T18:53:16Z`.
+- Runner: Kubernetes service account `argo-ci-workflow`; validation pod
+  `verdify-platform-pr-ci-qgsj6-validate-98428860` on `vm-k3s-node4`.
 - Literal error: `no CI App installation for owner VerdifyConsultancy`.
+- Required status: terminal `failure`, with `target_url: null`; the status
+  reporter succeeded and GitHub Actions check-runs remained zero.
 
-The same error occurred in recent workflows
-`verdify-platform-pr-ci-ndj9h` and `verdify-platform-pr-ci-4827s`. Their
-terminal status reporter succeeded through `agent-fleet-repo-github-app`,
-which isolates the fault to the old read/checkout identity rather than repo
-code. PRs #560 and #562 have terminal required-context failures with null
-target URLs; PRs #558 and #559 initially had no status at all.
+The supported `reopened` trigger was used because the template-generation
+change was a legitimate platform diff; the head SHA stayed unchanged. The new
+specs retained `agent-fleet-ci-github-app` for checkout and
+`agent-fleet-repo-github-app` for status/write. Reproducing the same error while
+the separate status writer succeeded isolates the fault to the standard
+read/checkout installation contract rather than repo code.
 
 Self-service was probed at `2026-08-02T18:16:15Z` against exact default SHA
 `eb3ac9cf33001fa6c5271412284382b36c6abf9e`:
@@ -209,8 +212,8 @@ kubectl auth can-i patch applications.argoproj.io -n argocd
   no
 ```
 
-The final PR-head local gate and one post-push platform attempt are recorded on
-#561/#559. A platform failure is not retried without a platform diff.
+The final report commit's local gate and automatic platform result are recorded
+on #561/#559. A platform failure is not retried without a platform diff.
 
 ## Desired state, runtime, user path, and rollback
 
@@ -231,10 +234,10 @@ Git revision:
 
 Blindly syncing current `main` would roll multiple greenhouse workloads,
 including the sole writer and setpoint server, so it is not a safe proof or
-rollback. The safe rollback handle is the immutable per-workload running
-digest set above and its historical pin commits. Recovery requires a reviewed
-digest-only commit that first records one coherent known-good set, followed by
-the explicit non-pruning, device-gated Argo sync.
+rollback. The mixed running digest set above is recovery evidence, not proof of
+one coherent known-good release. Recovery requires reconstructing a reviewed
+desired-state commit from known-good historical pins, followed by the explicit
+non-pruning, device-gated Argo sync and post-sync verification.
 
 Lab stage is coherent: at `2026-08-02T18:24:19Z`, metrics reported
 `verdify-platform-lab-stage` Synced and Healthy, autosync disabled, with two
@@ -258,11 +261,12 @@ observed, not promoted.
 
 ## Required standard fixes
 
-1. Move every common read, trusted-precheck, validation, and build checkout
-   consumer from the stale CI App path to the repo-scoped broker/current App
-   contract. Audit all uses of `agent-fleet-ci-github-app`; do not add a
-   Verdify-specific Secret. Re-render/reconcile centrally, then retrigger each
-   exact PR head once.
+1. Reconcile every common read, trusted-precheck, validation, and build
+   checkout consumer onto the standard repo-scoped read broker/installation
+   contract while retaining a separately scoped status/write authority. Audit
+   all uses of `agent-fleet-ci-github-app`; do not add a Verdify-specific
+   Secret. Re-render/reconcile centrally, then retrigger each exact PR head
+   once.
 2. Extend the standard `.agent-fleet/ci.yaml` build schema and helper for
    multi-stage targets and controlled build arguments, then add a complete
    repo-owned Verdify spec. Restore the standard repo-agent Workflow-create
