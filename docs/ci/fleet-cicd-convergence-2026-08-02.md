@@ -1,10 +1,15 @@
 # Fleet CI/CD convergence evidence — 2026-08-02
 
-**Verdict: `BLOCKED_PLATFORM`**  
-**Lifecycle: `active-delivery`**  
-**Estate lane:** `jvallery/agents#3088`  
-**Repository lane:** `VerdifyConsultancy/verdify-platform#561`  
-**Proof PR:** `VerdifyConsultancy/verdify-platform#559`  
+**Verdict: `BLOCKED_PLATFORM`**
+
+**Lifecycle: `active-delivery`**
+
+**Estate lane:** `jvallery/agents#3088`
+
+**Repository lane:** `VerdifyConsultancy/verdify-platform#561`
+
+**Proof PR:** `VerdifyConsultancy/verdify-platform#559`
+
 **Broadcast:** `[[codex-broadcast:fleet-cicd-convergence-20260802T180658Z-88f1eab5]]`
 
 This is a point-in-time reconciliation of the default branch, GitHub, the
