@@ -7,14 +7,18 @@
 path anymore.
 
 **ZOT MIGRATION (2026-07-11, ADR-0021):** publishing moved OFF GHCR to the
-in-cluster zot origin (`registry.vallery.net`). GitHub Actions now VALIDATES
-builds only (`Container Publish` runs every Dockerfile with `push: false`).
+in-cluster zot origin (`registry.vallery.net`). GitHub Actions was removed in
+the same change — the `Container Publish`, `CI`, and `K8s Manifests` workflows
+no longer exist and last ran 2026-07-11. `.github/workflows/` is deliberately
+empty and two tests keep it that way.
 
 ## Flow
 
-1. Merge to `main` with `make ci` green (GitHub Actions is REMOVED as of
-   2026-07-11 — `scripts/ci-local.sh` is the entire validation gate, runnable
-   on any host or in the in-cluster `verdify-platform-ci` Workflow).
+1. Merge to `main` with `make ci` green. `scripts/ci-local.sh` is the entire
+   validation gate, runnable on any host; in-cluster the
+   `verdify-platform-pr-ci` sensor runs it with `CI_BASE_REF` set and reports
+   the commit status `Verdify Platform / Argo PR CI`, the single required check
+   on `main`.
 3. Publish happens IN-CLUSTER: submit one `repo-build` Argo Workflow per
    changed image in namespace `agent-fleet-ci` (Kaniko builds the exact main
    revision and pushes `registry.vallery.net/verdifyconsultancy/<image>@sha256:…`

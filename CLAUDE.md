@@ -143,9 +143,14 @@ Handoff protocol:
   device-write gate**. NOTE: `verdify-www` (verdify.ai/www marketing) and
   `verdify-crm` are SEPARATE products in SEPARATE repos — unrelated to the
   greenhouse, do not touch.
-- **Pipeline (single-env, ZOT as of 2026-07-11 / ADR-0021):** GitHub Actions
-  VALIDATES only — `Container Publish` builds every image with `push: false`
-  (a Dockerfile/COPY break still fails the push/PR). PUBLISHING is in-cluster:
+- **Pipeline (single-env, ZOT as of 2026-07-11 / ADR-0021):** there are no
+  GitHub Actions in this repo — `.github/workflows/` is deliberately empty and
+  guarded by `tests/test_no_workflow_uses_a_github_hosted_runner` and
+  `test_workflow_directory_is_still_empty_on_this_branch`. VALIDATION is
+  in-cluster: the `verdify-platform-pr-ci` Argo Events sensor runs
+  `scripts/ci-local.sh` with `CI_BASE_REF` set and reports the GitHub commit
+  status `Verdify Platform / Argo PR CI`, which is the single required check on
+  `main` (see `docs/ci/zero-paid-runner-ledger.md`). PUBLISHING is in-cluster:
   `repo-build` Argo Workflows in ns `agent-fleet-ci` (Kaniko) build the exact
   main revision and push `registry.vallery.net/verdifyconsultancy/<image>@sha256`
   to the zot origin; digests are pinned into `overlays/prod/kustomization.yaml`
@@ -257,9 +262,9 @@ Post-2026-04-21 incident (sprint-15/15.1 fix-it-forward spiral producing repeate
 
 5. **Stress-window warning.** If outdoor_temp > 85°F forecast for the next 24 hours, `make firmware-deploy` reports it as operator context but does not block. Severe alerts, 48-hour bake, and weekly OTA limits remain hard gates.
 
-6. **Every new tunable needs a `cfg_*` readback.** CI job `no-new-fire-and-forget` enforces this on PRs touching `firmware/greenhouse/tunables.yaml`. Fire-and-forget tunables are silent-push-corruption risks.
+6. **Every new tunable needs a `cfg_*` readback.** The `no-new-fire-and-forget` gate in `scripts/ci-local.sh` enforces this on PRs touching `firmware/greenhouse/tunables.yaml`. It is diff-scoped, so it only runs when `CI_BASE_REF` is set — which the in-cluster PR CI does, and a bare local `make ci` does not. Fire-and-forget tunables are silent-push-corruption risks.
 
-7. **Schema changes require explicit restart documentation.** If a PR touches `verdify_schemas/**`, `ingestor/entity_map.py`, or `mcp/server.py`, the PR body must mention which services need to bounce post-merge (`verdify-mcp`, `verdify-ingestor`). CI job `service-restart-drift-guard` enforces this. Observed need from the 2026-04-21 MCP staleness incident.
+7. **Schema changes require explicit restart documentation.** If a PR touches `verdify_schemas/**`, `ingestor/entity_map.py`, or `mcp/server.py`, the PR body must mention which services need to bounce post-merge (`verdify-mcp`, `verdify-ingestor`). The `service-restart drift guard` gate in `scripts/ci-local.sh` enforces this; like rule 6 it is diff-scoped behind `CI_BASE_REF`. Observed need from the 2026-04-21 MCP staleness incident.
 
 8. **Every firmware PR must show a replay-diff.** `make ci` with `CI_BASE_REF=<base>` runs `scripts/firmware-replay-diff.sh` against merge-base. Default `THRESHOLD_PCT=0` means zero mode/relay divergence allowed. Intentional divergence (e.g. Phase 2 dwell-gate rollout) requires coordinator approval + explicit `THRESHOLD_PCT` override in the PR.
 

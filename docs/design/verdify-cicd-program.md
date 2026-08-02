@@ -1,5 +1,20 @@
 # Verdify CI/CD Self-Refactor Program (Golden-Path)
 
+> **SUPERSEDED 2026-07-11 — HISTORICAL RECORD ONLY.** This document plans a GitHub
+> Actions pipeline (`container-publish.yml`, the `jvallery/agents` reusable
+> container-build workflow, `ghcr.io/jvallery/verdify-<comp>` tags). **None of it
+> exists.** All eight workflow files were deleted in `6c7abe14` and
+> `.github/workflows/` is now deliberately empty and test-guarded. Publishing
+> moved to the in-cluster zot origin (`registry.vallery.net`) per ADR-0021, and
+> the merge gate is the commit status `Verdify Platform / Argo PR CI` produced by
+> the `verdify-platform-pr-ci` Argo Events sensor. It also predates the
+> 2026-06-10/06-16 single-branch simplification, so its `live/platform-main`
+> ground-truth section describes a retired branch.
+>
+> **For the current pipeline read `docs/ci/zero-paid-runner-ledger.md`,
+> `docs/runbooks/prod-promotion.md`, and `ARGOCD.md`.** Do not implement anything
+> below.
+
 **Status:** DESIGN ONLY — no cluster created, no images pushed, no production changed, no
 device/secret/firmware touched. This is the P1 deliverable of the CI/CD golden-path
 self-refactor, the Verdify-specific equivalent of the fleet's `gravity-k3s-program.md`.
