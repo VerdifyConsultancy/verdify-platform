@@ -32,6 +32,32 @@ Consequently this ledger records dispositions, evidence, measurements and
 rollback rather than a migration. No ARC scale sets, namespaces, runner images
 or Kubernetes resources were created (all four were out of scope).
 
+### 1.1 If you were sent here to "add CI to this repo"
+
+An empty `.github/workflows/` reads like a missing-CI gap. It is not — it is
+the deliberate 2026-07-11 end state, and adding a workflow is the one change
+this repo actively rejects. Before writing a workflow file, note that **both**
+available runner choices are dead ends today:
+
+| Approach | Outcome |
+| --- | --- |
+| `runs-on: ubuntu-latest` (or any `ubuntu-*`/`windows-*`/`macos-*`) | Fails `tests/test_no_workflow_uses_a_github_hosted_runner`, which runs inside `ci-local.sh`. The required check `Verdify Platform / Argo PR CI` goes **red**, so the PR is unmergeable. |
+| `runs-on: self-hosted` | Passes the label guard, but `repos/.../actions/runners` is `total_count: 0` — no runner is registered to this repo, so the job **queues forever** and never reports. |
+
+Either way `tests/test_workflow_directory_is_still_empty_on_this_branch` also
+trips. Reintroduction is a gated operator decision (§7), not an autonomous one.
+
+**Add the validation to the gate instead.** `scripts/ci-local.sh` is what runs
+on every PR, so new static checks belong there — that is where
+`tests/test_static_repo_hygiene.py` (repo-wide Python compile, YAML parse,
+merge-marker and Dockerfile base-image checks, plus a SOPS encryption *shape*
+check) was wired on 2026-08-02, closing a real coverage hole: the gate's ruff
+invocation names only seven paths and `pyproject.toml` excludes
+`planner_graph/`, leaving 68 tracked `.py` files — the whole production
+`planner_graph/` package among them — with no syntax coverage at all. The
+`check-yaml` / `check-merge-conflict` hooks in `.pre-commit-config.yaml` were
+likewise advisory-only, because `ci-local.sh` never invokes pre-commit.
+
 ## 2. Workflow ledger — dispositions
 
 ### 2.1 Live surface (registered with GitHub today)

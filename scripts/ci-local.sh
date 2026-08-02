@@ -79,6 +79,7 @@ $PY -m pytest -q \
   tests/test_soil_dryout_alert.py \
   tests/test_solar_band_anchors.py \
   tests/test_solar_constants_check.py \
+  tests/test_static_repo_hygiene.py \
   tests/test_tempest_sync.py \
   tests/test_writer_lease_fence.py
 
