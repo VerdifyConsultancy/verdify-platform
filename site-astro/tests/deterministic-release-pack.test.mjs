@@ -5,6 +5,7 @@ import {
   mkdtemp,
   readFile,
   readdir,
+  realpath,
   rm,
   symlink,
 } from "node:fs/promises";
@@ -244,7 +245,7 @@ test("release pack decoding rejects malformed, noncanonical, truncated, and alte
 });
 
 test("packed hydration materializes the canonical individual 143 graph plus 2 camera PNG paths", async (context) => {
-  const root = await mkdtemp(path.join(tmpdir(), "verdify-packed-hydration-"));
+  const root = await mkdtemp(path.join(await realpath(tmpdir()), "verdify-packed-hydration-"));
   context.after(() => rm(root, { recursive: true, force: true }));
   const graphImages = Array.from({ length: 143 }, (_, index) => ({ role: "graph", bytes: png(index) }));
   const cameraImages = Array.from({ length: 2 }, (_, index) => ({ role: "camera", bytes: png(143 + index) }));
