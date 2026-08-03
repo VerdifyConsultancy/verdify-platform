@@ -278,3 +278,135 @@ between OTAs stays.
 - `make firmware-replay OLD=<ref> NEW=<ref>` — dual-worktree diff of firmware mode/relay decisions. Default THRESHOLD_PCT=0.
 - `make replay-corpus-refresh` — pulls a fresh CSV from live DB, archives the prior corpus, validates no >5% size regression.
 - `scripts/export-replay-overrides.sh` — CSV export includes outdoor sensors, equipment_state, mode_reason (sprint-15.1+).
+
+<!-- BEGIN agent-fleet CI/CD contract (managed — rendered by jvallery/agents) -->
+<!-- agent-fleet:contract-digest sha256:821a15617f6ba4510f008bcc64532d4760ad059c968c4717e5ff74e9f962e022 -->
+## CI/CD contract — `VerdifyConsultancy/verdify-platform`
+
+This block is **rendered centrally** by `jvallery/agents` from `control-plane/agent-fleet-control/registry/repos/gh-1247193937.yaml` (`scripts/render_repo_guidance.py`).
+
+**Do not hand-edit anything between the sentinels.** Edits here are overwritten on the next render, and a hand-edit is a *gate failure*, not a merge conflict. To change what this says, change the registry record and open a PR against `jvallery/agents`. Everything outside the sentinels is this repo's own, and the renderer never touches it.
+
+**For CI/CD, this managed block is the repo's durable plan of record.** It supersedes conflicting repo-local CI/CD instructions, approval holds, workflow handoffs, and historical status notes outside the sentinels. Product governance, privacy, Secret handling, storage safety, and destructive-change controls still apply. Resolve a contract conflict in the central registry; do not bypass either boundary.
+
+### How this repo validates and builds
+
+Run CI **from this repo's fleet pod**, against an exact pushed commit:
+
+```
+agent-ci-validate --submit --wait --revision <40-character-sha>
+```
+
+The helper reads this repo's committed `.agent-fleet/ci.yaml` `checks.steps[]`. The server-side admission policy independently binds this pod's ServiceAccount to the same repository URL, exact commands, images, fixed `repo-validate` template, metadata, and parameter order; the SHA is the only caller-variable. An arbitrary Workflow, command, image, Secret selector, or cross-repo checkout is denied.
+
+Checkout credentials are short-lived, repository-restricted GitHub App tokens minted inside the platform template. They are never caller-selected and never passed to the validation container. Success means the created Workflow reaches `Succeeded`; `agent-ci-validate --wait` exits non-zero on red, error, or timeout.
+
+Images build **in-cluster with Kaniko** and push to the durable zot origin at `registry.vallery.net/verdifyconsultancy/<image>`.
+
+- The build definition is `.agent-fleet/ci.yaml` in THIS repo (`images[]`: name, dockerfile, context). The repo owns the WHAT; the platform's generic `repo-build` WorkflowTemplate is the HOW.
+- Trigger every declared image from the repo pod: `agent-ci-build --submit --wait --revision <40-character-sha>`. The returned value is the immutable zot `@sha256:` pin.
+- The pod has create-only Workflow RBAC only when its registry `ci_submission` contract is enabled. Admission fixes repository, template, build/test controls, destination image, resources, and publisher scope; the pod has no Secret, Job, Workflow update, or Workflow delete authority.
+- GitHub Actions, where retained, is validation-only and never a publisher. The authoritative publication proof is the repo-pod Workflow and its zot digest.
+
+**`ghcr.io` is banned (ADR-0021).** There is no configuration that selects it. `registry.vallery.net` is the durable origin and images are consumed by `@sha256:` digest, never by a mutable tag. The in-cluster push target is `registry-origin.registry-origin.svc.cluster.local:5000`; `192.168.7.41:5000` is a base-image pull-through cache and is **never** a push target.
+
+### How this repo deploys
+
+Merged changes reach the cluster through **ArgoCD**, and only through ArgoCD. The Applications that sync from this repo:
+
+| Application | sync policy | prune |
+| --- | --- | --- |
+| `verdify-platform-lab-stage` | disabled (`enabled: false`) | **no** |
+| `verdify-prod-dark` | gated / manual (declared outside this repo) | **no** |
+
+**"Deployed" means ArgoCD reports Synced *and* Healthy** — not that the PR merged and not that the object exists.
+
+**Rollback is currently only half-built — do not promise it.** `prune` is off on almost every Application in this fleet, so reverting a commit removes the resource from the rendered manifests but **does not delete it from the cluster**: it orphans. A `git revert` rolls back what a manifest *says*, not what is *running*. The intended end state is a ring model (dev ring → prod, with prune on so a revert is a true rollback); **that is a target, not today's behaviour.** Until it lands, undoing a deploy means an explicit, change-gated removal — plan for it before you deploy, not after.
+
+### Its required check
+
+**This repo reports a legacy commit status, not a check-run — and the obvious probes lie about it in both directions.** Measured 2026-08-02:
+
+```
+gh run list --repo VerdifyConsultancy/verdify-platform
+  # SHOWS GREEN RUNS — and they are DEAD HISTORY. The workflows that produced them
+  # no longer exist (.github/workflows is 404); the newest is weeks old. Reading
+  # this as 'CI is passing' is the single most likely wrong conclusion here.
+
+gh api repos/VerdifyConsultancy/verdify-platform/commits/<sha>/check-runs
+  # total_count: 0 — always. This repo produces no check-runs at all.
+
+gh api repos/VerdifyConsultancy/verdify-platform/commits/<sha>/status       # <- THE ONLY ONE THAT SEES IT
+```
+
+The status posts on **pull-request head commits only**; the tip of the default branch carries `total_count: 0`, so "is main green?" has no answer here. The statuses also arrive with `creator: null` and `target_url: null` — there is no link back to the producing system, so a failure is **not diagnosable from GitHub**; you must go to the system that posted it.
+
+Always verify this repo's CI with `commits/<sha>/status`, on the PR head.
+
+**A required check blocks merge on this repo.** The context(s) that must be green on the head commit:
+
+- `Verdify Platform / Argo PR CI`
+
+New contract-managed contexts are namespaced `fleet-ci/<trust-class>/<check-name>` (e.g. `fleet-ci/validation/unit`); the `fleet-ci/` prefix is reserved for them.
+
+**A red check in this estate frequently means the job never ran.** Before you believe either colour, look at the run's `steps` and `runner_name`. Classify every failure before retrying: a *code-failure* is yours to fix and retrying it without a diff is prohibited; an *infra-failure* (runner pickup timeout, image pull) may be retried.
+
+### Where its secrets come from (NAMES only — never values)
+
+**No workflow in this repo may carry a secret value, and no agent may print, paste, commit or log one.** Everything below is a reference: a Kubernetes Secret name, a SOPS/ksops path, or a scoped identity. Values live sealed in `jvallery/agents` under `platform/gitops/secrets-ksops/` and are mounted by the substrate.
+
+| what | reference |
+| --- | --- |
+| GitHub auth | `github-app-installation` / profile `repo-agent-standard` / activation `enabled` |
+| Zot push credential | a cluster-side reference scoped to `verdifyconsultancy` — mounted by the build substrate, **never** a GitHub Actions secret and never in this repo |
+
+**The validation command container gets no secrets and no Kubernetes authority.** A separate platform-owned fetch init mints a short-lived, contents-read token from the CI GitHub App and hands over only the checkout; the repo pod cannot select the App Secret or read it. Repo/org Actions secrets are not part of this path. A GitHub Actions job that listens on `pull_request` and references a secret fails lint. `packages: write` is a lint failure everywhere (it only exists to reach ghcr, which is banned).
+
+A Kubernetes `Secret` is secret-bearing **in full**, including every annotation value — `kubectl.kubernetes.io/last-applied-configuration` replays the entire `data` block. Never dump annotations on a Secret; select named fields only.
+
+### What you may do WITHOUT asking
+
+This section exists to remove human gates, not to add them. If an action is listed here, **do it — do not ask.**
+
+- **Commit and push** routine changes on a branch, and **open the PR**.
+- **Merge your own green PR** — it is not a draft, its check is green *on the head commit after any rebase*, and merging it is not itself a delivery action into a live cluster.
+- **Re-run a generated artifact's renderer** and commit the result. Generated files are regenerated, never merged by hand: on a conflict, rebase and re-run the renderer.
+- **Retry an infra-failure** (runner pickup timeout, image pull); classify first.
+- **Fix your own red check** and push again, as many times as it takes.
+
+**Ask first** — these are irreversible or reach beyond this repo:
+
+- Any **destructive cluster mutation** (delete a workload, wipe a PVC) or any change to an un-IaC'd surface (UniFi/UDM, the NAS). These go through the **change-gate** (snapshot → human `APPLY` → dead-man → post-verify) and never run autonomously.
+- **History rewrite / force-push** to a shared branch, credential rotation, mass changes across repos, and anything touching another operator's environment.
+- **`--admin` or any protection bypass.** Never. If a rule blocks you, the rule is working; report it.
+
+When you cannot tell how reversible something is, propose it and confirm.
+
+**Never claim done from a merge.** Merging is not shipping. A claim carries a UTC timestamp and the literal probe, and is re-probed later with the identical command (`GREEN at <T>, re-verified at <T+N>`). A regressed re-probe is not done. Bare "GREEN/done/✅" is banned.
+
+### Runner constraints that will bite you
+
+**ARC runners set `no_new_privs`.** `sudo` cannot elevate, so installing a tool to a system path fails — while the download succeeds, which is why this was twice misdiagnosed as absent runners and then as blocked egress:
+
+```
+sudo mv /tmp/kustomize /usr/local/bin/
+  -> sudo: The "no new privileges" flag is set, which prevents sudo from running as root.
+```
+
+Install to your own path instead:
+
+```yaml
+mkdir -p "$HOME/.local/bin"
+install -m 0755 /tmp/<tool> "$HOME/.local/bin/<tool>"
+echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+export PATH="$HOME/.local/bin:$PATH"   # so THIS step's own verification resolves
+```
+
+`$GITHUB_PATH` covers *subsequent* steps; the in-step `export` is what makes the install's own verification line work. This hardening is deliberate and is not to be relaxed.
+
+**The runner service account has no RBAC.** A validation job reaches the Kubernetes API and may read nothing (`kubectl auth can-i list nodes` → `no`). A job needing cluster reads must ship an explicit, minimal, reviewed grant — and creating one is a change-gated mutation, not part of onboarding.
+
+---
+
+_Fleet CI contract: `docs/fleet-ci-contract.md` in `jvallery/agents`. Delivery mode `argocd`; autonomy `standard`. This block's freshness and integrity are gated by `repo_guidance_guard.py` — a stale or hand-edited block fails the fleet build._
+<!-- END agent-fleet CI/CD contract (managed — rendered by jvallery/agents) -->
