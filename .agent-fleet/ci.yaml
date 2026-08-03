@@ -27,9 +27,11 @@ images:
 - name: verdify-lab
   dockerfile: Dockerfile.production
   context: site-astro
+  test: cd site-astro && npm ci --no-audit --no-fund && npm run snapshot:hydrate
 - name: verdify-lab-astro
   dockerfile: Dockerfile
   context: site-astro
+  test: cd site-astro && npm ci --no-audit --no-fund && npm run snapshot:hydrate
 checks:
   steps:
   - name: platform-static
