@@ -79,7 +79,7 @@ function approvalRecord({ attestationSha256, sanitizedManifestSha256, guardRepor
     sourceFileCount: 6,
     policyVersion: "verdify-public-output-production-v1",
     guardReportSha256,
-    sourceOrigin: "s3://verdify-lab-content/lab/content",
+    sourceOrigin: "s3://example-lab-content-bucket/lab/content",
     sourceCapturedAt: "2026-08-04T06:00:00Z",
     occurrenceSelectionPolicySha256: "c".repeat(64),
     approver: "jvallery",
@@ -186,7 +186,7 @@ test("a registered, content-bound approval makes the snapshot approval-eligible"
   // dist/static-build.json, which spreads build.sanitization.
   assert.equal(resolved.sanitization.approval.sourceOrigin, undefined);
   assert.equal(
-    JSON.stringify(resolved.sanitization).includes("verdify-lab-content"),
+    JSON.stringify(resolved.sanitization).includes("example-lab-content-bucket"),
     false,
     "the source bucket must not be published in the build identity",
   );
