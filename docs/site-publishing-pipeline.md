@@ -491,6 +491,58 @@ reader, or network client; therefore it intentionally stops without taking live
 action. The factory above is an explicit construction dependency only
 and does not change that executable default.
 
+### Approved immutable production-snapshot attestation (source-only)
+
+`site-astro/scripts/verify-production-output.mjs` has always required a build
+that is `approvalEligible: true` with a non-provisional evidence status, and
+until now nothing in the tree could produce one:
+`scripts/lib/snapshot.mjs` hard-coded every non-fixture snapshot to
+`provisional-only` / `approvalEligible: false`. `scripts/lib/production-approval.mjs`
+is the trusted immutable attestation resolver that closes that gap **without
+touching the production verifier**.
+
+Trust root: the frozen `PRODUCTION_APPROVAL_REGISTRY` constant. It ships empty,
+is compiled into the image, and is never read from the environment, a CLI flag,
+a build argument, the snapshot payload, or an object store. Adding an entry is a
+reviewed source change on `main` — that review is the approval.
+
+An approved capture is a distinct closed contract, not a relabelled stage
+capture:
+
+| Artifact | Stage / legacy | Approved production |
+|---|---|---|
+| `attestation.json` contract | `verdify.lab-stage-sanitized-snapshot` | `verdify.lab-production-sanitized-snapshot` |
+| `evidenceStatus` | `provisional-only` (enforced) | `approved-immutable` (enforced) |
+| `approvalEligible` | `false` (enforced) | `true` (enforced) |
+| Payload layout | `content/`, `manifests/content.json`, `evidence/public-output-guard.json`, `attestation.json` | the same **plus** `approval.json` |
+| Release descriptor | `verdify.lab-stage-snapshot-release` with hard-coded 429-file pins | `verdify.lab-production-snapshot-release` with `approvalSha256` + `approvalId`, every pin bound to the registry |
+
+`approval.json` is canonical JSON in the closed
+`verdify.lab-production-snapshot-approval` v1 shape. Verification requires all
+of: its SHA-256 equals the registered `approvalSha256`; every field equals the
+registry entry field-for-field; and the sanitized content-manifest digest,
+source-capture manifest digest, sanitized/source file counts, zero-finding
+guard-report digest, sanitization policy version, and the snapshot's own
+attestation digest are independently recomputed from the snapshot on disk and
+match the record. The record additionally names its provenance in the open: the
+authoritative source URI (pinned to the Lab content prefix), the capture
+instant, the approver (fixed authority list), a permalink to the recorded human
+decision in this repository, the approval instant, the immutable release tag,
+and the release asset digest.
+
+Consequences that are deliberate:
+
+- The legacy provisional capture can never become eligible. The untouched stage
+  verifier still rejects `approvalEligible !== false`, and editing its
+  attestation changes the digest its own release descriptor pins.
+- A fixture can never become eligible: the fixture branch is mutually exclusive
+  and the fixture payload layout forbids `approval.json`.
+- An approval cannot be replayed onto another capture, and one changed content
+  byte invalidates it.
+- With the shipped empty registry the bounded hydrator refuses a production
+  release descriptor before fetching a byte, so the failure is fail-closed at
+  download time as well as at build time.
+
 ### Astro occurrence-store binding names (source-only)
 
 The closed

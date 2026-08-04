@@ -92,10 +92,49 @@ SITE_ORIGIN=https://lab-stage.verdify.ai \
 npm run build
 ```
 
-The current frozen snapshot is a legacy content-hash capture, not the future
-immutable snapshot attestation. `static-build.json` and `route-manifest.json`
-therefore always report `localEvidenceStatus: provisional-only` and
-`approvalEligible: false`.
+The current frozen snapshot is a legacy content-hash capture, not an approved
+immutable snapshot. It carries the `verdify.lab-stage-sanitized-snapshot`
+contract, whose verifier hard-rejects `approvalEligible !== false`, so
+`static-build.json` and `route-manifest.json` report
+`localEvidenceStatus: provisional-only` and `approvalEligible: false` for it and
+always will. It cannot be relabelled: changing a byte of its attestation changes
+the attestation digest its own release descriptor pins.
+
+## Approved immutable production snapshots
+
+`verify-production-output.mjs` requires `approvalEligible === true` and a
+non-provisional evidence status. `scripts/lib/production-approval.mjs` is the
+only producer of that verdict, and it is deliberately narrow:
+
+- A snapshot becomes approval-eligible **only** by matching an entry in the
+  frozen `PRODUCTION_APPROVAL_REGISTRY` constant. That registry is compiled into
+  the build. It is never read from the environment, a CLI flag, a build
+  argument, the snapshot payload, or an object store. Adding an entry is a
+  reviewed source change on `main`; that review **is** the approval gate.
+- The registry ships **empty**. Nothing is approved by default.
+- An approved snapshot carries a second closed contract:
+  `verdify.lab-production-sanitized-snapshot` in `attestation.json` plus a
+  canonical `approval.json` (`verdify.lab-production-snapshot-approval` v1).
+  The approval's SHA-256 must equal the registered `approvalSha256`, every field
+  must equal the registry entry, and the sanitized content-manifest digest,
+  source-capture manifest digest, file counts, guard-report digest, sanitization
+  policy version, and the snapshot's own attestation digest must all be
+  reproduced from the snapshot on disk. An approval cannot be replayed onto a
+  different capture, and one changed content byte invalidates it.
+- The record names its provenance in the open: the authoritative source URI and
+  capture instant, the approver (from a fixed authority list), a permalink to
+  the recorded human decision in this repository, the approval instant, the
+  immutable release tag, and the release asset digest.
+- The production release descriptor
+  (`verdify.lab-production-snapshot-release` v1) adds `approvalSha256` and
+  `approvalId` and carries **no** hard-coded content pins — every pin must match
+  the registered approval, so the bounded hydrator refuses to download an
+  unapproved production asset at all.
+- Fixtures are excluded structurally: the fixture branch is mutually exclusive
+  and the fixture payload layout forbids `approval.json`.
+
+`verify-production-output.mjs` and the stage verifiers are unchanged by this
+contract.
 
 ## Specialist evidence releases
 
