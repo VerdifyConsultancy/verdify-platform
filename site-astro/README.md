@@ -364,13 +364,29 @@ environment, application/object-store credential, or egress. Its standard zot re
 merging source is not an operator sync, and even a sync cannot schedule this
 zero-replica candidate.
 
-The CLI and cache hydrator remain local-only. Object-store CLI wiring and bounded site
-cache materialization, the occurrence producer/caller transaction, the event agent,
-distributed coordination, retention/GC, resource accounting, real-endpoint
-conditional-write proof, actual resource/value binding, store/egress wiring, and alert
-routing are still required before activation. The #501 slice fixes names only; it does
-not configure an endpoint or credential, deploy a binding, activate a writer, or alter
-production.
+The CLI and cache hydrator remain local-only. A source-only S3 coordinator now
+implements same-bucket/non-overlapping-prefix enforcement, pre-I/O inventory
+reservations, distributed fencing, 14-day idempotency records, 48-hour reachability
+GC, and daily resource accounting. Its closed site-publisher checkpoint contract must
+still be imported by the executable publisher writer when that branch is refreshed.
+The operator proof now also verifies that a second absent-only write cannot replace
+an existing object, but endpoint correctness is not capacity authorization. The
+current per-file 143+2 format is machine-readably activation-blocked: at 96 full
+publications/day its strict 48-hour occurrence payload alone reaches 28,564 objects,
+above the 25,000 complete-inventory cap, and its canonical reads exceed the daily
+request budget. Deterministic occurrence/site packs and selected-root inventory must
+land before this gate can open; the 96-sample reporting freshness KPI does not imply
+96 full object publications. Object-store CLI wiring and bounded site cache
+materialization, the event agent, real-endpoint proof, actual resource/value binding,
+store/egress wiring, and alert routing also remain required. The #501 slice fixes
+names only; none of this source configures an endpoint or credential, deploys a
+binding, activates a writer, or alters production.
+
+The dormant coordinator also still accepts the publisher payload estimate/result
+from its injected caller. Its own reservation and fence overhead is always added,
+but activation additionally requires the executable writer to derive the full
+payload envelope, import the closed checkpoint contract, and enforce the fence at
+the actual mutation boundary.
 
 The source tree now contains the first deterministic packed-layout prerequisite.
 `scripts/lib/deterministic-release-pack.mjs` uses fixed `VLABPACK`/v1 framing, one
@@ -485,11 +501,12 @@ token, database, object store, Grafana, or device-network access.
   to stage yet.
 - The complete built-tree local store implements reachability GC, maximum-ten
   retention, and the ratified 10 GiB cap. The inactive S3 foundation implements
-  bounded conditional store primitives, but CLI/caller wiring, distributed
-  coordination, object-store retention/GC, and real-endpoint proof remain.
+  bounded conditional store primitives and an offline-tested distributed coordinator,
+  but executable publisher integration, CLI/caller wiring, and acknowledged
+  real-endpoint proof remain.
 - The built-tree publisher lease recovers a provably dead same-host PID and excludes a
-  live local owner. Cross-pod publication still requires a distributed lease or
-  object-store conditional-write primitive.
+  live local owner. The S3 coordinator provides the source-only cross-pod fence; no
+  active workload invokes it yet.
 - The frozen Quartz baseline has known HLS, alias, feed/sitemap, missing-asset,
   and fallback findings and is not clean approval evidence.
 - The WWW shell release is review-only until its producer PR is merged; the Lab

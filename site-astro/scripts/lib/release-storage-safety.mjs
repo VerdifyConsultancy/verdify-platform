@@ -9,6 +9,7 @@ const SAFE_KEY_RE = /^[A-Za-z0-9._/-]{1,1024}$/u;
 const MAX_OBJECTS = 1_000_000;
 const MAX_SELECTORS = 10_000;
 const RECOVERY_GRACE_MS = 48 * 60 * 60 * 1000;
+const EVENT_IDEMPOTENCY_HORIZON_MS = 14 * 24 * 60 * 60 * 1000;
 const OPERATION_USAGE_LIMITS = Object.freeze({
   writtenBytes: 64 * 1024,
   deletedBytes: 0,
@@ -24,8 +25,8 @@ const BUDGETS = Object.freeze({
   warningFraction: 0.8,
 });
 
-const GC_KINDS = new Set(["release", "manifest", "generation", "blob"]);
-const ALL_KINDS = new Set([...GC_KINDS, "event"]);
+const GC_KINDS = new Set(["release", "manifest", "generation", "blob", "event", "checkpoint"]);
+const ALL_KINDS = new Set(GC_KINDS);
 
 function canonicalBytes(value) {
   return Buffer.from(`${JSON.stringify(value, null, 2)}\n`);
@@ -120,18 +121,26 @@ function objectKey(value, namespaceValue, kind, label = "release storage object 
         : kind === "generation"
           ? /^occurrences\/(media_[0-9a-f]{24})\/generations\/sha256\/([0-9a-f]{64})\.json$/u.exec(value)
           : kind === "event" && namespaceValue === "site"
-            ? /^events\/sha256\/[0-9a-f]{64}\.json$/u.exec(value)
-            : kind === "event"
-              ? /^(?:events\/sha256\/[0-9a-f]{64}|occurrences\/media_[0-9a-f]{24}\/events\/sha256\/[0-9a-f]{64})\.json$/u.exec(value)
-              : null;
+            ? /^events\/sha256\/([0-9a-f]{64})\.json$/u.exec(value)
+            : kind === "checkpoint" && namespaceValue === "site"
+              ? /^checkpoints\/sha256\/([0-9a-f]{64})\.json$/u.exec(value)
+              : kind === "event"
+                ? /^(?:events\/sha256\/([0-9a-f]{64})|occurrences\/media_[0-9a-f]{24}\/events\/sha256\/([0-9a-f]{64}))\.json$/u.exec(value)
+                : null;
   if (keyedDigest === null) throw new Error(`${label} does not match its object kind`);
-  if (namespaceValue === "site" && !["release", "blob", "event"].includes(kind)) {
+  if (namespaceValue === "site" && !["release", "blob", "event", "checkpoint"].includes(kind)) {
     throw new Error("site release storage object kind is invalid");
   }
   if (namespaceValue === "occurrence" && !["manifest", "generation", "blob", "event"].includes(kind)) {
     throw new Error("occurrence release storage object kind is invalid");
   }
   return keyedDigest;
+}
+
+function matchedObjectDigest(match, kind) {
+  if (kind === "generation") return match[2];
+  if (kind === "event" && match[1] === undefined) return match[2];
+  return match[1];
 }
 
 function selectorKey(value, selectorKind, occurrenceId) {
@@ -151,9 +160,8 @@ function validateObject(raw) {
   if (!ALL_KINDS.has(raw.kind)) throw new Error("release storage object kind is invalid");
   const keyMatch = objectKey(raw.key, namespaceValue, raw.kind);
   digest(raw.sha256, "release storage object digest");
-  if (raw.kind !== "event") {
-    const keyed = raw.kind === "generation" ? keyMatch[2] : keyMatch[1];
-    if (keyed !== raw.sha256) throw new Error("release storage object key and digest differ");
+  if (matchedObjectDigest(keyMatch, raw.kind) !== raw.sha256) {
+    throw new Error("release storage object key and digest differ");
   }
   safeInteger(raw.bytes, "release storage object byte count", { minimum: 1 });
   instant(raw.createdAt, "release storage object creation time");
@@ -171,8 +179,8 @@ function validateObject(raw) {
   if (raw.kind === "blob" && raw.references.length !== 0) {
     throw new Error("release storage blob cannot reference another object");
   }
-  if (raw.kind === "event" && raw.references.length !== 0) {
-    throw new Error("permanent release storage event cannot retain immutable payload objects");
+  if (["event", "checkpoint"].includes(raw.kind) && raw.references.length !== 0) {
+    throw new Error("release storage idempotency tombstone cannot retain immutable payload objects");
   }
   return raw;
 }
@@ -580,7 +588,10 @@ export function planReleaseStorageSafety(input) {
   for (const [identity, object] of objects) {
     const age = Date.parse(asOf) - Date.parse(object.createdAt);
     if (age < 0) throw new Error("release storage object is from the future");
-    if (object.kind === "event" || age <= RECOVERY_GRACE_MS) roots.push(identity);
+    const retentionHorizon = ["event", "checkpoint"].includes(object.kind)
+      ? EVENT_IDEMPOTENCY_HORIZON_MS
+      : RECOVERY_GRACE_MS;
+    if (age <= retentionHorizon) roots.push(identity);
   }
   const retained = retainedClosure(objects, roots);
   const candidateIdentities = new Set();
@@ -643,6 +654,7 @@ export function planReleaseStorageSafety(input) {
     snapshotSha256: sha256(canonicalBytes(snapshot)),
     budgetsSha256: sha256(canonicalBytes(BUDGETS)),
     recoveryGraceSeconds: RECOVERY_GRACE_MS / 1000,
+    eventIdempotencyHorizonSeconds: EVENT_IDEMPOTENCY_HORIZON_MS / 1000,
     selectors: selectors.map(selectorPrecondition),
     deletions,
     accounting: {
@@ -678,6 +690,7 @@ function validatePlan(plan) {
     "snapshotSha256",
     "budgetsSha256",
     "recoveryGraceSeconds",
+    "eventIdempotencyHorizonSeconds",
     "selectors",
     "deletions",
     "accounting",
@@ -690,6 +703,7 @@ function validatePlan(plan) {
     || document.schemaVersion !== 1
     || document.budgetsSha256 !== sha256(canonicalBytes(BUDGETS))
     || document.recoveryGraceSeconds !== RECOVERY_GRACE_MS / 1000
+    || document.eventIdempotencyHorizonSeconds !== EVENT_IDEMPOTENCY_HORIZON_MS / 1000
     || sha256(canonicalBytes(document)) !== plan.sha256
   ) throw new Error("release storage GC plan identity is invalid");
   instant(document.plannedAt, "release storage GC plan time");
@@ -744,7 +758,7 @@ function validatePlan(plan) {
     if (!GC_KINDS.has(deletion.kind)) throw new Error("release storage GC deletion kind is invalid");
     const match = objectKey(deletion.key, namespaceValue, deletion.kind, "release storage GC deletion key");
     digest(deletion.sha256, "release storage GC deletion digest");
-    const keyed = deletion.kind === "generation" ? match[2] : match[1];
+    const keyed = matchedObjectDigest(match, deletion.kind);
     if (keyed !== deletion.sha256) throw new Error("release storage GC deletion key and digest differ");
     const identity = objectIdentity(namespaceValue, deletion.key);
     if (deletionIds.has(identity)) throw new Error("release storage GC deletion is duplicated");
@@ -755,7 +769,10 @@ function validatePlan(plan) {
       "release storage GC deletion bytes",
     );
     instant(deletion.createdAt, "release storage GC deletion creation time");
-    if (Date.parse(document.plannedAt) - Date.parse(deletion.createdAt) <= RECOVERY_GRACE_MS) {
+    const deletionHorizon = ["event", "checkpoint"].includes(deletion.kind)
+      ? EVENT_IDEMPOTENCY_HORIZON_MS
+      : RECOVERY_GRACE_MS;
+    if (Date.parse(document.plannedAt) - Date.parse(deletion.createdAt) <= deletionHorizon) {
       throw new Error("release storage GC plan deletes an object inside recovery grace");
     }
   }
@@ -1206,9 +1223,10 @@ export async function executeReleaseStorageGcPlan(input) {
   const injected = validateAdapter(adapter);
   const firstInstant = await injectedCurrentInstant(currentInstant);
   const fence = validateLease(lease, plan.sha256, firstInstant);
-  if (Date.parse(fence.issuedAt) < Date.parse(document.plannedAt)) {
-    throw new Error("release storage GC lease predates its plan");
-  }
+  // Distributed callers acquire the same fence before inventory admission so
+  // concurrent page/read reservations cannot race the daily budget. The
+  // current-fence operation below proves that this exact token was then bound
+  // to the completed plan before any GC mutation.
   const resumed = validateProgress(progress, plan, document);
   if (resumed !== null && Date.parse(resumed.document.updatedAt) > Date.parse(firstInstant)) {
     throw new Error("release storage GC progress is from the future");
@@ -1323,6 +1341,7 @@ export async function executeReleaseStorageGcPlan(input) {
 export const releaseStorageSafetyContract = Object.freeze({
   budgets: BUDGETS,
   recoveryGraceSeconds: RECOVERY_GRACE_MS / 1000,
+  eventIdempotencyHorizonSeconds: EVENT_IDEMPOTENCY_HORIZON_MS / 1000,
   inventory: Object.freeze({ contract: "verdify.lab-release-storage-inventory", schemaVersion: 1 }),
   publication: Object.freeze({ contract: "verdify.lab-release-storage-publication-estimate", schemaVersion: 1 }),
   usageState: Object.freeze({ contract: "verdify.lab-release-storage-usage-state", schemaVersion: 1 }),

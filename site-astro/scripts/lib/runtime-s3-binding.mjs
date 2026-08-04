@@ -6,6 +6,7 @@ import {
     createSiteReleaseStore,
     parseSiteReleaseStoreLocation,
 } from "./site-release-store.mjs";
+import { S3ObjectStore } from "./s3-object-store.mjs";
 
 export const RUNTIME_S3_ENDPOINT_URL = "https://s3-hdd.vallery.net";
 export const RUNTIME_S3_REGION = "garage";
@@ -178,6 +179,23 @@ export async function createOccurrenceReleaseWriterStore(
         parseLocation: parseOccurrenceReleaseStoreLocation,
         createStore: createOccurrenceReleaseStore,
     });
+}
+
+export async function createRuntimeS3ObjectStore(
+    storeRoot,
+    { environment, accessMode = "writer", clientFactory } = {},
+) {
+    const location = parseSiteReleaseStoreLocation(storeRoot);
+    if (location.kind !== "s3")
+        throw new Error("runtime coordination store must use an S3 URI");
+    const store = new S3ObjectStore({
+        bucket: location.bucket,
+        prefix: location.prefix,
+        accessMode,
+        clientConfig: runtimeS3ClientConfig(environment),
+        clientFactory,
+    });
+    return store.initialize();
 }
 
 export function siteReleaseCliEnvironment(storeRoot, options = {}) {

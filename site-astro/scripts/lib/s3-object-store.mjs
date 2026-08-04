@@ -1,7 +1,9 @@
 import path from "node:path";
 
 import {
+    DeleteObjectCommand,
     GetObjectCommand,
+    HeadObjectCommand,
     ListObjectsV2Command,
     PutObjectCommand,
     S3Client,
@@ -14,6 +16,7 @@ const KEY_SEGMENT_RE = /^[A-Za-z0-9](?:[A-Za-z0-9._=-]{0,254})$/u;
 const ETAG_RE = /^"[^"\\\u0000-\u001f\u007f]{1,512}"$/u;
 const MAX_KEY_BYTES = 1024;
 const MAX_LIST_PAGES = 100;
+const MAX_LIST_OBJECTS = 25_000;
 const MAX_CONTINUATION_TOKEN_BYTES = 4096;
 const ACCESS_MODES = new Set(["reader", "writer"]);
 
@@ -66,6 +69,24 @@ function validateETag(value, label = "S3 entity tag") {
     if (typeof value !== "string" || !ETAG_RE.test(value))
         throw new Error(`${label} is invalid`);
     return value;
+}
+
+function validateObjectMetadata(value, label = "S3 object") {
+    if (
+        value === null ||
+        typeof value !== "object" ||
+        !Number.isSafeInteger(value.ContentLength) ||
+        value.ContentLength < 0 ||
+        !(value.LastModified instanceof Date) ||
+        !Number.isFinite(value.LastModified.getTime())
+    ) {
+        throw new Error(`${label} metadata is invalid`);
+    }
+    return {
+        bytes: value.ContentLength,
+        lastModified: value.LastModified.toISOString(),
+        etag: validateETag(value.ETag, `${label} entity tag`),
+    };
 }
 
 function isMissing(error) {
@@ -239,6 +260,20 @@ export class S3ObjectStore {
         return { bytes, etag: validateETag(result.ETag) };
     }
 
+    async head(relative, { missing = false, label = "S3 object" } = {}) {
+        const Key = this.objectKey(relative);
+        let result;
+        try {
+            result = await this.client.send(
+                new HeadObjectCommand({ Bucket: this.bucket, Key }),
+            );
+        } catch (error) {
+            if (missing && isMissing(error)) return null;
+            throw error;
+        }
+        return validateObjectMetadata(result, label);
+    }
+
     async putIfAbsent(
         relative,
         bytes,
@@ -297,12 +332,156 @@ export class S3ObjectStore {
         }
     }
 
+    async deleteIfMatch(relative, expectedETag) {
+        if (this.accessMode !== "writer")
+            throw new Error("S3 object store is not configured for writes");
+        validateETag(expectedETag, "S3 conditional-delete entity tag");
+        const Key = this.objectKey(relative);
+        try {
+            await this.client.send(
+                new DeleteObjectCommand({
+                    Bucket: this.bucket,
+                    Key,
+                    IfMatch: expectedETag,
+                }),
+            );
+            return { deleted: true };
+        } catch (error) {
+            if (isMissing(error) || isPrecondition(error))
+                return { deleted: false };
+            throw error;
+        }
+    }
+
+    async listInventory(
+        relativePrefix = "",
+        {
+            maximumObjects = 1000,
+            maximumPages = MAX_LIST_PAGES,
+            beforePage = null,
+            includePageCount = false,
+        } = {},
+    ) {
+        if (relativePrefix !== "")
+            validateRelativeObjectKey(relativePrefix, {
+                allowTrailingSlash: true,
+            });
+        if (
+            !Number.isSafeInteger(maximumObjects) ||
+            maximumObjects < 1 ||
+            maximumObjects > MAX_LIST_OBJECTS
+        ) {
+            throw new Error("S3 object listing limit is invalid");
+        }
+        if (
+            !Number.isSafeInteger(maximumPages) ||
+            maximumPages < 1 ||
+            maximumPages > MAX_LIST_PAGES
+        ) {
+            throw new Error("S3 object listing page limit is invalid");
+        }
+        if (beforePage !== null && typeof beforePage !== "function") {
+            throw new Error("S3 object listing page callback is invalid");
+        }
+        if (typeof includePageCount !== "boolean") {
+            throw new Error("S3 object listing evidence mode is invalid");
+        }
+        const Prefix =
+            relativePrefix === ""
+                ? `${this.prefix}/`
+                : `${this.prefix}/${relativePrefix}`;
+        if (Buffer.byteLength(Prefix) > MAX_KEY_BYTES)
+            throw new Error("S3 object key exceeds its byte limit");
+        const objects = [];
+        const seenKeys = new Set();
+        const seenTokens = new Set();
+        let ContinuationToken;
+        for (let page = 0; page < maximumPages; page += 1) {
+            if (beforePage !== null) {
+                await beforePage(Object.freeze({ pageNumber: page + 1 }));
+            }
+            const result = await this.client.send(
+                new ListObjectsV2Command({
+                    Bucket: this.bucket,
+                    Prefix,
+                    MaxKeys: 1000,
+                    ...(ContinuationToken === undefined
+                        ? {}
+                        : { ContinuationToken }),
+                }),
+            );
+            const contents = result.Contents ?? [];
+            if (!Array.isArray(contents))
+                throw new Error("S3 object listing is invalid");
+            for (const entry of contents) {
+                if (
+                    entry === null ||
+                    typeof entry !== "object" ||
+                    typeof entry.Key !== "string" ||
+                    !entry.Key.startsWith(Prefix) ||
+                    entry.Key.length === Prefix.length ||
+                    seenKeys.has(entry.Key)
+                ) {
+                    throw new Error("S3 object listing membership is invalid");
+                }
+                const relative = entry.Key.slice(`${this.prefix}/`.length);
+                try {
+                    validateRelativeObjectKey(relative);
+                } catch {
+                    throw new Error("S3 object listing membership is invalid");
+                }
+                if (Buffer.byteLength(entry.Key) > MAX_KEY_BYTES)
+                    throw new Error("S3 object listing membership is invalid");
+                const metadata = validateObjectMetadata(
+                    {
+                        ContentLength: entry.Size,
+                        LastModified: entry.LastModified,
+                        ETag: entry.ETag,
+                    },
+                    "S3 listed object",
+                );
+                seenKeys.add(entry.Key);
+                objects.push({ key: relative, ...metadata });
+                if (objects.length > maximumObjects)
+                    throw new Error(
+                        "S3 object listing exceeds its membership limit",
+                    );
+            }
+            if (result.IsTruncated !== true) {
+                if (
+                    result.IsTruncated !== false &&
+                    result.IsTruncated !== undefined
+                )
+                    throw new Error("S3 object listing pagination is invalid");
+                return includePageCount
+                    ? Object.freeze({
+                        objects: Object.freeze(objects),
+                        pageCount: page + 1,
+                    })
+                    : objects;
+            }
+            const token = result.NextContinuationToken;
+            if (
+                typeof token !== "string" ||
+                token.length === 0 ||
+                CONTROL_RE.test(token) ||
+                Buffer.byteLength(token) > MAX_CONTINUATION_TOKEN_BYTES ||
+                seenTokens.has(token)
+            ) {
+                throw new Error("S3 object listing continuation is invalid");
+            }
+            seenTokens.add(token);
+            ContinuationToken = token;
+        }
+        throw new Error("S3 object listing exceeds its page limit");
+    }
+
     async list(relativePrefix, { maximumObjects = 1000 } = {}) {
         validateRelativeObjectKey(relativePrefix, { allowTrailingSlash: true });
         if (
             !Number.isSafeInteger(maximumObjects) ||
             maximumObjects < 1 ||
-            maximumObjects > 1000
+            maximumObjects > MAX_LIST_OBJECTS
         ) {
             throw new Error("S3 object listing limit is invalid");
         }

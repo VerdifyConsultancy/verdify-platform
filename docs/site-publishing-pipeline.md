@@ -272,6 +272,103 @@ an explicitly injected adapter. The legacy credential-free occurrence CLI delibe
 refuses implicit S3 access; only the separate approved-policy `execute` path can
 construct an explicit S3 operation adapter, and no workload invokes it.
 
+The source-only S3 coordinator defines the shared storage lifecycle without changing
+the local-store policy. The coordinator itself requires initialized writer stores in
+one bucket with three pairwise distinct, non-nested built-site, typed-occurrence, and
+coordination prefixes before any clock or object-store I/O. It obtains one monotonic
+object-store admission fence before inventory or budget reservations, binds that same
+token to the completed plan, and takes a complete, fail-closed inventory of the two
+release roots. It conditionally removes only objects outside the current/rollback reachability graph
+and strictly older than the 48-hour recovery window. Every delete is preceded by an
+immutable daily usage reservation, a current UTC-budget-day check, and a current
+lease/fence check; HEAD metadata and its entity tag must still match the complete
+inventory before conditional deletion. Lease time and the fence are checked again
+after reservation I/O and immediately after final object inspection, before the
+conditional delete request.
+
+Inventory I/O is part of the daily budget rather than an uncounted preflight. Each
+site or occurrence `ListObjectsV2` page gets its own immutable reservation before
+that page request, with a two-MiB response envelope and an exact page cardinality.
+Coordination-root inventory uses a maximum 100-page reservation before listing, then
+records the actual returned page count; this remains conservative when an endpoint
+legally returns short pages.
+The complete listing then determines the exact selector, release manifest,
+occurrence manifest, media generation, and site-publisher checkpoint GET count and
+listed byte total. One second reservation is committed before any of those canonical
+GETs. A crash between either reservation and its I/O leaves the conservative usage
+durable. If retained canonical history would reach a hard daily limit, the
+coordinator returns a names-safe typed budget failure before those reads; it never
+silently discovers the overrun afterward. Admission is serialized by the distributed
+fence, so two near-budget coordinators cannot both append reservations from one stale
+snapshot. The physical coordination listing limit remains 25,000 objects, while
+ordinary admission stops at 23,976 to preserve 1,024 cleanup slots.
+
+The current per-file publication format is **not activation-ready at 96 full
+publications/day**. One 143-graph plus two-camera occurrence publication adds at
+least 148 payload objects. Strict 48-hour retention holds 193 samples, or 28,564
+occurrence payload objects before events, checkpoints, site releases, and selectors.
+The quantified lower bound is 32,887 occurrence objects, 63,946 combined objects,
+29,088 write requests/day, and 212,736 canonical inventory reads/day. Those figures
+exceed the approved 25,000-object and 25,000-request defaults. The operator CLI
+therefore reports the endpoint conditional-semantics proof but exits nonzero with a
+machine-readable activation gate. Deterministic occurrence/site packs plus
+selected-root inventory are a required follow-up; a single 143+2 snapshot test is
+only a functional check and is not convergence evidence. The 96-sample reporting
+freshness KPI remains unchanged and must not be reinterpreted as 96 full publishes.
+The executable publisher boundary is a second explicit activation prerequisite:
+this dormant coordinator still receives the payload estimate/result from its caller.
+The refreshed writer must derive the complete payload envelope, import the closed
+checkpoint contract, and enforce the fence at each actual write. Coordinator-owned
+reservation-journal and pre/post-fence overhead is already added structurally and
+cannot be reduced by the caller, but that does not validate caller-reported payload
+usage.
+
+S3 event tombstones are deliberately bounded rather than permanent: exact event
+replay is protected for 14 days (seven times the recovery window), after which the
+tombstone becomes GC-eligible. Complete inventory derives old event identity from
+its immutable key and listing metadata, so it does not GET every retained event
+body. The exact event reader still validates canonical bytes and payload binding
+when that event ID is replayed. A replay after expiry is handled as a new fenced
+attempt: immutable content identities and selector compare-and-swap still make an
+exact replay idempotent and prevent it from replacing a competing selection. This
+14-day S3 policy replaces the local backend's permanent-tombstone behavior for the
+distributed store only.
+
+The occurrence-to-site publisher checkpoint is a separate closed idempotency
+tombstone, not a generic whitelisted object and not the site release event intent.
+Its key is exactly `checkpoints/sha256/<sha256(eventId)>.json`; its canonical body is
+limited to 64 KiB and must use the closed publisher-checkpoint v1 schema with the key
+event identity and digest fields. It carries no reachability references, remains
+retained for the same 14-day idempotency horizon, participates in complete inventory
+read accounting, and is deleted only by the fenced conditional GC path after expiry.
+The S3 coordinator branch defines this canonical contract. When the executable stage
+publisher branch is refreshed onto this head, its checkpoint writer must import this
+contract and reject any non-canonical body before its PR can merge; the coordinator
+regression already proves publisher-compatible bytes survive a successful cycle and
+permit the next complete inventory/coordinator cycle.
+
+Coordination history is bounded under the same fence. Publication/GC usage
+reservations remain for 14 days; deletion confirmations remain for 48 hours.
+Expiration is based on a complete UTC day, conservatively retaining up to one extra
+day. Up to 1,000 expired coordination objects share one attempt-bound batch
+reservation, then receive individual HEAD/entity-tag conditional deletion checks.
+This bounded batch can consume the reserved cleanup headroom and shrink a saturated
+journal rather than replacing every deleted record one-for-one. Reservation deltas are encoded
+in their content-addressed keys, allowing daily counters to be reconstructed from a
+bounded listing without rereading every journal body; a retry of the exact key still
+validates the canonical body. The saturation regression starts at the admitted
+23,976-object boundary, deletes one bounded batch, and proves the journal returns
+below ordinary admission without exceeding the physical 25,000-object cap.
+
+Publication, GC, and terminal reservations include the fencing token so a later
+whole-coordinator retry of the same event is charged again while response-loss retry
+inside one attempt remains idempotent. Terminal output is also token-monotonic:
+fail-closed metrics are written first, then `status.json`, then terminal metrics.
+A delayed lower token cannot overwrite either output, and a budget-blocked cycle
+replaces a prior allow metric. The finalization envelope covers all eight CAS
+attempts for the two metric phases and status, fence acquire/bind/release, and the
+reservation journal.
+
 ### Deterministic packed release contract (source-only)
 
 `site-astro/scripts/lib/deterministic-release-pack.mjs` defines the first bounded
@@ -351,14 +448,24 @@ checkpoint operations. It does not supply defaults for those operations and is
 not wired as the executable's default runtime. Constructing it invokes none of
 the operations.
 
-This is source-only dependency injection, not activation. It adds no Kubernetes
-manifest or Secret values, workload selection, endpoint probe, network call,
-replica, egress, route, sync, activation, distributed lease, retention/GC, or
-credential provisioning. Bounded cache hydration from object bytes, distributed
-coordination, bounded retention/GC, the event agent, resource accounting,
-real-endpoint conditional-write proof, and live cache/freshness/alert proof
-remain separate gates. The endpoint proof must confirm that the compatible store
-preserves the tested conditional semantics before any writer is activated.
+This remains source-only dependency injection, not activation. It adds no Kubernetes
+manifest or Secret values, workload selection, live network call, replica, egress,
+route, sync, activation, or credential provisioning. The distributed lease,
+retention, accounting, and bounded three-prefix
+create/read/HEAD/conditional-update/delete proof are
+offline-injected code paths only. Deployment wiring, the acknowledged real-endpoint
+proof, event-agent activation, and live cache/freshness/alert proof remain separate
+gates. The endpoint proof must confirm that the compatible store preserves the tested
+conditional semantics before any writer is activated: an exact conditional update
+must succeed, stale conditional update and delete requests must both be rejected, and
+the current entity tag must still authorize bounded cleanup.
+
+After the injected publisher returns, the coordinator rechecks the same UTC budget
+day, current fencing token, and unexpired lease before any terminal action. It repeats
+that check after loading final usage, releases the lease first, records the exact
+release instant in the terminal document, and only then persists `state=complete`
+status and metrics. A publisher that returns after lease expiry or UTC midnight can
+produce neither a released fence nor a complete status.
 
 The source tree now includes the built-site event consumer command:
 
