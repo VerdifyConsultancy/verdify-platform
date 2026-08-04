@@ -272,6 +272,52 @@ an explicitly injected adapter. The legacy credential-free occurrence CLI delibe
 refuses implicit S3 access; only the separate approved-policy `execute` path can
 construct an explicit S3 operation adapter, and no workload invokes it.
 
+### Deterministic packed release contract (source-only)
+
+`site-astro/scripts/lib/deterministic-release-pack.mjs` defines the first bounded
+replacement for the per-file payload layout. A pack has fixed `VLABPACK` magic,
+format version 1, a canonical closed JSON index, and strictly path-sorted frames.
+Each frame is one unsigned 32-bit big-endian length followed by the exact file bytes.
+There is no compression and the format carries no timestamp, mode, ownership, link,
+or other filesystem metadata. Both encoding and decoding enforce file, index,
+payload, path-depth, and total-pack limits; verify every content digest; and reject
+truncation, trailing bytes, noncanonical indexes, unsafe paths, duplicate paths,
+case-folded aliases, file/directory collisions, and link-shaped input descriptors.
+Hydration verifies the complete pack before creating a new destination tree, then
+creates only single-link regular files beneath canonical real directories.
+
+`packed-release-selected-root.mjs` defines one canonical `selected-root.json`. Its
+current and nullable rollback slots are each a closed pair containing exactly one
+occurrence-pack reference and one site-pack reference under the same event identity.
+The pair digest binds both pack identities and byte/count metadata. Future CAS code
+must replace this one root as the selection unit; independent occurrence and site
+selectors are not part of this contract.
+
+The deterministic 16-day simulator in `packed-release-capacity.mjs` covers 1,536
+15-minute events and proves the bounded object/request envelope:
+
+- strict 48-hour inclusive current/rollback reachability retains 193 events, or 386
+  pack objects;
+- exact 14-day inclusive event receipts retain 1,345 objects;
+- UTC-day-rounded 14-day attempt history retains 1,440 reservations;
+- three UTC day buckets of four delete confirmations per event retain 1,152 objects;
+- the selected root, inventory root, fence, status, and metrics add five objects.
+
+The total is **4,328 retained objects**. A conservative day carries 96 publication
+envelopes at 128 requests each, 768 deletion candidates at seven requests each, and
+eight audit requests, totaling **17,672 requests/day**. Actual occurrence-pack,
+site-pack, receipt, reservation, confirmation, root, and operation-envelope byte
+sizes are mandatory simulator inputs. The result applies the existing 10-GiB
+retained, 5-GiB/day write, 10-GiB/day egress, 25,000-object, and 25,000-request gates
+with the existing 80-percent warning line; missing or overflowing byte inputs fail
+closed.
+
+The hydration regression expands one packed occurrence into the same 145 canonical
+`evidence/blobs/sha256/<digest>.png` files required by the 143-graph plus two-camera
+completeness proof. This slice adds no S3 calls, writer, selector mutation, runtime
+binding, or deployment. Its counts are a format-capacity proof, not live 143+2
+convergence or permission to activate routing.
+
 The complete local filesystem primitive is present, and its candidate manifest is
 included by the Lab stage overlay only at `replicas: 0`. The overlay deliberately
 uses exact source-bound zot digests for the release agent and nginx site images. The
