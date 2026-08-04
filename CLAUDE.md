@@ -280,7 +280,7 @@ between OTAs stays.
 - `scripts/export-replay-overrides.sh` — CSV export includes outdoor sensors, equipment_state, mode_reason (sprint-15.1+).
 
 <!-- BEGIN agent-fleet CI/CD contract (managed — rendered by jvallery/agents) -->
-<!-- agent-fleet:contract-digest sha256:821a15617f6ba4510f008bcc64532d4760ad059c968c4717e5ff74e9f962e022 -->
+<!-- agent-fleet:contract-digest sha256:c51a6392ee2790e179b0631843f1c64beb8c6418e6fbf6b034b824685f694413 -->
 ## CI/CD contract — `VerdifyConsultancy/verdify-platform`
 
 This block is **rendered centrally** by `jvallery/agents` from `control-plane/agent-fleet-control/registry/repos/gh-1247193937.yaml` (`scripts/render_repo_guidance.py`).
@@ -304,7 +304,7 @@ Checkout credentials are short-lived, repository-restricted GitHub App tokens mi
 Images build **in-cluster with Kaniko** and push to the durable zot origin at `registry.vallery.net/verdifyconsultancy/<image>`.
 
 - The build definition is `.agent-fleet/ci.yaml` in THIS repo (`images[]`: name, dockerfile, context). The repo owns the WHAT; the platform's generic `repo-build` WorkflowTemplate is the HOW.
-- Trigger every declared image from the repo pod: `agent-ci-build --submit --wait --revision <40-character-sha>`. The returned value is the immutable zot `@sha256:` pin.
+- Build ONE declared image from the repo pod: `agent-ci-build --submit --wait --revision <40-character-sha> --image <name>`. Intentionally omit `--image` only when every declared image should build in one submission. Either form returns the immutable zot `@sha256:` pin for each image built.
 - The pod has create-only Workflow RBAC only when its registry `ci_submission` contract is enabled. Admission fixes repository, template, build/test controls, destination image, resources, and publisher scope; the pod has no Secret, Job, Workflow update, or Workflow delete authority.
 - GitHub Actions, where retained, is validation-only and never a publisher. The authoritative publication proof is the repo-pod Workflow and its zot digest.
 
