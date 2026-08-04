@@ -269,3 +269,32 @@ export function verifyProductionApproval(approvalBytes, bindings, registry) {
   }
   return record;
 }
+
+// The fields of an approval that may be published.
+//
+// `verifySnapshot`'s result is spread into `build.sanitization`, which the
+// compiler writes to `dist/static-build.json` — a file served at the public site
+// root (it is the deployment's readiness-probe path and `verify-live-occurrences.mjs`
+// fetches it over HTTP). Everything here therefore appears on lab.verdify.ai.
+//
+// `sourceOrigin` is deliberately EXCLUDED: it names the private Lab content
+// bucket, which is infrastructure detail, not public evidence. It stays in the
+// snapshot's `approval.json` and in the reviewed registry entry, where auditors
+// can read it. Every content digest a reader needs to verify the claim is
+// already published in the attestation.
+const PUBLISHED_APPROVAL_KEYS = Object.freeze([
+  "contract",
+  "schemaVersion",
+  "approvalId",
+  "sourceCapturedAt",
+  "occurrenceSelectionPolicySha256",
+  "approver",
+  "approvalRecordUrl",
+  "approvedAt",
+  "releaseTag",
+  "assetSha256",
+]);
+
+export function publishedApprovalIdentity(record) {
+  return Object.freeze(Object.fromEntries(PUBLISHED_APPROVAL_KEYS.map((key) => [key, record[key]])));
+}

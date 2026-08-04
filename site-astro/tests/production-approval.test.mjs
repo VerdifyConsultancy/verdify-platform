@@ -182,7 +182,15 @@ test("a registered, content-bound approval makes the snapshot approval-eligible"
   assert.equal(resolved.snapshotId, `sanitized-content-sha256:${snapshot.sanitizedManifestSha256}`);
   assert.equal(resolved.sanitization.fixtureOnly, false);
   assert.equal(resolved.sanitization.approval.approver, "jvallery");
-  assert.equal(resolved.sanitization.approval.sourceOrigin, "s3://verdify-lab-content/lab/content");
+  // The private content-bucket URI must never reach the publicly served
+  // dist/static-build.json, which spreads build.sanitization.
+  assert.equal(resolved.sanitization.approval.sourceOrigin, undefined);
+  assert.equal(
+    JSON.stringify(resolved.sanitization).includes("verdify-lab-content"),
+    false,
+    "the source bucket must not be published in the build identity",
+  );
+  assert.equal(resolved.sanitization.approval.releaseTag, "lab-production-snapshot-20260804t1200z");
   assert.equal(resolved.files.size, Object.keys(CONTENT).length);
 });
 
