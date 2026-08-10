@@ -145,6 +145,12 @@ spec:
               value: /opt/data/slack.yaml
             - name: HERMES_MCP_READINESS_URL
               value: http://verdify-mcp.verdify-prod.svc:8000/readyz
+            # Verdify's 10-minute disconnect threshold supervises a continuously
+            # disconnected pinned client. Two failed 15s liveness probes then
+            # restart it. Readiness remains strict; this deliberately may preempt
+            # an unusually slow upstream retry (#575).
+            - name: HERMES_MCP_DISCONNECT_RESTART_SECONDS
+              value: "600"
           securityContext:
             allowPrivilegeEscalation: false
             # hermes writes run state under /opt/data (PVC); root FS can stay RO.
@@ -180,7 +186,7 @@ spec:
             initialDelaySeconds: 45
             periodSeconds: 15
             timeoutSeconds: 5
-            failureThreshold: 1
+            failureThreshold: 2
           readinessProbe:
             exec:
               command: ["python3", "/etc/verdify/hermes-config/tool-readiness.py", "--mode", "readiness"]

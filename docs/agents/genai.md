@@ -38,6 +38,24 @@ Iris the planner agent, the MCP tool surface, prompt templates, plan scoring and
 - Plan feedback loop smoke (`scripts/smoke-feedback-loop.py`) must pass end-to-end against the live stack.
 - Token/cost sanity check: if a prompt change inflates average plan-cycle cost by >20%, coordinator reviews.
 
+## Hermes MCP supervision
+
+- Hermes readiness remains fail-closed: the configured MCP allowlist must
+  match exactly, Verdify MCP `/readyz` must expose every required tool, and the
+  in-process Hermes client must be `connected`. Never substitute
+  `planner_graph`, a TCP-only check, or a synthetic production write.
+- The pinned upstream client has a finite reconnect loop. Verdify's liveness
+  wrapper treats an explicit fatal exhaustion marker as immediately non-live
+  and, only when the Deployment explicitly sets the supervisor threshold, a
+  continuous MCP-client disconnect of 600 seconds as stalled. An absent or
+  invalid threshold leaves timeout supervision disabled without weakening
+  readiness. Retry log chatter does not reset the first-disconnect clock; a
+  later registered marker does.
+- The probe script is projected from a ConfigMap, so applying a supervision
+  change can restart an already-stale Hermes process before a normal rollout.
+  Treat the ConfigMap plus Deployment environment as one human-gated workload
+  action. Preserve the pinned upstream digest and strict readiness contract.
+
 ## Ask coordinator before
 
 - Switching planner models or routing policy (local ↔ cloud, Gemma/version bumps, or behavior-impacting model changes)

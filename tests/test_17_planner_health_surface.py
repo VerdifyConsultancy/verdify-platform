@@ -418,6 +418,23 @@ def test_hermes_client_state_ignores_persistent_prestart_history(tmp_path):
     assert state["fatal"] is False
 
 
+def test_hermes_client_state_does_not_inherit_immediate_prior_process_disconnect(tmp_path):
+    _manifest, _profile, source = _hermes_config_documents()
+    namespace = _hermes_probe_namespace(source)
+    client_state = namespace["hermes_client_state"]
+    started_at = datetime(2026, 7, 10, 12, tzinfo=UTC).timestamp()
+    log_path = tmp_path / "agent.log"
+    log_path.write_text(
+        "2026-07-10 11:59:59,500 WARNING MCP server 'verdify_greenhouse' "
+        "connection lost (attempt 4/5), reconnecting in 60s: old process\n"
+    )
+
+    state = client_state([str(log_path)], started_at)
+
+    assert state["state"] == "unknown"
+    assert state["disconnected_since"] is None
+
+
 def test_hermes_client_state_disconnect_then_recover(tmp_path):
     _manifest, _profile, source = _hermes_config_documents()
     namespace = _hermes_probe_namespace(source)
@@ -440,8 +457,109 @@ def test_hermes_client_state_disconnect_then_recover(tmp_path):
 
     assert disconnected["state"] == "disconnected"
     assert disconnected["fatal"] is False
+    assert disconnected["disconnected_since"] == datetime(2026, 7, 10, 12, 1, tzinfo=UTC).timestamp()
     assert recovered["state"] == "connected"
     assert recovered["fatal"] is False
+    assert recovered["disconnected_since"] is None
+
+
+def test_hermes_disconnect_episode_is_not_postponed_by_retry_chatter(tmp_path):
+    _manifest, _profile, source = _hermes_config_documents()
+    namespace = _hermes_probe_namespace(source)
+    client_state = namespace["hermes_client_state"]
+    disconnected_for_seconds = namespace["disconnected_for_seconds"]
+    started_at = datetime(2026, 7, 10, 12, tzinfo=UTC).timestamp()
+    log_path = tmp_path / "agent.log"
+    log_path.write_text(
+        "2026-07-10 12:00:01,000 INFO MCP server 'verdify_greenhouse' "
+        "(HTTP): registered 23 tool(s): climate\n"
+        "2026-07-10 12:01:00,000 WARNING MCP server 'verdify_greenhouse' "
+        "connection lost (attempt 1/5), reconnecting in 1s: reset\n"
+        "2026-07-10 12:02:00,000 WARNING MCP server 'verdify_greenhouse' "
+        "is not connected (attempt 4/5)\n"
+    )
+
+    state = client_state([str(log_path)], started_at)
+    now = datetime(2026, 7, 10, 12, 11, 1, tzinfo=UTC).timestamp()
+
+    assert state["state"] == "disconnected"
+    assert state["last_event_at"] == datetime(2026, 7, 10, 12, 2, tzinfo=UTC).timestamp()
+    assert state["disconnected_since"] == datetime(2026, 7, 10, 12, 1, tzinfo=UTC).timestamp()
+    assert disconnected_for_seconds(state, now=now) == 601
+
+
+def test_hermes_liveness_escalates_only_prolonged_disconnect_or_fatal(monkeypatch, capsys):
+    _manifest, _profile, source = _hermes_config_documents()
+    namespace = _hermes_probe_namespace(source)
+    monkeypatch.setenv("HERMES_PROCESS_START_EPOCH", "0")
+    monkeypatch.setenv("HERMES_MCP_DISCONNECT_RESTART_SECONDS", "600")
+    namespace["time"] = SimpleNamespace(time=lambda: 1_000.0)
+
+    client = {
+        "state": "disconnected",
+        "fatal": False,
+        "last_event_at": 500.0,
+        "disconnected_since": 401.0,
+    }
+    namespace["hermes_client_state"] = lambda *_args: client
+    assert namespace["main"](["--mode", "liveness"]) == 0
+    recent = json.loads(capsys.readouterr().out)
+    assert recent["alive"] is True
+    assert recent["restart_reason"] is None
+
+    client["disconnected_since"] = 400.0
+    assert namespace["main"](["--mode", "liveness"]) == 1
+    stale = json.loads(capsys.readouterr().out)
+    assert stale["alive"] is False
+    assert stale["disconnected_for_seconds"] == 600
+    assert stale["restart_reason"] == "mcp_client_disconnect_timeout"
+
+    client.update({"state": "unknown", "disconnected_since": None})
+    assert namespace["main"](["--mode", "liveness"]) == 0
+    unknown = json.loads(capsys.readouterr().out)
+    assert unknown["alive"] is True
+
+    client.update({"state": "fatal", "fatal": True})
+    assert namespace["main"](["--mode", "liveness"]) == 1
+    fatal = json.loads(capsys.readouterr().out)
+    assert fatal["restart_reason"] == "fatal_reconnect_exhaustion"
+
+
+@pytest.mark.parametrize(
+    ("configured", "expected_error"),
+    [
+        (None, None),
+        ("not-a-number", "not_numeric"),
+        ("nan", "outside_60_86400_seconds"),
+        ("-1", "outside_60_86400_seconds"),
+        ("59", "outside_60_86400_seconds"),
+        ("86401", "outside_60_86400_seconds"),
+    ],
+)
+def test_hermes_disconnect_timeout_is_opt_in_and_invalid_values_fail_open(
+    configured, expected_error, monkeypatch, capsys
+):
+    _manifest, _profile, source = _hermes_config_documents()
+    namespace = _hermes_probe_namespace(source)
+    monkeypatch.setenv("HERMES_PROCESS_START_EPOCH", "0")
+    if configured is None:
+        monkeypatch.delenv("HERMES_MCP_DISCONNECT_RESTART_SECONDS", raising=False)
+    else:
+        monkeypatch.setenv("HERMES_MCP_DISCONNECT_RESTART_SECONDS", configured)
+    namespace["time"] = SimpleNamespace(time=lambda: 10_000.0)
+    namespace["hermes_client_state"] = lambda *_args: {
+        "state": "disconnected",
+        "fatal": False,
+        "last_event_at": 100.0,
+        "disconnected_since": 100.0,
+    }
+
+    assert namespace["main"](["--mode", "liveness"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["alive"] is True
+    assert payload["disconnect_restart_seconds"] is None
+    assert payload["timeout_config_error"] == expected_error
+    assert payload["restart_reason"] is None
 
 
 def test_hermes_client_state_fatal_reconnect_exhaustion(tmp_path):
@@ -463,7 +581,7 @@ def test_hermes_client_state_fatal_reconnect_exhaustion(tmp_path):
     assert state["fatal"] is True
 
 
-def test_actual_python3_liveness_probe_restarts_only_on_poststart_fatal(tmp_path):
+def test_actual_python3_liveness_probe_restarts_on_bounded_disconnect_or_fatal(tmp_path):
     manifest, _profile, source = _hermes_config_documents()
     probe_path = tmp_path / "tool-readiness.py"
     log_path = tmp_path / "agent.log"
@@ -477,8 +595,21 @@ def test_actual_python3_liveness_probe_restarts_only_on_poststart_fatal(tmp_path
         **os.environ,
         "HERMES_PROCESS_START_EPOCH": str(started_at),
         "HERMES_CLIENT_LOG_PATHS": str(log_path),
+        "HERMES_MCP_DISCONNECT_RESTART_SECONDS": "600",
     }
     live = subprocess.run(
+        ["python3", str(probe_path), "--mode", "liveness"],
+        check=False,
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    with log_path.open("a") as stream:
+        stream.write(
+            "2026-07-10 12:01:00,000 WARNING MCP server 'verdify_greenhouse' "
+            "connection lost (attempt 1/5), reconnecting in 1s: reset\n"
+        )
+    disconnected = subprocess.run(
         ["python3", str(probe_path), "--mode", "liveness"],
         check=False,
         capture_output=True,
@@ -503,11 +634,24 @@ def test_actual_python3_liveness_probe_restarts_only_on_poststart_fatal(tmp_path
     probes = workload["spec"]["template"]["spec"]["containers"][0]
 
     assert live.returncode == 0
+    assert disconnected.returncode == 1
+    assert json.loads(disconnected.stdout)["restart_reason"] == "mcp_client_disconnect_timeout"
     assert fatal.returncode == 1
     assert json.loads(fatal.stdout)["client"]["fatal"] is True
     assert container["data"]["tool-readiness.py"] == source
     assert probes["readinessProbe"]["exec"]["command"][0] == "python3"
     assert probes["livenessProbe"]["exec"]["command"][-1] == "liveness"
+    assert probes["livenessProbe"]["failureThreshold"] == 2
+    env_by_name = {item["name"]: item["value"] for item in probes["env"]}
+    assert env_by_name["HERMES_MCP_DISCONNECT_RESTART_SECONDS"] == "600"
+    assert workload["spec"]["replicas"] == 1
+    assert workload["spec"]["strategy"]["type"] == "Recreate"
+    expected_digest = (
+        "nousresearch/hermes-agent@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e"
+    )
+    assert probes["image"] == expected_digest
+    init_by_name = {item["name"]: item for item in workload["spec"]["template"]["spec"]["initContainers"]}
+    assert init_by_name["seed-config"]["image"] == expected_digest
 
 
 def test_materializer_runs_one_canonical_final_normalization_per_output(mcp_server, monkeypatch):

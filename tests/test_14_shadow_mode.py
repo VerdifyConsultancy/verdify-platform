@@ -256,6 +256,4 @@ def test_healthz_probe_exists_and_reads_climate_freshness():
     probe = Path(INGESTOR_PATH, "ingestor-healthz.py").read_text()
     assert "max(ts)" in probe
     assert "FROM climate" in probe
-    # k8s probe contract documented for the cluster ingestor.
-    assert "initialDelaySeconds: 60" in probe
-    assert "failureThreshold: 5" in probe
+    assert "SELECT extract(epoch FROM now() - max(ts))::float FROM climate" in probe

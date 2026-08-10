@@ -31,9 +31,11 @@ data:
     import argparse
     import datetime
     import json
+    import math
     import os
     import re
     import sys
+    import time
     import urllib.request
 
     REQUIRED = {
@@ -119,7 +121,7 @@ data:
                         event_at = _line_epoch(line)
                         # Persistent PVC logs survive pod replacement. Untimestamped
                         # and pre-start lines can never describe this process.
-                        if event_at is None or event_at < started_at - 2:
+                        if event_at is None or event_at < started_at:
                             continue
                         events.append((event_at, sequence, line))
             except FileNotFoundError:
@@ -127,6 +129,7 @@ data:
         state = "unknown"
         fatal = False
         last_event_at = None
+        disconnected_since = None
         for event_at, _sequence, line in sorted(events):
             if any(marker in line for marker in FATAL) and "giving up" in line:
                 state = "fatal"
@@ -136,14 +139,38 @@ data:
                 state = "connected"
                 fatal = False
                 last_event_at = event_at
+                disconnected_since = None
             elif any(marker in line for marker in DISCONNECTED):
+                if state != "disconnected":
+                    disconnected_since = event_at
                 state = "disconnected"
                 last_event_at = event_at
         return {
             "state": state,
             "fatal": fatal,
             "last_event_at": last_event_at,
+            "disconnected_since": disconnected_since,
         }
+
+    def disconnected_for_seconds(client, now=None):
+        """Age of the current disconnect episode; retry chatter cannot reset it."""
+        disconnected_since = client.get("disconnected_since")
+        if client.get("state") != "disconnected" or disconnected_since is None:
+            return None
+        observed_at = time.time() if now is None else now
+        return max(0.0, observed_at - disconnected_since)
+
+    def disconnect_restart_policy(raw):
+        """Parse the opt-in supervisor threshold without creating restart loops."""
+        if raw is None or not raw.strip():
+            return None, None
+        try:
+            seconds = float(raw)
+        except ValueError:
+            return None, "not_numeric"
+        if not math.isfinite(seconds) or not 60 <= seconds <= 86400:
+            return None, "outside_60_86400_seconds"
+        return seconds, None
 
     def mcp_server_ready():
         url = os.environ.get(
@@ -172,8 +199,28 @@ data:
         ).split(":")
         client = hermes_client_state(log_paths, started_at)
         if args.mode == "liveness":
-            alive = not client["fatal"]
-            print(json.dumps({"alive": alive, "client": client}, sort_keys=True))
+            disconnect_restart_seconds, timeout_config_error = disconnect_restart_policy(
+                os.environ.get("HERMES_MCP_DISCONNECT_RESTART_SECONDS")
+            )
+            disconnected_for = disconnected_for_seconds(client)
+            restart_reason = None
+            if client["fatal"]:
+                restart_reason = "fatal_reconnect_exhaustion"
+            elif (
+                disconnect_restart_seconds is not None
+                and disconnected_for is not None
+                and disconnected_for >= disconnect_restart_seconds
+            ):
+                restart_reason = "mcp_client_disconnect_timeout"
+            alive = restart_reason is None
+            print(json.dumps({
+                "alive": alive,
+                "client": client,
+                "disconnected_for_seconds": disconnected_for,
+                "disconnect_restart_seconds": disconnect_restart_seconds,
+                "timeout_config_error": timeout_config_error,
+                "restart_reason": restart_reason,
+            }, sort_keys=True))
             return 0 if alive else 1
 
         with open("/opt/data/config.yaml", encoding="utf-8") as config_file:

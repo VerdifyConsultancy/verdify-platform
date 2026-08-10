@@ -111,6 +111,18 @@ def test_prod_ha_gap_backfill_cronjob_mounts_script_and_ha_token():
     assert "POSTGRES_PASSWORD" in cron
     assert "--lookback-days=30" in cron
     assert "--max-gap-minutes=10" in cron
+    assert "--history-request-timeout-seconds=60" in cron
+    assert "--history-transport-retries=1" in cron
+    assert "--history-request-max-minutes=60" in cron
+    assert "--history-request-min-minutes=5" in cron
+    assert "--history-max-requests=512" in cron
+    assert "--history-fetch-budget-seconds=1200" in cron
+    assert "--history-max-split-depth=12" in cron
+    assert "--history-max-points=250000" in cron
+    assert "--history-response-max-bytes=33554432" in cron
+    assert "activeDeadlineSeconds: 1800" in cron
+    assert "backoffLimit: 0" in cron
+    assert "restartPolicy: Never" in cron
     assert "name: allow-db-from-ha-gap-backfill" in cron
     assert "app.kubernetes.io/component: ha-gap-backfill" in cron
     assert "deploy/k8s/components/ha-gap-backfill/backfill-ha-gaps.py" in wrapper

@@ -14,12 +14,17 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import hashlib
+import http.client
 import json
 import logging
 import math
 import os
 import re
+import socket
 import sys
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from bisect import bisect_right
@@ -63,6 +68,7 @@ LOG = logging.getLogger("ha-gap-backfill")
 GREENHOUSE_ID = os.environ.get("GREENHOUSE_ID", "vallery")
 DEFAULT_HA_URL = "http://192.168.30.107:8123"
 DEFAULT_HA_TOKEN_FILE = "/mnt/agents/shared/credentials/ha_token.txt"
+DEFAULT_HA_RESPONSE_MAX_BYTES = 32 * 1024 * 1024
 ADVISORY_LOCK_NAME = "verdify-ha-gap-backfill"
 
 SAMPLE_TABLES = ("climate", "diagnostics", "setpoint_snapshot", "energy")
@@ -145,11 +151,104 @@ class Stats:
     windows_seen: int = 0
     windows_backfilled: int = 0
     windows_without_ha: int = 0
+    windows_committed: int = 0
+    windows_with_candidates: int = 0
     rows: dict[str, int] = field(default_factory=lambda: defaultdict(int))
     skipped: dict[str, int] = field(default_factory=lambda: defaultdict(int))
 
     def add(self, table: str, count: int) -> None:
         self.rows[table] += count
+
+
+@dataclass(frozen=True)
+class HistoryFetchPolicy:
+    request_timeout_seconds: float = 60.0
+    transport_retries: int = 1
+    retry_backoff_seconds: float = 2.0
+    request_max_minutes: float = 60.0
+    request_min_minutes: float = 5.0
+    max_requests: int = 512
+    budget_seconds: float = 1200.0
+    max_split_depth: int = 12
+    max_points: int = 250_000
+    response_max_bytes: int = DEFAULT_HA_RESPONSE_MAX_BYTES
+
+    def __post_init__(self) -> None:
+        finite_positive = {
+            "request_timeout_seconds": self.request_timeout_seconds,
+            "retry_backoff_seconds": self.retry_backoff_seconds,
+            "request_max_minutes": self.request_max_minutes,
+            "request_min_minutes": self.request_min_minutes,
+            "budget_seconds": self.budget_seconds,
+        }
+        invalid = [
+            name
+            for name, value in finite_positive.items()
+            if isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(float(value))
+            or value <= 0
+        ]
+        integer_limits = {
+            "max_requests": self.max_requests,
+            "max_split_depth": self.max_split_depth,
+            "max_points": self.max_points,
+            "response_max_bytes": self.response_max_bytes,
+        }
+        invalid.extend(name for name, value in integer_limits.items() if type(value) is not int or value <= 0)
+        if type(self.transport_retries) is not int or self.transport_retries < 0:
+            invalid.append("transport_retries")
+        if invalid:
+            raise ValueError("invalid history fetch policy: " + ", ".join(invalid))
+        if self.request_max_minutes < self.request_min_minutes:
+            raise ValueError("history request maximum must be at least the minimum")
+
+
+@dataclass(frozen=True)
+class HistoryRequest:
+    entity_ids: tuple[str, ...]
+    start: datetime
+    end: datetime
+    depth: int = 0
+    parent_key: str | None = None
+    include_initial_state: bool = True
+
+    @property
+    def span_minutes(self) -> float:
+        return (self.end - self.start).total_seconds() / 60.0
+
+    @property
+    def entity_fingerprint(self) -> str:
+        joined = "\n".join(self.entity_ids).encode()
+        return hashlib.sha256(joined).hexdigest()[:12]
+
+    @property
+    def key(self) -> str:
+        material = (
+            f"{history_iso_z(self.start)}|{history_iso_z(self.end)}|{','.join(self.entity_ids)}|"
+            f"{self.depth}|{self.include_initial_state}"
+        )
+        return hashlib.sha256(material.encode()).hexdigest()[:12]
+
+
+@dataclass
+class HistoryFetchStats:
+    attempts: int = 0
+    retries: int = 0
+    splits: int = 0
+    points: int = 0
+
+
+class HistoryFetchExhausted(RuntimeError):
+    """A bounded history fetch could not complete safely."""
+
+
+class HistoryPayloadError(RuntimeError):
+    """Home Assistant returned ambiguous or malformed history."""
+
+
+class HistoryResponseTooLarge(HistoryPayloadError):
+    """Home Assistant response exceeded the bounded in-memory body limit."""
 
 
 def parse_args() -> argparse.Namespace:
@@ -187,7 +286,59 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--ha-url", default=os.environ.get("HA_URL", DEFAULT_HA_URL))
     parser.add_argument("--ha-token-file", default=os.environ.get("HA_TOKEN_FILE", DEFAULT_HA_TOKEN_FILE))
     parser.add_argument("--batch-size", type=int, default=25, help="HA history entity batch size")
-    parser.add_argument("--history-carry-minutes", type=float, default=20.0, help="pre-window HA history for carry-forward")
+    parser.add_argument(
+        "--history-carry-minutes", type=float, default=20.0, help="pre-window HA history for carry-forward"
+    )
+    parser.add_argument(
+        "--history-request-timeout-seconds",
+        type=float,
+        default=60.0,
+        help="timeout for one bounded HA history request",
+    )
+    parser.add_argument(
+        "--history-transport-retries",
+        type=int,
+        default=1,
+        help="same-shape retries before splitting or failing",
+    )
+    parser.add_argument(
+        "--history-retry-backoff-seconds",
+        type=float,
+        default=2.0,
+        help="initial bounded retry delay",
+    )
+    parser.add_argument(
+        "--history-request-max-minutes",
+        type=float,
+        default=60.0,
+        help="pre-split ordinary history requests to at most this span",
+    )
+    parser.add_argument(
+        "--history-request-min-minutes",
+        type=float,
+        default=5.0,
+        help="smallest adaptive time-split leaf",
+    )
+    parser.add_argument("--history-max-requests", type=int, default=512, help="run-wide HA history request budget")
+    parser.add_argument(
+        "--history-fetch-budget-seconds",
+        type=float,
+        default=1200.0,
+        help="run-wide wall-clock budget for HA history fetching",
+    )
+    parser.add_argument("--history-max-split-depth", type=int, default=12, help="adaptive split depth limit")
+    parser.add_argument(
+        "--history-max-points",
+        type=int,
+        default=250_000,
+        help="run-wide decoded HA history point budget",
+    )
+    parser.add_argument(
+        "--history-response-max-bytes",
+        type=int,
+        default=DEFAULT_HA_RESPONSE_MAX_BYTES,
+        help="maximum encoded bytes accepted from one HA response",
+    )
     parser.add_argument("--log-level", default=os.environ.get("LOG_LEVEL", "INFO"))
     return parser.parse_args()
 
@@ -204,6 +355,11 @@ def parse_time(value: str) -> datetime:
 
 def iso_z(dt: datetime) -> str:
     return dt.astimezone(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def history_iso_z(dt: datetime) -> str:
+    """RFC3339 with microseconds for padded HA recorder boundaries."""
+    return dt.astimezone(UTC).isoformat(timespec="microseconds").replace("+00:00", "Z")
 
 
 def floor_time(dt: datetime, seconds: int) -> datetime:
@@ -550,13 +706,26 @@ def load_ha_token(path: str) -> str:
     return token
 
 
-def ha_get_json(ha_url: str, token: str, path: str, timeout: int = 60) -> Any:
+def ha_get_json(
+    ha_url: str,
+    token: str,
+    path: str,
+    timeout: float = 60,
+    *,
+    max_response_bytes: int = DEFAULT_HA_RESPONSE_MAX_BYTES,
+) -> Any:
     req = urllib.request.Request(
         f"{ha_url.rstrip('/')}{path}",
         headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
     )
     with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return json.loads(resp.read())
+        body = resp.read(max_response_bytes + 1)
+    if len(body) > max_response_bytes:
+        # A traceback retains this frame. Drop the body before raising so
+        # adaptive split recursion cannot retain one body per ancestor request.
+        del body
+        raise HistoryResponseTooLarge("HA response exceeded encoded byte limit")
+    return json.loads(body)
 
 
 def fetch_current_entities(ha_url: str, token: str) -> set[str]:
@@ -564,8 +733,8 @@ def fetch_current_entities(ha_url: str, token: str) -> set[str]:
     return {row.get("entity_id") for row in payload if row.get("entity_id")}
 
 
-def parse_ha_time(raw: str | None) -> datetime | None:
-    if not raw:
+def parse_ha_time(raw: Any) -> datetime | None:
+    if not isinstance(raw, str) or not raw:
         return None
     try:
         return parse_time(raw)
@@ -573,53 +742,520 @@ def parse_ha_time(raw: str | None) -> datetime | None:
         return None
 
 
-def fetch_history(
-    ha_url: str,
-    token: str,
-    entity_ids: list[str],
-    start: datetime,
-    end: datetime,
-    batch_size: int,
-) -> dict[str, HAHistory]:
+def _history_error_action(exc: Exception) -> tuple[str, str]:
+    """Return bounded handling action and a non-secret error class."""
+    if isinstance(exc, urllib.error.HTTPError):
+        if exc.code == 413:
+            return "split", "http_413"
+        if exc.code == 408:
+            return "retry_split", "http_408"
+        if exc.code == 429:
+            return "retry_fail", "http_429"
+        if 500 <= exc.code <= 599:
+            return "retry_fail", f"http_{exc.code}"
+        return "fatal", f"http_{exc.code}"
+    if isinstance(exc, HistoryResponseTooLarge):
+        return "split", "response_too_large"
+    if isinstance(exc, json.JSONDecodeError):
+        return "retry_fail", "json_decode"
+    if isinstance(exc, http.client.IncompleteRead):
+        return "retry_split", "incomplete_read"
+    if isinstance(
+        exc,
+        (
+            http.client.RemoteDisconnected,
+            ConnectionResetError,
+            ConnectionAbortedError,
+            BrokenPipeError,
+        ),
+    ):
+        return "retry_fail", type(exc).__name__
+    if isinstance(exc, (TimeoutError, socket.timeout)):
+        return "retry_split", type(exc).__name__
+    if isinstance(exc, urllib.error.URLError):
+        if isinstance(exc.reason, (TimeoutError, socket.timeout)):
+            return "retry_split", "url_timeout"
+        if isinstance(exc.reason, http.client.IncompleteRead):
+            return "retry_split", "url_incomplete_read"
+        if isinstance(
+            exc.reason,
+            (
+                http.client.RemoteDisconnected,
+                ConnectionResetError,
+                ConnectionAbortedError,
+                BrokenPipeError,
+            ),
+        ):
+            return "retry_fail", "url_connection_reset"
+        return "retry_fail", "url_transport"
+    if isinstance(exc, HistoryPayloadError):
+        return "fatal", "payload_integrity"
+    return "fatal", type(exc).__name__
+
+
+def _merge_history_points(
+    destination: dict[str, dict[datetime, str]],
+    source: dict[str, list[tuple[datetime, str]]],
+) -> None:
+    for entity_id, points in source.items():
+        target = destination.setdefault(entity_id, {})
+        for timestamp, state in points:
+            previous = target.get(timestamp)
+            if previous is not None and previous != state:
+                entity_hash = hashlib.sha256(entity_id.encode()).hexdigest()[:12]
+                raise HistoryPayloadError(f"conflicting HA states for entity_hash={entity_hash} at {iso_z(timestamp)}")
+            target[timestamp] = state
+
+
+def _freeze_history_points(
+    points: dict[str, dict[datetime, str]],
+) -> dict[str, list[tuple[datetime, str]]]:
+    return {entity_id: sorted(by_timestamp.items()) for entity_id, by_timestamp in points.items()}
+
+
+def _parse_history_payload(
+    payload: Any,
+    allowed_entities: set[str],
+    *,
+    max_points: int | None = None,
+) -> dict[str, list[tuple[datetime, str]]]:
+    if not isinstance(payload, list):
+        raise HistoryPayloadError("HA history payload is not a list")
     histories: dict[str, list[tuple[datetime, str]]] = defaultdict(list)
-    for batch_start in range(0, len(entity_ids), batch_size):
-        batch = entity_ids[batch_start : batch_start + batch_size]
-        query = urllib.parse.urlencode(
-            {
-                "filter_entity_id": ",".join(batch),
-                "end_time": iso_z(end),
-                "minimal_response": "true",
-                "no_attributes": "true",
-                "significant_changes_only": "false",
-            }
+    decoded_points = 0
+    for series in payload:
+        if not isinstance(series, list):
+            raise HistoryPayloadError("HA history series is not a list")
+        if not series:
+            continue
+        entity_id = None
+        for row in series:
+            if not isinstance(row, dict):
+                raise HistoryPayloadError("HA history row is not an object")
+            row_entity = row.get("entity_id")
+            if row_entity is not None and (not isinstance(row_entity, str) or not row_entity):
+                raise HistoryPayloadError("HA history row has an invalid entity_id")
+            if row_entity:
+                if entity_id is not None and row_entity != entity_id:
+                    raise HistoryPayloadError("HA history series changed entity_id")
+                entity_id = row_entity
+            if entity_id is None:
+                raise HistoryPayloadError("HA history series does not establish entity_id")
+            if entity_id not in allowed_entities:
+                raise HistoryPayloadError("HA history returned an unrequested entity_id")
+            timestamp = parse_ha_time(row.get("last_updated") or row.get("last_changed"))
+            state = row.get("state")
+            if timestamp is None:
+                raise HistoryPayloadError("HA history row has a missing or invalid timestamp")
+            if not isinstance(state, str):
+                raise HistoryPayloadError("HA history row has a missing or non-string state")
+            if max_points is not None and decoded_points >= max_points:
+                raise HistoryFetchExhausted("HA history decoded point budget exhausted")
+            histories[entity_id].append((timestamp, state))
+            decoded_points += 1
+    return dict(histories)
+
+
+class HistoryFetcher:
+    """Run-scoped, bounded Home Assistant history fetcher."""
+
+    def __init__(
+        self,
+        ha_url: str,
+        token: str,
+        policy: HistoryFetchPolicy,
+        *,
+        request_json: Callable[[str, str, str, float], Any] | None = None,
+        clock: Callable[[], float] = time.monotonic,
+        sleep: Callable[[float], None] = time.sleep,
+    ) -> None:
+        self.ha_url = ha_url
+        self.token = token
+        self.policy = policy
+        self.request_json = request_json or (
+            lambda ha_url, token, path, timeout: ha_get_json(
+                ha_url,
+                token,
+                path,
+                timeout,
+                max_response_bytes=policy.response_max_bytes,
+            )
         )
-        path = f"/api/history/period/{urllib.parse.quote(iso_z(start), safe='')}?{query}"
-        payload = ha_get_json(ha_url, token, path, timeout=120)
-        for series in payload:
-            entity_id = None
-            for row in series:
-                entity_id = row.get("entity_id") or entity_id
-                if not entity_id:
-                    continue
-                ts = parse_ha_time(row.get("last_updated") or row.get("last_changed"))
-                state = row.get("state")
-                if ts is None or state is None:
-                    continue
-                histories[entity_id].append((ts, str(state)))
-    return {entity_id: HAHistory(sorted(points)) for entity_id, points in histories.items()}
+        self.clock = clock
+        self.sleep = sleep
+        self.started_at = clock()
+        self.deadline = self.started_at + policy.budget_seconds
+        self.stats = HistoryFetchStats()
+
+    def _remaining_seconds(self) -> float:
+        return self.deadline - self.clock()
+
+    def ensure_within_budget(self, stage: str) -> None:
+        if self._remaining_seconds() <= 0:
+            raise HistoryFetchExhausted(f"HA history wall-clock budget exhausted {stage}")
+
+    def _reserve_request(self) -> float:
+        self.ensure_within_budget("before request")
+        remaining = self._remaining_seconds()
+        if self.stats.attempts >= self.policy.max_requests:
+            raise HistoryFetchExhausted("HA history request budget exhausted")
+        self.stats.attempts += 1
+        return min(self.policy.request_timeout_seconds, remaining)
+
+    @staticmethod
+    def _path(request: HistoryRequest) -> str:
+        # HA recorder uses strict ``> start`` / ``< end`` filters. Pad both
+        # bounds so an event exactly on an adjacent chunk boundary is included.
+        # Only the first temporal chunk asks HA for its synthetic carry-in row.
+        query_params = {
+            "filter_entity_id": ",".join(request.entity_ids),
+            "end_time": history_iso_z(request.end + timedelta(microseconds=1)),
+            "minimal_response": "true",
+            "no_attributes": "true",
+            "significant_changes_only": "0",
+        }
+        if not request.include_initial_state:
+            query_params["skip_initial_state"] = "true"
+        query = urllib.parse.urlencode(query_params)
+        padded_start = request.start - timedelta(microseconds=1)
+        start = urllib.parse.quote(history_iso_z(padded_start), safe="")
+        return f"/api/history/period/{start}?{query}"
+
+    def _request_once(
+        self,
+        request: HistoryRequest,
+        attempt: int,
+    ) -> dict[str, list[tuple[datetime, str]]]:
+        remaining_points = self.policy.max_points - self.stats.points
+        if remaining_points <= 0:
+            raise HistoryFetchExhausted("HA history decoded point budget exhausted")
+        timeout = self._reserve_request()
+        started = self.clock()
+        LOG.info(
+            "history_request_start key=%s parent=%s depth=%d attempt=%d entity_count=%d "
+            "entity_hash=%s start=%s end=%s span_minutes=%.1f timeout_seconds=%.1f",
+            request.key,
+            request.parent_key or "root",
+            request.depth,
+            attempt,
+            len(request.entity_ids),
+            request.entity_fingerprint,
+            iso_z(request.start),
+            iso_z(request.end),
+            request.span_minutes,
+            timeout,
+        )
+        payload = self.request_json(self.ha_url, self.token, self._path(request), timeout)
+        self.ensure_within_budget("after transport")
+        parsed = _parse_history_payload(
+            payload,
+            set(request.entity_ids),
+            max_points=remaining_points,
+        )
+        self.ensure_within_budget("after payload parsing")
+        point_count = sum(len(points) for points in parsed.values())
+        if self.stats.points + point_count > self.policy.max_points:
+            raise HistoryFetchExhausted("HA history decoded point budget exhausted")
+        self.stats.points += point_count
+        LOG.info(
+            "history_request_ok key=%s elapsed_ms=%d series=%d points=%d",
+            request.key,
+            round((self.clock() - started) * 1000),
+            len(parsed),
+            point_count,
+        )
+        return parsed
+
+    @staticmethod
+    def _retry_after_seconds(exc: Exception) -> float:
+        if not isinstance(exc, urllib.error.HTTPError) or exc.code not in {429, 503}:
+            return 0.0
+        headers = exc.headers
+        raw = headers.get("Retry-After") if headers is not None else None
+        if raw is None:
+            return 0.0
+        try:
+            requested = float(raw)
+        except (TypeError, ValueError):
+            return 0.0
+        if not math.isfinite(requested) or requested <= 0:
+            return 0.0
+        return min(requested, 15.0)
+
+    def _retry_delay(
+        self,
+        request: HistoryRequest,
+        attempt: int,
+        error_class: str,
+        retry_after_seconds: float,
+    ) -> None:
+        delay = self.policy.retry_backoff_seconds * (2 ** (attempt - 1))
+        delay = max(delay, retry_after_seconds)
+        remaining = self._remaining_seconds()
+        if remaining <= delay:
+            raise HistoryFetchExhausted("HA history budget cannot accommodate retry delay")
+        self.stats.retries += 1
+        LOG.warning(
+            "history_request_retry key=%s error_class=%s attempt=%d delay_seconds=%.1f",
+            request.key,
+            error_class,
+            attempt,
+            delay,
+        )
+        self.sleep(delay)
+        self.ensure_within_budget("after retry delay")
+
+    def _split_request(
+        self,
+        request: HistoryRequest,
+        reason: str,
+        destination: dict[str, dict[datetime, str]],
+    ) -> None:
+        if request.depth >= self.policy.max_split_depth:
+            raise HistoryFetchExhausted("HA history maximum split depth exhausted")
+        can_split_entities = len(request.entity_ids) > 1
+        minimum_span = timedelta(minutes=self.policy.request_min_minutes)
+        can_split_time = request.end - request.start >= minimum_span * 2
+        if not can_split_entities and not can_split_time:
+            raise HistoryFetchExhausted("HA history request failed at irreducible shape")
+
+        time_pressure = request.span_minutes / self.policy.request_min_minutes
+        split_entities = can_split_entities and (not can_split_time or len(request.entity_ids) >= time_pressure)
+        if split_entities:
+            midpoint = len(request.entity_ids) // 2
+            children = (
+                HistoryRequest(
+                    request.entity_ids[:midpoint],
+                    request.start,
+                    request.end,
+                    request.depth + 1,
+                    request.key,
+                    request.include_initial_state,
+                ),
+                HistoryRequest(
+                    request.entity_ids[midpoint:],
+                    request.start,
+                    request.end,
+                    request.depth + 1,
+                    request.key,
+                    request.include_initial_state,
+                ),
+            )
+            axis = "entities"
+        else:
+            span_microseconds = (request.end - request.start) // timedelta(microseconds=1)
+            midpoint = request.start + timedelta(microseconds=span_microseconds // 2)
+            children = (
+                HistoryRequest(
+                    request.entity_ids,
+                    request.start,
+                    midpoint,
+                    request.depth + 1,
+                    request.key,
+                    request.include_initial_state,
+                ),
+                HistoryRequest(
+                    request.entity_ids,
+                    midpoint,
+                    request.end,
+                    request.depth + 1,
+                    request.key,
+                    False,
+                ),
+            )
+            axis = "time"
+        self.stats.splits += 1
+        LOG.warning(
+            "history_request_split key=%s axis=%s reason=%s child_keys=%s,%s",
+            request.key,
+            axis,
+            reason,
+            children[0].key,
+            children[1].key,
+        )
+        for child in children:
+            self._fetch_request(child, destination)
+
+    def _fetch_request(
+        self,
+        request: HistoryRequest,
+        destination: dict[str, dict[datetime, str]],
+    ) -> None:
+        for attempt in range(1, self.policy.transport_retries + 2):
+            decision: tuple[str, str, float] | None = None
+            try:
+                _merge_history_points(destination, self._request_once(request, attempt))
+                return
+            except HistoryFetchExhausted:
+                raise
+            except Exception as exc:
+                action, error_class = _history_error_action(exc)
+                retry_after_seconds = self._retry_after_seconds(exc)
+                if isinstance(exc, urllib.error.HTTPError):
+                    try:
+                        exc.close()
+                    except OSError:
+                        pass
+                if action == "fatal":
+                    decision = ("fatal", error_class, 0.0)
+                elif action == "split":
+                    decision = ("split", error_class, 0.0)
+                elif attempt <= self.policy.transport_retries:
+                    decision = ("retry", error_class, retry_after_seconds)
+                elif action == "retry_split":
+                    decision = ("split", error_class, 0.0)
+                else:
+                    decision = ("exhausted", error_class, 0.0)
+
+            # Retry and recursive split happen only after Python has cleared the
+            # caught exception and traceback, which may retain response bytes.
+            assert decision is not None
+            next_action, error_class, retry_after_seconds = decision
+            if next_action == "retry":
+                self._retry_delay(request, attempt, error_class, retry_after_seconds)
+                continue
+            if next_action == "split":
+                self._split_request(request, error_class, destination)
+                return
+            if next_action == "fatal":
+                raise HistoryFetchExhausted(f"HA history request failed without retry ({error_class})") from None
+            raise HistoryFetchExhausted(f"HA history request failed after bounded retry ({error_class})") from None
+        raise AssertionError("unreachable history retry state")
+
+    @staticmethod
+    def _time_partitions(
+        start: datetime,
+        end: datetime,
+        max_minutes: float,
+    ) -> list[tuple[datetime, datetime, bool]]:
+        partitions = []
+        cursor = start
+        maximum = timedelta(minutes=max_minutes)
+        while cursor < end:
+            child_end = min(end, cursor + maximum)
+            partitions.append((cursor, child_end, not partitions))
+            cursor = child_end
+        return partitions or [(start, end, True)]
+
+    def fetch(
+        self,
+        entity_ids: list[str] | tuple[str, ...],
+        start: datetime,
+        end: datetime,
+        batch_size: int,
+        *,
+        prepartition_time: bool = True,
+        window_key: str = "window",
+    ) -> dict[str, HAHistory]:
+        if start.tzinfo is None or start.utcoffset() is None or end.tzinfo is None or end.utcoffset() is None:
+            raise ValueError("history bounds must be timezone-aware")
+        if start >= end:
+            raise ValueError("history start must be before end")
+        requested_entities = tuple(entity_ids)
+        if any(not isinstance(entity_id, str) or not entity_id for entity_id in requested_entities):
+            raise ValueError("history entity IDs must be non-empty strings")
+        entities = tuple(sorted(set(requested_entities)))
+        if not entities:
+            return {}
+        if batch_size <= 0:
+            raise ValueError("history batch_size must be positive")
+        batches = [entities[offset : offset + batch_size] for offset in range(0, len(entities), batch_size)]
+        intervals = (
+            self._time_partitions(start, end, self.policy.request_max_minutes)
+            if prepartition_time
+            else [(start, end, True)]
+        )
+        LOG.info(
+            "history_fetch_start window=%s start=%s end=%s entity_count=%d planned_leaves=%d "
+            "remaining_requests=%d remaining_seconds=%.1f",
+            window_key,
+            iso_z(start),
+            iso_z(end),
+            len(entities),
+            len(batches) * len(intervals),
+            self.policy.max_requests - self.stats.attempts,
+            self._remaining_seconds(),
+        )
+        started = self.clock()
+        started_stats = HistoryFetchStats(
+            attempts=self.stats.attempts,
+            retries=self.stats.retries,
+            splits=self.stats.splits,
+            points=self.stats.points,
+        )
+        combined: dict[str, dict[datetime, str]] = {}
+        try:
+            for batch in batches:
+                for interval_start, interval_end, include_initial_state in intervals:
+                    request = HistoryRequest(
+                        batch,
+                        interval_start,
+                        interval_end,
+                        include_initial_state=include_initial_state,
+                    )
+                    self._fetch_request(request, combined)
+            self.ensure_within_budget("at fetch completion")
+            frozen = _freeze_history_points(combined)
+            combined.clear()
+            self.ensure_within_budget("after result freeze")
+            histories = {entity_id: HAHistory(points) for entity_id, points in frozen.items()}
+            self.ensure_within_budget("after history construction")
+        except Exception as exc:
+            combined.clear()
+            LOG.error(
+                "history_fetch_exhausted window=%s error_class=%s window_attempts=%d "
+                "window_retries=%d window_splits=%d window_decoded_points=%d "
+                "run_attempts=%d run_retries=%d run_splits=%d run_decoded_points=%d "
+                "elapsed_seconds=%.1f",
+                window_key,
+                type(exc).__name__,
+                self.stats.attempts - started_stats.attempts,
+                self.stats.retries - started_stats.retries,
+                self.stats.splits - started_stats.splits,
+                self.stats.points - started_stats.points,
+                self.stats.attempts,
+                self.stats.retries,
+                self.stats.splits,
+                self.stats.points,
+                self.clock() - started,
+            )
+            raise
+        LOG.info(
+            "history_fetch_complete window=%s window_attempts=%d window_retries=%d "
+            "window_splits=%d entities=%d window_decoded_points=%d unique_points=%d "
+            "run_attempts=%d run_retries=%d run_splits=%d run_decoded_points=%d "
+            "elapsed_seconds=%.1f",
+            window_key,
+            self.stats.attempts - started_stats.attempts,
+            self.stats.retries - started_stats.retries,
+            self.stats.splits - started_stats.splits,
+            len(frozen),
+            self.stats.points - started_stats.points,
+            sum(len(points) for points in frozen.values()),
+            self.stats.attempts,
+            self.stats.retries,
+            self.stats.splits,
+            self.stats.points,
+            self.clock() - started,
+        )
+        return histories
 
 
-def discover_earliest_ha(ha_url: str, token: str, search_start: datetime, end: datetime) -> datetime | None:
+def discover_earliest_ha(
+    fetcher: HistoryFetcher,
+    search_start: datetime,
+    end: datetime,
+) -> datetime | None:
     cursor = search_start
     while cursor < end:
         chunk_end = min(cursor + timedelta(days=30), end)
-        histories = fetch_history(
-            ha_url,
-            token,
+        histories = fetcher.fetch(
             list(REPRESENTATIVE_HA_ENTITIES),
             cursor,
             chunk_end,
             batch_size=len(REPRESENTATIVE_HA_ENTITIES),
+            prepartition_time=False,
+            window_key=f"earliest-{iso_z(cursor)}",
         )
         earliest = min((history.points[0][0] for history in histories.values() if history.points), default=None)
         if earliest:
@@ -758,7 +1394,9 @@ def full_scan_windows(start: datetime, end: datetime, max_minutes: float) -> lis
     return split_windows([Window(ceil_time(start, 60), floor_time(end, 60), ("full-scan",))], max_minutes)
 
 
-async def detect_windows(conn: asyncpg.Connection, args: argparse.Namespace, start: datetime, end: datetime) -> list[Window]:
+async def detect_windows(
+    conn: asyncpg.Connection, args: argparse.Namespace, start: datetime, end: datetime
+) -> list[Window]:
     if args.full_scan:
         return full_scan_windows(start, end, args.max_backfill_minutes)
 
@@ -896,7 +1534,11 @@ async def backfill_climate(
         rows.append(row)
     if not rows:
         return 0
-    insert_columns = ["ts", "greenhouse_id", *sorted({key for row in rows for key in row if key not in {"ts", "greenhouse_id"}})]
+    insert_columns = [
+        "ts",
+        "greenhouse_id",
+        *sorted({key for row in rows for key in row if key not in {"ts", "greenhouse_id"}}),
+    ]
     return await insert_dict_rows(conn, "climate", insert_columns, rows, args.apply)
 
 
@@ -946,7 +1588,11 @@ async def backfill_diagnostics(
         rows.append(row)
     if not rows:
         return 0
-    insert_columns = ["ts", "greenhouse_id", *sorted({key for row in rows for key in row if key not in {"ts", "greenhouse_id"}})]
+    insert_columns = [
+        "ts",
+        "greenhouse_id",
+        *sorted({key for row in rows for key in row if key not in {"ts", "greenhouse_id"}}),
+    ]
     return await insert_dict_rows(conn, "diagnostics", insert_columns, rows, args.apply)
 
 
@@ -1197,15 +1843,23 @@ async def backfill_window(
     conn: asyncpg.Connection,
     window: Window,
     mappings: MappingSet,
-    token: str,
+    history_fetcher: HistoryFetcher,
     args: argparse.Namespace,
     table_column_cache: dict[str, set[str]],
 ) -> Stats:
     stats = Stats(windows_seen=1)
     history_start = window.start - timedelta(minutes=args.history_carry_minutes)
-    histories = fetch_history(args.ha_url, token, mappings.all_entities, history_start, window.end, args.batch_size)
+    window_key = f"{iso_z(window.start)}--{iso_z(window.end)}"
+    histories = history_fetcher.fetch(
+        mappings.all_entities,
+        history_start,
+        window.end,
+        args.batch_size,
+        window_key=window_key,
+    )
     representative_ok = any(
-        history.value_at(window.start) is not None or any(True for _ in history.events_between(window.start, window.end))
+        history.value_at(window.start) is not None
+        or any(True for _ in history.events_between(window.start, window.end))
         for entity_id, history in histories.items()
         if entity_id in REPRESENTATIVE_HA_ENTITIES
     )
@@ -1213,27 +1867,55 @@ async def backfill_window(
         stats.windows_without_ha += 1
         return stats
 
-    async with conn.transaction():
-        climate_count = await backfill_climate(conn, window, histories, mappings, table_column_cache["climate"], args)
-        stats.add("climate", climate_count)
-        diagnostics_count = await backfill_diagnostics(
-            conn,
-            window,
-            histories,
-            mappings,
-            table_column_cache["diagnostics"],
-            args,
-        )
-        stats.add("diagnostics", diagnostics_count)
-        stats.add("setpoint_snapshot", await backfill_setpoints(conn, window, histories, mappings, args))
-        stats.add("energy", await backfill_energy(conn, window, histories, mappings, args))
-        stats.add("equipment_state", await backfill_equipment(conn, window, histories, mappings, args))
-        stats.add("system_state", await backfill_system_state(conn, window, histories, mappings, args))
+    budget_check = getattr(history_fetcher, "ensure_within_budget", None)
+    if callable(budget_check):
+        budget_check("before window transaction")
+    apply_mode = bool(getattr(args, "apply", False))
+    mode = "APPLY" if apply_mode else "DRY-RUN"
+    LOG.info("window_transaction_begin window=%s mode=%s", window_key, mode)
+    try:
+        async with conn.transaction():
+            climate_count = await backfill_climate(
+                conn,
+                window,
+                histories,
+                mappings,
+                table_column_cache["climate"],
+                args,
+            )
+            stats.add("climate", climate_count)
+            diagnostics_count = await backfill_diagnostics(
+                conn,
+                window,
+                histories,
+                mappings,
+                table_column_cache["diagnostics"],
+                args,
+            )
+            stats.add("diagnostics", diagnostics_count)
+            stats.add("setpoint_snapshot", await backfill_setpoints(conn, window, histories, mappings, args))
+            stats.add("energy", await backfill_energy(conn, window, histories, mappings, args))
+            stats.add("equipment_state", await backfill_equipment(conn, window, histories, mappings, args))
+            stats.add("system_state", await backfill_system_state(conn, window, histories, mappings, args))
+    except Exception:
+        LOG.exception("window_transaction_rollback window=%s mode=%s", window_key, mode)
+        raise
+    stats.windows_committed = int(apply_mode)
+    row_kind = "inserted_rows" if apply_mode else "candidate_rows"
+    LOG.info(
+        "window_transaction_complete window=%s mode=%s %s=%s",
+        window_key,
+        mode,
+        row_kind,
+        dict(sorted(stats.rows.items())),
+    )
 
-    if sum(stats.rows.values()) == 0 and not representative_ok:
+    row_count = sum(stats.rows.values())
+    if row_count == 0 and not representative_ok:
         stats.windows_without_ha += 1
-    elif sum(stats.rows.values()) > 0:
-        stats.windows_backfilled += 1
+    elif row_count > 0:
+        stats.windows_with_candidates += 1
+        stats.windows_backfilled += int(apply_mode)
     return stats
 
 
@@ -1241,17 +1923,19 @@ def combine_stats(total: Stats, part: Stats) -> None:
     total.windows_seen += part.windows_seen
     total.windows_backfilled += part.windows_backfilled
     total.windows_without_ha += part.windows_without_ha
+    total.windows_committed += part.windows_committed
+    total.windows_with_candidates += part.windows_with_candidates
     for table, count in part.rows.items():
         total.rows[table] += count
     for key, count in part.skipped.items():
         total.skipped[key] += count
 
 
-def compute_range(args: argparse.Namespace, token: str) -> tuple[datetime, datetime]:
+def compute_range(args: argparse.Namespace, history_fetcher: HistoryFetcher) -> tuple[datetime, datetime]:
     end = parse_time(args.end) if args.end else datetime.now(UTC) - timedelta(minutes=args.settle_minutes)
     if args.since_earliest_ha:
         search_start = parse_time(args.earliest_search_start)
-        earliest = discover_earliest_ha(args.ha_url, token, search_start, end)
+        earliest = discover_earliest_ha(history_fetcher, search_start, end)
         if earliest is None:
             raise RuntimeError("could not find any representative Home Assistant greenhouse history")
         start = earliest
@@ -1266,9 +1950,24 @@ def compute_range(args: argparse.Namespace, token: str) -> tuple[datetime, datet
 
 async def async_main() -> int:
     args = parse_args()
-    logging.basicConfig(level=getattr(logging, args.log_level.upper(), logging.INFO), format="%(levelname)s %(message)s")
+    logging.basicConfig(
+        level=getattr(logging, args.log_level.upper(), logging.INFO), format="%(levelname)s %(message)s"
+    )
     token = load_ha_token(args.ha_token_file)
-    start, end = compute_range(args, token)
+    history_policy = HistoryFetchPolicy(
+        request_timeout_seconds=args.history_request_timeout_seconds,
+        transport_retries=args.history_transport_retries,
+        retry_backoff_seconds=args.history_retry_backoff_seconds,
+        request_max_minutes=args.history_request_max_minutes,
+        request_min_minutes=args.history_request_min_minutes,
+        max_requests=args.history_max_requests,
+        budget_seconds=args.history_fetch_budget_seconds,
+        max_split_depth=args.history_max_split_depth,
+        max_points=args.history_max_points,
+        response_max_bytes=args.history_response_max_bytes,
+    )
+    history_fetcher = HistoryFetcher(args.ha_url, token, history_policy)
+    start, end = compute_range(args, history_fetcher)
     mode = "APPLY" if args.apply else "DRY-RUN"
     LOG.info("%s scanning %s -> %s", mode, iso_z(start), iso_z(end))
 
@@ -1312,14 +2011,34 @@ async def async_main() -> int:
                     window.minutes,
                     ",".join(window.reasons),
                 )
-                part = await backfill_window(conn, window, mappings, token, args, table_column_cache)
+                try:
+                    part = await backfill_window(
+                        conn,
+                        window,
+                        mappings,
+                        history_fetcher,
+                        args,
+                        table_column_cache,
+                    )
+                except Exception:
+                    LOG.exception(
+                        "run_failed committed_windows=%d failed_window=%s--%s",
+                        total.windows_committed,
+                        iso_z(window.start),
+                        iso_z(window.end),
+                    )
+                    raise
                 combine_stats(total, part)
+            row_kind = "inserted_rows" if args.apply else "candidate_rows"
             LOG.info(
-                "%s complete: windows=%d backfilled=%d no_ha=%d rows=%s",
+                "%s complete: windows=%d committed=%d candidates=%d backfilled=%d no_ha=%d %s=%s",
                 mode,
                 total.windows_seen,
+                total.windows_committed,
+                total.windows_with_candidates,
                 total.windows_backfilled,
                 total.windows_without_ha,
+                row_kind,
                 dict(sorted(total.rows.items())),
             )
         finally:

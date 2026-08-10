@@ -16,14 +16,15 @@ and NO device are involved. They prove, deterministically:
   C. renew-or-die — a holder that cannot renew (API partition) self-fences
      (is_held() → False) within the lease-duration window;
   D. release — graceful release lets the standby acquire immediately;
-  E. flag gating — disabled / off-cluster degrades to an always-held no-op so
-     the live writer is unchanged until the gated arm.
+  E. flag gating — disabled is an always-held no-op, while enabled-but-degraded
+     fails closed and cannot connect to the device.
 
 A1 (never-two) is the hard life-safety gate.
 """
 
 from __future__ import annotations
 
+import asyncio
 import sys
 import time
 from pathlib import Path
@@ -253,19 +254,21 @@ def test_E_disabled_is_always_held(monkeypatch):
     lease = WriterLease()
     assert lease.enabled is False
     assert lease._can_fence is False
+    assert lease.fencing_active is False
     # Disabled fence never blocks the push path.
     assert lease.is_held() is True
 
 
-def test_E_enabled_but_off_cluster_degrades(monkeypatch):
+def test_E_enabled_but_off_cluster_fails_closed(monkeypatch):
     monkeypatch.setenv("VERDIFY_WRITER_LEASE_ENABLED", "1")
-    # No SA token / API host in a unit-test env → cannot fence → degrade to
-    # always-held so the VM systemd unit / dev box behaviour is unchanged.
+    # No SA token / API host in a unit-test env → cannot fence → fail closed.
     monkeypatch.delenv("KUBERNETES_SERVICE_HOST", raising=False)
     lease = WriterLease()
     assert lease.enabled is True
     assert lease._can_fence is False
-    assert lease.is_held() is True
+    assert lease.fencing_active is False
+    assert lease.is_held() is False
+    assert asyncio.run(lease.acquire(timeout=0)) is False
 
 
 # ── F. push-path gate honours the fence (shared.writer_lease_held) ───────────

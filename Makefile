@@ -10,6 +10,7 @@ VENV ?= $(if $(wildcard .venv/bin/python),.venv,$(if $(wildcard $(LEGACY_VENV)/b
 PYTHON := $(VENV)/bin/python
 PYTEST := $(PYTHON) -m pytest
 RUFF := $(VENV)/bin/ruff
+HA_GAP_BACKFILL_SCRIPT := deploy/k8s/components/ha-gap-backfill/backfill-ha-gaps.py
 ESPHOME := $(VENV)/bin/esphome
 BOOTSTRAP_PYTHON ?=
 BOOTSTRAP_EXTRAS ?= dev,api,planner
@@ -75,11 +76,11 @@ tool-check: venv-check
 # ── Quality ─────────────────────────────────────────────────────────
 
 lint: tool-check ## Run ruff linter on all Python files
-	$(RUFF) check ingestor/ api/ mcp/ scripts/*.py tests/ verdify_schemas/
+	$(RUFF) check ingestor/ api/ mcp/ scripts/*.py tests/ verdify_schemas/ $(HA_GAP_BACKFILL_SCRIPT)
 
 format: tool-check ## Auto-format Python files with ruff
-	$(RUFF) format ingestor/ api/ mcp/ scripts/*.py tests/ verdify_schemas/
-	$(RUFF) check --fix ingestor/ api/ mcp/ scripts/*.py tests/ verdify_schemas/
+	$(RUFF) format ingestor/ api/ mcp/ scripts/*.py tests/ verdify_schemas/ $(HA_GAP_BACKFILL_SCRIPT)
+	$(RUFF) check --fix ingestor/ api/ mcp/ scripts/*.py tests/ verdify_schemas/ $(HA_GAP_BACKFILL_SCRIPT)
 
 check: lint test lighting-audit-static test-firmware firmware-check ## Run all checks (lint + test + lighting audit + native firmware tests + firmware compile)
 	@echo ""

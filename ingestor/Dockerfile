@@ -117,11 +117,10 @@ LABEL org.opencontainers.image.source="https://github.com/VerdifyConsultancy/ver
       org.opencontainers.image.created=$BUILD_TIME \
       org.opencontainers.image.title="verdify-ingestor"
 
-# Connect-out worker: NO EXPOSE, NO inbound port. Liveness in k3s is a process
-# probe on the Deployment (e.g. `pgrep -f ingestor.py`), not an httpGet — the
-# image-level HEALTHCHECK just asserts the single python process is alive.
+# Connect-out worker: NO EXPOSE, NO inbound port. Both image and k3s liveness
+# consume the local event-loop status; neither depends on DB/device freshness.
 HEALTHCHECK --interval=60s --timeout=10s --start-period=30s --retries=3 \
-    CMD python -c "import sys; sys.exit(0)" || exit 1
+    CMD python ingestor-healthz.py --mode liveness --quiet || exit 1
 
 # Run the existing module exactly as the systemd unit does (CWD == /app/ingestor
 # so the bare-name sibling imports resolve, matching WorkingDirectory=.../ingestor).

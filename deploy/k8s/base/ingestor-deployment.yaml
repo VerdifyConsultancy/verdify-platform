@@ -53,8 +53,9 @@ spec:
       # HA-3.2 FENCE (#240): bind the dedicated SA whose Role grants the minimal
       # Lease verbs (ingestor-rbac.yaml). The lease code is INERT until
       # VERDIFY_WRITER_LEASE_ENABLED=1, so binding the SA ahead of the gated arm
-      # is safe and makes the arm a pure config flip. A pod with no projected SA
-      # token, or with the flag off, degrades to the pre-fence always-held no-op.
+      # is safe and makes the arm a pure config flip. With the flag off the fence
+      # is an always-held development no-op; once enabled, missing projected SA
+      # credentials or API/CA capability fails closed and blocks device access.
       serviceAccountName: verdify-ingestor
       securityContext:
         runAsNonRoot: true

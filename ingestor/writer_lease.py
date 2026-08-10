@@ -18,10 +18,9 @@ split-brain). The exactly-one mechanism is therefore an application-level
 
 Design constraint: this module adds **zero new pip dependencies**. It talks to
 the in-cluster API server over HTTPS using the projected ServiceAccount token +
-CA bundle (stdlib ``ssl`` + ``urllib``). When those credentials are absent
-(running off-cluster, e.g. the VM systemd unit or a dev box) the fence
-gracefully degrades to a no-op holder that always reports "held" so behaviour is
-unchanged from the pre-fence world — the fence only ever ADDS safety inside k8s.
+CA bundle (stdlib ``ssl`` + ``urllib``). A disabled fence remains a no-op for
+off-cluster development. An explicitly enabled fence that lacks credentials
+fails closed and never permits the ESP32 connection.
 
 FEATURE FLAG: the whole mechanism is INERT unless ``VERDIFY_WRITER_LEASE_ENABLED``
 is truthy. Until armed, ``WriterLease.enabled`` is False, ``acquire()`` returns
@@ -113,8 +112,8 @@ class WriterLease:
             except Exception as e:  # pragma: no cover - defensive
                 log.warning("writer_lease: CA load failed (%s); fence DEGRADED", e)
 
-        # Whether we can actually talk to the API as a SA. If not, the fence
-        # degrades to an always-held no-op (off-cluster / no token).
+        # Whether we can actually talk to the API as a SA. An enabled fence
+        # without this capability must fail closed; disabled remains a no-op.
         self._can_fence = bool(self.enabled and self._token and self._api and self._ssl_ctx)
 
         # Last successful renew (monotonic). Held iff (now - last_renew) < duration.
@@ -126,7 +125,7 @@ class WriterLease:
         if self.enabled and not self._can_fence:
             log.warning(
                 "writer_lease: ENABLED but no in-cluster SA creds (token/api/ca) — "
-                "fence DEGRADED to always-held no-op (off-cluster?)"
+                "fence DEGRADED; device connection will remain blocked"
             )
         log.info(
             "writer_lease: enabled=%s can_fence=%s ns=%s identity=%s (duration=%ds renew=%ds retry=%.0fs)",
@@ -140,15 +139,23 @@ class WriterLease:
         )
 
     # ── public API ───────────────────────────────────────────────────────────
+    @property
+    def fencing_active(self) -> bool:
+        """Whether this instance has an enabled, usable Kubernetes fence."""
+        return bool(self.enabled and self._can_fence)
+
     def is_held(self) -> bool:
         """True iff it is safe to push to the device RIGHT NOW.
 
-        Disabled or degraded → always True (behaviour unchanged from pre-fence).
-        Enabled+fencing → True only while the lease was renewed inside the last
+        Disabled → always True (behaviour unchanged from pre-fence).
+        Enabled+degraded → False (fail closed). Enabled+fencing → True only while
+        the lease was renewed inside the last
         ``LEASE_DURATION_S`` (renew-or-die: stale = fenced).
         """
-        if not self._can_fence:
+        if not self.enabled:
             return True
+        if not self._can_fence:
+            return False
         if not self._held:
             return False
         return (time.monotonic() - self._last_renew) < LEASE_DURATION_S
@@ -167,8 +174,10 @@ class WriterLease:
         True immediately. The ingestor calls this BEFORE opening the ESP32
         connection so a standby waits out the holder's ``LEASE_DURATION``.
         """
-        if not self._can_fence:
+        if not self.enabled:
             return True
+        if not self._can_fence:
+            return False
         await self.start()
         deadline = None if timeout is None else time.monotonic() + timeout
         while not self.is_held():

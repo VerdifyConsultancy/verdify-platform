@@ -61,6 +61,20 @@ spec:
                 - --max-gap-minutes=10
                 - --max-backfill-minutes=720
                 - --max-windows=12
+                # Bounded HA Recorder history policy (#575). The 1200s fetch
+                # budget leaves 600s inside activeDeadlineSeconds for DB work
+                # and cleanup; one timeout retry precedes adaptive splitting.
+                # Body and decoded-point ceilings bound in-memory accumulation.
+                - --history-request-timeout-seconds=60
+                - --history-transport-retries=1
+                - --history-retry-backoff-seconds=2
+                - --history-request-max-minutes=60
+                - --history-request-min-minutes=5
+                - --history-max-requests=512
+                - --history-fetch-budget-seconds=1200
+                - --history-max-split-depth=12
+                - --history-max-points=250000
+                - --history-response-max-bytes=33554432
               envFrom:
                 - configMapRef:
                     name: verdify-config

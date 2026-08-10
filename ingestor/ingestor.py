@@ -69,6 +69,7 @@ from mqtt_fanout import (
     subscribe_topic_filter,
 )
 from occupancy import refresh_latest_occupancy_state, sync_occupancy_state
+from process_health import DEFAULT_STATUS_PATH, runtime_status, runtime_status_loop, write_runtime_status
 from pydantic import ValidationError
 from tasks import (
     BAND_DRIVEN_PARAMS,
@@ -96,6 +97,7 @@ from tasks import (
     water_flowing_sync,
     water_meter_materialize,
 )
+from writer_lease import RETRY_PERIOD_S as WRITER_LEASE_RETRY_PERIOD_S
 from writer_lease import WriterLease
 
 from verdify_schemas import (
@@ -1790,6 +1792,10 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
         if _writer_lease is not None and _writer_lease.enabled:
             while not await _writer_lease.acquire(timeout=30):
                 log.info("Writer lease held by another writer — standing by (will not connect ESP32)")
+                # Enabled-but-unusable fencing fails immediately and closed.
+                # Pace that path explicitly so it cannot hot-spin, log-flood,
+                # or starve the process-health heartbeat.
+                await asyncio.sleep(WRITER_LEASE_RETRY_PERIOD_S)
 
         log.info(f"Connecting to ESP32 at {ESP32_HOST}:{ESP32_PORT}...")
         client = APIClient(
@@ -2702,12 +2708,43 @@ async def reconcile_interrupted_device_writes(pool: asyncpg.Pool) -> int:
 # ──────────────────────────────────────────────────────────────
 # Main
 # ──────────────────────────────────────────────────────────────
+def _runtime_health_state(subscribe_mode: bool) -> dict[str, Any]:
+    """Return the allowlisted, side-effect-free writer health snapshot."""
+    lease = shared.writer_lease
+    return {
+        "mode": "subscribe" if subscribe_mode else "capture",
+        "lease_initialized": lease is not None,
+        "lease_enabled": bool(lease and lease.enabled),
+        "lease_fencing_active": bool(lease and lease.fencing_active),
+        "lease_held": lease is not None and shared.writer_lease_held(),
+        "esp32_connected": shared.esp32.get("client") is not None,
+        "writer_fatal": shared.writer_fatal_event.is_set(),
+    }
+
+
+def _publish_runtime_health(
+    subscribe_mode: bool,
+    path: Path = DEFAULT_STATUS_PATH,
+) -> None:
+    """Synchronously invalidate any prior container's runtime status."""
+    write_runtime_status(path, runtime_status(_runtime_health_state(subscribe_mode)))
+
+
 async def main() -> None:
     global ESP32_HOST, ESP32_PORT, ESP32_API_KEY, GREENHOUSE_ID, _fanout_publisher, _writer_lease
 
     # Fail loudly if both fan-out modes are set (publisher + subscriber in one
     # process would re-emit what it consumes — a self-feeding topic storm).
     assert_modes_consistent()
+
+    subscribe_mode = subscribe_mode_enabled()
+    # emptyDir survives a container restart in the same Pod. Replace any prior
+    # connected/held document synchronously before kubelet readiness can read it.
+    _publish_runtime_health(subscribe_mode)
+    health_task = asyncio.create_task(
+        runtime_status_loop(lambda: _runtime_health_state(subscribe_mode)),
+        name="verdify-runtime-health",
+    )
 
     pool = await asyncpg.create_pool(DB_DSN, min_size=2, max_size=10)
     # SHADOW_MODE: wrap the pool so every acquired connection suppresses write
@@ -2719,7 +2756,7 @@ async def main() -> None:
     # ── #114: subscribe mode (dev/stage) — ingest FROM prod's fan-out bus ─────
     # NO ESP32 loop, NO Home Assistant, NO occupancy bridge, NO setpoint listener.
     # The only ingest path is the fan-out subscriber writing into THIS env's DB.
-    if subscribe_mode_enabled():
+    if subscribe_mode:
         log.info(
             "Verdify ingestor starting in MQTT-SUBSCRIBE mode (greenhouse: %s) — "
             "read-only telemetry mirror, no device/HA loops",
@@ -2727,6 +2764,7 @@ async def main() -> None:
         )
         await asyncio.gather(
             mqtt_subscribe_loop(pool),
+            health_task,
         )
         return
 
@@ -2781,8 +2819,9 @@ async def main() -> None:
     # and publish it to shared so the push path (esp32_push.push_to_esp32) and
     # esp32_loop both gate on it. INERT unless VERDIFY_WRITER_LEASE_ENABLED is
     # set — until armed, is_held() always returns True and behaviour is identical
-    # to the pre-fence ingestor. start() spawns the background renew loop (no-op
-    # when disabled/off-cluster).
+    # to the pre-fence ingestor. Once armed, missing ServiceAccount/API/CA
+    # capability fails closed and the paced acquire loop never connects to the
+    # device. start() spawns the background renew loop when fencing is usable.
     _writer_lease = WriterLease()
     shared.writer_lease = _writer_lease
     await _writer_lease.start()
@@ -2801,6 +2840,7 @@ async def main() -> None:
             await _writer_lease.release()
         except Exception as e:  # noqa: BLE001
             log.warning("Lease release on SIGTERM failed: %s", e)
+        _publish_runtime_health(subscribe_mode)
         _shutdown.set()
 
     try:
@@ -2821,6 +2861,7 @@ async def main() -> None:
         mqtt_loop(pool),
         setpoint_listener(pool),
         _writer_failure_monitor(),
+        health_task,
     )
 
     # Race the worker gather against the shutdown signal so SIGTERM unwinds

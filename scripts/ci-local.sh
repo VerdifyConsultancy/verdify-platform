@@ -22,16 +22,17 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 PY="${PYTHON:-.venv/bin/python}"
 RUFF="${RUFF:-.venv/bin/ruff}"
+HA_GAP_BACKFILL_SCRIPT=deploy/k8s/components/ha-gap-backfill/backfill-ha-gaps.py
 if [ ! -x "$PY" ]; then PY=python3; fi
 if [ ! -x "$RUFF" ]; then RUFF="$PY -m ruff"; fi
 
 step() { printf '\n== %s ==\n' "$1"; }
 
 step "ruff lint"
-$RUFF check ingestor/ api/ mcp/ scripts/*.py tests/ verdify_public/ verdify_schemas/
+$RUFF check ingestor/ api/ mcp/ scripts/*.py tests/ verdify_public/ verdify_schemas/ "$HA_GAP_BACKFILL_SCRIPT"
 
 step "ruff format"
-$RUFF format --check ingestor/ api/ mcp/ scripts/*.py tests/ verdify_public/ verdify_schemas/
+$RUFF format --check ingestor/ api/ mcp/ scripts/*.py tests/ verdify_public/ verdify_schemas/ "$HA_GAP_BACKFILL_SCRIPT"
 
 step "schema suites (incl. drift guards + producer payload round-trips)"
 $PY -m pytest -q verdify_schemas/tests/
@@ -60,6 +61,8 @@ $PY -m pytest -q \
   tests/test_generate_daily_plan.py \
   tests/test_grafana_cm_check.py \
   tests/test_grafana_manifest_security.py \
+  tests/test_ha_gap_backfill.py \
+  tests/test_ingestor_health_probe.py \
   tests/test_lab_publish_k3s_guard.py \
   tests/test_mqtt_fanout.py \
   tests/test_no_hosted_runner_workflows.py \
