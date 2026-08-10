@@ -45,6 +45,7 @@ $PY -m pytest -q \
   tests/test_10_planner_routing.py \
   tests/test_11_planner_milestones.py \
   tests/test_13_grafana_band_traceability.py \
+  tests/test_13_operational_recovery.py::test_prod_ha_gap_backfill_cronjob_mounts_script_and_ha_token \
   tests/test_14_shadow_mode.py \
   tests/test_14_site_doctor.py \
   tests/test_17_planner_health_surface.py \
