@@ -39,6 +39,8 @@ def _write_status(path: Path, **overrides) -> dict:
         "lease_held": True,
         "esp32_connected": True,
         "climate_spool_pending": False,
+        "climate_spool_fence_grace_until_monotonic": None,
+        "climate_spool_failure": False,
         "writer_fatal": False,
         **overrides,
     }
@@ -96,6 +98,34 @@ def test_liveness_rejects_missing_malformed_wrong_version_future_and_stale_statu
 
     malformed = _write_status(status_file)
     malformed["lease_held"] = "true"
+    status_file.write_text(json.dumps(malformed))
+    assert module.main(["--mode", "liveness", "--status-file", str(status_file)]) == 1
+
+    malformed = _write_status(status_file)
+    malformed["climate_spool_fence_grace_until_monotonic"] = True
+    status_file.write_text(json.dumps(malformed))
+    assert module.main(["--mode", "liveness", "--status-file", str(status_file)]) == 1
+
+    malformed = _write_status(
+        status_file,
+        climate_spool_pending=True,
+        climate_spool_fence_grace_until_monotonic=145.0,
+    )
+    malformed["climate_spool_fence_grace_until_monotonic"] = 145.001
+    status_file.write_text(json.dumps(malformed))
+    assert module.main(["--mode", "liveness", "--status-file", str(status_file)]) == 1
+
+    malformed = _write_status(status_file)
+    malformed["climate_spool_fence_grace_until_monotonic"] = 110.0
+    status_file.write_text(json.dumps(malformed))
+    assert module.main(["--mode", "liveness", "--status-file", str(status_file)]) == 1
+
+    malformed = _write_status(
+        status_file,
+        climate_spool_pending=True,
+        climate_spool_fence_grace_until_monotonic=110.0,
+    )
+    malformed["climate_spool_failure"] = True
     status_file.write_text(json.dumps(malformed))
     assert module.main(["--mode", "liveness", "--status-file", str(status_file)]) == 1
 
@@ -191,6 +221,150 @@ def test_pending_spool_fails_readiness_before_any_db_freshness_query(tmp_path, m
     assert module.main(["--mode", "readiness", "--status-file", str(status_file)]) == 1
 
 
+def test_fresh_fence_spool_keeps_operational_readiness_but_strict_rollout_fails(tmp_path, monkeypatch):
+    module = _load_healthz_module()
+    status_file = tmp_path / "status.json"
+    status = _write_status(
+        status_file,
+        climate_spool_pending=True,
+        climate_spool_fence_grace_until_monotonic=145.0,
+    )
+    monkeypatch.setattr(process_health.time, "monotonic", lambda: 110.0)
+
+    async def fresh_climate(*_args, **_kwargs):
+        return 10.0
+
+    monkeypatch.setattr(module, "climate_age_seconds", fresh_climate)
+
+    assert process_health.evaluate_writer_readiness(status) == (True, "writer_connected_fenced_spooling")
+    assert process_health.evaluate_writer_readiness(status, require_empty_spool=True) == (
+        False,
+        "climate_spool_pending",
+    )
+    assert module.main(["--mode", "readiness", "--status-file", str(status_file)]) == 0
+    assert (
+        module.main(
+            [
+                "--mode",
+                "readiness",
+                "--require-empty-spool",
+                "--status-file",
+                str(status_file),
+            ]
+        )
+        == 1
+    )
+
+
+def test_strict_rollout_readiness_reads_spool_directly_not_only_heartbeat_status(tmp_path, monkeypatch):
+    module = _load_healthz_module()
+    status_file = tmp_path / "status.json"
+    spool_file = tmp_path / "state" / "spool" / "climate.jsonl"
+    _write_status(status_file)
+    spool_file.parent.mkdir(parents=True)
+    spool_file.write_text('{"ts":"2026-08-10T21:23:00Z"}\n')
+    monkeypatch.setattr(process_health.time, "monotonic", lambda: 110.0)
+
+    async def unexpected_db_query(*_args, **_kwargs):
+        raise AssertionError("strict spool gate reached DB freshness query")
+
+    monkeypatch.setattr(module, "climate_age_seconds", unexpected_db_query)
+    assert (
+        module.main(
+            [
+                "--mode",
+                "readiness",
+                "--require-empty-spool",
+                "--status-file",
+                str(status_file),
+                "--spool-path",
+                str(spool_file),
+            ]
+        )
+        == 1
+    )
+
+
+def test_strict_rollout_rechecks_spool_after_freshness_query(tmp_path, monkeypatch):
+    module = _load_healthz_module()
+    status_file = tmp_path / "status.json"
+    spool_file = tmp_path / "state" / "spool" / "climate.jsonl"
+    _write_status(status_file)
+    monkeypatch.setattr(process_health.time, "monotonic", lambda: 110.0)
+
+    async def spool_during_freshness(*_args, **_kwargs):
+        spool_file.parent.mkdir(parents=True)
+        spool_file.write_text('{"ts":"2026-08-10T21:23:00Z"}\n')
+        return 10.0
+
+    monkeypatch.setattr(module, "climate_age_seconds", spool_during_freshness)
+    assert (
+        module.main(
+            [
+                "--mode",
+                "readiness",
+                "--require-empty-spool",
+                "--status-file",
+                str(status_file),
+                "--spool-path",
+                str(spool_file),
+            ]
+        )
+        == 1
+    )
+
+
+@pytest.mark.parametrize(
+    "argv",
+    (
+        ["--require-empty-spool"],
+        ["--mode", "liveness", "--require-empty-spool"],
+        ["--spool-path", "not-used"],
+        ["--mode", "readiness", "--spool-path", "not-used"],
+    ),
+)
+def test_strict_spool_flags_cannot_be_silently_ignored(argv):
+    module = _load_healthz_module()
+    with pytest.raises(SystemExit) as exc_info:
+        module.main(argv)
+    assert exc_info.value.code == 2
+
+
+def test_fence_grace_deadline_expires_even_while_heartbeat_remains_live(tmp_path, monkeypatch):
+    status_file = tmp_path / "status.json"
+    status = _write_status(
+        status_file,
+        climate_spool_pending=True,
+        climate_spool_fence_grace_until_monotonic=101.0,
+    )
+
+    assert process_health.evaluate_liveness(status, now_monotonic=159.0) == (
+        True,
+        "event_loop_progressing",
+        59.0,
+    )
+    assert process_health.evaluate_writer_readiness(status, now_monotonic=100.999) == (
+        True,
+        "writer_connected_fenced_spooling",
+    )
+    assert process_health.evaluate_writer_readiness(status, now_monotonic=101.001) == (
+        False,
+        "climate_spool_pending",
+    )
+    assert process_health.evaluate_writer_readiness(
+        {**status, "climate_spool_failure": True},
+        now_monotonic=100.5,
+    ) == (False, "climate_spool_failure")
+    impossible = process_health.runtime_status(
+        {
+            **status,
+            "climate_spool_fence_grace_until_monotonic": 1e300,
+        },
+        now_monotonic=100.0,
+    )
+    assert impossible["climate_spool_fence_grace_until_monotonic"] is None
+
+
 def test_default_mode_retains_legacy_freshness_contract(monkeypatch):
     module = _load_healthz_module()
 
@@ -212,6 +386,8 @@ def test_runtime_status_publication_is_atomic_and_allowlisted(tmp_path, monkeypa
             "lease_held": True,
             "esp32_connected": False,
             "climate_spool_pending": False,
+            "climate_spool_fence_grace_until_monotonic": None,
+            "climate_spool_failure": False,
             "writer_fatal": False,
             "secret_should_not_escape": "value",
         },
@@ -318,6 +494,7 @@ def test_real_state_provider_fails_readiness_closed_until_current_pod_spool_is_e
 
     saved_lease = shared.writer_lease
     saved_client = shared.esp32.get("client")
+    saved_spool_failure = ingestor._climate_spool_failure
     spool_path = tmp_path / "spool" / "climate.jsonl"
     monkeypatch.setattr(ingestor, "CLIMATE_SPOOL_PATH", spool_path)
     try:
@@ -330,6 +507,8 @@ def test_real_state_provider_fails_readiness_closed_until_current_pod_spool_is_e
         spool_path.write_text('{"ts":"2026-08-10T19:23:00+00:00"}\n')
         pending_status = process_health.runtime_status(ingestor._runtime_health_state(False), now_monotonic=100.0)
         assert pending_status["climate_spool_pending"] is True
+        assert pending_status["climate_spool_fence_grace_until_monotonic"] is None
+        assert pending_status["climate_spool_failure"] is False
         assert process_health.evaluate_writer_readiness(pending_status) == (False, "climate_spool_pending")
 
         real_stat = Path.stat
@@ -342,9 +521,12 @@ def test_real_state_provider_fails_readiness_closed_until_current_pod_spool_is_e
         monkeypatch.setattr(Path, "stat", denied_stat)
         unreadable_status = process_health.runtime_status(ingestor._runtime_health_state(False), now_monotonic=100.0)
         assert unreadable_status["climate_spool_pending"] is True
+        assert unreadable_status["climate_spool_fence_grace_until_monotonic"] is None
+        assert unreadable_status["climate_spool_failure"] is True
     finally:
         shared.writer_lease = saved_lease
         shared.esp32["client"] = saved_client
+        ingestor._climate_spool_failure = saved_spool_failure
 
 
 def test_degraded_writer_lease_retry_is_paced_before_any_device_connection():
@@ -353,6 +535,162 @@ def test_degraded_writer_lease_retry_is_paced_before_any_device_connection():
 
     assert "while not await _writer_lease.acquire(timeout=30):" in acquire_loop
     assert "await asyncio.sleep(WRITER_LEASE_RETRY_PERIOD_S)" in acquire_loop
+
+
+def test_post_share_esp32_exception_disconnects_before_retry_and_fails_readiness_closed(monkeypatch):
+    for name, value in {
+        "DB_USER": "test",
+        "DB_PASSWORD": "test",
+        "DB_HOST": "localhost",
+        "DB_PORT": "5432",
+        "DB_NAME": "test",
+    }.items():
+        monkeypatch.setenv(name, value)
+
+    import shared
+
+    import ingestor
+
+    class StopAfterDisconnect(RuntimeError):
+        pass
+
+    class FakeClient:
+        disconnected = False
+
+        def __init__(self, **_kwargs):
+            pass
+
+        async def connect(self, **_kwargs):
+            return None
+
+        async def list_entities_services(self):
+            return [], []
+
+        def subscribe_states(self, _callback):
+            raise RuntimeError("subscription setup failed after client share")
+
+        async def disconnect(self):
+            assert shared.esp32 == {"client": None, "keys": {}, "services": {}}
+            assert shared.esp32_connected_at == 0.0
+            type(self).disconnected = True
+
+    async def no_last_telemetry(_pool):
+        return None
+
+    async def stop_retry(delay):
+        assert delay == 30
+        assert FakeClient.disconnected is True
+        assert ingestor._runtime_health_state(False)["esp32_connected"] is False
+        raise StopAfterDisconnect
+
+    saved_esp32 = shared.esp32.copy()
+    saved_connected_at = shared.esp32_connected_at
+    saved_transport_generation = shared.transport_generation
+    saved_reconciled_generation = shared.reconciled_transport_generation
+    saved_force_push = shared.force_setpoint_push.is_set()
+    saved_dispatch_requested = shared.setpoint_dispatch_requested.is_set()
+    try:
+        shared.esp32.update(client=None, keys={}, services={})
+        shared.esp32_connected_at = 0.0
+        monkeypatch.setattr(ingestor, "_writer_lease", None)
+        monkeypatch.setattr(ingestor, "APIClient", FakeClient)
+        monkeypatch.setattr(ingestor, "_last_telemetry_ts", no_last_telemetry)
+        monkeypatch.setattr(ingestor.asyncio, "sleep", stop_retry)
+
+        with pytest.raises(StopAfterDisconnect):
+            asyncio.run(ingestor.esp32_loop())
+    finally:
+        shared.esp32.clear()
+        shared.esp32.update(saved_esp32)
+        shared.esp32_connected_at = saved_connected_at
+        shared.transport_generation = saved_transport_generation
+        shared.reconciled_transport_generation = saved_reconciled_generation
+        if saved_force_push:
+            shared.force_setpoint_push.set()
+        else:
+            shared.force_setpoint_push.clear()
+        if saved_dispatch_requested:
+            shared.setpoint_dispatch_requested.set()
+        else:
+            shared.setpoint_dispatch_requested.clear()
+
+
+def test_flush_loop_retries_pending_climate_spool_on_next_paced_tick(monkeypatch):
+    for name, value in {
+        "DB_USER": "test",
+        "DB_PASSWORD": "test",
+        "DB_HOST": "localhost",
+        "DB_PORT": "5432",
+        "DB_NAME": "test",
+    }.items():
+        monkeypatch.setenv(name, value)
+
+    import ingestor
+
+    class StopLoop(RuntimeError):
+        pass
+
+    events = []
+    pending = {"value": False}
+    sleeps = 0
+
+    async def fake_sleep(seconds):
+        nonlocal sleeps
+        assert seconds == 5
+        sleeps += 1
+        if sleeps > 2:
+            raise StopLoop
+
+    class Clock:
+        values = iter((60.0, 65.0))
+
+        @classmethod
+        def time(cls):
+            return next(cls.values)
+
+    async def write_fresh(_pool, _ts):
+        events.append("fresh")
+        pending["value"] = True
+
+    async def drain_spool(_pool):
+        assert pending["value"] is True
+        events.append("drain")
+        pending["value"] = False
+
+    async def fail_action_log(_pool, _ts):
+        events.append("action_log")
+        raise RuntimeError("separate action-log write failed")
+
+    async def write_diagnostics(_pool, _ts):
+        events.append("diagnostics")
+
+    async def no_daily_summary(_pool):
+        return None
+
+    monkeypatch.setattr(ingestor.asyncio, "sleep", fake_sleep)
+    monkeypatch.setattr(ingestor.asyncio, "get_event_loop", lambda: Clock)
+    monkeypatch.setattr(ingestor, "write_climate", write_fresh)
+    monkeypatch.setattr(ingestor, "_climate_spool_pending", lambda: pending["value"])
+    monkeypatch.setattr(ingestor, "_drain_climate_spool", drain_spool)
+    monkeypatch.setattr(ingestor, "CLIMATE_ACTION_LOG_INTERVAL", 0)
+    monkeypatch.setattr(ingestor, "write_climate_action_log", fail_action_log)
+    monkeypatch.setattr(ingestor, "write_diagnostics", write_diagnostics)
+    monkeypatch.setattr(ingestor, "write_daily_summary", no_daily_summary)
+    for name, value in {
+        "cfg_readback": {},
+        "pending_equipment": [],
+        "pending_states": [],
+        "pending_override_events": [],
+        "pending_setpoints": [],
+        "pending_logs": [],
+    }.items():
+        monkeypatch.setattr(ingestor.state, name, value)
+
+    with pytest.raises(StopLoop):
+        asyncio.run(ingestor.flush_loop(object()))
+
+    assert events == ["fresh", "action_log", "diagnostics", "drain"]
+    assert pending["value"] is False
 
 
 def test_prod_manifest_holds_new_probes_until_exact_image_pin_is_ready():
@@ -387,6 +725,7 @@ def _load_ingestor_for_climate_fence(monkeypatch):
         monkeypatch.setenv(name, value)
     import ingestor
 
+    monkeypatch.setattr(ingestor, "_climate_spool_failure", False)
     return ingestor
 
 
@@ -549,9 +888,176 @@ def test_fresh_climate_fence_contention_spools_once_without_fast_retry(tmp_path,
 
     asyncio.run(ingestor.write_climate(_ClimateFencePool(_ClimateFenceConnection(fence_available=False)), ts))
 
-    assert ingestor._read_climate_spool_rows() == [
+    rows = ingestor._read_climate_spool_rows()
+    assert [ingestor._climate_spool_payload(row) for row in rows] == [
         {"ts": ts, "greenhouse_id": ingestor.GREENHOUSE_ID, "temp_avg": 72.0}
     ]
+    assert rows[0]["_verdify_spool_reason"] == ingestor.CLIMATE_SPOOL_REASON_FENCE_CONTENTION
+
+
+def test_fence_contention_spool_grace_is_bounded_to_process_and_drains_after_release(tmp_path, monkeypatch):
+    ingestor = _load_ingestor_for_climate_fence(monkeypatch)
+    spool_path = tmp_path / "spool" / "climate.jsonl"
+    monkeypatch.setattr(ingestor, "CLIMATE_SPOOL_PATH", spool_path)
+    monkeypatch.setattr(ingestor, "_fanout_publish", lambda *_args: None)
+    observed_at = 1_786_000_000.0
+    monkeypatch.setattr(ingestor.time, "time", lambda: observed_at)
+    ingestor.state.climate.clear()
+    ingestor.state.climate_latest.clear()
+    ingestor.state.climate["temp_avg"] = 72.0
+    conn = _ClimateFenceConnection(fence_available=False)
+
+    asyncio.run(
+        ingestor.write_climate(
+            _ClimateFencePool(conn),
+            datetime(2026, 8, 10, 19, 23, tzinfo=UTC),
+        )
+    )
+
+    assert ingestor._climate_spool_fence_grace(now=observed_at + 30) is True
+    assert ingestor._climate_spool_fence_grace(now=observed_at + 45) is True
+    assert ingestor._climate_spool_fence_grace(now=observed_at + 45.001) is False
+
+    original_token = ingestor.CLIMATE_SPOOL_PROCESS_TOKEN
+    monkeypatch.setattr(ingestor, "CLIMATE_SPOOL_PROCESS_TOKEN", "replacement-process")
+    assert ingestor._climate_spool_fence_grace(now=observed_at + 30) is False
+    monkeypatch.setattr(ingestor, "CLIMATE_SPOOL_PROCESS_TOKEN", original_token)
+
+    conn.fence_available = True
+    asyncio.run(ingestor._drain_climate_spool(_ClimateFencePool(conn)))
+    assert not spool_path.exists()
+
+
+def test_ordinary_or_legacy_spool_never_receives_fence_readiness_grace(tmp_path, monkeypatch):
+    ingestor = _load_ingestor_for_climate_fence(monkeypatch)
+    spool_path = tmp_path / "spool" / "climate.jsonl"
+    monkeypatch.setattr(ingestor, "CLIMATE_SPOOL_PATH", spool_path)
+    observed_at = 1_786_000_000.0
+    monkeypatch.setattr(ingestor.time, "time", lambda: observed_at)
+    row = {"ts": datetime(2026, 8, 10, 19, 23, tzinfo=UTC), "temp_avg": 72.0}
+
+    assert ingestor._spool_climate_row(row) is True
+    assert ingestor._climate_spool_fence_grace(now=observed_at + 1) is False
+
+    ingestor._write_climate_spool_rows([row])
+    assert ingestor._climate_spool_fence_grace(now=observed_at + 1) is False
+
+
+@pytest.mark.parametrize("invalid_schema", (True, 1.0))
+def test_non_integer_spool_metadata_schema_never_receives_grace(tmp_path, monkeypatch, invalid_schema):
+    ingestor = _load_ingestor_for_climate_fence(monkeypatch)
+    spool_path = tmp_path / "spool" / "climate.jsonl"
+    monkeypatch.setattr(ingestor, "CLIMATE_SPOOL_PATH", spool_path)
+    observed_at = 1_786_000_000.0
+    row = ingestor._annotate_climate_spool_row(
+        {"ts": datetime(2026, 8, 10, 19, 23, tzinfo=UTC), "temp_avg": 72.0},
+        ingestor.CLIMATE_SPOOL_REASON_FENCE_CONTENTION,
+        spooled_at=observed_at,
+    )
+    row["_verdify_spool_schema"] = invalid_schema
+    ingestor._write_climate_spool_rows([row])
+
+    assert ingestor._climate_spool_fence_grace(now=observed_at + 1) is False
+
+
+def test_non_fence_drain_failure_revokes_contention_grace_immediately(tmp_path, monkeypatch):
+    ingestor = _load_ingestor_for_climate_fence(monkeypatch)
+    spool_path = tmp_path / "spool" / "climate.jsonl"
+    monkeypatch.setattr(ingestor, "CLIMATE_SPOOL_PATH", spool_path)
+    observed_at = 1_786_000_000.0
+    monkeypatch.setattr(ingestor.time, "time", lambda: observed_at)
+    row = {"ts": datetime(2026, 8, 10, 19, 23, tzinfo=UTC), "temp_avg": 72.0}
+    assert ingestor._spool_climate_row(row, reason=ingestor.CLIMATE_SPOOL_REASON_FENCE_CONTENTION)
+
+    async def db_failure(_pool, _row):
+        raise OSError("database unavailable after fence release")
+
+    monkeypatch.setattr(ingestor, "_insert_climate_row", db_failure)
+    asyncio.run(ingestor._drain_climate_spool(object()))
+
+    rows = ingestor._read_climate_spool_rows()
+    assert rows[0]["_verdify_spool_reason"] == ingestor.CLIMATE_SPOOL_REASON_DRAIN_FAILURE
+    assert ingestor._climate_spool_fence_grace(now=observed_at + 1) is False
+
+
+def test_spool_reclassification_failure_stays_latched_across_later_contention_rewrite(tmp_path, monkeypatch):
+    ingestor = _load_ingestor_for_climate_fence(monkeypatch)
+    spool_path = tmp_path / "spool" / "climate.jsonl"
+    monkeypatch.setattr(ingestor, "CLIMATE_SPOOL_PATH", spool_path)
+    observed_at = 1_786_000_000.0
+    monkeypatch.setattr(ingestor.time, "time", lambda: observed_at)
+    row = {"ts": datetime(2026, 8, 10, 19, 23, tzinfo=UTC), "temp_avg": 72.0}
+    assert ingestor._spool_climate_row(row, reason=ingestor.CLIMATE_SPOOL_REASON_FENCE_CONTENTION)
+    assert ingestor._climate_spool_fence_grace(now=observed_at + 1) is True
+
+    async def db_failure(_pool, _row):
+        raise OSError("database unavailable after fence release")
+
+    real_replace = Path.replace
+
+    def fail_reclassification_replace(path, target):
+        if target == spool_path:
+            raise OSError("simulated spool reclassification failure")
+        return real_replace(path, target)
+
+    monkeypatch.setattr(ingestor, "_insert_climate_row", db_failure)
+    monkeypatch.setattr(Path, "replace", fail_reclassification_replace)
+    asyncio.run(ingestor._drain_climate_spool(object()))
+
+    assert spool_path.exists()
+    assert ingestor._read_climate_spool_rows()[0]["_verdify_spool_reason"] == (
+        ingestor.CLIMATE_SPOOL_REASON_FENCE_CONTENTION
+    )
+    assert ingestor._climate_spool_failure is True
+    assert ingestor._climate_spool_fence_grace(now=observed_at + 1) is False
+
+    async def fence_busy(_pool, _row):
+        raise ingestor.ClimateWriteFenceBusy("history repair still owns fence")
+
+    monkeypatch.setattr(Path, "replace", real_replace)
+    monkeypatch.setattr(ingestor, "_insert_climate_row", fence_busy)
+    asyncio.run(ingestor._drain_climate_spool(object()))
+
+    assert ingestor._climate_spool_failure is True
+    assert ingestor._climate_spool_fence_grace(now=observed_at + 1) is False
+    state = ingestor._runtime_health_state(False)
+    assert state["climate_spool_fence_grace_until_monotonic"] is None
+    assert state["climate_spool_failure"] is True
+
+
+def test_first_spool_persistence_failure_is_sticky_without_a_created_path(tmp_path, monkeypatch):
+    ingestor = _load_ingestor_for_climate_fence(monkeypatch)
+    spool_path = tmp_path / "spool" / "climate.jsonl"
+    monkeypatch.setattr(ingestor, "CLIMATE_SPOOL_PATH", spool_path)
+    row = {"ts": datetime(2026, 8, 10, 19, 23, tzinfo=UTC), "temp_avg": 72.0}
+    real_mkdir = Path.mkdir
+
+    def fail_spool_mkdir(path, *args, **kwargs):
+        if path == spool_path.parent:
+            raise OSError("simulated unavailable state volume")
+        return real_mkdir(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "mkdir", fail_spool_mkdir)
+    assert ingestor._spool_climate_row(row, reason=ingestor.CLIMATE_SPOOL_REASON_FENCE_CONTENTION) is False
+    assert spool_path.exists() is False
+    assert ingestor._climate_spool_failure is True
+
+    state = ingestor._runtime_health_state(False)
+    assert state["climate_spool_pending"] is False
+    assert state["climate_spool_failure"] is True
+    status = process_health.runtime_status(
+        {
+            **state,
+            "mode": "capture",
+            "lease_initialized": True,
+            "lease_enabled": True,
+            "lease_fencing_active": True,
+            "lease_held": True,
+            "esp32_connected": True,
+        },
+        now_monotonic=100.0,
+    )
+    assert process_health.evaluate_writer_readiness(status) == (False, "climate_spool_failure")
 
 
 def test_fresh_climate_fence_contention_re_raises_if_spool_cannot_persist(monkeypatch):

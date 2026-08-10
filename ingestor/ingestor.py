@@ -16,7 +16,9 @@ import logging
 import math
 import os
 import sys
+import time
 import urllib.request
+import uuid
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -70,7 +72,13 @@ from mqtt_fanout import (
     subscribe_topic_filter,
 )
 from occupancy import refresh_latest_occupancy_state, sync_occupancy_state
-from process_health import DEFAULT_STATUS_PATH, runtime_status, runtime_status_loop, write_runtime_status
+from process_health import (
+    DEFAULT_STATUS_PATH,
+    MAX_FENCE_GRACE_SECONDS,
+    runtime_status,
+    runtime_status_loop,
+    write_runtime_status,
+)
 from pydantic import ValidationError
 from tasks import (
     BAND_DRIVEN_PARAMS,
@@ -127,6 +135,14 @@ GREENHOUSE_ID = os.environ.get("GREENHOUSE_ID", "vallery")
 STATE_DIR = Path(os.environ.get("STATE_DIR", "/srv/verdify/state"))
 CLIMATE_SPOOL_PATH = Path(os.environ.get("CLIMATE_SPOOL_PATH", str(STATE_DIR / "spool" / "climate.jsonl")))
 CLIMATE_SPOOL_MAX_ROWS = int(os.environ.get("CLIMATE_SPOOL_MAX_ROWS", "2880"))
+CLIMATE_SPOOL_FENCE_GRACE_SECONDS = MAX_FENCE_GRACE_SECONDS
+CLIMATE_SPOOL_METADATA_SCHEMA = 1
+CLIMATE_SPOOL_REASON_DB_FAILURE = "db_write_failure"
+CLIMATE_SPOOL_REASON_FENCE_CONTENTION = "write_fence_contention"
+CLIMATE_SPOOL_REASON_DRAIN_FAILURE = "spool_drain_failure"
+CLIMATE_SPOOL_PROCESS_TOKEN = uuid.uuid4().hex
+_CLIMATE_SPOOL_METADATA_PREFIX = "_verdify_spool_"
+_climate_spool_failure = False
 
 
 class ClimateWriteFenceBusy(RuntimeError):
@@ -372,41 +388,88 @@ def _decode_climate_spool_row(line: str) -> dict[str, Any]:
     return row
 
 
-def _read_climate_spool_rows() -> list[dict[str, Any]]:
-    if not CLIMATE_SPOOL_PATH.exists():
+def _read_climate_spool_rows(*, fail_on_corrupt: bool = False) -> list[dict[str, Any]]:
+    global _climate_spool_failure
+
+    try:
+        contents = CLIMATE_SPOOL_PATH.read_text()
+    except FileNotFoundError:
+        # Missing storage is not proof that a failed write preserved its row.
+        # Only a later successful DB write or spool rewrite clears that failure.
         return []
+    except OSError:
+        _climate_spool_failure = True
+        raise
     rows: list[dict[str, Any]] = []
-    for line_no, line in enumerate(CLIMATE_SPOOL_PATH.read_text().splitlines(), start=1):
+    for line_no, line in enumerate(contents.splitlines(), start=1):
         if not line.strip():
             continue
         try:
             rows.append(_decode_climate_spool_row(line))
         except Exception as e:
+            _climate_spool_failure = True
+            if fail_on_corrupt:
+                raise ValueError(f"invalid climate spool row {line_no}") from e
             log.error("dropping corrupt climate spool row %s:%s: %s", CLIMATE_SPOOL_PATH, line_no, e)
     return rows
 
 
 def _write_climate_spool_rows(rows: list[dict[str, Any]]) -> None:
-    CLIMATE_SPOOL_PATH.parent.mkdir(parents=True, exist_ok=True)
-    tmp_path = CLIMATE_SPOOL_PATH.with_suffix(CLIMATE_SPOOL_PATH.suffix + ".tmp")
-    if rows:
-        tmp_path.write_text("".join(_encode_climate_spool_row(row) + "\n" for row in rows))
-        tmp_path.replace(CLIMATE_SPOOL_PATH)
-    else:
-        tmp_path.unlink(missing_ok=True)
-        CLIMATE_SPOOL_PATH.unlink(missing_ok=True)
+    global _climate_spool_failure
+
+    try:
+        CLIMATE_SPOOL_PATH.parent.mkdir(parents=True, exist_ok=True)
+        tmp_path = CLIMATE_SPOOL_PATH.with_suffix(CLIMATE_SPOOL_PATH.suffix + ".tmp")
+        if rows:
+            tmp_path.write_text("".join(_encode_climate_spool_row(row) + "\n" for row in rows))
+            tmp_path.replace(CLIMATE_SPOOL_PATH)
+        else:
+            tmp_path.unlink(missing_ok=True)
+            CLIMATE_SPOOL_PATH.unlink(missing_ok=True)
+    except Exception:
+        _climate_spool_failure = True
+        raise
+    # A contention-only rewrite cannot erase an earlier unpersisted
+    # non-contention failure classification. Empty storage or a durable
+    # non-contention annotation is the proof needed to clear the latch.
+    if not rows or any(row.get("_verdify_spool_reason") != CLIMATE_SPOOL_REASON_FENCE_CONTENTION for row in rows):
+        _climate_spool_failure = False
 
 
-def _spool_climate_row(row: dict[str, Any], *, reason: str = "DB write failure") -> bool:
+def _climate_spool_payload(row: dict[str, Any]) -> dict[str, Any]:
+    """Remove local spool metadata before a DB write or fan-out."""
+    return {key: value for key, value in row.items() if not key.startswith(_CLIMATE_SPOOL_METADATA_PREFIX)}
+
+
+def _annotate_climate_spool_row(
+    row: dict[str, Any],
+    reason: str,
+    *,
+    spooled_at: float | None = None,
+) -> dict[str, Any]:
+    return {
+        **_climate_spool_payload(row),
+        "_verdify_spool_schema": CLIMATE_SPOOL_METADATA_SCHEMA,
+        "_verdify_spool_reason": reason,
+        "_verdify_spool_at": time.time() if spooled_at is None else spooled_at,
+        "_verdify_spool_process": CLIMATE_SPOOL_PROCESS_TOKEN,
+    }
+
+
+def _spool_climate_row(
+    row: dict[str, Any],
+    *,
+    reason: str = CLIMATE_SPOOL_REASON_DB_FAILURE,
+) -> bool:
     try:
         rows = _read_climate_spool_rows()
-        rows.append(row)
+        rows.append(_annotate_climate_spool_row(row, reason))
         if len(rows) > CLIMATE_SPOOL_MAX_ROWS:
             dropped = len(rows) - CLIMATE_SPOOL_MAX_ROWS
             rows = rows[dropped:]
             log.error("climate spool exceeded %s rows; dropped %s oldest rows", CLIMATE_SPOOL_MAX_ROWS, dropped)
         _write_climate_spool_rows(rows)
-        log.warning("spooled climate row at %s after %s (spool_depth=%s)", row["ts"], reason, len(rows))
+        log.warning("spooled climate row at %s reason=%s spool_depth=%s", row["ts"], reason, len(rows))
         return True
     except Exception as e:
         log.error("failed to spool climate row at %s: %s", row.get("ts"), e)
@@ -415,6 +478,8 @@ def _spool_climate_row(row: dict[str, Any], *, reason: str = "DB write failure")
 
 def _climate_spool_pending() -> bool:
     """Report only whether current-pod climate replay remains, never its contents."""
+    global _climate_spool_failure
+
     try:
         return CLIMATE_SPOOL_PATH.stat().st_size > 0
     except FileNotFoundError:
@@ -422,13 +487,66 @@ def _climate_spool_pending() -> bool:
     except OSError:
         # Readiness is a rollout/safety gate. An unreadable spool must not be
         # represented as empty and allow history repair to race unknown data.
+        _climate_spool_failure = True
         return True
 
 
+def _climate_spool_fence_grace_deadline(
+    *,
+    now_wall: float | None = None,
+    now_monotonic: float | None = None,
+) -> float | None:
+    """Return the exact monotonic grace deadline for a safe contention spool."""
+    if _climate_spool_failure:
+        return None
+    try:
+        rows = _read_climate_spool_rows(fail_on_corrupt=True)
+    except (OSError, ValueError):
+        return None
+    if _climate_spool_failure or not rows:
+        return None
+    observed_at = time.time() if now_wall is None else now_wall
+    observed_monotonic = time.monotonic() if now_monotonic is None else now_monotonic
+    if (
+        isinstance(observed_at, bool)
+        or not isinstance(observed_at, (int, float))
+        or not math.isfinite(observed_at)
+        or isinstance(observed_monotonic, bool)
+        or not isinstance(observed_monotonic, (int, float))
+        or not math.isfinite(observed_monotonic)
+    ):
+        return None
+    earliest_expiry = math.inf
+    for row in rows:
+        metadata_schema = row.get("_verdify_spool_schema")
+        spooled_at = row.get("_verdify_spool_at")
+        if (
+            type(metadata_schema) is not int
+            or metadata_schema != CLIMATE_SPOOL_METADATA_SCHEMA
+            or row.get("_verdify_spool_reason") != CLIMATE_SPOOL_REASON_FENCE_CONTENTION
+            or row.get("_verdify_spool_process") != CLIMATE_SPOOL_PROCESS_TOKEN
+            or isinstance(spooled_at, bool)
+            or not isinstance(spooled_at, (int, float))
+            or not math.isfinite(spooled_at)
+        ):
+            return None
+        age = observed_at - spooled_at
+        if age < 0 or age > CLIMATE_SPOOL_FENCE_GRACE_SECONDS:
+            return None
+        earliest_expiry = min(earliest_expiry, spooled_at + CLIMATE_SPOOL_FENCE_GRACE_SECONDS)
+    return observed_monotonic + (earliest_expiry - observed_at)
+
+
+def _climate_spool_fence_grace(*, now: float | None = None) -> bool:
+    """Allow only this process's fresh, readable fence-deferred spool."""
+    return _climate_spool_fence_grace_deadline(now_wall=now, now_monotonic=0.0) is not None
+
+
 async def _insert_climate_row(pool: asyncpg.Pool, row: dict[str, Any]) -> bool:
-    ts = _coerce_spooled_ts(row["ts"])
-    greenhouse_id = str(row.get("greenhouse_id") or GREENHOUSE_ID).strip()
-    normalized_row = {**row, "greenhouse_id": greenhouse_id}
+    payload = _climate_spool_payload(row)
+    ts = _coerce_spooled_ts(payload["ts"])
+    greenhouse_id = str(payload.get("greenhouse_id") or GREENHOUSE_ID).strip()
+    normalized_row = {**payload, "greenhouse_id": greenhouse_id}
     cols = [col for col in normalized_row if col != "ts"]
     cols_sql = ", ".join(["ts"] + cols)
     placeholders = ", ".join([f"${i + 1}" for i in range(len(cols) + 1)])
@@ -506,6 +624,8 @@ async def _insert_climate_row(pool: asyncpg.Pool, row: dict[str, Any]) -> bool:
 
 
 async def _drain_climate_spool(pool: asyncpg.Pool) -> None:
+    global _climate_spool_failure
+
     try:
         rows = _read_climate_spool_rows()
     except Exception as e:
@@ -521,6 +641,13 @@ async def _drain_climate_spool(pool: asyncpg.Pool) -> None:
             drained += 1
         except Exception as e:
             remaining = rows[idx:]
+            if not isinstance(e, ClimateWriteFenceBusy):
+                # Set this before the rewrite. If persistence fails, the old
+                # contention metadata must never regain operational grace.
+                _climate_spool_failure = True
+                remaining = [
+                    _annotate_climate_spool_row(item, CLIMATE_SPOOL_REASON_DRAIN_FAILURE) for item in remaining
+                ]
             log.error("climate spool drain paused after %s/%s rows: %s", drained, len(rows), e)
             break
     else:
@@ -550,6 +677,8 @@ async def write_climate(pool: asyncpg.Pool, ts: datetime) -> None:
     This prevents phantom data (zombie ingestor stale values from hours ago)
     while preserving legitimate current values from sensors that publish on-change.
     """
+    global _climate_spool_failure
+
     STALENESS_TIMEOUT = 600  # 10 minutes — sensors not seen in 10 min are excluded
 
     # Step 1: Build merged row from last-known (within timeout) + fresh
@@ -599,8 +728,12 @@ async def write_climate(pool: asyncpg.Pool, ts: datetime) -> None:
     row = {"ts": ts, "greenhouse_id": GREENHOUSE_ID, **merged}
     try:
         await _insert_climate_row(pool, row)
+        if not _climate_spool_pending():
+            # A current authoritative DB write proves the writer no longer
+            # needs a previously failed, absent fallback spool.
+            _climate_spool_failure = False
     except ClimateWriteFenceBusy:
-        if _spool_climate_row(row, reason="backfill write-fence contention"):
+        if _spool_climate_row(row, reason=CLIMATE_SPOOL_REASON_FENCE_CONTENTION):
             # This is expected coordination, not a failed flush. Advancing the
             # caller's normal cadence avoids retrying and spooling the same
             # minute every event-loop tick while repair owns the mutex.
@@ -1718,12 +1851,22 @@ async def flush_loop(pool: asyncpg.Pool) -> None:
         if now - last_climate >= CLIMATE_FLUSH_INTERVAL:
             try:
                 await write_climate(pool, ts)
+                # The fresh sample was either persisted or safely spooled. Its
+                # 60s cadence advances even if the separate action-log write
+                # fails, preventing a new sample every five-second loop tick.
+                last_climate = now
                 if now - last_climate_action_log >= CLIMATE_ACTION_LOG_INTERVAL:
                     if await write_climate_action_log(pool, ts):
                         last_climate_action_log = now
-                last_climate = now
             except Exception as e:
                 log.error(f"climate write error: {e}")
+        elif _climate_spool_pending():
+            # A backfill owns the shared climate fence only briefly. Retry the
+            # current Pod's preserved row on this loop's paced 5s tick instead
+            # of leaving strict readiness false until the next 60s sample.
+            # This branch is spool-only: it cannot create another fresh row or
+            # accelerate the normal climate sampling cadence.
+            await _drain_climate_spool(pool)
 
         # Diagnostics every 60s
         if now - last_diag >= DIAG_FLUSH_INTERVAL:
@@ -1853,6 +1996,16 @@ async def flush_loop(pool: asyncpg.Pool) -> None:
 # ──────────────────────────────────────────────────────────────
 # ESP32 connection loop
 # ──────────────────────────────────────────────────────────────
+def _unshare_esp32_client(client: APIClient) -> None:
+    """Fail pushes/readiness closed before one ESP32 client is disconnected."""
+    if shared.esp32.get("client") is not client:
+        return
+    shared.esp32["client"] = None
+    shared.esp32["keys"] = {}
+    shared.esp32["services"] = {}
+    shared.esp32_connected_at = 0.0
+
+
 async def esp32_loop(pool: asyncpg.Pool = None) -> None:
     """Connect to ESP32 and subscribe to all entity states.
 
@@ -1909,6 +2062,7 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
                 log.warning("ESP32 connection lost (unexpected)")
             connection_lost.set()
 
+        retry_delay_seconds = 0
         try:
             await client.connect(on_stop=on_stop, login=True)
             connected_at = datetime.now(UTC)
@@ -2097,23 +2251,28 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
 
             log.warning("Connection lost — will reconnect")
             last_disconnected_at = disconnected_at or datetime.now(UTC)
-            shared.esp32["client"] = None
 
         except APIConnectionError as e:
             log.warning(f"ESP32 connection error: {e}. Reconnecting in 30s...")
             if last_disconnected_at is None:
                 last_disconnected_at = datetime.now(UTC)
-            await asyncio.sleep(30)
+            retry_delay_seconds = 30
         except Exception as e:
             log.error(f"Unexpected error: {e}. Reconnecting in 30s...")
             if last_disconnected_at is None:
                 last_disconnected_at = datetime.now(UTC)
-            await asyncio.sleep(30)
+            retry_delay_seconds = 30
         finally:
+            # Clear every shared push/readiness surface before awaiting network
+            # teardown. In particular, subscription/setup exceptions used to
+            # retain a disconnected client throughout the 30s retry delay.
+            _unshare_esp32_client(client)
             try:
                 await client.disconnect()
             except Exception:
                 pass
+        if retry_delay_seconds:
+            await asyncio.sleep(retry_delay_seconds)
 
 
 # ──────────────────────────────────────────────────────────────
@@ -2801,6 +2960,8 @@ async def reconcile_interrupted_device_writes(pool: asyncpg.Pool) -> int:
 def _runtime_health_state(subscribe_mode: bool) -> dict[str, Any]:
     """Return the allowlisted, side-effect-free writer health snapshot."""
     lease = shared.writer_lease
+    spool_pending = _climate_spool_pending()
+    grace_until = _climate_spool_fence_grace_deadline() if spool_pending else None
     return {
         "mode": "subscribe" if subscribe_mode else "capture",
         "lease_initialized": lease is not None,
@@ -2808,7 +2969,9 @@ def _runtime_health_state(subscribe_mode: bool) -> dict[str, Any]:
         "lease_fencing_active": bool(lease and lease.fencing_active),
         "lease_held": lease is not None and shared.writer_lease_held(),
         "esp32_connected": shared.esp32.get("client") is not None,
-        "climate_spool_pending": _climate_spool_pending(),
+        "climate_spool_pending": spool_pending,
+        "climate_spool_fence_grace_until_monotonic": grace_until,
+        "climate_spool_failure": _climate_spool_failure,
         "writer_fatal": shared.writer_fatal_event.is_set(),
     }
 

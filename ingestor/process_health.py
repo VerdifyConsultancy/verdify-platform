@@ -17,7 +17,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 4
 DEFAULT_STATUS_PATH = Path(
     os.environ.get(
         "INGESTOR_RUNTIME_STATUS_PATH",
@@ -26,6 +26,7 @@ DEFAULT_STATUS_PATH = Path(
 )
 DEFAULT_HEARTBEAT_INTERVAL_S = 5.0
 DEFAULT_HEARTBEAT_MAX_AGE_S = 60.0
+MAX_FENCE_GRACE_SECONDS = 45.0
 STATUS_KEYS = frozenset(
     {
         "schema_version",
@@ -37,6 +38,8 @@ STATUS_KEYS = frozenset(
         "lease_held",
         "esp32_connected",
         "climate_spool_pending",
+        "climate_spool_fence_grace_until_monotonic",
+        "climate_spool_failure",
         "writer_fatal",
     }
 )
@@ -48,16 +51,36 @@ def runtime_status(
     now_monotonic: float | None = None,
 ) -> dict[str, Any]:
     """Build the exact non-secret status schema written for kubelet."""
+    heartbeat = time.monotonic() if now_monotonic is None else now_monotonic
+    heartbeat_valid = (
+        not isinstance(heartbeat, bool) and isinstance(heartbeat, (int, float)) and math.isfinite(float(heartbeat))
+    )
+    spool_pending = state.get("climate_spool_pending") is True
+    spool_failure = state.get("climate_spool_failure") is True
+    grace_until = state.get("climate_spool_fence_grace_until_monotonic")
+    if (
+        isinstance(grace_until, bool)
+        or not isinstance(grace_until, (int, float))
+        or not math.isfinite(float(grace_until))
+        or not spool_pending
+        or spool_failure
+        or not heartbeat_valid
+        or grace_until < heartbeat
+        or grace_until > heartbeat + MAX_FENCE_GRACE_SECONDS
+    ):
+        grace_until = None
     return {
         "schema_version": SCHEMA_VERSION,
-        "heartbeat_monotonic": time.monotonic() if now_monotonic is None else now_monotonic,
+        "heartbeat_monotonic": heartbeat,
         "mode": state.get("mode"),
         "lease_enabled": state.get("lease_enabled") is True,
         "lease_fencing_active": state.get("lease_fencing_active") is True,
         "lease_initialized": state.get("lease_initialized") is True,
         "lease_held": state.get("lease_held") is True,
         "esp32_connected": state.get("esp32_connected") is True,
-        "climate_spool_pending": state.get("climate_spool_pending") is True,
+        "climate_spool_pending": spool_pending,
+        "climate_spool_fence_grace_until_monotonic": grace_until,
+        "climate_spool_failure": spool_failure,
         "writer_fatal": state.get("writer_fatal") is True,
     }
 
@@ -87,8 +110,24 @@ def read_runtime_status(path: Path = DEFAULT_STATUS_PATH) -> dict[str, Any] | No
         return None
     if payload.get("mode") not in {"capture", "subscribe"}:
         return None
-    boolean_keys = STATUS_KEYS - {"schema_version", "heartbeat_monotonic", "mode"}
+    boolean_keys = STATUS_KEYS - {
+        "schema_version",
+        "heartbeat_monotonic",
+        "mode",
+        "climate_spool_fence_grace_until_monotonic",
+    }
     if any(type(payload.get(key)) is not bool for key in boolean_keys):
+        return None
+    grace_until = payload.get("climate_spool_fence_grace_until_monotonic")
+    if grace_until is not None and (
+        isinstance(grace_until, bool)
+        or not isinstance(grace_until, (int, float))
+        or not math.isfinite(float(grace_until))
+        or not payload["climate_spool_pending"]
+        or payload["climate_spool_failure"]
+        or grace_until < heartbeat
+        or grace_until > heartbeat + MAX_FENCE_GRACE_SECONDS
+    ):
         return None
     return payload
 
@@ -120,8 +159,13 @@ def evaluate_liveness(
     return True, "event_loop_progressing", age
 
 
-def evaluate_writer_readiness(status: dict[str, Any] | None) -> tuple[bool, str]:
-    """Evaluate in-process singleton writer state without changing it."""
+def evaluate_writer_readiness(
+    status: dict[str, Any] | None,
+    *,
+    require_empty_spool: bool = False,
+    now_monotonic: float | None = None,
+) -> tuple[bool, str]:
+    """Evaluate operational or point-in-time strict singleton writer state."""
     if status is None:
         return False, "runtime_status_missing_or_invalid"
     if status["mode"] != "capture":
@@ -138,7 +182,20 @@ def evaluate_writer_readiness(status: dict[str, Any] | None) -> tuple[bool, str]
         return False, "writer_lease_not_held"
     if not status["esp32_connected"]:
         return False, "esp32_disconnected"
+    if status["climate_spool_failure"]:
+        return False, "climate_spool_failure"
     if status["climate_spool_pending"]:
+        if not require_empty_spool:
+            grace_until = status["climate_spool_fence_grace_until_monotonic"]
+            observed_at = time.monotonic() if now_monotonic is None else now_monotonic
+            if (
+                grace_until is not None
+                and not isinstance(observed_at, bool)
+                and isinstance(observed_at, (int, float))
+                and math.isfinite(float(observed_at))
+                and observed_at <= grace_until
+            ):
+                return True, "writer_connected_fenced_spooling"
         return False, "climate_spool_pending"
     return True, "writer_connected_and_fenced"
 

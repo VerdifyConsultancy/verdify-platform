@@ -87,6 +87,25 @@ DEFAULT_HA_RESPONSE_MAX_BYTES = 32 * 1024 * 1024
 DEFAULT_WRITE_TRANSACTION_TIMEOUT_SECONDS = 30.0
 DEFAULT_EVENT_RECONCILE_MINUTES = 240.0
 MIN_APPLY_SETTLE_SECONDS = 120.0
+MAX_LOOKBACK_DAYS = 3650.0
+MAX_GAP_MINUTES = 525_600.0
+MAX_BACKFILL_MINUTES = 1440.0
+MAX_EVENT_RECONCILE_MINUTES = 10_080.0
+MAX_SAMPLE_SECONDS = 86_400
+MAX_SETTLE_MINUTES = 525_600.0
+MAX_HISTORY_CARRY_MINUTES = 1440.0
+MAX_BATCH_SIZE = 500
+MAX_WINDOWS = 1000
+MAX_WRITE_TRANSACTION_TIMEOUT_SECONDS = 300.0
+MAX_HISTORY_REQUEST_TIMEOUT_SECONDS = 300.0
+MAX_HISTORY_RETRY_BACKOFF_SECONDS = 60.0
+MAX_HISTORY_REQUEST_MINUTES = 1440.0
+MAX_HISTORY_FETCH_BUDGET_SECONDS = 1800.0
+MAX_HISTORY_REQUESTS = 4096
+MAX_HISTORY_SPLIT_DEPTH = 32
+MAX_HISTORY_POINTS = 1_000_000
+MAX_HISTORY_RESPONSE_BYTES = 64 * 1024 * 1024
+MAX_HISTORY_TRANSPORT_RETRIES = 10
 ADVISORY_LOCK_NAME = "verdify-ha-gap-backfill"
 
 SAMPLE_TABLES = ("climate", "diagnostics", "setpoint_snapshot", "energy")
@@ -96,6 +115,15 @@ REPRESENTATIVE_HA_ENTITIES = (
     "sensor.greenhouse_avg_rh",
     "sensor.greenhouse_avg_vpd_kpa",
 )
+
+
+def _is_finite_number(value: Any) -> bool:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False
+    try:
+        return math.isfinite(float(value))
+    except (OverflowError, ValueError):
+        return False
 
 
 @dataclass(frozen=True)
@@ -199,14 +227,7 @@ class HistoryFetchPolicy:
             "request_min_minutes": self.request_min_minutes,
             "budget_seconds": self.budget_seconds,
         }
-        invalid = [
-            name
-            for name, value in finite_positive.items()
-            if isinstance(value, bool)
-            or not isinstance(value, (int, float))
-            or not math.isfinite(float(value))
-            or value <= 0
-        ]
+        invalid = [name for name, value in finite_positive.items() if not _is_finite_number(value) or value <= 0]
         integer_limits = {
             "max_requests": self.max_requests,
             "max_split_depth": self.max_split_depth,
@@ -218,6 +239,27 @@ class HistoryFetchPolicy:
             invalid.append("transport_retries")
         if invalid:
             raise ValueError("invalid history fetch policy: " + ", ".join(invalid))
+        finite_maximums = {
+            "request_timeout_seconds": MAX_HISTORY_REQUEST_TIMEOUT_SECONDS,
+            "retry_backoff_seconds": MAX_HISTORY_RETRY_BACKOFF_SECONDS,
+            "request_max_minutes": MAX_HISTORY_REQUEST_MINUTES,
+            "request_min_minutes": MAX_HISTORY_REQUEST_MINUTES,
+            "budget_seconds": MAX_HISTORY_FETCH_BUDGET_SECONDS,
+        }
+        invalid.extend(name for name, maximum in finite_maximums.items() if float(getattr(self, name)) > maximum)
+        integer_maximums = {
+            "max_requests": MAX_HISTORY_REQUESTS,
+            "max_split_depth": MAX_HISTORY_SPLIT_DEPTH,
+            "max_points": MAX_HISTORY_POINTS,
+            "response_max_bytes": MAX_HISTORY_RESPONSE_BYTES,
+        }
+        invalid.extend(name for name, maximum in integer_maximums.items() if getattr(self, name) > maximum)
+        if self.transport_retries > MAX_HISTORY_TRANSPORT_RETRIES:
+            invalid.append("transport_retries")
+        if invalid:
+            raise ValueError("invalid history fetch policy: " + ", ".join(invalid))
+        if self.request_max_minutes < 1 or self.request_min_minutes < 1:
+            raise ValueError("history request partitions must be at least one minute")
         if self.request_max_minutes < self.request_min_minutes:
             raise ValueError("history request maximum must be at least the minimum")
 
@@ -295,7 +337,7 @@ def parse_args() -> argparse.Namespace:
         "--max-backfill-minutes",
         type=float,
         default=720.0,
-        help="split repair work into chunks no larger than this",
+        help="split repair work into chunks no larger than this (minimum 1 minute)",
     )
     parser.add_argument("--max-windows", type=int, default=12, help="maximum windows per run; 0 means unlimited")
     parser.add_argument(
@@ -305,7 +347,12 @@ def parse_args() -> argparse.Namespace:
         help="always reconcile this trailing event-only window so sparse transitions cannot fall between runs",
     )
     parser.add_argument("--sample-seconds", type=int, default=60, help="climate/diagnostic/setpoint backfill cadence")
-    parser.add_argument("--energy-sample-seconds", type=int, default=300, help="energy backfill cadence")
+    parser.add_argument(
+        "--energy-sample-seconds",
+        type=int,
+        default=300,
+        help="energy backfill cadence (minimum 60 seconds)",
+    )
     parser.add_argument("--settle-minutes", type=float, default=2.0, help="do not backfill the freshest N minutes")
     parser.add_argument("--ha-url", default=os.environ.get("HA_URL", DEFAULT_HA_URL))
     parser.add_argument("--ha-token-file", default=os.environ.get("HA_TOKEN_FILE", DEFAULT_HA_TOKEN_FILE))
@@ -335,13 +382,13 @@ def parse_args() -> argparse.Namespace:
         "--history-request-max-minutes",
         type=float,
         default=60.0,
-        help="pre-split ordinary history requests to at most this span",
+        help="pre-split ordinary history requests to at most this span (minimum 1 minute)",
     )
     parser.add_argument(
         "--history-request-min-minutes",
         type=float,
         default=5.0,
-        help="smallest adaptive time-split leaf",
+        help="smallest adaptive time-split leaf (minimum 1 minute)",
     )
     parser.add_argument("--history-max-requests", type=int, default=512, help="run-wide HA history request budget")
     parser.add_argument(
@@ -371,6 +418,46 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--log-level", default=os.environ.get("LOG_LEVEL", "INFO"))
     return parser.parse_args()
+
+
+def validate_run_bounds(args: argparse.Namespace) -> None:
+    """Reject unsafe numeric work bounds before credentials or I/O are touched."""
+    invalid: list[str] = []
+    finite_positive = {
+        "lookback_days": (args.lookback_days, MAX_LOOKBACK_DAYS),
+        "max_gap_minutes": (args.max_gap_minutes, MAX_GAP_MINUTES),
+        "max_backfill_minutes": (args.max_backfill_minutes, MAX_BACKFILL_MINUTES),
+        "event_reconcile_minutes": (args.event_reconcile_minutes, MAX_EVENT_RECONCILE_MINUTES),
+        "write_transaction_timeout_seconds": (
+            args.write_transaction_timeout_seconds,
+            MAX_WRITE_TRANSACTION_TIMEOUT_SECONDS,
+        ),
+    }
+    for name, (value, maximum) in finite_positive.items():
+        if not _is_finite_number(value) or value <= 0 or value > maximum:
+            invalid.append(name)
+
+    finite_nonnegative = {
+        "settle_minutes": (args.settle_minutes, MAX_SETTLE_MINUTES),
+        "history_carry_minutes": (args.history_carry_minutes, MAX_HISTORY_CARRY_MINUTES),
+    }
+    for name, (value, maximum) in finite_nonnegative.items():
+        if not _is_finite_number(value) or value < 0 or value > maximum:
+            invalid.append(name)
+
+    if type(args.sample_seconds) is not int or not 0 < args.sample_seconds <= MAX_SAMPLE_SECONDS:
+        invalid.append("sample_seconds")
+    if type(args.energy_sample_seconds) is not int or not 60 <= args.energy_sample_seconds <= MAX_SAMPLE_SECONDS:
+        invalid.append("energy_sample_seconds")
+    if type(args.batch_size) is not int or not 0 < args.batch_size <= MAX_BATCH_SIZE:
+        invalid.append("batch_size")
+    if type(args.max_windows) is not int or not 0 <= args.max_windows <= MAX_WINDOWS:
+        invalid.append("max_windows")
+    if isinstance(args.max_backfill_minutes, (int, float)) and args.max_backfill_minutes < 1:
+        invalid.append("max_backfill_minutes")
+
+    if invalid:
+        raise ValueError("invalid reconciliation bounds: " + ", ".join(sorted(set(invalid))))
 
 
 def parse_time(value: str) -> datetime:
@@ -403,6 +490,8 @@ def ceil_time(dt: datetime, seconds: int) -> datetime:
 
 
 def iter_times(start: datetime, end: datetime, seconds: int) -> Iterable[datetime]:
+    if type(seconds) is not int or not 0 < seconds <= MAX_SAMPLE_SECONDS:
+        raise ValueError(f"sample cadence seconds must be an integer from 1 to {MAX_SAMPLE_SECONDS}")
     ts = ceil_time(start, seconds)
     while ts <= end:
         yield ts
@@ -1158,6 +1247,8 @@ class HistoryFetcher:
         end: datetime,
         max_minutes: float,
     ) -> list[tuple[datetime, datetime, bool]]:
+        if not _is_finite_number(max_minutes) or not 1 <= max_minutes <= MAX_HISTORY_REQUEST_MINUTES:
+            raise ValueError(f"history request partitions must be from 1 to {int(MAX_HISTORY_REQUEST_MINUTES)} minutes")
         partitions = []
         cursor = start
         maximum = timedelta(minutes=max_minutes)
@@ -1409,6 +1500,8 @@ def merge_windows(windows: list[Window]) -> list[Window]:
 
 
 def split_windows(windows: list[Window], max_minutes: float) -> list[Window]:
+    if not _is_finite_number(max_minutes) or not 1 <= max_minutes <= MAX_BACKFILL_MINUTES:
+        raise ValueError(f"backfill windows must be from 1 to {int(MAX_BACKFILL_MINUTES)} minutes")
     max_delta = timedelta(minutes=max_minutes)
     result: list[Window] = []
     for window in windows:
@@ -1431,8 +1524,8 @@ def full_scan_windows(start: datetime, end: datetime, max_minutes: float) -> lis
 
 
 def trailing_event_window(start: datetime, end: datetime, minutes: float) -> Window:
-    if not math.isfinite(minutes) or minutes <= 0:
-        raise ValueError("event reconcile minutes must be finite and positive")
+    if not _is_finite_number(minutes) or not 0 < minutes <= MAX_EVENT_RECONCILE_MINUTES:
+        raise ValueError(f"event reconcile minutes must be finite and no more than {int(MAX_EVENT_RECONCILE_MINUTES)}")
     return Window(max(start, end - timedelta(minutes=minutes)), end, ("event-tail",))
 
 
@@ -1954,6 +2047,13 @@ async def backfill_window(
     write_timeout_ms = max(1, math.ceil(write_timeout * 1000))
     try:
         async with conn.transaction():
+            if apply_mode:
+                # Install transaction-local server limits before every apply
+                # write, including sparse event-tail and non-climate batches.
+                # The asyncio timeout below separately caps the phase that owns
+                # the live climate writer's advisory mutex end to end.
+                await conn.execute(f"SET LOCAL statement_timeout = {write_timeout_ms}")
+                await conn.execute(f"SET LOCAL idle_in_transaction_session_timeout = {write_timeout_ms}")
             if event_only:
                 stats.add("equipment_state", await backfill_equipment(conn, window, histories, mappings, args))
                 stats.add("system_state", await backfill_system_state(conn, window, histories, mappings, args))
@@ -1963,13 +2063,6 @@ async def backfill_window(
                 # this transaction and roll back if the fenced climate phase
                 # fails.
                 await run_non_climate_writes()
-                # Install transaction-local server limits only after the
-                # potentially large non-climate phase. They bound the lock,
-                # climate statements, and COMMIT, and reclaim a client that
-                # becomes idle while holding the xact lock. The asyncio timeout
-                # below separately caps this pre-commit phase end to end.
-                await conn.execute(f"SET LOCAL statement_timeout = {write_timeout_ms}")
-                await conn.execute(f"SET LOCAL idle_in_transaction_session_timeout = {write_timeout_ms}")
                 # The climate table has no unique logical-bucket constraint,
                 # and the live ingestor may replay old rows from its durable
                 # spool. The paired image takes this same transaction-scoped
@@ -2065,10 +2158,10 @@ def require_apply_write_contract(apply: bool, sample_seconds: int) -> None:
 async def async_main() -> int:
     args = parse_args()
     require_apply_write_contract(args.apply, args.sample_seconds)
+    validate_run_bounds(args)
     logging.basicConfig(
         level=getattr(logging, args.log_level.upper(), logging.INFO), format="%(levelname)s %(message)s"
     )
-    token = load_ha_token(args.ha_token_file)
     history_policy = HistoryFetchPolicy(
         request_timeout_seconds=args.history_request_timeout_seconds,
         transport_retries=args.history_transport_retries,
@@ -2081,6 +2174,7 @@ async def async_main() -> int:
         max_points=args.history_max_points,
         response_max_bytes=args.history_response_max_bytes,
     )
+    token = load_ha_token(args.ha_token_file)
     history_fetcher = HistoryFetcher(args.ha_url, token, history_policy)
     start, end = compute_range(args, history_fetcher)
     require_settled_apply_end(args.apply, end)

@@ -745,7 +745,7 @@ def test_late_writer_failure_rolls_back_the_whole_window(monkeypatch):
     ]
 
 
-def test_apply_write_fence_follows_non_climate_writes_and_precedes_climate_check(monkeypatch):
+def test_apply_write_limits_precede_non_climate_writes_and_fence_precedes_climate_check(monkeypatch):
     timestamp = datetime(2026, 8, 10, 14, tzinfo=UTC)
     calls = []
 
@@ -814,13 +814,13 @@ def test_apply_write_fence_follows_non_climate_writes_and_precedes_climate_check
 
     assert calls == [
         "transaction_enter",
+        "statement_timeout",
+        "idle_transaction_timeout",
         "writer:backfill_diagnostics",
         "writer:backfill_setpoints",
         "writer:backfill_energy",
         "writer:backfill_equipment",
         "writer:backfill_system_state",
-        "statement_timeout",
-        "idle_transaction_timeout",
         "write_fence",
         "writer:backfill_climate",
         "transaction_commit",
@@ -1060,6 +1060,7 @@ def test_event_only_window_fetches_and_writes_only_sparse_event_tables(monkeypat
     timestamp = datetime(2026, 8, 10, 18, tzinfo=UTC)
     fetched_entities = []
     called = []
+    executed = []
 
     class Fetcher:
         def fetch(self, entity_ids, *_args, **_kwargs):
@@ -1083,8 +1084,9 @@ def test_event_only_window_fetches_and_writes_only_sparse_event_tables(monkeypat
         def transaction(self):
             return Transaction()
 
-        async def execute(self, *_args, **_kwargs):
-            raise AssertionError("event-only reconciliation must not acquire the climate fence")
+        async def execute(self, sql, *_args, **_kwargs):
+            assert sql != backfill.CLIMATE_WRITE_FENCE_SQL
+            executed.append(sql)
 
     async def event_writer(name, *_args, **_kwargs):
         called.append(name)
@@ -1129,6 +1131,10 @@ def test_event_only_window_fetches_and_writes_only_sparse_event_tables(monkeypat
 
     assert fetched_entities == ["binary_sensor.fan", "sensor.mode"]
     assert called == ["equipment", "system_state"]
+    assert executed == [
+        "SET LOCAL statement_timeout = 30000",
+        "SET LOCAL idle_in_transaction_session_timeout = 30000",
+    ]
     assert stats.windows_committed == 1
     assert stats.rows == {"equipment_state": 1, "system_state": 1}
 
@@ -1160,6 +1166,91 @@ def test_invalid_apply_bucket_contract_fails_before_token_or_external_access(mon
 
     with pytest.raises(RuntimeError, match="60s ingestor climate bucket contract"):
         asyncio.run(backfill.async_main())
+
+
+def _valid_run_bounds(**overrides):
+    values = {
+        "lookback_days": 30.0,
+        "max_gap_minutes": 10.0,
+        "max_backfill_minutes": 720.0,
+        "max_windows": 12,
+        "event_reconcile_minutes": 240.0,
+        "sample_seconds": 60,
+        "energy_sample_seconds": 300,
+        "settle_minutes": 2.0,
+        "batch_size": 25,
+        "history_carry_minutes": 20.0,
+        "write_transaction_timeout_seconds": 30.0,
+    }
+    values.update(overrides)
+    return SimpleNamespace(**values)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("lookback_days", 0),
+        ("lookback_days", backfill.MAX_LOOKBACK_DAYS + 1),
+        ("max_gap_minutes", 0),
+        ("max_gap_minutes", backfill.MAX_GAP_MINUTES + 1),
+        ("max_backfill_minutes", 0),
+        ("max_backfill_minutes", 0.5),
+        ("max_backfill_minutes", 1e308),
+        ("max_windows", -1),
+        ("max_windows", backfill.MAX_WINDOWS + 1),
+        ("event_reconcile_minutes", 0),
+        ("event_reconcile_minutes", backfill.MAX_EVENT_RECONCILE_MINUTES + 1),
+        ("sample_seconds", 0),
+        ("sample_seconds", backfill.MAX_SAMPLE_SECONDS + 1),
+        ("sample_seconds", 10**1000),
+        ("energy_sample_seconds", 30),
+        ("energy_sample_seconds", backfill.MAX_SAMPLE_SECONDS + 1),
+        ("settle_minutes", -1),
+        ("settle_minutes", backfill.MAX_SETTLE_MINUTES + 1),
+        ("batch_size", 0),
+        ("batch_size", backfill.MAX_BATCH_SIZE + 1),
+        ("history_carry_minutes", -1),
+        ("history_carry_minutes", backfill.MAX_HISTORY_CARRY_MINUTES + 1),
+        ("write_transaction_timeout_seconds", float("nan")),
+        ("write_transaction_timeout_seconds", backfill.MAX_WRITE_TRANSACTION_TIMEOUT_SECONDS + 1),
+    ],
+)
+def test_reconciliation_numeric_bounds_fail_closed(field, value):
+    with pytest.raises(ValueError, match=field):
+        backfill.validate_run_bounds(_valid_run_bounds(**{field: value}))
+
+
+def test_invalid_reconciliation_bounds_fail_before_token_or_external_access(monkeypatch):
+    args = _valid_run_bounds(max_backfill_minutes=1e308)
+    args.apply = False
+    args.log_level = "INFO"
+    monkeypatch.setattr(backfill, "parse_args", lambda: args)
+    monkeypatch.setattr(
+        backfill,
+        "load_ha_token",
+        lambda *_args, **_kwargs: pytest.fail("invalid run bounds reached token loading"),
+    )
+
+    with pytest.raises(ValueError, match="max_backfill_minutes"):
+        asyncio.run(backfill.async_main())
+
+
+@pytest.mark.parametrize(
+    "operation",
+    [
+        lambda start, end: backfill.split_windows([backfill.Window(start, end, ("climate",))], 0),
+        lambda start, end: backfill.split_windows([backfill.Window(start, end, ("climate",))], 1e308),
+        lambda start, end: list(backfill.iter_times(start, end, 0)),
+        lambda start, end: list(backfill.iter_times(start, end, 10**1000)),
+        lambda start, end: backfill.HistoryFetcher._time_partitions(start, end, 0.5),
+        lambda start, end: backfill.HistoryFetcher._time_partitions(start, end, 1e308),
+        lambda start, end: backfill.trailing_event_window(start, end, 1e308),
+    ],
+)
+def test_partition_helpers_reject_nonadvancing_or_unbounded_steps(operation):
+    start = datetime(2026, 8, 10, 14, tzinfo=UTC)
+    with pytest.raises(ValueError):
+        operation(start, start + timedelta(minutes=2))
 
 
 def test_history_logs_never_include_token_or_entity_list(caplog):
@@ -1218,5 +1309,30 @@ def test_history_policy_rejects_nonfinite_bounds(field, value):
 @pytest.mark.parametrize("field", ["transport_retries", "max_requests", "max_split_depth", "max_points"])
 @pytest.mark.parametrize("value", [True, 1.5])
 def test_history_policy_requires_exact_integer_limits(field, value):
+    with pytest.raises(ValueError, match="invalid history fetch policy"):
+        backfill.HistoryFetchPolicy(**{field: value})
+
+
+def test_history_policy_rejects_subminute_partitions():
+    with pytest.raises(ValueError, match="at least one minute"):
+        backfill.HistoryFetchPolicy(request_max_minutes=0.5, request_min_minutes=0.5)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("request_timeout_seconds", backfill.MAX_HISTORY_REQUEST_TIMEOUT_SECONDS + 1),
+        ("retry_backoff_seconds", backfill.MAX_HISTORY_RETRY_BACKOFF_SECONDS + 1),
+        ("request_max_minutes", 1e308),
+        ("request_min_minutes", backfill.MAX_HISTORY_REQUEST_MINUTES + 1),
+        ("budget_seconds", backfill.MAX_HISTORY_FETCH_BUDGET_SECONDS + 1),
+        ("transport_retries", backfill.MAX_HISTORY_TRANSPORT_RETRIES + 1),
+        ("max_requests", backfill.MAX_HISTORY_REQUESTS + 1),
+        ("max_split_depth", backfill.MAX_HISTORY_SPLIT_DEPTH + 1),
+        ("max_points", backfill.MAX_HISTORY_POINTS + 1),
+        ("response_max_bytes", backfill.MAX_HISTORY_RESPONSE_BYTES + 1),
+    ],
+)
+def test_history_policy_rejects_operationally_unbounded_values(field, value):
     with pytest.raises(ValueError, match="invalid history fetch policy"):
         backfill.HistoryFetchPolicy(**{field: value})

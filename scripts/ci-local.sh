@@ -42,6 +42,8 @@ $PY -m pytest -q tests/test_device_write_gate.py
 
 step "pure-logic / contract tests"
 $PY -m pytest -q \
+  tests/test_05_ingestor.py::TestIngestorTasks::test_climate_write_failure_spools_row \
+  tests/test_05_ingestor.py::TestIngestorTasks::test_climate_write_drains_spooled_rows_after_recovery \
   tests/test_10_planner_routing.py \
   tests/test_11_planner_milestones.py \
   tests/test_13_grafana_band_traceability.py \

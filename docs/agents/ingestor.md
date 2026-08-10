@@ -43,10 +43,27 @@ Every write into TimescaleDB, every read from Home Assistant / Shelly / Tempest 
   `/tmp/verdify-ingestor-runtime.json` from its owning asyncio loop. Kubelet
   liveness uses the monotonic heartbeat only; it must never depend on the DB,
   ESP32 reachability, telemetry age, or Lease state.
+- Keep the failure boundaries explicit: the legacy climate-freshness liveness
+  probe can create a CrashLoop while the ESP32 transport is unavailable, and
+  the absence of a readiness probe can make that same disconnected process
+  briefly appear Ready. Moving freshness and transport checks to readiness
+  stops the false restart loop and makes the outage truthful; it does not repair
+  device reachability or prove telemetry recovery.
 - Readiness is deliberately stricter: a fresh runtime heartbeat, capture mode,
   no writer-fatal state, an enabled+usable+held writer Lease, a connected ESP32
-  client, and climate no older than 300 seconds. A device/DB outage must
-  leave the retry loop Running but make the pod NotReady.
+  client, and climate no older than 300 seconds. A readable spool made only by
+  this process's expected write-fence contention receives at most 45 seconds of
+  operational readiness grace; that covers the 30-second repair fence, the
+  five-second replay tick, and status publication. The runtime document carries
+  the monotonic deadline rather than a cached boolean, so a stalled publisher
+  cannot extend the grace, and the schema rejects a deadline later than that
+  heartbeat plus 45 seconds. Any spool read/rewrite failure becomes a distinct
+  readiness failure; a missing path cannot erase a row that failed to persist.
+  It clears only after a current authoritative DB write with no pending spool,
+  an empty spool rewrite, or a rewrite that durably preserves a non-contention
+  classification. Ordinary DB/drain failures, legacy or post-restart spool
+  rows, corruption, and expired contention receive no grace. A device/DB outage
+  must leave the retry loop Running but make the pod NotReady.
 - The no-argument `ingestor-healthz.py` command retains the legacy climate-only
   check. The mode-specific probe manifest therefore must roll out with the
   image that implements it. In prod this is one reviewed Recreate replacement;
@@ -75,23 +92,31 @@ Every write into TimescaleDB, every read from Home Assistant / Shelly / Tempest 
   and fails closed on an older image. Rollout is deliberately two-phase because
   equal desired digests do not make an ArgoCD multi-resource sync atomic: first
   pin both resources while the CronJob remains suspended, then roll and prove
-  the singleton healthy on that exact digest with an explicit
-  `ingestor-healthz.py --mode readiness` probe. Writer readiness includes an
-  empty current-pod climate spool. Production still mounts this state as
-  restart-volatile `emptyDir` under open #382, so the gated Recreate must also
-  prove the old pod's spool empty immediately before deletion; a newly empty pod
-  is not evidence that old replay was drained. Restoring the retained Longhorn
-  PVC is a separate storage gate. Only a separate reviewed change may unsuspend
-  the natural schedule after those proofs. The pre-commit fenced phase and each DB
-  statement (including COMMIT) have 30-second bounds; timeout or a writer failure
-  rolls the whole window back. The live writer never waits behind repair: a busy
-  try-lock preserves one fresh or replayed row at normal cadence in the durable
-  spool. If repair already filled that bucket, the fenced replay reconciles its
-  actual timestamp and present sensor fields into the single existing row before
-  removing the spool entry; device telemetry therefore wins over reconstructed
-  HA history while the spool survives. It does not cure #382 pod-replacement
-  loss. Reconciliation is re-emitted on the retired fan-out path; do not
-  reactivate a subscriber until its plain insert is made bucket-idempotent too.
+  the singleton healthy on that exact digest. The diagnostic
+  `ingestor-healthz.py --mode readiness --require-empty-spool` probe reads the
+  spool before and after its freshness query, but it is still only a final
+  point-in-time observation. It cannot authorize deletion of a live writer:
+  another row can be created after the last stat. Operational kubelet readiness
+  is not an empty-spool proof either. Production still mounts this state as
+  restart-volatile `emptyDir` under open #382, so Recreate remains held until a
+  separately reviewed writer-quiescence handshake or durable spool closes that
+  deletion race. A newly empty pod is not evidence that old replay was drained.
+  Restoring the retained Longhorn PVC is a separate storage gate. Only a
+  separate reviewed change may unsuspend the natural schedule after those
+  proofs. The pre-commit fenced phase and each DB statement (including COMMIT)
+  have 30-second bounds; timeout or a writer failure rolls the whole window
+  back. Unsafe or non-advancing CLI numeric bounds are rejected before
+  credentials, network access, or DB access. The live writer never waits behind
+  repair: a busy try-lock preserves one fresh or replayed row at normal cadence
+  in the current-pod spool. The ordinary five-second loop retries that spool
+  without producing an extra fresh sample; separate action-log failure also
+  cannot leave the 60-second climate cadence due. If repair already filled
+  that bucket, the fenced replay reconciles its actual timestamp and present
+  sensor fields into the single existing row before removing the spool entry;
+  device telemetry therefore wins over reconstructed HA history while the spool
+  survives. It does not cure #382 pod-replacement loss. Reconciliation is
+  re-emitted on the retired fan-out path; do not reactivate a subscriber until
+  its plain insert is made bucket-idempotent too.
   Adjacent inclusive history windows meet at microsecond-precise,
   non-overlapping boundaries, and every natural run also reconciles a trailing
   240-minute equipment/system event window because sparse events have no sample

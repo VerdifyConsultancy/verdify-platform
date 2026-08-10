@@ -44,13 +44,22 @@ Iris the planner agent, the MCP tool surface, prompt templates, plan scoring and
   match exactly, Verdify MCP `/readyz` must expose every required tool, and the
   in-process Hermes client must be `connected`. Never substitute
   `planner_graph`, a TCP-only check, or a synthetic production write.
-- The pinned upstream client has a finite reconnect loop. Verdify's liveness
-  wrapper treats an explicit fatal exhaustion marker as immediately non-live
-  and, only when the Deployment explicitly sets the supervisor threshold, a
-  continuous MCP-client disconnect of 600 seconds as stalled. An absent or
-  invalid threshold leaves timeout supervision disabled without weakening
-  readiness. Retry log chatter does not reset the first-disconnect clock; a
-  later registered marker does.
+- The pinned upstream client has a finite reconnect loop but emits no positive
+  lifecycle marker when a background reconnect succeeds. Verdify therefore
+  cannot truthfully infer continuous connection state from its logs. The probe
+  latches a post-start disconnect or clean session-teardown request that is not
+  followed by a real full-discovery registration and keeps readiness false. A
+  fatal exhaustion marker fails liveness immediately; an explicitly configured
+  600-second unacknowledged disconnect triggers bounded process replacement
+  after the upstream retry budget. This may replace a client that recovered
+  silently, but the new process must emit a fresh registration before becoming
+  Ready.
+- The negative latch is per process, persisted atomically under `/tmp` so log
+  rotation cannot reset its age, and accepts lifecycle text only from the
+  `tools.mcp_tool` logger when the whole message matches the pinned client's
+  lifecycle grammar. Embedded model/tool/error text cannot manufacture a
+  transition. Retry chatter cannot postpone replacement. An absent or invalid
+  threshold leaves timeout supervision disabled without weakening readiness.
 - The probe script is projected from a ConfigMap, so applying a supervision
   change can restart an already-stale Hermes process before a normal rollout.
   Treat the ConfigMap plus Deployment environment as one human-gated workload
