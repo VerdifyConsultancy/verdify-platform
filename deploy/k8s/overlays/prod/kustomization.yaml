@@ -127,11 +127,12 @@ patches:
   # DEVICE-WRITE INTERLOCK (#79): VERDIFY_DEVICE_WRITE_ENABLED=1 — prod only.
   - path: device-write-configmap.yaml
   # ⚠️ TEMPORARY (#382, 2026-06-20): the ingestor `state` volume is emptyDir, not the
-  # iSCSI PVC — defined DIRECTLY in ingestor-state-volume.yaml. (The old
+  # retained Longhorn PVC — defined DIRECTLY in ingestor-state-volume.yaml. (The old
   # TEMP-ingestor-state-emptydir.patch.yaml `$patch: replace` here never overrode the
   # PVC in the render, leaving git=PVC vs live=emptyDir → ArgoCD OutOfSync; the
-  # emptyDir now lives in ingestor-state-volume.yaml so git==live.) REVERT that file
-  # to the PVC once the iSCSI cap is fixed. See the storage-wedge tracking issue.
+  # emptyDir now lives in ingestor-state-volume.yaml so git==live.) Restoring the
+  # retained PVC requires its own storage preflight and gated Recreate; do not
+  # silently couple that decision to an application rollout.
   # HA-3.1 FAST FAILOVER (#239, Jason-approved 2026-06-20): pin the ingestor to
   # priorityClassName verdify-device-writer + 20s NoExecute tolerations + a cpu
   # request (no cpu LIMIT) + terminationGracePeriodSeconds:15, so the sole writer
@@ -164,8 +165,8 @@ patches:
   # that is a laptop-root guarded Recreate at the gated window, NOT an autonomous
   # action. See ingestor-gather-mount.patch.yaml header.
   - path: ingestor-gather-mount.patch.yaml
-  # #130 ingestor state volume: durable RWO PVC at /srv/verdify/state for
-  # dispatcher/MCP bookkeeping and DB-outage telemetry spooling.
+  # #130/#382 ingestor state mount: currently restart-volatile emptyDir at
+  # /srv/verdify/state; a retained Longhorn RWO PVC awaits a separate gated roll.
   - path: ingestor-state-volume.yaml
   # L1 Phase 2 resilience: liveness probe (DB-outage-tolerant — restarts only a
   # wedged writer, never during a DB outage) + soft anti-affinity off the

@@ -67,9 +67,39 @@ Every write into TimescaleDB, every read from Home Assistant / Shelly / Tempest 
   Recorder requests use padded microsecond bounds and suppress synthetic
   initial state after the first temporal leaf so a real boundary transition is
   neither dropped nor replaced. Malformed rows fail the whole window before
-  its transaction; a failed leaf writes nothing, and a writer failure rolls all
-  six table writes for the window back. Dry runs report candidate rows, never
-  committed/backfilled windows.
+  its transaction; a failed leaf writes nothing. Apply mode and every ingestor
+  climate insert share a transaction-scoped advisory fence. The ingestor
+  rechecks the logical minute bucket under that fence, including for delayed
+  spool replay, so a replay after a committed backfill cannot create a duplicate
+  climate bucket. The mounted script requires the matching fence-contract module
+  and fails closed on an older image. Rollout is deliberately two-phase because
+  equal desired digests do not make an ArgoCD multi-resource sync atomic: first
+  pin both resources while the CronJob remains suspended, then roll and prove
+  the singleton healthy on that exact digest with an explicit
+  `ingestor-healthz.py --mode readiness` probe. Writer readiness includes an
+  empty current-pod climate spool. Production still mounts this state as
+  restart-volatile `emptyDir` under open #382, so the gated Recreate must also
+  prove the old pod's spool empty immediately before deletion; a newly empty pod
+  is not evidence that old replay was drained. Restoring the retained Longhorn
+  PVC is a separate storage gate. Only a separate reviewed change may unsuspend
+  the natural schedule after those proofs. The pre-commit fenced phase and each DB
+  statement (including COMMIT) have 30-second bounds; timeout or a writer failure
+  rolls the whole window back. The live writer never waits behind repair: a busy
+  try-lock preserves one fresh or replayed row at normal cadence in the durable
+  spool. If repair already filled that bucket, the fenced replay reconciles its
+  actual timestamp and present sensor fields into the single existing row before
+  removing the spool entry; device telemetry therefore wins over reconstructed
+  HA history while the spool survives. It does not cure #382 pod-replacement
+  loss. Reconciliation is re-emitted on the retired fan-out path; do not
+  reactivate a subscriber until its plain insert is made bucket-idempotent too.
+  Adjacent inclusive history windows meet at microsecond-precise,
+  non-overlapping boundaries, and every natural run also reconciles a trailing
+  240-minute equipment/system event window because sparse events have no sample
+  cadence from which a missing transition can be inferred. The tail covers two
+  missed hourly starts plus the declared 15-minute late-start allowance. Apply
+  ranges end at least 120 seconds behind wall time and require the shared
+  60-second climate bucket cadence. Dry runs take no write fence and report
+  candidate rows, never committed/backfilled windows.
 - Never manually create/rerun the production backfill Job as a diagnostic: the
   CronJob passes `--apply`. Recovery proof requires a successful natural `:23`
   run and the next natural run, with no new duplicate buckets or out-of-window

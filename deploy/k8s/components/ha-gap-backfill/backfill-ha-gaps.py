@@ -61,6 +61,21 @@ from entity_map import (  # noqa: E402
     normalize_feedback_value,
 )
 
+try:
+    from backfill_write_fence import (  # noqa: E402
+        BACKFILL_WRITE_FENCE_CONTRACT_VERSION,
+        CLIMATE_WRITE_BUCKET_SECONDS,
+        CLIMATE_WRITE_FENCE_SQL,
+        climate_write_fence_key,
+    )
+except ImportError as exc:
+    raise RuntimeError(
+        "HA gap backfill requires the paired ingestor image write-fence contract; refusing to run"
+    ) from exc
+
+if BACKFILL_WRITE_FENCE_CONTRACT_VERSION != 1:  # pragma: no cover - image/source skew guard
+    raise RuntimeError("unsupported ingestor/backfill write-fence contract version")
+
 from verdify_schemas import ClimateRow, Diagnostics, EnergySample, EquipmentStateEvent, SystemStateRow  # noqa: E402
 from verdify_schemas.setpoint import SetpointSnapshot  # noqa: E402
 
@@ -69,6 +84,9 @@ GREENHOUSE_ID = os.environ.get("GREENHOUSE_ID", "vallery")
 DEFAULT_HA_URL = "http://192.168.30.107:8123"
 DEFAULT_HA_TOKEN_FILE = "/mnt/agents/shared/credentials/ha_token.txt"
 DEFAULT_HA_RESPONSE_MAX_BYTES = 32 * 1024 * 1024
+DEFAULT_WRITE_TRANSACTION_TIMEOUT_SECONDS = 30.0
+DEFAULT_EVENT_RECONCILE_MINUTES = 240.0
+MIN_APPLY_SETTLE_SECONDS = 120.0
 ADVISORY_LOCK_NAME = "verdify-ha-gap-backfill"
 
 SAMPLE_TABLES = ("climate", "diagnostics", "setpoint_snapshot", "energy")
@@ -280,6 +298,12 @@ def parse_args() -> argparse.Namespace:
         help="split repair work into chunks no larger than this",
     )
     parser.add_argument("--max-windows", type=int, default=12, help="maximum windows per run; 0 means unlimited")
+    parser.add_argument(
+        "--event-reconcile-minutes",
+        type=float,
+        default=DEFAULT_EVENT_RECONCILE_MINUTES,
+        help="always reconcile this trailing event-only window so sparse transitions cannot fall between runs",
+    )
     parser.add_argument("--sample-seconds", type=int, default=60, help="climate/diagnostic/setpoint backfill cadence")
     parser.add_argument("--energy-sample-seconds", type=int, default=300, help="energy backfill cadence")
     parser.add_argument("--settle-minutes", type=float, default=2.0, help="do not backfill the freshest N minutes")
@@ -338,6 +362,12 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=DEFAULT_HA_RESPONSE_MAX_BYTES,
         help="maximum encoded bytes accepted from one HA response",
+    )
+    parser.add_argument(
+        "--write-transaction-timeout-seconds",
+        type=float,
+        default=DEFAULT_WRITE_TRANSACTION_TIMEOUT_SECONDS,
+        help="maximum time for each apply DB statement and the pre-commit climate-fence phase",
     )
     parser.add_argument("--log-level", default=os.environ.get("LOG_LEVEL", "INFO"))
     return parser.parse_args()
@@ -1384,14 +1414,26 @@ def split_windows(windows: list[Window], max_minutes: float) -> list[Window]:
     for window in windows:
         cursor = window.start
         while cursor <= window.end:
-            chunk_end = min(window.end, cursor + max_delta)
-            result.append(Window(cursor, chunk_end, window.reasons))
-            cursor = chunk_end + timedelta(seconds=60)
+            boundary = min(window.end, cursor + max_delta)
+            if boundary >= window.end:
+                result.append(Window(cursor, window.end, window.reasons))
+                break
+            # HA event bounds are inclusive and timestamps have microsecond
+            # precision. Partition at the exact boundary without overlap or a
+            # representable gap; a +60s cursor would drop real transitions.
+            result.append(Window(cursor, boundary - timedelta(microseconds=1), window.reasons))
+            cursor = boundary
     return result
 
 
 def full_scan_windows(start: datetime, end: datetime, max_minutes: float) -> list[Window]:
     return split_windows([Window(ceil_time(start, 60), floor_time(end, 60), ("full-scan",))], max_minutes)
+
+
+def trailing_event_window(start: datetime, end: datetime, minutes: float) -> Window:
+    if not math.isfinite(minutes) or minutes <= 0:
+        raise ValueError("event reconcile minutes must be finite and positive")
+    return Window(max(start, end - timedelta(minutes=minutes)), end, ("event-tail",))
 
 
 async def detect_windows(
@@ -1848,20 +1890,26 @@ async def backfill_window(
     table_column_cache: dict[str, set[str]],
 ) -> Stats:
     stats = Stats(windows_seen=1)
+    event_only = window.reasons == ("event-tail",)
     history_start = window.start - timedelta(minutes=args.history_carry_minutes)
     window_key = f"{iso_z(window.start)}--{iso_z(window.end)}"
+    history_entities = sorted({*mappings.equipment, *mappings.system_state}) if event_only else mappings.all_entities
     histories = history_fetcher.fetch(
-        mappings.all_entities,
+        history_entities,
         history_start,
         window.end,
         args.batch_size,
         window_key=window_key,
     )
-    representative_ok = any(
-        history.value_at(window.start) is not None
-        or any(True for _ in history.events_between(window.start, window.end))
-        for entity_id, history in histories.items()
-        if entity_id in REPRESENTATIVE_HA_ENTITIES
+    representative_ok = (
+        bool(histories)
+        if event_only
+        else any(
+            history.value_at(window.start) is not None
+            or any(True for _ in history.events_between(window.start, window.end))
+            for entity_id, history in histories.items()
+            if entity_id in REPRESENTATIVE_HA_ENTITIES
+        )
     )
     if not histories:
         stats.windows_without_ha += 1
@@ -1873,30 +1921,77 @@ async def backfill_window(
     apply_mode = bool(getattr(args, "apply", False))
     mode = "APPLY" if apply_mode else "DRY-RUN"
     LOG.info("window_transaction_begin window=%s mode=%s", window_key, mode)
+
+    async def run_non_climate_writes() -> None:
+        diagnostics_count = await backfill_diagnostics(
+            conn,
+            window,
+            histories,
+            mappings,
+            table_column_cache["diagnostics"],
+            args,
+        )
+        stats.add("diagnostics", diagnostics_count)
+        stats.add("setpoint_snapshot", await backfill_setpoints(conn, window, histories, mappings, args))
+        stats.add("energy", await backfill_energy(conn, window, histories, mappings, args))
+        stats.add("equipment_state", await backfill_equipment(conn, window, histories, mappings, args))
+        stats.add("system_state", await backfill_system_state(conn, window, histories, mappings, args))
+
+    async def run_climate_write() -> None:
+        climate_count = await backfill_climate(
+            conn,
+            window,
+            histories,
+            mappings,
+            table_column_cache["climate"],
+            args,
+        )
+        stats.add("climate", climate_count)
+
+    write_timeout = float(getattr(args, "write_transaction_timeout_seconds", DEFAULT_WRITE_TRANSACTION_TIMEOUT_SECONDS))
+    if not math.isfinite(write_timeout) or write_timeout <= 0:
+        raise ValueError("write transaction timeout must be finite and positive")
+    write_timeout_ms = max(1, math.ceil(write_timeout * 1000))
     try:
         async with conn.transaction():
-            climate_count = await backfill_climate(
-                conn,
-                window,
-                histories,
-                mappings,
-                table_column_cache["climate"],
-                args,
-            )
-            stats.add("climate", climate_count)
-            diagnostics_count = await backfill_diagnostics(
-                conn,
-                window,
-                histories,
-                mappings,
-                table_column_cache["diagnostics"],
-                args,
-            )
-            stats.add("diagnostics", diagnostics_count)
-            stats.add("setpoint_snapshot", await backfill_setpoints(conn, window, histories, mappings, args))
-            stats.add("energy", await backfill_energy(conn, window, histories, mappings, args))
-            stats.add("equipment_state", await backfill_equipment(conn, window, histories, mappings, args))
-            stats.add("system_state", await backfill_system_state(conn, window, histories, mappings, args))
+            if event_only:
+                stats.add("equipment_state", await backfill_equipment(conn, window, histories, mappings, args))
+                stats.add("system_state", await backfill_system_state(conn, window, histories, mappings, args))
+            elif apply_mode:
+                # Do the potentially large diagnostics/setpoint/event batches
+                # before taking the live climate writer's mutex. They remain in
+                # this transaction and roll back if the fenced climate phase
+                # fails.
+                await run_non_climate_writes()
+                # Install transaction-local server limits only after the
+                # potentially large non-climate phase. They bound the lock,
+                # climate statements, and COMMIT, and reclaim a client that
+                # becomes idle while holding the xact lock. The asyncio timeout
+                # below separately caps this pre-commit phase end to end.
+                await conn.execute(f"SET LOCAL statement_timeout = {write_timeout_ms}")
+                await conn.execute(f"SET LOCAL idle_in_transaction_session_timeout = {write_timeout_ms}")
+                # The climate table has no unique logical-bucket constraint,
+                # and the live ingestor may replay old rows from its durable
+                # spool. The paired image takes this same transaction-scoped
+                # advisory lock and rechecks the minute bucket on every climate
+                # insert. Holding it before our existence checks serializes
+                # both current and future spool replays; an older image lacks
+                # the imported capability marker and the script fails closed.
+                # Keep timeout inside the transaction so cancellation rolls
+                # back before __aexit__ attempts COMMIT. The server-side local
+                # statement timeout above independently bounds COMMIT itself.
+                async with asyncio.timeout(write_timeout):
+                    await conn.execute(CLIMATE_WRITE_FENCE_SQL, climate_write_fence_key(GREENHOUSE_ID))
+                    LOG.info(
+                        "window_write_fence_acquired window=%s contract=%d timeout_seconds=%.1f",
+                        window_key,
+                        BACKFILL_WRITE_FENCE_CONTRACT_VERSION,
+                        write_timeout,
+                    )
+                    await run_climate_write()
+            else:
+                await run_non_climate_writes()
+                await run_climate_write()
     except Exception:
         LOG.exception("window_transaction_rollback window=%s mode=%s", window_key, mode)
         raise
@@ -1948,8 +2043,28 @@ def compute_range(args: argparse.Namespace, history_fetcher: HistoryFetcher) -> 
     return start, end
 
 
+def require_settled_apply_end(apply: bool, end: datetime, *, now: datetime | None = None) -> None:
+    if not apply:
+        return
+    observed_now = now or datetime.now(UTC)
+    latest_safe_end = observed_now - timedelta(seconds=MIN_APPLY_SETTLE_SECONDS)
+    if end > latest_safe_end:
+        raise RuntimeError(
+            f"apply end {iso_z(end)} is newer than the mandatory {int(MIN_APPLY_SETTLE_SECONDS)}s settle boundary"
+        )
+
+
+def require_apply_write_contract(apply: bool, sample_seconds: int) -> None:
+    if apply and sample_seconds != CLIMATE_WRITE_BUCKET_SECONDS:
+        raise RuntimeError(
+            "apply sample cadence must match the shared "
+            f"{CLIMATE_WRITE_BUCKET_SECONDS}s ingestor climate bucket contract"
+        )
+
+
 async def async_main() -> int:
     args = parse_args()
+    require_apply_write_contract(args.apply, args.sample_seconds)
     logging.basicConfig(
         level=getattr(logging, args.log_level.upper(), logging.INFO), format="%(levelname)s %(message)s"
     )
@@ -1968,6 +2083,7 @@ async def async_main() -> int:
     )
     history_fetcher = HistoryFetcher(args.ha_url, token, history_policy)
     start, end = compute_range(args, history_fetcher)
+    require_settled_apply_end(args.apply, end)
     mode = "APPLY" if args.apply else "DRY-RUN"
     LOG.info("%s scanning %s -> %s", mode, iso_z(start), iso_z(end))
 
@@ -1999,8 +2115,8 @@ async def async_main() -> int:
                 LOG.warning("detected %d windows; processing first %d this run", len(windows), args.max_windows)
                 windows = windows[: args.max_windows]
             if not windows:
-                LOG.info("no Verdify DB gaps found")
-                return 0
+                LOG.info("no sampled Verdify DB gaps found; processing the event reconciliation tail")
+            windows.append(trailing_event_window(start, end, args.event_reconcile_minutes))
             LOG.info("processing %d window(s)", len(windows))
             total = Stats()
             for window in windows:

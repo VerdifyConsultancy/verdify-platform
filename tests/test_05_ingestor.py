@@ -57,11 +57,22 @@ class _ClimateConn:
     def __init__(self, *, fail: bool = False):
         self.fail = fail
         self.execute_calls = []
+        self.fetchval_calls = []
+
+    def transaction(self):
+        return _FakeAcquire(self)
+
+    async def fetchval(self, query, *args):
+        if self.fail:
+            raise OSError("database unavailable")
+        self.fetchval_calls.append((query, args))
+        return True
 
     async def execute(self, query, *args):
         if self.fail:
             raise OSError("database unavailable")
         self.execute_calls.append((query, args))
+        return "INSERT 0 1"
 
 
 class _ClimatePool:
@@ -179,6 +190,7 @@ class TestIngestorTasks:
         rows = ingestor._read_climate_spool_rows()
         assert len(rows) == 1
         assert rows[0]["ts"] == ts
+        assert rows[0]["greenhouse_id"] == ingestor.GREENHOUSE_ID
         assert rows[0]["temp_avg"] == 71.5
 
     def test_climate_write_drains_spooled_rows_after_recovery(self, tmp_path, monkeypatch):

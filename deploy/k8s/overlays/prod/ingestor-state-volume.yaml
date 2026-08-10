@@ -15,9 +15,10 @@
 # pushes themselves still land (direct-push to ESP32 succeeds) but the logging +
 # MCP-restart bookkeeping fails, so the dispatcher task is marked failed each run.
 #
-# FIX: mount a writable RWO PVC at /srv/verdify/state. The climate spool is
-# operational data, not just diagnostic log noise, so emptyDir is no longer
-# acceptable.
+# TARGET: mount a writable RWO PVC at /srv/verdify/state. The climate spool is
+# operational data, not just diagnostic log noise. The live exception below is
+# still emptyDir under #382, so every gated Recreate must prove the old-pod spool
+# empty before deletion until the retained Longhorn PVC is restored separately.
 #
 # laptop-root applies the restart that picks this up (single-writer Recreate: the
 # old writer pod is torn down fully before the new one starts — no double-writer).
@@ -43,8 +44,8 @@ spec:
         # TEMP-ingestor-state-emptydir.patch.yaml `$patch: replace` never overrode
         # this PVC in the render (it left git=PVC vs live=emptyDir → ArgoCD
         # OutOfSync); defining emptyDir here directly is the reliable fix.
-        # REVERT to the persistentVolumeClaim below (and drop this block) once the
-        # iSCSI cap is fixed.
+        # Restore the retained Longhorn persistentVolumeClaim below only after a
+        # separate storage preflight and explicitly gated Recreate.
         - name: state
           emptyDir: {}
         # PVC (restore when #382/iSCSI is fixed):

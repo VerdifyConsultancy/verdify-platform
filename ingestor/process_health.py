@@ -17,7 +17,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 DEFAULT_STATUS_PATH = Path(
     os.environ.get(
         "INGESTOR_RUNTIME_STATUS_PATH",
@@ -36,6 +36,7 @@ STATUS_KEYS = frozenset(
         "lease_initialized",
         "lease_held",
         "esp32_connected",
+        "climate_spool_pending",
         "writer_fatal",
     }
 )
@@ -56,6 +57,7 @@ def runtime_status(
         "lease_initialized": state.get("lease_initialized") is True,
         "lease_held": state.get("lease_held") is True,
         "esp32_connected": state.get("esp32_connected") is True,
+        "climate_spool_pending": state.get("climate_spool_pending") is True,
         "writer_fatal": state.get("writer_fatal") is True,
     }
 
@@ -136,6 +138,8 @@ def evaluate_writer_readiness(status: dict[str, Any] | None) -> tuple[bool, str]
         return False, "writer_lease_not_held"
     if not status["esp32_connected"]:
         return False, "esp32_disconnected"
+    if status["climate_spool_pending"]:
+        return False, "climate_spool_pending"
     return True, "writer_connected_and_fenced"
 
 

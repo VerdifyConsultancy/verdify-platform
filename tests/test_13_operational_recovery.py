@@ -15,6 +15,8 @@ import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+import yaml
+
 from verdify_schemas.tunable_registry import (
     BAND_OWNED_REG,
     CROP_BAND_REG,
@@ -104,6 +106,7 @@ def test_prod_ha_gap_backfill_cronjob_mounts_script_and_ha_token():
     assert "backfill-ha-gaps.py" in component
     assert "name: verdify-ha-gap-backfill" in cron
     assert 'schedule: "23 * * * *"' in cron
+    assert "suspend: true" in cron
     assert "concurrencyPolicy: Forbid" in cron
     assert "image: ghcr.io/verdifyconsultancy/verdify-ingestor" in cron
     assert "verdify-ha-gap-backfill-script" in cron
@@ -120,12 +123,51 @@ def test_prod_ha_gap_backfill_cronjob_mounts_script_and_ha_token():
     assert "--history-max-split-depth=12" in cron
     assert "--history-max-points=250000" in cron
     assert "--history-response-max-bytes=33554432" in cron
+    assert "--event-reconcile-minutes=240" in cron
+    assert "--write-transaction-timeout-seconds=30" in cron
     assert "activeDeadlineSeconds: 1800" in cron
     assert "backoffLimit: 0" in cron
     assert "restartPolicy: Never" in cron
     assert "name: allow-db-from-ha-gap-backfill" in cron
     assert "app.kubernetes.io/component: ha-gap-backfill" in cron
     assert "deploy/k8s/components/ha-gap-backfill/backfill-ha-gaps.py" in wrapper
+    assert (
+        "from backfill_write_fence import"
+        in Path("deploy/k8s/components/ha-gap-backfill/backfill-ha-gaps.py").read_text()
+    )
+    assert "BACKFILL_WRITE_FENCE_CONTRACT_VERSION = 1" in Path("ingestor/backfill_write_fence.py").read_text()
+
+    rendered = subprocess.run(
+        ["kustomize", "build", "deploy/k8s/overlays/prod"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    resources = [resource for resource in yaml.safe_load_all(rendered) if isinstance(resource, dict)]
+    rendered_cron = next(
+        resource
+        for resource in resources
+        if resource.get("kind") == "CronJob" and resource.get("metadata", {}).get("name") == "verdify-ha-gap-backfill"
+    )
+    rendered_ingestor = next(
+        resource
+        for resource in resources
+        if resource.get("kind") == "Deployment" and resource.get("metadata", {}).get("name") == "verdify-ingestor"
+    )
+    rendered_script = next(
+        resource
+        for resource in resources
+        if resource.get("kind") == "ConfigMap"
+        and resource.get("metadata", {}).get("name", "").startswith("verdify-ha-gap-backfill-script")
+    )
+    cron_container = rendered_cron["spec"]["jobTemplate"]["spec"]["template"]["spec"]["containers"][0]
+    ingestor_container = rendered_ingestor["spec"]["template"]["spec"]["containers"][0]
+    assert rendered_cron["spec"]["suspend"] is True
+    assert cron_container["image"] == ingestor_container["image"]
+    assert (
+        rendered_script["data"]["backfill-ha-gaps.py"]
+        == Path("deploy/k8s/components/ha-gap-backfill/backfill-ha-gaps.py").read_text()
+    )
 
 
 def test_derived_history_reconcile_script_uses_canonical_daily_refresh():
@@ -154,15 +196,46 @@ def test_daily_summary_refresh_skips_incomplete_compliance_rows():
     assert src.index(guard) < src.index('vpd = float(r["vpd_avg"])')
 
 
-def test_prod_ingestor_state_is_durable_pvc():
+def test_prod_ingestor_state_exception_is_explicit_until_382_storage_gate():
     pvc_src = Path("deploy/k8s/overlays/prod/ingestor-state-pvc.yaml").read_text()
     patch_src = Path("deploy/k8s/overlays/prod/ingestor-state-volume.yaml").read_text()
     assert "kind: PersistentVolumeClaim" in pvc_src
     assert "name: verdify-ingestor-state" in pvc_src
-    assert "storageClassName: synology-iscsi" in pvc_src
-    assert "persistentVolumeClaim:" in patch_src
-    assert "claimName: verdify-ingestor-state" in patch_src
-    assert "emptyDir: {}" not in patch_src
+    assert "storageClassName: longhorn-v1-workspace-rwo" in pvc_src
+    assert "separate gated restart" in pvc_src
+    assert "#382" in patch_src
+    assert "emptyDir: {}" in patch_src
+    assert "PVC (restore" in patch_src
+
+    rendered = subprocess.run(
+        ["kustomize", "build", "deploy/k8s/overlays/prod"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    resources = [resource for resource in yaml.safe_load_all(rendered) if isinstance(resource, dict)]
+    deployment = next(
+        resource
+        for resource in resources
+        if resource.get("kind") == "Deployment" and resource.get("metadata", {}).get("name") == "verdify-ingestor"
+    )
+    rendered_pvc = next(
+        resource
+        for resource in resources
+        if resource.get("kind") == "PersistentVolumeClaim"
+        and resource.get("metadata", {}).get("name") == "verdify-ingestor-state"
+    )
+    pod_spec = deployment["spec"]["template"]["spec"]
+    state_volume = next(volume for volume in pod_spec["volumes"] if volume["name"] == "state")
+    ingestor_container = next(container for container in pod_spec["containers"] if container["name"] == "ingestor")
+    state_mount = next(mount for mount in ingestor_container["volumeMounts"] if mount["name"] == "state")
+    assert deployment["spec"]["replicas"] == 1
+    assert deployment["spec"]["strategy"]["type"] == "Recreate"
+    assert state_volume == {"name": "state", "emptyDir": {}}
+    assert state_mount["mountPath"] == "/srv/verdify/state"
+    assert rendered_pvc["spec"]["storageClassName"] == "longhorn-v1-workspace-rwo"
+    assert rendered_pvc["spec"]["accessModes"] == ["ReadWriteOnce"]
+    assert rendered_pvc["spec"]["resources"]["requests"]["storage"] == "2Gi"
 
 
 def test_echo_suppression_covers_delayed_esphome_state_publish():

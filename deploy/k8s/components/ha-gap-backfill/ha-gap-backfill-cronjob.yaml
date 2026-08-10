@@ -14,9 +14,12 @@ spec:
   # Hourly: DB-first gap detection is cheap; HA history is queried only when a
   # gap exists. Full historical reconciliation is a manual script mode.
   schedule: "23 * * * *"
-  # Explicit (matches the K8s default the cluster sets) so ArgoCD does not report
-  # a phantom suspend:false-vs-absent diff. The job must run; never suspended.
-  suspend: false
+  # Phase-one rollout gate. While #382 leaves state on emptyDir, the gated
+  # Recreate must first prove the OLD pod's spool empty. Then the paired ingestor
+  # must pass explicit mode-specific readiness on the exact reviewed digest;
+  # that includes an empty current-pod spool. Only a separate reviewed change
+  # may set this false for natural-cadence proof.
+  suspend: true
   concurrencyPolicy: Forbid
   startingDeadlineSeconds: 900
   successfulJobsHistoryLimit: 2
@@ -48,9 +51,11 @@ spec:
               type: RuntimeDefault
           containers:
             - name: backfill
-              # Reuse the ingestor runtime for asyncpg + verdify_schemas +
-              # entity_map. The script itself is mounted from a ConfigMap so
-              # enabling this CronJob does not require rolling the live writer.
+              # Reuse the exact ingestor runtime for asyncpg + verdify_schemas +
+              # entity_map + the shared climate-spool write fence. The mounted
+              # script fails closed on an older image. Pin both resources to the
+              # same reviewed digest while this CronJob remains suspended; roll
+              # and prove the singleton Ready before a later gated unsuspend.
               image: ghcr.io/verdifyconsultancy/verdify-ingestor
               command:
                 - python
@@ -61,6 +66,10 @@ spec:
                 - --max-gap-minutes=10
                 - --max-backfill-minutes=720
                 - --max-windows=12
+                # Sparse equipment/system transitions have no sample cadence
+                # from which to infer gaps. Always reconcile one overlapping
+                # natural-cadence tail so events cannot fall between runs.
+                - --event-reconcile-minutes=240
                 # Bounded HA Recorder history policy (#575). The 1200s fetch
                 # budget leaves 600s inside activeDeadlineSeconds for DB work
                 # and cleanup; one timeout retry precedes adaptive splitting.
@@ -75,6 +84,10 @@ spec:
                 - --history-max-split-depth=12
                 - --history-max-points=250000
                 - --history-response-max-bytes=33554432
+                # Bound the shared advisory-fence section. The live ingestor
+                # uses a non-blocking try-lock and spools locally instead of
+                # waiting behind a history repair.
+                - --write-transaction-timeout-seconds=30
               envFrom:
                 - configMapRef:
                     name: verdify-config

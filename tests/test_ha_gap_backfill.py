@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import builtins
 import http.client
 import importlib.util
 import sys
@@ -32,6 +33,28 @@ def _load_backfill_module():
 
 
 backfill = _load_backfill_module()
+
+
+def test_mounted_script_fails_closed_when_image_lacks_write_fence_contract(monkeypatch):
+    original_import = builtins.__import__
+
+    def reject_missing_contract(name, *args, **kwargs):
+        if name == "backfill_write_fence":
+            raise ImportError("simulated old ingestor image")
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", reject_missing_contract)
+    path = REPO_ROOT / "deploy/k8s/components/ha-gap-backfill/backfill-ha-gaps.py"
+    module_name = "verdify_ha_gap_backfill_old_image_test"
+    spec = importlib.util.spec_from_file_location(module_name, path)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    try:
+        with pytest.raises(RuntimeError, match="paired ingestor image write-fence contract"):
+            spec.loader.exec_module(module)
+    finally:
+        sys.modules.pop(module_name, None)
 
 
 class _Clock:
@@ -668,7 +691,12 @@ def test_late_writer_failure_rolls_back_the_whole_window(monkeypatch):
             return False
 
     transaction = Transaction()
-    connection = SimpleNamespace(transaction=lambda: transaction)
+    calls = []
+
+    async def execute(sql, *args):
+        calls.append((sql, args))
+
+    connection = SimpleNamespace(transaction=lambda: transaction, execute=execute)
 
     async def one(*_args, **_kwargs):
         return 1
@@ -677,18 +705,23 @@ def test_late_writer_failure_rolls_back_the_whole_window(monkeypatch):
         raise RuntimeError("late writer failure")
 
     for name in (
-        "backfill_climate",
         "backfill_diagnostics",
         "backfill_setpoints",
         "backfill_energy",
         "backfill_equipment",
+        "backfill_system_state",
     ):
         monkeypatch.setattr(backfill, name, one)
-    monkeypatch.setattr(backfill, "backfill_system_state", fail)
+    monkeypatch.setattr(backfill, "backfill_climate", fail)
 
     mappings = backfill.MappingSet([], [], [], [], {}, {})
     window = backfill.Window(timestamp, timestamp + timedelta(minutes=1), ("climate",))
-    args = SimpleNamespace(history_carry_minutes=20, batch_size=25)
+    args = SimpleNamespace(
+        history_carry_minutes=20,
+        batch_size=25,
+        apply=True,
+        write_transaction_timeout_seconds=30,
+    )
     with pytest.raises(RuntimeError, match="late writer failure"):
         asyncio.run(
             backfill.backfill_window(
@@ -702,6 +735,236 @@ def test_late_writer_failure_rolls_back_the_whole_window(monkeypatch):
         )
     assert transaction.entered is True
     assert transaction.rolled_back is True
+    assert calls == [
+        ("SET LOCAL statement_timeout = 30000", ()),
+        ("SET LOCAL idle_in_transaction_session_timeout = 30000", ()),
+        (
+            backfill.CLIMATE_WRITE_FENCE_SQL,
+            (backfill.climate_write_fence_key(backfill.GREENHOUSE_ID),),
+        ),
+    ]
+
+
+def test_apply_write_fence_follows_non_climate_writes_and_precedes_climate_check(monkeypatch):
+    timestamp = datetime(2026, 8, 10, 14, tzinfo=UTC)
+    calls = []
+
+    class Fetcher:
+        def fetch(self, *_args, **_kwargs):
+            return {backfill.REPRESENTATIVE_HA_ENTITIES[0]: backfill.HAHistory([(timestamp, "1")])}
+
+        def ensure_within_budget(self, _stage):
+            return None
+
+    class Transaction:
+        async def __aenter__(self):
+            calls.append("transaction_enter")
+            return self
+
+        async def __aexit__(self, exc_type, _exc, _tb):
+            calls.append("transaction_rollback" if exc_type else "transaction_commit")
+            return False
+
+    class Connection:
+        def transaction(self):
+            return Transaction()
+
+        async def execute(self, sql, *args):
+            if sql.startswith("SET LOCAL statement_timeout"):
+                calls.append("statement_timeout")
+                return
+            if sql.startswith("SET LOCAL idle_in_transaction_session_timeout"):
+                calls.append("idle_transaction_timeout")
+                return
+            assert sql == backfill.CLIMATE_WRITE_FENCE_SQL
+            assert args == (backfill.climate_write_fence_key(backfill.GREENHOUSE_ID),)
+            calls.append("write_fence")
+
+    async def writer(name, *_args, **_kwargs):
+        calls.append(f"writer:{name}")
+        return 0
+
+    for name in (
+        "backfill_climate",
+        "backfill_diagnostics",
+        "backfill_setpoints",
+        "backfill_energy",
+        "backfill_equipment",
+        "backfill_system_state",
+    ):
+        monkeypatch.setattr(backfill, name, lambda *args, _name=name, **kwargs: writer(_name, *args, **kwargs))
+
+    window = backfill.Window(timestamp, timestamp + timedelta(minutes=1), ("climate",))
+    args = SimpleNamespace(
+        history_carry_minutes=20,
+        batch_size=25,
+        apply=True,
+        write_transaction_timeout_seconds=30,
+    )
+    asyncio.run(
+        backfill.backfill_window(
+            Connection(),
+            window,
+            backfill.MappingSet([], [], [], [], {}, {}),
+            Fetcher(),
+            args,
+            {"climate": set(), "diagnostics": set()},
+        )
+    )
+
+    assert calls == [
+        "transaction_enter",
+        "writer:backfill_diagnostics",
+        "writer:backfill_setpoints",
+        "writer:backfill_energy",
+        "writer:backfill_equipment",
+        "writer:backfill_system_state",
+        "statement_timeout",
+        "idle_transaction_timeout",
+        "write_fence",
+        "writer:backfill_climate",
+        "transaction_commit",
+    ]
+
+
+def test_apply_write_fence_timeout_rolls_back(monkeypatch):
+    timestamp = datetime(2026, 8, 10, 14, tzinfo=UTC)
+
+    class Fetcher:
+        def fetch(self, *_args, **_kwargs):
+            return {backfill.REPRESENTATIVE_HA_ENTITIES[0]: backfill.HAHistory([(timestamp, "1")])}
+
+    class Transaction:
+        rolled_back = False
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, _exc, _tb):
+            self.rolled_back = exc_type is not None
+            return False
+
+    transaction = Transaction()
+
+    class Connection:
+        def transaction(self):
+            return transaction
+
+        async def execute(self, sql, *args):
+            if sql.startswith("SET LOCAL "):
+                return
+            assert sql == backfill.CLIMATE_WRITE_FENCE_SQL
+            assert args == (backfill.climate_write_fence_key(backfill.GREENHOUSE_ID),)
+
+    async def slow_writer(*_args, **_kwargs):
+        await asyncio.sleep(1)
+        return 0
+
+    async def quick_writer(*_args, **_kwargs):
+        return 0
+
+    for name in (
+        "backfill_diagnostics",
+        "backfill_setpoints",
+        "backfill_energy",
+        "backfill_equipment",
+        "backfill_system_state",
+    ):
+        monkeypatch.setattr(backfill, name, quick_writer)
+    monkeypatch.setattr(backfill, "backfill_climate", slow_writer)
+    window = backfill.Window(timestamp, timestamp + timedelta(minutes=1), ("climate",))
+    args = SimpleNamespace(
+        history_carry_minutes=20,
+        batch_size=25,
+        apply=True,
+        write_transaction_timeout_seconds=0.001,
+    )
+    with pytest.raises(TimeoutError):
+        asyncio.run(
+            backfill.backfill_window(
+                Connection(),
+                window,
+                backfill.MappingSet([], [], [], [], {}, {}),
+                Fetcher(),
+                args,
+                {"climate": set(), "diagnostics": set()},
+            )
+        )
+    assert transaction.rolled_back is True
+
+
+def test_apply_write_fence_failure_rolls_back_pre_fence_writes(monkeypatch):
+    timestamp = datetime(2026, 8, 10, 14, tzinfo=UTC)
+    climate_writer_called = False
+    pre_fence_writes = 0
+
+    class Fetcher:
+        def fetch(self, *_args, **_kwargs):
+            return {backfill.REPRESENTATIVE_HA_ENTITIES[0]: backfill.HAHistory([(timestamp, "1")])}
+
+    class Transaction:
+        rolled_back = False
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, _exc, _tb):
+            self.rolled_back = exc_type is not None
+            return False
+
+    transaction = Transaction()
+
+    class Connection:
+        def transaction(self):
+            return transaction
+
+        async def execute(self, sql, *args):
+            if sql.startswith("SET LOCAL "):
+                return
+            assert sql == backfill.CLIMATE_WRITE_FENCE_SQL
+            assert args == (backfill.climate_write_fence_key(backfill.GREENHOUSE_ID),)
+            raise RuntimeError("simulated lock contention")
+
+    async def climate_writer(*_args, **_kwargs):
+        nonlocal climate_writer_called
+        climate_writer_called = True
+        return 0
+
+    async def pre_fence_writer(*_args, **_kwargs):
+        nonlocal pre_fence_writes
+        pre_fence_writes += 1
+        return 0
+
+    for name in (
+        "backfill_diagnostics",
+        "backfill_setpoints",
+        "backfill_energy",
+        "backfill_equipment",
+        "backfill_system_state",
+    ):
+        monkeypatch.setattr(backfill, name, pre_fence_writer)
+    monkeypatch.setattr(backfill, "backfill_climate", climate_writer)
+    window = backfill.Window(timestamp, timestamp + timedelta(minutes=1), ("climate",))
+    args = SimpleNamespace(
+        history_carry_minutes=20,
+        batch_size=25,
+        apply=True,
+        write_transaction_timeout_seconds=30,
+    )
+    with pytest.raises(RuntimeError, match="simulated lock contention"):
+        asyncio.run(
+            backfill.backfill_window(
+                Connection(),
+                window,
+                backfill.MappingSet([], [], [], [], {}, {}),
+                Fetcher(),
+                args,
+                {"climate": set(), "diagnostics": set()},
+            )
+        )
+    assert transaction.rolled_back is True
+    assert pre_fence_writes == 5
+    assert climate_writer_called is False
 
 
 def test_dry_run_completes_transaction_without_claiming_a_commit(monkeypatch, caplog):
@@ -754,6 +1017,149 @@ def test_dry_run_completes_transaction_without_claiming_a_commit(monkeypatch, ca
     assert "mode=DRY-RUN" in caplog.text
     assert "candidate_rows=" in caplog.text
     assert "window_write_commit" not in caplog.text
+
+
+def test_split_windows_use_nonoverlapping_microsecond_boundaries_without_dropping_events():
+    start = datetime(2026, 8, 10, 14, tzinfo=UTC)
+    end = start + timedelta(minutes=130)
+
+    windows = backfill.split_windows([backfill.Window(start, end, ("climate",))], 60)
+
+    assert [(window.start, window.end) for window in windows] == [
+        (start, start + timedelta(minutes=60) - timedelta(microseconds=1)),
+        (start + timedelta(minutes=60), start + timedelta(minutes=120) - timedelta(microseconds=1)),
+        (start + timedelta(minutes=120), end),
+    ]
+    boundary = start + timedelta(minutes=60)
+    transition = start + timedelta(minutes=60, seconds=30)
+    assert sum(window.start <= boundary <= window.end for window in windows) == 1
+    assert sum(window.start <= transition <= window.end for window in windows) == 1
+
+
+def test_trailing_event_window_survives_two_missed_hourly_jobs_and_validates_limit():
+    start = datetime(2026, 8, 10, 14, tzinfo=UTC)
+    end = datetime(2026, 8, 10, 19, 21, 6, tzinfo=UTC)
+
+    window = backfill.trailing_event_window(start, end, 240)
+    after_two_missed_jobs = backfill.trailing_event_window(
+        start,
+        end + timedelta(hours=3, minutes=15),
+        240,
+    )
+
+    assert window == backfill.Window(datetime(2026, 8, 10, 15, 21, 6, tzinfo=UTC), end, ("event-tail",))
+    assert window.start < datetime(2026, 8, 10, 18, 21, 30, tzinfo=UTC) < window.end
+    assert after_two_missed_jobs.start == window.end - timedelta(minutes=45)
+    assert after_two_missed_jobs.start < window.end
+    for invalid in (0, -1, float("nan"), float("inf")):
+        with pytest.raises(ValueError, match="event reconcile minutes"):
+            backfill.trailing_event_window(start, end, invalid)
+
+
+def test_event_only_window_fetches_and_writes_only_sparse_event_tables(monkeypatch):
+    timestamp = datetime(2026, 8, 10, 18, tzinfo=UTC)
+    fetched_entities = []
+    called = []
+
+    class Fetcher:
+        def fetch(self, entity_ids, *_args, **_kwargs):
+            fetched_entities.extend(entity_ids)
+            return {
+                "binary_sensor.fan": backfill.HAHistory([(timestamp, "on")]),
+                "sensor.mode": backfill.HAHistory([(timestamp, "VENTILATE")]),
+            }
+
+        def ensure_within_budget(self, _stage):
+            return None
+
+    class Transaction:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, _exc_type, _exc, _tb):
+            return False
+
+    class Connection:
+        def transaction(self):
+            return Transaction()
+
+        async def execute(self, *_args, **_kwargs):
+            raise AssertionError("event-only reconciliation must not acquire the climate fence")
+
+    async def event_writer(name, *_args, **_kwargs):
+        called.append(name)
+        return 1
+
+    async def sample_writer(*_args, **_kwargs):
+        raise AssertionError("event-only reconciliation invoked a sampled-table writer")
+
+    monkeypatch.setattr(
+        backfill, "backfill_equipment", lambda *args, **kwargs: event_writer("equipment", *args, **kwargs)
+    )
+    monkeypatch.setattr(
+        backfill, "backfill_system_state", lambda *args, **kwargs: event_writer("system_state", *args, **kwargs)
+    )
+    for name in ("backfill_climate", "backfill_diagnostics", "backfill_setpoints", "backfill_energy"):
+        monkeypatch.setattr(backfill, name, sample_writer)
+
+    mappings = backfill.MappingSet(
+        [backfill.ScalarMapping("sensor.sample", "temp_avg")],
+        [],
+        [],
+        [],
+        {"binary_sensor.fan": "fan"},
+        {"sensor.mode": "mode"},
+    )
+    args = SimpleNamespace(
+        history_carry_minutes=20,
+        batch_size=25,
+        apply=True,
+        write_transaction_timeout_seconds=30,
+    )
+    stats = asyncio.run(
+        backfill.backfill_window(
+            Connection(),
+            backfill.Window(timestamp, timestamp + timedelta(minutes=1), ("event-tail",)),
+            mappings,
+            Fetcher(),
+            args,
+            {"climate": set(), "diagnostics": set()},
+        )
+    )
+
+    assert fetched_entities == ["binary_sensor.fan", "sensor.mode"]
+    assert called == ["equipment", "system_state"]
+    assert stats.windows_committed == 1
+    assert stats.rows == {"equipment_state": 1, "system_state": 1}
+
+
+def test_apply_range_must_end_at_least_two_minutes_behind_now():
+    now = datetime(2026, 8, 10, 20, tzinfo=UTC)
+
+    backfill.require_settled_apply_end(True, now - timedelta(seconds=120), now=now)
+    backfill.require_settled_apply_end(False, now, now=now)
+    with pytest.raises(RuntimeError, match="mandatory 120s settle boundary"):
+        backfill.require_settled_apply_end(True, now - timedelta(seconds=119), now=now)
+
+
+def test_apply_requires_shared_sixty_second_climate_bucket_contract():
+    backfill.require_apply_write_contract(True, backfill.CLIMATE_WRITE_BUCKET_SECONDS)
+    backfill.require_apply_write_contract(False, 30)
+    for cadence in (30, 300):
+        with pytest.raises(RuntimeError, match="60s ingestor climate bucket contract"):
+            backfill.require_apply_write_contract(True, cadence)
+
+
+def test_invalid_apply_bucket_contract_fails_before_token_or_external_access(monkeypatch):
+    monkeypatch.setattr(backfill, "parse_args", lambda: SimpleNamespace(apply=True, sample_seconds=30))
+    monkeypatch.setattr(
+        backfill,
+        "load_ha_token",
+        lambda *_args, **_kwargs: pytest.fail("invalid apply contract reached token loading"),
+    )
+
+    with pytest.raises(RuntimeError, match="60s ingestor climate bucket contract"):
+        asyncio.run(backfill.async_main())
 
 
 def test_history_logs_never_include_token_or_entity_list(caplog):

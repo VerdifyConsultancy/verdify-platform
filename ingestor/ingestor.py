@@ -17,7 +17,7 @@ import math
 import os
 import sys
 import urllib.request
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
@@ -37,6 +37,7 @@ from aioesphomeapi.model import (
     SwitchInfo,
     TextSensorInfo,
 )
+from backfill_write_fence import CLIMATE_WRITE_BUCKET_SECONDS, CLIMATE_WRITE_FENCE_TRY_SQL, climate_write_fence_key
 from dotenv import load_dotenv
 from entity_map import (
     CFG_READBACK_MAP,
@@ -126,6 +127,11 @@ GREENHOUSE_ID = os.environ.get("GREENHOUSE_ID", "vallery")
 STATE_DIR = Path(os.environ.get("STATE_DIR", "/srv/verdify/state"))
 CLIMATE_SPOOL_PATH = Path(os.environ.get("CLIMATE_SPOOL_PATH", str(STATE_DIR / "spool" / "climate.jsonl")))
 CLIMATE_SPOOL_MAX_ROWS = int(os.environ.get("CLIMATE_SPOOL_MAX_ROWS", "2880"))
+
+
+class ClimateWriteFenceBusy(RuntimeError):
+    """The backfill owns the climate mutex; preserve the row in the spool."""
+
 
 # ESP32 config: loaded from DB in main(), fallback to .env
 ESP32_HOST = os.environ.get("ESP32_HOST", "192.168.10.111")
@@ -391,7 +397,7 @@ def _write_climate_spool_rows(rows: list[dict[str, Any]]) -> None:
         CLIMATE_SPOOL_PATH.unlink(missing_ok=True)
 
 
-def _spool_climate_row(row: dict[str, Any]) -> None:
+def _spool_climate_row(row: dict[str, Any], *, reason: str = "DB write failure") -> bool:
     try:
         rows = _read_climate_spool_rows()
         rows.append(row)
@@ -400,26 +406,103 @@ def _spool_climate_row(row: dict[str, Any]) -> None:
             rows = rows[dropped:]
             log.error("climate spool exceeded %s rows; dropped %s oldest rows", CLIMATE_SPOOL_MAX_ROWS, dropped)
         _write_climate_spool_rows(rows)
-        log.warning("spooled climate row at %s after DB write failure (spool_depth=%s)", row["ts"], len(rows))
+        log.warning("spooled climate row at %s after %s (spool_depth=%s)", row["ts"], reason, len(rows))
+        return True
     except Exception as e:
         log.error("failed to spool climate row at %s: %s", row.get("ts"), e)
+        return False
 
 
-async def _insert_climate_row(pool: asyncpg.Pool, row: dict[str, Any]) -> None:
+def _climate_spool_pending() -> bool:
+    """Report only whether current-pod climate replay remains, never its contents."""
+    try:
+        return CLIMATE_SPOOL_PATH.stat().st_size > 0
+    except FileNotFoundError:
+        return False
+    except OSError:
+        # Readiness is a rollout/safety gate. An unreadable spool must not be
+        # represented as empty and allow history repair to race unknown data.
+        return True
+
+
+async def _insert_climate_row(pool: asyncpg.Pool, row: dict[str, Any]) -> bool:
     ts = _coerce_spooled_ts(row["ts"])
-    cols = [col for col in row if col != "ts"]
+    greenhouse_id = str(row.get("greenhouse_id") or GREENHOUSE_ID).strip()
+    normalized_row = {**row, "greenhouse_id": greenhouse_id}
+    cols = [col for col in normalized_row if col != "ts"]
     cols_sql = ", ".join(["ts"] + cols)
     placeholders = ", ".join([f"${i + 1}" for i in range(len(cols) + 1)])
-    values = [ts] + [row.get(c) for c in cols]
+    values = [ts] + [normalized_row.get(c) for c in cols]
+    bucket_start = datetime.fromtimestamp(
+        math.floor(ts.timestamp() / CLIMATE_WRITE_BUCKET_SECONDS) * CLIMATE_WRITE_BUCKET_SECONDS,
+        UTC,
+    )
+    bucket_end = bucket_start + timedelta(seconds=CLIMATE_WRITE_BUCKET_SECONDS)
+    greenhouse_param = len(values) + 1
+    bucket_start_param = len(values) + 2
+    bucket_end_param = len(values) + 3
     async with pool.acquire() as conn:
-        await conn.execute(
-            f"INSERT INTO climate ({cols_sql}) VALUES ({placeholders})",
-            *values,
-        )
+        async with conn.transaction():
+            acquired = await conn.fetchval(CLIMATE_WRITE_FENCE_TRY_SQL, climate_write_fence_key(greenhouse_id))
+            if acquired is not True:
+                # Never let a history repair stall the live capture loop. The
+                # caller's existing failure path spools a fresh row locally or
+                # preserves the not-yet-drained replay suffix for a later pass.
+                raise ClimateWriteFenceBusy("climate write fence is busy")
+            result = await conn.execute(
+                f"""
+                INSERT INTO climate ({cols_sql})
+                SELECT {placeholders}
+                 WHERE NOT EXISTS (
+                    SELECT 1
+                      FROM climate
+                     WHERE greenhouse_id = ${greenhouse_param}
+                       AND ts >= ${bucket_start_param}
+                       AND ts < ${bucket_end_param}
+                 )
+                """,
+                *values,
+                greenhouse_id,
+                bucket_start,
+                bucket_end,
+            )
+            inserted = result.rsplit(" ", 1)[-1] == "1"
+            if not inserted:
+                # HA repair may have filled this minute while real telemetry
+                # survived in the current pod's spool. Device telemetry is
+                # authoritative: keep
+                # one logical row, but reconcile its timestamp and every field
+                # present in the replay before declaring that spool row drained.
+                assignments = ", ".join(f"{col} = ${index + 1}" for index, col in enumerate(["ts", *cols]))
+                reconciled = await conn.execute(
+                    f"""
+                    UPDATE climate AS target
+                       SET {assignments}
+                     WHERE (target.tableoid, target.ctid) = (
+                        SELECT candidate.tableoid, candidate.ctid
+                          FROM climate AS candidate
+                         WHERE greenhouse_id = ${greenhouse_param}
+                           AND ts >= ${bucket_start_param}
+                           AND ts < ${bucket_end_param}
+                         ORDER BY ts DESC
+                         LIMIT 1
+                     )
+                    """,
+                    *values,
+                    greenhouse_id,
+                    bucket_start,
+                    bucket_end,
+                )
+                if reconciled.rsplit(" ", 1)[-1] != "1":
+                    raise RuntimeError("existing climate bucket could not be reconciled")
+                log.info("climate row reconciled with authoritative telemetry at %s", bucket_start)
     log.debug(f"climate row written ({len(cols)} columns)")
     # #113: re-emit the exact row we just persisted onto the fan-out bus so
-    # dev/stage subscribers write the same climate row to their own DB.
-    _fanout_publish("climate", {"ts": ts, **{col: row.get(col) for col in cols}})
+    # subscribers see authoritative reconciliation too. The legacy subscriber
+    # is retired in the current single environment; it must gain the same
+    # bucket-idempotent write before any future reactivation.
+    _fanout_publish("climate", {"ts": ts, **{col: normalized_row.get(col) for col in cols}})
+    return inserted
 
 
 async def _drain_climate_spool(pool: asyncpg.Pool) -> None:
@@ -513,9 +596,16 @@ async def write_climate(pool: asyncpg.Pool, ts: datetime) -> None:
             # once the known-false-positive-free baseline is proven.
 
     await _drain_climate_spool(pool)
-    row = {"ts": ts, **merged}
+    row = {"ts": ts, "greenhouse_id": GREENHOUSE_ID, **merged}
     try:
         await _insert_climate_row(pool, row)
+    except ClimateWriteFenceBusy:
+        if _spool_climate_row(row, reason="backfill write-fence contention"):
+            # This is expected coordination, not a failed flush. Advancing the
+            # caller's normal cadence avoids retrying and spooling the same
+            # minute every event-loop tick while repair owns the mutex.
+            return
+        raise
     except Exception:
         _spool_climate_row(row)
         raise
@@ -2718,6 +2808,7 @@ def _runtime_health_state(subscribe_mode: bool) -> dict[str, Any]:
         "lease_fencing_active": bool(lease and lease.fencing_active),
         "lease_held": lease is not None and shared.writer_lease_held(),
         "esp32_connected": shared.esp32.get("client") is not None,
+        "climate_spool_pending": _climate_spool_pending(),
         "writer_fatal": shared.writer_fatal_event.is_set(),
     }
 
