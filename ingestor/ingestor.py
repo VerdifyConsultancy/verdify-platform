@@ -2826,20 +2826,20 @@ async def main() -> None:
     shared.writer_lease = _writer_lease
     await _writer_lease.start()
 
-    # SIGTERM handler: on graceful eviction / drain / rollout, RELEASE the lease
-    # (clears holderIdentity so a replacement acquires in seconds, not 15s) and
-    # let the process exit. This turns a planned-disruption zero-writer gap from
-    # ~15s into seconds. SIGTERM during a Recreate rollout: the old pod releases,
-    # the new pod (already blocked in esp32_loop.acquire) takes over immediately.
+    # SIGTERM handler: first self-fence locally and stop Lease renewal. The
+    # remote holder identity stays in place while worker cancellation unwinds
+    # esp32_loop and disconnects the old client. Only after that disconnect does
+    # main clear the Lease for immediate takeover. This ordering prevents a
+    # replacement from connecting during old-client teardown.
     loop = asyncio.get_running_loop()
     _shutdown = asyncio.Event()
 
     async def _on_sigterm() -> None:
-        log.warning("SIGTERM received — releasing writer lease + shutting down")
+        log.warning("SIGTERM received — self-fencing writer + shutting down")
         try:
-            await _writer_lease.release()
+            await _writer_lease.self_fence()
         except Exception as e:  # noqa: BLE001
-            log.warning("Lease release on SIGTERM failed: %s", e)
+            log.warning("Writer self-fence on SIGTERM failed: %s", e)
         _publish_runtime_health(subscribe_mode)
         _shutdown.set()
 
@@ -2864,9 +2864,9 @@ async def main() -> None:
         health_task,
     )
 
-    # Race the worker gather against the shutdown signal so SIGTERM unwinds
-    # promptly (releasing the lease) instead of waiting on the never-returning
-    # loops. On shutdown, cancel the workers and return.
+    # Race the worker gather against the shutdown signal. On SIGTERM, cancel and
+    # await every worker (including esp32_loop's disconnect finally) before
+    # clearing the remote Lease holder identity.
     shutdown_wait = asyncio.ensure_future(_shutdown.wait())
     done, pending = await asyncio.wait({main_tasks, shutdown_wait}, return_when=asyncio.FIRST_COMPLETED)
     if _shutdown.is_set():
@@ -2875,6 +2875,7 @@ async def main() -> None:
             await main_tasks
         except (asyncio.CancelledError, Exception):
             pass
+        await _writer_lease.release()
         return
     # If the gather itself returned/raised, propagate (surfaces fatal errors).
     shutdown_wait.cancel()

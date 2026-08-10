@@ -248,6 +248,37 @@ def test_D_release_enables_immediate_takeover(monkeypatch):
     assert api.obj["spec"]["holderIdentity"] == "pod-b"
 
 
+@pytest.mark.asyncio
+async def test_D_self_fence_retains_remote_holder_until_explicit_release(monkeypatch):
+    _set_fast_windows(monkeypatch, duration=15)
+    api = FakeLeaseAPI()
+    lease = make_lease(api, "pod-a", duration=15)
+    assert lease._try_acquire_or_renew() is True
+    lease._held = True
+    lease._last_renew = time.monotonic()
+    lease._renew_task = asyncio.create_task(asyncio.sleep(60))
+
+    await lease.self_fence()
+
+    assert lease.is_held() is False
+    assert lease._renew_task is None
+    assert api.obj["spec"]["holderIdentity"] == "pod-a"
+
+    await lease.release()
+
+    assert api.obj["spec"]["holderIdentity"] is None
+
+
+def test_D_sigterm_disconnects_workers_before_remote_release():
+    source = (Path(_INGESTOR_PATH) / "ingestor.py").read_text()
+    signal_handler = source[source.index("async def _on_sigterm") : source.index("try:\n        import signal")]
+    shutdown_path = source[source.index("if _shutdown.is_set():") : source.index("# If the gather itself")]
+
+    assert "await _writer_lease.self_fence()" in signal_handler
+    assert "await _writer_lease.release()" not in signal_handler
+    assert shutdown_path.index("await main_tasks") < shutdown_path.index("await _writer_lease.release()")
+
+
 # ── E. flag gating / off-cluster degrade = always-held no-op ─────────────────
 def test_E_disabled_is_always_held(monkeypatch):
     monkeypatch.delenv("VERDIFY_WRITER_LEASE_ENABLED", raising=False)

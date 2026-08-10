@@ -186,13 +186,14 @@ class WriterLease:
             await asyncio.sleep(RETRY_PERIOD_S)
         return True
 
-    async def release(self) -> None:
-        """Best-effort lease release on graceful shutdown (SIGTERM / drain).
+    async def self_fence(self) -> None:
+        """Stop renewing and close the local push gate without releasing.
 
-        Clears ``holderIdentity`` so a replacement pod can acquire IMMEDIATELY
-        instead of waiting out ``LEASE_DURATION`` — turning a rollout/drain gap
-        from ~15s into seconds. Safe/no-op when not fencing.
+        Graceful shutdown uses this before disconnecting the ESP32. The remote
+        holder identity deliberately remains in place until the device loop has
+        unwound, so a replacement cannot connect during the old client teardown.
         """
+        self._held = False
         self._stop.set()
         if self._renew_task is not None:
             self._renew_task.cancel()
@@ -201,7 +202,16 @@ class WriterLease:
             except (asyncio.CancelledError, Exception):
                 pass
             self._renew_task = None
-        self._held = False
+
+    async def release(self) -> None:
+        """Best-effort lease release on graceful shutdown (SIGTERM / drain).
+
+        The caller must first stop/disconnect the device writer. This method
+        closes the local push gate again defensively, then clears
+        ``holderIdentity`` so a replacement can acquire without waiting out
+        ``LEASE_DURATION``. Safe/no-op when not fencing.
+        """
+        await self.self_fence()
         if not self._can_fence:
             return
         try:

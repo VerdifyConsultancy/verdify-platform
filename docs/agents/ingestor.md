@@ -56,7 +56,10 @@ Every write into TimescaleDB, every read from Home Assistant / Shelly / Tempest 
   same gated change that pins the exact newly built image digest.
 - A disabled Lease remains a development no-op. If the Lease is explicitly
   enabled but ServiceAccount/API/CA capability is unavailable, acquisition and
-  readiness fail closed; the process must not open the ESP32 connection.
+  readiness fail closed; the process must not open the ESP32 connection. On
+  SIGTERM, stop renewal and close the local push gate first, cancel and await
+  the ESP32 disconnect, and only then clear the remote holder identity. Never
+  release the Lease while the old client can still be connected.
 - HA gap recovery fetches every bounded history leaf before opening the
   per-window DB transaction. Ordinary requests are pre-split to at most 60
   minutes and 25 entities, retry once, then timeout leaves split adaptively
