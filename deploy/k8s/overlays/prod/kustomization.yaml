@@ -36,6 +36,10 @@ resources:
   - db-watchdog.yaml
   - writer-watchdog.yaml
   - ingestor-state-pvc.yaml
+  # #575 / proxmox-infrastructure#86: adopt the already-migrated portable R2
+  # Hermes run-state claim in Git while retaining the original component claim
+  # as rollback material. The paired patch changes only the Hermes data volume.
+  - hermes-data-portable-pvc.yaml
   # Plant-observation pipeline (#436): GitOps-owned CronJob + generated
   # verdify-vision-src ConfigMap. Pulls the production ingestor digest from the
   # zot origin with zot-origin-cluster-pull ONLY (ADR-0021 — the transitional
@@ -119,6 +123,9 @@ components:
   - ../../components/ha-gap-backfill
 
 patches:
+  # Reconcile the live, verified 2026-08-01 Hermes PVC cutover. The original
+  # verdify-hermes-iris-data claim remains declared and must not be deleted.
+  - path: hermes-data-portable.patch.yaml
   # PROD DB STORAGE RECONCILE: restate verdify-db's volumeClaimTemplate onto
   # Longhorn NVMe RWO storage to match the migrated live prod DB. git==live
   # -> no immutable-field StatefulSet patch attempt. See

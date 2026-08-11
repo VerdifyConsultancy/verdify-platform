@@ -1,0 +1,24 @@
+# Production adoption of the attended portable-R2 migration completed under
+# jvallery/proxmox-infrastructure#86 on 2026-08-01. The exact bound PV is pinned
+# so Git describes the existing data-bearing claim instead of provisioning a
+# blank replacement. The original verdify-hermes-iris-data PVC remains rendered
+# by the component as retained rollback material; cleanup is a separate action.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: verdify-hermes-iris-data-portable-20260801
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: hermes-iris
+    app.kubernetes.io/name: verdify-hermes-iris
+    maintenance.vallery.net/transaction: oro-issue-94
+    storage.vallery.net/policy: rebuildable-replicated-r2
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn-v1-rebuildable-rwo
+  volumeMode: Filesystem
+  volumeName: pvc-6b6b2f30-c414-4325-a803-87b19010851f
+  resources:
+    requests:
+      storage: 5Gi
