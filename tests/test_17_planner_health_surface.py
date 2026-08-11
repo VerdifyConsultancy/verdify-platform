@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import asyncio
 import importlib.util
+import io
 import json
 import os
 import subprocess
@@ -377,6 +378,10 @@ def _hermes_probe_namespace(source: str) -> dict[str, object]:
     return namespace
 
 
+def _hermes_mcp_log(stamp: str, message: str, level: str = "INFO", logger: str = "tools.mcp_tool") -> str:
+    return f"{stamp} {level} {logger}: {message}\n"
+
+
 def test_hermes_readiness_covers_the_exact_configured_mcp_allowlist(mcp_server):
     _manifest, profile, readiness_source = _hermes_config_documents()
     configured = set(profile["mcp_servers"]["verdify_greenhouse"]["tools"]["include"])
@@ -406,42 +411,329 @@ def test_hermes_client_state_ignores_persistent_prestart_history(tmp_path):
     started_at = datetime(2026, 7, 10, 12, tzinfo=UTC).timestamp()
     log_path = tmp_path / "agent.log"
     log_path.write_text(
-        "2026-07-10 11:59:00,000 WARNING MCP server 'verdify_greenhouse' "
-        "failed after 5 reconnection attempts, giving up: old\n"
-        "2026-07-10 12:00:01,000 INFO MCP server 'verdify_greenhouse' "
-        "(HTTP): registered 23 tool(s): climate\n"
+        _hermes_mcp_log(
+            "2026-07-10 11:59:00,000",
+            "MCP server 'verdify_greenhouse' failed after 5 reconnection attempts, giving up: old",
+            "WARNING",
+        )
+        + _hermes_mcp_log(
+            "2026-07-10 12:00:01,000",
+            "MCP server 'verdify_greenhouse' (HTTP): registered 23 tool(s): climate",
+        )
     )
 
     state = client_state([str(log_path)], started_at)
 
     assert state["state"] == "connected"
     assert state["fatal"] is False
+    assert state["signal_source"] == "full_discovery_log"
 
 
-def test_hermes_client_state_disconnect_then_recover(tmp_path):
+def test_hermes_persisted_state_does_not_inherit_immediate_prior_process_disconnect(tmp_path):
+    _manifest, _profile, source = _hermes_config_documents()
+    namespace = _hermes_probe_namespace(source)
+    client_state = namespace["hermes_client_state"]
+    first_started_at = datetime(2026, 7, 10, 11, 59, tzinfo=UTC).timestamp()
+    replacement_started_at = datetime(2026, 7, 10, 12, tzinfo=UTC).timestamp()
+    log_path = tmp_path / "agent.log"
+    state_path = tmp_path / "probe-state.json"
+    log_path.write_text(
+        _hermes_mcp_log(
+            "2026-07-10 11:59:59,500",
+            "MCP server 'verdify_greenhouse' connection lost (attempt 4/5), reconnecting in 60s: old process",
+            "WARNING",
+        )
+    )
+
+    first = client_state([str(log_path)], first_started_at, state_path=state_path)
+    log_path.replace(tmp_path / "agent.log.1")
+    log_path.write_text("")
+    replacement = client_state([str(log_path)], replacement_started_at, state_path=state_path)
+
+    assert first["state"] == "disconnected"
+    assert replacement["state"] == "unknown"
+    assert replacement["process_started_at"] == replacement_started_at
+    assert replacement["unacknowledged_disconnect_since"] is None
+
+
+def test_hermes_silent_background_reconnect_stays_latched_across_log_rotation(tmp_path):
+    _manifest, _profile, source = _hermes_config_documents()
+    namespace = _hermes_probe_namespace(source)
+    client_state = namespace["hermes_client_state"]
+    started_at = datetime(2026, 7, 10, 12, tzinfo=UTC).timestamp()
+    log_path = tmp_path / "agent.log"
+    state_path = tmp_path / "probe-state.json"
+    log_path.write_text(
+        _hermes_mcp_log(
+            "2026-07-10 12:00:01,000",
+            "MCP server 'verdify_greenhouse' (HTTP): registered 23 tool(s): climate",
+        )
+        + _hermes_mcp_log(
+            "2026-07-10 12:01:00,000",
+            "MCP server 'verdify_greenhouse' connection lost (attempt 1/5), reconnecting in 1s: reset",
+            "WARNING",
+        )
+    )
+    disconnected = client_state([str(log_path)], started_at, state_path=state_path)
+
+    # Exact pinned upstream behavior: _run_http() can reconnect successfully,
+    # but emits no new full-discovery/registered line. Rotate away the first
+    # negative marker and leave only later retry chatter in the active log.
+    log_path.replace(tmp_path / "agent.log.1")
+    log_path.write_text(
+        _hermes_mcp_log(
+            "2026-07-10 12:02:00,000",
+            "MCP server 'verdify_greenhouse' connection lost (attempt 4/5), reconnecting in 8s: reset",
+            "WARNING",
+        )
+    )
+    after_rotation = client_state([str(log_path)], started_at, state_path=state_path)
+    (tmp_path / "agent.log.1").unlink()
+    log_path.write_text("")
+    after_original_marker_is_gone = client_state([str(log_path)], started_at, state_path=state_path)
+
+    expected_since = datetime(2026, 7, 10, 12, 1, tzinfo=UTC).timestamp()
+    for state in (disconnected, after_rotation, after_original_marker_is_gone):
+        assert state["state"] == "disconnected"
+        assert state["fatal"] is False
+        assert state["unacknowledged_disconnect_since"] == expected_since
+    assert after_rotation["last_event_at"] == datetime(2026, 7, 10, 12, 2, tzinfo=UTC).timestamp()
+    assert state_path.stat().st_mode & 0o777 == 0o600
+
+
+def test_hermes_real_full_rediscovery_marker_acknowledges_latched_disconnect(tmp_path):
+    _manifest, _profile, source = _hermes_config_documents()
+    namespace = _hermes_probe_namespace(source)
+    client_state = namespace["hermes_client_state"]
+    started_at = datetime(2026, 7, 10, 12, tzinfo=UTC).timestamp()
+    log_path = tmp_path / "agent.log"
+    state_path = tmp_path / "probe-state.json"
+    log_path.write_text(
+        _hermes_mcp_log(
+            "2026-07-10 12:00:01,000",
+            "MCP server 'verdify_greenhouse' (HTTP): registered 23 tool(s): climate",
+        )
+        + _hermes_mcp_log(
+            "2026-07-10 12:01:00,000",
+            "MCP server 'verdify_greenhouse' connection lost (attempt 1/5), reconnecting in 1s: reset",
+            "WARNING",
+        )
+    )
+    disconnected = client_state([str(log_path)], started_at, state_path=state_path)
+    with log_path.open("a") as stream:
+        stream.write(
+            _hermes_mcp_log(
+                "2026-07-10 12:03:00,000",
+                "MCP server 'verdify_greenhouse' (HTTP): registered 23 tool(s): climate",
+            )
+        )
+    acknowledged = client_state([str(log_path)], started_at, state_path=state_path)
+
+    assert disconnected["state"] == "disconnected"
+    assert acknowledged["state"] == "connected"
+    assert acknowledged["unacknowledged_disconnect_since"] is None
+    assert acknowledged["signal_source"] == "full_discovery_log"
+
+
+def test_hermes_clean_reconnect_request_latches_silent_http_session_replacement(tmp_path):
     _manifest, _profile, source = _hermes_config_documents()
     namespace = _hermes_probe_namespace(source)
     client_state = namespace["hermes_client_state"]
     started_at = datetime(2026, 7, 10, 12, tzinfo=UTC).timestamp()
     log_path = tmp_path / "agent.log"
     log_path.write_text(
-        "2026-07-10 12:00:01,000 INFO MCP server 'verdify_greenhouse' "
-        "(HTTP): registered 23 tool(s): climate\n"
-        "2026-07-10 12:01:00,000 WARNING MCP server 'verdify_greenhouse' "
-        "connection lost (attempt 1/5), reconnecting in 1s: reset\n"
-    )
-    disconnected = client_state([str(log_path)], started_at)
-    with log_path.open("a") as stream:
-        stream.write(
-            "2026-07-10 12:01:02,000 INFO MCP server 'verdify_greenhouse' (HTTP): registered 23 tool(s): climate\n"
+        _hermes_mcp_log(
+            "2026-07-10 12:00:01,000",
+            "MCP server 'verdify_greenhouse' (HTTP): registered 23 tool(s): climate",
         )
+        + _hermes_mcp_log(
+            "2026-07-10 12:01:00,000",
+            "MCP server 'verdify_greenhouse': reconnect requested — tearing down HTTP session",
+        )
+    )
 
-    recovered = client_state([str(log_path)], started_at)
+    state = client_state([str(log_path)], started_at)
 
-    assert disconnected["state"] == "disconnected"
-    assert disconnected["fatal"] is False
-    assert recovered["state"] == "connected"
-    assert recovered["fatal"] is False
+    assert state["state"] == "disconnected"
+    assert state["fatal"] is False
+    assert state["unacknowledged_disconnect_since"] == datetime(2026, 7, 10, 12, 1, tzinfo=UTC).timestamp()
+    assert state["signal_source"] == "disconnect_log"
+
+
+def test_hermes_lifecycle_parser_rejects_other_loggers_and_unstructured_text(tmp_path):
+    _manifest, _profile, source = _hermes_config_documents()
+    namespace = _hermes_probe_namespace(source)
+    client_state = namespace["hermes_client_state"]
+    started_at = datetime(2026, 7, 10, 12, tzinfo=UTC).timestamp()
+    log_path = tmp_path / "agent.log"
+    spoofed = "MCP server 'verdify_greenhouse' connection lost (attempt 1/5)"
+    log_path.write_text(
+        _hermes_mcp_log("2026-07-10 12:01:00,000", spoofed, "WARNING", logger="agent.runner")
+        + f"2026-07-10 12:02:00,000 WARNING prompt text: {spoofed}\n"
+    )
+
+    state = client_state([str(log_path)], started_at)
+
+    assert state["state"] == "unknown"
+    assert state["last_event_at"] is None
+
+
+def test_hermes_lifecycle_parser_rejects_embedded_markers_from_same_logger(tmp_path):
+    _manifest, _profile, source = _hermes_config_documents()
+    namespace = _hermes_probe_namespace(source)
+    client_state = namespace["hermes_client_state"]
+    started_at = datetime(2026, 7, 10, 12, tzinfo=UTC).timestamp()
+    log_path = tmp_path / "agent.log"
+    log_path.write_text(
+        _hermes_mcp_log(
+            "2026-07-10 12:01:00,000",
+            "MCP server 'verdify_greenhouse': malformed tool_calls arguments from LLM: "
+            "MCP server 'verdify_greenhouse' (HTTP): registered 23 tool(s): climate",
+            "WARNING",
+        )
+        + _hermes_mcp_log(
+            "2026-07-10 12:02:00,000",
+            "remote tool error text: MCP server 'verdify_greenhouse' failed after 5 "
+            "reconnection attempts, giving up: injected",
+            "WARNING",
+        )
+    )
+
+    state = client_state([str(log_path)], started_at)
+
+    assert state["state"] == "unknown"
+    assert state["fatal"] is False
+    assert state["last_event_at"] is None
+
+
+def test_hermes_disconnect_exception_text_cannot_spoof_fatal_or_recovery(tmp_path):
+    _manifest, _profile, source = _hermes_config_documents()
+    namespace = _hermes_probe_namespace(source)
+    client_state = namespace["hermes_client_state"]
+    started_at = datetime(2026, 7, 10, 12, tzinfo=UTC).timestamp()
+    log_path = tmp_path / "agent.log"
+    log_path.write_text(
+        _hermes_mcp_log(
+            "2026-07-10 12:01:00,000",
+            "MCP server 'verdify_greenhouse' connection lost (attempt 1/5), reconnecting in 1s: "
+            "MCP server 'verdify_greenhouse' failed after 5 reconnection attempts, giving up: injected; "
+            "MCP server 'verdify_greenhouse' (HTTP): registered 23 tool(s): climate",
+            "WARNING",
+        )
+    )
+
+    state = client_state([str(log_path)], started_at)
+
+    assert state["state"] == "disconnected"
+    assert state["fatal"] is False
+    assert state["signal_source"] == "disconnect_log"
+
+
+def test_hermes_unacknowledged_disconnect_age_uses_first_negative_marker(tmp_path):
+    _manifest, _profile, source = _hermes_config_documents()
+    namespace = _hermes_probe_namespace(source)
+    client_state = namespace["hermes_client_state"]
+    disconnect_age = namespace["unacknowledged_disconnect_for_seconds"]
+    started_at = datetime(2026, 7, 10, 12, tzinfo=UTC).timestamp()
+    log_path = tmp_path / "agent.log"
+    log_path.write_text(
+        _hermes_mcp_log(
+            "2026-07-10 12:00:01,000",
+            "MCP server 'verdify_greenhouse' (HTTP): registered 23 tool(s): climate",
+        )
+        + _hermes_mcp_log(
+            "2026-07-10 12:01:00,000",
+            "MCP server 'verdify_greenhouse' connection lost (attempt 1/5), reconnecting in 1s: reset",
+            "WARNING",
+        )
+        + _hermes_mcp_log(
+            "2026-07-10 12:02:00,000",
+            "MCP server 'verdify_greenhouse' connection lost (attempt 4/5), reconnecting in 8s: reset",
+            "WARNING",
+        )
+    )
+
+    state = client_state([str(log_path)], started_at)
+    now = datetime(2026, 7, 10, 12, 11, 1, tzinfo=UTC).timestamp()
+
+    assert state["state"] == "disconnected"
+    assert state["last_event_at"] == datetime(2026, 7, 10, 12, 2, tzinfo=UTC).timestamp()
+    assert state["unacknowledged_disconnect_since"] == datetime(2026, 7, 10, 12, 1, tzinfo=UTC).timestamp()
+    assert disconnect_age(state, now=now) == 601
+
+
+def test_hermes_liveness_replaces_only_prolonged_unacknowledged_disconnect_or_fatal(monkeypatch, capsys):
+    _manifest, _profile, source = _hermes_config_documents()
+    namespace = _hermes_probe_namespace(source)
+    monkeypatch.setenv("HERMES_PROCESS_START_EPOCH", "0")
+    monkeypatch.setenv("HERMES_MCP_UNACKNOWLEDGED_DISCONNECT_RESTART_SECONDS", "600")
+    namespace["time"] = SimpleNamespace(time=lambda: 1_000.0)
+
+    client = {
+        "state": "disconnected",
+        "fatal": False,
+        "last_event_at": 500.0,
+        "unacknowledged_disconnect_since": 401.0,
+    }
+    namespace["hermes_client_state"] = lambda *_args, **_kwargs: client
+    assert namespace["main"](["--mode", "liveness"]) == 0
+    recent = json.loads(capsys.readouterr().out)
+    assert recent["alive"] is True
+    assert recent["restart_reason"] is None
+
+    client["unacknowledged_disconnect_since"] = 400.0
+    assert namespace["main"](["--mode", "liveness"]) == 1
+    stale = json.loads(capsys.readouterr().out)
+    assert stale["alive"] is False
+    assert stale["unacknowledged_disconnect_for_seconds"] == 600
+    assert stale["restart_reason"] == "mcp_client_unacknowledged_disconnect_timeout"
+
+    client.update({"state": "unknown", "unacknowledged_disconnect_since": None})
+    assert namespace["main"](["--mode", "liveness"]) == 0
+    unknown = json.loads(capsys.readouterr().out)
+    assert unknown["alive"] is True
+
+    client.update({"state": "fatal", "fatal": True})
+    assert namespace["main"](["--mode", "liveness"]) == 1
+    fatal = json.loads(capsys.readouterr().out)
+    assert fatal["restart_reason"] == "fatal_reconnect_exhaustion"
+
+
+@pytest.mark.parametrize(
+    ("configured", "expected_error"),
+    [
+        (None, None),
+        ("not-a-number", "not_numeric"),
+        ("nan", "outside_60_86400_seconds"),
+        ("-1", "outside_60_86400_seconds"),
+        ("59", "outside_60_86400_seconds"),
+        ("86401", "outside_60_86400_seconds"),
+    ],
+)
+def test_hermes_unacknowledged_disconnect_timeout_is_opt_in_and_invalid_values_fail_open(
+    configured, expected_error, monkeypatch, capsys
+):
+    _manifest, _profile, source = _hermes_config_documents()
+    namespace = _hermes_probe_namespace(source)
+    monkeypatch.setenv("HERMES_PROCESS_START_EPOCH", "0")
+    if configured is None:
+        monkeypatch.delenv("HERMES_MCP_UNACKNOWLEDGED_DISCONNECT_RESTART_SECONDS", raising=False)
+    else:
+        monkeypatch.setenv("HERMES_MCP_UNACKNOWLEDGED_DISCONNECT_RESTART_SECONDS", configured)
+    namespace["time"] = SimpleNamespace(time=lambda: 10_000.0)
+    namespace["hermes_client_state"] = lambda *_args, **_kwargs: {
+        "state": "disconnected",
+        "fatal": False,
+        "last_event_at": 100.0,
+        "unacknowledged_disconnect_since": 100.0,
+    }
+
+    assert namespace["main"](["--mode", "liveness"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["alive"] is True
+    assert payload["unacknowledged_disconnect_restart_seconds"] is None
+    assert payload["timeout_config_error"] == expected_error
+    assert payload["restart_reason"] is None
 
 
 def test_hermes_client_state_fatal_reconnect_exhaustion(tmp_path):
@@ -451,10 +743,15 @@ def test_hermes_client_state_fatal_reconnect_exhaustion(tmp_path):
     started_at = datetime(2026, 7, 10, 12, tzinfo=UTC).timestamp()
     log_path = tmp_path / "errors.log"
     log_path.write_text(
-        "2026-07-10 12:00:01,000 INFO MCP server 'verdify_greenhouse' "
-        "(HTTP): registered 23 tool(s): climate\n"
-        "2026-07-10 12:02:00,000 WARNING MCP server 'verdify_greenhouse' "
-        "failed after 5 reconnection attempts, giving up: reset\n"
+        _hermes_mcp_log(
+            "2026-07-10 12:00:01,000",
+            "MCP server 'verdify_greenhouse' (HTTP): registered 23 tool(s): climate",
+        )
+        + _hermes_mcp_log(
+            "2026-07-10 12:02:00,000",
+            "MCP server 'verdify_greenhouse' failed after 5 reconnection attempts, giving up: reset",
+            "WARNING",
+        )
     )
 
     state = client_state([str(log_path)], started_at)
@@ -463,20 +760,110 @@ def test_hermes_client_state_fatal_reconnect_exhaustion(tmp_path):
     assert state["fatal"] is True
 
 
-def test_actual_python3_liveness_probe_restarts_only_on_poststart_fatal(tmp_path):
+def test_hermes_readiness_main_fails_closed_across_client_server_and_config_matrix(monkeypatch, capsys):
+    manifest, _profile, source = _hermes_config_documents()
+    namespace = _hermes_probe_namespace(source)
+    config_text = manifest["data"]["config.yaml"]
+    missing_config = config_text.replace("        - lessons\n", "")
+    unexpected_config = config_text.replace(
+        "        - lessons\n",
+        "        - lessons\n        - unexpected_tool\n",
+    )
+    monkeypatch.setenv("HERMES_PROCESS_START_EPOCH", "0")
+
+    cases = [
+        ("connected", False, (True, [], None), config_text, True),
+        ("unknown", False, (True, [], None), config_text, False),
+        ("disconnected", False, (True, [], None), config_text, False),
+        ("fatal", True, (True, [], None), config_text, False),
+        ("connected", False, (False, [], "TimeoutError"), config_text, False),
+        ("connected", False, (False, ["set_plan"], None), config_text, False),
+        ("connected", False, (True, [], None), missing_config, False),
+        ("connected", False, (True, [], None), unexpected_config, False),
+    ]
+    for state, fatal, server_result, configured, expected_ready in cases:
+        namespace["hermes_client_state"] = lambda *_args, _state=state, _fatal=fatal, **_kwargs: {
+            "state": _state,
+            "fatal": _fatal,
+            "last_event_at": 1.0,
+            "unacknowledged_disconnect_since": 1.0 if _state in {"disconnected", "fatal"} else None,
+        }
+        namespace["mcp_server_ready"] = lambda _result=server_result: _result
+        namespace["open"] = lambda *_args, _configured=configured, **_kwargs: io.StringIO(_configured)
+
+        return_code = namespace["main"](["--mode", "readiness"])
+        payload = json.loads(capsys.readouterr().out)
+
+        assert return_code == (0 if expected_ready else 1)
+        assert payload["ready"] is expected_ready
+
+
+def test_hermes_mcp_server_ready_checks_http_status_payload_and_required_tools(monkeypatch):
+    _manifest, _profile, source = _hermes_config_documents()
+    namespace = _hermes_probe_namespace(source)
+
+    class Response(io.StringIO):
+        def __init__(self, payload, status=200):
+            super().__init__(json.dumps(payload))
+            self.status = status
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            self.close()
+
+    required = sorted(namespace["REQUIRED"])
+    monkeypatch.setattr(
+        namespace["urllib"].request,
+        "urlopen",
+        lambda *_args, **_kwargs: Response({"ready": True, "required_tools": required}),
+    )
+    assert namespace["mcp_server_ready"]() == (True, [], None)
+
+    monkeypatch.setattr(
+        namespace["urllib"].request,
+        "urlopen",
+        lambda *_args, **_kwargs: Response({"ready": True, "required_tools": required[1:]}),
+    )
+    ready, missing, error = namespace["mcp_server_ready"]()
+    assert ready is False
+    assert missing == [required[0]]
+    assert error is None
+
+    monkeypatch.setattr(
+        namespace["urllib"].request,
+        "urlopen",
+        lambda *_args, **_kwargs: Response({"ready": True, "required_tools": required}, status=503),
+    )
+    assert namespace["mcp_server_ready"]()[0] is False
+
+    def timeout(*_args, **_kwargs):
+        raise TimeoutError("bounded test timeout")
+
+    monkeypatch.setattr(namespace["urllib"].request, "urlopen", timeout)
+    assert namespace["mcp_server_ready"]() == (False, [], "TimeoutError")
+
+
+def test_actual_python3_liveness_probe_replaces_unacknowledged_disconnect_or_fatal(tmp_path):
     manifest, _profile, source = _hermes_config_documents()
     probe_path = tmp_path / "tool-readiness.py"
     log_path = tmp_path / "agent.log"
     probe_path.write_text(source)
     started_at = datetime(2026, 7, 10, 12, tzinfo=UTC).timestamp()
     log_path.write_text(
-        "2026-07-10 11:59:00,000 WARNING MCP server 'verdify_greenhouse' "
-        "failed after 5 reconnection attempts, giving up: old\n"
+        _hermes_mcp_log(
+            "2026-07-10 11:59:00,000",
+            "MCP server 'verdify_greenhouse' failed after 5 reconnection attempts, giving up: old",
+            "WARNING",
+        )
     )
     env = {
         **os.environ,
         "HERMES_PROCESS_START_EPOCH": str(started_at),
         "HERMES_CLIENT_LOG_PATHS": str(log_path),
+        "HERMES_MCP_PROBE_STATE_PATH": str(tmp_path / "probe-state.json"),
+        "HERMES_MCP_UNACKNOWLEDGED_DISCONNECT_RESTART_SECONDS": "600",
     }
     live = subprocess.run(
         ["python3", str(probe_path), "--mode", "liveness"],
@@ -487,8 +874,26 @@ def test_actual_python3_liveness_probe_restarts_only_on_poststart_fatal(tmp_path
     )
     with log_path.open("a") as stream:
         stream.write(
-            "2026-07-10 12:02:00,000 WARNING MCP server 'verdify_greenhouse' "
-            "failed after 5 reconnection attempts, giving up: reset\n"
+            _hermes_mcp_log(
+                "2026-07-10 12:01:00,000",
+                "MCP server 'verdify_greenhouse' connection lost (attempt 1/5), reconnecting in 1s: reset",
+                "WARNING",
+            )
+        )
+    disconnected = subprocess.run(
+        ["python3", str(probe_path), "--mode", "liveness"],
+        check=False,
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    with log_path.open("a") as stream:
+        stream.write(
+            _hermes_mcp_log(
+                "2026-07-10 12:02:00,000",
+                "MCP server 'verdify_greenhouse' failed after 5 reconnection attempts, giving up: reset",
+                "WARNING",
+            )
         )
     fatal = subprocess.run(
         ["python3", str(probe_path), "--mode", "liveness"],
@@ -503,11 +908,75 @@ def test_actual_python3_liveness_probe_restarts_only_on_poststart_fatal(tmp_path
     probes = workload["spec"]["template"]["spec"]["containers"][0]
 
     assert live.returncode == 0
+    assert disconnected.returncode == 1
+    assert json.loads(disconnected.stdout)["restart_reason"] == ("mcp_client_unacknowledged_disconnect_timeout")
     assert fatal.returncode == 1
     assert json.loads(fatal.stdout)["client"]["fatal"] is True
     assert container["data"]["tool-readiness.py"] == source
     assert probes["readinessProbe"]["exec"]["command"][0] == "python3"
     assert probes["livenessProbe"]["exec"]["command"][-1] == "liveness"
+    assert probes["livenessProbe"]["failureThreshold"] == 2
+    env_by_name = {item["name"]: item["value"] for item in probes["env"]}
+    assert env_by_name["HERMES_MCP_UNACKNOWLEDGED_DISCONNECT_RESTART_SECONDS"] == "600"
+    assert workload["spec"]["replicas"] == 1
+    assert workload["spec"]["strategy"]["type"] == "Recreate"
+    expected_digest = (
+        "nousresearch/hermes-agent@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e"
+    )
+    assert probes["image"] == expected_digest
+    init_by_name = {item["name"]: item for item in workload["spec"]["template"]["spec"]["initContainers"]}
+    assert init_by_name["seed-config"]["image"] == expected_digest
+
+
+def test_rendered_prod_hermes_supervision_preserves_singleton_exact_pin_and_both_probes():
+    rendered = subprocess.run(
+        ["kustomize", "build", "deploy/k8s/overlays/prod"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    resources = [resource for resource in yaml.safe_load_all(rendered) if isinstance(resource, dict)]
+    workload = next(
+        resource
+        for resource in resources
+        if resource.get("kind") == "Deployment" and resource.get("metadata", {}).get("name") == "verdify-hermes-iris"
+    )
+    container = workload["spec"]["template"]["spec"]["containers"][0]
+    env_by_name = {item["name"]: item.get("value") for item in container["env"]}
+    init_by_name = {item["name"]: item for item in workload["spec"]["template"]["spec"]["initContainers"]}
+    volume_by_name = {item["name"]: item for item in workload["spec"]["template"]["spec"]["volumes"]}
+    mount_by_name = {item["name"]: item for item in container["volumeMounts"]}
+    expected_digest = (
+        "nousresearch/hermes-agent@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e"
+    )
+    readiness = container["readinessProbe"]
+    liveness = container["livenessProbe"]
+
+    assert workload["spec"]["replicas"] == 1
+    assert workload["spec"]["strategy"]["type"] == "Recreate"
+    assert container["image"] == expected_digest
+    assert init_by_name["seed-config"]["image"] == expected_digest
+    assert readiness == {
+        "exec": {"command": ["python3", "/etc/verdify/hermes-config/tool-readiness.py", "--mode", "readiness"]},
+        "failureThreshold": 1,
+        "initialDelaySeconds": 15,
+        "periodSeconds": 10,
+        "timeoutSeconds": 5,
+    }
+    assert liveness == {
+        "exec": {"command": ["python3", "/etc/verdify/hermes-config/tool-readiness.py", "--mode", "liveness"]},
+        "failureThreshold": 2,
+        "initialDelaySeconds": 45,
+        "periodSeconds": 15,
+        "timeoutSeconds": 5,
+    }
+    assert container["securityContext"]["readOnlyRootFilesystem"] is True
+    assert volume_by_name["tmp"]["emptyDir"] == {}
+    assert mount_by_name["tmp"]["mountPath"] == "/tmp"  # noqa: S108 - asserted ephemeral emptyDir mount
+    assert env_by_name["HERMES_MCP_UNACKNOWLEDGED_DISCONNECT_RESTART_SECONDS"] == "600"
+    assert env_by_name["HERMES_MCP_PROBE_STATE_PATH"] == (
+        "/tmp/verdify-hermes-mcp-probe-state.json"  # noqa: S108 - non-secret per-process probe state
+    )
 
 
 def test_materializer_runs_one_canonical_final_normalization_per_output(mcp_server, monkeypatch):
