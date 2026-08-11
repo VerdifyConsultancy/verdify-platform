@@ -981,6 +981,7 @@ def test_rendered_prod_hermes_supervision_preserves_singleton_exact_pin_and_both
         "verdify-hermes-iris-data-portable-20260801"
     )
     portable_pvc = pvc_by_name["verdify-hermes-iris-data-portable-20260801"]
+    assert portable_pvc["metadata"]["annotations"]["argocd.argoproj.io/sync-options"] == "Prune=false"
     assert portable_pvc["spec"] == {
         "accessModes": ["ReadWriteOnce"],
         "resources": {"requests": {"storage": "5Gi"}},
@@ -991,7 +992,8 @@ def test_rendered_prod_hermes_supervision_preserves_singleton_exact_pin_and_both
     assert portable_pvc["metadata"]["labels"]["storage.vallery.net/policy"] == "rebuildable-replicated-r2"
     # The pre-migration claim remains desired rollback material; no cleanup is
     # coupled to the current-data adoption.
-    assert "verdify-hermes-iris-data" in pvc_by_name
+    retained_pvc = pvc_by_name["verdify-hermes-iris-data"]
+    assert retained_pvc["metadata"]["annotations"]["argocd.argoproj.io/sync-options"] == "Prune=false"
     assert mount_by_name["tmp"]["mountPath"] == "/tmp"  # noqa: S108 - asserted ephemeral emptyDir mount
     assert env_by_name["HERMES_MCP_UNACKNOWLEDGED_DISCONNECT_RESTART_SECONDS"] == "600"
     assert env_by_name["HERMES_MCP_PROBE_STATE_PATH"] == (

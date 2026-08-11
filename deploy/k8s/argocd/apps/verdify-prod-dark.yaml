@@ -60,6 +60,29 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: verdify-prod
+  ignoreDifferences:
+    # Bound fields are assigned by Kubernetes and are not a migration signal.
+    # Both the active portable claim and retained rollback claim are explicit
+    # desired resources; neither may be pruned by an Application reconcile.
+    - group: apps
+      kind: StatefulSet
+      name: verdify-db
+      namespace: verdify-prod
+      jsonPointers:
+        - /spec/volumeClaimTemplates/0/spec/volumeMode
+        - /spec/volumeClaimTemplates/0/status
+    - kind: PersistentVolumeClaim
+      name: verdify-hermes-iris-data
+      namespace: verdify-prod
+      jsonPointers:
+        - /spec/volumeMode
+        - /spec/volumeName
+    - kind: PersistentVolumeClaim
+      name: verdify-hermes-iris-data-portable-20260801
+      namespace: verdify-prod
+      jsonPointers:
+        - /spec/volumeMode
+        - /spec/volumeName
   # MANUAL SYNC: no automated block (prod adoption is operator-paced; see header).
   # prune stays false at the app level; operator-initiated syncs must use the
   # ArgoCD prune confirmation explicitly and NEVER prune the verdify-db
