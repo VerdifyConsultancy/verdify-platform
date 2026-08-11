@@ -633,15 +633,15 @@ class TestPlannerWriteContractLockout:
         assert 'FORCED_ON_SWITCH_PARAMS = frozenset({"sw_fsm_controller_enabled"})' in mcp_text
 
     def test_dehum_vent_hold_flag_is_operator_only(self) -> None:
-        """#410/#420: the S8 vent+reheat hold activation flag is operator-gated.
+        """#410/#420: the S8 vent+reheat hold activation flag is operator-scoped.
 
-        OFF-default switch; activation is a Jason-gated wave step (STEP-06)
+        OFF-default switch; activation is a safety-checked wave step (STEP-06)
         through the sanctioned logged push path. Iris must never toggle it:
         controller_safety class, absent from every planner-writable surface
         (MCP set_tunable gates on PLANNER_PUSHABLE_REG). The canonical name is
         sw_-prefixed because the dispatcher/RT-listener push paths select
         switch_command by that prefix; the esp/cfg object_ids are the wire
-        NAME slugs per the #421 critic finding.
+        NAME slugs per the #421 validation finding.
         """
         row = REGISTRY["sw_dehum_vent_hold_enabled"]
         assert row.kind == "switch"

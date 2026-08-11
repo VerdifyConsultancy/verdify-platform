@@ -348,7 +348,7 @@ inline bool check_22_center_burst_no_feed_hold(const TraceRow& r, ReportFn repor
 // day, i.e. it must leave >=6h of guaranteed dark. This is a CONFIG-level
 // property over LightingSetpoints, not a per-climate-row check (the replay
 // corpus carries no lighting columns). It sweeps all 24 local hours under the
-// adversarial assumption that the greenhouse is occupied with low exterior lux
+// worst-case assumption that the greenhouse is occupied with low exterior lux
 // at EVERY hour (the worst case for the occupancy task-light branch that M14
 // gated) and counts how many hours `evaluate_lighting` would permit the light.
 // Pre-M14 the occupancy branch omitted in_window, so an all-occupied day could
@@ -366,7 +366,7 @@ inline bool check_23_min_dark(const LightingSetpoints& sp_in,
         in.exterior_lux = 0.0f;         // pitch dark outdoors → exterior_lux_below_on
         in.exterior_lux_fresh = true;   // fresh so the occupancy branch is eligible
         in.local_hour = hour;
-        in.occupied = true;             // adversarial: someone present every hour
+        in.occupied = true;             // edge-case: someone present every hour
         LightingState st = initial_lighting_state();
         // current_on=false: ask whether the controller would TURN the light on.
         LightingDecision d = evaluate_lighting(in, sp, st, false, 120000u, 60.0f);

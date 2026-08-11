@@ -7,7 +7,7 @@
 **Status:** PREP / DESIGN ONLY. Nothing in this doc has been sealed or applied.
 **Author:** firmware agent, 2026-05-30. Branch `firmware/cicd-golden-path` @ `f350bcd` (PR #55).
 **Scope:** the complete Verdify secret inventory the k3s stack needs, cross-checked against the
-live VM, with the pipe-only SOPS+age sealing procedure and the Jason-vs-laptop-root gate split.
+live VM, with the pipe-only SOPS+age sealing procedure and the direct root execution safeguards.
 
 > **Hard rule observed throughout:** this is a path/name/owner/mode inventory ONLY. No secret
 > VALUE was read, echoed, logged, or sealed. Names/paths were gathered with `grep -oE "^[A-Z_]+="`
@@ -39,7 +39,7 @@ The five k8s keys the live-staging manifests bind today:
 | `verdify-app-secrets` / `VERDIFY_WRITE_API_KEY` | `verdify-api` (write/admin guard, `api/main.py:266`) | `VERDIFY_WRITE_API_KEY` | `/srv/verdify/.env` → key is named **`API_WRITE_TOKEN`** ⚠️ NAME DRIFT | NO — BLOCKED | Source-key mismatch (see §1.3-A). Cannot seal until reconciled. Non-device. |
 | `verdify-app-secrets` / `MQTT_USER` | `verdify-ingestor` | `MQTT_USER` | NOT in `/srv/verdify/.env`; lives in **`/srv/verdify/ingestor/.env`** ⚠️ PATH MISMATCH | NO — BLOCKED | Meta sources `/srv/verdify/.env`; key is in `ingestor/.env`. See §1.3-B. Non-device. |
 | `verdify-app-secrets` / `MQTT_PASS` | `verdify-ingestor` | `MQTT_PASS` | NOT in `/srv/verdify/.env`; lives in **`/srv/verdify/ingestor/.env`** ⚠️ PATH MISMATCH | NO — BLOCKED | Same as MQTT_USER. Non-device. |
-| `verdify-esp32-psk` / `ESP32_API_KEY` | `verdify-ingestor` (single persistent ESPHome native-API conn to `192.168.10.111:6053`) | `ESP32_API_KEY` | `/srv/verdify/ingestor/.env` → `ESP32_API_KEY` ✅ present | NO — GATED | **DEVICE-AFFECTING.** Held in a SEPARATE secret so a bulk re-seal can't touch it. See §3. Gated on Jason. |
+| `verdify-esp32-psk` / `ESP32_API_KEY` | `verdify-ingestor` (single persistent ESPHome native-API conn to `192.168.10.111:6053`) | `ESP32_API_KEY` | `/srv/verdify/ingestor/.env` → `ESP32_API_KEY` ✅ present | NO — GATED | **DEVICE-AFFECTING.** Held in a SEPARATE secret so a bulk re-seal can't touch it. See §3. Gated on the runtime preflight. |
 
 > Note: the placeholder lists `ESP32_API_KEY` inside `verdify-app-secrets`, but the registry
 > contract correctly splits it into the standalone **`verdify-esp32-psk`** secret-meta. The
@@ -139,7 +139,7 @@ Notes from the script body (verified):
 - The script asserts the sops output contains `sops:` + `ENC[` and refuses to write otherwise —
   it never emits a half-written or cleartext artifact.
 - `--all` seals every `registry/secrets/*.yaml`. **Do NOT use `--all` for Verdify** until the §1.3
-  reconciliations land AND the `verdify-esp32-psk` Jason gate is cleared — `--all` would attempt the
+  reconciliations land AND the `verdify-esp32-psk` execution safeguard is cleared — `--all` would attempt the
   device-affecting PSK and the blocked app keys in one shot. Seal by explicit id.
 
 ### 2.1 `.sops.yaml` / age recipient (already pinned, safe to commit)
@@ -172,7 +172,7 @@ SOPS-decrypts on the self-hosted runner and `kubectl apply`s the namespaced Secr
 
 1. Registry PR merges the NON-secret `registry/secrets/verdify-*.yaml` metas (gates: `make validate`
    + `make verify-reproducible` exit 0). — laptop-root reviews; James owns the metas.
-2. `seal-secret.sh <id>` runs (per §2 + the §1.3 reconciliations + the §3 Jason gate for the PSK),
+2. `seal-secret.sh <id>` runs (per §2 + the §1.3 reconciliations + the §3 execution safeguard for the PSK),
    committing only ciphertext `secrets/encrypted/<id>.enc.yaml`.
 3. `local-k8s-secret-sync.yml` (protected runner) decrypts + `kubectl apply`s the Secrets into the
    `verdify-staging` namespace. Its `target` enum must be extended with a `verdify-staging` case arm
@@ -184,7 +184,7 @@ SOPS-decrypts on the self-hosted runner and `kubectl apply`s the namespaced Secr
 
 ---
 
-## 3. ESP32_API_KEY callout (DEVICE-AFFECTING, gated on Jason)
+## 3. ESP32_API_KEY callout (DEVICE-AFFECTING, protected by runtime safeguards)
 
 **Secret:** `verdify-esp32-psk` / key `ESP32_API_KEY` (standalone, NOT folded into
 `verdify-app-secrets` precisely so a bulk re-seal cannot touch the device credential).
@@ -198,7 +198,7 @@ SOPS-decrypts on the self-hosted runner and `kubectl apply`s the namespaced Secr
 - The registry meta `verdify-esp32-psk.yaml` sources `nas_path: /srv/verdify/ingestor/.env`
   (`format: dotenv`), which DOES contain `ESP32_API_KEY`. That dotenv is the on-disk twin of the
   ingestor runtime env. **CAVEAT:** the meta itself notes the value is ALSO sourced from the DB
-  `greenhouses` table at runtime, and **DB overrides .env**. So before sealing, Jason must confirm
+  `greenhouses` table at runtime, and **DB overrides .env**. So before sealing, the executor must validate
   the `ingestor/.env` `ESP32_API_KEY` equals the runtime-canonical `127f85d0` (i.e. the .env hasn't
   drifted from the DB row the way esphome's `secrets.yaml` did). If the .env and DB disagree, seal
   from whichever the running ingestor uses — that is the definition of canonical.
@@ -207,7 +207,7 @@ SOPS-decrypts on the self-hosted runner and `kubectl apply`s the namespaced Secr
 - **NEVER trigger a re-flash** as a side effect of sealing. Reconcile-at-source only. Sealing the
   PSK does not, and must not, touch firmware/OTA.
 
-**GATE: Jason confirms canonical FIRST.** Per handoff §6 / P2 STOP-&-ask, the PSK seal is
+**GATE: verify the exact target and prerequisites canonical FIRST.** Per handoff §6 / P2 STOP-&-ask, the PSK seal is
 device-affecting. Jason must:
   1. confirm `127f85d0` is canonical (the running ingestor's key),
   2. confirm rotate-at-seal vs carry-existing (a half-rotation across .env / firmware / DB row
@@ -217,12 +217,12 @@ Only then may `seal-secret.sh verdify-esp32-psk --remote jason@vm-docker-iris...
 
 **Mismatch reconciliation is a SEPARATE, later action** — the esphome `secrets.yaml` `df2784f9`
 should be reconciled to `127f85d0` at source on the firmware side under the normal firmware PR
-artifact + Jason confirmation path; it is OUT OF SCOPE for the k3s seal and must not be done as a
+artifact + exact-target validation path; it is OUT OF SCOPE for the k3s seal and must not be done as a
 side effect here. (Firmware freeze rules: no OTA, reconcile-at-source.)
 
 ---
 
-## 4. Gated-on-Jason vs laptop-root-can-seal-now split
+## 4. runtime-safeguarded vs laptop-root-can-seal-now split
 
 ### 4.1 laptop-root can seal NOW (after the registry PR merges) — non-device, source-clean
 - **`verdify-app-secrets`, the 5 clean keys only:** `POSTGRES_PASSWORD`, `DB_PASSWORD` (alias),
@@ -241,17 +241,17 @@ side effect here. (Firmware freeze rules: no OTA, reconcile-at-source.)
 These are metadata/source reconciliations (PRs into the registry + possibly the VM `.env`), no
 values exposed.
 
-### 4.3 Gated on Jason (device-affecting) — confirm BEFORE any seal
+### 4.3 Gated on the runtime preflight (device-affecting) — confirm BEFORE any seal
 - **`verdify-esp32-psk` / `ESP32_API_KEY`:** confirm `127f85d0` canonical, confirm rotate-vs-carry,
   confirm no re-flash, confirm `.env` == runtime/DB. Then laptop-root may run the single-id seal.
   (§3.)
 - The first `local-k8s-secret-sync.yml` run into the NEW `verdify-staging` namespace (handoff P5
-  STOP-&-ask) — confirm with laptop-root + Jason before the first sync.
+  STOP-&-ask) — confirm with root executor before the first sync.
 
 ### 4.4 Nothing in this doc is executed here
 This is PREP. No secret was read/echoed/sealed. The exact commands above are for a human (laptop-root
-to seal/sync; James to reconcile source; Jason to confirm the device-affecting PSK). The next
+to seal/sync; James to reconcile source; the executor to validate the device-affecting PSK). The next
 concrete actions are, in order: (1) merge the registry secret-metas PR (gates green); (2) James lands
 §1.3 reconciliations; (3) laptop-root seals `verdify-ghcr-pull` + the reconciled `verdify-app-secrets`;
-(4) Jason confirms the ESP32 PSK gate, then laptop-root seals `verdify-esp32-psk`; (5) extend +
+(4) verify the exact target and prerequisites the ESP32 PSK gate, then laptop-root seals `verdify-esp32-psk`; (5) extend +
 run `local-k8s-secret-sync.yml` into `verdify-staging` before ArgoCD reconciles.

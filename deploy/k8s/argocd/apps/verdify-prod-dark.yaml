@@ -12,7 +12,7 @@
 # ArgoCD Application names are IMMUTABLE, so "rename" = create a new App named
 # verdify-prod + delete this one. The live App manages the SINGLE-WRITER ingestor,
 # so a naive delete (default cascade) would PRUNE every child incl. the ingestor.
-# Execute ONLY with this orphan-readopt sequence, operator-gated:
+# Execute ONLY with this orphan-readopt sequence, operator-scoped:
 #   1. kubectl -n argocd delete application verdify-prod-dark --cascade=orphan
 #      (orphan: leaves ALL live resources running, only removes the App object)
 #   2. kubectl apply -f this file with metadata.name: verdify-prod (same project,

@@ -113,7 +113,7 @@ aws_s3() {
   fi
 }
 
-# delta_sync LABEL LOCAL_DIR REMOTE_URI — content-hash, change-gated upload.
+# delta_sync LABEL LOCAL_DIR REMOTE_URI — content-hash, snapshot-protected upload.
 # Uploads only files whose SHA-256 changed and skips entirely when nothing
 # changed, so the every-10-min rebuild no longer re-pushes the whole tree to the
 # (HDD-backed) endpoint just because Quartz refreshed every mtime.

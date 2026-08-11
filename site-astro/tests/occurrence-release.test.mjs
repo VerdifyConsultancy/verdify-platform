@@ -134,7 +134,7 @@ function mediaInput(candidate) {
       semanticRole: "Current greenhouse view",
       captureCadenceSeconds: 300,
     }),
-    requestProvenanceSha256: candidate?.requestProvenanceSha256 ?? digest("approved-camera-request"),
+    requestProvenanceSha256: candidate?.requestProvenanceSha256 ?? digest("active-camera-request"),
     captureStatus: "success",
     candidate,
   };
@@ -288,7 +288,7 @@ test("current media generations advance and roll back through their own CAS poin
     relativePath,
     bytesByPath.get(relativePath),
     instant,
-    digest("approved-camera-request"),
+    digest("active-camera-request"),
   );
   const firstOccurrence = mediaInput(candidate("camera-one.png", "2026-07-12T12:00:00Z")).discovered;
   const firstRequest = {
@@ -423,7 +423,7 @@ test("failed graph and camera updates retain last-known-good bytes", async (cont
   assert.equal(
     third.manifest.occurrences.graphs[0].fallback.policyVersion,
     "verdify-public-output-v1",
-    "carried evidence preserves the policy that actually approved its bytes",
+    "carried evidence preserves the policy that actually active its bytes",
   );
 
   const selected = await loadSelectedOccurrenceRelease(store);
@@ -583,7 +583,7 @@ test("current-media readers reject intermediate directory symlinks", async (cont
       expectedSha256: digest(cameraBytes),
       verifiedAt: "2026-07-12T12:00:00Z",
       capturedAt: "2026-07-12T12:00:00Z",
-      requestProvenanceSha256: digest("approved-camera-request"),
+      requestProvenanceSha256: digest("active-camera-request"),
     },
     expectedSelectionSha256: null,
   };

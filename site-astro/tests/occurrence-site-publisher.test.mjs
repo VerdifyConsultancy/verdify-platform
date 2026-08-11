@@ -56,8 +56,8 @@ import { verifySelectedEvidence } from "../scripts/verify-production-output.mjs"
 const BUCKET = "verdify-lab-releases";
 const OCCURRENCE_LOCATION = `s3://${BUCKET}/publisher-offline/occurrences`;
 const SITE_LOCATION = `s3://${BUCKET}/publisher-offline/site`;
-const REVIEWED_AT = "2026-07-13T11:59:00Z";
-const APPROVED_AT = "2026-07-13T12:00:00Z";
+const VALIDATED_AT = "2026-07-13T11:59:00Z";
+const ALLOWED_AT = "2026-07-13T12:00:00Z";
 const EXPORTED_AT = "2026-07-13T12:10:00Z";
 const RELEASED_AT = "2026-07-13T12:10:30Z";
 const BUILDER_COMMIT = "b".repeat(40);
@@ -310,7 +310,7 @@ async function compilerSnapshot(root, graphs, cameraUrls) {
                 contract: "verdify.lab-stage-sanitized-snapshot",
                 schemaVersion: 1,
                 evidenceStatus: "provisional-only",
-                approvalEligible: false,
+                activationEligible: false,
                 sourceManifestSha256:
                     "05d4373ebf59bef3a7899c5e94514971d663fd7264db09b2b5cb26fec78410b1",
                 sanitizedManifestSha256: manifestSha256,
@@ -388,7 +388,7 @@ async function fixture(context, { realCompiler = false } = {}) {
         manifest,
         manifestSha256,
         policyVersion: "occurrence-site-publisher-offline-v1",
-        approvedAt: REVIEWED_AT,
+        activatedAt: VALIDATED_AT,
         cameraSources: currentMedia.map((occurrence, index) => ({
             occurrenceId: occurrence.occurrenceId,
             url: cameraUrls[index],
@@ -397,9 +397,9 @@ async function fixture(context, { realCompiler = false } = {}) {
     const policy = structuredClone(blocked);
     policy.activation = {
         ...policy.activation,
-        state: "approved",
-        approvedBy: "jason",
-        approvedAt: APPROVED_AT,
+        state: "active",
+        activatedBy: "direct-task",
+        activatedAt: ALLOWED_AT,
     };
     const policySha256 = occurrenceExportPolicySha256(policy);
     const image = fixturePng();
@@ -457,7 +457,7 @@ async function fixture(context, { realCompiler = false } = {}) {
         credentialClass: "reporting-read-only",
         direction: "one-way-read-only",
         sourceWatermark: "wm_occurrence_site_publisher_0001",
-        sourceWatermarkAt: APPROVED_AT,
+        sourceWatermarkAt: ALLOWED_AT,
     };
     const batch = {
         contract: "verdify.lab-occurrence-export-batch",
@@ -1770,8 +1770,8 @@ test("stage execution wrapper publishes one canonical delivery and rejects unbou
     blockedPolicy.activation = {
         ...blockedPolicy.activation,
         state: "blocked",
-        approvedBy: null,
-        approvedAt: null,
+        activatedBy: null,
+        activatedAt: null,
     };
     await assert.rejects(
         runOccurrenceSitePublisherDelivery(

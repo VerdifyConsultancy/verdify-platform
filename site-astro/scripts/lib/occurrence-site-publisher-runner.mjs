@@ -147,12 +147,12 @@ function operationProfileMatches(operation, kind, eventSha256) {
     );
 }
 
-function validateApprovedPolicy(policy) {
+function validateActivePolicy(policy) {
     validateOccurrenceExportPolicy(policy);
     if (
-        policy.activation.state !== "approved" ||
-        policy.activation.approvedBy !== "jason" ||
-        !policy.activation.approvedAt
+        policy.activation.state !== "active" ||
+        policy.activation.activatedBy !== "direct-task" ||
+        !policy.activation.activatedAt
     ) {
         throw new Error(
             "occurrence site publication is disabled by the supplied policy",
@@ -218,7 +218,7 @@ function validatePublicationResult(result, event) {
 
 /**
  * Consume one canonical, file-transported occurrence publication delivery.
- * The caller must inject every I/O-capable runtime dependency. Policy approval
+ * The caller must inject every I/O-capable runtime dependency. Policy activation
  * and event identity are checked before the construction-only runtime resolver
  * is requested. That resolver must perform no external I/O; its returned
  * stage-profiled operations are validated before any operation is invoked.
@@ -269,7 +269,7 @@ export async function runOccurrenceSitePublisherDelivery(
     }
 
     validateOccurrenceSitePublishEvent(event);
-    validateApprovedPolicy(policy);
+    validateActivePolicy(policy);
     const policySha256 = occurrenceExportPolicySha256(policy);
     if (
         policyValue.sha256 !== policySha256 ||

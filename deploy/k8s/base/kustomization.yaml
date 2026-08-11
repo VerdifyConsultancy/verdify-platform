@@ -42,7 +42,7 @@ resources:
 # ghcr.io/verdifyconsultancy/verdify-{api,mcp,ingestor,migrate} (NEVER
 # jvallery/*). The base leaves these UNPINNED (image name only, no tag); the
 # overlays' `images:` transformer pins each to an immutable @sha256 digest.
-# prod-promote updates overlays/prod by reviewed digest-only PR. No mutable
+# prod-promote updates overlays/prod by validated digest-only PR. No mutable
 # :latest/:staging tag is ever rendered.
 images:
   - name: ghcr.io/verdifyconsultancy/verdify-api

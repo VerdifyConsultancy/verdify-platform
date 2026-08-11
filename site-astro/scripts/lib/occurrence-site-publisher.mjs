@@ -140,7 +140,7 @@ function validatePublicationProfile(value) {
         !canonical.equals(canonicalBytes(PRODUCTION_PUBLICATION_PROFILE)) &&
         !canonical.equals(canonicalBytes(STAGE_PUBLICATION_PROFILE))
     ) {
-        throw new Error("site publication profile is not an approved target");
+        throw new Error("site publication profile is not an allowed target");
     }
     return structuredClone(value);
 }

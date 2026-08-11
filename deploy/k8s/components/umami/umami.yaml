@@ -17,7 +17,7 @@
 #
 # NOT YET WIRED into overlays/prod (the prod-promote diff guard, #82, treats a
 # prod-overlay edit as a digest-only promotion). The overlay `components:` entry +
-# its placeholder Secret land at the human-gated cutover as a separate follow-on,
+# its placeholder Secret land at the safety-checked cutover as a separate follow-on,
 # same posture as db/restore-job.yaml. See iris-state-preservation.md §10.
 #
 # IMAGES: postgres:16-alpine + ghcr.io/umami-software/umami are UPSTREAM. Compose

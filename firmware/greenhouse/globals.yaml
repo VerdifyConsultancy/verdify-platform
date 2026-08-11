@@ -62,7 +62,7 @@ globals:
   # before the first planner push uses this cold-start default. Default 0.0 = float
   # inside the served crop corridor and act at the edges. Nonzero values remain an
   # explicit operator/diagnostic escape hatch only; planner registry accepts 0.
-  # Takes effect on the next firmware OTA; the live no-OTA value remains operator-gated.
+  # Takes effect on the next firmware OTA; the live no-OTA value remains operator-scoped.
   - id: band_track_fraction
     type: float
     restore_value: no
@@ -1854,7 +1854,7 @@ globals:
 
   # ─── Phase-2 dwell gate ───────────────────────────────────────────
   # 5-min hold on non-safety mode transitions to kill whipsaw. Default
-  # OFF until replay/invariant evidence and operator approval allow direct
+  # OFF until replay/invariant evidence and an explicit live activation request allow direct
   # activation in the single live controller path.
   - id: sw_dwell_gate_enabled
     type: bool

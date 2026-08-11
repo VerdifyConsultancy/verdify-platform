@@ -50,7 +50,7 @@ async function readBuildIdentity(buildRoot) {
     || build.schemaVersion !== 1
     || build.siteOrigin !== "https://lab-stage.verdify.ai"
     || build.stageGlobalNoindex !== true
-    || build.approvalEligible !== false
+    || build.activationEligible !== false
     || build.sanitization?.fixtureOnly !== false
     || !SHA256_RE.test(snapshot)
     || typeof policyVersion !== "string"

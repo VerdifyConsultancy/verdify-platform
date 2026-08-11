@@ -129,7 +129,7 @@ function fixture(origin) {
       selected: {
         ...discovered,
         policySha256: "b".repeat(64),
-        requestProvenanceSha256: sha256(`approved-camera-request-${index}`),
+        requestProvenanceSha256: sha256(`active-camera-request-${index}`),
         staleAfterSeconds: Math.max(discovered.captureCadenceSeconds * 2, 900),
         captureStatus: "selected-generation",
         state: "verified",

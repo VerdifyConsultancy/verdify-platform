@@ -112,7 +112,7 @@ function fixture() {
     manifest,
     manifestSha256,
     policyVersion: "test-public-reporting-v1",
-    approvedAt: "2026-07-13T12:00:00Z",
+    activatedAt: "2026-07-13T12:00:00Z",
     cameraSources: [{
       occurrenceId: media.occurrenceId,
       url: "https://api.verdify.ai/api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080",
@@ -122,9 +122,9 @@ function fixture() {
     ...blocked,
     activation: {
       ...blocked.activation,
-      state: "approved",
-      approvedBy: "jason",
-      approvedAt: "2026-07-13T12:01:00Z",
+      state: "active",
+      activatedBy: "direct-task",
+      activatedAt: "2026-07-13T12:01:00Z",
     },
   };
   return { graph, media, manifest, manifestSha256, blocked, active };
@@ -222,7 +222,7 @@ function fullFixture() {
     manifest,
     manifestSha256,
     policyVersion: "full-public-reporting-v2",
-    approvedAt: "2026-07-13T12:00:00Z",
+    activatedAt: "2026-07-13T12:00:00Z",
     cameraSources: currentMedia.map((occurrence, index) => ({
       occurrenceId: occurrence.occurrenceId,
       url: cameraUrls[index],
@@ -232,9 +232,9 @@ function fullFixture() {
     ...blocked,
     activation: {
       ...blocked.activation,
-      state: "approved",
-      approvedBy: "jason",
-      approvedAt: "2026-07-13T12:01:00Z",
+      state: "active",
+      activatedBy: "direct-task",
+      activatedAt: "2026-07-13T12:01:00Z",
     },
   };
   return { graphs, currentMedia, manifest, manifestSha256, active };
@@ -313,9 +313,9 @@ test("checked-in Phase 4c policy is an exact blocked 143+2 allowlist", async () 
   assert.equal(policy.cameraUpstream.authorization, "forbidden");
   assert.match(policy.cameraUpstream.sanitization, /decode-reencode.*metadata-free/);
   for (const source of policy.cameraUpstream.sources) {
-    const approved = policy.currentMedia.find((record) => record.occurrenceId === source.occurrenceId);
+    const active = policy.currentMedia.find((record) => record.occurrenceId === source.occurrenceId);
     assert.equal(source.requestProvenanceSha256, cameraRequestProvenanceSha256(source));
-    assert.equal(source.requestProvenanceSha256, approved.requestProvenanceSha256);
+    assert.equal(source.requestProvenanceSha256, active.requestProvenanceSha256);
   }
 
   const swappedUrls = structuredClone(policy);
@@ -377,7 +377,7 @@ test("blocked policy validates candidates but cannot prepare publish requests", 
       storeRoot,
       processingAt: processingAtFor(exportBatch),
     }),
-    /blocked pending separate Jason-gated feed, tier, and credential work/,
+    /blocked pending separate safety-checked feed, tier, and credential work/,
   );
 });
 
@@ -472,7 +472,7 @@ test("producer batch is closed, opaque for cameras, and enforces PNG MIME, paths
       active,
       processingAtFor(wrongCandidateProvenance),
     ),
-    /candidate is not bound to its approved camera request/,
+    /candidate is not bound to its active camera request/,
   );
 
   const wrongBatchProvenance = structuredClone(valid);
@@ -486,7 +486,7 @@ test("producer batch is closed, opaque for cameras, and enforces PNG MIME, paths
   sameVersionPolicyMutation.imagePolicy.graphs.maxWidth -= 1;
   assert.throws(
     () => validateOccurrenceExportBatch(valid, sameVersionPolicyMutation, processingAtFor(valid)),
-    /not bound to the exact approved policy bytes/,
+    /not bound to the exact active policy bytes/,
   );
 
   const tinyCandidate = await candidate(sourceRoot, "graphs", graph.occurrenceId, png(2, 1));
@@ -498,7 +498,7 @@ test("producer batch is closed, opaque for cameras, and enforces PNG MIME, paths
       sourceRoot,
       processingAt: processingAtFor(tiny),
     }),
-    /outside the approved MIME, byte, or dimension bounds/,
+    /outside the active MIME, byte, or dimension bounds/,
   );
 
   const wrongPath = structuredClone(valid);

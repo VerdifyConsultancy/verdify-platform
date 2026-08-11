@@ -39,7 +39,7 @@ def test_expectation_failures_supports_richer_expectations() -> None:
         {
             "selected_action_in": ["acknowledge_trigger", "fail"],
             "max_confidence": 0.5,
-            "rationale_not_contains": ["approved"],
+            "rationale_not_contains": ["safe to execute"],
             "diagnosis_not_contains": ["guaranteed"],
             "empty_payload_fields": ["tunable_changes.fog_escalation_kpa"],
         },

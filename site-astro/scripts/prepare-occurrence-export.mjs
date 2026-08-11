@@ -12,7 +12,7 @@ import {
 function usage() {
   return [
     "Usage:",
-    "  node scripts/prepare-occurrence-export.mjs draft-policy --manifest MANIFEST --policy-version VERSION --reviewed-at ISO --camera-map MAP",
+    "  node scripts/prepare-occurrence-export.mjs draft-policy --manifest MANIFEST --policy-version VERSION --validated-at ISO --camera-map MAP",
     "  node scripts/prepare-occurrence-export.mjs validate --manifest MANIFEST --policy POLICY --batch BATCH --source SOURCE_ROOT",
     "  node scripts/prepare-occurrence-export.mjs prepare --manifest MANIFEST --policy POLICY --batch BATCH --source SOURCE_ROOT --store STORE_ROOT --output OUTPUT_ROOT",
   ].join("\n");
@@ -75,7 +75,7 @@ async function writePreparedOutput(outputRoot, prepared, batchId) {
 async function main() {
   const { command, values } = options(process.argv.slice(2));
   if (command === "draft-policy") {
-    exactOptions(values, ["--manifest", "--policy-version", "--reviewed-at", "--camera-map"]);
+    exactOptions(values, ["--manifest", "--policy-version", "--validated-at", "--camera-map"]);
     const manifest = await readCanonicalExportDocument(values.get("--manifest"), "static occurrence manifest");
     const cameraMap = await readCanonicalExportDocument(values.get("--camera-map"), "camera upstream map");
     if (
@@ -88,7 +88,7 @@ async function main() {
       manifest: manifest.document,
       manifestSha256: manifest.sha256,
       policyVersion: values.get("--policy-version"),
-      approvedAt: values.get("--reviewed-at"),
+      activatedAt: values.get("--validated-at"),
       cameraSources: cameraMap.document.sources,
     });
     process.stdout.write(canonical(policy));
@@ -108,7 +108,7 @@ async function main() {
       schemaVersion: 1,
       policyVersion: policy.document.policyVersion,
       activationState: policy.document.activation.state,
-      activationEligible: policy.document.activation.state === "approved",
+      activationEligible: policy.document.activation.state === "active",
       sourceOccurrenceManifestSha256: manifest.sha256,
       feedFreshness: inspected.feedFreshness,
       graphCount: discovered.graphs.length,

@@ -6,7 +6,7 @@
 > the 56 NVS-persisted (`restore_value: yes`) crop-band params on every reconnect — they are delta-seeded
 > and re-synced per-param by `_readback_drift`. The 18 reboot-reverting params (`restore_value: no`: 10
 > lighting + 8 served-band edges/zone-vpd) stay **force-reconciled** to preserve the 2026-06-16
-> grow-light-strand protection (critic-found "Case D": a reverted device masked by a stale/non-republished
+> grow-light-strand protection (validator-found "Case D": a reverted device masked by a stale/non-republished
 > cfg cache). An enforced invariant test parses the firmware globals so no reverting param can ever slip
 > into the delta-seed. Effect: ~7,400 constant band re-pushes/day → ~0 (only genuine changes + true drift),
 > plus ~400 harmless informational vpd_target pushes/day retained. Ingestor-only; **no firmware, no OTA.**

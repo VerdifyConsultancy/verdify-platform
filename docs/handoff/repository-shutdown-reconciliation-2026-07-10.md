@@ -15,9 +15,8 @@ history. It complements the production release record in
 - Canonical clean worktree:
   `/Users/jason/repos/verdify-worktrees/storage-migration-main`.
 - Production release: application rollout and firmware OTA are complete; the
-  immediate and two-hour gates passed. The sprint is now
-  `AWAITING_OUTCOME_ACCEPTANCE`, not complete, because the first overnight
-  review and 48-hour firmware bake remain.
+  immediate and two-hour checks passed. The first overnight observation and
+  48-hour firmware bake were still pending at this checkpoint.
 - No open pull requests existed at `2026-07-10T23:21:06Z`.
 
 ## Delivered context
@@ -27,10 +26,9 @@ history. It complements the production release record in
   [`software-recovery-deploy-2026-07-10.md`](software-recovery-deploy-2026-07-10.md).
 - The production database credential rotation has a redacted immutable record
   in
-  [`.verdify/sprints/software-recovery-2026-07-09/lanes/security-hygiene/rotation-closeout-2026-07-10.md`](../../.verdify/sprints/software-recovery-2026-07-09/lanes/security-hygiene/rotation-closeout-2026-07-10.md).
-- Current sprint and lane status is recorded under
-  `.verdify/sprints/software-recovery-2026-07-09/`. All implementation lanes
-  are complete; release control is waiting only on settled outcome evidence.
+  [`docs/security/database-credential-rotation-closeout-2026-07-10.md`](../security/database-credential-rotation-closeout-2026-07-10.md).
+- Durable release and implementation state is recorded in the handoff,
+  security, ADR, migration, and issue records linked from this document.
 
 ## Worktree and branch disposition
 
@@ -45,11 +43,11 @@ already canonical there. The final audit found all 24 worktrees clean.
 Three old clean topic heads are patch-equivalent to `main` and contain no
 unpublished work:
 
-- `chore/uninstall-verdify-skills` via PR #453.
+- `custom-skill-uninstall branch` via PR #453.
 - `chore/sprint-replan-lanes` via PR #401.
 - `fix/ingestor-emptydir-patch-order` via PR #406.
 
-All other clean recovery, critic, and temporary worktree heads were ancestors
+All other clean recovery, validator, and temporary worktree heads were ancestors
 of `main` at audit time.
 
 Sixteen exact historical local tips were no longer reachable from any remote
@@ -58,7 +56,7 @@ commit identity without reopening or merging stale work, they were pushed under
 `origin/archive/shutdown-2026-07-10/`:
 
 - `chore/sprint-replan-lanes`
-- `chore/uninstall-verdify-skills`
+- `custom-skill-uninstall branch`
 - `codex/adr0004-solar-kpi-deploy-gate`
 - `data-327-cfg-readback-410`
 - `data-327-moisture-telemetry`
@@ -88,7 +86,7 @@ unique commits:
 
 PR #409 was deliberately closed unmerged. It must not be merged wholesale:
 
-- Its deeper night-DIF migration and band defaults conflict with the approved
+- Its deeper night-DIF migration and band defaults conflict with the adopted
   dry-roots decision and were superseded by migration 188.
 - Its shared ingestor changes overlap the recovered writer/evidence contracts.
 - Its vision watchdog, CronJob, Frigate helper, and runbook remain potentially
@@ -101,7 +99,7 @@ the work without reintroducing rejected greenhouse behavior.
 ## Remaining runtime and issue state
 
 - Firmware version `2026.7.10.1500.09ee886` passed the two-hour sensor-health
-  gate at 17:18 MDT: 27 pass, 0 fail, 0 warn after 8,104 seconds uptime.
+  check at 17:18 MDT: 27 pass, 0 fail, 0 warn after 8,104 seconds uptime.
 - The 48-hour bake is due after 2026-07-12 15:03 MDT. Do not replace
   `firmware/artifacts/last-good.ota.bin` before it passes.
 - Night dehumidification is enabled, but its first complete post-OTA overnight

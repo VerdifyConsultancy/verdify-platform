@@ -388,7 +388,7 @@ def test_overassertive_rationale_is_rejected_by_contract_validation() -> None:
                 "rationale": "This guarantees the greenhouse will remain compliant.",
                 "confidence": 0.8,
                 "tunable_changes": {},
-                "expected_effect": "Guaranteed stable outcome after execution approval.",
+                "expected_effect": "Guaranteed stable outcome after execution validation.",
             }
 
     trigger_id = str(uuid4())

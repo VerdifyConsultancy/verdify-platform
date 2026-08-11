@@ -1,6 +1,6 @@
 # STAGED — ArgoCD source flip for the verdify-prod device cutover (DO NOT auto-apply)
 
-Status: STAGED for laptop-root + Jason gate. The device cutover is already LIVE
+Status: STAGED for laptop-root + execution safeguard. The device cutover is already LIVE
 (applied imperatively 2026-06-07T17:15Z). This flip makes a future ArgoCD sync
 REINFORCE the live armed shape instead of reverting it.
 
@@ -14,7 +14,7 @@ verdify-prod-dark` against the UNCHANGED dark overlay would REVERT the cutover:
 - ingestor replicas → 0
 = re-dark the live greenhouse. NEVER sync verdify-prod-dark as-is.
 
-## The flip (laptop-root performs; Jason-gated)
+## The flip (laptop-root performs; safety-checked)
 
 overlays/prod has now been reconciled (this PR) to the PROVEN live shape:
 - `allow-ingestor-device-egress`: broad egress (0.0.0.0/0) + DNS — matches the live
@@ -78,7 +78,7 @@ patch. Prefer Option A unless Jason wants the clean `verdify-prod` name now.
 
 ## HARD pre-checks before EITHER flip (laptop-root)
 1. This PR is merged into `main` (ArgoCD reads that ref).
-2. `argocd app diff` reviewed: confirms ADD allow-ingestor-device-egress + state
+2. `argocd app diff` validated: confirms ADD allow-ingestor-device-egress + state
    volume; confirms NO ingestor→0, NO except:192.168.10.0/24 re-added, NO DB prune.
 3. Single-writer Recreate means the ingestor pod restarts ONCE (state volume) — the
    VM writer stays STOPPED, so still exactly one writer across the restart.

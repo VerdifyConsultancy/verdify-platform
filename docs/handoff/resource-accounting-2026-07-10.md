@@ -1,6 +1,6 @@
 # Resource accounting recovery handoff — 2026-07-10
 
-Issue [#437](https://github.com/VerdifyConsultancy/verdify-platform/issues/437) is implemented through independently approved head `6ea8ab1` (schema, consumers, generator parity, and gas fail-closed correction). This is a code/data-contract handoff only: no production migration, service restart, dashboard rollout, or device action occurred.
+Issue [#437](https://github.com/VerdifyConsultancy/verdify-platform/issues/437) is implemented through independently validated head `6ea8ab1` (schema, consumers, generator parity, and gas fail-closed correction). This is a code/data-contract handoff only: no production migration, service restart, dashboard rollout, or device action occurred.
 
 ## What changed
 
@@ -23,7 +23,7 @@ A read-only production-shaped local replay copied 107,467 water samples, 97,033 
 
 Both migrations classify safe-to-wrap, pass explicit outer rollback proofs, rerun idempotently, and pass fixed SQL fixtures. The generated schema restores cleanly. The expanded fixture proves incomplete-watermark, repeated-run and boundary-state ambiguity, positive-duration fertilizer-master overlap, contradictory-source degradation, historical uncertainty, transition-backed full/partial/modeled-only/stale/unavailable energy, aggregate gas nulling, and no-free-resource-score cases. Ruff, 254 focused tests collected (253 passed, one skipped), six targeted disposable-schema tests, dashboard JSON/ConfigMap/generator parity, compilation, and `git diff --check` pass. The current-head laptop-wide `make test` checkpoint is 717 passed, 141 failed, 6 skipped, 10 errors; failures are the inherited retired laptop/live-service assumptions plus DB-backed checks that pass against the disposable restored schema, not focused lane regressions.
 
-The required independent critic returned `REQUEST_CHANGES` at `722a90c` and `b03c417`, then caught stale generator SQL at `77fba8b` and gas-scalar leakage at `675cb96`. Those last defects are fixed in `675cb96` and `6ea8ab1`. The critic returned `APPROVE` for exact implementation head `6ea8ab18633fbfd9638899495cdaaabb0ffa9fcf`; the complete item-by-item record is in the lane `critic-report.md`.
+The independent validation returned `REQUEST_CHANGES` at `722a90c` and `b03c417`, then caught stale generator SQL at `77fba8b` and gas-scalar leakage at `675cb96`. Those last defects are fixed in `675cb96` and `6ea8ab1`. Validation passed for exact implementation head `6ea8ab18633fbfd9638899495cdaaabb0ffa9fcf`; the complete item-by-item record is in the lane `validator-report.md`.
 
 ## Release order and gates
 

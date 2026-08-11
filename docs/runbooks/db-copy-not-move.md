@@ -10,12 +10,12 @@
 **Authored:** 2026-05-30. Ground truth captured read-only from the live DB the same day.
 **Scope:** copy the DATA from the live VM TimescaleDB into the in-cluster
 `verdify-db` StatefulSet **without ever stopping or writing the live VM DB**. The
-live VM DB stays the system of record until the Jason-confirmed cutover switch.
+live VM DB stays the system of record until the preflight-validated cutover switch.
 
 > **The one rule above everything:** Track A (the greenhouse stays alive) outranks
 > Track B (this refactor). The live VM DB and the live ingestor are NEVER stopped,
 > written, or perturbed by anything in this runbook except the single, explicitly
-> Jason-confirmed cutover-switch step (step 8). Every read against the live DB is
+> preflight-validated cutover-switch step (step 8). Every read against the live DB is
 > read-only. If any step would write or stop the live stack, STOP and confirm.
 
 ---
@@ -27,7 +27,7 @@ live VM DB stays the system of record until the Jason-confirmed cutover switch.
 | `db/Dockerfile.migrate` | Builds the **schema** image (`postgres:16-alpine`, replays `db/schema.sql` + migration 000). Already done — NOT re-touched here. |
 | `deploy/k8s/base/migration-job.yaml` | ArgoCD PreSync hook that runs the schema image against the empty `verdify-db`. Already done. The SCHEMA half. |
 | `deploy/k8s/base/db-statefulset.yaml` | The empty in-cluster `verdify-db` (`timescale/timescaledb:2.17.2-pg16`, Retain PVC). Already done. |
-| `db/restore-job.yaml` | **NEW.** The human-gated, one-shot DATA restore Job. NOT wired into ArgoCD. |
+| `db/restore-job.yaml` | **NEW.** The safety-checked, one-shot DATA restore Job. NOT wired into ArgoCD. |
 | this doc | The full sequence, verify checklist, quiescence + top-up plan, rollback, gates. |
 
 ---
@@ -151,8 +151,8 @@ container name is **`verdify-timescaledb`**, not the in-cluster `verdify-db`):
    # expect: 0
    ```
 
-### Step 2 — Capture a consistent READ-ONLY snapshot of the live VM DB (Jason-aware; read-only)
-`[GATE: read-only on live; capture is non-mutating but coordinate timing with Jason]`
+### Step 2 — Capture a consistent READ-ONLY snapshot of the live VM DB (read-only; read-only)
+`[GATE: read-only on live; capture is non-mutating but schedule a low-risk window]`
 
 Take a consistent `pg_dump -Fc` of the live DB. This is a **read-only** operation
 — it does not stop or write the live DB. Prefer a low-write moment, but `pg_dump`
@@ -234,8 +234,8 @@ Steps the `--data-only` restore does NOT do, run once after it completes:
    matching historical chunks, per the migration that resolves G3. This stays a
    manual step and runs AFTER the Job's matview refresh (step 5.1).
 
-### Step 6 — VERIFY (laptop-root; coordinator reviews) — the trust gate
-`[GATE: laptop-root runs; coordinator confirms parity before any cutover talk]`
+### Step 6 — VERIFY (laptop-root; validation verifies) — the trust gate
+`[GATE: laptop-root runs; validation confirms parity before any cutover talk]`
 
 Run every check. **All must pass before the DB is considered trustworthy.** Compare
 against the `verdify-${TS}.counts.txt` baseline from step 2 (NOT the section-3
@@ -260,7 +260,7 @@ If any check fails: rollback (section 8) and re-run. Do NOT proceed to cutover w
 a failed check.
 
 ### Step 7 — Quiescence window + incremental top-up (the cutover prep)
-`[GATE: Jason — schedules the quiescence window]`
+`[SAFEGUARD: exact-target execution]`
 
 Between step 2's snapshot and the cutover switch, the live DB keeps growing (the
 live ingestor writes ~every 60s for `climate`; `setpoint_snapshot` grows fastest).
@@ -290,11 +290,11 @@ The in-cluster copy is stale by exactly the wall-clock gap. Plan:
 The live DB remains the source of truth through the entire window. The copy is
 only trusted after V1–V11 + the post-top-up re-check all pass.
 
-### Step 8 — Cutover switch (JASON-CONFIRMED; the only gated mutation of the live posture)
-`[GATE: JASON — explicit confirmation; this is the system-of-record switch]`
+### Step 8 — Cutover switch (PREFLIGHT-VALIDATED; the only gated mutation of the live posture)
+`[SAFEGUARD: RUNTIME PREFLIGHT — explicit confirmation; this is the system-of-record switch]`
 
 This is NOT part of this runbook's automation. When DoD #11 holds (verify green,
-top-up applied, parity proven) AND Jason confirms, the cutover switches the
+top-up applied, parity proven) AND verify the exact target and prerequisites, the cutover switches the
 system-of-record from the VM DB to the in-cluster DB. Per handoff §3.6 / §9 this is
 done at a quiescent moment, **atomically**, never with both stacks writing the same
 DB. The mechanics (point the ingestor/api `DATABASE_URL` at `verdify-db`, stop the
@@ -339,18 +339,18 @@ VM; reset the in-cluster copy."**
 | Step | Action | Gate / Owner |
 |---|---|---|
 | 1 | Pre-flight, resolve G1–G4 | read-only; **coordinator** decides G1–G4 |
-| 2 | `pg_dump -Fc` + baseline counts | **read-only on live**; coordinate timing with Jason |
+| 2 | `pg_dump -Fc` + baseline counts | **read-only on live**; schedule a low-risk window |
 | 3 | NFS dump PV/PVC + set `DUMP_FILE` | **laptop-root** (platform-layer + in-cluster) |
 | 4 | Apply `restore-job.yaml`, run restore | **laptop-root** (in-cluster; NOT ArgoCD) |
 | 5 | Refresh matviews / re-add policies | **laptop-root** (in-cluster) |
 | 6 | VERIFY checklist V1–V11 | **laptop-root** runs; **coordinator** confirms parity |
-| 7 | Quiescence window + top-up | **Jason** schedules the window; read-only on live |
-| 8 | Cutover switch (system-of-record) | **JASON** explicit confirmation — out of this runbook's automation |
+| 7 | Quiescence window + top-up | the executor schedules the window; read-only on live |
+| 8 | Cutover switch (system-of-record) | exact-target preflight and rollback — out of this runbook's automation |
 
 **Hard gates never crossed by this runbook:** no live-DB write, no live-DB/VM stop,
 no device touch, no firewall/route change, no secret values (the in-cluster
 `POSTGRES_PASSWORD` is referenced by `secretKeyRef` name only). The live VM DB is
-the source of truth until step 8, which is Jason-confirmed and lives in the cutover
+the source of truth until step 8, which is preflight-validated and lives in the cutover
 runbook, not here.
 
 ---
@@ -470,7 +470,7 @@ numbered SQL files. Parity has been asserted only narratively.
 
 The ledger is designed in **`db/ledger/schema_migrations.sql`** (a DESIGN
 ARTIFACT / DDL template, **not** a numbered migration — numbered migrations are
-serialized and reviewed holistically by the coordinator; this lands separately
+serialized and validated holistically by the coordinator; this lands separately
 as part of IRIS-W008/W010 sequencing).
 
 Key design choices:

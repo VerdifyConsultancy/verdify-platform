@@ -32,9 +32,9 @@ function activePolicy() {
   const policy = structuredClone(policyDocument);
   policy.activation = {
     ...policy.activation,
-    state: "approved",
-    approvedBy: "jason",
-    approvedAt: ACTIVE_AT,
+    state: "active",
+    activatedBy: "direct-task",
+    activatedAt: ACTIVE_AT,
   };
   return policy;
 }
@@ -146,7 +146,7 @@ test("the closed producer sanitizes both #483 camera occurrences into downstream
   const results = [];
   const calls = [];
 
-  for (const occurrenceId of cameraExportProducerContract.approvedOccurrenceIds) {
+  for (const occurrenceId of cameraExportProducerContract.allowedOccurrenceIds) {
     const request = cameraRequest(policy, occurrenceId);
     const result = await successfulCapture({ policy, request, root, bytes, calls });
     results.push(result);
@@ -220,7 +220,7 @@ test("the closed producer sanitizes both #483 camera occurrences into downstream
 test("request validation rejects URL, query, method, redirect, auth, cookie, and shape drift before transport", async (context) => {
   const root = await workspace(context);
   const policy = activePolicy();
-  const occurrenceId = cameraExportProducerContract.approvedOccurrenceIds[0];
+  const occurrenceId = cameraExportProducerContract.allowedOccurrenceIds[0];
   const original = cameraRequest(policy, occurrenceId);
   const cases = [
     ["origin", { url: original.url.replace("api.verdify.ai", "example.com") }],
@@ -278,7 +278,7 @@ test("request validation rejects URL, query, method, redirect, auth, cookie, and
 test("response handling fails closed on HTTP, redirects, MIME, lengths, bytes, decode, and dimensions", async (context) => {
   const root = await workspace(context);
   const policy = activePolicy();
-  const request = cameraRequest(policy, cameraExportProducerContract.approvedOccurrenceIds[0]);
+  const request = cameraRequest(policy, cameraExportProducerContract.allowedOccurrenceIds[0]);
   const valid = await jpeg();
   const png = await sharp(valid).png().toBuffer();
   const oversized = Buffer.alloc(policy.imagePolicy.currentMedia.maxBytes + 1, 1);
@@ -318,7 +318,7 @@ test("response handling fails closed on HTTP, redirects, MIME, lengths, bytes, d
 test("early response rejection aborts transport and cancels the unread body", async (context) => {
   const root = await workspace(context);
   const policy = activePolicy();
-  const request = cameraRequest(policy, cameraExportProducerContract.approvedOccurrenceIds[0]);
+  const request = cameraRequest(policy, cameraExportProducerContract.allowedOccurrenceIds[0]);
   const valid = await jpeg();
   const cases = [
     ["invalid status", { status: 503 }, /HTTP 200/],
@@ -353,10 +353,10 @@ test("early response rejection aborts transport and cancels the unread body", as
   }
 });
 
-test("network and time failures are bounded and do not reflect the approved URL", async (context) => {
+test("network and time failures are bounded and do not reflect the active URL", async (context) => {
   const root = await workspace(context);
   const policy = activePolicy();
-  const request = cameraRequest(policy, cameraExportProducerContract.approvedOccurrenceIds[0]);
+  const request = cameraRequest(policy, cameraExportProducerContract.allowedOccurrenceIds[0]);
   const NativeAbortController = globalThis.AbortController;
   let timeoutAbortCalls = 0;
   globalThis.AbortController = class CountingAbortController extends NativeAbortController {
@@ -427,7 +427,7 @@ test("JPEG metadata is removed and repeated pixel content has deterministic PNG 
   const root = await workspace(context);
   const secondRoot = await workspace(context, "verdify-camera-export-second-");
   const policy = activePolicy();
-  const request = cameraRequest(policy, cameraExportProducerContract.approvedOccurrenceIds[1]);
+  const request = cameraRequest(policy, cameraExportProducerContract.allowedOccurrenceIds[1]);
   const base = await jpeg();
   const tagged = jpegWithComment(base);
   assert.notDeepEqual(tagged, base);
@@ -448,7 +448,7 @@ test("JPEG metadata is removed and repeated pixel content has deterministic PNG 
 test("candidate persistence rejects linked roots and directories before writing outside its canonical root", async (context) => {
   const root = await workspace(context);
   const policy = activePolicy();
-  const occurrenceId = cameraExportProducerContract.approvedOccurrenceIds[0];
+  const occurrenceId = cameraExportProducerContract.allowedOccurrenceIds[0];
   const request = cameraRequest(policy, occurrenceId);
   const bytes = await jpeg();
   const linkedRoot = path.join(root, "linked-output");
@@ -500,7 +500,7 @@ test("candidate persistence rejects linked roots and directories before writing 
 
 test("write and sync failures remove temporary candidates and permit a clean retry", async (context) => {
   const policy = activePolicy();
-  const occurrenceId = cameraExportProducerContract.approvedOccurrenceIds[0];
+  const occurrenceId = cameraExportProducerContract.allowedOccurrenceIds[0];
   const request = cameraRequest(policy, occurrenceId);
   const bytes = await jpeg();
 
@@ -530,7 +530,7 @@ test("write and sync failures remove temporary candidates and permit a clean ret
 test("temporary unlink failure rolls back its new digest target and leaves a retryable directory", async (context) => {
   const root = await workspace(context);
   const policy = activePolicy();
-  const occurrenceId = cameraExportProducerContract.approvedOccurrenceIds[1];
+  const occurrenceId = cameraExportProducerContract.allowedOccurrenceIds[1];
   const request = cameraRequest(policy, occurrenceId);
   const bytes = await jpeg();
   let injected = false;
@@ -566,7 +566,7 @@ test("CLI reads canonical documents and emits a URL-free canonical result with i
   const root = await workspace(context);
   const outputRoot = path.join(root, "output");
   const policy = activePolicy();
-  const request = cameraRequest(policy, cameraExportProducerContract.approvedOccurrenceIds[0]);
+  const request = cameraRequest(policy, cameraExportProducerContract.allowedOccurrenceIds[0]);
   const policyPath = path.join(root, "policy.json");
   const requestPath = path.join(root, "request.json");
   await mkdir(outputRoot);

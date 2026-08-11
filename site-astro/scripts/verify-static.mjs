@@ -13,8 +13,8 @@ const build = JSON.parse(await readFile(path.join(PROJECT_ROOT, ".generated", "b
 if (build.sourceCount !== build.snapshotMarkdownCount - build.excludedDrafts.length) {
   throw new Error("compiled source accounting is incomplete");
 }
-if (build.approvalEligible !== false || build.localEvidenceStatus !== "provisional-only") {
-  throw new Error("stage build must not claim immutable-snapshot approval");
+if (build.activationEligible !== false || build.localEvidenceStatus !== "provisional-only") {
+  throw new Error("stage build must not claim immutable-snapshot activation");
 }
 if (!build.stageGlobalNoindex) throw new Error("stage build must be globally noindex");
 if (build.copiedSnapshotAssetCount + build.generatedResponsiveImageCount !== assets.length) {
@@ -56,7 +56,7 @@ if (
   || build.siteShell?.wwwCommit !== "7febbc479c6ed7d22f829e9c1e7109bc9bc7c6c0"
   || build.siteShell?.archiveDigest !== "sha256:0645773ab3a952727251840e28dc73929a3e42b904450bcc9e7d25d8b03b1c91"
 ) {
-  throw new Error("stage output is not bound to the reviewed WWW shell release");
+  throw new Error("stage output is not bound to the validated WWW shell release");
 }
 
 const routePaths = new Set(records.flatMap((record) => [record.route, record.canonicalPath].map((value) => value.replace(/\/$/, "") || "/")));

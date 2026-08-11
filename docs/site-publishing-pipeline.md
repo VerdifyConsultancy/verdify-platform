@@ -26,7 +26,7 @@ The Astro candidate owns an offline specialist-evidence release interface under
 `site-astro/scripts/lib/occurrence-release.mjs`. It is intentionally separate
 from the current Quartz publisher and does not query the database, Grafana,
 camera API, S3, or any other network service. A future bounded exporter supplies
-one canonical local request containing only event metadata, approved occurrence
+one canonical local request containing only event metadata, activated occurrence
 metadata, and local sanitized candidate paths.
 
 The contract provides:
@@ -53,7 +53,7 @@ specialist store, every occurrence is explicit pending evidence. When
 revalidates the selected manifest and decoded blobs, copies only the referenced
 content-addressed images, emits local fallbacks, and keeps an independently
 usable graph link. Current-camera public manifests include opaque occurrence,
-exact-policy, and approved-request provenance digests, never the upstream URL.
+exact-policy, and activated-request provenance digests, never the upstream URL.
 
 The CLI is deliberately local and credential-free:
 
@@ -92,7 +92,7 @@ The separate 143+2 execution path is explicit and fail-closed:
 cd site-astro
 npm run occurrence:execute -- execute \
   --manifest /path/to/occurrence-manifest.json \
-  --policy /path/to/approved-policy.json \
+  --policy /path/to/activated-policy.json \
   --batch /path/to/canonical-export-batch.json \
   --graph-result /path/to/canonical-graph-result.json \
   --source /path/to/sanitized-candidates \
@@ -101,8 +101,8 @@ npm run occurrence:execute -- execute \
 
 This command is absent-by-default authority, not deployment wiring. Without the
 literal `execute` command it only returns usage. It canonical-reads all four
-documents and requires the policy's closed activation record to name Jason's
-approval before constructing either a local or S3 adapter. The store location is
+documents and requires the policy's closed source-controlled activation record
+before constructing either a local or S3 adapter. The store location is
 always an explicit argument; there is no default endpoint, bucket, credential,
 environment binding, workload, or route. The legacy single-request
 `manage-occurrence-release.mjs` CLI remains local-only.
@@ -132,7 +132,7 @@ The camera source contract is GET-only and exact:
 Redirects, cookies, auth, direct device/VLAN, Frigate, go2rtc, database, and
 control access are forbidden. A domain-separated SHA-256 binds each opaque
 occurrence to GET, its exact URL, and those redirect/auth/cookie rules in the
-reviewed policy, batch, sanitized candidate, private generation, selection, and
+validated policy, batch, sanitized candidate, private generation, selection, and
 reconciliation request. A generation is eligible for LKG only while its exact policy
 and request digests match, so a same-version policy or URL mutation cannot retain it.
 Only the opaque digests—not the URL—enter public release output. The future producer must decode each JPEG and
@@ -147,18 +147,18 @@ either whole seconds or exactly three milliseconds; impossible dates are rejecte
 `deploy/k8s/components/lab-occurrence-reporting-boundary/` records the future
 boundary but is deliberately inert: no overlay reference, workload, Secret,
 Service, or Ingress, and deny-all egress. Request preparation also refuses the
-blocked policy. A separate Jason-gated change must approve and provide the
+blocked policy. A separate safety-checked change must approve and provide the
 reporting tier/feed, reporting-only credential, occurrence-store route, and
 egress restricted to that store plus `api.verdify.ai:443`.
 
 This implementation does not grant export authority or prove live freshness.
 Before stage can select a real occurrence release, separate work must provide a
-policy-approved reporting source and camera sanitizer that cannot reach the Track
+policy-activated reporting source and camera sanitizer that cannot reach the Track
 A primary, plus durable delivery, alerts, outage probes, and the GitOps image/pin
 rollout. Static nginx does not yet resolve the stable current-media targets. A
 source-only merge needs no service restart. Any stage rollout needs the
 normal stage acceptance and delayed durability probes; production sync, public
-cutover, and Quartz retirement remain human-gated.
+cutover, and Quartz retirement remain safety-checked.
 
 `site-astro/Dockerfile.occurrence-exporter` packages the source-only
 `occurrence-exporter` image. It derives from the locked Node
@@ -194,7 +194,7 @@ release manifest binds the exact source-snapshot manifest digest, publication-po
 version, builder commit, planner/event envelope and payload, timestamps/freshness,
 and every output path, media type, byte count, and digest. A policy change therefore
 cannot silently reuse the prior release identity. Specialist last-known-good evidence
-also retains the policy version that approved those bytes when carried forward; it is
+also retains the policy version that activated those bytes when carried forward; it is
 not relabeled as verified under a later policy.
 
 Publication writes an immutable event intent before changing selection. Event ID,
@@ -202,7 +202,7 @@ envelope digest, payload digest, intended release, and expected selection digest
 bound together, so a retry after process failure completes the same operation without
 forking it. One atomic canonical selector carries current and previous releases plus
 a monotonic generation. Every update after the first requires the full selector SHA
-precondition. Identical content is change-gated, and rollback only swaps current and
+precondition. Identical content is snapshot-protected, and rollback only swaps current and
 previous; neither operation rebuilds the site.
 
 The exported `SiteReleaseStore` class documents the backend operation surface; the
@@ -269,7 +269,7 @@ blobs; canonical store-identity binding on every event intent; immediate-read
 entity-tag CAS plus exact post-write verification for both selector families; and
 bounded PNG reads and exact materialization. High-level read/materialization accepts
 an explicitly injected adapter. The legacy credential-free occurrence CLI deliberately
-refuses implicit S3 access; only the separate approved-policy `execute` path can
+refuses implicit S3 access; only the separate activated-policy `execute` path can
 construct an explicit S3 operation adapter, and no workload invokes it.
 
 The source-only S3 coordinator defines the shared storage lifecycle without changing
@@ -309,7 +309,7 @@ least 148 payload objects. Strict 48-hour retention holds 193 samples, or 28,564
 occurrence payload objects before events, checkpoints, site releases, and selectors.
 The quantified lower bound is 32,887 occurrence objects, 63,946 combined objects,
 29,088 write requests/day, and 212,736 canonical inventory reads/day. Those figures
-exceed the approved 25,000-object and 25,000-request defaults. The operator CLI
+exceed the activated 25,000-object and 25,000-request defaults. The operator CLI
 therefore reports the endpoint conditional-semantics proof but exits nonzero with a
 machine-readable activation gate. Deterministic occurrence/site packs plus
 selected-root inventory are a required follow-up; a single 143+2 snapshot test is
@@ -480,8 +480,8 @@ npm run occurrence:site:execute -- execute \
   --workspace-root /absolute/workspace
 ```
 
-It validates canonical file identities, disjoint canonical roots, and Jason's
-closed approval record before requesting a construction-only runtime resolver.
+It validates canonical file identities, disjoint canonical roots, and the
+closed source-controlled activation record before requesting a construction-only runtime resolver.
 The returned build and verifier operations must share digest-identified profile
 bindings for the fixed `https://lab-stage.verdify.ai` target with global
 noindex. The processor independently requires the selected build record and
@@ -491,53 +491,53 @@ reader, or network client; therefore it intentionally stops without taking live
 action. The factory above is an explicit construction dependency only
 and does not change that executable default.
 
-### Approved immutable production-snapshot attestation (source-only)
+### Activated immutable production-snapshot attestation (source-only)
 
 `site-astro/scripts/verify-production-output.mjs` has always required a build
-that is `approvalEligible: true` with a non-provisional evidence status, and
+that is `activationEligible: true` with a non-provisional evidence status, and
 until now nothing in the tree could produce one:
 `scripts/lib/snapshot.mjs` hard-coded every non-fixture snapshot to
-`provisional-only` / `approvalEligible: false`. `scripts/lib/production-approval.mjs`
+`provisional-only` / `activationEligible: false`. `scripts/lib/production-activation.mjs`
 is the trusted immutable attestation resolver that closes that gap **without
 touching the production verifier**.
 
-Trust root: the frozen `PRODUCTION_APPROVAL_REGISTRY` constant. It ships empty,
+Trust root: the frozen `PRODUCTION_ACTIVATION_REGISTRY` constant. It ships empty,
 is compiled into the image, and is never read from the environment, a CLI flag,
 a build argument, the snapshot payload, or an object store. Adding an entry is a
-reviewed source change on `main` — that review is the approval.
+explicit source change on `main`; the immutable registry entry is the activation.
 
-An approved capture is a distinct closed contract, not a relabelled stage
+An activated capture is a distinct closed contract, not a relabelled stage
 capture:
 
-| Artifact | Stage / legacy | Approved production |
+| Artifact | Stage / legacy | Activated production |
 |---|---|---|
 | `attestation.json` contract | `verdify.lab-stage-sanitized-snapshot` | `verdify.lab-production-sanitized-snapshot` |
-| `evidenceStatus` | `provisional-only` (enforced) | `approved-immutable` (enforced) |
-| `approvalEligible` | `false` (enforced) | `true` (enforced) |
-| Payload layout | `content/`, `manifests/content.json`, `evidence/public-output-guard.json`, `attestation.json` | the same **plus** `approval.json` |
-| Release descriptor | `verdify.lab-stage-snapshot-release` with hard-coded 429-file pins | `verdify.lab-production-snapshot-release` with `approvalSha256` + `approvalId`, every pin bound to the registry |
+| `evidenceStatus` | `provisional-only` (enforced) | `active-immutable` (enforced) |
+| `activationEligible` | `false` (enforced) | `true` (enforced) |
+| Payload layout | `content/`, `manifests/content.json`, `evidence/public-output-guard.json`, `attestation.json` | the same **plus** `activation.json` |
+| Release descriptor | `verdify.lab-stage-snapshot-release` with hard-coded 429-file pins | `verdify.lab-production-snapshot-release` with `activationSha256` + `activationId`, every pin bound to the registry |
 
-`approval.json` is canonical JSON in the closed
-`verdify.lab-production-snapshot-approval` v1 shape. Verification requires all
-of: its SHA-256 equals the registered `approvalSha256`; every field equals the
+`activation.json` is canonical JSON in the closed
+`verdify.lab-production-snapshot-activation` v1 shape. Verification requires all
+of: its SHA-256 equals the registered `activationSha256`; every field equals the
 registry entry field-for-field; and the sanitized content-manifest digest,
 source-capture manifest digest, sanitized/source file counts, zero-finding
 guard-report digest, sanitization policy version, and the snapshot's own
 attestation digest are independently recomputed from the snapshot on disk and
 match the record. The record additionally names its provenance in the open: the
 authoritative source URI (pinned to the Lab content prefix), the capture
-instant, the approver (fixed authority list), a permalink to the recorded human
-decision in this repository, the approval instant, the immutable release tag,
+instant, the fixed `repository-change` activation actor, a permalink to the
+source commit, the activation instant, the immutable release tag,
 and the release asset digest.
 
 Consequences that are deliberate:
 
 - The legacy provisional capture can never become eligible. The untouched stage
-  verifier still rejects `approvalEligible !== false`, and editing its
+  verifier still rejects `activationEligible !== false`, and editing its
   attestation changes the digest its own release descriptor pins.
 - A fixture can never become eligible: the fixture branch is mutually exclusive
-  and the fixture payload layout forbids `approval.json`.
-- An approval cannot be replayed onto another capture, and one changed content
+  and the fixture payload layout forbids `activation.json`.
+- An activation cannot be replayed onto another capture, and one changed content
   byte invalidates it.
 - With the shipped empty registry the bounded hydrator refuses a production
   release descriptor before fetching a byte, so the failure is fail-closed at
@@ -682,7 +682,7 @@ The sync uses delayed deletes, so existing pages stay available while new files
 copy into place. The `verdify-lab` nginx container serves the PVC read-only and
 does not need S3 credentials.
 
-## Delta Uploads to S3 (content-hash, change-gated)
+## Delta Uploads to S3 (content-hash, snapshot-protected)
 
 The S3 `public/` tree is a **durable mirror only** — nginx serves the PVC, and
 the publisher only ever downloads `content/` (never `public/`) to hydrate a cold

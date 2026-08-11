@@ -33,7 +33,7 @@ WORKFLOW_DIR = ROOT / ".github" / "workflows"
 HOSTED_LABEL_PREFIXES = ("ubuntu-", "windows-", "macos-")
 
 # Actions published by GitHub itself are exempt from SHA pinning; anything
-# else is third-party and must be pinned to a reviewed commit SHA.
+# else is third-party and must be pinned to an immutable full commit SHA.
 FIRST_PARTY_ACTION_PREFIXES = ("actions/", "github/")
 SHA_PINNED_RE = re.compile(r"@[0-9a-f]{40}$")
 
@@ -87,7 +87,7 @@ def test_no_workflow_uses_a_github_hosted_runner():
                     offenders.append(f"{path.name}:{job_name} runs-on={label!r}")
     assert not offenders, (
         "GitHub-hosted runner labels reintroduced — this repo runs zero hosted CI compute.\n"
-        "Use a platform-approved self-hosted/ARC label, or retire the workflow.\n"
+        "Use a platform-supported self-hosted/ARC label, or retire the workflow.\n"
         "See docs/ci/zero-paid-runner-ledger.md.\n  " + "\n  ".join(offenders)
     )
 
@@ -147,7 +147,7 @@ def test_third_party_actions_are_pinned_to_commit_shas():
                     continue
                 if not SHA_PINNED_RE.search(uses):
                     unpinned.append(f"{path.name}:{job_name} uses={uses!r}")
-    assert not unpinned, "Third-party Actions must be pinned to a reviewed 40-char commit SHA.\n  " + "\n  ".join(
+    assert not unpinned, "Third-party Actions must be pinned to an immutable 40-char commit SHA.\n  " + "\n  ".join(
         unpinned
     )
 

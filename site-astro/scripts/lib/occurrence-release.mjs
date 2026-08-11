@@ -173,7 +173,7 @@ function graphTarget(liveUrl) {
     || parsed.password
     || parsed.hash
   ) {
-    throw new Error("graph live target is outside the approved origin");
+    throw new Error("graph live target is outside the allowed origin");
   }
   const route = /^\/(?:d-solo|d)\/([^/]+)(?:\/[^/?]*)?$/.exec(parsed.pathname);
   if (!route) throw new Error("graph live target is invalid");
@@ -247,7 +247,7 @@ export function discoverCurrentMediaOccurrence({ route, ordinal, sourceUrl, sema
     ordinal,
     classification: "current-still",
     semanticRole: requireSafeText(semanticRole, "media semantic role", 512),
-    sourceProvenanceSha256: sha256(Buffer.from(`approved-current-still:${id}`)),
+    sourceProvenanceSha256: sha256(Buffer.from(`selected-current-still:${id}`)),
     stableTarget: `/evidence/current/${id}`,
     captureCadenceSeconds: boundedPositiveInteger(captureCadenceSeconds, "media capture cadence"),
   };
@@ -1556,7 +1556,7 @@ export async function publishOccurrenceRelease({
 
     // Reconciliation output depends on the independently selected per-camera
     // generations, so an identical request payload may resolve differently after
-    // media-first publication. Graph-only requests remain safely change-gated.
+    // media-first publication. Graph-only requests remain safely snapshot-protected.
     if (currentMedia.length === 0 && selected.current?.event.payloadSha256 === event.payloadSha256) {
       await publishCanonicalAbsent(eventPath, {
         contract: "verdify.lab-release-idempotency",

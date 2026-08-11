@@ -18,7 +18,7 @@
 
 Verdify is keeping the greenhouse alive and its deterministic on-device controller is the strongest part of the system. Temperature control is broadly suitable for the strap-leaf Vandas. The public services, database, telemetry stream, and core Kubernetes workloads are available. That is the good news.
 
-The greenhouse is **not yet operating as a trustworthy closed-loop optimization system**, but absent center-drip runtime is not a crop-care failure. Jason confirms that the center drip is intentionally disabled and physically unconnected. The center clean mister is a separate climate actuator used by the VPD cycle, and fertilizer is intended to run only through the wall drips.
+The greenhouse is **not yet operating as a trustworthy closed-loop optimization system**, but absent center-drip runtime is not a crop-care failure. verify the exact target and prerequisites that the center drip is intentionally disabled and physically unconnected. The center clean mister is a separate climate actuator used by the VPD cycle, and fertilizer is intended to run only through the wall drips.
 
 The two highest-confidence software defects are:
 
@@ -62,7 +62,7 @@ The best next move is a software-reliability recovery sequence:
 - **Mechanical engineer:** the restrictive intake, absent HAF, absent external shade, and lack of proportional ventilation are binding constraints. Software cannot ventilate away solar heat when outdoor air is as hot as the house.
 - **Reliability engineer:** the 3.789 kB lifetime heap floor, Task WDT history, replay blind spot, stale plan, and repeated 69-value pushes block a clean firmware-reliability claim.
 - **Climatologist/data scientist:** outdoor temperature, absolute humidity, solar load, wind, and open-window epoch dominate raw firmware comparisons. Several canonical-looking metrics—DLI, forecast VPD accuracy, and reboot counts—also have known semantic defects.
-- **AI/ML reviewer:** the model and gateway usually work; Hermes-to-MCP liveness, action accounting, materialization, plan lifecycle, and forecast semantics do not. The 33.6% nominal resolved rate also counts one-shot fallbacks as plan success, so the planner should remain bounded or shadowed after transport repair.
+- **AI/ML validator:** the model and gateway usually work; Hermes-to-MCP liveness, action accounting, materialization, plan lifecycle, and forecast semantics do not. The 33.6% nominal resolved rate also counts one-shot fallbacks as plan success, so the planner should remain bounded or shadowed after transport repair.
 - **Owner/operator:** the house is running and public surfaces are up. The immediate return is in software reliability—stable device delivery without redundant writes, a working planner, an explicit irrigation contract, honest DLI availability, and measured night dry-out—not new physical equipment in the current plan.
 
 ## Priority recommendations
@@ -70,7 +70,7 @@ The best next move is a software-reliability recovery sequence:
 ### P0 — restore the software control plane
 
 1. **Repair reconnect/reconcile semantics and readback identity.** Do not clear the setpoint cache for generic configuration drift; map the 56 anchor readbacks to their actual ESPHome wire IDs; compare values after registry clamping; and label true transport reconnects separately. The transport is currently continuous—the failure is redundant reconciliation, not network loss.
-2. **Recover the AI planner transport and materializer.** Make Hermes MCP health real rather than TCP-only, retry indefinitely with bounded backoff or restart a dead client, surface tool-disconnected failures distinctly, clamp against the intersection of firmware and planner bounds, and distinguish full plans from one-shot fallbacks. Then repair singular active-plan expiry, required horizon, and forecast semantics; keep optimization bounded or shadowed until it meets an approved reliability threshold.
+2. **Recover the AI planner transport and materializer.** Make Hermes MCP health real rather than TCP-only, retry indefinitely with bounded backoff or restart a dead client, surface tool-disconnected failures distinctly, clamp against the intersection of firmware and planner bounds, and distinguish full plans from one-shot fallbacks. Then repair singular active-plan expiry, required horizon, and forecast semantics; keep optimization bounded or shadowed until it meets an validated reliability threshold.
 3. **Make irrigation intent explicit and fail closed.** Preserve center clean mist for VPD control; disable the purposeless 10:30 center-drip schedule and disallow fertilizer on center or mister paths; prove the wall-drip clean/fertilizer sequence, fertilizer-master interlock, and outcome ledger. Any behavior-changing firmware or live-device step remains separately gated.
 4. **Make DLI unavailable rather than fabricated.** Add validity and provenance to firmware telemetry, database views, dashboards, alerts, and planner context. Suppress DLI-dependent recommendations and scoring until the interior sensor is replaced and validated.
 5. **Keep night dehumidification as a measured experiment.** The current five-night result is 3/5, with the latest night failing. Use existing indoor/outdoor temperature and absolute-humidity response to bound ventilation/reheat and stop conditions.
@@ -114,7 +114,7 @@ Important limits:
 - The Shelly channels are not a whole-building meter. Lighting and gas estimates contain assumptions.
 - Firmware-era comparisons are observational and confounded by weather, open-window state, bands, and simultaneous tuning.
 - The greenhouse entered an open-screen/window mechanical epoch around June 19. Summer coefficients should not be reused after fall closure without re-identification.
-- Published Vanda guidance does not provide a validated cultivar-specific VPD curve. The VPD targets below are cautious engineering ranges, not claims of a horticultural consensus.
+- Published Vanda guidance does not provide a validated cultivar-specific VPD curve. The VPD targets below are cautious engineering ranges, not claims of a cultivar-established standard.
 
 ## Orchid target card
 
@@ -206,7 +206,7 @@ The proposed software contract is:
 1. center clean mister remains an automatic VPD-cycle actuator;
 2. center drip and center-fertilizer schedule/manual paths are disabled or removed;
 3. fertilizer may actuate only the connected wall drips, with the fertilizer master sequenced and interlocked there;
-4. the approved wall schedule lies inside the feed window and queues only wall drip, not south/west fertilizer misters;
+4. the validated wall schedule lies inside the feed window and queues only wall drip, not south/west fertilizer misters;
 5. scheduled and manual wall-drip jobs receive durable terminal dispositions and physical feedback where existing hardware exposes it;
 6. any obsolete job request is rejected with an explicit configuration reason rather than silently disappearing or refilling the queue throughout the scheduled minute.
 
@@ -227,7 +227,7 @@ The center mister therefore averaged about 77 minutes/day of command time, sprea
 
 ## Light and DLI
 
-Interior DLI is currently **unavailable**. Jason confirms that the interior light sensor is broken and owns its eventual replacement. No software correction or outdoor proxy can establish what DLI the crop currently receives inside the greenhouse.
+Interior DLI is currently **unavailable**. verify the exact target and prerequisites that the interior light sensor is broken and owns its eventual replacement. No software correction or outdoor proxy can establish what DLI the crop currently receives inside the greenhouse.
 
 The primary firmware interval in [`firmware/greenhouse/controls.yaml`](../../firmware/greenhouse/controls.yaml) runs every one second, but the DLI accumulator still calls `lighting_dli_increment(..., 5.0f)`. That inflates every component of the firmware total approximately fivefold. The function already applies a 3.5× correction to indoor LDR lux, chooses the stronger of corrected indoor or Tempest-derived natural light, and adds separate main/grow supplemental-light credit. [`scripts/gather-plan-context.sh`](../../scripts/gather-plan-context.sh) then multiplies that combined total by 3.5 and adds a grow-light estimate again; `v_estimated_plant_dli` repeats the same conceptual double count. Recent raw values of roughly 70–148 mol/m²/day, and corrected-view values above 100, are not credible for this greenhouse.
 
@@ -377,7 +377,7 @@ Latest diagnostics reported:
 
 Current free heap is reassuring only as a momentary state. It does not erase the lifetime minimum or watchdog reset. The current uptime spans no new OTA, so heap improvement cannot yet be attributed to the July ingestor change.
 
-The controlled-restart/backstop work from PR #429 has merged to `main`, but it is not present in the currently running pre-merge `ab18fe8` firmware. It should not be counted as a live protection until a separately approved OTA and runtime proof occur.
+The controlled-restart/backstop work from PR #429 has merged to `main`, but it is not present in the currently running pre-merge `ab18fe8` firmware. It should not be counted as a live protection until a separately validated OTA and runtime proof occur.
 
 Two validation gaps remain important:
 
@@ -508,7 +508,7 @@ At the quantitative evidence cutoff, with continuity rechecked at 19:47 UTC:
 - the latest DB backup and pre-storage-move backup jobs Succeeded;
 - ArgoCD app `verdify-prod-dark` was **Healthy / OutOfSync** at Git revision `0a9a19a`, with drift on a Grafana ConfigMap, Namespace, ingestor PVC, HA-gap-backfill CronJob, and migration Job;
 - ArgoCD also carried a shared-resource warning because the `verdify-prod` Namespace is referenced by `agent-sessions-local-staging`; ownership should be reconciled before anyone treats a broad sync as cleanup;
-- the only environment remains production and its sync is correctly human-gated.
+- the only environment remains production and its sync is correctly safety-checked.
 
 Open alert inventory included one critical planner-required-plan-missed alert, one heap warning, one plan-horizon warning, five forecast-deviation warnings, three irrigation-feedback gaps, and eighteen sensor-offline warnings. Some sensor warnings may be stale/schema artifacts, but that itself is an observability-quality problem.
 
@@ -522,7 +522,7 @@ Relevant open tracking includes firmware heap [#428](https://github.com/VerdifyC
 
 What is working:
 
-- strong device-write gating and human approval boundaries;
+- strong device-write gating and explicit safety boundaries;
 - deterministic local safety controller separated from AI intent;
 - substantial firmware invariants, replay, readback, migration-safety, and CI gates;
 - single production environment with digest-pinned promotion and manual live sync;
@@ -540,7 +540,7 @@ What is not working:
 - physical limits exist, but hardware additions are intentionally deferred from the current software plan;
 - utility accounting cannot yet support rigorous cost optimization;
 - old review/issue claims are not automatically invalidated when later evidence changes the conclusion;
-- the repository had no canonical `.agent-workflow/project/project-definition.yaml` at review start, so lifecycle routing correctly stopped before architecture/sprint orchestration.
+- the repository lacked a concise project definition at review start, so the review proceeded from repository evidence and live read-only observations.
 
 ## Recommended execution sequence
 
@@ -559,10 +559,10 @@ This wave changes no production, database, device, firmware, setpoint, or hardwa
 Each item needs its own issue/change surface and the applicable CI, migration, promotion, production-sync, service-restart, device-write, or OTA gate. Do not treat the wave as one ungated deployment.
 
 1. Repair Tier-1 connection ownership, cache/readback/no-op semantics, and reconnect handling. This changes the sole live device-writer path and needs ingestor deployment plus direct connection and push-count proof.
-2. Repair Hermes-to-MCP liveness and health, poll terminal runs, require `set_plan` for required-plan success, clamp materialization to the intersection of all bounds, restore a real future horizon, and define singular active-plan expiry; separately and atomically neutralize the invalid stale plan after approval. Service changes require normal promotion/sync proof, while the live-intent cleanup requires its own gate.
+2. Repair Hermes-to-MCP liveness and health, poll terminal runs, require `set_plan` for required-plan success, clamp materialization to the intersection of all bounds, restore a real future horizon, and define singular active-plan expiry; separately and atomically neutralize the invalid stale plan after validation. Service changes require normal promotion/sync proof, while the live-intent cleanup requires its own gate.
 3. Disable the dead 10:30 center schedule and center drip/fertilizer commands, preserve center clean VPD misting, enforce wall-drip-only fertilizer, and add outcome accounting for connected paths. Firmware changes require replay/invariants/tests and an OTA; device-affecting execution remains gated.
 4. Add DLI availability/provenance, suppress invalid consumers, and annotate historical values. Arithmetic cleanup can be tested now, but interior DLI remains unavailable until sensor replacement and validation.
-5. Repair forecast evaluation semantics—forecast outdoor VPD must be compared with observed outdoor VPD, not observed indoor VPD—plus planner observability through reviewed database/service changes and the applicable migration and production promotion/sync.
+5. Repair forecast evaluation semantics—forecast outdoor VPD must be compared with observed outdoor VPD, not observed indoor VPD—plus planner observability through validated database/service changes and the applicable migration and production promotion/sync.
 
 ### Wave C — bounded existing-sensor climate experiments
 
@@ -579,14 +579,14 @@ Sensor additions, HAF, intake, shade, airflow measurement, utility meters, and a
 ## Software recovery acceptance criteria
 
 - the sole device writer remains continuously connected for an agreed observation period, without a five-to-six-minute cadence or unchanged bulk repush;
-- planner triggers meet the approved SLA and produce one registry-valid expiring plan or a neutral fallback, with a durable journal result;
+- planner triggers meet the validated SLA and produce one registry-valid expiring plan or a neutral fallback, with a durable journal result;
 - center clean mist continues to operate through the VPD cycle while center drip/fertilizer schedule and manual paths are unrepresentable or explicitly disabled;
-- fertilizer can reach only operator-approved wall-drip outputs and its master/zone sequence is covered by tests and observable terminal outcomes;
+- fertilizer can reach only operator-validated wall-drip outputs and its master/zone sequence is covered by tests and observable terminal outcomes;
 - interior DLI is `unknown` everywhere the sensor is invalid, with no DLI-dependent AI recommendation or score;
 - bounded night-dry-out experiments record indoor/outdoor absolute humidity, realized temperature, actuator duty, stop reason, and weather-matched outcome;
 - firmware has no open deploy-blocking alert and any OTA passes replay, band replay where applicable, invariants, unit tests, weekly-limit, and bake gates.
 
-## Human gates and decisions still needed
+## Direct-execution safeguards and decisions still needed
 
 1. Confirm whether wall drips should run automatically or operator-only. If automatic, specify days/cadence, start time inside 06:00–09:00, fertilizer duration, and clean-flush duration. “Wall-drip-only” is otherwise treated as forbidding every center, south-mister, and west-mister fertilizer output.
 2. Confirm authorization to remove or hard-disable the 10:30 center schedule plus every center drip/fertilizer manual and planner entry point while preserving the center clean VPD mister.
@@ -594,7 +594,7 @@ Sensor additions, HAF, intake, shade, airflow measurement, utility meters, and a
 4. For a later gated wall-path proof, confirm whether the fertilizer tank is safely mixed or whether the first device test must be clean-water-only.
 5. Define the overnight dry-out objective and hard bounds: time window, preferred house VPD or RH range, minimum temperature, whether center mist is normally suppressed overnight, and whether bounded gas heat is allowed after electric reheat proves insufficient.
 6. Confirm whether `band_track_fraction=0` is authoritative and the stale June 18 `0.25` operator experiment may be retired.
-7. Define the planner service level and authority: required full-plan cadence/deadline, shadow observation period, and whether the first repaired phase remains proposal-only or may progress to a separately approved bounded canary.
+7. Define the planner service level and authority: required full-plan cadence/deadline, shadow observation period, and whether the first repaired phase remains proposal-only or may progress to a separately validated bounded canary.
 8. Decide the disposition of PR #409 after extracting any still-useful vision work; reconcile/close is safer than merging the stale branch wholesale.
 9. Approve any firmware OTA, prod ArgoCD sync, live-intent database change, or device-VLAN action separately under the existing gates.
 

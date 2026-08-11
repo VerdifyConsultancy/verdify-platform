@@ -113,12 +113,12 @@ export function planGraphExportRequests({
   if (discovered.graphs.length !== EXPECTED_GRAPH_COUNT || policy.graphs.length !== EXPECTED_GRAPH_COUNT) {
     throw new Error(`graph export plan must contain exactly ${EXPECTED_GRAPH_COUNT} requests`);
   }
-  const approvedById = new Map(policy.graphs.map((record) => [record.occurrenceId, record.occurrenceSha256]));
+  const allowedById = new Map(policy.graphs.map((record) => [record.occurrenceId, record.occurrenceSha256]));
   const requests = discovered.graphs.map((occurrence) => ({
     contract: "verdify.lab-graph-render-request",
     schemaVersion: 3,
     occurrenceId: occurrence.occurrenceId,
-    occurrenceSha256: approvedById.get(occurrence.occurrenceId),
+    occurrenceSha256: allowedById.get(occurrence.occurrenceId),
     reportingFeedSha256,
     target: {
       uid: occurrence.uid,
@@ -147,11 +147,11 @@ export function planGraphExportRequests({
   };
 }
 
-function assertApprovedPolicy(policy) {
+function assertActivePolicy(policy) {
   if (
-    policy.activation.state !== "approved"
-    || policy.activation.approvedBy !== "jason"
-    || !policy.activation.approvedAt
+    policy.activation.state !== "active"
+    || policy.activation.activatedBy !== "direct-task"
+    || !policy.activation.activatedAt
   ) throw new Error("graph export policy is not activated");
 }
 
@@ -495,7 +495,7 @@ async function normalizeGraphPng(bytes, bounds) {
     || metadata.width > bounds.maxWidth
     || metadata.height < bounds.minHeight
     || metadata.height > bounds.maxHeight
-  ) throw new GraphProbeError("decode-error", "graph image dimensions are outside the approved bounds");
+  ) throw new GraphProbeError("decode-error", "graph image dimensions are outside the configured bounds");
 
   let encoded;
   try {
@@ -533,7 +533,7 @@ async function normalizeGraphPng(bytes, bounds) {
     || decoded.width > bounds.maxWidth
     || decoded.height < bounds.minHeight
     || decoded.height > bounds.maxHeight
-  ) throw new GraphProbeError("decode-error", "normalized graph PNG is outside the approved bounds");
+  ) throw new GraphProbeError("decode-error", "normalized graph PNG is outside the configured bounds");
   return png;
 }
 
@@ -556,7 +556,7 @@ async function renderOne({
       settlementGraceMs,
     });
     const capturedAt = canonicalInstant(now(), "graph capture time");
-    if (Date.parse(capturedAt) < Date.parse(policy.activation.approvedAt)) {
+    if (Date.parse(capturedAt) < Date.parse(policy.activation.activatedAt)) {
       throw new GraphProbeError("missing", "graph capture time predates policy activation");
     }
     const png = await normalizeGraphPng(source, policy.imagePolicy.graphs);
@@ -611,7 +611,7 @@ export async function produceGraphExportCandidates({
     reportingFeedSha256,
     reportingDatasourceIdentitySha256: datasourceIdentitySha256,
   });
-  assertApprovedPolicy(policy);
+  assertActivePolicy(policy);
   const validatedRenderer = validateRenderer(renderer, reportingFeedSha256, datasourceIdentitySha256);
   if (typeof now !== "function") throw new Error("graph exporter dependency is invalid");
   if (

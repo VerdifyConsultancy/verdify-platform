@@ -3,7 +3,7 @@ kind: Kustomization
 
 # This is a disconnected production cutover candidate, not another environment.
 # It is deliberately absent from overlays/prod until its immutable image digest
-# is promoted and the separate human cutover gate is approved.
+# is promoted and the separate cutover safeguard is validated.
 namespace: verdify-prod
 
 resources:

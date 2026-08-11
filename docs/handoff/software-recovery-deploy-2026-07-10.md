@@ -11,7 +11,7 @@ candidate to `last-good.ota.bin` before that gate.
   when this closeout was written. PRs #448–#450 delivered DLI, planner, and
   firmware behavior; #451/#452 and #455–#457 promoted the runtime images.
 - Firmware: `2026.7.10.1500.09ee886`, OTA accepted at approximately 15:03 MDT.
-  The binary was built from repository SHA `09ee886`; the reviewed firmware
+  The binary was built from repository SHA `09ee886`; the validated firmware
   tree landed in #450 (`0c8c301` merge lineage). Candidate SHA-256:
   `4c412460b19472c94a1dbb01fa5fb7c629aa05aa3cdde7a6ace5b1b35ecef65d`.
 - API image:

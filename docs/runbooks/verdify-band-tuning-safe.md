@@ -10,7 +10,7 @@
 > **Hard gate:** applying a `crop_target_profiles` migration to the **prod** DB
 > (`verdify-prod/verdify-db`) changes the live setpoints the dispatcher pushes to the sole
 > device writer. **Build + test the migration in the dev DB first; the prod apply is
-> laptop-root + Jason gated.** No secrets are printed in this runbook.
+> laptop-root + execution safeguardd.** No secrets are printed in this runbook.
 
 ---
 
@@ -108,7 +108,7 @@ how compliance moves. (Compliance is graded per-zone against each crop's served 
 `iris_planner.py` §80% Compliance.) A band that *raises* compliance only because it widened
 the target is not necessarily a win — check temp AND vpd compliance separately.
 
-### Step 5 — GATED prod apply (laptop-root + Jason)
+### Step 5 — GATED prod apply (root executor)
 Same `psql` apply but against `verdify-prod/verdify-db`. **Gate + snapshot first:**
 ```bash
 # snapshot the current orchid rows BEFORE applying (rollback artifact)

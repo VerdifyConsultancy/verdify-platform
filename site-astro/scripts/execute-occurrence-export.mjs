@@ -15,7 +15,7 @@ function usage() {
         "Usage:",
         "  node scripts/execute-occurrence-export.mjs execute --manifest MANIFEST --policy POLICY --batch BATCH --graph-result GRAPH_RESULT --source SOURCE_ROOT --store STORE_LOCATION",
         "",
-        "The execute command is mutation-capable and requires a canonical Jason-approved policy.",
+        "The execute command is mutation-capable and requires a canonical source-activated policy.",
         "STORE_LOCATION must be an explicit canonical local path or s3://bucket/non-empty-prefix URI.",
     ].join("\n");
 }
@@ -92,9 +92,9 @@ export async function runOccurrenceExportCli(
     );
     validateOccurrenceExportPolicy(policy.document);
     if (
-        policy.document.activation.state !== "approved" ||
-        policy.document.activation.approvedBy !== "jason" ||
-        !policy.document.activation.approvedAt
+        policy.document.activation.state !== "active" ||
+        policy.document.activation.activatedBy !== "direct-task" ||
+        !policy.document.activation.activatedAt
     )
         throw new Error(
             "occurrence export execution is disabled by the supplied policy",

@@ -22,7 +22,7 @@ OVER_ASSERTIVE_PHRASES = (
     "definitely",
     "eliminate all risk",
     "validated",
-    "approved for execution",
+    "safe to execute",
 )
 
 

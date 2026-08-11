@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { verifySnapshot } from "./lib/snapshot.mjs";
-import { PRODUCTION_APPROVAL_REGISTRY, PRODUCTION_RELEASE_CONTRACT } from "./lib/production-approval.mjs";
+import { PRODUCTION_ACTIVATION_REGISTRY, PRODUCTION_RELEASE_CONTRACT } from "./lib/production-activation.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SHA256_RE = /^[0-9a-f]{64}$/;
@@ -20,8 +20,8 @@ const RELEASE_KEYS = [
   "sourceManifestSha256",
   "fileCount",
 ];
-// The production descriptor adds the approval binding. It carries no hard-coded
-// content pins: every pin must match a reviewed approval-registry entry, so an
+// The production descriptor adds the activation binding. It carries no hard-coded
+// content pins: every pin must match a validated activation-registry entry, so an
 // empty registry makes every production descriptor unreadable — fail-closed at
 // download time, before a single byte is fetched.
 const PRODUCTION_RELEASE_KEYS = [
@@ -32,8 +32,8 @@ const PRODUCTION_RELEASE_KEYS = [
   "assetBytes",
   "assetFormat",
   "attestationSha256",
-  "approvalSha256",
-  "approvalId",
+  "activationSha256",
+  "activationId",
   "sanitizedManifestSha256",
   "sourceManifestSha256",
   "fileCount",
@@ -91,33 +91,33 @@ function releaseTagFromAssetUrl(assetUrl) {
 }
 
 /**
- * Bind a production release descriptor to the reviewed approval registry.
+ * Bind a production release descriptor to the validated activation registry.
  *
- * Every pinned value must equal the registered approval. There is no
+ * Every pinned value must equal the registered activation. There is no
  * hard-coded fallback and no permissive mode: with the shipped (empty)
  * registry this always throws.
  */
 function bindProductionRelease(release, registry) {
-  const matches = registry.filter((entry) => entry.approvalId === release.approvalId);
+  const matches = registry.filter((entry) => entry.activationId === release.activationId);
   if (matches.length !== 1) {
-    throw new Error("production snapshot release descriptor is not in the reviewed approval registry");
+    throw new Error("production snapshot release descriptor is not in the validated activation registry");
   }
   const entry = matches[0];
   if (
     release.assetSha256 !== entry.assetSha256
-    || release.approvalSha256 !== entry.approvalSha256
+    || release.activationSha256 !== entry.activationSha256
     || release.attestationSha256 !== entry.snapshotAttestationSha256
     || release.sanitizedManifestSha256 !== entry.sanitizedManifestSha256
     || release.sourceManifestSha256 !== entry.sourceManifestSha256
     || release.fileCount !== entry.sanitizedFileCount
     || releaseTagFromAssetUrl(release.assetUrl) !== entry.releaseTag
   ) {
-    throw new Error("production snapshot release descriptor disagrees with its registered approval");
+    throw new Error("production snapshot release descriptor disagrees with its registered activation");
   }
   return release;
 }
 
-export async function readReleaseDescriptor(file, { allowPlaceholders = false, registry = PRODUCTION_APPROVAL_REGISTRY } = {}) {
+export async function readReleaseDescriptor(file, { allowPlaceholders = false, registry = PRODUCTION_ACTIVATION_REGISTRY } = {}) {
   const bytes = await readRegular(file, MAX_DESCRIPTOR_BYTES);
   let release;
   try {
@@ -140,15 +140,15 @@ export async function readReleaseDescriptor(file, { allowPlaceholders = false, r
       || release.assetBytes > MAX_ARCHIVE_BYTES
       || release.assetFormat !== "tar"
       || !SHA256_RE.test(release.attestationSha256)
-      || !SHA256_RE.test(release.approvalSha256)
+      || !SHA256_RE.test(release.activationSha256)
       || !SHA256_RE.test(release.sanitizedManifestSha256)
       || !SHA256_RE.test(release.sourceManifestSha256)
-      || typeof release.approvalId !== "string"
+      || typeof release.activationId !== "string"
       || !Number.isSafeInteger(release.fileCount)
       || release.fileCount < 1
       || release.fileCount > MAX_ENTRIES
     ) {
-      throw new Error("production snapshot release descriptor violates the approved release contract");
+      throw new Error("production snapshot release descriptor violates the active release contract");
     }
     return bindProductionRelease(release, registry);
   }
@@ -324,9 +324,9 @@ function parseTarHeader(header) {
   return { rawPath, type, size };
 }
 
-function safePayloadPath(rawPath, type, allowApprovalRecord = false) {
-  const metadataFiles = allowApprovalRecord
-    ? ["manifests/content.json", "evidence/public-output-guard.json", "attestation.json", "approval.json"]
+function safePayloadPath(rawPath, type, allowActivationRecord = false) {
+  const metadataFiles = allowActivationRecord
+    ? ["manifests/content.json", "evidence/public-output-guard.json", "attestation.json", "activation.json"]
     : ["manifests/content.json", "evidence/public-output-guard.json", "attestation.json"];
   let relative = rawPath;
   if (type === "directory") {
@@ -369,7 +369,7 @@ async function readExact(handle, length, position) {
 export async function extractVerifiedTar(
   archive,
   destination,
-  { expectedContentFiles = 429, allowApprovalRecord = false } = {},
+  { expectedContentFiles = 429, allowActivationRecord = false } = {},
 ) {
   const archiveMetadata = await lstat(archive, { bigint: true });
   if (!archiveMetadata.isFile() || archiveMetadata.isSymbolicLink() || archiveMetadata.nlink !== 1n) {
@@ -403,7 +403,7 @@ export async function extractVerifiedTar(
       }
       if (zeroBlocks !== 0) throw new Error("tar has a partial end marker");
       const entry = parseTarHeader(header);
-      const relative = safePayloadPath(entry.rawPath, entry.type, allowApprovalRecord);
+      const relative = safePayloadPath(entry.rawPath, entry.type, allowActivationRecord);
       entryCount += 1;
       if (entryCount > MAX_ENTRIES) throw new Error("snapshot archive contains too many entries");
       const parts = relative.split("/");
@@ -465,7 +465,7 @@ export async function extractVerifiedTar(
     if (zeroBlocks !== 2) throw new Error("tar archive lacks its two-block end marker");
     if (contentFiles !== expectedContentFiles) throw new Error("tar content file count does not match the release descriptor");
     const requiredFiles = ["manifests/content.json", "attestation.json", "evidence/public-output-guard.json"];
-    if (allowApprovalRecord) requiredFiles.push("approval.json");
+    if (allowActivationRecord) requiredFiles.push("activation.json");
     for (const required of requiredFiles) {
       if (paths.get(required) !== "file") throw new Error(`tar payload lacks required file: ${required}`);
     }
@@ -514,7 +514,7 @@ export async function verifyHydratedSnapshot(snapshotRoot, release) {
   const production = release.contract === PRODUCTION_RELEASE_CONTRACT;
   const top = (await readdir(snapshotRoot)).sort();
   const expectedTop = production
-    ? ["approval.json", "attestation.json", "content", "evidence", "manifests"]
+    ? ["activation.json", "attestation.json", "content", "evidence", "manifests"]
     : ["attestation.json", "content", "evidence", "manifests"];
   if (JSON.stringify(top) !== JSON.stringify(expectedTop)) {
     throw new Error("hydrated snapshot has unexpected top-level members");
@@ -530,15 +530,15 @@ export async function verifyHydratedSnapshot(snapshotRoot, release) {
   const evidencePath = path.join(snapshotRoot, "evidence", "public-output-guard.json");
   if ((await sha256(attestationPath)) !== release.attestationSha256) throw new Error("attestation SHA-256 does not match the release descriptor");
   if ((await sha256(manifestPath)) !== release.sanitizedManifestSha256) throw new Error("sanitized manifest SHA-256 does not match the release descriptor");
-  if (production && (await sha256(path.join(snapshotRoot, "approval.json"))) !== release.approvalSha256) {
-    throw new Error("approval SHA-256 does not match the release descriptor");
+  if (production && (await sha256(path.join(snapshotRoot, "activation.json"))) !== release.activationSha256) {
+    throw new Error("activation SHA-256 does not match the release descriptor");
   }
   const snapshot = await verifySnapshot(snapshotRoot);
   if (
     snapshot.files.size !== release.fileCount
     || snapshot.sanitization.sourceManifestSha256 !== release.sourceManifestSha256
     || snapshot.sanitization.sanitizedManifestSha256 !== release.sanitizedManifestSha256
-    || snapshot.approvalEligible !== production
+    || snapshot.activationEligible !== production
   ) {
     throw new Error("hydrated snapshot does not match descriptor content pins");
   }
@@ -590,7 +590,7 @@ export async function hydrateStageSnapshot(releasePath, destination) {
     archiveIdentity = await downloadVerifiedAsset(release, archive);
     await extractVerifiedTar(archive, staged, {
       expectedContentFiles: release.fileCount,
-      allowApprovalRecord: release.contract === PRODUCTION_RELEASE_CONTRACT,
+      allowActivationRecord: release.contract === PRODUCTION_RELEASE_CONTRACT,
     });
     stagedIdentity = await lstat(staged, { bigint: true });
     await verifyHydratedSnapshot(staged, release);

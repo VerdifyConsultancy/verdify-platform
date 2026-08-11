@@ -152,7 +152,7 @@ Only backfill after observed outcomes are already flowing.
 Recommendation:
 
 - start with the same validated cohort as observed outcomes
-- keep this behind a separate flag until retrieval quality is reviewed
+- keep this behind a separate flag until retrieval quality is validated
 
 ### 3. Support Doc Seed Backfill
 
@@ -340,7 +340,7 @@ For the first real rollout, the agent should:
 3. Backfill a small recent `observed_outcome` slice.
 4. Add the first 5 to 10 support docs in a seed file.
 5. Seed support docs once.
-6. Leave `prior_plan` historical backfill off until retrieval quality is reviewed.
+6. Leave `prior_plan` historical backfill off until retrieval quality is validated.
 
 ## Explicit Non-Goal
 

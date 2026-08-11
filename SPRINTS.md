@@ -145,22 +145,22 @@ Verification:
 
 ### S8: Vanda Night Dehum (vent+reheat + telemetry + gated activation)
 
-Status: `Executing — 48h flag-OFF soak (OTA ab18fe8 accepted 2026-07-04T01:33Z; flag-ON eligible ~07-06T01:33Z, Jason gate)`
+Status: `Executing — 48h flag-OFF soak (OTA ab18fe8 accepted 2026-07-04T01:33Z; flag-ON eligible ~07-06T01:33Z, execution safeguard)`
 
 Goal: dry the overnight center-zone air per #410 (02-06h median VPD 0.61 ->
->=0.78) via the design-reviewed vent+reheat held-temp path, shipped flag-OFF and
-activated behind the #411/#377 Jason gates with a 48h canary bake
+>=0.78) via the design-validated vent+reheat held-temp path, shipped flag-OFF and
+activated behind the #411/#377 execution safeguards with a 48h canary bake
 (night_min >= 64F rollback trigger).
 
-First structured sprint transaction: plan, lane contracts, gates, and the wave
-release plan live in `.agent-workflow/sprints/s8-vanda-night-dehum/`.
+The implementation history is retained in the durable issue, migration, ADR,
+and release records linked below.
 
 Primary lanes:
 
 - #410 firmware vent+reheat hold (flag OFF, replay-identical).
 - #327 moisture-estimator telemetry (migration 187) — bake prerequisite.
 - #413 doc drift: pinch re-pin step, OTA-reset mechanics, envelope notes.
-- #411 night-anchor migration 188 — blocked on the gate:jason decision.
+- #411 night-anchor migration 188 — blocked on the safeguard:runtime-preflight decision.
 
 Verification:
 

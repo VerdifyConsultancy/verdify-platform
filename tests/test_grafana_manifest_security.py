@@ -1,4 +1,4 @@
-"""Static contract guards for the separately runtime-reviewed Grafana manifest."""
+"""Static contract guards for the separately runtime-validated Grafana manifest."""
 
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ def _environment(container: dict) -> dict[str, dict]:
     return {entry["name"]: entry for entry in container.get("env", [])}
 
 
-def test_grafana_and_renderer_use_reviewed_immutable_security_images():
+def test_grafana_and_renderer_use_validated_immutable_security_images():
     pod = _deployment()["spec"]["template"]["spec"]
     init = _container(pod["initContainers"], "inject-canvas-css")
     grafana = _container(pod["containers"], "grafana")
@@ -71,7 +71,7 @@ def test_manifest_wires_the_same_required_secret_sourced_renderer_token():
     assert renderer_env["AUTH_TOKEN"].get("value") is None
 
 
-def test_manifest_locks_the_runtime_reviewed_renderer_v5_configuration_and_probes():
+def test_manifest_locks_the_runtime_validated_renderer_v5_configuration_and_probes():
     pod = _deployment()["spec"]["template"]["spec"]
     containers = pod["containers"]
     grafana_env = _environment(_container(containers, "grafana"))
@@ -139,7 +139,7 @@ def test_required_runtime_secrets_fail_closed_and_sql_expressions_are_not_explic
     assert "sqlExpressions" not in enabled.split(",")
 
 
-def test_required_grafana_secret_keys_and_manual_sync_gate_are_in_the_canonical_contract():
+def test_required_grafana_secret_keys_are_in_the_canonical_contract():
     contract = SECRET_CONTRACT.read_text()
 
     assert (
@@ -152,4 +152,4 @@ def test_required_grafana_secret_keys_and_manual_sync_gate_are_in_the_canonical_
         "— | — | ✓ |"
     ) in contract
     assert "there is deliberately no in-repo placeholder, default password, or" in contract
-    assert "then obtain Jason's explicit approval" in contract
+    assert "then run the task-scoped" in contract

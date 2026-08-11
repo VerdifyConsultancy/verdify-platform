@@ -82,8 +82,8 @@ export async function verifyProductionOutput({ dist, allowFixture = false }) {
     throw new Error("synthetic fixtures can never satisfy the production release verifier");
   }
   if (!fixture) {
-    if (build.approvalEligible !== true || build.localEvidenceStatus === "provisional-only") {
-      throw new Error("production release is not backed by approval-eligible immutable evidence");
+    if (build.activationEligible !== true || build.localEvidenceStatus === "provisional-only") {
+      throw new Error("production release is not backed by activation-eligible immutable evidence");
     }
     if (build.unavailableReferenceCount !== 0) {
       throw new Error("production release retains unavailable same-origin references");
@@ -124,7 +124,7 @@ export async function verifyProductionOutput({ dist, allowFixture = false }) {
       `<meta property="og:url" content="${expectedCanonical}">`,
       `production route has the wrong Open Graph URL: ${record.physicalPath}`,
     );
-    if (/Stage preview|globally noindex|not approval evidence|lab-stage\.verdify\.ai/u.test(html)) {
+    if (/Stage preview|globally noindex|not activation evidence|lab-stage\.verdify\.ai/u.test(html)) {
       throw new Error(`production route retains stage-only output: ${record.physicalPath}`);
     }
   }

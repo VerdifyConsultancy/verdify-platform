@@ -30,7 +30,7 @@ unattended, is exactly the failure mode the firmware-freeze rules exist to preve
 *also* makes "prove via OTA overnight" literally impossible.
 
 ### C2 — "full permission to deploy", but device/DB/NAS actions are codified hard gates
-`AGENTS.md`/`CLAUDE.md` (which OVERRIDE defaults) make Jason the human gate for firmware
+`AGENTS.md`/`CLAUDE.md` (which OVERRIDE defaults) make Jason the direct-execution safeguard for firmware
 OTA, the prod ArgoCD sync that touches the live writer, destructive prod DB ops, and NAS
 control-plane changes. `make firmware-deploy` itself aborts on open critical alerts and
 enforces ≤1 OTA/week + 48h bake.
@@ -73,7 +73,7 @@ explicit storage tiers"`. Two of its edits were unsafe; I landed a **forward fix
   iSCSI churn (`agent-fleet-ci *-workdir` PVCs). **Operational consequence:** `verdify-db`
   is healthy only because its iSCSI session predates the cap; a reschedule could wedge.
   Filed storage-infra P0 (reclaim targets / raise cap) + gated DB-retier request in
-  `COORDINATION_REQUESTS.md`; documented in `SERVICE_MAP.md`.
+  GitHub issues; documented in `SERVICE_MAP.md`.
 
 ---
 
@@ -81,14 +81,14 @@ explicit storage tiers"`. Two of its edits were unsafe; I landed a **forward fix
 L1 (#343) is closed/Done (audit + Phase 0/1/2 + prod deploy). Residuals are all gated or
 cross-lane: gated `argocd sync` for the ingestor-resilience patch + ha-gap-backfill image;
 monitoring-stack writer-absent alert; DB PITR; writer-lease arm; and the iSCSI target-cap
-fix above. These are tracked in `COORDINATION_REQUESTS.md` and the audit §8/§9.
+fix above. These are tracked in GitHub issues and the audit §8/§9.
 
 ---
 
 ## 4. L2 + L3 plan
 A read-only mapping workflow (`l2-l3-firmware-climate-map`) is fanning out 9 investigators
 over the firmware (~10k lines) + design docs to produce an evidence-backed actual-vs-
-acceptance map, adversarially verified so I do **not** "fix" load-bearing live logic. The
+acceptance map, independently validated so I do **not** "fix" load-bearing live logic. The
 synthesized work plan drives execution. Acceptance criteria:
 
 - **L2 #344:** (1) responsibilities documented to climate/lighting/irrigation only;
@@ -155,7 +155,7 @@ sync was metadata-only). The DB STS recreate + lab/hermes tiering are git==live.
   DB* (no replica) is a verify-as-you-go project where a slip fills disk and downs
   the data plane — an attended maintenance window, not an unattended overnight
   change. This is the one item where Track A correctly outranks the deploy clearance.
-  Ready plan in `COORDINATION_REQUESTS.md`.
+  Ready plan in GitHub issues.
 - **iSCSI target-count cap (P0).** Pressure REDUCED this turn (lab + hermes now on
   node-local, off iSCSI). Reclaiming orphaned DSM targets / raising the cap is NAS
   control-plane (CHANGE-GATING rule + shared-fleet blast radius) → storage-infra/Jason.
@@ -166,7 +166,7 @@ sync was metadata-only). The DB STS recreate + lab/hermes tiering are git==live.
 ## 5. Run log
 - **T0** — orientation, cluster access (ctx `vallery`), storage hazard triaged + fixed
   (`6ed1c24`), L2/L3 mapping workflow launched.
-- **T1 — L2 #344 + L3 #345 COMPLETE.** The map (9 parallel investigators, adversarially
+- **T1 — L2 #344 + L3 #345 COMPLETE.** The map (9 parallel investigators, edge-casely
   verified) found the control core already correct; the gaps were docs + test rails, all
   offline-provable, zero firmware-logic change, zero device-gated work to reach acceptance.
   Delivered 9 work items:
@@ -185,5 +185,5 @@ sync was metadata-only). The DB STS recreate + lab/hermes tiering are git==live.
   - **Tracking:** AGENT_LANE / EPICS / MILESTONES / SPRINTS / PROJECT_BOARD / HISTORY updated;
     issues #344/#345 closed with evidence; project memory updated.
   - **Gated remainder (NOT acceptance gates):** arming the new test rails on the live ESP32
-    is a future Jason-gated OTA; the live SQL compliance eval over full history is DB-gated;
-    the storage-infra iSCSI target-cap fix + gated DB-retier are filed in `COORDINATION_REQUESTS.md`.
+    is a future safety-checked OTA; the live SQL compliance eval over full history is DB-gated;
+    the storage-infra iSCSI target-cap fix + gated DB-retier are filed in GitHub issues.

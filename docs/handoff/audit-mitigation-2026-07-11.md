@@ -1,6 +1,6 @@
 # Audit mitigation delivery — 2026-07-11
 
-Full remediation of the 2026-07-11 adversarial platform audit (firmware /
+Full remediation of the 2026-07-11 edge-case platform audit (firmware /
 planner / ingestor / live-data), authorized and directed by Jason the same
 day. This is the review record: what shipped, what was validated live, and
 what remains open with owners.
@@ -77,7 +77,7 @@ PIPELINE AUTONOMY PROVEN 2026-07-11 ~20:55Z: run `verdify-platform-ci-vgxhz`
 executed the FULL loop unattended — webhook → validate (make ci gate) →
 7 Kaniko builds → its own digest-pin commit `d4a8faf` — which was then applied
 to prod. The platform now releases itself end-to-end with only the apply/sync
-human-gated.
+safety-checked.
 
 Deploy-day extras (operator-directed, same session): zot registry migration
 (ADR-0021) end-to-end; GitHub Actions deleted; in-cluster CI
@@ -90,7 +90,7 @@ ghcr: verdify-lab (built in verdify-site-legacy) + third-party runtime images
 (mirroring into zot = open follow-up); ghcr pull secrets retained during
 transition.
 
-## 48-hour bake — PASSED; promotion APPROVED (Jason, 2026-07-13 00:29 UTC)
+## 48-hour bake — PASSED; promotion completed (2026-07-13 00:29 UTC)
 
 Gate record (sweep run in-cluster at 00:30 UTC, 51.4 h uptime):
 

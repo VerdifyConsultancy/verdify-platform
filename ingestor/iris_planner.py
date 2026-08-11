@@ -4,7 +4,7 @@ iris_planner.py — Send planning events to Iris via the Hermes gateway.
 Assembles greenhouse context by running gather-plan-context.sh, then delivers
 it to Hermes's API server (POST /v1/runs). Repo source selects GPT-5.6 Sol with
 xhigh reasoning for a separately gated future activation; live Hermes remains
-on the prior deployed profile until approved. Hermes reasons over the Verdify MCP
+on the prior deployed profile until the candidate passes validation. Hermes reasons over the Verdify MCP
 toolset, and the gathered context pack is the planner memory source of truth.
 """
 
@@ -176,7 +176,7 @@ _STANDING_DIRECTIVES = """
 _PLANNER_CORE = """
 ## Greenhouse Planner Knowledge
 
-You are the greenhouse supervisory planner. You adjust registry-approved tunables that shape
+You are the greenhouse supervisory planner. You adjust registry-valid tunables that shape
 HOW the ESP32 controller responds to conditions. You do not control relays directly.
 
 **Full operational playbook:** Read `skills/greenhouse-planner.md` for detailed workflows,
@@ -872,7 +872,7 @@ plan.
    `set_plan(plan_id=..., hypothesis=..., transitions=..., trigger_id=..., planner_instance=...)`.
    The first transition must be current when written, every transition must
    carry a complete bounded `climate_intent`, and the plan must remain inside
-   the approved 72-hour envelope. Do not emit raw Tier 1 or crop-band params.
+   the validated 72-hour envelope. Do not emit raw Tier 1 or crop-band params.
 6. **Post a concise weekly brief** — report what improved, what regressed, the
    evidence-backed strategy adjustment, and the next measurable hypothesis.
 

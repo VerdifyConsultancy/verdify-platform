@@ -50,8 +50,8 @@ export function verifyOccurrenceExporterImage(metadata) {
     "graph producer",
   );
   requireContract(
-    cameraExportProducerContract.approvedOccurrenceIds.length === 2
-      && new Set(cameraExportProducerContract.approvedOccurrenceIds).size === 2
+    cameraExportProducerContract.allowedOccurrenceIds.length === 2
+      && new Set(cameraExportProducerContract.allowedOccurrenceIds).size === 2
       && cameraExportProducerContract.defaultTimeoutMs > 0
       && cameraExportProducerContract.defaultTimeoutMs <= cameraExportProducerContract.maxTimeoutMs,
     "camera producer",

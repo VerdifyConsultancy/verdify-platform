@@ -39,8 +39,8 @@ A authority and exists only for the Lab Astro migration.
 
 | App | Namespace | Source path | Sync policy | Notes |
 |---|---|---|---|---|
-| `verdify-prod-dark` | `verdify-prod` | `deploy/k8s/overlays/prod` | Manual | Legacy live app name; currently the real production writer. Sync requires Jason. |
-| `verdify-prod` | `verdify-prod` | `deploy/k8s/overlays/prod` | Manual | Intended rename target only. Apply through a gated orphan/readopt procedure if ever scheduled. |
+| `verdify-prod-dark` | `verdify-prod` | `deploy/k8s/overlays/prod` | Manual | Legacy live app name; currently the real production writer. Sync uses the release preflight and rollback checks. |
+| `verdify-prod` | `verdify-prod` | `deploy/k8s/overlays/prod` | Manual | Intended rename target only. Apply through the orphan/readopt runbook if scheduled. |
 | `verdify-platform-lab-stage` | `verdify-platform` | `deploy/k8s/overlays/lab-stage` | Manual | Fleet-owned isolated Astro canary. This repo owns the rendered overlay; `jvallery/agents` owns the Application/AppProject. `prune:false`, `selfHeal:false`; explicit exact-revision actuation plus T0/T+10 proof. |
 
 Production Application manifests live in `deploy/k8s/argocd/apps/`. The Lab
@@ -67,28 +67,28 @@ This repo owns only their rendered source path,
   StorageClasses, shared ingress controllers, Cloudflare tunnel config, and
   shared monitoring.
 - Secret value sealing/decryption and age key custody.
-- Prod sync execution without Jason approval.
+- Prod sync execution without recorded task scope.
 
 ## Promotion Model
 
 GitHub Actions no longer publishes this repo. A fleet Argo Event submits the
 exact `main` revision to the `repo-build` WorkflowTemplate in
 `agent-fleet-ci`; Kaniko pushes to the in-cluster Zot origin and the resulting
-`registry.vallery.net/...@sha256:` identities are committed through reviewed,
-CI-gated digest-pin PRs. Stage and production overlay pins are distinct.
+`registry.vallery.net/...@sha256:` identities are committed through validated
+digest-pin changes. Stage and production overlay pins are distinct.
 
-Merging a pin changes Git only. `verdify-platform-lab-stage` requires an
-explicit reviewed exact-revision actuator and T0/T+10 durability proof. For
+Merging a pin changes Git only. `verdify-platform-lab-stage` uses an explicit
+exact-revision actuator and T0/T+10 durability proof. For
 each Lab pass, record one immutable Platform commit and image pin-set, its
 complete rendered inventory, the previous known-good rollback commit/trigger,
-and the reviewed `jvallery/agents` actuator commit. The actuator temporarily
+and the validated `jvallery/agents` actuator commit. The actuator temporarily
 sets the fleet-owned Application annotation/`targetRevision` to that immutable
 commit; verify the live AppProject admits every rendered kind and require Argo
 `Synced` + `Healthy` with no unexpected resources. After T+10, a separate
-reviewed fleet PR restores `targetRevision: main`, autosync disabled,
+validated fleet PR restores `targetRevision: main`, autosync disabled,
 `prune:false`, and `selfHeal:false`. This is the proven #2998/#2999 pattern;
 never sync moving `main` directly for an activation pass. Production remains a
-separate Jason-gated `argocd app sync verdify-prod-dark`; no image build or pin
+separate safety-checked `argocd app sync verdify-prod-dark`; no image build or pin
 authorizes that sync.
 
 ## Verification
@@ -97,6 +97,6 @@ authorizes that sync.
   `kustomize build deploy/k8s/overlays/prod`.
 - CI gate: `make ci` plus the in-cluster repo-build/PR-CI render and policy
   checks.
-- Promotion must use exact Zot digests and the reviewed pin workflow described
+- Promotion must use exact Zot digests and the validated pin workflow described
   in `docs/runbooks/prod-promotion.md`; merge changes Git only. The manual prod
-  sync remains Jason-gated.
+  sync remains safety-checked.

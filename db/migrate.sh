@@ -10,7 +10,7 @@
 # TimescaleDB tolerates the inherited-chunk DDL noise), THEN run migration 000,
 # which reconstructs the hypertable catalog rows. Replay-tolerant => safe to
 # re-run as an ArgoCD PreSync hook. SCHEMA ONLY — the copy-not-move DATA restore
-# (handoff §3.6) is a separate, gated, human-run runbook; this never touches the
+# (handoff §3.6) is a separate, gated, directly executed runbook; this never touches the
 # live VM DB or the device.
 set -eu
 : "${DB_HOST:?DB_HOST required}" "${DB_NAME:?DB_NAME required}" "${DB_USER:?DB_USER required}" "${DB_PASS:?DB_PASS required}"

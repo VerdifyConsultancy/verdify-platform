@@ -5,7 +5,7 @@
 > (`hermes-iris`) with the MCP-only tool allowlist in `hermes/iris/config.yaml`.
 > Repo source selects OpenAI GPT-5.6 Sol xhigh-reasoning as the pending profile;
 > live activation is separately gated, and Hermes remains on the prior deployed
-> profile until approved. Use `plan_delivery_log.hermes_run_id` as the active gateway
+> profile until validated. Use `plan_delivery_log.hermes_run_id` as the active gateway
 > correlation field.
 >
 > **For the current planner I/O schema, allowed-tunables/bounds, write-contract
@@ -319,16 +319,16 @@ escalation is an auditable trigger decision, not a hidden retry.
 
 ## 3. Ownership summary
 
-| Layer | File(s) | Owning agent | Review required from |
+| Layer | File(s) | Owning component | Required compatibility checks |
 |---|---|---|---|
-| Trigger source & SLA detection | `ingestor/tasks.py`, `ingestor/alert_monitor.py` | ingestor | coordinator (new trigger_id schema dep) |
-| Dispatch function | `ingestor/iris_planner.py` | genai | ingestor (env vars it consumes) |
+| Trigger source & SLA detection | `ingestor/tasks.py`, `ingestor/alert_monitor.py` | ingestor | update the `trigger_id` schema and consumers together |
+| Dispatch function | `ingestor/iris_planner.py` | planner | validate ingestor environment variables and call sites |
 | Env vars + config | `ingestor/config.py` | ingestor | — |
-| OpenClaw profile | `~/.openclaw/openclaw.json` + `agents/*/agent/models.json` | iris-dev | coordinator (hooks token rotation policy) |
+| OpenClaw profile | `~/.openclaw/openclaw.json` + `agents/*/agent/models.json` | planner runtime | validate token rotation and hook compatibility |
 | Prompt variants | `ingestor/iris_planner.py`, `templates/planner-prompt.md` | genai | — |
-| MCP tool surface | `mcp/server.py` | genai | coordinator (schema cols used) |
-| Schema cols, migration | `db/migrations/NNN_planner_instance_audit.sql`, `verdify_schemas/*` | coordinator | — |
-| Contract doc | `docs/iris-planner-contract.md` (this doc) | coordinator | all agents |
+| MCP tool surface | `mcp/server.py` | planner | validate every schema column it uses |
+| Schema cols, migration | `db/migrations/NNN_planner_instance_audit.sql`, `verdify_schemas/*` | shared data contract | disposable-schema migration test |
+| Contract doc | `docs/iris-planner-contract.md` (this doc) | repository | keep all component references current |
 
 ## 4. Changes required vs. today
 

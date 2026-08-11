@@ -180,7 +180,7 @@ async function selectedReleaseFixture(context) {
     manifest: discovered.manifest,
     manifestSha256: staticOccurrenceDiscoverySha256(discovered.manifest),
     policyVersion: "compiler-occurrence-export-v1",
-    approvedAt: "2026-07-13T17:00:00Z",
+    activatedAt: "2026-07-13T17:00:00Z",
     cameraSources: discovered.mediaSources.map(({ sourceUrl: url }, index) => ({
       occurrenceId: discovered.currentMedia[index].occurrenceId,
       url,
@@ -190,9 +190,9 @@ async function selectedReleaseFixture(context) {
     ...blockedPolicy,
     activation: {
       ...blockedPolicy.activation,
-      state: "approved",
-      approvedBy: "jason",
-      approvedAt: "2026-07-13T17:00:00Z",
+      state: "active",
+      activatedBy: "direct-task",
+      activatedAt: "2026-07-13T17:00:00Z",
     },
   };
   const policyPath = path.join(root, "occurrence-policy.json");
@@ -303,7 +303,7 @@ test("compiler keeps absent-store behavior pending and requires a policy for any
       occurrenceStore: fixture.storeRoot,
       occurrencePolicy: fixture.blockedPolicyPath,
     }),
-    /policy is not approved for compiler use/,
+    /policy is not active for compiler use/,
   );
 });
 
@@ -332,7 +332,7 @@ test("blocked compiler policy prevents injected S3 store and client construction
         });
       },
     }),
-    /policy is not approved for compiler use/,
+    /policy is not active for compiler use/,
   );
   assert.equal(storeFactoryCalls, 0);
   assert.equal(clientFactoryCalls, 0);
@@ -375,7 +375,7 @@ test("compiler rejects snapshot, discovery, policy-version, and canonical-policy
   );
   const differentBytesPath = await writePolicy(fixture.root, "different-bytes.json", {
     ...fixture.policy,
-    reviewedAt: "2026-07-13T16:59:59Z",
+    validatedAt: "2026-07-13T16:59:59Z",
   });
   await assert.rejects(
     loadCompilerOccurrenceBinding({
@@ -501,7 +501,7 @@ test("selected builds retain a stable discovery hash and require 143 graph plus 
       fixture.policy,
       fixture.policySha256,
     ),
-    /approved current-media fallback coverage/,
+    /active current-media fallback coverage/,
   );
 
   const wrongProvenanceSelected = {
@@ -537,7 +537,7 @@ test("selected builds retain a stable discovery hash and require 143 graph plus 
       fixture.policy,
       fixture.policySha256,
     ),
-    /graph fallback violates the approved image bounds/,
+    /graph fallback violates the active image bounds/,
   );
 });
 
@@ -608,7 +608,7 @@ test("compiler builds and materializes a selected 143 plus 2 release through one
     contract: "verdify.lab-stage-sanitized-snapshot",
     schemaVersion: 1,
     evidenceStatus: "provisional-only",
-    approvalEligible: false,
+    activationEligible: false,
     sourceManifestSha256: "05d4373ebf59bef3a7899c5e94514971d663fd7264db09b2b5cb26fec78410b1",
     sanitizedManifestSha256: sha256(snapshotManifestBytes),
     sourceFileCount: 429,
@@ -667,7 +667,7 @@ test("compiler builds and materializes a selected 143 plus 2 release through one
     manifest: discoveryManifest,
     manifestSha256: staticOccurrenceDiscoverySha256(discoveryManifest),
     policyVersion: "selected-compiler-integration-v1",
-    approvedAt: "2026-07-13T18:00:00Z",
+    activatedAt: "2026-07-13T18:00:00Z",
     cameraSources: discoveryManifest.currentMedia.map((occurrence, index) => ({
       occurrenceId: occurrence.occurrenceId,
       url: cameraUrls[index],
@@ -677,12 +677,12 @@ test("compiler builds and materializes a selected 143 plus 2 release through one
     ...blockedPolicy,
     activation: {
       ...blockedPolicy.activation,
-      state: "approved",
-      approvedBy: "jason",
-      approvedAt: "2026-07-13T18:00:00Z",
+      state: "active",
+      activatedBy: "direct-task",
+      activatedAt: "2026-07-13T18:00:00Z",
     },
   };
-  const policyPath = path.join(root, "approved-policy.json");
+  const policyPath = path.join(root, "active-policy.json");
   await writeFile(policyPath, canonicalBytes(policy));
   const policySha256 = occurrenceExportPolicySha256(policy);
   const sourceSnapshotManifestSha256 = discoveryBuild.snapshotManifestDigest.slice("sha256:".length);

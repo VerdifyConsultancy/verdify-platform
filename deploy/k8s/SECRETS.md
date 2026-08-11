@@ -52,7 +52,7 @@ secret-delivery step is the fast-follow.
 - **Never** set `DEVICE_WRITE=1` / an ESP32-egress allow in dev or staging — those
   envs are device-dark. The device-write path + `ESP32_API_KEY` use live ONLY in
   `verdify-prod`.
-- **Never** rotate/seal `ESP32_API_KEY` without explicit Jason confirmation of the
+- **Never** rotate/seal `ESP32_API_KEY` without exact-target validation of the
   canonical value; it is the ESP32 Noise PSK and must never trigger a re-flash
   (handoff §6). The live `.env` and the esphome `secrets.yaml` have DRIFTED (two
   different shas); reconcile at source and seal from the canonical one.
@@ -102,8 +102,8 @@ the public prod tree. For the current S3-compatible endpoint, set
 Grafana Deployment. Root must seal and deliver the two named keys before an
 ArgoCD sync; there is deliberately no in-repo placeholder, default password, or
 default renderer token. Before any sync, verify only the Secret name and both
-required key names (never their values), then obtain Jason's explicit approval
-for the manual `verdify-prod-dark` sync. A missing Secret or key leaves new pods
+required key names (never their values), then run the task-scoped
+`verdify-prod-dark` sync. A missing Secret or key leaves new pods
 in `CreateContainerConfigError`; Kubernetes still accepts the Deployment object,
 but its rollout cannot complete.
 
@@ -160,7 +160,7 @@ the sealed prod Secret.
 Review of every standing token/credential that an agent or CI can use, vs what it
 needs. **Hard invariant: no agent/CI principal may have device-write reach or
 cluster-admin.** The device writer (ingestor `replicas:1` + the gated
-`allow-ingestor-device-egress`) and firmware OTA stay Jason-gated regardless.
+`allow-ingestor-device-egress`) and firmware OTA stay safety-checked regardless.
 
 | Principal | Scope held | Scope needed | Device-write? | Cluster-admin? | Verdict |
 |---|---|---|---|---|---|
@@ -170,6 +170,6 @@ cluster-admin.** The device writer (ingestor `replicas:1` + the gated
 | `verdify-agent-secrets` / `agent_ro` DSN | `pg_read_all_data` (SELECT all, no write) | read prod | no | no | ✅ least-privilege (migration 184, #302) |
 | Grafana datasource | connects as `verdify` **SUPERUSER** (`POSTGRES_PASSWORD`), read-only *by intent* | SELECT-only | no | no | ⚠️ **over-grant** — repoint to `agent_ro` (a panel could issue DML today) |
 | Agent kubeconfig (context `vallery`) | full **cluster-admin** | namespaced read + `exec` into `verdify-db-0` | only if device-egress enabled (gated) | **yes** | ⚠️ **the real admin surface** — prefer the `agent_ro` DSN (#302) + a narrow RBAC `Role` over the admin kubeconfig |
-| `verdify-firmware-ota` / `ota_password` | flash the ESP32 via `make firmware-deploy` | operator OTA | **yes (flash)** | no | 🔒 device-affecting — stays Jason-gated; not held by CI |
+| `verdify-firmware-ota` / `ota_password` | flash the ESP32 via `make firmware-deploy` | operator OTA | **yes (flash)** | no | 🔒 device-affecting — stays safety-checked; not held by CI |
 
-**CI is already least-privilege** (built-in `GITHUB_TOKEN` + scoped per-job `permissions:`; no kube credential; the gated `argocd app sync` is run by a human off-CI). The two open hardening recommendations (own follow-ups): **(a)** repoint the Grafana datasource off the `verdify` superuser onto `agent_ro`/`pg_read_all_data`; **(b)** issue agents the `agent_ro` DSN + a narrow namespaced RBAC `Role` (`get/list` + `pods/exec` scoped to `verdify-db-0`) instead of the cluster-admin kubeconfig. **(c)** confirm `LAB_REPO_TOKEN` is a fine-grained single-repo PAT (Jason, org settings).
+**CI is already least-privilege** (built-in `GITHUB_TOKEN` + scoped per-job `permissions:`; no kube credential; the gated `argocd app sync` is run by a root executor outside CI). The two open hardening recommendations (own follow-ups): **(a)** repoint the Grafana datasource off the `verdify` superuser onto `agent_ro`/`pg_read_all_data`; **(b)** issue agents the `agent_ro` DSN + a narrow namespaced RBAC `Role` (`get/list` + `pods/exec` scoped to `verdify-db-0`) instead of the cluster-admin kubeconfig. **(c)** confirm `LAB_REPO_TOKEN` is a fine-grained single-repo PAT (Jason, org settings).

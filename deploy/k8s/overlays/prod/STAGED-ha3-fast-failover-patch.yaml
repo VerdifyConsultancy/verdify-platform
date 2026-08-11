@@ -5,13 +5,13 @@
 # Merging it to main therefore changes NOTHING — ArgoCD does not
 # render it. It is the reviewable, ready-to-apply patch the GATED live-arm
 # runbook (STAGED-ha3-writer-fence-arm.md, step F) appends to the kustomization
-# under a Jason-confirmed maintenance window.
+# under a preflight-validated maintenance window.
 #
 # WHY GATED: applying this patch mutates the live ingestor Deployment podSpec
 # (priorityClassName + tolerations + terminationGracePeriod + cpu request),
 # which triggers a Recreate rollout that RESTARTS the sole live device writer.
 # Per the HARD GATE, the live writer's scheduling/push path is never restarted
-# without laptop-root + Jason. It PAIRS WITH the §HA-3.2 Lease fence — never ship
+# without root executor. It PAIRS WITH the §HA-3.2 Lease fence — never ship
 # the short tolerations without the fence (a faster reschedule with no fence
 # would widen, not close, the split-brain window).
 #

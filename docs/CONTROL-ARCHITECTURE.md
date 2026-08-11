@@ -215,7 +215,7 @@ important control lever and is the intended (but see §9a) arbitration axis.
 | **Make the device obey the DB band** | `VERDIFY_BAND_SOURCE=anchors` on the prod ingestor + roll | No (firmware must already expose the anchor entities/service) | — |
 
 Pipeline: push to `main` → CI builds/validates → `bump-dev-digests` → dev
-auto-syncs → `prod-promote` (digest-pinned, operator-gated sync) for prod. The
+auto-syncs → `prod-promote` (digest-pinned, operator-scoped sync) for prod. The
 ingestor's state PVC is being migrated to Synology — coordinate before touching it.
 
 **Gotchas worth knowing** (learned the hard way): incremental DB migrations are

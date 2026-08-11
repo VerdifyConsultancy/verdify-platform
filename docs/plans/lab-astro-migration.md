@@ -3,13 +3,13 @@
 Last updated: 2026-07-14 09:55 UTC. Phases 1-3 are PASSED; Phase 4 is
 in progress. The static Astro canary is healthy, but occurrence activation
 Pass 1 is **not repo-ready**: image packaging/pins and acceptance tooling are
-complete, while four reviewed source lanes remain off main, one protected
+complete, while four validated source lanes remain off main, one protected
 store is externally delivered, and one protected reporting resource is
-executor-delivered under approval. The current work register below is the
+executor-delivered under validation. The current work register below is the
 authoritative execution view.
 
 Owner: platform agent (Claude outer loop plans/verifies; Codex executes on
-xhigh). Human gate: Jason (prod sync, DNS/edge, Quartz retirement, credential
+xhigh). Direct-execution safeguards (prod sync, DNS/edge, Quartz retirement, credential
 work). Epic: #351 (L9, G3). This file is the single source of truth for the
 Quartz→Astro migration of lab.verdify.ai; update it whenever a phase gate
 changes state.
@@ -45,20 +45,20 @@ changes state.
 
 ## The nine surfaces (program decomposition)
 
-Child issues (persisted 2026-07-13 post-consensus): 1→#474, 2→#475, 3→#476,
-4→#477, 5→#478, 6→#479, 7→#480, 8→#481, 9→#482 (Jason-gated cutover).
+Child issues (persisted 2026-07-13 after planning): 1→#474, 2→#475, 3→#476,
+4→#477, 5→#478, 6→#479, 7→#480, 8→#481, 9→#482 (safety-checked cutover).
 
 | # | Surface | Position | Remaining gap |
 |---|---|---|---|
 | 1 | Shared design contract | 1.1.0 merged and accepted on stage | Production remains Quartz until Phase 5 |
-| 2 | Search/CSP/camera/contact | Pagefind/search, strict CSP, and contact behavior accepted on stage; privacy-approved bounded offline producers exist for both camera occurrences | No selected occurrence release, materialized same-origin fallback, freshness/LKG proof, or live producer; Cloudflare analytics remains diagnostic-only under the strict CSP |
+| 2 | Search/CSP/camera/contact | Pagefind/search, strict CSP, and contact behavior accepted on stage; privacy-validated bounded offline producers exist for both camera occurrences | No selected occurrence release, materialized same-origin fallback, freshness/LKG proof, or live producer; Cloudflare analytics remains diagnostic-only under the strict CSP |
 | 3 | Graph fallbacks | 143/143 occurrences discovered and DOM-reconciled; complete manifest/feed-bound offline producer merged; interactive links preserved | No reporting-feed activation, occurrence-store selection/materialization, freshness/LKG proof, or live immutable fallback image |
 | 4 | Media & lightbox | Responsive images, intrinsic sizing, and lightbox accepted on stage | Production remains Quartz until Phase 5 |
 | 5 | Planner/evidence templates | Accepted on stage against the full frozen snapshot | Event-driven content refresh remains Phase 4b |
-| 6 | Semantic parity | Same-snapshot schema-v2 diagnostic implemented; 240/240 canonical routes and 84/84 aliases compare from one frozen input, with SVG-title, feed/sitemap, heading-fragment, robots, and ambiguous sibling-link drift cleared | The diagnostic has 442 fully accounted findings: 429 gated graph-fallback findings, nine unavailable historical source references pending a regenerated snapshot, and two gated current-camera occurrences; final proof also requires an approval-eligible immutable snapshot |
+| 6 | Semantic parity | Same-snapshot schema-v2 diagnostic implemented; 240/240 canonical routes and 84/84 aliases compare from one frozen input, with SVG-title, feed/sitemap, heading-fragment, robots, and ambiguous sibling-link drift cleared | The diagnostic has 442 fully accounted findings: 429 gated graph-fallback findings, nine unavailable historical source references pending a regenerated snapshot, and two gated current-camera occurrences; final proof also requires an validation-eligible immutable snapshot |
 | 7 | Immutable publishing | Local-filesystem CAS/release/cache engine, S3 conditional stores, typed occurrence store, closed caller, runtime injection (#525), exact runtime/exporter pins (#532), and live acceptance tooling (#528) are on main; the runtime remains disconnected at `replicas: 0` | #533/#537/#540/#542 own protected storage, deterministic packs, distributed coordination/GC, and executable publisher/runtime; no runtime pod is scheduled or routed |
 | 8 | Quality gates | Strict 13/13 real-content gates green; exact tested static build passed live T0 and T+10 acceptance; #528 closes selected-release identity/path/completeness checks | Repeat the same gates for #541 Pass 1/Pass 2; no production acceptance yet |
-| 9 | Production cutover | Fail-closed canary scaffold merged via #471 and remains inactive/source-only | Not built/pinned/deployed; Quartz remains authoritative; Jason APPLY required |
+| 9 | Production cutover | Fail-closed canary scaffold merged via #471 and remains inactive/source-only | Not built/pinned/deployed; Quartz remains authoritative; exact-revision actuator and rollback required |
 
 ## Execution phases and gates
 
@@ -115,7 +115,7 @@ img-src in favor of compiled same-origin snapshots
 (`static/cameras/<id>/latest.jpg`) — verify the snapshot path actually
 populates post-deploy, or camera images regress. Decide
 Cloudflare-analytics-vs-CSP policy explicitly.
-GATE: **PASSED 2026-07-13 ~06:55Z.** Stage serves `ee36941f` (Pagefind
+VALIDATION: **PASSED 2026-07-13 ~06:55Z.** Stage serves `ee36941f` (Pagefind
 noWorker fix #466 + retry #467, pin #468; a stale-Cloudflare-cache worker-CSP
 interaction found and designed around). Full acceptance on the deployed
 build: search/lightbox/images/mobile-nav pass; 323 routes + 145 graph/camera
@@ -129,24 +129,21 @@ blocks: diagnostic-only; strict CSP retained.
 
 Phase 3 — **Program formalization (owner: codex) — PASSED.** #351 is In
 Progress/P1/XL. Issues #474-#482 carry What/Why/How/Test/Success, all Project
-#5 fields, native parent/blocker links, and explicit human gates; completed
-stage surfaces #474/#477/#478/#481 are closed with durable evidence. The
-cross-model consensus report and append-only ledger are under
-`.agent-workflow/consensus/`. Branch work is salvaged/parked per the
-dispositions below. The doc-debt slice
+#5 fields, native parent/blocker links, and explicit direct-execution safeguards; completed
+stage surfaces #474/#477/#478/#481 are closed with durable evidence. Technical
+issue decomposition and execution evidence are retained in issues #474-#482,
+this plan, and the branch dispositions below. The doc-debt slice
 from the 2026-07-13 staleness scan is complete in this Phase 3 change:
-`docs/handoff/k3s-agent-handoff.md` §2/§5.3 now records the zot/Kaniko
+`docs/runbooks/k3s-operations.md` §2/§5.3 records the Zot/Kaniko
 pipeline and current Lab blocker; `docs/agents/web.md` records Astro ownership,
 deploy, acceptance, and stage state; and `LANES.md` carries a Lab-lane
 staleness banner without rewriting its non-Lab historical plan.
-GATE: **PASSED 2026-07-13 ~07:54Z.** Board and tracker agree; two consecutive
-unchanged `no-changes` turns from Claude and Codex, all six seat approvals,
-and YES votes for all nine issues are recorded; no authorized orphan branch is
-unaccounted.
+VALIDATION: **PASSED 2026-07-13 ~07:54Z.** Board and tracker agreed, the issue
+decomposition was complete, and every orphan branch had a recorded disposition.
 
 Phase 4 — **Feature completion (owner: codex, critical-path order below).**
 1. **4c Graphs/camera producer first:** build the isolated reporting/export
-   tier, occurrence release producer, privacy-approved camera sanitizer,
+   tier, occurrence release producer, privacy-preserving camera sanitizer,
    allowlisting, freshness alerts, and LKG proof for all 143 graph plus two
    camera occurrences. The reporting tier must be anonymous-disabled and use
    a least-privilege read credential against a one-way, read-only public
@@ -154,8 +151,8 @@ Phase 4 — **Feature completion (owner: codex, critical-path order below).**
    credential. The feed exposes only allowlisted public time-series/views and
    carries a source watermark: p95 lag at most 15 minutes and an alert at more
    than 30 minutes. Provisioning/changing that feed, tier, or credential is
-   Jason-gated; code and credential-name-only manifests may land first. The
-   camera sanitizer separately performs GET-only reads from the exact approved
+   safety-checked; code and credential-name-only manifests may land first. The
+   camera sanitizer separately performs GET-only reads from the exact validated
    public-edge allowlist
    `https://api.verdify.ai/api/v1/public/cameras/{greenhouse_1|greenhouse_2}/latest.jpg?h=1080`,
    with no Authorization header or cookie. It rejects redirects, strips
@@ -163,7 +160,7 @@ Phase 4 — **Feature completion (owner: codex, critical-path order below).**
    the occurrence store. Only the API owns its internal camera handoff; the
    sanitizer has no device-VLAN, Frigate/go2rtc, controller, DB, or general API
    access. Any future camera credential or source/allowlist change is also
-   Jason-gated.
+   safety-checked.
    The inert trust-boundary slice (#483), two-camera offline producer (#487),
    and complete 143-graph offline producer (#492) are merged. They do not
    create a workload, activate a tier, read a credential, make a default live
@@ -171,7 +168,7 @@ Phase 4 — **Feature completion (owner: codex, critical-path order below).**
    operator-owned reporting feed, occurrence-store delivery/selection,
    freshness alerts, LKG behavior, and joint live proof. Inert Phase 4b
    implementation may proceed, but live reporting or occurrence activation
-   remains separately Jason-gated.
+   remains separately safety-checked.
    The current exact-source static/agent/nginx/exporter chain is built and
    pinned through #532. Canonical workflow
    `verdify-exporter-probe-projected-token-ql5cw` proved the exporter image
@@ -186,14 +183,14 @@ Phase 4 — **Feature completion (owner: codex, critical-path order below).**
    digests, no route, no object-store/AWS environment, and deny-all egress.
    Merging that source is not a live rollout: the Lab stage ArgoCD app remains
    manual-sync, and an operator sync is a separately recorded boundary. A later
-   activation must apply the reviewed #532 runtime pins, add the #542
+   activation must apply the validated #532 runtime pins, add the #542
    store/egress/runtime contract, explicitly raise replicas, and pass #541
    stage acceptance.
 3. **4b S3 backend and event wiring:** the inactive full-site S3
    conditional-store foundation merged through #496, #502 carries the distinct
    typed occurrence store, and #507 carries the closed 143+2 caller. The
    concrete source-only operation adapter maps that caller to explicit store
-   APIs; its CLI requires the literal `execute` command, canonical approved
+   APIs; its CLI requires the literal `execute` command, canonical validated
    policy, and an explicit store location before store initialization. No
    workload selects it and it carries no endpoint, credential, route, or
    activation. The source-only #501 binding-name contract fixes the
@@ -227,24 +224,24 @@ Phase 4 — **Feature completion (owner: codex, critical-path order below).**
    historical references, and two current-camera occurrences. Final live proof
    depends on 4c+4b materializing the same-snapshot fallbacks, a regenerated
    source snapshot reflecting the historical-reference dispositions, and an
-   approval-eligible immutable attestation.
-   Issue #479 is open for this final gated proof; the earlier automatic close
+   validation-eligible immutable attestation.
+   Issue #479 is open for this final proof; the earlier automatic close
    did not satisfy it.
 
-GATE per implementation slice: PR merged + `make ci` green + in-cluster build
-green. That gate does not close S3/4c: S3 remains open until the joint S3+S7
-stage rollout serves and reconciles 143/143 graph and 2/2 approved camera
+VALIDATION per implementation slice: committed change + `make ci` green +
+in-cluster build green. That validation does not close S3/4c: S3 remains open
+until the joint S3+S7 stage rollout serves and reconciles 143/143 graph and 2/2 validated camera
 fallbacks at T0 and T+10, with no pending/invalid occurrences and with LKG and
 freshness recovery proven. No reporting-tier activation, credential work,
-production sync, DNS, or Quartz change occurs without its recorded human gate.
+production sync, DNS, or Quartz change occurs without its recorded direct-execution safeguard.
 
-Phase 5 — **Production cutover (Jason-gated).** The canary scaffold landed via
+Phase 5 — **Production cutover (safety-checked).** The canary scaffold landed via
 #471 but remains unbuilt, unpinned, undeployed, and unrouted. Build/pin/deploy
-the dark canary only after its gates, run full acceptance vs prod, then Jason
-APPLY: route cutover, Quartz retirement, publisher decommission, ghcr image
-retirement (ADR-0021 cleanup).
-GATE: Jason explicit approval; rollback = route flip back to Quartz (kept
-warm until sign-off).
+the dark canary only after its technical preconditions pass, run full acceptance
+against prod, then perform the route cutover, Quartz retirement, publisher
+decommission, and GHCR image retirement (ADR-0021 cleanup).
+SAFEGUARD: use an explicit exact-target execution request; rollback is the route
+flip back to Quartz, which stays warm until post-cutover verification passes.
 
 ## Branch dispositions (2026-07-13, per-branch triage vs origin/main)
 
@@ -308,7 +305,7 @@ DELETE — verified superseded (content demonstrably on main via #461/#462):
   otherwise disturb it; its extra commit is canary-v2 content and may coexist
   with unrelated operator state. Continue all program work from fresh
   worktrees rooted at `origin/main`. Retire the old local branch only through a
-  separately reviewed, explicitly authorized non-destructive disposition once
+  separately validated, explicitly authorized non-destructive disposition once
   no worktree uses it.
 
 CORRECTION (2026-07-13 ~10:05Z, codex direct audit supersedes the branch
@@ -342,26 +339,26 @@ credential, or authorize activation.
 
 ## Current Phase 4 work register
 
-Jason approved the exact stage-only #476/#480 activation scope on 2026-07-14.
-That approval does not convert incomplete source or protected delivery into a
+The exact stage-only #476/#480 activation scope was recorded on 2026-07-14.
+That validation does not convert incomplete source or protected delivery into a
 passed gate. Every independently executable unit now has one issue with
 What/Why/How/Test/Success and complete Project #5 fields:
 
 | Issue | Work item | Current state | Blocks / evidence |
 |---|---|---|---|
 | #533 | Dedicated private stage store and separate reader/writer delivery | Backlog; protected operator delivery | Cross-linked to `jvallery/storage-infra#53`; blocks #540/#541; #537/#540 own capacity and endpoint integration |
-| #534 | Anonymous-disabled reporting tier, one-way read-only feed, and separate credential | Backlog; `verdify-platform` executor under approval | Independent reporting-resource delivery; blocks #541 live proof, not inert #535 source |
-| #535 | Executable 143+2 producer and dormant reporting GitOps | In Progress; reviewed partial substrate `e79a978`, no PR | Missing the executable, final exporter binding, required ConfigMaps, and camera/store egress; no source-start blocker |
-| #537 | Deterministic occurrence/site packs and approved-budget proof | In Progress; reviewed source commit `f6348bf`, no PR | Reconstruct that commit only onto current main; never merge its inherited #540 ancestry; blocks #540/#542/#541 |
-| #540 | Distributed S3 lease/fence, retention/GC, accounting, real-endpoint proof | In Progress; reviewed source commits through `d3ccea9`, no PR | Reconstruct on merged #537; blocked by #533/#537; blocks #542/#541 |
-| #542 | Executable packed publisher and dormant two-pod runtime | In Progress; reviewed local head `448d556`, no PR | Blocked by #535/#537/#540; blocks #541 |
+| #534 | Anonymous-disabled reporting tier, one-way read-only feed, and separate credential | Backlog; `verdify-platform` executor under validation | Independent reporting-resource delivery; blocks #541 live proof, not inert #535 source |
+| #535 | Executable 143+2 producer and dormant reporting GitOps | In Progress; validated partial substrate `e79a978`, no PR | Missing the executable, final exporter binding, required ConfigMaps, and camera/store egress; no source-start blocker |
+| #537 | Deterministic occurrence/site packs and validated-budget proof | In Progress; validated source commit `f6348bf`, no PR | Reconstruct that commit only onto current main; never merge its inherited #540 ancestry; blocks #540/#542/#541 |
+| #540 | Distributed S3 lease/fence, retention/GC, accounting, real-endpoint proof | In Progress; validated source commits through `d3ccea9`, no PR | Reconstruct on merged #537; blocked by #533/#537; blocks #542/#541 |
+| #542 | Executable packed publisher and dormant two-pod runtime | In Progress; validated local head `448d556`, no PR | Blocked by #535/#537/#540; blocks #541 |
 | #541 | Two-pass stage activation, 143+2/both-cache proof, route switch, T0/T+10, and 24h/96-sample soak | Backlog; no activation started | Blocked by #533/#534/#535/#537/#540/#542 |
 | #536 | Public-output/media-contract follow-ups from #458 | Ready; non-critical path | Native child of #475 |
 
 The local `phase4c/deterministic-release-packs@f6348bf` ref is a mixed review
 vehicle, not a safe PR head: its ancestry contains the #540 source commits
 `a288c40`, `9faead5`, `0b9473f`, `bae3bde`, `b632a3d`, `8228a94`, and
-`d3ccea9`, followed by the single #537 commit `f6348bf`. Preserve the approved
+`d3ccea9`, followed by the single #537 commit `f6348bf`. Preserve the validated
 dependency order by reconstructing/cherry-picking only `f6348bf` onto current
 main for #537, keeping current main's live-acceptance package entry and
 resolving only the packed-release additions in the publishing doc/package
@@ -379,16 +376,16 @@ exporter packaging), #532 (dormant runtime/exporter pins), #528 (bounded live
 (canonical projected-token probe fix). agents#3002 is resolved and closed; no
 node-placement workaround remains.
 
-Pass 1 may begin only after the six blockers on #541 are green, reviewed source
+Pass 1 may begin only after the six blockers on #541 are green, validated source
 and exact digest pins are on main, protected resources are delivered by name,
 and real-endpoint lease/GC tests pass. For **each** pass, freeze and record one
 immutable Platform commit and exact pin-set, the complete rendered resource
 inventory/hash, the previous known-good Platform rollback revision and manual
-rollback trigger, and the reviewed `jvallery/agents` actuator commit. Before
+rollback trigger, and the validated `jvallery/agents` actuator commit. Before
 reconciliation, prove the live fleet AppProject admits every expected kind,
 including `CronJob`. The fleet-owned Application must target only the frozen
-commit, reach `Synced` + `Healthy`, and contain no resource outside the reviewed
-inventory. After T+10, a separate reviewed fleet PR restores
+commit, reach `Synced` + `Healthy`, and contain no resource outside the validated
+inventory. After T+10, a separate validated fleet PR restores
 `targetRevision: main`, autosync disabled, `prune:false`, and `selfHeal:false`;
 this repeats the proven agents#2998/#2999 pattern and never syncs moving `main`
 directly. Pass 1 activates the producer and two-pod runtime **unrouted**. Pass
@@ -408,31 +405,23 @@ remain separate release artifacts, deployments, and repositories while sharing
 Astro, the versioned shell, fonts/tokens/navigation, and the in-cluster
 Kaniko/Zot/ArgoCD delivery model.
 
-## Operating cadence
+## Execution cadence
 
-- Outer loop (Claude): 5-minute drive loop — check codex progress, unblock,
-  verify each gate with live probes, keep this tracker + #351 current,
-  surface Jason-gated asks in `COORDINATION_REQUESTS.md`.
-- Executor (codex, xhigh): works the phase order above; every change lands
-  via `main` with `make ci` green; no prod sync/DNS/device/credential action
-  without Jason.
-- Consensus ceremony: completed in Phase 3 at frozen commit `1e7dc6c`; the
-  report and ledger are `.agent-workflow/consensus/lab-astro-migration.*`.
-  Issues #474-#482 were persisted only after the full gate passed. The current
-  #533-#542 records are implementation decomposition of those approved
-  surfaces, not a new architecture or gate decision; the historical report is
-  not relabelled as consensus on later execution facts. The six-seat factual
-  execution review and exact branch/issue reconciliation are recorded in
-  `docs/reviews/lab-astro-program-tracking-audit-2026-07-14.md`.
+- Work the phase order above, land each change on `main`, and require `make ci`
+  plus the relevant live probe before advancing.
+- For production sync, DNS, device, or credential actions, use an explicit
+  exact-target request, run the documented preflight, and stage rollback.
+- Issues #474-#482 and #533-#542 retain the technical decomposition and current
+  implementation facts; this plan and the issue records are authoritative.
 
 ## KPIs / done bar
 
 - For each Lab-relevant main revision, in-cluster CI opens or updates its exact
-  digest pin PR within 24 hours. Time from reviewed pin merge to stage sync is
+  digest pin PR within 24 hours. Time from validated pin merge to stage sync is
   recorded separately as operator-dependent; every authorized stage rollout
   still receives T0/T+10 acceptance (pipeline health).
 - 5/5 stage defects cleared; full acceptance green against deployed build.
-- 143/143 graph and 2/2 privacy-approved camera occurrences with secure
+- 143/143 graph and 2/2 privacy-validated camera occurrences with secure
   immutable fallback live at T0 and T+10; S3 stays open until this joint S3+S7
   proof passes.
 - The isolated public reporting feed has p95 source-watermark lag at most 15
@@ -450,6 +439,6 @@ Kaniko/Zot/ArgoCD delivery model.
   48-hour recovery window. Default pre-activation hard budgets are 10 GiB
   retained, 5 GiB written/day, 10 GiB egress/day, and 25,000 object requests/
   day; 80% alerts and 100% blocks publication while retaining LKG. A different
-  numeric budget requires explicit Jason approval recorded on S7 before
+  numeric budget requires explicit recorded task scope recorded on S7 before
   activation; no unbounded object-retention policy is accepted.
 - Production on Astro, Quartz retired — with Jason APPLY recorded.

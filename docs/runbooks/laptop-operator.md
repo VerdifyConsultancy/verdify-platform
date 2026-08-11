@@ -53,7 +53,8 @@ disposable copy, not the live prod writer database.
 
 Historical derived-data reconciliation lives in
 [`derived-history-reconcile.md`](./derived-history-reconcile.md). It dry-runs
-by default; any prod apply requires an explicit operator gate.
+by default; a production apply requires its explicit apply flag and technical
+preflight.
 
 ## 2. CI/CD: push publishes, dispatch promotes to prod (single-env)
 
@@ -143,7 +144,7 @@ ESPHOME_BIN=$PWD/.venv/bin/esphome \
 The gates are real: no OTA while `alert_log` has unresolved critical/high
 rows, 48h bake on `last-good.ota.bin` mtime, ≤1 OTA/calendar week, telemetry
 freshness <300s, action-log proof. Overrides need the documented
-sign-off envs (see `scripts/firmware-deploy-preflight.sh`). Firmware policy:
+reason-bearing override envs (see `scripts/firmware-deploy-preflight.sh`). Firmware policy:
 hot-staged direct-to-prod (there is no dev device; dev never connects to any
 device).
 

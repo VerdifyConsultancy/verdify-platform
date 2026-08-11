@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS public.dli_validity_intervals (
 
 -- v195 is intentionally fail closed. This is an application/schema invariant,
 -- not a privilege boundary: the production application role owns this table.
--- Enabling measured DLI therefore requires a separately reviewed migration
+-- Enabling measured DLI therefore requires a separately validated migration
 -- that removes/replaces this constraint and updates the product contract.
 ALTER TABLE public.dli_validity_intervals
     DROP CONSTRAINT IF EXISTS dli_validity_release_unavailable;
@@ -54,7 +54,7 @@ ALTER TABLE public.dli_validity_intervals
     );
 
 COMMENT ON TABLE public.dli_validity_intervals IS
-'Fail-closed validity ledger for interior crop DLI. Migration 195 permits unavailable intervals only; ordinary DML cannot activate DLI. Future activation requires a separately reviewed migration/contract change. This is a schema invariant, not DB-role privilege separation.';
+'Fail-closed validity ledger for interior crop DLI. Migration 195 permits unavailable intervals only; ordinary DML cannot activate DLI. Future activation requires a separately validated migration/contract change. This is a schema invariant, not DB-role privilege separation.';
 
 CREATE OR REPLACE FUNCTION public.enforce_dli_validity_nonoverlap()
 RETURNS trigger
@@ -328,7 +328,7 @@ FROM latest l
 LEFT JOIN LATERAL public.fn_dli_validity(l.ts, l.greenhouse_id) v ON true;
 
 COMMENT ON VIEW public.v_dli_current IS
-'Current interior crop DLI product contract. Migration 195 is categorically unavailable and always emits NULL. Invalid, non-finite, negative, missing, and out-of-range source readings receive explicit reasons; a later reviewed activation migration owns source completeness and calibration.';
+'Current interior crop DLI product contract. Migration 195 is categorically unavailable and always emits NULL. Invalid, non-finite, negative, missing, and out-of-range source readings receive explicit reasons; a later validated activation migration owns source completeness and calibration.';
 
 CREATE OR REPLACE VIEW public.v_dli_daily AS
 WITH day_bounds AS (
@@ -368,7 +368,7 @@ LEFT JOIN LATERAL public.fn_dli_validity(
 ) v ON true;
 
 COMMENT ON VIEW public.v_dli_daily IS
-'Daily interior crop DLI product contract. Migration 195 is categorically unavailable and never emits a numeric value. A later reviewed sensor-activation migration must define source revision, cadence/completeness, calibration, and validity rules.';
+'Daily interior crop DLI product contract. Migration 195 is categorically unavailable and never emits a numeric value. A later validated sensor-activation migration must define source revision, cadence/completeness, calibration, and validity rules.';
 
 COMMENT ON COLUMN public.climate.dli_today IS
 'LEGACY FORENSIC PROXY ONLY while dli-validity-v1 is unavailable. Built from a broken interior sensor/exterior proxy plus fixture estimate; use v_dli_current or v_dli_daily for product truth.';

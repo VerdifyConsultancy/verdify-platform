@@ -1039,7 +1039,7 @@ test("one 143-plus-2 snapshot is processable but the 96-publication format is ac
   const value = await fixture({ includeOrphans: false });
   value.client.pageSize = 1000;
   // The fixture already carries graph/media blobs for current and rollback.
-  // Add metadata-only current graph fallbacks to reach the approved 143-panel
+  // Add metadata-only current graph fallbacks to reach the active 143-panel
   // reporting tier while remaining inside one exact listing page per root.
   for (let index = 0; index < 141; index += 1) {
     const bytes = Buffer.from(`normal-graph-${index}`);

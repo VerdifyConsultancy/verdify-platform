@@ -1310,7 +1310,7 @@ async def _refresh_daily_summary_for_date(
     # the binary columns above are untouched (co-existence). Guarded so a node
     # running this code BEFORE migration 146 lands (columns/tables absent) logs
     # once and continues rather than failing the whole daily refresh. Cannot be
-    # runtime-validated tonight (migration apply is forbidden) — logic-reviewed.
+    # runtime-validated tonight (migration apply is forbidden) — logic-checked.
     await _write_graded_compliance(conn, target_day, graded)
 
     temp_max = float(climate["temp_max"]) if climate and climate["temp_max"] else 0.0

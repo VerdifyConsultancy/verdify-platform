@@ -35,9 +35,9 @@ If a PR changes accepted feedback aliases in `ingestor/entity_map.py`, `ingestor
 sudo systemctl restart verdify-ingestor
 ```
 
-Alias-only irrigation feedback changes do not require `verdify-mcp` to restart unless the PR also touches schemas or `mcp/server.py`. Do not run this restart from a dirty shared worktree that contains unrelated changes; use the normal reviewed deploy path, then rerun `make irrigation-feedback-discover` and `make irrigation-feedback-check`.
+Alias-only irrigation feedback changes do not require `verdify-mcp` to restart unless the PR also touches schemas or `mcp/server.py`. Do not run this restart from a dirty shared worktree that contains unrelated changes; use the normal validated deploy path, then rerun `make irrigation-feedback-discover` and `make irrigation-feedback-check`.
 
-Final acceptance is a post-deploy proof, not a deploy target. Run it only after the reviewed branch is merged, any required services are restarted, the generated public site is live, and the Grafana dashboard artifacts being validated are the deployed artifacts.
+Final acceptance is a post-deploy proof, not a deploy target. Run it only after the branch is merged, any required services are restarted, the generated public site is live, and the Grafana dashboard artifacts being validated are the deployed artifacts.
 
 For a concise repair/install checklist instead of full diagnostics:
 
@@ -354,7 +354,7 @@ Expected outcome:
 
 ## Firmware Boundary
 
-The current ESP32 Modbus soil definitions cover south_1, south_2, and west only. Center feedback is currently prepared through Home Assistant ingestion. Adding center probes directly to the ESP32 Modbus chain requires a firmware PR and the firmware freeze gates, including replay diff, invariants, firmware tests, and OTA approval.
+The current ESP32 Modbus soil definitions cover south_1, south_2, and west only. Center feedback is currently prepared through Home Assistant ingestion. Adding center probes directly to the ESP32 Modbus chain requires a firmware PR and the firmware freeze gates, including replay diff, invariants, firmware tests, and OTA validation.
 
 ## Final Proof
 

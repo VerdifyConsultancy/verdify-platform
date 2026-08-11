@@ -1016,7 +1016,7 @@ Add:
 - optional `sw_cool_all_fans_at_high_enabled`
 - `cold_vent_guard_delta_f`
 
-Replay diff expected and should be reviewed against hot-day corpus. This is the
+Replay diff expected and should be validated against hot-day corpus. This is the
 highest-value behavior OTA candidate because it is simple and low biological
 risk.
 
@@ -1052,7 +1052,7 @@ Planner contract handoff status:
   the new cooling posture instead of the legacy indirect knob.
 - Deployment still requires service bounces for `verdify-ingestor` and
   `verdify-mcp`, replay diff as a PR artifact with intentional divergence
-  threshold, and coordinator approval before OTA.
+  threshold, and cross-component validation before OTA.
 
 ### PR 3 - Direct-Wet And Fog Stress Override
 

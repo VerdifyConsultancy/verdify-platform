@@ -1,6 +1,6 @@
 # Band-Compliance Reconcile — sprint design & plan (2026-06-17)
 
-**North star:** the greenhouse tracks the smooth diurnal target curve — **temperature AND VPD** — aligned to an optimized sun state and the crop target points, **24/7**, so the homepage band-trace shows actual hugging the target line. **Software-only** (firmware is software; physical/hardware upgrades are out, tracked separately). **First-principles bias: delete code, collapse edge cases — fewer tight lines.** Cost/energy is explicitly NOT an objective this regime; **dehum gets equal standing** with heating and cooling.
+**Control objective:** the greenhouse tracks the smooth diurnal target curve — **temperature AND VPD** — aligned to an optimized sun state and the crop target points, **24/7**, so the homepage band-trace shows actual hugging the target line. **Software-only** (firmware is software; physical/hardware upgrades are out, tracked separately). **First-principles bias: delete code, collapse edge cases — fewer tight lines.** Cost/energy is explicitly NOT an objective this regime; **dehum gets equal standing** with heating and cooling.
 
 Decision basis: **`docs/adr/0003-band-compliance-track-the-target.md`**. Built on the 2026-06-17 end-to-end control review. Tracking: the **Band-Compliance Reconcile epic** + the issues below.
 
@@ -66,7 +66,7 @@ Measured from `mv_zone_band_grade` / `fn_compliance_v2`, over rolling 24h, **tem
 
 ## 6. Guardrails (unchanged, non-negotiable)
 
-Single-writer device gate; firmware OTA stays Jason-gated (land + prove offline via replay-diff/invariants/unit tests, OTA on the gate); band-CURVE changes require `make firmware-replay-band`; no self-committing migration wrapped in an outer txn; safety rails / FSM lockout / dewpoint veto remain planner-unreachable (ADR 0002 §5). Net behavioral changes to automatic control must ship with replay evidence.
+Single-writer device gate; firmware OTA stays safety-checked (land + prove offline via replay-diff/invariants/unit tests, OTA on the gate); band-CURVE changes require `make firmware-replay-band`; no self-committing migration wrapped in an outer txn; safety rails / FSM lockout / dewpoint veto remain planner-unreachable (ADR 0002 §5). Net behavioral changes to automatic control must ship with replay evidence.
 
 ## 7. Tracking
 

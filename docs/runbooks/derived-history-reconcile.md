@@ -2,7 +2,7 @@
 
 > **Current environment note:** older examples in this document may reference the
 > retired `verdify-dev` namespace. Use current prod DB access patterns and keep
-> the script dry-run unless an explicit prod apply has been approved.
+> the script dry-run unless an explicit prod apply has been validated.
 
 Use `scripts/reconcile-derived-history.py` when schema or scoring logic has
 evolved and Verdify needs historical derived rows recalculated from canonical

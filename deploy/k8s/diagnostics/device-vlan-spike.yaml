@@ -17,7 +17,7 @@
 #   - push any setpoint / occupancy / OTA, or
 #   - mutate the live greenhouse in any way.
 # The FIRST real API session or setpoint push from a pod is a SEPARATE, gated
-# step that requires explicit Jason confirmation (handoff §6, P7 STOP-and-ask).
+# step that requires exact-target validation (handoff §6, P7 STOP-and-ask).
 # This probe deliberately stops at "the TCP handshake completed" and measures
 # only how long that handshake took. Track A (greenhouse stays alive) > Track B.
 #
@@ -32,7 +32,7 @@
 #     docs/runbooks/device-vlan-spike.md.
 #   - No egress NetworkPolicy is bundled here. If the namespace later carries a
 #     default-deny-egress policy, the operator adds a scoped, temporary egress
-#     allow for THIS pod as a separate reviewed step (the gated-§3.4 placeholder
+#     allow for THIS pod as a separate validated step (the gated-§3.4 placeholder
 #     in deploy/k8s/base/networkpolicy.yaml documents the eventual shape).
 #
 # HOW TO READ IT: the container prints one line per target:
@@ -156,7 +156,7 @@ spec:
               print("RESULT: PASS — all REQUIRED targets reachable; RTT << SLA.")
               print("Meaning: the ingestor CAN move to k3s (Option 1) pending")
               print("  the egress NetworkPolicy + single-writer cutover")
-              print("  choreography (both still gated on Jason).")
+              print("  choreography (both still protected by runtime safeguards).")
               sys.exit(0)
           else:
               print("RESULT: FAIL — a REQUIRED target is unreachable from the pod.")

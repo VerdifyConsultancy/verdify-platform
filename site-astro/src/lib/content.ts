@@ -69,8 +69,8 @@ export type BuildDocument = {
     } | null;
   };
   localEvidenceStatus: string;
-  approvalEligible: boolean;
-  mandatoryApprovalBoundary: string;
+  activationEligible: boolean;
+  mandatoryActivationBoundary: string;
   sourceCount: number;
   snapshotMarkdownCount: number;
   excludedDrafts: string[];

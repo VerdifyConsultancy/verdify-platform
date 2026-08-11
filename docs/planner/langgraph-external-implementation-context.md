@@ -21,7 +21,7 @@ Verdify is an AI-assisted greenhouse control system for a 367 sq ft greenhouse i
 The control stack has three separate responsibilities:
 
 - **Crop/band policy:** database functions compute target temp/VPD bands from crop profiles.
-- **Planner:** Iris currently uses Hermes to choose tactical setpoints and plans through MCP tools. Repo source selects OpenAI GPT-5.6 Sol xhigh as the pending profile; live activation is separately gated, and Hermes remains on the prior deployed profile until approved.
+- **Planner:** Iris currently uses Hermes to choose tactical setpoints and plans through MCP tools. Repo source selects OpenAI GPT-5.6 Sol xhigh as the pending profile; activation requires the documented replay and deterministic checks, and Hermes remains on the prior deployed profile until those checks pass.
 - **Controller:** ESP32 firmware evaluates real-time climate every 5 seconds and decides relay behavior.
 
 The new LangGraph planner replaces the current Hermes prompt-orchestration path, but it must not replace the control loop. It plans, validates, writes through MCP, and verifies. It does not directly control relays.
@@ -66,8 +66,8 @@ Current production shape:
 - Dispatcher cadence: every 300 seconds.
 - ESP32 control loop: every 5 seconds.
 - Current planner gateway: Hermes `hermes-iris`; any new planner must replace
-  that path directly after offline replay, deterministic validation, and
-  operator approval. Verdify no longer allows an alternate production planner
+  that path directly after offline replay and deterministic validation pass.
+  Verdify no longer allows an alternate production planner
   path.
 
 Key repo references:
@@ -490,7 +490,7 @@ Do not store:
 - Large raw prompts.
 - Full unbounded context packs.
 - Large telemetry blobs.
-- Full LLM transcripts unless explicitly bounded and approved.
+- Full LLM transcripts unless explicitly bounded and validated.
 
 State is not Verdify truth. Operational truth remains in Verdify tables and views. Checkpoint state records graph execution and resume position.
 

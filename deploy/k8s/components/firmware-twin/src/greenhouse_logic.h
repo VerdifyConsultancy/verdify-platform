@@ -557,7 +557,7 @@ inline float band_vpd_hysteresis(const Setpoints& sp) noexcept {
 // by f·(high−target), so the pinched width = served_width·(1−f) regardless of
 // where the target sits between the edges.
 //
-// DEMAND-OVERLAP FLOOR (critic must-fix): the heat-stage-1 trigger is
+// DEMAND-OVERLAP FLOOR (validation fix): the heat-stage-1 trigger is
 // band_heat_target_f + heat_hysteresis; the cooling trigger is temp_high. If the
 // pinched temp band narrows so far that band_heat_target_f(pinched)+heat_hysteresis
 // meets/exceeds the pinched temp_high, the heater and the vent/fans get demanded at

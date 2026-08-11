@@ -52,7 +52,7 @@ Decision rules:
 Contract rules:
 - Mirror Verdify's downstream execution payload shape as closely as possible.
 - Do not propose direct greenhouse writes.
-- Do not claim the action is approved for execution.
+- Do not claim the action is safe to execute without downstream validation.
 - Do not describe Verdify validation as already passed, guaranteed, or certain.
 - Keep rationale concrete and grounded in the provided context.
 - expected_effect should describe the intended operational outcome, not a certainty.

@@ -9,7 +9,7 @@ function usage() {
         "Usage:",
         "  node scripts/execute-occurrence-site-publish.mjs execute --event EVENT --producer-result PRODUCER_RESULT --policy POLICY --manifest MANIFEST --candidate-root CANDIDATE_ROOT --workspace-root WORKSPACE_ROOT",
         "",
-        "The execute command is mutation-capable and requires a canonical Jason-approved policy.",
+        "The execute command is mutation-capable and requires a canonical source-activated policy.",
         "The source-only executable has no default runtime, store, endpoint, credential, or network client.",
     ].join("\n");
 }

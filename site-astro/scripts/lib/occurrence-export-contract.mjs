@@ -22,8 +22,8 @@ const REPORTING_TARGET_SECONDS = 15 * 60;
 const REPORTING_STALE_SECONDS = 30 * 60;
 const MAX_BATCH_PROCESSING_DELAY_SECONDS = 5 * 60;
 const MAX_CLOCK_SKEW_SECONDS = 60;
-const REQUIRED_ACTIVATION_GATES = [
-  "jason-approval",
+const REQUIRED_ACTIVATION_SAFEGUARDS = [
+  "source-activated-policy",
   "operator-owned-reporting-feed",
   "least-privilege-reporting-credential",
 ];
@@ -248,12 +248,12 @@ export function draftBlockedOccurrenceExportPolicy({
   manifest,
   manifestSha256,
   policyVersion,
-  approvedAt,
+  activatedAt,
   cameraSources = [],
 }) {
   if (!SHA256_RE.test(manifestSha256)) throw new Error("source occurrence manifest digest is invalid");
   safeText(policyVersion, "occurrence export policy version", 256);
-  instant(approvedAt, "policy review time");
+  instant(activatedAt, "policy validation time");
   const { graphs, currentMedia } = validateStaticOccurrenceManifest(manifest);
   const cameraSourceRecords = cameraSources.map((source) => {
     if (!exactKeys(source, ["occurrenceId", "url"])) {
@@ -275,13 +275,13 @@ export function draftBlockedOccurrenceExportPolicy({
     policyVersion,
     activation: {
       state: "blocked",
-      approvedBy: null,
-      approvedAt: null,
-      requiredGates: REQUIRED_ACTIVATION_GATES,
+      activatedBy: null,
+      activatedAt: null,
+      requiredSafeguards: REQUIRED_ACTIVATION_SAFEGUARDS,
     },
     sourceSnapshotManifestSha256: snapshotManifestDigest(manifest.snapshotId),
     sourceOccurrenceManifestSha256: manifestSha256,
-    reviewedAt: approvedAt,
+    validatedAt: activatedAt,
     reportingFeed: {
       contract: "verdify.operator-public-reporting-feed",
       authority: "operator-owned",
@@ -343,7 +343,7 @@ export function draftBlockedOccurrenceExportPolicy({
   return policy;
 }
 
-function validateCameraUpstream(cameraUpstream, approvedCurrentMedia) {
+function validateCameraUpstream(cameraUpstream, activeCurrentMedia) {
   if (!exactKeys(cameraUpstream, [
     "contract",
     "method",
@@ -372,18 +372,18 @@ function validateCameraUpstream(cameraUpstream, approvedCurrentMedia) {
       "control-plane",
     ])
   ) throw new Error("camera upstream policy weakens the public read-only handoff");
-  if (!Array.isArray(cameraUpstream.sources) || cameraUpstream.sources.length !== approvedCurrentMedia.length) {
+  if (!Array.isArray(cameraUpstream.sources) || cameraUpstream.sources.length !== activeCurrentMedia.length) {
     throw new Error("camera upstream allowlist is incomplete");
   }
-  const approvedById = new Map(approvedCurrentMedia.map((record) => [record.occurrenceId, record]));
-  const approvedUrls = new Set([
+  const allowedById = new Map(activeCurrentMedia.map((record) => [record.occurrenceId, record]));
+  const activeUrls = new Set([
     "https://api.verdify.ai/api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080",
     "https://api.verdify.ai/api/v1/public/cameras/greenhouse_2/latest.jpg?h=1080",
   ]);
   const seenIds = new Set();
   const seenUrls = new Set();
   for (const source of cameraUpstream.sources) {
-    if (!exactKeys(source, ["occurrenceId", "url", "requestProvenanceSha256"]) || !approvedById.has(source.occurrenceId)) {
+    if (!exactKeys(source, ["occurrenceId", "url", "requestProvenanceSha256"]) || !allowedById.has(source.occurrenceId)) {
       throw new Error("camera upstream allowlist entry is invalid");
     }
     let parsed;
@@ -393,7 +393,7 @@ function validateCameraUpstream(cameraUpstream, approvedCurrentMedia) {
       throw new Error("camera upstream URL is invalid");
     }
     if (
-      !approvedUrls.has(source.url)
+      !activeUrls.has(source.url)
       || parsed.origin !== cameraUpstream.origin
       || parsed.username
       || parsed.password
@@ -401,7 +401,7 @@ function validateCameraUpstream(cameraUpstream, approvedCurrentMedia) {
       || seenIds.has(source.occurrenceId)
       || seenUrls.has(source.url)
       || source.requestProvenanceSha256 !== cameraRequestProvenanceSha256(source)
-      || approvedById.get(source.occurrenceId).requestProvenanceSha256 !== source.requestProvenanceSha256
+      || allowedById.get(source.occurrenceId).requestProvenanceSha256 !== source.requestProvenanceSha256
     ) throw new Error("camera upstream URL is outside the exact public allowlist");
     seenIds.add(source.occurrenceId);
     seenUrls.add(source.url);
@@ -411,22 +411,22 @@ function validateCameraUpstream(cameraUpstream, approvedCurrentMedia) {
 }
 
 function validateActivation(activation) {
-  if (!exactKeys(activation, ["state", "approvedBy", "approvedAt", "requiredGates"])) {
+  if (!exactKeys(activation, ["state", "activatedBy", "activatedAt", "requiredSafeguards"])) {
     throw new Error("occurrence export activation does not use the closed v1 shape");
   }
-  if (JSON.stringify(activation.requiredGates) !== JSON.stringify(REQUIRED_ACTIVATION_GATES)) {
-    throw new Error("occurrence export activation gates are incomplete");
+  if (JSON.stringify(activation.requiredSafeguards) !== JSON.stringify(REQUIRED_ACTIVATION_SAFEGUARDS)) {
+    throw new Error("occurrence export activation safeguards are incomplete");
   }
   if (activation.state === "blocked") {
-    if (activation.approvedBy !== null || activation.approvedAt !== null) {
-      throw new Error("blocked occurrence export policy carries approval metadata");
+    if (activation.activatedBy !== null || activation.activatedAt !== null) {
+      throw new Error("blocked occurrence export policy carries activation metadata");
     }
     return;
   }
-  if (activation.state !== "approved" || activation.approvedBy !== "jason") {
+  if (activation.state !== "active" || activation.activatedBy !== "direct-task") {
     throw new Error("occurrence export activation is invalid");
   }
-  instant(activation.approvedAt, "occurrence export approval time");
+  instant(activation.activatedAt, "occurrence export activation time");
 }
 
 function validateFeedPolicy(feed) {
@@ -498,7 +498,7 @@ export function validateOccurrenceExportPolicy(policy) {
     "activation",
     "sourceSnapshotManifestSha256",
     "sourceOccurrenceManifestSha256",
-    "reviewedAt",
+    "validatedAt",
     "reportingFeed",
     "cameraUpstream",
     "imagePolicy",
@@ -512,11 +512,11 @@ export function validateOccurrenceExportPolicy(policy) {
   if (!SHA256_RE.test(policy.sourceSnapshotManifestSha256) || !SHA256_RE.test(policy.sourceOccurrenceManifestSha256)) {
     throw new Error("occurrence export policy source digest is invalid");
   }
-  instant(policy.reviewedAt, "occurrence export policy review time");
+  instant(policy.validatedAt, "occurrence export policy validation time");
   if (
-    policy.activation.state === "approved"
-    && Date.parse(policy.activation.approvedAt) < Date.parse(policy.reviewedAt)
-  ) throw new Error("occurrence export approval predates policy review");
+    policy.activation.state === "active"
+    && Date.parse(policy.activation.activatedAt) < Date.parse(policy.validatedAt)
+  ) throw new Error("occurrence export activation predates policy validation");
   validateFeedPolicy(policy.reportingFeed);
   validateCameraUpstream(policy.cameraUpstream, policy.currentMedia);
   if (!exactKeys(policy.imagePolicy, ["mediaType", "graphs", "currentMedia"]) || policy.imagePolicy.mediaType !== "image/png") {
@@ -543,14 +543,14 @@ export function validatePolicyManifestBinding(policy, manifest, manifestSha256) 
   if (policy.sourceSnapshotManifestSha256 !== snapshotManifestDigest(manifest.snapshotId)) {
     throw new Error("occurrence export policy does not match the snapshot manifest");
   }
-  for (const [label, occurrences, approved] of [
+  for (const [label, occurrences, active] of [
     ["graph", discovered.graphs, policy.graphs],
     ["current-media", discovered.currentMedia, policy.currentMedia],
   ]) {
-    if (occurrences.length !== approved.length) throw new Error(`${label} allowlist is not complete`);
-    const approvedById = new Map(approved.map((item) => [item.occurrenceId, item.occurrenceSha256]));
+    if (occurrences.length !== active.length) throw new Error(`${label} allowlist is not complete`);
+    const allowedById = new Map(active.map((item) => [item.occurrenceId, item.occurrenceSha256]));
     for (const occurrence of occurrences) {
-      if (approvedById.get(occurrence.occurrenceId) !== occurrenceFingerprint(occurrence)) {
+      if (allowedById.get(occurrence.occurrenceId) !== occurrenceFingerprint(occurrence)) {
         throw new Error(`${label} occurrence is not exactly allowlisted`);
       }
     }
@@ -635,26 +635,26 @@ function validateCandidate(candidate, label, requestProvenanceSha256 = null) {
   if (candidate.mediaType !== "image/png") throw new Error(`${label} candidate MIME type is not image/png`);
   instant(candidate.capturedAt, `${label} capture time`);
   if (label === "current-media" && candidate.requestProvenanceSha256 !== requestProvenanceSha256) {
-    throw new Error("current-media candidate is not bound to its approved camera request");
+    throw new Error("current-media candidate is not bound to its active camera request");
   }
 }
 
-function validateBatchRecords(records, approved, pattern, statusKey, allowedStatuses, label) {
-  if (!Array.isArray(records) || records.length !== approved.length) throw new Error(`${label} export batch is not complete`);
-  const approvedById = new Map(approved.map((record) => [record.occurrenceId, record]));
+function validateBatchRecords(records, active, pattern, statusKey, allowedStatuses, label) {
+  if (!Array.isArray(records) || records.length !== active.length) throw new Error(`${label} export batch is not complete`);
+  const allowedById = new Map(active.map((record) => [record.occurrenceId, record]));
   const seen = new Set();
   for (const record of records) {
     const keys = label === "current-media"
       ? ["occurrenceId", statusKey, "requestProvenanceSha256", "candidate", "expectedSelectionSha256"]
       : ["occurrenceId", statusKey, "candidate"];
-    const approvedRecord = approvedById.get(record.occurrenceId);
+    const activeRecord = allowedById.get(record.occurrenceId);
     if (
       !exactKeys(record, keys)
       || !pattern.test(record.occurrenceId)
-      || !approvedRecord
+      || !activeRecord
       || seen.has(record.occurrenceId)
       || !allowedStatuses.includes(record[statusKey])
-      || (label === "current-media" && record.requestProvenanceSha256 !== approvedRecord.requestProvenanceSha256)
+      || (label === "current-media" && record.requestProvenanceSha256 !== activeRecord.requestProvenanceSha256)
     ) throw new Error(`${label} export batch entry is invalid`);
     seen.add(record.occurrenceId);
     if (label === "current-media") nullableDigest(record.expectedSelectionSha256, "current-media selection precondition");
@@ -682,10 +682,10 @@ export function validateOccurrenceExportBatch(batch, policy, processingAt = new 
   }
   if (!BATCH_ID_RE.test(batch.batchId)) throw new Error("occurrence export batch ID is invalid");
   if (batch.policyVersion !== policy.policyVersion || batch.sourceOccurrenceManifestSha256 !== policy.sourceOccurrenceManifestSha256) {
-    throw new Error("occurrence export batch is not bound to the approved policy and manifest");
+    throw new Error("occurrence export batch is not bound to the active policy and manifest");
   }
   if (batch.policySha256 !== occurrenceExportPolicySha256(policy)) {
-    throw new Error("occurrence export batch is not bound to the exact approved policy bytes");
+    throw new Error("occurrence export batch is not bound to the exact active policy bytes");
   }
   validateBatchFeed(batch.reportingFeed);
   instant(batch.exportedAt, "occurrence export time");
@@ -722,7 +722,7 @@ async function verifiedCandidate(sourceRoot, record, bounds, kind, exportedAt, v
     || verified.width > bounds.maxWidth
     || verified.height < bounds.minHeight
     || verified.height > bounds.maxHeight
-  ) throw new Error(`${kind} candidate is outside the approved MIME, byte, or dimension bounds`);
+  ) throw new Error(`${kind} candidate is outside the active MIME, byte, or dimension bounds`);
   if (Date.parse(record.candidate.capturedAt) > Date.parse(exportedAt)) {
     throw new Error(`${kind} candidate was captured after the export batch`);
   }
@@ -802,12 +802,12 @@ export async function prepareOccurrenceExportRequests({
 }) {
   const discovered = validatePolicyManifestBinding(policy, manifest, manifestSha256);
   if (
-    policy.activation.state !== "approved"
-    || policy.activation.approvedBy !== "jason"
-    || !policy.activation.approvedAt
-  ) throw new Error("occurrence export policy is blocked pending separate Jason-gated feed, tier, and credential work");
-  if (Date.parse(batch.exportedAt) < Date.parse(policy.activation.approvedAt)) {
-    throw new Error("occurrence export batch predates its Jason-gated activation");
+    policy.activation.state !== "active"
+    || policy.activation.activatedBy !== "direct-task"
+    || !policy.activation.activatedAt
+  ) throw new Error("occurrence export policy is blocked pending separate safety-checked feed, tier, and credential work");
+  if (Date.parse(batch.exportedAt) < Date.parse(policy.activation.activatedAt)) {
+    throw new Error("occurrence export batch predates its safety-checked activation");
   }
   safeText(path.resolve(sourceRoot), "occurrence export source root", 4096);
   safeText(path.resolve(storeRoot), "occurrence export store root", 4096);
@@ -884,5 +884,5 @@ export const occurrenceExportContract = {
   staleAfterSeconds: REPORTING_STALE_SECONDS,
   maxBatchProcessingDelaySeconds: MAX_BATCH_PROCESSING_DELAY_SECONDS,
   maxClockSkewSeconds: MAX_CLOCK_SKEW_SECONDS,
-  requiredActivationGates: REQUIRED_ACTIVATION_GATES,
+  requiredActivationGates: REQUIRED_ACTIVATION_SAFEGUARDS,
 };

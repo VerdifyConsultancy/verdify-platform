@@ -82,7 +82,7 @@ context:
 # Repo source selects GPT-5.6 Sol xhigh for Hermes. Live activation is a
 # separate gated step; the instance field is an audit label only.
 planner_routing:
-  # After approved activation, required full-plan cycles use the same
+  # After validated activation, required full-plan cycles use the same
   # Hermes/GPT-5.6 Sol profile as other triggers. This value is an audit label
   # carried into plan_delivery_log.
   required_full_plan_instance: opus

@@ -6,7 +6,7 @@ This is the actual-vs-intended architecture map for the Verdify greenhouse stack
 drift findings, the dead/stale/obsolete inventory, the CI/CD + firmware HIL assessment,
 the deployment failure modes + HA fallback design, and a phased simplification plan.
 
-It **builds on and reconciles** `docs/reviews/data-path-adversarial-review-2026-06-16.md`
+It **builds on and reconciles** `docs/reviews/lane1-architecture-audit-2026-06-16.md`
 (the control-loop deep-dive). Where this audit corrects that doc, it is flagged in §11.
 
 **How it was produced:** five parallel read-only investigators — deployed-state-vs-repo,
@@ -175,7 +175,7 @@ out-of-date · `DEAD` = unused, delete candidate · `DARK` = built but not deplo
 - **D1 — `verdify-ha-gap-backfill` runs a stale ingestor digest.** Live `verdify-ingestor@99efdf`,
   git pin `@f8e034`. Root cause: the gated `argocd app sync verdify-prod-dark` has not run since
   `main` HEAD bumped the ingestor pin (commits `291cf5c`/`950834a`). **Fix: operator runs the
-  gated sync** (Jason gate — touches the device-write app).
+  gated sync** (execution safeguard — touches the device-write app).
 - **D2 — ArgoCD `verdify-prod-dark` = OutOfSync/Degraded.** 5 resources: the D1 CronJob (real);
   `Deployment verdify-ingestor` (live image matches git; diff is the recently-added
   `verdify-ingestor-state` PVC volume wiring not yet reconciled); 3 PVCs (Bound + present;
@@ -198,7 +198,7 @@ out-of-date · `DEAD` = unused, delete candidate · `DARK` = built but not deplo
 - **D5 — `db/schema.sql` is an internally-inconsistent stale dump.** It carries mig-176 objects
   (`fn_lighting_*`) yet lacks 161/167/171/178 (`crop_band_anchors`, `mv_band_curve`,
   `v_band_device_divergence`) and still has the OLD clamped `fn_band_setpoints` body. Not a
-  faithful snapshot of any point; misleads every reviewer. The migration chain (000→179) is the
+  faithful snapshot of any point; misleads every validator. The migration chain (000→179) is the
   only authority. **→ regenerate from a post-179 dump.** (prior review F13, sharpened)
 - **D6 — `docs/BCDR-AND-OPERATIONS.md` references the decommissioned `/mnt/iris` `.150` VM paths**
   for restore; the actual path is the `verdify-db-dumps` NFS PVC.
@@ -355,7 +355,7 @@ push main ─┬─ ci.yml                (lint · schemas+drift · device-write
                  → Device-Write-Safety-Gate (render-equality, digests-only) → open prod-promote PR
                           → promote-diff-guard.yml (change-surface containment) + ci re-run
                           → [human] merge (git only)
-                          → [Jason-gated operator] argocd app sync verdify-prod-dark
+                          → [safety-checked operator] argocd app sync verdify-prod-dark
 FIRMWARE (separate, never in the image pipeline): local `make firmware-deploy` → preflight gates
    → esphome compile + OTA → 60 s wait → wait-for-version → sensor-health → pass: archive+pin /
    fail: auto firmware-rollback to last-good.ota.bin
@@ -380,7 +380,7 @@ FIRMWARE (separate, never in the image pipeline): local `make firmware-deploy` �
 ### 6.3 Hardware-in-the-loop assessment
 **There is no automated HIL test.** Firmware validation is 100% offline replay against a recorded
 corpus + native C++ unit tests of the shared logic. The only real-device contact is the
-human-gated post-OTA `sensor-health` sweep — on **production hardware**, after the fact. The
+safety-checked post-OTA `sensor-health` sweep — on **production hardware**, after the fact. The
 `firmware-twin` shadow exists but is **merged-but-dark** (not in prod, not in CI). Risks: corpus
 staleness, the un-gated band-curve blind spot (the exact wet-night-curve class), corpus missing
 `eq_fertilizer_master`/`feed_hold_active` (invariants #18–22 vacuously pass), `esphome config` ≠
@@ -403,7 +403,7 @@ source).
 6. **Wire `firmware-twin` as a continuous shadow first** — stand it up INSERT-only in a non-device
    namespace reading prod telemetry, compare twin-vs-live decisions, surface a divergence metric +
    alert. This is "HIL without a second device" and catches the seasonal drift the static corpus
-   misses. (DB schema bits stay Jason-gated.)
+   misses. (DB schema bits stay safety-checked.)
 7. *(optional, higher effort)* a bench ESP32 on a self-hosted runner that takes the OTA candidate
    and runs a scripted scenario sweep before the live OTA.
 
@@ -478,7 +478,7 @@ the monitor that detects a dead writer runs *in* the writer. The only out-of-ban
 **P0**
 1. **No DB replica / no PITR (RPO ≤24 h, RTO unpracticed).** Single point of total data loss.
    → re-arm CNPG (1+2 sync + Barman PITR) *or* interim WAL archiving to the dumps PVC (RPO→~5 min)
-   + a quarterly `restore-test.sh` drill. (storage-infra / Jason-gated)
+   + a quarterly `restore-test.sh` drill. (storage-infra / safety-checked)
 2. **No out-of-band writer-absent alert.** → add a Prometheus alert on
    `sum(verdify_esp32_writer_estab)==0` and on `time()-max(climate.ts)`, Slack-routed independent
    of the ingestor.
@@ -488,9 +488,9 @@ the monitor that detects a dead writer runs *in* the writer. The only out-of-ban
    a soft nodeAffinity off node6 + a DB-outage-tolerant liveness probe (`ingestor-resilience.patch.yaml`,
    ready-to-sync). **Correction:** do NOT `emptyDir` the state PVC — `/srv/verdify/state/spool/climate.jsonl`
    is the DB-outage replay buffer (operational data), so the PVC stays. The durable node6 storage fix is
-   a `storage-infra` item (coordination request filed). (Applying the patch restarts the writer — Jason gate.)
+   a `storage-infra` item (coordination request filed). (Applying the patch restarts the writer — execution safeguard.)
 4. **Writer-lease fence inert** (`VERDIFY_WRITER_LEASE_ENABLED=0`); firmware `max_connections:20`
-   means two pods *could* both connect. → arm `#240` (also buys SIGTERM fast-release). (Jason-gated)
+   means two pods *could* both connect. → arm `#240` (also buys SIGTERM fast-release). (safety-checked)
 5. **No liveness/readiness probe on the single writer** — `ingestor-healthz.py` exists but is wired
    to nothing. → add a freshness-based liveness exec with a generous initialDelay.
 
@@ -519,7 +519,7 @@ the monitor that detects a dead writer runs *in* the writer. The only out-of-ban
 add the corpus-freshness gate, remove the soft-skip, run the broad test suite in CI, add the
 registry↔firmware↔anchors guards (D7), strengthen the two weak guards, seal the OTA password.
 
-**Phase 2 — reliability (mix; cluster syncs are Jason-gated)** — DONE/landed ready-to-sync: soft
+**Phase 2 — reliability (mix; cluster syncs are safety-checked)** — DONE/landed ready-to-sync: soft
 anti-affinity off node6 + DB-outage-tolerant liveness probe (keep the state PVC — it holds the
 climate spool, NOT emptyDir). Filed as coordination requests: out-of-band writer-absent +
 telemetry-stall alert (`monitoring-stack`), durable node6 storage fix (`storage-infra`). Gated
@@ -533,7 +533,7 @@ all lighting params; close the fire-and-forget switch (F9); alert on partial/zer
 add the dashboard env banner; stand up `firmware-twin` as a continuous shadow (§6.4 B).
 
 **Gates:** anything that runs `argocd app sync verdify-prod-dark`, touches firmware/OTA, arms the
-writer lease, or changes DB topology is **Jason-gated**. DB PITR/storage is a **storage-infra**
+writer lease, or changes DB topology is **safety-checked**. DB PITR/storage is a **storage-infra**
 dependency. Everything else (docs, code, dead-code deletion via PR, CI, dashboards) lands
 autonomously on `main` keeping CI green.
 
@@ -551,7 +551,7 @@ are recommendations to be executed as scoped PRs (Phase 0/1) and gated work (Pha
 ---
 
 ## 11. Corrections folded back into the prior data-path review
-The data-path review (`docs/reviews/data-path-adversarial-review-2026-06-16.md`) says "if this doc
+The data-path review (`docs/reviews/lane1-architecture-audit-2026-06-16.md`) says "if this doc
 and the code disagree, the code wins — update this doc." This audit found three items to correct:
 - **F15 — `mv_band_curve` is NOT orphaned.** It is refreshed every 10 min by
   `band-curve-refresh-cronjob.yaml` and read live (`v_band_curve`) by the live `site-home`

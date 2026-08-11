@@ -1,17 +1,16 @@
 # Verdify Lab — Candidate Production Snapshot & Sanitization Report (2026-08-04)
 
-Issue: #570. **Status: CANDIDATE. NOT APPROVED. NOT CAPTURED.**
+Issue: #570. **Status: CANDIDATE. NOT ACTIVATED. NOT CAPTURED.**
 
-This document is the decision package for the first approval-eligible immutable
+This document is the decision package for the first activation-eligible immutable
 Lab production snapshot. It records the authoritative source, a real inventory
 of that source taken today, the sanitization plan, and the privacy / identity /
 content-rights / occurrence-selection reasoning #570 requires.
 
-It does **not** approve anything. Jason is the recorded approval authority for
-the snapshot. Nothing in this document, and no entry in
-`site-astro/scripts/lib/production-approval.mjs`, becomes trusted until he
-records an explicit approval and a separate reviewed PR adds the matching
-registry entry.
+It does **not** activate anything. The registry ships empty. A separate source
+change activates one exact snapshot by adding a digest-matching immutable entry
+to `site-astro/scripts/lib/production-activation.mjs`; no separate validator or
+validation role is involved.
 
 The snapshot **bytes have deliberately not been captured**. Section 7 states
 why, and section 8 states exactly what is required to capture them.
@@ -110,12 +109,12 @@ keyword-detectable.
 
 | Item | Class | Evidence | Proposed disposition |
 |---|---|---|---|
-| `static/photos/jason-and-james.jpeg` | **identity** — photograph of two identifiable individuals, both given names in the filename | live probe: HTTP 200 on `lab.verdify.ai` today | **Jason's call (D1).** Already public on a *mutable* site; a release asset is a *permanent, non-retractable* publication. Options: keep, keep with an opaque filename, or exclude. |
-| `static/photos/exterior-wide-property-solar.jpg`, `exterior-night-snow.jpg`, `exterior-evening-patio-wide.jpg` (+ `full/` variants) | **premises / location disclosure** — exterior views of a private residence | live probe: HTTP 200 | **Jason's call (D2).** The greenhouse is at a private address in Longmont, CO. Exterior wide shots plus published local-time series narrow location materially. |
-| `static/photos/homelab-cortex-server-rack.jpg` | **infrastructure disclosure** | live probe: HTTP 200 | **Jason's call (D2).** Rack photography can expose hardware, labels, and cabling detail not visible in text. |
+| `static/photos/jason-and-james.jpeg` | **identity** — photograph of two identifiable individuals, both given names in the filename | live probe: HTTP 200 on `lab.verdify.ai` today | **Activation decision D1.** Already public on a *mutable* site; a release asset is a *permanent, non-retractable* publication. Options: keep, keep with an opaque filename, or exclude. |
+| `static/photos/exterior-wide-property-solar.jpg`, `exterior-night-snow.jpg`, `exterior-evening-patio-wide.jpg` (+ `full/` variants) | **premises / location disclosure** — exterior views of a private residence | live probe: HTTP 200 | **Activation decision D2.** The greenhouse is at a private address in Longmont, CO. Exterior wide shots plus published local-time series narrow location materially. |
+| `static/photos/homelab-cortex-server-rack.jpg` | **infrastructure disclosure** | live probe: HTTP 200 | **Activation decision D2.** Rack photography can expose hardware, labels, and cabling detail not visible in text. |
 | All 5 `.png` (3 under `start/slack-ops/`, 2 icons) | **metadata** | the 3 `start/slack-ops/` PNGs are the plausible re-encode targets of the previous capture (`pngReencodeFiles: 3`) | Re-encode to strip ancillary chunks. The repo already holds the strict precedent for this in `scripts/lib/png-validation.mjs`, which rejects ancillary metadata on occurrence blobs. |
 | `static/vision/lettuce-477.jpg`, `lettuce-479.jpg` | **camera-derived imagery** | live probe: HTTP 200; `robots.txt` `Disallow: /static/vision/` | Include only if D3 says the vision family stays published. They are served-but-not-indexed today. |
-| 38 `.jpg` + 1 `.jpeg` generally | **content rights** | — | **Jason's call (D4).** Confirm every image is first-party. Any third-party or licensed image must be excluded from a permanent public asset. |
+| 38 `.jpg` + 1 `.jpeg` generally | **content rights** | — | **Activation decision D4.** Record that every included image is first-party. Any third-party or licensed image must be excluded from a permanent public asset. |
 | `raw-planner-lessons.md`, `raw-ai-tunables.md`, `planner-static-context.md`, `publish.log` | **raw pre-reduction material** | on the PVC under `state/`, **outside** `content/`; 66 KB→50 KB and 333 KB→80 KB reductions vs their published counterparts | Structurally excluded — a capture of `content/` cannot reach them. Recorded here so the exclusion is deliberate, not accidental. |
 | `orchid-463.jpg`, `orchid-471.jpg`, `orchid-477.jpg` | **residue** | present under the retired `/lab-cache/public` directory; absent from `content/`, from the live served tree, and from both manifests; 404 on the live site | Structurally excluded. **Open item:** whether the S3 bucket still retains these pruned objects is unverified. |
 
@@ -139,7 +138,7 @@ later does not withdraw copies. A site page can be edited or removed.
 That asymmetry is the whole of D1 and D2. The text corpus scans clean. The
 residual identity and location exposure is entirely in the photographic assets,
 and it is a judgement call, not a detection problem — which is exactly why #570
-routes it to a human approver rather than to a guard.
+requires the source-controlled activation record to state the disposition.
 
 ## 5. Content-rights reasoning
 
@@ -147,7 +146,8 @@ The corpus is machine-generated greenhouse telemetry, planner output, and
 first-party photography, published under the Verdify Lab site. The rights
 question is confined to the 39 photographic assets and the 2 `.mp4` / 179 HLS
 media files. The HLS ladder is a first-party greenhouse tour (frozen 2026-06-29).
-D4 asks Jason to confirm there is no third-party or licensed imagery in the set.
+D4 requires the activation record to attest that no included media is
+third-party or uncleared.
 
 ## 6. Occurrence-selection reasoning
 
@@ -158,9 +158,9 @@ current-camera occurrences**; none currently has a selected release. The
 occurrence set is a property of the snapshot's markdown, so a new capture will
 discover its own count, which must be re-measured, not assumed.
 
-The approval record therefore binds `occurrenceSelectionPolicySha256` — the
+The activation record therefore binds `occurrenceSelectionPolicySha256` — the
 SHA-256 of the exact canonical export policy that produced the selected release.
-That makes the approval cover *which* occurrences were selected and under what
+That makes the activation cover *which* occurrences were selected and under what
 policy, not just the content bytes. Selecting occurrences at all is the
 #533/#534/#535/#540/#542/#541 track and is **not** delivered by #570.
 
@@ -175,21 +175,21 @@ policy, not just the content bytes. Selecting occurrences at all is the
    ~397 MiB derived from a private greenhouse/vault pipeline, published as a
    public GitHub release asset. That is a confirm-first action.
 3. **A capture today would not turn the build green and would need redoing.**
-   Section 9 shows the approval is one of three independent gates. Capturing
+   Section 9 shows the activation is one of three independent prerequisites. Capturing
    before the occurrence track lands produces a large permanent public artifact
    that unblocks nothing and is likely superseded.
 
-## 8. The approval record Jason would sign
+## 8. Source-controlled activation record
 
-The registry entry is the approval. Its shape is fixed by
-`site-astro/scripts/lib/production-approval.mjs`; the digest fields are produced
+The registry entry is the activation. Its shape is fixed by
+`site-astro/scripts/lib/production-activation.mjs`; the digest fields are produced
 by the capture:
 
 ```json
 {
-  "contract": "verdify.lab-production-snapshot-approval",
+  "contract": "verdify.lab-production-snapshot-activation",
   "schemaVersion": 1,
-  "approvalId": "lab-production-snapshot-<YYYYMMDD>t<HHMM>z",
+  "activationId": "lab-production-snapshot-<YYYYMMDD>t<HHMM>z",
   "snapshotAttestationSha256": "<from capture>",
   "sanitizedManifestSha256": "<from capture>",
   "sourceManifestSha256": "<from capture>",
@@ -199,17 +199,17 @@ by the capture:
   "guardReportSha256": "<from capture, zero-finding v2>",
   "sourceOrigin": "s3://<LAB_S3_BUCKET>/lab/content",
   "sourceCapturedAt": "<UTC instant of the capture>",
-  "occurrenceSelectionPolicySha256": "<reviewed export policy>",
-  "approver": "jvallery",
-  "approvalRecordUrl": "https://github.com/VerdifyConsultancy/verdify-platform/issues/570#issuecomment-<id>",
-  "approvedAt": "<UTC instant of the recorded decision>",
+  "occurrenceSelectionPolicySha256": "<validated export policy>",
+  "activationActor": "repository-change",
+  "activationRecordUrl": "https://github.com/VerdifyConsultancy/verdify-platform/commit/<40-hex-commit>",
+  "activatedAt": "<UTC instant of the source activation>",
   "releaseTag": "lab-production-snapshot-<YYYYMMDD>t<HHMM>z",
   "assetSha256": "<published release asset digest>",
-  "approvalSha256": "<sha256 of the canonical approval.json bytes>"
+  "activationSha256": "<sha256 of the canonical activation.json bytes>"
 }
 ```
 
-### Decisions only Jason can make
+### Decisions the activation record must resolve
 
 - **D1 — identity.** `static/photos/jason-and-james.jpeg`: keep as-is, keep
   under an opaque filename, or exclude from the permanent asset?
@@ -224,7 +224,7 @@ by the capture:
   bytes.)
 - **D6 — the production sanitization policy version.** Ratify
   `verdify-public-output-production-v1` as the label for the D1–D5 outcome. The
-  code refuses a stage policy version in a production approval.
+  code refuses a stage policy version in a production activation.
 - **D7 — S3 residue.** Is the bucket to be swept for pruned objects (notably
   the three orchid vision images) before a permanent capture?
 - **D8 — capture location.** Authorize the capture to run **in-cluster in the
@@ -234,11 +234,11 @@ by the capture:
 
 ## 9. What this unblocks — and what it does not
 
-Merging the approval contract and, later, an approved snapshot clears **one** of
+Merging the activation contract and, later, an activated snapshot clears **one** of
 the three independent gates in `verify-production-output.mjs`:
 
-1. `approvalEligible === true` and `localEvidenceStatus !== "provisional-only"`
-   — **closed by #570 + a registered approval.**
+1. `activationEligible === true` and `localEvidenceStatus !== "provisional-only"`
+   — **closed by #570 + a registered activation.**
 2. `unavailableReferenceCount === 0` — the frozen capture has **nine**
    unavailable historical references (five `/plans/2026-06-08..12` routes, four
    `/static/vision/{lettuce-475,peppers-482,peppers-484,peppers-487}.jpg`
@@ -251,5 +251,5 @@ the three independent gates in `verify-production-output.mjs`:
    store is empty and the executable producer/publisher path
    (#535/#540/#542/#541) has not landed. **Not addressed by #570.**
 
-Gate 3 is the binding constraint. An approved snapshot alone does not produce a
+Gate 3 is the binding constraint. An activated snapshot alone does not produce a
 green `verdify-lab` build.

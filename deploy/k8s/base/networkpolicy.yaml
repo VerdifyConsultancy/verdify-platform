@@ -148,7 +148,7 @@ spec:
 # Home Assistant / local MQTT (192.168.30.107), and Frigate (192.168.30.142)
 # across VLANs. It is INTENTIONALLY COMMENTED OUT and MUST NOT be enabled here:
 #   - It touches firewall/router posture (a *third* VLAN allowance beyond the
-#     two-VLAN apps/agents model) and requires explicit Jason confirmation
+#     two-VLAN apps/agents model) and requires exact-target validation
 #     (handoff §3.4 / §6 hard boundary).
 #   - It is only meaningful once the device-VLAN reachability + 5-10s latency
 #     spike has been PROVEN from a real pod. Until then the ingestor stays

@@ -32,7 +32,7 @@ const FIXTURE = path.join(ROOT, "tests", "fixtures", "snapshot");
 test("fixture snapshot is exact, local, and explicitly provisional", async () => {
   const snapshot = await verifySnapshot(FIXTURE, { allowSyntheticFixture: true });
   assert.equal(snapshot.files.size, 10);
-  assert.equal(snapshot.approvalEligible, false);
+  assert.equal(snapshot.activationEligible, false);
   assert.equal(snapshot.evidenceStatus, "provisional-only");
   assert.match(snapshot.manifestDigest, /^sha256:[0-9a-f]{64}$/);
   assert.equal(snapshot.sanitization.fixtureOnly, true);
@@ -54,7 +54,7 @@ test("sanitization attestation is closed, canonical, bounded, and HLS-accounted"
     contract: "verdify.lab-stage-sanitized-snapshot",
     schemaVersion: 1,
     evidenceStatus: "provisional-only",
-    approvalEligible: false,
+    activationEligible: false,
     sourceManifestSha256: "05d4373ebf59bef3a7899c5e94514971d663fd7264db09b2b5cb26fec78410b1",
     sanitizedManifestSha256: digest,
     sourceFileCount: 429,

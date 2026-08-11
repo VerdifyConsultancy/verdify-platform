@@ -49,8 +49,7 @@ def db_query(sql: str) -> str:
     if os.environ.get("VERDIFY_DB_QUERY_MODE") == "direct" and shutil.which("psql"):
         cmd = ["psql", "-t", "-A", "-c", sql]
     elif os.environ.get("VERDIFY_DB_BACKEND") == "kube" or not shutil.which("docker"):
-        # k3s-resident agents (docs/handoff/k3s-agent-handoff.md) have kubectl,
-        # not the retired VM's docker socket.
+        # The k3s execution path has kubectl, not a Docker socket.
         cmd = [
             "kubectl",
             "exec",

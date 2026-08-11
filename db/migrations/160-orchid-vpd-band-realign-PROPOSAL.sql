@@ -12,7 +12,7 @@
 -- It LEAVES UNTOUCHED: temp_ideal_*, temp_stress_*, vpd_stress_*, dli_target_mol.
 --
 -- Rationale + shadow analysis: docs/proposals/verdify-band-redesign-2026-06-07.md
--- Gated live-apply procedure (NOT this file): docs/runbooks/verdify-band-live-apply-gated.md
+-- Gated live-apply procedure (NOT this file): docs/runbooks/verdify-band-live-apply-safe.md
 --
 -- Safety: idempotent (UPDATE keyed on the unique row), reversible (the prior
 -- vanda_spec_v1.0 values are recorded in migration 145). NOT wired into any

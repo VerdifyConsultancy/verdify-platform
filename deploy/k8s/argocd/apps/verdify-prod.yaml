@@ -10,7 +10,7 @@
 # Therefore prod is DELIBERATELY a MANUAL-SYNC env: NO syncPolicy.automated block.
 # An automated selfHeal would bring the prod ingestor up as a second live-device
 # writer the moment its image+secrets resolve — before the device-VLAN spike
-# sign-off and the live VM control-loop cutover are explicitly approved by Jason.
+# single-writer preflight and live VM cutover are explicitly validated.
 # Sync is operator-initiated (argocd app sync verdify-prod) only.
 #
 # prune is FALSE — the verdify-db StatefulSet + its iSCSI PVC hold restored
@@ -22,7 +22,7 @@
 #      verdify-prod BEFORE first reconcile.
 #   2. synology-iscsi-ssd StorageClass present; prod gets its OWN TimescaleDB STS.
 #   3. The §3.4 device-VLAN reachability/latency spike signed off AND the live VM
-#      control-loop cutover explicitly approved — BOTH are separate Jason gates.
+#      control-loop cutover explicitly validated — BOTH are separate execution safeguards.
 #   4. Image digests are real/pullable; container-publish or external image
 #      workflows have completed before the operator syncs prod.
 apiVersion: argoproj.io/v1alpha1

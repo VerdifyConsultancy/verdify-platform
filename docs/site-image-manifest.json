@@ -5,7 +5,7 @@
         "greenhouse/equipment.md"
       ],
       "category": "control",
-      "status": "approved"
+      "status": "allowed"
     },
     "exhaust-fan-mister-nozzles.jpg": {
       "allowed_paths": [
@@ -13,7 +13,7 @@
         "climate/"
       ],
       "category": "cooling",
-      "status": "approved"
+      "status": "allowed"
     },
     "exterior-evening-patio-wide.jpg": {
       "allowed_paths": [
@@ -21,7 +21,7 @@
         "index.md"
       ],
       "category": "exterior",
-      "status": "approved"
+      "status": "allowed"
     },
     "exterior-night-snow.jpg": {
       "allowed_paths": [
@@ -32,7 +32,7 @@
         "start/climate.md"
       ],
       "category": "climate",
-      "status": "approved"
+      "status": "allowed"
     },
     "exterior-wide-property-solar.jpg": {
       "allowed_paths": [
@@ -44,14 +44,14 @@
         "reference/about.md"
       ],
       "category": "exterior",
-      "status": "approved"
+      "status": "allowed"
     },
     "greenhouse-entry-door.jpg": {
       "allowed_paths": [
         "greenhouse/structure.md"
       ],
       "category": "structure",
-      "status": "approved"
+      "status": "allowed"
     },
     "homelab-cortex-server-rack.jpg": {
       "allowed_paths": [
@@ -61,7 +61,7 @@
         "reference/"
       ],
       "category": "inference",
-      "status": "approved"
+      "status": "allowed"
     },
     "hydro-nft-channels.jpg": {
       "allowed_paths": [
@@ -70,28 +70,28 @@
         "greenhouse/crops/lettuce.md"
       ],
       "category": "hydroponics",
-      "status": "approved"
+      "status": "allowed"
     },
     "hydro-peppers-lettuce-channels.jpg": {
       "allowed_paths": [
         "greenhouse/crops/peppers.md"
       ],
       "category": "hydroponics",
-      "status": "approved"
+      "status": "allowed"
     },
     "hydro-strawberry-flowers.jpg": {
       "allowed_paths": [
         "greenhouse/crops/strawberries.md"
       ],
       "category": "crop",
-      "status": "approved"
+      "status": "allowed"
     },
     "hydro-strawberry-harvest.jpg": {
       "allowed_paths": [
         "greenhouse/crops/strawberries.md"
       ],
       "category": "crop",
-      "status": "approved"
+      "status": "allowed"
     },
     "interior-canna-geranium-path.jpg": {
       "allowed_paths": [
@@ -104,21 +104,21 @@
         "reference/"
       ],
       "category": "interior",
-      "status": "approved"
+      "status": "allowed"
     },
     "interior-cannas-hydro-growlights.jpg": {
       "allowed_paths": [
         "greenhouse/crops/canna.md"
       ],
       "category": "crop",
-      "status": "approved"
+      "status": "allowed"
     },
     "interior-south-zone.jpg": {
       "allowed_paths": [
         "greenhouse/zones/south.md"
       ],
       "category": "zone",
-      "status": "approved"
+      "status": "allowed"
     },
     "jason-and-james.jpeg": {
       "allowed_paths": [
@@ -127,7 +127,7 @@
         "start/about.md"
       ],
       "category": "people",
-      "status": "approved"
+      "status": "allowed"
     },
     "kincony-relay-closeup.jpg": {
       "allowed_paths": [
@@ -135,28 +135,28 @@
         "greenhouse/equipment.md"
       ],
       "category": "control",
-      "status": "approved"
+      "status": "allowed"
     },
     "motorized-louver-vent.jpg": {
       "allowed_paths": [
         "climate/cooling.md"
       ],
       "category": "cooling",
-      "status": "approved"
+      "status": "allowed"
     },
     "north-wall-manifold.jpg": {
       "allowed_paths": [
         "greenhouse/zones/north.md"
       ],
       "category": "water",
-      "status": "approved"
+      "status": "allowed"
     },
     "north-wall-overview.jpg": {
       "allowed_paths": [
         "greenhouse/zones/north.md"
       ],
       "category": "equipment",
-      "status": "approved"
+      "status": "allowed"
     },
     "north-wall-service-core.jpg": {
       "allowed_paths": [
@@ -164,7 +164,7 @@
         "greenhouse/zones/north.md"
       ],
       "category": "equipment",
-      "status": "approved"
+      "status": "allowed"
     },
     "planters-labeled-starts.jpg": {
       "allowed_paths": [
@@ -173,28 +173,28 @@
         "greenhouse/crops/cucumbers.md"
       ],
       "category": "starts",
-      "status": "approved"
+      "status": "allowed"
     },
     "planters-seedlings-mint.jpg": {
       "allowed_paths": [
         "greenhouse/zones/west.md"
       ],
       "category": "starts",
-      "status": "approved"
+      "status": "allowed"
     },
     "rinnai-water-heater.jpg": {
       "allowed_paths": [
         "greenhouse/equipment.md"
       ],
       "category": "water",
-      "status": "approved"
+      "status": "allowed"
     },
     "roof-timber-staghorn-fern.jpg": {
       "allowed_paths": [
         "greenhouse/structure.md"
       ],
       "category": "structure",
-      "status": "approved"
+      "status": "allowed"
     },
     "seedling-flats-propagation.jpg": {
       "allowed_paths": [
@@ -204,14 +204,14 @@
         "greenhouse/crops/herbs.md"
       ],
       "category": "starts",
-      "status": "approved"
+      "status": "allowed"
     },
     "seedling-trays-humidity-dome.jpg": {
       "allowed_paths": [
         "greenhouse/crops/index.md"
       ],
       "category": "starts",
-      "status": "approved"
+      "status": "allowed"
     },
     "south-wall-fans-misters.jpg": {
       "allowed_paths": [
@@ -220,14 +220,14 @@
         "start/climate.md"
       ],
       "category": "cooling",
-      "status": "approved"
+      "status": "allowed"
     },
     "tzone-sensor-north.jpg": {
       "allowed_paths": [
         "greenhouse/equipment.md"
       ],
       "category": "sensor",
-      "status": "approved"
+      "status": "allowed"
     },
     "tzone-sensor-south.jpg": {
       "allowed_paths": [
@@ -235,7 +235,7 @@
         "reference/data-model.md"
       ],
       "category": "sensor",
-      "status": "approved"
+      "status": "allowed"
     },
     "vanda-orchids-hanging.jpg": {
       "allowed_paths": [
@@ -243,10 +243,10 @@
         "greenhouse/crops/orchid.md"
       ],
       "category": "crop",
-      "status": "approved"
+      "status": "allowed"
     }
   },
-  "policy": "Only approved public photos may be referenced from website markdown. allowed_paths entries are route/source prefixes under /mnt/iris/verdify-vault/website.",
+  "policy": "Only allowlisted public photos may be referenced from website markdown. allowed_paths entries are route/source prefixes under /mnt/iris/verdify-vault/website.",
   "updated": "2026-05-07",
   "version": 1
 }

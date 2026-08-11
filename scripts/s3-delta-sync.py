@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""s3-delta-sync.py — content-hash, change-gated delta uploader for the lab publisher.
+"""s3-delta-sync.py — content-hash, snapshot-protected delta uploader for the lab publisher.
 
 WHY THIS EXISTS
 ---------------

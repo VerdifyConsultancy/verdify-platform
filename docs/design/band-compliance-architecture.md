@@ -271,7 +271,7 @@ CREATE TABLE achievable_envelope (
 );
 ```
 
-A `fn_achievable_envelope(zone, season, ts)` accessor does a cheap indexed point-lookup with hourly interpolation (dispatcher-safe, <5ms). The `refresh_achievable_envelope` job (ingestor-owned, coordinator-reviewed because it writes a shared table) recomputes:
+A `fn_achievable_envelope(zone, season, ts)` accessor does a cheap indexed point-lookup with hourly interpolation (dispatcher-safe, <5ms). The `refresh_achievable_envelope` job (ingestor-owned, coordinator-validated because it writes a shared table) recomputes:
 - **Cadence:** on each `fn_current_season()` transition (the June-1 switch is the first) + a weekly within-season re-derivation.
 - **Term B gating (corrected from the draft):** require `n_saturated_samples ≥ 30` **AND** `n_hot_samples ≥ 20` where `outdoor_temp ≥ 80F`. **Every current saturated sample is from spring** (max outdoor h14 in the relay_truth window = 84.6F), so the initial summer Term B is spring-biased; the hot-sample gate forces fallback to Term A (`note='insufficient_hot_samples'`) rather than presenting a spring number as a summer guardrail. Also a plausibility gate: if indoor exceeds outdoor by more than `k·solar_max + 5F`, exclude the sample (a vent-stuck-shut failure would otherwise inflate Term B and hide a mechanical fault as "achievable").
 - **Non-circularity, by construction:** the served target is never fed back into the envelope. The envelope reads outdoor weather + saturated-stack indoor; the served line reads the envelope; nothing reads the served line back. A `hardware_epoch` marker prevents pooling pre/post-shade samples when shade (H1) lands.
@@ -576,7 +576,7 @@ Re-point `v_daily_kpi`/`v_planner_performance`/`fn_plan_anchor_score` to `compli
 ## 9. Risks + working-invariants preserved
 
 **Working invariants preserved:**
-- **16/16 firmware invariants + dispatcher 95% confirm:** untouched. Compliance is off the control path; 146/147 are DB-only; replay-diff = 0%. The served-band change is migration 145's, governed by `make firmware-replay` + THRESHOLD_PCT sign-off (no relay/mode divergence expected — cooling un-pins, duty *drops*).
+- **16/16 firmware invariants + dispatcher 95% confirm:** untouched. Compliance is off the control path; 146/147 are DB-only; replay-diff = 0%. Validate migration 145's served-band change with `make firmware-replay` plus recorded `THRESHOLD_PCT` evidence (no relay/mode divergence expected — cooling un-pins, duty *drops*).
 - **Planner reward integrity:** preserved by dual-write co-existence + frozen 103 anchored / 228 outcome rows + ordinal-stable ladder re-anchor. The reward number does not move until 147, gated on the ≥90% ordinal-stability test.
 - **Consistency with Vanda design / migration 145:** 146 consumes 145's served band + re-authored stress bounds; the 146.1 guard hard-blocks shipping before 145 D2. Per-zone temp grading (decision #1) is compliance-only; the single served control line stays the center/Vanda house curve.
 

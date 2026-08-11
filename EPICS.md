@@ -14,12 +14,12 @@ anchors and evidence; do not delete their history.
 Start with S4 `controller-architecture-audit`, then pull the highest-risk
 schema/firmware/dashboard contract work forward into S5/S6. Firmware OTA,
 prod sync, device VLAN, prod-destructive DB, credential, and outward-facing
-infra actions remain Jason-gated.
+infra actions remain safety-checked.
 
 2026-06-23 overlay: use
-`docs/reviews/adversarial-audit-backlog-replan-2026-06-23.md` for the current
+`planning/backlog.yaml` for the current
 climate-control replan. ADR-0004 supersedes ADR-0003 target hugging; the next
-priority is DB solar phase parity, then the Jason-gated `band_track_fraction -> 0`
+priority is DB solar phase parity, then the safety-checked `band_track_fraction -> 0`
 float trial, then outcome KPIs and moisture-estimator telemetry before the
 focused VPD/dehum policy lane (#383).
 
@@ -57,7 +57,7 @@ focused VPD/dehum policy lane (#383).
   prod promote (#358);
   `docs/reviews/lane1-architecture-audit-2026-06-16.md`, `docs/RELEASE-CHECKLIST.md`,
   `docs/handoff/monitoring-writer-absent-alert.md`, `docs/SERVICE_MAP.md`,
-  `docs/reviews/data-path-adversarial-review-2026-06-16.md`.
+  `docs/reviews/lane1-architecture-audit-2026-06-16.md`.
 - Dependencies: Jason, `monitoring-stack`, `network-infra`, `storage-infra`.
 - Risks: stale docs can look authoritative; old dev/staging language can cause
   operators to reason about environments that no longer exist.
@@ -78,7 +78,7 @@ focused VPD/dehum policy lane (#383).
 - Scope: five-second state machine, climate/lighting/irrigation separation,
   relay states, safety rails, disconnected operation, local fallback, relay
   dwell/wear, override precedence, and crop-specific logic removal.
-- Non-goals: firmware OTA without Jason, AI-controlled safety/target curves, or
+- Non-goals: firmware OTA without the required preflight, AI-controlled safety/target curves, or
   crop strategy embedded in firmware.
 - Acceptance criteria:
   - Firmware responsibilities are documented around climate, lighting, and
@@ -98,8 +98,8 @@ focused VPD/dehum policy lane (#383).
   invariants #25 (SAFETY_HEAT) / #26 (SENSOR_FAULT) ✓; AC5 crop-agnostic guard
   test ✓.
   Verified: 222/0 native firmware tests, 193,525-row invariant suite green.
-  Firmware OTA arming of the new rails stays Jason-gated — NOT an acceptance
-  gate (OTA-without-Jason is an explicit non-goal).)
+  Firmware OTA arming of the new rails stays safety-checked — NOT an acceptance
+  gate (OTA without preflight and rollback is an explicit non-goal).)
 - Priority: P1
 - Effort: XL
 - Milestone: G1 - Firmware-First Determinism
@@ -111,7 +111,7 @@ focused VPD/dehum policy lane (#383).
   `firmware/test/test_greenhouse_logic.cpp` (72h tests),
   `tests/test_firmware_crop_agnostic_guard.py`; commits d8ed531, 417531e,
   38c6e08, ffc89b9.
-- Dependencies: Jason for OTA; schema-first sequencing for emitted fields and
+- Dependencies: firmware preflight/rollback; schema-first sequencing for emitted fields and
   tunables.
 - Risks: production firmware controls live relays; regressions can harm plants
   or hardware.
@@ -162,7 +162,7 @@ focused VPD/dehum policy lane (#383).
   `docs/GREENHOUSE-CONTROL-TEST-CATALOG.md`; delivered `docs/firmware-fsm-spec.md`
   §6-§10, `tests/test_compliance_feasibility_classifier.py`; commits 38c6e08,
   417531e, ffc89b9.
-- Dependencies: L5 schema authority, L6 dashboards, Jason gates for OTA/live DB.
+- Dependencies: L5 schema authority, L6 dashboards, execution safeguards for OTA/live DB.
 - Risks: band/content bugs can look like firmware bugs unless readbacks and
   service projections are compared.
 - Evidence: data-path review findings F1/F2/F6/F7/F12/F20.
@@ -231,7 +231,7 @@ focused VPD/dehum policy lane (#383).
 - Dependencies: L1 architecture map, L2 firmware surfaces, Jason for live DB
   gates.
 - Risks: duplicated defaults and stale schema dumps can silently mislead future
-  reviewers.
+  maintainers.
 - Evidence: data-path review findings F1-F20.
 
 ### L6 Observability, Dashboards, And KPIs
@@ -265,7 +265,7 @@ focused VPD/dehum policy lane (#383).
   #327 moisture-estimator telemetry is source-wired without a new migration:
   firmware emits `climate_moisture_exchange`, the ingestor persists it under
   `climate_action_log.source_system_state`, and `outcome_kpi()` summarizes the
-  JSON payload when live rows exist. Still needed: the Jason-gated OTA, service
+  JSON payload when live rows exist. Still needed: the safety-checked OTA, service
   deploy, live-data verification, and any durable DB/dashboard rollups for
   long-term reporting.
 - 2026-06-23 #383 source-policy progress: low-wet night rows now have a bounded
@@ -313,7 +313,7 @@ focused VPD/dehum policy lane (#383).
 - Sprint: S5 `firmware-first-climate-core`
 - Related files/issues/PRs: #118, #294, #295, #300, #341,
   `scripts/setpoint-server.py`, lighting audit targets.
-- Dependencies: Home Assistant, Frigate, Lutron, Jason for device-affecting
+- Dependencies: Home Assistant, Frigate, Lutron, and device-write preflight for
   validation.
 - Risks: lighting paths can become accidental duplicate writers if ownership is
   unclear.
@@ -384,7 +384,7 @@ focused VPD/dehum policy lane (#383).
 - Dependencies: #533/#534 protected stage-store and reporting-feed delivery;
   #535/#537/#540/#542 source completion; #541 two-pass stage proof;
   network-infra for production route truth; Jason for production cutover.
-- Risks: reviewed local Phase 4 source being mistaken for main; activating the
+- Risks: validated local Phase 4 source being mistaken for main; activating the
   former per-object layout beyond its budget; parity evidence preceding 143+2
   materialization; legacy anonymous Grafana being reused instead of the
   isolated reporting tier.
@@ -416,7 +416,7 @@ focused VPD/dehum policy lane (#383).
 - Sprint: S7 `irrigation-lab-testing-hardening`
 - Related files/issues/PRs: #14, #31, #303, #322, #335, #340,
   `firmware/test/`, `scripts/firmware-replay-diff.sh`.
-- Dependencies: L2/L3 deterministic model, CI capacity, Jason for OTA evidence.
+- Dependencies: L2/L3 deterministic model, CI capacity, firmware preflight evidence.
 - Risks: current replay can miss band-curve changes unless
   `make firmware-replay-band` is used.
 - Evidence: `AGENTS.md` verification order, Makefile firmware targets, and
@@ -428,8 +428,8 @@ focused VPD/dehum policy lane (#383).
 - Board cards are EPICS. Child issues/tasks may exist, but planning happens at
   the lane-epic level.
 - If work depends on another lane or external owner, record the dependency in
-  `COORDINATION_REQUESTS.md` and the issue `## Project Tracking` block.
+  GitHub issues and the issue `## Project Tracking` block.
 - Historical work must be `Done` only when linked to closed issues, merged PRs,
   commits, or durable runbook evidence.
 - Firmware OTA, prod sync, device VLAN, destructive prod DB, credential
-  rotation, and public DNS/edge actions require Jason.
+  rotation, and public DNS/edge actions require exact-target preflight and rollback.

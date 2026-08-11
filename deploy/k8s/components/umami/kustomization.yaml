@@ -10,7 +10,7 @@ kind: Component
 # edit to overlays/prod as a digest-only promotion, so the overlay `components:`
 # wiring is a separate, gated follow-on (same posture as db/restore-job.yaml).
 # This PR delivers the reviewable target shape + the state-migration runbook; the
-# prod wiring lands at the human-gated cutover. See
+# prod wiring lands at the safety-checked cutover. See
 # docs/runbooks/iris-state-preservation.md §10.
 #
 # Upstream postgres + umami images (NOT transformer-rewritten — not verdify-*

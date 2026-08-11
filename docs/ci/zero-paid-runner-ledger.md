@@ -6,8 +6,8 @@ open residual risk — see §6 and §7).
 Probed 2026-07-28. Every claim below is backed by a literal probe recorded in
 §10; re-run those to re-verify.
 
-GitHub remains the source, issue, PR, review and check authority. No change in
-this ledger alters that.
+GitHub remains the source, issue, PR, and status-reporting surface. CI remains
+technical validation rather than a merge prerequisite.
 
 ---
 
@@ -16,9 +16,9 @@ this ledger alters that.
 **There is nothing to migrate.** GitHub Actions execution was removed from this
 repo on 2026-07-11 (commit `6c7abe1`, operator directive: no external CI
 dependency). `.github/workflows/` does not exist on `main` — only
-`.github/CODEOWNERS`. The pre-merge gate is `scripts/ci-local.sh`, executed
-in-cluster by the `verdify-platform-ci` Argo Workflow (ns `agent-fleet-ci`),
-which reports the required check via the commit-status API.
+`.github/CODEOWNERS`. The validation entry point is `scripts/ci-local.sh`,
+executed in-cluster by the `verdify-platform-ci` Argo Workflow (ns
+`agent-fleet-ci`), which reports its result through the commit-status API.
 
 Two premises in the original goal do not hold for this repo, and they change
 the work materially:
@@ -56,7 +56,7 @@ stale branches (§7) and their replacement must be traceable.
 | `cnpg-image.yml` | `ubuntu-latest` | **RETIRE** | same |
 | `k8s-manifests.yml` | `ubuntu-latest` | **RETIRE** | `kustomize build overlays/prod` step in `ci-local.sh` |
 | `promote-diff-guard.yml` | `ubuntu-latest` ×2 | **RETIRE** | digest-pin review in `docs/runbooks/prod-promotion.md` |
-| `prod-promote.yml` | `ubuntu-latest` | **RETIRE** | gated `argocd app sync verdify-prod-dark` (human gate) |
+| `prod-promote.yml` | `ubuntu-latest` | **RETIRE** | gated `argocd app sync verdify-prod-dark` (direct-execution safeguard) |
 | `lab-content-pipeline.yml` | `ubuntu-latest` ×2 | **RETIRE** | in-cluster lab publisher |
 
 **No workflow carries a `MIGRATE_ARC`, `BLOCKED_PLATFORM` or
@@ -69,7 +69,7 @@ Assessed against the repo as it stands, not against a hypothetical migration.
 | Control | State | Evidence |
 | --- | --- | --- |
 | No production / Kubernetes / package-write secrets in validation | **PASS** | `actions/secrets` `total_count: 0`; `actions/variables` `total_count: 0` |
-| Build / deployment / release identities separate | **PASS** | Build pushes with `zot-origin-verdifyconsultancy-ci-dockerconfig` (in-cluster, never readable by this cell); workloads pull with the read-only `zot-origin-cluster-pull`; prod sync is a human-gated ArgoCD action |
+| Build / deployment / release identities separate | **PASS** | Build pushes with `zot-origin-verdifyconsultancy-ci-dockerconfig` (in-cluster, never readable by this cell); workloads pull with the read-only `zot-origin-cluster-pull`; prod sync is a safety-checked ArgoCD action |
 | No untrusted PR code on privileged runners | **PASS** | No repo-owned workflow executes on any runner |
 | Minimal explicit `permissions:` | **N/A today**, enforced on reintroduction | `tests/test_no_hosted_runner_workflows.py` |
 | Third-party Actions SHA-pinned | **N/A today**, enforced on reintroduction | same |
@@ -79,24 +79,27 @@ Repo Actions policy is currently `enabled: true`, `allowed_actions: "all"`,
 `sha_pinning_required: false`. That is permissive, and it is what makes §7
 reachable.
 
-## 4. Required check — still effective
+## 4. CI status — informational
 
-`main` branch protection requires exactly one context:
+`main` branch protection retains linear-history and destructive-push safeguards,
+but does not require a CI status or pull-request review:
 
 ```
-Verdify Platform / Argo PR CI   (app_id: null, strict: true)
+required_status_checks: null
+required_pull_request_reviews: null
 ```
 
-`strict: true` (branch must be current), `required_linear_history: true`,
-`allow_force_pushes: false`, `allow_deletions: false`. **0** environments and
-**0** rulesets exist, so there are no environment approvals to preserve.
+`required_linear_history: true`, `allow_force_pushes: false`, and
+`allow_deletions: false` remain in force. **0** environments and **0** rulesets
+exist. `Verdify Platform / Argo PR CI` continues to report validation results
+without blocking direct delivery.
 
 `app_id: null` means the context is posted through the commit-status API by the
 in-cluster Argo Events sensor authenticating as `jvallery`, **not** by a GitHub
 App with a pinned identity. Any actor holding write on this repo can post a
 green `Verdify Platform / Argo PR CI` status. This is a **pre-existing property
-of the 2026-07-11 design, not introduced here**, but it is the weakest link in
-the check chain and is called out in §7.
+of the 2026-07-11 design, not introduced here**, and is relevant only to the
+trustworthiness of the reported status.
 
 ## 5. Measurements — before / after
 
@@ -251,7 +254,7 @@ not a design claim.
 | **Exact head SHA** | Status attaches to the head SHA itself, not a synthetic merge commit |
 | **Observed runner labels** | `actions/runs?head_sha=…` → `total_count: 0` on **every** commit pushed. Zero GitHub-hosted compute; all execution in ns `agent-fleet-ci` |
 | **Runner pod cleanup** | `podGC: {strategy: OnPodSuccess}`, `ttlStrategy: 86400s` after completion / `172800s` after failure. No `verdify-platform-pr-ci` pods remain after any run |
-| **Protected environment behavior** | N/A — **0** environments exist (§4), so there are no approvals to exercise |
+| **Protected environment behavior** | N/A — **0** environments exist (§4) |
 | **Superseded-job cancellation** | **FAILS — see below** |
 | **Timeout** | Observed in the wild: the 3606 s step-budget expiry on PR #553 terminated and reported non-green (no false green, no lost status) |
 
@@ -339,7 +342,7 @@ and supply-chain** risk rather than a billing one. **It becomes a paid-runner
 regression the moment this repo is made private.**
 
 Mitigations, in order of strength — the first two are **outside this repo's
-autonomy** and need Jason's gate (repo settings / ref deletion):
+autonomy** and need runtime safeguards (repo settings / ref deletion):
 
 1. **Repo setting (strongest, gated):** set Actions permissions to
    `disabled`, or `allowed_actions: selected` with an empty allowlist. Kills
@@ -381,15 +384,15 @@ The rule is: **rollback must never land on `ubuntu-latest`.** The retired
 workflows in §2.2 are *not* a valid rollback target — they are hosted-runner
 definitions and restoring them re-introduces exactly what was removed.
 
-Approved rollback order:
+Validated rollback order:
 
-1. **Re-run the gate out-of-band (no GitHub compute).** `scripts/ci-local.sh`
+1. **Re-run the validation out-of-band (no GitHub compute).** `scripts/ci-local.sh`
    is host-portable by design — any kubectl host or agent pod:
    ```bash
-   make ci                       # full gate
-   CI_BASE_REF=origin/main make ci   # adds replay-diff + fire-and-forget gates
+   make ci                       # full validation
+   CI_BASE_REF=origin/main make ci   # adds replay-diff + fire-and-forget checks
    ```
-   Post the resulting status manually if the required check must be satisfied.
+   Post the resulting status when GitHub visibility is useful.
 2. **Re-submit the in-cluster workflow directly**, bypassing the webhook.
    **Proven executable — see §5.2** (`verdify-platform-rollback-proof-trg8g`):
    ```bash
@@ -420,12 +423,12 @@ Approved rollback order:
 execution and consume zero GitHub-hosted compute — verified, not asserted.
 `ubuntu-latest` is never a rollback destination.
 
-Explicitly **not** an approved path: restoring any workflow from §2.2. Those
+Explicitly **not** an validated path: restoring any workflow from §2.2. Those
 are hosted-runner definitions; reinstating one re-introduces exactly what was
 removed, and `tests/test_no_hosted_runner_workflows.py` will fail the gate if
 one lands. If the cluster is ever unavailable *and* a merge cannot wait, step 1
 is the fallback — it needs nothing but a shell. A hosted workflow bearing a
-self-hosted/ARC label would require Jason's sign-off, a matching ledger update,
+self-hosted/ARC label would require recorded validation, a matching ledger update,
 and an ARC profile that **does not exist for this repo today** (§9), so that
 route is **BLOCKED_PLATFORM** and is not needed: step 1 covers the case.
 
@@ -437,7 +440,7 @@ Stated plainly rather than assumed:
   `autoscalingrunnersets`, `ephemeralrunners`, `autoscalinglisteners` in
   `actions.github.com/v1alpha1`), but this cell's RBAC denies `list` on
   `autoscalingrunnersets` in every reachable namespace, and
-  `orgs/.../actions/runners` returns 403 (needs `admin:org`). **No approved ARC
+  `orgs/.../actions/runners` returns 403 (needs `admin:org`). **No validated ARC
   profile is registered to this repo** — `repos/.../actions/runners` returns
   `total_count: 0` — so profile selection ("unprivileged validation",
   "browser/E2E", "trusted container build", …) could not be exercised and is

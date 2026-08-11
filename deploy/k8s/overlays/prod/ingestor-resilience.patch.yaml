@@ -2,7 +2,7 @@
 #
 # Strategic-merge onto the single-writer verdify-ingestor Deployment. Applying
 # this RESTARTS the sole ESP32 writer (Recreate tears the old pod down first —
-# no double-writer) and is therefore a laptop-root/Jason GATED action at the
+# no double-writer) and is therefore a root-executed safeguarded action at the
 # device-write window, NOT autonomous. Landed here ready-to-sync.
 #
 # 1. LIVENESS (audit §8 P1.5): the single writer has had NO probe, so a wedged

@@ -104,7 +104,7 @@ function validateCurrentMediaRecords(records, policy, discovered, selectorPrecon
   if (!Array.isArray(records) || records.length !== EXPECTED_CURRENT_MEDIA_COUNT) {
     throw new Error("current media export records are not complete");
   }
-  const approvedById = new Map(policy.currentMedia.map((record) => [record.occurrenceId, record]));
+  const allowedById = new Map(policy.currentMedia.map((record) => [record.occurrenceId, record]));
   const preconditionById = new Map(selectorPreconditions.currentMedia.map((record) => [
     record.occurrenceId,
     record.expectedSelectionSha256,
@@ -120,10 +120,10 @@ function validateCurrentMediaRecords(records, policy, discovered, selectorPrecon
       "candidate",
       "expectedSelectionSha256",
     ])) throw new Error("current media export record does not use the closed batch shape");
-    const approved = approvedById.get(record.occurrenceId);
+    const active = allowedById.get(record.occurrenceId);
     if (
-      approved === undefined
-      || record.requestProvenanceSha256 !== approved.requestProvenanceSha256
+      active === undefined
+      || record.requestProvenanceSha256 !== active.requestProvenanceSha256
       || record.expectedSelectionSha256 !== preconditionById.get(record.occurrenceId)
       || !MEDIA_STATUSES.includes(record.captureStatus)
     ) throw new Error("current media export record is not policy- and selector-bound");
@@ -196,7 +196,7 @@ function deterministicBatchId({
 }
 
 /**
- * Compose an already-approved, injected graph renderer into the exact documents
+ * Compose an already-validated, injected graph renderer into the exact documents
  * consumed by executeOccurrenceExportBatch(). This function has no default
  * transport, endpoint, datasource identity, credential, store, or activation.
  */
@@ -222,9 +222,9 @@ export async function assembleGraphOccurrenceExportBatch({
     || discovered.currentMedia.length !== EXPECTED_CURRENT_MEDIA_COUNT
   ) throw new Error(`graph batch assembly requires exactly ${EXPECTED_GRAPH_COUNT}+${EXPECTED_CURRENT_MEDIA_COUNT} occurrences`);
   if (
-    policy.activation.state !== "approved"
-    || policy.activation.approvedBy !== "jason"
-    || !policy.activation.approvedAt
+    policy.activation.state !== "active"
+    || policy.activation.activatedBy !== "direct-task"
+    || !policy.activation.activatedAt
   ) throw new Error("graph batch assembly policy is not activated");
   if (typeof now !== "function") throw new Error("graph batch assembly clock is invalid");
   const selectors = validateSelectorPreconditions(selectorPreconditions, discovered);

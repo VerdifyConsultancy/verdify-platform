@@ -15,26 +15,32 @@ ESP32 controller code, build pipeline, replay validation, OTA, sensor health.
 
 - The DB tables firmware writes to (that's `ingestor` — ESP32 → ingestor → DB)
 - The planner tunables firmware applies (that's `genai` — planner emits, firmware enforces)
-- The drift guards that assert firmware ↔ schema alignment (shared `verdify_schemas/` — route to coordinator)
+- The drift guards that assert firmware ↔ schema alignment (shared
+  `verdify_schemas/`; update both sides together when required)
 
 ## Handshakes
 
 | With agent | When | Protocol |
 |---|---|---|
-| `ingestor` | Adding a new sensor or override flag that needs a DB column | Schema + migration via coordinator first, then firmware emits, then ingestor reads |
+| `ingestor` | Adding a new sensor or override flag that needs a DB column | Land schema + migration first, then firmware emits, then ingestor reads |
 | `genai` | Changing which tunables the planner controls | Planner agent owns the tunables list (`verdify_schemas/tunables.py`); firmware reads it — don't add tunables unilaterally |
-| `coordinator` | Any change to `ALL_TUNABLES`, `EquipmentId`, `override_events` shape | Coordinator merges the schema change; firmware PR lands after |
+| shared schemas | Any change to `ALL_TUNABLES`, `EquipmentId`, or `override_events` | Update and validate the schema and firmware consumers in one compatible sequence |
 
-## Gates
+## Required checks
 
-**Replay is a permanent gate for firmware changes.** Any structural change to `greenhouse_logic.h` must pass `firmware/test/test_greenhouse_logic.cpp` *and* replay against 8 months of real telemetry. Use `make test-firmware`, `make firmware-invariants`, and `make firmware-replay-worktree` while the candidate is still uncommitted; use `make firmware-replay OLD=<ref> NEW=<ref>` once both sides are committed refs. See `CLAUDE.md` at repo root for the deploy protocol and OTA freeze rules.
+Any structural change to `greenhouse_logic.h` must pass
+`firmware/test/test_greenhouse_logic.cpp` and replay against 8 months of real
+telemetry. Use `make test-firmware`, `make firmware-invariants`, and
+`make firmware-replay-worktree` while the candidate is still uncommitted; use
+`make firmware-replay OLD=<ref> NEW=<ref>` once both sides are committed refs.
+See `CLAUDE.md` for the deploy protocol and OTA safety rules.
 
-## Ask coordinator before
+## Cross-component checks
 
-- Adding an override flag that isn't already in `firmware/lib/greenhouse_types.h`
-- Changing the band-first state machine's transition logic (physics invariant territory)
-- Bumping firmware version in a way that requires ingestor / planner code changes
-- Touching `controls.yaml` in ways that rename or remove entities (entity_map.py depends on these)
+- Add new override flags to `firmware/lib/greenhouse_types.h` and every consumer.
+- Prove state-machine transition changes with physics invariants and replay.
+- Update ingestor and planner consumers with firmware-version contract changes.
+- Update `entity_map.py` with any `controls.yaml` entity rename or removal.
 
 ## Recent arc
 

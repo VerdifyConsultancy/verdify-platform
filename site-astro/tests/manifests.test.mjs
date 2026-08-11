@@ -438,7 +438,7 @@ async function createReleaseBuild(root, title) {
     schemaVersion: 1,
     siteOrigin: "https://lab-stage.verdify.ai",
     stageGlobalNoindex: true,
-    approvalEligible: false,
+    activationEligible: false,
     snapshotManifestDigest: `sha256:${"1".repeat(64)}`,
     sanitization: {
       fixtureOnly: false,

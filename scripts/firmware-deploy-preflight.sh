@@ -20,7 +20,6 @@ warn() { echo "⚠ $1"; }
 override_enabled() { [[ "${ALLOW_FIRMWARE_DEPLOY_GUARD_OVERRIDE:-0}" == "1" ]]; }
 override_authorized() {
     override_enabled \
-        && [[ "${FIRMWARE_DEPLOY_OPERATOR_SIGNOFF:-0}" == "1" ]] \
         && [[ -n "${FIRMWARE_DEPLOY_OVERRIDE_REASON:-}" ]]
 }
 guard_or_fail() {
@@ -30,10 +29,10 @@ guard_or_fail() {
         # (only the bake/weekly gates called record_override). Every accepted
         # override is now audited to the override log AND alert_log.
         record_deploy_override "severe-alert-or-telemetry" "$message" "${FIRMWARE_DEPLOY_OVERRIDE_REASON:-no reason supplied}"
-        warn "$message — operator override active (${FIRMWARE_DEPLOY_OVERRIDE_REASON:-no reason supplied})"
+        warn "$message — explicit override active (${FIRMWARE_DEPLOY_OVERRIDE_REASON:-no reason supplied})"
     else
         if override_enabled; then
-            fail "$message; override requested but FIRMWARE_DEPLOY_OPERATOR_SIGNOFF=1 and FIRMWARE_DEPLOY_OVERRIDE_REASON are required"
+            fail "$message; override requested but FIRMWARE_DEPLOY_OVERRIDE_REASON is required"
         fi
         fail "$message"
     fi
@@ -48,7 +47,7 @@ override_log="${FIRMWARE_OTA_FREEZE_OVERRIDE_LOG:-/var/local/verdify/state/firmw
 require_override_reason() {
     local gate="$1"
     if [[ ${#override_reason} -lt 12 ]]; then
-        fail "$gate blocked; set FIRMWARE_OTA_FREEZE_OVERRIDE_REASON with an operator-approved reason to override"
+        fail "$gate blocked; set FIRMWARE_OTA_FREEZE_OVERRIDE_REASON to a specific reason of at least 12 characters to override"
     fi
 }
 

@@ -6,7 +6,7 @@
 -- §5.3 (the read-only / no-actuation safety model, layer L2). The MVP and all
 -- comparison streams write to these two tables; nothing else in the repo owns
 -- them. Serialized shared-territory migration (db/migrations) — coordinator
--- reviewed.
+-- validated.
 --
 -- Adds:
 --   1. twin_decisions          — hypertable, 1:1 with replay_emit's TSV row

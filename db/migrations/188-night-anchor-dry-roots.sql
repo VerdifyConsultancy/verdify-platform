@@ -17,7 +17,7 @@
 -- +3 g/m3 indoor moisture source. The flower-initiation deep-DIF goal is
 -- deferred to fall (natural cooling + window closure, #412). See GitHub #411
 -- (2026-07-03 decision comment) and
--- .agent-workflow/sprints/s8-vanda-night-dehum/gates/g-411-night-temp-priority.yaml.
+-- docs/adr/0009-solar-night-realized-dryout.md.
 --
 -- Context: PR #409 was never merged — its Item-4 anchor edit reached prod
 -- crop_band_anchors as an out-of-band UPDATE (verified live 2026-07-03:

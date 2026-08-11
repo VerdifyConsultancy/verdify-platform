@@ -5,8 +5,8 @@
 **Covers:** #250 (orchid time-of-day), #251 (VPD+temp alignment), #252 (dashboard), #253 (season resolver).
 **Author:** laptop-root. **Date:** 2026-06-07. **No firmware flashed; no live setpoint changed.**
 
-> **Hard gate:** every `crop_target_profiles` change here is GATED (laptop-root + Jason),
-> snapshot-first, applied to **dev DB first**. See `docs/runbooks/verdify-band-live-apply-gated.md`.
+> **Hard gate:** every `crop_target_profiles` change here is GATED (root executor),
+> snapshot-first, applied to **dev DB first**. See `docs/runbooks/verdify-band-live-apply-safe.md`.
 
 ---
 
@@ -167,7 +167,7 @@ mutates nothing. This converts the latent #253 risk into a CI/migration tripwire
 `grafana/provisioning/dashboards/json/band-tuning-diurnal.json` (from PR #258) deployed
 additively as `verdify-grafana-dashboards-2` ConfigMap (bucket2) on `live/platform-main` —
 no edit to the generated cm-0/cm-1, no collision. All 6 panels' SQL verified against live prod.
-See `docs/runbooks/verdify-band-live-apply-gated.md` §Dashboard.
+See `docs/runbooks/verdify-band-live-apply-safe.md` §Dashboard.
 
 ---
 

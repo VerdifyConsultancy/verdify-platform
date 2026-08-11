@@ -79,10 +79,10 @@ context:
 #   - ingestor/planner_routing.py (classify_severity + pick_instance + sla_for)
 #   - ingestor/alert_monitor rule 7 (SLA-breach detection)
 # Contract spec: docs/iris-planner-contract.md §2.F (SLA) + §2.G (routing).
-# Repo source selects GPT-5.6 Sol xhigh for Hermes. Live activation is a
-# separate gated step; the instance field is an audit label only.
+# Repo source selects GPT-5.6 Sol xhigh for Hermes. Live activation follows the
+# declarative deployment and technical validation; the instance field is an audit label only.
 planner_routing:
-  # After approved activation, required full-plan cycles use the same
+  # After validated activation, required full-plan cycles use the same
   # Hermes/GPT-5.6 Sol profile as other triggers. This value is an audit label
   # carried into plan_delivery_log.
   required_full_plan_instance: opus

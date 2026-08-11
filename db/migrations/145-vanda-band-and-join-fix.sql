@@ -27,7 +27,7 @@
 -- fn_band_setpoints / fn_house_vpd_control_band / fn_zone_vpd_targets), so the served
 -- band change ships DB-only. RESTARTS (CLAUDE.md rule 7): bounce setpoint-server
 -- (dispatcher) + verdify-mcp. No firmware OTA. Attach make firmware-replay +
--- coordinator THRESHOLD_PCT sign-off (rule 8) for the setpoint-policy change.
+-- recorded THRESHOLD_PCT validation evidence for the setpoint-policy change.
 
 -- =====================================================================
 -- D0: fn_current_season() IMMUTABLE -> STABLE  (must be FIRST)

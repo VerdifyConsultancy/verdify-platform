@@ -25,8 +25,8 @@ import {
 } from "../scripts/lib/occurrence-release.mjs";
 import { validatePngFile } from "../scripts/lib/png-validation.mjs";
 
-const REVIEWED_AT = "2026-07-13T11:59:00Z";
-const APPROVED_AT = "2026-07-13T12:00:00Z";
+const VALIDATED_AT = "2026-07-13T11:59:00Z";
+const ALLOWED_AT = "2026-07-13T12:00:00Z";
 const EXPORTED_AT = "2026-07-13T12:10:00Z";
 const PROCESSING_AT = "2026-07-13T12:10:30Z";
 
@@ -138,7 +138,7 @@ async function fixture(context) {
     manifest,
     manifestSha256,
     policyVersion: "caller-offline-policy-v1",
-    approvedAt: REVIEWED_AT,
+    activatedAt: VALIDATED_AT,
     cameraSources: currentMedia.map((occurrence, index) => ({
       occurrenceId: occurrence.occurrenceId,
       url: cameraUrls[index],
@@ -147,9 +147,9 @@ async function fixture(context) {
   const policy = structuredClone(blocked);
   policy.activation = {
     ...policy.activation,
-    state: "approved",
-    approvedBy: "jason",
-    approvedAt: APPROVED_AT,
+    state: "active",
+    activatedBy: "direct-task",
+    activatedAt: ALLOWED_AT,
   };
   const policySha256 = occurrenceExportPolicySha256(policy);
   const image = png();
@@ -175,10 +175,10 @@ async function fixture(context) {
       candidate: await candidate("graphs", occurrence.occurrenceId),
     });
   }
-  const approvedMedia = new Map(policy.currentMedia.map((record) => [record.occurrenceId, record]));
+  const activeMedia = new Map(policy.currentMedia.map((record) => [record.occurrenceId, record]));
   const mediaRecords = [];
   for (const occurrence of currentMedia) {
-    const requestProvenanceSha256 = approvedMedia.get(occurrence.occurrenceId).requestProvenanceSha256;
+    const requestProvenanceSha256 = activeMedia.get(occurrence.occurrenceId).requestProvenanceSha256;
     mediaRecords.push({
       occurrenceId: occurrence.occurrenceId,
       captureStatus: "success",
@@ -202,7 +202,7 @@ async function fixture(context) {
       credentialClass: "reporting-read-only",
       direction: "one-way-read-only",
       sourceWatermark: "wm_caller_offline_0001",
-      sourceWatermarkAt: APPROVED_AT,
+      sourceWatermarkAt: ALLOWED_AT,
     },
     exportedAt: EXPORTED_AT,
     expectedSelectionSha256: null,
@@ -530,7 +530,7 @@ async function fakeOperations({
         eventType: "reconciliation",
         payloadSha256: "f".repeat(64),
         sourceWatermark: "wm_competing_aggregate_0001",
-        occurredAt: APPROVED_AT,
+        occurredAt: ALLOWED_AT,
       });
       const manifest = {
         contract: "verdify.lab-specialist-occurrence-release",
@@ -851,7 +851,7 @@ test("a pre-activation batch is rejected before any injected store operation", a
       ...inputFrom(value, fake.operations),
       batch: early,
       graphResult: graphResultFor(early),
-      processingAt: APPROVED_AT,
+      processingAt: ALLOWED_AT,
     }),
     /predates policy activation/,
   );

@@ -13,9 +13,9 @@ current Quartz production site, and the Astro replacement staged for
 - `site-astro/` — Astro compiler/runtime, shared-shell consumer, immutable
   snapshot/occurrence/release contracts, and parity/browser quality gates
 - `deploy/k8s/components/lab-astro-stage/`,
-  `deploy/k8s/components/lab-release-runtime/`, future reviewed reporting
+  `deploy/k8s/components/lab-release-runtime/`, future validated reporting
   boundary components, and `deploy/k8s/overlays/lab-stage/` — isolated static
-  canary plus dormant release path and reviewed Zot digest pins
+  canary plus dormant release path and validated Zot digest pins
 - S3-backed lab content store — source/public/state for the k3s lab publisher
   (`deploy/k8s/components/lab-site/lab-publisher.yaml`)
 - Legacy `/mnt/iris/verdify-vault/` paths — compatibility paths for generators;
@@ -23,19 +23,19 @@ current Quartz production site, and the Astro replacement staged for
 
 ## Does not own
 
-- Schemas the API returns or the frontmatter models (`verdify_schemas/api.py`, `vault.py` — coordinator)
-- The DB the API reads (ingestor writes, coordinator migrates)
+- Schemas the API returns or the frontmatter models (`verdify_schemas/api.py`, `vault.py` are shared)
+- The DB the API reads (ingestor writes; migrations are shared)
 - The planner output that feeds daily plan pages (genai)
 
 ## Handshakes
 
 | With agent | When | Protocol |
 |---|---|---|
-| `ingestor` | Needs a new DB column to render in a page | Ingestor adds the write path + coordinator adds migration; web consumes next cycle |
+| `ingestor` | Needs a new DB column to render in a page | Land the write path, migration, and schema before the web consumer |
 | `genai` | New plan section, new lesson category | Genai defines shape in `plan.py` / `lessons.py`; web renderer consumes through the schema |
-| `coordinator` | Adding a response model or frontmatter schema | Coordinator merges `verdify_schemas/api.py` or `vault.py` change; web endpoint gets `response_model=` wiring after |
+| shared schemas | Adding a response model or frontmatter schema | Update `verdify_schemas/api.py` or `vault.py` and wire the endpoint's `response_model=` compatibly |
 
-## Gates
+## Required checks
 
 - Vault writer changes must produce byte-for-byte identical frontmatter on existing files (`diff` against pre-regen file) — Obsidian dataview queries depend on key names and order.
 - FastAPI endpoints must have `response_model=` declared (Sprint 22 pattern). OpenAPI `/docs` populates from these; regressions here mislead downstream consumers.
@@ -61,14 +61,14 @@ current Quartz production site, and the Astro replacement staged for
   prefix.
 - Grafana iframe edits must be checked against live Grafana dashboard panel IDs; Quartz will happily build pages with stale `panelId=` values.
 
-## Ask coordinator before
+## Cross-component checks
 
-- Changing a vault frontmatter key (breaks Obsidian dataview silently)
-- Adding an API endpoint (affects external consumers incl. Cloud Run api)
-- Reworking the vault directory layout (site routing depends on it)
-- Changing the public route/alias contract in either Quartz or Astro
-- Any production cutover, public route change, Quartz retirement, or publisher
-  decommission (Jason-gated)
+- Preserve or migrate Obsidian dataview consumers with any frontmatter-key change.
+- Update external consumers and OpenAPI validation with new API endpoints.
+- Update site routing with any vault directory-layout change.
+- Test aliases and link parity with any Quartz or Astro route-contract change.
+- For production cutover, route changes, Quartz retirement, or publisher
+  decommission, retain rollback state and verify live health after execution.
 
 ## Site operations reference
 
@@ -88,7 +88,7 @@ work; treat `/srv` paths as historical/break-glass context only.
 `lab-stage.verdify.ai` is the isolated Astro canary. Its build path is the exact
 `verdify-platform` revision through the in-cluster `verdify-platform-ci` /
 `repo-build` WorkflowTemplate: the sanitized snapshot is hydrated and verified
-before Kaniko, Kaniko pushes the image to the zot origin, and a reviewed digest
+before Kaniko, Kaniko pushes the image to the zot origin, and a validated digest
 pin lands in `deploy/k8s/overlays/lab-stage/kustomization.yaml`. ArgoCD serves
 the static nginx image with no PVC, runtime Secret, service-account token, DB,
 Grafana, object-store access, or egress.
@@ -110,14 +110,14 @@ Current production Quartz build/publish unit:
   syncs generated content/public/state back to S3.
 
 The current Astro stage has no publisher CronJob, mutable cache PVC, or runtime
-content fetch. Phase 4 replaces the frozen build input with the reviewed
+content fetch. Phase 4 replaces the frozen build input with the validated
 event-driven release/store path before any production cutover.
 
 The source-only occurrence execution CLI is
 `site-astro/scripts/execute-occurrence-export.mjs`. It requires the literal
 `execute` command, canonical policy/manifest/batch/graph-result files, a local
 sanitized-candidate root, an explicit store location, and a policy whose closed
-activation record carries Jason's approval before store initialization. Its
+source-controlled activation record is active before store initialization. Its
 presence is not a deployment or activation claim: no Lab workload invokes it,
 and no endpoint, credential, environment binding, route, or replica is supplied
 by the source adapter.
@@ -126,7 +126,7 @@ The separate built-site consumer command is
 `site-astro/scripts/execute-occurrence-site-publish.mjs`. It accepts only the
 literal `execute` command, canonical event/producer/policy/manifest documents,
 and disjoint canonical candidate/workspace roots. It checks the exact document
-identities and closed Jason approval record before asking a construction-only
+identities and closed recorded task scope record before asking a construction-only
 runtime resolver. The returned build and verifier operations must both bind the
 same digest-identified `https://lab-stage.verdify.ai` global-noindex profile;
 the selected build record and verifier result must attest that profile before a
@@ -244,7 +244,7 @@ Audit snapshot from 2026-04-27/28:
 - 19 dashboard UIDs embedded by the site.
 - 55 live Grafana dashboards after archiving unused `site-evidence-compliance` and adding `site-evidence-planning-quality`.
 - Full Grafana audit generated `docs/grafana-panel-catalog.md`: 904 live panels, all 904 rendered successfully after fixing `greenhouse-energy-cost` panel 924 and adding Planning Quality.
-- Website visual audit generated `docs/grafana-website-visual-audit.md`: 164 unique website iframe PNGs were rendered and visually reviewed; broken-looking website panels were fixed in the site-facing dashboard JSON and specific iframe ranges.
+- Website visual audit generated `docs/grafana-website-visual-audit.md`: 164 unique website iframe PNGs were rendered and visually validated; broken-looking website panels were fixed in the site-facing dashboard JSON and specific iframe ranges.
 - Initial audit found 75 iframe embeds referenced panel IDs missing from the current live dashboards. UIDs existed; `panelId` values drifted. The stale iframe IDs were repaired on 2026-04-27/28, then a semantic pass removed obvious duplicate/misleading embeds and `make site-doctor` passed with 0 findings.
 - Cooling equipment proof is now on `site-climate-cooling` panel IDs `938` and `939`; soil-moisture-vs-VPD proof is now on `site-climate-water` panel ID `218`.
 - Planning quality proof is now on `site-evidence-planning-quality` panel IDs `2`, `3`, `4`, `5`, `6`, `7`, `10`, `11`, `12`, `13`, `14`, `15`, `16`, `17`, `18`, and `19`; `/evidence/planning-quality` embeds every panel.

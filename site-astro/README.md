@@ -7,7 +7,7 @@ sanitized snapshot, verifies its closed `attestation.json` and
 Grafana, S3, or HTTP access, and emits a noindex stage tree.
 
 The implementation deliberately uses custom Astro layouts plus Pagefind. No
-Starlight claim is made: there is not yet an approved immutable corpus on which
+Starlight claim is made: there is not yet an active immutable corpus on which
 Starlight can demonstrate the required Quartz/Obsidian/raw-HTML route contract.
 
 ## Local build
@@ -92,46 +92,47 @@ SITE_ORIGIN=https://lab-stage.verdify.ai \
 npm run build
 ```
 
-The current frozen snapshot is a legacy content-hash capture, not an approved
+The current frozen snapshot is a legacy content-hash capture, not an active
 immutable snapshot. It carries the `verdify.lab-stage-sanitized-snapshot`
-contract, whose verifier hard-rejects `approvalEligible !== false`, so
+contract, whose verifier hard-rejects `activationEligible !== false`, so
 `static-build.json` and `route-manifest.json` report
-`localEvidenceStatus: provisional-only` and `approvalEligible: false` for it and
+`localEvidenceStatus: provisional-only` and `activationEligible: false` for it and
 always will. It cannot be relabelled: changing a byte of its attestation changes
 the attestation digest its own release descriptor pins.
 
-## Approved immutable production snapshots
+## Active immutable production snapshots
 
-`verify-production-output.mjs` requires `approvalEligible === true` and a
-non-provisional evidence status. `scripts/lib/production-approval.mjs` is the
+`verify-production-output.mjs` requires `activationEligible === true` and a
+non-provisional evidence status. `scripts/lib/production-activation.mjs` is the
 only producer of that verdict, and it is deliberately narrow:
 
-- A snapshot becomes approval-eligible **only** by matching an entry in the
-  frozen `PRODUCTION_APPROVAL_REGISTRY` constant. That registry is compiled into
+- A snapshot becomes activation-eligible **only** by matching an entry in the
+  frozen `PRODUCTION_ACTIVATION_REGISTRY` constant. That registry is compiled into
   the build. It is never read from the environment, a CLI flag, a build
   argument, the snapshot payload, or an object store. Adding an entry is a
-  reviewed source change on `main`; that review **is** the approval gate.
-- The registry ships **empty**. Nothing is approved by default.
-- An approved snapshot carries a second closed contract:
+  explicit source change on `main`; the immutable record is the activation
+  mechanism.
+- The registry ships **empty**. Nothing is active by default.
+- An active snapshot carries a second closed contract:
   `verdify.lab-production-sanitized-snapshot` in `attestation.json` plus a
-  canonical `approval.json` (`verdify.lab-production-snapshot-approval` v1).
-  The approval's SHA-256 must equal the registered `approvalSha256`, every field
+  canonical `activation.json` (`verdify.lab-production-snapshot-activation` v1).
+  The activation's SHA-256 must equal the registered `activationSha256`, every field
   must equal the registry entry, and the sanitized content-manifest digest,
   source-capture manifest digest, file counts, guard-report digest, sanitization
   policy version, and the snapshot's own attestation digest must all be
-  reproduced from the snapshot on disk. An approval cannot be replayed onto a
+  reproduced from the snapshot on disk. An activation cannot be replayed onto a
   different capture, and one changed content byte invalidates it.
 - The record names its provenance in the open: the authoritative source URI and
-  capture instant, the approver (from a fixed authority list), a permalink to
-  the recorded human decision in this repository, the approval instant, the
+  capture instant, the activationActor (from a fixed authority list), a permalink to
+  the source-controlled activation record, the activation instant, the
   immutable release tag, and the release asset digest.
 - The production release descriptor
-  (`verdify.lab-production-snapshot-release` v1) adds `approvalSha256` and
-  `approvalId` and carries **no** hard-coded content pins — every pin must match
-  the registered approval, so the bounded hydrator refuses to download an
-  unapproved production asset at all.
+  (`verdify.lab-production-snapshot-release` v1) adds `activationSha256` and
+  `activationId` and carries **no** hard-coded content pins — every pin must match
+  the registered activation, so the bounded hydrator refuses to download an
+  unactive production asset at all.
 - Fixtures are excluded structurally: the fixture branch is mutually exclusive
-  and the fixture payload layout forbids `approval.json`.
+  and the fixture payload layout forbids `activation.json`.
 
 `verify-production-output.mjs` and the stage verifiers are unchanged by this
 contract.
@@ -143,7 +144,7 @@ Grafana and current-camera occurrence. Grafana records preserve the normalized
 dashboard UID, panel, query multiplicity, variables, time range, semantic role,
 cadence, and an opaque occurrence ID. Camera records expose only an opaque
 occurrence ID, semantic role, stable same-origin target, cadence, and opaque
-occurrence, exact-policy, and approved-request digests. The upstream camera URL is
+occurrence, exact-policy, and active-request digests. The upstream camera URL is
 never copied into the public manifest.
 
 `scripts/manage-occurrence-release.mjs` implements the offline specialist-release
@@ -179,7 +180,7 @@ ratified cadence-based stale thresholds.
 
 For a build that has an already-verified local occurrence store, set
 `LAB_OCCURRENCE_STORE` to that read-only store and set `LAB_OCCURRENCE_POLICY` to the
-canonical JSON file for the exact approved export policy that produced the selected
+canonical JSON file for the exact active export policy that produced the selected
 release. The store is fail-closed without that policy, and a selected release cannot
 use a policy that remains blocked. The compiler revalidates the selected manifest and
 decoded blobs, then binds the release to the snapshot-manifest SHA-256,
@@ -187,7 +188,7 @@ the export-policy version, and the SHA-256 of the complete canonical policy byte
 snapshot sanitization-policy version is a separate contract and is not used for this
 binding. The policy's source-occurrence digest is checked against a stable discovery
 projection with the top-level selection and every per-occurrence selection set to null,
-so decorating served evidence cannot change the approved discovery identity. A selected
+so decorating served evidence cannot change the active discovery identity. A selected
 build is accepted only with fallbacks for every discovered graph and current-camera
 occurrence. Before copying any blob, the compiler also rechecks each selected discovery
 fingerprint against the exact policy allowlist, each camera request-provenance digest,
@@ -211,7 +212,7 @@ these local selectors: a deployed no-build pointer update/rollback still require
 future runtime/object-store adapter and end-to-end proof. No service restart is
 required by this source-only change.
 
-After a separately reviewed stage rollout has selected and materialized an occurrence
+After a separate stage rollout has selected and materialized an occurrence
 release, run the GET-only live acceptance check at T0 and T+10:
 
 ```bash
@@ -244,12 +245,12 @@ or activate a workload.
 ### Phase 4c producer boundary (inactive)
 
 `scripts/prepare-occurrence-export.mjs` now closes the offline handoff that a
-future specialist producer must satisfy. The reviewed, byte-bound policy at
+future specialist producer must satisfy. The validated, byte-bound policy at
 `config/lab-stage-occurrence-export-policy.json` contains exactly 143 graph and
 two opaque camera occurrence fingerprints from the accepted stage snapshot. A
 producer batch must name the operator-owned, one-way, read-only public reporting
 feed contract, bind the exact canonical policy SHA-256, carry its source watermark,
-and include every approved occurrence exactly once. The trusted compiler clock
+and include every active occurrence exactly once. The trusted compiler clock
 allows at most five minutes of delivery delay and 60 seconds of future clock skew.
 The target is end-to-end source-watermark p95 at or below 15 minutes; a sample
 older than 30 minutes is alert state and cannot prepare a release, preserving
@@ -267,7 +268,7 @@ Both the exact policy and request digests must still match before camera LKG is
 selected. Prepared `media/*.request.json` files are accepted directly by the closed
 v3 `publish-media` CLI contract, and `release.request.json` by the closed v2
 `publish` contract; missing identities and unknown URL-bearing fields fail before
-store mutation. The approved upstream handoff is
+store mutation. The active upstream handoff is
 GET-only to the two exact
 `api.verdify.ai/api/v1/public/cameras/.../latest.jpg?h=1080` paths; redirects,
 cookies, authentication, device/VLAN access, Frigate, and go2rtc are forbidden,
@@ -277,8 +278,8 @@ enters the candidate directory.
 The checked-in policy has `activation.state=blocked`. Validation is available,
 but request preparation refuses it. The matching Kubernetes Component under
 `deploy/k8s/components/lab-occurrence-reporting-boundary/` is referenced by no
-overlay, defines no workload or Secret, and is deny-all. A separate Jason-gated
-change must approve and create the isolated reporting feed/tier, its
+overlay, defines no workload or Secret, and is deny-all. A separate safety-checked
+change must create and validate the isolated reporting feed/tier, its
 least-privilege credential, occurrence-store access, and egress limited to that
 store plus `api.verdify.ai:443`. Existing anonymous `graphs.verdify.ai` and the
 Track A primary database role are explicitly ineligible.
@@ -287,7 +288,7 @@ The inert graph-producer library adds one pure planner that verifies the exact
 occurrence-manifest bytes against that policy and emits all 143 render targets in
 manifest order without an endpoint. Its producer has no default renderer or network,
 service, credential, database, Kubernetes, Grafana, or object-store client: an
-approved policy and an explicitly injected renderer are required before any call.
+active policy and an explicitly injected renderer are required before any call.
 The producer also requires the full closed reporting-feed envelope and derives its
 canonical digest itself. Only that digest enters the v3 plan and all 143 requests;
 the feed identity, watermark, endpoint, and credential details do not. The injected
@@ -327,7 +328,7 @@ their classified null records for downstream LKG handling. No HTTP adapter is
 provided: renderer transport/configuration remains injected, with no environment,
 endpoint, credential, store, workload, route, replica, or activation binding in this
 source slice. The checked policy remains blocked, so these contracts cannot make a
-live render or publish until the existing Jason gates are separately satisfied.
+live render or publish until the existing execution safeguards are separately satisfied.
 
 ## Complete built-site releases
 
@@ -445,7 +446,7 @@ hydrate an occurrence pack back to all 143 graph and two camera
 proof: it does not wire S3, mutate a selector, start a publisher, deploy a workload,
 or establish live two-cache convergence.
 
-The stage vendors the reviewed offline parity comparator at
+The stage vendors the validated offline parity comparator at
 `scripts/site-build-parity.py` (SHA-256
 `9ffa966a8d36a1a98a56b941588a340f2e23cc7ee38389e1056717204fadf92c`):
 
@@ -457,7 +458,7 @@ npm run parity:compare:provisional
 ```
 
 The baseline itself has known integrity blockers. A successful structural
-diagnostic is not a baseline, canary, cutover, or production approval.
+diagnostic is not a baseline, canary, cutover, or production activation.
 
 For container-only fixture diagnostics, select the non-default target
 explicitly: `docker build --target fixture-runtime -f Dockerfile .`. That image
@@ -465,7 +466,7 @@ is not release input.
 
 ## Shared-shell boundary
 
-The build vendors the reviewed `@verdify/site-shell` 1.1.0 release from WWW
+The build vendors the validated `@verdify/site-shell` 1.1.0 release from WWW
 commit `7febbc479c6ed7d22f829e9c1e7109bc9bc7c6c0`. The archive, independent
 release record, and four-file consumer kit are committed under `vendor/` and
 `scripts/site-shell/`; every byte is independently pinned before the hardened
@@ -526,12 +527,12 @@ token, database, object store, Grafana, or device-network access.
 
 ## Known blockers
 
-- The sanitized legacy capture remains provisional-only; the future approved
+- The sanitized legacy capture remains provisional-only; the future active
   immutable filesystem/object-store evidence attestation is not implemented.
 - Digest-verified local Grafana fallback images remain absent from the frozen
   snapshot. The compiler and specialist-release store now enforce decoded,
   content-addressed current/previous selection and last-known-good retention, but
-  a policy-approved exporter/reporting source has not populated a selected release.
+  a policy-active exporter/reporting source has not populated a selected release.
 - Current-camera occurrences now have an opaque same-origin manifest contract, but
   the camera sanitizer and independently served occurrence pointer are not deployed.
 - Planner event idempotency, freshness, conditional promotion, local pointer rollback,
@@ -547,8 +548,8 @@ token, database, object store, Grafana, or device-network access.
   live local owner. The S3 coordinator provides the source-only cross-pod fence; no
   active workload invokes it yet.
 - The frozen Quartz baseline has known HLS, alias, feed/sitemap, missing-asset,
-  and fallback findings and is not clean approval evidence.
-- The WWW shell release is review-only until its producer PR is merged; the Lab
-  pins its exact reviewed bytes and does not claim producer merge or cutover.
+  and fallback findings and is not clean activation evidence.
+- The WWW shell release is source-only until its producer change is merged; the Lab
+  pins its exact validated bytes and does not claim producer merge or cutover.
 - The zero-finding public-data guard report is mandatory snapshot input, but a
-  public canary still requires the separate approval gates.
+  public canary still requires the separate activation safeguards.

@@ -978,11 +978,11 @@ def check_images(
                     )
                 )
                 continue
-            if entry.get("status") != "approved":
+            if entry.get("status") != "allowed":
                 findings.append(
                     Finding(
                         severity="error",
-                        code="image-not-approved",
+                        code="image-not-allowed",
                         message=f"{image.file}:{image.line} references {filename}, status={entry.get('status')}",
                     )
                 )

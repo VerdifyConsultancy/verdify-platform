@@ -19,9 +19,9 @@ Key decisions:
 - V1 uses Direct OpenAI for structured LLM calls.
 - LangGraph state is persisted in Postgres through a LangGraph checkpointer.
 - Verdify operational truth remains in existing tables such as `plan_delivery_log`, plan journals, readbacks, scorecards, and guardrail audit views.
-- Rollout is a direct single-path replacement only after offline replay,
-  deterministic validation, and operator approval; no alternate production
-  controller is allowed.
+- Rollout is a direct single-path replacement after offline replay and
+  deterministic validation pass; no alternate production controller is
+  allowed.
 
 ## 1. Architecture Overview
 
@@ -395,7 +395,7 @@ Required test scenarios:
 - V1 uses Postgres for LangGraph checkpointing.
 - V1 uses `trigger_id` as the LangGraph `thread_id`.
 - V1 does not run alongside Hermes as a second live planner. It replaces the
-  active planner path only after offline evidence and operator approval.
+  active planner path once the offline replay and deterministic checks pass.
 - V1 does not modify firmware, dispatcher ownership, or MCP write contracts.
 - V1 does not introduce a new long-term memory system; it reuses existing Verdify retrieval sources.
 - Any production cutover is a later implementation step, not part of this design-doc-only change.

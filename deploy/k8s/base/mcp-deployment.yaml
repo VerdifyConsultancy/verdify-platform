@@ -5,7 +5,7 @@
 # has NO transport auth (fails open — gravity's "MCP transport failed open"
 # anti-pattern). The target adds a fail-CLOSED auth guard, but that is a
 # tool-surface code change requiring the full firmware PR artifact set +
-# coordinator(iris-dev) + Iris concurrence. This manifest WRAPS/containerizes
+# coordinator(iris-dev) + Iris compatibility validation. This manifest WRAPS/containerizes
 # the server WITHOUT changing tool semantics. NetworkPolicy restricts ingress to
 # in-namespace clients only; it is NEVER given a raw LB IP.
 apiVersion: apps/v1

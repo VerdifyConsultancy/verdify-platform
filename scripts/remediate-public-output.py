@@ -332,7 +332,7 @@ def build_manifest(report: dict, root: Path, *, apply_redaction: bool = False) -
             action = "redact_generated_plan" if can_redact else "regenerate_generated_plan"
             regenerate_command = ["python3", "scripts/generate-daily-plan.py", "--date", date]
         else:
-            action = "manual_review"
+            action = "resolve_source_content"
             regenerate_command = None
 
         items.append(

@@ -27,9 +27,9 @@ allows no egress. Enabling object storage is a separate integration:
 2. land the object-store implementation behind `manage-site-release.mjs`;
 3. provision a dedicated Lab Astro release bucket in Garage, with separate
    per-bucket keys for the read-only runtime and the publishing writer; key
-   provisioning and activation are Jason-gated, key material stays outside
+   provisioning and activation are safety-checked, key material stays outside
    Git, and source may record only the Secret/key names;
-4. introduce the separately reviewed least-privilege egress and Secret
+4. introduce the separately validated least-privilege egress and Secret
    references, then patch `LAB_RELEASE_STORE` to a credential-free
    `s3://<dedicated-release-bucket>/releases` URI;
 5. replace both zero image sentinels and explicitly raise the replica count; and
@@ -39,7 +39,7 @@ allows no egress. Enabling object storage is a separate integration:
 Merging this source does not change the live cluster. The Lab stage ArgoCD app
 is manual-sync, and an operator sync is a separate recorded action. Even after
 such a sync, this source remains unschedulable at `replicas: 0`; activation
-requires another reviewed change satisfying every step above.
+requires another explicit activation change satisfying every step above.
 
 The runtime publishes `/healthz`, `/readyz`, `/metrics`, and
 `/.well-known/verdify-release.json` through the internal ClusterIP service.

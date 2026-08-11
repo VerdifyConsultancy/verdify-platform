@@ -4,16 +4,16 @@ import { lstat, opendir, readFile, readdir, realpath } from "node:fs/promises";
 import path from "node:path";
 
 import {
-  PRODUCTION_APPROVAL_REGISTRY,
+  PRODUCTION_ACTIVATION_REGISTRY,
   PRODUCTION_EVIDENCE_STATUS,
   PRODUCTION_SNAPSHOT_CONTRACT,
-  publishedApprovalIdentity,
-  verifyProductionApproval,
-} from "./production-approval.mjs";
+  publishedActivationIdentity,
+  verifyProductionActivation,
+} from "./production-activation.mjs";
 
 const SHA256_RE = /^[0-9a-f]{64}$/;
 const STAGE_SNAPSHOT_CONTRACT = "verdify.lab-stage-sanitized-snapshot";
-const MANDATORY_APPROVAL_BOUNDARY = "approved immutable filesystem/object-store snapshot attestation";
+const MANDATORY_ACTIVATION_BOUNDARY = "active immutable filesystem/object-store snapshot attestation";
 const MAX_FILES = 10_000;
 const MAX_FILE_BYTES = 128 * 1024 * 1024;
 const MAX_TOTAL_BYTES = 1024 * 1024 * 1024;
@@ -23,7 +23,7 @@ const ATTESTATION_KEYS = [
   "contract",
   "schemaVersion",
   "evidenceStatus",
-  "approvalEligible",
+  "activationEligible",
   "sourceManifestSha256",
   "sanitizedManifestSha256",
   "sourceFileCount",
@@ -166,7 +166,7 @@ export async function verifySanitizationAttestation(root, manifestDigest, invent
     attestation.contract !== STAGE_SNAPSHOT_CONTRACT
     || attestation.schemaVersion !== 1
     || attestation.evidenceStatus !== "provisional-only"
-    || attestation.approvalEligible !== false
+    || attestation.activationEligible !== false
     || attestation.sourceManifestSha256 !== SOURCE_MANIFEST_SHA256
     || attestation.sanitizedManifestSha256 !== manifestDigest
     || attestation.sourceFileCount !== 429
@@ -193,7 +193,7 @@ export async function verifySanitizationAttestation(root, manifestDigest, invent
     hlsFilesPreserved: 179,
   };
   if (JSON.stringify(attestation.transformations) !== JSON.stringify(expectedTransformations)) {
-    throw new Error("sanitized snapshot transformation counts do not match the reviewed release");
+    throw new Error("sanitized snapshot transformation counts do not match the validated release");
   }
   const actualHlsFiles = [...inventory.keys()].filter((relative) => relative.startsWith("static/video/")).length;
   if (attestation.transformations.hlsFilesPreserved !== actualHlsFiles) {
@@ -204,14 +204,14 @@ export async function verifySanitizationAttestation(root, manifestDigest, invent
 
 /**
  * Verify a PRODUCTION sanitized snapshot: the closed v1 attestation shape with
- * the production contract, plus a registry-trusted immutable approval record.
+ * the production contract, plus a registry-trusted immutable activation record.
  *
  * Unlike the stage verifier this carries no hard-coded content pins — the pins
- * live in the reviewed approval registry entry, so one code path serves every
- * future approved capture without ever loosening.
+ * live in the validated activation registry entry, so one code path serves every
+ * future active capture without ever loosening.
  *
  * `registry` is a required argument with no default. The only production caller
- * is `verifySnapshot`, which passes the frozen `PRODUCTION_APPROVAL_REGISTRY`;
+ * is `verifySnapshot`, which passes the frozen `PRODUCTION_ACTIVATION_REGISTRY`;
  * there is no runtime input that can substitute another one.
  */
 export async function verifyProductionSanitizationAttestation(root, manifestDigest, inventory, registry) {
@@ -233,7 +233,7 @@ export async function verifyProductionSanitizationAttestation(root, manifestDige
     attestation.contract !== PRODUCTION_SNAPSHOT_CONTRACT
     || attestation.schemaVersion !== 1
     || attestation.evidenceStatus !== PRODUCTION_EVIDENCE_STATUS
-    || attestation.approvalEligible !== true
+    || attestation.activationEligible !== true
     || !SHA256_RE.test(attestation.sourceManifestSha256)
     || attestation.sanitizedManifestSha256 !== manifestDigest
     || !Number.isSafeInteger(attestation.sanitizedFileCount)
@@ -248,7 +248,7 @@ export async function verifyProductionSanitizationAttestation(root, manifestDige
     || attestation.guardSchemaVersion !== 2
     || attestation.guardFindings !== 0
   ) {
-    throw new Error("production snapshot attestation does not match the approved release policy");
+    throw new Error("production snapshot attestation does not match the active release policy");
   }
   for (const key of TRANSFORMATION_KEYS) {
     const value = attestation.transformations[key];
@@ -273,11 +273,11 @@ export async function verifyProductionSanitizationAttestation(root, manifestDige
     path.join(root, "evidence", "public-output-guard.json"),
     8 * 1024 * 1024,
   );
-  const approvalBytes = await readBoundedRegularFile(path.join(root, "approval.json"), 64 * 1024);
-  const approval = verifyProductionApproval(
-    approvalBytes,
+  const activationBytes = await readBoundedRegularFile(path.join(root, "activation.json"), 64 * 1024);
+  const activation = verifyProductionActivation(
+    activationBytes,
     {
-      approvalDigest: createHash("sha256").update(approvalBytes).digest("hex"),
+      activationDigest: createHash("sha256").update(activationBytes).digest("hex"),
       attestationSha256: createHash("sha256").update(attestationBytes).digest("hex"),
       sanitizedManifestSha256: manifestDigest,
       sourceManifestSha256: attestation.sourceManifestSha256,
@@ -289,8 +289,8 @@ export async function verifyProductionSanitizationAttestation(root, manifestDige
     registry,
   );
   // Only the publishable projection travels into the build identity; see
-  // publishedApprovalIdentity for why the source bucket URI is withheld.
-  return { ...attestation, fixtureOnly: false, approval: publishedApprovalIdentity(approval) };
+  // publishedActivationIdentity for why the source bucket URI is withheld.
+  return { ...attestation, fixtureOnly: false, activation: publishedActivationIdentity(activation) };
 }
 
 async function verifyGuardEvidence(root, expectedDigest) {
@@ -333,8 +333,8 @@ async function verifyGuardEvidence(root, expectedDigest) {
  * The snapshot's own attestation names which contract it claims; each verifier
  * then proves that claim independently. A production claim buys nothing on its
  * own — it only routes to the stricter verifier, which additionally demands a
- * registry-trusted approval. The stage verifier is untouched and still rejects
- * `approvalEligible !== false`, so the legacy provisional capture cannot be
+ * registry-trusted activation. The stage verifier is untouched and still rejects
+ * `activationEligible !== false`, so the legacy provisional capture cannot be
  * relabelled into eligibility.
  */
 async function verifyAttestedSnapshot(root, manifestDigest, inventory, registry) {
@@ -353,24 +353,24 @@ async function verifyAttestedSnapshot(root, manifestDigest, inventory, registry)
 /**
  * Public snapshot verifier.
  *
- * It accepts exactly one option, `allowSyntheticFixture`. The trusted approval
+ * It accepts exactly one option, `allowSyntheticFixture`. The trusted activation
  * registry is NOT an option: it is bound here, once, to the frozen module
  * constant. A caller cannot widen trust by passing anything in.
  */
 export async function verifySnapshot(snapshotRoot, { allowSyntheticFixture = false } = {}) {
-  return resolveSnapshot(snapshotRoot, { allowSyntheticFixture }, PRODUCTION_APPROVAL_REGISTRY);
+  return resolveSnapshot(snapshotRoot, { allowSyntheticFixture }, PRODUCTION_ACTIVATION_REGISTRY);
 }
 
 /**
  * Test seam. Identical to `verifySnapshot` except that the trusted registry is
  * supplied explicitly, so the accept direction can be proven end-to-end without
- * shipping a real approval. Production code must call `verifySnapshot`.
+ * shipping a real activation. Production code must call `verifySnapshot`.
  */
 export async function __resolveSnapshotWithRegistry(snapshotRoot, options, registry) {
   return resolveSnapshot(snapshotRoot, options, registry);
 }
 
-async function resolveSnapshot(snapshotRoot, { allowSyntheticFixture = false } = {}, registry = PRODUCTION_APPROVAL_REGISTRY) {
+async function resolveSnapshot(snapshotRoot, { allowSyntheticFixture = false } = {}, registry = PRODUCTION_ACTIVATION_REGISTRY) {
   const root = path.resolve(snapshotRoot);
   const contentRoot = path.join(root, "content");
   const manifestPath = path.join(root, "manifests", "content.json");
@@ -412,10 +412,10 @@ async function resolveSnapshot(snapshotRoot, { allowSyntheticFixture = false } =
   const sanitization = allowSyntheticFixture
     ? await verifySyntheticFixture(root)
     : await verifyAttestedSnapshot(root, manifestDigest, inventory, registry);
-  const approved = sanitization.contract === PRODUCTION_SNAPSHOT_CONTRACT;
+  const active = sanitization.contract === PRODUCTION_SNAPSHOT_CONTRACT;
   if (!sanitization.fixtureOnly) {
-    const closedRoot = approved
-      ? ["approval.json", "attestation.json", "content", "evidence", "manifests"]
+    const closedRoot = active
+      ? ["activation.json", "attestation.json", "content", "evidence", "manifests"]
       : ["attestation.json", "content", "evidence", "manifests"];
     if (JSON.stringify((await readdir(root)).sort()) !== JSON.stringify(closedRoot)) {
       throw new Error("sanitized snapshot root is not closed");
@@ -432,11 +432,11 @@ async function resolveSnapshot(snapshotRoot, { allowSyntheticFixture = false } =
     manifest,
     manifestDigest: `sha256:${manifestDigest}`,
     snapshotId: `${sanitization.fixtureOnly ? "synthetic-fixture" : "sanitized-content"}-sha256:${manifestDigest}`,
-    evidenceStatus: approved ? PRODUCTION_EVIDENCE_STATUS : "provisional-only",
-    approvalEligible: approved,
-    mandatoryApprovalBoundary: approved
-      ? `satisfied by approval ${sanitization.approval.approvalId}`
-      : MANDATORY_APPROVAL_BOUNDARY,
+    evidenceStatus: active ? PRODUCTION_EVIDENCE_STATUS : "provisional-only",
+    activationEligible: active,
+    mandatoryActivationBoundary: active
+      ? `satisfied by activation ${sanitization.activation.activationId}`
+      : MANDATORY_ACTIVATION_BOUNDARY,
     sanitization,
   };
 }

@@ -9,7 +9,7 @@
 # The base sets replicas:1 (the eventual single-writer target that overlays/prod
 # keeps); prod-dark pins it OFF. A manual `kubectl scale` to 0 is NOT durable —
 # a reconcile would revert it to the manifest value, which is exactly why this
-# lives in git. Flipping prod to a writer is a SEPARATE, Jason-gated step that
+# lives in git. Flipping prod to a writer is a SEPARATE, safety-checked step that
 # adopts overlays/prod (the writer shape), never prod-dark.
 apiVersion: apps/v1
 kind: Deployment

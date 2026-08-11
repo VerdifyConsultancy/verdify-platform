@@ -71,11 +71,11 @@ function nullableDigest(value, label) {
   return value;
 }
 
-function validateApprovedPolicy(policy) {
+function validateActivePolicy(policy) {
   if (
-    policy.activation.state !== "approved"
-    || policy.activation.approvedBy !== "jason"
-    || !policy.activation.approvedAt
+    policy.activation.state !== "active"
+    || policy.activation.activatedBy !== "direct-task"
+    || !policy.activation.activatedAt
   ) throw new Error("occurrence producer policy is not activated");
 }
 
@@ -385,7 +385,7 @@ export async function runOccurrenceProducer({
     discovered.graphs.length !== EXPECTED_GRAPH_COUNT
     || discovered.currentMedia.length !== EXPECTED_CURRENT_MEDIA_COUNT
   ) throw new Error(`occurrence producer requires exactly ${EXPECTED_GRAPH_COUNT}+${EXPECTED_CURRENT_MEDIA_COUNT} occurrences`);
-  validateApprovedPolicy(policySnapshot);
+  validateActivePolicy(policySnapshot);
   const policySha256 = occurrenceExportPolicySha256(policySnapshot);
   const reportingFeedSha256 = reportingFeedEnvelopeSha256(reportingFeedSnapshot);
   const datasourceIdentitySha256 = reportingDatasourceIdentitySha256(reportingDatasourceIdentity);

@@ -26,7 +26,7 @@ export const graphExportProducerContract = Object.freeze({
 });
 
 export const cameraExportProducerContract = Object.freeze({
-  approvedOccurrenceIds: Object.freeze([
+  allowedOccurrenceIds: Object.freeze([
     "media_024bdac9f86794c7d1f36d48",
     "media_4e973f995789201d00aed8fd",
   ]),

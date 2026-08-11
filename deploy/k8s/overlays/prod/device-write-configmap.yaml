@@ -5,7 +5,7 @@
 # device-write path is enabled. Staging pins this to "0". Enabling the live
 # device-write path is a gated cutover step (handoff §6 STOP-and-ask) — this
 # manifest declares the intended prod shape; flipping the live loop onto k3s is
-# still human-gated with explicit Jason sign-off.
+# still safety-checked with explicit recorded task authorization.
 #
 # Patched onto the base verdify-config ConfigMap (strategic merge adds the key).
 apiVersion: v1

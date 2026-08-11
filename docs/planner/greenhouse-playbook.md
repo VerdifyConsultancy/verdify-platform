@@ -9,7 +9,7 @@ Canonical source of the Verdify planner operational playbook.
 Iris reads this file at runtime from the agent-host path
 `/mnt/agents/iris/skills/greenhouse-planner.md`. That file is an
 operational mirror of this one and must stay in sync — any content change
-should land here first (reviewed, version-controlled) and then be copied
+should land here first (validated, version-controlled) and then be copied
 out to the agent host.
 
 A module-level assertion in `ingestor/iris_planner.py` checks the agent-host

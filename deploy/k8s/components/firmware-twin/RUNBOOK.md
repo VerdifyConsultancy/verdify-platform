@@ -51,12 +51,12 @@ here), all buildable-now but NOT built (design §6 Phase-1 / TWIN-5):
 - the local-hour MDT correction (`AT TIME ZONE 'America/Denver'`) + `dt_ms`
   5 s cap in a live driver (the offline corpus already carries UTC ts).
 
-## GATED ON JASON — any future prod-DB shadow
+## PROTECTED BY RUNTIME SAFEGUARDS — any future prod-DB shadow
 
 Standing up the shadow in **verdify-prod** is a **live-prod schema change**
 (migration 155 on the prod DB) + a prod `twin` login user. It is additive /
 idempotent / non-destructive, but per the change-gating rule it needs an
-explicit go + a DB snapshot first. When approved:
+explicit go + a DB snapshot first. When validated:
 
 ```
 # 1. snapshot the prod DB (PITR/backup already runs; take a fresh logical dump).

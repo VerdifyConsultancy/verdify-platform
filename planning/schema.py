@@ -21,7 +21,7 @@ Invariants enforced (beyond field types):
     ownership — the synth coverage_check resolves these);
   * every depends_on token is a well-formed issue ref ("#NNN"), story id
     ("S..."), wave ("W0".."W3"), or lane id ("L0-..".."L8-..");
-  * gate / effort / wave values are within their enums;
+  * preflight / effort / wave values are within their enums;
   * every wave referenced by a work item exists in the top-level waves list.
 """
 
@@ -35,14 +35,14 @@ from typing import Literal
 import yaml
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
-Gate = Literal[
+Preflight = Literal[
     "none",
-    "jason-ota",
-    "jason-prod-migration",
-    "jason-prod-sync",
-    "jason-device-tunable",
-    "jason-hardware",
-    "jason-infra",
+    "firmware-preflight",
+    "prod-migration-preflight",
+    "prod-sync-preflight",
+    "device-tunable-preflight",
+    "hardware-preflight",
+    "infra-preflight",
 ]
 Effort = Literal["S", "M", "L"]
 Wave = Literal["W0", "W1", "W2", "W3"]
@@ -61,7 +61,7 @@ class WorkItem(BaseModel):
     how: str
     acceptance: list[str]
     depends_on: list[str]
-    gate: Gate
+    preflight: Preflight
     effort: Effort
     wave: Wave
     area_labels: list[str]
@@ -124,7 +124,7 @@ class Lane(BaseModel):
     lane_id: str
     lane_name: str
     worktree_branch: str
-    gate: Gate
+    preflight: Preflight
     milestone: str
     depends_on_lanes: list[str]
     owns_paths: list[str]
@@ -138,7 +138,7 @@ class WaveDef(BaseModel):
 
     wave: Wave
     goal: str
-    gate: str
+    preflight: str
     lanes: list[str]
     exit_criteria: str
 

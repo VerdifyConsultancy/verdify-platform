@@ -8,9 +8,9 @@ knobs. The earlier AI-tunable audit/design work remains useful evidence, but
 the implementation target is now a smaller climate-intent surface plus a
 deterministic firmware action selector.
 
-This document is the implementation contract. Any OTA must still follow
-firmware freeze rules, replay/invariant gates, service restart documentation,
-and operator approval.
+This document is the implementation contract. Any OTA must still pass the
+firmware freeze rules, replay/invariant checks, service restart checks, and
+post-deploy health validation.
 
 Next implementation sprint:
 [`docs/climate-authority-sprint-plan-2026-05-24.md`](climate-authority-sprint-plan-2026-05-24.md).
@@ -315,9 +315,9 @@ controller must publish:
    - Firmware owns action selection and relay application.
 
 5. Deploy and audit.
-   - Firmware PR must include replay diff, invariant output, unit-test delta,
-     coordinator reproduction, planner concurrence, rollback plan, and service
-     restart documentation.
+   - A firmware change must include replay diff, invariant output, unit-test
+     delta, interface-contract validation, rollback plan, and service restart
+     documentation.
    - After OTA, validate no critical/high alerts, confirm published
      `climate_action`, and compare live outcomes against replay expectations.
 
@@ -334,7 +334,7 @@ The implementation is not complete until all of these are true:
 - Tests prove climate logic cannot drive fert/drip relays.
 - `make test-firmware`, `make firmware-invariants`, and firmware replay pass.
 - No critical/high alerts block rollout.
-- A behavior-changing OTA is separately approved under freeze rules.
+- A behavior-changing OTA passes the freeze-rule preflight and post-deploy checks.
 
 ## Near-Term Backlog Breakdown
 

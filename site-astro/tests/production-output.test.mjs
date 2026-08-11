@@ -31,7 +31,7 @@ test("production fixture proves per-page SEO without satisfying the release gate
   const root = await read("index.html");
   assert.match(root, /<meta name="robots" content="index,follow">/);
   assert.match(root, new RegExp(`<link rel="canonical" href="${PRODUCTION_ORIGIN}/">`));
-  assert.doesNotMatch(root, /Stage preview|globally noindex|not approval evidence|lab-stage\.verdify\.ai/);
+  assert.doesNotMatch(root, /Stage preview|globally noindex|not activation evidence|lab-stage\.verdify\.ai/);
 
   const notFound = await read("404.html");
   assert.match(notFound, /<meta name="robots" content="noindex,follow">/);

@@ -4,17 +4,17 @@
   "policyVersion": "lab-public-reporting-v2",
   "activation": {
     "state": "blocked",
-    "approvedBy": null,
-    "approvedAt": null,
-    "requiredGates": [
-      "jason-approval",
+    "activatedBy": null,
+    "activatedAt": null,
+    "requiredSafeguards": [
+      "source-activated-policy",
       "operator-owned-reporting-feed",
       "least-privilege-reporting-credential"
     ]
   },
   "sourceSnapshotManifestSha256": "2dbcb7256f475be6bd620427101900c53814fb065a815e0129b19451d7467d86",
   "sourceOccurrenceManifestSha256": "e455309736cf785914141d1641ec2569f623e048cf9073b3ea6fce181726160d",
-  "reviewedAt": "2026-07-13T07:36:30Z",
+  "validatedAt": "2026-07-13T07:36:30Z",
   "reportingFeed": {
     "contract": "verdify.operator-public-reporting-feed",
     "authority": "operator-owned",

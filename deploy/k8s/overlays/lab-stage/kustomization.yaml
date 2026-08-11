@@ -10,12 +10,12 @@ resources:
 
 images:
   # The serving static Astro image remains the separately accepted stage
-  # release; changing it requires its own reviewed exact-source pin.
+  # release; changing it requires its own validated exact-source pin.
   - name: registry.vallery.net/verdifyconsultancy/verdify-lab-astro
     newName: registry.vallery.net/verdifyconsultancy/verdify-lab-astro
     digest: sha256:1852cf2523041ef840b3eb1092050e4b3b19d2027494fc6b6c9809b930de93b7
   # These exact-source runtime images remain dormant under the replicas-zero
-  # patch. A separate reviewed activation must add the store contract and raise
+  # patch. A separate validated activation must add the store contract and raise
   # replicas; digest presence alone is not rollout authority.
   - name: registry.vallery.net/verdifyconsultancy/verdify-lab-release-agent
     newName: registry.vallery.net/verdifyconsultancy/verdify-lab-release-agent

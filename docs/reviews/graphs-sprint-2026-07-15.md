@@ -38,7 +38,7 @@ dashboards read `v_daily_kpi` directly (a single economics page load fired
 | 8 | **Migration 206**: raw-meter water fallback restricted to completed days | intraday 1388-gal artifact (vs 78–346 normal) no longer pollutes 30-day water panels |
 | 9 | 3 sparse-column latest-value panels get 48 h scan bounds | cheap insurance vs dead-sensor full-history walks |
 | 10 | **verdify-vision CronJob** PodSecurity-restricted securityContext (repo + live) | server-side apply clean (admission would warn on a bad template); pods were admission-rejected since 07-11T21:00Z, 4,654 FailedCreate |
-| 11 | Grafana datasource `maxOpenConns: 10` cap (provisioning CM applied) | **takes effect on next Grafana restart — deliberately deferred, operator-gated** |
+| 11 | Grafana datasource `maxOpenConns: 10` cap (provisioning CM applied) | **takes effect on next Grafana restart — deliberately deferred, operator-scoped** |
 
 **Durability probes**: last backend kill 02:21:59Z. 0 kills in the
 38 min after (probe 03:01Z, `kubectl logs --since=38m | grep -c 'signal 9'`
@@ -75,7 +75,7 @@ deploy-gate semantics). Sprint fix = labeled estimates (migrations 204/206).
    `ingestor/tasks/daily.py` (`_apply_resource_cost_gate`, and
    `_gas_btu_per_hour`'s lower≠upper → None). History needs the
    derived-history backfill; pre-2026-01-01 days have no coefficients at all.
-2. **Delete wedged Job `verdify-vision-29730060`** (change-gated; the
+2. **Delete wedged Job `verdify-vision-29730060`** (snapshot-protected; the
    CronJob spec fix is already live — deletion is the last unblock;
    `concurrencyPolicy: Forbid` keeps vision dead until then). Commands:
    scratchpad `vision-fix-operator-commands.sh`.
@@ -108,7 +108,7 @@ deploy-gate semantics). Sprint fix = labeled estimates (migrations 204/206).
 - `fn_lighting_minutes_policy` (7 s) / `v_lighting_traceability_now`
   (9.9 s): unbounded latest-per-parameter walk over all setpoint_changes
   chunks. Time-bound the CTEs — control-adjacent (services call it), so do
-  it as its own reviewed change.
+  it as its own change with bounded-query tests and runtime evidence.
 - Materialize `v_water_attribution_daily` (~1 s × 5 concurrent panels,
   grows O(history)) — same migration-200/203 pattern.
 - lab.verdify.ai plans index: 8 broken links (Jun 08–12 gap + tomorrow's

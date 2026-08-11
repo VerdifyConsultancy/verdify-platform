@@ -249,7 +249,7 @@ def _render_catalog_cards(d: dict) -> str:
 def _render_taxonomy_status(slug: str, current: list[dict]) -> str:
     status, note = CROP_TAXONOMY.get(
         slug,
-        ("Observed/Reference", "No explicit crop-control status assigned; treated as reference until reviewed."),
+        ("Observed/Reference", "No explicit crop-control status assigned; treated as reference until validated."),
     )
     occupied = [c for c in current if c.get("is_occupied", True)]
     positions = ", ".join(c.get("position_label") or "—" for c in occupied) or "none"

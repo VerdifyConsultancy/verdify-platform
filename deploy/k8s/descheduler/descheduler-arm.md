@@ -1,7 +1,7 @@
 # HA-1.9 (#234) — descheduler: deploy (dry-run), PROVE exclusion, gated enforce
 
 **Status:** Step 1 (dry-run) is laptop-root-autonomous (evicts nothing). Steps 3–4
-(relabel + enforce flip) are **GATED — laptop-root + Jason** (they mutate live pods).
+(relabel + enforce flip) are **GATED — root executor** (they mutate live pods).
 **Tracks:** #234 · **Epic:** #225 · **Design:** §2.4.
 
 The descheduler keeps the multi-replica stateless verdify surfaces
@@ -49,7 +49,7 @@ the eviction set is still singleton-free before Step 4.
 
 ## Step 3 — GATED: label the stateless surfaces rebalanceable (one rolling restart)
 
-Jason confirms a window. This restarts ONLY www/lab/api/mcp/planner/traefik
+verify the exact target and prerequisites a window. This restarts ONLY www/lab/api/mcp/planner/traefik
 (RollingUpdate, PDB-protected). It does NOT touch the ingestor or any singleton.
 
 ```bash
@@ -60,7 +60,7 @@ $K -n verdify-prod get pod -l app.kubernetes.io/component=ingestor -o jsonpath='
 # Re-run Step 2 — confirm dry-run now lists only stateless duplicates, no singleton.
 ```
 
-## Step 4 — GATED: ARM enforcement (drop --dry-run) — Jason confirms
+## Step 4 — GATED: ARM enforcement (drop --dry-run) — verify the exact target and prerequisites
 
 ONLY after Step 2 (post-relabel) is green.
 

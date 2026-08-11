@@ -5,7 +5,7 @@ kind: Kustomization
 # instance whose ingestor is the ONE real single writer to the live ESP32. The
 # device-write path is enabled HERE and only here (VERDIFY_DEVICE_WRITE_ENABLED=1
 # + the allow-ingestor-device-egress NetworkPolicy). Cutting the live control
-# loop onto k3s remains a human-gated step (handoff §6); this overlay is the
+# loop onto k3s remains a safety-checked step (handoff §6); this overlay is the
 # reviewable target shape.
 #
 # The namespace string is PINNED. It MUST equal:
@@ -139,7 +139,7 @@ patches:
   # PVC in the render, leaving git=PVC vs live=emptyDir → ArgoCD OutOfSync; the
   # emptyDir now lives in ingestor-state-volume.yaml so git==live.) REVERT that file
   # to the PVC once the iSCSI cap is fixed. See the storage-wedge tracking issue.
-  # HA-3.1 FAST FAILOVER (#239, Jason-approved 2026-06-20): pin the ingestor to
+  # HA-3.1 FAST FAILOVER (#239, task-authorized 2026-06-20): pin the ingestor to
   # priorityClassName verdify-device-writer + 20s NoExecute tolerations + a cpu
   # request (no cpu LIMIT) + terminationGracePeriodSeconds:15, so the sole writer
   # reschedules fast on node loss and is never preempted. GATED LIVE-APPLY: this
@@ -214,8 +214,8 @@ images:
   # `gh api orgs/VerdifyConsultancy/packages/container/verdify-planner/versions`
   # (the `branch-live-platform-main` build of planner_graph/). The planner image is
   # env-agnostic (it carries its own planner_graph package; per-env DB/secrets come
-  # from each overlay's verdify-config + sealed secret). prod is human-gated and
-  # its digest is advanced only by a reviewed prod-promote PR.
+  # from each overlay's verdify-config + sealed secret). prod is safety-checked and
+  # its digest is advanced only by a validated digest-pin commit.
   - name: ghcr.io/verdifyconsultancy/verdify-planner
     newName: registry.vallery.net/verdifyconsultancy/verdify-planner
     digest: sha256:735cb005d436e067b013d606e037aa1a1b8cbee6a6af96187bc316e29cd68d73

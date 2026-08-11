@@ -155,7 +155,7 @@ struct Setpoints {
     // Safety rails, R2-3 dry override, and vpd_min_safe rescue preempt the
     // dwell. Projected 80% reduction in whipsaw events (Explore B: 59 mode
     // changes in 2h on 2026-04-17 stress window). Default OFF until replay
-    // validation and operator approval.
+    // validation and an explicit live activation request.
     bool     sw_dwell_gate_enabled;
     uint32_t dwell_gate_ms;                // default 300000 (5 min)
     // Unified band-first controller. Kept as a compatibility/readback field,
@@ -721,7 +721,7 @@ inline Setpoints default_setpoints() {
         .outdoor_staleness_max_s = 600u,
         .summer_vent_min_runtime_s = 180u,
         // Phase-2 dwell gate. Default OFF until replay validation and
-        // operator approval. 5-min dwell projected to reduce whipsaw 80%.
+        // an explicit live activation request. 5-min dwell projected to reduce whipsaw 80%.
         .sw_dwell_gate_enabled = false,  // BC-8: armed LIVE via the dispatcher tunable (registry sw_dwell_gate_enabled), not the boot default
         .dwell_gate_ms = 300000u,
         // Library fallback remains legacy so old unit tests/replay rows can

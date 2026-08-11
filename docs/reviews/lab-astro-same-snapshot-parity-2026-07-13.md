@@ -12,15 +12,15 @@ Quartz retirement.
   `a5ed1cc899094dc061c01904d93e7034618d9eb22cf14488d04298da635a4e6d`
 - Sanitized content-manifest SHA-256:
   `2dbcb7256f475be6bd620427101900c53814fb065a815e0129b19451d7467d86`
-- Evidence status: `provisional-only`; `approvalEligible: false`
+- Evidence status: `provisional-only`; `activationEligible: false`
 - Same origin for both builds: `https://lab.verdify.ai`
 
 The schema-v2 parity manifests bind both byte digests above and the comparator
 revalidates the declared snapshot root. A declared identity mismatch is an
 unwaivable failure; the recorded build procedure supplies the same content tree
 to both generators. The current attestation remains diagnostic evidence only;
-strict approval remains blocked until a trusted immutable attestation resolver
-is implemented and an approved snapshot is supplied.
+strict validation remains blocked until a trusted immutable attestation resolver
+is implemented and an validated snapshot is supplied.
 
 ## Code-level diagnostic result
 
@@ -42,7 +42,7 @@ remaining source or materialization boundaries:
 There are no remaining title-parser, feed, sitemap, robots, 404, fragment-target,
 decorative-anchor, or crop sibling-link findings. The comparison is correctly
 `compatible: false`, has no applied exceptions, and is
-`approval-blocked-provisional-evidence`.
+`validation-blocked-provisional-evidence`.
 
 The final diagnostic artifacts are byte-identified as follows (the large JSON
 documents are reproducible evidence and are not committed):
@@ -92,7 +92,7 @@ The framework comparison is reproduced by building Quartz from
 running both schema-v2 manifest commands plus `compare --allow-provisional`
 with `--snapshot-root .snapshot`. Astro's production build intentionally exits
 at its final release verifier because this snapshot is provisional; the static
-output is complete before that fail-closed approval boundary.
+output is complete before that fail-closed validation boundary.
 
 On the frozen snapshot this reports the four `missing-image` and five
 `missing-internal-link` rows above. A new sanitized snapshot produced after the
@@ -113,4 +113,4 @@ immutable input.
 - Final #479 evidence must use a regenerated snapshot that reflects the nine
   dispositions, materialize the gated 143+2 evidence, run without
   `--allow-provisional`, report zero unexplained findings, and carry an
-  approved immutable snapshot identity.
+  validated immutable snapshot identity.

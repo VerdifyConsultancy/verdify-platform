@@ -9,7 +9,7 @@
       "WARNING"
     ],
     "rationale_not_contains": [
-      "approved"
+      "safe to execute"
     ],
     "selected_action_in": [
       "acknowledge_trigger",

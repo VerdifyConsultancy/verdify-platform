@@ -113,7 +113,7 @@ spec:
                   name: verdify-app-secrets
                   key: POSTGRES_PASSWORD
             # ESP32 Noise PSK. DEVICE-AFFECTING (handoff §6) — sealing/rotating
-            # this is gated on explicit Jason confirmation and must never trigger
+            # this is gated on exact-target validation and must never trigger
             # a re-flash. Referenced by name only; never a value in this tree.
             # NOTE: ingestor.py also reads esp32_api_key from the greenhouses DB
             # row which OVERRIDES this env (ingestor.py:1987-1993).
@@ -166,7 +166,7 @@ spec:
           # the single writer. Wired in the containerize PR; omitted here to keep
           # the base manifest free of an entrypoint that does not exist yet.
       # gated-§3.4: when (and only when) the device-VLAN reachability spike clears
-      # AND Jason confirms, this pod is pinned to a greenhouse-VLAN-reachable node
+      # AND verify the exact target and prerequisites, this pod is pinned to a greenhouse-VLAN-reachable node
       # via nodeSelector / affinity. Left UNSET so the base never schedules it
       # somewhere assuming reachability it does not have.
       volumes:

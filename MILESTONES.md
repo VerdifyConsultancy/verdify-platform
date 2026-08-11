@@ -25,7 +25,7 @@ child anchors. Do not use them as the primary current planning decomposition.
 | Enablement: Compliance & Twins | 5 | 4 | Child/evidence anchors for L3/L5/L6/L10. |
 | Enablement: Data Hygiene & Observability | 10 | 8 | Child/evidence anchors for L5/L6/L9. |
 | Enablement: Decommission & Auth | 7 | 0 | Child/evidence anchors for L1/L9 residual cleanup. |
-| Hardware / Seasonal (operator-gated) | 6 | 0 | Child/evidence anchors for L8 operator-gated physical work. |
+| Hardware / Seasonal (operator-scoped) | 6 | 0 | Child/evidence anchors for L8 operator-scoped physical work. |
 | M7 - HA: first-principles resilience | 10 | 15 | Child/evidence anchors for L1/L5 reliability work. |
 | Greenhouse Control Optimization | 17 | 0 | Legacy umbrella under L2/L3/L7/L8. |
 | Deploy Enablement (agent access + firmware CI/OTA) | 12 | 0 | Child/evidence anchors for L1/L10 enabling work. |
@@ -65,8 +65,8 @@ next milestones (see `docs/reviews/lane1-architecture-audit-2026-06-16.md` §8):
   **G1 remainder: L7 #349** (lighting/occupancy).
 - **2026-06-23 G2 pull-forward:** DB solar phase parity is now the top data/SOT
   fix because `fn_solar_altitude()` hardcodes solar noon at 13:00 local. After
-  that, run the Jason-gated #377 float trial and verify the locally implemented
+  that, run the safety-checked #377 float trial and verify the locally implemented
   outcome/moisture telemetry through the OTA/deploy path before deeper VPD
   policy changes (#383). See
-  `docs/reviews/adversarial-audit-backlog-replan-2026-06-23.md`.
+  `planning/backlog.yaml`.
 Proceed to L7 (G1) + G2/G3 next; pull urgent L5/L6 safety/data items forward per the audits.

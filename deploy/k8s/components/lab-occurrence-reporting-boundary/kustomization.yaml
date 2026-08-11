@@ -2,7 +2,7 @@ apiVersion: kustomize.config.k8s.io/v1alpha1
 kind: Component
 
 # INACTIVE BY DESIGN. No overlay references this Component and it contains no
-# workload, Service, Ingress, Secret, or credential. A separate Jason-gated
+# workload, Service, Ingress, Secret, or credential. A separate safety-checked
 # change must provide the operator-owned reporting feed, least-privilege
 # credential, occurrence-store route, and an explicit egress policy before a
 # producer can exist.

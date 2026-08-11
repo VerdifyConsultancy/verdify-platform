@@ -26,7 +26,7 @@
 # gated prerequisite; until it lands the running container would still resolve
 # localhost. This image + manifest are the reviewable TARGET shape (same posture as
 # the verdify-planner placeholder digest), not an instruction to cut the live
-# grow-light path onto k3s — that is human-gated (handoff §6).
+# grow-light path onto k3s — that is safety-checked (handoff §6).
 #
 # BUILD CONTEXT IS THE REPO ROOT (setpoint-server.py inserts the repo root on
 # sys.path and imports verdify_schemas.tunable_registry).

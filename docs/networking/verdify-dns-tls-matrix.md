@@ -12,7 +12,7 @@
 > actual manifest (cited inline as `file:Host`).
 
 **Owner:** Iris (Verdify platform). **Implements against:** Nexus (DNS / cert /
-firewall flow). **Status:** authoring complete; Nexus sign-off tracked on #87
+firewall flow). **Status:** authoring complete; Nexus dependency validation tracked on #87
 (out of scope for this doc).
 
 Last updated: 2026-06-01
@@ -150,7 +150,7 @@ Nexus to wire. The **device plane** (row D-1) is CONTEXT ONLY.
 | W-3 | Edge → api backend | `traefik` ns → `verdify-api` pod | 8080 (target) | ALLOW (Traefik ingress ns only) | live (staging) | `base/networkpolicy.yaml` (allow-api-from-ingress) |
 | W-4 | App → DB | `api`/`mcp`/`ingestor`/`migrate` → `db` pod | 5432 | ALLOW (in-namespace only) | live | `base/networkpolicy.yaml` (allow-db-from-app) |
 | W-5 | App → cluster DNS | any verdify pod → CoreDNS | 53 (UDP/TCP) | ALLOW | live | `overlays/*/(deny-esp32-egress\|allow-ingestor-device-egress).yaml` |
-| D-1 | Ingestor → ESP32 (device VLAN) | `verdify-ingestor` pod → `192.168.10.111:6053` | 6053 (ESPHome native API) | **CONTEXT ONLY — CUTOVER-GATED, do NOT open now** | M5 cutover + single-writer choreography + explicit Jason sign-off | `overlays/prod/allow-ingestor-device-egress.yaml` (port 6053) |
+| D-1 | Ingestor → ESP32 (device VLAN) | `verdify-ingestor` pod → `192.168.10.111:6053` | 6053 (ESPHome native API) | **CONTEXT ONLY — CUTOVER-GATED, do NOT open now** | M5 cutover + single-writer choreography + explicit recorded task authorization | `overlays/prod/allow-ingestor-device-egress.yaml` (port 6053) |
 
 ### 4.1 Device-route (`:6053`) — CONTEXT ONLY, do NOT open
 
@@ -169,7 +169,7 @@ This row is included so Nexus understands the eventual device-plane shape; it is
   the two overlays ever grants the device allow — never both, never the base.
 - **Gate.** Declaring the prod policy does NOT move the control loop to k3s. The
   device-VLAN route is a STOP-and-ask-Jason / laptop-root networking step; the
-  cutover also requires the single-writer choreography and explicit Jason
+  cutover also requires the single-writer choreography and exact-target preflight
   confirmation (handoff §3.4 / §6, the gated P7/P9 cutover). This doc documents
   the shape; it does NOT instruct opening `:6053` pre-M5.
 

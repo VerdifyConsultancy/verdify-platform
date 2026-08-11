@@ -14,7 +14,7 @@ Agent name: `verdify-platform`
 - Repository link: linked to `VerdifyConsultancy/verdify-platform`.
 - Current planning surface: the ten controller-replan lane epics #343-#352,
   with the 2026-06-23 climate/control audit overlay in
-  `docs/reviews/adversarial-audit-backlog-replan-2026-06-23.md`.
+  `planning/backlog.yaml`.
 - 2026-07-13: L9 (#351) is promoted from a generic pipeline audit to the
   **lab Quartz→Astro migration program** (In Progress/P1/XL). The
   authoritative decomposition, phase gates, and branch dispositions live in
@@ -41,7 +41,7 @@ Workflow details live in `docs/PROJECT_BOARD_WORKFLOW.md`.
 - Epic: L2 Firmware Core
 - Agent Lane: verdify-platform
 - Related Issues/PRs: #287, #344
-- Dependencies: Jason OTA gate; schema-first sequencing
+- Dependencies: firmware preflight/rollback; schema-first sequencing
 - Evidence: AGENTS.md, EPICS.md
 ```
 
@@ -53,12 +53,12 @@ Fields: `Priority`, `Effort`, `Component`, `Sprint`, `Epic`, `Agent Lane`,
 `Milestone`, `Related Issues/PRs`, `Dependencies`, `Evidence`.
 
 Board cards are EPICS. Child issues/tasks can exist, but planning decisions
-happen at the lane-epic level unless a child issue is explicitly operator-gated.
+happen at the lane-epic level unless a child issue is explicitly operator-scoped.
 
 ## 2026-06-23 Audit Overlay
 
 The June 22-23 reviews supersede the ADR-0003 target-hugging framing in several
-open issue bodies. ADR-0004 is the active climate-control north star: float
+open issue bodies. ADR-0004 is the active climate-control architecture baseline: float
 inside the crop corridor, act at the edges, and grade outcomes plus cost.
 
 Immediate planning changes:
@@ -67,7 +67,7 @@ Immediate planning changes:
   anchor retune. The DB helper hardcodes solar noon at 13:00 local and is wrong
   seasonally, even though current June divergence is small.
 - Keep #377 `band_track_fraction -> 0` as the highest-leverage control
-  experiment, but treat it as Jason/operator-gated because it changes live device
+  experiment, but treat it as Jason/operator-scoped because it changes live device
   behavior even without OTA.
 - Add outcome/corridor KPIs and moisture-estimator telemetry before deeper VPD
   and overnight dehum tuning; #383 now tracks that policy tuning after the

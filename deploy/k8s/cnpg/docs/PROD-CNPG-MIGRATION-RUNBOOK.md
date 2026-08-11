@@ -1,7 +1,8 @@
-# GATED Prod DB → CloudNativePG Migration Runbook (HA-4.3 / issue #245)
+# Controlled Prod DB → CloudNativePG Migration Runbook (HA-4.3 / issue #245)
 
-**Status:** STAGED — DESIGN + RUNBOOK ONLY. **Nothing in this document is to be
-executed without laptop-root + Jason sign-off in a declared maintenance window.**
+**Status:** STAGED — DESIGN + RUNBOOK ONLY. Execute only from an explicit
+production-cutover request in a declared maintenance window, with the exact
+target, preflight evidence, and rollback commands recorded.
 This is the single riskiest action in the HA program: a cutover of the live
 Verdify system-of-record (`verdify-prod/verdify-db`, a single-replica
 TimescaleDB StatefulSet that the SOLE live ESP32 device-writer ingestor writes
@@ -10,12 +11,12 @@ through).
 **Tracker:** VerdifyConsultancy/verdify-platform #245 (epic #218 / #225).
 **Mirrors:** the device-cutover discipline already proven on the `.150→k3s` and
 `verdify-staging` cutovers — *stand the new system alongside the live one,
-replicate/seed, parity-prove, then a single gated atomic flip with the old
+replicate/seed, parity-prove, then a single controlled atomic flip with the old
 system kept as instant rollback.*
 
 ---
 
-## 0. Why this is gated and why it is hard
+## 0. Why this is risky and how it is bounded
 
 The live DB is not a stateless surface. Three properties make this the riskiest
 flip in the program:
@@ -71,7 +72,7 @@ verdify-prod/verdify-db (StatefulSet)    verdify-prod/verdify-db-cnpg (CNPG Clus
 
 ## 2. Preconditions (ALL must be GREEN before scheduling the window)
 
-- [ ] **G0 dev gate passed (#243):** dev CNPG cluster healthy, timescale 2.25.2
+- [ ] **G0 dev validation passed (#243):** dev CNPG cluster healthy, timescale 2.25.2
       loads, hypertables+compression survive restore, kill-primary failover
       < RTO, PITR restore-test green, re-probed ≥60 min. (This runbook's
       mechanics are all dev-proven before prod.)
@@ -82,15 +83,15 @@ verdify-prod/verdify-db (StatefulSet)    verdify-prod/verdify-db-cnpg (CNPG Clus
 - [ ] **External WAL/PITR object store reachable** from the cluster, creds in
       SOPS, a throwaway `barman-cloud-wal-archive` smoke test succeeded.
 - [ ] **HA-3 ingestor Lease-fence is built + dev-proven** (so the writer can be
-      cleanly quiesced and will not split-brain during the flip). Coordinate the
-      window with the HA-3 owner.
+      cleanly quiesced and will not split-brain during the flip). Confirm no
+      concurrent HA-3 mutation is active during the window.
 - [ ] **Capacity:** 3× (cpu 500m / mem 2Gi req) + 3× 50Gi synology-iscsi-ssd
       free on ≥3 distinct schedulable workers (the dev cluster proved 2; prod
       wants 1+2 on 3 nodes — confirm node4/5/6/7 headroom or stage capacity).
 - [ ] **Rollback drill rehearsed in dev** (sub-minute DB_HOST revert proven).
-- [ ] **Maintenance window declared**, Jason sign-off recorded on #245, James
-      coordinated (VerdifyConsultancy repo is PR-only; the prod overlay change
-      lands as a reviewed PR, not a direct push).
+- [ ] **Maintenance window declared** and the exact production overlay change
+      committed. Render and diff the desired state, stage the revert, and use an
+      explicit ArgoCD sync during the window.
 
 ---
 
@@ -178,8 +179,9 @@ old StatefulSet stopped + `Retain`. Order is exact and each step is gated.
 5. **Flip `DB_HOST`.** Change the single ConfigMap/Secret key the app reads for
    the DB host from `verdify-db` → `verdify-db-cnpg-rw`. This is ONE key in the
    prod overlay env (mirrors the design's "flip one ConfigMap key" discipline).
-   Land via the gated GitOps path (reviewed PR → ArgoCD), or a direct gated
-   `kubectl set env`/patch in the window with the revert staged.
+   Commit the desired-state change, render and diff it, then explicitly sync it
+   through ArgoCD in the window. Use a direct `kubectl set env`/patch only for a
+   declared emergency, with the exact target validated and the revert staged.
 6. **Unquiesce, writer last.** Bring up `verdify-api`/`mcp` against the new
    `-rw`; confirm healthy reads+writes. THEN scale `verdify-ingestor` back to
    `replicas:1` (re-acquires its writer-Lease, reconnects the ESP32). Confirm
@@ -252,4 +254,4 @@ the build, not the migration.
 
 This runbook is intentionally exhaustive and is NOT a green light. It is the
 gated plan; execution requires the §2 preconditions GREEN + a declared window +
-Jason sign-off on #245.
+recorded task authorization on #245.

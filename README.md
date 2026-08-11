@@ -77,7 +77,7 @@ make help              # List all targets
 
 **Tooling:** ruff (lint + format), pytest, pre-commit hooks, and in-cluster
 Argo Workflows/Kaniko CI. GitHub Actions publishing was removed; application
-images publish to Zot and are promoted by reviewed digest pins.
+images publish to Zot and are promoted by validated digest pins.
 **Config:** `pyproject.toml` is the single source of truth for deps, lint rules, and test config. `make setup` reads it directly; there is no checked-in duplicate requirements file for local tooling.
 
 ### Codex quickstart
@@ -90,7 +90,7 @@ vault at `/Users/jason/Orbit/context_dump/verdify-platform/`.
 A safe orientation pass is: read `AGENTS.md`, `README.md`,
 the root lane docs (`AGENT_LANE.md`, `PROJECT_BOARD.md`, `EPICS.md`,
 `MILESTONES.md`, `SPRINTS.md`, `HISTORY.md`, `ARGOCD.md`,
-`ACCESS_MATRIX.md`, `COORDINATION_REQUESTS.md`),
+`ACCESS_MATRIX.md`, GitHub issues),
 `docs/runbooks/laptop-operator.md`, `Makefile`, `pyproject.toml`,
 `.github/workflows/ci.yml`, and the Orbit dump manifest if available; then
 report branch/worktree state, access assumptions, current goal, safety gates,

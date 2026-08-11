@@ -1,6 +1,6 @@
 # Firmware v2 — First-Principles Simplification (2026-06-10)
 
-Status: **DESIGN / FOR OWNER SIGN-OFF.** No firmware code until signed off.
+Status: **DESIGN / READY FOR IMPLEMENTATION.** Implement directly after the firmware replay, invariant, and rollback checks pass.
 Owner: Jason. Author: laptop-root. Supersedes nothing — extends
 `docs/design/vanda-zone-control-design.md` and
 `docs/firmware-climate-intent-controller-final-design-2026-05-24.md`.

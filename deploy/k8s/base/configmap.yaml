@@ -52,8 +52,8 @@ data:
   # device-write gate (#79). The lease code is fully inert (is_held()→True,
   # behaviour identical to the pre-fence ingestor) until this flag is "1". It is
   # armed ONLY in the prod overlay, and ONLY via the gated live-arm runbook with
-  # Jason sign-off (see deploy/k8s/overlays/prod/STAGED-ha3-writer-fence-arm.md).
+  # recorded task authorization (see deploy/k8s/overlays/prod/STAGED-ha3-writer-fence-arm.md).
   # Renew-or-die windows (15s lease / 10s renew / 2s retry) are the writer_lease
   # defaults; overridable per-env via VERDIFY_WRITER_LEASE_* if ever needed.
-  # ARMED 2026-06-20 (Jason sign-off, sprint): the exactly-one writer fence is on.
+  # ARMED 2026-06-20 (recorded task authorization, sprint): the exactly-one writer fence is on.
   VERDIFY_WRITER_LEASE_ENABLED: "1"

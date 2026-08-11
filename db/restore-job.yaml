@@ -3,13 +3,13 @@
 # PURPOSE (handoff §3.6): load a READ-ONLY pg_dump -Fc snapshot of the LIVE VM
 # TimescaleDB into the IN-CLUSTER verdify-db StatefulSet, WITHOUT ever stopping
 # or writing the live VM DB. The live VM DB remains the system of record until a
-# separate, Jason-confirmed cutover switch. This Job is the DATA half of the
+# separate, preflight-validated cutover switch. This Job is the DATA half of the
 # copy; the SCHEMA half (db/Dockerfile.migrate + migration-job.yaml, an ArgoCD
 # PreSync hook) must have run FIRST and built the empty, hypertable-registered
 # schema. See docs/runbooks/db-copy-not-move.md for the full gated sequence.
 #
 # THIS IS NOT WIRED INTO ARGOCD. It carries NO argocd.argoproj.io/hook annotation
-# on purpose — it is a HUMAN-RUN, one-shot, gated Job that laptop-root applies by
+# on purpose — it is a directly executed, one-shot, explicit one-shot Job that laptop-root applies by
 # hand inside the cluster during a quiescence window. ArgoCD must never sync it
 # (it is excluded from the kustomization resource list). Wiring a data-restore
 # into selfHeal could re-run a destructive --clean restore on every reconcile.
@@ -27,7 +27,7 @@
 # read-only NFS dump share (the same NAS path the nightly pg_dump writes to,
 # handoff §2.6 "NAS gets dumps only, never live DB files") into an emptyDir that
 # the restore container reads. The archive is produced OUT OF BAND by the
-# human-run, read-only `pg_dump -Fc` against the live VM DB (runbook step 2).
+# directly executed, read-only `pg_dump -Fc` against the live VM DB (runbook step 2).
 # No values, no credentials, no DB writes happen on the live VM in this manifest.
 apiVersion: batch/v1
 kind: Job
@@ -39,8 +39,8 @@ metadata:
   annotations:
     # Explicitly NOT an ArgoCD hook. Human-applied only. Documented so a future
     # reader does not "helpfully" add it to the kustomization or add a hook.
-    verdify.ai/run-mode: "human-gated-one-shot"
-    verdify.ai/gate: "laptop-root applies in-cluster; cutover-switch is Jason-confirmed"
+    verdify.ai/run-mode: "safety-checked-one-shot"
+    verdify.ai/gate: "laptop-root applies in-cluster; cutover-switch is preflight-validated"
 spec:
   # One attempt — a partial data-only restore must be inspected, not blindly
   # retried (a retry after a partial COPY could double-insert). On failure, the

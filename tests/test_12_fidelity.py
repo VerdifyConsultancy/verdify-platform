@@ -3925,7 +3925,7 @@ def test_irrigation_feedback_validator_covers_physical_acceptance_paths():
     assert "Alias-only irrigation feedback changes do not require `verdify-mcp`" in runbook
     assert "Do not run this restart from a dirty shared worktree" in runbook
     assert "Final acceptance is a post-deploy proof, not a deploy target" in runbook
-    assert "Run it only after the reviewed branch is merged" in runbook
+    assert "Run it only after the branch is merged" in runbook
     assert "the generated public site is live" in runbook
     assert "Run this after merge/deploy on the production host" in runbook
     assert "it proves the deployed state, it does not deploy the state" in runbook

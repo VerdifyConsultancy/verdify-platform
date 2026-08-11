@@ -171,7 +171,7 @@ def _compute_milestones() -> dict[str, datetime]:
     # trigger contract, ledger expectations, labels, and catch-up behavior do
     # not drift apart. Phase 4 retired PRE_DAWN/MORNING/MIDDAY/AFTERNOON/
     # EVENING fixed boundaries and the raw FORECAST poll because they produced
-    # low-signal cycles. MIDNIGHT remains as a short-window required review.
+    # low-signal cycles. MIDNIGHT remains a short-window required assessment.
     now_local = datetime.now(_DENVER)
     _milestones_cache = {}
     for key, spec in PLANNER_TRIGGER_MATRIX.items():

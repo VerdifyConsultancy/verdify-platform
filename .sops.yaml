@@ -13,7 +13,7 @@
 #
 # encrypted_regex: encrypt ONLY the secret VALUES (data / stringData), leaving
 # apiVersion/kind/metadata/type in cleartext so kustomize + kubeconform can still
-# parse the manifest shape, and so reviewers can see WHICH keys exist without
+# parse the manifest shape, and so operators can see WHICH keys exist without
 # seeing their values.
 creation_rules:
   - path_regex: deploy/k8s/.*\.sops\.ya?ml$

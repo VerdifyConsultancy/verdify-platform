@@ -1263,7 +1263,7 @@ def print_work_order(report: dict[str, Any]) -> None:
     print("   sudo systemctl restart verdify-ingestor")
     print("   Alias-only feedback changes do not require verdify-mcp unless schemas or mcp/server.py changed.")
     print("   Do not restart from a dirty shared worktree; rerun discovery and feedback-check after deploy.")
-    print("   Final acceptance is a post-deploy proof, not a deploy target; run it only after the reviewed")
+    print("   Final acceptance is a post-deploy proof, not a deploy target; run it only after the")
     print("   branch is merged, required services are restarted, and the public site/dashboard artifacts are live.")
     print()
     print("4. Tracking records that must close")

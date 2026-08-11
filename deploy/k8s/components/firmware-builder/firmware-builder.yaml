@@ -8,15 +8,15 @@
 #   # compile + archive only (default, safe):
 #   kubectl -n verdify-prod create job --from=cronjob/verdify-firmware-builder fw-build-$(date +%s)
 #
-#   # compile + archive + FLASH the device (Jason-gated; run the preflight first):
+#   # compile + archive + FLASH the device (safety-checked; run the preflight first):
 #   kubectl -n verdify-prod create job --from=cronjob/verdify-firmware-builder fw-flash-$(date +%s) \
 #     --dry-run=client -o json | \
 #     python3 -c 'import json,sys; j=json.load(sys.stdin); c=j["spec"]["template"]["spec"]["containers"][0]; \
 #       [e.update(value="1") for e in c["env"] if e["name"]=="FLASH"]; print(json.dumps(j))' | kubectl create -f -
 #
-# The OTA itself REMAINS human-gated policy-wise (CLAUDE.md): the agent runs
+# The OTA itself REMAINS safety-checked policy-wise (CLAUDE.md): the agent runs
 # scripts/firmware-deploy-preflight.sh (kube backend) and asks; only an
-# explicit operator approval triggers a FLASH=1 job.
+# an explicit FLASH=1 request triggers the job after the preflight passes.
 #
 # Secrets consumed (never logged; secrets.yaml is assembled in an emptyDir):
 #   verdify-firmware-ota/ota_password        (exists)

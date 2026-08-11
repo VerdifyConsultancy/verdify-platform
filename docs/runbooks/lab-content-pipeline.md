@@ -41,7 +41,7 @@ we deliberately return to content-in-image publishing.
    -> push ghcr.io/verdifyconsultancy/verdify-lab@sha256:<new>
         |
         v
-[GATE]  verdify-platform overlay digest write-back   <-- JASON / prod-promotion gate
+[GATE]  verdify-platform overlay digest write-back   <-- exact-target prod-promotion safeguard
    repin lab-site image digest in deploy/k8s/overlays/{dev,prod,prod-dark}
    -> ArgoCD sync (gated, one-at-a-time, health-checked)
 ```
@@ -88,7 +88,7 @@ Quartz runtime/source changes, such as components, styles, scripts, or static
 brand assets, must also land in `verdify-site-legacy@v4` before publishing the
 image. A content snapshot update alone does not move runtime behavior.
 
-## Stage 3 — overlay digest write-back  [GATED: Jason / prod-promotion]
+## Stage 3 — overlay digest write-back  [SAFEGUARD: exact-target execution]
 
 **Do NOT auto-merge.** Once Stage 2 publishes `verdify-lab@sha256:<new>`:
 
@@ -104,7 +104,7 @@ image. A content snapshot update alone does not move runtime behavior.
    ```
 
 3. Open a PR; the `K8s Manifests` gate (kubeconform) must pass.
-4. **Jason gate:** prod promotion. Merge -> ArgoCD sync the dev overlay first,
+4. **execution safeguard:** prod promotion. Merge -> ArgoCD sync the dev overlay first,
    health-check, then prod, one at a time, re-probe durability.
 
 ### Verification probe (live, read-only)

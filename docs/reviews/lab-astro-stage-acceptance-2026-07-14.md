@@ -3,7 +3,7 @@
 Issue: #351. This report makes the latest static-stage proof durable without
 copying the executor's scratch log. It is evidence for the static canary only;
 it is not occurrence activation, semantic-parity closure, or production
-cutover approval.
+cutover validation.
 
 ## Deployed identity
 

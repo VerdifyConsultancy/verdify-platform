@@ -42,7 +42,7 @@ builds only (`Container Publish` runs every Dockerfile with `push: false`).
 4. Collect each workflow's `digest` output parameter and commit a digest-only
    change to `deploy/k8s/overlays/prod/kustomization.yaml`
    (`newName: registry.vallery.net/verdifyconsultancy/<image>` + `digest:`).
-5. A human reviews the digest-only commit/PR.
+5. Validate the digest-only commit/PR.
 6. The prod ArgoCD app remains OutOfSync until an operator performs the explicit
    manual sync.
 
@@ -59,7 +59,7 @@ sync the live cluster or restart the ESP32 writer automatically.
 - `verdify-migrate`
 - `verdify-planner`
 
-Device-affecting or external images remain hand-pinned unless a specific reviewed
+Device-affecting or external images remain hand-pinned unless a specific validated
 change says otherwise:
 
 - `verdify-setpoint-server`

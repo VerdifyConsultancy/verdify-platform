@@ -11,7 +11,7 @@
 # DATA MIGRATION SAFETY (handoff §3.6): this Job applies schema migrations
 # against the in-cluster verdify-db. The copy-not-move TimescaleDB restore
 # (pg_dump -Fc from the VM, plus the row-count + hypertable + compression
-# verification) is a SEPARATE, gated, human-run runbook — it is deliberately NOT
+# verification) is a SEPARATE, gated, directly executed runbook — it is deliberately NOT
 # wired into this Job. Never let the VM stack and the k3s stack write the same DB.
 apiVersion: batch/v1
 kind: Job

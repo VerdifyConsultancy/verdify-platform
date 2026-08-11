@@ -156,7 +156,7 @@ report_sha256=8da094d7f9eb0957d38fff47dcd6b80f2d906676433c1b57613ad8aa632bf20d
 
 ## Media bypass regression follow-up — 2026-07-13
 
-Adversarial review found two classification-order gaps: an undeclared MPEG-TS
+Independent validation found two classification-order gaps: an undeclared MPEG-TS
 PES payload could precede the PMT and disappear from the metadata scan, and all
 top-level MP4 `mdat` bytes were skipped without proving their sample ownership.
 Regression fixtures now require PAT/PMT-first declared PIDs and place protected,
@@ -184,7 +184,7 @@ That same tree remained clean after stream-type/adaptation hardening at
 `2026-07-13T08:27:34Z` (3.180 seconds, identical report SHA-256).
 
 The final range-containment review replaced per-`mdat` sample rescans with one
-monotonic sweep. At `2026-07-13T08:38:28Z`, the adversarial 532,936-byte fixture
+monotonic sweep. At `2026-07-13T08:38:28Z`, the edge-case 532,936-byte fixture
 (100,000 one-byte `avc1` chunks, 4,093 empty `mdat` boxes, and one populated
 `mdat`) scanned clean in 0.967 seconds; the prior nested implementation took
 22.3 seconds. The fixture SHA-256 was

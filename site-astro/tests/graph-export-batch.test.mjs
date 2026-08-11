@@ -27,8 +27,8 @@ import {
   staticOccurrenceManifest,
 } from "../scripts/lib/occurrence-release.mjs";
 
-const REVIEWED_AT = "2026-07-13T11:59:00Z";
-const APPROVED_AT = "2026-07-13T12:00:00Z";
+const VALIDATED_AT = "2026-07-13T11:59:00Z";
+const ALLOWED_AT = "2026-07-13T12:00:00Z";
 const CAPTURED_AT = "2026-07-13T12:01:00Z";
 const DATASOURCE_IDENTITY = "operator-reporting-datasource-fixture";
 const DATASOURCE_IDENTITY_SHA256 = reportingDatasourceIdentitySha256(DATASOURCE_IDENTITY);
@@ -49,7 +49,7 @@ const REPORTING_FEED = Object.freeze({
   credentialClass: "reporting-read-only",
   direction: "one-way-read-only",
   sourceWatermark: "wm_graph_batch_fixture_0001",
-  sourceWatermarkAt: APPROVED_AT,
+  sourceWatermarkAt: ALLOWED_AT,
 });
 
 function canonicalBytes(value) {
@@ -72,8 +72,8 @@ function fixture() {
   const graphs = dashboardUids.map((uid, index) => discoverGraphOccurrence({
     route: `/evidence/graph-${String(index).padStart(3, "0")}`,
     ordinal: index,
-    liveUrl: `https://graphs.verdify.ai/d-solo/${uid}/approved?orgId=1&panelId=${index + 1}&theme=light&from=now-24h&to=now`,
-    title: `Approved graph ${index + 1}`,
+    liveUrl: `https://graphs.verdify.ai/d-solo/${uid}/active?orgId=1&panelId=${index + 1}&theme=light&from=now-24h&to=now`,
+    title: `Active graph ${index + 1}`,
   }));
   const cameraSources = [
     "https://api.verdify.ai/api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080",
@@ -86,7 +86,7 @@ function fixture() {
         route: index === 0 ? "/" : "/greenhouse",
         ordinal: index,
         sourceUrl,
-        semanticRole: `Approved current still ${index + 1}`,
+        semanticRole: `Active current still ${index + 1}`,
       }),
     }));
   const currentMedia = currentMediaWithSources.map(({ occurrence }) => occurrence);
@@ -100,7 +100,7 @@ function fixture() {
     manifest,
     manifestSha256,
     policyVersion: "offline-graph-batch-v1",
-    approvedAt: REVIEWED_AT,
+    activatedAt: VALIDATED_AT,
     cameraSources: currentMediaWithSources.map(({ occurrence, sourceUrl }) => ({
       occurrenceId: occurrence.occurrenceId,
       url: sourceUrl,
@@ -109,9 +109,9 @@ function fixture() {
   const active = structuredClone(blocked);
   active.activation = {
     ...active.activation,
-    state: "approved",
-    approvedBy: "jason",
-    approvedAt: APPROVED_AT,
+    state: "active",
+    activatedBy: "direct-task",
+    activatedAt: ALLOWED_AT,
   };
   const selectorPreconditions = {
     contract: "verdify.lab-occurrence-export-selector-preconditions",
@@ -122,11 +122,11 @@ function fixture() {
       expectedSelectionSha256: MEDIA_SELECTED_SHA256[index],
     })),
   };
-  const approvedMediaById = new Map(active.currentMedia.map((record) => [record.occurrenceId, record]));
+  const activeMediaById = new Map(active.currentMedia.map((record) => [record.occurrenceId, record]));
   const currentMediaRecords = currentMedia.map(({ occurrenceId }, index) => ({
     occurrenceId,
     captureStatus: "missing",
-    requestProvenanceSha256: approvedMediaById.get(occurrenceId).requestProvenanceSha256,
+    requestProvenanceSha256: activeMediaById.get(occurrenceId).requestProvenanceSha256,
     candidate: null,
     expectedSelectionSha256: MEDIA_SELECTED_SHA256[index],
   }));

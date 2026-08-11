@@ -12,7 +12,7 @@ but may describe services or overlays that have since moved or been retired.
 
 | Environment | ArgoCD app | Namespace | Desired state | Sync model | Device posture |
 |---|---|---|---|---|---|
-| Prod | `verdify-prod-dark` | `verdify-prod` | `deploy/k8s/overlays/prod` | Manual, behind device-write gate | Single live writer; `VERDIFY_DEVICE_WRITE_ENABLED=1`; prod sync requires Jason. |
+| Prod | `verdify-prod-dark` | `verdify-prod` | `deploy/k8s/overlays/prod` | Manual, behind device-write safeguards | Single live writer; `VERDIFY_DEVICE_WRITE_ENABLED=1`; sync requires exact-target preflight and rollback. |
 | Prod rename target | `verdify-prod` | `verdify-prod` | `deploy/k8s/overlays/prod` | Manual | Intended replacement name for the legacy `verdify-prod-dark` app; only through a gated orphan/readopt plan. |
 | Dev | Historical/deleted | `verdify-dev` | removed | n/a | Decommissioned/deleted 2026-06-16; do not add new work here. |
 | Staging | Historical/deleted | `verdify-staging` | removed | n/a | Decommissioned/deleted; do not add new work here. |
@@ -34,7 +34,7 @@ Prod public HTTP enters Cloudflare/tier-1 apps Traefik, then the prod tier-2
 
 Former dev routes such as `*.k3s.verdify.ai` / `*-dev.verdify.ai` are
 historical after the 2026-06-16 single-env decommission unless reintroduced by a
-new approved issue.
+new validated issue.
 
 ## Core Workloads
 
@@ -46,7 +46,7 @@ new approved issue.
 | `verdify-mcp` | `mcp/server.py`, FastMCP streamable HTTP | `deploy/k8s/base/mcp-deployment.yaml` | `ghcr.io/verdifyconsultancy/verdify-mcp` | `8000`, ClusterIP; prod `mcp.verdify.ai` | `verdify-config`; `verdify-app-secrets/POSTGRES_PASSWORD`; planner tool surface. |
 | `verdify-ingestor` | `ingestor/ingestor.py` | `deploy/k8s/base/ingestor-deployment.yaml` plus prod patches | `ghcr.io/verdifyconsultancy/verdify-ingestor` | No inbound service; connect-out worker | ESP32 `192.168.10.111:6053`, HA `192.168.30.107:8123`, MQTT, TimescaleDB, Open-Meteo, Slack, Hermes. Single-writer invariant: replicas `1`, strategy `Recreate`. |
 | `verdify-planner` | `planner_graph/`, `python -m planner_graph.server` | `deploy/k8s/components/planner/planner-deployment.yaml` | `ghcr.io/verdifyconsultancy/verdify-planner` | `8080`, ClusterIP, `/health` | TimescaleDB run store; optional `OPENAI_API_KEY`; reached by Hermes/Iris and cron replan paths. |
-| `verdify-setpoint-server` | `scripts/setpoint-server.py` | `deploy/k8s/components/setpoint-server/setpoint-server.yaml` | `ghcr.io/verdifyconsultancy/verdify-setpoint-server` | `8200`, ClusterIP | Prod-only grow-light writer and diagnostics; HA token Secret mount; TimescaleDB. Device-affecting cutover is Jason-gated. |
+| `verdify-setpoint-server` | `scripts/setpoint-server.py` | `deploy/k8s/components/setpoint-server/setpoint-server.yaml` | `ghcr.io/verdifyconsultancy/verdify-setpoint-server` | `8200`, ClusterIP | Prod-only grow-light writer and diagnostics; HA token Secret mount; TimescaleDB. Device-affecting cutover is safety-checked. |
 | `verdify-hermes-iris` | upstream Hermes gateway, args `gateway run` | `deploy/k8s/components/hermes-iris/hermes-iris.yaml` | `nousresearch/hermes-agent@sha256:...` | `8642`, ClusterIP | Secret `verdify-hermes`, optional `verdify-hermes-slack`, PVC `verdify-hermes-iris-data`, MCP URL to `verdify-mcp`. |
 | `verdify-mqtt` | Mosquitto fan-out broker | `deploy/k8s/components/mqtt-broker/mqtt-broker.yaml` | `eclipse-mosquitto:2` | `1883`, ClusterIP | In-cluster telemetry fan-out; separate from HAOS/Sentinel broker; no persistence. |
 | `verdify-lab` | static Quartz nginx runtime | `deploy/k8s/components/lab-site/lab-site.yaml` | `ghcr.io/verdifyconsultancy/verdify-lab` | `8080`, ClusterIP; prod lab hosts | Public research site. Serves the `verdify-lab-site-cache` PVC read-only; baked image content is bootstrap fallback. |
@@ -124,7 +124,7 @@ Grafana/MQTT use `emptyDir` (no PVC). When adding a PVC, follow this tiering.
 > storage-infra reclaims target budget / raises the DSM cap. Mitigation in
 > progress: regenerable volumes (lab cache; hermes run-state intent) are moving to
 > `node-local-temp-rwo` (local-path, no iSCSI), reducing target pressure. This is
-> the audit §8-P0 DB-reliability risk; pair with DB PITR. See `COORDINATION_REQUESTS.md`.
+> the audit §8-P0 DB-reliability risk; pair with DB PITR. See GitHub issues.
 
 ## External Dependencies
 

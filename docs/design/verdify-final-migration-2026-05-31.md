@@ -65,7 +65,7 @@ The VM is still the **production ESP32 writer** and holds the **authoritative Ti
 - **3-way device-safety interlock shipped & enforced:** code default-deny (`esp32_push.py:31`), staging `replicas:0` + base `replicas:1 Recreate`, `deny-esp32-egress` (staging) vs `allow-ingestor-device-egress` (prod only) + `VERDIFY_DEVICE_WRITE_ENABLED=1` prod only (#79/#84).
 - In-org CI/CD: `container-publish.yml` + vendored `reusable-container-build.yml` (#56/#68), `k8s-manifests.yml` digest write-back (#78), `promote-diff-guard.yml` (#82), 8 PR-gates intact, firmware never CI-flashed.
 - All 4 images `ghcr.io/verdifyconsultancy/verdify-{api,mcp,ingestor,migrate}@sha256`, digest-pinned, never mutable tag.
-- `deploy/k8s/base` + `overlays/{staging,prod}` on disk; CODEOWNERS human gate dropped → autonomous prod-promote gated only by promote-diff-guard (`f332265`); G10 smoke + device-route monitor (`fea5247`, #89).
+- `deploy/k8s/base` + `overlays/{staging,prod}` on disk; CODEOWNERS direct-execution safeguard dropped → autonomous prod-promote gated only by promote-diff-guard (`f332265`); G10 smoke + device-route monitor (`fea5247`, #89).
 - Secrets contract: sealed `verdify-app-secrets` present + decrypting in staging.
 
 ### B.2 STAGED, not merged (PR #101, validated GREEN, nothing applied)
@@ -78,7 +78,7 @@ The VM is still the **production ESP32 writer** and holds the **authoritative Ti
 ### B.3 REMAINING (the gap to 3 envs)
 - **dev env entirely net-new** (no ns, no overlay, no DB copy, no ArgoCD app).
 - prod stand-up (empty ns → workloads + ArgoCD app, #86).
-- DB single-writer handoff (Jason-gated, #72/#73).
+- DB single-writer handoff (safety-checked, #72/#73).
 - Per-repo CI/CD for www and planner (no deploy step today).
 - IngressRoutes + split-horizon DNS + wildcard TLS (out-of-lane).
 - planner_graph fold (#102), vault commit (#104), www decision (#103), VM decommission (#74/#91).
@@ -117,7 +117,7 @@ Each env runs its **own** db StatefulSet + api + mcp + ingestor; **all three ing
 All user-facing services converge to **ClusterIP + host-routed IngressRoute behind the one shared apps-ingress VIP `192.168.7.10`** (ADR-15 Model B′). The per-app LB `.7.21` is the documented interim anti-pattern to retire (add IngressRoute, then drop the LB). Use `metallb.universe.tf/address-pool: apps-pool` + ETP `Cluster`.
 
 ### C.4 Dual DNS (no-SPOF: Cloudflare + local split-horizon)
-- **External (WAN):** Cloudflare Tunnel (cloudflared, k3s ns `cloudflare`, 2 replicas, dials outbound → survives NextLight/Starlink failure). Add `*.verdify.ai` prod + `*.k3s.verdify.ai` hostnames to the tunnel ingress map → `https://192.168.7.10` Host-preserving (#293 adopt-not-mutate, change-gated). `verdify.ai` apex stays decoupled (Google A `216.239.3x.21`) so the consulting front door survives a home outage.
+- **External (WAN):** Cloudflare Tunnel (cloudflared, k3s ns `cloudflare`, 2 replicas, dials outbound → survives NextLight/Starlink failure). Add `*.verdify.ai` prod + `*.k3s.verdify.ai` hostnames to the tunnel ingress map → `https://192.168.7.10` Host-preserving (#293 adopt-not-mutate, snapshot-protected). `verdify.ai` apex stays decoupled (Google A `216.239.3x.21`) so the consulting front door survives a home outage.
 - **Local (split-horizon, the "Cloudflare-down still serves locally" requirement):** **decision #24, NOT YET BUILT.** Local resolver (pihole ArgoCD app exists as substrate) answers `*.verdify.ai`/`*.k3s.verdify.ai` → `192.168.7.10` internally; cert-manager `wildcard-verdify-ai` (letsencrypt DNS-01, James CF token agents#323) provides local TLS. This is the single largest unbuilt piece of the no-SPOF DNS requirement — **entirely out-of-lane (network-infra #53/#54, nexus).**
 
 ### C.5 CI/CD per repo → k3s
@@ -129,7 +129,7 @@ Authoritative path (proven on platform): PR → `ci.yml` (lint/unit+schema+firmw
 | **verdify-www** | Cloud Run via GAR | New GHCR build + overlay + ArgoCD (mirror platform); decision #103 |
 | **lab site** | VM nginx + site-legacy GHCR | platform `verdify-site/Dockerfile.k3s` (bakes Quartz+vault); content-change → new image → GitOps (no live file-watch) |
 | **verdify-planner** | test-only, no deploy | Add GHCR build + ArgoCD wiring (or stay Cloud Run); fold planner_graph into monorepo #102 |
-| **firmware OTA** | `make firmware-deploy` human-gated | Optional `workflow_dispatch` self-hosted-LAN runner; **CI MUST NOT flash** — all freeze rules (no-OTA-while-critical-alert, ≤1 OTA/week, 48h bake, replay-diff=0) preserved as the only OTA path |
+| **firmware OTA** | `make firmware-deploy` safety-checked | Optional `workflow_dispatch` self-hosted-LAN runner; **CI MUST NOT flash** — all freeze rules (no-OTA-while-critical-alert, ≤1 OTA/week, 48h bake, replay-diff=0) preserved as the only OTA path |
 
 ---
 
@@ -154,7 +154,7 @@ Authoritative path (proven on platform): PR → `ci.yml` (lint/unit+schema+firmw
 
 ---
 
-## E. THE FIVE HARD STOPS (Jason/operator-gated)
+## E. THE FIVE HARD STOPS (Jason/operator-scoped)
 G6 (staging never writes device) · Phase-1 firewall raw-socket proof · G-DB-4 (no promotion vs unvalidated DB, #85) · **G9 atomic single-writer ESP32 handoff** (rollback = scale k3s ingestor→0 + `systemctl start verdify-ingestor` on VM) · Gate 31 (irreversible VM destroy, #91).
 
 
@@ -181,7 +181,7 @@ G6 (staging never writes device) · Phase-1 firewall raw-socket proof · G-DB-4 
     - Re-run VLAN-10 egress spike under live load; uncomment allow-ingestor-device-egress (#87)
     - Model verdify-setpoint-server :8200 second writer in k3s (agents#304)
     - Reconcile canonical ESP32_API_KEY without re-flash (#105)
-    - G9 atomic handoff choreography (Jason-gated)
+    - G9 atomic handoff choreography (safety-checked)
 - **[verdify] EPIC #72/#28: DB migration (the long pole)** — Copy authoritative VM TimescaleDB into per-env k3s PVCs with parity validation (G-DB-4 HARD gate). Pin TimescaleDB >=2.25.2-pg16 everywhere (no downgrade #57). Move staging DB off local-path onto synology-iscsi Retain (#84).
     - psql abstraction scripts/lib/psql-verdify.sh (#24, in PR #101)
     - Recreate verdify-db StatefulSet on synology-iscsi Retain (#84, needs out-of-lane SC)
@@ -297,12 +297,12 @@ Work items:
 Exit criteria:
 - VM verdify-ingestor.service stopped (VERDIFY_DEVICE_WRITE_ENABLED unset)
 - prod k3s ingestor flipped to VERDIFY_DEVICE_WRITE_ENABLED=1, replicas:1, writing setpoints
-- Twin divergence trustworthy (#31/#34/#33/#32); first live setpoint push Jason-signed-off
+- Twin divergence trustworthy (#31/#34/#33/#32); first live setpoint push validated with exact readback and rollback staged
 - verdify-setpoint-server :8200 second-writer re-homed or accounted for (agents#304)
 - Rollback path proven: scale k3s ingestor->0 + systemctl start verdify-ingestor on VM
 
 Work items:
-- G9 atomic handoff choreography (Jason-gated, network-infra#40, agents#303)
+- G9 atomic handoff choreography (safety-checked, network-infra#40, agents#303)
 - Model/re-home setpoint-server :8200
 - Twin trust gates #31/#34
 
@@ -313,7 +313,7 @@ Exit criteria:
 - hermes-iris pod live (state copied); 8 cron + 3 timer units are CronJobs; FAILED plan-publish fixed (#59)
 - lab.verdify.ai served from baked verdify-site image; forecast/site-poll pipeline in k3s
 - Host verdify-api.service :8300 retired (#61)
-- VM compose down (volumes kept); Gate 31 VM destroy (#91, Jason-gated)
+- VM compose down (volumes kept); Gate 31 VM destroy (#91, safety-checked)
 
 Work items:
 - Cutover obs tier + copy grafana/umami volumes
@@ -339,7 +339,7 @@ Work items:
 - verdify-planner: fold planner_graph into the monorepo and run as a k3s service per-env, OR keep it on Cloud Run (project buoyant-valve-496719-m0, gpt-5.5) as a deliberate stateless remote gateway. The fold (#102) is required regardless to prevent data loss before VM decommission; the runtime location is the decision.
 - DB cutover technique for prod: physical pg_basebackup -> promote replica (compute-first/data-last, #28) vs the simpler dump-restore snapshot already proven in staging. Long-pole risk vs simplicity.
 - Whether to retire the per-env separate DB in favor of a single shared TimescaleDB with per-env schemas (Jason's target says each env has its OWN DB copy — assumed three separate StatefulSets; confirm this is intended over a shared instance for cost/storage).
-- Timing of the G9 atomic single-writer ESP32 handoff and the irreversible VM destroy (Gate 31, #91) — both are hardware/Track-A HARD STOPS only Jason can schedule, contingent on twin-divergence trust (#31/#34) being established.
+- Timing of the G9 atomic single-writer ESP32 handoff and the irreversible VM destroy (Gate 31, #91) — both are hardware/Track-A HARD STOPS must be explicitly scheduled with rollback, contingent on twin-divergence trust (#31/#34) being established.
 - Whether stale GCP SaaS-mirror resources (Cloud SQL/GCE Mosquitto/PubSub/Firebase) should be deleted now to stop billing — requires the GCP IAM access fix first; #53 is closed but resources may still exist.
 
 ---

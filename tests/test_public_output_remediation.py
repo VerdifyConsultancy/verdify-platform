@@ -86,7 +86,7 @@ def test_remediation_manifest_targets_only_marker_verified_historical_plans(tmp_
         "--date",
         "2026-07-03",
     ]
-    assert by_date["2026-07-04"]["action"] == "manual_review"
+    assert by_date["2026-07-04"]["action"] == "resolve_source_content"
     assert by_date["2026-07-05"]["action"] == "regenerate_generated_plan"
     assert excluded in generated.read_text(encoding="utf-8").casefold()
 
@@ -162,7 +162,7 @@ def test_remediation_rejects_same_root_final_and_intermediate_symlinks(tmp_path)
         assert applied.returncode == 0, applied.stderr
         assert target.read_text(encoding="utf-8") == original
         item = json.loads(manifest.read_text(encoding="utf-8"))["items"][0]
-        assert item["action"] == "manual_review"
+        assert item["action"] == "resolve_source_content"
         assert item["route"] == f"/plans/{date}"
         assert item["reason_classes"] == ["protected-reference"]
         assert item["automatic_redaction_eligible"] is False

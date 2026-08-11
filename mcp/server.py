@@ -260,7 +260,7 @@ mcp = FastMCP(
     manage setpoints, run the AI planner, and review performance.
     The greenhouse has temp/VPD bands, misters, fog, fans, heaters, and a vent.
     The planner emits bounded ClimateIntent in set_plan transitions; MCP
-    materializes it into registry-approved tunables that shape how the controller responds.
+    materializes it into registry-valid tunables that shape how the controller responds.
     Band params (temp_low, temp_high, vpd_low, vpd_high) are dispatcher-owned
     read-only context in routine plans. Temp comes from crop policy; house VPD is
     derived from crop + zone policy. Use direct tunable pushes only for explicit overrides.""",
@@ -2061,7 +2061,7 @@ async def set_tunable(
     trigger_id: str | None = None,
     planner_instance: str | None = None,
 ) -> str:
-    """Push a single registry-approved tunable to the ESP32 immediately.
+    """Push a single registry-valid tunable to the ESP32 immediately.
     The dispatcher will apply it within 5 minutes.
     Example: set_tunable('fog_escalation_kpa', 0.15, 'fog is 7x more effective than misters')
 

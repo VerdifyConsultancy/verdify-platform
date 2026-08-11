@@ -658,7 +658,7 @@ def _effectiveness_status(name: str, spec: TunableDef, ev: Evidence) -> str:
         return "Route exists but not recently exercised by the dispatcher."
     if ev.last_readback_ts:
         return "Firmware publishes the value; no recent planner/dispatcher use."
-    return "No recent live landing evidence; static route must be reviewed before relying on this."
+    return "No recent live landing evidence; validate the static route before relying on this."
 
 
 def _planner_status(name: str, spec: TunableDef, plan_required: set[str]) -> str:
@@ -995,7 +995,7 @@ def _render_full_page(
         "Every expected trigger is materialized in `planner_trigger_ledger` before planner delivery. Required full-plan triggers must close with `set_plan`; tactical checkpoints may close with `set_tunable` or `acknowledge_trigger` when no change is warranted.",
         "",
         '<div class="data-table">',
-        '  <div class="data-row"><strong><code>MIDNIGHT</code></strong><span>00:15 America/Denver</span><p>Required end-of-day review and reset. The AI planning agent evaluates prior-day plans, extracts supported lessons, and starts the new local day with <code>set_plan</code>.</p></div>',
+        '  <div class="data-row"><strong><code>MIDNIGHT</code></strong><span>00:15 America/Denver</span><p>Scheduled end-of-day evaluation and reset. The AI planning agent evaluates prior-day plans, extracts supported lessons, and starts the new local day with <code>set_plan</code>.</p></div>',
         '  <div class="data-row"><strong><code>SUNRISE</code></strong><span>Astral sunrise</span><p>Required morning full plan for daylight, peak stress, decline, and evening handoff.</p></div>',
         '  <div class="data-row"><strong><code>SOLAR_MAX</code></strong><span>Astral solar noon</span><p>Solar checkpoint for a small tactical correction or honest no-change acknowledgement.</p></div>',
         '  <div class="data-row"><strong><code>TRANSITION</code></strong><span>Peak stress and decline</span><p>Bounded tactical checkpoint for the two highest-signal day transitions.</p></div>',

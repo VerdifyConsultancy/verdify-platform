@@ -10,7 +10,7 @@
 > is STILL WANTED as the fully out-of-cluster backstop (this repo has no RBAC
 > in `observability`), and Slack wiring waits on the token-secret sealing.
 
-**From:** `verdify-platform` (L1 audit P0) · **Date:** 2026-06-17 · **Tracker:** `jvallery/agents` monitoring-stack; cross-ref `VerdifyConsultancy/verdify-platform#343`, `COORDINATION_REQUESTS.md`.
+**From:** `verdify-platform` (L1 audit P0) · **Date:** 2026-06-17 · **Tracker:** `jvallery/agents` monitoring-stack; cross-ref `VerdifyConsultancy/verdify-platform#343`, GitHub issues.
 
 ## Why this is needed (the P0 gap)
 
@@ -124,4 +124,4 @@ When `VerdifyEsp32WriterAbsent` fires:
 - Keep these alerts **out-of-band** (do not co-locate in the ingestor) — that independence is
   the entire point.
 - Cross-ref: `docs/reviews/lane1-architecture-audit-2026-06-16.md` §8 (P0 #2), and the
-  `verdify-platform` `COORDINATION_REQUESTS.md` monitoring-stack row.
+  `verdify-platform` GitHub issues monitoring-stack row.

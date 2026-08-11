@@ -2118,7 +2118,7 @@ export const releaseStoragePassOneContract = Object.freeze({
   }),
   activationGate: Object.freeze({
     status: "blocked",
-    reason: "per-object-143-plus-2-format-exceeds-approved-capacity",
+    reason: "per-object-143-plus-2-format-exceeds-active-capacity",
     requestedFullPublicationsPerDay: 96,
     occurrenceObjectsPerPublication: 148,
     retainedSamplesAtStrict48Hours: 193,

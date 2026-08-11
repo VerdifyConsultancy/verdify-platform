@@ -27,8 +27,8 @@ import {
 import { decodePng, validatePngFile } from "../scripts/lib/png-validation.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const REVIEWED_AT = "2026-07-13T11:59:00Z";
-const APPROVED_AT = "2026-07-13T12:00:00Z";
+const VALIDATED_AT = "2026-07-13T11:59:00Z";
+const ALLOWED_AT = "2026-07-13T12:00:00Z";
 const CAPTURED_AT = "2026-07-13T12:01:00Z";
 const REPORTING_FEED = Object.freeze({
   contract: "verdify.operator-public-reporting-feed",
@@ -38,7 +38,7 @@ const REPORTING_FEED = Object.freeze({
   credentialClass: "reporting-read-only",
   direction: "one-way-read-only",
   sourceWatermark: "wm_graph_offline_fixture_0001",
-  sourceWatermarkAt: APPROVED_AT,
+  sourceWatermarkAt: ALLOWED_AT,
 });
 const REPORTING_FEED_SHA256 = reportingFeedEnvelopeSha256(REPORTING_FEED);
 const REPORTING_DATASOURCE_IDENTITY = "operator-reporting-datasource-fixture";
@@ -58,8 +58,8 @@ function fixture() {
   const graphs = Array.from({ length: graphExportProducerContract.expectedGraphCount }, (_, index) => discoverGraphOccurrence({
     route: `/evidence/graph-${String(index).padStart(3, "0")}`,
     ordinal: index,
-    liveUrl: `https://graphs.verdify.ai/d-solo/public-reporting/approved?orgId=1&panelId=${index + 1}&theme=light&from=now-24h&to=now&var-zone=greenhouse`,
-    title: `Approved graph ${index + 1}`,
+    liveUrl: `https://graphs.verdify.ai/d-solo/public-reporting/active?orgId=1&panelId=${index + 1}&theme=light&from=now-24h&to=now&var-zone=greenhouse`,
+    title: `Active graph ${index + 1}`,
   }));
   const manifest = staticOccurrenceManifest({
     snapshotId: `sanitized-content-sha256:${"a".repeat(64)}`,
@@ -71,14 +71,14 @@ function fixture() {
     manifest,
     manifestSha256,
     policyVersion: "offline-graph-producer-v1",
-    approvedAt: REVIEWED_AT,
+    activatedAt: VALIDATED_AT,
   });
   const active = structuredClone(blocked);
   active.activation = {
     ...active.activation,
-    state: "approved",
-    approvedBy: "jason",
-    approvedAt: APPROVED_AT,
+    state: "active",
+    activatedBy: "direct-task",
+    activatedAt: ALLOWED_AT,
   };
   return { graphs, manifest, manifestSha256, blocked, active };
 }

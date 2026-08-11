@@ -1067,7 +1067,7 @@ REGISTRY: dict[str, TunableDef] = {
         planner_pushable=False,
         tier=2,
         notes="#410/#420: OFF-default activation flag for the S8 vent+reheat "
-        "held-temp dehum hold. Activation is Jason-gated (wave STEP-06) via the "
+        "held-temp dehum hold. Activation is safety-checked (wave STEP-06) via the "
         "sanctioned logged push path; iris must never toggle it "
         "(controller_safety — MCP set_tunable rejects non-planner_policy rows). "
         "Wire object_ids are the aioesphomeapi NAME slugs (the #421 wire-slug "

@@ -2,7 +2,7 @@
 
 - **Status:** Proposed — **DESIGN ONLY (M7 / #177 DEFERRED).** No code in this ADR contacts a device; nothing here is scheduled for this cutover sprint.
 - **Date:** 2026-06-04
-- **Owner lane:** verdify-platform (Iris authors; firmware concurrence review on heap/protocol; Jason gates any future scheduling).
+- **Owner lane:** verdify-platform (Iris authors; firmware compatibility validation review on heap/protocol; execution safeguards any future scheduling).
 - **Refs:** #177 (M7 device-write API), #79 (`VERDIFY_DEVICE_WRITE_ENABLED` single-writer gate), #27/#87 (device-VLAN route + split-horizon), #73/#132 (M5.1 single-writer cutover), #113/#114 (MQTT fan-out publish/subscribe).
 - **Supersedes / extends:** the LAN-only, native-ESPHome-API device plane documented in `docs/networking/verdify-dns-tls-matrix.md` (§4, row D-1) and `docs/design/verdify-final-migration-2026-05-31.md` (§A.1). Those describe the *as-is* single greenhouse on the device VLAN; this ADR describes the *future* internet-reachable, multi-device shape and is explicitly out of scope until M7 is scheduled.
 
@@ -14,7 +14,7 @@
 > touches the device this sprint**, and the migration ships **migrate-as-is**
 > (native-API dispatcher → ESP32 unchanged) with the **single-writer invariant**
 > intact. This ADR records the decision *shape* so the future build inherits a
-> reviewed contract rather than improvising one.
+> validated contract rather than improvising one.
 
 ---
 
@@ -47,7 +47,7 @@ So M7 is: **define the device-facing ingest + setpoint API on `api.verdify.ai`, 
 
 In scope (decided here, design-level): the API surface, the per-device auth model, and single-writer-**at-the-API-tier**. Captured as context: the transport trade-offs (MQTT vs edge-gateway vs WS/HTTPS) and the **TLS-heap fork** (ESP32-S3/PSRAM vs edge-offload) from the 2026-06-04 discussion.
 
-Out of scope (NOT decided here): any firmware change, any concrete transport selection (that is a go/no-go for the future build with firmware concurrence), schema/`verdify_schemas` additions, billing/multi-tenant data partitioning, and the planner's interaction with multi-device setpoints. **No device is contacted by anything in this ADR.**
+Out of scope (NOT decided here): any firmware change, any concrete transport selection (that is a go/no-go for the future build with firmware compatibility validation), schema/`verdify_schemas` additions, billing/multi-tenant data partitioning, and the planner's interaction with multi-device setpoints. **No device is contacted by anything in this ADR.**
 
 ---
 
@@ -89,7 +89,7 @@ The crux. Today "single writer" = "one process holds the one socket." At scale t
 
 The composition guarantee: **lease** ⇒ at most one current command author per device; **sequence** ⇒ a stale author is rejected, not silently applied; **idempotency** ⇒ retries are safe; **env gate** ⇒ a whole-fleet kill switch with the same default-deny semantics the operators already trust. No two-writer window and no zero-writer-corruption window for any individual device, by construction, without requiring "one global process."
 
-### D4. The as-is path is unchanged and remains the only production path until M7 is explicitly scheduled and gated by Jason.
+### D4. The as-is path is unchanged and remains the only production path until M7 is explicitly scheduled and protected by runtime safeguards.
 
 This ADR adds a future contract; it removes nothing. The single greenhouse keeps running the native-API connect-out path through M0→M6. M7 does not begin at the M5.1 cutover and is not part of it.
 
@@ -112,7 +112,7 @@ This ADR adds a future contract; it removes nothing. The single greenhouse keeps
 
 ## 4. Transport trade-offs (context from the 2026-06-04 discussion)
 
-The §2 contract (idempotent, sequence-keyed, ack'd, device-pulls-commands) is transport-independent. Three candidate transports were weighed; **none is selected here** — selection is a future go/no-go with firmware concurrence.
+The §2 contract (idempotent, sequence-keyed, ack'd, device-pulls-commands) is transport-independent. Three candidate transports were weighed; **none is selected here** — selection is a future go/no-go with firmware compatibility validation.
 
 ### 4.1 MQTT vs edge-gateway vs WS/HTTPS
 
@@ -136,17 +136,17 @@ The §2 contract (idempotent, sequence-keyed, ack'd, device-pulls-commands) is t
 
 The load-bearing on-device constraint surfaced 2026-06-04. The current controller already paces ESP32 writes specifically to avoid **transient heap-pressure alerts** post-OTA (`ingestor/esp32_push.py:47-51`). Adding a **persistent outbound cloud-TLS session** (WS/HTTPS-keepalive/MQTT-over-TLS) to the device is a materially larger and *sustained* heap commitment than the current LAN Noise session. That forks the design:
 
-- **Fork A — TLS on-device (ESP32-S3 / PSRAM).** The device terminates cloud TLS itself (WS or MQTT-over-TLS or HTTPS poll). Requires a part with enough RAM to hold the TLS record buffers + cert chain + app state *concurrently with the control loop* — practically an **ESP32-S3 with PSRAM**, not the bare ESP32 class. This is a **hardware fork** (a device-revision / new BOM), and a firmware-stack fork (mbedTLS tuning, session reuse, fragment sizes). It keeps the device a first-class internet endpoint with per-device mTLS (D2 primary). Risk: heap regressions are exactly the failure class the firmware-freeze rules were written for; this path must clear firmware concurrence on a measured heap budget, not an estimate.
+- **Fork A — TLS on-device (ESP32-S3 / PSRAM).** The device terminates cloud TLS itself (WS or MQTT-over-TLS or HTTPS poll). Requires a part with enough RAM to hold the TLS record buffers + cert chain + app state *concurrently with the control loop* — practically an **ESP32-S3 with PSRAM**, not the bare ESP32 class. This is a **hardware fork** (a device-revision / new BOM), and a firmware-stack fork (mbedTLS tuning, session reuse, fragment sizes). It keeps the device a first-class internet endpoint with per-device mTLS (D2 primary). Risk: heap regressions are exactly the failure class the firmware-freeze rules were written for; this path must clear firmware compatibility validation on a measured heap budget, not an estimate.
 - **Fork B — edge-offload (local gateway / Forks toward §4.1 edge-gateway).** The device **never speaks cloud TLS.** It keeps the current LAN-side Noise/native-API session to a nearby **gateway** (which can be a Pi-class device or a small always-on box per site); the gateway bears the cloud-TLS, holds the per-site command lease, and speaks the §2 device API upstream. No ESP32 hardware change, no on-device TLS heap cost — the firmware-freeze posture is preserved end-to-end. Cost: the gateway is a new device class with its own provisioning, update, and failure story, and it is one more hop that can be the single point of failure for a site (mitigated by it being the per-site single writer, which is what we want).
 
-**Framing for the future decision (NOT decided here):** Fork B (edge-offload) is the better fit for *migrate-as-is* + the firmware-freeze posture + the single-writer invariant (gateway = natural per-site single writer), at the cost of a new gateway component. Fork A (TLS on-device) is the better fit for a *true* fleet of self-contained internet devices with no per-site box, at the cost of a hardware revision (ESP32-S3/PSRAM) and a heap budget that must be proven, not assumed. The choice is a hardware + firmware + ops decision that belongs to the scheduled-M7 go/no-go with firmware concurrence and Jason's gate — this ADR only records that the fork exists and what each arm costs.
+**Framing for the future decision (NOT decided here):** Fork B (edge-offload) is the better fit for *migrate-as-is* + the firmware-freeze posture + the single-writer invariant (gateway = natural per-site single writer), at the cost of a new gateway component. Fork A (TLS on-device) is the better fit for a *true* fleet of self-contained internet devices with no per-site box, at the cost of a hardware revision (ESP32-S3/PSRAM) and a heap budget that must be proven, not assumed. The choice is a hardware + firmware + ops decision that belongs to the scheduled-M7 go/no-go with firmware compatibility validation and runtime safeguards — this ADR only records that the fork exists and what each arm costs.
 
 ---
 
 ## 5. Consequences
 
 **Positive**
-- A reviewed contract exists before any code is written, so the eventual build inherits the single-writer discipline (#79) instead of reinventing it under deadline.
+- A validated contract exists before any code is written, so the eventual build inherits the single-writer discipline (#79) instead of reinventing it under deadline.
 - Per-device mTLS removes the single-shared-key blast radius that the current `ESP32_API_KEY` has.
 - The lease + monotonic-sequence + idempotency + fleet-env-gate composition reconstructs the single-writer invariant *per device* without requiring a single global process, so the API tier can scale.
 - Device-pulls-commands keeps the platform free of a fan-out of outbound device sockets and traverses customer NAT — and is the natural generalization of the existing `:8200` poll, honoring migrate-as-is.
@@ -166,12 +166,12 @@ The load-bearing on-device constraint surfaced 2026-06-04. The current controlle
 
 - **migrate-as-is:** the production native-API dispatcher → ESP32 path is unchanged; this ADR is additive future design. ✔
 - **single-writer:** nothing here enables a second writer to the live greenhouse; the existing #79 three-layer gate is untouched and the new contract *strengthens* the invariant per-device (lease + sequence + idempotency + fleet gate). ✔
-- **#177 / M7 DEFERRED — design only:** zero code that contacts the device; this is a pure document; implementation is gated on a future Jason go/no-go. ✔
+- **#177 / M7 DEFERRED — design only:** zero code that contacts the device; this is a pure document; implementation is gated on a future explicitly scoped task. ✔
 - **no secrets:** all credentials referenced by name only. ✔
 
 ## 7. Open questions for the future M7 go/no-go (NOT decided here)
 
-1. Transport selection — Fork A (ESP32-S3/PSRAM, TLS on-device) vs Fork B (edge-gateway offload). Needs firmware concurrence on a *measured* heap budget.
+1. Transport selection — Fork A (ESP32-S3/PSRAM, TLS on-device) vs Fork B (edge-gateway offload). Needs firmware compatibility validation on a *measured* heap budget.
 2. Lease authority — reuse `verdify-db` advisory locks / a lease table, or a purpose-built coordination store? Fail-closed semantics on lease-store outage to be specified.
 3. PKI ops at fleet scale — CA hierarchy, issuance/rotation/revocation, OCSP/CRL reachability for NAT'd devices.
 4. How the planner addresses N greenhouses' setpoints, and how per-device command authority interacts with the planner's write path.

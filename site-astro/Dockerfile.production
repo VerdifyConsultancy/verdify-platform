@@ -23,7 +23,7 @@ RUN test -f .snapshot/attestation.json && npm run build:production
 FROM nginxinc/nginx-unprivileged:1.29.3-alpine@sha256:f7d0d0f2ebc0486dc110278672b9073f7fd641e58376b112b0c8865cf36d2e36 AS runtime
 
 LABEL org.opencontainers.image.title="Verdify Lab Astro production candidate" \
-      org.opencontainers.image.description="Approval-gated static production candidate; carries no device or publishing authority" \
+      org.opencontainers.image.description="Activation-gated static production candidate; carries no device or publishing authority" \
       ai.verdify.environment="production" \
       ai.verdify.release-track="green" \
       ai.verdify.device-authority="none"

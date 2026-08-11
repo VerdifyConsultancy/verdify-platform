@@ -17,7 +17,7 @@
 # DEVICE-VLAN REACHABILITY (handoff §3.4) is a GATED SPIKE handled by the
 # Deployment/NetworkPolicy/node-pinning, NOT this Dockerfile. Building/running
 # this image does NOT touch the live ESP32; a live connection is a separate,
-# Jason-gated probe.
+# safety-checked probe.
 #
 # BUILD CONTEXT IS THE REPO ROOT. ingestor.py inserts the repo root on sys.path
 # (ingestor/ingestor.py:24-26) and imports `verdify_schemas`; tasks.py pulls in

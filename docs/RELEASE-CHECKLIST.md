@@ -5,7 +5,7 @@ Last updated: 2026-07-03 (#413: §B pinch-decision + bake-record steps). Compani
 is the only branch; prod is ArgoCD app `verdify-prod-dark` (ns `verdify-prod`), manual-sync
 behind the device-write gate.
 
-Use the section(s) matching what you changed. **Jason is the human gate** for firmware OTA, the
+Use the section(s) matching what you changed. **Firmware safeguards are the preflight and rollback contract** for firmware OTA, the
 prod `argocd app sync`, device-VLAN actions, destructive prod DB work, and outward-facing edge/DNS.
 
 ---
@@ -31,15 +31,15 @@ prod `argocd app sync`, device-VLAN actions, destructive prod DB work, and outwa
       **Device-Write-Safety-Gate** must PASS (render-equality, digests-only, interlock/egress
       assertions).
 - [ ] On the `prod-promote` PR: `promote-diff-guard` PASS (only digest/comment/component-ref
-      lines changed). Human review + merge — git only, cluster untouched.
-- [ ] **[Jason gate]** Operator runs `argocd app sync verdify-prod-dark`.
+      lines changed). Required checks + merge — git only, cluster untouched.
+- [ ] **[execution safeguard]** Operator runs `argocd app sync verdify-prod-dark`.
 - [ ] Post-sync verify: app Synced/Healthy; single-writer intact (`replicas:1`, exactly one
       ingestor pod, `sum(verdify_esp32_writer_estab)==1`); restart the services named above; tail
       ingestor logs for clean ESP32 connect.
 
 ---
 
-## B. Firmware OTA (Jason-gated, ≤1/week, 48 h bake)
+## B. Firmware OTA (safety-checked, ≤1/week, 48 h bake)
 
 **Pre-deploy validation (local — CI does not gate firmware fully):**
 - [ ] On `main`, clean tree (`git status --short`). `make lint && make test`.
@@ -47,7 +47,7 @@ prod `argocd app sync`, device-VLAN actions, destructive prod DB work, and outwa
 - [ ] Corpus fresh: if `firmware/test/data/replay_overrides.csv.gz` max-ts is > ~3 weeks old,
       `make replay-corpus-refresh` first.
 - [ ] `make firmware-invariants` — 0 breaches.
-- [ ] `make firmware-replay OLD=<last-deployed-sha> NEW=HEAD` — 0 divergence, or reviewed +
+- [ ] `make firmware-replay OLD=<last-deployed-sha> NEW=HEAD` — 0 divergence, or documented +
       justified with a `THRESHOLD_PCT` override.
 - [ ] **If a band-CURVE changed** (`greenhouse_solar.h` `band_value_at_phase`, anchor resolution,
       diurnal-band shape): also `make firmware-replay-band OLD=<base>` and **read the %** — the
@@ -56,7 +56,7 @@ prod `argocd app sync`, device-VLAN actions, destructive prod DB work, and outwa
 - [ ] `make firmware-check` — real ESPHome compile passes (CI only `esphome config`-validates).
 - [ ] Every new tunable has a `cfg_*` readback (`no-new-fire-and-forget`).
 
-**Deploy preflight gates (enforced by `make firmware-deploy`):**
+**Deploy preflight checks (enforced by `make firmware-deploy`):**
 - [ ] No open `critical` (or legacy `high`) alerts.
 - [ ] Climate ≤300 s fresh; `climate_action_log` fresh + complete.
 - [ ] 48 h bake since `last-good.ota.bin` (override needs a ≥12-char logged reason).
@@ -68,7 +68,7 @@ prod `argocd app sync`, device-VLAN actions, destructive prod DB work, and outwa
 **Deploy + post:**
 - [ ] `make firmware-deploy` → confirm post-OTA `sensor-health` PASS; expected-firmware pin bumped.
       (Fail → auto-rollback to last-good; investigate before retry.)
-- [ ] **Pinch state — execute the g-377 decision (#377, Jason gate; mechanics per #413).**
+- [ ] **Pinch state — execute the g-377 decision (#377, execution safeguard; mechanics per #413).**
       `band_track_fraction` is `restore_value: no` with `initial_value: '0.0'`
       (`firmware/greenhouse/globals.yaml`), so the flash just **cold-started the pinch to 0.0**
       regardless of what was live (as of 2026-07-03 the live pre-#385 binary boots 0.25 and runs
@@ -142,4 +142,4 @@ prod `argocd app sync`, device-VLAN actions, destructive prod DB work, and outwa
 - [ ] Durable decisions, invariants, and runbook changes go into `docs/` — not chat only.
 - [ ] If the board / ArgoCD ownership / access boundaries changed, update the root lane docs
       (`AGENT_LANE.md`, `ARGOCD.md`, `ACCESS_MATRIX.md`, `PROJECT_BOARD.md`).
-- [ ] `git status --short` reviewed so unrelated changes aren't bundled in.
+- [ ] `git status --short` validated so unrelated changes aren't bundled in.

@@ -40,7 +40,7 @@ The site story is: Verdify is a public AI-assisted greenhouse control loop in Lo
 | `/reference/lessons` | Planner lesson library | Generated | `planner_lessons` | None | Generated |
 | `/reference/data-model` | Data model reference | Hand-authored | Tables, views, functions, compression, retention, and evidence exports | None | Manual |
 | `/reference/architecture` | System architecture and public-safe reference implementation | Hand-authored | Component map, data flow, reference hardware/runtime shape, database overview, example plan/scorecard JSON, and facts owned elsewhere | None | Manual copy |
-| `/reference/safety` | Safety architecture and firmware change protocol | Hand-authored | ESP32/dispatcher/LLM control split, firmware review gates, OTA preflight, rollback, and command surface | None | Manual |
+| `/reference/safety` | Safety architecture and firmware change protocol | Hand-authored | ESP32/dispatcher/LLM control split, firmware validation, OTA preflight, rollback, and command surface | None | Manual |
 | `/reference/known-limits` | Known issues | Alias | Alias on `/start/climate` after the known-limits merge | None | Manual |
 | `/reference/related-work` | Related work comparison | Hand-authored | Maker, research, and commercial greenhouse-control context | None | Manual |
 

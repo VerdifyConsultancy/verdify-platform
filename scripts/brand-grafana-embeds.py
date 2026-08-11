@@ -3332,7 +3332,7 @@ def main() -> int:
         if did_change:
             changed += 1
             print(f"updated {path} ({uid or '<no uid>'}, {panel_count} matching embedded panels)")
-    print(f"updated {changed} dashboard files; reviewed {touched_panels} embedded-panel definitions")
+    print(f"updated {changed} dashboard files; checked {touched_panels} embedded-panel definitions")
     return 0
 
 

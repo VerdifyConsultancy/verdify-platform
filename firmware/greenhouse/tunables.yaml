@@ -2281,7 +2281,7 @@ switch:
           id(sw_summer_vent_enabled_switch).publish_state(false);
 
   # Phase-2 dwell gate master switch. Default OFF until replay/invariant
-  # evidence and operator approval allow direct activation in the single live
+  # evidence and an explicit live activation request allow direct activation in the single live
   # controller path.
   - platform: template
     id: sw_dwell_gate_enabled_switch

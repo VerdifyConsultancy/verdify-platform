@@ -6,7 +6,7 @@
 # on the firmware/safety DANGER-surface change list (CLAUDE.md guardrail 1 +
 # handoff §3.2): this Dockerfile only WRAPS the existing module — it adds no
 # code, changes no tool, and adds no transport auth (the fail-CLOSED auth guard
-# is a separate, reviewed change by the mcp scope owner + iris-dev + Iris).
+# is a separate change with its own authentication tests).
 #
 # BUILD CONTEXT IS THE REPO ROOT. server.py imports the repo-root modules
 # `slack_config`, `slack_ops.service`, and `verdify_schemas` after inserting the

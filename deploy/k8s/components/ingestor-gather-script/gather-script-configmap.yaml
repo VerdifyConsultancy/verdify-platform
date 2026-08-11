@@ -1250,7 +1250,7 @@ data:
      GROUP BY climate_action, priority_axis
      ORDER BY samples DESC, climate_action;
     " 2>/dev/null || echo "(climate action rollup unavailable)"
-    echo "Use this to distinguish capacity limits from tactical limits: persistent high band errors with wet/fog disallowed point to safety/block reasons; high errors with assist allowed but low relay duty point to controller/relay proof that needs operator review."
+    echo "Use this to distinguish capacity limits from tactical limits: persistent high band errors with wet/fog disallowed point to safety/block reasons; high errors with assist allowed but low relay duty point to controller/relay investigation."
     echo ""
 
     # ── 30b-4a. BOUNDED RESPONSE PRIORS ─────────────────────────────

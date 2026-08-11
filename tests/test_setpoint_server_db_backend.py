@@ -179,7 +179,7 @@ def test_script_has_no_subprocess_docker_or_psql_prefix_resolution(setpoint_modu
 
 
 def test_all_setpoint_queries_route_through_db_text_safe():
-    """Adversarial-audit item on #447: ALL query sites inherit the corrected
+    """Edge-case-audit item on #447: ALL query sites inherit the corrected
     backend, not just the first. get_setpoint_text_sync may only query through
     _db_text_safe."""
     src = SCRIPT.read_text()

@@ -24615,7 +24615,7 @@ ALTER TABLE public.dli_validity_intervals OWNER TO verdify;
 -- Name: TABLE dli_validity_intervals; Type: COMMENT; Schema: public; Owner: verdify
 --
 
-COMMENT ON TABLE public.dli_validity_intervals IS 'Fail-closed validity ledger for interior crop DLI. Migration 195 permits unavailable intervals only; ordinary DML cannot activate DLI. Future activation requires a separately reviewed migration/contract change. This is a schema invariant, not DB-role privilege separation.';
+COMMENT ON TABLE public.dli_validity_intervals IS 'Fail-closed validity ledger for interior crop DLI. Migration 195 permits unavailable intervals only; ordinary DML cannot activate DLI. Future activation requires a separately validated migration/contract change. This is a schema invariant, not DB-role privilege separation.';
 
 
 --
@@ -27584,7 +27584,7 @@ ALTER VIEW public.v_dli_daily OWNER TO verdify;
 -- Name: VIEW v_dli_daily; Type: COMMENT; Schema: public; Owner: verdify
 --
 
-COMMENT ON VIEW public.v_dli_daily IS 'Daily interior crop DLI product contract. Migration 195 is categorically unavailable and never emits a numeric value. A later reviewed sensor-activation migration must define source revision, cadence/completeness, calibration, and validity rules.';
+COMMENT ON VIEW public.v_dli_daily IS 'Daily interior crop DLI product contract. Migration 195 is categorically unavailable and never emits a numeric value. A later validated sensor-activation migration must define source revision, cadence/completeness, calibration, and validity rules.';
 
 
 --
@@ -30303,7 +30303,7 @@ ALTER VIEW public.v_dli_current OWNER TO verdify;
 -- Name: VIEW v_dli_current; Type: COMMENT; Schema: public; Owner: verdify
 --
 
-COMMENT ON VIEW public.v_dli_current IS 'Current interior crop DLI product contract. Migration 195 is categorically unavailable and always emits NULL. Invalid, non-finite, negative, missing, and out-of-range source readings receive explicit reasons; a later reviewed activation migration owns source completeness and calibration.';
+COMMENT ON VIEW public.v_dli_current IS 'Current interior crop DLI product contract. Migration 195 is categorically unavailable and always emits NULL. Invalid, non-finite, negative, missing, and out-of-range source readings receive explicit reasons; a later validated activation migration owns source completeness and calibration.';
 
 
 --

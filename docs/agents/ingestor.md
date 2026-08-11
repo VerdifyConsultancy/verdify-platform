@@ -14,7 +14,7 @@ Every write into TimescaleDB, every read from Home Assistant / Shelly / Tempest 
 
 ## Does not own
 
-- The schemas it validates against (`verdify_schemas/` — shared, coordinator merges)
+- The schemas it validates against (`verdify_schemas/` is shared)
 - The ESP32 side of the connection (that's `firmware`)
 - The planner logic (that's `genai`) — even though `iris_planner.py` sits in `ingestor/` for deployment reasons, its content is genai-owned
 
@@ -22,23 +22,25 @@ Every write into TimescaleDB, every read from Home Assistant / Shelly / Tempest 
 
 | With agent | When | Protocol |
 |---|---|---|
-| `firmware` | New sensor, new override flag, new diagnostic field | Firmware emits → ingestor routes via `entity_map.py` → coordinator adds DB column + schema |
+| `firmware` | New sensor, new override flag, new diagnostic field | Firmware emits → ingestor routes via `entity_map.py` → DB column and schema land compatibly |
 | `genai` | Planner's emitted tunables change | Genai updates `ALL_TUNABLES`; ingestor dispatcher validates through `SetpointChange`; no code coupling |
-| `web` | Adding a new table for vault writers / API to read | Ingestor writes, web reads — column additions via coordinator schema PR |
-| `coordinator` | Every write path schema change | Every `INSERT INTO climate/diagnostics/equipment_state/...` must validate through a `verdify_schemas` model first |
+| `web` | Adding a new table for vault writers / API to read | Land the table, schema, and write path before the web consumer |
+| shared schemas | Every write-path contract change | Every `INSERT INTO climate/diagnostics/equipment_state/...` validates through a `verdify_schemas` model first |
 
-## Gates
+## Required checks
 
 - Every DB write must run through a Pydantic schema at the boundary (Sprint 23 completed this across ingestor.py + tasks.py). New write paths must continue this pattern.
-- Restart-then-tail is the live-test gate: `sudo systemctl restart verdify-ingestor && sudo journalctl -u verdify-ingestor -f`. Watch for `ValidationError` or `row failed schema validation` for 5 min before considering a deploy green.
-- DB is live production; never run destructive migrations without coordinator sign-off.
+- For a live deploy, restart and inspect the journal. Watch for `ValidationError`
+  or `row failed schema validation` for five minutes before declaring it green.
+- DB is live production; never run destructive migrations without documented validation.
 
-## Ask coordinator before
+## Cross-component checks
 
-- Adding a new hypertable or renaming a column
-- Changing a `verdify_schemas` write model (e.g., tightening a range check) — surface drift first
-- Wiring a new external API (Shelly v2, new HA integration) — might need a new `external.py` schema
-- Touching the setpoint confirmation loop (`confirmed_at` / setpoint_snapshot cross-check) — dispatcher and confirmation are tightly coupled
+- Validate new hypertables and column renames with a disposable restored schema.
+- Surface existing drift before tightening a `verdify_schemas` write model.
+- Add an `external.py` boundary schema when wiring a new external API.
+- Test dispatcher and confirmation together when changing the setpoint
+  confirmation loop.
 
 ## Recent arc (pre-agent-org)
 

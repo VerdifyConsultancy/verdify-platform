@@ -121,12 +121,12 @@ async function loadCompilerOccurrenceBinding({
   ) {
     throw new Error("occurrence export policy does not match the exact snapshot manifest");
   }
-  if (policy.activation.state !== "approved") {
-    throw new Error("selected occurrence release policy is not approved for compiler use");
+  if (policy.activation.state !== "active") {
+    throw new Error("selected occurrence release policy is not active for compiler use");
   }
 
   // The policy is the authority boundary. Only after its closed shape,
-  // canonical bytes, approval, and snapshot binding are proven may a lazy
+  // canonical bytes, activation, and snapshot binding are proven may a lazy
   // adapter construct or invoke a client. Keep this exact store instance for
   // both selector reads and later blob materialization.
   const store = await createCompilerOccurrenceStore(occurrenceStore, occurrenceStoreFactory);
@@ -190,7 +190,7 @@ function verifyCompleteSelectedOccurrenceEvidence(release, occurrenceManifest, p
   if (occurrenceManifest.selectedManifestSha256 !== release.selection.current.manifestSha256) {
     throw new Error("selected occurrence release identity differs from the static occurrence manifest");
   }
-  for (const [kind, released, discovered, approved, bounds] of [
+  for (const [kind, released, discovered, active, bounds] of [
     ["graph", release.current.occurrences.graphs, occurrenceManifest.graphs, policy.graphs, policy.imagePolicy.graphs],
     [
       "current-media",
@@ -201,35 +201,35 @@ function verifyCompleteSelectedOccurrenceEvidence(release, occurrenceManifest, p
     ],
   ]) {
     const discoveredById = new Map(discovered.map((occurrence) => [occurrence.occurrenceId, occurrence]));
-    const approvedById = new Map(approved.map((occurrence) => [occurrence.occurrenceId, occurrence]));
-    if (released.length !== discovered.length || approved.length !== discovered.length) {
+    const allowedById = new Map(active.map((occurrence) => [occurrence.occurrenceId, occurrence]));
+    if (released.length !== discovered.length || active.length !== discovered.length) {
       throw new Error(`selected occurrence release lacks complete ${kind} fallback coverage`);
     }
     for (const occurrence of released) {
       const served = discoveredById.get(occurrence.occurrenceId);
-      const approval = approvedById.get(occurrence.occurrenceId);
+      const activation = allowedById.get(occurrence.occurrenceId);
       const selectedDiscovery = selectedOccurrenceDiscovery(kind, occurrence);
       const discoverySha256 = createHash("sha256")
         .update(`${JSON.stringify(selectedDiscovery, null, 2)}\n`)
         .digest("hex");
       if (
         !served
-        || !approval
+        || !activation
         || !occurrence.fallback
         || JSON.stringify(selectedOccurrenceDiscovery(kind, served)) !== JSON.stringify(selectedDiscovery)
         || JSON.stringify(served.selected) !== JSON.stringify(occurrence)
-        || approval.occurrenceSha256 !== discoverySha256
+        || activation.occurrenceSha256 !== discoverySha256
       ) {
-        throw new Error(`selected occurrence release lacks exact approved ${kind} fallback coverage`);
+        throw new Error(`selected occurrence release lacks exact active ${kind} fallback coverage`);
       }
       if (
         kind === "current-media"
         && (
           occurrence.policySha256 !== policySha256
-          || occurrence.requestProvenanceSha256 !== approval.requestProvenanceSha256
+          || occurrence.requestProvenanceSha256 !== activation.requestProvenanceSha256
         )
       ) {
-        throw new Error("selected current-media request provenance differs from the approved occurrence policy");
+        throw new Error("selected current-media request provenance differs from the active occurrence policy");
       }
       const fallback = occurrence.fallback;
       if (
@@ -240,7 +240,7 @@ function verifyCompleteSelectedOccurrenceEvidence(release, occurrenceManifest, p
         || fallback.height > bounds.maxHeight
         || fallback.bytes > bounds.maxBytes
       ) {
-        throw new Error(`selected ${kind} fallback violates the approved image bounds`);
+        throw new Error(`selected ${kind} fallback violates the active image bounds`);
       }
     }
   }
@@ -979,7 +979,7 @@ function aliasRecords(sourceRecords) {
         date: record.date,
         socialImage: record.socialImage,
       };
-      if (aliases.has(route)) throw new Error(`duplicate alias is not an approved rolling-plan alias: ${route}`);
+      if (aliases.has(route)) throw new Error(`duplicate alias is not an active rolling-plan alias: ${route}`);
       aliases.set(route, candidate);
     }
   }
@@ -1377,8 +1377,8 @@ async function main({ occurrenceStoreFactory = null } = {}) {
     snapshotManifestDigest: snapshot.manifestDigest,
     sanitization: snapshot.sanitization,
     localEvidenceStatus: snapshot.evidenceStatus,
-    approvalEligible: snapshot.approvalEligible,
-    mandatoryApprovalBoundary: snapshot.mandatoryApprovalBoundary,
+    activationEligible: snapshot.activationEligible,
+    mandatoryActivationBoundary: snapshot.mandatoryActivationBoundary,
     sourceCount: records.length,
     snapshotMarkdownCount: markdownSources.length + excludedDrafts.length,
     excludedDrafts,

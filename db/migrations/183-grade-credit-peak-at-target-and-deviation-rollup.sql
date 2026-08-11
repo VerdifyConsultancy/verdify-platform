@@ -21,7 +21,7 @@
 -- DEFERRED to a follow-up live step (DB-gated, cannot run offline): re-quantile-matching
 -- mig-147 plan_anchor_ladder.comp_cut_graded to the new (lower) compliance distribution +
 -- the BC-6 ordinal-stability ≥90% gate. mig-147's binary_fallback keeps the planner reward
--- safe in the interim. Tracked: run the mig-147.2 $reanchor$ block + the §6 reviewer query
+-- safe in the interim. Tracked: run the mig-147.2 $reanchor$ block + the §6 validator query
 -- against live data, post-deploy, before relying on the re-shaped reward.
 --
 -- Non-self-transactional (CREATE OR REPLACE FUNCTION + ALTER TABLE ADD COLUMN; no top-level

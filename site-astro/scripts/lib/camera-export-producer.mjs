@@ -21,14 +21,14 @@ const MAX_TIMEOUT_MS = cameraExportProducerContract.maxTimeoutMs;
 const DEFAULT_TIMEOUT_MS = cameraExportProducerContract.defaultTimeoutMs;
 const PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 
-// #483 deliberately approved exactly these two public, read-only requests. Keep
+// #483 deliberately active exactly these two public, read-only requests. Keep
 // this producer closed if a later policy is broadened accidentally.
-const APPROVED_CAMERA_REQUESTS = new Map([
-  [cameraExportProducerContract.approvedOccurrenceIds[0], {
+const ALLOWED_CAMERA_REQUESTS = new Map([
+  [cameraExportProducerContract.allowedOccurrenceIds[0], {
     url: "https://api.verdify.ai/api/v1/public/cameras/greenhouse_2/latest.jpg?h=1080",
     requestProvenanceSha256: "34d53abda8ab745e106c0719534a554769a9b1017f22b7bb40e5895a6be74a34",
   }],
-  [cameraExportProducerContract.approvedOccurrenceIds[1], {
+  [cameraExportProducerContract.allowedOccurrenceIds[1], {
     url: "https://api.verdify.ai/api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080",
     requestProvenanceSha256: "0667d58e2f39c22e68bd906d3e4c754de1b41a845487eb55654aadba37c76fe0",
   }],
@@ -55,28 +55,28 @@ function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
-function assertApprovedPolicy(policy) {
+function assertActivePolicy(policy) {
   validateOccurrenceExportPolicy(policy);
   if (
-    policy.activation.state !== "approved"
-    || policy.activation.approvedBy !== "jason"
-    || !policy.activation.approvedAt
+    policy.activation.state !== "active"
+    || policy.activation.activatedBy !== "direct-task"
+    || !policy.activation.activatedAt
   ) throw new Error("camera export policy is not activated");
-  if (policy.cameraUpstream.sources.length !== APPROVED_CAMERA_REQUESTS.size) {
+  if (policy.cameraUpstream.sources.length !== ALLOWED_CAMERA_REQUESTS.size) {
     throw new Error("camera export policy is not the closed #483 request set");
   }
   for (const source of policy.cameraUpstream.sources) {
-    const approved = APPROVED_CAMERA_REQUESTS.get(source.occurrenceId);
+    const active = ALLOWED_CAMERA_REQUESTS.get(source.occurrenceId);
     if (
-      !approved
-      || source.url !== approved.url
-      || source.requestProvenanceSha256 !== approved.requestProvenanceSha256
+      !active
+      || source.url !== active.url
+      || source.requestProvenanceSha256 !== active.requestProvenanceSha256
     ) throw new Error("camera export policy is not the closed #483 request set");
   }
 }
 
 export function validateCameraExportRequest(request, policy) {
-  assertApprovedPolicy(policy);
+  assertActivePolicy(policy);
   if (!exactKeys(request, [
     "contract",
     "schemaVersion",
@@ -92,22 +92,22 @@ export function validateCameraExportRequest(request, policy) {
   ]) || request.contract !== "verdify.lab-camera-export-request" || request.schemaVersion !== 1) {
     throw new Error("camera export request does not use the closed v1 shape");
   }
-  const approved = APPROVED_CAMERA_REQUESTS.get(request.occurrenceId);
+  const active = ALLOWED_CAMERA_REQUESTS.get(request.occurrenceId);
   const policySource = policy.cameraUpstream.sources.find(({ occurrenceId }) => occurrenceId === request.occurrenceId);
   if (
-    !approved
+    !active
     || !policySource
-    || request.requestProvenanceSha256 !== approved.requestProvenanceSha256
+    || request.requestProvenanceSha256 !== active.requestProvenanceSha256
     || request.requestProvenanceSha256 !== policySource.requestProvenanceSha256
     || request.method !== "GET"
-    || request.url !== approved.url
+    || request.url !== active.url
     || request.url !== policySource.url
     || request.redirectsAllowed !== false
     || request.authorization !== "forbidden"
     || request.cookies !== "forbidden"
   ) throw new Error("camera export request is outside the exact public allowlist");
   canonicalInstant(request.requestedAt, "camera export request time");
-  if (Date.parse(request.requestedAt) < Date.parse(policy.activation.approvedAt)) {
+  if (Date.parse(request.requestedAt) < Date.parse(policy.activation.activatedAt)) {
     throw new Error("camera export request predates policy activation");
   }
   if (request.expectedSelectionSha256 !== null && !SHA256_RE.test(request.expectedSelectionSha256)) {
@@ -253,7 +253,7 @@ async function sanitizeJpeg(bytes, bounds) {
     || metadata.width > bounds.maxWidth
     || metadata.height < bounds.minHeight
     || metadata.height > bounds.maxHeight
-  ) throw new Error("camera JPEG dimensions are outside the approved bounds");
+  ) throw new Error("camera JPEG dimensions are outside the configured bounds");
 
   let encodedPng;
   try {
@@ -288,7 +288,7 @@ async function sanitizeJpeg(bytes, bounds) {
     || decoded.width > bounds.maxWidth
     || decoded.height < bounds.minHeight
     || decoded.height > bounds.maxHeight
-  ) throw new Error("sanitized camera PNG dimensions are outside the approved bounds");
+  ) throw new Error("sanitized camera PNG dimensions are outside the configured bounds");
   return { png, decoded };
 }
 

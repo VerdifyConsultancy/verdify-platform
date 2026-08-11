@@ -7,7 +7,7 @@
     "min_confidence": 0.2,
     "rationale_not_contains": [
       "guarantee",
-      "approved"
+      "safe to execute"
     ],
     "selected_action_in": [
       "acknowledge_trigger",
@@ -77,7 +77,7 @@
         "readback_freshness_seconds": 75
       },
       "operator_notes": [
-        "This looks like a review item more than a direct control action."
+        "This needs diagnosis more than a direct control action."
       ],
       "recent_delivery_summary": {
         "compliance_drift_points": 8,
@@ -96,7 +96,7 @@
       "site_refs": [
         {
           "id": "playbook-compliance-1",
-          "snippet": "Escalate to review if the score drifts without a strong local control hypothesis."
+          "snippet": "Diagnose the cause if the score drifts without a strong local control hypothesis."
         }
       ]
     },
@@ -108,7 +108,7 @@
       "trace_id": "trace-eval-compliance-001"
     },
     "trigger": {
-      "event_label": "Compliance drift review",
+      "event_label": "Compliance drift diagnosis",
       "event_type": "REVIEW",
       "expected_action": "any",
       "greenhouse_id": "vallery",

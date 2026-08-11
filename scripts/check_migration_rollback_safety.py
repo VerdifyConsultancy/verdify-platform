@@ -42,7 +42,7 @@ Modes
 ``--check FILE [FILE ...]``
     The CI gate. Exit 1 if any listed file is self-committing. This is what the
     workflow runs against the migration files touched in a PR: a self-committing
-    migration is flagged so a reviewer confirms the apply/rollback tooling is NOT
+    migration is flagged so the apply/rollback tooling can confirm it is NOT
     blindly wrapping it.
 
 ``--rollback-wrap FILE``

@@ -4,7 +4,7 @@
 **Author:** firmware agent (planning). **Executors:** root (cluster/VLAN/storage/secrets infra) + coordinator (`/mnt/iris/verdify`, migrations, `.github/workflows/**`, `verdify_schemas/**`).
 **Date:** 2026-05-30. **Repo:** `/mnt/iris/verdify-worktrees/firmware`.
 
-> This document was synthesized from five design tracks and their adversarial critiques. Where a track's premise was factually wrong against the repo, it has been **corrected and the correction grounded** (see §0.1). Every claim cites a real file/line. Each recommendation is tagged **[buildable-now]** or **[aspirational]** so executors know what is safe to act on versus what needs a confirmation gate first.
+> This document was synthesized from five design tracks and their independent technical critiques. Where a track's premise was factually wrong against the repo, it has been **corrected and the correction grounded** (see §0.1). Every claim cites a real file/line. Each recommendation is tagged **[buildable-now]** or **[aspirational]** so executors know what is safe to act on versus what needs a confirmation gate first.
 
 ---
 
@@ -19,7 +19,7 @@ Today there is **no CD for the Python layer.** The systemd units run code straig
 - `systemd/verdify-setpoint-server.service`: `ExecStart=.../python3 /srv/verdify/scripts/setpoint-server.py`
 - `systemd/verdify-api.service`: `EnvironmentFile=/srv/verdify/api/.env`, `ExecStart=.../uvicorn main:app --host 0.0.0.0 --port 8300`
 
-`/srv/verdify` is a symlink to `/mnt/iris/verdify` (coordinator main worktree, branch `live/platform-main`). Code goes live only when a human merges to that branch and then runs `systemctl restart` — **coordinator-only, manual, no audit trail.** `.github/workflows/ci.yml` has **eight gate jobs and zero build/push/deploy jobs** (`lint`, `site-generated-guards`, `schemas`, `firmware`, `firmware-logic`, `firmware-replay-diff`, `no-new-fire-and-forget`, `service-restart-drift-guard`). A merge changes git; nothing reloads.
+`/srv/verdify` is a symlink to `/mnt/iris/verdify` (coordinator main worktree, branch `live/platform-main`). Code goes live only when the change merges after required checks pass to that branch and then runs `systemctl restart` — **coordinator-only, manual, no audit trail.** `.github/workflows/ci.yml` has **eight gate jobs and zero build/push/deploy jobs** (`lint`, `site-generated-guards`, `schemas`, `firmware`, `firmware-logic`, `firmware-replay-diff`, `no-new-fire-and-forget`, `service-restart-drift-guard`). A merge changes git; nothing reloads.
 
 This gap is exactly why **PR #12 (the Vanda software backlog) cannot go live** without a hand-deploy, and it is the direct cause of the **2026-04-21 MCP-staleness incident** that the `service-restart-drift-guard` job (ci.yml:395-427) was written to prevent ("MCP ran 40+ hours with stale schema because nobody restarted it post-merge").
 
@@ -67,7 +67,7 @@ Tenant of the existing 5-node k3s cluster. **[buildable-now]** once root provisi
 | **obs** | `promtail` (DaemonSet) | hand to nexus/observability | log topology changes in k8s; §4.4 |
 | **jobs** | the CronJobs from systemd timers/crons (§4.3) | auto-sync | non-critical batch |
 
-**The sync-policy asymmetry is the core safety model:** web + jobs auto-sync (developer velocity); the control + data tiers are human-gated. A 5-second-cadence push loop must never be rolled by a passive git push.
+**The sync-policy asymmetry is the core safety model:** web + jobs auto-sync (developer velocity); the control + data tiers are safety-checked. A 5-second-cadence push loop must never be rolled by a passive git push.
 
 ### 2.2 Networking — the ESP32-LAN solution (rebased on §0.1)
 
@@ -123,7 +123,7 @@ The **`ESP32_API_KEY` is hardware-control-sensitive** — rotate it as part of t
 
 ### 3.1 Phased decoupling — move compute first, data last
 
-**[buildable-now]** **Phase A — pods point at the still-external DB.** Stand up the Python pods reading/writing the *existing* compose DB on `VM-VERDIFY` via a k8s `Service` of type `ExternalName` (or an `Endpoints` object pointing at `VM-VERDIFY:5432`). This proves the compute layer in-cluster **without touching the DB**, and is the lowest-risk sequencing. **Security note:** the DB is currently `127.0.0.1`-bound; exposing it to the pod CIDR requires either (preferred) a **stunnel/PgBouncer TLS sidecar on the VM** exposing only a TLS port to the k3s node CIDR, or a firewall-scoped bind change permitting only the pod/node CIDR. Do **not** unbind to `0.0.0.0` without that compensating control (this is a reviewed, coordinator-gated prod change).
+**[buildable-now]** **Phase A — pods point at the still-external DB.** Stand up the Python pods reading/writing the *existing* compose DB on `VM-VERDIFY` via a k8s `Service` of type `ExternalName` (or an `Endpoints` object pointing at `VM-VERDIFY:5432`). This proves the compute layer in-cluster **without touching the DB**, and is the lowest-risk sequencing. **Security note:** the DB is currently `127.0.0.1`-bound; exposing it to the pod CIDR requires either (preferred) a **stunnel/PgBouncer TLS sidecar on the VM** exposing only a TLS port to the k3s node CIDR, or a firewall-scoped bind change permitting only the pod/node CIDR. Do **not** unbind to `0.0.0.0` without that compensating control (this is a validated, coordinator-gated prod change).
 
 **[aspirational]** **Phase B — move the DB into the cluster** only if root confirms replicated block storage. Otherwise the external-DB-on-VM end-state is acceptable and lower-risk.
 
@@ -238,7 +238,13 @@ CMD ["uvicorn","main:app","--host","0.0.0.0","--port","8300"]
 
 `make firmware-deploy` (Makefile:346) runs `firmware-deploy-preflight.sh`, compiles ESPHome, `upload --device $(ESP32_DEVICE=192.168.10.111)`, sleeps 60 s, runs `sensor-health-sweep.sh`, and auto-rolls-back to `last-good.ota.bin` on failure (Makefile:372-385). It flashes physical hardware over the LAN. **It must never be a reconciled Deployment** (a Deployment would re-flash on every drift — the catastrophe the freeze rules prevent).
 
-**Primary mechanism: keep OTA as an operator-gated GitHub Actions `workflow_dispatch` job on a self-hosted runner with LAN access to `192.168.10.111`** (`runs-on: [self-hosted, verdify-lan]`), with a mandatory `reason` input for the audit trail. Rationale: the freeze gates are already CI/script gates; environment-protection + required reviewers map cleanly to the three-reviewer rule (CLAUDE.md rule 9); and a privileged hostNetwork Job that can flash prod is the largest blast-radius object to leave in a GitOps repo. **Break-glass fallback:** a manually-instantiated, `syncPolicy: manual`, `hostNetwork`, node-pinned, `backoffLimit: 0` Job from a `verdify-firmware-ota` image (built rarely; layers ESPHome + ESP-IDF on `verdify-py:full`).
+**Primary mechanism: keep OTA as an operator-scoped GitHub Actions
+`workflow_dispatch` job on a self-hosted runner with LAN access to
+`192.168.10.111`** (`runs-on: [self-hosted, verdify-lan]`), with a mandatory
+`reason`, replay/invariant/compile checks, a last-good rollback image, and
+post-flash health verification. A privileged hostNetwork Job that can flash
+production remains a break-glass fallback: manually instantiated,
+`syncPolicy: manual`, node-pinned, and `backoffLimit: 0`.
 
 **The one code change OTA needs:** `firmware-deploy-preflight.sh:10` does `DB=(docker exec … verdify-timescaledb psql …)`. On a runner with no Docker socket / after the DB moves, this fails. Re-point it (and the other 26 call sites) to a network-psql wrapper (§5.4). **This is a Phase-0 / pre-condition deliverable** — without it the freeze gates do not exist on the runner.
 
@@ -314,7 +320,7 @@ Do **not** make PR #12 the first GitOps deploy. PR #12 carries heat-critical wor
 3. Confirm the PR body documents post-merge restarts (drift-guard enforces). Derive the set from changed paths: `ingestor/**`→`verdify-ingestor`; `mcp/server.py`→`verdify-mcp`; `api/**`→`verdify-api`; dispatcher→`verdify-setpoint-server`.
 4. Extra safety dump: `docker exec verdify-timescaledb pg_dump -U verdify -Fc verdify > /mnt/iris/backups/verdify-precut-PR12-$(date +%Y%m%d-%H%M).dump`.
 5. `git -C /mnt/iris/verdify fetch && merge --ff-only origin/live/platform-main`.
-6. Apply any PR #12 migration first (serialized, coordinator-reviewed), validate against `verdify_schemas/tests/test_drift_guards.py`.
+6. Apply any PR #12 migration first (serialized, coordinator-validated), validate against `verdify_schemas/tests/test_drift_guards.py`.
 7. Restart **only** the documented services in dependency order: `sudo systemctl restart verdify-ingestor verdify-mcp verdify-api` (+ `verdify-setpoint-server` if dispatcher code changed) — explicit restart closes the 2026-04-21 class.
 8. Verify: `make lint && make test` (tolerate the 1 flaky `test_dew_point_risk_computes` timeout); `make sensor-health SINCE='15 minutes'` → `FAIL: 0`; confirm fresh `climate`/`climate_action_log`; functional check the PR #12 behavior (pre-cool trigger emitted; any dual-write lands in both sinks); watch one diurnal peak.
 **Rollback:** `git checkout <prev-sha>` + restart the same services (same mechanism as the forward deploy — why this path is low-risk under deadline).

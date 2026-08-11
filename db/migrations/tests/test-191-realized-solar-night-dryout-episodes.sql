@@ -304,7 +304,7 @@ INSERT INTO public.climate_action_log(
     '{"vent":true,"fan1":true,"fan2":false,"heat1":true,"heat2":true,"fog":false,"mister_south":false,"mister_west":false,"mister_center":false}'
 );
 
--- Independent adversarial greenhouses cover each evidence qualification that
+-- Independent edge-case greenhouses cover each evidence qualification that
 -- previously allowed a false effective result.
 INSERT INTO public.setpoint_snapshot(ts, parameter, value, greenhouse_id)
 SELECT ts, parameter, value, greenhouse_id

@@ -20,7 +20,7 @@ const environment = {
 if (fixture) {
   environment.LAB_SNAPSHOT = "tests/fixtures/snapshot";
 } else if (!environment.LAB_SNAPSHOT) {
-  throw new Error("LAB_SNAPSHOT must name an approval-eligible production snapshot");
+  throw new Error("LAB_SNAPSHOT must name an activation-eligible production snapshot");
 }
 
 function run(script, scriptArgs = []) {

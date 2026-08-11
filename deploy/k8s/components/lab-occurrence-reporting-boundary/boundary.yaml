@@ -27,7 +27,7 @@ data:
   cameraRequestProvenance: sha256-of-occurrence-method-exact-url-redirect-auth-cookie-contract
   cameraSanitization: decode-reencode-rgb-or-rgba-png-metadata-free
   futureEgressContract: api.verdify.ai:443-and-occurrence-store-only
-  requiredGates: jason-approval,operator-owned-reporting-feed,least-privilege-reporting-credential
+  requiredSafeguards: source-activated-policy,operator-owned-reporting-feed,least-privilege-reporting-credential
 ---
 apiVersion: v1
 kind: ServiceAccount

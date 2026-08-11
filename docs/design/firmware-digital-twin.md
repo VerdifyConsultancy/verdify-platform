@@ -4,7 +4,7 @@
 **Scope:** firmware agent authors the twin runtime + harness extensions; everything crossing `db/migrations/`, `docker-compose.yml`, `.github/workflows/`, `grafana/provisioning/`, and ingestor's `alert_monitor` routes through coordinator / the owning agent (per `CLAUDE.md`).
 **Date:** 2026-05-29.
 
-A reviewer's shortcut: every claim below is tagged **[verified]** (read from the repo), **[buildable-now]** (constructible with what exists, minor additive glue), or **[aspirational]** (needs new infra/config that does not exist yet). The honest punchline: the **prod twin shadowing live telemetry to a divergence dashboard (MVP)** is buildable-now; the **stage pre-deploy bake gate** and **dev CI live-diff** are buildable-now-with-caveats; **full relay-interlock fidelity (Tier 2 ESPHome host build)** is aspirational.
+A validator's shortcut: every claim below is tagged **[verified]** (read from the repo), **[buildable-now]** (constructible with what exists, minor additive glue), or **[aspirational]** (needs new infra/config that does not exist yet). The honest punchline: the **prod twin shadowing live telemetry to a divergence dashboard (MVP)** is buildable-now; the **stage pre-deploy bake gate** and **dev CI live-diff** are buildable-now-with-caveats; **full relay-interlock fidelity (Tier 2 ESPHome host build)** is aspirational.
 
 ---
 
@@ -160,7 +160,7 @@ Sinks: a `firmware_twin_divergence` summary table + Grafana panels (rolling stag
 
 - **Rule 8 (`firmware-replay-diff`, THRESHOLD_PCT=0).** Today: candidate vs merge-base over the 8-month frozen corpus, PR-time only. Upgrade: **add a live agreement gate** — stage-vs-prod `relay_disagree_pct ≤ THRESHOLD_PCT` (default 0) sustained over N hours of *today's* telemetry. The corpus diff **stays** (covers conditions the recent window lacks — winter freezes in summer); the live diff **adds** "agrees under today's actual conditions." Both must pass; the existing `REPLAY_DIFF_THRESHOLD_PCT:` PR-body override extends to the live gate.
 - **Rule 3 (48-h bake).** Today: `firmware-deploy-preflight.sh` checks the **mtime** of `last-good.ota.bin` — a clock check on the *previous* binary, not a behavioral check on the candidate. Upgrade: bake = **"48 continuous hours of stage-twin agreement under real conditions, measured before deploy."** The bake clock advances only while stage-vs-prod stays within threshold AND no `severity='critical'` twin alert is open; a divergence spike **resets the clock**. Preflight gains a query: `min(window_start) WHERE comparison='stage_vs_prod' AND relay_disagree_pct ≤ threshold` must span ≥48 h ending now. **Precision (critique):** this bake criterion is **stage-twin FSM output vs prod-twin FSM output** (both are FSM intent). A separate, stronger "FSM vs actual relays" definition would read `equipment_state` and account for dwell/interlock effects Tier 1 doesn't model — be explicit about which is measured. **Trigger (critique):** the stage twin must repin to the candidate SHA **when the candidate binary is produced (post-merge / `make firmware-deploy` accepted)**, not when the operator initiates deploy — otherwise the 48 h clock can't have started and the gate is circular.
-- **Rule 9 (required artifacts + coordinator independent replay).** The continuously-running stage twin **is** an independent reproduction: separate container, separate process, separate checkout of the candidate SHA, on the same live data. The CI hook attaches the twin's corpus+live diff artifact automatically; the coordinator step collapses to "confirm the stage-twin container runs the right SHA (`twin_decisions.twin_ref`) and its divergence artifact is green." **Honest limit (critique):** this replaces only the manual *replay re-run*. The **Iris planner concurrence brief for interface-level changes** (new `ClimateAction` value, changed `mode_reason` string, new field) remains a human step — the twin validates control-logic consistency, not planner/MCP interpretation. The CI artifact should *flag* interface-level changes (enum-ordinal or string-literal deltas) separately to prompt the brief.
+- **Rule 9 (automated artifacts + independent replay).** The continuously-running stage twin **is** an independent reproduction: separate container, separate process, separate checkout of the candidate SHA, on the same live data. The CI hook attaches the twin's corpus+live diff artifact automatically and verifies that the stage-twin container runs the candidate SHA (`twin_decisions.twin_ref`) with a green divergence artifact. The twin validates control-logic consistency, not planner/MCP interpretation, so interface-level changes (new `ClimateAction` value, changed `mode_reason` string, or new field) also run the Iris planner compatibility suite and surface any failure directly.
 - **Rule 1 interaction (cleanest integration point).** `firmware-deploy-preflight.sh` already blocks deploy on `severity IN ('critical','high')` rows in `alert_log`. So the divergence detector plugs into the existing freeze gate with **no new gate plumbing** — it just writes the right alert rows: stage-vs-prod over-threshold during bake → `high` (deploy blocker); sustained prod-vs-reality → `critical` candidate (which then blocks the *next* OTA — a misbehaving live device should block shipping on top of it); twin staleness (twin stopped emitting) → `high`, because a dark twin silently disables the live gates.
 
 ### 4.4 CI hook
@@ -168,7 +168,7 @@ Sinks: a `firmware_twin_divergence` summary table + Grafana panels (rolling stag
 Extend the existing `.github/workflows/ci.yml` `firmware-replay-diff` job (it already builds OLD/NEW `replay_emit` via worktrees, runs the corpus diff at `THRESHOLD_PCT=0`, and parses `REPLAY_DIFF_THRESHOLD_PCT:`):
 1. **Build the twin per PR** — the job *already* builds the candidate `replay_emit` from HEAD; **that binary is the dev/stage twin.** Tag and upload it by HEAD SHA so the bake pipeline promotes the *same* binary (build-once, run-as-twin).
 2. **Corpus diff stays the blocking PR gate.** The **live** diff cannot run in CI — GitHub-hosted runners have **no route to the prod TimescaleDB** (`127.0.0.1:5432`, localhost-only). CI **fetches a summary** of the stage twin's recent stage-vs-prod divergence (published artifact / read-only endpoint) and **reports** it; live generation happens on the prod host. **No-data handling (critique):** if the stage twin hasn't run this SHA yet, emit a warning annotation ("live bake gate enforced at deploy time") and **do not block** — the corpus diff remains the blocking gate at PR time; the live bake is enforced at `firmware-deploy-preflight.sh`.
-3. **Post the combined artifact** (corpus %, live 48 h %, per-relay + by-mode breakdown, bake-clock status) in the format reviewers already know from the `firmware-replay-diff.sh` summary — replacing manual rule-9 artifact assembly.
+3. **Post the combined artifact** (corpus %, live 48 h %, per-relay + by-mode breakdown, bake-clock status) in the `firmware-replay-diff.sh` summary format.
 
 ---
 
@@ -231,7 +231,7 @@ services:
 ### 5.2 Observability schema
 
 ```sql
--- coordinator-reviewed migration (db/migrations/ is serialized shared territory)
+-- coordinator-validated migration (db/migrations/ is serialized shared territory)
 CREATE TABLE twin_decisions (
     ts            timestamptz NOT NULL,
     twin_env      text NOT NULL,        -- 'dev' | 'stage' | 'prod'
@@ -279,7 +279,7 @@ One `twin-prod` container pinned to `last-good` (`source_dirty=0`, ref build), t
 Add `twin-stage` (artifact-snapshot build, after the archive script ships `firmware/test/` in the snapshot) + the **stage-vs-prod** live diff. Repin stage at candidate-build time. Wire the live 48 h bake query into `firmware-deploy-preflight.sh` (start as non-blocking operator context, then promote to a hard gate once the false-positive rate from §2.2 gaps is demonstrably zero). **[buildable-now-with-caveats]**
 
 **Phase 3 — dev CI live-diff.**
-Add `twin-dev` + the CI summary-fetch step (corpus diff blocking; live summary informational with no-data tolerance) + the combined PR artifact + the interface-change flagger feeding the rule-9 planner-concurrence prompt. **[buildable-now-with-caveats]**
+Add `twin-dev` + the CI summary-fetch step (corpus diff blocking; live summary informational with no-data tolerance) + the combined PR artifact + the interface-change flagger feeding the rule-9 planner-compatibility validation prompt. **[buildable-now-with-caveats]**
 
 **Deferred / aspirational:** Tier 2 ESPHome host build (needs a new `greenhouse-host.yaml` platform overlay stubbing gpio/wifi/api/sntp and adapting timing-sensitive YAML — *not* a re-use of `firmware-esphome-worktree.sh`, which builds for `esp32dev`); QEMU forensic tool (reserve only); zone-VPD fidelity (needs new sensor columns in `climate`).
 
@@ -305,7 +305,7 @@ design.*
 | TWIN-9 | P1 | firmware→coordinator | Extend `firmware-deploy-preflight.sh`: live stage-vs-prod 48 h bake query (rule 3) + live stage-vs-prod agreement query (rule 8); start non-blocking, promote to hard gate after false-positive rate is zero. |
 | TWIN-10 | P2 | firmware→ingestor | `requested-by: firmware` PR adding `alert_monitor` rules: stage-vs-prod over-threshold → `high`; sustained prod-vs-reality → `critical`; twin staleness → `high`. |
 | TWIN-11 | P2 | firmware→ingestor/coordinator | Log manual-override state (`manual_fan/fog_active`, `vent_lock_active`) to `system_state`/`climate_action_log` so the differ can suppress override-caused prod-vs-reality divergence. Schema-touch → coordinator. |
-| TWIN-12 | P2 | coordinator | CI: tag+upload candidate `replay_emit` as the twin image artifact; add live-summary-fetch step (no-data tolerant, informational); add interface-change flagger for rule-9 planner-concurrence prompt. |
+| TWIN-12 | P2 | coordinator | CI: tag+upload candidate `replay_emit` as the twin image artifact; add live-summary-fetch step (no-data tolerant, informational); add interface-change flagger for rule-9 planner-compatibility validation prompt. |
 | TWIN-13 | P2 | firmware/web | Grafana divergence dashboard JSON (prod-vs-reality, stage-vs-prod, per-relay heatmap, by-mode/daypart/outdoor-band); provisioning lands via web/coordinator. |
 | TWIN-14 | P3 | firmware | Warm-start: seed `ControlState` from last ~10 min `equipment_state`/`system_state`; write `twin_warmup_until`; suppress alerts during warm-up. |
 | TWIN-15 | P3 | firmware | Stage/prod ref hygiene: `deployed/last-good` annotated tag at promotion; `source_dirty=1` → force artifact-snapshot build + fail if snapshot absent; `git cat-file -e` pre-build assert. |

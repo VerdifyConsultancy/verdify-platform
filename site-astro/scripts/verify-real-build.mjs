@@ -89,7 +89,7 @@ if (
   || build.stageGlobalNoindex !== true
   || routes.routes?.length !== 323
 ) {
-  throw new Error("dist is not the reviewed 429-file sanitized Lab stage build");
+  throw new Error("dist is not the validated 429-file sanitized Lab stage build");
 }
 if (
   discoveryOccurrenceManifestSha256 !== occurrencePolicy.sourceOccurrenceManifestSha256

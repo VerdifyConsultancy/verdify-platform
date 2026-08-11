@@ -33,8 +33,8 @@ import {
     staticOccurrenceManifest,
 } from "../scripts/lib/occurrence-release.mjs";
 
-const REVIEWED_AT = "2026-07-13T11:59:00Z";
-const APPROVED_AT = "2026-07-13T12:00:00Z";
+const VALIDATED_AT = "2026-07-13T11:59:00Z";
+const ALLOWED_AT = "2026-07-13T12:00:00Z";
 const EXPORTED_AT = "2026-07-13T12:10:00Z";
 const PROCESSING_AT = "2026-07-13T12:10:30Z";
 const BUCKET = "verdify-lab-releases";
@@ -225,7 +225,7 @@ async function fixture(context) {
         manifest,
         manifestSha256,
         policyVersion: "operation-adapter-offline-v1",
-        approvedAt: REVIEWED_AT,
+        activatedAt: VALIDATED_AT,
         cameraSources: currentMedia.map((occurrence, index) => ({
             occurrenceId: occurrence.occurrenceId,
             url: cameraUrls[index],
@@ -234,9 +234,9 @@ async function fixture(context) {
     const policy = structuredClone(blockedPolicy);
     policy.activation = {
         ...policy.activation,
-        state: "approved",
-        approvedBy: "jason",
-        approvedAt: APPROVED_AT,
+        state: "active",
+        activatedBy: "direct-task",
+        activatedAt: ALLOWED_AT,
     };
     const policySha256 = occurrenceExportPolicySha256(policy);
     const image = png();
@@ -273,12 +273,12 @@ async function fixture(context) {
             candidate: await candidate("graphs", occurrence.occurrenceId),
         });
     }
-    const approvedMedia = new Map(
+    const activeMedia = new Map(
         policy.currentMedia.map((record) => [record.occurrenceId, record]),
     );
     const mediaRecords = [];
     for (const occurrence of currentMedia) {
-        const requestProvenanceSha256 = approvedMedia.get(
+        const requestProvenanceSha256 = activeMedia.get(
             occurrence.occurrenceId,
         ).requestProvenanceSha256;
         mediaRecords.push({
@@ -308,7 +308,7 @@ async function fixture(context) {
             credentialClass: "reporting-read-only",
             direction: "one-way-read-only",
             sourceWatermark: "wm_operation_adapter_offline_0001",
-            sourceWatermarkAt: APPROVED_AT,
+            sourceWatermarkAt: ALLOWED_AT,
         },
         exportedAt: EXPORTED_AT,
         expectedSelectionSha256: null,
@@ -615,7 +615,7 @@ test("camera preconditions stop aggregate CAS before changing its selector", asy
     );
 });
 
-test("CLI requires an explicit command and approved policy before store construction", async (context) => {
+test("CLI requires an explicit command and active policy before store construction", async (context) => {
     const value = await fixture(context);
     let createCalls = 0;
     const createStore = () => {

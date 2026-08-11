@@ -20,8 +20,8 @@
 # Grafana, the deploy-gate sweeps, and the firmware-OTA critical-alert
 # preflight. When the DB itself is unreachable the job emits a Kubernetes
 # Warning Event (VerdifyWatchdogDbUnreachable) and fails loudly instead.
-# Slack: intentionally not wired here until the slack token secret is sealed
-# (docs/handoff/k3s-agent-handoff.md §5.2) — do not add a silent-noop path.
+# Slack remains unwired until its token is managed as a sealed secret; do not
+# add a silent-noop path.
 apiVersion: v1
 kind: ServiceAccount
 metadata:

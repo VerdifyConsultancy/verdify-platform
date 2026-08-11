@@ -564,14 +564,14 @@ export async function executeOccurrenceExportBatch({
     throw new Error(`occurrence export caller requires exactly ${EXPECTED_GRAPH_COUNT}+${EXPECTED_MEDIA_COUNT} occurrences`);
   }
   if (
-    policy.activation.state !== "approved"
-    || policy.activation.approvedBy !== "jason"
-    || !policy.activation.approvedAt
+    policy.activation.state !== "active"
+    || policy.activation.activatedBy !== "direct-task"
+    || !policy.activation.activatedAt
   ) throw new Error("occurrence export caller policy is not activated");
   const policySha256 = occurrenceExportPolicySha256(policy);
   if (batch.policySha256 !== policySha256) throw new Error("occurrence export caller policy digest mismatch");
   const feedFreshness = validateOccurrenceExportBatch(batch, policy, processingAt);
-  if (Date.parse(batch.exportedAt) < Date.parse(policy.activation.approvedAt)) {
+  if (Date.parse(batch.exportedAt) < Date.parse(policy.activation.activatedAt)) {
     throw new Error("occurrence export batch predates policy activation");
   }
   const reportingFeedSha256 = reportingFeedEnvelopeSha256(batch.reportingFeed);

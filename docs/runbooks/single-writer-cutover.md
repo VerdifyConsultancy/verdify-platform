@@ -1,12 +1,12 @@
 # M5 — Single-Writer Cutover Runbook (atomic ESP32-writer handoff, iris VM → k3s prod)
 
 **Status:** DRAFT — PAPER ONLY. **Nothing in this document auto-executes.** No
-command here is run by authoring or reviewing it. No `kubectl`/ArgoCD apply/sync,
+command here is run merely by editing it. No `kubectl`/ArgoCD apply/sync,
 no `systemctl` stop/start, no `ConfigMap`/replica/NetworkPolicy edit, no setpoint
 push, no ESP32 native-API session, no firmware flash, no secret read/seal. Every
-step is teed up for **Jason** to execute by hand at the gated M5 moment. The doc
+step is ready for the executing agent to run directly at the scoped M5 window. The doc
 stays marked **DRAFT** until its two preconditions land (IRIS-W012 setpoint
-coverage gate + IRIS-W013 `:6053` ESTAB==1 monitor); Jason executes at M5.
+coverage gate + IRIS-W013 `:6053` ESTAB==1 monitor); direct executor executes at M5.
 
 **Handle:** IRIS-W014 (the W014 deliverable). **Issue:** #132 (DRAFT runbook),
 child of **#73** (EPIC prod cutover / G9 atomic single-writer handoff), member of
@@ -44,10 +44,10 @@ transition — never a make-before-break overlap:
 ```
    1            iris VM verdify-ingestor.service holds the one connection  (BEFORE)
    │
-   ▼  (Jason stops the VM unit; its aioesphomeapi socket releases)
+   ▼  (the executor stops the VM unit; its aioesphomeapi socket releases)
    0            ATOMIC zero-writer window — proven empty before any k3s start  (PROVE)
    │
-   ▼  (Jason flips the 3-part prod posture + scales k3s ingestor 0→1)
+   ▼  (the executor flips the 3-part prod posture + scales k3s ingestor 0→1)
    1            exactly ONE k3s pod holds the connection, iris socket empty  (AFTER)
 ```
 
@@ -63,14 +63,11 @@ on-device during it); a two-writer window is never acceptable.
 
 ---
 
-## 1. Roles & the single executor
+## 1. Single executor
 
-| Owner | Does |
-|---|---|
-| **Jason** | executes **every** step in §3–§6 by hand. The atomic 3-part posture flip (§4) is HIS single action. Every stop/start/scale/flip is a Jason gate. |
-| **laptop-root** | only if a cluster-side apply is needed to land the prod posture (e.g. `argocd app sync verdify-prod` after Jason approves) — prod is a **manual-sync** Application on purpose (no `syncPolicy.automated`), so nothing reconciles without an explicit operator sync. |
-
-No agent executes any step. This runbook is the script Jason reads from.
+One direct executor performs §3–§6 in order and records every verification. The
+same executor uses root cluster access when the manual-sync Application must be
+reconciled. Do not split the break-before-make sequence across actors.
 
 ---
 
@@ -123,7 +120,7 @@ deliverables; the runbook stays DRAFT until W012 + W013 land.
 - [ ] **Not inside a stress window.** If `outdoor_temp > 85°F` is forecast for the
   next 24 h, defer (operator-context warning, not a hard block by itself, but M5
   is a high-consequence handoff — prefer a calm window). See §5.
-- [ ] **rollback path pre-walked.** Jason has confirmed the iris
+- [ ] **rollback path pre-walked.** Confirm the iris
   `verdify-ingestor.service` unit is present and startable (it carries an
   `ExecStartPre` pkill guard, `systemd/verdify-ingestor.service:11`, that
   guarantees a clean single aioesphomeapi connection on restart).
@@ -135,7 +132,7 @@ deliverables; the runbook stays DRAFT until W012 + W013 land.
 > The count starts at **1** (the iris VM holds the connection). This phase drives
 > it to **0** and proves the zero before anything k3s-side connects.
 
-**3.1 Snapshot the BEFORE state (proves count == 1, VM-owned).** `[GATE: Jason]`
+**3.1 Snapshot the BEFORE state (proves count == 1, VM-owned).** `[SAFEGUARD: exact-target execution]`
 On the iris VM, observe the single ESTABLISHED `:6053` socket and record the
 owning PID:
 
@@ -149,7 +146,7 @@ Confirm `ESTAB(:6053) == 1` and it is the VM ingestor. If it is already 0 or 2,
 **STOP** (abort — §5: a zero-writer or pre-existing multi-writer state is not the
 expected BEFORE).
 
-**3.2 Stop the VM ingestor (the writer releases).** `[GATE: Jason]`
+**3.2 Stop the VM ingestor (the writer releases).** `[SAFEGUARD: exact-target execution]`
 
 ```sh
 # iris VM (.150)
@@ -168,7 +165,7 @@ that is the rollback in §6.)
 > running until then so grow-light control never gaps, and stop it at the same
 > gated instant the k3s setpoint-server proves a green cycle.
 
-**3.3 PROVE the zero-writer window (count == 0 everywhere).** `[GATE: Jason]`
+**3.3 PROVE the zero-writer window (count == 0 everywhere).** `[SAFEGUARD: exact-target execution]`
 The count must be 0 on BOTH sides before any k3s writer starts:
 
 ```sh
@@ -193,7 +190,7 @@ flip while the old writer is still connected (that path risks a 2).
 > This is the single M5 action. The **3-part posture** —
 > (a) `VERDIFY_DEVICE_WRITE_ENABLED=1`, (b) prod ingestor `replicas 0→1`, and
 > (c) the device-egress allow (`allow-ingestor-device-egress`, replacing the
-> deny posture) — changes **together, as one atomic Jason action**. **No part may
+> deny posture) — changes **together, as one atomic action**. **No part may
 > change earlier than this moment.** The runbook intentionally does not let
 > DEVICE_WRITE, the replica count, or the egress policy flip during preconditions
 > or phase 1; they are all here, in one gated block, executed only after §3.3
@@ -208,21 +205,21 @@ The prod overlay already declares the *target* shape of all three parts in git
 | (b) replicas | ingestor `0 → 1` (Recreate, single-writer) | base `ingestor-deployment.yaml` (`replicas:1`); the pre-cutover `replicas:0` pin is removed/patched here |
 | (c) egress | allow `:6053` + HA + Frigate; replaces deny | `deploy/k8s/overlays/prod/allow-ingestor-device-egress.yaml` (prod ONLY; the inverse `deny-esp32-egress` never co-applies) |
 
-**4.1 Apply the prepared `greenhouses` registry repoint.** `[GATE: Jason]` Apply
+**4.1 Apply the prepared `greenhouses` registry repoint.** `[SAFEGUARD: exact-target execution]` Apply
 the STAGED `greenhouses` DB-row repoint so the prod ingestor resolves the live
 ESP32 (`esp32_host`/`esp32_port` = `192.168.10.111:6053`) and the correct
-`esp32_api_key`. This is a prepared, reviewed SQL/registry change — applied now,
+`esp32_api_key`. This is a prepared, validated SQL/registry change — applied now,
 not improvised. (Recall `ingestor.py:2224-2230`: the DB row overrides the env
 host/port/PSK; the repoint and the synced `ESP32_API_KEY` must agree.)
 
-**4.2 Flip the 3-part posture + scale 0→1 (ONE atomic act).** `[GATE: Jason]`
-With the count proven at 0 (§3.3), Jason lands all three parts together via the
+**4.2 Flip the 3-part posture + scale 0→1 (ONE atomic act).** `[SAFEGUARD: exact-target execution]`
+With the count proven at 0 (§3.3), the executor lands all three parts together via the
 prod manual sync. Concretely: ensure `device-write-configmap.yaml` (a) and
 `allow-ingestor-device-egress.yaml` (c) are in the synced `overlays/prod`, remove
 the pre-cutover `replicas:0` pin so the ingestor goes to `replicas:1` (b), then:
 
 ```sh
-# laptop-root, AFTER Jason approves — prod is manual-sync by design
+# root executor, only after §3.3 passes — prod is manual-sync by design
 argocd app sync verdify-prod        # no automated selfHeal exists for prod
 ```
 
@@ -231,7 +228,7 @@ one** ingestor pod (RollingUpdate is forbidden precisely so a second pod can
 never connect mid-rollout). The pod opens the one aioesphomeapi connection from
 the pinned greenhouse-VLAN-reachable node.
 
-**4.3 PROVE exactly ONE writer (count == 1, k3s-owned).** `[GATE: Jason]`
+**4.3 PROVE exactly ONE writer (count == 1, k3s-owned).** `[SAFEGUARD: exact-target execution]`
 
 ```sh
 # k3s prod — the device-route monitor must now read EXACTLY ONE writer
@@ -284,18 +281,18 @@ Abort the moment ANY of these is observed — do not "fix forward" mid-cutover:
 **Rollback is always available and is the default response to any §5 abort.** It
 restores the BEFORE state (the VM as the single writer) with a bounded zero-gap.
 
-**6.1 Scale the k3s prod ingestor to 0** `[GATE: Jason]` (release the pod's
+**6.1 Scale the k3s prod ingestor to 0** `[SAFEGUARD: exact-target execution]` (release the pod's
 connection first — same break-before-make discipline):
 
 ```sh
-# laptop-root / Jason — prod manual control
+# root executor — prod manual control
 kubectl --kubeconfig /home/jason/.kube/verdify-agent.config \
   -n verdify-prod scale deploy/verdify-ingestor --replicas=0
 ```
 
 Confirm the device-monitor reads **0** writers (k3s socket released).
 
-**6.2 Restart the iris VM writer** `[GATE: Jason]`:
+**6.2 Restart the iris VM writer** `[SAFEGUARD: exact-target execution]`:
 
 ```sh
 # iris VM (.150)
@@ -404,17 +401,17 @@ the same cluster state.
 
 ## 8. What this runbook explicitly does NOT do
 
-- No command auto-executes. Authoring/reviewing this doc touches nothing.
+- No command auto-executes. Editing this doc touches nothing.
 - No `systemctl stop/start`, no `kubectl scale`, no `argocd app sync`, no
-  `ConfigMap`/replica/NetworkPolicy edit — every such command above is a Jason
-  step, shown for him to run by hand at M5.
+  `ConfigMap`/replica/NetworkPolicy edit — every such command above is an
+  exact-target step for the executor to run at M5.
 - No part of the 3-part posture (DEVICE_WRITE / replicas / egress) changes before
-  the gated §4 moment. The preconditions and phase 1 are all read-only or
+  the safeguarded §4 moment. The preconditions and phase 1 are all read-only or
   VM-stop-only.
 - No firmware flash/OTA. migrate-as-is: only which host dials `:6053` changes.
 - No second writer is ever introduced — the count goes 1 → 0 (atomic, proven) → 1
   and never passes through 2.
 - No data destroyed — copy-not-move; the iris TimescaleDB and VM stack remain the
   intact, instantly-restartable rollback target.
-- DRAFT until IRIS-W012 + IRIS-W013 land; Jason executes at M5; #177/M7 work is
+- DRAFT until IRIS-W012 + IRIS-W013 land; direct executor executes at M5; #177/M7 work is
   DEFERRED (design-only) and out of scope here.

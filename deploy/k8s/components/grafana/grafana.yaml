@@ -409,7 +409,7 @@ spec:
 # application credential, so NetworkPolicy does NOT make it read-only. The site
 # unification canary must not reuse this trust boundary; DEC-SITE-015 requires a
 # reporting-only store/login before public graph cutover. This prod-only policy
-# merely preserves current reachability while the image security patch is reviewed.
+# merely preserves current reachability while the image security patch is validated.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:

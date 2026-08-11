@@ -50,18 +50,18 @@ a structural gate. External-CSS visibility, browser interaction, responsive
 Grafana fallback behavior, and visual presentation require separate browser and
 visual gates. ``compare --exceptions FILE`` accepts only v2 exceptions bound to
 the canonical baseline-manifest digest and the full current failure digest,
-with an allowed category, concrete owner, approval issue and explicit approval
+with an allowed category, concrete owner, activation issue and explicit activation
 attestation. Tree/integrity/duplicate failures are never waivable.
 
 Every manifest and comparison must re-read the same bounded snapshot root. The
 manifest records the exact content-manifest and attestation byte digests; a
 mismatch is an unwaivable failure. The currently supported attestation contract
-is explicitly ``provisional-only`` and never approval-eligible. A future
-approved immutable filesystem/object-store attestation requires its own trusted
+is explicitly ``provisional-only`` and never activation-eligible. A future
+active immutable filesystem/object-store attestation requires its own trusted
 resolver before this tool may accept it. Accordingly, a structurally compatible
-comparison of the current snapshot exits 3 instead of claiming approval.
+comparison of the current snapshot exits 3 instead of claiming activation.
 ``--allow-provisional`` changes that diagnostic exit to 0 but leaves the report
-explicitly non-approval-eligible. Structural mismatch exits 1; malformed input
+explicitly non-activation-eligible. Structural mismatch exits 1; malformed input
 or operational failure exits 2.
 """
 
@@ -134,7 +134,7 @@ HLS_ASSET_KINDS = frozenset(
         "hls-variant",
     }
 )
-EXCEPTION_CATEGORIES = frozenset({"approved-content-improvement", "privacy", "security", "sentinel", "seo"})
+EXCEPTION_CATEGORIES = frozenset({"active-content-improvement", "privacy", "security", "sentinel", "seo"})
 GRAFANA_LIVE_SOURCE_ATTRIBUTES = ("data-live-src", "data-iframe-src")
 GRAFANA_FALLBACK_SOURCE_ATTRIBUTES = ("data-image-src", "data-src")
 GRAFANA_SOURCE_ATTRIBUTES = (*GRAFANA_LIVE_SOURCE_ATTRIBUTES, *GRAFANA_FALLBACK_SOURCE_ATTRIBUTES, "src")
@@ -479,7 +479,7 @@ META_REFRESH_RE = re.compile(
     re.IGNORECASE,
 )
 GRAFANA_PATH_RE = re.compile(r"^/(?:render/)?(?:d-solo|d)/([^/]+)(?:/|$)", re.IGNORECASE)
-GRAFANA_APPROVED_ORIGIN = "https://graphs.verdify.ai"
+GRAFANA_ALLOWED_ORIGIN = "https://graphs.verdify.ai"
 GRAFANA_MAX_QUERY_PAIRS = 64
 GRAFANA_MAX_QUERY_KEY_BYTES = 128
 GRAFANA_MAX_QUERY_VALUE_BYTES = 4096
@@ -488,7 +488,7 @@ GRAFANA_MAX_PATH_BYTES = 4096
 GRAFANA_MAX_UID_BYTES = 128
 WILDCARD_RE = re.compile(r"[*?\[\]]")
 SHA256_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
-APPROVAL_ISSUE_RE = re.compile(
+ACTIVATION_ISSUE_RE = re.compile(
     r"^(?:#[1-9][0-9]*|[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+#[1-9][0-9]*|"
     r"https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/issues/[1-9][0-9]*)$"
 )
@@ -499,8 +499,8 @@ VERIFICATION_SCOPE = {
         "acquisition": "nonblocking-exclusive-before-preflight-held-through-final-evidence",
         "producer_requirement": "every compliant producer or mutator must hold the same root-directory flock",
         "local_evidence_status": "provisional-only",
-        "approval_eligible": False,
-        "mandatory_approval_boundary": "approved immutable filesystem/object-store snapshot attestation",
+        "activation_eligible": False,
+        "mandatory_activation_boundary": "active immutable filesystem/object-store snapshot attestation",
         "outside_guarantee": "uncooperative hostile same-UID mutation remains outside userspace guarantees",
     },
     "text_policy": (
@@ -968,7 +968,7 @@ def _verification_scope_for(source_snapshot: dict[str, Any]) -> dict[str, Any]:
     scope = _authority_copy(_VERIFICATION_SCOPE_AUTHORITY_JSON)
     boundary = scope["snapshot_boundary"]
     boundary["local_evidence_status"] = source_snapshot["evidence_status"]
-    boundary["approval_eligible"] = source_snapshot["approval_eligible"]
+    boundary["activation_eligible"] = source_snapshot["activation_eligible"]
     return scope
 
 
@@ -2189,9 +2189,9 @@ def _sanitize_grafana_source(source: str) -> tuple[str, bool]:
     if port is not None:
         netloc = f"{netloc}:{port}"
     scheme = parts.scheme.lower()
-    approved = urlsplit(GRAFANA_APPROVED_ORIGIN)
-    exact_approved_origin = scheme == approved.scheme and hostname == approved.hostname and port in {None, 443}
-    if netloc and not exact_approved_origin and hostname != "redacted.invalid":
+    active = urlsplit(GRAFANA_ALLOWED_ORIGIN)
+    exact_active_origin = scheme == active.scheme and hostname == active.hostname and port in {None, 443}
+    if netloc and not exact_active_origin and hostname != "redacted.invalid":
         scheme = "https"
         netloc = "redacted.invalid"
     return urlunsplit((scheme, netloc.lower(), parts.path, query, "")), within_limits
@@ -2205,14 +2205,14 @@ def _grafana_live_source_status(raw_source: str, normalized: str, *, query_withi
     except ValueError:
         return "invalid-live-origin"
     if (
-        raw_parts.scheme.lower() != urlsplit(GRAFANA_APPROVED_ORIGIN).scheme
-        or raw_parts.hostname != urlsplit(GRAFANA_APPROVED_ORIGIN).hostname
+        raw_parts.scheme.lower() != urlsplit(GRAFANA_ALLOWED_ORIGIN).scheme
+        or raw_parts.hostname != urlsplit(GRAFANA_ALLOWED_ORIGIN).hostname
         or raw_port not in {None, 443}
         or raw_parts.username is not None
         or raw_parts.password is not None
         or raw_parts.fragment
-        or parts.scheme.lower() != urlsplit(GRAFANA_APPROVED_ORIGIN).scheme
-        or parts.hostname != urlsplit(GRAFANA_APPROVED_ORIGIN).hostname
+        or parts.scheme.lower() != urlsplit(GRAFANA_ALLOWED_ORIGIN).scheme
+        or parts.hostname != urlsplit(GRAFANA_ALLOWED_ORIGIN).hostname
     ):
         return "invalid-live-origin"
     if not query_within_limits:
@@ -2223,7 +2223,7 @@ def _grafana_live_source_status(raw_source: str, normalized: str, *, query_withi
     target = _grafana_url_target(normalized)
     if target is None or "/render/" in parts.path.lower():
         return "invalid-live-target"
-    return "approved-live"
+    return "active-live"
 
 
 def _grafana_fallback_source_status(raw_source: str, normalized: str) -> str:
@@ -2294,7 +2294,7 @@ def _grafana_evidence_conflicts(
     live_sources = [
         sources[attribute]
         for attribute in sources
-        if source_roles[attribute] == "live" and source_status[attribute] == "approved-live"
+        if source_roles[attribute] == "live" and source_status[attribute] == "active-live"
     ]
     fallback_sources = [
         sources[attribute]
@@ -2399,7 +2399,7 @@ def grafana_occurrence(
     live_sources = [
         (attribute, raw_source, source, sanitized, target)
         for attribute, raw_source, source, sanitized, _bounded, target in targets
-        if source_roles[attribute] == "live" and source_status[attribute] == "approved-live" and target is not None
+        if source_roles[attribute] == "live" and source_status[attribute] == "active-live" and target is not None
     ]
     fallback_sources = [
         (attribute, raw_source, source, sanitized, target)
@@ -5241,7 +5241,7 @@ def _hls_rule(kind: str, *values: str) -> tuple[str, frozenset[str]]:
 
 # The parser deliberately supports a closed set of attribute-list tags.  Each
 # supported attribute has its RFC/LL-HLS value type here; an unknown/new
-# attribute fails closed until its semantics and URI behavior are reviewed.
+# attribute fails closed until its semantics and URI behavior are validated.
 HLS_ATTRIBUTE_SCHEMAS: dict[str, dict[str, Any]] = {
     "#EXT-X-CONTENT-STEERING": {
         "required": {"SERVER-URI"},
@@ -7165,7 +7165,7 @@ def _comparison_items(field: str, items: list[Any]) -> list[Any]:
             if (
                 item.get("kind") == "iframe"
                 and media_parts.scheme == "https"
-                and media_parts.netloc == urlsplit(GRAFANA_APPROVED_ORIGIN).netloc
+                and media_parts.netloc == urlsplit(GRAFANA_ALLOWED_ORIGIN).netloc
                 and GRAFANA_PATH_RE.match(media_parts.path)
             ):
                 # Grafana presentation is compared once through its normalized
@@ -7692,7 +7692,7 @@ def _validate_grafana(page: dict[str, Any], *, label: str, route: str, route_pat
                 "must contain exactly one validation status for every source attribute",
             )
         live_statuses = {
-            "approved-live",
+            "active-live",
             "invalid-live-credential-query",
             "invalid-live-origin",
             "invalid-live-query-limits",
@@ -7709,15 +7709,15 @@ def _validate_grafana(page: dict[str, Any], *, label: str, route: str, route_pat
                 )
             source = sources[source_attribute]
             if (
-                status == "approved-live"
+                status == "active-live"
                 and _grafana_live_source_status(
                     source,
                     source,
                     query_within_limits=True,
                 )
-                != "approved-live"
+                != "active-live"
             ):
-                _manifest_schema_error(label, f"{item_path}.source_status.{source_attribute}", "is not approved")
+                _manifest_schema_error(label, f"{item_path}.source_status.{source_attribute}", "is not active")
             if status == "release-image" and _grafana_fallback_source_status(source, source) != "release-image":
                 _manifest_schema_error(
                     label,
@@ -7734,17 +7734,17 @@ def _validate_grafana(page: dict[str, Any], *, label: str, route: str, route_pat
                 f"contains unsupported states {unknown_states}",
             )
         _string(occurrence["tag"], label=label, path=f"{item_path}.tag", nonempty=True)
-        approved_live = [
+        active_live = [
             sources[name]
             for name in (*GRAFANA_LIVE_SOURCE_ATTRIBUTES, "data-src", "src")
-            if name in sources and source_roles[name] == "live" and source_status[name] == "approved-live"
+            if name in sources and source_roles[name] == "live" and source_status[name] == "active-live"
         ]
         release_fallback = [
             sources[name]
             for name in (*GRAFANA_FALLBACK_SOURCE_ATTRIBUTES, "src")
             if name in sources and source_roles[name] == "fallback" and source_status[name] == "release-image"
         ]
-        expected_live = approved_live[0] if approved_live else ""
+        expected_live = active_live[0] if active_live else ""
         expected_fallback = release_fallback[0] if release_fallback else ""
         if occurrence["live_url"] != expected_live or occurrence["fallback_url"] != expected_fallback:
             _manifest_schema_error(label, item_path, "does not select its validated live and fallback roles exactly")
@@ -8953,7 +8953,7 @@ def _validate_source_snapshot(value: Any, *, label: str, path: str = "source_sna
     snapshot = _exact_object(
         value,
         {
-            "approval_eligible",
+            "activation_eligible",
             "attestation_contract",
             "attestation_schema_version",
             "attestation_sha256",
@@ -8973,8 +8973,8 @@ def _validate_source_snapshot(value: Any, *, label: str, path: str = "source_sna
             _manifest_schema_error(label, f"{path}.{key}", "must be lowercase sha256:<64 hex>")
     if snapshot["evidence_status"] != "provisional-only":
         _manifest_schema_error(label, f"{path}.evidence_status", "is not trusted by the supported v1 resolver")
-    if snapshot["approval_eligible"] is not False:
-        _manifest_schema_error(label, f"{path}.approval_eligible", "cannot be true for the supported v1 attestation")
+    if snapshot["activation_eligible"] is not False:
+        _manifest_schema_error(label, f"{path}.activation_eligible", "cannot be true for the supported v1 attestation")
     return snapshot
 
 
@@ -9446,8 +9446,8 @@ def _validate_exceptions_document(
 
     current_date = today or datetime.now(UTC).date()
     base_keys = {
-        "approval_attestation",
-        "approval_issue",
+        "activation_attestation",
+        "activation_issue",
         "category",
         "code",
         "expires",
@@ -9478,20 +9478,20 @@ def _validate_exceptions_document(
                 raise ValueError(f"exception {index} {key} must be a nonempty string")
             if WILDCARD_RE.search(value):
                 raise ValueError(f"exception {index} {key} contains a forbidden wildcard")
-        for key in ("approval_issue", "owner", "reason"):
+        for key in ("activation_issue", "owner", "reason"):
             value = raw_entry[key]
             if not isinstance(value, str) or not value.strip():
                 raise ValueError(f"exception {index} {key} must be a nonempty string")
-        if WILDCARD_RE.search(raw_entry["approval_issue"]) or WILDCARD_RE.search(raw_entry["owner"]):
-            raise ValueError(f"exception {index} owner/approval_issue contains a forbidden wildcard")
-        if not APPROVAL_ISSUE_RE.fullmatch(raw_entry["approval_issue"]):
-            raise ValueError(f"exception {index} approval_issue must identify a GitHub issue")
+        if WILDCARD_RE.search(raw_entry["activation_issue"]) or WILDCARD_RE.search(raw_entry["owner"]):
+            raise ValueError(f"exception {index} owner/activation_issue contains a forbidden wildcard")
+        if not ACTIVATION_ISSUE_RE.fullmatch(raw_entry["activation_issue"]):
+            raise ValueError(f"exception {index} activation_issue must identify a GitHub issue")
         if raw_entry["owner"].strip().lower() in {"none", "nobody", "tbd", "team", "unknown", "unassigned"}:
             raise ValueError(f"exception {index} owner must identify a concrete accountable owner")
         if raw_entry["category"] not in EXCEPTION_CATEGORIES:
             raise ValueError(f"exception {index} category must be one of {sorted(EXCEPTION_CATEGORIES)}")
-        if raw_entry["approval_attestation"] is not True:
-            raise ValueError(f"exception {index} approval_attestation must be the JSON boolean true")
+        if raw_entry["activation_attestation"] is not True:
+            raise ValueError(f"exception {index} activation_attestation must be the JSON boolean true")
         value = raw_entry["failure_digest"]
         if not isinstance(value, str) or not SHA256_RE.fullmatch(value):
             raise ValueError(f"exception {index} failure_digest must be lowercase sha256:<64 hex>")
@@ -9544,8 +9544,8 @@ def _apply_exceptions(
         applied_digests.add(failure["failure_digest"])
         applied.append(
             {
-                "approval_issue": entry["approval_issue"],
-                "approval_attestation": True,
+                "activation_issue": entry["activation_issue"],
+                "activation_attestation": True,
                 "category": entry["category"],
                 "code": entry["code"],
                 "expires": entry["expires"],
@@ -9979,19 +9979,19 @@ def compare_manifests(
     additions["content"] = dict(sorted(additions["content"].items()))
     baseline_boundary = baseline["verification_scope"]["snapshot_boundary"]
     candidate_boundary = candidate["verification_scope"]["snapshot_boundary"]
-    approval_eligible = bool(
-        trusted_source_snapshot["approval_eligible"]
+    activation_eligible = bool(
+        trusted_source_snapshot["activation_eligible"]
         and baseline["source_snapshot"] == trusted_source_snapshot
         and candidate["source_snapshot"] == trusted_source_snapshot
-        and baseline_boundary["approval_eligible"]
-        and candidate_boundary["approval_eligible"]
+        and baseline_boundary["activation_eligible"]
+        and candidate_boundary["activation_eligible"]
     )
-    approval = {
-        "status": "approval-eligible" if approval_eligible else "approval-blocked-provisional-evidence",
-        "approval_eligible": approval_eligible,
+    activation = {
+        "status": "activation-eligible" if activation_eligible else "activation-blocked-provisional-evidence",
+        "activation_eligible": activation_eligible,
         "baseline_local_evidence_status": baseline_boundary["local_evidence_status"],
         "candidate_local_evidence_status": candidate_boundary["local_evidence_status"],
-        "mandatory_approval_boundary": baseline_boundary["mandatory_approval_boundary"],
+        "mandatory_activation_boundary": baseline_boundary["mandatory_activation_boundary"],
         "source_snapshot_revalidated": True,
         "exception_waivable": False,
     }
@@ -10001,7 +10001,7 @@ def compare_manifests(
         "source_snapshot": _json_deep_copy(trusted_source_snapshot),
         "baseline_manifest_digest": canonical_digest(baseline),
         "compatible": not failures,
-        "approval": approval,
+        "activation": activation,
         "failures": failures,
         "applied_exceptions": applied_exceptions,
         "additions": additions,
@@ -10124,7 +10124,7 @@ def read_source_snapshot(root: Path) -> dict[str, Any]:
     )
 
     attestation_keys = {
-        "approvalEligible",
+        "activationEligible",
         "contract",
         "evidenceStatus",
         "guardFindings",
@@ -10147,7 +10147,7 @@ def read_source_snapshot(root: Path) -> dict[str, Any]:
         attestation["contract"] != SNAPSHOT_ATTESTATION_CONTRACT
         or attestation["schemaVersion"] != SNAPSHOT_ATTESTATION_SCHEMA_VERSION
         or attestation["evidenceStatus"] != "provisional-only"
-        or attestation["approvalEligible"] is not False
+        or attestation["activationEligible"] is not False
     ):
         raise ValueError("source snapshot attestation is not trusted by the supported v1 resolver")
 
@@ -10225,7 +10225,7 @@ def read_source_snapshot(root: Path) -> dict[str, Any]:
         "attestation_sha256": f"sha256:{hashlib.sha256(attestation_bytes).hexdigest()}",
         "manifest_sha256": f"sha256:{manifest_digest}",
         "evidence_status": attestation["evidenceStatus"],
-        "approval_eligible": False,
+        "activation_eligible": False,
     }
 
 
@@ -10301,7 +10301,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="compare baseline and candidate manifests",
         description=(
             "Compare structural evidence. Compatible provisional evidence exits 3 by default; "
-            "--allow-provisional permits diagnostic exit 0 without conferring approval."
+            "--allow-provisional permits diagnostic exit 0 without conferring activation."
         ),
     )
     compare_parser.add_argument("baseline", type=Path)
@@ -10320,7 +10320,7 @@ def build_parser() -> argparse.ArgumentParser:
     compare_parser.add_argument(
         "--allow-provisional",
         action="store_true",
-        help="allow diagnostic exit 0 for compatible provisional evidence; does not confer approval",
+        help="allow diagnostic exit 0 for compatible provisional evidence; does not confer activation",
     )
     compare_parser.add_argument("-o", "--output", type=Path, help="write JSON here instead of stdout")
     return parser
@@ -10364,7 +10364,7 @@ def main(argv: list[str] | None = None) -> int:
         write_json(report, args.output)
         if not report["compatible"]:
             return 1
-        if report["approval"]["approval_eligible"] or args.allow_provisional:
+        if report["activation"]["activation_eligible"] or args.allow_provisional:
             return 0
         return 3
     except (MemoryError, OSError, OverflowError, RecursionError, UnicodeError, ValueError) as exc:

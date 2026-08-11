@@ -286,8 +286,8 @@ region the data spikes into. So:
 - **Do not use the Grafana admin API as an authoring path.** The required admin
   and renderer Secret key names are delivered out of band and must be verified
   without reading their values before any rollout. Production remains a
-  Jason-approved manual sync; dashboards remain Git-provisioned, so preview
-  through the reviewed deployment path.
+  task-authorized manual sync; dashboards remain Git-provisioned, so preview
+  through the validated deployment path.
 - **Band panels project into the future** (`now+30h`); `equipment_state` only
   exists up to now, so stripes correctly stop at "now".
 - **`rg` is unreliable in this repo** (silently misses, esp. `.sql`); use

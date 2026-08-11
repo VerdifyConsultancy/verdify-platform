@@ -33,7 +33,7 @@ caused a wrong "cc1bb19" claim earlier in the session; corrected here).
   fog-first wetting ladder (BC-14), legacy controller deleted. Architecture: one
   solar-ephemeris diurnal band curve, one 8-mode FSM, one single-arbitration
   allocator, staged hysteresis, no PID. OTA receipts:
-  `docs/reviews/band-compliance-ota-signoff-2026-06-17.md`; deploy procedure +
+  `docs/reviews/band-compliance-ota-validation-2026-06-17.md`; deploy procedure +
   the false-rollback gotcha in project memory `firmware-ota-from-laptop-2026-06-17`.
 - **At HEAD:** identical except the `globals.yaml` cold-start default (runtime-moot).
 - Internals spec: `docs/firmware-fsm-spec.md`.
@@ -94,7 +94,7 @@ last-resort/rare); on the running fw the engage point is the **pinched** band ed
 - Decisions: `docs/adr/0004-floating-corridor-control.md` (current),
   `docs/adr/0003-band-compliance-track-the-target.md` (superseded)
 - Band SoT: `docs/band-traceability-contract.md`
-- OTA: `docs/reviews/band-compliance-ota-signoff-2026-06-17.md` + memory
+- OTA: `docs/reviews/band-compliance-ota-validation-2026-06-17.md` + memory
   `firmware-ota-from-laptop-2026-06-17`
 - Graphs authoring: `docs/grafana-graph-authoring.md`;
   brand/inventory: `docs/grafana-brand-system.md`, `docs/grafana-panel-catalog.md`

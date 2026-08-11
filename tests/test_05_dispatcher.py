@@ -150,7 +150,7 @@ def test_unknown_physical_outcome_is_terminal_and_never_retryable():
     assert dispatcher._persisted_delivery_status(outcome, final_attempt=False) == "failed"
 
 
-def test_approved_lifecycle_consumers_cover_full_state_vocabulary():
+def test_expected_lifecycle_consumers_cover_full_state_vocabulary():
     brief = (ROOT / "slack_ops" / "briefs.py").read_text()
     irrigation = (ROOT / "scripts" / "validate-irrigation-stack.py").read_text()
 

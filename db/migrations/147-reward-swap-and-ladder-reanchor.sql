@@ -400,7 +400,7 @@ UPDATE plan_journal pj
 -- This is a read-only check (RAISE NOTICE), not a hard failure, because in the
 -- rollback-replay the graded *_v2 columns are empty (binary_fallback identity) and
 -- the real validation runs in Phase 2 against the dual-written history. The query
--- is emitted so reviewers can run it against the live (dual-written) DB.
+-- is emitted so operators can run it against the live (dual-written) DB.
 DO $verify$
 DECLARE
     n_total int;
@@ -426,7 +426,7 @@ BEGIN
 END
 $verify$;
 
--- Reviewer verification query (run against the LIVE dual-written DB, not the replay):
+-- Validator verification query (run against the LIVE dual-written DB, not the replay):
 --   SELECT count(*) AS n_anchored,
 --          count(*) FILTER (WHERE anchor_score = fn_plan_anchor_score(plan_id)) AS n_reproduced,
 --          ROUND(100.0 * count(*) FILTER (WHERE anchor_score = fn_plan_anchor_score(plan_id))

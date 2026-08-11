@@ -1,6 +1,6 @@
 # Firmware-v2: settable on-chip band anchors (complete anchors-mode)
 
-**Date:** 2026-06-15 · **Status:** building · **Owner gate:** Jason (authorized OTA)
+**Date:** 2026-06-15 · **Status:** building · **Execution safeguards:** firmware preflight and rollback
 
 ## Problem
 

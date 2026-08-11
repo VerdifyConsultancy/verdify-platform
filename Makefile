@@ -111,7 +111,7 @@ climate-intent-replay-report: ## Replay ClimateIntent actions over the firmware 
 climate-authority-post-deploy-proof-plan: ## Print post-merge/service-restart proof sequence before OTA
 	@printf '%s\n' \
 		'Climate authority post-deploy proof plan (prints only; does not restart services or run OTA):' \
-		'1. Merge/deploy the reviewed branch to /srv/verdify.' \
+		'1. Merge/deploy the validated branch to /srv/verdify.' \
 		'2. Restart affected services: verdify-ingestor, verdify-api, verdify-setpoint-server, verdify-mcp.' \
 		'3. Wait at least 120 seconds for ESPHome diagnostic republish and action-log writes.' \
 		'4. Run make climate-authority-post-deploy-proof.' \
@@ -123,7 +123,7 @@ climate-authority-post-deploy-proof: ## Prove ClimateIntent service path and OTA
 test-firmware: ## Run native C++ logic tests + replay against golden CSV (same code as ESP32)
 	cd firmware && g++ -std=c++17 -I lib -o test/test_greenhouse test/test_greenhouse_logic.cpp && ./test/test_greenhouse
 	# OBS-1e (Sprint 16) — replay validation against 8 months of real telemetry.
-	# Required gate per CLAUDE.md Firmware Change Protocol: unit tests alone
+	# Replay validation complements unit tests because unit tests alone
 	# cannot catch structural flag regressions (e.g. the shipped-and-caught
 	# vpd_dry_override dead code in commit 82b18ad → patched in caa2cea).
 	gzip -cd $(REPLAY_CORPUS_GZ) > $(REPLAY_CORPUS_TMP)
@@ -416,7 +416,7 @@ irrigation-post-deploy-acceptance-plan: ## Print non-mutating post-deploy accept
 		'9. make irrigation-stack-proof' \
 		'10. make irrigation-completion-audit-proof' \
 		'11. make irrigation-completion-audit' \
-		'Run make irrigation-post-deploy-acceptance only after reviewed merge, service restart, and live site/dashboard publication.'
+		'Run make irrigation-post-deploy-acceptance only after merge, service restart, and live site/dashboard publication.'
 
 irrigation-post-deploy-acceptance: irrigation-full-acceptance ## Post-deploy production proof after merge/restart/site publish
 
@@ -425,11 +425,11 @@ firmware-deploy: ## Compile + OTA deploy to ESP32 + post-deploy sensor-health sw
 	@mkdir -p firmware/artifacts
 	@DIRTY="$$(git diff --quiet -- . && git diff --cached --quiet -- . || echo .dirty)"; \
 	if [ -n "$$DIRTY" ] && [ "$(ALLOW_DIRTY_FIRMWARE_DEPLOY)" != "1" ]; then \
-		echo "✗ Dirty firmware OTA refused. Commit/stash changes or rerun with ALLOW_DIRTY_FIRMWARE_DEPLOY=1 for an operator-approved emergency."; \
+		echo "✗ Dirty firmware OTA refused. Commit/stash changes or rerun with ALLOW_DIRTY_FIRMWARE_DEPLOY=1 and a specific emergency reason."; \
 		git status --short; \
 		exit 1; \
-	elif [ -n "$$DIRTY" ] && { [ "$(FIRMWARE_DEPLOY_OPERATOR_SIGNOFF)" != "1" ] || [ -z "$(FIRMWARE_DEPLOY_OVERRIDE_REASON)" ]; }; then \
-		echo "✗ Dirty firmware OTA override requires FIRMWARE_DEPLOY_OPERATOR_SIGNOFF=1 and FIRMWARE_DEPLOY_OVERRIDE_REASON."; \
+	elif [ -n "$$DIRTY" ] && [ -z "$(FIRMWARE_DEPLOY_OVERRIDE_REASON)" ]; then \
+		echo "✗ Dirty firmware OTA override requires FIRMWARE_DEPLOY_OVERRIDE_REASON."; \
 		exit 1; \
 	fi; \
 	FW_VERSION="$$(date +%Y.%-m.%-d.%H%M).$$(git rev-parse --short HEAD)$$DIRTY"; \

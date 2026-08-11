@@ -36,7 +36,7 @@
 #
 # The old verdify-dev safe-shadow environment is retired. Any future verdify-prod
 # shadow additionally needs migration 155 applied to the prod DB + a prod `twin`
-# login user — GATED on Jason (live-prod schema change), see the runbook.
+# login user — GATED on the runtime preflight (live-prod schema change), see the runbook.
 apiVersion: apps/v1
 kind: Deployment
 metadata:

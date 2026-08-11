@@ -101,7 +101,7 @@ test("stage output stays noindex, blocker-labelled, searchable, and auditable", 
     routeManifest.build.copiedSnapshotAssetCount + routeManifest.build.generatedResponsiveImageCount,
     assetRecords.length,
   );
-  assert.equal(routeManifest.build.approvalEligible, false);
+  assert.equal(routeManifest.build.activationEligible, false);
   assert.equal(routeManifest.build.siteShell.contractVersion, "1.1.0");
   assert.equal(routeManifest.build.siteShell.releaseDigest, "sha256:779620f2eda4d62677a2d9d61c65e2a1014e34de8cb2cec5008928caeef46a6d");
   assert.equal(routeManifest.build.sanitization.fixtureOnly, true);

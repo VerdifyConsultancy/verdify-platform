@@ -1258,7 +1258,7 @@ def _check_acceptance_tooling() -> Check:
         missing.append("runbook ingestor restart boundary for feedback aliases")
     runbook_post_deploy_acceptance_doc = (
         "Final acceptance is a post-deploy proof, not a deploy target" in runbook
-        and "Run it only after the reviewed branch is merged" in runbook
+        and "Run it only after the branch is merged" in runbook
         and "the generated public site is live" in runbook
         and "Run this after merge/deploy on the production host" in runbook
         and "it proves the deployed state, it does not deploy the state" in runbook
@@ -1577,7 +1577,7 @@ def _check_acceptance_tooling() -> Check:
             "Print non-mutating post-deploy acceptance sequence" in post_deploy_plan_block
             and "prints only; does not run checks" in post_deploy_plan_block
             and "make irrigation-feedback-finalize" in post_deploy_plan_block
-            and "make irrigation-post-deploy-acceptance only after reviewed merge" in post_deploy_plan_block
+            and "make irrigation-post-deploy-acceptance only after merge" in post_deploy_plan_block
             and "$(MAKE)" not in post_deploy_plan_block
             and "$(PYTHON)" not in post_deploy_plan_block
             and "scripts/" not in post_deploy_plan_block

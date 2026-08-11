@@ -1,12 +1,12 @@
 # STAGED — HA-3 single-writer Lease fence + fast-failover: GATED live-arm runbook
 
-**Status:** STAGED. **Gate:** laptop-root + Jason. **NEVER run unattended.**
+**Status:** STAGED. **Gate:** root executor. **NEVER run unattended.**
 **Tracks:** #239 (fast-failover) · #240 (Lease fence) · #241 (split-brain alarm — already LIVE).
 **Design:** `~/Agents/root/docs/verdify-ha-architecture-2026-06-07.md` §2.3 / §3 / §5.
 
 This runbook arms, on the **live prod device-writer**, the exactly-one Lease fence
 and the fast unpinned failover that are merged but **INERT** until this procedure.
-It restarts the sole live ESP32 writer, so it runs ONLY inside a Jason-confirmed
+It restarts the sole live ESP32 writer, so it runs ONLY inside a preflight-validated
 maintenance window with the single-writer interlock preserved end-to-end.
 
 ---
@@ -67,7 +67,7 @@ $K -n verdify-prod get lease verdify-ingestor-writer 2>&1
 #   EXPECT: NotFound (no lease created while disabled)
 ```
 
-## Step C — ARM the fence (the gated flip) — Jason confirms
+## Step C — ARM the fence (the gated flip) — verify the exact target and prerequisites
 
 Flip the flag in the prod overlay (NOT base):
 

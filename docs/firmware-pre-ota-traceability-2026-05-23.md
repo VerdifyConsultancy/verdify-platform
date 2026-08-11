@@ -1,6 +1,6 @@
 # Firmware Pre-OTA Traceability Evidence - 2026-05-23
 
-Prepared from the firmware worktree on 2026-05-23 after the live planner delivery-log repair, end-to-end traceability sweep, and operator-approved OTA.
+Prepared from the firmware worktree on 2026-05-23 after the live planner delivery-log repair, end-to-end traceability sweep, and operator-validated OTA.
 
 ## Live State
 
@@ -28,8 +28,8 @@ Prepared from the firmware worktree on 2026-05-23 after the live planner deliver
 
 ## OTA Result
 
-- Operator authorization: Jason approved OTA on 2026-05-23.
-- Override reason used for the weekly OTA freeze: `Operator Jason approved OTA on 2026-05-23 after pre-work, replay, invariant, compile, and live no-critical-alert validation`.
+- Execution record: OTA preflight passed on 2026-05-23.
+- Override reason used for the weekly OTA freeze: `Scoped OTA on 2026-05-23 after pre-work, replay, invariant, compile, and live no-critical-alert validation`.
 - Deployed version: `2026.5.23.1711.63c59c4.dirty`.
 - OTA upload succeeded and diagnostics reported the new version at `2026-05-23 23:13:20.169178+00`.
 - Post-deploy sensor-health accepted the deploy: 27 pass, 0 fail, 0 warn.

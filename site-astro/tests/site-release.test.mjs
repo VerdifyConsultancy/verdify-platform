@@ -98,7 +98,7 @@ async function treeBytes(root) {
   return total;
 }
 
-test("publishes a closed tree, change-gates identical bytes, binds policy, reports freshness, and rolls back", async (t) => {
+test("publishes a closed tree, change safeguards identical bytes, binds policy, reports freshness, and rolls back", async (t) => {
   const value = await fixture();
   t.after(() => rm(value.root, { recursive: true, force: true }));
   const firstRequest = await request({ ...value, sequence: 1 });

@@ -12,7 +12,7 @@
 # already permits for the prod namespace. The :6053 ESP32 native-API path is NOT
 # used by this service (the ESP32 is push-target of the ingestor, not the
 # dispatcher — migration doc §0.1). Bringing the live grow-light path onto k3s is
-# a human-gated cutover (handoff §6); this manifest is the reviewable target shape.
+# a safety-checked cutover (handoff §6); this manifest is the reviewable target shape.
 #
 # DB + HA TOKEN (migration doc §A1 code gate): the running script today resolves
 # localhost:5432 and reads HA_TOKEN_FILE=/mnt/agents/shared/credentials/ha_token.txt.

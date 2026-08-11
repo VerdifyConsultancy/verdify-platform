@@ -10,7 +10,7 @@ every claim carries probe timestamps; canaries re-probed ≥60 min apart.
 |---|---|---|---|
 | Firmware | `2026.7.3.1931.ab18fe8` (flag-OFF build, #418) | 2026-07-04T01:33:20Z | diagnostics.firmware_version; sensor-health 27/0/0 |
 | `band_track_fraction` | **0.0 (float, ADR-0004)** | 01:33Z reboot (g-377: accept float, joint #377 trial) | setpoint_snapshot continuous |
-| `sw_dehum_vent_hold_enabled` | **1 (ON)** — flipped via setpoint_changes INSERT (critic-F procedure) under Jason's early-activation directive | 2026-07-04T14:49:07Z (RT push <1s; snapshot 0->1 @14:49:37Z) | ingestor log + setpoint_snapshot |
+| `sw_dehum_vent_hold_enabled` | **1 (ON)** — flipped via setpoint_changes INSERT (validator-F procedure) under Jason's early-activation directive | 2026-07-04T14:49:07Z (RT push <1s; snapshot 0->1 @14:49:37Z) | ingestor log + setpoint_snapshot |
 | Night band anchors | 60.71 / 65.71 / 70.71 °F, vpd_target 0.83 (migration 188, g-411 dry-roots) | 2026-07-03T23:00Z | prod re-probes 23:00Z + 02:38Z identical |
 | Envelope | **door screen-window OPEN** (#412; open since ~06-19, until fall; NEVER change mid-bake) | — | Jason 2026-07-03 |
 | Known bake-floor caveat | #424 RESOLVED as view artifact — device is CORRECT and enforces the control envelope (`fn_house_vpd_control_band`: night floor ≈0.5 kPa, not the crop curve ≈0.74 the design assumed). CONSEQUENCE: hold episodes arm only on quite-wet excursions; a ~0.70 night may see few/none. Tuning lever if under-delivery: `night_vpd_bias_kpa` (planner-pushable 0–0.25, no OTA). View fix = migration 189 (queued) | 2026-07-04 trace | #424 comment |

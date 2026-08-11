@@ -2,7 +2,7 @@
 --
 -- Applied-migrations ledger for Verdify. DESIGN ARTIFACT / DDL TEMPLATE — this
 -- is intentionally NOT a numbered db/migrations/NNN-*.sql file. Numbered
--- migrations are serialized and reviewed holistically by the coordinator; this
+-- migrations are serialized and validated holistically by the coordinator; this
 -- ledger lands separately so its rollout sequence is decided as part of
 -- IRIS-W008 (restore reconcile) / IRIS-W010 (prod migration), not slipped into
 -- the migration stream out of band.

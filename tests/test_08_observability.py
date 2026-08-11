@@ -225,7 +225,7 @@ class TestDispatcherWiring:
         assert "BAND_DRIVEN_PARAMS" in ingestor
 
     def test_no_reboot_reverting_band_param_is_delta_seeded(self):
-        # ENFORCED INVARIANT (#430 Tier 1, critic Case D): every band param that
+        # ENFORCED INVARIANT (#430 Tier 1, validation case D): every band param that
         # the reconnect delta-seed keeps (BAND_DRIVEN_PARAMS minus the force-
         # reconcile set) must be restore_value:yes in firmware globals, so a
         # reverted/non-republished device can never be masked by a stale
@@ -796,7 +796,7 @@ class TestContractDriftGuardrails:
         assert "firmware-promote-last-good" in makefile
         assert "Rollback target unchanged while this build bakes" in makefile
         assert makefile.index("bash scripts/firmware-deploy-preflight.sh") < makefile.index("upload --device")
-        assert "FIRMWARE_DEPLOY_OPERATOR_SIGNOFF=1" in preflight
+        assert "ALLOW_FIRMWARE_DEPLOY_GUARD_OVERRIDE" in preflight
         assert "FIRMWARE_DEPLOY_OVERRIDE_REASON" in preflight
         assert "No last-good rollback artifact" in preflight
         assert "Climate telemetry stale or missing" in preflight

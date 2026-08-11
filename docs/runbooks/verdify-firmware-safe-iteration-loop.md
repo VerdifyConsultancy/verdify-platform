@@ -11,7 +11,7 @@
 > **Hard gate (CLAUDE.md / lane #221):** the LIVE prod device-writer ingestor
 > (`verdify-prod/verdify-ingestor`) is the SOLE live ESP32 writer (`192.168.10.111:6053`).
 > **NEVER** flash live firmware, push a live setpoint, or scale/restart its push path
-> without **laptop-root + Jason** confirmation. Everything below bakes a change in
+> without **root executor** confirmation. Everything below bakes a change in
 > dev/shadow *before* the one gated live step.
 
 ---
@@ -19,7 +19,7 @@
 ## 0. The big picture — ideate → deploy → validate, safely
 
 ```
-                       SHADOW (device-write=0)                 GATED LIVE (Jason)
+                       SHADOW (device-write=0)                 SAFEGUARDED LIVE
   ┌──────────┐   ┌──────────────────────────────────┐   ┌──────────────────────────┐
   │ idea /   │──▶│ 1. branch + worktree             │──▶│ 6. make firmware-deploy   │
   │ band edit│   │ 2. replay-diff vs prod corpus     │   │    (compile→OTA→60s soak  │
@@ -66,10 +66,10 @@ changes end-to-end without any path to the device:
 The existing target (`Makefile: firmware-deploy`) is a self-protecting deploy:
 
 1. **`scripts/firmware-deploy-preflight.sh`** — refuses OTA while any `critical`/`high`
-   alert is unresolved (override requires `FIRMWARE_DEPLOY_OPERATOR_SIGNOFF=1` +
-   `FIRMWARE_DEPLOY_OVERRIDE_REASON`).
+   alert is unresolved (override requires `ALLOW_FIRMWARE_DEPLOY_GUARD_OVERRIDE=1` +
+   a specific `FIRMWARE_DEPLOY_OVERRIDE_REASON`).
 2. **Dirty-tree refusal** — refuses to flash a dirty worktree unless
-   `ALLOW_DIRTY_FIRMWARE_DEPLOY=1` **and** operator sign-off + reason are set (emergency only).
+   `ALLOW_DIRTY_FIRMWARE_DEPLOY=1` **and** an explicit execution reason are set (emergency only).
 3. **Compile + OTA** to `ESP32_DEVICE=192.168.10.111` with a stamped
    `fw_version=<date>.<sha>`.
 4. **60s soak** for reboot + ingestor reconnect + first diagnostics cycle.
@@ -137,7 +137,7 @@ route to ESP32, INSERT-only DB role). Design: `docs/design/firmware-digital-twin
 - The live device runs `2026.5.30.1418.aa6518c`; `last-good` is still the 2026-05-17
   binary. Freeze rule 3 requires a **48h bake** (no `severity='critical'` sensor-health
   alert) before promotion — that window completed ~2026-06-01.
-- **Promote (gated, Jason):**
+- **Promote (safeguarded):**
   `make firmware-promote-last-good FW_VERSION=2026.5.30.1418.aa6518c`
   → advances `firmware/artifacts/last-good.{version,ota.bin,metadata.env}`.
 - **Precondition:** the archived artifacts for `aa6518c` must exist in
@@ -170,8 +170,8 @@ SHADOW (no device)
   □ make firmware-check            # replay-diff vs last deployed ref
   □ (twin) deploy candidate to stage-twin, watch divergence panel ≥ bake window
   □ re-probe dev device-dark invariants (ingestor replicas:0 + deny-esp32-egress)
-GATE  → laptop-root + Jason sign-off required past this line
-LIVE (Jason only)
+VERIFY → run the technical preflight and confirm rollback readiness
+LIVE
   □ refresh last-good if stale (§4)
   □ re-point preflight DB handle + esphome secrets at k3s (§2.1)  ← prereq
   □ make firmware-deploy           # compile→OTA→60s→sensor-health→pass/auto-rollback

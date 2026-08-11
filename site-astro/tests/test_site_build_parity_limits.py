@@ -32,7 +32,7 @@ SOURCE_SNAPSHOT = {
     "attestation_sha256": f"sha256:{'a' * 64}",
     "manifest_sha256": f"sha256:{'b' * 64}",
     "evidence_status": "provisional-only",
-    "approval_eligible": False,
+    "activation_eligible": False,
 }
 
 
@@ -184,7 +184,7 @@ class DocumentTitleTests(unittest.TestCase):
 
 
 class SourceSnapshotBindingTests(unittest.TestCase):
-    def write_snapshot(self, root: Path, *, approved: bool = False, declared_digest: str | None = None) -> None:
+    def write_snapshot(self, root: Path, *, active: bool = False, declared_digest: str | None = None) -> None:
         content = b"# Verdify Lab\n"
         manifest = {"files": {"index.md": hashlib.sha256(content).hexdigest()}, "version": 1}
         manifest_bytes = json.dumps(manifest, separators=(",", ":")).encode("utf-8")
@@ -192,8 +192,8 @@ class SourceSnapshotBindingTests(unittest.TestCase):
         attestation = {
             "contract": "verdify.lab-stage-sanitized-snapshot",
             "schemaVersion": 1,
-            "evidenceStatus": "approval-eligible" if approved else "provisional-only",
-            "approvalEligible": approved,
+            "evidenceStatus": "activation-eligible" if active else "provisional-only",
+            "activationEligible": active,
             "sourceManifestSha256": "d" * 64,
             "sanitizedManifestSha256": declared_digest or manifest_digest,
             "sourceFileCount": 1,
@@ -245,7 +245,7 @@ class SourceSnapshotBindingTests(unittest.TestCase):
                 identity["attestation_sha256"],
                 f"sha256:{hashlib.sha256(root.joinpath('attestation.json').read_bytes()).hexdigest()}",
             )
-            self.assertFalse(identity["approval_eligible"])
+            self.assertFalse(identity["activation_eligible"])
 
     def test_snapshot_content_tree_rejects_missing_file(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -295,10 +295,10 @@ class SourceSnapshotBindingTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "does not bind the supplied content manifest"):
                 parity.read_source_snapshot(root)
 
-    def test_current_v1_attestation_cannot_self_assert_approval(self):
+    def test_current_v1_attestation_cannot_self_assert_activation(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            self.write_snapshot(root, approved=True)
+            self.write_snapshot(root, active=True)
             with self.assertRaisesRegex(ValueError, "not trusted by the supported v1 resolver"):
                 parity.read_source_snapshot(root)
 
@@ -354,7 +354,7 @@ class SourceSnapshotBindingTests(unittest.TestCase):
                 encoding="utf-8",
             )
             manifest = parity.build_manifest(root, source_snapshot=SOURCE_SNAPSHOT)
-            manifest["verification_scope"]["snapshot_boundary"]["approval_eligible"] = True
+            manifest["verification_scope"]["snapshot_boundary"]["activation_eligible"] = True
             with self.assertRaisesRegex(ValueError, "derived schema v2 policy"):
                 parity._validate_manifest(manifest, "candidate")
 
