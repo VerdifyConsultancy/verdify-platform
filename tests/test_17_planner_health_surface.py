@@ -941,6 +941,11 @@ def test_rendered_prod_hermes_supervision_preserves_singleton_exact_pin_and_both
         for resource in resources
         if resource.get("kind") == "Deployment" and resource.get("metadata", {}).get("name") == "verdify-hermes-iris"
     )
+    pvc_by_name = {
+        resource["metadata"]["name"]: resource
+        for resource in resources
+        if resource.get("kind") == "PersistentVolumeClaim"
+    }
     container = workload["spec"]["template"]["spec"]["containers"][0]
     env_by_name = {item["name"]: item.get("value") for item in container["env"]}
     init_by_name = {item["name"]: item for item in workload["spec"]["template"]["spec"]["initContainers"]}
@@ -972,6 +977,23 @@ def test_rendered_prod_hermes_supervision_preserves_singleton_exact_pin_and_both
     }
     assert container["securityContext"]["readOnlyRootFilesystem"] is True
     assert volume_by_name["tmp"]["emptyDir"] == {}
+    assert volume_by_name["data"]["persistentVolumeClaim"]["claimName"] == (
+        "verdify-hermes-iris-data-portable-20260801"
+    )
+    portable_pvc = pvc_by_name["verdify-hermes-iris-data-portable-20260801"]
+    assert portable_pvc["metadata"]["annotations"]["argocd.argoproj.io/sync-options"] == "Prune=false"
+    assert portable_pvc["spec"] == {
+        "accessModes": ["ReadWriteOnce"],
+        "resources": {"requests": {"storage": "5Gi"}},
+        "storageClassName": "longhorn-v1-rebuildable-rwo",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-6b6b2f30-c414-4325-a803-87b19010851f",
+    }
+    assert portable_pvc["metadata"]["labels"]["storage.vallery.net/policy"] == "rebuildable-replicated-r2"
+    # The pre-migration claim remains desired rollback material; no cleanup is
+    # coupled to the current-data adoption.
+    retained_pvc = pvc_by_name["verdify-hermes-iris-data"]
+    assert retained_pvc["metadata"]["annotations"]["argocd.argoproj.io/sync-options"] == "Prune=false"
     assert mount_by_name["tmp"]["mountPath"] == "/tmp"  # noqa: S108 - asserted ephemeral emptyDir mount
     assert env_by_name["HERMES_MCP_UNACKNOWLEDGED_DISCONNECT_RESTART_SECONDS"] == "600"
     assert env_by_name["HERMES_MCP_PROBE_STATE_PATH"] == (

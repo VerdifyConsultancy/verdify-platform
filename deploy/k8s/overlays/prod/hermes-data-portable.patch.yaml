@@ -1,0 +1,13 @@
+# Keep the production Hermes Deployment on the verified, data-bearing portable
+# R2 claim. This is a live-state reconciliation, not a new migration.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-hermes-iris
+spec:
+  template:
+    spec:
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: verdify-hermes-iris-data-portable-20260801
