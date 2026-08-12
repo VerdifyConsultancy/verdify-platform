@@ -1,5 +1,10 @@
 # Verdify Platform Access Matrix
 
+> Technical capability inventory only. This file records observed access and
+> tool surfaces; it does not grant execution authority, require approval, or
+> define workflow prerequisites. Current credentials and live probes determine
+> available mechanics; root `AGENTS.md` and the user's request govern work.
+
 Last updated: 2026-07-14
 
 Agent name: `verdify-platform`
@@ -14,7 +19,7 @@ does not include raw secret values.
 | GitHub Project Board | Project scope available through local `gh`; project #5 includes lane epics and current Lab children | Maintain issue fields, native parents, and blockers | Project only | Verdify org/project admins | Available |
 | In-cluster CI/publishing | Argo Events/Workflows + Kaniko; exact revisions publish to Zot | Submit/observe validated repo-build workflows; no GitHub Actions publishing | `agent-fleet-ci` / repo scope | Agent Fleet + repo owners | Available through the fixed pipeline |
 | Zot application images | `registry.vallery.net` digest pins; in-cluster origin push | Resolve/pin immutable digests through CI | Verdify image namespace | Agent Fleet / registry owners | CI-owned |
-| GHCR holdovers | Read-only legacy production references only | Retire through the gated migration; never publish new images | Legacy Quartz runtime | Repo/Jason | Retirement pending #482 |
+| GHCR holdovers | Read-only legacy production references only | Retire through the validated migration; never publish new images | Legacy Quartz runtime | Repo/Jason | Retirement pending #482 |
 | `verdify-prod` namespace | Repo manifests; no live write used in this docs pass | Read for diagnostics; writes use GitOps preflight and rollback | Namespace | Platform/GitOps owners | Available with safeguards |
 | ArgoCD apps | App YAML in repo | Read app health; sync prod with exact-target preflight and rollback | `verdify-prod-dark` | Platform/GitOps owners | Available |
 | Kubernetes Secrets | Names/key contracts only | Metadata/status only; no values | Namespace-local | Secret-delivery owner | Values out of scope |

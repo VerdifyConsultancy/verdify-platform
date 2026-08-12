@@ -1,5 +1,8 @@
 # Verdify — Floating-Corridor Replan: Lanes, Waves & Worktree Kickoff
 
+> Optional ownership and planning map. Lanes describe likely domain ownership;
+> they are not dispatch, permission, approval, or routing boundaries. Work
+> directly from the user's request, current repository state, and live evidence.
 > **Lab-lane staleness notice (2026-07-13):** This file is a generated
 > 2026-06-22 floating-corridor planning snapshot. Its L8/#351 Lab entries and
 > the worktree kickoff below are not the execution plan for the Quartz-to-Astro
