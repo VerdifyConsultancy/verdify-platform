@@ -1,5 +1,9 @@
 # Verdify Platform Epics
 
+> Optional planning and status reference. Epics and milestones record context;
+> they are not execution authority, prerequisites, or a required workflow. Work
+> directly from the user's request, current repository state, and live evidence.
+
 Last updated: 2026-06-23
 
 Agent name: `verdify-platform`

@@ -1,5 +1,9 @@
 # Verdify Platform Sprints
 
+> Optional planning and history reference. No sprint selection, sprint artifact,
+> board update, or routing step is required for repository work. Work directly
+> from the user's request, current repository state, and live evidence.
+
 Last updated: 2026-06-17
 
 Agent name: `verdify-platform`

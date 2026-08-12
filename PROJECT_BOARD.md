@@ -1,12 +1,17 @@
 # Verdify Platform Project Board
 
+> Optional planning and status reference. Project boards and issue metadata
+> record context; they are not execution authority, prerequisites, or a required
+> workflow. Work directly from the user's request, current repository state, and
+> live evidence.
+
 Last updated: 2026-07-14
 
 Agent name: `verdify-platform`
 
 ## Connection Status
 
-- Required board: `verdify-platform`.
+- Recorded board: `verdify-platform`.
 - Current board: `VerdifyConsultancy` project #5,
   <https://github.com/orgs/VerdifyConsultancy/projects/5>.
 - Current finding: the exact `verdify-platform` board exists with 45 issue
@@ -17,17 +22,17 @@ Agent name: `verdify-platform`
   `planning/backlog.yaml`.
 - 2026-07-13: L9 (#351) is promoted from a generic pipeline audit to the
   **lab Quartz→Astro migration program** (In Progress/P1/XL). The
-  authoritative decomposition, phase gates, and branch dispositions live in
+  detailed decomposition, validation milestones, and branch history live in
   `docs/plans/lab-astro-migration.md`; nine surface child issues follow
   under G3.
 - Legacy/evidence cards remain on the board so old issue history is not lost;
   they are no longer the primary planning decomposition.
-- Required fallback: keep `## Project Tracking` in every new or materially
-  updated issue because issue bodies remain durable when project fields drift.
+- Optional issue-body mirror: `## Project Tracking` can preserve planning
+  metadata when project fields drift.
 
-Workflow details live in `docs/PROJECT_BOARD_WORKFLOW.md`.
+Historical board-workflow details live in `docs/PROJECT_BOARD_WORKFLOW.md`.
 
-## Required Issue Block
+## Optional Issue Metadata Example
 
 ```markdown
 ## Project Tracking
@@ -52,8 +57,8 @@ Statuses: `Backlog`, `Ready`, `In Progress`, `In Review`, `Done`.
 Fields: `Priority`, `Effort`, `Component`, `Sprint`, `Epic`, `Agent Lane`,
 `Milestone`, `Related Issues/PRs`, `Dependencies`, `Evidence`.
 
-Board cards are EPICS. Child issues/tasks can exist, but planning decisions
-happen at the lane-epic level unless a child issue is explicitly operator-scoped.
+Board cards group planning context as EPICS. Child issues and tasks may carry
+more detail; neither representation is a prerequisite for requested work.
 
 ## 2026-06-23 Audit Overlay
 
@@ -80,14 +85,14 @@ Immediate planning changes:
   heat-dehum episodes. The #327 moisture-estimator source path is also wired:
   firmware publishes `climate_moisture_exchange`, the ingestor stores it in
   `climate_action_log.source_system_state`, and `outcome_kpi()` summarizes it
-  when rows exist. Live rows still require the gated OTA plus service deploy;
+  when rows exist. Live rows still require a validated OTA plus service deploy;
   durable DB/dashboard rollups remain open.
 - 2026-06-23 local #383 policy progress: firmware source now has a bounded
   closed-vent `heat_dehum` path for low-wet night rows when the estimator says
   heat-assist is effective and venting is stale, overcooling, or weak. It is
   headroom-limited, heat1-only, VPD-priority tagged, and mirrored into the
-  firmware twin. Offline firmware gates passed; live proof still requires the
-  gated OTA/deploy path and before/after outcome KPI review.
+  firmware twin. Offline firmware checks passed; live proof still requires the
+  validated OTA/deploy path and before/after outcome KPI review.
 - 2026-06-23 tracker cleanup done for #359, #365, #371, #293, #377, #327,
   plus #361, #378, and #379; #17/#20 superseded/closed, #366 closed, and #383
   created.

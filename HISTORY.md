@@ -1,5 +1,9 @@
 # Verdify Platform History
 
+> Context and evidence only. This file is not current agent guidance, a task
+> queue, or a required handoff. Current source, live state, root `AGENTS.md`, and
+> the user's request supersede its entries.
+
 Last updated: 2026-06-23
 
 Agent name: `verdify-platform`
