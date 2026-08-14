@@ -10,7 +10,9 @@ Transport: streamable-http on port 8400
 """
 
 import asyncio
+import hmac
 import json
+import logging
 import os
 import sys
 from datetime import date, datetime, timedelta
@@ -254,7 +256,192 @@ def _json(obj):
     return json.dumps(obj, default=default)
 
 
-mcp = FastMCP(
+# ═══════════════════════════════════════════════════════════════
+# SERVER-SIDE AUDIENCE AUTHORIZATION (#585, audit §8.8)
+# ═══════════════════════════════════════════════════════════════
+# Before this layer the ONLY boundary in front of the 26 registered tools was
+# the NetworkPolicy ingress allowlist: the `Authorization: Bearer
+# ${VERDIFY_MCP_TOKEN}` header Hermes already sends
+# (deploy/k8s/components/hermes-iris/hermes-config.yaml) was never validated.
+# The controlled planner experiment's treatment firewall requires
+# audience-scoped tool enforcement IN the MCP layer, not just a client-side
+# `tools.include` list.
+#
+# Modes (VERDIFY_MCP_AUTH_MODE):
+#   off     — default; authorization is fully bypassed, byte-identical to the
+#             pre-#585 behavior. Safe rollout starting point.
+#   log     — every would-be denial is emitted as one structured JSON log line
+#             (never the token value) and the call proceeds. Prod runs this
+#             first to prove the token registry before any blocking.
+#   enforce — denials reject the tool call with a clear error. FAIL-CLOSED: a
+#             missing or unknown bearer token denies every tool.
+# Any unrecognized mode value is treated as "enforce" — a typo must fail
+# closed, never silently disable authorization.
+#
+# Token registry (audience → bearer token) is env-driven, matching the flat
+# VERDIFY_MCP_* env config style of this file:
+#   VERDIFY_MCP_TOKEN_IRIS       — the current Hermes Iris profile credential
+#                                  (same value hermes-config.yaml sends as
+#                                  ${VERDIFY_MCP_TOKEN}).
+#   VERDIFY_MCP_TOKEN_EXPERIMENT — the experiment-arm planner profile
+#                                  (wired in Lane C/D tranche 2).
+#   VERDIFY_MCP_TOKEN_ADMIN      — operator/debug credential; all tools.
+# Tokens must be distinct per audience; on a duplicate the first audience in
+# sorted order wins deterministically. Token values are never logged, never
+# echoed in errors, and never surfaced by /readyz (names only).
+
+VERDIFY_MCP_AUTH_MODE_ENV = "VERDIFY_MCP_AUTH_MODE"
+VERDIFY_MCP_AUTH_MODES = ("off", "log", "enforce")
+_AUDIENCE_TOKEN_ENV_PREFIX = "VERDIFY_MCP_TOKEN_"
+KNOWN_AUDIENCES = frozenset({"iris", "experiment", "admin"})
+
+_TOOL_AUTH_LOGGER = logging.getLogger("verdify.mcp.auth")
+
+
+class ToolAccessDenied(Exception):
+    """Raised in enforce mode; surfaces to the MCP client as a tool error."""
+
+
+def auth_mode() -> str:
+    """Resolve the authorization mode from the environment.
+
+    Absent/empty env → "off" (current behavior). A present-but-unrecognized
+    value fails CLOSED to "enforce" so a typo can never disable authorization.
+    """
+    raw = os.environ.get(VERDIFY_MCP_AUTH_MODE_ENV, "").strip().lower()
+    if not raw:
+        return "off"
+    return raw if raw in VERDIFY_MCP_AUTH_MODES else "enforce"
+
+
+def audience_token_registry() -> tuple[dict[str, str], list[str]]:
+    """Read VERDIFY_MCP_TOKEN_<AUDIENCE> env vars.
+
+    Returns (audience → token, unrecognized env var NAMES). An env var naming
+    an audience outside KNOWN_AUDIENCES is ignored for matching but reported
+    (by name only) so /readyz makes the misconfiguration visible instead of
+    silently granting nothing. Empty-valued vars are ignored.
+    """
+    registry: dict[str, str] = {}
+    unrecognized: list[str] = []
+    for key in sorted(os.environ):
+        if not key.startswith(_AUDIENCE_TOKEN_ENV_PREFIX):
+            continue
+        audience = key[len(_AUDIENCE_TOKEN_ENV_PREFIX) :].lower()
+        if audience not in KNOWN_AUDIENCES:
+            unrecognized.append(key)
+            continue
+        if os.environ[key]:
+            registry[audience] = os.environ[key]
+    return registry, unrecognized
+
+
+def resolve_token_audience(token: str | None, registry: dict[str, str]) -> str | None:
+    """Map a presented bearer token to an audience, or None.
+
+    hmac.compare_digest gives a constant-time comparison per candidate, and the
+    loop always scans the full registry (no early exit) so response timing does
+    not reveal which audience matched. First match in sorted-audience order
+    wins if an operator ever configures duplicate tokens.
+    """
+    if not token:
+        return None
+    token_bytes = token.encode()
+    matched: str | None = None
+    for audience in sorted(registry):
+        if hmac.compare_digest(token_bytes, registry[audience].encode()) and matched is None:
+            matched = audience
+    return matched
+
+
+def _tool_call_denial(name: str, token: str | None) -> dict | None:
+    """Return a denial record for this (tool, token), or None when allowed."""
+    registry, _unrecognized = audience_token_registry()
+    audience = resolve_token_audience(token, registry)
+    if audience is None:
+        return {
+            "tool": name,
+            "audience": None,
+            "reason": "missing_token" if not token else "unknown_token",
+        }
+    allowed_audiences = TOOL_AUDIENCES.get(name)
+    if allowed_audiences is None:
+        # A tool outside the inventory is never authorizable — the startup
+        # assertion makes this unreachable in a correctly built image, but a
+        # denial here keeps the layer fail-closed regardless.
+        return {"tool": name, "audience": audience, "reason": "tool_not_in_audience_registry"}
+    if audience not in allowed_audiences:
+        return {"tool": name, "audience": audience, "reason": "tool_not_in_audience"}
+    return None
+
+
+def authorize_tool_call(name: str, token: str | None) -> None:
+    """Gatekeeper for every tool dispatch. Raises ToolAccessDenied in enforce mode."""
+    mode = auth_mode()
+    if mode == "off":
+        return
+    denial = _tool_call_denial(name, token)
+    if denial is None:
+        return
+    # Structured, grep-able denial record. Contains audience/tool/reason —
+    # NEVER the presented token.
+    _TOOL_AUTH_LOGGER.warning(
+        "%s",
+        _json({"event": "mcp_tool_authz_denial", "mode": mode, "enforced": mode == "enforce", **denial}),
+    )
+    if mode == "enforce":
+        audience = denial["audience"] or "none (unknown or missing bearer token)"
+        raise ToolAccessDenied(
+            f"unauthorized: tool '{name}' is not available to this credential "
+            f"(audience: {audience}). Server-side audience authorization is in "
+            f"enforce mode (#585)."
+        )
+
+
+def _request_bearer_token(server) -> str | None:
+    """Extract the bearer token of the in-flight MCP request, if any.
+
+    The streamable-http transport attaches the originating Starlette Request to
+    every message (ServerMessageMetadata.request_context), and the low-level
+    server publishes it through the request_ctx contextvar for the duration of
+    each handler call — so this is per-request-correct even on a long-lived
+    session. Absent context (stdio, in-process calls, import stubs) resolves to
+    None, which under enforce mode denies: fail closed.
+    """
+    lowlevel = getattr(server, "_mcp_server", None)
+    if lowlevel is None:
+        return None
+    try:
+        ctx = lowlevel.request_context
+    except LookupError:
+        return None
+    headers = getattr(getattr(ctx, "request", None), "headers", None)
+    if headers is None:
+        return None
+    value = headers.get("authorization") or ""
+    scheme, _, credential = value.partition(" ")
+    if scheme.lower() != "bearer":
+        return None
+    return credential.strip() or None
+
+
+class AudienceAuthorizedFastMCP(FastMCP):
+    """FastMCP with server-side audience authorization at the dispatch choke point.
+
+    FastMCP.call_tool is the single public method the low-level MCP server
+    invokes for every tool call, so overriding it covers all 26 registered
+    tools without touching any tool body or signature (and without the
+    26-decorator / ASGI-middleware fallback). A raised ToolAccessDenied is
+    converted by the low-level server into an isError tool result with this
+    message — the session stays healthy.
+    """
+
+    async def call_tool(self, name, arguments):
+        authorize_tool_call(name, _request_bearer_token(self))
+        return await super().call_tool(name, arguments)
+
+
+mcp = AudienceAuthorizedFastMCP(
     "verdify",
     instructions="""Verdify greenhouse control tools. Use these to monitor climate,
     manage setpoints, run the AI planner, and review performance.
@@ -301,6 +488,73 @@ HERMES_REQUIRED_TOOLS = frozenset(
         "topology",
     }
 )
+
+# ── Tool inventory as data (#585) ──
+# EVERY @mcp.tool() registered in this file must have an entry here — the
+# module-bottom _assert_tool_audience_registry_complete() fails startup on any
+# drift, so a new tool cannot silently skip authorization.
+#
+# Audiences:
+#   iris       — the current Hermes Iris profile. Exactly the 23 tools of
+#                hermes-config.yaml tools.include (== HERMES_REQUIRED_TOOLS);
+#                tests/test_mcp_audience_auth.py holds the three surfaces in
+#                lockstep. Current behavior is preserved.
+#   experiment — the blinded experiment planner arm (audit §8.8): qualified
+#                climate/forecast/crop/topology READS plus trigger
+#                acknowledgement only. Treatment-revealing reads
+#                (get_setpoints, plan_status, history, scorecard, outcome_kpi,
+#                lessons*) and all ordinary writes are denied. Wired but
+#                unused until Lane C/D tranche 2 issues its credential.
+#   admin      — operator/debug credential; every tool.
+TOOL_AUDIENCES: dict[str, frozenset[str]] = {
+    # Monitoring
+    "climate": frozenset({"iris", "experiment", "admin"}),
+    "scorecard": frozenset({"iris", "admin"}),
+    "outcome_kpi": frozenset({"admin"}),
+    "equipment_state": frozenset({"iris", "admin"}),
+    "forecast": frozenset({"iris", "experiment", "admin"}),
+    "get_setpoints": frozenset({"iris", "admin"}),
+    "plan_status": frozenset({"iris", "admin"}),
+    "history": frozenset({"iris", "admin"}),
+    "alerts": frozenset({"iris", "admin"}),
+    "slack_ops": frozenset({"iris", "admin"}),
+    # Knowledge
+    "lessons": frozenset({"iris", "admin"}),
+    "lessons_search": frozenset({"iris", "admin"}),
+    "knowledge_search": frozenset({"iris", "admin"}),
+    # Crops + topology (read-only crop context is experiment-safe; the
+    # action-verb crops/observations tools carry writes, so they are not)
+    "crops": frozenset({"iris", "admin"}),
+    "observations": frozenset({"iris", "admin"}),
+    "topology": frozenset({"iris", "experiment", "admin"}),
+    "position_current": frozenset({"iris", "experiment", "admin"}),
+    "crop_history": frozenset({"iris", "experiment", "admin"}),
+    "crop_lifecycle": frozenset({"iris", "experiment", "admin"}),
+    # Writes
+    "set_plan": frozenset({"iris", "admin"}),
+    "set_tunable": frozenset({"iris", "admin"}),
+    "acknowledge_trigger": frozenset({"iris", "experiment", "admin"}),
+    "plan_evaluate": frozenset({"iris", "admin"}),
+    "lessons_manage": frozenset({"iris", "admin"}),
+    # Operator-only surfaces (never in the Hermes include list)
+    "plan_run": frozenset({"admin"}),
+    "query": frozenset({"admin"}),
+}
+
+# Registry entries for tools that are DESIGNED but not yet registered. Lane
+# C/D tranche 2 moves each into TOOL_AUDIENCES when the @mcp.tool() lands;
+# until then the startup assertion keeps the two maps disjoint so a pending
+# entry cannot mask a registered tool that skipped authorization.
+PENDING_TOOL_AUDIENCES: dict[str, frozenset[str]] = {
+    # Audit §8.8: the experiment arm's only actuation-eligible output — an
+    # opaque policy_template_id proposal. Arrives with Lane C/D tranche 2.
+    "policy_template_propose": frozenset({"experiment", "admin"}),
+}
+
+
+def audience_allowlist(audience: str) -> frozenset[str]:
+    """The set of registered tools an audience may call."""
+    return frozenset(name for name, audiences in TOOL_AUDIENCES.items() if audience in audiences)
 
 
 async def _db() -> asyncpg.Connection:
@@ -384,7 +638,15 @@ async def mcp_ready(_request):
     finally:
         if conn is not None:
             await conn.close()
-    ready = not missing and db_error is None
+    # #585: operators must be able to SEE the authorization rollout state
+    # (off → log → enforce) on the same surface release acceptance already
+    # reads. Names only — never token values. Enforce mode with an empty token
+    # registry would fail-closed every tool call, so that misconfiguration
+    # reports not-ready instead of serving a fully bricked tool surface.
+    mode = auth_mode()
+    token_registry, unrecognized_token_envs = audience_token_registry()
+    auth_misconfigured = mode == "enforce" and not token_registry
+    ready = not missing and db_error is None and not auth_misconfigured
     return JSONResponse(
         {
             "ready": ready,
@@ -392,6 +654,10 @@ async def mcp_ready(_request):
             "missing_tools": missing,
             "db": "ok" if db_error is None else "unavailable",
             "db_error_class": db_error,
+            "auth_mode": mode,
+            "auth_audiences_configured": sorted(token_registry),
+            "auth_unrecognized_token_envs": unrecognized_token_envs,
+            "auth_misconfigured": auth_misconfigured,
         },
         status_code=200 if ready else 503,
     )
@@ -4392,6 +4658,51 @@ async def knowledge_search(
         return _json([dict(r) for r in rows])
     finally:
         await conn.close()
+
+
+# ═══════════════════════════════════════════════════════════════
+# AUTHORIZATION INVENTORY GUARD (#585)
+# ═══════════════════════════════════════════════════════════════
+
+
+def _sync_registered_tool_names() -> frozenset[str] | None:
+    """Registered tool names, or None when running under CI import stubs.
+
+    Schema-only and logic CI import this module with a lightweight FastMCP
+    stub that has no _tool_manager; the completeness guard then runs in
+    tests/test_mcp_audience_auth.py against the stub's recorded registrations
+    instead of here.
+    """
+    manager = getattr(mcp, "_tool_manager", None)
+    if manager is None:
+        return None
+    return frozenset(tool.name for tool in manager.list_tools())
+
+
+def _assert_tool_audience_registry_complete() -> None:
+    """Fail startup if any registered tool could bypass audience authorization."""
+    for name, audiences in TOOL_AUDIENCES.items():
+        if not audiences or not audiences <= KNOWN_AUDIENCES:
+            raise AssertionError(f"TOOL_AUDIENCES[{name!r}] must be a non-empty subset of {sorted(KNOWN_AUDIENCES)}")
+        if "admin" not in audiences:
+            raise AssertionError(f"TOOL_AUDIENCES[{name!r}] must include 'admin' (admin means ALL tools)")
+    masked = sorted(set(TOOL_AUDIENCES) & set(PENDING_TOOL_AUDIENCES))
+    if masked:
+        raise AssertionError(f"tools present in both TOOL_AUDIENCES and PENDING_TOOL_AUDIENCES: {masked}")
+    registered = _sync_registered_tool_names()
+    if registered is None:
+        return
+    unauthorized = sorted(registered - set(TOOL_AUDIENCES))
+    stale = sorted(set(TOOL_AUDIENCES) - registered)
+    if unauthorized:
+        raise AssertionError(
+            f"registered MCP tools missing from TOOL_AUDIENCES (would bypass #585 authorization): {unauthorized}"
+        )
+    if stale:
+        raise AssertionError(f"TOOL_AUDIENCES entries with no registered tool: {stale}")
+
+
+_assert_tool_audience_registry_complete()
 
 
 # ═══════════════════════════════════════════════════════════════
