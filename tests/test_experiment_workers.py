@@ -23,6 +23,7 @@ if _REPO_ROOT not in sys.path:
     sys.path.insert(0, _REPO_ROOT)
 
 import esp32_push  # noqa: E402
+import shared  # noqa: E402
 from tasks.experiment_assignments import (  # noqa: E402
     EXPERIMENT_OWNED_PARAMS,
     experiment_assignment_scheduler,
@@ -99,8 +100,10 @@ def _clean_env(monkeypatch):
     monkeypatch.delenv("VERDIFY_POLICY_VECTOR_MODE", raising=False)
     monkeypatch.delenv("VERDIFY_ACTIVE_EXPERIMENT_ID", raising=False)
     esp32_push.set_experiment_policy_hold(False)
+    shared.experiment_assignment.clear()
     yield
     esp32_push.set_experiment_policy_hold(False)
+    shared.experiment_assignment.clear()
 
 
 def _enable(monkeypatch, mode="live", experiment_id=EXPERIMENT_ID):
@@ -151,6 +154,14 @@ def test_feature_off_releases_a_stale_hold():
     assert esp32_push.experiment_policy_hold() == (False, frozenset())
 
 
+def test_feature_off_clears_a_stale_assignment_receipt():
+    # Lane D (#585): a mode flip back to off must not leave iris_planner a
+    # stale receipt that would keep experiment gather mode armed.
+    shared.experiment_assignment["assignment_id"] = ASSIGNMENT_ID
+    _run(experiment_assignment_scheduler(ForbiddenPool()))
+    assert shared.experiment_assignment == {}
+
+
 # ── Schedule validation + deviations ────────────────────────────────────────
 
 
@@ -184,6 +195,45 @@ def test_assignment_gap_emits_deviation_and_releases_hold(monkeypatch):
     events = conn.sql_calls("INSERT INTO experiment_events")
     assert any("assignment_gap" in event[2][4] for event in events)
     assert esp32_push.experiment_policy_hold() == (False, frozenset())
+
+
+def test_assignment_gap_clears_the_receipt_cache(monkeypatch):
+    # Lane D (#585): no covering assignment => no receipt => iris_planner
+    # fails closed instead of gathering the general packet.
+    _enable(monkeypatch)
+    shared.experiment_assignment["assignment_id"] = ASSIGNMENT_ID
+    conn = FakeConn(
+        [
+            ("FROM control_experiments", _exp_row("running")),
+            ("count(*)", 30),
+            ("upper(valid_range) <= now()", []),
+            ("now() <@ valid_range", None),
+        ]
+    )
+    _run(experiment_assignment_scheduler(FakePool(conn)))
+    assert shared.experiment_assignment == {}
+
+
+def test_current_assignment_caches_the_opaque_receipt_in_shadow_and_live(monkeypatch):
+    # Lane D (#585): the receipt cache feeds context gathering only, so it is
+    # populated in BOTH shadow and live modes (unlike the device-write hold).
+    for mode in ("shadow", "live"):
+        _enable(monkeypatch, mode=mode)
+        shared.experiment_assignment.clear()
+        conn = FakeConn(
+            [
+                ("FROM control_experiments", _exp_row("running")),
+                ("count(*)", 30),
+                ("upper(valid_range) <= now()", []),
+                ("now() <@ valid_range", _current_row()),
+                ("lower(valid_range) > now()", None),
+            ]
+        )
+        _run(experiment_assignment_scheduler(FakePool(conn)))
+        assert shared.experiment_assignment["assignment_id"] == ASSIGNMENT_ID, mode
+        assert shared.experiment_assignment["experiment_id"] == EXPERIMENT_ID, mode
+        assert "boundary" in shared.experiment_assignment, mode
+        esp32_push.set_experiment_policy_hold(False)
 
 
 # ── UTC boundary open/close with a fixture schedule ─────────────────────────
