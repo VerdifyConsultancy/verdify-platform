@@ -1,0 +1,23 @@
+[project]
+name = "verdify-planner-efficacy-audit"
+version = "0.1.0"
+description = "Reproducible core PID analysis for the Verdify planner audit"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy>=2.2,<3",
+    "scikit-learn>=1.6,<2",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9,<10",
+    "ruff>=0.11,<1",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

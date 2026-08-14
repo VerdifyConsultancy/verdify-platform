@@ -1,0 +1,1194 @@
+{
+  "counterfactual_eligible": false,
+  "direction_stable_across_models": {
+    "climate_actuator_minutes": true,
+    "modeled_electric_kwh_high": true,
+    "modeled_electric_kwh_low": true,
+    "modeled_electric_kwh_nominal": true,
+    "modeled_gas_therms_high": true,
+    "modeled_gas_therms_low": true,
+    "modeled_gas_therms_nominal": true,
+    "runtime_fan1_min": true,
+    "runtime_fan2_min": false,
+    "runtime_fog_min": false,
+    "runtime_heat1_min": false,
+    "runtime_heat2_min": true,
+    "runtime_mister_center_min": true,
+    "runtime_mister_south_min": true,
+    "runtime_mister_west_min": true,
+    "runtime_vent_min": true,
+    "temp_compliance_pct": false,
+    "temp_degree_hours_outside": false,
+    "vpd_compliance_pct": true,
+    "vpd_kpa_hours_outside": true
+  },
+  "factual_strong_window": {
+    "attributable_compliance_pct_mean": 65.97333333333333,
+    "climate_runtime_including_misters_minutes_total": 69132.6,
+    "core_cycles_total": 3763,
+    "days": 30,
+    "energy_scoring_eligible_days": 0,
+    "graded_stress_hours_total": 681.46,
+    "graded_temp_compliance_pct_mean": 49.25333333333334,
+    "graded_vpd_compliance_pct_mean": 41.24,
+    "quality_filtered_meter_gallons_total": 7626.0,
+    "runtime_modeled_kwh_total": 475.889,
+    "six_core_runtime_minutes_total": 65837.1,
+    "warning": "Factual aggregates only; daily metrics and resource scopes retain their database quality limits.",
+    "water_attribution_scoring_eligible_days": 23,
+    "water_meter_gap_events": 7,
+    "water_meter_reset_events": 1,
+    "water_meter_scoring_eligible_days": 25
+  },
+  "generated_at": "2026-08-14T16:30:06.918460+00:00",
+  "historical_observed_weather_match": {
+    "ai_days": 139,
+    "ai_minus_matched_pre": {
+      "climate_actuator_minutes": {
+        "descriptive_mean": 462.908576253078
+      },
+      "temp_compliance_pct": {
+        "descriptive_mean": 11.308453237410076
+      },
+      "temp_degree_hours_outside": {
+        "descriptive_mean": -12.655874386127866
+      },
+      "vpd_compliance_pct": {
+        "descriptive_mean": 0.8243405275779387
+      },
+      "vpd_kpa_hours_outside": {
+        "descriptive_mean": -6.0896396936594765
+      }
+    },
+    "inference": "Not computed: control-day reuse and serial dependence make an IID paired-day bootstrap invalid.",
+    "matching_with_replacement": true,
+    "maximum_control_day_reuse": 45,
+    "nearest_neighbor_distance_median": 1.1278015410113842,
+    "nearest_neighbor_distance_p95": 2.2532188627478313,
+    "pre_ai_days": 175,
+    "solar_coverage_required_pct": 40.0,
+    "unique_matched_control_days": 39,
+    "warning": "Nearest-weather historical comparison is descriptive only: firmware, crop, season, sensors, and the open-window configuration remain uncontrolled; pre-AI solar is partly clear-sky-imputed.",
+    "weather_smd_after": {
+      "outdoor_ah": 0.0889204293640554,
+      "outdoor_temp_mean_f": 0.2595692556559274,
+      "outdoor_temp_range_f": -0.13210606920111564,
+      "solar_kwh_m2": 0.5694062698470417,
+      "wind_mph": 0.21007905550608943
+    },
+    "weather_smd_before": {
+      "outdoor_ah": 0.8917291323645937,
+      "outdoor_temp_mean_f": 1.3408184432884158,
+      "outdoor_temp_range_f": 0.08456120874282287,
+      "solar_kwh_m2": 1.8631242301392652,
+      "wind_mph": -0.3502193735954223
+    }
+  },
+  "imputation_counts": {
+    "outdoor_rh_pct": 1160,
+    "outdoor_temp_f": 616,
+    "solar_w_m2": 10137,
+    "wind_mph": 645
+  },
+  "inputs": {
+    "climate": {
+      "bytes": 17390127,
+      "file": "climate_15m.csv",
+      "rows": 33166,
+      "sha256": "c20b789f77b64fbe94cfdf1f45e53fa0a9b8db675dcc4b192fd80dfed789004a"
+    },
+    "daily": {
+      "bytes": 96232,
+      "file": "daily_outcomes.csv",
+      "rows": 364,
+      "sha256": "737758a5e1e5cc610aed75c0f98c453f4038461ed5fe2bbe2dab2721a0c12e27"
+    },
+    "equipment": {
+      "bytes": 3958375,
+      "file": "equipment_transitions.csv",
+      "rows": 99537,
+      "sha256": "7868307d87e302fae63fa72676e7f80a5cbfe913757a7e2d5456ec34394958e7"
+    },
+    "plans": {
+      "bytes": 65420,
+      "file": "plans.csv",
+      "rows": 365,
+      "sha256": "df0e4760bc2e32f6a4812faae71ca68b33b682fee6c77a00566c1ab4e0d6f33b"
+    }
+  },
+  "interpretation": "not estimable: at least one declared validation/support/robustness gate failed",
+  "models": {
+    "hist_gradient_boosting": {
+      "comparison": {
+        "aggregate": {
+          "climate_actuator_minutes": {
+            "executed_model_replay_mean_per_day": 2305.3926381957526,
+            "executed_observed_mean_per_day": 2305.3926381957526,
+            "pid_minus_executed_model": 620.3304431709322,
+            "pid_model_mean_per_day": 2925.723081366685
+          },
+          "modeled_electric_kwh_high": {
+            "executed_model_replay_mean_per_day": 6.1810028312015355,
+            "executed_observed_mean_per_day": 6.1810028312015355,
+            "pid_minus_executed_model": 6.478099851297796,
+            "pid_model_mean_per_day": 12.659102682499334
+          },
+          "modeled_electric_kwh_low": {
+            "executed_model_replay_mean_per_day": 4.398152336352494,
+            "executed_observed_mean_per_day": 4.398152336352494,
+            "pid_minus_executed_model": 6.340848288369224,
+            "pid_model_mean_per_day": 10.739000624721715
+          },
+          "modeled_electric_kwh_nominal": {
+            "executed_model_replay_mean_per_day": 5.300199833521078,
+            "executed_observed_mean_per_day": 5.300199833521078,
+            "pid_minus_executed_model": 6.461336466586966,
+            "pid_model_mean_per_day": 11.761536300108048
+          },
+          "modeled_gas_therms_high": {
+            "executed_model_replay_mean_per_day": 0.006764022174808715,
+            "executed_observed_mean_per_day": 0.006764022174808715,
+            "pid_minus_executed_model": 0.8265728742158894,
+            "pid_model_mean_per_day": 0.833336896390698
+          },
+          "modeled_gas_therms_low": {
+            "executed_model_replay_mean_per_day": 0.006764022174808715,
+            "executed_observed_mean_per_day": 0.006764022174808715,
+            "pid_minus_executed_model": 0.8265728742158894,
+            "pid_model_mean_per_day": 0.833336896390698
+          },
+          "modeled_gas_therms_nominal": {
+            "executed_model_replay_mean_per_day": 0.006764022174808715,
+            "executed_observed_mean_per_day": 0.006764022174808715,
+            "pid_minus_executed_model": 0.8265728742158894,
+            "pid_model_mean_per_day": 0.833336896390698
+          },
+          "runtime_fan1_min": {
+            "executed_model_replay_mean_per_day": 585.7606050872803,
+            "executed_observed_mean_per_day": 585.7606050872803,
+            "pid_minus_executed_model": 406.5577471280533,
+            "pid_model_mean_per_day": 992.3183522153337
+          },
+          "runtime_fan2_min": {
+            "executed_model_replay_mean_per_day": 599.5591890369521,
+            "executed_observed_mean_per_day": 599.5591890369521,
+            "pid_minus_executed_model": -85.43250353240212,
+            "pid_model_mean_per_day": 514.12668550455
+          },
+          "runtime_fog_min": {
+            "executed_model_replay_mean_per_day": 232.3654837494426,
+            "executed_observed_mean_per_day": 232.3654837494426,
+            "pid_minus_executed_model": -141.0023624340029,
+            "pid_model_mean_per_day": 91.36312131543974
+          },
+          "runtime_heat1_min": {
+            "executed_model_replay_mean_per_day": 47.37747661537595,
+            "executed_observed_mean_per_day": 47.37747661537595,
+            "pid_minus_executed_model": 289.29499876585317,
+            "pid_model_mean_per_day": 336.67247538122905
+          },
+          "runtime_heat2_min": {
+            "executed_model_replay_mean_per_day": 0.5411217739846972,
+            "executed_observed_mean_per_day": 0.5411217739846972,
+            "pid_minus_executed_model": 66.12582993727115,
+            "pid_model_mean_per_day": 66.66695171125585
+          },
+          "runtime_mister_center_min": {
+            "executed_model_replay_mean_per_day": 110.8137158519692,
+            "executed_observed_mean_per_day": 110.8137158519692,
+            "pid_minus_executed_model": -110.76432814117892,
+            "pid_model_mean_per_day": 0.04938771079028879
+          },
+          "runtime_mister_south_min": {
+            "executed_model_replay_mean_per_day": 0.0,
+            "executed_observed_mean_per_day": 0.0,
+            "pid_minus_executed_model": 0.04938771079028879,
+            "pid_model_mean_per_day": 0.04938771079028879
+          },
+          "runtime_mister_west_min": {
+            "executed_model_replay_mean_per_day": 0.0,
+            "executed_observed_mean_per_day": 0.0,
+            "pid_minus_executed_model": 0.04938771079028879,
+            "pid_model_mean_per_day": 0.04938771079028879
+          },
+          "runtime_vent_min": {
+            "executed_model_replay_mean_per_day": 728.9750460807485,
+            "executed_observed_mean_per_day": 728.9750460807485,
+            "pid_minus_executed_model": 195.4522860257579,
+            "pid_model_mean_per_day": 924.427332106506
+          },
+          "temp_compliance_pct": {
+            "executed_model_replay_mean_per_day": 90.59027777777779,
+            "executed_observed_mean_per_day": 64.27083333333334,
+            "pid_minus_executed_model": -7.8125,
+            "pid_model_mean_per_day": 82.77777777777777
+          },
+          "temp_degree_hours_outside": {
+            "executed_model_replay_mean_per_day": 4.493425821536207,
+            "executed_observed_mean_per_day": 14.485046459142202,
+            "pid_minus_executed_model": 2.9709789535970303,
+            "pid_model_mean_per_day": 7.464404775133238
+          },
+          "vpd_compliance_pct": {
+            "executed_model_replay_mean_per_day": 53.54166666666667,
+            "executed_observed_mean_per_day": 60.625,
+            "pid_minus_executed_model": 6.5625,
+            "pid_model_mean_per_day": 60.10416666666666
+          },
+          "vpd_kpa_hours_outside": {
+            "executed_model_replay_mean_per_day": 2.689107492416353,
+            "executed_observed_mean_per_day": 1.8688667881274552,
+            "pid_minus_executed_model": -0.3618951126136198,
+            "pid_model_mean_per_day": 2.3272123798027335
+          }
+        },
+        "paired_day_bootstrap": {
+          "climate_actuator_minutes": {
+            "high_95": 885.4593735214052,
+            "low_95": 370.33422132240986,
+            "mean": 620.3304431709322,
+            "probability_gt_zero": 1.0
+          },
+          "modeled_electric_kwh_high": {
+            "high_95": 7.858136971630974,
+            "low_95": 5.1090507322698056,
+            "mean": 6.478099851297796,
+            "probability_gt_zero": 1.0
+          },
+          "modeled_electric_kwh_low": {
+            "high_95": 7.5249169040639945,
+            "low_95": 5.176994623816418,
+            "mean": 6.340848288369224,
+            "probability_gt_zero": 1.0
+          },
+          "modeled_electric_kwh_nominal": {
+            "high_95": 7.750110618027259,
+            "low_95": 5.180539803659646,
+            "mean": 6.461336466586966,
+            "probability_gt_zero": 1.0
+          },
+          "modeled_gas_therms_high": {
+            "high_95": 1.598275171064113,
+            "low_95": 0.2603016752337879,
+            "mean": 0.8265728742158894,
+            "probability_gt_zero": 1.0
+          },
+          "modeled_gas_therms_low": {
+            "high_95": 1.598275171064113,
+            "low_95": 0.2603016752337879,
+            "mean": 0.8265728742158894,
+            "probability_gt_zero": 1.0
+          },
+          "modeled_gas_therms_nominal": {
+            "high_95": 1.598275171064113,
+            "low_95": 0.2603016752337879,
+            "mean": 0.8265728742158894,
+            "probability_gt_zero": 1.0
+          },
+          "runtime_fan1_min": {
+            "high_95": 476.6013110232077,
+            "low_95": 341.92252459188904,
+            "mean": 406.5577471280533,
+            "probability_gt_zero": 1.0
+          },
+          "runtime_fan2_min": {
+            "high_95": -21.501336074733338,
+            "low_95": -142.15306262492177,
+            "mean": -85.43250353240212,
+            "probability_gt_zero": 0.0049
+          },
+          "runtime_fog_min": {
+            "high_95": -101.37181475993752,
+            "low_95": -177.08731501814967,
+            "mean": -141.0023624340029,
+            "probability_gt_zero": 0.0
+          },
+          "runtime_heat1_min": {
+            "high_95": 336.39931072083357,
+            "low_95": 240.74140959883096,
+            "mean": 289.29499876585317,
+            "probability_gt_zero": 1.0
+          },
+          "runtime_heat2_min": {
+            "high_95": 127.862013685129,
+            "low_95": 20.82413401870303,
+            "mean": 66.12582993727115,
+            "probability_gt_zero": 1.0
+          },
+          "runtime_mister_center_min": {
+            "high_95": -81.59338352413508,
+            "low_95": -153.80871863938992,
+            "mean": -110.76432814117892,
+            "probability_gt_zero": 0.0
+          },
+          "runtime_mister_south_min": {
+            "high_95": 0.12999235153518812,
+            "low_95": 0.0,
+            "mean": 0.04938771079028879,
+            "probability_gt_zero": 0.8702
+          },
+          "runtime_mister_west_min": {
+            "high_95": 0.12999235153518812,
+            "low_95": 0.0,
+            "mean": 0.04938771079028879,
+            "probability_gt_zero": 0.8702
+          },
+          "runtime_vent_min": {
+            "high_95": 266.93704383687236,
+            "low_95": 130.3818390701507,
+            "mean": 195.4522860257579,
+            "probability_gt_zero": 1.0
+          },
+          "temp_compliance_pct": {
+            "high_95": -2.6041666666666674,
+            "low_95": -13.472222222222223,
+            "mean": -7.8125,
+            "probability_gt_zero": 0.0011
+          },
+          "temp_degree_hours_outside": {
+            "high_95": 5.968444582245181,
+            "low_95": 0.07811325306394683,
+            "mean": 2.9709789535970303,
+            "probability_gt_zero": 0.9781
+          },
+          "vpd_compliance_pct": {
+            "high_95": 13.124999999999996,
+            "low_95": -0.03472222222222144,
+            "mean": 6.5625,
+            "probability_gt_zero": 0.9745
+          },
+          "vpd_kpa_hours_outside": {
+            "high_95": 0.07559490315190565,
+            "low_95": -0.7654914122102473,
+            "mean": -0.3618951126136198,
+            "probability_gt_zero": 0.0501
+          }
+        }
+      },
+      "residuals": {
+        "one_step_abs_humidity_mae_g_m3": 0.48946836233498725,
+        "one_step_temp_mae_f": 0.4817098964295401,
+        "passes": true,
+        "residual_lag1": {
+          "abs_humidity": 0.332830297116018,
+          "temp": 0.24685967093329259
+        }
+      },
+      "support": {
+        "actual_in_support_pct": 98.98245614035088,
+        "passes": true,
+        "pid_in_support_pct": 94.7017543859649,
+        "threshold_actual_validation_p99": 50.560028682400876
+      },
+      "validation": {
+        "daily": [
+          {
+            "temp_mae_f": 2.0010043054902265,
+            "vpd_mae_kpa": 0.347447168369792
+          },
+          {
+            "temp_mae_f": 2.310641278756482,
+            "vpd_mae_kpa": 0.3182055839138735
+          },
+          {
+            "temp_mae_f": 2.3167472743921107,
+            "vpd_mae_kpa": 0.3239163510974598
+          },
+          {
+            "temp_mae_f": 2.2639022797178048,
+            "vpd_mae_kpa": 0.3106660788349412
+          },
+          {
+            "temp_mae_f": 2.2781258318291577,
+            "vpd_mae_kpa": 0.30781539191025287
+          },
+          {
+            "temp_mae_f": 2.0308673711504905,
+            "vpd_mae_kpa": 0.2732217613205435
+          },
+          {
+            "temp_mae_f": 2.4362541524385333,
+            "vpd_mae_kpa": 0.1948998691546819
+          },
+          {
+            "temp_mae_f": 2.359219003419575,
+            "vpd_mae_kpa": 0.1777891034240342
+          },
+          {
+            "temp_mae_f": 2.7163710594828108,
+            "vpd_mae_kpa": 0.23491008633930152
+          },
+          {
+            "temp_mae_f": 2.061155585352532,
+            "vpd_mae_kpa": 0.21425960126054946
+          },
+          {
+            "temp_mae_f": 0.8799473735121749,
+            "vpd_mae_kpa": 0.13175035112088737
+          },
+          {
+            "temp_mae_f": 1.8006933983330693,
+            "vpd_mae_kpa": 0.26046128925416845
+          },
+          {
+            "temp_mae_f": 2.3226131254764306,
+            "vpd_mae_kpa": 0.2667591233444108
+          },
+          {
+            "temp_mae_f": 2.027245659202029,
+            "vpd_mae_kpa": 0.195924407734282
+          },
+          {
+            "temp_mae_f": 2.3374388282281884,
+            "vpd_mae_kpa": 0.2260176866680783
+          },
+          {
+            "temp_mae_f": 2.460077513673316,
+            "vpd_mae_kpa": 0.3230497055777671
+          },
+          {
+            "temp_mae_f": 1.7070711123347906,
+            "vpd_mae_kpa": 0.19445611884851485
+          },
+          {
+            "temp_mae_f": 2.800693149752051,
+            "vpd_mae_kpa": 0.3732647337655289
+          },
+          {
+            "temp_mae_f": 2.5919054875615477,
+            "vpd_mae_kpa": 0.3945246319135754
+          },
+          {
+            "temp_mae_f": 2.894720312087412,
+            "vpd_mae_kpa": 0.44014768673430726
+          },
+          {
+            "temp_mae_f": 1.8241044006232148,
+            "vpd_mae_kpa": 0.29320234099959724
+          },
+          {
+            "temp_mae_f": 2.1290333231387337,
+            "vpd_mae_kpa": 0.5239637687524746
+          },
+          {
+            "temp_mae_f": 3.419144902789002,
+            "vpd_mae_kpa": 0.774915836014984
+          },
+          {
+            "temp_mae_f": 3.427618609886609,
+            "vpd_mae_kpa": 0.7537625285089623
+          },
+          {
+            "temp_mae_f": 3.477789913601015,
+            "vpd_mae_kpa": 0.457401198516653
+          },
+          {
+            "temp_mae_f": 3.7686749793129004,
+            "vpd_mae_kpa": 0.2420441524264887
+          },
+          {
+            "temp_mae_f": 3.0444461636076636,
+            "vpd_mae_kpa": 0.5382114787730748
+          },
+          {
+            "temp_mae_f": 2.8578604310845397,
+            "vpd_mae_kpa": 0.4073175236254296
+          },
+          {
+            "temp_mae_f": 1.6674039292782463,
+            "vpd_mae_kpa": 0.13795093189086993
+          },
+          {
+            "temp_mae_f": 3.156369759766226,
+            "vpd_mae_kpa": 0.2998437776332887
+          }
+        ],
+        "days": 30,
+        "gate_thresholds": {
+          "must_beat_persistence": true,
+          "temp_mae_f_max": 2.5,
+          "vpd_mae_kpa_max": 0.25
+        },
+        "horizons": {
+          "1h": {
+            "persistence_temp_mae_f": 0.8445190344916427,
+            "persistence_vpd_mae_kpa": 0.037449844543524596,
+            "temp_mae_f": 1.1776431299123595,
+            "vpd_mae_kpa": 0.10111280947889502
+          },
+          "24h": {
+            "persistence_temp_mae_f": 1.8976698412213981,
+            "persistence_vpd_mae_kpa": 0.18172364130011368,
+            "temp_mae_f": 5.47285389429717,
+            "vpd_mae_kpa": 0.6526237788014227
+          },
+          "6h": {
+            "persistence_temp_mae_f": 1.9361657533191476,
+            "persistence_vpd_mae_kpa": 0.26305988367800115,
+            "temp_mae_f": 2.8651370759721075,
+            "vpd_mae_kpa": 0.249577121396688
+          }
+        },
+        "passes": false,
+        "persistence_temp_mae_f": 5.505413958356265,
+        "persistence_vpd_mae_kpa": 0.24045823184520024,
+        "rollout_temp_mae_f": 2.4456380171759626,
+        "rollout_vpd_mae_kpa": 0.3312700089242924
+      }
+    },
+    "ridge": {
+      "comparison": {
+        "aggregate": {
+          "climate_actuator_minutes": {
+            "executed_model_replay_mean_per_day": 2305.3926381957526,
+            "executed_observed_mean_per_day": 2305.3926381957526,
+            "pid_minus_executed_model": 1707.7321939882759,
+            "pid_model_mean_per_day": 4013.1248321840294
+          },
+          "modeled_electric_kwh_high": {
+            "executed_model_replay_mean_per_day": 6.1810028312015355,
+            "executed_observed_mean_per_day": 6.1810028312015355,
+            "pid_minus_executed_model": 2.159414971416173,
+            "pid_model_mean_per_day": 8.340417802617708
+          },
+          "modeled_electric_kwh_low": {
+            "executed_model_replay_mean_per_day": 4.398152336352494,
+            "executed_observed_mean_per_day": 4.398152336352494,
+            "pid_minus_executed_model": 1.701946819892582,
+            "pid_model_mean_per_day": 6.100099156245077
+          },
+          "modeled_electric_kwh_nominal": {
+            "executed_model_replay_mean_per_day": 5.300199833521078,
+            "executed_observed_mean_per_day": 5.300199833521078,
+            "pid_minus_executed_model": 1.9261504590432805,
+            "pid_model_mean_per_day": 7.226350292564358
+          },
+          "modeled_gas_therms_high": {
+            "executed_model_replay_mean_per_day": 0.006764022174808715,
+            "executed_observed_mean_per_day": 0.006764022174808715,
+            "pid_minus_executed_model": 0.0015204305133175874,
+            "pid_model_mean_per_day": 0.008284452688126302
+          },
+          "modeled_gas_therms_low": {
+            "executed_model_replay_mean_per_day": 0.006764022174808715,
+            "executed_observed_mean_per_day": 0.006764022174808715,
+            "pid_minus_executed_model": 0.0015204305133175874,
+            "pid_model_mean_per_day": 0.008284452688126302
+          },
+          "modeled_gas_therms_nominal": {
+            "executed_model_replay_mean_per_day": 0.006764022174808715,
+            "executed_observed_mean_per_day": 0.006764022174808715,
+            "pid_minus_executed_model": 0.0015204305133175874,
+            "pid_model_mean_per_day": 0.008284452688126302
+          },
+          "runtime_fan1_min": {
+            "executed_model_replay_mean_per_day": 585.7606050872803,
+            "executed_observed_mean_per_day": 585.7606050872803,
+            "pid_minus_executed_model": 773.3812861174912,
+            "pid_model_mean_per_day": 1359.1418912047714
+          },
+          "runtime_fan2_min": {
+            "executed_model_replay_mean_per_day": 599.5591890369521,
+            "executed_observed_mean_per_day": 599.5591890369521,
+            "pid_minus_executed_model": 503.9935207119007,
+            "pid_model_mean_per_day": 1103.5527097488525
+          },
+          "runtime_fog_min": {
+            "executed_model_replay_mean_per_day": 232.3654837494426,
+            "executed_observed_mean_per_day": 232.3654837494426,
+            "pid_minus_executed_model": 2.6845302758879845,
+            "pid_model_mean_per_day": 235.05001402533063
+          },
+          "runtime_heat1_min": {
+            "executed_model_replay_mean_per_day": 47.37747661537595,
+            "executed_observed_mean_per_day": 47.37747661537595,
+            "pid_minus_executed_model": -24.833496527613075,
+            "pid_model_mean_per_day": 22.54398008776287
+          },
+          "runtime_heat2_min": {
+            "executed_model_replay_mean_per_day": 0.5411217739846972,
+            "executed_observed_mean_per_day": 0.5411217739846972,
+            "pid_minus_executed_model": 0.12163444106540695,
+            "pid_model_mean_per_day": 0.6627562150501042
+          },
+          "runtime_mister_center_min": {
+            "executed_model_replay_mean_per_day": 110.8137158519692,
+            "executed_observed_mean_per_day": 110.8137158519692,
+            "pid_minus_executed_model": -110.75474475854365,
+            "pid_model_mean_per_day": 0.05897109342554909
+          },
+          "runtime_mister_south_min": {
+            "executed_model_replay_mean_per_day": 0.0,
+            "executed_observed_mean_per_day": 0.0,
+            "pid_minus_executed_model": 0.05897109342554909,
+            "pid_model_mean_per_day": 0.05897109342554909
+          },
+          "runtime_mister_west_min": {
+            "executed_model_replay_mean_per_day": 0.0,
+            "executed_observed_mean_per_day": 0.0,
+            "pid_minus_executed_model": 0.05897109342554909,
+            "pid_model_mean_per_day": 0.05897109342554909
+          },
+          "runtime_vent_min": {
+            "executed_model_replay_mean_per_day": 728.9750460807485,
+            "executed_observed_mean_per_day": 728.9750460807485,
+            "pid_minus_executed_model": 563.021521541236,
+            "pid_model_mean_per_day": 1291.9965676219842
+          },
+          "temp_compliance_pct": {
+            "executed_model_replay_mean_per_day": 15.243055555555559,
+            "executed_observed_mean_per_day": 64.27083333333334,
+            "pid_minus_executed_model": 11.5625,
+            "pid_model_mean_per_day": 26.805555555555546
+          },
+          "temp_degree_hours_outside": {
+            "executed_model_replay_mean_per_day": 98.39023785220706,
+            "executed_observed_mean_per_day": 14.485046459142202,
+            "pid_minus_executed_model": -40.10600593017092,
+            "pid_model_mean_per_day": 58.28423192203615
+          },
+          "vpd_compliance_pct": {
+            "executed_model_replay_mean_per_day": 45.65972222222222,
+            "executed_observed_mean_per_day": 60.625,
+            "pid_minus_executed_model": 9.965277777777779,
+            "pid_model_mean_per_day": 55.625
+          },
+          "vpd_kpa_hours_outside": {
+            "executed_model_replay_mean_per_day": 2.6827840764249298,
+            "executed_observed_mean_per_day": 1.8688667881274552,
+            "pid_minus_executed_model": -0.6456263719417576,
+            "pid_model_mean_per_day": 2.037157704483172
+          }
+        },
+        "paired_day_bootstrap": {
+          "climate_actuator_minutes": {
+            "high_95": 2011.4356561587772,
+            "low_95": 1432.2259515430696,
+            "mean": 1707.7321939882759,
+            "probability_gt_zero": 1.0
+          },
+          "modeled_electric_kwh_high": {
+            "high_95": 3.2407568720714224,
+            "low_95": 0.983945944139712,
+            "mean": 2.159414971416173,
+            "probability_gt_zero": 0.9998
+          },
+          "modeled_electric_kwh_low": {
+            "high_95": 2.5844796936982104,
+            "low_95": 0.7129799293848761,
+            "mean": 1.701946819892582,
+            "probability_gt_zero": 0.9994
+          },
+          "modeled_electric_kwh_nominal": {
+            "high_95": 2.9113500268648664,
+            "low_95": 0.8438340828118424,
+            "mean": 1.9261504590432805,
+            "probability_gt_zero": 0.9995
+          },
+          "modeled_gas_therms_high": {
+            "high_95": 0.0079773118836539,
+            "low_95": -0.003416020343701137,
+            "mean": 0.0015204305133175874,
+            "probability_gt_zero": 0.616
+          },
+          "modeled_gas_therms_low": {
+            "high_95": 0.0079773118836539,
+            "low_95": -0.003416020343701137,
+            "mean": 0.0015204305133175874,
+            "probability_gt_zero": 0.616
+          },
+          "modeled_gas_therms_nominal": {
+            "high_95": 0.0079773118836539,
+            "low_95": -0.003416020343701137,
+            "mean": 0.0015204305133175874,
+            "probability_gt_zero": 0.616
+          },
+          "runtime_fan1_min": {
+            "high_95": 859.7787215056514,
+            "low_95": 688.3555733184079,
+            "mean": 773.3812861174912,
+            "probability_gt_zero": 1.0
+          },
+          "runtime_fan2_min": {
+            "high_95": 618.3458556553707,
+            "low_95": 395.1154169847504,
+            "mean": 503.9935207119007,
+            "probability_gt_zero": 1.0
+          },
+          "runtime_fog_min": {
+            "high_95": 44.64474703784735,
+            "low_95": -30.926110695571875,
+            "mean": 2.6845302758879845,
+            "probability_gt_zero": 0.5401
+          },
+          "runtime_heat1_min": {
+            "high_95": 14.254129164295163,
+            "low_95": -70.1852509214716,
+            "mean": -24.833496527613075,
+            "probability_gt_zero": 0.1215
+          },
+          "runtime_heat2_min": {
+            "high_95": 0.638184950692312,
+            "low_95": -0.2732816274960911,
+            "mean": 0.12163444106540695,
+            "probability_gt_zero": 0.616
+          },
+          "runtime_mister_center_min": {
+            "high_95": -81.58370062198702,
+            "low_95": -153.79913525675465,
+            "mean": -110.75474475854365,
+            "probability_gt_zero": 0.0
+          },
+          "runtime_mister_south_min": {
+            "high_95": 0.1395757341704484,
+            "low_95": 0.0,
+            "mean": 0.05897109342554909,
+            "probability_gt_zero": 0.9583
+          },
+          "runtime_mister_west_min": {
+            "high_95": 0.1395757341704484,
+            "low_95": 0.0,
+            "mean": 0.05897109342554909,
+            "probability_gt_zero": 0.9583
+          },
+          "runtime_vent_min": {
+            "high_95": 656.0829412314538,
+            "low_95": 474.32036975647526,
+            "mean": 563.021521541236,
+            "probability_gt_zero": 1.0
+          },
+          "temp_compliance_pct": {
+            "high_95": 17.67447916666666,
+            "low_95": 6.354166666666669,
+            "mean": 11.5625,
+            "probability_gt_zero": 1.0
+          },
+          "temp_degree_hours_outside": {
+            "high_95": -29.00883153590617,
+            "low_95": -52.17901795737345,
+            "mean": -40.10600593017092,
+            "probability_gt_zero": 0.0
+          },
+          "vpd_compliance_pct": {
+            "high_95": 17.256944444444443,
+            "low_95": 2.6380208333333335,
+            "mean": 9.965277777777779,
+            "probability_gt_zero": 0.9956
+          },
+          "vpd_kpa_hours_outside": {
+            "high_95": -0.02165293304985207,
+            "low_95": -1.3509905944563654,
+            "mean": -0.6456263719417576,
+            "probability_gt_zero": 0.0203
+          }
+        }
+      },
+      "residuals": {
+        "one_step_abs_humidity_mae_g_m3": 1.4502517494562905,
+        "one_step_temp_mae_f": 1.3985987586838613,
+        "passes": false,
+        "residual_lag1": {
+          "abs_humidity": 0.515660352734342,
+          "temp": 0.7356195718326831
+        }
+      },
+      "support": {
+        "actual_in_support_pct": 98.98245614035088,
+        "passes": true,
+        "pid_in_support_pct": 98.14035087719299,
+        "threshold_actual_validation_p99": 51.164806161552576
+      },
+      "validation": {
+        "daily": [
+          {
+            "temp_mae_f": 0.6859475144350778,
+            "vpd_mae_kpa": 0.1983622380171335
+          },
+          {
+            "temp_mae_f": 0.855811495049934,
+            "vpd_mae_kpa": 0.1710591549181588
+          },
+          {
+            "temp_mae_f": 0.8457996031892034,
+            "vpd_mae_kpa": 0.20590416569603998
+          },
+          {
+            "temp_mae_f": 0.925706558720521,
+            "vpd_mae_kpa": 0.22332704420563573
+          },
+          {
+            "temp_mae_f": 1.1829895308707685,
+            "vpd_mae_kpa": 0.23736054599193787
+          },
+          {
+            "temp_mae_f": 1.472471870900464,
+            "vpd_mae_kpa": 0.23789988583925445
+          },
+          {
+            "temp_mae_f": 1.6148172059029209,
+            "vpd_mae_kpa": 0.1827622187442346
+          },
+          {
+            "temp_mae_f": 1.9640507052302805,
+            "vpd_mae_kpa": 0.11503568151106042
+          },
+          {
+            "temp_mae_f": 1.7193143088917617,
+            "vpd_mae_kpa": 0.1743870568006507
+          },
+          {
+            "temp_mae_f": 3.3460927645435827,
+            "vpd_mae_kpa": 0.12481719381569191
+          },
+          {
+            "temp_mae_f": 4.4749411533680545,
+            "vpd_mae_kpa": 0.23870602570817057
+          },
+          {
+            "temp_mae_f": 3.528336151040587,
+            "vpd_mae_kpa": 0.20124683393715678
+          },
+          {
+            "temp_mae_f": 3.0176472975430464,
+            "vpd_mae_kpa": 0.2336879301053532
+          },
+          {
+            "temp_mae_f": 3.7928832888959145,
+            "vpd_mae_kpa": 0.23188589141582494
+          },
+          {
+            "temp_mae_f": 4.7651302515305165,
+            "vpd_mae_kpa": 0.1807806555661462
+          },
+          {
+            "temp_mae_f": 4.527081031644292,
+            "vpd_mae_kpa": 0.22611370369061404
+          },
+          {
+            "temp_mae_f": 4.866546398944536,
+            "vpd_mae_kpa": 0.27039630669339126
+          },
+          {
+            "temp_mae_f": 5.698905702861875,
+            "vpd_mae_kpa": 0.2788609230600653
+          },
+          {
+            "temp_mae_f": 5.657083951491592,
+            "vpd_mae_kpa": 0.3786279837015365
+          },
+          {
+            "temp_mae_f": 6.6498730322354485,
+            "vpd_mae_kpa": 0.2509967963725347
+          },
+          {
+            "temp_mae_f": 7.58188832897384,
+            "vpd_mae_kpa": 0.2610836152509823
+          },
+          {
+            "temp_mae_f": 6.746760218653711,
+            "vpd_mae_kpa": 0.6057823547340099
+          },
+          {
+            "temp_mae_f": 6.622235268262313,
+            "vpd_mae_kpa": 0.6398382654837591
+          },
+          {
+            "temp_mae_f": 6.473748985002765,
+            "vpd_mae_kpa": 0.6683620808745435
+          },
+          {
+            "temp_mae_f": 10.80584304698543,
+            "vpd_mae_kpa": 0.696200896753607
+          },
+          {
+            "temp_mae_f": 14.598260927888573,
+            "vpd_mae_kpa": 0.2926670738700958
+          },
+          {
+            "temp_mae_f": 7.931019892043616,
+            "vpd_mae_kpa": 0.6293997193627382
+          },
+          {
+            "temp_mae_f": 8.423387974060079,
+            "vpd_mae_kpa": 0.5582257459781779
+          },
+          {
+            "temp_mae_f": 11.49584667608156,
+            "vpd_mae_kpa": 0.3524755649291593
+          },
+          {
+            "temp_mae_f": 10.714414784997672,
+            "vpd_mae_kpa": 0.3555533594068396
+          }
+        ],
+        "days": 30,
+        "gate_thresholds": {
+          "must_beat_persistence": true,
+          "temp_mae_f_max": 2.5,
+          "vpd_mae_kpa_max": 0.25
+        },
+        "horizons": {
+          "1h": {
+            "persistence_temp_mae_f": 0.8445190344916427,
+            "persistence_vpd_mae_kpa": 0.037449844543524596,
+            "temp_mae_f": 2.826498136419567,
+            "vpd_mae_kpa": 0.29385487972343377
+          },
+          "24h": {
+            "persistence_temp_mae_f": 1.8976698412213981,
+            "persistence_vpd_mae_kpa": 0.18172364130011368,
+            "temp_mae_f": 4.17527551432346,
+            "vpd_mae_kpa": 0.42933449188297695
+          },
+          "6h": {
+            "persistence_temp_mae_f": 1.9361657533191476,
+            "persistence_vpd_mae_kpa": 0.26305988367800115,
+            "temp_mae_f": 5.499250687361576,
+            "vpd_mae_kpa": 0.23015297380271418
+          }
+        },
+        "passes": false,
+        "persistence_temp_mae_f": 5.505413958356265,
+        "persistence_vpd_mae_kpa": 0.24045823184520024,
+        "rollout_temp_mae_f": 5.099494530674665,
+        "rollout_vpd_mae_kpa": 0.3140602304144835
+      }
+    }
+  },
+  "open_loop_decision_replay": {
+    "candidate_max_requested_minutes_per_day": 5403.7514192218105,
+    "candidate_min_requested_minutes_per_day": 3618.2198433193525,
+    "candidates": [
+      {
+        "name": "current_spec:p_only",
+        "requested_climate_actuator_minutes_per_day": 4379.950208284606,
+        "requested_modeled_electric_kwh_nominal_per_day": 14.551054424812415,
+        "requested_modeled_gas_therms_nominal_per_day": 1.0324682437805908
+      },
+      {
+        "name": "current_spec:conservative",
+        "requested_climate_actuator_minutes_per_day": 3725.561986517561,
+        "requested_modeled_electric_kwh_nominal_per_day": 12.330831071519475,
+        "requested_modeled_gas_therms_nominal_per_day": 0.35595694189493327
+      },
+      {
+        "name": "current_spec:balanced",
+        "requested_climate_actuator_minutes_per_day": 4677.545166027896,
+        "requested_modeled_electric_kwh_nominal_per_day": 15.685954459861136,
+        "requested_modeled_gas_therms_nominal_per_day": 1.3199017357372105
+      },
+      {
+        "name": "current_spec:aggressive",
+        "requested_climate_actuator_minutes_per_day": 5403.7514192218105,
+        "requested_modeled_electric_kwh_nominal_per_day": 17.32377371012666,
+        "requested_modeled_gas_therms_nominal_per_day": 2.2266083406461346
+      },
+      {
+        "name": "legacy_midpoint:p_only",
+        "requested_climate_actuator_minutes_per_day": 4632.441634556221,
+        "requested_modeled_electric_kwh_nominal_per_day": 7.90079264152743,
+        "requested_modeled_gas_therms_nominal_per_day": 0.036953556424095514
+      },
+      {
+        "name": "legacy_midpoint:conservative",
+        "requested_climate_actuator_minutes_per_day": 4308.085139464298,
+        "requested_modeled_electric_kwh_nominal_per_day": 7.096985954071958,
+        "requested_modeled_gas_therms_nominal_per_day": 0.000684201963904767
+      },
+      {
+        "name": "legacy_midpoint:balanced",
+        "requested_climate_actuator_minutes_per_day": 4679.423862656946,
+        "requested_modeled_electric_kwh_nominal_per_day": 8.006652050486235,
+        "requested_modeled_gas_therms_nominal_per_day": 0.04635158647160952
+      },
+      {
+        "name": "legacy_midpoint:aggressive",
+        "requested_climate_actuator_minutes_per_day": 4849.87599200358,
+        "requested_modeled_electric_kwh_nominal_per_day": 8.550104849027838,
+        "requested_modeled_gas_therms_nominal_per_day": 0.06280649582220589
+      },
+      {
+        "name": "warm_dry:p_only",
+        "requested_climate_actuator_minutes_per_day": 4249.993763440206,
+        "requested_modeled_electric_kwh_nominal_per_day": 21.028530279816177,
+        "requested_modeled_gas_therms_nominal_per_day": 6.487205646151589
+      },
+      {
+        "name": "warm_dry:conservative",
+        "requested_climate_actuator_minutes_per_day": 3618.2198433193525,
+        "requested_modeled_electric_kwh_nominal_per_day": 19.066259318646196,
+        "requested_modeled_gas_therms_nominal_per_day": 4.709796801933625
+      },
+      {
+        "name": "warm_dry:balanced",
+        "requested_climate_actuator_minutes_per_day": 4402.308583314223,
+        "requested_modeled_electric_kwh_nominal_per_day": 21.603129596266612,
+        "requested_modeled_gas_therms_nominal_per_day": 6.6546318607395225
+      },
+      {
+        "name": "warm_dry:aggressive",
+        "requested_climate_actuator_minutes_per_day": 4940.970530114465,
+        "requested_modeled_electric_kwh_nominal_per_day": 23.077386907697342,
+        "requested_modeled_gas_therms_nominal_per_day": 7.440877560583102
+      }
+    ],
+    "executed_climate_actuator_minutes_per_day": 2305.3926381957526,
+    "selected_pid": {
+      "name": "current_spec:conservative",
+      "requested_climate_actuator_minutes_per_day": 3725.561986517561,
+      "requested_modeled_electric_kwh_nominal_per_day": 12.330831071519475,
+      "requested_modeled_gas_therms_nominal_per_day": 0.35595694189493327
+    },
+    "warning": "Observed-state/open-loop replay: requested duty only; indoor trajectory is held factual."
+  },
+  "pid": {
+    "anti_windup": "clamped integrators",
+    "candidate_ranking": [
+      {
+        "model_scores": [
+          0.24782275765060238,
+          0.37867821065278917
+        ],
+        "name": "current_spec:conservative",
+        "score": 0.31325048415169576
+      },
+      {
+        "model_scores": [
+          0.2209685711137668,
+          0.44698270674975366
+        ],
+        "name": "legacy_midpoint:p_only",
+        "score": 0.33397563893176024
+      },
+      {
+        "model_scores": [
+          0.2366147241958513,
+          0.458807456705337
+        ],
+        "name": "legacy_midpoint:aggressive",
+        "score": 0.3477110904505942
+      },
+      {
+        "model_scores": [
+          0.24676065866744437,
+          0.4507028569590875
+        ],
+        "name": "legacy_midpoint:balanced",
+        "score": 0.34873175781326593
+      },
+      {
+        "model_scores": [
+          0.3029017618011306,
+          0.39585369971115986
+        ],
+        "name": "current_spec:p_only",
+        "score": 0.3493777307561452
+      },
+      {
+        "model_scores": [
+          0.2693378376818358,
+          0.43292771061365926
+        ],
+        "name": "legacy_midpoint:conservative",
+        "score": 0.3511327741477475
+      },
+      {
+        "model_scores": [
+          0.3096195758395454,
+          0.4205581650018942
+        ],
+        "name": "current_spec:balanced",
+        "score": 0.3650888704207198
+      },
+      {
+        "model_scores": [
+          0.32470989580567666,
+          0.42618425093653045
+        ],
+        "name": "warm_dry:p_only",
+        "score": 0.37544707337110356
+      },
+      {
+        "model_scores": [
+          0.3644339567904125,
+          0.3882850764016858
+        ],
+        "name": "warm_dry:conservative",
+        "score": 0.37635951659604916
+      },
+      {
+        "model_scores": [
+          0.33940161736959135,
+          0.42593630678318284
+        ],
+        "name": "warm_dry:balanced",
+        "score": 0.3826689620763871
+      },
+      {
+        "model_scores": [
+          0.31623578070367625,
+          0.45171533123829793
+        ],
+        "name": "current_spec:aggressive",
+        "score": 0.3839755559709871
+      },
+      {
+        "model_scores": [
+          0.34459524205293635,
+          0.425798399522776
+        ],
+        "name": "warm_dry:aggressive",
+        "score": 0.38519682078785616
+      }
+    ],
+    "safety": "45F heat and 95F cool preemption; 8F dew-margin wet block; coordinated allocator",
+    "sample_period_minutes": 15,
+    "selected": {
+      "name": "current_spec:conservative",
+      "temp_kd": 0.02,
+      "temp_ki": 0.01,
+      "temp_kp": 0.2,
+      "temp_target_f": 72.0,
+      "vpd_kd": 0.1,
+      "vpd_ki": 0.05,
+      "vpd_kp": 1.5,
+      "vpd_target_kpa": 0.95
+    },
+    "selected_on_training_only": true,
+    "selection_status": "Nominal audit specification ranked on calibration data through model classes that later failed validation; not a validated optimum."
+  },
+  "plans": {
+    "anchor_score_mean": 3.350210970464135,
+    "climate_intent": 152,
+    "lifecycle": {
+      "expired": 280,
+      "superseded": 85
+    },
+    "plans": 365,
+    "score_pair_count": 237,
+    "score_warning": "Journal scores are workflow diagnostics, not causal efficacy outcomes.",
+    "self_anchor_mean_abs_difference": 1.7932489451476794,
+    "self_score_mean": 4.763713080168777,
+    "structured_hypothesis": 183,
+    "validated": 365
+  },
+  "resource_evidence": {
+    "crop_or_yield": "not measured",
+    "electricity": "runtime-modeled low/nominal/high; production marks all days scoring-ineligible",
+    "gas": "nameplate runtime model, not metered",
+    "water": "counterfactual gallons not estimated; eligible factual meter attribution exists only for a subset of days"
+  },
+  "schema_version": 1,
+  "study": {
+    "estimand": "PID-C minus executed-policy outcome under common observed weather, conditional on accepted plant models",
+    "evaluation_complete_days": 30,
+    "evaluation_end": "2026-08-14T06:00:00+00:00",
+    "evaluation_start": "2026-07-15T06:00:00+00:00",
+    "model_evaluation_rows": 2879,
+    "model_training_rows": 1919,
+    "primary_era": "open screen/window; stable firmware after 2026-07-10",
+    "step_minutes": 15,
+    "train_end": "2026-07-10T06:00:00+00:00",
+    "train_start": "2026-06-20T06:00:00+00:00"
+  }
+}
