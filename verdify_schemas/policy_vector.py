@@ -94,6 +94,19 @@ _WIRE_FIELDS: tuple[TunableDef, ...] = tuple(
 )
 assert len(_WIRE_FIELDS) == POLICY_WIRE_FIELD_COUNT
 
+# Component index (migration 207 policy_*_components.component_index, 0..48):
+# a field's position in the canonical ascending-wire_id record order.
+WIRE_COMPONENT_INDEXES: dict[str, int] = {defn.name: index for index, defn in enumerate(_WIRE_FIELDS)}
+
+
+def wire_component_index(name: str) -> int:
+    """The 0..48 component index of one wire field (ascending wire_id order)."""
+    try:
+        return WIRE_COMPONENT_INDEXES[name]
+    except KeyError:
+        raise ValueError(f"{name!r} is not part of the policy wire schema") from None
+
+
 POLICY_VECTOR_HEADER_SIZE = len(POLICY_VECTOR_MAGIC) + 1 + 8 + 1
 POLICY_VECTOR_SIZE = POLICY_VECTOR_HEADER_SIZE + sum(2 + WIRE_KIND_WIDTH[d.wire_kind or ""] for d in _WIRE_FIELDS)
 
