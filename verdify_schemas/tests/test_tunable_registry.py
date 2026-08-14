@@ -334,12 +334,16 @@ class TestDriftGuard:
             "sw_direct_wet_stress_override_enabled",
             "direct_wet_stress_vpd_margin_kpa",
             "direct_wet_stress_min_dew_margin_f",
-            "direct_wet_stress_latest_hour",
             # fog_stress_* removed (BC-11/ADR0003 §6.7): retired dead registry rows.
+            # direct_wet_stress_latest_hour retired (wire schema v2, #588):
+            # zero firmware presence — asserted below.
         ):
             assert param in TIER1_REG
             assert param in PLANNER_PUSHABLE_REG
             assert REGISTRY[param].cfg_readback_object_id
+        assert "direct_wet_stress_latest_hour" not in TIER1_REG
+        assert "direct_wet_stress_latest_hour" not in PLANNER_PUSHABLE_REG
+        assert REGISTRY["direct_wet_stress_latest_hour"].control_class == "retired"
 
     def test_registry_value_error_reports_bounds_and_nearest_safe(self) -> None:
         err = registry_value_error("mister_all_kpa", 2.8)
@@ -412,11 +416,14 @@ class TestActivityDirectWetGuards:
         for name in (
             "direct_wet_stress_vpd_margin_kpa",
             "direct_wet_stress_min_dew_margin_f",
-            "direct_wet_stress_latest_hour",
             "sw_direct_wet_stress_override_enabled",
         ):
             assert REGISTRY[name].planner_pushable
             assert REGISTRY[name].control_class == "planner_policy"
+        # Retired (wire schema v2, #588): zero firmware presence; the row stays
+        # for history + the PR3 dispatch gate but is no longer planner-writable.
+        assert not REGISTRY["direct_wet_stress_latest_hour"].planner_pushable
+        assert REGISTRY["direct_wet_stress_latest_hour"].control_class == "retired"
         assert REGISTRY["sw_direct_wet_gate_enabled"].kind == "switch"
         assert REGISTRY["sw_direct_wet_gate_enabled"].planner_pushable
         assert REGISTRY["sw_direct_wet_gate_enabled"].cfg_readback_object_id

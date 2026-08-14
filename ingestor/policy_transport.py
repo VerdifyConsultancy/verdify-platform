@@ -10,9 +10,11 @@ The ESP32 transport buffers begin/chunk/validate/commit into ONE call
 sequence and flushes it through ``esp32_push.push_policy_transaction`` at
 ``commit()`` — the whole staged transaction reaches the device atomically
 w.r.t. the singleton writer (ordinary per-parameter pushes queue behind it,
-bounded, never interleave). ``read_identity()`` reads the device-echoed
-identity from ``shared.policy_readback`` (populated by the ingest loop once
-Lane E's readback sensors exist).
+bounded, never interleave). ``read_identity()`` parses the device-echoed
+aggregated ``policy_identity`` text sensor (contract v2, #586: ONE sensor,
+FULL 64-hex activation hash, no content prefix — content identity is bound
+inside the activation hash per audit §8.9) from ``shared.policy_readback``
+(populated by the esp32 ingest loop).
 """
 
 from __future__ import annotations
@@ -28,18 +30,14 @@ from esp32_push import (
 )
 
 from verdify_schemas.policy_transport import (
-    POLICY_READBACK_ACTIVATION_SHA256,
-    POLICY_READBACK_APPLY_STATE,
-    POLICY_READBACK_ASSIGNMENT_ID,
-    POLICY_READBACK_CONTENT_SHA256,
-    POLICY_READBACK_GENERATION,
-    POLICY_READBACK_SCHEMA_REVISION,
+    POLICY_IDENTITY_SENSOR,
     POLICY_SERVICE_ABORT,
     POLICY_SERVICE_BEGIN,
     POLICY_SERVICE_CHUNK,
     POLICY_SERVICE_COMMIT,
     POLICY_SERVICE_VALIDATE,
     POLICY_TRANSPORT_SERVICES,
+    parse_policy_identity,
     policy_abort_payload,
     policy_begin_payload,
     policy_commit_payload,
@@ -81,12 +79,17 @@ class PolicyDeliveryRequest:
 
 @dataclass(frozen=True)
 class PolicyDeviceIdentity:
-    """Device-echoed policy identity (the exact-echo exposure precondition)."""
+    """Device-echoed policy identity (the exact-echo exposure precondition).
 
-    schema_revision: str | None
+    Contract v2 (#586): parsed from the ONE aggregated ``policy_identity``
+    sensor. There is deliberately NO content hash field — content identity is
+    bound inside ``activation_sha256`` (audit §8.9), so the activation echo
+    transitively confirms content.
+    """
+
+    schema_revision: int | None
     device_generation: int | None
     assignment_id: str | None
-    content_sha256: str | None
     activation_sha256: str | None
     apply_state: str | None
 
@@ -194,21 +197,20 @@ class Esp32PolicyTransport:
             )
 
     def read_identity(self) -> PolicyDeviceIdentity | None:
-        echo = dict(shared.policy_readback)
-        if not echo:
+        payload = shared.policy_readback.get(POLICY_IDENTITY_SENSOR)
+        if not payload:
             return None
-        raw_generation = echo.get(POLICY_READBACK_GENERATION)
         try:
-            generation = int(float(raw_generation)) if raw_generation not in (None, "") else None
-        except (TypeError, ValueError):
-            generation = None
+            echo = parse_policy_identity(payload)
+        except ValueError:
+            # Malformed echo is "no echo", never a partially-trusted identity.
+            return None
         return PolicyDeviceIdentity(
-            schema_revision=echo.get(POLICY_READBACK_SCHEMA_REVISION),
-            device_generation=generation,
-            assignment_id=echo.get(POLICY_READBACK_ASSIGNMENT_ID),
-            content_sha256=echo.get(POLICY_READBACK_CONTENT_SHA256),
-            activation_sha256=echo.get(POLICY_READBACK_ACTIVATION_SHA256),
-            apply_state=echo.get(POLICY_READBACK_APPLY_STATE),
+            schema_revision=echo.schema_revision,
+            device_generation=echo.generation,
+            assignment_id=echo.assignment_id,
+            activation_sha256=echo.activation_sha256,
+            apply_state=echo.apply_state,
         )
 
     def _require_open(self, stage: str) -> PolicyDeliveryRequest:

@@ -14,7 +14,7 @@
 namespace verdify_policy {
 
 // Canonical revision ids bound into the ROM baseline content hash.
-constexpr char kRomBaselineRevisionIdsJson[] = "{\"registry_rev\":\"wire-v1-initial\",\"schema_rev\":\"efa85343\"}";
+constexpr char kRomBaselineRevisionIdsJson[] = "{\"registry_rev\":\"wire-v2-retire-wire-id-6\",\"schema_rev\":\"efa85343\"}";
 
 // Snapshot/table index (kPolicyFields order == ascending wire_id) per field.
 constexpr uint8_t kPF_band_track_fraction = 0;
@@ -22,79 +22,77 @@ constexpr uint8_t kPF_cold_vent_guard_delta_f = 1;
 constexpr uint8_t kPF_cool_exit_hysteresis_f = 2;
 constexpr uint8_t kPF_cool_stage2_exit_hysteresis_f = 3;
 constexpr uint8_t kPF_cool_stage2_over_high_f = 4;
-constexpr uint8_t kPF_direct_wet_stress_latest_hour = 5;
-constexpr uint8_t kPF_direct_wet_stress_min_dew_margin_f = 6;
-constexpr uint8_t kPF_direct_wet_stress_vpd_margin_kpa = 7;
-constexpr uint8_t kPF_dwell_gate_ms = 8;
-constexpr uint8_t kPF_enthalpy_close = 9;
-constexpr uint8_t kPF_enthalpy_open = 10;
-constexpr uint8_t kPF_fog_escalation_kpa = 11;
-constexpr uint8_t kPF_heat_hysteresis = 12;
-constexpr uint8_t kPF_min_fan_off_s = 13;
-constexpr uint8_t kPF_min_fan_on_s = 14;
-constexpr uint8_t kPF_min_fog_off_s = 15;
-constexpr uint8_t kPF_min_fog_on_s = 16;
-constexpr uint8_t kPF_min_heat_off_s = 17;
-constexpr uint8_t kPF_min_heat_on_s = 18;
-constexpr uint8_t kPF_min_vent_off_s = 19;
-constexpr uint8_t kPF_min_vent_on_s = 20;
-constexpr uint8_t kPF_mist_backoff_s = 21;
-constexpr uint8_t kPF_mist_max_closed_vent_s = 22;
-constexpr uint8_t kPF_mist_thermal_relief_s = 23;
-constexpr uint8_t kPF_mister_all_delay_s = 24;
-constexpr uint8_t kPF_mister_all_kpa = 25;
-constexpr uint8_t kPF_mister_center_penalty = 26;
-constexpr uint8_t kPF_mister_engage_delay_s = 27;
-constexpr uint8_t kPF_mister_engage_kpa = 28;
-constexpr uint8_t kPF_mister_min_off_s = 29;
-constexpr uint8_t kPF_mister_pulse_gap_s = 30;
-constexpr uint8_t kPF_mister_pulse_on_s = 31;
-constexpr uint8_t kPF_mister_vpd_weight = 32;
-constexpr uint8_t kPF_mister_water_budget_gal = 33;
-constexpr uint8_t kPF_night_vpd_bias_kpa = 34;
-constexpr uint8_t kPF_outdoor_staleness_max_s = 35;
-constexpr uint8_t kPF_sw_cool_all_fans_at_high_enabled = 36;
-constexpr uint8_t kPF_sw_direct_wet_gate_enabled = 37;
-constexpr uint8_t kPF_sw_direct_wet_stress_override_enabled = 38;
-constexpr uint8_t kPF_sw_dwell_gate_enabled = 39;
-constexpr uint8_t kPF_sw_fog_closes_vent = 40;
-constexpr uint8_t kPF_sw_mister_closes_vent = 41;
-constexpr uint8_t kPF_sw_summer_vent_enabled = 42;
-constexpr uint8_t kPF_temp_hysteresis = 43;
-constexpr uint8_t kPF_vent_exchange_fraction = 44;
-constexpr uint8_t kPF_vent_prefer_dp_delta_f = 45;
-constexpr uint8_t kPF_vent_prefer_temp_delta_f = 46;
-constexpr uint8_t kPF_vpd_hysteresis = 47;
-constexpr uint8_t kPF_vpd_watch_dwell_s = 48;
+constexpr uint8_t kPF_direct_wet_stress_min_dew_margin_f = 5;
+constexpr uint8_t kPF_direct_wet_stress_vpd_margin_kpa = 6;
+constexpr uint8_t kPF_dwell_gate_ms = 7;
+constexpr uint8_t kPF_enthalpy_close = 8;
+constexpr uint8_t kPF_enthalpy_open = 9;
+constexpr uint8_t kPF_fog_escalation_kpa = 10;
+constexpr uint8_t kPF_heat_hysteresis = 11;
+constexpr uint8_t kPF_min_fan_off_s = 12;
+constexpr uint8_t kPF_min_fan_on_s = 13;
+constexpr uint8_t kPF_min_fog_off_s = 14;
+constexpr uint8_t kPF_min_fog_on_s = 15;
+constexpr uint8_t kPF_min_heat_off_s = 16;
+constexpr uint8_t kPF_min_heat_on_s = 17;
+constexpr uint8_t kPF_min_vent_off_s = 18;
+constexpr uint8_t kPF_min_vent_on_s = 19;
+constexpr uint8_t kPF_mist_backoff_s = 20;
+constexpr uint8_t kPF_mist_max_closed_vent_s = 21;
+constexpr uint8_t kPF_mist_thermal_relief_s = 22;
+constexpr uint8_t kPF_mister_all_delay_s = 23;
+constexpr uint8_t kPF_mister_all_kpa = 24;
+constexpr uint8_t kPF_mister_center_penalty = 25;
+constexpr uint8_t kPF_mister_engage_delay_s = 26;
+constexpr uint8_t kPF_mister_engage_kpa = 27;
+constexpr uint8_t kPF_mister_min_off_s = 28;
+constexpr uint8_t kPF_mister_pulse_gap_s = 29;
+constexpr uint8_t kPF_mister_pulse_on_s = 30;
+constexpr uint8_t kPF_mister_vpd_weight = 31;
+constexpr uint8_t kPF_mister_water_budget_gal = 32;
+constexpr uint8_t kPF_night_vpd_bias_kpa = 33;
+constexpr uint8_t kPF_outdoor_staleness_max_s = 34;
+constexpr uint8_t kPF_sw_cool_all_fans_at_high_enabled = 35;
+constexpr uint8_t kPF_sw_direct_wet_gate_enabled = 36;
+constexpr uint8_t kPF_sw_direct_wet_stress_override_enabled = 37;
+constexpr uint8_t kPF_sw_dwell_gate_enabled = 38;
+constexpr uint8_t kPF_sw_fog_closes_vent = 39;
+constexpr uint8_t kPF_sw_mister_closes_vent = 40;
+constexpr uint8_t kPF_sw_summer_vent_enabled = 41;
+constexpr uint8_t kPF_temp_hysteresis = 42;
+constexpr uint8_t kPF_vent_exchange_fraction = 43;
+constexpr uint8_t kPF_vent_prefer_dp_delta_f = 44;
+constexpr uint8_t kPF_vent_prefer_temp_delta_f = 45;
+constexpr uint8_t kPF_vpd_hysteresis = 46;
+constexpr uint8_t kPF_vpd_watch_dwell_s = 47;
 
 // Registry-default raw (scaled-integer) values, ordered by ascending wire_id.
-constexpr int64_t kRomBaselineRaws[kPolicyFieldCount] = {0, 20, 15, 10, 10, 22, 16, 1, 300000, 2, -4, 4, 10, 90, 120, 60, 60, 180, 120, 60, 60, 600, 600, 90, 300, 38, 5, 45, 32, 45, 45, 60, 3, 3000, 0, 600, 0, 1, 0, 0, 1, 0, 1, 15, 6, 10, 10, 6, 60};
+constexpr int64_t kRomBaselineRaws[kPolicyFieldCount] = {0, 20, 15, 10, 10, 16, 1, 300000, 2, -4, 4, 10, 90, 120, 60, 60, 180, 120, 60, 60, 600, 600, 90, 300, 38, 5, 45, 32, 45, 45, 60, 3, 3000, 0, 600, 0, 1, 0, 0, 1, 0, 1, 15, 6, 10, 10, 6, 60};
 
 // Canonical encoded vector bytes for the registry defaults.
 constexpr uint8_t kRomBaselineVectorBytes[kPolicyVectorSize] = {
-    0x56, 0x50, 0x56, 0x31, 0x01, 0x2b, 0x17, 0x98, 0xfa, 0x81, 0x1c, 0x03,
-    0xec, 0x31, 0x00, 0x01, 0x00, 0x00, 0x02, 0x14, 0x00, 0x03, 0x0f, 0x00,
-    0x04, 0x0a, 0x00, 0x05, 0x0a, 0x00, 0x06, 0x16, 0x00, 0x07, 0x10, 0x00,
-    0x08, 0x01, 0x00, 0x09, 0x00, 0x04, 0x93, 0xe0, 0x00, 0x0a, 0x00, 0x02,
-    0x00, 0x0b, 0xff, 0xfc, 0x00, 0x0c, 0x04, 0x00, 0x0d, 0x0a, 0x00, 0x0e,
-    0x00, 0x5a, 0x00, 0x0f, 0x00, 0x78, 0x00, 0x10, 0x00, 0x3c, 0x00, 0x11,
-    0x00, 0x3c, 0x00, 0x12, 0x00, 0xb4, 0x00, 0x13, 0x00, 0x78, 0x00, 0x14,
-    0x00, 0x3c, 0x00, 0x15, 0x00, 0x3c, 0x00, 0x16, 0x02, 0x58, 0x00, 0x17,
-    0x02, 0x58, 0x00, 0x18, 0x00, 0x5a, 0x00, 0x19, 0x01, 0x2c, 0x00, 0x1a,
-    0x26, 0x00, 0x1b, 0x05, 0x00, 0x1c, 0x00, 0x2d, 0x00, 0x1d, 0x20, 0x00,
-    0x1e, 0x2d, 0x00, 0x1f, 0x2d, 0x00, 0x20, 0x3c, 0x00, 0x21, 0x03, 0x00,
-    0x22, 0x0b, 0xb8, 0x00, 0x23, 0x00, 0x00, 0x24, 0x02, 0x58, 0x00, 0x25,
-    0x00, 0x00, 0x26, 0x01, 0x00, 0x27, 0x00, 0x00, 0x28, 0x00, 0x00, 0x29,
-    0x01, 0x00, 0x2a, 0x00, 0x00, 0x2b, 0x01, 0x00, 0x2c, 0x0f, 0x00, 0x2d,
-    0x06, 0x00, 0x2e, 0x0a, 0x00, 0x2f, 0x0a, 0x00, 0x30, 0x06, 0x00, 0x31,
-    0x3c,
+    0x56, 0x50, 0x56, 0x31, 0x02, 0x0b, 0xdd, 0x80, 0x47, 0x2f, 0x2a, 0x98,
+    0x45, 0x30, 0x00, 0x01, 0x00, 0x00, 0x02, 0x14, 0x00, 0x03, 0x0f, 0x00,
+    0x04, 0x0a, 0x00, 0x05, 0x0a, 0x00, 0x07, 0x10, 0x00, 0x08, 0x01, 0x00,
+    0x09, 0x00, 0x04, 0x93, 0xe0, 0x00, 0x0a, 0x00, 0x02, 0x00, 0x0b, 0xff,
+    0xfc, 0x00, 0x0c, 0x04, 0x00, 0x0d, 0x0a, 0x00, 0x0e, 0x00, 0x5a, 0x00,
+    0x0f, 0x00, 0x78, 0x00, 0x10, 0x00, 0x3c, 0x00, 0x11, 0x00, 0x3c, 0x00,
+    0x12, 0x00, 0xb4, 0x00, 0x13, 0x00, 0x78, 0x00, 0x14, 0x00, 0x3c, 0x00,
+    0x15, 0x00, 0x3c, 0x00, 0x16, 0x02, 0x58, 0x00, 0x17, 0x02, 0x58, 0x00,
+    0x18, 0x00, 0x5a, 0x00, 0x19, 0x01, 0x2c, 0x00, 0x1a, 0x26, 0x00, 0x1b,
+    0x05, 0x00, 0x1c, 0x00, 0x2d, 0x00, 0x1d, 0x20, 0x00, 0x1e, 0x2d, 0x00,
+    0x1f, 0x2d, 0x00, 0x20, 0x3c, 0x00, 0x21, 0x03, 0x00, 0x22, 0x0b, 0xb8,
+    0x00, 0x23, 0x00, 0x00, 0x24, 0x02, 0x58, 0x00, 0x25, 0x00, 0x00, 0x26,
+    0x01, 0x00, 0x27, 0x00, 0x00, 0x28, 0x00, 0x00, 0x29, 0x01, 0x00, 0x2a,
+    0x00, 0x00, 0x2b, 0x01, 0x00, 0x2c, 0x0f, 0x00, 0x2d, 0x06, 0x00, 0x2e,
+    0x0a, 0x00, 0x2f, 0x0a, 0x00, 0x30, 0x06, 0x00, 0x31, 0x3c,
 };
 
 // content_sha256 of the ROM baseline (== the registry_defaults golden).
 constexpr uint8_t kRomBaselineContentSha256[32] = {
-    0x8e, 0x33, 0x7c, 0x67, 0xf0, 0x02, 0xba, 0xdf, 0xe5, 0xcc, 0xa9, 0x63,
-    0x38, 0x3b, 0x1e, 0x85, 0xf9, 0xbf, 0x94, 0x79, 0x7f, 0xf0, 0x4b, 0x89,
-    0x66, 0x81, 0xf8, 0xeb, 0x1e, 0x5b, 0x75, 0x75,
+    0x04, 0x1a, 0x35, 0xe6, 0xff, 0xf3, 0xb3, 0xf2, 0x2d, 0xbc, 0x69, 0x43,
+    0x57, 0x51, 0xfd, 0x05, 0x97, 0xb9, 0x0b, 0x63, 0x7b, 0x92, 0x19, 0x6d,
+    0x62, 0xd0, 0x8e, 0x9f, 0xf1, 0xe9, 0x2d, 0x18,
 };
 
 }  // namespace verdify_policy

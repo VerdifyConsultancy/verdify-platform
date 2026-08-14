@@ -209,7 +209,7 @@ data.
 - Dispatcher-owned activity mirror: `activity_start_hour`, `activity_start_minute`, `activity_duration_min`
 - Direct-wet gate: `sw_direct_wet_gate_enabled`, `direct_wet_min_temp_f`
 - Per-zone wet start/drydown: `direct_wet_wall_*`, `direct_wet_south_*`, `direct_wet_west_*`, `direct_wet_center_*`
-- Dry-stress override: `sw_direct_wet_stress_override_enabled`, `direct_wet_stress_vpd_margin_kpa`, `direct_wet_stress_min_dew_margin_f`, `direct_wet_stress_latest_hour`
+- Dry-stress override: `sw_direct_wet_stress_override_enabled`, `direct_wet_stress_vpd_margin_kpa`, `direct_wet_stress_min_dew_margin_f` (`direct_wet_stress_latest_hour` retired in wire schema v2, #588 — zero firmware presence)
 - Fog stress extension: `sw_fog_stress_window_extend_enabled`, `fog_stress_window_latest_hour`, `fog_stress_min_dew_margin_f`
 - Firmware blocks misters, drips, fert paths, and flush paths outside the active zone window or below the minimum direct-wet temperature.
 - Stress overrides only bypass the direct-wet/fog time window; RH/temp, direct-wet min temp, occupancy, irrigation, water budget, dew-margin, and latest-hour gates remain deterministic.

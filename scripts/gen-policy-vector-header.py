@@ -136,7 +136,7 @@ inline double raw_to_value(const PolicyFieldDef& field, int64_t raw) {{
   return static_cast<double>(raw) / static_cast<double>(field.scale);
 }}
 
-// Encode 49 raw (scaled-integer) values, ordered like kPolicyFields, into the
+// Encode kPolicyFieldCount raw (scaled-integer) values, ordered like kPolicyFields, into the
 // canonical byte vector. Returns false on out-of-bounds raws or a small
 // output buffer; on success *out_len == kPolicyVectorSize.
 inline bool encode_policy_vector(const int64_t raws[kPolicyFieldCount], uint8_t* out, size_t out_cap,
@@ -310,7 +310,7 @@ def generate_goldens_inc() -> str:
 
     vec_names = ", ".join(_c_string(vec["name"]) for vec in vectors)
     out.append(f"static const char* kGoldenVectorNames[kGoldenVectorCount] = {{{vec_names}}};")
-    out.append("static const int64_t kGoldenRaws[kGoldenVectorCount][49] = {")
+    out.append(f"static const int64_t kGoldenRaws[kGoldenVectorCount][{POLICY_WIRE_FIELD_COUNT}] = {{")
     for vec in vectors:
         raws = ", ".join(str(raw) for raw in vec["raws_by_wire_id"])
         out.append(f"    {{{raws}}},  // {vec['name']}")

@@ -50,11 +50,16 @@ from pydantic import BaseModel
 # inserting or renaming registry rows cannot shift them. When a field is
 # retired, its wire_id moves into RETIRED_WIRE_IDS and is never reused; a new
 # field always takes the next never-used id.
-WIRE_SCHEMA_VERSION = 1
-RETIRED_WIRE_IDS: frozenset[int] = frozenset()
-# The frozen size of the version-1 policy vector (audit §8.9: all 49
-# planner-pushable fields, including the reserved no-firmware-consumer row).
-POLICY_WIRE_FIELD_COUNT = 49
+WIRE_SCHEMA_VERSION = 2
+# wire_id 6 (direct_wet_stress_latest_hour) retired in wire schema v2 (#588
+# decision): tier-1 planner-pushable with ZERO firmware presence (no global,
+# entity, or read site — audit §6.4), so it could never alter an effective
+# component and it blocked Frozen-FSM baseline qualification (§8.2: zero
+# device readbacks). Retired ids are NEVER reused.
+RETIRED_WIRE_IDS: frozenset[int] = frozenset({6})
+# The frozen size of the version-2 policy vector (audit §8.9: all 48
+# planner-pushable fields; the v1 reserved no-firmware-consumer row is retired).
+POLICY_WIRE_FIELD_COUNT = 48
 
 
 class TunableDef(BaseModel):
@@ -1610,18 +1615,17 @@ REGISTRY: dict[str, TunableDef] = {
         esp_object_id="direct_wet_stress_latest_hour",
         cfg_readback_object_id="cfg_direct_wet_stress_latest_hour",
         push_owner="planner",
-        planner_pushable=True,
-        tier=1,
-        # wire: reserved/no-firmware-consumer (see #582); whole local hours -> scale 1; [17,24] -> raw [17,24]
-        wire_id=6,
-        wire_kind="u8",
-        wire_scale=1,
-        wire_unit="hour",
+        planner_pushable=False,
+        tier=2,
         notes=(
-            "Latest local hour for direct-wet dry-stress override; 24 means through 23:59. "
-            "wire: reserved/no-firmware-consumer (see #582) — no ESPHome entity, global, or read "
-            "site exists; the field stays in the 49-field wire schema (byte-identical across "
-            "experiment arms) and is exempt from the firmware-entity drift assertion."
+            "RETIRED (wire schema v2, #588 decision on #582's reserved row): latest local hour "
+            "for direct-wet dry-stress override; 24 means through 23:59. ZERO firmware presence "
+            "— no ESPHome entity, global, or read site ever existed (audit §6.4), so the value "
+            "could never alter an effective component, and its zero device readbacks blocked "
+            "Frozen-FSM baseline qualification (§8.2). Former wire_id 6 is permanently reserved "
+            "in RETIRED_WIRE_IDS. The row stays for setpoint_plan/setpoint_changes history and "
+            "the PR3 moisture-stress dispatch gate (ingestor/tasks/_common.py), which keeps its "
+            "pre-retirement behavior."
         ),
     ),
     # ─────────────────────────────────────────────────────────────────────
@@ -3569,6 +3573,9 @@ RETIRED_TUNABLES_REG: frozenset[str] = frozenset(
         "bias_heat",
         "d_cool_stage_2",
         "d_heat_stage_2",
+        # #588 decision (wire schema v2): zero firmware presence — see the
+        # registry row notes and RETIRED_WIRE_IDS ({6}).
+        "direct_wet_stress_latest_hour",
         "fan_burst_min",
         "fog_burst_min",
         "mist_vent_close_lead_s",

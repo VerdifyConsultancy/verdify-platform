@@ -87,6 +87,11 @@ constexpr size_t kMaxStageChunk = 192;  // bounds every api chunk allocation
 constexpr size_t kPolicyBeginHeaderMin = 1 + 1 + 1 + 4 + 32 + 1 + 32 + 16 + 4 + 4 + 2 + 1;
 constexpr size_t kPolicyBeginHeaderMax = kPolicyBeginHeaderMin + 35;
 
+// Aggregated identity readback (transport contract v2, #586):
+//   "<schema>|<generation>|<assignment uuid|->|<activation sha256 64 hex|->|<apply_state>"
+// Worst case: 3 + 1 + 10 + 1 + 36 + 1 + 64 + 1 + 12 + NUL = 130; padded.
+constexpr size_t kPolicyIdentityMax = 144;
+
 enum class PolicySlot : uint8_t { kBoundary = 1, kTactical = 2 };
 enum class CommitKind : uint8_t { kNone = 0, kContentChange = 1, kIdentityRebind = 2 };
 
@@ -590,31 +595,34 @@ class PolicyEngine {
   uint32_t last_committed_generation() const { return last_committed_generation_; }
   PolicyError last_error() const { return last_error_; }
 
-  // Compact identity line for the single aggregated readback text sensor:
-  // "v<schema>|g<generation>|c<content8>|a<activation8|->|s<assignment8|->|<state>"
-  // out must hold >= 96 bytes.
+  // Aggregated identity line for the single readback text sensor (transport
+  // contract v2, #586 decision):
+  //   "<schema>|<generation>|<assignment uuid|->|<activation sha256 FULL 64
+  //   hex|->|<apply_state>"
+  // The v1 truncated content/activation prefixes are gone: content identity
+  // is bound inside the activation hash (audit §8.9), so the activation echo
+  // transitively confirms content. "-" marks an unbound assignment/activation
+  // (ROM baseline). out must hold >= kPolicyIdentityMax bytes.
   void identity_readback(char* out, size_t cap) const {
-    char content8[17];
-    char activation8[17];
-    char assignment8[17];
-    hex8(content8, active_->content_sha256);
-    if (active_->has_activation) {
-      hex8(activation8, active_->activation_sha256);
-    } else {
-      activation8[0] = '-';
-      activation8[1] = '\0';
-    }
+    char assignment[37];
+    char activation[65];
     bool assignment_zero = true;
     for (size_t i = 0; i < 16; ++i) assignment_zero = assignment_zero && active_->assignment_id[i] == 0;
     if (assignment_zero) {
-      assignment8[0] = '-';
-      assignment8[1] = '\0';
+      assignment[0] = '-';
+      assignment[1] = '\0';
     } else {
-      hex8(assignment8, active_->assignment_id);
+      format_uuid(assignment, active_->assignment_id);
     }
-    const char* state = rom_baseline_active() ? "ROM" : "ACTIVE";
-    std::snprintf(out, cap, "v%u|g%lu|c%s|a%s|s%s|%s", static_cast<unsigned>(active_->schema_version),
-                  static_cast<unsigned long>(active_->generation), content8, activation8, assignment8, state);
+    if (active_->has_activation) {
+      hex_bytes(activation, active_->activation_sha256, 32);
+    } else {
+      activation[0] = '-';
+      activation[1] = '\0';
+    }
+    const char* state = rom_baseline_active() ? "rom_baseline" : "active";
+    std::snprintf(out, cap, "%u|%lu|%s|%s|%s", static_cast<unsigned>(active_->schema_version),
+                  static_cast<unsigned long>(active_->generation), assignment, activation, state);
   }
 
  private:
@@ -673,13 +681,27 @@ class PolicyEngine {
   // ── helpers ──────────────────────────────────────────────────────────────
   static void copy_sha8(uint8_t out[8], const uint8_t sha[32]) { std::memcpy(out, sha, 8); }
 
-  static void hex8(char out[17], const uint8_t* bytes) {
+  static void hex_bytes(char* out, const uint8_t* bytes, size_t len) {
     static const char digits[] = "0123456789abcdef";
-    for (size_t i = 0; i < 8; ++i) {
+    for (size_t i = 0; i < len; ++i) {
       out[2 * i] = digits[bytes[i] >> 4];
       out[2 * i + 1] = digits[bytes[i] & 0x0F];
     }
-    out[16] = '\0';
+    out[2 * len] = '\0';
+  }
+
+  // Canonical lowercase 8-4-4-4-12 UUID from 16 network-order bytes.
+  static void format_uuid(char out[37], const uint8_t bytes[16]) {
+    static const uint8_t group_lens[5] = {4, 2, 2, 2, 6};
+    size_t offset = 0;
+    size_t byte_index = 0;
+    for (size_t group = 0; group < 5; ++group) {
+      if (group != 0) out[offset++] = '-';
+      hex_bytes(out + offset, bytes + byte_index, group_lens[group]);
+      offset += 2 * group_lens[group];
+      byte_index += group_lens[group];
+    }
+    out[offset] = '\0';
   }
 
   SlotRec& slot_for(PolicySlot which) { return which == PolicySlot::kBoundary ? boundary_ : tactical_; }

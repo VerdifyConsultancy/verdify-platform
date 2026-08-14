@@ -177,8 +177,8 @@ def test_shadow_compiles_but_never_admits(monkeypatch):
     assert args[1] == "shadow"
     _vector_bytes, content, _activation = _expected_artifacts()
     assert content.hex() in args[2], "shadow state_reason must carry the compiled content hash"
-    # The proposal was completed to the full 49 components.
-    assert len(conn.sql_calls("INSERT INTO policy_proposal_components")) == 49
+    # The proposal was completed to the full 48 components (wire schema v2).
+    assert len(conn.sql_calls("INSERT INTO policy_proposal_components")) == 48
 
 
 # ── Live: byte-exact admission via the SQL function ─────────────────────────

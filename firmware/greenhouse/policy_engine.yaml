@@ -129,8 +129,11 @@ api:
                      policy_error_name(policy_engine().last_error()));
 
 text_sensor:
-  # ONE aggregated identity readback (heap: no per-field entities):
-  # "v<schema>|g<generation>|c<content8>|a<activation8|->|s<assignment8|->|<ROM|ACTIVE>"
+  # ONE aggregated identity readback (heap: no per-field entities), transport
+  # contract v2 (#586 decision):
+  # "<schema>|<generation>|<assignment uuid|->|<activation sha256 FULL 64 hex|->|<apply_state>"
+  # The truncated content/activation prefixes of v1 are gone — content
+  # identity is bound inside the activation hash (audit §8.9).
   - platform: template
     id: policy_identity
     name: "Policy Identity"
@@ -138,7 +141,7 @@ text_sensor:
     icon: "mdi:file-key-outline"
     update_interval: 60s
     lambda: |-
-      static char identity_buf[96];
+      static char identity_buf[verdify_policy::kPolicyIdentityMax];
       verdify_policy::policy_engine().identity_readback(identity_buf, sizeof(identity_buf));
       return std::string(identity_buf);
 

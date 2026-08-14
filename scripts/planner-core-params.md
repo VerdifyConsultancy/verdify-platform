@@ -38,9 +38,10 @@ the same horizon. Crop-band rows are not part of this contract.
   forecasted solar decline alone is not recovery evidence.
 - During evening VPD-high recovery after the normal moisture windows close,
   `sw_direct_wet_stress_override_enabled` can open drydown-gated mister zones only
-  when VPD is above `vpd_high + direct_wet_stress_vpd_margin_kpa`, dew margin
-  is at least `direct_wet_stress_min_dew_margin_f`, and the local hour is before
-  `direct_wet_stress_latest_hour`.
+  when VPD is above `vpd_high + direct_wet_stress_vpd_margin_kpa` and dew margin
+  is at least `direct_wet_stress_min_dew_margin_f`. (The former
+  `direct_wet_stress_latest_hour` cap was retired in wire schema v2, #588 —
+  it had zero firmware presence and never gated anything.)
 - `sw_fog_stress_window_extend_enabled` extends fog after the normal fog window
   only during VPD-high stress with RH/temp gates still satisfied, dew margin at
   least `fog_stress_min_dew_margin_f`, and local hour before

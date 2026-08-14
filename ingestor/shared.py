@@ -149,10 +149,11 @@ recently_pushed_values: dict[str, float] = {}
 # values the firmware has already confirmed.
 cfg_readback: dict[str, float] = {}
 
-# Lane C (#584): latest device-echoed policy identity readback, keyed by the
-# verdify_schemas.policy_transport POLICY_READBACK_* sensor names. Populated by
-# the esp32 ingest loop once Lane E registers the readback sensors; empty until
-# then, which the delivery worker treats as "no echo yet".
+# Lane C (#584) / contract v2 (#586): latest device-echoed policy identity,
+# keyed by verdify_schemas.policy_transport.POLICY_IDENTITY_SENSOR — the ONE
+# aggregated text sensor payload ("schema|generation|assignment|activation|
+# apply_state"). Populated by the esp32 ingest loop; empty until the firmware
+# echoes, which the delivery worker treats as "no echo yet".
 policy_readback: dict[str, str] = {}
 
 # Monotonic transport generation.  Only a successful API connect may advance

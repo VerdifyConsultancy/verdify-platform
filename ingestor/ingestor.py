@@ -121,6 +121,7 @@ from verdify_schemas.experiment_config import (
     policy_device_id,
     policy_vector_mode,
 )
+from verdify_schemas.policy_transport import POLICY_IDENTITY_SENSOR
 from verdify_schemas.tunable_registry import get as get_tunable
 
 # ──────────────────────────────────────────────────────────────
@@ -1648,6 +1649,13 @@ def on_state_change(entity_state) -> None:
     elif etype == "text":
         val = entity_state.state
         if not val:
+            return
+
+        # Lane C/E contract v2 (#586): the ONE aggregated policy-identity echo.
+        # Raw payload is cached for the delivery worker's exact-echo readback
+        # (policy_transport.Esp32PolicyTransport.read_identity parses it).
+        if obj_id == POLICY_IDENTITY_SENSOR:
+            shared.policy_readback[POLICY_IDENTITY_SENSOR] = val
             return
 
         if _record_diagnostic(obj_id, val):

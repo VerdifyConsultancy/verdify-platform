@@ -210,7 +210,9 @@ def test_materializer_forces_wet_assist_when_live_vpd_is_above_band_and_dew_is_s
     assert params["direct_wet_stress_vpd_margin_kpa"] == pytest.approx(0.05)
     assert params["mister_all_kpa"] == pytest.approx(1.45)
     assert params["fog_escalation_kpa"] == pytest.approx(0.2)
-    assert params["direct_wet_stress_latest_hour"] >= 19.0
+    # direct_wet_stress_latest_hour retired (wire schema v2, #588): the
+    # materializer no longer emits the dead parameter row.
+    assert "direct_wet_stress_latest_hour" not in params
     assert params["mister_water_budget_gal"] >= 120.0
     guardrails = climate_intent_materialization_guardrails(
         intent,
@@ -258,7 +260,8 @@ def test_materializer_keeps_wet_assist_available_for_high_forecast_vpd_pressure(
     assert params["direct_wet_stress_vpd_margin_kpa"] <= 0.1
     assert params["mister_all_kpa"] <= 1.5
     assert params["fog_escalation_kpa"] <= 0.3
-    assert params["direct_wet_stress_latest_hour"] >= 19.0
+    # direct_wet_stress_latest_hour retired (wire schema v2, #588).
+    assert "direct_wet_stress_latest_hour" not in params
     assert params["mister_water_budget_gal"] >= 60.0
     assert params["mister_pulse_on_s"] >= 26.0
     guardrails = climate_intent_materialization_guardrails(intent, base, params)

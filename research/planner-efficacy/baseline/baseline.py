@@ -5,14 +5,22 @@ Single source of truth for:
 
 1. the read-only extraction SQL (``emit-sql``) that ``extract-baseline.sh``
    pipes to the production DB — a time-weighted value histogram of the
-   ``setpoint_snapshot`` effective readbacks for every 49-field policy-wire
-   parameter over the §8.2 window;
+   ``setpoint_snapshot`` effective readbacks for every policy-wire parameter
+   (48 under wire schema v2) over the §8.2 window;
 2. the baseline candidate artifact (``build``) — per-field time-weighted
    medians (numeric) / time-weighted modes (switches), quantized through the
-   canonical wire schema in ``verdify_schemas.policy_vector``; and
+   canonical wire schema in ``verdify_schemas.policy_vector``;
 3. the two AI template candidates (``build-templates``) — moderate and
    aggressive hot/dry response vectors that differ from the baseline only in
-   the §8.2 11-field allowlist.
+   the §8.2 11-field allowlist; and
+4. ``requantize`` — rebuild the artifact under the CURRENT wire schema from a
+   committed artifact's per-field raw statistics, WITHOUT touching the
+   database. Contract v2 (#588) retired ``direct_wet_stress_latest_hour``
+   (the only unqualified v1 field — zero device readbacks by construction),
+   so requantizing the committed v1 artifact yields a fully-qualified 48-field
+   vector. The original extraction block (SQL + input-CSV hashes) is carried
+   VERBATIM for provenance, and a ``provenance.requantized_schema_version``
+   note records the operation.
 
 §8.2 contract implemented here:
 
@@ -25,7 +33,7 @@ Single source of truth for:
   onto the canonical wire grid.
 - A field with no qualified readback in the window is listed as UNQUALIFIED
   and blocks approval; no default is silently substituted. The canonical
-  vector bytes / content hash are only emitted when all 49 fields qualify.
+  vector bytes / content hash are only emitted when all 48 fields qualify.
 
 The artifact status stays CANDIDATE until horticultural, firmware, and safety
 owners approve the complete vector after compiled replay, HIL, and A/A
@@ -75,9 +83,10 @@ EFFECTIVE_WINDOW_SECONDS = 23 * 86400
 CARRY_LOOKBACK = "3 days"
 
 # Fixed policy revision ids for content_sha256 — identical to the Lane A
-# golden fixtures (verdify_schemas/tests/fixtures/policy_vector_goldens.json):
-# the wire-v1 registry revision and the commit that locked the wire schema.
-POLICY_REVISION_IDS = {"registry_rev": "wire-v1-initial", "schema_rev": "efa85343"}
+# golden fixtures (scripts/gen-policy-vector-goldens.py REVISION_IDS): the
+# wire-v2 registry revision (#588 retired wire_id 6) and the commit that
+# locked the v1 wire schema. test_baseline cross-checks the equality.
+POLICY_REVISION_IDS = {"registry_rev": "wire-v2-retire-wire-id-6", "schema_rev": "efa85343"}
 
 STATUS = "CANDIDATE — pending horticultural/firmware/safety approval (gate:jason)"
 BASELINE_ARTIFACT_NAME = "frozen-fsm-baseline-candidate-2026-08-14.json"
@@ -238,8 +247,11 @@ def build_sql() -> str:
     window; the excluded reboot day is zero-weighted (an interval spanning
     the exclusion contributes only its time outside it). A carry-in row
     (latest readback at or before window start) covers the head of the
-    window. All 49 wire-schema parameters are queried; a parameter with no
-    rows is UNQUALIFIED downstream.
+    window. All current wire-schema parameters (48 under v2) are queried; a
+    parameter with no rows is UNQUALIFIED downstream. NOTE: the committed
+    2026-08-14 artifact was extracted with the v1 (49-parameter) form of this
+    SQL and preserves that exact text in its extraction block; ``requantize``
+    keeps it verbatim.
     """
     params = ",\n  ".join(f"('{d.name}')" for d in wire_fields())
     return f"""BEGIN READ ONLY;
@@ -343,9 +355,9 @@ def _registry_placeholder(defn: TunableDef) -> float | bool:
 
 
 def quantize_field(name: str, value: float | bool) -> float | bool:
-    """Quantize one field through the canonical 49-field codec path.
+    """Quantize one field through the canonical 48-field codec path.
 
-    ``quantize_policy_values`` requires all 49 fields, so the other 48 are
+    ``quantize_policy_values`` requires all 48 fields, so the other 47 are
     filled with registry defaults purely to run the canonical codec; only the
     requested field's quantized value is returned and the placeholders never
     reach any artifact.
@@ -445,10 +457,18 @@ def build_artifact(csv_path: Path, generated_at: str | None = None) -> dict:
         "policy_revision_ids": POLICY_REVISION_IDS,
     }
 
+    _attach_canonical_vector(artifact, unqualified, quantized_values)
+    return artifact
+
+
+def _attach_canonical_vector(artifact: dict, unqualified: list[str], quantized_values: dict[str, float | bool]) -> None:
     if unqualified:
         artifact["canonical_vector"] = {
             "omitted": True,
-            "reason": ("unqualified fields block the complete 49-field vector: " + ", ".join(unqualified)),
+            "reason": (
+                f"unqualified fields block the complete {len(artifact['fields'])}-field vector: "
+                + ", ".join(unqualified)
+            ),
         }
     else:
         vector = encode_policy_vector(quantized_values)
@@ -459,6 +479,93 @@ def build_artifact(csv_path: Path, generated_at: str | None = None) -> dict:
                 vector, schema_version=WIRE_SCHEMA_VERSION, policy_revision_ids=POLICY_REVISION_IDS
             ).hex(),
         }
+
+
+# ── Requantization (contract v2, #588) ───────────────────────────────────────
+
+
+def build_requantized_artifact(source: dict, generated_at: str | None = None) -> dict:
+    """Rebuild the baseline candidate under the CURRENT wire schema from a
+    committed artifact — per-field raw medians/modes only, NO database access.
+
+    The source's method + extraction blocks (window definition, original SQL
+    text, SQL/input-CSV hashes) are carried VERBATIM; every current wire field
+    takes its committed raw statistic and is re-quantized through the current
+    codec. Fields the current schema no longer contains (retired, e.g.
+    ``direct_wet_stress_latest_hour``) are dropped and recorded in the
+    provenance note.
+    """
+    source_fields = source["fields"]
+    current = {defn.name for defn in wire_fields()}
+    missing = sorted(current - set(source_fields))
+    if missing:
+        raise ValueError(f"source artifact lacks per-field data for current wire fields: {missing}")
+    dropped = sorted(set(source_fields) - current)
+
+    fields: dict[str, dict] = {}
+    unqualified: list[str] = []
+    quantized_values: dict[str, float | bool] = {}
+    for defn in wire_fields():
+        src = source_fields[defn.name]
+        entry: dict = {
+            "wire_id": defn.wire_id,
+            "kind": defn.kind,
+            "wire_kind": defn.wire_kind,
+            "statistic": src["statistic"],
+            "interval_count": src["interval_count"],
+            "coverage_seconds": src["coverage_seconds"],
+            "distinct_values": src["distinct_values"],
+        }
+        if "raw_value" not in src:
+            entry["qualified"] = False
+            entry["reason"] = src.get("reason", "no qualified readback in window")
+            unqualified.append(defn.name)
+        else:
+            raw = src["raw_value"]
+            entry["raw_value"] = raw
+            try:
+                quantized = quantize_field(defn.name, bool(raw) if defn.wire_kind == "bool" else raw)
+            except ValueError as exc:
+                entry["qualified"] = False
+                entry["reason"] = f"raw statistic does not quantize onto the wire envelope: {exc}"
+                unqualified.append(defn.name)
+            else:
+                entry["qualified"] = True
+                entry["quantized_value"] = quantized
+                quantized_values[defn.name] = quantized
+        fields[defn.name] = entry
+
+    artifact: dict = {
+        "artifact": source["artifact"],
+        "status": STATUS,
+        "issue": source["issue"],
+        "epic": source["epic"],
+        "generated_at": generated_at or datetime.now(UTC).isoformat(timespec="seconds"),
+        "provenance": {
+            "requantized_schema_version": WIRE_SCHEMA_VERSION,
+            "requantized_from_generated_at": source["generated_at"],
+            "source_wire_schema": source["wire_schema"],
+            "retired_fields_dropped": dropped,
+            "note": (
+                "Re-quantized from the committed artifact's per-field raw time-weighted "
+                "statistics under wire schema v2 (#588 retired direct_wet_stress_latest_hour, "
+                "the sole unqualified v1 field — zero device readbacks by construction). "
+                "No database access; the extraction block below is the ORIGINAL v1 SQL and "
+                "input hashes, preserved verbatim."
+            ),
+        },
+        "method": source["method"],
+        "extraction": source["extraction"],
+        "wire_schema": {
+            "version": WIRE_SCHEMA_VERSION,
+            "field_count": len(fields),
+            "manifest_digest_sha256": wire_manifest_digest().hex(),
+        },
+        "fields": fields,
+        "unqualified_fields": unqualified,
+        "policy_revision_ids": POLICY_REVISION_IDS,
+    }
+    _attach_canonical_vector(artifact, unqualified, quantized_values)
     return artifact
 
 
@@ -527,8 +634,8 @@ def build_templates_artifact(baseline: dict, generated_at: str | None = None) ->
         "baseline_input_csv_sha256": baseline["extraction"]["input_csv_sha256"],
         "diff_allowlist": list(DIFF_ALLOWLIST),
         "inheritance_rule": (
-            "all 38 wire fields outside the allowlist are byte-identical to the approved "
-            "Frozen-FSM baseline vector (§8.2)"
+            "all 37 wire fields outside the allowlist are byte-identical to the approved "
+            "Frozen-FSM baseline vector (§8.2; wire schema v2 has 48 fields)"
         ),
         "unresolved_baseline_fields": baseline["unqualified_fields"],
         "wire_schema": baseline["wire_schema"],
@@ -536,11 +643,14 @@ def build_templates_artifact(baseline: dict, generated_at: str | None = None) ->
         "templates": templates,
     }
 
+    if "provenance" in baseline:
+        artifact["baseline_provenance"] = baseline["provenance"]
+
     if baseline["unqualified_fields"] or baseline["canonical_vector"].get("omitted", True):
         artifact["canonical_vectors"] = {
             "omitted": True,
             "reason": (
-                "template vectors inherit 38 fields from the baseline, which is incomplete: "
+                "template vectors inherit 37 fields from the baseline, which is incomplete: "
                 + ", ".join(baseline["unqualified_fields"])
             ),
         }
@@ -579,6 +689,12 @@ def main(argv: list[str] | None = None) -> int:
     templates = sub.add_parser("build-templates", help="build the AI template candidates artifact")
     templates.add_argument("--baseline", required=True, type=Path, help="committed baseline candidate JSON")
     templates.add_argument("--out", required=True, type=Path)
+    requantize = sub.add_parser(
+        "requantize",
+        help="rebuild a committed baseline artifact under the current wire schema (no DB access)",
+    )
+    requantize.add_argument("--source", required=True, type=Path, help="committed baseline candidate JSON")
+    requantize.add_argument("--out", required=True, type=Path)
     args = parser.parse_args(argv)
 
     if args.command == "emit-sql":
@@ -590,6 +706,10 @@ def main(argv: list[str] | None = None) -> int:
         baseline = json.loads(args.baseline.read_text(encoding="utf-8"))
         _write_json(args.out, build_templates_artifact(baseline))
         print(f"template candidates written to {args.out}")
+    elif args.command == "requantize":
+        source = json.loads(args.source.read_text(encoding="utf-8"))
+        _write_json(args.out, build_requantized_artifact(source))
+        print(f"requantized baseline candidate written to {args.out}")
     return 0
 
 

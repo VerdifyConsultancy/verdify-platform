@@ -1,13 +1,15 @@
 """Canonical policy-vector wire codec (Lane A of #582; audit §8.9).
 
-One 49-field planner policy vector has exactly one byte encoding, one
+One 48-field planner policy vector has exactly one byte encoding, one
 content hash, and one activation hash — identical here, in the generated
 firmware header (`firmware/lib/policy_vector_generated.h`), and in the twin.
 
-Wire format, version 1 (all integers big-endian):
+Wire format, version 2 (all integers big-endian; v2 retired wire_id 6,
+`direct_wet_stress_latest_hour`, per the #588 decision — retired ids are
+never reused):
 
     header:  magic b"VPV1" | schema version u8 | first 8 bytes of the
-             wire-manifest SHA-256 | field count u8 (49)
+             wire-manifest SHA-256 | field count u8 (48)
     records: ordered by ascending permanent wire_id —
              wire_id u16 | fixed-width raw value per wire_kind
              (u8/u16/u32 unsigned; i16 two's complement; bool one byte
@@ -85,7 +87,7 @@ _U64_MAX = 2**64 - 1
 
 
 def wire_fields() -> tuple[TunableDef, ...]:
-    """The 49 wire-schema fields ordered by permanent ``wire_id``."""
+    """The 48 wire-schema fields ordered by permanent ``wire_id``."""
     return _WIRE_FIELDS
 
 
@@ -94,13 +96,14 @@ _WIRE_FIELDS: tuple[TunableDef, ...] = tuple(
 )
 assert len(_WIRE_FIELDS) == POLICY_WIRE_FIELD_COUNT
 
-# Component index (migration 207 policy_*_components.component_index, 0..48):
-# a field's position in the canonical ascending-wire_id record order.
+# Component index (migration 207 policy_*_components.component_index, 0..47
+# under wire schema v2): a field's position in the canonical ascending-wire_id
+# record order.
 WIRE_COMPONENT_INDEXES: dict[str, int] = {defn.name: index for index, defn in enumerate(_WIRE_FIELDS)}
 
 
 def wire_component_index(name: str) -> int:
-    """The 0..48 component index of one wire field (ascending wire_id order)."""
+    """The 0..47 component index of one wire field (ascending wire_id order)."""
     try:
         return WIRE_COMPONENT_INDEXES[name]
     except KeyError:
@@ -247,7 +250,9 @@ def _raws_from_values(values: Mapping[str, float | bool]) -> list[int]:
     if provided != expected:
         missing = sorted(expected - provided)
         extra = sorted(provided - expected)
-        raise ValueError(f"policy vector requires exactly the 49 wire fields: missing={missing} extra={extra}")
+        raise ValueError(
+            f"policy vector requires exactly the {POLICY_WIRE_FIELD_COUNT} wire fields: missing={missing} extra={extra}"
+        )
     return [_raw_from_value(defn, values[defn.name]) for defn in wire_fields()]
 
 
@@ -267,7 +272,7 @@ def quantize_policy_values(values: Mapping[str, float | bool]) -> dict[str, floa
 
 
 def encode_policy_vector(values: Mapping[str, float | bool]) -> bytes:
-    """Encode all 49 wire fields into the canonical versioned byte vector."""
+    """Encode all 48 wire fields into the canonical versioned byte vector."""
     raws = _raws_from_values(values)
     out = bytearray(POLICY_VECTOR_MAGIC)
     out.append(WIRE_SCHEMA_VERSION)

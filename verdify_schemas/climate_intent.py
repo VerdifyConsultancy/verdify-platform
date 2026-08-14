@@ -192,7 +192,8 @@ CLIMATE_INTENT_FIELD_DOCS: tuple[ClimateIntentFieldDoc, ...] = (
         "17..24",
         "Materializes fog and direct-wet latest-hour limits.",
         (
-            "direct_wet_stress_latest_hour",
+            # direct_wet_stress_latest_hour retired (wire schema v2, #588):
+            # zero firmware presence — wet_cutoff_hour still bounds the fields below.
             "fog_stress_window_latest_hour",
             "sw_fog_stress_window_extend_enabled",
         ),
@@ -579,19 +580,20 @@ def materialize_climate_intent_tier1(
     moisture_engage_vpd_excess_kpa = intent.moisture_engage_vpd_excess_kpa
     all_zone_vpd_excess_kpa = intent.all_zone_vpd_excess_kpa
     fog_escalate_vpd_excess_kpa = intent.fog_escalate_vpd_excess_kpa
-    wet_cutoff_hour = intent.wet_cutoff_hour
+    # wet_cutoff_hour no longer materializes to a Tier 1 knob:
+    # direct_wet_stress_latest_hour was retired in wire schema v2 (#588,
+    # zero firmware presence). The intent field stays as bounded audit
+    # context for the guardrail annotations.
     daily_mist_budget_gal = intent.daily_mist_budget_gal
     if forecast_wet_required:
         moisture_engage_vpd_excess_kpa = min(moisture_engage_vpd_excess_kpa, 0.1)
         all_zone_vpd_excess_kpa = min(all_zone_vpd_excess_kpa, 0.3)
         fog_escalate_vpd_excess_kpa = min(fog_escalate_vpd_excess_kpa, 0.3)
-        wet_cutoff_hour = max(wet_cutoff_hour, 19.0)
         daily_mist_budget_gal = max(daily_mist_budget_gal, 60.0)
     if compliance_wet_required:
         moisture_engage_vpd_excess_kpa = min(moisture_engage_vpd_excess_kpa, 0.05)
         all_zone_vpd_excess_kpa = min(all_zone_vpd_excess_kpa, 0.25)
         fog_escalate_vpd_excess_kpa = min(fog_escalate_vpd_excess_kpa, 0.2 if temp_above_high > 0.0 else 0.25)
-        wet_cutoff_hour = max(wet_cutoff_hour, 19.0)
         daily_mist_budget_gal = max(daily_mist_budget_gal, 120.0)
 
     params.update(
@@ -605,7 +607,9 @@ def materialize_climate_intent_tier1(
             "cold_vent_guard_delta_f": max(6.0, min(15.0, intent.economizer_temp_advantage_f + 4.0)),
             "direct_wet_stress_vpd_margin_kpa": moisture_engage_vpd_excess_kpa,
             "direct_wet_stress_min_dew_margin_f": intent.dew_margin_floor_f,
-            "direct_wet_stress_latest_hour": wet_cutoff_hour,
+            # direct_wet_stress_latest_hour retired (wire schema v2, #588): the
+            # materializer no longer emits the dead parameter row; wet_cutoff_hour
+            # still bounds the wet-assist clamps computed above.
             "sw_direct_wet_stress_override_enabled": 1.0 if wet_aggression >= 0.35 else 0.0,
             "fog_escalation_kpa": fog_escalate_vpd_excess_kpa,
             "mister_engage_kpa": vpd_high + moisture_engage_vpd_excess_kpa,

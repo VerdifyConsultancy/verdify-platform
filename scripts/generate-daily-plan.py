@@ -447,8 +447,8 @@ CORE_PARAMS = [
     "cool_exit_hysteresis_f",
     "sw_cool_all_fans_at_high_enabled",
     "sw_direct_wet_stress_override_enabled",
-    "direct_wet_stress_latest_hour",
     # fog_stress_* removed (BC-11/ADR0003 §6.7): retired dead registry rows.
+    # direct_wet_stress_latest_hour retired (wire schema v2, #588): zero firmware presence.
     "mister_engage_kpa",
     "mister_all_kpa",
     "mister_pulse_on_s",
@@ -466,8 +466,8 @@ TACTICAL_TUNABLE_PARAMS = [
     "cool_exit_hysteresis_f",
     "sw_cool_all_fans_at_high_enabled",
     "sw_direct_wet_stress_override_enabled",
-    "direct_wet_stress_latest_hour",
     # fog_stress_* removed (BC-11/ADR0003 §6.7): retired dead registry rows.
+    # direct_wet_stress_latest_hour retired (wire schema v2, #588): zero firmware presence.
     "mister_engage_kpa",
     "mister_all_kpa",
     "mister_pulse_on_s",

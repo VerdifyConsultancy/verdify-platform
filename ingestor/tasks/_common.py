@@ -1012,6 +1012,13 @@ AI_MOISTURE_STRESS_POLICY_PARAMS = frozenset(
         "sw_direct_wet_stress_override_enabled",
         "direct_wet_stress_vpd_margin_kpa",
         "direct_wet_stress_min_dew_margin_f",
+        # direct_wet_stress_latest_hour is RETIRED from the wire schema
+        # (contract v2, #588 — zero firmware presence) but DELIBERATELY kept
+        # in this PR3 gate: _ai_moisture_stress_policy_supported() requires
+        # every listed entity/readback, and the dead entity has never existed,
+        # so the whole group stays gated exactly as before the retirement
+        # (behavioral parity — removing it here would silently enable
+        # dispatch of the other three params).
         "direct_wet_stress_latest_hour",
         # fog_stress_* removed (BC-11/ADR0003 §6.7): retired dead registry rows.
     }

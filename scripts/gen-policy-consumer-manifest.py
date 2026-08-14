@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate firmware/policy_consumer_manifest.json (Lane E, #586; audit §8.9).
 
-Enumerates every ESPHome ``id(<global>)`` read site of the 49 policy-vector
+Enumerates every ESPHome ``id(<global>)`` read site of the 48 policy-vector
 wire fields across the firmware YAML sources and records, per site, whether it
 has been migrated to the per-tick policy snapshot (a gated
 ``pol(kPF_<field>, id(<global>))`` / ``polb(...)`` read in controls.yaml).
@@ -21,9 +21,10 @@ Site categories:
   entity       tunables.yaml number/switch getters + set_action writers.
   boot_or_diag greenhouse.yaml on_boot repair + display sensors.
 
-``direct_wet_stress_latest_hour`` is a registry wire field with no firmware
-global at all (known audit defect, §1.5 of the program plan review); it is
-tracked with ``global_id: null`` and zero sites.
+Every wire field maps to a firmware global under wire schema v2:
+``direct_wet_stress_latest_hour`` (the v1 reserved zero-consumer row, audit
+§1.5) was retired from the wire schema by the #588 decision — its former
+wire_id 6 lives permanently in ``RETIRED_WIRE_IDS``.
 """
 
 from __future__ import annotations
@@ -66,9 +67,10 @@ GLOBAL_ID_OVERRIDES: dict[str, str] = {
     "sw_direct_wet_stress_override_enabled": "direct_wet_stress_override_enabled",
 }
 
-# Registry wire fields with NO firmware global (audit §1.5: retire-or-implement
-# is a Lane A follow-up; the wire schema keeps the id reserved).
-NO_FIRMWARE_GLOBAL: frozenset[str] = frozenset({"direct_wet_stress_latest_hour"})
+# Wire fields with NO firmware global. Empty since wire schema v2 retired the
+# one reserved zero-consumer row (#588); a nonempty set here means a new field
+# was wired before its firmware landed and must be tracked explicitly.
+NO_FIRMWARE_GLOBAL: frozenset[str] = frozenset()
 
 ID_RE = re.compile(r"id\(\s*([a-z0-9_]+)\s*\)")
 WRITE_RE = re.compile(r"^\s*(\+?=|-=)\s")
@@ -132,7 +134,7 @@ def build_manifest() -> dict:
     return {
         "_generated_by": "scripts/gen-policy-consumer-manifest.py — DO NOT EDIT (Lane E, #586)",
         "_purpose": (
-            "Per-field id(<global>) consumer map for the 49-field policy wire schema. "
+            "Per-field id(<global>) consumer map for the 48-field policy wire schema. "
             "control category reads must all be migrated_to_snapshot before an experiment "
             "manifest may be armed (audit §8.9); readback/entity/boot sites stay on legacy "
             "globals as diagnostics."

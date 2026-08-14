@@ -1,9 +1,9 @@
 {
   "_generated_by": "scripts/gen-policy-consumer-manifest.py \u2014 DO NOT EDIT (Lane E, #586)",
-  "_purpose": "Per-field id(<global>) consumer map for the 49-field policy wire schema. control category reads must all be migrated_to_snapshot before an experiment manifest may be armed (audit \u00a78.9); readback/entity/boot sites stay on legacy globals as diagnostics.",
-  "wire_schema_version": 1,
+  "_purpose": "Per-field id(<global>) consumer map for the 48-field policy wire schema. control category reads must all be migrated_to_snapshot before an experiment manifest may be armed (audit \u00a78.9); readback/entity/boot sites stay on legacy globals as diagnostics.",
+  "wire_schema_version": 2,
   "summary": {
-    "fields": 49,
+    "fields": 48,
     "fields_fully_migrated_or_trivial": 11,
     "control_read_sites": 63,
     "control_reads_migrated": 16
@@ -210,16 +210,6 @@
           "migrated_to_snapshot": false
         }
       ]
-    },
-    {
-      "name": "direct_wet_stress_latest_hour",
-      "wire_id": 6,
-      "global_id": null,
-      "control_read_sites": 0,
-      "control_reads_migrated": 0,
-      "control_migrated": false,
-      "tranche": 2,
-      "sites": []
     },
     {
       "name": "direct_wet_stress_min_dew_margin_f",
