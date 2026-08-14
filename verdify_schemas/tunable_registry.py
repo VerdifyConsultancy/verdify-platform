@@ -39,6 +39,23 @@ from typing import Literal
 import yaml
 from pydantic import BaseModel
 
+# ── Policy wire schema (Lane A, #582) ────────────────────────────────────────
+# WIRE_SCHEMA_VERSION versions the canonical policy-vector wire encoding
+# (header layout, per-field wire_id/kind/scale assignments). Bump it only for
+# an incompatible wire change; verdify_schemas/policy_vector.py and the
+# generated firmware/lib/policy_vector_generated.h both embed it.
+#
+# Reserved-ID policy: wire_ids are PERMANENT. They are written literally on
+# each TunableDef below — never derived from insertion or sorted order — so
+# inserting or renaming registry rows cannot shift them. When a field is
+# retired, its wire_id moves into RETIRED_WIRE_IDS and is never reused; a new
+# field always takes the next never-used id.
+WIRE_SCHEMA_VERSION = 1
+RETIRED_WIRE_IDS: frozenset[int] = frozenset()
+# The frozen size of the version-1 policy vector (audit §8.9: all 49
+# planner-pushable fields, including the reserved no-firmware-consumer row).
+POLICY_WIRE_FIELD_COUNT = 49
+
 
 class TunableDef(BaseModel):
     """One row in the tunable registry. Each field has exactly one owner.
@@ -63,6 +80,16 @@ class TunableDef(BaseModel):
             visible contract/context only.
         enum_values: for `kind == "enum"`, int value ↔ symbolic name.
         notes: anything human.
+        wire_id: permanent policy-vector wire id (see WIRE_SCHEMA_VERSION /
+            RETIRED_WIRE_IDS above). Set for every planner-pushable field;
+            None for rows outside the policy wire schema.
+        wire_kind: fixed-width big-endian encoding on the wire. Signed kinds
+            use two's complement; "bool" is one byte 0x00/0x01.
+        wire_scale: decimal scale factor — encoded raw = value × wire_scale,
+            value = raw / wire_scale. The quantum (1/wire_scale) is at least
+            as fine as the ESPHome entity step, so every value the entity can
+            hold round-trips exactly. Choice documented inline per field.
+        wire_unit: human unit for the decoded value (ASCII); None for bool.
     """
 
     name: str
@@ -79,6 +106,10 @@ class TunableDef(BaseModel):
     tier: Literal[1, 2] = 1
     enum_values: dict[str, int] | None = None
     notes: str = ""
+    wire_id: int | None = None
+    wire_kind: Literal["u8", "u16", "i16", "u32", "bool", "enum"] | None = None
+    wire_scale: int | None = None
+    wire_unit: str | None = None
 
     @property
     def control_class(
@@ -182,6 +213,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=1,
+        # wire: ESPHome step 0.1 F -> scale 10; [0,3] F -> raw [0,30]
+        wire_id=5,
+        wire_kind="u8",
+        wire_scale=10,
+        wire_unit="degF",
         notes=("Live band-first fan2 threshold above temp_high. This replaces planner use of legacy d_cool_stage_2."),
     ),
     "cool_exit_hysteresis_f": TunableDef(
@@ -197,6 +233,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=1,
+        # wire: ESPHome step 0.1 F -> scale 10; [0.3,3] F -> raw [3,30]
+        wire_id=3,
+        wire_kind="u8",
+        wire_scale=10,
+        wire_unit="degF",
         notes="Cooling hold exits at temp_high minus this margin in the live band-first controller.",
     ),
     "cool_stage2_exit_hysteresis_f": TunableDef(
@@ -212,6 +253,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=1,
+        # wire: ESPHome step 0.1 F -> scale 10; [0.3,3] F -> raw [3,30]
+        wire_id=4,
+        wire_kind="u8",
+        wire_scale=10,
+        wire_unit="degF",
         notes=(
             "BC-8 (ADR0003 §6.5): de-escalation hysteresis for the fan1->fan2 stage. "
             "fan2 latches at temp_high+cool_stage2_over_high_f and clears at that minus "
@@ -231,6 +277,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=1,
+        # wire: ESPHome step 0.05 -> scale 20; [0.1,0.6] -> raw [2,12]
+        wire_id=45,
+        wire_kind="u8",
+        wire_scale=20,
+        wire_unit="fraction",
         notes=(
             "BC-13 (ADR0003 §6.4, Jason 2026-06-17): single-cycle air-exchange fraction "
             "toward outdoor used by the moisture-exchange estimator's vent VPD-gain "
@@ -250,6 +301,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=1,
+        # wire: ESPHome step 0.05 -> scale 20; wire envelope is the fw clamp [0,1] (planner pins 0, ADR-0004) -> raw [0,20]
+        wire_id=1,
+        wire_kind="u8",
+        wire_scale=20,
+        wire_unit="fraction",
         notes=(
             "Control-band tracking tightness. Pinches the band toward "
             "temp_target/vpd_target when nonzero, but ADR-0004 makes 0 the only "
@@ -272,6 +328,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=1,
+        # wire: ESPHome step 0.5 F -> scale 2; [0,15] F -> raw [0,30]
+        wire_id=2,
+        wire_kind="u8",
+        wire_scale=2,
+        wire_unit="degF",
         notes=(
             "Cold-outdoor ventilation guard. Outdoor air below temp_low minus "
             "this delta requires extra cooling margin before opening the vent."
@@ -290,6 +351,10 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=1,
+        # wire: boolean -> one wire byte, 0x00/0x01
+        wire_id=37,
+        wire_kind="bool",
+        wire_scale=1,
         notes="When enabled, VENTILATE runs both fans immediately above temp_high.",
     ),
     "temp_hysteresis": TunableDef(
@@ -305,6 +370,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="band",
         planner_pushable=True,
         tier=1,
+        # wire: ESPHome step 0.1 F -> scale 10; [0.5,3] F -> raw [5,30]
+        wire_id=44,
+        wire_kind="u8",
+        wire_scale=10,
+        wire_unit="degF",
         notes="Forecast-tuned temperature transition hysteresis. Wider values reduce mode churn; narrower values tighten band tracking.",
     ),
     "heat_hysteresis": TunableDef(
@@ -320,6 +390,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=1,
+        # wire: ESPHome step 0.1 F -> scale 10; [0,3] F -> raw [0,30]
+        wire_id=13,
+        wire_kind="u8",
+        wire_scale=10,
+        wire_unit="degF",
         notes="Forecast-tuned heat-stage clear margin above the interior heating target. Higher values hold heat longer.",
     ),
     "vpd_low": TunableDef(
@@ -365,6 +440,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="band",
         planner_pushable=True,
         tier=1,
+        # wire: ESPHome step 0.05 kPa -> scale 20; [0.05,0.5] kPa -> raw [1,10]
+        wire_id=48,
+        wire_kind="u8",
+        wire_scale=20,
+        wire_unit="kPa",
         notes="In MCP TIER1 — planner tunes to widen/tighten seal exit during humid regimes.",
     ),
     # ─────────────────────────────────────────────────────────────────────
@@ -463,6 +543,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=1,
+        # wire: ESPHome step 0.05 kPa -> scale 20; [0.5,2.5] kPa -> raw [10,50]
+        wire_id=29,
+        wire_kind="u8",
+        wire_scale=20,
+        wire_unit="kPa",
         notes=(
             "Physical S1 mister-pulse threshold once humidity/zone demand exists. "
             "SEALED_MIST entry is vpd_high plus vpd_watch_dwell_s. During live "
@@ -483,6 +568,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=1,
+        # wire: ESPHome step 0.05 kPa -> scale 20; [1,2.5] kPa -> raw [20,50]
+        wire_id=26,
+        wire_kind="u8",
+        wire_scale=20,
+        wire_unit="kPa",
         notes=(
             "Physical all-zone mister rotation threshold. Keep close to active "
             "vpd_high on hot/dry ventilation cycles; dispatcher clamps values "
@@ -502,6 +592,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=1,
+        # wire: integer seconds (ESPHome step 30) -> scale 1; [30,300] -> u16
+        wire_id=28,
+        wire_kind="u16",
+        wire_scale=1,
+        wire_unit="s",
         notes="Delay before first physical mister pulse during a sealed or vent-assist moisture cycle. "
         "Tightened to 30-300s so plans cannot postpone humidity response through an entire stress window.",
     ),
@@ -518,6 +613,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=1,
+        # wire: integer seconds (ESPHome step 30) -> scale 1; [60,600] -> u16
+        wire_id=25,
+        wire_kind="u16",
+        wire_scale=1,
+        wire_unit="s",
         notes="Dwell before physical all-zone rotation. Also feeds the header mist-stage delay; "
         "stress defaults stay near 60-90s.",
     ),
@@ -594,6 +694,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=1,
+        # wire: 0.1-gal quantum (finer than the 10-gal ESPHome step, per audit 8.9 guidance) -> scale 10; [100,300] -> raw [1000,3000] (u16)
+        wire_id=34,
+        wire_kind="u16",
+        wire_scale=10,
+        wire_unit="gal",
         notes="Daily mister water cap. In MCP TIER1. Practical operating range tightened to 100-300 gal/day.",
     ),
     "mister_max_runtime_min": TunableDef(
@@ -627,6 +732,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=1,
+        # wire: integer seconds (ESPHome step 5) -> scale 1; [30,90] fits u8
+        wire_id=32,
+        wire_kind="u8",
+        wire_scale=1,
+        wire_unit="s",
         notes="Pulse-rotation ON duration per zone.",
     ),
     "mister_pulse_gap_s": TunableDef(
@@ -642,6 +752,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=1,
+        # wire: integer seconds (ESPHome step 5) -> scale 1; [10,60] fits u8
+        wire_id=31,
+        wire_kind="u8",
+        wire_scale=1,
+        wire_unit="s",
         notes="Pulse-rotation OFF (evap dwell) between zones.",
     ),
     "mister_min_off_s": TunableDef(
@@ -657,6 +772,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=2,
+        # wire: integer seconds (ESPHome step 5) -> scale 1; [30,120] fits u8
+        wire_id=30,
+        wire_kind="u8",
+        wire_scale=1,
+        wire_unit="s",
         notes="Mister re-fire dwell floor: a zone may not re-energize within "
         "this of its own last off. Default 45s == the designed pulse gap, so it "
         "only fences sub-gap chatter (never extends a pulse / over-waters). "
@@ -675,6 +795,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=1,
+        # wire: ESPHome step 0.5 -> scale 2; [0.5,3] -> raw [1,6]
+        wire_id=33,
+        wire_kind="u8",
+        wire_scale=2,
+        wire_unit="ratio",
         notes="Weight on VPD gap in zone-selection scoring formula. Capped at 3.0 until replay proves higher values help.",
     ),
     "night_vpd_bias_kpa": TunableDef(
@@ -690,6 +815,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=1,
+        # wire: ESPHome step 0.01 kPa -> scale 100; [0,0.25] kPa -> raw [0,25]
+        wire_id=35,
+        wire_kind="u8",
+        wire_scale=100,
+        wire_unit="kPa",
         notes="Item-4 night-dry lever: kPa added to the OVERNIGHT VPD band (smooth sin^2 weight peaking at solar midnight, 0 at sunset/sunrise). Raises the night dryness floor so the dryer keeps running on a humid-night forecast WITHOUT moving the crop_band_anchors curve. Clamped 0..0.25.",
     ),
     "sw_arbiter_zone_enabled": TunableDef(
@@ -779,6 +909,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=2,
+        # wire: ESPHome step 0.1 -> scale 10; [0,1] -> raw [0,10]
+        wire_id=27,
+        wire_kind="u8",
+        wire_scale=10,
+        wire_unit="fraction",
         notes="Score penalty on center zone to discourage over-misting seedlings.",
     ),
     "east_adjacency_factor": TunableDef(
@@ -809,6 +944,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=1,
+        # wire: integer seconds (ESPHome step 15) -> scale 1; [15,300] -> u16
+        wire_id=17,
+        wire_kind="u16",
+        wire_scale=1,
+        wire_unit="s",
         notes="Fog minimum ON time — in MCP TIER1.",
     ),
     "min_fog_off_s": TunableDef(
@@ -824,6 +964,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=1,
+        # wire: integer seconds (ESPHome step 15) -> scale 1; [15,300] -> u16
+        wire_id=16,
+        wire_kind="u16",
+        wire_scale=1,
+        wire_unit="s",
         notes="Fog minimum OFF time — in MCP TIER1.",
     ),
     # ─────────────────────────────────────────────────────────────────────
@@ -842,6 +987,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="operator",
         planner_pushable=True,
         tier=2,
+        # wire: integer seconds (ESPHome step 10) -> scale 1; [30,300] -> u16
+        wire_id=19,
+        wire_kind="u16",
+        wire_scale=1,
+        wire_unit="s",
         notes="Heater relay protection dwell. Operator/firmware policy, not routine planner policy.",
     ),
     "min_fan_on_s": TunableDef(
@@ -857,6 +1007,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="operator",
         planner_pushable=True,
         tier=2,
+        # wire: integer seconds (ESPHome step 10) -> scale 1; [30,300] -> u16
+        wire_id=15,
+        wire_kind="u16",
+        wire_scale=1,
+        wire_unit="s",
         notes="Fan relay protection dwell. Operator/firmware policy.",
     ),
     "min_fan_off_s": TunableDef(
@@ -872,6 +1027,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="operator",
         planner_pushable=True,
         tier=2,
+        # wire: integer seconds (ESPHome step 10) -> scale 1; [30,300] -> u16
+        wire_id=14,
+        wire_kind="u16",
+        wire_scale=1,
+        wire_unit="s",
         notes="Fan relay protection dwell. Operator/firmware policy.",
     ),
     "min_vent_on_s": TunableDef(
@@ -887,6 +1047,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="operator",
         planner_pushable=True,
         tier=2,
+        # wire: integer seconds (ESPHome step 10) -> scale 1; [10,300] -> u16
+        wire_id=21,
+        wire_kind="u16",
+        wire_scale=1,
+        wire_unit="s",
         notes="Vent actuator protection dwell. Operator/firmware policy, not routine planner policy.",
     ),
     "min_vent_off_s": TunableDef(
@@ -902,6 +1067,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="operator",
         planner_pushable=True,
         tier=2,
+        # wire: integer seconds (ESPHome step 10) -> scale 1; [10,300] -> u16
+        wire_id=20,
+        wire_kind="u16",
+        wire_scale=1,
+        wire_unit="s",
         notes="Vent actuator protection dwell. Operator/firmware policy, not routine planner policy.",
     ),
     "lead_rotate_s": TunableDef(
@@ -1109,6 +1279,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=1,
+        # wire: integer seconds (ESPHome step 15) -> scale 1; [15,120] fits u8
+        wire_id=49,
+        wire_kind="u8",
+        wire_scale=1,
+        wire_unit="s",
         notes="VPD_WATCH observation window before engaging mist.",
     ),
     "mist_vent_close_lead_s": TunableDef(
@@ -1139,6 +1314,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=1,
+        # wire: integer seconds (ESPHome step 60) -> scale 1; [120,900] -> u16
+        wire_id=23,
+        wire_kind="u16",
+        wire_scale=1,
+        wire_unit="s",
         notes="Maximum time vent can stay closed during misting before thermal-relief burst.",
     ),
     "mist_vent_reopen_delay_s": TunableDef(
@@ -1169,6 +1349,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=1,
+        # wire: integer seconds (ESPHome step 30) -> scale 1; [30,300] -> u16
+        wire_id=24,
+        wire_kind="u16",
+        wire_scale=1,
+        wire_unit="s",
         notes="Mandatory vent-open relief duration if mist-closed-vent cap hit.",
     ),
     # ─────────────────────────────────────────────────────────────────────
@@ -1367,6 +1552,10 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=1,
+        # wire: boolean -> one wire byte, 0x00/0x01
+        wire_id=39,
+        wire_kind="bool",
+        wire_scale=1,
         notes=(
             "Allows direct-wet mister zones to bypass drydown windows only during VPD-high stress. "
             "Firmware still enforces direct-wet master gate, min temp, irrigation/occupancy locks, latest hour, and dew margin."
@@ -1385,6 +1574,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=1,
+        # wire: ESPHome step 0.05 kPa -> scale 20; [0,0.5] kPa -> raw [0,10]
+        wire_id=8,
+        wire_kind="u8",
+        wire_scale=20,
+        wire_unit="kPa",
         notes="VPD excess above active vpd_high required before direct-wet stress override can open drydown-gated zones.",
     ),
     "direct_wet_stress_min_dew_margin_f": TunableDef(
@@ -1400,6 +1594,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=1,
+        # wire: ESPHome step 0.5 F -> scale 2; [3,15] F -> raw [6,30]
+        wire_id=7,
+        wire_kind="u8",
+        wire_scale=2,
+        wire_unit="degF",
         notes="Minimum indoor temp-minus-dewpoint margin required for direct-wet stress override.",
     ),
     "direct_wet_stress_latest_hour": TunableDef(
@@ -1413,7 +1612,17 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=1,
-        notes="Latest local hour for direct-wet dry-stress override; 24 means through 23:59.",
+        # wire: reserved/no-firmware-consumer (see #582); whole local hours -> scale 1; [17,24] -> raw [17,24]
+        wire_id=6,
+        wire_kind="u8",
+        wire_scale=1,
+        wire_unit="hour",
+        notes=(
+            "Latest local hour for direct-wet dry-stress override; 24 means through 23:59. "
+            "wire: reserved/no-firmware-consumer (see #582) — no ESPHome entity, global, or read "
+            "site exists; the field stays in the 49-field wire schema (byte-identical across "
+            "experiment arms) and is exempt from the firmware-entity drift assertion."
+        ),
     ),
     # ─────────────────────────────────────────────────────────────────────
     # Irrigation schedule (push_owner="operator"). Tier=2 across the board.
@@ -2323,6 +2532,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=1,
+        # wire: ESPHome step 0.5 kJ/kg -> scale 2; signed [-5,0] -> raw [-10,0] (i16)
+        wire_id=11,
+        wire_kind="i16",
+        wire_scale=2,
+        wire_unit="kJ/kg",
         notes="Economiser opens when outdoor-indoor enthalpy ≤ this. In MCP TIER1.",
     ),
     "enthalpy_close": TunableDef(
@@ -2338,6 +2552,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=1,
+        # wire: ESPHome step 0.5 kJ/kg -> scale 2; signed [-5,20] -> raw [-10,40] (i16)
+        wire_id=10,
+        wire_kind="i16",
+        wire_scale=2,
+        wire_unit="kJ/kg",
         notes="Economiser closes when enthalpy ≥ this. In MCP TIER1.",
     ),
     "econ_heat_margin_f": TunableDef(
@@ -2484,6 +2703,10 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=1,
+        # wire: boolean -> one wire byte, 0x00/0x01
+        wire_id=43,
+        wire_kind="bool",
+        wire_scale=1,
         notes="Master switch for the sprint-15 outdoor-cooler-and-drier gate. "
         "Default ON: firmware behavior without it is wrong in summer.",
     ),
@@ -2500,6 +2723,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=1,
+        # wire: ESPHome step 0.5 F -> scale 2; [2,15] F -> raw [4,30]
+        wire_id=47,
+        wire_kind="u8",
+        wire_scale=2,
+        wire_unit="degF",
         notes="Outdoor must be ≥ this many °F cooler than indoor for gate to fire.",
     ),
     "vent_prefer_dp_delta_f": TunableDef(
@@ -2515,6 +2743,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=1,
+        # wire: ESPHome step 0.5 F -> scale 2; [2,15] F -> raw [4,30]
+        wire_id=46,
+        wire_kind="u8",
+        wire_scale=2,
+        wire_unit="degF",
         notes="Outdoor dewpoint must be ≥ this many °F below indoor DP for gate.",
     ),
     "outdoor_staleness_max_s": TunableDef(
@@ -2530,6 +2763,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=1,
+        # wire: integer seconds (ESPHome step 30) -> scale 1; [120,1800] -> u16
+        wire_id=36,
+        wire_kind="u16",
+        wire_scale=1,
+        wire_unit="s",
         notes="Gate disables when outdoor data older than this. Sprint-15.1 "
         "raised default 300→600 and floor 60→120 so dispatcher cadence "
         "jitter doesn't intermittently disqualify the gate.",
@@ -2559,6 +2797,10 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=1,
+        # wire: boolean -> one wire byte, 0x00/0x01
+        wire_id=41,
+        wire_kind="bool",
+        wire_scale=1,
         notes="Fog is suppressed while the vent is physically open, except vent-mist assist. "
         "Default ON; disabling re-enables open-vent fog during VENTILATE (tradeoff).",
     ),
@@ -2571,6 +2813,10 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=1,
+        # wire: boolean -> one wire byte, 0x00/0x01
+        wire_id=42,
+        wire_kind="bool",
+        wire_scale=1,
         notes="Normal mister pulses are suppressed while the vent is physically open. "
         "The explicit VENTILATE vent-mist assist path bypasses this interlock.",
     ),
@@ -2583,6 +2829,10 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=2,
+        # wire: boolean -> one wire byte, 0x00/0x01
+        wire_id=38,
+        wire_kind="bool",
+        wire_scale=1,
         notes="Enables global biological activity and per-zone direct-wet gates for clean/fert misters and irrigation paths.",
     ),
     # ─────────────────────────────────────────────────────────────────────
@@ -2633,6 +2883,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="operator",
         planner_pushable=True,
         tier=2,
+        # wire: integer seconds (ESPHome step 10) -> scale 1; [60,600] -> u16
+        wire_id=18,
+        wire_kind="u16",
+        wire_scale=1,
+        wire_unit="s",
         notes="Heater relay protection dwell. Default 180s from Sprint-15.1; operator/firmware policy.",
     ),
     # ─────────────────────────────────────────────────────────────────────
@@ -2647,6 +2902,10 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=1,
+        # wire: boolean -> one wire byte, 0x00/0x01
+        wire_id=40,
+        wire_kind="bool",
+        wire_scale=1,
         notes="Master switch for Phase-2 mode-dwell gate. ClimateIntent may "
         "enable this on the single live controller path when relay-churn "
         "preference warrants it; offline replay remains diagnostic only.",
@@ -2664,6 +2923,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=1,
+        # wire: integer milliseconds (ESPHome step 30000) -> scale 1; [60000,1800000] needs u32
+        wire_id=9,
+        wire_kind="u32",
+        wire_scale=1,
+        wire_unit="ms",
         notes="Dwell hold duration. Default 5 min. Safety rails + R2-3 "
         "dry override + vpd_min_safe rescue preempt unconditionally.",
     ),
@@ -2693,6 +2957,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=1,
+        # wire: integer seconds (ESPHome step 60) -> scale 1; [60,3600] -> u16
+        wire_id=22,
+        wire_kind="u16",
+        wire_scale=1,
+        wire_unit="s",
         notes="Controller lockout after sealed humidification times out. "
         "Suppresses another SEALED_MIST attempt without forcing venting.",
     ),
@@ -2709,6 +2978,11 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=1,
+        # wire: ESPHome step 0.1 kPa -> scale 10; [0.1,0.5] kPa -> raw [1,5]
+        wire_id=12,
+        wire_kind="u8",
+        wire_scale=10,
+        wire_unit="kPa",
         notes=(
             "VPD delta above active vpd_high that escalates from mist to fog. "
             "Lower values mean earlier fog inside VENTILATE mist assist; dispatcher "
@@ -3585,3 +3859,114 @@ def normalize_planner_value(name: str, value: float) -> float:
     if upper is not None:
         numeric = min(float(upper), numeric)
     return numeric
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Policy wire schema validation (Lane A, #582) — see WIRE_SCHEMA_VERSION at the
+# top of this module for the reserved-ID policy.
+# ─────────────────────────────────────────────────────────────────────────────
+
+_WIRE_KIND_RAW_RANGE: dict[str, tuple[int, int]] = {
+    "u8": (0, 0xFF),
+    "u16": (0, 0xFFFF),
+    "i16": (-0x8000, 0x7FFF),
+    "u32": (0, 0xFFFFFFFF),
+    "bool": (0, 1),
+}
+
+
+def wire_value_bounds(name: str) -> tuple[float, float]:
+    """Wire-envelope bounds for one planner-pushable field.
+
+    The codec must round-trip every value the device could legitimately hold,
+    so the wire envelope is the union hull of the planner contract bounds
+    (``min``/``max``) and the firmware clamp (``fw_clamp_lo``/``fw_clamp_hi``).
+    For every current field except ``band_track_fraction`` the two coincide;
+    ``band_track_fraction`` is planner-pinned to 0 (ADR-0004) but firmware
+    clamps and reads back [0, 1]. Switches use the boolean envelope [0, 1].
+    """
+    tunable = get(name)
+    if tunable is None:
+        raise ValueError(f"{name!r} is not registered in tunable_registry")
+    if tunable.wire_id is None:
+        raise ValueError(f"{name!r} is not part of the policy wire schema")
+    if tunable.wire_kind == "bool":
+        return 0.0, 1.0
+    lower_candidates = [bound for bound in (tunable.min, tunable.fw_clamp_lo) if bound is not None]
+    upper_candidates = [bound for bound in (tunable.max, tunable.fw_clamp_hi) if bound is not None]
+    if not lower_candidates or not upper_candidates:
+        raise ValueError(f"{name!r} has no finite wire bounds")
+    return min(lower_candidates), max(upper_candidates)
+
+
+def wire_metadata_errors() -> list[str]:
+    """Validate the planner-pushable wire schema; return a list of problems.
+
+    Asserted at import so a registry edit that breaks the wire contract fails
+    immediately: every planner-pushable field must carry complete, unique wire
+    metadata; nothing outside that set may carry any; ids must be permanent
+    (never from RETIRED_WIRE_IDS); and every wire bound must be exactly
+    representable within the declared kind/scale.
+    """
+    errors: list[str] = []
+    seen_ids: dict[int, str] = {}
+    wired = sorted(n for n, d in REGISTRY.items() if d.wire_id is not None)
+
+    if set(wired) != set(PLANNER_PUSHABLE_REG):
+        extra = sorted(set(wired) - set(PLANNER_PUSHABLE_REG))
+        missing = sorted(set(PLANNER_PUSHABLE_REG) - set(wired))
+        errors.append(f"wire surface != planner-pushable surface: extra={extra} missing={missing}")
+    if len(PLANNER_PUSHABLE_REG) != POLICY_WIRE_FIELD_COUNT:
+        errors.append(
+            f"planner-pushable count {len(PLANNER_PUSHABLE_REG)} != frozen POLICY_WIRE_FIELD_COUNT "
+            f"{POLICY_WIRE_FIELD_COUNT}; a v1 wire-schema change requires a WIRE_SCHEMA_VERSION bump"
+        )
+
+    for name in wired:
+        d = REGISTRY[name]
+        prefix = f"{name} (wire_id={d.wire_id})"
+        if not isinstance(d.wire_id, int) or not 1 <= d.wire_id <= 0xFFFF:
+            errors.append(f"{prefix}: wire_id must be an int in [1, 65535]")
+            continue
+        if d.wire_id in RETIRED_WIRE_IDS:
+            errors.append(f"{prefix}: wire_id is retired and may never be reused")
+        if d.wire_id in seen_ids:
+            errors.append(f"{prefix}: duplicate wire_id also used by {seen_ids[d.wire_id]}")
+        seen_ids[d.wire_id] = name
+
+        if d.wire_kind is None or d.wire_scale is None:
+            errors.append(f"{prefix}: wire_kind/wire_scale are required")
+            continue
+        if not isinstance(d.wire_scale, int) or d.wire_scale < 1:
+            errors.append(f"{prefix}: wire_scale must be a positive int")
+            continue
+        if d.kind == "switch" and d.wire_kind != "bool":
+            errors.append(f"{prefix}: switch fields must use wire_kind='bool'")
+        if d.kind == "numeric" and d.wire_kind not in ("u8", "u16", "i16", "u32"):
+            errors.append(f"{prefix}: numeric fields need a fixed-width integer wire_kind")
+        if d.kind == "enum" and d.wire_kind != "enum":
+            errors.append(f"{prefix}: enum fields must use wire_kind='enum'")
+        if d.wire_kind == "bool":
+            if d.wire_scale != 1 or d.wire_unit is not None:
+                errors.append(f"{prefix}: bool fields must have wire_scale=1 and no wire_unit")
+        elif not d.wire_unit:
+            errors.append(f"{prefix}: non-bool fields require a wire_unit")
+
+        raw_lo, raw_hi = _WIRE_KIND_RAW_RANGE.get(d.wire_kind, (0, 0))
+        try:
+            lo, hi = wire_value_bounds(name)
+        except ValueError as exc:
+            errors.append(f"{prefix}: {exc}")
+            continue
+        for label, bound in (("min", lo), ("max", hi), ("default", d.default)):
+            scaled = bound * d.wire_scale
+            if abs(scaled - round(scaled)) > 1e-9:
+                errors.append(f"{prefix}: {label}={bound:g} is not representable at scale {d.wire_scale}")
+            elif not raw_lo <= round(scaled) <= raw_hi:
+                errors.append(f"{prefix}: {label}={bound:g} raw {round(scaled)} overflows {d.wire_kind}")
+
+    return errors
+
+
+_WIRE_METADATA_ERRORS = wire_metadata_errors()
+assert not _WIRE_METADATA_ERRORS, "policy wire schema invalid:\n" + "\n".join(_WIRE_METADATA_ERRORS)

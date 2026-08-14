@@ -61,6 +61,7 @@ site/public
 reports/
 reports
 firmware/test/replay_overrides
+firmware/test/test_policy_vector
 firmware/artifacts/
 
 # Claude Code local settings — per-worktree, never committed
