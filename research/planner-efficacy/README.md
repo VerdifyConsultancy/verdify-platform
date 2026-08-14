@@ -18,7 +18,8 @@ and has two executed manifests:
   for the bounded PID/model rerun; and
 - [`results-current-firmware-supplement-2026-08-14.json`](results-current-firmware-supplement-2026-08-14.json)
   for the stale-policy match, forecast response, waypoint survival, and
-  effective-tunable audit.
+  effective-tunable audit, plus the reproducible 30-day switchback screening
+  calculation used to size the proposed next phase.
 
 The study distinguishes three questions:
 
@@ -118,6 +119,7 @@ uv run --project research/planner-efficacy \
   research/planner-efficacy/epoch_analysis.py \
   --climate /tmp/planner-current-fw-inputs/climate_15m.csv \
   --equipment /tmp/planner-current-fw-inputs/equipment_transitions.csv \
+  --daily /tmp/planner-current-fw-inputs/daily_outcomes.csv \
   --forecast-response /tmp/planner-current-fw-inputs/forecast_response.csv \
   --waypoints /tmp/planner-current-fw-inputs/waypoints.csv \
   --forecast-vpd-accuracy /tmp/planner-current-fw-inputs/forecast_vpd_accuracy.csv \
@@ -129,3 +131,6 @@ uv run --project research/planner-efficacy \
 The stale-policy comparison is intentionally labeled hypothesis-generating.
 It asserts the fixed sample counts, matching reuse, and raw-feature coverage and
 does not emit a minute-level significance test or causal savings estimate.
+The switchback sizing is also explicitly a screening approximation: it uses
+adjacent-day variability in the all-AI exact-firmware history and cannot stand
+in for the prospective paired randomization analysis.

@@ -5,6 +5,7 @@ description = "Reproducible core PID analysis for the Verdify planner audit"
 requires-python = ">=3.12"
 dependencies = [
     "numpy>=2.2,<3",
+    "scipy>=1.15,<2",
     "scikit-learn>=1.6,<2",
 ]
 

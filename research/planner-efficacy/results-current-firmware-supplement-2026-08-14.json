@@ -345,13 +345,19 @@
     ],
     "source_bug": "The production accuracy view subtracts indoor house VPD from an outdoor Open-Meteo VPD forecast; correct outdoor-reference values are reported alongside it."
   },
-  "generated_at": "2026-08-14T17:27:49.657924+00:00",
+  "generated_at": "2026-08-14T19:02:17.761201+00:00",
   "inputs": {
     "climate": {
       "bytes": 1920564,
       "file": "climate_15m.csv",
       "rows": 3264,
       "sha256": "ddfb28f9e2c1ba9337cecbe8602cae6879c723207d52832a9faa715fa818971b"
+    },
+    "daily": {
+      "bytes": 10972,
+      "file": "daily_outcomes.csv",
+      "rows": 34,
+      "sha256": "ee720211ec7e4bf7ce29fb8671915bb5fde902fb7d166a0a302c751c13d2811b"
     },
     "effective_tunables": {
       "bytes": 1748,
@@ -390,7 +396,274 @@
       "sha256": "572f0285c70d5db3ac8b46fbc7382bb680d9adfb6838184b852b6f0d48f81c01"
     }
   },
-  "schema_version": 1,
+  "proposed_experiment_screening": {
+    "design": "30 local days; 15 adjacent two-day pairs independently randomized to blinded XY or YX, then resolved 15/15 to physical A/B by one committed secret mapping",
+    "endpoints": {
+      "mean_temp_distance_outside_corridor_f": {
+        "adjacent_day_uncentered_scale": 0.43532608025564046,
+        "distance_from_decision_boundary_for_80pct_power": 0.33869388036325127,
+        "distance_pct_of_historical_mean": 66.40911881537485,
+        "future_target_pairs": 15,
+        "historical_pairs": 16,
+        "historical_post_washout_mean": 0.5100111045063856,
+        "optimistic_stable_pair_sensitivity": {
+          "adjacent_day_uncentered_scale": 0.32997459410446117,
+          "distance_from_decision_boundary_for_80pct_power": 0.2567279581156698,
+          "distance_pct_of_historical_mean": 50.33771928635632,
+          "future_target_pairs": 15,
+          "historical_pairs": 11,
+          "selected_conservative_pair_origin": "epoch_start"
+        },
+        "pair_origin_sensitivity": {
+          "epoch_start": {
+            "all_operational_days": {
+              "adjacent_day_uncentered_scale": 0.354723948349753,
+              "distance_from_decision_boundary_for_80pct_power": 0.275983535040673,
+              "future_target_pairs": 15,
+              "historical_pairs": 17
+            },
+            "optimistic_stable_pair_sensitivity": {
+              "adjacent_day_uncentered_scale": 0.32997459410446117,
+              "distance_from_decision_boundary_for_80pct_power": 0.2567279581156698,
+              "future_target_pairs": 15,
+              "historical_pairs": 11
+            }
+          },
+          "one_day_shift": {
+            "all_operational_days": {
+              "adjacent_day_uncentered_scale": 0.43532608025564046,
+              "distance_from_decision_boundary_for_80pct_power": 0.33869388036325127,
+              "future_target_pairs": 15,
+              "historical_pairs": 16
+            },
+            "optimistic_stable_pair_sensitivity": {
+              "adjacent_day_uncentered_scale": 0.2570448891773381,
+              "distance_from_decision_boundary_for_80pct_power": 0.19998694057541827,
+              "future_target_pairs": 15,
+              "historical_pairs": 11
+            }
+          }
+        },
+        "selected_conservative_pair_origin": "one_day_shift"
+      },
+      "mean_vpd_distance_outside_corridor_kpa": {
+        "adjacent_day_uncentered_scale": 0.12198766625845635,
+        "distance_from_decision_boundary_for_80pct_power": 0.09490925978354246,
+        "distance_pct_of_historical_mean": 95.01504988174268,
+        "future_target_pairs": 15,
+        "historical_pairs": 16,
+        "historical_post_washout_mean": 0.09988865964041288,
+        "optimistic_stable_pair_sensitivity": {
+          "adjacent_day_uncentered_scale": 0.05156266646606394,
+          "distance_from_decision_boundary_for_80pct_power": 0.040116961467164494,
+          "distance_pct_of_historical_mean": 40.16167762344666,
+          "future_target_pairs": 15,
+          "historical_pairs": 11,
+          "selected_conservative_pair_origin": "one_day_shift"
+        },
+        "pair_origin_sensitivity": {
+          "epoch_start": {
+            "all_operational_days": {
+              "adjacent_day_uncentered_scale": 0.08289301931181993,
+              "distance_from_decision_boundary_for_80pct_power": 0.06449270934849405,
+              "future_target_pairs": 15,
+              "historical_pairs": 17
+            },
+            "optimistic_stable_pair_sensitivity": {
+              "adjacent_day_uncentered_scale": 0.049293904808096194,
+              "distance_from_decision_boundary_for_80pct_power": 0.03835181179107522,
+              "future_target_pairs": 15,
+              "historical_pairs": 11
+            }
+          },
+          "one_day_shift": {
+            "all_operational_days": {
+              "adjacent_day_uncentered_scale": 0.12198766625845635,
+              "distance_from_decision_boundary_for_80pct_power": 0.09490925978354246,
+              "future_target_pairs": 15,
+              "historical_pairs": 16
+            },
+            "optimistic_stable_pair_sensitivity": {
+              "adjacent_day_uncentered_scale": 0.05156266646606394,
+              "distance_from_decision_boundary_for_80pct_power": 0.040116961467164494,
+              "future_target_pairs": 15,
+              "historical_pairs": 11
+            }
+          }
+        },
+        "selected_conservative_pair_origin": "one_day_shift"
+      },
+      "nine_climate_device_minutes": {
+        "adjacent_day_uncentered_scale": 1062.9947787716267,
+        "distance_from_decision_boundary_for_80pct_power": 827.0348200057633,
+        "distance_pct_of_historical_mean": 40.88178651288871,
+        "future_target_pairs": 15,
+        "historical_pairs": 17,
+        "historical_post_washout_mean": 2022.9908977804234,
+        "optimistic_stable_pair_sensitivity": {
+          "adjacent_day_uncentered_scale": 586.0713010192919,
+          "distance_from_decision_boundary_for_80pct_power": 455.9771906962176,
+          "distance_pct_of_historical_mean": 22.539754933969537,
+          "future_target_pairs": 15,
+          "historical_pairs": 11,
+          "selected_conservative_pair_origin": "epoch_start"
+        },
+        "pair_origin_sensitivity": {
+          "epoch_start": {
+            "all_operational_days": {
+              "adjacent_day_uncentered_scale": 1062.9947787716267,
+              "distance_from_decision_boundary_for_80pct_power": 827.0348200057633,
+              "future_target_pairs": 15,
+              "historical_pairs": 17
+            },
+            "optimistic_stable_pair_sensitivity": {
+              "adjacent_day_uncentered_scale": 586.0713010192919,
+              "distance_from_decision_boundary_for_80pct_power": 455.9771906962176,
+              "future_target_pairs": 15,
+              "historical_pairs": 11
+            }
+          },
+          "one_day_shift": {
+            "all_operational_days": {
+              "adjacent_day_uncentered_scale": 832.9802969089761,
+              "distance_from_decision_boundary_for_80pct_power": 648.0781690372405,
+              "future_target_pairs": 15,
+              "historical_pairs": 16
+            },
+            "optimistic_stable_pair_sensitivity": {
+              "adjacent_day_uncentered_scale": 446.2287968896848,
+              "distance_from_decision_boundary_for_80pct_power": 347.17644911060717,
+              "future_target_pairs": 15,
+              "historical_pairs": 11
+            }
+          }
+        },
+        "selected_conservative_pair_origin": "epoch_start"
+      },
+      "six_core_device_minutes": {
+        "adjacent_day_uncentered_scale": 931.5030577472655,
+        "distance_from_decision_boundary_for_80pct_power": 724.7311831475488,
+        "distance_pct_of_historical_mean": 37.7414235653669,
+        "future_target_pairs": 15,
+        "historical_pairs": 17,
+        "historical_post_washout_mean": 1920.2539668180195,
+        "optimistic_stable_pair_sensitivity": {
+          "adjacent_day_uncentered_scale": 548.1031190377748,
+          "distance_from_decision_boundary_for_80pct_power": 426.43705637183604,
+          "distance_pct_of_historical_mean": 22.20732589233854,
+          "future_target_pairs": 15,
+          "historical_pairs": 11,
+          "selected_conservative_pair_origin": "epoch_start"
+        },
+        "pair_origin_sensitivity": {
+          "epoch_start": {
+            "all_operational_days": {
+              "adjacent_day_uncentered_scale": 931.5030577472655,
+              "distance_from_decision_boundary_for_80pct_power": 724.7311831475488,
+              "future_target_pairs": 15,
+              "historical_pairs": 17
+            },
+            "optimistic_stable_pair_sensitivity": {
+              "adjacent_day_uncentered_scale": 548.1031190377748,
+              "distance_from_decision_boundary_for_80pct_power": 426.43705637183604,
+              "future_target_pairs": 15,
+              "historical_pairs": 11
+            }
+          },
+          "one_day_shift": {
+            "all_operational_days": {
+              "adjacent_day_uncentered_scale": 783.2106890900021,
+              "distance_from_decision_boundary_for_80pct_power": 609.3562491686522,
+              "future_target_pairs": 15,
+              "historical_pairs": 16
+            },
+            "optimistic_stable_pair_sensitivity": {
+              "adjacent_day_uncentered_scale": 427.0667275865342,
+              "distance_from_decision_boundary_for_80pct_power": 332.2679106553362,
+              "future_target_pairs": 15,
+              "historical_pairs": 11
+            }
+          }
+        },
+        "selected_conservative_pair_origin": "epoch_start"
+      }
+    },
+    "expected_15_minute_bins_per_day": 88,
+    "gate_operating_characteristics": {
+      "illustrative_joint_advance_power_upper_bound": {
+        "all_operational_day_scale": 0.31536980823919625,
+        "optimistic_stable_pair_scale": 0.9367090928716526,
+        "warning": "All three gates must pass, so joint advance power cannot exceed the weakest marginal gate. Their dependence is not estimated from this short observational history."
+      },
+      "model": "Marginal noncentral-t operating characteristics using the uncentered adjacent-day planning scale. Climate scenarios assume true AI-minus-Frozen difference zero; the duty scenario applies the exploratory stale/fresh percentage to the historical nine-device mean. These are assumptions, not effect estimates.",
+      "nine_device_superiority": {
+        "decision_boundary_device_minutes": 0.0,
+        "marginal_power_at_stale_fresh_analogue": 0.5292523012421471,
+        "marginal_power_if_true_reduction_is_20pct": 0.2789288527708022,
+        "optimistic_stable_pair_sensitivity": {
+          "marginal_power_at_stale_fresh_analogue": 0.9570752465091519,
+          "marginal_power_if_true_reduction_is_20pct": 0.7010003276738334,
+          "reduction_for_80pct_power_device_minutes": 455.9771906962176,
+          "reduction_for_80pct_power_pct_of_historical_mean": 22.539754933969537
+        },
+        "reduction_for_80pct_power_device_minutes": 827.0348200057633,
+        "reduction_for_80pct_power_pct_of_historical_mean": 40.88178651288871,
+        "stale_fresh_analogue_reduction_device_minutes": 599.461664370204,
+        "stale_fresh_analogue_reduction_pct": 29.632444961957997
+      },
+      "temperature_noninferiority": {
+        "largest_true_ai_minus_frozen_for_80pct_power": 0.16130611963674873,
+        "marginal_power_if_true_ai_minus_frozen_is_zero": 0.9848667651609516,
+        "noninferiority_margin": 0.5,
+        "optimistic_stable_pair_sensitivity": {
+          "largest_true_ai_minus_frozen_for_80pct_power": 0.24327204188433021,
+          "marginal_power_if_true_ai_minus_frozen_is_zero": 0.9997418657110592
+        }
+      },
+      "vpd_noninferiority": {
+        "largest_true_ai_minus_frozen_for_80pct_power": -0.04490925978354246,
+        "marginal_power_if_true_ai_minus_frozen_is_zero": 0.31536980823919625,
+        "noninferiority_margin": 0.05,
+        "optimistic_stable_pair_sensitivity": {
+          "largest_true_ai_minus_frozen_for_80pct_power": 0.009883038532835509,
+          "marginal_power_if_true_ai_minus_frozen_is_zero": 0.9367090928716526
+        }
+      }
+    },
+    "historical_climate_bins_below_12_samples": 1,
+    "historical_climate_bins_ineligible": 1,
+    "historical_complete_days": 34,
+    "historical_pair_origins": {
+      "epoch_start": 17,
+      "one_day_shift": 16
+    },
+    "interpretation": "Thirty days can detect only large marginal effects under current reliability. A null result is inconclusive. This fixed study must not be extended based on its outcome; use a separately preregistered and newly randomized follow-up.",
+    "noncentral_t_lambda_80pct_power": 3.0132717004662926,
+    "primary_window_local": "[02:00, 24:00)",
+    "resource_evidence": {
+      "days": 34,
+      "expected_water_attribution_eligible_days_per_15_day_arm_if_arm_independent": 11.029411764705882,
+      "expected_water_meter_eligible_days_per_15_day_arm_if_arm_independent": 11.911764705882353,
+      "shared_water_meter_eligible_day_mean_gal": 277.037037037037,
+      "water_attribution_eligible_days": 25,
+      "water_meter_eligible_days": 27,
+      "whole_runtime_energy_eligible_days": 0
+    },
+    "screening_method": "Marginal screening approximation: the noncentral-t parameter lambda satisfying P(T[df=14,ncp=lambda] > t_0.975,14)=0.80, times the historical uncentered adjacent-day scale sqrt(sum(diff^2)/(n-1)) divided by sqrt(15). This scale is at least the centered sample SD; the reported endpoint value is the larger distance from the epoch-start and one-day-shifted nonoverlapping pair origins. It is not an estimate from randomized treatment contrasts. This is not a causal estimate, joint gate power, or a substitute for the prospective paired analysis.",
+    "stable_pair_sensitivity_excluded_days": [
+      "2026-07-11",
+      "2026-07-25",
+      "2026-08-05",
+      "2026-08-06",
+      "2026-08-07",
+      "2026-08-08",
+      "2026-08-09",
+      "2026-08-10",
+      "2026-08-11"
+    ],
+    "symmetric_washout_hours": 2
+  },
+  "schema_version": 2,
   "stale_policy_interruption": {
     "balance": {
       "outdoor_rh_pct": {

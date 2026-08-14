@@ -8,6 +8,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from scipy.stats import nct, t
 
 MODULE_DIR = Path(__file__).parents[1]
 sys.path.insert(0, str(MODULE_DIR))
@@ -41,6 +42,37 @@ def test_nearest_same_slot_match_applies_declared_caliper() -> None:
     assert stale.tolist() == [0]
     assert matched.tolist() == [2]
     assert distances.tolist() == pytest.approx([0.1])
+
+
+def test_paired_screening_mde_uses_uncentered_adjacent_day_scale_and_stable_filter() -> None:
+    values = np.asarray([1.0, 3.0, 4.0, 3.0, 2.0, 6.0, 9.0, 9.0])
+    pair_dates = [
+        (date(2026, 7, 11), date(2026, 7, 12)),
+        (date(2026, 7, 13), date(2026, 7, 14)),
+        (date(2026, 7, 15), date(2026, 7, 16)),
+        (date(2026, 7, 17), date(2026, 7, 18)),
+    ]
+    result = EPOCH.paired_screening_mde(values, pair_dates)
+    assert result["historical_pairs"] == 4
+    assert result["adjacent_day_uncentered_scale"] == pytest.approx(np.sqrt((4 + 1 + 16 + 0) / 3))
+    assert result["distance_from_decision_boundary_for_80pct_power"] == pytest.approx(
+        EPOCH.EXPERIMENT_MDE_NONCENTRAL_T_LAMBDA * result["adjacent_day_uncentered_scale"] / np.sqrt(15)
+    )
+    assert EPOCH.one_sided_lower_better_power(
+        result["distance_from_decision_boundary_for_80pct_power"], result["adjacent_day_uncentered_scale"]
+    ) == pytest.approx(0.80)
+    assert EPOCH.one_sided_lower_better_power(0.0, result["adjacent_day_uncentered_scale"]) == pytest.approx(0.025)
+
+    stable = EPOCH.paired_screening_mde(values, pair_dates, excluded_days={date(2026, 7, 15)})
+    assert stable["historical_pairs"] == 3
+    assert stable["adjacent_day_uncentered_scale"] == pytest.approx(np.sqrt((4 + 1 + 0) / 2))
+
+
+def test_noncentral_t_lambda_solves_declared_power_equation() -> None:
+    degrees_of_freedom = EPOCH.EXPERIMENT_TARGET_PAIRS - 1
+    critical = t.ppf(0.975, degrees_of_freedom)
+    achieved_power = nct.sf(critical, degrees_of_freedom, EPOCH.EXPERIMENT_MDE_NONCENTRAL_T_LAMBDA)
+    assert achieved_power == pytest.approx(0.80, abs=1e-12)
 
 
 def test_waypoint_summary_counts_survival_and_future_band_mismatch(tmp_path: Path) -> None:
