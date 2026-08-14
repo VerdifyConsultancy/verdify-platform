@@ -265,6 +265,26 @@ def test_materializer_keeps_wet_assist_available_for_high_forecast_vpd_pressure(
     assert [item["code"] for item in guardrails] == ["forecast_vpd_wet_assist_guard"]
 
 
+def test_materializer_emits_only_registered_tier1_params() -> None:
+    """#582: the three unregistered ``fog_stress_*`` writes were dead code.
+
+    ``materialize_climate_intent_tier1`` filters to ``TIER1_REG`` before
+    returning, so a parameter assembled outside the registry is silently
+    dropped and any guardrail reading it back is permanently dead. Assert the
+    output is exactly the sorted Tier-1 registry surface so the dead-write
+    pattern cannot return.
+    """
+
+    params = materialize_climate_intent_tier1(_valid_intent())
+    assert list(params) == sorted(TIER1_REG)
+    for name in (
+        "fog_stress_min_dew_margin_f",
+        "fog_stress_window_latest_hour",
+        "sw_fog_stress_window_extend_enabled",
+    ):
+        assert name not in params
+
+
 def test_materializer_does_not_force_wet_assist_when_dew_margin_is_unsafe() -> None:
     intent = _valid_intent(
         forecast_vpd_bias_kpa=0.0,

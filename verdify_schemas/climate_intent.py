@@ -481,7 +481,6 @@ def climate_intent_materialization_guardrails(
     annotations: list[dict[str, object]] = []
     materialized = materialized_params or {}
     wet_switch = _finite_number(materialized.get("sw_direct_wet_stress_override_enabled"))
-    fog_window = _finite_number(materialized.get("sw_fog_stress_window_extend_enabled"))
 
     if ctx["compliance_wet_required"] and (
         intent.mist_duty_limit_pct < 25.0
@@ -511,7 +510,6 @@ def climate_intent_materialization_guardrails(
         or intent.all_zone_vpd_excess_kpa > 0.3
         or intent.wet_cutoff_hour < 19.0
         or wet_switch == 0.0
-        or fog_window == 0.0
     ):
         annotations.append(
             {
@@ -610,9 +608,6 @@ def materialize_climate_intent_tier1(
             "direct_wet_stress_latest_hour": wet_cutoff_hour,
             "sw_direct_wet_stress_override_enabled": 1.0 if wet_aggression >= 0.35 else 0.0,
             "fog_escalation_kpa": fog_escalate_vpd_excess_kpa,
-            "fog_stress_min_dew_margin_f": intent.dew_margin_floor_f,
-            "fog_stress_window_latest_hour": min(wet_cutoff_hour, 22.0),
-            "sw_fog_stress_window_extend_enabled": 1.0 if wet_cutoff_hour > 17.0 and wet_aggression >= 0.35 else 0.0,
             "mister_engage_kpa": vpd_high + moisture_engage_vpd_excess_kpa,
             "mister_all_kpa": vpd_high + all_zone_vpd_excess_kpa,
             "mister_vpd_weight": 1.0 + (2.0 * wet_aggression),
