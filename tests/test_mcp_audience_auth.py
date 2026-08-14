@@ -32,6 +32,9 @@ import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 HERMES_CONFIG_PATH = REPO_ROOT / "deploy" / "k8s" / "components" / "hermes-iris" / "hermes-config.yaml"
+HERMES_EXPERIMENT_CONFIG_PATH = (
+    REPO_ROOT / "deploy" / "k8s" / "components" / "hermes-iris-experiment" / "hermes-config.yaml"
+)
 
 _MISSING_MODULE = object()
 _MCP_STUB_MODULES = ("mcp", "mcp.server", "mcp.server.fastmcp")
@@ -359,6 +362,60 @@ class TestInventoryAndDriftGuards:
         assert len(include) == len(set(include)), "duplicate entries in hermes include list"
         assert set(include) == mcp_server.audience_allowlist("iris")
         assert set(include) == mcp_server.HERMES_REQUIRED_TOOLS
+
+    def test_experiment_audience_matches_hermes_experiment_config_include_list(self, mcp_server):
+        """Drift guard (#585 tranche 2): the DARK experiment profile's client
+        include list == the server `experiment` audience, exactly.
+
+        deploy/k8s/components/hermes-iris-experiment/hermes-config.yaml is the
+        Lane F flip target; its include list must carry the qualified reads +
+        acknowledge_trigger + policy_template_propose surface and NOTHING
+        else — a treatment-revealing tool added to either side fails here
+        before it can ship.
+        """
+        configmap = yaml.safe_load(HERMES_EXPERIMENT_CONFIG_PATH.read_text())
+        hermes_config = yaml.safe_load(configmap["data"]["config.yaml"])
+        server = hermes_config["mcp_servers"]["verdify_greenhouse"]
+        include = server["tools"]["include"]
+        assert len(include) == len(set(include)), "duplicate entries in hermes experiment include list"
+        assert set(include) == mcp_server.audience_allowlist("experiment")
+        assert "policy_template_propose" in include
+        # The experiment profile must present the EXPERIMENT audience
+        # credential, not the iris one, at the same in-cluster MCP endpoint.
+        assert server["headers"]["Authorization"] == "Bearer ${VERDIFY_MCP_TOKEN_EXPERIMENT}"
+        live_configmap = yaml.safe_load(HERMES_CONFIG_PATH.read_text())
+        live_config = yaml.safe_load(live_configmap["data"]["config.yaml"])
+        assert server["url"] == live_config["mcp_servers"]["verdify_greenhouse"]["url"]
+        # Treatment-revealing reads and quarantined writes can never appear.
+        forbidden = {
+            "get_setpoints",
+            "plan_status",
+            "history",
+            "scorecard",
+            "outcome_kpi",
+            "lessons",
+            "lessons_search",
+            "knowledge_search",
+            "set_plan",
+            "set_tunable",
+            "plan_evaluate",
+            "lessons_manage",
+            "slack_ops",
+            "query",
+            "plan_run",
+        }
+        assert not set(include) & forbidden
+
+    def test_iris_planner_experiment_tools_match_server_experiment_audience(self, mcp_server):
+        """The planner-side EXPERIMENT_MODE_TOOLS tuple (prompt + frozen tool
+        manifest hash) is bound to the server audience registry."""
+        planner_path = REPO_ROOT / "ingestor" / "iris_planner.py"
+        spec = importlib.util.spec_from_file_location("iris_planner_experiment_tools_test", planner_path)
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        assert set(module.EXPERIMENT_MODE_TOOLS) == mcp_server.audience_allowlist("experiment")
+        assert tuple(sorted(module.EXPERIMENT_MODE_TOOLS)) == module.EXPERIMENT_MODE_TOOLS
 
 
 # ─── call_tool dispatch wiring ───────────────────────────────────────────

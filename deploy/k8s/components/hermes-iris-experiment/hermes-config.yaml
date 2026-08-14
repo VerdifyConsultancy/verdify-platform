@@ -1,0 +1,101 @@
+# verdify-hermes-iris-experiment-config (#585, audit §8.8) — the DARK Hermes
+# profile for the controlled planner experiment. NOT wired into any overlay:
+# the Lane F rollout flips the seeded profile from hermes-iris to this variant
+# when the experiment arms; until then this ConfigMap is repo-canonical IaC
+# only and nothing mounts it.
+#
+# Differences from components/hermes-iris/hermes-config.yaml (which stays the
+# live profile):
+#   - Authorization header presents the EXPERIMENT audience credential
+#     (${VERDIFY_MCP_TOKEN_EXPERIMENT}), so the MCP server's audience
+#     authorization layer (#585, mcp/server.py TOOL_AUDIENCES) enforces the
+#     same boundary server-side.
+#   - tools.include is EXACTLY the MCP `experiment` audience list: qualified
+#     climate/forecast/topology/crop-position reads, trigger acknowledgement,
+#     and the ONE actuation-eligible output policy_template_propose (#584).
+#     Treatment-revealing reads (get_setpoints, plan_status, history,
+#     scorecard, outcome/lesson surfaces) and ordinary writes (set_plan,
+#     set_tunable, plan_evaluate, lessons_manage) are absent on BOTH the
+#     client include list and the server audience registry; a drift test in
+#     tests/test_mcp_audience_auth.py binds this include list to
+#     TOOL_AUDIENCES so the two surfaces can never diverge.
+#   - Same MCP endpoint, model, reasoning effort, disabled toolsets, API
+#     server, and dashboard settings as the live profile — the experiment
+#     changes WHAT the planner may see/do, not how it runs.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: verdify-hermes-iris-experiment-config
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: hermes-iris-experiment
+data:
+  config.yaml: |
+    # Hermes profile config for the Verdify EXPERIMENT planner audience
+    # (#585, audit §8.8) — dark until the rollout flips profiles.
+    #
+    # Canonical source: this ConfigMap (deploy/k8s/components/hermes-iris-experiment).
+    # The live planner profile stays components/hermes-iris/hermes-config.yaml.
+
+    model:
+      # Same provider/model as the live Iris profile — the experiment prompt
+      # and tool surface change, the model does not.
+      default: "gpt-5.6-sol"
+      provider: "custom"
+      base_url: "https://api.openai.com/v1"
+
+    agent:
+      reasoning_effort: xhigh
+      # Experiment cycles are template-selection only (a handful of qualified
+      # reads + one policy_template_propose or acknowledge_trigger), so the
+      # generous live-profile turn budget still applies as a loop fence.
+      max_turns: 30
+      # Same hermes-side capability lockdown as the live profile: no memory,
+      # web, terminal, filesystem, or browser — every read/write goes through
+      # the MCP allowlist below.
+      disabled_toolsets:
+        - memory
+        - web
+        - terminal
+        - filesystem
+        - browser
+
+    mcp_servers:
+      verdify_greenhouse:
+        url: "http://verdify-mcp.verdify-prod.svc:8000/mcp"   # same in-cluster endpoint as hermes-iris
+        headers:
+          # EXPERIMENT audience credential — server-side audience authorization
+          # (mcp/server.py, #585) enforces the same tool boundary even if this
+          # include list drifted.
+          Authorization: "Bearer ${VERDIFY_MCP_TOKEN_EXPERIMENT}"
+        tools:
+          include:
+            # EXACTLY the MCP `experiment` audience (TOOL_AUDIENCES, #585):
+            # qualified reads
+            - climate
+            - forecast
+            - topology
+            - position_current
+            - crop_history
+            - crop_lifecycle
+            # trigger acknowledgement
+            - acknowledge_trigger
+            # the ONE actuation-eligible output (opaque template selection, #584)
+            - policy_template_propose
+          exclude:
+            - query  # raw-SQL escape hatch — deliberately denied in production
+          resources: false
+          prompts: false
+
+    skills:
+      guard_agent_created: true
+
+    platforms:
+      api_server:
+        enabled: true
+        extra:
+          host: "0.0.0.0"
+          port: 8642
+
+    dashboard:
+      enabled: false

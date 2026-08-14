@@ -861,7 +861,29 @@ async def planner_memory_ingest_sync(pool: asyncpg.Pool) -> None:
     - optional support_doc seeding from a local JSON file
 
     Failures are logged and skipped; this path must never block greenhouse ops.
+
+    Experiment quarantine (#585, audit §8.8): while experiment gather mode is
+    armed (VERDIFY_POLICY_VECTOR_MODE != off AND an experiment id is set),
+    evaluation/lesson-derived memory ingestion is SKIPPED with a structured
+    log — outcome/lesson material must not flow into any planner-visible
+    retrieval corpus until unblinding. Feature-off reads env only, so the
+    default path stays byte-identical.
     """
+    from verdify_schemas.experiment_config import active_experiment_id, experiment_enabled
+
+    if experiment_enabled():
+        log.info(
+            "%s",
+            json.dumps(
+                {
+                    "event": "experiment_quarantine_skip",
+                    "phase": "planner_memory_ingest",
+                    "experiment_id": active_experiment_id(),
+                },
+                sort_keys=True,
+            ),
+        )
+        return
 
     from planner_memory_ingest import (
         PlannerMemoryIngestError,

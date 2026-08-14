@@ -247,6 +247,32 @@ def note_writer_fatal(reason: str) -> None:
     writer_fatal_event.set()
 
 
+# Lane D (#585, audit §8.8): the current experiment assignment receipt cache,
+# refreshed by tasks.experiment_assignments each scheduler cycle (same pattern
+# as the esp32_push experiment policy hold). Keys when populated:
+#   assignment_id — the opaque receipt iris_planner passes to the fail-closed
+#                   experiment gather mode (it does not identify the arm)
+#   experiment_id — the owning experiment
+#   boundary      — ISO upper boundary of the assignment's valid_range
+# Empty when feature-off, the experiment is idle, or no active assignment
+# covers now() — iris_planner then FAILS CLOSED instead of gathering the
+# general context packet.
+experiment_assignment: dict[str, str] = {}
+
+
+def set_experiment_assignment_receipt(
+    assignment_id: str | None, experiment_id: str | None = None, boundary=None
+) -> None:
+    """Replace (or clear, with assignment_id=None) the cached receipt."""
+    experiment_assignment.clear()
+    if assignment_id:
+        experiment_assignment["assignment_id"] = str(assignment_id)
+        if experiment_id:
+            experiment_assignment["experiment_id"] = str(experiment_id)
+        if boundary is not None:
+            experiment_assignment["boundary"] = str(boundary)
+
+
 # Timestamp of last ESP32 connect (used for boot-window gating)
 esp32_connected_at: float = 0.0
 

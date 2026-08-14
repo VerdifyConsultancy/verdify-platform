@@ -26,6 +26,7 @@ Deviations are emitted as experiment_events rows, deduplicated over a
 """
 
 import esp32_push
+import shared
 
 from verdify_schemas.experiment_config import (
     POLICY_VECTOR_MODE_LIVE,
@@ -149,6 +150,8 @@ async def experiment_assignment_scheduler(pool: asyncpg.Pool) -> None:
         # a mode flip back to off can never strand legacy pushes rejected.
         if esp32_push.experiment_policy_hold()[0]:
             esp32_push.set_experiment_policy_hold(False)
+        if shared.experiment_assignment:
+            shared.set_experiment_assignment_receipt(None)
         return
 
     async with pool.acquire() as conn:
@@ -164,6 +167,7 @@ async def experiment_assignment_scheduler(pool: asyncpg.Pool) -> None:
                 experiment_id,
             )
             esp32_push.set_experiment_policy_hold(False)
+            shared.set_experiment_assignment_receipt(None)
             return
         if exp["status"] not in ("armed", "running"):
             _log_once(
@@ -173,6 +177,7 @@ async def experiment_assignment_scheduler(pool: asyncpg.Pool) -> None:
                 exp["status"],
             )
             esp32_push.set_experiment_policy_hold(False)
+            shared.set_experiment_assignment_receipt(None)
             return
 
         # 1. Locked schedule must exist: an armed experiment with zero
@@ -191,6 +196,7 @@ async def experiment_assignment_scheduler(pool: asyncpg.Pool) -> None:
                 detail={"status": exp["status"]},
             )
             esp32_push.set_experiment_policy_hold(False)
+            shared.set_experiment_assignment_receipt(None)
             return
 
         # 2. UTC boundary close-out.
@@ -223,12 +229,23 @@ async def experiment_assignment_scheduler(pool: asyncpg.Pool) -> None:
                     detail={"closed_this_cycle": closed},
                 )
             esp32_push.set_experiment_policy_hold(False)
+            # Lane D (#585): no active assignment => no receipt; iris_planner
+            # fails closed rather than gathering the general packet.
+            shared.set_experiment_assignment_receipt(None)
         else:
             # The hold changes device-visible behavior, so it arms ONLY in
             # live mode; shadow keeps legacy delivery byte-identical.
             esp32_push.set_experiment_policy_hold(
                 mode == POLICY_VECTOR_MODE_LIVE,
                 EXPERIMENT_OWNED_PARAMS,
+            )
+            # Lane D (#585): cache the opaque assignment receipt for the
+            # fail-closed experiment gather mode (both shadow AND live — the
+            # receipt only feeds context gathering, never the device path).
+            shared.set_experiment_assignment_receipt(
+                current["assignment_id"],
+                experiment_id,
+                current["boundary"],
             )
 
         # 4. Pre-stage the next boundary's activation intent.

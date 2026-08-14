@@ -8,6 +8,7 @@ on the prior deployed profile until the candidate passes validation. Hermes reas
 toolset, and the gathered context pack is the planner memory source of truth.
 """
 
+import hashlib
 import json
 import logging
 import os
@@ -1056,6 +1057,112 @@ _PROMPT_BUILDERS = {
 }
 
 
+# ── Experiment gather mode (#585, audit §8.8) ────────────────────
+#
+# When VERDIFY_POLICY_VECTOR_MODE != off AND VERDIFY_ACTIVE_EXPERIMENT_ID is
+# set, every planning cycle switches to the treatment-firewall path:
+#   - gather-plan-context.sh runs with --experiment-mode <experiment_id>
+#     <opaque_assignment_receipt> and must echo the mode-acknowledgement
+#     marker below. FAIL CLOSED: a script that does not acknowledge the mode
+#     (stale mounted copy) aborts the planning run — the general context
+#     packet is NEVER sent in experiment mode.
+#   - the prompt is the byte-stable template-selection request below,
+#     identical on both arms: two locked template ids + current context + the
+#     planner's own virtual prior, never physical admission state. The only
+#     actuation-eligible output is one policy_template_propose call.
+#   - evaluation/lesson phases (plan_evaluate, lessons_manage) are quarantined
+#     until unblinding: skipped with a structured log, never prompted.
+
+EXPERIMENT_MODE_ACK_MARKER = "=== EXPERIMENT CONTEXT MODE ACK v1 ==="
+
+# The MCP `experiment` audience surface (mcp/server.py TOOL_AUDIENCES); a
+# drift test binds this tuple to the server registry so the prompt, the
+# Hermes experiment profile, and the server allowlist can never diverge.
+EXPERIMENT_MODE_TOOLS: tuple[str, ...] = (
+    "acknowledge_trigger",
+    "climate",
+    "crop_history",
+    "crop_lifecycle",
+    "forecast",
+    "policy_template_propose",
+    "position_current",
+    "topology",
+)
+
+_EXPERIMENT_PROMPT_TEMPLATE = """## Planning Event: EXPERIMENT TEMPLATE SELECTION
+
+You are the greenhouse planner operating inside a controlled experiment
+(treatment firewall, audit §8.8). Your ONLY actuation-eligible output is one
+opaque policy template selection.
+
+### Rules (MANDATORY)
+1. Tools available: climate, forecast, topology, position_current,
+   crop_history, crop_lifecycle, policy_template_propose, acknowledge_trigger.
+   No other tool is available to this profile. Do NOT attempt set_plan,
+   set_tunable, get_setpoints, plan_status, history, scorecard, lessons,
+   lessons_search, knowledge_search, plan_evaluate, or lessons_manage —
+   evaluation and lesson writes are quarantined until unblinding.
+2. Select EXACTLY ONE policy_template_id from the CANDIDATE POLICY TEMPLATES
+   list in the assembled context, then call
+   `policy_template_propose(assignment_receipt=..., policy_template_id=...,
+   prediction=..., rationale=...)` using the `assignment_receipt` printed in
+   the assembled context. The receipt is opaque; it does not identify the
+   experiment arm, and nothing actuates directly from the call.
+3. Include a falsifiable prediction (expected corridor/stress behavior over
+   the selection window) and a concise rationale anchored to the as-of
+   forecast and current sensors.
+4. If the assembled context is incomplete (missing candidate templates,
+   sensors, or forecast), call
+   `acknowledge_trigger(trigger_id, reason, planner_instance)` with the audit
+   values at the bottom of this prompt instead of guessing.
+5. Base your selection ONLY on the assembled context and the allowed tools.
+   Your own previous selection appears as VIRTUAL PRIOR; physical device,
+   setpoint, and admission state are intentionally not visible and must not
+   be inferred or requested.
+
+### Assembled Context
+{context}
+"""
+
+_EXPERIMENT_PROMPT_TEMPLATE_SHA256 = hashlib.sha256(_EXPERIMENT_PROMPT_TEMPLATE.encode("utf-8")).hexdigest()
+_EXPERIMENT_TOOL_MANIFEST_SHA256 = hashlib.sha256(json.dumps(sorted(EXPERIMENT_MODE_TOOLS)).encode("utf-8")).hexdigest()
+
+
+def _experiment_assignment_receipt() -> str | None:
+    """The opaque receipt for the current assignment, from the ingestor-shared
+    cache the experiment_assignments worker (#584 Lane C) refreshes each cycle.
+    None (=> fail closed) until the worker has confirmed an active assignment.
+    """
+    try:
+        import shared  # same-process ingestor shared state
+
+        value = shared.experiment_assignment.get("assignment_id")
+    except Exception:
+        return None
+    return str(value) if value else None
+
+
+def _experiment_gather_mode() -> tuple[str, str | None] | None:
+    """(experiment_id, receipt|None) when experiment gather mode is armed.
+
+    Armed iff VERDIFY_POLICY_VECTOR_MODE != off AND a valid experiment id is
+    configured — the same env contract as the Lane C workers, so feature-off
+    keeps this module byte-identical to pre-experiment behavior.
+    """
+    from verdify_schemas.experiment_config import (
+        POLICY_VECTOR_MODE_OFF,
+        active_experiment_id,
+        policy_vector_mode,
+    )
+
+    if policy_vector_mode() == POLICY_VECTOR_MODE_OFF:
+        return None
+    experiment_id = active_experiment_id()
+    if not experiment_id:
+        return None
+    return experiment_id, _experiment_assignment_receipt()
+
+
 # ── Context gathering ────────────────────────────────────────────
 
 
@@ -1177,17 +1284,59 @@ def gather_context() -> str:
     this and either skip the dispatch or mark the resulting
     plan_delivery_log row as delivery_failed — DO NOT pass the sentinel to
     send_to_iris (it would otherwise land in the prompt and confuse Iris).
+
+    Experiment gather mode (#585, audit §8.8) is FAIL CLOSED: with the mode
+    armed, a missing assignment receipt, a nonzero exit, or a gather script
+    that does not echo EXPERIMENT_MODE_ACK_MARKER aborts the planning run —
+    the general context packet is never returned in experiment mode.
     """
+    argv = ["/bin/bash", GATHER_SCRIPT]
+    env = None
+    experiment_mode = _experiment_gather_mode()
+    if experiment_mode is not None:
+        experiment_id, receipt = experiment_mode
+        if not receipt:
+            log.error(
+                "experiment gather mode armed (experiment %s) but no assignment receipt is cached — failing closed",
+                experiment_id,
+            )
+            _record_plan_context_failure(
+                "experiment_mode_no_receipt",
+                "assignments worker has not cached an active assignment receipt",
+                None,
+            )
+            return CONTEXT_GATHER_FAILED_SENTINEL
+        argv += ["--experiment-mode", experiment_id, receipt]
+        env = {
+            **os.environ,
+            "VERDIFY_EXPERIMENT_PROMPT_SHA256": _EXPERIMENT_PROMPT_TEMPLATE_SHA256,
+            "VERDIFY_EXPERIMENT_TOOL_MANIFEST_SHA256": _EXPERIMENT_TOOL_MANIFEST_SHA256,
+        }
     try:
         result = subprocess.run(
-            ["/bin/bash", GATHER_SCRIPT],
+            argv,
             capture_output=True,
             text=True,
             timeout=CONTEXT_GATHER_TIMEOUT,
+            env=env,
         )
         if result.returncode != 0:
             log.error("gather-plan-context.sh failed: %s", result.stderr[:200])
             _record_plan_context_failure("nonzero_exit", result.stderr, result.returncode)
+            return CONTEXT_GATHER_FAILED_SENTINEL
+        if experiment_mode is not None and EXPERIMENT_MODE_ACK_MARKER not in result.stdout:
+            # Fail CLOSED: the mounted script did not acknowledge experiment
+            # mode, so its stdout is (or may be) the general context packet.
+            # Abort the planning run rather than sending it.
+            log.error(
+                "experiment gather mode was NOT acknowledged by %s — aborting planning run (fail closed)",
+                GATHER_SCRIPT,
+            )
+            _record_plan_context_failure(
+                "experiment_mode_not_acknowledged",
+                "gather script did not emit the experiment-mode ack marker; general packet suppressed",
+                result.returncode,
+            )
             return CONTEXT_GATHER_FAILED_SENTINEL
         _resolve_plan_context_failures()
         return result.stdout
@@ -1284,28 +1433,62 @@ def send_to_iris(
         )
         return result
 
-    builder = _PROMPT_BUILDERS.get(event_type)
-    if not builder:
-        log.error("Unknown event type: %s", event_type)
-        result["gateway_body"] = f"unknown event_type: {event_type}"
-        result["status"] = "delivery_failed"
-        return result
+    experiment_mode = _experiment_gather_mode()
+    if experiment_mode is not None:
+        # Treatment firewall (#585, audit §8.8): every event type collapses to
+        # the ONE byte-stable template-selection prompt, identical on both
+        # arms. plan_evaluate / lessons_manage phases are quarantined until
+        # unblinding — skipped with a structured log, never prompted.
+        log.info(
+            "%s",
+            json.dumps(
+                {
+                    "event": "experiment_quarantine_skip",
+                    "phases": ["plan_evaluate", "lessons_manage"],
+                    "event_type": event_type,
+                    "experiment_id": experiment_mode[0],
+                    "trigger_id": trigger_id,
+                },
+                sort_keys=True,
+            ),
+        )
+        message = _EXPERIMENT_PROMPT_TEMPLATE.format(context=context)
+    else:
+        builder = _PROMPT_BUILDERS.get(event_type)
+        if not builder:
+            log.error("Unknown event type: %s", event_type)
+            result["gateway_body"] = f"unknown event_type: {event_type}"
+            result["status"] = "delivery_failed"
+            return result
 
-    message = builder(context, label, instance)
+        message = builder(context, label, instance)
 
-    audit_banner = (
-        "\n\n---\n"
-        f"**Audit headers** — pass these to `set_plan`, `set_tunable`, or\n"
-        f"`acknowledge_trigger` so the\n"
-        f"plan-journal and setpoint-changes rows record which trigger and which\n"
-        f"planner instance produced them.\n\n"
-        f"- `trigger_id={trigger_id}`\n"
-        f"- `planner_instance={instance!r}`\n"
-        f"---\n\n"
-    )
+    if experiment_mode is not None:
+        # Experiment audience: acknowledge_trigger is the only audit-header
+        # consumer (set_plan/set_tunable are denied to this profile). Same
+        # banner bytes on both arms; only the per-trigger id varies.
+        audit_banner = (
+            "\n\n---\n"
+            f"**Audit headers** — pass these to `acknowledge_trigger` if you\n"
+            f"must record a no-selection outcome.\n\n"
+            f"- `trigger_id={trigger_id}`\n"
+            f"- `planner_instance={instance!r}`\n"
+            f"---\n\n"
+        )
+    else:
+        audit_banner = (
+            "\n\n---\n"
+            f"**Audit headers** — pass these to `set_plan`, `set_tunable`, or\n"
+            f"`acknowledge_trigger` so the\n"
+            f"plan-journal and setpoint-changes rows record which trigger and which\n"
+            f"planner instance produced them.\n\n"
+            f"- `trigger_id={trigger_id}`\n"
+            f"- `planner_instance={instance!r}`\n"
+            f"---\n\n"
+        )
     message = message + audit_banner
 
-    if not PLANNER_PLAYBOOK_PATH.exists():
+    if experiment_mode is None and not PLANNER_PLAYBOOK_PATH.exists():
         log.critical("Sending planning event with missing playbook: %s", PLANNER_PLAYBOOK_PATH)
         message = (
             "## ⚠ DEGRADED MODE — Planner playbook missing\n\n"
