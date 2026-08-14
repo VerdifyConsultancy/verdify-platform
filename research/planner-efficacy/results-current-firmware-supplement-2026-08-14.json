@@ -1,0 +1,702 @@
+{
+  "effective_tunable_posture": [
+    {
+      "compiled_default": 1.0,
+      "max_value": 2.069999933242798,
+      "mean_value": 0.7859856350172927,
+      "min_value": 0.0,
+      "parameter": "cool_stage2_over_high_f",
+      "pct_above_default": 42.320043373092,
+      "pct_at_default": 0.0041704896154808576,
+      "pct_below_default": 57.67578613729252,
+      "samples": 47956.0
+    },
+    {
+      "compiled_default": 0.4,
+      "max_value": 0.5,
+      "mean_value": 0.2607800926480575,
+      "min_value": 0.100000001490116,
+      "parameter": "fog_escalation_kpa",
+      "pct_above_default": 23.663358078238385,
+      "pct_at_default": 0.9404454082909334,
+      "pct_below_default": 75.39619651347068,
+      "samples": 47956.0
+    },
+    {
+      "compiled_default": 60.0,
+      "max_value": 144.0,
+      "mean_value": 75.03134122946034,
+      "min_value": 30.0,
+      "parameter": "min_fog_off_s",
+      "pct_above_default": 34.852781716573524,
+      "pct_at_default": 34.527483526566016,
+      "pct_below_default": 30.619734756860456,
+      "samples": 47956.0
+    },
+    {
+      "compiled_default": 60.0,
+      "max_value": 75.0,
+      "mean_value": 62.25112603219618,
+      "min_value": 32.0,
+      "parameter": "min_fog_on_s",
+      "pct_above_default": 61.500125114688466,
+      "pct_at_default": 0.0041704896154808576,
+      "pct_below_default": 38.49570439569605,
+      "samples": 47956.0
+    },
+    {
+      "compiled_default": 300.0,
+      "max_value": 300.0,
+      "mean_value": 87.34074985403286,
+      "min_value": 60.0,
+      "parameter": "mister_all_delay_s",
+      "pct_above_default": 0.0,
+      "pct_at_default": 0.0041704896154808576,
+      "pct_below_default": 99.99582951038452,
+      "samples": 47956.0
+    },
+    {
+      "compiled_default": 1.9,
+      "max_value": 1.899999976158142,
+      "mean_value": 1.359998449291675,
+      "min_value": 1.0,
+      "parameter": "mister_all_kpa",
+      "pct_above_default": 0.0,
+      "pct_at_default": 0.006255734423221286,
+      "pct_below_default": 99.99374426557678,
+      "samples": 47956.0
+    },
+    {
+      "compiled_default": 1.6,
+      "max_value": 1.6200000047683716,
+      "mean_value": 1.185174917393455,
+      "min_value": 0.7900000214576721,
+      "parameter": "mister_engage_kpa",
+      "pct_above_default": 0.03544916173158729,
+      "pct_at_default": 0.006255734423221286,
+      "pct_below_default": 99.95829510384519,
+      "samples": 47956.0
+    },
+    {
+      "compiled_default": 45.0,
+      "max_value": 60.0,
+      "mean_value": 37.61612728334306,
+      "min_value": 15.0,
+      "parameter": "mister_pulse_gap_s",
+      "pct_above_default": 29.6626073901076,
+      "pct_at_default": 0.4003670030861623,
+      "pct_below_default": 69.93702560680624,
+      "samples": 47956.0
+    },
+    {
+      "compiled_default": 60.0,
+      "max_value": 90.0,
+      "mean_value": 61.16210693135374,
+      "min_value": 30.0,
+      "parameter": "mister_pulse_on_s",
+      "pct_above_default": 50.696471765785304,
+      "pct_at_default": 0.006255734423221286,
+      "pct_below_default": 49.297272499791475,
+      "samples": 47956.0
+    },
+    {
+      "compiled_default": 300.0,
+      "max_value": 300.0,
+      "mean_value": 222.36112269580448,
+      "min_value": 100.0,
+      "parameter": "mister_water_budget_gal",
+      "pct_above_default": 0.0,
+      "pct_at_default": 42.538994077904746,
+      "pct_below_default": 57.461005922095254,
+      "samples": 47956.0
+    },
+    {
+      "compiled_default": 0.0,
+      "max_value": 0.0,
+      "mean_value": 0.0,
+      "min_value": 0.0,
+      "parameter": "night_vpd_bias_kpa",
+      "pct_above_default": 0.0,
+      "pct_at_default": 100.0,
+      "pct_below_default": 0.0,
+      "samples": 47956.0
+    },
+    {
+      "compiled_default": 0.0,
+      "max_value": 1.0,
+      "mean_value": 0.5825548419384435,
+      "min_value": 0.0,
+      "parameter": "sw_cool_all_fans_at_high_enabled",
+      "pct_above_default": 58.25548419384436,
+      "pct_at_default": 41.74451580615564,
+      "pct_below_default": 0.0,
+      "samples": 47956.0
+    }
+  ],
+  "forecast_responsiveness": {
+    "correlations": {
+      "all_fans_enabled": {
+        "forecast_solar_max_w_m2": {
+          "partial_pearson_controlling_current_state_and_local_hour": 0.034153522584872795,
+          "pearson": 0.1408313822543429
+        },
+        "forecast_temp_max_f": {
+          "partial_pearson_controlling_current_state_and_local_hour": 0.1746671256141607,
+          "pearson": 0.19950887755287575
+        },
+        "forecast_vpd_max_kpa": {
+          "partial_pearson_controlling_current_state_and_local_hour": 0.1669077725179855,
+          "pearson": 0.22170685411115326
+        }
+      },
+      "cool_stage2_over_high_f": {
+        "forecast_solar_max_w_m2": {
+          "partial_pearson_controlling_current_state_and_local_hour": -0.35840251951993923,
+          "pearson": -0.39560894123638246
+        },
+        "forecast_temp_max_f": {
+          "partial_pearson_controlling_current_state_and_local_hour": -0.4451590372186697,
+          "pearson": -0.4815378500128562
+        },
+        "forecast_vpd_max_kpa": {
+          "partial_pearson_controlling_current_state_and_local_hour": -0.48033270993707855,
+          "pearson": -0.5397428429842116
+        }
+      },
+      "fog_escalation_kpa": {
+        "forecast_solar_max_w_m2": {
+          "partial_pearson_controlling_current_state_and_local_hour": -0.06699102630810855,
+          "pearson": -0.22967335901841263
+        },
+        "forecast_temp_max_f": {
+          "partial_pearson_controlling_current_state_and_local_hour": -0.2358129303185344,
+          "pearson": -0.4372615141946842
+        },
+        "forecast_vpd_max_kpa": {
+          "partial_pearson_controlling_current_state_and_local_hour": -0.2984139653347682,
+          "pearson": -0.5199539611093765
+        }
+      },
+      "min_fog_on_s": {
+        "forecast_solar_max_w_m2": {
+          "partial_pearson_controlling_current_state_and_local_hour": 0.19843358151924728,
+          "pearson": 0.27490671438063674
+        },
+        "forecast_temp_max_f": {
+          "partial_pearson_controlling_current_state_and_local_hour": 0.2772893331213849,
+          "pearson": 0.4254491317538627
+        },
+        "forecast_vpd_max_kpa": {
+          "partial_pearson_controlling_current_state_and_local_hour": 0.35090247582095563,
+          "pearson": 0.5114722540102177
+        }
+      },
+      "mister_all_delay_s": {
+        "forecast_solar_max_w_m2": {
+          "partial_pearson_controlling_current_state_and_local_hour": -0.09714964447480068,
+          "pearson": -0.19526547082853873
+        },
+        "forecast_temp_max_f": {
+          "partial_pearson_controlling_current_state_and_local_hour": -0.12292015934265534,
+          "pearson": -0.3248150958427544
+        },
+        "forecast_vpd_max_kpa": {
+          "partial_pearson_controlling_current_state_and_local_hour": -0.18924400787337095,
+          "pearson": -0.41062868220235144
+        }
+      },
+      "mister_all_kpa": {
+        "forecast_solar_max_w_m2": {
+          "partial_pearson_controlling_current_state_and_local_hour": 0.5110923636853288,
+          "pearson": 0.35607533279624903
+        },
+        "forecast_temp_max_f": {
+          "partial_pearson_controlling_current_state_and_local_hour": 0.1767319752688689,
+          "pearson": 0.07352649349377297
+        },
+        "forecast_vpd_max_kpa": {
+          "partial_pearson_controlling_current_state_and_local_hour": 0.16066922950331364,
+          "pearson": 0.021408158513715782
+        }
+      },
+      "mister_engage_kpa": {
+        "forecast_solar_max_w_m2": {
+          "partial_pearson_controlling_current_state_and_local_hour": 0.5034746580948579,
+          "pearson": 0.35204387374699
+        },
+        "forecast_temp_max_f": {
+          "partial_pearson_controlling_current_state_and_local_hour": 0.19462170794636205,
+          "pearson": 0.09340127262674956
+        },
+        "forecast_vpd_max_kpa": {
+          "partial_pearson_controlling_current_state_and_local_hour": 0.17764832695194077,
+          "pearson": 0.03994736520844745
+        }
+      },
+      "mister_pulse_gap_s": {
+        "forecast_solar_max_w_m2": {
+          "partial_pearson_controlling_current_state_and_local_hour": -0.1864518976827212,
+          "pearson": -0.31878797532465375
+        },
+        "forecast_temp_max_f": {
+          "partial_pearson_controlling_current_state_and_local_hour": -0.40339328953677994,
+          "pearson": -0.5233075788546658
+        },
+        "forecast_vpd_max_kpa": {
+          "partial_pearson_controlling_current_state_and_local_hour": -0.4457871958038434,
+          "pearson": -0.5962823802173021
+        }
+      },
+      "mister_pulse_on_s": {
+        "forecast_solar_max_w_m2": {
+          "partial_pearson_controlling_current_state_and_local_hour": 0.18326577558019852,
+          "pearson": 0.31618291952029315
+        },
+        "forecast_temp_max_f": {
+          "partial_pearson_controlling_current_state_and_local_hour": 0.4652858188466729,
+          "pearson": 0.5399936097926189
+        },
+        "forecast_vpd_max_kpa": {
+          "partial_pearson_controlling_current_state_and_local_hour": 0.492704963645978,
+          "pearson": 0.6036126928604713
+        }
+      },
+      "mister_water_budget_gal": {
+        "forecast_solar_max_w_m2": {
+          "partial_pearson_controlling_current_state_and_local_hour": 0.5891838972026513,
+          "pearson": 0.5617492613465191
+        },
+        "forecast_temp_max_f": {
+          "partial_pearson_controlling_current_state_and_local_hour": 0.5043965018776212,
+          "pearson": 0.6129873176991151
+        },
+        "forecast_vpd_max_kpa": {
+          "partial_pearson_controlling_current_state_and_local_hour": 0.5730522529230541,
+          "pearson": 0.6829768170527712
+        }
+      },
+      "relay_churn_penalty": {
+        "forecast_solar_max_w_m2": {
+          "partial_pearson_controlling_current_state_and_local_hour": -0.5502190583221677,
+          "pearson": -0.38697502305263254
+        },
+        "forecast_temp_max_f": {
+          "partial_pearson_controlling_current_state_and_local_hour": -0.5523014831830709,
+          "pearson": -0.4993932436265552
+        },
+        "forecast_vpd_max_kpa": {
+          "partial_pearson_controlling_current_state_and_local_hour": -0.583120783052412,
+          "pearson": -0.535186767265447
+        }
+      },
+      "resource_sensitivity": {
+        "forecast_solar_max_w_m2": {
+          "partial_pearson_controlling_current_state_and_local_hour": -0.3034459079110381,
+          "pearson": -0.32830917476221955
+        },
+        "forecast_temp_max_f": {
+          "partial_pearson_controlling_current_state_and_local_hour": -0.5521599151954214,
+          "pearson": -0.5639762004227418
+        },
+        "forecast_vpd_max_kpa": {
+          "partial_pearson_controlling_current_state_and_local_hour": -0.580922459258323,
+          "pearson": -0.6070789014087822
+        }
+      }
+    },
+    "forecast_vintages_as_of_plan_creation": true,
+    "interpretation": "Descriptive mechanism evidence: planned posture varies with the as-of 24-hour forecast, including after linear adjustment for current indoor/outdoor state, solar, and local hour. It is not an outcome-benefit or causal estimate.",
+    "plans_with_at_least_20_as_of_forecast_hours": 70
+  },
+  "forecast_vpd_calibration": {
+    "rows": [
+      {
+        "correct_outdoor_bias_kpa": 0.5386356396878517,
+        "correct_outdoor_mae_kpa": 0.6762533066513964,
+        "lead_bucket": "00-06h",
+        "samples": 9999.0,
+        "wrong_indoor_bias_kpa": 1.4525356651711994,
+        "wrong_indoor_mae_kpa": 1.5724871899921542
+      },
+      {
+        "correct_outdoor_bias_kpa": 0.6561477503581445,
+        "correct_outdoor_mae_kpa": 0.7655564132719119,
+        "lead_bucket": "06-24h",
+        "samples": 29781.0,
+        "wrong_indoor_bias_kpa": 1.6276054495784014,
+        "wrong_indoor_mae_kpa": 1.7054058964728833
+      },
+      {
+        "correct_outdoor_bias_kpa": 0.6664840444717871,
+        "correct_outdoor_mae_kpa": 0.8165154305155173,
+        "lead_bucket": "24-48h",
+        "samples": 39204.0,
+        "wrong_indoor_bias_kpa": 1.690320759935013,
+        "wrong_indoor_mae_kpa": 1.7426294453363784
+      },
+      {
+        "correct_outdoor_bias_kpa": 0.5957601806471827,
+        "correct_outdoor_mae_kpa": 1.054843346791924,
+        "lead_bucket": "48h+",
+        "samples": 246733.0,
+        "wrong_indoor_bias_kpa": 1.4177584911404695,
+        "wrong_indoor_mae_kpa": 1.5698134043611427
+      }
+    ],
+    "source_bug": "The production accuracy view subtracts indoor house VPD from an outdoor Open-Meteo VPD forecast; correct outdoor-reference values are reported alongside it."
+  },
+  "generated_at": "2026-08-14T17:27:49.657924+00:00",
+  "inputs": {
+    "climate": {
+      "bytes": 1920564,
+      "file": "climate_15m.csv",
+      "rows": 3264,
+      "sha256": "ddfb28f9e2c1ba9337cecbe8602cae6879c723207d52832a9faa715fa818971b"
+    },
+    "effective_tunables": {
+      "bytes": 1748,
+      "file": "effective_tunables.csv",
+      "rows": 12,
+      "sha256": "911b5a723586e0d94783d4b13615e7f12cfcb1cb398e0a04dacb123d39c680e1"
+    },
+    "equipment": {
+      "bytes": 664157,
+      "file": "equipment_transitions.csv",
+      "rows": 16507,
+      "sha256": "45927b6d2fe89bf3a7dee389ed354cdcecf2618fd11df074dc67eb158d30bab0"
+    },
+    "forecast_response": {
+      "bytes": 24701,
+      "file": "forecast_response.csv",
+      "rows": 70,
+      "sha256": "41fb0ef36c03e2fc2589b981ea830e063aab1ddc4c0d1fe7df7a30f5275c284c"
+    },
+    "forecast_vpd_accuracy": {
+      "bytes": 464,
+      "file": "forecast_vpd_accuracy.csv",
+      "rows": 4,
+      "sha256": "ff8fef37cc52767e12db497d7951ad9cac4adfa8bb3aeed414099f308a1170a7"
+    },
+    "trigger_outcomes": {
+      "bytes": 282,
+      "file": "trigger_outcomes.csv",
+      "rows": 7,
+      "sha256": "5f7b10af36e54cc9fe6a0cf8608b3cdda5679871cf0804b17d1f220fa9993173"
+    },
+    "waypoints": {
+      "bytes": 1396703,
+      "file": "waypoints.csv",
+      "rows": 703,
+      "sha256": "572f0285c70d5db3ac8b46fbc7382bb680d9adfb6838184b852b6f0d48f81c01"
+    }
+  },
+  "schema_version": 1,
+  "stale_policy_interruption": {
+    "balance": {
+      "outdoor_rh_pct": {
+        "control_pool_mean": 45.74534176626131,
+        "control_pool_sample_sd": 17.163628171041218,
+        "post_match_smd": -0.07304945176293523
+      },
+      "outdoor_temp_f": {
+        "control_pool_mean": 79.00372056728148,
+        "control_pool_sample_sd": 10.092611306338375,
+        "post_match_smd": -0.10066679888799794
+      },
+      "solar_w_m2": {
+        "control_pool_mean": 286.4958064870133,
+        "control_pool_sample_sd": 365.1405677426014,
+        "post_match_smd": -0.03788425209082665
+      },
+      "wind_mph": {
+        "control_pool_mean": 1.9198008010792547,
+        "control_pool_sample_sd": 1.159131492961654,
+        "post_match_smd": -0.004001474651267415
+      }
+    },
+    "caliper_max_abs_control_sd": 0.35,
+    "candidate_control_bins": 2496,
+    "candidate_stale_bins": 384,
+    "causal_status": "hypothesis-generating only; not randomized and not an AI-versus-Frozen-FSM estimate",
+    "contrasts": {
+      "nine_climate_device_minutes_per_bin": {
+        "daily_stale_minus_matched_fresh": {
+          "2026-08-06": 7.037090226724035,
+          "2026-08-07": 12.137263191187824,
+          "2026-08-08": 12.93372481682944,
+          "2026-08-09": -4.210965612729394
+        },
+        "matched_fresh_mean": 23.942663095672497,
+        "matched_fresh_pct_below_stale": 29.632444961957997,
+        "stale_mean": 34.02514565516544,
+        "stale_minus_matched_fresh": 10.082482559492941,
+        "stale_pct_above_matched_fresh": 42.11094864094418
+      },
+      "six_core_device_minutes_per_bin": {
+        "daily_stale_minus_matched_fresh": {
+          "2026-08-06": 6.943874559941746,
+          "2026-08-07": 12.341789690874243,
+          "2026-08-08": 9.05261244963086,
+          "2026-08-09": -5.133026796181997
+        },
+        "matched_fresh_mean": 23.079942359078316,
+        "matched_fresh_pct_below_stale": 26.430486756404154,
+        "stale_mean": 31.37161215496747,
+        "stale_minus_matched_fresh": 8.291669795889153,
+        "stale_pct_above_matched_fresh": 35.92586873436315
+      },
+      "temp_distance_outside_corridor_f": {
+        "daily_stale_minus_matched_fresh": {
+          "2026-08-06": 0.21877513702314286,
+          "2026-08-07": 0.9999010846001263,
+          "2026-08-08": -0.2389290682768928,
+          "2026-08-09": -0.6344074410018266
+        },
+        "matched_fresh_mean": 0.32689541826675483,
+        "matched_fresh_pct_below_stale": 26.421483401680135,
+        "stale_mean": 0.4442810665120413,
+        "stale_minus_matched_fresh": 0.11738564824528647,
+        "stale_pct_above_matched_fresh": 35.909236314073034
+      },
+      "vpd_distance_outside_corridor_kpa": {
+        "daily_stale_minus_matched_fresh": {
+          "2026-08-06": 0.3875660738175534,
+          "2026-08-07": 0.7723466070826767,
+          "2026-08-08": 0.08472578225155795,
+          "2026-08-09": 0.06444043957293477
+        },
+        "matched_fresh_mean": 0.050515506172246816,
+        "matched_fresh_pct_below_stale": 85.90591280653743,
+        "stale_mean": 0.35841630237450245,
+        "stale_minus_matched_fresh": 0.30790079620225563,
+        "stale_pct_above_matched_fresh": 609.5173928424697
+      },
+      "wet_device_minutes_per_bin": {
+        "daily_stale_minus_matched_fresh": {
+          "2026-08-06": -1.0983269756748562,
+          "2026-08-07": -1.584899192606961,
+          "2026-08-08": 3.8958125106872084,
+          "2026-08-09": -0.9823458758989971
+        },
+        "matched_fresh_mean": 3.7674010766022517,
+        "matched_fresh_pct_below_stale": 22.105646459509405,
+        "stale_mean": 4.836552208683397,
+        "stale_minus_matched_fresh": 1.0691511320811453,
+        "stale_pct_above_matched_fresh": 28.379010101186058
+      }
+    },
+    "control_window_sensitivity": {
+      "forecast_archive_from_2026_07_15": {
+        "contrasts": {
+          "nine_climate_device_minutes_per_bin": {
+            "matched_fresh_mean": 28.12269206384546,
+            "matched_fresh_pct_below_stale": 23.125872928828088,
+            "stale_mean": 36.58277906402605,
+            "stale_minus_matched_fresh": 8.46008700018059,
+            "stale_pct_above_matched_fresh": 30.08277792529286
+          },
+          "six_core_device_minutes_per_bin": {
+            "matched_fresh_mean": 26.978420345369543,
+            "matched_fresh_pct_below_stale": 20.595653657829594,
+            "stale_mean": 33.9759995367429,
+            "stale_minus_matched_fresh": 6.9975791913733545,
+            "stale_pct_above_matched_fresh": 25.93769057562478
+          },
+          "temp_distance_outside_corridor_f": {
+            "matched_fresh_mean": 0.38792543157001735,
+            "matched_fresh_pct_below_stale": 32.60880232287853,
+            "stale_mean": 0.5756321966981655,
+            "stale_minus_matched_fresh": 0.1877067651281481,
+            "stale_pct_above_matched_fresh": 48.38733164991493
+          },
+          "vpd_distance_outside_corridor_kpa": {
+            "matched_fresh_mean": 0.04182807642769238,
+            "matched_fresh_pct_below_stale": 89.72824816314358,
+            "stale_mean": 0.4072146318567357,
+            "stale_minus_matched_fresh": 0.3653865554290433,
+            "stale_pct_above_matched_fresh": 873.5437692447607
+          },
+          "wet_device_minutes_per_bin": {
+            "matched_fresh_mean": 4.637101687579395,
+            "matched_fresh_pct_below_stale": 9.38630282688978,
+            "stale_mean": 5.117440113629381,
+            "stale_minus_matched_fresh": 0.4803384260499861,
+            "stale_pct_above_matched_fresh": 10.358591603384198
+          }
+        },
+        "control_start": "2026-07-15",
+        "retained_pairs": 73
+      },
+      "post_service_roll_from_2026_07_12": {
+        "contrasts": {
+          "nine_climate_device_minutes_per_bin": {
+            "matched_fresh_mean": 25.790089392220533,
+            "matched_fresh_pct_below_stale": 31.004684423312916,
+            "stale_mean": 37.37947884817673,
+            "stale_minus_matched_fresh": 11.589389455956198,
+            "stale_pct_above_matched_fresh": 44.93737605830899
+          },
+          "six_core_device_minutes_per_bin": {
+            "matched_fresh_mean": 24.7653138237235,
+            "matched_fresh_pct_below_stale": 27.86695897920653,
+            "stale_mean": 34.332829273875355,
+            "stale_minus_matched_fresh": 9.567515450151856,
+            "stale_pct_above_matched_fresh": 38.63272445587514
+          },
+          "temp_distance_outside_corridor_f": {
+            "matched_fresh_mean": 0.36833557579495213,
+            "matched_fresh_pct_below_stale": 27.791565091162653,
+            "stale_mean": 0.5101004837730845,
+            "stale_minus_matched_fresh": 0.14176490797813235,
+            "stale_pct_above_matched_fresh": 38.48797599096187
+          },
+          "vpd_distance_outside_corridor_kpa": {
+            "matched_fresh_mean": 0.04533088680867075,
+            "matched_fresh_pct_below_stale": 88.8276224178733,
+            "stale_mean": 0.4057407340152017,
+            "stale_minus_matched_fresh": 0.36040984720653096,
+            "stale_pct_above_matched_fresh": 795.0646293943513
+          },
+          "wet_device_minutes_per_bin": {
+            "matched_fresh_mean": 4.321499755696505,
+            "matched_fresh_pct_below_stale": 21.474524031081536,
+            "stale_mean": 5.503309215734035,
+            "stale_minus_matched_fresh": 1.1818094600375302,
+            "stale_pct_above_matched_fresh": 27.34720645256766
+          }
+        },
+        "control_start": "2026-07-12",
+        "retained_pairs": 81
+      }
+    },
+    "excluded_transition_days": [
+      "2026-07-25",
+      "2026-08-05",
+      "2026-08-10",
+      "2026-08-11"
+    ],
+    "inference_warning": "Only four sequential stale-policy days contribute. No minute-level p-value or causal savings claim is valid; weather support retains only 24.2% of stale bins and policy carryover is unresolved.",
+    "label": "fresh adaptation versus stale last-confirmed policy during a shared delivery interruption",
+    "match_distance": {
+      "max": 0.5578053502587452,
+      "median": 0.3420694758621025,
+      "p95": 0.4956028412044817
+    },
+    "maximum_control_reuse": 2,
+    "retained_by_stale_day": {
+      "2026-08-06": 28,
+      "2026-08-07": 18,
+      "2026-08-08": 42,
+      "2026-08-09": 5
+    },
+    "retained_hours": 23.25,
+    "retained_pairs": 93,
+    "retention_pct": 24.21875,
+    "selected_weather_features_all_raw_measured": true,
+    "stale_days": [
+      "2026-08-06",
+      "2026-08-07",
+      "2026-08-08",
+      "2026-08-09"
+    ],
+    "unique_control_bins": 85
+  },
+  "study": {
+    "complete_denver_days": 34,
+    "firmware_epoch_start": "2026-07-10T21:03:12.991915+00:00",
+    "firmware_version": "2026.7.10.1500.09ee886",
+    "outcome_end_exclusive": "2026-08-14T06:00:00+00:00"
+  },
+  "trigger_outcomes": [
+    {
+      "expected_action": "any",
+      "status": "acked",
+      "terminal_action": "acknowledge_trigger",
+      "triggers": 106.0
+    },
+    {
+      "expected_action": "any",
+      "status": "action_completed",
+      "terminal_action": "set_tunable",
+      "triggers": 27.0
+    },
+    {
+      "expected_action": "any",
+      "status": "delivery_failed",
+      "terminal_action": "delivery_failed",
+      "triggers": 46.0
+    },
+    {
+      "expected_action": "any",
+      "status": "missed",
+      "terminal_action": "timeout",
+      "triggers": 3.0
+    },
+    {
+      "expected_action": "set_plan",
+      "status": "delivery_failed",
+      "terminal_action": "delivery_failed",
+      "triggers": 21.0
+    },
+    {
+      "expected_action": "set_plan",
+      "status": "missed",
+      "terminal_action": "timeout",
+      "triggers": 1.0
+    },
+    {
+      "expected_action": "set_plan",
+      "status": "plan_written",
+      "terminal_action": "set_plan",
+      "triggers": 84.0
+    }
+  ],
+  "waypoint_survival_and_semantics": {
+    "all_waypoint_band_materialization_mismatch_kpa": {
+      "max_abs": 0.5508091867786556,
+      "mean_abs": 0.06552279690010639,
+      "over_0_05_kpa": 289,
+      "p90_abs": 0.08582255040523457,
+      "waypoints": 703
+    },
+    "already_due_at_creation": 84,
+    "due_before_outcome_cutoff": {
+      "already_due_at_creation": 84,
+      "future_scheduled_while_plan_governed": 156,
+      "future_superseded_before_scheduled": 457,
+      "future_superseded_pct": 74.55138662316476,
+      "genuinely_future_waypoints": 613,
+      "waypoints": 697
+    },
+    "future_due_band_materialization_mismatch_kpa": {
+      "max_abs": 0.5508091867786556,
+      "mean_abs": 0.06185247838092918,
+      "over_0_05_kpa": 247,
+      "p90_abs": 0.08568165406650308,
+      "waypoints": 613
+    },
+    "intent_field_counts": {
+      "forecast_temp_bias_negative": 215,
+      "forecast_vpd_bias_at_negative_floor": 446,
+      "forecast_vpd_bias_negative": 525,
+      "materialized_night_vpd_bias_zero": 703,
+      "thermal_lead_time_positive": 701
+    },
+    "materialized_parameters_per_plan": {
+      "max": 40,
+      "min": 40
+    },
+    "parameters_varied_within_plan": {
+      "max": 25,
+      "mean": 19.345238095238095,
+      "median": 21.0,
+      "min": 4
+    },
+    "plans": 84,
+    "scheduled_while_plan_governed": 156,
+    "scheduled_while_plan_governed_pct": 22.190611664295876,
+    "superseded_before_scheduled": 463,
+    "superseded_before_scheduled_pct": 65.8605974395448,
+    "waypoints": 703
+  }
+}

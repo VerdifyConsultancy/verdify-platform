@@ -776,10 +776,16 @@ def compare_policy(
     return {"aggregate": aggregate, "paired_day_bootstrap": day_effects}
 
 
-def plan_summary(path: Path) -> dict[str, Any]:
+def plan_summary(path: Path, start: datetime | None = None, end: datetime | None = None) -> dict[str, Any]:
     rows: list[dict[str, str]] = []
     with path.open(newline="", encoding="utf-8") as handle:
-        rows.extend(csv.DictReader(handle))
+        for row in csv.DictReader(handle):
+            created_at = parse_ts(row["created_at"])
+            if start is not None and created_at < start:
+                continue
+            if end is not None and created_at >= end:
+                continue
+            rows.append(row)
     scored = [row for row in rows if row["outcome_score"] and row["anchor_score"]]
     return {
         "plans": len(rows),
@@ -809,12 +815,12 @@ def plan_summary(path: Path) -> dict[str, Any]:
     }
 
 
-def strong_window_daily_summary(path: Path) -> dict[str, Any]:
+def strong_window_daily_summary(path: Path, start: date, end: date) -> dict[str, Any]:
     rows: list[dict[str, str]] = []
     with path.open(newline="", encoding="utf-8") as handle:
         for row in csv.DictReader(handle):
             day = datetime.fromisoformat(row["date"]).date()
-            if date(2026, 7, 15) <= day <= date(2026, 8, 13):
+            if start <= day < end:
                 rows.append(row)
 
     def numbers(name: str) -> list[float]:
@@ -967,6 +973,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     train_end = parse_ts(args.train_end)
     eval_start = parse_ts(args.eval_start)
     eval_end = parse_ts(args.eval_end)
+    factual_start = date.fromisoformat(args.factual_start)
+    factual_end = date.fromisoformat(args.factual_end)
+    plan_start = parse_ts(args.plan_start) if args.plan_start else None
+    plan_end = parse_ts(args.plan_end) if args.plan_end else None
     train_mask = in_window(telemetry, train_start, train_end)
     eval_mask = in_window(telemetry, eval_start, eval_end)
     train_x, train_y, _ = build_training_matrix(telemetry, train_mask)
@@ -1005,7 +1015,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     }
     all_gates = model_counterfactual_eligible(model_results, direction_stable)
     open_loop = open_loop_sensitivity(telemetry, eval_starts, pid_spec)
-    historical_match = historical_weather_match(telemetry)
+    historical_match = None if args.skip_historical_match else historical_weather_match(telemetry)
 
     result = {
         "schema_version": 1,
@@ -1020,7 +1030,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "evaluation_complete_days": len(eval_starts),
             "model_training_rows": len(train_x),
             "model_evaluation_rows": len(eval_x),
-            "primary_era": "open screen/window; stable firmware after 2026-07-10",
+            "primary_era": args.era_label,
+            "firmware_version": args.firmware_version,
+            "firmware_epoch_start": args.firmware_epoch_start,
+            "factual_start_date": factual_start.isoformat(),
+            "factual_end_date_exclusive": factual_end.isoformat(),
         },
         "inputs": {
             "climate": file_manifest(climate_path),
@@ -1050,8 +1064,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             if all_gates
             else "not estimable: at least one declared validation/support/robustness gate failed"
         ),
-        "plans": plan_summary(plans_path),
-        "factual_strong_window": strong_window_daily_summary(daily_path),
+        "plans": plan_summary(plans_path, plan_start, plan_end),
+        "factual_strong_window": strong_window_daily_summary(daily_path, factual_start, factual_end),
         "historical_observed_weather_match": historical_match,
         "resource_evidence": {
             "electricity": "runtime-modeled low/nominal/high; production marks all days scoring-ineligible",
@@ -1074,6 +1088,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--train-end", default="2026-07-10T06:00:00+00:00")
     parser.add_argument("--eval-start", default="2026-07-15T06:00:00+00:00")
     parser.add_argument("--eval-end", default="2026-08-14T06:00:00+00:00")
+    parser.add_argument("--factual-start", default="2026-07-15")
+    parser.add_argument("--factual-end", default="2026-08-14")
+    parser.add_argument("--plan-start")
+    parser.add_argument("--plan-end")
+    parser.add_argument("--firmware-version")
+    parser.add_argument("--firmware-epoch-start")
+    parser.add_argument("--era-label", default="open screen/window; stable firmware after 2026-07-10")
+    parser.add_argument("--skip-historical-match", action="store_true")
     return parser
 
 

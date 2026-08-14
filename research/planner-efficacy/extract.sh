@@ -14,9 +14,11 @@ START_TS=${PLANNER_AUDIT_START_TS:-2025-08-15 00:00:00+00}
 END_TS=${PLANNER_AUDIT_END_TS:-2026-08-14 06:00:00+00}
 START_DATE=${PLANNER_AUDIT_START_DATE:-2025-08-15}
 END_DATE=${PLANNER_AUDIT_END_DATE:-2026-08-14}
+PLAN_START_TS=${PLANNER_AUDIT_PLAN_START_TS:-2026-03-24 00:00:00+00}
 
 if [[ ! $START_TS =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}[[:space:]][0-9]{2}:[0-9]{2}:[0-9]{2}\+00$ ]] \
     || [[ ! $END_TS =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}[[:space:]][0-9]{2}:[0-9]{2}:[0-9]{2}\+00$ ]] \
+    || [[ ! $PLAN_START_TS =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}[[:space:]][0-9]{2}:[0-9]{2}:[0-9]{2}([.][0-9]+)?\+00$ ]] \
     || [[ ! $START_DATE =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] \
     || [[ ! $END_DATE =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
     echo "audit bounds must use YYYY-MM-DD HH:MM:SS+00 / YYYY-MM-DD" >&2
@@ -68,6 +70,7 @@ WITH b AS (
 ), p AS (
   SELECT plan_id, planner_instance, trigger_id, interval_start, interval_end
     FROM v_plan_execution_intervals
+   WHERE greenhouse_id = 'vallery'
 )
 SELECT b.*,
        fn_crop_band_value('house','temp_low',b.bucket) AS eval_temp_low_f,
@@ -183,8 +186,9 @@ SELECT plan_id, created_at, valid_from, expires_at, lifecycle_status, trigger_id
        hypothesis_structured IS NOT NULL AS has_structured_hypothesis,
        climate_intents IS NOT NULL AS has_climate_intent
   FROM plan_journal
- WHERE created_at >= timestamptz '2026-03-24 00:00:00+00'
+ WHERE created_at >= timestamptz '$PLAN_START_TS'
    AND created_at < timestamptz '$END_TS'
+   AND greenhouse_id = 'vallery'
  ORDER BY created_at
 ) TO STDOUT WITH CSV HEADER;
 COMMIT;
@@ -194,7 +198,7 @@ SQL
     printf 'extraction_started_at_utc=%s\n' "$EXTRACTION_STARTED_AT"
     printf 'extraction_completed_at_utc=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
     printf 'snapshot_mode=sequential_read_only_transactions\n'
-    printf 'start_ts=%s\nend_ts=%s\n' "$START_TS" "$END_TS"
+    printf 'start_ts=%s\nend_ts=%s\nplan_start_ts=%s\n' "$START_TS" "$END_TS" "$PLAN_START_TS"
     sha256sum "$OUTDIR"/*.csv
     wc -l "$OUTDIR"/*.csv
 } > "$OUTDIR/input-manifest.txt"

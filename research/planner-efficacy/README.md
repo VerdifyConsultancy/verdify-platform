@@ -8,9 +8,19 @@ The report's broader architecture, delivery-lineage, and inventory audit uses
 additional source inspection and read-only aggregate database queries that are
 not all reproduced by this package.
 
-The aggregate output from the executed audit is checked in as
-[`results-2026-08-14.json`](results-2026-08-14.json). The study distinguishes
-three questions:
+The first-pass aggregate output is checked in as
+[`results-2026-08-14.json`](results-2026-08-14.json). The firmware-bounded
+second pass is documented in
+[`planner-efficacy-current-firmware-2026-08-14.md`](../../docs/research/planner-efficacy-current-firmware-2026-08-14.md)
+and has two executed manifests:
+
+- [`results-current-firmware-core-2026-08-14.json`](results-current-firmware-core-2026-08-14.json)
+  for the bounded PID/model rerun; and
+- [`results-current-firmware-supplement-2026-08-14.json`](results-current-firmware-supplement-2026-08-14.json)
+  for the stale-policy match, forecast response, waypoint survival, and
+  effective-tunable audit.
+
+The study distinguishes three questions:
 
 1. What actually happened while plans governed the greenhouse?
 2. What could an adequately validated plant model estimate for an explicitly
@@ -65,3 +75,57 @@ Run the focused validation with:
 uv run --project research/planner-efficacy \
   pytest research/planner-efficacy/tests
 ```
+
+## Reproduce the current-firmware second pass
+
+The wrapper fixes the physical firmware epoch and complete-day outcome cutoff,
+then adds the read-only inputs required by the mechanism audit:
+
+```bash
+VERDIFY_DB_BACKEND=kube \
+  research/planner-efficacy/extract-current-firmware.sh \
+  /tmp/planner-current-fw-inputs
+```
+
+Run the core analysis with the exact arguments recorded in the report:
+
+```bash
+uv run --project research/planner-efficacy \
+  research/planner-efficacy/audit.py \
+  --climate /tmp/planner-current-fw-inputs/climate_15m.csv \
+  --equipment /tmp/planner-current-fw-inputs/equipment_transitions.csv \
+  --daily /tmp/planner-current-fw-inputs/daily_outcomes.csv \
+  --plans /tmp/planner-current-fw-inputs/plans.csv \
+  --output /tmp/planner-current-fw-core.json \
+  --train-start 2026-07-11T06:00:00+00:00 \
+  --train-end 2026-07-31T06:00:00+00:00 \
+  --eval-start 2026-07-31T06:00:00+00:00 \
+  --eval-end 2026-08-14T06:00:00+00:00 \
+  --factual-start 2026-07-11 \
+  --factual-end 2026-08-14 \
+  --plan-start 2026-07-10T21:03:12.991915+00:00 \
+  --plan-end 2026-08-14T06:00:00+00:00 \
+  --firmware-version 2026.7.10.1500.09ee886 \
+  --firmware-epoch-start 2026-07-10T21:03:12.991915+00:00 \
+  --era-label 'exact live firmware 2026.7.10.1500.09ee886; complete local days only' \
+  --skip-historical-match
+```
+
+Run the supplemental analysis:
+
+```bash
+uv run --project research/planner-efficacy \
+  research/planner-efficacy/epoch_analysis.py \
+  --climate /tmp/planner-current-fw-inputs/climate_15m.csv \
+  --equipment /tmp/planner-current-fw-inputs/equipment_transitions.csv \
+  --forecast-response /tmp/planner-current-fw-inputs/forecast_response.csv \
+  --waypoints /tmp/planner-current-fw-inputs/waypoints.csv \
+  --forecast-vpd-accuracy /tmp/planner-current-fw-inputs/forecast_vpd_accuracy.csv \
+  --effective-tunables /tmp/planner-current-fw-inputs/effective_tunables.csv \
+  --trigger-outcomes /tmp/planner-current-fw-inputs/trigger_outcomes.csv \
+  --output /tmp/planner-current-fw-supplement.json
+```
+
+The stale-policy comparison is intentionally labeled hypothesis-generating.
+It asserts the fixed sample counts, matching reuse, and raw-feature coverage and
+does not emit a minute-level significance test or causal savings estimate.
