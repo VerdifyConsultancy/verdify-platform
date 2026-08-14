@@ -61,6 +61,7 @@ $PY -m pytest -q \
   tests/test_grafana_cm_check.py \
   tests/test_grafana_manifest_security.py \
   tests/test_lab_publish_k3s_guard.py \
+  tests/test_mcp_audience_auth.py \
   tests/test_mqtt_fanout.py \
   tests/test_no_hosted_runner_workflows.py \
   tests/test_planner_memory_ingest.py \
