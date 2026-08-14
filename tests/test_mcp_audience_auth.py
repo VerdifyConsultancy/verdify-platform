@@ -260,7 +260,7 @@ class TestAudienceMatrix:
         allowed = mcp_server.audience_allowlist("iris")
         assert allowed == mcp_server.HERMES_REQUIRED_TOOLS
         denied = set(mcp_server.TOOL_AUDIENCES) - allowed
-        assert denied == {"outcome_kpi", "plan_run", "query"}
+        assert denied == {"outcome_kpi", "plan_run", "query", "policy_template_propose"}
         for tool in allowed:
             mcp_server.authorize_tool_call(tool, "tok-iris")
         for tool in denied:
@@ -270,7 +270,8 @@ class TestAudienceMatrix:
     def test_experiment_matrix(self, mcp_server, monkeypatch):
         _configure(monkeypatch, mode="enforce", experiment="tok-exp")
         allowed = mcp_server.audience_allowlist("experiment")
-        # Audit §8.8: qualified reads + trigger acknowledgement only.
+        # Audit §8.8: qualified reads + trigger acknowledgement + the ONE
+        # actuation-eligible output (opaque template selection, Lane C #584).
         assert allowed == {
             "climate",
             "forecast",
@@ -279,6 +280,7 @@ class TestAudienceMatrix:
             "crop_history",
             "crop_lifecycle",
             "acknowledge_trigger",
+            "policy_template_propose",
         }
         # Treatment-revealing reads and ordinary writes are denied.
         for tool in (
@@ -309,8 +311,10 @@ class TestAudienceMatrix:
         for tool in mcp_server.TOOL_AUDIENCES:
             mcp_server.authorize_tool_call(tool, "tok-admin")
 
-    def test_pending_policy_template_propose_entry_is_reserved(self, mcp_server):
-        assert mcp_server.PENDING_TOOL_AUDIENCES["policy_template_propose"] == frozenset({"experiment", "admin"})
+    def test_policy_template_propose_is_registered_experiment_and_admin_only(self, mcp_server):
+        # Lane C tranche 2 (#584): moved out of PENDING into the live registry.
+        assert mcp_server.TOOL_AUDIENCES["policy_template_propose"] == frozenset({"experiment", "admin"})
+        assert "policy_template_propose" not in mcp_server.PENDING_TOOL_AUDIENCES
         assert not set(mcp_server.PENDING_TOOL_AUDIENCES) & set(mcp_server.TOOL_AUDIENCES)
 
 

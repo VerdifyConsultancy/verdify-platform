@@ -75,6 +75,7 @@ from tasks import (
     IRRIGATION_SCHEDULE_PARAMS,
     alert_monitor,
     daily_summary_live,
+    experiment_assignment_scheduler,
     forecast_action_engine,
     forecast_deviation_check,
     forecast_sync,
@@ -86,6 +87,8 @@ from tasks import (
     midnight_watch,
     planner_memory_ingest_sync,
     planning_heartbeat,
+    policy_arbiter_admissions,
+    policy_delivery_worker,
     readback_abs_tolerance,
     setpoint_confirmation_monitor,
     setpoint_dispatcher,
@@ -112,6 +115,11 @@ from verdify_schemas import (
     SetpointSnapshot,
     SystemStateRow,
     normalize_moisture_exchange_telemetry,
+)
+from verdify_schemas.experiment_config import (
+    POLICY_VECTOR_MODE_OFF,
+    policy_device_id,
+    policy_vector_mode,
 )
 from verdify_schemas.tunable_registry import get as get_tunable
 
@@ -660,66 +668,14 @@ def _climate_fog_assist_status(
     return fog_allowed, reason
 
 
-async def write_climate_action_log(pool: asyncpg.Pool, ts: datetime) -> bool:
-    """Persist one structured ClimateIntent controller decision snapshot."""
-    action = state.system.get("climate_action")
-    priority_axis = state.system.get("climate_priority_axis")
-    if not action or not priority_axis:
-        return False
-
-    moisture_state = state.system.get("climate_moisture_assist_state")
-    moisture_zone = state.system.get("climate_moisture_zone") or "none"
-    fog_allowed, fog_block_reason = _climate_fog_assist_status(
-        action,
-        state.system.get("climate_fog_block_reason"),
-        state.system.get("fog_block_reason"),
-    )
-    wet_assist_allowed, wet_block_reason = _climate_wet_assist_status(action, moisture_state, fog_allowed)
-    relay_truth = {equipment: bool(state.equipment.get(equipment, False)) for equipment in CLIMATE_RELAY_EQUIPMENT}
-    source_system_state = {entity: state.system.get(entity) for entity in sorted(CLIMATE_ACTION_LOG_ENTITIES)}
-    moisture_exchange = _parse_json_object(state.system.get("climate_moisture_exchange"))
-    if moisture_exchange:
-        # #327: normalize through the shared JSON contract
-        # (verdify_schemas.MoistureExchangeTelemetry) so migration 187's
-        # v_moisture_estimator_telemetry view and the MCP outcome_kpi() parser
-        # read consistent types. Tolerant by contract: normalization never
-        # raises — payloads that don't validate (e.g. the {"raw": ...}
-        # parse-failure fallback) pass through unchanged, unknown keys are
-        # preserved (only non-finite numbers are dropped, keeping JSONB
-        # castable), and the two #410 fields (vent_held_vpd_gain_kpa,
-        # hold_required) are optional like everything else (live fw 995c9b3
-        # emits none of these fields).
-        moisture_exchange = normalize_moisture_exchange_telemetry(moisture_exchange)
-        source_system_state["climate_moisture_exchange"] = moisture_exchange
-    resource_cost = _parse_json_object(state.system.get("climate_resource_cost_estimate"))
-
-    try:
-        ClimateActionLogRow(
-            ts=ts,
-            greenhouse_id=GREENHOUSE_ID,
-            climate_action=action,
-            priority_axis=priority_axis,
-            temp_band_error_f=_finite_state_float(state.system.get("climate_temp_error_f")),
-            vpd_band_error_kpa=_finite_state_float(state.system.get("climate_vpd_error_kpa")),
-            moisture_assist_state=moisture_state,
-            moisture_zone=moisture_zone,
-            wet_assist_allowed=wet_assist_allowed,
-            wet_assist_block_reason=wet_block_reason,
-            fog_allowed=fog_allowed,
-            fog_block_reason=fog_block_reason,
-            relay_truth=relay_truth,
-            resource_cost_estimate=resource_cost,
-            climate_intent_version=CLIMATE_INTENT_CONTRACT_VERSION,
-            candidate_summary=state.system.get("climate_candidate_summary"),
-            source_system_state=source_system_state,
-        )
-    except ValidationError as e:
-        log.error("climate_action_log skipped (validation failed: %s): action=%s priority=%s", e, action, priority_axis)
-        return False
-
-    async with pool.acquire() as conn:
-        await conn.execute(
-            """
+# Lane C (#584): one SQL template, two renderings. The LEGACY rendering (all
+# policy_* slots empty) is the exact pre-experiment statement and remains the
+# feature-off path; the POLICY rendering adds the device-confirmed vector
+# identity join (latest policy_exposures interval covering the tick, falling
+# back to the latest policy_device_snapshots echo at or before it) into the
+# migration-208 nullable columns. The legacy plan_context heuristic keeps
+# populating plan_id/trigger_id/planner_instance for continuity either way.
+_CLIMATE_ACTION_LOG_INSERT_TEMPLATE = """
             WITH latest_climate AS (
                 SELECT c.*
                   FROM climate c
@@ -751,7 +707,7 @@ async def write_climate_action_log(pool: asyncpg.Pool, ts: datetime) -> bool:
                    AND sp.ts <= COALESCE((SELECT ts FROM latest_climate), $2)
                  ORDER BY sp.ts DESC, sp.created_at DESC
                  LIMIT 1
-            )
+            ){policy_identity_ctes}
             INSERT INTO climate_action_log (
                 ts,
                 greenhouse_id,
@@ -781,7 +737,7 @@ async def write_climate_action_log(pool: asyncpg.Pool, ts: datetime) -> bool:
                 planner_instance,
                 sensor_status,
                 candidate_summary,
-                source_system_state
+                source_system_state{policy_identity_cols}
             )
             SELECT
                 $2,
@@ -840,30 +796,164 @@ async def write_climate_action_log(pool: asyncpg.Pool, ts: datetime) -> bool:
                     )
                 ),
                 $17,
-                $18::jsonb
+                $18::jsonb{policy_identity_vals}
             FROM band
             LEFT JOIN latest_climate lc ON true
-            LEFT JOIN plan_context pc ON true
-            """,
-            GREENHOUSE_ID,
-            ts,
-            action,
-            priority_axis,
-            _finite_state_float(state.system.get("climate_temp_error_f")),
-            _finite_state_float(state.system.get("climate_vpd_error_kpa")),
-            moisture_state,
-            moisture_zone,
-            wet_assist_allowed,
-            wet_block_reason,
-            fog_allowed,
-            fog_block_reason,
-            json.dumps(relay_truth, sort_keys=True),
-            json.dumps(resource_cost, sort_keys=True),
-            CLIMATE_INTENT_CONTRACT_VERSION,
-            json.dumps({"latest_climate_age_s": None}, sort_keys=True),
-            state.system.get("climate_candidate_summary"),
-            json.dumps(source_system_state, sort_keys=True),
+            LEFT JOIN plan_context pc ON true{policy_identity_join}
+            """
+
+_CLIMATE_ACTION_LOG_INSERT_LEGACY = _CLIMATE_ACTION_LOG_INSERT_TEMPLATE.format(
+    policy_identity_ctes="",
+    policy_identity_cols="",
+    policy_identity_vals="",
+    policy_identity_join="",
+)
+
+_CLIMATE_ACTION_LOG_INSERT_POLICY = _CLIMATE_ACTION_LOG_INSERT_TEMPLATE.format(
+    policy_identity_ctes=""",
+            policy_exposure_identity AS (
+                SELECT pe.vector_id, epv.device_generation, epv.activation_sha256
+                  FROM policy_exposures pe
+                  JOIN effective_policy_vectors epv ON epv.vector_id = pe.vector_id
+                 WHERE pe.device_id = $19
+                   AND pe.started_at <= $2
+                   AND (pe.ended_at IS NULL OR pe.ended_at > $2)
+                 ORDER BY pe.started_at DESC
+                 LIMIT 1
+            ),
+            policy_snapshot_identity AS (
+                SELECT epv.vector_id, s.device_generation, s.activation_sha256
+                  FROM policy_device_snapshots s
+                  LEFT JOIN effective_policy_vectors epv
+                    ON epv.activation_sha256 = s.activation_sha256
+                 WHERE s.device_id = $19
+                   AND s.reported_at <= $2
+                   AND s.activation_sha256 IS NOT NULL
+                 ORDER BY s.reported_at DESC
+                 LIMIT 1
+            ),
+            policy_identity AS (
+                SELECT * FROM policy_exposure_identity
+                UNION ALL
+                SELECT * FROM policy_snapshot_identity
+                 WHERE NOT EXISTS (SELECT 1 FROM policy_exposure_identity)
+            )""",
+    policy_identity_cols=""",
+                policy_vector_id,
+                policy_generation,
+                policy_activation_sha256""",
+    policy_identity_vals=""",
+                pi.vector_id,
+                pi.device_generation,
+                pi.activation_sha256""",
+    policy_identity_join="""
+            LEFT JOIN policy_identity pi ON true""",
+)
+
+_POLICY_IDENTITY_FALLBACK_LOGGED = False
+
+
+def _log_policy_identity_fallback_once(exc: Exception) -> None:
+    global _POLICY_IDENTITY_FALLBACK_LOGGED
+    if not _POLICY_IDENTITY_FALLBACK_LOGGED:
+        _POLICY_IDENTITY_FALLBACK_LOGGED = True
+        log.warning(
+            "climate_action_log: policy-identity join unavailable (%s: %s); falling back to the legacy insert",
+            type(exc).__name__,
+            exc,
         )
+
+
+async def write_climate_action_log(pool: asyncpg.Pool, ts: datetime) -> bool:
+    """Persist one structured ClimateIntent controller decision snapshot."""
+    action = state.system.get("climate_action")
+    priority_axis = state.system.get("climate_priority_axis")
+    if not action or not priority_axis:
+        return False
+
+    moisture_state = state.system.get("climate_moisture_assist_state")
+    moisture_zone = state.system.get("climate_moisture_zone") or "none"
+    fog_allowed, fog_block_reason = _climate_fog_assist_status(
+        action,
+        state.system.get("climate_fog_block_reason"),
+        state.system.get("fog_block_reason"),
+    )
+    wet_assist_allowed, wet_block_reason = _climate_wet_assist_status(action, moisture_state, fog_allowed)
+    relay_truth = {equipment: bool(state.equipment.get(equipment, False)) for equipment in CLIMATE_RELAY_EQUIPMENT}
+    source_system_state = {entity: state.system.get(entity) for entity in sorted(CLIMATE_ACTION_LOG_ENTITIES)}
+    moisture_exchange = _parse_json_object(state.system.get("climate_moisture_exchange"))
+    if moisture_exchange:
+        # #327: normalize through the shared JSON contract
+        # (verdify_schemas.MoistureExchangeTelemetry) so migration 187's
+        # v_moisture_estimator_telemetry view and the MCP outcome_kpi() parser
+        # read consistent types. Tolerant by contract: normalization never
+        # raises — payloads that don't validate (e.g. the {"raw": ...}
+        # parse-failure fallback) pass through unchanged, unknown keys are
+        # preserved (only non-finite numbers are dropped, keeping JSONB
+        # castable), and the two #410 fields (vent_held_vpd_gain_kpa,
+        # hold_required) are optional like everything else (live fw 995c9b3
+        # emits none of these fields).
+        moisture_exchange = normalize_moisture_exchange_telemetry(moisture_exchange)
+        source_system_state["climate_moisture_exchange"] = moisture_exchange
+    resource_cost = _parse_json_object(state.system.get("climate_resource_cost_estimate"))
+
+    try:
+        ClimateActionLogRow(
+            ts=ts,
+            greenhouse_id=GREENHOUSE_ID,
+            climate_action=action,
+            priority_axis=priority_axis,
+            temp_band_error_f=_finite_state_float(state.system.get("climate_temp_error_f")),
+            vpd_band_error_kpa=_finite_state_float(state.system.get("climate_vpd_error_kpa")),
+            moisture_assist_state=moisture_state,
+            moisture_zone=moisture_zone,
+            wet_assist_allowed=wet_assist_allowed,
+            wet_assist_block_reason=wet_block_reason,
+            fog_allowed=fog_allowed,
+            fog_block_reason=fog_block_reason,
+            relay_truth=relay_truth,
+            resource_cost_estimate=resource_cost,
+            climate_intent_version=CLIMATE_INTENT_CONTRACT_VERSION,
+            candidate_summary=state.system.get("climate_candidate_summary"),
+            source_system_state=source_system_state,
+        )
+    except ValidationError as e:
+        log.error("climate_action_log skipped (validation failed: %s): action=%s priority=%s", e, action, priority_axis)
+        return False
+
+    args = (
+        GREENHOUSE_ID,
+        ts,
+        action,
+        priority_axis,
+        _finite_state_float(state.system.get("climate_temp_error_f")),
+        _finite_state_float(state.system.get("climate_vpd_error_kpa")),
+        moisture_state,
+        moisture_zone,
+        wet_assist_allowed,
+        wet_block_reason,
+        fog_allowed,
+        fog_block_reason,
+        json.dumps(relay_truth, sort_keys=True),
+        json.dumps(resource_cost, sort_keys=True),
+        CLIMATE_INTENT_CONTRACT_VERSION,
+        json.dumps({"latest_climate_age_s": None}, sort_keys=True),
+        state.system.get("climate_candidate_summary"),
+        json.dumps(source_system_state, sort_keys=True),
+    )
+    async with pool.acquire() as conn:
+        if policy_vector_mode() != POLICY_VECTOR_MODE_OFF:
+            # Lane C (#584): stamp the device-confirmed vector identity onto
+            # the tick. The join must NEVER fail the insert — any error (e.g.
+            # migration 208 not applied yet in this environment) falls back to
+            # the legacy statement, logged once.
+            try:
+                await conn.execute(_CLIMATE_ACTION_LOG_INSERT_POLICY, *args, policy_device_id(GREENHOUSE_ID))
+            except Exception as exc:  # noqa: BLE001 — fallback must catch everything
+                _log_policy_identity_fallback_once(exc)
+                await conn.execute(_CLIMATE_ACTION_LOG_INSERT_LEGACY, *args)
+        else:
+            await conn.execute(_CLIMATE_ACTION_LOG_INSERT_LEGACY, *args)
     log.debug("climate_action_log: action=%s priority=%s wet_allowed=%s", action, priority_axis, wet_assist_allowed)
     return True
 
@@ -2141,6 +2231,12 @@ async def task_loop(pool: asyncpg.Pool) -> None:
         # dispatch, alerts, or planner heartbeat.
         ("gpu_power_sync", 300, gpu_power_sync),
         ("infra_cpu_sync", 300, infra_cpu_sync),
+        # Controlled planner experiment (#584 Lane C). All three are inert
+        # (immediate return, no DB access) while VERDIFY_POLICY_VECTOR_MODE=off
+        # or no VERDIFY_ACTIVE_EXPERIMENT_ID is set — the default env.
+        ("experiment_assignments", 60, experiment_assignment_scheduler),
+        ("policy_arbiter", 60, policy_arbiter_admissions),
+        ("policy_delivery", 30, policy_delivery_worker),
     ]
     last_run: dict[str, float] = {name: 0.0 for name, _, _ in TASKS}
     running: dict[str, asyncio.Task[None]] = {}

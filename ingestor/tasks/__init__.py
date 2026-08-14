@@ -23,9 +23,12 @@ from . import (  # noqa: F401
     confirmation,
     daily,
     dispatcher,
+    experiment_assignments,
     forecast,
     ha,
     heartbeat,
+    policy_arbiter,
+    policy_delivery,
     watch,
 )
 from ._common import *  # noqa: F401,F403
@@ -128,6 +131,14 @@ from .dispatcher import (  # noqa: F401
     _vpd_high_moisture_guardrails,
     _write_clamp_audit_rows,
 )
+
+# Lane C (#584): coroutine names differ from their module names on purpose so
+# the submodule attributes bound above survive (see the rebinding note in the
+# module docstring); import them explicitly instead of star-importing.
+from .experiment_assignments import (  # noqa: F401
+    EXPERIMENT_OWNED_PARAMS,
+    experiment_assignment_scheduler,
+)
 from .forecast import *  # noqa: F401,F403
 from .forecast import (  # noqa: F401
     _cloud_cover_proxy_pct,
@@ -167,4 +178,9 @@ from .heartbeat import (  # noqa: F401
     _sync_planner_trigger_ledger,
     _trigger_spec_for_event,
 )
+from .policy_arbiter import (  # noqa: F401
+    policy_arbiter_admissions,
+    treatment_bytes_for_assignment,
+)
+from .policy_delivery import policy_delivery_worker  # noqa: F401
 from .watch import *  # noqa: F401,F403

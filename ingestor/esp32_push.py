@@ -38,6 +38,11 @@ def _device_writes_enabled() -> bool:
     return os.environ.get("VERDIFY_DEVICE_WRITE_ENABLED", "") == "1"
 
 
+def device_writes_enabled() -> bool:
+    """Public read of the #79 gate for callers outside this module (Lane C)."""
+    return _device_writes_enabled()
+
+
 def _log_device_writes_disabled_once(where: str) -> None:
     global _DEVICE_WRITE_DISABLED_LOGGED
     if not _DEVICE_WRITE_DISABLED_LOGGED:
@@ -149,6 +154,7 @@ _NON_RETRYABLE_DELIVERY_REASONS = frozenset(
         "command_version_count_mismatch",
         "device_writes_disabled",
         "entity_key_unavailable",
+        "experiment_policy_hold",
         "lifecycle_persistence_unavailable",
         "shadow_mode",
         "transport_client_changed",
@@ -157,6 +163,43 @@ _NON_RETRYABLE_DELIVERY_REASONS = frozenset(
         "writer_lease_not_held",
     }
 )
+
+
+# ── Experiment policy hold (#584 Lane C) ─────────────────────────────────────
+# While an experiment assignment is armed, the atomic policy transaction path
+# owns the 49 experiment-owned parameters; individual legacy setter pushes for
+# them are rejected at this physical chokepoint. The hold is CACHED here and
+# refreshed once per scheduling cycle by the experiment_assignments worker (and
+# once per dispatch by the dispatcher), so this module never queries the DB.
+# Default state is inactive => byte-identical legacy behavior (fail open when
+# VERDIFY_POLICY_VECTOR_MODE=off, which never arms the hold).
+_EXPERIMENT_HOLD_ACTIVE = False
+_EXPERIMENT_HOLD_PARAMS: frozenset[str] = frozenset()
+
+
+def set_experiment_policy_hold(active: bool, params: Sequence[str] | frozenset[str] = ()) -> None:
+    """Arm/disarm the experiment hold over legacy per-parameter pushes."""
+    global _EXPERIMENT_HOLD_ACTIVE, _EXPERIMENT_HOLD_PARAMS
+    was_active = _EXPERIMENT_HOLD_ACTIVE
+    _EXPERIMENT_HOLD_ACTIVE = bool(active) and bool(params)
+    _EXPERIMENT_HOLD_PARAMS = frozenset(params) if _EXPERIMENT_HOLD_ACTIVE else frozenset()
+    if _EXPERIMENT_HOLD_ACTIVE != was_active:
+        log.info(
+            "writer_policy_hold %s param_count=%d",
+            "armed" if _EXPERIMENT_HOLD_ACTIVE else "released",
+            len(_EXPERIMENT_HOLD_PARAMS),
+        )
+
+
+def experiment_policy_hold() -> tuple[bool, frozenset[str]]:
+    """The cached hold state (active flag + held parameter names)."""
+    return _EXPERIMENT_HOLD_ACTIVE, _EXPERIMENT_HOLD_PARAMS
+
+
+def _experiment_hold_failure(parameter: str) -> str | None:
+    if _EXPERIMENT_HOLD_ACTIVE and parameter in _EXPERIMENT_HOLD_PARAMS:
+        return "experiment_policy_hold"
+    return None
 
 
 def delivery_failure_retryable(outcome: DeviceCommandOutcome) -> bool:
@@ -328,6 +371,11 @@ async def _execute_one(request: _WriteRequest, index: int) -> DeviceCommandOutco
         return _outcome(request, index, "failed", failure)
 
     obj_id, value, entity_type = request.changes[index]
+    # Lane C (#584): experiment-owned parameters are delivered ONLY through the
+    # atomic policy transaction while an assignment is armed. Terminal,
+    # non-retryable — the dispatcher records it like any other rejection.
+    if hold_failure := _experiment_hold_failure(_parameter_for(obj_id, entity_type)):
+        return _outcome(request, index, "failed", hold_failure)
     client = shared.esp32["client"]
     keys = shared.esp32["keys"]
     try:
@@ -720,6 +768,157 @@ async def push_to_esp32(changes: list[tuple[str, float, str]]) -> int:
     if result.fatal_error:
         raise LifecyclePersistenceError(result.fatal_error)
     return result.sent_count
+
+
+# ── Whole-vector policy transactions (#584 Lane C) ───────────────────────────
+# One staged policy delivery (begin → chunks → validate → commit) must reach
+# the device as ONE non-interleavable unit: while it runs, the round-robin
+# worker's ordinary per-parameter commands queue behind it on the same
+# physical chokepoint (_PUSH_LOCK) instead of splicing into the sequence.
+# Non-starvation is by construction: the call count and wall-clock budget are
+# bounded, so ordinary requests resume within one bounded transaction.
+
+_POLICY_TRANSACTION_MAX_CALLS = 16
+_POLICY_TRANSACTION_BUDGET_S = 120.0
+_POLICY_TRANSACTION_ACTIVE = False
+
+
+@dataclass(frozen=True)
+class PolicyServiceCall:
+    """One native-API service invocation inside a policy transaction."""
+
+    service: str
+    payload: dict
+
+
+@dataclass(frozen=True)
+class PolicyCallOutcome:
+    index: int
+    service: str
+    status: Literal["sent", "failed", "aborted"]
+    reason: str
+
+
+@dataclass(frozen=True)
+class PolicyTransactionResult:
+    outcomes: tuple[PolicyCallOutcome, ...]
+
+    @property
+    def ok(self) -> bool:
+        return bool(self.outcomes) and all(outcome.status == "sent" for outcome in self.outcomes)
+
+    @property
+    def failure(self) -> PolicyCallOutcome | None:
+        return next((outcome for outcome in self.outcomes if outcome.status == "failed"), None)
+
+
+def policy_transaction_active() -> bool:
+    """True while a whole-vector policy transaction owns the writer."""
+    return _POLICY_TRANSACTION_ACTIVE
+
+
+def _policy_result(
+    calls: Sequence[PolicyServiceCall],
+    done: list[PolicyCallOutcome],
+    failed_index: int | None,
+    reason: str,
+) -> PolicyTransactionResult:
+    outcomes = list(done)
+    if failed_index is not None:
+        outcomes.append(PolicyCallOutcome(failed_index, calls[failed_index].service, "failed", reason))
+        outcomes.extend(
+            PolicyCallOutcome(index, calls[index].service, "aborted", "aborted_prior_failure")
+            for index in range(failed_index + 1, len(calls))
+        )
+    return PolicyTransactionResult(tuple(outcomes))
+
+
+async def push_policy_transaction(
+    calls: Sequence[PolicyServiceCall],
+    *,
+    budget_s: float = _POLICY_TRANSACTION_BUDGET_S,
+) -> PolicyTransactionResult:
+    """Execute one bounded, non-interleavable staged policy transaction.
+
+    Preserves every existing writer guarantee: default-deny device-write gate,
+    shadow mode, the k8s writer lease, reconnect fences (generation + client
+    identity re-checked before every call), and heap pacing between commands.
+    The first failure terminates the sequence; the caller decides whether to
+    send an explicit ``policy_abort``.
+    """
+    global _POLICY_TRANSACTION_ACTIVE
+    loop = asyncio.get_running_loop()
+    _reset_queue_for_loop(loop)
+    calls = tuple(calls)
+    if not calls:
+        return PolicyTransactionResult(())
+    if len(calls) > _POLICY_TRANSACTION_MAX_CALLS:
+        return _policy_result(calls, [], 0, "transaction_call_limit_exceeded")
+    if failure := _preflight_failure():
+        return _policy_result(calls, [], 0, failure)
+
+    accepted_generation = int(shared.transport_generation)
+    accepted_client = shared.esp32.get("client")
+
+    def fence() -> str | None:
+        if fence_failure := _preflight_failure():
+            return fence_failure
+        if accepted_generation != int(shared.transport_generation):
+            return "transport_generation_changed"
+        if accepted_client is not shared.esp32.get("client"):
+            return "transport_client_changed"
+        return None
+
+    done: list[PolicyCallOutcome] = []
+    deadline = time.monotonic() + max(1.0, float(budget_s))
+    lock = _PUSH_LOCK
+    async with lock:
+        _POLICY_TRANSACTION_ACTIVE = True
+        try:
+            for index, call in enumerate(calls):
+                if time.monotonic() > deadline:
+                    return _policy_result(calls, done, index, "transaction_budget_exceeded")
+                await _pace_command()
+                if fence_failure := fence():
+                    return _policy_result(calls, done, index, fence_failure)
+                service = (shared.esp32.get("services") or {}).get(call.service)
+                if service is None:
+                    return _policy_result(calls, done, index, "policy_service_unavailable")
+                client = shared.esp32["client"]
+                try:
+                    result = client.execute_service(service, dict(call.payload))
+                    if inspect.isawaitable(result):
+                        await asyncio.wait_for(result, timeout=_COMMAND_TIMEOUT_S)
+                except asyncio.CancelledError:
+                    raise
+                except TimeoutError:
+                    log.error(
+                        "writer_policy_txn phase=transport status=failed reason=command_timeout_outcome_unknown "
+                        "service=%s index=%d generation=%d",
+                        call.service,
+                        index,
+                        shared.transport_generation,
+                    )
+                    return _policy_result(calls, done, index, "command_timeout_outcome_unknown")
+                except Exception as exc:
+                    log.warning(
+                        "writer_policy_txn phase=transport status=failed reason=command_error "
+                        "service=%s index=%d generation=%d error=%s",
+                        call.service,
+                        index,
+                        shared.transport_generation,
+                        type(exc).__name__,
+                    )
+                    return _policy_result(calls, done, index, f"command_error:{type(exc).__name__}")
+                done.append(PolicyCallOutcome(index, call.service, "sent", "api_command_returned"))
+            log.info(
+                "writer_policy_txn phase=transport status=sent call_count=%d generation=%d",
+                len(calls),
+                accepted_generation,
+            )
+            return PolicyTransactionResult(tuple(done))
+        finally:
+            _POLICY_TRANSACTION_ACTIVE = False
 
 
 async def push_occupancy_to_esp32(occupied: bool, source: str) -> int:

@@ -149,6 +149,12 @@ recently_pushed_values: dict[str, float] = {}
 # values the firmware has already confirmed.
 cfg_readback: dict[str, float] = {}
 
+# Lane C (#584): latest device-echoed policy identity readback, keyed by the
+# verdify_schemas.policy_transport POLICY_READBACK_* sensor names. Populated by
+# the esp32 ingest loop once Lane E registers the readback sensors; empty until
+# then, which the delivery worker treats as "no echo yet".
+policy_readback: dict[str, str] = {}
+
 # Monotonic transport generation.  Only a successful API connect may advance
 # this counter; cfg readback drift is tracked separately below.  The dispatcher
 # records the last generation it reconciled so a stable socket can never be

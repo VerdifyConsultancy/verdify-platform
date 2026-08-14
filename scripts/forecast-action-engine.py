@@ -26,6 +26,11 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 from slack_config import build_slack_payload, load_slack_settings, read_slack_token  # noqa: E402
+from verdify_schemas.experiment_config import (  # noqa: E402
+    demoted_policy_write_gate,
+    submit_policy_proposal,
+)
+from verdify_schemas.policy_vector import WIRE_COMPONENT_INDEXES  # noqa: E402
 from verdify_schemas.tunable_registry import BAND_OWNED_REG  # noqa: E402
 
 logging.basicConfig(
@@ -176,12 +181,53 @@ async def evaluate_due_outcomes(conn):
         log.info("Evaluated %d due forecast-action outcome rows", updated)
 
 
+async def submit_demoted_proposal(conn, rule_name, params, forecast_snapshot):
+    """Record the demoted forecast write as ONE policy proposal (#584 Lane C).
+
+    Returns the proposal id, or None when nothing was recordable (no policy
+    wire fields in the write, or the proposal function rejected it) — the
+    caller logs the outcome either way; it NEVER falls back to a direct write.
+    """
+    components = [
+        {
+            "field_name": name,
+            "component_index": WIRE_COMPONENT_INDEXES[name],
+            "normalized_value": float(value),
+        }
+        for name, value in sorted(params.items())
+        if name in WIRE_COMPONENT_INDEXES
+    ]
+    if not components:
+        log.warning("Demoted forecast action %s carries no policy wire fields; nothing recorded", rule_name)
+        return None
+    try:
+        return await submit_policy_proposal(
+            conn,
+            producer="forecast",
+            trigger_ref=f"forecast-rule:{rule_name}",
+            components=components,
+            context={"forecast_condition": forecast_snapshot},
+            actor="forecast-action-engine",
+        )
+    except Exception as e:  # noqa: BLE001 — never fall back to a direct write
+        log.warning("Demoted forecast proposal for %s not recorded: %s", rule_name, e)
+        return None
+
+
 async def main():
     conn = await asyncpg.connect(get_db_url())
     now = datetime.now(UTC)
 
     try:
         await evaluate_due_outcomes(conn)
+
+        # Lane C (#584): while an experiment assignment is armed (or legacy
+        # direct writes are disabled) the engine becomes a proposal producer —
+        # no direct setpoint_plan/setpoint_changes writes. Feature-off
+        # (default env) this gate takes no query and behavior is unchanged.
+        demotion = await demoted_policy_write_gate(conn)
+        if demotion is not None:
+            log.info("Direct policy writes demoted (experiment armed or legacy writes disabled)")
 
         # Get enabled rules ordered by priority
         rules = await conn.fetch("SELECT * FROM forecast_action_rules WHERE enabled = true ORDER BY priority")
@@ -276,6 +322,9 @@ async def main():
             precool_remap = PRECOOL_REMAP.get(param) if action_type == "setpoint" else None
             if precool_remap is not None:
                 plan_id = f"preemptive-{now.strftime('%Y%m%d-%H%M')}"
+                proposal_id = None
+                if demotion is not None and not DRY_RUN:
+                    proposal_id = await submit_demoted_proposal(conn, name, dict(precool_remap), forecast_snapshot)
                 for precool_param, precool_value in precool_remap:
                     old_val = await conn.fetchval(
                         "SELECT value FROM setpoint_changes WHERE parameter = $1 ORDER BY ts DESC LIMIT 1",
@@ -286,7 +335,7 @@ async def main():
                         f"(actual {trigger_val} at {trigger_ts.strftime('%H:%M')}); "
                         f"re-routed from band-owned {param} to {precool_param}"
                     )
-                    if not DRY_RUN:
+                    if not DRY_RUN and demotion is None:
                         await conn.execute(
                             "INSERT INTO setpoint_plan (ts, parameter, value, plan_id, source, reason) "
                             "VALUES (now(), $1, $2, $3, 'preemptive', $4)",
@@ -301,6 +350,12 @@ async def main():
                             precool_param,
                             float(precool_value),
                         )
+                    if DRY_RUN:
+                        action_taken = "dry_run"
+                    elif demotion is not None:
+                        action_taken = "proposal_recorded"
+                    else:
+                        action_taken = "precool_rerouted"
                     await conn.execute(
                         "INSERT INTO forecast_action_log "
                         "(rule_id, rule_name, triggered_at, forecast_condition, action_taken, plan_id, param, old_value, new_value, outcome, outcome_evaluated_at, outcome_metrics) "
@@ -309,7 +364,7 @@ async def main():
                         name,
                         now,
                         json.dumps(forecast_snapshot),
-                        "precool_rerouted" if not DRY_RUN else "dry_run",
+                        action_taken,
                         plan_id,
                         precool_param,
                         float(old_val) if old_val is not None else None,
@@ -321,6 +376,7 @@ async def main():
                                 "original_band_owned_param": param,
                                 "original_adjustment_value": float(adj_value) if adj_value is not None else None,
                                 "lookahead_window": window,
+                                "policy_proposal_id": str(proposal_id) if proposal_id else None,
                             }
                         ),
                     )
@@ -370,7 +426,12 @@ async def main():
 
                 plan_id = f"preemptive-{now.strftime('%Y%m%d-%H%M')}"
 
-                if not DRY_RUN:
+                proposal_id = None
+                if not DRY_RUN and demotion is not None:
+                    proposal_id = await submit_demoted_proposal(
+                        conn, name, {param: float(adj_value)}, forecast_snapshot
+                    )
+                elif not DRY_RUN:
                     await conn.execute(
                         "INSERT INTO setpoint_plan (ts, parameter, value, plan_id, source, reason) "
                         "VALUES (now(), $1, $2, $3, 'preemptive', $4)",
@@ -387,6 +448,12 @@ async def main():
                         float(adj_value),
                     )
 
+                if DRY_RUN:
+                    action_taken = "dry_run"
+                elif demotion is not None:
+                    action_taken = "proposal_recorded"
+                else:
+                    action_taken = "setpoint_written"
                 await conn.execute(
                     "INSERT INTO forecast_action_log "
                     "(rule_id, rule_name, triggered_at, forecast_condition, action_taken, plan_id, param, old_value, new_value, outcome) "
@@ -395,12 +462,14 @@ async def main():
                     name,
                     now,
                     json.dumps(forecast_snapshot),
-                    "setpoint_written" if not DRY_RUN else "dry_run",
+                    action_taken,
                     plan_id,
                     param,
                     float(old_val) if old_val else None,
                     float(adj_value),
                 )
+                if proposal_id:
+                    log.info("  → proposal %s recorded for %s (no direct write)", proposal_id, param)
 
                 log.info(
                     "  → %s %s: %s → %s (plan: %s)%s",
