@@ -6,6 +6,16 @@ firmware-twin-divergence Grafana dashboard) stood up in k3s as a **read-only,
 INSERT-only SHADOW**. Design: `docs/design/firmware-digital-twin.md` §2.1, §5.3,
 §6.
 
+> **2026-08-14 (#587, Lane F):** the component was reworked to the durable
+> Tier-1 form — the pre-baked `verdify-twin` image (twin/Dockerfile, built
+> in-cluster via `../twin-builder/twin-builder.yaml` into the zot origin)
+> replaces the gcc initContainer + vendored `src/` ConfigMap + startup
+> `pip install`, and the TCP-443 pip egress rule is removed (DB-only egress).
+> The clone-and-compile steps below describe the RETIRED dev-proof shape and
+> are kept as historical record. Deploying the durable form is §8.10 rollout
+> step 4 (digest pin + overlays/prod wiring + migration/roles) — see
+> `docs/runbooks/experiment-rollout.md`.
+
 ## Historical dev shadow proof (retired environment)
 
 The `verdify-dev` namespace/overlay is now retired. The record below is kept as

@@ -1,15 +1,27 @@
-# Firmware digital-twin — PROD-SHADOW deployment (#34 / #255 / FW-OPT-6).
+# Firmware digital-twin — durable Tier-1 form (#34 / #255 / #587, audit §8.9).
 #
 # Design: docs/design/firmware-digital-twin.md §2.1 (native logic twin), §5.3
-# (read-only / no-actuation safety model, layer L2), §6 Phase-1 (prod twin
-# shadowing + divergence dashboard).
+# (read-only / no-actuation safety model), §6 Phase-1; productionization per
+# audit §8.9/§8.10 and issue #587.
 #
-# WHAT THIS IS: the merged-but-not-deployed twin (twin/Dockerfile +
-# twin/offline_driver.py + migration 155) stood up in k3s as a SHADOW. It runs
-# the EXACT ESP32 control logic (the -DREPLAY_EMIT_STREAM build of
-# firmware/test/replay_emit.cpp — the same code the rule-8 replay-diff gate
-# trusts), replays a telemetry corpus through it, and writes predicted decisions
-# to twin_decisions via the INSERT-only `twin_ro`/`twin` role (migration 155).
+# WHAT CHANGED (Lane F, #587): the dev-proof shape (gcc:13 initContainer
+# compiling vendored src/ copies + startup `pip install` + an open TCP-443
+# egress for pip) is REPLACED by the pre-baked twin image built from
+# twin/Dockerfile — the same -DREPLAY_EMIT_STREAM compile of
+# firmware/test/replay_emit.cpp the rule-8 replay-diff gate trusts, plus the
+# offline driver, with psycopg already installed. The vendored source copies
+# and their byte-identity CI gate are retired: the image builds from the
+# CANONICAL firmware sources in this repo at an exact revision (see
+# ../twin-builder/twin-builder.yaml), so there are no copies to drift.
+#
+# IMAGE / ROLLOUT: the image reference below is `images:`-transformable
+# (verdify-twin). The digest is pinned by the consuming overlay's images:
+# transformer AFTER the in-cluster twin-builder run pushes to the zot origin —
+# e.g.
+#   - name: registry.vallery.net/verdifyconsultancy/verdify-twin
+#     digest: sha256:<pinned-at-rollout>          # placeholder — no digest yet
+# This component is deliberately NOT referenced by any overlay kustomization
+# yet (nothing deploys); wiring it into overlays/prod is §8.10 rollout step 4.
 #
 # READ-ONLY BY CONSTRUCTION (§5.3 four independent guarantees):
 #   L1  no actuation client, no MQTT, no ESP32 route — only DB INSERT.
@@ -17,26 +29,18 @@
 #       driver asserts at startup it CANNOT write equipment_state and aborts if
 #       it can.
 #   L3  runs in its own pod; no docker.sock, no privileged caps, read-only
-#       rootfs, runAsNonRoot.
-#   L4  egress is only the verdify-db Service (NetworkPolicy below).
-#
-# NO IMAGE BUILD/PUSH: an initContainer (gcc:13) compiles replay_emit_follow
-# from the firmware sources mounted via the verdify-twin-src ConfigMap into a
-# shared emptyDir; the runtime container (python:3.12-slim) pip-installs psycopg
-# and runs offline_driver.py. This keeps the shadow self-contained for the dev
-# proof. The Tier-1 image (twin/Dockerfile) is the durable prod form.
+#       rootfs, runAsNonRoot, no SA token.
+#   L4  egress is ONLY DNS + the verdify-db Service (NetworkPolicy below). The
+#       former TCP-443 pip-bootstrap egress is REMOVED — the image is pre-baked.
 #
 # ── #31 GATE (NOT closed) ───────────────────────────────────────────────────
-# replay_emit_follow itself warns that 48 sp_* Setpoints fields are absent from
-# the export corpus and fall back to default_setpoints() — so for any field the
-# dispatcher tuned away from default, the twin diverges for a CONFIG reason, not
-# a code reason. The prod-vs-reality DIVERGENCE METRIC is therefore NOT
-# trustworthy as a gate until #31 (setpoint coverage) closes. This shadow proves
-# the pipeline + dashboard render; it does NOT yet license acting on divergence.
-#
-# The old verdify-dev safe-shadow environment is retired. Any future verdify-prod
-# shadow additionally needs migration 155 applied to the prod DB + a prod `twin`
-# login user — GATED on the runtime preflight (live-prod schema change), see the runbook.
+# replay_emit_follow warns that 48 sp_* Setpoints fields are absent from the
+# export corpus and fall back to default_setpoints() — so for any field the
+# dispatcher tuned away from default, the twin diverges for a CONFIG reason,
+# not a code reason. The divergence metric is NOT trustworthy as a gate until
+# #31 (setpoint coverage) closes. The §8.10 step-4 live twin additionally
+# needs the live as-of adapter + v_policy_twin_asof_input + the SELECT-only
+# twin role (Lane B/E coordination) before the 7–14d shadow agreement gate.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -59,6 +63,10 @@ spec:
     spec:
       # L3: no privilege, non-root, no service-account token (no API surface).
       automountServiceAccountToken: false
+      # zot-origin pull auth (ADR-0021) — same by-name secret as the other
+      # workloads; the twin image lives ONLY on the zot origin (never ghcr).
+      imagePullSecrets:
+        - name: zot-origin-cluster-pull
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
@@ -66,69 +74,29 @@ spec:
         fsGroup: 10001
         seccompProfile:
           type: RuntimeDefault
-      initContainers:
-        # Compile the gated --stream follower (TWIN-1). The stock batch binary is
-        # byte-for-byte unchanged by -DREPLAY_EMIT_STREAM, so rule-8 is unaffected.
-        - name: build-follower
-          image: gcc:13-bookworm
-          workingDir: /tmp
-          env:
-            - name: TMPDIR
-              value: /tmp
-          command:
-            - bash
-            - -ceu
-            - |
-              g++ -std=c++17 -O2 -DREPLAY_EMIT_STREAM \
-                -I /src/firmware/lib \
-                -o /shared/replay_emit_follow \
-                /src/firmware/test/replay_emit.cpp
-              cp /src/twin/offline_driver.py /shared/offline_driver.py
-              echo "built replay_emit_follow + staged driver"
-          volumeMounts:
-            - name: tmp
-              mountPath: /tmp
-            - name: src
-              mountPath: /src/firmware/lib/greenhouse_logic.h
-              subPath: greenhouse_logic.h
-            - name: src
-              mountPath: /src/firmware/lib/greenhouse_types.h
-              subPath: greenhouse_types.h
-            - name: src
-              mountPath: /src/firmware/test/replay_emit.cpp
-              subPath: replay_emit.cpp
-            - name: src
-              mountPath: /src/twin/offline_driver.py
-              subPath: offline_driver.py
-            - name: shared
-              mountPath: /shared
-          securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            capabilities:
-              drop: ["ALL"]
       containers:
         - name: twin
-          image: python:3.12-slim
+          # Pre-baked Tier-1 image (twin/Dockerfile): replay_emit_follow +
+          # offline_driver.py + psycopg, USER twin (uid 10001). Pinned to an
+          # immutable @sha256 digest by the consuming overlay's images:
+          # transformer at rollout — placeholder digest, see header.
+          image: registry.vallery.net/verdifyconsultancy/verdify-twin
           command:
             - bash
             - -ceu
             - |
-              export HOME=/tmp PYTHONUSERBASE=/tmp/pip
-              pip install --no-cache-dir --quiet --user "psycopg[binary]>=3.1"
-              export PYTHONPATH="$(python -c 'import site,os; print(site.getusersitepackages())')"
-              # Pass the password via libpq's PGPASSWORD env (unambiguous, never
-              # in the URI / argv / logs). The driver's psycopg.connect(dsn)
-              # picks PGPASSWORD up from the environment.
+              # Pass the password via libpq's PGPASSWORD env (unambiguous,
+              # never in the URI / argv / logs). psycopg.connect(dsn) picks
+              # PGPASSWORD up from the environment.
               export PGPASSWORD="${TWIN_DB_PASSWORD}"
               export TWIN_DSN="${TWIN_DSN_BASE}"
               # The driver asserts read-only at startup (L2), then replays the
               # corpus, INSERT-only into twin_decisions. Loop the corpus so the
               # shadow keeps producing rows for the dashboard.
               while true; do
-                TWIN_BINARY=/shared/replay_emit_follow \
+                TWIN_BINARY=/usr/local/bin/replay_emit_follow \
                 TWIN_CSV=/corpus/replay_sample.csv \
-                python /shared/offline_driver.py
+                python /usr/local/bin/offline_driver.py
                 echo "[twin] corpus pass complete; sleeping ${TWIN_LOOP_SLEEP:-300}s"
                 sleep "${TWIN_LOOP_SLEEP:-300}"
               done
@@ -152,9 +120,6 @@ spec:
                   name: verdify-twin-secrets
                   key: TWIN_DB_PASSWORD
           volumeMounts:
-            - name: shared
-              mountPath: /shared
-              readOnly: true
             - name: corpus
               mountPath: /corpus
               readOnly: true
@@ -173,20 +138,16 @@ spec:
               cpu: 250m
               memory: 256Mi
       volumes:
-        - name: src
-          configMap:
-            name: verdify-twin-src
         - name: corpus
           configMap:
             name: verdify-twin-corpus
-        - name: shared
-          emptyDir: {}
         - name: tmp
           emptyDir: {}
 ---
-# L4: egress restricted to the verdify-db Service + DNS. No device, no internet
-# beyond what pip needs at boot (kept open to TCP 443 for the one-time install;
-# tighten to a pre-baked image in the durable Tier-1 form).
+# L4: egress restricted to DNS + the verdify-db Service. NOTHING else: no
+# device VLAN, no MQTT, no internet — the pip-bootstrap TCP-443 rule of the
+# dev-proof shape is gone (pre-baked image). NO-ACTUATION is a network
+# property here, not just a code property.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -208,7 +169,7 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
-    # verdify-db (Postgres) — the only data egress in steady state.
+    # verdify-db (Postgres) — the ONLY data egress.
     - to:
         - podSelector:
             matchLabels:
@@ -217,11 +178,6 @@ spec:
       ports:
         - protocol: TCP
           port: 5432
-    # pip bootstrap (one-time at container start); remove in the pre-baked image.
-    - to: []
-      ports:
-        - protocol: TCP
-          port: 443
 ---
 # Ingress allowance ON THE DB for the twin. The namespace runs default-deny
 # ingress + an allow-db-from-app that only lists api/mcp/ingestor/migrate, so

@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+# Kustomize COMPONENT: verdify-twin in-cluster Kaniko build template (#587,
+# §8.10 rollout step 4). Suspended-CronJob-as-template — see
+# twin-builder.yaml. NOT referenced by any overlay yet; wiring it in (or
+# using the agent-fleet-ci repo-build path documented in the manifest header)
+# is a rollout-step decision. NOTE: adding it to an overlay requires the
+# CronJob kind to already be whitelisted in the AppProject (firmware-builder
+# precedent).
+resources:
+  - twin-builder.yaml

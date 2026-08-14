@@ -21,7 +21,6 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 SURFACE_RELS = [
     "ingestor/solar.py",
     "firmware/lib/greenhouse_solar.h",
-    "deploy/k8s/components/firmware-twin/src/greenhouse_solar.h",
     "db/migrations/186-noaa-solar-phase-parity.sql",
     "db/schema.sql",
 ]
