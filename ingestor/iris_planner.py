@@ -1463,16 +1463,29 @@ def send_to_iris(
 
         message = builder(context, label, instance)
 
-    audit_banner = (
-        "\n\n---\n"
-        f"**Audit headers** — pass these to `set_plan`, `set_tunable`, or\n"
-        f"`acknowledge_trigger` so the\n"
-        f"plan-journal and setpoint-changes rows record which trigger and which\n"
-        f"planner instance produced them.\n\n"
-        f"- `trigger_id={trigger_id}`\n"
-        f"- `planner_instance={instance!r}`\n"
-        f"---\n\n"
-    )
+    if experiment_mode is not None:
+        # Experiment audience: acknowledge_trigger is the only audit-header
+        # consumer (set_plan/set_tunable are denied to this profile). Same
+        # banner bytes on both arms; only the per-trigger id varies.
+        audit_banner = (
+            "\n\n---\n"
+            f"**Audit headers** — pass these to `acknowledge_trigger` if you\n"
+            f"must record a no-selection outcome.\n\n"
+            f"- `trigger_id={trigger_id}`\n"
+            f"- `planner_instance={instance!r}`\n"
+            f"---\n\n"
+        )
+    else:
+        audit_banner = (
+            "\n\n---\n"
+            f"**Audit headers** — pass these to `set_plan`, `set_tunable`, or\n"
+            f"`acknowledge_trigger` so the\n"
+            f"plan-journal and setpoint-changes rows record which trigger and which\n"
+            f"planner instance produced them.\n\n"
+            f"- `trigger_id={trigger_id}`\n"
+            f"- `planner_instance={instance!r}`\n"
+            f"---\n\n"
+        )
     message = message + audit_banner
 
     if experiment_mode is None and not PLANNER_PLAYBOOK_PATH.exists():
