@@ -1,0 +1,404 @@
+{
+  "artifact": "ai-template-candidates",
+  "status": "CANDIDATE — pending horticultural/firmware/safety approval (gate:jason)",
+  "issue": "#588",
+  "epic": "#581",
+  "generated_at": "2026-08-14T21:09:42+00:00",
+  "baseline_artifact": "frozen-fsm-baseline-candidate-2026-08-14.json",
+  "baseline_sql_sha256": "72a83c13028a11b5fb0d0b1aed08e00b37dccdfd9bd8ce169e20ad65c369354c",
+  "baseline_input_csv_sha256": "bfabce68f393d990d13b4b9097076f910a49c65b5a18afc6a778cbdad065064a",
+  "diff_allowlist": [
+    "cool_stage2_over_high_f",
+    "sw_cool_all_fans_at_high_enabled",
+    "fog_escalation_kpa",
+    "min_fog_on_s",
+    "min_fog_off_s",
+    "mister_engage_kpa",
+    "mister_all_kpa",
+    "mister_all_delay_s",
+    "mister_pulse_gap_s",
+    "mister_pulse_on_s",
+    "mister_water_budget_gal"
+  ],
+  "inheritance_rule": "all 38 wire fields outside the allowlist are byte-identical to the approved Frozen-FSM baseline vector (§8.2)",
+  "unresolved_baseline_fields": [
+    "direct_wet_stress_latest_hour"
+  ],
+  "wire_schema": {
+    "version": 1,
+    "field_count": 49,
+    "manifest_digest_sha256": "2b1798fa811c03ecb91090c9d0f08c584bd34224ad26133db6d5535e9ddf6421"
+  },
+  "policy_revision_ids": {
+    "registry_rev": "wire-v1-initial",
+    "schema_rev": "efa85343"
+  },
+  "templates": {
+    "moderate": {
+      "design_intent": "epoch-mean hot/dry posture on the wire grid",
+      "fields": {
+        "cool_stage2_over_high_f": {
+          "wire_id": 5,
+          "value": 0.8,
+          "baseline_quantized_value": 0.0,
+          "differs_from_baseline": true,
+          "registry_bounds": [
+            0.0,
+            3.0
+          ],
+          "firmware_clamp": [
+            0.0,
+            3.0
+          ],
+          "evidence": "§5 epoch mean 0.786°F (57.7% below the 1.0°F default)",
+          "rationale": "Second-stage cooling engages slightly earlier than default, matching observed practice."
+        },
+        "sw_cool_all_fans_at_high_enabled": {
+          "wire_id": 37,
+          "value": true,
+          "baseline_quantized_value": true,
+          "differs_from_baseline": false,
+          "registry_bounds": [
+            0.0,
+            1.0
+          ],
+          "firmware_clamp": [
+            null,
+            null
+          ],
+          "evidence": "§5: enabled 58.3% of sampled minutes (default off)",
+          "rationale": "Majority-time posture ran both fans immediately above temp_high."
+        },
+        "fog_escalation_kpa": {
+          "wire_id": 12,
+          "value": 0.3,
+          "baseline_quantized_value": 0.2,
+          "differs_from_baseline": true,
+          "registry_bounds": [
+            0.1,
+            0.5
+          ],
+          "firmware_clamp": [
+            0.1,
+            0.5
+          ],
+          "evidence": "§5 epoch mean 0.261 kPa (75.4% below the 0.4 kPa default); wire grid 0.1 kPa",
+          "rationale": "Earlier fog escalation than default; 0.3 is the nearest wire-grid value to the epoch mean."
+        },
+        "min_fog_on_s": {
+          "wire_id": 17,
+          "value": 60.0,
+          "baseline_quantized_value": 59.0,
+          "differs_from_baseline": true,
+          "registry_bounds": [
+            15.0,
+            300.0
+          ],
+          "firmware_clamp": [
+            15.0,
+            300.0
+          ],
+          "evidence": "no §5 evidence of movement from the 60 s default",
+          "rationale": "Held at the compiled default; the observed epoch did not demonstrate a different posture."
+        },
+        "min_fog_off_s": {
+          "wire_id": 16,
+          "value": 60.0,
+          "baseline_quantized_value": 60.0,
+          "differs_from_baseline": false,
+          "registry_bounds": [
+            15.0,
+            300.0
+          ],
+          "firmware_clamp": [
+            15.0,
+            300.0
+          ],
+          "evidence": "no §5 evidence of movement from the 60 s default",
+          "rationale": "Held at the compiled default; the observed epoch did not demonstrate a different posture."
+        },
+        "mister_engage_kpa": {
+          "wire_id": 29,
+          "value": 1.2,
+          "baseline_quantized_value": 1.2,
+          "differs_from_baseline": false,
+          "registry_bounds": [
+            0.5,
+            2.5
+          ],
+          "firmware_clamp": [
+            0.5,
+            2.5
+          ],
+          "evidence": "§5 epoch mean 1.185 kPa (99.96% below the 1.6 kPa default); wire grid 0.05 kPa",
+          "rationale": "Physical mister pulses engage well before the default threshold, matching observed practice."
+        },
+        "mister_all_kpa": {
+          "wire_id": 26,
+          "value": 1.35,
+          "baseline_quantized_value": 1.4,
+          "differs_from_baseline": true,
+          "registry_bounds": [
+            1.0,
+            2.5
+          ],
+          "firmware_clamp": [
+            1.0,
+            2.5
+          ],
+          "evidence": "§5 epoch mean 1.360 kPa (99.99% below the 1.9 kPa default); wire grid 0.05 kPa",
+          "rationale": "All-zone rotation threshold near the epoch mean."
+        },
+        "mister_all_delay_s": {
+          "wire_id": 25,
+          "value": 90.0,
+          "baseline_quantized_value": 80.0,
+          "differs_from_baseline": true,
+          "registry_bounds": [
+            60.0,
+            600.0
+          ],
+          "firmware_clamp": [
+            60.0,
+            600.0
+          ],
+          "evidence": "§5 epoch mean 87.3 s (>99.9% below the 300 s default); registry notes stress default 60-90 s",
+          "rationale": "Short all-zone dwell consistent with the observed stress posture, on the 30 s operator step."
+        },
+        "mister_pulse_gap_s": {
+          "wire_id": 31,
+          "value": 38.0,
+          "baseline_quantized_value": 30.0,
+          "differs_from_baseline": true,
+          "registry_bounds": [
+            10.0,
+            60.0
+          ],
+          "firmware_clamp": [
+            10.0,
+            60.0
+          ],
+          "evidence": "§5 epoch mean 37.6 s (69.9% below the 45 s default)",
+          "rationale": "Slightly shorter evaporation dwell between zone pulses, matching observed practice."
+        },
+        "mister_pulse_on_s": {
+          "wire_id": 32,
+          "value": 60.0,
+          "baseline_quantized_value": 90.0,
+          "differs_from_baseline": true,
+          "registry_bounds": [
+            30.0,
+            90.0
+          ],
+          "firmware_clamp": [
+            30.0,
+            90.0
+          ],
+          "evidence": "§5 posture table records no epoch mean shift; forecast response (+0.604 Pearson vs future max VPD) is plan-conditional",
+          "rationale": "Held at the compiled default; per-forecast lengthening belongs to the aggressive template."
+        },
+        "mister_water_budget_gal": {
+          "wire_id": 34,
+          "value": 220.0,
+          "baseline_quantized_value": 300.0,
+          "differs_from_baseline": true,
+          "registry_bounds": [
+            100.0,
+            300.0
+          ],
+          "firmware_clamp": [
+            100.0,
+            300.0
+          ],
+          "evidence": "§5 epoch mean 222.4 gal (57.5% below the 300 gal default; never above)",
+          "rationale": "Lower total water ceiling with earlier response — the observed efficiency strategy."
+        }
+      }
+    },
+    "aggressive": {
+      "design_intent": "bounded step further in the responsive hot/dry direction",
+      "fields": {
+        "cool_stage2_over_high_f": {
+          "wire_id": 5,
+          "value": 0.5,
+          "baseline_quantized_value": 0.0,
+          "differs_from_baseline": true,
+          "registry_bounds": [
+            0.0,
+            3.0
+          ],
+          "firmware_clamp": [
+            0.0,
+            3.0
+          ],
+          "evidence": "§5 Pearson −0.540 (stage-2 offset vs future max VPD): earlier second-stage cooling under load",
+          "rationale": "One bounded step earlier than the moderate 0.8°F; well inside the [0, 3]°F clamp."
+        },
+        "sw_cool_all_fans_at_high_enabled": {
+          "wire_id": 37,
+          "value": true,
+          "baseline_quantized_value": true,
+          "differs_from_baseline": false,
+          "registry_bounds": [
+            0.0,
+            1.0
+          ],
+          "firmware_clamp": [
+            null,
+            null
+          ],
+          "evidence": "§5: enabled 58.3% of sampled minutes",
+          "rationale": "Both fans immediately above temp_high, as in the moderate template."
+        },
+        "fog_escalation_kpa": {
+          "wire_id": 12,
+          "value": 0.2,
+          "baseline_quantized_value": 0.2,
+          "differs_from_baseline": false,
+          "registry_bounds": [
+            0.1,
+            0.5
+          ],
+          "firmware_clamp": [
+            0.1,
+            0.5
+          ],
+          "evidence": "§5 epoch mean 0.261 kPa already 75.4% below default",
+          "rationale": "One 0.1 kPa wire step earlier than moderate; stays above the 0.1 kPa clamp floor."
+        },
+        "min_fog_on_s": {
+          "wire_id": 17,
+          "value": 90.0,
+          "baseline_quantized_value": 59.0,
+          "differs_from_baseline": true,
+          "registry_bounds": [
+            15.0,
+            300.0
+          ],
+          "firmware_clamp": [
+            15.0,
+            300.0
+          ],
+          "evidence": "§5: longer wet pulses under severe forecasts (mister pulse-on Pearson +0.604)",
+          "rationale": "Longer minimum fog runs once engaged, consistent with the longer-wet-pulse response direction."
+        },
+        "min_fog_off_s": {
+          "wire_id": 16,
+          "value": 30.0,
+          "baseline_quantized_value": 60.0,
+          "differs_from_baseline": true,
+          "registry_bounds": [
+            15.0,
+            300.0
+          ],
+          "firmware_clamp": [
+            15.0,
+            300.0
+          ],
+          "evidence": "§5: shorter recovery gaps under severe forecasts (pulse-gap Pearson −0.596)",
+          "rationale": "Faster fog re-engagement during escalation; stays above the 15 s clamp floor."
+        },
+        "mister_engage_kpa": {
+          "wire_id": 29,
+          "value": 1.0,
+          "baseline_quantized_value": 1.2,
+          "differs_from_baseline": true,
+          "registry_bounds": [
+            0.5,
+            2.5
+          ],
+          "firmware_clamp": [
+            0.5,
+            2.5
+          ],
+          "evidence": "§5 epoch mean 1.185 kPa; observed posture spent 99.96% of time below default",
+          "rationale": "One bounded step earlier than moderate; twice the 0.5 kPa clamp floor."
+        },
+        "mister_all_kpa": {
+          "wire_id": 26,
+          "value": 1.2,
+          "baseline_quantized_value": 1.4,
+          "differs_from_baseline": true,
+          "registry_bounds": [
+            1.0,
+            2.5
+          ],
+          "firmware_clamp": [
+            1.0,
+            2.5
+          ],
+          "evidence": "§5 epoch mean 1.360 kPa; registry notes keep it close to active vpd_high under hot/dry stress",
+          "rationale": "Earlier all-zone assist; stays above the 1.0 kPa clamp floor."
+        },
+        "mister_all_delay_s": {
+          "wire_id": 25,
+          "value": 60.0,
+          "baseline_quantized_value": 80.0,
+          "differs_from_baseline": true,
+          "registry_bounds": [
+            60.0,
+            600.0
+          ],
+          "firmware_clamp": [
+            60.0,
+            600.0
+          ],
+          "evidence": "§5 epoch mean 87.3 s; registry stress default range 60-90 s",
+          "rationale": "Fastest permitted all-zone rotation — exactly the 60 s firmware clamp floor the epoch already approached."
+        },
+        "mister_pulse_gap_s": {
+          "wire_id": 31,
+          "value": 30.0,
+          "baseline_quantized_value": 30.0,
+          "differs_from_baseline": false,
+          "registry_bounds": [
+            10.0,
+            60.0
+          ],
+          "firmware_clamp": [
+            10.0,
+            60.0
+          ],
+          "evidence": "§5: shorter recovery gaps under severe forecasts (Pearson −0.596, partial −0.446)",
+          "rationale": "One bounded step below the moderate 38 s; three times the 10 s clamp floor."
+        },
+        "mister_pulse_on_s": {
+          "wire_id": 32,
+          "value": 75.0,
+          "baseline_quantized_value": 90.0,
+          "differs_from_baseline": true,
+          "registry_bounds": [
+            30.0,
+            90.0
+          ],
+          "firmware_clamp": [
+            30.0,
+            90.0
+          ],
+          "evidence": "§5: longer wet pulses under severe forecasts (Pearson +0.604, partial +0.493)",
+          "rationale": "Halfway between the 60 s default and the 90 s clamp ceiling."
+        },
+        "mister_water_budget_gal": {
+          "wire_id": 34,
+          "value": 250.0,
+          "baseline_quantized_value": 300.0,
+          "differs_from_baseline": true,
+          "registry_bounds": [
+            100.0,
+            300.0
+          ],
+          "firmware_clamp": [
+            100.0,
+            300.0
+          ],
+          "evidence": "§5: more water headroom on severe forecasts (budget vs future max VPD Pearson +0.683)",
+          "rationale": "More headroom than moderate for severe hot/dry days while keeping a ceiling below the 300 gal default."
+        }
+      }
+    }
+  },
+  "canonical_vectors": {
+    "omitted": true,
+    "reason": "template vectors inherit 38 fields from the baseline, which is incomplete: direct_wet_stress_latest_hour"
+  }
+}
