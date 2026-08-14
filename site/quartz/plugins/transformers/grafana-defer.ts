@@ -5,16 +5,15 @@ import { Root } from "hast"
 // Build-time replacement of Grafana embed iframes with progressive-
 // enhancement placeholder <div class="grafana-embed">. The companion
 // GrafanaEmbeds component (afterDOMLoaded script) upgrades each
-// placeholder to either a live iframe (desktop, Android) or a
-// /render-served PNG (iOS Safari/Chrome) depending on the user
-// agent.
+// placeholder to a live iframe as it approaches the viewport, with a
+// /render-served PNG retained as its automatic failure fallback.
 //
-// Why placeholders, not iframes: iOS Safari OOM-crashes the tab when
-// many Grafana React contexts allocate at once. Static PNGs from the
-// grafana-image-renderer service have no JS, no WebSocket, and use
-// well under a megabyte each — so iPhone Safari handles them fine.
+// Why placeholders, not immediate iframes: graph-heavy pages can allocate many
+// Grafana React contexts at once. The client-side viewport observer bounds
+// startup work and releases distant contexts while still loading every panel
+// without a click as the visitor reaches it.
 //
-// We carry both URLs forward so the client can pick at runtime:
+// We carry both URLs forward so the client can load and recover at runtime:
 //   data-iframe-src — original /d-solo/... URL (live, interactive)
 //   data-image-src  — /render/d-solo/... URL (static PNG)
 // The image-src is computed from the iframe-src by injecting `/render`

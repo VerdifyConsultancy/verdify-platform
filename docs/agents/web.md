@@ -205,8 +205,11 @@ Vault writer scripts also maintain non-website Obsidian notes:
 Site markdown embeds Grafana with `https://graphs.verdify.ai/d-solo/{dashboard_uid}/?...&panelId=N`. Site dashboard JSON is in `/mnt/iris/verdify/grafana/dashboards`, while live Grafana also stores dashboards in its DB.
 
 Quartz transforms those embeds into browser-neutral placeholders. The
-`GrafanaEmbeds` component automatically loads the corresponding
-`/render/d-solo/...` PNG in every browser; interactive Grafana is an explicit
+`GrafanaEmbeds` component automatically loads the interactive Grafana iframe as
+each panel approaches the viewport and releases it again once it is well outside
+the viewport; returning to the panel recreates it automatically. If a navigation
+does not settle within 12 seconds or the browser reports an error, the component
+falls back to the corresponding `/render/d-solo/...` PNG and offers a retry
 action. The public `/render/` route passes through
 the two-replica `verdify-grafana-render-cache`, whose five-minute shared render
 entries prevent each Chrome/Safari page view from

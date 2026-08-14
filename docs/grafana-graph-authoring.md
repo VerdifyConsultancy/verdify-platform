@@ -37,8 +37,9 @@ Grafana pod (ns verdify-prod, deploy/verdify-grafana)
         ▼
 verdify-grafana-render-cache (five-minute PNG cache; one-minute browser freshness)
         ▼
-graphs.verdify.ai (interactive dashboards) + lab.verdify.ai (automatic PNGs;
-explicit interactive-panel action)
+graphs.verdify.ai (interactive dashboards) + lab.verdify.ai (automatic
+viewport-bounded interactive panels; distant iframe release; cached PNG
+best-effort failure fallback)
 ```
 
 Key facts:

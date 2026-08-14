@@ -2,11 +2,11 @@ import { QuartzComponentConstructor } from "./types"
 
 // GrafanaEmbeds — progressive-enhancement upgrader for placeholder
 // <div class="grafana-embed"> nodes emitted by the GrafanaDefer
-// transformer. Every browser gets a stable cached PNG from Grafana's
-// `/render/d-solo/...` endpoint by default. Interactive Grafana is an
-// explicit action: cross-origin iframes are considerably heavier and their
-// load event does not prove that the panel actually rendered in Chrome or
-// Safari.
+// transformer. Every browser automatically gets the live Grafana iframe as
+// the panel approaches the viewport. Iframes are released again when they move
+// well outside it so graph-heavy pages do not retain every Grafana React app.
+// The stable cached `/render/d-solo/...` PNG remains a best-effort fallback for
+// navigations that do not settle or whose browser reports an error.
 //
 // The component itself emits no DOM (returns null) — the render is
 // done client-side by the afterDOMLoaded script below, which scans
@@ -135,16 +135,16 @@ export default (() => {
     }
   }
 
-  function appendActions(el, liveSrc, loadInteractive) {
+  function appendActions(el, liveSrc, retryInteractive) {
     if (!liveSrc) return;
     var actions = document.createElement('div');
     actions.className = 'grafana-embed__actions';
-    if (loadInteractive) {
+    if (retryInteractive) {
       var b = document.createElement('button');
       b.type = 'button';
-      b.textContent = 'Load interactive panel';
+      b.textContent = 'Retry interactive panel';
       b.addEventListener('click', function () {
-        loadInteractive();
+        retryInteractive();
       });
       actions.appendChild(b);
     }
@@ -392,6 +392,16 @@ export default (() => {
       elementTimers.delete(el);
     }
 
+    function deactivate(el) {
+      if (!loaded.has(el)) return;
+      loaded.delete(el);
+      clearElementTimers(el);
+      beginRender(el);
+      var height = parseInt(el.getAttribute('data-height') || '300', 10);
+      el.style.minHeight = height + 'px';
+      el.innerHTML = '<div class="grafana-embed__placeholder" style="height:' + height + 'px">Loading...</div>';
+    }
+
     function renderImage(el, imgSrc, iframeSrc, liveSrc, title, height, refreshMs) {
       clearElementTimers(el);
       var generation = beginRender(el);
@@ -463,6 +473,9 @@ export default (() => {
       el.appendChild(img);
       requestImage(sizedSrc);
 
+      // Reaching the image path means the automatic iframe failed (or this is
+      // an image-only embed). Keep an explicit retry only as recovery; normal
+      // interactive loading never waits for a user action.
       appendActions(el, liveSrc, iframeSrc ? function () {
         if (current()) renderIframe(el, iframeSrc, liveSrc, title, height, imgSrc, refreshMs);
       } : null);
@@ -489,8 +502,8 @@ export default (() => {
       f.height = String(height);
       f.style.height = height + 'px';
       f.frameBorder = '0';
-      // Interactive panels are created only after an explicit user action, so
-      // there is no reason to defer that requested navigation again.
+      // IntersectionObserver already bounds creation to panels approaching the
+      // viewport, so do not defer the iframe navigation a second time.
       f.loading = 'eager';
       f.referrerPolicy = 'no-referrer-when-downgrade';
 
@@ -540,9 +553,7 @@ export default (() => {
         return;
       }
 
-      if (imageSrc) {
-        renderImage(el, imageSrc, iframeSrc, liveSrc, title, height, refreshMs);
-      } else if (iframeSrc) {
+      if (iframeSrc) {
         renderIframe(el, iframeSrc, liveSrc, title, height, imageSrc, refreshMs);
       } else {
         renderImage(el, imageSrc, iframeSrc, liveSrc, title, height, refreshMs);
@@ -563,12 +574,15 @@ export default (() => {
         for (var i = 0; i < entries.length; i++) {
           if (entries[i].isIntersecting) {
             load(entries[i].target);
-            observer.unobserve(entries[i].target);
+          } else {
+            // A page can contain 17 panels. Release offscreen iframe contexts
+            // and automatically recreate them if the visitor scrolls back.
+            deactivate(entries[i].target);
           }
         }
-      // Start the bounded image queue before a panel reaches the viewport so a
-      // normal scroll does not expose an avoidable blank/loading interval.
-      }, { rootMargin: '1200px 0px', threshold: 0 });
+      // Start interactive navigation shortly before a panel reaches the
+      // viewport without retaining the entire graph inventory at once.
+      }, { rootMargin: '600px 0px', threshold: 0 });
       embeds.forEach(function (el) { observer.observe(el); });
     } else {
       embeds.forEach(load);

@@ -42,14 +42,25 @@ async function fulfillPng(route) {
     });
 }
 
-test("@quality Quartz media loader bounds startup work and autoloads intersected evidence", async ({
+test("@quality Quartz media loader bounds startup work and autoloads intersected dashboards", async ({
     page,
 }) => {
     const graphRequests = [];
+    const interactiveRequests = [];
     page.on("request", (request) => {
         if (request.url().includes("graph-")) graphRequests.push(request.url());
+        if (request.url().startsWith("https://graphs.invalid/")) {
+            interactiveRequests.push(request.url());
+        }
     });
     await page.route("https://fixture.invalid/**", fulfillPng);
+    await page.route("https://graphs.invalid/**", (route) =>
+        route.fulfill({
+            status: 200,
+            contentType: "text/html",
+            body: "<!doctype html><title>Interactive Grafana fixture</title>",
+        }),
+    );
 
     await page.setContent(`
     <!doctype html>
@@ -125,23 +136,141 @@ test("@quality Quartz media loader bounds startup work and autoloads intersected
     );
 
     await page.locator("#near").scrollIntoViewIfNeeded();
-    await expect(page.locator("#near img.grafana-embed__img")).toHaveJSProperty(
-        "naturalWidth",
-        1,
+    await expect(page.locator("#near iframe.grafana-embed__frame")).toHaveAttribute(
+        "src",
+        /\/d-solo\/near\?theme=light$/,
     );
-    await expect(page.locator("#near iframe")).toHaveCount(0);
-    await expect(page.locator("#near button")).toHaveText(
-        "Load interactive panel",
-    );
-    expect(graphRequests.some((url) => url.includes("graph-near.png"))).toBe(
+    await expect(page.locator("#near iframe")).toHaveAttribute("loading", "eager");
+    await expect(page.locator("#near img")).toHaveCount(0);
+    await expect(page.locator("#near button")).toHaveCount(0);
+    expect(interactiveRequests.some((url) => url.includes("/d-solo/near"))).toBe(
         true,
     );
-    expect(graphRequests.some((url) => url.includes("graph-far.png"))).toBe(
+    expect(interactiveRequests.some((url) => url.includes("/d-solo/far"))).toBe(
         false,
     );
+    expect(graphRequests).toEqual([]);
     await expect(page.locator("#far .grafana-embed__placeholder")).toHaveText(
         "Loading...",
     );
+
+    await page.locator("#far").scrollIntoViewIfNeeded();
+    await expect(page.locator("#far iframe.grafana-embed__frame")).toHaveAttribute(
+        "src",
+        /\/d-solo\/far\?theme=light$/,
+    );
+    expect(interactiveRequests.some((url) => url.includes("/d-solo/far"))).toBe(
+        true,
+    );
+    await expect(page.locator("#near iframe")).toHaveCount(0);
+    await expect(page.locator("#near .grafana-embed__placeholder")).toHaveText(
+        "Loading...",
+    );
+});
+
+test("@quality Quartz dashboard automatically falls back when its iframe stalls", async ({
+    page,
+}) => {
+    await page.route("https://fixture.invalid/**", fulfillPng);
+    await page.route("https://graphs.invalid/**", (route) =>
+        route.fulfill({
+            status: 200,
+            contentType: "text/html",
+            body: "<!doctype html><title>Interactive Grafana fixture</title>",
+        }),
+    );
+    await page.setContent(`
+    <!doctype html>
+    <html saved-theme="light">
+      <body>
+        <div id="fallback" class="grafana-embed"
+             data-iframe-src="https://graphs.invalid/d-solo/fallback"
+             data-image-src="https://fixture.invalid/graph-fallback.png"
+             data-live-src="https://graphs.invalid/d/fallback"
+             data-title="Fallback panel" data-height="180" data-refresh-ms="0"></div>
+      </body>
+    </html>
+  `);
+
+    // Suppress the fixture iframe's load/error listeners and compress only the
+    // production 12-second watchdog, deterministically simulating a navigation
+    // that never settles without weakening any other loader behavior.
+    await page.evaluate(() => {
+        const nativeAddEventListener =
+            HTMLIFrameElement.prototype.addEventListener;
+        HTMLIFrameElement.prototype.addEventListener = function (
+            type,
+            listener,
+            options,
+        ) {
+            if (type === "load" || type === "error") return;
+            return nativeAddEventListener.call(this, type, listener, options);
+        };
+        const nativeTimeout = window.setTimeout.bind(window);
+        window.setTimeout = (callback, delay = 0, ...args) =>
+            nativeTimeout(callback, delay === 12000 ? 5 : delay, ...args);
+    });
+
+    await installLoader(page);
+    await expect(
+        page.locator("#fallback img.grafana-embed__img"),
+    ).toHaveJSProperty("naturalWidth", 1);
+    await expect(page.locator("#fallback iframe")).toHaveCount(0);
+    await expect(page.locator("#fallback button")).toHaveText(
+        "Retry interactive panel",
+    );
+});
+
+test("@quality Quartz recycles iframe contexts across a graph-heavy page", async ({
+    page,
+}) => {
+    const interactiveRequests = [];
+    page.on("request", (request) => {
+        if (request.url().startsWith("https://graphs.invalid/")) {
+            interactiveRequests.push(request.url());
+        }
+    });
+    await page.route("https://graphs.invalid/**", (route) =>
+        route.fulfill({
+            status: 200,
+            contentType: "text/html",
+            body: "<!doctype html><title>Interactive Grafana fixture</title>",
+        }),
+    );
+    const embeds = Array.from(
+        { length: 17 },
+        (_, index) => `
+        <div style="height: 500px"></div>
+        <div id="graph-heavy-${index}" class="grafana-embed"
+             data-iframe-src="https://graphs.invalid/d-solo/heavy-${index}"
+             data-title="Heavy panel ${index}" data-height="180" data-refresh-ms="0"></div>`,
+    ).join("");
+    await page.setContent(
+        `<!doctype html><html saved-theme="light"><body>${embeds}</body></html>`,
+    );
+    await installLoader(page);
+
+    let maxActive = 0;
+    for (let index = 0; index < 17; index += 1) {
+        await page.locator(`#graph-heavy-${index}`).scrollIntoViewIfNeeded();
+        await expect(
+            page.locator(`#graph-heavy-${index} iframe.grafana-embed__frame`),
+        ).toHaveCount(1);
+        maxActive = Math.max(
+            maxActive,
+            await page.locator("iframe.grafana-embed__frame").count(),
+        );
+    }
+
+    expect(maxActive).toBeLessThan(17);
+    await expect(page.locator("#graph-heavy-0 iframe")).toHaveCount(0);
+    await page.locator("#graph-heavy-0").scrollIntoViewIfNeeded();
+    await expect(
+        page.locator("#graph-heavy-0 iframe.grafana-embed__frame"),
+    ).toHaveCount(1);
+    expect(
+        interactiveRequests.filter((url) => url.includes("/d-solo/heavy-0")),
+    ).toHaveLength(2);
 });
 
 test("@quality Quartz graph image recovers after its initial retry budget", async ({

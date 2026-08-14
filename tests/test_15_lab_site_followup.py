@@ -415,18 +415,19 @@ def test_quartz_dark_mode_contract_is_user_theme_driven():
     assert "themechange" in embeds
 
 
-def test_quartz_graphs_and_cameras_autoload_with_cached_images_on_every_browser():
+def test_quartz_graphs_and_cameras_autoload_interactively_on_every_browser():
     embeds = (REPO_ROOT / "site/quartz/components/GrafanaEmbeds.tsx").read_text(encoding="utf-8")
 
-    # Browser sniffing previously sent desktop Chrome/Safari down the heavier
-    # cross-origin iframe path. Rendered images are now the universal default;
-    # the iframe remains available only through the explicit action.
+    # Every browser takes the interactive path automatically. The cached image
+    # path remains available only as an automatic timeout/error fallback.
     assert "shouldUseStaticImages" not in embeds
     assert "var staticImages" not in embeds
-    assert "if (imageSrc) {" in embeds
-    assert "Load interactive panel" in embeds
+    assert "if (iframeSrc) {" in embeds
+    assert "Load interactive panel" not in embeds
+    assert "Retry interactive panel" in embeds
     assert "IMG_MAX_INFLIGHT = 2" in embeds
-    assert "rootMargin: '1200px 0px'" in embeds
+    assert "function deactivate(el)" in embeds
+    assert "rootMargin: '600px 0px'" in embeds
     assert "if (!loaded.has(el)) return" in embeds
     assert "unavailable.parentNode.replaceChild(img, unavailable)" in embeds
     assert "var renderGenerations = new WeakMap()" in embeds
