@@ -2,6 +2,8 @@
 -- One-time baseline stamp of the existing applied migration set.
 -- Identity = (source, filename). Re-running is idempotent (stamp_migration upserts).
 -- DO NOT hand-edit; regenerate after adding migrations.
+-- EXCLUDED (in repo, NOT pre-stamped — pending for the ledgered runner):
+--   207-controlled-policy-experiment.sql
 
 BEGIN;
 SELECT stamp_migration('db/migrations/000-fresh-schema-hypertable-repair.sql', 'db/migrations', 0, 'f1dff063bae1e5d8315eca08103eb7ef0d3e3d91aa935c6a0d0478abbb398d54', 'baseline');
@@ -104,8 +106,8 @@ SELECT stamp_migration('db/migrations/091-fairness-counter.sql', 'db/migrations'
 SELECT stamp_migration('db/migrations/092-plan-delivery-log.sql', 'db/migrations', 92, '4014ec990e3805ffc8fcc887eb929257ba30eff7b2cb3e488da4e42324cfbdd0', 'baseline');
 SELECT stamp_migration('db/migrations/093-planner-instance-audit.sql', 'db/migrations', 93, 'c703fa8bba41dcbdf2022b9135b5bd402fa5740b3c5c26b852396a585d733a85', 'baseline');
 SELECT stamp_migration('db/migrations/094-v2-control-diagnostics.sql', 'db/migrations', 94, 'a7513f1ebc05e93381fdb379caf1786d045f9dd9d782d1caabaffd70cb3c083d', 'baseline');
-SELECT stamp_migration('db/migrations/095a-daily-summary-compliance-columns.sql', 'db/migrations', 95, '1a45246bba482c3ade71e7bb5d4caa5f40a8ec99fd890cd9e9fbebc5f5448788', 'baseline');
 SELECT stamp_migration('db/migrations/095-stress-hours-time-weighted.sql', 'db/migrations', 95, 'a625316e03e5f9a95929fc76a61dc7bbac652ac6a7b957f53d7b55e823e03fee', 'baseline');
+SELECT stamp_migration('db/migrations/095a-daily-summary-compliance-columns.sql', 'db/migrations', 95, '1a45246bba482c3ade71e7bb5d4caa5f40a8ec99fd890cd9e9fbebc5f5448788', 'baseline');
 SELECT stamp_migration('db/migrations/096-scorecard-live-resync.sql', 'db/migrations', 96, '2a499961048c97c0b4e7813e6b3a4961bf559eb1b751c72235cee0f8605cdb6b', 'baseline');
 SELECT stamp_migration('db/migrations/097-zone-cycle-counters.sql', 'db/migrations', 97, '6f00aea85b343c434472e18ec5d9b286b4e941983aa54e943b58b58147695579', 'baseline');
 SELECT stamp_migration('db/migrations/098-greenhouse-state-refresh.sql', 'db/migrations', 98, '529bedaa528bdfd9ef47facf41c3d4df4bac844504dd06126c6c794cc738d3a7', 'baseline');
@@ -155,9 +157,9 @@ SELECT stamp_migration('db/migrations/141-greenhouse-state-target-deltas.sql', '
 SELECT stamp_migration('db/migrations/142-climate-action-log.sql', 'db/migrations', 142, '9169632901c22be627f475cab0422bd44752248c34427772ca9eef3e98512413', 'baseline');
 SELECT stamp_migration('db/migrations/143-slack-ops.sql', 'db/migrations', 143, '7de07502539239be2ae964285deb352b8df9f8dc94c762911603acc1ebc16bf8', 'baseline');
 SELECT stamp_migration('db/migrations/144-slack-ops-completion.sql', 'db/migrations', 144, '1bc3a9397352eafae4a02c6ded0decde4731454dbb0019026cd120df8e1c1cd2', 'baseline');
-SELECT stamp_migration('db/migrations/145-vanda-band-and-join-fix.sql', 'db/migrations', 145, 'ae2d5087f67e5ef259ca6832499f81e7d27d106e96951b1a3001dd202f4e54b2', 'baseline');
+SELECT stamp_migration('db/migrations/145-vanda-band-and-join-fix.sql', 'db/migrations', 145, 'c599744bc497a0c6bc5c39644a17eeeec7b658fc4b1081afcf65aa94e6818f35', 'baseline');
 SELECT stamp_migration('db/migrations/146-compliance-rearchitecture.sql', 'db/migrations', 146, '8e96c3bdf2cff051e6b8cf3b16cabe2dc47288fc39b5fb96b5b0ab6e54b25d3a', 'baseline');
-SELECT stamp_migration('db/migrations/147-reward-swap-and-ladder-reanchor.sql', 'db/migrations', 147, 'd1083f7b93ac4f5de833627c2ace67b22cf5820516765ef34c0ace0edd63b574', 'baseline');
+SELECT stamp_migration('db/migrations/147-reward-swap-and-ladder-reanchor.sql', 'db/migrations', 147, '71f5345d14917e986eda6a2cea43f680b6eb28d2caeb56f6340ae83c28fbd8d9', 'baseline');
 SELECT stamp_migration('db/migrations/148-plan-accuracy-repoint-plan-journal.sql', 'db/migrations', 148, '873f4fb0a57dc7b2702094d4e7b83bea271f222bf986dcc25729a9b5ab87f928', 'baseline');
 SELECT stamp_migration('db/migrations/149-compress-snapshot-open-alerts-zone-kpis.sql', 'db/migrations', 149, 'bc770faa85973a1d614f1defa5265e603d04736aaf9f52b9fac5aa75316337aa', 'baseline');
 SELECT stamp_migration('db/migrations/150-vanda-nutrient-recipe.sql', 'db/migrations', 150, '89326344502f4d6c28961e002321658b47f6317de44a9bfaa331dd9c7cb487c6', 'baseline');
@@ -165,9 +167,59 @@ SELECT stamp_migration('db/migrations/151-backfill-suppressed-sensor-offline-res
 SELECT stamp_migration('db/migrations/152-kwh-coalesce-sanity-gate.sql', 'db/migrations', 152, 'af6e312cfb8278955e08ea1019d65a93b10fb863c746154ae8bf2de17e421d97', 'baseline');
 SELECT stamp_migration('db/migrations/153-pipeline-health-weather-station-dark-sources.sql', 'db/migrations', 153, '7ccce5af590167f1cb90d6186c0dfd2a77b3889e0fc33e7b6b8d65b0811cf9e3', 'baseline');
 SELECT stamp_migration('db/migrations/154-consolidate-oscillation-views.sql', 'db/migrations', 154, '33cf6059d8df0b4d608f8913c6dce302a7917fa3b2ed8c9e475fecdac6e91375', 'baseline');
-SELECT stamp_migration('db/migrations/155-twin-observability-tables.sql', 'db/migrations', 155, 'bfbf32c08a21f396e5721b9a5c539a93bcd8f81db771055e016fd90923a1223c', 'baseline');
+SELECT stamp_migration('db/migrations/155-twin-observability-tables.sql', 'db/migrations', 155, 'acd3d616dd03f0570b544da1ab16d77cc20acbbf09dc99669b37c763eace0e00', 'baseline');
 SELECT stamp_migration('db/migrations/156-prune-active-planner-lessons.sql', 'db/migrations', 156, '2a5177c4e75a60cdc5c907ee52fbfb2bf9e32b1ec361ace7b577bbd55380da44', 'baseline');
+SELECT stamp_migration('db/migrations/157-hypertable-parity-repair.sql', 'db/migrations', 157, '12f3cc6ad080380fbddcc1d8ada7122f25150578fb04651345a2ed9dfb164122', 'baseline');
+SELECT stamp_migration('db/migrations/158-compression-retention-policies.sql', 'db/migrations', 158, 'dc7d793f0fe2c08c463fc9367907e1d3c254b3cdab6e3c8a85bf7bb86b62a0af', 'baseline');
+SELECT stamp_migration('db/migrations/159-band-season-resolver-guard.sql', 'db/migrations', 159, '38205b3678829880564fed9e6d4ef5768264df7e6f7661f9801714b071325f70', 'baseline');
+SELECT stamp_migration('db/migrations/160-orchid-vpd-band-realign-PROPOSAL.sql', 'db/migrations', 160, 'c75b016a25ec41e0cd5bff50ce7e4a331fad3435418a1fe271dc10376de42612', 'baseline');
+SELECT stamp_migration('db/migrations/161-crop-band-anchors.sql', 'db/migrations', 161, '3a21d79b359568614e3368923a2208be0a91ffdd3d6d5cecb5262f657ed908f1', 'baseline');
+SELECT stamp_migration('db/migrations/162-activate-cannabis-lime-crops.sql', 'db/migrations', 162, '92b5f52ce8d9504e4bf717fe0ce1ee182ce06de6439ce5a5800064c1269bd3a2', 'baseline');
+SELECT stamp_migration('db/migrations/163-setpoint-zone-audit-columns.sql', 'db/migrations', 163, '8c2f002083dac517bf337c44695efb3de80c6bfedd5383be1a5e9259361e6eb9', 'baseline');
+SELECT stamp_migration('db/migrations/164-zone-vpd-targets-solar-repoint.sql', 'db/migrations', 164, '078c7e1afe025c3fa14d8ec39d422707a1f22867844959bce526907cacb0b262', 'baseline');
+SELECT stamp_migration('db/migrations/165-band-solar-noon-repoint.sql', 'db/migrations', 165, '2cdf3d6b657e2e8d1c95ebb73cc724bc9f8465a95b0e4c5e74a6deb0c9d46bed', 'baseline');
+SELECT stamp_migration('db/migrations/166-firmware-v2-telemetry-columns.sql', 'db/migrations', 166, 'e473882b63f1fbbe91d1c5d62e72a94746988db07596f9c9fa6b27694ddfb297', 'baseline');
+SELECT stamp_migration('db/migrations/167-band-curve-matview-cache.sql', 'db/migrations', 167, 'f3b0fd27433572c7b2431e7e4ebaf9d404ba32d9a438e3838d4dd4d1cc685eb6', 'baseline');
+SELECT stamp_migration('db/migrations/168-orchid-dry-night-band-curve.sql', 'db/migrations', 168, 'b1a272a72f3d8d2e3ccbd4215059aa13eef18a688e3958269672b2412bad8025', 'baseline');
+SELECT stamp_migration('db/migrations/169-mister-duty-true-ontime.sql', 'db/migrations', 169, '3a19022b293fbc1caf7661c298af7d82b3111d99644718f735ee7105cae9577c', 'baseline');
+SELECT stamp_migration('db/migrations/170-band-harmonic-smooth-curve.sql', 'db/migrations', 170, 'f3e93f7df52ad899ea192ed90849a36ec79b7bc7f86a487a28d5af53024ef49b', 'baseline');
+SELECT stamp_migration('db/migrations/171-align-served-band-to-device-harmonic.sql', 'db/migrations', 171, 'aaf2ef351c4dcf98418ee796cc65deb9e8fec33accb0bd1d8382d7bd96bc8a6e', 'baseline');
+SELECT stamp_migration('db/migrations/172-smooth-solar-phase.sql', 'db/migrations', 172, 'bf0c60dc6f3553be395c32a22bdd5d1c00f3addfd689aa1def3f796db6db431e', 'baseline');
+SELECT stamp_migration('db/migrations/173-temp-band-parallel-equal-width.sql', 'db/migrations', 173, '925fd0da67dd21a6198bd7c99858b6fe37f9f99e8792a09fdaf132a640e40e21', 'baseline');
+SELECT stamp_migration('db/migrations/174-retune-house-bands-new-architecture.sql', 'db/migrations', 174, '6db873ff4fa07e00342417db958202f11bd5c4f8bcfdc791460f94fd2431b736', 'baseline');
+SELECT stamp_migration('db/migrations/175-orchid-night-vpd-lift-dehum-trigger.sql', 'db/migrations', 175, '4110367085b882771a2ab8e36910cc442f7ed268c9a8fb42d48789489dbf765e', 'baseline');
+SELECT stamp_migration('db/migrations/176-lighting-minutes-policy-lux-single-source.sql', 'db/migrations', 176, '58cbe52f977bd5d365a80aad9b2ad5ad554f123832b58c3cc8d4475c5117ac16', 'baseline');
+SELECT stamp_migration('db/migrations/177-band-defaults-from-canonical-seed.sql', 'db/migrations', 177, '0ef9414610015c785e1b1b1fad4e5f6a364d9269a49ebb30b0ae29d766b485d1', 'baseline');
+SELECT stamp_migration('db/migrations/178-band-device-vs-db-divergence.sql', 'db/migrations', 178, '2fbf41e4bf797fb49e620de12c51d3a7006e203a2f1fa3828885c772aa3e1453', 'baseline');
+SELECT stamp_migration('db/migrations/179-lighting-minutes-policy-planner-over-device.sql', 'db/migrations', 179, '64889b186409c19aded5ba42ebacf20356158be8dca555d52a7e82b63a75095f', 'baseline');
+SELECT stamp_migration('db/migrations/180-drop-orphaned-band-functions.sql', 'db/migrations', 180, '23eb3cbe020b1349779789841d84b742c54fa5d34a970e839d241bd51b5164c6', 'baseline');
+SELECT stamp_migration('db/migrations/181-serve-band-target-one-source.sql', 'db/migrations', 181, '7992b80335450c5851545d9695811f54c20df780ec18c5ee95f2a15b888fe67a', 'baseline');
+SELECT stamp_migration('db/migrations/182-divergence-audit-target.sql', 'db/migrations', 182, '909448e073c0f6f06c87f77a5e15c669660e5497e1f040edc847cc22210ac881', 'baseline');
+SELECT stamp_migration('db/migrations/183-grade-credit-peak-at-target-and-deviation-rollup.sql', 'db/migrations', 183, '4392096855550fe2233aff5446e17949870258a94cb2d86f1ead0d5cc7388c0a', 'baseline');
+SELECT stamp_migration('db/migrations/184-agent-ro-role.sql', 'db/migrations', 184, 'c24d826e3f6ca81a9f4ecf23e339c762723e272fb2b6517e0e0db951b7bce633', 'baseline');
+SELECT stamp_migration('db/migrations/185-per-circuit-lighting-crop-policy.sql', 'db/migrations', 185, 'ab0d9b1b0f944b440f06f15819e6a2e0bff681df482ce2095b8650a4b4a181c7', 'baseline');
+SELECT stamp_migration('db/migrations/186-noaa-solar-phase-parity.sql', 'db/migrations', 186, '9e1e33b5005e183a35d84dd9b41d96b4d535faa99945d7ae6c89b196d4569e28', 'baseline');
+SELECT stamp_migration('db/migrations/187-moisture-estimator-telemetry.sql', 'db/migrations', 187, 'cb294cdf24c7b65346f449c8505e6afaa001c4025974e440ad63a5e0bd2dd9c0', 'baseline');
+SELECT stamp_migration('db/migrations/188-night-anchor-dry-roots.sql', 'db/migrations', 188, 'a28509758345e58e4cd06ef2c8f8eaab63d5fc50b536277c264f4fae6eb2a539', 'baseline');
+SELECT stamp_migration('db/migrations/189-served-vpd-divergence-parity.sql', 'db/migrations', 189, '0b136e016a8e711f822191a4745fd41ffd779182acdcb6d8987e504a7312b50a', 'baseline');
+SELECT stamp_migration('db/migrations/190-transition-derived-equipment-runtime.sql', 'db/migrations', 190, 'ba7706ad6d1f5f55bf051d3ec04e36d27588c99df25856b7a8fedf2484f90be4', 'baseline');
+SELECT stamp_migration('db/migrations/191-realized-solar-night-dryout-episodes.sql', 'db/migrations', 191, '9aea5b0f7878df3a585884743a4d5eaf8b989c39f18cd09698e9b4973394c211', 'baseline');
+SELECT stamp_migration('db/migrations/192-replay-outdoor-freshness-provenance.sql', 'db/migrations', 192, '8a392e64960fd6371a5d27b2bd74aa8e7ea6b2e3b9833f19d7c5aa99abbb7dc4', 'baseline');
+SELECT stamp_migration('db/migrations/193-canonical-resource-coefficients.sql', 'db/migrations', 193, '585abd1399bce1e981fe1ad66308f776cb6cc0343ec82d664440f3725c38fb4e', 'baseline');
+SELECT stamp_migration('db/migrations/194-scope-aware-resource-accounting.sql', 'db/migrations', 194, '0156838b252faa07951c2dedd9f1e0c97a18a5a1e1692442a0d1a73189ab3558', 'baseline');
+SELECT stamp_migration('db/migrations/195-dli-availability-provenance.sql', 'db/migrations', 195, 'ae85e85389c0fef46dc2807913f894f97a3898e4fb5ac7709881f736cff96e25', 'baseline');
+SELECT stamp_migration('db/migrations/196-planner-terminal-lifecycle.sql', 'db/migrations', 196, '8a5341fee4271cef9ff14c581e15192632919bd659ebfe4dbbaaeb7d71782a42', 'baseline');
+SELECT stamp_migration('db/migrations/197-band-source-aware-divergence.sql', 'db/migrations', 197, '9f0a8af8c52642f805af5e265d200fbe971ae92e07d4a40d6541a99490933500', 'baseline');
+SELECT stamp_migration('db/migrations/198-dynamic-sensor-staleness.sql', 'db/migrations', 198, 'edd43ef0048b3787d64589d764fd2eb2ae62a47bb87c3b3cdf990c60e7865463', 'baseline');
+SELECT stamp_migration('db/migrations/199-bounded-equipment-runtime-view.sql', 'db/migrations', 199, 'f5da2ca16cde8b0f3d9ad77f382565695ea4478dd25a04c8f34e11d81bfd3d25', 'baseline');
+SELECT stamp_migration('db/migrations/200-materialized-equipment-runtime.sql', 'db/migrations', 200, 'c1ab2fba065bc2027377681ddf3f307225927015b434ff632ae111af3f472f52', 'baseline');
+SELECT stamp_migration('db/migrations/201-snapshot-runtime-energy-model.sql', 'db/migrations', 201, '967cb3623601136657edb9c710dba5db36cc411ce0a548a58e3345ddd183a454', 'baseline');
+SELECT stamp_migration('db/migrations/202-climate-action-scorecard-date-pushdown.sql', 'db/migrations', 202, '5c40ddbc91fd976654eb831be636875a3b9d0946db16d643e00f5d131b98c111', 'baseline');
+SELECT stamp_migration('db/migrations/203-materialized-daily-kpi-scorecard.sql', 'db/migrations', 203, '3b3cd1c3e951cde3056bc24a068efc7df08d96d85f30448107d508d801473e1d', 'baseline');
+SELECT stamp_migration('db/migrations/204-ungated-modeled-cost-columns.sql', 'db/migrations', 204, 'bf6535bab41eacc41cd0f466edfa274dcee89bfa57a4a085bb11ee8477a336e5', 'baseline');
+SELECT stamp_migration('db/migrations/205-setpoint-velocity-parallel-safe.sql', 'db/migrations', 205, 'a9c4047f2ae63fced2d9824ca1260032b50e2df8b8fba1d83f50c61772df3a2c', 'baseline');
+SELECT stamp_migration('db/migrations/206-water-est-completed-day-guard.sql', 'db/migrations', 206, 'a64044b3240912bbb79293724743ec30e36b098bc6b3d8a2d00935f61f7d8b5f', 'baseline');
 SELECT stamp_migration('planner_graph/migrations/001_planner_memory.sql', 'planner_graph/migrations', 1, 'fadceba8d3f49eaa9e11e53fe9d22888228a9177e2532266732e1aca7cb2dd98', 'baseline');
 COMMIT;
 
--- stamped: 163 db/migrations + 1 planner_graph migration
+-- stamped: 213 db/migrations + 1 planner_graph migration

@@ -1,8 +1,11 @@
 #!/bin/sh
 # Image schema coverage: db/schema.sql is the production pg_dump --schema-only
-# snapshot through migration 156 (155 twin-observability tables + 156
-# planner_lessons canonicalization / active-lessons prune). Replaying it here
-# builds those into a fresh DB; migration 000 then repairs the hypertable catalog.
+# snapshot from the ~196-199 era (it contains migration-196 planner-terminal-
+# lifecycle artifacts and predates 200+ — see the 2026-08-14 planner-efficacy
+# audit §8.7; the earlier "through migration 156" claim here was stale).
+# Replaying it builds those into a fresh DB; migration 000 then repairs the
+# hypertable catalog. The applied set is provable from the schema_migrations
+# ledger once the ledgered runner (below) is enabled, not from this comment.
 # (This comment is a real db/** edit so the migrate image rebuilds on push — #99.)
 # Verdify fresh-DB schema build. Mirrors the documented convention (db/migrations/000
 # header + tests/test_12_fidelity.py + `make db-dump`): replay db/schema.sql (the
@@ -16,6 +19,20 @@ set -eu
 : "${DB_HOST:?DB_HOST required}" "${DB_NAME:?DB_NAME required}" "${DB_USER:?DB_USER required}" "${DB_PASS:?DB_PASS required}"
 export PGPASSWORD="$DB_PASS"
 PSQL="psql -h ${DB_HOST} -p ${DB_PORT:-5432} -U ${DB_USER} -d ${DB_NAME} -q"
+
+# Opt-in ledgered numbered-migration delivery (#583, audit §8.7). DEFAULT
+# BEHAVIOR UNCHANGED: until the GitOps Job sets VERDIFY_MIGRATE_LEDGER=1
+# (Lane F rollout step, not this repo change), a populated DB stays on the
+# verify-not-rebuild no-op path below. With the flag set, after the schema
+# verify/build the ledgered runner bootstraps the schema_migrations ledger,
+# seeds the audited baseline (guarded by VERDIFY_MIGRATE_ALLOW_BASELINE=1),
+# and applies pending db/migrations/NNN-*.sql under advisory lock.
+run_ledgered_migrations() {
+  if [ "${VERDIFY_MIGRATE_LEDGER:-0}" = "1" ]; then
+    echo "[migrate] VERDIFY_MIGRATE_LEDGER=1 — running ledgered migration delivery ..."
+    /usr/local/bin/apply-migrations.sh ${VERDIFY_MIGRATE_PLAN:+--plan}
+  fi
+}
 # Idempotent / verify-not-rebuild. On an ALREADY-POPULATED DB (the data-migrate
 # restore path, or a prior run) the core schema is present, so we VERIFY and
 # exit 0 — we do NOT replay schema.sql or re-run the 000 hypertable repair
@@ -30,7 +47,8 @@ if [ "$have_core" = "t" ]; then
     [ "$($PSQL -tAc "select to_regclass('public.$t') is not null")" = "t" ] \
       || { echo "[migrate] FATAL: expected core table '$t' missing"; exit 1; }
   done
-  echo "[migrate] verify OK — schema present, exiting 0."
+  echo "[migrate] verify OK — schema present."
+  run_ledgered_migrations
   exit 0
 fi
 echo "[migrate] fresh/empty DB — replaying db/schema.sql (ON_ERROR_STOP=0; 000 repairs hypertable catalog) ..."
@@ -41,3 +59,4 @@ echo "[migrate] asserting core schema present ..."
 [ "$($PSQL -tAc "select to_regclass('public.climate') is not null")" = "t" ] \
   || { echo "[migrate] FATAL: public.climate missing after build"; exit 1; }
 echo "[migrate] schema build complete."
+run_ledgered_migrations

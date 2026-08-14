@@ -16,6 +16,12 @@
 #   PLANNER_MIGRATION=<path> scripts/gen-ledger-backfill.sh
 #       (point at planner_graph/migrations/001_planner_memory.sql if present in
 #        a sibling checkout; otherwise it is stamped sha256-less as a reference)
+#   BASELINE_EXCLUDE="<basename> [<basename> ...]" scripts/gen-ledger-backfill.sh
+#       Basenames to OMIT from the baseline (#583): a migration that is in the
+#       repo but NOT yet applied to the target DB must not be pre-stamped, or
+#       the ledgered runner (db/apply-migrations.sh) would never apply it.
+#       The exclusion list is recorded in the generated header. At rollout,
+#       regenerate against the VERIFIED applied set of the target database.
 
 set -euo pipefail
 
@@ -26,6 +32,17 @@ TO_STDOUT=0
 
 # External planner-repo migration (lives in the verdify planner repo, not here).
 PLANNER_MIGRATION="${PLANNER_MIGRATION:-planner_graph/migrations/001_planner_memory.sql}"
+
+# Not-yet-applied migrations to keep OUT of the baseline (see usage above).
+BASELINE_EXCLUDE="${BASELINE_EXCLUDE:-207-controlled-policy-experiment.sql}"
+
+is_excluded() {
+  local x
+  for x in $BASELINE_EXCLUDE; do
+    [ "$1" = "$x" ] && return 0
+  done
+  return 1
+}
 
 # Parse a leading "NNN" or "NNNa" prefix into an integer seq (95a -> 95).
 seq_of() {
@@ -40,11 +57,17 @@ emit() {
   echo "-- One-time baseline stamp of the existing applied migration set."
   echo "-- Identity = (source, filename). Re-running is idempotent (stamp_migration upserts)."
   echo "-- DO NOT hand-edit; regenerate after adding migrations."
+  echo "-- EXCLUDED (in repo, NOT pre-stamped — pending for the ledgered runner):"
+  local ex
+  for ex in $BASELINE_EXCLUDE; do
+    echo "--   ${ex}"
+  done
   echo
   echo "BEGIN;"
 
   local f rel sha seq cnt=0
   for f in "${REPO_ROOT}"/db/migrations/*.sql; do
+    is_excluded "$(basename "$f")" && continue
     rel="db/migrations/$(basename "$f")"
     sha="$(sha256sum "$f" | cut -d' ' -f1)"
     seq="$(seq_of "$f")"
