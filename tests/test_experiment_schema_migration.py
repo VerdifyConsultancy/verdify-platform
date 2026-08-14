@@ -14,6 +14,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MIGRATION = REPO_ROOT / "db" / "migrations" / "207-controlled-policy-experiment.sql"
+MIGRATION_209 = REPO_ROOT / "db" / "migrations" / "209-wire-schema-v2-field-count.sql"
 ROLES_SQL = REPO_ROOT / "db" / "roles" / "experiment-roles.sql"
 LEDGER_SQL = REPO_ROOT / "db" / "ledger" / "schema_migrations.sql"
 BACKFILL_SQL = REPO_ROOT / "db" / "ledger" / "backfill_ledger.sql"
@@ -115,10 +116,55 @@ def test_every_security_definer_function_pins_search_path():
 
 
 def test_49_component_completeness_is_enforced():
+    # 207 is frozen as applied at wire schema v1 (49 components); migration 209
+    # re-creates the completeness/admission functions to read the count from
+    # policy_wire_schema instead (contract v2, 48) — see the 209 tests below.
     sql = MIGRATION.read_text()
-    assert "count(*) = 49" in sql  # fn_policy_template_is_complete
-    assert "component_index BETWEEN 0 AND 48" in sql
-    assert "v_count <> 49" in sql  # fn_admit_policy_vector gate
+    assert "count(*) = 49" in sql  # fn_policy_template_is_complete (superseded by 209)
+    assert "component_index BETWEEN 0 AND 48" in sql  # upper bound; still admits 0..47
+    assert "v_count <> 49" in sql  # fn_admit_policy_vector gate (superseded by 209)
+
+
+def test_migration_209_parameterizes_the_component_count():
+    """Contract v2 (#588): no function may hard-code the field count anymore —
+    the count comes from the policy_wire_schema registry table."""
+    sql = MIGRATION_209.read_text()
+    assert "CREATE TABLE IF NOT EXISTS public.policy_wire_schema" in sql
+    assert "ON CONFLICT (schema_version) DO NOTHING" in sql
+    assert "CREATE OR REPLACE FUNCTION public.fn_policy_wire_field_count()" in sql
+    for fn in (
+        "fn_policy_template_is_complete",
+        "fn_submit_policy_proposal",
+        "fn_admit_policy_vector",
+        "fn_open_exposure",
+    ):
+        assert f"CREATE OR REPLACE FUNCTION public.{fn}(" in sql, fn
+    # No literal 49-count gates survive in the replacement bodies.
+    stripped = _load_classifier().strip_sql_noise(sql)
+    assert "v_count <> 49" not in sql
+    assert "count(*) = 49" not in sql
+    assert "BETWEEN 0 AND 48" not in stripped
+    # Contract-v2 echo: content compared only when the snapshot echoes one.
+    assert "v_snap.content_sha256 IS NOT NULL" in sql
+    # 209 must remain safe-to-wrap like 207/208.
+    classifier = _load_classifier()
+    c = classifier.classify(MIGRATION_209)
+    assert not c.self_committing, f"209 must stay non-self-transactional; reasons: {c.reasons}"
+
+
+def test_migration_209_seed_matches_the_python_wire_registry():
+    """The policy_wire_schema seed is the in-database mirror of the Python
+    registry constants — drift here would let admission accept the wrong
+    component count."""
+    from verdify_schemas.tunable_registry import POLICY_WIRE_FIELD_COUNT, WIRE_SCHEMA_VERSION
+
+    sql = MIGRATION_209.read_text()
+    match = re.search(r"INSERT INTO public\.policy_wire_schema[^;]*VALUES\s*([^;]+);", sql)
+    assert match, "seed INSERT missing"
+    rows = dict(re.findall(r"\((\d+),\s*(\d+)\)", match.group(1)))
+    assert rows.get("1") == "49"  # frozen v1 history
+    assert rows.get(str(WIRE_SCHEMA_VERSION)) == str(POLICY_WIRE_FIELD_COUNT)
+    assert int(max(rows, key=int)) == WIRE_SCHEMA_VERSION, "current version must be the max seeded row"
 
 
 def test_outbox_idempotency_key_and_bounded_error_classes():
@@ -188,6 +234,7 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
     unapplied = {
         "207-controlled-policy-experiment.sql",
         "208-policy-arbiter-lane-c.sql",
+        "209-wire-schema-v2-field-count.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(
