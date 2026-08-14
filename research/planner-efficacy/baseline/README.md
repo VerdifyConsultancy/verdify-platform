@@ -9,12 +9,32 @@ Artifacts (committed, derived; raw extraction CSVs stay outside Git):
 
 - `frozen-fsm-baseline-candidate-2026-08-14.json` — the per-field baseline
   candidate derived from stable same-firmware effective readbacks.
-- `ai-template-candidates-2026-08-14.json` — the two reviewed 49-field AI
+- `ai-template-candidates-2026-08-14.json` — the two reviewed 48-field AI
   template candidates (moderate / aggressive hot-dry response) whose
   differences from baseline are confined to the §8.2 11-field allowlist.
 - `extract-baseline.sh` + `baseline.py` — read-only extraction and
   deterministic artifact builders (the SQL lives in `baseline.py` and its
-  SHA-256 is recorded in the artifact).
+  SHA-256 is recorded in the artifact). `baseline.py requantize` rebuilds a
+  committed artifact under the current wire schema WITHOUT touching the
+  database (used for the contract-v2 refresh below).
+
+**Contract v2 (#588)**: wire schema v2 retired `direct_wet_stress_latest_hour`
+(wire_id 6 — the v1 reserved zero-consumer row and the ONLY unqualified
+field). The committed artifacts are the original 2026-08-14 v1 extraction
+**requantized** to the 48-field schema (`provenance.requantized_schema_version:
+2`; original SQL text + SQL/input-CSV hashes preserved verbatim). With the
+dead field gone, **all 48 fields qualify** and the canonical vector bytes +
+`content_sha256` are now emitted for the baseline and both templates:
+
+- baseline `content_sha256`
+  `c090f769be541cde90e2242568fcf5182b3ac764621a37111764b51eea18d795`
+- moderate `content_sha256`
+  `94446c6cd5e20cd00f3316f7fa1e962e8ff62f9a4dea50d26f41d35f8af0090f`
+- aggressive `content_sha256`
+  `0439e618a9a8a64af103fdced9fa946294776496e900b95d04819676d301f5a9`
+
+These hashes are CANDIDATE identities — nothing actuates before the approval
+chain below (gate:jason).
 
 ## Method (audit §8.2)
 
@@ -38,11 +58,12 @@ Artifacts (committed, derived; raw extraction CSVs stay outside Git):
   take the **time-weighted mode**. Results are then quantized round-half-even
   through the canonical wire schema
   (`verdify_schemas.policy_vector.quantize_policy_values`,
-  wire schema v1, manifest digest recorded in the artifact).
+  wire schema v2, manifest digest recorded in the artifact).
 - **Unqualified policy**: a field with no qualified readback in the window is
   listed as UNQUALIFIED and **blocks baseline approval** — no boot default is
-  silently substituted, and the canonical 49-field vector bytes/content hash
-  are omitted until every field qualifies.
+  silently substituted, and the canonical 48-field vector bytes/content hash
+  are omitted until every field qualifies. (Under wire schema v2 every field
+  qualifies; the v1 artifact was blocked solely by the now-retired dead row.)
 
 Extraction provenance: SQL SHA-256
 `72a83c13028a11b5fb0d0b1aed08e00b37dccdfd9bd8ce169e20ad65c369354c`,
@@ -53,7 +74,7 @@ input histogram CSV SHA-256
 
 ## Per-field coverage
 
-48 of 49 wire fields have complete readback coverage (every present field
+All 48 wire fields have complete readback coverage (every field
 covers the full 1,987,200 s effective window). Interval counts are ~32.5k
 (one-minute readback cadence over 23 days; the 31,766-interval rows are
 fields with a slightly sparser readback cadence — consecutive-snapshot
@@ -67,7 +88,6 @@ canonical wire-grid value.
 | 3 | `cool_exit_hysteresis_f` | median | 1.69 | 1.7 | 32453 | 1987200 | 16 |
 | 4 | `cool_stage2_exit_hysteresis_f` | median | 1 | 1.0 | 32453 | 1987200 | 1 |
 | 5 | `cool_stage2_over_high_f` | median | 0 | 0.0 | 32453 | 1987200 | 67 |
-| 6 | `direct_wet_stress_latest_hour` | — | — | **UNQUALIFIED** | 0 | 0 | 0 |
 | 7 | `direct_wet_stress_min_dew_margin_f` | median | 8 | 8.0 | 32453 | 1987200 | 1 |
 | 8 | `direct_wet_stress_vpd_margin_kpa` | median | 0.05 | 0.05 | 32453 | 1987200 | 2 |
 | 9 | `dwell_gate_ms` | median | 225000 | 225000.0 | 32453 | 1987200 | 11 |
@@ -117,22 +137,20 @@ grid is 0.5 (round-half-even 3.4 → 3). Several medians sit off the ESPHome
 entity step (e.g. `min_fog_on_s` 59 s) — the wire grid is intentionally at
 least as fine as the entity step, and these are the device-confirmed values.
 
-## Unqualified fields
+## Retired field (formerly unqualified)
 
-- **`direct_wet_stress_latest_hour`** (wire_id 6): reserved
-  no-firmware-consumer field (#582) — no ESPHome entity or `cfg_*` readback
-  exists, so the window contains no qualified readback. Per §8.2 this
-  **blocks baseline approval**; the canonical 49-field vector bytes and
-  `content_sha256` are deliberately omitted from both artifacts. Before
-  approval the owners must assign its frozen value explicitly (an approved
-  reviewed constant recorded in the protocol instance — e.g. the registry
-  default 22 — via a reviewed edit, never a silent substitution by this
-  pipeline).
+- **`direct_wet_stress_latest_hour`** (former wire_id 6, now permanently in
+  `RETIRED_WIRE_IDS`): the v1 reserved no-firmware-consumer field (#582) —
+  no ESPHome entity, global, or `cfg_*` readback ever existed, so it could
+  never alter an effective component (audit §6.4) and its zero device
+  readbacks blocked §8.2 qualification. The #588 decision retired it from the
+  wire schema (v2), which resolves the qualification blocker without any
+  silent value substitution.
 
 ## AI template candidates
 
 Both templates differ from the baseline only inside the §8.2 11-field
-allowlist; the other 38 wire fields are byte-identical to the approved
+allowlist; the other 37 wire fields are byte-identical to the approved
 baseline. Values are grounded in the §5 effective-readback posture table
 (epoch means over 47,956 sampled minutes) and the §5 forecast-response
 correlations; every value is on the wire grid and inside both the registry
@@ -155,18 +173,16 @@ may not synthesize intermediates.
 
 ## Approval chain (what must happen before any of this actuates)
 
-1. Resolve the unqualified field (`direct_wet_stress_latest_hour`) with a
-   reviewed explicit value.
-2. Regenerate the artifacts so the canonical vector bytes and
-   `content_sha256` (fixed policy revision ids
-   `{"registry_rev": "wire-v1-initial", "schema_rev": "efa85343"}`) are
-   emitted for baseline + both templates.
-3. **Compiled replay** of the complete baseline vector through the current
+1. ~~Resolve the unqualified field~~ — DONE by the #588 retirement (wire
+   schema v2); the canonical vector bytes and `content_sha256` (fixed policy
+   revision ids `{"registry_rev": "wire-v2-retire-wire-id-6", "schema_rev":
+   "efa85343"}`) are now emitted for baseline + both templates.
+2. **Compiled replay** of the complete baseline vector through the current
    firmware build, then **HIL**, then **A/A** (§8.2/§8.6) — constructed and
    reviewed without inspecting trial outcomes.
-4. Horticultural, firmware, and safety owners approve the complete vectors
+3. Horticultural, firmware, and safety owners approve the complete vectors
    (**gate:jason** sign-off).
-5. The approved content hashes are locked into the protocol instance
+4. The approved content hashes are locked into the protocol instance
    (`protocols/planner-switchback-v1.template.yaml` successor) and the
    `policy_templates` rows; only those exact hashes are resolvable to bytes
    by the arbiter.
@@ -177,13 +193,18 @@ may not synthesize intermediates.
 # 1. read-only extraction (raw histogram; do not commit)
 VERDIFY_DB_BACKEND=kube baseline/extract-baseline.sh /path/to/outdir
 
-# 2. rebuild the artifacts
+# 2. rebuild the artifacts (fresh extraction)
 uv run python baseline/baseline.py build \
     --input /path/to/outdir/baseline_intervals.csv \
     --out baseline/frozen-fsm-baseline-candidate-2026-08-14.json
 uv run python baseline/baseline.py build-templates \
     --baseline baseline/frozen-fsm-baseline-candidate-2026-08-14.json \
     --out baseline/ai-template-candidates-2026-08-14.json
+
+# 2b. or requantize the committed artifact after a wire-schema change (no DB)
+uv run python baseline/baseline.py requantize \
+    --source baseline/frozen-fsm-baseline-candidate-2026-08-14.json \
+    --out baseline/frozen-fsm-baseline-candidate-2026-08-14.json
 
 # 3. verify
 uv run pytest tests

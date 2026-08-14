@@ -3,7 +3,20 @@
   "status": "CANDIDATE — pending horticultural/firmware/safety approval (gate:jason)",
   "issue": "#588",
   "epic": "#581",
-  "generated_at": "2026-08-14T21:09:24+00:00",
+  "generated_at": "2026-08-14T21:52:14+00:00",
+  "provenance": {
+    "requantized_schema_version": 2,
+    "requantized_from_generated_at": "2026-08-14T21:09:24+00:00",
+    "source_wire_schema": {
+      "version": 1,
+      "field_count": 49,
+      "manifest_digest_sha256": "2b1798fa811c03ecb91090c9d0f08c584bd34224ad26133db6d5535e9ddf6421"
+    },
+    "retired_fields_dropped": [
+      "direct_wet_stress_latest_hour"
+    ],
+    "note": "Re-quantized from the committed artifact's per-field raw time-weighted statistics under wire schema v2 (#588 retired direct_wet_stress_latest_hour, the sole unqualified v1 field — zero device readbacks by construction). No database access; the extraction block below is the ORIGINAL v1 SQL and input hashes, preserved verbatim."
+  },
   "method": {
     "source_table": "setpoint_snapshot",
     "greenhouse_id": "vallery",
@@ -34,9 +47,9 @@
     "sql": "BEGIN READ ONLY;\nSET LOCAL statement_timeout='300s';\nCOPY (\nWITH bounds AS (\n  SELECT (timestamp '2026-07-12 00:00:00' AT TIME ZONE 'America/Denver') AS w_start,\n         (timestamp '2026-08-05 00:00:00' AT TIME ZONE 'America/Denver') AS w_end,\n         (timestamp '2026-07-25 00:00:00' AT TIME ZONE 'America/Denver') AS x_start,\n         (timestamp '2026-07-26 00:00:00' AT TIME ZONE 'America/Denver') AS x_end\n), params(parameter) AS (VALUES\n  ('band_track_fraction'),\n  ('cold_vent_guard_delta_f'),\n  ('cool_exit_hysteresis_f'),\n  ('cool_stage2_exit_hysteresis_f'),\n  ('cool_stage2_over_high_f'),\n  ('direct_wet_stress_latest_hour'),\n  ('direct_wet_stress_min_dew_margin_f'),\n  ('direct_wet_stress_vpd_margin_kpa'),\n  ('dwell_gate_ms'),\n  ('enthalpy_close'),\n  ('enthalpy_open'),\n  ('fog_escalation_kpa'),\n  ('heat_hysteresis'),\n  ('min_fan_off_s'),\n  ('min_fan_on_s'),\n  ('min_fog_off_s'),\n  ('min_fog_on_s'),\n  ('min_heat_off_s'),\n  ('min_heat_on_s'),\n  ('min_vent_off_s'),\n  ('min_vent_on_s'),\n  ('mist_backoff_s'),\n  ('mist_max_closed_vent_s'),\n  ('mist_thermal_relief_s'),\n  ('mister_all_delay_s'),\n  ('mister_all_kpa'),\n  ('mister_center_penalty'),\n  ('mister_engage_delay_s'),\n  ('mister_engage_kpa'),\n  ('mister_min_off_s'),\n  ('mister_pulse_gap_s'),\n  ('mister_pulse_on_s'),\n  ('mister_vpd_weight'),\n  ('mister_water_budget_gal'),\n  ('night_vpd_bias_kpa'),\n  ('outdoor_staleness_max_s'),\n  ('sw_cool_all_fans_at_high_enabled'),\n  ('sw_direct_wet_gate_enabled'),\n  ('sw_direct_wet_stress_override_enabled'),\n  ('sw_dwell_gate_enabled'),\n  ('sw_fog_closes_vent'),\n  ('sw_mister_closes_vent'),\n  ('sw_summer_vent_enabled'),\n  ('temp_hysteresis'),\n  ('vent_exchange_fraction'),\n  ('vent_prefer_dp_delta_f'),\n  ('vent_prefer_temp_delta_f'),\n  ('vpd_hysteresis'),\n  ('vpd_watch_dwell_s')\n), in_window AS (\n  SELECT s.parameter, s.ts, s.value\n    FROM setpoint_snapshot s\n    JOIN params USING (parameter)\n   CROSS JOIN bounds b\n   WHERE s.greenhouse_id = 'vallery'\n     AND s.value IS NOT NULL\n     AND s.ts >= b.w_start AND s.ts < b.w_end\n), carry AS (\n  SELECT DISTINCT ON (s.parameter) s.parameter, b.w_start AS ts, s.value\n    FROM setpoint_snapshot s\n    JOIN params USING (parameter)\n   CROSS JOIN bounds b\n   WHERE s.greenhouse_id = 'vallery'\n     AND s.value IS NOT NULL\n     AND s.ts < b.w_start AND s.ts >= b.w_start - interval '3 days'\n   ORDER BY s.parameter, s.ts DESC\n), snaps AS (\n  SELECT parameter, ts, value FROM in_window\n  UNION ALL\n  SELECT parameter, ts, value FROM carry\n), seq AS (\n  SELECT parameter, value, ts AS ivl_start,\n         lead(ts) OVER (PARTITION BY parameter ORDER BY ts) AS next_ts\n    FROM snaps\n), ivl AS (\n  SELECT s.parameter, s.value,\n         extract(epoch FROM (coalesce(least(s.next_ts, b.w_end), b.w_end) - s.ivl_start))\n         - greatest(0.0, extract(epoch FROM (\n             least(coalesce(least(s.next_ts, b.w_end), b.w_end), b.x_end)\n             - greatest(s.ivl_start, b.x_start)))) AS weight_s\n    FROM seq s\n   CROSS JOIN bounds b\n)\nSELECT parameter, value,\n       count(*) AS interval_count,\n       sum(weight_s) AS coverage_s\n  FROM ivl\n WHERE weight_s > 0\n GROUP BY parameter, value\n ORDER BY parameter, value\n) TO STDOUT WITH CSV HEADER;\nCOMMIT;\n"
   },
   "wire_schema": {
-    "version": 1,
-    "field_count": 49,
-    "manifest_digest_sha256": "2b1798fa811c03ecb91090c9d0f08c584bd34224ad26133db6d5535e9ddf6421"
+    "version": 2,
+    "field_count": 48,
+    "manifest_digest_sha256": "0bdd80472f2a9845c24a78cd7d6662e0523314afc5f3149233c08a8e8aedb318"
   },
   "fields": {
     "band_track_fraction": {
@@ -98,17 +111,6 @@
       "raw_value": 0.0,
       "qualified": true,
       "quantized_value": 0.0
-    },
-    "direct_wet_stress_latest_hour": {
-      "wire_id": 6,
-      "kind": "numeric",
-      "wire_kind": "u8",
-      "statistic": "time_weighted_median",
-      "interval_count": 0,
-      "coverage_seconds": 0,
-      "distinct_values": 0,
-      "qualified": false,
-      "reason": "no qualified readback in window"
     },
     "direct_wet_stress_min_dew_margin_f": {
       "wire_id": 7,
@@ -627,15 +629,14 @@
       "quantized_value": 56.0
     }
   },
-  "unqualified_fields": [
-    "direct_wet_stress_latest_hour"
-  ],
+  "unqualified_fields": [],
   "policy_revision_ids": {
-    "registry_rev": "wire-v1-initial",
+    "registry_rev": "wire-v2-retire-wire-id-6",
     "schema_rev": "efa85343"
   },
   "canonical_vector": {
-    "omitted": true,
-    "reason": "unqualified fields block the complete 49-field vector: direct_wet_stress_latest_hour"
+    "omitted": false,
+    "vector_hex": "56505631020bdd80472f2a98453000010000021000031100040a000500000710000801000900036ee8000a0002000bfffc000c02000d0a000e005a000f00780010003c0011003b001200b4001300780014003c0015003c00160258001702580018005a00190050001a1c001b05001c0028001d18001e2d001f1e00205a00210300220bb800230000240258002501002601002701002801002901002a00002b01002c11002d06002e06002f08003004003138",
+    "content_sha256": "c090f769be541cde90e2242568fcf5182b3ac764621a37111764b51eea18d795"
   }
 }

@@ -3,7 +3,7 @@
   "status": "CANDIDATE — pending horticultural/firmware/safety approval (gate:jason)",
   "issue": "#588",
   "epic": "#581",
-  "generated_at": "2026-08-14T21:09:42+00:00",
+  "generated_at": "2026-08-14T21:52:15+00:00",
   "baseline_artifact": "frozen-fsm-baseline-candidate-2026-08-14.json",
   "baseline_sql_sha256": "72a83c13028a11b5fb0d0b1aed08e00b37dccdfd9bd8ce169e20ad65c369354c",
   "baseline_input_csv_sha256": "bfabce68f393d990d13b4b9097076f910a49c65b5a18afc6a778cbdad065064a",
@@ -20,17 +20,15 @@
     "mister_pulse_on_s",
     "mister_water_budget_gal"
   ],
-  "inheritance_rule": "all 38 wire fields outside the allowlist are byte-identical to the approved Frozen-FSM baseline vector (§8.2)",
-  "unresolved_baseline_fields": [
-    "direct_wet_stress_latest_hour"
-  ],
+  "inheritance_rule": "all 37 wire fields outside the allowlist are byte-identical to the approved Frozen-FSM baseline vector (§8.2; wire schema v2 has 48 fields)",
+  "unresolved_baseline_fields": [],
   "wire_schema": {
-    "version": 1,
-    "field_count": 49,
-    "manifest_digest_sha256": "2b1798fa811c03ecb91090c9d0f08c584bd34224ad26133db6d5535e9ddf6421"
+    "version": 2,
+    "field_count": 48,
+    "manifest_digest_sha256": "0bdd80472f2a9845c24a78cd7d6662e0523314afc5f3149233c08a8e8aedb318"
   },
   "policy_revision_ids": {
-    "registry_rev": "wire-v1-initial",
+    "registry_rev": "wire-v2-retire-wire-id-6",
     "schema_rev": "efa85343"
   },
   "templates": {
@@ -397,8 +395,28 @@
       }
     }
   },
+  "baseline_provenance": {
+    "requantized_schema_version": 2,
+    "requantized_from_generated_at": "2026-08-14T21:09:24+00:00",
+    "source_wire_schema": {
+      "version": 1,
+      "field_count": 49,
+      "manifest_digest_sha256": "2b1798fa811c03ecb91090c9d0f08c584bd34224ad26133db6d5535e9ddf6421"
+    },
+    "retired_fields_dropped": [
+      "direct_wet_stress_latest_hour"
+    ],
+    "note": "Re-quantized from the committed artifact's per-field raw time-weighted statistics under wire schema v2 (#588 retired direct_wet_stress_latest_hour, the sole unqualified v1 field — zero device readbacks by construction). No database access; the extraction block below is the ORIGINAL v1 SQL and input hashes, preserved verbatim."
+  },
   "canonical_vectors": {
-    "omitted": true,
-    "reason": "template vectors inherit 38 fields from the baseline, which is incomplete: direct_wet_stress_latest_hour"
+    "omitted": false,
+    "moderate": {
+      "vector_hex": "56505631020bdd80472f2a98453000010000021000031100040a000508000710000801000900036ee8000a0002000bfffc000c03000d0a000e005a000f00780010003c0011003c001200b4001300780014003c0015003c00160258001702580018005a0019005a001a1b001b05001c0028001d18001e2d001f2600203c0021030022089800230000240258002501002601002701002801002901002a00002b01002c11002d06002e06002f08003004003138",
+      "content_sha256": "94446c6cd5e20cd00f3316f7fa1e962e8ff62f9a4dea50d26f41d35f8af0090f"
+    },
+    "aggressive": {
+      "vector_hex": "56505631020bdd80472f2a98453000010000021000031100040a000505000710000801000900036ee8000a0002000bfffc000c02000d0a000e005a000f00780010001e0011005a001200b4001300780014003c0015003c00160258001702580018005a0019003c001a18001b05001c0028001d14001e2d001f1e00204b002103002209c400230000240258002501002601002701002801002901002a00002b01002c11002d06002e06002f08003004003138",
+      "content_sha256": "0439e618a9a8a64af103fdced9fa946294776496e900b95d04819676d301f5a9"
+    }
   }
 }

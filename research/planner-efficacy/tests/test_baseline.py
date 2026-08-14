@@ -126,15 +126,53 @@ def test_build_artifact_full_qualification_emits_canonical_vector(tmp_path: Path
 
 def test_build_artifact_missing_field_blocks_vector(tmp_path: Path) -> None:
     artifact = baseline.build_artifact(
-        _synthetic_csv(tmp_path, drop="direct_wet_stress_latest_hour"),
+        _synthetic_csv(tmp_path, drop="vpd_watch_dwell_s"),
         generated_at="2026-08-14T00:00:00+00:00",
     )
-    assert artifact["unqualified_fields"] == ["direct_wet_stress_latest_hour"]
-    field = artifact["fields"]["direct_wet_stress_latest_hour"]
+    assert artifact["unqualified_fields"] == ["vpd_watch_dwell_s"]
+    field = artifact["fields"]["vpd_watch_dwell_s"]
     assert field["qualified"] is False
     assert "quantized_value" not in field  # no silent default substitution
     assert artifact["canonical_vector"]["omitted"] is True
-    assert "direct_wet_stress_latest_hour" in artifact["canonical_vector"]["reason"]
+    assert "vpd_watch_dwell_s" in artifact["canonical_vector"]["reason"]
+
+
+def test_requantize_drops_retired_fields_and_keeps_extraction_verbatim(tmp_path: Path) -> None:
+    """Contract v2 (#588): requantization rebuilds the artifact from committed
+    per-field raw statistics — no DB — dropping retired fields, preserving the
+    original extraction block, and stamping provenance."""
+    source = baseline.build_artifact(_synthetic_csv(tmp_path), generated_at="2026-08-14T00:00:00+00:00")
+    # Simulate a source artifact from an older schema carrying a retired row.
+    source["fields"]["retired_fake_field"] = {
+        "wire_id": 999,
+        "kind": "numeric",
+        "wire_kind": "u8",
+        "statistic": "time_weighted_median",
+        "interval_count": 0,
+        "coverage_seconds": 0,
+        "distinct_values": 0,
+        "qualified": False,
+        "reason": "no qualified readback in window",
+    }
+    requantized = baseline.build_requantized_artifact(source, generated_at="2026-08-14T01:00:00+00:00")
+    assert set(requantized["fields"]) == {d.name for d in wire_fields()}
+    assert requantized["provenance"]["requantized_schema_version"] == WIRE_SCHEMA_VERSION
+    assert requantized["provenance"]["retired_fields_dropped"] == ["retired_fake_field"]
+    assert requantized["extraction"] == source["extraction"]  # verbatim, incl. original SQL + hashes
+    assert requantized["unqualified_fields"] == []
+    vector = requantized["canonical_vector"]
+    assert vector["omitted"] is False
+    decoded = decode_policy_vector(bytes.fromhex(vector["vector_hex"]))
+    assert decoded == {name: field["quantized_value"] for name, field in requantized["fields"].items()}
+
+
+def test_revision_ids_match_the_lane_a_goldens() -> None:
+    """POLICY_REVISION_IDS must stay identical to the Lane A golden fixtures
+    so baseline/template content hashes live in the same identity domain."""
+    goldens = json.loads(
+        (REPO_ROOT / "verdify_schemas" / "tests" / "fixtures" / "policy_vector_goldens.json").read_text()
+    )
+    assert baseline.POLICY_REVISION_IDS == goldens["revision_ids"]
 
 
 def test_build_templates_differ_from_baseline_only_in_allowlist(tmp_path: Path) -> None:
@@ -166,9 +204,15 @@ def committed_templates() -> dict:
 def test_committed_baseline_sql_hash_matches(committed_baseline: dict) -> None:
     extraction = committed_baseline["extraction"]
     assert hashlib.sha256(extraction["sql"].encode("utf-8")).hexdigest() == extraction["sql_sha256"]
-    # The embedded SQL is the one this code generates — no drift between the
-    # committed artifact and the extraction path.
-    assert extraction["sql"] == baseline.build_sql()
+    # The committed artifact is the v1 extraction REQUANTIZED under wire
+    # schema v2 (#588): the embedded SQL is the ORIGINAL 49-parameter v1 text
+    # (provenance), so it still names the retired field, while the current
+    # generator no longer does.
+    assert "direct_wet_stress_latest_hour" in extraction["sql"]
+    assert "direct_wet_stress_latest_hour" not in baseline.build_sql()
+    provenance = committed_baseline["provenance"]
+    assert provenance["requantized_schema_version"] == WIRE_SCHEMA_VERSION == 2
+    assert provenance["retired_fields_dropped"] == ["direct_wet_stress_latest_hour"]
     assert extraction["input_csv_data_rows"] > 0
 
 
@@ -186,7 +230,7 @@ def test_committed_baseline_fields_cover_wire_schema(committed_baseline: dict) -
     assert set(fields) == {d.name for d in wire_fields()}
     assert committed_baseline["wire_schema"] == {
         "version": WIRE_SCHEMA_VERSION,
-        "field_count": 49,
+        "field_count": 48,
         "manifest_digest_sha256": wire_manifest_digest().hex(),
     }
     window = committed_baseline["method"]["effective_window_seconds"]
@@ -201,13 +245,21 @@ def test_committed_baseline_fields_cover_wire_schema(committed_baseline: dict) -
             assert "quantized_value" not in field, name
 
 
-def test_committed_baseline_unqualified_blocks_vector(committed_baseline: dict) -> None:
-    unqualified = committed_baseline["unqualified_fields"]
-    assert unqualified == [n for n, f in committed_baseline["fields"].items() if not f["qualified"]]
-    assert unqualified == ["direct_wet_stress_latest_hour"]
+def test_committed_baseline_is_fully_qualified_and_emits_the_canonical_vector(committed_baseline: dict) -> None:
+    """Contract v2: with the dead field retired (#588), every remaining field
+    qualified, so the canonical vector bytes + content hash are now emitted."""
+    assert committed_baseline["unqualified_fields"] == []
+    assert all(f["qualified"] for f in committed_baseline["fields"].values())
     vector = committed_baseline["canonical_vector"]
-    assert vector["omitted"] is True
-    assert "direct_wet_stress_latest_hour" in vector["reason"]
+    assert vector["omitted"] is False
+    decoded = decode_policy_vector(bytes.fromhex(vector["vector_hex"]))
+    assert decoded == {name: field["quantized_value"] for name, field in committed_baseline["fields"].items()}
+    recomputed = content_sha256(
+        bytes.fromhex(vector["vector_hex"]),
+        schema_version=WIRE_SCHEMA_VERSION,
+        policy_revision_ids=committed_baseline["policy_revision_ids"],
+    )
+    assert recomputed.hex() == vector["content_sha256"]
 
 
 # ── Manifest: committed template candidates ──────────────────────────────────
@@ -218,8 +270,20 @@ def test_committed_templates_bind_to_baseline(committed_baseline: dict, committe
     assert committed_templates["baseline_artifact"] == BASELINE_JSON.name
     assert committed_templates["baseline_sql_sha256"] == committed_baseline["extraction"]["sql_sha256"]
     assert committed_templates["baseline_input_csv_sha256"] == committed_baseline["extraction"]["input_csv_sha256"]
-    assert committed_templates["unresolved_baseline_fields"] == committed_baseline["unqualified_fields"]
-    assert committed_templates["canonical_vectors"]["omitted"] is True
+    assert committed_templates["unresolved_baseline_fields"] == committed_baseline["unqualified_fields"] == []
+    vectors = committed_templates["canonical_vectors"]
+    assert vectors["omitted"] is False
+    base_decoded = decode_policy_vector(bytes.fromhex(committed_baseline["canonical_vector"]["vector_hex"]))
+    for name in ("moderate", "aggressive"):
+        decoded = decode_policy_vector(bytes.fromhex(vectors[name]["vector_hex"]))
+        diff = {field for field in decoded if decoded[field] != base_decoded[field]}
+        assert diff <= set(baseline.DIFF_ALLOWLIST), name
+        recomputed = content_sha256(
+            bytes.fromhex(vectors[name]["vector_hex"]),
+            schema_version=WIRE_SCHEMA_VERSION,
+            policy_revision_ids=committed_templates["policy_revision_ids"],
+        )
+        assert recomputed.hex() == vectors[name]["content_sha256"], name
 
 
 def test_committed_templates_confined_to_allowlist(committed_baseline: dict, committed_templates: dict) -> None:
