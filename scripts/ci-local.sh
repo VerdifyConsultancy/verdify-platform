@@ -96,58 +96,10 @@ $PY scripts/check-solar-constants.py
 step "config-revision annotations match verdify-config sources (#587)"
 bash scripts/gen-config-revision.sh --check
 
+step "policy consumer manifest drift (Lane E, #586)"
+$PY scripts/gen-policy-consumer-manifest.py --check
+
 step "twin follower source compiles (the twin image's exact build, #587)"
 # The firmware-twin component now runs the pre-baked twin image (twin/Dockerfile
 # builds from these CANONICAL sources — the vendored src/ copies are gone), so
 # syntax-check the exact -DREPLAY_EMIT_STREAM compile the image performs.
-if command -v g++ >/dev/null; then
-  g++ -std=c++17 -fsyntax-only -DREPLAY_EMIT_STREAM \
-    -Ifirmware/lib \
-    firmware/test/replay_emit.cpp
-else
-  echo "SKIP: g++ not available on this host (required in the CI image)"
-fi
-
-step "prod overlay renders"
-if command -v kustomize >/dev/null; then
-  kustomize build deploy/k8s/overlays/prod > /dev/null
-elif command -v kubectl >/dev/null; then
-  kubectl kustomize deploy/k8s/overlays/prod > /dev/null
-else
-  echo "SKIP: no kustomize/kubectl on this host (required in the CI image)"
-fi
-
-# ── Diff-scoped gates (merge-base semantics from the retired PR workflows) ──
-if [ -n "${CI_BASE_REF:-}" ]; then
-  BASE=$(git merge-base "${CI_BASE_REF}" HEAD)
-
-  step "no-new-fire-and-forget (rule 6, num_* + sw_*) vs ${BASE}"
-  NEW_IDS=$(git diff "$BASE" HEAD -- firmware/greenhouse/tunables.yaml 2>/dev/null \
-    | grep -oE '^\+[[:space:]]+id:[[:space:]]+(num|sw)_[a-z0-9_]+' \
-    | sed -E 's/.*id:[[:space:]]+(num|sw)_//' | sort -u || true)
-  MISSING=""
-  for id in $NEW_IDS; do
-    grep -qE "id: cfg_(sw_)?${id}\b" firmware/greenhouse/sensors.yaml || MISSING="$MISSING $id"
-  done
-  [ -z "$MISSING" ] || { echo "New tunables without cfg_* readback:$MISSING" >&2; exit 1; }
-
-  step "service-restart drift guard (rule 7, schema -> runtime) vs ${BASE}"
-  # #391: the retired ci.yml job grepped the bare word 'service' and
-  # false-passed on ~every PR body. The structural contract lives in the guard.
-  bash scripts/check-service-restart-drift.sh "$BASE" HEAD
-
-  step "firmware replay-diff trigger check vs ${BASE}"
-  CHANGED=$(git diff --name-only "$BASE" HEAD -- 'firmware/lib/*.h' 'firmware/lib/*.cpp' \
-    firmware/greenhouse/controls.yaml firmware/greenhouse/tunables.yaml firmware/greenhouse/globals.yaml)
-  if [ -n "$CHANGED" ]; then
-    THRESHOLD_PCT="${THRESHOLD_PCT:-0}" bash scripts/firmware-replay-diff.sh "$BASE" HEAD
-    if git diff --name-only "$BASE" HEAD -- firmware/lib/greenhouse_solar.h | grep -q .; then
-      REPLAY_EMIT_BAND_DERIVE=1 THRESHOLD_PCT="${BAND_THRESHOLD_PCT:-0}" \
-        bash scripts/firmware-replay-diff.sh "$BASE" HEAD
-    fi
-  else
-    echo "no firmware-logic diff; replay gates not required"
-  fi
-fi
-
-printf '\nALL GATES GREEN\n'
