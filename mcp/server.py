@@ -10,6 +10,7 @@ Transport: streamable-http on port 8400
 """
 
 import asyncio
+import hashlib
 import hmac
 import json
 import logging
@@ -71,10 +72,15 @@ from verdify_schemas.climate_intent import (  # noqa: E402
     climate_intent_materialization_guardrails,
     materialize_climate_intent_tier1,
 )
+from verdify_schemas.experiment_config import (  # noqa: E402
+    demoted_policy_write_gate,
+    submit_policy_proposal,
+)
 from verdify_schemas.plan import (  # noqa: E402
     classify_planner_terminal_action,
     plan_current_coverage_error,
 )
+from verdify_schemas.policy_vector import WIRE_COMPONENT_INDEXES  # noqa: E402
 from verdify_schemas.telemetry import DliEvidence  # noqa: E402
 from verdify_schemas.tunable_registry import (  # noqa: E402
     BAND_OWNED_REG,
@@ -240,6 +246,84 @@ def _materialize_climate_intent_waypoints(
             record["guardrails"] = guardrails
         intent_records.append(record)
     return expanded, intent_records
+
+
+# ── Lane C (#584): direct-writer demotion ──
+# When VERDIFY_LEGACY_DIRECT_POLICY_WRITES_ENABLED=0 OR an experiment
+# assignment is armed, set_plan/set_tunable stop writing actuation-eligible
+# setpoint_plan rows and instead record policy_proposals through the
+# migration-208 producer function. Feature-off (legacy enabled + experiment
+# env unset) takes no gate query at all — behavior is byte-identical.
+
+
+def _policy_proposal_components(params: dict[str, float]) -> list[dict]:
+    """Wire-schema component rows for the policy params of one write."""
+    return [
+        {
+            "field_name": name,
+            "component_index": WIRE_COMPONENT_INDEXES[name],
+            "normalized_value": float(value),
+        }
+        for name, value in sorted(params.items())
+        if name in WIRE_COMPONENT_INDEXES
+    ]
+
+
+async def _record_demoted_policy_proposal(
+    conn,
+    demotion: dict,
+    *,
+    action: str,
+    trigger_ref: str | None,
+    params: dict[str, float],
+    digest_material: object = None,
+) -> str:
+    """Persist the demoted write as a proposal; return the tool JSON payload."""
+    if not demotion.get("assignment_id"):
+        return json.dumps(
+            {
+                "error": "direct policy writes are demoted but no experiment assignment is armed",
+                "detail": "legacy direct writes disabled (VERDIFY_LEGACY_DIRECT_POLICY_WRITES_ENABLED=0) "
+                "with no active control_assignments row covering now(); nothing was recorded or actuated",
+                "actuated": False,
+            }
+        )
+    digest = None
+    if digest_material is not None:
+        digest = hashlib.sha256(json.dumps(digest_material, sort_keys=True, default=str).encode()).hexdigest()
+    try:
+        proposal_id = await submit_policy_proposal(
+            conn,
+            producer="ai",
+            trigger_ref=trigger_ref,
+            components=_policy_proposal_components(params),
+            digest_sha256=digest,
+            assignment_id=demotion["assignment_id"],
+            actor=f"mcp-{action}",
+        )
+    except Exception as exc:  # surface, never silently actuate instead
+        return json.dumps(
+            {
+                "error": "policy proposal could not be recorded",
+                "detail": f"{type(exc).__name__}: {exc}",
+                "actuated": False,
+            }
+        )
+    return json.dumps(
+        {
+            "ok": True,
+            "proposal_recorded": True,
+            "actuated": False,
+            "proposal_id": proposal_id,
+            "action": action,
+            "param_count": len(_policy_proposal_components(params)),
+            "note": (
+                "Proposal recorded, NOT actuated: direct policy writes are demoted while an "
+                "experiment assignment is armed (or legacy writes are disabled). The policy "
+                "arbiter compiles the proposal against the active assignment (#584)."
+            ),
+        }
+    )
 
 
 def _json(obj):
@@ -533,6 +617,9 @@ TOOL_AUDIENCES: dict[str, frozenset[str]] = {
     # Writes
     "set_plan": frozenset({"iris", "admin"}),
     "set_tunable": frozenset({"iris", "admin"}),
+    # Lane C (#584): the experiment arm's only actuation-eligible output — an
+    # opaque policy_template_id proposal (registered with tranche 2, audit §8.8).
+    "policy_template_propose": frozenset({"experiment", "admin"}),
     "acknowledge_trigger": frozenset({"iris", "experiment", "admin"}),
     "plan_evaluate": frozenset({"iris", "admin"}),
     "lessons_manage": frozenset({"iris", "admin"}),
@@ -541,15 +628,12 @@ TOOL_AUDIENCES: dict[str, frozenset[str]] = {
     "query": frozenset({"admin"}),
 }
 
-# Registry entries for tools that are DESIGNED but not yet registered. Lane
-# C/D tranche 2 moves each into TOOL_AUDIENCES when the @mcp.tool() lands;
-# until then the startup assertion keeps the two maps disjoint so a pending
-# entry cannot mask a registered tool that skipped authorization.
-PENDING_TOOL_AUDIENCES: dict[str, frozenset[str]] = {
-    # Audit §8.8: the experiment arm's only actuation-eligible output — an
-    # opaque policy_template_id proposal. Arrives with Lane C/D tranche 2.
-    "policy_template_propose": frozenset({"experiment", "admin"}),
-}
+# Registry entries for tools that are DESIGNED but not yet registered. Each
+# moves into TOOL_AUDIENCES when its @mcp.tool() lands; until then the startup
+# assertion keeps the two maps disjoint so a pending entry cannot mask a
+# registered tool that skipped authorization. (policy_template_propose moved
+# into TOOL_AUDIENCES with Lane C tranche 2, #584.)
+PENDING_TOOL_AUDIENCES: dict[str, frozenset[str]] = {}
 
 
 def audience_allowlist(audience: str) -> frozenset[str]:
@@ -2430,6 +2514,19 @@ async def set_tunable(
 
     conn = await _db()
     try:
+        # Lane C (#584): while an experiment assignment is armed (or legacy
+        # writes are disabled) this write becomes a policy proposal instead of
+        # an actuation-eligible setpoint_plan row.
+        demotion = await demoted_policy_write_gate(conn)
+        if demotion is not None:
+            return await _record_demoted_policy_proposal(
+                conn,
+                demotion,
+                action="set_tunable",
+                trigger_ref=normalized_trigger_id,
+                params={parameter: float(value)},
+                digest_material={"parameter": parameter, "value": float(value), "reason": reason},
+            )
         now_mdt = datetime.now(ZoneInfo("America/Denver"))
         plan_id = f"iris-oneshot-{now_mdt.strftime('%Y%m%d-%H%M')}"
         async with conn.transaction():
@@ -3100,6 +3197,30 @@ async def set_plan(
 
     conn = await _db()
     try:
+        # Lane C (#584): demoted plans become ONE policy proposal carrying the
+        # first transition's policy params (the immediately-actuatable slice)
+        # plus a digest of the whole plan envelope for audit.
+        demotion = await demoted_policy_write_gate(conn)
+        if demotion is not None:
+            first_params = {
+                param: float(value)
+                for param, value in plan.transitions[0].params.items()
+                if param not in BAND_OWNED_PARAMS and param in PLANNER_PUSHABLE_REG
+            }
+            return await _record_demoted_policy_proposal(
+                conn,
+                demotion,
+                action="set_plan",
+                trigger_ref=normalized_trigger_id,
+                params=first_params,
+                digest_material={
+                    "plan_id": plan.plan_id,
+                    "transitions": [
+                        {"ts": wp.ts.isoformat(), "params": {k: float(v) for k, v in wp.params.items()}}
+                        for wp in plan.transitions
+                    ],
+                },
+            )
         async with conn.transaction():
             db_now = await conn.fetchval("SELECT now()")
             coverage_error = plan_current_coverage_error(plan, db_now)
@@ -3336,6 +3457,72 @@ async def set_plan(
         if structured_warning:
             result["structured_warning"] = structured_warning
         return json.dumps(result)
+    finally:
+        await conn.close()
+
+
+@mcp.tool()
+async def policy_template_propose(
+    assignment_receipt: str = "",
+    policy_template_id: str = "",
+    prediction: str = "",
+    rationale: str = "",
+) -> str:
+    """Propose a pre-qualified policy template for the current experiment assignment.
+
+    The experiment planner arm's ONLY actuation-eligible output (#584, audit
+    §8.8): an opaque template selection. The proposal is recorded append-only;
+    the policy arbiter compiles it against the active assignment and (in live
+    mode) admits it through the atomic vector path. Nothing actuates directly
+    from this call, and the response never reveals the arm or treatment.
+
+    assignment_receipt: the opaque receipt from the planning trigger (it does
+        not identify the experiment or the arm).
+    policy_template_id: one of the pre-qualified template ids offered in the
+        trigger context.
+    prediction, rationale: the falsifiable prediction and reasoning to freeze
+        alongside the selection (stored in the append-only context snapshot).
+    """
+    if not assignment_receipt:
+        return json.dumps({"error": "assignment_receipt is required"})
+    if not policy_template_id:
+        return json.dumps({"error": "policy_template_id is required"})
+    try:
+        receipt = str(UUID(assignment_receipt))
+        template_id = str(UUID(policy_template_id))
+    except (TypeError, ValueError):
+        return json.dumps({"error": "assignment_receipt and policy_template_id must be valid UUIDs"})
+
+    conn = await _db()
+    try:
+        try:
+            proposal_id = await submit_policy_proposal(
+                conn,
+                producer="ai",
+                trigger_ref=f"receipt:{receipt}",
+                proposed_template_id=template_id,
+                context={"prediction": prediction, "rationale": rationale},
+                assignment_id=receipt,
+                actor="mcp-policy_template_propose",
+            )
+        except Exception as exc:
+            return json.dumps(
+                {
+                    "error": "template selection could not be recorded",
+                    "detail": f"{type(exc).__name__}: {exc}",
+                }
+            )
+        return json.dumps(
+            {
+                "ok": True,
+                "proposal_id": proposal_id,
+                "state": "proposed",
+                "note": (
+                    "Template selection recorded as a policy proposal. The arbiter compiles it "
+                    "for the current assignment; nothing actuates directly from this call."
+                ),
+            }
+        )
     finally:
         await conn.close()
 

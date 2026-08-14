@@ -50,11 +50,15 @@ $PY -m pytest -q \
   tests/test_18_twin_divergence_dashboard.py \
   tests/test_20_vision_src_sync.py \
   tests/test_21_config_revision.py \
+  tests/test_action_log_policy_identity.py \
   tests/test_anchor_service_sync.py \
   tests/test_api_public_output_policy.py \
   tests/test_climate_intent_replay_evaluator.py \
   tests/test_compliance_feasibility_classifier.py \
+  tests/test_esp32_policy_transaction.py \
   tests/test_experiment_api.py \
+  tests/test_experiment_schema_migration.py \
+  tests/test_experiment_workers.py \
   tests/test_firmware_crop_agnostic_guard.py \
   tests/test_forecast_action_engine_path.py \
   tests/test_g5_dualwrite_validation.py \
@@ -66,6 +70,10 @@ $PY -m pytest -q \
   tests/test_mqtt_fanout.py \
   tests/test_no_hosted_runner_workflows.py \
   tests/test_planner_memory_ingest.py \
+  tests/test_policy_arbiter_migration.py \
+  tests/test_policy_arbiter_worker.py \
+  tests/test_policy_delivery_worker.py \
+  tests/test_policy_writer_demotion.py \
   tests/test_psql_verdify_backend.py \
   tests/test_publish_site_content_guard.py \
   tests/test_public_output_generators.py \
