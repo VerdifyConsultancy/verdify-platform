@@ -27,6 +27,14 @@ esphome:
     - lib/greenhouse_solar.h
     - lib/irrigation_policy.h
     - lib/greenhouse_logic.h
+    # Lane E (#586): atomic policy engine — generated codec + ROM baseline +
+    # engine + NVS journal glue (order matters; policy_vector.h needs the
+    # generated headers, the glue needs policy_vector.h).
+    - lib/policy_sha256.h
+    - lib/policy_vector_generated.h
+    - lib/policy_rom_baseline_generated.h
+    - lib/policy_vector.h
+    - lib/policy_journal_esphome.h
   # Lutron LEAP TLS disabled (causes ESP32 crash — TLS heap exhaustion)
   # Grow lights use HA native service calls; no on-device HTTP client.
   # Cold-start safety: turn every relay OFF before the first control pass
@@ -211,6 +219,7 @@ packages:
   tunables:  !include greenhouse/tunables.yaml
   control:   !include greenhouse/controls.yaml
   external:  !include greenhouse/external_sensors.yaml
+  policy:    !include greenhouse/policy_engine.yaml
 
 # ────────────────────────────── Networking ─────────────────────────────────
 wifi:
