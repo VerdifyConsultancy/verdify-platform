@@ -955,16 +955,51 @@ static void test_water_high_water_never_rolls_backward() {
 }
 
 static void test_identity_readback_format() {
+  // Transport contract v2 (#586): schema|generation|assignment|activation|state
+  // with FULL activation hash and no content prefix (content identity is bound
+  // inside the activation hash, audit §8.9).
   PolicyEngine engine;
-  char buf[96];
+  char buf[kPolicyIdentityMax];
   engine.identity_readback(buf, sizeof(buf));
-  char expected[96];
-  std::snprintf(expected, sizeof(expected), "v1|g0|c%02x%02x%02x%02x%02x%02x%02x%02x|a-|s-|ROM",
-                kGoldenContentSha[kVecBaseline][0], kGoldenContentSha[kVecBaseline][1],
-                kGoldenContentSha[kVecBaseline][2], kGoldenContentSha[kVecBaseline][3],
-                kGoldenContentSha[kVecBaseline][4], kGoldenContentSha[kVecBaseline][5],
-                kGoldenContentSha[kVecBaseline][6], kGoldenContentSha[kVecBaseline][7]);
+  char expected[kPolicyIdentityMax];
+  std::snprintf(expected, sizeof(expected), "%u|0|-|-|rom_baseline", (unsigned) kWireSchemaVersion);
   CHECK(std::strcmp(buf, expected) == 0, "ROM identity readback format");
+
+  // Committed active policy with an activation hash: full 64-hex echo plus the
+  // canonical lowercase assignment UUID.
+  ManifestSpec mspec;
+  const uint8_t aa_lane0[2] = {0x03, 0x00};
+  uint8_t activation[32];
+  CHECK(activation_sha256(kGoldenContentSha[kVecModerate], kExperimentId, kAssignmentId, aa_lane0, 2, 1,
+                          static_cast<uint64_t>(kFrom) * 1000000ULL, static_cast<uint64_t>(kTo) * 1000000ULL,
+                          activation),
+        "compute activation for the active-identity echo");
+  PolicyEngine active_engine;
+  CHECK(arm_manifest(active_engine, mspec), "manifest armed");
+  HeaderSpec spec;
+  spec.content_sha = kGoldenContentSha[kVecModerate];
+  spec.has_activation = true;
+  spec.activation_sha = activation;
+  spec.treatment = aa_lane0;
+  spec.treatment_len = 2;
+  CHECK(push_and_commit(active_engine, spec, kGoldenVectorBytes[kVecModerate], kFrom), "active policy committed");
+  active_engine.on_tick(kFrom, true, kDay1);
+  CHECK(!active_engine.rom_baseline_active(), "active (not ROM)");
+  active_engine.identity_readback(buf, sizeof(buf));
+  char activation_hex[65];
+  for (size_t i = 0; i < 32; ++i) {
+    std::snprintf(activation_hex + 2 * i, 3, "%02x", activation[i]);
+  }
+  char assignment_uuid[37];
+  {
+    const uint8_t* a = kAssignmentId;
+    std::snprintf(assignment_uuid, sizeof(assignment_uuid),
+                  "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x", a[0], a[1], a[2], a[3],
+                  a[4], a[5], a[6], a[7], a[8], a[9], a[10], a[11], a[12], a[13], a[14], a[15]);
+  }
+  std::snprintf(expected, sizeof(expected), "%u|1|%s|%s|active", (unsigned) kWireSchemaVersion, assignment_uuid,
+                activation_hex);
+  CHECK(std::strcmp(buf, expected) == 0, "active identity readback format (full activation hash)");
 }
 
 static void test_hex_decode() {
