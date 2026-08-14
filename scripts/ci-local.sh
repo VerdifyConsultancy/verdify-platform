@@ -48,8 +48,8 @@ $PY -m pytest -q \
   tests/test_14_site_doctor.py \
   tests/test_17_planner_health_surface.py \
   tests/test_18_twin_divergence_dashboard.py \
-  tests/test_19_firmware_twin_shadow_src_sync.py \
   tests/test_20_vision_src_sync.py \
+  tests/test_21_config_revision.py \
   tests/test_anchor_service_sync.py \
   tests/test_api_public_output_policy.py \
   tests/test_climate_intent_replay_evaluator.py \
@@ -92,11 +92,17 @@ $PY scripts/gen-grafana-dashboard-cms.py --check
 step "solar site constants SSOT guard (#393)"
 $PY scripts/check-solar-constants.py
 
-step "twin vendored source compiles (the initContainer's exact build)"
+step "config-revision annotations match verdify-config sources (#587)"
+bash scripts/gen-config-revision.sh --check
+
+step "twin follower source compiles (the twin image's exact build, #587)"
+# The firmware-twin component now runs the pre-baked twin image (twin/Dockerfile
+# builds from these CANONICAL sources — the vendored src/ copies are gone), so
+# syntax-check the exact -DREPLAY_EMIT_STREAM compile the image performs.
 if command -v g++ >/dev/null; then
-  g++ -std=c++17 -fsyntax-only \
-    -Ideploy/k8s/components/firmware-twin/src \
-    deploy/k8s/components/firmware-twin/src/replay_emit.cpp
+  g++ -std=c++17 -fsyntax-only -DREPLAY_EMIT_STREAM \
+    -Ifirmware/lib \
+    firmware/test/replay_emit.cpp
 else
   echo "SKIP: g++ not available on this host (required in the CI image)"
 fi
