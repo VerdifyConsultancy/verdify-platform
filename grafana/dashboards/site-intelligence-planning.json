@@ -1959,6 +1959,164 @@
         }
       ],
       "transparent": true
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 54
+      },
+      "id": 118,
+      "title": "Controlled experiment (blinded)",
+      "type": "row",
+      "panels": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "verdify-tsdb"
+          },
+          "id": 119,
+          "type": "text",
+          "title": "Blinded board contract",
+          "gridPos": {
+            "h": 9,
+            "w": 12,
+            "x": 0,
+            "y": 55
+          },
+          "options": {
+            "mode": "markdown",
+            "content": "### Controlled experiment \u2014 blinded ops board (#587, audit \u00a78.7/\u00a78.10)\n\nSkeleton panels for the controlled planner experiment. The backing tables land with **Lane B (migration 207)**: `control_assignments`, `policy_delivery_outbox`, `policy_device_snapshots`, `policy_exposures`. Until then the stat/table panels below intentionally return NULL (their real SQL is staged in each panel description).\n\n**Blinded fields ONLY (visible during the run):**\n- opaque assignment id (UUID, no arm meaning)\n- activation receipt (device-echoed generation acknowledged)\n- expected-vs-confirmed identity equality (boolean)\n- exposure coverage fraction + close/fallback reason\n- delivery lag (outbox enqueue -> device activation)\n- safety/fallback + protocol-deviation events\n- tested-rollback receipt (last baseline-recovery drill)\n\n**NEVER on this board while an experiment runs:** arm labels or the X/Y->A/B mapping, template content hashes, component values, or any efficacy/outcome metric. The outcome analysis role is blinded by construction (\u00a78.7); this board must not leak what the database refuses."
+          }
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "verdify-tsdb"
+          },
+          "id": 120,
+          "type": "stat",
+          "title": "Exposure coverage (7d)",
+          "description": "PENDING Lane B (migration 207). Staged SQL:\nSELECT COALESCE(SUM(EXTRACT(EPOCH FROM (upper(confirmed_interval) - lower(confirmed_interval)))) / (7*86400.0), 0) AS coverage\nFROM policy_exposures\nWHERE lower(confirmed_interval) > now() - interval '7 days';\nBlinded: coverage only \u2014 no arm, no content identity.",
+          "gridPos": {
+            "h": 4,
+            "w": 6,
+            "x": 12,
+            "y": 55
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "format": "table",
+              "rawSql": "-- pending Lane B (migration 207): policy_exposures; staged SQL in panel description\nSELECT NULL::float8 AS coverage;"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "noValue": "pending Lane B",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "text",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "colorMode": "none",
+            "graphMode": "none"
+          }
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "verdify-tsdb"
+          },
+          "id": 121,
+          "type": "stat",
+          "title": "Expected = confirmed (24h)",
+          "description": "PENDING Lane B (migration 207). Staged SQL:\nSELECT BOOL_AND(expected_activation_hash = observed_activation_hash) AS identity_ok\nFROM policy_device_snapshots\nWHERE snapshot_at > now() - interval '24 hours';\nBlinded: equality boolean only \u2014 the hashes themselves NEVER render here.",
+          "gridPos": {
+            "h": 4,
+            "w": 6,
+            "x": 18,
+            "y": 55
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "format": "table",
+              "rawSql": "-- pending Lane B (migration 207): policy_device_snapshots; staged SQL in panel description\nSELECT NULL::boolean AS identity_ok;"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "pending Lane B",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "text",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "colorMode": "none",
+            "graphMode": "none"
+          }
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "verdify-tsdb"
+          },
+          "id": 122,
+          "type": "table",
+          "title": "Assignment receipts (opaque)",
+          "description": "PENDING Lane B (migration 207). Staged SQL:\nSELECT a.assignment_id, o.activated_at, o.activated_at - o.enqueued_at AS delivery_lag, e.close_reason\nFROM control_assignments a\nLEFT JOIN policy_delivery_outbox o USING (assignment_id)\nLEFT JOIN policy_exposures e USING (assignment_id)\nORDER BY a.assigned_range DESC LIMIT 20;\nBlinded: opaque UUIDs, receipts, lag, close/fallback reason \u2014 no arm, no X/Y, no content hash, no component values.",
+          "gridPos": {
+            "h": 5,
+            "w": 12,
+            "x": 12,
+            "y": 59
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "format": "table",
+              "rawSql": "-- pending Lane B (migration 207): control_assignments / policy_delivery_outbox / policy_exposures; staged SQL in panel description\nSELECT NULL::uuid AS assignment_id, NULL::timestamptz AS activated_at, NULL::interval AS delivery_lag, NULL::text AS close_reason WHERE FALSE;"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "pending Lane B"
+            },
+            "overrides": []
+          },
+          "options": {}
+        }
+      ]
     }
   ],
   "annotations": {
