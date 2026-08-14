@@ -54,6 +54,7 @@ $PY -m pytest -q \
   tests/test_api_public_output_policy.py \
   tests/test_climate_intent_replay_evaluator.py \
   tests/test_compliance_feasibility_classifier.py \
+  tests/test_experiment_api.py \
   tests/test_firmware_crop_agnostic_guard.py \
   tests/test_forecast_action_engine_path.py \
   tests/test_g5_dualwrite_validation.py \
