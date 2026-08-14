@@ -131,6 +131,42 @@ registry range, and nearest safe value so Iris can retry with a valid plan.
 
 **Invariant:** MCP writes are idempotent on `plan_id`. A duplicate `set_plan` with the same `plan_id` is a **409 from MCP with a clear error**; Iris must generate a new `plan_id` per cycle. *Note: today's `set_plan` silently overwrites; making this actually return 409 is a genai-owned change in the MCP PR, not inherited behavior.*
 
+**Server-side audience authorization (#585, audit §8.8, Lane D tranche 1).**
+The `Authorization: Bearer` header Hermes already sends is now validated by the
+MCP server itself; the client-side `tools.include` list and the NetworkPolicy
+are no longer the only boundaries. Every tool call resolves its bearer token to
+an **audience** (constant-time comparison) and is checked against the
+server-side `TOOL_AUDIENCES` inventory in `mcp/server.py`:
+
+- `iris` — exactly the 23 tools in the hermes-config `tools.include` list
+  (drift-guarded by `tests/test_mcp_audience_auth.py`); current behavior.
+- `experiment` — the blinded experiment planner arm: qualified
+  climate/forecast/crop/topology reads + `acknowledge_trigger` only;
+  treatment-revealing reads (`get_setpoints`, `plan_status`, `history`,
+  scorecards, lessons) and all ordinary writes denied.
+  `policy_template_propose` joins this audience in Lane C/D tranche 2.
+- `admin` — operator/debug credential; all tools.
+
+Config: `VERDIFY_MCP_TOKEN_IRIS` / `VERDIFY_MCP_TOKEN_EXPERIMENT` /
+`VERDIFY_MCP_TOKEN_ADMIN` on the MCP server (the iris value is the same secret
+hermes-config sends as `${VERDIFY_MCP_TOKEN}`), and
+`VERDIFY_MCP_AUTH_MODE=off|log|enforce` (default `off`). Modes and required
+rollout order:
+
+1. `off` (default) — authorization bypassed; byte-identical pre-#585 behavior.
+2. `log` — **prod runs this first**: would-be denials are emitted as
+   structured `mcp_tool_authz_denial` JSON log lines (never token values) but
+   nothing is blocked. Soak until the denial log is quiet for the iris
+   audience.
+3. `enforce` — denials reject the tool call with a clear tool error; a
+   missing/unknown token denies everything (fail closed). An unrecognized
+   mode value also behaves as `enforce`. **`enforce` must be live before any
+   experiment assignment is armed.**
+
+`/readyz` reports `auth_mode`, `auth_audiences_configured` (names only), and
+`auth_misconfigured`; `enforce` with an empty token registry reports not-ready
+instead of serving a fully bricked tool surface.
+
 ### D. MCP server → TimescaleDB
 
 **Owner:** genai (MCP code) + coordinator (schema).
