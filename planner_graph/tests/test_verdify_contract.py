@@ -99,14 +99,41 @@ def test_build_climate_intent_uses_bounded_single_path_surface() -> None:
         intent["fog_escalate_vpd_excess_kpa"]
         == TIER1_PLAN_DEFAULTS["fog_escalation_kpa"]
     )
+    # Wire schema v2 retired the fog_stress_* window/dew-margin knobs and
+    # direct_wet_stress_latest_hour: the dew-margin floor is the direct-wet
+    # stress margin alone, and the wet cutoff is the bounded intent default.
     assert (
         intent["dew_margin_floor_f"]
-        == TIER1_PLAN_DEFAULTS["fog_stress_min_dew_margin_f"]
+        == TIER1_PLAN_DEFAULTS["direct_wet_stress_min_dew_margin_f"]
     )
-    assert (
-        intent["wet_cutoff_hour"]
-        == TIER1_PLAN_DEFAULTS["fog_stress_window_latest_hour"]
+    assert intent["wet_cutoff_hour"] == CLIMATE_INTENT_DEFAULTS["wet_cutoff_hour"]
+
+
+def test_tier1_contract_is_the_wire_v2_39_field_surface() -> None:
+    """Regen guard (#585, audit §8.8): the generated block carries exactly the
+    39-field wire-v2 Tier-1 surface with the stale/obsolete names gone."""
+    from planner_graph.verdify_contract import (
+        TIER1_CONTRACT_FIELD_COUNT,
+        TIER1_CONTRACT_WIRE_SCHEMA_VERSION,
     )
+
+    assert TIER1_CONTRACT_WIRE_SCHEMA_VERSION == 2
+    assert TIER1_CONTRACT_FIELD_COUNT == 39
+    assert len(TIER1_PLAN_DEFAULTS) == 39
+    for present in (
+        "band_track_fraction",
+        "cool_stage2_exit_hysteresis_f",
+        "night_vpd_bias_kpa",
+        "vent_exchange_fraction",
+    ):
+        assert present in TIER1_PLAN_DEFAULTS
+    for gone in (
+        "direct_wet_stress_latest_hour",
+        "fog_stress_min_dew_margin_f",
+        "fog_stress_window_latest_hour",
+        "sw_fog_stress_window_extend_enabled",
+    ):
+        assert gone not in TIER1_PLAN_DEFAULTS
 
 
 def test_build_climate_intent_defaults_when_tier1_context_is_missing() -> None:

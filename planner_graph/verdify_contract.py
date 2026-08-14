@@ -14,22 +14,30 @@ from datetime import datetime
 from typing import Mapping
 
 
-# Mirrors Verdify's Tier 1 tunable registry for contract version 2026-05-24.
-# The planner is standalone, so this list is intentionally copied instead of
-# importing Verdify packages at runtime.
+# --- BEGIN GENERATED TIER1 (scripts/gen-planner-graph-contract.py) ---
+# GENERATED from verdify_schemas.tunable_registry (TIER1_REG) — DO NOT EDIT
+# BY HAND. Regenerate with:
+#     python scripts/gen-planner-graph-contract.py
+# A drift test (tests/test_planner_graph_contract.py) fails CI when this
+# block diverges from the canonical registry. The planner is standalone, so
+# the values are materialized here instead of importing Verdify packages at
+# runtime — but the SOURCE is the registry, never a hand-copy (#585,
+# audit §8.8).
+TIER1_CONTRACT_WIRE_SCHEMA_VERSION = 2
+TIER1_CONTRACT_FIELD_COUNT = 39
+
 TIER1_PLAN_DEFAULTS: dict[str, float] = {
+    "band_track_fraction": 0.0,
     "cold_vent_guard_delta_f": 10.0,
     "cool_exit_hysteresis_f": 1.5,
+    "cool_stage2_exit_hysteresis_f": 1.0,
     "cool_stage2_over_high_f": 1.0,
-    "direct_wet_stress_latest_hour": 22.0,
     "direct_wet_stress_min_dew_margin_f": 8.0,
     "direct_wet_stress_vpd_margin_kpa": 0.05,
     "dwell_gate_ms": 300000.0,
     "enthalpy_close": 1.0,
     "enthalpy_open": -2.0,
     "fog_escalation_kpa": 0.4,
-    "fog_stress_min_dew_margin_f": 10.0,
-    "fog_stress_window_latest_hour": 19.0,
     "heat_hysteresis": 1.0,
     "min_fog_off_s": 60.0,
     "min_fog_on_s": 60.0,
@@ -44,20 +52,22 @@ TIER1_PLAN_DEFAULTS: dict[str, float] = {
     "mister_pulse_on_s": 60.0,
     "mister_vpd_weight": 1.5,
     "mister_water_budget_gal": 300.0,
+    "night_vpd_bias_kpa": 0.0,
     "outdoor_staleness_max_s": 600.0,
     "sw_cool_all_fans_at_high_enabled": 0.0,
     "sw_direct_wet_stress_override_enabled": 0.0,
     "sw_dwell_gate_enabled": 0.0,
     "sw_fog_closes_vent": 1.0,
-    "sw_fog_stress_window_extend_enabled": 0.0,
     "sw_mister_closes_vent": 0.0,
     "sw_summer_vent_enabled": 1.0,
     "temp_hysteresis": 1.5,
+    "vent_exchange_fraction": 0.3,
     "vent_prefer_dp_delta_f": 5.0,
     "vent_prefer_temp_delta_f": 5.0,
     "vpd_hysteresis": 0.3,
     "vpd_watch_dwell_s": 60.0,
 }
+# --- END GENERATED TIER1 ---
 
 TIER1_PLAN_PARAM_NAMES: tuple[str, ...] = tuple(TIER1_PLAN_DEFAULTS)
 
@@ -245,14 +255,13 @@ def build_climate_intent(active_plan_summary: object) -> dict[str, float]:
         "all_zone_vpd_excess_kpa": all_zone_vpd_excess_kpa,
         "mist_duty_limit_pct": duty_pct,
         "fog_escalate_vpd_excess_kpa": params["fog_escalation_kpa"],
-        "dew_margin_floor_f": max(
-            params["direct_wet_stress_min_dew_margin_f"],
-            params["fog_stress_min_dew_margin_f"],
-        ),
-        "wet_cutoff_hour": min(
-            params["direct_wet_stress_latest_hour"],
-            params["fog_stress_window_latest_hour"],
-        ),
+        # Wire schema v2 retired the fog_stress_* window/dew-margin knobs and
+        # direct_wet_stress_latest_hour (fog now follows the solar-phase curve
+        # gate, not a clock window). The dew-margin floor is the direct-wet
+        # stress margin alone; the wet cutoff falls back to the bounded
+        # ClimateIntent default.
+        "dew_margin_floor_f": params["direct_wet_stress_min_dew_margin_f"],
+        "wet_cutoff_hour": CLIMATE_INTENT_DEFAULTS["wet_cutoff_hour"],
         "daily_mist_budget_gal": params["mister_water_budget_gal"],
         "resource_sensitivity": 1.0 - min(1.0, max(0.0, duty_pct / 100.0)),
         "relay_churn_penalty": (dwell - 60000.0) / (1800000.0 - 60000.0),

@@ -57,6 +57,7 @@ $PY -m pytest -q \
   tests/test_compliance_feasibility_classifier.py \
   tests/test_esp32_policy_transaction.py \
   tests/test_experiment_api.py \
+  tests/test_experiment_gather_mode.py \
   tests/test_experiment_schema_migration.py \
   tests/test_experiment_workers.py \
   tests/test_firmware_crop_agnostic_guard.py \
@@ -69,6 +70,7 @@ $PY -m pytest -q \
   tests/test_mcp_audience_auth.py \
   tests/test_mqtt_fanout.py \
   tests/test_no_hosted_runner_workflows.py \
+  tests/test_planner_graph_contract.py \
   tests/test_planner_memory_ingest.py \
   tests/test_policy_arbiter_migration.py \
   tests/test_policy_arbiter_worker.py \
