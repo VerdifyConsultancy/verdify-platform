@@ -49,8 +49,16 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
     -- the existing prod schema), 'runner' (stamped by the migrate runner on a
     -- fresh apply), or 'manual'.
     stamp_method TEXT        NOT NULL DEFAULT 'runner',
+    -- Runner audit fields (#583 Lane B): wall-clock apply duration and the DB
+    -- role that applied the file. NULL for baseline stamps.
+    duration_ms  INTEGER     NULL,
+    applied_by   TEXT        NULL,
     PRIMARY KEY (source, filename)
 );
+
+-- Upgrade path for ledgers created before the audit columns existed.
+ALTER TABLE schema_migrations ADD COLUMN IF NOT EXISTS duration_ms INTEGER;
+ALTER TABLE schema_migrations ADD COLUMN IF NOT EXISTS applied_by  TEXT;
 
 COMMENT ON TABLE schema_migrations IS
     'Applied-migrations ledger (IRIS-W007). Identity = (source, filename); '
@@ -60,24 +68,37 @@ COMMENT ON TABLE schema_migrations IS
 -- Stamping helper. The migrate runner calls this once per file it applies (or
 -- verifies present, under verify-not-rebuild). Idempotent: re-stamping a file
 -- refreshes its sha256/applied_at rather than erroring.
+--
+-- The pre-#583 5-argument signature is dropped (if present) and replaced by a
+-- single 7-argument version whose trailing args default to NULL, so existing
+-- 5-positional callers (db/ledger/backfill_ledger.sql) resolve unambiguously.
+DROP FUNCTION IF EXISTS stamp_migration(TEXT, TEXT, INTEGER, TEXT, TEXT);
+
 CREATE OR REPLACE FUNCTION stamp_migration(
-    p_filename TEXT,
-    p_source   TEXT DEFAULT 'db/migrations',
-    p_seq      INTEGER DEFAULT NULL,
-    p_sha256   TEXT DEFAULT NULL,
-    p_method   TEXT DEFAULT 'runner'
+    p_filename    TEXT,
+    p_source      TEXT DEFAULT 'db/migrations',
+    p_seq         INTEGER DEFAULT NULL,
+    p_sha256      TEXT DEFAULT NULL,
+    p_method      TEXT DEFAULT 'runner',
+    p_duration_ms INTEGER DEFAULT NULL,
+    p_applied_by  TEXT DEFAULT NULL
 ) RETURNS VOID
 LANGUAGE sql AS $$
-    INSERT INTO schema_migrations (filename, source, seq, sha256, applied_at, stamp_method)
-    VALUES (p_filename, p_source, p_seq, p_sha256, now(), p_method)
+    INSERT INTO schema_migrations
+        (filename, source, seq, sha256, applied_at, stamp_method, duration_ms, applied_by)
+    VALUES
+        (p_filename, p_source, p_seq, p_sha256, now(), p_method,
+         p_duration_ms, COALESCE(p_applied_by, current_user))
     ON CONFLICT (source, filename) DO UPDATE
         SET sha256 = EXCLUDED.sha256,
             seq = EXCLUDED.seq,
             applied_at = now(),
-            stamp_method = EXCLUDED.stamp_method;
+            stamp_method = EXCLUDED.stamp_method,
+            duration_ms = EXCLUDED.duration_ms,
+            applied_by = EXCLUDED.applied_by;
 $$;
 
-COMMENT ON FUNCTION stamp_migration(TEXT, TEXT, INTEGER, TEXT, TEXT) IS
+COMMENT ON FUNCTION stamp_migration(TEXT, TEXT, INTEGER, TEXT, TEXT, INTEGER, TEXT) IS
     'Idempotently record that a migration file has been applied/verified.';
 
 COMMIT;

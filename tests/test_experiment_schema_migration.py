@@ -1,0 +1,221 @@
+"""Migration 207 (controlled policy experiment, #583) source-contract tests.
+
+File-based like tests/test_db_solar_sql_contract.py: CI proves the migration's
+structural invariants without a live database. The live-DB idempotency and
+behavior fixture is db/migrations/tests/test-207-controlled-policy-experiment.sql.
+"""
+
+from __future__ import annotations
+
+import importlib.util
+import re
+import sys
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+MIGRATION = REPO_ROOT / "db" / "migrations" / "207-controlled-policy-experiment.sql"
+ROLES_SQL = REPO_ROOT / "db" / "roles" / "experiment-roles.sql"
+LEDGER_SQL = REPO_ROOT / "db" / "ledger" / "schema_migrations.sql"
+BACKFILL_SQL = REPO_ROOT / "db" / "ledger" / "backfill_ledger.sql"
+DOCKERFILE = REPO_ROOT / "db" / "Dockerfile.migrate"
+MIGRATE_SH = REPO_ROOT / "db" / "migrate.sh"
+
+REQUIRED_TABLES = [
+    "control_experiments",
+    "control_experiment_arms",
+    "control_arm_resolutions",
+    "qualification_transition_slots",
+    "control_assignments",
+    "control_transition_ledger",
+    "policy_templates",
+    "policy_template_components",
+    "policy_template_edges",
+    "experiment_context_snapshots",
+    "policy_proposals",
+    "policy_proposal_components",
+    "effective_policy_vectors",
+    "effective_policy_vector_components",
+    "policy_delivery_outbox",
+    "policy_delivery_attempts",
+    "policy_device_snapshots",
+    "policy_exposures",
+    "experiment_events",
+    "planner_inference_runs",
+]
+
+REQUIRED_FUNCTIONS = [
+    "fn_experiment_transition",
+    "fn_claim_qualification_slot",
+    "fn_create_assignment",
+    "fn_admit_policy_vector",
+    "fn_open_exposure",
+    "fn_close_exposure",
+    "fn_record_device_snapshot",
+]
+
+
+def _load_classifier():
+    name = "check_migration_rollback_safety"
+    if name in sys.modules:
+        return sys.modules[name]
+    spec = importlib.util.spec_from_file_location(name, REPO_ROOT / "scripts" / "check_migration_rollback_safety.py")
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[name] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _stripped_sql() -> str:
+    """Migration SQL with comments/literals/dollar-bodies blanked, so
+    structural assertions never match prose in header comments."""
+    return _load_classifier().strip_sql_noise(MIGRATION.read_text())
+
+
+def test_migration_207_exists_and_is_safe_to_wrap():
+    assert MIGRATION.is_file()
+    classifier = _load_classifier()
+    c = classifier.classify(MIGRATION)
+    assert not c.self_committing, f"207 must stay non-self-transactional (safe-to-wrap); reasons: {c.reasons}"
+
+
+def test_migration_207_creates_all_required_tables_idempotently():
+    sql = MIGRATION.read_text()
+    for table in REQUIRED_TABLES:
+        assert f"CREATE TABLE IF NOT EXISTS public.{table} (" in sql, table
+    # No non-idempotent table creation anywhere (comments stripped first).
+    stripped = _stripped_sql()
+    assert len(re.findall(r"CREATE TABLE\b", stripped)) == len(re.findall(r"CREATE TABLE IF NOT EXISTS\b", stripped))
+
+
+def test_migration_207_defines_all_transition_functions():
+    sql = MIGRATION.read_text()
+    for fn in REQUIRED_FUNCTIONS:
+        assert f"CREATE OR REPLACE FUNCTION public.{fn}(" in sql, fn
+
+
+def test_no_exclude_constraint_and_no_btree_gist():
+    """btree_gist is not installed in prod: non-overlap must come from the
+    advisory-lock transition function, never an EXCLUDE constraint."""
+    stripped = _stripped_sql()
+    assert not re.search(r"\bEXCLUDE\s+USING\b", stripped, re.IGNORECASE)
+    assert not re.search(r"CREATE\s+EXTENSION\b", stripped, re.IGNORECASE)
+    # Advisory-lock guards live inside function bodies: assert on raw SQL.
+    sql = MIGRATION.read_text()
+    assert "pg_advisory_xact_lock(hashtext('control_assignments-' || p_greenhouse_id))" in sql
+    assert "pg_advisory_xact_lock(hashtext('effective_policy_vectors-' || v_asg.greenhouse_id))" in sql
+
+
+def test_every_security_definer_function_pins_search_path():
+    stripped = _stripped_sql()
+    definer_count = len(re.findall(r"\bSECURITY DEFINER\b", stripped))
+    pinned_count = len(re.findall(r"SET search_path = public, pg_temp", stripped))
+    assert definer_count >= 7
+    # Every SECURITY DEFINER function pins search_path (helpers may pin too).
+    assert pinned_count >= definer_count
+
+
+def test_49_component_completeness_is_enforced():
+    sql = MIGRATION.read_text()
+    assert "count(*) = 49" in sql  # fn_policy_template_is_complete
+    assert "component_index BETWEEN 0 AND 48" in sql
+    assert "v_count <> 49" in sql  # fn_admit_policy_vector gate
+
+
+def test_outbox_idempotency_key_and_bounded_error_classes():
+    sql = MIGRATION.read_text()
+    assert "UNIQUE (device_id, vector_id)" in sql
+    for cls in ("hash_mismatch", "schema_mismatch", "generation_conflict"):
+        assert cls in sql
+
+
+def test_generation_monotonicity_and_assignment_containment():
+    sql = MIGRATION.read_text()
+    assert "UNIQUE (greenhouse_id, device_generation)" in sql
+    assert "COALESCE(max(device_generation), 0) + 1" in sql
+    assert "v_validity <@ v_asg.valid_range" in sql
+
+
+def test_blinded_resolution_table_is_quarantined():
+    sql = MIGRATION.read_text()
+    assert "CREATE TABLE IF NOT EXISTS public.control_arm_resolutions" in sql
+    assert "REVOKE ALL ON public.control_arm_resolutions FROM PUBLIC;" in sql
+
+
+def test_lane_c_extension_points_are_marked():
+    sql = MIGRATION.read_text()
+    assert sql.count("LANE-C") >= 4
+
+
+def test_roles_scaffold_declares_all_eight_roles_and_analysis_denies():
+    sql = ROLES_SQL.read_text()
+    for role in (
+        "verdify_migration_owner",
+        "verdify_api",
+        "verdify_iris_context",
+        "verdify_mcp_runtime",
+        "verdify_planner_graph",
+        "verdify_ingestor_arbiter",
+        "verdify_analysis_blinded",
+        "verdify_twin_ro",
+    ):
+        assert role in sql, role
+    for denied in (
+        "control_arm_resolutions",
+        "effective_policy_vector_components",
+        "setpoint_plan",
+        "setpoint_changes",
+        "setpoint_snapshot",
+    ):
+        assert re.search(rf"REVOKE ALL ON public\.{denied}\s+FROM verdify_analysis_blinded", sql), denied
+
+
+def test_ledger_ddl_has_runner_audit_columns_and_seven_arg_stamp():
+    sql = LEDGER_SQL.read_text()
+    assert "duration_ms" in sql
+    assert "applied_by" in sql
+    assert "DROP FUNCTION IF EXISTS stamp_migration(TEXT, TEXT, INTEGER, TEXT, TEXT);" in sql
+    assert "p_duration_ms INTEGER DEFAULT NULL" in sql
+
+
+def test_backfill_covers_repo_migrations_except_207_with_correct_shas():
+    """The audited baseline stamps every checked-in migration EXCEPT the new
+    207 (pre-stamping it would mark it applied and the runner would skip it).
+    Shas in the generated file must match the actual file contents."""
+    import hashlib
+
+    sql = BACKFILL_SQL.read_text()
+    stamped = dict(
+        re.findall(
+            r"stamp_migration\('db/migrations/([^']+)', 'db/migrations', \d+, '([0-9a-f]{64})'",
+            sql,
+        )
+    )
+    repo_files = sorted(p.name for p in (REPO_ROOT / "db" / "migrations").glob("*.sql"))
+    assert "207-controlled-policy-experiment.sql" in repo_files
+    assert "207-controlled-policy-experiment.sql" not in stamped
+    for name in repo_files:
+        if name == "207-controlled-policy-experiment.sql":
+            continue
+        assert name in stamped, f"{name} missing from baseline backfill"
+        actual = hashlib.sha256((REPO_ROOT / "db" / "migrations" / name).read_bytes()).hexdigest()
+        assert stamped[name] == actual, f"stale baseline sha for {name}"
+    # Duplicate-number history must be representable (031 twice, etc.).
+    assert "031-setpoint-plan.sql" in stamped
+    assert "031-setpoint-schedule.sql" in stamped
+
+
+def test_migrate_image_carries_migrations_and_runner():
+    docker = DOCKERFILE.read_text()
+    assert "COPY db/migrations/ /db/migrations/" in docker
+    assert "COPY db/ledger/ /db/ledger/" in docker
+    assert "COPY db/apply-migrations.sh /usr/local/bin/apply-migrations.sh" in docker
+    assert "check_migration_rollback_safety.py" in docker
+
+
+def test_migrate_sh_ledger_branch_is_opt_in_and_comment_fixed():
+    sh = MIGRATE_SH.read_text()
+    assert "VERDIFY_MIGRATE_LEDGER:-0" in sh, "ledger branch must default OFF"
+    assert "apply-migrations.sh" in sh
+    # The stale coverage claim is corrected (audit §8.7 / review 1.5).
+    assert "snapshot through migration 156" not in sh
+    assert "196" in sh

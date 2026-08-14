@@ -13,9 +13,26 @@
 # build failed with exit 1. The old reason for inlining, an unreliable
 # NFS-backed worktree, retired with the VM).
 FROM postgres:16-alpine
+# python3: exact wrap-safety classification for the ledgered runner (#583) —
+# scripts/check_migration_rollback_safety.py decides single-transaction vs
+# unwrapped apply per migration file.
+RUN apk add --no-cache python3
 COPY db/schema.sql /db/schema.sql
 COPY db/migrations/000-fresh-schema-hypertable-repair.sql /db/000-fresh-schema-hypertable-repair.sql
+# Ledgered populated-DB delivery path (#583, audit §8.7): the full numbered
+# migration set + ledger DDL/backfill + the runner. Inert unless the Job sets
+# VERDIFY_MIGRATE_LEDGER=1 (Lane F flips that flag in GitOps, not this image).
+COPY db/migrations/ /db/migrations/
+COPY db/ledger/ /db/ledger/
+COPY db/apply-migrations.sh /usr/local/bin/apply-migrations.sh
+COPY scripts/check_migration_rollback_safety.py /scripts/check_migration_rollback_safety.py
 COPY db/migrate.sh /usr/local/bin/migrate.sh
-RUN chmod 0755 /usr/local/bin/migrate.sh && chmod 0644 /db/*.sql
+RUN chmod 0755 /usr/local/bin/migrate.sh /usr/local/bin/apply-migrations.sh \
+    && chmod 0644 /db/*.sql \
+    && find /db/migrations /db/ledger -type f -exec chmod 0644 {} + \
+    && chmod 0644 /scripts/check_migration_rollback_safety.py
 USER 1000:1000
+ENV VERDIFY_MIGRATIONS_DIR=/db/migrations \
+    VERDIFY_LEDGER_DIR=/db/ledger \
+    VERDIFY_SAFETY_CLASSIFIER=/scripts/check_migration_rollback_safety.py
 ENTRYPOINT ["/usr/local/bin/migrate.sh"]
