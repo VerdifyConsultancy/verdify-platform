@@ -177,12 +177,18 @@ def test_ledger_ddl_has_runner_audit_columns_and_seven_arg_stamp():
     assert "p_duration_ms INTEGER DEFAULT NULL" in sql
 
 
-def test_backfill_covers_repo_migrations_except_207_with_correct_shas():
+def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
     """The audited baseline stamps every checked-in migration EXCEPT the new
-    207 (pre-stamping it would mark it applied and the runner would skip it).
-    Shas in the generated file must match the actual file contents."""
+    not-yet-applied ones (pre-stamping would mark them applied and the runner
+    would skip them). 207 shipped with the baseline; 208 (Lane C, #584)
+    follows the same convention. Shas in the generated file must match the
+    actual file contents."""
     import hashlib
 
+    unapplied = {
+        "207-controlled-policy-experiment.sql",
+        "208-policy-arbiter-lane-c.sql",
+    }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(
         re.findall(
@@ -191,10 +197,11 @@ def test_backfill_covers_repo_migrations_except_207_with_correct_shas():
         )
     )
     repo_files = sorted(p.name for p in (REPO_ROOT / "db" / "migrations").glob("*.sql"))
-    assert "207-controlled-policy-experiment.sql" in repo_files
-    assert "207-controlled-policy-experiment.sql" not in stamped
+    for name in unapplied:
+        assert name in repo_files
+        assert name not in stamped
     for name in repo_files:
-        if name == "207-controlled-policy-experiment.sql":
+        if name in unapplied:
             continue
         assert name in stamped, f"{name} missing from baseline backfill"
         actual = hashlib.sha256((REPO_ROOT / "db" / "migrations" / name).read_bytes()).hexdigest()
