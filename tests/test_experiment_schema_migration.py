@@ -235,6 +235,7 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "207-controlled-policy-experiment.sql",
         "208-policy-arbiter-lane-c.sql",
         "209-wire-schema-v2-field-count.sql",
+        "210-iris-experiment-context.sql",  # Lane D tranche 2 (#585)
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(
