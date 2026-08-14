@@ -221,7 +221,7 @@ def test_boundary_close_then_current_open_arms_hold_in_live(monkeypatch):
     assert close_index < update_index
     # Live mode + covered now() => the 49-param legacy-push hold is armed.
     active, params = esp32_push.experiment_policy_hold()
-    assert active and params == EXPERIMENT_OWNED_PARAMS and len(params) == 49
+    assert active and params == EXPERIMENT_OWNED_PARAMS and len(params) == 48  # wire schema v2
 
 
 def test_shadow_mode_never_arms_the_hold(monkeypatch):

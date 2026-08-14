@@ -11,11 +11,13 @@ Four layers of protection:
    `firmware/lib/policy_vector_generated.h` and
    `firmware/test/policy_vector_goldens_generated.inc` must be byte-identical
    to regenerated output.
-4. **Firmware entity drift** — every wire field except the documented
-   `direct_wet_stress_latest_hour` exemption maps to a real ESPHome entity in
-   `firmware/greenhouse/tunables.yaml` backed by a real global in
+4. **Firmware entity drift** — every wire field maps to a real ESPHome entity
+   in `firmware/greenhouse/tunables.yaml` backed by a real global in
    `firmware/greenhouse/globals.yaml` (several globals are renamed relative
-   to the registry name; the entity lambda is the source of truth).
+   to the registry name; the entity lambda is the source of truth). Wire
+   schema v2 (#588) retired the one documented zero-firmware-presence
+   exemption (`direct_wet_stress_latest_hour`, wire_id 6 — permanently in
+   RETIRED_WIRE_IDS), so the exemption set is empty and stays that way.
 """
 
 from __future__ import annotations
@@ -46,22 +48,21 @@ FIXTURE_PATH = Path(__file__).resolve().parent / "fixtures" / "policy_vector_gol
 TUNABLES_YAML = REPO_ROOT / "firmware" / "greenhouse" / "tunables.yaml"
 GLOBALS_YAML = REPO_ROOT / "firmware" / "greenhouse" / "globals.yaml"
 
-# Documented wire-schema exemption: planner-pushable with ZERO firmware
-# presence; stays byte-identical across experiment arms (see #582 and the
-# registry notes for the field).
-FIRMWARE_ABSENT_WIRE_FIELDS = frozenset({"direct_wet_stress_latest_hour"})
+# Wire fields with zero firmware presence. Empty since wire schema v2 (#588)
+# retired `direct_wet_stress_latest_hour` — the one documented v1 exemption.
+FIRMWARE_ABSENT_WIRE_FIELDS: frozenset[str] = frozenset()
 
 # ── 1. Frozen wire assignment ────────────────────────────────────────────────
 # PERMANENT. A change here is a wire-schema change: it requires a
 # WIRE_SCHEMA_VERSION bump, new goldens, and regenerated firmware headers —
-# never a silent renumbering. Retired ids move to RETIRED_WIRE_IDS.
+# never a silent renumbering. Retired ids move to RETIRED_WIRE_IDS: wire_id 6
+# (direct_wet_stress_latest_hour) retired in v2 and may never be reused.
 FROZEN_WIRE_TABLE: dict[str, tuple[int, str, int, str | None]] = {
     "band_track_fraction": (1, "u8", 20, "fraction"),
     "cold_vent_guard_delta_f": (2, "u8", 2, "degF"),
     "cool_exit_hysteresis_f": (3, "u8", 10, "degF"),
     "cool_stage2_exit_hysteresis_f": (4, "u8", 10, "degF"),
     "cool_stage2_over_high_f": (5, "u8", 10, "degF"),
-    "direct_wet_stress_latest_hour": (6, "u8", 1, "hour"),
     "direct_wet_stress_min_dew_margin_f": (7, "u8", 2, "degF"),
     "direct_wet_stress_vpd_margin_kpa": (8, "u8", 20, "kPa"),
     "dwell_gate_ms": (9, "u32", 1, "ms"),
@@ -122,9 +123,9 @@ def _default_values() -> dict[str, float | bool]:
 
 def test_wire_metadata_is_complete_unique_and_representable() -> None:
     assert wire_metadata_errors() == []
-    assert WIRE_SCHEMA_VERSION == 1
-    assert POLICY_WIRE_FIELD_COUNT == 49
-    assert len(PLANNER_PUSHABLE_REG) == 49
+    assert WIRE_SCHEMA_VERSION == 2
+    assert POLICY_WIRE_FIELD_COUNT == 48
+    assert len(PLANNER_PUSHABLE_REG) == 48
 
 
 def test_wire_assignment_is_frozen() -> None:
@@ -132,14 +133,15 @@ def test_wire_assignment_is_frozen() -> None:
         d.name: (d.wire_id, d.wire_kind, d.wire_scale, d.wire_unit) for d in REGISTRY.values() if d.wire_id is not None
     }
     assert actual == FROZEN_WIRE_TABLE
+    assert RETIRED_WIRE_IDS == frozenset({6})
     assert not RETIRED_WIRE_IDS & {wire_id for wire_id, *_ in FROZEN_WIRE_TABLE.values()}
 
 
 def test_wire_fields_ordered_by_wire_id_and_sized() -> None:
     ids = [d.wire_id for d in pv.wire_fields()]
-    assert ids == sorted(ids) == list(range(1, 50))
+    assert ids == sorted(ids) == [*range(1, 6), *range(7, 50)]  # wire_id 6 retired in v2
     assert pv.POLICY_VECTOR_HEADER_SIZE == 14
-    assert pv.POLICY_VECTOR_SIZE == 181
+    assert pv.POLICY_VECTOR_SIZE == 178
 
 
 def test_wire_manifest_matches_frozen_fixture(goldens: dict) -> None:
@@ -166,7 +168,7 @@ def test_golden_vectors_round_trip(goldens: dict) -> None:
         assert encoded.hex() == vector["vector_hex"], vector["name"]
         assert pv.decode_policy_vector(encoded) == values, vector["name"]
         assert pv.quantize_policy_values(values) == values, vector["name"]
-        raws = [pv._raws_from_values(values)[i] for i in range(49)]
+        raws = [pv._raws_from_values(values)[i] for i in range(POLICY_WIRE_FIELD_COUNT)]
         assert raws == vector["raws_by_wire_id"], vector["name"]
 
 
@@ -258,7 +260,7 @@ def test_decode_is_strict(goldens: dict) -> None:
         pv.decode_policy_vector(bytes(bad))
 
     bad = bytearray(blob)
-    bad[13] = 48
+    bad[13] = POLICY_WIRE_FIELD_COUNT + 1
     with pytest.raises(ValueError, match="field count"):
         pv.decode_policy_vector(bytes(bad))
 
@@ -290,15 +292,19 @@ def test_content_sha256_validation(goldens: dict) -> None:
     blob = bytes.fromhex(goldens["vectors"][0]["vector_hex"])
     revision_ids = goldens["revision_ids"]
     with pytest.raises(ValueError, match="header version"):
-        pv.content_sha256(blob, schema_version=2, policy_revision_ids=revision_ids)
+        pv.content_sha256(blob, schema_version=WIRE_SCHEMA_VERSION + 1, policy_revision_ids=revision_ids)
     with pytest.raises(ValueError, match="\\[1, 255\\]"):
         pv.content_sha256(blob, schema_version=0, policy_revision_ids=revision_ids)
     with pytest.raises(ValueError, match="non-empty"):
-        pv.content_sha256(blob, schema_version=1, policy_revision_ids={})
+        pv.content_sha256(blob, schema_version=WIRE_SCHEMA_VERSION, policy_revision_ids={})
     with pytest.raises(ValueError, match="str -> str"):
-        pv.content_sha256(blob, schema_version=1, policy_revision_ids={"registry": 7})  # type: ignore[dict-item]
+        pv.content_sha256(
+            blob,
+            schema_version=WIRE_SCHEMA_VERSION,
+            policy_revision_ids={"registry": 7},  # type: ignore[dict-item]
+        )
     with pytest.raises(ValueError, match="magic"):
-        pv.content_sha256(b"nope" + blob[4:], schema_version=1, policy_revision_ids=revision_ids)
+        pv.content_sha256(b"nope" + blob[4:], schema_version=WIRE_SCHEMA_VERSION, policy_revision_ids=revision_ids)
 
 
 def test_treatment_octets_exactly_match_spec() -> None:
@@ -366,6 +372,17 @@ def test_generated_cpp_artifacts_have_not_drifted() -> None:
     assert result.returncode == 0, f"generated C++ artifacts drifted:\n{result.stdout}{result.stderr}"
 
 
+def test_goldens_fixture_has_not_drifted() -> None:
+    """The committed goldens JSON must match scripts/gen-policy-vector-goldens.py."""
+    result = subprocess.run(
+        [sys.executable, str(REPO_ROOT / "scripts" / "gen-policy-vector-goldens.py"), "--check"],
+        capture_output=True,
+        text=True,
+        cwd=REPO_ROOT,
+    )
+    assert result.returncode == 0, f"goldens fixture drifted:\n{result.stdout}{result.stderr}"
+
+
 # ── Firmware entity drift ────────────────────────────────────────────────────
 
 for _tag in ("!secret", "!lambda", "!include"):
@@ -422,12 +439,15 @@ def test_every_wire_field_maps_to_a_firmware_entity_and_global(
     assert problems == []
 
 
-def test_firmware_absent_exemption_is_still_absent(firmware_entities: dict[str, dict]) -> None:
-    """If firmware grows a consumer for the exempted field, the exemption —
-    and the reserved wire note in the registry — must be revisited (#582)."""
-    for name in FIRMWARE_ABSENT_WIRE_FIELDS:
-        defn = REGISTRY[name]
-        assert defn.esp_object_id not in firmware_entities
-        assert "no-firmware-consumer" in defn.notes
-        lo, hi = wire_value_bounds(name)
-        assert (lo, hi) == (float(defn.min), float(defn.max))
+def test_firmware_absent_exemption_is_retired_and_stays_retired(firmware_entities: dict[str, dict]) -> None:
+    """Wire schema v2 (#588): the v1 zero-consumer exemption is retired, its
+    wire_id permanently reserved, and firmware still has no such entity — if
+    one ever appears the field needs a NEW wire id, never a resurrected 6."""
+    assert FIRMWARE_ABSENT_WIRE_FIELDS == frozenset()
+    defn = REGISTRY["direct_wet_stress_latest_hour"]
+    assert defn.wire_id is None and defn.tier == 2 and not defn.planner_pushable
+    assert defn.control_class == "retired"
+    assert 6 in RETIRED_WIRE_IDS
+    assert defn.esp_object_id not in firmware_entities
+    with pytest.raises(ValueError, match="not part of the policy wire schema"):
+        wire_value_bounds("direct_wet_stress_latest_hour")

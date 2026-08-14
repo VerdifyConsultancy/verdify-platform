@@ -8,14 +8,14 @@ database.
 Each cycle it consumes eligible policy_proposals (state='proposed') for the
 currently-open assignment and, per proposal:
 
-  1. resolves the complete 49-field value set — proposed template components
+  1. resolves the complete 48-field value set — proposed template components
      when the proposal is a template selection, otherwise the latest admitted
      vector (falling back to the frozen baseline template) overlaid with the
      proposal's explicit components;
   2. compiles the canonical Lane A wire artifact: quantize -> encode ->
      content_sha256 -> activation_sha256 with the assignment's §8.9
      treatment octets and the next device generation;
-  3. completes the proposal's component rows to the full 49 (lineage-tagged
+  3. completes the proposal's component rows to the full 48 (lineage-tagged
      'baseline' for carried-over fields) so admission's completeness gate is
      provable from the proposal itself;
   4. LIVE mode: calls fn_admit_policy_vector (migration 208) which enforces
@@ -54,7 +54,7 @@ from verdify_schemas.policy_vector import (
     wire_component_index,
     wire_fields,
 )
-from verdify_schemas.tunable_registry import WIRE_SCHEMA_VERSION
+from verdify_schemas.tunable_registry import POLICY_WIRE_FIELD_COUNT, WIRE_SCHEMA_VERSION
 
 from ._common import json, log
 
@@ -125,7 +125,7 @@ async def _template_values(conn, template_id) -> dict[str, float]:
 
 
 async def _resolve_full_values(conn, exp, proposal) -> tuple[dict[str, float | bool], set[str]]:
-    """The complete 49-field value set + the fields the proposal set explicitly."""
+    """The complete 48-field value set + the fields the proposal set explicitly."""
     explicit_rows = await conn.fetch(
         "SELECT field_name, normalized_value FROM policy_proposal_components WHERE proposal_id = $1::uuid",
         proposal["proposal_id"],
@@ -135,8 +135,8 @@ async def _resolve_full_values(conn, exp, proposal) -> tuple[dict[str, float | b
     base: dict[str, float] = {}
     if proposal["proposed_template_id"] is not None:
         base = await _template_values(conn, proposal["proposed_template_id"])
-        if len(base) != 49:
-            raise ArbiterReject("proposed template is incomplete (needs 49 components)")
+        if len(base) != POLICY_WIRE_FIELD_COUNT:
+            raise ArbiterReject(f"proposed template is incomplete (needs {POLICY_WIRE_FIELD_COUNT} components)")
     else:
         prior = await conn.fetchrow(
             """
@@ -153,7 +153,7 @@ async def _resolve_full_values(conn, exp, proposal) -> tuple[dict[str, float | b
                 prior["vector_id"],
             )
             base = {row["field_name"]: float(row["normalized_value"]) for row in rows}
-        if len(base) != 49:
+        if len(base) != POLICY_WIRE_FIELD_COUNT:
             baseline = await conn.fetchrow(
                 "SELECT template_id FROM policy_templates WHERE experiment_id = $1::uuid AND kind = 'baseline'",
                 exp["experiment_id"],
@@ -161,15 +161,18 @@ async def _resolve_full_values(conn, exp, proposal) -> tuple[dict[str, float | b
             if baseline is None:
                 raise ArbiterReject("no base vector: neither a prior admitted vector nor a baseline template exists")
             base = await _template_values(conn, baseline["template_id"])
-            if len(base) != 49:
-                raise ArbiterReject("baseline template is incomplete (needs 49 components)")
+            if len(base) != POLICY_WIRE_FIELD_COUNT:
+                raise ArbiterReject(f"baseline template is incomplete (needs {POLICY_WIRE_FIELD_COUNT} components)")
 
     values: dict[str, float | bool] = {**base, **explicit}
     expected = {defn.name for defn in wire_fields()}
     missing = sorted(expected - set(values))
     extra = sorted(set(values) - expected)
     if missing or extra:
-        raise ArbiterReject(f"resolved values are not the 49 wire fields: missing={missing[:5]} extra={extra[:5]}")
+        raise ArbiterReject(
+            f"resolved values are not the {POLICY_WIRE_FIELD_COUNT} wire fields: "
+            f"missing={missing[:5]} extra={extra[:5]}"
+        )
     return values, set(explicit)
 
 
@@ -179,7 +182,7 @@ async def _complete_proposal_components(
     quantized: dict[str, float | bool],
     explicit_fields: set[str],
 ) -> None:
-    """Insert the carried-over components so the proposal itself proves 49."""
+    """Insert the carried-over components so the proposal itself proves the full count."""
     template_selected = proposal["proposed_template_id"] is not None
     for name, value in quantized.items():
         if name in explicit_fields:

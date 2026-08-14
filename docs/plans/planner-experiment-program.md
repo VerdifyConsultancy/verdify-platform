@@ -98,7 +98,9 @@ quality-ok water deltas. Reproduction tests: 14/14 pass.
 - `direct_wet_stress_latest_hour` is a live tier-1 planner-pushable registry
   field with **zero firmware presence** (no global, no entity, no read site).
   The canonical 49-field wire schema must resolve this (retire or implement)
-  before the vector contract freezes.
+  before the vector contract freezes. **RESOLVED (contract v2, #588 decision):
+  RETIRED — wire schema v2 is 48 fields; wire_id 6 lives permanently in
+  `RETIRED_WIRE_IDS` and the materializer/planner no longer emit the row.**
 - `db/migrate.sh` claims the snapshot covers "through migration 156" but the
   checked-in `db/schema.sql` contains migration-196 artifacts and lacks
   200/203 — prod's applied state past 196 is not provable from the repo, which
@@ -136,7 +138,7 @@ version 1 and scientifically weaker (it changes two things at once).
   α=0.025; intersection-union decision; leave-one-pair-out influence rule.
 - **Arms:** A = Frozen-FSM baseline vector (time-weighted medians of
   device-confirmed readbacks Jul 12–Aug 4, excl. Jul 25); B = planner
-  selecting between exactly two pre-qualified 49-field AI templates
+  selecting between exactly two pre-qualified 48-field AI templates (wire schema v2, #588)
   (moderate/aggressive hot-dry), differing from baseline only in the 11-field
   allowlist; deterministic forecast engine runs shadow-only.
 - **Prerequisite gates:** byte-identical codec goldens → shadow mode → live

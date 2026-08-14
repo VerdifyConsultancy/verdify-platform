@@ -19,18 +19,18 @@
 
 namespace verdify_policy {
 
-constexpr uint8_t kWireSchemaVersion = 1;
-constexpr uint8_t kPolicyFieldCount = 49;
+constexpr uint8_t kWireSchemaVersion = 2;
+constexpr uint8_t kPolicyFieldCount = 48;
 constexpr size_t kPolicyVectorHeaderSize = 14;
-constexpr size_t kPolicyVectorSize = 181;
+constexpr size_t kPolicyVectorSize = 178;
 constexpr uint8_t kPolicyVectorMagic[4] = {'V', 'P', 'V', '1'};
 
 // Full SHA-256 of the RFC-8785-style canonical JSON serialization of the
-// ordered wire manifest (2b1798fa811c03ecb91090c9d0f08c584bd34224ad26133db6d5535e9ddf6421).
+// ordered wire manifest (0bdd80472f2a9845c24a78cd7d6662e0523314afc5f3149233c08a8e8aedb318).
 constexpr uint8_t kWireManifestDigest[32] = {
-    0x2b, 0x17, 0x98, 0xfa, 0x81, 0x1c, 0x03, 0xec, 0xb9, 0x10, 0x90, 0xc9,
-    0xd0, 0xf0, 0x8c, 0x58, 0x4b, 0xd3, 0x42, 0x24, 0xad, 0x26, 0x13, 0x3d,
-    0xb6, 0xd5, 0x53, 0x5e, 0x9d, 0xdf, 0x64, 0x21,
+    0x0b, 0xdd, 0x80, 0x47, 0x2f, 0x2a, 0x98, 0x45, 0xc2, 0x4a, 0x78, 0xcd,
+    0x7d, 0x66, 0x62, 0xe0, 0x52, 0x33, 0x14, 0xaf, 0xc5, 0xf3, 0x14, 0x92,
+    0x33, 0xc0, 0x8a, 0x8e, 0x8a, 0xed, 0xb3, 0x18,
 };
 
 constexpr char kContentDomainTag[] = "verdify-policy-content-v1";
@@ -54,7 +54,6 @@ constexpr PolicyFieldDef kPolicyFields[kPolicyFieldCount] = {
     {3, WireKind::kU8, 10, 3, 30, "cool_exit_hysteresis_f"},
     {4, WireKind::kU8, 10, 3, 30, "cool_stage2_exit_hysteresis_f"},
     {5, WireKind::kU8, 10, 0, 30, "cool_stage2_over_high_f"},
-    {6, WireKind::kU8, 1, 17, 24, "direct_wet_stress_latest_hour"},
     {7, WireKind::kU8, 2, 6, 30, "direct_wet_stress_min_dew_margin_f"},
     {8, WireKind::kU8, 20, 0, 10, "direct_wet_stress_vpd_margin_kpa"},
     {9, WireKind::kU32, 1, 60000, 1800000, "dwell_gate_ms"},
@@ -118,7 +117,7 @@ inline double raw_to_value(const PolicyFieldDef& field, int64_t raw) {
   return static_cast<double>(raw) / static_cast<double>(field.scale);
 }
 
-// Encode 49 raw (scaled-integer) values, ordered like kPolicyFields, into the
+// Encode kPolicyFieldCount raw (scaled-integer) values, ordered like kPolicyFields, into the
 // canonical byte vector. Returns false on out-of-bounds raws or a small
 // output buffer; on success *out_len == kPolicyVectorSize.
 inline bool encode_policy_vector(const int64_t raws[kPolicyFieldCount], uint8_t* out, size_t out_cap,

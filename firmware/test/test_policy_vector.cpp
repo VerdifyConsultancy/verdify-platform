@@ -52,7 +52,7 @@ static void test_sha256_self_test() {
 }
 
 static void test_table_sanity() {
-  CHECK(kPolicyFieldCount == 49, "field count is the frozen 49");
+  CHECK(kPolicyFieldCount == 48, "field count is the frozen 48 (wire schema v2)");
   size_t size = kPolicyVectorHeaderSize;
   uint16_t prev_id = 0;
   for (size_t i = 0; i < kPolicyFieldCount; ++i) {

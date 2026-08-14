@@ -316,7 +316,7 @@ def _planner_guidance(name: str, spec: TunableDef, plan_required: set[str]) -> s
     if name == "direct_wet_stress_min_dew_margin_f":
         return "Planner-policy safety gate. Use 8 F or higher unless disease-risk evidence justifies a stricter margin; never lower to chase compliance blindly."
     if name == "direct_wet_stress_latest_hour":
-        return "Planner-policy latest-hour cap. Use the earliest hour that covers the dry recovery window, then back out after VPD recovers."
+        return "Retired (wire schema v2, #588): zero firmware presence — the value never reached a firmware read site. Kept for historical traceability only."
     if name == "sw_fog_stress_window_extend_enabled":
         return "Planner-policy switch. Enable only when VPD-high persists after the normal fog window and dew/RH/temp gates are still safe."
     if name == "fog_stress_window_latest_hour":
