@@ -6,7 +6,9 @@ Proves, without a live DB or device:
 - graceful no-op when the device lacks the Lane E policy services;
 - happy path: staged begin/chunk/validate/commit through the transport, the
   device snapshot recorded, and fn_open_exposure called ONLY on an exact
-  assignment/generation/content/activation echo;
+  schema/generation/assignment/activation echo (contract v2, #586: the
+  aggregated policy_identity echo carries the FULL activation hash; content
+  identity is bound inside it per audit §8.9);
 - echo mismatch: exposure never opens, open exposures close with a bounded
   reason, the transaction aborts, and the outbox row requeues with a bounded
   error class + backoff;
@@ -39,6 +41,7 @@ from tasks.policy_delivery import policy_delivery_worker  # noqa: E402
 from test_experiment_workers import FakeConn, FakePool, ForbiddenPool  # noqa: E402
 
 from verdify_schemas.policy_vector import encode_policy_vector, wire_fields  # noqa: E402
+from verdify_schemas.tunable_registry import WIRE_SCHEMA_VERSION  # noqa: E402
 
 EXPERIMENT_ID = str(uuid.uuid4())
 ASSIGNMENT_ID = str(uuid.uuid4())
@@ -82,10 +85,9 @@ def _vector_row(status="ready"):
 
 def _exact_identity():
     return PolicyDeviceIdentity(
-        schema_revision="s1",
+        schema_revision=WIRE_SCHEMA_VERSION,
         device_generation=7,
         assignment_id=ASSIGNMENT_ID,
-        content_sha256=CONTENT_SHA,
         activation_sha256=ACTIVATION_SHA,
         apply_state="active",
     )
@@ -205,11 +207,10 @@ def test_begin_payload_carries_the_exact_vector_identity(monkeypatch):
 
 def test_hash_mismatch_requeues_and_never_opens_exposure(monkeypatch):
     identity = PolicyDeviceIdentity(
-        schema_revision="s1",
+        schema_revision=WIRE_SCHEMA_VERSION,
         device_generation=7,
         assignment_id=ASSIGNMENT_ID,
-        content_sha256="c" * 64,  # wrong content
-        activation_sha256=ACTIVATION_SHA,
+        activation_sha256="c" * 64,  # wrong activation (content identity is bound inside it, §8.9)
         apply_state="active",
     )
     transport = FakePolicyTransport(identity=identity)
@@ -238,7 +239,6 @@ def test_generation_conflict_classification(monkeypatch):
         schema_revision=identity.schema_revision,
         device_generation=6,  # stale generation
         assignment_id=identity.assignment_id,
-        content_sha256=identity.content_sha256,
         activation_sha256=identity.activation_sha256,
         apply_state="active",
     )
@@ -249,6 +249,39 @@ def test_generation_conflict_classification(monkeypatch):
     assert conn.sql_calls("fn_open_exposure") == []
     failed = [c for c in conn.sql_calls("UPDATE policy_delivery_outbox") if len(c[2]) > 1 and c[2][1] == "failed"]
     assert len(failed) == 1 and failed[0][2][2] == "generation_conflict"
+
+
+def test_schema_mismatch_classification(monkeypatch):
+    identity = _exact_identity()
+    identity = PolicyDeviceIdentity(
+        schema_revision=WIRE_SCHEMA_VERSION + 1,  # firmware compiled a different wire schema
+        device_generation=identity.device_generation,
+        assignment_id=identity.assignment_id,
+        activation_sha256=identity.activation_sha256,
+        apply_state="active",
+    )
+    transport = FakePolicyTransport(identity=identity)
+    _enable(monkeypatch, transport)
+    conn = _conn()
+    _run(policy_delivery_worker(FakePool(conn)))
+    assert conn.sql_calls("fn_open_exposure") == []
+    failed = [c for c in conn.sql_calls("UPDATE policy_delivery_outbox") if len(c[2]) > 1 and c[2][1] == "failed"]
+    assert len(failed) == 1 and failed[0][2][2] == "schema_mismatch"
+
+
+def test_snapshot_records_no_content_hash_under_contract_v2(monkeypatch):
+    """The device echoes no separate content hash (bound inside activation,
+    §8.9): fn_record_device_snapshot must receive NULL content."""
+    transport = FakePolicyTransport(identity=_exact_identity())
+    _enable(monkeypatch, transport)
+    conn = _conn()
+    _run(policy_delivery_worker(FakePool(conn)))
+    snapshots = conn.sql_calls("fn_record_device_snapshot")
+    assert len(snapshots) == 1
+    args = snapshots[0][2]
+    assert args[2] == str(WIRE_SCHEMA_VERSION)  # schema_revision echo
+    assert args[5] is None  # p_content_sha256
+    assert args[6] == ACTIVATION_SHA  # p_activation_sha256 (full hash)
 
 
 def test_readback_timeout_requeues_with_timeout_class(monkeypatch):

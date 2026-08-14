@@ -15,8 +15,10 @@ worker no-ops gracefully (logged once, natural 30s backoff).
 
 Evidence chain per attempt: policy_delivery_attempts stage rows ->
 fn_record_device_snapshot readback -> exposure opens via fn_open_exposure
-ONLY when the device echoes the exact assignment/generation/content/
-activation identity. Mismatch or readback timeout closes any open exposure
+ONLY when the device echoes the exact schema/generation/assignment/
+activation identity (contract v2, #586: the aggregated policy_identity
+sensor carries the FULL activation hash; content identity is bound inside
+it per audit §8.9). Mismatch or readback timeout closes any open exposure
 (bounded close reasons), aborts the device transaction, and requeues the
 outbox row with a bounded error class + capped exponential backoff.
 """
@@ -30,6 +32,7 @@ from policy_transport import (
     ERROR_CLASS_GENERATION_CONFLICT,
     ERROR_CLASS_HASH_MISMATCH,
     ERROR_CLASS_INTERNAL,
+    ERROR_CLASS_SCHEMA_MISMATCH,
     ERROR_CLASS_TIMEOUT,
     Esp32PolicyTransport,
     PolicyDeliveryRequest,
@@ -42,6 +45,7 @@ from verdify_schemas.experiment_config import (
     policy_vector_mode,
 )
 from verdify_schemas.policy_transport import policy_chunk_payloads
+from verdify_schemas.tunable_registry import WIRE_SCHEMA_VERSION
 
 from ._common import asyncio, log
 
@@ -286,27 +290,31 @@ async def policy_delivery_worker(pool: asyncpg.Pool) -> None:
             "SELECT fn_record_device_snapshot($1, $2, $3, $4, $5::uuid, $6, $7, $8, $9)",
             device_id,
             vector["greenhouse_id"],
-            identity.schema_revision,
+            str(identity.schema_revision) if identity.schema_revision is not None else None,
             identity.device_generation,
             identity.assignment_id,
-            identity.content_sha256,
+            # Contract v2 (#586): the device echoes no separate content hash —
+            # content identity is bound inside activation_sha256 (audit §8.9).
+            None,
             identity.activation_sha256,
             identity.apply_state or "unknown",
             None,  # firmware_revision: Lane E readback
         )
 
+        # Exact echo (contract v2): schema/generation/assignment/activation.
         echo_exact = (
-            identity.assignment_id == vector["assignment_id"]
+            identity.schema_revision == WIRE_SCHEMA_VERSION
+            and identity.assignment_id == vector["assignment_id"]
             and identity.device_generation == generation
-            and identity.content_sha256 == vector["content_sha256"]
             and identity.activation_sha256 == vector["activation_sha256"]
         )
         if not echo_exact:
-            error_class = (
-                ERROR_CLASS_GENERATION_CONFLICT
-                if identity.device_generation != generation
-                else ERROR_CLASS_HASH_MISMATCH
-            )
+            if identity.device_generation != generation:
+                error_class = ERROR_CLASS_GENERATION_CONFLICT
+            elif identity.schema_revision != WIRE_SCHEMA_VERSION:
+                error_class = ERROR_CLASS_SCHEMA_MISMATCH
+            else:
+                error_class = ERROR_CLASS_HASH_MISMATCH
             await _record_attempt(conn, lease["outbox_id"], attempt_no, "activate", False, error_class)
             await _close_open_exposures(conn, device_id, "protocol_deviation", snapshot_id)
             try:
