@@ -58,6 +58,10 @@ $PY -m pytest -q \
   tests/test_esp32_policy_transaction.py \
   tests/test_experiment_api.py \
   tests/test_experiment_gather_mode.py \
+  tests/test_experiment_qualification_regimes.py \
+  tests/test_experiment_qualification_scheduler.py \
+  tests/test_experiment_qualification_settling.py \
+  tests/test_experiment_qualification_spec.py \
   tests/test_experiment_schema_migration.py \
   tests/test_experiment_verify.py \
   tests/test_experiment_workers.py \

@@ -76,6 +76,7 @@ from tasks import (
     alert_monitor,
     daily_summary_live,
     experiment_assignment_scheduler,
+    experiment_qualification_scheduler,
     forecast_action_engine,
     forecast_deviation_check,
     forecast_sync,
@@ -2245,6 +2246,10 @@ async def task_loop(pool: asyncpg.Pool) -> None:
         ("experiment_assignments", 60, experiment_assignment_scheduler),
         ("policy_arbiter", 60, policy_arbiter_admissions),
         ("policy_delivery", 30, policy_delivery_worker),
+        # Qualification-phase step-test scheduler (#584/#588): additionally
+        # inert unless mode=live AND the active experiment is
+        # kind=qualification, armed/running.
+        ("experiment_qualification", 60, experiment_qualification_scheduler),
     ]
     last_run: dict[str, float] = {name: 0.0 for name, _, _ in TASKS}
     running: dict[str, asyncio.Task[None]] = {}
