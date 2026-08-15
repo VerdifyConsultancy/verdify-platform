@@ -59,6 +59,7 @@ $PY -m pytest -q \
   tests/test_experiment_api.py \
   tests/test_experiment_gather_mode.py \
   tests/test_experiment_schema_migration.py \
+  tests/test_experiment_verify.py \
   tests/test_experiment_workers.py \
   tests/test_firmware_crop_agnostic_guard.py \
   tests/test_forecast_action_engine_path.py \
