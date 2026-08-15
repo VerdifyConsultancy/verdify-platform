@@ -29,13 +29,24 @@ RUN g++ -std=c++17 -O2 -DREPLAY_EMIT_STREAM \
 # ── stage 2: minimal hardened runtime ─────────────────────────────────────────
 # python:3.12-slim gives us psycopg for the INSERT-only sink without pulling a
 # compiler into the runtime image. No docker.sock, no actuation client.
+# pydantic + pyyaml serve verdify_schemas.policy_vector — the SAME 48-field
+# wire codec the planner and generated firmware header share — so the live
+# driver decodes the paired device-confirmed vector with zero hand-copied
+# policy fields (§8.9 "copy-sync the generated headers, never hand-copy").
 FROM python:3.12-slim AS runtime
-RUN pip install --no-cache-dir "psycopg[binary]>=3.1" \
+RUN pip install --no-cache-dir "psycopg[binary]>=3.1" "pydantic>=2" "pyyaml>=6" \
     && useradd --create-home --uid 10001 twin
 COPY --from=build /src/replay_emit_follow /usr/local/bin/replay_emit_follow
+# The canonical wire-codec package (registry + policy_vector) — imported by
+# live_driver.py to decode canonical_bytes from v_policy_twin_asof_input.
+COPY verdify_schemas /opt/verdify/verdify_schemas
+ENV PYTHONPATH=/opt/verdify
 COPY twin/offline_driver.py /usr/local/bin/offline_driver.py
+COPY twin/live_driver.py /usr/local/bin/live_driver.py
+COPY twin/report_agreement.py /usr/local/bin/report_agreement.py
 USER twin
-# The driver replays the mounted corpus CSV through the follower and (optionally)
-# writes each decision to twin_decisions via twin_ro. Both args come from env so
-# the same image serves the offline harness and a future live driver.
+# TWIN_MODE (set by the firmware-twin deployment) selects the corpus replay
+# loop (offline_driver.py, the shadow default) or the §8.9 live follower
+# (live_driver.py — needs migration 211's view + results grants). The k8s
+# command overrides this entrypoint; it stays for bare `docker run` parity.
 ENTRYPOINT ["python", "/usr/local/bin/offline_driver.py"]

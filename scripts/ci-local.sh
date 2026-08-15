@@ -92,6 +92,9 @@ $PY -m pytest -q \
   tests/test_solar_band_anchors.py \
   tests/test_solar_constants_check.py \
   tests/test_tempest_sync.py \
+  tests/test_twin_agreement_report.py \
+  tests/test_twin_asof_migration.py \
+  tests/test_twin_live_driver.py \
   tests/test_writer_lease_fence.py
 
 step "migration rollback safety classification"
