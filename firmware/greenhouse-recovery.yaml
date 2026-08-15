@@ -1,0 +1,55 @@
+###############################################################################
+# greenhouse-recovery.yaml — RECOVERY image (#586, audit §8.10 step 3)
+#
+# The recovery image is the CURRENT proven control logic WITHOUT the policy
+# engine actuation surface but WITH the generated vector/baseline schema
+# compiled in. It exists so an experiment can be aborted by a single flash
+# that provably cannot re-enter experiment control, while host tooling can
+# still decode and confirm the device's policy identity.
+#
+# Mechanism: ONE compile-time flag. This file packages the stock
+# greenhouse.yaml unchanged and adds -DPOLICY_ENGINE_RECOVERY, which in
+# lib/policy_vector.h:
+#   * fail-closes every actuation entry point (policy_begin / policy_chunk /
+#     policy_validate / policy_commit / policy_manifest_begin /
+#     policy_manifest_commit reject with error "recovery_image" before
+#     touching the staging arena);
+#   * compiles the journal resume of an active policy / pending slots / armed
+#     manifest OUT of boot_init — the ROM baseline is held unconditionally,
+#     and continued journal writes leave ROM-baseline state behind so a later
+#     full-image flash does not silently resume the aborted experiment
+#     (last_committed_generation and the conservative water high-water rule
+#     are carried forward);
+#   * hard-disables the consumer switchover: PolicySnapshot.experiment_active
+#     and policy_experiment_active() are constant false, so every runtime-
+#     gated consumer reads its legacy global permanently — control behavior
+#     is bit-identical to pre-Lane-E firmware;
+#   * keeps the generated codec + ROM baseline + identity readback: the
+#     "Policy Identity" text sensor echoes
+#     "<schema>|<generation>|-|-|recovery" (apply_state "recovery"), and
+#     "Policy Engine Active" reads false.
+#
+# The policy_* api services intentionally REMAIN REGISTERED (same entity and
+# service schema as the full image, so HA/dispatcher integration needs no
+# recovery-specific configuration) but every call is rejected at the first
+# instruction. A parallel yaml with the services removed was rejected:
+# ESPHome packages cannot subtract one package's api services without
+# duplicating the whole top-level config.
+#
+# Build/validate:   make firmware-recovery-check
+# Device identity:  same node name — a recovery flash is a drop-in
+#                   replacement for the SAME physical device; it shares the
+#                   .esphome build directory with the full image, so switching
+#                   image types triggers a rebuild of the affected objects.
+# Host-level proof: firmware/test/test_policy_recovery.cpp compiles the
+#                   engine with -DPOLICY_ENGINE_RECOVERY and asserts all of
+#                   the above (runs in make test-firmware).
+###############################################################################
+
+packages:
+  base: !include greenhouse.yaml
+
+esphome:
+  platformio_options:
+    build_flags:
+      - "-DPOLICY_ENGINE_RECOVERY"

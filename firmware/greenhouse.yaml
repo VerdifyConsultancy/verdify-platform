@@ -555,7 +555,7 @@ binary_sensor:
   - platform: template
     id: bs_mister_budget_exceeded
     name: "Mister Budget Exceeded"
-    lambda: "return id(mister_water_today) >= id(mister_water_budget_gal);"
+    lambda: "return id(mister_water_today) >= verdify_policy::policy_read(verdify_policy::kPF_mister_water_budget_gal, id(mister_water_budget_gal));"
     device_class: problem
 
   # Water status — replaces HA template binary_sensors
