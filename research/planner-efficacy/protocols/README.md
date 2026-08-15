@@ -53,3 +53,17 @@ regenerates the published commitment byte-for-byte.
 Do not rerandomize, shift, or replace any assignment for any reason after
 lock. A failed gate produces a new protocol version, a new secret, and a new
 beacon round — never an edit to a locked instance.
+
+## Protocol deviation (recorded 2026-08-15, decision: Jason)
+
+The §8.3 *witnessed* mapping-secret ceremony is replaced by an **automated,
+publicly-committed draw**: the assignment service generates the 32-byte secret
+with the OS CSPRNG and its domain-separated commitment
+(`verdify-switchback-map-commit-v1`) is published in a git commit **before**
+the named public beacon round publishes. Git commit ordering + the beacon
+round replace the human witness. Blinding, the byte-exact HMAC derivations,
+and the restricted-service secret custody are unchanged. What is lost is
+third-party attestation that no redraw occurred before commitment; the public
+commit ordering substantially covers this. Qualification and A/A gates are
+NOT waived — the migration-207 state machine binds their result hashes before
+a randomized experiment can arm.
