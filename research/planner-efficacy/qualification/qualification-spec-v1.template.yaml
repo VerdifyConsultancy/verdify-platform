@@ -1,0 +1,202 @@
+# Qualification specification instance TEMPLATE — step-test qualification v1
+# (audit §8.3, docs/research/planner-efficacy-current-firmware-2026-08-14.md;
+# issues #584/#588, epic #581).
+#
+# This file is a TEMPLATE. A specification INSTANCE is produced by copying it,
+# resolving every value marked TO-LOCK, and committing the copy; the SHA-256
+# of the instance file's exact bytes (python -m qualification spec-hash) is
+# the separately hashed pretrial qualification specification §8.3 requires.
+# That hash goes into control_experiments.protocol_sha256 and
+# policy_templates.qualification_spec_sha256. Any change to a locked value —
+# including firmware/template/compiler/crop-band/safety/sensor/mechanical
+# revisions — voids the qualification and requires a new instance and a
+# complete rerun. The specification deliberately does NOT invent 96 exact UTC
+# ranges: slots carry requirements, never fabricated future timestamps.
+#
+# Numeric values under `scheduler:` and `analyzer:` are FROZEN and must equal
+# the constants in ingestor/tasks/experiment_qualification.py and
+# research/planner-efficacy/qualification/settling.py — CI asserts the
+# agreement (tests/test_experiment_qualification_spec.py).
+
+spec:
+  name: qualification-spec-v1
+  version: 1
+  study_id: TO-LOCK            # e.g. verdify-switchback-2026a-qualification
+  greenhouse_id: TO-LOCK       # e.g. vallery
+  timezone: America/Denver
+  window_local_days: 45        # §8.3: 45-local-day qualification window
+
+# ---------------------------------------------------------------------------
+# Frozen revision pins (§8.3: firmware, baseline/templates, compiler,
+# crop-band, safety, sensor, and mechanical revisions the trial would use).
+# ---------------------------------------------------------------------------
+revisions:
+  firmware_version: TO-LOCK            # device-reported build (esp32_logs)
+  wire_schema_revision: TO-LOCK        # verdify_schemas WIRE_SCHEMA_VERSION
+  manifest_revision: TO-LOCK
+  compiler_revision: TO-LOCK
+  registry_revision: TO-LOCK
+  crop_band_revision: TO-LOCK
+  safety_revision: TO-LOCK
+  sensor_registry_revision: TO-LOCK
+  mechanical_revision: TO-LOCK
+
+# The three locked vectors. Content hashes are the canonical-bytes SHA-256 of
+# the policy_templates rows (the rows, not these hashes, are the resolution
+# source once locked; these are the cross-check).
+templates:
+  baseline_content_sha256: TO-LOCK
+  moderate_content_sha256: TO-LOCK
+  aggressive_content_sha256: TO-LOCK
+
+# Producers the qualification experiment admits
+# (control_experiments.permitted_producers). The deterministic scheduler is
+# the only content-changing producer during qualification.
+permitted_producers:
+  - qualification_scheduler
+  - baseline
+
+# ---------------------------------------------------------------------------
+# Regime classifier (verdify_schemas/experiment_regimes.py). Four mutually
+# exclusive regimes; the canonical code order is locked (never reorder).
+# ---------------------------------------------------------------------------
+regimes:
+  codes:                       # locked §8.3 order (switchback REGIME_CODES)
+    night: 0
+    hot_bright_dry: 1
+    hot_bright_humid: 2
+    other_daylight: 3
+  thresholds:
+    night_solar_max_w_m2: 20.0         # night: solar < 20 (strict)
+    hot_bright_solar_min_w_m2: 400.0   # hot/bright: solar >= 400 (inclusive)
+    hot_bright_temp_min_f: 80.0        # hot/bright: outdoor temp >= 80 (inclusive)
+    humidity_ratio_split_kg_kg: 0.012  # dry: W <= 0.012; humid: W > 0.012
+  psychrometrics:
+    saturation_model: tetens           # 0.6108 * exp(17.27*Tc/(Tc+237.3))
+    humidity_ratio_model: ashrae       # W = 0.62198 * pv / (P - pv)
+    station_pressure_kpa_fallback: 84.0  # TO-LOCK: site constant (registry
+                                         # site_pressure_hpa default 840);
+                                         # measured climate.pressure_hpa is
+                                         # COALESCEd over this value
+
+# ---------------------------------------------------------------------------
+# The 24 edge/regime cell queues x 4 ordered slots (the fixed 96).
+# cell_index = edge_index * 4 + regime_code over the locked orderings below
+# (verdify_schemas.experiment_regimes.EDGES / REGIMES; enforced server-side:
+# migration 212 checks frozen_strata regime == cell_index % 4).
+# ---------------------------------------------------------------------------
+cells:
+  slots_per_cell: 4            # ordered slots; first four claimed starts are
+                               # the fixed analysis set; stop at four
+  edges:                       # locked six-edge directed graph order
+    - [baseline, moderate]     # edge 0 -> cells 0..3
+    - [moderate, baseline]     # edge 1 -> cells 4..7
+    - [baseline, aggressive]   # edge 2 -> cells 8..11
+    - [aggressive, baseline]   # edge 3 -> cells 12..15
+    - [moderate, aggressive]   # edge 4 -> cells 16..19
+    - [aggressive, moderate]   # edge 5 -> cells 20..23
+  regime_order: [night, hot_bright_dry, hot_bright_humid, other_daylight]
+
+# ---------------------------------------------------------------------------
+# Deterministic FIFO scheduler + eligibility predicates
+# (ingestor/tasks/experiment_qualification.py — values must match).
+# ---------------------------------------------------------------------------
+scheduler:
+  worker: experiment_qualification/v1
+  cadence_seconds: 60
+  rules:                       # frozen decision order at every boundary
+    - R1: resolve the just-finished analyzed step (completed | failed);
+        a failed result is never replaced and terminal slot states never
+        reopen (fn_resolve_qualification_slot, migration 212)
+    - R2: claim the lowest-cell-index FIFO head whose edge source equals the
+        current device content AND whose cell regime matches current
+        conditions AND every eligibility predicate passes
+        (fn_claim_qualification_slot before any actuation); enqueue the
+        target through the sole arbiter path (fn_submit_policy_proposal)
+    - R3: otherwise, when a candidate was considered and declined, record a
+        'skipped' ledger move with the failed predicates
+    - R4: reposition (positioning move, fixed interval below) ONLY when the
+        current content has no open cell work left; the target source is the
+        lowest-cell-index still-open head's edge source
+    - R5: otherwise chain the next locked identity_hold on the same content
+        (content continuity is judged by content/template hash, never the
+        assignment-bound activation hash)
+    - R6: after the window cutoff or full resolution, return to baseline via
+        one baseline_recovery move, then idle
+  intervals:
+    positioning_hours: 3       # fixed: 2h settle + the 60-min pretrace (§8.3)
+    baseline_recovery_hours: 3
+    analyzed_hours: 6          # six post-step hours
+    identity_hold_minutes: 15  # locked hold cadence
+  boundary_backdate_grace_s: 120  # hold may anchor at the exact previous
+                                  # boundary within this lag; beyond it the
+                                  # gap is ledgered and the chain re-anchors
+  eligibility_predicates:
+    inputs_fresh_max_age_s: 300      # newest outdoor climate row age
+    override_lookback_minutes: 60    # no manual/safety override or critical
+                                     # event within this window
+    pretrace_minutes: 60             # gap-free source-content pretrace
+    pretrace_max_snapshot_gap_s: 180 # device-echo continuity bound
+    regime_match: current conditions must classify to the cell regime
+  analyzed_failure_rules:
+    delivery_confirm_grace_s: 900    # no identity-confirmed exposure by then
+                                     # => delivery failure => failed cell
+    post_step_max_snapshot_gap_s: 900  # target-content echo continuity over
+                                       # the six post-step hours; a gap is
+                                       # missing post-step data => failed
+
+# ---------------------------------------------------------------------------
+# Frozen settling analyzer (research/planner-efficacy/qualification/
+# settling.py — values must match).
+# ---------------------------------------------------------------------------
+analyzer:
+  name: qualification-settling-v1
+  model: >
+    y_i = y_inf + A*exp(-t_i/tau) + beta*(d_i - mean(d)) fitted by exact
+    linear least squares at each tau over a frozen geometric tau grid with
+    golden-section refinement; disturbance column optional per endpoint.
+  post_step_bins: 24
+  bin_hours: 0.25
+  endpoint_bands:
+    vpd_kpa: 0.025             # kPa
+    temp_f: 0.25               # °F
+    duty_devmin: 6.75          # device-minutes per 15-min bin (nine devices)
+  gate:
+    statistic: max settling time over all endpoints x all 96 transitions
+    max_settling_h: 2.0
+    identity_confirm_max_s: 120.0
+    expected_transitions: 96
+    unanalyzable_is_failure: true   # never extend or selectively resample
+  fit:
+    tau_grid_min_h: 0.02
+    tau_grid_max_h: 12.0
+    tau_grid_points: 60
+    tau_refine_iterations: 40
+    tau_edge_pin_fraction: 0.01
+  # Proposed frozen response-model diagnostics (§8.3: every diagnostic named
+  # with its numeric pass/fail threshold BEFORE collection). TO-LOCK: these
+  # exact values require sign-off at spec lock; failing any locked check
+  # fails the qualification.
+  diagnostics:
+    min_r_squared: 0.60                  # only when |A| > endpoint band
+    max_resid_lag1_autocorr: 0.50
+    max_asymptote_ci_band_ratio: 1.0     # 95% conditional CI half-width of
+                                         # y_inf <= 1.0 x endpoint band
+    tau_not_pinned_to_grid_edge: true    # within 1% of an edge fails when
+                                         # the transient is material
+  disturbance_columns:                   # TO-LOCK: named input columns
+    vpd_kpa: outdoor_vpd_kpa_deviation_from_step
+    temp_f: outdoor_temp_f_deviation_from_step
+    duty_devmin: solar_w_m2_deviation_from_step
+
+# ---------------------------------------------------------------------------
+# Result binding
+# ---------------------------------------------------------------------------
+result:
+  format: qualification result JSON (settling.analyze output)
+  hash: SHA-256 over compact sorted-key JSON of the result body
+  binds_to:
+    - policy_templates.qualification_result_sha256
+    - policy_template_edges.qualification_result_sha256 (per directed edge)
+    - fn_experiment_transition arm gate for kind=aa (requires a passing
+      result hash bound before an A/A experiment may arm)
