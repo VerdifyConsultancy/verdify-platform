@@ -24,6 +24,7 @@ from . import (  # noqa: F401
     daily,
     dispatcher,
     experiment_assignments,
+    experiment_qualification,
     forecast,
     ha,
     heartbeat,
@@ -139,6 +140,7 @@ from .experiment_assignments import (  # noqa: F401
     EXPERIMENT_OWNED_PARAMS,
     experiment_assignment_scheduler,
 )
+from .experiment_qualification import experiment_qualification_scheduler  # noqa: F401
 from .forecast import *  # noqa: F401,F403
 from .forecast import (  # noqa: F401
     _cloud_cover_proxy_pct,
