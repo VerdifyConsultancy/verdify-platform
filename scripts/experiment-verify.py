@@ -849,18 +849,40 @@ def cmd_preflight_randomized(args: argparse.Namespace) -> list[Check]:
             "no completed aa experiment — run and complete the seven-day A/A first",
         )
     )
-    aa_bound = run_sql_json(
-        "SELECT count(*) AS n FROM experiment_events"
+    # Migration 213 gives the bindings real schema slots; fn_experiment_transition
+    # enforces them at arming — this preflight mirrors the same predicate.
+    bound = run_sql_json(
+        "SELECT (qualification_result_sha256 IS NOT NULL"
+        "         AND EXISTS (SELECT 1 FROM control_experiments q"
+        "                      WHERE q.greenhouse_id = control_experiments.greenhouse_id"
+        "                        AND q.kind = 'qualification' AND q.status = 'completed'"
+        "                        AND q.result_sha256 = control_experiments.qualification_result_sha256)"
+        "       ) AS qual_ok,"
+        "       (aa_result_sha256 IS NOT NULL"
+        "         AND EXISTS (SELECT 1 FROM control_experiments a"
+        "                      WHERE a.greenhouse_id = control_experiments.greenhouse_id"
+        "                        AND a.kind = 'aa' AND a.status = 'completed'"
+        "                        AND a.result_sha256 = control_experiments.aa_result_sha256)"
+        "       ) AS aa_ok"
+        " FROM control_experiments"
         f" WHERE experiment_id = {sql_quote(experiment_id)}::uuid"
-        " AND detail ? 'aa_result_sha256'"
     )[0]
     checks.append(
         check(
-            "A/A gate result hash recorded on the randomized experiment",
-            int(aa_bound["n"]) > 0,
+            "qualification result hash bound and matching a completed qualification",
+            bool(bound["qual_ok"]),
             "",
-            "no experiment_events row carrying detail key 'aa_result_sha256' — record the "
-            "experiment-aa-gates.py result_sha256 before arming (LANE-C arm-gate binding)",
+            "qualification_result_sha256 unbound or unmatched — bind via "
+            "fn_bind_experiment_result('<id>','qualification','<sha>') (migration 213)",
+        )
+    )
+    checks.append(
+        check(
+            "A/A gate result hash bound and matching a completed aa experiment",
+            bool(bound["aa_ok"]),
+            "",
+            "aa_result_sha256 unbound or unmatched — bind the experiment-aa-gates.py "
+            "result_sha256 via fn_bind_experiment_result('<id>','aa','<sha>') (migration 213)",
         )
     )
 

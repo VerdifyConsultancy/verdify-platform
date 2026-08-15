@@ -238,6 +238,7 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "210-iris-experiment-context.sql",  # Lane D tranche 2 (#585)
         "211-twin-asof-input.sql",  # Lane F twin live adapter (#587)
         "212-qualification-scheduler.sql",  # qualification machinery (#584/#588)
+        "213-experiment-result-binding.sql",  # result-hash binding gates (#583/#588)
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(
