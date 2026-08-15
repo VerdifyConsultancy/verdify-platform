@@ -1124,6 +1124,17 @@ sensor:
 
 ################################################################################
 # 7. CONFIGURATION / SET‑POINT OUTPUTS  – entity_category fixed to “diagnostic”
+#
+# Readback truth decision (tranche 2, #586, audit §8.9): cfg_* readbacks of
+# policy wire fields are DEVICE-CONFIRMED TRUTH — while an experiment manifest
+# is armed they report the ACTIVE policy value (verdify_policy::policy_read /
+# _read_b), i.e. exactly what the control tick consumes; while inactive they
+# report the legacy global, unchanged from pre-Lane-E behavior. The
+# cfg_first_pull_ok NAN guard applies only to the legacy path: it exists to
+# avoid echoing unconfirmed NVS defaults as registry truth, whereas an armed
+# policy value is engine truth independent of any registry push, so it is
+# never blanked (guards on migrated readbacks are `!cfg_first_pull_ok &&
+# !policy_experiment_active()`).
 ################################################################################
 
   # ─── Temperature band & hysteresis (°F) ────────────────────────────────
@@ -1189,8 +1200,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return id(cool_stage2_over_high_f);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_cool_stage2_over_high_f, id(cool_stage2_over_high_f));
 
   - platform: template
     id: cfg_cool_exit_hysteresis_f
@@ -1202,8 +1213,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return id(cool_exit_hysteresis_f);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_cool_exit_hysteresis_f, id(cool_exit_hysteresis_f));
 
   # BC-8 (ADR0003 §6.5): on-device readback of the fan2 de-escalation hysteresis
   # (freeze rule 6). NAN until the first push confirms cfg_first_pull_ok.
@@ -1217,8 +1228,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return id(cool_stage2_exit_hysteresis_f);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_cool_stage2_exit_hysteresis_f, id(cool_stage2_exit_hysteresis_f));
 
   # ADR-0004: on-device readback of the live control-band tracking tightness.
   # Expected planner value is 0; NAN until the first push confirms cfg_first_pull_ok.
@@ -1230,8 +1241,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return id(band_track_fraction);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_band_track_fraction, id(band_track_fraction));
 
   # BC-13 (ADR0003 §6.4): on-device readback of the AI-tunable air-exchange fraction
   # (freeze rule 6). NAN until the first push confirms cfg_first_pull_ok.
@@ -1243,8 +1254,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return id(vent_exchange_fraction);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_vent_exchange_fraction, id(vent_exchange_fraction));
 
   # #410 (freeze rule 6): readback for the vent+reheat held-temp dehum enable
   # (sw_dehum_vent_hold in tunables.yaml). Ships OFF; NAN until the first push
@@ -1270,8 +1281,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return id(cold_vent_guard_delta_f);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_cold_vent_guard_delta_f, id(cold_vent_guard_delta_f));
 
   - platform: template
     id: cfg_cool_all_fans_at_high_enabled
@@ -1281,8 +1292,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return id(cool_all_fans_at_high_enabled) ? 1.0f : 0.0f;
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read_b(verdify_policy::kPF_sw_cool_all_fans_at_high_enabled, id(cool_all_fans_at_high_enabled)) ? 1.0f : 0.0f;
 
   - platform: template
     id: cfg_hyst_temp_f
@@ -1294,8 +1305,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return id(hyst_temp_f);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_temp_hysteresis, id(hyst_temp_f));
 
   # ─── VPD band & hysteresis (kPa) ───────────────────────────────────────
   - platform: template
@@ -1331,8 +1342,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return id(hyst_vpd_kpa);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_vpd_hysteresis, id(hyst_vpd_kpa));
 
   - platform: template
     id: cfg_heat_hysteresis_f
@@ -1344,8 +1355,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return id(heat_hysteresis_f);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_heat_hysteresis, id(heat_hysteresis_f));
 
   - platform: template
     id: ctl_effective_heat_target_f
@@ -1379,7 +1390,7 @@ sensor:
       sp.temp_low = id(target_temp_low_f);
       sp.temp_high = id(target_temp_high_f);
       sp.dC2 = id(stage2_cool_delta_f);
-      sp.cool_stage2_over_high_f = id(cool_stage2_over_high_f);
+      sp.cool_stage2_over_high_f = verdify_policy::policy_read(verdify_policy::kPF_cool_stage2_over_high_f, id(cool_stage2_over_high_f));
       sp.safety_max = id(safety_max_f);
       validate_setpoints(sp);
       return band_cool_stage2_delta_f(sp);
@@ -1393,11 +1404,11 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
       Setpoints sp = default_setpoints();
       sp.vpd_low = id(target_vpd_low_kpa);
       sp.vpd_high = id(target_vpd_high_kpa);
-      sp.vpd_hysteresis = id(hyst_vpd_kpa);
+      sp.vpd_hysteresis = verdify_policy::policy_read(verdify_policy::kPF_vpd_hysteresis, id(hyst_vpd_kpa));
       validate_setpoints(sp);
       return band_vpd_hysteresis(sp);
 
@@ -1532,8 +1543,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return id(enthalpy_open_kjkg);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_enthalpy_open, id(enthalpy_open_kjkg));
 
   - platform: template
     id: cfg_enthalpy_close_kjkg
@@ -1544,8 +1555,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return id(enthalpy_close_kjkg);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_enthalpy_close, id(enthalpy_close_kjkg));
 
   - platform: template
     id: cfg_econ_heat_margin_f
@@ -1637,8 +1648,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return id(min_heat_on_s);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_min_heat_on_s, id(min_heat_on_s));
 
   - platform: template
     id: cfg_min_heat_off_s
@@ -1650,8 +1661,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return id(min_heat_off_s);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_min_heat_off_s, id(min_heat_off_s));
 
   - platform: template
     id: cfg_min_fan_on_s
@@ -1663,8 +1674,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return id(min_fan_on_s);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_min_fan_on_s, id(min_fan_on_s));
 
   - platform: template
     id: cfg_min_fan_off_s
@@ -1676,8 +1687,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return id(min_fan_off_s);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_min_fan_off_s, id(min_fan_off_s));
 
   # ─── Vent relay timing tunables (seconds) ─────────────────────────────
   - platform: template
@@ -1690,8 +1701,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return id(min_vent_on_s);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_min_vent_on_s, id(min_vent_on_s));
 
   - platform: template
     id: cfg_min_vent_off_s
@@ -1703,8 +1714,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return id(min_vent_off_s);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_min_vent_off_s, id(min_vent_off_s));
 
   # --------------------------------------------------------------------------
   # 8. DLI — availability-bearing interior crop evidence (B5 / ADR-008)
@@ -1804,8 +1815,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return id(mister_engage_kpa);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_mister_engage_kpa, id(mister_engage_kpa));
 
   - platform: template
     id: cfg_mister_all_kpa
@@ -1816,8 +1827,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return id(mister_all_kpa);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_mister_all_kpa, id(mister_all_kpa));
 
   # Sprint-3: per-zone VPD target readbacks + mister scoring tunables.
   # The setpoint dispatcher pushes vpd_target_{south,west,east,center},
@@ -1882,8 +1893,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return id(mister_center_penalty);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_mister_center_penalty, id(mister_center_penalty));
 
   - platform: template
     id: cfg_east_adjacency_factor
@@ -1937,8 +1948,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return (float)id(vpd_watch_dwell_s);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return (float)verdify_policy::policy_read(verdify_policy::kPF_vpd_watch_dwell_s, id(vpd_watch_dwell_s));
 
   - platform: template
     id: cfg_mister_engage_delay_s
@@ -1949,8 +1960,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return (float)id(mister_engage_delay_s);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return (float)verdify_policy::policy_read(verdify_policy::kPF_mister_engage_delay_s, id(mister_engage_delay_s));
 
   - platform: template
     id: cfg_mister_all_delay_s
@@ -1961,8 +1972,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return (float)id(mister_all_delay_s);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return (float)verdify_policy::policy_read(verdify_policy::kPF_mister_all_delay_s, id(mister_all_delay_s));
 
   - platform: template
     id: cfg_min_fog_on_s
@@ -1973,8 +1984,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return (float)id(min_fog_on_s);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return (float)verdify_policy::policy_read(verdify_policy::kPF_min_fog_on_s, id(min_fog_on_s));
 
   - platform: template
     id: cfg_min_fog_off_s
@@ -1985,8 +1996,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return (float)id(min_fog_off_s);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return (float)verdify_policy::policy_read(verdify_policy::kPF_min_fog_off_s, id(min_fog_off_s));
 
   - platform: template
     id: cfg_fog_escalation_kpa
@@ -1997,8 +2008,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return id(fog_escalation_kpa);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_fog_escalation_kpa, id(fog_escalation_kpa));
 
   - platform: template
     id: cfg_max_relief_cycles
@@ -2076,8 +2087,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return id(vent_prefer_temp_delta_f);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_vent_prefer_temp_delta_f, id(vent_prefer_temp_delta_f));
 
   - platform: template
     id: cfg_vent_prefer_dp_delta_f
@@ -2089,8 +2100,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return id(vent_prefer_dp_delta_f);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_vent_prefer_dp_delta_f, id(vent_prefer_dp_delta_f));
 
   - platform: template
     id: cfg_outdoor_staleness_max_s
@@ -2101,8 +2112,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return (float)id(outdoor_staleness_max_s);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return (float)verdify_policy::policy_read(verdify_policy::kPF_outdoor_staleness_max_s, id(outdoor_staleness_max_s));
 
   - platform: template
     id: cfg_summer_vent_min_runtime_s
@@ -2128,8 +2139,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return id(sw_summer_vent_enabled) ? 1.0f : 0.0f;
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read_b(verdify_policy::kPF_sw_summer_vent_enabled, id(sw_summer_vent_enabled)) ? 1.0f : 0.0f;
 
   - platform: template
     id: cfg_fsm_controller_enabled
@@ -2150,8 +2161,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return id(sw_dwell_gate_enabled) ? 1.0f : 0.0f;
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read_b(verdify_policy::kPF_sw_dwell_gate_enabled, id(sw_dwell_gate_enabled)) ? 1.0f : 0.0f;
 
   - platform: template
     id: cfg_dwell_gate_ms
@@ -2162,8 +2173,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return (float)id(dwell_gate_ms);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return (float)verdify_policy::policy_read(verdify_policy::kPF_dwell_gate_ms, id(dwell_gate_ms));
 
   - platform: template
     id: cfg_mist_backoff_s
@@ -2174,8 +2185,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return (float)id(mist_backoff_s);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return (float)verdify_policy::policy_read(verdify_policy::kPF_mist_backoff_s, id(mist_backoff_s));
 
   # Live outdoor readings (firmware exposes the values it's actually
   # comparing). Useful for Iris to see whether the gate is data-poor
@@ -2228,8 +2239,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return (float)id(mister_pulse_on_s);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return (float)verdify_policy::policy_read(verdify_policy::kPF_mister_pulse_on_s, id(mister_pulse_on_s));
 
   - platform: template
     id: cfg_mister_pulse_gap_s
@@ -2240,8 +2251,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return (float)id(mister_pulse_gap_s);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return (float)verdify_policy::policy_read(verdify_policy::kPF_mister_pulse_gap_s, id(mister_pulse_gap_s));
 
   - platform: template
     id: cfg_mister_min_off_s
@@ -2252,8 +2263,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return (float)id(mister_min_off_s);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return (float)verdify_policy::policy_read(verdify_policy::kPF_mister_min_off_s, id(mister_min_off_s));
 
   - platform: template
     id: cfg_mister_water_budget_gal
@@ -2264,8 +2275,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return id(mister_water_budget_gal);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_mister_water_budget_gal, id(mister_water_budget_gal));
 
   - platform: template
     id: cfg_mister_vpd_weight
@@ -2275,8 +2286,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return id(mister_vpd_weight);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_mister_vpd_weight, id(mister_vpd_weight));
 
   - platform: template
     id: cfg_night_vpd_bias_kpa
@@ -2286,8 +2297,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return id(night_vpd_bias_kpa);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_night_vpd_bias_kpa, id(night_vpd_bias_kpa));
 
   - platform: template
     id: cfg_mist_vent_close_lead_s
@@ -2310,8 +2321,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return (float)id(mist_max_closed_vent_s);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return (float)verdify_policy::policy_read(verdify_policy::kPF_mist_max_closed_vent_s, id(mist_max_closed_vent_s));
 
   - platform: template
     id: cfg_mist_vent_reopen_delay_s
@@ -2334,8 +2345,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return (float)id(mist_thermal_relief_s);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return (float)verdify_policy::policy_read(verdify_policy::kPF_mist_thermal_relief_s, id(mist_thermal_relief_s));
 
   - platform: template
     id: cfg_gl_lux_hysteresis
@@ -2570,8 +2581,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return id(direct_wet_stress_override_enabled) ? 1.0f : 0.0f;
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read_b(verdify_policy::kPF_sw_direct_wet_stress_override_enabled, id(direct_wet_stress_override_enabled)) ? 1.0f : 0.0f;
 
   - platform: template
     id: cfg_direct_wet_stress_vpd_margin_kpa
@@ -2582,8 +2593,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return id(direct_wet_stress_vpd_margin_kpa);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_direct_wet_stress_vpd_margin_kpa, id(direct_wet_stress_vpd_margin_kpa));
 
   - platform: template
     id: cfg_direct_wet_stress_min_dew_margin_f
@@ -2594,8 +2605,8 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
     lambda: |-
-      if (!id(cfg_first_pull_ok)) return NAN;
-      return id(direct_wet_stress_min_dew_margin_f);
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read(verdify_policy::kPF_direct_wet_stress_min_dew_margin_f, id(direct_wet_stress_min_dew_margin_f));
 
   - platform: template
     id: cfg_irrig_wall_start_hour

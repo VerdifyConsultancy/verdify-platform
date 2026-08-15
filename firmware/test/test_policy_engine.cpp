@@ -1020,7 +1020,72 @@ static void test_static_footprint() {
   CHECK(sizeof(ControlPolicy) <= 640, "ControlPolicy <= 640 B");
 }
 
-int main() {
+// Tranche-2 out-of-tick consumer helpers (#586): policy_read / policy_read_b /
+// policy_experiment_active gate readback + entity lambdas on the SINGLETON
+// engine exactly like the control tick's pol()/polb() gate its snapshot.
+static void test_out_of_tick_consumer_helpers() {
+  PolicyEngine& engine = policy_engine();
+  engine.reset_runtime();
+  CHECK(!policy_experiment_active(), "singleton starts inactive");
+  CHECK(policy_read(kPF_mister_engage_kpa, 42.5f) == 42.5f, "inactive read falls through to legacy");
+  CHECK(policy_read_b(kPF_sw_summer_vent_enabled, false) == false, "inactive bool read falls through");
+
+  ManifestSpec mspec;
+  CHECK(arm_manifest(engine, mspec), "arm singleton");
+  HeaderSpec boundary;
+  boundary.content_sha = kGoldenContentSha[kVecModerate];
+  boundary.generation = 1;
+  boundary.valid_from = kFrom + 10;
+  boundary.valid_to = kFrom + 10 + 86400;
+  CHECK(push_and_commit(engine, boundary, kGoldenVectorBytes[kVecModerate], kFrom + 10), "commit singleton vector");
+  engine.on_tick(kFrom + 10, true, kDay1);
+  CHECK(!engine.rom_baseline_active(), "moderate policy applied");
+
+  CHECK(policy_experiment_active(), "armed => helpers active");
+  CHECK(policy_read(kPF_mister_engage_kpa, 42.5f) == engine.active().values[kPF_mister_engage_kpa],
+        "armed read reflects ACTIVE policy, not legacy");
+  CHECK(policy_read(kPF_mister_engage_kpa, 42.5f) != 42.5f, "armed read ignores legacy value");
+  CHECK(policy_read_b(kPF_sw_summer_vent_enabled, false) ==
+            (engine.active().values[kPF_sw_summer_vent_enabled] != 0.0f),
+        "armed bool read reflects ACTIVE policy");
+  engine.reset_runtime();  // leave the singleton clean for other tests
+}
+
+// §8.10 recovery-image fixture: dump a journal holding an ACTIVE experiment
+// policy + armed manifest so test_policy_recovery (compiled with
+// -DPOLICY_ENGINE_RECOVERY) can prove the recovery image refuses to resume it.
+static int emit_recovery_fixture(const char* prefix) {
+  FakeStorage storage;
+  PolicyEngine engine;
+  engine.bind_storage(&storage);
+  engine.boot_init(kFrom, true, kDay1);
+  ManifestSpec mspec;
+  if (!arm_manifest(engine, mspec)) return 1;
+  HeaderSpec boundary;
+  boundary.content_sha = kGoldenContentSha[kVecModerate];
+  boundary.generation = 1;
+  boundary.valid_from = kFrom + 10;
+  boundary.valid_to = kFrom + 10 + 86400;
+  if (!push_and_commit(engine, boundary, kGoldenVectorBytes[kVecModerate], kFrom + 10)) return 1;
+  engine.on_tick(kFrom + 10, true, kDay1);  // apply => journal holds the active experiment policy
+  if (engine.rom_baseline_active() || !engine.manifest_armed()) return 1;
+  for (int copy = 0; copy < 2; ++copy) {
+    char path[512];
+    std::snprintf(path, sizeof(path), "%s.copy%d", prefix, copy);
+    FILE* f = std::fopen(path, "wb");
+    if (f == nullptr) return 1;
+    if (storage.present[copy]) std::fwrite(storage.data[copy], 1, storage.len[copy], f);
+    std::fclose(f);
+  }
+  std::printf("wrote recovery fixture %s.copy{0,1} (active gen=%u, manifest armed)\n", prefix,
+              static_cast<unsigned>(engine.active().generation));
+  return 0;
+}
+
+int main(int argc, char** argv) {
+  if (argc == 3 && std::strcmp(argv[1], "--emit-recovery-fixture") == 0) {
+    return emit_recovery_fixture(argv[2]);
+  }
   test_rom_baseline_matches_python_goldens();
   test_engine_starts_on_rom_baseline();
   test_manifest_kind_result_reference_matrix();
@@ -1039,6 +1104,7 @@ int main() {
   test_identity_readback_format();
   test_hex_decode();
   test_static_footprint();
+  test_out_of_tick_consumer_helpers();
   if (checks_failed == 0) {
     std::printf("test_policy_engine: all %d checks passed\n", checks_run);
     return 0;

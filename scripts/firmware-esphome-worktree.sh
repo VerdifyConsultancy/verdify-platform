@@ -22,7 +22,9 @@ if [[ -z "${ESPHOME_BIN:-}" ]]; then
     fi
 fi
 SECRETS_SRC="${SECRETS_SRC:-/srv/greenhouse/esphome/secrets.yaml}"
-CONFIG="firmware/greenhouse.yaml"
+# FIRMWARE_CONFIG override: firmware/greenhouse-recovery.yaml builds the §8.10
+# RECOVERY image (make firmware-recovery-check). Default is the full image.
+CONFIG="${FIRMWARE_CONFIG:-firmware/greenhouse.yaml}"
 SECRET_LINK="firmware/secrets.yaml"
 
 if [[ ! -x "$ESPHOME_BIN" ]]; then

@@ -71,3 +71,4 @@ CLAUDE.md
 .claude-tmp/
 .claude/
 firmware/test/test_policy_engine
+firmware/test/test_policy_recovery

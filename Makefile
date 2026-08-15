@@ -48,7 +48,7 @@ REPLAY_CORPUS_TMP ?= /tmp/verdify-replay-overrides.csv
 HERMES_IRIS_RUNTIME_DIR ?= /var/lib/verdify/hermes/iris
 HERMES_IRIS_ENV_FILE ?= /etc/verdify/hermes-iris.env
 
-.PHONY: help setup venv-check tool-check test test-policy-vector test-policy-engine lint format check lighting-audit-static lighting-audit-current lighting-audit-live lighting-audit-complete climate-intent-replay-report climate-authority-post-deploy-proof-plan climate-authority-post-deploy-proof firmware-check firmware-check-worktree firmware-check-all firmware-invariants firmware-replay firmware-replay-worktree firmware-replay-stream-check firmware-audit-traceability-proof firmware-audit-worktree-proof firmware-dwell-preview firmware-deploy firmware-archive-artifacts firmware-promote-last-good smoke hermes-deploy-config hermes-restart hermes-smoke clean migration-rollback-safety irrigation-migration-check irrigation-migration-proof irrigation-field-diagnostics irrigation-field-sensor-health-proof irrigation-stack-software-check irrigation-stack-check irrigation-feedback-check irrigation-feedback-discover irrigation-feedback-discovery-proof irrigation-feedback-work-order irrigation-feedback-work-order-proof irrigation-feedback-clear-stale-retained irrigation-feedback-clear-stale-near-misses irrigation-feedback-watch irrigation-feedback-watch-field irrigation-feedback-watch-field-proof irrigation-feedback-finalize-dry-run irrigation-feedback-finalize-dry-run-proof irrigation-feedback-finalize irrigation-feedback-finalize-proof irrigation-feedback-proof-json irrigation-sensor-health-proof irrigation-stack-proof irrigation-completion-audit irrigation-completion-audit-proof irrigation-acceptance irrigation-full-acceptance irrigation-post-deploy-acceptance-plan irrigation-post-deploy-acceptance
+.PHONY: help setup venv-check tool-check test test-policy-vector test-policy-engine test-policy-recovery firmware-recovery-check lint format check lighting-audit-static lighting-audit-current lighting-audit-live lighting-audit-complete climate-intent-replay-report climate-authority-post-deploy-proof-plan climate-authority-post-deploy-proof firmware-check firmware-check-worktree firmware-check-all firmware-invariants firmware-replay firmware-replay-worktree firmware-replay-stream-check firmware-audit-traceability-proof firmware-audit-worktree-proof firmware-dwell-preview firmware-deploy firmware-archive-artifacts firmware-promote-last-good smoke hermes-deploy-config hermes-restart hermes-smoke clean migration-rollback-safety irrigation-migration-check irrigation-migration-proof irrigation-field-diagnostics irrigation-field-sensor-health-proof irrigation-stack-software-check irrigation-stack-check irrigation-feedback-check irrigation-feedback-discover irrigation-feedback-discovery-proof irrigation-feedback-work-order irrigation-feedback-work-order-proof irrigation-feedback-clear-stale-retained irrigation-feedback-clear-stale-near-misses irrigation-feedback-watch irrigation-feedback-watch-field irrigation-feedback-watch-field-proof irrigation-feedback-finalize-dry-run irrigation-feedback-finalize-dry-run-proof irrigation-feedback-finalize irrigation-feedback-finalize-proof irrigation-feedback-proof-json irrigation-sensor-health-proof irrigation-stack-proof irrigation-completion-audit irrigation-completion-audit-proof irrigation-acceptance irrigation-full-acceptance irrigation-post-deploy-acceptance-plan irrigation-post-deploy-acceptance
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -126,7 +126,15 @@ test-policy-vector: ## Cross-language policy-vector codec goldens vs Python (Lan
 test-policy-engine: ## Firmware atomic policy engine: slots/staging/manifest/journal/power-loss (Lane E, #586)
 	cd firmware && g++ -std=c++17 -I lib -o test/test_policy_engine test/test_policy_engine.cpp && ./test/test_policy_engine
 
-test-firmware: test-policy-vector test-policy-engine ## Run native C++ logic tests + replay against golden CSV (same code as ESP32)
+POLICY_RECOVERY_FIXTURE ?= /tmp/verdify-policy-recovery-journal
+
+test-policy-recovery: ## §8.10 recovery image host proof: -DPOLICY_ENGINE_RECOVERY build cannot resume/arm/actuate
+	cd firmware && g++ -std=c++17 -I lib -o test/test_policy_engine test/test_policy_engine.cpp
+	cd firmware && g++ -std=c++17 -DPOLICY_ENGINE_RECOVERY -I lib -o test/test_policy_recovery test/test_policy_recovery.cpp
+	./firmware/test/test_policy_engine --emit-recovery-fixture $(POLICY_RECOVERY_FIXTURE)
+	./firmware/test/test_policy_recovery $(POLICY_RECOVERY_FIXTURE)
+
+test-firmware: test-policy-vector test-policy-engine test-policy-recovery ## Run native C++ logic tests + replay against golden CSV (same code as ESP32)
 	cd firmware && g++ -std=c++17 -I lib -o test/test_greenhouse test/test_greenhouse_logic.cpp && ./test/test_greenhouse
 	# OBS-1e (Sprint 16) — replay validation against 8 months of real telemetry.
 	# Replay validation complements unit tests because unit tests alone
@@ -224,6 +232,9 @@ test-v: ## Run tests with verbose output
 
 firmware-check: ## Compile ESP32 firmware from this git worktree (validate only, no deploy)
 	$(FIRMWARE_ESPHOME) compile
+
+firmware-recovery-check: ## Compile the §8.10 RECOVERY image (greenhouse-recovery.yaml: policy actuation fail-closed, consumers permanently legacy)
+	FIRMWARE_CONFIG=firmware/greenhouse-recovery.yaml $(FIRMWARE_ESPHOME) compile
 
 firmware-check-worktree: firmware-check ## Back-compat alias; firmware-check already uses this worktree
 
