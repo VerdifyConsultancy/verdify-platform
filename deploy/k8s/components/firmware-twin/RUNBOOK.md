@@ -54,12 +54,46 @@ live prod-vs-reality signal is a gate. The seeded `firmware_twin_divergence` row
 is tagged `cmp_twin_ref='SEED-render-proof ...'` so it is never mistaken for a
 real measurement.
 
-Also still required for the LIVE shadow (vs the offline corpus replay deployed
-here), all buildable-now but NOT built (design §6 Phase-1 / TWIN-5):
-- a live as-of-join feed adapter (parameterize `export-replay-overrides.sh`'s
-  inner SELECT with `SINCE_TS` so one SQL body serves batch + live tail);
-- the local-hour MDT correction (`AT TIME ZONE 'America/Denver'`) + `dt_ms`
-  5 s cap in a live driver (the offline corpus already carries UTC ts).
+> **2026-08-15 (#587, live adapter):** the live as-of feed is now BUILT —
+> `db/migrations/211-twin-asof-input.sql` (security-barrier
+> `v_policy_twin_asof_input` + append-only `twin_live_results` + twin-role
+> grants) and `twin/live_driver.py` (incremental polling, 48-field vector
+> decode onto the harness `sp_*` surface, §8.9 agreement/divergence/warm-up/
+> unmatched-state/gap classification, boot-event twin-state reset). See the
+> LIVE mode section below.
+
+## LIVE mode (§8.9 live-shadow gate, #587)
+
+`TWIN_MODE=live` on the Deployment switches the container from the corpus
+loop to `twin/live_driver.py`. Prerequisites, in order:
+
+1. Migration **211** applied (view + `twin_live_results` + grants — additive,
+   idempotent, rollback-wrap validated against the prod schema).
+2. The twin login user's group role holds migration 211's grants (both
+   `twin_ro` and the experiment-era `verdify_twin_ro` name carry the same
+   narrow surface: SELECT on `v_policy_twin_asof_input`, INSERT on
+   `twin_live_results`, nothing else — the driver still runs the L2
+   write-probe at startup and refuses to start otherwise).
+3. Set `TWIN_MODE=live` via a component/overlay patch (GitOps only — never by
+   editing the cluster). The NetworkPolicies are unchanged: DB-only egress,
+   no actuation, no device route.
+
+The §8.9 gate itself is computed by `twin/report_agreement.py` (operator/
+analyst DSN — the twin role deliberately cannot read its own results):
+byte-identical policy AND action agreement across a 7–14 day window with
+per-day coverage/gap accounting, machine-readable JSON + canonical hash.
+Warm-up, unmatched-state, and gap ticks never count as agreement.
+
+Known §8.9 feed gaps (enumerated in the migration 211 header): no typed
+firmware boot event (boots are inferred from the `diagnostics.uptime_s < 300`
+drop), no per-relay last-off/runtime telemetry (the twin reconstructs dwell
+state internally), no budget-remaining echo beyond `mister_water_today`, and
+no resident-FSM echo (twin warm-up stands in). The ~26 wire fields whose
+consumers sit outside the `greenhouse_logic.h` replay surface (mister
+engagement, per-relay dwell fairness, enthalpy economizer, night VPD bias,
+band pinch) are enumerated in `twin/live_driver.py::UNMAPPED_WIRE_FIELDS`;
+they participate fully in policy-identity hash equality but not in the
+harness action surface until the shared-oracle extraction (Lane E) lands.
 
 ## PROTECTED BY RUNTIME SAFEGUARDS — any future prod-DB shadow
 
@@ -84,4 +118,5 @@ cat db/migrations/155-twin-observability-tables.sql \
 
 The twin remains read-only / INSERT-only / no-device-route in prod too (L1–L4).
 The durable form replaces the gcc-initContainer with the pre-baked
-`twin/Dockerfile` image (GHCR-pinned) once a build/push is wired.
+`twin/Dockerfile` image, built in-cluster and digest-pinned from the zot
+origin (`registry.vallery.net`; ghcr is banned per ADR-0021).
