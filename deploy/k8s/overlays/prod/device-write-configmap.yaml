@@ -25,3 +25,11 @@ data:
   # cfg_*-confirmed (no band gap). It also activates the per-zone band audit.
   # Rollback: set to "legacy" (or remove) + restart the ingestor.
   VERDIFY_BAND_SOURCE: "anchors"
+  # ---- Controlled planner experiment rollout step 2 (#581, §8.10) ----------
+  # Shadow: proposal/arbiter/outbox persist; NOTHING is delivered to the device.
+  VERDIFY_POLICY_VECTOR_MODE: "shadow"
+  # MCP audience auth observation mode (#589): log would-be denials, block nothing.
+  VERDIFY_MCP_AUTH_MODE: "log"
+  # Ledgered migration delivery (#591): ledger is already current (applied
+  # 2026-08-15, see #583); the PreSync Job now verifies instead of no-opping.
+  VERDIFY_MIGRATE_LEDGER: "1"
