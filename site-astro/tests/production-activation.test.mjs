@@ -67,6 +67,24 @@ function attestation({ sanitizedManifestSha256, guardReportSha256, overrides = {
   };
 }
 
+function legacyStageAttestation(document, approvalEligible) {
+  return {
+    contract: "verdify.lab-stage-sanitized-snapshot",
+    schemaVersion: document.schemaVersion,
+    evidenceStatus: "provisional-only",
+    approvalEligible,
+    sourceManifestSha256: document.sourceManifestSha256,
+    sanitizedManifestSha256: document.sanitizedManifestSha256,
+    sourceFileCount: document.sourceFileCount,
+    sanitizedFileCount: document.sanitizedFileCount,
+    policyVersion: document.policyVersion,
+    guardReportSha256: document.guardReportSha256,
+    guardSchemaVersion: document.guardSchemaVersion,
+    guardFindings: document.guardFindings,
+    transformations: document.transformations,
+  };
+}
+
 function activationRecord({ attestationSha256, sanitizedManifestSha256, guardReportSha256, overrides = {} }) {
   const record = {
     contract: "verdify.lab-production-snapshot-activation",
@@ -123,9 +141,14 @@ async function buildProductionSnapshot(context, { content = CONTENT, mutate = {}
   await writeFile(path.join(root, "evidence", "public-output-guard.json"), guardBytes);
   const guardReportSha256 = sha256(guardBytes);
 
-  const attestationBytes = canonical(
-    attestation({ sanitizedManifestSha256, guardReportSha256, overrides: mutate.attestation ?? {} }),
-  );
+  const attestationDocument = attestation({
+    sanitizedManifestSha256,
+    guardReportSha256,
+    overrides: mutate.attestation ?? {},
+  });
+  const attestationBytes = mutate.attestationBytes
+    ? mutate.attestationBytes(attestationDocument)
+    : canonical(attestationDocument);
   await writeFile(path.join(root, "attestation.json"), attestationBytes);
   const attestationSha256 = sha256(attestationBytes);
 
@@ -249,16 +272,19 @@ test("a fixture that also carries a production activation stays a fixture", asyn
 
 test("the legacy stage capture cannot be relabelled activation-eligible", async (context) => {
   const snapshot = await buildProductionSnapshot(context, {
-    mutate: { attestation: { contract: "verdify.lab-stage-sanitized-snapshot" } },
+    mutate: {
+      attestationBytes: (document) => canonical(legacyStageAttestation(document, false)),
+    },
   });
-  // Routed to the untouched stage verifier, which hard-rejects activationEligible !== false.
+  // The immutable stage wire shape is accepted before its exact content policy
+  // rejects these deliberately non-stage test values.
   await assert.rejects(() => resolveWith(snapshot), /stage release policy/);
 });
 
-test("flipping activationEligible on a stage attestation is rejected by the stage verifier", async (context) => {
+test("flipping the immutable stage eligibility verdict is rejected by the stage verifier", async (context) => {
   const snapshot = await buildProductionSnapshot(context, {
     mutate: {
-      attestation: { contract: "verdify.lab-stage-sanitized-snapshot", evidenceStatus: "provisional-only" },
+      attestationBytes: (document) => canonical(legacyStageAttestation(document, true)),
     },
   });
   await assert.rejects(() => resolveWith(snapshot), /stage release policy/);

@@ -32,8 +32,9 @@
 // `activation.json` and the fixture branch is mutually exclusive). The legacy
 // provisional capture can never take this path either: it carries the
 // `verdify.lab-stage-sanitized-snapshot` contract, whose verifier still
-// hard-rejects `activationEligible !== false`, and relabelling it would change
-// its attestation digest, which is pinned by its own release descriptor.
+// hard-rejects its immutable v1 `approvalEligible !== false` wire verdict and
+// normalizes it to `activationEligible: false`; relabelling it would change its
+// attestation digest, which is pinned by its own release descriptor.
 
 const SHA256_RE = /^[0-9a-f]{64}$/;
 const ACTIVATION_ID_RE = /^lab-production-snapshot-[0-9]{8}t[0-9]{4}z$/;

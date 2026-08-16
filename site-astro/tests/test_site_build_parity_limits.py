@@ -193,7 +193,9 @@ class SourceSnapshotBindingTests(unittest.TestCase):
             "contract": "verdify.lab-stage-sanitized-snapshot",
             "schemaVersion": 1,
             "evidenceStatus": "activation-eligible" if active else "provisional-only",
-            "activationEligible": active,
+            # The published stage archive's immutable v1 wire contract uses
+            # this original field name; the resolver output is activation-based.
+            "approvalEligible": active,
             "sourceManifestSha256": "d" * 64,
             "sanitizedManifestSha256": declared_digest or manifest_digest,
             "sourceFileCount": 1,

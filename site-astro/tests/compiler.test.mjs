@@ -54,7 +54,7 @@ test("sanitization attestation is closed, canonical, bounded, and HLS-accounted"
     contract: "verdify.lab-stage-sanitized-snapshot",
     schemaVersion: 1,
     evidenceStatus: "provisional-only",
-    activationEligible: false,
+    approvalEligible: false,
     sourceManifestSha256: "05d4373ebf59bef3a7899c5e94514971d663fd7264db09b2b5cb26fec78410b1",
     sanitizedManifestSha256: digest,
     sourceFileCount: 429,

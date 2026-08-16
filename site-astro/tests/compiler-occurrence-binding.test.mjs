@@ -608,7 +608,7 @@ test("compiler builds and materializes a selected 143 plus 2 release through one
     contract: "verdify.lab-stage-sanitized-snapshot",
     schemaVersion: 1,
     evidenceStatus: "provisional-only",
-    activationEligible: false,
+    approvalEligible: false,
     sourceManifestSha256: "05d4373ebf59bef3a7899c5e94514971d663fd7264db09b2b5cb26fec78410b1",
     sanitizedManifestSha256: sha256(snapshotManifestBytes),
     sourceFileCount: 429,

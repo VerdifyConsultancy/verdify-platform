@@ -19,7 +19,28 @@ const MAX_FILE_BYTES = 128 * 1024 * 1024;
 const MAX_TOTAL_BYTES = 1024 * 1024 * 1024;
 const MAX_DEPTH = 24;
 const SOURCE_MANIFEST_SHA256 = "05d4373ebf59bef3a7899c5e94514971d663fd7264db09b2b5cb26fec78410b1";
-const ATTESTATION_KEYS = [
+// The stage archive is immutable and its descriptor pins the attestation bytes.
+// Its closed v1 wire contract therefore retains the original
+// `approvalEligible: false` field even though the application-facing API now
+// calls the same verdict `activationEligible`. Never rename a field inside the
+// already-published stage attestation: doing so makes the pinned archive
+// unreadable before its content can be verified.
+const STAGE_ATTESTATION_KEYS = [
+  "contract",
+  "schemaVersion",
+  "evidenceStatus",
+  "approvalEligible",
+  "sourceManifestSha256",
+  "sanitizedManifestSha256",
+  "sourceFileCount",
+  "sanitizedFileCount",
+  "policyVersion",
+  "guardReportSha256",
+  "guardSchemaVersion",
+  "guardFindings",
+  "transformations",
+];
+const PRODUCTION_ATTESTATION_KEYS = [
   "contract",
   "schemaVersion",
   "evidenceStatus",
@@ -156,7 +177,7 @@ export async function verifySanitizationAttestation(root, manifestDigest, invent
   } catch {
     throw new Error("sanitized snapshot attestation is not valid JSON");
   }
-  if (!exactKeys(attestation, ATTESTATION_KEYS) || !exactKeys(attestation.transformations, TRANSFORMATION_KEYS)) {
+  if (!exactKeys(attestation, STAGE_ATTESTATION_KEYS) || !exactKeys(attestation.transformations, TRANSFORMATION_KEYS)) {
     throw new Error("sanitized snapshot attestation does not use the closed v1 shape");
   }
   if (`${JSON.stringify(attestation, null, 2)}\n` !== bytes.toString("utf8")) {
@@ -166,7 +187,7 @@ export async function verifySanitizationAttestation(root, manifestDigest, invent
     attestation.contract !== STAGE_SNAPSHOT_CONTRACT
     || attestation.schemaVersion !== 1
     || attestation.evidenceStatus !== "provisional-only"
-    || attestation.activationEligible !== false
+    || attestation.approvalEligible !== false
     || attestation.sourceManifestSha256 !== SOURCE_MANIFEST_SHA256
     || attestation.sanitizedManifestSha256 !== manifestDigest
     || attestation.sourceFileCount !== 429
@@ -199,7 +220,8 @@ export async function verifySanitizationAttestation(root, manifestDigest, invent
   if (attestation.transformations.hlsFilesPreserved !== actualHlsFiles) {
     throw new Error("sanitized snapshot HLS preservation count does not match the content tree");
   }
-  return { ...attestation, fixtureOnly: false };
+  const { approvalEligible, ...identity } = attestation;
+  return { ...identity, activationEligible: approvalEligible, fixtureOnly: false };
 }
 
 /**
@@ -223,7 +245,7 @@ export async function verifyProductionSanitizationAttestation(root, manifestDige
   } catch {
     throw new Error("production snapshot attestation is not valid JSON");
   }
-  if (!exactKeys(attestation, ATTESTATION_KEYS) || !exactKeys(attestation.transformations, TRANSFORMATION_KEYS)) {
+  if (!exactKeys(attestation, PRODUCTION_ATTESTATION_KEYS) || !exactKeys(attestation.transformations, TRANSFORMATION_KEYS)) {
     throw new Error("production snapshot attestation does not use the closed v1 shape");
   }
   if (`${JSON.stringify(attestation, null, 2)}\n` !== attestationText) {
@@ -333,8 +355,9 @@ async function verifyGuardEvidence(root, expectedDigest) {
  * The snapshot's own attestation names which contract it claims; each verifier
  * then proves that claim independently. A production claim buys nothing on its
  * own — it only routes to the stricter verifier, which additionally demands a
- * registry-trusted activation. The stage verifier is untouched and still rejects
- * `activationEligible !== false`, so the legacy provisional capture cannot be
+ * registry-trusted activation. The stage verifier still rejects its immutable
+ * v1 `approvalEligible !== false` wire verdict and normalizes that verdict to
+ * `activationEligible: false`, so the legacy provisional capture cannot be
  * relabelled into eligibility.
  */
 async function verifyAttestedSnapshot(root, manifestDigest, inventory, registry) {

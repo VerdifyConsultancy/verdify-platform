@@ -10124,7 +10124,9 @@ def read_source_snapshot(root: Path) -> dict[str, Any]:
     )
 
     attestation_keys = {
-        "activationEligible",
+        # Immutable stage v1 wire field. The resolved manifest below exposes
+        # the current activation terminology without rewriting pinned bytes.
+        "approvalEligible",
         "contract",
         "evidenceStatus",
         "guardFindings",
@@ -10147,7 +10149,7 @@ def read_source_snapshot(root: Path) -> dict[str, Any]:
         attestation["contract"] != SNAPSHOT_ATTESTATION_CONTRACT
         or attestation["schemaVersion"] != SNAPSHOT_ATTESTATION_SCHEMA_VERSION
         or attestation["evidenceStatus"] != "provisional-only"
-        or attestation["activationEligible"] is not False
+        or attestation["approvalEligible"] is not False
     ):
         raise ValueError("source snapshot attestation is not trusted by the supported v1 resolver")
 

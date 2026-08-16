@@ -94,7 +94,9 @@ npm run build
 
 The current frozen snapshot is a legacy content-hash capture, not an active
 immutable snapshot. It carries the `verdify.lab-stage-sanitized-snapshot`
-contract, whose verifier hard-rejects `activationEligible !== false`, so
+contract. Its immutable closed v1 attestation retains the original
+`approvalEligible: false` wire field, which the resolver hard-rejects if changed
+and normalizes to the current activation terminology, so
 `static-build.json` and `route-manifest.json` report
 `localEvidenceStatus: provisional-only` and `activationEligible: false` for it and
 always will. It cannot be relabelled: changing a byte of its attestation changes
