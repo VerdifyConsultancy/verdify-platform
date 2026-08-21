@@ -66,6 +66,7 @@ def test_render_cache_runtime_is_pinned_unprivileged_and_credential_free():
     container = pod["containers"][0]
 
     assert deployment["spec"]["replicas"] == 2
+    assert pod["nodeSelector"] == {"agentfleet.vallery.net/node-class": "general"}
     assert pod["topologySpreadConstraints"][0]["topologyKey"] == "kubernetes.io/hostname"
     assert pod["topologySpreadConstraints"][0]["minDomains"] == 2
     assert pod["topologySpreadConstraints"][0]["whenUnsatisfiable"] == "DoNotSchedule"
