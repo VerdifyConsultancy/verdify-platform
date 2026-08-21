@@ -65,6 +65,7 @@ $PY -m pytest -q \
   tests/test_experiment_schema_migration.py \
   tests/test_experiment_verify.py \
   tests/test_experiment_workers.py \
+  tests/test_firmware_builder_image.py \
   tests/test_firmware_crop_agnostic_guard.py \
   tests/test_forecast_action_engine_path.py \
   tests/test_g5_dualwrite_validation.py \
