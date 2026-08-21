@@ -1141,6 +1141,8 @@ def test_deployed_cache_layout_is_unique_restricted_and_preserves_time_budget():
     publisher_env = {item["name"]: item.get("value") for item in publisher_container["env"]}
     assert publisher_env["LAB_WORK_ROOT"] == "/work/publisher"
     assert publisher_env["VERDIFY_PUBLISH_STEP_TIMEOUT"] == "180"
+    assert publisher_env["VERDIFY_PUBLISH_REBUILD_TIMEOUT"] == "300"
+    assert cronjob["spec"]["jobTemplate"]["spec"]["activeDeadlineSeconds"] == 900
 
     for pod_spec in (publisher_spec, site_spec):
         pod_security = pod_spec["securityContext"]
