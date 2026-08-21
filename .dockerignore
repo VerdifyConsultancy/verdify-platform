@@ -72,10 +72,10 @@ db
 hermes
 
 # db/ is excluded above (the api/mcp/ingestor images never touch it), but the
-# verdify-migrate image (db/Dockerfile.migrate) COPYs three files out of it:
-# db/schema.sql, db/migrate.sh, and db/migrations/000-fresh-schema-hypertable-
-# repair.sql. Re-include only those — keep the other migrations, init/, @eaDir,
-# and the restore manifests out of every build context.
+# verdify-migrate image (db/Dockerfile.migrate) COPYs the schema, both runners,
+# every top-level numbered migration, and the two ledger SQL files. Re-include
+# exactly those — keep init/, migration fixtures/tests, roles, @eaDir, and the
+# restore manifests out of every build context.
 # KANIKO QUIRK (2026-07-11, found when the in-cluster zot build shipped an
 # empty COPY): unlike BuildKit, kaniko will NOT restore `!db/schema.sql` while
 # the `db` DIRECTORY itself is still excluded — every COPY logged "No files to
@@ -85,9 +85,13 @@ hermes
 db/*
 !db/schema.sql
 !db/migrate.sh
+!db/apply-migrations.sh
 !db/migrations
 db/migrations/*
-!db/migrations/000-fresh-schema-hypertable-repair.sql
+!db/migrations/*.sql
+!db/ledger
+db/ledger/*
+!db/ledger/*.sql
 
 # --- secrets / local env (NEVER bake into an image; secrets come from k8s) ---
 .env

@@ -19,6 +19,7 @@ ROLES_SQL = REPO_ROOT / "db" / "roles" / "experiment-roles.sql"
 LEDGER_SQL = REPO_ROOT / "db" / "ledger" / "schema_migrations.sql"
 BACKFILL_SQL = REPO_ROOT / "db" / "ledger" / "backfill_ledger.sql"
 DOCKERFILE = REPO_ROOT / "db" / "Dockerfile.migrate"
+DOCKERIGNORE = REPO_ROOT / ".dockerignore"
 MIGRATE_SH = REPO_ROOT / "db" / "migrate.sh"
 
 REQUIRED_TABLES = [
@@ -268,6 +269,23 @@ def test_migrate_image_carries_migrations_and_runner():
     assert "COPY db/ledger/ /db/ledger/" in docker
     assert "COPY db/apply-migrations.sh /usr/local/bin/apply-migrations.sh" in docker
     assert "check_migration_rollback_safety.py" in docker
+
+    ignore_lines = DOCKERIGNORE.read_text().splitlines()
+    ordered_reincludes = [
+        "!db",
+        "db/*",
+        "!db/schema.sql",
+        "!db/migrate.sh",
+        "!db/apply-migrations.sh",
+        "!db/migrations",
+        "db/migrations/*",
+        "!db/migrations/*.sql",
+        "!db/ledger",
+        "db/ledger/*",
+        "!db/ledger/*.sql",
+    ]
+    indexes = [ignore_lines.index(line) for line in ordered_reincludes]
+    assert indexes == sorted(indexes), "Kaniko re-include rules must stay ordered"
 
 
 def test_migrate_sh_ledger_branch_is_opt_in_and_comment_fixed():
