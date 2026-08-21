@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -26,7 +27,7 @@ def deployment(documents: list[dict]) -> dict:
 
 def run_validator(path: Path) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
-        ["python3", str(VALIDATOR), str(path)],
+        [sys.executable, str(VALIDATOR), str(path)],
         check=False,
         capture_output=True,
         text=True,
