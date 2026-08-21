@@ -43,6 +43,11 @@ metadata:
     app.kubernetes.io/component: grafana
 spec:
   replicas: 1
+  # Attended REL-3 activation: a candidate must remain Ready for two full
+  # minutes before Kubernetes may scale the old pod down. Combined with the
+  # surge-first strategy below, this creates a real observation window rather
+  # than retiring the known-good pod on the candidate's first Ready sample.
+  minReadySeconds: 120
   selector:
     matchLabels:
       app.kubernetes.io/component: grafana

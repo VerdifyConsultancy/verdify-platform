@@ -116,9 +116,12 @@ def test_renderer_port_is_not_exposed_by_the_public_service_or_network_policy():
     assert ingress_ports == [3000]
 
 
-def test_surge_first_rollout_retains_the_old_pod_until_the_candidate_is_ready():
-    strategy = _deployment()["spec"]["strategy"]
+def test_surge_first_rollout_requires_a_two_minute_ready_candidate_dwell():
+    spec = _deployment()["spec"]
+    strategy = spec["strategy"]
 
+    assert spec["replicas"] == 1
+    assert spec["minReadySeconds"] == 120
     assert strategy == {
         "type": "RollingUpdate",
         "rollingUpdate": {"maxUnavailable": 0, "maxSurge": 1},
