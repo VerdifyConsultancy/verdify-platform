@@ -267,4 +267,4 @@ images:
   # GITHUB_TOKEN can publish immutable CI-built digests.
   - name: ghcr.io/verdifyconsultancy/verdify-lab-publisher-k3s
     newName: registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s
-    digest: sha256:6450415420fb3bc76fb5444986eda44dfc1273dad56afa841e31bb751787840c
+    digest: sha256:af16d6e7678a08e728ff1b6a0939a7f069a8d8dbe1f4ae170b9e4a7ace92140b
