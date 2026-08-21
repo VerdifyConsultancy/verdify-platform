@@ -1166,6 +1166,8 @@ def test_publisher_image_and_ci_own_the_canonical_cache_scanner_and_shared_packa
     assert "VERDIFY_PUBLIC_OUTPUT_GUARD=/usr/local/bin/check-public-output" in dockerfile
     assert "prepare-lab-cache-lock.py /usr/local/bin/prepare-lab-cache-lock" in dockerfile
     assert "VERDIFY_PUBLIC_OUTPUT_GUARD:-/usr/local/bin/check-public-output" in initializer
+    assert "VERDIFY_PUBLIC_OUTPUT_GUARD_TIMEOUT:-300" in initializer
+    assert "PUBLIC_OUTPUT_GUARD_TIMEOUT > 600" in initializer
     assert initializer.count('validate_public_tree "$BOOTSTRAP"') == 1
     assert initializer.count('validate_public_tree "$LEGACY"') == 1
     assert 'validate_public_tree "$candidate"' in initializer
