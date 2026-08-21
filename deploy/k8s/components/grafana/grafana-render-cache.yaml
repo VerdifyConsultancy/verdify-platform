@@ -25,6 +25,8 @@ spec:
         app.kubernetes.io/component: grafana-render-cache
     spec:
       automountServiceAccountToken: false
+      nodeSelector:
+        agentfleet.vallery.net/node-class: general
       securityContext:
         runAsNonRoot: true
         seccompProfile:
