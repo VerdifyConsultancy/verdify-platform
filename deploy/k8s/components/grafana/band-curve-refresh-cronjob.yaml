@@ -23,12 +23,15 @@ spec:
         metadata:
           labels:
             app.kubernetes.io/part-of: verdify
-            app.kubernetes.io/component: grafana
+            # Keep maintenance Pods outside the Grafana Service selector. A
+            # refresh Pod has no HTTP port and must never become a Grafana
+            # EndpointSlice target while the Job is running.
+            app.kubernetes.io/component: grafana-maintenance
         spec:
           restartPolicy: Never
           # Co-locate with the DB pod so the refresh connection never crosses
-          # the Flannel overlay mesh. DB ingress is allowed by the grafana DB
-          # NetworkPolicy in grafana.yaml.
+          # the Flannel overlay mesh. DB ingress is allowed by the dedicated
+          # grafana-maintenance peer in grafana.yaml.
           affinity:
             podAffinity:
               requiredDuringSchedulingIgnoredDuringExecution:
