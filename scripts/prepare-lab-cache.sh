@@ -43,9 +43,9 @@ CACHE_LOCK_HELPER="${VERDIFY_CACHE_LOCK_HELPER:-/usr/local/bin/prepare-lab-cache
 if [[ ! -f "$CACHE_LOCK_HELPER" && -f "$SCRIPT_DIR/prepare-lab-cache-lock.py" ]]; then
   CACHE_LOCK_HELPER="$SCRIPT_DIR/prepare-lab-cache-lock.py"
 fi
-PUBLIC_OUTPUT_GUARD_TIMEOUT="${VERDIFY_PUBLIC_OUTPUT_GUARD_TIMEOUT:-120}"
+PUBLIC_OUTPUT_GUARD_TIMEOUT="${VERDIFY_PUBLIC_OUTPUT_GUARD_TIMEOUT:-300}"
 if ! [[ "$PUBLIC_OUTPUT_GUARD_TIMEOUT" =~ ^[0-9]+$ ]] \
-    || ((PUBLIC_OUTPUT_GUARD_TIMEOUT < 30 || PUBLIC_OUTPUT_GUARD_TIMEOUT > 120)); then
+    || ((PUBLIC_OUTPUT_GUARD_TIMEOUT < 30 || PUBLIC_OUTPUT_GUARD_TIMEOUT > 600)); then
   echo "Lab cache public validation configuration failed" >&2
   exit 2
 fi
