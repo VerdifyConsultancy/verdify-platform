@@ -22,7 +22,22 @@ def test_public_render_path_uses_cache_without_becoming_a_second_grafana_front_d
 
     assert routes[0]["match"] == "Host(`graphs.verdify.ai`) && PathPrefix(`/render/`)"
     assert routes[0]["priority"] == 100
-    assert routes[0]["services"] == [{"name": "verdify-grafana-render-cache", "port": 8080}]
+    assert routes[0]["services"] == [
+        {
+            "name": "verdify-grafana-render-cache",
+            "port": 8080,
+            "sticky": {
+                "cookie": {
+                    "name": "verdify_render_cache",
+                    "httpOnly": True,
+                    "secure": True,
+                    "sameSite": "Lax",
+                    "path": "/render/",
+                    "maxAge": 300,
+                }
+            },
+        }
+    ]
     assert routes[1]["match"] == "Host(`graphs.verdify.ai`)"
     assert routes[1]["services"] == [{"name": "verdify-grafana", "port": 3000}]
 
