@@ -33,6 +33,18 @@ spec:
       services:
         - name: verdify-grafana-render-cache
           port: 8080
+          # Cache storage is intentionally pod-local. Pin a browser to one
+          # replica for the bounded cache lifetime so an immediate repeat
+          # render is a HIT instead of a second cold render on its peer.
+          # This cookie carries no identity or authorization state.
+          sticky:
+            cookie:
+              name: verdify_render_cache
+              httpOnly: true
+              secure: true
+              sameSite: Lax
+              path: /render/
+              maxAge: 300
     - kind: Rule
       match: Host(`graphs.verdify.ai`)
       middlewares:
