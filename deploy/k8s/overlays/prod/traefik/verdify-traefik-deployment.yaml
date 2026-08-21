@@ -43,6 +43,8 @@ spec:
         app.kubernetes.io/part-of: verdify
         app.kubernetes.io/component: edge-traefik
     spec:
+      nodeSelector:
+        agentfleet.vallery.net/node-class: general
       serviceAccountName: verdify-traefik
       # HA ha-1 / Lane A (#229): serving-tier priority so the tier-2 edge proxy
       # is preempted only after batch, and never starved under node pressure.

@@ -100,6 +100,7 @@ $PY -m pytest -q \
   tests/test_twin_agreement_report.py \
   tests/test_twin_asof_migration.py \
   tests/test_twin_live_driver.py \
+  tests/test_verdify_traefik_placement.py \
   tests/test_writer_lease_fence.py
 
 step "migration rollback safety classification"
