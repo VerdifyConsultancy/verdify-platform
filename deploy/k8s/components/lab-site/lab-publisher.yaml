@@ -139,6 +139,12 @@ spec:
                 # 45s DB statement_timeout keep the #454 pressure profile.
                 - name: VERDIFY_PUBLISH_STEP_TIMEOUT
                   value: "180"
+                # Quartz crossed the generic 180-second generator ceiling as
+                # the public tree grew. Keep generators tightly bounded while
+                # allowing only the final local rebuild up to five minutes.
+                # The Job's 900-second deadline remains the outer hard stop.
+                - name: VERDIFY_PUBLISH_REBUILD_TIMEOUT
+                  value: "300"
                 # Bound report-generation queries so a public-site refresh can
                 # never starve the control database. PGOPTIONS is consumed by
                 # the psql shim/libpq clients used by the publisher scripts.

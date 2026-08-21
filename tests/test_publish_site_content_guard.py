@@ -121,6 +121,7 @@ def harness(tmp_path: Path):
         "#!/usr/bin/env bash\n"
         "set -euo pipefail\n"
         'touch "${FIXTURE_STATE_DIR}/rebuild.called"\n'
+        'if [[ "${FIXTURE_REBUILD_HANG:-}" == "1" ]]; then sleep 30; fi\n'
         'if [[ "${FIXTURE_REBUILD_FAIL:-}" == "1" ]]; then exit 1; fi\n',
         encoding="utf-8",
     )
@@ -151,6 +152,7 @@ def harness(tmp_path: Path):
                 "VERDIFY_PUBLISH_LOCK": str(lock),
                 # Fast, deterministic guard knobs for tests.
                 "VERDIFY_PUBLISH_STEP_TIMEOUT": "2",
+                "VERDIFY_PUBLISH_REBUILD_TIMEOUT": "2",
                 "VERDIFY_PUBLISH_STEP_RETRIES": "3",
                 "VERDIFY_PUBLISH_STEP_RETRY_DELAY": "0",
                 "FIXTURE_STATE_DIR": str(state_dir),
@@ -258,6 +260,25 @@ def test_failed_rebuild_never_logs_complete(harness):
     assert rc == 1, out
     assert (state_dir / "rebuild.called").is_file()
     assert "Site content publish complete" not in out
+    assert "rebuild/promotion blocked" in out
+
+
+def test_rebuild_uses_its_own_bounded_timeout(harness):
+    rc, out, state_dir = harness(
+        {
+            "FIXTURE_REBUILD_HANG": "1",
+            "VERDIFY_PUBLISH_STEP_TIMEOUT": "1",
+            "VERDIFY_PUBLISH_REBUILD_TIMEOUT": "2",
+            "VERDIFY_PUBLISH_STEP_RETRIES": "1",
+        },
+        timeout_s=10,
+        rebuild=True,
+    )
+
+    assert rc == 1, out
+    assert (state_dir / "rebuild.called").is_file()
+    assert "TIMEOUT after 2s" in out
+    assert "TIMEOUT after 1s" not in out
     assert "rebuild/promotion blocked" in out
 
 

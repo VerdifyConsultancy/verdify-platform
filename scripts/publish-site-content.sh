@@ -76,6 +76,7 @@ fi
 # does not leave the units failed. The unit exits non-zero at the end iff a
 # step ultimately failed, so genuine breakage is still surfaced to systemd.
 STEP_TIMEOUT=${VERDIFY_PUBLISH_STEP_TIMEOUT:-120}   # seconds per attempt (0 disables)
+REBUILD_TIMEOUT=${VERDIFY_PUBLISH_REBUILD_TIMEOUT:-300} # Quartz cold-cache build (30..600s)
 STEP_RETRIES=${VERDIFY_PUBLISH_STEP_RETRIES:-3}     # total attempts per step
 STEP_RETRY_DELAY=${VERDIFY_PUBLISH_STEP_RETRY_DELAY:-5} # seconds between attempts
 LOCKED_RC=${VERDIFY_PUBLISH_LOCKED_RC:-0}
@@ -188,7 +189,11 @@ report_failed_steps() {
   fi
 
   if [[ "$REBUILD" == true ]]; then
-    run_step "$SCRIPT_ROOT/rebuild-site.sh"
+    # Quartz has a materially different cold-cache runtime from the small
+    # generators above. Keep their tighter network/DB timeout, but give the
+    # final local build its own bounded window. Assignment-scoping means
+    # run_step sees this value only for the rebuild invocation.
+    STEP_TIMEOUT="$REBUILD_TIMEOUT" run_step "$SCRIPT_ROOT/rebuild-site.sh"
     if [[ ${#FAILED_STEPS[@]} -eq 0 ]]; then
       echo "[$(date -Is)] Site content publish complete: reason_class=${REASON_CLASS}, date=${DATE}" | tee -a "$LOG"
     fi
