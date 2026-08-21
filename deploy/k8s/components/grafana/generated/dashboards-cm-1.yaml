@@ -3,7 +3,7 @@ kind: ConfigMap
 metadata:
   name: verdify-grafana-dashboards-1
   annotations:
-    argocd.argoproj.io/sync-options: ServerSideApply=true
+    argocd.argoproj.io/sync-options: Replace=true
   labels:
     app.kubernetes.io/part-of: verdify
     app.kubernetes.io/component: grafana
