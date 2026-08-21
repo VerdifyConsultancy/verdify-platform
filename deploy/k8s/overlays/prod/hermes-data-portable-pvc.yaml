@@ -1,8 +1,9 @@
 # Production adoption of the attended portable-R2 migration completed under
 # jvallery/proxmox-infrastructure#86 on 2026-08-01. The exact bound PV is pinned
 # so Git describes the existing data-bearing claim instead of provisioning a
-# blank replacement. The original verdify-hermes-iris-data PVC remains rendered
-# by the component as retained rollback material; cleanup is a separate action.
+# blank replacement. The original verdify-hermes-iris-data PVC is removed from
+# the production render by hermes-data-retired.patch.yaml after its independent
+# backup and replacement runtime were requalified.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:

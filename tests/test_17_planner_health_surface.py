@@ -990,15 +990,36 @@ def test_rendered_prod_hermes_supervision_preserves_singleton_exact_pin_and_both
         "volumeName": "pvc-6b6b2f30-c414-4325-a803-87b19010851f",
     }
     assert portable_pvc["metadata"]["labels"]["storage.vallery.net/policy"] == "rebuildable-replicated-r2"
-    # The pre-migration claim remains desired rollback material; no cleanup is
-    # coupled to the current-data adoption.
-    retained_pvc = pvc_by_name["verdify-hermes-iris-data"]
-    assert retained_pvc["metadata"]["annotations"]["argocd.argoproj.io/sync-options"] == "Prune=false"
+    assert "verdify-hermes-iris-data" not in pvc_by_name
     assert mount_by_name["tmp"]["mountPath"] == "/tmp"  # noqa: S108 - asserted ephemeral emptyDir mount
     assert env_by_name["HERMES_MCP_UNACKNOWLEDGED_DISCONNECT_RESTART_SECONDS"] == "600"
     assert env_by_name["HERMES_MCP_PROBE_STATE_PATH"] == (
         "/tmp/verdify-hermes-mcp-probe-state.json"  # noqa: S108 - non-secret per-process probe state
     )
+
+
+def test_prod_source_cannot_recreate_retired_hermes_claim():
+    rendered = subprocess.run(
+        ["kustomize", "build", "deploy/k8s/overlays/prod"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    resources = [resource for resource in yaml.safe_load_all(rendered) if isinstance(resource, dict)]
+    pvc_names = {
+        resource["metadata"]["name"] for resource in resources if resource.get("kind") == "PersistentVolumeClaim"
+    }
+    assert "verdify-hermes-iris-data-portable-20260801" in pvc_names
+    assert "verdify-hermes-iris-data" not in pvc_names
+
+    application = yaml.safe_load((REPO_ROOT / "deploy/k8s/argocd/apps/verdify-prod-dark.yaml").read_text())
+    ignored_pvcs = {
+        item.get("name")
+        for item in application["spec"].get("ignoreDifferences", [])
+        if item.get("kind") == "PersistentVolumeClaim"
+    }
+    assert "verdify-hermes-iris-data" not in ignored_pvcs
+    assert "verdify-hermes-iris-data-portable-20260801" in ignored_pvcs
 
 
 def test_materializer_runs_one_canonical_final_normalization_per_output(mcp_server, monkeypatch):
