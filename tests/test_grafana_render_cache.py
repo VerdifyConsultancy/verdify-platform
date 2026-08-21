@@ -90,3 +90,29 @@ def test_render_cache_runtime_is_pinned_unprivileged_and_credential_free():
             "files": ["default.conf=nginx-render-cache.conf"],
         }
     ]
+
+
+def test_grafana_service_never_selects_band_curve_maintenance_jobs():
+    grafana_documents = _documents("grafana.yaml")
+    deployment = next(document for document in grafana_documents if document["kind"] == "Deployment")
+    service = next(document for document in grafana_documents if document["kind"] == "Service")
+    database_policy = next(
+        document
+        for document in grafana_documents
+        if document["kind"] == "NetworkPolicy" and document["metadata"]["name"] == "allow-db-from-grafana"
+    )
+    refresh = _documents("band-curve-refresh-cronjob.yaml")[0]
+
+    service_selector = service["spec"]["selector"]
+    grafana_labels = deployment["spec"]["template"]["metadata"]["labels"]
+    refresh_labels = refresh["spec"]["jobTemplate"]["spec"]["template"]["metadata"]["labels"]
+
+    assert all(grafana_labels.get(key) == value for key, value in service_selector.items())
+    assert not all(refresh_labels.get(key) == value for key, value in service_selector.items())
+    assert refresh_labels["app.kubernetes.io/component"] == "grafana-maintenance"
+
+    allowed_components = {
+        peer["podSelector"]["matchLabels"]["app.kubernetes.io/component"]
+        for peer in database_policy["spec"]["ingress"][0]["from"]
+    }
+    assert allowed_components == {"grafana", "grafana-maintenance"}
