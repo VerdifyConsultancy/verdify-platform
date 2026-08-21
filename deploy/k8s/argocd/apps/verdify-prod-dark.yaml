@@ -62,8 +62,8 @@ spec:
     namespace: verdify-prod
   ignoreDifferences:
     # Bound fields are assigned by Kubernetes and are not a migration signal.
-    # Both the active portable claim and retained rollback claim are explicit
-    # desired resources; neither may be pruned by an Application reconcile.
+    # The active portable claim is an explicit desired resource and may not be
+    # pruned by an Application reconcile.
     - group: apps
       kind: StatefulSet
       name: verdify-db
@@ -71,12 +71,6 @@ spec:
       jsonPointers:
         - /spec/volumeClaimTemplates/0/spec/volumeMode
         - /spec/volumeClaimTemplates/0/status
-    - kind: PersistentVolumeClaim
-      name: verdify-hermes-iris-data
-      namespace: verdify-prod
-      jsonPointers:
-        - /spec/volumeMode
-        - /spec/volumeName
     - kind: PersistentVolumeClaim
       name: verdify-hermes-iris-data-portable-20260801
       namespace: verdify-prod
