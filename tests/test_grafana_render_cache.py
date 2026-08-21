@@ -78,6 +78,8 @@ def test_render_cache_runtime_is_pinned_unprivileged_and_credential_free():
     assert container["securityContext"]["capabilities"]["drop"] == ["ALL"]
     assert "env" not in container and "envFrom" not in container
     assert service["spec"]["ports"] == [{"name": "http", "port": 8080, "targetPort": "http"}]
+    assert service["spec"]["sessionAffinity"] == "ClientIP"
+    assert service["spec"]["sessionAffinityConfig"] == {"clientIP": {"timeoutSeconds": 600}}
     assert policy["spec"]["ingress"][0]["from"][0]["podSelector"]["matchLabels"] == {
         "app.kubernetes.io/component": "edge-traefik"
     }

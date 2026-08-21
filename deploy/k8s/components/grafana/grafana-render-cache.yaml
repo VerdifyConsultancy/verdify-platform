@@ -110,6 +110,13 @@ metadata:
     app.kubernetes.io/component: grafana-render-cache
 spec:
   type: ClusterIP
+  # Each replica has its own bounded emptyDir cache. Keep a given ingress
+  # source on one replica long enough for an immediate repeat render to hit
+  # the same cache instead of cold-rendering once per endpoint.
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 600
   selector:
     app.kubernetes.io/component: grafana-render-cache
   ports:
