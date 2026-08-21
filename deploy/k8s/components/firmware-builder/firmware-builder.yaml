@@ -119,7 +119,7 @@ spec:
             - name: builder
               # Official ESPHome image: carries the esphome CLI; PlatformIO
               # pulls the xtensa toolchain into the cache PVC on first run.
-              image: ghcr.io/esphome/esphome:2026.6.5
+              image: ghcr.io/esphome/esphome:2026.6.5@sha256:ffe23402d169fc9b8ff29fc3c9fc13b3c47e8a53726fce4569e2280bd534c84c
               securityContext:
                 allowPrivilegeEscalation: false
                 capabilities: {drop: ["ALL"]}
