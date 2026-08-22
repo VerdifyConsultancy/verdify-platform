@@ -37,6 +37,10 @@ metadata:
     app.kubernetes.io/component: lab-publisher
 spec:
   schedule: "*/10 * * * *"
+  # A run may legitimately cross the next ten-minute boundary while rebuilding
+  # the cache. Do not replay that missed tick after the active Job exits: doing
+  # so creates a permanent catch-up chain when runtime is just over ten minutes.
+  startingDeadlineSeconds: 30
   # Re-enabled after the repaired image passed its production recovery canary
   # on 2026-07-11: one bounded attempt per step, 323 pages emitted, all S3
   # deltas completed, and the database restart count remained unchanged.
