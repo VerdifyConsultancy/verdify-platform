@@ -1145,8 +1145,9 @@ def test_deployed_cache_layout_is_unique_restricted_and_preserves_time_budget():
     job_deadline = cronjob["spec"]["jobTemplate"]["spec"]["activeDeadlineSeconds"]
     assert step_timeout == 180
     assert rebuild_timeout == 300
-    assert job_deadline == 900
+    assert job_deadline == 1800
     assert step_timeout < rebuild_timeout < job_deadline
+    assert job_deadline >= 2 * (step_timeout + rebuild_timeout)
 
     for pod_spec in (publisher_spec, site_spec):
         pod_security = pod_spec["securityContext"]
