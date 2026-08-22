@@ -77,6 +77,17 @@ data:
     # preserves prior VM argv). The PGOPTIONS statement-timeout is injected as a
     # docker-exec extra flag in docker-exec mode. Call sites add -c "...".
     . "$(dirname "${BASH_SOURCE[0]}")/lib/psql-verdify.sh"
+    # verdify_psql_cmd is captured through process substitution below. Exports made
+    # inside that subshell cannot reach the eventual psql process, so materialize
+    # the non-secret connection environment in this parent shell first.
+    case "${VERDIFY_PSQL_MODE:-}" in
+      direct|in-cluster)
+        export PGHOST="${PGHOST:-${DB_HOST:-localhost}}"
+        export PGPORT="${PGPORT:-${DB_PORT:-5432}}"
+        export PGDATABASE="${PGDATABASE:-${VERDIFY_DB_NAME:-verdify}}"
+        export PGUSER="${PGUSER:-${VERDIFY_DB_USER:-verdify}}"
+        ;;
+    esac
     mapfile -t DB < <(verdify_psql_cmd -e "PGOPTIONS=-c statement_timeout=${DB_STATEMENT_TIMEOUT_MS}")
     DB+=(-t -A)
     mapfile -t DB_OPTIONAL < <(verdify_psql_cmd -e "PGOPTIONS=-c statement_timeout=${DB_OPTIONAL_STATEMENT_TIMEOUT_MS}")

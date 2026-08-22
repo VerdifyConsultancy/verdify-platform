@@ -50,6 +50,10 @@ metadata:
   name: verdify-ingestor
 spec:
   template:
+    metadata:
+      annotations:
+        # Deterministic restart trigger for the static subPath-mounted scripts.
+        verdify.io/gather-script-revision: "pghost-parent-env-v1"
     spec:
       initContainers:
         # ADDITIVE to the base wait-for-db initContainer (strategic merge keys by
