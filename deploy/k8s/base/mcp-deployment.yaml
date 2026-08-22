@@ -78,6 +78,12 @@ spec:
             # env entries (POSTGRES_PASSWORD above + DB_* from envFrom).
             - name: DB_DSN
               value: "postgresql://$(DB_USER):$(POSTGRES_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)"
+            # The legacy VM uses a local systemd path unit for immediate site
+            # publishing. In k3s, the source-owned lab-publisher CronJob is the
+            # publisher; disable the VM-only file trigger instead of writing to
+            # the container's intentionally read-only root filesystem.
+            - name: VERDIFY_SITE_PUBLISH_TRIGGER_PATH
+              value: ""
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

@@ -105,6 +105,10 @@ if _env_path.exists():
 # in-cluster Postgres endpoint moves this service off the VM with no code change.
 # Default below preserves the live VM connection (localhost:5432).
 DB_DSN = os.environ.get("DB_DSN", f"postgresql://verdify:{_db_pass}@localhost:5432/verdify")
+SITE_PUBLISH_TRIGGER_PATH = os.environ.get(
+    "VERDIFY_SITE_PUBLISH_TRIGGER_PATH",
+    "/var/local/verdify/state/plan-publish-trigger",
+).strip()
 MCP_DB_STATEMENT_TIMEOUT_MS = max(
     1000,
     int(os.environ.get("VERDIFY_MCP_DB_STATEMENT_TIMEOUT_MS", "15000")),
@@ -3427,9 +3431,10 @@ async def set_plan(
             from datetime import UTC
             from datetime import datetime as _dt
 
-            trigger_path = Path("/var/local/verdify/state/plan-publish-trigger")
-            trigger_path.parent.mkdir(parents=True, exist_ok=True)
-            trigger_path.write_text(f"{plan.plan_id}\n{_dt.now(UTC).isoformat()}\n")
+            if SITE_PUBLISH_TRIGGER_PATH:
+                trigger_path = Path(SITE_PUBLISH_TRIGGER_PATH)
+                trigger_path.parent.mkdir(parents=True, exist_ok=True)
+                trigger_path.write_text(f"{plan.plan_id}\n{_dt.now(UTC).isoformat()}\n")
         except Exception as e:  # never block plan persistence on trigger failures
             log_msg = f"plan-publish trigger write failed (non-fatal): {e}"
             print(log_msg)
@@ -3832,10 +3837,11 @@ async def plan_evaluate(plan_id: str, outcome_score: int, actual_outcome: str, l
 
         site_publish_triggered = False
         try:
-            trigger_path = Path("/var/local/verdify/state/plan-publish-trigger")
-            trigger_path.parent.mkdir(parents=True, exist_ok=True)
-            trigger_path.write_text(f"evaluation:{ev.plan_id}\n{datetime.now(ZoneInfo('UTC')).isoformat()}\n")
-            site_publish_triggered = True
+            if SITE_PUBLISH_TRIGGER_PATH:
+                trigger_path = Path(SITE_PUBLISH_TRIGGER_PATH)
+                trigger_path.parent.mkdir(parents=True, exist_ok=True)
+                trigger_path.write_text(f"evaluation:{ev.plan_id}\n{datetime.now(ZoneInfo('UTC')).isoformat()}\n")
+                site_publish_triggered = True
         except Exception as e:  # never block evaluation persistence on publish trigger failures
             print(f"plan-evaluate publish trigger write failed (non-fatal): {e}")
 
