@@ -82,6 +82,7 @@ spec:
             # publishing. In k3s, the source-owned lab-publisher CronJob is the
             # publisher; disable the VM-only file trigger instead of writing to
             # the container's intentionally read-only root filesystem.
+            # Post-merge restart: verdify-mcp.
             - name: VERDIFY_SITE_PUBLISH_TRIGGER_PATH
               value: ""
           securityContext:
