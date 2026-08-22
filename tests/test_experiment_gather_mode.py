@@ -121,6 +121,16 @@ def _run_gather(tmp_path: Path, args: list[str], env_extra: dict[str, str] | Non
     )
 
 
+def test_gather_materializes_direct_pg_env_before_process_substitution():
+    """The mapped psql argv must inherit TCP connection variables, not a local socket."""
+    source = GATHER_SCRIPT.read_text()
+    source_pos = source.index('. "$(dirname "${BASH_SOURCE[0]}")/lib/psql-verdify.sh"')
+    mapfile_pos = source.index("mapfile -t DB < <(verdify_psql_cmd", source_pos)
+    block = source[source_pos:mapfile_pos]
+    for key in ("PGHOST", "PGPORT", "PGDATABASE", "PGUSER"):
+        assert f"export {key}=" in block
+
+
 @pytest.fixture(autouse=True)
 def _clean_experiment_env(monkeypatch):
     monkeypatch.delenv("VERDIFY_POLICY_VECTOR_MODE", raising=False)
