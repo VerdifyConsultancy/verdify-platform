@@ -1895,7 +1895,7 @@ def test_plan_evaluate_triggers_public_site_publish():
     start = server.index("async def plan_evaluate")
     end = server.index("@mcp.tool()", start + 1) if "@mcp.tool()" in server[start + 1 :] else len(server)
     body = server[start:end]
-    assert 'Path("/var/local/verdify/state/plan-publish-trigger")' in body
+    assert "SITE_PUBLISH_TRIGGER_PATH" in body
     assert "evaluation:{ev.plan_id}" in body
     assert "site_publish_triggered" in body
 
@@ -2113,9 +2113,15 @@ def test_mcp_set_plan_triggers_public_site_publish():
     start = server.index("async def set_plan")
     end = server.index("@mcp.tool()", start + 1)
     body = server[start:end]
-    assert 'Path("/var/local/verdify/state/plan-publish-trigger")' in body
+    assert "SITE_PUBLISH_TRIGGER_PATH" in body
     assert "trigger_path.write_text" in body
     assert "plan.plan_id" in body
+
+
+def test_k3s_mcp_disables_vm_only_site_publish_file_trigger():
+    deployment = (REPO_ROOT / "deploy" / "k8s" / "base" / "mcp-deployment.yaml").read_text()
+    assert "VERDIFY_SITE_PUBLISH_TRIGGER_PATH" in deployment
+    assert 'value: ""' in deployment
 
 
 def test_mcp_set_plan_populates_plan_journal_feedback_fields():
