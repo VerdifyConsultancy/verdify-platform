@@ -1139,6 +1139,9 @@ def test_deployed_cache_layout_is_unique_restricted_and_preserves_time_budget():
 
     publisher_container = publisher_spec["containers"][0]
     publisher_env = {item["name"]: item.get("value") for item in publisher_container["env"]}
+    assert cronjob["spec"]["schedule"] == "*/10 * * * *"
+    assert cronjob["spec"]["concurrencyPolicy"] == "Forbid"
+    assert cronjob["spec"]["startingDeadlineSeconds"] == 30
     assert publisher_env["LAB_WORK_ROOT"] == "/work/publisher"
     step_timeout = int(publisher_env["VERDIFY_PUBLISH_STEP_TIMEOUT"])
     rebuild_timeout = int(publisher_env["VERDIFY_PUBLISH_REBUILD_TIMEOUT"])
