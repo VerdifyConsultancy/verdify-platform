@@ -64,6 +64,12 @@ spec:
       # is safe and makes the arm a pure config flip. A pod with no projected SA
       # token, or with the flag off, degrades to the pre-fence always-held no-op.
       serviceAccountName: verdify-ingestor
+      # Device writers are ordinary control-plane workloads, not GPU services.
+      # Keep the hard class boundary generic so the scheduler can select any
+      # healthy general worker while the prod overlay's soft node6 avoidance
+      # remains an independent preference.
+      nodeSelector:
+        agentfleet.vallery.net/node-class: general
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
@@ -173,10 +179,6 @@ spec:
           # with a generous initialDelay so transient DB latency does not restart
           # the single writer. Wired in the containerize PR; omitted here to keep
           # the base manifest free of an entrypoint that does not exist yet.
-      # gated-§3.4: when (and only when) the device-VLAN reachability spike clears
-      # AND verify the exact target and prerequisites, this pod is pinned to a greenhouse-VLAN-reachable node
-      # via nodeSelector / affinity. Left UNSET so the base never schedules it
-      # somewhere assuming reachability it does not have.
       volumes:
         - name: tmp
           emptyDir: {}

@@ -52,6 +52,11 @@ spec:
       imagePullSecrets:
         - name: zot-origin-cluster-pull  # zot origin (ADR-0021); ghcr kept during transition
         - name: ghcr-jvallery-readonly
+      # The HA writer needs services-VLAN access but no GPU. Select the general
+      # worker class without hard-pinning a hostname so scheduler failover stays
+      # available across the eligible pool.
+      nodeSelector:
+        agentfleet.vallery.net/node-class: general
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
