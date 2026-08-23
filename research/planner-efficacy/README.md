@@ -37,6 +37,21 @@ therefore includes a prospective randomized switchback design.
 
 ## Reproduce
 
+### Protocol-v2 source-only contracts
+
+Regenerate the additive protocol-v2 profile, provisional joint-power, schedule
+golden, and analyzer golden artifacts without a database/provider/device call:
+
+```bash
+PYTHONPATH=research/planner-efficacy:. \
+  uv run --project research/planner-efficacy \
+  research/planner-efficacy/generate_v2_artifacts.py
+```
+
+The generated power file is a transparent planning scenario, not a frozen
+trial design or efficacy result. Its missing provider replay and exact
+six-hour raw-data refresh are recorded in the artifact itself.
+
 Extract the four input files through the repository's read-only database
 helper. Keep the output outside Git because it contains operational telemetry:
 

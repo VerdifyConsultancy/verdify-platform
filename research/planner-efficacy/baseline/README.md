@@ -1,5 +1,21 @@
 # Frozen-FSM baseline candidate + AI template candidates (Lane G, #588)
 
+## Additive protocol-v2 source-grid candidates
+
+`planner-switchback-v2-profiles.json` preserves the historical artifacts below
+and builds three new complete 48-field candidates against the source ESPHome
+entity grid. It records six explicit design choices for historical off-grid
+values (`dwell_gate_ms`, `min_fog_on_s`, `mister_all_delay_s`,
+`mister_engage_delay_s`, `vpd_watch_dwell_s`, and moderate
+`mister_pulse_gap_s`); runtime rounding is forbidden. Every common field is
+validated, not only the 11 treatment fields, and moderate/aggressive may differ
+from baseline only inside that allowlist.
+
+These are source-grid candidates, not physical approval. The exact running
+device entity grid and the multidisciplinary #641 signoff remain required.
+Regenerate without network/database/device access using
+`generate_v2_artifacts.py` from the parent research directory.
+
 Status: **CANDIDATE — pending horticultural/firmware/safety approval
 (gate:jason)**. Nothing in this directory is an executable treatment
 definition; per audit §8.2 the baseline becomes usable only after the full
