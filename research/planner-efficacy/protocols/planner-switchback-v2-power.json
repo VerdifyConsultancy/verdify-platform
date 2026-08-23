@@ -1,0 +1,198 @@
+{
+  "artifact_sha256": "6231b9f99ebed0ea758a0c056f9c338b37e473d002d9059c1d24aa383e85e32b",
+  "assumptions": {
+    "complete_pair_probability": 0.9995,
+    "correlation": [
+      [
+        1.0,
+        0.45,
+        -0.25
+      ],
+      [
+        0.45,
+        1.0,
+        -0.3
+      ],
+      [
+        -0.25,
+        -0.3,
+        1.0
+      ]
+    ],
+    "diluted_true_effect": [
+      0.0,
+      0.0,
+      -283.21872568925926
+    ],
+    "minimum_joint_power": 0.8,
+    "one_sided_confidence_level": 0.975,
+    "paired_sd": [
+      0.12198766625845635,
+      0.43532608025564046,
+      1062.9947787716267
+    ],
+    "selector_frequencies": {
+      "aggressive": 0.2,
+      "baseline": 0.25,
+      "fallback": 0.05,
+      "moderate": 0.5
+    },
+    "selector_replay": {
+      "aggressive": 20,
+      "baseline": 25,
+      "fallback": 5,
+      "moderate": 50
+    },
+    "true_nonbaseline_effect": [
+      0.0,
+      0.0,
+      -404.5981795560847
+    ]
+  },
+  "claim": "planning operating characteristics only; no randomized efficacy data were read or computed",
+  "expected_climate_bins": 72,
+  "limitations": [
+    "The checked-in historical paired scales use [02:00,24:00) and 88 bins; raw data are not in Git, so the required [06:00,24:00) 72-bin scales must be regenerated before design lock.",
+    "Provider/model/prompt are not frozen and no pretrial selector replay exists; the 25/50/20/5 baseline/moderate/aggressive/fallback counts are an explicit planning assumption, not observed selection frequency.",
+    "The cross-endpoint correlation matrix is a plausible planning model, not an estimate from randomized or arm-resolved outcomes.",
+    "Complete-pair probability 0.9995 is a reliability target assumption and must be replaced by source-bound six-hour climate/equipment completeness evidence.",
+    "The nonbaseline benefit effect is an assumed 20 percent reduction from the historical 2022.9908977804234-minute mean; it is not a causal effect estimate.",
+    "The resulting 150-pair choice applies only to this provisional model. A final fixed m must be chosen once after the missing pre-draw inputs are frozen and before any schedule draw; it may never adapt to randomized outcomes."
+  ],
+  "primary_window_local": "[06:00,24:00)",
+  "schema": "verdify-switchback-v2-power-design",
+  "selected_benefit_endpoint": "nine_control_state_minutes",
+  "selection": {
+    "chosen_local_days": 300,
+    "chosen_pairs": 150,
+    "evaluations": [
+      {
+        "complete_all_pairs_probability_model": 0.9925261932102195,
+        "diluted_true_effect": {
+          "nine_control_state_minutes": -283.21872568925926,
+          "temperature_corridor_distance_f": 0.0,
+          "vpd_corridor_distance_kpa": 0.0
+        },
+        "joint_advance_power": 0.03312,
+        "marginal_unconditional_power": {
+          "nine_control_state_minutes": 0.15692,
+          "temperature_corridor_distance_f": 0.97756,
+          "vpd_corridor_distance_kpa": 0.3148
+        },
+        "monte_carlo_standard_error": 0.0011317785225034092,
+        "pairs": 15,
+        "passes_minimum_joint_power": false,
+        "repetitions": 25000,
+        "seed": 588639,
+        "simulated_complete_fraction": 0.99292
+      },
+      {
+        "complete_all_pairs_probability_model": 0.9851082442083701,
+        "diluted_true_effect": {
+          "nine_control_state_minutes": -283.21872568925926,
+          "temperature_corridor_distance_f": 0.0,
+          "vpd_corridor_distance_kpa": 0.0
+        },
+        "joint_advance_power": 0.13776,
+        "marginal_unconditional_power": {
+          "nine_control_state_minutes": 0.28976,
+          "temperature_corridor_distance_f": 0.98548,
+          "vpd_corridor_distance_kpa": 0.575
+        },
+        "monte_carlo_standard_error": 0.0021797447777205476,
+        "pairs": 30,
+        "passes_minimum_joint_power": false,
+        "repetitions": 25000,
+        "seed": 588640,
+        "simulated_complete_fraction": 0.98552
+      },
+      {
+        "complete_all_pairs_probability_model": 0.9704382528072977,
+        "diluted_true_effect": {
+          "nine_control_state_minutes": -283.21872568925926,
+          "temperature_corridor_distance_f": 0.0,
+          "vpd_corridor_distance_kpa": 0.0
+        },
+        "joint_advance_power": 0.43712,
+        "marginal_unconditional_power": {
+          "nine_control_state_minutes": 0.51448,
+          "temperature_corridor_distance_f": 0.97112,
+          "vpd_corridor_distance_kpa": 0.8558
+        },
+        "monte_carlo_standard_error": 0.003137171373068421,
+        "pairs": 60,
+        "passes_minimum_joint_power": false,
+        "repetitions": 25000,
+        "seed": 588641,
+        "simulated_complete_fraction": 0.97112
+      },
+      {
+        "complete_all_pairs_probability_model": 0.9559867233356354,
+        "diluted_true_effect": {
+          "nine_control_state_minutes": -283.21872568925926,
+          "temperature_corridor_distance_f": 0.0,
+          "vpd_corridor_distance_kpa": 0.0
+        },
+        "joint_advance_power": 0.64416,
+        "marginal_unconditional_power": {
+          "nine_control_state_minutes": 0.671,
+          "temperature_corridor_distance_f": 0.95528,
+          "vpd_corridor_distance_kpa": 0.92436
+        },
+        "monte_carlo_standard_error": 0.003027988734457247,
+        "pairs": 90,
+        "passes_minimum_joint_power": false,
+        "repetitions": 25000,
+        "seed": 588642,
+        "simulated_complete_fraction": 0.95528
+      },
+      {
+        "complete_all_pairs_probability_model": 0.9417504025116806,
+        "diluted_true_effect": {
+          "nine_control_state_minutes": -283.21872568925926,
+          "temperature_corridor_distance_f": 0.0,
+          "vpd_corridor_distance_kpa": 0.0
+        },
+        "joint_advance_power": 0.776,
+        "marginal_unconditional_power": {
+          "nine_control_state_minutes": 0.78212,
+          "temperature_corridor_distance_f": 0.94044,
+          "vpd_corridor_distance_kpa": 0.934
+        },
+        "monte_carlo_standard_error": 0.002636846601529941,
+        "pairs": 120,
+        "passes_minimum_joint_power": false,
+        "repetitions": 25000,
+        "seed": 588643,
+        "simulated_complete_fraction": 0.94044
+      },
+      {
+        "complete_all_pairs_probability_model": 0.9277260855008075,
+        "diluted_true_effect": {
+          "nine_control_state_minutes": -283.21872568925926,
+          "temperature_corridor_distance_f": 0.0,
+          "vpd_corridor_distance_kpa": 0.0
+        },
+        "joint_advance_power": 0.83468,
+        "marginal_unconditional_power": {
+          "nine_control_state_minutes": 0.83592,
+          "temperature_corridor_distance_f": 0.92844,
+          "vpd_corridor_distance_kpa": 0.92712
+        },
+        "monte_carlo_standard_error": 0.0023493769182487516,
+        "pairs": 150,
+        "passes_minimum_joint_power": true,
+        "repetitions": 25000,
+        "seed": 588644,
+        "simulated_complete_fraction": 0.92844
+      }
+    ],
+    "no_adaptive_sample_size": true
+  },
+  "source_files_sha256": {
+    "research/planner-efficacy/results-current-firmware-supplement-2026-08-14.json": "0f477b4b39268b0ed03a02740c01e7f25b3d4b47ff390e6aa3c36eb8254726cf",
+    "research/planner-efficacy/switchback/v2_power.py": "a33de7aa20ee22bbca9f6eecdfcd7671754f7fb92760b3650dcffe458bda8bb4"
+  },
+  "status": "PROVISIONAL PRE-DRAW SCENARIO \u2014 not eligible for randomization lock",
+  "version": 1
+}

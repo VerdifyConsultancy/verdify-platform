@@ -1,0 +1,23 @@
+{
+  "expected": {
+    "boundary": 0.0,
+    "mean": -2.0,
+    "pairs": 3,
+    "passes": false,
+    "sample_sd": 1.0,
+    "standard_error": 0.5773502691896258,
+    "t_critical": 4.302652729749462,
+    "upper_bound": 0.48413771175033027
+  },
+  "hand_calculation": "mean=-2; sample_sd=1; standard_error=1/sqrt(3); upper=-2+t(.975,2)/sqrt(3)",
+  "input": {
+    "boundary": 0.0,
+    "pair_contrasts": [
+      -3.0,
+      -2.0,
+      -1.0
+    ]
+  },
+  "schema": "verdify-switchback-v2-analyzer-golden",
+  "version": 1
+}

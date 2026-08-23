@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://verdify.dev/schemas/blinded-schedule-v2.schema.json",
+  "title": "Verdify protocol-v2 blinded switchback schedule",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "assignments",
+    "namespace_uuid",
+    "pairs",
+    "schema",
+    "start_local_date",
+    "study_id",
+    "timezone"
+  ],
+  "properties": {
+    "assignments": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "assignment_uuid",
+          "blinded_label",
+          "day_in_pair",
+          "local_date",
+          "pair_index",
+          "utc_end",
+          "utc_start"
+        ],
+        "properties": {
+          "assignment_uuid": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+          },
+          "blinded_label": {"enum": ["X", "Y"]},
+          "day_in_pair": {"enum": [1, 2]},
+          "local_date": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+          "pair_index": {"type": "integer", "minimum": 0, "maximum": 4294967295},
+          "utc_end": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+          "utc_start": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"}
+        }
+      }
+    },
+    "namespace_uuid": {"type": "string", "format": "uuid"},
+    "pairs": {"type": "integer", "minimum": 1},
+    "schema": {"const": "verdify-switchback-blinded-schedule-v2"},
+    "start_local_date": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+    "study_id": {"type": "string", "minLength": 1},
+    "timezone": {"type": "string", "minLength": 1}
+  },
+  "x-verdify-field-contract-sha256": "f1cd82e7883f912379680f85a12420f4ecf5aaaaefb3c78373708ccedefab892"
+}

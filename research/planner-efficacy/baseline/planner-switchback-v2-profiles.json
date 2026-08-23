@@ -1,0 +1,416 @@
+{
+  "explicit_grid_design_decisions": [
+    {
+      "field": "dwell_gate_ms",
+      "from": 225000.0,
+      "profile_scope": "all",
+      "rationale": "225000 ms lies halfway between entity points; select the longer 240000 ms anti-chatter dwell explicitly",
+      "to": 240000
+    },
+    {
+      "field": "min_fog_on_s",
+      "from": 59.0,
+      "profile_scope": "all",
+      "rationale": "historical 59 s cannot land on the 15 s entity grid; select the adjacent 60 s point",
+      "to": 60
+    },
+    {
+      "field": "mister_all_delay_s",
+      "from": 80.0,
+      "profile_scope": "all",
+      "rationale": "historical 80 s cannot land on the 30 s entity grid; select nearest 90 s",
+      "to": 90
+    },
+    {
+      "field": "mister_engage_delay_s",
+      "from": 40.0,
+      "profile_scope": "all",
+      "rationale": "historical 40 s cannot land on the 30 s entity grid; select nearest 30 s",
+      "to": 30
+    },
+    {
+      "field": "vpd_watch_dwell_s",
+      "from": 56.0,
+      "profile_scope": "all",
+      "rationale": "historical 56 s cannot land on the 15 s entity grid; select nearest 60 s",
+      "to": 60
+    },
+    {
+      "field": "mister_pulse_gap_s",
+      "from": 38.0,
+      "profile_scope": "moderate",
+      "rationale": "historical candidate 38 s cannot land on the 5 s entity grid; select nearest 40 s",
+      "to": 40
+    }
+  ],
+  "profiles": {
+    "aggressive": {
+      "field_count": 48,
+      "policy_state_content_sha256": "fa08c3e12d4951c77ac13c3584f48f010dfe48cee8385fadce612a938e8b0c1d",
+      "values": {
+        "band_track_fraction": 0.0,
+        "cold_vent_guard_delta_f": 8.0,
+        "cool_exit_hysteresis_f": 1.7,
+        "cool_stage2_exit_hysteresis_f": 1.0,
+        "cool_stage2_over_high_f": 0.5,
+        "direct_wet_stress_min_dew_margin_f": 8.0,
+        "direct_wet_stress_vpd_margin_kpa": 0.05,
+        "dwell_gate_ms": 240000,
+        "enthalpy_close": 1.0,
+        "enthalpy_open": -2.0,
+        "fog_escalation_kpa": 0.2,
+        "heat_hysteresis": 1.0,
+        "min_fan_off_s": 90.0,
+        "min_fan_on_s": 120.0,
+        "min_fog_off_s": 30.0,
+        "min_fog_on_s": 90.0,
+        "min_heat_off_s": 180.0,
+        "min_heat_on_s": 120.0,
+        "min_vent_off_s": 60.0,
+        "min_vent_on_s": 60.0,
+        "mist_backoff_s": 600.0,
+        "mist_max_closed_vent_s": 600.0,
+        "mist_thermal_relief_s": 90.0,
+        "mister_all_delay_s": 60.0,
+        "mister_all_kpa": 1.2,
+        "mister_center_penalty": 0.5,
+        "mister_engage_delay_s": 30,
+        "mister_engage_kpa": 1.0,
+        "mister_min_off_s": 45.0,
+        "mister_pulse_gap_s": 30.0,
+        "mister_pulse_on_s": 75.0,
+        "mister_vpd_weight": 1.5,
+        "mister_water_budget_gal": 250.0,
+        "night_vpd_bias_kpa": 0.0,
+        "outdoor_staleness_max_s": 600.0,
+        "sw_cool_all_fans_at_high_enabled": true,
+        "sw_direct_wet_gate_enabled": true,
+        "sw_direct_wet_stress_override_enabled": true,
+        "sw_dwell_gate_enabled": true,
+        "sw_fog_closes_vent": true,
+        "sw_mister_closes_vent": false,
+        "sw_summer_vent_enabled": true,
+        "temp_hysteresis": 1.7,
+        "vent_exchange_fraction": 0.3,
+        "vent_prefer_dp_delta_f": 3.0,
+        "vent_prefer_temp_delta_f": 4.0,
+        "vpd_hysteresis": 0.2,
+        "vpd_watch_dwell_s": 60
+      },
+      "wire_bytes": 178,
+      "wire_hex": "56505631020bdd80472f2a98453000010000021000031100040a00050500071000080100090003a980000a0002000bfffc000c02000d0a000e005a000f00780010001e0011005a001200b4001300780014003c0015003c00160258001702580018005a0019003c001a18001b05001c001e001d14001e2d001f1e00204b002103002209c400230000240258002501002601002701002801002901002a00002b01002c11002d06002e06002f0800300400313c"
+    },
+    "baseline": {
+      "field_count": 48,
+      "policy_state_content_sha256": "6f823c63a56686da33bf258e7c2380a4c87292d431f09b4f79c81e71b285cf8e",
+      "values": {
+        "band_track_fraction": 0.0,
+        "cold_vent_guard_delta_f": 8.0,
+        "cool_exit_hysteresis_f": 1.7,
+        "cool_stage2_exit_hysteresis_f": 1.0,
+        "cool_stage2_over_high_f": 0.0,
+        "direct_wet_stress_min_dew_margin_f": 8.0,
+        "direct_wet_stress_vpd_margin_kpa": 0.05,
+        "dwell_gate_ms": 240000,
+        "enthalpy_close": 1.0,
+        "enthalpy_open": -2.0,
+        "fog_escalation_kpa": 0.2,
+        "heat_hysteresis": 1.0,
+        "min_fan_off_s": 90.0,
+        "min_fan_on_s": 120.0,
+        "min_fog_off_s": 60.0,
+        "min_fog_on_s": 60,
+        "min_heat_off_s": 180.0,
+        "min_heat_on_s": 120.0,
+        "min_vent_off_s": 60.0,
+        "min_vent_on_s": 60.0,
+        "mist_backoff_s": 600.0,
+        "mist_max_closed_vent_s": 600.0,
+        "mist_thermal_relief_s": 90.0,
+        "mister_all_delay_s": 90,
+        "mister_all_kpa": 1.4,
+        "mister_center_penalty": 0.5,
+        "mister_engage_delay_s": 30,
+        "mister_engage_kpa": 1.2,
+        "mister_min_off_s": 45.0,
+        "mister_pulse_gap_s": 30.0,
+        "mister_pulse_on_s": 90.0,
+        "mister_vpd_weight": 1.5,
+        "mister_water_budget_gal": 300.0,
+        "night_vpd_bias_kpa": 0.0,
+        "outdoor_staleness_max_s": 600.0,
+        "sw_cool_all_fans_at_high_enabled": true,
+        "sw_direct_wet_gate_enabled": true,
+        "sw_direct_wet_stress_override_enabled": true,
+        "sw_dwell_gate_enabled": true,
+        "sw_fog_closes_vent": true,
+        "sw_mister_closes_vent": false,
+        "sw_summer_vent_enabled": true,
+        "temp_hysteresis": 1.7,
+        "vent_exchange_fraction": 0.3,
+        "vent_prefer_dp_delta_f": 3.0,
+        "vent_prefer_temp_delta_f": 4.0,
+        "vpd_hysteresis": 0.2,
+        "vpd_watch_dwell_s": 60
+      },
+      "wire_bytes": 178,
+      "wire_hex": "56505631020bdd80472f2a98453000010000021000031100040a00050000071000080100090003a980000a0002000bfffc000c02000d0a000e005a000f00780010003c0011003c001200b4001300780014003c0015003c00160258001702580018005a0019005a001a1c001b05001c001e001d18001e2d001f1e00205a00210300220bb800230000240258002501002601002701002801002901002a00002b01002c11002d06002e06002f0800300400313c"
+    },
+    "moderate": {
+      "field_count": 48,
+      "policy_state_content_sha256": "816bee6d7557b2ea4dfbc8afe13184c415089bdabb13c1a0ac1f41f8099b1c73",
+      "values": {
+        "band_track_fraction": 0.0,
+        "cold_vent_guard_delta_f": 8.0,
+        "cool_exit_hysteresis_f": 1.7,
+        "cool_stage2_exit_hysteresis_f": 1.0,
+        "cool_stage2_over_high_f": 0.8,
+        "direct_wet_stress_min_dew_margin_f": 8.0,
+        "direct_wet_stress_vpd_margin_kpa": 0.05,
+        "dwell_gate_ms": 240000,
+        "enthalpy_close": 1.0,
+        "enthalpy_open": -2.0,
+        "fog_escalation_kpa": 0.3,
+        "heat_hysteresis": 1.0,
+        "min_fan_off_s": 90.0,
+        "min_fan_on_s": 120.0,
+        "min_fog_off_s": 60.0,
+        "min_fog_on_s": 60.0,
+        "min_heat_off_s": 180.0,
+        "min_heat_on_s": 120.0,
+        "min_vent_off_s": 60.0,
+        "min_vent_on_s": 60.0,
+        "mist_backoff_s": 600.0,
+        "mist_max_closed_vent_s": 600.0,
+        "mist_thermal_relief_s": 90.0,
+        "mister_all_delay_s": 90.0,
+        "mister_all_kpa": 1.35,
+        "mister_center_penalty": 0.5,
+        "mister_engage_delay_s": 30,
+        "mister_engage_kpa": 1.2,
+        "mister_min_off_s": 45.0,
+        "mister_pulse_gap_s": 40,
+        "mister_pulse_on_s": 60.0,
+        "mister_vpd_weight": 1.5,
+        "mister_water_budget_gal": 220.0,
+        "night_vpd_bias_kpa": 0.0,
+        "outdoor_staleness_max_s": 600.0,
+        "sw_cool_all_fans_at_high_enabled": true,
+        "sw_direct_wet_gate_enabled": true,
+        "sw_direct_wet_stress_override_enabled": true,
+        "sw_dwell_gate_enabled": true,
+        "sw_fog_closes_vent": true,
+        "sw_mister_closes_vent": false,
+        "sw_summer_vent_enabled": true,
+        "temp_hysteresis": 1.7,
+        "vent_exchange_fraction": 0.3,
+        "vent_prefer_dp_delta_f": 3.0,
+        "vent_prefer_temp_delta_f": 4.0,
+        "vpd_hysteresis": 0.2,
+        "vpd_watch_dwell_s": 60
+      },
+      "wire_bytes": 178,
+      "wire_hex": "56505631020bdd80472f2a98453000010000021000031100040a00050800071000080100090003a980000a0002000bfffc000c03000d0a000e005a000f00780010003c0011003c001200b4001300780014003c0015003c00160258001702580018005a0019005a001a1b001b05001c001e001d18001e2d001f2800203c0021030022089800230000240258002501002601002701002801002901002a00002b01002c11002d06002e06002f0800300400313c"
+    }
+  },
+  "runtime_rounding_allowed": false,
+  "schema": "verdify-switchback-v2-profile-set",
+  "source_entity_grid": {
+    "band_track_fraction": {
+      "origin": 0,
+      "step": 0.05
+    },
+    "cold_vent_guard_delta_f": {
+      "origin": 0,
+      "step": 0.5
+    },
+    "cool_exit_hysteresis_f": {
+      "origin": 0.3,
+      "step": 0.1
+    },
+    "cool_stage2_exit_hysteresis_f": {
+      "origin": 0.3,
+      "step": 0.1
+    },
+    "cool_stage2_over_high_f": {
+      "origin": 0,
+      "step": 0.1
+    },
+    "direct_wet_stress_min_dew_margin_f": {
+      "origin": 3,
+      "step": 0.5
+    },
+    "direct_wet_stress_vpd_margin_kpa": {
+      "origin": 0,
+      "step": 0.05
+    },
+    "dwell_gate_ms": {
+      "origin": 60000,
+      "step": 30000
+    },
+    "enthalpy_close": {
+      "origin": -5,
+      "step": 0.5
+    },
+    "enthalpy_open": {
+      "origin": -5,
+      "step": 0.5
+    },
+    "fog_escalation_kpa": {
+      "origin": 0.1,
+      "step": 0.1
+    },
+    "heat_hysteresis": {
+      "origin": 0,
+      "step": 0.1
+    },
+    "min_fan_off_s": {
+      "origin": 30,
+      "step": 10
+    },
+    "min_fan_on_s": {
+      "origin": 30,
+      "step": 10
+    },
+    "min_fog_off_s": {
+      "origin": 15,
+      "step": 15
+    },
+    "min_fog_on_s": {
+      "origin": 15,
+      "step": 15
+    },
+    "min_heat_off_s": {
+      "origin": 60,
+      "step": 10
+    },
+    "min_heat_on_s": {
+      "origin": 30,
+      "step": 10
+    },
+    "min_vent_off_s": {
+      "origin": 10,
+      "step": 10
+    },
+    "min_vent_on_s": {
+      "origin": 10,
+      "step": 10
+    },
+    "mist_backoff_s": {
+      "origin": 60,
+      "step": 60
+    },
+    "mist_max_closed_vent_s": {
+      "origin": 120,
+      "step": 60
+    },
+    "mist_thermal_relief_s": {
+      "origin": 30,
+      "step": 30
+    },
+    "mister_all_delay_s": {
+      "origin": 60,
+      "step": 30
+    },
+    "mister_all_kpa": {
+      "origin": 1,
+      "step": 0.05
+    },
+    "mister_center_penalty": {
+      "origin": 0,
+      "step": 0.1
+    },
+    "mister_engage_delay_s": {
+      "origin": 30,
+      "step": 30
+    },
+    "mister_engage_kpa": {
+      "origin": 0.5,
+      "step": 0.05
+    },
+    "mister_min_off_s": {
+      "origin": 30,
+      "step": 5
+    },
+    "mister_pulse_gap_s": {
+      "origin": 10,
+      "step": 5
+    },
+    "mister_pulse_on_s": {
+      "origin": 30,
+      "step": 5
+    },
+    "mister_vpd_weight": {
+      "origin": 0.5,
+      "step": 0.5
+    },
+    "mister_water_budget_gal": {
+      "origin": 100,
+      "step": 10
+    },
+    "night_vpd_bias_kpa": {
+      "origin": 0,
+      "step": 0.01
+    },
+    "outdoor_staleness_max_s": {
+      "origin": 120,
+      "step": 30
+    },
+    "temp_hysteresis": {
+      "origin": 0.5,
+      "step": 0.1
+    },
+    "vent_exchange_fraction": {
+      "origin": 0.1,
+      "step": 0.05
+    },
+    "vent_prefer_dp_delta_f": {
+      "origin": 2,
+      "step": 0.5
+    },
+    "vent_prefer_temp_delta_f": {
+      "origin": 2,
+      "step": 0.5
+    },
+    "vpd_hysteresis": {
+      "origin": 0.05,
+      "step": 0.05
+    },
+    "vpd_watch_dwell_s": {
+      "origin": 15,
+      "step": 15
+    }
+  },
+  "source_evidence": {
+    "audited_deployed_firmware_revision": "2026.7.10.1500.09ee886",
+    "claim_limit": "source/deployed-firmware-code comparison only, not a raw running-entity read; issue 641 physical verification is still required",
+    "historical_baseline_path": "research/planner-efficacy/baseline/frozen-fsm-baseline-candidate-2026-08-14.json",
+    "historical_baseline_sha256": "d483ae2b90c323f66609372ac15f6627b02c4ad27a3aead9126308967c6807ca",
+    "historical_template_path": "research/planner-efficacy/baseline/ai-template-candidates-2026-08-14.json",
+    "historical_template_sha256": "73bc9c885930e2fb978901bfc89b9d284f8c8bb4d55b7a9e785691433476d63b",
+    "running_device_entity_grid_verified": false,
+    "source_entity_grid_path": "firmware/greenhouse/tunables.yaml",
+    "source_entity_grid_sha256": "6852247e30875062ab1340f857e30e9f761ae8591de19b933c97012d6394cd9b",
+    "source_vs_audited_firmware_grid_comparison": "all 48 candidate values were checked against the source entity grid associated with the audited firmware path; six off-grid historical inputs were replaced only by the explicit decisions above"
+  },
+  "status": "SOURCE-GRID CANDIDATE \u2014 running-device grid and multidisciplinary physical approval still required",
+  "treatment_allowlist": [
+    "cool_stage2_over_high_f",
+    "fog_escalation_kpa",
+    "min_fog_off_s",
+    "min_fog_on_s",
+    "mister_all_delay_s",
+    "mister_all_kpa",
+    "mister_engage_kpa",
+    "mister_pulse_gap_s",
+    "mister_pulse_on_s",
+    "mister_water_budget_gal",
+    "sw_cool_all_fans_at_high_enabled"
+  ],
+  "version": 1,
+  "wire_schema": {
+    "field_count": 48,
+    "manifest_digest_sha256": "0bdd80472f2a9845c24a78cd7d6662e0523314afc5f3149233c08a8e8aedb318",
+    "version": 2
+  }
+}
