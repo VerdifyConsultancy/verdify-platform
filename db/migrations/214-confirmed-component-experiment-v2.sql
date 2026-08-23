@@ -8,8 +8,10 @@
 --
 -- NON-SELF-TRANSACTIONAL / ROLLBACK SAFE: there is no top-level BEGIN or
 -- COMMIT.  The migration is safe for the migration runner's outer transaction
--- and creates only additive columns/objects.  Functional rollback drops the
--- v2 objects and columns after first preserving any evidence rows.
+-- and keeps schema changes additive.  Duty-role normalization is transactional
+-- and limited to the six dedicated v2 identities.  Functional rollback drops
+-- the v2 objects and columns after first preserving any evidence rows; retaining
+-- the NOLOGIN/non-elevated role posture is the safe rollback default.
 --
 -- SECURITY: application roles receive function/view access only.  Every base
 -- table is denied to PUBLIC; the secret/mapping relation is denied even to the
@@ -22,21 +24,77 @@
 DO $roles$
 DECLARE
     r text;
-BEGIN
-    FOREACH r IN ARRAY ARRAY[
+    member_role text;
+    granted_role text;
+    role_state record;
+    migrator_is_super boolean;
+    managed_roles text[] := ARRAY[
         'verdify_experiment_v2_owner',
         'verdify_experiment_randomizer',
         'verdify_experiment_lifecycle',
         'verdify_experiment_component_executor',
         'verdify_experiment_outcome_freezer',
         'verdify_experiment_blinded_analyst'
-    ] LOOP
+    ];
+BEGIN
+    SELECT rolsuper INTO migrator_is_super FROM pg_roles
+     WHERE rolname = current_user;
+    FOREACH r IN ARRAY managed_roles LOOP
         IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = r) THEN
             EXECUTE format('CREATE ROLE %I NOLOGIN', r);
         END IF;
+        SELECT * INTO role_state FROM pg_roles WHERE rolname = r;
+        IF role_state.rolsuper OR role_state.rolreplication OR
+           role_state.rolbypassrls THEN
+            IF NOT migrator_is_super THEN
+                RAISE EXCEPTION
+                    'managed role % is elevated and requires a superuser migration to normalize', r;
+            END IF;
+            EXECUTE format(
+                'ALTER ROLE %I NOSUPERUSER NOREPLICATION NOBYPASSRLS', r);
+        END IF;
+        EXECUTE format(
+            'ALTER ROLE %I NOLOGIN NOCREATEDB NOCREATEROLE NOINHERIT', r);
+        SELECT * INTO role_state FROM pg_roles WHERE rolname = r;
+        IF role_state.rolcanlogin OR role_state.rolsuper OR
+           role_state.rolcreatedb OR role_state.rolcreaterole OR
+           role_state.rolinherit OR role_state.rolreplication OR
+           role_state.rolbypassrls THEN
+            RAISE EXCEPTION 'managed role % could not be normalized safely', r;
+        END IF;
     END LOOP;
+    -- These are dedicated, function-only identities.  Remove any pre-existing
+    -- membership between duties (or to/from the unavailable owner) before
+    -- privileges are rebuilt below; unrelated roles and PUBLIC are untouched.
+    FOREACH member_role IN ARRAY managed_roles LOOP
+        FOREACH granted_role IN ARRAY managed_roles LOOP
+            IF member_role <> granted_role AND EXISTS (
+                SELECT 1
+                  FROM pg_auth_members membership
+                  JOIN pg_roles granted ON granted.oid = membership.roleid
+                  JOIN pg_roles member ON member.oid = membership.member
+                 WHERE granted.rolname = granted_role
+                   AND member.rolname = member_role) THEN
+                EXECUTE format('REVOKE %I FROM %I', granted_role, member_role);
+            END IF;
+        END LOOP;
+    END LOOP;
+    IF EXISTS (
+        SELECT 1
+          FROM pg_auth_members membership
+          JOIN pg_roles granted ON granted.oid = membership.roleid
+          JOIN pg_roles member ON member.oid = membership.member
+         WHERE granted.rolname = ANY (managed_roles)
+           AND member.rolname = ANY (managed_roles)) THEN
+        RAISE EXCEPTION 'managed experiment roles retain cross-duty membership';
+    END IF;
 END
 $roles$;
+
+REVOKE CREATE ON SCHEMA public FROM
+    verdify_experiment_randomizer, verdify_experiment_lifecycle,
+    verdify_experiment_component_executor, verdify_experiment_outcome_freezer,
+    verdify_experiment_blinded_analyst;
 
 -- --------------------------------------------------------------------------
 -- Orthogonal v2 experiment axes.  Defaults preserve every existing v1 row.
@@ -3579,7 +3637,7 @@ BEGIN
         1,2,3,4,5,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,
         26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49
     ] OR v_last - v_first > interval '60 seconds' OR v_last > v_now OR
-       v_now - v_last > interval '90 seconds' THEN
+       (NOT p_reset_detected AND v_now - v_last > interval '90 seconds') THEN
         RAISE EXCEPTION 'runtime snapshot requires ordered, fresh, <=60s-skew observations';
     END IF;
     v_source_epoch_sha256 := encode(digest(convert_to(jsonb_build_object(
@@ -5392,6 +5450,7 @@ GRANT USAGE, SELECT ON SEQUENCE public.experiment_events_event_id_seq
 DO $security$
 DECLARE
     obj record;
+    fn regprocedure;
     r text;
 BEGIN
     FOR obj IN
@@ -5447,70 +5506,60 @@ BEGIN
                        obj.oid::regprocedure);
     END LOOP;
 
-    FOR obj IN
-        SELECT p.oid, p.proname
-          FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-         WHERE n.nspname = 'public' AND p.proname = ANY (ARRAY[
-             'fn_experiment_v2_configure', 'fn_experiment_v2_register_state',
-             'fn_experiment_v2_record_approval', 'fn_experiment_v2_transition',
-             'fn_experiment_v2_set_admission',
-             'fn_experiment_v2_record_facility_safe_closure',
-             'fn_experiment_v2_create_work', 'fn_experiment_v2_request_recovery',
-             'fn_experiment_v2_complete', 'fn_experiment_v2_api_status'])
-    LOOP
-        EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO verdify_experiment_lifecycle',
-                       obj.oid::regprocedure);
+    FOREACH fn IN ARRAY ARRAY[
+        'public.fn_experiment_v2_configure(uuid,text,text,text,text,text,text,date,integer,text,uuid,text,text,text,text)'::regprocedure,
+        'public.fn_experiment_v2_register_state(uuid,text,smallint,bytea,bytea,text)'::regprocedure,
+        'public.fn_experiment_v2_record_approval(uuid,text,text,integer,text,text,tstzrange,timestamptz,text,text,text)'::regprocedure,
+        'public.fn_experiment_v2_transition(uuid,text,text,text,text)'::regprocedure,
+        'public.fn_experiment_v2_set_admission(uuid,text,text,text)'::regprocedure,
+        'public.fn_experiment_v2_record_facility_safe_closure(uuid,text,text,text)'::regprocedure,
+        'public.fn_experiment_v2_create_work(uuid,text,text,tstzrange,timestamptz,text)'::regprocedure,
+        'public.fn_experiment_v2_request_recovery(uuid,uuid,tstzrange,timestamptz,text,text)'::regprocedure,
+        'public.fn_experiment_v2_complete(uuid,text,text)'::regprocedure,
+        'public.fn_experiment_v2_api_status(uuid)'::regprocedure
+    ] LOOP
+        EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO verdify_experiment_lifecycle', fn);
     END LOOP;
 
-    FOR obj IN
-        SELECT p.oid, p.proname
-          FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-         WHERE n.nspname = 'public' AND p.proname = ANY (ARRAY[
-             'fn_experiment_v2_finalize_randomization',
-             'fn_experiment_v2_record_selector_choice',
-             'fn_experiment_v2_reveal'])
-    LOOP
-        EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO verdify_experiment_randomizer',
-                       obj.oid::regprocedure);
+    FOREACH fn IN ARRAY ARRAY[
+        'public.fn_experiment_v2_finalize_randomization(uuid,text)'::regprocedure,
+        'public.fn_experiment_v2_record_selector_choice(uuid,uuid,text,text,text,text,text,text,text,text,text[],text,timestamptz,text)'::regprocedure,
+        'public.fn_experiment_v2_reveal(uuid,text)'::regprocedure
+    ] LOOP
+        EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO verdify_experiment_randomizer', fn);
     END LOOP;
 
-    FOR obj IN
-        SELECT p.oid, p.proname
-          FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-         WHERE n.nspname = 'public' AND p.proname = ANY (ARRAY[
-             'fn_experiment_v2_resolve_readiness',
-             'fn_experiment_v2_resolve_randomized',
-             'fn_experiment_v2_resolve_recovery',
-             'fn_experiment_v2_executor_runtime',
-             'fn_experiment_v2_claim_executor_candidate',
-             'fn_experiment_v2_read_observation_window',
-             'fn_experiment_v2_record_work_event',
-             'fn_experiment_v2_begin_delivery_bundle',
-             'fn_experiment_v2_read_delivery_bundle',
-             'fn_experiment_v2_record_component_outcome',
-             'fn_experiment_v2_record_delivery_bundle',
-             'fn_experiment_v2_register_runtime_instance',
-             'fn_experiment_v2_record_observation_epoch',
-             'fn_experiment_v2_record_runtime_snapshot',
-             'fn_experiment_v2_monitor_open_exposure',
-             'fn_experiment_v2_report_runtime_fault',
-             'fn_experiment_v2_safe_startup_attestation',
-             'fn_experiment_v2_open_exposure',
-             'fn_experiment_v2_close_exposure',
-             'fn_experiment_v2_request_recovery'])
-    LOOP
-        EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO verdify_experiment_component_executor',
-                       obj.oid::regprocedure);
+    FOREACH fn IN ARRAY ARRAY[
+        'public.fn_experiment_v2_resolve_readiness(uuid,uuid,bigint)'::regprocedure,
+        'public.fn_experiment_v2_resolve_randomized(uuid,uuid,bigint)'::regprocedure,
+        'public.fn_experiment_v2_resolve_recovery(uuid,uuid,bigint)'::regprocedure,
+        'public.fn_experiment_v2_executor_runtime(uuid,text)'::regprocedure,
+        'public.fn_experiment_v2_claim_executor_candidate(uuid,text,bigint,text)'::regprocedure,
+        'public.fn_experiment_v2_read_observation_window(uuid,uuid,uuid,text,bigint)'::regprocedure,
+        'public.fn_experiment_v2_record_work_event(uuid,uuid,text,jsonb,text)'::regprocedure,
+        'public.fn_experiment_v2_begin_delivery_bundle(uuid,uuid,uuid,text,text,text)'::regprocedure,
+        'public.fn_experiment_v2_read_delivery_bundle(uuid,uuid,text,text,bigint)'::regprocedure,
+        'public.fn_experiment_v2_record_component_outcome(uuid,uuid,uuid,integer,text,text,bigint,bigint,text)'::regprocedure,
+        'public.fn_experiment_v2_record_delivery_bundle(uuid,uuid,uuid,timestamptz,text)'::regprocedure,
+        'public.fn_experiment_v2_register_runtime_instance(uuid,text,uuid,bigint,text)'::regprocedure,
+        'public.fn_experiment_v2_record_observation_epoch(uuid,uuid,uuid,uuid,bytea,jsonb,text,text,text,text,bigint,bigint,text)'::regprocedure,
+        'public.fn_experiment_v2_record_runtime_snapshot(uuid,text,uuid,bytea,jsonb,text,text,text,text,uuid,bigint,bigint,boolean,text)'::regprocedure,
+        'public.fn_experiment_v2_monitor_open_exposure(uuid,text,bigint)'::regprocedure,
+        'public.fn_experiment_v2_report_runtime_fault(uuid,text,uuid,bigint,uuid,bigint,bigint,text,text,text)'::regprocedure,
+        'public.fn_experiment_v2_safe_startup_attestation(text,uuid)'::regprocedure,
+        'public.fn_experiment_v2_open_exposure(uuid,uuid,text,text)'::regprocedure,
+        'public.fn_experiment_v2_close_exposure(uuid,text,text)'::regprocedure,
+        'public.fn_experiment_v2_request_recovery(uuid,uuid,tstzrange,timestamptz,text,text)'::regprocedure
+    ] LOOP
+        EXECUTE format(
+            'GRANT EXECUTE ON FUNCTION %s TO verdify_experiment_component_executor', fn);
     END LOOP;
 
-    FOR obj IN
-        SELECT p.oid, p.proname
-          FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-         WHERE n.nspname = 'public' AND p.proname = ANY (ARRAY[
-             'fn_experiment_v2_freeze_outcome', 'fn_experiment_v2_freeze_export'])
-    LOOP
-        EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO verdify_experiment_outcome_freezer',
-                       obj.oid::regprocedure);
+    FOREACH fn IN ARRAY ARRAY[
+        'public.fn_experiment_v2_freeze_outcome(uuid,uuid,jsonb,boolean,boolean,boolean,boolean,boolean,text)'::regprocedure,
+        'public.fn_experiment_v2_freeze_export(uuid,text,text)'::regprocedure
+    ] LOOP
+        EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO verdify_experiment_outcome_freezer', fn);
     END LOOP;
 END
 $security$;

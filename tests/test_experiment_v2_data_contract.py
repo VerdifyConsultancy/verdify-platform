@@ -203,21 +203,64 @@ def test_five_runtime_duties_have_function_only_surfaces():
         assert role in sql
     assert "verdify_experiment_v2_owner" in sql
     assert "CREATE ROLE %I NOLOGIN" in sql
+    assert "NOLOGIN NOCREATEDB NOCREATEROLE NOINHERIT" in sql
+    assert "NOSUPERUSER NOREPLICATION NOBYPASSRLS" in sql
+    assert "requires a superuser migration to normalize" in sql
+    assert "REVOKE CREATE ON SCHEMA public FROM" in sql
+    assert "REVOKE %I FROM %I" in sql
     assert "GRANT EXECUTE ON FUNCTION" in sql
     assert "GRANT SELECT ON public.v_experiment_v2_blinded_assigned_day_outcomes" in sql
     assert not re.search(r"GRANT\s+verdify_experiment_v2_owner\s+TO", sql, re.IGNORECASE)
 
 
+def test_duty_grants_are_exact_signature_allowlists_not_proname_matches():
+    sql = _sql()
+    grant_surface = sql[sql.index("DO $security$") : sql.index("END\n$security$;")]
+    expected = (
+        "fn_experiment_v2_configure(uuid,text,text,text,text,text,text,date,integer,text,uuid,text,text,text,text)",
+        "fn_experiment_v2_register_state(uuid,text,smallint,bytea,bytea,text)",
+        "fn_experiment_v2_record_approval(uuid,text,text,integer,text,text,tstzrange,timestamptz,text,text,text)",
+        "fn_experiment_v2_transition(uuid,text,text,text,text)",
+        "fn_experiment_v2_set_admission(uuid,text,text,text)",
+        "fn_experiment_v2_record_facility_safe_closure(uuid,text,text,text)",
+        "fn_experiment_v2_create_work(uuid,text,text,tstzrange,timestamptz,text)",
+        "fn_experiment_v2_request_recovery(uuid,uuid,tstzrange,timestamptz,text,text)",
+        "fn_experiment_v2_complete(uuid,text,text)",
+        "fn_experiment_v2_api_status(uuid)",
+        "fn_experiment_v2_finalize_randomization(uuid,text)",
+        "fn_experiment_v2_record_selector_choice(uuid,uuid,text,text,text,text,text,text,text,text,text[],text,timestamptz,text)",
+        "fn_experiment_v2_reveal(uuid,text)",
+        "fn_experiment_v2_resolve_readiness(uuid,uuid,bigint)",
+        "fn_experiment_v2_resolve_randomized(uuid,uuid,bigint)",
+        "fn_experiment_v2_resolve_recovery(uuid,uuid,bigint)",
+        "fn_experiment_v2_executor_runtime(uuid,text)",
+        "fn_experiment_v2_claim_executor_candidate(uuid,text,bigint,text)",
+        "fn_experiment_v2_read_observation_window(uuid,uuid,uuid,text,bigint)",
+        "fn_experiment_v2_record_work_event(uuid,uuid,text,jsonb,text)",
+        "fn_experiment_v2_begin_delivery_bundle(uuid,uuid,uuid,text,text,text)",
+        "fn_experiment_v2_read_delivery_bundle(uuid,uuid,text,text,bigint)",
+        "fn_experiment_v2_record_component_outcome(uuid,uuid,uuid,integer,text,text,bigint,bigint,text)",
+        "fn_experiment_v2_record_delivery_bundle(uuid,uuid,uuid,timestamptz,text)",
+        "fn_experiment_v2_register_runtime_instance(uuid,text,uuid,bigint,text)",
+        "fn_experiment_v2_record_observation_epoch(uuid,uuid,uuid,uuid,bytea,jsonb,text,text,text,text,bigint,bigint,text)",
+        "fn_experiment_v2_record_runtime_snapshot(uuid,text,uuid,bytea,jsonb,text,text,text,text,uuid,bigint,bigint,boolean,text)",
+        "fn_experiment_v2_monitor_open_exposure(uuid,text,bigint)",
+        "fn_experiment_v2_report_runtime_fault(uuid,text,uuid,bigint,uuid,bigint,bigint,text,text,text)",
+        "fn_experiment_v2_safe_startup_attestation(text,uuid)",
+        "fn_experiment_v2_open_exposure(uuid,uuid,text,text)",
+        "fn_experiment_v2_close_exposure(uuid,text,text)",
+        "fn_experiment_v2_freeze_outcome(uuid,uuid,jsonb,boolean,boolean,boolean,boolean,boolean,text)",
+        "fn_experiment_v2_freeze_export(uuid,text,text)",
+    )
+    for signature in expected:
+        assert f"'public.{signature}'::regprocedure" in grant_surface
+    assert grant_surface.count("FOREACH fn IN ARRAY ARRAY[") == 4
+    assert "proname = ANY" not in grant_surface
+
+
 def test_component_executor_can_request_only_function_bounded_recovery():
     sql = _sql()
-    executor_grant = re.search(
-        r"proname\s*=\s*ANY\s*\(ARRAY\[(.*?)\]\).*?"
-        r"GRANT EXECUTE ON FUNCTION %s TO verdify_experiment_component_executor",
-        sql,
-        re.DOTALL,
-    )
-    assert executor_grant is not None
-    assert "'fn_experiment_v2_request_recovery'" in executor_grant.group(1)
+    assert "'public.fn_experiment_v2_request_recovery(uuid,uuid,tstzrange,timestamptz,text,text)'::regprocedure" in sql
     wrapper = _body("fn_experiment_v2_request_recovery")
     recovery = _body("fn_experiment_v2_request_recovery_at")
     assert wrapper.count("clock_timestamp()") == 1
@@ -257,6 +300,7 @@ def test_terminal_exposure_monitor_is_raw_idempotent_and_close_first():
     assert "runtime_reset_without_exposure" in record
     assert "'raw_reset_epoch'" in record
     assert "v_exp.execution_phase <> 'shadow'" in record
+    assert "NOT p_reset_detected AND v_now - v_last > interval '90 seconds'" in record
 
 
 def test_runtime_fault_callback_closes_first_and_keeps_emergency_yielded():
@@ -330,6 +374,7 @@ def test_real_postgres_fixture_is_transactional_and_marks_negative_matrix():
         "open_exposure_runtime_monitor",
         "buffered_confirmation_epoch_ignored",
         "reset_without_exposure_fails_confirmation",
+        "exact_signature_grants_and_role_normalization",
         "runtime_fault_and_startup_attestation",
         "different-work claim did not close prior exposure boundary first",
         "api_status_expiry",
