@@ -60,9 +60,17 @@ single-writer Recreate it always was.
    contracts, APIs, the frozen outcome view, dashboards, digest-pinned images,
    and flags **off**; verify every config consumer restarted onto the intended
    config revision.
-2. **Shadow.** `VERDIFY_POLICY_VECTOR_MODE=shadow` (prod overlay patch +
-   revision bump): proposal / arbiter / outbox run and persist; **no device
-   actuation**.
+2. **Shadow.** Create and validate an explicit shadow experiment UUID first.
+   The current workers also require the DB experiment to be `armed|running`
+   and a current assignment to exist; do not flip the flag until a preflight
+   proves that non-actuating lifecycle/schedule shape. Then set both
+   `VERDIFY_POLICY_VECTOR_MODE=shadow` and
+   `VERDIFY_ACTIVE_EXPERIMENT_ID=<that UUID>` (prod overlay patch + revision
+   bump). The assignment/arbiter workers are inert without the UUID. Eligible
+   proposals compile and persist with state `shadow`; the arbiter deliberately
+   creates **no outbox row and no device actuation** in shadow. Verify compiled
+   shadow proposals, zero new outbox rows, zero policy service calls, and
+   unchanged legacy writer behavior.
 3. **Firmware artifacts.** Build the staged-vector OTA image AND a separate
    recovery image through
    `deploy/k8s/components/firmware-builder/firmware-builder.yaml`. The
@@ -89,7 +97,8 @@ single-writer Recreate it always was.
    declaratively to shadow/empty ID, verify reset.
 7. **Randomized arm-up.** Freeze the randomized protocol + new UUID; bind the
    passing qualification and A/A result hashes; name the future beacon round;
-   draw and commit the witnessed mapping secret BEFORE that beacon publishes;
+   run the audited automated assignment-service OS-CSPRNG draw and commit its
+   domain-separated commitment BEFORE that beacon publishes;
    generate the schedule. Commit `mode=live`, the randomized ID, legacy
    writes `0`, frozen Hermes/context hashes; sync/restart/verify; stage and
    echo the randomized manifest; arm the DB record; pre-stage day 1.

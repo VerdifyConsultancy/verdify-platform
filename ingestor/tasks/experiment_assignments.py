@@ -38,7 +38,7 @@ from verdify_schemas.policy_vector import wire_fields
 
 from ._common import asyncpg, json, log
 
-# The 49 experiment-owned parameters (the canonical wire surface): while an
+# The 48 experiment-owned parameters (the canonical schema-v2 wire surface): while an
 # assignment is armed in live mode, legacy per-parameter pushes for these are
 # rejected at the esp32_push chokepoint.
 EXPERIMENT_OWNED_PARAMS: frozenset[str] = frozenset(defn.name for defn in wire_fields())

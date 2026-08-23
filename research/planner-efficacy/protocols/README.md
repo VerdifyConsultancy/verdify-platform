@@ -19,9 +19,12 @@ immutable; any change afterwards ends the protocol epoch.
    hashes, all revision pins, margins sign-off, analysis environment digest,
    and tested rollback vector. Name the **future** public-randomness beacon
    round. Commit `planner-switchback-v1.yaml`.
-2. **Mapping-secret draw and commitment.** With witnesses, generate the
-   32-byte mapping secret using an operating-system CSPRNG. The tooling never
-   generates it. Record the commitment **before** the beacon round publishes:
+2. **Automated mapping-secret draw and commitment.** The restricted assignment
+   service generates the 32-byte mapping secret using an operating-system
+   CSPRNG and computes the domain-separated commitment. Publish that commitment
+   in Git **before** the beacon round publishes. The assignment-service draw is
+   still pending implementation; the current CLI only verifies/commits an
+   already generated secret file:
 
    ```sh
    cd research/planner-efficacy
@@ -66,4 +69,5 @@ and the restricted-service secret custody are unchanged. What is lost is
 third-party attestation that no redraw occurred before commitment; the public
 commit ordering substantially covers this. Qualification and A/A gates are
 NOT waived — the migration-207 state machine binds their result hashes before
-a randomized experiment can arm.
+a randomized experiment can arm. Do not lock a protocol until the automated
+assignment-service implementation and its no-redraw/audit tests have landed.

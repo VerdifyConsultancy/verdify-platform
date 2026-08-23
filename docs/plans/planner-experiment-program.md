@@ -1,5 +1,14 @@
 # Controlled planner experiment — accuracy review and implementation program
 
+> **Current status (2026-08-23): HOLD.** The August build wave landed behind
+> safe defaults, but a resumption audit found that the database, host transport,
+> firmware manifest/vector API, identity trace, assignment executor and outcome
+> pipeline do not yet compose. Production remains feature-off and no efficacy
+> trial has started. Use
+> [`docs/research/planner-experiment-resumption-audit-2026-08-23.md`](../research/planner-experiment-resumption-audit-2026-08-23.md)
+> for the current state, blockers and replanned gates. This document remains the
+> original design/accuracy review.
+
 - **Date:** 2026-08-14
 - **Author:** claude (outer-loop controller), on direction from Jason
 - **Reviews:** [`docs/research/planner-efficacy-current-firmware-2026-08-14.md`](../research/planner-efficacy-current-firmware-2026-08-14.md)
@@ -159,7 +168,7 @@ after A.
 | **B — experiment schema + migration delivery + roles** | `db/` | Migration `207-controlled-policy-experiment.sql` (§8.7 tables + SECURITY DEFINER transition functions + advisory-lock overlap guards); ledgered populated-DB migration path (ledger table, audited baseline, migrate image carries numbered migrations, `psql -X -v ON_ERROR_STOP=1` runner, post-assertions); DB role split with per-workload Secrets |
 | **C — assignment/arbiter/delivery workers** | `ingestor/`, `mcp/` | `experiment_assignments.py`, `policy_arbiter.py`, `policy_delivery.py` (feature-off inert); whole-vector transactions in `esp32_push.py`; action logger consumes device-confirmed vector identity; `set_plan`/`set_tunable` and forecast engine demoted to proposal producers; legacy direct writes rejected while armed |
 | **D — planner treatment firewall** | `ingestor/iris_planner.py`, `scripts/gather-plan-context.sh`, `hermes-iris`, `mcp/server.py` | Fail-closed experiment gather mode + frozen context snapshots; **new MCP server-side authorization** (none exists today) with audience-scoped tool sets; template-selection proposal tool; quarantined lessons/evaluation; regenerate `planner_graph` contract from registry |
-| **E — firmware atomic policy engine** | `firmware/` | `policy_vector.h`; active/boundary/tactical `ControlPolicy` slots + ROM baseline; begin/chunk/validate/commit/abort + manifest native API services (heap-budgeted — the repo deliberately runs ONE service today); per-tick policy snapshot for all 49 consumers + CI consumer manifest; two-copy NVS journal; conservative reboot semantics (water budget marked consumed, relays off, full min-off dwell); recovery image; native tests + power-loss fixtures |
+| **E — firmware atomic policy engine** | `firmware/` | `policy_vector.h`; active/boundary/tactical `ControlPolicy` slots + ROM baseline; begin/chunk/validate/commit/abort + manifest native API services (heap-budgeted — the repo deliberately runs ONE service today); per-tick policy snapshot for all 48 schema-v2 consumers + CI consumer manifest; two-copy NVS journal; conservative reboot semantics (water budget marked consumed, relays off, full min-off dwell); recovery image; native tests + power-loss fixtures |
 | **F — GitOps, observability, twin** | `deploy/`, `grafana/`, `api/`, `twin/` | `VERDIFY_POLICY_VECTOR_MODE`/`VERDIFY_ACTIVE_EXPERIMENT_ID`/`VERDIFY_LEGACY_DIRECT_POLICY_WRITES_ENABLED` flags + config-revision hashes on pod templates; blinded ops board; twin productionized from `twin/Dockerfile` (in-cluster build → zot, digest pin, no runtime pip/gcc, no 443 egress, live as-of adapter + `v_policy_twin_asof_input`); experiment lifecycle API; §8.10 acceptance suite |
 | **G — protocol artifacts + analysis** | `research/planner-efficacy/` | `protocols/planner-switchback-v1.yaml` + qualification spec; baseline extraction (locked query/hashes); two AI templates; randomization generator + HMAC commitment tooling; frozen analyzer + power artifact; A/A gate checklist |
 
@@ -188,17 +197,19 @@ late September or after early November.
 
 1. Noninferiority margins approval (horticultural + safety owner, §8.4).
 2. Frozen baseline vector + both AI template approvals after compiled replay/HIL.
-3. Beacon-round naming + witnessed mapping-secret ceremony (the agent cannot
-   witness its own CSPRNG draw; a human must attest the commitment ordering).
+3. Beacon-round naming + the automated assignment-service OS-CSPRNG draw Jason
+   approved on 2026-08-15; publish its domain-separated commitment in Git
+   before the named beacon round. This is a recorded deviation from the
+   originally witnessed ceremony and still requires an implementation/audit.
 4. OTA scheduling within the firmware freeze cadence.
 5. Protocol lock sign-off before day 1.
 
 ## 6. Known constraints and risks
 
-- **Prod delivery reliability is itself a prerequisite fix**: 24.7% of trigger
-  cycles failed/missed in the epoch; issue #575 (ingestor CrashLoop history,
-  1,128 restarts, stable ~4 days at review time) remains open. The A/A gate
-  will fail until delivery is reliable — that is working as intended.
+- **Prod delivery reliability remains an experiment prerequisite**: the #575
+  workload/backfill incident is recovered, and current required planner cycles
+  are healthy. #433's deliberate writer/reconnect/truthful-lifecycle acceptance
+  is still required before A/A.
 - **Heap**: chronic ESP32 heap exhaustion (#428) constrains the firmware
   service surface; the policy transport must be chunked and heap-budgeted, and
   the repo's one-service pattern (`set_band_anchor`) is the template.

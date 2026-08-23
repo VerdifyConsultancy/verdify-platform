@@ -7,9 +7,11 @@ assignment UUIDv5 construction over raw name bytes, the 30-day blinded schedule
 with its RFC 8785 (JCS) canonical hash, and the Section 8.9 version-1
 `assignment_treatment_bytes` octets.
 
-Everything here is deterministic and stdlib-only. This module NEVER generates
-the mapping secret: the witnessed operating-system CSPRNG ceremony does that,
-and the CLI only reads an existing secret file to commit, verify, or reveal.
+Everything here is deterministic and stdlib-only. This module does not
+generate the mapping secret: per Jason's 2026-08-15 protocol decision, the
+restricted assignment service will perform the automated operating-system
+CSPRNG draw. The CLI only reads an existing secret file to commit, verify, or
+reveal.
 
 RFC 8785 note: the canonicalizer below intentionally supports only `str`, `int`,
 `list`, and `dict` values (no float, bool, or null). Every value in the blinded
