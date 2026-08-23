@@ -31,6 +31,21 @@ Version 2 pins these architectural decisions:
 - >=12 h shadow spanning a complete scheduled boundary (target 24 h), two
   transport/safety canaries and 48 h A/A are evidence gates.
 
+The additive executable source contracts are in `switchback/v2_selector.py`,
+`v2_randomization.py`, `v2_profiles.py`, `v2_power.py`, `v2_outcomes.py`, and
+`v2_analysis.py`. The schedule/design/selector JSON Schemas and canonical
+schedule/analyzer goldens in this directory are integration inputs for the
+runtime/data lanes; they do not themselves provide persistence, provider
+access, database role isolation, or actuation authority.
+
+`planner-switchback-v2-power.json` is intentionally **not** a design lock. It
+demonstrates the fixed-m/joint-power machinery and selects 150 pairs under its
+explicit provisional assumptions, while recording why Git lacks the raw
+06:00–24:00 inputs and frozen provider replay needed for the real pre-draw
+lock. It reads no randomized/live efficacy data. Fifteen pairs fail that
+scenario decisively; the final one-time fixed m must be regenerated from the
+missing pretrial inputs before any randomization finalization.
+
 The authoritative reasoning and execution model are:
 
 - `docs/adr/0010-confirmed-component-experiment-fast-path.md`;

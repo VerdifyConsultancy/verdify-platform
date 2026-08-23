@@ -22,9 +22,9 @@ study:
   pairs: "TO-LOCK: local_days / 2; 15 only if the power gate passes"
   pair_structure: adjacent_ab_ba
   assignment_namespace_uuid: "TO-LOCK: fixed UUIDv5 namespace"
-  # The intended accelerated 2026 window does not cross DST. A later window
-  # that crosses a UTC-offset change requires elapsed-window fixtures before
-  # lock; it is not silently rejected or normalized.
+  # Protocol v2 rejects every window that crosses a UTC-offset change. A later
+  # design that permits one requires a new protocol version; v2 never silently
+  # shifts or normalizes a local day.
   dst_crossing:
     allowed: false
     rule: every locked local day must have the same America/Denver UTC offset
@@ -182,12 +182,14 @@ randomization:
     blinded_schedule_hash_bytes || 0x00 || randomization_secret_32_bytes);
     committing a bare one-bit mapping is forbidden because it is brute-forceable
   mapping_commitment_sha256: "RANDOMIZATION-FINALIZATION"
+  finalization_receipt_sha256: "RANDOMIZATION-FINALIZATION"
   secret_custody: >-
     restricted randomizer storage only; never Git, logs, general application
     configuration, executor, dashboard or analyst role; reveal exactly once
     after frozen outcome/deviation hashes and reproduce schedule plus mapping
   schedule_generation_source_sha: "TO-LOCK"
-  canonical_schedule_schema_sha256: "TO-LOCK"
+  canonical_schedule_schema: research/planner-efficacy/protocols/blinded-schedule-v2.schema.json
+  canonical_schedule_schema_sha256: f1cd82e7883f912379680f85a12420f4ecf5aaaaefb3c78373708ccedefab892
   custody: >-
     facility operations may see physical state required for safety; analysts,
     comparative dashboards and the analyzer receive X/Y until frozen exports
@@ -481,7 +483,10 @@ outcomes:
       whose temperature or VPD differs by more than the locked sensor-resolution
       tolerance invalidate that slot and emit an integrity deviation
     timestamp_tolerance: none across minute boundaries; clock-quality gate must pass
-    duplicate_value_tolerance: "TO-LOCK: exact temperature and VPD sensor-resolution tolerances"
+    duplicate_value_tolerance:
+      temperature_f: 0.0
+      vpd_kpa: 0.0
+      decision: exact same-timestamp duplicates must be byte-value equal; any numeric disagreement invalidates the minute
     interpolation: forbidden for indoor climate
     weight_hours: 0.25
   climate:
@@ -583,7 +588,11 @@ outcomes:
         continuous sensors, which becomes a declared hardware gate and timeline change
       artifact_sha256: "TO-LOCK"
   operating_benefit:
-    primary_endpoint_id: "TO-LOCK: exactly one of variable_operating_cost_usd or nine_control_state_minutes"
+    primary_endpoint_id: nine_control_state_minutes
+    selection_decision: >-
+      selected because the audited source has no commissioned whole-system
+      variable-cost coefficients; this remains heterogeneous control-state
+      burden and must never be relabeled energy, water, cost or efficiency
     common_decision: upper one-sided locked-confidence bound for AI-minus-Frozen is less than 0
     primary_catalog:
       variable_operating_cost_usd:
@@ -720,6 +729,11 @@ analysis:
   frozen_analyzer_environment_digest: "TO-LOCK"
 
 design_power:
+  provisional_source_artifact: research/planner-efficacy/protocols/planner-switchback-v2-power.json
+  provisional_status: >-
+    source-bounded planning scenario only; provider replay, exact six-hour raw
+    outcome scales, correlation and completeness must replace its explicit
+    assumptions before the final fixed m can enter the design lock
   frozen_pretrial_selector_replay: >-
     run the exact frozen prompt/model/context on a versioned set of pretrial
     contexts and publish baseline/moderate/aggressive frequencies, fallback
