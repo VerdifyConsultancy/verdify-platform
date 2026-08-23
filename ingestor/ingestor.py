@@ -74,6 +74,7 @@ from tasks import (
     BAND_DRIVEN_PARAMS,
     IRRIGATION_SCHEDULE_PARAMS,
     alert_monitor,
+    component_experiment_worker,
     daily_summary_live,
     experiment_assignment_scheduler,
     experiment_qualification_scheduler,
@@ -91,6 +92,7 @@ from tasks import (
     policy_arbiter_admissions,
     policy_delivery_worker,
     readback_abs_tolerance,
+    record_component_cfg_readback,
     setpoint_confirmation_monitor,
     setpoint_dispatcher,
     shelly_sync,
@@ -1513,6 +1515,10 @@ def _record_cfg_readback(obj_id: str, value: Any) -> bool:
     prev = shared.cfg_readback.get(cfg_param)
     state.cfg_readback[cfg_param] = val
     shared.cfg_readback[cfg_param] = val
+    # #433/#639: capture the original ESPHome callback timestamp.  The
+    # component source collector freezes an epoch only after all 48 callbacks
+    # advance; periodic cached setpoint_snapshot flushes never call this hook.
+    record_component_cfg_readback(cfg_param, val)
     drift_version: int | None = None
     if (
         cfg_param in _RECONCILABLE_CFG_PARAMS
@@ -2206,6 +2212,9 @@ async def task_loop(pool: asyncpg.Pool) -> None:
         # gateway POST (observed 2026-07-11 20:15Z). Budget above worst-case
         # gather + Hermes POST.
         "planning_heartbeat": 300,
+        # Full-48 recovery retains the existing heap-safe 2s setter pacing and
+        # is bounded by the component writer to 120s.
+        "component_experiment": 150,
     }
     TASKS = [
         # (name, interval_seconds, coroutine_factory)
@@ -2246,6 +2255,10 @@ async def task_loop(pool: asyncpg.Pool) -> None:
         ("experiment_assignments", 60, experiment_assignment_scheduler),
         ("policy_arbiter", 60, policy_arbiter_admissions),
         ("policy_delivery", 30, policy_delivery_worker),
+        # ADR-0010 confirmed-component path. The worker checks its mutually
+        # exclusive environment gate before constructing or querying L3 and is
+        # therefore zero-DB/zero-device under the default disabled posture.
+        ("component_experiment", 15, component_experiment_worker),
         # Qualification-phase step-test scheduler (#584/#588): additionally
         # inert unless mode=live AND the active experiment is
         # kind=qualification, armed/running.
