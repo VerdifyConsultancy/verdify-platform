@@ -8,6 +8,10 @@ safe defaults ARE current production behavior):
     VERDIFY_POLICY_VECTOR_MODE                  off | shadow | live (default off;
                                                 any unrecognized value fails safe
                                                 to off — no new actuation path)
+    VERDIFY_COMPONENT_EXPERIMENT_ENABLED        off | enabled (default off;
+                                                v2 component work is admissible
+                                                only while the generalized vector
+                                                mode is explicitly ``off``)
     VERDIFY_ACTIVE_EXPERIMENT_ID                UUID of the live experiment
                                                 (default unset)
     VERDIFY_LEGACY_DIRECT_POLICY_WRITES_ENABLED "1" (default) keeps today's
@@ -30,6 +34,7 @@ import uuid
 log = logging.getLogger("experiment_config")
 
 POLICY_VECTOR_MODE_ENV = "VERDIFY_POLICY_VECTOR_MODE"
+COMPONENT_EXPERIMENT_ENABLED_ENV = "VERDIFY_COMPONENT_EXPERIMENT_ENABLED"
 ACTIVE_EXPERIMENT_ID_ENV = "VERDIFY_ACTIVE_EXPERIMENT_ID"
 LEGACY_DIRECT_POLICY_WRITES_ENV = "VERDIFY_LEGACY_DIRECT_POLICY_WRITES_ENABLED"
 POLICY_DEVICE_ID_ENV = "VERDIFY_POLICY_DEVICE_ID"
@@ -38,6 +43,10 @@ POLICY_VECTOR_MODE_OFF = "off"
 POLICY_VECTOR_MODE_SHADOW = "shadow"
 POLICY_VECTOR_MODE_LIVE = "live"
 POLICY_VECTOR_MODES = (POLICY_VECTOR_MODE_OFF, POLICY_VECTOR_MODE_SHADOW, POLICY_VECTOR_MODE_LIVE)
+
+COMPONENT_EXPERIMENT_OFF = "off"
+COMPONENT_EXPERIMENT_ENABLED = "enabled"
+COMPONENT_EXPERIMENT_MODES = (COMPONENT_EXPERIMENT_OFF, COMPONENT_EXPERIMENT_ENABLED)
 
 _UNRECOGNIZED_MODE_LOGGED: set[str] = set()
 
@@ -59,6 +68,54 @@ def policy_vector_mode() -> str:
             log.warning("%s=%r unrecognized; failing safe to 'off'", POLICY_VECTOR_MODE_ENV, raw)
         return POLICY_VECTOR_MODE_OFF
     return raw
+
+
+def component_experiment_mode() -> str:
+    """Return the coarse v2 component capability mode.
+
+    The only enabling spelling is exactly ``enabled`` after whitespace/case
+    normalization. Missing and unrecognized values fail closed to ``off``.
+    Database phase/admission remains the sole source of shadow versus physical
+    authority; this flag deliberately has no shadow/live submodes.
+    """
+    raw = os.environ.get(COMPONENT_EXPERIMENT_ENABLED_ENV, "").strip().lower()
+    if not raw:
+        return COMPONENT_EXPERIMENT_OFF
+    if raw not in COMPONENT_EXPERIMENT_MODES:
+        key = f"{COMPONENT_EXPERIMENT_ENABLED_ENV}:{raw}"
+        if key not in _UNRECOGNIZED_MODE_LOGGED:
+            _UNRECOGNIZED_MODE_LOGGED.add(key)
+            log.warning(
+                "%s=%r unrecognized; failing safe to 'off'",
+                COMPONENT_EXPERIMENT_ENABLED_ENV,
+                raw,
+            )
+        return COMPONENT_EXPERIMENT_OFF
+    return raw
+
+
+def component_experiment_gate() -> tuple[bool, str]:
+    """Resolve the environment-only v2 admission gate and audit reason.
+
+    This helper intentionally inspects the generalized flag's *raw* value.
+    ``policy_vector_mode()`` maps typos to ``off`` for legacy safety, but the
+    component fast path requires the configured value to be explicitly and
+    exactly ``off``. When enabled against any other value it hard-fails before
+    a database query, work claim, outbox lease, or device call.
+    """
+    if component_experiment_mode() != COMPONENT_EXPERIMENT_ENABLED:
+        return False, "component_capability_off"
+    raw_vector_mode = os.environ.get(POLICY_VECTOR_MODE_ENV, "").strip().lower()
+    if raw_vector_mode != POLICY_VECTOR_MODE_OFF:
+        return False, "generalized_vector_mode_not_exactly_off"
+    if active_experiment_id() is None:
+        return False, "active_experiment_id_missing_or_invalid"
+    return True, "admissible"
+
+
+def component_experiment_enabled() -> bool:
+    """True only for a fully admissible coarse component configuration."""
+    return component_experiment_gate()[0]
 
 
 def active_experiment_id() -> str | None:
