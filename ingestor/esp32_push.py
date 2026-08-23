@@ -18,6 +18,7 @@ import time
 from collections import deque
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from typing import Literal
 
 import shared
@@ -73,6 +74,15 @@ _LAST_COMMAND_TS = 0.0
 _PUSH_LOCK = asyncio.Lock()
 
 DeliveryState = Literal["queued", "sent", "failed", "cancelled", "superseded"]
+ComponentDeliveryState = Literal[
+    "requested",
+    "queued",
+    "sent",
+    "failed",
+    "cancelled",
+    "superseded",
+    "confirmed",
+]
 
 
 class LifecyclePersistenceError(RuntimeError):
@@ -116,6 +126,50 @@ class PushBatchResult:
 
 
 StateCallback = Callable[[tuple[DeviceCommandOutcome, ...]], Awaitable[None]]
+
+
+@dataclass(frozen=True)
+class ComponentBundleCall:
+    """One exact legacy setter invocation in an exclusive component bundle."""
+
+    parameter: str
+    object_id: str
+    value: float | bool
+    entity_type: Literal["number", "switch"]
+
+
+@dataclass(frozen=True)
+class ComponentCommandOutcome:
+    """One durable lifecycle transition for a confirmed-component setter."""
+
+    index: int
+    parameter: str
+    object_id: str
+    value: float | bool
+    entity_type: Literal["number", "switch"]
+    status: ComponentDeliveryState
+    reason: str
+    writer_generation: int
+    connection_generation: int
+
+
+@dataclass(frozen=True)
+class ComponentBundleResult:
+    """Terminal per-component truth from one non-interleavable bundle."""
+
+    outcomes: tuple[ComponentCommandOutcome, ...]
+    connection_generation: int
+
+    @property
+    def ok(self) -> bool:
+        return bool(self.outcomes) and all(outcome.status == "sent" for outcome in self.outcomes)
+
+    @property
+    def failure(self) -> ComponentCommandOutcome | None:
+        return next((outcome for outcome in self.outcomes if outcome.status == "failed"), None)
+
+
+ComponentStateCallback = Callable[[tuple[ComponentCommandOutcome, ...]], Awaitable[None]]
 
 
 @dataclass
@@ -176,6 +230,22 @@ _NON_RETRYABLE_DELIVERY_REASONS = frozenset(
 _EXPERIMENT_HOLD_ACTIVE = False
 _EXPERIMENT_HOLD_PARAMS: frozenset[str] = frozenset()
 
+# The component executor uses the deployed number/switch setters, so it cannot
+# use the generalized-vector hold above (that hold rejects the executor too).
+# This source-aware hold rejects only ordinary queued writes while the executor
+# owns the same physical lock.  It is deliberately scoped to a bounded bundle;
+# post-bundle drift is handled by full-state observation/exposure fencing.
+_COMPONENT_BUNDLE_HOLD_ACTIVE = False
+_COMPONENT_BUNDLE_HOLD_PARAMS: frozenset[str] = frozenset()
+
+# Unlike the bounded bundle hold, this authority hold survives between task
+# ticks and across transition/confirmation/exposure.  It is armed over all 48
+# canonical fields whenever physical component authority is active.  The
+# component executor bypasses it by using push_component_bundle directly;
+# every ordinary request is rejected at the source-aware chokepoint.
+_COMPONENT_AUTHORITY_HOLD_ACTIVE = False
+_COMPONENT_AUTHORITY_HOLD_PARAMS: frozenset[str] = frozenset()
+
 
 def set_experiment_policy_hold(active: bool, params: Sequence[str] | frozenset[str] = ()) -> None:
     """Arm/disarm the experiment hold over legacy per-parameter pushes."""
@@ -196,9 +266,42 @@ def experiment_policy_hold() -> tuple[bool, frozenset[str]]:
     return _EXPERIMENT_HOLD_ACTIVE, _EXPERIMENT_HOLD_PARAMS
 
 
+def _set_component_bundle_hold(active: bool, params: Sequence[str] = ()) -> None:
+    global _COMPONENT_BUNDLE_HOLD_ACTIVE, _COMPONENT_BUNDLE_HOLD_PARAMS
+    _COMPONENT_BUNDLE_HOLD_ACTIVE = bool(active) and bool(params)
+    _COMPONENT_BUNDLE_HOLD_PARAMS = frozenset(params) if _COMPONENT_BUNDLE_HOLD_ACTIVE else frozenset()
+
+
+def component_bundle_hold() -> tuple[bool, frozenset[str]]:
+    """Read-only test/observability surface for the source-aware bundle hold."""
+    return _COMPONENT_BUNDLE_HOLD_ACTIVE, _COMPONENT_BUNDLE_HOLD_PARAMS
+
+
+def set_component_authority_hold(active: bool, params: Sequence[str] = ()) -> None:
+    """Arm/release the long-lived confirmed-component ordinary-writer hold."""
+    global _COMPONENT_AUTHORITY_HOLD_ACTIVE, _COMPONENT_AUTHORITY_HOLD_PARAMS
+    was_active = _COMPONENT_AUTHORITY_HOLD_ACTIVE
+    _COMPONENT_AUTHORITY_HOLD_ACTIVE = bool(active) and bool(params)
+    _COMPONENT_AUTHORITY_HOLD_PARAMS = frozenset(params) if _COMPONENT_AUTHORITY_HOLD_ACTIVE else frozenset()
+    if was_active != _COMPONENT_AUTHORITY_HOLD_ACTIVE:
+        log.info(
+            "component_authority_hold %s param_count=%d",
+            "armed" if _COMPONENT_AUTHORITY_HOLD_ACTIVE else "released",
+            len(_COMPONENT_AUTHORITY_HOLD_PARAMS),
+        )
+
+
+def component_authority_hold() -> tuple[bool, frozenset[str]]:
+    return _COMPONENT_AUTHORITY_HOLD_ACTIVE, _COMPONENT_AUTHORITY_HOLD_PARAMS
+
+
 def _experiment_hold_failure(parameter: str) -> str | None:
     if _EXPERIMENT_HOLD_ACTIVE and parameter in _EXPERIMENT_HOLD_PARAMS:
         return "experiment_policy_hold"
+    if _COMPONENT_BUNDLE_HOLD_ACTIVE and parameter in _COMPONENT_BUNDLE_HOLD_PARAMS:
+        return "component_bundle_hold"
+    if _COMPONENT_AUTHORITY_HOLD_ACTIVE and parameter in _COMPONENT_AUTHORITY_HOLD_PARAMS:
+        return "component_authority_hold"
     return None
 
 
@@ -313,6 +416,8 @@ def _reset_queue_for_loop(loop: asyncio.AbstractEventLoop) -> None:
     global _QUEUE_LOOP, _QUEUE_EVENT, _WORKER_TASK, _PENDING_REQUESTS, _ACTIVE_REQUEST
     global _REQUESTS, _PUSH_LOCK, _LAST_COMMAND_TS, _LIFECYCLE_BLOCKED
     global _LOGICAL_SEQUENCE, _LATEST_LOGICAL_VERSION, _LOGICAL_TOKEN_VERSION
+    global _COMPONENT_BUNDLE_HOLD_ACTIVE, _COMPONENT_BUNDLE_HOLD_PARAMS
+    global _COMPONENT_AUTHORITY_HOLD_ACTIVE, _COMPONENT_AUTHORITY_HOLD_PARAMS
     if _QUEUE_LOOP is loop:
         return
     _QUEUE_LOOP = loop
@@ -327,6 +432,8 @@ def _reset_queue_for_loop(loop: asyncio.AbstractEventLoop) -> None:
     _LOGICAL_SEQUENCE = 0
     _LATEST_LOGICAL_VERSION = {}
     _LOGICAL_TOKEN_VERSION = {}
+    _COMPONENT_BUNDLE_HOLD_ACTIVE = False
+    _COMPONENT_BUNDLE_HOLD_PARAMS = frozenset()
 
 
 async def _pace_command() -> None:
@@ -388,6 +495,11 @@ async def _execute_one(request: _WriteRequest, index: int) -> DeviceCommandOutco
             # client captured before that wait.
             if failure := _request_fence_failure(request):
                 return _outcome(request, index, "failed", failure)
+            # Re-check after lock acquisition: an ordinary request may have
+            # queued before component authority armed while it waited behind
+            # an exclusive prefix.
+            if hold_failure := _experiment_hold_failure(_parameter_for(obj_id, entity_type)):
+                return _outcome(request, index, "failed", hold_failure)
             if entity_type == "service":
                 service = (shared.esp32.get("services") or {}).get(_BAND_ANCHOR_SERVICE)
                 if service is None:
@@ -768,6 +880,289 @@ async def push_to_esp32(changes: list[tuple[str, float, str]]) -> int:
     if result.fatal_error:
         raise LifecyclePersistenceError(result.fatal_error)
     return result.sent_count
+
+
+# ── Confirmed-component bundles (ADR-0010 / #433 / #639) ────────────────────
+
+_COMPONENT_BUNDLE_MAX_CALLS = 48
+_COMPONENT_BUNDLE_BUDGET_S = 120.0
+
+
+def _component_outcome(
+    call: ComponentBundleCall,
+    index: int,
+    status: ComponentDeliveryState,
+    reason: str,
+    writer_generation: int,
+    connection_generation: int,
+) -> ComponentCommandOutcome:
+    return ComponentCommandOutcome(
+        index=index,
+        parameter=call.parameter,
+        object_id=call.object_id,
+        value=call.value,
+        entity_type=call.entity_type,
+        status=status,
+        reason=reason,
+        writer_generation=writer_generation,
+        connection_generation=connection_generation,
+    )
+
+
+async def _emit_component_state(
+    callback: ComponentStateCallback,
+    outcomes: Sequence[ComponentCommandOutcome],
+) -> None:
+    """Persist one component milestone or self-fence before continuing."""
+    global _LIFECYCLE_BLOCKED
+    if not outcomes:
+        return
+    for callback_attempt in range(1, _LIFECYCLE_CALLBACK_ATTEMPTS + 1):
+        try:
+            await asyncio.wait_for(
+                callback(tuple(outcomes)),
+                timeout=_LIFECYCLE_CALLBACK_TIMEOUT_S,
+            )
+            return
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            log.error(
+                "component_writer lifecycle_callback_failed count=%d callback_attempt=%d/%d error=%s",
+                len(outcomes),
+                callback_attempt,
+                _LIFECYCLE_CALLBACK_ATTEMPTS,
+                type(exc).__name__,
+            )
+            if callback_attempt < _LIFECYCLE_CALLBACK_ATTEMPTS:
+                await asyncio.sleep(_LIFECYCLE_RETRY_S)
+    _LIFECYCLE_BLOCKED = True
+    _abort_all_requests("component_lifecycle_persistence_unavailable")
+    raise LifecyclePersistenceError(
+        f"component lifecycle callback failed after {_LIFECYCLE_CALLBACK_ATTEMPTS} attempts"
+    )
+
+
+async def push_component_bundle(
+    calls: Sequence[ComponentBundleCall],
+    *,
+    on_state: ComponentStateCallback | None,
+    expected_writer_generation: int,
+    expected_connection_generation: int,
+    work_deadline: datetime | None = None,
+    budget_s: float = _COMPONENT_BUNDLE_BUDGET_S,
+) -> ComponentBundleResult:
+    """Deliver one fixed-order component bundle under the sole writer lock.
+
+    ``requested`` and ``queued`` must become durable before the first physical
+    command.  Each terminal outcome must become durable before the next command
+    is allowed.  A callback outage therefore self-fences the writer; it never
+    fabricates database success around an already-sent API command.
+
+    Ordinary queue entries use the same ``_PUSH_LOCK`` and re-check the
+    source-aware hold inside that lock, so no legacy setter can interleave with
+    a component prefix.  The bundle is bounded to the full canonical 48-field
+    recovery surface and to 120 seconds, preserving ordinary-writer progress.
+    """
+    loop = asyncio.get_running_loop()
+    _reset_queue_for_loop(loop)
+    calls = tuple(calls)
+    accepted_generation = int(shared.transport_generation)
+
+    if not calls:
+        return ComponentBundleResult((), accepted_generation)
+    if len(calls) > _COMPONENT_BUNDLE_MAX_CALLS:
+        first = _component_outcome(
+            calls[0],
+            0,
+            "failed",
+            "component_bundle_call_limit_exceeded",
+            expected_writer_generation,
+            accepted_generation,
+        )
+        return ComponentBundleResult((first,), accepted_generation)
+    if len({call.parameter for call in calls}) != len(calls):
+        first = _component_outcome(
+            calls[0], 0, "failed", "duplicate_component_in_bundle", expected_writer_generation, accepted_generation
+        )
+        return ComponentBundleResult((first,), accepted_generation)
+    if on_state is None:
+        first = _component_outcome(
+            calls[0],
+            0,
+            "failed",
+            "component_lifecycle_callback_required",
+            expected_writer_generation,
+            accepted_generation,
+        )
+        return ComponentBundleResult((first,), accepted_generation)
+    if work_deadline is not None and (work_deadline.tzinfo is None or work_deadline.utcoffset() is None):
+        first = _component_outcome(
+            calls[0],
+            0,
+            "failed",
+            "component_work_deadline_invalid",
+            expected_writer_generation,
+            accepted_generation,
+        )
+        return ComponentBundleResult((first,), accepted_generation)
+
+    requested = tuple(
+        _component_outcome(call, index, "requested", "work_resolved", expected_writer_generation, accepted_generation)
+        for index, call in enumerate(calls)
+    )
+    await _emit_component_state(on_state, requested)
+
+    if expected_connection_generation != accepted_generation:
+        failed = tuple(
+            _component_outcome(
+                call,
+                index,
+                "failed",
+                "transport_generation_changed",
+                expected_writer_generation,
+                accepted_generation,
+            )
+            for index, call in enumerate(calls)
+        )
+        await _emit_component_state(on_state, failed)
+        return ComponentBundleResult(failed, accepted_generation)
+    if failure := _preflight_failure():
+        failed = tuple(
+            _component_outcome(call, index, "failed", failure, expected_writer_generation, accepted_generation)
+            for index, call in enumerate(calls)
+        )
+        await _emit_component_state(on_state, failed)
+        return ComponentBundleResult(failed, accepted_generation)
+
+    accepted_client = shared.esp32.get("client")
+
+    def fence() -> str | None:
+        if failure := _preflight_failure():
+            return failure
+        if expected_connection_generation != int(shared.transport_generation):
+            return "transport_generation_changed"
+        if accepted_client is not shared.esp32.get("client"):
+            return "transport_client_changed"
+        return None
+
+    terminal: list[ComponentCommandOutcome] = []
+    deadline = time.monotonic() + max(1.0, float(budget_s))
+    _set_component_bundle_hold(True, [call.parameter for call in calls])
+    try:
+        async with _PUSH_LOCK:
+            for index, call in enumerate(calls):
+                reason: str | None = None
+                if work_deadline is not None and datetime.now(UTC) >= work_deadline:
+                    reason = "component_work_expired"
+                elif time.monotonic() > deadline:
+                    reason = "component_bundle_budget_exceeded"
+                else:
+                    reason = fence()
+
+                if reason is None:
+                    # This per-prefix queued journal append is the database
+                    # lease/revision fence immediately before the setter.  A
+                    # callback outage fails while the physical lock is held,
+                    # before this component reaches the device.
+                    queued = _component_outcome(
+                        call,
+                        index,
+                        "queued",
+                        "exclusive_bundle_accepted",
+                        expected_writer_generation,
+                        accepted_generation,
+                    )
+                    await _emit_component_state(on_state, (queued,))
+                    await _pace_command()
+                    if work_deadline is not None and datetime.now(UTC) >= work_deadline:
+                        reason = "component_work_expired"
+                    else:
+                        reason = fence()
+
+                if reason is None:
+                    key = (shared.esp32.get("keys") or {}).get(call.object_id)
+                    if not key:
+                        reason = "entity_key_unavailable"
+                    else:
+                        client = shared.esp32["client"]
+                        try:
+                            if call.entity_type == "number":
+                                if isinstance(call.value, bool):
+                                    reason = "component_value_type_mismatch"
+                                else:
+                                    result = client.number_command(key, float(call.value))
+                            elif call.entity_type == "switch":
+                                if type(call.value) is not bool:  # noqa: E721
+                                    reason = "component_value_type_mismatch"
+                                else:
+                                    result = client.switch_command(key, call.value)
+                            else:  # pragma: no cover - dataclass typing guard
+                                reason = "unsupported_entity_type"
+                            if reason is None and inspect.isawaitable(result):
+                                await asyncio.wait_for(result, timeout=_COMMAND_TIMEOUT_S)
+                        except asyncio.CancelledError:
+                            current = _component_outcome(
+                                call,
+                                index,
+                                "failed",
+                                "caller_cancelled_outcome_unknown",
+                                expected_writer_generation,
+                                accepted_generation,
+                            )
+                            terminal.append(current)
+                            await _emit_component_state(on_state, (current,))
+                            cancelled = tuple(
+                                _component_outcome(
+                                    later,
+                                    later_index,
+                                    "cancelled",
+                                    "cancelled_prior_unknown",
+                                    expected_writer_generation,
+                                    accepted_generation,
+                                )
+                                for later_index, later in enumerate(calls[index + 1 :], start=index + 1)
+                            )
+                            terminal.extend(cancelled)
+                            await _emit_component_state(on_state, cancelled)
+                            raise
+                        except TimeoutError:
+                            reason = "command_timeout_outcome_unknown"
+                        except Exception as exc:
+                            reason = f"command_error:{type(exc).__name__}"
+
+                if reason is None:
+                    shared.recently_pushed[call.parameter] = time.time()
+                    shared.recently_pushed_values[call.parameter] = float(call.value)
+                    outcome = _component_outcome(
+                        call, index, "sent", "api_command_returned", expected_writer_generation, accepted_generation
+                    )
+                else:
+                    outcome = _component_outcome(
+                        call, index, "failed", reason, expected_writer_generation, accepted_generation
+                    )
+                terminal.append(outcome)
+                await _emit_component_state(on_state, (outcome,))
+
+                if outcome.status == "failed":
+                    cancelled = tuple(
+                        _component_outcome(
+                            later,
+                            later_index,
+                            "cancelled",
+                            "cancelled_prior_failure",
+                            expected_writer_generation,
+                            accepted_generation,
+                        )
+                        for later_index, later in enumerate(calls[index + 1 :], start=index + 1)
+                    )
+                    terminal.extend(cancelled)
+                    await _emit_component_state(on_state, cancelled)
+                    break
+    finally:
+        _set_component_bundle_hold(False)
+
+    return ComponentBundleResult(tuple(terminal), accepted_generation)
 
 
 # ── Whole-vector policy transactions (#584 Lane C) ───────────────────────────

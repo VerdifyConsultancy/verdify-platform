@@ -20,6 +20,7 @@ from . import (  # noqa: F401
     _common,
     alerts,
     band_anchors,
+    component_experiment,
     confirmation,
     daily,
     dispatcher,
@@ -87,6 +88,10 @@ from ._common import (  # noqa: F401
     _td,
 )
 from .alerts import *  # noqa: F401,F403
+from .component_experiment import (  # noqa: F401
+    component_experiment_worker,
+    record_component_cfg_readback,
+)
 from .confirmation import *  # noqa: F401,F403
 from .daily import *  # noqa: F401,F403
 from .daily import (  # noqa: F401
