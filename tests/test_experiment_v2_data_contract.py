@@ -182,6 +182,12 @@ def test_itt_rows_are_fixed_and_exposure_is_sensitivity_only():
     assert "exposure_coverage_sensitivity" in sql
     export_body = _body("fn_experiment_v2_freeze_export")
     assert "exposure_seconds" not in export_body
+    freeze_body = _body("fn_experiment_v2_freeze_outcome")
+    assert "flags must equal durable work and closure evidence" in freeze_body
+    assert "experiment_v2_runtime_snapshots" in freeze_body
+    assert "s.first_observed_at > x.started_at" in freeze_body
+    for reason in ("sensor_gap", "db_outage", "lease_loss", "reconnect", "reboot"):
+        assert f"'{reason}'" in freeze_body
 
 
 def test_five_runtime_duties_have_function_only_surfaces():
@@ -212,7 +218,11 @@ def test_component_executor_can_request_only_function_bounded_recovery():
     )
     assert executor_grant is not None
     assert "'fn_experiment_v2_request_recovery'" in executor_grant.group(1)
-    recovery = _body("fn_experiment_v2_request_recovery")
+    wrapper = _body("fn_experiment_v2_request_recovery")
+    recovery = _body("fn_experiment_v2_request_recovery_at")
+    assert wrapper.count("clock_timestamp()") == 1
+    assert "fn_experiment_v2_request_recovery_at" in wrapper
+    assert "clock_timestamp()" not in recovery
     assert "p_valid_range <@ v_source.valid_range" in recovery
     assert "linked recovery source must be one nonbaseline immutable work row" in recovery
 
@@ -226,11 +236,10 @@ def test_terminal_exposure_monitor_is_raw_idempotent_and_close_first():
     assert "source_epoch_id replay differs" in record
     assert "jsonb_array_length(p_observations) <> 48" in record
     assert "all 48 runtime monitor timestamps must advance" in record
-    assert (
-        record.index("INSERT INTO public.experiment_v2_exposure_closures")
-        < record.index("open_exposure_monitor_fault")
-        < record.index("fn_experiment_v2_request_recovery")
-    )
+    closure = record.index("INSERT INTO public.experiment_v2_exposure_closures")
+    monitor_audit = record.index("open_exposure_monitor_fault")
+    monitor_recovery = record.index("fn_experiment_v2_request_recovery", monitor_audit)
+    assert closure < monitor_audit < monitor_recovery
     assert "v_exp.admission_state <> 'emergency_hold'" in record
     for signal in (
         "common_field_drift",
@@ -242,6 +251,42 @@ def test_terminal_exposure_monitor_is_raw_idempotent_and_close_first():
         assert signal in record and signal in monitor
     assert "target_wire_vector" in sql
     assert "current_runtime_instance_id" in sql
+    assert "exposure_started_at timestamptz" in sql
+    assert "successful no-row result" in record
+    assert "v_first <= v_exposure.started_at AND NOT p_reset_detected" in record
+    assert "runtime_reset_without_exposure" in record
+    assert "'raw_reset_epoch'" in record
+    assert "v_exp.execution_phase <> 'shadow'" in record
+
+
+def test_runtime_fault_callback_closes_first_and_keeps_emergency_yielded():
+    body = _body("fn_experiment_v2_report_runtime_fault")
+    assert body.count("clock_timestamp()") == 1
+    assert "fault_report_id retry differs" in body
+    assert "runtime fault reporter was never registered" in body
+    assert "WHEN v_lease_mismatch THEN 'lease_loss'" in body
+    assert "WHEN v_runtime_mismatch THEN 'writer_collision'" in body
+    assert "WHEN p_fault_kind = 'connection_generation_changed' THEN 'reconnect'" in body
+    assert body.index("INSERT INTO public.experiment_v2_exposure_closures") < body.index(
+        "fn_experiment_v2_request_recovery_at"
+    )
+    assert "fn_experiment_v2_set_admission" not in body
+    assert "v_exp.admission_state = 'emergency_hold'" in body
+    for forbidden in ("secret_bytes", "target_profile AS", "arm_label", "assignment_id"):
+        assert forbidden not in body
+
+
+def test_startup_attestation_is_read_only_fail_closed_without_release_authority():
+    sql = _sql()
+    body = _body("fn_experiment_v2_safe_startup_attestation")
+    assert body.count("clock_timestamp()") == 1
+    assert "unbound_active_v2_experiment" in body
+    assert "ambiguous_device_scope" in body
+    assert "facility_authority_yielded" in sql
+    assert "hold_required" in sql
+    assert "release_permitted" not in body
+    for forbidden in ("assignment_id", "work_id uuid", "target_profile", "arm_label"):
+        assert forbidden not in body
 
 
 def test_different_work_claim_closes_prior_boundary_before_claim():
@@ -283,9 +328,13 @@ def test_real_postgres_fixture_is_transactional_and_marks_negative_matrix():
         "receipt_golden_and_anti_cache",
         "restart_reconnect_recovery",
         "open_exposure_runtime_monitor",
+        "buffered_confirmation_epoch_ignored",
+        "reset_without_exposure_fails_confirmation",
+        "runtime_fault_and_startup_attestation",
         "different-work claim did not close prior exposure boundary first",
         "api_status_expiry",
         "itt_freeze_export_reveal",
+        "outcome_flags_from_durable_evidence",
         "facility_entry_not_completion",
     ):
         assert marker in fixture
