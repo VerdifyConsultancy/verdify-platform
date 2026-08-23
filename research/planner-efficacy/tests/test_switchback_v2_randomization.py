@@ -75,15 +75,24 @@ def test_source_locked_canonical_schedule_golden() -> None:
         randomization.DesignLock(**{**design.__dict__, "schedule_schema_sha256": "22" * 32})
 
 
+@pytest.mark.parametrize("bad_sha", ["8f9e011", "8F9E011B8E186C3B4E735130D837EEFE9A079B12", "a" * 39, "a" * 41])
+def test_design_lock_requires_exact_lowercase_40_hex_source_sha(bad_sha: str) -> None:
+    design = _design()
+    with pytest.raises(ValueError, match="lowercase 40-hex"):
+        randomization.DesignLock(**{**design.__dict__, "source_git_sha": bad_sha})
+
+
 def test_checked_in_schema_golden_and_protocol_template_share_exact_contract() -> None:
     protocols = MODULE_DIR / "protocols"
     schema = json.loads((protocols / "blinded-schedule-v2.schema.json").read_text())
+    design_schema = json.loads((protocols / "design-lock-v2.schema.json").read_text())
     golden = json.loads((protocols / "blinded-schedule-v2.golden.json").read_text())
     template = yaml.safe_load((protocols / "planner-switchback-v2.template.yaml").read_text())
     contract_hash = randomization.schedule_schema_contract_sha256()
     assert schema["x-verdify-field-contract-sha256"] == contract_hash
     assert golden["schedule_schema_contract_sha256"] == contract_hash
     assert template["randomization"]["canonical_schedule_schema_sha256"] == contract_hash
+    assert design_schema["properties"]["source_git_sha"]["pattern"] == "^[0-9a-f]{40}$"
     canonical = bytes.fromhex(golden["canonical_schedule_utf8_hex"])
     assert canonical == randomization.canonical_schedule_bytes(golden["schedule"])
     assert hashlib.sha256(canonical).hexdigest() == golden["canonical_schedule_sha256"]
@@ -160,6 +169,16 @@ def test_reveal_only_after_completion_reproduces_once(monkeypatch: pytest.Monkey
         deviations_export_sha256="44" * 32,
         confirmed_baseline_close_sha256="55" * 32,
     )
+    forged = randomization.CompletionProof(
+        study_id=STUDY_ID,
+        lifecycle_status="completed",
+        outcomes_export_sha256="33" * 32,
+        deviations_export_sha256="44" * 32,
+        confirmed_baseline_close_sha256="55" * 32,
+    )
+    object.__setattr__(forged, "lifecycle_status", "running")
+    with pytest.raises(ValueError, match="lifecycle_status=completed"):
+        finalizer.reveal_after_completion(forged)
     reveal = finalizer.reveal_after_completion(proof)
     assert reveal.reproduced_schedule_hash_sha256 == receipt.schedule_hash_sha256
     assert reveal.reproduced_commitment_sha256 == receipt.mapping_commitment_sha256

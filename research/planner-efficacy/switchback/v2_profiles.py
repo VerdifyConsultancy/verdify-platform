@@ -39,50 +39,50 @@ TREATMENT_ALLOWLIST = frozenset(
     }
 )
 
-# (entity minimum/origin, entity step), source-locked from
+# (entity minimum, entity maximum, entity step), source-locked from
 # firmware/greenhouse/tunables.yaml.  Switches are exact booleans and omitted.
-SOURCE_ENTITY_GRID: dict[str, tuple[float, float]] = {
-    "band_track_fraction": (0, 0.05),
-    "cold_vent_guard_delta_f": (0, 0.5),
-    "cool_exit_hysteresis_f": (0.3, 0.1),
-    "cool_stage2_exit_hysteresis_f": (0.3, 0.1),
-    "cool_stage2_over_high_f": (0, 0.1),
-    "direct_wet_stress_min_dew_margin_f": (3, 0.5),
-    "direct_wet_stress_vpd_margin_kpa": (0, 0.05),
-    "dwell_gate_ms": (60_000, 30_000),
-    "enthalpy_close": (-5, 0.5),
-    "enthalpy_open": (-5, 0.5),
-    "fog_escalation_kpa": (0.1, 0.1),
-    "heat_hysteresis": (0, 0.1),
-    "min_fan_off_s": (30, 10),
-    "min_fan_on_s": (30, 10),
-    "min_fog_off_s": (15, 15),
-    "min_fog_on_s": (15, 15),
-    "min_heat_off_s": (60, 10),
-    "min_heat_on_s": (30, 10),
-    "min_vent_off_s": (10, 10),
-    "min_vent_on_s": (10, 10),
-    "mist_backoff_s": (60, 60),
-    "mist_max_closed_vent_s": (120, 60),
-    "mist_thermal_relief_s": (30, 30),
-    "mister_all_delay_s": (60, 30),
-    "mister_all_kpa": (1, 0.05),
-    "mister_center_penalty": (0, 0.1),
-    "mister_engage_delay_s": (30, 30),
-    "mister_engage_kpa": (0.5, 0.05),
-    "mister_min_off_s": (30, 5),
-    "mister_pulse_gap_s": (10, 5),
-    "mister_pulse_on_s": (30, 5),
-    "mister_vpd_weight": (0.5, 0.5),
-    "mister_water_budget_gal": (100, 10),
-    "night_vpd_bias_kpa": (0, 0.01),
-    "outdoor_staleness_max_s": (120, 30),
-    "temp_hysteresis": (0.5, 0.1),
-    "vent_exchange_fraction": (0.1, 0.05),
-    "vent_prefer_dp_delta_f": (2, 0.5),
-    "vent_prefer_temp_delta_f": (2, 0.5),
-    "vpd_hysteresis": (0.05, 0.05),
-    "vpd_watch_dwell_s": (15, 15),
+SOURCE_ENTITY_GRID: dict[str, tuple[float, float, float]] = {
+    "band_track_fraction": (0, 1, 0.05),
+    "cold_vent_guard_delta_f": (0, 15, 0.5),
+    "cool_exit_hysteresis_f": (0.3, 3, 0.1),
+    "cool_stage2_exit_hysteresis_f": (0.3, 3, 0.1),
+    "cool_stage2_over_high_f": (0, 3, 0.1),
+    "direct_wet_stress_min_dew_margin_f": (3, 15, 0.5),
+    "direct_wet_stress_vpd_margin_kpa": (0, 0.5, 0.05),
+    "dwell_gate_ms": (60_000, 1_800_000, 30_000),
+    "enthalpy_close": (-5, 20, 0.5),
+    "enthalpy_open": (-5, 0, 0.5),
+    "fog_escalation_kpa": (0.1, 0.5, 0.1),
+    "heat_hysteresis": (0, 3, 0.1),
+    "min_fan_off_s": (30, 300, 10),
+    "min_fan_on_s": (30, 300, 10),
+    "min_fog_off_s": (15, 300, 15),
+    "min_fog_on_s": (15, 300, 15),
+    "min_heat_off_s": (60, 600, 10),
+    "min_heat_on_s": (30, 300, 10),
+    "min_vent_off_s": (10, 300, 10),
+    "min_vent_on_s": (10, 300, 10),
+    "mist_backoff_s": (60, 3_600, 60),
+    "mist_max_closed_vent_s": (120, 900, 60),
+    "mist_thermal_relief_s": (30, 300, 30),
+    "mister_all_delay_s": (60, 600, 30),
+    "mister_all_kpa": (1, 2.5, 0.05),
+    "mister_center_penalty": (0, 1, 0.1),
+    "mister_engage_delay_s": (30, 300, 30),
+    "mister_engage_kpa": (0.5, 2.5, 0.05),
+    "mister_min_off_s": (30, 120, 5),
+    "mister_pulse_gap_s": (10, 60, 5),
+    "mister_pulse_on_s": (30, 90, 5),
+    "mister_vpd_weight": (0.5, 3, 0.5),
+    "mister_water_budget_gal": (100, 300, 10),
+    "night_vpd_bias_kpa": (0, 0.25, 0.01),
+    "outdoor_staleness_max_s": (120, 1_800, 30),
+    "temp_hysteresis": (0.5, 3, 0.1),
+    "vent_exchange_fraction": (0.1, 0.6, 0.05),
+    "vent_prefer_dp_delta_f": (2, 15, 0.5),
+    "vent_prefer_temp_delta_f": (2, 15, 0.5),
+    "vpd_hysteresis": (0.05, 0.5, 0.05),
+    "vpd_watch_dwell_s": (15, 120, 15),
 }
 
 # Explicit source/design decisions, applied before validation.  They are not a
@@ -114,8 +114,10 @@ def _sha256_file(path: Path) -> str:
 def _on_grid(name: str, value: float | bool) -> bool:
     if isinstance(value, bool):
         return name.startswith("sw_")
-    origin, step = SOURCE_ENTITY_GRID[name]
-    position = (float(value) - origin) / step
+    minimum, maximum, step = SOURCE_ENTITY_GRID[name]
+    if not minimum <= float(value) <= maximum:
+        return False
+    position = (float(value) - minimum) / step
     return abs(position - round(position)) <= 1e-9
 
 
@@ -199,7 +201,8 @@ def build_profile_artifact(repo_root: Path = REPO_ROOT) -> dict[str, Any]:
         "treatment_allowlist": sorted(TREATMENT_ALLOWLIST),
         "explicit_grid_design_decisions": decisions,
         "source_entity_grid": {
-            name: {"origin": origin, "step": step} for name, (origin, step) in sorted(SOURCE_ENTITY_GRID.items())
+            name: {"max": maximum, "min": minimum, "step": step}
+            for name, (minimum, maximum, step) in sorted(SOURCE_ENTITY_GRID.items())
         },
         "source_evidence": {
             "historical_baseline_path": str(baseline_path.relative_to(repo_root)),
