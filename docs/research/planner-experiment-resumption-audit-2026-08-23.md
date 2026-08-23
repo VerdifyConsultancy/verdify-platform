@@ -1,5 +1,13 @@
 # Controlled planner experiment resumption audit — 2026-08-23
 
+> **Planning update:** this report remains the authoritative factual audit of
+> current code/runtime gaps. ADR-0010 and
+> [`planner-experiment-fast-path-2026-08-23.md`](../plans/planner-experiment-fast-path-2026-08-23.md)
+> supersede its Phase 1–5 generalized policy-vector critical path. The fast path
+> deliberately keeps that mode off and uses the deployed confirmed-component
+> setter/readback transport; it does not claim these audited platform defects
+> are fixed.
+
 - **Decision:** HOLD physical experiment activation. Keep the production policy-vector path off.
 - **Audited source:** `62caffead96416f3d57fa5bf9bf727dfbf376bf0` (`main`, fetched 2026-08-23).
 - **Live observation window:** 2026-08-23 16:50–16:56 UTC.

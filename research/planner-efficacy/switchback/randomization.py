@@ -51,8 +51,10 @@ DEFAULT_PAIRS = 15
 
 _LOCAL_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
-# RFC 8785 integers must be exactly representable as IEEE-754 doubles.
+# Historical v1 canonicalizer bound. Protocol v2 applies the stricter I-JSON
+# profile in ``rfc8785_canonicalize_nfc_ijson`` without changing v1 bytes.
 _JCS_MAX_INT = 2**53
+_JCS_IJSON_MAX_INT = 2**53 - 1
 
 
 def _utf8_nfc(study_id: str) -> bytes:
@@ -184,6 +186,42 @@ def rfc8785_canonicalize(value: Any) -> str:
 def rfc8785_sha256(value: Any) -> bytes:
     """SHA256(UTF8(RFC8785(value)))."""
     return hashlib.sha256(rfc8785_canonicalize(value).encode("utf-8")).digest()
+
+
+def _validate_nfc_ijson(value: Any) -> None:
+    """Validate the stricter protocol-v2 receipt profile without mutating v1."""
+    if isinstance(value, bool) or value is None or isinstance(value, float):
+        raise TypeError(f"non-canonical value type for hashed artifact: {value!r}")
+    if isinstance(value, int):
+        if abs(value) > _JCS_IJSON_MAX_INT:
+            raise ValueError(f"integer {value} exceeds I-JSON exact range")
+        return
+    if isinstance(value, str):
+        if unicodedata.normalize("NFC", value) != value:
+            raise ValueError("canonical JSON strings must already be Unicode NFC")
+        try:
+            value.encode("utf-8")
+        except UnicodeEncodeError as exc:
+            raise ValueError("canonical JSON strings must contain only valid Unicode scalar values") from exc
+        return
+    if isinstance(value, (list, tuple)):
+        for item in value:
+            _validate_nfc_ijson(item)
+        return
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if not isinstance(key, str):
+                raise TypeError(f"object key must be str, got {key!r}")
+            _validate_nfc_ijson(key)
+            _validate_nfc_ijson(item)
+        return
+    raise TypeError(f"unsupported type for canonical JSON: {type(value).__name__}")
+
+
+def rfc8785_canonicalize_nfc_ijson(value: Any) -> str:
+    """Canonicalize the protocol-v2 NFC/I-JSON receipt profile."""
+    _validate_nfc_ijson(value)
+    return rfc8785_canonicalize(value)
 
 
 # --- Blinded schedule generation ---

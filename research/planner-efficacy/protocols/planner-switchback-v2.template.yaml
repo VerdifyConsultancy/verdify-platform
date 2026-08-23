@@ -1,0 +1,823 @@
+# Planner switchback protocol — version 2 TEMPLATE (NOT a locked instance).
+#
+# ADR-0010 replaces the unfinished generalized policy-vector critical path with
+# the deployed confirmed-component transport. Every TO-LOCK value must be
+# resolved before this becomes planner-switchback-v2.yaml. A template is not
+# authorization to actuate.
+
+schema: verdify-planner-switchback-protocol
+version: 2
+status: template
+decision_record: docs/adr/0010-confirmed-component-experiment-fast-path.md
+execution_plan: docs/plans/planner-experiment-fast-path-2026-08-23.md
+
+study:
+  study_id: "TO-LOCK: canonical study id"
+  greenhouse_id: vallery
+  timezone: America/Denver
+  start_local_date: "TO-LOCK: YYYY-MM-DD of local day 1"
+  local_days_target: 30
+  pairs_target: 15
+  local_days: "TO-LOCK: even count justified by frozen power artifact"
+  pairs: "TO-LOCK: local_days / 2; 15 only if the power gate passes"
+  pair_structure: adjacent_ab_ba
+  assignment_namespace_uuid: "TO-LOCK: fixed UUIDv5 namespace"
+  # The intended accelerated 2026 window does not cross DST. A later window
+  # that crosses a UTC-offset change requires elapsed-window fixtures before
+  # lock; it is not silently rejected or normalized.
+  dst_crossing:
+    allowed: false
+    rule: every locked local day must have the same America/Denver UTC offset
+  blinded_schedule_artifact: "RANDOMIZATION-FINALIZATION: committed X/Y schedule JSON"
+  blinded_schedule_hash_sha256: "RANDOMIZATION-FINALIZATION: SHA256 of canonical schedule"
+
+database_contract:
+  control_experiment_kind: randomized
+  protocol_version: 2
+  lifecycle_status:
+    existing_axis: [draft, locked, armed, running, paused, completed, aborted]
+    legal_edges:
+      - draft->locked
+      - locked->draft
+      - locked->armed
+      - locked->aborted
+      - armed->running
+      - armed->aborted
+      - running->paused
+      - paused->running
+      - running->completed
+      - running->aborted
+      - paused->aborted
+    meaning: immutable experiment-design and run lifecycle
+  execution_phase:
+    additive_axis: [feature_off, shadow, commissioning, aa_rehearsal, randomized]
+    legal_edges:
+      - feature_off->shadow
+      - shadow->commissioning
+      - commissioning->aa_rehearsal
+      - aa_rehearsal->commissioning
+      - aa_rehearsal->randomized
+    meaning: source phase bound onto every assignment, bundle, exposure, outcome and readiness artifact
+  admission_state:
+    values: [closed, open, baseline_recovery, emergency_hold]
+    legal_edges:
+      - closed->open
+      - closed->baseline_recovery
+      - open->baseline_recovery
+      - baseline_recovery->closed
+      - closed->emergency_hold
+      - open->emergency_hold
+      - baseline_recovery->emergency_hold
+      - emergency_hold->closed
+      - emergency_hold->baseline_recovery
+    invariant: >-
+      closed permits no experiment device claim or write; emergency_hold permits
+      no experiment write until an immutable facility authorization event;
+      baseline_recovery is the sole bounded baseline-only write authority apart
+      from baseline as the exact currently-open typed operation, and remains
+      executable while lifecycle status is paused so a pause cannot strand a
+      non-baseline device state
+    cross_axis_guards:
+      - feature_off and shadow require admission closed
+      - closed rejects every experiment device claim and write, including baseline
+      - emergency_hold rejects every experiment write until facility-authorized release
+      - open requires component flag enabled, vector mode off, current lease, current typed operation and phase readiness
+      - commissioning open requires lifecycle draft and admits only an approved commissioning_probe or commissioning_canary operation and its exact profile revisions
+      - aa_rehearsal open requires lifecycle draft and admits only phase-tagged baseline rehearsal readiness operations
+      - locked or armed lifecycle requires admission closed; readiness cannot reopen after design freeze
+      - randomized open requires lifecycle running and one current immutable randomized assignment
+      - paused or terminal lifecycle forbids open but may retain baseline_recovery or emergency_hold
+      - open failure transitions to baseline_recovery or emergency_hold, never directly to closed
+      - baseline_recovery to closed requires two qualifying fresh baseline epochs at current generations
+      - emergency_hold release to closed or baseline_recovery requires an immutable facility authorization event
+      - completed, capability disabled or ordinary writer restored requires closed with confirmed baseline, or an explicit facility-owned emergency-safe-state event
+    closure_basis: every closed transition records confirmed_baseline or facility_owned_emergency
+  v1_compatibility: >-
+    additive protocol-version-2 transition/admission functions supersede the
+    migration-213 qualification/aa result-binding gates only for version 2;
+    version-1 rows and kind semantics remain unchanged
+  readiness_binding: >-
+    shadow, canary and A/A evidence are typed immutable readiness artifacts on
+    this study id, not separate qualification/aa experiment results; their
+    phase tags are rejected from randomized ITT outcomes
+  readiness_revision_guard: >-
+    every artifact binds source git, image digests, config, firmware, registry/
+    grid, baseline/profile, selector, sensor/corridor, outcome and analyzer
+    revisions applicable to its gate. Design lock/randomized transition rejects
+    any mismatch. A semantic revision invalidates and reruns every affected
+    downstream gate; nonsemantic revisions require an explicit equivalence record
+  prerun_readiness_operations: >-
+    shadow, commissioning and aa_rehearsal run while lifecycle is draft through
+    additive protocol-v2 preview/readiness tables and functions. Shadow creates
+    immutable phase-tagged preview artifacts and has no device operation/outbox
+    claim. #641 diagnostics use operation_kind=commissioning_probe;
+    moderate/aggressive canaries use commissioning_canary. Commissioning/A-A create
+    immutable phase-tagged typed readiness operations that cannot enter the
+    randomized assignment table or ITT. They do not call or weaken the existing
+    fn_freeze_experiment_context/fn_create_assignment armed-or-running v1 gates
+  baseline_recovery_operation: >-
+    every recovery request first appends an immutable phase-tagged
+    operation_kind=baseline_recovery work row linked to the triggering preview,
+    readiness operation or randomized assignment; it is the only work id the
+    resolver may return while admission is baseline_recovery
+  baseline_recovery_target_resolver: >-
+    a dedicated SECURITY DEFINER least-information function valid in
+    commissioning, aa_rehearsal and randomized accepts only experiment id,
+    immutable linked recovery-operation id and lease generation, reads
+    clock_timestamp() once, requires admission=baseline_recovery and any needed
+    facility authorization, and returns only the exact locked baseline state
+    hash. It rejects assignment/readiness ids and can never return moderate,
+    aggressive or the triggering target
+  readiness_target_resolver: >-
+    a separate SECURITY DEFINER least-information function accepts only
+    experiment id, readiness-operation id and lease generation, reads
+    clock_timestamp() once, and returns only the current phase-typed profile/state
+    hash after feature, admission, revision and validity checks; it cannot see
+    assignments, schedule or mapping and is unavailable in randomized phase
+  current_target_resolver: >-
+    the randomized-only SECURITY DEFINER least-information function accepts only experiment id,
+    assignment id and lease generation; it reads PostgreSQL clock_timestamp()
+    exactly once inside the function (never transaction_timestamp). After checking
+    protocol version, enabled/vector flags, lifecycle, phase, admission,
+    server-time validity and frozen revisions, it returns only the current
+    assignment id, permitted profile id/state hash and validity. The executor
+    cannot supply time or read the secret, mapping table, future assignments or
+    bulk schedule
+
+feature_flags:
+  component:
+    environment: VERDIFY_COMPONENT_EXPERIMENT_ENABLED
+    default: false
+    semantics: false denies all experiment claims; true only makes DB-fenced v2 operations available
+  generalized_vector:
+    environment: VERDIFY_POLICY_VECTOR_MODE
+    required: "off"
+  startup_and_worker_guard: >-
+    hard-fail experiment readiness and claim zero work if component=true while
+    generalized vector mode is not exactly off; the two transports are mutually exclusive
+
+randomization:
+  public_beacon_required: false
+  draw_owner: restricted assignment service
+  draw: >-
+    the restricted idempotent finalization routine internally generates exactly
+    one accepted 32-byte operating-system CSPRNG secret after locking a unique
+    study row; callers cannot supply or replace it, retry returns the existing
+    receipt, and an append-only audit event exposes any violation
+  derivation: >-
+    for zero-based pair j, digest_j = HMAC-SHA256(secret,
+    "verdify-switchback-v2/pair\0" || UTF8_NFC(study_id) || uint32_be(j));
+    digest_j[0]&1 selects X,Y when zero and Y,X when one. mapping_digest =
+    HMAC-SHA256(secret, "verdify-switchback-v2/mapping\0" ||
+    UTF8_NFC(study_id)); mapping_digest[0]&1 selects X=A/Y=B when zero and the
+    reverse when one. A single output bit is uniform, so no rejection step exists
+  schedule_serialization: >-
+    RFC 8785 canonical JSON UTF-8 bytes of the source-locked schedule schema;
+    dates are YYYY-MM-DD, pair indexes are zero-based integers, labels are
+    literal X/Y, no insignificant or implementation-dependent fields exist
+  pair_order: one X and one Y day per adjacent pair, order derived from the pair stream
+  analyst_labels: [X, Y]
+  mapping_commitment: >-
+    SHA256("verdify-switchback-v2/commit\0" || UTF8_NFC(study_id) || 0x00 ||
+    blinded_schedule_hash_bytes || 0x00 || randomization_secret_32_bytes);
+    committing a bare one-bit mapping is forbidden because it is brute-forceable
+  mapping_commitment_sha256: "RANDOMIZATION-FINALIZATION"
+  secret_custody: >-
+    restricted randomizer storage only; never Git, logs, general application
+    configuration, executor, dashboard or analyst role; reveal exactly once
+    after frozen outcome/deviation hashes and reproduce schedule plus mapping
+  schedule_generation_source_sha: "TO-LOCK"
+  canonical_schedule_schema_sha256: "TO-LOCK"
+  custody: >-
+    facility operations may see physical state required for safety; analysts,
+    comparative dashboards and the analyzer receive X/Y until frozen exports
+  no_redraw: true
+  no_shift_replace_or_rerandomize: true
+
+locking:
+  pre_draw_design_lock: >-
+    immutable protocol design, profiles, selector, endpoint, missingness, power,
+    sample size, exact local start date, analyzer, role grants and source
+    revisions; contains no schedule-dependent value
+  randomization_finalization: >-
+    one restricted transaction internally generates the secret and creates the
+    immutable X/Y schedule, schedule hash, mapping commitment and no-redraw
+    receipt; a mechanically
+    checked final protocol instance may differ from the design lock only in
+    those receipt fields, and is committed before day 1. Missing the locked
+    start aborts that study id/draw; the schedule is never shifted
+  changes_after_day_1: forbidden; semantic change closes the epoch
+
+integrity_roles:
+  shared_database_owner_allowed_for_runtime: false
+  restricted_randomizer: >-
+    invoke functions that internally create/use the secret and publish only a
+    blinded receipt; no pre-reveal function returns it, and direct SELECT/logging
+    is denied. One-way authorized reveal is a distinct completion function
+  lifecycle_controller: execute legal v2 lifecycle/phase transitions; cannot rewrite design, schedule or outcomes
+  component_executor: >-
+    call only the least-information current-target resolver, claim its current
+    work and append bundle/receipt/exposure records; cannot read mapping secret,
+    arm table, future assignment or bulk schedule
+  outcome_freezer: >-
+    build and freeze X/Y-labeled exports; may read blinded assignment id/label/
+    phase lineage but cannot mutate assignment or read A/B mapping or secret
+  blinded_analyst: >-
+    read frozen X/Y exports only until one-way reveal; cannot mutate assignment/
+    outcomes or read A/B mapping or secret before authorized reveal
+  scope_note: full workload-wide least privilege remains platform hardening in issue 643
+
+transport:
+  kind: legacy_components_v1
+  generalized_policy_vector_mode_required: "off"
+  firmware_change_required: false
+  treatment_component_count: 11
+  observed_component_count: 48
+  identity_source: derived_cfg_readbacks_v1
+  state_content_identity:
+    field: policy_state_content_sha256
+    domain_ascii: verdify-policy-state-content-v1
+    formula: >-
+      SHA256(domain_ascii bytes || 0x00 || WIRE_SCHEMA_VERSION u8 || full
+      wire_manifest_digest 32 bytes || encode_policy_vector(values) 178 bytes)
+    canonical_payload: >-
+      `verdify_schemas.policy_vector.encode_policy_vector`: magic VPV1, schema
+      u8, manifest prefix, count u8, then all 48 records ascending permanent
+      wire_id with wire_id u16 big-endian and fixed-width u8/u16/i16/u32/bool
+      raw values; numeric raw=value*wire_scale after round-half-even; bool is
+      exactly 0x00/0x01; missing, extra, null, non-finite, out-of-bounds,
+      duplicate or malformed values are rejected
+    semantics: stable expected/observed equality hash; no observation timestamp or generation
+    deployed_grid_precondition: >-
+      before encoding or activation, each value must equal a point on the locked
+      deployed ESPHome entity grid; the wire encoder's finer round-half-even
+      quantization is not evidence that an off-entity-grid value is landable
+    golden_fixture: verdify_schemas/tests/fixtures/policy_vector_goldens.json
+    golden_sha256:
+      registry_defaults: ffa4e479ae1ed9ca4ca21a4c851b23769bb3614f85bb6f246ef813b5f5053404
+      wire_min_bounds: 66676681ca3362953d40aaf27763ab0ec118767ffedba1e4f0eb913e88fadaa2
+      wire_max_bounds: 38168934a8de56011717c626ccb990dfb2704297c66c8ff90a9218683fecddab
+      mixed_realistic: 74c6250c234bc08a57d550b552f2de7f17ac24bfe3f3e961e5564bd5b68cc053
+  observation_receipt_identity:
+    field: observation_receipt_sha256
+    domain_ascii: verdify-policy-observation-receipt-v1
+    formula: SHA256(domain_ascii bytes || 0x00 || RFC8785(canonical_payload) UTF-8 bytes)
+    canonicalization_profile: >-
+      RFC 8785 JSON Canonicalization Scheme over I-JSON: object keys sorted by
+      UTF-16 code units, minimal escapes and UTF-8 output; every input string is
+      first validated as Unicode NFC (normalization is rejected, never silently
+      applied), and every integer is in [0, 2^53-1]. Use the source-locked
+      `switchback.randomization.rfc8785_canonicalize_nfc_ijson` implementation, not the
+      broader `policy_vector.canonical_json_bytes` RFC-8785-style helper
+    canonical_payload: >-
+      source-locked object with schema literal
+      "verdify-policy-observation-receipt", version integer 1, lowercase-hex
+      policy_state_content_sha256, literal identity_source, lowercase UUID experiment/work/bundle,
+      literal execution_phase and operation_kind in one schema-enforced valid
+      phase/kind pair,
+      lowercase UUIDv4 source_epoch_id, observations array of exactly 48 entries
+      ascending permanent wire_id containing wire_id integer and observed_at
+      spelled exactly YYYY-MM-DDTHH:MM:SS.ffffffZ, nonempty NFC
+      NFC firmware/config/registry/grid revision strings, nonnegative I-JSON
+      exact integers at most 9007199254740991 for
+      writer/connection generations and persisted_at in the same timestamp
+      spelling; every key is required, and null/extra keys, duplicate wire ids,
+      offset timestamps and non-NFC strings are rejected
+    schema: research/planner-efficacy/protocols/observation-receipt-v1.schema.json
+    schema_exact_bytes_sha256: db60b98661fb56dbdb9d3be6c987023db66fbacb638235c3f80a1a06160d5975
+    golden_fixture: research/planner-efficacy/protocols/observation-receipt-v1.golden.json
+    source_epoch_ownership: >-
+      source_epoch_id is generated and immutably persisted by the cfg-ingestion
+      source cycle that observed all 48 fields, never minted or relabeled by the
+      executor or receipt assembler; one epoch id identifies exactly one source
+      cycle and cannot be reused with different observations
+    semantics: per-observation provenance receipt; never used as the stable baseline identity
+    revision_scope: >-
+      the receipt embeds exactly firmware, config, registry and deployed-grid
+      revisions. The full source/image/profile/selector/sensor/corridor/outcome/
+      analyzer/facility revision set is bound relationally through immutable
+      study/work/bundle/readiness rows; it is not falsely claimed to be embedded
+      in this receipt
+    work_lineage: >-
+      execution_phase and operation_kind must match the referenced immutable
+      work row; shadow uses a no-device preview id, randomized uses
+      work_id=assignment_id, commissioning/A-A use v2 readiness-operation ids,
+      and recovery uses its linked immutable recovery-operation id. None of the
+      non-randomized kinds can join randomized ITT
+  identity_claim_limit: both hashes are server-derived and never described as device-echoed
+  activation:
+    boundary_local: "00:00"
+    baseline_interposition_required: true
+    baseline_confirmation_epochs_before_nonbaseline: 2
+    baseline_confirmation_rule: >-
+      the same two distinct post-delivery complete/fresh/skew/current-generation
+      criteria as target confirmation must prove the stable baseline state hash
+      before any nonbaseline component write begins
+    send_only_differences: true
+    fixed_activation_order: "TO-LOCK: replay-qualified 11-field order"
+    fixed_rollback_order: "TO-LOCK: separately replay-qualified rollback-safe order"
+    no_interleaving: true
+    intermediate_prefix_is_exposure: false
+  full_baseline_recovery:
+    triggers: [initial_enrollment, reboot, reset, common_field_drift]
+    expected_source: locked complete 48-field baseline artifact
+    component_count: 48
+    ownership: same sole component executor under exclusive writer barrier
+    behavior: write every observed-divergent canonical field, including any of the common 37
+    fixed_recovery_order: "TO-LOCK: separately replay-qualified 48-field baseline-safe order"
+    qualification: >-
+      every canonical field has an exact deployed setter/readback route and all
+      prefixes from compiled defaults and observed recovery starts pass replay/HIL;
+      no exposure opens until complete post-recovery confirmation
+  confirmation:
+    consecutive_full_matches: 2
+    full_match_fields: 48
+    snapshot_cadence_seconds_max: 60
+    snapshot_age_seconds_max: 90
+    all_component_observations_after_bundle_finished: true
+    distinct_source_observation_epochs: true
+    source_epoch_separation_seconds_min: 30
+    anti_cache_rule: >-
+      the second receipt must reference a later cfg-ingestion source cycle and
+      every one of its 48 observed_at values must be strictly greater than the
+      corresponding value in the first receipt; changing only an epoch UUID or
+      persisted_at over cached observations never qualifies
+    intra_snapshot_component_skew_seconds_max: 60
+    require_current_writer_generation: true
+    require_current_connection_generation: true
+  close_exposure_on:
+    - any expected-versus-observed mismatch
+    - stale or incomplete snapshot
+    - reboot or reset
+    - reconnect or connection-generation change
+    - writer lease loss or foreign writer
+    - expired or mismatched current typed work, including randomized assignment
+    - unknown delivery outcome
+    - database or provenance uncertainty
+  automatic_recovery: >-
+    close exposure and revoke non-baseline admission; make one bounded baseline
+    recovery request only with current lease/connection and no facility rescue;
+    otherwise enter no-exposure emergency_hold and alert, never repeat writes
+  manual_or_emergency_override: >-
+    close exposure, revoke non-baseline authority, yield to the facility, pause
+    and alert; do not send baseline until the facility manager explicitly
+    authorizes it as compatible with the rescue action
+  reboot_policy: >-
+    close exposure, request/confirm baseline after reconnect, record deviation,
+    and do not automatically re-enter a non-baseline B target that day
+
+arms:
+  frozen_fsm:
+    label: A
+    definition: >-
+      unchanged deployed deterministic firmware using the approved current
+      device-confirmed 48-field baseline state
+    baseline_artifact: "TO-LOCK"
+    baseline_state_content_sha256: "TO-LOCK"
+  ai_daily_selector:
+    label: B
+    definition: >-
+      the same deterministic firmware; one frozen AI invocation before the
+      boundary selects baseline, moderate or aggressive; invalid/unavailable
+      selection falls back to baseline but remains B under ITT
+    valid_outputs: [baseline, moderate, aggressive]
+    invocation_cadence: once_per_local_day
+    run_identically_in_both_arms: true
+    intraday_physical_replanning: false
+    moderate_artifact: "TO-LOCK"
+    aggressive_artifact: "TO-LOCK"
+    treatment_allowlist:
+      - cool_stage2_over_high_f
+      - sw_cool_all_fans_at_high_enabled
+      - fog_escalation_kpa
+      - min_fog_on_s
+      - min_fog_off_s
+      - mister_engage_kpa
+      - mister_all_kpa
+      - mister_all_delay_s
+      - mister_pulse_gap_s
+      - mister_pulse_on_s
+      - mister_water_budget_gal
+    common_fields_note: remaining 37 policy values observed equal to baseline during exposure
+    value_grid: actual deployed ESPHome entity quantization; silent activation rounding forbidden
+
+selection:
+  frozen_context_cutoff_local: "TO-LOCK: before boundary"
+  provider: "TO-LOCK"
+  immutable_model_identifier: "TO-LOCK: version, never a floating alias"
+  returned_system_fingerprint: "TO-LOCK when provider exposes one; persist on every response"
+  prompt_sha256: "TO-LOCK"
+  system_message_sha256: "TO-LOCK"
+  model_revision: "TO-LOCK"
+  context_schema_revision: "TO-LOCK"
+  lesson_snapshot_sha256: "TO-LOCK"
+  tool_contract_revision: "TO-LOCK"
+  response_schema_revision: "TO-LOCK"
+  decoding_parameters: "TO-LOCK: temperature, top_p, seed and all provider controls"
+  timeout_retry_idempotency: >-
+    TO-LOCK: one logical invocation key per study/local day; retries reuse it,
+    cannot create a second accepted choice and fail baseline after the locked limit
+  raw_request_sha256: required_per_invocation
+  raw_response_sha256: required_per_invocation
+  forbidden_context:
+    - X/Y label or private A/B mapping
+    - post-cutoff telemetry
+    - comparative or arm-resolved outcomes
+    - online lesson/model/prompt update
+  response_contract: exactly one of baseline, moderate, aggressive
+  invalid_late_or_unavailable: baseline
+  virtual_choice_persisted_in_both_arms: true
+  accepted_choices_per_local_day: exactly_one
+  deterministic_forecast_comparator: shadow_only
+
+washout:
+  primary_exclusion_local: "00:00-06:00"
+  hours: 6
+  expected_bins_per_day: 72
+  climate_bins_minimum: 66
+  maximum_continuous_gap_minutes: 30
+  per_protocol_denominator_seconds: 64800
+  per_protocol_minimum_seconds: 61560
+  per_protocol_threshold_filters_primary_itt: false
+  status: "TO-LOCK after historical power/completeness recomputation"
+  required_sensitivities:
+    - zero_hour
+    - six_hour
+    - previous_arm
+    - water_use
+    - major_intervention
+  canary_scope: >-
+    supervised canaries validate delivery, bounded transition prefixes,
+    immediate climate/safety response and authorized recovery only; they do not
+    estimate carryover or prove six-hour stabilization
+  admission: >-
+    six hours is allowed only if the frozen historical/carryover analysis and
+    prespecified zero-hour, six-hour and previous-arm sensitivities justify it;
+    otherwise redesign with multi-day blocks before randomization
+
+outcomes:
+  primary_itt_window_contract: >-
+    create one endpoint row for every immutable randomized assignment over its
+    fixed local [06:00,24:00) window. Assignment/day/time select the row; raw
+    outcome availability determines its value or null, never row existence, and
+    confirmed-exposure membership never selects it. Include known
+    baseline fallback, failed delivery, rescue and zero-exposure days in their
+    assigned arm. Irreducibly ambiguous treatment or missing outcome data stays
+    in the ITT ledger and invokes the frozen null/bounds/inconclusive rule; it is
+    never silently dropped or reclassified
+  exposure_use: >-
+    the confirmed-exposure union and 61560/64800-second threshold measure
+    fidelity and define a prespecified per-protocol sensitivity only. They never
+    filter, truncate or weight the primary assigned-day ITT endpoint
+  bucket:
+    minutes: 15
+    measured_sample_minimum: 12
+    expected_one_minute_samples: 15
+    interval: UTC half-open [bucket_start, bucket_start + 15 minutes)
+    minute_slot: >-
+      floor each UTC timestamp to its exact [minute,minute+60s) slot; average
+      finite rows inside a slot once so extra polling cannot add weight. Exact
+      duplicate timestamps with identical values collapse; duplicate timestamps
+      whose temperature or VPD differs by more than the locked sensor-resolution
+      tolerance invalidate that slot and emit an integrity deviation
+    timestamp_tolerance: none across minute boundaries; clock-quality gate must pass
+    duplicate_value_tolerance: "TO-LOCK: exact temperature and VPD sensor-resolution tolerances"
+    interpolation: forbidden for indoor climate
+    weight_hours: 0.25
+  climate:
+    source_contract:
+      relation: public.climate
+      greenhouse_id: vallery
+      temperature_field: temp_avg
+      vpd_field: vpd_avg
+      corridor_resolver:
+        temperature_low: "public.fn_crop_band_value('house','temp_low', bucket_start)"
+        temperature_high: "public.fn_crop_band_value('house','temp_high', bucket_start)"
+        vpd_low: "public.fn_crop_band_value('house','vpd_low', bucket_start)"
+        vpd_high: "public.fn_crop_band_value('house','vpd_high', bucket_start)"
+      worst_zone_fields:
+        temperature: [temp_north, temp_east, temp_south, temp_west]
+        vpd: [vpd_north, vpd_east, vpd_south, vpd_west]
+      revision: "TO-LOCK: sensor registry plus corridor function/source revision"
+    bin_formula: >-
+      x_i is the arithmetic mean of finite one-minute-slot values in the UTC
+      half-open bucket; L_i and U_i are the corridor resolver values at
+      bucket_start; e_i = max(L_i - x_i, 0, x_i - U_i). A bin is null unless it
+      has at least 12 of 15 distinct valid minute slots and finite x_i/L_i/U_i
+    daily_formula: >-
+      over valid bins whose local timestamp is in [06:00,24:00),
+      Y_d = sum(0.25*e_i)/sum(0.25); the denominator contains valid bins only,
+      and the day is null unless at least 66 of 72 bins are valid with no
+      continuous missing interval over 30 minutes
+    vpd_corridor_distance:
+      direction: lower_is_better
+      noninferiority_margin_kpa: 0.05
+      margin_status: engineering margin requiring horticultural/climate justification before lock
+    temperature_corridor_distance:
+      direction: lower_is_better
+      noninferiority_margin_f: 0.50
+      margin_status: engineering margin requiring horticultural/climate justification before lock
+    margin_justification_artifact_sha256: "TO-LOCK"
+    localized_safety:
+      measured_wall_zone_fields:
+        north: {temperature: temp_north, vpd: vpd_north, rh: rh_north}
+        east: {temperature: temp_east, vpd: vpd_east, rh: rh_east}
+        south: {temperature: temp_south, vpd: vpd_south, rh: rh_south}
+        west: {temperature: temp_west, vpd: vpd_west, rh: rh_west}
+      center_proxy:
+        fields: {temperature: temp_avg, vpd: vpd_avg, rh: rh_avg}
+        status: >-
+          TO-LOCK only if issue 641 verifies these house-average fields as an
+          acceptable center-screening proxy; never label them a center probe
+      zone_bin_formula: >-
+        apply the same minute-slot validity and e_i=max(L_i-x_i,0,x_i-U_i)
+        formula per measured wall zone; worst-measured-wall-zone e_i is max
+        across north/east/south/west for each temperature and VPD bucket
+      absolute_limits: "TO-LOCK: per-zone temperature/VPD hard low/high and maximum breach duration"
+      air_dew_margin_proxy:
+        dewpoint_formula: >-
+          for paired observations from the same measured zone and minute slot,
+          require finite T_f and 0 < RH <= 100, then T_c=(T_f-32)*5/9;
+          gamma=ln(RH/100)+17.625*T_c/(243.04+T_c);
+          dewpoint_c=243.04*gamma/(17.625-gamma). RH=0, out-of-domain or
+          unpaired inputs are null and fail the safety gate, never a numeric margin
+        margin_formula: zone_air_temperature_c - zone_air_dewpoint_c
+        minimum_margin_c_and_duration: "TO-LOCK"
+        claim_limit: >-
+          air-dew screening only; without a commissioned center, canopy-surface
+          or leaf-wetness sensor it cannot establish true center/canopy/leaf
+          condensation safety
+      manual_crop_inspection:
+        protocol: >-
+          TO-LOCK: facility-approved crown/leaf wetness and visible-condensation
+          inspection timing, rubric, stop rule and immutable observation record
+          for each physical canary and randomized safety review
+      reference_disagreement:
+        mode: "TO-LOCK: commissioned_pair or no_continuous_pair"
+        commissioned_pair:
+          source_ids: "TO-LOCK only if existing primary/reference temperature and RH/VPD pairs are verified"
+          formula: absolute paired one-minute-slot difference
+          maximum_difference_and_duration: "TO-LOCK if selected"
+        no_continuous_pair: >-
+          if issue 641 verifies no redundant continuous pair, freeze calibration
+          age, cross-wall plausibility limits and independent handheld spot-check
+          timing/rubric/stop rules; explicitly report that continuous reference
+          disagreement was unavailable and do not imply redundant sensing
+        hardware_rule: >-
+          requiring a new continuous reference makes it an explicit issue-641
+          hardware/calibration/timeline gate; it is never an implicit fast-path prerequisite
+      missingness: >-
+        any required measured wall-zone, approved proxy or reference/spot-check
+        evidence under the locked mode, or required manual inspection, failing its locked completeness/
+        freshness invalidates the safety gate; no interpolation
+      decision: >-
+        any hard absolute or air-dew/manual-inspection stop condition triggers a
+        safety stop; any missing, excessive worst-measured-wall-zone corridor or
+        reference-disagreement gate prevents advance. Thresholds, approved
+        proxy inputs and horticultural/HVAC/facility approval are frozen in the
+        localized-safety artifact before physical canaries
+      claim_limit: >-
+        reports worst measured wall-zone and approved house-average proxy only;
+        it makes no true center, canopy-surface, leaf-condensation or crop-safety
+        claim unless issue 641 explicitly adds and commissions the corresponding
+        continuous sensors, which becomes a declared hardware gate and timeline change
+      artifact_sha256: "TO-LOCK"
+  operating_benefit:
+    primary_endpoint_id: "TO-LOCK: exactly one of variable_operating_cost_usd or nine_control_state_minutes"
+    common_decision: upper one-sided locked-confidence bound for AI-minus-Frozen is less than 0
+    primary_catalog:
+      variable_operating_cost_usd:
+        unit: USD per analyzed local day
+        direction: lower_is_better
+        boundary: 0
+        formula: >-
+          stream-specific commissioned resource use times locked unit prices:
+          relay-active duration for heat/fan/fog/misters, calibrated delivered
+          water for fog/misters, and measured/calibrated vent travel events for
+          vent motor energy (never vent-open duration); coefficient values,
+          uncertainty propagation and scope are frozen in the artifact
+        coefficient_artifact_sha256: "TO-LOCK if selected"
+      nine_control_state_minutes:
+        unit: active-or-open-state minutes per analyzed local day
+        direction: lower_is_better
+        boundary: 0
+        formula: >-
+          sum of right-continuous active duration for eight relay streams plus
+          open-state duration for vent, in minutes, each with weight 1
+        weights:
+          heat1: 1
+          heat2: 1
+          vent: 1
+          fan1: 1
+          fan2: 1
+          fog: 1
+          mister_south: 1
+          mister_west: 1
+          mister_center: 1
+        claim_limit: heterogeneous control-state burden only; not energy, water, cost, carbon or resource efficiency
+    missingness: >-
+      any missing initial state, invalid source-continuity interval or incomplete
+      selected coefficient makes the day endpoint null; retain it in ITT and
+      apply the locked complete-pair and conservative-bound rule without imputation
+    secondary_only: all unselected resource endpoint variants, per-actuator runtime, cycles and short cycles
+  actuator_state_contract:
+    relation: public.equipment_state
+    greenhouse_id: vallery
+    equipment_ids: [heat1, heat2, vent, fan1, fan2, fog, mister_south, mister_west, mister_center]
+    stream_semantics:
+      heat1: state=true means commanded/observed electric-heater relay active
+      heat2: state=true means commanded/observed gas-heat enable relay active
+      vent: state=true means vent_open active/open state, not motor energized runtime
+      fan1: state=true means commanded/observed fan relay active
+      fan2: state=true means commanded/observed fan relay active
+      fog: state=true means commanded/observed fog relay active, not measured flow
+      mister_south: state=true means commanded/observed mister relay active, not measured flow
+      mister_west: state=true means commanded/observed mister relay active, not measured flow
+      mister_center: state=true means commanded/observed mister relay active, not measured flow
+    initial_state: >-
+      each stream requires a direct current state snapshot observed in
+      [05:58:30,06:00:00] local at or before the analyzed-window start, plus no
+      conflicting/ambiguous transition between that snapshot and 06:00; a
+      post-06:00 snapshot or arbitrarily old transition row is not a valid seed
+    same_timestamp: >-
+      identical duplicates may collapse; conflicting true/false rows invalidate
+      the affected bucket and day, emit an integrity deviation and are never
+      silently resolved with bool_or
+    integration: >-
+      after the fresh seed, treat unambiguous states as right-continuous and
+      integrate intersections with UTC half-open 15-minute buckets; connection
+      or ingestion continuity uncertainty invalidates the affected interval
+    device_counter_reconciliation: >-
+      for every stream, bind a source-locked device counter and read a fresh
+      start sample in [05:58:30,06:00:00] plus a fresh end sample in
+      [23:58:30,24:00:00) of the same local day/reset epoch. Compare the
+      counter delta—not the since-midnight total—to the state-stream integral
+      over the exact half-open [start_sample_at,end_sample_at) interval within
+      max(1 active/open-state minute, 1 percent); never compare flexible sample
+      timestamps to a different fixed window. A reset,
+      wrap, reboot or missing endpoint invalidates reconciliation unless every
+      boot-epoch segment has separately fresh endpoints and the locked
+      segment-delta algorithm sums them. The 24:00 post-reset sample is forbidden
+    counter_source_map: "TO-LOCK: exact counter entity/units/reset semantics for each of nine streams"
+    revision: "TO-LOCK: source, extractor and equipment inventory revision"
+  safety_integrity:
+    - deterministic interlocks and safety modes
+    - emergency/manual overrides and facility rescue
+    - expected-versus-observed state and exposure coverage
+    - sensor freshness, reference disagreement and wetting recovery
+    - writer/reconnect/reboot/fallback events
+  exploratory:
+    - per-actuator runtime, cycles and short cycles
+    - outside weather and forecast vintage
+    - AI selection frequency, latency, retries, fallback, tokens and compute cost
+    - irrigation, fertigation, crop and facility interventions
+
+analysis:
+  primary_estimand: >-
+    paired ITT effect of physical admission of the frozen once-daily selector
+    recommendation versus frozen baseline under common virtual AI inference,
+    over all precommitted adjacent-day pairs in the locked design, including
+    fallback, rescue and failed-delivery assignments
+  inference_cost_scope: >-
+    the one AI call occurs in both arms and cancels from the randomized primary
+    contrast; report compute/tokens/cost descriptively, and include it in net
+    benefit only through a separately preregistered sensitivity assigning one
+    call cost to each B day
+  paired_contrast: "for pair j, D_j = Y_AI,j - Y_Frozen,j regardless of chronological order"
+  estimator: "tau_hat = sum(D_j)/m for the locked m complete pairs"
+  standard_error: "sample_sd(D_j) / sqrt(m), with Bessel denominator m-1"
+  upper_confidence_bound: >-
+    tau_hat + t_quantile(one_sided_confidence_level, df=m-1) * standard_error;
+    t implementation/library revision and numeric goldens are frozen
+  decision_boundaries:
+    vpd_corridor_distance: upper bound < 0.05 kPa
+    temperature_corridor_distance: upper bound < 0.50 degF
+    selected_operating_benefit: upper bound < 0 in its locked unit
+  no_efficacy_peek: true
+  advance_rule: >-
+    all safety/integrity gates pass, both climate noninferiority gates pass and
+    the locked operating-benefit gate passes at the same justified one-sided
+    confidence level
+  one_sided_confidence_level: "TO-LOCK by the v2 power artifact; do not add an unnecessary IUT multiplicity penalty"
+  report_effects_and_intervals: true
+  incomplete_or_null: iterate_inconclusive
+  keep_every_assignment_in_itt: true
+  primary_never_conditions_on_exposure: true
+  no_outcome_driven_pair_replacement: true
+  complete_pair_primary_rule: >-
+    all locked pairs must have both daily endpoint values for an advance
+    classification; otherwise retain every assignment, report available-pair
+    effects plus locked physical best/worst-case bounds, and classify
+    inconclusive without imputation, replacement or denominator change
+  finite_sample_sensitivity: >-
+    paired sign-flip sensitivity centered at each locked boundary: enumerate
+    all 2^m sign vectors when m<=20; when m>20 use exactly 2,000,000 vectors from
+    the counter stream SHA256("verdify-switchback-v2/analysis-signs\0" ||
+    schedule_hash_bytes || uint64_be(counter)), concatenate digest bits
+    most-significant-bit first and consume successive groups of m bits, include
+    the observed vector and report Monte Carlo standard error; sensitivity
+    never changes the primary t-bound decision
+  frozen_analyzer_environment_digest: "TO-LOCK"
+
+design_power:
+  frozen_pretrial_selector_replay: >-
+    run the exact frozen prompt/model/context on a versioned set of pretrial
+    contexts and publish baseline/moderate/aggressive frequencies, fallback
+    frequency and uncertainty without randomized outcomes
+  selection_frequency_artifact_sha256: "TO-LOCK"
+  minimum_joint_advance_power: 0.80
+  evaluated_for:
+    - both climate noninferiority gates
+    - the selected operating-benefit superiority gate
+    - selection dilution and the 06:00-24:00 completeness distribution
+    - joint intersection-union advance event under plausible locked cross-endpoint correlation
+  fixed_design_rule: >-
+    choose one fixed m from pretrial data before randomization. Fifteen pairs may
+    be locked only if the joint probability that all three IUT conditions pass
+    is at least 0.80 under locked smallest relevant effects, selector mix,
+    missingness and a versioned plausible correlation model; otherwise choose a
+    larger fixed m. No internal sample-size adaptation occurs after the draw
+  type_i_note: >-
+    the intersection-union test needs no multiplicity penalty for type-I error,
+    but that does not make marginal per-endpoint power equal joint decision power
+  correlation_artifact_sha256: "TO-LOCK"
+  power_artifact_sha256: "TO-LOCK"
+
+pre_randomization_gates:
+  software_vertical:
+    - recent restored PostgreSQL assignment-to-outcome happy path
+    - injected partial, unknown, stale, duplicate, reconnect, reboot, DB and rollback failures
+    - every permitted intermediate prefix passes compiled replay
+  writer_and_band:
+    - issue 433 truthful/non-starving runtime acceptance
+    - issue 424 direct raw served/control/readback semantic proof
+  shadow:
+    duration_hours_minimum: 12
+    duration_hours_target: 24
+    complete_scheduled_boundaries_minimum: 1
+    required_path: context cutoff -> one persisted selector choice -> expected state/receipt -> outcome preview
+    require_zero_experiment_device_calls: true
+  supervised_canaries:
+    - baseline->moderate->baseline
+    - baseline->aggressive->baseline
+  aa:
+    duration_hours: 48
+    physical_boundaries: 2
+    both_branches_resolve_to_baseline: true
+    zero_tolerance:
+      - failed activation barrier
+      - foreign writer mutation
+      - mixed or unconfirmed exposure
+      - missing climate/runtime outcome lineage
+  physical_readiness_issue: 641
+  staged_launch_issue: 642
+
+stopping_and_fix_forward:
+  class_0_nonsemantic: deploy_and_continue_with_revision_record
+  class_1_replay_equivalent_reliability: deploy_at_pair_boundary_after_equivalence_proof
+  class_2_epoch_semantic: confirm_baseline_close_epoch_and_start_new_version
+  class_3_safety: >-
+    close exposure, revoke experiment authority and yield to facility emergency
+    action; baseline only when facility-authorized and reachable, then abort,
+    repair and recommission
+  plant_care_overrides_protocol: true
+  never_discard_assignment_or_deviation: true
+
+facility_covariates:
+  - crop inventory, growth stage, canopy and topology epoch
+  - irrigation/fertigation schedule, recipe, EC/pH availability and flushes
+  - fog/mister flow, pressure, supply faults and daily water state
+  - doors, shade/screens, occupancy and manual actions
+  - maintenance, mechanical availability, network/power interruptions and resets
+  - outside weather, solar and forecast vintage
+  - primary/reference T/RH calibration, disagreement, wetting and recovery
+
+rollback:
+  order:
+    - close exposure and stop non-baseline admission while preserving baseline-recovery authority
+    - if no facility rescue owns the device, authorize the separately replay-qualified baseline order
+    - confirm two distinct fresh complete baseline readback epochs
+    - persist closure/deviation and pause or abort the database lifecycle
+    - declaratively disable component-experiment mode and clear active id
+    - restore ordinary writer ownership only after baseline confirmation
+  manual_override_exception: >-
+    yield immediately and wait for explicit facility authorization before any
+    baseline command; if baseline cannot be safely confirmed, retain no exposure
+    and use the facility emergency path
+  baseline_state_content_sha256: "TO-LOCK"
+  rehearsed_evidence: "TO-LOCK"
+
+revisions:
+  source_git_sha: "TO-LOCK"
+  deployed_firmware_revision: "TO-LOCK"
+  tunable_registry_revision: "TO-LOCK"
+  deployed_entity_grid_revision: "TO-LOCK"
+  baseline_revision: "TO-LOCK"
+  moderate_revision: "TO-LOCK"
+  aggressive_revision: "TO-LOCK"
+  selector_revision: "TO-LOCK"
+  outcome_schema_revision: "TO-LOCK"
+  analysis_revision: "TO-LOCK"
+  sensor_calibration_revision: "TO-LOCK"
+  actuator_resource_revision: "TO-LOCK"
+  crop_facility_epoch: "TO-LOCK"

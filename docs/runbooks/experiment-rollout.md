@@ -1,148 +1,413 @@
-# Controlled planner experiment — rollout and rollback runbook
+# Confirmed-component planner experiment — rollout and rollback runbook
 
-Scope: the GitOps side of the controlled policy experiment (#581 / #587).
-Source of truth: audit §8.10 in
-[`docs/research/planner-efficacy-current-firmware-2026-08-14.md`](../research/planner-efficacy-current-firmware-2026-08-14.md)
-and the program plan `docs/plans/planner-experiment-program.md`. This runbook
-captures the ORDER of operations; the audit defines the acceptance detail.
+Scope: the fast AI-vs-Frozen-FSM experiment in ADR-0010, epic #581 and launch
+issue #642.
 
-Flags (base defaults are the feature-OFF shape, `deploy/k8s/base/configmap.yaml`):
+Authoritative design:
+
+- `docs/adr/0010-confirmed-component-experiment-fast-path.md`
+- `docs/plans/planner-experiment-fast-path-2026-08-23.md`
+- `research/planner-efficacy/protocols/planner-switchback-v2.template.yaml`
+
+This runbook does not authorize a physical phase without its preceding evidence
+gate. The generalized policy-vector rollout is deferred; its mode remains off.
+
+## Mode and ownership contract
+
+The fast-path implementation must add a separate safe-default mode, named here
+as the target contract:
 
 ```text
-VERDIFY_POLICY_VECTOR_MODE=off|shadow|live        (default off)
-VERDIFY_ACTIVE_EXPERIMENT_ID=<explicit UUID>       (default empty)
-VERDIFY_LEGACY_DIRECT_POLICY_WRITES_ENABLED=0|1    (default 1)
+VERDIFY_COMPONENT_EXPERIMENT_ENABLED=false|true  # new coarse kill switch; default false
+VERDIFY_ACTIVE_EXPERIMENT_ID=<explicit UUID>     # default empty
+VERDIFY_POLICY_VECTOR_MODE=off                   # must remain off
 ```
 
-Overlay reality check (§8.10): the production Argo application is historically
-named `verdify-prod-dark`, but its **source is `deploy/k8s/overlays/prod`** —
-that overlay is the ONLY study target. Never sync the actual
-`overlays/prod-dark` device-dark shape as if it were production, and never set
-an experiment mode there (prod-dark stays non-actuating).
+The implementation lane may choose a more precise final name only by updating
+ADR-0010, the v2 protocol, tests, issue bodies and this runbook atomically. It
+must preserve the coarse `off|enabled` semantics everywhere and must not reuse
+`VERDIFY_POLICY_VECTOR_MODE` or accidentally enable the broken manifest/vector
+workers.
 
-"Deployed" means the exact revision is ArgoCD **Synced + Healthy**, the
-expected image digests and config revisions are running, and the baseline /
-vector hash is confirmed on-device — not merely "manifest present".
+`enabled` only makes the bounded executor available. Database execution phase
+and admission state grant actual authority. `shadow` has closed admission;
+`commissioning`, `aa_rehearsal` and `randomized` open only their exact typed
+operation. Ordinary planner/MCP/forecast proposals for the experiment-owned
+fields remain shadow-only. An explicit source-aware hold prevents other writers
+from interleaving; do not use a global switch that also blocks the executor's
+legacy component transport.
 
-## Config-revision bump procedure (do this on EVERY verdify-config edit)
+Startup/readiness and every claim hard-fail to zero experiment work if enabled
+is true while vector mode is anything other than exact `off`.
 
-`verdify-config` is consumed via `envFrom` by api / mcp / ingestor /
-migration-job / planner / setpoint-server / lab-publisher / ha-gap-backfill,
-so a ConfigMap edit alone does **not** restart any pod. The GitOps-owned
-rollout trigger is the `verdify.io/config-revision` pod-template annotation on
-verdify-api, verdify-mcp, verdify-ingestor, verdify-planner, and
-verdify-setpoint-server, maintained by `scripts/gen-config-revision.sh`:
+Use one `kind=randomized`, `protocol_version=2` experiment ID for `shadow`,
+`commissioning`, `aa_rehearsal` and `randomized`. Lifecycle status, execution
+phase and admission state are orthogonal and audited. Every assignment, bundle,
+receipt, exposure and outcome carries the phase; non-randomized evidence cannot
+enter ITT. The additive v2 transition contract replaces separate migration-213
+qualification/A/A result prerequisites only for v2. Do not edit ConfigMaps or
+restart services for phase changes.
 
-1. Edit the ConfigMap source (base `configmap.yaml` and/or an overlay
-   `verdify-config` patch such as `device-write-configmap.yaml`).
-2. Run `scripts/gen-config-revision.sh` (no args). It hashes the base
-   ConfigMap plus every overlay `verdify-config` patch and rewrites the five
-   annotations in place. Commit the flag change and the annotation bump
-   together.
-3. CI (`tests/test_21_config_revision.py`, also run by `scripts/ci-local.sh`)
-   recomputes the hash and FAILS the build if an edit shipped without the
-   bump.
-4. After the gated Argo sync, verify every env-consuming pod actually
-   restarted onto the new revision:
-   `kubectl get pods -o jsonpath='{range .items[*]}{.metadata.name} {.metadata.annotations.verdify\.io/config-revision}{"\n"}{end}'`
-   and compare with `scripts/gen-config-revision.sh --print`.
+Pre-draw shadow/commissioning/A-A remain lifecycle `draft`. Additive v2 preview
+and typed readiness-operation functions serve those phases: shadow creates no
+device work; canary/A-A operations are immutable, phase-tagged, and live outside
+the randomized assignment/ITT tables. Do not reuse or relax the existing
+`fn_freeze_experiment_context`/`fn_create_assignment` armed-or-running gates.
+The executor uses a separate least-information readiness-target resolver until
+randomized phase, then the randomized-only current-assignment resolver. A third
+resolver handles linked immutable baseline-recovery work in every physical
+phase and can return only the locked baseline—never the triggering assignment
+or a nonbaseline profile.
 
-Note the deliberately conservative blast radius: the revision is ONE hash over
-base + all overlay config patches, so a config edit for either overlay rolls
-the consumers of both at their next sync. Restarts are sync-gated (ArgoCD is
-manual-sync for this app), and the ingestor restart remains the gated
-single-writer Recreate it always was.
+The executor's baseline-only recovery authority survives `paused`; paused
+blocks non-baseline admission, not safe recovery. `emergency_hold` blocks all
+experiment writes and yields to the facility.
 
-## Rollout order (§8.10 steps 1–9)
+An open failure moves to `baseline_recovery` or `emergency_hold`, never directly
+to an apparently safe `closed`. Recovery may close only after two qualifying
+baseline epochs. Completion, kill-switch disable and ordinary-writer restoration
+require that proof, except when an immutable facility-owned emergency-safe-state
+event explicitly transfers responsibility. Emergency-hold release always needs
+facility authorization.
 
-1. **Foundations, everything OFF.** Verify a restorable database snapshot; run
-   the ledgered migration-207 PreSync path; pass post-schema assertions; roll
-   contracts, APIs, the frozen outcome view, dashboards, digest-pinned images,
-   and flags **off**; verify every config consumer restarted onto the intended
-   config revision.
-2. **Shadow.** Create and validate an explicit shadow experiment UUID first.
-   The current workers also require the DB experiment to be `armed|running`
-   and a current assignment to exist; do not flip the flag until a preflight
-   proves that non-actuating lifecycle/schedule shape. Then set both
-   `VERDIFY_POLICY_VECTOR_MODE=shadow` and
-   `VERDIFY_ACTIVE_EXPERIMENT_ID=<that UUID>` (prod overlay patch + revision
-   bump). The assignment/arbiter workers are inert without the UUID. Eligible
-   proposals compile and persist with state `shadow`; the arbiter deliberately
-   creates **no outbox row and no device actuation** in shadow. Verify compiled
-   shadow proposals, zero new outbox rows, zero policy service calls, and
-   unchanged legacy writer behavior.
-3. **Firmware artifacts.** Build the staged-vector OTA image AND a separate
-   recovery image through
-   `deploy/k8s/components/firmware-builder/firmware-builder.yaml`. The
-   recovery image must be the prior proven control logic **plus** the exact
-   immutable baseline/vector schema compiled in (the old binary alone boots
-   defaults — many legacy globals are not restored). Pin source, toolchain,
-   binary, baseline, and schema hashes; test both images before OTA.
-4. **Live twin.** Build `twin/Dockerfile` in-cluster (twin-builder →
-   zot origin), digest-pin, deploy the completed live twin
-   (`components/firmware-twin`), and collect 7–14 days of shadow action/hash
-   agreement.
-5. **Qualification.** Create and lock the non-efficacy `qualification` UUID
-   (hashed pretrial spec, three canonical templates, six content-changing
-   edges, 24 FIFO cell queues, four slots per cell). Commit `mode=live`, that
-   exact ID, legacy writes `0` through GitOps; sync, restart, verify every
-   config/image/audience hash; stage and echo the qualification manifest; arm
-   the DB record; run the §8.3 protocol. On completion: confirm baseline via
-   the ledgered path, close exposure, complete the UUID, declaratively return
-   to `mode=shadow` + empty ID, verify the reset rollout.
-6. **A/A.** Separate non-efficacy `aa` UUID (seven fixed local-day
-   assignments, both lanes resolving to exact baseline content). Commit that
-   ID in `mode=live`; sync/restart/verify; stage its baseline-only manifest;
-   arm; run the seven-day A/A gate. Then confirm baseline, complete, return
-   declaratively to shadow/empty ID, verify reset.
-7. **Randomized arm-up.** Freeze the randomized protocol + new UUID; bind the
-   passing qualification and A/A result hashes; name the future beacon round;
-   run the audited automated assignment-service OS-CSPRNG draw and commit its
-   domain-separated commitment BEFORE that beacon publishes;
-   generate the schedule. Commit `mode=live`, the randomized ID, legacy
-   writes `0`, frozen Hermes/context hashes; sync/restart/verify; stage and
-   echo the randomized manifest; arm the DB record; pre-stage day 1.
-8. **Blinded run.** 30 days blinded, no efficacy peeking; then freeze exports
-   and endpoint/fidelity/deviation tables BEFORE revealing the arm mapping.
-9. **Completion.** Confirm baseline on-device; complete the experiment; then
-   declaratively set mode off / empty ID; restore legacy writes only after the
-   confirmed baseline; sync; restart; verify the final state.
+## Immutable preflight snapshot
 
-## Immediate rollback (ORDER MATTERS — device truth before GitOps truth)
+Before the first implementation deployment, record safe metadata only:
 
-Do these strictly in sequence; the GitOps flip is deliberately LAST among the
-software steps because flipping mode off first would strand an unconfirmed
-vector on the device with no owner:
+- current main and desired GitOps revision;
+- current and rollback image digests/config revision;
+- Argo sync/health and workload readiness;
+- generalized vector mode `off`, current active ID and component kill-switch state;
+- exact deployed firmware, registry/entity-grid and baseline revisions;
+- public planner/data health and open critical/high alerts;
+- single writer/Lease and #433 evidence state;
+- direct raw band/control/readback evidence for #424;
+- database migration-ledger and restorable-backup metadata;
+- current complete 48-field raw baseline payload, stable
+  `policy_state_content_sha256`, and latest `observation_receipt_sha256`;
+- facility/crop epoch and planned maintenance/irrigation/fertigation windows.
 
-1. **Pause admission** — stop the arbiter admitting new proposals/assignments
-   (experiment pause transition; no new outbox work).
-2. **Baseline via the outbox** — enqueue the frozen baseline vector through
-   the SAME durable outbox/staged-commit path as any other vector. Never
-   hand-push, never bypass the delivery ledger.
-3. **Confirm the device hash** — wait for the device to echo the exact
-   baseline generation/activation hash (readback), proving the baseline is
-   what is actually running.
-4. **Close exposure** — close the open exposure interval as `fallback` so the
-   analysis window has an honest boundary.
-5. **THEN GitOps mode off** — set `VERDIFY_POLICY_VECTOR_MODE=off` and clear
-   `VERDIFY_ACTIVE_EXPERIMENT_ID` in the prod overlay patch.
-6. **Restore legacy writes** — `VERDIFY_LEGACY_DIRECT_POLICY_WRITES_ENABLED=1`
-   (only now — after the confirmed baseline).
-7. **Bump + sync** — run `scripts/gen-config-revision.sh`, commit, ArgoCD
-   sync.
-8. **Verify restarts** — confirm every env-consuming pod restarted onto the
-   rollback config revision (procedure above) and reports mode off / empty ID.
+Never read or emit Kubernetes Secret contents or annotation values. A Secret is
+secret-bearing in full.
 
-Independent paths when software rollback is unavailable (§8.10): with no
-network, firmware expiry to the immutable ROM baseline is the independent
-rollback; if the new firmware itself is bad, flash the **verified recovery
-image** — not the unmodified legacy binary.
+## Config revision
 
-## Never `--prune`
+`verdify-config` is consumed through `envFrom`; a ConfigMap edit alone does not
+restart consumers. On every experiment ConfigMap edit:
 
-Never run `argocd app sync --prune` (or enable automated pruning) on the
-verdify app during any experiment phase. The app is deliberately
-`prune:false`: a removed workload ORPHANS rather than deletes, and a prune
-could tear down the single-writer ingestor, the DB, or delivery machinery
-mid-experiment. Removal of a resource is its own reviewed change followed by
-an explicit, targeted deletion — never a sync-time side effect.
+1. edit the declarative base/overlay source;
+2. run `scripts/gen-config-revision.sh`;
+3. commit the generated pod-template annotation changes with the ConfigMap;
+4. pass `tests/test_21_config_revision.py` and full CI;
+5. after Argo sync, verify every consumer runs the intended revision.
+
+The stable experiment ID does not change between phases. One initial image
+release is built; governed fix-forward releases remain available. Enabling or
+rehearsing the coarse kill switch still causes bounded
+ConfigMap revision rollouts; shadow→commissioning→A/A→randomized does not.
+
+## Gate 1 — integrated feature-off release
+
+Required before changing the new mode from `off`:
+
+- recent restored-Postgres migration and vertical happy-path test;
+- assignment → daily selection → exclusive setter call list → two distinct
+  post-delivery raw-observation epochs → stable state hash plus observation
+  receipts → exposure → daily outcome/export → analyzer fixture;
+- failure injection for partial/unknown delivery, stale/expired/mismatched
+  phase-typed preview/readiness/assignment/recovery work, duplicate
+  worker, writer collision, reconnect/reboot, DB outage, sensor gap, cfg drift,
+  pod restart and interrupted rollback;
+- actual deployed entity-grid goldens for all baseline/template values;
+- Python/SQL state-hash goldens use the exact domain + schema byte + full
+  manifest digest + canonical 178-byte wire encoding; receipt-schema hash and
+  goldens match exact RFC-8785/UUID/timestamp spelling;
+- compiled replay of every permitted treatment/rollback prefix and
+  compiled-default/current-state → full-48 baseline recovery prefix;
+- additive v2 lifecycle/phase/admission migrations that leave v1 semantics
+  unchanged and prevent canary/A/A rows from entering randomized ITT;
+- five bounded runtime roles: restricted randomizer, lifecycle controller,
+  executor, outcome freezer and separate read-only blinded analyst; no shared
+  database-owner runtime credential;
+- separate least-information readiness, randomized-assignment and
+  baseline-recovery resolvers each read `clock_timestamp()` once inside their
+  SECURITY DEFINER function; the recovery branch accepts only linked immutable
+  recovery work and can return only the locked baseline after phase, lease,
+  validity, authorization and revision checks;
+- readiness artifacts bind exact source/deploy/firmware/grid/profile/sensor/
+  outcome revisions and semantic drift invalidates affected downstream gates;
+- focused tests and `CI_BASE_REF=<base> make ci` green;
+- exact source built in-cluster by Kaniko to Zot and digest-pinned on main;
+- previous state and declarative rollback diff retained.
+
+Sync the feature-off release without prune. Verify exact revision Synced +
+Healthy, running digests/config revision, migration ledger, one writer, normal
+planner/data health and unchanged device state.
+
+## Gate 2 — explicit-ID non-actuating shadow
+
+1. Create one explicit experiment UUID with frozen candidate revisions and an
+   assignment/selection preview schedule.
+2. Set its v2 execution phase to `shadow` with admission `closed`.
+3. Commit `VERDIFY_COMPONENT_EXPERIMENT_ENABLED=true` and that UUID through the
+   production overlay, including the generated config revision.
+4. Argo plan/apply the exact app without prune.
+5. Verify all expected pods restarted onto the exact revision.
+6. Run at least 12 hours **and through at least one complete scheduled context
+   cutoff/boundary/choice/receipt/outcome-preview path**; target 24 hours.
+
+Shadow acceptance:
+
+- valid once-daily virtual selections in both arms;
+- complete stable cfg-readback state hashes, provenance receipts and outcome
+  previews;
+- zero experiment component writes/device calls;
+- no experiment outbox work that the live executor could lease;
+- no writer demotion or interference with ordinary production automation;
+- generalized vector mode still `off`;
+- no new safety/integrity alert and normal planner/data health green.
+
+Exercise declarative rollback once: enabled `false`, empty ID, revision bump,
+sync and restart verification. Re-enable with the same shadow DB phase only
+after the rollback proof is retained. These are bounded kill-switch config
+rollouts, not per-phase deployment mechanics.
+
+Shadow is evidence collection, not the causal experiment start.
+
+## Gate 3 — field readiness and physical admission capability
+
+Before the first experiment-owned physical write, obtain #641's scoped probe
+approval with supervisor, time window and facility rescue owner. Then advance
+to `commissioning`, create an immutable `operation_kind=commissioning_probe`
+readiness operation,
+and run only the approved #424/#433 raw served/control/readback, writer and
+baseline-recovery probe. The approval does not authorize a moderate/aggressive
+canary.
+
+After that diagnostic:
+
+- #433 passes the deployed quiet-writer, deliberate drift, reconnect, truthful
+  lifecycle and scheduler-nonstarvation acceptance;
+- #424 has direct raw proof that served, controller and observed band semantics
+  are coherent and versioned;
+- #641 contains the probe evidence and its second, combined multidisciplinary
+  physical signoff before any moderate/aggressive canary or A/A;
+- baseline and both templates land exactly on deployed setter steps;
+- facility rescue and automatic baseline recovery have named on-call ownership;
+- no planned maintenance/feed/flush/irrigation action conflicts with the
+  supervised canary window;
+- current baseline is complete, fresh and confirmed.
+
+Verify the coarse capability is still enabled at the exact deployed revision.
+Keep admission `closed` until a specific supervised action begins; no ConfigMap
+or pod restart is needed for this phase transition.
+
+## Gate 4 — supervised template canaries
+
+Run only with the facility manager able to override immediately.
+
+For each sequence:
+
+1. verify current complete baseline and writer/connection generation;
+2. keep DB phase `commissioning` and open only the exact typed canary admission;
+3. execute the same component-bundle path used by randomized assignments;
+4. retain every command lifecycle, raw readback, intermediate prefix, sensor,
+   actuator, safety and connection event;
+5. open exposure only after two distinct full-state source epochs: all
+   component observations follow bundle completion, epoch separation is at
+   least 30 seconds, intra-snapshot skew is at most 60 seconds, and both stable
+   state hashes match; cfg ingestion owns the immutable epoch IDs and every
+   wire's second `observed_at` advances, so a new UUID/receipt over cached
+   observations cannot qualify;
+6. observe through the conservative six-hour response window or return earlier
+   for a safety/operational reason;
+7. close treatment exposure/nonbaseline admission, enter bounded
+   `baseline_recovery`, then activate baseline through the same executor;
+8. confirm two distinct fresh complete baseline epochs, transition admission to
+   `closed`, and close the canary.
+
+Required sequences:
+
+- baseline → moderate → baseline;
+- baseline → aggressive → baseline.
+
+A mixed/unconfirmed state is transition evidence only. Ambiguity, reboot,
+reconnect, foreign writer or sensor invalidity closes exposure and revokes
+non-baseline admission. Initial/reboot/common-field recovery restores every
+divergent field of the locked 48-field baseline through the exclusive recovery
+operation; an 11-field reset is insufficient. A manual/emergency action instead
+makes the experiment yield, enter `emergency_hold` and alert. It never fights
+the rescue or writes baseline until the facility manager authorizes recovery.
+Failure is fixed forward and re-proved; it is not waived because values are
+inside clamps.
+
+Canaries validate transport, prefix safety, immediate climate/safety response
+and authorized recovery; they do not prove six-hour carryover. The separate
+frozen historical/carryover analysis must justify six elapsed hours. If it
+cannot, redesign with multi-day blocks before randomization. V2 forbids a
+DST-offset crossing.
+
+## Gate 5 — 48-hour A/A dress rehearsal
+
+Advance the same experiment ID to `aa_rehearsal`. Preload two immutable typed
+local-day readiness operations that exercise both executor branches while
+resolving to the exact baseline. Bind that phase onto every artifact; these
+rows never enter the randomized assignment table or ITT and do not use the
+historical `kind=aa` result gate.
+
+Require:
+
+- two boundary activations and 48 real hours;
+- 100% barrier convergence within the locked time;
+- baseline exact in every eligible exposure snapshot;
+- zero foreign mutation of an experiment-owned field;
+- no exposure across partial/mixed state, reconnect or reboot ambiguity;
+- complete climate bins and all-nine-actuator streams under the v2 rules;
+- action/outcome rows join one and only one confirmed exposure;
+- safety/integrity dashboard and alerts proven with controlled injected faults;
+- final baseline recovery re-proved.
+
+A/A estimates no efficacy. Zero-tolerance integrity failure closes admission,
+preserves phase-tagged evidence, and returns execution phase to `commissioning`
+if rework is needed. The pre-draw lifecycle remains `draft`; `paused` is
+reachable only from an already `running` randomized lifecycle and is never a
+phase.
+
+## Gate 6 — protocol and randomization lock
+
+Before randomization finalization, create and freeze the **pre-draw design
+lock**:
+
+1. freeze the approved baseline, moderate and aggressive artifacts;
+2. freeze selector provider/immutable model/system fingerprint contract,
+   prompt/messages, decoding controls, tool/schema versions, cutoff/exclusions,
+   timeout/retry/idempotency rules and raw request/response hashing;
+3. replay frozen pretrial contexts and freeze baseline/moderate/aggressive plus
+   fallback frequencies;
+4. freeze six-hour completeness/power including selector dilution and plausible
+   cross-endpoint correlation; allow 15 pairs only if the joint probability all
+   three IUT conditions pass is at least 80%, otherwise freeze a larger fixed
+   even count. No sample-size adaptation occurs after the draw;
+5. freeze exactly one operating-benefit endpoint with units, weights,
+   direction, boundary and missingness; lock the exact climate fields/corridor
+   functions and nine stream/integration semantics. Treat `vent=true` as open
+   state, never motor runtime; lock minute-slot duplicate rules and fresh
+   at-or-before-06:00/pre-midnight same-reset-epoch counter samples and compare
+   each delta to state integration over the exact sample-to-sample interval;
+   a post-06:00 state snapshot cannot seed the endpoint;
+6. freeze the primary ITT export as one fixed [06:00,24:00) row per assigned
+   day, including known fallback, failed delivery and rescue without filtering
+   on confirmed exposure. Exposure union and 61,560/64,800 seconds are fidelity/
+   per-protocol sensitivity only; ambiguous/missing endpoints stay assigned and
+   use the frozen bounds/inconclusive rule;
+7. freeze analysis formula, confidence level, finite-sample sensitivity and
+   environment;
+8. freeze the exact local start date, all revisions and minimum role grants;
+9. resolve every non-random `TO-LOCK` in the v2 template and commit/hash the
+   design lock, then transition lifecycle `draft→locked`;
+10. verify no comparative efficacy result has been inspected.
+
+The restricted idempotent randomization routine then locks the unique study
+row and internally generates exactly one 32-byte OS-CSPRNG secret; the caller
+cannot supply or replace it. The same transaction persists the restricted
+secret/no-redraw receipt and creates the RFC-8785 X/Y schedule, schedule hash
+and full-entropy commitment using the protocol's exact HMAC/domain/index rules.
+Retry returns the existing receipt. Never print, log or commit the secret.
+
+Finalize and commit `planner-switchback-v2.yaml` before day 1. A contract test
+must prove that it differs from the pre-draw design lock only in the generated
+schedule/receipt fields. The start date cannot change after the draw. If it is
+missed, abort that study ID/draw and preregister a new study; never shift the
+schedule. Successful idempotent finalization and all readiness bindings
+transition lifecycle `locked→armed`; they do not start exposure.
+
+The future public beacon in the historical v1 tooling is not used.
+
+## Gate 7 — randomized day 1
+
+Obtain #642's separate randomized-day-1 go/no-go after both #641 approvals,
+canaries, A/A and finalization. Advance
+the stable experiment ID's phase `aa_rehearsal→randomized` without a new GitOps
+rollout. At the exact day-1 start transition lifecycle `armed→running`, then
+open admission only for the current immutable typed assignment; randomized
+`open` is illegal before lifecycle is `running`.
+
+At the first boundary verify:
+
+- immutable assignment and frozen revisions;
+- expected once-daily AI selection/fallback;
+- baseline interposition and exclusive target batch;
+- two distinct post-delivery complete expected raw observation epochs;
+- a valid exposure open at the second confirmation time;
+- exact deployed revision remains Synced + Healthy;
+- public planner/data/safety health remains green;
+- confirmed baseline rollback remains immediately available.
+
+Only after all of those are true may the program report “experiment started.”
+
+## During the randomized run
+
+- Monitor safety, integrity, exposure, data completeness and rollback only.
+- Do not compute or display comparative efficacy or X/Y mapping.
+- Keep every assigned day, fallback, override and deviation in ITT.
+- Never redraw, reorder, shift, replace or delete an assignment.
+- Class 0 observability-only changes may deploy with a revision record.
+- Class 1 replay-equivalent reliability changes require equivalence proof and a
+  pair boundary.
+- Class 2 treatment/controller/band/sensor-calibration/mechanical/outcome changes
+  close the epoch; do not pool before/after.
+- Class 3 safety defects close exposure, revoke experiment authority and yield
+  to the facility. Baseline is sent only when facility-authorized and
+  reachable; then abort.
+
+## Immediate rollback — physical truth first
+
+Use this order for software/integrity rollback:
+
+1. **Close exposure and non-baseline admission.** Set lifecycle `paused`, but
+   preserve the explicit `baseline_recovery` authority; record the reason and
+   assigned ITT day immediately.
+2. **Yield to rescue when present.** For a manual/emergency override enter
+   `emergency_hold`, send nothing and wait for explicit facility authorization.
+3. **Recover baseline when authorized.** Use the durable component executor and
+   separately replay-qualified baseline order. After reboot/common drift,
+   restore every divergent field of the full locked 48-field baseline; never
+   hand-edit an apparent value to bypass the ledger.
+4. **Confirm baseline.** Require two distinct fresh complete raw observation
+   epochs at the current connection generation and matching stable baseline
+   state-content hash.
+5. **Persist lifecycle evidence.** Pause or abort with exact receipts/deviation.
+6. **Then GitOps off.** Set component enabled `false` and clear the active ID;
+   keep generalized vector mode `off`.
+7. **Restore ordinary ownership.** Only after confirmed baseline may normal
+   planner/forecast/MCP component admission resume.
+8. **Bump, build if needed and sync.** Regenerate the config revision, commit,
+   Argo sync without prune and verify restarts/digests/health.
+
+If software cannot restore the baseline, use the facility emergency procedure
+and existing firmware/local controls. Do not enable the unqualified
+manifest/vector path as a fallback.
+
+## Completion and reveal
+
+After the final scheduled day:
+
+1. close every exposure and stop nonbaseline admission while retaining bounded
+   baseline-recovery authority;
+2. activate and confirm baseline, then transition admission to `closed`;
+3. freeze and hash outcomes, deviations, fidelity, facility epochs and analysis
+   environment;
+4. pass integrity/completion gates;
+5. reveal the 256-bit secret exactly once, verify its commitment and reproduce
+   both schedule and X/Y mapping;
+6. run the frozen analyzer and publish effects, uncertainty, decision and claim
+   limits;
+7. declaratively set component enabled false/empty ID and verify final
+   Synced + Healthy;
+8. reconcile all GitHub issues against exact source/deploy/runtime evidence.
+
+## Never prune
+
+Never run `argocd app sync --prune` or enable automated pruning for this
+rollout. Resource removal is a separate reviewed action with explicit target
+and rollback; it is not an experiment phase transition.

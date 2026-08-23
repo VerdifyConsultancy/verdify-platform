@@ -1,6 +1,13 @@
 # Step-test qualification machinery (audit §8.3)
 
-Issues #584/#588, epic #581. Spec: audit §8.3
+> **Historical/platform-v2 only — not the current #581/#588 launch path.**
+> ADR-0010 replaced this 96-transition generalized-vector gate for the first
+> physical study with setter-prefix replay/HIL, supervised baseline↔template
+> canaries and a 48-hour A/A rehearsal. `VERDIFY_POLICY_VECTOR_MODE` remains
+> `off` for that fast path. Preserve this machinery for #586/#638; do not run it
+> or cite it as fast-path readiness.
+
+Historical issues #584/#588 and epic #581. Spec: audit §8.3
 (`docs/research/planner-efficacy-current-firmware-2026-08-14.md`) — the
 pretrial gate that decides whether a two-hour wall-clock washout (and
 therefore daily switching) is admissible for the 30-day randomized phase.

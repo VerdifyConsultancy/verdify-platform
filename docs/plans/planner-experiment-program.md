@@ -1,13 +1,15 @@
 # Controlled planner experiment — accuracy review and implementation program
 
-> **Current status (2026-08-23): HOLD.** The August build wave landed behind
-> safe defaults, but a resumption audit found that the database, host transport,
-> firmware manifest/vector API, identity trace, assignment executor and outcome
-> pipeline do not yet compose. Production remains feature-off and no efficacy
-> trial has started. Use
-> [`docs/research/planner-experiment-resumption-audit-2026-08-23.md`](../research/planner-experiment-resumption-audit-2026-08-23.md)
-> for the current state, blockers and replanned gates. This document remains the
-> original design/accuracy review.
+> **Superseded for current execution (2026-08-23).** The factual accuracy review
+> remains useful, but ADR-0010 removes the unfinished generalized policy-vector
+> platform from the first trial's critical path. Production remains feature-off
+> and no efficacy trial has started. Use
+> [`planner-experiment-fast-path-2026-08-23.md`](planner-experiment-fast-path-2026-08-23.md)
+> for the active implementation/launch plan and
+> [`planner-experiment-resumption-audit-2026-08-23.md`](../research/planner-experiment-resumption-audit-2026-08-23.md)
+> for the audited gaps. The 7–14-day twin, 96-transition qualification,
+> seven-day A/A, public beacon and new experiment OTA below are historical
+> platform-design context, not fast-path prerequisites.
 
 - **Date:** 2026-08-14
 - **Author:** claude (outer-loop controller), on direction from Jason

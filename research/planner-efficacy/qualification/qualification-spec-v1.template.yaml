@@ -2,6 +2,12 @@
 # (audit §8.3, docs/research/planner-efficacy-current-firmware-2026-08-14.md;
 # issues #584/#588, epic #581).
 #
+# HISTORICAL/PLATFORM-V2 ONLY. ADR-0010 supersedes this 96-transition/vector
+# gate for the first physical trial. The current fast path keeps
+# VERDIFY_POLICY_VECTOR_MODE=off and uses deployed-setter prefix replay/HIL,
+# supervised baseline<->template canaries and a 48-hour A/A rehearsal. Retain
+# this template for #586/#638; it is not current actuation authority.
+#
 # This file is a TEMPLATE. A specification INSTANCE is produced by copying it,
 # resolving every value marked TO-LOCK, and committing the copy; the SHA-256
 # of the instance file's exact bytes (python -m qualification spec-hash) is

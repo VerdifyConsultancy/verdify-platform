@@ -134,9 +134,7 @@ def test_rfc8785_sorting_escapes_and_whitespace() -> None:
 
 
 def test_rfc8785_key_sort_uses_utf16_code_units() -> None:
-    # U+1D306 (surrogate pair, leading unit 0xD834) sorts before U+FB33 in
-    # UTF-16 order would be false; per RFC 8785 appendix, "דּ" < "\U0001d306"
-    # is FALSE in code-point order but TRUE... verify against explicit encoding.
+    # Preserve the historical v1 RFC-8785 fixture byte-for-byte.
     keys = ["\U0001d306", "דּ", "z"]
     expected = sorted(keys, key=lambda k: k.encode("utf-16-be"))
     out = randomization.rfc8785_canonicalize({k: 1 for k in keys})
@@ -148,8 +146,32 @@ def test_rfc8785_rejects_non_int_str_values() -> None:
     for bad in ({"a": 1.5}, {"a": True}, {"a": None}, {1: "x"}):
         with pytest.raises((TypeError, ValueError)):
             randomization.rfc8785_canonicalize(bad)
+    assert randomization.rfc8785_canonicalize({"a": 2**53}) == '{"a":9007199254740992}'
     with pytest.raises(ValueError):
         randomization.rfc8785_canonicalize({"a": 2**53 + 1})
+
+
+def test_v2_nfc_ijson_profile_is_strict_without_changing_v1() -> None:
+    canonicalize = randomization.rfc8785_canonicalize_nfc_ijson
+
+    decomposed = "study-e\u0301"
+    assert randomization.rfc8785_canonicalize({"study_id": decomposed}) == f'{{"study_id":"{decomposed}"}}'
+    historical = randomization.blinded_schedule(
+        decomposed,
+        "2026-09-01",
+        beacon_bytes=BEACON,
+        namespace_uuid=NAMESPACE,
+    )
+    assert historical["blinded_assignment"]["study_id"] == decomposed
+    assert canonicalize({"a": 2**53 - 1}) == '{"a":9007199254740991}'
+    with pytest.raises(ValueError, match="I-JSON exact range"):
+        canonicalize({"a": 2**53})
+    with pytest.raises(ValueError, match="Unicode NFC"):
+        canonicalize({"a": "e\u0301"})
+    with pytest.raises(ValueError, match="Unicode scalar"):
+        canonicalize({"a": "\ud800"})
+    with pytest.raises(ValueError, match="Unicode NFC"):
+        canonicalize({"e\u0301": "x"})
 
 
 # --- Blinded schedule --------------------------------------------------------

@@ -1,0 +1,203 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://verdify.vallery.net/schemas/policy-observation-receipt-v1.json",
+  "title": "Verdify policy observation receipt v1 payload",
+  "type": "object",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {"properties": {"execution_phase": {"const": "shadow"}}},
+      "then": {"properties": {"operation_kind": {"const": "shadow_preview"}}}
+    },
+    {
+      "if": {"properties": {"execution_phase": {"const": "commissioning"}}},
+      "then": {"properties": {"operation_kind": {"enum": ["commissioning_probe", "commissioning_canary", "baseline_recovery"]}}}
+    },
+    {
+      "if": {"properties": {"execution_phase": {"const": "aa_rehearsal"}}},
+      "then": {"properties": {"operation_kind": {"enum": ["aa_baseline_rehearsal", "baseline_recovery"]}}}
+    },
+    {
+      "if": {"properties": {"execution_phase": {"const": "randomized"}}},
+      "then": {"properties": {"operation_kind": {"enum": ["randomized_assignment", "baseline_recovery"]}}}
+    }
+  ],
+  "required": [
+    "schema",
+    "version",
+    "policy_state_content_sha256",
+    "identity_source",
+    "experiment_id",
+    "execution_phase",
+    "operation_kind",
+    "work_id",
+    "bundle_id",
+    "source_epoch_id",
+    "observations",
+    "firmware_revision",
+    "config_revision",
+    "registry_revision",
+    "grid_revision",
+    "writer_generation",
+    "connection_generation",
+    "persisted_at"
+  ],
+  "properties": {
+    "schema": {
+      "const": "verdify-policy-observation-receipt"
+    },
+    "version": {
+      "const": 1
+    },
+    "policy_state_content_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "identity_source": {
+      "const": "derived_cfg_readbacks_v1"
+    },
+    "experiment_id": {
+      "$ref": "#/$defs/uuid"
+    },
+    "execution_phase": {
+      "enum": [
+        "shadow",
+        "commissioning",
+        "aa_rehearsal",
+        "randomized"
+      ]
+    },
+    "operation_kind": {
+      "enum": [
+        "shadow_preview",
+        "commissioning_probe",
+        "commissioning_canary",
+        "aa_baseline_rehearsal",
+        "randomized_assignment",
+        "baseline_recovery"
+      ]
+    },
+    "work_id": {
+      "$ref": "#/$defs/uuid"
+    },
+    "bundle_id": {
+      "$ref": "#/$defs/uuid"
+    },
+    "source_epoch_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "observations": {
+      "type": "array",
+      "minItems": 48,
+      "maxItems": 48,
+      "prefixItems": [
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 1}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 2}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 3}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 4}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 5}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 7}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 8}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 9}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 10}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 11}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 12}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 13}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 14}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 15}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 16}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 17}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 18}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 19}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 20}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 21}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 22}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 23}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 24}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 25}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 26}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 27}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 28}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 29}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 30}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 31}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 32}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 33}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 34}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 35}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 36}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 37}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 38}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 39}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 40}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 41}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 42}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 43}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 44}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 45}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 46}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 47}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 48}}},
+        {"$ref": "#/$defs/observation", "properties": {"wire_id": {"const": 49}}}
+      ],
+      "items": false
+    },
+    "firmware_revision": {
+      "$ref": "#/$defs/revision"
+    },
+    "config_revision": {
+      "$ref": "#/$defs/revision"
+    },
+    "registry_revision": {
+      "$ref": "#/$defs/revision"
+    },
+    "grid_revision": {
+      "$ref": "#/$defs/revision"
+    },
+    "writer_generation": {
+      "$ref": "#/$defs/generation"
+    },
+    "connection_generation": {
+      "$ref": "#/$defs/generation"
+    },
+    "persisted_at": {
+      "$ref": "#/$defs/timestamp"
+    }
+  },
+  "$defs": {
+    "observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "wire_id",
+        "observed_at"
+      ],
+      "properties": {
+        "wire_id": {
+          "type": "integer"
+        },
+        "observed_at": {
+          "$ref": "#/$defs/timestamp"
+        }
+      }
+    },
+    "uuid": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{6}Z$"
+    },
+    "revision": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generation": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    }
+  }
+}

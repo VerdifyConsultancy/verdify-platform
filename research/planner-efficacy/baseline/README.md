@@ -36,6 +36,20 @@ dead field gone, **all 48 fields qualify** and the canonical vector bytes +
 These hashes are CANDIDATE identities — nothing actuates before the approval
 chain below (gate:jason).
 
+> **Identity warning for protocol v2:** the three `content_sha256` values above
+> use the historical revision-bound vector-content domain. They must never
+> populate `baseline_state_content_sha256` or another v2
+> `policy_state_content_sha256` field. Applying the new state-only formula to
+> these same historical bytes yields baseline
+> `02aaec81f48488830079c0f39821012b52af70254f7c9e8119a628cfe6cc5e38`,
+> moderate
+> `730df1ff380e78abf61610599c3b1fdde3901303cd286edb23f10aceb52e4445`,
+> and aggressive
+> `bc93ba1a18ccf3429cb89222affec92fde8b6bbcb5ef72a6b96d0eebf8333eb3`;
+> those are also non-lockable historical candidates.
+> Regenerate all three on the actual deployed setter grid, then compute and
+> golden-test the complete v2 hashes before lock.
+
 ## Method (audit §8.2)
 
 - **Source**: `setpoint_snapshot` effective device readbacks for greenhouse
@@ -167,9 +181,10 @@ tests).
   floor the epoch already approached), pulse gap 30 s, pulse on 75 s,
   water budget 250 gal, fog min on 90 s / min off 30 s.
 
-Per-field evidence and rationale strings are in the artifact. The planner may
-only select and switch between the two complete reviewed templates (§8.2); it
-may not synthesize intermediates.
+Per-field evidence and rationale strings are in the artifact. The once-daily
+selector may choose only `baseline`, `moderate` or `aggressive`; it may not
+synthesize intermediates or switch intraday. Every boundary interposes baseline,
+so direct moderate↔aggressive activation is forbidden.
 
 ## Approval chain (what must happen before any of this actuates)
 
@@ -177,15 +192,19 @@ may not synthesize intermediates.
    schema v2); the canonical vector bytes and `content_sha256` (fixed policy
    revision ids `{"registry_rev": "wire-v2-retire-wire-id-6", "schema_rev":
    "efa85343"}`) are now emitted for baseline + both templates.
-2. **Compiled replay** of the complete baseline vector through the current
-   firmware build, then **HIL**, then **A/A** (§8.2/§8.6) — constructed and
-   reviewed without inspecting trial outcomes.
-3. Horticultural, firmware, and safety owners approve the complete vectors
+2. Regenerate baseline/templates on the **actual deployed setter grid**. Prove
+   all 48 canonical setter/readback routes plus treatment-prefix and separately
+   ordered full-baseline-recovery replay/HIL (including compiled defaults).
+3. Horticultural, firmware, controls, water/fertigation and facility owners
+   approve the exact profiles and supervised canaries
    (**gate:jason** sign-off).
-4. The approved content hashes are locked into the protocol instance
-   (`protocols/planner-switchback-v1.template.yaml` successor) and the
-   `policy_templates` rows; only those exact hashes are resolvable to bytes
-   by the arbiter.
+4. Run baseline↔moderate/aggressive canaries and the fast-path 48-hour A/A
+   rehearsal without inspecting comparative outcomes.
+5. Lock the
+   approved baseline and templates into the current fast-path protocol instance
+   (`protocols/planner-switchback-v2.template.yaml`) and its database rows. The
+   confirmed-component executor may resolve only those exact artifacts; it does
+   not use the historical v1 manifest/vector arbiter.
 
 ## Reproducing
 

@@ -1,11 +1,15 @@
-# Planner switchback protocol — version 1 TEMPLATE (NOT a locked instance).
+# Planner switchback protocol — version 1 TEMPLATE (SUPERSEDED, never locked).
+#
+# ADR-0010 supersedes this generalized policy-vector design for the first
+# physical trial. Keep this file as the historical platform-v2 contract; use
+# planner-switchback-v2.template.yaml for current execution planning.
 #
 # Machine-readable preregistration scaffold per audit Sections 8.2–8.6
 # (docs/research/planner-efficacy-current-firmware-2026-08-14.md) and issue #588.
-# Every `TO-LOCK:` value must be filled during the lock ceremony described in
-# README.md; this file becomes protocols/planner-switchback-v1.yaml only at
-# protocol lock, committed BEFORE the mapping-secret draw and the named future
-# beacon round publishes.
+# The historical v1 lock order is preserved by the v1 tooling/tests and the
+# "Historical version 1" section of README.md. This file would become
+# protocols/planner-switchback-v1.yaml only under a future platform-v2 decision;
+# it is not governed by the current v2 fast-path lock instructions.
 
 schema: verdify-planner-switchback-protocol
 version: 1
