@@ -48,6 +48,7 @@ def _run(coro):
 @pytest.fixture(autouse=True)
 def _clean_env(monkeypatch):
     monkeypatch.delenv("VERDIFY_POLICY_VECTOR_MODE", raising=False)
+    monkeypatch.delenv("VERDIFY_COMPONENT_EXPERIMENT_ENABLED", raising=False)
     monkeypatch.delenv("VERDIFY_ACTIVE_EXPERIMENT_ID", raising=False)
     monkeypatch.delenv("VERDIFY_LEGACY_DIRECT_POLICY_WRITES_ENABLED", raising=False)
 
@@ -85,6 +86,43 @@ class TestFlags:
         assert experiment_config.active_experiment_id() is None
         monkeypatch.setenv("VERDIFY_ACTIVE_EXPERIMENT_ID", TRIGGER_ID)
         assert experiment_config.active_experiment_id() == TRIGGER_ID
+
+    def test_component_capability_defaults_off_and_typos_fail_closed(self, monkeypatch):
+        assert experiment_config.component_experiment_mode() == "off"
+        assert experiment_config.component_experiment_gate() == (False, "component_capability_off")
+        for raw in ("1", "true", "live", "enabled-typo"):
+            monkeypatch.setenv("VERDIFY_COMPONENT_EXPERIMENT_ENABLED", raw)
+            assert experiment_config.component_experiment_mode() == "off"
+            assert experiment_config.component_experiment_enabled() is False
+
+    def test_component_capability_requires_vector_explicitly_off_and_valid_id(self, monkeypatch):
+        monkeypatch.setenv("VERDIFY_COMPONENT_EXPERIMENT_ENABLED", "enabled")
+        assert experiment_config.component_experiment_gate() == (
+            False,
+            "generalized_vector_mode_not_exactly_off",
+        )
+        for raw in ("shadow", "live", "typo", ""):
+            monkeypatch.setenv("VERDIFY_POLICY_VECTOR_MODE", raw)
+            assert experiment_config.component_experiment_gate() == (
+                False,
+                "generalized_vector_mode_not_exactly_off",
+            )
+
+        monkeypatch.setenv("VERDIFY_POLICY_VECTOR_MODE", "off")
+        assert experiment_config.component_experiment_gate() == (
+            False,
+            "active_experiment_id_missing_or_invalid",
+        )
+        monkeypatch.setenv("VERDIFY_ACTIVE_EXPERIMENT_ID", TRIGGER_ID)
+        assert experiment_config.component_experiment_gate() == (True, "admissible")
+        assert experiment_config.component_experiment_enabled() is True
+
+    def test_component_capability_has_no_shadow_or_live_submode(self, monkeypatch):
+        monkeypatch.setenv("VERDIFY_POLICY_VECTOR_MODE", "off")
+        monkeypatch.setenv("VERDIFY_ACTIVE_EXPERIMENT_ID", TRIGGER_ID)
+        for raw in ("shadow", "live"):
+            monkeypatch.setenv("VERDIFY_COMPONENT_EXPERIMENT_ENABLED", raw)
+            assert experiment_config.component_experiment_gate() == (False, "component_capability_off")
 
 
 class TestGate:

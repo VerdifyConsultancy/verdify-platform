@@ -78,6 +78,12 @@ data:
   #            experiment ID below, an armed DB assignment, compatible
   #            firmware, and an already-confirmed baseline (§8.10).
   VERDIFY_POLICY_VECTOR_MODE: "off"
+  # Confirmed-component v2 capability: off | enabled. This coarse switch
+  # defaults off and never encodes shadow/live authority; audited database
+  # execution_phase + admission_state do that. Runtime hard-fails component
+  # readiness and claims zero work unless the generalized vector mode above is
+  # explicitly "off".
+  VERDIFY_COMPONENT_EXPERIMENT_ENABLED: "off"
   # The exact experiment UUID the arbiter/delivery path may serve. Empty means
   # NO experiment is admitted. Set (with mode) only through a reviewed GitOps
   # commit at a rollout step; cleared again on completion/rollback.
