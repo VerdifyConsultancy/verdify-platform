@@ -217,167 +217,208 @@
   "schema": "verdify-switchback-v2-profile-set",
   "source_entity_grid": {
     "band_track_fraction": {
-      "origin": 0,
+      "max": 1,
+      "min": 0,
       "step": 0.05
     },
     "cold_vent_guard_delta_f": {
-      "origin": 0,
+      "max": 15,
+      "min": 0,
       "step": 0.5
     },
     "cool_exit_hysteresis_f": {
-      "origin": 0.3,
+      "max": 3,
+      "min": 0.3,
       "step": 0.1
     },
     "cool_stage2_exit_hysteresis_f": {
-      "origin": 0.3,
+      "max": 3,
+      "min": 0.3,
       "step": 0.1
     },
     "cool_stage2_over_high_f": {
-      "origin": 0,
+      "max": 3,
+      "min": 0,
       "step": 0.1
     },
     "direct_wet_stress_min_dew_margin_f": {
-      "origin": 3,
+      "max": 15,
+      "min": 3,
       "step": 0.5
     },
     "direct_wet_stress_vpd_margin_kpa": {
-      "origin": 0,
+      "max": 0.5,
+      "min": 0,
       "step": 0.05
     },
     "dwell_gate_ms": {
-      "origin": 60000,
+      "max": 1800000,
+      "min": 60000,
       "step": 30000
     },
     "enthalpy_close": {
-      "origin": -5,
+      "max": 20,
+      "min": -5,
       "step": 0.5
     },
     "enthalpy_open": {
-      "origin": -5,
+      "max": 0,
+      "min": -5,
       "step": 0.5
     },
     "fog_escalation_kpa": {
-      "origin": 0.1,
+      "max": 0.5,
+      "min": 0.1,
       "step": 0.1
     },
     "heat_hysteresis": {
-      "origin": 0,
+      "max": 3,
+      "min": 0,
       "step": 0.1
     },
     "min_fan_off_s": {
-      "origin": 30,
+      "max": 300,
+      "min": 30,
       "step": 10
     },
     "min_fan_on_s": {
-      "origin": 30,
+      "max": 300,
+      "min": 30,
       "step": 10
     },
     "min_fog_off_s": {
-      "origin": 15,
+      "max": 300,
+      "min": 15,
       "step": 15
     },
     "min_fog_on_s": {
-      "origin": 15,
+      "max": 300,
+      "min": 15,
       "step": 15
     },
     "min_heat_off_s": {
-      "origin": 60,
+      "max": 600,
+      "min": 60,
       "step": 10
     },
     "min_heat_on_s": {
-      "origin": 30,
+      "max": 300,
+      "min": 30,
       "step": 10
     },
     "min_vent_off_s": {
-      "origin": 10,
+      "max": 300,
+      "min": 10,
       "step": 10
     },
     "min_vent_on_s": {
-      "origin": 10,
+      "max": 300,
+      "min": 10,
       "step": 10
     },
     "mist_backoff_s": {
-      "origin": 60,
+      "max": 3600,
+      "min": 60,
       "step": 60
     },
     "mist_max_closed_vent_s": {
-      "origin": 120,
+      "max": 900,
+      "min": 120,
       "step": 60
     },
     "mist_thermal_relief_s": {
-      "origin": 30,
+      "max": 300,
+      "min": 30,
       "step": 30
     },
     "mister_all_delay_s": {
-      "origin": 60,
+      "max": 600,
+      "min": 60,
       "step": 30
     },
     "mister_all_kpa": {
-      "origin": 1,
+      "max": 2.5,
+      "min": 1,
       "step": 0.05
     },
     "mister_center_penalty": {
-      "origin": 0,
+      "max": 1,
+      "min": 0,
       "step": 0.1
     },
     "mister_engage_delay_s": {
-      "origin": 30,
+      "max": 300,
+      "min": 30,
       "step": 30
     },
     "mister_engage_kpa": {
-      "origin": 0.5,
+      "max": 2.5,
+      "min": 0.5,
       "step": 0.05
     },
     "mister_min_off_s": {
-      "origin": 30,
+      "max": 120,
+      "min": 30,
       "step": 5
     },
     "mister_pulse_gap_s": {
-      "origin": 10,
+      "max": 60,
+      "min": 10,
       "step": 5
     },
     "mister_pulse_on_s": {
-      "origin": 30,
+      "max": 90,
+      "min": 30,
       "step": 5
     },
     "mister_vpd_weight": {
-      "origin": 0.5,
+      "max": 3,
+      "min": 0.5,
       "step": 0.5
     },
     "mister_water_budget_gal": {
-      "origin": 100,
+      "max": 300,
+      "min": 100,
       "step": 10
     },
     "night_vpd_bias_kpa": {
-      "origin": 0,
+      "max": 0.25,
+      "min": 0,
       "step": 0.01
     },
     "outdoor_staleness_max_s": {
-      "origin": 120,
+      "max": 1800,
+      "min": 120,
       "step": 30
     },
     "temp_hysteresis": {
-      "origin": 0.5,
+      "max": 3,
+      "min": 0.5,
       "step": 0.1
     },
     "vent_exchange_fraction": {
-      "origin": 0.1,
+      "max": 0.6,
+      "min": 0.1,
       "step": 0.05
     },
     "vent_prefer_dp_delta_f": {
-      "origin": 2,
+      "max": 15,
+      "min": 2,
       "step": 0.5
     },
     "vent_prefer_temp_delta_f": {
-      "origin": 2,
+      "max": 15,
+      "min": 2,
       "step": 0.5
     },
     "vpd_hysteresis": {
-      "origin": 0.05,
+      "max": 0.5,
+      "min": 0.05,
       "step": 0.05
     },
     "vpd_watch_dwell_s": {
-      "origin": 15,
+      "max": 120,
+      "min": 15,
       "step": 15
     }
   },

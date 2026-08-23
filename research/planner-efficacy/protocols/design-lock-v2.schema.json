@@ -21,7 +21,7 @@
     "schedule_schema_sha256": {
       "const": "f1cd82e7883f912379680f85a12420f4ecf5aaaaefb3c78373708ccedefab892"
     },
-    "source_git_sha": {"type": "string", "minLength": 7},
+    "source_git_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
     "start_local_date": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
     "study_id": {"type": "string", "minLength": 1},
     "timezone": {"type": "string", "minLength": 1}

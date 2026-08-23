@@ -338,7 +338,7 @@ VALID_PHASE_KIND_WORK: frozenset[tuple[str, str, str]] = frozenset(
         ("shadow", "shadow_preview", "preview"),
         ("commissioning", "commissioning_probe", "readiness_operation"),
         ("commissioning", "commissioning_canary", "readiness_operation"),
-        ("aa_rehearsal", "aa_rehearsal", "readiness_operation"),
+        ("aa_rehearsal", "aa_baseline_rehearsal", "readiness_operation"),
         ("commissioning", "baseline_recovery", "recovery_operation"),
         ("aa_rehearsal", "baseline_recovery", "recovery_operation"),
         ("randomized", "randomized_assignment", "assignment"),

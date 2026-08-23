@@ -36,6 +36,8 @@ def test_all_profiles_have_exactly_48_source_grid_values_and_only_11_may_differ(
     }
     assert artifact["runtime_rounding_allowed"] is False
     assert artifact["source_evidence"]["running_device_entity_grid_verified"] is False
+    assert all(set(grid) == {"min", "max", "step"} for grid in artifact["source_entity_grid"].values())
+    assert artifact["source_entity_grid"]["dwell_gate_ms"] == {"min": 60_000, "max": 1_800_000, "step": 30_000}
     baseline = built["baseline"]
     for profile_id in ("moderate", "aggressive"):
         differences = {field for field in baseline if built[profile_id][field] != baseline[field]}
@@ -49,6 +51,14 @@ def test_all_profiles_have_exactly_48_source_grid_values_and_only_11_may_differ(
     assert artifact["profiles"]["aggressive"]["policy_state_content_sha256"] == (
         "fa08c3e12d4951c77ac13c3584f48f010dfe48cee8385fadce612a938e8b0c1d"
     )
+
+
+def test_profile_grid_rejects_values_above_exact_entity_max() -> None:
+    artifact = profiles.build_profile_artifact(REPO_ROOT)
+    built = {name: dict(row["values"]) for name, row in artifact["profiles"].items()}
+    built["baseline"]["mister_pulse_on_s"] = 95
+    with pytest.raises(ValueError, match="off-entity-grid"):
+        profiles.validate_profiles(built)
 
 
 def test_every_historical_off_grid_value_has_one_explicit_design_decision() -> None:
@@ -201,12 +211,14 @@ def test_primary_itt_row_never_filters_on_exposure_or_fallback() -> None:
 
 
 def test_phase_kind_work_pairings_are_exact() -> None:
+    outcomes.validate_phase_kind_work("aa_rehearsal", "aa_baseline_rehearsal", "readiness_operation")
     for pairing in outcomes.VALID_PHASE_KIND_WORK:
         outcomes.validate_phase_kind_work(*pairing)
     for illegal in (
         ("shadow", "randomized_assignment", "assignment"),
         ("commissioning", "randomized_assignment", "assignment"),
         ("aa_rehearsal", "commissioning_canary", "readiness_operation"),
+        ("aa_rehearsal", "aa_rehearsal", "readiness_operation"),
         ("randomized", "commissioning_canary", "assignment"),
     ):
         with pytest.raises(ValueError, match="illegal"):

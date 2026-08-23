@@ -14,6 +14,7 @@ import hashlib
 import hmac
 import inspect
 import json
+import re
 import secrets
 import struct
 import threading
@@ -129,8 +130,8 @@ class DesignLock:
                 raise ValueError(f"{name} must be lowercase SHA-256 hex")
         if self.schedule_schema_sha256 != schedule_schema_contract_sha256():
             raise ValueError("schedule_schema_sha256 does not match the source-locked v2 field contract")
-        if not self.source_git_sha:
-            raise ValueError("source_git_sha must be frozen")
+        if not re.fullmatch(r"[0-9a-f]{40}", self.source_git_sha):
+            raise ValueError("source_git_sha must be exact lowercase 40-hex")
 
 
 def blinded_schedule(design: DesignLock, secret: bytes) -> dict[str, Any]:
@@ -344,6 +345,8 @@ class RandomizationFinalizer:
         return accepted.receipt
 
     def reveal_after_completion(self, proof: CompletionProof) -> RevealReceipt:
+        if not isinstance(proof, CompletionProof) or proof.lifecycle_status != "completed":
+            raise ValueError("restricted reveal requires lifecycle_status=completed")
         state = self._store._state(proof.study_id)
         if state is None:
             raise ValueError("study has not been finalized")
