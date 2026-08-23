@@ -105,6 +105,11 @@ from verdify_schemas import (  # noqa: E402
     ZoneDetail,
     ZoneListItem,
 )
+from verdify_schemas.experiment_config import (  # noqa: E402
+    active_experiment_id,
+    component_experiment_gate,
+    component_experiment_mode,
+)
 from verdify_schemas.mcp_responses import ScorecardResponse  # noqa: E402
 from verdify_schemas.telemetry import DliEvidence  # noqa: E402
 from verdify_schemas.tunable_registry import (  # noqa: E402
@@ -4743,6 +4748,79 @@ class ExperimentDevicePolicyIdentity(BaseModel):
     firmware_revision: str | None = None
 
 
+class ComponentExperimentWorkStatus(BaseModel):
+    """Generic, phase-typed current work without treatment disclosure."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    work_id: str
+    execution_phase: str
+    operation_kind: str
+    valid_from: dt.datetime
+    valid_to: dt.datetime
+    expires_at: dt.datetime
+    expired: bool
+    # Only randomized assignment work may expose assignment identity/X-Y.
+    assignment_id: str | None = None
+    blinded_label: str | None = None
+
+    @model_validator(mode="after")
+    def _assignment_identity_is_randomized_only(self) -> "ComponentExperimentWorkStatus":
+        if self.operation_kind != "assignment" and (self.assignment_id is not None or self.blinded_label is not None):
+            raise ValueError("assignment identity is randomized-work-only")
+        if self.blinded_label is not None and self.blinded_label not in ("X", "Y"):
+            raise ValueError("blinded_label may only be X or Y")
+        return self
+
+
+class ComponentExperimentApprovals(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    scoped_probe: bool = False
+    combined_physical: bool = False
+    randomized_day_1: bool = False
+
+
+class ComponentExperimentStateIdentity(BaseModel):
+    """Two separate server-derived identities; neither is a device echo."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    policy_state_content_sha256: str | None = None
+    observation_receipt_sha256: str | None = None
+    receipt_persisted_at: dt.datetime | None = None
+    identity_source: str = "server_derived"
+    device_echoed: bool = False
+
+
+class ComponentExperimentStatus(BaseModel):
+    """Operator safety/integrity surface for confirmed-component v2."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    experiment_id: str
+    kind: str
+    protocol_version: int
+    transport_kind: str
+    lifecycle_status: str
+    execution_phase: str
+    admission_state: str
+    component_capability_mode: str
+    environment_admissible: bool
+    environment_gate_reason: str
+    db_component_enabled: bool
+    current_work: ComponentExperimentWorkStatus | None = None
+    approvals: ComponentExperimentApprovals
+    state_identity: ComponentExperimentStateIdentity
+    open_exposures: int = 0
+    lease_generation: int
+    revision_bundle_sha256: str
+    firmware_revision: str
+    config_revision: str
+    registry_revision: str
+    grid_revision: str
+
+
 async def _fetch_experiment_row(conn, experiment_id: str, *, for_update: bool = False) -> asyncpg.Record:
     try:
         uuid.UUID(experiment_id)
@@ -5219,4 +5297,158 @@ async def get_experiment_device_policy(
         valid_to=snap["valid_to"],
         apply_state=snap["apply_state"],
         firmware_revision=snap["firmware_revision"],
+    )
+
+
+@app.get(
+    "/experiments/{experiment_id}/component-status",
+    response_model=ComponentExperimentStatus,
+)
+@app.get(
+    "/api/v1/experiments/{experiment_id}/component-status",
+    response_model=ComponentExperimentStatus,
+)
+async def get_component_experiment_status(
+    experiment_id: str,
+    _operator: None = Depends(require_experiment_operator_access),
+):
+    """Read-only v2 safety/integrity state for facility operators.
+
+    Treatment profile, component values, mapping, secret, comparative outcome,
+    and efficacy data are deliberately absent. Assignment ID/X-Y is exposed
+    only while the current work is a randomized assignment. The two SHA-256
+    fields are labeled as distinct server-derived identities and never as
+    device-echoed state.
+    """
+    try:
+        normalized_experiment_id = str(uuid.UUID(experiment_id))
+    except (TypeError, ValueError):
+        raise HTTPException(404, "Experiment not found")
+
+    async with pool.acquire() as conn:
+        exp = await conn.fetchrow(
+            """
+            SELECT experiment_id::text AS experiment_id, kind, status,
+                   protocol_version, transport_kind, execution_phase,
+                   admission_state, component_enabled, lease_generation,
+                   revision_bundle_sha256, firmware_revision, config_revision,
+                   registry_revision, grid_revision
+              FROM control_experiments
+             WHERE experiment_id = $1::uuid
+            """,
+            normalized_experiment_id,
+        )
+        if exp is None or exp["protocol_version"] != 2 or exp["transport_kind"] != "confirmed_component":
+            raise HTTPException(404, "Confirmed-component v2 experiment not found")
+
+        work = await conn.fetchrow(
+            """
+            SELECT w.work_id::text AS work_id,
+                   w.assignment_id::text AS assignment_id,
+                   a.arm_label AS blinded_label,
+                   w.execution_phase,
+                   w.operation_kind,
+                   lower(w.valid_range) AS valid_from,
+                   least(upper(w.valid_range), w.expires_at) AS valid_to,
+                   w.expires_at,
+                   (w.expires_at <= clock_timestamp()
+                    OR NOT clock_timestamp() <@ w.valid_range) AS expired
+              FROM experiment_v2_work w
+              LEFT JOIN control_assignments a ON a.assignment_id = w.assignment_id
+             WHERE w.experiment_id = $1::uuid
+               AND NOT EXISTS (
+                   SELECT 1 FROM experiment_v2_work_events e
+                    WHERE e.work_id = w.work_id
+                      AND e.event_kind IN ('completed', 'failed', 'cancelled', 'superseded')
+               )
+             ORDER BY lower(w.valid_range) DESC, w.created_at DESC
+             LIMIT 1
+            """,
+            normalized_experiment_id,
+        )
+        approval = await conn.fetchrow(
+            """
+            SELECT coalesce(bool_or(approval_kind = 'scoped_probe'), false) AS scoped_probe,
+                   coalesce(bool_or(approval_kind = 'combined_physical'), false) AS combined_physical,
+                   coalesce(bool_or(approval_kind = 'randomized_day_1'), false) AS randomized_day_1
+              FROM experiment_v2_approvals
+             WHERE experiment_id = $1::uuid
+            """,
+            normalized_experiment_id,
+        )
+        receipt = await conn.fetchrow(
+            """
+            SELECT policy_state_content_sha256, observation_receipt_sha256,
+                   persisted_at
+              FROM experiment_v2_observation_receipts
+             WHERE experiment_id = $1::uuid
+             ORDER BY persisted_at DESC, receipt_id DESC
+             LIMIT 1
+            """,
+            normalized_experiment_id,
+        )
+        open_exposures = await conn.fetchval(
+            """
+            SELECT count(*)::int
+              FROM experiment_v2_exposures x
+             WHERE x.experiment_id = $1::uuid
+               AND NOT EXISTS (
+                   SELECT 1 FROM experiment_v2_exposure_closures c
+                    WHERE c.exposure_id = x.exposure_id
+               )
+            """,
+            normalized_experiment_id,
+        )
+
+    gate_allowed, gate_reason = component_experiment_gate()
+    if gate_allowed and active_experiment_id() != normalized_experiment_id:
+        gate_allowed = False
+        gate_reason = "active_experiment_id_mismatch"
+
+    current_work = None
+    if work is not None:
+        randomized = work["operation_kind"] == "assignment"
+        label = work["blinded_label"] if randomized and work["blinded_label"] in ("X", "Y") else None
+        current_work = ComponentExperimentWorkStatus(
+            work_id=work["work_id"],
+            execution_phase=work["execution_phase"],
+            operation_kind=work["operation_kind"],
+            valid_from=work["valid_from"],
+            valid_to=work["valid_to"],
+            expires_at=work["expires_at"],
+            expired=work["expired"],
+            assignment_id=work["assignment_id"] if randomized else None,
+            blinded_label=label,
+        )
+
+    return ComponentExperimentStatus(
+        experiment_id=exp["experiment_id"],
+        kind=exp["kind"],
+        protocol_version=exp["protocol_version"],
+        transport_kind=exp["transport_kind"],
+        lifecycle_status=exp["status"],
+        execution_phase=exp["execution_phase"],
+        admission_state=exp["admission_state"],
+        component_capability_mode=component_experiment_mode(),
+        environment_admissible=gate_allowed,
+        environment_gate_reason=gate_reason,
+        db_component_enabled=exp["component_enabled"],
+        current_work=current_work,
+        approvals=ComponentExperimentApprovals(
+            scoped_probe=approval["scoped_probe"] if approval else False,
+            combined_physical=approval["combined_physical"] if approval else False,
+            randomized_day_1=approval["randomized_day_1"] if approval else False,
+        ),
+        state_identity=ComponentExperimentStateIdentity(
+            policy_state_content_sha256=receipt["policy_state_content_sha256"] if receipt else None,
+            observation_receipt_sha256=receipt["observation_receipt_sha256"] if receipt else None,
+            receipt_persisted_at=receipt["persisted_at"] if receipt else None,
+        ),
+        open_exposures=open_exposures or 0,
+        lease_generation=exp["lease_generation"],
+        revision_bundle_sha256=exp["revision_bundle_sha256"],
+        firmware_revision=exp["firmware_revision"],
+        config_revision=exp["config_revision"],
+        registry_revision=exp["registry_revision"],
+        grid_revision=exp["grid_revision"],
     )
