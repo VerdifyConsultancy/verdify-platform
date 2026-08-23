@@ -7,7 +7,105 @@ BEGIN;
 
 -- Migration idempotency is part of the restored-schema contract.
 \ir ../214-confirmed-component-experiment-v2.sql
+
+-- exact_signature_grants_and_role_normalization: simulate a pre-existing duty
+-- with unsafe attributes/membership/schema access and a same-name overload
+-- carrying a stale grant.  Reapply must normalize/revoke it without relying on
+-- the function name alone.
+ALTER ROLE verdify_experiment_component_executor LOGIN INHERIT;
+GRANT verdify_experiment_lifecycle TO verdify_experiment_component_executor;
+GRANT CREATE ON SCHEMA public TO verdify_experiment_component_executor;
+CREATE OR REPLACE FUNCTION public.fn_experiment_v2_executor_runtime(text)
+RETURNS boolean LANGUAGE sql AS 'SELECT true';
+GRANT EXECUTE ON FUNCTION public.fn_experiment_v2_executor_runtime(text)
+    TO verdify_experiment_component_executor;
 \ir ../214-confirmed-component-experiment-v2.sql
+
+DO $fixture$
+DECLARE
+    duty text;
+    actual_count integer;
+    expected_count integer;
+    expected regprocedure;
+    managed_roles text[] := ARRAY[
+        'verdify_experiment_v2_owner',
+        'verdify_experiment_randomizer',
+        'verdify_experiment_lifecycle',
+        'verdify_experiment_component_executor',
+        'verdify_experiment_outcome_freezer',
+        'verdify_experiment_blinded_analyst'
+    ];
+BEGIN
+    FOREACH duty IN ARRAY managed_roles[2:6] LOOP
+        IF EXISTS (
+            SELECT 1 FROM pg_roles r
+             WHERE r.rolname = duty AND
+                   (r.rolcanlogin OR r.rolsuper OR r.rolcreatedb OR
+                    r.rolcreaterole OR r.rolinherit OR r.rolreplication OR
+                    r.rolbypassrls)) OR
+           has_schema_privilege(duty, 'public', 'CREATE') OR
+           NOT has_schema_privilege(duty, 'public', 'USAGE') THEN
+            RAISE EXCEPTION 'duty role % retained elevated attributes/schema access', duty;
+        END IF;
+    END LOOP;
+    IF EXISTS (
+        SELECT 1
+          FROM pg_auth_members membership
+          JOIN pg_roles granted ON granted.oid = membership.roleid
+          JOIN pg_roles member ON member.oid = membership.member
+         WHERE granted.rolname = ANY (managed_roles)
+           AND member.rolname = ANY (managed_roles)) THEN
+        RAISE EXCEPTION 'managed experiment roles retained cross-duty membership';
+    END IF;
+    IF has_function_privilege(
+           'verdify_experiment_component_executor',
+           'public.fn_experiment_v2_executor_runtime(text)', 'EXECUTE') OR EXISTS (
+           SELECT 1
+             FROM pg_proc p,
+                  aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) acl
+            WHERE p.oid = 'public.fn_experiment_v2_executor_runtime(text)'::regprocedure
+              AND acl.grantee = 0 AND acl.privilege_type = 'EXECUTE') THEN
+        RAISE EXCEPTION 'same-name executor overload retained executable privilege';
+    END IF;
+
+    FOR duty, expected_count IN VALUES
+        ('verdify_experiment_lifecycle', 10),
+        ('verdify_experiment_randomizer', 3),
+        ('verdify_experiment_component_executor', 20),
+        ('verdify_experiment_outcome_freezer', 2),
+        ('verdify_experiment_blinded_analyst', 0)
+    LOOP
+        SELECT count(*)::integer INTO actual_count
+          FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+         WHERE n.nspname = 'public' AND p.proname LIKE 'fn_experiment_v2_%'
+           AND has_function_privilege(duty, p.oid, 'EXECUTE');
+        IF actual_count <> expected_count THEN
+            RAISE EXCEPTION 'duty % has % v2 functions, expected exact %',
+                duty, actual_count, expected_count;
+        END IF;
+    END LOOP;
+    FOREACH expected IN ARRAY ARRAY[
+        'public.fn_experiment_v2_api_status(uuid)'::regprocedure,
+        'public.fn_experiment_v2_finalize_randomization(uuid,text)'::regprocedure,
+        'public.fn_experiment_v2_executor_runtime(uuid,text)'::regprocedure,
+        'public.fn_experiment_v2_report_runtime_fault(uuid,text,uuid,bigint,uuid,bigint,bigint,text,text,text)'::regprocedure,
+        'public.fn_experiment_v2_freeze_outcome(uuid,uuid,jsonb,boolean,boolean,boolean,boolean,boolean,text)'::regprocedure
+    ] LOOP
+        duty := CASE expected::text
+            WHEN 'fn_experiment_v2_api_status(uuid)' THEN
+                'verdify_experiment_lifecycle'
+            WHEN 'fn_experiment_v2_finalize_randomization(uuid,text)' THEN
+                'verdify_experiment_randomizer'
+            WHEN 'fn_experiment_v2_freeze_outcome(uuid,uuid,jsonb,boolean,boolean,boolean,boolean,boolean,text)' THEN
+                'verdify_experiment_outcome_freezer'
+            ELSE 'verdify_experiment_component_executor'
+        END;
+        IF NOT has_function_privilege(duty, expected, 'EXECUTE') THEN
+            RAISE EXCEPTION 'canonical exact signature % missing from duty %', expected, duty;
+        END IF;
+    END LOOP;
+END
+$fixture$;
 
 INSERT INTO public.greenhouses (id, name, timezone)
 VALUES ('test-214-v2', 'Migration 214 disposable fixture', 'UTC')
@@ -478,11 +576,33 @@ BEGIN
 
     -- reset_without_exposure_fails_confirmation: a source-owned reset between
     -- claim and exposure persists one source-keyed fault, requests root
-    -- recovery, and returns no ordinary snapshot row.  Retry is exact.
+    -- recovery, and returns no ordinary snapshot row.  A reset pinned through
+    -- a >90s DB outage stays actionable; an ordinary equally stale epoch does
+    -- not.  Retry is exact.
+    SELECT jsonb_agg(jsonb_build_object(
+               'wire_id', i,
+               'observed_at', to_char((v_now - interval '5 minutes') AT TIME ZONE 'UTC',
+                                      'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')) ORDER BY i)
+      INTO v_observations_1 FROM generate_series(1,49) i WHERE i <> 6;
+    blocked := false;
+    BEGIN
+        PERFORM public.fn_experiment_v2_record_runtime_snapshot(
+            v_exp, 'device-214', '21420000-0000-4000-8000-000000000005',
+            v_baseline, v_observations_1,
+            'fw-214', 'cfg-214', 'registry-214', 'grid-214',
+            'dddddddd-dddd-4ddd-8ddd-dddddddddddd', v_writer_restart, 0,
+            false, 'fixture-ordinary-stale-epoch');
+    EXCEPTION WHEN OTHERS THEN blocked := true;
+    END;
+    IF NOT blocked OR EXISTS (
+        SELECT 1 FROM public.experiment_v2_runtime_faults
+         WHERE fault_report_id = '21420000-0000-4000-8000-000000000005') THEN
+        RAISE EXCEPTION 'ordinary >90s runtime epoch bypassed freshness rejection';
+    END IF;
     SELECT count(*) INTO v_n
       FROM public.fn_experiment_v2_record_runtime_snapshot(
         v_exp, 'device-214', '21420000-0000-4000-8000-000000000003',
-        v_baseline, v_observations_2,
+        v_baseline, v_observations_1,
         'fw-214', 'cfg-214', 'registry-214', 'grid-214',
         'dddddddd-dddd-4ddd-8ddd-dddddddddddd', v_writer_restart, 0,
         true, 'fixture-reset-without-exposure');
@@ -505,7 +625,7 @@ BEGIN
     SELECT count(*) INTO v_n
       FROM public.fn_experiment_v2_record_runtime_snapshot(
         v_exp, 'device-214', '21420000-0000-4000-8000-000000000003',
-        v_baseline, v_observations_2,
+        v_baseline, v_observations_1,
         'fw-214', 'cfg-214', 'registry-214', 'grid-214',
         'dddddddd-dddd-4ddd-8ddd-dddddddddddd', v_writer_restart, 0,
         true, 'fixture-reset-retry');
