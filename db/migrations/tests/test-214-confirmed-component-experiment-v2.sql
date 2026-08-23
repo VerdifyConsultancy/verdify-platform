@@ -299,6 +299,21 @@ BEGIN
     SELECT lease_generation INTO v_lease FROM public.control_experiments
      WHERE experiment_id = v_exp;
 
+    -- buffered_confirmation_epoch_ignored: the epoch that opened exposure is
+    -- acknowledged but is not duplicated into the post-open monitor ledger.
+    SELECT count(*) INTO v_n
+      FROM public.fn_experiment_v2_record_runtime_snapshot(
+        v_exp, 'device-214', '21420000-0000-4000-8000-000000000000',
+        decode(repeat('04',178),'hex'), v_observations_2,
+        'fw-214', 'cfg-214', 'registry-214', 'grid-214',
+        'dddddddd-dddd-4ddd-8ddd-dddddddddddd', v_writer_restart, 0,
+        false, 'fixture-buffered-confirmation');
+    IF v_n <> 0 OR EXISTS (
+        SELECT 1 FROM public.experiment_v2_runtime_snapshots
+         WHERE source_epoch_id = '21420000-0000-4000-8000-000000000000') THEN
+        RAISE EXCEPTION 'exposure-opening confirmation epoch entered monitor ledger';
+    END IF;
+
     -- open_exposure_runtime_monitor: real raw epochs remain monitorable after
     -- terminal work.  A healthy row stays open; advancing drift closes first,
     -- appends a durable signal, and creates linked recovery.  Retry is exact.
@@ -318,6 +333,8 @@ BEGIN
     IF EXISTS (SELECT 1 FROM public.experiment_v2_exposure_closures
                 WHERE exposure_id = v_probe_exposure) OR
        row_out.exposure_id <> v_probe_exposure OR NOT row_out.exposure_is_open OR
+       row_out.exposure_started_at IS NULL OR
+       row_out.resolved_at < row_out.exposure_started_at OR
        row_out.common_field_drift OR row_out.cfg_drift OR row_out.foreign_writer OR
        row_out.target_wire_vector <> decode(repeat('04',178),'hex') THEN
         RAISE EXCEPTION 'healthy raw monitor epoch closed exposure';
@@ -410,6 +427,122 @@ BEGIN
            AND c.exposure_id IS NULL) THEN
         RAISE EXCEPTION 'different-work claim did not close prior exposure boundary first';
     END IF;
+    -- runtime_fault_and_startup_attestation: a typed authoritative fault closes
+    -- first, requests one linked recovery, retries exactly, and keeps startup
+    -- hold without returning an assignment/treatment identity.
+    v_boundary_exposure := public.fn_experiment_v2_open_exposure(
+        v_exp, v_probe, 'device-214', 'fixture');
+    SELECT * INTO row_out FROM public.fn_experiment_v2_report_runtime_fault(
+        v_exp, 'device-214', '21430000-0000-4000-8000-000000000001',
+        v_lease, 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+        v_writer_restart, 0, 'sensor_gap', 'fixture-source-gap', 'fixture');
+    v_recovery := row_out.recovery_work_id;
+    IF row_out.exposure_id <> v_boundary_exposure OR
+       row_out.close_reason <> 'sensor_gap' OR v_recovery IS NULL OR
+       NOT row_out.authority_hold_required OR row_out.facility_authority_yielded OR
+       NOT EXISTS (
+           SELECT 1 FROM public.experiment_v2_exposure_closures c
+            WHERE c.exposure_id = v_boundary_exposure
+              AND c.close_reason = 'sensor_gap'
+              AND c.writer_generation = v_writer_restart
+              AND c.connection_generation = 0) THEN
+        RAISE EXCEPTION 'runtime fault did not close first and request recovery';
+    END IF;
+    PERFORM public.fn_experiment_v2_report_runtime_fault(
+        v_exp, 'device-214', '21430000-0000-4000-8000-000000000001',
+        v_lease, 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+        v_writer_restart, 0, 'sensor_gap', 'fixture-source-gap', 'fixture-retry');
+    IF (SELECT count(*) FROM public.experiment_v2_runtime_faults
+         WHERE fault_report_id = '21430000-0000-4000-8000-000000000001') <> 1 THEN
+        RAISE EXCEPTION 'runtime fault retry duplicated evidence';
+    END IF;
+    SELECT * INTO row_out FROM public.fn_experiment_v2_report_runtime_fault(
+        v_exp, 'device-214', '21430000-0000-4000-8000-000000000002',
+        v_lease - 1, 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+        v_writer_restart, 0, 'sensor_gap', 'fixture-lease-watchdog', 'fixture');
+    IF NOT row_out.lease_mismatch OR row_out.close_reason <> 'lease_loss' OR
+       row_out.recovery_work_id <> v_recovery THEN
+        RAISE EXCEPTION 'database did not override stale lease fault to lease_loss';
+    END IF;
+    SELECT * INTO row_out FROM public.fn_experiment_v2_safe_startup_attestation(
+        'device-214', v_exp);
+    IF NOT row_out.scope_resolved OR NOT row_out.hold_required OR
+       row_out.open_exposure_count <> 0 OR row_out.recovery_pending_count < 1 OR
+       row_out.facility_authority_yielded THEN
+        RAISE EXCEPTION 'startup attestation did not retain fail-closed recovery hold';
+    END IF;
+    INSERT INTO public.experiment_v2_work_events
+        (experiment_id, work_id, event_kind, worker_ref, detail, recorded_at)
+    VALUES (v_exp, v_recovery, 'recovered', 'fixture', '{"fixture":true}', clock_timestamp());
+    PERFORM public.fn_experiment_v2_set_admission(v_exp, 'closed', 'fixture');
+
+    -- reset_without_exposure_fails_confirmation: a source-owned reset between
+    -- claim and exposure persists one source-keyed fault, requests root
+    -- recovery, and returns no ordinary snapshot row.  Retry is exact.
+    SELECT count(*) INTO v_n
+      FROM public.fn_experiment_v2_record_runtime_snapshot(
+        v_exp, 'device-214', '21420000-0000-4000-8000-000000000003',
+        v_baseline, v_observations_2,
+        'fw-214', 'cfg-214', 'registry-214', 'grid-214',
+        'dddddddd-dddd-4ddd-8ddd-dddddddddddd', v_writer_restart, 0,
+        true, 'fixture-reset-without-exposure');
+    SELECT recovery_work_id INTO v_recovery
+      FROM public.experiment_v2_runtime_faults
+     WHERE fault_report_id = '21420000-0000-4000-8000-000000000003'
+       AND fault_source = 'raw_reset_epoch' AND reported_fault_kind = 'reboot';
+    IF v_n <> 0 OR v_recovery IS NULL OR NOT EXISTS (
+        SELECT 1 FROM public.control_experiments e
+         WHERE e.experiment_id = v_exp
+           AND e.admission_state = 'baseline_recovery'
+           AND e.component_enabled) OR (
+        SELECT count(*) FROM public.experiment_events e
+         WHERE e.experiment_id = v_exp
+           AND e.detail->>'v2_event' = 'runtime_reset_without_exposure'
+           AND e.detail->>'source_epoch_id' =
+               '21420000-0000-4000-8000-000000000003') <> 1 THEN
+        RAISE EXCEPTION 'no-exposure reset was consumed without durable recovery';
+    END IF;
+    SELECT count(*) INTO v_n
+      FROM public.fn_experiment_v2_record_runtime_snapshot(
+        v_exp, 'device-214', '21420000-0000-4000-8000-000000000003',
+        v_baseline, v_observations_2,
+        'fw-214', 'cfg-214', 'registry-214', 'grid-214',
+        'dddddddd-dddd-4ddd-8ddd-dddddddddddd', v_writer_restart, 0,
+        true, 'fixture-reset-retry');
+    IF v_n <> 0 OR (SELECT count(*) FROM public.experiment_v2_runtime_faults
+         WHERE fault_report_id = '21420000-0000-4000-8000-000000000003') <> 1 THEN
+        RAISE EXCEPTION 'no-exposure reset retry duplicated its fault';
+    END IF;
+    INSERT INTO public.experiment_v2_work_events
+        (experiment_id, work_id, event_kind, worker_ref, detail, recorded_at)
+    VALUES (v_exp, v_recovery, 'recovered', 'fixture', '{"fixture":true}', clock_timestamp());
+    PERFORM public.fn_experiment_v2_set_admission(v_exp, 'closed', 'fixture');
+
+    -- A reset-marked epoch from the opening confirmation buffer must not take
+    -- the ordinary successful no-row branch merely because it predates start.
+    PERFORM public.fn_experiment_v2_set_admission(v_exp, 'open', 'fixture');
+    v_boundary_exposure := public.fn_experiment_v2_open_exposure(
+        v_exp, v_probe, 'device-214', 'fixture');
+    SELECT count(*) INTO v_n
+      FROM public.fn_experiment_v2_record_runtime_snapshot(
+        v_exp, 'device-214', '21420000-0000-4000-8000-000000000004',
+        decode(repeat('04',178),'hex'), v_observations_2,
+        'fw-214', 'cfg-214', 'registry-214', 'grid-214',
+        'dddddddd-dddd-4ddd-8ddd-dddddddddddd', v_writer_restart, 0,
+        true, 'fixture-reset-from-confirmation-buffer');
+    SELECT recovery_work_id INTO v_recovery
+      FROM public.experiment_v2_runtime_snapshots
+     WHERE source_epoch_id = '21420000-0000-4000-8000-000000000004';
+    IF v_n <> 1 OR v_recovery IS NULL OR NOT EXISTS (
+        SELECT 1 FROM public.experiment_v2_exposure_closures c
+         WHERE c.exposure_id = v_boundary_exposure AND c.close_reason = 'reboot') THEN
+        RAISE EXCEPTION 'reset-marked pre-exposure epoch was incorrectly ignored';
+    END IF;
+    INSERT INTO public.experiment_v2_work_events
+        (experiment_id, work_id, event_kind, worker_ref, detail, recorded_at)
+    VALUES (v_exp, v_recovery, 'recovered', 'fixture', '{"fixture":true}', clock_timestamp());
+    PERFORM public.fn_experiment_v2_set_admission(v_exp, 'closed', 'fixture');
+
     v_canary_a := public.fn_experiment_v2_create_work(
         v_exp, 'commissioning_canary', 'aggressive',
         tstzrange(v_now, v_now + interval '1 hour', '[)'), v_now + interval '50 minutes', 'fixture');
@@ -417,7 +550,6 @@ BEGIN
         (experiment_id, work_id, event_kind, worker_ref, detail, recorded_at)
     VALUES (v_exp, v_canary_m, 'completed', 'fixture', '{"fixture":true}', clock_timestamp()),
            (v_exp, v_canary_a, 'completed', 'fixture', '{"fixture":true}', clock_timestamp());
-    PERFORM public.fn_experiment_v2_set_admission(v_exp, 'closed', 'fixture');
     PERFORM public.fn_experiment_v2_transition(v_exp, NULL, 'aa_rehearsal', 'fixture');
     v_aa := public.fn_experiment_v2_create_work(
         v_exp, 'aa_baseline_rehearsal', 'baseline',
@@ -451,18 +583,38 @@ BEGIN
         NULL, NULL, NULL, NULL, 'fixture');
     PERFORM public.fn_experiment_v2_transition(v_exp, 'running', NULL, 'fixture');
 
+    -- outcome_flags_from_durable_evidence: an unrecorded selector choice is a
+    -- deterministic fallback and cannot be hidden by a caller false flag.
+    SELECT assignment_id INTO v_claimed FROM public.experiment_v2_outcomes
+     WHERE experiment_id = v_exp AND day_index = 2;
+    blocked := false;
+    BEGIN
+        PERFORM public.fn_experiment_v2_freeze_outcome(
+            v_exp, v_claimed, '{"endpoint":null}'::jsonb,
+            false, false, false, false, true, 'fixture-invalid-flags');
+    EXCEPTION WHEN OTHERS THEN blocked := true;
+    END;
+    IF NOT blocked THEN
+        RAISE EXCEPTION 'caller hid durable selector fallback from frozen outcome';
+    END IF;
     FOR row_out IN SELECT assignment_id, day_index
       FROM public.experiment_v2_outcomes WHERE experiment_id = v_exp ORDER BY day_index
     LOOP
         PERFORM public.fn_experiment_v2_freeze_outcome(
             v_exp, row_out.assignment_id,
             jsonb_build_object('endpoint', CASE WHEN row_out.day_index = 2 THEN NULL ELSE 0 END),
-            row_out.day_index = 3, row_out.day_index = 2,
-            row_out.day_index = 4, true, row_out.day_index = 2, 'fixture');
+            false, row_out.day_index <> 1,
+            false, true, row_out.day_index = 2, 'fixture');
     END LOOP;
     PERFORM public.fn_experiment_v2_freeze_export(v_exp, repeat('e',64), 'fixture');
     PERFORM public.fn_experiment_v2_set_admission(
         v_exp, 'emergency_hold', 'fixture', 'facility-entry-only');
+    SELECT * INTO row_out FROM public.fn_experiment_v2_safe_startup_attestation(
+        'device-214', v_exp);
+    IF row_out.hold_required OR NOT row_out.facility_authority_yielded OR
+       row_out.open_exposure_count <> 0 THEN
+        RAISE EXCEPTION 'startup attestation failed to yield experiment hold to facility';
+    END IF;
     blocked := false;
     BEGIN
         PERFORM public.fn_experiment_v2_complete(v_exp, 'fixture', 'must fail');
@@ -562,6 +714,15 @@ BEGIN
         'public.fn_experiment_v2_monitor_open_exposure(uuid,text,bigint)',
         'EXECUTE') THEN
         RAISE EXCEPTION 'executor cannot record/read bounded raw exposure monitoring';
+    END IF;
+    IF NOT has_function_privilege(
+        current_user,
+        'public.fn_experiment_v2_report_runtime_fault(uuid,text,uuid,bigint,uuid,bigint,bigint,text,text,text)',
+        'EXECUTE') OR NOT has_function_privilege(
+        current_user,
+        'public.fn_experiment_v2_safe_startup_attestation(text,uuid)',
+        'EXECUTE') THEN
+        RAISE EXCEPTION 'executor cannot report faults/read startup attestation';
     END IF;
     BEGIN
         INSERT INTO public.experiment_v2_state_artifacts

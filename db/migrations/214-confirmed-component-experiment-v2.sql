@@ -409,6 +409,100 @@ CREATE INDEX IF NOT EXISTS idx_experiment_v2_runtime_snapshots_latest
     ON public.experiment_v2_runtime_snapshots
        (experiment_id, device_id, recorded_at DESC);
 
+CREATE TABLE IF NOT EXISTS public.experiment_v2_runtime_faults (
+    fault_report_id uuid PRIMARY KEY,
+    experiment_id uuid NOT NULL REFERENCES public.control_experiments(experiment_id),
+    device_id text NOT NULL CHECK (length(device_id) > 0),
+    fault_source text NOT NULL DEFAULT 'runtime_callback' CHECK
+        (fault_source IN ('runtime_callback', 'raw_reset_epoch')),
+    source_epoch_sha256 text CHECK
+        (source_epoch_sha256 IS NULL OR source_epoch_sha256 ~ '^[0-9a-f]{64}$'),
+    reported_fault_kind text NOT NULL CHECK (reported_fault_kind IN
+        ('lease_loss', 'writer_collision', 'device_lost',
+         'connection_generation_changed', 'reconnect', 'reboot',
+         'db_outage', 'sensor_gap', 'cfg_drift', 'common_field_drift',
+         'stale_or_mismatched_work', 'unknown_delivery',
+         'interrupted_recovery', 'protocol_deviation')),
+    reason text NOT NULL CHECK (length(reason) > 0),
+    reported_lease_generation bigint NOT NULL CHECK
+        (reported_lease_generation BETWEEN 0 AND 9007199254740991),
+    current_lease_generation bigint NOT NULL CHECK
+        (current_lease_generation BETWEEN 0 AND 9007199254740991),
+    reporter_runtime_instance_id uuid NOT NULL,
+    reporter_writer_generation bigint NOT NULL CHECK
+        (reporter_writer_generation BETWEEN 0 AND 9007199254740991),
+    reporter_connection_generation bigint NOT NULL CHECK
+        (reporter_connection_generation BETWEEN 0 AND 9007199254740991),
+    current_runtime_instance_id uuid NOT NULL,
+    current_writer_generation bigint NOT NULL CHECK
+        (current_writer_generation BETWEEN 0 AND 9007199254740991),
+    current_connection_generation bigint NOT NULL CHECK
+        (current_connection_generation BETWEEN 0 AND 9007199254740991),
+    lease_mismatch boolean NOT NULL,
+    runtime_mismatch boolean NOT NULL,
+    exposure_id uuid REFERENCES public.experiment_v2_exposures(exposure_id),
+    close_reason text NOT NULL CHECK (close_reason IN
+        ('lease_loss', 'writer_collision', 'device_lost', 'reconnect', 'reboot',
+         'db_outage', 'sensor_gap', 'cfg_drift', 'common_field_drift',
+         'stale_or_mismatched_work', 'unknown_delivery',
+         'interrupted_recovery', 'protocol_deviation')),
+    recovery_work_id uuid REFERENCES public.experiment_v2_work(work_id),
+    admission_state_after text NOT NULL CHECK (admission_state_after IN
+        ('closed', 'open', 'baseline_recovery', 'emergency_hold')),
+    authority_hold_required boolean NOT NULL,
+    facility_authority_yielded boolean NOT NULL,
+    recorded_by text NOT NULL,
+    recorded_at timestamptz NOT NULL,
+    CHECK (lease_mismatch =
+           (reported_lease_generation <> current_lease_generation)),
+    CHECK (runtime_mismatch =
+           ((reporter_runtime_instance_id, reporter_writer_generation,
+             reporter_connection_generation) <>
+            (current_runtime_instance_id, current_writer_generation,
+             current_connection_generation))),
+    CHECK ((fault_source = 'raw_reset_epoch') =
+           (source_epoch_sha256 IS NOT NULL)),
+    CHECK (NOT facility_authority_yielded OR
+           (admission_state_after = 'emergency_hold' AND
+            NOT authority_hold_required AND recovery_work_id IS NULL))
+);
+
+ALTER TABLE public.experiment_v2_runtime_faults
+    ADD COLUMN IF NOT EXISTS fault_source text NOT NULL DEFAULT 'runtime_callback',
+    ADD COLUMN IF NOT EXISTS source_epoch_sha256 text;
+
+ALTER TABLE public.experiment_v2_runtime_faults
+    DROP CONSTRAINT IF EXISTS experiment_v2_runtime_faults_reported_fault_kind_check;
+ALTER TABLE public.experiment_v2_runtime_faults
+    ADD CONSTRAINT experiment_v2_runtime_faults_reported_fault_kind_check CHECK (
+        reported_fault_kind IN
+            ('lease_loss', 'writer_collision', 'device_lost',
+             'connection_generation_changed', 'reconnect', 'reboot',
+             'db_outage', 'sensor_gap', 'cfg_drift', 'common_field_drift',
+             'stale_or_mismatched_work', 'unknown_delivery',
+             'interrupted_recovery', 'protocol_deviation'));
+
+DO $body$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+         WHERE conrelid = 'public.experiment_v2_runtime_faults'::regclass
+           AND conname = 'experiment_v2_runtime_faults_source_binding') THEN
+        ALTER TABLE public.experiment_v2_runtime_faults
+            ADD CONSTRAINT experiment_v2_runtime_faults_source_binding CHECK (
+                fault_source IN ('runtime_callback', 'raw_reset_epoch') AND
+                (fault_source = 'raw_reset_epoch') =
+                    (source_epoch_sha256 IS NOT NULL) AND
+                (source_epoch_sha256 IS NULL OR
+                 source_epoch_sha256 ~ '^[0-9a-f]{64}$'));
+    END IF;
+END;
+$body$;
+
+CREATE INDEX IF NOT EXISTS idx_experiment_v2_runtime_faults_device_time
+    ON public.experiment_v2_runtime_faults
+       (experiment_id, device_id, recorded_at DESC);
+
 CREATE TABLE IF NOT EXISTS public.experiment_v2_facility_safe_closures (
     experiment_id uuid PRIMARY KEY REFERENCES public.control_experiments(experiment_id),
     authorization_ref text NOT NULL CHECK (length(authorization_ref) > 0),
@@ -548,6 +642,7 @@ BEGIN
         'experiment_v2_component_outcomes',
         'experiment_v2_runtime_generations',
         'experiment_v2_runtime_snapshots',
+        'experiment_v2_runtime_faults',
         'experiment_v2_observation_epochs', 'experiment_v2_observation_receipts',
         'experiment_v2_exposures', 'experiment_v2_exposure_closures',
         'experiment_v2_facility_safe_closures',
@@ -1425,16 +1520,16 @@ BEGIN
 END;
 $body$;
 
-CREATE OR REPLACE FUNCTION public.fn_experiment_v2_request_recovery(
+CREATE OR REPLACE FUNCTION public.fn_experiment_v2_request_recovery_at(
     p_experiment_id uuid,
     p_source_work_id uuid,
     p_valid_range tstzrange,
     p_expires_at timestamptz,
     p_reason text,
+    p_now timestamptz,
     p_actor text DEFAULT current_user
 ) RETURNS uuid
 LANGUAGE plpgsql
-SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $body$
 DECLARE
@@ -1443,7 +1538,6 @@ DECLARE
     v_state public.experiment_v2_state_artifacts%ROWTYPE;
     v_existing uuid;
     v_work_id uuid;
-    v_now timestamptz := clock_timestamp();
 BEGIN
     SELECT * INTO v_exp FROM public.control_experiments
      WHERE experiment_id = p_experiment_id FOR UPDATE;
@@ -1472,7 +1566,7 @@ BEGIN
        NOT lower_inc(p_valid_range) OR upper_inc(p_valid_range) OR
        p_expires_at <= lower(p_valid_range) OR p_expires_at > upper(p_valid_range) OR
        (p_source_work_id IS NOT NULL AND NOT (p_valid_range <@ v_source.valid_range)) OR
-       upper(p_valid_range) <= v_now THEN
+       p_now IS NULL OR upper(p_valid_range) <= p_now THEN
         RAISE EXCEPTION 'recovery requires a reason and bounded current [) range contained by linked work';
     END IF;
     SELECT * INTO v_state FROM public.experiment_v2_state_artifacts
@@ -1492,7 +1586,7 @@ BEGIN
          coalesce(v_source.registry_revision, v_exp.registry_revision),
          coalesce(v_source.grid_revision, v_exp.grid_revision),
          coalesce(v_source.lease_generation, v_exp.lease_generation),
-         p_valid_range, p_expires_at, p_actor, v_now)
+         p_valid_range, p_expires_at, p_actor, p_now)
     RETURNING work_id INTO v_work_id;
     INSERT INTO public.experiment_events
         (experiment_id, event_kind, severity, actor, detail)
@@ -1501,6 +1595,30 @@ BEGIN
                                'source_work_id', p_source_work_id,
                                'recovery_work_id', v_work_id, 'reason', p_reason));
     RETURN v_work_id;
+END;
+$body$;
+
+-- Public wrapper owns the clock.  Internal fault/monitor transactions call the
+-- ungranted *_at helper with their already captured decision timestamp so all
+-- expiry, closure, recovery, admission, and evidence writes share one clock.
+CREATE OR REPLACE FUNCTION public.fn_experiment_v2_request_recovery(
+    p_experiment_id uuid,
+    p_source_work_id uuid,
+    p_valid_range tstzrange,
+    p_expires_at timestamptz,
+    p_reason text,
+    p_actor text DEFAULT current_user
+) RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $body$
+DECLARE
+    v_now timestamptz := clock_timestamp();
+BEGIN
+    RETURN public.fn_experiment_v2_request_recovery_at(
+        p_experiment_id, p_source_work_id, p_valid_range, p_expires_at,
+        p_reason, v_now, p_actor);
 END;
 $body$;
 
@@ -3381,6 +3499,7 @@ SET search_path = public, pg_temp
 AS $body$
 DECLARE
     v_existing public.experiment_v2_runtime_snapshots%ROWTYPE;
+    v_existing_fault public.experiment_v2_runtime_faults%ROWTYPE;
     v_row public.experiment_v2_runtime_snapshots%ROWTYPE;
     v_exp public.control_experiments%ROWTYPE;
     v_exposure public.experiment_v2_exposures%ROWTYPE;
@@ -3399,6 +3518,7 @@ DECLARE
     v_reason text;
     v_recovery uuid;
     v_recovery_upper timestamptz;
+    v_source_epoch_sha256 text;
     v_now timestamptz := clock_timestamp();
 BEGIN
     IF p_device_id IS NULL OR length(p_device_id) = 0 OR
@@ -3462,6 +3582,36 @@ BEGIN
        v_now - v_last > interval '90 seconds' THEN
         RAISE EXCEPTION 'runtime snapshot requires ordered, fresh, <=60s-skew observations';
     END IF;
+    v_source_epoch_sha256 := encode(digest(convert_to(jsonb_build_object(
+        'config_revision', p_config_revision,
+        'connection_generation', p_connection_generation,
+        'device_id', p_device_id,
+        'experiment_id', p_experiment_id,
+        'firmware_revision', p_firmware_revision,
+        'grid_revision', p_grid_revision,
+        'observations', p_observations,
+        'registry_revision', p_registry_revision,
+        'reset_detected', p_reset_detected,
+        'runtime_instance_id', p_runtime_instance_id,
+        'source_epoch_id', p_source_epoch_id,
+        'wire_vector_hex', encode(p_wire_vector, 'hex'),
+        'writer_generation', p_writer_generation)::text, 'UTF8'), 'sha256'), 'hex');
+    SELECT f.* INTO v_existing_fault
+      FROM public.experiment_v2_runtime_faults f
+     WHERE f.fault_report_id = p_source_epoch_id;
+    IF FOUND THEN
+        IF NOT p_reset_detected OR
+           v_existing_fault.fault_source <> 'raw_reset_epoch' OR
+           v_existing_fault.source_epoch_sha256 <> v_source_epoch_sha256 OR
+           v_existing_fault.experiment_id <> p_experiment_id OR
+           v_existing_fault.device_id <> p_device_id THEN
+            RAISE EXCEPTION 'source_epoch_id collides with a different immutable runtime fault';
+        END IF;
+        -- The durable fault row is the idempotent reset result.  The SETOF
+        -- snapshot surface has no nullable exposure/work identity, so callers
+        -- distinguish this fail-closed zero-row result by their reset=true input.
+        RETURN;
+    END IF;
 
     SELECT * INTO v_exp FROM public.control_experiments
      WHERE experiment_id = p_experiment_id FOR UPDATE;
@@ -3476,6 +3626,102 @@ BEGIN
        AND c.exposure_id IS NULL
      ORDER BY x.opened_at DESC LIMIT 1 FOR UPDATE OF x;
     IF NOT FOUND THEN
+        IF NOT p_reset_detected THEN
+            RETURN;
+        END IF;
+        IF NOT EXISTS (
+            SELECT 1 FROM public.experiment_v2_runtime_generations reporter
+             WHERE reporter.experiment_id = p_experiment_id
+               AND reporter.device_id = p_device_id
+               AND reporter.runtime_instance_id = p_runtime_instance_id
+               AND reporter.writer_generation = p_writer_generation
+               AND reporter.connection_generation = p_connection_generation) THEN
+            RAISE EXCEPTION 'reset reporter was never registered for this device';
+        END IF;
+        SELECT g.* INTO v_generation
+          FROM public.experiment_v2_runtime_generations g
+         WHERE g.experiment_id = p_experiment_id AND g.device_id = p_device_id
+         ORDER BY g.generation_event_id DESC LIMIT 1;
+        v_foreign :=
+            (p_runtime_instance_id, p_writer_generation, p_connection_generation)
+            IS DISTINCT FROM
+            (v_generation.runtime_instance_id, v_generation.writer_generation,
+             v_generation.connection_generation);
+        v_reason := CASE WHEN v_foreign THEN 'writer_collision' ELSE 'reboot' END;
+        IF v_exp.admission_state <> 'emergency_hold' AND
+           v_exp.execution_phase <> 'shadow' AND
+           v_exp.status IN ('draft', 'armed', 'running', 'paused') THEN
+            SELECT w.work_id INTO v_recovery
+              FROM public.experiment_v2_work w
+             WHERE w.experiment_id = p_experiment_id
+               AND w.operation_kind = 'baseline_recovery'
+               AND w.execution_phase = v_exp.execution_phase
+               AND w.lease_generation = v_exp.lease_generation
+               AND v_now < w.expires_at AND v_now <@ w.valid_range
+               AND NOT EXISTS (
+                   SELECT 1 FROM public.experiment_v2_work_events terminal
+                    WHERE terminal.work_id = w.work_id
+                      AND terminal.event_kind IN
+                          ('recovered', 'failed', 'cancelled', 'superseded'))
+             ORDER BY w.created_at DESC LIMIT 1;
+            IF v_recovery IS NULL THEN
+                v_recovery_upper := v_now + interval '5 minutes';
+                v_recovery := public.fn_experiment_v2_request_recovery_at(
+                    p_experiment_id, NULL,
+                    tstzrange(v_now, v_recovery_upper, '[)'), v_recovery_upper,
+                    'raw reset without an open exposure', v_now, p_actor);
+            END IF;
+            IF v_exp.admission_state <> 'baseline_recovery' THEN
+                PERFORM set_config('verdify.experiment_v2_transition', 'on', true);
+                UPDATE public.control_experiments
+                   SET admission_state = 'baseline_recovery',
+                       component_enabled = true,
+                       updated_at = v_now
+                 WHERE experiment_id = p_experiment_id
+                 RETURNING * INTO v_exp;
+                INSERT INTO public.experiment_events
+                    (experiment_id, event_kind, severity, actor, detail)
+                VALUES (p_experiment_id, 'state_transition', 'info', p_actor,
+                        jsonb_build_object(
+                            'v2_admission', 'baseline_recovery',
+                            'reason', 'raw-reset:' || p_source_epoch_id::text));
+            END IF;
+        END IF;
+        INSERT INTO public.experiment_v2_runtime_faults
+            (fault_report_id, experiment_id, device_id, fault_source,
+             source_epoch_sha256, reported_fault_kind, reason,
+             reported_lease_generation, current_lease_generation,
+             reporter_runtime_instance_id, reporter_writer_generation,
+             reporter_connection_generation, current_runtime_instance_id,
+             current_writer_generation, current_connection_generation,
+             lease_mismatch, runtime_mismatch, exposure_id, close_reason,
+             recovery_work_id, admission_state_after, authority_hold_required,
+             facility_authority_yielded, recorded_by, recorded_at)
+        VALUES (p_source_epoch_id, p_experiment_id, p_device_id,
+                'raw_reset_epoch', v_source_epoch_sha256, 'reboot',
+                'raw runtime reset detected without an open exposure',
+                v_exp.lease_generation, v_exp.lease_generation,
+                p_runtime_instance_id, p_writer_generation,
+                p_connection_generation, v_generation.runtime_instance_id,
+                v_generation.writer_generation, v_generation.connection_generation,
+                false, v_foreign, NULL, v_reason, v_recovery,
+                v_exp.admission_state,
+                v_exp.admission_state <> 'emergency_hold' AND
+                    v_exp.execution_phase <> 'shadow' AND
+                    v_exp.component_enabled AND
+                    v_exp.status IN ('draft', 'armed', 'running', 'paused'),
+                v_exp.admission_state = 'emergency_hold', p_actor, v_now);
+        INSERT INTO public.experiment_events
+            (experiment_id, event_kind, severity, actor, detail)
+        VALUES (p_experiment_id, 'override', 'warning', p_actor,
+                jsonb_build_object(
+                    'v2_event', 'runtime_reset_without_exposure',
+                    'source_epoch_id', p_source_epoch_id,
+                    'device_id', p_device_id,
+                    'close_reason', v_reason,
+                    'recovery_work_id', v_recovery,
+                    'facility_authority_yielded',
+                        v_exp.admission_state = 'emergency_hold'));
         RETURN;
     END IF;
     SELECT * INTO v_work FROM public.experiment_v2_work
@@ -3486,9 +3732,14 @@ BEGIN
     SELECT * INTO v_generation FROM public.experiment_v2_runtime_generations
      WHERE experiment_id = p_experiment_id AND device_id = p_device_id
      ORDER BY generation_event_id DESC LIMIT 1;
-    IF v_work.work_id IS NULL OR v_state.state_artifact_id IS NULL OR
-       v_first <= v_exposure.started_at THEN
+    IF v_work.work_id IS NULL OR v_state.state_artifact_id IS NULL THEN
         RAISE EXCEPTION 'runtime snapshot is stale or lacks an immutable open-exposure target';
+    END IF;
+    -- The source buffer still contains the two epochs that qualified the
+    -- exposure when it first opens.  They are confirmation evidence, not
+    -- post-open monitoring; acknowledge them as a successful no-row result.
+    IF v_first <= v_exposure.started_at AND NOT p_reset_detected THEN
+        RETURN;
     END IF;
     SELECT * INTO v_previous FROM public.experiment_v2_runtime_snapshots
      WHERE exposure_id = v_exposure.exposure_id
@@ -3574,22 +3825,33 @@ BEGIN
                    upper(v_work.valid_range) > v_now THEN
                     v_recovery_upper := least(upper(v_work.valid_range),
                                               v_now + interval '5 minutes');
-                    v_recovery := public.fn_experiment_v2_request_recovery(
+                    v_recovery := public.fn_experiment_v2_request_recovery_at(
                         p_experiment_id, v_work.work_id,
                         tstzrange(v_now, v_recovery_upper, '[)'), v_recovery_upper,
-                        'open exposure ' || v_reason, p_actor);
+                        'open exposure ' || v_reason, v_now, p_actor);
                 ELSE
                     v_recovery_upper := v_now + interval '5 minutes';
-                    v_recovery := public.fn_experiment_v2_request_recovery(
+                    v_recovery := public.fn_experiment_v2_request_recovery_at(
                         p_experiment_id, NULL,
                         tstzrange(v_now, v_recovery_upper, '[)'), v_recovery_upper,
-                        'open exposure ' || v_reason, p_actor);
+                        'open exposure ' || v_reason, v_now, p_actor);
                 END IF;
             END IF;
             IF v_exp.admission_state <> 'baseline_recovery' THEN
-                PERFORM public.fn_experiment_v2_set_admission(
-                    p_experiment_id, 'baseline_recovery', p_actor,
-                    'monitor:' || v_reason || ':' || p_source_epoch_id::text);
+                PERFORM set_config('verdify.experiment_v2_transition', 'on', true);
+                UPDATE public.control_experiments
+                   SET admission_state = 'baseline_recovery',
+                       component_enabled = true,
+                       updated_at = v_now
+                 WHERE experiment_id = p_experiment_id
+                 RETURNING * INTO v_exp;
+                INSERT INTO public.experiment_events
+                    (experiment_id, event_kind, severity, actor, detail)
+                VALUES (p_experiment_id, 'state_transition', 'info', p_actor,
+                        jsonb_build_object(
+                            'v2_admission', 'baseline_recovery',
+                            'reason', 'monitor:' || v_reason || ':' ||
+                                      p_source_epoch_id::text));
             END IF;
         END IF;
     END IF;
@@ -3615,12 +3877,14 @@ BEGIN
 END;
 $body$;
 
+DROP FUNCTION IF EXISTS public.fn_experiment_v2_monitor_open_exposure(uuid, text, bigint);
 CREATE OR REPLACE FUNCTION public.fn_experiment_v2_monitor_open_exposure(
     p_experiment_id uuid,
     p_device_id text,
     p_expected_lease_generation bigint
 ) RETURNS TABLE (
     exposure_id uuid,
+    exposure_started_at timestamptz,
     work_id uuid,
     target_state_content_sha256 text,
     target_wire_vector bytea,
@@ -3692,7 +3956,7 @@ BEGIN
     SELECT * INTO v_closure FROM public.experiment_v2_exposure_closures c
      WHERE c.exposure_id = v_exposure.exposure_id;
     RETURN QUERY SELECT
-        v_exposure.exposure_id, v_exposure.work_id,
+        v_exposure.exposure_id, v_exposure.started_at, v_exposure.work_id,
         v_state.state_content_sha256, v_state.wire_vector,
         v_snapshot.source_epoch_id, v_snapshot.observed_state_content_sha256,
         v_snapshot.observed_wire_vector, v_snapshot.observations,
@@ -3707,6 +3971,383 @@ BEGIN
         coalesce(v_snapshot.foreign_writer, false),
         v_closure.exposure_id IS NULL, v_closure.close_reason,
         v_snapshot.recovery_work_id, v_now;
+END;
+$body$;
+
+-- Authoritative fail-closed callback for faults discovered outside a raw
+-- observation epoch (notably a lease watchdog).  Known runtime ownership is
+-- required, but a superseded known generation may still report the fault.  A
+-- server-derived lease/runtime mismatch overrides the caller's close reason.
+CREATE OR REPLACE FUNCTION public.fn_experiment_v2_report_runtime_fault(
+    p_experiment_id uuid,
+    p_device_id text,
+    p_fault_report_id uuid,
+    p_expected_lease_generation bigint,
+    p_runtime_instance_id uuid,
+    p_writer_generation bigint,
+    p_connection_generation bigint,
+    p_fault_kind text,
+    p_reason text,
+    p_actor text DEFAULT current_user
+) RETURNS public.experiment_v2_runtime_faults
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $body$
+DECLARE
+    v_existing public.experiment_v2_runtime_faults%ROWTYPE;
+    v_row public.experiment_v2_runtime_faults%ROWTYPE;
+    v_exp public.control_experiments%ROWTYPE;
+    v_generation public.experiment_v2_runtime_generations%ROWTYPE;
+    v_exposure public.experiment_v2_exposures%ROWTYPE;
+    v_source public.experiment_v2_work%ROWTYPE;
+    v_recovery uuid;
+    v_recovery_upper timestamptz;
+    v_lease_mismatch boolean;
+    v_runtime_mismatch boolean;
+    v_close_reason text;
+    v_facility_yielded boolean;
+    v_authority_hold boolean;
+    v_now timestamptz := clock_timestamp();
+BEGIN
+    IF p_device_id IS NULL OR length(p_device_id) = 0 OR
+       p_fault_report_id IS NULL OR p_fault_report_id::text !~
+           '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' OR
+       p_runtime_instance_id IS NULL OR
+       p_expected_lease_generation NOT BETWEEN 0 AND 9007199254740991 OR
+       p_writer_generation NOT BETWEEN 0 AND 9007199254740991 OR
+       p_connection_generation NOT BETWEEN 0 AND 9007199254740991 OR
+       p_fault_kind NOT IN
+           ('lease_loss', 'writer_collision', 'device_lost',
+            'connection_generation_changed', 'reconnect', 'reboot',
+            'db_outage', 'sensor_gap', 'cfg_drift', 'common_field_drift',
+            'stale_or_mismatched_work', 'unknown_delivery',
+            'interrupted_recovery', 'protocol_deviation') OR
+       p_reason IS NULL OR length(p_reason) = 0 OR
+       p_actor IS NULL OR length(p_actor) = 0 THEN
+        RAISE EXCEPTION 'runtime fault requires one typed source-owned report and reason';
+    END IF;
+    PERFORM pg_advisory_xact_lock(hashtext(
+        'experiment-v2-runtime-fault-' || p_fault_report_id::text));
+    SELECT f.* INTO v_existing FROM public.experiment_v2_runtime_faults f
+     WHERE f.fault_report_id = p_fault_report_id;
+    IF FOUND THEN
+        IF v_existing.fault_source <> 'runtime_callback' OR
+           (v_existing.experiment_id, v_existing.device_id,
+            v_existing.reported_lease_generation,
+            v_existing.reporter_runtime_instance_id,
+            v_existing.reporter_writer_generation,
+            v_existing.reporter_connection_generation,
+            v_existing.reported_fault_kind, v_existing.reason) IS DISTINCT FROM
+           (p_experiment_id, p_device_id, p_expected_lease_generation,
+            p_runtime_instance_id, p_writer_generation,
+            p_connection_generation, p_fault_kind, p_reason) THEN
+            RAISE EXCEPTION 'fault_report_id retry differs from its immutable report';
+        END IF;
+        RETURN v_existing;
+    END IF;
+    SELECT e.* INTO v_exp FROM public.control_experiments e
+     WHERE e.experiment_id = p_experiment_id FOR UPDATE;
+    IF NOT FOUND OR v_exp.protocol_version <> 2 THEN
+        RAISE EXCEPTION 'runtime fault scope is not one protocol-v2 experiment';
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM public.experiment_v2_runtime_generations reporter
+         WHERE reporter.experiment_id = p_experiment_id
+           AND reporter.device_id = p_device_id
+           AND reporter.runtime_instance_id = p_runtime_instance_id
+           AND reporter.writer_generation = p_writer_generation
+           AND reporter.connection_generation = p_connection_generation) THEN
+        RAISE EXCEPTION 'runtime fault reporter was never registered for this device';
+    END IF;
+    SELECT g.* INTO v_generation FROM public.experiment_v2_runtime_generations g
+     WHERE g.experiment_id = p_experiment_id AND g.device_id = p_device_id
+     ORDER BY g.generation_event_id DESC LIMIT 1;
+    v_lease_mismatch := p_expected_lease_generation <> v_exp.lease_generation;
+    v_runtime_mismatch :=
+        (p_runtime_instance_id, p_writer_generation, p_connection_generation)
+        IS DISTINCT FROM
+        (v_generation.runtime_instance_id, v_generation.writer_generation,
+         v_generation.connection_generation);
+    v_close_reason := CASE
+        WHEN v_lease_mismatch THEN 'lease_loss'
+        WHEN v_runtime_mismatch THEN 'writer_collision'
+        WHEN p_fault_kind = 'connection_generation_changed' THEN 'reconnect'
+        ELSE p_fault_kind
+    END;
+
+    PERFORM pg_advisory_xact_lock(hashtext('experiment-v2-exposure-' || p_device_id));
+    SELECT x.* INTO v_exposure
+      FROM public.experiment_v2_exposures x
+      LEFT JOIN public.experiment_v2_exposure_closures c USING (exposure_id)
+     WHERE x.experiment_id = p_experiment_id AND x.device_id = p_device_id
+       AND c.exposure_id IS NULL
+     ORDER BY x.opened_at DESC LIMIT 1 FOR UPDATE OF x;
+    IF v_exposure.exposure_id IS NOT NULL THEN
+        INSERT INTO public.experiment_v2_exposure_closures
+            (exposure_id, ended_at, close_reason, writer_generation,
+             connection_generation, closed_by, recorded_at)
+        VALUES (v_exposure.exposure_id, greatest(v_now, v_exposure.started_at),
+                v_close_reason, v_generation.writer_generation,
+                v_generation.connection_generation, p_actor, v_now);
+        SELECT w.* INTO v_source FROM public.experiment_v2_work w
+         WHERE w.work_id = v_exposure.work_id;
+    END IF;
+
+    v_facility_yielded := v_exp.admission_state = 'emergency_hold';
+    IF NOT v_facility_yielded AND v_exp.execution_phase <> 'shadow' AND
+       v_exp.status IN ('draft', 'armed', 'running', 'paused') THEN
+        SELECT w.work_id INTO v_recovery
+          FROM public.experiment_v2_work w
+         WHERE w.experiment_id = p_experiment_id
+           AND w.operation_kind = 'baseline_recovery'
+           AND w.execution_phase = v_exp.execution_phase
+           AND w.lease_generation = v_exp.lease_generation
+           AND v_now < w.expires_at AND v_now <@ w.valid_range
+           AND NOT EXISTS (
+               SELECT 1 FROM public.experiment_v2_work_events terminal
+                WHERE terminal.work_id = w.work_id AND terminal.event_kind IN
+                    ('recovered', 'failed', 'cancelled', 'superseded'))
+         ORDER BY w.created_at DESC LIMIT 1;
+        IF v_recovery IS NULL THEN
+            IF v_source.work_id IS NOT NULL AND
+               v_source.target_profile <> 'baseline' AND
+               v_source.operation_kind <> 'baseline_recovery' AND
+               v_source.execution_phase = v_exp.execution_phase AND
+               v_source.lease_generation = v_exp.lease_generation AND
+               upper(v_source.valid_range) > v_now THEN
+                v_recovery_upper := least(upper(v_source.valid_range),
+                                          v_now + interval '5 minutes');
+                v_recovery := public.fn_experiment_v2_request_recovery_at(
+                    p_experiment_id, v_source.work_id,
+                    tstzrange(v_now, v_recovery_upper, '[)'), v_recovery_upper,
+                    'runtime fault ' || v_close_reason || ': ' || p_reason,
+                    v_now, p_actor);
+            ELSE
+                v_recovery_upper := v_now + interval '5 minutes';
+                v_recovery := public.fn_experiment_v2_request_recovery_at(
+                    p_experiment_id, NULL,
+                    tstzrange(v_now, v_recovery_upper, '[)'), v_recovery_upper,
+                    'runtime fault ' || v_close_reason || ': ' || p_reason,
+                    v_now, p_actor);
+            END IF;
+        END IF;
+        IF v_exp.admission_state <> 'baseline_recovery' THEN
+            PERFORM set_config('verdify.experiment_v2_transition', 'on', true);
+            UPDATE public.control_experiments
+               SET admission_state = 'baseline_recovery',
+                   component_enabled = true,
+                   updated_at = v_now
+             WHERE experiment_id = p_experiment_id
+             RETURNING * INTO v_exp;
+            INSERT INTO public.experiment_events
+                (experiment_id, event_kind, severity, actor, detail)
+            VALUES (p_experiment_id, 'state_transition', 'info', p_actor,
+                    jsonb_build_object(
+                        'v2_admission', 'baseline_recovery',
+                        'reason', 'runtime-fault:' || p_fault_report_id::text));
+        END IF;
+    END IF;
+    v_facility_yielded := v_exp.admission_state = 'emergency_hold';
+    v_authority_hold := NOT v_facility_yielded AND v_exp.component_enabled AND
+        v_exp.status IN ('draft', 'armed', 'running', 'paused');
+    INSERT INTO public.experiment_v2_runtime_faults
+        (fault_report_id, experiment_id, device_id, fault_source,
+         source_epoch_sha256, reported_fault_kind, reason,
+         reported_lease_generation, current_lease_generation,
+         reporter_runtime_instance_id, reporter_writer_generation,
+         reporter_connection_generation, current_runtime_instance_id,
+         current_writer_generation, current_connection_generation,
+         lease_mismatch, runtime_mismatch, exposure_id, close_reason,
+         recovery_work_id, admission_state_after, authority_hold_required,
+         facility_authority_yielded, recorded_by, recorded_at)
+    VALUES (p_fault_report_id, p_experiment_id, p_device_id, 'runtime_callback',
+            NULL, p_fault_kind, p_reason,
+            p_expected_lease_generation, v_exp.lease_generation,
+            p_runtime_instance_id, p_writer_generation, p_connection_generation,
+            v_generation.runtime_instance_id, v_generation.writer_generation,
+            v_generation.connection_generation, v_lease_mismatch,
+            v_runtime_mismatch, v_exposure.exposure_id, v_close_reason,
+            v_recovery, v_exp.admission_state, v_authority_hold,
+            v_facility_yielded, p_actor, v_now)
+    RETURNING * INTO v_row;
+    INSERT INTO public.experiment_events
+        (experiment_id, event_kind, severity, actor, detail)
+    VALUES (p_experiment_id, 'override', 'warning', p_actor,
+            jsonb_build_object(
+                'v2_event', 'runtime_fault_reported',
+                'fault_report_id', p_fault_report_id,
+                'device_id', p_device_id,
+                'reported_fault_kind', p_fault_kind,
+                'close_reason', v_close_reason,
+                'lease_mismatch', v_lease_mismatch,
+                'runtime_mismatch', v_runtime_mismatch,
+                'exposure_id', v_exposure.exposure_id,
+                'recovery_work_id', v_recovery,
+                'facility_authority_yielded', v_facility_yielded));
+    RETURN v_row;
+END;
+$body$;
+
+-- Read-only fail-closed startup attestation.  It deliberately has no
+-- release-permission output: callers may maintain the all-48 hold when
+-- hold_required or scope_resolved=false, but this function cannot authorize an
+-- automatic release.  No work, assignment, treatment, or mapping identity is
+-- returned.
+CREATE OR REPLACE FUNCTION public.fn_experiment_v2_safe_startup_attestation(
+    p_device_id text,
+    p_experiment_id uuid DEFAULT NULL
+) RETURNS TABLE (
+    attested_at timestamptz,
+    device_id text,
+    requested_experiment_id uuid,
+    scoped_experiment_id uuid,
+    scope_resolved boolean,
+    current_lease_generation bigint,
+    active_experiment_count integer,
+    open_exposure_count integer,
+    recovery_pending_count integer,
+    experiment_authority_active boolean,
+    facility_authority_yielded boolean,
+    hold_required boolean,
+    attestation_reason text
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $body$
+DECLARE
+    v_exp public.control_experiments%ROWTYPE;
+    v_bound_count integer := 0;
+    v_unbound_active integer := 0;
+    v_active_count integer := 0;
+    v_open_count integer := 0;
+    v_recovery_count integer := 0;
+    v_scope_resolved boolean := false;
+    v_authority_active boolean := false;
+    v_facility_yielded boolean := false;
+    v_hold boolean := true;
+    v_reason text;
+    v_now timestamptz := clock_timestamp();
+BEGIN
+    IF p_device_id IS NULL OR length(p_device_id) = 0 THEN
+        RAISE EXCEPTION 'startup attestation requires a device identity';
+    END IF;
+    SELECT count(*)::integer INTO v_active_count
+      FROM public.control_experiments e
+     WHERE e.protocol_version = 2 AND e.execution_phase <> 'shadow'
+       AND e.status IN ('draft', 'armed', 'running', 'paused');
+    IF p_experiment_id IS NOT NULL THEN
+        SELECT e.* INTO v_exp FROM public.control_experiments e
+         WHERE e.experiment_id = p_experiment_id AND e.protocol_version = 2;
+        IF NOT FOUND THEN
+            v_reason := 'unknown_requested_experiment';
+        ELSE
+            v_scope_resolved := true;
+        END IF;
+    ELSE
+        SELECT count(*)::integer INTO v_bound_count
+          FROM public.control_experiments e
+         WHERE e.protocol_version = 2
+           AND (e.status IN ('draft', 'armed', 'running', 'paused') OR EXISTS (
+                SELECT 1 FROM public.experiment_v2_exposures x
+                LEFT JOIN public.experiment_v2_exposure_closures c USING (exposure_id)
+                 WHERE x.experiment_id = e.experiment_id
+                   AND x.device_id = p_device_id AND c.exposure_id IS NULL) OR EXISTS (
+                SELECT 1 FROM public.experiment_v2_work w
+                 WHERE w.experiment_id = e.experiment_id
+                   AND w.operation_kind = 'baseline_recovery'
+                   AND NOT EXISTS (
+                       SELECT 1 FROM public.experiment_v2_work_events recovered
+                        WHERE recovered.work_id = w.work_id
+                          AND recovered.event_kind = 'recovered')))
+           AND (EXISTS (
+                SELECT 1 FROM public.experiment_v2_runtime_generations g
+                 WHERE g.experiment_id = e.experiment_id
+                   AND g.device_id = p_device_id) OR EXISTS (
+                SELECT 1 FROM public.experiment_v2_exposures x
+                 WHERE x.experiment_id = e.experiment_id
+                   AND x.device_id = p_device_id));
+        SELECT count(*)::integer INTO v_unbound_active
+          FROM public.control_experiments e
+         WHERE e.protocol_version = 2 AND e.execution_phase <> 'shadow'
+           AND e.status IN ('draft', 'armed', 'running', 'paused')
+           AND NOT EXISTS (
+               SELECT 1 FROM public.experiment_v2_runtime_generations g
+                WHERE g.experiment_id = e.experiment_id)
+           AND NOT EXISTS (
+               SELECT 1 FROM public.experiment_v2_exposures x
+                WHERE x.experiment_id = e.experiment_id);
+        IF v_unbound_active > 0 THEN
+            v_reason := 'unbound_active_v2_experiment';
+        ELSIF v_bound_count > 1 THEN
+            v_reason := 'ambiguous_device_scope';
+        ELSIF v_bound_count = 0 THEN
+            v_scope_resolved := true;
+            v_hold := false;
+            v_reason := 'no_active_v2_authority';
+        ELSE
+            SELECT e.* INTO v_exp FROM public.control_experiments e
+             WHERE e.protocol_version = 2
+               AND (e.status IN ('draft', 'armed', 'running', 'paused') OR EXISTS (
+                    SELECT 1 FROM public.experiment_v2_exposures open_x
+                    LEFT JOIN public.experiment_v2_exposure_closures close_x
+                      USING (exposure_id)
+                     WHERE open_x.experiment_id = e.experiment_id
+                       AND open_x.device_id = p_device_id
+                       AND close_x.exposure_id IS NULL) OR EXISTS (
+                    SELECT 1 FROM public.experiment_v2_work pending
+                     WHERE pending.experiment_id = e.experiment_id
+                       AND pending.operation_kind = 'baseline_recovery'
+                       AND NOT EXISTS (
+                           SELECT 1 FROM public.experiment_v2_work_events recovered
+                            WHERE recovered.work_id = pending.work_id
+                              AND recovered.event_kind = 'recovered')))
+               AND (EXISTS (
+                    SELECT 1 FROM public.experiment_v2_runtime_generations g
+                     WHERE g.experiment_id = e.experiment_id
+                       AND g.device_id = p_device_id) OR EXISTS (
+                    SELECT 1 FROM public.experiment_v2_exposures x
+                     WHERE x.experiment_id = e.experiment_id
+                       AND x.device_id = p_device_id))
+             ORDER BY e.updated_at DESC LIMIT 1;
+            v_scope_resolved := true;
+        END IF;
+    END IF;
+    IF v_scope_resolved AND v_exp.experiment_id IS NOT NULL THEN
+        SELECT count(*)::integer INTO v_open_count
+          FROM public.experiment_v2_exposures x
+          LEFT JOIN public.experiment_v2_exposure_closures c USING (exposure_id)
+         WHERE x.experiment_id = v_exp.experiment_id
+           AND x.device_id = p_device_id AND c.exposure_id IS NULL;
+        SELECT count(*)::integer INTO v_recovery_count
+          FROM public.experiment_v2_work w
+         WHERE w.experiment_id = v_exp.experiment_id
+           AND w.operation_kind = 'baseline_recovery'
+           AND NOT EXISTS (
+               SELECT 1 FROM public.experiment_v2_work_events recovered
+                WHERE recovered.work_id = w.work_id
+                  AND recovered.event_kind = 'recovered');
+        v_facility_yielded := v_exp.admission_state = 'emergency_hold';
+        v_authority_active := NOT v_facility_yielded AND
+            v_exp.execution_phase <> 'shadow' AND v_exp.component_enabled AND
+            v_exp.status IN ('draft', 'armed', 'running', 'paused');
+        v_hold := NOT v_facility_yielded AND
+            (v_authority_active OR v_open_count > 0 OR v_recovery_count > 0);
+        v_reason := CASE
+            WHEN v_facility_yielded THEN 'facility_authority_yielded'
+            WHEN v_open_count > 0 THEN 'open_exposure'
+            WHEN v_recovery_count > 0 THEN 'baseline_recovery_pending'
+            WHEN v_authority_active THEN 'experiment_authority_active'
+            WHEN v_exp.status IN ('completed', 'aborted') THEN 'experiment_terminal'
+            ELSE 'no_experiment_authority'
+        END;
+    END IF;
+    RETURN QUERY SELECT
+        v_now, p_device_id, p_experiment_id, v_exp.experiment_id,
+        v_scope_resolved, v_exp.lease_generation, v_active_count,
+        v_open_count, v_recovery_count, v_authority_active,
+        v_facility_yielded, v_hold, v_reason;
 END;
 $body$;
 
@@ -4330,6 +4971,9 @@ DECLARE
     v_row public.experiment_v2_outcome_freezes%ROWTYPE;
     v_exposure_seconds integer;
     v_expected_seconds integer;
+    v_delivery_failed boolean;
+    v_fallback_used boolean;
+    v_facility_rescue boolean;
     v_hash text;
     v_now timestamptz := clock_timestamp();
 BEGIN
@@ -4342,22 +4986,58 @@ BEGIN
      WHERE assignment_id = p_assignment_id;
     v_expected_seconds := extract(epoch FROM
         (upper(v_outcome.itt_range) - lower(v_outcome.itt_range)))::integer;
+    v_delivery_failed := EXISTS (
+        SELECT 1
+          FROM public.experiment_v2_work w
+          JOIN public.experiment_v2_work_events ev USING (experiment_id, work_id)
+         WHERE w.assignment_id = p_assignment_id AND ev.event_kind = 'failed') OR EXISTS (
+        SELECT 1
+          FROM public.experiment_v2_exposures x
+          JOIN public.experiment_v2_exposure_closures c USING (exposure_id)
+         WHERE x.assignment_id = p_assignment_id AND c.close_reason IN
+            ('device_lost', 'protocol_deviation', 'work_failed', 'reconnect',
+             'reboot', 'lease_loss', 'writer_collision', 'db_outage',
+             'sensor_gap', 'cfg_drift', 'common_field_drift',
+             'stale_or_mismatched_work', 'unknown_delivery',
+             'interrupted_recovery'));
+    v_fallback_used := NOT EXISTS (
+        SELECT 1 FROM public.experiment_v2_selector_choices choice
+         WHERE choice.assignment_id = p_assignment_id
+           AND choice.choice_status = 'selected') OR EXISTS (
+        SELECT 1
+          FROM public.experiment_v2_exposures x
+          JOIN public.experiment_v2_exposure_closures c USING (exposure_id)
+         WHERE x.assignment_id = p_assignment_id AND c.close_reason = 'fallback');
+    v_facility_rescue := EXISTS (
+        SELECT 1
+          FROM public.experiment_v2_exposures x
+          JOIN public.experiment_v2_exposure_closures c USING (exposure_id)
+         WHERE x.assignment_id = p_assignment_id
+           AND c.close_reason IN ('facility_emergency', 'manual_rescue'));
+    IF (p_delivery_failed, p_fallback_used, p_facility_rescue) IS DISTINCT FROM
+       (v_delivery_failed, v_fallback_used, v_facility_rescue) THEN
+        RAISE EXCEPTION 'outcome failure/fallback/rescue flags must equal durable work and closure evidence';
+    END IF;
     SELECT coalesce(sum(greatest(0, extract(epoch FROM
         (least(c.ended_at, upper(v_outcome.itt_range)) -
          greatest(x.started_at, lower(v_outcome.itt_range))))))::integer, 0)
       INTO v_exposure_seconds
-      FROM public.experiment_v2_exposures x
+     FROM public.experiment_v2_exposures x
       JOIN public.experiment_v2_exposure_closures c USING (exposure_id)
      WHERE x.assignment_id = p_assignment_id
-       AND tstzrange(x.started_at, c.ended_at, '[)') && v_outcome.itt_range;
+       AND tstzrange(x.started_at, c.ended_at, '[)') && v_outcome.itt_range
+       AND EXISTS (
+           SELECT 1 FROM public.experiment_v2_runtime_snapshots s
+            WHERE s.exposure_id = x.exposure_id
+              AND s.first_observed_at > x.started_at);
     v_exposure_seconds := least(v_exposure_seconds, v_expected_seconds);
     v_hash := encode(digest(
         convert_to('verdify-experiment-v2-assigned-day-outcome-v1', 'UTF8') ||
         decode('00', 'hex') || uuid_send(p_assignment_id) ||
         convert_to(jsonb_build_object(
-            'delivery_failed', p_delivery_failed,
-            'facility_rescue', p_facility_rescue,
-            'fallback_used', p_fallback_used,
+            'delivery_failed', v_delivery_failed,
+            'facility_rescue', v_facility_rescue,
+            'fallback_used', v_fallback_used,
             'null_value_retained', p_null_value_retained,
             'outcome', p_outcome_payload,
             'zero_value_retained', p_zero_value_retained)::text, 'UTF8'),
@@ -4372,8 +5052,8 @@ BEGIN
         (assignment_id, outcome_payload, delivery_failed, fallback_used,
          facility_rescue, zero_value_retained, null_value_retained,
          exposure_seconds, expected_seconds, outcome_sha256, frozen_by, frozen_at)
-    VALUES (p_assignment_id, p_outcome_payload, p_delivery_failed, p_fallback_used,
-            p_facility_rescue, p_zero_value_retained, p_null_value_retained,
+    VALUES (p_assignment_id, p_outcome_payload, v_delivery_failed, v_fallback_used,
+            v_facility_rescue, p_zero_value_retained, p_null_value_retained,
             v_exposure_seconds, v_expected_seconds, v_hash, p_actor, v_now)
     RETURNING * INTO v_row;
     RETURN v_row;
@@ -4813,6 +5493,8 @@ BEGIN
              'fn_experiment_v2_record_observation_epoch',
              'fn_experiment_v2_record_runtime_snapshot',
              'fn_experiment_v2_monitor_open_exposure',
+             'fn_experiment_v2_report_runtime_fault',
+             'fn_experiment_v2_safe_startup_attestation',
              'fn_experiment_v2_open_exposure',
              'fn_experiment_v2_close_exposure',
              'fn_experiment_v2_request_recovery'])
