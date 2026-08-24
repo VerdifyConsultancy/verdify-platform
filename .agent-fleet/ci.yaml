@@ -15,6 +15,9 @@ images:
 - name: verdify-migrate
   dockerfile: db/Dockerfile.migrate
   context: .
+- name: verdify-experiment-v2-orchestrator
+  dockerfile: experiment_orchestrator/Dockerfile
+  context: .
 - name: verdify-planner
   dockerfile: planner_graph/Dockerfile
   context: .
