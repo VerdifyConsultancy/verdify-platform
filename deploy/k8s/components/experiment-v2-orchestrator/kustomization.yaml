@@ -23,4 +23,4 @@ replacements:
           - spec.egress.2.to.0.ipBlock.cidr
 
 images:
-  - name: registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator
+  - name: ghcr.io/verdifyconsultancy/verdify-experiment-v2-orchestrator

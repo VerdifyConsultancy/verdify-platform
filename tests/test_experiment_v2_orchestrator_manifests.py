@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -11,6 +12,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 COMPONENT = Path(__file__).resolve().parents[1] / "deploy" / "k8s" / "components" / "experiment-v2-orchestrator"
 ROLLBACK = COMPONENT.parent / "experiment-v2-orchestrator-rollback"
 PROD = Path(__file__).resolve().parents[1] / "deploy" / "k8s" / "overlays" / "prod" / "kustomization.yaml"
+ORCHESTRATOR_LOGICAL_IMAGE = "ghcr.io/verdifyconsultancy/verdify-experiment-v2-orchestrator"
+ORCHESTRATOR_ZOT_IMAGE = "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator"
 
 
 def rendered_documents(source: Path = COMPONENT) -> list[dict]:
@@ -69,7 +72,7 @@ def test_one_hardened_image_has_three_separate_optional_duty_credentials() -> No
                 reference = item["valueFrom"]["secretKeyRef"]
                 assert reference["optional"] is True
                 secret_names.add(reference["name"])
-    assert images == {"registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator"}
+    assert images == {ORCHESTRATOR_LOGICAL_IMAGE}
     assert usernames == {
         "verdify_experiment_v2_shadow_scheduler_login",
         "verdify_experiment_v2_randomizer_login",
@@ -118,6 +121,18 @@ def test_component_is_inert_until_explicit_gitops_configuration() -> None:
     assert "VERDIFY_ACTIVE_EXPERIMENT_ID" not in config
     assert config["VERDIFY_EXPERIMENT_SELECTOR_ENDPOINT"] == ""
     assert config["VERDIFY_EXPERIMENT_V2_LIFECYCLE_PLAN_SHA256"] == ""
+
+
+def test_prod_seeds_digest_pin_without_adopting_the_component_early() -> None:
+    prod = yaml.safe_load(PROD.read_text())
+    pin = next(image for image in prod["images"] if image["name"] == ORCHESTRATOR_LOGICAL_IMAGE)
+    assert pin["newName"] == ORCHESTRATOR_ZOT_IMAGE
+    assert re.fullmatch(r"sha256:[0-9a-f]{64}", pin["digest"])
+    component = "../../components/experiment-v2-orchestrator"
+    if component in prod.get("components", []):
+        assert pin["digest"] != "sha256:" + "0" * 64
+    else:
+        assert component not in prod.get("components", [])
 
 
 def test_no_prune_rollback_keeps_every_resource_desired_and_scales_workers_to_zero() -> None:
