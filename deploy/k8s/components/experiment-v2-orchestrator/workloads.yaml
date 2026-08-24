@@ -35,7 +35,9 @@ spec:
           type: RuntimeDefault
       containers:
         - name: lifecycle
-          image: registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator
+          # Logical transformer key. The prod overlay rewrites this to the
+          # exact registry.vallery.net digest produced by fleet Kaniko.
+          image: ghcr.io/verdifyconsultancy/verdify-experiment-v2-orchestrator
           args: ["--mode", "lifecycle"]
           envFrom:
             - configMapRef:
@@ -124,7 +126,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: selector
-          image: registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator
+          image: ghcr.io/verdifyconsultancy/verdify-experiment-v2-orchestrator
           args: ["--mode", "selector"]
           envFrom:
             - configMapRef:
@@ -215,7 +217,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: freezer
-          image: registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator
+          image: ghcr.io/verdifyconsultancy/verdify-experiment-v2-orchestrator
           args: ["--mode", "freezer"]
           envFrom:
             - configMapRef:
