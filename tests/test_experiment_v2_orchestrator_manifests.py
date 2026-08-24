@@ -18,7 +18,7 @@ ORCHESTRATOR_ZOT_IMAGE = "registry.vallery.net/verdifyconsultancy/verdify-experi
 
 def rendered_documents(source: Path = COMPONENT) -> list[dict]:
     rendered = subprocess.run(
-        ["kubectl", "kustomize", str(source)],
+        ["kustomize", "build", str(source)],
         check=True,
         capture_output=True,
         text=True,
