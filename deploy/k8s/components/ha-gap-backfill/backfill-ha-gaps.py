@@ -20,6 +20,8 @@ import math
 import os
 import re
 import sys
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from bisect import bisect_right
@@ -64,6 +66,9 @@ GREENHOUSE_ID = os.environ.get("GREENHOUSE_ID", "vallery")
 DEFAULT_HA_URL = "http://192.168.30.107:8123"
 DEFAULT_HA_TOKEN_FILE = "/mnt/agents/shared/credentials/ha_token.txt"
 ADVISORY_LOCK_NAME = "verdify-ha-gap-backfill"
+HA_READ_ATTEMPTS = 3
+HA_RETRY_DELAY_SECONDS = 2
+HA_RETRYABLE_HTTP_STATUS = {404, 408, 425, 429, 500, 502, 503, 504}
 
 SAMPLE_TABLES = ("climate", "diagnostics", "setpoint_snapshot", "energy")
 WRITE_TABLES = (*SAMPLE_TABLES, "equipment_state", "system_state")
@@ -187,7 +192,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--ha-url", default=os.environ.get("HA_URL", DEFAULT_HA_URL))
     parser.add_argument("--ha-token-file", default=os.environ.get("HA_TOKEN_FILE", DEFAULT_HA_TOKEN_FILE))
     parser.add_argument("--batch-size", type=int, default=25, help="HA history entity batch size")
-    parser.add_argument("--history-carry-minutes", type=float, default=20.0, help="pre-window HA history for carry-forward")
+    parser.add_argument(
+        "--history-carry-minutes", type=float, default=20.0, help="pre-window HA history for carry-forward"
+    )
     parser.add_argument("--log-level", default=os.environ.get("LOG_LEVEL", "INFO"))
     return parser.parse_args()
 
@@ -555,8 +562,24 @@ def ha_get_json(ha_url: str, token: str, path: str, timeout: int = 60) -> Any:
         f"{ha_url.rstrip('/')}{path}",
         headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
     )
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return json.loads(resp.read())
+    for attempt in range(1, HA_READ_ATTEMPTS + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                return json.loads(resp.read())
+        except urllib.error.HTTPError as error:
+            if error.code not in HA_RETRYABLE_HTTP_STATUS or attempt == HA_READ_ATTEMPTS:
+                raise
+            delay = HA_RETRY_DELAY_SECONDS * 2 ** (attempt - 1)
+            LOG.warning(
+                "HA read returned retryable HTTP %s; attempt %s/%s, retrying in %ss",
+                error.code,
+                attempt,
+                HA_READ_ATTEMPTS,
+                delay,
+            )
+            time.sleep(delay)
+
+    raise RuntimeError("unreachable HA retry state")
 
 
 def fetch_current_entities(ha_url: str, token: str) -> set[str]:
@@ -758,7 +781,9 @@ def full_scan_windows(start: datetime, end: datetime, max_minutes: float) -> lis
     return split_windows([Window(ceil_time(start, 60), floor_time(end, 60), ("full-scan",))], max_minutes)
 
 
-async def detect_windows(conn: asyncpg.Connection, args: argparse.Namespace, start: datetime, end: datetime) -> list[Window]:
+async def detect_windows(
+    conn: asyncpg.Connection, args: argparse.Namespace, start: datetime, end: datetime
+) -> list[Window]:
     if args.full_scan:
         return full_scan_windows(start, end, args.max_backfill_minutes)
 
@@ -896,7 +921,11 @@ async def backfill_climate(
         rows.append(row)
     if not rows:
         return 0
-    insert_columns = ["ts", "greenhouse_id", *sorted({key for row in rows for key in row if key not in {"ts", "greenhouse_id"}})]
+    insert_columns = [
+        "ts",
+        "greenhouse_id",
+        *sorted({key for row in rows for key in row if key not in {"ts", "greenhouse_id"}}),
+    ]
     return await insert_dict_rows(conn, "climate", insert_columns, rows, args.apply)
 
 
@@ -946,7 +975,11 @@ async def backfill_diagnostics(
         rows.append(row)
     if not rows:
         return 0
-    insert_columns = ["ts", "greenhouse_id", *sorted({key for row in rows for key in row if key not in {"ts", "greenhouse_id"}})]
+    insert_columns = [
+        "ts",
+        "greenhouse_id",
+        *sorted({key for row in rows for key in row if key not in {"ts", "greenhouse_id"}}),
+    ]
     return await insert_dict_rows(conn, "diagnostics", insert_columns, rows, args.apply)
 
 
@@ -1205,7 +1238,8 @@ async def backfill_window(
     history_start = window.start - timedelta(minutes=args.history_carry_minutes)
     histories = fetch_history(args.ha_url, token, mappings.all_entities, history_start, window.end, args.batch_size)
     representative_ok = any(
-        history.value_at(window.start) is not None or any(True for _ in history.events_between(window.start, window.end))
+        history.value_at(window.start) is not None
+        or any(True for _ in history.events_between(window.start, window.end))
         for entity_id, history in histories.items()
         if entity_id in REPRESENTATIVE_HA_ENTITIES
     )
@@ -1266,7 +1300,9 @@ def compute_range(args: argparse.Namespace, token: str) -> tuple[datetime, datet
 
 async def async_main() -> int:
     args = parse_args()
-    logging.basicConfig(level=getattr(logging, args.log_level.upper(), logging.INFO), format="%(levelname)s %(message)s")
+    logging.basicConfig(
+        level=getattr(logging, args.log_level.upper(), logging.INFO), format="%(levelname)s %(message)s"
+    )
     token = load_ha_token(args.ha_token_file)
     start, end = compute_range(args, token)
     mode = "APPLY" if args.apply else "DRY-RUN"
