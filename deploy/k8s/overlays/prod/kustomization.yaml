@@ -123,6 +123,10 @@ components:
   - ../../components/ha-gap-backfill
 
 patches:
+  # ORE OUTAGE: production serves the already-qualified direct Astro image while
+  # the portable Lab cache/publisher contract is normalized off node6. This is
+  # prod-only; staging and development retain the cache-backed Lab component.
+  - path: ore-outage-lab-recovery.patch.yaml
   # Reconcile the live, verified 2026-08-01 Hermes PVC cutover.
   - path: hermes-data-portable.patch.yaml
   # The old, detached pre-portable claim has a readable Completed backup and no

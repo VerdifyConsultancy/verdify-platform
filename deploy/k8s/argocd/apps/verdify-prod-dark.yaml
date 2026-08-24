@@ -72,6 +72,12 @@ spec:
         - /spec/volumeClaimTemplates/0/spec/volumeMode
         - /spec/volumeClaimTemplates/0/status
     - kind: PersistentVolumeClaim
+      name: verdify-lab-site-cache
+      namespace: verdify-prod
+      jsonPointers:
+        - /spec/volumeMode
+        - /spec/volumeName
+    - kind: PersistentVolumeClaim
       name: verdify-hermes-iris-data-portable-20260801
       namespace: verdify-prod
       jsonPointers:

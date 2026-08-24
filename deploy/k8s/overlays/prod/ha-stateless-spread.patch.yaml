@@ -24,10 +24,11 @@
 # NOT touched here: verdify-ingestor / verdify-setpoint-server (single-writer
 # device path — gated ha-3), grafana (RWO PVC singleton — stays replicas:1).
 #
-# 2026-06-17 storage exception: lab-site now uses the rebuildable
-# verdify-lab-site-cache PVC on node-local-temp-rwo. It keeps two replicas, but
-# uses ScheduleAnyway so both pods may co-locate on the cache PV node; hard
-# hostname spread conflicts with a shared node-local RWO cache.
+# Storage exception: lab-site uses the shared ReadWriteOnce
+# verdify-lab-site-cache PVC. It keeps two replicas, but uses ScheduleAnyway
+# while required pod affinity co-locates both replicas on whichever eligible
+# worker hosts the portable cache; hard hostname spread conflicts with a shared
+# RWO cache.
 #
 # ha-5 (#230, this commit): verdify-planner added — the last replicas:1
 # stateless serving surface. It is a stateless HTTP service (run state lives in

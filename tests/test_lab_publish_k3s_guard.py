@@ -1084,21 +1084,45 @@ def test_deployed_cache_layout_is_unique_restricted_and_preserves_time_budget():
     publisher_spec = cronjob["spec"]["jobTemplate"]["spec"]["template"]["spec"]
     site_spec = deployment["spec"]["template"]["spec"]
 
+    assert cronjob["spec"]["startingDeadlineSeconds"] == 30
     assert publisher_spec["securityContext"]["fsGroupChangePolicy"] == "OnRootMismatch"
     assert site_spec["securityContext"]["fsGroupChangePolicy"] == "OnRootMismatch"
 
-    # STORAGE PLACEMENT. The cache PVC is ReadWriteOnce and node-attached, so an
-    # RWO volume is only co-mountable by pods sharing a node. Both workloads must
-    # therefore pin the same node, and the Deployment's surge pod (maxSurge 1,
-    # maxUnavailable 0 with replicas 1 starts before the old pod drains) must land
-    # there too or the rollout stalls on a failed attach. This was live only as an
-    # unrecorded hand patch until 2026-07-27; assert it so a sync cannot drop it.
+    # STORAGE CO-LOCATION. The cache PVC is ReadWriteOnce, so the serving pods,
+    # rollout surge, and publisher must share a hostname. Required pod affinity
+    # preserves that relationship without pinning the group to one named worker.
     assert deployment["spec"]["replicas"] == 1
     assert deployment["spec"]["strategy"]["rollingUpdate"] == {"maxUnavailable": 0, "maxSurge": 1}
+    expected_co_location = {
+        "podAffinity": {
+            "requiredDuringSchedulingIgnoredDuringExecution": [
+                {
+                    "labelSelector": {
+                        "matchLabels": {
+                            "verdify.ai/lab-cache-cohort": "portable-rwo",
+                        },
+                    },
+                    "topologyKey": "kubernetes.io/hostname",
+                },
+            ],
+        },
+    }
     for pod_spec in (publisher_spec, site_spec):
-        assert pod_spec["nodeSelector"] == {"kubernetes.io/hostname": "vm-k3s-node6"}
+        assert "nodeSelector" not in pod_spec
+        assert pod_spec["affinity"] == expected_co_location
+        assert not pod_spec.get("tolerations")
         cache_volume = next(volume for volume in pod_spec["volumes"] if volume["name"] == "lab-cache")
         assert cache_volume["persistentVolumeClaim"]["claimName"] == "verdify-lab-site-cache"
+    assert deployment["spec"]["template"]["metadata"]["labels"]["verdify.ai/lab-cache-cohort"] == "portable-rwo"
+
+    application = yaml.safe_load((REPO_ROOT / "deploy/k8s/argocd/apps/verdify-prod-dark.yaml").read_text())
+    lab_cache_ignore = next(
+        item
+        for item in application["spec"]["ignoreDifferences"]
+        if item.get("kind") == "PersistentVolumeClaim" and item.get("name") == "verdify-lab-site-cache"
+    )
+    assert lab_cache_ignore["namespace"] == "verdify-prod"
+    assert lab_cache_ignore["jsonPointers"] == ["/spec/volumeMode", "/spec/volumeName"]
     cache_pvc = _resource(publisher_docs, "PersistentVolumeClaim", "verdify-lab-site-cache")
     assert cache_pvc["spec"]["accessModes"] == ["ReadWriteOnce"]
     assert [item["name"] for item in publisher_spec["initContainers"]] == ["prepare-private-work-root"]
@@ -1165,6 +1189,68 @@ def test_deployed_cache_layout_is_unique_restricted_and_preserves_time_budget():
             capabilities = security["capabilities"]
             assert capabilities.get("add", []) == []
             assert "ALL" in capabilities["drop"]
+
+
+def test_rendered_prod_ore_recovery_keeps_qualified_site_and_portable_publisher():
+    rendered = subprocess.run(
+        ["kustomize", "build", "deploy/k8s/overlays/prod"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    resources = [resource for resource in yaml.safe_load_all(rendered) if isinstance(resource, dict)]
+    deployment = next(
+        resource
+        for resource in resources
+        if resource.get("kind") == "Deployment" and resource.get("metadata", {}).get("name") == "verdify-lab"
+    )
+    cronjob = next(
+        resource
+        for resource in resources
+        if resource.get("kind") == "CronJob" and resource.get("metadata", {}).get("name") == "verdify-lab-publisher"
+    )
+    pvc = next(
+        resource
+        for resource in resources
+        if resource.get("kind") == "PersistentVolumeClaim"
+        and resource.get("metadata", {}).get("name") == "verdify-lab-site-cache"
+    )
+
+    deployment_pod = deployment["spec"]["template"]["spec"]
+    publisher_pod = cronjob["spec"]["jobTemplate"]["spec"]["template"]["spec"]
+    site_container = next(item for item in deployment_pod["containers"] if item["name"] == "lab-site")
+    expected_affinity = {
+        "podAffinity": {
+            "requiredDuringSchedulingIgnoredDuringExecution": [
+                {
+                    "labelSelector": {
+                        "matchLabels": {"verdify.ai/lab-cache-cohort": "portable-rwo"},
+                    },
+                    "topologyKey": "kubernetes.io/hostname",
+                },
+            ],
+        },
+    }
+
+    assert deployment["spec"]["replicas"] == 2
+    assert "nodeSelector" not in deployment_pod
+    assert deployment_pod["affinity"] == expected_affinity
+    assert deployment_pod["initContainers"] == []
+    assert site_container["image"] == (
+        "registry.vallery.net/verdifyconsultancy/verdify-lab-astro"
+        "@sha256:1852cf2523041ef840b3eb1092050e4b3b19d2027494fc6b6c9809b930de93b7"
+    )
+    assert {item["name"] for item in site_container["volumeMounts"]} == {"tmp", "nginx-cache", "nginx-run"}
+    assert {item["name"] for item in deployment_pod["volumes"]} == {"tmp", "nginx-cache", "nginx-run"}
+    assert deployment["metadata"]["annotations"]["operations.vallery.net/temporary-placement"] == (
+        "ore-motherboard-outage-20260824"
+    )
+
+    assert "nodeSelector" not in publisher_pod
+    assert publisher_pod["affinity"] == expected_affinity
+    assert cronjob["spec"]["startingDeadlineSeconds"] == 30
+    assert pvc["spec"]["accessModes"] == ["ReadWriteOnce"]
+    assert pvc["spec"]["storageClassName"] == "longhorn-v1-rebuildable-rwo"
 
 
 def test_publisher_image_and_ci_own_the_canonical_cache_scanner_and_shared_package():
