@@ -11,16 +11,22 @@ Environment: loads from .env in same directory.
 """
 
 import asyncio
+import hmac
 import json
 import logging
 import math
 import os
 import sys
+import unicodedata
 import urllib.request
-from datetime import UTC, datetime
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
+from datetime import time as dt_time
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
+from zoneinfo import ZoneInfo
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
@@ -74,7 +80,9 @@ from tasks import (
     BAND_DRIVEN_PARAMS,
     IRRIGATION_SCHEDULE_PARAMS,
     alert_monitor,
+    attest_component_safe_startup,
     component_experiment_worker,
+    create_component_experiment_pool,
     daily_summary_live,
     experiment_assignment_scheduler,
     experiment_qualification_scheduler,
@@ -91,8 +99,10 @@ from tasks import (
     planning_heartbeat,
     policy_arbiter_admissions,
     policy_delivery_worker,
+    prime_component_startup_hold,
     readback_abs_tolerance,
     record_component_cfg_readback,
+    record_component_device_uptime,
     setpoint_confirmation_monitor,
     setpoint_dispatcher,
     shelly_sync,
@@ -146,11 +156,77 @@ DB_DSN = (
     f"postgresql://{os.environ['DB_USER']}:{os.environ['DB_PASSWORD']}"
     f"@{os.environ['DB_HOST']}:{os.environ['DB_PORT']}/{os.environ['DB_NAME']}"
 )
+INGESTOR_RUNTIME_DB_ROLE_REQUIRED_ENV = "VERDIFY_INGESTOR_RUNTIME_DB_ROLE_REQUIRED"
+INGESTOR_RUNTIME_DB_LOGIN = "verdify_ingestor_runtime_login"
+
+_ORDINARY_RUNTIME_ROLE_ATTESTATION_SQL = """
+SELECT current_user = session_user
+   AND pg_catalog.current_setting('search_path') =
+       'pg_catalog, public, pg_temp'
+   AND public.fn_runtime_attest_ordinary_login()
+"""
+
+
+def _ingestor_runtime_db_role_required() -> bool:
+    return os.environ.get(INGESTOR_RUNTIME_DB_ROLE_REQUIRED_ENV, "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+async def attest_ordinary_ingestor_runtime_role(pool: asyncpg.Pool) -> None:
+    """Fail startup if the staged cutover is not the exact powerless login."""
+    if not _ingestor_runtime_db_role_required():
+        return
+    if not hmac.compare_digest(os.environ.get("DB_USER", ""), INGESTOR_RUNTIME_DB_LOGIN):
+        raise RuntimeError("runtime-role cutover requires the exact ingestor database login")
+    async with pool.acquire() as conn:
+        attested = await conn.fetchval(_ORDINARY_RUNTIME_ROLE_ATTESTATION_SQL)
+    if attested is not True:
+        raise RuntimeError("ordinary ingestor database role attestation failed")
+
 
 CLIMATE_FLUSH_INTERVAL = 60  # seconds between climate row writes
 CLIMATE_ACTION_LOG_INTERVAL = 60  # seconds between controller decision snapshots
 DIAG_FLUSH_INTERVAL = 60  # seconds between diagnostics row writes
 LOG_FLUSH_INTERVAL = 10  # seconds between log batch writes
+COUNTER_SAMPLE_BUFFER_MAX_ROWS = max(1, int(os.environ.get("EQUIPMENT_COUNTER_SAMPLE_BUFFER_MAX_ROWS", "50000")))
+DIRECT_STATE_SNAPSHOT_BUFFER_MAX_ROWS = 8
+EQUIPMENT_STATE_EVENT_BUFFER_MAX_ROWS = max(1, int(os.environ.get("EQUIPMENT_STATE_EVENT_BUFFER_MAX_ROWS", "50000")))
+EQUIPMENT_STATE_RECEIPT_BUFFER_MAX_ROWS = max(2, int(os.environ.get("EQUIPMENT_STATE_RECEIPT_BUFFER_MAX_ROWS", "5000")))
+EQUIPMENT_SOURCE_RECEIPT_INTERVAL = timedelta(seconds=30)
+# Protocol v2 is locked to the Vallery local-day definition; generic container
+# TZ must not silently move reset/cutoff evidence to UTC.
+COUNTER_SOURCE_TIMEZONE = ZoneInfo("America/Denver")
+COUNTER_SOURCE_RUNTIME_INSTANCE_ID = str(uuid4())
+
+# Firmware source units are intentionally explicit.  The three mister entity
+# ids end in `_min`, but the deployed sensor YAML reports hours; silently
+# treating those values as minutes would corrupt the endpoint by 60x.
+_COUNTER_SOURCE_BY_DAILY_COLUMN: dict[str, tuple[str, str]] = {
+    "runtime_heat1_min": ("heat1", "minutes"),
+    "runtime_heat2_min": ("heat2", "minutes"),
+    "runtime_vent_min": ("vent", "minutes"),
+    "runtime_fan1_min": ("fan1", "minutes"),
+    "runtime_fan2_min": ("fan2", "minutes"),
+    "runtime_fog_min": ("fog", "minutes"),
+    "runtime_mister_south_h": ("mister_south", "hours"),
+    "runtime_mister_west_h": ("mister_west", "hours"),
+    "runtime_mister_center_h": ("mister_center", "hours"),
+}
+_COUNTER_SOURCE_COLUMNS = frozenset(_COUNTER_SOURCE_BY_DAILY_COLUMN)
+_EXPERIMENT_EQUIPMENT_STREAMS = frozenset(stream for stream, _unit in _COUNTER_SOURCE_BY_DAILY_COLUMN.values())
+_EXPERIMENT_DIRECT_STATE_COMPONENTS = _EXPERIMENT_EQUIPMENT_STREAMS | {
+    "mister_south_fert",
+    "mister_west_fert",
+}
+_COUNTER_INITIAL_BURST_MAX_SKEW = timedelta(seconds=60)
+_COUNTER_DIAGNOSTIC_MAX_AGE = timedelta(seconds=90)
+_COUNTER_DEVICE_CLOCK_MAX_SKEW = timedelta(seconds=120)
+_DIRECT_STATE_SEED_OPEN = dt_time(5, 58, 30)
+_DIRECT_STATE_SEED_CLOSE = dt_time(6, 0, 0)
 
 # Loki push endpoint (nexus management VM)
 LOKI_URL = os.environ.get("LOKI_URL", "")  # Empty = disabled
@@ -237,6 +313,53 @@ CLIMATE_RELAY_EQUIPMENT = (
 # ──────────────────────────────────────────────────────────────
 # State
 # ──────────────────────────────────────────────────────────────
+@dataclass(frozen=True)
+class PendingEquipmentCounterSample:
+    sample_id: str
+    source_observed_at: datetime
+    stream: str
+    native_value: float
+    native_unit: str
+    counter_reset_epoch_id: str
+    device_uptime_seconds: float
+    source_runtime_instance_id: str
+    source_connection_generation: int
+    firmware_revision: str
+
+
+@dataclass(frozen=True)
+class PendingEquipmentDirectStateSnapshot:
+    snapshot_id: str
+    source_epoch_id: str
+    observations: tuple[tuple[str, bool, datetime], ...]
+    device_uptime_seconds: float
+    source_runtime_instance_id: str
+    source_connection_generation: int
+    firmware_revision: str
+
+
+@dataclass(frozen=True)
+class PendingEquipmentStateEvent:
+    source_observed_at: datetime
+    equipment: str
+    state: bool
+    source_runtime_instance_id: str
+    source_connection_generation: int
+    firmware_revision: str
+
+
+@dataclass(frozen=True)
+class PendingEquipmentStateReceipt:
+    receipt_id: str
+    source_observed_through: datetime
+    events: tuple[PendingEquipmentStateEvent, ...]
+    source_runtime_instance_id: str
+    source_connection_generation: int
+    firmware_revision: str
+    gap_requested: bool
+    gap_version: int
+
+
 class State:
     """Mutable ingestor state shared across callbacks."""
 
@@ -251,6 +374,45 @@ class State:
         self.diagnostics: dict[str, Any] = {}
         self.daily: dict[str, float] = {}
 
+        # Raw device-counter evidence. Epoch ids rotate on local-day rollover,
+        # device uptime regression (reboot), or process restart. A process
+        # restart is conservatively treated as a source-continuity break even
+        # if the device itself remained up.
+        self.pending_counter_samples: list[PendingEquipmentCounterSample] = []
+        self.pending_direct_state_snapshots: list[PendingEquipmentDirectStateSnapshot] = []
+        self.counter_reset_epoch_id = str(uuid4())
+        self.counter_reset_local_date = datetime.now(COUNTER_SOURCE_TIMEZONE).date()
+        self.counter_last_device_uptime_seconds: float | None = None
+        self.counter_source_connection_generation = 0
+        self.counter_source_uptime_generation = 0
+        self.counter_source_firmware_generation = 0
+        self.counter_source_uptime_observed_at: datetime | None = None
+        self.counter_source_firmware_observed_at: datetime | None = None
+        self.counter_source_device_time_generation = 0
+        self.counter_source_device_time_observed_at: datetime | None = None
+        self.counter_source_device_time_epoch: int | None = None
+        self.counter_source_local_hour_generation = 0
+        self.counter_source_local_hour_observed_at: datetime | None = None
+        self.counter_source_local_hour: int | None = None
+        self.counter_source_sntp_generation = 0
+        self.counter_source_sntp_observed_at: datetime | None = None
+        self.counter_source_sntp_valid = False
+        self.counter_source_device_local_date = None
+        self.counter_last_native_values: dict[str, float] = {}
+        self.counter_generation_observations: dict[str, tuple[float, datetime]] = {}
+        self.counter_generation_ready = False
+        self.last_direct_state_snapshot_local_date = None
+        self.equipment_source_last_receipt_at: datetime | None = None
+        self.equipment_source_last_device_observed_at: datetime | None = None
+        self.equipment_source_last_device_generation = 0
+        self.pending_equipment_receipts: list[PendingEquipmentStateReceipt] = []
+        # A monotonic generation makes source gaps sticky across async DB I/O.
+        # Only a successfully committed receipt that captured a generation may
+        # advance the committed watermark; a newer callback-side gap can never
+        # be erased by an older in-flight transaction.
+        self.equipment_source_gap_version = 0
+        self.equipment_source_committed_gap_version = 0
+
         # ESP32 configured value readback (cfg_* sensors → setpoint_snapshot)
         self.cfg_readback: dict[str, float] = {}  # param → value
 
@@ -262,7 +424,7 @@ class State:
         self.pending_setpoints: list[tuple[str, float]] = []
 
         # Pending equipment events to write
-        self.pending_equipment: list[tuple[str, bool]] = []
+        self.pending_equipment: list[PendingEquipmentStateEvent] = []
 
         # Pending state transitions to write
         self.pending_states: list[tuple[str, str]] = []
@@ -432,6 +594,222 @@ async def _insert_climate_row(pool: asyncpg.Pool, row: dict[str, Any]) -> None:
     _fanout_publish("climate", {"ts": ts, **{col: row.get(col) for col in cols}})
 
 
+_EQUIPMENT_SOURCE_COLLECTOR_LOGIN = "verdify_experiment_v2_equipment_source_collector_login"
+_EQUIPMENT_SOURCE_COLLECTOR_DUTY = "verdify_experiment_equipment_source_collector"
+_EQUIPMENT_SOURCE_COLLECTOR_FUNCTIONS = (
+    "public.fn_record_equipment_counter_sample(uuid,timestamp with time zone,text,text,text,double precision,text,uuid,double precision,uuid,bigint,text)",
+    "public.fn_record_equipment_direct_state_snapshot(uuid,uuid,text,text,jsonb,double precision,uuid,bigint,text)",
+    "public.fn_record_equipment_state_source_receipt(uuid,timestamp with time zone,text,text,jsonb,boolean,uuid,bigint,text)",
+)
+_EQUIPMENT_SOURCE_ROLE_ATTESTATION_SQL = """
+WITH login AS (
+    SELECT oid, rolcanlogin, rolinherit, rolsuper, rolcreatedb,
+           rolcreaterole, rolreplication, rolbypassrls
+      FROM pg_roles
+     WHERE rolname = current_user
+), duty AS (
+    SELECT oid, rolcanlogin, rolinherit, rolsuper, rolcreatedb,
+           rolcreaterole, rolreplication, rolbypassrls
+      FROM pg_roles
+     WHERE rolname = $1::text
+), allowed_functions(function_signature) AS (
+    SELECT unnest($2::text[])
+)
+SELECT current_user::text AS current_user_name,
+       session_user::text AS session_user_name,
+       current_user = session_user AS session_user_matches,
+       pg_has_role(current_user, $1::text, 'member') AS duty_member,
+       coalesce((
+           SELECT NOT membership.admin_option
+             FROM pg_auth_members membership
+             CROSS JOIN login CROSS JOIN duty
+            WHERE membership.member = login.oid
+              AND membership.roleid = duty.oid
+       ), false) AS duty_membership_non_admin,
+       coalesce((SELECT rolcanlogin AND rolinherit FROM login), false)
+           AS login_role_safe,
+       coalesce((SELECT rolsuper FROM login), true) AS is_superuser,
+       coalesce((
+           SELECT database_row.datdba = login.oid
+             FROM pg_database database_row CROSS JOIN login
+            WHERE database_row.datname = current_database()
+       ), true) AS is_database_owner,
+       coalesce((
+           SELECT rolcreatedb OR rolcreaterole OR rolreplication OR rolbypassrls
+             FROM login
+       ), true) AS has_elevated_role_attributes,
+       coalesce((
+           SELECT NOT duty.rolcanlogin AND NOT duty.rolinherit AND
+                  NOT duty.rolsuper AND NOT duty.rolcreatedb AND
+                  NOT duty.rolcreaterole AND NOT duty.rolreplication AND
+                  NOT duty.rolbypassrls AND NOT EXISTS (
+                      SELECT 1 FROM pg_roles inherited
+                       WHERE inherited.oid <> duty.oid
+                         AND pg_has_role(duty.oid, inherited.oid, 'member')
+                  )
+             FROM duty
+       ), false) AS duty_role_safe,
+       EXISTS (
+           SELECT 1 FROM pg_roles inherited
+            WHERE inherited.rolname NOT IN (current_user, $1::text)
+              AND pg_has_role(current_user, inherited.oid, 'member')
+       ) AS has_other_role_membership,
+       EXISTS (
+           SELECT 1
+             FROM pg_roles candidate
+             CROSS JOIN login
+             CROSS JOIN duty
+            WHERE candidate.oid NOT IN (login.oid, duty.oid)
+              AND NOT candidate.rolsuper
+              AND pg_has_role(candidate.oid, duty.oid, 'member')
+       ) AS has_unexpected_duty_member,
+       EXISTS (
+           SELECT 1 FROM pg_namespace namespace CROSS JOIN login
+            WHERE namespace.nspname = 'public' AND namespace.nspowner = login.oid
+           UNION ALL
+           SELECT 1 FROM pg_class owned
+             JOIN pg_namespace namespace ON namespace.oid = owned.relnamespace
+             CROSS JOIN login
+            WHERE namespace.nspname = 'public' AND owned.relowner = login.oid
+           UNION ALL
+           SELECT 1 FROM pg_proc owned
+             JOIN pg_namespace namespace ON namespace.oid = owned.pronamespace
+             CROSS JOIN login
+            WHERE namespace.nspname = 'public' AND owned.proowner = login.oid
+       ) AS has_managed_object_ownership,
+       has_schema_privilege(current_user, 'public', 'USAGE') AS schema_usage,
+       has_schema_privilege(current_user, 'public', 'CREATE')
+           AS has_public_schema_create,
+       EXISTS (
+           SELECT 1 FROM pg_class protected
+             JOIN pg_namespace namespace ON namespace.oid = protected.relnamespace
+            WHERE namespace.nspname = 'public'
+              AND protected.relkind IN ('r', 'p', 'v', 'm', 'f')
+              AND (
+                  has_table_privilege(
+                      current_user, protected.oid,
+                      'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER'
+                  ) OR has_any_column_privilege(
+                      current_user, protected.oid,
+                      'SELECT,INSERT,UPDATE,REFERENCES'
+                  )
+              )
+       ) AS has_protected_relation_privilege,
+       EXISTS (
+           SELECT 1 FROM pg_class protected
+             JOIN pg_namespace namespace ON namespace.oid = protected.relnamespace
+            WHERE namespace.nspname = 'public'
+              AND protected.relkind = 'S'
+              AND has_sequence_privilege(
+                  current_user, protected.oid, 'USAGE,SELECT,UPDATE'
+              )
+       ) AS has_protected_sequence_privilege,
+       EXISTS (
+           SELECT 1 FROM pg_proc candidate
+             JOIN pg_namespace namespace ON namespace.oid = candidate.pronamespace
+            WHERE namespace.nspname = 'public'
+              AND (
+                  candidate.proname LIKE 'fn_experiment_v2_%'
+                  OR candidate.proname LIKE 'fn_record_equipment_%'
+                  OR candidate.prosecdef
+              )
+              AND has_function_privilege(current_user, candidate.oid, 'EXECUTE')
+              AND NOT EXISTS (
+                  SELECT 1 FROM allowed_functions allowed
+                   WHERE to_regprocedure(allowed.function_signature) = candidate.oid
+              )
+       ) AS has_unexpected_function_execute,
+       NOT EXISTS (
+           SELECT 1 FROM allowed_functions required
+            WHERE to_regprocedure(required.function_signature) IS NULL
+               OR NOT has_function_privilege(
+                   current_user,
+                   to_regprocedure(required.function_signature),
+                   'EXECUTE'
+               )
+       ) AS has_required_function_execute
+"""
+
+
+def _equipment_source_role_attestation_passes(
+    row: Any,
+    expected_user: str,
+) -> bool:
+    if row is None:
+        return False
+    try:
+        return bool(
+            row["current_user_name"] == expected_user
+            and row["session_user_name"] == expected_user
+            and row["session_user_matches"] is True
+            and row["duty_member"] is True
+            and row["duty_membership_non_admin"] is True
+            and row["login_role_safe"] is True
+            and row["is_superuser"] is False
+            and row["is_database_owner"] is False
+            and row["has_elevated_role_attributes"] is False
+            and row["duty_role_safe"] is True
+            and row["has_other_role_membership"] is False
+            and row["has_unexpected_duty_member"] is False
+            and row["has_managed_object_ownership"] is False
+            and row["schema_usage"] is True
+            and row["has_public_schema_create"] is False
+            and row["has_protected_relation_privilege"] is False
+            and row["has_protected_sequence_privilege"] is False
+            and row["has_unexpected_function_execute"] is False
+            and row["has_required_function_execute"] is True
+        )
+    except (KeyError, TypeError):
+        return False
+
+
+async def create_equipment_source_pool() -> asyncpg.Pool | None:
+    """Create and attest the optional function-only raw-source connection.
+
+    This credential is deliberately independent of the ordinary telemetry DB
+    owner credential. Missing values leave experiment evidence unavailable but
+    do not interrupt legacy telemetry capture or device safety loops.
+    """
+    user = os.environ.get("VERDIFY_EXPERIMENT_EQUIPMENT_SOURCE_COLLECTOR_DB_USER", "")
+    password = os.environ.get("VERDIFY_EXPERIMENT_EQUIPMENT_SOURCE_COLLECTOR_DB_PASSWORD", "")
+    if not user and not password:
+        log.warning("equipment source collector credential unavailable; evidence is fail-closed")
+        return None
+    if not user or not password or user == os.environ.get("DB_USER"):
+        log.error("equipment source collector credential is incomplete or shared")
+        return None
+    expected_user = _EQUIPMENT_SOURCE_COLLECTOR_LOGIN
+    duty = _EQUIPMENT_SOURCE_COLLECTOR_DUTY
+    if user != expected_user:
+        log.error("equipment source collector login identity is not the locked login")
+        return None
+
+    pool = await asyncpg.create_pool(
+        host=os.environ["DB_HOST"],
+        port=int(os.environ.get("DB_PORT", "5432")),
+        database=os.environ["DB_NAME"],
+        user=user,
+        password=password,
+        min_size=1,
+        max_size=1,
+        server_settings={"application_name": "verdify-experiment-equipment-source-collector"},
+    )
+    try:
+        async with pool.acquire() as conn:
+            attestation = await conn.fetchrow(
+                _EQUIPMENT_SOURCE_ROLE_ATTESTATION_SQL,
+                duty,
+                list(_EQUIPMENT_SOURCE_COLLECTOR_FUNCTIONS),
+            )
+        if not _equipment_source_role_attestation_passes(attestation, expected_user):
+            raise RuntimeError("equipment source collector database authority mismatch")
+    except BaseException:
+        await pool.close()
+        raise
+    log.info("equipment source collector database authority attested")
+    return pool
+
+
 async def _drain_climate_spool(pool: asyncpg.Pool) -> None:
     try:
         rows = _read_climate_spool_rows()
@@ -531,43 +909,312 @@ async def write_climate(pool: asyncpg.Pool, ts: datetime) -> None:
         raise
 
 
-async def write_equipment_events(pool: asyncpg.Pool, ts: datetime) -> None:
-    """Flush pending equipment state change events."""
+def _valid_source_firmware(value: object) -> bool:
+    return bool(isinstance(value, str) and value and len(value) <= 512 and unicodedata.normalize("NFC", value) == value)
+
+
+def _mark_equipment_source_gap(reason: str) -> None:
+    """Make a continuity loss sticky until its exact generation is committed."""
+
+    state.equipment_source_gap_version += 1
+    log.error(
+        "equipment source continuity gap marked reason=%s version=%d",
+        reason,
+        state.equipment_source_gap_version,
+    )
+
+
+def _equipment_source_gap_pending() -> bool:
+    return state.equipment_source_gap_version > state.equipment_source_committed_gap_version
+
+
+def _append_pending_equipment_event(event: PendingEquipmentStateEvent) -> bool:
+    if len(state.pending_equipment) >= EQUIPMENT_STATE_EVENT_BUFFER_MAX_ROWS:
+        _mark_equipment_source_gap("state_event_buffer_overflow")
+        log.error(
+            "equipment source state event rejected at bounded buffer rows=%d",
+            EQUIPMENT_STATE_EVENT_BUFFER_MAX_ROWS,
+        )
+        return False
+    state.pending_equipment.append(event)
+    return True
+
+
+def _new_equipment_receipt(
+    *,
+    source_observed_through: datetime,
+    events: tuple[PendingEquipmentStateEvent, ...],
+    source_runtime_instance_id: str,
+    source_connection_generation: int,
+    firmware_revision: str,
+) -> PendingEquipmentStateReceipt:
+    gap_version = state.equipment_source_gap_version
+    return PendingEquipmentStateReceipt(
+        receipt_id=str(uuid4()),
+        source_observed_through=source_observed_through,
+        events=events,
+        source_runtime_instance_id=source_runtime_instance_id,
+        source_connection_generation=source_connection_generation,
+        firmware_revision=firmware_revision,
+        gap_requested=gap_version > state.equipment_source_committed_gap_version,
+        gap_version=gap_version,
+    )
+
+
+def _append_pending_equipment_receipt(receipt: PendingEquipmentStateReceipt) -> bool:
+    if len(state.pending_equipment_receipts) >= EQUIPMENT_STATE_RECEIPT_BUFFER_MAX_ROWS:
+        _mark_equipment_source_gap("state_receipt_buffer_overflow")
+        log.error(
+            "equipment source receipt rejected at bounded buffer rows=%d",
+            EQUIPMENT_STATE_RECEIPT_BUFFER_MAX_ROWS,
+        )
+        return False
+    state.pending_equipment_receipts.append(receipt)
+    return True
+
+
+async def write_equipment_events(pool: asyncpg.Pool, _ts: datetime) -> None:
+    """Atomically persist exact callbacks and a fenced continuity receipt.
+
+    The receipt is also emitted as a bounded heartbeat when there are no
+    transitions. It proves that every callback observed before the barrier was
+    durably drained; an unavailable/reconnected source cannot forge continuity
+    merely because the relay happened not to change state.
+    """
+    generation = shared.transport_generation
+    client = shared.esp32.get("state_subscription_client")
+    source_now = _equipment_source_now()
+    last_device_observed_at = state.equipment_source_last_device_observed_at
+    if (
+        last_device_observed_at is not None
+        and state.equipment_source_last_device_generation == generation
+        and source_now < last_device_observed_at
+    ):
+        _mark_equipment_source_gap("flush_clock_regression")
+    live_source = client is not None and (
+        generation >= 1
+        and shared.esp32.get("state_subscription_generation") == generation
+        and shared.esp32.get("client") is client
+        and state.counter_generation_ready
+        and last_device_observed_at is not None
+        and state.equipment_source_last_device_generation == generation
+        and source_now >= last_device_observed_at
+        and source_now - last_device_observed_at <= _COUNTER_DIAGNOSTIC_MAX_AGE
+        and _counter_lineage_is_fresh(generation, last_device_observed_at)
+    )
+    firmware_revision = state.diagnostics.get("firmware_version")
+    if live_source and not _valid_source_firmware(firmware_revision):
+        live_source = False
+
+    # Seal callback batches with their original lineage and immutable UUIDs.
+    # Old-generation callbacks are never relabeled after a reconnect. Their
+    # conservative barrier is their final callback time; only the current live
+    # device-origin callback can advance a continuity heartbeat beyond it.
+    if state.pending_equipment:
+        unsealed = state.pending_equipment.copy()
+        state.pending_equipment.clear()
+        start = 0
+        while start < len(unsealed):
+            first = unsealed[start]
+            lineage = (
+                first.source_runtime_instance_id,
+                first.source_connection_generation,
+                first.firmware_revision,
+            )
+            end = start + 1
+            while (
+                end < len(unsealed)
+                and (
+                    unsealed[end].source_runtime_instance_id,
+                    unsealed[end].source_connection_generation,
+                    unsealed[end].firmware_revision,
+                )
+                == lineage
+                and end - start < 10000
+            ):
+                end += 1
+            batch = tuple(unsealed[start:end])
+            is_current = bool(
+                live_source
+                and lineage == (COUNTER_SOURCE_RUNTIME_INSTANCE_ID, generation, firmware_revision)
+                and end == len(unsealed)
+            )
+            barrier = (
+                last_device_observed_at
+                if is_current and last_device_observed_at is not None
+                else max(event.source_observed_at for event in batch)
+            )
+            _append_pending_equipment_receipt(
+                _new_equipment_receipt(
+                    source_observed_through=barrier,
+                    events=batch,
+                    source_runtime_instance_id=lineage[0],
+                    source_connection_generation=lineage[1],
+                    firmware_revision=lineage[2],
+                )
+            )
+            start = end
+
+    last_receipt = state.equipment_source_last_receipt_at
+    heartbeat_due = bool(
+        live_source
+        and last_device_observed_at is not None
+        and (
+            _equipment_source_gap_pending()
+            or last_receipt is None
+            or last_device_observed_at - last_receipt >= EQUIPMENT_SOURCE_RECEIPT_INTERVAL
+        )
+        and not any(
+            receipt.source_runtime_instance_id == COUNTER_SOURCE_RUNTIME_INSTANCE_ID
+            and receipt.source_connection_generation == generation
+            and receipt.firmware_revision == firmware_revision
+            and receipt.source_observed_through == last_device_observed_at
+            and (
+                not _equipment_source_gap_pending()
+                or receipt.gap_requested
+                and receipt.gap_version == state.equipment_source_gap_version
+            )
+            for receipt in state.pending_equipment_receipts
+        )
+    )
+    if heartbeat_due:
+        assert last_device_observed_at is not None
+        assert isinstance(firmware_revision, str)
+        _append_pending_equipment_receipt(
+            _new_equipment_receipt(
+                source_observed_through=last_device_observed_at,
+                events=(),
+                source_runtime_instance_id=COUNTER_SOURCE_RUNTIME_INSTANCE_ID,
+                source_connection_generation=generation,
+                firmware_revision=firmware_revision,
+            )
+        )
+    if not state.pending_equipment_receipts:
+        return
+
+    receipts = state.pending_equipment_receipts.copy()
+    state.pending_equipment_receipts.clear()
+    try:
+        async with pool.acquire() as conn:
+            async with conn.transaction():
+                for receipt in receipts:
+                    payload = [
+                        {
+                            "equipment": event.equipment,
+                            "source_observed_at": event.source_observed_at.astimezone(UTC).strftime(
+                                "%Y-%m-%dT%H:%M:%S.%fZ"
+                            ),
+                            "state": event.state,
+                        }
+                        for event in receipt.events
+                    ]
+                    for event in receipt.events:
+                        EquipmentStateEvent(
+                            ts=event.source_observed_at,
+                            equipment=event.equipment,
+                            state=event.state,
+                            greenhouse_id=GREENHOUSE_ID,
+                        )
+                    await conn.fetchrow(
+                        """
+                        SELECT * FROM public.fn_record_equipment_state_source_receipt(
+                            $1::uuid, $2::timestamptz, $3::text, $4::text,
+                            $5::jsonb, $6::boolean, $7::uuid, $8::bigint,
+                            $9::text)
+                        """,
+                        receipt.receipt_id,
+                        receipt.source_observed_through,
+                        GREENHOUSE_ID,
+                        policy_device_id(GREENHOUSE_ID),
+                        json.dumps(payload, sort_keys=True, separators=(",", ":")),
+                        receipt.gap_requested,
+                        receipt.source_runtime_instance_id,
+                        receipt.source_connection_generation,
+                        receipt.firmware_revision,
+                    )
+    except BaseException:
+        combined = receipts + state.pending_equipment_receipts
+        if len(combined) > EQUIPMENT_STATE_RECEIPT_BUFFER_MAX_ROWS:
+            dropped = len(combined) - EQUIPMENT_STATE_RECEIPT_BUFFER_MAX_ROWS
+            combined = combined[:EQUIPMENT_STATE_RECEIPT_BUFFER_MAX_ROWS]
+            _mark_equipment_source_gap("state_receipt_retry_overflow")
+            log.error(
+                "equipment source receipt retry queue dropped newer receipts rows=%d",
+                dropped,
+            )
+        state.pending_equipment_receipts[:] = combined
+        raise
+
+    committed_gap_versions = [receipt.gap_version for receipt in receipts if receipt.gap_requested]
+    if committed_gap_versions:
+        state.equipment_source_committed_gap_version = max(
+            state.equipment_source_committed_gap_version,
+            max(committed_gap_versions),
+        )
+
+    current_receipts = [
+        receipt
+        for receipt in receipts
+        if receipt.source_runtime_instance_id == COUNTER_SOURCE_RUNTIME_INSTANCE_ID
+        and receipt.source_connection_generation == generation
+        and receipt.firmware_revision == firmware_revision
+    ]
+    if current_receipts:
+        state.equipment_source_last_receipt_at = max(receipt.source_observed_through for receipt in current_receipts)
+    event_count = sum(len(receipt.events) for receipt in receipts)
+    log.debug(
+        "equipment_state: %d exact events and %d immutable receipt(s) written",
+        event_count,
+        len(receipts),
+    )
+    # #113: fan-out each equipment event to the bus.
+    for receipt in receipts:
+        for event in receipt.events:
+            _fanout_publish(
+                "equipment_state",
+                {
+                    "ts": event.source_observed_at,
+                    "equipment": event.equipment,
+                    "state": event.state,
+                },
+            )
+
+
+async def write_legacy_equipment_events(pool: asyncpg.Pool) -> None:
+    """Preserve ordinary telemetry when the experiment collector is absent.
+
+    This path intentionally creates no continuity receipt and therefore can
+    never satisfy the v2 endpoint. It exists only to keep the pre-experiment
+    equipment_state surface operating while the optional sealed credential is
+    provisioned or during a collector rollback.
+    """
     if not state.pending_equipment:
         return
     events = state.pending_equipment.copy()
     state.pending_equipment.clear()
-    validated: list[tuple[datetime, str, bool]] = []
-    for equip, s in events:
-        try:
-            EquipmentStateEvent(ts=ts, equipment=equip, state=s, greenhouse_id=GREENHOUSE_ID)
-        except ValidationError as e:
-            log.error(f"equipment_state skipped (validation failed: {e}): equip={equip} state={s}")
-            continue
-        validated.append((ts, equip, s))
-    if not validated:
-        return
-
-    # Sprint 23 Phase 4b: Pydantic validation against the EquipmentId Literal.
-    # Catches equipment slugs that aren't in the known set (typo → silent
-    # misroute previously). Failed validations are logged; the write still
-    # proceeds so a firmware-added slug doesn't halt the pipeline.
-    if EquipmentStateEvent is not None:
-        for equip, s in events:
-            try:
-                EquipmentStateEvent.model_validate({"ts": ts, "equipment": equip, "state": s})
-            except ValidationError as e:
-                log.warning("equipment_state event failed validation: equipment=%s state=%s: %s", equip, s, e)
-
-    async with pool.acquire() as conn:
-        await conn.executemany(
-            "INSERT INTO equipment_state (ts, equipment, state) VALUES ($1, $2, $3)",
-            validated,
+    rows: list[tuple[datetime, str, bool]] = []
+    try:
+        for event in events:
+            EquipmentStateEvent(
+                ts=event.source_observed_at,
+                equipment=event.equipment,
+                state=event.state,
+                greenhouse_id=GREENHOUSE_ID,
+            )
+            rows.append((event.source_observed_at, event.equipment, event.state))
+        async with pool.acquire() as conn:
+            await conn.executemany(
+                "INSERT INTO equipment_state (ts, equipment, state) VALUES ($1, $2, $3)",
+                rows,
+            )
+    except BaseException:
+        state.pending_equipment[0:0] = events
+        raise
+    for observed_at, equipment, equipment_state in rows:
+        _fanout_publish(
+            "equipment_state",
+            {"ts": observed_at, "equipment": equipment, "state": equipment_state},
         )
-    log.debug(f"equipment_state: {len(validated)} events written")
-    # #113: fan-out each equipment event to the bus.
-    for row_ts, equip, s in validated:
-        _fanout_publish("equipment_state", {"ts": row_ts, "equipment": equip, "state": s})
 
 
 async def write_state_transitions(pool: asyncpg.Pool, ts: datetime) -> set[str]:
@@ -596,6 +1243,634 @@ async def write_state_transitions(pool: asyncpg.Pool, ts: datetime) -> set[str]:
     for row_ts, entity, val in validated:
         _fanout_publish("system_state", {"ts": row_ts, "entity": entity, "value": val})
     return {entity for _, entity, _ in validated}
+
+
+def _equipment_source_now() -> datetime:
+    """Return the host observation clock used by raw equipment sources."""
+    return datetime.now(UTC)
+
+
+def _begin_counter_source_generation(connection_generation: int, observed_at: datetime) -> bool:
+    """Fence raw counter lineage to one live ESPHome transport generation."""
+    if not 1 <= connection_generation <= 9_007_199_254_740_991:
+        if connection_generation != 0:
+            _mark_equipment_source_gap("invalid_connection_generation")
+        return False
+    if connection_generation == state.counter_source_connection_generation:
+        return True
+    if state.counter_source_connection_generation >= 1:
+        _mark_equipment_source_gap("connection_generation_change")
+    state.counter_source_connection_generation = connection_generation
+    state.counter_reset_epoch_id = str(uuid4())
+    state.counter_reset_local_date = observed_at.astimezone(COUNTER_SOURCE_TIMEZONE).date()
+    state.counter_last_device_uptime_seconds = None
+    state.counter_source_uptime_generation = 0
+    state.counter_source_firmware_generation = 0
+    state.counter_source_uptime_observed_at = None
+    state.counter_source_firmware_observed_at = None
+    state.counter_source_device_time_generation = 0
+    state.counter_source_device_time_observed_at = None
+    state.counter_source_device_time_epoch = None
+    state.counter_source_local_hour_generation = 0
+    state.counter_source_local_hour_observed_at = None
+    state.counter_source_local_hour = None
+    state.counter_source_sntp_generation = 0
+    state.counter_source_sntp_observed_at = None
+    state.counter_source_sntp_valid = False
+    state.counter_source_device_local_date = None
+    state.counter_last_native_values.clear()
+    state.counter_generation_observations.clear()
+    state.counter_generation_ready = False
+    state.equipment_source_last_receipt_at = None
+    return True
+
+
+def _invalidate_counter_epoch(observed_at: datetime) -> None:
+    """Start a new unready epoch after a reset boundary or continuity break."""
+    state.counter_reset_epoch_id = str(uuid4())
+    state.counter_reset_local_date = observed_at.astimezone(COUNTER_SOURCE_TIMEZONE).date()
+    state.counter_generation_observations.clear()
+    state.counter_generation_ready = False
+    state.counter_last_native_values.clear()
+
+
+def _rotate_counter_epoch_if_needed(
+    device_uptime_seconds: float,
+    observed_at: datetime,
+    connection_generation: int | None = None,
+) -> None:
+    """Keep one conservative firmware-counter reset epoch.
+
+    The firmware resets every daily counter at local midnight and on reboot.
+    A process restart and every reconnect start a new epoch. No sample from a
+    new generation is accepted until fresh uptime, firmware, and all nine
+    counters have arrived on that generation.
+    """
+    if not math.isfinite(device_uptime_seconds) or not 0 <= device_uptime_seconds <= 1_000_000_000:
+        _mark_equipment_source_gap("invalid_counter_source_uptime")
+        _invalidate_counter_epoch(observed_at)
+        return
+    generation = shared.transport_generation if connection_generation is None else connection_generation
+    if not _begin_counter_source_generation(generation, observed_at):
+        return
+    local_date = observed_at.astimezone(COUNTER_SOURCE_TIMEZONE).date()
+    previous_uptime = state.counter_last_device_uptime_seconds
+    if local_date != state.counter_reset_local_date or (
+        previous_uptime is not None and device_uptime_seconds + 1.0 < previous_uptime
+    ):
+        _invalidate_counter_epoch(observed_at)
+    state.counter_last_device_uptime_seconds = device_uptime_seconds
+
+
+def _counter_lineage_is_fresh(
+    connection_generation: int,
+    observed_at: datetime | None = None,
+) -> bool:
+    complete = (
+        connection_generation >= 1
+        and state.counter_source_connection_generation == connection_generation
+        and state.counter_source_uptime_generation == connection_generation
+        and state.counter_source_firmware_generation == connection_generation
+        and state.counter_source_uptime_observed_at is not None
+        and state.counter_source_firmware_observed_at is not None
+        and state.counter_source_device_time_generation == connection_generation
+        and state.counter_source_device_time_observed_at is not None
+        and state.counter_source_device_time_epoch is not None
+        and state.counter_source_local_hour_generation == connection_generation
+        and state.counter_source_local_hour_observed_at is not None
+        and state.counter_source_local_hour is not None
+        and state.counter_source_sntp_generation == connection_generation
+        and state.counter_source_sntp_observed_at is not None
+        and state.counter_source_sntp_valid
+    )
+    if not complete or observed_at is None:
+        return complete
+    moments = (
+        state.counter_source_uptime_observed_at,
+        state.counter_source_firmware_observed_at,
+        state.counter_source_device_time_observed_at,
+        state.counter_source_local_hour_observed_at,
+        state.counter_source_sntp_observed_at,
+    )
+    if any(moment is None or abs(observed_at - moment) > _COUNTER_DIAGNOSTIC_MAX_AGE for moment in moments):
+        return False
+    assert state.counter_source_device_time_epoch is not None
+    device_at = datetime.fromtimestamp(state.counter_source_device_time_epoch, UTC)
+    if abs(device_at - observed_at) > _COUNTER_DEVICE_CLOCK_MAX_SKEW:
+        return False
+    device_local = device_at.astimezone(COUNTER_SOURCE_TIMEZONE)
+    return (
+        device_local.date() == observed_at.astimezone(COUNTER_SOURCE_TIMEZONE).date()
+        and device_local.date() == state.counter_source_device_local_date
+        and device_local.hour == state.counter_source_local_hour
+    )
+
+
+def _append_equipment_counter_sample(
+    daily_column: str,
+    native_value: float,
+    observed_at: datetime,
+    connection_generation: int,
+) -> None:
+    source = _COUNTER_SOURCE_BY_DAILY_COLUMN.get(daily_column)
+    if source is None or not _counter_lineage_is_fresh(connection_generation, observed_at):
+        return
+    try:
+        device_uptime_seconds = float(state.diagnostics.get("uptime_s"))
+    except (TypeError, ValueError):
+        return
+    firmware_revision = state.diagnostics.get("firmware_version")
+    stream, native_unit = source
+    maximum_native_value = 1_500.0 if native_unit == "minutes" else 25.0
+    if (
+        not math.isfinite(native_value)
+        or not 0 <= native_value <= maximum_native_value
+        or not math.isfinite(device_uptime_seconds)
+        or not 0 <= device_uptime_seconds <= 1_000_000_000
+        or not _valid_source_firmware(firmware_revision)
+        or not 1 <= connection_generation <= 9_007_199_254_740_991
+    ):
+        _mark_equipment_source_gap("invalid_counter_source_sample")
+        return
+
+    if len(state.pending_counter_samples) >= COUNTER_SAMPLE_BUFFER_MAX_ROWS:
+        _mark_equipment_source_gap("counter_sample_buffer_overflow")
+        log.error(
+            "equipment counter source sample rejected at bounded buffer rows=%d",
+            COUNTER_SAMPLE_BUFFER_MAX_ROWS,
+        )
+        return
+    state.pending_counter_samples.append(
+        PendingEquipmentCounterSample(
+            sample_id=str(uuid4()),
+            source_observed_at=observed_at,
+            stream=stream,
+            native_value=native_value,
+            native_unit=native_unit,
+            counter_reset_epoch_id=state.counter_reset_epoch_id,
+            device_uptime_seconds=device_uptime_seconds,
+            source_runtime_instance_id=COUNTER_SOURCE_RUNTIME_INSTANCE_ID,
+            source_connection_generation=connection_generation,
+            firmware_revision=firmware_revision,
+        )
+    )
+    state.counter_last_native_values[daily_column] = native_value
+
+
+def _complete_counter_generation_if_ready() -> None:
+    """Release the initial counter burst only after its lineage is complete."""
+    generation = shared.transport_generation
+    if (
+        state.counter_generation_ready
+        or not _counter_lineage_is_fresh(generation)
+        or set(state.counter_generation_observations) != _COUNTER_SOURCE_COLUMNS
+    ):
+        return
+    assert state.counter_source_uptime_observed_at is not None
+    assert state.counter_source_firmware_observed_at is not None
+    moments = [observed_at for _native_value, observed_at in state.counter_generation_observations.values()]
+    moments.extend(
+        (
+            state.counter_source_uptime_observed_at,
+            state.counter_source_firmware_observed_at,
+        )
+    )
+    latest = max(moments)
+    cutoff = latest - _COUNTER_INITIAL_BURST_MAX_SKEW
+    if min(moments) < cutoff:
+        state.counter_generation_observations = {
+            column: observation
+            for column, observation in state.counter_generation_observations.items()
+            if observation[1] >= cutoff
+        }
+        if state.counter_source_uptime_observed_at < cutoff:
+            state.counter_source_uptime_generation = 0
+            state.counter_source_uptime_observed_at = None
+        if state.counter_source_firmware_observed_at < cutoff:
+            state.counter_source_firmware_generation = 0
+            state.counter_source_firmware_observed_at = None
+        return
+    observations = tuple(sorted(state.counter_generation_observations.items()))
+    moments.extend(
+        (
+            state.counter_source_device_time_observed_at,
+            state.counter_source_local_hour_observed_at,
+            state.counter_source_sntp_observed_at,
+        )
+    )
+    if any(moment is None for moment in moments):
+        return
+    typed_moments = [moment for moment in moments if moment is not None]
+    latest = max(typed_moments)
+    cutoff = latest - _COUNTER_INITIAL_BURST_MAX_SKEW
+    if min(typed_moments) < cutoff or not _counter_lineage_is_fresh(generation, latest):
+        state.counter_generation_observations = {
+            column: observation
+            for column, observation in state.counter_generation_observations.items()
+            if observation[1] >= cutoff
+        }
+        return
+    state.counter_generation_ready = True
+    state.counter_generation_observations.clear()
+    for daily_column, (native_value, observed_at) in observations:
+        _append_equipment_counter_sample(daily_column, native_value, observed_at, generation)
+
+
+def _queue_equipment_counter_sample(
+    daily_column: str,
+    raw_value: object,
+    observed_at: datetime | None = None,
+) -> None:
+    if daily_column not in _COUNTER_SOURCE_BY_DAILY_COLUMN:
+        return
+    _stream, native_unit = _COUNTER_SOURCE_BY_DAILY_COLUMN[daily_column]
+    maximum_native_value = 1_500.0 if native_unit == "minutes" else 25.0
+    try:
+        native_value = float(raw_value)
+    except (TypeError, ValueError):
+        _mark_equipment_source_gap("invalid_counter_source_value")
+        return
+    if not math.isfinite(native_value) or not 0 <= native_value <= maximum_native_value:
+        _mark_equipment_source_gap("invalid_counter_source_value")
+        return
+
+    observed_at = _equipment_source_now() if observed_at is None else observed_at
+    generation = shared.transport_generation
+    if not _begin_counter_source_generation(generation, observed_at):
+        return
+    if _counter_lineage_is_fresh(generation, observed_at):
+        try:
+            device_uptime_seconds = float(state.diagnostics.get("uptime_s"))
+        except (TypeError, ValueError):
+            _mark_equipment_source_gap("invalid_counter_source_uptime")
+            return
+        if not math.isfinite(device_uptime_seconds) or not 0 <= device_uptime_seconds <= 1_000_000_000:
+            _mark_equipment_source_gap("invalid_counter_source_uptime")
+            return
+        _rotate_counter_epoch_if_needed(device_uptime_seconds, observed_at, generation)
+
+    if state.counter_generation_ready and _counter_lineage_is_fresh(generation, observed_at):
+        previous_native = state.counter_last_native_values.get(daily_column)
+        if previous_native is not None and native_value + 1e-9 < previous_native:
+            # Any observed per-stream decrease means the firmware reset or
+            # wrapped its whole daily counter bank. Rotate the global epoch and
+            # re-hold until a fresh all-nine/diagnostic burst is complete.
+            _invalidate_counter_epoch(observed_at)
+            state.counter_generation_observations[daily_column] = (
+                native_value,
+                observed_at,
+            )
+            return
+        _append_equipment_counter_sample(daily_column, native_value, observed_at, generation)
+        return
+    state.counter_generation_observations[daily_column] = (native_value, observed_at)
+    _complete_counter_generation_if_ready()
+
+
+async def write_equipment_counter_samples(pool: asyncpg.Pool) -> None:
+    """Persist queued raw counters atomically through the insert-only function.
+
+    Exact sample UUIDs make a whole-batch retry safe after an unknown commit.
+    On any failure the batch is restored ahead of newer samples; no summary or
+    reconstructed value is substituted.
+    """
+    if not state.pending_counter_samples:
+        return
+    samples = state.pending_counter_samples.copy()
+    state.pending_counter_samples.clear()
+    rows = [
+        (
+            sample.sample_id,
+            sample.source_observed_at,
+            GREENHOUSE_ID,
+            policy_device_id(GREENHOUSE_ID),
+            sample.stream,
+            sample.native_value,
+            sample.native_unit,
+            sample.counter_reset_epoch_id,
+            sample.device_uptime_seconds,
+            sample.source_runtime_instance_id,
+            sample.source_connection_generation,
+            sample.firmware_revision,
+        )
+        for sample in samples
+    ]
+    try:
+        async with pool.acquire() as conn:
+            async with conn.transaction():
+                await conn.executemany(
+                    """
+                    SELECT * FROM public.fn_record_equipment_counter_sample(
+                        $1::uuid, $2::timestamptz, $3::text, $4::text,
+                        $5::text, $6::double precision, $7::text, $8::uuid,
+                        $9::double precision, $10::uuid, $11::bigint, $12::text)
+                    """,
+                    rows,
+                )
+    except BaseException:
+        combined = samples + state.pending_counter_samples
+        if len(combined) > COUNTER_SAMPLE_BUFFER_MAX_ROWS:
+            dropped = len(combined) - COUNTER_SAMPLE_BUFFER_MAX_ROWS
+            combined = combined[:COUNTER_SAMPLE_BUFFER_MAX_ROWS]
+            _mark_equipment_source_gap("counter_sample_retry_overflow")
+            log.error(
+                "equipment counter source retry queue dropped newer samples rows=%d",
+                dropped,
+            )
+        state.pending_counter_samples[:] = combined
+        raise
+
+
+def _request_current_state_burst(client: APIClient, on_state) -> object:
+    """Request one current-state burst on the already fenced API connection.
+
+    ``APIClient.subscribe_states`` discards the callback-removal handle.  Use
+    the pinned client's underlying callback API so this one-shot reader can be
+    removed after the complete snapshot without accumulating subscribers.  It
+    sends only ``SubscribeStatesRequest``; no command/setter message exists in
+    this path and no second device connection is opened.
+    """
+    from functools import partial
+
+    from aioesphomeapi.api_pb2 import SubscribeStatesRequest
+    from aioesphomeapi.client import SUBSCRIBE_STATES_MSG_TYPES
+    from aioesphomeapi.client_base import on_state_msg
+
+    connection = client._get_connection()  # noqa: SLF001 - bounded pinned-library adapter
+    return connection.send_message_callback_response(
+        SubscribeStatesRequest(),
+        partial(on_state_msg, on_state, {}),
+        SUBSCRIBE_STATES_MSG_TYPES,
+    )
+
+
+async def write_equipment_direct_state_snapshots(pool: asyncpg.Pool) -> None:
+    """Persist complete eleven-component snapshots through one atomic function."""
+    if not state.pending_direct_state_snapshots:
+        return
+    snapshots = state.pending_direct_state_snapshots.copy()
+    state.pending_direct_state_snapshots.clear()
+    rows = [
+        (
+            snapshot.snapshot_id,
+            snapshot.source_epoch_id,
+            GREENHOUSE_ID,
+            policy_device_id(GREENHOUSE_ID),
+            json.dumps(
+                {
+                    stream: {
+                        "source_observed_at": observed_at.isoformat(timespec="microseconds"),
+                        "state": value,
+                    }
+                    for stream, value, observed_at in snapshot.observations
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+            ),
+            snapshot.device_uptime_seconds,
+            snapshot.source_runtime_instance_id,
+            snapshot.source_connection_generation,
+            snapshot.firmware_revision,
+        )
+        for snapshot in snapshots
+    ]
+    try:
+        async with pool.acquire() as conn:
+            async with conn.transaction():
+                await conn.executemany(
+                    """
+                    SELECT * FROM public.fn_record_equipment_direct_state_snapshot(
+                        $1::uuid, $2::uuid, $3::text, $4::text, $5::jsonb,
+                        $6::double precision, $7::uuid, $8::bigint, $9::text)
+                    """,
+                    rows,
+                )
+    except BaseException:
+        combined = snapshots + state.pending_direct_state_snapshots
+        if len(combined) > DIRECT_STATE_SNAPSHOT_BUFFER_MAX_ROWS:
+            dropped = len(combined) - DIRECT_STATE_SNAPSHOT_BUFFER_MAX_ROWS
+            combined = combined[:DIRECT_STATE_SNAPSHOT_BUFFER_MAX_ROWS]
+            _mark_equipment_source_gap("direct_snapshot_retry_overflow")
+            log.error(
+                "direct equipment source retry queue dropped newer snapshots rows=%d",
+                dropped,
+            )
+        state.pending_direct_state_snapshots[:] = combined
+        raise
+
+
+async def equipment_direct_state_snapshot_source(pool: asyncpg.Pool) -> None:
+    """Capture the locked pre-06:00 direct state seed without device writes."""
+    requested_at = _equipment_source_now()
+    requested_local = requested_at.astimezone(COUNTER_SOURCE_TIMEZONE)
+    if not (_DIRECT_STATE_SEED_OPEN <= requested_local.time() < _DIRECT_STATE_SEED_CLOSE):
+        return
+    local_date = requested_local.date()
+    if state.last_direct_state_snapshot_local_date == local_date:
+        return
+
+    client = shared.esp32.get("state_subscription_client")
+    generation = shared.transport_generation
+    if (
+        client is None
+        or generation < 1
+        or shared.esp32.get("state_subscription_generation") != generation
+        or shared.esp32.get("client") is not client
+    ):
+        log.warning("direct equipment state snapshot skipped: fenced source connection unavailable")
+        return
+
+    expected_components_by_key: dict[int, str] = {}
+    expected_uptime_keys: set[int] = set()
+    expected_firmware_keys: set[int] = set()
+    for key, obj_id in state.key_to_object_id.items():
+        entity_type = state.key_to_type.get(key)
+        if entity_type == "binary":
+            stream = EQUIPMENT_BINARY_MAP.get(obj_id)
+        elif entity_type == "switch":
+            stream = EQUIPMENT_SWITCH_MAP.get(obj_id)
+        else:
+            stream = None
+        if stream in _EXPERIMENT_DIRECT_STATE_COMPONENTS:
+            expected_components_by_key[key] = stream
+        elif DIAGNOSTIC_MAP.get(obj_id) == "uptime_s":
+            expected_uptime_keys.add(key)
+        elif DIAGNOSTIC_MAP.get(obj_id) == "firmware_version":
+            expected_firmware_keys.add(key)
+    if (
+        set(expected_components_by_key.values()) != _EXPERIMENT_DIRECT_STATE_COMPONENTS
+        or not expected_uptime_keys
+        or not expected_firmware_keys
+    ):
+        _mark_equipment_source_gap("direct_snapshot_entity_map_incomplete")
+        log.warning("direct equipment state snapshot skipped: source entity map incomplete")
+        return
+
+    required_keys = set(expected_components_by_key) | expected_uptime_keys | expected_firmware_keys
+    seen_keys: set[int] = set()
+    conflicts: set[str] = set()
+    observations: dict[str, tuple[bool, datetime]] = {}
+    device_uptime: tuple[float, datetime] | None = None
+    firmware_revision: tuple[str, datetime] | None = None
+    complete = asyncio.Event()
+
+    def on_fresh_state(entity_state) -> None:
+        nonlocal device_uptime, firmware_revision
+        observed_at = _equipment_source_now()
+        key = entity_state.key
+        if key not in required_keys:
+            return
+        seen_keys.add(key)
+        stream = expected_components_by_key.get(key)
+        if stream is not None:
+            value = entity_state.state
+            if type(value) is not bool:
+                conflicts.add("state")
+            elif stream in observations and observations[stream][0] != value:
+                conflicts.add("state")
+            else:
+                observations.setdefault(stream, (value, observed_at))
+        elif key in expected_uptime_keys:
+            try:
+                value = float(entity_state.state)
+            except (TypeError, ValueError):
+                value = math.nan
+            if math.isfinite(value) and 0 <= value <= 1_000_000_000:
+                if device_uptime is not None and device_uptime[0] != value:
+                    conflicts.add("uptime")
+                else:
+                    device_uptime = device_uptime or (value, observed_at)
+            else:
+                conflicts.add("uptime")
+        elif key in expected_firmware_keys:
+            value = entity_state.state
+            if _valid_source_firmware(value):
+                if firmware_revision is not None and firmware_revision[0] != value:
+                    conflicts.add("firmware")
+                else:
+                    firmware_revision = firmware_revision or (value, observed_at)
+            else:
+                conflicts.add("firmware")
+        if conflicts or required_keys.issubset(seen_keys):
+            complete.set()
+
+    remove_callback = None
+    try:
+        remove_callback = _request_current_state_burst(client, on_fresh_state)
+        await asyncio.wait_for(complete.wait(), timeout=20)
+        # Let already-buffered SubscribeStates responses run before accepting
+        # the once/day bundle. A same-key repeat with a changed value means the
+        # burst did not describe one unambiguous physical instant.
+        await asyncio.sleep(0.1)
+    except TimeoutError:
+        _mark_equipment_source_gap("direct_snapshot_burst_incomplete")
+        log.warning(
+            "direct equipment state snapshot incomplete streams=%d uptime=%s firmware=%s",
+            len(observations),
+            device_uptime is not None,
+            firmware_revision is not None,
+        )
+        return
+    finally:
+        if callable(remove_callback):
+            remove_callback()
+
+    if conflicts:
+        _mark_equipment_source_gap("direct_snapshot_conflicting_observations")
+        log.warning(
+            "direct equipment state snapshot discarded: conflicting source observations fields=%s",
+            ",".join(sorted(conflicts)),
+        )
+        return
+    if (
+        not required_keys.issubset(seen_keys)
+        or len(observations) != len(_EXPERIMENT_DIRECT_STATE_COMPONENTS)
+        or device_uptime is None
+        or firmware_revision is None
+    ):
+        _mark_equipment_source_gap("direct_snapshot_observations_incomplete")
+        log.warning("direct equipment state snapshot discarded: source observations incomplete")
+        return
+
+    if (
+        shared.esp32.get("client") is not client
+        or shared.esp32.get("state_subscription_client") is not client
+        or shared.esp32.get("state_subscription_generation") != generation
+        or shared.transport_generation != generation
+    ):
+        _mark_equipment_source_gap("direct_snapshot_generation_changed")
+        log.warning("direct equipment state snapshot discarded: source generation changed")
+        return
+    assert device_uptime is not None and firmware_revision is not None
+    observed_times = [moment for _value, moment in observations.values()]
+    observed_times.extend((device_uptime[1], firmware_revision[1]))
+    first_observed = min(observed_times)
+    last_observed = max(observed_times)
+    if (last_observed - first_observed).total_seconds() > 60:
+        _mark_equipment_source_gap("direct_snapshot_observation_skew")
+        log.warning("direct equipment state snapshot discarded: observation skew exceeded 60s")
+        return
+    if any(
+        moment.astimezone(COUNTER_SOURCE_TIMEZONE).date() != local_date
+        or not (
+            _DIRECT_STATE_SEED_OPEN <= moment.astimezone(COUNTER_SOURCE_TIMEZONE).time() <= _DIRECT_STATE_SEED_CLOSE
+        )
+        for moment in observed_times
+    ):
+        _mark_equipment_source_gap("direct_snapshot_outside_seed_window")
+        log.warning("direct equipment state snapshot discarded: outside locked seed window")
+        return
+
+    prior_firmware = state.diagnostics.get("firmware_version")
+    prior_firmware_is_current = state.counter_source_firmware_generation == generation
+    _begin_counter_source_generation(generation, last_observed)
+    if prior_firmware_is_current and prior_firmware != firmware_revision[0]:
+        _mark_equipment_source_gap("firmware_revision_change")
+        _invalidate_counter_epoch(last_observed)
+    state.diagnostics["uptime_s"] = device_uptime[0]
+    state.diagnostics["firmware_version"] = firmware_revision[0]
+    state.counter_source_uptime_generation = generation
+    state.counter_source_firmware_generation = generation
+    state.counter_source_uptime_observed_at = device_uptime[1]
+    state.counter_source_firmware_observed_at = firmware_revision[1]
+    _rotate_counter_epoch_if_needed(device_uptime[0], last_observed, generation)
+    _complete_counter_generation_if_ready()
+    if len(state.pending_direct_state_snapshots) >= DIRECT_STATE_SNAPSHOT_BUFFER_MAX_ROWS:
+        _mark_equipment_source_gap("direct_snapshot_buffer_overflow")
+        log.error(
+            "direct equipment state snapshot rejected at bounded buffer rows=%d",
+            DIRECT_STATE_SNAPSHOT_BUFFER_MAX_ROWS,
+        )
+        return
+    state.pending_direct_state_snapshots.append(
+        PendingEquipmentDirectStateSnapshot(
+            snapshot_id=str(uuid4()),
+            source_epoch_id=str(uuid4()),
+            observations=tuple(
+                (stream, value, observed_at) for stream, (value, observed_at) in sorted(observations.items())
+            ),
+            device_uptime_seconds=device_uptime[0],
+            source_runtime_instance_id=COUNTER_SOURCE_RUNTIME_INSTANCE_ID,
+            source_connection_generation=generation,
+            firmware_revision=firmware_revision[0],
+        )
+    )
+    state.last_direct_state_snapshot_local_date = local_date
+    await write_equipment_direct_state_snapshots(pool)
+
+
+async def restricted_equipment_direct_state_snapshot_source(
+    ordinary_pool: asyncpg.Pool,
+    equipment_source_pool: asyncpg.Pool | None,
+) -> None:
+    """Run the direct seed only through its function-only collector login."""
+
+    if equipment_source_pool is None:
+        return
+    if equipment_source_pool is ordinary_pool:
+        log.error("direct equipment state snapshot skipped: dedicated source pool is not isolated")
+        return
+    await equipment_direct_state_snapshot_source(equipment_source_pool)
 
 
 def _finite_state_float(value: str | None) -> float | None:
@@ -1472,17 +2747,121 @@ def _coerce_integer_diagnostic(col: str, value: Any) -> int | None:
     return parsed
 
 
-def _record_diagnostic(obj_id: str, value: Any) -> bool:
+def _record_diagnostic(
+    obj_id: str,
+    value: Any,
+    observed_at: datetime | None = None,
+) -> bool:
     col = DIAGNOSTIC_MAP.get(obj_id)
     if not col:
         return False
+    observed_at = _equipment_source_now() if observed_at is None else observed_at
+    generation = shared.transport_generation
+    _begin_counter_source_generation(generation, observed_at)
+    if col == "uptime_s":
+        record_component_device_uptime(value)
+        try:
+            parsed_uptime = float(value)
+        except (TypeError, ValueError):
+            parsed_uptime = math.nan
+        if math.isfinite(parsed_uptime) and 0 <= parsed_uptime <= 1_000_000_000:
+            state.diagnostics[col] = parsed_uptime
+            state.counter_source_uptime_generation = generation
+            state.counter_source_uptime_observed_at = observed_at
+            _rotate_counter_epoch_if_needed(parsed_uptime, observed_at, generation)
+            _complete_counter_generation_if_ready()
+            return True
+        if generation >= 1:
+            _mark_equipment_source_gap("invalid_device_uptime")
+            _invalidate_counter_epoch(observed_at)
+        state.counter_source_uptime_generation = 0
+        state.counter_source_uptime_observed_at = None
+    if col == "firmware_version":
+        previous_firmware = state.diagnostics.get(col)
+        previous_is_current = state.counter_source_firmware_generation == generation
+        if not _valid_source_firmware(value):
+            if generation >= 1:
+                _mark_equipment_source_gap("invalid_firmware_revision")
+                state.counter_generation_ready = False
+            state.counter_source_firmware_generation = 0
+            state.counter_source_firmware_observed_at = None
+            return True
+        elif previous_is_current and previous_firmware != value:
+            _mark_equipment_source_gap("firmware_revision_change")
+            _invalidate_counter_epoch(observed_at)
     if col in INTEGER_DIAGNOSTIC_COLUMNS:
         parsed = _coerce_integer_diagnostic(col, value)
         if parsed is None:
+            if generation >= 1 and col in {
+                "controller_time_epoch",
+                "controller_local_hour",
+                "sntp_valid",
+            }:
+                _mark_equipment_source_gap("invalid_device_clock_diagnostic")
             return True
         state.diagnostics[col] = parsed
+        if col == "controller_time_epoch":
+            previous_epoch = state.counter_source_device_time_epoch
+            previous_date = state.counter_source_device_local_date
+            device_at = datetime.fromtimestamp(parsed, UTC)
+            device_local_date = device_at.astimezone(COUNTER_SOURCE_TIMEZONE).date()
+            if state.counter_source_device_time_generation == generation and (
+                (previous_epoch is not None and parsed + 5 < previous_epoch)
+                or (previous_date is not None and device_local_date != previous_date)
+            ):
+                _mark_equipment_source_gap("device_clock_regression")
+                _invalidate_counter_epoch(observed_at)
+            state.counter_source_device_time_generation = generation
+            state.counter_source_device_time_observed_at = observed_at
+            state.counter_source_device_time_epoch = parsed
+            state.counter_source_device_local_date = device_local_date
+            _complete_counter_generation_if_ready()
+        elif col == "controller_local_hour":
+            if parsed > 23:
+                _mark_equipment_source_gap("invalid_device_local_hour")
+                _invalidate_counter_epoch(observed_at)
+                state.counter_source_local_hour_generation = 0
+                state.counter_source_local_hour_observed_at = None
+                state.counter_source_local_hour = None
+                return True
+            previous_hour = state.counter_source_local_hour
+            previous_epoch = state.counter_source_device_time_epoch
+            if (
+                state.counter_source_local_hour_generation == generation
+                and previous_hour is not None
+                and previous_epoch is not None
+                and parsed != datetime.fromtimestamp(previous_epoch, UTC).astimezone(COUNTER_SOURCE_TIMEZONE).hour
+            ):
+                _invalidate_counter_epoch(observed_at)
+            state.counter_source_local_hour_generation = generation
+            state.counter_source_local_hour_observed_at = observed_at
+            state.counter_source_local_hour = parsed
+            _complete_counter_generation_if_ready()
+        elif col == "sntp_valid":
+            if parsed != 1:
+                _mark_equipment_source_gap("device_clock_untrusted")
+                _invalidate_counter_epoch(observed_at)
+                state.counter_source_sntp_generation = 0
+                state.counter_source_sntp_observed_at = None
+                state.counter_source_sntp_valid = False
+                state.counter_source_device_time_generation = 0
+                state.counter_source_device_time_observed_at = None
+                state.counter_source_device_time_epoch = None
+                state.counter_source_local_hour_generation = 0
+                state.counter_source_local_hour_observed_at = None
+                state.counter_source_local_hour = None
+                state.counter_source_device_local_date = None
+                return True
+            state.counter_source_sntp_generation = generation
+            state.counter_source_sntp_observed_at = observed_at
+            state.counter_source_sntp_valid = True
+            _complete_counter_generation_if_ready()
     else:
         state.diagnostics[col] = value
+    if col == "firmware_version" and _valid_source_firmware(value):
+        state.counter_source_firmware_generation = generation
+        state.counter_source_firmware_observed_at = observed_at
+        _complete_counter_generation_if_ready()
     return True
 
 
@@ -1577,8 +2956,67 @@ def _mirror_irrigation_number_readback(param: str, value: Any) -> None:
 # ──────────────────────────────────────────────────────────────
 # ESP32 callbacks
 # ──────────────────────────────────────────────────────────────
+def _record_equipment_callback(
+    equipment: str,
+    value: object,
+    observed_at: datetime,
+    source_generation: int,
+    source_clock_valid: bool,
+) -> None:
+    if type(value) is not bool:
+        if source_generation >= 1:
+            _mark_equipment_source_gap("invalid_equipment_state_value")
+        return
+    old = state.equipment.get(equipment)
+    state.equipment[equipment] = value
+    if old == value or source_generation < 1:
+        return
+    if not source_clock_valid:
+        return
+    firmware_revision = state.diagnostics.get("firmware_version")
+    if not _valid_source_firmware(firmware_revision) or state.counter_source_firmware_generation != source_generation:
+        _mark_equipment_source_gap("equipment_event_lineage_unavailable")
+        return
+    _append_pending_equipment_event(
+        PendingEquipmentStateEvent(
+            observed_at,
+            equipment,
+            value,
+            COUNTER_SOURCE_RUNTIME_INSTANCE_ID,
+            source_generation,
+            firmware_revision,
+        )
+    )
+
+
 def on_state_change(entity_state) -> None:
     """Called by aioesphomeapi on any entity state change."""
+    source_observed_at = _equipment_source_now()
+    source_generation = shared.transport_generation
+    source_clock_valid = bool(
+        isinstance(source_observed_at, datetime)
+        and source_observed_at.tzinfo is not None
+        and source_observed_at.utcoffset() is not None
+    )
+    if source_generation >= 1:
+        previous_observed_at = state.equipment_source_last_device_observed_at
+        previous_generation = state.equipment_source_last_device_generation
+        if not source_clock_valid:
+            _mark_equipment_source_gap("invalid_callback_timestamp")
+        elif (
+            previous_generation == source_generation
+            and previous_observed_at is not None
+            and source_observed_at < previous_observed_at
+        ):
+            # Never regress the barrier. The sticky gap survives subsequent
+            # forward callbacks until a gap-marked receipt commits.
+            _mark_equipment_source_gap("callback_clock_nonmonotonic")
+            source_clock_valid = False
+        else:
+            if previous_generation >= 1 and previous_generation != source_generation:
+                _mark_equipment_source_gap("connection_generation_change")
+            state.equipment_source_last_device_observed_at = source_observed_at
+            state.equipment_source_last_device_generation = source_generation
     key = entity_state.key
     obj_id = state.key_to_object_id.get(key)
     etype = state.key_to_type.get(key)
@@ -1596,12 +3034,13 @@ def on_state_change(entity_state) -> None:
         if _record_climate_sensor(obj_id, val):
             return
 
-        if _record_diagnostic(obj_id, val):
+        if _record_diagnostic(obj_id, val, source_observed_at):
             return
 
         col = DAILY_ACCUM_MAP.get(obj_id)
         if col:
             state.daily[col] = val
+            _queue_equipment_counter_sample(col, val, source_observed_at)
             return
 
         param = SETPOINT_MAP.get(obj_id)
@@ -1634,10 +3073,13 @@ def on_state_change(entity_state) -> None:
         val = entity_state.state
         equip = EQUIPMENT_BINARY_MAP.get(obj_id)
         if equip:
-            old = state.equipment.get(equip)
-            state.equipment[equip] = val
-            if old != val:
-                state.pending_equipment.append((equip, val))
+            _record_equipment_callback(
+                equip,
+                val,
+                source_observed_at,
+                source_generation,
+                source_clock_valid,
+            )
             return
 
     elif etype == "switch":
@@ -1647,10 +3089,13 @@ def on_state_change(entity_state) -> None:
 
         equip = EQUIPMENT_SWITCH_MAP.get(obj_id)
         if equip:
-            old = state.equipment.get(equip)
-            state.equipment[equip] = val
-            if old != val:
-                state.pending_equipment.append((equip, val))
+            _record_equipment_callback(
+                equip,
+                val,
+                source_observed_at,
+                source_generation,
+                source_clock_valid,
+            )
             return
 
     elif etype == "text":
@@ -1716,8 +3161,16 @@ def on_state_change(entity_state) -> None:
 # ──────────────────────────────────────────────────────────────
 # Flush loop
 # ──────────────────────────────────────────────────────────────
-async def flush_loop(pool: asyncpg.Pool) -> None:
+async def flush_loop(
+    pool: asyncpg.Pool,
+    equipment_source_pool: asyncpg.Pool | None = None,
+) -> None:
     """Periodically flush buffered data to the database."""
+    if shared.is_shadow_mode():
+        # Main never creates this pool in shadow mode. Keep the loop itself
+        # fail-closed as well so a future/direct caller cannot inject a
+        # separately credentialed source writer around the ordinary pool proxy.
+        equipment_source_pool = None
     last_climate = 0.0
     last_climate_action_log = 0.0
     last_diag = 0.0
@@ -1817,11 +3270,28 @@ async def flush_loop(pool: asyncpg.Pool) -> None:
                     log.error(f"setpoint_snapshot write error: {e}")
 
         # Equipment events (flush immediately)
-        if state.pending_equipment:
+        try:
+            if equipment_source_pool is None:
+                await write_legacy_equipment_events(pool)
+            else:
+                await write_equipment_events(equipment_source_pool, ts)
+        except Exception as e:
+            log.error(f"equipment_state write error: {e}")
+
+        # Raw device counters (flush immediately). These are source evidence,
+        # not a derived daily summary; database errors retain the exact UUIDs
+        # for a safe whole-batch retry.
+        if equipment_source_pool is not None and state.pending_direct_state_snapshots:
             try:
-                await write_equipment_events(pool, ts)
+                await write_equipment_direct_state_snapshots(equipment_source_pool)
             except Exception as e:
-                log.error(f"equipment_state write error: {e}")
+                log.error("direct equipment state snapshot write error: %s", type(e).__name__)
+
+        if equipment_source_pool is not None and state.pending_counter_samples:
+            try:
+                await write_equipment_counter_samples(equipment_source_pool)
+            except Exception as e:
+                log.error("equipment counter source write error: %s", type(e).__name__)
 
         # State transitions (flush immediately)
         if state.pending_states:
@@ -1912,6 +3382,7 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
             """Called by aioesphomeapi when connection drops."""
             nonlocal disconnected_at
             disconnected_at = datetime.now(UTC)
+            _mark_equipment_source_gap("transport_connection_stopped")
             if expected_disconnect:
                 log.info("ESP32 disconnected (expected)")
             else:
@@ -2031,8 +3502,21 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
             )
             log.info(f"Tracking {tracked} entities across all maps (incl {len(CFG_READBACK_MAP)} cfg readback)")
 
-            # Subscribe to state changes
-            client.subscribe_states(on_state_change)
+            # Fence the callback itself. A late callback from an old client
+            # must never be relabeled with the new transport generation.
+            def on_generation_state(entity_state) -> None:
+                if (
+                    shared.transport_generation != connection_generation
+                    or shared.esp32.get("client") is not client
+                    or shared.esp32.get("state_subscription_client") is not client
+                    or shared.esp32.get("state_subscription_generation") != connection_generation
+                ):
+                    return
+                on_state_change(entity_state)
+
+            shared.esp32["state_subscription_client"] = client
+            shared.esp32["state_subscription_generation"] = connection_generation
+            client.subscribe_states(on_generation_state)
 
             # Keep ESP32 log streaming opt-in. Heap pressure is covered by
             # binary sensors and diagnostics; a live API log stream costs heap.
@@ -2105,8 +3589,11 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
                             break
 
             log.warning("Connection lost — will reconnect")
+            _mark_equipment_source_gap("transport_connection_lost")
             last_disconnected_at = disconnected_at or datetime.now(UTC)
             shared.esp32["client"] = None
+            shared.esp32["state_subscription_client"] = None
+            shared.esp32["state_subscription_generation"] = None
 
         except APIConnectionError as e:
             log.warning(f"ESP32 connection error: {e}. Reconnecting in 30s...")
@@ -2119,6 +3606,11 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
                 last_disconnected_at = datetime.now(UTC)
             await asyncio.sleep(30)
         finally:
+            if shared.esp32.get("state_subscription_client") is client:
+                shared.esp32["state_subscription_client"] = None
+                shared.esp32["state_subscription_generation"] = None
+            if shared.esp32.get("client") is client:
+                shared.esp32["client"] = None
             try:
                 await client.disconnect()
             except Exception:
@@ -2195,8 +3687,43 @@ def _launch_due_tasks(
     return started
 
 
-async def task_loop(pool: asyncpg.Pool) -> None:
+async def _run_restricted_component_worker(component_pool: object | None) -> None:
+    """Run the separately credentialed component worker only outside shadow."""
+    if shared.is_shadow_mode():
+        return
+    await component_experiment_worker(component_pool)
+
+
+async def _run_restricted_direct_snapshot_worker(
+    ordinary_pool: asyncpg.Pool,
+    equipment_source_pool: asyncpg.Pool | None,
+) -> None:
+    """Run the separately credentialed source writer only outside shadow."""
+    if shared.is_shadow_mode():
+        return
+    await restricted_equipment_direct_state_snapshot_source(
+        ordinary_pool,
+        equipment_source_pool,
+    )
+
+
+async def task_loop(
+    pool: asyncpg.Pool,
+    component_pool: object | None = None,
+    equipment_source_pool: asyncpg.Pool | None = None,
+) -> None:
     """Run periodic tasks concurrently so writer pacing cannot starve them."""
+    prime_component_startup_hold()
+
+    async def restricted_component_experiment_worker(_ordinary_pool: asyncpg.Pool) -> None:
+        await _run_restricted_component_worker(component_pool)
+
+    async def restricted_direct_snapshot_worker(ordinary_pool: asyncpg.Pool) -> None:
+        await _run_restricted_direct_snapshot_worker(
+            ordinary_pool,
+            equipment_source_pool,
+        )
+
     task_timeouts = {
         # Reconnect reconciles can push 25+ values through heap-safe ESPHome
         # pacing, which intentionally exceeds the generic 120s watchdog.
@@ -2215,6 +3742,7 @@ async def task_loop(pool: asyncpg.Pool) -> None:
         # Full-48 recovery retains the existing heap-safe 2s setter pacing and
         # is bounded by the component writer to 120s.
         "component_experiment": 150,
+        "equipment_direct_snapshot": 30,
     }
     TASKS = [
         # (name, interval_seconds, coroutine_factory)
@@ -2255,10 +3783,13 @@ async def task_loop(pool: asyncpg.Pool) -> None:
         ("experiment_assignments", 60, experiment_assignment_scheduler),
         ("policy_arbiter", 60, policy_arbiter_admissions),
         ("policy_delivery", 30, policy_delivery_worker),
+        # Read-only current-state burst over the existing fenced connection.
+        # It is inert outside 05:58:30-06:00 local and never calls a setter.
+        ("equipment_direct_snapshot", 15, restricted_direct_snapshot_worker),
         # ADR-0010 confirmed-component path. The worker checks its mutually
         # exclusive environment gate before constructing or querying L3 and is
         # therefore zero-DB/zero-device under the default disabled posture.
-        ("component_experiment", 15, component_experiment_worker),
+        ("component_experiment", 15, restricted_component_experiment_worker),
         # Qualification-phase step-test scheduler (#584/#588): additionally
         # inert unless mode=live AND the active experiment is
         # kind=qualification, armed/running.
@@ -2821,6 +4352,45 @@ async def reconcile_interrupted_device_writes(pool: asyncpg.Pool) -> int:
     return len(rows)
 
 
+async def create_dedicated_mutation_pools() -> tuple[object | None, asyncpg.Pool | None]:
+    """Create separately attested mutation pools only outside global shadow mode.
+
+    ``VERDIFY_SHADOW_MODE`` is the process-wide zero-database-write contract.
+    The ordinary pool is protected by :func:`shared.wrap_pool_for_shadow`, but
+    the component executor and equipment-source collector intentionally use
+    separate credentials and therefore cannot be made safe by that wrapper.
+    Refuse to create either connection here so valid dedicated credentials can
+    never re-enable a write path in a shadow process.
+    """
+    if shared.is_shadow_mode():
+        prime_component_startup_hold()
+        log.warning("SHADOW_MODE active: dedicated component/equipment mutation pools are disabled")
+        return None, None
+
+    # The component executor never receives the ordinary shared DB-owner pool.
+    # Missing/invalid dedicated credentials leave this as None; the worker's
+    # environment gate stays zero-DB while OFF and retains the all-48 writer
+    # hold if someone attempts to enable without the restricted role.
+    component_pool = await create_component_experiment_pool()
+    try:
+        await attest_component_safe_startup(component_pool)
+    except Exception as exc:
+        # The helper has already retained the all-48 hold. Continue telemetry
+        # capture, but every ordinary/component setter remains denied until a
+        # later proven recovery and clean restart.
+        log.error("component startup authority unresolved error=%s", type(exc).__name__)
+
+    try:
+        equipment_source_pool = await create_equipment_source_pool()
+    except Exception as exc:
+        equipment_source_pool = None
+        log.error(
+            "equipment source collector startup authority unresolved error=%s",
+            type(exc).__name__,
+        )
+    return component_pool, equipment_source_pool
+
+
 # ──────────────────────────────────────────────────────────────
 # Main
 # ──────────────────────────────────────────────────────────────
@@ -2832,6 +4402,11 @@ async def main() -> None:
     assert_modes_consistent()
 
     pool = await asyncpg.create_pool(DB_DSN, min_size=2, max_size=10)
+    try:
+        await attest_ordinary_ingestor_runtime_role(pool)
+    except Exception:
+        await pool.close()
+        raise
     # SHADOW_MODE: wrap the pool so every acquired connection suppresses write
     # SQL while still serving reads (freshness probe, config load). Default-off
     # returns the pool unchanged — zero behavior change to the live writer.
@@ -2851,6 +4426,8 @@ async def main() -> None:
             mqtt_subscribe_loop(pool),
         )
         return
+
+    component_pool, equipment_source_pool = await create_dedicated_mutation_pools()
 
     # ── Capture mode (prod, and the legacy VM single-writer) ──────────────────
     log.info("Verdify ingestor starting (greenhouse: %s)...", GREENHOUSE_ID)
@@ -2908,6 +4485,9 @@ async def main() -> None:
     _writer_lease = WriterLease()
     shared.writer_lease = _writer_lease
     await _writer_lease.start()
+    # Arm before esp32_loop, listener, reconnect reconciliation, or periodic
+    # dispatch can queue an ordinary setter. L3 is the only later release.
+    prime_component_startup_hold()
 
     # SIGTERM handler: on graceful eviction / drain / rollout, RELEASE the lease
     # (clears holderIdentity so a replacement acquires in seconds, not 15s) and
@@ -2918,11 +4498,10 @@ async def main() -> None:
     _shutdown = asyncio.Event()
 
     async def _on_sigterm() -> None:
-        log.warning("SIGTERM received — releasing writer lease + shutting down")
-        try:
-            await _writer_lease.release()
-        except Exception as e:  # noqa: BLE001
-            log.warning("Lease release on SIGTERM failed: %s", e)
+        # Do not release the cross-pod lease while a component setter may still
+        # be awaiting its acknowledgement. The shutdown branch cancels and
+        # joins all writer tasks first, then releases for the replacement.
+        log.warning("SIGTERM received — stopping writer tasks before lease release")
         _shutdown.set()
 
     try:
@@ -2938,8 +4517,8 @@ async def main() -> None:
 
     main_tasks = asyncio.gather(
         esp32_loop(pool),
-        flush_loop(pool),
-        task_loop(pool),
+        flush_loop(pool, equipment_source_pool),
+        task_loop(pool, component_pool, equipment_source_pool),
         mqtt_loop(pool),
         setpoint_listener(pool),
         _writer_failure_monitor(),
@@ -2956,6 +4535,14 @@ async def main() -> None:
             await main_tasks
         except (asyncio.CancelledError, Exception):
             pass
+        try:
+            await _writer_lease.release()
+        except Exception as e:  # noqa: BLE001
+            log.warning("Lease release on SIGTERM failed: %s", e)
+        if component_pool is not None:
+            await component_pool.close()
+        if equipment_source_pool is not None:
+            await equipment_source_pool.close()
         return
     # If the gather itself returned/raised, propagate (surfaces fatal errors).
     shutdown_wait.cancel()

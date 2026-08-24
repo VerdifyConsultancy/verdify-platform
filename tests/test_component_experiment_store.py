@@ -19,14 +19,17 @@ from esp32_push import ComponentCommandOutcome  # noqa: E402
 from tasks.component_experiment import (  # noqa: E402
     RUNTIME_INSTANCE_ID,
     AsyncpgComponentExperimentStore,
+    ComponentRuntimeFault,
     RevisionSet,
     component_cfg_source_epochs,
     configure_component_cfg_source,
     record_component_cfg_readback,
+    record_component_device_uptime,
 )
 
 from verdify_schemas.component_executor import CANONICAL_FIELD_ORDER, ENTITY_GRIDS
 from verdify_schemas.policy_vector import encode_policy_vector
+from verdify_schemas.tunable_registry import REGISTRY
 
 NOW = datetime(2026, 8, 23, 23, 30, tzinfo=UTC)
 EXPERIMENT_ID = "11111111-1111-4111-8111-111111111111"
@@ -75,6 +78,11 @@ class FunctionOnlyConnection:
         self.outcomes: list[tuple] = []
         self.events: list[tuple] = []
         self.recovery_requests: list[tuple] = []
+        self.runtime_snapshots: list[dict] = []
+        self.preexposure_mismatches: list[tuple] = []
+        self.raise_preexposure_mismatch = False
+        self.monitor_row: dict | None = None
+        self.runtime_faults: list[tuple] = []
         self.registration = {
             "generation_event_id": 1,
             "runtime_instance_id": RUNTIME_INSTANCE_ID,
@@ -204,6 +212,86 @@ class FunctionOnlyConnection:
                 }
             )
             return {"receipt_id": self.window[-1]["receipt_id"], "persisted_at": persisted_at}
+        if "fn_experiment_v2_record_runtime_snapshot" in query:
+            observations = json.loads(args[4])
+            assert [item["wire_id"] for item in observations] == [
+                REGISTRY[field].wire_id for field in CANONICAL_FIELD_ORDER
+            ]
+            row = {
+                "source_epoch_id": args[2],
+                "experiment_id": args[0],
+                "device_id": args[1],
+                "observed_wire_vector": args[3],
+                "observations": observations,
+                "runtime_instance_id": args[9],
+                "writer_generation": args[10],
+                "connection_generation": args[11],
+                "reset_detected": args[12],
+            }
+            self.runtime_snapshots.append(row)
+            return row
+        if "fn_experiment_v2_record_preexposure_mismatch" in query:
+            observations = json.loads(args[6])
+            assert [item["wire_id"] for item in observations] == [
+                REGISTRY[field].wire_id for field in CANONICAL_FIELD_ORDER
+            ]
+            self.preexposure_mismatches.append(args)
+            if self.raise_preexposure_mismatch:
+                raise RuntimeError("database unavailable")
+            return {
+                "fault_report_id": args[4],
+                "experiment_id": args[0],
+                "device_id": args[3],
+                "reported_lease_generation": args[12],
+                "reporter_runtime_instance_id": args[11],
+                "reporter_writer_generation": args[13],
+                "reporter_connection_generation": args[14],
+                "reported_fault_kind": "stale_or_mismatched_work",
+                "reason": "post_delivery_observation_mismatch",
+                "close_reason": "stale_or_mismatched_work",
+                "recovery_work_id": "66666666-6666-4666-8666-666666666666",
+                "admission_state_after": "baseline_recovery",
+                "authority_hold_required": True,
+                "facility_authority_yielded": False,
+                "recorded_at": NOW,
+            }
+        if "fn_experiment_v2_monitor_open_exposure" in query:
+            return self.monitor_row
+        if "fn_experiment_v2_report_runtime_fault" in query:
+            self.runtime_faults.append(args)
+            return {
+                "fault_report_id": args[2],
+                "experiment_id": args[0],
+                "device_id": args[1],
+                "reported_lease_generation": args[3],
+                "reporter_runtime_instance_id": args[4],
+                "reporter_writer_generation": args[5],
+                "reporter_connection_generation": args[6],
+                "reported_fault_kind": args[7],
+                "reason": args[8],
+                "close_reason": "reconnect" if args[7] == "connection_generation_changed" else args[7],
+                "recovery_work_id": "66666666-6666-4666-8666-666666666666",
+                "admission_state_after": "baseline_recovery",
+                "authority_hold_required": True,
+                "facility_authority_yielded": False,
+                "recorded_at": NOW,
+            }
+        if "fn_experiment_v2_safe_startup_attestation" in query:
+            return {
+                "attested_at": NOW,
+                "device_id": args[0],
+                "requested_experiment_id": args[1],
+                "scoped_experiment_id": args[1],
+                "scope_resolved": True,
+                "current_lease_generation": 5,
+                "active_experiment_count": 1,
+                "open_exposure_count": 0,
+                "recovery_pending_count": 0,
+                "experiment_authority_active": False,
+                "facility_authority_yielded": False,
+                "hold_required": False,
+                "attestation_reason": "no_experiment_authority",
+            }
         if "fn_experiment_v2_close_exposure" in query:
             return {"exposure_id": args[0], "close_reason": args[1]}
         raise AssertionError(f"unexpected fetchrow query: {query}")
@@ -236,6 +324,25 @@ class FunctionOnlyConnection:
             self.recovery_requests.append(args)
             return "66666666-6666-4666-8666-666666666666"
         raise AssertionError(f"unexpected fetchval query: {query}")
+
+
+@pytest.fixture(autouse=True)
+def isolated_component_source_epochs():
+    configure_component_cfg_source(
+        experiment_id=None,
+        lease_generation=None,
+        writer_generation=None,
+        connection_generation=None,
+        revisions=None,
+    )
+    yield
+    configure_component_cfg_source(
+        experiment_id=None,
+        lease_generation=None,
+        writer_generation=None,
+        connection_generation=None,
+        revisions=None,
+    )
 
 
 @pytest.fixture
@@ -271,6 +378,53 @@ async def test_runtime_registration_and_claim_map_separate_lease_writer_and_conn
     assert work.transport_kind == "legacy_components_v1"
     assert work.target_state == baseline_state()
     assert all("experiment_v2_randomization" not in query for query in connection.queries)
+
+
+@pytest.mark.asyncio
+async def test_claim_uses_transient_generation_fault_but_retains_historical_reentry_fence(adapter):
+    store, connection = adapter
+    await store.prepare_runtime(
+        EXPERIMENT_ID,
+        device_id=DEVICE_ID,
+        connection_generation=7,
+        writer_lease_held=True,
+        device_write_enabled=True,
+    )
+    connection.candidate["restart_detected"] = True
+    connection.candidate["executor_signals"] = {
+        "generation_recovery_cleared": False,
+        "effective_restart_detected": True,
+        "effective_reconnect_detected": False,
+        "same_generation_nonbaseline_reentry_forbidden": False,
+    }
+    before = await store.claim_next(
+        EXPERIMENT_ID,
+        lease_generation=5,
+        writer_generation=9,
+        connection_generation=7,
+    )
+    assert before is not None
+    assert before.signals.rebooted is True
+    assert before.signals.generation_recovery_cleared is False
+
+    connection.candidate["no_reentry"] = True
+    connection.candidate["executor_signals"] = {
+        "generation_recovery_cleared": True,
+        "effective_restart_detected": False,
+        "effective_reconnect_detected": False,
+        "same_generation_nonbaseline_reentry_forbidden": True,
+    }
+    after = await store.claim_next(
+        EXPERIMENT_ID,
+        lease_generation=5,
+        writer_generation=9,
+        connection_generation=7,
+    )
+    assert after is not None
+    assert after.signals.rebooted is False  # immutable row remains true; effective fault cleared
+    assert after.signals.generation_recovery_cleared is True
+    assert after.signals.nonbaseline_reentry_forbidden is True
+    assert after.signals.same_generation_nonbaseline_reentry_forbidden is True
 
 
 @pytest.mark.asyncio
@@ -319,9 +473,20 @@ async def test_bundle_begin_is_restart_idempotent_and_outcomes_remain_truthful(a
     await store.record_component_outcomes(work, first.bundle, [outcome])
     await store.record_component_outcomes(work, first.bundle, [replace(outcome, status="queued")])
     await store.record_component_outcomes(work, first.bundle, [replace(outcome, status="sent")])
+    assert connection.bundle is not None
+    connection.bundle["component_wire_ids"] = [REGISTRY["mister_all_kpa"].wire_id]
     finished = await store.finish_bundle(work, first.bundle, NOW + timedelta(seconds=2))
     await store.record_component_outcomes(work, finished, [replace(outcome, status="confirmed")])
     assert [args[4] for args in connection.outcomes] == ["requested", "queued", "sent", "confirmed"]
+
+    restored = await store.reserve_bundle(
+        work,
+        bundle_id="99999999-9999-4999-8999-999999999999",
+        purpose="target",
+        expected_state_content_sha256="b" * 64,
+    )
+    assert restored.owned is False
+    assert restored.bundle.component_fields == ("mister_all_kpa",)
 
     await store.request_recovery(work, "initial_enrollment")
     assert connection.recovery_requests[-1][1] is None
@@ -374,3 +539,207 @@ async def test_source_epochs_are_persisted_and_read_only_through_l3_functions(ad
         "public.experiment_v2_randomization ",
     )
     assert all(not any(relation in query for relation in forbidden_relations) for query in connection.queries)
+
+
+@pytest.mark.asyncio
+async def test_raw_runtime_snapshot_and_open_exposure_monitor_use_only_bounded_functions(adapter):
+    store, connection = adapter
+    authority = await store.prepare_runtime(
+        EXPERIMENT_ID,
+        device_id=DEVICE_ID,
+        connection_generation=7,
+        writer_lease_held=True,
+        device_write_enabled=True,
+    )
+    configure_component_cfg_source(
+        experiment_id=EXPERIMENT_ID,
+        lease_generation=authority.lease_generation,
+        writer_generation=authority.writer_generation,
+        connection_generation=7,
+        revisions=REVISIONS,
+    )
+    state = baseline_state()
+    for field in CANONICAL_FIELD_ORDER:
+        record_component_cfg_readback(field, state[field], observed_at=NOW)
+    (raw,) = component_cfg_source_epochs()
+
+    assert await store.record_runtime_snapshot(raw, device_id=DEVICE_ID) is None
+    snapshot = connection.runtime_snapshots[-1]
+    assert snapshot["source_epoch_id"] == raw.source_epoch_id
+    assert snapshot["observed_wire_vector"] == encode_policy_vector(state)
+    assert len(snapshot["observations"]) == 48
+    assert snapshot["reset_detected"] is False
+
+    connection.monitor_row = {
+        "exposure_id": "55555555-5555-4555-8555-555555555555",
+        "exposure_started_at": NOW - timedelta(seconds=30),
+        "work_id": WORK_ID,
+        "current_runtime_instance_id": RUNTIME_INSTANCE_ID,
+        "current_writer_generation": 9,
+        "current_connection_generation": 7,
+        "source_epoch_id": raw.source_epoch_id,
+        "source_runtime_instance_id": RUNTIME_INSTANCE_ID,
+        "source_writer_generation": 9,
+        "source_connection_generation": 7,
+        "last_observed_at": NOW - timedelta(seconds=1),
+        "common_field_drift": False,
+        "cfg_drift": False,
+        "lineage_drift": False,
+        "reset_detected": False,
+        "foreign_writer": False,
+        "exposure_is_open": True,
+        "close_reason": None,
+        "recovery_work_id": None,
+        "resolved_at": NOW,
+    }
+    status = await store.monitor_open_exposure(
+        EXPERIMENT_ID,
+        device_id=DEVICE_ID,
+        lease_generation=authority.lease_generation,
+    )
+    assert status is not None
+    assert status.exposure_is_open is True
+    assert status.source_epoch_id == raw.source_epoch_id
+
+    function_queries = [query for query in connection.queries if "runtime_snapshot" in query or "monitor_open" in query]
+    assert len(function_queries) == 2
+    assert all(query.lstrip().startswith("SELECT * FROM public.fn_experiment_v2_") for query in function_queries)
+    assert all(" FROM public.experiment_v2_" not in query for query in connection.queries)
+
+
+@pytest.mark.asyncio
+async def test_runtime_fault_and_startup_attestation_use_exact_bounded_functions(adapter):
+    store, connection = adapter
+    authority = await store.prepare_runtime(
+        EXPERIMENT_ID,
+        device_id=DEVICE_ID,
+        connection_generation=7,
+        writer_lease_held=True,
+        device_write_enabled=True,
+    )
+    fault_id = "77777777-7777-4777-8777-777777777777"
+    receipt = await store.report_runtime_fault(
+        EXPERIMENT_ID,
+        device_id=DEVICE_ID,
+        fault_report_id=fault_id,
+        expected_lease_generation=authority.lease_generation,
+        runtime_instance_id=RUNTIME_INSTANCE_ID,
+        writer_generation=authority.writer_generation,
+        connection_generation=7,
+        fault_kind="connection_generation_changed",
+        reason="connection_generation_changed_after_monitor",
+    )
+    assert receipt.fault_report_id == fault_id
+    assert receipt.close_reason == "reconnect"
+    assert receipt.authority_hold_required is True
+
+    attestation = await store.safe_startup_attestation(
+        device_id=DEVICE_ID,
+        experiment_id=EXPERIMENT_ID,
+    )
+    assert attestation.scope_resolved is True
+    assert attestation.hold_required is False
+    assert attestation.requested_experiment_id == EXPERIMENT_ID
+
+    fault_query = next(query for query in connection.queries if "report_runtime_fault" in query)
+    startup_query = next(query for query in connection.queries if "safe_startup_attestation" in query)
+    assert fault_query.startswith("SELECT (public.fn_experiment_v2_report_runtime_fault")
+    assert startup_query.startswith("SELECT * FROM public.fn_experiment_v2_safe_startup_attestation")
+    assert all(" FROM public.experiment_v2_" not in query for query in (fault_query, startup_query))
+
+
+@pytest.mark.asyncio
+async def test_reset_epoch_is_durably_reported_and_never_used_as_bundle_confirmation(adapter):
+    store, connection = adapter
+    authority = await store.prepare_runtime(
+        EXPERIMENT_ID,
+        device_id=DEVICE_ID,
+        connection_generation=7,
+        writer_lease_held=True,
+        device_write_enabled=True,
+    )
+    work = await store.claim_next(
+        EXPERIMENT_ID,
+        lease_generation=5,
+        writer_generation=9,
+        connection_generation=7,
+    )
+    reservation = await store.reserve_bundle(
+        work,
+        bundle_id=BUNDLE_ID,
+        purpose="target",
+        expected_state_content_sha256="b" * 64,
+    )
+    bundle = await store.finish_bundle(work, reservation.bundle, NOW + timedelta(seconds=2))
+    configure_component_cfg_source(
+        experiment_id=EXPERIMENT_ID,
+        lease_generation=authority.lease_generation,
+        writer_generation=authority.writer_generation,
+        connection_generation=7,
+        revisions=REVISIONS,
+    )
+    record_component_device_uptime(120)
+    assert record_component_device_uptime(4) is True
+    for field in CANONICAL_FIELD_ORDER:
+        record_component_cfg_readback(field, baseline_state()[field], observed_at=NOW + timedelta(seconds=7))
+
+    with pytest.raises(ComponentRuntimeFault, match="device_reset_detected"):
+        await store.observation_epochs(work, bundle)
+
+    assert len(connection.runtime_snapshots) == 1
+    assert connection.runtime_snapshots[0]["reset_detected"] is True
+    assert connection.window == []
+    assert component_cfg_source_epochs() == ()
+
+
+@pytest.mark.asyncio
+async def test_complete_post_delivery_mismatch_is_durably_faulted_not_filtered(adapter):
+    store, connection = adapter
+    authority = await store.prepare_runtime(
+        EXPERIMENT_ID,
+        device_id=DEVICE_ID,
+        connection_generation=7,
+        writer_lease_held=True,
+        device_write_enabled=True,
+    )
+    work = await store.claim_next(
+        EXPERIMENT_ID,
+        lease_generation=5,
+        writer_generation=9,
+        connection_generation=7,
+    )
+    reservation = await store.reserve_bundle(
+        work,
+        bundle_id=BUNDLE_ID,
+        purpose="target",
+        expected_state_content_sha256="b" * 64,
+    )
+    bundle = await store.finish_bundle(work, reservation.bundle, NOW + timedelta(seconds=2))
+    configure_component_cfg_source(
+        experiment_id=EXPERIMENT_ID,
+        lease_generation=authority.lease_generation,
+        writer_generation=authority.writer_generation,
+        connection_generation=7,
+        revisions=REVISIONS,
+    )
+    mismatched = baseline_state()
+    mismatched["mister_all_kpa"] = float(ENTITY_GRIDS["mister_all_kpa"].maximum)
+    for field in CANONICAL_FIELD_ORDER:
+        record_component_cfg_readback(field, mismatched[field], observed_at=NOW + timedelta(seconds=7))
+    (raw,) = component_cfg_source_epochs()
+
+    connection.raise_preexposure_mismatch = True
+    with pytest.raises(RuntimeError, match="database unavailable"):
+        await store.observation_epochs(work, bundle)
+    assert component_cfg_source_epochs() == (raw,)
+
+    connection.raise_preexposure_mismatch = False
+    with pytest.raises(ComponentRuntimeFault, match="post_delivery_observation_mismatch"):
+        await store.observation_epochs(work, bundle)
+
+    assert len(connection.preexposure_mismatches) == 2
+    call = connection.preexposure_mismatches[-1]
+    assert call[0:5] == (EXPERIMENT_ID, WORK_ID, BUNDLE_ID, DEVICE_ID, raw.source_epoch_id)
+    assert call[12:15] == (5, 9, 7)
+    assert connection.window == []
+    assert component_cfg_source_epochs() == ()

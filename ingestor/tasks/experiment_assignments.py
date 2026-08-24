@@ -10,9 +10,8 @@ When live, each cycle:
   1. validates the locked assignment schedule exists for the active
      experiment (a missing schedule is a protocol deviation, not a crash);
   2. closes assignments whose UTC upper boundary has passed — open exposures
-     close first via fn_close_exposure(reason='boundary'), then the
-     assignment row transitions to 'closed' (the migration-207 immutability
-     trigger permits exactly status/updated_at);
+     close first through the protocol-v1 runtime wrapper (reason='boundary'),
+     then the atomic assignment wrapper closes the row and appends its event;
   3. confirms an active assignment covers now() (a gap is a deviation event)
      and arms/releases the esp32_push experiment policy hold accordingly —
      the hold is armed ONLY in live mode, so shadow mode never changes what
@@ -82,18 +81,16 @@ async def _emit_event_once(
     )
     if existing:
         return False
-    payload = {"lane_c_kind": lane_c_kind, **(detail or {})}
-    await conn.execute(
+    await conn.fetchval(
         """
-        INSERT INTO experiment_events
-            (experiment_id, assignment_id, event_kind, severity, actor, detail)
-        VALUES ($1::uuid, $2::uuid, $3, $4, 'experiment_assignments', $5::jsonb)
+        SELECT public.fn_runtime_v1_record_assignment_event(
+            $1::uuid, $2::uuid, $3, $4::jsonb
+        )
         """,
         experiment_id,
         assignment_id,
-        event_kind,
-        severity,
-        json.dumps(payload, sort_keys=True, default=str),
+        lane_c_kind,
+        json.dumps(detail or {}, sort_keys=True, default=str),
     )
     return True
 
@@ -114,30 +111,17 @@ async def _close_overdue_assignments(conn: asyncpg.Connection, experiment_id: st
     closed = 0
     for row in overdue:
         assignment_id = row["assignment_id"]
-        open_exposures = await conn.fetch(
-            "SELECT exposure_id FROM policy_exposures WHERE assignment_id = $1::uuid AND ended_at IS NULL",
-            assignment_id,
-        )
-        for exposure in open_exposures:
-            await conn.fetchval(
-                "SELECT fn_close_exposure($1::uuid, 'boundary', NULL, $2)",
-                exposure["exposure_id"],
-                row["boundary"],
-            )
-        await conn.execute(
-            "UPDATE control_assignments SET status = 'closed', updated_at = now() WHERE assignment_id = $1::uuid",
-            assignment_id,
-        )
-        await _emit_event_once(
-            conn,
+        result = await conn.fetchrow(
+            """
+            SELECT changed, boundary, exposures_closed
+              FROM public.fn_runtime_v1_finalize_assignment_boundary(
+                  $1::uuid, $2::uuid, 'experiment_assignments'
+              )
+            """,
             experiment_id,
-            event_kind="state_transition",
-            lane_c_kind="assignment_closed_at_boundary",
-            assignment_id=assignment_id,
-            severity="info",
-            detail={"boundary": row["boundary"], "exposures_closed": len(open_exposures)},
+            assignment_id,
         )
-        closed += 1
+        closed += int(bool(result and result["changed"]))
     return closed
 
 
@@ -157,7 +141,7 @@ async def experiment_assignment_scheduler(pool: asyncpg.Pool) -> None:
     async with pool.acquire() as conn:
         exp = await conn.fetchrow(
             "SELECT experiment_id::text AS experiment_id, status, greenhouse_id, kind "
-            "FROM control_experiments WHERE experiment_id = $1::uuid",
+            "FROM control_experiments WHERE experiment_id = $1::uuid AND protocol_version = 1",
             experiment_id,
         )
         if exp is None:

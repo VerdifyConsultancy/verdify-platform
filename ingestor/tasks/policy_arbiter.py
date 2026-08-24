@@ -18,9 +18,9 @@ currently-open assignment and, per proposal:
   3. completes the proposal's component rows to the full 48 (lineage-tagged
      'baseline' for carried-over fields) so admission's completeness gate is
      provable from the proposal itself;
-  4. LIVE mode: calls fn_admit_policy_vector (migration 208) which enforces
-     the arm/allowlist/template rules server-side and atomically persists
-     vector + components + outbox row.
+  4. LIVE mode: calls fn_runtime_v1_admit_policy_vector, whose migration-208
+     delegate enforces the arm/allowlist/template rules server-side and
+     atomically persists vector + components + outbox row.
      SHADOW mode: transitions the proposal to state='shadow' carrying the
      compiled content hash — persisted + compiled but NEVER an outbox row
      (the SQL additionally guards shadow-never-outbox: only state='proposed'
@@ -189,10 +189,9 @@ async def _complete_proposal_components(
             continue
         await conn.execute(
             """
-            INSERT INTO policy_proposal_components
-                (proposal_id, field_name, component_index, normalized_value, encoded_value, producer)
-            VALUES ($1::uuid, $2, $3, $4, $5, $6)
-            ON CONFLICT (proposal_id, field_name) DO NOTHING
+            SELECT public.fn_runtime_v1_put_proposal_component(
+                $1::uuid, $2, $3, $4, $5, $6, false, NULL
+            )
             """,
             proposal["proposal_id"],
             name,
@@ -208,7 +207,7 @@ async def _complete_proposal_components(
 
 async def _set_proposal_state(conn, proposal_id, state: str, reason: str) -> None:
     await conn.execute(
-        "UPDATE policy_proposals SET state = $2, state_reason = $3, updated_at = now() WHERE proposal_id = $1::uuid",
+        "SELECT public.fn_runtime_v1_set_proposal_state($1::uuid, $2, $3)",
         proposal_id,
         state,
         reason[:_STATE_REASON_MAX],
@@ -237,6 +236,7 @@ async def policy_arbiter_admissions(pool: asyncpg.Pool) -> None:
                    mutable_fields
               FROM control_experiments
              WHERE experiment_id = $1::uuid
+               AND protocol_version = 1
             """,
             experiment_id,
         )
@@ -334,7 +334,8 @@ async def policy_arbiter_admissions(pool: asyncpg.Pool) -> None:
 
             try:
                 vector_id = await conn.fetchval(
-                    "SELECT fn_admit_policy_vector($1::uuid, $2, $3::tstzrange, $4, $5::bytea, $6, $7, $8)",
+                    "SELECT public.fn_runtime_v1_admit_policy_vector("
+                    "$1::uuid, $2, $3::tstzrange, $4, $5::bytea, $6, $7, $8)",
                     proposal["proposal_id"],
                     device_id,
                     validity,

@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import sys
+from dataclasses import replace
 from datetime import timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -107,6 +108,119 @@ def test_fixed_predraw_power_quantifies_dilution_and_rejects_15_pairs() -> None:
     assert selection["evaluations"][1]["joint_advance_power"] >= 0.80
 
 
+@pytest.mark.parametrize("field", ["baseline", "moderate", "aggressive", "fallback"])
+@pytest.mark.parametrize("invalid", [-1, True, 1.0, "1"])
+def test_selector_replay_requires_exact_nonnegative_integer_counts(field: str, invalid: object) -> None:
+    values: dict[str, object] = {"baseline": 1, "moderate": 1, "aggressive": 1, "fallback": 1}
+    values[field] = invalid
+    with pytest.raises(ValueError, match="exact nonnegative integer"):
+        power.SelectorReplay(**values)  # type: ignore[arg-type]
+
+
+def test_selector_replay_fallback_flags_must_be_exact_booleans() -> None:
+    with pytest.raises(ValueError, match="exact booleans"):
+        power.summarize_selector_replay(["baseline"], [1])  # type: ignore[list-item]
+
+
+def test_selector_replay_must_not_be_empty() -> None:
+    with pytest.raises(ValueError, match="at least one context"):
+        power.SelectorReplay(baseline=0, moderate=0, aggressive=0, fallback=0)
+
+
+@pytest.mark.parametrize(
+    ("field", "invalid"),
+    [
+        ("paired_sd", (1.0, 2.0, "3")),
+        ("paired_sd", (1.0, 2.0, float("inf"))),
+        ("paired_sd", (1.0, 2.0, 10**1_000)),
+        ("paired_sd", [1.0, 2.0, 3.0]),
+        ("true_nonbaseline_effect", (0.0, True, -1.0)),
+        ("true_nonbaseline_effect", (0.0, 0.0, float("nan"))),
+        ("true_nonbaseline_effect", (0.0, 0.0)),
+        ("correlation", ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, float("nan")))),
+        ("correlation", [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]),
+        ("complete_pair_probability", float("nan")),
+        ("complete_pair_probability", True),
+        ("one_sided_confidence_level", "0.975"),
+        ("minimum_joint_power", float("inf")),
+        ("selector_replay", {"baseline": 1, "moderate": 1, "aggressive": 1, "fallback": 1}),
+    ],
+)
+def test_power_assumptions_require_exact_typed_finite_values(field: str, invalid: object) -> None:
+    assumptions = replace(_power_assumptions(), **{field: invalid})
+    with pytest.raises((TypeError, ValueError)):
+        assumptions.validate()
+
+
+@pytest.mark.parametrize(
+    ("field", "invalid"),
+    [
+        ("pairs", True),
+        ("pairs", 2.0),
+        ("pairs", 1),
+        ("pairs", power.MAX_SIMULATION_PAIRS + 1),
+        ("repetitions", True),
+        ("repetitions", 1.0),
+        ("repetitions", 0),
+        ("repetitions", power.MAX_SIMULATION_REPETITIONS + 1),
+        ("batch_size", True),
+        ("batch_size", 1.0),
+        ("batch_size", 0),
+        ("batch_size", power.MAX_SIMULATION_BATCH_SIZE + 1),
+        ("seed", True),
+        ("seed", 1.0),
+        ("seed", -1),
+        ("seed", power.MAX_SIMULATION_SEED + 1),
+    ],
+)
+def test_power_simulation_requires_exact_bounded_integer_inputs(field: str, invalid: object) -> None:
+    values: dict[str, object] = {
+        "pairs": 2,
+        "repetitions": 1,
+        "seed": 1,
+        "batch_size": 1,
+    }
+    values[field] = invalid
+    with pytest.raises(ValueError, match=f"{field} must be an exact integer"):
+        power.simulate_joint_power(assumptions=_power_assumptions(), **values)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    "candidates",
+    [
+        [15, 30],
+        (15, True),
+        (15, 30.0),
+        (15, power.MAX_SIMULATION_PAIRS + 1),
+        (15,) * (power.MAX_CANDIDATE_COUNTS + 1),
+    ],
+)
+def test_fixed_pair_candidates_require_exact_bounded_integer_tuple(candidates: object) -> None:
+    with pytest.raises(ValueError, match="candidate|candidates"):
+        power.choose_fixed_pairs(
+            _power_assumptions(),
+            candidates=candidates,  # type: ignore[arg-type]
+            repetitions=1,
+            seed=1,
+        )
+
+
+@pytest.mark.parametrize(
+    ("field", "invalid"),
+    [
+        ("repetitions", True),
+        ("repetitions", power.MAX_SIMULATION_REPETITIONS + 1),
+        ("seed", True),
+        ("seed", power.MAX_SIMULATION_SEED),
+    ],
+)
+def test_fixed_pair_selection_requires_bounded_exact_simulation_inputs(field: str, invalid: object) -> None:
+    values: dict[str, object] = {"candidates": (15, 30), "repetitions": 1, "seed": 1}
+    values[field] = invalid
+    with pytest.raises(ValueError, match=f"{field} must be an exact integer"):
+        power.choose_fixed_pairs(_power_assumptions(), **values)  # type: ignore[arg-type]
+
+
 def test_climate_72_bin_hand_calculation_and_missingness_rule() -> None:
     tz = ZoneInfo("America/Denver")
     start, _end = outcomes._local_window("2026-09-01", "America/Denver")
@@ -129,6 +243,57 @@ def test_climate_72_bin_hand_calculation_and_missingness_rule() -> None:
         broken[index] = outcomes.ClimateBin(broken[index].bucket_start, 0, None, None, "incomplete_bin")
     assert outcomes.daily_climate_outcome(broken) == (None, None, "climate_completeness")
     assert start.tzinfo == tz
+
+
+def test_nonfinite_climate_inputs_and_bins_fail_closed() -> None:
+    start, _end = outcomes._local_window("2026-09-01", "America/Denver")
+    with pytest.raises(ValueError, match="duplicate tolerance must be finite"):
+        outcomes.climate_bins(
+            [],
+            local_date="2026-09-01",
+            timezone="America/Denver",
+            corridors={},
+            temperature_duplicate_tolerance_f=float("nan"),
+            vpd_duplicate_tolerance_kpa=0.01,
+        )
+    with pytest.raises(ValueError, match="corridor low must be finite"):
+        outcomes.climate_bins(
+            [],
+            local_date="2026-09-01",
+            timezone="America/Denver",
+            corridors={start: outcomes.Corridor(float("nan"), 74.0, 0.8, 1.2)},
+            temperature_duplicate_tolerance_f=0.1,
+            vpd_duplicate_tolerance_kpa=0.01,
+        )
+    with pytest.raises(ValueError, match="corridor low exceeds high"):
+        outcomes.climate_bins(
+            [],
+            local_date="2026-09-01",
+            timezone="America/Denver",
+            corridors={start: outcomes.Corridor(75.0, 74.0, 0.8, 1.2)},
+            temperature_duplicate_tolerance_f=0.1,
+            vpd_duplicate_tolerance_kpa=0.01,
+        )
+    nonfinite_bins = [
+        outcomes.ClimateBin(start + timedelta(minutes=15 * index), 15, float("nan"), 0.0) for index in range(72)
+    ]
+    assert outcomes.daily_climate_outcome(nonfinite_bins) == (None, None, "climate_completeness")
+
+    duplicate_grid = [outcomes.ClimateBin(start, 15, 1.0, 2.0) for _index in range(72)]
+    with pytest.raises(ValueError, match="exact ordered 15-minute grid"):
+        outcomes.daily_climate_outcome(duplicate_grid)
+
+    invalid_rows = [
+        outcomes.ClimateBin(
+            start + timedelta(minutes=15 * index),
+            0,
+            -1.0,
+            -2.0,
+            "conflicting_duplicate_timestamp",
+        )
+        for index in range(72)
+    ]
+    assert outcomes.daily_climate_outcome(invalid_rows) == (None, None, "climate_completeness")
 
 
 def test_nine_stream_right_continuous_seed_counter_and_vent_open_semantics() -> None:
@@ -185,6 +350,65 @@ def test_duplicate_conflict_and_counter_reset_fail_closed() -> None:
     assert not reset_result.valid and reset_result.reason == "counter_reset_or_wrap"
 
 
+@pytest.mark.parametrize("reset_epoch", [None, "", True, "boot-e\N{COMBINING ACUTE ACCENT}"])
+def test_counter_reset_epoch_requires_exact_nonempty_nfc_string(reset_epoch: object) -> None:
+    start, end = outcomes._local_window("2026-09-01", "America/Denver")
+    result = outcomes.equipment_stream_outcome(
+        "heat1",
+        [outcomes.StateObservation(start - timedelta(minutes=1), False)],
+        local_date="2026-09-01",
+        timezone="America/Denver",
+        start_counter=outcomes.CounterSample(
+            start - timedelta(minutes=1),
+            0.0,
+            reset_epoch,  # type: ignore[arg-type]
+        ),
+        end_counter=outcomes.CounterSample(
+            end - timedelta(minutes=1),
+            0.0,
+            reset_epoch,  # type: ignore[arg-type]
+        ),
+    )
+    assert not result.valid and result.reason == "invalid_counter_reset_epoch"
+
+
+def test_equipment_state_type_and_duplicate_streams_fail_closed() -> None:
+    start, end = outcomes._local_window("2026-09-01", "America/Denver")
+    invalid_state = outcomes.equipment_stream_outcome(
+        "heat1",
+        [outcomes.StateObservation(start - timedelta(minutes=1), 1)],  # type: ignore[arg-type]
+        local_date="2026-09-01",
+        timezone="America/Denver",
+        start_counter=outcomes.CounterSample(start - timedelta(minutes=1), 0.0, "boot-1"),
+        end_counter=outcomes.CounterSample(end - timedelta(minutes=1), 0.0, "boot-1"),
+    )
+    assert not invalid_state.valid and invalid_state.reason == "invalid_state_type"
+
+    valid_rows = [outcomes.StreamOutcome(name, 0.0, True, None) for name in outcomes.EQUIPMENT_STREAMS]
+    duplicate = [*valid_rows, outcomes.StreamOutcome("heat1", 1.0, True, None)]
+    assert outcomes.nine_stream_burden(duplicate) == (None, "missing_or_extra_equipment_stream")
+
+    invalid_counter = outcomes.equipment_stream_outcome(
+        "heat1",
+        [outcomes.StateObservation(start - timedelta(minutes=1), False)],
+        local_date="2026-09-01",
+        timezone="America/Denver",
+        start_counter=outcomes.CounterSample(start - timedelta(minutes=1), float("nan"), "boot-1"),
+        end_counter=outcomes.CounterSample(end - timedelta(minutes=1), 0.0, "boot-1"),
+    )
+    assert not invalid_counter.valid and invalid_counter.reason == "invalid_counter_value"
+
+    for malformed in (None, -1.0, float("nan"), 1_081.0, True):
+        rows = [outcomes.StreamOutcome(name, 0.0, True, None) for name in outcomes.EQUIPMENT_STREAMS]
+        rows[0] = outcomes.StreamOutcome("heat1", malformed, True, None)  # type: ignore[arg-type]
+        burden, reason = outcomes.nine_stream_burden(rows)
+        assert burden is None and reason == "invalid_streams:heat1"
+
+    rows = [outcomes.StreamOutcome(name, 0.0, True, None) for name in outcomes.EQUIPMENT_STREAMS]
+    rows[0] = outcomes.StreamOutcome("heat1", 0.0, 1, None)  # type: ignore[arg-type]
+    assert outcomes.nine_stream_burden(rows) == (None, "invalid_streams:heat1")
+
+
 def test_primary_itt_row_never_filters_on_exposure_or_fallback() -> None:
     row = outcomes.make_randomized_itt_row(
         assignment_id="assignment-1",
@@ -208,6 +432,34 @@ def test_primary_itt_row_never_filters_on_exposure_or_fallback() -> None:
         exposure_seconds=0,
     )
     assert not missing.outcome_complete and missing.missing_reason
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"assignment_id": ""},
+        {"local_date": "2026-9-1"},
+        {"blinded_label": "A"},
+        {"climate": (float("nan"), 0.1, None)},
+        {"equipment": (-1.0, None)},
+        {"fallback_or_rescue": 1},
+        {"exposure_seconds": -1},
+        {"exposure_seconds": outcomes.ANALYZED_SECONDS + 1},
+    ],
+)
+def test_randomized_itt_row_rejects_malformed_runtime_values(overrides: dict[str, object]) -> None:
+    values: dict[str, object] = {
+        "assignment_id": "assignment-1",
+        "local_date": "2026-09-01",
+        "blinded_label": "X",
+        "climate": (1.0, 0.1, None),
+        "equipment": (540.0, None),
+        "fallback_or_rescue": False,
+        "exposure_seconds": 0,
+    }
+    values.update(overrides)
+    with pytest.raises((TypeError, ValueError)):
+        outcomes.make_randomized_itt_row(**values)  # type: ignore[arg-type]
 
 
 def test_phase_kind_work_pairings_are_exact() -> None:

@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: experiment-v2-orchestrator-config
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: experiment-v2-orchestrator
+data:
+  # The shared capability/vector/active-ID gates come only from verdify-config.
+  # Duplicating them here would override the environment source because this
+  # ConfigMap is loaded second. If verdify-config is absent, runtime defaults
+  # still fail closed with capability off.
+  VERDIFY_EXPERIMENT_V2_POLL_INTERVAL_SECONDS: "15"
+  VERDIFY_EXPERIMENT_V2_DB_STATEMENT_TIMEOUT_MS: "10000"
+  VERDIFY_EXPERIMENT_SELECTOR_ENDPOINT: ""
+  VERDIFY_EXPERIMENT_SELECTOR_EGRESS_CIDR: "192.0.2.1/32"
+  VERDIFY_EXPERIMENT_SELECTOR_MAX_RESPONSE_BYTES: "16384"
+  VERDIFY_EXPERIMENT_SELECTOR_IDENTITY_PATH: "/etc/verdify/experiment-v2-selector/identity.json"
+  VERDIFY_EXPERIMENT_V2_LIFECYCLE_PLAN_PATH: "/etc/verdify/experiment-v2-lifecycle/plan.json"
+  # Empty digest means there is no authorized scheduling plan. An enabling
+  # overlay must bind the exact canonical plan bytes.
+  VERDIFY_EXPERIMENT_V2_LIFECYCLE_PLAN_SHA256: ""
+  VERDIFY_EXPERIMENT_V2_OUTCOME_IDENTITY_PATH: "/etc/verdify/experiment-v2-outcome/identity.json"

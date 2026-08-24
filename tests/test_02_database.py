@@ -298,7 +298,7 @@ class TestResourceAccountingContractSources:
         assert "modeled_available_for_scoring" in mcp
         assert "measured_available_for_scoring" in mcp
         assert "async def water_meter_materialize" in ha
-        assert "materialize_water_meter_events('vallery', now())" in ha
+        assert "fn_runtime_materialize_water_meter_events('vallery', now())" in ha
         assert '("water_meter_materialize", 60, water_meter_materialize)' in ingestor
         assert '@app.get("/api/v1/resources/daily")' in api
         assert "v_resource_accounting_health" in api

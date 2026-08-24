@@ -338,12 +338,12 @@
     },
     "mister_all_kpa": {
       "max": 2.5,
-      "min": 1,
+      "min": 1.0,
       "step": 0.05
     },
     "mister_center_penalty": {
-      "max": 1,
-      "min": 0,
+      "max": 1.0,
+      "min": 0.0,
       "step": 0.1
     },
     "mister_engage_delay_s": {
@@ -372,7 +372,7 @@
       "step": 5
     },
     "mister_vpd_weight": {
-      "max": 3,
+      "max": 3.0,
       "min": 0.5,
       "step": 0.5
     },
@@ -383,7 +383,7 @@
     },
     "night_vpd_bias_kpa": {
       "max": 0.25,
-      "min": 0,
+      "min": 0.0,
       "step": 0.01
     },
     "outdoor_staleness_max_s": {

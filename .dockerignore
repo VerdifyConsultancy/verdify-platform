@@ -74,8 +74,9 @@ hermes
 # db/ is excluded above (the api/mcp/ingestor images never touch it), but the
 # verdify-migrate image (db/Dockerfile.migrate) COPYs the schema, both runners,
 # every top-level numbered migration, and the two ledger SQL files. Re-include
-# exactly those — keep init/, migration fixtures/tests, roles, @eaDir, and the
-# restore manifests out of every build context.
+# exactly those plus the three bounded experiment-v2 fixtures consumed by the
+# one-release restore rehearsal. Keep every other migration fixture/test,
+# init/, roles, @eaDir, and the restore manifests out of every build context.
 # KANIKO QUIRK (2026-07-11, found when the in-cluster zot build shipped an
 # empty COPY): unlike BuildKit, kaniko will NOT restore `!db/schema.sql` while
 # the `db` DIRECTORY itself is still excluded — every COPY logged "No files to
@@ -89,6 +90,11 @@ db/*
 !db/migrations
 db/migrations/*
 !db/migrations/*.sql
+!db/migrations/tests
+db/migrations/tests/*
+!db/migrations/tests/test-214-confirmed-component-experiment-v2.sql
+!db/migrations/tests/test-216-equipment-counter-source-ledger.sql
+!db/migrations/tests/test-217-runtime-role-boundary.sql
 !db/ledger
 db/ledger/*
 !db/ledger/*.sql

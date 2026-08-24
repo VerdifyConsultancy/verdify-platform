@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import re
 
 log = logging.getLogger("shadow")
 
@@ -35,6 +36,50 @@ _WRITE_PREFIXES = (
     "create",
 )
 
+_SQL_FUNCTION_CALL_RE = re.compile(r"\b(?:public\.)?(fn_[a-z0-9_]+)\s*\(", re.IGNORECASE)
+_READ_ONLY_RUNTIME_FUNCTIONS = {
+    "fn_runtime_assert_protocol_v1",
+    "fn_runtime_v1_arm_resolutions",
+    "fn_runtime_power_30m",
+}
+_MUTATING_FUNCTION_VERBS = (
+    "admit_",
+    "append_",
+    "claim_",
+    "close_",
+    "create_",
+    "experiment_transition",
+    "freeze_",
+    "lease_",
+    "materialize_",
+    "open_",
+    "record_",
+    "refresh_",
+    "resolve_",
+    "set_",
+    "submit_",
+)
+
+
+def _calls_mutating_function(query: str) -> bool:
+    """Return true for SELECT-based mutation entry points.
+
+    PostgreSQL functions can write even when the outer statement starts with
+    SELECT.  The ordinary runtime boundary intentionally funnels shared-table
+    writes through ``fn_runtime_v1_*`` functions, so shadow mode must classify
+    those calls as writes across execute *and* fetch-family methods.
+    """
+    for match in _SQL_FUNCTION_CALL_RE.finditer(query):
+        function_name = match.group(1).lower()
+        if function_name in _READ_ONLY_RUNTIME_FUNCTIONS:
+            continue
+        if function_name.startswith("fn_runtime_v1_"):
+            return True
+        suffix = function_name.removeprefix("fn_runtime_").removeprefix("fn_")
+        if suffix.startswith(_MUTATING_FUNCTION_VERBS):
+            return True
+    return False
+
 
 def _is_write_sql(query: str) -> bool:
     """Classify a SQL string as a mutating statement.
@@ -55,15 +100,16 @@ def _is_write_sql(query: str) -> bool:
         return True
     # CTEs may wrap a writing statement: WITH ... INSERT/UPDATE/DELETE ...
     if lowered.startswith("with "):
-        return any(f" {kw} " in lowered or f"\n{kw} " in lowered for kw in ("insert", "update", "delete"))
-    return False
+        if any(f" {kw} " in lowered or f"\n{kw} " in lowered for kw in ("insert", "update", "delete")):
+            return True
+    return _calls_mutating_function(lowered)
 
 
 class _ShadowConnection:
     """Wraps an asyncpg connection so write statements become no-ops.
 
-    Reads (fetch/fetchval/fetchrow/cursor) and connection lifecycle delegate to
-    the real connection unchanged. Only execute/executemany/copy* are gated.
+    Read-only fetches and connection lifecycle delegate to the real connection.
+    SQL-function writes are suppressed across execute and fetch-family methods.
     """
 
     def __init__(self, conn):
@@ -80,6 +126,24 @@ class _ShadowConnection:
             log.debug("SHADOW_MODE: suppressed executemany: %.60s", query.lstrip() if isinstance(query, str) else query)
             return None
         return await self._conn.executemany(query, args, **kwargs)
+
+    async def fetch(self, query, *args, **kwargs):
+        if _is_write_sql(query):
+            log.debug("SHADOW_MODE: suppressed fetch mutation: %.60s", query.lstrip())
+            return []
+        return await self._conn.fetch(query, *args, **kwargs)
+
+    async def fetchrow(self, query, *args, **kwargs):
+        if _is_write_sql(query):
+            log.debug("SHADOW_MODE: suppressed fetchrow mutation: %.60s", query.lstrip())
+            return None
+        return await self._conn.fetchrow(query, *args, **kwargs)
+
+    async def fetchval(self, query, *args, **kwargs):
+        if _is_write_sql(query):
+            log.debug("SHADOW_MODE: suppressed fetchval mutation: %.60s", query.lstrip())
+            return None
+        return await self._conn.fetchval(query, *args, **kwargs)
 
     async def copy_records_to_table(self, *args, **kwargs):
         log.debug("SHADOW_MODE: suppressed copy_records_to_table")
@@ -103,6 +167,11 @@ class _ShadowAcquireContext:
 
     async def __aenter__(self):
         conn = await self._ctx.__aenter__()
+        # Defense in depth: any mutation shape missed by the SQL classifier is
+        # rejected by PostgreSQL. This session setting applies to each implicit
+        # or explicit transaction begun after acquisition and is reset by the
+        # asyncpg pool when the connection is released.
+        await conn.execute("SET default_transaction_read_only = on")
         return _ShadowConnection(conn)
 
     async def __aexit__(self, *exc):
@@ -136,7 +205,13 @@ def wrap_pool_for_shadow(pool):
 
 # ESP32 client reference, set by esp32_loop in ingestor.py
 # Used by dispatcher in tasks.py for direct setpoint push
-esp32 = {"client": None, "keys": {}, "services": {}}
+esp32 = {
+    "client": None,
+    "keys": {},
+    "services": {},
+    "state_subscription_client": None,
+    "state_subscription_generation": None,
+}
 
 # param -> monotonic timestamp/value of the last direct ESP32 push.
 # Shared between ingestor.py callbacks and tasks.py dispatcher so echo
@@ -300,4 +375,15 @@ def writer_lease_held() -> bool:
     except Exception:
         # A bug in the fence must FAIL SAFE: if we cannot determine lease state,
         # do NOT push (better a bounded zero-writer gap than a split-brain push).
+        return False
+
+
+def writer_lease_strictly_held(minimum_remaining_s: float = 0.0) -> bool:
+    """Component actuation requires a real fence with a validity margin."""
+    lease = writer_lease
+    if lease is None:
+        return False
+    try:
+        return bool(lease.strictly_held(minimum_remaining_s))
+    except Exception:
         return False

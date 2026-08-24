@@ -8,6 +8,172 @@ metadata:
     app.kubernetes.io/part-of: verdify
     app.kubernetes.io/component: grafana
 data:
+  confirmed-component-experiment-v2.json: |
+    {
+      "uid": "confirmed-component-experiment-v2",
+      "title": "Experiment: Confirmed Component V2 Safety & Integrity",
+      "description": "Blinded-safe operational board for the OFF-gated confirmed-component experiment lane. No comparative efficacy or X/Y mapping is exposed.",
+      "tags": [
+        "experiment",
+        "safety",
+        "integrity",
+        "standardized"
+      ],
+      "timezone": "America/Denver",
+      "editable": false,
+      "time": {
+        "from": "now-24h",
+        "to": "now"
+      },
+      "refresh": "30s",
+      "panels": [
+        {
+          "id": 1,
+          "type": "text",
+          "title": "Scope and blinding",
+          "gridPos": {
+            "h": 4,
+            "w": 18,
+            "x": 0,
+            "y": 0
+          },
+          "options": {
+            "mode": "markdown",
+            "content": "This board shows lifecycle, work, derived cfg-readback equality, exposure, generations, fallback, outcome completeness, and rollback readiness. Future randomized work/assignment identity is database-clock masked. It intentionally omits the randomization secret, X/Y mapping, physical-arm resolution, and comparative efficacy. Any red state requires the rollout runbook's close/recover/yield action before advance."
+          }
+        },
+        {
+          "id": 2,
+          "type": "stat",
+          "title": "Actionable integrity states",
+          "gridPos": {
+            "h": 4,
+            "w": 6,
+            "x": 18,
+            "y": 0
+          },
+          "targets": [
+            {
+              "rawSql": "SELECT count(*)::integer AS \"Actionable\" FROM public.fn_experiment_v2_ops_status() WHERE alert_severity IS NOT NULL",
+              "refId": "A",
+              "format": "table",
+              "datasource": {
+                "uid": "verdify-tsdb",
+                "type": "grafana-postgresql-datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "thresholds": {
+                "steps": [
+                  {
+                    "color": "#73BF69",
+                    "value": null
+                  },
+                  {
+                    "color": "#EF5350",
+                    "value": 1
+                  }
+                ]
+              },
+              "unit": "short"
+            }
+          }
+        },
+        {
+          "id": 3,
+          "type": "table",
+          "title": "Lifecycle, authority, and current typed work",
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 4
+          },
+          "targets": [
+            {
+              "rawSql": "SELECT experiment_id AS \"Experiment\", lifecycle_status AS \"Lifecycle\", execution_phase AS \"Phase\", admission_state AS \"Admission\", component_enabled AS \"Capability\", lease_generation AS \"Lease gen\", operation_kind AS \"Operation\", work_id AS \"Work\", assignment_id AS \"Assignment\", future_randomized_identity_masked AS \"Future masked\", safety_state AS \"Safety\", fallback_state AS \"Fallback\" FROM public.fn_experiment_v2_ops_status() ORDER BY experiment_id",
+              "refId": "A",
+              "format": "table",
+              "datasource": {
+                "uid": "verdify-tsdb",
+                "type": "grafana-postgresql-datasource"
+              }
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "type": "table",
+          "title": "Derived readback, exposure, and writer truth",
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 12
+          },
+          "targets": [
+            {
+              "rawSql": "SELECT experiment_id AS \"Experiment\", expected_observed_equal AS \"Expected = observed\", observation_truth AS \"Observation truth\", observation_evidence_count AS \"Receipts\", observation_age_seconds AS \"Age s\", open_exposure_count AS \"Open exposures\", writer_generation AS \"Writer gen\", connection_generation AS \"Connection gen\", expected_state_content_sha256 AS \"Expected state hash\", observed_state_content_sha256 AS \"Observed state hash\" FROM public.fn_experiment_v2_ops_status() ORDER BY experiment_id",
+              "refId": "A",
+              "format": "table",
+              "datasource": {
+                "uid": "verdify-tsdb",
+                "type": "grafana-postgresql-datasource"
+              }
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "type": "table",
+          "title": "Outcome completeness and rollback readiness",
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 0,
+            "y": 20
+          },
+          "targets": [
+            {
+              "rawSql": "SELECT experiment_id AS \"Experiment\", frozen_outcome_count AS \"Frozen outcomes\", expected_outcome_count AS \"Expected outcomes\", outcomes_complete AS \"Complete\", rollback_ready AS \"Rollback ready\" FROM public.fn_experiment_v2_ops_status() ORDER BY experiment_id",
+              "refId": "A",
+              "format": "table",
+              "datasource": {
+                "uid": "verdify-tsdb",
+                "type": "grafana-postgresql-datasource"
+              }
+            }
+          ]
+        },
+        {
+          "id": 6,
+          "type": "table",
+          "title": "Action required",
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 12,
+            "y": 20
+          },
+          "targets": [
+            {
+              "rawSql": "SELECT experiment_id AS \"Experiment\", alert_severity AS \"Severity\", alert_reason AS \"Reason\", safety_state AS \"Safety\", admission_state AS \"Admission\", resolved_at AS \"Evaluated at\" FROM public.fn_experiment_v2_ops_status() WHERE alert_severity IS NOT NULL ORDER BY CASE alert_severity WHEN 'critical' THEN 0 ELSE 1 END, experiment_id",
+              "refId": "A",
+              "format": "table",
+              "datasource": {
+                "uid": "verdify-tsdb",
+                "type": "grafana-postgresql-datasource"
+              }
+            }
+          ]
+        }
+      ],
+      "schemaVersion": 39,
+      "version": 1,
+      "style": "light"
+    }
   band-tuning-diurnal.json: |
     {
       "uid": "band-tuning-diurnal",

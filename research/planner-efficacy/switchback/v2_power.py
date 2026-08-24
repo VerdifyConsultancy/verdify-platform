@@ -21,6 +21,32 @@ from scipy.stats import t as student_t
 ENDPOINTS = ("vpd_corridor_distance_kpa", "temperature_corridor_distance_f", "nine_control_state_minutes")
 BOUNDARIES = np.asarray((0.05, 0.50, 0.0), dtype=float)
 DEFAULT_CANDIDATE_PAIRS = (15, 30, 60, 90, 120, 150, 180)
+# Frozen resource envelope for the pre-draw local simulator.  The declared
+# 15..180-pair design sits well inside it; callers cannot turn validation into
+# an unbounded allocation or run by passing Python's bool/int aliases.
+MAX_SIMULATION_PAIRS = 1_000
+MAX_SIMULATION_REPETITIONS = 1_000_000
+MAX_SIMULATION_BATCH_SIZE = 2_000
+MAX_SIMULATION_SEED = (1 << 64) - 1
+MAX_CANDIDATE_COUNTS = MAX_SIMULATION_PAIRS - 14
+
+
+def _require_exact_int(value: object, field: str, *, minimum: int, maximum: int) -> int:
+    if type(value) is not int or not minimum <= value <= maximum:
+        raise ValueError(f"{field} must be an exact integer in [{minimum},{maximum}]")
+    return value
+
+
+def _require_finite_number(value: object, field: str) -> float:
+    if type(value) not in (int, float):
+        raise ValueError(f"{field} must be an exact finite int or float")
+    try:
+        converted = float(value)
+    except OverflowError as exc:
+        raise ValueError(f"{field} must be an exact finite int or float") from exc
+    if not math.isfinite(converted):
+        raise ValueError(f"{field} must be an exact finite int or float")
+    return converted
 
 
 @dataclass(frozen=True)
@@ -30,19 +56,23 @@ class SelectorReplay:
     aggressive: int
     fallback: int
 
+    def __post_init__(self) -> None:
+        for field in ("baseline", "moderate", "aggressive", "fallback"):
+            value = getattr(self, field)
+            if type(value) is not int or value < 0:
+                raise ValueError(f"selector replay {field} must be an exact nonnegative integer")
+        if self.total == 0:
+            raise ValueError("selector replay must contain at least one context")
+
     @property
     def total(self) -> int:
         return self.baseline + self.moderate + self.aggressive + self.fallback
 
     @property
     def physical_nonbaseline_frequency(self) -> float:
-        if self.total <= 0:
-            raise ValueError("selector replay must contain at least one context")
         return (self.moderate + self.aggressive) / self.total
 
     def frequencies(self) -> dict[str, float]:
-        if self.total <= 0:
-            raise ValueError("selector replay must contain at least one context")
         return {name: getattr(self, name) / self.total for name in ("baseline", "moderate", "aggressive", "fallback")}
 
 
@@ -57,18 +87,47 @@ class PowerAssumptions:
     minimum_joint_power: float = 0.80
 
     def validate(self) -> None:
-        sd = np.asarray(self.paired_sd, dtype=float)
-        if sd.shape != (3,) or not np.all(np.isfinite(sd)) or np.any(sd <= 0):
+        if type(self.paired_sd) is not tuple or len(self.paired_sd) != 3:
             raise ValueError("paired_sd must contain three finite positive values")
-        corr = np.asarray(self.correlation, dtype=float)
-        if corr.shape != (3, 3) or not np.allclose(corr, corr.T) or not np.allclose(np.diag(corr), 1):
+        sd = np.asarray(
+            tuple(_require_finite_number(value, f"paired_sd[{index}]") for index, value in enumerate(self.paired_sd))
+        )
+        if np.any(sd <= 0) or np.any(sd > math.sqrt(np.finfo(float).max)):
+            raise ValueError("paired_sd must contain three finite positive values with finite variance")
+
+        if type(self.true_nonbaseline_effect) is not tuple or len(self.true_nonbaseline_effect) != 3:
+            raise ValueError("true_nonbaseline_effect must contain three finite values")
+        for index, value in enumerate(self.true_nonbaseline_effect):
+            _require_finite_number(value, f"true_nonbaseline_effect[{index}]")
+
+        if (
+            type(self.correlation) is not tuple
+            or len(self.correlation) != 3
+            or any(type(row) is not tuple or len(row) != 3 for row in self.correlation)
+        ):
+            raise ValueError("correlation must be a symmetric 3x3 correlation matrix")
+        corr = np.asarray(
+            tuple(
+                tuple(
+                    _require_finite_number(value, f"correlation[{row_index}][{column_index}]")
+                    for column_index, value in enumerate(row)
+                )
+                for row_index, row in enumerate(self.correlation)
+            )
+        )
+        if np.any(np.abs(corr) > 1) or not np.allclose(corr, corr.T) or not np.allclose(np.diag(corr), 1):
             raise ValueError("correlation must be a symmetric 3x3 correlation matrix")
         if np.min(np.linalg.eigvalsh(corr)) < -1e-12:
             raise ValueError("correlation matrix must be positive semidefinite")
-        if not 0 < self.complete_pair_probability <= 1:
+        complete_pair_probability = _require_finite_number(self.complete_pair_probability, "complete_pair_probability")
+        confidence_level = _require_finite_number(self.one_sided_confidence_level, "one_sided_confidence_level")
+        minimum_joint_power = _require_finite_number(self.minimum_joint_power, "minimum_joint_power")
+        if not 0 < complete_pair_probability <= 1:
             raise ValueError("complete_pair_probability must be in (0,1]")
-        if not 0.5 < self.one_sided_confidence_level < 1 or not 0 < self.minimum_joint_power < 1:
+        if not 0.5 < confidence_level < 1 or not 0 < minimum_joint_power < 1:
             raise ValueError("invalid confidence/power target")
+        if type(self.selector_replay) is not SelectorReplay:
+            raise TypeError("selector_replay must be an exact SelectorReplay")
         self.selector_replay.frequencies()
 
     @property
@@ -84,6 +143,8 @@ def summarize_selector_replay(profiles: list[str], fallback_flags: list[bool]) -
     for profile, fallback in zip(profiles, fallback_flags, strict=True):
         if profile not in ("baseline", "moderate", "aggressive"):
             raise ValueError(f"invalid frozen selector output {profile!r}")
+        if type(fallback) is not bool:
+            raise ValueError("fallback replay flags must be exact booleans")
         if fallback:
             counts["fallback"] += 1
         else:
@@ -100,8 +161,20 @@ def simulate_joint_power(
     batch_size: int = 2_000,
 ) -> dict[str, Any]:
     assumptions.validate()
-    if pairs < 2 or repetitions < 1 or batch_size < 1:
-        raise ValueError("pairs>=2 and positive repetitions/batch_size required")
+    pairs = _require_exact_int(pairs, "pairs", minimum=2, maximum=MAX_SIMULATION_PAIRS)
+    repetitions = _require_exact_int(
+        repetitions,
+        "repetitions",
+        minimum=1,
+        maximum=MAX_SIMULATION_REPETITIONS,
+    )
+    batch_size = _require_exact_int(
+        batch_size,
+        "batch_size",
+        minimum=1,
+        maximum=MAX_SIMULATION_BATCH_SIZE,
+    )
+    seed = _require_exact_int(seed, "seed", minimum=0, maximum=MAX_SIMULATION_SEED)
     sd = np.asarray(assumptions.paired_sd, dtype=float)
     mean = np.asarray(assumptions.diluted_true_effect, dtype=float)
     corr = np.asarray(assumptions.correlation, dtype=float)
@@ -145,11 +218,34 @@ def choose_fixed_pairs(
     seed: int = 588_639,
 ) -> dict[str, Any]:
     """Choose once from an ordered preregistered candidate set."""
-    if not candidates or tuple(sorted(set(candidates))) != candidates or candidates[0] != 15:
+    if type(candidates) is not tuple or not 1 <= len(candidates) <= MAX_CANDIDATE_COUNTS:
+        raise ValueError(f"candidate pair counts must be an exact tuple of 1..{MAX_CANDIDATE_COUNTS} values")
+    validated_candidates = tuple(
+        _require_exact_int(
+            value,
+            f"candidates[{index}]",
+            minimum=15,
+            maximum=MAX_SIMULATION_PAIRS,
+        )
+        for index, value in enumerate(candidates)
+    )
+    if tuple(sorted(set(validated_candidates))) != validated_candidates or validated_candidates[0] != 15:
         raise ValueError("candidate pair counts must be unique/increasing and begin at 15")
+    repetitions = _require_exact_int(
+        repetitions,
+        "repetitions",
+        minimum=1,
+        maximum=MAX_SIMULATION_REPETITIONS,
+    )
+    seed = _require_exact_int(
+        seed,
+        "seed",
+        minimum=0,
+        maximum=MAX_SIMULATION_SEED - len(validated_candidates) + 1,
+    )
     evaluations = []
     chosen = None
-    for index, pairs in enumerate(candidates):
+    for index, pairs in enumerate(validated_candidates):
         result = simulate_joint_power(
             pairs,
             assumptions,

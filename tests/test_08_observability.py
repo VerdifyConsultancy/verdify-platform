@@ -449,7 +449,7 @@ class TestHeapPressureObservability:
     def test_greenhouse_state_refresh_registered(self):
         body = _tasks_source()
         migration = (REPO_ROOT / "db/migrations/098-greenhouse-state-refresh.sql").read_text()
-        assert "refresh_greenhouse_state" in body
+        assert "fn_runtime_refresh_materialized_views" in body
         assert "CREATE OR REPLACE FUNCTION refresh_greenhouse_state" in migration
         assert "CREATE OR REPLACE VIEW v_greenhouse_state" in migration
         assert "interval '14 days'" in migration

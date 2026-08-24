@@ -2,11 +2,11 @@
 # completes BEFORE the api/mcp/ingestor pods reconcile, and so those pods never
 # race each other applying schema changes.
 #
-# RE-RUNNABLE: the runner (verdify-migrate image) replays db/schema.sql with
-# ON_ERROR_STOP=0 then migration 000 (hypertable-catalog repair). On a populated
-# DB the replay's "already exists" errors are tolerated and it exits 0, so it is
-# safe as a PreSync hook on every sync. The hook-delete-policy replaces the Job.
-# (No schema_migrations ledger exists; the pg_dump schema snapshot is the source.)
+# RE-RUNNABLE: on a populated DB the runner verifies the core schema and, when
+# the owning overlay explicitly enables VERDIFY_MIGRATE_LEDGER, applies only
+# pending numbered migrations under an advisory lock with exact SHA receipts.
+# On a fresh DB it first builds the schema snapshot and repairs hypertable
+# metadata. The hook-delete-policy replaces the Job on every sync.
 #
 # DATA MIGRATION SAFETY (handoff §3.6): this Job applies schema migrations
 # against the in-cluster verdify-db. The copy-not-move TimescaleDB restore
@@ -69,10 +69,10 @@ spec:
           # db/schema.sql + migration 000. Pinned to a sha-<gitsha> by the
           # overlay/CI image-pin; `latest` here is the kustomize validation tag.
           image: ghcr.io/verdifyconsultancy/verdify-migrate  # pinned to a @sha256 digest by the kustomization images: transformer
-          # Real runner: replay db/schema.sql (ON_ERROR_STOP=0; the production
-          # pg_dump snapshot) then migration 000 (hypertable-catalog repair) —
-          # the documented fresh-DB build. DB_HOST/DB_NAME/DB_USER come from the
-          # verdify-config ConfigMap (envFrom); DB_PASS from the Secret below.
+          # Real runner: verify a populated DB then apply explicitly enabled
+          # ledgered migrations, or build schema.sql + migration 000 only for a
+          # genuinely fresh DB. DB_HOST/DB_NAME/DB_USER come from verdify-config;
+          # DB_PASS comes from the Secret reference below.
           command: ["/usr/local/bin/migrate.sh"]
           envFrom:
             - configMapRef:

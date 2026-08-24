@@ -1,0 +1,20 @@
+# Production numbered-migration delivery (#583 / experiment-v2 integration).
+#
+# This flag is set directly on the PreSync hook rather than through
+# verdify-config: a PreSync Job runs before ordinary ConfigMaps reconcile, so
+# envFrom alone could observe the previous ConfigMap on the first armed sync
+# and let new workloads roll before their schema. The ledger runner is
+# idempotent, advisory-lock protected, and fails closed on a missing baseline
+# authorization or an edited-after-apply migration hash.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: verdify-migrate
+spec:
+  template:
+    spec:
+      containers:
+        - name: migrate
+          env:
+            - name: VERDIFY_MIGRATE_LEDGER
+              value: "1"

@@ -365,7 +365,7 @@ async def _create_move(
     }
     assignment_id = await conn.fetchval(
         """
-        SELECT fn_create_assignment(
+        SELECT public.fn_runtime_v1_create_assignment(
             $1::uuid, $2, $3, $4,
             tstzrange($5::timestamptz, $6::timestamptz, '[)'),
             NULL, NULL, NULL, $7, $8, $9, $10, $11::jsonb, $12)
@@ -415,7 +415,7 @@ async def _submit_proposal(
 ) -> None:
     await conn.fetchval(
         """
-        SELECT fn_submit_policy_proposal(
+        SELECT public.fn_runtime_v1_submit_policy_proposal(
             $1, $2, $3::uuid, NULL::jsonb, NULL, NULL::jsonb, 'proposed', $4,
             $5::uuid, $6::uuid,
             tstzrange($7::timestamptz, $8::timestamptz, '[)'), NULL, NULL)
@@ -433,7 +433,8 @@ async def _submit_proposal(
 
 async def _record_skip(conn, exp: dict, *, slot_id: str | None, detail: dict) -> None:
     await conn.fetchval(
-        "SELECT fn_record_qualification_event($1::uuid, 'skipped', $2::jsonb, $3::uuid, NULL::uuid, $4)",
+        "SELECT public.fn_runtime_v1_record_qualification_event("
+        "$1::uuid, 'skipped', $2::jsonb, $3::uuid, NULL::uuid, $4)",
         exp["experiment_id"],
         json.dumps(detail, sort_keys=True, default=str),
         slot_id,
@@ -443,7 +444,7 @@ async def _record_skip(conn, exp: dict, *, slot_id: str | None, detail: dict) ->
 
 async def _resolve_slot(conn, slot_id: str, outcome: str, detail: dict) -> None:
     await conn.fetchval(
-        "SELECT fn_resolve_qualification_slot($1::uuid, $2, $3::jsonb, $4)",
+        "SELECT public.fn_runtime_v1_resolve_qualification_slot($1::uuid, $2, $3::jsonb, $4)",
         slot_id,
         outcome,
         json.dumps(detail, sort_keys=True, default=str),
@@ -656,7 +657,7 @@ async def _boundary_action(conn, exp: dict, prev: dict | None, now: datetime) ->
             }
             assignment_id = await conn.fetchval(
                 """
-                SELECT fn_claim_qualification_slot(
+                SELECT public.fn_runtime_v1_claim_qualification_slot(
                     $1::uuid, $2::jsonb,
                     tstzrange($3::timestamptz, $4::timestamptz, '[)'),
                     $5, $6::jsonb, $7)
@@ -783,7 +784,7 @@ async def experiment_qualification_scheduler(pool: asyncpg.Pool) -> None:
         exp_row = await conn.fetchrow(
             "SELECT experiment_id::text AS experiment_id, status, kind, greenhouse_id, "
             "timezone, started_at "
-            "FROM control_experiments WHERE experiment_id = $1::uuid",
+            "FROM control_experiments WHERE experiment_id = $1::uuid AND protocol_version = 1",
             experiment_id,
         )
         if exp_row is None:

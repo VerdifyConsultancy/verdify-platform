@@ -50,5 +50,5 @@
     "study_id": {"type": "string", "minLength": 1},
     "timezone": {"type": "string", "minLength": 1}
   },
-  "x-verdify-field-contract-sha256": "f1cd82e7883f912379680f85a12420f4ecf5aaaaefb3c78373708ccedefab892"
+  "x-verdify-field-contract-sha256": "fc73d212f58db91bd55bb70e3faa1431172b4339ae3b22a11d404ba95147b794"
 }

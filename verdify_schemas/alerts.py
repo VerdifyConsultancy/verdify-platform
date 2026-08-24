@@ -37,6 +37,7 @@ AlertType = Literal[
     "leak_detected",
     "lighting_cfg_threshold_drift",
     "climate_action_proof_stale",
+    "component_experiment_integrity",
     "plan_context_failed",
     "planner_band_ownership_drift",
     "planner_evaluation_missed",
@@ -85,6 +86,7 @@ ALERT_TYPES: tuple[str, ...] = (
     "leak_detected",
     "lighting_cfg_threshold_drift",
     "climate_action_proof_stale",
+    "component_experiment_integrity",
     "plan_context_failed",
     "planner_band_ownership_drift",
     "planner_evaluation_missed",
@@ -515,6 +517,34 @@ class AlertValidationFailedDetails(_DetailsBase):
     producer: str | None = None
 
 
+class ComponentExperimentIntegrityDetails(_DetailsBase):
+    experiment_id: str = Field(..., min_length=36, max_length=36)
+    lifecycle_status: str
+    execution_phase: str
+    admission_state: str
+    safety_state: str
+    reason: Literal[
+        "multiple_open_exposures",
+        "baseline_artifact_missing",
+        "facility_emergency_hold",
+        "open_exposure_observation_missing",
+        "open_exposure_observation_stale",
+        "open_exposure_state_mismatch",
+        "open_admission_without_current_work",
+        "completed_with_incomplete_outcomes",
+        "baseline_recovery_in_progress",
+        "runtime_fault_requires_recovery",
+    ]
+    operation_kind: str | None = None
+    observation_truth: Literal["future_identity_masked", "unobserved", "stale", "mismatch", "exact"]
+    observation_age_seconds: int | None = Field(default=None, ge=0)
+    open_exposure_count: int = Field(..., ge=0)
+    writer_generation: int | None = Field(default=None, ge=0)
+    connection_generation: int | None = Field(default=None, ge=0)
+    outcomes_complete: bool
+    rollback_ready: bool
+
+
 class _AlertBase(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -733,6 +763,11 @@ class AlertValidationFailedAlert(_AlertBase):
     details: AlertValidationFailedDetails
 
 
+class ComponentExperimentIntegrityAlert(_AlertBase):
+    alert_type: Literal["component_experiment_integrity"]
+    details: ComponentExperimentIntegrityDetails
+
+
 class WriterAbsentDetails(_DetailsBase):
     # Out-of-band writer-presence check (2026-07-11 audit P0): the in-ingestor
     # alert engine self-silences when the writer dies, so this row is written
@@ -808,6 +843,7 @@ AlertEnvelopeUnion = Annotated[
     | LeakDetectedAlert
     | LightingCfgThresholdDriftAlert
     | ClimateActionProofStaleAlert
+    | ComponentExperimentIntegrityAlert
     | PlanContextFailedAlert
     | PlannerBandOwnershipDriftAlert
     | PlannerEvaluationMissedAlert

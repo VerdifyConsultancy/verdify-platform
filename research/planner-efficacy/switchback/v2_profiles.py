@@ -11,9 +11,12 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import sys
 from pathlib import Path
 from typing import Any
+
+import yaml
 
 RESEARCH_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = RESEARCH_ROOT.parents[1]
@@ -39,51 +42,50 @@ TREATMENT_ALLOWLIST = frozenset(
     }
 )
 
-# (entity minimum, entity maximum, entity step), source-locked from
-# firmware/greenhouse/tunables.yaml.  Switches are exact booleans and omitted.
-SOURCE_ENTITY_GRID: dict[str, tuple[float, float, float]] = {
-    "band_track_fraction": (0, 1, 0.05),
-    "cold_vent_guard_delta_f": (0, 15, 0.5),
-    "cool_exit_hysteresis_f": (0.3, 3, 0.1),
-    "cool_stage2_exit_hysteresis_f": (0.3, 3, 0.1),
-    "cool_stage2_over_high_f": (0, 3, 0.1),
-    "direct_wet_stress_min_dew_margin_f": (3, 15, 0.5),
-    "direct_wet_stress_vpd_margin_kpa": (0, 0.5, 0.05),
-    "dwell_gate_ms": (60_000, 1_800_000, 30_000),
-    "enthalpy_close": (-5, 20, 0.5),
-    "enthalpy_open": (-5, 0, 0.5),
-    "fog_escalation_kpa": (0.1, 0.5, 0.1),
-    "heat_hysteresis": (0, 3, 0.1),
-    "min_fan_off_s": (30, 300, 10),
-    "min_fan_on_s": (30, 300, 10),
-    "min_fog_off_s": (15, 300, 15),
-    "min_fog_on_s": (15, 300, 15),
-    "min_heat_off_s": (60, 600, 10),
-    "min_heat_on_s": (30, 300, 10),
-    "min_vent_off_s": (10, 300, 10),
-    "min_vent_on_s": (10, 300, 10),
-    "mist_backoff_s": (60, 3_600, 60),
-    "mist_max_closed_vent_s": (120, 900, 60),
-    "mist_thermal_relief_s": (30, 300, 30),
-    "mister_all_delay_s": (60, 600, 30),
-    "mister_all_kpa": (1, 2.5, 0.05),
-    "mister_center_penalty": (0, 1, 0.1),
-    "mister_engage_delay_s": (30, 300, 30),
-    "mister_engage_kpa": (0.5, 2.5, 0.05),
-    "mister_min_off_s": (30, 120, 5),
-    "mister_pulse_gap_s": (10, 60, 5),
-    "mister_pulse_on_s": (30, 90, 5),
-    "mister_vpd_weight": (0.5, 3, 0.5),
-    "mister_water_budget_gal": (100, 300, 10),
-    "night_vpd_bias_kpa": (0, 0.25, 0.01),
-    "outdoor_staleness_max_s": (120, 1_800, 30),
-    "temp_hysteresis": (0.5, 3, 0.1),
-    "vent_exchange_fraction": (0.1, 0.6, 0.05),
-    "vent_prefer_dp_delta_f": (2, 15, 0.5),
-    "vent_prefer_temp_delta_f": (2, 15, 0.5),
-    "vpd_hysteresis": (0.05, 0.5, 0.05),
-    "vpd_watch_dwell_s": (15, 120, 15),
-}
+
+def _esphome_object_id(name: str) -> str:
+    """Mirror ESPHome's ASCII object-id spelling for the checked source names."""
+    return "".join(char if char.isascii() and char.isalnum() else "_" for char in name.lower())
+
+
+def source_entity_grid(repo_root: Path = REPO_ROOT) -> dict[str, tuple[float, float, float]]:
+    """Parse every numeric wire field's exact min/max/step from firmware source."""
+    path = repo_root / "firmware/greenhouse/tunables.yaml"
+    document = yaml.safe_load(path.read_text())
+    rows = document.get("number") if isinstance(document, dict) else None
+    if not isinstance(rows, list):
+        raise TypeError("firmware tunables source must contain a number list")
+    by_object_id: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        if not isinstance(row, dict) or not isinstance(row.get("name"), str):
+            raise TypeError("every firmware number entity must have a string name")
+        object_id = _esphome_object_id(row["name"])
+        if object_id in by_object_id:
+            raise ValueError(f"duplicate firmware number object id {object_id!r}")
+        by_object_id[object_id] = row
+
+    grid: dict[str, tuple[float, float, float]] = {}
+    for definition in wire_fields():
+        if definition.wire_kind == "bool":
+            continue
+        object_id = definition.esp_object_id
+        if not object_id or object_id not in by_object_id:
+            raise ValueError(f"numeric wire field {definition.name!r} has no matching firmware number entity")
+        row = by_object_id[object_id]
+        values = tuple(row.get(key) for key in ("min_value", "max_value", "step"))
+        if any(isinstance(value, bool) or not isinstance(value, (int, float)) for value in values):
+            raise ValueError(f"firmware grid for {definition.name!r} is not fully numeric")
+        minimum, maximum, step = values
+        if not all(math.isfinite(float(value)) for value in values) or minimum > maximum or step <= 0:
+            raise ValueError(f"firmware grid for {definition.name!r} is invalid")
+        if float(minimum) != definition.fw_clamp_lo or float(maximum) != definition.fw_clamp_hi:
+            raise ValueError(f"registry clamp for {definition.name!r} differs from firmware entity source")
+        grid[definition.name] = (minimum, maximum, step)
+    return grid
+
+
+# Compatibility export, but derived from the source file rather than duplicated.
+SOURCE_ENTITY_GRID = source_entity_grid()
 
 # Explicit source/design decisions, applied before validation.  They are not a
 # generic normalizer and no unlisted off-grid value can pass.
@@ -111,10 +113,14 @@ def _sha256_file(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def _on_grid(name: str, value: float | bool) -> bool:
+def _on_grid(
+    name: str,
+    value: float | bool,
+    source_grid: dict[str, tuple[float, float, float]] = SOURCE_ENTITY_GRID,
+) -> bool:
     if isinstance(value, bool):
         return name.startswith("sw_")
-    minimum, maximum, step = SOURCE_ENTITY_GRID[name]
+    minimum, maximum, step = source_grid[name]
     if not minimum <= float(value) <= maximum:
         return False
     position = (float(value) - minimum) / step
@@ -131,20 +137,23 @@ def _state_content_sha256(values: dict[str, float | bool]) -> str:
     return digest.hexdigest()
 
 
-def validate_profiles(profiles: dict[str, dict[str, float | bool]]) -> None:
+def validate_profiles(
+    profiles: dict[str, dict[str, float | bool]],
+    source_grid: dict[str, tuple[float, float, float]] = SOURCE_ENTITY_GRID,
+) -> None:
     fields = {definition.name for definition in wire_fields()}
     if len(fields) != 48:
         raise ValueError(f"protocol v2 requires 48 registry fields, got {len(fields)}")
     numeric_fields = {definition.name for definition in wire_fields() if definition.wire_kind != "bool"}
-    if set(SOURCE_ENTITY_GRID) != numeric_fields:
+    if set(source_grid) != numeric_fields:
         raise ValueError(
             "source entity-grid manifest does not exactly cover numeric wire fields: "
-            f"missing={sorted(numeric_fields - set(SOURCE_ENTITY_GRID))} extra={sorted(set(SOURCE_ENTITY_GRID) - numeric_fields)}"
+            f"missing={sorted(numeric_fields - set(source_grid))} extra={sorted(set(source_grid) - numeric_fields)}"
         )
     for profile_id, values in profiles.items():
         if set(values) != fields:
             raise ValueError(f"{profile_id} is not an exact 48-field profile")
-        off_grid = sorted(name for name, value in values.items() if not _on_grid(name, value))
+        off_grid = sorted(name for name, value in values.items() if not _on_grid(name, value, source_grid))
         if off_grid:
             raise ValueError(f"{profile_id} contains off-entity-grid values: {off_grid}")
         encode_policy_vector(values)  # strict bounds/types/wire representability
@@ -159,6 +168,7 @@ def build_profile_artifact(repo_root: Path = REPO_ROOT) -> dict[str, Any]:
     baseline_path = repo_root / "research/planner-efficacy/baseline/frozen-fsm-baseline-candidate-2026-08-14.json"
     candidates_path = repo_root / "research/planner-efficacy/baseline/ai-template-candidates-2026-08-14.json"
     firmware_grid_path = repo_root / "firmware/greenhouse/tunables.yaml"
+    source_grid = source_entity_grid(repo_root)
     baseline_source = json.loads(baseline_path.read_text())
     candidates_source = json.loads(candidates_path.read_text())
     original_baseline = {name: row["quantized_value"] for name, row in baseline_source["fields"].items()}
@@ -182,7 +192,7 @@ def build_profile_artifact(repo_root: Path = REPO_ROOT) -> dict[str, Any]:
                 {"field": name, "from": previous, "profile_scope": profile_id, "rationale": rationale, "to": selected}
             )
         profiles[profile_id] = values
-    validate_profiles(profiles)
+    validate_profiles(profiles, source_grid)
     artifact_profiles = {}
     for profile_id, values in profiles.items():
         wire = encode_policy_vector(values)
@@ -202,7 +212,7 @@ def build_profile_artifact(repo_root: Path = REPO_ROOT) -> dict[str, Any]:
         "explicit_grid_design_decisions": decisions,
         "source_entity_grid": {
             name: {"max": maximum, "min": minimum, "step": step}
-            for name, (minimum, maximum, step) in sorted(SOURCE_ENTITY_GRID.items())
+            for name, (minimum, maximum, step) in sorted(source_grid.items())
         },
         "source_evidence": {
             "historical_baseline_path": str(baseline_path.relative_to(repo_root)),

@@ -40,7 +40,7 @@ spec:
         # consumed via envFrom, so a ConfigMap edit alone does NOT restart this
         # pod. Maintained by scripts/gen-config-revision.sh — do NOT hand-edit
         # (the CI gate recomputes it).
-        verdify.io/config-revision: "84ecb86e6240"
+        verdify.io/config-revision: "4df9cfe0da6a"
       labels:
         app.kubernetes.io/part-of: verdify
         app.kubernetes.io/component: api
@@ -97,6 +97,37 @@ spec:
                 secretKeyRef:
                   name: verdify-app-secrets
                   key: POSTGRES_PASSWORD
+            # Optional until the v2 operator status surface is activated. It
+            # must be a distinct non-superuser login with only migration 214's
+            # lifecycle duty; the API refuses to use its shared owner pool.
+            - name: VERDIFY_EXPERIMENT_LIFECYCLE_DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: VERDIFY_EXPERIMENT_LIFECYCLE_DB_USER
+                  optional: true
+            - name: VERDIFY_EXPERIMENT_LIFECYCLE_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: VERDIFY_EXPERIMENT_LIFECYCLE_DB_PASSWORD
+                  optional: true
+            # Separate fail-closed authorization for the blinded lifecycle
+            # command surface and the operator safety/status surface. Optional
+            # keeps the feature-off image deployable; an absent key makes its
+            # corresponding routes return 403 and is an activation gate.
+            - name: VERDIFY_EXPERIMENT_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: VERDIFY_EXPERIMENT_API_TOKEN
+                  optional: true
+            - name: VERDIFY_EXPERIMENT_OPERATOR_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: VERDIFY_EXPERIMENT_OPERATOR_TOKEN
+                  optional: true
             # Write/admin endpoints are guarded by this key (api/main.py:266).
             # Present + non-empty → writes require auth. NO unauth-write escape
             # hatch is set anywhere in this tree (it fails closed).

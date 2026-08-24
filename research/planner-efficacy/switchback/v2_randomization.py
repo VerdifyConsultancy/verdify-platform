@@ -20,8 +20,9 @@ import struct
 import threading
 import unicodedata
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
+from pathlib import Path
 from typing import Any, Literal
 from zoneinfo import ZoneInfo
 
@@ -30,36 +31,47 @@ from .randomization import assignment_uuid, rfc8785_canonicalize_nfc_ijson
 PAIR_DOMAIN = b"verdify-switchback-v2/pair\x00"
 MAPPING_DOMAIN = b"verdify-switchback-v2/mapping\x00"
 COMMIT_DOMAIN = b"verdify-switchback-v2/commit\x00"
-SCHEDULE_SCHEMA = "verdify-switchback-blinded-schedule-v2"
 RECEIPT_SCHEMA = "verdify-switchback-randomization-receipt-v2"
 REVEAL_SCHEMA = "verdify-switchback-randomization-reveal-v2"
 ALGORITHM_REVISION = "hmac-sha256-rfc8785-v2"
 SECRET_BYTES = 32
+SCHEDULE_SCHEMA_PATH = Path(__file__).resolve().parents[1] / "protocols/blinded-schedule-v2.schema.json"
+
+
+def _schedule_schema_document() -> dict[str, Any]:
+    document = json.loads(SCHEDULE_SCHEMA_PATH.read_text())
+    if not isinstance(document, dict):
+        raise TypeError("blinded schedule schema must be a JSON object")
+    return document
+
+
+def _schedule_schema_contract_projection() -> dict[str, Any]:
+    """Return the complete schema document without its self-referential hash."""
+    document = _schedule_schema_document()
+    embedded = document.pop("x-verdify-field-contract-sha256", None)
+    if embedded is not None and (
+        not isinstance(embedded, str) or len(embedded) != 64 or any(ch not in "0123456789abcdef" for ch in embedded)
+    ):
+        raise ValueError("embedded schedule schema contract hash must be lowercase SHA-256 hex")
+    return document
+
+
+_SCHEDULE_SCHEMA_DOCUMENT = _schedule_schema_document()
+SCHEDULE_SCHEMA = _SCHEDULE_SCHEMA_DOCUMENT["properties"]["schema"]["const"]
 SCHEDULE_SCHEMA_CONTRACT: dict[str, Any] = {
-    "assignment_fields": [
-        "assignment_uuid",
-        "blinded_label",
-        "day_in_pair",
-        "local_date",
-        "pair_index",
-        "utc_end",
-        "utc_start",
-    ],
+    "assignment_fields": _SCHEDULE_SCHEMA_DOCUMENT["properties"]["assignments"]["items"]["required"],
     "schema": SCHEDULE_SCHEMA,
-    "top_level_fields": [
-        "assignments",
-        "namespace_uuid",
-        "pairs",
-        "schema",
-        "start_local_date",
-        "study_id",
-        "timezone",
-    ],
+    "top_level_fields": _SCHEDULE_SCHEMA_DOCUMENT["required"],
 }
 
 
 def schedule_schema_contract_sha256() -> str:
-    payload = json.dumps(SCHEDULE_SCHEMA_CONTRACT, sort_keys=True, separators=(",", ":")).encode()
+    payload = json.dumps(
+        _schedule_schema_contract_projection(),
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode()
     return hashlib.sha256(payload).hexdigest()
 
 
@@ -122,8 +134,10 @@ class DesignLock:
         if parsed.isoformat() != self.start_local_date:
             raise ValueError("start_local_date must be canonical YYYY-MM-DD")
         ZoneInfo(self.timezone)
-        if self.pairs < 1:
-            raise ValueError("pairs must be positive")
+        if type(self.pairs) is not int or self.pairs < 1:
+            raise ValueError("pairs must be a positive exact integer")
+        if type(self.assignment_namespace_uuid) is not uuid.UUID:
+            raise TypeError("assignment_namespace_uuid must be an exact UUID")
         for name in ("design_lock_sha256", "schedule_schema_sha256"):
             value = getattr(self, name)
             if len(value) != 64 or any(ch not in "0123456789abcdef" for ch in value):
@@ -196,12 +210,24 @@ class FinalizationReceipt:
     design_lock_sha256: str
     source_git_sha: str
     algorithm_revision: str
-    schedule: dict[str, Any]
+    _schedule_canonical_bytes: bytes = field(repr=False)
     schedule_hash_sha256: str
     mapping_commitment_sha256: str
     finalized_at: str
     no_redraw: bool
     receipt_sha256: str
+
+    def __post_init__(self) -> None:
+        if hashlib.sha256(self._schedule_canonical_bytes).hexdigest() != self.schedule_hash_sha256:
+            raise ValueError("receipt schedule bytes do not match schedule_hash_sha256")
+
+    @property
+    def schedule(self) -> dict[str, Any]:
+        """Return a defensive copy decoded from the immutable canonical bytes."""
+        decoded = json.loads(self._schedule_canonical_bytes)
+        if not isinstance(decoded, dict):
+            raise TypeError("stored canonical schedule is not an object")
+        return decoded
 
     def public_dict(self) -> dict[str, Any]:
         return {
@@ -230,10 +256,14 @@ class CompletionProof:
     def __post_init__(self) -> None:
         if self.lifecycle_status != "completed":
             raise ValueError("restricted reveal requires lifecycle_status=completed")
-        for field in ("outcomes_export_sha256", "deviations_export_sha256", "confirmed_baseline_close_sha256"):
-            value = getattr(self, field)
+        for field_name in (
+            "outcomes_export_sha256",
+            "deviations_export_sha256",
+            "confirmed_baseline_close_sha256",
+        ):
+            value = getattr(self, field_name)
             if len(value) != 64 or any(ch not in "0123456789abcdef" for ch in value):
-                raise ValueError(f"{field} must be lowercase SHA-256 hex")
+                raise ValueError(f"{field_name} must be lowercase SHA-256 hex")
 
 
 @dataclass(frozen=True)
@@ -310,7 +340,8 @@ class RandomizationFinalizer:
             raise ValueError("locked start was missed; abort this study id/draw instead of shifting the schedule")
         secret = _secret32(secrets.token_bytes(SECRET_BYTES))
         schedule = blinded_schedule(design, secret)
-        schedule_hash = hashlib.sha256(canonical_schedule_bytes(schedule)).digest()
+        schedule_bytes = canonical_schedule_bytes(schedule)
+        schedule_hash = hashlib.sha256(schedule_bytes).digest()
         commitment = full_entropy_commitment(design.study_id, schedule_hash, secret)
         finalized_at = now.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
         receipt_body = {
@@ -332,7 +363,7 @@ class RandomizationFinalizer:
             design_lock_sha256=design.design_lock_sha256,
             source_git_sha=design.source_git_sha,
             algorithm_revision=ALGORITHM_REVISION,
-            schedule=schedule,
+            _schedule_canonical_bytes=schedule_bytes,
             schedule_hash_sha256=schedule_hash.hex(),
             mapping_commitment_sha256=commitment.hex(),
             finalized_at=finalized_at,
@@ -410,3 +441,26 @@ def assert_finalization_only_changes(design_protocol: dict[str, Any], final_prot
     illegal = changed - FINALIZATION_ONLY_PATHS
     if illegal:
         raise ValueError(f"final protocol changed non-finalization design paths: {sorted(illegal)}")
+    if changed != FINALIZATION_ONLY_PATHS:
+        raise ValueError("finalization must atomically populate all four source-locked receipt fields")
+
+    study = final_protocol.get("study")
+    randomization = final_protocol.get("randomization")
+    if not isinstance(study, dict) or not isinstance(randomization, dict):
+        raise TypeError("final protocol study/randomization sections must be objects")
+    artifact = study.get("blinded_schedule_artifact")
+    if (
+        not isinstance(artifact, str)
+        or not re.fullmatch(r"[A-Za-z0-9_./-]+\.json", artifact)
+        or ".." in artifact.split("/")
+        or any(part in artifact.lower() for part in ("secret", "mapping"))
+    ):
+        raise ValueError("final blinded_schedule_artifact must be a safe committed JSON path")
+    for section, key in (
+        (study, "blinded_schedule_hash_sha256"),
+        (randomization, "mapping_commitment_sha256"),
+        (randomization, "finalization_receipt_sha256"),
+    ):
+        value = section.get(key)
+        if not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{64}", value):
+            raise ValueError(f"final {key} must be lowercase SHA-256 hex")

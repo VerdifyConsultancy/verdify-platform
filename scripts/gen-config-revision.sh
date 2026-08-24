@@ -4,15 +4,18 @@
 #
 # WHY: the fixed-name verdify-config ConfigMap is consumed via envFrom by
 # api / mcp / ingestor / migration-job / planner / setpoint-server /
-# lab-publisher / ha-gap-backfill, so editing the ConfigMap does NOT restart
-# any pod — a flag flip (e.g. VERDIFY_POLICY_VECTOR_MODE at a §8.10 rollout
+# lab-publisher / ha-gap-backfill, while the v2 orchestrator also consumes its
+# component ConfigMap and the mounted gather-script ConfigMap. Editing one of
+# these ConfigMaps does NOT restart any pod — a
+# flag flip (e.g. VERDIFY_POLICY_VECTOR_MODE at a §8.10 rollout
 # step) would silently not take effect until some unrelated rollout. This
-# script maintains a deterministic content hash of every verdify-config source
-# as the `verdify.io/config-revision` pod-template annotation on the five
+# script maintains a deterministic content hash of every runtime ConfigMap
+# source as the `verdify.io/config-revision` pod-template annotation on the six
 # long-running env consumers, so a config edit changes the pod template and
 # the next ArgoCD sync rolls exactly those pods.
 #
-# HASH INPUT (canonical, no-arg invocation): the base ConfigMap PLUS every
+# HASH INPUT (canonical, no-arg invocation): the base ConfigMap, the v2
+# orchestrator component ConfigMap, the ingestor gather-script ConfigMap, PLUS every
 # overlay file that patches the verdify-config ConfigMap (device-write /
 # publish-all / hermes-url / gather-script-env / future experiment patches),
 # discovered by content, sorted, hashed via sha256sum of the file list. The
@@ -41,6 +44,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 BASE_CM="deploy/k8s/base/configmap.yaml"
+ORCHESTRATOR_CM="deploy/k8s/components/experiment-v2-orchestrator/configmap.yaml"
+GATHER_SCRIPT_CM="deploy/k8s/components/ingestor-gather-script/gather-script-configmap.yaml"
 OVERLAY_DIR="deploy/k8s/overlays"
 
 # Pod templates carrying the annotation (the long-running envFrom consumers).
@@ -52,6 +57,7 @@ ANNOTATED_FILES=(
   "deploy/k8s/base/ingestor-deployment.yaml"
   "deploy/k8s/components/planner/planner-deployment.yaml"
   "deploy/k8s/components/setpoint-server/setpoint-server.yaml"
+  "deploy/k8s/components/experiment-v2-orchestrator/workloads.yaml"
 )
 
 ANNOTATION="verdify.io/config-revision"
@@ -79,7 +85,7 @@ discover_patches() {
       done
 }
 
-inputs=("$BASE_CM")
+inputs=("$BASE_CM" "$ORCHESTRATOR_CM" "$GATHER_SCRIPT_CM")
 if [ "${#overlays[@]}" -eq 0 ]; then
   scope_dirs=("$OVERLAY_DIR")
 else
@@ -117,12 +123,18 @@ for f in "${ANNOTATED_FILES[@]}"; do
     status=1
     continue
   fi
-  current="$(grep -o "$ANNOTATION: \"[0-9a-f]*\"" "$f" | head -1 | cut -d'"' -f2)"
-  if [ "$current" = "$revision" ]; then
+  mapfile -t current_revisions < <(
+    grep -o "$ANNOTATION: \"[0-9a-f]*\"" "$f" | cut -d'"' -f2
+  )
+  stale=0
+  for current in "${current_revisions[@]}"; do
+    [ "$current" = "$revision" ] || stale=1
+  done
+  if [ "$stale" -eq 0 ]; then
     continue
   fi
   if [ "$mode" = "check" ]; then
-    echo "STALE: $f has $ANNOTATION=\"$current\", expected \"$revision\"" >&2
+    echo "STALE: $f has $ANNOTATION values [${current_revisions[*]}], expected only \"$revision\"" >&2
     status=1
   else
     sed -i -E "s|($ANNOTATION: )\"[0-9a-f]*\"|\\1\"$revision\"|" "$f"

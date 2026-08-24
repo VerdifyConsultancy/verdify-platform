@@ -174,10 +174,14 @@ def test_missing_schedule_emits_critical_deviation(monkeypatch):
         ]
     )
     _run(experiment_assignment_scheduler(FakePool(conn)))
-    events = conn.sql_calls("INSERT INTO experiment_events")
+    events = conn.sql_calls("fn_runtime_v1_record_assignment_event")
     assert len(events) == 1
-    assert "schedule_missing" in events[0][2][4]
-    assert events[0][2][3] == "critical"
+    assert events[0][2][1] is None
+    assert events[0][2][2] == "schedule_missing"
+    assert '"status": "running"' in events[0][2][3]
+    experiment_reads = conn.sql_calls("FROM control_experiments")
+    assert len(experiment_reads) == 1
+    assert "protocol_version = 1" in experiment_reads[0][1]
 
 
 def test_assignment_gap_emits_deviation_and_releases_hold(monkeypatch):
@@ -192,8 +196,8 @@ def test_assignment_gap_emits_deviation_and_releases_hold(monkeypatch):
         ]
     )
     _run(experiment_assignment_scheduler(FakePool(conn)))
-    events = conn.sql_calls("INSERT INTO experiment_events")
-    assert any("assignment_gap" in event[2][4] for event in events)
+    events = conn.sql_calls("fn_runtime_v1_record_assignment_event")
+    assert any(event[2][2] == "assignment_gap" for event in events)
     assert esp32_push.experiment_policy_hold() == (False, frozenset())
 
 
@@ -242,33 +246,29 @@ def test_current_assignment_caches_the_opaque_receipt_in_shadow_and_live(monkeyp
 def _boundary_conn(mode_rows):
     boundary = datetime.now(UTC) - timedelta(minutes=1)
     overdue = {"assignment_id": str(uuid.uuid4()), "boundary": boundary}
-    exposure = {"exposure_id": str(uuid.uuid4())}
     responders = [
         ("FROM control_experiments", _exp_row("running")),
         ("count(*)", 30),
         ("upper(valid_range) <= now()", [overdue]),
-        ("FROM policy_exposures", [exposure]),
-        ("fn_close_exposure", None),
-        ("UPDATE control_assignments SET status = 'closed'", "UPDATE 1"),
+        (
+            "fn_runtime_v1_finalize_assignment_boundary",
+            {"changed": True, "boundary": boundary, "exposures_closed": 1},
+        ),
         ("now() <@ valid_range", _current_row()),
         *mode_rows,
     ]
-    return FakeConn(responders), overdue, exposure
+    return FakeConn(responders), overdue
 
 
 def test_boundary_close_then_current_open_arms_hold_in_live(monkeypatch):
     _enable(monkeypatch, mode="live")
-    conn, overdue, exposure = _boundary_conn([("lower(valid_range) > now()", None)])
+    conn, overdue = _boundary_conn([("lower(valid_range) > now()", None)])
     _run(experiment_assignment_scheduler(FakePool(conn)))
-    # Exposure closed with reason boundary BEFORE the assignment closes.
-    close_calls = conn.sql_calls("fn_close_exposure")
-    assert len(close_calls) == 1 and "'boundary'" in close_calls[0][1]
-    assert close_calls[0][2][0] == exposure["exposure_id"]
-    assert close_calls[0][2][1] == overdue["boundary"]
-    assert len(conn.sql_calls("UPDATE control_assignments SET status = 'closed'")) == 1
-    close_index = conn.calls.index(close_calls[0])
-    update_index = conn.calls.index(conn.sql_calls("UPDATE control_assignments SET status = 'closed'")[0])
-    assert close_index < update_index
+    # The database derives the boundary/count and closes exposures plus the
+    # assignment under one parent/assignment lock.
+    finalizers = conn.sql_calls("fn_runtime_v1_finalize_assignment_boundary")
+    assert len(finalizers) == 1
+    assert finalizers[0][2] == (EXPERIMENT_ID, overdue["assignment_id"])
     # Live mode + covered now() => the 49-param legacy-push hold is armed.
     active, params = esp32_push.experiment_policy_hold()
     assert active and params == EXPERIMENT_OWNED_PARAMS and len(params) == 48  # wire schema v2
@@ -276,7 +276,7 @@ def test_boundary_close_then_current_open_arms_hold_in_live(monkeypatch):
 
 def test_shadow_mode_never_arms_the_hold(monkeypatch):
     _enable(monkeypatch, mode="shadow")
-    conn, _overdue, _exposure = _boundary_conn([("lower(valid_range) > now()", None)])
+    conn, _overdue = _boundary_conn([("lower(valid_range) > now()", None)])
     _run(experiment_assignment_scheduler(FakePool(conn)))
     assert esp32_push.experiment_policy_hold() == (False, frozenset())
 
@@ -294,9 +294,9 @@ def test_prestage_emits_activation_intent_once(monkeypatch):
         ]
     )
     _run(experiment_assignment_scheduler(FakePool(conn)))
-    events = conn.sql_calls("INSERT INTO experiment_events")
+    events = conn.sql_calls("fn_runtime_v1_record_assignment_event")
     assert len(events) == 1
-    assert "boundary_activation_intent" in events[0][2][4]
+    assert events[0][2][2] == "boundary_activation_intent"
     assert events[0][2][1] == upcoming["assignment_id"]
 
 
@@ -314,4 +314,4 @@ def test_dedup_suppresses_repeat_events(monkeypatch):
         ]
     )
     _run(experiment_assignment_scheduler(FakePool(conn)))
-    assert conn.sql_calls("INSERT INTO experiment_events") == []
+    assert conn.sql_calls("fn_runtime_v1_record_assignment_event") == []

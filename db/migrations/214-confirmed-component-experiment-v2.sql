@@ -9,7 +9,8 @@
 -- NON-SELF-TRANSACTIONAL / ROLLBACK SAFE: there is no top-level BEGIN or
 -- COMMIT.  The migration is safe for the migration runner's outer transaction
 -- and keeps schema changes additive.  Duty-role normalization is transactional
--- and limited to the six dedicated v2 identities.  Functional rollback drops
+-- and limited to the dedicated v2 duties and their exact runtime logins.
+-- Functional rollback drops
 -- the v2 objects and columns after first preserving any evidence rows; retaining
 -- the NOLOGIN/non-elevated role posture is the safe rollback default.
 --
@@ -18,7 +19,8 @@
 -- blinded analyst and outcome freezer.  The SECURITY DEFINER owner is NOLOGIN.
 
 -- --------------------------------------------------------------------------
--- Roles: five mutually separated runtime duties and one unavailable owner.
+-- Roles: six mutually separated duties, five exact runtime logins, and one
+-- unavailable owner. Password assignment remains out-of-band.
 -- --------------------------------------------------------------------------
 
 DO $roles$
@@ -26,15 +28,33 @@ DECLARE
     r text;
     member_role text;
     granted_role text;
+    login_role text;
+    duty_role text;
+    login_index integer;
     role_state record;
     migrator_is_super boolean;
     managed_roles text[] := ARRAY[
         'verdify_experiment_v2_owner',
+        'verdify_experiment_shadow_scheduler',
         'verdify_experiment_randomizer',
         'verdify_experiment_lifecycle',
         'verdify_experiment_component_executor',
         'verdify_experiment_outcome_freezer',
         'verdify_experiment_blinded_analyst'
+    ];
+    runtime_logins text[] := ARRAY[
+        'verdify_experiment_v2_shadow_scheduler_login',
+        'verdify_experiment_v2_randomizer_login',
+        'verdify_experiment_v2_lifecycle_login',
+        'verdify_experiment_v2_component_executor_login',
+        'verdify_experiment_v2_outcome_freezer_login'
+    ];
+    runtime_duties text[] := ARRAY[
+        'verdify_experiment_shadow_scheduler',
+        'verdify_experiment_randomizer',
+        'verdify_experiment_lifecycle',
+        'verdify_experiment_component_executor',
+        'verdify_experiment_outcome_freezer'
     ];
 BEGIN
     SELECT rolsuper INTO migrator_is_super FROM pg_roles
@@ -61,6 +81,95 @@ BEGIN
            role_state.rolinherit OR role_state.rolreplication OR
            role_state.rolbypassrls THEN
             RAISE EXCEPTION 'managed role % could not be normalized safely', r;
+        END IF;
+    END LOOP;
+    -- Create passwordless login identities transactionally so a deployment
+    -- cannot reference a role that migration ordering never provisioned.
+    -- ALTER ROLE deliberately does not touch an out-of-band password. Each
+    -- login inherits exactly one NOLOGIN duty and neither side retains any
+    -- other membership or incoming member.
+    FOR login_index IN 1..array_length(runtime_logins, 1)
+    LOOP
+        login_role := runtime_logins[login_index];
+        duty_role := runtime_duties[login_index];
+        IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = login_role) THEN
+            EXECUTE format('CREATE ROLE %I LOGIN', login_role);
+        END IF;
+        SELECT * INTO role_state FROM pg_roles WHERE rolname = login_role;
+        IF role_state.rolsuper OR role_state.rolreplication OR
+           role_state.rolbypassrls THEN
+            IF NOT migrator_is_super THEN
+                RAISE EXCEPTION
+                    'runtime login % is elevated and requires a superuser migration to normalize',
+                    login_role;
+            END IF;
+        END IF;
+        EXECUTE format(
+            'ALTER ROLE %I LOGIN INHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS',
+            login_role);
+
+        FOR granted_role IN
+            SELECT granted.rolname
+              FROM pg_auth_members membership
+              JOIN pg_roles granted ON granted.oid = membership.roleid
+              JOIN pg_roles member ON member.oid = membership.member
+             WHERE member.rolname = duty_role
+        LOOP
+            EXECUTE format('REVOKE %I FROM %I', granted_role, duty_role);
+        END LOOP;
+        FOR member_role IN
+            SELECT member.rolname
+              FROM pg_auth_members membership
+              JOIN pg_roles granted ON granted.oid = membership.roleid
+              JOIN pg_roles member ON member.oid = membership.member
+             WHERE granted.rolname = duty_role
+               AND member.rolname <> login_role
+        LOOP
+            EXECUTE format('REVOKE %I FROM %I', duty_role, member_role);
+        END LOOP;
+        FOR granted_role IN
+            SELECT granted.rolname
+              FROM pg_auth_members membership
+              JOIN pg_roles granted ON granted.oid = membership.roleid
+              JOIN pg_roles member ON member.oid = membership.member
+             WHERE member.rolname = login_role
+               AND granted.rolname <> duty_role
+        LOOP
+            EXECUTE format('REVOKE %I FROM %I', granted_role, login_role);
+        END LOOP;
+        FOR member_role IN
+            SELECT member.rolname
+              FROM pg_auth_members membership
+              JOIN pg_roles granted ON granted.oid = membership.roleid
+              JOIN pg_roles member ON member.oid = membership.member
+             WHERE granted.rolname = login_role
+        LOOP
+            EXECUTE format('REVOKE %I FROM %I', login_role, member_role);
+        END LOOP;
+        -- Revoke/re-grant the intended edge as well: replay must strip a
+        -- pre-existing WITH ADMIN OPTION, not merely preserve the right pair.
+        EXECUTE format('REVOKE %I FROM %I', duty_role, login_role);
+        EXECUTE format('GRANT %I TO %I', duty_role, login_role);
+
+        SELECT * INTO role_state FROM pg_roles WHERE rolname = login_role;
+        IF NOT role_state.rolcanlogin OR NOT role_state.rolinherit OR
+           role_state.rolsuper OR role_state.rolcreatedb OR
+           role_state.rolcreaterole OR role_state.rolreplication OR
+           role_state.rolbypassrls OR
+           (SELECT count(*) FROM pg_auth_members membership
+             WHERE membership.member = role_state.oid) <> 1 OR
+           NOT EXISTS (
+               SELECT 1 FROM pg_auth_members membership
+                WHERE membership.roleid =
+                          (SELECT oid FROM pg_roles
+                            WHERE rolname = duty_role)
+                  AND membership.member = role_state.oid
+                  AND NOT membership.admin_option) OR
+           EXISTS (SELECT 1 FROM pg_auth_members membership
+                    WHERE membership.roleid = role_state.oid) THEN
+            RAISE EXCEPTION
+                'runtime login % could not be normalized to exact duty %',
+                login_role, duty_role;
         END IF;
     END LOOP;
     -- These are dedicated, function-only identities.  Remove any pre-existing
@@ -92,9 +201,16 @@ END
 $roles$;
 
 REVOKE CREATE ON SCHEMA public FROM
-    verdify_experiment_randomizer, verdify_experiment_lifecycle,
+    verdify_experiment_shadow_scheduler, verdify_experiment_randomizer,
+    verdify_experiment_lifecycle,
     verdify_experiment_component_executor, verdify_experiment_outcome_freezer,
     verdify_experiment_blinded_analyst;
+REVOKE CREATE ON SCHEMA public FROM
+    verdify_experiment_v2_shadow_scheduler_login,
+    verdify_experiment_v2_randomizer_login,
+    verdify_experiment_v2_lifecycle_login,
+    verdify_experiment_v2_component_executor_login,
+    verdify_experiment_v2_outcome_freezer_login;
 
 -- --------------------------------------------------------------------------
 -- Orthogonal v2 experiment axes.  Defaults preserve every existing v1 row.
@@ -120,6 +236,7 @@ ALTER TABLE public.control_experiments
     ADD COLUMN IF NOT EXISTS firmware_revision text,
     ADD COLUMN IF NOT EXISTS config_revision text,
     ADD COLUMN IF NOT EXISTS grid_revision text,
+    ADD COLUMN IF NOT EXISTS candidate_revision_at timestamptz,
     ADD COLUMN IF NOT EXISTS study_start_local_date date,
     ADD COLUMN IF NOT EXISTS randomized_pair_count integer
         CHECK (randomized_pair_count IS NULL OR randomized_pair_count > 0),
@@ -131,6 +248,30 @@ ALTER TABLE public.control_experiments
         CHECK (source_git_sha IS NULL OR source_git_sha ~ '^[0-9a-f]{40}$'),
     ADD COLUMN IF NOT EXISTS schedule_schema_sha256 text
         CHECK (schedule_schema_sha256 IS NULL OR schedule_schema_sha256 ~ '^[0-9a-f]{64}$');
+
+ALTER TABLE public.control_experiments
+    ADD COLUMN IF NOT EXISTS selector_context_cutoff_local time,
+    ADD COLUMN IF NOT EXISTS selector_identity_sha256 text
+        CHECK (selector_identity_sha256 IS NULL OR
+               selector_identity_sha256 ~ '^[0-9a-f]{64}$'),
+    ADD COLUMN IF NOT EXISTS selector_artifact_sha256 text
+        CHECK (selector_artifact_sha256 IS NULL OR
+               selector_artifact_sha256 ~ '^[0-9a-f]{64}$'),
+    ADD COLUMN IF NOT EXISTS context_schema_sha256 text
+        CHECK (context_schema_sha256 IS NULL OR
+               context_schema_sha256 ~ '^[0-9a-f]{64}$'),
+    ADD COLUMN IF NOT EXISTS endpoint_artifact_sha256 text
+        CHECK (endpoint_artifact_sha256 IS NULL OR
+               endpoint_artifact_sha256 ~ '^[0-9a-f]{64}$'),
+    ADD COLUMN IF NOT EXISTS outcome_schema_sha256 text
+        CHECK (outcome_schema_sha256 IS NULL OR
+               outcome_schema_sha256 ~ '^[0-9a-f]{64}$'),
+    ADD COLUMN IF NOT EXISTS analyzer_environment_sha256 text
+        CHECK (analyzer_environment_sha256 IS NULL OR
+               analyzer_environment_sha256 ~ '^[0-9a-f]{64}$'),
+    ADD COLUMN IF NOT EXISTS power_artifact_sha256 text
+        CHECK (power_artifact_sha256 IS NULL OR
+               power_artifact_sha256 ~ '^[0-9a-f]{64}$');
 
 -- --------------------------------------------------------------------------
 -- Immutable evidence relations.
@@ -153,9 +294,33 @@ VALUES (true,
         'fc73d212f58db91bd55bb70e3faa1431172b4339ae3b22a11d404ba95147b794')
 ON CONFLICT (singleton) DO NOTHING;
 
+-- Candidate revisions are immutable even though the draft control-row pointer
+-- may move.  A replacement is an explicit new epoch: it bumps the lease,
+-- returns execution to device-dark shadow, and makes every old work/approval
+-- row ineligible without destroying its audit evidence.
+CREATE TABLE IF NOT EXISTS public.experiment_v2_candidate_revisions (
+    revision_bundle_sha256 text PRIMARY KEY
+        CHECK (revision_bundle_sha256 ~ '^[0-9a-f]{64}$'),
+    experiment_id uuid NOT NULL REFERENCES public.control_experiments(experiment_id),
+    transport_kind text NOT NULL CHECK (transport_kind = 'legacy_components_v1'),
+    firmware_revision text NOT NULL,
+    config_revision text NOT NULL,
+    registry_revision text NOT NULL,
+    grid_revision text NOT NULL,
+    study_id text NOT NULL,
+    assignment_namespace_uuid uuid NOT NULL,
+    supersedes_revision_bundle_sha256 text
+        REFERENCES public.experiment_v2_candidate_revisions(revision_bundle_sha256),
+    configured_by text NOT NULL,
+    configured_at timestamptz NOT NULL,
+    UNIQUE (experiment_id, revision_bundle_sha256)
+);
+
 CREATE TABLE IF NOT EXISTS public.experiment_v2_state_artifacts (
     state_artifact_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     experiment_id uuid NOT NULL REFERENCES public.control_experiments(experiment_id),
+    revision_bundle_sha256 text NOT NULL
+        REFERENCES public.experiment_v2_candidate_revisions(revision_bundle_sha256),
     profile text NOT NULL CHECK (profile IN
         ('baseline', 'moderate', 'aggressive', 'commissioning_probe')),
     wire_schema_version smallint NOT NULL CHECK (wire_schema_version BETWEEN 0 AND 255),
@@ -164,8 +329,8 @@ CREATE TABLE IF NOT EXISTS public.experiment_v2_state_artifacts (
     state_content_sha256 text NOT NULL CHECK (state_content_sha256 ~ '^[0-9a-f]{64}$'),
     recorded_by text NOT NULL,
     recorded_at timestamptz NOT NULL,
-    UNIQUE (experiment_id, profile),
-    UNIQUE (experiment_id, state_content_sha256)
+    UNIQUE (experiment_id, revision_bundle_sha256, profile),
+    UNIQUE (experiment_id, revision_bundle_sha256, state_content_sha256)
 );
 
 CREATE TABLE IF NOT EXISTS public.experiment_v2_approvals (
@@ -178,13 +343,15 @@ CREATE TABLE IF NOT EXISTS public.experiment_v2_approvals (
     issue_number integer NOT NULL CHECK (issue_number IN (641, 642)),
     approval_ref text NOT NULL CHECK (length(approval_ref) > 0),
     artifact_sha256 text NOT NULL CHECK (artifact_sha256 ~ '^[0-9a-f]{64}$'),
+    revision_bundle_sha256 text NOT NULL
+        REFERENCES public.experiment_v2_candidate_revisions(revision_bundle_sha256),
     valid_range tstzrange,
     expires_at timestamptz,
     supervisor_role text,
     rescue_owner_role text,
     approved_by text NOT NULL,
     approved_at timestamptz NOT NULL,
-    UNIQUE (experiment_id, approval_kind, scope_name),
+    UNIQUE (experiment_id, revision_bundle_sha256, approval_kind, scope_name),
     CHECK (
         (approval_kind = 'scoped_probe' AND issue_number = 641 AND
          scope_name = 'commissioning_probe' AND valid_range IS NOT NULL AND
@@ -241,7 +408,119 @@ CREATE TABLE IF NOT EXISTS public.experiment_v2_work (
                 ('randomized_assignment', 'baseline_recovery'))),
     CHECK ((operation_kind = 'randomized_assignment') = (assignment_id IS NOT NULL)),
     CHECK (operation_kind <> 'randomized_assignment' OR work_id = assignment_id),
+    CHECK (operation_kind <> 'shadow_preview' OR target_profile = 'baseline'),
     CHECK (operation_kind <> 'baseline_recovery' OR target_profile = 'baseline')
+);
+
+-- One candidate selector cycle is bound to one deterministic, baseline-only
+-- shadow work row.  Its local boundary and outcome window are database-derived;
+-- it confers no assignment, exposure, outbox, admission, or device authority.
+CREATE TABLE IF NOT EXISTS public.experiment_v2_shadow_cycles (
+    cycle_id uuid PRIMARY KEY,
+    experiment_id uuid NOT NULL REFERENCES public.control_experiments(experiment_id),
+    work_id uuid NOT NULL UNIQUE REFERENCES public.experiment_v2_work(work_id),
+    local_date date NOT NULL,
+    context_cutoff_at timestamptz NOT NULL,
+    boundary_at timestamptz NOT NULL,
+    outcome_start_at timestamptz NOT NULL,
+    outcome_end_at timestamptz NOT NULL,
+    context_schema_sha256 text NOT NULL
+        CHECK (context_schema_sha256 ~ '^[0-9a-f]{64}$'),
+    selector_identity_sha256 text NOT NULL
+        CHECK (selector_identity_sha256 ~ '^[0-9a-f]{64}$'),
+    selector_artifact_sha256 text NOT NULL
+        CHECK (selector_artifact_sha256 ~ '^[0-9a-f]{64}$'),
+    endpoint_artifact_sha256 text NOT NULL
+        CHECK (endpoint_artifact_sha256 ~ '^[0-9a-f]{64}$'),
+    outcome_schema_sha256 text NOT NULL
+        CHECK (outcome_schema_sha256 ~ '^[0-9a-f]{64}$'),
+    revision_bundle_sha256 text NOT NULL
+        REFERENCES public.experiment_v2_candidate_revisions(revision_bundle_sha256),
+    lease_generation bigint NOT NULL CHECK (lease_generation >= 0),
+    created_by text NOT NULL,
+    created_at timestamptz NOT NULL,
+    UNIQUE (experiment_id, revision_bundle_sha256, local_date),
+    CHECK (context_cutoff_at < boundary_at),
+    CHECK (outcome_start_at = boundary_at + interval '6 hours'),
+    CHECK (outcome_end_at > outcome_start_at)
+);
+
+CREATE TABLE IF NOT EXISTS public.experiment_v2_shadow_contexts (
+    cycle_id uuid PRIMARY KEY REFERENCES public.experiment_v2_shadow_cycles(cycle_id),
+    experiment_id uuid NOT NULL REFERENCES public.control_experiments(experiment_id),
+    context_status text NOT NULL CHECK (context_status IN ('frozen', 'unavailable')),
+    context_payload jsonb NOT NULL,
+    context_canonical_bytes bytea NOT NULL,
+    context_sha256 text NOT NULL CHECK (context_sha256 ~ '^[0-9a-f]{64}$'),
+    source_bundle_sha256 text NOT NULL
+        CHECK (source_bundle_sha256 ~ '^[0-9a-f]{64}$'),
+    source_max_at timestamptz,
+    failure_reason text,
+    context_schema_sha256 text NOT NULL
+        CHECK (context_schema_sha256 ~ '^[0-9a-f]{64}$'),
+    selector_identity_sha256 text NOT NULL
+        CHECK (selector_identity_sha256 ~ '^[0-9a-f]{64}$'),
+    selector_artifact_sha256 text NOT NULL
+        CHECK (selector_artifact_sha256 ~ '^[0-9a-f]{64}$'),
+    frozen_by text NOT NULL,
+    frozen_at timestamptz NOT NULL,
+    UNIQUE (experiment_id, context_sha256),
+    CHECK (jsonb_typeof(context_payload) = 'object'),
+    CHECK ((context_status = 'frozen') = (failure_reason IS NULL)),
+    CHECK (context_status <> 'frozen' OR source_max_at IS NOT NULL)
+);
+
+CREATE TABLE IF NOT EXISTS public.experiment_v2_shadow_choices (
+    cycle_id uuid PRIMARY KEY REFERENCES public.experiment_v2_shadow_cycles(cycle_id),
+    experiment_id uuid NOT NULL REFERENCES public.control_experiments(experiment_id),
+    local_date date NOT NULL,
+    choice_id text NOT NULL UNIQUE,
+    invocation_key text NOT NULL UNIQUE,
+    choice_status text NOT NULL CHECK (choice_status IN ('selected', 'fallback')),
+    selected_profile text NOT NULL CHECK
+        (selected_profile IN ('baseline', 'moderate', 'aggressive')),
+    fallback_reason text,
+    context_sha256 text NOT NULL CHECK (context_sha256 ~ '^[0-9a-f]{64}$'),
+    selector_identity_sha256 text NOT NULL
+        CHECK (selector_identity_sha256 ~ '^[0-9a-f]{64}$'),
+    raw_request_sha256 text NOT NULL CHECK (raw_request_sha256 ~ '^[0-9a-f]{64}$'),
+    raw_response_sha256 text CHECK
+        (raw_response_sha256 IS NULL OR raw_response_sha256 ~ '^[0-9a-f]{64}$'),
+    attempt_receipt_sha256 text[] NOT NULL CHECK
+        (cardinality(attempt_receipt_sha256) > 0),
+    selector_artifact_sha256 text NOT NULL
+        CHECK (selector_artifact_sha256 ~ '^[0-9a-f]{64}$'),
+    virtual_a_profile text NOT NULL CHECK (virtual_a_profile = 'baseline'),
+    virtual_a_state_content_sha256 text NOT NULL
+        CHECK (virtual_a_state_content_sha256 ~ '^[0-9a-f]{64}$'),
+    virtual_b_profile text NOT NULL CHECK
+        (virtual_b_profile IN ('baseline', 'moderate', 'aggressive')),
+    virtual_b_state_content_sha256 text NOT NULL
+        CHECK (virtual_b_state_content_sha256 ~ '^[0-9a-f]{64}$'),
+    virtual_choice_sha256 text NOT NULL
+        CHECK (virtual_choice_sha256 ~ '^[0-9a-f]{64}$'),
+    accepted_at timestamptz NOT NULL,
+    recorded_by text NOT NULL,
+    recorded_at timestamptz NOT NULL,
+    CHECK ((choice_status = 'selected') = (fallback_reason IS NULL)),
+    CHECK (choice_id = invocation_key),
+    CHECK (accepted_at = recorded_at)
+);
+
+CREATE TABLE IF NOT EXISTS public.experiment_v2_shadow_outcome_previews (
+    cycle_id uuid PRIMARY KEY REFERENCES public.experiment_v2_shadow_cycles(cycle_id),
+    experiment_id uuid NOT NULL REFERENCES public.control_experiments(experiment_id),
+    outcome_payload jsonb NOT NULL,
+    endpoint_artifact_sha256 text NOT NULL
+        CHECK (endpoint_artifact_sha256 ~ '^[0-9a-f]{64}$'),
+    outcome_schema_sha256 text NOT NULL
+        CHECK (outcome_schema_sha256 ~ '^[0-9a-f]{64}$'),
+    outcome_preview_sha256 text NOT NULL
+        CHECK (outcome_preview_sha256 ~ '^[0-9a-f]{64}$'),
+    frozen_by text NOT NULL,
+    frozen_at timestamptz NOT NULL,
+    UNIQUE (experiment_id, outcome_preview_sha256),
+    CHECK (jsonb_typeof(outcome_payload) = 'object')
 );
 
 CREATE TABLE IF NOT EXISTS public.experiment_v2_work_events (
@@ -467,6 +746,49 @@ CREATE INDEX IF NOT EXISTS idx_experiment_v2_runtime_snapshots_latest
     ON public.experiment_v2_runtime_snapshots
        (experiment_id, device_id, recorded_at DESC);
 
+-- Complete current-lineage epochs that disprove a completed bundle before an
+-- exposure opens are durable negative evidence.  They cannot enter the
+-- successful receipt tables, and they cannot use runtime_snapshots because
+-- that ledger is deliberately bound to one exposure.  Keep the raw all-48
+-- source statement here and bind its source_epoch_id to the atomic fault row.
+CREATE TABLE IF NOT EXISTS public.experiment_v2_preexposure_mismatch_epochs (
+    source_epoch_id uuid PRIMARY KEY,
+    experiment_id uuid NOT NULL REFERENCES public.control_experiments(experiment_id),
+    work_id uuid NOT NULL REFERENCES public.experiment_v2_work(work_id),
+    bundle_id uuid NOT NULL REFERENCES public.experiment_v2_delivery_bundles(bundle_id),
+    device_id text NOT NULL CHECK (length(device_id) > 0),
+    expected_state_content_sha256 text NOT NULL
+        CHECK (expected_state_content_sha256 ~ '^[0-9a-f]{64}$'),
+    expected_wire_vector bytea NOT NULL CHECK (octet_length(expected_wire_vector) = 178),
+    observed_state_content_sha256 text NOT NULL
+        CHECK (observed_state_content_sha256 ~ '^[0-9a-f]{64}$'),
+    observed_wire_vector bytea NOT NULL CHECK (octet_length(observed_wire_vector) = 178),
+    observations jsonb NOT NULL,
+    first_observed_at timestamptz NOT NULL,
+    last_observed_at timestamptz NOT NULL,
+    firmware_revision text NOT NULL,
+    config_revision text NOT NULL,
+    registry_revision text NOT NULL,
+    grid_revision text NOT NULL,
+    runtime_instance_id uuid NOT NULL,
+    lease_generation bigint NOT NULL CHECK
+        (lease_generation BETWEEN 0 AND 9007199254740991),
+    writer_generation bigint NOT NULL CHECK
+        (writer_generation BETWEEN 0 AND 9007199254740991),
+    connection_generation bigint NOT NULL CHECK
+        (connection_generation BETWEEN 0 AND 9007199254740991),
+    source_epoch_sha256 text NOT NULL
+        CHECK (source_epoch_sha256 ~ '^[0-9a-f]{64}$'),
+    recorded_by text NOT NULL,
+    recorded_at timestamptz NOT NULL,
+    CHECK (last_observed_at >= first_observed_at),
+    CHECK (observed_wire_vector <> expected_wire_vector)
+);
+
+CREATE INDEX IF NOT EXISTS idx_experiment_v2_preexposure_mismatch_work_time
+    ON public.experiment_v2_preexposure_mismatch_epochs
+       (experiment_id, work_id, recorded_at DESC);
+
 CREATE TABLE IF NOT EXISTS public.experiment_v2_runtime_faults (
     fault_report_id uuid PRIMARY KEY,
     experiment_id uuid NOT NULL REFERENCES public.control_experiments(experiment_id),
@@ -593,6 +915,37 @@ CREATE TABLE IF NOT EXISTS public.experiment_v2_randomization (
     CHECK (x_physical_arm <> y_physical_arm)
 );
 
+CREATE TABLE IF NOT EXISTS public.experiment_v2_selector_contexts (
+    assignment_id uuid PRIMARY KEY REFERENCES public.control_assignments(assignment_id),
+    experiment_id uuid NOT NULL REFERENCES public.control_experiments(experiment_id),
+    assigned_local_date date NOT NULL,
+    context_cutoff_at timestamptz NOT NULL,
+    boundary_at timestamptz NOT NULL,
+    context_status text NOT NULL CHECK (context_status IN ('frozen', 'unavailable')),
+    context_payload jsonb NOT NULL,
+    context_canonical_bytes bytea NOT NULL,
+    context_sha256 text NOT NULL CHECK (context_sha256 ~ '^[0-9a-f]{64}$'),
+    source_bundle_sha256 text NOT NULL
+        CHECK (source_bundle_sha256 ~ '^[0-9a-f]{64}$'),
+    source_max_at timestamptz,
+    failure_reason text,
+    context_schema_sha256 text NOT NULL
+        CHECK (context_schema_sha256 ~ '^[0-9a-f]{64}$'),
+    selector_identity_sha256 text NOT NULL
+        CHECK (selector_identity_sha256 ~ '^[0-9a-f]{64}$'),
+    selector_artifact_sha256 text NOT NULL
+        CHECK (selector_artifact_sha256 ~ '^[0-9a-f]{64}$'),
+    frozen_by text NOT NULL,
+    frozen_at timestamptz NOT NULL,
+    UNIQUE (experiment_id, assigned_local_date),
+    UNIQUE (experiment_id, context_sha256),
+    CHECK (jsonb_typeof(context_payload) = 'object'),
+    CHECK ((context_status = 'frozen') = (failure_reason IS NULL)),
+    CHECK (context_status <> 'frozen' OR source_max_at IS NOT NULL),
+    CHECK (source_max_at IS NULL OR source_max_at <= context_cutoff_at),
+    CHECK (context_cutoff_at < boundary_at)
+);
+
 CREATE TABLE IF NOT EXISTS public.experiment_v2_selector_choices (
     assignment_id uuid PRIMARY KEY REFERENCES public.control_assignments(assignment_id),
     experiment_id uuid NOT NULL REFERENCES public.control_experiments(experiment_id),
@@ -604,6 +957,8 @@ CREATE TABLE IF NOT EXISTS public.experiment_v2_selector_choices (
         (selected_profile IN ('baseline', 'moderate', 'aggressive')),
     fallback_reason text,
     context_sha256 text NOT NULL CHECK (context_sha256 ~ '^[0-9a-f]{64}$'),
+    context_schema_sha256 text NOT NULL
+        CHECK (context_schema_sha256 ~ '^[0-9a-f]{64}$'),
     identity_sha256 text NOT NULL CHECK (identity_sha256 ~ '^[0-9a-f]{64}$'),
     raw_request_sha256 text NOT NULL CHECK (raw_request_sha256 ~ '^[0-9a-f]{64}$'),
     raw_response_sha256 text CHECK
@@ -651,25 +1006,69 @@ CREATE TABLE IF NOT EXISTS public.experiment_v2_outcome_freezes (
     CHECK (exposure_seconds <= expected_seconds)
 );
 
+-- Completion evidence is separate from the primary outcome payload so a
+-- caller cannot make a fabricated metric row stand in for deviations,
+-- treatment fidelity, source environment, or an integrity-verifier result.
+-- The freeze function below derives the durable portions from the database,
+-- binds external/source artifacts by hash, and accepts only a passing verifier
+-- result after the assigned fixed window is terminal.
+CREATE TABLE IF NOT EXISTS public.experiment_v2_day_evidence (
+    assignment_id uuid PRIMARY KEY
+        REFERENCES public.experiment_v2_outcomes(assignment_id),
+    experiment_id uuid NOT NULL REFERENCES public.control_experiments(experiment_id),
+    deviation_payload jsonb NOT NULL,
+    deviation_sha256 text NOT NULL CHECK (deviation_sha256 ~ '^[0-9a-f]{64}$'),
+    fidelity_payload jsonb NOT NULL,
+    fidelity_sha256 text NOT NULL CHECK (fidelity_sha256 ~ '^[0-9a-f]{64}$'),
+    environment_payload jsonb NOT NULL,
+    environment_sha256 text NOT NULL CHECK (environment_sha256 ~ '^[0-9a-f]{64}$'),
+    integrity_payload jsonb NOT NULL,
+    integrity_sha256 text NOT NULL CHECK (integrity_sha256 ~ '^[0-9a-f]{64}$'),
+    evidence_bundle_sha256 text NOT NULL
+        CHECK (evidence_bundle_sha256 ~ '^[0-9a-f]{64}$'),
+    integrity_passed boolean NOT NULL CHECK (integrity_passed),
+    frozen_by text NOT NULL,
+    frozen_at timestamptz NOT NULL,
+    UNIQUE (experiment_id, assignment_id),
+    CHECK (jsonb_typeof(deviation_payload) = 'object'),
+    CHECK (jsonb_typeof(fidelity_payload) = 'object'),
+    CHECK (jsonb_typeof(environment_payload) = 'object'),
+    CHECK (jsonb_typeof(integrity_payload) = 'object')
+);
+
 CREATE TABLE IF NOT EXISTS public.experiment_v2_exports (
     experiment_id uuid PRIMARY KEY REFERENCES public.control_experiments(experiment_id),
     export_payload jsonb NOT NULL,
     export_sha256 text NOT NULL CHECK (export_sha256 ~ '^[0-9a-f]{64}$'),
+    evidence_bundle_sha256 text NOT NULL
+        CHECK (evidence_bundle_sha256 ~ '^[0-9a-f]{64}$'),
     analyzer_environment_sha256 text NOT NULL
         CHECK (analyzer_environment_sha256 ~ '^[0-9a-f]{64}$'),
     frozen_by text NOT NULL,
     frozen_at timestamptz NOT NULL
 );
 
+-- A partially applied earlier draft may already have created the export table.
+-- Keep replay additive; any such legacy row remains fail-closed and requires
+-- explicit pre-launch remediation because immutable evidence cannot be
+-- guessed or backfilled (production has never applied migration 214).
+ALTER TABLE public.experiment_v2_exports
+    ADD COLUMN IF NOT EXISTS evidence_bundle_sha256 text
+        CHECK (evidence_bundle_sha256 ~ '^[0-9a-f]{64}$');
+
 CREATE TABLE IF NOT EXISTS public.experiment_v2_reveals (
     experiment_id uuid PRIMARY KEY REFERENCES public.control_experiments(experiment_id),
     export_sha256 text NOT NULL CHECK (export_sha256 ~ '^[0-9a-f]{64}$'),
     revealed_secret bytea NOT NULL CHECK (octet_length(revealed_secret) = 32),
     mapping_payload jsonb NOT NULL,
+    mapping_payload_sha256 text NOT NULL
+        CHECK (mapping_payload_sha256 ~ '^[0-9a-f]{64}$'),
     reproduced_schedule_sha256 text NOT NULL
         CHECK (reproduced_schedule_sha256 ~ '^[0-9a-f]{64}$'),
     reproduced_commitment_sha256 text NOT NULL
         CHECK (reproduced_commitment_sha256 ~ '^[0-9a-f]{64}$'),
+    reveal_receipt_sha256 text NOT NULL
+        CHECK (reveal_receipt_sha256 ~ '^[0-9a-f]{64}$'),
     revealed_by text NOT NULL,
     revealed_at timestamptz NOT NULL
 );
@@ -692,9 +1091,12 @@ DECLARE
     t text;
 BEGIN
     FOREACH t IN ARRAY ARRAY[
-        'experiment_v2_contract_constants', 'experiment_v2_state_artifacts',
+        'experiment_v2_contract_constants', 'experiment_v2_candidate_revisions',
+        'experiment_v2_state_artifacts',
         'experiment_v2_approvals',
-        'experiment_v2_work', 'experiment_v2_work_events',
+        'experiment_v2_work', 'experiment_v2_shadow_cycles',
+        'experiment_v2_shadow_contexts', 'experiment_v2_shadow_choices',
+        'experiment_v2_shadow_outcome_previews', 'experiment_v2_work_events',
         'experiment_v2_delivery_bundles', 'experiment_v2_delivery_bundle_completions',
         'experiment_v2_bundle_attempts',
         'experiment_v2_component_outcomes',
@@ -704,8 +1106,9 @@ BEGIN
         'experiment_v2_observation_epochs', 'experiment_v2_observation_receipts',
         'experiment_v2_exposures', 'experiment_v2_exposure_closures',
         'experiment_v2_facility_safe_closures',
-        'experiment_v2_randomization', 'experiment_v2_selector_choices',
-        'experiment_v2_outcomes',
+        'experiment_v2_randomization', 'experiment_v2_selector_contexts',
+        'experiment_v2_selector_choices',
+        'experiment_v2_outcomes', 'experiment_v2_day_evidence',
         'experiment_v2_outcome_freezes', 'experiment_v2_exports',
         'experiment_v2_reveals'
     ] LOOP
@@ -911,18 +1314,14 @@ $body$;
 CREATE OR REPLACE FUNCTION public.fn_experiment_v2_configure(
     p_experiment_id uuid,
     p_transport_kind text,
-    p_execution_phase text,
     p_firmware_revision text,
     p_config_revision text,
     p_registry_revision text,
     p_grid_revision text,
-    p_study_start_local_date date,
-    p_randomized_pair_count integer,
     p_study_id text,
     p_assignment_namespace_uuid uuid,
-    p_design_lock_sha256 text,
-    p_source_git_sha text,
-    p_schedule_schema_sha256 text,
+    p_expected_revision_bundle_sha256 text,
+    p_expected_lease_generation bigint,
     p_actor text DEFAULT current_user
 ) RETURNS public.control_experiments
 LANGUAGE plpgsql
@@ -932,21 +1331,18 @@ AS $body$
 DECLARE
     v_exp public.control_experiments%ROWTYPE;
     v_revision text;
+    v_prior_revision text;
+    v_now timestamptz;
+    v_is_replacement boolean;
 BEGIN
     SELECT e.* INTO v_exp FROM public.control_experiments e
      WHERE e.experiment_id = p_experiment_id FOR UPDATE;
+    v_now := clock_timestamp();
     IF NOT FOUND OR v_exp.kind <> 'randomized' OR v_exp.status <> 'draft' THEN
         RAISE EXCEPTION 'v2 configure requires an existing draft randomized experiment';
     END IF;
-    IF v_exp.protocol_version = 2 AND v_exp.revision_bundle_sha256 IS NOT NULL THEN
-        RAISE EXCEPTION 'v2 experiment % is already configured (immutable)', p_experiment_id;
-    END IF;
-    IF p_transport_kind <> 'legacy_components_v1' OR p_execution_phase <> 'shadow' THEN
-        RAISE EXCEPTION 'v2 confirmed-component study uses legacy_components_v1 transport in shadow';
-    END IF;
-    IF p_randomized_pair_count IS NULL OR p_randomized_pair_count < 2 OR
-       p_study_start_local_date IS NULL THEN
-        RAISE EXCEPTION 'v2 requires a fixed start date and at least two randomized pairs';
+    IF p_transport_kind <> 'legacy_components_v1' THEN
+        RAISE EXCEPTION 'v2 confirmed-component study uses legacy_components_v1 transport';
     END IF;
     IF p_firmware_revision IS NULL OR p_config_revision IS NULL OR
        p_registry_revision IS NULL OR p_grid_revision IS NULL OR
@@ -961,24 +1357,82 @@ BEGIN
     IF p_study_id IS NULL OR length(p_study_id) = 0 OR
        normalize(p_study_id, NFC) <> p_study_id OR
        p_assignment_namespace_uuid IS NULL OR
-       p_design_lock_sha256 !~ '^[0-9a-f]{64}$' OR
-       p_source_git_sha !~ '^[0-9a-f]{40}$' OR
-       p_schedule_schema_sha256 <>
-           'fc73d212f58db91bd55bb70e3faa1431172b4339ae3b22a11d404ba95147b794' THEN
-        RAISE EXCEPTION 'study/design/source/schedule-schema lock is incomplete or mismatched';
+       p_expected_lease_generation IS NULL OR p_expected_lease_generation < 0 THEN
+        RAISE EXCEPTION 'candidate study identity, namespace, and expected lease are required';
     END IF;
     v_revision := encode(digest(
         convert_to('verdify-experiment-v2-revision-bundle-v1', 'UTF8') || decode('00', 'hex') ||
+        uuid_send(p_experiment_id) ||
         convert_to(jsonb_build_object(
             'config_revision', p_config_revision,
             'firmware_revision', p_firmware_revision,
             'grid_revision', p_grid_revision,
             'registry_revision', p_registry_revision,
             'study_id', p_study_id,
-            'design_lock_sha256', p_design_lock_sha256,
-            'source_git_sha', p_source_git_sha,
-            'schedule_schema_sha256', p_schedule_schema_sha256)::text, 'UTF8'),
+            'assignment_namespace_uuid', p_assignment_namespace_uuid::text,
+            'transport_kind', p_transport_kind)::text, 'UTF8'),
         'sha256'), 'hex');
+
+    -- Exact lost-response replay is safe from any later draft readiness phase;
+    -- it neither bumps the lease nor reactivates invalidated evidence.
+    IF v_exp.protocol_version = 2 AND
+       v_exp.revision_bundle_sha256 = v_revision AND
+       v_exp.transport_kind = p_transport_kind AND
+       v_exp.firmware_revision = p_firmware_revision AND
+       v_exp.config_revision = p_config_revision AND
+       v_exp.registry_revision = p_registry_revision AND
+       v_exp.grid_revision = p_grid_revision AND
+       v_exp.study_id = p_study_id AND
+       v_exp.assignment_namespace_uuid = p_assignment_namespace_uuid THEN
+        RETURN v_exp;
+    END IF;
+
+    v_is_replacement := v_exp.protocol_version = 2;
+    v_prior_revision := v_exp.revision_bundle_sha256;
+    IF NOT v_is_replacement THEN
+        IF p_expected_revision_bundle_sha256 IS NOT NULL OR
+           p_expected_lease_generation <> v_exp.lease_generation THEN
+            RAISE EXCEPTION 'initial candidate configure expected binding is stale';
+        END IF;
+    ELSIF p_expected_revision_bundle_sha256 IS DISTINCT FROM
+              v_exp.revision_bundle_sha256 OR
+          p_expected_lease_generation <> v_exp.lease_generation THEN
+        RAISE EXCEPTION 'candidate replacement expected binding is stale';
+    ELSIF v_exp.admission_state <> 'closed' OR
+          v_exp.design_lock_sha256 IS NOT NULL OR EXISTS (
+              SELECT 1 FROM public.experiment_v2_randomization r
+               WHERE r.experiment_id = p_experiment_id) OR
+          EXISTS (
+              SELECT 1 FROM public.experiment_v2_exposures x
+              LEFT JOIN public.experiment_v2_exposure_closures c USING (exposure_id)
+               WHERE x.experiment_id = p_experiment_id AND c.exposure_id IS NULL) OR EXISTS (
+              SELECT 1 FROM public.experiment_v2_work w
+               WHERE w.experiment_id = p_experiment_id
+                 AND w.revision_bundle_sha256 = v_exp.revision_bundle_sha256
+                 AND NOT EXISTS (
+                     SELECT 1 FROM public.experiment_v2_work_events terminal
+                      WHERE terminal.work_id = w.work_id
+                        AND terminal.event_kind IN
+                            ('completed', 'failed', 'recovered',
+                             'cancelled', 'superseded'))) THEN
+        RAISE EXCEPTION 'candidate replacement requires exact draft/closed binding and terminal current work';
+    END IF;
+    IF EXISTS (
+        SELECT 1 FROM public.experiment_v2_candidate_revisions prior
+         WHERE prior.revision_bundle_sha256 = v_revision) THEN
+        RAISE EXCEPTION 'superseded candidate revision cannot reactivate old readiness evidence';
+    END IF;
+
+    INSERT INTO public.experiment_v2_candidate_revisions
+        (revision_bundle_sha256, experiment_id, transport_kind,
+         firmware_revision, config_revision, registry_revision, grid_revision,
+         study_id, assignment_namespace_uuid,
+         supersedes_revision_bundle_sha256, configured_by, configured_at)
+    VALUES (v_revision, p_experiment_id, p_transport_kind,
+            p_firmware_revision, p_config_revision, p_registry_revision,
+            p_grid_revision, p_study_id, p_assignment_namespace_uuid,
+            CASE WHEN v_is_replacement THEN v_prior_revision END,
+            p_actor, v_now);
 
     PERFORM set_config('verdify.experiment_v2_transition', 'on', true);
     UPDATE public.control_experiments
@@ -987,27 +1441,45 @@ BEGIN
            execution_phase = 'shadow',
            admission_state = 'closed',
            component_enabled = false,
-           lease_generation = 0,
+           lease_generation = lease_generation + CASE WHEN v_is_replacement THEN 1 ELSE 0 END,
            firmware_revision = p_firmware_revision,
            config_revision = p_config_revision,
            registry_revision = p_registry_revision,
            grid_revision = p_grid_revision,
            revision_bundle_sha256 = v_revision,
-           study_start_local_date = p_study_start_local_date,
-           randomized_pair_count = p_randomized_pair_count,
+           candidate_revision_at = v_now,
+           study_start_local_date = NULL,
+           randomized_pair_count = NULL,
            study_id = p_study_id,
            assignment_namespace_uuid = p_assignment_namespace_uuid,
-           design_lock_sha256 = p_design_lock_sha256,
-           source_git_sha = p_source_git_sha,
-           schedule_schema_sha256 = p_schedule_schema_sha256,
-           updated_at = clock_timestamp()
+           design_lock_sha256 = NULL,
+           source_git_sha = NULL,
+           schedule_schema_sha256 = NULL,
+           selector_context_cutoff_local = NULL,
+           selector_identity_sha256 = NULL,
+           selector_artifact_sha256 = NULL,
+           context_schema_sha256 = NULL,
+           endpoint_artifact_sha256 = NULL,
+           outcome_schema_sha256 = NULL,
+           analyzer_environment_sha256 = NULL,
+           power_artifact_sha256 = NULL,
+           schedule_sha256 = NULL,
+           mapping_commitment_sha256 = NULL,
+           updated_at = v_now
      WHERE experiment_id = p_experiment_id
      RETURNING * INTO v_exp;
     INSERT INTO public.experiment_events
         (experiment_id, event_kind, severity, actor, detail)
-    VALUES (p_experiment_id, 'note', 'info', p_actor,
-            jsonb_build_object('v2_event', 'configured',
-                               'revision_bundle_sha256', v_revision));
+    VALUES (p_experiment_id, 'note',
+            CASE WHEN v_is_replacement THEN 'warning' ELSE 'info' END,
+            p_actor,
+            jsonb_build_object(
+                'v2_event', CASE WHEN v_is_replacement
+                                 THEN 'candidate_revision_invalidated'
+                                 ELSE 'candidate_configured' END,
+                'revision_bundle_sha256', v_revision,
+                'superseded_revision_bundle_sha256',
+                    CASE WHEN v_is_replacement THEN v_prior_revision END));
     RETURN v_exp;
 END;
 $body$;
@@ -1042,10 +1514,12 @@ BEGIN
     v_hash := public.fn_experiment_v2_state_content_sha256(
         p_wire_schema_version, p_wire_manifest_digest, p_wire_vector);
     INSERT INTO public.experiment_v2_state_artifacts
-        (experiment_id, profile, wire_schema_version, wire_manifest_digest,
+        (experiment_id, revision_bundle_sha256, profile,
+         wire_schema_version, wire_manifest_digest,
          wire_vector, state_content_sha256, recorded_by, recorded_at)
     VALUES
-        (p_experiment_id, p_profile, p_wire_schema_version, p_wire_manifest_digest,
+        (p_experiment_id, v_exp.revision_bundle_sha256, p_profile,
+         p_wire_schema_version, p_wire_manifest_digest,
          p_wire_vector, v_hash, p_actor, v_now)
     RETURNING * INTO v_row;
     RETURN v_row;
@@ -1071,16 +1545,34 @@ SET search_path = public, pg_temp
 AS $body$
 DECLARE
     v_exp public.control_experiments%ROWTYPE;
+    v_existing public.experiment_v2_approvals%ROWTYPE;
     v_row public.experiment_v2_approvals%ROWTYPE;
+    v_now timestamptz;
 BEGIN
     SELECT * INTO v_exp FROM public.control_experiments
      WHERE experiment_id = p_experiment_id FOR UPDATE;
+    v_now := clock_timestamp();
     IF NOT FOUND OR v_exp.protocol_version <> 2 THEN
         RAISE EXCEPTION 'approval requires a protocol-v2 experiment';
     END IF;
     IF p_artifact_sha256 IS NULL OR p_artifact_sha256 !~ '^[0-9a-f]{64}$' OR
        p_approval_ref IS NULL OR length(p_approval_ref) = 0 THEN
         RAISE EXCEPTION 'approval reference and lowercase artifact hash are required';
+    END IF;
+    SELECT * INTO v_existing FROM public.experiment_v2_approvals
+     WHERE experiment_id = p_experiment_id
+       AND revision_bundle_sha256 = v_exp.revision_bundle_sha256
+       AND approval_kind = p_approval_kind AND scope_name = p_scope_name;
+    IF FOUND THEN
+        IF (v_existing.issue_number, v_existing.approval_ref,
+            v_existing.artifact_sha256, v_existing.valid_range,
+            v_existing.expires_at, v_existing.supervisor_role,
+            v_existing.rescue_owner_role, v_existing.approved_by) IS DISTINCT FROM
+           (p_issue_number, p_approval_ref, p_artifact_sha256, p_valid_range,
+            p_expires_at, p_supervisor_role, p_rescue_owner_role, p_actor) THEN
+            RAISE EXCEPTION 'current-revision approval is immutable';
+        END IF;
+        RETURN v_existing;
     END IF;
     IF p_approval_kind = 'scoped_probe' THEN
         IF v_exp.status <> 'draft' OR p_issue_number <> 641 OR
@@ -1097,6 +1589,7 @@ BEGIN
         IF p_artifact_sha256 <> (SELECT state_content_sha256
               FROM public.experiment_v2_state_artifacts
              WHERE experiment_id = p_experiment_id
+               AND revision_bundle_sha256 = v_exp.revision_bundle_sha256
                AND profile = 'commissioning_probe') THEN
             RAISE EXCEPTION '#641 scoped approval must bind the exact diagnostic probe state';
         END IF;
@@ -1106,11 +1599,13 @@ BEGIN
            (SELECT count(*)
               FROM public.experiment_v2_approvals
              WHERE experiment_id = p_experiment_id
+               AND revision_bundle_sha256 = v_exp.revision_bundle_sha256
                AND approval_kind = 'scoped_probe') <> 1 OR NOT EXISTS (
                SELECT 1 FROM public.experiment_v2_work w
                JOIN public.experiment_v2_work_events ev USING (experiment_id, work_id)
                 WHERE w.experiment_id = p_experiment_id
                   AND w.operation_kind = 'commissioning_probe'
+                  AND w.revision_bundle_sha256 = v_exp.revision_bundle_sha256
                   AND ev.event_kind = 'completed') THEN
             RAISE EXCEPTION '#641 combined approval follows exactly one scoped probe approval';
         END IF;
@@ -1119,6 +1614,7 @@ BEGIN
            v_exp.execution_phase <> 'randomized' OR NOT EXISTS (
                SELECT 1 FROM public.experiment_v2_approvals
                 WHERE experiment_id = p_experiment_id
+                  AND revision_bundle_sha256 = v_exp.revision_bundle_sha256
                   AND approval_kind = 'combined_physical'
            ) THEN
             RAISE EXCEPTION '#642 day-1 approval follows finalization/arming and integrated evidence';
@@ -1128,13 +1624,236 @@ BEGIN
     END IF;
     INSERT INTO public.experiment_v2_approvals
         (experiment_id, approval_kind, scope_name, issue_number, approval_ref,
-         artifact_sha256, valid_range, expires_at, supervisor_role,
+         artifact_sha256, revision_bundle_sha256,
+         valid_range, expires_at, supervisor_role,
          rescue_owner_role, approved_by, approved_at)
     VALUES (p_experiment_id, p_approval_kind, p_scope_name, p_issue_number,
-            p_approval_ref, p_artifact_sha256, p_valid_range, p_expires_at,
-            p_supervisor_role, p_rescue_owner_role, p_actor, clock_timestamp())
+            p_approval_ref, p_artifact_sha256, v_exp.revision_bundle_sha256,
+            p_valid_range, p_expires_at, p_supervisor_role,
+            p_rescue_owner_role, p_actor, v_now)
     RETURNING * INTO v_row;
     RETURN v_row;
+END;
+$body$;
+
+-- Freeze every non-random design input only after all readiness evidence for
+-- the current candidate revision exists.  Exact retries are safe; no other
+-- locked-row mutation or caller-selected schedule is accepted here.
+CREATE OR REPLACE FUNCTION public.fn_experiment_v2_lock_design(
+    p_experiment_id uuid,
+    p_study_start_local_date date,
+    p_randomized_pair_count integer,
+    p_selector_context_cutoff_local time without time zone,
+    p_design_lock_sha256 text,
+    p_source_git_sha text,
+    p_schedule_schema_sha256 text,
+    p_selector_identity_sha256 text,
+    p_selector_artifact_sha256 text,
+    p_context_schema_sha256 text,
+    p_endpoint_artifact_sha256 text,
+    p_outcome_schema_sha256 text,
+    p_analyzer_environment_sha256 text,
+    p_power_artifact_sha256 text,
+    p_actor text DEFAULT current_user
+) RETURNS public.control_experiments
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $body$
+DECLARE
+    v_exp public.control_experiments%ROWTYPE;
+    v_now timestamptz;
+    v_start_at timestamptz;
+    v_offset_count integer;
+    v_required_hash text;
+BEGIN
+    SELECT * INTO v_exp FROM public.control_experiments
+     WHERE experiment_id = p_experiment_id FOR UPDATE;
+    v_now := clock_timestamp();
+    IF NOT FOUND OR v_exp.protocol_version <> 2 THEN
+        RAISE EXCEPTION 'design lock requires one configured protocol-v2 experiment';
+    END IF;
+    IF (v_exp.greenhouse_id, v_exp.timezone) IS DISTINCT FROM
+       ('vallery'::text, 'America/Denver'::text) THEN
+        RAISE EXCEPTION
+            'design lock requires exact Vallery/America-Denver facility identity';
+    END IF;
+
+    -- A lost response after the one-way update must return exactly the same
+    -- row without another lease bump.  A single differing byte is a conflict.
+    IF v_exp.status = 'locked' THEN
+        IF (v_exp.study_start_local_date, v_exp.randomized_pair_count,
+            v_exp.selector_context_cutoff_local, v_exp.design_lock_sha256,
+            v_exp.source_git_sha, v_exp.schedule_schema_sha256,
+            v_exp.selector_identity_sha256, v_exp.selector_artifact_sha256,
+            v_exp.context_schema_sha256, v_exp.endpoint_artifact_sha256,
+            v_exp.outcome_schema_sha256, v_exp.analyzer_environment_sha256,
+            v_exp.power_artifact_sha256) IS NOT DISTINCT FROM
+           (p_study_start_local_date, p_randomized_pair_count,
+            p_selector_context_cutoff_local, p_design_lock_sha256,
+            p_source_git_sha, p_schedule_schema_sha256,
+            p_selector_identity_sha256, p_selector_artifact_sha256,
+            p_context_schema_sha256, p_endpoint_artifact_sha256,
+            p_outcome_schema_sha256, p_analyzer_environment_sha256,
+            p_power_artifact_sha256) THEN
+            RETURN v_exp;
+        END IF;
+        RAISE EXCEPTION 'design lock is immutable and exact replay differs';
+    END IF;
+
+    FOREACH v_required_hash IN ARRAY ARRAY[
+        p_design_lock_sha256, p_schedule_schema_sha256,
+        p_selector_identity_sha256, p_selector_artifact_sha256,
+        p_context_schema_sha256, p_endpoint_artifact_sha256,
+        p_outcome_schema_sha256, p_analyzer_environment_sha256,
+        p_power_artifact_sha256
+    ] LOOP
+        IF v_required_hash IS NULL OR v_required_hash !~ '^[0-9a-f]{64}$' THEN
+            RAISE EXCEPTION 'design lock requires every exact lowercase artifact SHA-256';
+        END IF;
+    END LOOP;
+    IF p_source_git_sha IS NULL OR p_source_git_sha !~ '^[0-9a-f]{40}$' OR
+       p_schedule_schema_sha256 <>
+           'fc73d212f58db91bd55bb70e3faa1431172b4339ae3b22a11d404ba95147b794' OR
+       p_selector_context_cutoff_local IS NULL OR
+       p_study_start_local_date IS NULL OR p_randomized_pair_count IS NULL OR
+       p_randomized_pair_count <= 0 THEN
+        RAISE EXCEPTION 'design lock source, schedule schema, cutoff, start, and fixed pair count are required';
+    END IF;
+    v_start_at := p_study_start_local_date::timestamp AT TIME ZONE v_exp.timezone;
+    IF v_start_at <= v_now THEN
+        RAISE EXCEPTION 'design lock start must remain strictly in the future';
+    END IF;
+    SELECT count(DISTINCT (
+        (p_study_start_local_date + i)::timestamp -
+        (((p_study_start_local_date + i)::timestamp AT TIME ZONE v_exp.timezone)
+            AT TIME ZONE 'UTC')))
+      INTO v_offset_count
+      FROM generate_series(0, p_randomized_pair_count * 2) i;
+    IF v_offset_count <> 1 THEN
+        RAISE EXCEPTION 'protocol v2 forbids a UTC-offset crossing in the locked local-day window';
+    END IF;
+    IF v_exp.status <> 'draft' OR v_exp.execution_phase <> 'randomized' OR
+       v_exp.admission_state <> 'closed' OR v_exp.component_enabled OR
+       v_exp.design_lock_sha256 IS NOT NULL OR
+       NOT EXISTS (
+           SELECT 1 FROM public.experiment_v2_candidate_revisions revision
+            WHERE revision.experiment_id = p_experiment_id
+              AND revision.revision_bundle_sha256 = v_exp.revision_bundle_sha256) OR
+       (SELECT count(DISTINCT s.profile)
+          FROM public.experiment_v2_state_artifacts s
+         WHERE s.experiment_id = p_experiment_id
+           AND s.revision_bundle_sha256 = v_exp.revision_bundle_sha256) <> 4 OR
+       NOT EXISTS (
+           SELECT 1
+             FROM public.experiment_v2_shadow_cycles cycle
+             JOIN public.experiment_v2_shadow_contexts context
+               USING (cycle_id, experiment_id)
+             JOIN public.experiment_v2_shadow_choices choice
+               USING (cycle_id, experiment_id)
+             JOIN public.experiment_v2_shadow_outcome_previews preview
+               USING (cycle_id, experiment_id)
+            WHERE cycle.experiment_id = p_experiment_id
+              AND cycle.revision_bundle_sha256 = v_exp.revision_bundle_sha256
+              AND cycle.lease_generation <= v_exp.lease_generation
+              AND cycle.context_schema_sha256 = p_context_schema_sha256
+              AND cycle.selector_identity_sha256 = p_selector_identity_sha256
+              AND cycle.selector_artifact_sha256 = p_selector_artifact_sha256
+              AND cycle.endpoint_artifact_sha256 = p_endpoint_artifact_sha256
+              AND cycle.outcome_schema_sha256 = p_outcome_schema_sha256
+              AND (cycle.context_cutoff_at AT TIME ZONE v_exp.timezone)::time =
+                  p_selector_context_cutoff_local
+              AND context.context_status = 'frozen'
+              AND context.context_schema_sha256 = p_context_schema_sha256
+              AND context.selector_identity_sha256 = p_selector_identity_sha256
+              AND context.selector_artifact_sha256 = p_selector_artifact_sha256
+              AND context.source_max_at <= cycle.context_cutoff_at
+              AND choice.selector_identity_sha256 = p_selector_identity_sha256
+              AND choice.selector_artifact_sha256 = p_selector_artifact_sha256
+              AND choice.accepted_at < cycle.boundary_at
+              AND preview.outcome_schema_sha256 = p_outcome_schema_sha256
+              AND preview.endpoint_artifact_sha256 = p_endpoint_artifact_sha256
+              AND preview.frozen_at >= cycle.outcome_end_at
+              AND cycle.created_at <= cycle.boundary_at - interval '12 hours'
+              AND EXISTS (
+                  SELECT 1 FROM public.experiment_v2_work_events done
+                   WHERE done.experiment_id = cycle.experiment_id
+                     AND done.work_id = cycle.work_id
+                     AND done.event_kind = 'completed')) OR
+       NOT EXISTS (
+           SELECT 1 FROM public.experiment_v2_approvals approval
+            WHERE approval.experiment_id = p_experiment_id
+              AND approval.revision_bundle_sha256 = v_exp.revision_bundle_sha256
+              AND approval.approval_kind = 'combined_physical') OR
+       NOT EXISTS (
+           SELECT 1 FROM public.experiment_v2_work w
+           JOIN public.experiment_v2_work_events done USING (experiment_id, work_id)
+            WHERE w.experiment_id = p_experiment_id
+              AND w.revision_bundle_sha256 = v_exp.revision_bundle_sha256
+              AND w.operation_kind = 'commissioning_probe'
+              AND done.event_kind = 'completed') OR
+       NOT EXISTS (
+           SELECT 1 FROM public.experiment_v2_work w
+           JOIN public.experiment_v2_work_events done USING (experiment_id, work_id)
+            WHERE w.experiment_id = p_experiment_id
+              AND w.revision_bundle_sha256 = v_exp.revision_bundle_sha256
+              AND w.operation_kind = 'commissioning_canary'
+              AND w.target_profile = 'moderate'
+              AND done.event_kind = 'completed') OR
+       NOT EXISTS (
+           SELECT 1 FROM public.experiment_v2_work w
+           JOIN public.experiment_v2_work_events done USING (experiment_id, work_id)
+            WHERE w.experiment_id = p_experiment_id
+              AND w.revision_bundle_sha256 = v_exp.revision_bundle_sha256
+              AND w.operation_kind = 'commissioning_canary'
+              AND w.target_profile = 'aggressive'
+              AND done.event_kind = 'completed') OR
+       NOT EXISTS (
+           SELECT 1 FROM public.experiment_v2_work w
+           JOIN public.experiment_v2_work_events done USING (experiment_id, work_id)
+            WHERE w.experiment_id = p_experiment_id
+              AND w.revision_bundle_sha256 = v_exp.revision_bundle_sha256
+              AND w.operation_kind = 'aa_baseline_rehearsal'
+              AND w.target_profile = 'baseline'
+              AND upper(w.valid_range) - lower(w.valid_range) >= interval '48 hours'
+              AND done.event_kind = 'completed') OR
+       EXISTS (
+           SELECT 1 FROM public.experiment_v2_exposures x
+           LEFT JOIN public.experiment_v2_exposure_closures c USING (exposure_id)
+            WHERE x.experiment_id = p_experiment_id AND c.exposure_id IS NULL) THEN
+        RAISE EXCEPTION 'design lock requires completed shadow/probe/moderate-canary/aggressive-canary/A-A current-revision evidence';
+    END IF;
+
+    PERFORM set_config('verdify.experiment_v2_transition', 'on', true);
+    UPDATE public.control_experiments
+       SET status = 'locked', component_enabled = false,
+           admission_state = 'closed',
+           study_start_local_date = p_study_start_local_date,
+           randomized_pair_count = p_randomized_pair_count,
+           selector_context_cutoff_local = p_selector_context_cutoff_local,
+           design_lock_sha256 = p_design_lock_sha256,
+           source_git_sha = p_source_git_sha,
+           schedule_schema_sha256 = p_schedule_schema_sha256,
+           selector_identity_sha256 = p_selector_identity_sha256,
+           selector_artifact_sha256 = p_selector_artifact_sha256,
+           context_schema_sha256 = p_context_schema_sha256,
+           endpoint_artifact_sha256 = p_endpoint_artifact_sha256,
+           outcome_schema_sha256 = p_outcome_schema_sha256,
+           analyzer_environment_sha256 = p_analyzer_environment_sha256,
+           power_artifact_sha256 = p_power_artifact_sha256,
+           lease_generation = lease_generation + 1,
+           locked_at = v_now, updated_at = v_now
+     WHERE experiment_id = p_experiment_id
+     RETURNING * INTO v_exp;
+    INSERT INTO public.experiment_events
+        (experiment_id, event_kind, severity, actor, detail, recorded_at)
+    VALUES (p_experiment_id, 'state_transition', 'info', p_actor,
+            jsonb_build_object(
+                'v2_status', 'locked',
+                'revision_bundle_sha256', v_exp.revision_bundle_sha256,
+                'design_lock_sha256', p_design_lock_sha256,
+                'power_artifact_sha256', p_power_artifact_sha256), v_now);
+    RETURN v_exp;
 END;
 $body$;
 
@@ -1166,16 +1885,16 @@ BEGIN
        (p_target_phase IS NOT NULL OR p_target_status IN ('completed', 'aborted')) THEN
         RAISE EXCEPTION 'phase/terminal transitions require admission closed first';
     END IF;
-    IF (p_target_phase IS NOT NULL OR p_target_status = 'locked') AND EXISTS (
+    IF p_target_phase IS NOT NULL AND EXISTS (
         SELECT 1 FROM public.experiment_v2_exposures x
         LEFT JOIN public.experiment_v2_exposure_closures c USING (exposure_id)
          WHERE x.experiment_id = p_experiment_id AND c.exposure_id IS NULL) THEN
-        RAISE EXCEPTION 'close every exposure before phase advance or design lock';
+        RAISE EXCEPTION 'close every exposure before phase advance';
     END IF;
 
     IF p_target_status IS NOT NULL THEN
         v_ok := (v_exp.status, p_target_status) IN (
-            ('draft', 'locked'), ('armed', 'running'),
+            ('armed', 'running'),
             ('running', 'paused'), ('paused', 'running'),
             ('locked', 'aborted'), ('armed', 'aborted'),
             ('running', 'aborted'), ('paused', 'aborted'));
@@ -1183,30 +1902,8 @@ BEGIN
             RAISE EXCEPTION 'illegal irreversible v2 lifecycle transition % -> %',
                 v_exp.status, p_target_status;
         END IF;
-        IF p_target_status = 'locked' AND (
-            v_exp.revision_bundle_sha256 IS NULL OR
-            (SELECT count(*) FROM public.experiment_v2_state_artifacts
-              WHERE experiment_id = p_experiment_id) <> 4 OR
-            v_exp.execution_phase <> 'randomized' OR
-            NOT EXISTS (SELECT 1 FROM public.experiment_v2_approvals
-                         WHERE experiment_id = p_experiment_id
-                           AND approval_kind = 'combined_physical') OR
-            EXISTS (
-                SELECT required.kind FROM (VALUES
-                    ('shadow_preview', NULL::text),
-                    ('commissioning_probe', 'commissioning_probe'),
-                    ('commissioning_canary', 'moderate'),
-                    ('commissioning_canary', 'aggressive'),
-                    ('aa_baseline_rehearsal', 'baseline')) required(kind, profile)
-                 WHERE NOT EXISTS (
-                     SELECT 1 FROM public.experiment_v2_work w
-                     JOIN public.experiment_v2_work_events ev USING (experiment_id, work_id)
-                      WHERE w.experiment_id = p_experiment_id
-                        AND w.operation_kind = required.kind
-                        AND (required.profile IS NULL OR
-                             w.target_profile = required.profile)
-                        AND ev.event_kind = 'completed'))) THEN
-            RAISE EXCEPTION 'design lock requires four states, closed readiness, and completed shadow/probe/moderate-canary/aggressive-canary/A-A evidence';
+        IF p_target_status = 'locked' THEN
+            RAISE EXCEPTION 'draft-to-locked is owned atomically by fn_experiment_v2_lock_design';
         END IF;
         IF p_target_status = 'armed' THEN
             RAISE EXCEPTION 'locked-to-armed is owned atomically by randomization finalization';
@@ -1217,6 +1914,7 @@ BEGIN
                          WHERE experiment_id = p_experiment_id) OR
             NOT EXISTS (SELECT 1 FROM public.experiment_v2_approvals
                          WHERE experiment_id = p_experiment_id
+                           AND revision_bundle_sha256 = v_exp.revision_bundle_sha256
                            AND approval_kind = 'randomized_day_1') OR
             NOT EXISTS (
                 SELECT 1 FROM public.experiment_v2_outcomes o
@@ -1255,9 +1953,25 @@ BEGIN
         IF NOT v_ok OR v_exp.status <> 'draft' THEN
             RAISE EXCEPTION 'readiness phases advance one way only while lifecycle remains draft';
         END IF;
+        IF p_target_phase = 'commissioning' AND NOT EXISTS (
+            SELECT 1
+              FROM public.experiment_v2_shadow_cycles cycle
+              JOIN public.experiment_v2_shadow_contexts context USING (cycle_id, experiment_id)
+              JOIN public.experiment_v2_shadow_choices choice USING (cycle_id, experiment_id)
+              JOIN public.experiment_v2_shadow_outcome_previews preview
+                USING (cycle_id, experiment_id)
+              JOIN public.experiment_v2_work_events completed
+                ON completed.experiment_id = cycle.experiment_id
+               AND completed.work_id = cycle.work_id
+               AND completed.event_kind = 'completed'
+             WHERE cycle.experiment_id = p_experiment_id
+               AND cycle.revision_bundle_sha256 = v_exp.revision_bundle_sha256) THEN
+            RAISE EXCEPTION 'commissioning requires one complete current-revision device-dark shadow cycle';
+        END IF;
         IF p_target_phase = 'aa_rehearsal' AND NOT EXISTS (
             SELECT 1 FROM public.experiment_v2_approvals
              WHERE experiment_id = p_experiment_id
+               AND revision_bundle_sha256 = v_exp.revision_bundle_sha256
                AND approval_kind = 'combined_physical') THEN
             RAISE EXCEPTION 'A/A phase requires #641 combined approval';
         END IF;
@@ -1266,6 +1980,7 @@ BEGIN
             JOIN public.experiment_v2_work_events ev USING (experiment_id, work_id)
              WHERE w.experiment_id = p_experiment_id
                AND w.operation_kind = 'aa_baseline_rehearsal'
+               AND w.revision_bundle_sha256 = v_exp.revision_bundle_sha256
                AND ev.event_kind = 'completed') THEN
             RAISE EXCEPTION 'randomized design phase requires completed A/A rehearsal evidence';
         END IF;
@@ -1327,12 +2042,15 @@ BEGIN
         IF v_exp.execution_phase = 'commissioning' AND NOT EXISTS (
             SELECT 1 FROM public.experiment_v2_approvals
              WHERE experiment_id = p_experiment_id AND approval_kind = 'scoped_probe'
+               AND revision_bundle_sha256 = v_exp.revision_bundle_sha256
                AND v_now < expires_at) THEN
             RAISE EXCEPTION 'commissioning admission requires a scoped #641 approval';
         END IF;
         IF v_exp.execution_phase IN ('aa_rehearsal', 'randomized') AND NOT EXISTS (
             SELECT 1 FROM public.experiment_v2_approvals
-             WHERE experiment_id = p_experiment_id AND approval_kind = 'combined_physical') THEN
+             WHERE experiment_id = p_experiment_id
+               AND revision_bundle_sha256 = v_exp.revision_bundle_sha256
+               AND approval_kind = 'combined_physical') THEN
             RAISE EXCEPTION 'physical admission requires #641 combined approval';
         END IF;
         IF v_exp.execution_phase = 'randomized' AND (
@@ -1504,11 +2222,17 @@ AS $body$
 DECLARE
     v_exp public.control_experiments%ROWTYPE;
     v_state public.experiment_v2_state_artifacts%ROWTYPE;
+    v_existing public.experiment_v2_work%ROWTYPE;
+    v_existing_count integer;
     v_work_id uuid;
-    v_now timestamptz := clock_timestamp();
+    v_now timestamptz;
 BEGIN
     SELECT * INTO v_exp FROM public.control_experiments
      WHERE experiment_id = p_experiment_id FOR UPDATE;
+    -- The experiment-row lock is the serialization point for readiness-work
+    -- creation.  Capture server time only after acquiring it so a waiter can
+    -- never create work with a range that expired while it was blocked.
+    v_now := clock_timestamp();
     IF NOT FOUND OR v_exp.protocol_version <> 2 THEN
         RAISE EXCEPTION 'unknown protocol-v2 experiment %', p_experiment_id;
     END IF;
@@ -1516,15 +2240,11 @@ BEGIN
         'commissioning_canary', 'aa_baseline_rehearsal') THEN
         RAISE EXCEPTION 'routine work kind % must use its typed creation path', p_operation_kind;
     END IF;
-    IF (v_exp.execution_phase, p_operation_kind) NOT IN (
-        ('shadow', 'shadow_preview'),
-        ('commissioning', 'commissioning_probe'),
-        ('commissioning', 'commissioning_canary'),
-        ('aa_rehearsal', 'aa_baseline_rehearsal')) THEN
-        RAISE EXCEPTION 'work kind % cannot cross phase %', p_operation_kind, v_exp.execution_phase;
+    IF p_actor IS NULL OR length(p_actor) = 0 THEN
+        RAISE EXCEPTION 'readiness work requires a nonempty actor identity';
     END IF;
-    IF v_exp.status <> 'draft' THEN
-        RAISE EXCEPTION 'readiness work closes permanently at design lock';
+    IF p_operation_kind = 'shadow_preview' AND p_target_profile <> 'baseline' THEN
+        RAISE EXCEPTION 'device-dark shadow preview resolves only to baseline';
     END IF;
     IF p_operation_kind = 'aa_baseline_rehearsal' AND p_target_profile <> 'baseline' THEN
         RAISE EXCEPTION 'A/A rehearsal resolves only to baseline';
@@ -1536,6 +2256,80 @@ BEGIN
     IF p_operation_kind = 'commissioning_canary' AND
        p_target_profile NOT IN ('moderate', 'aggressive') THEN
         RAISE EXCEPTION 'commissioning canary uses moderate/aggressive only after combined signoff';
+    END IF;
+    IF p_valid_range IS NULL OR isempty(p_valid_range) OR lower_inf(p_valid_range) OR
+       upper_inf(p_valid_range) OR NOT lower_inc(p_valid_range) OR upper_inc(p_valid_range) OR
+       p_expires_at IS NULL OR p_expires_at <= lower(p_valid_range) OR
+       p_expires_at > upper(p_valid_range) THEN
+        RAISE EXCEPTION 'work requires a bounded [) range and contained expiry';
+    END IF;
+    SELECT * INTO v_state FROM public.experiment_v2_state_artifacts
+     WHERE experiment_id = p_experiment_id
+       AND revision_bundle_sha256 = v_exp.revision_bundle_sha256
+       AND profile = p_target_profile;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'target profile % is not frozen', p_target_profile;
+    END IF;
+
+    -- This immutable caller tuple is the retry identity.  The experiment row
+    -- remains locked throughout lookup and insert, so concurrent callers of
+    -- this SECURITY DEFINER surface serialize.  A single exact row is the
+    -- canonical lost-response replay.  Old/owner-written duplicates or a row
+    -- bound to stale phase/revision/lease state are never guessed through.
+    SELECT count(*)::integer INTO v_existing_count
+      FROM public.experiment_v2_work w
+     WHERE w.experiment_id = p_experiment_id
+       AND w.operation_kind = p_operation_kind
+       AND w.target_profile = p_target_profile
+       AND w.valid_range = p_valid_range
+       AND w.expires_at = p_expires_at
+       AND w.created_by = p_actor;
+    IF v_existing_count > 1 THEN
+        RAISE EXCEPTION
+            'readiness work request is ambiguous: % equivalent immutable rows',
+            v_existing_count;
+    ELSIF v_existing_count = 1 THEN
+        SELECT * INTO STRICT v_existing
+          FROM public.experiment_v2_work w
+         WHERE w.experiment_id = p_experiment_id
+           AND w.operation_kind = p_operation_kind
+           AND w.target_profile = p_target_profile
+           AND w.valid_range = p_valid_range
+           AND w.expires_at = p_expires_at
+           AND w.created_by = p_actor;
+        IF v_existing.assignment_id IS NOT NULL OR
+           v_existing.parent_work_id IS NOT NULL OR
+           (v_existing.execution_phase,
+            v_existing.target_state_content_sha256,
+            v_existing.revision_bundle_sha256,
+            v_existing.firmware_revision,
+            v_existing.config_revision,
+            v_existing.registry_revision,
+            v_existing.grid_revision,
+            v_existing.lease_generation) IS DISTINCT FROM
+           (v_exp.execution_phase,
+            v_state.state_content_sha256,
+            v_exp.revision_bundle_sha256,
+            v_exp.firmware_revision,
+            v_exp.config_revision,
+            v_exp.registry_revision,
+            v_exp.grid_revision,
+            v_exp.lease_generation) THEN
+            RAISE EXCEPTION
+                'readiness work request conflicts with current experiment bindings';
+        END IF;
+        RETURN v_existing.work_id;
+    END IF;
+
+    IF (v_exp.execution_phase, p_operation_kind) NOT IN (
+        ('shadow', 'shadow_preview'),
+        ('commissioning', 'commissioning_probe'),
+        ('commissioning', 'commissioning_canary'),
+        ('aa_rehearsal', 'aa_baseline_rehearsal')) THEN
+        RAISE EXCEPTION 'work kind % cannot cross phase %', p_operation_kind, v_exp.execution_phase;
+    END IF;
+    IF v_exp.status <> 'draft' THEN
+        RAISE EXCEPTION 'readiness work closes permanently at design lock';
     END IF;
     IF p_operation_kind = 'commissioning_probe' AND NOT EXISTS (
         SELECT 1 FROM public.experiment_v2_approvals
@@ -1551,16 +2345,8 @@ BEGIN
            AND approval_kind = 'combined_physical') THEN
         RAISE EXCEPTION 'commissioning canary requires #641 combined approval';
     END IF;
-    IF p_valid_range IS NULL OR isempty(p_valid_range) OR lower_inf(p_valid_range) OR
-       upper_inf(p_valid_range) OR NOT lower_inc(p_valid_range) OR upper_inc(p_valid_range) OR
-       p_expires_at IS NULL OR p_expires_at <= lower(p_valid_range) OR
-       p_expires_at > upper(p_valid_range) OR upper(p_valid_range) <= v_now THEN
-        RAISE EXCEPTION 'work requires a bounded future [) range and contained expiry';
-    END IF;
-    SELECT * INTO v_state FROM public.experiment_v2_state_artifacts
-     WHERE experiment_id = p_experiment_id AND profile = p_target_profile;
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'target profile % is not frozen', p_target_profile;
+    IF upper(p_valid_range) <= v_now THEN
+        RAISE EXCEPTION 'new work requires a future range at the serialized server time';
     END IF;
     INSERT INTO public.experiment_v2_work
         (experiment_id, execution_phase, operation_kind, target_profile,
@@ -1575,6 +2361,227 @@ BEGIN
          p_actor, v_now)
     RETURNING work_id INTO v_work_id;
     RETURN v_work_id;
+END;
+$body$;
+
+CREATE OR REPLACE FUNCTION public.fn_experiment_v2_shadow_cycle_uuid(
+    p_namespace_uuid uuid,
+    p_study_id text,
+    p_local_date date,
+    p_revision_bundle_sha256 text
+) RETURNS uuid
+LANGUAGE plpgsql
+IMMUTABLE
+STRICT
+SET search_path = public, pg_temp
+AS $body$
+DECLARE
+    v_raw bytea;
+    v_hex text;
+BEGIN
+    v_raw := substring(digest(
+        uuid_send(p_namespace_uuid) ||
+        convert_to('verdify-shadow-cycle-v2', 'UTF8') || decode('00', 'hex') ||
+        convert_to(p_study_id, 'UTF8') || decode('00', 'hex') ||
+        convert_to(to_char(p_local_date, 'YYYY-MM-DD'), 'SQL_ASCII') ||
+        decode(p_revision_bundle_sha256, 'hex'), 'sha1') FROM 1 FOR 16);
+    v_raw := set_byte(v_raw, 6, (get_byte(v_raw, 6) & 15) | 80);
+    v_raw := set_byte(v_raw, 8, (get_byte(v_raw, 8) & 63) | 128);
+    v_hex := encode(v_raw, 'hex');
+    RETURN (substring(v_hex,1,8) || '-' || substring(v_hex,9,4) || '-' ||
+            substring(v_hex,13,4) || '-' || substring(v_hex,17,4) || '-' ||
+            substring(v_hex,21,12))::uuid;
+END;
+$body$;
+
+CREATE OR REPLACE FUNCTION public.fn_experiment_v2_schedule_shadow_cycle_at(
+    p_experiment_id uuid,
+    p_local_date date,
+    p_context_cutoff_at timestamptz,
+    p_context_schema_sha256 text,
+    p_selector_identity_sha256 text,
+    p_selector_artifact_sha256 text,
+    p_endpoint_artifact_sha256 text,
+    p_outcome_schema_sha256 text,
+    p_now timestamptz,
+    p_actor text DEFAULT current_user
+) RETURNS TABLE (
+    cycle_id uuid,
+    work_id uuid,
+    local_date date,
+    context_cutoff_at timestamptz,
+    boundary_at timestamptz,
+    outcome_end_at timestamptz,
+    revision_bundle_sha256 text,
+    lease_generation bigint
+)
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $body$
+DECLARE
+    v_exp public.control_experiments%ROWTYPE;
+    v_state public.experiment_v2_state_artifacts%ROWTYPE;
+    v_existing public.experiment_v2_shadow_cycles%ROWTYPE;
+    v_cycle_id uuid;
+    v_boundary timestamptz;
+    v_outcome_end timestamptz;
+    v_hash text;
+BEGIN
+    SELECT * INTO v_exp FROM public.control_experiments
+     WHERE experiment_id = p_experiment_id FOR UPDATE;
+    IF p_now IS NULL OR NOT FOUND OR v_exp.protocol_version <> 2 OR
+       v_exp.status <> 'draft' OR v_exp.execution_phase <> 'shadow' OR
+       v_exp.admission_state <> 'closed' OR v_exp.component_enabled OR
+       v_exp.revision_bundle_sha256 IS NULL OR
+       v_exp.assignment_namespace_uuid IS NULL OR v_exp.study_id IS NULL THEN
+        RAISE EXCEPTION 'shadow schedule requires current device-dark draft candidate';
+    END IF;
+    FOREACH v_hash IN ARRAY ARRAY[
+        p_context_schema_sha256, p_selector_identity_sha256,
+        p_selector_artifact_sha256, p_endpoint_artifact_sha256,
+        p_outcome_schema_sha256
+    ] LOOP
+        IF v_hash IS NULL OR v_hash !~ '^[0-9a-f]{64}$' THEN
+            RAISE EXCEPTION 'shadow schedule requires exact candidate artifact hashes';
+        END IF;
+    END LOOP;
+    v_boundary := p_local_date::timestamp AT TIME ZONE v_exp.timezone;
+    v_outcome_end := (p_local_date + 1)::timestamp AT TIME ZONE v_exp.timezone;
+    IF p_context_cutoff_at IS NULL OR p_context_cutoff_at < v_boundary - interval '24 hours' OR
+       p_context_cutoff_at >= v_boundary OR p_now > p_context_cutoff_at OR
+       p_now > v_boundary - interval '12 hours' OR v_outcome_end <= v_boundary THEN
+        RAISE EXCEPTION 'shadow schedule requires a server-future cutoff and at least 12 hours before one fixed boundary';
+    END IF;
+    SELECT state.* INTO v_state FROM public.experiment_v2_state_artifacts state
+     WHERE state.experiment_id = p_experiment_id
+       AND state.revision_bundle_sha256 = v_exp.revision_bundle_sha256
+       AND state.profile = 'baseline';
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'shadow schedule requires current-revision baseline state';
+    END IF;
+    v_cycle_id := public.fn_experiment_v2_shadow_cycle_uuid(
+        v_exp.assignment_namespace_uuid, v_exp.study_id, p_local_date,
+        v_exp.revision_bundle_sha256);
+    SELECT cycle.* INTO v_existing FROM public.experiment_v2_shadow_cycles cycle
+     WHERE cycle.cycle_id = v_cycle_id;
+    IF FOUND THEN
+        IF (v_existing.experiment_id, v_existing.local_date,
+            v_existing.context_cutoff_at, v_existing.boundary_at,
+            v_existing.outcome_end_at, v_existing.context_schema_sha256,
+            v_existing.selector_identity_sha256,
+            v_existing.selector_artifact_sha256,
+            v_existing.endpoint_artifact_sha256,
+            v_existing.outcome_schema_sha256,
+            v_existing.revision_bundle_sha256,
+            v_existing.lease_generation) IS DISTINCT FROM
+           (p_experiment_id, p_local_date, p_context_cutoff_at, v_boundary,
+            v_outcome_end, p_context_schema_sha256,
+            p_selector_identity_sha256, p_selector_artifact_sha256,
+            p_endpoint_artifact_sha256, p_outcome_schema_sha256,
+            v_exp.revision_bundle_sha256, v_exp.lease_generation) THEN
+            RAISE EXCEPTION 'shadow cycle identity is immutable and conflicting';
+        END IF;
+        RETURN QUERY SELECT v_existing.cycle_id, v_existing.work_id,
+            v_existing.local_date, v_existing.context_cutoff_at,
+            v_existing.boundary_at, v_existing.outcome_end_at,
+            v_existing.revision_bundle_sha256, v_existing.lease_generation;
+        RETURN;
+    END IF;
+    INSERT INTO public.experiment_v2_work
+        (work_id, experiment_id, execution_phase, operation_kind,
+         target_profile, target_state_content_sha256, revision_bundle_sha256,
+         firmware_revision, config_revision, registry_revision, grid_revision,
+         lease_generation, valid_range, expires_at, created_by, created_at)
+    VALUES (v_cycle_id, p_experiment_id, 'shadow', 'shadow_preview',
+            'baseline', v_state.state_content_sha256,
+            v_exp.revision_bundle_sha256, v_exp.firmware_revision,
+            v_exp.config_revision, v_exp.registry_revision, v_exp.grid_revision,
+            v_exp.lease_generation, tstzrange(p_now, v_outcome_end, '[)'),
+            v_outcome_end, p_actor, p_now);
+    INSERT INTO public.experiment_v2_shadow_cycles
+        (cycle_id, experiment_id, work_id, local_date, context_cutoff_at,
+         boundary_at, outcome_start_at, outcome_end_at,
+         context_schema_sha256, selector_identity_sha256,
+         selector_artifact_sha256, endpoint_artifact_sha256,
+         outcome_schema_sha256, revision_bundle_sha256, lease_generation,
+         created_by, created_at)
+    VALUES (v_cycle_id, p_experiment_id, v_cycle_id, p_local_date,
+            p_context_cutoff_at, v_boundary, v_boundary + interval '6 hours',
+            v_outcome_end, p_context_schema_sha256,
+            p_selector_identity_sha256, p_selector_artifact_sha256,
+            p_endpoint_artifact_sha256, p_outcome_schema_sha256,
+            v_exp.revision_bundle_sha256, v_exp.lease_generation,
+            p_actor, p_now);
+    RETURN QUERY SELECT v_cycle_id, v_cycle_id, p_local_date,
+        p_context_cutoff_at, v_boundary, v_outcome_end,
+        v_exp.revision_bundle_sha256, v_exp.lease_generation;
+END;
+$body$;
+
+CREATE OR REPLACE FUNCTION public.fn_experiment_v2_schedule_shadow_cycle(
+    p_experiment_id uuid,
+    p_local_date date,
+    p_context_cutoff_at timestamptz,
+    p_context_schema_sha256 text,
+    p_selector_identity_sha256 text,
+    p_selector_artifact_sha256 text,
+    p_endpoint_artifact_sha256 text,
+    p_outcome_schema_sha256 text,
+    p_actor text DEFAULT current_user
+) RETURNS TABLE (
+    cycle_id uuid, work_id uuid, local_date date,
+    context_cutoff_at timestamptz, boundary_at timestamptz,
+    outcome_end_at timestamptz, revision_bundle_sha256 text,
+    lease_generation bigint
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $body$
+DECLARE
+    v_now timestamptz := clock_timestamp();
+BEGIN
+    RETURN QUERY SELECT * FROM public.fn_experiment_v2_schedule_shadow_cycle_at(
+        p_experiment_id, p_local_date, p_context_cutoff_at,
+        p_context_schema_sha256, p_selector_identity_sha256,
+        p_selector_artifact_sha256, p_endpoint_artifact_sha256,
+        p_outcome_schema_sha256, v_now, p_actor);
+END;
+$body$;
+
+CREATE OR REPLACE FUNCTION public.fn_experiment_v2_due_shadow_cycle(
+    p_experiment_id uuid
+) RETURNS TABLE (
+    cycle_id uuid, work_id uuid, local_date date,
+    context_cutoff_at timestamptz, boundary_at timestamptz,
+    outcome_end_at timestamptz, revision_bundle_sha256 text,
+    lease_generation bigint, resolved_at timestamptz
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $body$
+DECLARE
+    v_now timestamptz := clock_timestamp();
+BEGIN
+    RETURN QUERY
+    SELECT cycle.cycle_id, cycle.work_id, cycle.local_date,
+           cycle.context_cutoff_at, cycle.boundary_at, cycle.outcome_end_at,
+           cycle.revision_bundle_sha256, cycle.lease_generation, v_now
+      FROM public.control_experiments e
+      JOIN public.experiment_v2_shadow_cycles cycle
+        ON cycle.experiment_id = e.experiment_id
+       AND cycle.revision_bundle_sha256 = e.revision_bundle_sha256
+       AND cycle.lease_generation = e.lease_generation
+      LEFT JOIN public.experiment_v2_shadow_contexts context
+        USING (cycle_id, experiment_id)
+     WHERE e.experiment_id = p_experiment_id AND e.protocol_version = 2
+       AND e.status = 'draft' AND e.execution_phase = 'shadow'
+       AND e.admission_state = 'closed' AND NOT e.component_enabled
+       AND v_now >= cycle.context_cutoff_at AND v_now < cycle.boundary_at
+       AND context.cycle_id IS NULL
+     ORDER BY cycle.context_cutoff_at, cycle.cycle_id
+     LIMIT 1;
 END;
 $body$;
 
@@ -1628,7 +2635,10 @@ BEGIN
         RAISE EXCEPTION 'recovery requires a reason and bounded current [) range contained by linked work';
     END IF;
     SELECT * INTO v_state FROM public.experiment_v2_state_artifacts
-     WHERE experiment_id = p_experiment_id AND profile = 'baseline';
+     WHERE experiment_id = p_experiment_id
+       AND revision_bundle_sha256 =
+           coalesce(v_source.revision_bundle_sha256, v_exp.revision_bundle_sha256)
+       AND profile = 'baseline';
     INSERT INTO public.experiment_v2_work
         (experiment_id, parent_work_id, execution_phase, operation_kind, target_profile,
          target_state_content_sha256, revision_bundle_sha256,
@@ -1935,6 +2945,60 @@ AS $body$
      WHERE e.experiment_id = p_experiment_id AND e.protocol_version = 2
 $body$;
 
+-- One recovery may clear a historical physical-fault signal only after its
+-- exact work has a successful `recovered` event (whose L3 writer requires two
+-- advancing baseline receipts) and a later explicit DB admission transition
+-- has moved authority out of baseline_recovery.
+CREATE OR REPLACE FUNCTION public.fn_experiment_v2_recovery_authority_cleared(
+    p_experiment_id uuid,
+    p_recovery_work_id uuid
+) RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $body$
+    SELECT p_recovery_work_id IS NOT NULL AND EXISTS (
+        SELECT 1
+          FROM public.experiment_v2_work recovery
+          JOIN public.experiment_v2_work_events recovered
+            ON recovered.experiment_id = recovery.experiment_id
+           AND recovered.work_id = recovery.work_id
+           AND recovered.event_kind = 'recovered'
+          JOIN public.control_experiments e
+            ON e.experiment_id = recovery.experiment_id
+         WHERE recovery.experiment_id = p_experiment_id
+           AND recovery.work_id = p_recovery_work_id
+           AND recovery.operation_kind = 'baseline_recovery'
+           AND recovery.target_profile = 'baseline'
+           AND recovery.lease_generation = e.lease_generation
+           AND recovery.revision_bundle_sha256 = e.revision_bundle_sha256
+           AND e.admission_state IN ('closed', 'open'))
+$body$;
+
+-- Historical restart/reconnect bits themselves never change. This derived
+-- predicate is the only way the executor may stop treating them as an active
+-- physical-state invalidation.
+CREATE OR REPLACE FUNCTION public.fn_experiment_v2_generation_recovery_cleared(
+    p_experiment_id uuid,
+    p_generation_event_id bigint
+) RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $body$
+    SELECT CASE
+        WHEN g.generation_event_id IS NULL THEN false
+        WHEN NOT (g.restart_detected OR g.reconnect_detected) THEN true
+        ELSE public.fn_experiment_v2_recovery_authority_cleared(
+            p_experiment_id, g.recovery_work_id)
+        END
+      FROM public.experiment_v2_runtime_generations g
+     WHERE g.experiment_id = p_experiment_id
+       AND g.generation_event_id = p_generation_event_id
+$body$;
+
 CREATE OR REPLACE FUNCTION public.fn_experiment_v2_claim_executor_candidate(
     p_experiment_id uuid,
     p_device_id text,
@@ -1993,7 +3057,15 @@ DECLARE
     v_open_exposure uuid;
     v_open_work uuid;
     v_baseline_confirmed boolean;
+    v_generation_recovery_cleared boolean;
+    v_snapshot_recovery_cleared boolean;
+    v_same_generation_nonbaseline_reentry boolean;
     v_mode text;
+    v_stale_work_id uuid;
+    v_stale_bundle_id uuid;
+    v_stale_operation_kind text;
+    v_confirmation_deadline timestamptz;
+    v_watchdog_fault public.experiment_v2_runtime_faults%ROWTYPE;
     v_now timestamptz := clock_timestamp();
 BEGIN
     SELECT e.* INTO v_exp FROM public.control_experiments e
@@ -2008,6 +3080,90 @@ BEGIN
      ORDER BY g.generation_event_id DESC LIMIT 1;
     IF v_generation.generation_event_id IS NULL THEN
         RAISE EXCEPTION 'executor must register one current runtime instance before claiming work';
+    END IF;
+    v_generation_recovery_cleared :=
+        public.fn_experiment_v2_generation_recovery_cleared(
+            p_experiment_id, v_generation.generation_event_id);
+    -- A completed physical bundle waiting on zero/one successful receipts is
+    -- no longer claim-eligible after its work/confirmation deadline. Detect it
+    -- before the ordinary eligibility query can make it disappear. The fault,
+    -- terminal work evidence, admission transition and bounded recovery are
+    -- committed atomically with this claim attempt.
+    SELECT w.work_id, b.bundle_id, w.operation_kind,
+           least(
+               w.expires_at,
+               upper(w.valid_range),
+               coalesce(receipts.last_observed_at,
+                        completion.bundle_finished_at) + interval '90 seconds')
+      INTO v_stale_work_id, v_stale_bundle_id, v_stale_operation_kind,
+           v_confirmation_deadline
+      FROM public.experiment_v2_work w
+      JOIN public.experiment_v2_delivery_bundles b
+        ON b.work_id = w.work_id AND b.experiment_id = w.experiment_id
+      JOIN public.experiment_v2_delivery_bundle_completions completion
+        ON completion.bundle_id = b.bundle_id
+      LEFT JOIN LATERAL (
+          SELECT count(*)::integer AS receipt_count,
+                 max(epoch.last_observed_at) AS last_observed_at
+            FROM public.experiment_v2_observation_receipts receipt
+            JOIN public.experiment_v2_observation_epochs epoch
+              USING (source_epoch_id)
+           WHERE receipt.work_id = w.work_id
+             AND receipt.bundle_id = b.bundle_id
+      ) receipts ON true
+     WHERE w.experiment_id = p_experiment_id
+       AND b.device_id = p_device_id
+       AND w.operation_kind <> 'shadow_preview'
+       AND w.execution_phase = v_exp.execution_phase
+       AND w.revision_bundle_sha256 = v_exp.revision_bundle_sha256
+       AND w.lease_generation = v_exp.lease_generation
+       AND coalesce(receipts.receipt_count, 0) < 2
+       AND NOT EXISTS (
+           SELECT 1 FROM public.experiment_v2_exposures x
+            WHERE x.work_id = w.work_id)
+       AND NOT EXISTS (
+           SELECT 1 FROM public.experiment_v2_work_events terminal
+            WHERE terminal.work_id = w.work_id AND terminal.event_kind IN
+                ('completed', 'failed', 'recovered', 'cancelled', 'superseded'))
+       AND least(
+               w.expires_at,
+               upper(w.valid_range),
+               coalesce(receipts.last_observed_at,
+                        completion.bundle_finished_at) + interval '90 seconds') <= v_now
+     ORDER BY least(
+                  w.expires_at,
+                  upper(w.valid_range),
+                  coalesce(receipts.last_observed_at,
+                           completion.bundle_finished_at) + interval '90 seconds'),
+              completion.bundle_finished_at
+     FOR UPDATE OF w SKIP LOCKED
+     LIMIT 1;
+    IF v_stale_work_id IS NOT NULL THEN
+        SELECT * INTO v_watchdog_fault
+          FROM public.fn_experiment_v2_report_runtime_fault(
+              p_experiment_id, p_device_id, gen_random_uuid(),
+              p_expected_lease_generation, v_generation.runtime_instance_id,
+              v_generation.writer_generation, v_generation.connection_generation,
+              CASE WHEN v_stale_operation_kind = 'baseline_recovery'
+                   THEN 'interrupted_recovery' ELSE 'sensor_gap' END,
+              'preexposure_confirmation_deadline_exceeded', p_worker_ref);
+        IF v_stale_operation_kind <> 'baseline_recovery' THEN
+            PERFORM public.fn_experiment_v2_record_work_event(
+                p_experiment_id, v_stale_work_id, 'failed',
+                jsonb_build_object(
+                    'reason', 'preexposure_confirmation_deadline_exceeded',
+                    'bundle_id', v_stale_bundle_id,
+                    'confirmation_deadline', v_confirmation_deadline,
+                    'fault_report_id', v_watchdog_fault.fault_report_id),
+                p_worker_ref);
+        ELSE
+            -- report_runtime_fault has atomically failed the one bounded
+            -- recovery and incremented the lease while yielding emergency
+            -- authority. This claim's expected lease is intentionally stale.
+            RETURN;
+        END IF;
+        SELECT e.* INTO v_exp FROM public.control_experiments e
+         WHERE e.experiment_id = p_experiment_id;
     END IF;
     SELECT w.* INTO v_work
       FROM public.experiment_v2_work w
@@ -2066,9 +3222,13 @@ BEGIN
         RETURNING work_event_id INTO v_claim_id;
     END IF;
     SELECT s.* INTO v_baseline FROM public.experiment_v2_state_artifacts s
-     WHERE s.experiment_id = p_experiment_id AND s.profile = 'baseline';
+     WHERE s.experiment_id = p_experiment_id
+       AND s.revision_bundle_sha256 = v_work.revision_bundle_sha256
+       AND s.profile = 'baseline';
     SELECT s.* INTO v_target FROM public.experiment_v2_state_artifacts s
-     WHERE s.experiment_id = p_experiment_id AND s.profile = v_work.target_profile;
+     WHERE s.experiment_id = p_experiment_id
+       AND s.revision_bundle_sha256 = v_work.revision_bundle_sha256
+       AND s.profile = v_work.target_profile;
     IF v_open_exposure IS NULL THEN
         SELECT x.exposure_id INTO v_open_exposure
           FROM public.experiment_v2_exposures x
@@ -2087,6 +3247,22 @@ BEGIN
       FROM public.experiment_v2_runtime_snapshots s
      WHERE s.experiment_id = p_experiment_id AND s.device_id = p_device_id
      ORDER BY s.recorded_at DESC LIMIT 1;
+    v_snapshot_recovery_cleared :=
+        v_snapshot.source_epoch_id IS NULL OR
+        NOT (coalesce(v_snapshot.reset_detected, false) OR
+             coalesce(v_snapshot.foreign_writer, false)) OR
+        public.fn_experiment_v2_recovery_authority_cleared(
+            p_experiment_id, v_snapshot.recovery_work_id);
+    v_same_generation_nonbaseline_reentry :=
+        ((v_generation.restart_detected OR v_generation.reconnect_detected) AND
+         (v_generation.recorded_at AT TIME ZONE v_exp.timezone)::date =
+             (lower(v_work.valid_range) AT TIME ZONE v_exp.timezone)::date OR
+         (coalesce(v_snapshot.reset_detected, false) OR
+          coalesce(v_snapshot.foreign_writer, false)) AND
+         (v_snapshot.recorded_at AT TIME ZONE v_exp.timezone)::date =
+             (lower(v_work.valid_range) AT TIME ZONE v_exp.timezone)::date) AND
+        v_work.target_profile <> 'baseline' AND
+        v_work.operation_kind NOT IN ('shadow_preview', 'baseline_recovery');
     RETURN QUERY SELECT
         v_claim_id, v_claim_expires, v_now, v_work.expires_at,
         v_work.work_id, v_work.assignment_id,
@@ -2105,7 +3281,8 @@ BEGIN
         v_baseline_confirmed,
         (v_exp.admission_state = 'baseline_recovery'),
         (v_exp.admission_state = 'emergency_hold' OR
-         v_exp.status IN ('completed', 'aborted')),
+         v_exp.status IN ('completed', 'aborted') OR
+         v_same_generation_nonbaseline_reentry),
         jsonb_build_object(
             'authority_hold_required', v_exp.component_enabled,
             'observation_source_required',
@@ -2114,8 +3291,22 @@ BEGIN
             'runtime_instance_id', v_generation.runtime_instance_id,
             'restart_detected', v_generation.restart_detected,
             'reconnect_detected', v_generation.reconnect_detected,
-            'reset_detected', coalesce(v_snapshot.reset_detected, false),
-            'foreign_writer', coalesce(v_snapshot.foreign_writer, false),
+            'generation_recovery_cleared', v_generation_recovery_cleared,
+            'effective_restart_detected',
+                v_generation.restart_detected AND
+                NOT v_generation_recovery_cleared,
+            'effective_reconnect_detected',
+                v_generation.reconnect_detected AND
+                NOT v_generation_recovery_cleared,
+            'snapshot_recovery_cleared', v_snapshot_recovery_cleared,
+            'same_generation_nonbaseline_reentry_forbidden',
+                v_same_generation_nonbaseline_reentry,
+            'historical_reset_detected', coalesce(v_snapshot.reset_detected, false),
+            'historical_foreign_writer', coalesce(v_snapshot.foreign_writer, false),
+            'reset_detected', coalesce(v_snapshot.reset_detected, false) AND
+                NOT v_snapshot_recovery_cleared,
+            'foreign_writer', coalesce(v_snapshot.foreign_writer, false) AND
+                NOT v_snapshot_recovery_cleared,
             'cfg_drift', coalesce(v_snapshot.cfg_drift, false),
             'common_field_drift', coalesce(v_snapshot.common_field_drift, false),
             'lineage_drift', coalesce(v_snapshot.lineage_drift, false),
@@ -2287,7 +3478,9 @@ BEGIN
                WHEN v_work.operation_kind = 'shadow_preview' THEN
                    (SELECT state_content_sha256
                       FROM public.experiment_v2_state_artifacts
-                     WHERE experiment_id = p_experiment_id AND profile = 'baseline')
+                     WHERE experiment_id = p_experiment_id
+                       AND revision_bundle_sha256 = v_work.revision_bundle_sha256
+                       AND profile = 'baseline')
                ELSE v_work.target_state_content_sha256 END
            AND r2.policy_state_content_sha256 = r1.policy_state_content_sha256
            AND e2.last_observed_at - e1.last_observed_at >= interval '30 seconds'
@@ -2385,6 +3578,8 @@ BEGIN
 END;
 $body$;
 
+DROP FUNCTION IF EXISTS public.fn_experiment_v2_read_delivery_bundle(
+    uuid, uuid, text, text, bigint);
 CREATE OR REPLACE FUNCTION public.fn_experiment_v2_read_delivery_bundle(
     p_experiment_id uuid,
     p_work_id uuid,
@@ -2399,7 +3594,8 @@ CREATE OR REPLACE FUNCTION public.fn_experiment_v2_read_delivery_bundle(
     purpose text,
     started_at timestamptz,
     bundle_finished_at timestamptz,
-    completion_recorded_at timestamptz
+    completion_recorded_at timestamptz,
+    component_wire_ids integer[]
 )
 LANGUAGE sql
 STABLE
@@ -2407,11 +3603,19 @@ SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $body$
     SELECT b.bundle_id, b.experiment_id, b.work_id, b.device_id, b.purpose,
-           b.started_at, c.bundle_finished_at, c.recorded_at
+           b.started_at, c.bundle_finished_at, c.recorded_at,
+           coalesce(commands.component_wire_ids, ARRAY[]::integer[])
       FROM public.experiment_v2_delivery_bundles b
       JOIN public.experiment_v2_work w USING (experiment_id, work_id)
       JOIN public.control_experiments e USING (experiment_id)
       LEFT JOIN public.experiment_v2_delivery_bundle_completions c USING (bundle_id)
+      LEFT JOIN LATERAL (
+          SELECT array_agg(requested.wire_id ORDER BY requested.component_outcome_id)
+                     AS component_wire_ids
+            FROM public.experiment_v2_component_outcomes requested
+           WHERE requested.bundle_id = b.bundle_id
+             AND requested.delivery_status = 'requested'
+      ) commands ON true
      WHERE b.experiment_id = p_experiment_id AND b.work_id = p_work_id
        AND b.device_id = p_device_id AND b.purpose = p_purpose
        AND w.lease_generation = p_expected_lease_generation
@@ -2724,7 +3928,9 @@ BEGIN
              v_exp.admission_state IN ('open', 'baseline_recovery'));
         IF v_requires_recovery THEN
             SELECT * INTO v_baseline FROM public.experiment_v2_state_artifacts
-             WHERE experiment_id = p_experiment_id AND profile = 'baseline';
+             WHERE experiment_id = p_experiment_id
+               AND revision_bundle_sha256 = v_exp.revision_bundle_sha256
+               AND profile = 'baseline';
             IF v_baseline.state_artifact_id IS NULL THEN
                 RAISE EXCEPTION 'restart/reconnect recovery requires the frozen baseline state';
             END IF;
@@ -2886,6 +4092,16 @@ BEGIN
          WHERE source_epoch_id = p_source_epoch_id;
         RETURN v_receipt;
     END IF;
+    IF EXISTS (
+        SELECT 1 FROM public.experiment_v2_runtime_snapshots snapshot
+         WHERE snapshot.source_epoch_id = p_source_epoch_id) OR EXISTS (
+        SELECT 1 FROM public.experiment_v2_preexposure_mismatch_epochs mismatch
+         WHERE mismatch.source_epoch_id = p_source_epoch_id) OR EXISTS (
+        SELECT 1 FROM public.experiment_v2_runtime_faults fault
+         WHERE fault.fault_report_id = p_source_epoch_id) THEN
+        RAISE EXCEPTION 'source epoch % already belongs to different durable evidence',
+            p_source_epoch_id;
+    END IF;
     IF p_source_epoch_id::text !~
        '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' THEN
         RAISE EXCEPTION 'source_epoch_id must be a lowercase UUIDv4 owned by cfg ingestion';
@@ -2970,6 +4186,7 @@ BEGIN
     END IF;
     SELECT * INTO v_state FROM public.experiment_v2_state_artifacts
      WHERE experiment_id = p_experiment_id
+       AND revision_bundle_sha256 = v_work.revision_bundle_sha256
        AND profile = CASE WHEN v_work.operation_kind = 'shadow_preview'
                           THEN 'baseline' ELSE v_work.target_profile END;
     v_state_hash := public.fn_experiment_v2_state_content_sha256(
@@ -3045,10 +4262,17 @@ CREATE OR REPLACE FUNCTION public.fn_experiment_v2_state_insert_binding()
 RETURNS trigger
 LANGUAGE plpgsql
 AS $body$
+DECLARE
+    v_exp public.control_experiments%ROWTYPE;
 BEGIN
-    IF NEW.state_content_sha256 <> public.fn_experiment_v2_state_content_sha256(
+    SELECT * INTO v_exp FROM public.control_experiments
+     WHERE experiment_id = NEW.experiment_id;
+    IF v_exp.protocol_version <> 2 OR
+       NEW.revision_bundle_sha256 <> v_exp.revision_bundle_sha256 OR
+       v_exp.status <> 'draft' OR v_exp.execution_phase <> 'shadow' OR
+       NEW.state_content_sha256 <> public.fn_experiment_v2_state_content_sha256(
         NEW.wire_schema_version, NEW.wire_manifest_digest, NEW.wire_vector) THEN
-        RAISE EXCEPTION 'state artifact hash is not derived from its exact bytes';
+        RAISE EXCEPTION 'state artifact must bind current draft/shadow candidate and exact bytes';
     END IF;
     RETURN NEW;
 END;
@@ -3069,23 +4293,29 @@ DECLARE
 BEGIN
     SELECT * INTO v_exp FROM public.control_experiments
      WHERE experiment_id = NEW.experiment_id;
-    IF v_exp.protocol_version <> 2 THEN
-        RAISE EXCEPTION 'approval must bind one protocol-v2 experiment';
+    IF v_exp.protocol_version <> 2 OR
+       NEW.revision_bundle_sha256 <> v_exp.revision_bundle_sha256 THEN
+        RAISE EXCEPTION 'approval must bind the current protocol-v2 candidate revision';
     END IF;
     IF NEW.approval_kind = 'scoped_probe' AND (
        v_exp.status <> 'draft' OR v_exp.execution_phase <> 'commissioning' OR
        NEW.artifact_sha256 <> (SELECT state_content_sha256
           FROM public.experiment_v2_state_artifacts
-         WHERE experiment_id = NEW.experiment_id AND profile = 'commissioning_probe')) THEN
+         WHERE experiment_id = NEW.experiment_id
+           AND revision_bundle_sha256 = NEW.revision_bundle_sha256
+           AND profile = 'commissioning_probe')) THEN
         RAISE EXCEPTION 'scoped #641 approval must bind the frozen diagnostic probe in draft commissioning';
     ELSIF NEW.approval_kind = 'combined_physical' AND (
        v_exp.status <> 'draft' OR v_exp.execution_phase <> 'commissioning' OR
        (SELECT count(*) FROM public.experiment_v2_approvals
-         WHERE experiment_id = NEW.experiment_id AND approval_kind = 'scoped_probe') <> 1 OR
+         WHERE experiment_id = NEW.experiment_id
+           AND revision_bundle_sha256 = NEW.revision_bundle_sha256
+           AND approval_kind = 'scoped_probe') <> 1 OR
        NOT EXISTS (
            SELECT 1 FROM public.experiment_v2_work w
            JOIN public.experiment_v2_work_events ev USING (experiment_id, work_id)
             WHERE w.experiment_id = NEW.experiment_id
+              AND w.revision_bundle_sha256 = NEW.revision_bundle_sha256
               AND w.operation_kind = 'commissioning_probe'
               AND ev.event_kind = 'completed')) THEN
         RAISE EXCEPTION 'combined #641 approval requires exactly one earlier scoped probe decision';
@@ -3095,6 +4325,7 @@ BEGIN
                     WHERE r.experiment_id = NEW.experiment_id) OR
        NOT EXISTS (SELECT 1 FROM public.experiment_v2_approvals a
                     WHERE a.experiment_id = NEW.experiment_id
+                      AND a.revision_bundle_sha256 = NEW.revision_bundle_sha256
                       AND a.approval_kind = 'combined_physical')) THEN
         RAISE EXCEPTION '#642 approval requires finalized armed randomized design after #641';
     END IF;
@@ -3123,7 +4354,9 @@ BEGIN
     SELECT * INTO v_exp FROM public.control_experiments
      WHERE experiment_id = NEW.experiment_id;
     SELECT * INTO v_state FROM public.experiment_v2_state_artifacts
-     WHERE experiment_id = NEW.experiment_id AND profile = NEW.target_profile;
+     WHERE experiment_id = NEW.experiment_id
+       AND revision_bundle_sha256 = NEW.revision_bundle_sha256
+       AND profile = NEW.target_profile;
     IF v_exp.protocol_version <> 2 OR v_state.state_artifact_id IS NULL OR
        NEW.execution_phase <> v_exp.execution_phase OR
        NEW.target_state_content_sha256 <> v_state.state_content_sha256 OR
@@ -3149,6 +4382,7 @@ BEGIN
        NEW.target_profile <> 'commissioning_probe' OR NOT EXISTS (
            SELECT 1 FROM public.experiment_v2_approvals a
             WHERE a.experiment_id = NEW.experiment_id
+              AND a.revision_bundle_sha256 = NEW.revision_bundle_sha256
               AND a.approval_kind = 'scoped_probe'
               AND NEW.valid_range <@ a.valid_range
               AND NEW.expires_at <= a.expires_at
@@ -3159,6 +4393,7 @@ BEGIN
        NEW.target_profile NOT IN ('moderate', 'aggressive') OR NOT EXISTS (
            SELECT 1 FROM public.experiment_v2_approvals a
             WHERE a.experiment_id = NEW.experiment_id
+              AND a.revision_bundle_sha256 = NEW.revision_bundle_sha256
               AND a.approval_kind = 'combined_physical')) THEN
         RAISE EXCEPTION 'commissioning canary requires combined #641 approval and one treatment profile';
     END IF;
@@ -3166,6 +4401,7 @@ BEGIN
        (NEW.target_profile <> 'baseline' OR NOT EXISTS (
            SELECT 1 FROM public.experiment_v2_approvals a
             WHERE a.experiment_id = NEW.experiment_id
+              AND a.revision_bundle_sha256 = NEW.revision_bundle_sha256
               AND a.approval_kind = 'combined_physical')) THEN
         RAISE EXCEPTION 'A/A readiness is baseline-only after combined #641 approval';
     END IF;
@@ -3224,6 +4460,7 @@ BEGIN
      WHERE work_id = NEW.work_id AND experiment_id = NEW.experiment_id;
     SELECT * INTO v_state FROM public.experiment_v2_state_artifacts
      WHERE experiment_id = NEW.experiment_id
+       AND revision_bundle_sha256 = v_work.revision_bundle_sha256
        AND profile = CASE WHEN v_work.operation_kind = 'shadow_preview'
                           THEN 'baseline' ELSE v_work.target_profile END;
     IF v_epoch.source_epoch_id IS NULL OR v_work.work_id IS NULL OR
@@ -3447,6 +4684,7 @@ BEGIN
      WHERE work_id = v_exposure.work_id;
     SELECT * INTO v_state FROM public.experiment_v2_state_artifacts
      WHERE experiment_id = v_exposure.experiment_id
+       AND revision_bundle_sha256 = v_work.revision_bundle_sha256
        AND state_content_sha256 = v_exposure.state_content_sha256;
     SELECT * INTO v_exp FROM public.control_experiments
      WHERE experiment_id = v_exposure.experiment_id;
@@ -3612,6 +4850,13 @@ BEGIN
         END IF;
         RETURN NEXT v_existing;
         RETURN;
+    END IF;
+    IF EXISTS (
+        SELECT 1 FROM public.experiment_v2_observation_epochs observation
+         WHERE observation.source_epoch_id = p_source_epoch_id) OR EXISTS (
+        SELECT 1 FROM public.experiment_v2_preexposure_mismatch_epochs mismatch
+         WHERE mismatch.source_epoch_id = p_source_epoch_id) THEN
+        RAISE EXCEPTION 'runtime source epoch already belongs to different durable evidence';
     END IF;
     IF p_firmware_revision IS NULL OR p_config_revision IS NULL OR
        p_registry_revision IS NULL OR p_grid_revision IS NULL OR
@@ -3786,6 +5031,7 @@ BEGIN
      WHERE experiment_id = p_experiment_id AND work_id = v_exposure.work_id;
     SELECT * INTO v_state FROM public.experiment_v2_state_artifacts
      WHERE experiment_id = p_experiment_id
+       AND revision_bundle_sha256 = v_work.revision_bundle_sha256
        AND state_content_sha256 = v_exposure.state_content_sha256;
     SELECT * INTO v_generation FROM public.experiment_v2_runtime_generations
      WHERE experiment_id = p_experiment_id AND device_id = p_device_id
@@ -3975,6 +5221,7 @@ AS $body$
 DECLARE
     v_exp public.control_experiments%ROWTYPE;
     v_exposure public.experiment_v2_exposures%ROWTYPE;
+    v_work public.experiment_v2_work%ROWTYPE;
     v_snapshot public.experiment_v2_runtime_snapshots%ROWTYPE;
     v_state public.experiment_v2_state_artifacts%ROWTYPE;
     v_generation public.experiment_v2_runtime_generations%ROWTYPE;
@@ -4002,11 +5249,19 @@ BEGIN
     IF v_exposure.exposure_id IS NULL THEN
         RETURN;
     END IF;
+    SELECT * INTO v_work FROM public.experiment_v2_work w
+     WHERE w.experiment_id = p_experiment_id
+       AND w.work_id = v_exposure.work_id;
+    IF v_work.work_id IS NULL OR
+       v_work.revision_bundle_sha256 <> v_exp.revision_bundle_sha256 THEN
+        RAISE EXCEPTION 'open-exposure monitor work revision is stale or missing';
+    END IF;
     SELECT * INTO v_snapshot FROM public.experiment_v2_runtime_snapshots s
      WHERE s.exposure_id = v_exposure.exposure_id
      ORDER BY s.recorded_at DESC LIMIT 1;
     SELECT * INTO v_state FROM public.experiment_v2_state_artifacts s
      WHERE s.experiment_id = p_experiment_id
+       AND s.revision_bundle_sha256 = v_work.revision_bundle_sha256
        AND s.state_content_sha256 = v_exposure.state_content_sha256;
     SELECT * INTO v_generation FROM public.experiment_v2_runtime_generations g
      WHERE g.experiment_id = p_experiment_id AND g.device_id = p_device_id
@@ -4066,6 +5321,7 @@ DECLARE
     v_close_reason text;
     v_facility_yielded boolean;
     v_authority_hold boolean;
+    v_report_current_lease bigint;
     v_now timestamptz := clock_timestamp();
 BEGIN
     IF p_device_id IS NULL OR length(p_device_id) = 0 OR
@@ -4109,6 +5365,7 @@ BEGIN
     IF NOT FOUND OR v_exp.protocol_version <> 2 THEN
         RAISE EXCEPTION 'runtime fault scope is not one protocol-v2 experiment';
     END IF;
+    v_report_current_lease := v_exp.lease_generation;
     IF NOT EXISTS (
         SELECT 1 FROM public.experiment_v2_runtime_generations reporter
          WHERE reporter.experiment_id = p_experiment_id
@@ -4151,9 +5408,66 @@ BEGIN
         SELECT w.* INTO v_source FROM public.experiment_v2_work w
          WHERE w.work_id = v_exposure.work_id;
     END IF;
+    IF v_source.work_id IS NULL THEN
+        -- A completed physical bundle can be waiting on its two raw receipts
+        -- without an exposure. Runtime callbacks and the claim watchdog must
+        -- retain that immutable source lineage rather than create an unrelated
+        -- recovery after eligibility/expiry makes the work disappear.
+        SELECT w.* INTO v_source
+          FROM public.experiment_v2_work w
+          JOIN public.experiment_v2_delivery_bundles b
+            ON b.work_id = w.work_id AND b.experiment_id = w.experiment_id
+          JOIN public.experiment_v2_delivery_bundle_completions completion
+            ON completion.bundle_id = b.bundle_id
+         WHERE w.experiment_id = p_experiment_id
+           AND b.device_id = p_device_id
+           AND w.operation_kind <> 'shadow_preview'
+           AND w.lease_generation = v_exp.lease_generation
+           AND w.revision_bundle_sha256 = v_exp.revision_bundle_sha256
+           AND NOT EXISTS (
+               SELECT 1 FROM public.experiment_v2_work_events terminal
+                WHERE terminal.work_id = w.work_id AND terminal.event_kind IN
+                    ('completed', 'failed', 'recovered', 'cancelled', 'superseded'))
+         ORDER BY EXISTS (
+                      SELECT 1
+                        FROM public.experiment_v2_preexposure_mismatch_epochs mismatch
+                       WHERE mismatch.source_epoch_id = p_fault_report_id
+                         AND mismatch.work_id = w.work_id
+                         AND mismatch.bundle_id = b.bundle_id) DESC,
+                  completion.bundle_finished_at DESC
+         LIMIT 1 FOR UPDATE OF w;
+    END IF;
 
     v_facility_yielded := v_exp.admission_state = 'emergency_hold';
-    IF NOT v_facility_yielded AND v_exp.execution_phase <> 'shadow' AND
+    IF NOT v_facility_yielded AND
+       v_source.operation_kind = 'baseline_recovery' THEN
+        -- A recovery bundle is the single bounded automatic attempt. Any
+        -- uncertainty in its delivery/confirmation yields authority and
+        -- enters a no-exposure emergency hold; it must never enqueue another
+        -- automatic baseline write behind the failed recovery.
+        v_close_reason := 'interrupted_recovery';
+        PERFORM public.fn_experiment_v2_record_work_event(
+            p_experiment_id, v_source.work_id, 'failed',
+            jsonb_build_object(
+                'reason', 'interrupted_recovery',
+                'fault_report_id', p_fault_report_id),
+            p_actor);
+        PERFORM set_config('verdify.experiment_v2_transition', 'on', true);
+        UPDATE public.control_experiments
+           SET admission_state = 'emergency_hold', component_enabled = false,
+               lease_generation = lease_generation + 1, updated_at = v_now
+         WHERE experiment_id = p_experiment_id
+         RETURNING * INTO v_exp;
+        INSERT INTO public.experiment_events
+            (experiment_id, event_kind, severity, actor, detail)
+        VALUES (p_experiment_id, 'emergency_action', 'critical', p_actor,
+                jsonb_build_object(
+                    'v2_admission', 'emergency_hold',
+                    'reason', 'interrupted-recovery:' || p_fault_report_id::text,
+                    'source_work_id', v_source.work_id));
+        v_facility_yielded := true;
+        v_recovery := NULL;
+    ELSIF NOT v_facility_yielded AND v_exp.execution_phase <> 'shadow' AND
        v_exp.status IN ('draft', 'armed', 'running', 'paused') THEN
         SELECT w.work_id INTO v_recovery
           FROM public.experiment_v2_work w
@@ -4221,7 +5535,7 @@ BEGIN
          facility_authority_yielded, recorded_by, recorded_at)
     VALUES (p_fault_report_id, p_experiment_id, p_device_id, 'runtime_callback',
             NULL, p_fault_kind, p_reason,
-            p_expected_lease_generation, v_exp.lease_generation,
+            p_expected_lease_generation, v_report_current_lease,
             p_runtime_instance_id, p_writer_generation, p_connection_generation,
             v_generation.runtime_instance_id, v_generation.writer_generation,
             v_generation.connection_generation, v_lease_mismatch,
@@ -4244,6 +5558,228 @@ BEGIN
                 'recovery_work_id', v_recovery,
                 'facility_authority_yielded', v_facility_yielded));
     RETURN v_row;
+END;
+$body$;
+
+-- Persist one complete post-delivery epoch that disproves the frozen bundle
+-- target, then fault/close/recover in the same transaction.  The raw source
+-- UUID is also the runtime fault UUID, making a timeout retry exact while
+-- keeping negative evidence out of the successful observation receipt tables.
+CREATE OR REPLACE FUNCTION public.fn_experiment_v2_record_preexposure_mismatch(
+    p_experiment_id uuid,
+    p_work_id uuid,
+    p_bundle_id uuid,
+    p_device_id text,
+    p_source_epoch_id uuid,
+    p_wire_vector bytea,
+    p_observations jsonb,
+    p_firmware_revision text,
+    p_config_revision text,
+    p_registry_revision text,
+    p_grid_revision text,
+    p_runtime_instance_id uuid,
+    p_expected_lease_generation bigint,
+    p_writer_generation bigint,
+    p_connection_generation bigint,
+    p_actor text DEFAULT current_user
+) RETURNS public.experiment_v2_runtime_faults
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $body$
+DECLARE
+    v_existing public.experiment_v2_preexposure_mismatch_epochs%ROWTYPE;
+    v_fault public.experiment_v2_runtime_faults%ROWTYPE;
+    v_exp public.control_experiments%ROWTYPE;
+    v_work public.experiment_v2_work%ROWTYPE;
+    v_bundle public.experiment_v2_delivery_bundles%ROWTYPE;
+    v_completion public.experiment_v2_delivery_bundle_completions%ROWTYPE;
+    v_state public.experiment_v2_state_artifacts%ROWTYPE;
+    v_ids integer[];
+    v_first timestamptz;
+    v_last timestamptz;
+    v_observed_hash text;
+    v_source_epoch_sha256 text;
+    v_expected_purpose text;
+    v_now timestamptz := clock_timestamp();
+BEGIN
+    IF p_device_id IS NULL OR length(p_device_id) = 0 OR
+       p_source_epoch_id IS NULL OR p_source_epoch_id::text !~
+           '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' OR
+       p_runtime_instance_id IS NULL OR p_runtime_instance_id::text !~
+           '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' OR
+       p_expected_lease_generation NOT BETWEEN 0 AND 9007199254740991 OR
+       p_writer_generation NOT BETWEEN 0 AND 9007199254740991 OR
+       p_connection_generation NOT BETWEEN 0 AND 9007199254740991 OR
+       p_actor IS NULL OR length(p_actor) = 0 OR
+       octet_length(p_wire_vector) <> 178 OR p_observations IS NULL OR
+       jsonb_typeof(p_observations) <> 'array' OR
+       jsonb_array_length(p_observations) <> 48 THEN
+        RAISE EXCEPTION 'pre-exposure mismatch requires one complete source-owned raw epoch';
+    END IF;
+    IF p_firmware_revision IS NULL OR p_config_revision IS NULL OR
+       p_registry_revision IS NULL OR p_grid_revision IS NULL OR
+       normalize(p_firmware_revision, NFC) <> p_firmware_revision OR
+       normalize(p_config_revision, NFC) <> p_config_revision OR
+       normalize(p_registry_revision, NFC) <> p_registry_revision OR
+       normalize(p_grid_revision, NFC) <> p_grid_revision OR EXISTS (
+           SELECT 1 FROM jsonb_array_elements(p_observations) o
+            WHERE jsonb_typeof(o) <> 'object'
+               OR (SELECT count(*) FROM jsonb_object_keys(o)) <> 2
+               OR jsonb_typeof(o->'wire_id') <> 'number'
+               OR jsonb_typeof(o->'observed_at') <> 'string'
+               OR (o->>'observed_at') !~
+                  '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{6}Z$') THEN
+        RAISE EXCEPTION 'pre-exposure mismatch revisions/observations are not exact NFC raw data';
+    END IF;
+    SELECT array_agg((o->>'wire_id')::integer ORDER BY ord),
+           min((o->>'observed_at')::timestamptz),
+           max((o->>'observed_at')::timestamptz)
+      INTO v_ids, v_first, v_last
+      FROM jsonb_array_elements(p_observations) WITH ORDINALITY item(o, ord);
+    IF v_ids <> ARRAY[
+        1,2,3,4,5,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,
+        26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49
+    ] OR v_last - v_first > interval '60 seconds' OR v_last > v_now THEN
+        RAISE EXCEPTION 'pre-exposure mismatch requires ordered, non-future, <=60s-skew observations';
+    END IF;
+    v_source_epoch_sha256 := encode(digest(convert_to(jsonb_build_object(
+        'bundle_id', p_bundle_id,
+        'config_revision', p_config_revision,
+        'connection_generation', p_connection_generation,
+        'device_id', p_device_id,
+        'experiment_id', p_experiment_id,
+        'firmware_revision', p_firmware_revision,
+        'grid_revision', p_grid_revision,
+        'lease_generation', p_expected_lease_generation,
+        'observations', p_observations,
+        'registry_revision', p_registry_revision,
+        'runtime_instance_id', p_runtime_instance_id,
+        'source_epoch_id', p_source_epoch_id,
+        'wire_vector_hex', encode(p_wire_vector, 'hex'),
+        'work_id', p_work_id,
+        'writer_generation', p_writer_generation)::text, 'UTF8'), 'sha256'), 'hex');
+
+    PERFORM pg_advisory_xact_lock(hashtext(
+        'experiment-v2-mismatch-' || p_source_epoch_id::text));
+    SELECT m.* INTO v_existing
+      FROM public.experiment_v2_preexposure_mismatch_epochs m
+     WHERE m.source_epoch_id = p_source_epoch_id;
+    IF FOUND THEN
+        IF (v_existing.experiment_id, v_existing.work_id, v_existing.bundle_id,
+            v_existing.device_id, v_existing.observed_wire_vector,
+            v_existing.observations, v_existing.firmware_revision,
+            v_existing.config_revision, v_existing.registry_revision,
+            v_existing.grid_revision, v_existing.runtime_instance_id,
+            v_existing.lease_generation, v_existing.writer_generation,
+            v_existing.connection_generation, v_existing.source_epoch_sha256)
+           IS DISTINCT FROM
+           (p_experiment_id, p_work_id, p_bundle_id, p_device_id,
+            p_wire_vector, p_observations, p_firmware_revision,
+            p_config_revision, p_registry_revision, p_grid_revision,
+            p_runtime_instance_id, p_expected_lease_generation,
+            p_writer_generation, p_connection_generation,
+            v_source_epoch_sha256) THEN
+            RAISE EXCEPTION 'source_epoch_id replay differs from its immutable mismatch epoch';
+        END IF;
+        SELECT f.* INTO v_fault FROM public.experiment_v2_runtime_faults f
+         WHERE f.fault_report_id = p_source_epoch_id;
+        IF NOT FOUND OR v_fault.reported_fault_kind <> 'stale_or_mismatched_work' OR
+           v_fault.reason <> 'post_delivery_observation_mismatch' THEN
+            RAISE EXCEPTION 'persisted mismatch lacks its exact atomic runtime fault';
+        END IF;
+        RETURN v_fault;
+    END IF;
+    IF EXISTS (SELECT 1 FROM public.experiment_v2_observation_epochs e
+                WHERE e.source_epoch_id = p_source_epoch_id) OR
+       EXISTS (SELECT 1 FROM public.experiment_v2_runtime_snapshots s
+                WHERE s.source_epoch_id = p_source_epoch_id) OR
+       EXISTS (SELECT 1 FROM public.experiment_v2_runtime_faults f
+                WHERE f.fault_report_id = p_source_epoch_id) THEN
+        RAISE EXCEPTION 'source_epoch_id collides with different durable evidence';
+    END IF;
+
+    SELECT e.* INTO v_exp FROM public.control_experiments e
+     WHERE e.experiment_id = p_experiment_id FOR UPDATE;
+    SELECT w.* INTO v_work FROM public.experiment_v2_work w
+     WHERE w.experiment_id = p_experiment_id AND w.work_id = p_work_id;
+    SELECT b.* INTO v_bundle FROM public.experiment_v2_delivery_bundles b
+     WHERE b.experiment_id = p_experiment_id AND b.work_id = p_work_id
+       AND b.bundle_id = p_bundle_id AND b.device_id = p_device_id;
+    SELECT c.* INTO v_completion
+      FROM public.experiment_v2_delivery_bundle_completions c
+     WHERE c.bundle_id = p_bundle_id;
+    SELECT s.* INTO v_state FROM public.experiment_v2_state_artifacts s
+     WHERE s.experiment_id = p_experiment_id
+       AND s.revision_bundle_sha256 = v_work.revision_bundle_sha256
+       AND s.profile = CASE WHEN v_work.operation_kind = 'shadow_preview'
+                            THEN 'baseline' ELSE v_work.target_profile END;
+    v_expected_purpose := CASE
+        WHEN v_work.operation_kind = 'shadow_preview' THEN 'preview'
+        WHEN v_work.operation_kind = 'baseline_recovery' THEN 'recovery'
+        ELSE 'target'
+    END;
+    IF v_exp.experiment_id IS NULL OR v_exp.protocol_version <> 2 OR
+       v_work.work_id IS NULL OR v_bundle.bundle_id IS NULL OR
+       v_completion.bundle_id IS NULL OR v_state.state_artifact_id IS NULL OR
+       v_bundle.purpose <> v_expected_purpose OR
+       v_work.lease_generation <> p_expected_lease_generation OR
+       (p_firmware_revision, p_config_revision, p_registry_revision,
+        p_grid_revision) IS DISTINCT FROM
+       (v_work.firmware_revision, v_work.config_revision,
+        v_work.registry_revision, v_work.grid_revision) OR
+       v_first <= v_completion.bundle_finished_at OR EXISTS (
+           SELECT 1 FROM public.experiment_v2_exposures x
+            WHERE x.work_id = p_work_id) OR EXISTS (
+           SELECT 1 FROM public.experiment_v2_work_events terminal
+            WHERE terminal.work_id = p_work_id AND terminal.event_kind IN
+                ('completed', 'failed', 'recovered', 'cancelled', 'superseded')) OR
+       NOT EXISTS (
+           SELECT 1 FROM public.experiment_v2_runtime_generations reporter
+            WHERE reporter.experiment_id = p_experiment_id
+              AND reporter.device_id = p_device_id
+              AND reporter.runtime_instance_id = p_runtime_instance_id
+              AND reporter.writer_generation = p_writer_generation
+              AND reporter.connection_generation = p_connection_generation) THEN
+        RAISE EXCEPTION 'mismatch epoch is not bound to one completed current-lineage pre-exposure bundle';
+    END IF;
+    v_observed_hash := public.fn_experiment_v2_state_content_sha256(
+        v_state.wire_schema_version, v_state.wire_manifest_digest, p_wire_vector);
+    IF p_wire_vector = v_state.wire_vector OR
+       v_observed_hash = v_state.state_content_sha256 THEN
+        RAISE EXCEPTION 'qualifying target observations must use the receipt function, not mismatch evidence';
+    END IF;
+
+    INSERT INTO public.experiment_v2_preexposure_mismatch_epochs
+        (source_epoch_id, experiment_id, work_id, bundle_id, device_id,
+         expected_state_content_sha256, expected_wire_vector,
+         observed_state_content_sha256, observed_wire_vector, observations,
+         first_observed_at, last_observed_at, firmware_revision, config_revision,
+         registry_revision, grid_revision, runtime_instance_id, lease_generation,
+         writer_generation, connection_generation, source_epoch_sha256,
+         recorded_by, recorded_at)
+    VALUES (p_source_epoch_id, p_experiment_id, p_work_id, p_bundle_id,
+            p_device_id, v_state.state_content_sha256, v_state.wire_vector,
+            v_observed_hash, p_wire_vector, p_observations, v_first, v_last,
+            p_firmware_revision, p_config_revision, p_registry_revision,
+            p_grid_revision, p_runtime_instance_id,
+            p_expected_lease_generation, p_writer_generation,
+            p_connection_generation, v_source_epoch_sha256, p_actor, v_now);
+
+    SELECT * INTO v_fault FROM public.fn_experiment_v2_report_runtime_fault(
+        p_experiment_id, p_device_id, p_source_epoch_id,
+        p_expected_lease_generation, p_runtime_instance_id,
+        p_writer_generation, p_connection_generation,
+        'stale_or_mismatched_work', 'post_delivery_observation_mismatch', p_actor);
+    IF v_work.operation_kind <> 'baseline_recovery' AND
+       v_exp.lease_generation = p_expected_lease_generation AND
+       v_exp.revision_bundle_sha256 = v_work.revision_bundle_sha256 THEN
+        PERFORM public.fn_experiment_v2_record_work_event(
+            p_experiment_id, p_work_id, 'failed',
+            jsonb_build_object('reason', 'post_delivery_observation_mismatch'),
+            p_actor);
+    END IF;
+    RETURN v_fault;
 END;
 $body$;
 
@@ -4521,13 +6057,17 @@ BEGIN
 END;
 $body$;
 
+DROP FUNCTION IF EXISTS public.fn_experiment_v2_finalize_randomization(uuid, text);
 CREATE OR REPLACE FUNCTION public.fn_experiment_v2_finalize_randomization(
     p_experiment_id uuid,
     p_actor text DEFAULT current_user
 ) RETURNS TABLE (
     schedule_sha256 text,
     mapping_commitment_sha256 text,
-    assignment_count integer
+    finalization_receipt_sha256 text,
+    blinded_schedule jsonb,
+    assignment_count integer,
+    finalized_at timestamptz
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -4577,10 +6117,13 @@ BEGIN
         END IF;
         RETURN QUERY SELECT v_existing.schedule_sha256,
                             v_existing.mapping_commitment_sha256,
+                            v_existing.finalization_receipt_sha256,
+                            v_existing.schedule,
                             (SELECT count(*)::integer
                                FROM public.control_assignments a
                               WHERE a.experiment_id = p_experiment_id
-                                AND a.operation_kind = 'randomized_day');
+                                AND a.operation_kind = 'randomized_day'),
+                            v_existing.generated_at;
         RETURN;
     END IF;
     IF v_exp.experiment_id IS NULL OR v_exp.protocol_version <> 2 OR
@@ -4605,7 +6148,8 @@ BEGIN
         VALUES (p_experiment_id, 'state_transition', 'critical', p_actor,
                 jsonb_build_object('v2_status', 'aborted',
                                    'reason', 'locked_randomized_start_missed'));
-        RETURN QUERY SELECT NULL::text, NULL::text, 0::integer;
+        RETURN QUERY SELECT NULL::text, NULL::text, NULL::text, NULL::jsonb,
+                            0::integer, v_now;
         RETURN;
     END IF;
     SELECT count(DISTINCT (
@@ -4748,25 +6292,442 @@ BEGIN
            armed_at = v_now,
            updated_at = v_now
      WHERE experiment_id = p_experiment_id;
-    RETURN QUERY SELECT v_schedule_hash, v_commitment,
-                        (v_exp.randomized_pair_count * 2)::integer;
+    RETURN QUERY SELECT v_schedule_hash, v_commitment, v_receipt_hash,
+                        v_schedule, (v_exp.randomized_pair_count * 2)::integer,
+                        v_now;
 END;
 $body$;
 
-CREATE OR REPLACE FUNCTION public.fn_experiment_v2_record_selector_choice(
+-- Build the only positive selector-context schema from database-owned source
+-- rows.  The exact returned bytes are authoritative across languages; callers
+-- parse them but never reserialize floats to invent a competing hash.
+CREATE OR REPLACE FUNCTION public.fn_experiment_v2_build_selector_context(
+    p_experiment_id uuid,
+    p_local_date date,
+    p_context_cutoff_at timestamptz,
+    p_boundary_at timestamptz
+) RETURNS TABLE (
+    context_status text,
+    context_payload jsonb,
+    context_canonical_bytes bytea,
+    context_sha256 text,
+    source_bundle_sha256 text,
+    source_max_at timestamptz,
+    failure_reason text
+)
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $body$
+DECLARE
+    v_greenhouse_id text;
+    v_climate jsonb;
+    v_forecast jsonb;
+    v_climate_max timestamptz;
+    v_forecast_max timestamptz;
+    v_climate_hashes text;
+    v_forecast_hashes text;
+    v_forecast_conflict boolean := false;
+    v_status text := 'frozen';
+    v_failure text;
+    v_payload jsonb;
+    v_bytes bytea;
+    v_context_hash text;
+    v_source_hash text;
+    v_source_max timestamptz;
+BEGIN
+    SELECT greenhouse_id INTO v_greenhouse_id
+      FROM public.control_experiments WHERE experiment_id = p_experiment_id;
+    IF v_greenhouse_id IS NULL OR p_context_cutoff_at IS NULL OR
+       p_boundary_at IS NULL OR p_context_cutoff_at >= p_boundary_at THEN
+        RAISE EXCEPTION 'selector source builder requires one bound experiment/date window';
+    END IF;
+    IF to_regclass('public.climate') IS NULL OR
+       to_regclass('public.weather_forecast') IS NULL THEN
+        v_status := 'unavailable';
+        v_failure := 'source_relation_unavailable';
+    ELSE
+        EXECUTE $sql$
+            WITH raw AS (
+                SELECT c.ts AS observed_at,
+                       jsonb_build_object(
+                         'temp_avg_f', c.temp_avg,
+                         'temp_north_f', c.temp_north,
+                         'temp_south_f', c.temp_south,
+                         'temp_east_f', c.temp_east,
+                         'temp_west_f', c.temp_west,
+                         'rh_avg_pct', c.rh_avg,
+                         'rh_north_pct', c.rh_north,
+                         'rh_south_pct', c.rh_south,
+                         'rh_east_pct', c.rh_east,
+                         'rh_west_pct', c.rh_west,
+                         'vpd_avg_kpa', c.vpd_avg,
+                         'vpd_north_kpa', c.vpd_north,
+                         'vpd_south_kpa', c.vpd_south,
+                         'vpd_east_kpa', c.vpd_east,
+                         'vpd_west_kpa', c.vpd_west,
+                         'dew_point_f', c.dew_point,
+                         'outdoor_temp_f', c.outdoor_temp_f,
+                         'outdoor_rh_pct', c.outdoor_rh_pct,
+                         'solar_irradiance_w_m2', c.solar_irradiance_w_m2,
+                         'leaf_temp_north_f', c.leaf_temp_north,
+                         'leaf_temp_south_f', c.leaf_temp_south,
+                         'leaf_wetness_north', c.leaf_wetness_north,
+                         'leaf_wetness_south', c.leaf_wetness_south,
+                         'wind_speed_mph', c.wind_speed_mph,
+                         'precip_in', c.precip_in,
+                         'flow_gpm', c.flow_gpm,
+                         'mister_water_today_gal', c.mister_water_today
+                       ) AS values
+                  FROM public.climate c
+                 WHERE c.greenhouse_id = $1
+                   AND c.ts > $2 - interval '24 hours' AND c.ts <= $2
+            ), admitted AS (
+                SELECT * FROM raw r
+                 WHERE jsonb_typeof(r.values->'temp_avg_f') = 'number'
+                   AND jsonb_typeof(r.values->'vpd_avg_kpa') = 'number'
+                   AND NOT EXISTS (SELECT 1 FROM jsonb_each(r.values) v
+                                   WHERE jsonb_typeof(v.value) NOT IN ('number', 'null'))
+            ), unsigned_rows AS (
+                SELECT observed_at, jsonb_build_object(
+                    'schema', 'verdify-selector-climate-source-v1',
+                    'observed_at', public.fn_experiment_v2_timestamp_text(observed_at),
+                    'values', values) AS unsigned_payload
+                  FROM admitted
+            ), bound_rows AS (
+                SELECT observed_at, unsigned_payload,
+                       encode(digest(
+                         convert_to('verdify-experiment-v2-selector-source-v1', 'UTF8') ||
+                         decode('00', 'hex') || convert_to(unsigned_payload::text, 'UTF8'),
+                         'sha256'), 'hex') AS row_hash
+                  FROM unsigned_rows
+            )
+            SELECT jsonb_agg(unsigned_payload ||
+                       jsonb_build_object('source_row_sha256', row_hash)
+                       ORDER BY observed_at, row_hash),
+                   max(observed_at), string_agg(row_hash, '' ORDER BY observed_at, row_hash)
+              FROM bound_rows
+        $sql$ INTO v_climate, v_climate_max, v_climate_hashes
+        USING v_greenhouse_id, p_context_cutoff_at;
+
+        IF v_climate IS NULL THEN
+            v_status := 'unavailable';
+            v_failure := 'no_usable_precutoff_climate_source';
+        ELSE
+            EXECUTE $sql$
+                WITH raw AS (
+                    SELECT f.ts AS valid_at, f.fetched_at,
+                           jsonb_build_object(
+                             'temp_f', f.temp_f,
+                             'rh_pct', f.rh_pct,
+                             'vpd_kpa', f.vpd_kpa,
+                             'cloud_cover_pct', f.cloud_cover_pct,
+                             'wind_speed_mph', f.wind_speed_mph,
+                             'solar_w_m2', f.solar_w_m2,
+                             'precip_prob_pct', f.precip_prob_pct,
+                             'direct_radiation_w_m2', f.direct_radiation_w_m2
+                           ) AS values
+                      FROM public.weather_forecast f
+                     WHERE f.greenhouse_id = $1 AND f.fetched_at <= $2
+                       AND f.ts >= $2 AND f.ts < $3 + interval '24 hours'
+                ), admitted AS (
+                    SELECT * FROM raw r
+                     WHERE NOT EXISTS (SELECT 1 FROM jsonb_each(r.values) v
+                                       WHERE jsonb_typeof(v.value) NOT IN ('number', 'null'))
+                ), maxima AS (
+                    SELECT valid_at, max(fetched_at) AS fetched_at
+                      FROM admitted GROUP BY valid_at
+                ), conflicts AS (
+                    SELECT EXISTS (
+                        SELECT 1 FROM admitted a JOIN maxima m USING (valid_at, fetched_at)
+                         GROUP BY a.valid_at HAVING count(DISTINCT a.values::text) > 1
+                    ) AS conflict
+                ), latest AS (
+                    SELECT DISTINCT ON (a.valid_at) a.valid_at, a.fetched_at, a.values
+                      FROM admitted a JOIN maxima m USING (valid_at, fetched_at)
+                     ORDER BY a.valid_at, a.fetched_at DESC, a.values::text
+                ), unsigned_rows AS (
+                    SELECT valid_at, fetched_at, jsonb_build_object(
+                        'schema', 'verdify-selector-forecast-source-v1',
+                        'valid_at', public.fn_experiment_v2_timestamp_text(valid_at),
+                        'fetched_at', public.fn_experiment_v2_timestamp_text(fetched_at),
+                        'values', values) AS unsigned_payload
+                      FROM latest
+                ), bound_rows AS (
+                    SELECT valid_at, fetched_at, unsigned_payload,
+                           encode(digest(
+                             convert_to('verdify-experiment-v2-selector-source-v1', 'UTF8') ||
+                             decode('00', 'hex') || convert_to(unsigned_payload::text, 'UTF8'),
+                             'sha256'), 'hex') AS row_hash
+                      FROM unsigned_rows
+                )
+                SELECT coalesce(jsonb_agg(unsigned_payload ||
+                           jsonb_build_object('source_row_sha256', row_hash)
+                           ORDER BY valid_at, fetched_at, row_hash), '[]'::jsonb),
+                       max(fetched_at),
+                       coalesce(string_agg(row_hash, '' ORDER BY valid_at, fetched_at, row_hash), ''),
+                       (SELECT conflict FROM conflicts)
+                  FROM bound_rows
+            $sql$ INTO v_forecast, v_forecast_max, v_forecast_hashes,
+                       v_forecast_conflict
+            USING v_greenhouse_id, p_context_cutoff_at, p_boundary_at;
+            IF v_forecast_conflict THEN
+                v_status := 'unavailable';
+                v_failure := 'conflicting_latest_forecast_vintage';
+            END IF;
+        END IF;
+    END IF;
+
+    IF v_status = 'frozen' THEN
+        v_payload := jsonb_build_object(
+            'schema', 'verdify-selector-context-v2',
+            'local_date', to_char(p_local_date, 'YYYY-MM-DD'),
+            'context_cutoff_at', public.fn_experiment_v2_timestamp_text(p_context_cutoff_at),
+            'boundary_at', public.fn_experiment_v2_timestamp_text(p_boundary_at),
+            'climate_observations', v_climate,
+            'forecast_vintage', coalesce(v_forecast, '[]'::jsonb));
+        v_source_hash := encode(digest(
+            convert_to('verdify-experiment-v2-selector-source-bundle-v1', 'UTF8') ||
+            decode('00', 'hex') ||
+            convert_to(coalesce(v_climate_hashes, '') || coalesce(v_forecast_hashes, ''),
+                       'SQL_ASCII'), 'sha256'), 'hex');
+        v_source_max := greatest(v_climate_max, v_forecast_max);
+    ELSE
+        v_payload := jsonb_build_object(
+            'schema', 'verdify-selector-context-unavailable-v1',
+            'local_date', to_char(p_local_date, 'YYYY-MM-DD'),
+            'context_cutoff_at', public.fn_experiment_v2_timestamp_text(p_context_cutoff_at),
+            'boundary_at', public.fn_experiment_v2_timestamp_text(p_boundary_at),
+            'reason', v_failure);
+        v_source_max := NULL;
+    END IF;
+    v_bytes := convert_to(v_payload::text, 'UTF8');
+    v_context_hash := encode(digest(v_bytes, 'sha256'), 'hex');
+    IF v_source_hash IS NULL THEN
+        v_source_hash := encode(digest(
+            convert_to('verdify-experiment-v2-selector-source-unavailable-v1', 'UTF8') ||
+            decode('00', 'hex') || v_bytes, 'sha256'), 'hex');
+    END IF;
+    RETURN QUERY SELECT v_status, v_payload, v_bytes, v_context_hash,
+                        v_source_hash, v_source_max, v_failure;
+END;
+$body$;
+
+CREATE OR REPLACE FUNCTION public.fn_experiment_v2_selector_cycle_at(
+    p_experiment_id uuid,
+    p_now timestamptz
+) RETURNS TABLE (
+    cycle_kind text,
+    subject_id uuid,
+    assignment_id uuid,
+    work_id uuid,
+    local_date date,
+    study_id text,
+    invocation_key text,
+    context_status text,
+    failure_reason text,
+    context_payload jsonb,
+    context_canonical_bytes bytea,
+    context_sha256 text,
+    source_bundle_sha256 text,
+    context_schema_sha256 text,
+    selector_identity_sha256 text,
+    selector_artifact_sha256 text,
+    context_cutoff_at timestamptz,
+    boundary_at timestamptz,
+    resolved_at timestamptz
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $body$
+DECLARE
+    v_exp public.control_experiments%ROWTYPE;
+    v_shadow public.experiment_v2_shadow_cycles%ROWTYPE;
+    v_assignment public.control_assignments%ROWTYPE;
+    v_outcome public.experiment_v2_outcomes%ROWTYPE;
+    v_context public.experiment_v2_selector_contexts%ROWTYPE;
+    v_shadow_context public.experiment_v2_shadow_contexts%ROWTYPE;
+    v_assignment_context public.experiment_v2_selector_contexts%ROWTYPE;
+    v_source record;
+    v_now timestamptz := p_now;
+    v_cutoff timestamptz;
+    v_boundary timestamptz;
+    v_invocation text;
+BEGIN
+    SELECT * INTO v_exp FROM public.control_experiments
+     WHERE experiment_id = p_experiment_id FOR UPDATE;
+    IF v_now IS NULL OR NOT FOUND OR v_exp.protocol_version <> 2 OR
+       v_exp.admission_state <> 'closed' THEN
+        RAISE EXCEPTION 'selector cycle requires one closed protocol-v2 experiment';
+    END IF;
+
+    IF v_exp.status = 'draft' AND v_exp.execution_phase = 'shadow' AND
+       NOT v_exp.component_enabled THEN
+        SELECT cycle.* INTO v_shadow
+          FROM public.experiment_v2_shadow_cycles cycle
+          LEFT JOIN public.experiment_v2_shadow_choices choice
+            USING (cycle_id, experiment_id)
+         WHERE cycle.experiment_id = p_experiment_id
+           AND cycle.revision_bundle_sha256 = v_exp.revision_bundle_sha256
+           AND cycle.lease_generation = v_exp.lease_generation
+           AND v_now >= cycle.context_cutoff_at AND v_now < cycle.boundary_at
+           AND choice.cycle_id IS NULL
+         ORDER BY cycle.context_cutoff_at, cycle.cycle_id LIMIT 1;
+        IF v_shadow.cycle_id IS NULL THEN
+            RETURN;
+        END IF;
+        SELECT * INTO v_shadow_context FROM public.experiment_v2_shadow_contexts
+         WHERE cycle_id = v_shadow.cycle_id;
+        IF v_shadow_context.cycle_id IS NULL THEN
+            SELECT * INTO v_source FROM public.fn_experiment_v2_build_selector_context(
+                p_experiment_id, v_shadow.local_date, v_shadow.context_cutoff_at,
+                v_shadow.boundary_at);
+            INSERT INTO public.experiment_v2_shadow_contexts
+                (cycle_id, experiment_id, context_status, context_payload,
+                 context_canonical_bytes, context_sha256, source_bundle_sha256,
+                 source_max_at, failure_reason, context_schema_sha256,
+                 selector_identity_sha256, selector_artifact_sha256,
+                 frozen_by, frozen_at)
+            VALUES (v_shadow.cycle_id, p_experiment_id, v_source.context_status,
+                    v_source.context_payload, v_source.context_canonical_bytes,
+                    v_source.context_sha256, v_source.source_bundle_sha256,
+                    v_source.source_max_at, v_source.failure_reason,
+                    v_shadow.context_schema_sha256,
+                    v_shadow.selector_identity_sha256,
+                    v_shadow.selector_artifact_sha256, session_user, v_now)
+            RETURNING * INTO v_shadow_context;
+        END IF;
+        v_invocation := v_shadow.cycle_id::text;
+        RETURN QUERY SELECT 'shadow'::text, v_shadow.cycle_id, NULL::uuid,
+            v_shadow.work_id, v_shadow.local_date, v_exp.study_id, v_invocation,
+            v_shadow_context.context_status, v_shadow_context.failure_reason,
+            v_shadow_context.context_payload,
+            v_shadow_context.context_canonical_bytes,
+            v_shadow_context.context_sha256,
+            v_shadow_context.source_bundle_sha256,
+            v_shadow.context_schema_sha256, v_shadow.selector_identity_sha256,
+            v_shadow.selector_artifact_sha256, v_shadow.context_cutoff_at,
+            v_shadow.boundary_at, v_now;
+        RETURN;
+    END IF;
+
+    IF v_exp.status NOT IN ('armed', 'running') OR
+       v_exp.execution_phase <> 'randomized' OR
+       v_exp.selector_context_cutoff_local IS NULL OR
+       v_exp.context_schema_sha256 IS NULL OR
+       v_exp.selector_identity_sha256 IS NULL OR
+       v_exp.selector_artifact_sha256 IS NULL OR NOT EXISTS (
+           SELECT 1 FROM public.experiment_v2_randomization r
+            WHERE r.experiment_id = p_experiment_id) THEN
+        RAISE EXCEPTION 'selector cycle requires finalized randomized identity';
+    END IF;
+    SELECT a.* INTO v_assignment
+      FROM public.control_assignments a
+      JOIN public.experiment_v2_outcomes o USING (assignment_id, experiment_id)
+      LEFT JOIN public.experiment_v2_selector_choices choice
+        USING (assignment_id, experiment_id)
+     WHERE a.experiment_id = p_experiment_id
+       AND a.operation_kind = 'randomized_day' AND a.status = 'active'
+       AND choice.assignment_id IS NULL
+       AND v_now >= (((o.assigned_local_date - 1)::date +
+                      v_exp.selector_context_cutoff_local) AT TIME ZONE v_exp.timezone)
+       AND v_now < lower(a.valid_range)
+     ORDER BY lower(a.valid_range), a.assignment_id LIMIT 1;
+    IF v_assignment.assignment_id IS NULL THEN
+        RETURN;
+    END IF;
+    SELECT outcome.* INTO v_outcome FROM public.experiment_v2_outcomes outcome
+     WHERE outcome.experiment_id = p_experiment_id
+       AND outcome.assignment_id = v_assignment.assignment_id;
+    v_boundary := lower(v_assignment.valid_range);
+    v_cutoff := ((v_outcome.assigned_local_date - 1)::date +
+                 v_exp.selector_context_cutoff_local) AT TIME ZONE v_exp.timezone;
+    SELECT context.* INTO v_assignment_context
+      FROM public.experiment_v2_selector_contexts context
+     WHERE context.assignment_id = v_assignment.assignment_id;
+    IF v_assignment_context.assignment_id IS NULL THEN
+        SELECT * INTO v_source FROM public.fn_experiment_v2_build_selector_context(
+            p_experiment_id, v_outcome.assigned_local_date, v_cutoff, v_boundary);
+        INSERT INTO public.experiment_v2_selector_contexts
+            (assignment_id, experiment_id, assigned_local_date,
+             context_cutoff_at, boundary_at, context_status, context_payload,
+             context_canonical_bytes, context_sha256, source_bundle_sha256,
+             source_max_at, failure_reason, context_schema_sha256,
+             selector_identity_sha256, selector_artifact_sha256,
+             frozen_by, frozen_at)
+        VALUES (v_assignment.assignment_id, p_experiment_id,
+                v_outcome.assigned_local_date, v_cutoff, v_boundary,
+                v_source.context_status, v_source.context_payload,
+                v_source.context_canonical_bytes, v_source.context_sha256,
+                v_source.source_bundle_sha256, v_source.source_max_at,
+                v_source.failure_reason, v_exp.context_schema_sha256,
+                v_exp.selector_identity_sha256, v_exp.selector_artifact_sha256,
+                session_user, v_now)
+        RETURNING * INTO v_assignment_context;
+    END IF;
+    v_invocation := public.fn_experiment_v2_selector_invocation_uuid(
+        v_exp.assignment_namespace_uuid, v_exp.study_id,
+        v_outcome.assigned_local_date)::text;
+    RETURN QUERY SELECT 'randomized'::text, v_assignment.assignment_id,
+        v_assignment.assignment_id, NULL::uuid, v_outcome.assigned_local_date,
+        v_exp.study_id, v_invocation, v_assignment_context.context_status,
+        v_assignment_context.failure_reason,
+        v_assignment_context.context_payload,
+        v_assignment_context.context_canonical_bytes,
+        v_assignment_context.context_sha256,
+        v_assignment_context.source_bundle_sha256,
+        v_exp.context_schema_sha256, v_exp.selector_identity_sha256,
+        v_exp.selector_artifact_sha256, v_cutoff, v_boundary, v_now;
+END;
+$body$;
+
+CREATE OR REPLACE FUNCTION public.fn_experiment_v2_selector_cycle(
+    p_experiment_id uuid
+) RETURNS TABLE (
+    cycle_kind text,
+    subject_id uuid,
+    assignment_id uuid,
+    work_id uuid,
+    local_date date,
+    study_id text,
+    invocation_key text,
+    context_status text,
+    failure_reason text,
+    context_payload jsonb,
+    context_canonical_bytes bytea,
+    context_sha256 text,
+    source_bundle_sha256 text,
+    context_schema_sha256 text,
+    selector_identity_sha256 text,
+    selector_artifact_sha256 text,
+    context_cutoff_at timestamptz,
+    boundary_at timestamptz,
+    resolved_at timestamptz
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $body$
+DECLARE
+    v_now timestamptz := clock_timestamp();
+BEGIN
+    RETURN QUERY SELECT * FROM public.fn_experiment_v2_selector_cycle_at(
+        p_experiment_id, v_now);
+END;
+$body$;
+
+CREATE OR REPLACE FUNCTION public.fn_experiment_v2_record_selector_choice_at(
     p_experiment_id uuid,
     p_assignment_id uuid,
     p_choice_id text,
     p_invocation_key text,
     p_profile text,
     p_fallback_reason text,
-    p_context_sha256 text,
-    p_identity_sha256 text,
     p_raw_request_sha256 text,
     p_raw_response_sha256 text,
     p_attempt_receipt_sha256 text[],
     p_selector_artifact_sha256 text,
-    p_accepted_at timestamptz,
+    p_now timestamptz,
     p_actor text DEFAULT current_user
 ) RETURNS public.experiment_v2_selector_choices
 LANGUAGE plpgsql
@@ -4777,6 +6738,7 @@ DECLARE
     v_exp public.control_experiments%ROWTYPE;
     v_assignment public.control_assignments%ROWTYPE;
     v_outcome public.experiment_v2_outcomes%ROWTYPE;
+    v_context public.experiment_v2_selector_contexts%ROWTYPE;
     v_randomization public.experiment_v2_randomization%ROWTYPE;
     v_existing public.experiment_v2_selector_choices%ROWTYPE;
     v_row public.experiment_v2_selector_choices%ROWTYPE;
@@ -4784,7 +6746,9 @@ DECLARE
     v_target_profile text;
     v_state public.experiment_v2_state_artifacts%ROWTYPE;
     v_choice_hash text;
-    v_now timestamptz := clock_timestamp();
+    v_accepted_at timestamptz;
+    v_late_baseline boolean;
+    v_now timestamptz := p_now;
 BEGIN
     SELECT * INTO v_exp FROM public.control_experiments
      WHERE experiment_id = p_experiment_id FOR UPDATE;
@@ -4793,76 +6757,107 @@ BEGIN
        AND operation_kind = 'randomized_day';
     SELECT * INTO v_outcome FROM public.experiment_v2_outcomes
      WHERE experiment_id = p_experiment_id AND assignment_id = p_assignment_id;
+    SELECT * INTO v_context FROM public.experiment_v2_selector_contexts
+     WHERE experiment_id = p_experiment_id AND assignment_id = p_assignment_id;
     SELECT * INTO v_randomization FROM public.experiment_v2_randomization
      WHERE experiment_id = p_experiment_id;
-    IF v_exp.protocol_version <> 2 OR v_exp.execution_phase <> 'randomized' OR
+    IF v_now IS NULL OR v_exp.protocol_version <> 2 OR
+       v_exp.execution_phase <> 'randomized' OR
        v_exp.status NOT IN ('armed', 'running') OR v_assignment.assignment_id IS NULL OR
-       v_randomization.experiment_id IS NULL THEN
-        RAISE EXCEPTION 'selector choice requires one finalized randomized assigned day';
+       v_randomization.experiment_id IS NULL OR v_context.assignment_id IS NULL THEN
+        RAISE EXCEPTION 'selector choice requires one finalized day with DB-frozen context';
     END IF;
     IF p_choice_id IS NULL OR p_choice_id <> p_invocation_key OR
        p_choice_id <> public.fn_experiment_v2_selector_invocation_uuid(
            v_exp.assignment_namespace_uuid, v_exp.study_id,
            v_outcome.assigned_local_date)::text OR
        p_profile NOT IN ('baseline', 'moderate', 'aggressive') OR
-       p_context_sha256 !~ '^[0-9a-f]{64}$' OR
-       p_identity_sha256 !~ '^[0-9a-f]{64}$' OR
        p_raw_request_sha256 !~ '^[0-9a-f]{64}$' OR
        (p_raw_response_sha256 IS NOT NULL AND
         p_raw_response_sha256 !~ '^[0-9a-f]{64}$') OR
-       p_selector_artifact_sha256 !~ '^[0-9a-f]{64}$' OR
+       p_selector_artifact_sha256 IS DISTINCT FROM v_exp.selector_artifact_sha256 OR
+       v_context.selector_artifact_sha256 IS DISTINCT FROM v_exp.selector_artifact_sha256 OR
+       v_context.context_schema_sha256 IS DISTINCT FROM v_exp.context_schema_sha256 OR
+       v_context.selector_identity_sha256 IS DISTINCT FROM v_exp.selector_identity_sha256 OR
        p_attempt_receipt_sha256 IS NULL OR cardinality(p_attempt_receipt_sha256) = 0 OR
        EXISTS (SELECT 1 FROM unnest(p_attempt_receipt_sha256) h
                 WHERE h !~ '^[0-9a-f]{64}$') OR
-       p_accepted_at IS NULL OR p_accepted_at > v_now OR
        (p_fallback_reason IS NOT NULL AND p_profile <> 'baseline') THEN
         RAISE EXCEPTION 'selector choice identity/context/request/attempt ledger is malformed';
     END IF;
-    IF p_accepted_at < lower(v_assignment.valid_range) - interval '24 hours' OR
-       p_accepted_at >= lower(v_assignment.valid_range) THEN
-        RAISE EXCEPTION 'selector invocation must be accepted before its fixed local-day boundary';
+    SELECT * INTO v_existing FROM public.experiment_v2_selector_choices
+     WHERE assignment_id = p_assignment_id;
+    v_late_baseline := v_existing.assignment_id IS NULL AND
+        v_now >= v_context.boundary_at AND v_now < upper(v_assignment.valid_range) AND
+        p_profile = 'baseline' AND
+        p_fallback_reason = 'boundary_elapsed_before_choice_persist' AND
+        p_raw_response_sha256 IS NULL AND
+        p_raw_request_sha256 = v_context.context_sha256;
+    IF v_existing.assignment_id IS NULL AND
+       v_now < v_context.context_cutoff_at THEN
+        RAISE EXCEPTION 'selector acceptance precedes its server context cutoff';
     END IF;
+    IF v_existing.assignment_id IS NULL AND
+       v_now >= v_context.boundary_at AND NOT v_late_baseline THEN
+        RAISE EXCEPTION USING
+            ERRCODE = 'V2B01',
+            MESSAGE = 'selector choice boundary window elapsed; exact safe baseline closure required';
+    END IF;
+    IF (v_existing.assignment_id IS NULL AND
+        p_fallback_reason = 'boundary_elapsed_before_choice_persist' AND
+        NOT v_late_baseline) OR
+       v_context.boundary_at <> lower(v_assignment.valid_range) OR
+       (v_context.context_status = 'unavailable' AND
+        (p_profile <> 'baseline' OR p_fallback_reason IS NULL OR
+         p_raw_response_sha256 IS NOT NULL OR
+         p_raw_request_sha256 <> v_context.context_sha256 OR
+         p_fallback_reason IS DISTINCT FROM CASE WHEN v_late_baseline
+             THEN 'boundary_elapsed_before_choice_persist'
+             ELSE v_context.failure_reason END)) THEN
+        RAISE EXCEPTION 'selector acceptance requires the server cutoff window or explicit source-unavailable baseline fallback';
+    END IF;
+    v_accepted_at := coalesce(v_existing.accepted_at, v_now);
     v_choice_hash := encode(digest(
         convert_to('verdify-switchback-v2/selector-choice', 'UTF8') || decode('00', 'hex') ||
         uuid_send(p_assignment_id) || convert_to(p_choice_id, 'UTF8') || decode('00', 'hex') ||
         convert_to(p_profile, 'UTF8') || decode('00', 'hex') ||
         convert_to(coalesce(p_fallback_reason, ''), 'UTF8') ||
-        decode(p_context_sha256, 'hex') || decode(p_identity_sha256, 'hex') ||
+        decode(v_context.context_sha256, 'hex') ||
+        decode(v_context.context_schema_sha256, 'hex') ||
+        decode(v_context.selector_identity_sha256, 'hex') ||
         decode(p_raw_request_sha256, 'hex') ||
         coalesce(decode(p_raw_response_sha256, 'hex'), ''::bytea) ||
         convert_to(array_to_string(p_attempt_receipt_sha256, ''), 'SQL_ASCII') ||
-        decode(p_selector_artifact_sha256, 'hex'), 'sha256'), 'hex');
-    SELECT * INTO v_existing FROM public.experiment_v2_selector_choices
-     WHERE assignment_id = p_assignment_id;
-    IF FOUND THEN
-        IF v_existing.virtual_choice_sha256 <> v_choice_hash OR
-           v_existing.accepted_at <> p_accepted_at THEN
+        decode(p_selector_artifact_sha256, 'hex') ||
+        convert_to(public.fn_experiment_v2_timestamp_text(v_accepted_at), 'SQL_ASCII'),
+        'sha256'), 'hex');
+    IF v_existing.assignment_id IS NOT NULL THEN
+        IF v_existing.virtual_choice_sha256 <> v_choice_hash THEN
             RAISE EXCEPTION 'daily selector choice is insert-once and cannot be replaced';
         END IF;
         RETURN v_existing;
     END IF;
-    IF v_now < lower(v_assignment.valid_range) - interval '24 hours' OR
-       v_now >= upper(v_assignment.valid_range) THEN
-        RAISE EXCEPTION 'daily selector choices cannot be bulk-created or shifted';
-    END IF;
     INSERT INTO public.experiment_v2_selector_choices
         (assignment_id, experiment_id, assigned_local_date, choice_id,
          invocation_key, choice_status, selected_profile, fallback_reason,
-         context_sha256, identity_sha256, raw_request_sha256,
+         context_sha256, context_schema_sha256, identity_sha256, raw_request_sha256,
          raw_response_sha256, attempt_receipt_sha256, selector_artifact_sha256,
          virtual_choice_sha256, recorded_by, recorded_at, accepted_at)
     VALUES (p_assignment_id, p_experiment_id, v_outcome.assigned_local_date,
             p_choice_id, p_invocation_key,
             CASE WHEN p_fallback_reason IS NULL THEN 'selected' ELSE 'fallback' END,
-            p_profile, p_fallback_reason, p_context_sha256, p_identity_sha256,
+            p_profile, p_fallback_reason, v_context.context_sha256,
+            v_context.context_schema_sha256, v_context.selector_identity_sha256,
             p_raw_request_sha256, p_raw_response_sha256, p_attempt_receipt_sha256,
-            p_selector_artifact_sha256, v_choice_hash, p_actor, v_now, p_accepted_at)
+            p_selector_artifact_sha256, v_choice_hash, p_actor, v_now, v_accepted_at)
     RETURNING * INTO v_row;
     v_physical_arm := CASE WHEN v_assignment.arm_label = 'X'
         THEN v_randomization.x_physical_arm ELSE v_randomization.y_physical_arm END;
     v_target_profile := CASE WHEN v_physical_arm = 'A' THEN 'baseline' ELSE p_profile END;
     SELECT * INTO v_state FROM public.experiment_v2_state_artifacts
-     WHERE experiment_id = p_experiment_id AND profile = v_target_profile;
+     WHERE experiment_id = p_experiment_id
+       AND revision_bundle_sha256 = v_exp.revision_bundle_sha256
+       AND profile = v_target_profile;
     INSERT INTO public.experiment_v2_work
         (work_id, experiment_id, assignment_id, execution_phase, operation_kind,
          target_profile, target_state_content_sha256, revision_bundle_sha256,
@@ -4877,6 +6872,550 @@ BEGIN
     RETURN v_row;
 END;
 $body$;
+
+CREATE OR REPLACE FUNCTION public.fn_experiment_v2_record_selector_choice(
+    p_experiment_id uuid,
+    p_assignment_id uuid,
+    p_choice_id text,
+    p_invocation_key text,
+    p_profile text,
+    p_fallback_reason text,
+    p_raw_request_sha256 text,
+    p_raw_response_sha256 text,
+    p_attempt_receipt_sha256 text[],
+    p_selector_artifact_sha256 text,
+    p_actor text DEFAULT current_user
+) RETURNS public.experiment_v2_selector_choices
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $body$
+DECLARE
+    v_now timestamptz := clock_timestamp();
+BEGIN
+    RETURN public.fn_experiment_v2_record_selector_choice_at(
+        p_experiment_id, p_assignment_id, p_choice_id, p_invocation_key,
+        p_profile, p_fallback_reason, p_raw_request_sha256,
+        p_raw_response_sha256, p_attempt_receipt_sha256,
+        p_selector_artifact_sha256, v_now, p_actor);
+END;
+$body$;
+
+CREATE OR REPLACE FUNCTION public.fn_experiment_v2_record_shadow_choice_at(
+    p_experiment_id uuid,
+    p_cycle_id uuid,
+    p_choice_id text,
+    p_invocation_key text,
+    p_profile text,
+    p_fallback_reason text,
+    p_raw_request_sha256 text,
+    p_raw_response_sha256 text,
+    p_attempt_receipt_sha256 text[],
+    p_selector_artifact_sha256 text,
+    p_now timestamptz,
+    p_actor text DEFAULT current_user
+) RETURNS public.experiment_v2_shadow_choices
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $body$
+DECLARE
+    v_exp public.control_experiments%ROWTYPE;
+    v_cycle public.experiment_v2_shadow_cycles%ROWTYPE;
+    v_context public.experiment_v2_shadow_contexts%ROWTYPE;
+    v_existing public.experiment_v2_shadow_choices%ROWTYPE;
+    v_row public.experiment_v2_shadow_choices%ROWTYPE;
+    v_a public.experiment_v2_state_artifacts%ROWTYPE;
+    v_b public.experiment_v2_state_artifacts%ROWTYPE;
+    v_hash text;
+    v_accepted timestamptz;
+    v_late_baseline boolean;
+    v_now timestamptz := p_now;
+BEGIN
+    SELECT * INTO v_exp FROM public.control_experiments
+     WHERE experiment_id = p_experiment_id FOR UPDATE;
+    SELECT * INTO v_cycle FROM public.experiment_v2_shadow_cycles
+     WHERE experiment_id = p_experiment_id AND cycle_id = p_cycle_id;
+    SELECT * INTO v_context FROM public.experiment_v2_shadow_contexts
+     WHERE experiment_id = p_experiment_id AND cycle_id = p_cycle_id;
+    SELECT * INTO v_existing FROM public.experiment_v2_shadow_choices
+     WHERE experiment_id = p_experiment_id AND cycle_id = p_cycle_id;
+    IF v_now IS NULL OR v_exp.protocol_version <> 2 OR v_exp.status <> 'draft' OR
+       v_exp.execution_phase <> 'shadow' OR v_exp.admission_state <> 'closed' OR
+       v_exp.component_enabled OR v_cycle.cycle_id IS NULL OR
+       v_context.cycle_id IS NULL OR
+       v_cycle.revision_bundle_sha256 <> v_exp.revision_bundle_sha256 OR
+       v_cycle.lease_generation <> v_exp.lease_generation THEN
+        RAISE EXCEPTION 'shadow choice requires the current device-dark frozen context';
+    END IF;
+    IF p_choice_id IS NULL OR p_choice_id <> p_invocation_key OR
+       p_choice_id <> p_cycle_id::text OR
+       p_profile NOT IN ('baseline', 'moderate', 'aggressive') OR
+       p_raw_request_sha256 !~ '^[0-9a-f]{64}$' OR
+       (p_raw_response_sha256 IS NOT NULL AND
+        p_raw_response_sha256 !~ '^[0-9a-f]{64}$') OR
+       p_selector_artifact_sha256 IS DISTINCT FROM v_cycle.selector_artifact_sha256 OR
+       v_context.context_schema_sha256 <> v_cycle.context_schema_sha256 OR
+       v_context.selector_identity_sha256 <> v_cycle.selector_identity_sha256 OR
+       v_context.selector_artifact_sha256 <> v_cycle.selector_artifact_sha256 OR
+       p_attempt_receipt_sha256 IS NULL OR cardinality(p_attempt_receipt_sha256) = 0 OR
+       EXISTS (SELECT 1 FROM unnest(p_attempt_receipt_sha256) h
+                WHERE h !~ '^[0-9a-f]{64}$') OR
+       (p_fallback_reason IS NOT NULL AND p_profile <> 'baseline') THEN
+        RAISE EXCEPTION 'shadow choice identity/context/request/attempt ledger is malformed';
+    END IF;
+    v_late_baseline := v_existing.cycle_id IS NULL AND
+        v_now >= v_cycle.boundary_at AND v_now < v_cycle.outcome_start_at AND
+        p_profile = 'baseline' AND
+        p_fallback_reason = 'boundary_elapsed_before_choice_persist' AND
+        p_raw_response_sha256 IS NULL AND
+        p_raw_request_sha256 = v_context.context_sha256;
+    IF v_existing.cycle_id IS NULL AND
+       v_now < v_cycle.context_cutoff_at THEN
+        RAISE EXCEPTION 'shadow selector acceptance precedes its server context cutoff';
+    END IF;
+    IF v_existing.cycle_id IS NULL AND
+       v_now >= v_cycle.boundary_at AND NOT v_late_baseline THEN
+        RAISE EXCEPTION USING
+            ERRCODE = 'V2B01',
+            MESSAGE = 'selector choice boundary window elapsed; exact safe baseline closure required';
+    END IF;
+    IF (v_existing.cycle_id IS NULL AND
+        p_fallback_reason = 'boundary_elapsed_before_choice_persist' AND
+        NOT v_late_baseline) OR
+       (v_context.context_status = 'unavailable' AND
+        (p_profile <> 'baseline' OR p_fallback_reason IS NULL OR
+         p_raw_response_sha256 IS NOT NULL OR
+         p_raw_request_sha256 <> v_context.context_sha256 OR
+         p_fallback_reason IS DISTINCT FROM CASE WHEN v_late_baseline
+             THEN 'boundary_elapsed_before_choice_persist'
+             ELSE v_context.failure_reason END)) THEN
+        RAISE EXCEPTION 'shadow selector requires its server cutoff window or explicit source-unavailable baseline fallback';
+    END IF;
+    SELECT * INTO v_a FROM public.experiment_v2_state_artifacts
+     WHERE experiment_id = p_experiment_id
+       AND revision_bundle_sha256 = v_exp.revision_bundle_sha256
+       AND profile = 'baseline';
+    SELECT * INTO v_b FROM public.experiment_v2_state_artifacts
+     WHERE experiment_id = p_experiment_id
+       AND revision_bundle_sha256 = v_exp.revision_bundle_sha256
+       AND profile = p_profile;
+    IF v_a.state_artifact_id IS NULL OR v_b.state_artifact_id IS NULL THEN
+        RAISE EXCEPTION 'shadow virtual A/B choice requires current frozen state artifacts';
+    END IF;
+    v_accepted := coalesce(v_existing.accepted_at, v_now);
+    v_hash := encode(digest(
+        convert_to('verdify-switchback-v2/shadow-selector-choice', 'UTF8') ||
+        decode('00', 'hex') || uuid_send(p_cycle_id) ||
+        convert_to(p_choice_id, 'UTF8') || decode('00', 'hex') ||
+        convert_to(p_profile, 'UTF8') || decode('00', 'hex') ||
+        convert_to(coalesce(p_fallback_reason, ''), 'UTF8') ||
+        decode(v_context.context_sha256, 'hex') ||
+        decode(v_context.context_schema_sha256, 'hex') ||
+        decode(v_context.selector_identity_sha256, 'hex') ||
+        decode(p_raw_request_sha256, 'hex') ||
+        coalesce(decode(p_raw_response_sha256, 'hex'), ''::bytea) ||
+        convert_to(array_to_string(p_attempt_receipt_sha256, ''), 'SQL_ASCII') ||
+        decode(p_selector_artifact_sha256, 'hex') ||
+        decode(v_a.state_content_sha256, 'hex') ||
+        decode(v_b.state_content_sha256, 'hex') ||
+        convert_to(public.fn_experiment_v2_timestamp_text(v_accepted), 'SQL_ASCII'),
+        'sha256'), 'hex');
+    IF v_existing.cycle_id IS NOT NULL THEN
+        IF v_existing.virtual_choice_sha256 <> v_hash THEN
+            RAISE EXCEPTION 'shadow selector choice is immutable and exact retry differs';
+        END IF;
+        RETURN v_existing;
+    END IF;
+    INSERT INTO public.experiment_v2_shadow_choices
+        (cycle_id, experiment_id, local_date, choice_id, invocation_key,
+         choice_status, selected_profile, fallback_reason, context_sha256,
+         selector_identity_sha256, raw_request_sha256, raw_response_sha256,
+         attempt_receipt_sha256, selector_artifact_sha256,
+         virtual_a_profile, virtual_a_state_content_sha256,
+         virtual_b_profile, virtual_b_state_content_sha256,
+         virtual_choice_sha256, accepted_at, recorded_by, recorded_at)
+    VALUES (p_cycle_id, p_experiment_id, v_cycle.local_date, p_choice_id,
+            p_invocation_key,
+            CASE WHEN p_fallback_reason IS NULL THEN 'selected' ELSE 'fallback' END,
+            p_profile, p_fallback_reason, v_context.context_sha256,
+            v_context.selector_identity_sha256, p_raw_request_sha256,
+            p_raw_response_sha256, p_attempt_receipt_sha256,
+            p_selector_artifact_sha256, 'baseline', v_a.state_content_sha256,
+            p_profile, v_b.state_content_sha256, v_hash, v_accepted,
+            p_actor, v_accepted)
+    RETURNING * INTO v_row;
+    RETURN v_row;
+END;
+$body$;
+
+CREATE OR REPLACE FUNCTION public.fn_experiment_v2_record_shadow_choice(
+    p_experiment_id uuid,
+    p_cycle_id uuid,
+    p_choice_id text,
+    p_invocation_key text,
+    p_profile text,
+    p_fallback_reason text,
+    p_raw_request_sha256 text,
+    p_raw_response_sha256 text,
+    p_attempt_receipt_sha256 text[],
+    p_selector_artifact_sha256 text,
+    p_actor text DEFAULT current_user
+) RETURNS public.experiment_v2_shadow_choices
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $body$
+DECLARE
+    v_now timestamptz := clock_timestamp();
+BEGIN
+    RETURN public.fn_experiment_v2_record_shadow_choice_at(
+        p_experiment_id, p_cycle_id, p_choice_id, p_invocation_key,
+        p_profile, p_fallback_reason, p_raw_request_sha256,
+        p_raw_response_sha256, p_attempt_receipt_sha256,
+        p_selector_artifact_sha256, v_now, p_actor);
+END;
+$body$;
+
+CREATE OR REPLACE FUNCTION public.fn_experiment_v2_record_shadow_outcome_preview_at(
+    p_experiment_id uuid,
+    p_cycle_id uuid,
+    p_outcome_payload jsonb,
+    p_now timestamptz,
+    p_actor text DEFAULT current_user
+) RETURNS public.experiment_v2_shadow_outcome_previews
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $body$
+DECLARE
+    v_exp public.control_experiments%ROWTYPE;
+    v_cycle public.experiment_v2_shadow_cycles%ROWTYPE;
+    v_context public.experiment_v2_shadow_contexts%ROWTYPE;
+    v_choice public.experiment_v2_shadow_choices%ROWTYPE;
+    v_existing public.experiment_v2_shadow_outcome_previews%ROWTYPE;
+    v_row public.experiment_v2_shadow_outcome_previews%ROWTYPE;
+    v_hash text;
+BEGIN
+    SELECT * INTO v_exp FROM public.control_experiments
+     WHERE experiment_id = p_experiment_id FOR UPDATE;
+    SELECT * INTO v_cycle FROM public.experiment_v2_shadow_cycles
+     WHERE experiment_id = p_experiment_id AND cycle_id = p_cycle_id;
+    SELECT * INTO v_context FROM public.experiment_v2_shadow_contexts
+     WHERE experiment_id = p_experiment_id AND cycle_id = p_cycle_id;
+    SELECT * INTO v_choice FROM public.experiment_v2_shadow_choices
+     WHERE experiment_id = p_experiment_id AND cycle_id = p_cycle_id;
+    IF p_outcome_payload IS NULL OR jsonb_typeof(p_outcome_payload) <> 'object' OR
+       p_now IS NULL OR v_cycle.cycle_id IS NULL OR v_context.cycle_id IS NULL OR
+       v_choice.cycle_id IS NULL THEN
+        RAISE EXCEPTION 'shadow outcome preview requires complete typed shadow lineage';
+    END IF;
+    v_hash := encode(digest(
+        convert_to('verdify-experiment-v2-shadow-outcome-preview-v1', 'UTF8') ||
+        decode('00', 'hex') || uuid_send(p_cycle_id) ||
+        decode(v_cycle.endpoint_artifact_sha256, 'hex') ||
+        decode(v_cycle.outcome_schema_sha256, 'hex') ||
+        decode(v_context.context_sha256, 'hex') ||
+        decode(v_choice.virtual_choice_sha256, 'hex') ||
+        convert_to(p_outcome_payload::text, 'UTF8'), 'sha256'), 'hex');
+    SELECT * INTO v_existing FROM public.experiment_v2_shadow_outcome_previews
+     WHERE cycle_id = p_cycle_id;
+    IF FOUND THEN
+        IF v_existing.outcome_preview_sha256 <> v_hash THEN
+            RAISE EXCEPTION 'shadow outcome preview is immutable and exact retry differs';
+        END IF;
+        RETURN v_existing;
+    END IF;
+    IF v_exp.protocol_version <> 2 OR v_exp.status <> 'draft' OR
+       v_exp.execution_phase <> 'shadow' OR v_exp.admission_state <> 'closed' OR
+       v_exp.component_enabled OR
+       v_cycle.revision_bundle_sha256 <> v_exp.revision_bundle_sha256 OR
+       v_cycle.lease_generation <> v_exp.lease_generation OR
+       (v_context.context_status = 'unavailable' AND (
+           v_choice.choice_status <> 'fallback' OR
+           v_choice.selected_profile <> 'baseline' OR
+           v_choice.fallback_reason IS NULL OR
+           (SELECT count(*) FROM jsonb_object_keys(p_outcome_payload)) <> 7 OR
+           p_outcome_payload->>'schema' IS DISTINCT FROM
+               'verdify-assigned-day-outcome-v2' OR
+           jsonb_typeof(p_outcome_payload->'temperature_corridor_distance_f')
+               IS DISTINCT FROM 'null' OR
+           jsonb_typeof(p_outcome_payload->'vpd_corridor_distance_kpa')
+               IS DISTINCT FROM 'null' OR
+           jsonb_typeof(p_outcome_payload->'nine_control_state_minutes')
+               IS DISTINCT FROM 'null' OR
+           coalesce(p_outcome_payload->>'climate_missing_reason', '') NOT IN
+               ('source_unavailable', 'source_contract_invalid',
+                'climate_completeness', 'counter_samples_unavailable',
+                'counter_reset_or_wrap', 'counter_state_reconciliation',
+                'direct_state_snapshot_unavailable',
+                'direct_state_snapshot_invalid') OR
+           coalesce(p_outcome_payload->>'equipment_missing_reason', '') NOT IN
+               ('source_unavailable', 'source_contract_invalid',
+                'climate_completeness', 'counter_samples_unavailable',
+                'counter_reset_or_wrap', 'counter_state_reconciliation',
+                'direct_state_snapshot_unavailable',
+                'direct_state_snapshot_invalid') OR
+           coalesce(p_outcome_payload->>'source_bundle_sha256', '') !~
+               '^[0-9a-f]{64}$'
+       )) OR p_now < v_cycle.outcome_end_at OR
+       EXISTS (SELECT 1 FROM public.experiment_v2_delivery_bundles b
+                WHERE b.work_id = v_cycle.work_id) OR
+       EXISTS (SELECT 1 FROM public.experiment_v2_component_outcomes o
+                WHERE o.work_id = v_cycle.work_id) OR
+       EXISTS (SELECT 1 FROM public.experiment_v2_exposures x
+                WHERE x.work_id = v_cycle.work_id) OR
+       EXISTS (SELECT 1 FROM public.control_assignments a
+                WHERE a.assignment_id = v_cycle.cycle_id) THEN
+        RAISE EXCEPTION 'shadow outcome preview requires elapsed device-dark current cycle with zero authority; unavailable context requires its exact baseline fallback and explicit-null locked outcome';
+    END IF;
+    INSERT INTO public.experiment_v2_shadow_outcome_previews
+        (cycle_id, experiment_id, outcome_payload,
+         endpoint_artifact_sha256, outcome_schema_sha256,
+         outcome_preview_sha256, frozen_by, frozen_at)
+    VALUES (p_cycle_id, p_experiment_id, p_outcome_payload,
+            v_cycle.endpoint_artifact_sha256, v_cycle.outcome_schema_sha256,
+            v_hash, p_actor, p_now)
+    RETURNING * INTO v_row;
+    INSERT INTO public.experiment_v2_work_events
+        (experiment_id, work_id, event_kind, worker_ref, detail, recorded_at)
+    VALUES (p_experiment_id, v_cycle.work_id, 'completed', p_actor,
+            jsonb_build_object(
+                'shadow_outcome_preview_sha256', v_hash,
+                'device_calls', 0, 'assignments', 0,
+                'outbox_rows', 0, 'exposures', 0), p_now);
+    RETURN v_row;
+END;
+$body$;
+
+CREATE OR REPLACE FUNCTION public.fn_experiment_v2_record_shadow_outcome_preview(
+    p_experiment_id uuid,
+    p_cycle_id uuid,
+    p_outcome_payload jsonb,
+    p_actor text DEFAULT current_user
+) RETURNS public.experiment_v2_shadow_outcome_previews
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $body$
+DECLARE
+    v_now timestamptz := clock_timestamp();
+BEGIN
+    RETURN public.fn_experiment_v2_record_shadow_outcome_preview_at(
+        p_experiment_id, p_cycle_id, p_outcome_payload, v_now, p_actor);
+END;
+$body$;
+
+CREATE OR REPLACE FUNCTION public.fn_experiment_v2_context_insert_binding()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $body$
+DECLARE
+    v_local_date date;
+    v_cutoff timestamptz;
+    v_boundary timestamptz;
+    v_context_schema text;
+    v_identity text;
+    v_selector_artifact text;
+    v_row jsonb;
+    v_value record;
+    v_observed timestamptz;
+    v_valid timestamptz;
+    v_fetched timestamptz;
+    v_previous_1 timestamptz;
+    v_previous_2 timestamptz;
+    v_previous_hash text;
+    v_row_hash text;
+    v_source_hashes text := '';
+    v_source_max timestamptz;
+    v_climate_fields text[] := ARRAY[
+        'temp_avg_f','temp_north_f','temp_south_f','temp_east_f','temp_west_f',
+        'rh_avg_pct','rh_north_pct','rh_south_pct','rh_east_pct','rh_west_pct',
+        'vpd_avg_kpa','vpd_north_kpa','vpd_south_kpa','vpd_east_kpa','vpd_west_kpa',
+        'dew_point_f','outdoor_temp_f','outdoor_rh_pct','solar_irradiance_w_m2',
+        'leaf_temp_north_f','leaf_temp_south_f','leaf_wetness_north',
+        'leaf_wetness_south','wind_speed_mph','precip_in','flow_gpm',
+        'mister_water_today_gal'];
+    v_forecast_fields text[] := ARRAY[
+        'temp_f','rh_pct','vpd_kpa','cloud_cover_pct','wind_speed_mph',
+        'solar_w_m2','precip_prob_pct','direct_radiation_w_m2'];
+BEGIN
+    IF TG_TABLE_NAME = 'experiment_v2_shadow_contexts' THEN
+        SELECT cycle.local_date, cycle.context_cutoff_at, cycle.boundary_at,
+               cycle.context_schema_sha256, cycle.selector_identity_sha256,
+               cycle.selector_artifact_sha256
+          INTO v_local_date, v_cutoff, v_boundary, v_context_schema,
+               v_identity, v_selector_artifact
+          FROM public.experiment_v2_shadow_cycles cycle
+         WHERE cycle.cycle_id = NEW.cycle_id
+           AND cycle.experiment_id = NEW.experiment_id;
+    ELSE
+        SELECT outcome.assigned_local_date,
+               (((outcome.assigned_local_date - 1)::date +
+                  e.selector_context_cutoff_local) AT TIME ZONE e.timezone),
+               lower(assignment.valid_range), e.context_schema_sha256,
+               e.selector_identity_sha256, e.selector_artifact_sha256
+          INTO v_local_date, v_cutoff, v_boundary, v_context_schema,
+               v_identity, v_selector_artifact
+          FROM public.control_experiments e
+          JOIN public.control_assignments assignment USING (experiment_id)
+          JOIN public.experiment_v2_outcomes outcome USING (assignment_id, experiment_id)
+         WHERE e.experiment_id = NEW.experiment_id
+           AND assignment.assignment_id = NEW.assignment_id;
+        IF NEW.assigned_local_date IS DISTINCT FROM v_local_date OR
+           NEW.context_cutoff_at IS DISTINCT FROM v_cutoff OR
+           NEW.boundary_at IS DISTINCT FROM v_boundary THEN
+            RAISE EXCEPTION 'randomized selector context time identity is not DB-derived';
+        END IF;
+    END IF;
+    IF v_local_date IS NULL OR v_cutoff IS NULL OR v_boundary IS NULL OR
+       NEW.context_schema_sha256 <> v_context_schema OR
+       NEW.selector_identity_sha256 <> v_identity OR
+       NEW.selector_artifact_sha256 <> v_selector_artifact OR
+       NEW.context_canonical_bytes <> convert_to(NEW.context_payload::text, 'UTF8') OR
+       NEW.context_sha256 <> encode(digest(NEW.context_canonical_bytes, 'sha256'), 'hex') OR
+       NEW.frozen_at < v_cutoff OR NEW.frozen_at >= v_boundary THEN
+        RAISE EXCEPTION 'selector context bytes/hash/time/artifacts do not bind the exact due subject';
+    END IF;
+
+    IF NEW.context_status = 'unavailable' THEN
+        IF (SELECT count(*) FROM jsonb_object_keys(NEW.context_payload)) <> 5 OR
+           NEW.context_payload->>'schema' <> 'verdify-selector-context-unavailable-v1' OR
+           NEW.context_payload->>'local_date' <> to_char(v_local_date, 'YYYY-MM-DD') OR
+           NEW.context_payload->>'context_cutoff_at' <>
+               public.fn_experiment_v2_timestamp_text(v_cutoff) OR
+           NEW.context_payload->>'boundary_at' <>
+               public.fn_experiment_v2_timestamp_text(v_boundary) OR
+           NEW.context_payload->>'reason' NOT IN
+               ('source_relation_unavailable',
+                'no_usable_precutoff_climate_source',
+                'conflicting_latest_forecast_vintage') OR
+           NEW.failure_reason <> NEW.context_payload->>'reason' OR
+           NEW.source_max_at IS NOT NULL OR
+           NEW.source_bundle_sha256 <> encode(digest(
+               convert_to('verdify-experiment-v2-selector-source-unavailable-v1', 'UTF8') ||
+               decode('00', 'hex') || NEW.context_canonical_bytes,
+               'sha256'), 'hex') THEN
+            RAISE EXCEPTION 'selector unavailable receipt is not one exact public fallback code';
+        END IF;
+        RETURN NEW;
+    END IF;
+
+    IF NEW.context_status <> 'frozen' OR NEW.failure_reason IS NOT NULL OR
+       (SELECT count(*) FROM jsonb_object_keys(NEW.context_payload)) <> 6 OR
+       NEW.context_payload->>'schema' <> 'verdify-selector-context-v2' OR
+       NEW.context_payload->>'local_date' <> to_char(v_local_date, 'YYYY-MM-DD') OR
+       NEW.context_payload->>'context_cutoff_at' <>
+           public.fn_experiment_v2_timestamp_text(v_cutoff) OR
+       NEW.context_payload->>'boundary_at' <>
+           public.fn_experiment_v2_timestamp_text(v_boundary) OR
+       jsonb_typeof(NEW.context_payload->'climate_observations') <> 'array' OR
+       jsonb_array_length(NEW.context_payload->'climate_observations') = 0 OR
+       jsonb_typeof(NEW.context_payload->'forecast_vintage') <> 'array' THEN
+        RAISE EXCEPTION 'positive selector context envelope differs from locked v2 schema';
+    END IF;
+
+    FOR v_row IN SELECT value FROM jsonb_array_elements(
+            NEW.context_payload->'climate_observations') LOOP
+        IF jsonb_typeof(v_row) <> 'object' OR
+           (SELECT count(*) FROM jsonb_object_keys(v_row)) <> 4 OR
+           v_row->>'schema' <> 'verdify-selector-climate-source-v1' OR
+           v_row->>'source_row_sha256' !~ '^[0-9a-f]{64}$' OR
+           (v_row->>'observed_at') !~
+               '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{6}Z$' OR
+           jsonb_typeof(v_row->'values') <> 'object' OR
+           (SELECT count(*) FROM jsonb_object_keys(v_row->'values')) <>
+               cardinality(v_climate_fields) OR EXISTS (
+               SELECT 1 FROM jsonb_object_keys(v_row->'values') key
+                WHERE NOT key = ANY(v_climate_fields)) OR EXISTS (
+               SELECT 1 FROM jsonb_each(v_row->'values') item
+                WHERE jsonb_typeof(item.value) NOT IN ('number', 'null')) OR
+           jsonb_typeof(v_row->'values'->'temp_avg_f') <> 'number' OR
+           jsonb_typeof(v_row->'values'->'vpd_avg_kpa') <> 'number' THEN
+            RAISE EXCEPTION 'climate selector source row is not exact positive typed schema';
+        END IF;
+        v_observed := (v_row->>'observed_at')::timestamptz;
+        v_row_hash := v_row->>'source_row_sha256';
+        IF public.fn_experiment_v2_timestamp_text(v_observed) <>
+               v_row->>'observed_at' OR v_observed > v_cutoff OR
+           (v_previous_1 IS NOT NULL AND
+            (v_observed, v_row_hash) <= (v_previous_1, v_previous_hash)) OR
+           v_row_hash <> encode(digest(
+               convert_to('verdify-experiment-v2-selector-source-v1', 'UTF8') ||
+               decode('00', 'hex') || convert_to(
+                   (v_row - 'source_row_sha256')::text, 'UTF8'), 'sha256'), 'hex') THEN
+            RAISE EXCEPTION 'climate source row cutoff/order/hash is not DB-canonical';
+        END IF;
+        v_previous_1 := v_observed;
+        v_previous_hash := v_row_hash;
+        v_source_max := greatest(v_source_max, v_observed);
+        v_source_hashes := v_source_hashes || v_row_hash;
+    END LOOP;
+
+    v_previous_1 := NULL; v_previous_2 := NULL; v_previous_hash := NULL;
+    FOR v_row IN SELECT value FROM jsonb_array_elements(
+            NEW.context_payload->'forecast_vintage') LOOP
+        IF jsonb_typeof(v_row) <> 'object' OR
+           (SELECT count(*) FROM jsonb_object_keys(v_row)) <> 5 OR
+           v_row->>'schema' <> 'verdify-selector-forecast-source-v1' OR
+           v_row->>'source_row_sha256' !~ '^[0-9a-f]{64}$' OR
+           (v_row->>'valid_at') !~
+               '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{6}Z$' OR
+           (v_row->>'fetched_at') !~
+               '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{6}Z$' OR
+           jsonb_typeof(v_row->'values') <> 'object' OR
+           (SELECT count(*) FROM jsonb_object_keys(v_row->'values')) <>
+               cardinality(v_forecast_fields) OR EXISTS (
+               SELECT 1 FROM jsonb_object_keys(v_row->'values') key
+                WHERE NOT key = ANY(v_forecast_fields)) OR EXISTS (
+               SELECT 1 FROM jsonb_each(v_row->'values') item
+                WHERE jsonb_typeof(item.value) NOT IN ('number', 'null')) THEN
+            RAISE EXCEPTION 'forecast selector source row is not exact positive typed schema';
+        END IF;
+        v_valid := (v_row->>'valid_at')::timestamptz;
+        v_fetched := (v_row->>'fetched_at')::timestamptz;
+        v_row_hash := v_row->>'source_row_sha256';
+        IF public.fn_experiment_v2_timestamp_text(v_valid) <> v_row->>'valid_at' OR
+           public.fn_experiment_v2_timestamp_text(v_fetched) <> v_row->>'fetched_at' OR
+           v_fetched > v_cutoff OR v_valid < v_cutoff OR
+           v_valid >= v_boundary + interval '24 hours' OR
+           (v_previous_1 IS NOT NULL AND
+            (v_valid, v_fetched, v_row_hash) <=
+                (v_previous_1, v_previous_2, v_previous_hash)) OR
+           (v_previous_1 IS NOT NULL AND v_valid = v_previous_1) OR
+           v_row_hash <> encode(digest(
+               convert_to('verdify-experiment-v2-selector-source-v1', 'UTF8') ||
+               decode('00', 'hex') || convert_to(
+                   (v_row - 'source_row_sha256')::text, 'UTF8'), 'sha256'), 'hex') THEN
+            RAISE EXCEPTION 'forecast source vintage cutoff/order/hash is not DB-canonical';
+        END IF;
+        v_previous_1 := v_valid; v_previous_2 := v_fetched;
+        v_previous_hash := v_row_hash;
+        v_source_max := greatest(v_source_max, v_fetched);
+        v_source_hashes := v_source_hashes || v_row_hash;
+    END LOOP;
+    IF NEW.source_max_at IS DISTINCT FROM v_source_max OR
+       NEW.source_max_at > v_cutoff OR
+       NEW.source_bundle_sha256 <> encode(digest(
+           convert_to('verdify-experiment-v2-selector-source-bundle-v1', 'UTF8') ||
+           decode('00', 'hex') || convert_to(v_source_hashes, 'SQL_ASCII'),
+           'sha256'), 'hex') THEN
+        RAISE EXCEPTION 'selector source bundle hash/max timestamp is not exact';
+    END IF;
+    RETURN NEW;
+END;
+$body$;
+
+DROP TRIGGER IF EXISTS trg_experiment_v2_shadow_context_binding
+    ON public.experiment_v2_shadow_contexts;
+CREATE TRIGGER trg_experiment_v2_shadow_context_binding
+    BEFORE INSERT ON public.experiment_v2_shadow_contexts
+    FOR EACH ROW EXECUTE FUNCTION public.fn_experiment_v2_context_insert_binding();
+
+DROP TRIGGER IF EXISTS trg_experiment_v2_selector_context_binding
+    ON public.experiment_v2_selector_contexts;
+CREATE TRIGGER trg_experiment_v2_selector_context_binding
+    BEFORE INSERT ON public.experiment_v2_selector_contexts
+    FOR EACH ROW EXECUTE FUNCTION public.fn_experiment_v2_context_insert_binding();
 
 CREATE OR REPLACE FUNCTION public.fn_experiment_v2_randomization_insert_binding()
 RETURNS trigger
@@ -4961,6 +7500,8 @@ DECLARE
     v_exp public.control_experiments%ROWTYPE;
     v_assignment public.control_assignments%ROWTYPE;
     v_outcome public.experiment_v2_outcomes%ROWTYPE;
+    v_context public.experiment_v2_selector_contexts%ROWTYPE;
+    v_late_baseline boolean;
 BEGIN
     SELECT * INTO v_exp FROM public.control_experiments
      WHERE experiment_id = NEW.experiment_id;
@@ -4969,6 +7510,14 @@ BEGIN
        AND operation_kind = 'randomized_day';
     SELECT * INTO v_outcome FROM public.experiment_v2_outcomes
      WHERE experiment_id = NEW.experiment_id AND assignment_id = NEW.assignment_id;
+    SELECT * INTO v_context FROM public.experiment_v2_selector_contexts
+     WHERE experiment_id = NEW.experiment_id AND assignment_id = NEW.assignment_id;
+    v_late_baseline := NEW.accepted_at >= v_context.boundary_at AND
+        NEW.accepted_at < upper(v_assignment.valid_range) AND
+        NEW.selected_profile = 'baseline' AND
+        NEW.fallback_reason = 'boundary_elapsed_before_choice_persist' AND
+        NEW.raw_response_sha256 IS NULL AND
+        NEW.raw_request_sha256 = v_context.context_sha256;
     IF EXISTS (SELECT 1 FROM unnest(NEW.attempt_receipt_sha256) h
                 WHERE h !~ '^[0-9a-f]{64}$') THEN
         RAISE EXCEPTION 'selector attempt receipt hash is malformed';
@@ -4978,19 +7527,30 @@ BEGIN
         uuid_send(NEW.assignment_id) || convert_to(NEW.choice_id, 'UTF8') ||
         decode('00', 'hex') || convert_to(NEW.selected_profile, 'UTF8') ||
         decode('00', 'hex') || convert_to(coalesce(NEW.fallback_reason, ''), 'UTF8') ||
-        decode(NEW.context_sha256, 'hex') || decode(NEW.identity_sha256, 'hex') ||
+        decode(NEW.context_sha256, 'hex') ||
+        decode(NEW.context_schema_sha256, 'hex') ||
+        decode(NEW.identity_sha256, 'hex') ||
         decode(NEW.raw_request_sha256, 'hex') ||
         coalesce(decode(NEW.raw_response_sha256, 'hex'), ''::bytea) ||
         convert_to(array_to_string(NEW.attempt_receipt_sha256, ''), 'SQL_ASCII') ||
-        decode(NEW.selector_artifact_sha256, 'hex'), 'sha256'), 'hex');
+        decode(NEW.selector_artifact_sha256, 'hex') ||
+        convert_to(public.fn_experiment_v2_timestamp_text(NEW.accepted_at), 'SQL_ASCII'),
+        'sha256'), 'hex');
     IF v_exp.protocol_version <> 2 OR v_exp.status NOT IN ('armed', 'running') OR
        v_assignment.assignment_id IS NULL OR v_outcome.assignment_id IS NULL OR
+       v_context.assignment_id IS NULL OR
        NEW.assigned_local_date <> v_outcome.assigned_local_date OR
+       NEW.context_sha256 <> v_context.context_sha256 OR
+       NEW.context_schema_sha256 <> v_context.context_schema_sha256 OR
+       NEW.identity_sha256 <> v_context.selector_identity_sha256 OR
+       NEW.selector_artifact_sha256 <> v_context.selector_artifact_sha256 OR
+       NEW.accepted_at <> NEW.recorded_at OR
+       NEW.accepted_at < v_context.context_cutoff_at OR
+       (NEW.accepted_at >= v_context.boundary_at AND NOT v_late_baseline) OR
        NEW.choice_id <> public.fn_experiment_v2_selector_invocation_uuid(
            v_exp.assignment_namespace_uuid, v_exp.study_id,
            v_outcome.assigned_local_date)::text OR
-       NEW.accepted_at < lower(v_assignment.valid_range) - interval '24 hours' OR
-       NEW.accepted_at >= lower(v_assignment.valid_range) OR
+       v_context.boundary_at <> lower(v_assignment.valid_range) OR
        (NEW.fallback_reason IS NOT NULL AND NEW.selected_profile <> 'baseline') OR
        NEW.virtual_choice_sha256 <> v_hash OR
        NEW.choice_id <> NEW.invocation_key OR
@@ -5008,7 +7568,324 @@ CREATE TRIGGER trg_experiment_v2_selector_insert_binding
     BEFORE INSERT ON public.experiment_v2_selector_choices
     FOR EACH ROW EXECUTE FUNCTION public.fn_experiment_v2_selector_insert_binding();
 
-CREATE OR REPLACE FUNCTION public.fn_experiment_v2_freeze_outcome(
+-- The schedule, immutable assignment, and fixed ITT row must describe the
+-- same day byte-for-byte before any terminal/freeze operation can proceed.
+-- p_now is accepted only by this ungranted internal helper.  Every production
+-- entry point below captures clock_timestamp() once and supplies it itself.
+CREATE OR REPLACE FUNCTION public.fn_experiment_v2_assignment_window_is_bound(
+    p_experiment_id uuid,
+    p_assignment_id uuid,
+    p_now timestamptz
+) RETURNS boolean
+LANGUAGE sql
+STABLE
+SET search_path = public, pg_temp
+AS $body$
+    SELECT EXISTS (
+        SELECT 1
+          FROM public.control_experiments e
+          JOIN public.control_assignments a
+            ON a.experiment_id = e.experiment_id
+           AND a.assignment_id = p_assignment_id
+           AND a.operation_kind = 'randomized_day'
+          JOIN public.experiment_v2_outcomes o
+            ON o.experiment_id = a.experiment_id
+           AND o.assignment_id = a.assignment_id
+          JOIN public.experiment_v2_randomization r
+            ON r.experiment_id = e.experiment_id
+          JOIN LATERAL jsonb_array_elements(r.schedule->'assignments') scheduled(day)
+            ON scheduled.day->>'assignment_uuid' = a.assignment_id::text
+         WHERE e.experiment_id = p_experiment_id
+           AND e.protocol_version = 2
+           AND e.execution_phase = 'randomized'
+           AND p_now IS NOT NULL
+           AND p_now >= upper(a.valid_range)
+           AND p_now >= upper(o.itt_range)
+           AND a.greenhouse_id = e.greenhouse_id
+           AND a.arm_label = o.blinded_arm
+           AND a.pair_index = o.pair_index
+           AND a.block_index = o.day_index
+           AND lower(a.valid_range) =
+               o.assigned_local_date::timestamp AT TIME ZONE e.timezone
+           AND upper(a.valid_range) =
+               (o.assigned_local_date + 1)::timestamp AT TIME ZONE e.timezone
+           AND lower(o.itt_range) =
+               (o.assigned_local_date + time '06:00') AT TIME ZONE e.timezone
+           AND upper(o.itt_range) = upper(a.valid_range)
+           AND scheduled.day->>'blinded_label' = o.blinded_arm
+           AND (scheduled.day->>'pair_index')::integer = o.pair_index
+           AND (scheduled.day->>'day_in_pair')::integer =
+               ((o.day_index - 1) % 2) + 1
+           AND scheduled.day->>'local_date' =
+               to_char(o.assigned_local_date, 'YYYY-MM-DD')
+           AND scheduled.day->>'utc_start' = to_char(
+               lower(a.valid_range) AT TIME ZONE 'UTC',
+               'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+           AND scheduled.day->>'utc_end' = to_char(
+               upper(a.valid_range) AT TIME ZONE 'UTC',
+               'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+    )
+$body$;
+
+CREATE OR REPLACE FUNCTION public.fn_experiment_v2_all_assignment_windows_bound(
+    p_experiment_id uuid,
+    p_now timestamptz
+) RETURNS boolean
+LANGUAGE sql
+STABLE
+SET search_path = public, pg_temp
+AS $body$
+    SELECT EXISTS (
+        SELECT 1
+          FROM public.control_experiments e
+          JOIN public.experiment_v2_randomization r USING (experiment_id)
+         WHERE e.experiment_id = p_experiment_id
+           AND e.protocol_version = 2
+           AND e.execution_phase = 'randomized'
+           AND jsonb_array_length(r.schedule->'assignments') =
+               e.randomized_pair_count * 2
+           AND (SELECT count(*) FROM public.control_assignments a
+                 WHERE a.experiment_id = e.experiment_id
+                   AND a.operation_kind = 'randomized_day') =
+               e.randomized_pair_count * 2
+           AND (SELECT count(*) FROM public.experiment_v2_outcomes o
+                 WHERE o.experiment_id = e.experiment_id) =
+               e.randomized_pair_count * 2
+           AND NOT EXISTS (
+               SELECT 1
+                 FROM public.control_assignments a
+                 LEFT JOIN public.experiment_v2_outcomes o
+                   ON o.assignment_id = a.assignment_id
+                  AND o.experiment_id = a.experiment_id
+                WHERE a.experiment_id = e.experiment_id
+                  AND a.operation_kind = 'randomized_day'
+                  AND (o.assignment_id IS NULL OR
+                       a.status NOT IN ('closed', 'failed') OR
+                       NOT public.fn_experiment_v2_assignment_window_is_bound(
+                           e.experiment_id, a.assignment_id, p_now))
+           )
+    )
+$body$;
+
+-- Lifecycle owns the only assignment status mutation.  It derives closed vs
+-- failed from immutable selector/work/exposure evidence after the exact fixed
+-- day has elapsed; callers cannot submit a status or a clock.
+CREATE OR REPLACE FUNCTION public.fn_experiment_v2_finalize_assignment_at(
+    p_experiment_id uuid,
+    p_assignment_id uuid,
+    p_now timestamptz,
+    p_actor text DEFAULT current_user
+) RETURNS public.control_assignments
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $body$
+DECLARE
+    v_exp public.control_experiments%ROWTYPE;
+    v_assignment public.control_assignments%ROWTYPE;
+    v_work public.experiment_v2_work%ROWTYPE;
+    v_failed boolean;
+BEGIN
+    SELECT * INTO v_exp FROM public.control_experiments
+     WHERE experiment_id = p_experiment_id FOR UPDATE;
+    SELECT * INTO v_assignment FROM public.control_assignments
+     WHERE experiment_id = p_experiment_id
+       AND assignment_id = p_assignment_id FOR UPDATE;
+    IF v_exp.protocol_version <> 2 OR v_exp.execution_phase <> 'randomized' OR
+       v_exp.status NOT IN ('running', 'paused') OR
+       v_assignment.assignment_id IS NULL OR
+       v_assignment.operation_kind <> 'randomized_day' OR
+       NOT public.fn_experiment_v2_assignment_window_is_bound(
+           p_experiment_id, p_assignment_id, p_now) THEN
+        RAISE EXCEPTION 'assignment finalization requires its elapsed schedule-bound v2 window';
+    END IF;
+    IF v_assignment.status IN ('closed', 'failed') THEN
+        RETURN v_assignment;
+    END IF;
+    IF v_assignment.status <> 'active' THEN
+        RAISE EXCEPTION 'assignment % has illegal pre-final status %',
+            p_assignment_id, v_assignment.status;
+    END IF;
+    IF EXISTS (
+        SELECT 1 FROM public.experiment_v2_exposures x
+        LEFT JOIN public.experiment_v2_exposure_closures c USING (exposure_id)
+         WHERE x.experiment_id = p_experiment_id
+           AND x.assignment_id = p_assignment_id
+           AND c.exposure_id IS NULL) THEN
+        RAISE EXCEPTION 'assignment finalization requires every physical exposure closed first';
+    END IF;
+    SELECT * INTO v_work FROM public.experiment_v2_work
+     WHERE experiment_id = p_experiment_id
+       AND assignment_id = p_assignment_id;
+    IF v_work.work_id IS NOT NULL AND NOT EXISTS (
+        SELECT 1 FROM public.experiment_v2_work_events terminal
+         WHERE terminal.work_id = v_work.work_id
+           AND terminal.event_kind IN
+               ('completed', 'failed', 'recovered', 'cancelled', 'superseded')) THEN
+        INSERT INTO public.experiment_v2_work_events
+            (experiment_id, work_id, event_kind, worker_ref, detail, recorded_at)
+        VALUES (p_experiment_id, v_work.work_id, 'failed', p_actor,
+                jsonb_build_object(
+                    'reason', 'assignment_window_elapsed_without_terminal_work'),
+                p_now);
+    END IF;
+    v_failed := NOT EXISTS (
+            SELECT 1 FROM public.experiment_v2_selector_choices choice
+             WHERE choice.experiment_id = p_experiment_id
+               AND choice.assignment_id = p_assignment_id) OR
+        v_work.work_id IS NULL OR NOT EXISTS (
+            SELECT 1 FROM public.experiment_v2_work_events completed
+             WHERE completed.work_id = v_work.work_id
+               AND completed.event_kind = 'completed') OR EXISTS (
+            SELECT 1 FROM public.experiment_v2_work_events failed
+             WHERE failed.work_id = v_work.work_id
+               AND failed.event_kind IN ('failed', 'cancelled', 'superseded')) OR EXISTS (
+            SELECT 1
+              FROM public.experiment_v2_exposures x
+              JOIN public.experiment_v2_exposure_closures c USING (exposure_id)
+             WHERE x.experiment_id = p_experiment_id
+               AND x.assignment_id = p_assignment_id
+               AND c.close_reason IN
+                   ('device_lost', 'protocol_deviation', 'work_failed',
+                    'facility_emergency', 'manual_rescue', 'reconnect', 'reboot',
+                    'lease_loss', 'writer_collision', 'db_outage', 'sensor_gap',
+                    'cfg_drift', 'common_field_drift',
+                    'stale_or_mismatched_work', 'unknown_delivery',
+                    'interrupted_recovery'));
+    UPDATE public.control_assignments
+       SET status = CASE WHEN v_failed THEN 'failed' ELSE 'closed' END,
+           updated_at = p_now
+     WHERE assignment_id = p_assignment_id
+     RETURNING * INTO v_assignment;
+    INSERT INTO public.experiment_events
+        (experiment_id, assignment_id, event_kind, severity, actor, detail,
+         recorded_at)
+    VALUES (p_experiment_id, p_assignment_id,
+            CASE WHEN v_failed THEN 'protocol_deviation' ELSE 'note' END,
+            CASE WHEN v_failed THEN 'warning' ELSE 'info' END,
+            p_actor,
+            jsonb_build_object('v2_event', 'assignment_finalized',
+                               'assignment_status', v_assignment.status),
+            p_now);
+    RETURN v_assignment;
+END;
+$body$;
+
+CREATE OR REPLACE FUNCTION public.fn_experiment_v2_finalize_assignment(
+    p_experiment_id uuid,
+    p_assignment_id uuid,
+    p_actor text DEFAULT current_user
+) RETURNS public.control_assignments
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $body$
+DECLARE
+    v_now timestamptz := clock_timestamp();
+BEGIN
+    RETURN public.fn_experiment_v2_finalize_assignment_at(
+        p_experiment_id, p_assignment_id, v_now, p_actor);
+END;
+$body$;
+
+CREATE OR REPLACE FUNCTION public.fn_experiment_v2_due_assignment(
+    p_experiment_id uuid
+) RETURNS TABLE (
+    assignment_id uuid,
+    assigned_local_date date,
+    context_cutoff_at timestamptz,
+    boundary_at timestamptz,
+    invocation_key text,
+    context_schema_sha256 text,
+    selector_identity_sha256 text,
+    selector_artifact_sha256 text,
+    resolved_at timestamptz
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $body$
+DECLARE
+    v_now timestamptz := clock_timestamp();
+BEGIN
+    RETURN QUERY
+    SELECT a.assignment_id, o.assigned_local_date,
+           (((o.assigned_local_date - 1)::date +
+             e.selector_context_cutoff_local) AT TIME ZONE e.timezone),
+           lower(a.valid_range),
+           public.fn_experiment_v2_selector_invocation_uuid(
+               e.assignment_namespace_uuid, e.study_id,
+               o.assigned_local_date)::text,
+           e.context_schema_sha256, e.selector_identity_sha256,
+           e.selector_artifact_sha256, v_now
+      FROM public.control_experiments e
+      JOIN public.control_assignments a USING (experiment_id)
+      JOIN public.experiment_v2_outcomes o USING (assignment_id, experiment_id)
+      LEFT JOIN public.experiment_v2_selector_choices choice
+        USING (assignment_id, experiment_id)
+     WHERE e.experiment_id = p_experiment_id AND e.protocol_version = 2
+       AND e.execution_phase = 'randomized' AND e.status IN ('armed', 'running')
+       AND e.admission_state = 'closed' AND e.selector_context_cutoff_local IS NOT NULL
+       AND a.operation_kind = 'randomized_day' AND a.status = 'active'
+       AND choice.assignment_id IS NULL
+       AND v_now >= (((o.assigned_local_date - 1)::date +
+                      e.selector_context_cutoff_local) AT TIME ZONE e.timezone)
+       AND v_now < lower(a.valid_range)
+     ORDER BY lower(a.valid_range), a.assignment_id
+     LIMIT 1;
+END;
+$body$;
+
+-- One scheduler poll advances at most the oldest elapsed active assignment.
+-- Status is derived from immutable selector/work/exposure evidence and the
+-- clock is captured once inside the SECURITY DEFINER boundary.
+CREATE OR REPLACE FUNCTION public.fn_experiment_v2_boundary_cycle(
+    p_experiment_id uuid,
+    p_actor text DEFAULT current_user
+) RETURNS TABLE (
+    assignment_id uuid,
+    assigned_local_date date,
+    assignment_status text,
+    finalized boolean,
+    resolved_at timestamptz
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $body$
+DECLARE
+    v_exp public.control_experiments%ROWTYPE;
+    v_assignment_id uuid;
+    v_local_date date;
+    v_assignment public.control_assignments%ROWTYPE;
+    v_now timestamptz;
+BEGIN
+    SELECT * INTO v_exp FROM public.control_experiments
+     WHERE experiment_id = p_experiment_id FOR UPDATE;
+    v_now := clock_timestamp();
+    IF NOT FOUND OR v_exp.protocol_version <> 2 OR
+       v_exp.execution_phase <> 'randomized' OR
+       v_exp.status NOT IN ('running', 'paused') THEN
+        RAISE EXCEPTION 'boundary cycle requires one running or paused randomized v2 experiment';
+    END IF;
+    SELECT a.assignment_id, o.assigned_local_date
+      INTO v_assignment_id, v_local_date
+      FROM public.control_assignments a
+      JOIN public.experiment_v2_outcomes o USING (assignment_id, experiment_id)
+     WHERE a.experiment_id = p_experiment_id
+       AND a.operation_kind = 'randomized_day' AND a.status = 'active'
+       AND v_now >= upper(a.valid_range) AND v_now >= upper(o.itt_range)
+     ORDER BY o.day_index, a.assignment_id LIMIT 1;
+    IF v_assignment_id IS NULL THEN
+        RETURN;
+    END IF;
+    v_assignment := public.fn_experiment_v2_finalize_assignment_at(
+        p_experiment_id, v_assignment_id, v_now, p_actor);
+    RETURN QUERY SELECT v_assignment_id, v_local_date, v_assignment.status,
+                        true, v_now;
+END;
+$body$;
+
+CREATE OR REPLACE FUNCTION public.fn_experiment_v2_freeze_outcome_at(
     p_experiment_id uuid,
     p_assignment_id uuid,
     p_outcome_payload jsonb,
@@ -5017,13 +7894,15 @@ CREATE OR REPLACE FUNCTION public.fn_experiment_v2_freeze_outcome(
     p_facility_rescue boolean,
     p_zero_value_retained boolean,
     p_null_value_retained boolean,
+    p_now timestamptz,
     p_actor text DEFAULT current_user
 ) RETURNS public.experiment_v2_outcome_freezes
 LANGUAGE plpgsql
-SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $body$
 DECLARE
+    v_exp public.control_experiments%ROWTYPE;
+    v_assignment public.control_assignments%ROWTYPE;
     v_outcome public.experiment_v2_outcomes%ROWTYPE;
     v_existing public.experiment_v2_outcome_freezes%ROWTYPE;
     v_row public.experiment_v2_outcome_freezes%ROWTYPE;
@@ -5032,13 +7911,29 @@ DECLARE
     v_delivery_failed boolean;
     v_fallback_used boolean;
     v_facility_rescue boolean;
+    v_assignment_failed boolean;
     v_hash text;
-    v_now timestamptz := clock_timestamp();
 BEGIN
+    SELECT * INTO v_exp FROM public.control_experiments
+     WHERE experiment_id = p_experiment_id;
+    SELECT * INTO v_assignment FROM public.control_assignments
+     WHERE experiment_id = p_experiment_id AND assignment_id = p_assignment_id;
     SELECT * INTO v_outcome FROM public.experiment_v2_outcomes
      WHERE experiment_id = p_experiment_id AND assignment_id = p_assignment_id;
-    IF NOT FOUND OR p_outcome_payload IS NULL OR jsonb_typeof(p_outcome_payload) <> 'object' THEN
-        RAISE EXCEPTION 'freeze requires one existing assigned-day row and object payload';
+    IF v_exp.protocol_version <> 2 OR v_exp.execution_phase <> 'randomized' OR
+       v_exp.status NOT IN ('running', 'paused') OR
+       v_outcome.assignment_id IS NULL OR
+       v_assignment.status NOT IN ('closed', 'failed') OR
+       NOT public.fn_experiment_v2_assignment_window_is_bound(
+           p_experiment_id, p_assignment_id, p_now) OR
+       p_outcome_payload IS NULL OR jsonb_typeof(p_outcome_payload) <> 'object' OR
+       EXISTS (
+           SELECT 1 FROM public.experiment_v2_exposures x
+           LEFT JOIN public.experiment_v2_exposure_closures c USING (exposure_id)
+            WHERE x.experiment_id = p_experiment_id
+              AND x.assignment_id = p_assignment_id
+              AND c.exposure_id IS NULL) THEN
+        RAISE EXCEPTION 'freeze requires one elapsed terminal schedule-bound day with closed exposures and object payload';
     END IF;
     SELECT * INTO v_existing FROM public.experiment_v2_outcome_freezes
      WHERE assignment_id = p_assignment_id;
@@ -5072,6 +7967,28 @@ BEGIN
           JOIN public.experiment_v2_exposure_closures c USING (exposure_id)
          WHERE x.assignment_id = p_assignment_id
            AND c.close_reason IN ('facility_emergency', 'manual_rescue'));
+    v_assignment_failed := NOT EXISTS (
+            SELECT 1 FROM public.experiment_v2_selector_choices choice
+             WHERE choice.experiment_id = p_experiment_id
+               AND choice.assignment_id = p_assignment_id) OR NOT EXISTS (
+            SELECT 1 FROM public.experiment_v2_work w
+             WHERE w.experiment_id = p_experiment_id
+               AND w.assignment_id = p_assignment_id) OR NOT EXISTS (
+            SELECT 1 FROM public.experiment_v2_work w
+            JOIN public.experiment_v2_work_events completed
+              USING (experiment_id, work_id)
+             WHERE w.experiment_id = p_experiment_id
+               AND w.assignment_id = p_assignment_id
+               AND completed.event_kind = 'completed') OR EXISTS (
+            SELECT 1 FROM public.experiment_v2_work w
+            JOIN public.experiment_v2_work_events failed USING (experiment_id, work_id)
+             WHERE w.experiment_id = p_experiment_id
+               AND w.assignment_id = p_assignment_id
+               AND failed.event_kind IN ('failed', 'cancelled', 'superseded')) OR
+        v_facility_rescue OR v_delivery_failed;
+    IF (v_assignment.status = 'failed') IS DISTINCT FROM v_assignment_failed THEN
+        RAISE EXCEPTION 'assignment terminal status does not match durable selector/work/exposure evidence';
+    END IF;
     IF (p_delivery_failed, p_fallback_used, p_facility_rescue) IS DISTINCT FROM
        (v_delivery_failed, v_fallback_used, v_facility_rescue) THEN
         RAISE EXCEPTION 'outcome failure/fallback/rescue flags must equal durable work and closure evidence';
@@ -5112,9 +8029,34 @@ BEGIN
          exposure_seconds, expected_seconds, outcome_sha256, frozen_by, frozen_at)
     VALUES (p_assignment_id, p_outcome_payload, v_delivery_failed, v_fallback_used,
             v_facility_rescue, p_zero_value_retained, p_null_value_retained,
-            v_exposure_seconds, v_expected_seconds, v_hash, p_actor, v_now)
+            v_exposure_seconds, v_expected_seconds, v_hash, p_actor, p_now)
     RETURNING * INTO v_row;
     RETURN v_row;
+END;
+$body$;
+
+CREATE OR REPLACE FUNCTION public.fn_experiment_v2_freeze_outcome(
+    p_experiment_id uuid,
+    p_assignment_id uuid,
+    p_outcome_payload jsonb,
+    p_delivery_failed boolean,
+    p_fallback_used boolean,
+    p_facility_rescue boolean,
+    p_zero_value_retained boolean,
+    p_null_value_retained boolean,
+    p_actor text DEFAULT current_user
+) RETURNS public.experiment_v2_outcome_freezes
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $body$
+DECLARE
+    v_now timestamptz := clock_timestamp();
+BEGIN
+    RETURN public.fn_experiment_v2_freeze_outcome_at(
+        p_experiment_id, p_assignment_id, p_outcome_payload,
+        p_delivery_failed, p_fallback_used, p_facility_rescue,
+        p_zero_value_retained, p_null_value_retained, v_now, p_actor);
 END;
 $body$;
 
@@ -5125,9 +8067,331 @@ SELECT o.experiment_id, o.assignment_id, o.pair_index, o.day_index,
        f.zero_value_retained, f.null_value_retained, f.outcome_sha256,
        f.exposure_seconds, f.expected_seconds,
        f.exposure_seconds::numeric / f.expected_seconds AS exposure_coverage_sensitivity,
-       f.frozen_at
+       d.deviation_payload, d.deviation_sha256,
+       d.fidelity_payload, d.fidelity_sha256,
+       d.environment_payload, d.environment_sha256,
+       d.integrity_payload, d.integrity_sha256,
+       d.evidence_bundle_sha256, d.integrity_passed,
+       f.frozen_at AS outcome_frozen_at, d.frozen_at AS evidence_frozen_at
   FROM public.experiment_v2_outcomes o
-  JOIN public.experiment_v2_outcome_freezes f USING (assignment_id);
+  JOIN public.experiment_v2_outcome_freezes f USING (assignment_id)
+  LEFT JOIN public.experiment_v2_day_evidence d USING (assignment_id);
+
+CREATE OR REPLACE FUNCTION public.fn_experiment_v2_freeze_day_evidence_at(
+    p_experiment_id uuid,
+    p_assignment_id uuid,
+    p_reported_deviations jsonb,
+    p_environment_artifact jsonb,
+    p_integrity_verifier jsonb,
+    p_now timestamptz,
+    p_actor text DEFAULT current_user
+) RETURNS public.experiment_v2_day_evidence
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $body$
+DECLARE
+    v_exp public.control_experiments%ROWTYPE;
+    v_assignment public.control_assignments%ROWTYPE;
+    v_outcome public.experiment_v2_outcomes%ROWTYPE;
+    v_freeze public.experiment_v2_outcome_freezes%ROWTYPE;
+    v_existing public.experiment_v2_day_evidence%ROWTYPE;
+    v_row public.experiment_v2_day_evidence%ROWTYPE;
+    v_events jsonb;
+    v_work_events jsonb;
+    v_closures jsonb;
+    v_receipts jsonb;
+    v_deviation jsonb;
+    v_fidelity jsonb;
+    v_environment jsonb;
+    v_integrity jsonb;
+    v_deviation_hash text;
+    v_fidelity_hash text;
+    v_environment_hash text;
+    v_integrity_hash text;
+    v_bundle_hash text;
+BEGIN
+    SELECT * INTO v_exp FROM public.control_experiments
+     WHERE experiment_id = p_experiment_id;
+    SELECT * INTO v_assignment FROM public.control_assignments
+     WHERE experiment_id = p_experiment_id AND assignment_id = p_assignment_id;
+    SELECT * INTO v_outcome FROM public.experiment_v2_outcomes
+     WHERE experiment_id = p_experiment_id AND assignment_id = p_assignment_id;
+    SELECT * INTO v_freeze FROM public.experiment_v2_outcome_freezes
+     WHERE assignment_id = p_assignment_id;
+    IF v_exp.protocol_version <> 2 OR v_exp.execution_phase <> 'randomized' OR
+       v_exp.status NOT IN ('running', 'paused') OR
+       v_assignment.status NOT IN ('closed', 'failed') OR
+       v_outcome.assignment_id IS NULL OR v_freeze.assignment_id IS NULL OR
+       NOT public.fn_experiment_v2_assignment_window_is_bound(
+           p_experiment_id, p_assignment_id, p_now) OR
+       p_reported_deviations IS NULL OR
+       jsonb_typeof(p_reported_deviations) <> 'object' OR
+       p_environment_artifact IS NULL OR
+       jsonb_typeof(p_environment_artifact) <> 'object' OR
+       coalesce(p_environment_artifact->>'artifact_sha256', '') !~ '^[0-9a-f]{64}$' OR
+       coalesce(p_environment_artifact->>'source_revision_sha256', '') !~ '^[0-9a-f]{64}$' OR
+       p_integrity_verifier IS NULL OR
+       jsonb_typeof(p_integrity_verifier) <> 'object' OR
+       p_integrity_verifier->>'result' <> 'pass' OR
+       coalesce(p_integrity_verifier->>'verifier_artifact_sha256', '') !~
+           '^[0-9a-f]{64}$' OR
+       coalesce(p_integrity_verifier->>'verifier_environment_sha256', '') !~
+           '^[0-9a-f]{64}$' OR
+       jsonb_typeof(p_integrity_verifier->'checks') <> 'array' OR
+       jsonb_array_length(p_integrity_verifier->'checks') = 0 OR EXISTS (
+           SELECT 1 FROM public.experiment_v2_exposures x
+           LEFT JOIN public.experiment_v2_exposure_closures c USING (exposure_id)
+            WHERE x.experiment_id = p_experiment_id
+              AND x.assignment_id = p_assignment_id
+              AND c.exposure_id IS NULL) THEN
+        RAISE EXCEPTION 'day evidence requires elapsed terminal outcome, source-bound environment, and passing integrity verifier';
+    END IF;
+    SELECT coalesce(jsonb_agg(jsonb_build_object(
+               'event_id', event_id,
+               'event_kind', event_kind,
+               'severity', severity,
+               'recorded_at', public.fn_experiment_v2_timestamp_text(recorded_at),
+               'detail', detail) ORDER BY event_id), '[]'::jsonb)
+      INTO v_events
+      FROM public.experiment_events
+     WHERE experiment_id = p_experiment_id
+       AND (assignment_id = p_assignment_id OR
+            detail->>'assignment_id' = p_assignment_id::text);
+    SELECT coalesce(jsonb_agg(jsonb_build_object(
+               'work_event_id', ev.work_event_id,
+               'work_id', ev.work_id::text,
+               'event_kind', ev.event_kind,
+               'recorded_at', public.fn_experiment_v2_timestamp_text(ev.recorded_at),
+               'detail', ev.detail) ORDER BY ev.work_event_id), '[]'::jsonb)
+      INTO v_work_events
+      FROM public.experiment_v2_work w
+      JOIN public.experiment_v2_work_events ev USING (experiment_id, work_id)
+     WHERE w.experiment_id = p_experiment_id
+       AND (w.assignment_id = p_assignment_id OR
+            w.parent_work_id = p_assignment_id);
+    SELECT coalesce(jsonb_agg(jsonb_build_object(
+               'exposure_id', x.exposure_id::text,
+               'started_at', public.fn_experiment_v2_timestamp_text(x.started_at),
+               'ended_at', public.fn_experiment_v2_timestamp_text(c.ended_at),
+               'close_reason', c.close_reason) ORDER BY x.started_at, x.exposure_id),
+               '[]'::jsonb)
+      INTO v_closures
+      FROM public.experiment_v2_exposures x
+      JOIN public.experiment_v2_exposure_closures c USING (exposure_id)
+     WHERE x.experiment_id = p_experiment_id
+       AND x.assignment_id = p_assignment_id;
+    SELECT coalesce(jsonb_agg(jsonb_build_object(
+               'receipt_id', r.receipt_id::text,
+               'observation_receipt_sha256', r.observation_receipt_sha256,
+               'policy_state_content_sha256', r.policy_state_content_sha256,
+               'persisted_at', public.fn_experiment_v2_timestamp_text(r.persisted_at))
+               ORDER BY r.persisted_at, r.receipt_id), '[]'::jsonb)
+      INTO v_receipts
+      FROM public.experiment_v2_work w
+      JOIN public.experiment_v2_observation_receipts r USING (experiment_id, work_id)
+     WHERE w.experiment_id = p_experiment_id
+       AND (w.assignment_id = p_assignment_id OR
+            w.parent_work_id = p_assignment_id);
+    v_deviation := jsonb_build_object(
+        'assignment_id', p_assignment_id::text,
+        'durable_events', v_events,
+        'reported', p_reported_deviations);
+    v_fidelity := jsonb_build_object(
+        'assignment_id', p_assignment_id::text,
+        'assignment_status', v_assignment.status,
+        'delivery_failed', v_freeze.delivery_failed,
+        'exposure_closures', v_closures,
+        'exposure_seconds', v_freeze.exposure_seconds,
+        'expected_seconds', v_freeze.expected_seconds,
+        'facility_rescue', v_freeze.facility_rescue,
+        'fallback_used', v_freeze.fallback_used,
+        'observation_receipts', v_receipts,
+        'work_events', v_work_events);
+    v_environment := jsonb_build_object(
+        'assigned_local_date', to_char(v_outcome.assigned_local_date, 'YYYY-MM-DD'),
+        'assignment_id', p_assignment_id::text,
+        'itt_end', public.fn_experiment_v2_timestamp_text(upper(v_outcome.itt_range)),
+        'itt_start', public.fn_experiment_v2_timestamp_text(lower(v_outcome.itt_range)),
+        'reported_artifact', p_environment_artifact);
+    v_deviation_hash := encode(digest(
+        convert_to('verdify-experiment-v2-deviation-v1', 'UTF8') || decode('00', 'hex') ||
+        uuid_send(p_assignment_id) || convert_to(v_deviation::text, 'UTF8'),
+        'sha256'), 'hex');
+    v_fidelity_hash := encode(digest(
+        convert_to('verdify-experiment-v2-fidelity-v1', 'UTF8') || decode('00', 'hex') ||
+        uuid_send(p_assignment_id) || convert_to(v_fidelity::text, 'UTF8'),
+        'sha256'), 'hex');
+    v_environment_hash := encode(digest(
+        convert_to('verdify-experiment-v2-environment-v1', 'UTF8') || decode('00', 'hex') ||
+        uuid_send(p_assignment_id) || convert_to(v_environment::text, 'UTF8'),
+        'sha256'), 'hex');
+    v_integrity := jsonb_build_object(
+        'assignment_id', p_assignment_id::text,
+        'deviation_sha256', v_deviation_hash,
+        'environment_sha256', v_environment_hash,
+        'fidelity_sha256', v_fidelity_hash,
+        'outcome_sha256', v_freeze.outcome_sha256,
+        'verifier', p_integrity_verifier);
+    v_integrity_hash := encode(digest(
+        convert_to('verdify-experiment-v2-integrity-v1', 'UTF8') || decode('00', 'hex') ||
+        uuid_send(p_assignment_id) || convert_to(v_integrity::text, 'UTF8'),
+        'sha256'), 'hex');
+    v_bundle_hash := encode(digest(
+        convert_to('verdify-experiment-v2-day-evidence-v1', 'UTF8') || decode('00', 'hex') ||
+        uuid_send(p_assignment_id) || decode(v_freeze.outcome_sha256, 'hex') ||
+        decode(v_deviation_hash, 'hex') || decode(v_fidelity_hash, 'hex') ||
+        decode(v_environment_hash, 'hex') || decode(v_integrity_hash, 'hex'),
+        'sha256'), 'hex');
+    SELECT * INTO v_existing FROM public.experiment_v2_day_evidence
+     WHERE assignment_id = p_assignment_id;
+    IF FOUND THEN
+        IF v_existing.evidence_bundle_sha256 <> v_bundle_hash THEN
+            RAISE EXCEPTION 'assigned-day completion evidence is frozen; replacement forbidden';
+        END IF;
+        RETURN v_existing;
+    END IF;
+    INSERT INTO public.experiment_v2_day_evidence
+        (assignment_id, experiment_id, deviation_payload, deviation_sha256,
+         fidelity_payload, fidelity_sha256, environment_payload,
+         environment_sha256, integrity_payload, integrity_sha256,
+         evidence_bundle_sha256, integrity_passed, frozen_by, frozen_at)
+    VALUES (p_assignment_id, p_experiment_id, v_deviation, v_deviation_hash,
+            v_fidelity, v_fidelity_hash, v_environment, v_environment_hash,
+            v_integrity, v_integrity_hash, v_bundle_hash, true, p_actor, p_now)
+    RETURNING * INTO v_row;
+    RETURN v_row;
+END;
+$body$;
+
+CREATE OR REPLACE FUNCTION public.fn_experiment_v2_freeze_day_evidence(
+    p_experiment_id uuid,
+    p_assignment_id uuid,
+    p_reported_deviations jsonb,
+    p_environment_artifact jsonb,
+    p_integrity_verifier jsonb,
+    p_actor text DEFAULT current_user
+) RETURNS public.experiment_v2_day_evidence
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $body$
+DECLARE
+    v_now timestamptz := clock_timestamp();
+BEGIN
+    RETURN public.fn_experiment_v2_freeze_day_evidence_at(
+        p_experiment_id, p_assignment_id, p_reported_deviations,
+        p_environment_artifact, p_integrity_verifier, v_now, p_actor);
+END;
+$body$;
+
+CREATE OR REPLACE FUNCTION public.fn_experiment_v2_freeze_export_at(
+    p_experiment_id uuid,
+    p_analyzer_environment_sha256 text,
+    p_now timestamptz,
+    p_actor text DEFAULT current_user
+) RETURNS public.experiment_v2_exports
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $body$
+DECLARE
+    v_exp public.control_experiments%ROWTYPE;
+    v_expected integer;
+    v_frozen integer;
+    v_payload jsonb;
+    v_hash text;
+    v_evidence_bundle_hash text;
+    v_existing public.experiment_v2_exports%ROWTYPE;
+    v_row public.experiment_v2_exports%ROWTYPE;
+BEGIN
+    SELECT * INTO v_exp FROM public.control_experiments
+     WHERE experiment_id = p_experiment_id;
+    IF p_analyzer_environment_sha256 IS NULL OR
+       p_analyzer_environment_sha256 !~ '^[0-9a-f]{64}$' OR
+       v_exp.protocol_version <> 2 OR v_exp.execution_phase <> 'randomized' OR
+       v_exp.status NOT IN ('running', 'paused') OR
+       NOT public.fn_experiment_v2_all_assignment_windows_bound(
+           p_experiment_id, p_now) OR EXISTS (
+           SELECT 1 FROM public.experiment_v2_exposures x
+           LEFT JOIN public.experiment_v2_exposure_closures c USING (exposure_id)
+            WHERE x.experiment_id = p_experiment_id AND c.exposure_id IS NULL) THEN
+        RAISE EXCEPTION 'frozen analyzer environment hash is required';
+    END IF;
+    SELECT count(*) INTO v_expected FROM public.experiment_v2_outcomes
+     WHERE experiment_id = p_experiment_id;
+    SELECT count(*) INTO v_frozen
+      FROM public.experiment_v2_outcomes o
+      JOIN public.experiment_v2_outcome_freezes f USING (assignment_id)
+      JOIN public.experiment_v2_day_evidence d USING (assignment_id, experiment_id)
+     WHERE o.experiment_id = p_experiment_id;
+    IF v_expected <> v_exp.randomized_pair_count * 2 OR
+       v_frozen <> v_expected OR EXISTS (
+           SELECT 1 FROM public.experiment_v2_day_evidence d
+            WHERE d.experiment_id = p_experiment_id AND NOT d.integrity_passed) THEN
+        RAISE EXCEPTION 'export retains every terminal assignment and passing evidence: % expected, % frozen',
+            v_expected, v_frozen;
+    END IF;
+    SELECT encode(digest(
+               convert_to('verdify-experiment-v2-evidence-bundle-v1', 'UTF8') ||
+               decode('00', 'hex') || convert_to(string_agg(
+                   d.evidence_bundle_sha256, '' ORDER BY o.day_index), 'SQL_ASCII'),
+               'sha256'), 'hex')
+      INTO v_evidence_bundle_hash
+      FROM public.experiment_v2_outcomes o
+      JOIN public.experiment_v2_day_evidence d USING (assignment_id, experiment_id)
+     WHERE o.experiment_id = p_experiment_id;
+    SELECT jsonb_build_object(
+        'analyzer_environment_sha256', p_analyzer_environment_sha256,
+        'evidence_bundle_sha256', v_evidence_bundle_hash,
+        'experiment_id', p_experiment_id::text,
+        'rows', jsonb_agg(jsonb_build_object(
+            'assigned_local_date', o.assigned_local_date,
+            'assignment_id', o.assignment_id::text,
+            'blinded_arm', o.blinded_arm,
+            'day_index', o.day_index,
+            'delivery_failed', f.delivery_failed,
+            'facility_rescue', f.facility_rescue,
+            'fallback_used', f.fallback_used,
+            'deviation_sha256', d.deviation_sha256,
+            'environment_sha256', d.environment_sha256,
+            'evidence_bundle_sha256', d.evidence_bundle_sha256,
+            'fidelity_sha256', d.fidelity_sha256,
+            'integrity_sha256', d.integrity_sha256,
+            'itt_range', o.itt_range::text,
+            'null_value_retained', f.null_value_retained,
+            'outcome', f.outcome_payload,
+            'outcome_sha256', f.outcome_sha256,
+            'pair_index', o.pair_index,
+            'zero_value_retained', f.zero_value_retained)
+            ORDER BY o.day_index))
+      INTO v_payload
+      FROM public.experiment_v2_outcomes o
+      JOIN public.experiment_v2_outcome_freezes f USING (assignment_id)
+      JOIN public.experiment_v2_day_evidence d USING (assignment_id, experiment_id)
+     WHERE o.experiment_id = p_experiment_id;
+    -- Exposure coverage is intentionally absent from the primary export.  It
+    -- remains available only in the named sensitivity column of the view.
+    v_hash := encode(digest(
+        convert_to('verdify-experiment-v2-frozen-export-v1', 'UTF8') ||
+        decode('00', 'hex') || convert_to(v_payload::text, 'UTF8'), 'sha256'), 'hex');
+    SELECT * INTO v_existing FROM public.experiment_v2_exports
+     WHERE experiment_id = p_experiment_id;
+    IF FOUND THEN
+        IF v_existing.export_sha256 IS DISTINCT FROM v_hash OR
+           v_existing.evidence_bundle_sha256 IS DISTINCT FROM
+               v_evidence_bundle_hash THEN
+            RAISE EXCEPTION 'frozen export replacement forbidden';
+        END IF;
+        RETURN v_existing;
+    END IF;
+    INSERT INTO public.experiment_v2_exports
+        (experiment_id, export_payload, export_sha256, evidence_bundle_sha256,
+         analyzer_environment_sha256, frozen_by, frozen_at)
+    VALUES (p_experiment_id, v_payload, v_hash, v_evidence_bundle_hash,
+            p_analyzer_environment_sha256, p_actor, p_now)
+    RETURNING * INTO v_row;
+    RETURN v_row;
+END;
+$body$;
 
 CREATE OR REPLACE FUNCTION public.fn_experiment_v2_freeze_export(
     p_experiment_id uuid,
@@ -5139,91 +8403,31 @@ SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $body$
 DECLARE
-    v_expected integer;
-    v_frozen integer;
-    v_payload jsonb;
-    v_hash text;
-    v_existing public.experiment_v2_exports%ROWTYPE;
-    v_row public.experiment_v2_exports%ROWTYPE;
     v_now timestamptz := clock_timestamp();
 BEGIN
-    IF p_analyzer_environment_sha256 IS NULL OR
-       p_analyzer_environment_sha256 !~ '^[0-9a-f]{64}$' THEN
-        RAISE EXCEPTION 'frozen analyzer environment hash is required';
-    END IF;
-    SELECT count(*) INTO v_expected FROM public.experiment_v2_outcomes
-     WHERE experiment_id = p_experiment_id;
-    SELECT count(*) INTO v_frozen
-      FROM public.experiment_v2_outcomes o
-      JOIN public.experiment_v2_outcome_freezes f USING (assignment_id)
-     WHERE o.experiment_id = p_experiment_id;
-    IF v_expected = 0 OR v_frozen <> v_expected THEN
-        RAISE EXCEPTION 'export retains every assignment: % expected, % frozen',
-            v_expected, v_frozen;
-    END IF;
-    SELECT jsonb_build_object(
-        'analyzer_environment_sha256', p_analyzer_environment_sha256,
-        'experiment_id', p_experiment_id::text,
-        'rows', jsonb_agg(jsonb_build_object(
-            'assigned_local_date', o.assigned_local_date,
-            'assignment_id', o.assignment_id::text,
-            'blinded_arm', o.blinded_arm,
-            'day_index', o.day_index,
-            'delivery_failed', f.delivery_failed,
-            'facility_rescue', f.facility_rescue,
-            'fallback_used', f.fallback_used,
-            'itt_range', o.itt_range::text,
-            'null_value_retained', f.null_value_retained,
-            'outcome', f.outcome_payload,
-            'outcome_sha256', f.outcome_sha256,
-            'pair_index', o.pair_index,
-            'zero_value_retained', f.zero_value_retained)
-            ORDER BY o.day_index))
-      INTO v_payload
-      FROM public.experiment_v2_outcomes o
-      JOIN public.experiment_v2_outcome_freezes f USING (assignment_id)
-     WHERE o.experiment_id = p_experiment_id;
-    -- Exposure coverage is intentionally absent from the primary export.  It
-    -- remains available only in the named sensitivity column of the view.
-    v_hash := encode(digest(
-        convert_to('verdify-experiment-v2-frozen-export-v1', 'UTF8') ||
-        decode('00', 'hex') || convert_to(v_payload::text, 'UTF8'), 'sha256'), 'hex');
-    SELECT * INTO v_existing FROM public.experiment_v2_exports
-     WHERE experiment_id = p_experiment_id;
-    IF FOUND THEN
-        IF v_existing.export_sha256 <> v_hash THEN
-            RAISE EXCEPTION 'frozen export replacement forbidden';
-        END IF;
-        RETURN v_existing;
-    END IF;
-    INSERT INTO public.experiment_v2_exports
-        (experiment_id, export_payload, export_sha256,
-         analyzer_environment_sha256, frozen_by, frozen_at)
-    VALUES (p_experiment_id, v_payload, v_hash, p_analyzer_environment_sha256,
-            p_actor, v_now)
-    RETURNING * INTO v_row;
-    RETURN v_row;
+    RETURN public.fn_experiment_v2_freeze_export_at(
+        p_experiment_id, p_analyzer_environment_sha256, v_now, p_actor);
 END;
 $body$;
 
 CREATE OR REPLACE VIEW public.v_experiment_v2_frozen_analyzer_input AS
-SELECT e.experiment_id, e.export_sha256, e.analyzer_environment_sha256,
+SELECT e.experiment_id, e.export_sha256, e.evidence_bundle_sha256,
+       e.analyzer_environment_sha256,
        e.export_payload, e.frozen_at
   FROM public.experiment_v2_exports e;
 
-CREATE OR REPLACE FUNCTION public.fn_experiment_v2_complete(
+CREATE OR REPLACE FUNCTION public.fn_experiment_v2_complete_at(
     p_experiment_id uuid,
+    p_now timestamptz,
     p_actor text DEFAULT current_user,
     p_note text DEFAULT NULL
 ) RETURNS public.control_experiments
 LANGUAGE plpgsql
-SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $body$
 DECLARE
     v_exp public.control_experiments%ROWTYPE;
     v_export public.experiment_v2_exports%ROWTYPE;
-    v_now timestamptz := clock_timestamp();
 BEGIN
     SELECT * INTO v_exp FROM public.control_experiments
      WHERE experiment_id = p_experiment_id FOR UPDATE;
@@ -5231,11 +8435,23 @@ BEGIN
      WHERE experiment_id = p_experiment_id;
     IF v_exp.protocol_version <> 2 OR v_exp.status NOT IN ('running', 'paused') OR
        v_exp.admission_state <> 'closed' OR v_export.experiment_id IS NULL OR
+       v_export.evidence_bundle_sha256 IS NULL OR
+       v_export.export_payload->>'evidence_bundle_sha256' <>
+           v_export.evidence_bundle_sha256 OR
+       v_export.frozen_at > p_now OR
+       NOT public.fn_experiment_v2_all_assignment_windows_bound(
+           p_experiment_id, p_now) OR
+       (SELECT count(*) FROM public.experiment_v2_outcomes o
+         JOIN public.experiment_v2_outcome_freezes f USING (assignment_id)
+         JOIN public.experiment_v2_day_evidence d
+           USING (assignment_id, experiment_id)
+        WHERE o.experiment_id = p_experiment_id AND d.integrity_passed) <>
+           v_exp.randomized_pair_count * 2 OR
        EXISTS (
            SELECT 1 FROM public.experiment_v2_exposures x
            LEFT JOIN public.experiment_v2_exposure_closures c USING (exposure_id)
             WHERE x.experiment_id = p_experiment_id AND c.exposure_id IS NULL) THEN
-        RAISE EXCEPTION 'completion requires closed admission/exposures and one frozen export';
+        RAISE EXCEPTION 'completion requires every elapsed terminal day, passing evidence, closed admission/exposures, and one bound frozen export';
     END IF;
     IF NOT EXISTS (
         SELECT 1 FROM public.experiment_v2_work w
@@ -5255,24 +8471,43 @@ BEGIN
     UPDATE public.control_experiments
        SET status = 'completed', component_enabled = false,
            result_sha256 = v_export.export_sha256,
-           ended_at = v_now, updated_at = v_now
+           ended_at = p_now, updated_at = p_now
      WHERE experiment_id = p_experiment_id RETURNING * INTO v_exp;
     INSERT INTO public.experiment_events
-        (experiment_id, event_kind, severity, actor, detail)
+        (experiment_id, event_kind, severity, actor, detail, recorded_at)
     VALUES (p_experiment_id, 'state_transition', 'info', p_actor,
             jsonb_build_object('v2_status', 'completed',
                                'export_sha256', v_export.export_sha256,
-                               'note', p_note));
+                               'evidence_bundle_sha256',
+                                   v_export.evidence_bundle_sha256,
+                               'note', p_note), p_now);
     RETURN v_exp;
 END;
 $body$;
 
-CREATE OR REPLACE FUNCTION public.fn_experiment_v2_reveal(
+CREATE OR REPLACE FUNCTION public.fn_experiment_v2_complete(
     p_experiment_id uuid,
+    p_actor text DEFAULT current_user,
+    p_note text DEFAULT NULL
+) RETURNS public.control_experiments
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $body$
+DECLARE
+    v_now timestamptz := clock_timestamp();
+BEGIN
+    RETURN public.fn_experiment_v2_complete_at(
+        p_experiment_id, v_now, p_actor, p_note);
+END;
+$body$;
+
+CREATE OR REPLACE FUNCTION public.fn_experiment_v2_reveal_at(
+    p_experiment_id uuid,
+    p_now timestamptz,
     p_actor text DEFAULT current_user
 ) RETURNS public.experiment_v2_reveals
 LANGUAGE plpgsql
-SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $body$
 DECLARE
@@ -5283,6 +8518,9 @@ DECLARE
     v_row public.experiment_v2_reveals%ROWTYPE;
     v_schedule_hash text;
     v_commitment text;
+    v_mapping jsonb;
+    v_mapping_hash text;
+    v_receipt_hash text;
 BEGIN
     SELECT * INTO v_exp FROM public.control_experiments
      WHERE experiment_id = p_experiment_id FOR UPDATE;
@@ -5292,10 +8530,24 @@ BEGIN
      WHERE experiment_id = p_experiment_id;
     SELECT * INTO v_existing FROM public.experiment_v2_reveals
      WHERE experiment_id = p_experiment_id;
-    IF FOUND THEN RETURN v_existing; END IF;
     IF v_exp.status <> 'completed' OR v_exp.result_sha256 <> v_export.export_sha256 OR
-       v_randomization.experiment_id IS NULL THEN
-        RAISE EXCEPTION 'one-way reveal requires completed lifecycle and bound frozen export';
+       v_exp.admission_state <> 'closed' OR v_exp.component_enabled OR
+       v_exp.ended_at > p_now OR v_randomization.experiment_id IS NULL OR
+       v_export.evidence_bundle_sha256 IS NULL OR
+       v_export.export_payload->>'evidence_bundle_sha256' <>
+           v_export.evidence_bundle_sha256 OR
+       NOT public.fn_experiment_v2_all_assignment_windows_bound(
+           p_experiment_id, p_now) OR
+       (SELECT count(*) FROM public.experiment_v2_outcomes o
+         JOIN public.experiment_v2_outcome_freezes f USING (assignment_id)
+         JOIN public.experiment_v2_day_evidence d
+           USING (assignment_id, experiment_id)
+        WHERE o.experiment_id = p_experiment_id AND d.integrity_passed) <>
+           v_exp.randomized_pair_count * 2 OR EXISTS (
+           SELECT 1 FROM public.experiment_v2_exposures x
+           LEFT JOIN public.experiment_v2_exposure_closures c USING (exposure_id)
+            WHERE x.experiment_id = p_experiment_id AND c.exposure_id IS NULL) THEN
+        RAISE EXCEPTION 'one-way reveal requires completed elapsed schedule, passing evidence, and bound frozen export';
     END IF;
     v_schedule_hash := encode(digest(convert_to(
         public.fn_experiment_v2_schedule_canonical(v_randomization.schedule),
@@ -5309,19 +8561,106 @@ BEGIN
        v_commitment <> v_randomization.mapping_commitment_sha256 THEN
         RAISE EXCEPTION 'reveal failed schedule/commitment reproduction';
     END IF;
+    v_mapping := jsonb_build_object('X', v_randomization.x_physical_arm,
+                                    'Y', v_randomization.y_physical_arm);
+    v_mapping_hash := encode(digest(convert_to(v_mapping::text, 'UTF8'), 'sha256'), 'hex');
+    v_receipt_hash := encode(digest(
+        convert_to('verdify-experiment-v2-reveal-receipt-v1', 'UTF8') ||
+        decode('00', 'hex') || uuid_send(p_experiment_id) ||
+        decode(v_export.export_sha256, 'hex') ||
+        decode(v_schedule_hash, 'hex') || decode(v_commitment, 'hex') ||
+        decode(v_mapping_hash, 'hex') ||
+        convert_to(public.fn_experiment_v2_timestamp_text(p_now), 'SQL_ASCII'),
+        'sha256'), 'hex');
+    IF v_existing.experiment_id IS NOT NULL THEN
+        IF v_existing.export_sha256 <> v_export.export_sha256 OR
+           v_existing.reproduced_schedule_sha256 <> v_schedule_hash OR
+           v_existing.reproduced_commitment_sha256 <> v_commitment OR
+           v_existing.mapping_payload_sha256 <> v_mapping_hash OR
+           v_existing.reveal_receipt_sha256 <> encode(digest(
+               convert_to('verdify-experiment-v2-reveal-receipt-v1', 'UTF8') ||
+               decode('00', 'hex') || uuid_send(p_experiment_id) ||
+               decode(v_existing.export_sha256, 'hex') ||
+               decode(v_existing.reproduced_schedule_sha256, 'hex') ||
+               decode(v_existing.reproduced_commitment_sha256, 'hex') ||
+               decode(v_existing.mapping_payload_sha256, 'hex') ||
+               convert_to(public.fn_experiment_v2_timestamp_text(
+                   v_existing.revealed_at), 'SQL_ASCII'), 'sha256'), 'hex') THEN
+            RAISE EXCEPTION 'existing reveal is not bound to the completed evidence';
+        END IF;
+        RETURN v_existing;
+    END IF;
     INSERT INTO public.experiment_v2_reveals
         (experiment_id, export_sha256, revealed_secret, mapping_payload,
+         mapping_payload_sha256,
          reproduced_schedule_sha256, reproduced_commitment_sha256,
+         reveal_receipt_sha256,
          revealed_by, revealed_at)
     VALUES (p_experiment_id, v_export.export_sha256, v_randomization.secret_bytes,
-            jsonb_build_object('X', v_randomization.x_physical_arm,
-                               'Y', v_randomization.y_physical_arm),
-            v_schedule_hash, v_commitment,
-            p_actor, clock_timestamp())
+            v_mapping, v_mapping_hash, v_schedule_hash, v_commitment,
+            v_receipt_hash,
+            p_actor, p_now)
     RETURNING * INTO v_row;
     RETURN v_row;
 END;
 $body$;
+
+DROP FUNCTION IF EXISTS public.fn_experiment_v2_reveal(uuid, text);
+CREATE OR REPLACE FUNCTION public.fn_experiment_v2_reveal(
+    p_experiment_id uuid,
+    p_actor text DEFAULT current_user
+) RETURNS TABLE (
+    experiment_id uuid,
+    export_sha256 text,
+    reproduced_schedule_sha256 text,
+    reproduced_commitment_sha256 text,
+    mapping_payload_sha256 text,
+    reveal_receipt_sha256 text,
+    revealed_at timestamptz
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $body$
+DECLARE
+    v_now timestamptz := clock_timestamp();
+    v_reveal public.experiment_v2_reveals%ROWTYPE;
+BEGIN
+    v_reveal := public.fn_experiment_v2_reveal_at(
+        p_experiment_id, v_now, p_actor);
+    RETURN QUERY SELECT v_reveal.experiment_id, v_reveal.export_sha256,
+        v_reveal.reproduced_schedule_sha256,
+        v_reveal.reproduced_commitment_sha256,
+        v_reveal.mapping_payload_sha256, v_reveal.reveal_receipt_sha256,
+        v_reveal.revealed_at;
+END;
+$body$;
+
+CREATE OR REPLACE VIEW public.v_experiment_v2_revealed_analyzer_input
+WITH (security_barrier = true) AS
+SELECT o.experiment_id, o.assignment_id, o.pair_index, o.day_index,
+       o.blinded_arm,
+       reveal.mapping_payload->>o.blinded_arm AS physical_arm,
+       o.assigned_local_date, o.itt_range,
+       frozen.outcome_payload, frozen.outcome_sha256,
+       frozen.delivery_failed, frozen.fallback_used, frozen.facility_rescue,
+       frozen.zero_value_retained, frozen.null_value_retained,
+       evidence.deviation_payload, evidence.deviation_sha256,
+       evidence.fidelity_payload, evidence.fidelity_sha256,
+       evidence.environment_payload, evidence.environment_sha256,
+       evidence.integrity_payload, evidence.integrity_sha256,
+       evidence.evidence_bundle_sha256, evidence.integrity_passed,
+       export.export_sha256, export.analyzer_environment_sha256,
+       reveal.mapping_payload_sha256, reveal.reveal_receipt_sha256,
+       reveal.revealed_at
+  FROM public.experiment_v2_reveals reveal
+  JOIN public.experiment_v2_exports export USING (experiment_id, export_sha256)
+  JOIN public.experiment_v2_outcomes o USING (experiment_id)
+  JOIN public.experiment_v2_outcome_freezes frozen USING (assignment_id)
+  JOIN public.experiment_v2_day_evidence evidence
+    USING (assignment_id, experiment_id)
+ WHERE evidence.integrity_passed
+   AND reveal.mapping_payload->>o.blinded_arm IN ('A', 'B');
 
 DROP FUNCTION IF EXISTS public.fn_experiment_v2_api_status(uuid);
 
@@ -5442,72 +8781,177 @@ $body$;
 -- --------------------------------------------------------------------------
 
 GRANT SELECT, UPDATE ON public.control_experiments TO verdify_experiment_v2_owner;
-GRANT SELECT, INSERT ON public.control_assignments TO verdify_experiment_v2_owner;
+GRANT SELECT, INSERT, UPDATE ON public.control_assignments
+    TO verdify_experiment_v2_owner;
 GRANT SELECT, INSERT ON public.experiment_events TO verdify_experiment_v2_owner;
 GRANT USAGE, SELECT ON SEQUENCE public.experiment_events_event_id_seq
     TO verdify_experiment_v2_owner;
+REVOKE ALL ON TABLE public.control_experiments, public.control_assignments,
+    public.experiment_events FROM
+    verdify_experiment_v2_shadow_scheduler_login,
+    verdify_experiment_v2_randomizer_login,
+    verdify_experiment_v2_lifecycle_login,
+    verdify_experiment_v2_component_executor_login,
+    verdify_experiment_v2_outcome_freezer_login;
+REVOKE ALL ON SEQUENCE public.experiment_events_event_id_seq FROM
+    verdify_experiment_v2_shadow_scheduler_login,
+    verdify_experiment_v2_randomizer_login,
+    verdify_experiment_v2_lifecycle_login,
+    verdify_experiment_v2_component_executor_login,
+    verdify_experiment_v2_outcome_freezer_login;
+
+-- Source tables predate this migration on restored production schemas.  The
+-- unavailable NOLOGIN function owner receives only the columns needed by the
+-- typed context builder; runtime duties retain no base-table SELECT.
+DO $source_grants$
+BEGIN
+    IF to_regclass('public.climate') IS NOT NULL THEN
+        EXECUTE 'GRANT SELECT (ts, greenhouse_id, temp_avg, temp_north, temp_south, '
+             || 'temp_east, temp_west, rh_avg, rh_north, rh_south, rh_east, rh_west, '
+             || 'vpd_avg, vpd_north, vpd_south, vpd_east, vpd_west, dew_point, '
+             || 'outdoor_temp_f, outdoor_rh_pct, solar_irradiance_w_m2, '
+             || 'leaf_temp_north, leaf_temp_south, leaf_wetness_north, '
+             || 'leaf_wetness_south, wind_speed_mph, precip_in, flow_gpm, '
+             || 'mister_water_today) ON public.climate TO verdify_experiment_v2_owner';
+        EXECUTE 'REVOKE ALL ON TABLE public.climate FROM '
+             || 'verdify_experiment_v2_shadow_scheduler_login, '
+             || 'verdify_experiment_v2_randomizer_login, '
+             || 'verdify_experiment_v2_lifecycle_login, '
+             || 'verdify_experiment_v2_component_executor_login, '
+             || 'verdify_experiment_v2_outcome_freezer_login';
+    END IF;
+    IF to_regclass('public.weather_forecast') IS NOT NULL THEN
+        EXECUTE 'GRANT SELECT (ts, fetched_at, greenhouse_id, temp_f, rh_pct, '
+             || 'vpd_kpa, cloud_cover_pct, wind_speed_mph, solar_w_m2, '
+             || 'precip_prob_pct, direct_radiation_w_m2) ON public.weather_forecast '
+             || 'TO verdify_experiment_v2_owner';
+        EXECUTE 'REVOKE ALL ON TABLE public.weather_forecast FROM '
+             || 'verdify_experiment_v2_shadow_scheduler_login, '
+             || 'verdify_experiment_v2_randomizer_login, '
+             || 'verdify_experiment_v2_lifecycle_login, '
+             || 'verdify_experiment_v2_component_executor_login, '
+             || 'verdify_experiment_v2_outcome_freezer_login';
+    END IF;
+END
+$source_grants$;
 
 DO $security$
 DECLARE
     obj record;
+    acl_grant record;
+    column_grant record;
     fn regprocedure;
     r text;
 BEGIN
     FOR obj IN
-        SELECT c.oid, c.relname, c.relkind
+        SELECT c.oid, c.relname, c.relkind, c.relowner
           FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-         WHERE n.nspname = 'public' AND c.relname LIKE 'experiment_v2_%'
+         WHERE n.nspname = 'public'
+           AND (c.relname LIKE 'experiment_v2_%' OR
+                c.relname LIKE 'v_experiment_v2_%')
            AND c.relkind IN ('r', 'p', 'S', 'v')
          ORDER BY CASE c.relkind WHEN 'v' THEN 2 WHEN 'S' THEN 1 ELSE 0 END,
                   c.relname
     LOOP
-        FOREACH r IN ARRAY ARRAY[
-            'verdify_experiment_randomizer', 'verdify_experiment_lifecycle',
-            'verdify_experiment_component_executor',
-            'verdify_experiment_outcome_freezer',
-            'verdify_experiment_blinded_analyst'
-        ] LOOP
+        -- Normalize every extant ACL grantee rather than only today's known
+        -- duties. CASCADE removes any privilege delegated onward.
+        FOR acl_grant IN
+            SELECT DISTINCT grantee_role.rolname
+              FROM pg_class relation
+              CROSS JOIN LATERAL aclexplode(relation.relacl) acl
+              JOIN pg_roles grantee_role ON grantee_role.oid = acl.grantee
+             WHERE relation.oid = obj.oid
+               AND acl.grantee <> relation.relowner
+        LOOP
             IF obj.relkind = 'S' THEN
-                EXECUTE format('REVOKE ALL ON SEQUENCE public.%I FROM %I', obj.relname, r);
+                EXECUTE format(
+                    'REVOKE ALL PRIVILEGES ON SEQUENCE public.%I FROM %I CASCADE',
+                    obj.relname, acl_grant.rolname);
             ELSE
-                EXECUTE format('REVOKE ALL ON TABLE public.%I FROM %I', obj.relname, r);
+                EXECUTE format(
+                    'REVOKE ALL PRIVILEGES ON TABLE public.%I FROM %I CASCADE',
+                    obj.relname, acl_grant.rolname);
             END IF;
         END LOOP;
+
+        -- Table-level REVOKE does not remove pg_attribute.attacl grants.
+        IF obj.relkind <> 'S' THEN
+            FOR column_grant IN
+                SELECT acl.grantee,
+                       string_agg(format('%I', attribute.attname), ', '
+                                  ORDER BY attribute.attnum) AS columns
+                  FROM pg_attribute attribute
+                  CROSS JOIN LATERAL aclexplode(attribute.attacl) acl
+                 WHERE attribute.attrelid = obj.oid
+                   AND attribute.attnum > 0
+                   AND NOT attribute.attisdropped
+                   AND acl.grantee <> obj.relowner
+                 GROUP BY acl.grantee
+            LOOP
+                IF column_grant.grantee = 0 THEN
+                    r := 'PUBLIC';
+                ELSE
+                    r := NULL;
+                    SELECT format('%I', role_row.rolname) INTO r
+                      FROM pg_roles role_row
+                     WHERE role_row.oid = column_grant.grantee;
+                END IF;
+                IF r IS NOT NULL THEN
+                    EXECUTE format(
+                        'REVOKE ALL PRIVILEGES (%s) ON TABLE public.%I FROM %s CASCADE',
+                        column_grant.columns, obj.relname, r);
+                END IF;
+            END LOOP;
+        END IF;
+
         IF obj.relkind = 'S' THEN
-            EXECUTE format('REVOKE ALL ON SEQUENCE public.%I FROM PUBLIC', obj.relname);
+            EXECUTE format(
+                'REVOKE ALL PRIVILEGES ON SEQUENCE public.%I FROM PUBLIC CASCADE',
+                obj.relname);
             EXECUTE format('ALTER SEQUENCE public.%I OWNER TO verdify_experiment_v2_owner',
                            obj.relname);
         ELSIF obj.relkind = 'v' THEN
-            EXECUTE format('REVOKE ALL ON TABLE public.%I FROM PUBLIC', obj.relname);
+            EXECUTE format(
+                'REVOKE ALL PRIVILEGES ON TABLE public.%I FROM PUBLIC CASCADE',
+                obj.relname);
             EXECUTE format('ALTER VIEW public.%I OWNER TO verdify_experiment_v2_owner',
                            obj.relname);
         ELSE
-            EXECUTE format('REVOKE ALL ON TABLE public.%I FROM PUBLIC', obj.relname);
+            EXECUTE format(
+                'REVOKE ALL PRIVILEGES ON TABLE public.%I FROM PUBLIC CASCADE',
+                obj.relname);
             EXECUTE format('ALTER TABLE public.%I OWNER TO verdify_experiment_v2_owner',
                            obj.relname);
         END IF;
     END LOOP;
 
     FOR obj IN
-        SELECT p.oid, p.proname
+        SELECT p.oid, p.proname, p.proowner
           FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
          WHERE n.nspname = 'public' AND p.proname LIKE 'fn_experiment_v2_%'
     LOOP
-        EXECUTE format('REVOKE ALL ON FUNCTION %s FROM PUBLIC', obj.oid::regprocedure);
-        FOREACH r IN ARRAY ARRAY[
-            'verdify_experiment_randomizer', 'verdify_experiment_lifecycle',
-            'verdify_experiment_component_executor',
-            'verdify_experiment_outcome_freezer',
-            'verdify_experiment_blinded_analyst'
-        ] LOOP
-            EXECUTE format('REVOKE ALL ON FUNCTION %s FROM %I', obj.oid::regprocedure, r);
+        EXECUTE format(
+            'REVOKE ALL PRIVILEGES ON FUNCTION %s FROM PUBLIC CASCADE',
+            obj.oid::regprocedure);
+        FOR acl_grant IN
+            SELECT DISTINCT grantee_role.rolname
+              FROM pg_proc procedure_row
+              CROSS JOIN LATERAL aclexplode(procedure_row.proacl) acl
+              JOIN pg_roles grantee_role ON grantee_role.oid = acl.grantee
+             WHERE procedure_row.oid = obj.oid
+               AND acl.grantee <> procedure_row.proowner
+        LOOP
+            EXECUTE format(
+                'REVOKE ALL PRIVILEGES ON FUNCTION %s FROM %I CASCADE',
+                obj.oid::regprocedure, acl_grant.rolname);
         END LOOP;
         EXECUTE format('ALTER FUNCTION %s OWNER TO verdify_experiment_v2_owner',
                        obj.oid::regprocedure);
     END LOOP;
 
     FOREACH fn IN ARRAY ARRAY[
-        'public.fn_experiment_v2_configure(uuid,text,text,text,text,text,text,date,integer,text,uuid,text,text,text,text)'::regprocedure,
+        'public.fn_experiment_v2_configure(uuid,text,text,text,text,text,text,uuid,text,bigint,text)'::regprocedure,
+        'public.fn_experiment_v2_lock_design(uuid,date,integer,time without time zone,text,text,text,text,text,text,text,text,text,text,text)'::regprocedure,
         'public.fn_experiment_v2_register_state(uuid,text,smallint,bytea,bytea,text)'::regprocedure,
         'public.fn_experiment_v2_record_approval(uuid,text,text,integer,text,text,tstzrange,timestamptz,text,text,text)'::regprocedure,
         'public.fn_experiment_v2_transition(uuid,text,text,text,text)'::regprocedure,
@@ -5522,8 +8966,20 @@ BEGIN
     END LOOP;
 
     FOREACH fn IN ARRAY ARRAY[
+        'public.fn_experiment_v2_schedule_shadow_cycle(uuid,date,timestamptz,text,text,text,text,text,text)'::regprocedure,
+        'public.fn_experiment_v2_due_shadow_cycle(uuid)'::regprocedure,
+        'public.fn_experiment_v2_due_assignment(uuid)'::regprocedure,
+        'public.fn_experiment_v2_boundary_cycle(uuid,text)'::regprocedure
+    ] LOOP
+        EXECUTE format(
+            'GRANT EXECUTE ON FUNCTION %s TO verdify_experiment_shadow_scheduler', fn);
+    END LOOP;
+
+    FOREACH fn IN ARRAY ARRAY[
         'public.fn_experiment_v2_finalize_randomization(uuid,text)'::regprocedure,
-        'public.fn_experiment_v2_record_selector_choice(uuid,uuid,text,text,text,text,text,text,text,text,text[],text,timestamptz,text)'::regprocedure,
+        'public.fn_experiment_v2_selector_cycle(uuid)'::regprocedure,
+        'public.fn_experiment_v2_record_selector_choice(uuid,uuid,text,text,text,text,text,text,text[],text,text)'::regprocedure,
+        'public.fn_experiment_v2_record_shadow_choice(uuid,uuid,text,text,text,text,text,text,text[],text,text)'::regprocedure,
         'public.fn_experiment_v2_reveal(uuid,text)'::regprocedure
     ] LOOP
         EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO verdify_experiment_randomizer', fn);
@@ -5543,6 +8999,7 @@ BEGIN
         'public.fn_experiment_v2_record_delivery_bundle(uuid,uuid,uuid,timestamptz,text)'::regprocedure,
         'public.fn_experiment_v2_register_runtime_instance(uuid,text,uuid,bigint,text)'::regprocedure,
         'public.fn_experiment_v2_record_observation_epoch(uuid,uuid,uuid,uuid,bytea,jsonb,text,text,text,text,bigint,bigint,text)'::regprocedure,
+        'public.fn_experiment_v2_record_preexposure_mismatch(uuid,uuid,uuid,text,uuid,bytea,jsonb,text,text,text,text,uuid,bigint,bigint,bigint,text)'::regprocedure,
         'public.fn_experiment_v2_record_runtime_snapshot(uuid,text,uuid,bytea,jsonb,text,text,text,text,uuid,bigint,bigint,boolean,text)'::regprocedure,
         'public.fn_experiment_v2_monitor_open_exposure(uuid,text,bigint)'::regprocedure,
         'public.fn_experiment_v2_report_runtime_fault(uuid,text,uuid,bigint,uuid,bigint,bigint,text,text,text)'::regprocedure,
@@ -5557,7 +9014,9 @@ BEGIN
 
     FOREACH fn IN ARRAY ARRAY[
         'public.fn_experiment_v2_freeze_outcome(uuid,uuid,jsonb,boolean,boolean,boolean,boolean,boolean,text)'::regprocedure,
-        'public.fn_experiment_v2_freeze_export(uuid,text,text)'::regprocedure
+        'public.fn_experiment_v2_freeze_day_evidence(uuid,uuid,jsonb,jsonb,jsonb,text)'::regprocedure,
+        'public.fn_experiment_v2_freeze_export(uuid,text,text)'::regprocedure,
+        'public.fn_experiment_v2_record_shadow_outcome_preview(uuid,uuid,jsonb,text)'::regprocedure
     ] LOOP
         EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO verdify_experiment_outcome_freezer', fn);
     END LOOP;
@@ -5565,9 +9024,11 @@ END
 $security$;
 
 GRANT USAGE ON SCHEMA public TO
-    verdify_experiment_randomizer, verdify_experiment_lifecycle,
+    verdify_experiment_shadow_scheduler, verdify_experiment_randomizer,
+    verdify_experiment_lifecycle,
     verdify_experiment_component_executor, verdify_experiment_outcome_freezer,
     verdify_experiment_blinded_analyst;
 GRANT SELECT ON public.v_experiment_v2_blinded_assigned_day_outcomes,
-                public.v_experiment_v2_frozen_analyzer_input
+                public.v_experiment_v2_frozen_analyzer_input,
+                public.v_experiment_v2_revealed_analyzer_input
     TO verdify_experiment_blinded_analyst;

@@ -189,7 +189,7 @@ randomization:
     after frozen outcome/deviation hashes and reproduce schedule plus mapping
   schedule_generation_source_sha: "TO-LOCK"
   canonical_schedule_schema: research/planner-efficacy/protocols/blinded-schedule-v2.schema.json
-  canonical_schedule_schema_sha256: f1cd82e7883f912379680f85a12420f4ecf5aaaaefb3c78373708ccedefab892
+  canonical_schedule_schema_sha256: fc73d212f58db91bd55bb70e3faa1431172b4339ae3b22a11d404ba95147b794
   custody: >-
     facility operations may see physical state required for safety; analysts,
     comparative dashboards and the analyzer receive X/Y until frozen exports
@@ -630,7 +630,7 @@ outcomes:
       apply the locked complete-pair and conservative-bound rule without imputation
     secondary_only: all unselected resource endpoint variants, per-actuator runtime, cycles and short cycles
   actuator_state_contract:
-    relation: public.equipment_state
+    relation: public.equipment_state_source_receipts
     greenhouse_id: vallery
     equipment_ids: [heat1, heat2, vent, fan1, fan2, fog, mister_south, mister_west, mister_center]
     stream_semantics:
@@ -644,7 +644,9 @@ outcomes:
       mister_west: state=true means commanded/observed mister relay active, not measured flow
       mister_center: state=true means commanded/observed mister relay active, not measured flow
     initial_state: >-
-      each stream requires a direct current state snapshot observed in
+      the nine logical streams require an eleven-component direct current
+      state snapshot (including separate normal and fertilized south/west
+      valves) observed in
       [05:58:30,06:00:00] local at or before the analyzed-window start, plus no
       conflicting/ambiguous transition between that snapshot and 06:00; a
       post-06:00 snapshot or arbitrarily old transition row is not a valid seed
@@ -656,6 +658,13 @@ outcomes:
       after the fresh seed, treat unambiguous states as right-continuous and
       integrate intersections with UTC half-open 15-minute buckets; connection
       or ingestion continuity uncertainty invalidates the affected interval
+    ingestion_receipt_chain:
+      schema: verdify-equipment-state-receipt-chain-v1
+      maximum_source_barrier_gap_seconds: 60
+      coverage_start: earliest_direct_component_observation
+      coverage_end: analyzed_window_end
+      event_source: receipt_canonical_events_only
+      gap_policy: any_gap_or_broken_link_invalidates_day
     device_counter_reconciliation: >-
       for every stream, bind a source-locked device counter and read a fresh
       start sample in [05:58:30,06:00:00] plus a fresh end sample in
@@ -667,8 +676,18 @@ outcomes:
       wrap, reboot or missing endpoint invalidates reconciliation unless every
       boot-epoch segment has separately fresh endpoints and the locked
       segment-delta algorithm sums them. The 24:00 post-reset sample is forbidden
-    counter_source_map: "TO-LOCK: exact counter entity/units/reset semantics for each of nine streams"
-    revision: "TO-LOCK: source, extractor and equipment inventory revision"
+    counter_source_map:
+      artifact: "research/planner-efficacy/baseline/experiment-v2-equipment-source-map.json"
+      canonical_sha256: "5c790584da6a99eed70421514fda4bf2a79aabbccd91ae1f4fe6e0c4fc3d3048"
+      revision: "combined-normal-fertilized-misters-v1"
+      semantics: >-
+        retain all eleven physical component seeds/transitions; reduce south
+        and west as normal OR fertilized only when no positive-duration overlap
+        exists, because firmware sums both components into each shared counter.
+        A clean same-timestamp handoff is atomic; any positive overlap,
+        missing component, conflict, reset ambiguity or continuity gap yields
+        an explicit null outcome.
+    revision: "combined-normal-fertilized-misters-v1"
   safety_integrity:
     - deterministic interlocks and safety modes
     - emergency/manual overrides and facility rescue

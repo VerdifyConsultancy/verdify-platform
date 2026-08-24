@@ -241,6 +241,9 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "212-qualification-scheduler.sql",  # qualification machinery (#584/#588)
         "213-experiment-result-binding.sql",  # result-hash binding gates (#583/#588)
         "214-confirmed-component-experiment-v2.sql",  # additive v2 data contract (#583/#640)
+        "215-experiment-v2-ops-observability.sql",  # blinded-safe v2 ops status (#587)
+        "216-equipment-counter-source-ledger.sql",  # raw reset-epoch counter evidence (#640)
+        "217-runtime-role-boundary.sql",  # exact ordinary API/ingestor credentials (#640)
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(
@@ -281,12 +284,27 @@ def test_migrate_image_carries_migrations_and_runner():
         "!db/migrations",
         "db/migrations/*",
         "!db/migrations/*.sql",
+        "!db/migrations/tests",
+        "db/migrations/tests/*",
+        "!db/migrations/tests/test-214-confirmed-component-experiment-v2.sql",
+        "!db/migrations/tests/test-216-equipment-counter-source-ledger.sql",
+        "!db/migrations/tests/test-217-runtime-role-boundary.sql",
         "!db/ledger",
         "db/ledger/*",
         "!db/ledger/*.sql",
     ]
     indexes = [ignore_lines.index(line) for line in ordered_reincludes]
     assert indexes == sorted(indexes), "Kaniko re-include rules must stay ordered"
+
+    # The production migrate image remains free of the broad SQL fixture tree.
+    # Only the three vertical fixtures executed by the one-release restore
+    # rehearsal are admitted into /db/migrations/tests.
+    test_fixture_reincludes = [line for line in ignore_lines if line.startswith("!db/migrations/tests/")]
+    assert test_fixture_reincludes == [
+        "!db/migrations/tests/test-214-confirmed-component-experiment-v2.sql",
+        "!db/migrations/tests/test-216-equipment-counter-source-ledger.sql",
+        "!db/migrations/tests/test-217-runtime-role-boundary.sql",
+    ]
 
 
 def test_migrate_sh_ledger_branch_is_opt_in_and_comment_fixed():

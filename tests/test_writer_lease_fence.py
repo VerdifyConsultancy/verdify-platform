@@ -160,6 +160,7 @@ def test_A_exactly_one_under_contention(monkeypatch):
     # First acquire wins.
     assert a._try_acquire_or_renew() is True
     a._held, a._last_renew = True, time.monotonic()
+    assert a.strictly_held() is True
 
     # Contender cannot acquire while A's lease is fresh (not expired).
     got_b = b._try_acquire_or_renew()
@@ -170,6 +171,7 @@ def test_A_exactly_one_under_contention(monkeypatch):
     # B must NOT consider itself a holder.
     b._held = bool(got_b)
     assert b.is_held() is False
+    assert b.strictly_held() is False
 
 
 # ── B. failover ONLY after the lease-duration window (no overlap) ────────────
@@ -209,6 +211,7 @@ async def test_C_renew_or_die_self_fence(monkeypatch):
     assert a._try_acquire_or_renew() is True
     a._held, a._last_renew = True, time.monotonic()
     assert a.is_held() is True
+    assert a.strictly_held() is True
 
     # Simulate API partition: every renew now raises (as urlopen would on a
     # partition). is_held() must flip to False once last_renew goes stale —
@@ -224,6 +227,7 @@ async def test_C_renew_or_die_self_fence(monkeypatch):
     # ...but once the window elapses with no renew, is_held() fences us.
     time.sleep(2.1)
     assert a.is_held() is False, "renew-or-die FAILED: stale holder still reports held"
+    assert a.strictly_held() is False
 
 
 # ── D. graceful release lets the standby acquire immediately ─────────────────
@@ -255,6 +259,7 @@ def test_E_disabled_is_always_held(monkeypatch):
     assert lease._can_fence is False
     # Disabled fence never blocks the push path.
     assert lease.is_held() is True
+    assert lease.strictly_held() is False
 
 
 def test_E_enabled_but_off_cluster_degrades(monkeypatch):
@@ -266,6 +271,18 @@ def test_E_enabled_but_off_cluster_degrades(monkeypatch):
     assert lease.enabled is True
     assert lease._can_fence is False
     assert lease.is_held() is True
+    assert lease.strictly_held() is False
+
+
+def test_E_strict_hold_requires_command_validity_margin(monkeypatch):
+    _set_fast_windows(monkeypatch, duration=15)
+    api = FakeLeaseAPI()
+    lease = make_lease(api, "pod-a", duration=15)
+    assert lease._try_acquire_or_renew() is True
+    lease._held = True
+    lease._last_renew = time.monotonic() - 11.5
+    assert lease.strictly_held() is True
+    assert lease.strictly_held(minimum_remaining_s=4.0) is False
 
 
 # ── F. push-path gate honours the fence (shared.writer_lease_held) ───────────
@@ -277,6 +294,7 @@ def test_F_push_gate_consults_lease(monkeypatch):
         # No lease set → gate OPEN (pre-arm behaviour).
         shared.writer_lease = None
         assert shared.writer_lease_held() is True
+        assert shared.writer_lease_strictly_held() is False
 
         class _Held:
             def is_held(self):
@@ -288,6 +306,7 @@ def test_F_push_gate_consults_lease(monkeypatch):
 
         shared.writer_lease = _Held()
         assert shared.writer_lease_held() is True
+        assert shared.writer_lease_strictly_held() is False
         shared.writer_lease = _Fenced()
         assert shared.writer_lease_held() is False
 

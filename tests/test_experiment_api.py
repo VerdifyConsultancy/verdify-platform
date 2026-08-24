@@ -10,6 +10,7 @@ export hash; transitions are idempotent and optimistic-concurrency guarded;
 all routes fail closed (403) with no token configured.
 """
 
+import asyncio
 from importlib import util
 from pathlib import Path
 
@@ -72,11 +73,19 @@ class _FakePool:
 def _experiment_row(kind="randomized", status="running", **extra):
     row = {
         "experiment_id": EXP_ID,
+        "protocol_version": 1,
         "greenhouse_id": "vallery",
         "kind": kind,
         "status": status,
         "name": "exp-1",
         "timezone": "America/Denver",
+        "protocol_ref": None,
+        "protocol_sha256": None,
+        "beacon_identity": None,
+        "beacon_hash": None,
+        "schedule_sha256": None,
+        "mutable_fields": None,
+        "permitted_producers": ["ai", "forecast", "baseline", "guardrail", "operator"],
         "created_at": "2026-08-14T00:00:00+00:00",
         # Forbidden lineage a careless raw-row spread WOULD leak:
         "baseline_content_sha256": FORBIDDEN_MARKERS[0],
@@ -133,6 +142,7 @@ class _FakeConn:
         resolutions=(),
         unblind_recorded=False,
         transition_error=None,
+        create_error=None,
         insert_returns=None,
         device_snapshot=None,
     ):
@@ -142,10 +152,12 @@ class _FakeConn:
         self.resolutions = list(resolutions)
         self.unblind_recorded = unblind_recorded
         self.transition_error = transition_error
+        self.create_error = create_error
         self.insert_returns = insert_returns
         self.device_snapshot = device_snapshot
         self.queries: list[str] = []
         self.transition_calls: list[tuple] = []
+        self.unblind_calls: list[tuple] = []
         self.executed: list[tuple] = []
 
     def transaction(self):
@@ -153,14 +165,23 @@ class _FakeConn:
 
     async def fetchrow(self, sql, *args):
         self.queries.append(sql)
-        if "fn_experiment_transition" in sql:
-            self.transition_calls.append(args)
+        if "fn_runtime_v1_experiment_transition" in sql:
+            if "'locked'" in sql:
+                target, expected, actor, note = "locked", args[1], args[2], args[3]
+            else:
+                target, expected, actor, note = args[1], args[2], args[3], args[4]
+            self.transition_calls.append((args[0], target, expected, actor, note))
             if self.transition_error is not None:
                 raise self.transition_error
-            return {"status": args[1] if len(args) > 1 else "locked"}
-        if "INSERT INTO control_experiments" in sql:
+            current = self.experiment["status"]
+            if expected is not None and expected != current:
+                raise asyncpg.exceptions.SerializationError(f"experiment {args[0]} is {current}, expected {expected}")
+            return {"previous_status": current, "status": target, "changed": current != target}
+        if "fn_runtime_v1_create_experiment" in sql:
+            if self.create_error is not None:
+                raise self.create_error
             return self.insert_returns
-        if "FROM control_experiments WHERE experiment_id" in sql:
+        if "FROM control_experiments" in sql:
             return self.experiment
         if "FROM control_assignments" in sql and "LIMIT 1" in sql:
             return self.assignment
@@ -186,12 +207,17 @@ class _FakeConn:
         self.queries.append(sql)
         if "FROM control_assignments a" in sql:
             return self.export_records
-        if "FROM control_arm_resolutions" in sql:
+        if "fn_runtime_v1_arm_resolutions" in sql:
             return self.resolutions
         raise AssertionError(f"unexpected fetch: {sql}")
 
     async def fetchval(self, sql, *args):
         self.queries.append(sql)
+        if "fn_runtime_v1_record_unblind" in sql:
+            self.unblind_calls.append(args)
+            inserted = not self.unblind_recorded
+            self.unblind_recorded = True
+            return inserted
         if "detail->>'to' = 'unblinded'" in sql:
             return self.unblind_recorded
         if "NOT EXISTS (SELECT 1 FROM policy_exposures" in sql:
@@ -219,6 +245,44 @@ def client(monkeypatch):
 def _install(monkeypatch, conn):
     monkeypatch.setattr(main, "pool", _FakePool(conn))
     return conn
+
+
+def test_runtime_role_cutover_rejects_owner_identity_and_database_url_bypass(monkeypatch):
+    monkeypatch.setenv(main.API_RUNTIME_DB_ROLE_REQUIRED_ENV, "1")
+    monkeypatch.setenv("DB_USER", "verdify")
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    with pytest.raises(RuntimeError, match="exact API database login"):
+        main.get_db_dsn()
+
+    monkeypatch.setenv("DATABASE_URL", "postgresql://verdify:placeholder@db/verdify")
+    with pytest.raises(RuntimeError, match="non-runtime login"):
+        main.get_db_dsn()
+
+
+def test_runtime_role_cutover_attests_every_new_api_connection(monkeypatch):
+    class Connection:
+        def __init__(self, attested):
+            self.attested = attested
+            self.calls = []
+
+        async def fetchval(self, sql, *args):
+            self.calls.append((sql, args))
+            return self.attested
+
+        async def execute(self, sql):
+            self.calls.append((sql, ()))
+
+    monkeypatch.setenv(main.API_RUNTIME_DB_ROLE_REQUIRED_ENV, "true")
+    good = Connection(True)
+    asyncio.run(main._init_db_connection(good))
+    assert good.calls[0][1] == ()
+    assert "current_user = session_user" in good.calls[0][0]
+    assert "current_setting('search_path')" in good.calls[0][0]
+    assert "fn_runtime_attest_ordinary_login()" in good.calls[0][0]
+    assert good.calls[-1][0] == "SET jit = off"
+
+    with pytest.raises(RuntimeError, match="role attestation failed"):
+        asyncio.run(main._init_db_connection(Connection(False)))
 
 
 # ── Auth: fail closed / feature-off parity ────────────────────────────
@@ -442,9 +506,14 @@ def test_unblind_rejects_a_stale_export_hash(monkeypatch, client):
 def test_unblind_happy_path_is_one_way_and_idempotent(monkeypatch, client):
     conn = _FakeConn(experiment=_experiment_row(status="completed"), export_records=[_export_record("X")])
     _install(monkeypatch, conn)
-    frozen = client.get(f"/api/v1/experiments/{EXP_ID}/export", headers=AUTH).json()["export_sha256"]
+    frozen_export = client.get(f"/api/v1/experiments/{EXP_ID}/export", headers=AUTH).json()
+    frozen = frozen_export["export_sha256"]
 
-    first = client.post(f"/api/v1/experiments/{EXP_ID}/unblind", json={"export_sha256": frozen}, headers=AUTH)
+    first = client.post(
+        f"/api/v1/experiments/{EXP_ID}/unblind",
+        json={"export_sha256": frozen, "actor": "caller-controlled-label"},
+        headers=AUTH,
+    )
     assert first.status_code == 200
     assert first.json() == {
         "experiment_id": EXP_ID,
@@ -452,13 +521,16 @@ def test_unblind_happy_path_is_one_way_and_idempotent(monkeypatch, client):
         "export_sha256": frozen,
         "idempotent": False,
     }
-    assert len(conn.executed) == 1
-    assert "INSERT INTO experiment_events" in conn.executed[0][0]
+    assert len(conn.unblind_calls) == 1
+    assert conn.unblind_calls[0][:3] == (EXP_ID, "api:experiment-unblind", frozen)
+    assert conn.unblind_calls[0][3] == main._experiment_export_canonical_json(
+        [main.ExperimentExportRow.model_validate(row) for row in frozen_export["rows"]]
+    )
 
     replay = client.post(f"/api/v1/experiments/{EXP_ID}/unblind", json={"export_sha256": frozen}, headers=AUTH)
     assert replay.status_code == 200
     assert replay.json()["idempotent"] is True
-    assert len(conn.executed) == 1  # no second ledger row
+    assert len(conn.unblind_calls) == 2  # wrapper proves the replay atomically
 
 
 # ── Lifecycle transitions ─────────────────────────────────────────────
@@ -466,7 +538,11 @@ def test_unblind_happy_path_is_one_way_and_idempotent(monkeypatch, client):
 
 def test_transition_calls_the_sql_state_machine(monkeypatch, client):
     conn = _install(monkeypatch, _FakeConn(experiment=_experiment_row(status="draft")))
-    resp = client.post(f"/api/v1/experiments/{EXP_ID}/lock", json={"expected_status": "draft"}, headers=AUTH)
+    resp = client.post(
+        f"/api/v1/experiments/{EXP_ID}/lock",
+        json={"expected_status": "draft", "actor": "caller-controlled-label"},
+        headers=AUTH,
+    )
     assert resp.status_code == 200
     assert resp.json() == {
         "experiment_id": EXP_ID,
@@ -476,7 +552,7 @@ def test_transition_calls_the_sql_state_machine(monkeypatch, client):
         "idempotent": False,
         "validated": None,
     }
-    assert conn.transition_calls == [(EXP_ID, "locked", "api:experiment-lock", None)]
+    assert conn.transition_calls == [(EXP_ID, "locked", "draft", "api:experiment-lock", None)]
 
 
 def test_transition_is_an_idempotent_noop_when_already_in_target_state(monkeypatch, client):
@@ -484,14 +560,14 @@ def test_transition_is_an_idempotent_noop_when_already_in_target_state(monkeypat
     resp = client.post(f"/api/v1/experiments/{EXP_ID}/pause", json={}, headers=AUTH)
     assert resp.status_code == 200
     assert resp.json()["idempotent"] is True
-    assert conn.transition_calls == []
+    assert conn.transition_calls == [(EXP_ID, "paused", None, "api:experiment-pause", None)]
 
 
 def test_transition_expected_status_precondition_conflicts(monkeypatch, client):
     conn = _install(monkeypatch, _FakeConn(experiment=_experiment_row(status="running")))
     resp = client.post(f"/api/v1/experiments/{EXP_ID}/abort", json={"expected_status": "paused"}, headers=AUTH)
     assert resp.status_code == 409
-    assert conn.transition_calls == []
+    assert conn.transition_calls == [(EXP_ID, "aborted", "paused", "api:experiment-abort", None)]
 
 
 def test_sql_gate_failures_surface_as_422_with_sql_detail(monkeypatch, client):
@@ -524,8 +600,8 @@ def test_validate_dry_runs_the_lock_gates_without_transitioning(monkeypatch, cli
     assert body["validated"] is True
     assert body["status"] == "draft"  # dry-run rolled back — still draft
     # 'locked' is a SQL literal in the dry-run statement; args are (id, actor, note)
-    assert conn.transition_calls == [(EXP_ID, "api:experiment-validate", None)]
-    assert any("fn_experiment_transition($1, 'locked'" in q for q in conn.queries)
+    assert conn.transition_calls == [(EXP_ID, "locked", None, "api:experiment-lock", None)]
+    assert any("fn_runtime_v1_experiment_transition" in q and "'locked'" in q for q in conn.queries)
 
 
 def test_rollback_maps_to_the_sql_unlock_edge(monkeypatch, client):
@@ -533,7 +609,7 @@ def test_rollback_maps_to_the_sql_unlock_edge(monkeypatch, client):
     resp = client.post(f"/api/v1/experiments/{EXP_ID}/rollback", json={}, headers=AUTH)
     assert resp.status_code == 200
     assert resp.json()["status"] == "draft"
-    assert conn.transition_calls == [(EXP_ID, "draft", "api:experiment-rollback", None)]
+    assert conn.transition_calls == [(EXP_ID, "draft", None, "api:experiment-rollback", None)]
 
 
 def test_unknown_action_404s(monkeypatch, client):
@@ -553,6 +629,58 @@ def test_malformed_experiment_id_404s_without_touching_the_db(monkeypatch, clien
     resp = client.get("/api/v1/experiments/not-a-uuid/status", headers=AUTH)
     assert resp.status_code == 404
     assert conn.queries == []
+
+
+@pytest.mark.parametrize(
+    ("method", "path", "headers", "payload"),
+    [
+        (
+            "post",
+            f"/api/v1/experiments/{EXP_ID}/unblind",
+            AUTH,
+            {"export_sha256": main._experiment_export_hash([])},
+        ),
+        ("post", f"/api/v1/experiments/{EXP_ID}/abort", AUTH, {}),
+        ("post", f"/api/v1/experiments/{EXP_ID}/complete", AUTH, {}),
+        ("post", f"/api/v1/experiments/{EXP_ID}/validate", AUTH, {}),
+        ("get", f"/api/v1/experiments/{EXP_ID}/status", AUTH, None),
+        ("get", f"/api/v1/experiments/{EXP_ID}/export", AUTH, None),
+        ("get", f"/api/v1/experiments/{EXP_ID}/device-policy", OP_AUTH, None),
+    ],
+)
+def test_legacy_v1_surfaces_reject_protocol_v2_before_evidence_or_mutation(
+    monkeypatch,
+    client,
+    method,
+    path,
+    headers,
+    payload,
+):
+    """A v2 row can never fall through to the legacy state/export contract."""
+    conn = _install(
+        monkeypatch,
+        _FakeConn(
+            experiment=_experiment_row(protocol_version=2, status="completed"),
+            export_records=[],
+            unblind_recorded=False,
+            device_snapshot={"snapshot_id": 7},
+        ),
+    )
+
+    if method == "post":
+        response = client.post(path, json=payload, headers=headers)
+    else:
+        response = client.get(path, headers=headers)
+
+    assert response.status_code == 409
+    assert response.json() == {
+        "detail": "Protocol-v2 experiments are not available on the legacy v1 experiment surface"
+    }
+    assert len(conn.queries) == 1
+    assert "protocol_version" in conn.queries[0]
+    assert "FROM control_experiments WHERE experiment_id" in conn.queries[0]
+    assert conn.transition_calls == []
+    assert conn.executed == []
 
 
 # ── Create (draft) ────────────────────────────────────────────────────
@@ -584,7 +712,7 @@ def test_create_rejects_oversized_mutable_allowlist(client):
 
 
 def test_create_returns_created_draft(monkeypatch, client):
-    conn = _FakeConn(insert_returns=_experiment_row(kind="qualification", status="draft"))
+    conn = _FakeConn(insert_returns=_experiment_row(kind="qualification", status="draft", inserted=True))
     _install(monkeypatch, conn)
     resp = client.post(
         "/api/v1/experiments",
@@ -600,7 +728,10 @@ def test_create_returns_created_draft(monkeypatch, client):
 
 
 def test_create_idempotency_key_replays_the_existing_row(monkeypatch, client):
-    conn = _FakeConn(insert_returns=None, experiment=_experiment_row(kind="qualification", status="draft"))
+    conn = _FakeConn(
+        insert_returns=_experiment_row(kind="qualification", status="draft", inserted=False),
+        experiment=_experiment_row(kind="qualification", status="draft", mapping_commitment_sha256=None),
+    )
     _install(monkeypatch, conn)
     resp = client.post(
         "/api/v1/experiments",
@@ -611,8 +742,36 @@ def test_create_idempotency_key_replays_the_existing_row(monkeypatch, client):
     assert resp.json()["experiment_id"] == EXP_ID
 
 
+def test_create_idempotency_preserves_an_explicit_empty_producer_allowlist(monkeypatch, client):
+    conn = _FakeConn(
+        insert_returns=_experiment_row(kind="qualification", status="draft", inserted=False),
+        experiment=_experiment_row(
+            kind="qualification",
+            status="draft",
+            mapping_commitment_sha256=None,
+            permitted_producers=[],
+        ),
+    )
+    _install(monkeypatch, conn)
+    response = client.post(
+        "/api/v1/experiments",
+        json={
+            "greenhouse_id": "vallery",
+            "kind": "qualification",
+            "name": "exp-1",
+            "experiment_id": EXP_ID,
+            "permitted_producers": [],
+        },
+        headers=AUTH,
+    )
+    assert response.status_code == 200
+
+
 def test_create_idempotency_key_conflicts_on_different_content(monkeypatch, client):
-    conn = _FakeConn(insert_returns=None, experiment=_experiment_row(kind="qualification", status="draft"))
+    conn = _FakeConn(
+        insert_returns=_experiment_row(kind="qualification", status="draft", inserted=False),
+        experiment=_experiment_row(kind="qualification", status="draft", mapping_commitment_sha256=None),
+    )
     _install(monkeypatch, conn)
     resp = client.post(
         "/api/v1/experiments",
@@ -620,6 +779,37 @@ def test_create_idempotency_key_conflicts_on_different_content(monkeypatch, clie
         headers=AUTH,
     )
     assert resp.status_code == 409
+
+
+def test_create_idempotency_replay_cannot_return_a_protocol_v2_row(monkeypatch, client):
+    conn = _install(
+        monkeypatch,
+        _FakeConn(
+            create_error=asyncpg.exceptions.InsufficientPrivilegeError(
+                f"ordinary runtime rejects protocol 2 experiment {EXP_ID}"
+            ),
+            experiment=_experiment_row(protocol_version=2),
+        ),
+    )
+    response = client.post(
+        "/api/v1/experiments",
+        json={
+            "greenhouse_id": "vallery",
+            "kind": "randomized",
+            "name": "exp-1",
+            "experiment_id": EXP_ID,
+        },
+        headers=AUTH,
+    )
+
+    assert response.status_code == 409
+    assert response.json() == {
+        "detail": "Protocol-v2 experiments are not available on the legacy v1 experiment surface"
+    }
+    assert len(conn.queries) == 1
+    assert "fn_runtime_v1_create_experiment" in conn.queries[0]
+    assert conn.transition_calls == []
+    assert conn.executed == []
 
 
 # ── Operator device-policy surface ────────────────────────────────────

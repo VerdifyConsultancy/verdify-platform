@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: verdify-experiment-v2-restore-rehearsal-deny-all
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: experiment-v2-restore-rehearsal
+  annotations:
+    # The policy must exist before the PreSync Job starts. Retain it after the
+    # hook so the workload cannot outlive its isolation; BeforeHookCreation
+    # safely refreshes it on a later rehearsal.
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "-3"
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/part-of: verdify
+      app.kubernetes.io/component: experiment-v2-restore-rehearsal
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress: []
+  egress: []

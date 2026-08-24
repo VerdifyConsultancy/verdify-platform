@@ -17,6 +17,7 @@ from verdify_schemas.alerts import (
     BandDeviceDbDivergenceAlert,
     BandFnNullAlert,
     ClimateActionProofStaleAlert,
+    ComponentExperimentIntegrityAlert,
     DeployOverrideAlert,
     ESP32PushFailedAlert,
     ESP32RebootAlert,
@@ -62,6 +63,25 @@ from verdify_schemas.alerts import (
 NOW = "2026-05-01T12:00:00+00:00"
 
 CASES = {
+    "component_experiment_integrity": (
+        ComponentExperimentIntegrityAlert,
+        {
+            "experiment_id": "11111111-1111-4111-8111-111111111111",
+            "lifecycle_status": "running",
+            "execution_phase": "randomized",
+            "admission_state": "baseline_recovery",
+            "safety_state": "baseline_recovery",
+            "reason": "baseline_recovery_in_progress",
+            "operation_kind": "baseline_recovery",
+            "observation_truth": "exact",
+            "observation_age_seconds": 12,
+            "open_exposure_count": 0,
+            "writer_generation": 4,
+            "connection_generation": 9,
+            "outcomes_complete": False,
+            "rollback_ready": True,
+        },
+    ),
     "writer_absent": (
         WriterAbsentAlert,
         {"lease_found": True, "lease_age_s": 421.5, "threshold_s": 180.0},

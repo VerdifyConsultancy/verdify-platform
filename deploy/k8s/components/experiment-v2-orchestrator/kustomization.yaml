@@ -1,0 +1,26 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+resources:
+  - configmap.yaml
+  - workloads.yaml
+  - networkpolicies.yaml
+
+# Kubernetes NetworkPolicy cannot select an FQDN.  The same explicit single-IP
+# value is injected into the selector pod and its only HTTPS egress rule.  The
+# component default is a non-routable TEST-NET address and the endpoint URL is
+# empty, so an unconfigured selector persists baseline without external I/O.
+replacements:
+  - source:
+      kind: ConfigMap
+      name: experiment-v2-orchestrator-config
+      fieldPath: data.VERDIFY_EXPERIMENT_SELECTOR_EGRESS_CIDR
+    targets:
+      - select:
+          kind: NetworkPolicy
+          name: experiment-v2-selector
+        fieldPaths:
+          - spec.egress.2.to.0.ipBlock.cidr
+
+images:
+  - name: registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator

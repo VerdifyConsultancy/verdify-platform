@@ -188,11 +188,11 @@ def _base_responders(
         pretrace_rows = _snapshots(latest_snap_sha, NOW - timedelta(minutes=70), NOW)
     responders = [
         ("SELECT now() AS now_utc", NOW),
-        ("SELECT fn_claim_qualification_slot(", str(uuid.uuid4())),
-        ("SELECT fn_create_assignment(", str(uuid.uuid4())),
-        ("SELECT fn_submit_policy_proposal(", str(uuid.uuid4())),
-        ("SELECT fn_record_qualification_event(", 1),
-        ("SELECT fn_resolve_qualification_slot(", None),
+        ("fn_runtime_v1_claim_qualification_slot(", str(uuid.uuid4())),
+        ("fn_runtime_v1_create_assignment(", str(uuid.uuid4())),
+        ("fn_runtime_v1_submit_policy_proposal(", str(uuid.uuid4())),
+        ("fn_runtime_v1_record_qualification_event(", 1),
+        ("fn_runtime_v1_resolve_qualification_slot(", None),
         ("SELECT status FROM qualification_transition_slots", slot_status),
         ("FROM qualification_transition_slots s", list(slots)),
         ("FROM control_experiments WHERE experiment_id", exp or _exp_row()),
@@ -238,6 +238,7 @@ def test_non_qualification_experiment_is_ignored(monkeypatch):
     _run(experiment_qualification_scheduler(FakePool(conn)))
     kinds = [sql for _, sql, _ in conn.calls]
     assert any("FROM control_experiments" in sql for sql in kinds)
+    assert any("protocol_version = 1" in sql for sql in kinds)
     assert not any("control_assignments" in sql for sql in kinds)
 
 
@@ -367,7 +368,7 @@ def test_initial_positioning_created_when_no_assignments(monkeypatch):
     slots = [_slot(1, 1, "open", "baseline", "moderate")]
     conn = FakeConn(_base_responders(slots=slots, latest_snap_sha=None, prev=None))
     _run(experiment_qualification_scheduler(FakePool(conn)))
-    creates = conn.sql_calls("fn_create_assignment")
+    creates = conn.sql_calls("fn_runtime_v1_create_assignment")
     assert len(creates) == 1
     args = creates[0][2]
     assert args[3] == "positioning"
@@ -375,7 +376,7 @@ def test_initial_positioning_created_when_no_assignments(monkeypatch):
     assert args[5] - args[4] == timedelta(hours=POSITIONING_HOURS)
     strata = _json.loads(args[10])
     assert strata["target_template_id"] == BASELINE_ID  # cell 1 source is baseline
-    proposals = conn.sql_calls("fn_submit_policy_proposal")
+    proposals = conn.sql_calls("fn_runtime_v1_submit_policy_proposal")
     assert len(proposals) == 1
     assert proposals[0][2][2] == BASELINE_ID  # proposal delivers the source vector
     # The worker NEVER creates slot rows (no fabricated 97th transition).
@@ -394,7 +395,7 @@ def test_eligible_boundary_claims_slot_and_proposes_target(monkeypatch):
         )
     )
     _run(experiment_qualification_scheduler(FakePool(conn)))
-    claims = conn.sql_calls("fn_claim_qualification_slot")
+    claims = conn.sql_calls("fn_runtime_v1_claim_qualification_slot")
     assert len(claims) == 1
     args = claims[0][2]
     assert args[0] == slot["slot_id"]
@@ -416,11 +417,11 @@ def test_eligible_boundary_claims_slot_and_proposes_target(monkeypatch):
         "target_template_id": MODERATE_ID,
         "regime": 1,
     }
-    proposals = conn.sql_calls("fn_submit_policy_proposal")
+    proposals = conn.sql_calls("fn_runtime_v1_submit_policy_proposal")
     assert len(proposals) == 1
     assert proposals[0][2][2] == MODERATE_ID
     # A claim is not a positioning/hold move.
-    assert not conn.sql_calls("fn_create_assignment")
+    assert not conn.sql_calls("fn_runtime_v1_create_assignment")
 
 
 def test_stale_inputs_skip_claim_and_chain_hold(monkeypatch):
@@ -435,14 +436,14 @@ def test_stale_inputs_skip_claim_and_chain_hold(monkeypatch):
         )
     )
     _run(experiment_qualification_scheduler(FakePool(conn)))
-    assert not conn.sql_calls("fn_claim_qualification_slot")
-    skips = conn.sql_calls("fn_record_qualification_event")
+    assert not conn.sql_calls("fn_runtime_v1_claim_qualification_slot")
+    skips = conn.sql_calls("fn_runtime_v1_record_qualification_event")
     assert len(skips) == 1
     detail = _json.loads(skips[0][2][1])
     assert detail["reason"] == "eligibility_failed"
     assert detail["predicates"]["inputs_fresh"] is False
     # The deterministic hold cadence continues on the same content.
-    creates = conn.sql_calls("fn_create_assignment")
+    creates = conn.sql_calls("fn_runtime_v1_create_assignment")
     assert len(creates) == 1
     args = creates[0][2]
     assert args[3] == "identity_hold"
@@ -459,10 +460,10 @@ def test_regime_mismatch_chains_hold_without_skip_record(monkeypatch):
     prev = _assignment("identity_hold", NOW - timedelta(minutes=16), NOW - timedelta(minutes=1))
     conn = FakeConn(_base_responders(slots=[slot], prev=prev, conditions=_conditions_row(solar=5.0)))
     _run(experiment_qualification_scheduler(FakePool(conn)))
-    assert not conn.sql_calls("fn_claim_qualification_slot")
+    assert not conn.sql_calls("fn_runtime_v1_claim_qualification_slot")
     # No candidate was considered (regime mismatch), so no skipped-move row.
-    assert not conn.sql_calls("fn_record_qualification_event")
-    creates = conn.sql_calls("fn_create_assignment")
+    assert not conn.sql_calls("fn_runtime_v1_record_qualification_event")
+    creates = conn.sql_calls("fn_runtime_v1_create_assignment")
     assert len(creates) == 1 and creates[0][2][3] == "identity_hold"
 
 
@@ -476,10 +477,10 @@ def test_boundary_gap_reanchors_and_records_skip(monkeypatch):
     )
     conn = FakeConn(_base_responders(slots=[slot], prev=prev, conditions=_conditions_row(solar=5.0)))
     _run(experiment_qualification_scheduler(FakePool(conn)))
-    skips = conn.sql_calls("fn_record_qualification_event")
+    skips = conn.sql_calls("fn_runtime_v1_record_qualification_event")
     assert len(skips) == 1
     assert _json.loads(skips[0][2][1])["reason"] == "boundary_gap"
-    creates = conn.sql_calls("fn_create_assignment")
+    creates = conn.sql_calls("fn_runtime_v1_create_assignment")
     assert len(creates) == 1
     assert creates[0][2][4] == NOW  # re-anchored at now, not the stale boundary
 
@@ -492,7 +493,7 @@ def test_source_exhausted_triggers_positioning_rotation(monkeypatch):
     prev = _assignment("identity_hold", NOW - timedelta(minutes=16), NOW - timedelta(minutes=1))
     conn = FakeConn(_base_responders(slots=slots, prev=prev))
     _run(experiment_qualification_scheduler(FakePool(conn)))
-    creates = conn.sql_calls("fn_create_assignment")
+    creates = conn.sql_calls("fn_runtime_v1_create_assignment")
     assert len(creates) == 1
     args = creates[0][2]
     assert args[3] == "positioning"
@@ -500,7 +501,7 @@ def test_source_exhausted_triggers_positioning_rotation(monkeypatch):
     strata = _json.loads(args[10])
     assert strata["source_template_id"] == BASELINE_ID
     assert strata["target_template_id"] == MODERATE_ID
-    proposals = conn.sql_calls("fn_submit_policy_proposal")
+    proposals = conn.sql_calls("fn_runtime_v1_submit_policy_proposal")
     assert proposals[0][2][2] == MODERATE_ID
 
 
@@ -515,7 +516,7 @@ def test_all_resolved_recovers_to_baseline_then_idles(monkeypatch):
     )
     conn = FakeConn(_base_responders(slots=slots, prev=prev, latest_snap_sha=MODERATE_SHA))
     _run(experiment_qualification_scheduler(FakePool(conn)))
-    creates = conn.sql_calls("fn_create_assignment")
+    creates = conn.sql_calls("fn_runtime_v1_create_assignment")
     assert len(creates) == 1
     args = creates[0][2]
     assert args[3] == "baseline_recovery"
@@ -526,8 +527,8 @@ def test_all_resolved_recovers_to_baseline_then_idles(monkeypatch):
     # Already on baseline: fully idle (no new assignments, no proposals).
     conn2 = FakeConn(_base_responders(slots=slots, prev=prev, latest_snap_sha=BASELINE_SHA))
     _run(experiment_qualification_scheduler(FakePool(conn2)))
-    assert not conn2.sql_calls("fn_create_assignment")
-    assert not conn2.sql_calls("fn_submit_policy_proposal")
+    assert not conn2.sql_calls("fn_runtime_v1_create_assignment")
+    assert not conn2.sql_calls("fn_runtime_v1_submit_policy_proposal")
 
 
 def test_window_cutoff_stops_new_claims(monkeypatch):
@@ -536,9 +537,9 @@ def test_window_cutoff_stops_new_claims(monkeypatch):
     prev = _assignment("identity_hold", NOW - timedelta(minutes=16), NOW - timedelta(minutes=1))
     conn = FakeConn(_base_responders(exp=_exp_row(started_days_ago=50), slots=[slot], prev=prev))
     _run(experiment_qualification_scheduler(FakePool(conn)))
-    assert not conn.sql_calls("fn_claim_qualification_slot")
+    assert not conn.sql_calls("fn_runtime_v1_claim_qualification_slot")
     # On baseline already -> idle, no recovery needed.
-    assert not conn.sql_calls("fn_create_assignment")
+    assert not conn.sql_calls("fn_runtime_v1_create_assignment")
 
 
 # ---------------------------------------------------------------------------
@@ -578,7 +579,7 @@ def test_finished_analyzed_step_resolves_completed(monkeypatch):
         )
     )
     _run(experiment_qualification_scheduler(FakePool(conn)))
-    resolves = conn.sql_calls("fn_resolve_qualification_slot")
+    resolves = conn.sql_calls("fn_runtime_v1_resolve_qualification_slot")
     assert len(resolves) == 1
     args = resolves[0][2]
     assert args[0] == slot["slot_id"]
@@ -608,7 +609,7 @@ def test_missing_post_step_data_fails_cell(monkeypatch):
         )
     )
     _run(experiment_qualification_scheduler(FakePool(conn)))
-    resolves = conn.sql_calls("fn_resolve_qualification_slot")
+    resolves = conn.sql_calls("fn_runtime_v1_resolve_qualification_slot")
     assert len(resolves) == 1
     assert resolves[0][2][1] == "failed"
     detail = _json.loads(resolves[0][2][2])
@@ -623,7 +624,7 @@ def test_delivery_failure_fails_cell(monkeypatch):
     prev = _analyzed_prev(slot["slot_id"])
     conn = FakeConn(_base_responders(slots=[slot], prev=prev, exposure=None, latest_snap_sha=MODERATE_SHA))
     _run(experiment_qualification_scheduler(FakePool(conn)))
-    resolves = conn.sql_calls("fn_resolve_qualification_slot")
+    resolves = conn.sql_calls("fn_runtime_v1_resolve_qualification_slot")
     assert len(resolves) == 1
     assert resolves[0][2][1] == "failed"
     assert _json.loads(resolves[0][2][2])["failure"] == "delivery_failure"
@@ -642,14 +643,14 @@ def test_mid_assignment_safety_event_fails_cell_immediately(monkeypatch):
     )
     conn = FakeConn(_base_responders(current=current, override_count=1))
     _run(experiment_qualification_scheduler(FakePool(conn)))
-    resolves = conn.sql_calls("fn_resolve_qualification_slot")
+    resolves = conn.sql_calls("fn_runtime_v1_resolve_qualification_slot")
     assert len(resolves) == 1
     assert resolves[0][2][0] == slot_id
     assert resolves[0][2][1] == "failed"
     detail = _json.loads(resolves[0][2][2])
     assert detail["failure"] == "safety_or_override_event"
     # Mid-assignment: no boundary action is taken.
-    assert not conn.sql_calls("fn_create_assignment")
+    assert not conn.sql_calls("fn_runtime_v1_create_assignment")
 
 
 def test_already_resolved_slot_is_not_re_resolved(monkeypatch):
@@ -665,7 +666,7 @@ def test_already_resolved_slot_is_not_re_resolved(monkeypatch):
     )
     conn = FakeConn(_base_responders(current=current, override_count=1, slot_status="failed"))
     _run(experiment_qualification_scheduler(FakePool(conn)))
-    assert not conn.sql_calls("fn_resolve_qualification_slot")
+    assert not conn.sql_calls("fn_runtime_v1_resolve_qualification_slot")
 
 
 # ---------------------------------------------------------------------------

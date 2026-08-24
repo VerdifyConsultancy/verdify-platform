@@ -1,0 +1,267 @@
+# One image, three separately attested non-device duties. Each optional Secret
+# is named for exactly one login; absence leaves that worker non-actuating but,
+# when capability is enabled, intentionally unready.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: experiment-v2-lifecycle
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: experiment-v2-lifecycle
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: experiment-v2-lifecycle
+  template:
+    metadata:
+      annotations:
+        verdify.io/config-revision: "4df9cfe0da6a"
+      labels:
+        app.kubernetes.io/part-of: verdify
+        app.kubernetes.io/component: experiment-v2-lifecycle
+    spec:
+      automountServiceAccountToken: false
+      imagePullSecrets:
+        - name: zot-origin-cluster-pull
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: lifecycle
+          image: registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator
+          args: ["--mode", "lifecycle"]
+          envFrom:
+            - configMapRef:
+                name: verdify-config
+                optional: true
+            - configMapRef:
+                name: experiment-v2-orchestrator-config
+          env:
+            - name: VERDIFY_EXPERIMENT_SHADOW_SCHEDULER_DB_USER
+              value: verdify_experiment_v2_shadow_scheduler_login
+            - name: VERDIFY_EXPERIMENT_SHADOW_SCHEDULER_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-experiment-v2-shadow-scheduler-db
+                  key: password
+                  optional: true
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 48Mi
+            limits:
+              cpu: 250m
+              memory: 192Mi
+          # Feature-off publishes Ready immediately. Enabled workers become
+          # Ready only after attestation plus a successful server cycle and go
+          # unready after three consecutive failures or a stale heartbeat.
+          # Deliberately no liveness probe: a DB outage must not cause restarts.
+          readinessProbe:
+            exec:
+              command: ["python", "-m", "experiment_orchestrator.readiness", "check"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 2
+            successThreshold: 1
+            failureThreshold: 3
+          volumeMounts:
+            - name: lifecycle-plan
+              mountPath: /etc/verdify/experiment-v2-lifecycle
+              readOnly: true
+            - name: runtime
+              mountPath: /run/verdify
+      volumes:
+        - name: lifecycle-plan
+          configMap:
+            name: verdify-experiment-v2-lifecycle-plan
+            optional: true
+        - name: runtime
+          emptyDir: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: experiment-v2-selector
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: experiment-v2-selector
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: experiment-v2-selector
+  template:
+    metadata:
+      annotations:
+        verdify.io/config-revision: "4df9cfe0da6a"
+      labels:
+        app.kubernetes.io/part-of: verdify
+        app.kubernetes.io/component: experiment-v2-selector
+    spec:
+      automountServiceAccountToken: false
+      imagePullSecrets:
+        - name: zot-origin-cluster-pull
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: selector
+          image: registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator
+          args: ["--mode", "selector"]
+          envFrom:
+            - configMapRef:
+                name: verdify-config
+                optional: true
+            - configMapRef:
+                name: experiment-v2-orchestrator-config
+          env:
+            - name: VERDIFY_EXPERIMENT_RANDOMIZER_DB_USER
+              value: verdify_experiment_v2_randomizer_login
+            - name: VERDIFY_EXPERIMENT_RANDOMIZER_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-experiment-v2-randomizer-db
+                  key: password
+                  optional: true
+            - name: VERDIFY_EXPERIMENT_SELECTOR_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-experiment-v2-selector-provider
+                  key: api-key
+                  optional: true
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          readinessProbe:
+            exec:
+              command: ["python", "-m", "experiment_orchestrator.readiness", "check"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 2
+            successThreshold: 1
+            failureThreshold: 3
+          volumeMounts:
+            - name: selector-identity
+              mountPath: /etc/verdify/experiment-v2-selector
+              readOnly: true
+            - name: runtime
+              mountPath: /run/verdify
+      volumes:
+        - name: selector-identity
+          configMap:
+            name: verdify-experiment-v2-selector-identity
+            optional: true
+        - name: runtime
+          emptyDir: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: experiment-v2-freezer
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: experiment-v2-freezer
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: experiment-v2-freezer
+  template:
+    metadata:
+      annotations:
+        verdify.io/config-revision: "4df9cfe0da6a"
+      labels:
+        app.kubernetes.io/part-of: verdify
+        app.kubernetes.io/component: experiment-v2-freezer
+    spec:
+      automountServiceAccountToken: false
+      imagePullSecrets:
+        - name: zot-origin-cluster-pull
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: freezer
+          image: registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator
+          args: ["--mode", "freezer"]
+          envFrom:
+            - configMapRef:
+                name: verdify-config
+                optional: true
+            - configMapRef:
+                name: experiment-v2-orchestrator-config
+          env:
+            - name: VERDIFY_EXPERIMENT_OUTCOME_FREEZER_DB_USER
+              value: verdify_experiment_v2_outcome_freezer_login
+            - name: VERDIFY_EXPERIMENT_OUTCOME_FREEZER_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-experiment-v2-outcome-freezer-db
+                  key: password
+                  optional: true
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          readinessProbe:
+            exec:
+              command: ["python", "-m", "experiment_orchestrator.readiness", "check"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 2
+            successThreshold: 1
+            failureThreshold: 3
+          volumeMounts:
+            - name: outcome-identity
+              mountPath: /etc/verdify/experiment-v2-outcome
+              readOnly: true
+            - name: runtime
+              mountPath: /run/verdify
+      volumes:
+        - name: outcome-identity
+          configMap:
+            name: verdify-experiment-v2-outcome-identity
+            optional: true
+        - name: runtime
+          emptyDir: {}

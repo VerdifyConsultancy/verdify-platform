@@ -67,6 +67,8 @@ _MAX_PENDING_REQUESTS = 32
 _MAX_BATCH_COMMANDS = 128
 _FAIR_QUANTUM = 2
 _COMMAND_TIMEOUT_S = 15.0
+_COMPONENT_COMMAND_TIMEOUT_S = 3.0
+_COMPONENT_LEASE_MARGIN_S = 1.0
 _LIFECYCLE_CALLBACK_ATTEMPTS = 3
 _LIFECYCLE_CALLBACK_TIMEOUT_S = 5.0
 _LIFECYCLE_RETRY_S = 0.25
@@ -1038,6 +1040,14 @@ async def push_component_bundle(
     accepted_client = shared.esp32.get("client")
 
     def fence() -> str | None:
+        # Component authority is never allowed to inherit the legacy
+        # pre-arm/degraded "lease is effectively held" compatibility path.
+        # Every prefix requires a configured, fence-capable, freshly held
+        # cross-pod lease.
+        if not shared.writer_lease_strictly_held(
+            minimum_remaining_s=_COMPONENT_COMMAND_TIMEOUT_S + _COMPONENT_LEASE_MARGIN_S
+        ):
+            return "writer_lease_not_held"
         if failure := _preflight_failure():
             return failure
         if expected_connection_generation != int(shared.transport_generation):
@@ -1047,7 +1057,7 @@ async def push_component_bundle(
         return None
 
     terminal: list[ComponentCommandOutcome] = []
-    deadline = time.monotonic() + max(1.0, float(budget_s))
+    deadline = time.monotonic() + max(0.001, float(budget_s))
     _set_component_bundle_hold(True, [call.parameter for call in calls])
     try:
         async with _PUSH_LOCK:
@@ -1061,10 +1071,25 @@ async def push_component_bundle(
                     reason = fence()
 
                 if reason is None:
+                    # Pacing may suspend for up to two seconds.  Do it before
+                    # the authoritative per-prefix database fence so a newer
+                    # runtime cannot supersede this writer during the pacing
+                    # window and still have the old process reach the setter.
+                    await _pace_command()
+                    if work_deadline is not None and datetime.now(UTC) >= work_deadline:
+                        reason = "component_work_expired"
+                    elif time.monotonic() > deadline:
+                        reason = "component_bundle_budget_exceeded"
+                    else:
+                        reason = fence()
+
+                if reason is None:
                     # This per-prefix queued journal append is the database
                     # lease/revision fence immediately before the setter.  A
                     # callback outage fails while the physical lock is held,
-                    # before this component reaches the device.
+                    # before this component reaches the device.  After this
+                    # awaited check, only synchronous local fences occur before
+                    # the client method is invoked.
                     queued = _component_outcome(
                         call,
                         index,
@@ -1074,9 +1099,10 @@ async def push_component_bundle(
                         accepted_generation,
                     )
                     await _emit_component_state(on_state, (queued,))
-                    await _pace_command()
                     if work_deadline is not None and datetime.now(UTC) >= work_deadline:
                         reason = "component_work_expired"
+                    elif time.monotonic() > deadline:
+                        reason = "component_bundle_budget_exceeded"
                     else:
                         reason = fence()
 
@@ -1100,7 +1126,15 @@ async def push_component_bundle(
                             else:  # pragma: no cover - dataclass typing guard
                                 reason = "unsupported_entity_type"
                             if reason is None and inspect.isawaitable(result):
-                                await asyncio.wait_for(result, timeout=_COMMAND_TIMEOUT_S)
+                                # Stay comfortably inside the 15-second
+                                # cross-pod lease expiry. A replacement cannot
+                                # acquire while this bounded acknowledgement
+                                # wait is still live after a renewal failure.
+                                await asyncio.wait_for(result, timeout=_COMPONENT_COMMAND_TIMEOUT_S)
+                            if reason is None:
+                                post_command_fence = fence()
+                                if post_command_fence is not None:
+                                    reason = f"{post_command_fence}_after_command_outcome_unknown"
                         except asyncio.CancelledError:
                             current = _component_outcome(
                                 call,

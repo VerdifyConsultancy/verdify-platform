@@ -18,7 +18,7 @@ The fast-path implementation must add a separate safe-default mode, named here
 as the target contract:
 
 ```text
-VERDIFY_COMPONENT_EXPERIMENT_ENABLED=false|true  # new coarse kill switch; default false
+VERDIFY_COMPONENT_EXPERIMENT_ENABLED=off|enabled # coarse kill switch; default off
 VERDIFY_ACTIVE_EXPERIMENT_ID=<explicit UUID>     # default empty
 VERDIFY_POLICY_VECTOR_MODE=off                   # must remain off
 ```
@@ -37,8 +37,9 @@ fields remain shadow-only. An explicit source-aware hold prevents other writers
 from interleaving; do not use a global switch that also blocks the executor's
 legacy component transport.
 
-Startup/readiness and every claim hard-fail to zero experiment work if enabled
-is true while vector mode is anything other than exact `off`.
+Startup/readiness and every claim hard-fail to zero experiment work if the
+component capability is `enabled` while vector mode is anything other than
+exact `off`.
 
 Use one `kind=randomized`, `protocol_version=2` experiment ID for `shadow`,
 `commissioning`, `aa_rehearsal` and `randomized`. Lifecycle status, execution
@@ -69,6 +70,58 @@ baseline epochs. Completion, kill-switch disable and ordinary-writer restoration
 require that proof, except when an immutable facility-owned emergency-safe-state
 event explicitly transfers responsibility. Emergency-hold release always needs
 facility authorization.
+
+## Audited lifecycle control surface
+
+Use `POST /api/v1/experiments/{experiment_id}/component-control/commands`
+through the authenticated API for v2 configuration, state-artifact registration,
+approval recording, lifecycle/phase transitions, admission changes,
+facility-safe closure, typed readiness work, baseline-recovery requests and
+completion. Use the typed `lock_design` action for the atomic pre-draw lock;
+the generic transition action cannot create that lock. The route requires the
+separately delivered experiment API token and the attested function-only
+lifecycle database login; it never falls back to the ordinary database-owner
+pool. Do not place either credential in a command, issue comment or captured
+evidence. The API login attestation fails if its lifecycle duty gains shadow
+scheduler, randomizer, executor, freezer or any other unlisted v2 function.
+
+The ingestor uses two additional optional key pairs from the existing
+`verdify-app-secrets`: `VERDIFY_EXPERIMENT_COMPONENT_DB_USER` /
+`VERDIFY_EXPERIMENT_COMPONENT_DB_PASSWORD` and
+`VERDIFY_EXPERIMENT_EQUIPMENT_SOURCE_COLLECTOR_DB_USER` /
+`VERDIFY_EXPERIMENT_EQUIPMENT_SOURCE_COLLECTOR_DB_PASSWORD`. The former must
+authenticate exactly as `verdify_experiment_v2_component_executor_login`; the
+latter must authenticate exactly as
+`verdify_experiment_v2_equipment_source_collector_login`. Missing or mismatched
+credentials leave those experiment paths unavailable and never fall back to the
+ordinary ingestor database owner.
+
+Every command on an already configured experiment supplies the caller's exact
+expected lifecycle status, execution phase, admission state, component-enabled
+state, lease generation and revision-bundle hash. The API checks those values,
+calls only the fixed action-to-function allowlist and reads the treatment-free
+receipt in one serializable transaction. Refresh the operator status and
+reconcile evidence after a 409; never blindly retry stale authority. Initial
+`configure` carries the fixed protocol-1/draft/closed/disabled/lease-0
+precondition. It records only the candidate revisions, stable study ID and
+assignment namespace; it cannot accept a start date, pair count or pre-draw
+artifact. Replacing an unlocked candidate requires the exact observed v2
+revision and lease and returns the candidate to shadow/disabled posture.
+
+`lock_design` requires the exact current authority axes and atomically binds
+the start date, randomized pair count, local selector-context cutoff,
+source/design/schema identities, selector identity and artifact, endpoint
+artifact, analyzer environment and power artifact after the revision-bound
+shadow, commissioning and A/A gates. An exact retry after a lost successful
+response returns the already-locked row; any changed lock tuple conflicts.
+Generic v1 status, export, unblind, transition and device-policy routes reject a v2
+experiment; use only the dedicated component status and lifecycle workflow.
+
+The response contains only an opaque durable result ID, before/after authority
+axes, revision identity and database timestamp. It never returns component
+vectors, target profiles, approval payloads, recovery reasons, assignment
+mapping, efficacy or credentials. `GET .../component-status` remains the
+separately operator-token-protected safety/integrity read surface.
 
 ## Immutable preflight snapshot
 
@@ -126,9 +179,12 @@ Required before changing the new mode from `off`:
   compiled-default/current-state → full-48 baseline recovery prefix;
 - additive v2 lifecycle/phase/admission migrations that leave v1 semantics
   unchanged and prevent canary/A/A rows from entering randomized ITT;
-- five bounded runtime roles: restricted randomizer, lifecycle controller,
-  executor, outcome freezer and separate read-only blinded analyst; no shared
-  database-owner runtime credential;
+- seven bounded experiment duties: shadow scheduler, restricted randomizer,
+  lifecycle controller, component executor, outcome freezer, separate
+  read-only blinded analyst and append-only equipment-source collector;
+- migration 217's exact ordinary API and ingestor login/duty pairs are live;
+  neither ordinary pod carries the database-owner credential, and both
+  startup attestations pass against the actual login;
 - separate least-information readiness, randomized-assignment and
   baseline-recovery resolvers each read `clock_timestamp()` once inside their
   SECURITY DEFINER function; the recovery branch accepts only linked immutable
@@ -144,12 +200,75 @@ Sync the feature-off release without prune. Verify exact revision Synced +
 Healthy, running digests/config revision, migration ledger, one writer, normal
 planner/data health and unchanged device state.
 
+### Gate 1 ordinary-role credential cutover
+
+Migration 217 deliberately creates no password and switches no workload. Keep
+the experiment component `off` while performing this separate rollout:
+
+1. apply/replay migration 217 through the pinned migrate image and retain the
+   hostile actual-login fixture result;
+2. provision only the four documented
+   `VERDIFY_{API,INGESTOR}_RUNTIME_DB_{USER,PASSWORD}` keys out of band; never
+   place a value in Git, a command transcript or an issue comment;
+3. render the inactive review target at
+   `deploy/k8s/overlays/prod-runtime-role-boundary`; prove it emits no Secret,
+   removes `POSTGRES_PASSWORD` from both ordinary containers, points the
+   gather subprocess at the ingestor runtime password, and leaves both
+   experiment switches `off`;
+4. add `../../components/runtime-role-boundary` to the production overlay in
+   a reviewed GitOps commit, regenerate the config revision, and sync without
+   prune;
+5. verify both processes pass their exact current-user/membership/ownership/
+   ACL attestations, the API and planner paths still work, the singleton
+   ingestor is the sole writer, normal actuation is unchanged, and no owner
+   credential is ambient in either ordinary pod.
+
+If the cutover fails, remove the component reference and restore the captured
+pre-cutover pod templates through GitOps. Do not enable experiment shadow while
+either ordinary service still uses the database owner; repair and re-prove the
+cutover first.
+
+### Gate 1 no-prune rollback
+
+Before the first sync, retain the complete pre-release production `images:` map
+(including API, MCP, ingestor, migrate and every other pin), every pre-release
+`verdify-config` source, and every running `verdify.io/config-revision` value.
+The orchestrator is net-new and has no previous image digest, so removing its
+Component from Git is not a rollback: with prune disabled, the three live
+Deployments would remain extraneous and the Application would remain OutOfSync.
+
+The bounded rollback artifact is
+`deploy/k8s/components/experiment-v2-orchestrator-rollback`. In a rollback
+commit, keep all of the orchestrator objects desired by consuming that directory
+as a production `resource` in place of the normal orchestrator Component. Its
+only patch sets the lifecycle, selector and freezer Deployments to zero replicas.
+In the same commit:
+
+1. restore the complete captured production `images:` map exactly, including
+   MCP and every digest advanced by the release;
+2. restore the captured experiment ConfigMap source and generated config
+   revisions as one reviewed set (never hand-edit only an annotation);
+3. keep `VERDIFY_COMPONENT_EXPERIMENT_ENABLED=off`, the active experiment ID
+   empty, generalized vector mode `off`, and the legacy path enabled;
+4. keep the additive database migrations and the PreSync ledger verifier in
+   place; rollback never attempts a schema downgrade;
+5. render the complete production overlay and prove all three orchestrator
+   Deployments are desired at zero, every first-party image is digest-pinned,
+   and no Secret document is emitted;
+6. sync without prune, then verify the prior service digests/config revisions,
+   zero orchestrator pods, exactly one ordinary writer, unchanged device state,
+   and Argo Synced + Healthy.
+
+Retain the before/after render, exact commit IDs, image/config snapshots and
+sync result. Deleting the dormant objects is a later exact-target reviewed
+cleanup, never part of this rollback.
+
 ## Gate 2 — explicit-ID non-actuating shadow
 
 1. Create one explicit experiment UUID with frozen candidate revisions and an
    assignment/selection preview schedule.
 2. Set its v2 execution phase to `shadow` with admission `closed`.
-3. Commit `VERDIFY_COMPONENT_EXPERIMENT_ENABLED=true` and that UUID through the
+3. Commit `VERDIFY_COMPONENT_EXPERIMENT_ENABLED=enabled` and that UUID through the
    production overlay, including the generated config revision.
 4. Argo plan/apply the exact app without prune.
 5. Verify all expected pods restarted onto the exact revision.
@@ -167,7 +286,7 @@ Shadow acceptance:
 - generalized vector mode still `off`;
 - no new safety/integrity alert and normal planner/data health green.
 
-Exercise declarative rollback once: enabled `false`, empty ID, revision bump,
+Exercise declarative rollback once: component capability `off`, empty ID, revision bump,
 sync and restart verification. Re-enable with the same shadow DB phase only
 after the rollback proof is retained. These are bounded kill-switch config
 rollouts, not per-phase deployment mechanics.
@@ -377,7 +496,7 @@ Use this order for software/integrity rollback:
    epochs at the current connection generation and matching stable baseline
    state-content hash.
 5. **Persist lifecycle evidence.** Pause or abort with exact receipts/deviation.
-6. **Then GitOps off.** Set component enabled `false` and clear the active ID;
+6. **Then GitOps off.** Set the component capability to `off` and clear the active ID;
    keep generalized vector mode `off`.
 7. **Restore ordinary ownership.** Only after confirmed baseline may normal
    planner/forecast/MCP component admission resume.
@@ -402,7 +521,7 @@ After the final scheduled day:
    both schedule and X/Y mapping;
 6. run the frozen analyzer and publish effects, uncertainty, decision and claim
    limits;
-7. declaratively set component enabled false/empty ID and verify final
+7. declaratively set component capability `off`/empty ID and verify final
    Synced + Healthy;
 8. reconcile all GitHub issues against exact source/deploy/runtime evidence.
 

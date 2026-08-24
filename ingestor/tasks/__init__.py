@@ -89,8 +89,12 @@ from ._common import (  # noqa: F401
 )
 from .alerts import *  # noqa: F401,F403
 from .component_experiment import (  # noqa: F401
+    attest_component_safe_startup,
     component_experiment_worker,
+    create_component_experiment_pool,
+    prime_component_startup_hold,
     record_component_cfg_readback,
+    record_component_device_uptime,
 )
 from .confirmation import *  # noqa: F401,F403
 from .daily import *  # noqa: F401,F403
