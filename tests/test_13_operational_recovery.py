@@ -10,10 +10,16 @@ Covers fixes from ingestor/sprint-25.1:
 from __future__ import annotations
 
 import asyncio
+import io
+import runpy
 import subprocess
 import sys
+import urllib.error
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from unittest.mock import MagicMock, call, patch
+
+import pytest
 
 from verdify_schemas.tunable_registry import (
     BAND_OWNED_REG,
@@ -114,6 +120,44 @@ def test_prod_ha_gap_backfill_cronjob_mounts_script_and_ha_token():
     assert "name: allow-db-from-ha-gap-backfill" in cron
     assert "app.kubernetes.io/component: ha-gap-backfill" in cron
     assert "deploy/k8s/components/ha-gap-backfill/backfill-ha-gaps.py" in wrapper
+
+
+def _ha_gap_backfill_globals():
+    return runpy.run_path("deploy/k8s/components/ha-gap-backfill/backfill-ha-gaps.py")
+
+
+def _http_error(code: int) -> urllib.error.HTTPError:
+    return urllib.error.HTTPError("http://home-assistant/api/history", code, "test", {}, io.BytesIO())
+
+
+def test_ha_gap_backfill_retries_transient_history_http_errors():
+    module = _ha_gap_backfill_globals()
+    response = MagicMock()
+    response.__enter__.return_value.read.return_value = b'{"status":"ok"}'
+
+    with (
+        patch("urllib.request.urlopen", side_effect=[_http_error(404), _http_error(503), response]) as urlopen,
+        patch("time.sleep") as sleep,
+    ):
+        result = module["ha_get_json"]("http://home-assistant", "redacted", "/api/history/period/test")
+
+    assert result == {"status": "ok"}
+    assert urlopen.call_count == 3
+    assert sleep.call_args_list == [call(2), call(4)]
+
+
+def test_ha_gap_backfill_does_not_retry_authentication_errors():
+    module = _ha_gap_backfill_globals()
+
+    with (
+        patch("urllib.request.urlopen", side_effect=_http_error(401)) as urlopen,
+        patch("time.sleep") as sleep,
+        pytest.raises(urllib.error.HTTPError, match="HTTP Error 401"),
+    ):
+        module["ha_get_json"]("http://home-assistant", "redacted", "/api/history/period/test")
+
+    urlopen.assert_called_once()
+    sleep.assert_not_called()
 
 
 def test_derived_history_reconcile_script_uses_canonical_daily_refresh():
