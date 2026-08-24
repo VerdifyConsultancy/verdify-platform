@@ -304,6 +304,18 @@ def test_record_plan_context_failure_dedupes_open_alerts():
     assert "plan_context_failed" in sql
 
 
+@pytest.mark.parametrize("backend", ["docker", "kube"])
+def test_alert_sql_argv_uses_the_configured_runtime_identity(monkeypatch, backend):
+    monkeypatch.setenv("VERDIFY_DB_BACKEND", backend)
+    monkeypatch.setenv("DB_USER", "verdify_ingestor_runtime_login")
+    monkeypatch.setenv("DB_NAME", "verdify_runtime_test")
+
+    argv = iris_planner._alert_sql_argv("SELECT 1")
+
+    assert argv[argv.index("-U") + 1] == "verdify_ingestor_runtime_login"
+    assert argv[argv.index("-d") + 1] == "verdify_runtime_test"
+
+
 def test_resolve_plan_context_failures_marks_open_alerts_resolved():
     with patch("iris_planner._run_alert_sql") as run_sql:
         iris_planner._resolve_plan_context_failures()

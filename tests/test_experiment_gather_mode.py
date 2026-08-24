@@ -73,10 +73,10 @@ FORBIDDEN_PACKET_MARKERS = (
 FAKE_PSQL = r"""#!/bin/bash
 # Scripted psql stand-in: answers by SQL substring; last argv token is the SQL.
 sql="${!#}"
-if [[ "$sql" == *"fn_freeze_experiment_context"* ]]; then
+if [[ "$sql" == *"fn_runtime_v1_freeze_experiment_context"* ]]; then
   if [[ "${FAKE_PSQL_FREEZE_FAIL:-0}" == "1" ]]; then exit 0; fi
   echo "11111111-2222-3333-4444-555555555555|7"
-elif [[ "$sql" == *"SELECT 1 FROM v_iris_experiment_context"* ]]; then
+elif [[ "$sql" == *"SELECT 1 FROM v_runtime_v1_iris_experiment_context"* ]]; then
   if [[ "${FAKE_PSQL_NO_EXPERIMENT_ROW:-0}" == "1" ]]; then exit 0; fi
   echo "1"
 elif [[ "$sql" == *"COALESCE(crop_topology::text"* ]]; then
@@ -210,9 +210,9 @@ class TestGatherScriptExperimentMode:
         assert block_start < general_start, "experiment block must run before the general packet"
         block = source[block_start:general_start]
         assert "exit 0" in block
-        # The block queries ONLY the migration-210 surface.
-        assert "v_iris_experiment_context" in block
-        assert "fn_freeze_experiment_context" in block
+        # The block queries only the migration-217 protocol-v1 barrier/wrapper.
+        assert "v_runtime_v1_iris_experiment_context" in block
+        assert "fn_runtime_v1_freeze_experiment_context" in block
         for forbidden_sql in ("setpoint", "plan_journal", "planner_lessons", "v_daily_kpi", "fn_planner_scorecard"):
             assert forbidden_sql not in block
 
@@ -231,7 +231,9 @@ class TestGatherScriptExperimentMode:
 
 
 class TestIrisPlannerFailClosed:
-    def test_feature_off_argv_and_env_are_byte_identical(self):
+    def test_feature_off_with_active_experiment_argv_and_env_are_byte_identical(self, monkeypatch):
+        monkeypatch.setenv("VERDIFY_POLICY_VECTOR_MODE", "off")
+        monkeypatch.setenv("VERDIFY_ACTIVE_EXPERIMENT_ID", EXPERIMENT_ID)
         fake_result = MagicMock(returncode=0, stdout="=== CONTEXT ===\n", stderr="")
         with (
             patch("iris_planner.subprocess.run", return_value=fake_result) as run,
@@ -465,7 +467,7 @@ class TestMigration210:
 
     def test_gather_script_freezes_through_the_migration_functions(self):
         source = GATHER_SCRIPT.read_text()
-        assert "fn_freeze_experiment_context" in source
+        assert "fn_runtime_v1_freeze_experiment_context" in source
         assert "fn_get_experiment_context_snapshot" in source  # named in the packet for retrieval
 
 

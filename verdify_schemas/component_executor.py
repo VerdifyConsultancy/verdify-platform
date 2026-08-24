@@ -18,6 +18,7 @@ evidence; silently deriving steps from the finer policy-wire scale is unsafe.
 from __future__ import annotations
 
 import math
+import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
@@ -32,6 +33,9 @@ type EntityType = Literal["number", "switch"]
 
 GRID_REVISION = "source-grid-parity/main-and-historical-09ee886-live-unverified-v1"
 ORDER_REVISION = "candidate-fixed-order-v1-prefix-replay-unqualified"
+
+_QUALIFIED_GRID_REVISION = re.compile(r"^live-entity-grid-v[1-9][0-9]*:sha256:[0-9a-f]{64}$")
+_QUALIFIED_ORDER_REVISION = re.compile(r"^prefix-replay-v[1-9][0-9]*:sha256:[0-9a-f]{64}$")
 
 
 class ComponentContractError(ValueError):
@@ -49,6 +53,21 @@ class EntityGrid:
     maximum: Decimal | None
     step: Decimal | None
     entity_type: EntityType = "number"
+
+
+def physical_execution_qualified(grid_revision: str) -> bool:
+    """True only for source-bound live-grid and prefix-replay evidence.
+
+    The checked constants deliberately remain provisional for the OFF release.
+    Physical work therefore cannot pass this boundary until a reviewed change
+    replaces both values with evidence-addressed qualified revisions and L3
+    resolves work against that exact grid revision.
+    """
+    return (
+        grid_revision == GRID_REVISION
+        and _QUALIFIED_GRID_REVISION.fullmatch(GRID_REVISION) is not None
+        and _QUALIFIED_ORDER_REVISION.fullmatch(ORDER_REVISION) is not None
+    )
 
 
 def _grid(minimum: str, maximum: str, step: str) -> EntityGrid:

@@ -26,7 +26,7 @@
 # and the unauth-write escape hatch is closed in the k3s ConfigMap, NOT here.
 # ============================================================================
 
-FROM python:3.13-slim AS base
+FROM python:3.13-slim@sha256:ffb752e139c0a19692a43af8d8523b274222dd68eebad5d583b45c2201c6e30a AS base
 
 # Runtime-only system deps. curl for the healthcheck; ca-certificates for the
 # outbound contact-form SMTP / go2rtc-Frigate proxy calls. No build toolchain.

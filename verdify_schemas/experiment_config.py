@@ -73,12 +73,13 @@ def policy_vector_mode() -> str:
 def component_experiment_mode() -> str:
     """Return the coarse v2 component capability mode.
 
-    The only enabling spelling is exactly ``enabled`` after whitespace/case
-    normalization. Missing and unrecognized values fail closed to ``off``.
+    The only enabling spelling is the raw literal ``enabled``. Missing,
+    case-folded, whitespace-padded, and otherwise unrecognized values fail
+    closed to ``off``.
     Database phase/admission remains the sole source of shadow versus physical
     authority; this flag deliberately has no shadow/live submodes.
     """
-    raw = os.environ.get(COMPONENT_EXPERIMENT_ENABLED_ENV, "").strip().lower()
+    raw = os.environ.get(COMPONENT_EXPERIMENT_ENABLED_ENV, "")
     if not raw:
         return COMPONENT_EXPERIMENT_OFF
     if raw not in COMPONENT_EXPERIMENT_MODES:
@@ -105,7 +106,11 @@ def component_experiment_gate() -> tuple[bool, str]:
     """
     if component_experiment_mode() != COMPONENT_EXPERIMENT_ENABLED:
         return False, "component_capability_off"
-    raw_vector_mode = os.environ.get(POLICY_VECTOR_MODE_ENV, "").strip().lower()
+    # This is deliberately stricter than ``policy_vector_mode()``.  A
+    # whitespace- or case-normalized spelling is safe for the legacy path, but
+    # it is not the explicit ``off`` configuration required to admit the
+    # confirmed-component executor.
+    raw_vector_mode = os.environ.get(POLICY_VECTOR_MODE_ENV, "")
     if raw_vector_mode != POLICY_VECTOR_MODE_OFF:
         return False, "generalized_vector_mode_not_exactly_off"
     if active_experiment_id() is None:
@@ -116,6 +121,19 @@ def component_experiment_gate() -> tuple[bool, str]:
 def component_experiment_enabled() -> bool:
     """True only for a fully admissible coarse component configuration."""
     return component_experiment_gate()[0]
+
+
+def component_startup_hold_required() -> bool:
+    """Fail-safe hint for the ordinary-writer hold before DB authority loads.
+
+    Any non-default component spelling or any residual active experiment id is
+    treated as possible experiment authority.  This is intentionally stricter
+    than the actuation gate: typos must block ordinary writes until an operator
+    restores the literal off/empty rollback configuration.
+    """
+    raw_component = os.environ.get(COMPONENT_EXPERIMENT_ENABLED_ENV, "")
+    raw_experiment_id = os.environ.get(ACTIVE_EXPERIMENT_ID_ENV, "")
+    return raw_component not in ("", COMPONENT_EXPERIMENT_OFF) or bool(raw_experiment_id)
 
 
 def active_experiment_id() -> str | None:

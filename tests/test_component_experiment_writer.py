@@ -57,6 +57,7 @@ def writer_state(monkeypatch):
     monkeypatch.setenv("VERDIFY_DEVICE_WRITE_ENABLED", "1")
     monkeypatch.setattr(shared, "is_shadow_mode", lambda: False)
     monkeypatch.setattr(shared, "writer_lease_held", lambda: True)
+    monkeypatch.setattr(shared, "writer_lease_strictly_held", lambda minimum_remaining_s=0: True)
     monkeypatch.setattr(shared, "transport_generation", 7)
     monkeypatch.setattr(shared, "esp32", {"client": FakeClient(), "keys": {}, "services": {}})
     monkeypatch.setattr(esp32_push, "_pace_command", lambda: asyncio.sleep(0))
@@ -185,10 +186,45 @@ async def test_expired_work_deadline_fails_before_any_setter():
 
 
 @pytest.mark.asyncio
+async def test_authoritative_queued_fence_runs_after_pacing_and_before_setter(monkeypatch):
+    client: FakeClient = shared.esp32["client"]
+    shared.esp32["keys"] = {"component_1": "component_1"}
+    events: list[str] = []
+
+    async def paced() -> None:
+        events.append("paced")
+
+    async def superseded_after_pacing(outcomes) -> None:
+        status = outcomes[0].status
+        events.append(status)
+        if status == "queued":
+            raise RuntimeError("writer generation superseded")
+
+    monkeypatch.setattr(esp32_push, "_pace_command", paced)
+    monkeypatch.setattr(esp32_push, "_LIFECYCLE_CALLBACK_ATTEMPTS", 1)
+
+    with pytest.raises(LifecyclePersistenceError):
+        await push_component_bundle(
+            [call("field_1", "component_1")],
+            on_state=superseded_after_pacing,
+            expected_writer_generation=4,
+            expected_connection_generation=7,
+        )
+
+    assert events == ["requested", "paced", "queued"]
+    assert client.calls == []
+
+
+@pytest.mark.asyncio
 async def test_lease_loss_and_reconnect_fence_each_remaining_prefix(monkeypatch):
     for fault in ("lease", "reconnect"):
         held = {"value": True}
         monkeypatch.setattr(shared, "writer_lease_held", lambda: held["value"])
+        monkeypatch.setattr(
+            shared,
+            "writer_lease_strictly_held",
+            lambda minimum_remaining_s=0: held["value"],
+        )
         shared.transport_generation = 7
         client = FakeClient()
         shared.esp32 = {
@@ -210,11 +246,54 @@ async def test_lease_loss_and_reconnect_fence_each_remaining_prefix(monkeypatch)
             expected_writer_generation=9,
             expected_connection_generation=7,
         )
-        assert result.outcomes[0].status == "sent"
-        assert result.outcomes[1].status == "failed"
-        assert result.outcomes[1].reason == (
-            "writer_lease_not_held" if fault == "lease" else "transport_generation_changed"
+        assert result.outcomes[0].status == "failed"
+        assert result.outcomes[0].reason == (
+            "writer_lease_not_held_after_command_outcome_unknown"
+            if fault == "lease"
+            else "transport_generation_changed_after_command_outcome_unknown"
         )
+        assert result.outcomes[1].status == "cancelled"
+
+
+@pytest.mark.asyncio
+async def test_queued_database_fence_latency_cannot_overrun_bundle_budget(monkeypatch):
+    client: FakeClient = shared.esp32["client"]
+    shared.esp32["keys"] = {"component_1": "component_1"}
+
+    async def slow_queued(outcomes) -> None:
+        if outcomes[0].status == "queued":
+            await asyncio.sleep(0.02)
+
+    monkeypatch.setattr(esp32_push, "_pace_command", lambda: asyncio.sleep(0))
+    result = await push_component_bundle(
+        [call("field_1", "component_1")],
+        on_state=slow_queued,
+        expected_writer_generation=4,
+        expected_connection_generation=7,
+        budget_s=0.001,
+    )
+
+    assert result.failure is not None
+    assert result.failure.reason == "component_bundle_budget_exceeded"
+    assert client.calls == []
+
+
+@pytest.mark.asyncio
+async def test_component_bundle_requires_strict_cross_pod_lease(monkeypatch):
+    client: FakeClient = shared.esp32["client"]
+    shared.esp32["keys"] = {"component_1": "component_1"}
+    monkeypatch.setattr(shared, "writer_lease_strictly_held", lambda minimum_remaining_s=0: False)
+
+    result = await push_component_bundle(
+        [call("field_1", "component_1")],
+        on_state=lambda outcomes: recorder([], outcomes),
+        expected_writer_generation=4,
+        expected_connection_generation=7,
+    )
+
+    assert result.failure is not None
+    assert result.failure.reason == "writer_lease_not_held"
+    assert client.calls == []
 
 
 @pytest.mark.asyncio

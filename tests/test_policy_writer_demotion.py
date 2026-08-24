@@ -90,7 +90,7 @@ class TestFlags:
     def test_component_capability_defaults_off_and_typos_fail_closed(self, monkeypatch):
         assert experiment_config.component_experiment_mode() == "off"
         assert experiment_config.component_experiment_gate() == (False, "component_capability_off")
-        for raw in ("1", "true", "live", "enabled-typo"):
+        for raw in ("1", "true", "live", "enabled-typo", "ENABLED", " enabled", "enabled "):
             monkeypatch.setenv("VERDIFY_COMPONENT_EXPERIMENT_ENABLED", raw)
             assert experiment_config.component_experiment_mode() == "off"
             assert experiment_config.component_experiment_enabled() is False
@@ -101,7 +101,7 @@ class TestFlags:
             False,
             "generalized_vector_mode_not_exactly_off",
         )
-        for raw in ("shadow", "live", "typo", ""):
+        for raw in ("shadow", "live", "typo", "", "OFF", " off", "off "):
             monkeypatch.setenv("VERDIFY_POLICY_VECTOR_MODE", raw)
             assert experiment_config.component_experiment_gate() == (
                 False,
@@ -123,6 +123,15 @@ class TestFlags:
         for raw in ("shadow", "live"):
             monkeypatch.setenv("VERDIFY_COMPONENT_EXPERIMENT_ENABLED", raw)
             assert experiment_config.component_experiment_gate() == (False, "component_capability_off")
+
+    def test_component_startup_hold_fails_safe_on_typos_or_residual_id(self, monkeypatch):
+        assert experiment_config.component_startup_hold_required() is False
+        monkeypatch.setenv("VERDIFY_COMPONENT_EXPERIMENT_ENABLED", "typo")
+        assert experiment_config.component_startup_hold_required() is True
+        monkeypatch.setenv("VERDIFY_COMPONENT_EXPERIMENT_ENABLED", "off")
+        assert experiment_config.component_startup_hold_required() is False
+        monkeypatch.setenv("VERDIFY_ACTIVE_EXPERIMENT_ID", TRIGGER_ID)
+        assert experiment_config.component_startup_hold_required() is True
 
 
 class TestGate:

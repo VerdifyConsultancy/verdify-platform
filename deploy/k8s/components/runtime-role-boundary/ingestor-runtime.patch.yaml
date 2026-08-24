@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-ingestor
+spec:
+  template:
+    spec:
+      containers:
+        - name: ingestor
+          env:
+            # Explicit env wins over the shared DB_USER in verdify-config. The
+            # process attests this exact login/duty pair before starting any
+            # telemetry, planner, experiment, or device loop.
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: VERDIFY_INGESTOR_RUNTIME_DB_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD
+            - name: VERDIFY_INGESTOR_RUNTIME_DB_ROLE_REQUIRED
+              value: "1"
+            # The owner password must not remain ambient after cutover.
+            - name: POSTGRES_PASSWORD
+              $patch: delete

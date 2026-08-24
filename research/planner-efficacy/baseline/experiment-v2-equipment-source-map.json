@@ -1,0 +1,86 @@
+{
+  "counter_publish_interval_seconds": 30,
+  "revision": "combined-normal-fertilized-misters-v1",
+  "schema": "verdify-experiment-v2-equipment-source-map-v1",
+  "streams": {
+    "fan1": {
+      "collector_column": "runtime_fan1_min",
+      "counter_object_id": "runtime___fan_1__min_today_",
+      "native_unit": "minutes",
+      "state_object_ids": ["fan_1_running"],
+      "state_reduce": "identity",
+      "to_minutes": "identity"
+    },
+    "fan2": {
+      "collector_column": "runtime_fan2_min",
+      "counter_object_id": "runtime___fan_2__min_today_",
+      "native_unit": "minutes",
+      "state_object_ids": ["fan_2_running"],
+      "state_reduce": "identity",
+      "to_minutes": "identity"
+    },
+    "fog": {
+      "collector_column": "runtime_fog_min",
+      "counter_object_id": "runtime___fog__min_today_",
+      "native_unit": "minutes",
+      "state_object_ids": ["fog_running"],
+      "state_reduce": "identity",
+      "to_minutes": "identity"
+    },
+    "heat1": {
+      "collector_column": "runtime_heat1_min",
+      "counter_object_id": "runtime___heat_1__min_today_",
+      "native_unit": "minutes",
+      "state_object_ids": ["heat_1_running"],
+      "state_reduce": "identity",
+      "to_minutes": "identity"
+    },
+    "heat2": {
+      "collector_column": "runtime_heat2_min",
+      "counter_object_id": "runtime___heat_2__min_today_",
+      "native_unit": "minutes",
+      "state_object_ids": ["heat_2_running"],
+      "state_reduce": "identity",
+      "to_minutes": "identity"
+    },
+    "mister_center": {
+      "collector_column": "runtime_mister_center_h",
+      "counter_object_id": "mister_center_runtime__today_",
+      "native_unit": "hours",
+      "state_object_ids": ["mister___center"],
+      "state_reduce": "identity",
+      "to_minutes": "multiply_60"
+    },
+    "mister_south": {
+      "collector_column": "runtime_mister_south_h",
+      "counter_object_id": "mister_south_wall_runtime__today_",
+      "native_unit": "hours",
+      "state_object_ids": [
+        "mister___south_wall",
+        "mister___south_wall__fert__"
+      ],
+      "state_reduce": "boolean_or_require_no_overlap",
+      "to_minutes": "multiply_60"
+    },
+    "mister_west": {
+      "collector_column": "runtime_mister_west_h",
+      "counter_object_id": "mister_west_wall_runtime__today_",
+      "native_unit": "hours",
+      "state_object_ids": [
+        "mister___west_wall",
+        "mister___west_wall__fert__"
+      ],
+      "state_reduce": "boolean_or_require_no_overlap",
+      "to_minutes": "multiply_60"
+    },
+    "vent": {
+      "collector_column": "runtime_vent_min",
+      "counter_object_id": "runtime___vent__min_today_",
+      "native_unit": "minutes",
+      "state_object_ids": ["vent_open"],
+      "state_reduce": "identity",
+      "to_minutes": "identity"
+    }
+  },
+  "timezone": "America/Denver"
+}

@@ -14,11 +14,15 @@ if _INGESTOR_PATH not in sys.path:
     sys.path.insert(0, _INGESTOR_PATH)
 
 import shared  # noqa: E402
+import tasks.component_experiment as component_experiment  # noqa: E402
+from aioesphomeapi.api_pb2 import SubscribeStatesRequest  # noqa: E402
 from tasks.component_experiment import (  # noqa: E402
     RevisionSet,
     component_cfg_source_epochs,
     configure_component_cfg_source,
     record_component_cfg_readback,
+    record_component_device_uptime,
+    request_component_state_replay,
 )
 
 from verdify_schemas.component_executor import CANONICAL_FIELD_ORDER, ENTITY_GRIDS
@@ -38,6 +42,10 @@ def minimum_state() -> dict[str, bool | float]:
 @pytest.fixture(autouse=True)
 def isolated_source(monkeypatch):
     monkeypatch.setattr(shared, "transport_generation", 7)
+    monkeypatch.setattr(shared, "writer_lease_strictly_held", lambda minimum_remaining_s=0: True)
+    shared.esp32["client"] = None
+    shared.esp32["state_subscription_client"] = None
+    shared.esp32["state_subscription_generation"] = None
     shared.cfg_readback.clear()
     configure_component_cfg_source(
         experiment_id=None,
@@ -47,6 +55,9 @@ def isolated_source(monkeypatch):
         revisions=None,
     )
     yield
+    shared.esp32["client"] = None
+    shared.esp32["state_subscription_client"] = None
+    shared.esp32["state_subscription_generation"] = None
     configure_component_cfg_source(
         experiment_id=None,
         lease_generation=None,
@@ -70,6 +81,42 @@ def emit_complete(state: dict[str, bool | float], at: datetime) -> None:
     for index, field in enumerate(CANONICAL_FIELD_ORDER):
         completed = record_component_cfg_readback(field, state[field], observed_at=at)
         assert completed is (index == len(CANONICAL_FIELD_ORDER) - 1)
+
+
+class ReplayConnection:
+    def __init__(self, *, fail: bool = False) -> None:
+        self.fail = fail
+        self.messages = []
+
+    def send_message(self, message) -> None:
+        if self.fail:
+            raise RuntimeError("injected send failure")
+        self.messages.append(message)
+
+
+class ReplayClient:
+    def __init__(self, connection: ReplayConnection) -> None:
+        self.connection = connection
+        self.subscribe_calls = 0
+        self.command_calls = 0
+
+    def _get_connection(self):
+        return self.connection
+
+    def subscribe_states(self, _callback) -> None:
+        self.subscribe_calls += 1
+
+    def number_command(self, *_args, **_kwargs) -> None:
+        self.command_calls += 1
+
+    def switch_command(self, *_args, **_kwargs) -> None:
+        self.command_calls += 1
+
+
+def install_replay_client(client: ReplayClient, generation: int = 7) -> None:
+    shared.esp32["client"] = client
+    shared.esp32["state_subscription_client"] = client
+    shared.esp32["state_subscription_generation"] = generation
 
 
 def test_epoch_uuid_and_timestamps_are_owned_by_raw_callbacks() -> None:
@@ -108,6 +155,97 @@ def test_cached_snapshot_flush_cannot_complete_a_second_epoch() -> None:
     )
     first, second = component_cfg_source_epochs()
     assert all(second.observed_at[field] > first.observed_at[field] for field in CANONICAL_FIELD_ORDER)
+
+
+def test_state_replay_is_read_only_single_subscription_request_and_throttled() -> None:
+    arm()
+    connection = ReplayConnection()
+    client = ReplayClient(connection)
+    install_replay_client(client)
+
+    assert request_component_state_replay(monotonic_clock=lambda: 0.0) is True
+    assert request_component_state_replay(monotonic_clock=lambda: 30.999) is False
+    assert request_component_state_replay(monotonic_clock=lambda: 31.0) is True
+
+    assert len(connection.messages) == 2
+    assert all(isinstance(message, SubscribeStatesRequest) for message in connection.messages)
+    assert client.subscribe_calls == 0
+    assert client.command_calls == 0
+
+
+def test_state_replay_requires_armed_current_subscription_and_strict_lease(monkeypatch) -> None:
+    connection = ReplayConnection()
+    client = ReplayClient(connection)
+    install_replay_client(client)
+    assert request_component_state_replay(monotonic_clock=lambda: 0.0) is False
+
+    arm()
+    shared.esp32["state_subscription_generation"] = 8
+    with pytest.raises(component_experiment.ComponentStoreError, match="authenticated subscription"):
+        request_component_state_replay(monotonic_clock=lambda: 0.0)
+    shared.esp32["state_subscription_generation"] = 7
+    monkeypatch.setattr(shared, "writer_lease_strictly_held", lambda minimum_remaining_s=0: False)
+    with pytest.raises(component_experiment.ComponentStoreError, match="strictly held"):
+        request_component_state_replay(monotonic_clock=lambda: 0.0)
+    assert connection.messages == []
+
+
+def test_state_replay_send_failure_does_not_advance_throttle_or_add_callback() -> None:
+    arm()
+    connection = ReplayConnection(fail=True)
+    client = ReplayClient(connection)
+    install_replay_client(client)
+    with pytest.raises(component_experiment.ComponentStoreError, match="request failed"):
+        request_component_state_replay(monotonic_clock=lambda: 10.0)
+    connection.fail = False
+    assert request_component_state_replay(monotonic_clock=lambda: 10.0) is True
+    assert len(connection.messages) == 1
+    assert client.subscribe_calls == 0
+
+
+def test_state_replay_identity_change_resets_throttle_and_old_client_is_rejected() -> None:
+    arm()
+    first_connection = ReplayConnection()
+    first_client = ReplayClient(first_connection)
+    install_replay_client(first_client)
+    assert request_component_state_replay(monotonic_clock=lambda: 100.0) is True
+
+    configure_component_cfg_source(
+        experiment_id=EXPERIMENT_ID,
+        lease_generation=4,
+        writer_generation=6,
+        connection_generation=8,
+        revisions=REVISIONS,
+    )
+    shared.transport_generation = 8
+    second_connection = ReplayConnection()
+    second_client = ReplayClient(second_connection)
+    install_replay_client(second_client, generation=8)
+    assert request_component_state_replay(monotonic_clock=lambda: 100.0) is True
+    shared.esp32["client"] = first_client
+    with pytest.raises(component_experiment.ComponentStoreError, match="authenticated subscription"):
+        request_component_state_replay(monotonic_clock=lambda: 131.0)
+
+
+def test_deployable_ingestor_pins_the_audited_state_replay_client_version() -> None:
+    root = Path(__file__).resolve().parents[1]
+    assert "aioesphomeapi==44.24.2" in (root / "ingestor" / "requirements-image.txt").read_text()
+    assert "aioesphomeapi==44.24.2" in (root / "ingestor" / "requirements.txt").read_text()
+    assert '"aioesphomeapi==44.24.2"' in (root / "pyproject.toml").read_text()
+
+
+def test_invalid_later_callback_removes_an_older_pending_value_for_that_wire() -> None:
+    arm()
+    state = minimum_state()
+    field = "band_track_fraction"
+    assert record_component_cfg_readback(field, state[field], observed_at=NOW) is False
+    assert record_component_cfg_readback(field, 0.123456789, observed_at=NOW + timedelta(seconds=1)) is False
+
+    for other in CANONICAL_FIELD_ORDER:
+        if other != field:
+            assert record_component_cfg_readback(other, state[other], observed_at=NOW + timedelta(seconds=1)) is False
+    assert component_cfg_source_epochs() == ()
+    assert record_component_cfg_readback(field, state[field], observed_at=NOW + timedelta(seconds=2)) is True
 
 
 def test_reconnect_discards_partial_epoch_instead_of_mixing_generations(monkeypatch) -> None:
@@ -151,9 +289,57 @@ def test_lease_change_discards_partial_epoch_instead_of_relabelling_it() -> None
     assert all(epoch.observed_at[field] == NOW + timedelta(seconds=2) for field in CANONICAL_FIELD_ORDER[:24])
 
 
+def test_raw_uptime_regression_marks_exactly_the_next_complete_epoch_as_reset() -> None:
+    arm()
+    state = minimum_state()
+    assert record_component_device_uptime(120.0) is False
+    assert record_component_device_uptime(4.0) is True
+
+    emit_complete(state, NOW)
+    (reset_epoch,) = component_cfg_source_epochs()
+    assert reset_epoch.reset_detected is True
+
+    emit_complete(state, NOW + timedelta(seconds=31))
+    _, ordinary_epoch = component_cfg_source_epochs()
+    assert ordinary_epoch.reset_detected is False
+
+
+def test_unacknowledged_reset_epoch_survives_bounded_ordinary_buffer_eviction() -> None:
+    arm()
+    state = minimum_state()
+    record_component_device_uptime(120.0)
+    assert record_component_device_uptime(4.0) is True
+    emit_complete(state, NOW)
+    reset_epoch = component_cfg_source_epochs()[0]
+
+    for sequence in range(1, 10):
+        emit_complete(state, NOW + timedelta(seconds=31 * sequence))
+
+    buffered = component_cfg_source_epochs()
+    assert len(buffered) == 9  # one pinned fault plus the bounded eight ordinary epochs
+    assert buffered[0].source_epoch_id == reset_epoch.source_epoch_id
+    assert [epoch.reset_detected for epoch in buffered] == [True, *([False] * 8)]
+
+
+@pytest.mark.parametrize("value", [True, -1, float("nan"), float("inf"), "not-a-number"])
+def test_invalid_uptime_never_forges_a_reset(value: object) -> None:
+    arm()
+    assert record_component_device_uptime(120.0) is False
+    assert record_component_device_uptime(value) is False
+    emit_complete(minimum_state(), NOW)
+    (epoch,) = component_cfg_source_epochs()
+    assert epoch.reset_detected is False
+
+
 def test_ingestor_callback_hook_is_separate_from_periodic_snapshot_flush() -> None:
     source = (Path(__file__).resolve().parents[1] / "ingestor" / "ingestor.py").read_text()
     callback = source.index("record_component_cfg_readback(cfg_param, val)")
     snapshot = source.index("Setpoint snapshot: write ESP32 configured values")
     assert callback < snapshot
     assert source.count("record_component_cfg_readback(cfg_param, val)") == 1
+    assert source.count("record_component_device_uptime(value)") == 1
+    assert source.count("client.subscribe_states(on_generation_state)") == 1
+    assert "shared.transport_generation != connection_generation" in source
+    assert source.index('shared.esp32["state_subscription_generation"] = connection_generation') < source.index(
+        "client.subscribe_states(on_generation_state)"
+    )

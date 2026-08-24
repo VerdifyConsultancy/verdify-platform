@@ -1,0 +1,516 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: verdify-experiment-v2-restore-rehearsal
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: experiment-v2-restore-rehearsal
+  annotations:
+    # The PreSync Job mounts this script, so the ConfigMap must exist in an
+    # earlier hook wave rather than waiting for the normal Sync phase.
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "-4"
+data:
+  rehearse.sh: |
+    #!/usr/bin/env bash
+    set -Eeuo pipefail
+    umask 077
+
+    latest_record="$({
+      find /backups -maxdepth 1 -type f -name 'verdify-*.dump' -printf '%T@ %p\n'
+    } | sort -nr | sed -n '1p')"
+    if [[ -z "${latest_record}" ]]; then
+      echo "[restore-rehearsal] FATAL: no completed verdify dump is available" >&2
+      exit 1
+    fi
+    dump_path="${latest_record#* }"
+    dump_mtime_raw="${latest_record%% *}"
+    dump_mtime_seconds="${dump_mtime_raw%%.*}"
+    now_seconds="$(date +%s)"
+    max_dump_age_seconds=$((26 * 60 * 60))
+    if [[ ! "${dump_mtime_seconds}" =~ ^[0-9]+$ ]]; then
+      echo "[restore-rehearsal] FATAL: latest dump has an invalid modification time" >&2
+      exit 1
+    fi
+    dump_age_seconds=$((now_seconds - dump_mtime_seconds))
+    if (( dump_age_seconds < 0 || dump_age_seconds >= max_dump_age_seconds )); then
+      echo "[restore-rehearsal] FATAL: latest dump age must be >=0 and <26h (age=${dump_age_seconds}s)" >&2
+      exit 1
+    fi
+    case "${dump_path}" in
+      /backups/verdify-*.dump) ;;
+      *)
+        echo "[restore-rehearsal] FATAL: resolved dump path escaped the bounded PVC directory" >&2
+        exit 1
+        ;;
+    esac
+    dump_name="$(basename -- "${dump_path}")"
+    dump_size="$(du -h -- "${dump_path}" | awk '{print $1}')"
+    dump_sha256="$(sha256sum -- "${dump_path}" | awk '{print $1}')"
+    echo "[restore-rehearsal] source=${dump_name} age=${dump_age_seconds}s size=${dump_size} sha256=${dump_sha256}"
+
+    initdb -D "${PGDATA}" --username=postgres --auth-local=trust --auth-host=reject >/dev/null
+    pg_ctl -D "${PGDATA}" \
+      -o "-k ${PGHOST} -p ${PGPORT} -c listen_addresses=''" \
+      -w start >/dev/null
+    cleanup() {
+      pg_ctl -D "${PGDATA}" -m fast -w stop >/dev/null 2>&1 || true
+    }
+    trap cleanup EXIT
+
+    psql -X -v ON_ERROR_STOP=1 -d postgres <<'SQL'
+    DO $role$
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'verdify') THEN
+        CREATE ROLE verdify NOLOGIN;
+      END IF;
+    END;
+    $role$;
+    SQL
+    createdb "${PGDATABASE}"
+    psql -X -v ON_ERROR_STOP=1 -d "${PGDATABASE}" \
+      -c 'CREATE EXTENSION IF NOT EXISTS timescaledb' >/dev/null
+    psql -X -v ON_ERROR_STOP=1 -d "${PGDATABASE}" \
+      -c 'SELECT timescaledb_pre_restore()' >/dev/null
+    pg_restore --exit-on-error --no-owner --no-privileges \
+      --dbname="${PGDATABASE}" "${dump_path}"
+    psql -X -v ON_ERROR_STOP=1 -d "${PGDATABASE}" \
+      -c 'SELECT timescaledb_post_restore()' >/dev/null
+    echo "[restore-rehearsal] recent production dump restored"
+
+    candidate_object_snapshot() {
+      psql -X -v ON_ERROR_STOP=1 -At -d "${PGDATABASE}" <<'SQL'
+    WITH candidate_relations AS (
+      SELECT relation.oid
+        FROM pg_class relation
+        JOIN pg_namespace namespace ON namespace.oid = relation.relnamespace
+       WHERE namespace.nspname = 'public'
+         AND (
+           relation.relname LIKE 'experiment_v2\_%' ESCAPE '\'
+           OR relation.relname LIKE 'v_experiment_v2\_%' ESCAPE '\'
+           OR relation.relname IN (
+             'equipment_counter_samples',
+             'equipment_direct_state_snapshots',
+             'equipment_state_source_receipts'
+           )
+         )
+    ), candidate_identity AS (
+      SELECT format(
+               'relation|%s|%s|%s|%s|%s',
+               relation.oid,
+               relation.relname,
+               relation.relkind,
+               relation.relowner,
+               coalesce(relation.relacl::text, '<NULL>')
+             ) AS identity
+        FROM pg_class relation
+       WHERE relation.oid IN (SELECT oid FROM candidate_relations)
+      UNION ALL
+      SELECT format(
+               'column|%s|%s|%s|%s|%s|%s',
+               attribute.attrelid,
+               attribute.attnum,
+               attribute.attname,
+               format_type(attribute.atttypid, attribute.atttypmod),
+               attribute.attnotnull,
+               coalesce(pg_get_expr(default_value.adbin, default_value.adrelid), '<NULL>')
+             )
+        FROM pg_attribute attribute
+        LEFT JOIN pg_attrdef default_value
+          ON default_value.adrelid = attribute.attrelid
+         AND default_value.adnum = attribute.attnum
+       WHERE attribute.attrelid IN (SELECT oid FROM candidate_relations)
+         AND attribute.attnum > 0
+         AND NOT attribute.attisdropped
+      UNION ALL
+      SELECT format(
+               'constraint|%s|%s|%s',
+               constraint_row.conrelid,
+               constraint_row.conname,
+               pg_get_constraintdef(constraint_row.oid, true)
+             )
+        FROM pg_constraint constraint_row
+       WHERE constraint_row.conrelid IN (SELECT oid FROM candidate_relations)
+      UNION ALL
+      SELECT format(
+               'trigger|%s|%s|%s',
+               trigger_row.tgrelid,
+               trigger_row.tgname,
+               pg_get_triggerdef(trigger_row.oid, true)
+             )
+        FROM pg_trigger trigger_row
+       WHERE trigger_row.tgrelid IN (SELECT oid FROM candidate_relations)
+         AND NOT trigger_row.tgisinternal
+      UNION ALL
+      SELECT format(
+               'function|%s|%s|%s|%s',
+               procedure_row.oid,
+               procedure_row.oid::regprocedure,
+               md5(pg_get_functiondef(procedure_row.oid)),
+               coalesce(procedure_row.proacl::text, '<NULL>')
+             )
+        FROM pg_proc procedure_row
+        JOIN pg_namespace namespace ON namespace.oid = procedure_row.pronamespace
+       WHERE namespace.nspname = 'public'
+         AND (
+           procedure_row.proname LIKE 'fn_experiment_v2\_%' ESCAPE '\'
+           OR procedure_row.proname LIKE 'fn_record_equipment\_%' ESCAPE '\'
+         )
+      UNION ALL
+      SELECT format(
+               'type|%s|%s|%s|%s',
+               type_row.oid,
+               type_row.typname,
+               type_row.typtype,
+               type_row.typowner
+             )
+        FROM pg_type type_row
+        JOIN pg_namespace namespace ON namespace.oid = type_row.typnamespace
+       WHERE namespace.nspname = 'public'
+         AND type_row.typname LIKE 'experiment_v2\_%' ESCAPE '\'
+      UNION ALL
+      SELECT format(
+               'role|%s|%s|%s|%s|%s|%s|%s|%s|%s',
+               role_row.oid,
+               role_row.rolname,
+               role_row.rolsuper,
+               role_row.rolinherit,
+               role_row.rolcreaterole,
+               role_row.rolcreatedb,
+               role_row.rolcanlogin,
+               role_row.rolreplication,
+               role_row.rolbypassrls
+             )
+        FROM pg_roles role_row
+       WHERE role_row.rolname LIKE 'verdify_experiment\_%' ESCAPE '\'
+      UNION ALL
+      SELECT format(
+               'membership|%s|%s|%s|%s',
+               duty_role.rolname,
+               member_role.rolname,
+               membership.admin_option,
+               grantor_role.rolname
+             )
+        FROM pg_auth_members membership
+        JOIN pg_roles duty_role ON duty_role.oid = membership.roleid
+        JOIN pg_roles member_role ON member_role.oid = membership.member
+        JOIN pg_roles grantor_role ON grantor_role.oid = membership.grantor
+       WHERE duty_role.rolname LIKE 'verdify_experiment\_%' ESCAPE '\'
+          OR member_role.rolname LIKE 'verdify_experiment\_%' ESCAPE '\'
+      UNION ALL
+      SELECT format(
+               'public-schema|%s|%s',
+               namespace.nspowner,
+               coalesce(namespace.nspacl::text, '<NULL>')
+             )
+        FROM pg_namespace namespace
+       WHERE namespace.nspname = 'public'
+    )
+    SELECT md5(coalesce(string_agg(identity, E'\n' ORDER BY identity), ''))
+      FROM candidate_identity;
+    SQL
+    }
+
+    ledger_snapshot() {
+      local ledger_exists
+      ledger_exists="$(psql -X -v ON_ERROR_STOP=1 -At -d "${PGDATABASE}" \
+        -c "SELECT to_regclass('public.schema_migrations') IS NOT NULL")"
+      if [[ "${ledger_exists}" != "t" ]]; then
+        echo '0:d41d8cd98f00b204e9800998ecf8427e'
+        return
+      fi
+      psql -X -v ON_ERROR_STOP=1 -At -d "${PGDATABASE}" <<'SQL'
+    SELECT count(*)::text || ':' || md5(coalesce(string_agg(
+             concat_ws(
+               E'\x1f',
+               source,
+               filename,
+               coalesce(seq::text, '<NULL>'),
+               coalesce(sha256, '<NULL>'),
+               to_char(applied_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'),
+               stamp_method,
+               coalesce(duration_ms::text, '<NULL>'),
+               coalesce(applied_by, '<NULL>')
+             ),
+             E'\n' ORDER BY source, filename
+           ), ''))
+      FROM public.schema_migrations;
+    SQL
+    }
+
+    write_ledger_row_snapshot() {
+      local destination="$1"
+      local ledger_exists
+      ledger_exists="$(psql -X -v ON_ERROR_STOP=1 -At -d "${PGDATABASE}" \
+        -c "SELECT to_regclass('public.schema_migrations') IS NOT NULL")"
+      : > "${destination}"
+      if [[ "${ledger_exists}" != "t" ]]; then
+        return
+      fi
+      psql -X -v ON_ERROR_STOP=1 -At -d "${PGDATABASE}" <<'SQL' \
+        | LC_ALL=C sort > "${destination}"
+    SELECT md5(concat_ws(
+             E'\x1f',
+             source,
+             filename,
+             coalesce(seq::text, '<NULL>'),
+             coalesce(sha256, '<NULL>'),
+             to_char(applied_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'),
+             stamp_method,
+             coalesce(duration_ms::text, '<NULL>'),
+             coalesce(applied_by, '<NULL>')
+           ))
+      FROM public.schema_migrations;
+    SQL
+    }
+
+    restored_populated="$(psql -X -v ON_ERROR_STOP=1 -At -d "${PGDATABASE}" \
+      -c "SELECT to_regclass('public.climate') IS NOT NULL")"
+    restored_ledger_exists="$(psql -X -v ON_ERROR_STOP=1 -At -d "${PGDATABASE}" \
+      -c "SELECT to_regclass('public.schema_migrations') IS NOT NULL")"
+    if [[ "${restored_populated}" != "t" ]]; then
+      echo "[restore-rehearsal] FATAL: restored dump lacks the populated-schema marker public.climate" >&2
+      exit 1
+    fi
+    if [[ "${restored_ledger_exists}" == "t" ]]; then
+      restored_ledger_count="$(psql -X -v ON_ERROR_STOP=1 -At -d "${PGDATABASE}" \
+        -c "SELECT count(*) FROM public.schema_migrations WHERE source = 'db/migrations'")"
+    else
+      restored_ledger_count=0
+    fi
+    echo "[restore-rehearsal] restored metadata: populated=true db-migration-ledger-count=${restored_ledger_count}"
+
+    baseline_branch=0
+    write_ledger_row_snapshot /tmp/restored-ledger-before.rows
+    if (( restored_ledger_count == 0 )); then
+      baseline_branch=1
+      candidate_objects_before="$(candidate_object_snapshot)"
+      ledger_before="$(ledger_snapshot)"
+      expected_refusal='[apply-migrations] FATAL: populated DB with EMPTY ledger. Refusing to apply numbered migrations blind. Set VERDIFY_MIGRATE_ALLOW_BASELINE=1 to seed the audited baseline (/work/db/ledger/backfill_ledger.sql) first.'
+      if env -u VERDIFY_MIGRATE_ALLOW_BASELINE \
+          /work/bin/apply-migrations.sh > /tmp/expected-empty-ledger-refusal.log 2>&1; then
+        echo "[restore-rehearsal] FATAL: empty-ledger migration unexpectedly succeeded without audited baseline authority" >&2
+        exit 1
+      fi
+      cat /tmp/expected-empty-ledger-refusal.log
+      if ! grep -Fqx "${expected_refusal}" /tmp/expected-empty-ledger-refusal.log; then
+        echo "[restore-rehearsal] FATAL: empty-ledger migration did not emit the exact fail-closed refusal" >&2
+        exit 1
+      fi
+      candidate_objects_after="$(candidate_object_snapshot)"
+      ledger_after="$(ledger_snapshot)"
+      if [[ "${candidate_objects_after}" != "${candidate_objects_before}" ]]; then
+        echo "[restore-rehearsal] FATAL: refused empty-ledger run mutated a 214/215/216/217 catalog object or ACL" >&2
+        exit 1
+      fi
+      if [[ "${ledger_after}" != "${ledger_before}" ]]; then
+        echo "[restore-rehearsal] FATAL: refused empty-ledger run mutated migration-ledger rows" >&2
+        exit 1
+      fi
+      echo "[restore-rehearsal] exact empty-ledger refusal preserved candidate objects, ACLs, and ledger rows"
+      VERDIFY_MIGRATE_ALLOW_BASELINE=1 /work/bin/apply-migrations.sh
+      baseline_count="$(psql -X -v ON_ERROR_STOP=1 -At -d "${PGDATABASE}" \
+        -c "SELECT count(*) FROM public.schema_migrations WHERE source = 'db/migrations' AND stamp_method = 'baseline'")"
+      if (( baseline_count == 0 )); then
+        echo "[restore-rehearsal] FATAL: authorized empty-ledger recovery did not stamp the audited baseline" >&2
+        exit 1
+      fi
+      echo "[restore-rehearsal] audited baseline and candidate migration ledger created"
+    else
+      echo "[restore-rehearsal] restored ledger is nonempty; empty-ledger baseline refusal branch not applicable"
+      env -u VERDIFY_MIGRATE_ALLOW_BASELINE /work/bin/apply-migrations.sh
+    fi
+
+    env -u VERDIFY_MIGRATE_ALLOW_BASELINE \
+      /work/bin/apply-migrations.sh | tee /tmp/second-migration-replay.log
+    if ! grep -Fq 'ledger is current' /tmp/second-migration-replay.log; then
+      echo "[restore-rehearsal] FATAL: second migration replay did not report a current ledger" >&2
+      exit 1
+    fi
+    if (( baseline_branch == 0 )); then
+      write_ledger_row_snapshot /tmp/restored-ledger-after.rows
+      if [[ -n "$(comm -23 /tmp/restored-ledger-before.rows /tmp/restored-ledger-after.rows)" ]]; then
+        echo "[restore-rehearsal] FATAL: candidate replay removed or rewrote a restored migration-ledger row" >&2
+        exit 1
+      fi
+      echo "[restore-rehearsal] pre-existing restored ledger rows were preserved byte-for-byte"
+    fi
+    for migration in \
+      214-confirmed-component-experiment-v2.sql \
+      215-experiment-v2-ops-observability.sql \
+      216-equipment-counter-source-ledger.sql \
+      217-runtime-role-boundary.sql
+    do
+      expected_sha256="$(sha256sum -- "/work/db/migrations/${migration}" | awk '{print $1}')"
+      ledger_sha256="$(psql -X -v ON_ERROR_STOP=1 -At -d "${PGDATABASE}" \
+        -c "SELECT sha256 FROM public.schema_migrations WHERE source = 'db/migrations' AND filename = 'db/migrations/${migration}'")"
+      if [[ "${ledger_sha256}" != "${expected_sha256}" ]]; then
+        echo "[restore-rehearsal] FATAL: ${migration} is not current in the migration ledger" >&2
+        exit 1
+      fi
+    done
+    echo "[restore-rehearsal] candidate migrations applied twice; exact candidate ledger is current"
+
+    psql -X -v ON_ERROR_STOP=1 -d "${PGDATABASE}" \
+      -f /work/db/migrations/tests/test-214-confirmed-component-experiment-v2.sql
+    psql -X -v ON_ERROR_STOP=1 -d "${PGDATABASE}" \
+      -f /work/db/migrations/tests/test-216-equipment-counter-source-ledger.sql
+    psql -X -v ON_ERROR_STOP=1 -d "${PGDATABASE}" \
+      -f /work/db/migrations/tests/test-217-runtime-role-boundary.sql
+    psql -X -v ON_ERROR_STOP=1 -d "${PGDATABASE}" <<'SQL'
+    DO $assertions$
+    BEGIN
+      IF NOT EXISTS (
+           SELECT 1
+             FROM pg_roles
+            WHERE rolname = 'verdify'
+              AND NOT rolsuper
+         ) OR
+         NOT EXISTS (
+           SELECT 1
+             FROM pg_roles
+            WHERE rolname = 'verdify_experiment_equipment_source_collector'
+              AND NOT rolcanlogin
+              AND NOT rolinherit
+              AND NOT rolsuper
+              AND NOT rolcreatedb
+              AND NOT rolcreaterole
+              AND NOT rolreplication
+              AND NOT rolbypassrls
+         ) OR
+         NOT EXISTS (
+           SELECT 1
+             FROM pg_roles
+            WHERE rolname =
+                      'verdify_experiment_v2_equipment_source_collector_login'
+              AND rolcanlogin
+              AND rolinherit
+              AND NOT rolsuper
+              AND NOT rolcreatedb
+              AND NOT rolcreaterole
+              AND NOT rolreplication
+              AND NOT rolbypassrls
+         ) OR
+         (SELECT count(*)
+            FROM pg_auth_members membership
+           WHERE membership.member = (
+                     SELECT oid FROM pg_roles
+                      WHERE rolname =
+                        'verdify_experiment_v2_equipment_source_collector_login'
+                 )) <> 1 OR
+         NOT EXISTS (
+           SELECT 1
+             FROM pg_auth_members membership
+            WHERE membership.roleid = (
+                      SELECT oid FROM pg_roles
+                       WHERE rolname =
+                         'verdify_experiment_equipment_source_collector'
+                  )
+              AND membership.member = (
+                      SELECT oid FROM pg_roles
+                       WHERE rolname =
+                         'verdify_experiment_v2_equipment_source_collector_login'
+                  )
+         ) OR
+         EXISTS (
+           SELECT 1
+             FROM pg_auth_members membership
+            WHERE membership.roleid = (
+                      SELECT oid FROM pg_roles
+                       WHERE rolname =
+                         'verdify_experiment_equipment_source_collector'
+                  )
+              AND membership.member <> (
+                      SELECT oid FROM pg_roles
+                       WHERE rolname =
+                         'verdify_experiment_v2_equipment_source_collector_login'
+                  )
+         ) OR
+         EXISTS (
+           SELECT 1
+             FROM pg_class relation
+             CROSS JOIN LATERAL aclexplode(coalesce(
+                 relation.relacl,
+                 acldefault('r', relation.relowner))) acl
+            WHERE relation.oid IN (
+                      'public.equipment_counter_samples'::regclass,
+                      'public.equipment_direct_state_snapshots'::regclass,
+                      'public.equipment_state_source_receipts'::regclass,
+                      'public.experiment_v2_outcome_source_bindings'::regclass)
+              AND acl.grantee = (
+                      SELECT oid FROM pg_roles
+                       WHERE rolname =
+                         'verdify_experiment_v2_equipment_source_collector_login'
+                  )
+         ) OR
+         to_regprocedure('public.fn_experiment_v2_ops_status()') IS NULL OR
+         NOT has_function_privilege(
+           'verdify', 'public.fn_experiment_v2_ops_status()', 'EXECUTE') OR
+         has_table_privilege(
+           'verdify', 'public.experiment_v2_work', 'SELECT') OR
+         to_regprocedure(
+           'public.fn_record_equipment_counter_sample(uuid,timestamptz,text,text,text,double precision,text,uuid,double precision,uuid,bigint,text)'
+         ) IS NULL OR
+         has_function_privilege(
+           'verdify',
+           'public.fn_record_equipment_counter_sample(uuid,timestamptz,text,text,text,double precision,text,uuid,double precision,uuid,bigint,text)',
+           'EXECUTE') OR
+         NOT has_function_privilege(
+           'verdify_experiment_equipment_source_collector',
+           'public.fn_record_equipment_counter_sample(uuid,timestamptz,text,text,text,double precision,text,uuid,double precision,uuid,bigint,text)',
+           'EXECUTE') OR
+         to_regprocedure(
+           'public.fn_record_equipment_direct_state_snapshot(uuid,uuid,text,text,jsonb,double precision,uuid,bigint,text)'
+         ) IS NULL OR
+         has_function_privilege(
+           'verdify',
+           'public.fn_record_equipment_direct_state_snapshot(uuid,uuid,text,text,jsonb,double precision,uuid,bigint,text)',
+           'EXECUTE') OR
+         NOT has_function_privilege(
+           'verdify_experiment_equipment_source_collector',
+           'public.fn_record_equipment_direct_state_snapshot(uuid,uuid,text,text,jsonb,double precision,uuid,bigint,text)',
+           'EXECUTE') OR
+         to_regprocedure(
+           'public.fn_record_equipment_state_source_receipt(uuid,timestamptz,text,text,jsonb,boolean,uuid,bigint,text)'
+         ) IS NULL OR
+         has_function_privilege(
+           'verdify',
+           'public.fn_record_equipment_state_source_receipt(uuid,timestamptz,text,text,jsonb,boolean,uuid,bigint,text)',
+           'EXECUTE') OR
+         NOT has_function_privilege(
+           'verdify_experiment_equipment_source_collector',
+           'public.fn_record_equipment_state_source_receipt(uuid,timestamptz,text,text,jsonb,boolean,uuid,bigint,text)',
+           'EXECUTE') OR
+         to_regprocedure(
+           'public.fn_experiment_v2_outcome_source_cycle(uuid)'
+         ) IS NULL OR
+         NOT has_function_privilege(
+           'verdify_experiment_outcome_freezer',
+           'public.fn_experiment_v2_outcome_source_cycle(uuid)',
+           'EXECUTE') OR
+         has_table_privilege(
+           'verdify', 'public.equipment_counter_samples', 'SELECT') OR
+         has_table_privilege(
+           'verdify', 'public.equipment_direct_state_snapshots', 'SELECT') OR
+         has_table_privilege(
+           'verdify', 'public.equipment_state_source_receipts', 'SELECT') OR
+         has_table_privilege(
+           'verdify_experiment_equipment_source_collector',
+           'public.equipment_counter_samples', 'SELECT') OR
+         has_table_privilege(
+           'verdify_experiment_equipment_source_collector',
+           'public.equipment_direct_state_snapshots', 'SELECT') OR
+         has_table_privilege(
+           'verdify_experiment_equipment_source_collector',
+           'public.equipment_state_source_receipts', 'SELECT') OR
+         has_table_privilege(
+           'verdify_experiment_outcome_freezer',
+           'public.experiment_v2_outcome_source_bindings', 'SELECT') THEN
+        RAISE EXCEPTION 'v2 non-superuser schema/ACL boundary differs from the candidate contract';
+      END IF;
+      PERFORM * FROM public.fn_experiment_v2_ops_status();
+    END;
+    $assertions$;
+    SQL
+    echo "[restore-rehearsal] PASS: recent-dump schema/ACL replay and v2 vertical fixtures (non-superuser rehearsal; not proof of production-superuser denial)"

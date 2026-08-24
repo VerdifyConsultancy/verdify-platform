@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-api
+spec:
+  template:
+    spec:
+      containers:
+        - name: api
+          env:
+            # Explicit env wins over the shared DB_USER in verdify-config. The
+            # process rejects any identity other than migration 217's exact
+            # login, including a higher-precedence owner DATABASE_URL.
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: VERDIFY_API_RUNTIME_DB_USER
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: VERDIFY_API_RUNTIME_DB_PASSWORD
+            - name: VERDIFY_API_RUNTIME_DB_ROLE_REQUIRED
+              value: "1"
+            # The owner password must not remain ambient after cutover.
+            - name: POSTGRES_PASSWORD
+              $patch: delete

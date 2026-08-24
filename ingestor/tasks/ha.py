@@ -111,7 +111,7 @@ async def water_flowing_sync(pool: asyncpg.Pool) -> None:
 async def water_meter_materialize(pool: asyncpg.Pool) -> None:
     """Advance the idempotent cumulative-meter event ledger (#437)."""
     async with pool.acquire() as conn:
-        row = await conn.fetchrow("SELECT * FROM materialize_water_meter_events('vallery', now())")
+        row = await conn.fetchrow("SELECT * FROM public.fn_runtime_materialize_water_meter_events('vallery', now())")
     if row is None:
         log.error("water_meter_materialize: materializer returned no status row")
         return
@@ -134,19 +134,7 @@ async def water_meter_materialize(pool: asyncpg.Pool) -> None:
 # ═════════════════════════════════════════════════════════════════
 async def matview_refresh(pool: asyncpg.Pool) -> None:
     async with pool.acquire() as conn:
-        await conn.execute("SELECT refresh_relay_stuck(0, '{}'::jsonb)")
-        await conn.execute("SELECT refresh_climate_merged(0, '{}'::jsonb)")
-        await conn.execute("SELECT refresh_greenhouse_state(0, '{}'::jsonb)")
-        # mv_band_curve (migration 167) caches the deterministic solar band +
-        # per-zone VPD target curves for the graphs.verdify.ai compliance panels
-        # (slides now±4d). This task is its sole refresh (fresh pods can't open a
-        # DB connection on this cluster, so a standalone CronJob is unreliable).
-        # Guard on existence so this is a no-op before the migration lands.
-        # CONCURRENTLY needs the matview's unique index.
-        try:
-            await conn.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY mv_band_curve")
-        except asyncpg.exceptions.UndefinedTableError:
-            pass
+        await conn.execute("SELECT public.fn_runtime_refresh_materialized_views()")
     log.debug("Materialized views refreshed")
 
 

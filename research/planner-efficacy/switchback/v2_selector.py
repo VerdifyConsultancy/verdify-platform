@@ -21,23 +21,61 @@ import unicodedata
 import uuid
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Any, Literal, Protocol
 
 ProfileId = Literal["baseline", "moderate", "aggressive"]
 VALID_PROFILES: tuple[ProfileId, ...] = ("baseline", "moderate", "aggressive")
+# A frozen selector identity cannot authorize an unbounded provider wait/retry
+# loop.  The current 10-second/two-attempt identity remains inside this cap.
+MAX_SELECTOR_TIMEOUT_MILLISECONDS = 60_000
+MAX_SELECTOR_ATTEMPTS = 3
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
-_SAFE_CONTEXT_KINDS = frozenset(
+_CONTEXT_SCHEMA = "verdify-selector-context-v2"
+_CLIMATE_SOURCE_SCHEMA = "verdify-selector-climate-source-v1"
+_FORECAST_SOURCE_SCHEMA = "verdify-selector-forecast-source-v1"
+_CLIMATE_VALUE_FIELDS = frozenset(
     {
-        "climate_history",
-        "outside_weather",
-        "forecast_vintage",
-        "crop_state",
-        "facility_state",
-        "equipment_availability",
-        "irrigation_fertigation_covariate",
-        "frozen_lesson_snapshot",
+        "temp_avg_f",
+        "temp_north_f",
+        "temp_south_f",
+        "temp_east_f",
+        "temp_west_f",
+        "rh_avg_pct",
+        "rh_north_pct",
+        "rh_south_pct",
+        "rh_east_pct",
+        "rh_west_pct",
+        "vpd_avg_kpa",
+        "vpd_north_kpa",
+        "vpd_south_kpa",
+        "vpd_east_kpa",
+        "vpd_west_kpa",
+        "dew_point_f",
+        "outdoor_temp_f",
+        "outdoor_rh_pct",
+        "solar_irradiance_w_m2",
+        "leaf_temp_north_f",
+        "leaf_temp_south_f",
+        "leaf_wetness_north",
+        "leaf_wetness_south",
+        "wind_speed_mph",
+        "precip_in",
+        "flow_gpm",
+        "mister_water_today_gal",
+    }
+)
+_FORECAST_VALUE_FIELDS = frozenset(
+    {
+        "temp_f",
+        "rh_pct",
+        "vpd_kpa",
+        "cloud_cover_pct",
+        "wind_speed_mph",
+        "solar_w_m2",
+        "precip_prob_pct",
+        "direct_radiation_w_m2",
     }
 )
 _FORBIDDEN_KEY_PARTS = frozenset(
@@ -64,9 +102,14 @@ _FORBIDDEN_KEY_PARTS = frozenset(
 
 
 def _aware_utc(value: datetime, field: str) -> datetime:
-    if value.tzinfo is None or value.utcoffset() is None:
+    if not isinstance(value, datetime) or value.tzinfo is None or value.utcoffset() is None:
         raise ValueError(f"{field} must be timezone-aware")
     return value.astimezone(UTC)
+
+
+def _trusted_utc_now() -> datetime:
+    """Source-owned wall clock used after provider return; callers cannot backdate it."""
+    return datetime.now(UTC)
 
 
 def _require_sha256(value: str, field: str) -> None:
@@ -74,10 +117,23 @@ def _require_sha256(value: str, field: str) -> None:
         raise ValueError(f"{field} must be lowercase SHA-256 hex")
 
 
-def _validate_nfc_and_safe(value: Any, path: tuple[str, ...] = ()) -> None:
+def _validate_nfc_and_safe(
+    value: Any,
+    path: tuple[str, ...] = (),
+    *,
+    allow_string_values: bool = True,
+) -> None:
     if isinstance(value, str):
         if unicodedata.normalize("NFC", value) != value:
             raise ValueError(f"context string at {'.'.join(path) or '<root>'} must already be Unicode NFC")
+        if not allow_string_values:
+            # Until each context kind has a frozen, typed positive schema,
+            # accepting caller-supplied prose/enums would let an arm, mapping,
+            # outcome, online lesson, or credential hide under an innocuous
+            # key such as ``note``. Numeric/bool/null covariates remain usable;
+            # textual context must be represented by a frozen artifact hash in
+            # SelectorIdentity rather than copied into the provider request.
+            raise ValueError(f"free-form selector-context string at {'.'.join(path) or '<root>'} is forbidden")
         return
     if value is None or isinstance(value, (bool, int)):
         return
@@ -92,12 +148,13 @@ def _validate_nfc_and_safe(value: Any, path: tuple[str, ...] = ()) -> None:
             normalized = key.lower().replace("-", "_")
             if any(part in normalized for part in _FORBIDDEN_KEY_PARTS):
                 raise ValueError(f"forbidden selector-context key at {'.'.join(path + (key,))}")
-            _validate_nfc_and_safe(key, path + (key,))
-            _validate_nfc_and_safe(item, path + (key,))
+            if unicodedata.normalize("NFC", key) != key:
+                raise ValueError(f"context key at {'.'.join(path + (key,))} must already be Unicode NFC")
+            _validate_nfc_and_safe(item, path + (key,), allow_string_values=allow_string_values)
         return
     if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
         for index, item in enumerate(value):
-            _validate_nfc_and_safe(item, path + (str(index),))
+            _validate_nfc_and_safe(item, path + (str(index),), allow_string_values=allow_string_values)
         return
     raise TypeError(f"unsupported selector-context value at {'.'.join(path)}: {type(value).__name__}")
 
@@ -156,8 +213,15 @@ class SelectorIdentity:
             "lesson_snapshot_sha256",
         ):
             _require_sha256(getattr(self, field), field)
-        if self.timeout_milliseconds <= 0 or self.max_attempts < 1:
-            raise ValueError("timeout_milliseconds and max_attempts must be positive")
+        if (
+            type(self.timeout_milliseconds) is not int
+            or not 1 <= self.timeout_milliseconds <= MAX_SELECTOR_TIMEOUT_MILLISECONDS
+        ):
+            raise ValueError(
+                f"timeout_milliseconds must be an exact integer in [1,{MAX_SELECTOR_TIMEOUT_MILLISECONDS}]"
+            )
+        if type(self.max_attempts) is not int or not 1 <= self.max_attempts <= MAX_SELECTOR_ATTEMPTS:
+            raise ValueError(f"max_attempts must be an exact integer in [1,{MAX_SELECTOR_ATTEMPTS}]")
 
     def as_request_identity(self) -> dict[str, str | int]:
         return {
@@ -184,60 +248,210 @@ class SelectorIdentity:
 
 
 @dataclass(frozen=True)
-class ContextRecord:
-    observed_at: datetime
-    kind: str
-    payload: Mapping[str, Any]
-
-
-@dataclass(frozen=True)
 class FrozenContext:
+    local_date: str
     cutoff_at: datetime
     boundary_at: datetime
     records: tuple[dict[str, Any], ...]
+    canonical_bytes: bytes
     canonical_sha256: str
 
 
-def freeze_context(
-    records: Sequence[ContextRecord],
+def _canonical_utc_text(value: datetime, field: str) -> str:
+    return _aware_utc(value, field).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+
+
+def _parse_canonical_utc_text(value: Any, field: str) -> datetime:
+    if not isinstance(value, str):
+        raise TypeError(f"{field} must be canonical RFC3339 UTC text")
+    try:
+        parsed = datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=UTC)
+    except ValueError as exc:
+        raise ValueError(f"{field} must be canonical RFC3339 UTC text") from exc
+    if parsed.strftime("%Y-%m-%dT%H:%M:%S.%fZ") != value:
+        raise ValueError(f"{field} must be canonical RFC3339 UTC text")
+    return parsed
+
+
+def _canonical_local_date(value: Any) -> str:
+    if not isinstance(value, str):
+        raise TypeError("selector context local_date must be canonical YYYY-MM-DD")
+    try:
+        parsed = date.fromisoformat(value)
+    except ValueError as exc:
+        raise ValueError("selector context local_date must be canonical YYYY-MM-DD") from exc
+    if parsed.isoformat() != value:
+        raise ValueError("selector context local_date must be canonical YYYY-MM-DD")
+    return value
+
+
+def _exact_mapping(value: Any, fields: frozenset[str], label: str) -> Mapping[str, Any]:
+    if not isinstance(value, Mapping) or set(value) != fields:
+        raise ValueError(f"{label} must contain exactly {sorted(fields)}")
+    if not all(isinstance(key, str) for key in value):
+        raise TypeError(f"{label} keys must be strings")
+    return value
+
+
+def _typed_values(value: Any, fields: frozenset[str], label: str) -> dict[str, int | float | None]:
+    source = _exact_mapping(value, fields, label)
+    result: dict[str, int | float | None] = {}
+    for key in sorted(fields):
+        item = source[key]
+        if item is None:
+            result[key] = None
+        elif type(item) in (int, float) and math.isfinite(item):
+            result[key] = item
+        else:
+            raise ValueError(f"{label}.{key} must be a finite JSON number or null")
+    return result
+
+
+def _validated_context_envelope(
+    value: Any,
     *,
+    expected_local_date: str,
+    expected_cutoff: datetime,
+    expected_boundary: datetime,
+) -> dict[str, Any]:
+    source = _exact_mapping(
+        value,
+        frozenset(
+            {
+                "schema",
+                "local_date",
+                "context_cutoff_at",
+                "boundary_at",
+                "climate_observations",
+                "forecast_vintage",
+            }
+        ),
+        "selector context envelope",
+    )
+    local_date = _canonical_local_date(source["local_date"])
+    cutoff = _parse_canonical_utc_text(source["context_cutoff_at"], "context_cutoff_at")
+    boundary = _parse_canonical_utc_text(source["boundary_at"], "boundary_at")
+    if (
+        source["schema"] != _CONTEXT_SCHEMA
+        or local_date != expected_local_date
+        or cutoff != expected_cutoff
+        or boundary != expected_boundary
+        or cutoff >= boundary
+    ):
+        raise ValueError("frozen selector context envelope mismatch; audit and abort")
+    climate_source = source["climate_observations"]
+    forecast_source = source["forecast_vintage"]
+    if not isinstance(climate_source, list) or not isinstance(forecast_source, list):
+        raise TypeError("selector context source collections must be arrays")
+
+    climate: list[dict[str, Any]] = []
+    climate_order: list[tuple[datetime, str]] = []
+    usable_climate = False
+    for index, item in enumerate(climate_source):
+        row = _exact_mapping(
+            item,
+            frozenset({"schema", "observed_at", "source_row_sha256", "values"}),
+            f"climate_observations[{index}]",
+        )
+        if row["schema"] != _CLIMATE_SOURCE_SCHEMA:
+            raise ValueError("climate selector source schema mismatch")
+        observed = _parse_canonical_utc_text(row["observed_at"], "climate.observed_at")
+        if observed > cutoff:
+            raise ValueError("frozen selector context contains post-cutoff climate data")
+        source_hash = row["source_row_sha256"]
+        if not isinstance(source_hash, str) or not _SHA256_RE.fullmatch(source_hash):
+            raise ValueError("climate.source_row_sha256 must be lowercase SHA-256 hex")
+        values = _typed_values(row["values"], _CLIMATE_VALUE_FIELDS, "climate values")
+        usable_climate = usable_climate or (values["temp_avg_f"] is not None and values["vpd_avg_kpa"] is not None)
+        climate.append(
+            {
+                "schema": _CLIMATE_SOURCE_SCHEMA,
+                "observed_at": row["observed_at"],
+                "source_row_sha256": source_hash,
+                "values": values,
+            }
+        )
+        climate_order.append((observed, source_hash))
+    if not climate or not usable_climate:
+        raise ValueError("selector context lacks a usable real climate observation")
+    if climate_order != sorted(climate_order) or len(set(climate_order)) != len(climate_order):
+        raise ValueError("climate source rows must be uniquely ordered")
+
+    forecast: list[dict[str, Any]] = []
+    forecast_order: list[tuple[datetime, datetime, str]] = []
+    valid_times: set[datetime] = set()
+    for index, item in enumerate(forecast_source):
+        row = _exact_mapping(
+            item,
+            frozenset({"schema", "valid_at", "fetched_at", "source_row_sha256", "values"}),
+            f"forecast_vintage[{index}]",
+        )
+        if row["schema"] != _FORECAST_SOURCE_SCHEMA:
+            raise ValueError("forecast selector source schema mismatch")
+        valid = _parse_canonical_utc_text(row["valid_at"], "forecast.valid_at")
+        fetched = _parse_canonical_utc_text(row["fetched_at"], "forecast.fetched_at")
+        if fetched > cutoff or valid < cutoff or valid >= boundary + timedelta(hours=24):
+            raise ValueError("forecast vintage violates cutoff/horizon")
+        source_hash = row["source_row_sha256"]
+        if not isinstance(source_hash, str) or not _SHA256_RE.fullmatch(source_hash):
+            raise ValueError("forecast.source_row_sha256 must be lowercase SHA-256 hex")
+        if valid in valid_times:
+            raise ValueError("forecast vintage must contain one as-of row per valid time")
+        valid_times.add(valid)
+        values = _typed_values(row["values"], _FORECAST_VALUE_FIELDS, "forecast values")
+        forecast.append(
+            {
+                "schema": _FORECAST_SOURCE_SCHEMA,
+                "valid_at": row["valid_at"],
+                "fetched_at": row["fetched_at"],
+                "source_row_sha256": source_hash,
+                "values": values,
+            }
+        )
+        forecast_order.append((valid, fetched, source_hash))
+    if forecast_order != sorted(forecast_order) or len(set(forecast_order)) != len(forecast_order):
+        raise ValueError("forecast source rows must be uniquely ordered")
+    return {
+        "schema": _CONTEXT_SCHEMA,
+        "local_date": local_date,
+        "context_cutoff_at": source["context_cutoff_at"],
+        "boundary_at": source["boundary_at"],
+        "climate_observations": climate,
+        "forecast_vintage": forecast,
+    }
+
+
+def freeze_context(
+    *,
+    local_date: str,
+    climate_observations: Sequence[Mapping[str, Any]],
+    forecast_vintage: Sequence[Mapping[str, Any]],
     cutoff_at: datetime,
     boundary_at: datetime,
 ) -> FrozenContext:
-    """Create the arm-free, pre-cutoff context used identically on both arms.
-
-    Records after the cutoff and kinds outside the positive allowlist are
-    excluded.  Forbidden nested keys in an otherwise admitted record fail
-    closed, so arm/outcome/credential leakage cannot be hidden in a payload.
-    """
+    """Freeze only the exact DB-derived, typed selector-context v2 envelope."""
     cutoff = _aware_utc(cutoff_at, "cutoff_at")
     boundary = _aware_utc(boundary_at, "boundary_at")
     if cutoff >= boundary:
         raise ValueError("selector context cutoff must be strictly before the local-day boundary")
-    admitted: list[dict[str, Any]] = []
-    for record in records:
-        observed = _aware_utc(record.observed_at, "record.observed_at")
-        if observed > cutoff or record.kind not in _SAFE_CONTEXT_KINDS:
-            continue
-        if not isinstance(record.payload, Mapping):
-            raise TypeError("context payload must be a mapping")
-        _validate_nfc_and_safe(record.payload, (record.kind,))
-        admitted.append(
-            {
-                "kind": record.kind,
-                "observed_at": observed.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
-                "payload": dict(record.payload),
-            }
-        )
-    admitted.sort(key=lambda item: (item["observed_at"], item["kind"], canonical_request_bytes(item)))
-    envelope = {
-        "boundary_at": boundary.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
-        "cutoff_at": cutoff.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
-        "records": admitted,
-        "schema": "verdify-selector-context-v2",
-    }
-    digest = hashlib.sha256(canonical_request_bytes(envelope)).hexdigest()
-    return FrozenContext(cutoff, boundary, tuple(admitted), digest)
+    local_date = _canonical_local_date(local_date)
+    envelope = _validated_context_envelope(
+        {
+            "schema": _CONTEXT_SCHEMA,
+            "local_date": local_date,
+            "context_cutoff_at": _canonical_utc_text(cutoff, "cutoff_at"),
+            "boundary_at": _canonical_utc_text(boundary, "boundary_at"),
+            "climate_observations": list(climate_observations),
+            "forecast_vintage": list(forecast_vintage),
+        },
+        expected_local_date=local_date,
+        expected_cutoff=cutoff,
+        expected_boundary=boundary,
+    )
+    canonical = canonical_request_bytes(envelope)
+    digest = hashlib.sha256(canonical).hexdigest()
+    records = tuple(envelope["climate_observations"] + envelope["forecast_vintage"])
+    return FrozenContext(local_date, cutoff, boundary, records, canonical, digest)
 
 
 @dataclass(frozen=True)
@@ -308,7 +522,25 @@ def _attempt_receipt(kind: str, response_hash: str | None, attempt: int) -> str:
     return hashlib.sha256(canonical_request_bytes(payload)).hexdigest()
 
 
+def _unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"duplicate JSON object key: {key}")
+        result[key] = value
+    return result
+
+
 def _validate_response(response: ProviderResponse, identity: SelectorIdentity, boundary_at: datetime) -> ProfileId:
+    if (
+        not isinstance(response.completed_at, datetime)
+        or not isinstance(response.provider, str)
+        or not isinstance(response.model_identifier, str)
+        or not isinstance(response.model_revision, str)
+        or not isinstance(response.system_fingerprint, str)
+        or not isinstance(response.raw_response, bytes)
+    ):
+        raise TypeError("malformed")
     completed = _aware_utc(response.completed_at, "response.completed_at")
     if completed >= boundary_at:
         raise ValueError("late")
@@ -322,12 +554,38 @@ def _validate_response(response: ProviderResponse, identity: SelectorIdentity, b
     if actual != expected:
         raise ValueError("revision_mismatch")
     try:
-        decoded = json.loads(response.raw_response)
-    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        decoded = json.loads(response.raw_response, object_pairs_hook=_unique_json_object)
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
         raise ValueError("malformed") from exc
     if not isinstance(decoded, dict) or set(decoded) != {"profile"} or decoded["profile"] not in VALID_PROFILES:
         raise ValueError("invalid_output")
     return decoded["profile"]
+
+
+def _validated_frozen_records(context: FrozenContext) -> dict[str, Any]:
+    if not isinstance(context.canonical_bytes, bytes):
+        raise TypeError("frozen selector context canonical bytes must be immutable bytes")
+    if (
+        not isinstance(context.canonical_sha256, str)
+        or not _SHA256_RE.fullmatch(context.canonical_sha256)
+        or hashlib.sha256(context.canonical_bytes).hexdigest() != context.canonical_sha256
+    ):
+        raise ValueError("frozen selector context bytes/hash mismatch; audit and abort")
+    cutoff = _aware_utc(context.cutoff_at, "context.cutoff_at")
+    boundary = _aware_utc(context.boundary_at, "context.boundary_at")
+    local_date = _canonical_local_date(context.local_date)
+    if cutoff >= boundary:
+        raise ValueError("frozen selector context cutoff must be strictly before boundary")
+    try:
+        envelope = json.loads(context.canonical_bytes, object_pairs_hook=_unique_json_object)
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
+        raise ValueError("frozen selector context bytes are malformed; audit and abort") from exc
+    return _validated_context_envelope(
+        envelope,
+        expected_local_date=local_date,
+        expected_cutoff=cutoff,
+        expected_boundary=boundary,
+    )
 
 
 def select_once(
@@ -342,6 +600,8 @@ def select_once(
     now: datetime,
 ) -> SelectorChoice:
     """Persist one immutable virtual choice; retries return the existing row."""
+    if context.local_date != local_date:
+        raise ValueError("selector local_date does not match the DB-frozen context")
     invocation_key = _invocation_key(namespace_uuid, study_id, local_date)
     existing = ledger.get(study_id, local_date)
     if existing is not None:
@@ -351,11 +611,16 @@ def select_once(
             raise ValueError("same-day idempotent retry changed frozen invocation/context/identity; audit and abort")
         return existing
     now_utc = _aware_utc(now, "now")
-    if now_utc >= context.boundary_at:
+    boundary = _aware_utc(context.boundary_at, "context.boundary_at")
+    trusted_started_at = _trusted_utc_now()
+    if now_utc >= boundary or trusted_started_at >= boundary:
         raise ValueError("missed selector start: no invocation may begin at/after the boundary")
+    frozen_context = _validated_frozen_records(context)
     request = canonical_request_bytes(
         {
-            "context": list(context.records),
+            # Canonical immutable bytes, not the convenience ``records`` view,
+            # are authoritative so a caller cannot mutate context after freeze.
+            "context": frozen_context,
             "context_sha256": context.canonical_sha256,
             "identity": identity.as_request_identity(),
             "invocation_key": invocation_key,
@@ -377,7 +642,10 @@ def select_once(
                 idempotency_key=invocation_key,
                 timeout_milliseconds=identity.timeout_milliseconds,
             )
-            if not isinstance(response.raw_response, (bytes, bytearray, memoryview)):
+            locally_completed_at = _trusted_utc_now()
+            if not isinstance(response, ProviderResponse) or not isinstance(
+                response.raw_response, (bytes, bytearray, memoryview)
+            ):
                 fallback_reason = "malformed"
                 receipts.append(_attempt_receipt("malformed", None, attempt))
                 break
@@ -391,11 +659,13 @@ def select_once(
             )
             response_hash = hashlib.sha256(response.raw_response).hexdigest()
             try:
-                profile = _validate_response(response, identity, context.boundary_at)
+                if locally_completed_at >= boundary:
+                    raise ValueError("late")
+                profile = _validate_response(response, identity, boundary)
                 fallback_reason = None
                 receipts.append(_attempt_receipt("accepted", response_hash, attempt))
                 break
-            except ValueError as exc:
+            except (TypeError, ValueError) as exc:
                 fallback_reason = str(exc)
                 receipts.append(_attempt_receipt(fallback_reason, response_hash, attempt))
                 break
@@ -405,6 +675,15 @@ def select_once(
         except (ProviderUnavailableError, ConnectionError, OSError):
             receipts.append(_attempt_receipt("provider_unavailable", None, attempt))
             fallback_reason = "provider_unavailable"
+    accepted_at = _trusted_utc_now()
+    if accepted_at >= boundary:
+        # Match the DB's SQLSTATE V2B01 retry contract: after a boundary race,
+        # only this source-bound, no-response baseline sentinel can persist.
+        profile = "baseline"
+        fallback_reason = "boundary_elapsed_before_choice_persist"
+        request_hash = context.canonical_sha256
+        response_hash = None
+        receipts.append(_attempt_receipt("boundary_elapsed_before_choice_persist", None, len(receipts) + 1))
     choice = SelectorChoice(
         choice_id=invocation_key,
         study_id=study_id,
@@ -417,7 +696,7 @@ def select_once(
         raw_request_sha256=request_hash,
         raw_response_sha256=response_hash,
         attempt_receipt_sha256=tuple(receipts),
-        accepted_at=now_utc,
+        accepted_at=accepted_at,
     )
     accepted = ledger.insert_once(choice)
     expected = (invocation_key, context.canonical_sha256, identity.digest_sha256, local_date)
@@ -447,7 +726,14 @@ def resolve_boundary_profile(
     if _aware_utc(resolved_at, "resolved_at") != boundary:
         raise ValueError("profile admission is boundary-only; intraday admission is forbidden")
     if choice.accepted_at >= boundary:
-        raise ValueError("late selector choice")
+        if (
+            choice.profile != "baseline"
+            or choice.fallback_reason != "boundary_elapsed_before_choice_persist"
+            or choice.raw_response_sha256 is not None
+            or choice.raw_request_sha256 != choice.context_sha256
+        ):
+            raise ValueError("late selector choice")
+        return "baseline"
     if physical_arm == "A":
         return "baseline"
     if physical_arm == "B":

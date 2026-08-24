@@ -1,5 +1,5 @@
 {
-  "artifact_sha256": "6231b9f99ebed0ea758a0c056f9c338b37e473d002d9059c1d24aa383e85e32b",
+  "artifact_sha256": "4d751a76465d03dc2e75034dcb398d25dc39b375d9976671bd8fffb018d237a2",
   "assumptions": {
     "complete_pair_probability": 0.9995,
     "correlation": [
@@ -190,8 +190,9 @@
     "no_adaptive_sample_size": true
   },
   "source_files_sha256": {
+    "research/planner-efficacy/generate_v2_artifacts.py": "7d552cca401e6887e1fca23f4b007744d1ce2aec6e756e6af954c93cdd8c3fd2",
     "research/planner-efficacy/results-current-firmware-supplement-2026-08-14.json": "0f477b4b39268b0ed03a02740c01e7f25b3d4b47ff390e6aa3c36eb8254726cf",
-    "research/planner-efficacy/switchback/v2_power.py": "a33de7aa20ee22bbca9f6eecdfcd7671754f7fb92760b3650dcffe458bda8bb4"
+    "research/planner-efficacy/switchback/v2_power.py": "fa39a9157da04a15b899dadea66a4d82b7a365521cf1c48dadede7e8c0c11921"
   },
   "status": "PROVISIONAL PRE-DRAW SCENARIO \u2014 not eligible for randomization lock",
   "version": 1

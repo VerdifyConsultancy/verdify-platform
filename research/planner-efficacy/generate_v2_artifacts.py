@@ -32,17 +32,17 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def _write(path: Path, value: dict) -> None:
-    path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n")
+def _render(value: dict) -> bytes:
+    return (json.dumps(value, indent=2, sort_keys=True) + "\n").encode()
 
 
-def generate(repo_root: Path) -> list[Path]:
+def generate(repo_root: Path, *, check: bool = False) -> list[Path]:
     research = repo_root / "research/planner-efficacy"
     profile_path = research / "baseline/planner-switchback-v2-profiles.json"
     power_path = research / "protocols/planner-switchback-v2-power.json"
     schedule_path = research / "protocols/blinded-schedule-v2.golden.json"
     analyzer_path = research / "protocols/analyzer-interface-v2.golden.json"
-    _write(profile_path, build_profile_artifact(repo_root))
+    outputs: dict[Path, dict] = {profile_path: build_profile_artifact(repo_root)}
 
     assumptions = PowerAssumptions(
         paired_sd=(0.12198766625845635, 0.43532608025564046, 1062.9947787716267),
@@ -54,12 +54,14 @@ def generate(repo_root: Path) -> list[Path]:
     selection = choose_fixed_pairs(assumptions, repetitions=25_000, seed=588_639)
     source_result = research / "results-current-firmware-supplement-2026-08-14.json"
     power_module = research / "switchback/v2_power.py"
+    generator = research / "generate_v2_artifacts.py"
     artifact = build_power_artifact(
         assumptions,
         selection,
         source_files_sha256={
             str(source_result.relative_to(repo_root)): _sha256(source_result),
             str(power_module.relative_to(repo_root)): _sha256(power_module),
+            str(generator.relative_to(repo_root)): _sha256(generator),
         },
         status="PROVISIONAL PRE-DRAW SCENARIO — not eligible for randomization lock",
         limitations=[
@@ -71,7 +73,7 @@ def generate(repo_root: Path) -> list[Path]:
             "The resulting 150-pair choice applies only to this provisional model. A final fixed m must be chosen once after the missing pre-draw inputs are frozen and before any schedule draw; it may never adapt to randomized outcomes.",
         ],
     )
-    _write(power_path, artifact)
+    outputs[power_path] = artifact
 
     design = DesignLock(
         study_id="verdify-v2-golden",
@@ -86,41 +88,52 @@ def generate(repo_root: Path) -> list[Path]:
     schedule = blinded_schedule(design, SYNTHETIC_GOLDEN_SECRET)
     schedule_bytes = canonical_schedule_bytes(schedule)
     schedule_hash = hashlib.sha256(schedule_bytes).digest()
-    _write(
-        schedule_path,
-        {
-            "schema": "verdify-switchback-v2-randomization-golden",
-            "version": 1,
-            "test_vector_only": True,
-            "synthetic_secret_hex": SYNTHETIC_GOLDEN_SECRET.hex(),
-            "schedule_schema_contract_sha256": schedule_schema_contract_sha256(),
-            "canonical_schedule_utf8_hex": schedule_bytes.hex(),
-            "canonical_schedule_sha256": schedule_hash.hex(),
-            "full_entropy_commitment_sha256": full_entropy_commitment(
-                design.study_id, schedule_hash, SYNTHETIC_GOLDEN_SECRET
-            ).hex(),
-            "hidden_mapping": hidden_mapping(SYNTHETIC_GOLDEN_SECRET, design.study_id),
-            "schedule": schedule,
-        },
-    )
-    _write(
-        analyzer_path,
-        {
-            "schema": "verdify-switchback-v2-analyzer-golden",
-            "version": 1,
-            "input": {"boundary": 0.0, "pair_contrasts": [-3.0, -2.0, -1.0]},
-            "expected": paired_upper_bound([-3.0, -2.0, -1.0], 0.0),
-            "hand_calculation": "mean=-2; sample_sd=1; standard_error=1/sqrt(3); upper=-2+t(.975,2)/sqrt(3)",
-        },
-    )
-    return [profile_path, power_path, schedule_path, analyzer_path]
+    outputs[schedule_path] = {
+        "schema": "verdify-switchback-v2-randomization-golden",
+        "version": 1,
+        "test_vector_only": True,
+        "synthetic_secret_hex": SYNTHETIC_GOLDEN_SECRET.hex(),
+        "schedule_schema_contract_sha256": schedule_schema_contract_sha256(),
+        "canonical_schedule_utf8_hex": schedule_bytes.hex(),
+        "canonical_schedule_sha256": schedule_hash.hex(),
+        "full_entropy_commitment_sha256": full_entropy_commitment(
+            design.study_id, schedule_hash, SYNTHETIC_GOLDEN_SECRET
+        ).hex(),
+        "hidden_mapping": hidden_mapping(SYNTHETIC_GOLDEN_SECRET, design.study_id),
+        "schedule": schedule,
+    }
+    outputs[analyzer_path] = {
+        "schema": "verdify-switchback-v2-analyzer-golden",
+        "version": 1,
+        "input": {"boundary": 0.0, "pair_contrasts": [-3.0, -2.0, -1.0]},
+        "expected": paired_upper_bound([-3.0, -2.0, -1.0], 0.0),
+        "hand_calculation": "mean=-2; sample_sd=1; standard_error=1/sqrt(3); upper=-2+t(.975,2)/sqrt(3)",
+    }
+
+    drift: list[Path] = []
+    for path, value in outputs.items():
+        rendered = _render(value)
+        if check:
+            if not path.is_file() or path.read_bytes() != rendered:
+                drift.append(path)
+        else:
+            path.write_bytes(rendered)
+    if drift:
+        relative = ", ".join(str(path.relative_to(repo_root)) for path in drift)
+        raise ValueError(f"checked-in v2 artifacts differ from deterministic regeneration: {relative}")
+    return list(outputs)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo-root", type=Path, default=Path(__file__).resolve().parents[2])
+    parser.add_argument("--check", action="store_true", help="compare all artifacts without writing")
     args = parser.parse_args()
-    for path in generate(args.repo_root.resolve()):
+    try:
+        paths = generate(args.repo_root.resolve(), check=args.check)
+    except ValueError as exc:
+        parser.exit(1, f"{exc}\n")
+    for path in paths:
         print(path)
 
 

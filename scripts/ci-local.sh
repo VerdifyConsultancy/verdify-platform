@@ -28,13 +28,30 @@ if [ ! -x "$RUFF" ]; then RUFF="$PY -m ruff"; fi
 step() { printf '\n== %s ==\n' "$1"; }
 
 step "ruff lint"
-$RUFF check ingestor/ api/ mcp/ scripts/*.py tests/ verdify_public/ verdify_schemas/
+$RUFF check ingestor/ api/ experiment_orchestrator/ mcp/ scripts/*.py tests/ verdify_public/ verdify_schemas/ \
+  research/planner-efficacy/generate_v2_artifacts.py \
+  research/planner-efficacy/switchback/v2_*.py \
+  research/planner-efficacy/tests/test_protocol_template_contract.py \
+  research/planner-efficacy/tests/test_switchback_v2_*.py
 
 step "ruff format"
-$RUFF format --check ingestor/ api/ mcp/ scripts/*.py tests/ verdify_public/ verdify_schemas/
+$RUFF format --check ingestor/ api/ experiment_orchestrator/ mcp/ scripts/*.py tests/ verdify_public/ verdify_schemas/ \
+  research/planner-efficacy/generate_v2_artifacts.py \
+  research/planner-efficacy/switchback/v2_*.py \
+  research/planner-efficacy/tests/test_protocol_template_contract.py \
+  research/planner-efficacy/tests/test_switchback_v2_*.py
 
 step "schema suites (incl. drift guards + producer payload round-trips)"
 $PY -m pytest -q verdify_schemas/tests/
+
+step "confirmed-component v2 selector/randomization/design contracts"
+$PY -m pytest -q \
+  tests/test_03_ingestor.py \
+  research/planner-efficacy/tests/test_protocol_template_contract.py \
+  research/planner-efficacy/tests/test_switchback_v2_design.py \
+  research/planner-efficacy/tests/test_switchback_v2_randomization.py \
+  research/planner-efficacy/tests/test_switchback_v2_selector.py
+$PY research/planner-efficacy/generate_v2_artifacts.py --check
 
 step "device write gate"
 $PY -m pytest -q tests/test_device_write_gate.py
@@ -55,6 +72,13 @@ $PY -m pytest -q \
   tests/test_api_public_output_policy.py \
   tests/test_climate_intent_replay_evaluator.py \
   tests/test_compliance_feasibility_classifier.py \
+  tests/test_component_experiment_api.py \
+  tests/test_component_experiment_contract.py \
+  tests/test_component_experiment_executor.py \
+  tests/test_component_experiment_observability.py \
+  tests/test_component_experiment_source.py \
+  tests/test_component_experiment_store.py \
+  tests/test_component_experiment_writer.py \
   tests/test_esp32_policy_transaction.py \
   tests/test_experiment_api.py \
   tests/test_experiment_gather_mode.py \
@@ -63,6 +87,17 @@ $PY -m pytest -q \
   tests/test_experiment_qualification_settling.py \
   tests/test_experiment_qualification_spec.py \
   tests/test_experiment_schema_migration.py \
+  tests/test_experiment_v2_counter_source.py \
+  tests/test_experiment_v2_orchestrator_contracts.py \
+  tests/test_experiment_v2_orchestrator_database.py \
+  tests/test_experiment_v2_orchestrator_manifests.py \
+  tests/test_experiment_v2_orchestrator_outcome.py \
+  tests/test_experiment_v2_orchestrator_provider.py \
+  tests/test_experiment_v2_orchestrator_runtime.py \
+  tests/test_experiment_v2_orchestrator_service.py \
+  tests/test_experiment_v2_orchestrator_stores.py \
+  tests/test_experiment_v2_restore_rehearsal.py \
+  tests/test_experiment_v2_data_contract.py \
   tests/test_experiment_verify.py \
   tests/test_experiment_workers.py \
   tests/test_firmware_builder_image.py \
@@ -90,6 +125,8 @@ $PY -m pytest -q \
   tests/test_public_output_policy.py \
   tests/test_public_output_remediation.py \
   tests/test_public_zone_renderer.py \
+  tests/test_release_dockerfile_base_pins.py \
+  tests/test_runtime_role_cutover_manifests.py \
   tests/test_service_restart_drift_guard.py \
   tests/test_setpoint_server_db_backend.py \
   tests/test_site_content_refresh.py \

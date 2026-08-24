@@ -58,6 +58,8 @@ sync the live cluster or restart the ESP32 writer automatically.
 - `verdify-ingestor`
 - `verdify-migrate`
 - `verdify-planner`
+- `verdify-experiment-v2-orchestrator` (non-device lifecycle/selector/freezer;
+  build from `experiment_orchestrator/Dockerfile`)
 
 Device-affecting or external images remain hand-pinned unless a specific validated
 change says otherwise:

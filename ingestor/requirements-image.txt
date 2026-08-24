@@ -22,7 +22,7 @@
 # upper bounds match the majors in the live venv so image==live-runtime holds.
 
 # --- base (pyproject [project]) ---
-aioesphomeapi>=24.0,<45
+aioesphomeapi==44.24.2
 asyncpg>=0.29,<1
 python-dotenv>=1.0,<2
 pyyaml>=6.0,<7

@@ -140,6 +140,9 @@ patches:
   - path: db-storageclass-iscsi.yaml
   # DEVICE-WRITE INTERLOCK (#79): VERDIFY_DEVICE_WRITE_ENABLED=1 — prod only.
   - path: device-write-configmap.yaml
+  # Numbered migrations run in the PreSync hook on the same exact revision,
+  # before API/ingestor workloads can consume the new schema.
+  - path: migration-ledger.patch.yaml
   # ⚠️ TEMPORARY (#382, 2026-06-20): the ingestor `state` volume is emptyDir, not the
   # iSCSI PVC — defined DIRECTLY in ingestor-state-volume.yaml. (The old
   # TEMP-ingestor-state-emptydir.patch.yaml `$patch: replace` here never overrode the

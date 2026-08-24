@@ -58,25 +58,14 @@ data:
   # ARMED 2026-06-20 (recorded task authorization, sprint): the exactly-one writer fence is on.
   VERDIFY_WRITER_LEASE_ENABLED: "1"
 
-  # ---- Controlled planner experiment (#587 / #581, audit §8.10) -----------
-  # Declarative experiment flags with SAFE DEFAULTS. The base pins the
-  # feature-OFF shape; overlays flip these ONLY at the §8.10 rollout steps
-  # (shadow mode at step 2, live+ID at steps 5/6/7) via the prod overlay's
-  # verdify-config patch — never here, and never in prod-dark (which stays
-  # non-actuating). NOTE: any edit to these keys (base or overlay) must be
-  # accompanied by a config-revision bump — run scripts/gen-config-revision.sh —
-  # because verdify-config is consumed via envFrom and a ConfigMap change alone
-  # does NOT restart pods.
-  #
-  # VERDIFY_POLICY_VECTOR_MODE: off | shadow | live
-  #   off    — experiment machinery fully inert: no assignment opens, no
-  #            proposals are admitted into vectors, no outbox work is created.
-  #   shadow — proposal/arbiter/outbox run and persist, but NOTHING is
-  #            delivered to the device (no actuation).
-  #   live   — staged device commit path armed. Live admission ADDITIONALLY
-  #            requires the device-write flag + writer lease, the exact GitOps
-  #            experiment ID below, an armed DB assignment, compatible
-  #            firmware, and an already-confirmed baseline (§8.10).
+  # ---- Confirmed-component v2 experiment (#587 / #581) --------------------
+  # Declarative fast-path flags with SAFE DEFAULTS. The generalized vector
+  # engine is deferred and remains exactly off for this entire experiment
+  # epoch. Only the separate coarse component capability changes through
+  # bounded ConfigMap rollouts; shadow/commissioning/A-A/randomized authority
+  # comes from audited database phase/admission transitions, never from this
+  # ConfigMap. Any edit to these keys (base or overlay) must be accompanied by
+  # a config-revision bump because envFrom does not restart consumers.
   VERDIFY_POLICY_VECTOR_MODE: "off"
   # Confirmed-component v2 capability: off | enabled. This coarse switch
   # defaults off and never encodes shadow/live authority; audited database
@@ -88,11 +77,11 @@ data:
   # NO experiment is admitted. Set (with mode) only through a reviewed GitOps
   # commit at a rollout step; cleared again on completion/rollback.
   VERDIFY_ACTIVE_EXPERIMENT_ID: ""
-  # Legacy direct policy writes (the pre-experiment dispatcher path). "1" keeps
-  # the incumbent behaviour. Flipped to "0" only while an experiment is live
-  # (steps 5/6/7) so the atomic-vector path is the sole policy writer; restored
-  # to "1" during rollback ONLY AFTER the frozen baseline is confirmed
-  # on-device (see docs/runbooks/experiment-rollout.md — order matters).
+  # Keep the incumbent non-vector path enabled. The confirmed-component
+  # executor uses the exclusive Lease plus its source-aware 48-field hold to
+  # prevent interleaving on experiment-owned components while ordinary
+  # non-owned automation continues. Do not set this to "0" for the v2 fast
+  # path; rollback releases the hold only after confirmed baseline recovery.
   VERDIFY_LEGACY_DIRECT_POLICY_WRITES_ENABLED: "1"
 
   # ---- MCP transport authorization (#585/#589, audit §8.7) ----------------

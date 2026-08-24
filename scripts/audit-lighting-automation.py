@@ -306,6 +306,9 @@ def static_checks(audit: Audit) -> None:
     sensors = read(REPO_ROOT / "firmware" / "greenhouse" / "sensors.yaml")
     hardware = read(REPO_ROOT / "firmware" / "greenhouse" / "hardware.yaml")
 
+    policy_lux_freshness = (
+        "tempest_age_s <= (uint32_t)pol(verdify_policy::kPF_outdoor_staleness_max_s, id(outdoor_staleness_max_s))"
+    )
     audit.check(
         all(token in types for token in ("LightingInputs", "LightingSetpoints", "LightingState"))
         and "evaluate_lighting" in logic,
@@ -347,7 +350,7 @@ def static_checks(audit: Audit) -> None:
         and ">= 60000" in controls
         and "main_changed" in controls
         and "grow_changed" in controls
-        and "tempest_age_s <= (uint32_t)id(outdoor_staleness_max_s)" in controls,
+        and policy_lux_freshness in controls,
         "firmware lighting latency contract",
         "lighting evaluates every 5s while telemetry publishes on change or 60s heartbeat",
         "controls.yaml still appears to gate lighting decisions on a 60s-only loop or lacks exterior lux freshness",

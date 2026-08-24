@@ -378,6 +378,16 @@ def test_v2_outcome_sources_and_formulas_are_executable() -> None:
     assert "different fixed window" in actuators["device_counter_reconciliation"]
     assert "[05:58:30,06:00:00]" in actuators["initial_state"]
     assert "post-06:00 snapshot" in actuators["initial_state"]
+    chain = actuators["ingestion_receipt_chain"]
+    assert chain == {
+        "schema": "verdify-equipment-state-receipt-chain-v1",
+        "maximum_source_barrier_gap_seconds": 60,
+        "coverage_start": "earliest_direct_component_observation",
+        "coverage_end": "analyzed_window_end",
+        "event_source": "receipt_canonical_events_only",
+        "gap_policy": "any_gap_or_broken_link_invalidates_day",
+    }
+    assert actuators["relation"] == "public.equipment_state_source_receipts"
     receipt = V2_TEMPLATE["transport"]["observation_receipt_identity"]
     assert "embeds exactly firmware, config, registry" in receipt["revision_scope"]
     assert "bound relationally" in receipt["revision_scope"]

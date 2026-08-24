@@ -23,6 +23,11 @@ dev = [
 target-version = "py312"
 line-length = 120
 
+[tool.ruff.lint]
+# The checked-in tools/tests intentionally add the repository or research root
+# before importing sibling source modules; match the monorepo lint contract.
+ignore = ["E402"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"

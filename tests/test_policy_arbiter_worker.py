@@ -3,7 +3,7 @@
 Proves, without a live DB:
 - feature-off inertness;
 - SHADOW mode: proposals are compiled (content hash recorded on the proposal)
-  but fn_admit_policy_vector is NEVER called — shadow never creates outbox rows;
+  but fn_runtime_v1_admit_policy_vector is NEVER called — shadow never creates outbox rows;
 - LIVE mode: the admitted vector carries the byte-exact Lane A canonical
   encoding plus content/activation hashes recomputed independently here,
   including the assignment's §8.9 treatment octets and the expected generation;
@@ -170,15 +170,20 @@ def test_shadow_compiles_but_never_admits(monkeypatch):
     conn = _conn()
     _run(policy_arbiter_admissions(FakePool(conn)))
 
-    assert conn.sql_calls("fn_admit_policy_vector") == [], "shadow must NEVER reach the outbox-creating admission"
-    updates = conn.sql_calls("UPDATE policy_proposals")
+    assert conn.sql_calls("fn_runtime_v1_admit_policy_vector") == [], (
+        "shadow must NEVER reach the outbox-creating admission"
+    )
+    updates = conn.sql_calls("fn_runtime_v1_set_proposal_state")
     assert len(updates) == 1
     _kind, _sql, args = updates[0]
     assert args[1] == "shadow"
     _vector_bytes, content, _activation = _expected_artifacts()
     assert content.hex() in args[2], "shadow state_reason must carry the compiled content hash"
     # The proposal was completed to the full 48 components (wire schema v2).
-    assert len(conn.sql_calls("INSERT INTO policy_proposal_components")) == 48
+    assert len(conn.sql_calls("fn_runtime_v1_put_proposal_component")) == 48
+    experiment_reads = conn.sql_calls("FROM control_experiments")
+    assert len(experiment_reads) == 1
+    assert "protocol_version = 1" in experiment_reads[0][1]
 
 
 # ── Live: byte-exact admission via the SQL function ─────────────────────────
@@ -186,10 +191,10 @@ def test_shadow_compiles_but_never_admits(monkeypatch):
 
 def test_live_admits_with_canonical_bytes_hashes_and_generation(monkeypatch):
     _enable(monkeypatch, "live")
-    conn = _conn(extra=[("fn_admit_policy_vector", str(uuid.uuid4()))])
+    conn = _conn(extra=[("fn_runtime_v1_admit_policy_vector", str(uuid.uuid4()))])
     _run(policy_arbiter_admissions(FakePool(conn)))
 
-    admits = conn.sql_calls("fn_admit_policy_vector")
+    admits = conn.sql_calls("fn_runtime_v1_admit_policy_vector")
     assert len(admits) == 1
     args = admits[0][2]
     vector_bytes, content, activation = _expected_artifacts()
@@ -201,15 +206,15 @@ def test_live_admits_with_canonical_bytes_hashes_and_generation(monkeypatch):
     assert args[6] == activation.hex()
     assert args[7] == 1  # expected generation bound into the activation hash
     # Admitted path leaves the proposal state to the SQL function (no reject).
-    assert all(call[2][1] != "rejected" for call in conn.sql_calls("UPDATE policy_proposals"))
+    assert all(call[2][1] != "rejected" for call in conn.sql_calls("fn_runtime_v1_set_proposal_state"))
 
 
 def test_incomplete_template_rejects_with_bounded_reason(monkeypatch):
     _enable(monkeypatch, "live")
     conn = _conn(template_rows=_template_rows()[:10])
     _run(policy_arbiter_admissions(FakePool(conn)))
-    assert conn.sql_calls("fn_admit_policy_vector") == []
-    updates = conn.sql_calls("UPDATE policy_proposals")
+    assert conn.sql_calls("fn_runtime_v1_admit_policy_vector") == []
+    updates = conn.sql_calls("fn_runtime_v1_set_proposal_state")
     assert len(updates) == 1
     assert updates[0][2][1] == "rejected"
     assert "incomplete" in updates[0][2][2]
@@ -227,7 +232,7 @@ def test_unfrozen_revisions_reject(monkeypatch):
         ]
     )
     _run(policy_arbiter_admissions(FakePool(conn)))
-    updates = conn.sql_calls("UPDATE policy_proposals")
+    updates = conn.sql_calls("fn_runtime_v1_set_proposal_state")
     assert len(updates) == 1 and updates[0][2][1] == "rejected"
     assert "not frozen" in updates[0][2][2]
 

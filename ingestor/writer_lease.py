@@ -153,6 +153,16 @@ class WriterLease:
             return False
         return (time.monotonic() - self._last_renew) < LEASE_DURATION_S
 
+    def strictly_held(self, minimum_remaining_s: float = 0.0) -> bool:
+        """True only for a real fence with the requested validity margin."""
+        if not self.enabled or not self._can_fence or not self._held:
+            return False
+        required = max(0.0, float(minimum_remaining_s))
+        if required >= LEASE_DURATION_S:
+            return False
+        age = time.monotonic() - self._last_renew
+        return age < LEASE_DURATION_S - required
+
     async def start(self) -> None:
         """Spawn the background renew loop (idempotent; no-op when not fencing)."""
         if not self._can_fence or self._renew_task is not None:

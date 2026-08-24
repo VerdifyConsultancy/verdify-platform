@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Inert, no-prune rollback shape for the first orchestrator release. Consume
+# this directory as a resource in place of the normal Component reference; it
+# keeps every object desired while scaling all three new Deployments to zero.
+components:
+  - ../experiment-v2-orchestrator
+
+patches:
+  - path: scale-zero.patch.yaml

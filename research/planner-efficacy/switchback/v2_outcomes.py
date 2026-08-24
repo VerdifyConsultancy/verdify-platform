@@ -9,6 +9,7 @@ primary ITT row.
 from __future__ import annotations
 
 import math
+import unicodedata
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
@@ -119,6 +120,9 @@ def _finite(value: float, name: str) -> float:
 
 
 def _distance(value: float, low: float, high: float) -> float:
+    value = _finite(value, "corridor observation")
+    low = _finite(low, "corridor low")
+    high = _finite(high, "corridor high")
     if low > high:
         raise ValueError("corridor low exceeds high")
     return max(low - value, 0.0, value - high)
@@ -134,9 +138,14 @@ def climate_bins(
     vpd_duplicate_tolerance_kpa: float,
 ) -> list[ClimateBin]:
     """Aggregate exact minute slots; extra polling never adds slot weight."""
+    temperature_duplicate_tolerance_f = _finite(temperature_duplicate_tolerance_f, "temperature duplicate tolerance")
+    vpd_duplicate_tolerance_kpa = _finite(vpd_duplicate_tolerance_kpa, "VPD duplicate tolerance")
     if temperature_duplicate_tolerance_f < 0 or vpd_duplicate_tolerance_kpa < 0:
         raise ValueError("duplicate tolerances must be nonnegative")
     start, end = _local_window(local_date, timezone)
+    for corridor in corridors.values():
+        _distance(0.0, corridor.temperature_low_f, corridor.temperature_high_f)
+        _distance(0.0, corridor.vpd_low_kpa, corridor.vpd_high_kpa)
     by_exact: dict[datetime, list[ClimateSample]] = defaultdict(list)
     for sample in samples:
         if sample.observed_at.tzinfo is None or sample.observed_at.utcoffset() is None:
@@ -201,10 +210,36 @@ def climate_bins(
 def daily_climate_outcome(bins: list[ClimateBin]) -> tuple[float | None, float | None, str | None]:
     if len(bins) != EXPECTED_CLIMATE_BINS:
         raise ValueError(f"expected exactly {EXPECTED_CLIMATE_BINS} locked climate bins")
-    valid = [row for row in bins if row.temperature_distance_f is not None and row.vpd_distance_kpa is not None]
+
+    first = bins[0].bucket_start
+    if first.tzinfo is None or first.utcoffset() is None:
+        raise ValueError("climate bin timestamps must be timezone-aware")
+    if (first.hour, first.minute, first.second, first.microsecond) != (6, 0, 0, 0):
+        raise ValueError("locked climate bins must begin exactly at 06:00 local")
+    for index, row in enumerate(bins):
+        if row.bucket_start != first + timedelta(minutes=index * BUCKET_MINUTES):
+            raise ValueError("climate bins must be one exact ordered 15-minute grid")
+        if type(row.minute_slots) is not int or not 0 <= row.minute_slots <= BUCKET_MINUTES:
+            raise ValueError("climate bin minute_slots must be an integer in [0,15]")
+
+    def complete(row: ClimateBin) -> bool:
+        return (
+            row.minute_slots >= MIN_MINUTE_SLOTS_PER_BIN
+            and row.integrity_deviation is None
+            and isinstance(row.temperature_distance_f, (int, float))
+            and not isinstance(row.temperature_distance_f, bool)
+            and math.isfinite(row.temperature_distance_f)
+            and row.temperature_distance_f >= 0
+            and isinstance(row.vpd_distance_kpa, (int, float))
+            and not isinstance(row.vpd_distance_kpa, bool)
+            and math.isfinite(row.vpd_distance_kpa)
+            and row.vpd_distance_kpa >= 0
+        )
+
+    valid = [row for row in bins if complete(row)]
     longest = current = 0
     for row in bins:
-        if row.temperature_distance_f is None or row.vpd_distance_kpa is None:
+        if not complete(row):
             current += 1
             longest = max(longest, current)
         else:
@@ -221,6 +256,8 @@ def daily_climate_outcome(bins: list[ClimateBin]) -> tuple[float | None, float |
 def _dedupe_states(rows: list[StateObservation]) -> tuple[list[StateObservation], str | None]:
     grouped: dict[datetime, set[bool]] = defaultdict(set)
     for row in rows:
+        if type(row.state) is not bool:
+            return [], "invalid_state_type"
         if row.observed_at.tzinfo is None or row.observed_at.utcoffset() is None:
             return [], "naive_state_timestamp"
         grouped[row.observed_at].add(row.state)
@@ -265,6 +302,12 @@ def equipment_stream_outcome(
     start, end = _local_window(local_date, timezone)
     seed_lo = start - timedelta(seconds=90)
     for sample in (start_counter, end_counter):
+        if (
+            type(sample.reset_epoch) is not str
+            or not sample.reset_epoch
+            or unicodedata.normalize("NFC", sample.reset_epoch) != sample.reset_epoch
+        ):
+            return StreamOutcome(stream, None, False, "invalid_counter_reset_epoch")
         if sample.observed_at.tzinfo is None or sample.observed_at.utcoffset() is None:
             return StreamOutcome(stream, None, False, "naive_counter_timestamp")
     if not seed_lo <= start_counter.observed_at.astimezone(start.tzinfo) <= start:
@@ -285,7 +328,12 @@ def equipment_stream_outcome(
         counter_interval_minutes = _integrate(clean, start_counter.observed_at, end_counter.observed_at)
     except ValueError as exc:
         return StreamOutcome(stream, None, False, str(exc).replace(" ", "_"))
-    delta = _finite(end_counter.value_minutes, "end counter") - _finite(start_counter.value_minutes, "start counter")
+    try:
+        delta = _finite(end_counter.value_minutes, "end counter") - _finite(
+            start_counter.value_minutes, "start counter"
+        )
+    except ValueError:
+        return StreamOutcome(stream, None, False, "invalid_counter_value")
     tolerance = max(1.0, abs(counter_interval_minutes) * 0.01)
     if delta < 0 or abs(delta - counter_interval_minutes) > tolerance:
         return StreamOutcome(stream, None, False, "counter_state_reconciliation")
@@ -294,12 +342,26 @@ def equipment_stream_outcome(
 
 def nine_stream_burden(streams: list[StreamOutcome]) -> tuple[float | None, str | None]:
     by_stream = {row.stream: row for row in streams}
+    if len(streams) != len(EQUIPMENT_STREAMS) or len(by_stream) != len(EQUIPMENT_STREAMS):
+        return None, "missing_or_extra_equipment_stream"
     if set(by_stream) != set(EQUIPMENT_STREAMS):
         return None, "missing_or_extra_equipment_stream"
-    invalid = [name for name in EQUIPMENT_STREAMS if not by_stream[name].valid]
+    invalid = []
+    for name in EQUIPMENT_STREAMS:
+        row = by_stream[name]
+        value = row.active_or_open_minutes
+        if (
+            row.valid is not True
+            or row.reason is not None
+            or isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(value)
+            or not 0 <= value <= 1_080
+        ):
+            invalid.append(name)
     if invalid:
         return None, "invalid_streams:" + ",".join(invalid)
-    return sum(by_stream[name].active_or_open_minutes or 0.0 for name in EQUIPMENT_STREAMS), None
+    return sum(float(by_stream[name].active_or_open_minutes) for name in EQUIPMENT_STREAMS), None
 
 
 def make_randomized_itt_row(
@@ -313,8 +375,37 @@ def make_randomized_itt_row(
     exposure_seconds: int,
 ) -> RandomizedIttRow:
     """Always emit one assigned-day row, even with fallback/rescue/no exposure."""
+    if not isinstance(assignment_id, str) or not assignment_id:
+        raise ValueError("assignment_id must be a nonempty string")
+    try:
+        parsed_date = date.fromisoformat(local_date)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("local_date must be canonical YYYY-MM-DD") from exc
+    if parsed_date.isoformat() != local_date:
+        raise ValueError("local_date must be canonical YYYY-MM-DD")
+    if blinded_label not in ("X", "Y"):
+        raise ValueError("blinded_label must be exactly X or Y")
+    if type(fallback_or_rescue) is not bool:
+        raise TypeError("fallback_or_rescue must be an exact boolean")
+    if type(exposure_seconds) is not int or not 0 <= exposure_seconds <= ANALYZED_SECONDS:
+        raise ValueError(f"exposure_seconds must be an integer in [0,{ANALYZED_SECONDS}]")
     temp, vpd, climate_reason = climate
     burden, equipment_reason = equipment
+    for value, name, maximum in (
+        (temp, "temperature corridor outcome", None),
+        (vpd, "VPD corridor outcome", None),
+        (burden, "nine-stream burden", 9 * 1_080),
+    ):
+        if value is None:
+            continue
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(value)
+            or value < 0
+            or (maximum is not None and value > maximum)
+        ):
+            raise ValueError(f"{name} must be finite, nonnegative, and within its locked bound")
     complete = temp is not None and vpd is not None and burden is not None
     missing = None if complete else ";".join(reason for reason in (climate_reason, equipment_reason) if reason)
     return RandomizedIttRow(

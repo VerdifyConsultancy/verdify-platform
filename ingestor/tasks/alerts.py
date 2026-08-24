@@ -5,6 +5,8 @@ original module. The tasks package __init__ re-exports the public
 surface so every `from tasks import X` still resolves.
 """
 
+from collections.abc import Mapping
+
 from ._common import (
     _FORECAST_STALE_SENSOR_ID,
     _FORECAST_STALE_THRESHOLD_S,
@@ -52,6 +54,46 @@ from .heartbeat import (
 )
 
 
+def _component_experiment_integrity_alert(
+    row: Mapping[str, object],
+) -> dict[str, object] | None:
+    """Translate the blinded-safe v2 ops row into one typed pager envelope."""
+    severity = row["alert_severity"]
+    reason = row["alert_reason"]
+    if severity not in ("warning", "critical") or not isinstance(reason, str):
+        return None
+    experiment_id = str(row["experiment_id"])
+    observation_age = row["observation_age_seconds"]
+    writer_generation = row["writer_generation"]
+    connection_generation = row["connection_generation"]
+    return {
+        "alert_type": "component_experiment_integrity",
+        "severity": severity,
+        "category": "system",
+        "sensor_id": f"experiment.v2.{experiment_id}",
+        "zone": None,
+        "message": (f"Confirmed-component experiment `{experiment_id}` requires action: {reason.replace('_', ' ')}"),
+        "details": {
+            "experiment_id": experiment_id,
+            "lifecycle_status": str(row["lifecycle_status"]),
+            "execution_phase": str(row["execution_phase"]),
+            "admission_state": str(row["admission_state"]),
+            "safety_state": str(row["safety_state"]),
+            "reason": reason,
+            "operation_kind": row["operation_kind"],
+            "observation_truth": str(row["observation_truth"]),
+            "observation_age_seconds": None if observation_age is None else int(observation_age),
+            "open_exposure_count": int(row["open_exposure_count"]),
+            "writer_generation": None if writer_generation is None else int(writer_generation),
+            "connection_generation": None if connection_generation is None else int(connection_generation),
+            "outcomes_complete": bool(row["outcomes_complete"]),
+            "rollback_ready": bool(row["rollback_ready"]),
+        },
+        "metric_value": float(row["open_exposure_count"]),
+        "threshold_value": 1.0,
+    }
+
+
 # ═════════════════════════════════════════════════════════════════
 # 6. ALERT MONITOR (every 300s)
 # ═════════════════════════════════════════════════════════════════
@@ -63,6 +105,36 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
 
     async with pool.acquire() as conn:
         alerts = []
+
+        # V2 safety/integrity paging consumes one least-information,
+        # SECURITY DEFINER projection.  The ordinary ingestor login has no v2
+        # base-table access, and future randomized identity is already masked
+        # by the database clock before this process can see the row.
+        try:
+            component_rows = await conn.fetch(
+                """
+                SELECT experiment_id, lifecycle_status, execution_phase,
+                       admission_state, operation_kind, observation_age_seconds,
+                       observation_truth, open_exposure_count,
+                       writer_generation, connection_generation, safety_state,
+                       outcomes_complete, rollback_ready, alert_severity,
+                       alert_reason
+                  FROM public.fn_experiment_v2_ops_status()
+                """
+            )
+            component_status_available = True
+        except Exception as e:
+            # Migration and workload roll independently during the OFF-gated
+            # release.  Do not abort every pre-existing greenhouse alert while
+            # the read-only surface is absent; make the observability failure
+            # explicit in application logs and retry on the next monitor tick.
+            log.warning("component experiment ops status unavailable: %s", type(e).__name__)
+            component_rows = []
+            component_status_available = False
+        for component_row in component_rows:
+            component_alert = _component_experiment_integrity_alert(component_row)
+            if component_alert is not None:
+                alerts.append(component_alert)
 
         # 1. sensor_offline (exclude legacy firmware entities)
         _STALE_EXCLUDE = {"state.mister_state", "state.mister_zone"}
@@ -2217,6 +2289,10 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
             "WHERE disposition IN ('open', 'acknowledged') AND resolved_at IS NULL AND source = 'system'"
         )
         open_keys = {(r["alert_type"], r["sensor_id"]): r for r in open_rows}
+        if not component_status_available:
+            # A missing/denied status function is unknown state, never evidence
+            # that a previously actionable experiment condition recovered.
+            active_keys.update(key for key in open_keys if key[0] == "component_experiment_integrity")
 
         slack_token = None
         new_count = 0

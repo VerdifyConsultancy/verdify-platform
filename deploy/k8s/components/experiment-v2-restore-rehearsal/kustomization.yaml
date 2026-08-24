@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+# One-release, GitOps-managed PreSync schema/ACL rehearsal for protocol v2.
+# It validates a recent dump under disposable non-superuser roles; it is not
+# proof that PostgreSQL superusers are denied database object privileges.
+# It is deliberately NOT referenced by an overlay until the candidate migrate
+# image has been built and digest-pinned. After one successful retained log,
+# remove the overlay component reference. The deny policy has an exact pod
+# selector and remains harmless when no rehearsal pod exists.
+resources:
+  - restore-rehearsal-script.yaml
+  - restore-rehearsal-job.yaml
+  - restore-rehearsal-network-policy.yaml

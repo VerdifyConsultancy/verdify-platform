@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import hashlib
 import hmac
 import inspect
@@ -82,6 +83,21 @@ def test_design_lock_requires_exact_lowercase_40_hex_source_sha(bad_sha: str) ->
         randomization.DesignLock(**{**design.__dict__, "source_git_sha": bad_sha})
 
 
+@pytest.mark.parametrize("bad_pairs", [True, 1.5, 0, -1])
+def test_design_lock_rejects_noninteger_or_nonpositive_pairs_before_draw(bad_pairs: object) -> None:
+    design = _design()
+    with pytest.raises(ValueError, match="positive exact integer"):
+        randomization.DesignLock(**{**design.__dict__, "pairs": bad_pairs})  # type: ignore[arg-type]
+
+
+def test_design_lock_requires_exact_uuid_namespace() -> None:
+    design = _design()
+    with pytest.raises(TypeError, match="exact UUID"):
+        randomization.DesignLock(  # type: ignore[arg-type]
+            **{**design.__dict__, "assignment_namespace_uuid": str(design.assignment_namespace_uuid)}
+        )
+
+
 def test_checked_in_schema_golden_and_protocol_template_share_exact_contract() -> None:
     protocols = MODULE_DIR / "protocols"
     schema = json.loads((protocols / "blinded-schedule-v2.schema.json").read_text())
@@ -89,6 +105,12 @@ def test_checked_in_schema_golden_and_protocol_template_share_exact_contract() -
     golden = json.loads((protocols / "blinded-schedule-v2.golden.json").read_text())
     template = yaml.safe_load((protocols / "planner-switchback-v2.template.yaml").read_text())
     contract_hash = randomization.schedule_schema_contract_sha256()
+    schema_projection = dict(schema)
+    schema_projection.pop("x-verdify-field-contract-sha256")
+    expected_hash = hashlib.sha256(
+        json.dumps(schema_projection, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    assert contract_hash == expected_hash
     assert schema["x-verdify-field-contract-sha256"] == contract_hash
     assert golden["schedule_schema_contract_sha256"] == contract_hash
     assert template["randomization"]["canonical_schedule_schema_sha256"] == contract_hash
@@ -130,6 +152,22 @@ def test_idempotent_restart_returns_existing_and_replacement_is_forbidden(monkey
     changed = _design(pairs=3)
     with pytest.raises(ValueError, match="replacement forbidden"):
         randomization.RandomizationFinalizer(store).finalize(changed)
+
+
+def test_receipt_schedule_is_defensive_and_retry_preserves_hash(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(randomization.secrets, "token_bytes", lambda length: SECRET)
+    store = randomization.RestrictedFinalizationStore()
+    first = randomization.RandomizationFinalizer(store).finalize(_design())
+    original = first.schedule
+    original_hash = hashlib.sha256(randomization.canonical_schedule_bytes(original)).hexdigest()
+    assert original_hash == first.schedule_hash_sha256
+
+    first.schedule["assignments"][0]["blinded_label"] = "Y"
+    first.public_dict()["schedule"]["assignments"][0]["blinded_label"] = "Y"
+    retry = randomization.RandomizationFinalizer(store).finalize(_design())
+
+    assert retry.schedule == original
+    assert hashlib.sha256(randomization.canonical_schedule_bytes(retry.schedule)).hexdigest() == original_hash
 
 
 def test_concurrent_candidate_loss_returns_winner_and_audits_safe_metadata(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -196,29 +234,22 @@ def test_reveal_only_after_completion_reproduces_once(monkeypatch: pytest.Monkey
 
 
 def test_design_lock_finalization_allowlist() -> None:
-    before = {
-        "study": {
-            "pairs": 15,
-            "blinded_schedule_artifact": "TO-LOCK",
-            "blinded_schedule_hash_sha256": "TO-LOCK",
-        },
-        "randomization": {
-            "mapping_commitment_sha256": "TO-LOCK",
-            "finalization_receipt_sha256": "TO-LOCK",
-        },
-    }
-    after = {
-        "study": {
-            "pairs": 15,
-            "blinded_schedule_artifact": "final",
-            "blinded_schedule_hash_sha256": "final",
-        },
-        "randomization": {
-            "mapping_commitment_sha256": "final",
-            "finalization_receipt_sha256": "final",
-        },
-    }
+    protocol_path = MODULE_DIR / "protocols/planner-switchback-v2.template.yaml"
+    before = yaml.safe_load(protocol_path.read_text())
+    after = copy.deepcopy(before)
+    after["study"]["blinded_schedule_artifact"] = "research/planner-efficacy/protocols/blinded-schedule-v2.json"
+    after["study"]["blinded_schedule_hash_sha256"] = "22" * 32
+    after["randomization"]["mapping_commitment_sha256"] = "33" * 32
+    after["randomization"]["finalization_receipt_sha256"] = "44" * 32
     randomization.assert_finalization_only_changes(before, after)
-    after["study"]["pairs"] = 16
+    after["study"]["pairs_target"] += 1
     with pytest.raises(ValueError, match="non-finalization"):
         randomization.assert_finalization_only_changes(before, after)
+
+    nested = copy.deepcopy(before)
+    nested["study"]["blinded_schedule_artifact"] = {"secret": "forbidden", "mapping": {"X": "A"}}
+    nested["study"]["blinded_schedule_hash_sha256"] = "22" * 32
+    nested["randomization"]["mapping_commitment_sha256"] = "33" * 32
+    nested["randomization"]["finalization_receipt_sha256"] = "44" * 32
+    with pytest.raises(ValueError, match="safe committed JSON path"):
+        randomization.assert_finalization_only_changes(before, nested)

@@ -52,7 +52,7 @@
     "study_id": "verdify-v2-golden",
     "timezone": "America/Denver"
   },
-  "schedule_schema_contract_sha256": "f1cd82e7883f912379680f85a12420f4ecf5aaaaefb3c78373708ccedefab892",
+  "schedule_schema_contract_sha256": "fc73d212f58db91bd55bb70e3faa1431172b4339ae3b22a11d404ba95147b794",
   "schema": "verdify-switchback-v2-randomization-golden",
   "synthetic_secret_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
   "test_vector_only": true,

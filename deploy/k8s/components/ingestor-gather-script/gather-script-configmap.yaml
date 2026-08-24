@@ -42,7 +42,7 @@ data:
     # ── Experiment gather mode (#585, audit §8.8) ────────────────────────────────
     # --experiment-mode <experiment_id> <assignment_receipt> switches this script
     # to the fail-closed treatment-firewall packet: ONLY the §8.8-allowed context
-    # (v_iris_experiment_context + as-of forecast + frozen snapshot + virtual
+    # (v_runtime_v1_iris_experiment_context + as-of forecast + frozen snapshot + virtual
     # prior). The caller (ingestor/iris_planner.py) verifies the
     # "EXPERIMENT CONTEXT MODE ACK v1" marker below and ABORTS the planning run if
     # it is absent — so a stale mounted copy of this script (no flag support)
@@ -99,7 +99,7 @@ data:
     STATIC_CONTEXT_FILE="${VERDIFY_PLANNER_STATIC_CONTEXT:-/srv/verdify/state/planner-static-context.md}"
 
     # ── EXPERIMENT GATHER MODE (#585, audit §8.8) — fail-closed early exit ──────
-    # Emits ONLY the treatment-firewall packet (v_iris_experiment_context, as-of
+    # Emits ONLY the treatment-firewall packet (v_runtime_v1_iris_experiment_context, as-of
     # forecast, frozen snapshot, virtual prior) and exits BEFORE any general
     # section below can run. No get_setpoints-equivalent, active plan, admission
     # state, outcomes, scorecards, evaluation backlog, or lessons.
@@ -120,30 +120,30 @@ data:
       echo "request the omitted state."
       echo ""
 
-      EXPERIMENT_ROW_OK=$("${DB[@]}" -c "SELECT 1 FROM v_iris_experiment_context WHERE experiment_id = '${EXPERIMENT_MODE_ID}';" | tr -d ' ')
+      EXPERIMENT_ROW_OK=$("${DB[@]}" -c "SELECT 1 FROM v_runtime_v1_iris_experiment_context WHERE experiment_id = '${EXPERIMENT_MODE_ID}';" | tr -d ' ')
       if [ "${EXPERIMENT_ROW_OK}" != "1" ]; then
-        echo "EXPERIMENT CONTEXT UNAVAILABLE: no armed/running v_iris_experiment_context row for ${EXPERIMENT_MODE_ID}" >&2
+        echo "EXPERIMENT CONTEXT UNAVAILABLE: no armed/running v_runtime_v1_iris_experiment_context row for ${EXPERIMENT_MODE_ID}" >&2
         exit 3
       fi
 
       echo "--- CURRENT SENSORS (latest climate row) ---"
-      "${DB[@]}" -c "SELECT current_sensors FROM v_iris_experiment_context WHERE experiment_id = '${EXPERIMENT_MODE_ID}';"
+      "${DB[@]}" -c "SELECT current_sensors FROM v_runtime_v1_iris_experiment_context WHERE experiment_id = '${EXPERIMENT_MODE_ID}';"
       echo ""
 
       echo "--- AS-OF FORECAST (next 24h, latest fetch per hour) ---"
-      "${DB[@]}" -c "SELECT asof_forecast FROM v_iris_experiment_context WHERE experiment_id = '${EXPERIMENT_MODE_ID}';"
+      "${DB[@]}" -c "SELECT asof_forecast FROM v_runtime_v1_iris_experiment_context WHERE experiment_id = '${EXPERIMENT_MODE_ID}';"
       echo ""
 
       echo "--- CROP / TOPOLOGY (fixed context) ---"
-      "${DB[@]}" -c "SELECT crop_topology FROM v_iris_experiment_context WHERE experiment_id = '${EXPERIMENT_MODE_ID}';"
+      "${DB[@]}" -c "SELECT crop_topology FROM v_runtime_v1_iris_experiment_context WHERE experiment_id = '${EXPERIMENT_MODE_ID}';"
       echo ""
 
       echo "--- CANDIDATE POLICY TEMPLATES (locked; select exactly one via policy_template_propose) ---"
-      "${DB[@]}" -c "SELECT candidate_templates FROM v_iris_experiment_context WHERE experiment_id = '${EXPERIMENT_MODE_ID}';"
+      "${DB[@]}" -c "SELECT candidate_templates FROM v_runtime_v1_iris_experiment_context WHERE experiment_id = '${EXPERIMENT_MODE_ID}';"
       echo ""
 
       echo "--- VIRTUAL PRIOR (your own previous selection; virtual state only) ---"
-      "${DB[@]}" -c "SELECT COALESCE(virtual_prior::text, '(no prior virtual selection)') FROM v_iris_experiment_context WHERE experiment_id = '${EXPERIMENT_MODE_ID}';"
+      "${DB[@]}" -c "SELECT COALESCE(virtual_prior::text, '(no prior virtual selection)') FROM v_runtime_v1_iris_experiment_context WHERE experiment_id = '${EXPERIMENT_MODE_ID}';"
       echo ""
 
       # Freeze the immutable per-trigger snapshot (migration 210). Optional
@@ -157,15 +157,15 @@ data:
       MODEL_ID_SAFE="${VERDIFY_EXPERIMENT_MODEL_ID:-}"
       [[ "$MODEL_ID_SAFE" =~ ^[A-Za-z0-9._/:-]{0,128}$ ]] || MODEL_ID_SAFE=""
 
-      CROP_TOPOLOGY_JSON=$("${DB[@]}" -c "SELECT COALESCE(crop_topology::text, '[]') FROM v_iris_experiment_context WHERE experiment_id = '${EXPERIMENT_MODE_ID}';")
+      CROP_TOPOLOGY_JSON=$("${DB[@]}" -c "SELECT COALESCE(crop_topology::text, '[]') FROM v_runtime_v1_iris_experiment_context WHERE experiment_id = '${EXPERIMENT_MODE_ID}';")
       CROP_TOPOLOGY_SHA=$(printf '%s' "$CROP_TOPOLOGY_JSON" | sha256sum | awk '{print $1}')
-      VIRTUAL_PRIOR_ID=$("${DB[@]}" -c "SELECT COALESCE(virtual_prior->>'template_id', '') FROM v_iris_experiment_context WHERE experiment_id = '${EXPERIMENT_MODE_ID}';" | tr -d ' ')
+      VIRTUAL_PRIOR_ID=$("${DB[@]}" -c "SELECT COALESCE(virtual_prior->>'template_id', '') FROM v_runtime_v1_iris_experiment_context WHERE experiment_id = '${EXPERIMENT_MODE_ID}';" | tr -d ' ')
       [[ "$VIRTUAL_PRIOR_ID" =~ ^[0-9a-fA-F-]{36}$ ]] || VIRTUAL_PRIOR_ID=""
       TRIGGER_REF="gather:$(date -u '+%Y%m%dT%H%M%SZ'):${EXPERIMENT_ASSIGNMENT_RECEIPT}"
 
       FROZEN=$("${DB[@]}" -c "
         SELECT snapshot_id || '|' || context_revision
-          FROM fn_freeze_experiment_context(
+          FROM fn_runtime_v1_freeze_experiment_context(
             p_experiment_id => '${EXPERIMENT_MODE_ID}'::uuid,
             p_trigger_ref   => '${TRIGGER_REF}',
             p_assignment_id => '${EXPERIMENT_ASSIGNMENT_RECEIPT}'::uuid,
@@ -181,7 +181,7 @@ data:
                            'candidate_templates', candidate_templates,
                            'virtual_prior', virtual_prior
                        )::jsonb
-                  FROM v_iris_experiment_context
+                  FROM v_runtime_v1_iris_experiment_context
                  WHERE experiment_id = '${EXPERIMENT_MODE_ID}'
             ),
             p_virtual_prior_template_id => NULLIF('${VIRTUAL_PRIOR_ID}', '')::uuid

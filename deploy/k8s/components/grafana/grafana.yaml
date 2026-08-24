@@ -242,7 +242,8 @@ spec:
             - name: dashboards-1
               mountPath: /etc/grafana/provisioning/dashboards/json/bucket1
               readOnly: true
-            # bucket2: band-tuning-diurnal (#252) — additive, separate ConfigMap.
+            # bucket2: band tuning plus the blinded-safe v2 experiment board
+            # (#252/#587) — additive, separate ConfigMap.
             - name: dashboards-2
               mountPath: /etc/grafana/provisioning/dashboards/json/bucket2
               readOnly: true

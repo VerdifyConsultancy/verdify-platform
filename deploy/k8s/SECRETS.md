@@ -68,7 +68,17 @@ Service → Secret → key wiring as authored in `deploy/k8s/{base,components}`:
 | `verdify-app-secrets` | `MQTT_USER` | ingestor (`secretKeyRef`) | ✓ | ✓ | ✓ |
 | `verdify-app-secrets` | `MQTT_PASS` | ingestor (`secretKeyRef`) | ✓ | ✓ | ✓ |
 | `verdify-app-secrets` | `ESP32_API_KEY` | ingestor (`secretKeyRef`); **device-affecting** | ref-only¹ | ref-only¹ | ✓ |
+| `verdify-app-secrets` | `VERDIFY_API_RUNTIME_DB_USER`, `VERDIFY_API_RUNTIME_DB_PASSWORD` | staged ordinary API database identity (migration 217 exact login; provision before the separately reviewed workload switch) | opt | opt | opt |
+| `verdify-app-secrets` | `VERDIFY_INGESTOR_RUNTIME_DB_USER`, `VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD` | staged ordinary ingestor database identity (migration 217 exact login; provision before the separately reviewed workload switch) | opt | opt | opt |
+| `verdify-app-secrets` | `VERDIFY_EXPERIMENT_LIFECYCLE_DB_USER`, `VERDIFY_EXPERIMENT_LIFECYCLE_DB_PASSWORD` | API v2 lifecycle/status surface (`secretKeyRef`, optional; exact function-only login required) | opt | opt | opt |
+| `verdify-app-secrets` | `VERDIFY_EXPERIMENT_API_TOKEN`, `VERDIFY_EXPERIMENT_OPERATOR_TOKEN` | API v2 command and blinded-safe operator surfaces (`secretKeyRef`, optional; distinct authorization boundaries) | opt | opt | opt |
+| `verdify-app-secrets` | `VERDIFY_EXPERIMENT_COMPONENT_DB_USER`, `VERDIFY_EXPERIMENT_COMPONENT_DB_PASSWORD` | ingestor confirmed-component executor (`secretKeyRef`, optional; exact function-only login required) | opt | opt | opt |
+| `verdify-app-secrets` | `VERDIFY_EXPERIMENT_EQUIPMENT_SOURCE_COLLECTOR_DB_USER`, `VERDIFY_EXPERIMENT_EQUIPMENT_SOURCE_COLLECTOR_DB_PASSWORD` | ingestor append-only equipment source collector (`secretKeyRef`, optional; exact function-only login required) | opt | opt | opt |
 | `verdify-app-secrets` | `OPENAI_API_KEY` | planner (`secretKeyRef`, `optional: true`) | ✓ | — | ✓ |
+| `verdify-experiment-v2-shadow-scheduler-db` | `password` | v2 lifecycle scheduler (`secretKeyRef`, optional; username is the migration-owned exact login) | — | — | opt |
+| `verdify-experiment-v2-randomizer-db` | `password` | v2 selector/randomizer (`secretKeyRef`, optional; username is the migration-owned exact login) | — | — | opt |
+| `verdify-experiment-v2-outcome-freezer-db` | `password` | v2 outcome freezer (`secretKeyRef`, optional; username is the migration-owned exact login) | — | — | opt |
+| `verdify-experiment-v2-selector-provider` | `api-key` | v2 selector provider adapter (`secretKeyRef`, optional; no endpoint means no network call) | — | — | opt |
 | `verdify-ha-token` | `ha_token.txt` | setpoint-server (volume mount); **device-affecting** | — | — | ✓ |
 | `verdify-hermes` | `OPENAI_API_KEY`, `HERMES_MCP_URL`² | hermes-iris (`envFrom.secretRef`) | — | — | ✓ |
 | `verdify-hermes-slack` | slack channel config | hermes-iris (optional volume mount; **non-secret** channel cfg) | — | — | opt |
@@ -86,9 +96,16 @@ but is never exercised — those envs never connect to the live ESP32.
 ² `HERMES_MCP_URL` is the migration doc **R7** gate: it must point at
 `verdify-mcp.verdify-prod.svc:8000` and is repointed at SEAL time, never committed.
 
-`DB_PASS` / `DB_PASSWORD` / `DB_DSN` / `VERDIFY_DB_DSN` are derived in-manifest from
-`POSTGRES_PASSWORD` + the non-secret connection fields in the `verdify-config`
-ConfigMap (`$(VAR)` interpolation); they are NOT separate secret keys.
+Before the migration-217 role cutover, `DB_PASS` / `DB_PASSWORD` / `DB_DSN` /
+`VERDIFY_DB_DSN` are derived in-manifest from `POSTGRES_PASSWORD` plus the
+non-secret connection fields in `verdify-config` (`$(VAR)` interpolation).
+After the separately reviewed API/ingestor switch, those ordinary-process
+aliases must reference the corresponding runtime password key above; the
+database owner credential must no longer be present in either ordinary pod.
+The reviewable target is
+`deploy/k8s/overlays/prod-runtime-role-boundary`; it is intentionally not the
+active Argo source until all four runtime keys have been provisioned and
+migration 217's actual-login fixture passes.
 
 `verdify-lab-publisher-s3` is non-device but required before enabling the
 `verdify-lab-publisher` CronJob. The durable prod prefixes are

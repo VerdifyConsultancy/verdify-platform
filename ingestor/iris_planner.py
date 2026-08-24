@@ -1179,8 +1179,22 @@ def _alert_sql_argv(sql: str) -> list[str]:
     row 2026-05-25 while context_gather_failed deliveries kept occurring).
     """
     backend = os.environ.get("VERDIFY_DB_BACKEND", "dsn")
+    db_user = os.environ.get("DB_USER", "verdify")
+    db_name = os.environ.get("DB_NAME", "verdify")
     if backend == "docker":
-        return ["docker", "exec", "-i", "verdify-timescaledb", "psql", "-U", "verdify", "-d", "verdify", "-c", sql]
+        return [
+            "docker",
+            "exec",
+            "-i",
+            "verdify-timescaledb",
+            "psql",
+            "-U",
+            db_user,
+            "-d",
+            db_name,
+            "-c",
+            sql,
+        ]
     if backend == "kube":
         return [
             "kubectl",
@@ -1191,9 +1205,9 @@ def _alert_sql_argv(sql: str) -> list[str]:
             "--",
             "psql",
             "-U",
-            "verdify",
+            db_user,
             "-d",
-            "verdify",
+            db_name,
             "-c",
             sql,
         ]

@@ -31,6 +31,52 @@ from esp32_push import DeviceCommandOutcome, PushBatchResult  # noqa: E402
 import ingestor  # noqa: E402
 
 
+@pytest.mark.asyncio
+async def test_runtime_role_cutover_requires_and_attests_exact_ingestor_login(monkeypatch):
+    class Connection:
+        def __init__(self, attested):
+            self.attested = attested
+            self.calls = []
+
+        async def fetchval(self, sql, *args):
+            self.calls.append((sql, args))
+            return self.attested
+
+    class Acquire:
+        def __init__(self, connection):
+            self.connection = connection
+
+        async def __aenter__(self):
+            return self.connection
+
+        async def __aexit__(self, *_args):
+            return False
+
+    class Pool:
+        def __init__(self, attested):
+            self.connection = Connection(attested)
+
+        def acquire(self):
+            return Acquire(self.connection)
+
+    monkeypatch.setenv(ingestor.INGESTOR_RUNTIME_DB_ROLE_REQUIRED_ENV, "1")
+    monkeypatch.setenv("DB_USER", ingestor.INGESTOR_RUNTIME_DB_LOGIN)
+    good = Pool(True)
+    await ingestor.attest_ordinary_ingestor_runtime_role(good)
+    assert good.connection.calls[0][1] == ()
+    assert "current_user = session_user" in good.connection.calls[0][0]
+    assert "current_setting('search_path')" in good.connection.calls[0][0]
+    assert "fn_runtime_attest_ordinary_login()" in good.connection.calls[0][0]
+
+    monkeypatch.setenv("DB_USER", "verdify")
+    with pytest.raises(RuntimeError, match="exact ingestor database login"):
+        await ingestor.attest_ordinary_ingestor_runtime_role(Pool(True))
+
+    monkeypatch.setenv("DB_USER", ingestor.INGESTOR_RUNTIME_DB_LOGIN)
+    with pytest.raises(RuntimeError, match="role attestation failed"):
+        await ingestor.attest_ordinary_ingestor_runtime_role(Pool(False))
+
+
 @pytest.fixture(autouse=True)
 def _reset_reconcile_state(monkeypatch):
     monkeypatch.setattr(shared, "transport_generation", 0)

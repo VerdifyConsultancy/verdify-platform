@@ -66,6 +66,40 @@ def test_exact_v2_axes_and_typed_work_are_relationally_guarded():
     assert "completed shadow/probe/moderate-canary/aggressive-canary/A-A" in sql
 
 
+def test_readiness_work_creation_serializes_and_replays_only_exact_current_bindings():
+    body = _body("fn_experiment_v2_create_work")
+    assert body.count("clock_timestamp()") == 1
+    assert body.index("FOR UPDATE") < body.index("v_now := clock_timestamp()")
+    assert body.index("SELECT count(*)::integer INTO v_existing_count") < body.index(
+        "INSERT INTO public.experiment_v2_work"
+    )
+    for request_field in (
+        "w.operation_kind = p_operation_kind",
+        "w.target_profile = p_target_profile",
+        "w.valid_range = p_valid_range",
+        "w.expires_at = p_expires_at",
+        "w.created_by = p_actor",
+    ):
+        assert request_field in body
+    for binding_field in (
+        "v_existing.execution_phase",
+        "v_existing.target_state_content_sha256",
+        "v_existing.revision_bundle_sha256",
+        "v_existing.firmware_revision",
+        "v_existing.config_revision",
+        "v_existing.registry_revision",
+        "v_existing.grid_revision",
+        "v_existing.lease_generation",
+    ):
+        assert binding_field in body
+    assert "readiness work request is ambiguous" in body
+    assert "readiness work request conflicts with current experiment bindings" in body
+    fixture = FIXTURE.read_text()
+    assert "readiness_work_retry_serialization_and_ambiguity" in fixture
+    assert "lost-response readiness retry duplicated canonical work" in fixture
+    assert "equivalent legacy readiness rows were guessed through" in fixture
+
+
 def test_exactly_three_least_information_resolvers_use_one_internal_clock_each():
     sql = _sql()
     resolvers = (
@@ -107,16 +141,72 @@ def test_state_and_receipt_hashes_are_server_bound_to_exact_goldens():
     assert "b3c1b6ca2b0c784206deaa0ac45b126f9a04793f7ac056ecd8761081d29f6875" in fixture
 
 
-def test_shadow_is_device_dark_but_requires_two_baseline_epochs():
+def test_shadow_is_device_dark_typed_source_bound_and_db_baseline_only():
     sql = _sql()
-    assert "observation_source_required" in sql
-    assert "shadow preview is device-dark" in sql
-    assert re.search(r"WHEN v_work\.operation_kind = 'shadow_preview'\s+THEN 'baseline'", sql)
-    assert "at least 30 seconds apart" in _body("fn_experiment_v2_record_work_event")
-    assert "v_exp.execution_phase = 'shadow'" in _body("fn_experiment_v2_open_exposure")
+    for relation in (
+        "experiment_v2_shadow_cycles",
+        "experiment_v2_shadow_contexts",
+        "experiment_v2_shadow_choices",
+        "experiment_v2_shadow_outcome_previews",
+    ):
+        assert relation in sql
+    assert "device-dark shadow preview resolves only to baseline" in _body("fn_experiment_v2_create_work")
+    assert "operation_kind <> 'shadow_preview' OR target_profile = 'baseline'" in sql
+    preview = _body("fn_experiment_v2_record_shadow_outcome_preview_at")
+    assert "zero authority" in preview
+    assert "verdify-assigned-day-outcome-v2" in preview
+    assert "explicit-null locked outcome" in preview
+    assert "v_choice.choice_status <> 'fallback'" in preview
+    assert "verdify-selector-climate-source-v1" in _body("fn_experiment_v2_build_selector_context")
+    assert "verdify-selector-forecast-source-v1" in _body("fn_experiment_v2_build_selector_context")
+    assert "temp_avg_f" in _body("fn_experiment_v2_context_insert_binding")
+    assert "vpd_avg_kpa" in _body("fn_experiment_v2_context_insert_binding")
     fixture = FIXTURE.read_text()
-    assert "shadow_zero_component_outcomes" in fixture
-    assert "shadow_two_raw_epochs" in fixture
+    assert "complete historical shadow cycle" in fixture
+    assert "shadow cycle gained authority or lost DB-enforced baseline" in fixture
+    assert "shadow missing-source context did not freeze one explicit unavailable receipt" in fixture
+    assert "unavailable shadow baseline did not retain explicit-null preview" in fixture
+
+
+def test_candidate_configuration_and_design_lock_are_distinct_one_way_steps():
+    sql = _sql()
+    configure_head = sql[sql.index("CREATE OR REPLACE FUNCTION public.fn_experiment_v2_configure(") :]
+    configure_head = configure_head[: configure_head.index(") RETURNS public.control_experiments")]
+    assert "p_study_start_local_date" not in configure_head
+    assert "p_randomized_pair_count" not in configure_head
+    configure = _body("fn_experiment_v2_configure")
+    assert "candidate replacement expected binding is stale" in configure
+    assert "superseded candidate revision cannot reactivate" in configure
+    assert "lease_generation = lease_generation + CASE WHEN v_is_replacement" in configure
+    lock = _body("fn_experiment_v2_lock_design")
+    assert "design lock is immutable and exact replay differs" in lock
+    assert "design lock requires exact Vallery/America-Denver facility identity" in lock
+    assert "completed shadow/probe/moderate-canary/aggressive-canary/A-A" in lock
+    assert "upper(w.valid_range) - lower(w.valid_range) >= interval '48 hours'" in lock
+    assert "draft-to-locked is owned atomically by fn_experiment_v2_lock_design" in _body("fn_experiment_v2_transition")
+
+
+def test_selector_server_boundary_has_exact_safe_late_baseline_closure():
+    for public_name, internal_name in (
+        ("fn_experiment_v2_selector_cycle", "fn_experiment_v2_selector_cycle_at"),
+        ("fn_experiment_v2_record_selector_choice", "fn_experiment_v2_record_selector_choice_at"),
+        ("fn_experiment_v2_record_shadow_choice", "fn_experiment_v2_record_shadow_choice_at"),
+    ):
+        assert _body(public_name).count("clock_timestamp()") == 1
+        assert "clock_timestamp()" not in _body(internal_name)
+    for internal_name in (
+        "fn_experiment_v2_record_selector_choice_at",
+        "fn_experiment_v2_record_shadow_choice_at",
+    ):
+        body = _body(internal_name)
+        assert "boundary_elapsed_before_choice_persist" in body
+        assert "ERRCODE = 'V2B01'" in body
+        assert "p_raw_request_sha256 = v_context.context_sha256" in body
+        assert "p_raw_response_sha256 IS NULL" in body
+        assert "ELSE v_context.failure_reason END" in body
+    trigger = _body("fn_experiment_v2_selector_insert_binding")
+    assert "v_late_baseline" in trigger
+    assert "NEW.accepted_at" in trigger
 
 
 def test_runtime_instance_owns_monotonic_generation_and_restart_recovery():
@@ -162,7 +252,7 @@ def test_randomized_admission_and_emergency_are_fail_closed():
     assert "exactly one current immutable assignment/work" in body
     assert "emergency_hold', 'baseline_recovery'" in body
     assert "facility-authorized emergency recovery" in body
-    complete = _body("fn_experiment_v2_complete")
+    complete = _body("fn_experiment_v2_complete_at")
     assert "experiment_v2_facility_safe_closures" in complete
     assert "event_kind = 'emergency_action'" not in complete
 
@@ -180,9 +270,9 @@ def test_itt_rows_are_fixed_and_exposure_is_sensitivity_only():
     ):
         assert flag in sql
     assert "exposure_coverage_sensitivity" in sql
-    export_body = _body("fn_experiment_v2_freeze_export")
+    export_body = _body("fn_experiment_v2_freeze_export_at")
     assert "exposure_seconds" not in export_body
-    freeze_body = _body("fn_experiment_v2_freeze_outcome")
+    freeze_body = _body("fn_experiment_v2_freeze_outcome_at")
     assert "flags must equal durable work and closure evidence" in freeze_body
     assert "experiment_v2_runtime_snapshots" in freeze_body
     assert "s.first_observed_at > x.started_at" in freeze_body
@@ -190,9 +280,10 @@ def test_itt_rows_are_fixed_and_exposure_is_sensitivity_only():
         assert f"'{reason}'" in freeze_body
 
 
-def test_five_runtime_duties_have_function_only_surfaces():
+def test_six_runtime_duties_have_function_only_surfaces():
     sql = _sql()
     duties = (
+        "verdify_experiment_shadow_scheduler",
         "verdify_experiment_randomizer",
         "verdify_experiment_lifecycle",
         "verdify_experiment_component_executor",
@@ -201,13 +292,25 @@ def test_five_runtime_duties_have_function_only_surfaces():
     )
     for role in duties:
         assert role in sql
+    for login in (
+        "verdify_experiment_v2_shadow_scheduler_login",
+        "verdify_experiment_v2_randomizer_login",
+        "verdify_experiment_v2_lifecycle_login",
+        "verdify_experiment_v2_component_executor_login",
+        "verdify_experiment_v2_outcome_freezer_login",
+    ):
+        assert login in sql
     assert "verdify_experiment_v2_owner" in sql
     assert "CREATE ROLE %I NOLOGIN" in sql
+    assert "CREATE ROLE %I LOGIN" in sql
     assert "NOLOGIN NOCREATEDB NOCREATEROLE NOINHERIT" in sql
+    assert "LOGIN INHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE" in sql
     assert "NOSUPERUSER NOREPLICATION NOBYPASSRLS" in sql
     assert "requires a superuser migration to normalize" in sql
     assert "REVOKE CREATE ON SCHEMA public FROM" in sql
     assert "REVOKE %I FROM %I" in sql
+    assert "GRANT %I TO %I" in sql
+    assert "ALTER ROLE deliberately does not touch an out-of-band password" in sql
     assert "GRANT EXECUTE ON FUNCTION" in sql
     assert "GRANT SELECT ON public.v_experiment_v2_blinded_assigned_day_outcomes" in sql
     assert not re.search(r"GRANT\s+verdify_experiment_v2_owner\s+TO", sql, re.IGNORECASE)
@@ -217,7 +320,8 @@ def test_duty_grants_are_exact_signature_allowlists_not_proname_matches():
     sql = _sql()
     grant_surface = sql[sql.index("DO $security$") : sql.index("END\n$security$;")]
     expected = (
-        "fn_experiment_v2_configure(uuid,text,text,text,text,text,text,date,integer,text,uuid,text,text,text,text)",
+        "fn_experiment_v2_configure(uuid,text,text,text,text,text,text,uuid,text,bigint,text)",
+        "fn_experiment_v2_lock_design(uuid,date,integer,time without time zone,text,text,text,text,text,text,text,text,text,text,text)",
         "fn_experiment_v2_register_state(uuid,text,smallint,bytea,bytea,text)",
         "fn_experiment_v2_record_approval(uuid,text,text,integer,text,text,tstzrange,timestamptz,text,text,text)",
         "fn_experiment_v2_transition(uuid,text,text,text,text)",
@@ -227,8 +331,14 @@ def test_duty_grants_are_exact_signature_allowlists_not_proname_matches():
         "fn_experiment_v2_request_recovery(uuid,uuid,tstzrange,timestamptz,text,text)",
         "fn_experiment_v2_complete(uuid,text,text)",
         "fn_experiment_v2_api_status(uuid)",
+        "fn_experiment_v2_schedule_shadow_cycle(uuid,date,timestamptz,text,text,text,text,text,text)",
+        "fn_experiment_v2_due_shadow_cycle(uuid)",
+        "fn_experiment_v2_due_assignment(uuid)",
+        "fn_experiment_v2_boundary_cycle(uuid,text)",
         "fn_experiment_v2_finalize_randomization(uuid,text)",
-        "fn_experiment_v2_record_selector_choice(uuid,uuid,text,text,text,text,text,text,text,text,text[],text,timestamptz,text)",
+        "fn_experiment_v2_selector_cycle(uuid)",
+        "fn_experiment_v2_record_selector_choice(uuid,uuid,text,text,text,text,text,text,text[],text,text)",
+        "fn_experiment_v2_record_shadow_choice(uuid,uuid,text,text,text,text,text,text,text[],text,text)",
         "fn_experiment_v2_reveal(uuid,text)",
         "fn_experiment_v2_resolve_readiness(uuid,uuid,bigint)",
         "fn_experiment_v2_resolve_randomized(uuid,uuid,bigint)",
@@ -243,6 +353,7 @@ def test_duty_grants_are_exact_signature_allowlists_not_proname_matches():
         "fn_experiment_v2_record_delivery_bundle(uuid,uuid,uuid,timestamptz,text)",
         "fn_experiment_v2_register_runtime_instance(uuid,text,uuid,bigint,text)",
         "fn_experiment_v2_record_observation_epoch(uuid,uuid,uuid,uuid,bytea,jsonb,text,text,text,text,bigint,bigint,text)",
+        "fn_experiment_v2_record_preexposure_mismatch(uuid,uuid,uuid,text,uuid,bytea,jsonb,text,text,text,text,uuid,bigint,bigint,bigint,text)",
         "fn_experiment_v2_record_runtime_snapshot(uuid,text,uuid,bytea,jsonb,text,text,text,text,uuid,bigint,bigint,boolean,text)",
         "fn_experiment_v2_monitor_open_exposure(uuid,text,bigint)",
         "fn_experiment_v2_report_runtime_fault(uuid,text,uuid,bigint,uuid,bigint,bigint,text,text,text)",
@@ -250,11 +361,13 @@ def test_duty_grants_are_exact_signature_allowlists_not_proname_matches():
         "fn_experiment_v2_open_exposure(uuid,uuid,text,text)",
         "fn_experiment_v2_close_exposure(uuid,text,text)",
         "fn_experiment_v2_freeze_outcome(uuid,uuid,jsonb,boolean,boolean,boolean,boolean,boolean,text)",
+        "fn_experiment_v2_freeze_day_evidence(uuid,uuid,jsonb,jsonb,jsonb,text)",
         "fn_experiment_v2_freeze_export(uuid,text,text)",
+        "fn_experiment_v2_record_shadow_outcome_preview(uuid,uuid,jsonb,text)",
     )
     for signature in expected:
         assert f"'public.{signature}'::regprocedure" in grant_surface
-    assert grant_surface.count("FOREACH fn IN ARRAY ARRAY[") == 4
+    assert grant_surface.count("FOREACH fn IN ARRAY ARRAY[") == 5
     assert "proname = ANY" not in grant_surface
 
 
@@ -344,6 +457,52 @@ def test_different_work_claim_closes_prior_boundary_before_claim():
     assert "'reset_detected'" in body and "'foreign_writer'" in body
 
 
+def test_preexposure_mismatch_and_confirmation_watchdog_are_durable_and_atomic():
+    sql = _sql()
+    mismatch = _body("fn_experiment_v2_record_preexposure_mismatch")
+    claim = _body("fn_experiment_v2_claim_executor_candidate")
+    fault = _body("fn_experiment_v2_report_runtime_fault")
+    assert "experiment_v2_preexposure_mismatch_epochs" in sql
+    assert "source_epoch_id replay differs from its immutable mismatch epoch" in mismatch
+    assert mismatch.count("clock_timestamp()") == 1
+    assert (
+        mismatch.index("INSERT INTO public.experiment_v2_preexposure_mismatch_epochs")
+        < mismatch.index("fn_experiment_v2_report_runtime_fault")
+        < mismatch.index("fn_experiment_v2_record_work_event")
+    )
+    assert "post_delivery_observation_mismatch" in mismatch
+    assert "coalesce(receipts.receipt_count, 0) < 2" in claim
+    assert "preexposure_confirmation_deadline_exceeded" in claim
+    assert claim.index("fn_experiment_v2_report_runtime_fault") < claim.index("SELECT w.* INTO v_work")
+    assert "v_source.operation_kind = 'baseline_recovery'" in fault
+    assert "admission_state = 'emergency_hold', component_enabled = false" in fault
+    assert "never enqueue another" in fault
+
+
+def test_generation_recovery_clearance_is_receipt_gated_and_preserves_day_reentry_fence():
+    clearance = _body("fn_experiment_v2_recovery_authority_cleared")
+    generation = _body("fn_experiment_v2_generation_recovery_cleared")
+    work_event = _body("fn_experiment_v2_record_work_event")
+    claim = _body("fn_experiment_v2_claim_executor_candidate")
+    assert "g.restart_detected OR g.reconnect_detected" in generation
+    assert "fn_experiment_v2_recovery_authority_cleared" in generation
+    assert "recovered.event_kind = 'recovered'" in clearance
+    assert "recovery.work_id = p_recovery_work_id" in clearance
+    assert "e.admission_state IN ('closed', 'open')" in clearance
+    assert "successful terminal work requires two advancing exact observation receipts" in work_event
+    assert "generation_recovery_cleared" in claim
+    assert "effective_restart_detected" in claim
+    assert "effective_reconnect_detected" in claim
+    assert "snapshot_recovery_cleared" in claim
+    assert "historical_reset_detected" in claim
+    assert "historical_foreign_writer" in claim
+    assert "v_generation.restart_detected" in claim  # immutable historical echo remains
+    assert "v_generation.recorded_at AT TIME ZONE v_exp.timezone" in claim
+    assert "lower(v_work.valid_range) AT TIME ZONE v_exp.timezone" in claim
+    assert "v_work.target_profile <> 'baseline'" in claim
+    assert "same_generation_nonbaseline_reentry_forbidden" in claim
+
+
 def test_api_status_masks_future_randomized_identity_and_never_returns_treatment():
     body = _body("fn_experiment_v2_api_status")
     assert "selected.future_masked THEN NULL" in body
@@ -357,6 +516,54 @@ def test_api_status_masks_future_randomized_identity_and_never_returns_treatment
     assert "e.kind = 'randomized'" in body
     for forbidden in ("secret_bytes", "x_physical_arm", "y_physical_arm", "target_profile", "wire_vector"):
         assert forbidden not in body
+
+
+def test_outcome_completion_and_reveal_use_server_owned_elapsed_window_fences():
+    sql = _sql()
+    for public_name, internal_name in (
+        ("fn_experiment_v2_finalize_assignment", "fn_experiment_v2_finalize_assignment_at"),
+        ("fn_experiment_v2_freeze_outcome", "fn_experiment_v2_freeze_outcome_at"),
+        ("fn_experiment_v2_freeze_day_evidence", "fn_experiment_v2_freeze_day_evidence_at"),
+        ("fn_experiment_v2_freeze_export", "fn_experiment_v2_freeze_export_at"),
+        ("fn_experiment_v2_complete", "fn_experiment_v2_complete_at"),
+        ("fn_experiment_v2_reveal", "fn_experiment_v2_reveal_at"),
+    ):
+        assert _body(public_name).count("clock_timestamp()") == 1
+        assert "clock_timestamp()" not in _body(internal_name)
+    window = _body("fn_experiment_v2_assignment_window_is_bound")
+    assert "p_now >= upper(a.valid_range)" in window
+    assert "p_now >= upper(o.itt_range)" in window
+    assert "jsonb_array_elements(r.schedule->'assignments')" in window
+    finalize = _body("fn_experiment_v2_finalize_assignment_at")
+    assert "status = CASE WHEN v_failed THEN 'failed' ELSE 'closed' END" in finalize
+    freeze = _body("fn_experiment_v2_freeze_outcome_at")
+    assert "v_assignment.status NOT IN ('closed', 'failed')" in freeze
+    evidence = _body("fn_experiment_v2_freeze_day_evidence_at")
+    for domain in (
+        "verdify-experiment-v2-deviation-v1",
+        "verdify-experiment-v2-fidelity-v1",
+        "verdify-experiment-v2-environment-v1",
+        "verdify-experiment-v2-integrity-v1",
+        "verdify-experiment-v2-day-evidence-v1",
+    ):
+        assert domain in evidence
+    export = _body("fn_experiment_v2_freeze_export_at")
+    complete = _body("fn_experiment_v2_complete_at")
+    reveal = _body("fn_experiment_v2_reveal_at")
+    assert "v_existing.evidence_bundle_sha256 IS DISTINCT FROM" in export
+    for body in (export, complete, reveal):
+        assert "fn_experiment_v2_all_assignment_windows_bound" in body
+        assert "experiment_v2_day_evidence" in body
+    grant_surface = sql[sql.index("DO $security$") : sql.index("END\n$security$;")]
+    for internal_name in (
+        "fn_experiment_v2_finalize_assignment_at",
+        "fn_experiment_v2_freeze_outcome_at",
+        "fn_experiment_v2_freeze_day_evidence_at",
+        "fn_experiment_v2_freeze_export_at",
+        "fn_experiment_v2_complete_at",
+        "fn_experiment_v2_reveal_at",
+    ):
+        assert f"'public.{internal_name}" not in grant_surface
 
 
 def test_real_postgres_fixture_is_transactional_and_marks_negative_matrix():
@@ -380,6 +587,8 @@ def test_real_postgres_fixture_is_transactional_and_marks_negative_matrix():
         "api_status_expiry",
         "itt_freeze_export_reveal",
         "outcome_flags_from_durable_evidence",
+        "future_assignment_outcome_export_completion_reveal_blocked",
+        "elapsed_assignment_day_evidence_happy_path",
         "facility_entry_not_completion",
     ):
         assert marker in fixture

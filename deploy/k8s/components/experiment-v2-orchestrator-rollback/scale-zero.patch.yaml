@@ -1,0 +1,24 @@
+# Exact no-prune rollback for the three net-new workers. Keeping the objects in
+# desired state lets Argo return Synced + Healthy without deleting resources or
+# running an untrusted first-release image. This patch is inert until the
+# rollback Kustomization is explicitly consumed.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: experiment-v2-lifecycle
+spec:
+  replicas: 0
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: experiment-v2-selector
+spec:
+  replicas: 0
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: experiment-v2-freezer
+spec:
+  replicas: 0

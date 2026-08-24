@@ -19,6 +19,7 @@ from verdify_schemas.component_executor import (
     fixed_order_differences,
     normalize_complete_state,
     normalize_component_value,
+    physical_execution_qualified,
     validate_routine_target,
     validate_work_phase,
 )
@@ -52,6 +53,10 @@ def test_registry_routes_grid_and_treatment_ownership_are_exact() -> None:
         assert definition.push_owner == "planner"
         assert definition.planner_pushable is True
         assert definition.tier == 1
+
+
+def test_provisional_grid_and_prefix_order_cannot_arm_physical_execution() -> None:
+    assert physical_execution_qualified("source-grid-r1") is False
 
 
 def test_every_numeric_grid_accepts_bounds_and_one_step_without_rounding() -> None:

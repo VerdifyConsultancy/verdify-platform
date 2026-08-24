@@ -14,6 +14,7 @@ import hashlib
 import hmac
 import ipaddress
 import json
+import logging
 import os
 import re
 import smtplib
@@ -22,19 +23,22 @@ import time
 import urllib.parse
 import urllib.request
 import uuid
+from collections.abc import Mapping
 from contextlib import asynccontextmanager
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 from email.message import EmailMessage
 from email.utils import formataddr, make_msgid
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 import asyncpg
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, Response
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
+
+log = logging.getLogger(__name__)
 
 
 def _coerce_jsonb(row_dict: dict, *keys: str) -> dict:
@@ -901,13 +905,35 @@ def _align_activity_policy_with_plan(
 
 # ── DB Connection ──
 
+API_RUNTIME_DB_ROLE_REQUIRED_ENV = "VERDIFY_API_RUNTIME_DB_ROLE_REQUIRED"
+API_RUNTIME_DB_LOGIN = "verdify_api_runtime_login"
+
+
+def _api_runtime_db_role_required() -> bool:
+    return os.environ.get(API_RUNTIME_DB_ROLE_REQUIRED_ENV, "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
 
 def get_db_dsn():
-    if os.environ.get("DATABASE_URL"):
-        return os.environ["DATABASE_URL"]
+    database_url = os.environ.get("DATABASE_URL")
+    if database_url:
+        if _api_runtime_db_role_required():
+            try:
+                database_user = urllib.parse.unquote(urllib.parse.urlsplit(database_url).username or "")
+            except ValueError as exc:
+                raise RuntimeError("runtime-role cutover rejects malformed DATABASE_URL") from exc
+            if not hmac.compare_digest(database_user, API_RUNTIME_DB_LOGIN):
+                raise RuntimeError("runtime-role cutover rejects DATABASE_URL with a non-runtime login")
+        return database_url
     host = os.environ.get("DB_HOST", "localhost")
     name = os.environ.get("DB_NAME", "verdify")
     user = os.environ.get("DB_USER", "verdify")
+    if _api_runtime_db_role_required() and not hmac.compare_digest(user, API_RUNTIME_DB_LOGIN):
+        raise RuntimeError("runtime-role cutover requires the exact API database login")
     pw = os.environ.get("DB_PASS", "verdify")
     if host.startswith("/cloudsql/"):
         return f"postgresql://{user}:{pw}@/{name}?host={host}"
@@ -915,14 +941,241 @@ def get_db_dsn():
 
 
 pool: asyncpg.Pool = None
+experiment_lifecycle_pool: "AttestedExperimentLifecyclePool | None" = None
 API_DB_STATEMENT_TIMEOUT_MS = 15_000
 SCORECARD_DB_STATEMENT_TIMEOUT_MS = 6_000
+EXPERIMENT_STATUS_DB_STATEMENT_TIMEOUT_MS = 3_000
+EXPERIMENT_LIFECYCLE_DB_USER_ENV = "VERDIFY_EXPERIMENT_LIFECYCLE_DB_USER"
+EXPERIMENT_LIFECYCLE_DB_PASSWORD_ENV = "VERDIFY_EXPERIMENT_LIFECYCLE_DB_PASSWORD"
+EXPERIMENT_LIFECYCLE_DB_LOGIN = "verdify_experiment_v2_lifecycle_login"
+
+_ORDINARY_RUNTIME_ROLE_ATTESTATION_SQL = """
+SELECT current_user = session_user
+   AND pg_catalog.current_setting('search_path') =
+       'pg_catalog, public, pg_temp'
+   AND public.fn_runtime_attest_ordinary_login()
+"""
+
+
+class AttestedExperimentLifecyclePool:
+    """Dedicated function-only pool made available only after role attestation."""
+
+    lifecycle_role_attested = True
+
+    def __init__(self, candidate: asyncpg.Pool) -> None:
+        self._candidate = candidate
+
+    def acquire(self):
+        return self._candidate.acquire()
+
+    async def close(self) -> None:
+        await self._candidate.close()
+
+
+_EXPERIMENT_LIFECYCLE_ROLE_ATTESTATION_SQL = """
+WITH login AS (
+    SELECT oid, rolname, rolcanlogin, rolinherit, rolsuper, rolcreatedb,
+           rolcreaterole, rolreplication, rolbypassrls
+      FROM pg_roles
+     WHERE rolname = current_user
+), duty AS (
+    SELECT oid, rolcanlogin, rolinherit, rolsuper, rolcreatedb, rolcreaterole,
+           rolreplication, rolbypassrls
+      FROM pg_roles
+     WHERE rolname = 'verdify_experiment_lifecycle'
+), allowed_functions(function_signature) AS (
+    SELECT unnest(ARRAY[
+        'public.fn_experiment_v2_configure(uuid,text,text,text,text,text,text,uuid,text,bigint,text)',
+        'public.fn_experiment_v2_lock_design(uuid,date,integer,time without time zone,text,text,text,text,text,text,text,text,text,text,text)',
+        'public.fn_experiment_v2_register_state(uuid,text,smallint,bytea,bytea,text)',
+        'public.fn_experiment_v2_record_approval(uuid,text,text,integer,text,text,tstzrange,timestamptz,text,text,text)',
+        'public.fn_experiment_v2_transition(uuid,text,text,text,text)',
+        'public.fn_experiment_v2_set_admission(uuid,text,text,text)',
+        'public.fn_experiment_v2_record_facility_safe_closure(uuid,text,text,text)',
+        'public.fn_experiment_v2_create_work(uuid,text,text,tstzrange,timestamptz,text)',
+        'public.fn_experiment_v2_request_recovery(uuid,uuid,tstzrange,timestamptz,text,text)',
+        'public.fn_experiment_v2_complete(uuid,text,text)',
+        'public.fn_experiment_v2_api_status(uuid)'
+    ]::text[])
+)
+SELECT current_user::text AS current_user_name,
+       session_user::text AS session_user_name,
+       current_user = session_user AS session_user_matches,
+       pg_has_role(current_user, 'verdify_experiment_lifecycle', 'member') AS duty_member,
+       coalesce((
+           SELECT NOT membership.admin_option
+             FROM pg_auth_members membership
+             CROSS JOIN login CROSS JOIN duty
+            WHERE membership.member = login.oid
+              AND membership.roleid = duty.oid
+       ), false) AS duty_membership_non_admin,
+       coalesce((SELECT rolcanlogin AND rolinherit FROM login), false)
+           AS login_role_safe,
+       coalesce((SELECT rolsuper FROM login), true) AS is_superuser,
+       coalesce((
+           SELECT d.datdba = login.oid
+             FROM pg_database d CROSS JOIN login
+            WHERE d.datname = current_database()
+       ), true) AS is_database_owner,
+       coalesce((
+           SELECT rolcreatedb OR rolcreaterole OR rolreplication OR rolbypassrls
+             FROM login
+       ), true) AS has_elevated_role_attributes,
+       coalesce((
+           SELECT NOT duty.rolcanlogin AND NOT duty.rolinherit AND
+                  NOT duty.rolsuper AND
+                  NOT duty.rolcreatedb AND NOT duty.rolcreaterole AND
+                  NOT duty.rolreplication AND NOT duty.rolbypassrls AND
+                  NOT EXISTS (
+                      SELECT 1
+                        FROM pg_roles inherited
+                       WHERE inherited.oid <> duty.oid
+                         AND pg_has_role(duty.oid, inherited.oid, 'member')
+                  )
+             FROM duty
+       ), false) AS duty_role_safe,
+       EXISTS (
+           SELECT 1
+             FROM pg_namespace namespace CROSS JOIN login
+            WHERE namespace.nspname = 'public' AND namespace.nspowner = login.oid
+           UNION ALL
+           SELECT 1
+             FROM pg_class owned
+             JOIN pg_namespace namespace ON namespace.oid = owned.relnamespace
+             CROSS JOIN login
+            WHERE namespace.nspname = 'public' AND owned.relowner = login.oid
+           UNION ALL
+           SELECT 1
+             FROM pg_proc owned
+             JOIN pg_namespace namespace ON namespace.oid = owned.pronamespace
+             CROSS JOIN login
+            WHERE namespace.nspname = 'public' AND owned.proowner = login.oid
+       ) AS has_managed_object_ownership,
+       has_schema_privilege(current_user, 'public', 'USAGE') AS schema_usage,
+       EXISTS (
+           SELECT 1
+             FROM pg_roles inherited
+            WHERE inherited.rolname NOT IN (current_user, 'verdify_experiment_lifecycle')
+              AND pg_has_role(current_user, inherited.oid, 'member')
+       ) AS has_other_role_membership,
+       EXISTS (
+           SELECT 1
+             FROM pg_roles candidate
+             CROSS JOIN login
+             CROSS JOIN duty
+            WHERE candidate.oid NOT IN (login.oid, duty.oid)
+              AND NOT candidate.rolsuper
+              AND pg_has_role(candidate.oid, duty.oid, 'member')
+       ) AS has_unexpected_duty_member,
+       has_schema_privilege(current_user, 'public', 'CREATE')
+           AS has_public_schema_create,
+       EXISTS (
+           SELECT 1
+             FROM pg_class protected
+             JOIN pg_namespace namespace ON namespace.oid = protected.relnamespace
+            WHERE namespace.nspname = 'public'
+              AND protected.relkind IN ('r', 'p', 'v', 'm', 'f')
+              AND (
+                  has_table_privilege(
+                      current_user,
+                      protected.oid,
+                      'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER'
+                  )
+                  OR has_any_column_privilege(
+                      current_user,
+                      protected.oid,
+                      'SELECT,INSERT,UPDATE,REFERENCES'
+                  )
+              )
+       ) AS has_protected_relation_privilege,
+       EXISTS (
+           SELECT 1
+             FROM pg_class protected
+             JOIN pg_namespace namespace ON namespace.oid = protected.relnamespace
+            WHERE namespace.nspname = 'public'
+              AND protected.relkind = 'S'
+              AND has_sequence_privilege(
+                  current_user,
+                  protected.oid,
+                  'USAGE,SELECT,UPDATE'
+              )
+       ) AS has_protected_sequence_privilege,
+       EXISTS (
+           SELECT 1
+             FROM pg_proc candidate_function
+            JOIN pg_namespace namespace ON namespace.oid = candidate_function.pronamespace
+            WHERE namespace.nspname = 'public'
+              AND (
+                  candidate_function.proname LIKE 'fn_experiment_v2_%'
+                  OR candidate_function.prosecdef
+              )
+              AND has_function_privilege(current_user, candidate_function.oid, 'EXECUTE')
+              AND NOT EXISTS (
+                  SELECT 1
+                    FROM allowed_functions allowed
+                   WHERE to_regprocedure(allowed.function_signature) = candidate_function.oid
+              )
+       ) AS has_unexpected_function_execute,
+       NOT EXISTS (
+           SELECT 1
+             FROM allowed_functions required
+            WHERE to_regprocedure(required.function_signature) IS NULL
+               OR NOT has_function_privilege(
+                   current_user,
+                   to_regprocedure(required.function_signature),
+                   'EXECUTE'
+               )
+       ) AS has_required_function_execute
+"""
+
+
+def _experiment_lifecycle_role_attestation_passes(row: Mapping[str, object] | None) -> bool:
+    if row is None:
+        return False
+    try:
+        return bool(
+            row["current_user_name"] == EXPERIMENT_LIFECYCLE_DB_LOGIN
+            and row["session_user_name"] == EXPERIMENT_LIFECYCLE_DB_LOGIN
+            and row["session_user_matches"] is True
+            and row["duty_member"] is True
+            and row["duty_membership_non_admin"] is True
+            and row["login_role_safe"] is True
+            and row["is_superuser"] is False
+            and row["is_database_owner"] is False
+            and row["has_elevated_role_attributes"] is False
+            and row["duty_role_safe"] is True
+            and row["has_other_role_membership"] is False
+            and row["has_unexpected_duty_member"] is False
+            and row["has_managed_object_ownership"] is False
+            and row["schema_usage"] is True
+            and row["has_public_schema_create"] is False
+            and row["has_protected_relation_privilege"] is False
+            and row["has_protected_sequence_privilege"] is False
+            and row["has_unexpected_function_execute"] is False
+            and row["has_required_function_execute"] is True
+        )
+    except (KeyError, TypeError):
+        return False
 
 
 async def _init_db_connection(conn: asyncpg.Connection) -> None:
     # Public proof endpoints hit planner/data-health views that are small but
     # complex enough for Postgres JIT to spend seconds compiling. Keep API
     # sessions latency-first; the DB still uses JIT for other clients.
+    if _api_runtime_db_role_required():
+        attested = await conn.fetchval(_ORDINARY_RUNTIME_ROLE_ATTESTATION_SQL)
+        if attested is not True:
+            raise RuntimeError("ordinary API database role attestation failed")
+    await conn.execute("SET jit = off")
+
+
+async def _init_experiment_lifecycle_db_connection(conn: asyncpg.Connection) -> None:
+    """Connection init for the separately attested migration-214 identity.
+
+    The ordinary-role cutover assertion deliberately does not apply to this
+    pool; its exact lifecycle login and function allowlist are attested after
+    pool creation by ``_EXPERIMENT_LIFECYCLE_ROLE_ATTESTATION_SQL``.
+    """
     await conn.execute("SET jit = off")
 
 
@@ -932,6 +1185,76 @@ async def _setup_db_connection(conn: asyncpg.Connection) -> None:
     # leave an unbounded production query running behind it.
     await conn.execute("SET application_name = 'verdify-api'")
     await conn.execute(f"SET statement_timeout = '{API_DB_STATEMENT_TIMEOUT_MS}ms'")
+
+
+async def _setup_experiment_lifecycle_connection(conn: asyncpg.Connection) -> None:
+    """Reapply the dedicated status-function session budget after pool reset."""
+    await conn.execute("SET application_name = 'verdify-api-experiment-lifecycle'")
+    await conn.execute(f"SET statement_timeout = '{EXPERIMENT_STATUS_DB_STATEMENT_TIMEOUT_MS}ms'")
+
+
+def _ordinary_api_db_user() -> str:
+    database_url = os.environ.get("DATABASE_URL", "")
+    if database_url:
+        try:
+            parsed = urllib.parse.urlsplit(database_url)
+            if parsed.username:
+                return urllib.parse.unquote(parsed.username)
+        except ValueError:
+            # The ordinary pool will reject a malformed URL independently. The
+            # dedicated pool still must pass DB-role attestation before use.
+            pass
+    return os.environ.get("DB_USER", "verdify")
+
+
+async def create_experiment_lifecycle_pool() -> AttestedExperimentLifecyclePool | None:
+    """Create the separately credentialed migration-214 lifecycle pool.
+
+    Missing, incomplete, shared, unreachable, or over-privileged credentials
+    leave only the component-status endpoint unavailable. The ordinary API
+    pool is never returned as a substitute, and credential values are never
+    interpolated into a DSN or log message.
+    """
+    user = os.environ.get(EXPERIMENT_LIFECYCLE_DB_USER_ENV, "")
+    password = os.environ.get(EXPERIMENT_LIFECYCLE_DB_PASSWORD_ENV, "")
+    if not user and not password:
+        return None
+    if not user or not password or hmac.compare_digest(user, _ordinary_api_db_user()):
+        log.error("experiment lifecycle database credential is incomplete or shared; refusing it")
+        return None
+    if not hmac.compare_digest(user, EXPERIMENT_LIFECYCLE_DB_LOGIN):
+        log.error("experiment lifecycle database login identity is not the locked login")
+        return None
+
+    candidate: asyncpg.Pool | None = None
+    try:
+        candidate = await asyncpg.create_pool(
+            host=os.environ.get("DB_HOST", "localhost"),
+            port=int(os.environ.get("DB_PORT", "5432")),
+            database=os.environ.get("DB_NAME", "verdify"),
+            user=user,
+            password=password,
+            min_size=1,
+            max_size=2,
+            max_inactive_connection_lifetime=60,
+            init=_init_experiment_lifecycle_db_connection,
+            setup=_setup_experiment_lifecycle_connection,
+        )
+        async with candidate.acquire() as connection:
+            attestation = await connection.fetchrow(_EXPERIMENT_LIFECYCLE_ROLE_ATTESTATION_SQL)
+        if not _experiment_lifecycle_role_attestation_passes(attestation):
+            await candidate.close()
+            log.error("experiment lifecycle database login lacks the exact restricted duty; refusing it")
+            return None
+        return AttestedExperimentLifecyclePool(candidate)
+    except Exception as exc:
+        if candidate is not None:
+            try:
+                await candidate.close()
+            except Exception:
+                pass
+        log.error("experiment lifecycle database pool unavailable error=%s", type(exc).__name__)
+        return None
 
 
 async def _fetch_planner_scorecard(
@@ -988,7 +1311,7 @@ async def _fetch_optional(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global pool
+    global experiment_lifecycle_pool, pool
     pool = await asyncpg.create_pool(
         get_db_dsn(),
         min_size=1,
@@ -997,8 +1320,17 @@ async def lifespan(app: FastAPI):
         init=_init_db_connection,
         setup=_setup_db_connection,
     )
-    yield
-    await pool.close()
+    experiment_lifecycle_pool = await create_experiment_lifecycle_pool()
+    try:
+        yield
+    finally:
+        dedicated_pool = experiment_lifecycle_pool
+        experiment_lifecycle_pool = None
+        try:
+            if dedicated_pool is not None:
+                await dedicated_pool.close()
+        finally:
+            await pool.close()
 
 
 app = FastAPI(
@@ -4432,12 +4764,10 @@ async def pressure_group_status(greenhouse_id: str = DEFAULT_GREENHOUSE):
 #       intentionally visible here and only here.
 #   VERDIFY_ALLOW_UNAUTHENTICATED_WRITES deliberately does NOT apply.
 #
-# CONCURRENCY / IDEMPOTENCY: fn_experiment_transition(uuid, text, text,
-# text) takes no expected-status argument, so the optimistic-concurrency
-# precondition is enforced here in the SAME transaction: SELECT ... FOR
-# UPDATE, compare expected_status, then call the SQL function (which
-# re-locks the same row — same txn, no deadlock). A transition to the
-# status the row already has is an idempotent 200 no-op (no event row).
+# CONCURRENCY / IDEMPOTENCY: the protocol-v1 runtime wrappers own row locks,
+# optimistic expected-status checks, and typed event writes atomically. The
+# API runtime has no direct DML on shared experiment relations. A transition
+# to the status the row already has is an idempotent 200 no-op (no event row).
 # All state rules (transition matrix, lock/arm gates, the LANE-C
 # aa/randomized qualification-hash gates as they land) live in SQL and are
 # surfaced as HTTP 404/409/422 with the SQL error detail — never
@@ -4485,7 +4815,7 @@ async def require_experiment_operator_access(
     raise HTTPException(status_code=403, detail="Experiment operator API disabled for unauthenticated request")
 
 
-def _experiment_sql_http_error(exc: asyncpg.exceptions.RaiseError) -> HTTPException:
+def _experiment_sql_http_error(exc: asyncpg.exceptions.PostgresError) -> HTTPException:
     """Map RAISE EXCEPTION detail from the migration-207 functions to HTTP.
 
     unknown id -> 404; illegal state-matrix edge or state conflict -> 409;
@@ -4495,7 +4825,18 @@ def _experiment_sql_http_error(exc: asyncpg.exceptions.RaiseError) -> HTTPExcept
     message = exc.message or str(exc)
     if "unknown experiment" in message:
         return HTTPException(status_code=404, detail=message)
-    if "illegal experiment transition" in message:
+    if "ordinary runtime rejects protocol" in message:
+        return HTTPException(
+            status_code=409,
+            detail="Protocol-v2 experiments are not available on the legacy v1 experiment surface",
+        )
+    if (
+        exc.sqlstate == "40001"
+        or "illegal experiment transition" in message
+        or "unblind requires completed" in message
+        or "unblind export does not match" in message
+        or "already unblinded with a different export hash" in message
+    ):
         return HTTPException(status_code=409, detail=message)
     return HTTPException(status_code=422, detail=message)
 
@@ -4579,6 +4920,8 @@ class ExperimentSummary(BaseModel):
 
 class ExperimentTransitionRequest(BaseModel):
     expected_status: str | None = None
+    # Retained for wire compatibility only. Audit identity is derived from the
+    # authenticated route/action and never trusted from request JSON.
     actor: str | None = Field(default=None, max_length=120)
     note: str | None = Field(default=None, max_length=1000)
 
@@ -4715,6 +5058,7 @@ class ExperimentExport(BaseModel):
 
 class ExperimentUnblindRequest(BaseModel):
     export_sha256: str
+    # Retained for wire compatibility only; the SQL evidence actor is fixed.
     actor: str | None = Field(default=None, max_length=120)
 
     @field_validator("export_sha256")
@@ -4753,12 +5097,15 @@ class ComponentExperimentWorkStatus(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    work_id: str
+    # The SECURITY DEFINER status function masks a future randomized work UUID
+    # until its valid range begins. Generic phase/kind/range remains visible.
+    work_id: str | None
     execution_phase: str
     operation_kind: str
     valid_from: dt.datetime
     valid_to: dt.datetime
     expires_at: dt.datetime
+    temporal_state: Literal["pending", "active", "expired"]
     expired: bool
     # Only randomized assignment work may expose assignment identity/X-Y.
     assignment_id: str | None = None
@@ -4766,10 +5113,21 @@ class ComponentExperimentWorkStatus(BaseModel):
 
     @model_validator(mode="after")
     def _assignment_identity_is_randomized_only(self) -> "ComponentExperimentWorkStatus":
-        if self.operation_kind != "assignment" and (self.assignment_id is not None or self.blinded_label is not None):
+        has_assignment_identity = self.assignment_id is not None or self.blinded_label is not None
+        if has_assignment_identity and (
+            self.operation_kind != "randomized_assignment" or self.temporal_state != "active"
+        ):
             raise ValueError("assignment identity is randomized-work-only")
         if self.blinded_label is not None and self.blinded_label not in ("X", "Y"):
             raise ValueError("blinded_label may only be X or Y")
+        if self.expired != (self.temporal_state == "expired"):
+            raise ValueError("expired must agree with temporal_state")
+        if self.work_id is None and not (
+            self.operation_kind == "randomized_assignment"
+            and self.temporal_state == "pending"
+            and not has_assignment_identity
+        ):
+            raise ValueError("work_id may only be masked for pending randomized work")
         return self
 
 
@@ -4786,6 +5144,7 @@ class ComponentExperimentStateIdentity(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    work_id: str | None = None
     policy_state_content_sha256: str | None = None
     observation_receipt_sha256: str | None = None
     receipt_persisted_at: dt.datetime | None = None
@@ -4821,13 +5180,787 @@ class ComponentExperimentStatus(BaseModel):
     grid_revision: str
 
 
+_COMPONENT_EXPERIMENT_LIFECYCLE_STATUSES = (
+    "draft",
+    "locked",
+    "armed",
+    "running",
+    "paused",
+    "completed",
+    "aborted",
+)
+_COMPONENT_EXPERIMENT_PHASES = ("shadow", "commissioning", "aa_rehearsal", "randomized")
+_COMPONENT_EXPERIMENT_ADMISSIONS = ("closed", "open", "baseline_recovery", "emergency_hold")
+_COMPONENT_EXPERIMENT_SCHEDULE_SCHEMA_SHA256 = "fc73d212f58db91bd55bb70e3faa1431172b4339ae3b22a11d404ba95147b794"
+_COMPONENT_EXPERIMENT_AUDIT_REF_PATTERN = r"^[A-Za-z0-9][A-Za-z0-9._:/#@-]{0,95}$"
+
+
+class _ComponentExperimentControlBase(BaseModel):
+    """Authenticated lifecycle command with an immutable external audit reference."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    audit_ref: str = Field(pattern=_COMPONENT_EXPERIMENT_AUDIT_REF_PATTERN)
+
+    @property
+    def database_actor(self) -> str:
+        # The fixed prefix makes it impossible to mistake a caller-supplied
+        # trace reference for a database login or human identity.
+        return f"verdify-api:{self.audit_ref}"
+
+
+class _ComponentExperimentExistingControl(_ComponentExperimentControlBase):
+    """Required optimistic precondition for every already-configured v2 command."""
+
+    expected_lifecycle_status: Literal["draft", "locked", "armed", "running", "paused", "completed", "aborted"]
+    expected_execution_phase: Literal["shadow", "commissioning", "aa_rehearsal", "randomized"]
+    expected_admission_state: Literal["closed", "open", "baseline_recovery", "emergency_hold"]
+    expected_component_enabled: bool = Field(strict=True)
+    expected_lease_generation: int = Field(ge=0, strict=True)
+    expected_revision_bundle_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
+class ComponentExperimentConfigureControl(_ComponentExperimentControlBase):
+    action: Literal["configure"]
+    # Candidate configuration converts a protocol-1 draft or replaces an
+    # unlocked protocol-2 candidate. It deliberately carries no pre-draw
+    # design, schedule, selector, endpoint, outcome, or power artifact.
+    expected_protocol_version: Literal[1, 2]
+    expected_lifecycle_status: Literal["draft"]
+    expected_execution_phase: Literal[None, "shadow", "commissioning", "aa_rehearsal"]
+    expected_admission_state: Literal["closed"]
+    expected_component_enabled: bool = Field(strict=True)
+    expected_lease_generation: int = Field(ge=0, strict=True)
+    expected_revision_bundle_sha256: str | None = Field(pattern=r"^[0-9a-f]{64}$")
+    firmware_revision: str = Field(min_length=1, max_length=200)
+    config_revision: str = Field(min_length=1, max_length=200)
+    registry_revision: str = Field(min_length=1, max_length=200)
+    grid_revision: str = Field(min_length=1, max_length=200)
+    study_id: str = Field(min_length=1, max_length=200)
+    assignment_namespace_uuid: uuid.UUID
+
+    @model_validator(mode="after")
+    def _source_or_candidate_precondition_is_exact(self) -> "ComponentExperimentConfigureControl":
+        if self.expected_protocol_version == 1:
+            if (
+                self.expected_execution_phase is not None
+                or self.expected_component_enabled
+                or self.expected_lease_generation != 0
+                or self.expected_revision_bundle_sha256 is not None
+            ):
+                raise ValueError("initial configure requires the protocol-1 source precondition")
+        elif self.expected_execution_phase is None or self.expected_revision_bundle_sha256 is None:
+            raise ValueError("replacement configure requires the observed protocol-2 candidate revision")
+        return self
+
+
+class ComponentExperimentLockDesignControl(_ComponentExperimentExistingControl):
+    """Atomic pre-draw lock after revision-bound shadow/canary/A-A evidence."""
+
+    action: Literal["lock_design"]
+    study_start_local_date: date
+    randomized_pair_count: int = Field(ge=2, le=10_000, strict=True)
+    selector_context_cutoff_local: dt.time
+    design_lock_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    source_git_sha: str = Field(pattern=r"^[0-9a-f]{40}$")
+    schedule_schema_sha256: Literal["fc73d212f58db91bd55bb70e3faa1431172b4339ae3b22a11d404ba95147b794"]
+    selector_identity_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    selector_artifact_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    context_schema_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    endpoint_artifact_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    outcome_schema_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    analyzer_environment_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    power_artifact_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+    @field_validator("selector_context_cutoff_local")
+    @classmethod
+    def _selector_cutoff_is_wall_clock_time(cls, value: dt.time) -> dt.time:
+        if value.tzinfo is not None:
+            raise ValueError("selector_context_cutoff_local must not include a UTC offset")
+        return value
+
+
+class ComponentExperimentRegisterStateControl(_ComponentExperimentExistingControl):
+    action: Literal["register_state"]
+    profile: Literal["baseline", "moderate", "aggressive", "commissioning_probe"]
+    wire_schema_version: int = Field(ge=0, le=255)
+    wire_manifest_digest_hex: str = Field(pattern=r"^[0-9a-f]{64}$")
+    wire_vector_hex: str = Field(pattern=r"^[0-9a-f]{356}$")
+
+
+class ComponentExperimentRecordApprovalControl(_ComponentExperimentExistingControl):
+    action: Literal["record_approval"]
+    approval_kind: Literal["scoped_probe", "combined_physical", "randomized_day_1"]
+    scope_name: Literal["commissioning_probe", "combined", "day1"]
+    issue_number: Literal[641, 642]
+    approval_ref: str = Field(min_length=1, max_length=500)
+    artifact_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    valid_from: dt.datetime | None = None
+    valid_to: dt.datetime | None = None
+    expires_at: dt.datetime | None = None
+    supervisor_role: str | None = Field(default=None, min_length=1, max_length=200)
+    rescue_owner_role: str | None = Field(default=None, min_length=1, max_length=200)
+
+    @model_validator(mode="after")
+    def _approval_scope_is_exact(self) -> "ComponentExperimentRecordApprovalControl":
+        if self.approval_kind == "scoped_probe":
+            if self.issue_number != 641 or self.scope_name != "commissioning_probe":
+                raise ValueError("scoped_probe must bind issue 641 commissioning_probe")
+            if None in (
+                self.valid_from,
+                self.valid_to,
+                self.expires_at,
+                self.supervisor_role,
+                self.rescue_owner_role,
+            ):
+                raise ValueError("scoped_probe requires its bounded window and facility roles")
+            _validate_component_control_interval(self.valid_from, self.valid_to, self.expires_at)
+        else:
+            expected = (641, "combined") if self.approval_kind == "combined_physical" else (642, "day1")
+            if (self.issue_number, self.scope_name) != expected:
+                raise ValueError(f"{self.approval_kind} has the wrong issue/scope")
+            if any(
+                value is not None
+                for value in (
+                    self.valid_from,
+                    self.valid_to,
+                    self.expires_at,
+                    self.supervisor_role,
+                    self.rescue_owner_role,
+                )
+            ):
+                raise ValueError(f"{self.approval_kind} cannot carry a probe window or facility roles")
+        return self
+
+
+class ComponentExperimentTransitionControl(_ComponentExperimentExistingControl):
+    action: Literal["transition"]
+    target_lifecycle_status: Literal["running", "paused", "aborted"] | None = None
+    target_execution_phase: Literal["commissioning", "aa_rehearsal", "randomized"] | None = None
+    note: str | None = Field(default=None, max_length=1000)
+
+    @model_validator(mode="after")
+    def _one_axis_only(self) -> "ComponentExperimentTransitionControl":
+        if (self.target_lifecycle_status is None) == (self.target_execution_phase is None):
+            raise ValueError("transition must change exactly one lifecycle/phase axis")
+        return self
+
+
+class ComponentExperimentSetAdmissionControl(_ComponentExperimentExistingControl):
+    action: Literal["set_admission"]
+    target_admission_state: Literal["closed", "open", "baseline_recovery", "emergency_hold"]
+    reason: str = Field(min_length=1, max_length=1000)
+
+
+class ComponentExperimentFacilitySafeClosureControl(_ComponentExperimentExistingControl):
+    action: Literal["record_facility_safe_closure"]
+    authorization_ref: str = Field(min_length=1, max_length=500)
+    safe_state_artifact_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
+class _ComponentExperimentBoundedRangeControl(_ComponentExperimentExistingControl):
+    valid_from: dt.datetime
+    valid_to: dt.datetime
+    expires_at: dt.datetime
+
+    @model_validator(mode="after")
+    def _bounded_aware_range(self) -> "_ComponentExperimentBoundedRangeControl":
+        _validate_component_control_interval(self.valid_from, self.valid_to, self.expires_at)
+        return self
+
+
+class ComponentExperimentCreateWorkControl(_ComponentExperimentBoundedRangeControl):
+    action: Literal["create_work"]
+    operation_kind: Literal["shadow_preview", "commissioning_probe", "commissioning_canary", "aa_baseline_rehearsal"]
+    target_profile: Literal["baseline", "moderate", "aggressive", "commissioning_probe"]
+
+    @model_validator(mode="after")
+    def _work_kind_matches_profile(self) -> "ComponentExperimentCreateWorkControl":
+        allowed = {
+            "shadow_preview": {"baseline"},
+            "commissioning_probe": {"commissioning_probe"},
+            "commissioning_canary": {"moderate", "aggressive"},
+            "aa_baseline_rehearsal": {"baseline"},
+        }
+        if self.target_profile not in allowed[self.operation_kind]:
+            raise ValueError("operation_kind cannot use that target_profile")
+        return self
+
+
+class ComponentExperimentRequestRecoveryControl(_ComponentExperimentBoundedRangeControl):
+    action: Literal["request_recovery"]
+    source_work_id: uuid.UUID | None = None
+    reason: str = Field(min_length=1, max_length=1000)
+
+
+class ComponentExperimentCompleteControl(_ComponentExperimentExistingControl):
+    action: Literal["complete"]
+    note: str | None = Field(default=None, max_length=1000)
+
+
+ComponentExperimentControlRequest = Annotated[
+    ComponentExperimentConfigureControl
+    | ComponentExperimentLockDesignControl
+    | ComponentExperimentRegisterStateControl
+    | ComponentExperimentRecordApprovalControl
+    | ComponentExperimentTransitionControl
+    | ComponentExperimentSetAdmissionControl
+    | ComponentExperimentFacilitySafeClosureControl
+    | ComponentExperimentCreateWorkControl
+    | ComponentExperimentRequestRecoveryControl
+    | ComponentExperimentCompleteControl,
+    Field(discriminator="action"),
+]
+
+
+class ComponentExperimentControlState(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    lifecycle_status: str
+    execution_phase: str
+    admission_state: str
+    component_enabled: bool
+    lease_generation: int
+    revision_bundle_sha256: str
+
+
+class ComponentExperimentControlReceipt(BaseModel):
+    """Treatment-free receipt for one function-bounded lifecycle command."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    experiment_id: str
+    action: Literal[
+        "configure",
+        "lock_design",
+        "register_state",
+        "record_approval",
+        "transition",
+        "set_admission",
+        "record_facility_safe_closure",
+        "create_work",
+        "request_recovery",
+        "complete",
+    ]
+    result_id: str
+    previous_state: ComponentExperimentControlState | None
+    state: ComponentExperimentControlState
+    recorded_at: dt.datetime
+
+
+def _validate_component_control_interval(
+    valid_from: dt.datetime | None,
+    valid_to: dt.datetime | None,
+    expires_at: dt.datetime | None,
+) -> None:
+    if valid_from is None or valid_to is None or expires_at is None:
+        raise ValueError("bounded interval is incomplete")
+    if any(value.tzinfo is None or value.utcoffset() is None for value in (valid_from, valid_to, expires_at)):
+        raise ValueError("bounded interval timestamps must include a UTC offset")
+    if valid_from >= valid_to or not (valid_from < expires_at <= valid_to):
+        raise ValueError("bounded interval must satisfy valid_from < expires_at <= valid_to")
+
+
+_EXPERIMENT_V2_API_STATUS_SQL = """
+SELECT experiment_id, protocol_version, experiment_kind, transport_kind,
+       lifecycle_status, execution_phase, admission_state, component_enabled,
+       lease_generation, revision_bundle_sha256, firmware_revision,
+       config_revision, registry_revision, grid_revision, design_lock_sha256,
+       schedule_sha256, mapping_commitment_sha256, scoped_probe_approved,
+       combined_physical_approved, randomized_day_1_approved, work_id,
+       assignment_id, work_operation_kind, work_execution_phase,
+       work_valid_range, work_expires_at, future_randomized_identity_masked,
+       current_work_receipt_ids, current_work_policy_state_content_sha256,
+       current_work_receipt_sha256, current_work_receipt_persisted_at,
+       open_exposure_count, resolved_at
+  FROM public.fn_experiment_v2_api_status($1::uuid)
+"""
+
+_EXPERIMENT_V2_CONTROL_SQL: dict[str, str] = {
+    "configure": """
+SELECT (public.fn_experiment_v2_configure(
+    $1::uuid, 'legacy_components_v1'::text,
+    $2::text, $3::text, $4::text, $5::text, $6::text, $7::uuid,
+    $8::text, $9::bigint, $10::text
+)).experiment_id::text
+""",
+    "lock_design": """
+SELECT (public.fn_experiment_v2_lock_design(
+    $1::uuid, $2::date, $3::integer, $4::time without time zone,
+    $5::text, $6::text, $7::text, $8::text, $9::text, $10::text,
+    $11::text, $12::text, $13::text, $14::text, $15::text
+)).experiment_id::text
+""",
+    "register_state": """
+SELECT (public.fn_experiment_v2_register_state(
+    $1::uuid, $2::text, $3::smallint, $4::bytea, $5::bytea, $6::text
+)).state_artifact_id::text
+""",
+    "record_approval": """
+SELECT (public.fn_experiment_v2_record_approval(
+    $1::uuid, $2::text, $3::text, $4::integer, $5::text, $6::text,
+    $7::tstzrange, $8::timestamptz, $9::text, $10::text, $11::text
+)).approval_id::text
+""",
+    "transition": """
+SELECT (public.fn_experiment_v2_transition(
+    $1::uuid, $2::text, $3::text, $4::text, $5::text
+)).experiment_id::text
+""",
+    "set_admission": """
+SELECT (public.fn_experiment_v2_set_admission(
+    $1::uuid, $2::text, $3::text, $4::text
+)).experiment_id::text
+""",
+    "record_facility_safe_closure": """
+SELECT (public.fn_experiment_v2_record_facility_safe_closure(
+    $1::uuid, $2::text, $3::text, $4::text
+)).experiment_id::text
+""",
+    "create_work": """
+SELECT public.fn_experiment_v2_create_work(
+    $1::uuid, $2::text, $3::text, $4::tstzrange, $5::timestamptz, $6::text
+)::text
+""",
+    "request_recovery": """
+SELECT public.fn_experiment_v2_request_recovery(
+    $1::uuid, $2::uuid, $3::tstzrange, $4::timestamptz, $5::text, $6::text
+)::text
+""",
+    "complete": """
+SELECT (public.fn_experiment_v2_complete(
+    $1::uuid, $2::text, $3::text
+)).experiment_id::text
+""",
+}
+
+
+def _component_work_from_api_status(row: Mapping[str, object]) -> ComponentExperimentWorkStatus | None:
+    work_fields = (
+        row["work_id"],
+        row["assignment_id"],
+        row["work_operation_kind"],
+        row["work_execution_phase"],
+        row["work_valid_range"],
+        row["work_expires_at"],
+    )
+    future_masked = row["future_randomized_identity_masked"]
+    if future_masked is not True and future_masked is not False:
+        raise ValueError("status function returned a malformed future-identity mask")
+    if all(value is None for value in work_fields):
+        if future_masked:
+            raise ValueError("status function returned a mask without generic work metadata")
+        return None
+    if any(value is None for value in work_fields[2:]):
+        raise ValueError("status function returned incomplete generic work metadata")
+
+    valid_range = row["work_valid_range"]
+    valid_from = getattr(valid_range, "lower", None)
+    range_end = getattr(valid_range, "upper", None)
+    expires_at = row["work_expires_at"]
+    resolved_at = row["resolved_at"]
+    if valid_from is None or range_end is None or expires_at is None or resolved_at is None:
+        raise ValueError("status function returned an unbounded work interval")
+    valid_to = min(range_end, expires_at)
+    if resolved_at < valid_from:
+        temporal_state: Literal["pending", "active", "expired"] = "pending"
+    elif resolved_at < valid_to:
+        temporal_state = "active"
+    else:
+        raise ValueError("status function returned expired work")
+
+    operation_kind = row["work_operation_kind"]
+    if temporal_state == "pending" and operation_kind == "randomized_assignment" and not future_masked:
+        raise ValueError("status function returned an unmasked future randomized identity")
+    if future_masked and not (
+        temporal_state == "pending"
+        and operation_kind == "randomized_assignment"
+        and row["work_id"] is None
+        and row["assignment_id"] is None
+    ):
+        raise ValueError("status function returned an inconsistent future randomized mask")
+    if not future_masked and row["work_id"] is None:
+        raise ValueError("status function returned unmasked work without its identifier")
+
+    return ComponentExperimentWorkStatus(
+        work_id=str(row["work_id"]) if row["work_id"] is not None else None,
+        execution_phase=row["work_execution_phase"],
+        operation_kind=operation_kind,
+        valid_from=valid_from,
+        valid_to=valid_to,
+        expires_at=expires_at,
+        temporal_state=temporal_state,
+        expired=False,
+        assignment_id=str(row["assignment_id"]) if row["assignment_id"] is not None else None,
+        # Migration 214 deliberately does not return the X/Y label from this
+        # least-information function. Never recover it through a base-table
+        # query on the ordinary API pool.
+        blinded_label=None,
+    )
+
+
+def _component_state_identity_from_api_status(
+    row: Mapping[str, object],
+    current_work: ComponentExperimentWorkStatus | None,
+) -> ComponentExperimentStateIdentity:
+    arrays = (
+        row["current_work_receipt_ids"],
+        row["current_work_policy_state_content_sha256"],
+        row["current_work_receipt_sha256"],
+        row["current_work_receipt_persisted_at"],
+    )
+    if any(not isinstance(values, (list, tuple)) for values in arrays):
+        raise ValueError("status function returned malformed receipt arrays")
+    lengths = {len(values) for values in arrays}
+    if len(lengths) != 1:
+        raise ValueError("status function returned misaligned receipt arrays")
+    if not arrays[0]:
+        return ComponentExperimentStateIdentity()
+    if current_work is None or current_work.work_id is None:
+        raise ValueError("status function returned receipts without visible current work")
+    policy_hash = arrays[1][-1]
+    receipt_hash = arrays[2][-1]
+    persisted_at = arrays[3][-1]
+    if policy_hash is None or receipt_hash is None or persisted_at is None:
+        raise ValueError("status function returned an incomplete receipt identity")
+    return ComponentExperimentStateIdentity(
+        work_id=current_work.work_id,
+        policy_state_content_sha256=policy_hash,
+        observation_receipt_sha256=receipt_hash,
+        receipt_persisted_at=persisted_at,
+    )
+
+
+def _validate_component_status_row(
+    status: Mapping[str, object],
+    normalized_experiment_id: str,
+) -> tuple[ComponentExperimentWorkStatus | None, ComponentExperimentStateIdentity]:
+    if str(status["experiment_id"]) != normalized_experiment_id:
+        raise ValueError("status function returned the wrong experiment identity")
+    if (
+        status["protocol_version"] != 2
+        or status["experiment_kind"] != "randomized"
+        or status["transport_kind"] != "legacy_components_v1"
+    ):
+        raise ValueError("status function returned a non-component experiment")
+    if status["lifecycle_status"] not in _COMPONENT_EXPERIMENT_LIFECYCLE_STATUSES:
+        raise ValueError("status function returned an unknown lifecycle status")
+    if status["execution_phase"] not in _COMPONENT_EXPERIMENT_PHASES:
+        raise ValueError("status function returned an unknown execution phase")
+    if status["admission_state"] not in _COMPONENT_EXPERIMENT_ADMISSIONS:
+        raise ValueError("status function returned an unknown admission state")
+    if status["component_enabled"] is not True and status["component_enabled"] is not False:
+        raise ValueError("status function returned malformed component_enabled")
+    if not isinstance(status["revision_bundle_sha256"], str) or not _SHA256_HEX_RE.fullmatch(
+        status["revision_bundle_sha256"]
+    ):
+        raise ValueError("status function returned malformed revision_bundle_sha256")
+    for approval_field in (
+        "scoped_probe_approved",
+        "combined_physical_approved",
+        "randomized_day_1_approved",
+    ):
+        if status[approval_field] is not True and status[approval_field] is not False:
+            raise ValueError("status function returned a malformed approval")
+    if type(status["open_exposure_count"]) is not int or status["open_exposure_count"] < 0:
+        raise ValueError("status function returned a malformed exposure count")
+    if type(status["lease_generation"]) is not int or status["lease_generation"] < 0:
+        raise ValueError("status function returned a malformed lease generation")
+    current_work = _component_work_from_api_status(status)
+    state_identity = _component_state_identity_from_api_status(status, current_work)
+    return current_work, state_identity
+
+
+def _component_control_state(status: Mapping[str, object]) -> ComponentExperimentControlState:
+    return ComponentExperimentControlState(
+        lifecycle_status=status["lifecycle_status"],
+        execution_phase=status["execution_phase"],
+        admission_state=status["admission_state"],
+        component_enabled=status["component_enabled"],
+        lease_generation=status["lease_generation"],
+        revision_bundle_sha256=status["revision_bundle_sha256"],
+    )
+
+
+def _assert_component_control_precondition(
+    status: Mapping[str, object],
+    command: _ComponentExperimentExistingControl | ComponentExperimentConfigureControl,
+) -> None:
+    checks = {
+        "lifecycle_status": (status["lifecycle_status"], command.expected_lifecycle_status),
+        "execution_phase": (status["execution_phase"], command.expected_execution_phase),
+        "admission_state": (status["admission_state"], command.expected_admission_state),
+        "component_enabled": (status["component_enabled"], command.expected_component_enabled),
+        "lease_generation": (status["lease_generation"], command.expected_lease_generation),
+        "revision_bundle_sha256": (
+            status["revision_bundle_sha256"],
+            command.expected_revision_bundle_sha256,
+        ),
+    }
+    mismatches = sorted(name for name, (actual, expected) in checks.items() if actual != expected)
+    if mismatches:
+        raise HTTPException(
+            409,
+            "Confirmed-component v2 precondition failed for " + ", ".join(mismatches),
+        )
+
+
+async def _execute_component_control(
+    conn,
+    experiment_id: str,
+    command: ComponentExperimentControlRequest,
+) -> str:
+    actor = command.database_actor
+    if isinstance(command, ComponentExperimentConfigureControl):
+        args = (
+            experiment_id,
+            command.firmware_revision,
+            command.config_revision,
+            command.registry_revision,
+            command.grid_revision,
+            command.study_id,
+            command.assignment_namespace_uuid,
+            command.expected_revision_bundle_sha256,
+            command.expected_lease_generation,
+            actor,
+        )
+    elif isinstance(command, ComponentExperimentLockDesignControl):
+        args = (
+            experiment_id,
+            command.study_start_local_date,
+            command.randomized_pair_count,
+            command.selector_context_cutoff_local,
+            command.design_lock_sha256,
+            command.source_git_sha,
+            command.schedule_schema_sha256,
+            command.selector_identity_sha256,
+            command.selector_artifact_sha256,
+            command.context_schema_sha256,
+            command.endpoint_artifact_sha256,
+            command.outcome_schema_sha256,
+            command.analyzer_environment_sha256,
+            command.power_artifact_sha256,
+            actor,
+        )
+    elif isinstance(command, ComponentExperimentRegisterStateControl):
+        args = (
+            experiment_id,
+            command.profile,
+            command.wire_schema_version,
+            bytes.fromhex(command.wire_manifest_digest_hex),
+            bytes.fromhex(command.wire_vector_hex),
+            actor,
+        )
+    elif isinstance(command, ComponentExperimentRecordApprovalControl):
+        valid_range = (
+            asyncpg.Range(command.valid_from, command.valid_to, lower_inc=True, upper_inc=False)
+            if command.valid_from is not None and command.valid_to is not None
+            else None
+        )
+        args = (
+            experiment_id,
+            command.approval_kind,
+            command.scope_name,
+            command.issue_number,
+            command.approval_ref,
+            command.artifact_sha256,
+            valid_range,
+            command.expires_at,
+            command.supervisor_role,
+            command.rescue_owner_role,
+            actor,
+        )
+    elif isinstance(command, ComponentExperimentTransitionControl):
+        args = (
+            experiment_id,
+            command.target_lifecycle_status,
+            command.target_execution_phase,
+            actor,
+            command.note,
+        )
+    elif isinstance(command, ComponentExperimentSetAdmissionControl):
+        args = (experiment_id, command.target_admission_state, actor, command.reason)
+    elif isinstance(command, ComponentExperimentFacilitySafeClosureControl):
+        args = (
+            experiment_id,
+            command.authorization_ref,
+            command.safe_state_artifact_sha256,
+            actor,
+        )
+    elif isinstance(command, ComponentExperimentCreateWorkControl):
+        args = (
+            experiment_id,
+            command.operation_kind,
+            command.target_profile,
+            asyncpg.Range(command.valid_from, command.valid_to, lower_inc=True, upper_inc=False),
+            command.expires_at,
+            actor,
+        )
+    elif isinstance(command, ComponentExperimentRequestRecoveryControl):
+        args = (
+            experiment_id,
+            command.source_work_id,
+            asyncpg.Range(command.valid_from, command.valid_to, lower_inc=True, upper_inc=False),
+            command.expires_at,
+            command.reason,
+            actor,
+        )
+    elif isinstance(command, ComponentExperimentCompleteControl):
+        args = (experiment_id, actor, command.note)
+    else:  # pragma: no cover - the discriminated union is exhaustive.
+        raise ValueError("unsupported confirmed-component v2 control action")
+
+    result = await conn.fetchval(_EXPERIMENT_V2_CONTROL_SQL[command.action], *args)
+    if result is None:
+        raise ValueError("lifecycle function returned no durable identifier")
+    result_id = str(result)
+    uuid.UUID(result_id)
+    if (
+        command.action
+        in {
+            "configure",
+            "lock_design",
+            "transition",
+            "set_admission",
+            "record_facility_safe_closure",
+            "complete",
+        }
+        and result_id != experiment_id
+    ):
+        raise ValueError("lifecycle function returned the wrong experiment identity")
+    return result_id
+
+
+def _component_control_sql_http_error(exc: asyncpg.exceptions.RaiseError) -> HTTPException:
+    message = (exc.message or str(exc) or "Confirmed-component v2 control function rejected the command")[:1000]
+    if "unknown protocol-v2 experiment" in message or "existing draft randomized experiment" in message:
+        return HTTPException(404, message)
+    if (
+        "illegal" in message
+        or "already configured" in message
+        or "immutable" in message
+        or "expected binding is stale" in message
+        or "superseded candidate revision" in message
+    ):
+        return HTTPException(409, message)
+    return HTTPException(422, message)
+
+
+@app.post(
+    "/experiments/{experiment_id}/component-control/commands",
+    response_model=ComponentExperimentControlReceipt,
+)
+@app.post(
+    "/api/v1/experiments/{experiment_id}/component-control/commands",
+    response_model=ComponentExperimentControlReceipt,
+)
+async def control_component_experiment(
+    experiment_id: str,
+    command: ComponentExperimentControlRequest,
+    _access: None = Depends(require_experiment_access),
+):
+    """Function-bounded, treatment-free v2 lifecycle command surface.
+
+    Every ordinary configured-v2 command requires all six caller-observed state axes.
+    The status read, comparison, exact allowlisted SECURITY DEFINER call, and
+    treatment-free receipt read share one serializable transaction. A racing
+    lifecycle change therefore aborts instead of applying against stale state.
+    Initial configuration is different because its protocol-1 source row is not
+    visible to the v2 status function. Candidate replacement instead carries
+    the observed revision and lease into the database function, which can
+    recognize an exact lost-response replay before rejecting stale changed
+    content.
+    """
+    try:
+        normalized_experiment_id = str(uuid.UUID(experiment_id))
+    except (TypeError, ValueError):
+        raise HTTPException(404, "Experiment not found")
+
+    dedicated_pool = experiment_lifecycle_pool
+    if dedicated_pool is None or getattr(dedicated_pool, "lifecycle_role_attested", False) is not True:
+        raise HTTPException(503, "Confirmed-component v2 lifecycle database duty unavailable")
+
+    try:
+        async with dedicated_pool.acquire() as conn:
+            async with conn.transaction(isolation="serializable"):
+                before = await conn.fetchrow(_EXPERIMENT_V2_API_STATUS_SQL, normalized_experiment_id)
+                previous_state: ComponentExperimentControlState | None = None
+                if isinstance(command, ComponentExperimentConfigureControl):
+                    if before is None:
+                        if command.expected_protocol_version != 1:
+                            raise HTTPException(409, "Confirmed-component v2 candidate is not configured")
+                    else:
+                        _validate_component_status_row(before, normalized_experiment_id)
+                        if command.expected_protocol_version != 2:
+                            raise HTTPException(409, "Confirmed-component v2 experiment is already configured")
+                        # Configure's SQL function performs the exact
+                        # candidate-content replay check before stale expected
+                        # revision/lease checks, preserving lost-response
+                        # idempotency without allowing a stale changed write.
+                        if (
+                            command.expected_revision_bundle_sha256 == before["revision_bundle_sha256"]
+                            and command.expected_lease_generation == before["lease_generation"]
+                        ):
+                            _assert_component_control_precondition(before, command)
+                        previous_state = _component_control_state(before)
+                elif isinstance(command, ComponentExperimentLockDesignControl):
+                    if before is None:
+                        raise HTTPException(404, "Confirmed-component v2 experiment not found")
+                    _validate_component_status_row(before, normalized_experiment_id)
+                    # An exact post-lock retry must reach the SQL function's
+                    # full artifact-tuple replay check. Any changed tuple is a
+                    # conflict there and cannot mutate the already-locked row.
+                    if before["lifecycle_status"] != "locked":
+                        _assert_component_control_precondition(before, command)
+                    previous_state = _component_control_state(before)
+                else:
+                    if before is None:
+                        raise HTTPException(404, "Confirmed-component v2 experiment not found")
+                    _validate_component_status_row(before, normalized_experiment_id)
+                    _assert_component_control_precondition(before, command)
+                    previous_state = _component_control_state(before)
+
+                result_id = await _execute_component_control(conn, normalized_experiment_id, command)
+                after = await conn.fetchrow(_EXPERIMENT_V2_API_STATUS_SQL, normalized_experiment_id)
+                if after is None:
+                    raise ValueError("lifecycle command left no protocol-v2 status row")
+                _validate_component_status_row(after, normalized_experiment_id)
+                receipt = ComponentExperimentControlReceipt(
+                    experiment_id=normalized_experiment_id,
+                    action=command.action,
+                    result_id=result_id,
+                    previous_state=previous_state,
+                    state=_component_control_state(after),
+                    recorded_at=after["resolved_at"],
+                )
+        return receipt
+    except HTTPException:
+        raise
+    except asyncpg.exceptions.SerializationError as exc:
+        raise HTTPException(
+            409,
+            "Confirmed-component v2 state changed concurrently; refresh status and retry",
+        ) from exc
+    except asyncpg.exceptions.RaiseError as exc:
+        raise _component_control_sql_http_error(exc) from exc
+    except (asyncpg.exceptions.UndefinedFunctionError, asyncpg.exceptions.InsufficientPrivilegeError) as exc:
+        log.error("experiment lifecycle control function unavailable error=%s", type(exc).__name__)
+        raise HTTPException(503, "Confirmed-component v2 lifecycle database duty unavailable") from exc
+    except asyncpg.PostgresError as exc:
+        log.error("experiment lifecycle control database conflict error=%s", type(exc).__name__)
+        raise HTTPException(409, "Confirmed-component v2 command conflicted with durable state") from exc
+    except (KeyError, TypeError, ValueError, ValidationError) as exc:
+        log.error("experiment lifecycle control returned an invalid contract error=%s", type(exc).__name__)
+        raise HTTPException(503, "Confirmed-component v2 lifecycle database duty unavailable") from exc
+
+
 async def _fetch_experiment_row(conn, experiment_id: str, *, for_update: bool = False) -> asyncpg.Record:
     try:
         uuid.UUID(experiment_id)
     except (ValueError, TypeError):
         raise HTTPException(404, "Experiment not found")
     row = await conn.fetchrow(
-        "SELECT experiment_id, greenhouse_id, kind, status, name, timezone, created_at "
+        "SELECT experiment_id, greenhouse_id, kind, status, name, timezone, created_at, protocol_version "
         "FROM control_experiments WHERE experiment_id = $1" + (" FOR UPDATE" if for_update else ""),
         experiment_id,
     )
@@ -4836,13 +5969,80 @@ async def _fetch_experiment_row(conn, experiment_id: str, *, for_update: bool = 
     return row
 
 
-def _experiment_export_hash(rows: list[ExperimentExportRow]) -> str:
-    canonical = json.dumps(
+def _require_legacy_v1_experiment_surface(exp: Mapping[str, object]) -> None:
+    """Keep the generic experiment API from bypassing protocol-v2 duties.
+
+    Protocol v2 has separately attested status and lifecycle functions, and
+    its export/reveal flow is frozen by a different evidence contract. A
+    generic handler must therefore stop immediately after identifying the
+    row, before it reads legacy evidence or invokes a legacy mutator.
+    """
+    if exp["protocol_version"] != 1:
+        raise HTTPException(
+            409,
+            "Protocol-v2 experiments are not available on the legacy v1 experiment surface",
+        )
+
+
+def _experiment_export_canonical_json(rows: list[ExperimentExportRow]) -> str:
+    return json.dumps(
         [r.model_dump(mode="json") for r in rows],
         sort_keys=True,
         separators=(",", ":"),
     )
+
+
+def _experiment_export_hash(rows: list[ExperimentExportRow]) -> str:
+    canonical = _experiment_export_canonical_json(rows)
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+async def _experiment_create_replay_matches(conn, body: ExperimentCreate, experiment_id: str) -> bool:
+    existing = await conn.fetchrow(
+        """
+        SELECT greenhouse_id, kind, name, timezone, protocol_ref,
+               protocol_sha256, beacon_identity, beacon_hash,
+               mapping_commitment_sha256, schedule_sha256, mutable_fields,
+               permitted_producers, protocol_version
+        FROM control_experiments
+        WHERE experiment_id = $1
+        """,
+        experiment_id,
+    )
+    if existing is None or existing["protocol_version"] != 1:
+        return False
+    expected_producers = (
+        body.permitted_producers
+        if body.permitted_producers is not None
+        else ["ai", "forecast", "baseline", "guardrail", "operator"]
+    )
+    return (
+        existing["greenhouse_id"],
+        existing["kind"],
+        existing["name"],
+        existing["timezone"],
+        existing["protocol_ref"],
+        existing["protocol_sha256"],
+        existing["beacon_identity"],
+        existing["beacon_hash"],
+        existing["mapping_commitment_sha256"],
+        existing["schedule_sha256"],
+        list(existing["mutable_fields"]) if existing["mutable_fields"] is not None else None,
+        list(existing["permitted_producers"]),
+    ) == (
+        body.greenhouse_id,
+        body.kind,
+        body.name,
+        body.timezone,
+        body.protocol_ref,
+        body.protocol_sha256,
+        body.beacon_identity,
+        body.beacon_hash,
+        body.mapping_commitment_sha256,
+        body.schedule_sha256,
+        body.mutable_fields,
+        expected_producers,
+    )
 
 
 async def _fetch_experiment_export_rows(conn, experiment_id: str, kind: str) -> list[ExperimentExportRow]:
@@ -4923,17 +6123,11 @@ async def create_experiment(
         try:
             row = await conn.fetchrow(
                 """
-                INSERT INTO control_experiments
-                    (experiment_id, greenhouse_id, kind, name, timezone,
-                     protocol_ref, protocol_sha256, beacon_identity, beacon_hash,
-                     mapping_commitment_sha256, schedule_sha256, mutable_fields,
-                     permitted_producers)
-                VALUES (COALESCE($1::uuid, gen_random_uuid()), $2, $3, $4, $5,
-                        $6, $7, $8, $9, $10, $11, $12,
-                        COALESCE($13::text[],
-                                 ARRAY['ai', 'forecast', 'baseline', 'guardrail', 'operator']))
-                ON CONFLICT (experiment_id) DO NOTHING
-                RETURNING experiment_id::text, greenhouse_id, kind, status, name, timezone, created_at
+                SELECT experiment_id::text, greenhouse_id, kind, status, name,
+                       timezone, created_at, inserted
+                FROM fn_runtime_v1_create_experiment(
+                    $1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
+                    $12::text[], $13::text[])
                 """,
                 body.experiment_id,
                 body.greenhouse_id,
@@ -4953,17 +6147,15 @@ async def create_experiment(
             raise HTTPException(422, f"Unknown greenhouse {body.greenhouse_id!r}")
         except asyncpg.exceptions.DataError:
             raise HTTPException(422, "experiment_id must be a UUID")
+        except asyncpg.exceptions.PostgresError as exc:
+            raise _experiment_sql_http_error(exc)
         if row is None:
-            # Idempotency-key replay: return the existing row iff it matches.
-            existing = await _fetch_experiment_row(conn, body.experiment_id)
-            if (existing["greenhouse_id"], existing["kind"], existing["name"]) != (
-                body.greenhouse_id,
-                body.kind,
-                body.name,
-            ):
+            raise HTTPException(422, "Experiment creation returned no row")
+        if not row["inserted"]:
+            # Idempotency-key replay: every caller-controlled field must match.
+            if not await _experiment_create_replay_matches(conn, body, str(row["experiment_id"])):
                 raise HTTPException(409, "experiment_id already exists with different content")
             response.status_code = 200
-            row = existing
     return ExperimentSummary(
         experiment_id=str(row["experiment_id"]),
         greenhouse_id=row["greenhouse_id"],
@@ -4993,32 +6185,37 @@ async def unblind_experiment(
     """
     async with pool.acquire() as conn:
         async with conn.transaction():
-            exp = await _fetch_experiment_row(conn, experiment_id, for_update=True)
+            exp = await _fetch_experiment_row(conn, experiment_id)
+            _require_legacy_v1_experiment_surface(exp)
             if exp["status"] != "completed":
                 raise HTTPException(
                     409,
                     f"Unblind requires status 'completed' (experiment is {exp['status']!r})",
                 )
             rows = await _fetch_experiment_export_rows(conn, experiment_id, exp["kind"])
-            frozen = _experiment_export_hash(rows)
+            canonical_json = _experiment_export_canonical_json(rows)
+            frozen = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
             if not hmac.compare_digest(frozen, body.export_sha256):
                 raise HTTPException(
                     409,
                     "export_sha256 does not match the frozen blinded export — re-freeze via GET .../export",
                 )
-            if await _experiment_unblind_recorded(conn, experiment_id):
-                return {"experiment_id": experiment_id, "unblinded": True, "export_sha256": frozen, "idempotent": True}
-            await conn.execute(
-                """
-                INSERT INTO experiment_events (experiment_id, event_kind, severity, actor, detail)
-                VALUES ($1, 'state_transition', 'info', $2,
-                        jsonb_build_object('to', 'unblinded', 'export_sha256', $3::text))
-                """,
-                experiment_id,
-                body.actor or "api:experiment-unblind",
-                frozen,
-            )
-    return {"experiment_id": experiment_id, "unblinded": True, "export_sha256": frozen, "idempotent": False}
+            try:
+                inserted = await conn.fetchval(
+                    "SELECT fn_runtime_v1_record_unblind($1::uuid, $2, $3, $4)",
+                    experiment_id,
+                    "api:experiment-unblind",
+                    frozen,
+                    canonical_json,
+                )
+            except asyncpg.exceptions.PostgresError as exc:
+                raise _experiment_sql_http_error(exc)
+    return {
+        "experiment_id": experiment_id,
+        "unblinded": True,
+        "export_sha256": frozen,
+        "idempotent": not inserted,
+    }
 
 
 @app.post("/experiments/{experiment_id}/{action}", response_model=ExperimentTransitionResponse)
@@ -5029,7 +6226,7 @@ async def transition_experiment(
     body: ExperimentTransitionRequest | None = None,
     _access: None = Depends(require_experiment_access),
 ):
-    """Thin wrapper over fn_experiment_transition (see section header).
+    """Thin wrapper over fn_runtime_v1_experiment_transition.
 
     validate: savepoint dry-run of the SQL lock gates (rolled back).
     lock/arm/resume/pause/abort/complete: forward edges of the SQL matrix.
@@ -5040,69 +6237,61 @@ async def transition_experiment(
         raise HTTPException(404, f"Unknown experiment action {action!r}")
     async with pool.acquire() as conn:
         async with conn.transaction():
-            row = await _fetch_experiment_row(conn, experiment_id, for_update=True)
-            current = row["status"]
-            if body.expected_status is not None and body.expected_status != current:
-                raise HTTPException(
-                    409,
-                    f"Precondition failed: experiment is {current!r}, expected {body.expected_status!r}",
-                )
+            row = await _fetch_experiment_row(conn, experiment_id)
+            _require_legacy_v1_experiment_surface(row)
 
             if action == "validate":
-                if current == "locked":
-                    return ExperimentTransitionResponse(
-                        experiment_id=experiment_id,
-                        action=action,
-                        previous_status=current,
-                        status=current,
-                        idempotent=True,
-                        validated=True,
-                    )
                 try:
                     async with conn.transaction():  # savepoint — always rolled back
-                        await conn.fetchrow(
-                            "SELECT status FROM fn_experiment_transition($1, 'locked', $2, $3)",
+                        validated = await conn.fetchrow(
+                            """
+                            SELECT previous_status, status, changed
+                            FROM fn_runtime_v1_experiment_transition(
+                                $1::uuid, 'locked', $2, $3, $4)
+                            """,
                             experiment_id,
-                            body.actor or "api:experiment-validate",
+                            body.expected_status,
+                            # This is a rolled-back rehearsal of the lock edge;
+                            # use the same immutable actor as a real lock.
+                            "api:experiment-lock",
                             body.note,
                         )
                         raise _ExperimentValidateRollback()
                 except _ExperimentValidateRollback:
                     pass
-                except asyncpg.exceptions.RaiseError as exc:
+                except asyncpg.exceptions.PostgresError as exc:
                     raise _experiment_sql_http_error(exc)
                 return ExperimentTransitionResponse(
                     experiment_id=experiment_id,
                     action=action,
-                    previous_status=current,
-                    status=current,
+                    previous_status=validated["previous_status"],
+                    status=validated["previous_status"],
+                    idempotent=not validated["changed"],
                     validated=True,
                 )
 
             target = EXPERIMENT_TRANSITION_TARGETS[action]
-            if current == target:
-                return ExperimentTransitionResponse(
-                    experiment_id=experiment_id,
-                    action=action,
-                    previous_status=current,
-                    status=current,
-                    idempotent=True,
-                )
             try:
                 updated = await conn.fetchrow(
-                    "SELECT status FROM fn_experiment_transition($1, $2, $3, $4)",
+                    """
+                    SELECT previous_status, status, changed
+                    FROM fn_runtime_v1_experiment_transition(
+                        $1::uuid, $2, $3, $4, $5)
+                    """,
                     experiment_id,
                     target,
-                    body.actor or f"api:experiment-{action}",
+                    body.expected_status,
+                    f"api:experiment-{action}",
                     body.note,
                 )
-            except asyncpg.exceptions.RaiseError as exc:
+            except asyncpg.exceptions.PostgresError as exc:
                 raise _experiment_sql_http_error(exc)
     return ExperimentTransitionResponse(
         experiment_id=experiment_id,
         action=action,
-        previous_status=current,
+        previous_status=updated["previous_status"],
         status=updated["status"],
+        idempotent=not updated["changed"],
     )
 
 
@@ -5119,6 +6308,7 @@ async def get_experiment_status(
     """BLINDED execution status — see ExperimentStatusBlinded docstring."""
     async with pool.acquire() as conn:
         exp = await _fetch_experiment_row(conn, experiment_id)
+        _require_legacy_v1_experiment_surface(exp)
         assignment = await conn.fetchrow(
             """
             SELECT assignment_id::text AS assignment_id, arm_label, operation_kind,
@@ -5226,13 +6416,14 @@ async def export_experiment(
     """Blinded outcome export; arm resolution ONLY after completed+unblind."""
     async with pool.acquire() as conn:
         exp = await _fetch_experiment_row(conn, experiment_id)
+        _require_legacy_v1_experiment_surface(exp)
         rows = await _fetch_experiment_export_rows(conn, experiment_id, exp["kind"])
         unblinded = exp["status"] == "completed" and await _experiment_unblind_recorded(conn, experiment_id)
         resolutions = None
         if unblinded:
             res_rows = await conn.fetch(
                 "SELECT blinded_label, physical_arm, resolved_at, resolution_source "
-                "FROM control_arm_resolutions WHERE experiment_id = $1 ORDER BY blinded_label",
+                "FROM fn_runtime_v1_arm_resolutions($1::uuid)",
                 experiment_id,
             )
             resolutions = [
@@ -5267,6 +6458,7 @@ async def get_experiment_device_policy(
     /setpoints compatibility route is intentionally untouched."""
     async with pool.acquire() as conn:
         exp = await _fetch_experiment_row(conn, experiment_id)
+        _require_legacy_v1_experiment_surface(exp)
         snap = await conn.fetchrow(
             """
             SELECT snapshot_id, device_id, greenhouse_id, reported_at, schema_revision,
@@ -5315,140 +6507,64 @@ async def get_component_experiment_status(
     """Read-only v2 safety/integrity state for facility operators.
 
     Treatment profile, component values, mapping, secret, comparative outcome,
-    and efficacy data are deliberately absent. Assignment ID/X-Y is exposed
-    only while the current work is a randomized assignment. The two SHA-256
-    fields are labeled as distinct server-derived identities and never as
-    device-echoed state.
+    and efficacy data are deliberately absent. The function-provided opaque
+    assignment ID is exposed only for active randomized work; this endpoint
+    does not recover X/Y through another relation. The two SHA-256 fields are
+    labeled as distinct server-derived identities and never as device-echoed
+    state.
     """
     try:
         normalized_experiment_id = str(uuid.UUID(experiment_id))
     except (TypeError, ValueError):
         raise HTTPException(404, "Experiment not found")
 
-    async with pool.acquire() as conn:
-        exp = await conn.fetchrow(
-            """
-            SELECT experiment_id::text AS experiment_id, kind, status,
-                   protocol_version, transport_kind, execution_phase,
-                   admission_state, component_enabled, lease_generation,
-                   revision_bundle_sha256, firmware_revision, config_revision,
-                   registry_revision, grid_revision
-              FROM control_experiments
-             WHERE experiment_id = $1::uuid
-            """,
-            normalized_experiment_id,
-        )
-        if exp is None or exp["protocol_version"] != 2 or exp["transport_kind"] != "confirmed_component":
-            raise HTTPException(404, "Confirmed-component v2 experiment not found")
+    dedicated_pool = experiment_lifecycle_pool
+    if dedicated_pool is None or getattr(dedicated_pool, "lifecycle_role_attested", False) is not True:
+        raise HTTPException(503, "Confirmed-component v2 status database duty unavailable")
+    try:
+        async with dedicated_pool.acquire() as conn:
+            status = await conn.fetchrow(_EXPERIMENT_V2_API_STATUS_SQL, normalized_experiment_id)
+    except Exception as exc:
+        log.error("experiment lifecycle status function unavailable error=%s", type(exc).__name__)
+        raise HTTPException(503, "Confirmed-component v2 status database duty unavailable") from exc
 
-        work = await conn.fetchrow(
-            """
-            SELECT w.work_id::text AS work_id,
-                   w.assignment_id::text AS assignment_id,
-                   a.arm_label AS blinded_label,
-                   w.execution_phase,
-                   w.operation_kind,
-                   lower(w.valid_range) AS valid_from,
-                   least(upper(w.valid_range), w.expires_at) AS valid_to,
-                   w.expires_at,
-                   (w.expires_at <= clock_timestamp()
-                    OR NOT clock_timestamp() <@ w.valid_range) AS expired
-              FROM experiment_v2_work w
-              LEFT JOIN control_assignments a ON a.assignment_id = w.assignment_id
-             WHERE w.experiment_id = $1::uuid
-               AND NOT EXISTS (
-                   SELECT 1 FROM experiment_v2_work_events e
-                    WHERE e.work_id = w.work_id
-                      AND e.event_kind IN ('completed', 'failed', 'cancelled', 'superseded')
-               )
-             ORDER BY lower(w.valid_range) DESC, w.created_at DESC
-             LIMIT 1
-            """,
-            normalized_experiment_id,
-        )
-        approval = await conn.fetchrow(
-            """
-            SELECT coalesce(bool_or(approval_kind = 'scoped_probe'), false) AS scoped_probe,
-                   coalesce(bool_or(approval_kind = 'combined_physical'), false) AS combined_physical,
-                   coalesce(bool_or(approval_kind = 'randomized_day_1'), false) AS randomized_day_1
-              FROM experiment_v2_approvals
-             WHERE experiment_id = $1::uuid
-            """,
-            normalized_experiment_id,
-        )
-        receipt = await conn.fetchrow(
-            """
-            SELECT policy_state_content_sha256, observation_receipt_sha256,
-                   persisted_at
-              FROM experiment_v2_observation_receipts
-             WHERE experiment_id = $1::uuid
-             ORDER BY persisted_at DESC, receipt_id DESC
-             LIMIT 1
-            """,
-            normalized_experiment_id,
-        )
-        open_exposures = await conn.fetchval(
-            """
-            SELECT count(*)::int
-              FROM experiment_v2_exposures x
-             WHERE x.experiment_id = $1::uuid
-               AND NOT EXISTS (
-                   SELECT 1 FROM experiment_v2_exposure_closures c
-                    WHERE c.exposure_id = x.exposure_id
-               )
-            """,
-            normalized_experiment_id,
-        )
+    if status is None:
+        raise HTTPException(404, "Confirmed-component v2 experiment not found")
 
     gate_allowed, gate_reason = component_experiment_gate()
     if gate_allowed and active_experiment_id() != normalized_experiment_id:
         gate_allowed = False
         gate_reason = "active_experiment_id_mismatch"
 
-    current_work = None
-    if work is not None:
-        randomized = work["operation_kind"] == "assignment"
-        label = work["blinded_label"] if randomized and work["blinded_label"] in ("X", "Y") else None
-        current_work = ComponentExperimentWorkStatus(
-            work_id=work["work_id"],
-            execution_phase=work["execution_phase"],
-            operation_kind=work["operation_kind"],
-            valid_from=work["valid_from"],
-            valid_to=work["valid_to"],
-            expires_at=work["expires_at"],
-            expired=work["expired"],
-            assignment_id=work["assignment_id"] if randomized else None,
-            blinded_label=label,
+    try:
+        current_work, state_identity = _validate_component_status_row(status, normalized_experiment_id)
+        return ComponentExperimentStatus(
+            experiment_id=str(status["experiment_id"]),
+            kind=status["experiment_kind"],
+            protocol_version=status["protocol_version"],
+            transport_kind=status["transport_kind"],
+            lifecycle_status=status["lifecycle_status"],
+            execution_phase=status["execution_phase"],
+            admission_state=status["admission_state"],
+            component_capability_mode=component_experiment_mode(),
+            environment_admissible=gate_allowed,
+            environment_gate_reason=gate_reason,
+            db_component_enabled=status["component_enabled"],
+            current_work=current_work,
+            approvals=ComponentExperimentApprovals(
+                scoped_probe=status["scoped_probe_approved"],
+                combined_physical=status["combined_physical_approved"],
+                randomized_day_1=status["randomized_day_1_approved"],
+            ),
+            state_identity=state_identity,
+            open_exposures=status["open_exposure_count"],
+            lease_generation=status["lease_generation"],
+            revision_bundle_sha256=status["revision_bundle_sha256"],
+            firmware_revision=status["firmware_revision"],
+            config_revision=status["config_revision"],
+            registry_revision=status["registry_revision"],
+            grid_revision=status["grid_revision"],
         )
-
-    return ComponentExperimentStatus(
-        experiment_id=exp["experiment_id"],
-        kind=exp["kind"],
-        protocol_version=exp["protocol_version"],
-        transport_kind=exp["transport_kind"],
-        lifecycle_status=exp["status"],
-        execution_phase=exp["execution_phase"],
-        admission_state=exp["admission_state"],
-        component_capability_mode=component_experiment_mode(),
-        environment_admissible=gate_allowed,
-        environment_gate_reason=gate_reason,
-        db_component_enabled=exp["component_enabled"],
-        current_work=current_work,
-        approvals=ComponentExperimentApprovals(
-            scoped_probe=approval["scoped_probe"] if approval else False,
-            combined_physical=approval["combined_physical"] if approval else False,
-            randomized_day_1=approval["randomized_day_1"] if approval else False,
-        ),
-        state_identity=ComponentExperimentStateIdentity(
-            policy_state_content_sha256=receipt["policy_state_content_sha256"] if receipt else None,
-            observation_receipt_sha256=receipt["observation_receipt_sha256"] if receipt else None,
-            receipt_persisted_at=receipt["persisted_at"] if receipt else None,
-        ),
-        open_exposures=open_exposures or 0,
-        lease_generation=exp["lease_generation"],
-        revision_bundle_sha256=exp["revision_bundle_sha256"],
-        firmware_revision=exp["firmware_revision"],
-        config_revision=exp["config_revision"],
-        registry_revision=exp["registry_revision"],
-        grid_revision=exp["grid_revision"],
-    )
+    except (KeyError, TypeError, ValueError, ValidationError) as exc:
+        log.error("experiment lifecycle status function returned an invalid contract error=%s", type(exc).__name__)
+        raise HTTPException(503, "Confirmed-component v2 status database duty unavailable") from exc
