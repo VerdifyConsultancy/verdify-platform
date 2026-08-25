@@ -28,7 +28,8 @@
 
 > The immutable upstream Hermes image remains pinned to revision `404640a2`.
 > That revision can index past a short tool-call/result tail during context
-> compaction (fixed upstream by `NousResearch/hermes-agent#75588`). Production
+> compaction (issue `NousResearch/hermes-agent#75588`, fixed by PR `#75884`
+> at `ad146a0c`). Production
 > mounts a two-anchor backport generated at startup only after both the packaged
 > source and patched-result SHA-256 values match. Any upstream image skew fails
 > the init container closed; removing the init/mount is the rollback.

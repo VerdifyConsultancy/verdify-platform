@@ -28,7 +28,7 @@ metadata:
     app.kubernetes.io/component: hermes-iris
 data:
   hermes-compressor-oob-patch.py: |
-    """Backport upstream Hermes #75588 onto the immutable May runtime."""
+    """Backport Hermes issue #75588 / PR #75884 onto the immutable May runtime."""
     import argparse
     import hashlib
     import os

@@ -87,9 +87,9 @@ spec:
         # drift test makes profile edits roll this Recreate Deployment so the
         # seed-config init container refreshes the state PVC before startup.
         verdify.io/hermes-profile-revision: "d9d787f2cce4"
-        # sha256[:12] of the digest-verified upstream #75588 backport. This
+        # sha256[:12] of the digest-verified upstream #75588/#75884 backport. This
         # rolls the singleton whenever the init-time runtime patch changes.
-        verdify.io/hermes-compressor-patch-revision: "4ce0844e2192"
+        verdify.io/hermes-compressor-patch-revision: "540f717391e9"
       labels:
         app.kubernetes.io/part-of: verdify
         app.kubernetes.io/component: hermes-iris
@@ -133,7 +133,7 @@ spec:
               mountPath: /etc/verdify/hermes-config
               readOnly: true
         # The pinned upstream May image contains the short tool-tail compaction
-        # IndexError fixed upstream by NousResearch/hermes-agent#75588. Keep the
+        # IndexError fixed by issue #75588 / PR #75884 (ad146a0c). Keep the
         # reviewed image digest and install only that two-anchor source backport
         # into a read-only single-file mount. The patcher verifies both the
         # packaged source and result digests and fails the pod closed on skew.
