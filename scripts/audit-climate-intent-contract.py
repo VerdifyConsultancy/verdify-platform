@@ -33,8 +33,6 @@ REMOVED_RUNTIME_SHADOW_PATHS = (
 )
 SINGLE_PATH_POLICY_FILES = (
     REPO_ROOT / "docs" / "firmware-climate-intent-controller-final-design-2026-05-24.md",
-    REPO_ROOT / "docs" / "BACKLOG.md",
-    REPO_ROOT / "docs" / "backlog" / "firmware.md",
     REPO_ROOT / "docs" / "langgraph-planner-design.md",
     REPO_ROOT / "docs" / "planner" / "langgraph-decisions.md",
     REPO_ROOT / "docs" / "planner" / "langgraph-implementation-approach.md",
@@ -126,6 +124,9 @@ def main() -> None:
     existing_shadow_paths = [str(path.relative_to(REPO_ROOT)) for path in REMOVED_RUNTIME_SHADOW_PATHS if path.exists()]
     if existing_shadow_paths:
         _fail("runtime shadow surfaces must stay removed: " + ", ".join(existing_shadow_paths))
+    missing_policy_files = [str(path.relative_to(REPO_ROOT)) for path in SINGLE_PATH_POLICY_FILES if not path.is_file()]
+    if missing_policy_files:
+        _fail("single-path policy files are missing: " + ", ".join(missing_policy_files))
     policy_hits: list[str] = []
     for path in SINGLE_PATH_POLICY_FILES:
         lowered = path.read_text().lower()
