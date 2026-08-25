@@ -28,6 +28,18 @@ The runtime re-resolves the hostname before every attempt and falls back to
 baseline unless the answer is exactly that one address. NetworkPolicy remains
 the hard deny for device/private subnets.
 
+The production selector adapter is deliberately narrower than a generic
+OpenAI client. It accepts only `https://cortex.vallery.net/v1` (normalized to
+the exact `/v1/chat/completions` path) or that exact completions URL, paired
+with `192.168.7.10/32`. The frozen identity must name route alias
+`llm.primary.longctx`, concrete revision `llm.qwen38u.longctx`, and the approved
+vLLM system fingerprint. Requests are non-streaming and tool-free with
+temperature 0, `chat_template_kwargs.reasoning_effort=medium`, a bounded
+`max_tokens`, and a strict canonical profile-only JSON schema. A non-`stop`
+finish, revision/fingerprint drift, malformed envelope/content, DNS drift, or
+transport failure is recorded as a baseline-safe failure and never admitted as
+a provider choice.
+
 The outcome freezer accepts only the one DB-snapshotted canonical source
 bundle returned by `fn_experiment_v2_outcome_source_cycle`. Its mounted
 `identity.json` is canonical JSON whose SHA-256 is the locked

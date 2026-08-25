@@ -286,15 +286,17 @@ the six exact TCP duty attestations is a fail-closed Gate-2 blocker. The
 blinded analyst intentionally remains `NOLOGIN`; the broader #643 credential
 split is not part of this launch gate.
 
-Provider setup is a separate input gate. The selector worker expects the
-Verdify selector request/response protocol, not an OpenAI-compatible
-chat-completions route. Keep endpoint and key absent for explicit baseline-only
-fallback, or bind the exact HTTPS endpoint, single-host egress CIDR, frozen
-identity artifact, and purpose-scoped provider key together before claiming a
-real provider shadow cycle. A downstream provider may use an approved Cortex
-route internally; do not mount a general gateway key directly into the worker
-without that protocol/scoping boundary. For the current adapter, have the fleet
-Secret authority reuse the already authorized Cortex credential server-side as
+Provider setup is a separate input gate. Keep endpoint and key absent for
+explicit baseline-only fallback, or bind the strict Cortex OpenAI endpoint
+`https://cortex.vallery.net/v1`, single-host egress CIDR `192.168.7.10/32`,
+frozen identity artifact, and provider key together before claiming a real
+provider shadow cycle. The adapter normalizes that base URL to the exact
+`/v1/chat/completions` path and rejects any other authority/path, DNS answer,
+route alias, concrete model revision, system fingerprint, finish reason, or
+response shape. The frozen request uses no tools or streaming, temperature 0,
+medium reasoning, a bounded output cap, and canonical profile-only JSON. Have
+the fleet Secret authority reuse the already authorized Cortex credential
+server-side as
 `verdify-experiment-v2-selector-provider` / `api-key`; never retrieve or relay
 the value through a repository pod. The provider key is not part of the six
 database-password/two-token shape and uniqueness checks.

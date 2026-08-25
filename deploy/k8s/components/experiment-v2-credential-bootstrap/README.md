@@ -38,15 +38,17 @@ The selector-provider credential is independent of this database bootstrap.
 `verdify-experiment-v2-selector-provider` / `api-key` is consumed only when an
 overlay also binds an exact credential-free HTTPS
 `VERDIFY_EXPERIMENT_SELECTOR_ENDPOINT`, its one globally routable `/32` or
-`/128`, and a frozen selector identity. The endpoint speaks the Verdify
-`verdify-daily-selector-request-v2` / `verdify-selector-response-v2` protocol;
-it is not an OpenAI chat-completions endpoint. A provider implementation may
-internally call an approved Cortex route, but the pod cannot point directly at
-`/v1/chat/completions`, and a general gateway key must not be copied into this
-Secret unless that provider boundary explicitly scopes and accepts it. With no
-endpoint/key the selector remains network-dark and records baseline fallback,
-which is safe for credential activation but is not provider qualification.
-For the current adapter activation, the fleet Secret authority must populate
+`/128`, and a frozen selector identity. The current adapter accepts only the
+strict Cortex OpenAI chat-completions authority at
+`https://cortex.vallery.net/v1` (normalized internally to
+`/v1/chat/completions`) or that exact completions URL, with the egress address
+locked to `192.168.7.10/32`. It sends the canonical
+`verdify-daily-selector-request-v2` document inside frozen system/user messages
+and admits only the locked model revision, system fingerprint, `stop` finish,
+and canonical profile-only JSON response. With no endpoint/key the selector
+remains network-dark and records baseline fallback, which is safe for
+credential activation but is not provider qualification. For adapter
+activation, the fleet Secret authority must populate
 `verdify-experiment-v2-selector-provider` / `api-key` by reusing the already
 authorized Cortex credential entirely server-side; the repository pod must not
 read, print, or transport it. That provider key is intentionally exempt from
