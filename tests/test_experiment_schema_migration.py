@@ -244,6 +244,7 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "215-experiment-v2-ops-observability.sql",  # blinded-safe v2 ops status (#587)
         "216-equipment-counter-source-ledger.sql",  # raw reset-epoch counter evidence (#640)
         "217-runtime-role-boundary.sql",  # exact ordinary API/ingestor credentials (#640)
+        "218-planner-required-failure-history.sql",  # retry-stable required-cycle health latch
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(
