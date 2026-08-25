@@ -316,6 +316,36 @@ def test_six_runtime_duties_have_function_only_surfaces():
     assert not re.search(r"GRANT\s+verdify_experiment_v2_owner\s+TO", sql, re.IGNORECASE)
 
 
+def test_selector_sources_use_owner_sealed_views_not_hypertable_column_acls():
+    sql = _sql()
+    for facade, source in (
+        ("v_experiment_v2_selector_climate_source", "climate"),
+        ("v_experiment_v2_selector_forecast_source", "weather_forecast"),
+    ):
+        assert f"CREATE OR REPLACE VIEW public.{facade}" in sql
+        assert f"FROM public.{source}" in sql
+        assert f"FROM public.{facade}" in sql
+    assert "GRANT SELECT ON TABLE public.%I TO verdify_experiment_v2_owner" in sql
+    facade_block = sql[sql.index("DO $source_facades$") : sql.index("$source_facades$;")]
+    assert "security_barrier = true" in facade_block
+    assert "security_invoker = false" in facade_block
+    assert "ALTER VIEW public.v_experiment_v2_selector_climate_source OWNER TO %I" in facade_block
+    assert "ALTER VIEW public.v_experiment_v2_selector_forecast_source OWNER TO %I" in facade_block
+    assert "current_user" in facade_block
+    assert "REVOKE ALL PRIVILEGES ON TABLE public.%I FROM %I CASCADE" in facade_block
+    assert "REVOKE ALL PRIVILEGES ON TABLE public.%I FROM PUBLIC CASCADE" in facade_block
+    assert "REVOKE ALL PRIVILEGES (%s) ON TABLE public.%I FROM %s CASCADE" in facade_block
+    assert "REVOKE ALL PRIVILEGES ON TABLE public.climate FROM" in facade_block
+    assert "REVOKE ALL PRIVILEGES ON TABLE public.weather_forecast FROM" in facade_block
+    assert "SELECT *" not in facade_block
+    assert not re.search(
+        r"GRANT\s+SELECT\s*\([^)]*\)\s+ON\s+public\.(?:climate|weather_forecast)",
+        sql,
+        re.IGNORECASE | re.DOTALL,
+    )
+    assert "timescale_source_facade_acl" in FIXTURE.read_text()
+
+
 def test_duty_grants_are_exact_signature_allowlists_not_proname_matches():
     sql = _sql()
     grant_surface = sql[sql.index("DO $security$") : sql.index("END\n$security$;")]

@@ -7,7 +7,7 @@ BEGIN;
 
 -- The reduced disposable harness does not carry production Timescale source
 -- relations.  Create only their restored column contract transactionally so
--- the migration can grant its NOLOGIN owner the exact column-level reads.
+-- the migration can build its owner-sealed exact-column source facades.
 CREATE TABLE IF NOT EXISTS public.climate (
     ts timestamptz NOT NULL,
     greenhouse_id text,
@@ -77,6 +77,16 @@ GRANT SELECT (work_id) ON public.experiment_v2_work
     TO test_214_v2_rogue WITH GRANT OPTION;
 GRANT SELECT ON public.v_experiment_v2_frozen_analyzer_input
     TO test_214_v2_rogue WITH GRANT OPTION;
+GRANT SELECT ON public.v_experiment_v2_selector_climate_source
+    TO test_214_v2_rogue WITH GRANT OPTION;
+GRANT SELECT (ts) ON public.v_experiment_v2_selector_forecast_source
+    TO test_214_v2_rogue WITH GRANT OPTION;
+GRANT UPDATE (ts) ON public.v_experiment_v2_selector_forecast_source
+    TO test_214_v2_rogue WITH GRANT OPTION;
+GRANT SELECT ON public.climate
+    TO verdify_experiment_v2_randomizer_login;
+GRANT SELECT ON public.weather_forecast
+    TO verdify_experiment_v2_lifecycle_login;
 GRANT EXECUTE ON FUNCTION public.fn_experiment_v2_api_status(uuid)
     TO test_214_v2_rogue WITH GRANT OPTION;
 \ir ../214-confirmed-component-experiment-v2.sql
@@ -156,6 +166,115 @@ BEGIN
             WHERE p.oid = 'public.fn_experiment_v2_executor_runtime(text)'::regprocedure
               AND acl.grantee = 0 AND acl.privilege_type = 'EXECUTE') THEN
         RAISE EXCEPTION 'same-name executor overload retained executable privilege';
+    END IF;
+
+    -- timescale_source_facade_acl: the function owner has no logical or
+    -- physical base-table ACL for Timescale to propagate.  Its only source
+    -- access is SELECT on two trusted-owner, exact-column facade views; replay
+    -- also removes an arbitrary delegated facade grant.
+    IF has_table_privilege(
+           'verdify_experiment_v2_owner', 'public.climate', 'SELECT') OR
+       has_any_column_privilege(
+           'verdify_experiment_v2_owner', 'public.climate', 'SELECT') OR
+       has_table_privilege(
+           'verdify_experiment_v2_owner', 'public.weather_forecast', 'SELECT') OR
+       has_any_column_privilege(
+           'verdify_experiment_v2_owner', 'public.weather_forecast', 'SELECT') THEN
+        RAISE EXCEPTION 'protocol-v2 owner retained a selector source base-table ACL';
+    END IF;
+    IF NOT has_table_privilege(
+           'verdify_experiment_v2_owner',
+           'public.v_experiment_v2_selector_climate_source', 'SELECT') OR
+       NOT has_table_privilege(
+           'verdify_experiment_v2_owner',
+           'public.v_experiment_v2_selector_forecast_source', 'SELECT') THEN
+        RAISE EXCEPTION 'protocol-v2 owner lacks an exact selector source facade';
+    END IF;
+    IF (SELECT count(*)
+          FROM pg_class relation
+          JOIN pg_namespace namespace ON namespace.oid = relation.relnamespace
+         WHERE namespace.nspname = 'public'
+           AND relation.relname IN (
+               'v_experiment_v2_selector_climate_source',
+               'v_experiment_v2_selector_forecast_source')) <> 2 OR
+       EXISTS (
+        SELECT 1
+          FROM pg_class relation
+          JOIN pg_namespace namespace ON namespace.oid = relation.relnamespace
+         WHERE namespace.nspname = 'public'
+           AND relation.relname IN (
+               'v_experiment_v2_selector_climate_source',
+               'v_experiment_v2_selector_forecast_source')
+           AND (relation.relowner <>
+                    (SELECT oid FROM pg_roles WHERE rolname = current_user) OR
+                NOT (coalesce(relation.reloptions, ARRAY[]::text[]) @>
+                    ARRAY['security_barrier=true']) OR
+                NOT (coalesce(relation.reloptions, ARRAY[]::text[]) @>
+                    ARRAY['security_invoker=false']))
+    ) THEN
+        RAISE EXCEPTION 'selector source facade owner/options posture drifted';
+    END IF;
+    IF EXISTS (
+        SELECT 1
+          FROM pg_class relation
+          JOIN pg_namespace namespace ON namespace.oid = relation.relnamespace
+          CROSS JOIN LATERAL aclexplode(relation.relacl) acl
+         WHERE namespace.nspname = 'public'
+           AND relation.relname IN (
+               'v_experiment_v2_selector_climate_source',
+               'v_experiment_v2_selector_forecast_source')
+           AND ((acl.grantee <> relation.relowner AND
+                 acl.grantee <>
+                    (SELECT oid FROM pg_roles
+                      WHERE rolname = 'verdify_experiment_v2_owner')) OR
+                (acl.grantee =
+                    (SELECT oid FROM pg_roles
+                      WHERE rolname = 'verdify_experiment_v2_owner') AND
+                 (acl.privilege_type <> 'SELECT' OR acl.is_grantable)))
+    ) OR (SELECT count(*)
+            FROM pg_class relation
+            JOIN pg_namespace namespace ON namespace.oid = relation.relnamespace
+            CROSS JOIN LATERAL aclexplode(relation.relacl) acl
+           WHERE namespace.nspname = 'public'
+             AND relation.relname IN (
+                 'v_experiment_v2_selector_climate_source',
+                 'v_experiment_v2_selector_forecast_source')
+             AND acl.grantee <> relation.relowner) <> 2 OR
+       EXISTS (
+           SELECT 1
+             FROM pg_attribute attribute
+             CROSS JOIN LATERAL aclexplode(attribute.attacl) acl
+            WHERE attribute.attrelid IN (
+                'public.v_experiment_v2_selector_climate_source'::regclass,
+                'public.v_experiment_v2_selector_forecast_source'::regclass)
+              AND attribute.attnum > 0
+              AND NOT attribute.attisdropped)
+    THEN
+        RAISE EXCEPTION 'selector source facade ACL posture drifted';
+    END IF;
+    IF (SELECT array_agg(attribute.attname ORDER BY attribute.attnum)
+          FROM pg_attribute attribute
+         WHERE attribute.attrelid =
+               'public.v_experiment_v2_selector_climate_source'::regclass
+           AND attribute.attnum > 0 AND NOT attribute.attisdropped) IS DISTINCT FROM
+       ARRAY[
+           'ts', 'greenhouse_id', 'temp_avg', 'temp_north', 'temp_south',
+           'temp_east', 'temp_west', 'rh_avg', 'rh_north', 'rh_south',
+           'rh_east', 'rh_west', 'vpd_avg', 'vpd_north', 'vpd_south',
+           'vpd_east', 'vpd_west', 'dew_point', 'outdoor_temp_f',
+           'outdoor_rh_pct', 'solar_irradiance_w_m2', 'leaf_temp_north',
+           'leaf_temp_south', 'leaf_wetness_north', 'leaf_wetness_south',
+           'wind_speed_mph', 'precip_in', 'flow_gpm', 'mister_water_today'] OR
+       (SELECT array_agg(attribute.attname ORDER BY attribute.attnum)
+          FROM pg_attribute attribute
+         WHERE attribute.attrelid =
+               'public.v_experiment_v2_selector_forecast_source'::regclass
+           AND attribute.attnum > 0 AND NOT attribute.attisdropped) IS DISTINCT FROM
+       ARRAY[
+           'ts', 'fetched_at', 'greenhouse_id', 'temp_f', 'rh_pct', 'vpd_kpa',
+           'cloud_cover_pct', 'wind_speed_mph', 'solar_w_m2',
+           'precip_prob_pct', 'direct_radiation_w_m2'] THEN
+        RAISE EXCEPTION 'selector source facade column projection drifted';
     END IF;
 
     FOR duty, expected_count IN VALUES

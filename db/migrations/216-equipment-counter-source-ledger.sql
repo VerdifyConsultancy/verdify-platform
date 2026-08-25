@@ -1366,7 +1366,7 @@ BEGIN
                            'vpd_north_kpa', climate.vpd_north,
                            'vpd_south_kpa', climate.vpd_south,
                            'vpd_west_kpa', climate.vpd_west)) AS payload
-              FROM public.climate climate
+              FROM public.v_experiment_v2_selector_climate_source climate
              WHERE climate.greenhouse_id = 'vallery'
                AND climate.ts >= v_window_start
                AND climate.ts < v_window_end
@@ -1999,10 +1999,11 @@ REVOKE ALL ON FUNCTION public.fn_experiment_v2_outcome_source_cycle(uuid)
 REVOKE ALL ON FUNCTION public.fn_experiment_v2_require_outcome_source_binding()
     FROM PUBLIC;
 
--- Only the NOLOGIN definer role reads raw telemetry. Runtime freezer logins
--- receive one least-information function and no base-table privilege.
-GRANT SELECT ON TABLE public.climate,
-    public.equipment_state_source_receipts
+-- Only the NOLOGIN definer role reads raw telemetry.  Climate is read through
+-- migration 214's trusted-owner exact-column facade, never through a base
+-- hypertable ACL. Runtime freezer logins receive one least-information
+-- function and no base-table privilege.
+GRANT SELECT ON TABLE public.equipment_state_source_receipts
     TO verdify_experiment_v2_owner;
 GRANT INSERT ON TABLE public.equipment_state
     TO verdify_experiment_v2_owner;

@@ -217,6 +217,16 @@ BEGIN
            'public.fn_experiment_v2_outcome_source_cycle(uuid)', 'EXECUTE') THEN
         RAISE EXCEPTION 'freezer unexpectedly has raw table access';
     END IF;
+    IF has_table_privilege(
+           'verdify_experiment_v2_owner', 'public.climate', 'SELECT') OR
+       has_any_column_privilege(
+           'verdify_experiment_v2_owner', 'public.climate', 'SELECT') OR
+       NOT has_table_privilege(
+           'verdify_experiment_v2_owner',
+           'public.v_experiment_v2_selector_climate_source', 'SELECT') THEN
+        RAISE EXCEPTION
+            'outcome source bypassed the exact-column climate facade';
+    END IF;
     IF to_regprocedure(
            'public.fn_experiment_v2_require_outcome_source_binding()') IS NULL OR
        (SELECT count(*) FROM pg_trigger

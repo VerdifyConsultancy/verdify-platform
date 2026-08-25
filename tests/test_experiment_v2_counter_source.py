@@ -197,9 +197,11 @@ def test_migration_is_append_only_function_bounded_and_never_backfills():
     assert "SECURITY DEFINER" in sql
     assert "SET search_path = public, pg_temp" in sql
     assert "GRANT EXECUTE ON FUNCTION public.fn_record_equipment_counter_sample" in sql
-    assert ("GRANT SELECT ON TABLE public.climate,\n    public.equipment_state_source_receipts") in sql
+    assert "FROM public.v_experiment_v2_selector_climate_source climate" in sql
+    assert "GRANT SELECT ON TABLE public.equipment_state_source_receipts" in sql
     assert "GRANT INSERT ON TABLE public.equipment_state" in sql
-    assert "GRANT SELECT ON TABLE public.climate, public.equipment_state," not in sql
+    assert "FROM public.climate climate" not in sql
+    assert "GRANT SELECT ON TABLE public.climate" not in sql
     assert "GRANT SELECT ON TABLE public.equipment_counter_samples" not in sql
     assert "INSERT INTO public.equipment_counter_samples" in sql
     assert "INSERT INTO public.equipment_counter_samples\n        SELECT" not in sql
