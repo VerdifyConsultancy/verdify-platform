@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import asyncio
+import hashlib
 import importlib.util
 import io
 import json
@@ -336,7 +337,7 @@ def _hermes_config_documents() -> tuple[dict, dict, str]:
     return manifest, profile, readiness_source
 
 
-def test_hermes_profile_pins_gpt_5_6_sol_xhigh_at_the_runtime_key():
+def test_hermes_profile_pins_bounded_cortex_text_route():
     _manifest, embedded, _readiness_source = _hermes_config_documents()
     canonical = yaml.safe_load((REPO_ROOT / "hermes/iris/config.yaml").read_text())
 
@@ -344,21 +345,41 @@ def test_hermes_profile_pins_gpt_5_6_sol_xhigh_at_the_runtime_key():
         embedded["model"]
         == canonical["model"]
         == {
-            "default": "gpt-5.6-sol",
+            "default": "llm.primary.longctx",
             "provider": "custom",
-            "base_url": "https://api.openai.com/v1",
+            "base_url": "https://cortex.vallery.net/v1",
+            "context_length": 98304,
+            "max_tokens": 8192,
         }
     )
     assert "reasoning_effort" not in embedded["model"]
     assert "reasoning_effort" not in canonical["model"]
-    assert embedded["agent"]["reasoning_effort"] == "xhigh"
-    assert canonical["agent"]["reasoning_effort"] == "xhigh"
+    assert embedded["agent"]["reasoning_effort"] == "medium"
+    assert canonical["agent"]["reasoning_effort"] == "medium"
 
     # The embedded k3s profile must remain structurally equivalent as parsed,
     # except for the intentionally environment-specific MCP endpoint.
     normalized = json.loads(json.dumps(embedded))
     normalized["mcp_servers"]["verdify_greenhouse"]["url"] = canonical["mcp_servers"]["verdify_greenhouse"]["url"]
     assert normalized == canonical
+
+
+def test_hermes_profile_revision_rolls_and_reseeds_on_config_change():
+    manifest, _profile, _readiness_source = _hermes_config_documents()
+    expected_profile = hashlib.sha256(manifest["data"]["config.yaml"].encode()).hexdigest()[:12]
+    workloads = yaml.safe_load_all((REPO_ROOT / "deploy/k8s/components/hermes-iris/hermes-iris.yaml").read_text())
+    workload = next(document for document in workloads if document.get("kind") == "Deployment")
+
+    assert workload["spec"]["template"]["metadata"]["annotations"] == {
+        "verdify.io/hermes-profile-revision": expected_profile,
+    }
+    init_by_name = {item["name"]: item for item in workload["spec"]["template"]["spec"]["initContainers"]}
+    assert init_by_name["seed-config"]["command"] == [
+        "sh",
+        "-c",
+        "cp -f /etc/verdify/hermes-config/config.yaml /opt/data/config.yaml && "
+        "echo 'seeded /opt/data/config.yaml from verdify-hermes-iris-config'",
+    ]
 
 
 def _readiness_required_tools(source: str) -> set[str]:
