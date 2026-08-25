@@ -1,0 +1,486 @@
+# Source-only TEMPLATE. It records no approval, creates no typed work, and
+# performs no physical action. Null means unresolved; never replace it with an
+# inferred or proxy value merely to make the manifest pass.
+schema: verdify-experiment-v2-physical-readiness
+version: 1
+status: template
+document_grants_authority: false
+schema_contract:
+  path: research/planner-efficacy/readiness/physical-readiness-v1.schema.json
+  sha256: 9c96543e8bd457a9e280a5b3d3e7456477e6aa96ae3210ed13d7c0e6510a853b
+template_source_base_git_sha: 4a4b5b3c6b84516aadbfa0d66cd44e32f6cb85d6
+
+study:
+  experiment_id: null
+  study_id: null
+  greenhouse_id: vallery
+  timezone: America/Denver
+  protocol_version: 2
+  lifecycle_status: draft
+  execution_phase: commissioning
+  crop_epoch_id: null
+  topology_epoch_id: null
+  observed_at: null
+
+transport:
+  kind: legacy_components_v1
+  generalized_vector_mode_required: "off"
+  firmware_change_required: false
+  canonical_field_count: 48
+  treatment_field_count: 11
+  source_claim: source-grid candidate only until raw running-device evidence passes
+
+revision_set:
+  # These null fields must bind the exact deployed release and physical epoch,
+  # not this source template or an earlier source-only audit.
+  source_git_sha: null
+  revision_bundle_sha256: null
+  image_set_sha256: null
+  config_revision: null
+  firmware_revision: null
+  registry_revision: null
+  deployed_grid_revision: null
+  source_grid_candidate_revision: source-grid-parity/main-and-historical-09ee886-live-unverified-v1
+  order_revision: candidate-fixed-order-v1-prefix-replay-unqualified
+  profile_artifact_path: research/planner-efficacy/baseline/planner-switchback-v2-profiles.json
+  profile_artifact_sha256: 15ec5d264f703f44bd5125a4aa543d6a5564e94f29998b04c7be0a007b8a7d81
+  protocol_template_path: research/planner-efficacy/protocols/planner-switchback-v2.template.yaml
+  protocol_template_sha256: 611869267531789a79a35821640730c831f1a49b7e933cb79b1c8298d42a9b21
+  sensor_calibration_revision: null
+  equipment_source_revision: combined-normal-fertilized-misters-v1
+  outcome_schema_revision: null
+  analyzer_revision: null
+  crop_facility_epoch_revision: null
+
+inventory:
+  inventory_complete: false
+  canonical_routes:
+    expected_count: 48
+    verified_count: 0
+    treatment_expected_count: 11
+    treatment_verified_count: 0
+    evidence_ref: null
+  sensors:
+    - inventory_id: wall_north_climate
+      category: measured_wall_zone
+      source_ids: [temp_north, vpd_north, rh_north]
+      provenance_ref: null
+      calibration_record_ref: null
+      status: unverified
+    - inventory_id: wall_east_climate
+      category: measured_wall_zone
+      source_ids: [temp_east, vpd_east, rh_east]
+      provenance_ref: null
+      calibration_record_ref: null
+      status: unverified
+    - inventory_id: wall_south_climate
+      category: measured_wall_zone
+      source_ids: [temp_south, vpd_south, rh_south]
+      provenance_ref: null
+      calibration_record_ref: null
+      status: unverified
+    - inventory_id: wall_west_climate
+      category: measured_wall_zone
+      source_ids: [temp_west, vpd_west, rh_west]
+      provenance_ref: null
+      calibration_record_ref: null
+      status: unverified
+    - inventory_id: house_average_screening_proxy
+      category: house_average_proxy
+      source_ids: [temp_avg, vpd_avg, rh_avg]
+      provenance_ref: null
+      calibration_record_ref: null
+      status: unverified
+    - inventory_id: independent_climate_reference
+      category: reference
+      source_ids: [independent_reference_to_select]
+      provenance_ref: null
+      calibration_record_ref: null
+      status: unverified
+  actuators:
+    - inventory_id: heat1
+      category: actuator
+      source_ids: [heat_1_running]
+      provenance_ref: null
+      calibration_record_ref: null
+      status: unverified
+    - inventory_id: heat2
+      category: actuator
+      source_ids: [heat_2_running]
+      provenance_ref: null
+      calibration_record_ref: null
+      status: unverified
+    - inventory_id: vent
+      category: actuator
+      source_ids: [vent_open]
+      provenance_ref: null
+      calibration_record_ref: null
+      status: unverified
+    - inventory_id: fan1
+      category: actuator
+      source_ids: [fan_1_running]
+      provenance_ref: null
+      calibration_record_ref: null
+      status: unverified
+    - inventory_id: fan2
+      category: actuator
+      source_ids: [fan_2_running]
+      provenance_ref: null
+      calibration_record_ref: null
+      status: unverified
+    - inventory_id: fog
+      category: actuator
+      source_ids: [fog_running]
+      provenance_ref: null
+      calibration_record_ref: null
+      status: unverified
+    - inventory_id: mister_south
+      category: actuator
+      source_ids: [mister___south_wall, mister___south_wall__fert__]
+      provenance_ref: null
+      calibration_record_ref: null
+      status: unverified
+    - inventory_id: mister_west
+      category: actuator
+      source_ids: [mister___west_wall, mister___west_wall__fert__]
+      provenance_ref: null
+      calibration_record_ref: null
+      status: unverified
+    - inventory_id: mister_center
+      category: actuator
+      source_ids: [mister___center]
+      provenance_ref: null
+      calibration_record_ref: null
+      status: unverified
+  meters:
+    - inventory_id: counter_heat1
+      category: counter
+      source_ids: [runtime___heat_1__min_today_]
+      provenance_ref: null
+      calibration_record_ref: null
+      status: unverified
+    - inventory_id: counter_heat2
+      category: counter
+      source_ids: [runtime___heat_2__min_today_]
+      provenance_ref: null
+      calibration_record_ref: null
+      status: unverified
+    - inventory_id: counter_vent
+      category: counter
+      source_ids: [runtime___vent__min_today_]
+      provenance_ref: null
+      calibration_record_ref: null
+      status: unverified
+    - inventory_id: counter_fan1
+      category: counter
+      source_ids: [runtime___fan_1__min_today_]
+      provenance_ref: null
+      calibration_record_ref: null
+      status: unverified
+    - inventory_id: counter_fan2
+      category: counter
+      source_ids: [runtime___fan_2__min_today_]
+      provenance_ref: null
+      calibration_record_ref: null
+      status: unverified
+    - inventory_id: counter_fog
+      category: counter
+      source_ids: [runtime___fog__min_today_]
+      provenance_ref: null
+      calibration_record_ref: null
+      status: unverified
+    - inventory_id: counter_mister_south
+      category: counter
+      source_ids: [mister_south_wall_runtime__today_]
+      provenance_ref: null
+      calibration_record_ref: null
+      status: unverified
+    - inventory_id: counter_mister_west
+      category: counter
+      source_ids: [mister_west_wall_runtime__today_]
+      provenance_ref: null
+      calibration_record_ref: null
+      status: unverified
+    - inventory_id: counter_mister_center
+      category: counter
+      source_ids: [mister_center_runtime__today_]
+      provenance_ref: null
+      calibration_record_ref: null
+      status: unverified
+
+profiles:
+  - profile_id: baseline
+    field_count: 48
+    state_content_sha256: 6f823c63a56686da33bf258e7c2380a4c87292d431f09b4f79c81e71b285cf8e
+    source_grid_status: candidate_passed
+    running_device_verified: false
+    landing_status: unverified
+    evidence_ref: evidence/source_profile_grid
+  - profile_id: moderate
+    field_count: 48
+    state_content_sha256: 816bee6d7557b2ea4dfbc8afe13184c415089bdabb13c1a0ac1f41f8099b1c73
+    source_grid_status: candidate_passed
+    running_device_verified: false
+    landing_status: unverified
+    evidence_ref: evidence/source_profile_grid
+  - profile_id: aggressive
+    field_count: 48
+    state_content_sha256: fa08c3e12d4951c77ac13c3584f48f010dfe48cee8385fadce612a938e8b0c1d
+    source_grid_status: candidate_passed
+    running_device_verified: false
+    landing_status: unverified
+    evidence_ref: evidence/source_profile_grid
+runtime_rounding_allowed: false
+
+prefix_qualification:
+  activation_order_revision: candidate-fixed-order-v1-prefix-replay-unqualified
+  rollback_order_revision: candidate-fixed-order-v1-prefix-replay-unqualified
+  full48_recovery_order_revision: candidate-fixed-order-v1-prefix-replay-unqualified
+  activation_rollback_status: unqualified
+  full48_recovery_status: unqualified
+  evidence_ref: null
+
+calibration:
+  work_order_schema_path: research/planner-efficacy/readiness/calibration-work-order-v1.schema.json
+  all_current: false
+  records: []
+
+hvac_and_controls:
+  capacity_envelope_ref: null
+  interlocks_ref: null
+  dwell_hysteresis_ref: null
+  status: unlocked
+  evidence_ref: null
+
+localized_safety:
+  measured_wall_zones:
+    - zone_id: north
+      temperature_source_id: temp_north
+      vpd_source_id: vpd_north
+      rh_source_id: rh_north
+      absolute_limits_ref: null
+      freshness_seconds_max: null
+      maximum_breach_seconds: null
+      status: unverified
+      evidence_ref: null
+    - zone_id: east
+      temperature_source_id: temp_east
+      vpd_source_id: vpd_east
+      rh_source_id: rh_east
+      absolute_limits_ref: null
+      freshness_seconds_max: null
+      maximum_breach_seconds: null
+      status: unverified
+      evidence_ref: null
+    - zone_id: south
+      temperature_source_id: temp_south
+      vpd_source_id: vpd_south
+      rh_source_id: rh_south
+      absolute_limits_ref: null
+      freshness_seconds_max: null
+      maximum_breach_seconds: null
+      status: unverified
+      evidence_ref: null
+    - zone_id: west
+      temperature_source_id: temp_west
+      vpd_source_id: vpd_west
+      rh_source_id: rh_west
+      absolute_limits_ref: null
+      freshness_seconds_max: null
+      maximum_breach_seconds: null
+      status: unverified
+      evidence_ref: null
+  center_screening_proxy:
+    source_ids: [temp_avg, vpd_avg, rh_avg]
+    status: unverified
+    evidence_ref: null
+    claim: house-average center-screening proxy only; never a center probe
+  air_dew_screen:
+    formula: zone_air_temperature_c-zone_air_dewpoint_c using Magnus paired same-zone observations
+    minimum_margin_c: null
+    maximum_breach_seconds: null
+    status: unlocked
+    evidence_ref: null
+    claim_limit: air-dew screening is not leaf, canopy-surface, or center condensation measurement
+  reference_evidence:
+    mode: unresolved
+    maximum_difference_ref: null
+    status: unlocked
+    evidence_ref: null
+    continuous_redundancy_claimed: false
+  manual_crop_inspection:
+    rubric_ref: null
+    timing_ref: null
+    stop_rule_ref: null
+    record_schema_ref: null
+    status: unlocked
+    evidence_ref: null
+  no_interpolation: true
+  claim_limit: worst measured wall zones plus an explicitly approved house-average proxy; no true center, canopy, leaf-condensation, or crop-safety claim
+
+water_and_fertigation:
+  fog_mister_branch_map_ref: null
+  pressure_flow_evidence_ref: null
+  leak_low_water_stop_ref: null
+  daily_ceiling_ref: null
+  fertigation_recipe_epoch: null
+  feed_flush_window_ref: null
+  pressure_contention_ref: null
+  experiment_changes_fertigation_authority: false
+
+nine_stream_endpoint:
+  endpoint_id: nine_control_state_minutes
+  claim_limit: heterogeneous active/open-state burden only; never energy, water, cost, carbon, or efficiency
+  source_map_path: research/planner-efficacy/baseline/experiment-v2-equipment-source-map.json
+  source_map_canonical_sha256: 5c790584da6a99eed70421514fda4bf2a79aabbccd91ae1f4fe6e0c4fc3d3048
+  seed_window_local: "[05:58:30,06:00:00] at or before 06:00"
+  end_window_local: "[23:58:30,24:00:00) pre-midnight"
+  same_reset_epoch_required: true
+  counter_integral_tolerance: max(1 active/open-state minute, 1 percent) over [start_sample_at,end_sample_at)
+  field_evidence_status: missing
+  evidence_ref: null
+  streams:
+    - {equipment_id: heat1, state_semantics: electric-heater relay active, weight: 1}
+    - {equipment_id: heat2, state_semantics: gas-heat enable relay active, weight: 1}
+    - {equipment_id: vent, state_semantics: vent open state and never motor energized runtime, weight: 1}
+    - {equipment_id: fan1, state_semantics: fan relay active, weight: 1}
+    - {equipment_id: fan2, state_semantics: fan relay active, weight: 1}
+    - {equipment_id: fog, state_semantics: fog relay active and not measured flow, weight: 1}
+    - {equipment_id: mister_south, state_semantics: normal OR fertilized relay active with no positive overlap, weight: 1}
+    - {equipment_id: mister_west, state_semantics: normal OR fertilized relay active with no positive overlap, weight: 1}
+    - {equipment_id: mister_center, state_semantics: center mister relay active and not measured flow, weight: 1}
+
+interventions:
+  status: unlocked
+  calendar_evidence_ref: null
+  pair_freeze_policy: freeze irrigation, fertigation, crop/topology, shade/door, maintenance, and manual interventions within a pair when safe; otherwise record immutable deviations
+  plant_care_override: facility safety and plant care always override protocol; never delay rescue to preserve a sample
+  planned: []
+
+facility_rescue:
+  owner_role: facility_operations
+  operator_roster_ref: null
+  stop_without_software_approval: true
+  software_competes: false
+  baseline_requires_facility_authorization: true
+  rehearsal_status: missing
+  evidence_ref: null
+
+personas:
+  - {persona_id: hvac_climate, contact_role_ref: null, evidence_status: missing, evidence_refs: [], signoff_status: pending}
+  - {persona_id: water_systems, contact_role_ref: null, evidence_status: missing, evidence_refs: [], signoff_status: pending}
+  - {persona_id: fertigation, contact_role_ref: null, evidence_status: missing, evidence_refs: [], signoff_status: pending}
+  - {persona_id: controls, contact_role_ref: null, evidence_status: candidate, evidence_refs: [evidence/source_component_contract], signoff_status: pending}
+  - {persona_id: systems_integration, contact_role_ref: null, evidence_status: candidate, evidence_refs: [evidence/source_vertical_contract], signoff_status: pending}
+  - {persona_id: iot_sensor, contact_role_ref: null, evidence_status: missing, evidence_refs: [], signoff_status: pending}
+  - {persona_id: data_science, contact_role_ref: null, evidence_status: candidate, evidence_refs: [evidence/source_outcome_contract], signoff_status: pending}
+  - {persona_id: facility_operations, contact_role_ref: null, evidence_status: missing, evidence_refs: [], signoff_status: pending}
+
+approvals:
+  scoped_probe:
+    issue_number: 641
+    approval_kind: scoped_probe
+    scope_name: commissioning_probe
+    status: pending
+    approval_ref: null
+    artifact_sha256: null
+    valid_from: null
+    valid_until: null
+    expires_at: null
+    supervisor_role: null
+    rescue_owner_role: null
+  probe_evidence:
+    status: missing
+    work_id: null
+    evidence_ref: null
+    completed_at: null
+  combined_physical:
+    issue_number: 641
+    approval_kind: combined_physical
+    scope_name: combined
+    status: pending
+    approval_ref: null
+    artifact_sha256: null
+    approved_at: null
+  randomized_day_1:
+    issue_number: 642
+    approval_kind: randomized_day_1
+    scope_name: day1
+    status: outside_this_manifest
+    claim: "separate approval after design lock/finalization/integrated evidence; never supplied by #641"
+
+evidence:
+  - evidence_id: source_profile_grid
+    kind: source_test
+    status: candidate
+    physical_observation: false
+    reference: research/planner-efficacy/baseline/planner-switchback-v2-profiles.json
+    sha256: 15ec5d264f703f44bd5125a4aa543d6a5564e94f29998b04c7be0a007b8a7d81
+    captured_at: null
+    claim_limit: 48-field source-grid candidates only; running-device grid remains unverified
+  - evidence_id: source_component_contract
+    kind: source_test
+    status: candidate
+    physical_observation: false
+    reference: verdify_schemas/component_executor.py
+    sha256: null
+    captured_at: null
+    claim_limit: source routing, clamp, and fixed candidate order only; no prefix-replay qualification
+  - evidence_id: source_vertical_contract
+    kind: source_test
+    status: candidate
+    physical_observation: false
+    reference: db/migrations/214-confirmed-component-experiment-v2.sql
+    sha256: null
+    captured_at: null
+    claim_limit: typed work and ordered approval software contract only; not a live approval or physical probe
+  - evidence_id: source_outcome_contract
+    kind: source_test
+    status: candidate
+    physical_observation: false
+    reference: research/planner-efficacy/switchback/v2_outcomes.py
+    sha256: null
+    captured_at: null
+    claim_limit: source formula and fixture evidence only; no real same-epoch nine-stream field day
+
+readiness:
+  decision: blocked
+  checks:
+    - {check_id: revision_bundle_pinned, status: blocked, evidence_refs: []}
+    - {check_id: running_grid_profiles_land, status: blocked, evidence_refs: [evidence/source_profile_grid]}
+    - {check_id: setter_readback_routes_48_48, status: candidate, evidence_refs: [evidence/source_component_contract]}
+    - {check_id: treatment_clamps_11_11, status: candidate, evidence_refs: [evidence/source_component_contract]}
+    - {check_id: activation_rollback_prefix_replay, status: blocked, evidence_refs: []}
+    - {check_id: full48_recovery_prefix_replay, status: blocked, evidence_refs: []}
+    - {check_id: physical_inventory_provenance, status: blocked, evidence_refs: []}
+    - {check_id: calibrations_current, status: blocked, evidence_refs: []}
+    - {check_id: hvac_capacity_and_interlocks, status: blocked, evidence_refs: []}
+    - {check_id: water_fertigation_commissioning, status: blocked, evidence_refs: []}
+    - {check_id: localized_wall_zone_safety, status: blocked, evidence_refs: []}
+    - {check_id: center_proxy_and_claim_limits, status: blocked, evidence_refs: []}
+    - {check_id: air_dew_reference_and_manual_inspection, status: blocked, evidence_refs: []}
+    - {check_id: nine_stream_counter_reconciliation, status: blocked, evidence_refs: [evidence/source_outcome_contract]}
+    - {check_id: intervention_calendar_and_care_override, status: blocked, evidence_refs: []}
+    - {check_id: commissioning_probe_evidence, status: blocked, evidence_refs: [evidence/source_vertical_contract]}
+    - {check_id: facility_rescue_rehearsal, status: blocked, evidence_refs: []}
+    - {check_id: multidisciplinary_record, status: blocked, evidence_refs: []}
+  blockers:
+    - revision_bundle_pinned
+    - running_grid_profiles_land
+    - setter_readback_routes_48_48
+    - treatment_clamps_11_11
+    - activation_rollback_prefix_replay
+    - full48_recovery_prefix_replay
+    - physical_inventory_provenance
+    - calibrations_current
+    - hvac_capacity_and_interlocks
+    - water_fertigation_commissioning
+    - localized_wall_zone_safety
+    - center_proxy_and_claim_limits
+    - air_dew_reference_and_manual_inspection
+    - nine_stream_counter_reconciliation
+    - intervention_calendar_and_care_override
+    - commissioning_probe_evidence
+    - facility_rescue_rehearsal
+    - multidisciplinary_record
+  physical_actions_performed_by_template: 0

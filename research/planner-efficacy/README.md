@@ -52,6 +52,12 @@ The generated power file is a transparent planning scenario, not a frozen
 trial design or efficacy result. Its missing provider replay and exact
 six-hour raw-data refresh are recorded in the artifact itself.
 
+The non-operative multidisciplinary physical-readiness manifest, calibration
+work order, scoped commissioning-probe work order, schemas, and offline
+validator are documented in [`readiness/README.md`](readiness/README.md). Those
+templates assemble issue-#641 evidence; they do not record an approval, create
+typed work, or authorize a device write.
+
 Extract the four input files through the repository's read-only database
 helper. Keep the output outside Git because it contains operational telemetry:
 

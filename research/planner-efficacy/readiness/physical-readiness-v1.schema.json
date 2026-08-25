@@ -1,0 +1,630 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://verdify.vallery.net/schemas/experiment-v2-physical-readiness-v1.json",
+  "title": "Verdify experiment-v2 multidisciplinary physical-readiness manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "document_grants_authority",
+    "schema_contract",
+    "template_source_base_git_sha",
+    "study",
+    "transport",
+    "revision_set",
+    "inventory",
+    "profiles",
+    "runtime_rounding_allowed",
+    "prefix_qualification",
+    "calibration",
+    "hvac_and_controls",
+    "localized_safety",
+    "water_and_fertigation",
+    "nine_stream_endpoint",
+    "interventions",
+    "facility_rescue",
+    "personas",
+    "approvals",
+    "evidence",
+    "readiness"
+  ],
+  "properties": {
+    "schema": {"const": "verdify-experiment-v2-physical-readiness"},
+    "version": {"const": 1},
+    "status": {"enum": ["template", "blocked", "ready_for_combined_signoff", "combined_signed"]},
+    "document_grants_authority": {"const": false},
+    "schema_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": {"$ref": "#/$defs/repo_path"},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "template_source_base_git_sha": {"$ref": "#/$defs/git_sha"},
+    "study": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "experiment_id",
+        "study_id",
+        "greenhouse_id",
+        "timezone",
+        "protocol_version",
+        "lifecycle_status",
+        "execution_phase",
+        "crop_epoch_id",
+        "topology_epoch_id",
+        "observed_at"
+      ],
+      "properties": {
+        "experiment_id": {"$ref": "#/$defs/nullable_uuid"},
+        "study_id": {"$ref": "#/$defs/nullable_nonempty"},
+        "greenhouse_id": {"const": "vallery"},
+        "timezone": {"const": "America/Denver"},
+        "protocol_version": {"const": 2},
+        "lifecycle_status": {"const": "draft"},
+        "execution_phase": {"const": "commissioning"},
+        "crop_epoch_id": {"$ref": "#/$defs/nullable_nonempty"},
+        "topology_epoch_id": {"$ref": "#/$defs/nullable_nonempty"},
+        "observed_at": {"$ref": "#/$defs/nullable_timestamp"}
+      }
+    },
+    "transport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "generalized_vector_mode_required",
+        "firmware_change_required",
+        "canonical_field_count",
+        "treatment_field_count",
+        "source_claim"
+      ],
+      "properties": {
+        "kind": {"const": "legacy_components_v1"},
+        "generalized_vector_mode_required": {"const": "off"},
+        "firmware_change_required": {"const": false},
+        "canonical_field_count": {"const": 48},
+        "treatment_field_count": {"const": 11},
+        "source_claim": {"const": "source-grid candidate only until raw running-device evidence passes"}
+      }
+    },
+    "revision_set": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_git_sha",
+        "revision_bundle_sha256",
+        "image_set_sha256",
+        "config_revision",
+        "firmware_revision",
+        "registry_revision",
+        "deployed_grid_revision",
+        "source_grid_candidate_revision",
+        "order_revision",
+        "profile_artifact_path",
+        "profile_artifact_sha256",
+        "protocol_template_path",
+        "protocol_template_sha256",
+        "sensor_calibration_revision",
+        "equipment_source_revision",
+        "outcome_schema_revision",
+        "analyzer_revision",
+        "crop_facility_epoch_revision"
+      ],
+      "properties": {
+        "source_git_sha": {"$ref": "#/$defs/nullable_git_sha"},
+        "revision_bundle_sha256": {"$ref": "#/$defs/nullable_sha256"},
+        "image_set_sha256": {"$ref": "#/$defs/nullable_sha256"},
+        "config_revision": {"$ref": "#/$defs/nullable_nonempty"},
+        "firmware_revision": {"$ref": "#/$defs/nullable_nonempty"},
+        "registry_revision": {"$ref": "#/$defs/nullable_nonempty"},
+        "deployed_grid_revision": {"$ref": "#/$defs/nullable_nonempty"},
+        "source_grid_candidate_revision": {"type": "string", "minLength": 1, "maxLength": 256},
+        "order_revision": {"type": "string", "minLength": 1, "maxLength": 256},
+        "profile_artifact_path": {"$ref": "#/$defs/repo_path"},
+        "profile_artifact_sha256": {"$ref": "#/$defs/sha256"},
+        "protocol_template_path": {"$ref": "#/$defs/repo_path"},
+        "protocol_template_sha256": {"$ref": "#/$defs/sha256"},
+        "sensor_calibration_revision": {"$ref": "#/$defs/nullable_nonempty"},
+        "equipment_source_revision": {"type": "string", "minLength": 1, "maxLength": 256},
+        "outcome_schema_revision": {"$ref": "#/$defs/nullable_nonempty"},
+        "analyzer_revision": {"$ref": "#/$defs/nullable_nonempty"},
+        "crop_facility_epoch_revision": {"$ref": "#/$defs/nullable_nonempty"}
+      }
+    },
+    "inventory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["inventory_complete", "canonical_routes", "sensors", "actuators", "meters"],
+      "properties": {
+        "inventory_complete": {"type": "boolean"},
+        "canonical_routes": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "expected_count",
+            "verified_count",
+            "treatment_expected_count",
+            "treatment_verified_count",
+            "evidence_ref"
+          ],
+          "properties": {
+            "expected_count": {"const": 48},
+            "verified_count": {"type": "integer", "minimum": 0, "maximum": 48},
+            "treatment_expected_count": {"const": 11},
+            "treatment_verified_count": {"type": "integer", "minimum": 0, "maximum": 11},
+            "evidence_ref": {"$ref": "#/$defs/nullable_reference"}
+          }
+        },
+        "sensors": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/inventory_item"}},
+        "actuators": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/inventory_item"}},
+        "meters": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/inventory_item"}}
+      }
+    },
+    "profiles": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "profile_id",
+          "field_count",
+          "state_content_sha256",
+          "source_grid_status",
+          "running_device_verified",
+          "landing_status",
+          "evidence_ref"
+        ],
+        "properties": {
+          "profile_id": {"enum": ["baseline", "moderate", "aggressive"]},
+          "field_count": {"const": 48},
+          "state_content_sha256": {"$ref": "#/$defs/sha256"},
+          "source_grid_status": {"const": "candidate_passed"},
+          "running_device_verified": {"type": "boolean"},
+          "landing_status": {"enum": ["unverified", "passed", "failed"]},
+          "evidence_ref": {"$ref": "#/$defs/nullable_reference"}
+        }
+      }
+    },
+    "runtime_rounding_allowed": {"const": false},
+    "prefix_qualification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "activation_order_revision",
+        "rollback_order_revision",
+        "full48_recovery_order_revision",
+        "activation_rollback_status",
+        "full48_recovery_status",
+        "evidence_ref"
+      ],
+      "properties": {
+        "activation_order_revision": {"type": "string", "minLength": 1, "maxLength": 256},
+        "rollback_order_revision": {"type": "string", "minLength": 1, "maxLength": 256},
+        "full48_recovery_order_revision": {"type": "string", "minLength": 1, "maxLength": 256},
+        "activation_rollback_status": {"enum": ["unqualified", "passed", "failed"]},
+        "full48_recovery_status": {"enum": ["unqualified", "passed", "failed"]},
+        "evidence_ref": {"$ref": "#/$defs/nullable_reference"}
+      }
+    },
+    "calibration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["work_order_schema_path", "all_current", "records"],
+      "properties": {
+        "work_order_schema_path": {"$ref": "#/$defs/repo_path"},
+        "all_current": {"type": "boolean"},
+        "records": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["inventory_id", "calibration_revision", "calibrated_at", "tolerance", "decision", "evidence_ref"],
+            "properties": {
+              "inventory_id": {"type": "string", "minLength": 1, "maxLength": 128},
+              "calibration_revision": {"type": "string", "minLength": 1, "maxLength": 256},
+              "calibrated_at": {"$ref": "#/$defs/timestamp"},
+              "tolerance": {"type": "string", "minLength": 1, "maxLength": 256},
+              "decision": {"enum": ["passed", "failed"]},
+              "evidence_ref": {"$ref": "#/$defs/reference"}
+            }
+          }
+        }
+      }
+    },
+    "hvac_and_controls": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capacity_envelope_ref", "interlocks_ref", "dwell_hysteresis_ref", "status", "evidence_ref"],
+      "properties": {
+        "capacity_envelope_ref": {"$ref": "#/$defs/nullable_reference"},
+        "interlocks_ref": {"$ref": "#/$defs/nullable_reference"},
+        "dwell_hysteresis_ref": {"$ref": "#/$defs/nullable_reference"},
+        "status": {"enum": ["unlocked", "passed", "failed"]},
+        "evidence_ref": {"$ref": "#/$defs/nullable_reference"}
+      }
+    },
+    "localized_safety": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "measured_wall_zones",
+        "center_screening_proxy",
+        "air_dew_screen",
+        "reference_evidence",
+        "manual_crop_inspection",
+        "no_interpolation",
+        "claim_limit"
+      ],
+      "properties": {
+        "measured_wall_zones": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "zone_id",
+              "temperature_source_id",
+              "vpd_source_id",
+              "rh_source_id",
+              "absolute_limits_ref",
+              "freshness_seconds_max",
+              "maximum_breach_seconds",
+              "status",
+              "evidence_ref"
+            ],
+            "properties": {
+              "zone_id": {"enum": ["north", "east", "south", "west"]},
+              "temperature_source_id": {"type": "string", "minLength": 1, "maxLength": 128},
+              "vpd_source_id": {"type": "string", "minLength": 1, "maxLength": 128},
+              "rh_source_id": {"type": "string", "minLength": 1, "maxLength": 128},
+              "absolute_limits_ref": {"$ref": "#/$defs/nullable_reference"},
+              "freshness_seconds_max": {"type": ["integer", "null"], "minimum": 1, "maximum": 3600},
+              "maximum_breach_seconds": {"type": ["integer", "null"], "minimum": 0, "maximum": 86400},
+              "status": {"enum": ["unverified", "passed", "failed"]},
+              "evidence_ref": {"$ref": "#/$defs/nullable_reference"}
+            }
+          }
+        },
+        "center_screening_proxy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["source_ids", "status", "evidence_ref", "claim"],
+          "properties": {
+            "source_ids": {
+              "type": "array",
+              "minItems": 3,
+              "maxItems": 3,
+              "uniqueItems": true,
+              "items": {"enum": ["temp_avg", "vpd_avg", "rh_avg"]}
+            },
+            "status": {"enum": ["unverified", "approved", "rejected"]},
+            "evidence_ref": {"$ref": "#/$defs/nullable_reference"},
+            "claim": {"const": "house-average center-screening proxy only; never a center probe"}
+          }
+        },
+        "air_dew_screen": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["formula", "minimum_margin_c", "maximum_breach_seconds", "status", "evidence_ref", "claim_limit"],
+          "properties": {
+            "formula": {"const": "zone_air_temperature_c-zone_air_dewpoint_c using Magnus paired same-zone observations"},
+            "minimum_margin_c": {"type": ["number", "null"], "minimum": 0, "maximum": 30},
+            "maximum_breach_seconds": {"type": ["integer", "null"], "minimum": 0, "maximum": 86400},
+            "status": {"enum": ["unlocked", "passed", "failed"]},
+            "evidence_ref": {"$ref": "#/$defs/nullable_reference"},
+            "claim_limit": {"const": "air-dew screening is not leaf, canopy-surface, or center condensation measurement"}
+          }
+        },
+        "reference_evidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode", "maximum_difference_ref", "status", "evidence_ref", "continuous_redundancy_claimed"],
+          "properties": {
+            "mode": {"enum": ["unresolved", "commissioned_pair", "no_continuous_pair"]},
+            "maximum_difference_ref": {"$ref": "#/$defs/nullable_reference"},
+            "status": {"enum": ["unlocked", "passed", "failed"]},
+            "evidence_ref": {"$ref": "#/$defs/nullable_reference"},
+            "continuous_redundancy_claimed": {"type": "boolean"}
+          }
+        },
+        "manual_crop_inspection": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["rubric_ref", "timing_ref", "stop_rule_ref", "record_schema_ref", "status", "evidence_ref"],
+          "properties": {
+            "rubric_ref": {"$ref": "#/$defs/nullable_reference"},
+            "timing_ref": {"$ref": "#/$defs/nullable_reference"},
+            "stop_rule_ref": {"$ref": "#/$defs/nullable_reference"},
+            "record_schema_ref": {"$ref": "#/$defs/nullable_reference"},
+            "status": {"enum": ["unlocked", "passed", "failed"]},
+            "evidence_ref": {"$ref": "#/$defs/nullable_reference"}
+          }
+        },
+        "no_interpolation": {"const": true},
+        "claim_limit": {"const": "worst measured wall zones plus an explicitly approved house-average proxy; no true center, canopy, leaf-condensation, or crop-safety claim"}
+      }
+    },
+    "water_and_fertigation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fog_mister_branch_map_ref",
+        "pressure_flow_evidence_ref",
+        "leak_low_water_stop_ref",
+        "daily_ceiling_ref",
+        "fertigation_recipe_epoch",
+        "feed_flush_window_ref",
+        "pressure_contention_ref",
+        "experiment_changes_fertigation_authority"
+      ],
+      "properties": {
+        "fog_mister_branch_map_ref": {"$ref": "#/$defs/nullable_reference"},
+        "pressure_flow_evidence_ref": {"$ref": "#/$defs/nullable_reference"},
+        "leak_low_water_stop_ref": {"$ref": "#/$defs/nullable_reference"},
+        "daily_ceiling_ref": {"$ref": "#/$defs/nullable_reference"},
+        "fertigation_recipe_epoch": {"$ref": "#/$defs/nullable_nonempty"},
+        "feed_flush_window_ref": {"$ref": "#/$defs/nullable_reference"},
+        "pressure_contention_ref": {"$ref": "#/$defs/nullable_reference"},
+        "experiment_changes_fertigation_authority": {"const": false}
+      }
+    },
+    "nine_stream_endpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "endpoint_id",
+        "claim_limit",
+        "source_map_path",
+        "source_map_canonical_sha256",
+        "seed_window_local",
+        "end_window_local",
+        "same_reset_epoch_required",
+        "counter_integral_tolerance",
+        "field_evidence_status",
+        "evidence_ref",
+        "streams"
+      ],
+      "properties": {
+        "endpoint_id": {"const": "nine_control_state_minutes"},
+        "claim_limit": {"const": "heterogeneous active/open-state burden only; never energy, water, cost, carbon, or efficiency"},
+        "source_map_path": {"$ref": "#/$defs/repo_path"},
+        "source_map_canonical_sha256": {"$ref": "#/$defs/sha256"},
+        "seed_window_local": {"const": "[05:58:30,06:00:00] at or before 06:00"},
+        "end_window_local": {"const": "[23:58:30,24:00:00) pre-midnight"},
+        "same_reset_epoch_required": {"const": true},
+        "counter_integral_tolerance": {"const": "max(1 active/open-state minute, 1 percent) over [start_sample_at,end_sample_at)"},
+        "field_evidence_status": {"enum": ["missing", "passed", "failed"]},
+        "evidence_ref": {"$ref": "#/$defs/nullable_reference"},
+        "streams": {
+          "type": "array",
+          "minItems": 9,
+          "maxItems": 9,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["equipment_id", "state_semantics", "weight"],
+            "properties": {
+              "equipment_id": {"enum": ["heat1", "heat2", "vent", "fan1", "fan2", "fog", "mister_south", "mister_west", "mister_center"]},
+              "state_semantics": {"type": "string", "minLength": 1, "maxLength": 256},
+              "weight": {"const": 1}
+            }
+          }
+        }
+      }
+    },
+    "interventions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "calendar_evidence_ref", "pair_freeze_policy", "plant_care_override", "planned"],
+      "properties": {
+        "status": {"enum": ["unlocked", "locked"]},
+        "calendar_evidence_ref": {"$ref": "#/$defs/nullable_reference"},
+        "pair_freeze_policy": {"const": "freeze irrigation, fertigation, crop/topology, shade/door, maintenance, and manual interventions within a pair when safe; otherwise record immutable deviations"},
+        "plant_care_override": {"const": "facility safety and plant care always override protocol; never delay rescue to preserve a sample"},
+        "planned": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["intervention_id", "kind", "starts_at", "ends_at", "owner_role", "disposition", "evidence_ref"],
+            "properties": {
+              "intervention_id": {"type": "string", "minLength": 1, "maxLength": 128},
+              "kind": {"enum": ["irrigation", "fertigation", "crop_topology", "shade_door", "maintenance", "manual", "other"]},
+              "starts_at": {"$ref": "#/$defs/timestamp"},
+              "ends_at": {"$ref": "#/$defs/timestamp"},
+              "owner_role": {"type": "string", "minLength": 1, "maxLength": 128},
+              "disposition": {"enum": ["outside_pair", "frozen_within_pair", "record_as_deviation"]},
+              "evidence_ref": {"$ref": "#/$defs/reference"}
+            }
+          }
+        }
+      }
+    },
+    "facility_rescue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["owner_role", "operator_roster_ref", "stop_without_software_approval", "software_competes", "baseline_requires_facility_authorization", "rehearsal_status", "evidence_ref"],
+      "properties": {
+        "owner_role": {"const": "facility_operations"},
+        "operator_roster_ref": {"$ref": "#/$defs/nullable_role_reference"},
+        "stop_without_software_approval": {"const": true},
+        "software_competes": {"const": false},
+        "baseline_requires_facility_authorization": {"const": true},
+        "rehearsal_status": {"enum": ["missing", "passed", "failed"]},
+        "evidence_ref": {"$ref": "#/$defs/nullable_reference"}
+      }
+    },
+    "personas": {
+      "type": "array",
+      "minItems": 8,
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["persona_id", "contact_role_ref", "evidence_status", "evidence_refs", "signoff_status"],
+        "properties": {
+          "persona_id": {"enum": ["hvac_climate", "water_systems", "fertigation", "controls", "systems_integration", "iot_sensor", "data_science", "facility_operations"]},
+          "contact_role_ref": {"$ref": "#/$defs/nullable_role_reference"},
+          "evidence_status": {"enum": ["missing", "candidate", "passed", "failed"]},
+          "evidence_refs": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/reference"}},
+          "signoff_status": {"enum": ["pending", "signed", "rejected"]}
+        }
+      }
+    },
+    "approvals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scoped_probe", "probe_evidence", "combined_physical", "randomized_day_1"],
+      "properties": {
+        "scoped_probe": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["issue_number", "approval_kind", "scope_name", "status", "approval_ref", "artifact_sha256", "valid_from", "valid_until", "expires_at", "supervisor_role", "rescue_owner_role"],
+          "properties": {
+            "issue_number": {"const": 641},
+            "approval_kind": {"const": "scoped_probe"},
+            "scope_name": {"const": "commissioning_probe"},
+            "status": {"enum": ["pending", "recorded", "rejected", "expired"]},
+            "approval_ref": {"$ref": "#/$defs/nullable_reference"},
+            "artifact_sha256": {"$ref": "#/$defs/nullable_sha256"},
+            "valid_from": {"$ref": "#/$defs/nullable_timestamp"},
+            "valid_until": {"$ref": "#/$defs/nullable_timestamp"},
+            "expires_at": {"$ref": "#/$defs/nullable_timestamp"},
+            "supervisor_role": {"$ref": "#/$defs/nullable_nonempty"},
+            "rescue_owner_role": {"$ref": "#/$defs/nullable_nonempty"}
+          }
+        },
+        "probe_evidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "work_id", "evidence_ref", "completed_at"],
+          "properties": {
+            "status": {"enum": ["missing", "passed", "failed"]},
+            "work_id": {"$ref": "#/$defs/nullable_uuid"},
+            "evidence_ref": {"$ref": "#/$defs/nullable_reference"},
+            "completed_at": {"$ref": "#/$defs/nullable_timestamp"}
+          }
+        },
+        "combined_physical": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["issue_number", "approval_kind", "scope_name", "status", "approval_ref", "artifact_sha256", "approved_at"],
+          "properties": {
+            "issue_number": {"const": 641},
+            "approval_kind": {"const": "combined_physical"},
+            "scope_name": {"const": "combined"},
+            "status": {"enum": ["pending", "recorded", "rejected"]},
+            "approval_ref": {"$ref": "#/$defs/nullable_reference"},
+            "artifact_sha256": {"$ref": "#/$defs/nullable_sha256"},
+            "approved_at": {"$ref": "#/$defs/nullable_timestamp"}
+          }
+        },
+        "randomized_day_1": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["issue_number", "approval_kind", "scope_name", "status", "claim"],
+          "properties": {
+            "issue_number": {"const": 642},
+            "approval_kind": {"const": "randomized_day_1"},
+            "scope_name": {"const": "day1"},
+            "status": {"enum": ["outside_this_manifest", "pending", "recorded", "rejected"]},
+            "claim": {"const": "separate approval after design lock/finalization/integrated evidence; never supplied by #641"}
+          }
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["evidence_id", "kind", "status", "physical_observation", "reference", "sha256", "captured_at", "claim_limit"],
+        "properties": {
+          "evidence_id": {"type": "string", "minLength": 1, "maxLength": 128},
+          "kind": {"enum": ["source_test", "compiled_replay", "deployed_runtime", "physical_observation", "calibration", "work_order", "approval", "procedure"]},
+          "status": {"enum": ["missing", "candidate", "passed", "failed"]},
+          "physical_observation": {"type": "boolean"},
+          "reference": {"$ref": "#/$defs/nullable_reference"},
+          "sha256": {"$ref": "#/$defs/nullable_sha256"},
+          "captured_at": {"$ref": "#/$defs/nullable_timestamp"},
+          "claim_limit": {"type": "string", "minLength": 1, "maxLength": 512}
+        }
+      }
+    },
+    "readiness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["decision", "checks", "blockers", "physical_actions_performed_by_template"],
+      "properties": {
+        "decision": {"enum": ["blocked", "ready_for_combined_signoff"]},
+        "checks": {
+          "type": "array",
+          "minItems": 18,
+          "maxItems": 18,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["check_id", "status", "evidence_refs"],
+            "properties": {
+              "check_id": {"enum": ["revision_bundle_pinned", "running_grid_profiles_land", "setter_readback_routes_48_48", "treatment_clamps_11_11", "activation_rollback_prefix_replay", "full48_recovery_prefix_replay", "physical_inventory_provenance", "calibrations_current", "hvac_capacity_and_interlocks", "water_fertigation_commissioning", "localized_wall_zone_safety", "center_proxy_and_claim_limits", "air_dew_reference_and_manual_inspection", "nine_stream_counter_reconciliation", "intervention_calendar_and_care_override", "commissioning_probe_evidence", "facility_rescue_rehearsal", "multidisciplinary_record"]},
+              "status": {"enum": ["blocked", "candidate", "passed", "failed"]},
+              "evidence_refs": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/reference"}}
+            }
+          }
+        },
+        "blockers": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"enum": ["revision_bundle_pinned", "running_grid_profiles_land", "setter_readback_routes_48_48", "treatment_clamps_11_11", "activation_rollback_prefix_replay", "full48_recovery_prefix_replay", "physical_inventory_provenance", "calibrations_current", "hvac_capacity_and_interlocks", "water_fertigation_commissioning", "localized_wall_zone_safety", "center_proxy_and_claim_limits", "air_dew_reference_and_manual_inspection", "nine_stream_counter_reconciliation", "intervention_calendar_and_care_override", "commissioning_probe_evidence", "facility_rescue_rehearsal", "multidisciplinary_record"]}
+        },
+        "physical_actions_performed_by_template": {"const": 0}
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "nullable_sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+    "git_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "nullable_git_sha": {"type": ["string", "null"], "pattern": "^[0-9a-f]{40}$"},
+    "nullable_nonempty": {"type": ["string", "null"], "minLength": 1, "maxLength": 256},
+    "reference": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/#?&=%+@-]{0,511}$"},
+    "nullable_reference": {"type": ["string", "null"], "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/#?&=%+@-]{0,511}$"},
+    "role_reference": {"type": "string", "pattern": "^role-roster/[a-z0-9][a-z0-9._/-]{0,127}$"},
+    "nullable_role_reference": {"type": ["string", "null"], "pattern": "^role-roster/[a-z0-9][a-z0-9._/-]{0,127}$"},
+    "repo_path": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,511}$"},
+    "timestamp": {"type": "string", "format": "date-time", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{6}Z$"},
+    "nullable_timestamp": {"type": ["string", "null"], "format": "date-time", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{6}Z$"},
+    "nullable_uuid": {"type": ["string", "null"], "format": "uuid"},
+    "inventory_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["inventory_id", "category", "source_ids", "provenance_ref", "calibration_record_ref", "status"],
+      "properties": {
+        "inventory_id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "category": {"enum": ["measured_wall_zone", "house_average_proxy", "reference", "actuator", "counter", "flow_pressure", "water_stop", "other"]},
+        "source_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 128}},
+        "provenance_ref": {"$ref": "#/$defs/nullable_reference"},
+        "calibration_record_ref": {"$ref": "#/$defs/nullable_reference"},
+        "status": {"enum": ["unverified", "verified", "unavailable"]}
+      }
+    }
+  }
+}

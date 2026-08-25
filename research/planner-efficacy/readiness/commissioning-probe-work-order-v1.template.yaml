@@ -1,0 +1,185 @@
+# Non-executable TEMPLATE. Do not run these steps from this file. A probe may
+# begin only after Jason's #641 scoped decision is immutably recorded and the
+# lifecycle service creates the exact current commissioning_probe typed work.
+schema: verdify-experiment-v2-commissioning-probe-work-order
+version: 1
+status: template
+document_grants_authority: false
+executable: false
+schema_contract:
+  path: research/planner-efficacy/readiness/commissioning-probe-work-order-v1.schema.json
+  sha256: 5657b58fa51aebc15d86b80a1a0d86ff6fe0febda11339ad85e270c684b7d120
+
+binding:
+  issue_number: 641
+  approval_kind: scoped_probe
+  scope_name: commissioning_probe
+  execution_phase: commissioning
+  operation_kind: commissioning_probe
+  lifecycle_status: draft
+  experiment_id: null
+  work_id: null
+  revision_bundle_sha256: null
+  target_state_content_sha256: null
+  approval_ref: null
+  artifact_sha256: null
+  valid_from: null
+  valid_until: null
+  expires_at: null
+  supervisor_role: null
+  rescue_owner_role: null
+
+target_profile: commissioning_probe
+
+scope:
+  issue_refs: [424, 433]
+  allowed_proofs:
+    - raw_served_control_readback
+    - quiet_writer_nonstarvation
+    - one_drift_one_write
+    - reconnect_generation
+    - full48_baseline_recovery
+    - manual_rescue_yield
+  forbidden_operations:
+    - commissioning_canary
+    - aa_rehearsal
+    - randomized_assignment
+    - moderate_profile
+    - aggressive_profile
+    - firmware_ota
+    - hardware_mutation
+    - generalized_policy_vector
+  generalized_vector_mode_required: "off"
+  firmware_change_allowed: false
+  hardware_change_allowed: false
+  ota_allowed: false
+  moderate_or_aggressive_allowed: false
+  canary_aa_or_randomization_allowed: false
+
+preconditions:
+  - {precondition_id: exact_source_deployed, status: pending, evidence_ref: null}
+  - {precondition_id: argo_synced_healthy, status: pending, evidence_ref: null}
+  - {precondition_id: normal_greenhouse_health, status: pending, evidence_ref: null}
+  - {precondition_id: component_capability_enabled, status: pending, evidence_ref: null}
+  - {precondition_id: generalized_vector_mode_off, status: pending, evidence_ref: null}
+  - {precondition_id: lifecycle_draft_commissioning, status: pending, evidence_ref: null}
+  - {precondition_id: admission_closed, status: pending, evidence_ref: null}
+  - {precondition_id: scoped_approval_recorded, status: pending, evidence_ref: null}
+  - {precondition_id: exact_work_window_current, status: pending, evidence_ref: null}
+  - {precondition_id: confirmed_complete_baseline, status: pending, evidence_ref: null}
+  - {precondition_id: supervisor_present, status: pending, evidence_ref: null}
+  - {precondition_id: rescue_owner_present, status: pending, evidence_ref: null}
+
+steps:
+  - step_id: capture_read_only_preflight
+    sequence: 1
+    experiment_write_possible: false
+    requires_runtime_authorization: false
+    instruction: Assemble exact source/deploy/config/firmware/grid/order identities, component/vector flag state, current baseline receipts, writer and connection generations, public health, and rollback snapshot using safe read-only surfaces.
+    evidence_required: [preflight_snapshot, rollback_snapshot, health_snapshot]
+    stop_on_failure: true
+  - step_id: verify_exact_typed_work
+    sequence: 2
+    experiment_write_possible: false
+    requires_runtime_authorization: true
+    instruction: "Through the audited lifecycle status surface, verify the one immutable current commissioning_probe work ID, revision bundle, half-open validity window, expiry, supervisor, rescue owner, lease generation, target state, and recorded #641 scoped approval. Never infer or extend a window locally."
+    evidence_required: [approval_receipt, typed_work_receipt, revision_match]
+    stop_on_failure: true
+  - step_id: capture_served_control_readback
+    sequence: 3
+    experiment_write_possible: false
+    requires_runtime_authorization: true
+    instruction: Capture raw served corridor, firmware controller semantics, and all 48 cfg readbacks at the current generations without relabeling a proxy or cached observation. Any contradiction remains a blocking result.
+    evidence_required: [served_corridor_raw, controller_raw, cfg_readbacks_48, source_epoch_receipt]
+    stop_on_failure: true
+  - step_id: prove_quiet_writer_nonstarvation
+    sequence: 4
+    experiment_write_possible: false
+    requires_runtime_authorization: true
+    instruction: Observe the approved quiet window and ordinary scheduler progress; prove zero unexpected experiment pushes and no starvation before introducing the single bounded drift.
+    evidence_required: [quiet_writer_window, scheduler_progress, writer_generation]
+    stop_on_failure: true
+  - step_id: prove_one_drift_one_write
+    sequence: 5
+    experiment_write_possible: true
+    requires_runtime_authorization: true
+    instruction: "Only while the live database resolver returns this exact current work, the supervisor may permit the bounded #424/#433 diagnostic drift and one executor correction. Preserve requested, queued, sent, confirmed, failed, and superseded lifecycle plus every raw readback. This template itself sends nothing."
+    evidence_required: [drift_definition, command_lifecycle, raw_readbacks, one_write_count]
+    stop_on_failure: true
+  - step_id: prove_reconnect_generation_fence
+    sequence: 6
+    experiment_write_possible: true
+    requires_runtime_authorization: true
+    instruction: Within the separately approved facility procedure, demonstrate that a reconnect or generation change closes exposure and prevents stale work from writing; any baseline action waits for the exact current recovery authority and facility compatibility.
+    evidence_required: [reconnect_event, generation_fence, stale_work_rejection, exposure_closure]
+    stop_on_failure: true
+  - step_id: rehearse_full48_baseline_recovery
+    sequence: 7
+    experiment_write_possible: true
+    requires_runtime_authorization: true
+    instruction: If the approved probe intentionally creates or observes reboot/reset/common-field drift, use only linked recovery-only work and the fixed full-48 baseline order. Send only observed differences, never a moderate/aggressive target, and never compete with rescue ownership.
+    evidence_required: [recovery_work_receipt, full48_diff, command_prefixes, rescue_ownership_check]
+    stop_on_failure: true
+  - step_id: confirm_two_baseline_epochs
+    sequence: 8
+    experiment_write_possible: false
+    requires_runtime_authorization: true
+    instruction: Require two distinct cfg-ingestion-owned complete baseline epochs at least 30 seconds apart, after delivery, current-generation, within skew/freshness limits, with every per-wire observation timestamp advancing. A new UUID over cached data cannot pass.
+    evidence_required: [baseline_epoch_one, baseline_epoch_two, state_hash_match, anti_cache_check]
+    stop_on_failure: true
+  - step_id: close_typed_work_and_preserve_evidence
+    sequence: 9
+    experiment_write_possible: false
+    requires_runtime_authorization: true
+    instruction: Close admission only after confirmed baseline or an explicit facility-owned emergency-safe closure, preserve deviations and failure codes, retain rollback readiness, and record that this evidence does not authorize a canary, A/A, or randomization.
+    evidence_required: [closure_receipt, baseline_or_facility_basis, immutable_evidence_index, claim_limit]
+    stop_on_failure: true
+
+safety:
+  baseline_required_before: true
+  baseline_required_after: true
+  confirmation_epochs_required: 2
+  full48_recovery_for_common_drift: true
+  facility_can_stop_immediately: true
+  manual_rescue_closes_exposure: true
+  software_competes_with_rescue: false
+  baseline_during_rescue_requires_facility_authorization: true
+  mixed_partial_state_is_exposure: false
+  expiry_or_revision_mismatch_action: close exposure, forbid further claims, and perform no additional experiment write
+
+stop_conditions:
+  - approval_missing_or_expired
+  - work_window_missing_or_expired
+  - revision_mismatch
+  - baseline_unconfirmed
+  - writer_or_lease_loss
+  - connection_generation_change
+  - unknown_or_partial_delivery
+  - raw_readback_mismatch
+  - sensor_or_clock_invalid
+  - manual_or_emergency_override
+  - facility_rescue
+  - supervisor_or_rescue_owner_unavailable
+  - normal_greenhouse_health_not_green
+
+required_evidence:
+  - exact_revision_and_work_receipt
+  - served_corridor_raw_observation
+  - controller_semantics_raw_observation
+  - all_48_cfg_readbacks
+  - all_11_treatment_routes
+  - quiet_writer_window
+  - one_drift_one_write_lifecycle
+  - reconnect_generation_fence
+  - full48_recovery_command_lifecycle
+  - two_ingestion_owned_baseline_epochs
+  - manual_rescue_yield_record
+  - scheduler_nonstarvation
+
+evidence_result:
+  decision: not_started
+  completed_at: null
+  baseline_confirmation_epoch_count: 0
+  evidence_refs: []
+  failure_codes: []
+  physical_claim_limit: "probe evidence covers only #424/#433 transport, writer, readback, rescue-yield, and baseline-recovery behavior; it does not authorize or validate moderate/aggressive canaries, A/A, or randomization"

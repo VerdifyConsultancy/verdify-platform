@@ -1,0 +1,104 @@
+# Non-operative evidence TEMPLATE. This work order permits observation and
+# comparison only. It cannot change a controller, sensor offset, firmware,
+# mechanical authority, or experiment phase.
+schema: verdify-experiment-v2-calibration-work-order
+version: 1
+status: template
+document_grants_authority: false
+device_write_allowed: false
+schema_contract:
+  path: research/planner-efficacy/readiness/calibration-work-order-v1.schema.json
+  sha256: 85e66048273ccf31731d2d286d986f739edd5f2b1943517821e5754d44e277c6
+work_order_id: null
+
+study:
+  experiment_id: null
+  study_id: null
+  greenhouse_id: vallery
+  revision_bundle_sha256: null
+  crop_epoch_id: null
+  topology_epoch_id: null
+
+scope:
+  calibration_kind: climate_sensor_comparison
+  inventory_ids:
+    - wall_north_climate
+    - wall_east_climate
+    - wall_south_climate
+    - wall_west_climate
+    - house_average_screening_proxy
+    - independent_climate_reference
+  measurement_only: true
+  target_tolerances:
+    - {metric_id: air_temperature_difference, unit: degC, maximum_absolute_error: null, maximum_duration_seconds: null, basis_ref: null}
+    - {metric_id: relative_humidity_difference, unit: percent_rh, maximum_absolute_error: null, maximum_duration_seconds: null, basis_ref: null}
+    - {metric_id: vpd_difference, unit: kPa, maximum_absolute_error: null, maximum_duration_seconds: null, basis_ref: null}
+    - {metric_id: wetting_recovery_bias, unit: minutes, maximum_absolute_error: null, maximum_duration_seconds: null, basis_ref: null}
+  adjustment_policy: this work order records comparison evidence only; any offset, firmware, controller, mechanical, or sensor change is separate approved facility work and an experiment Class-2 epoch change
+
+roles:
+  executor_role: null
+  independent_verifier_role: null
+  facility_owner_role: facility_operations
+  contact_role_refs: []
+
+window:
+  starts_at: null
+  ends_at: null
+  blackout_calendar_ref: null
+
+preconditions:
+  - {precondition_id: facility_window_confirmed, status: pending, evidence_ref: null}
+  - {precondition_id: reference_traceability_current, status: pending, evidence_ref: null}
+  - {precondition_id: clock_quality_confirmed, status: pending, evidence_ref: null}
+  - {precondition_id: safe_access_confirmed, status: pending, evidence_ref: null}
+  - {precondition_id: experiment_exposure_closed, status: pending, evidence_ref: null}
+
+steps:
+  - step_id: capture_as_found
+    sequence: 1
+    device_write: false
+    instruction: Record placement, source IDs, clock state, raw values, units, firmware/config identity, wetting flags, and reference traceability before touching any instrument; do not adjust a value or controller.
+    evidence_required: [as_found_inventory, raw_timestamped_samples, placement_record, revision_record]
+    stop_on_failure: true
+  - step_id: compare_independent_reference
+    sequence: 2
+    device_write: false
+    instruction: Collect paired same-location and same-minute primary/reference observations for the locked duration and environmental range; preserve every raw row and reject interpolation.
+    evidence_required: [paired_raw_samples, reference_traceability, clock_skew_result]
+    stop_on_failure: true
+  - step_id: capture_wetting_and_recovery_bias
+    sequence: 3
+    device_write: false
+    instruction: Observe naturally occurring or separately facility-authorized wetting/recovery behavior without inducing an experiment actuation; record recovery lag and claim limitations.
+    evidence_required: [wetting_status_record, recovery_bias_result, claim_limit]
+    stop_on_failure: true
+  - step_id: evaluate_locked_tolerance
+    sequence: 4
+    device_write: false
+    instruction: Evaluate the prespecified tolerances and durations without changing thresholds after seeing the result; missing required samples are a failure, not an interpolated pass.
+    evidence_required: [tolerance_calculation, completeness_result, immutable_decision]
+    stop_on_failure: true
+  - step_id: capture_as_left
+    sequence: 5
+    device_write: false
+    instruction: Record the unchanged as-left inventory, source IDs, placement, raw values, clock state, and revision set. If anything changed, stop and classify the separate work before continuing.
+    evidence_required: [as_left_inventory, change_check, final_raw_samples]
+    stop_on_failure: true
+  - step_id: independent_verification
+    sequence: 6
+    device_write: false
+    instruction: A distinct verifier checks traceability, timestamps, calculations, tolerance decisions, evidence hashes, and the explicit center/canopy/leaf claim limits.
+    evidence_required: [verifier_record, evidence_hashes, claim_limit_review]
+    stop_on_failure: true
+
+result:
+  decision: not_started
+  calibrated_at: null
+  next_due_at: null
+  calibration_revision: null
+  tolerances_observed: []
+  evidence_refs: []
+  deviations: []
+
+semantic_change_policy: a changed sensor calibration, source, placement, meter coefficient, mechanical authority, controller, or safety threshold invalidates affected readiness and closes the randomized epoch under Class 2

@@ -1,0 +1,219 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://verdify.vallery.net/schemas/experiment-v2-commissioning-probe-work-order-v1.json",
+  "title": "Verdify experiment-v2 scoped commissioning probe work order",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "document_grants_authority",
+    "executable",
+    "schema_contract",
+    "binding",
+    "target_profile",
+    "scope",
+    "preconditions",
+    "steps",
+    "safety",
+    "stop_conditions",
+    "required_evidence",
+    "evidence_result"
+  ],
+  "properties": {
+    "schema": {"const": "verdify-experiment-v2-commissioning-probe-work-order"},
+    "version": {"const": 1},
+    "status": {"enum": ["template", "planned", "evidence_complete", "cancelled"]},
+    "document_grants_authority": {"const": false},
+    "executable": {"const": false},
+    "schema_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": {"$ref": "#/$defs/repo_path"},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "issue_number",
+        "approval_kind",
+        "scope_name",
+        "execution_phase",
+        "operation_kind",
+        "lifecycle_status",
+        "experiment_id",
+        "work_id",
+        "revision_bundle_sha256",
+        "target_state_content_sha256",
+        "approval_ref",
+        "artifact_sha256",
+        "valid_from",
+        "valid_until",
+        "expires_at",
+        "supervisor_role",
+        "rescue_owner_role"
+      ],
+      "properties": {
+        "issue_number": {"const": 641},
+        "approval_kind": {"const": "scoped_probe"},
+        "scope_name": {"const": "commissioning_probe"},
+        "execution_phase": {"const": "commissioning"},
+        "operation_kind": {"const": "commissioning_probe"},
+        "lifecycle_status": {"const": "draft"},
+        "experiment_id": {"$ref": "#/$defs/nullable_uuid"},
+        "work_id": {"$ref": "#/$defs/nullable_uuid"},
+        "revision_bundle_sha256": {"$ref": "#/$defs/nullable_sha256"},
+        "target_state_content_sha256": {"$ref": "#/$defs/nullable_sha256"},
+        "approval_ref": {"$ref": "#/$defs/nullable_reference"},
+        "artifact_sha256": {"$ref": "#/$defs/nullable_sha256"},
+        "valid_from": {"$ref": "#/$defs/nullable_timestamp"},
+        "valid_until": {"$ref": "#/$defs/nullable_timestamp"},
+        "expires_at": {"$ref": "#/$defs/nullable_timestamp"},
+        "supervisor_role": {"$ref": "#/$defs/nullable_nonempty"},
+        "rescue_owner_role": {"$ref": "#/$defs/nullable_nonempty"}
+      }
+    },
+    "target_profile": {"const": "commissioning_probe"},
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "issue_refs",
+        "allowed_proofs",
+        "forbidden_operations",
+        "generalized_vector_mode_required",
+        "firmware_change_allowed",
+        "hardware_change_allowed",
+        "ota_allowed",
+        "moderate_or_aggressive_allowed",
+        "canary_aa_or_randomization_allowed"
+      ],
+      "properties": {
+        "issue_refs": {"type": "array", "minItems": 2, "maxItems": 2, "uniqueItems": true, "items": {"enum": [424, 433]}},
+        "allowed_proofs": {
+          "type": "array",
+          "minItems": 6,
+          "uniqueItems": true,
+          "items": {"enum": ["raw_served_control_readback", "quiet_writer_nonstarvation", "one_drift_one_write", "reconnect_generation", "full48_baseline_recovery", "manual_rescue_yield"]}
+        },
+        "forbidden_operations": {
+          "type": "array",
+          "minItems": 5,
+          "uniqueItems": true,
+          "items": {"enum": ["commissioning_canary", "aa_rehearsal", "randomized_assignment", "moderate_profile", "aggressive_profile", "firmware_ota", "hardware_mutation", "generalized_policy_vector"]}
+        },
+        "generalized_vector_mode_required": {"const": "off"},
+        "firmware_change_allowed": {"const": false},
+        "hardware_change_allowed": {"const": false},
+        "ota_allowed": {"const": false},
+        "moderate_or_aggressive_allowed": {"const": false},
+        "canary_aa_or_randomization_allowed": {"const": false}
+      }
+    },
+    "preconditions": {
+      "type": "array",
+      "minItems": 12,
+      "maxItems": 12,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["precondition_id", "status", "evidence_ref"],
+        "properties": {
+          "precondition_id": {"enum": ["exact_source_deployed", "argo_synced_healthy", "normal_greenhouse_health", "component_capability_enabled", "generalized_vector_mode_off", "lifecycle_draft_commissioning", "admission_closed", "scoped_approval_recorded", "exact_work_window_current", "confirmed_complete_baseline", "supervisor_present", "rescue_owner_present"]},
+          "status": {"enum": ["pending", "passed", "failed"]},
+          "evidence_ref": {"$ref": "#/$defs/nullable_reference"}
+        }
+      }
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 9,
+      "maxItems": 9,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["step_id", "sequence", "experiment_write_possible", "requires_runtime_authorization", "instruction", "evidence_required", "stop_on_failure"],
+        "properties": {
+          "step_id": {"enum": ["capture_read_only_preflight", "verify_exact_typed_work", "capture_served_control_readback", "prove_quiet_writer_nonstarvation", "prove_one_drift_one_write", "prove_reconnect_generation_fence", "rehearse_full48_baseline_recovery", "confirm_two_baseline_epochs", "close_typed_work_and_preserve_evidence"]},
+          "sequence": {"type": "integer", "minimum": 1, "maximum": 9},
+          "experiment_write_possible": {"type": "boolean"},
+          "requires_runtime_authorization": {"type": "boolean"},
+          "instruction": {"type": "string", "minLength": 1, "maxLength": 1536},
+          "evidence_required": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 128}},
+          "stop_on_failure": {"const": true}
+        }
+      }
+    },
+    "safety": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "baseline_required_before",
+        "baseline_required_after",
+        "confirmation_epochs_required",
+        "full48_recovery_for_common_drift",
+        "facility_can_stop_immediately",
+        "manual_rescue_closes_exposure",
+        "software_competes_with_rescue",
+        "baseline_during_rescue_requires_facility_authorization",
+        "mixed_partial_state_is_exposure",
+        "expiry_or_revision_mismatch_action"
+      ],
+      "properties": {
+        "baseline_required_before": {"const": true},
+        "baseline_required_after": {"const": true},
+        "confirmation_epochs_required": {"const": 2},
+        "full48_recovery_for_common_drift": {"const": true},
+        "facility_can_stop_immediately": {"const": true},
+        "manual_rescue_closes_exposure": {"const": true},
+        "software_competes_with_rescue": {"const": false},
+        "baseline_during_rescue_requires_facility_authorization": {"const": true},
+        "mixed_partial_state_is_exposure": {"const": false},
+        "expiry_or_revision_mismatch_action": {"const": "close exposure, forbid further claims, and perform no additional experiment write"}
+      }
+    },
+    "stop_conditions": {
+      "type": "array",
+      "minItems": 12,
+      "uniqueItems": true,
+      "items": {"enum": ["approval_missing_or_expired", "work_window_missing_or_expired", "revision_mismatch", "baseline_unconfirmed", "writer_or_lease_loss", "connection_generation_change", "unknown_or_partial_delivery", "raw_readback_mismatch", "sensor_or_clock_invalid", "manual_or_emergency_override", "facility_rescue", "supervisor_or_rescue_owner_unavailable", "normal_greenhouse_health_not_green"]}
+    },
+    "required_evidence": {
+      "type": "array",
+      "minItems": 10,
+      "uniqueItems": true,
+      "items": {"enum": ["exact_revision_and_work_receipt", "served_corridor_raw_observation", "controller_semantics_raw_observation", "all_48_cfg_readbacks", "all_11_treatment_routes", "quiet_writer_window", "one_drift_one_write_lifecycle", "reconnect_generation_fence", "full48_recovery_command_lifecycle", "two_ingestion_owned_baseline_epochs", "manual_rescue_yield_record", "scheduler_nonstarvation"]}
+    },
+    "evidence_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["decision", "completed_at", "baseline_confirmation_epoch_count", "evidence_refs", "failure_codes", "physical_claim_limit"],
+      "properties": {
+        "decision": {"enum": ["not_started", "passed", "failed", "cancelled"]},
+        "completed_at": {"$ref": "#/$defs/nullable_timestamp"},
+        "baseline_confirmation_epoch_count": {"type": "integer", "minimum": 0, "maximum": 2},
+        "evidence_refs": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/reference"}},
+        "failure_codes": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 128}},
+        "physical_claim_limit": {"const": "probe evidence covers only #424/#433 transport, writer, readback, rescue-yield, and baseline-recovery behavior; it does not authorize or validate moderate/aggressive canaries, A/A, or randomization"}
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "nullable_sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+    "reference": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/#?&=%+@-]{0,511}$"},
+    "nullable_reference": {"type": ["string", "null"], "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/#?&=%+@-]{0,511}$"},
+    "repo_path": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,511}$"},
+    "nullable_nonempty": {"type": ["string", "null"], "minLength": 1, "maxLength": 256},
+    "timestamp": {"type": "string", "format": "date-time", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{6}Z$"},
+    "nullable_timestamp": {"type": ["string", "null"], "format": "date-time", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{6}Z$"},
+    "nullable_uuid": {"type": ["string", "null"], "format": "uuid"}
+  }
+}

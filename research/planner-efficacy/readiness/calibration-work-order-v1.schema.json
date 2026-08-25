@@ -1,0 +1,188 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://verdify.vallery.net/schemas/experiment-v2-calibration-work-order-v1.json",
+  "title": "Verdify experiment-v2 calibration evidence work order",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "document_grants_authority",
+    "device_write_allowed",
+    "schema_contract",
+    "work_order_id",
+    "study",
+    "scope",
+    "roles",
+    "window",
+    "preconditions",
+    "steps",
+    "result",
+    "semantic_change_policy"
+  ],
+  "properties": {
+    "schema": {"const": "verdify-experiment-v2-calibration-work-order"},
+    "version": {"const": 1},
+    "status": {"enum": ["template", "scheduled", "completed", "cancelled"]},
+    "document_grants_authority": {"const": false},
+    "device_write_allowed": {"const": false},
+    "schema_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": {"$ref": "#/$defs/repo_path"},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "work_order_id": {"$ref": "#/$defs/nullable_uuid"},
+    "study": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["experiment_id", "study_id", "greenhouse_id", "revision_bundle_sha256", "crop_epoch_id", "topology_epoch_id"],
+      "properties": {
+        "experiment_id": {"$ref": "#/$defs/nullable_uuid"},
+        "study_id": {"$ref": "#/$defs/nullable_nonempty"},
+        "greenhouse_id": {"const": "vallery"},
+        "revision_bundle_sha256": {"$ref": "#/$defs/nullable_sha256"},
+        "crop_epoch_id": {"$ref": "#/$defs/nullable_nonempty"},
+        "topology_epoch_id": {"$ref": "#/$defs/nullable_nonempty"}
+      }
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["calibration_kind", "inventory_ids", "measurement_only", "target_tolerances", "adjustment_policy"],
+      "properties": {
+        "calibration_kind": {"enum": ["climate_sensor_comparison", "equipment_counter_reconciliation", "flow_pressure_verification", "clock_verification", "other"]},
+        "inventory_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1, "maxLength": 128}
+        },
+        "measurement_only": {"const": true},
+        "target_tolerances": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["metric_id", "unit", "maximum_absolute_error", "maximum_duration_seconds", "basis_ref"],
+            "properties": {
+              "metric_id": {"type": "string", "minLength": 1, "maxLength": 128},
+              "unit": {"type": "string", "minLength": 1, "maxLength": 64},
+              "maximum_absolute_error": {"type": ["number", "null"], "minimum": 0},
+              "maximum_duration_seconds": {"type": ["integer", "null"], "minimum": 0, "maximum": 86400},
+              "basis_ref": {"$ref": "#/$defs/nullable_reference"}
+            }
+          }
+        },
+        "adjustment_policy": {"const": "this work order records comparison evidence only; any offset, firmware, controller, mechanical, or sensor change is separate approved facility work and an experiment Class-2 epoch change"}
+      }
+    },
+    "roles": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["executor_role", "independent_verifier_role", "facility_owner_role", "contact_role_refs"],
+      "properties": {
+        "executor_role": {"$ref": "#/$defs/nullable_nonempty"},
+        "independent_verifier_role": {"$ref": "#/$defs/nullable_nonempty"},
+        "facility_owner_role": {"const": "facility_operations"},
+        "contact_role_refs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/role_reference"}
+        }
+      }
+    },
+    "window": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["starts_at", "ends_at", "blackout_calendar_ref"],
+      "properties": {
+        "starts_at": {"$ref": "#/$defs/nullable_timestamp"},
+        "ends_at": {"$ref": "#/$defs/nullable_timestamp"},
+        "blackout_calendar_ref": {"$ref": "#/$defs/nullable_reference"}
+      }
+    },
+    "preconditions": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["precondition_id", "status", "evidence_ref"],
+        "properties": {
+          "precondition_id": {"enum": ["facility_window_confirmed", "reference_traceability_current", "clock_quality_confirmed", "safe_access_confirmed", "experiment_exposure_closed"]},
+          "status": {"enum": ["pending", "passed", "failed"]},
+          "evidence_ref": {"$ref": "#/$defs/nullable_reference"}
+        }
+      }
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["step_id", "sequence", "device_write", "instruction", "evidence_required", "stop_on_failure"],
+        "properties": {
+          "step_id": {"enum": ["capture_as_found", "compare_independent_reference", "capture_wetting_and_recovery_bias", "evaluate_locked_tolerance", "capture_as_left", "independent_verification"]},
+          "sequence": {"type": "integer", "minimum": 1, "maximum": 6},
+          "device_write": {"const": false},
+          "instruction": {"type": "string", "minLength": 1, "maxLength": 1024},
+          "evidence_required": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 128}},
+          "stop_on_failure": {"type": "boolean"}
+        }
+      }
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["decision", "calibrated_at", "next_due_at", "calibration_revision", "tolerances_observed", "evidence_refs", "deviations"],
+      "properties": {
+        "decision": {"enum": ["not_started", "passed", "failed", "cancelled"]},
+        "calibrated_at": {"$ref": "#/$defs/nullable_timestamp"},
+        "next_due_at": {"$ref": "#/$defs/nullable_timestamp"},
+        "calibration_revision": {"$ref": "#/$defs/nullable_nonempty"},
+        "tolerances_observed": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["metric_id", "maximum_absolute_error", "unit", "decision"],
+            "properties": {
+              "metric_id": {"type": "string", "minLength": 1, "maxLength": 128},
+              "maximum_absolute_error": {"type": "number", "minimum": 0},
+              "unit": {"type": "string", "minLength": 1, "maxLength": 64},
+              "decision": {"enum": ["passed", "failed"]}
+            }
+          }
+        },
+        "evidence_refs": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/reference"}},
+        "deviations": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 512}}
+      }
+    },
+    "semantic_change_policy": {"const": "a changed sensor calibration, source, placement, meter coefficient, mechanical authority, controller, or safety threshold invalidates affected readiness and closes the randomized epoch under Class 2"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "nullable_sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+    "reference": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/#?&=%+@-]{0,511}$"},
+    "nullable_reference": {"type": ["string", "null"], "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/#?&=%+@-]{0,511}$"},
+    "role_reference": {"type": "string", "pattern": "^role-roster/[a-z0-9][a-z0-9._/-]{0,127}$"},
+    "repo_path": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,511}$"},
+    "nullable_nonempty": {"type": ["string", "null"], "minLength": 1, "maxLength": 256},
+    "timestamp": {"type": "string", "format": "date-time", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{6}Z$"},
+    "nullable_timestamp": {"type": ["string", "null"], "format": "date-time", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{6}Z$"},
+    "nullable_uuid": {"type": ["string", "null"], "format": "uuid"}
+  }
+}
