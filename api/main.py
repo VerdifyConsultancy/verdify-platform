@@ -1771,8 +1771,18 @@ def _to_float(value) -> float | None:
     return float(value) if value is not None else None
 
 
-def _overall_data_health(rows: list[asyncpg.Record]) -> str:
+def _overall_data_health(
+    rows: list[asyncpg.Record],
+    *,
+    open_critical_high: int | None = None,
+) -> str:
     statuses = {str(r["status"]).lower() for r in rows}
+    # The trust-ledger view intentionally covers pipeline/proof checks, while
+    # the open severe-alert count is queried directly.  Callers that expose a
+    # combined status must include that authoritative count so an otherwise
+    # green ledger cannot mask an active high/critical alert.
+    if int(open_critical_high or 0) > 0:
+        statuses.add("fail")
     if "fail" in statuses:
         return "fail"
     if "warn" in statuses:
@@ -4103,7 +4113,10 @@ async def public_evidence_snapshot(greenhouse_id: str = DEFAULT_GREENHOUSE):
             f"SELECT {_sql_columns('h', PUBLIC_PLANNER_HEALTH_FIELDS)} FROM v_planner_trigger_health h"
         )
 
-    data_health_status = _overall_data_health(data_checks)
+    data_health_status = _overall_data_health(
+        data_checks,
+        open_critical_high=open_critical_high,
+    )
     active_plan_id = active_plan["plan_id"] if active_plan else (last_plan["plan_id"] if last_plan else None)
     active_plan_status = None
     if active_plan_id and last_plan and active_plan_id == last_plan["plan_id"]:

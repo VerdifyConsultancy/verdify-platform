@@ -119,6 +119,7 @@ $PY -m pytest -q \
   tests/test_policy_delivery_worker.py \
   tests/test_policy_writer_demotion.py \
   tests/test_psql_verdify_backend.py \
+  tests/test_public_evidence_health_consistency.py \
   tests/test_publish_site_content_guard.py \
   tests/test_public_output_generators.py \
   tests/test_public_output_guard.py \
