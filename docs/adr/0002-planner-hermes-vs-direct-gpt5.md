@@ -33,6 +33,25 @@
 > mounts a two-anchor backport generated at startup only after both the packaged
 > source and patched-result SHA-256 values match. Any upstream image skew fails
 > the init container closed; removing the init/mount is the rollback.
+>
+> The same pinned revision also computes the main per-request `approx_tokens`
+> value from messages alone, even though Hermes sends the configured tool
+> schemas in that request. Production mounts a separate one-anchor
+> `/opt/hermes/run_agent.py` backport that calls the existing full-request
+> estimator with `api_messages` and the active tools. The pinned Dockerfile's
+> working directory is `/opt/hermes`, and the gateway imports `AIAgent` from
+> the top-level `run_agent` module, so this is the runtime import path rather
+> than an unused package copy. `api_messages` already
+> contains the effective system message, so the system prompt is intentionally
+> not passed again. This makes schema tokens visible to request logging, plugin
+> hooks, compression recovery, and the generic-400 context-overflow classifier.
+> It is guarded by packaged-source SHA-256
+> `a639cb65862c463a77297efbe41f311d3f8033f5162f7498b5ad7daf2cb3751b`
+> and patched-result SHA-256
+> `187fb9d4f1d127e95013777ae9b692f229fe324284f79f472f52622b7f8dc02b`.
+> Removing only the request-estimator init container, volume, mount, and pod
+> revision annotation rolls this fix back without removing the independent
+> compressor boundary-clamp backport.
 
 ---
 
