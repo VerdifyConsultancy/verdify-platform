@@ -183,6 +183,8 @@ from .heartbeat import (  # noqa: F401
     _mark_expected_trigger_delivered,
     _milestone_due_at,
     _milestone_event,
+    _normalize_hermes_run_status,
+    _reconcile_hermes_run_terminals,
     _resolve_delivery_log,
     _save_milestone_state,
     _sla_seconds,

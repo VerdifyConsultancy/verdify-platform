@@ -7,6 +7,8 @@ surface so every `from tasks import X` still resolves.
 
 from planner_routing import required_trigger_disposition
 
+from config import HERMES_API_KEY, HERMES_URL
+
 from ._common import (
     _DENVER,
     _LOCATION,
@@ -136,6 +138,204 @@ _trigger_attempts: dict[str, int] = {}
 
 # Consecutive failed MCP Service probes (see heartbeat section 6).
 _mcp_unreachable_streak = 0
+
+# Hermes retains terminal /v1/runs status in process memory for one hour. Poll
+# only the bounded live window and keep the heartbeat's network fan-out below
+# Hermes's own ten-run concurrency ceiling.
+_HERMES_RUN_STATUS_LOOKBACK_MINUTES = 65
+_HERMES_RUN_STATUS_LIMIT = 10
+_HERMES_RUN_STATUS_TIMEOUT_SECONDS = 5
+_HERMES_RUN_STATUS_MAX_BYTES = 16_384
+_HERMES_RUN_STATUSES = frozenset(
+    {"queued", "running", "waiting_for_approval", "stopping", "completed", "failed", "cancelled"}
+)
+_HERMES_RUN_TERMINAL_STATUSES = frozenset({"completed", "failed", "cancelled"})
+_HERMES_RUN_LAST_EVENTS = {
+    "completed": "run.completed",
+    "failed": "run.failed",
+    "cancelled": "run.cancelled",
+}
+_HERMES_RUN_USAGE_FIELDS = ("input_tokens", "output_tokens", "total_tokens")
+_HERMES_RUN_FAILURE_CLASSES = {
+    "completed": "hermes_run_completed_without_planner_action",
+    "failed": "hermes_run_failed",
+    "cancelled": "hermes_run_cancelled",
+}
+
+
+def _valid_hermes_run_id(run_id: object) -> bool:
+    """Accept only Hermes's fixed ``run_<uuid hex>`` path segment."""
+    if not isinstance(run_id, str) or not run_id.startswith("run_") or len(run_id) != 36:
+        return False
+    try:
+        return uuid.UUID(hex=run_id[4:]).hex == run_id[4:]
+    except (ValueError, AttributeError):
+        return False
+
+
+def _normalize_hermes_run_status(payload: object, expected_run_id: str) -> dict[str, object] | None:
+    """Return the public-safe subset of one Hermes run-status response.
+
+    Hermes errors and assistant output can contain arbitrary provider/model
+    text, so neither is retained. Only the fixed status/event vocabulary and
+    numeric usage scalars are eligible for the delivery audit body.
+    """
+    if not isinstance(payload, dict):
+        return None
+    if payload.get("object") != "hermes.run" or payload.get("run_id") != expected_run_id:
+        return None
+    status = payload.get("status")
+    if not isinstance(status, str) or status not in _HERMES_RUN_STATUSES:
+        return None
+
+    normalized: dict[str, object] = {"status": status}
+    last_event = payload.get("last_event")
+    if last_event == _HERMES_RUN_LAST_EVENTS.get(status):
+        normalized["last_event"] = last_event
+
+    raw_usage = payload.get("usage")
+    if isinstance(raw_usage, dict):
+        usage: dict[str, int] = {}
+        for field in _HERMES_RUN_USAGE_FIELDS:
+            value = raw_usage.get(field)
+            if isinstance(value, int) and not isinstance(value, bool) and value >= 0:
+                usage[field] = value
+        if usage:
+            normalized["usage"] = usage
+    return normalized
+
+
+def _fetch_hermes_run_status(run_id: str) -> dict[str, object] | None:
+    """Fetch and sanitize one pollable Hermes run status (blocking helper)."""
+    if not _valid_hermes_run_id(run_id):
+        log.warning("Skipping malformed Hermes run id in delivery log")
+        return None
+
+    headers = {"Accept": "application/json"}
+    if HERMES_API_KEY:
+        headers["Authorization"] = f"Bearer {HERMES_API_KEY}"
+    try:
+        request = urllib.request.Request(
+            f"{HERMES_URL.rstrip('/')}/v1/runs/{run_id}",
+            headers=headers,
+            method="GET",
+        )
+        with urllib.request.urlopen(request, timeout=_HERMES_RUN_STATUS_TIMEOUT_SECONDS) as response:
+            raw = response.read(_HERMES_RUN_STATUS_MAX_BYTES + 1)
+    except urllib.error.HTTPError as exc:
+        # A restarted Hermes process loses its in-memory run registry and
+        # returns 404. The existing planner SLA owns that unresolved case.
+        if exc.code != 404:
+            log.warning("Hermes run status fetch failed for %s: HTTP %d", run_id, exc.code)
+        return None
+    except Exception as exc:
+        log.warning("Hermes run status fetch failed for %s: %s", run_id, type(exc).__name__)
+        return None
+
+    if len(raw) > _HERMES_RUN_STATUS_MAX_BYTES:
+        log.warning("Hermes run status response exceeded limit for %s", run_id)
+        return None
+    try:
+        payload = json.loads(raw)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        log.warning("Hermes run status response was invalid JSON for %s", run_id)
+        return None
+    return _normalize_hermes_run_status(payload, run_id)
+
+
+def _hermes_terminal_audit_body(status: dict[str, object]) -> str:
+    """Build the bounded, arbitrary-text-free terminal audit summary."""
+    summary: dict[str, object] = {"hermes_run_status": status["status"]}
+    if "last_event" in status:
+        summary["last_event"] = status["last_event"]
+    if "usage" in status:
+        summary["usage"] = status["usage"]
+    return json.dumps(summary, sort_keys=True, separators=(",", ":"))
+
+
+async def _reconcile_hermes_run_terminals(pool: asyncpg.Pool) -> int:
+    """Fail pending deliveries whose Hermes run ended without an MCP action.
+
+    A valid ``set_plan``, ``set_tunable`` or ``acknowledge_trigger`` commits to
+    plan_delivery_log before Hermes can publish a terminal run status. The
+    conditional UPDATE is still the final ownership fence: if an MCP writer
+    already terminalized the row, reconciliation cannot overwrite it.
+    """
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT id, hermes_run_id
+              FROM plan_delivery_log
+             WHERE status = 'pending'
+               AND terminal_action IS NULL
+               AND resulting_plan_id IS NULL
+               AND plan_written_at IS NULL
+               AND acked_at IS NULL
+               AND hermes_run_id IS NOT NULL
+               AND gateway_status BETWEEN 200 AND 299
+               AND delivered_at >= now() - ($2::int * interval '1 minute')
+             ORDER BY delivered_at DESC
+             LIMIT $1
+            """,
+            _HERMES_RUN_STATUS_LIMIT,
+            _HERMES_RUN_STATUS_LOOKBACK_MINUTES,
+        )
+    if not rows:
+        return 0
+
+    loop = asyncio.get_running_loop()
+    statuses = await asyncio.gather(
+        *(loop.run_in_executor(None, _fetch_hermes_run_status, str(row["hermes_run_id"])) for row in rows)
+    )
+    terminal_rows = [
+        (row, status)
+        for row, status in zip(rows, statuses, strict=True)
+        if status is not None and status.get("status") in _HERMES_RUN_TERMINAL_STATUSES
+    ]
+    if not terminal_rows:
+        return 0
+
+    reconciled = 0
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            for row, status in terminal_rows:
+                terminal_status = str(status["status"])
+                updated_id = await conn.fetchval(
+                    """
+                    UPDATE plan_delivery_log
+                       SET status = 'delivery_failed',
+                           terminal_action = 'delivery_failed',
+                           terminal_at = now(),
+                           failure_class = $3,
+                           gateway_body = left(
+                               concat_ws(E'\n', NULLIF(gateway_body, ''), $4::text),
+                               2000
+                           )
+                     WHERE id = $1
+                       AND hermes_run_id = $2
+                       AND status = 'pending'
+                       AND terminal_action IS NULL
+                       AND resulting_plan_id IS NULL
+                       AND plan_written_at IS NULL
+                       AND acked_at IS NULL
+                    RETURNING id
+                    """,
+                    row["id"],
+                    row["hermes_run_id"],
+                    _HERMES_RUN_FAILURE_CLASSES[terminal_status],
+                    _hermes_terminal_audit_body(status),
+                )
+                if updated_id is not None:
+                    reconciled += 1
+                    log.warning(
+                        "Planner delivery %s failed after Hermes run %s terminalized as %s without an MCP action",
+                        row["id"],
+                        row["hermes_run_id"],
+                        terminal_status,
+                    )
+            if reconciled:
+                await _sync_planner_trigger_ledger(conn)
+    return reconciled
 
 
 def _attempts_for(expected_trigger_id: int | None) -> int:
@@ -1088,6 +1288,7 @@ async def planning_heartbeat(pool: asyncpg.Pool) -> None:
     try:
         async with pool.acquire() as conn:
             expected_trigger_ids = await _ensure_expected_planner_triggers(conn, all_milestones)
+        await _reconcile_hermes_run_terminals(pool)
         await _expire_planner_trigger_slas(pool)
     except Exception as e:
         log.warning("planner expected-trigger ledger refresh failed: %s", e)
