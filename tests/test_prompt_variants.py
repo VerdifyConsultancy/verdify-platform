@@ -202,7 +202,16 @@ class TestSplitInvariants:
         assert iris_planner._PLANNER_KNOWLEDGE == expected
 
 
-PROMPT_EVENTS = ["SUNRISE", "SUNSET", "SOLAR_MAX", "TRANSITION", "FORECAST_DEVIATION", "MANUAL"]
+PROMPT_EVENTS = [
+    "SUNRISE",
+    "SUNSET",
+    "MIDNIGHT",
+    "WEEKLY",
+    "SOLAR_MAX",
+    "TRANSITION",
+    "FORECAST_DEVIATION",
+    "MANUAL",
+]
 
 
 class TestPromptBuilders:
@@ -240,3 +249,46 @@ class TestPromptBuilders:
         default_msg = builder("<context stub>", "<label stub>")
         local_msg = builder("<context stub>", "<label stub>", "local")
         assert default_msg == local_msg
+
+    def test_standing_directives_publish_compact_set_plan_contract(self, iris_planner):
+        directives = " ".join(iris_planner._STANDING_DIRECTIVES.split())
+        expected = [
+            "under 9,000 characters",
+            "hard limit is 10,000",
+            "Use 3-8 transitions",
+            "set all 15 ClimateIntent fields",
+            "at or below 120 characters",
+            "at most 3 decimal places",
+            "at or below 2,200 characters",
+            "at or below 240",
+            "at or below 320",
+            "at most 2 stress windows",
+            "at most 3 decision-critical rationales",
+            "Never repeat the assembled context",
+        ]
+        assert not [item for item in expected if item not in directives]
+
+    @pytest.mark.parametrize(
+        ("builder_name", "count_contract"),
+        [
+            ("_sunrise_prompt", "exactly 5 waypoints"),
+            ("_sunset_prompt", "exactly 3 waypoints"),
+            ("_midnight_prompt", "using exactly 4 transitions"),
+            ("_weekly_prompt", "Use exactly 5 transitions"),
+        ],
+    )
+    def test_full_plan_events_persist_compact_plan_before_slack(self, iris_planner, builder_name, count_contract):
+        prompt = " ".join(getattr(iris_planner, builder_name)("<context stub>").split())
+
+        assert count_contract in prompt
+        assert "compact tool-call contract in Standing Directive 12" in prompt
+        assert "Only after `set_plan` returns success" in prompt
+        assert prompt.index("Only after `set_plan` returns success") > prompt.index("set_plan")
+
+    def test_structured_hypothesis_contract_is_compact_and_covers_sunrise_sunset(self, iris_planner):
+        core = iris_planner._PLANNER_CORE
+
+        assert "Structured hypothesis (required on SUNRISE/SUNSET plans)" in core
+        assert "entire `hypothesis` field one bare JSON" in core
+        assert "no more than two" in core
+        assert "three decision-critical rationales" in core
