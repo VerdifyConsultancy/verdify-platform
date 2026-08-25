@@ -91,9 +91,8 @@ ARG GIT_REF=unknown
 ENV VERDIFY_GIT_SHA=$GIT_SHA \
     VERDIFY_BUILD_TIME=$BUILD_TIME \
     VERDIFY_GIT_REF=$GIT_REF
+# Reserved revision/created OCI labels are supplied by the managed builder.
 LABEL org.opencontainers.image.source="https://github.com/VerdifyConsultancy/verdify-platform" \
-      org.opencontainers.image.revision=$GIT_SHA \
-      org.opencontainers.image.created=$BUILD_TIME \
       org.opencontainers.image.title="verdify-mcp"
 
 # Canonical streamable-http transport port (#81): server.py binds MCP_HTTP_PORT

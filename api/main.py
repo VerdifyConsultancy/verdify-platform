@@ -65,6 +65,7 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 for _p in reversed(("/app", str(_REPO_ROOT), "/mnt/iris/verdify")):
     if _p not in sys.path:
         sys.path.insert(0, _p)
+from verdify_public.build_provenance import image_git_sha  # noqa: E402
 from verdify_public.output_policy import (  # noqa: E402
     PUBLIC_CROP_EXCLUDE_SLUGS,
     PUBLIC_CROP_SQL_NAME_PATTERN,
@@ -2111,9 +2112,10 @@ async def health():
 async def health_detailed():
     """Image-provenance + readiness probe (#58).
 
-    Surfaces the git SHA baked into the image at build time (Dockerfile
-    ARG/ENV VERDIFY_GIT_SHA) so a running pod is verifiably traceable to a
-    commit — the k3s/CD equivalent of "what's actually deployed right now".
+    Surfaces the verified git SHA baked into the image from either the explicit
+    Docker build argument or the managed-CI detached-HEAD receipt, so a running
+    pod is traceable to a commit — the k3s/CD equivalent of "what's actually
+    deployed right now".
     Also reports baked build metadata and a basic DB-reachability check so a
     readiness probe can distinguish "process up" from "ready to serve".
 
@@ -2121,7 +2123,7 @@ async def health_detailed():
     endpoint is about the SERVICE/IMAGE, not the plants. It never touches the
     device loop.
     """
-    git_sha = os.environ.get("VERDIFY_GIT_SHA", "unknown")
+    git_sha = image_git_sha()
     build_time = os.environ.get("VERDIFY_BUILD_TIME", "unknown")
     git_ref = os.environ.get("VERDIFY_GIT_REF", "unknown")
 
