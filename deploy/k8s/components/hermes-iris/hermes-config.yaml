@@ -407,9 +407,10 @@ data:
       provider: "custom"
       base_url: "https://cortex.vallery.net/v1"
       context_length: 98304
-      # A valid planner tool call is comfortably below this client-side fence.
-      # Hermes can still issue bounded continuations up to Cortex's 16K server cap.
-      max_tokens: 8192
+      # Use Cortex's verified 16,384-token route cap. The former 8,192-token client
+      # fence could truncate a serialized set_plan call before it reached MCP;
+      # Cortex still bounds every response at this value server-side.
+      max_tokens: 16384
 
     agent:
       # The bundled custom transport does not forward this scalar. Cortex route 42

@@ -341,22 +341,27 @@ def _hermes_config_documents() -> tuple[dict, dict, str]:
 def test_hermes_profile_pins_bounded_cortex_text_route():
     _manifest, embedded, _readiness_source = _hermes_config_documents()
     canonical = yaml.safe_load((REPO_ROOT / "hermes/iris/config.yaml").read_text())
+    experiment_manifest = yaml.safe_load(
+        (REPO_ROOT / "deploy/k8s/components/hermes-iris-experiment/hermes-config.yaml").read_text()
+    )
+    experiment = yaml.safe_load(experiment_manifest["data"]["config.yaml"])
 
     assert (
         embedded["model"]
         == canonical["model"]
+        == experiment["model"]
         == {
             "default": "llm.primary.longctx",
             "provider": "custom",
             "base_url": "https://cortex.vallery.net/v1",
             "context_length": 98304,
-            "max_tokens": 8192,
+            "max_tokens": 16384,
         }
     )
     assert "reasoning_effort" not in embedded["model"]
     assert "reasoning_effort" not in canonical["model"]
-    assert embedded["agent"]["reasoning_effort"] == "medium"
-    assert canonical["agent"]["reasoning_effort"] == "medium"
+    assert embedded["agent"]["reasoning_effort"] == canonical["agent"]["reasoning_effort"] == "medium"
+    assert experiment["agent"]["reasoning_effort"] == "medium"
 
     # The embedded k3s profile must remain structurally equivalent as parsed,
     # except for the intentionally environment-specific MCP endpoint.

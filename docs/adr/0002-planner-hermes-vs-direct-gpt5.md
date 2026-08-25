@@ -21,7 +21,7 @@
 > **2026-08-25 profile amendment:** the active Hermes profile now uses the
 > OpenAI-compatible Cortex `custom` provider with
 > `model.default: llm.primary.longctx`, a 98,304-token context contract, an
-> 8,192-token client output fence, and `agent.reasoning_effort: medium`.
+> 16,384-token client output fence, and `agent.reasoning_effort: medium`.
 > Public API attribution uses the exact label
 > `hermes-iris/custom:llm.primary.longctx/medium`. The direct
 > `planner_graph` alternative remains inactive and independently versioned.
@@ -32,7 +32,7 @@
 
 The greenhouse has an AI planner that runs over a 72-hour horizon and adjusts **bounded tunables** (never targets, rails, or FSM logic). The open question (Lane 4 brief): *"It is unclear whether Hermes adds value or whether a direct GPT-5 prompt with structured data would be simpler."*
 
-**Production architecture (the thing this ADR ratifies):** the ingestor fires solar/forecast triggers (`ingestor/tasks/heartbeat.py` `_compute_milestones` + the `PLANNER_TRIGGER_MATRIX`), builds a 72h context pack, and dispatches to the **Hermes gateway** (`verdify-hermes-iris`, ns `verdify-prod`). The active Hermes profile uses Cortex's OpenAI-compatible `custom` provider on **`llm.primary.longctx` with medium reasoning** and an **MCP-only tool allowlist** (`hermes/iris/config.yaml`: 98,304-token context, 8,192-token output fence, 30-turn agentic loop, `mcp_servers` → Verdify MCP). Hermes reads the required MCP tools in sequence, then writes via `set_plan` / `set_tunable` / `acknowledge_trigger` (`mcp/server.py`). Every write is validated against `verdify_schemas/tunable_registry.py` (the `planner_pushable` gate + per-tunable min/max) before it reaches `setpoint_plan` / `plan_journal`; the dispatcher pushes the resulting bounded waypoints to the device.
+**Production architecture (the thing this ADR ratifies):** the ingestor fires solar/forecast triggers (`ingestor/tasks/heartbeat.py` `_compute_milestones` + the `PLANNER_TRIGGER_MATRIX`), builds a 72h context pack, and dispatches to the **Hermes gateway** (`verdify-hermes-iris`, ns `verdify-prod`). The active Hermes profile uses Cortex's OpenAI-compatible `custom` provider on **`llm.primary.longctx` with medium reasoning** and an **MCP-only tool allowlist** (`hermes/iris/config.yaml`: 98,304-token context, 16,384-token output fence, 30-turn agentic loop, `mcp_servers` → Verdify MCP). Hermes reads the required MCP tools in sequence, then writes via `set_plan` / `set_tunable` / `acknowledge_trigger` (`mcp/server.py`). Every write is validated against `verdify_schemas/tunable_registry.py` (the `planner_pushable` gate + per-tunable min/max) before it reaches `setpoint_plan` / `plan_journal`; the dispatcher pushes the resulting bounded waypoints to the device.
 
 **The two options:**
 - **(A) Hermes-orchestrated** Cortex `custom:llm.primary.longctx` medium + MCP: a managed agent gateway provides the multi-turn tool-use loop, session/conversation memory (kanban), the scheduler, and auth.
