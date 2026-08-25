@@ -1,6 +1,6 @@
 -- test-217-runtime-role-boundary.sql
 --
--- PostgreSQL 15 restored-schema fixture for the ordinary API/ingestor role
+-- PostgreSQL 16 / TimescaleDB 2.25.2 restored-schema fixture for the ordinary API/ingestor role
 -- boundary.  The whole rehearsal is transactional: it poisons roles,
 -- ownership, ACLs, schemas, and default ACLs; replays migration 217; then
 -- exercises both exact LOGIN identities against protocol-v1 and protocol-v2
@@ -123,7 +123,7 @@ END;
 $hostile_roles$;
 
 -- Hostile attribute, role-setting, outgoing, direct incoming, transitive
--- incoming, ADMIN OPTION, and dedicated-v2 membership drift.
+-- incoming, PostgreSQL-16 membership-option, and dedicated-v2 drift.
 ALTER ROLE verdify_api_runtime LOGIN INHERIT SUPERUSER CREATEDB CREATEROLE
     REPLICATION BYPASSRLS;
 ALTER ROLE verdify_ingestor_runtime LOGIN INHERIT CREATEDB CREATEROLE
@@ -138,7 +138,7 @@ ALTER ROLE verdify_api_runtime_login IN DATABASE :DBNAME
     SET search_path = pg_temp, public;
 GRANT verdify_api_runtime TO verdify_api_runtime_login WITH ADMIN OPTION;
 GRANT verdify_ingestor_runtime TO verdify_ingestor_runtime_login
-    WITH ADMIN OPTION;
+    WITH ADMIN FALSE, INHERIT FALSE, SET FALSE;
 GRANT verdify_experiment_lifecycle TO verdify_api_runtime_login;
 GRANT verdify_experiment_component_executor TO verdify_ingestor_runtime;
 GRANT verdify_api_runtime TO test_217_rogue;
@@ -185,13 +185,16 @@ ALTER DATABASE :DBNAME OWNER TO verdify_api_runtime;
 ALTER SCHEMA public OWNER TO test_217_rogue;
 GRANT CREATE ON SCHEMA public TO test_217_transitive;
 ALTER TABLE public.control_arm_resolutions OWNER TO verdify_api_runtime;
-ALTER SEQUENCE public.alert_log_id_seq OWNER TO verdify_ingestor_runtime;
+CREATE SEQUENCE public.test_217_runtime_owned_sequence;
+ALTER SEQUENCE public.test_217_runtime_owned_sequence
+    OWNER TO verdify_ingestor_runtime;
 ALTER VIEW public.v_runtime_v1_iris_experiment_context
     OWNER TO verdify_api_runtime_login;
 ALTER MATERIALIZED VIEW public.mv_band_curve
     OWNER TO verdify_ingestor_runtime_login;
 ALTER TABLE public.equipment_state OWNER TO test_217_rogue;
-ALTER SEQUENCE public.data_gaps_id_seq OWNER TO test_217_rogue;
+CREATE SEQUENCE public.test_217_rogue_owned_sequence;
+ALTER SEQUENCE public.test_217_rogue_owned_sequence OWNER TO test_217_rogue;
 
 CREATE OR REPLACE FUNCTION public.fn_runtime_v1_record_unblind(text)
 RETURNS boolean
@@ -220,11 +223,135 @@ GRANT SELECT ON TABLE public.equipment_counter_samples
     TO verdify_api_runtime_login, verdify_ingestor_runtime;
 GRANT INSERT, UPDATE ON TABLE public.policy_proposals
     TO verdify_ingestor_runtime_login;
+GRANT SELECT ON TABLE public.dli_validity_intervals
+    TO verdify_api_runtime, verdify_ingestor_runtime;
+GRANT SELECT (id, created_at, created_by), INSERT (created_by)
+    ON public.dli_validity_intervals
+    TO verdify_api_runtime, verdify_ingestor_runtime;
+GRANT SELECT, UPDATE ON TABLE public.v_system_health_score
+    TO verdify_ingestor_runtime;
+GRANT SELECT ON TABLE public.v_system_health_score
+    TO verdify_api_runtime_login;
+-- Poison the full pure/read helper union through PUBLIC and every managed
+-- identity.  Replay must rebuild only the exact API/ingestor duty split.
+DO $hostile_pure_helper_acl$
+DECLARE
+    helper regprocedure;
+BEGIN
+    FOREACH helper IN ARRAY ARRAY[
+        'public.fn_band_setpoints(timestamptz)'::regprocedure,
+        'public.fn_band_trace(timestamptz,timestamptz,text)'::regprocedure,
+        'public.fn_band_setpoint_provenance(timestamptz,text)'::regprocedure,
+        'public.fn_compliance_pct(interval)'::regprocedure,
+        'public.fn_crop_band_value(text,text,timestamptz,text,text,text)'::regprocedure,
+        'public.fn_current_season()'::regprocedure,
+        'public.fn_dli_validity(timestamptz,text)'::regprocedure,
+        'public.fn_dli_proxy_lesson_invalid(text,text)'::regprocedure,
+        'public.fn_equip_at(text,timestamptz)'::regprocedure,
+        'public.fn_equipment_health()'::regprocedure,
+        'public.fn_forecast_correction(text,numeric)'::regprocedure,
+        'public.fn_heat_staging_inversion()'::regprocedure,
+        'public.fn_house_vpd_control_band(timestamptz)'::regprocedure,
+        'public.fn_lighting_circuit_policy(timestamptz,text)'::regprocedure,
+        'public.fn_lighting_lux_threshold_recommendation(timestamptz,text,interval)'::regprocedure,
+        'public.fn_lighting_minutes_policy(timestamptz,text)'::regprocedure,
+        'public.fn_lighting_policy(timestamptz,text)'::regprocedure,
+        'public.fn_plan_transition_audit(text,interval,interval)'::regprocedure,
+        'public.fn_planner_scorecard(date)'::regprocedure,
+        'public.fn_setpoint_at(text,timestamptz)'::regprocedure,
+        'public.fn_setpoint_at(text,text,timestamptz)'::regprocedure,
+        'public.fn_system_health()'::regprocedure,
+        'public.fn_zone_vpd_targets(timestamptz)'::regprocedure,
+        'public.fn_experiment_v2_ops_status()'::regprocedure
+    ] LOOP
+        EXECUTE pg_catalog.format(
+            'GRANT EXECUTE ON FUNCTION %s TO PUBLIC, '
+            'verdify_api_runtime, verdify_ingestor_runtime, '
+            'verdify_api_runtime_login, verdify_ingestor_runtime_login',
+            helper);
+    END LOOP;
+END;
+$hostile_pure_helper_acl$;
+
+-- Transitive-only compatibility helpers should end with exactly PUBLIC
+-- EXECUTE.  Poison the three representable PG16 drift classes: missing
+-- PUBLIC, rogue grant option, and direct managed identity grants.
+DO $hostile_transitive_helper_acl$
+DECLARE
+    helper regprocedure;
+BEGIN
+    FOREACH helper IN ARRAY ARRAY[
+        'public.fn_center_band_setpoints(timestamptz)'::regprocedure,
+        'public.fn_compliance_v2(interval)'::regprocedure,
+        'public.fn_diurnal_interp(timestamptz,double precision,double precision)'::regprocedure,
+        'public.fn_dli_source_invalid_reason(double precision)'::regprocedure,
+        'public.fn_grade_credit(numeric,numeric,numeric,numeric,numeric)'::regprocedure,
+        'public.fn_hermite_phase(double precision,double precision,double precision,double precision,double precision,double precision)'::regprocedure,
+        'public.fn_solar_altitude(timestamptz)'::regprocedure,
+        'public.fn_solar_phase(timestamptz)'::regprocedure,
+        'public.fn_solar_sunrise_hour(timestamptz)'::regprocedure,
+        'public.fn_solar_sunset_hour(timestamptz)'::regprocedure,
+        'public.fn_zone_band(text,timestamptz,text)'::regprocedure,
+        'public.fn_zone_band_grade(timestamptz,timestamptz,text)'::regprocedure
+    ] LOOP
+        EXECUTE pg_catalog.format(
+            'REVOKE ALL PRIVILEGES ON FUNCTION %s FROM PUBLIC CASCADE',
+            helper);
+        EXECUTE pg_catalog.format(
+            'GRANT EXECUTE ON FUNCTION %s TO test_217_rogue '
+            'WITH GRANT OPTION', helper);
+        EXECUTE pg_catalog.format(
+            'GRANT EXECUTE ON FUNCTION %s TO verdify_api_runtime, '
+            'verdify_ingestor_runtime, verdify_api_runtime_login, '
+            'verdify_ingestor_runtime_login', helper);
+    END LOOP;
+END;
+$hostile_transitive_helper_acl$;
+ALTER FUNCTION public.fn_current_season() OWNER TO test_217_rogue;
+ALTER FUNCTION public.fn_solar_phase(timestamptz) OWNER TO test_217_rogue;
 GRANT USAGE, SELECT, UPDATE ON SEQUENCE public.alert_log_id_seq TO PUBLIC;
 GRANT USAGE, SELECT, UPDATE ON SEQUENCE public.experiment_events_event_id_seq
     TO verdify_api_runtime_login;
 GRANT EXECUTE ON FUNCTION public.fn_experiment_v2_api_status(uuid)
     TO PUBLIC, verdify_api_runtime_login;
+
+-- Timescale 2.25.2 regression poison: establish a managed column ACL before
+-- compression creates its physically different companion, then compress an
+-- old chunk.  Migration replay must clear pg_attribute.attacl via DROP OWNED;
+-- it must never issue a column GRANT/REVOKE against this parent.
+CREATE TABLE public.test_217_compressed_acl_poison (
+    ts timestamptz NOT NULL,
+    series text NOT NULL,
+    allowed_value integer,
+    denied_value text,
+    PRIMARY KEY (ts, series)
+);
+SELECT public.create_hypertable(
+    'public.test_217_compressed_acl_poison', 'ts',
+    chunk_time_interval => interval '1 day');
+GRANT INSERT (allowed_value)
+    ON public.test_217_compressed_acl_poison
+    TO verdify_ingestor_runtime;
+INSERT INTO public.test_217_compressed_acl_poison
+    (ts, series, allowed_value, denied_value)
+VALUES
+    (now() - interval '100 years', 'compressed', 1, 'sealed'),
+    (now(), 'current', 2, 'sealed');
+ALTER TABLE public.test_217_compressed_acl_poison SET (
+    timescaledb.compress,
+    timescaledb.compress_segmentby = 'series',
+    timescaledb.compress_orderby = 'ts DESC'
+);
+SELECT public.compress_chunk(chunk_oid)
+  FROM public.show_chunks(
+      'public.test_217_compressed_acl_poison',
+      older_than => now() - interval '99 years') chunk_oid;
+
+-- Facades themselves are safely replay-normalized by DROP/CREATE RESTRICT.
+ALTER VIEW public.v_runtime_equipment_state_write
+    SET (security_invoker = true);
+GRANT UPDATE (state) ON public.v_runtime_equipment_state_write
+    TO verdify_api_runtime;
 
 -- Non-system rogue schema, relation, sequence, and SECURITY DEFINER path.
 CREATE SCHEMA rogue_runtime_schema AUTHORIZATION verdify_api_runtime_login;
@@ -274,6 +401,31 @@ GRANT SELECT, INSERT ON TABLE public.test_217_foreign TO PUBLIC;
 -- Declarative replay must repair every poison above.
 \ir ../217-runtime-role-boundary.sql
 
+-- Schema-only reconstruction creates materialized views WITH NO DATA.  Only
+-- that ledgerless scratch path may initialize them inside this rollback.  A
+-- restored-production backup must already contain the populated state needed
+-- by the health path and CONCURRENTLY refresh wrapper.
+DO $synthetic_materialized_view_precondition$
+BEGIN
+    IF pg_catalog.to_regclass('public.schema_migrations') IS NULL THEN
+        REFRESH MATERIALIZED VIEW public.v_relay_stuck;
+        REFRESH MATERIALIZED VIEW public.v_climate_merged;
+        REFRESH MATERIALIZED VIEW public.mv_band_curve;
+    END IF;
+    IF EXISTS (
+        SELECT 1
+          FROM pg_catalog.pg_class relation
+         WHERE relation.oid = ANY (ARRAY[
+                   'public.v_relay_stuck'::regclass,
+                   'public.v_climate_merged'::regclass,
+                   'public.mv_band_curve'::regclass])
+           AND NOT relation.relispopulated) THEN
+        RAISE EXCEPTION
+            'restored runtime materialized view is not populated';
+    END IF;
+END;
+$synthetic_materialized_view_precondition$;
+
 DO $replay_assertions$
 DECLARE
     pair record;
@@ -313,7 +465,18 @@ BEGIN
            OR NOT pg_catalog.has_schema_privilege(pair.login, 'public', 'USAGE')
            OR pg_catalog.pg_has_role('test_217_rogue', pair.duty, 'MEMBER')
            OR pg_catalog.pg_has_role('test_217_transitive', pair.duty, 'MEMBER')
-           OR pg_catalog.pg_has_role('test_217_rogue', pair.login, 'MEMBER') THEN
+           OR pg_catalog.pg_has_role('test_217_rogue', pair.login, 'MEMBER')
+           OR NOT EXISTS (
+               SELECT 1 FROM pg_catalog.pg_auth_members membership
+                WHERE membership.roleid = (
+                          SELECT oid FROM pg_catalog.pg_roles
+                           WHERE rolname = pair.duty)
+                  AND membership.member = (
+                          SELECT oid FROM pg_catalog.pg_roles
+                           WHERE rolname = pair.login)
+                  AND NOT membership.admin_option
+                  AND membership.inherit_option
+                  AND membership.set_option) THEN
             RAISE EXCEPTION 'authority/membership drift survived for %', pair.login;
         END IF;
     END LOOP;
@@ -351,8 +514,14 @@ BEGIN
        OR pg_catalog.has_function_privilege(
            'verdify_api_runtime_login',
            'rogue_runtime_schema.escape()', 'EXECUTE')
-       OR pg_catalog.has_table_privilege(
-           'verdify_ingestor_runtime_login', 'public.test_217_foreign', 'SELECT')
+           OR pg_catalog.has_table_privilege(
+               'verdify_ingestor_runtime_login', 'public.test_217_foreign', 'SELECT')
+       OR (SELECT relation.relowner <> database_row.datdba
+             FROM pg_catalog.pg_class relation
+             CROSS JOIN pg_catalog.pg_database database_row
+            WHERE relation.oid =
+                  'public.test_217_runtime_owned_sequence'::regclass
+              AND database_row.datname = current_database())
     THEN
         RAISE EXCEPTION 'hostile object/ACL drift survived replay';
     END IF;
@@ -532,6 +701,7 @@ BEGIN
                 'public_contact_submissions_id_seq']::text[]),
             ('verdify_ingestor_runtime_login', ARRAY[
                 'alert_log_id_seq', 'data_gaps_id_seq',
+                'forecast_action_log_id_seq',
                 'plan_delivery_log_id_seq',
                 'planner_trigger_ledger_id_seq',
                 'slack_notification_events_id_seq',
@@ -568,22 +738,31 @@ BEGIN
     END LOOP;
 
     IF NOT pg_catalog.has_column_privilege(
-           'verdify_ingestor_runtime_login', 'public.equipment_state',
+           'verdify_ingestor_runtime_login',
+           'public.v_runtime_equipment_state_write',
            'equipment', 'INSERT')
        OR pg_catalog.has_any_column_privilege(
-           'verdify_ingestor_runtime_login', 'public.equipment_state',
+           'verdify_ingestor_runtime_login',
+           'public.v_runtime_equipment_state_write',
            'UPDATE')
        OR NOT pg_catalog.has_column_privilege(
-           'verdify_ingestor_runtime_login', 'public.weather_forecast',
+           'verdify_ingestor_runtime_login',
+           'public.v_runtime_weather_forecast_write',
            'temp_f', 'INSERT')
-       OR pg_catalog.has_column_privilege(
-           'verdify_ingestor_runtime_login', 'public.weather_forecast',
-           'greenhouse_id', 'INSERT')
+       OR EXISTS (
+           SELECT 1 FROM pg_catalog.pg_attribute attribute_row
+            WHERE attribute_row.attrelid =
+                  'public.v_runtime_weather_forecast_write'::regclass
+              AND attribute_row.attname = 'greenhouse_id'
+              AND attribute_row.attnum > 0
+              AND NOT attribute_row.attisdropped)
        OR NOT pg_catalog.has_table_privilege(
-           'verdify_ingestor_runtime_login', 'public.weather_forecast',
+           'verdify_ingestor_runtime_login',
+           'public.v_runtime_weather_forecast_write',
            'DELETE')
        OR pg_catalog.has_any_column_privilege(
-           'verdify_ingestor_runtime_login', 'public.weather_forecast',
+           'verdify_ingestor_runtime_login',
+           'public.v_runtime_weather_forecast_write',
            'UPDATE')
        OR NOT pg_catalog.has_column_privilege(
            'verdify_ingestor_runtime_login', 'public.site_content',
@@ -607,6 +786,418 @@ BEGIN
     END IF;
 END;
 $exact_sequence_and_column_acl$;
+
+DO $exact_runtime_write_facades$
+DECLARE
+    facade record;
+    view_oid oid;
+    base_oid oid;
+    database_owner_oid oid;
+    managed_role_oids oid[];
+    actual_projection_sha256 text;
+    actual_ingestor_insert_sha256 text;
+    actual_ingestor_update_sha256 text;
+    actual_api_insert_sha256 text;
+BEGIN
+    SELECT database_row.datdba INTO database_owner_oid
+      FROM pg_catalog.pg_database database_row
+     WHERE database_row.datname = current_database();
+    SELECT pg_catalog.array_agg(role_row.oid ORDER BY role_row.oid)
+      INTO managed_role_oids
+      FROM pg_catalog.pg_roles role_row
+     WHERE role_row.rolname = ANY (ARRAY[
+        'verdify_api_runtime', 'verdify_ingestor_runtime',
+        'verdify_api_runtime_login', 'verdify_ingestor_runtime_login']);
+
+    FOR facade IN
+        SELECT * FROM (VALUES
+            ('v_runtime_climate_write','climate','d77beb563a10504dbefbba3bd405d8d6a81f932fd608118d2021bb756af317ea','1c5c1fc4954ed08f3b4a9c12ee9a2cd8eb1c6b555c22060f45db2114742101e9','71313a74c3b722ee18a5ba17968fa4e73bd1f767393406f6d58303383db52317','e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'),
+            ('v_runtime_climate_action_log_write','climate_action_log','fe3a3e70c40aa0f7e1bd5f53e407285a15b6ea0c5ef895e59e0cfa5fa80be5a9','fe3a3e70c40aa0f7e1bd5f53e407285a15b6ea0c5ef895e59e0cfa5fa80be5a9','e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855','e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'),
+            ('v_runtime_diagnostics_write','diagnostics','48920ee0ac948df7bbfc110adef350b95444ee456da9f8d8bc41cd08818f63b5','48920ee0ac948df7bbfc110adef350b95444ee456da9f8d8bc41cd08818f63b5','e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855','e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'),
+            ('v_runtime_energy_write','energy','1780326142303d19a074f1be8abb33fd789bb2bd7c43ea18bae195cecf7d4b9e','1780326142303d19a074f1be8abb33fd789bb2bd7c43ea18bae195cecf7d4b9e','e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855','e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'),
+            ('v_runtime_equipment_state_write','equipment_state','fda6769204503176c05933f03a8c5434c13bf0b16084650dfe98984eaf5ea9d5','fda6769204503176c05933f03a8c5434c13bf0b16084650dfe98984eaf5ea9d5','e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855','fda6769204503176c05933f03a8c5434c13bf0b16084650dfe98984eaf5ea9d5'),
+            ('v_runtime_esp32_logs_write','esp32_logs','38a306941642407280f6cf1a36676a5197c4d1ac0598d7e4fbb16ca107a6b30e','38a306941642407280f6cf1a36676a5197c4d1ac0598d7e4fbb16ca107a6b30e','e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855','e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'),
+            ('v_runtime_forecast_deviation_log_write','forecast_deviation_log','cb99ab59a273fcfbab8114461f4dcb7cdba8effe41f1a68bc005d13bbbbb3ddb','cb99ab59a273fcfbab8114461f4dcb7cdba8effe41f1a68bc005d13bbbbb3ddb','e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855','e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'),
+            ('v_runtime_gpu_power_write','gpu_power','a1d5fe16cc6c99f1f129d33361d92c49b128a529339dff9a7e15e32f20eec89d','a1d5fe16cc6c99f1f129d33361d92c49b128a529339dff9a7e15e32f20eec89d','0ff5b5b4715f7be9d32c1eb2518a76c848f8b63fa7eeb9ed6239b3b8ed7e9150','e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'),
+            ('v_runtime_infra_cpu_write','infra_cpu','5dcca79d7e63e50a04fc966ded17ed268eaa7d79e271ec9544511bf02f9e9b39','5dcca79d7e63e50a04fc966ded17ed268eaa7d79e271ec9544511bf02f9e9b39','e5bbbb1a97df6057c6c820f875d268490912bfe75b238d7b4489f79c1fd526a7','e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'),
+            ('v_runtime_override_events_write','override_events','37d15d6fbc49f8d1596dfffd8c03fe12feec4e56b4968de3611532bbe184f8ce','37d15d6fbc49f8d1596dfffd8c03fe12feec4e56b4968de3611532bbe184f8ce','e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855','e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'),
+            ('v_runtime_setpoint_changes_write','setpoint_changes','5408e88122f376ddb76e757ea1e0b255130b948b98f0980fc6baf477718912af','7a8a779d0631662aa38abb700a9b9b22ec685fb1de2d3bf03d32bbe060152fc3','c2d61781e15d9fa3c48e475faae1e712ead1dd55a97ddca57eeecd97de3c732c','e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'),
+            ('v_runtime_setpoint_clamps_write','setpoint_clamps','bbf41009b20a80c89e8258808be135af237d3c38e1b08c54df387c9a80abdb44','bbf41009b20a80c89e8258808be135af237d3c38e1b08c54df387c9a80abdb44','e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855','e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'),
+            ('v_runtime_setpoint_plan_write','setpoint_plan','899bae4c83435f8593c2555d675f2875af6b4f3ee3b1995780b802d8d7034382','899bae4c83435f8593c2555d675f2875af6b4f3ee3b1995780b802d8d7034382','e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855','e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'),
+            ('v_runtime_setpoint_snapshot_write','setpoint_snapshot','88d9825890b4ca0bd10c5cc8381cba97459d1a1d66d8a73bee8ab6bff7fa70ee','88d9825890b4ca0bd10c5cc8381cba97459d1a1d66d8a73bee8ab6bff7fa70ee','e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855','e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'),
+            ('v_runtime_system_state_write','system_state','7d8e36724b9bd53114e74b1db53929d863e79f48c8b1445c2d8ae9314a6c651d','7d8e36724b9bd53114e74b1db53929d863e79f48c8b1445c2d8ae9314a6c651d','e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855','e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'),
+            ('v_runtime_weather_forecast_write','weather_forecast','45df983f3243f7c32fbf776dcdd618ab78c212cccfd2325f30de3dff0fbce900','45df983f3243f7c32fbf776dcdd618ab78c212cccfd2325f30de3dff0fbce900','e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855','e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855')
+        ) expected(view_name, base_name, projection_sha256,
+                   ingestor_insert_sha256, ingestor_update_sha256,
+                   api_insert_sha256)
+    LOOP
+        view_oid := pg_catalog.to_regclass('public.' || facade.view_name);
+        base_oid := pg_catalog.to_regclass('public.' || facade.base_name);
+        SELECT pg_catalog.encode(public.digest(
+                   pg_catalog.string_agg(attribute_row.attname, ','
+                                         ORDER BY attribute_row.attnum),
+                   'sha256'), 'hex')
+          INTO actual_projection_sha256
+          FROM pg_catalog.pg_attribute attribute_row
+         WHERE attribute_row.attrelid = view_oid
+           AND attribute_row.attnum > 0
+           AND NOT attribute_row.attisdropped;
+
+        SELECT pg_catalog.encode(public.digest(COALESCE(
+                   pg_catalog.string_agg(attribute_row.attname, ','
+                       ORDER BY attribute_row.attnum) FILTER (WHERE
+                       pg_catalog.has_column_privilege(
+                           'verdify_ingestor_runtime_login', view_oid,
+                           attribute_row.attnum, 'INSERT')), ''),
+                   'sha256'), 'hex'),
+               pg_catalog.encode(public.digest(COALESCE(
+                   pg_catalog.string_agg(attribute_row.attname, ','
+                       ORDER BY attribute_row.attnum) FILTER (WHERE
+                       pg_catalog.has_column_privilege(
+                           'verdify_ingestor_runtime_login', view_oid,
+                           attribute_row.attnum, 'UPDATE')), ''),
+                   'sha256'), 'hex'),
+               pg_catalog.encode(public.digest(COALESCE(
+                   pg_catalog.string_agg(attribute_row.attname, ','
+                       ORDER BY attribute_row.attnum) FILTER (WHERE
+                       pg_catalog.has_column_privilege(
+                           'verdify_api_runtime_login', view_oid,
+                           attribute_row.attnum, 'INSERT')), ''),
+                   'sha256'), 'hex')
+          INTO actual_ingestor_insert_sha256,
+               actual_ingestor_update_sha256,
+               actual_api_insert_sha256
+          FROM pg_catalog.pg_attribute attribute_row
+         WHERE attribute_row.attrelid = view_oid
+           AND attribute_row.attnum > 0
+           AND NOT attribute_row.attisdropped;
+
+        IF view_oid IS NULL OR base_oid IS NULL
+           OR actual_projection_sha256 IS DISTINCT FROM
+              facade.projection_sha256
+           OR actual_ingestor_insert_sha256 IS DISTINCT FROM
+              facade.ingestor_insert_sha256
+           OR actual_ingestor_update_sha256 IS DISTINCT FROM
+              facade.ingestor_update_sha256
+           OR actual_api_insert_sha256 IS DISTINCT FROM
+              facade.api_insert_sha256
+           OR pg_catalog.pg_relation_is_updatable(view_oid, false) <> 28
+           OR NOT EXISTS (
+                SELECT 1 FROM pg_catalog.pg_class relation
+                 WHERE relation.oid = view_oid
+                   AND relation.relkind = 'v'
+                   AND relation.relowner = database_owner_oid
+                   AND (SELECT pg_catalog.array_agg(option ORDER BY option)
+                          FROM pg_catalog.unnest(relation.reloptions) option) =
+                       ARRAY['security_barrier=true','security_invoker=false'])
+           OR EXISTS (
+                SELECT 1 FROM pg_catalog.pg_rewrite rewrite_row
+                 WHERE rewrite_row.ev_class = view_oid
+                   AND rewrite_row.rulename <> '_RETURN')
+           OR EXISTS (
+                SELECT 1 FROM pg_catalog.pg_trigger trigger_row
+                 WHERE trigger_row.tgrelid = view_oid
+                   AND NOT trigger_row.tgisinternal)
+           OR EXISTS (
+                SELECT 1 FROM pg_catalog.pg_policy policy_row
+                 WHERE policy_row.polrelid = view_oid)
+           OR NOT pg_catalog.has_table_privilege(
+                database_owner_oid, base_oid, 'INSERT,UPDATE,DELETE')
+           OR pg_catalog.has_table_privilege(
+                'verdify_api_runtime_login', view_oid, 'INSERT,UPDATE')
+           OR pg_catalog.has_table_privilege(
+                'verdify_ingestor_runtime_login', view_oid, 'INSERT,UPDATE')
+           OR pg_catalog.has_table_privilege(
+                'verdify_api_runtime_login', base_oid,
+                'INSERT,UPDATE,DELETE')
+           OR pg_catalog.has_any_column_privilege(
+                'verdify_api_runtime_login', base_oid, 'INSERT,UPDATE')
+           OR pg_catalog.has_table_privilege(
+                'verdify_ingestor_runtime_login', base_oid,
+                'INSERT,UPDATE,DELETE')
+           OR pg_catalog.has_any_column_privilege(
+                'verdify_ingestor_runtime_login', base_oid,
+                'INSERT,UPDATE')
+           OR EXISTS (
+                SELECT 1
+                  FROM pg_catalog.pg_attribute attribute_row
+                 WHERE attribute_row.attrelid = base_oid
+                   AND attribute_row.attnum > 0
+                   AND NOT attribute_row.attisdropped
+                   AND attribute_row.attacl IS NOT NULL)
+           OR EXISTS (
+                SELECT 1
+                  FROM pg_catalog.pg_attribute attribute_row
+                  CROSS JOIN LATERAL pg_catalog.aclexplode(
+                      attribute_row.attacl) acl
+                 WHERE attribute_row.attrelid = view_oid
+                   AND attribute_row.attnum > 0
+                   AND NOT attribute_row.attisdropped
+                   AND acl.grantee NOT IN (
+                       (SELECT oid FROM pg_catalog.pg_roles
+                         WHERE rolname = 'verdify_ingestor_runtime'),
+                       (SELECT oid FROM pg_catalog.pg_roles
+                         WHERE rolname = 'verdify_api_runtime'))) THEN
+            RAISE EXCEPTION 'runtime write facade fixture differs for %',
+                facade.view_name;
+        END IF;
+    END LOOP;
+
+    IF EXISTS (
+           SELECT 1
+             FROM pg_catalog.pg_attribute attribute_row
+             CROSS JOIN LATERAL pg_catalog.aclexplode(
+                 attribute_row.attacl) acl
+            WHERE attribute_row.attrelid =
+                  'public.test_217_compressed_acl_poison'::regclass
+              AND attribute_row.attnum > 0
+              AND NOT attribute_row.attisdropped
+              AND acl.grantee = ANY (managed_role_oids))
+       OR (SELECT count(*)
+             FROM public.show_chunks(
+                 'public.test_217_compressed_acl_poison')) < 2
+       OR NOT EXISTS (
+            SELECT 1
+              FROM timescaledb_information.chunks chunk_row
+             WHERE chunk_row.hypertable_schema = 'public'
+               AND chunk_row.hypertable_name =
+                   'test_217_compressed_acl_poison'
+               AND chunk_row.is_compressed)
+       OR pg_catalog.current_setting('timescaledb.restoring') <> 'off'
+       OR NOT EXISTS (
+            SELECT 1
+              FROM pg_catalog.pg_auth_members membership
+             WHERE membership.roleid = (
+                       SELECT oid FROM pg_catalog.pg_roles
+                        WHERE rolname = 'verdify_ingestor_runtime')
+               AND membership.member = (
+                       SELECT oid FROM pg_catalog.pg_roles
+                        WHERE rolname = 'verdify_ingestor_runtime_login')
+               AND NOT membership.admin_option
+               AND membership.inherit_option
+               AND membership.set_option)
+       OR NOT pg_catalog.has_table_privilege(
+            'verdify_ingestor_runtime_login',
+            'public.forecast_action_rules', 'SELECT')
+       OR pg_catalog.has_table_privilege(
+            'verdify_ingestor_runtime_login',
+            'public.forecast_action_log', 'SELECT')
+       OR NOT pg_catalog.has_sequence_privilege(
+            'verdify_ingestor_runtime_login',
+            'public.forecast_action_log_id_seq', 'USAGE')
+       OR pg_catalog.has_sequence_privilege(
+            'verdify_ingestor_runtime_login',
+            'public.forecast_action_log_id_seq', 'SELECT,UPDATE')
+       OR NOT pg_catalog.has_table_privilege(
+            'verdify_ingestor_runtime_login', 'public.v_greenhouse_now',
+            'SELECT')
+       OR pg_catalog.has_table_privilege(
+            'verdify_ingestor_runtime_login',
+            'public.dli_validity_intervals', 'SELECT')
+       OR (SELECT pg_catalog.array_agg(attribute_row.attname::text
+                                      ORDER BY attribute_row.attname)
+             FROM pg_catalog.pg_attribute attribute_row
+            WHERE attribute_row.attrelid =
+                  'public.dli_validity_intervals'::regclass
+              AND attribute_row.attnum > 0
+              AND NOT attribute_row.attisdropped
+              AND pg_catalog.has_column_privilege(
+                  'verdify_ingestor_runtime_login', attribute_row.attrelid,
+                  attribute_row.attnum, 'SELECT'))
+          IS DISTINCT FROM ARRAY[
+              'availability','greenhouse_id','operator_validated','provenance',
+              'unavailable_reason','valid_from','valid_to',
+              'validity_revision']::text[]
+       OR NOT pg_catalog.has_function_privilege(
+            'verdify_ingestor_runtime_login',
+            'public.fn_dli_validity(timestamptz,text)', 'EXECUTE')
+       OR pg_catalog.has_table_privilege(
+            'verdify_ingestor_runtime_login',
+            'public.v_system_health_score', 'SELECT')
+       OR (SELECT pg_catalog.array_agg(attribute_row.attname::text
+                                      ORDER BY attribute_row.attname)
+             FROM pg_catalog.pg_attribute attribute_row
+            WHERE attribute_row.attrelid =
+                  'public.v_system_health_score'::regclass
+              AND attribute_row.attnum > 0
+              AND NOT attribute_row.attisdropped
+              AND pg_catalog.has_column_privilege(
+                  'verdify_ingestor_runtime_login', attribute_row.attrelid,
+                  attribute_row.attnum, 'SELECT'))
+          IS DISTINCT FROM ARRAY['component','score_pct']::text[]
+       OR pg_catalog.has_table_privilege(
+            'verdify_ingestor_runtime_login',
+            'public.v_system_health_score', 'INSERT,UPDATE,DELETE')
+       OR pg_catalog.has_any_column_privilege(
+            'verdify_ingestor_runtime_login',
+            'public.v_system_health_score', 'INSERT,UPDATE')
+       OR pg_catalog.has_table_privilege(
+            'verdify_api_runtime_login',
+            'public.v_system_health_score', 'SELECT,INSERT,UPDATE,DELETE')
+       OR pg_catalog.has_any_column_privilege(
+            'verdify_api_runtime_login',
+            'public.v_system_health_score', 'SELECT,INSERT,UPDATE')
+       OR NOT pg_catalog.has_function_privilege(
+            'verdify_ingestor_runtime_login',
+            'public.fn_system_health()', 'EXECUTE')
+       OR NOT pg_catalog.has_function_privilege(
+            'verdify_ingestor_runtime_login',
+            'public.fn_equipment_health()', 'EXECUTE')
+       OR pg_catalog.has_function_privilege(
+            'verdify_api_runtime_login',
+            'public.fn_system_health()', 'EXECUTE')
+       OR pg_catalog.has_function_privilege(
+            'verdify_api_runtime_login',
+            'public.fn_equipment_health()', 'EXECUTE')
+       OR EXISTS (
+            SELECT 1
+              FROM pg_catalog.pg_proc procedure_row
+              JOIN pg_catalog.pg_namespace namespace_row
+                ON namespace_row.oid = procedure_row.pronamespace
+              CROSS JOIN LATERAL pg_catalog.aclexplode(
+                  procedure_row.proacl) acl
+             WHERE namespace_row.nspname = 'public'
+               AND procedure_row.oid = ANY (ARRAY[
+                   'public.fn_dli_validity(timestamptz,text)'::regprocedure,
+                   'public.fn_system_health()'::regprocedure,
+                   'public.fn_equipment_health()'::regprocedure])
+               AND acl.grantee = 0
+               AND acl.privilege_type = 'EXECUTE')
+       OR pg_catalog.has_table_privilege(
+            'verdify_ingestor_runtime_login',
+            'public.dli_validity_intervals', 'INSERT,UPDATE,DELETE')
+       OR pg_catalog.has_any_column_privilege(
+            'verdify_ingestor_runtime_login',
+            'public.dli_validity_intervals', 'INSERT,UPDATE')
+       OR pg_catalog.has_table_privilege(
+            'verdify_api_runtime_login',
+            'public.dli_validity_intervals', 'INSERT,UPDATE,DELETE')
+       OR pg_catalog.has_table_privilege(
+            'verdify_api_runtime_login',
+            'public.dli_validity_intervals', 'SELECT')
+       OR (SELECT pg_catalog.array_agg(attribute_row.attname::text
+                                      ORDER BY attribute_row.attname)
+             FROM pg_catalog.pg_attribute attribute_row
+            WHERE attribute_row.attrelid =
+                  'public.dli_validity_intervals'::regclass
+              AND attribute_row.attnum > 0
+              AND NOT attribute_row.attisdropped
+              AND pg_catalog.has_column_privilege(
+                  'verdify_api_runtime_login', attribute_row.attrelid,
+                  attribute_row.attnum, 'SELECT'))
+          IS DISTINCT FROM ARRAY[
+              'availability','greenhouse_id','operator_validated','provenance',
+              'unavailable_reason','valid_from','valid_to',
+              'validity_revision']::text[]
+       OR pg_catalog.has_any_column_privilege(
+            'verdify_api_runtime_login',
+            'public.dli_validity_intervals', 'INSERT,UPDATE')
+       OR NOT pg_catalog.has_table_privilege(
+            'verdify_ingestor_runtime_login',
+            'public.v_slack_crop_tasks_due', 'SELECT')
+       OR NOT pg_catalog.has_table_privilege(
+            'verdify_ingestor_runtime_login',
+            'public.slack_alert_runbooks', 'SELECT') THEN
+        RAISE EXCEPTION 'Timescale/runtime auxiliary boundary differs';
+    END IF;
+END;
+$exact_runtime_write_facades$;
+
+-- Independent expected call-graph closure: every invoker reached by the
+-- direct pure/read helpers has one trusted database owner, is not a definer,
+-- and appears exactly once.  The definer ops-status function is attested by
+-- its separate owner/function contract.
+DO $exact_invoker_helper_closure$
+DECLARE
+    database_owner_oid oid;
+    invoker_helper_closure regprocedure[] := ARRAY[
+        'public.fn_band_setpoints(timestamptz)'::regprocedure,
+        'public.fn_band_trace(timestamptz,timestamptz,text)'::regprocedure,
+        'public.fn_band_setpoint_provenance(timestamptz,text)'::regprocedure,
+        'public.fn_center_band_setpoints(timestamptz)'::regprocedure,
+        'public.fn_compliance_pct(interval)'::regprocedure,
+        'public.fn_compliance_v2(interval)'::regprocedure,
+        'public.fn_crop_band_value(text,text,timestamptz,text,text,text)'::regprocedure,
+        'public.fn_current_season()'::regprocedure,
+        'public.fn_diurnal_interp(timestamptz,double precision,double precision)'::regprocedure,
+        'public.fn_dli_validity(timestamptz,text)'::regprocedure,
+        'public.fn_dli_proxy_lesson_invalid(text,text)'::regprocedure,
+        'public.fn_dli_source_invalid_reason(double precision)'::regprocedure,
+        'public.fn_equip_at(text,timestamptz)'::regprocedure,
+        'public.fn_equipment_health()'::regprocedure,
+        'public.fn_forecast_correction(text,numeric)'::regprocedure,
+        'public.fn_grade_credit(numeric,numeric,numeric,numeric,numeric)'::regprocedure,
+        'public.fn_heat_staging_inversion()'::regprocedure,
+        'public.fn_hermite_phase(double precision,double precision,double precision,double precision,double precision,double precision)'::regprocedure,
+        'public.fn_house_vpd_control_band(timestamptz)'::regprocedure,
+        'public.fn_lighting_circuit_policy(timestamptz,text)'::regprocedure,
+        'public.fn_lighting_lux_threshold_recommendation(timestamptz,text,interval)'::regprocedure,
+        'public.fn_lighting_minutes_policy(timestamptz,text)'::regprocedure,
+        'public.fn_lighting_policy(timestamptz,text)'::regprocedure,
+        'public.fn_plan_transition_audit(text,interval,interval)'::regprocedure,
+        'public.fn_planner_scorecard(date)'::regprocedure,
+        'public.fn_setpoint_at(text,timestamptz)'::regprocedure,
+        'public.fn_setpoint_at(text,text,timestamptz)'::regprocedure,
+        'public.fn_solar_altitude(timestamptz)'::regprocedure,
+        'public.fn_solar_phase(timestamptz)'::regprocedure,
+        'public.fn_solar_sunrise_hour(timestamptz)'::regprocedure,
+        'public.fn_solar_sunset_hour(timestamptz)'::regprocedure,
+        'public.fn_system_health()'::regprocedure,
+        'public.fn_zone_vpd_targets(timestamptz)'::regprocedure,
+        'public.fn_zone_band(text,timestamptz,text)'::regprocedure,
+        'public.fn_zone_band_grade(timestamptz,timestamptz,text)'::regprocedure
+    ];
+    transitive_only_helpers regprocedure[] := ARRAY[
+        'public.fn_center_band_setpoints(timestamptz)'::regprocedure,
+        'public.fn_compliance_v2(interval)'::regprocedure,
+        'public.fn_diurnal_interp(timestamptz,double precision,double precision)'::regprocedure,
+        'public.fn_dli_source_invalid_reason(double precision)'::regprocedure,
+        'public.fn_grade_credit(numeric,numeric,numeric,numeric,numeric)'::regprocedure,
+        'public.fn_hermite_phase(double precision,double precision,double precision,double precision,double precision,double precision)'::regprocedure,
+        'public.fn_solar_altitude(timestamptz)'::regprocedure,
+        'public.fn_solar_phase(timestamptz)'::regprocedure,
+        'public.fn_solar_sunrise_hour(timestamptz)'::regprocedure,
+        'public.fn_solar_sunset_hour(timestamptz)'::regprocedure,
+        'public.fn_zone_band(text,timestamptz,text)'::regprocedure,
+        'public.fn_zone_band_grade(timestamptz,timestamptz,text)'::regprocedure
+    ];
+BEGIN
+    SELECT database_row.datdba INTO database_owner_oid
+      FROM pg_catalog.pg_database database_row
+     WHERE database_row.datname = pg_catalog.current_database();
+    IF pg_catalog.cardinality(invoker_helper_closure) <> 35
+       OR (SELECT count(DISTINCT helper_oid)
+             FROM pg_catalog.unnest(invoker_helper_closure)
+                  helper(helper_oid)) <> 35
+       OR (SELECT count(*)
+             FROM pg_catalog.pg_proc procedure_row
+            WHERE procedure_row.oid = ANY (invoker_helper_closure)) <> 35
+       OR EXISTS (
+            SELECT 1
+              FROM pg_catalog.pg_proc procedure_row
+             WHERE procedure_row.oid = ANY (invoker_helper_closure)
+               AND (procedure_row.proowner <> database_owner_oid
+                    OR procedure_row.prosecdef))
+       OR pg_catalog.cardinality(transitive_only_helpers) <> 12
+       OR (SELECT count(DISTINCT helper_oid)
+             FROM pg_catalog.unnest(transitive_only_helpers)
+                  helper(helper_oid)) <> 12
+       OR EXISTS (
+            SELECT 1
+             FROM pg_catalog.pg_proc procedure_row
+             WHERE procedure_row.oid = ANY (transitive_only_helpers)
+               AND ((SELECT count(*)
+                       FROM pg_catalog.aclexplode(procedure_row.proacl) acl) <> 1
+                    OR NOT EXISTS (
+                        SELECT 1
+                          FROM pg_catalog.aclexplode(procedure_row.proacl) acl
+                         WHERE acl.grantee = 0
+                           AND acl.privilege_type = 'EXECUTE'
+                           AND NOT acl.is_grantable))) THEN
+        RAISE EXCEPTION 'exact invoker helper closure differs';
+    END IF;
+END;
+$exact_invoker_helper_closure$;
 
 -- Prove forward defaults remain closed after replay, including PostgreSQL's
 -- usual automatic PUBLIC EXECUTE on a newly-created function.
@@ -795,6 +1386,19 @@ $attest_membership$;
 RESET SESSION AUTHORIZATION;
 ROLLBACK TO SAVEPOINT test_217_attest_membership;
 
+SAVEPOINT test_217_attest_membership_options;
+GRANT verdify_api_runtime TO verdify_api_runtime_login WITH SET FALSE;
+SET SESSION AUTHORIZATION verdify_api_runtime_login;
+DO $attest_membership_options$
+BEGIN
+    IF public.fn_runtime_attest_ordinary_login() THEN
+        RAISE EXCEPTION 'membership-option drift was not detected';
+    END IF;
+END;
+$attest_membership_options$;
+RESET SESSION AUTHORIZATION;
+ROLLBACK TO SAVEPOINT test_217_attest_membership_options;
+
 SAVEPOINT test_217_attest_relation;
 GRANT UPDATE ON TABLE public.equipment_state TO verdify_api_runtime;
 SET SESSION AUTHORIZATION verdify_api_runtime_login;
@@ -809,7 +1413,7 @@ RESET SESSION AUTHORIZATION;
 ROLLBACK TO SAVEPOINT test_217_attest_relation;
 
 SAVEPOINT test_217_attest_column;
-GRANT UPDATE (state) ON TABLE public.equipment_state
+GRANT UPDATE (state) ON TABLE public.v_runtime_equipment_state_write
     TO verdify_api_runtime;
 SET SESSION AUTHORIZATION verdify_api_runtime_login;
 DO $attest_column$
@@ -965,9 +1569,163 @@ $attest_internal_callee$;
 RESET SESSION AUTHORIZATION;
 ROLLBACK TO SAVEPOINT test_217_attest_internal_callee;
 
+SAVEPOINT test_217_attest_refresh_wrapper_path;
+ALTER FUNCTION public.fn_runtime_refresh_materialized_views()
+    SET search_path = pg_catalog, pg_temp;
+SET SESSION AUTHORIZATION verdify_ingestor_runtime_login;
+DO $attest_refresh_wrapper_path$
+BEGIN
+    IF public.fn_runtime_attest_ordinary_login() THEN
+        RAISE EXCEPTION 'refresh-wrapper trusted path drift was not detected';
+    END IF;
+END;
+$attest_refresh_wrapper_path$;
+RESET SESSION AUTHORIZATION;
+ROLLBACK TO SAVEPOINT test_217_attest_refresh_wrapper_path;
+SET SESSION AUTHORIZATION verdify_ingestor_runtime_login;
+DO $attest_refresh_wrapper_path_restored$
+BEGIN
+    IF NOT public.fn_runtime_attest_ordinary_login() THEN
+        RAISE EXCEPTION 'refresh-wrapper path rollback did not restore receipt';
+    END IF;
+END;
+$attest_refresh_wrapper_path_restored$;
+RESET SESSION AUTHORIZATION;
+
+-- The signed invoker-helper call graph includes bodies, owners, ACLs, and
+-- definition attributes even for transitive-only functions.  Each mutation
+-- is isolated, and a clean result after rollback proves receipts themselves
+-- were not altered by the negative probe.
+SAVEPOINT test_217_attest_invoker_body;
+CREATE OR REPLACE FUNCTION public.fn_solar_altitude(
+    target_ts timestamptz) RETURNS double precision
+LANGUAGE plpgsql IMMUTABLE
+AS $body$ BEGIN RETURN -217.0; END $body$;
+SET SESSION AUTHORIZATION verdify_api_runtime_login;
+DO $attest_invoker_body_api$
+BEGIN
+    IF public.fn_runtime_attest_ordinary_login() THEN
+        RAISE EXCEPTION 'shared invoker body drift missed API receipt';
+    END IF;
+END;
+$attest_invoker_body_api$;
+RESET SESSION AUTHORIZATION;
+SET SESSION AUTHORIZATION verdify_ingestor_runtime_login;
+DO $attest_invoker_body_ingestor$
+BEGIN
+    IF public.fn_runtime_attest_ordinary_login() THEN
+        RAISE EXCEPTION 'shared invoker body drift missed ingestor receipt';
+    END IF;
+END;
+$attest_invoker_body_ingestor$;
+RESET SESSION AUTHORIZATION;
+ROLLBACK TO SAVEPOINT test_217_attest_invoker_body;
+SET SESSION AUTHORIZATION verdify_api_runtime_login;
+DO $attest_invoker_body_restored$
+BEGIN
+    IF NOT public.fn_runtime_attest_ordinary_login() THEN
+        RAISE EXCEPTION 'shared invoker body rollback did not restore receipt';
+    END IF;
+END;
+$attest_invoker_body_restored$;
+RESET SESSION AUTHORIZATION;
+
+SAVEPOINT test_217_attest_invoker_owner;
+ALTER FUNCTION public.fn_compliance_v2(interval) OWNER TO test_217_rogue;
+SET SESSION AUTHORIZATION verdify_ingestor_runtime_login;
+DO $attest_invoker_owner$
+BEGIN
+    IF public.fn_runtime_attest_ordinary_login() THEN
+        RAISE EXCEPTION 'transitive invoker owner drift was not detected';
+    END IF;
+END;
+$attest_invoker_owner$;
+RESET SESSION AUTHORIZATION;
+ROLLBACK TO SAVEPOINT test_217_attest_invoker_owner;
+SET SESSION AUTHORIZATION verdify_ingestor_runtime_login;
+DO $attest_invoker_owner_restored$
+BEGIN
+    IF NOT public.fn_runtime_attest_ordinary_login() THEN
+        RAISE EXCEPTION 'transitive invoker owner rollback did not restore receipt';
+    END IF;
+END;
+$attest_invoker_owner_restored$;
+RESET SESSION AUTHORIZATION;
+
+SAVEPOINT test_217_attest_invoker_acl;
+GRANT EXECUTE ON FUNCTION
+    public.fn_grade_credit(numeric,numeric,numeric,numeric,numeric)
+TO test_217_rogue;
+SET SESSION AUTHORIZATION verdify_ingestor_runtime_login;
+DO $attest_invoker_acl$
+BEGIN
+    IF public.fn_runtime_attest_ordinary_login() THEN
+        RAISE EXCEPTION 'transitive invoker ACL drift was not detected';
+    END IF;
+END;
+$attest_invoker_acl$;
+RESET SESSION AUTHORIZATION;
+ROLLBACK TO SAVEPOINT test_217_attest_invoker_acl;
+SET SESSION AUTHORIZATION verdify_ingestor_runtime_login;
+DO $attest_invoker_acl_restored$
+BEGIN
+    IF NOT public.fn_runtime_attest_ordinary_login() THEN
+        RAISE EXCEPTION 'transitive invoker ACL rollback did not restore receipt';
+    END IF;
+END;
+$attest_invoker_acl_restored$;
+RESET SESSION AUTHORIZATION;
+
+SAVEPOINT test_217_attest_invoker_definition;
+ALTER FUNCTION public.fn_solar_phase(timestamptz) IMMUTABLE;
+SET SESSION AUTHORIZATION verdify_api_runtime_login;
+DO $attest_invoker_definition$
+BEGIN
+    IF public.fn_runtime_attest_ordinary_login() THEN
+        RAISE EXCEPTION 'invoker definition-attribute drift was not detected';
+    END IF;
+END;
+$attest_invoker_definition$;
+RESET SESSION AUTHORIZATION;
+ROLLBACK TO SAVEPOINT test_217_attest_invoker_definition;
+SET SESSION AUTHORIZATION verdify_api_runtime_login;
+DO $attest_invoker_definition_restored$
+BEGIN
+    IF NOT public.fn_runtime_attest_ordinary_login() THEN
+        RAISE EXCEPTION 'invoker definition rollback did not restore receipt';
+    END IF;
+END;
+$attest_invoker_definition_restored$;
+RESET SESSION AUTHORIZATION;
+
+SAVEPOINT test_217_attest_nonclosure_invoker;
+ALTER FUNCTION public.fn_succession_gaps_by_zone(text) COST 217;
+SET SESSION AUTHORIZATION verdify_api_runtime_login;
+DO $attest_nonclosure_api$
+BEGIN
+    IF NOT public.fn_runtime_attest_ordinary_login() THEN
+        RAISE EXCEPTION 'non-closure invoker changed API receipt';
+    END IF;
+END;
+$attest_nonclosure_api$;
+RESET SESSION AUTHORIZATION;
+SET SESSION AUTHORIZATION verdify_ingestor_runtime_login;
+DO $attest_nonclosure_ingestor$
+BEGIN
+    IF NOT public.fn_runtime_attest_ordinary_login() THEN
+        RAISE EXCEPTION 'non-closure invoker changed ingestor receipt';
+    END IF;
+END;
+$attest_nonclosure_ingestor$;
+RESET SESSION AUTHORIZATION;
+ROLLBACK TO SAVEPOINT test_217_attest_nonclosure_invoker;
+
 -- Disposable application rows.  Direct writes here run as the superuser
 -- fixture owner; only the calls in the identity sections below run as the
 -- ordinary LOGINs.
+INSERT INTO public.greenhouses (id, name, timezone)
+VALUES ('vallery', 'runtime 217 default greenhouse', 'UTC')
+ON CONFLICT (id) DO NOTHING;
 INSERT INTO public.greenhouses (id, name, timezone) VALUES
     ('runtime217-completed', 'runtime 217 completed', 'UTC'),
     ('runtime217-armed', 'runtime 217 armed', 'UTC'),
@@ -1492,6 +2250,18 @@ BEGIN
 END;
 $api_identity$;
 
+INSERT INTO public.v_runtime_equipment_state_write
+    (ts, equipment, state, greenhouse_id)
+VALUES ('2099-01-01 00:00:00+00', 'test_217_api_facade', false, 'vallery');
+SELECT public.test_217_expect_sqlstate(
+    $$INSERT INTO public.equipment_state (ts,equipment,state,greenhouse_id)
+      VALUES ('2099-01-01 00:00:01+00','test_217_base_bypass',false,'vallery')$$,
+    '42501');
+SELECT public.test_217_expect_sqlstate(
+    $$UPDATE public.v_runtime_equipment_state_write
+         SET state=true WHERE equipment='test_217_api_facade'$$,
+    '42501');
+
 DO $api_temp_shadow$
 DECLARE
     resolved_oid oid;
@@ -1977,11 +2747,31 @@ $api_positive$;
 
 -- Top-level SECURITY INVOKER helper calls must be usable through their
 -- transitive relation ACLs, not merely appear executable in pg_proc.
+-- API pure/read helper execution matrix begin.
 SELECT count(*) FROM public.fn_band_setpoints(now());
 SELECT count(*) FROM public.fn_band_trace(now() - interval '1 minute',
                                           now(), 'runtime217-test');
+SELECT count(*) FROM public.fn_crop_band_value(
+    'house', 'vpd_low', now(), NULL, 'default', 'vallery');
+SELECT count(*) FROM public.fn_current_season();
 SELECT count(*) FROM public.fn_dli_validity(now(), 'runtime217-test');
+SELECT count(*) FROM public.v_dli_current;
+SELECT greenhouse_id, valid_from, valid_to, availability,
+       unavailable_reason, provenance, validity_revision, operator_validated
+  FROM public.dli_validity_intervals
+ LIMIT 1;
+SELECT public.test_217_expect_sqlstate(
+    $$SELECT id, created_at, created_by
+        FROM public.dli_validity_intervals WHERE false$$, '42501');
+SELECT count(*) FROM public.fn_house_vpd_control_band(now());
+SELECT count(*) FROM public.fn_lighting_circuit_policy(now(), 'vallery');
+SELECT count(*) FROM public.fn_lighting_lux_threshold_recommendation(
+    now(), 'vallery', interval '30 days');
+SELECT count(*) FROM public.fn_lighting_minutes_policy(now(), 'vallery');
+SELECT count(*) FROM public.fn_lighting_policy(now(), 'vallery');
 SELECT count(*) FROM public.fn_planner_scorecard(current_date);
+SELECT count(*) FROM public.fn_zone_vpd_targets(now());
+-- API pure/read helper execution matrix end.
 
 RESET SESSION AUTHORIZATION;
 
@@ -1990,6 +2780,433 @@ RESET SESSION AUTHORIZATION;
 -- assignment snapshot path remain usable.
 SET SESSION AUTHORIZATION verdify_ingestor_runtime_login;
 SET search_path = pg_catalog, public, pg_temp;
+
+-- Resolve every allowed INSERT projection under the exact ordinary LOGIN.
+-- Zero-row INSERT..SELECT exercises all granted target columns without
+-- manufacturing domain data for the 16 independent runtime relations.
+DO $all_facade_insert_resolution$
+DECLARE
+    facade record;
+    insert_columns text;
+BEGIN
+    FOR facade IN
+        SELECT view_name FROM (VALUES
+            ('v_runtime_climate_write'),
+            ('v_runtime_climate_action_log_write'),
+            ('v_runtime_diagnostics_write'),
+            ('v_runtime_energy_write'),
+            ('v_runtime_equipment_state_write'),
+            ('v_runtime_esp32_logs_write'),
+            ('v_runtime_forecast_deviation_log_write'),
+            ('v_runtime_gpu_power_write'),
+            ('v_runtime_infra_cpu_write'),
+            ('v_runtime_override_events_write'),
+            ('v_runtime_setpoint_changes_write'),
+            ('v_runtime_setpoint_clamps_write'),
+            ('v_runtime_setpoint_plan_write'),
+            ('v_runtime_setpoint_snapshot_write'),
+            ('v_runtime_system_state_write'),
+            ('v_runtime_weather_forecast_write')
+        ) listed(view_name)
+    LOOP
+        SELECT pg_catalog.string_agg(
+                   pg_catalog.format('%I', attribute_row.attname), ', '
+                   ORDER BY attribute_row.attnum)
+          INTO insert_columns
+          FROM pg_catalog.pg_attribute attribute_row
+         WHERE attribute_row.attrelid =
+               pg_catalog.to_regclass('public.' || facade.view_name)
+           AND attribute_row.attnum > 0
+           AND NOT attribute_row.attisdropped
+           AND pg_catalog.has_column_privilege(
+               current_user, attribute_row.attrelid,
+               attribute_row.attnum, 'INSERT');
+        IF insert_columns IS NULL THEN
+            RAISE EXCEPTION 'facade % has no INSERT projection',
+                facade.view_name;
+        END IF;
+        EXECUTE pg_catalog.format(
+            'INSERT INTO public.%I (%s) '
+            'SELECT %s FROM public.%I WHERE false',
+            facade.view_name, insert_columns,
+            insert_columns, facade.view_name);
+    END LOOP;
+
+    FOR facade IN
+        SELECT view_name FROM (VALUES
+            ('v_runtime_climate_write'),
+            ('v_runtime_gpu_power_write'),
+            ('v_runtime_infra_cpu_write'),
+            ('v_runtime_setpoint_changes_write')
+        ) listed(view_name)
+    LOOP
+        SELECT pg_catalog.string_agg(
+                   pg_catalog.format('%1$I = %1$I',
+                                     attribute_row.attname), ', '
+                   ORDER BY attribute_row.attnum)
+          INTO insert_columns
+          FROM pg_catalog.pg_attribute attribute_row
+         WHERE attribute_row.attrelid =
+               pg_catalog.to_regclass('public.' || facade.view_name)
+           AND attribute_row.attnum > 0
+           AND NOT attribute_row.attisdropped
+           AND pg_catalog.has_column_privilege(
+               current_user, attribute_row.attrelid,
+               attribute_row.attnum, 'UPDATE');
+        EXECUTE pg_catalog.format('UPDATE public.%I SET %s WHERE false',
+                                  facade.view_name, insert_columns);
+    END LOOP;
+    DELETE FROM public.v_runtime_weather_forecast_write WHERE false;
+END;
+$all_facade_insert_resolution$;
+
+-- Traverse every facade with a real row.  These values are deliberately
+-- isolated and the enclosing transaction rolls them back, but unlike the
+-- zero-row resolution matrix they exercise defaults, NOT NULL/check
+-- constraints, automatic-view rewriting and Timescale chunk routing.
+INSERT INTO public.v_runtime_climate_write (ts, temp_avg)
+VALUES ('2099-04-01 00:00:00+00', 70);
+INSERT INTO public.v_runtime_climate_action_log_write
+    (ts, climate_action, priority_axis)
+VALUES ('2099-04-01 00:00:01+00', 'IDLE', 'temp');
+INSERT INTO public.v_runtime_diagnostics_write (ts)
+VALUES ('2099-04-01 00:00:02+00');
+INSERT INTO public.v_runtime_energy_write (ts, watts_total)
+VALUES ('2099-04-01 00:00:03+00', 1);
+INSERT INTO public.v_runtime_equipment_state_write (ts, equipment, state)
+VALUES ('2099-04-01 00:00:04+00', 'test_217_all_facades', false);
+INSERT INTO public.v_runtime_esp32_logs_write (ts, level, message)
+VALUES ('2099-04-01 00:00:05+00', 'INFO', 'test_217_all_facades');
+INSERT INTO public.v_runtime_forecast_deviation_log_write
+    (parameter, observed, forecasted, delta, threshold, triggered)
+VALUES ('test_217_all_facades', 1, 2, 1, 0.5, true);
+INSERT INTO public.v_runtime_gpu_power_write
+    (ts, host, gpu, watts)
+VALUES ('2099-04-01 00:00:07+00', 'test-217-all-facades', '0', 1);
+INSERT INTO public.v_runtime_infra_cpu_write
+    (ts, host, cpu_util_pct)
+VALUES ('2099-04-01 00:00:08+00', 'test-217-all-facades', 1);
+INSERT INTO public.v_runtime_override_events_write (ts, override_type, mode)
+VALUES ('2099-04-01 00:00:09+00', 'test_217_all_facades', 'IDLE');
+INSERT INTO public.v_runtime_setpoint_changes_write
+    (ts, parameter, value, source, delivery_status)
+VALUES ('2099-04-01 00:00:10+00', 'test_217_all_facades', 1,
+        'test_217', 'pending');
+INSERT INTO public.v_runtime_setpoint_clamps_write
+    (parameter, requested, applied, reason)
+VALUES ('test_217_all_facades', 2, 1, 'band_hi');
+INSERT INTO public.v_runtime_setpoint_plan_write
+    (ts, parameter, value, plan_id, source, reason)
+VALUES (now() + interval '1 hour', 'test_217_all_facades', 1,
+        'test_217_all_facades', 'forecast', 'runtime boundary fixture');
+INSERT INTO public.v_runtime_setpoint_snapshot_write
+    (ts, parameter, value)
+VALUES ('2099-04-01 00:00:13+00', 'test_217_all_facades', 1);
+INSERT INTO public.v_runtime_system_state_write (ts, entity, value)
+VALUES ('2099-04-01 00:00:14+00', 'test_217_all_facades', 'ok');
+INSERT INTO public.v_runtime_weather_forecast_write (ts, fetched_at, temp_f)
+VALUES ('2099-04-01 00:00:15+00', '2099-04-01 00:00:00+00', 70);
+
+DO $all_facade_real_insert_results$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM public.climate
+                    WHERE ts = '2099-04-01 00:00:00+00')
+       OR NOT EXISTS (SELECT 1 FROM public.climate_action_log
+                       WHERE ts = '2099-04-01 00:00:01+00'
+                         AND climate_action = 'IDLE')
+       OR NOT EXISTS (SELECT 1 FROM public.diagnostics
+                       WHERE ts = '2099-04-01 00:00:02+00')
+       OR NOT EXISTS (SELECT 1 FROM public.energy
+                       WHERE ts = '2099-04-01 00:00:03+00')
+       OR NOT EXISTS (SELECT 1 FROM public.equipment_state
+                       WHERE ts = '2099-04-01 00:00:04+00'
+                         AND equipment = 'test_217_all_facades')
+       OR NOT EXISTS (SELECT 1 FROM public.esp32_logs
+                       WHERE ts = '2099-04-01 00:00:05+00'
+                         AND message = 'test_217_all_facades')
+       OR NOT EXISTS (SELECT 1 FROM public.forecast_deviation_log
+                       WHERE parameter = 'test_217_all_facades')
+       OR NOT EXISTS (SELECT 1 FROM public.gpu_power
+                       WHERE ts = '2099-04-01 00:00:07+00'
+                         AND host = 'test-217-all-facades')
+       OR NOT EXISTS (SELECT 1 FROM public.infra_cpu
+                       WHERE ts = '2099-04-01 00:00:08+00'
+                         AND host = 'test-217-all-facades')
+       OR NOT EXISTS (SELECT 1 FROM public.override_events
+                       WHERE ts = '2099-04-01 00:00:09+00'
+                         AND override_type = 'test_217_all_facades')
+       OR NOT EXISTS (SELECT 1 FROM public.setpoint_changes
+                       WHERE ts = '2099-04-01 00:00:10+00'
+                         AND parameter = 'test_217_all_facades')
+       OR NOT EXISTS (SELECT 1 FROM public.setpoint_clamps
+                       WHERE parameter = 'test_217_all_facades')
+       OR NOT EXISTS (SELECT 1 FROM public.setpoint_plan
+                       WHERE plan_id = 'test_217_all_facades')
+       OR NOT EXISTS (SELECT 1 FROM public.setpoint_snapshot
+                       WHERE ts = '2099-04-01 00:00:13+00'
+                         AND parameter = 'test_217_all_facades')
+       OR NOT EXISTS (SELECT 1 FROM public.system_state
+                       WHERE ts = '2099-04-01 00:00:14+00'
+                         AND entity = 'test_217_all_facades')
+       OR NOT EXISTS (SELECT 1 FROM public.weather_forecast
+                       WHERE ts = '2099-04-01 00:00:15+00') THEN
+        RAISE EXCEPTION 'real INSERT did not traverse every runtime facade';
+    END IF;
+END;
+$all_facade_real_insert_results$;
+
+DELETE FROM public.v_runtime_weather_forecast_write
+ WHERE ts = '2099-04-01 00:00:15+00';
+DO $weather_real_delete_result$
+BEGIN
+    IF EXISTS (SELECT 1 FROM public.weather_forecast
+                WHERE ts = '2099-04-01 00:00:15+00') THEN
+        RAISE EXCEPTION 'weather facade DELETE did not reach the base row';
+    END IF;
+END;
+$weather_real_delete_result$;
+
+-- Exact PostgreSQL-16 conflict inference through the owner-sealed views.  The
+-- explicit targets are the production gpu/infra statements and create future
+-- Timescale chunks; the second write must take the atomic UPDATE branch.
+INSERT INTO public.v_runtime_gpu_power_write
+    (ts, greenhouse_id, host, gpu, watts)
+VALUES ('2099-02-01 00:00:00+00', 'vallery', 'test-217', '0', 1)
+ON CONFLICT (greenhouse_id, ts, host, gpu) DO UPDATE
+SET watts = EXCLUDED.watts;
+INSERT INTO public.v_runtime_gpu_power_write
+    (ts, greenhouse_id, host, gpu, watts)
+VALUES ('2099-02-01 00:00:00+00', 'vallery', 'test-217', '0', 2)
+ON CONFLICT (greenhouse_id, ts, host, gpu) DO UPDATE
+SET watts = EXCLUDED.watts;
+INSERT INTO public.v_runtime_infra_cpu_write
+    (ts, greenhouse_id, host, cpu_util_pct)
+VALUES ('2099-02-01 00:00:00+00', 'vallery', 'test-217', 1)
+ON CONFLICT (greenhouse_id, ts, host) DO UPDATE
+SET cpu_util_pct = EXCLUDED.cpu_util_pct;
+INSERT INTO public.v_runtime_infra_cpu_write
+    (ts, greenhouse_id, host, cpu_util_pct)
+VALUES ('2099-02-01 00:00:00+00', 'vallery', 'test-217', 2)
+ON CONFLICT (greenhouse_id, ts, host) DO UPDATE
+SET cpu_util_pct = EXCLUDED.cpu_util_pct;
+
+-- Exercise the real lock-and-CAS shape used by the notification handler.
+INSERT INTO public.v_runtime_setpoint_changes_write
+    (ts, parameter, value, source, delivery_status)
+VALUES ('2099-02-01 00:00:00+00', 'test_217_lock', 1,
+        'test_217', 'pending');
+WITH candidate AS (
+    SELECT ts
+      FROM public.v_runtime_setpoint_changes_write
+     WHERE parameter = 'test_217_lock'
+       AND delivery_status = 'pending'
+     ORDER BY ts
+     FOR UPDATE SKIP LOCKED
+     LIMIT 1
+)
+UPDATE public.v_runtime_setpoint_changes_write change_row
+   SET delivery_status = 'requested'
+  FROM candidate
+ WHERE change_row.ts = candidate.ts
+   AND change_row.parameter = 'test_217_lock'
+RETURNING change_row.ts;
+
+-- Feature-off forecast subprocess surface: full rule read, exact log
+-- INSERT/UPDATE/RETURNING, and the implicit sequence nextval all execute as the
+-- ingestor LOGIN; the three imported operator/runbook reads also resolve.
+SELECT count(*) FROM public.forecast_action_rules;
+INSERT INTO public.forecast_action_log
+    (rule_name, action_taken, outcome, outcome_metrics)
+VALUES ('test_217', 'evaluated_ok', 'pending', '{}'::jsonb)
+RETURNING id AS test_217_forecast_log_id \gset
+UPDATE public.forecast_action_log action_row
+   SET outcome = 'no_action_required',
+       outcome_evaluated_at = now(),
+       outcome_metrics = '{"fixture":"test_217"}'::jsonb
+ WHERE action_row.id = :test_217_forecast_log_id;
+SELECT count(*) FROM public.v_greenhouse_now;
+SELECT greenhouse_id, valid_from, valid_to, availability,
+       unavailable_reason, provenance, validity_revision, operator_validated
+  FROM public.dli_validity_intervals
+ LIMIT 1;
+SELECT count(*) FROM public.fn_dli_validity(now(), 'vallery');
+SELECT public.test_217_expect_sqlstate(
+    $$SELECT id, created_at, created_by
+        FROM public.dli_validity_intervals WHERE false$$, '42501');
+SELECT component, score_pct FROM public.v_system_health_score;
+SELECT count(*) FROM public.fn_system_health();
+SELECT count(*) FROM public.fn_equipment_health();
+SELECT public.test_217_expect_sqlstate(
+    $$SELECT details, checked_at
+        FROM public.v_system_health_score WHERE false$$, '42501');
+SELECT public.test_217_expect_sqlstate(
+    $$UPDATE public.v_system_health_score
+         SET score_pct = score_pct WHERE false$$, '55000');
+SELECT count(*) FROM public.v_slack_crop_tasks_due;
+SELECT count(*) FROM public.slack_alert_runbooks;
+
+-- Execute every pure/read helper granted to the exact ingestor login.  FROM
+-- calls force scalar and set-returning bodies alike, exposing every nested
+-- invoker-rights relation/function dependency on the reconstructed schema.
+-- Ingestor pure/read helper execution matrix begin.
+SELECT count(*) FROM public.fn_band_setpoints(now());
+SELECT count(*) FROM public.fn_band_setpoint_provenance(now(), 'vallery');
+SELECT count(*) FROM public.fn_compliance_pct(interval '24 hours');
+SELECT count(*) FROM public.fn_crop_band_value(
+    'house', 'vpd_low', now(), NULL, 'default', 'vallery');
+SELECT count(*) FROM public.fn_current_season();
+SELECT count(*) FROM public.fn_dli_validity(now(), 'vallery');
+SELECT count(*) FROM public.fn_dli_proxy_lesson_invalid(
+    'runtime217-condition', 'runtime217-lesson');
+SELECT count(*) FROM public.fn_equip_at('fan1', now());
+SELECT count(*) FROM public.fn_equipment_health();
+SELECT count(*) FROM public.fn_forecast_correction('temp_f', 24::numeric);
+SELECT count(*) FROM public.fn_heat_staging_inversion();
+SELECT count(*) FROM public.fn_house_vpd_control_band(now());
+SELECT count(*) FROM public.fn_lighting_circuit_policy(now(), 'vallery');
+SELECT count(*) FROM public.fn_lighting_lux_threshold_recommendation(
+    now(), 'vallery', interval '30 days');
+SELECT count(*) FROM public.fn_lighting_minutes_policy(now(), 'vallery');
+SELECT count(*) FROM public.fn_lighting_policy(now(), 'vallery');
+SELECT count(*) FROM public.fn_plan_transition_audit(
+    NULL, interval '36 hours', interval '10 minutes');
+SELECT count(*) FROM public.fn_planner_scorecard(current_date);
+SELECT count(*) FROM public.fn_setpoint_at('temp_low', now());
+SELECT count(*) FROM public.fn_setpoint_at('vallery', 'temp_low', now());
+SELECT count(*) FROM public.fn_system_health();
+SELECT count(*) FROM public.fn_zone_vpd_targets(now());
+SELECT count(*) FROM public.fn_experiment_v2_ops_status();
+SELECT count(*) FROM public.v_stress_hours_today;
+-- Ingestor pure/read helper execution matrix end.
+
+-- Every hypertable parent is read-only to the runtime identity.  Verify the
+-- denial independently for all 16 parents, plus one projection-excluded
+-- weather column and an operation not granted on the energy facade.
+DO $all_base_dml_denied$
+DECLARE
+    target record;
+BEGIN
+    FOR target IN
+        SELECT * FROM (VALUES
+            ('climate','temp_avg'),
+            ('climate_action_log','climate_action'),
+            ('diagnostics','wifi_rssi'),
+            ('energy','watts_total'),
+            ('equipment_state','state'),
+            ('esp32_logs','message'),
+            ('forecast_deviation_log','parameter'),
+            ('gpu_power','watts'),
+            ('infra_cpu','cpu_util_pct'),
+            ('override_events','mode'),
+            ('setpoint_changes','delivery_status'),
+            ('setpoint_clamps','status'),
+            ('setpoint_plan','value'),
+            ('setpoint_snapshot','value'),
+            ('system_state','value'),
+            ('weather_forecast','temp_f')
+        ) denied(base_name, column_name)
+    LOOP
+        BEGIN
+            EXECUTE pg_catalog.format(
+                'UPDATE public.%1$I SET %2$I = %2$I WHERE false',
+                target.base_name, target.column_name);
+        EXCEPTION WHEN insufficient_privilege THEN
+            CONTINUE;
+        END;
+        RAISE EXCEPTION 'direct base DML unexpectedly succeeded on %',
+            target.base_name;
+    END LOOP;
+END;
+$all_base_dml_denied$;
+SELECT public.test_217_expect_sqlstate(
+    $$INSERT INTO public.v_runtime_weather_forecast_write
+          (ts, greenhouse_id)
+      VALUES (now(), 'vallery')$$, '42703');
+SELECT public.test_217_expect_sqlstate(
+    $$UPDATE public.v_runtime_energy_write
+         SET watts_total=0 WHERE false$$, '42501');
+
+-- Create compressed/current/future climate chunks through the runtime facade.
+-- The owner compresses only the isolated old chunk, then the exact LOGIN updates
+-- it through the same facade while timescaledb.restoring remains normal.
+INSERT INTO public.v_runtime_climate_write (ts, temp_avg)
+VALUES
+    ('1901-01-01 00:00:00+00', 70),
+    (now(), 71),
+    ('2099-03-01 00:00:00+00', 72);
+RESET SESSION AUTHORIZATION;
+-- schema.sql cannot serialize Timescale extension-catalog reloptions.  Only
+-- the deliberately ledgerless synthetic reconstruction may restore the
+-- canonical migration-158 setting here.  A ledgered restored-production run
+-- must already carry compression_enabled=true and fails rather than repairing
+-- drift, so this proof cannot mask a bad backup.
+DO $synthetic_climate_compression_precondition$
+BEGIN
+    IF pg_catalog.to_regclass('public.schema_migrations') IS NULL THEN
+        ALTER TABLE public.climate SET (
+            timescaledb.compress = true,
+            timescaledb.compress_orderby = 'ts DESC'
+        );
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1
+          FROM timescaledb_information.hypertables hypertable_row
+         WHERE hypertable_row.hypertable_schema = 'public'
+           AND hypertable_row.hypertable_name = 'climate'
+           AND hypertable_row.compression_enabled) THEN
+        RAISE EXCEPTION
+            'restored climate hypertable does not have compression enabled';
+    END IF;
+END;
+$synthetic_climate_compression_precondition$;
+SELECT public.compress_chunk(
+           pg_catalog.format('%I.%I', chunk_row.chunk_schema,
+                             chunk_row.chunk_name)::regclass)
+  FROM timescaledb_information.chunks chunk_row
+ WHERE chunk_row.hypertable_schema = 'public'
+   AND chunk_row.hypertable_name = 'climate'
+   AND chunk_row.range_start <= '1901-01-01 00:00:00+00'::timestamptz
+   AND chunk_row.range_end > '1901-01-01 00:00:00+00'::timestamptz
+   AND NOT chunk_row.is_compressed;
+DO $climate_target_is_compressed$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+          FROM timescaledb_information.chunks chunk_row
+         WHERE chunk_row.hypertable_schema = 'public'
+           AND chunk_row.hypertable_name = 'climate'
+           AND chunk_row.range_start <=
+               '1901-01-01 00:00:00+00'::timestamptz
+           AND chunk_row.range_end >
+               '1901-01-01 00:00:00+00'::timestamptz
+           AND chunk_row.is_compressed) THEN
+        RAISE EXCEPTION 'target climate row was not routed to a compressed chunk';
+    END IF;
+END;
+$climate_target_is_compressed$;
+SET SESSION AUTHORIZATION verdify_ingestor_runtime_login;
+SET search_path = pg_catalog, public, pg_temp;
+UPDATE public.v_runtime_climate_write
+   SET outdoor_temp_f = 50
+ WHERE ts = '1901-01-01 00:00:00+00';
+
+DO $timescale_dml_result$
+BEGIN
+    IF (SELECT watts FROM public.gpu_power
+         WHERE greenhouse_id = 'vallery'
+           AND ts = '2099-02-01 00:00:00+00'
+           AND host = 'test-217' AND gpu = '0') <> 2
+       OR (SELECT cpu_util_pct FROM public.infra_cpu
+            WHERE greenhouse_id = 'vallery'
+              AND ts = '2099-02-01 00:00:00+00'
+              AND host = 'test-217') <> 2
+       OR (SELECT outdoor_temp_f FROM public.climate
+            WHERE ts = '1901-01-01 00:00:00+00') <> 50
+       OR pg_catalog.current_setting('timescaledb.restoring') <> 'off' THEN
+        RAISE EXCEPTION 'allowed Timescale facade DML result differs';
+    END IF;
+END;
+$timescale_dml_result$;
 
 SELECT public.test_217_expect_sqlstate(
     $$SELECT * FROM public.v_iris_experiment_context$$, '42501');
@@ -2142,7 +3359,31 @@ $ingestor_positive$;
 
 -- The wrapper performs owner-only refreshes itself with fully-qualified
 -- matview names; the exact LOGIN neither owns nor directly refreshes them.
+DO $trusted_public_schema_before_refresh$
+BEGIN
+    IF pg_catalog.has_schema_privilege(
+           current_user, 'public', 'CREATE')
+       OR EXISTS (
+            SELECT 1
+              FROM pg_catalog.pg_namespace namespace_row
+              CROSS JOIN LATERAL pg_catalog.aclexplode(
+                  namespace_row.nspacl) acl
+             WHERE namespace_row.nspname = 'public'
+               AND acl.privilege_type = 'CREATE'
+               AND acl.grantee <> namespace_row.nspowner) THEN
+        RAISE EXCEPTION 'public schema is not sealed before refresh wrapper';
+    END IF;
+END;
+$trusted_public_schema_before_refresh$;
+CREATE FUNCTION pg_temp.fn_current_season() RETURNS text
+LANGUAGE plpgsql
+AS $body$
+BEGIN
+    RAISE EXCEPTION 'temporary helper intercepted refresh wrapper';
+END;
+$body$;
 SELECT public.fn_runtime_refresh_materialized_views();
+DROP FUNCTION pg_temp.fn_current_season();
 
 -- Proposal components remain writable only while the locked proposal is
 -- proposed.  Exact retries are idempotent, conflicting evidence and a late
@@ -3036,4 +4277,5 @@ BEGIN
 END;
 $data_replay$;
 
+\echo 'PASS: migration 217 Timescale/runtime boundary fixture'
 ROLLBACK;

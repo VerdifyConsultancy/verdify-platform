@@ -142,9 +142,11 @@ class TestDispatcherWiring:
 
     def test_dispatcher_inserts_clamp_rows(self):
         body = self._read()
-        assert "INSERT INTO setpoint_clamps" in body, (
-            "setpoint_dispatcher must INSERT into setpoint_clamps when planner values are clamped (Tier 1 #2)"
+        assert "INSERT INTO v_runtime_setpoint_clamps_write" in body, (
+            "setpoint_dispatcher must INSERT through the setpoint_clamps runtime facade when planner values "
+            "are clamped (Tier 1 #2)"
         )
+        assert "INSERT INTO setpoint_clamps" not in body
         assert "_write_clamp_audit_rows" in body
         assert "held_by_guardrail" in body
         assert "dispatched_params" in body
@@ -1067,7 +1069,10 @@ class TestOverrideEventsWiring:
 
     def test_ingestor_writes_override_events(self):
         body = self._read(self.INGESTOR_PATH)
-        assert "INSERT INTO override_events" in body, "ingestor must INSERT rows into override_events on override start"
+        assert "INSERT INTO v_runtime_override_events_write" in body, (
+            "ingestor must INSERT rows through the override_events runtime facade on override start"
+        )
+        assert "INSERT INTO override_events" not in body
         assert "_parse_override_set" in body, "ingestor needs a parser for the comma-separated override payload"
         assert "pending_override_events" in body, "ingestor State must track pending override events for flush"
 

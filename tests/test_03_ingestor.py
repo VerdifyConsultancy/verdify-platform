@@ -135,12 +135,14 @@ async def test_notify_unknown_timeout_is_not_retried_and_opens_alert(monkeypatch
             self.statuses: list[str] = []
             self.alerts: list[tuple] = []
             self.claim_query = ""
+            self.state_update_queries: list[str] = []
 
         async def fetchval(self, query, *args):
             if "WITH candidate AS" in query:
                 self.claim_query = query
                 return requested_at
-            if "UPDATE setpoint_changes" in query:
+            if "UPDATE v_runtime_setpoint_changes_write" in query:
+                self.state_update_queries.append(query)
                 self.statuses.append(args[0])
                 return args[0]
             if "SELECT min(ts)" in query:
@@ -213,6 +215,10 @@ async def test_notify_unknown_timeout_is_not_retried_and_opens_alert(monkeypatch
     assert len(connection.alerts) == 1
     assert "FOR UPDATE SKIP LOCKED" in connection.claim_query
     assert "COALESCE(delivery_status, 'pending') = 'pending'" in connection.claim_query
+    assert "FROM v_runtime_setpoint_changes_write" in connection.claim_query
+    assert connection.state_update_queries
+    assert all("UPDATE v_runtime_setpoint_changes_write" in query for query in connection.state_update_queries)
+    assert all("UPDATE setpoint_changes" not in query for query in connection.state_update_queries)
 
 
 @pytest.mark.asyncio
@@ -221,7 +227,7 @@ async def test_notify_cas_rejects_delayed_regression_from_superseded():
 
     class Connection:
         async def fetchval(self, query, *_args):
-            if "UPDATE setpoint_changes" in query:
+            if "UPDATE v_runtime_setpoint_changes_write" in query:
                 return None
             if "SELECT delivery_status" in query:
                 return "superseded"
@@ -247,7 +253,7 @@ async def test_notify_cas_preserves_superseded_when_inflight_send_returns():
 
     class Connection:
         async def fetchval(self, query, *_args):
-            if "UPDATE setpoint_changes" in query:
+            if "UPDATE v_runtime_setpoint_changes_write" in query:
                 return None
             if "SELECT delivery_status" in query:
                 return "superseded"

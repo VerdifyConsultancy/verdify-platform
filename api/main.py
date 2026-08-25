@@ -2019,7 +2019,7 @@ async def control_lights(
     async with pool.acquire() as conn:
         await conn.execute(
             """
-            INSERT INTO equipment_state (ts, equipment, state, greenhouse_id)
+            INSERT INTO v_runtime_equipment_state_write (ts, equipment, state, greenhouse_id)
             VALUES (now(), $1, $2, $3)
         """,
             f"grow_light_{circuit}",

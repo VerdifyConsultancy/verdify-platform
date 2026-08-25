@@ -89,32 +89,89 @@ data:
          AND (
            relation.relname LIKE 'experiment_v2\_%' ESCAPE '\'
            OR relation.relname LIKE 'v_experiment_v2\_%' ESCAPE '\'
+           OR relation.relname LIKE 'v_runtime\_%\_write' ESCAPE '\'
            OR relation.relname IN (
+             'climate',
+             'climate_action_log',
+             'diagnostics',
+             'energy',
+             'equipment_state',
+             'esp32_logs',
+             'forecast_deviation_log',
+             'gpu_power',
+             'infra_cpu',
+             'override_events',
+             'setpoint_changes',
+             'setpoint_clamps',
+             'setpoint_plan',
+             'setpoint_snapshot',
+             'system_state',
+             'weather_forecast',
+             'forecast_action_rules',
+             'forecast_action_log',
+             'forecast_action_log_id_seq',
+             'v_greenhouse_now',
+             'v_system_health_score',
+             'v_relay_stuck',
+             'v_climate_merged',
+             'mv_band_curve',
+             'v_slack_crop_tasks_due',
+             'slack_alert_runbooks',
+             'dli_validity_intervals',
              'equipment_counter_samples',
              'equipment_direct_state_snapshots',
-             'equipment_state_source_receipts'
+             'equipment_state_source_receipts',
+             'runtime_ordinary_login_attestation_receipts',
+             'planner_trigger_ledger',
+             'v_planner_trigger_health'
            )
          )
     ), candidate_identity AS (
       SELECT format(
-               'relation|%s|%s|%s|%s|%s',
+               'relation|%s|%s|%s|%s|acl=%s|options=%s|rls=%s|force_rls=%s|populated=%s|view=%s',
                relation.oid,
                relation.relname,
                relation.relkind,
                relation.relowner,
-               coalesce(relation.relacl::text, '<NULL>')
+               coalesce((
+                 SELECT string_agg(
+                          format('%s:%s:%s:%s', acl.grantor, acl.grantee,
+                                 acl.privilege_type, acl.is_grantable),
+                          ',' ORDER BY acl.grantor, acl.grantee,
+                                       acl.privilege_type, acl.is_grantable)
+                   FROM aclexplode(relation.relacl) acl
+               ), '<NULL>'),
+               coalesce((
+                 SELECT string_agg(option, ',' ORDER BY option)
+                   FROM unnest(relation.reloptions) option
+               ), '<NULL>'),
+               relation.relrowsecurity,
+               relation.relforcerowsecurity,
+               relation.relispopulated,
+               CASE WHEN relation.relkind IN ('v', 'm')
+                    THEN pg_get_viewdef(relation.oid, true)
+                    ELSE '<NOT-VIEW>'
+                END
              ) AS identity
         FROM pg_class relation
        WHERE relation.oid IN (SELECT oid FROM candidate_relations)
       UNION ALL
       SELECT format(
-               'column|%s|%s|%s|%s|%s|%s',
+               'column|%s|%s|%s|%s|%s|default=%s|acl=%s',
                attribute.attrelid,
                attribute.attnum,
                attribute.attname,
                format_type(attribute.atttypid, attribute.atttypmod),
                attribute.attnotnull,
-               coalesce(pg_get_expr(default_value.adbin, default_value.adrelid), '<NULL>')
+               coalesce(pg_get_expr(default_value.adbin, default_value.adrelid), '<NULL>'),
+               coalesce((
+                 SELECT string_agg(
+                          format('%s:%s:%s:%s', acl.grantor, acl.grantee,
+                                 acl.privilege_type, acl.is_grantable),
+                          ',' ORDER BY acl.grantor, acl.grantee,
+                                       acl.privilege_type, acl.is_grantable)
+                   FROM aclexplode(attribute.attacl) acl
+               ), '<NULL>')
              )
         FROM pg_attribute attribute
         LEFT JOIN pg_attrdef default_value
@@ -134,9 +191,10 @@ data:
        WHERE constraint_row.conrelid IN (SELECT oid FROM candidate_relations)
       UNION ALL
       SELECT format(
-               'trigger|%s|%s|%s',
+               'trigger|%s|%s|enabled=%s|definition=%s',
                trigger_row.tgrelid,
                trigger_row.tgname,
+               trigger_row.tgenabled,
                pg_get_triggerdef(trigger_row.oid, true)
              )
         FROM pg_trigger trigger_row
@@ -144,9 +202,37 @@ data:
          AND NOT trigger_row.tgisinternal
       UNION ALL
       SELECT format(
-               'function|%s|%s|%s|%s',
+               'rule|%s|%s|event=%s|enabled=%s|instead=%s|definition=%s',
+               rewrite_row.ev_class,
+               rewrite_row.rulename,
+               rewrite_row.ev_type,
+               rewrite_row.ev_enabled,
+               rewrite_row.is_instead,
+               pg_get_ruledef(rewrite_row.oid, true)
+             )
+        FROM pg_rewrite rewrite_row
+       WHERE rewrite_row.ev_class IN (SELECT oid FROM candidate_relations)
+      UNION ALL
+      SELECT format(
+               'policy|%s|%s|command=%s|permissive=%s|roles=%s|using=%s|check=%s',
+               policy_row.polrelid,
+               policy_row.polname,
+               policy_row.polcmd,
+               policy_row.polpermissive,
+               policy_row.polroles::text,
+               coalesce(pg_get_expr(policy_row.polqual,
+                                    policy_row.polrelid, true), '<NULL>'),
+               coalesce(pg_get_expr(policy_row.polwithcheck,
+                                    policy_row.polrelid, true), '<NULL>')
+             )
+        FROM pg_policy policy_row
+       WHERE policy_row.polrelid IN (SELECT oid FROM candidate_relations)
+      UNION ALL
+      SELECT format(
+               'function|%s|%s|owner=%s|definition=%s|acl=%s',
                procedure_row.oid,
                procedure_row.oid::regprocedure,
+               procedure_row.proowner,
                md5(pg_get_functiondef(procedure_row.oid)),
                coalesce(procedure_row.proacl::text, '<NULL>')
              )
@@ -156,6 +242,46 @@ data:
          AND (
            procedure_row.proname LIKE 'fn_experiment_v2\_%' ESCAPE '\'
            OR procedure_row.proname LIKE 'fn_record_equipment\_%' ESCAPE '\'
+           OR procedure_row.proname LIKE 'fn_runtime\_%' ESCAPE '\'
+           OR procedure_row.proname =
+              'normalize_planner_trigger_terminal_state'
+           OR procedure_row.oid = ANY (ARRAY[
+             'public.fn_band_setpoints(timestamptz)'::regprocedure,
+             'public.fn_band_trace(timestamptz,timestamptz,text)'::regprocedure,
+             'public.fn_band_setpoint_provenance(timestamptz,text)'::regprocedure,
+             'public.fn_center_band_setpoints(timestamptz)'::regprocedure,
+             'public.fn_compliance_pct(interval)'::regprocedure,
+             'public.fn_compliance_v2(interval)'::regprocedure,
+             'public.fn_crop_band_value(text,text,timestamptz,text,text,text)'::regprocedure,
+             'public.fn_current_season()'::regprocedure,
+             'public.fn_diurnal_interp(timestamptz,double precision,double precision)'::regprocedure,
+             'public.fn_dli_validity(timestamptz,text)'::regprocedure,
+             'public.fn_dli_proxy_lesson_invalid(text,text)'::regprocedure,
+             'public.fn_dli_source_invalid_reason(double precision)'::regprocedure,
+             'public.fn_equip_at(text,timestamptz)'::regprocedure,
+             'public.fn_equipment_health()'::regprocedure,
+             'public.fn_forecast_correction(text,numeric)'::regprocedure,
+             'public.fn_grade_credit(numeric,numeric,numeric,numeric,numeric)'::regprocedure,
+             'public.fn_heat_staging_inversion()'::regprocedure,
+             'public.fn_hermite_phase(double precision,double precision,double precision,double precision,double precision,double precision)'::regprocedure,
+             'public.fn_house_vpd_control_band(timestamptz)'::regprocedure,
+             'public.fn_lighting_circuit_policy(timestamptz,text)'::regprocedure,
+             'public.fn_lighting_lux_threshold_recommendation(timestamptz,text,interval)'::regprocedure,
+             'public.fn_lighting_minutes_policy(timestamptz,text)'::regprocedure,
+             'public.fn_lighting_policy(timestamptz,text)'::regprocedure,
+             'public.fn_plan_transition_audit(text,interval,interval)'::regprocedure,
+             'public.fn_planner_scorecard(date)'::regprocedure,
+             'public.fn_setpoint_at(text,timestamptz)'::regprocedure,
+             'public.fn_setpoint_at(text,text,timestamptz)'::regprocedure,
+             'public.fn_solar_altitude(timestamptz)'::regprocedure,
+             'public.fn_solar_phase(timestamptz)'::regprocedure,
+             'public.fn_solar_sunrise_hour(timestamptz)'::regprocedure,
+             'public.fn_solar_sunset_hour(timestamptz)'::regprocedure,
+             'public.fn_system_health()'::regprocedure,
+             'public.fn_zone_vpd_targets(timestamptz)'::regprocedure,
+             'public.fn_zone_band(text,timestamptz,text)'::regprocedure,
+             'public.fn_zone_band_grade(timestamptz,timestamptz,text)'::regprocedure
+           ])
          )
       UNION ALL
       SELECT format(
@@ -171,7 +297,7 @@ data:
          AND type_row.typname LIKE 'experiment_v2\_%' ESCAPE '\'
       UNION ALL
       SELECT format(
-               'role|%s|%s|%s|%s|%s|%s|%s|%s|%s',
+               'role|%s|%s|%s|%s|%s|%s|%s|%s|%s|config=%s',
                role_row.oid,
                role_row.rolname,
                role_row.rolsuper,
@@ -180,16 +306,28 @@ data:
                role_row.rolcreatedb,
                role_row.rolcanlogin,
                role_row.rolreplication,
-               role_row.rolbypassrls
+               role_row.rolbypassrls,
+               coalesce((
+                 SELECT string_agg(setting, ',' ORDER BY setting)
+                   FROM unnest(role_row.rolconfig) setting
+               ), '<NULL>')
              )
-        FROM pg_roles role_row
+       FROM pg_roles role_row
        WHERE role_row.rolname LIKE 'verdify_experiment\_%' ESCAPE '\'
+          OR role_row.rolname IN (
+               'verdify_api_runtime',
+               'verdify_ingestor_runtime',
+               'verdify_api_runtime_login',
+               'verdify_ingestor_runtime_login'
+             )
       UNION ALL
       SELECT format(
-               'membership|%s|%s|%s|%s',
+               'membership|%s|%s|admin=%s|inherit=%s|set=%s|grantor=%s',
                duty_role.rolname,
                member_role.rolname,
                membership.admin_option,
+               membership.inherit_option,
+               membership.set_option,
                grantor_role.rolname
              )
         FROM pg_auth_members membership
@@ -198,6 +336,18 @@ data:
         JOIN pg_roles grantor_role ON grantor_role.oid = membership.grantor
        WHERE duty_role.rolname LIKE 'verdify_experiment\_%' ESCAPE '\'
           OR member_role.rolname LIKE 'verdify_experiment\_%' ESCAPE '\'
+          OR duty_role.rolname IN (
+               'verdify_api_runtime',
+               'verdify_ingestor_runtime',
+               'verdify_api_runtime_login',
+               'verdify_ingestor_runtime_login'
+             )
+          OR member_role.rolname IN (
+               'verdify_api_runtime',
+               'verdify_ingestor_runtime',
+               'verdify_api_runtime_login',
+               'verdify_ingestor_runtime_login'
+             )
       UNION ALL
       SELECT format(
                'public-schema|%s|%s',
@@ -301,7 +451,7 @@ data:
       candidate_objects_after="$(candidate_object_snapshot)"
       ledger_after="$(ledger_snapshot)"
       if [[ "${candidate_objects_after}" != "${candidate_objects_before}" ]]; then
-        echo "[restore-rehearsal] FATAL: refused empty-ledger run mutated a 214/215/216/217 catalog object or ACL" >&2
+        echo "[restore-rehearsal] FATAL: refused empty-ledger run mutated a 214/215/216/217/218 catalog object or ACL" >&2
         exit 1
       fi
       if [[ "${ledger_after}" != "${ledger_before}" ]]; then
@@ -340,7 +490,8 @@ data:
       214-confirmed-component-experiment-v2.sql \
       215-experiment-v2-ops-observability.sql \
       216-equipment-counter-source-ledger.sql \
-      217-runtime-role-boundary.sql
+      217-runtime-role-boundary.sql \
+      218-planner-required-failure-history.sql
     do
       expected_sha256="$(sha256sum -- "/work/db/migrations/${migration}" | awk '{print $1}')"
       ledger_sha256="$(psql -X -v ON_ERROR_STOP=1 -At -d "${PGDATABASE}" \
@@ -358,6 +509,10 @@ data:
       -f /work/db/migrations/tests/test-216-equipment-counter-source-ledger.sql
     psql -X -v ON_ERROR_STOP=1 -d "${PGDATABASE}" \
       -f /work/db/migrations/tests/test-217-runtime-role-boundary.sql
+    echo "[restore-rehearsal] migration 217 exact-runtime Timescale facade/ACL fixture passed"
+    psql -X -v ON_ERROR_STOP=1 -d "${PGDATABASE}" \
+      -f /work/db/migrations/tests/test-218-planner-required-failure-history.sql
+    echo "[restore-rehearsal] migration 218 required-failure-history fixture passed"
     psql -X -v ON_ERROR_STOP=1 -d "${PGDATABASE}" <<'SQL'
     DO $assertions$
     BEGIN
@@ -506,11 +661,12 @@ data:
            'public.equipment_state_source_receipts', 'SELECT') OR
          has_table_privilege(
            'verdify_experiment_outcome_freezer',
-           'public.experiment_v2_outcome_source_bindings', 'SELECT') THEN
+           'public.experiment_v2_outcome_source_bindings', 'SELECT') OR
+         current_setting('timescaledb.restoring', true) IS DISTINCT FROM 'off' THEN
         RAISE EXCEPTION 'v2 non-superuser schema/ACL boundary differs from the candidate contract';
       END IF;
       PERFORM * FROM public.fn_experiment_v2_ops_status();
     END;
     $assertions$;
     SQL
-    echo "[restore-rehearsal] PASS: recent-dump schema/ACL replay and v2 vertical fixtures (non-superuser rehearsal; not proof of production-superuser denial)"
+    echo "[restore-rehearsal] PASS: recent-dump schema/ACL replay and v2 vertical fixtures; exact 214-218 ledger and runtime facade DML verified (non-superuser rehearsal; not proof of production-superuser denial)"

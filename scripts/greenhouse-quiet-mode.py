@@ -79,7 +79,7 @@ async def fetch_system_state(conn: asyncpg.Connection) -> dict[str, str]:
 
 async def insert_system_state(conn: asyncpg.Connection, entity: str, value: str) -> None:
     await conn.execute(
-        "INSERT INTO system_state (ts, entity, value) VALUES (now(), $1, $2)",
+        "INSERT INTO v_runtime_system_state_write (ts, entity, value) VALUES (now(), $1, $2)",
         entity,
         value,
     )

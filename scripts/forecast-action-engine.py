@@ -337,7 +337,7 @@ async def main():
                     )
                     if not DRY_RUN and demotion is None:
                         await conn.execute(
-                            "INSERT INTO setpoint_plan (ts, parameter, value, plan_id, source, reason) "
+                            "INSERT INTO v_runtime_setpoint_plan_write (ts, parameter, value, plan_id, source, reason) "
                             "VALUES (now(), $1, $2, $3, 'preemptive', $4)",
                             precool_param,
                             float(precool_value),
@@ -345,7 +345,7 @@ async def main():
                             reason,
                         )
                         await conn.execute(
-                            "INSERT INTO setpoint_changes (ts, parameter, value, source) "
+                            "INSERT INTO v_runtime_setpoint_changes_write (ts, parameter, value, source) "
                             "VALUES (now(), $1, $2, 'preemptive')",
                             precool_param,
                             float(precool_value),
@@ -433,7 +433,7 @@ async def main():
                     )
                 elif not DRY_RUN:
                     await conn.execute(
-                        "INSERT INTO setpoint_plan (ts, parameter, value, plan_id, source, reason) "
+                        "INSERT INTO v_runtime_setpoint_plan_write (ts, parameter, value, plan_id, source, reason) "
                         "VALUES (now(), $1, $2, $3, 'preemptive', $4)",
                         param,
                         float(adj_value),
@@ -443,7 +443,7 @@ async def main():
 
                     # Also write to setpoint_changes for immediate dispatch
                     await conn.execute(
-                        "INSERT INTO setpoint_changes (ts, parameter, value, source) VALUES (now(), $1, $2, 'preemptive')",
+                        "INSERT INTO v_runtime_setpoint_changes_write (ts, parameter, value, source) VALUES (now(), $1, $2, 'preemptive')",
                         param,
                         float(adj_value),
                     )

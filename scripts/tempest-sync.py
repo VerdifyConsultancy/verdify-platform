@@ -141,7 +141,9 @@ async def sync_tempest(conn) -> None:
                     set_parts.append(f"{c} = ${i + 1}")
                     set_vals.append(v)
                 set_vals.append(latest_esp32)
-                await conn.execute(f"UPDATE climate SET {', '.join(set_parts)} WHERE ts = ${len(set_vals)}", *set_vals)
+                await conn.execute(
+                    f"UPDATE v_runtime_climate_write SET {', '.join(set_parts)} WHERE ts = ${len(set_vals)}", *set_vals
+                )
                 log.info(
                     "Tempest: merged %d outdoor cols into ESP32 row at %s",
                     len(outdoor_cols),

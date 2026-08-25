@@ -208,7 +208,7 @@ async def record_state_change(equipment: str, is_on: bool) -> None:
     try:
         async with _db_pool.acquire() as conn:
             await conn.execute(
-                "INSERT INTO equipment_state (ts, equipment, state) VALUES ($1, $2, $3)",
+                "INSERT INTO v_runtime_equipment_state_write (ts, equipment, state) VALUES ($1, $2, $3)",
                 datetime.now(UTC),
                 equipment,
                 is_on,

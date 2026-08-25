@@ -252,7 +252,7 @@ async def test_live_confirmation(pool: asyncpg.Pool) -> None:
     # 2. Insert a synthetic setpoint_changes row, tagged so cleanup is easy.
     async with pool.acquire() as conn:
         await conn.execute(
-            "INSERT INTO setpoint_changes (ts, parameter, value, source) VALUES (now(), $1, $2, $3)",
+            "INSERT INTO v_runtime_setpoint_changes_write (ts, parameter, value, source) VALUES (now(), $1, $2, $3)",
             TEST_PARAM,
             float(current),
             SMOKE_SOURCE,
@@ -302,7 +302,7 @@ async def test_fb1_alert(pool: asyncpg.Pool) -> None:
     mismatched = float(current) + 999.0
     async with pool.acquire() as conn:
         await conn.execute(
-            "INSERT INTO setpoint_changes (ts, parameter, value, source) "
+            "INSERT INTO v_runtime_setpoint_changes_write (ts, parameter, value, source) "
             "VALUES (now() - interval '6 minutes', $1, $2, $3)",
             TEST_PARAM,
             mismatched,

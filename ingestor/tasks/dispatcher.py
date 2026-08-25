@@ -231,7 +231,7 @@ async def _fetch_quiet_state(conn: asyncpg.Connection) -> dict[str, str]:
 
 async def _record_quiet_mode(conn: asyncpg.Connection, mode: str) -> None:
     await conn.execute(
-        "INSERT INTO system_state (ts, entity, value) VALUES (now(), $1, $2)",
+        "INSERT INTO v_runtime_system_state_write (ts, entity, value) VALUES (now(), $1, $2)",
         QUIET_MODE_ENTITY,
         mode,
     )
@@ -383,7 +383,7 @@ async def _write_clamp_audit_rows(
             status = "rejected"
         await conn.execute(
             """
-            INSERT INTO setpoint_clamps
+            INSERT INTO v_runtime_setpoint_clamps_write
               (parameter, requested, applied, band_lo, band_hi, reason,
                status, plan_id, plan_ts, trigger_id, planner_instance)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::uuid, $11)
@@ -1211,7 +1211,7 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                 # equivalent of the legacy UPDATE clause
                 # delivery_status = 'deferred_heap_pressure', now set at INSERT.
                 await conn.execute(
-                    "INSERT INTO setpoint_changes "
+                    "INSERT INTO v_runtime_setpoint_changes_write "
                     "(ts, parameter, value, source, trigger_id, planner_instance, delivery_status) "
                     "VALUES ($1, $2, $3, $4, $5::uuid, $6, 'deferred_heap_pressure')",
                     requested_at,
@@ -1233,7 +1233,7 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             # The explicit requested timestamp below is the immutable command
             # identity used by queued/sent/cancelled outcome updates.
             await conn.execute(
-                "INSERT INTO setpoint_changes "
+                "INSERT INTO v_runtime_setpoint_changes_write "
                 "(ts, parameter, value, source, trigger_id, planner_instance, delivery_status) "
                 "VALUES ($1, $2, $3, $4, $5::uuid, $6, 'requested')",
                 requested_at,
@@ -1248,7 +1248,7 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                 # Expire them quietly — they are not delivery failures.
                 await conn.execute(
                     """
-                    UPDATE setpoint_changes
+                    UPDATE v_runtime_setpoint_changes_write
                        SET delivery_status = 'superseded', expired_at = now()
                      WHERE ts = $1 AND parameter = $2 AND confirmed_at IS NULL
                     """,
@@ -1269,7 +1269,7 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             if route is None:
                 await conn.execute(
                     """
-                    UPDATE setpoint_changes
+                    UPDATE v_runtime_setpoint_changes_write
                        SET delivery_status = 'failed', expired_at = now()
                      WHERE ts = $1 AND parameter = $2 AND confirmed_at IS NULL
                     """,
@@ -1346,7 +1346,7 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             async with pool.acquire() as state_conn:
                 persisted = await state_conn.fetchval(
                     """
-                    UPDATE setpoint_changes
+                    UPDATE v_runtime_setpoint_changes_write
                        SET delivery_status = $1,
                            expired_at = CASE
                                WHEN $1 IN ('failed', 'cancelled', 'superseded')
@@ -1409,7 +1409,7 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                         continue
                     persisted = await state_conn.fetchval(
                         """
-                        UPDATE setpoint_changes
+                        UPDATE v_runtime_setpoint_changes_write
                            SET delivery_status = 'superseded',
                                superseded_by_ts = $3,
                                expired_at = COALESCE(expired_at, $3)

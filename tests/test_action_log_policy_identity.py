@@ -58,7 +58,7 @@ def _tick_state(monkeypatch):
 
 
 def _inserts(conn):
-    return conn.sql_calls("INSERT INTO climate_action_log")
+    return conn.sql_calls("INSERT INTO v_runtime_climate_action_log_write")
 
 
 # ── Statement structure ─────────────────────────────────────────────────────
@@ -66,12 +66,16 @@ def _inserts(conn):
 
 def test_legacy_statement_references_no_policy_tables():
     legacy = ingestor._CLIMATE_ACTION_LOG_INSERT_LEGACY
+    assert "INSERT INTO v_runtime_climate_action_log_write" in legacy
+    assert "INSERT INTO climate_action_log" not in legacy
     for fragment in ("policy_identity", "policy_exposures", "policy_device_snapshots", "$19", "policy_vector_id"):
         assert fragment not in legacy, fragment
 
 
 def test_policy_statement_joins_exposures_first_then_snapshots():
     policy = ingestor._CLIMATE_ACTION_LOG_INSERT_POLICY
+    assert "INSERT INTO v_runtime_climate_action_log_write" in policy
+    assert "INSERT INTO climate_action_log" not in policy
     assert "policy_exposure_identity" in policy
     assert "policy_snapshot_identity" in policy
     assert "WHERE NOT EXISTS (SELECT 1 FROM policy_exposure_identity)" in policy
