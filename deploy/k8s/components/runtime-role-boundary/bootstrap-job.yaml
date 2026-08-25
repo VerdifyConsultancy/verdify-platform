@@ -61,6 +61,16 @@ spec:
                 || fail "API runtime credential is empty"
               [ -n "${VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD}" ] \
                 || fail "ingestor runtime credential is empty"
+              [ "${#VERDIFY_API_RUNTIME_DB_PASSWORD}" -eq 64 ] \
+                || fail "API runtime credential shape mismatch"
+              case "${VERDIFY_API_RUNTIME_DB_PASSWORD}" in
+                *[!0-9a-f]*) fail "API runtime credential shape mismatch" ;;
+              esac
+              [ "${#VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD}" -eq 64 ] \
+                || fail "ingestor runtime credential shape mismatch"
+              case "${VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD}" in
+                *[!0-9a-f]*) fail "ingestor runtime credential shape mismatch" ;;
+              esac
               [ "${VERDIFY_API_RUNTIME_DB_PASSWORD}" != "${VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD}" ] \
                 || fail "ordinary runtime credentials must be distinct"
               [ "${VERDIFY_API_RUNTIME_DB_PASSWORD}" != "${DB_ADMIN_PASSWORD}" ] \
@@ -68,22 +78,25 @@ spec:
               [ "${VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD}" != "${DB_ADMIN_PASSWORD}" ] \
                 || fail "ingestor runtime credential must differ from the database owner"
 
-              # psql reads both new passwords from its environment with
-              # \getenv. No credential enters an argv, SQL file, manifest, or
-              # log. Quoted psql variables make arbitrary password bytes safe
-              # SQL literals; one transaction installs both or neither.
-              if ! PGPASSWORD="${DB_ADMIN_PASSWORD}" \
-                psql -X --no-password --quiet --set=ON_ERROR_STOP=1 \
-                  -h "${DB_HOST}" -p "${DB_PORT}" -U verdify -d "${DB_NAME}" <<'SQL'
-              \getenv api_runtime_password VERDIFY_API_RUNTIME_DB_PASSWORD
-              \getenv ingestor_runtime_password VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD
-              BEGIN;
-              ALTER ROLE verdify_api_runtime_login
-                PASSWORD :'api_runtime_password';
-              ALTER ROLE verdify_ingestor_runtime_login
-                PASSWORD :'ingestor_runtime_password';
-              COMMIT;
-              SQL
+              # psql's \password command runs PQencryptPasswordConn in the
+              # client and sends only a SCRAM verifier in ALTER USER. The pod
+              # has no controlling TTY, so its four non-echoing prompts read
+              # these two passwords (twice each) from the pipe. `printf` is an
+              # ash builtin: no cleartext enters argv, SQL, a file, or logs.
+              # One psql connection and --single-transaction install both
+              # verifiers or neither.
+              if ! printf '%s\n%s\n%s\n%s\n' \
+                  "${VERDIFY_API_RUNTIME_DB_PASSWORD}" \
+                  "${VERDIFY_API_RUNTIME_DB_PASSWORD}" \
+                  "${VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD}" \
+                  "${VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD}" |
+                PGPASSWORD="${DB_ADMIN_PASSWORD}" \
+                  psql -X --no-password --quiet --set=ON_ERROR_STOP=1 \
+                    --single-transaction \
+                    -h "${DB_HOST}" -p "${DB_PORT}" -U verdify -d "${DB_NAME}" \
+                    --command="SET password_encryption = 'scram-sha-256'" \
+                    --command='\password verdify_api_runtime_login' \
+                    --command='\password verdify_ingestor_runtime_login'
               then
                 fail "transactional credential installation failed"
               fi

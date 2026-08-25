@@ -151,11 +151,18 @@ def test_staged_cutover_bootstraps_and_attests_both_actual_logins_before_sync():
         check=True,
         capture_output=True,
     )
-    assert "\\getenv api_runtime_password VERDIFY_API_RUNTIME_DB_PASSWORD" in script
-    assert "\\getenv ingestor_runtime_password VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD" in script
-    assert "BEGIN;" in script and "COMMIT;" in script
-    assert "ALTER ROLE verdify_api_runtime_login" in script
-    assert "ALTER ROLE verdify_ingestor_runtime_login" in script
+    assert '[ "${#VERDIFY_API_RUNTIME_DB_PASSWORD}" -eq 64 ]' in script
+    assert '[ "${#VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD}" -eq 64 ]' in script
+    assert script.count('*[!0-9a-f]*) fail "') == 2
+    assert "printf '%s\\n%s\\n%s\\n%s\\n'" in script
+    password_pipe = script.split("if ! printf", 1)[1].split("PGPASSWORD=", 1)[0]
+    assert password_pipe.count('"${VERDIFY_API_RUNTIME_DB_PASSWORD}"') == 2
+    assert password_pipe.count('"${VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD}"') == 2
+    assert password_pipe.rstrip().endswith("|")
+    assert "--single-transaction" in script
+    assert "--command=\"SET password_encryption = 'scram-sha-256'\"" in script
+    assert "--command='\\password verdify_api_runtime_login'" in script
+    assert "--command='\\password verdify_ingestor_runtime_login'" in script
     assert script.count("current_user = session_user") == 2
     assert script.count("'pg_catalog, public, pg_temp'") == 2
     assert script.count("public.fn_runtime_attest_ordinary_login() IS TRUE") == 2
@@ -171,11 +178,175 @@ def test_staged_cutover_bootstraps_and_attests_both_actual_logins_before_sync():
         "--set=ingestor_runtime_password",
         "-v api_runtime_password",
         "-v ingestor_runtime_password",
+        "\\getenv api_runtime_password",
+        "\\getenv ingestor_runtime_password",
+        "PASSWORD :'",
+        "ALTER ROLE verdify_api_runtime_login",
+        "ALTER ROLE verdify_ingestor_runtime_login",
         "ESP32",
         "MQTT",
     ):
         assert forbidden not in script
     assert all("PASSWORD}" not in line for line in script.splitlines() if "printf" in line or 'fail "' in line)
+
+
+def test_bootstrap_pipes_raw_passwords_only_to_non_echoing_psql_prompts(tmp_path: Path):
+    documents = _render(STAGED)
+    bootstrap = _job(documents, "verdify-runtime-role-bootstrap")
+    script = bootstrap["spec"]["template"]["spec"]["containers"][0]["args"][0]
+
+    fake_psql = tmp_path / "psql"
+    fake_psql.write_text(
+        """#!/bin/sh
+set -eu
+args=" $* "
+for arg in "$@"; do
+  for secret in \
+    "$DB_ADMIN_PASSWORD" \
+    "$VERDIFY_API_RUNTIME_DB_PASSWORD" \
+    "$VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD"
+  do
+    case "$arg" in
+      *"$secret"*) exit 90 ;;
+    esac
+  done
+done
+
+case "$args" in
+  *" --single-transaction "*)
+    [ "$PGPASSWORD" = "$DB_ADMIN_PASSWORD" ] || exit 91
+    have_scram=0
+    have_api=0
+    have_ingestor=0
+    for arg in "$@"; do
+      case "$arg" in
+        "--command=SET password_encryption = 'scram-sha-256'") have_scram=1 ;;
+        '--command=\\password verdify_api_runtime_login') have_api=1 ;;
+        '--command=\\password verdify_ingestor_runtime_login') have_ingestor=1 ;;
+      esac
+    done
+    [ "$have_scram:$have_api:$have_ingestor" = "1:1:1" ] || exit 92
+    IFS= read -r api_first || exit 93
+    IFS= read -r api_second || exit 94
+    IFS= read -r ingestor_first || exit 95
+    IFS= read -r ingestor_second || exit 96
+    [ "$api_first" = "$VERDIFY_API_RUNTIME_DB_PASSWORD" ] || exit 97
+    [ "$api_second" = "$VERDIFY_API_RUNTIME_DB_PASSWORD" ] || exit 98
+    [ "$ingestor_first" = "$VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD" ] || exit 99
+    [ "$ingestor_second" = "$VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD" ] || exit 100
+    if IFS= read -r unexpected; then exit 101; fi
+    printf '%s\n' install >>"$FAKE_PSQL_TRACE"
+    ;;
+  *" -U verdify_api_runtime_login "*)
+    [ "$PGPASSWORD" = "$VERDIFY_API_RUNTIME_DB_PASSWORD" ] || exit 102
+    payload="$(cat)"
+    case "$payload" in
+      *"$DB_ADMIN_PASSWORD"*|*"$VERDIFY_API_RUNTIME_DB_PASSWORD"*|*"$VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD"*)
+        exit 103
+        ;;
+    esac
+    printf '%s\n' api-attest >>"$FAKE_PSQL_TRACE"
+    printf '%s\n' t
+    ;;
+  *" -U verdify_ingestor_runtime_login "*)
+    [ "$PGPASSWORD" = "$VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD" ] || exit 104
+    payload="$(cat)"
+    case "$payload" in
+      *"$DB_ADMIN_PASSWORD"*|*"$VERDIFY_API_RUNTIME_DB_PASSWORD"*|*"$VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD"*)
+        exit 105
+        ;;
+    esac
+    printf '%s\n' ingestor-attest >>"$FAKE_PSQL_TRACE"
+    printf '%s\n' t
+    ;;
+  *) exit 106 ;;
+esac
+"""
+    )
+    fake_psql.chmod(0o755)
+    trace = tmp_path / "psql.trace"
+    api_password = "a" * 64
+    ingestor_password = "b" * 64
+    admin_password = "owner-password-marker-never-printed"
+    environment = {
+        **os.environ,
+        "PATH": f"{tmp_path}:{os.environ['PATH']}",
+        "DB_HOST": "db.invalid",
+        "DB_PORT": "5432",
+        "DB_NAME": "verdify",
+        "DB_ADMIN_USER": "verdify",
+        "DB_ADMIN_PASSWORD": admin_password,
+        "VERDIFY_API_RUNTIME_DB_USER": "verdify_api_runtime_login",
+        "VERDIFY_API_RUNTIME_DB_PASSWORD": api_password,
+        "VERDIFY_INGESTOR_RUNTIME_DB_USER": "verdify_ingestor_runtime_login",
+        "VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD": ingestor_password,
+        "FAKE_PSQL_TRACE": str(trace),
+    }
+    result = subprocess.run(
+        ["/bin/sh", "-ec", script],
+        env=environment,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    combined_output = result.stdout + result.stderr
+    assert "both ordinary logins installed and attested" in combined_output
+    for secret in (admin_password, api_password, ingestor_password):
+        assert secret not in combined_output
+    assert trace.read_text().splitlines() == ["install", "api-attest", "ingestor-attest"]
+
+
+def test_bootstrap_rejects_noncanonical_passwords_before_psql(tmp_path: Path):
+    documents = _render(STAGED)
+    bootstrap = _job(documents, "verdify-runtime-role-bootstrap")
+    script = bootstrap["spec"]["template"]["spec"]["containers"][0]["args"][0]
+
+    fake_psql = tmp_path / "psql"
+    fake_psql.write_text(
+        """#!/bin/sh
+: >"$FAKE_PSQL_CALLED"
+exit 0
+"""
+    )
+    fake_psql.chmod(0o755)
+    invalid_cases = (
+        ("a" * 63, "b" * 64),
+        ("A" + "a" * 63, "b" * 64),
+        ("a" * 63 + "\n", "b" * 64),
+        ("a" * 64, "g" + "b" * 63),
+    )
+
+    for index, (api_password, ingestor_password) in enumerate(invalid_cases):
+        called = tmp_path / f"psql-called-{index}"
+        environment = {
+            **os.environ,
+            "PATH": f"{tmp_path}:{os.environ['PATH']}",
+            "DB_HOST": "db.invalid",
+            "DB_PORT": "5432",
+            "DB_NAME": "verdify",
+            "DB_ADMIN_USER": "verdify",
+            "DB_ADMIN_PASSWORD": "owner-password-marker-never-printed",
+            "VERDIFY_API_RUNTIME_DB_USER": "verdify_api_runtime_login",
+            "VERDIFY_API_RUNTIME_DB_PASSWORD": api_password,
+            "VERDIFY_INGESTOR_RUNTIME_DB_USER": "verdify_ingestor_runtime_login",
+            "VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD": ingestor_password,
+            "FAKE_PSQL_CALLED": str(called),
+        }
+        result = subprocess.run(
+            ["/bin/sh", "-ec", script],
+            env=environment,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+
+        assert result.returncode == 1
+        assert not called.exists()
+        combined_output = result.stdout + result.stderr
+        assert "runtime credential shape mismatch" in combined_output
+        assert api_password not in combined_output
+        assert ingestor_password not in combined_output
 
 
 def test_synthetic_direct_prod_adoption_uses_the_prod_migrate_transformer(tmp_path: Path):
