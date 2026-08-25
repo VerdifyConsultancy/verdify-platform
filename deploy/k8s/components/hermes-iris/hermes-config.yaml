@@ -27,6 +27,65 @@ metadata:
     app.kubernetes.io/part-of: verdify
     app.kubernetes.io/component: hermes-iris
 data:
+  hermes-compressor-oob-patch.py: |
+    """Backport Hermes issue #75588 / PR #75884 onto the immutable May runtime."""
+    import argparse
+    import hashlib
+    import os
+    from pathlib import Path
+
+    SOURCE_SHA256 = "8a5489f5c71c6755a7f81eb91763e231018d823f5269617b6b743eb96282cf4b"
+    PATCHED_SHA256 = "8e19bea3aa8c393d873e36503b310d4af74a2b09ccae51bae32104c245fc9e9e"
+    PATCHES = (
+        (
+            b'        """Find the newest handoff summary inside a compression window."""\n'
+            b"        for idx in range(end - 1, start - 1, -1):\n",
+            b'        """Find the newest handoff summary inside a compression window."""\n'
+            b"        n = len(messages)\n"
+            b"        start = max(0, min(start, n))\n"
+            b"        end = max(start, min(end, n))\n"
+            b"        for idx in range(end - 1, start - 1, -1):\n",
+        ),
+        (
+            b"        return max(cut_idx, head_end + 1)\n",
+            b"        return min(n, max(cut_idx, head_end + 1))\n",
+        ),
+    )
+
+    def apply_patches(source):
+        patched = source
+        for before, after in PATCHES:
+            if patched.count(before) != 1:
+                raise RuntimeError("pinned Hermes compressor patch anchor mismatch")
+            patched = patched.replace(before, after, 1)
+        return patched
+
+    def verified_patch(source):
+        if hashlib.sha256(source).hexdigest() != SOURCE_SHA256:
+            raise RuntimeError("pinned Hermes compressor source digest mismatch")
+        patched = apply_patches(source)
+        if hashlib.sha256(patched).hexdigest() != PATCHED_SHA256:
+            raise RuntimeError("patched Hermes compressor digest mismatch")
+        return patched
+
+    def main():
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--source", required=True)
+        parser.add_argument("--destination", required=True)
+        args = parser.parse_args()
+        source = Path(args.source)
+        destination = Path(args.destination)
+        patched = verified_patch(source.read_bytes())
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        temporary = destination.with_name(f".{destination.name}.{os.getpid()}.tmp")
+        temporary.write_bytes(patched)
+        os.chmod(temporary, 0o444)
+        os.replace(temporary, destination)
+        print(f"installed verified Hermes compressor backport sha256={PATCHED_SHA256}")
+
+    if __name__ == "__main__":
+        main()
+
   tool-readiness.py: |
     """Hermes probes: configured tools, MCP server, and in-process client state."""
     import argparse
