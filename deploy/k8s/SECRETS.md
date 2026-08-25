@@ -107,6 +107,17 @@ any sync. `deploy/k8s/overlays/prod-runtime-role-boundary` is a compatibility
 review alias that renders byte-identically to the active `overlays/prod` source;
 it is not a second activation layer.
 
+Gate-2 experiment credential activation is separately owned by the
+`experiment-v2-credential-bootstrap` component. Before that component is
+merged/synced, the fleet authority must reconcile the three experiment
+username/password pairs and two API tokens listed above in
+`verdify-app-secrets`, plus the `password` key in each of the shadow-scheduler,
+randomizer, and outcome-freezer Secrets. The wave-2 hook requires 64-character
+lowercase-hex, pairwise-distinct activation values, installs all six database
+SCRAM verifiers transactionally, and attests each actual TCP login. It never
+reads or validates the optional selector-provider key; provider activation has
+its own exact endpoint/CIDR/identity gate.
+
 `verdify-lab-publisher-s3` is non-device but required before enabling the
 `verdify-lab-publisher` CronJob. The durable prod prefixes are
 `s3://verdify-platform/lab/content`, `.../public`, and `.../state`; dev uses the
