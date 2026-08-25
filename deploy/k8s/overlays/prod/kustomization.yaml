@@ -96,6 +96,11 @@ components:
   # selector endpoint), so adopting it here creates only an inert, observable
   # Gate-1 runtime. Shadow/randomized operation remains a later GitOps change.
   - ../../components/experiment-v2-orchestrator
+  # ONE RELEASE ONLY: PreSync -2 restores the latest bounded dump into
+  # disposable PostgreSQL 16 / TimescaleDB 2.25.2 and proves migrations
+  # 214-218 plus the ordinary-runtime write boundary with the candidate
+  # migrate digest. Remove this component reference after retained PASS logs.
+  - ../../components/experiment-v2-restore-rehearsal
   # Gate 1 ordinary database-role cutover. The PreSync hook installs and proves
   # the two migration-217 logins before API/ingestor roll, then the pod patches
   # remove the database-owner credential from both ordinary containers. Merge
