@@ -154,7 +154,8 @@ class TestIngestorTasks:
         assert ingestor.state.pending_override_events == []
         assert len(pool.conn.executemany_calls) == 1
         query, rows = pool.conn.executemany_calls[0]
-        assert "INSERT INTO override_events" in query
+        assert "INSERT INTO v_runtime_override_events_write" in query
+        assert "INSERT INTO override_events" not in query
         assert rows == [
             (ts, "fog_gate_rh", "VENTILATE"),
             (ts, "occupancy_blocks_equipment", "VENTILATE"),

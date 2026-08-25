@@ -96,6 +96,11 @@ components:
   # selector endpoint), so adopting it here creates only an inert, observable
   # Gate-1 runtime. Shadow/randomized operation remains a later GitOps change.
   - ../../components/experiment-v2-orchestrator
+  # ONE RELEASE ONLY: PreSync -2 restores the latest bounded dump into
+  # disposable PostgreSQL 16 / TimescaleDB 2.25.2 and proves migrations
+  # 214-218 plus the ordinary-runtime write boundary with the candidate
+  # migrate digest. Remove this component reference after retained PASS logs.
+  - ../../components/experiment-v2-restore-rehearsal
   # #124 verdify-lab — the public Quartz research site (lab.verdify.ai). Pure web
   # tier, stateless (no PVC), NO device path. Built from the
   # verdify-site-legacy Dockerfile.k3s (see components/lab-site/lab-site.yaml).

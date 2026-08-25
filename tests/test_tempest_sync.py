@@ -63,8 +63,9 @@ async def test_tempest_skips_climate_insert_without_recent_indoor_row(tempest_mo
 
     queries = [query for query, _args in conn.executes]
     assert any("skipped climate overlay" in record.message for record in caplog.records)
-    assert not any(query.startswith("INSERT INTO climate") for query in queries)
-    assert not any(query.startswith("UPDATE climate") for query in queries)
+    assert not any(query.startswith("INSERT INTO v_runtime_climate_write") for query in queries)
+    assert not any(query.startswith("UPDATE v_runtime_climate_write") for query in queries)
+    assert not any(query.startswith(("INSERT INTO climate", "UPDATE climate")) for query in queries)
     assert any(query.startswith("INSERT INTO weather_station") for query in queries)
 
 
@@ -76,6 +77,7 @@ async def test_tempest_merges_into_recent_indoor_row(tempest_module):
     await tempest_module.sync_tempest(conn)
 
     queries = [query for query, _args in conn.executes]
-    assert any(query.startswith("UPDATE climate SET") for query in queries)
-    assert not any(query.startswith("INSERT INTO climate") for query in queries)
+    assert any(query.startswith("UPDATE v_runtime_climate_write SET") for query in queries)
+    assert not any(query.startswith("INSERT INTO v_runtime_climate_write") for query in queries)
+    assert not any(query.startswith(("INSERT INTO climate", "UPDATE climate")) for query in queries)
     assert any(query.startswith("INSERT INTO weather_station") for query in queries)

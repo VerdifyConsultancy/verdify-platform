@@ -61,7 +61,8 @@ async def water_flowing_sync(pool: asyncpg.Pool) -> None:
         )
         if current is None or flowing != current:
             await conn.execute(
-                "INSERT INTO equipment_state (ts, equipment, state) VALUES (NOW(), 'water_flowing', $1)", flowing
+                "INSERT INTO v_runtime_equipment_state_write (ts, equipment, state) VALUES (NOW(), 'water_flowing', $1)",
+                flowing,
             )
 
         # leak_detected — hysteresis: use tighter clear threshold while latched
@@ -103,7 +104,8 @@ async def water_flowing_sync(pool: asyncpg.Pool) -> None:
         )
         if current_leak is None or leak != current_leak:
             await conn.execute(
-                "INSERT INTO equipment_state (ts, equipment, state) VALUES (NOW(), 'leak_detected', $1)", leak
+                "INSERT INTO v_runtime_equipment_state_write (ts, equipment, state) VALUES (NOW(), 'leak_detected', $1)",
+                leak,
             )
         _leak_state = leak
 
@@ -334,7 +336,7 @@ async def shelly_sync(pool: asyncpg.Pool) -> None:
         return
     async with pool.acquire() as conn:
         await conn.execute(
-            "INSERT INTO energy (ts, watts_total, watts_heat, watts_fans, watts_other, kwh_today) VALUES ($1,$2,$3,$4,$5,$6)",
+            "INSERT INTO v_runtime_energy_write (ts, watts_total, watts_heat, watts_fans, watts_other, kwh_today) VALUES ($1,$2,$3,$4,$5,$6)",
             sample.ts,
             sample.watts_total,
             sample.watts_heat,
@@ -357,7 +359,7 @@ async def gpu_power_sync(pool: asyncpg.Pool) -> None:
     async with pool.acquire() as conn:
         await conn.executemany(
             """
-            INSERT INTO gpu_power (
+            INSERT INTO v_runtime_gpu_power_write (
                 ts, host, vm_name, purpose, gpu, device, model_name, watts,
                 gpu_util_pct, temperature_c, memory_used_mb, memory_free_mb, source, raw, greenhouse_id
             )
@@ -413,7 +415,7 @@ async def infra_cpu_sync(pool: asyncpg.Pool) -> None:
     async with pool.acquire() as conn:
         await conn.executemany(
             """
-            INSERT INTO infra_cpu (
+            INSERT INTO v_runtime_infra_cpu_write (
                 ts, host, vm_name, purpose, cpu_util_pct, load1, cores,
                 memory_used_pct, source, raw, greenhouse_id
             )
@@ -492,7 +494,7 @@ async def tempest_sync(pool: asyncpg.Pool) -> None:
         )
         if count and count > 0:
             result = await conn.execute(
-                f"UPDATE climate SET {', '.join(parts)} WHERE ts > now() - interval '6 minutes' AND temp_avg IS NOT NULL AND outdoor_temp_f IS NULL",
+                f"UPDATE v_runtime_climate_write SET {', '.join(parts)} WHERE ts > now() - interval '6 minutes' AND temp_avg IS NOT NULL AND outdoor_temp_f IS NULL",
                 *vals,
             )
             log.debug("Tempest: %d outdoor cols synced to %s rows", len(outdoor_cols), result.split()[-1])
@@ -503,7 +505,9 @@ async def tempest_sync(pool: asyncpg.Pool) -> None:
             )
             if latest:
                 vals.append(latest)
-                await conn.execute(f"UPDATE climate SET {', '.join(parts)} WHERE ts = ${len(vals)}", *vals)
+                await conn.execute(
+                    f"UPDATE v_runtime_climate_write SET {', '.join(parts)} WHERE ts = ${len(vals)}", *vals
+                )
                 log.debug("Tempest: %d outdoor cols refreshed on latest row", len(outdoor_cols))
             else:
                 log.warning("Tempest: skipped climate overlay; no recent indoor climate row")
@@ -561,7 +565,9 @@ async def ha_sensor_sync(pool: asyncpg.Pool) -> None:
                     parts.append(f"{c} = ${i + 1}")
                     vals.append(v)
                 vals.append(latest)
-                await conn.execute(f"UPDATE climate SET {', '.join(parts)} WHERE ts = ${len(vals)}", *vals)
+                await conn.execute(
+                    f"UPDATE v_runtime_climate_write SET {', '.join(parts)} WHERE ts = ${len(vals)}", *vals
+                )
 
         # Grow lights → equipment_state. Record every HA poll so lighting
         # traceability can prove physical state after OTA even if a relay held.
@@ -577,7 +583,10 @@ async def ha_sensor_sync(pool: asyncpg.Pool) -> None:
                 log.error("Light event skipped (validation failed: %s)", e)
                 continue
             await conn.execute(
-                "INSERT INTO equipment_state (ts, equipment, state) VALUES ($1, $2, $3)", now, equip, is_on
+                "INSERT INTO v_runtime_equipment_state_write (ts, equipment, state) VALUES ($1, $2, $3)",
+                now,
+                equip,
+                is_on,
             )
             if changed:
                 log.info("Light: %s → %s", equip, "ON" if is_on else "OFF")
@@ -597,7 +606,10 @@ async def ha_sensor_sync(pool: asyncpg.Pool) -> None:
                     log.error("Switch event skipped (validation failed: %s)", e)
                     continue
                 await conn.execute(
-                    "INSERT INTO equipment_state (ts, equipment, state) VALUES ($1, $2, $3)", now, equip, is_on
+                    "INSERT INTO v_runtime_equipment_state_write (ts, equipment, state) VALUES ($1, $2, $3)",
+                    now,
+                    equip,
+                    is_on,
                 )
             new_state[key] = is_on
 

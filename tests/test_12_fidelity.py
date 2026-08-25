@@ -470,8 +470,10 @@ def test_forecast_action_engine_does_not_write_dispatcher_owned_setpoints():
     start = script.index('if action_type == "setpoint" and param in BAND_OWNED_PARAMS')
     end = script.index('if action_type == "setpoint" and param and adj_value is not None', start + 1)
     body = script[start:end]
-    assert "INSERT INTO setpoint_plan" not in body
-    assert "INSERT INTO setpoint_changes" not in body
+    assert "INSERT INTO v_runtime_setpoint_plan_write" not in body
+    assert "INSERT INTO v_runtime_setpoint_changes_write" not in body
+    assert "INSERT INTO setpoint_plan" not in script
+    assert "INSERT INTO setpoint_changes" not in script
 
 
 def test_setpoint_confirmation_monitor_resolves_acknowledged_alerts():
@@ -1824,7 +1826,8 @@ def test_dispatcher_writes_guardrail_hold_audits_without_setpoint_push():
 def test_dispatcher_clamp_audit_rows_carry_plan_metadata():
 
     src = _tasks_src()
-    assert "INSERT INTO setpoint_clamps" in src
+    assert "INSERT INTO v_runtime_setpoint_clamps_write" in src
+    assert "INSERT INTO setpoint_clamps" not in src
     assert "status, plan_id, plan_ts, trigger_id, planner_instance" in src
     assert '"plan_id": r["plan_id"]' in src
     assert '"plan_ts": r["ts"]' in src

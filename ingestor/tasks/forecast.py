@@ -109,14 +109,14 @@ async def forecast_sync(pool: asyncpg.Pool) -> None:
         return
     now = datetime.now(UTC)
     async with pool.acquire() as conn:
-        await conn.execute("DELETE FROM weather_forecast WHERE fetched_at < now() - interval '30 days'")
+        await conn.execute("DELETE FROM v_runtime_weather_forecast_write WHERE fetched_at < now() - interval '30 days'")
         for row in rows:
             ts = datetime.fromisoformat(row["ts"])
             if ts.tzinfo is None:
                 ts = ts.replace(tzinfo=_DENVER).astimezone(UTC)
             await conn.execute(
                 """
-                INSERT INTO weather_forecast (ts, fetched_at, temp_f, rh_pct, wind_speed_mph, wind_dir_deg,
+                INSERT INTO v_runtime_weather_forecast_write (ts, fetched_at, temp_f, rh_pct, wind_speed_mph, wind_dir_deg,
                     cloud_cover_pct, precip_prob_pct, solar_w_m2, dew_point_f, feels_like_f, vpd_kpa,
                     precip_in, rain_in, snow_in, wind_gust_mph, uv_index, et0_mm,
                     direct_radiation_w_m2, diffuse_radiation_w_m2, sunshine_duration_s, weather_code,
@@ -509,7 +509,7 @@ async def forecast_deviation_check(pool: asyncpg.Pool) -> None:
         for d in logged:
             await conn.execute(
                 """
-                INSERT INTO forecast_deviation_log
+                INSERT INTO v_runtime_forecast_deviation_log_write
                   (parameter, observed, forecasted, delta, threshold, triggered)
                 VALUES ($1,$2,$3,$4,$5,$6)
                 """,

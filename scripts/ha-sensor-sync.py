@@ -250,7 +250,8 @@ async def sync_once(db_url: str) -> None:
                         set_vals.append(v)
                     set_vals.append(latest_esp32)
                     await conn.execute(
-                        f"UPDATE climate SET {', '.join(set_parts)} WHERE ts = ${len(set_vals)}", *set_vals
+                        f"UPDATE v_runtime_climate_write SET {', '.join(set_parts)} WHERE ts = ${len(set_vals)}",
+                        *set_vals,
                     )
                     log.info(
                         "Merged HA climate overlay into ESP32 row: %s",
@@ -269,7 +270,7 @@ async def sync_once(db_url: str) -> None:
                 new_state[eid] = is_on
                 prev = prev_state.get(eid)
                 await conn.execute(
-                    "INSERT INTO equipment_state (ts, equipment, state) VALUES ($1, $2, $3)",
+                    "INSERT INTO v_runtime_equipment_state_write (ts, equipment, state) VALUES ($1, $2, $3)",
                     now,
                     equip_name,
                     is_on,
@@ -286,7 +287,7 @@ async def sync_once(db_url: str) -> None:
                 prev = prev_state.get(prev_key)
                 if prev is None or prev != is_on:
                     await conn.execute(
-                        "INSERT INTO equipment_state (ts, equipment, state) VALUES ($1, $2, $3)",
+                        "INSERT INTO v_runtime_equipment_state_write (ts, equipment, state) VALUES ($1, $2, $3)",
                         now,
                         equip_name,
                         is_on,
@@ -304,7 +305,7 @@ async def sync_once(db_url: str) -> None:
                 prev_key = f"occupancy_{entity_name}"
                 if prev_state.get(prev_key) != val:
                     await conn.execute(
-                        "INSERT INTO system_state (ts, entity, value) VALUES ($1, $2, $3)",
+                        "INSERT INTO v_runtime_system_state_write (ts, entity, value) VALUES ($1, $2, $3)",
                         now,
                         entity_name,
                         val,

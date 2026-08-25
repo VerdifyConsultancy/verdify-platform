@@ -190,7 +190,7 @@ async def setpoint_confirmation_monitor(pool: asyncpg.Pool) -> None:
 
         superseded_rows = await conn.fetch(
             """
-            UPDATE setpoint_changes sc
+            UPDATE v_runtime_setpoint_changes_write sc
                SET delivery_status = 'superseded',
                    superseded_by_ts = (
                        SELECT min(newer.ts)
@@ -271,7 +271,7 @@ async def setpoint_confirmation_monitor(pool: asyncpg.Pool) -> None:
                      WHERE parameter IN (SELECT parameter FROM current_policy)
                      ORDER BY parameter, ts DESC
                 )
-                UPDATE setpoint_changes sc
+                UPDATE v_runtime_setpoint_changes_write sc
                    SET delivery_status = 'superseded',
                        superseded_by_ts = COALESCE(sc.superseded_by_ts, now()),
                        expired_at = COALESCE(sc.expired_at, now())
@@ -297,7 +297,7 @@ async def setpoint_confirmation_monitor(pool: asyncpg.Pool) -> None:
 
             legacy_lighting_rows = await conn.fetch(
                 """
-                UPDATE setpoint_changes sc
+                UPDATE v_runtime_setpoint_changes_write sc
                    SET delivery_status = 'superseded',
                        superseded_by_ts = COALESCE(sc.superseded_by_ts, now()),
                        expired_at = COALESCE(sc.expired_at, now())
@@ -336,7 +336,7 @@ async def setpoint_confirmation_monitor(pool: asyncpg.Pool) -> None:
                          WHERE equipment IN (SELECT equipment FROM switch_map)
                          ORDER BY equipment, ts DESC
                     )
-                    UPDATE setpoint_changes sc
+                    UPDATE v_runtime_setpoint_changes_write sc
                        SET confirmed_at = COALESCE(sc.confirmed_at, now()),
                            delivery_status = 'confirmed'
                       FROM switch_map sm

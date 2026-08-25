@@ -401,5 +401,9 @@ class TestForecastEngineDemotion:
         source = (REPO_ROOT / "scripts" / "forecast-action-engine.py").read_text()
         assert "if not DRY_RUN and demotion is None:" in source
         assert "demotion = await demoted_policy_write_gate(conn)" in source
+        assert "INSERT INTO v_runtime_setpoint_plan_write" in source
+        assert "INSERT INTO v_runtime_setpoint_changes_write" in source
+        assert "INSERT INTO setpoint_plan" not in source
+        assert "INSERT INTO setpoint_changes" not in source
         # Both write branches resolve action_taken through the demotion state.
         assert source.count('action_taken = "proposal_recorded"') == 2

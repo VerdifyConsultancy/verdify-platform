@@ -585,7 +585,7 @@ async def _insert_climate_row(pool: asyncpg.Pool, row: dict[str, Any]) -> None:
     values = [ts] + [row.get(c) for c in cols]
     async with pool.acquire() as conn:
         await conn.execute(
-            f"INSERT INTO climate ({cols_sql}) VALUES ({placeholders})",
+            f"INSERT INTO v_runtime_climate_write ({cols_sql}) VALUES ({placeholders})",
             *values,
         )
     log.debug(f"climate row written ({len(cols)} columns)")
@@ -1204,7 +1204,7 @@ async def write_legacy_equipment_events(pool: asyncpg.Pool) -> None:
             rows.append((event.source_observed_at, event.equipment, event.state))
         async with pool.acquire() as conn:
             await conn.executemany(
-                "INSERT INTO equipment_state (ts, equipment, state) VALUES ($1, $2, $3)",
+                "INSERT INTO v_runtime_equipment_state_write (ts, equipment, state) VALUES ($1, $2, $3)",
                 rows,
             )
     except BaseException:
@@ -1235,7 +1235,7 @@ async def write_state_transitions(pool: asyncpg.Pool, ts: datetime) -> set[str]:
         return set()
     async with pool.acquire() as conn:
         await conn.executemany(
-            "INSERT INTO system_state (ts, entity, value) VALUES ($1, $2, $3)",
+            "INSERT INTO v_runtime_system_state_write (ts, entity, value) VALUES ($1, $2, $3)",
             validated,
         )
     log.debug(f"system_state: {len(validated)} transitions written")
@@ -1987,7 +1987,7 @@ _CLIMATE_ACTION_LOG_INSERT_TEMPLATE = """
                  ORDER BY sp.ts DESC, sp.created_at DESC
                  LIMIT 1
             ){policy_identity_ctes}
-            INSERT INTO climate_action_log (
+            INSERT INTO v_runtime_climate_action_log_write (
                 ts,
                 greenhouse_id,
                 climate_action,
@@ -2261,7 +2261,7 @@ async def write_override_events(pool: asyncpg.Pool, ts: datetime) -> None:
         return
     async with pool.acquire() as conn:
         await conn.executemany(
-            "INSERT INTO override_events (ts, override_type, mode) VALUES ($1, $2, $3)",
+            "INSERT INTO v_runtime_override_events_write (ts, override_type, mode) VALUES ($1, $2, $3)",
             validated,
         )
     log.info(f"override_events: {len(validated)} start events written")
@@ -2296,7 +2296,7 @@ async def write_setpoint_changes(pool: asyncpg.Pool, ts: datetime) -> None:
     async with pool.acquire() as conn:
         await conn.executemany(
             """
-            INSERT INTO setpoint_changes
+            INSERT INTO v_runtime_setpoint_changes_write
                 (ts, parameter, value, source, confirmed_at, delivery_status)
             VALUES ($1, $2, $3, $4, $5, $6)
             """,
@@ -2317,7 +2317,7 @@ async def write_diagnostics(pool: asyncpg.Pool, ts: datetime) -> None:
         return
     async with pool.acquire() as conn:
         await conn.execute(
-            """INSERT INTO diagnostics (
+            """INSERT INTO v_runtime_diagnostics_write (
                    ts, wifi_rssi, heap_bytes, heap_min_free_kb, heap_largest_free_block_kb,
                    uptime_s, probe_health, reset_reason,
                    firmware_version, active_probe_count, relief_cycle_count, vent_latch_timer_s,
@@ -2550,7 +2550,7 @@ async def write_esp32_logs(pool: asyncpg.Pool) -> None:
     # Write to DB
     async with pool.acquire() as conn:
         await conn.executemany(
-            "INSERT INTO esp32_logs (ts, level, tag, message) VALUES ($1, $2, $3, $4)",
+            "INSERT INTO v_runtime_esp32_logs_write (ts, level, tag, message) VALUES ($1, $2, $3, $4)",
             validated,
         )
 
@@ -3220,7 +3220,7 @@ async def flush_loop(
                         snapshot_rows.append((ts, param, val))
                     async with pool.acquire() as conn:
                         await conn.executemany(
-                            "INSERT INTO setpoint_snapshot (ts, parameter, value) VALUES ($1, $2, $3)",
+                            "INSERT INTO v_runtime_setpoint_snapshot_write (ts, parameter, value) VALUES ($1, $2, $3)",
                             snapshot_rows,
                         )
                         # #113: fan-out each setpoint snapshot to the bus.
@@ -3238,7 +3238,7 @@ async def flush_loop(
                         # superseded, not proven by the current readback.
                         await conn.executemany(
                             """
-                            UPDATE setpoint_changes sc
+                            UPDATE v_runtime_setpoint_changes_write sc
                                SET confirmed_at = now(),
                                    delivery_status = 'confirmed'
                              WHERE sc.parameter = $1
@@ -4032,7 +4032,7 @@ async def _cas_notify_delivery_state(
     async with pool.acquire() as state_conn:
         persisted = await state_conn.fetchval(
             """
-            UPDATE setpoint_changes
+            UPDATE v_runtime_setpoint_changes_write
                SET delivery_status = $1,
                    expired_at = CASE
                        WHEN $1 IN ('failed', 'cancelled', 'superseded')
@@ -4117,7 +4117,7 @@ async def _handle_setpoint_notification(pool: asyncpg.Pool, payload: str) -> Non
             """
             WITH candidate AS (
                 SELECT ts
-                  FROM setpoint_changes
+                  FROM v_runtime_setpoint_changes_write
                  WHERE parameter = $1
                    AND abs(value - $2::double precision)
                          / greatest(abs($2::double precision), 1e-3) < 0.01
@@ -4128,7 +4128,7 @@ async def _handle_setpoint_notification(pool: asyncpg.Pool, payload: str) -> Non
                  FOR UPDATE SKIP LOCKED
                  LIMIT 1
             )
-            UPDATE setpoint_changes sc
+            UPDATE v_runtime_setpoint_changes_write sc
                SET delivery_status = 'requested'
               FROM candidate
              WHERE sc.ts = candidate.ts AND sc.parameter = $1
@@ -4308,7 +4308,7 @@ async def backfill_gap(
             equip = EQUIPMENT_BINARY_MAP.get(obj_id) or EQUIPMENT_SWITCH_MAP.get(obj_id)
             if equip and obj_id in state.equipment:
                 await conn.execute(
-                    "INSERT INTO equipment_state (ts, equipment, state) VALUES ($1, $2, $3)",
+                    "INSERT INTO v_runtime_equipment_state_write (ts, equipment, state) VALUES ($1, $2, $3)",
                     gap_end,
                     equip,
                     state.equipment[obj_id],
@@ -4333,7 +4333,7 @@ async def reconcile_interrupted_device_writes(pool: asyncpg.Pool) -> int:
     async with pool.acquire() as conn:
         rows = await conn.fetch(
             """
-            UPDATE setpoint_changes
+            UPDATE v_runtime_setpoint_changes_write
                SET delivery_status = 'failed',
                    expired_at = COALESCE(expired_at, now())
              WHERE confirmed_at IS NULL

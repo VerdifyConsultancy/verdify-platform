@@ -404,7 +404,7 @@ async def emit_band_audit(conn: asyncpg.Connection, values: dict[str, float], ct
     ]
     await conn.executemany(
         """
-        INSERT INTO setpoint_snapshot (ts, parameter, value, zone, band_role, target_value)
+        INSERT INTO v_runtime_setpoint_snapshot_write (ts, parameter, value, zone, band_role, target_value)
         VALUES (now(), $1, $2, $3, $4, $5)
         """,
         rows,
