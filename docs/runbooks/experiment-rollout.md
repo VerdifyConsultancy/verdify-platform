@@ -276,6 +276,29 @@ cleanup, never part of this rollback.
 
 ## Gate 2 — explicit-ID non-actuating shadow
 
+Before enabling the capability, sync the reviewed
+`experiment-v2-credential-bootstrap` component while Gate 1 remains `off` and
+the active ID remains empty. Require its retained, non-secret receipt
+`six database logins installed and attested; API token shapes validated`, and
+capture the Job/pod UID plus exact migrate image/imageID before its 600-second
+TTL expires. Any missing Secret key, verifier transaction failure, or one of
+the six exact TCP duty attestations is a fail-closed Gate-2 blocker. The
+blinded analyst intentionally remains `NOLOGIN`; the broader #643 credential
+split is not part of this launch gate.
+
+Provider setup is a separate input gate. The selector worker expects the
+Verdify selector request/response protocol, not an OpenAI-compatible
+chat-completions route. Keep endpoint and key absent for explicit baseline-only
+fallback, or bind the exact HTTPS endpoint, single-host egress CIDR, frozen
+identity artifact, and purpose-scoped provider key together before claiming a
+real provider shadow cycle. A downstream provider may use an approved Cortex
+route internally; do not mount a general gateway key directly into the worker
+without that protocol/scoping boundary. For the current adapter, have the fleet
+Secret authority reuse the already authorized Cortex credential server-side as
+`verdify-experiment-v2-selector-provider` / `api-key`; never retrieve or relay
+the value through a repository pod. The provider key is not part of the six
+database-password/two-token shape and uniqueness checks.
+
 1. Create one explicit experiment UUID with frozen candidate revisions and an
    assignment/selection preview schedule.
 2. Set its v2 execution phase to `shadow` with admission `closed`.
