@@ -6301,6 +6301,153 @@ $body$;
 -- Build the only positive selector-context schema from database-owned source
 -- rows.  The exact returned bytes are authoritative across languages; callers
 -- parse them but never reserialize floats to invent a competing hash.
+--
+-- The source relations are Timescale-managed in production.  Column ACL
+-- changes on a hypertable are propagated to its compressed storage relation,
+-- whose physical columns deliberately differ from the logical hypertable.
+-- Keep the exact-column boundary in ordinary owner-sealed views instead: the
+-- trusted migration identity owns each view and therefore supplies the base
+-- read, while the NOLOGIN function owner receives SELECT only on the facade.
+-- SECURITY INVOKER remains explicitly false, and SECURITY BARRIER prevents an
+-- outer caller expression from being pushed below the view boundary.
+--
+-- There is intentionally no column-level REVOKE on either source hypertable:
+-- the ledger runner reaches this revision only while migration 214 is
+-- unstamped, and its single transaction rolls a failed older attempt back in
+-- full.  A different already-stamped 214 hash is rejected before replay.  A
+-- column REVOKE here would re-enter the same Timescale compressed-table ACL
+-- propagation path that this facade removes.
+DO $source_facades$
+DECLARE
+    source_view text;
+    acl_grantee text;
+    column_grant record;
+    grantee_sql text;
+BEGIN
+    IF to_regclass('public.climate') IS NOT NULL THEN
+        EXECUTE $view$
+            CREATE OR REPLACE VIEW public.v_experiment_v2_selector_climate_source
+                WITH (security_barrier = true, security_invoker = false)
+            AS
+            SELECT ts, greenhouse_id, temp_avg, temp_north, temp_south,
+                   temp_east, temp_west, rh_avg, rh_north, rh_south,
+                   rh_east, rh_west, vpd_avg, vpd_north, vpd_south,
+                   vpd_east, vpd_west, dew_point, outdoor_temp_f,
+                   outdoor_rh_pct, solar_irradiance_w_m2, leaf_temp_north,
+                   leaf_temp_south, leaf_wetness_north, leaf_wetness_south,
+                   wind_speed_mph, precip_in, flow_gpm, mister_water_today
+              FROM public.climate
+        $view$;
+        EXECUTE format(
+            'ALTER VIEW public.v_experiment_v2_selector_climate_source OWNER TO %I',
+            current_user);
+        EXECUTE $comment$
+            COMMENT ON VIEW public.v_experiment_v2_selector_climate_source IS
+            'Owner-sealed exact-column facade over the Timescale climate hypertable for the protocol-v2 selector context builder.'
+        $comment$;
+        -- Table-level ACL propagation is shape-independent and safe for a
+        -- compressed hypertable.  Retain the original convergence guarantee
+        -- that no runtime login can bypass its function-only duty.
+        EXECUTE 'REVOKE ALL PRIVILEGES ON TABLE public.climate FROM '
+             || 'verdify_experiment_v2_shadow_scheduler_login, '
+             || 'verdify_experiment_v2_randomizer_login, '
+             || 'verdify_experiment_v2_lifecycle_login, '
+             || 'verdify_experiment_v2_component_executor_login, '
+             || 'verdify_experiment_v2_outcome_freezer_login CASCADE';
+    END IF;
+
+    IF to_regclass('public.weather_forecast') IS NOT NULL THEN
+        EXECUTE $view$
+            CREATE OR REPLACE VIEW public.v_experiment_v2_selector_forecast_source
+                WITH (security_barrier = true, security_invoker = false)
+            AS
+            SELECT ts, fetched_at, greenhouse_id, temp_f, rh_pct, vpd_kpa,
+                   cloud_cover_pct, wind_speed_mph, solar_w_m2,
+                   precip_prob_pct, direct_radiation_w_m2
+              FROM public.weather_forecast
+        $view$;
+        EXECUTE format(
+            'ALTER VIEW public.v_experiment_v2_selector_forecast_source OWNER TO %I',
+            current_user);
+        EXECUTE $comment$
+            COMMENT ON VIEW public.v_experiment_v2_selector_forecast_source IS
+            'Owner-sealed exact-column facade over weather forecast data for the protocol-v2 selector context builder.'
+        $comment$;
+        EXECUTE 'REVOKE ALL PRIVILEGES ON TABLE public.weather_forecast FROM '
+             || 'verdify_experiment_v2_shadow_scheduler_login, '
+             || 'verdify_experiment_v2_randomizer_login, '
+             || 'verdify_experiment_v2_lifecycle_login, '
+             || 'verdify_experiment_v2_component_executor_login, '
+             || 'verdify_experiment_v2_outcome_freezer_login CASCADE';
+    END IF;
+
+    -- CREATE OR REPLACE VIEW preserves ACLs.  Normalize every existing
+    -- non-owner grantee on replay, then grant exactly one facade reader.
+    FOREACH source_view IN ARRAY ARRAY[
+        'v_experiment_v2_selector_climate_source',
+        'v_experiment_v2_selector_forecast_source'
+    ] LOOP
+        IF to_regclass(format('public.%I', source_view)) IS NOT NULL THEN
+            FOR acl_grantee IN
+                SELECT role_row.rolname
+                  FROM pg_class relation
+                  JOIN pg_namespace namespace
+                    ON namespace.oid = relation.relnamespace
+                  CROSS JOIN LATERAL aclexplode(relation.relacl) acl
+                  JOIN pg_roles role_row ON role_row.oid = acl.grantee
+                 WHERE namespace.nspname = 'public'
+                   AND relation.relname = source_view
+                   AND acl.grantee <> relation.relowner
+                 GROUP BY role_row.rolname
+            LOOP
+                EXECUTE format(
+                    'REVOKE ALL PRIVILEGES ON TABLE public.%I FROM %I CASCADE',
+                    source_view, acl_grantee);
+            END LOOP;
+            EXECUTE format(
+                'REVOKE ALL PRIVILEGES ON TABLE public.%I FROM PUBLIC CASCADE',
+                source_view);
+
+            -- Table-level REVOKE does not clear pg_attribute.attacl.  A stale
+            -- column grant on the facade must not survive replay either.
+            FOR column_grant IN
+                SELECT grant_row.grantee,
+                       string_agg(format('%I', grant_row.attname), ', '
+                                  ORDER BY grant_row.attnum) AS columns
+                  FROM (
+                    SELECT DISTINCT acl.grantee, attribute.attnum,
+                           attribute.attname
+                      FROM pg_attribute attribute
+                      CROSS JOIN LATERAL aclexplode(attribute.attacl) acl
+                     WHERE attribute.attrelid =
+                           to_regclass(format('public.%I', source_view))
+                       AND attribute.attnum > 0
+                       AND NOT attribute.attisdropped
+                  ) grant_row
+                 GROUP BY grant_row.grantee
+            LOOP
+                IF column_grant.grantee = 0 THEN
+                    grantee_sql := 'PUBLIC';
+                ELSE
+                    grantee_sql := NULL;
+                    SELECT format('%I', role_row.rolname) INTO grantee_sql
+                      FROM pg_roles role_row
+                     WHERE role_row.oid = column_grant.grantee;
+                END IF;
+                IF grantee_sql IS NOT NULL THEN
+                    EXECUTE format(
+                        'REVOKE ALL PRIVILEGES (%s) ON TABLE public.%I FROM %s CASCADE',
+                        column_grant.columns, source_view, grantee_sql);
+                END IF;
+            END LOOP;
+            EXECUTE format(
+                'GRANT SELECT ON TABLE public.%I TO verdify_experiment_v2_owner',
+                source_view);
+        END IF;
+    END LOOP;
+END
+$source_facades$;
+
 CREATE OR REPLACE FUNCTION public.fn_experiment_v2_build_selector_context(
     p_experiment_id uuid,
     p_local_date date,
@@ -6341,8 +6488,8 @@ BEGIN
        p_boundary_at IS NULL OR p_context_cutoff_at >= p_boundary_at THEN
         RAISE EXCEPTION 'selector source builder requires one bound experiment/date window';
     END IF;
-    IF to_regclass('public.climate') IS NULL OR
-       to_regclass('public.weather_forecast') IS NULL THEN
+    IF to_regclass('public.v_experiment_v2_selector_climate_source') IS NULL OR
+       to_regclass('public.v_experiment_v2_selector_forecast_source') IS NULL THEN
         v_status := 'unavailable';
         v_failure := 'source_relation_unavailable';
     ELSE
@@ -6378,7 +6525,7 @@ BEGIN
                          'flow_gpm', c.flow_gpm,
                          'mister_water_today_gal', c.mister_water_today
                        ) AS values
-                  FROM public.climate c
+                  FROM public.v_experiment_v2_selector_climate_source c
                  WHERE c.greenhouse_id = $1
                    AND c.ts > $2 - interval '24 hours' AND c.ts <= $2
             ), admitted AS (
@@ -6426,7 +6573,7 @@ BEGIN
                              'precip_prob_pct', f.precip_prob_pct,
                              'direct_radiation_w_m2', f.direct_radiation_w_m2
                            ) AS values
-                      FROM public.weather_forecast f
+                      FROM public.v_experiment_v2_selector_forecast_source f
                      WHERE f.greenhouse_id = $1 AND f.fetched_at <= $2
                        AND f.ts >= $2 AND f.ts < $3 + interval '24 hours'
                 ), admitted AS (
@@ -8800,41 +8947,6 @@ REVOKE ALL ON SEQUENCE public.experiment_events_event_id_seq FROM
     verdify_experiment_v2_component_executor_login,
     verdify_experiment_v2_outcome_freezer_login;
 
--- Source tables predate this migration on restored production schemas.  The
--- unavailable NOLOGIN function owner receives only the columns needed by the
--- typed context builder; runtime duties retain no base-table SELECT.
-DO $source_grants$
-BEGIN
-    IF to_regclass('public.climate') IS NOT NULL THEN
-        EXECUTE 'GRANT SELECT (ts, greenhouse_id, temp_avg, temp_north, temp_south, '
-             || 'temp_east, temp_west, rh_avg, rh_north, rh_south, rh_east, rh_west, '
-             || 'vpd_avg, vpd_north, vpd_south, vpd_east, vpd_west, dew_point, '
-             || 'outdoor_temp_f, outdoor_rh_pct, solar_irradiance_w_m2, '
-             || 'leaf_temp_north, leaf_temp_south, leaf_wetness_north, '
-             || 'leaf_wetness_south, wind_speed_mph, precip_in, flow_gpm, '
-             || 'mister_water_today) ON public.climate TO verdify_experiment_v2_owner';
-        EXECUTE 'REVOKE ALL ON TABLE public.climate FROM '
-             || 'verdify_experiment_v2_shadow_scheduler_login, '
-             || 'verdify_experiment_v2_randomizer_login, '
-             || 'verdify_experiment_v2_lifecycle_login, '
-             || 'verdify_experiment_v2_component_executor_login, '
-             || 'verdify_experiment_v2_outcome_freezer_login';
-    END IF;
-    IF to_regclass('public.weather_forecast') IS NOT NULL THEN
-        EXECUTE 'GRANT SELECT (ts, fetched_at, greenhouse_id, temp_f, rh_pct, '
-             || 'vpd_kpa, cloud_cover_pct, wind_speed_mph, solar_w_m2, '
-             || 'precip_prob_pct, direct_radiation_w_m2) ON public.weather_forecast '
-             || 'TO verdify_experiment_v2_owner';
-        EXECUTE 'REVOKE ALL ON TABLE public.weather_forecast FROM '
-             || 'verdify_experiment_v2_shadow_scheduler_login, '
-             || 'verdify_experiment_v2_randomizer_login, '
-             || 'verdify_experiment_v2_lifecycle_login, '
-             || 'verdify_experiment_v2_component_executor_login, '
-             || 'verdify_experiment_v2_outcome_freezer_login';
-    END IF;
-END
-$source_grants$;
-
 DO $security$
 DECLARE
     obj record;
@@ -8849,6 +8961,9 @@ BEGIN
          WHERE n.nspname = 'public'
            AND (c.relname LIKE 'experiment_v2_%' OR
                 c.relname LIKE 'v_experiment_v2_%')
+           AND c.relname NOT IN (
+               'v_experiment_v2_selector_climate_source',
+               'v_experiment_v2_selector_forecast_source')
            AND c.relkind IN ('r', 'p', 'S', 'v')
          ORDER BY CASE c.relkind WHEN 'v' THEN 2 WHEN 'S' THEN 1 ELSE 0 END,
                   c.relname
