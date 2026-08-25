@@ -189,6 +189,7 @@ async def test_late_or_revision_mismatched_response_falls_back() -> None:
         _provider_settings(),
         transport=Transport(_provider_response(model_revision="floating")),
         resolver=_resolver,
+        clock=lambda: datetime(2026, 8, 24, 23, 50, tzinfo=UTC),
     )
     mismatch = await mismatch_adapter.select(
         study_id="study",
