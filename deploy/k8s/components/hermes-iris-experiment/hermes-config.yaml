@@ -44,7 +44,8 @@ data:
       provider: "custom"
       base_url: "https://cortex.vallery.net/v1"
       context_length: 98304
-      max_tokens: 8192
+      # Keep the experiment transport byte-locked to the live route contract.
+      max_tokens: 16384
 
     agent:
       # Cortex route 42 supplies the verified medium default server-side.

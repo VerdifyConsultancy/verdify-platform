@@ -86,7 +86,7 @@ spec:
         # sha256[:12] of hermes-config.yaml data.config.yaml. The focused
         # drift test makes profile edits roll this Recreate Deployment so the
         # seed-config init container refreshes the state PVC before startup.
-        verdify.io/hermes-profile-revision: "7c36add63b74"
+        verdify.io/hermes-profile-revision: "d9d787f2cce4"
       labels:
         app.kubernetes.io/part-of: verdify
         app.kubernetes.io/component: hermes-iris
