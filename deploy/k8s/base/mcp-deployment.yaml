@@ -12,6 +12,11 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: verdify-mcp
+  annotations:
+    # Argo waits for this Deployment to become Healthy before advancing to
+    # Hermes, so the gateway never starts against a half-rolled tool surface.
+    # Deployment metadata only: changing the wave does not replace MCP pods.
+    argocd.argoproj.io/sync-wave: "10"
   labels:
     app.kubernetes.io/part-of: verdify
     app.kubernetes.io/component: mcp

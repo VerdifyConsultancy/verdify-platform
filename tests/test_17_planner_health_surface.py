@@ -25,6 +25,7 @@ from verdify_schemas import PublicPlannerDelivery, PublicPlannerHealthResponse
 
 _MISSING_MODULE = object()
 _MCP_STUB_MODULES = ("mcp", "mcp.server", "mcp.server.fastmcp")
+ACTIVE_PLANNER_MODEL_LABEL = "hermes-iris/custom:llm.primary.longctx/medium"
 
 
 def _install_fastmcp_test_stub() -> None:
@@ -247,7 +248,7 @@ def test_public_planner_health_schema_includes_status_surface_fields():
         "resulting_plan_id": None,
         "plan_written_at": None,
         "planner_gateway": "hermes-iris",
-        "planner_model_label": "hermes-iris/openai:gpt-5.6-sol/xhigh",
+        "planner_model_label": ACTIVE_PLANNER_MODEL_LABEL,
     }
 
     response = PublicPlannerHealthResponse.model_validate(
@@ -270,7 +271,7 @@ def test_public_planner_health_schema_includes_status_surface_fields():
                 "overdue_gt_1h": 0,
             },
             "current_session_key": "hermes:iris:main:trigger:00000000-0000-0000-0000-000000000000",
-            "current_model_label": "hermes-iris/openai:gpt-5.6-sol/xhigh",
+            "current_model_label": ACTIVE_PLANNER_MODEL_LABEL,
             "current_hermes_run_id": "run_test",
             "active_plan_range_violation_count": 0,
             "recent_deliveries": [delivery],
@@ -282,7 +283,7 @@ def test_public_planner_health_schema_includes_status_surface_fields():
     assert response.last_delivered_trigger is not None
     assert response.last_resolved_trigger is not None
     assert response.pending_by_sla_age["within_sla"] == 2
-    assert response.current_model_label == "hermes-iris/openai:gpt-5.6-sol/xhigh"
+    assert response.current_model_label == ACTIVE_PLANNER_MODEL_LABEL
     assert response.recent_deliveries[0].planner_gateway == "hermes-iris"
     assert response.active_plan_range_violation_count == 0
 
@@ -297,13 +298,13 @@ def test_public_planner_delivery_schema_proves_gateway_model_session():
             "session_key": "hermes:iris:main:trigger:00000000-0000-0000-0000-000000000000",
             "hermes_run_id": "run_test",
             "planner_gateway": "hermes-iris",
-            "planner_model_label": "hermes-iris/openai:gpt-5.6-sol/xhigh",
+            "planner_model_label": ACTIVE_PLANNER_MODEL_LABEL,
         }
     )
 
     assert delivery.session_key is not None
     assert delivery.hermes_run_id == "run_test"
-    assert delivery.planner_model_label == "hermes-iris/openai:gpt-5.6-sol/xhigh"
+    assert delivery.planner_model_label == ACTIVE_PLANNER_MODEL_LABEL
 
 
 def test_public_planner_health_endpoint_queries_i_p1_1_sources():
@@ -327,7 +328,7 @@ def test_public_planner_health_endpoint_queries_i_p1_1_sources():
     assert "registry_value_error" in api_source
     assert "planner_gateway" in api_source
     assert "planner_model_label" in api_source
-    assert '"hermes-iris/openai:gpt-5.6-sol/xhigh"' in api_source
+    assert f'"{ACTIVE_PLANNER_MODEL_LABEL}"' in api_source
 
 
 def _hermes_config_documents() -> tuple[dict, dict, str]:
@@ -362,6 +363,45 @@ def test_hermes_profile_pins_bounded_cortex_text_route():
     normalized = json.loads(json.dumps(embedded))
     normalized["mcp_servers"]["verdify_greenhouse"]["url"] = canonical["mcp_servers"]["verdify_greenhouse"]["url"]
     assert normalized == canonical
+
+
+def test_api_public_planner_model_label_is_declarative_and_matches_active_profile():
+    _manifest, profile, _readiness_source = _hermes_config_documents()
+    expected = (
+        f"hermes-iris/{profile['model']['provider']}:"
+        f"{profile['model']['default']}/{profile['agent']['reasoning_effort']}"
+    )
+    assert expected == ACTIVE_PLANNER_MODEL_LABEL
+
+    api_source = (REPO_ROOT / "api/main.py").read_text()
+    assert f'"VERDIFY_PLANNER_MODEL_LABEL", "{ACTIVE_PLANNER_MODEL_LABEL}"' in api_source
+
+    api_documents = yaml.safe_load_all((REPO_ROOT / "deploy/k8s/base/api-deployment.yaml").read_text())
+    api_deployment = next(document for document in api_documents if document.get("kind") == "Deployment")
+    api_container = api_deployment["spec"]["template"]["spec"]["containers"][0]
+    env_by_name = {item["name"]: item.get("value") for item in api_container["env"]}
+    assert env_by_name["VERDIFY_PLANNER_MODEL_LABEL"] == ACTIVE_PLANNER_MODEL_LABEL
+
+
+def test_argocd_sync_waves_gate_mcp_then_hermes_then_ingestor_without_pod_template_churn():
+    sources = {
+        "mcp": REPO_ROOT / "deploy/k8s/base/mcp-deployment.yaml",
+        "hermes": REPO_ROOT / "deploy/k8s/components/hermes-iris/hermes-iris.yaml",
+        "ingestor": REPO_ROOT / "deploy/k8s/base/ingestor-deployment.yaml",
+    }
+    deployments = {
+        name: next(
+            document for document in yaml.safe_load_all(path.read_text()) if document.get("kind") == "Deployment"
+        )
+        for name, path in sources.items()
+    }
+    annotation = "argocd.argoproj.io/sync-wave"
+    waves = {name: int(deployment["metadata"]["annotations"][annotation]) for name, deployment in deployments.items()}
+
+    assert waves == {"mcp": 10, "hermes": 20, "ingestor": 30}
+    assert waves["mcp"] < waves["hermes"] < waves["ingestor"]
+    for deployment in deployments.values():
+        assert annotation not in deployment["spec"]["template"]["metadata"].get("annotations", {})
 
 
 def test_hermes_profile_revision_rolls_and_reseeds_on_config_change():

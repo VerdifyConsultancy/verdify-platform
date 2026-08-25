@@ -85,6 +85,12 @@ spec:
             - configMapRef:
                 name: verdify-config
           env:
+            # Public planner attribution must identify the effective Hermes
+            # transport profile, not the retired OpenAI candidate. Keep this
+            # explicit as well as api/main.py's safe default so an older image
+            # cannot publish a stale label after a declarative rollout.
+            - name: VERDIFY_PLANNER_MODEL_LABEL
+              value: "hermes-iris/custom:llm.primary.longctx/medium"
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:

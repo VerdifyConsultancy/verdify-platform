@@ -63,6 +63,12 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: verdify-hermes-iris
+  annotations:
+    # MCP is wave 10; Argo must observe it Healthy before rolling the gateway.
+    # Ingestor is wave 30 and therefore cannot dispatch into a half-rolled
+    # Hermes session/tool surface. This metadata annotation does not alter the
+    # Recreate Deployment's pod template or restart the current singleton.
+    argocd.argoproj.io/sync-wave: "20"
   labels:
     app.kubernetes.io/part-of: verdify
     app.kubernetes.io/component: hermes-iris
