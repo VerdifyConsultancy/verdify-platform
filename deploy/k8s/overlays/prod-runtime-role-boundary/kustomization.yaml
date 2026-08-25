@@ -10,3 +10,20 @@ resources:
 
 components:
   - ../../components/runtime-role-boundary
+
+# This review overlay adds the Component one level above prod, after prod's
+# image transformer has run. Copy the already-rendered immutable migrate image
+# into the bootstrap hook without duplicating a digest that the pin actuator
+# would otherwise have to maintain. Direct prod adoption is transformed at the
+# same level and does not need this review-only replacement.
+replacements:
+  - source:
+      kind: Job
+      name: verdify-migrate
+      fieldPath: spec.template.spec.containers.0.image
+    targets:
+      - select:
+          kind: Job
+          name: verdify-runtime-role-bootstrap
+        fieldPaths:
+          - spec.template.spec.containers.0.image
