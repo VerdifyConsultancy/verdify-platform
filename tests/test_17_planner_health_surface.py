@@ -364,6 +364,25 @@ def test_hermes_profile_pins_bounded_cortex_text_route():
     assert "reasoning_effort" not in canonical["model"]
     assert embedded["agent"]["reasoning_effort"] == canonical["agent"]["reasoning_effort"] == "medium"
     assert experiment["agent"]["reasoning_effort"] == "medium"
+    assert embedded["agent"]["api_max_retries"] == canonical["agent"]["api_max_retries"] == 1
+    assert experiment["agent"]["api_max_retries"] == 1
+    expected_provider_limits = {
+        "custom": {
+            "request_timeout_seconds": 600,
+            "stale_timeout_seconds": 600,
+        }
+    }
+    expected_compression = {"enabled": False}
+    expected_auxiliary = {
+        "compression": {
+            "context_length": 98304,
+            "timeout": 180,
+        }
+    }
+    for profile in (embedded, canonical, experiment):
+        assert profile["providers"] == expected_provider_limits
+        assert profile["compression"] == expected_compression
+        assert profile["auxiliary"] == expected_auxiliary
 
     # The embedded k3s profile must remain structurally equivalent as parsed,
     # except for the intentionally environment-specific MCP endpoint.
@@ -476,6 +495,12 @@ def test_hermes_profile_revision_rolls_and_reseeds_on_config_change():
         "cp -f /etc/verdify/hermes-config/config.yaml /opt/data/config.yaml && "
         "echo 'seeded /opt/data/config.yaml from verdify-hermes-iris-config'",
     ]
+    env = {
+        item["name"]: item["value"]
+        for item in workload["spec"]["template"]["spec"]["containers"][0]["env"]
+        if "value" in item
+    }
+    assert env["HERMES_STREAM_STALE_TIMEOUT"] == "600"
 
 
 def test_hermes_compressor_backport_is_digest_pinned_fail_closed_and_mounted():

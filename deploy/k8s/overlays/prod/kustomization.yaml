@@ -91,6 +91,11 @@ components:
   # #119 hermes-iris — the sole planner gateway, ported from the compose `hermes`
   # profile. prod-anchored (run-state PVC + OpenAI key). Image digest preserved.
   - ../../components/hermes-iris
+  # Confirmed-component experiment v2 orchestration workers. The component's
+  # base ConfigMap is fail-closed (experiment/vector modes off, no active ID or
+  # selector endpoint), so adopting it here creates only an inert, observable
+  # Gate-1 runtime. Shadow/randomized operation remains a later GitOps change.
+  - ../../components/experiment-v2-orchestrator
   # #124 verdify-lab — the public Quartz research site (lab.verdify.ai). Pure web
   # tier, stateless (no PVC), NO device path. Built from the
   # verdify-site-legacy Dockerfile.k3s (see components/lab-site/lab-site.yaml).
@@ -220,9 +225,9 @@ images:
   - name: ghcr.io/verdifyconsultancy/verdify-migrate
     newName: registry.vallery.net/verdifyconsultancy/verdify-migrate
     digest: sha256:48f59501052476abf25e9f522c089b7cd0fa8d0b7d9cd98b6e3ace7ff8f098eb
-  # Bootstrap key for the fleet pin actuator. The orchestrator Component stays
-  # absent from this overlay until Kaniko replaces the fail-closed zero digest
-  # with a verified Zot digest from the exact source revision.
+  # Fleet pin-actuator key for the feature-off experiment-v2 orchestrator.
+  # Every source build advances this pin with the other managed application
+  # images; the component remains inert until its explicit GitOps feature gate.
   - name: ghcr.io/verdifyconsultancy/verdify-experiment-v2-orchestrator
     newName: registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator
     digest: sha256:258239fe06c643c910af2752c74dc951264e2e912e8751c880b05a7544bb7f1a

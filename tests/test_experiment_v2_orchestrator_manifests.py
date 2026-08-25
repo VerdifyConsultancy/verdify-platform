@@ -123,16 +123,48 @@ def test_component_is_inert_until_explicit_gitops_configuration() -> None:
     assert config["VERDIFY_EXPERIMENT_V2_LIFECYCLE_PLAN_SHA256"] == ""
 
 
-def test_prod_seeds_digest_pin_without_adopting_the_component_early() -> None:
+def test_prod_adopts_feature_off_component_with_nonzero_digest() -> None:
     prod = yaml.safe_load(PROD.read_text())
     pin = next(image for image in prod["images"] if image["name"] == ORCHESTRATOR_LOGICAL_IMAGE)
     assert pin["newName"] == ORCHESTRATOR_ZOT_IMAGE
     assert re.fullmatch(r"sha256:[0-9a-f]{64}", pin["digest"])
+    assert pin["digest"] != "sha256:" + "0" * 64
     component = "../../components/experiment-v2-orchestrator"
-    if component in prod.get("components", []):
-        assert pin["digest"] != "sha256:" + "0" * 64
-    else:
-        assert component not in prod.get("components", [])
+    assert prod.get("components", []).count(component) == 1
+    assert "../../components/experiment-v2-orchestrator-rollback" not in PROD.read_text()
+
+    documents = rendered_documents(PROD.parent)
+    deployments = {
+        document["metadata"]["name"]: document
+        for document in documents
+        if document["kind"] == "Deployment" and document["metadata"]["name"].startswith("experiment-v2-")
+    }
+    assert set(deployments) == {
+        "experiment-v2-lifecycle",
+        "experiment-v2-selector",
+        "experiment-v2-freezer",
+    }
+    expected_image = f"{ORCHESTRATOR_ZOT_IMAGE}@{pin['digest']}"
+    for deployment in deployments.values():
+        assert deployment["spec"]["replicas"] == 1
+        assert deployment["spec"]["strategy"] == {"type": "Recreate"}
+        assert deployment["spec"]["template"]["spec"]["containers"][0]["image"] == expected_image
+
+    configs = {
+        document["metadata"]["name"]: document["data"]
+        for document in documents
+        if document["kind"] == "ConfigMap"
+        and document["metadata"]["name"]
+        in {
+            "verdify-config",
+            "experiment-v2-orchestrator-config",
+        }
+    }
+    assert configs["verdify-config"]["VERDIFY_COMPONENT_EXPERIMENT_ENABLED"] == "off"
+    assert configs["verdify-config"]["VERDIFY_POLICY_VECTOR_MODE"] == "off"
+    assert configs["verdify-config"]["VERDIFY_ACTIVE_EXPERIMENT_ID"] == ""
+    assert configs["experiment-v2-orchestrator-config"]["VERDIFY_EXPERIMENT_SELECTOR_ENDPOINT"] == ""
+    assert configs["experiment-v2-orchestrator-config"]["VERDIFY_EXPERIMENT_V2_LIFECYCLE_PLAN_SHA256"] == ""
 
 
 def test_no_prune_rollback_keeps_every_resource_desired_and_scales_workers_to_zero() -> None:
