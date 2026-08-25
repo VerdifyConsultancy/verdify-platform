@@ -1,0 +1,208 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: verdify-runtime-role-bootstrap
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: runtime-role-bootstrap
+  annotations:
+    # Migration delivery is the default PreSync wave (0). Run only after it has
+    # completed, but still before any Sync-wave API or ingestor rollout.
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 180
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: verdify
+        # The DB ingress policy admits the existing migration duty. This Job
+        # has the same narrow DB-only purpose and no device/network client.
+        app.kubernetes.io/component: migrate
+        app.kubernetes.io/name: verdify-runtime-role-bootstrap
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 10
+      imagePullSecrets:
+        - name: zot-origin-cluster-pull
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: bootstrap-and-attest
+          # Logical transformer key. The production overlay renders this to
+          # the exact pinned Zot migrate digest used by migration wave 0.
+          image: ghcr.io/verdifyconsultancy/verdify-migrate
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              fail() {
+                printf '%s\n' "[runtime-role-bootstrap] fail-closed: $1" >&2
+                exit 1
+              }
+
+              [ "${VERDIFY_API_RUNTIME_DB_USER}" = "verdify_api_runtime_login" ] \
+                || fail "API username contract mismatch"
+              [ "${VERDIFY_INGESTOR_RUNTIME_DB_USER}" = "verdify_ingestor_runtime_login" ] \
+                || fail "ingestor username contract mismatch"
+              [ "${DB_ADMIN_USER}" = "verdify" ] \
+                || fail "database administrator username contract mismatch"
+              [ -n "${DB_ADMIN_PASSWORD}" ] \
+                || fail "database administrator credential is empty"
+              [ -n "${VERDIFY_API_RUNTIME_DB_PASSWORD}" ] \
+                || fail "API runtime credential is empty"
+              [ -n "${VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD}" ] \
+                || fail "ingestor runtime credential is empty"
+              [ "${#VERDIFY_API_RUNTIME_DB_PASSWORD}" -eq 64 ] \
+                || fail "API runtime credential shape mismatch"
+              case "${VERDIFY_API_RUNTIME_DB_PASSWORD}" in
+                *[!0-9a-f]*) fail "API runtime credential shape mismatch" ;;
+              esac
+              [ "${#VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD}" -eq 64 ] \
+                || fail "ingestor runtime credential shape mismatch"
+              case "${VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD}" in
+                *[!0-9a-f]*) fail "ingestor runtime credential shape mismatch" ;;
+              esac
+              [ "${VERDIFY_API_RUNTIME_DB_PASSWORD}" != "${VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD}" ] \
+                || fail "ordinary runtime credentials must be distinct"
+              [ "${VERDIFY_API_RUNTIME_DB_PASSWORD}" != "${DB_ADMIN_PASSWORD}" ] \
+                || fail "API runtime credential must differ from the database owner"
+              [ "${VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD}" != "${DB_ADMIN_PASSWORD}" ] \
+                || fail "ingestor runtime credential must differ from the database owner"
+
+              # psql's \password command runs PQencryptPasswordConn in the
+              # client and sends only a SCRAM verifier in ALTER USER. The pod
+              # has no controlling TTY, so its four non-echoing prompts read
+              # these two passwords (twice each) from the pipe. `printf` is an
+              # ash builtin: no cleartext enters argv, SQL, a file, or logs.
+              # One psql connection and --single-transaction install both
+              # verifiers or neither.
+              if ! printf '%s\n%s\n%s\n%s\n' \
+                  "${VERDIFY_API_RUNTIME_DB_PASSWORD}" \
+                  "${VERDIFY_API_RUNTIME_DB_PASSWORD}" \
+                  "${VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD}" \
+                  "${VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD}" |
+                PGPASSWORD="${DB_ADMIN_PASSWORD}" \
+                  psql -X --no-password --quiet --set=ON_ERROR_STOP=1 \
+                    --single-transaction \
+                    -h "${DB_HOST}" -p "${DB_PORT}" -U verdify -d "${DB_NAME}" \
+                    --command="SET password_encryption = 'scram-sha-256'" \
+                    --command='\password verdify_api_runtime_login' \
+                    --command='\password verdify_ingestor_runtime_login'
+              then
+                fail "transactional credential installation failed"
+              fi
+
+              api_attested="$(
+                PGPASSWORD="${VERDIFY_API_RUNTIME_DB_PASSWORD}" \
+                  psql -X --no-password --quiet --tuples-only --no-align \
+                    -h "${DB_HOST}" -p "${DB_PORT}" \
+                    -U verdify_api_runtime_login -d "${DB_NAME}" <<'SQL'
+              SELECT current_user = session_user
+                 AND current_user = 'verdify_api_runtime_login'
+                 AND pg_catalog.current_setting('search_path') =
+                     'pg_catalog, public, pg_temp'
+                 AND public.fn_runtime_attest_ordinary_login() IS TRUE;
+              SQL
+              )" || fail "API actual-login connection failed"
+              [ "${api_attested}" = "t" ] \
+                || fail "API actual-login attestation failed"
+
+              ingestor_attested="$(
+                PGPASSWORD="${VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD}" \
+                  psql -X --no-password --quiet --tuples-only --no-align \
+                    -h "${DB_HOST}" -p "${DB_PORT}" \
+                    -U verdify_ingestor_runtime_login -d "${DB_NAME}" <<'SQL'
+              SELECT current_user = session_user
+                 AND current_user = 'verdify_ingestor_runtime_login'
+                 AND pg_catalog.current_setting('search_path') =
+                     'pg_catalog, public, pg_temp'
+                 AND public.fn_runtime_attest_ordinary_login() IS TRUE;
+              SQL
+              )" || fail "ingestor actual-login connection failed"
+              [ "${ingestor_attested}" = "t" ] \
+                || fail "ingestor actual-login attestation failed"
+
+              unset DB_ADMIN_PASSWORD \
+                DB_ADMIN_USER \
+                VERDIFY_API_RUNTIME_DB_USER \
+                VERDIFY_API_RUNTIME_DB_PASSWORD \
+                VERDIFY_INGESTOR_RUNTIME_DB_USER \
+                VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD
+              printf '%s\n' \
+                '[runtime-role-bootstrap] both ordinary logins installed and attested'
+          env:
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: verdify-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: verdify-config
+                  key: DB_PORT
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: verdify-config
+                  key: DB_NAME
+            - name: DB_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: POSTGRES_PASSWORD
+            - name: DB_ADMIN_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: verdify-config
+                  key: DB_USER
+            - name: VERDIFY_API_RUNTIME_DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: VERDIFY_API_RUNTIME_DB_USER
+            - name: VERDIFY_API_RUNTIME_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: VERDIFY_API_RUNTIME_DB_PASSWORD
+            - name: VERDIFY_INGESTOR_RUNTIME_DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: VERDIFY_INGESTOR_RUNTIME_DB_USER
+            - name: VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD
+            - name: PGAPPNAME
+              value: verdify-runtime-role-bootstrap
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: "25m"
+              memory: "32Mi"
+            limits:
+              cpu: "250m"
+              memory: "128Mi"
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 16Mi
