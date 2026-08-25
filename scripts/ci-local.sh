@@ -44,6 +44,9 @@ $RUFF format --check ingestor/ api/ experiment_orchestrator/ mcp/ scripts/*.py t
 step "schema suites (incl. drift guards + producer payload round-trips)"
 $PY -m pytest -q verdify_schemas/tests/
 
+step "ClimateIntent controller contract audit"
+$PY scripts/audit-climate-intent-contract.py
+
 step "confirmed-component v2 selector/randomization/design contracts"
 $PY -m pytest -q \
   tests/test_03_ingestor.py \
