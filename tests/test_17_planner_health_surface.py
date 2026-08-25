@@ -459,12 +459,15 @@ def test_hermes_profile_revision_rolls_and_reseeds_on_config_change():
     expected_profile = hashlib.sha256(manifest["data"]["config.yaml"].encode()).hexdigest()[:12]
     compressor_patch = manifest["data"]["hermes-compressor-oob-patch.py"]
     expected_compressor_patch = hashlib.sha256(compressor_patch.encode()).hexdigest()[:12]
+    estimator_patch = manifest["data"]["hermes-request-estimator-oob-patch.py"]
+    expected_estimator_patch = hashlib.sha256(estimator_patch.encode()).hexdigest()[:12]
     workloads = yaml.safe_load_all((REPO_ROOT / "deploy/k8s/components/hermes-iris/hermes-iris.yaml").read_text())
     workload = next(document for document in workloads if document.get("kind") == "Deployment")
 
     assert workload["spec"]["template"]["metadata"]["annotations"] == {
         "verdify.io/hermes-profile-revision": expected_profile,
         "verdify.io/hermes-compressor-patch-revision": expected_compressor_patch,
+        "verdify.io/hermes-request-estimator-patch-revision": expected_estimator_patch,
     }
     init_by_name = {item["name"]: item for item in workload["spec"]["template"]["spec"]["initContainers"]}
     assert init_by_name["seed-config"]["command"] == [
@@ -514,6 +517,62 @@ def test_hermes_compressor_backport_is_digest_pinned_fail_closed_and_mounted():
         "readOnly": True,
     }
     assert any(volume == {"name": "hermes-runtime-patch", "emptyDir": {}} for volume in pod_spec["volumes"])
+
+
+def test_hermes_request_estimator_backport_counts_schemas_fail_closed_and_mounted():
+    manifest, _profile, _readiness_source = _hermes_config_documents()
+    source = manifest["data"]["hermes-request-estimator-oob-patch.py"]
+    namespace = {"__name__": "hermes_request_estimator_patch_test"}
+    exec(compile(source, "hermes-request-estimator-oob-patch.py", "exec"), namespace)  # noqa: S102
+
+    assert namespace["SOURCE_SHA256"] == "a639cb65862c463a77297efbe41f311d3f8033f5162f7498b5ad7daf2cb3751b"
+    assert namespace["PATCHED_SHA256"] == "187fb9d4f1d127e95013777ae9b692f229fe324284f79f472f52622b7f8dc02b"
+    fixture = namespace["PATCHES"][0][0]
+    patched = namespace["apply_patches"](fixture)
+    assert b"estimate_messages_tokens_rough(api_messages)" not in patched
+    assert b"estimate_request_tokens_rough(" in patched
+    assert b"api_messages, tools=self.tools or None" in patched
+    assert b"system_prompt=" not in patched
+    with pytest.raises(RuntimeError, match="source digest mismatch"):
+        namespace["verified_patch"](fixture)
+
+    documents = yaml.safe_load_all((REPO_ROOT / "deploy/k8s/components/hermes-iris/hermes-iris.yaml").read_text())
+    deployment = next(document for document in documents if document.get("kind") == "Deployment")
+    pod_spec = deployment["spec"]["template"]["spec"]
+    assert pod_spec["securityContext"]["fsGroup"] == 1000
+    init_by_name = {item["name"]: item for item in pod_spec["initContainers"]}
+    patch_init = init_by_name["patch-request-estimator-oob"]
+    assert patch_init["image"] == pod_spec["containers"][0]["image"]
+    assert patch_init["securityContext"]["runAsUser"] == 1000
+    assert patch_init["securityContext"]["runAsGroup"] == 1000
+    assert patch_init["command"] == [
+        "python3",
+        "/etc/verdify/hermes-config/hermes-request-estimator-oob-patch.py",
+        "--source",
+        "/opt/hermes/run_agent.py",
+        "--destination",
+        "/opt/hermes-agent-patch/run_agent.py",
+    ]
+    main = pod_spec["containers"][0]
+    assert "command" not in main
+    assert main["args"] == ["gateway", "run"]
+    init_patch_mount = next(mount for mount in patch_init["volumeMounts"] if mount["name"] == "hermes-agent-patch")
+    assert init_patch_mount == {
+        "name": "hermes-agent-patch",
+        "mountPath": "/opt/hermes-agent-patch",
+    }
+    patch_mount = next(mount for mount in main["volumeMounts"] if mount["name"] == "hermes-agent-patch")
+    assert patch_mount == {
+        "name": "hermes-agent-patch",
+        "mountPath": "/opt/hermes/run_agent.py",
+        "subPath": "run_agent.py",
+        "readOnly": True,
+    }
+    assert any(volume == {"name": "hermes-agent-patch", "emptyDir": {}} for volume in pod_spec["volumes"])
+    # The independent compressor file stays mounted while this patch has its
+    # own init/volume/subPath rollback boundary.
+    assert "patch-compressor-oob" in init_by_name
+    assert any(mount["name"] == "hermes-runtime-patch" for mount in main["volumeMounts"])
 
 
 def _readiness_required_tools(source: str) -> set[str]:

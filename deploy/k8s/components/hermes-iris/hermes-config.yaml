@@ -27,6 +27,58 @@ metadata:
     app.kubernetes.io/part-of: verdify
     app.kubernetes.io/component: hermes-iris
 data:
+  hermes-request-estimator-oob-patch.py: |
+    """Count tool schemas in the pinned Hermes request-size estimate."""
+    import argparse
+    import hashlib
+    import os
+    from pathlib import Path
+
+    SOURCE_SHA256 = "a639cb65862c463a77297efbe41f311d3f8033f5162f7498b5ad7daf2cb3751b"
+    PATCHED_SHA256 = "187fb9d4f1d127e95013777ae9b692f229fe324284f79f472f52622b7f8dc02b"
+    PATCHES = (
+        (
+            b"            approx_tokens = estimate_messages_tokens_rough(api_messages)\n",
+            b"            approx_tokens = estimate_request_tokens_rough(\n"
+            b"                api_messages, tools=self.tools or None\n"
+            b"            )\n",
+        ),
+    )
+
+    def apply_patches(source):
+        patched = source
+        for before, after in PATCHES:
+            if patched.count(before) != 1:
+                raise RuntimeError("pinned Hermes request-estimator patch anchor mismatch")
+            patched = patched.replace(before, after, 1)
+        return patched
+
+    def verified_patch(source):
+        if hashlib.sha256(source).hexdigest() != SOURCE_SHA256:
+            raise RuntimeError("pinned Hermes run_agent source digest mismatch")
+        patched = apply_patches(source)
+        if hashlib.sha256(patched).hexdigest() != PATCHED_SHA256:
+            raise RuntimeError("patched Hermes run_agent digest mismatch")
+        return patched
+
+    def main():
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--source", required=True)
+        parser.add_argument("--destination", required=True)
+        args = parser.parse_args()
+        source = Path(args.source)
+        destination = Path(args.destination)
+        patched = verified_patch(source.read_bytes())
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        temporary = destination.with_name(f".{destination.name}.{os.getpid()}.tmp")
+        temporary.write_bytes(patched)
+        os.chmod(temporary, 0o444)
+        os.replace(temporary, destination)
+        print(f"installed verified Hermes request-estimator backport sha256={PATCHED_SHA256}")
+
+    if __name__ == "__main__":
+        main()
+
   hermes-compressor-oob-patch.py: |
     """Backport Hermes issue #75588 / PR #75884 onto the immutable May runtime."""
     import argparse
