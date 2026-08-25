@@ -2,10 +2,10 @@
 
 > **2026-08-25 source-routing addendum:** the active-source Hermes profile and
 > the dark experiment profile now select provider `custom`, Cortex's
-> OpenAI-compatible endpoint, alias `llm.primary.longctx.mm`, explicit tool-use
-> enforcement, and the existing 30-turn fence. The retained xhigh config value
-> is not forwarded by running Hermes revision `404640a`'s custom-provider
-> transport. Their distinct MCP audiences remain
+> OpenAI-compatible endpoint, 98K text alias `llm.primary.longctx`, explicit
+> context/output budgets and tool-use guidance, and the existing 30-turn fence.
+> A GitOps-mounted user provider forwards the declared medium effort through
+> vLLM's chat-template field. Their distinct MCP audiences remain
 > unchanged. The active Deployment carries a content-derived profile revision,
 > so a reviewed ArgoCD sync recreates and reseeds the singleton Hermes pod.
 > The API's public planner label is supplied by a Deployment env override,

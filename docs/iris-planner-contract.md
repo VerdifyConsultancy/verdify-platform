@@ -3,10 +3,10 @@
 > Historical contract: this document describes the pre-2026-05-11 OpenClaw /
 > local-Gemma planner path. Production planning routes through Hermes
 > (`hermes-iris`) with the MCP-only tool allowlist in `hermes/iris/config.yaml`.
-> Repo source selects Cortex's OpenAI-compatible `llm.primary.longctx.mm` route
-> with explicit tool-use enforcement; live activation is separately gated. The
-> retained xhigh config value is not forwarded by running revision `404640a`'s
-> custom-provider transport. Use
+> Repo source selects Cortex's OpenAI-compatible 98K text route
+> `llm.primary.longctx` with explicit context/output budgets and tool-use
+> guidance; live activation is separately gated. A GitOps-mounted user provider
+> forwards the declared medium effort through vLLM's chat-template field. Use
 > `plan_delivery_log.hermes_run_id` as the active gateway
 > correlation field.
 >
@@ -16,7 +16,7 @@
 > The ledger / exact-trigger-correlation / registry-validation semantics in *this*
 > doc remain active; the gateway/model details below are historical.
 
-**Status:** historical v1.5 by coordinator, 2026-05-04. It ratified the local-first OpenClaw/Gemma path that was superseded on 2026-05-11 by Hermes `hermes-iris`; repo source selects Cortex's OpenAI-compatible `llm.primary.longctx.mm` route with explicit tool-use enforcement, with live activation separately gated. The trigger-ledger, exact-correlation, lifecycle-status, and registry-validation rules remain active; the gateway/model details below are historical.
+**Status:** historical v1.5 by coordinator, 2026-05-04. It ratified the local-first OpenClaw/Gemma path that was superseded on 2026-05-11 by Hermes `hermes-iris`; repo source selects Cortex's OpenAI-compatible 98K text route `llm.primary.longctx` with explicit budgets/tool-use guidance, with live activation separately gated. The trigger-ledger, exact-correlation, lifecycle-status, and registry-validation rules remain active; the gateway/model details below are historical.
 
 **v1.5 change log (2026-05-04):** makes local Gemma4-on-cortext the default production planner path, defines the trigger ledger shape before more code changes, and closes the unsafe correlation rule: new planner rows correlate to triggers by exact `trigger_id` only. Legacy time-window fallback is permitted only for historical rows where both sides lack a UUID.
 

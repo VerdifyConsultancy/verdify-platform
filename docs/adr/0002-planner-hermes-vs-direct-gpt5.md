@@ -3,7 +3,7 @@
 - **Status:** Accepted — keep Hermes for production; the direct-GPT-5.5 path is the documented, low-risk rollback/simplification.
 - **Date:** 2026-06-17
 - **Model-profile amendment:** 2026-07-15 — record an xhigh profile preference for Hermes; production activation remains separately gated.
-- **Route amendment:** 2026-08-25 — route Hermes through Cortex alias `llm.primary.longctx.mm`; GitOps activation remains separately gated.
+- **Route amendment:** 2026-08-25 — route Hermes through Cortex's 98K text alias `llm.primary.longctx`; GitOps activation remains separately gated.
 - **Owner lane:** verdify-platform. **Closes:** #346 AC1 (L4 — AI Planner and Tunables).
 - **Refs:** `hermes/iris/config.yaml`, `mcp/server.py`, `verdify_schemas/tunable_registry.py`, `ingestor/iris_planner.py`, `ingestor/tasks/heartbeat.py`, `planner_graph/`, `docs/iris-planner-contract.md` (v1.5 — ledger/correlation semantics active; the Gemma/OpenClaw gateway details are historical), #214/#315 (planner pipeline health), `docs/agents/genai.md`.
 
@@ -19,19 +19,21 @@
 > the MCP/registry safety boundary or the orchestrator decision.
 
 > **2026-08-25 route amendment:** the active-source and dark-experiment Hermes
-> profiles now retain provider `custom`, `agent.reasoning_effort: xhigh`, and
-> `max_turns: 30`, but use the OpenAI-compatible endpoint
-> `https://cortex.vallery.net/v1` with model alias
-> `llm.primary.longctx.mm`. Cortex owns the upstream model resolution behind
-> that alias, so Verdify no longer claims a fixed first-party model identity for
-> this route. The alias does not match revision `404640a`'s fixed automatic
-> enforcement family list, so both profiles set
-> `agent.tool_use_enforcement: true`. Its custom-provider transport does not
-> forward `reasoning_effort`;
-> effective route behavior remains Cortex-owned. The MCP allowlists,
-> server-side audiences, and registry write boundary are unchanged. A
-> profile-revision annotation makes the next reviewed sync recreate and reseed
-> Hermes; this source amendment alone is not live-sync evidence.
+> profiles use provider `custom`, the OpenAI-compatible endpoint
+> `https://cortex.vallery.net/v1`, and Cortex's text-only alias
+> `llm.primary.longctx`. The 98,304-token context contract and an 8,192-token
+> per-call output fence are explicit because Cortex currently publishes no
+> context metadata for the alias. Both profiles declare
+> `agent.reasoning_effort: medium`, retain `max_turns: 30`, and set
+> `agent.tool_use_enforcement: true`. A GitOps-mounted user provider override
+> forwards effort as vLLM `chat_template_kwargs`, including on the separately
+> configured compression path. Cortex issue #166 remains compatible hardening
+> rather than an activation dependency. Cortex owns the
+> upstream model resolution behind the alias; Verdify does not claim a fixed
+> first-party model identity. The MCP allowlists,
+> server-side audiences, and registry write boundary are unchanged. Content
+> revisions for both profile and provider make the next reviewed sync recreate
+> and reseed Hermes; this source amendment alone is not live-sync evidence.
 
 ---
 
@@ -39,15 +41,15 @@
 
 The greenhouse has an AI planner that runs over a 72-hour horizon and adjusts **bounded tunables** (never targets, rails, or FSM logic). The open question (Lane 4 brief): *"It is unclear whether Hermes adds value or whether a direct GPT-5 prompt with structured data would be simpler."*
 
-**Production architecture (the thing this ADR ratifies):** the ingestor fires solar/forecast triggers (`ingestor/tasks/heartbeat.py` `_compute_milestones` + the `PLANNER_TRIGGER_MATRIX`), builds a 72h context pack, and dispatches to the **Hermes gateway** (`verdify-hermes-iris`, ns `verdify-prod`). Repo source configures Hermes for **Cortex route `llm.primary.longctx.mm` with explicit tool-use enforcement** and an **MCP-only tool allowlist** (`hermes/iris/config.yaml`: provider `custom`, OpenAI-compatible Cortex base URL, 30-turn agentic loop, `mcp_servers` → Verdify MCP). The retained `agent.reasoning_effort=xhigh` value is declarative intent and is not forwarded by running revision `404640a`'s custom-provider transport. After separately validated activation, Hermes reads ~6–10 MCP tools in sequence, then writes via `set_plan` / `set_tunable` / `acknowledge_trigger` (`mcp/server.py`). Every write is validated against `verdify_schemas/tunable_registry.py` (the `planner_pushable` gate + per-tunable min/max) before it reaches `setpoint_plan` / `plan_journal`; the dispatcher pushes the resulting bounded waypoints to the device. Git source selection and live activation remain separate facts.
+**Production architecture (the thing this ADR ratifies):** the ingestor fires solar/forecast triggers (`ingestor/tasks/heartbeat.py` `_compute_milestones` + the `PLANNER_TRIGGER_MATRIX`), builds a 72h context pack, and dispatches to the **Hermes gateway** (`verdify-hermes-iris`, ns `verdify-prod`). Repo source configures Hermes for **Cortex's 98K text route `llm.primary.longctx` with explicit context/output budgets and tool-use guidance** and an **MCP-only tool allowlist** (`hermes/iris/config.yaml`: provider `custom`, OpenAI-compatible Cortex base URL, 30-turn agentic loop, `mcp_servers` → Verdify MCP). A GitOps-mounted provider override sends the declared `agent.reasoning_effort=medium` through vLLM's chat-template field. After separately validated activation, Hermes reads ~6–10 MCP tools in sequence, then writes via `set_plan` / `set_tunable` / `acknowledge_trigger` (`mcp/server.py`). Every write is validated against `verdify_schemas/tunable_registry.py` (the `planner_pushable` gate + per-tunable min/max) before it reaches `setpoint_plan` / `plan_journal`; the dispatcher pushes the resulting bounded waypoints to the device. Git source selection and live activation remain separate facts.
 
 **The two options:**
-- **(A) Hermes-orchestrated** Cortex `llm.primary.longctx.mm` + MCP with explicit tool-use enforcement (repo-selected; live activation gated): a managed agent gateway provides the multi-turn tool-use loop, session/conversation memory (kanban), the scheduler, and auth.
+- **(A) Hermes-orchestrated** Cortex `llm.primary.longctx` + MCP with explicit budgets/tool-use guidance (repo-selected; live activation gated): a managed agent gateway provides the multi-turn tool-use loop, session/conversation memory (kanban), the scheduler, and auth.
 - **(B) Direct GPT-5.5** from the ingestor: on each trigger the ingestor calls the OpenAI API with a structured prompt, runs the function-calling tool loop itself, and applies the same registry-validated writes. Fewer moving parts (no Hermes deployment, no kanban DB).
 
 ## 2. Decision
 
-**Keep Hermes (option A) as the production planner orchestrator.** Model routing is independently versioned: repo source selects Cortex alias `llm.primary.longctx.mm` with explicit tool-use enforcement, while the inactive direct rollback remains GPT-5.5/medium pending parity evaluation. The custom transport does not establish an effective upstream reasoning level. The orchestration decision and the MCP/registry safety boundary do not depend on those route versions.
+**Keep Hermes (option A) as the production planner orchestrator.** Model routing is independently versioned: repo source selects Cortex's 98K text alias `llm.primary.longctx` with explicit budgets/tool-use guidance, while the inactive direct rollback remains GPT-5.5/medium pending parity evaluation. The custom transport does not establish an effective upstream reasoning level. The orchestration decision and the MCP/registry safety boundary do not depend on those route versions.
 
 **The safety boundary is the MCP server + `tunable_registry`, NOT Hermes.** The bounded-write contract (only `planner_pushable=True` tunables, clamped to registry min/max; targets/`crop_band_anchors` rejected via `push_owner='band'`; safety rails/FSM not exposed) is enforced at the MCP/registry boundary and is **independent of the orchestrator**. So this decision carries low risk and is cleanly reversible.
 

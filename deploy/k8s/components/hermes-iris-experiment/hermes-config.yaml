@@ -40,16 +40,20 @@ data:
     model:
       # Same provider/route as the live Iris profile — the experiment prompt
       # and tool surface change, the provider route does not.
-      default: "llm.primary.longctx.mm"
+      default: "llm.primary.longctx"
       provider: "custom"
       base_url: "https://cortex.vallery.net/v1"
+      # Cortex publishes no context metadata for this alias. Keep the dark
+      # profile on the same explicit, validated planner budget as live.
+      context_length: 98304
+      max_tokens: 8192
 
     agent:
-      # Retained as declarative route intent. Running Hermes revision 404640a's
-      # custom-provider transport does not forward this value; Cortex owns the
-      # effective upstream reasoning behavior behind the route alias.
-      reasoning_effort: xhigh
-      # llm.primary.longctx.mm does not match revision 404640a's fixed
+      # The production GitOps component's user provider override forwards this
+      # as vLLM chat_template_kwargs. A future Cortex #166 server default is
+      # compatible but not required by this profile.
+      reasoning_effort: medium
+      # llm.primary.longctx does not match revision 404640a's fixed
       # auto-enforcement model-family list, so the experiment MCP loop also
       # requires explicit tool-use enforcement.
       tool_use_enforcement: true
@@ -66,6 +70,14 @@ data:
         - terminal
         - filesystem
         - browser
+
+    # Compression bypasses the primary provider profile, so pin the same
+    # Cortex chat-template effort on its auxiliary request path.
+    auxiliary:
+      compression:
+        extra_body:
+          chat_template_kwargs:
+            reasoning_effort: medium
 
     mcp_servers:
       verdify_greenhouse:

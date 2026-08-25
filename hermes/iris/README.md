@@ -7,10 +7,10 @@ Hermes is now the only production route for Iris planning cycles.
 ## Files
 
 - `config.yaml` — repo-selected Hermes profile: Cortex's OpenAI-compatible
-  `llm.primary.longctx.mm` route, explicit tool-use enforcement, single profile,
-  MCP-only tool surface. Merging config does not activate it; live rollout is
-  separately gated. The allowlist tightens the toolset to Verdify's MCP server;
-  `query` (raw SQL) is excluded.
+  98K text route `llm.primary.longctx`, explicit 98,304/8,192 context/output
+  budgets, tool-use guidance, and an MCP-only tool surface. Merging config does
+  not activate it; live rollout is separately gated. The allowlist tightens the
+  toolset to Verdify's MCP server; `query` (raw SQL) is excluded.
 - `SOUL.md` — durable identity, authoritative-source priority order,
   behavioral contract. Short by design — per-cycle context comes from
   `gather-plan-context.sh` via the ingestor.
@@ -68,25 +68,32 @@ singleton pod and the init container reseeds the PVC before Hermes starts.
 ## Routing audit — 2026-08-25
 
 - The canonical and embedded live profiles select provider `custom`, endpoint
-  `https://cortex.vallery.net/v1`, model alias `llm.primary.longctx.mm`,
-  `agent.reasoning_effort: xhigh`, `agent.tool_use_enforcement: true`, and
-  `max_turns: 30`. In running Hermes revision `404640a`, the custom-provider
-  transport does not forward `reasoning_effort`; that value records route
-  intent, not observed upstream effort. The same revision's automatic tool-use
-  enforcement recognizes only a fixed model-family list, and the Cortex alias
-  matches none of it, so the explicit boolean is required.
+  `https://cortex.vallery.net/v1`, text-only model alias
+  `llm.primary.longctx`, `model.context_length: 98304`,
+  `model.max_tokens: 8192`, `agent.reasoning_effort: medium`, explicit tool-use
+  guidance, and `max_turns: 30`. Cortex deliberately publishes no context
+  metadata for this alias, so the explicit context value prevents Hermes's
+  256K unknown-model fallback. A read-only user provider plugin mounted below
+  `HERMES_HOME/plugins/model-providers` overrides the bundled `custom` request
+  profile and forwards medium as vLLM `chat_template_kwargs`; auxiliary
+  compression carries the same field explicitly. Cortex issue #166 remains a
+  compatible server-side hardening item. The explicit tool-use boolean remains
+  defense-in-depth for this tool-mandatory workload.
 - The dark experiment profile selects the same route and agent limits while
   retaining its narrower, server-bound experiment MCP audience.
 - The API Deployment supplies
-  `hermes-iris/cortex:llm.primary.longctx.mm` as the current public route label;
-  it deliberately omits an effort suffix because the custom transport does not
-  establish one.
+  `hermes-iris/cortex:llm.primary.longctx` as the current public route label;
+  it deliberately keeps attribution route-scoped while the delivery ledger
+  lacks immutable per-run provider metadata.
   Historical delivery rows deliberately omit a model label until provider/model
   identity is persisted per run, so a route change cannot rewrite their
   provenance.
 - These are source and rollout declarations, not evidence of a completed live
-  sync. Runtime activation is proven only after ArgoCD is Synced + Healthy and
-  a new Hermes pod has the matching profile-revision annotation.
+  sync. Runtime activation is additionally gated on at least one Ready target
+  for the text route and a synthetic request proving medium reasoning. It is
+  proven only after ArgoCD is Synced + Healthy, a new Hermes pod has matching
+  profile/provider revision annotations, and a required cycle writes a
+  correlated plan.
 
 ## Roll Forward
 

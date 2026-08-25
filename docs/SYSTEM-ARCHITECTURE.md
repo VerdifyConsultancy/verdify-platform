@@ -14,7 +14,7 @@
 
 ## Overview
 
-Verdify is a greenhouse automation platform running primarily on a single VM. An ESP32 controller manages 367 sq ft of greenhouse climate (fans, heaters, misters, fog) using a deterministic controller (`greenhouse_logic.h`). A Python ingestor captures 172 sensor entities into TimescaleDB, and an AI agent named Iris runs through Hermes as the sole planner gateway. Repo source selects Cortex's OpenAI-compatible `llm.primary.longctx.mm` route with explicit tool-use enforcement; live activation is separately gated. The retained `agent.reasoning_effort: xhigh` value is not forwarded by running Hermes revision `404640a`'s custom-provider transport. Iris manages tunables event-driven at solar milestones and deviations through typed MCP tools, but the ESP32 owns real-time relay control.
+Verdify is a greenhouse automation platform running primarily on a single VM. An ESP32 controller manages 367 sq ft of greenhouse climate (fans, heaters, misters, fog) using a deterministic controller (`greenhouse_logic.h`). A Python ingestor captures 172 sensor entities into TimescaleDB, and an AI agent named Iris runs through Hermes as the sole planner gateway. Repo source selects Cortex's OpenAI-compatible 98K text route `llm.primary.longctx` with explicit context/output budgets and tool-use guidance; live activation is separately gated. A GitOps-mounted user provider forwards the declared `agent.reasoning_effort: medium` through vLLM's chat-template field. Iris manages tunables event-driven at solar milestones and deviations through typed MCP tools, but the ESP32 owns real-time relay control.
 
 ```
 ESP32 (192.168.10.111, IoT VLAN)
@@ -26,7 +26,7 @@ TimescaleDB (44 tables, 54 views, 23 functions, 2.54M+ rows)
   ├─→ API (api.verdify.ai, crop endpoints + compatibility /setpoints)
   └─→ lab.verdify.ai (Quartz static lab site with embedded Grafana panels)
 
-Iris Planner (Hermes + Cortex llm.primary.longctx.mm, explicit tool-use enforcement, MCP-only tool surface; activation gated)
+Iris Planner (Hermes + Cortex 98K text route llm.primary.longctx, explicit budgets/tool-use guidance, MCP-only tool surface; activation gated)
   └─→ Event-driven (sunrise/transitions/sunset/forecast/deviation)
       → MCP tools (climate, scorecard, set_tunable) → setpoint_changes table
 ```

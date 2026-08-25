@@ -80,7 +80,11 @@ spec:
         # sha256[:12] of hermes-config.yaml data.config.yaml. The focused
         # drift test enforces this value so a profile edit always rolls this
         # Recreate Deployment and reruns seed-config against the state PVC.
-        verdify.io/hermes-profile-revision: "e9018a83b25d"
+        verdify.io/hermes-profile-revision: "e281a4917000"
+        # sha256[:12] over the sorted data entries in cortex-provider.yaml.
+        # Provider discovery is process-cached, so plugin-only changes must also
+        # recreate the singleton pod.
+        verdify.io/hermes-provider-revision: "cc3d9661dbbd"
       labels:
         app.kubernetes.io/part-of: verdify
         app.kubernetes.io/component: hermes-iris
@@ -180,6 +184,12 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /opt/data
+            # Hermes discovers user provider profiles below HERMES_HOME. This
+            # read-only nested mount overrides only the bundled `custom`
+            # request profile; it contains no credentials.
+            - name: cortex-provider
+              mountPath: /opt/data/plugins/model-providers/verdify-cortex
+              readOnly: true
             # Probe implementation and non-secret runtime profile. The init
             # container also mounts this ConfigMap to seed config.yaml, but the
             # main container needs it for tool-readiness.py.
@@ -220,6 +230,9 @@ spec:
         - name: hermes-config
           configMap:
             name: verdify-hermes-iris-config
+        - name: cortex-provider
+          configMap:
+            name: verdify-hermes-cortex-provider
 ---
 apiVersion: v1
 kind: Service

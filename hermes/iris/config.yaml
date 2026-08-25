@@ -1,6 +1,6 @@
 # Hermes profile config for the Verdify Iris planner — single profile,
-# Cortex OpenAI-compatible long-context multimodal route with explicit
-# tool-call enforcement and an MCP-only tool surface.
+# Cortex OpenAI-compatible 98K text route with explicit context/output budgets,
+# tool-call guidance, and an MCP-only tool surface.
 #
 # Canonical source: hermes/iris/config.yaml (this repo).
 # Runtime location: /var/lib/verdify/hermes/iris/config.yaml (bind-mounted into
@@ -14,18 +14,26 @@
 model:
   # Hermes reaches OpenAI-compatible endpoints through the "custom" provider.
   # The existing OPENAI_API_KEY environment contract remains unchanged;
-  # llm.primary.longctx.mm is a Cortex route alias, not a raw model name.
-  default: "llm.primary.longctx.mm"
+  # llm.primary.longctx is Cortex's text-only planner route alias, not a raw
+  # model name. Cortex's /v1/models response currently publishes no context
+  # metadata, so pin the validated route contract instead of letting Hermes
+  # fall back to its 256K unknown-model assumption.
+  default: "llm.primary.longctx"
   provider: "custom"
   base_url: "https://cortex.vallery.net/v1"
+  context_length: 98304
+  # Bound a failed reasoning turn instead of allowing vLLM to consume the full
+  # context remainder. A valid planner tool call is comfortably below this;
+  # Hermes may still issue its bounded continuation when a response truncates.
+  max_tokens: 8192
 
 agent:
-  # Retained as declarative route intent. The running Hermes revision 404640a
-  # custom-provider transport does not forward this value, so it is not proof
-  # of the Cortex route's effective upstream reasoning effort.
-  reasoning_effort: xhigh
+  # The production GitOps component mounts a user `custom` provider override
+  # that forwards this contract as vLLM chat_template_kwargs. Cortex #166 may
+  # later make medium the server default, but the planner does not depend on it.
+  reasoning_effort: medium
   # Revision 404640a auto-enables tool-use enforcement only for a fixed list of
-  # recognized model families. The Cortex alias llm.primary.longctx.mm matches
+  # recognized model families. The Cortex alias llm.primary.longctx matches
   # none of them, so enforcement must be explicit for the MCP planning loop.
   tool_use_enforcement: true
   # Iris's longest cycles (SUNRISE/SUNSET) read ~6-10 MCP tools in sequence
@@ -43,6 +51,14 @@ agent:
     - terminal
     - filesystem
     - browser
+
+# Compression uses Hermes's auxiliary client rather than the primary provider
+# transport. Supply the same Cortex chat-template contract on that path.
+auxiliary:
+  compression:
+    extra_body:
+      chat_template_kwargs:
+        reasoning_effort: medium
 
 mcp_servers:
   verdify_greenhouse:

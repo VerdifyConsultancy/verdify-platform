@@ -21,7 +21,7 @@ Verdify is an AI-assisted greenhouse control system for a 367 sq ft greenhouse i
 The control stack has three separate responsibilities:
 
 - **Crop/band policy:** database functions compute target temp/VPD bands from crop profiles.
-- **Planner:** Iris currently uses Hermes to choose tactical setpoints and plans through MCP tools. Repo source selects Cortex's OpenAI-compatible `llm.primary.longctx.mm` route with explicit tool-use enforcement; activation requires the documented replay and deterministic checks. Running Hermes revision `404640a` does not forward the retained xhigh config value through its custom-provider transport.
+- **Planner:** Iris currently uses Hermes to choose tactical setpoints and plans through MCP tools. Repo source selects Cortex's OpenAI-compatible 98K text route `llm.primary.longctx` with explicit context/output budgets and tool-use guidance; activation requires the documented replay and deterministic checks. A GitOps-mounted user provider forwards the declared medium effort through vLLM's chat-template field.
 - **Controller:** ESP32 firmware evaluates real-time climate every 5 seconds and decides relay behavior.
 
 The new LangGraph planner replaces the current Hermes prompt-orchestration path, but it must not replace the control loop. It plans, validates, writes through MCP, and verifies. It does not directly control relays.
@@ -612,7 +612,7 @@ Use these defaults unless Verdify operators override them:
 
 ## 19. Known Compatibility Notes
 
-- Some older docs mention OpenClaw/local Gemma. Current production planning uses Hermes `hermes-iris`; repo source selects Cortex's OpenAI-compatible `llm.primary.longctx.mm` route with explicit tool-use enforcement, while live activation remains separate. Effective upstream reasoning is route-owned, not proven by the retained xhigh config value.
+- Some older docs mention OpenClaw/local Gemma. Current production planning uses Hermes `hermes-iris`; repo source selects Cortex's OpenAI-compatible 98K text route `llm.primary.longctx` with explicit budgets/tool-use guidance, while live activation remains separate. The mounted provider sends medium explicitly; Cortex's server default remains independently versioned.
 - Some schema literals still list planner instances as `opus`, `local`, or `iris-planner`. Current operational docs also mention `hermes-iris`. The standalone planner should make `planner_instance` configurable and compare exactly to Verdify delivery rows when writing through MCP.
 - `/setpoints` compatibility endpoints still exist, but production firmware uses direct ESPHome API pushes/readbacks. Do not build the planner around HTTP setpoint polling.
 - The repo has permission-restricted directories such as `analytics/` and `hermes/iris/`; do not assume full tree access is available to every agent.

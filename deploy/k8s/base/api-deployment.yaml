@@ -89,7 +89,7 @@ spec:
             # Hermes route. Historical delivery rows remain unlabeled until
             # provider/model identity is persisted per run.
             - name: VERDIFY_PLANNER_MODEL_LABEL
-              value: "hermes-iris/cortex:llm.primary.longctx.mm"
+              value: "hermes-iris/cortex:llm.primary.longctx"
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
