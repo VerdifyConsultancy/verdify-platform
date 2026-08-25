@@ -65,13 +65,13 @@ Service → Secret → key wiring as authored in `deploy/k8s/{base,components}`:
 
 | Secret | Key | Consumed by (ref type) | dev | staging | prod |
 |---|---|---|---|---|---|
-| `verdify-app-secrets` | `POSTGRES_PASSWORD` | db / api / mcp / ingestor / migrate / planner / setpoint-server (`secretKeyRef`) | ✓ | ✓ | ✓ |
+| `verdify-app-secrets` | `POSTGRES_PASSWORD` | db / mcp / migrate / planner / setpoint-server and the bounded runtime-role bootstrap; API/ingestor only outside the prod Gate-1 cutover (`secretKeyRef`) | ✓ | ✓ | ✓ |
 | `verdify-app-secrets` | `VERDIFY_WRITE_API_KEY` | api (`secretKeyRef`; write guard `api/main.py`) | ✓ | ✓ | ✓ |
 | `verdify-app-secrets` | `MQTT_USER` | ingestor (`secretKeyRef`) | ✓ | ✓ | ✓ |
 | `verdify-app-secrets` | `MQTT_PASS` | ingestor (`secretKeyRef`) | ✓ | ✓ | ✓ |
 | `verdify-app-secrets` | `ESP32_API_KEY` | ingestor (`secretKeyRef`); **device-affecting** | ref-only¹ | ref-only¹ | ✓ |
-| `verdify-app-secrets` | `VERDIFY_API_RUNTIME_DB_USER`, `VERDIFY_API_RUNTIME_DB_PASSWORD` | staged ordinary API database identity (migration 217 exact login; provision before the separately reviewed workload switch) | opt | opt | opt |
-| `verdify-app-secrets` | `VERDIFY_INGESTOR_RUNTIME_DB_USER`, `VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD` | staged ordinary ingestor database identity (migration 217 exact login; provision before the separately reviewed workload switch) | opt | opt | opt |
+| `verdify-app-secrets` | `VERDIFY_API_RUNTIME_DB_USER`, `VERDIFY_API_RUNTIME_DB_PASSWORD` | production ordinary API database identity (migration 217 exact login; required before the Gate-1 sync) | opt | opt | ✓ |
+| `verdify-app-secrets` | `VERDIFY_INGESTOR_RUNTIME_DB_USER`, `VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD` | production ordinary ingestor and gather-subprocess database identity (migration 217 exact login; required before the Gate-1 sync) | opt | opt | ✓ |
 | `verdify-app-secrets` | `VERDIFY_EXPERIMENT_LIFECYCLE_DB_USER`, `VERDIFY_EXPERIMENT_LIFECYCLE_DB_PASSWORD` | API v2 lifecycle/status surface (`secretKeyRef`, optional; exact function-only login required) | opt | opt | opt |
 | `verdify-app-secrets` | `VERDIFY_EXPERIMENT_API_TOKEN`, `VERDIFY_EXPERIMENT_OPERATOR_TOKEN` | API v2 command and blinded-safe operator surfaces (`secretKeyRef`, optional; distinct authorization boundaries) | opt | opt | opt |
 | `verdify-app-secrets` | `VERDIFY_EXPERIMENT_COMPONENT_DB_USER`, `VERDIFY_EXPERIMENT_COMPONENT_DB_PASSWORD` | ingestor confirmed-component executor (`secretKeyRef`, optional; exact function-only login required) | opt | opt | opt |
@@ -98,16 +98,14 @@ but is never exercised — those envs never connect to the live ESP32.
 ² `HERMES_MCP_URL` is the migration doc **R7** gate: it must point at
 `verdify-mcp.verdify-prod.svc:8000` and is repointed at SEAL time, never committed.
 
-Before the migration-217 role cutover, `DB_PASS` / `DB_PASSWORD` / `DB_DSN` /
-`VERDIFY_DB_DSN` are derived in-manifest from `POSTGRES_PASSWORD` plus the
-non-secret connection fields in `verdify-config` (`$(VAR)` interpolation).
-After the separately reviewed API/ingestor switch, those ordinary-process
-aliases must reference the corresponding runtime password key above; the
-database owner credential must no longer be present in either ordinary pod.
-The reviewable target is
-`deploy/k8s/overlays/prod-runtime-role-boundary`; it is intentionally not the
-active Argo source until all four runtime keys have been provisioned and
-migration 217's actual-login fixture passes.
+The production overlay performs migration 217's Gate-1 role cutover: API and
+ingestor ordinary-process aliases reference their distinct runtime credentials,
+and the database-owner credential is absent from both ordinary pods. The owner
+credential remains bounded to database administration, migrations, and the
+PreSync runtime-role bootstrap. The four runtime keys must be reconciled before
+any sync. `deploy/k8s/overlays/prod-runtime-role-boundary` is a compatibility
+review alias that renders byte-identically to the active `overlays/prod` source;
+it is not a second activation layer.
 
 `verdify-lab-publisher-s3` is non-device but required before enabling the
 `verdify-lab-publisher` CronJob. The durable prod prefixes are

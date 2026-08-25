@@ -91,7 +91,7 @@ def _rendered_prod() -> list[dict]:
     return [document for document in yaml.safe_load_all(rendered.stdout) if document]
 
 
-def test_rehearsal_is_a_one_release_component_wired_once_for_this_prod_release():
+def test_rehearsal_component_is_retained_but_prod_reference_is_cleaned_up():
     kustomization = yaml.safe_load((COMPONENT / "kustomization.yaml").read_text())
     assert kustomization["kind"] == "Component"
     assert set(kustomization["resources"]) == {
@@ -100,9 +100,8 @@ def test_rehearsal_is_a_one_release_component_wired_once_for_this_prod_release()
         "restore-rehearsal-network-policy.yaml",
     }
     prod_text = PROD.read_text()
-    assert prod_text.count("../../components/experiment-v2-restore-rehearsal") == 1
-    assert "ONE RELEASE ONLY" in prod_text
-    assert "Remove this component reference after retained PASS logs" in prod_text
+    assert "../../components/experiment-v2-restore-rehearsal" not in prod_text
+    assert "ONE RELEASE ONLY" not in prod_text
 
 
 def test_rehearsal_is_gitops_hooked_bounded_and_non_networked():
@@ -157,47 +156,14 @@ def test_candidate_source_uses_the_prod_digest_transformer_key():
     assert pin["digest"].startswith("sha256:")
 
 
-def test_rendered_prod_admits_one_exact_isolated_rehearsal_hook_set():
+def test_rendered_prod_omits_the_completed_one_release_rehearsal_hook_set():
     rendered = _rendered_prod()
     resources = [
         document
         for document in rendered
         if "experiment-v2-restore-rehearsal" in document.get("metadata", {}).get("name", "")
     ]
-    assert [(resource["kind"], resource["metadata"]["name"]) for resource in resources] == [
-        ("ConfigMap", "verdify-experiment-v2-restore-rehearsal"),
-        ("Job", "verdify-experiment-v2-restore-rehearsal"),
-        ("NetworkPolicy", "verdify-experiment-v2-restore-rehearsal-deny-all"),
-    ]
-    assert {resource["metadata"]["namespace"] for resource in resources} == {"verdify-prod"}
-
-    config_map = resources[0]
-    job = resources[1]
-    policy = resources[2]
-    assert config_map["data"]["rehearse.sh"] == _script()
-    pod = job["spec"]["template"]["spec"]
-    candidate_image = pod["initContainers"][0]["image"]
-    migrate = next(
-        document
-        for document in rendered
-        if document["kind"] == "Job" and document["metadata"]["name"] == "verdify-migrate"
-    )
-    migrate_image = migrate["spec"]["template"]["spec"]["containers"][0]["image"]
-    prod = yaml.safe_load(PROD.read_text())
-    migrate_pin = next(
-        image for image in prod["images"] if image["name"] == "ghcr.io/verdifyconsultancy/verdify-migrate"
-    )
-    assert candidate_image == f"{migrate_pin['newName']}@{migrate_pin['digest']}"
-    assert candidate_image == migrate_image
-    assert candidate_image.startswith("registry.vallery.net/")
-    assert migrate["metadata"]["annotations"]["argocd.argoproj.io/hook"] == "PreSync"
-    assert "argocd.argoproj.io/sync-wave" not in migrate["metadata"]["annotations"]
-    assert int(config_map["metadata"]["annotations"]["argocd.argoproj.io/sync-wave"]) == -4
-    assert int(policy["metadata"]["annotations"]["argocd.argoproj.io/sync-wave"]) == -3
-    assert int(job["metadata"]["annotations"]["argocd.argoproj.io/sync-wave"]) == -2
-    assert policy["spec"]["podSelector"] == {"matchLabels": job["spec"]["template"]["metadata"]["labels"]}
-    assert policy["spec"]["ingress"] == []
-    assert policy["spec"]["egress"] == []
+    assert resources == []
 
 
 def test_script_restores_only_the_bounded_latest_dump_and_runs_real_gates():

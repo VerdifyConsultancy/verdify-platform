@@ -16,8 +16,8 @@
 # VM-era `docker exec verdify-timescaledb psql` path; setting VERDIFY_DB_BACKEND=dsn
 # (in the ingestor env, via the mount patch) switches it to the in-cluster DIRECT
 # mode — a bare `psql` that reads PGHOST/PGPORT/PGDATABASE/PGUSER from
-# DB_HOST/DB_PORT/DB_NAME/DB_USER and PGPASSWORD from the ingestor's existing
-# $POSTGRES_PASSWORD. SQL + output shape are byte-identical; only the connection
+# DB_HOST/DB_PORT/DB_NAME/DB_USER and the ingestor's PGPASSWORD. SQL + output
+# shape are byte-identical; only the connection
 # transport changes. NO line of context-building logic is altered.
 #
 # Both files are CHECKED IN at scripts/gather-plan-context.sh and

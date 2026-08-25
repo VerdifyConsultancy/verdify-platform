@@ -7,7 +7,7 @@
 #   VERDIFY_DB_BACKEND=dsn  — flips lib/psql-verdify.sh (#24) from its VM-era
 #     docker-exec default to the in-cluster DIRECT mode: a bare `psql` that reads
 #     PGHOST/PGPORT/PGDATABASE/PGUSER from DB_HOST/DB_PORT/DB_NAME/DB_USER and
-#     PGPASSWORD from the ingestor's existing $POSTGRES_PASSWORD. No docker
+#     PGPASSWORD from the ingestor's ordinary runtime credential. No docker
 #     socket, no script-logic change — only the connection transport.
 #
 #   PYTHON=python3  — the gather script's registry block (gather-plan-context.sh

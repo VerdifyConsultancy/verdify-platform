@@ -207,18 +207,24 @@ the experiment component `off` while performing this separate rollout:
 
 1. apply/replay migration 217 through the pinned migrate image and retain the
    hostile actual-login fixture result;
-2. provision only the four documented
+2. after the one-release restore rehearsal passes, retain its Job/pod identity
+   and log digest, then remove its production component reference in this
+   activation change. Because production syncs with `prune:false`, explicitly
+   delete only the now-absent rehearsal Job, ConfigMap and deny-all
+   NetworkPolicy after the activation sync; this releases the completed pod's
+   restore `emptyDir` without discarding the recorded evidence;
+3. provision only the four documented
    `VERDIFY_{API,INGESTOR}_RUNTIME_DB_{USER,PASSWORD}` keys out of band; never
    place a value in Git, a command transcript or an issue comment;
-3. render the inactive review target at
-   `deploy/k8s/overlays/prod-runtime-role-boundary`; prove it emits no Secret,
-   removes `POSTGRES_PASSWORD` from both ordinary containers, points the
-   gather subprocess at the ingestor runtime password, and leaves both
+4. render `deploy/k8s/overlays/prod` and its compatibility review alias at
+   `deploy/k8s/overlays/prod-runtime-role-boundary`; prove they are identical,
+   emit no Secret, remove `POSTGRES_PASSWORD` from both ordinary containers,
+   point the gather subprocess at the ingestor runtime password, and leave both
    experiment switches `off`;
-4. add `../../components/runtime-role-boundary` to the production overlay in
-   a reviewed GitOps commit, regenerate the config revision, and sync without
-   prune;
-5. verify both processes pass their exact current-user/membership/ownership/
+5. verify the production overlay contains exactly one component reference, then
+   merge the reviewed adoption only after the protected four-key reconciliation
+   receipt exists and sync without prune;
+6. verify both processes pass their exact current-user/membership/ownership/
    ACL attestations, the API and planner paths still work, the singleton
    ingestor is the sole writer, normal actuation is unchanged, and no owner
    credential is ambient in either ordinary pod.
@@ -233,6 +239,10 @@ cutover first.
 Before the first sync, retain the complete pre-release production `images:` map
 (including API, MCP, ingestor, migrate and every other pin), every pre-release
 `verdify-config` source, and every running `verdify.io/config-revision` value.
+This is evidence, not a whole-map rollback after migrations are stamped. The
+old migrate image carries older bytes for numbered migrations and will refuse
+the forward ledger with a SHA mismatch; a rollback must retain the accepted
+candidate migrate image and migrations.
 The orchestrator is net-new and has no previous image digest, so removing its
 Component from Git is not a rollback: with prune disabled, the three live
 Deployments would remain extraneous and the Application would remain OutOfSync.
@@ -244,8 +254,9 @@ as a production `resource` in place of the normal orchestrator Component. Its
 only patch sets the lifecycle, selector and freezer Deployments to zero replicas.
 In the same commit:
 
-1. restore the complete captured production `images:` map exactly, including
-   MCP and every digest advanced by the release;
+1. restore only the captured API, MCP and ingestor digests needed for the prior
+   application runtime; retain the accepted candidate migrate and orchestrator
+   digests, and keep the frozen planner, setpoint and lab pins byte-identical;
 2. restore the captured experiment ConfigMap source and generated config
    revisions as one reviewed set (never hand-edit only an annotation);
 3. keep `VERDIFY_COMPONENT_EXPERIMENT_ENABLED=off`, the active experiment ID

@@ -1,4 +1,4 @@
-"""Staged migration-217 workload identity and owner-retirement contract."""
+"""Active migration-217 workload identity and owner-retirement contract."""
 
 from __future__ import annotations
 
@@ -10,8 +10,7 @@ import yaml
 
 REPO_ROOT = Path(__file__).parents[1]
 PROD = REPO_ROOT / "deploy/k8s/overlays/prod"
-STAGED = REPO_ROOT / "deploy/k8s/overlays/prod-runtime-role-boundary"
-COMPONENT = REPO_ROOT / "deploy/k8s/components/runtime-role-boundary"
+REVIEW_ALIAS = REPO_ROOT / "deploy/k8s/overlays/prod-runtime-role-boundary"
 
 
 def _render(overlay: Path) -> list[dict]:
@@ -64,8 +63,12 @@ def _assert_config_key(item: dict, key: str) -> None:
     }
 
 
-def test_staged_cutover_removes_owner_password_and_binds_exact_runtime_keys():
-    documents = _render(STAGED)
+def test_review_alias_is_byte_equivalent_to_active_production_target():
+    assert _render(REVIEW_ALIAS) == _render(PROD)
+
+
+def test_active_cutover_removes_owner_password_and_binds_exact_runtime_keys():
+    documents = _render(REVIEW_ALIAS)
     api_env = _env(_deployment(documents, "verdify-api"), "api")
     ingestor_env = _env(_deployment(documents, "verdify-ingestor"), "ingestor")
 
@@ -83,14 +86,15 @@ def test_staged_cutover_removes_owner_password_and_binds_exact_runtime_keys():
     assert all(document.get("kind") != "Secret" for document in documents)
 
 
-def test_staged_cutover_bootstraps_and_attests_both_actual_logins_before_sync():
-    documents = _render(STAGED)
+def test_active_cutover_bootstraps_and_attests_both_actual_logins_before_sync():
+    documents = _render(REVIEW_ALIAS)
     bootstrap = _job(documents, "verdify-runtime-role-bootstrap")
     migration = _job(documents, "verdify-migrate")
 
     annotations = bootstrap["metadata"]["annotations"]
+    assert bootstrap["metadata"]["namespace"] == "verdify-prod"
     assert annotations["argocd.argoproj.io/hook"] == "PreSync"
-    assert annotations["argocd.argoproj.io/hook-delete-policy"] == "BeforeHookCreation,HookSucceeded"
+    assert annotations["argocd.argoproj.io/hook-delete-policy"] == "BeforeHookCreation"
     assert int(migration["metadata"]["annotations"].get("argocd.argoproj.io/sync-wave", "0")) == 0
     assert int(annotations["argocd.argoproj.io/sync-wave"]) == 1
 
@@ -191,7 +195,7 @@ def test_staged_cutover_bootstraps_and_attests_both_actual_logins_before_sync():
 
 
 def test_bootstrap_pipes_raw_passwords_only_to_non_echoing_psql_prompts(tmp_path: Path):
-    documents = _render(STAGED)
+    documents = _render(REVIEW_ALIAS)
     bootstrap = _job(documents, "verdify-runtime-role-bootstrap")
     script = bootstrap["spec"]["template"]["spec"]["containers"][0]["args"][0]
 
@@ -298,7 +302,7 @@ esac
 
 
 def test_bootstrap_rejects_noncanonical_passwords_before_psql(tmp_path: Path):
-    documents = _render(STAGED)
+    documents = _render(REVIEW_ALIAS)
     bootstrap = _job(documents, "verdify-runtime-role-bootstrap")
     script = bootstrap["spec"]["template"]["spec"]["containers"][0]["args"][0]
 
@@ -349,64 +353,37 @@ exit 0
         assert ingestor_password not in combined_output
 
 
-def test_synthetic_direct_prod_adoption_uses_the_prod_migrate_transformer(tmp_path: Path):
-    prod = yaml.safe_load((PROD / "kustomization.yaml").read_text())
-    migrate_pin = next(image for image in prod["images"] if image["name"].endswith("/verdify-migrate"))
-    synthetic = tmp_path / "kustomization.yaml"
-    synthetic.write_text(
-        yaml.safe_dump(
-            {
-                "apiVersion": "kustomize.config.k8s.io/v1beta1",
-                "kind": "Kustomization",
-                "resources": [os.path.relpath(PROD, tmp_path)],
-                "components": [os.path.relpath(COMPONENT, tmp_path)],
-                "images": [migrate_pin],
-            },
-            sort_keys=False,
-        )
-    )
-    result = subprocess.run(
-        ["kustomize", "build", "--load-restrictor", "LoadRestrictionsNone", str(tmp_path)],
-        cwd=REPO_ROOT,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    documents = [document for document in yaml.safe_load_all(result.stdout) if document]
+def test_cutover_is_active_in_production_with_experiment_still_off():
+    documents = _render(PROD)
+    api_env = _env(_deployment(documents, "verdify-api"), "api")
+    ingestor_env = _env(_deployment(documents, "verdify-ingestor"), "ingestor")
+
+    assert "POSTGRES_PASSWORD" not in api_env
+    _assert_secret_key(api_env["DB_USER"], "VERDIFY_API_RUNTIME_DB_USER")
+    _assert_secret_key(api_env["DB_PASS"], "VERDIFY_API_RUNTIME_DB_PASSWORD")
+    assert api_env["VERDIFY_API_RUNTIME_DB_ROLE_REQUIRED"]["value"] == "1"
+
+    assert "POSTGRES_PASSWORD" not in ingestor_env
+    _assert_secret_key(ingestor_env["DB_USER"], "VERDIFY_INGESTOR_RUNTIME_DB_USER")
+    _assert_secret_key(ingestor_env["DB_PASSWORD"], "VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD")
+    _assert_secret_key(ingestor_env["PGPASSWORD"], "VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD")
+    assert ingestor_env["VERDIFY_INGESTOR_RUNTIME_DB_ROLE_REQUIRED"]["value"] == "1"
+
     bootstrap = _job(documents, "verdify-runtime-role-bootstrap")
     migration = _job(documents, "verdify-migrate")
     bootstrap_image = bootstrap["spec"]["template"]["spec"]["containers"][0]["image"]
     migration_image = migration["spec"]["template"]["spec"]["containers"][0]["image"]
     assert bootstrap_image == migration_image
     assert bootstrap_image.startswith("registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:")
-    assert not any(document.get("kind") == "Secret" for document in documents)
 
-
-def test_cutover_is_not_active_in_the_current_production_overlay():
-    documents = _render(PROD)
-    api_env = _env(_deployment(documents, "verdify-api"), "api")
-    ingestor_env = _env(_deployment(documents, "verdify-ingestor"), "ingestor")
-
-    assert "VERDIFY_API_RUNTIME_DB_ROLE_REQUIRED" not in api_env
-    assert "VERDIFY_INGESTOR_RUNTIME_DB_ROLE_REQUIRED" not in ingestor_env
-
-    cutover_secret_keys = {
-        "VERDIFY_API_RUNTIME_DB_USER",
-        "VERDIFY_API_RUNTIME_DB_PASSWORD",
-        "VERDIFY_INGESTOR_RUNTIME_DB_USER",
-        "VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD",
-    }
-    rendered_secret_keys = {
-        secret_key_ref["key"]
-        for environment in (api_env, ingestor_env)
-        for item in environment.values()
-        if (secret_key_ref := item.get("valueFrom", {}).get("secretKeyRef"))
-    }
-    assert cutover_secret_keys.isdisjoint(rendered_secret_keys)
-    assert not any(
-        document.get("kind") == "Job" and document.get("metadata", {}).get("name") == "verdify-runtime-role-bootstrap"
+    config = next(
+        document
         for document in documents
-    )
+        if document.get("kind") == "ConfigMap" and document["metadata"]["name"] == "verdify-config"
+    )["data"]
+    assert config["VERDIFY_POLICY_VECTOR_MODE"] == "off"
+    assert config.get("VERDIFY_COMPONENT_EXPERIMENT_ENABLED", "off") == "off"
+    assert not any(document.get("kind") == "Secret" for document in documents)
 
 
 def test_production_presync_hook_explicitly_runs_ledgered_migrations():
