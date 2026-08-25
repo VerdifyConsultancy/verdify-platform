@@ -86,7 +86,7 @@ spec:
         # sha256[:12] of hermes-config.yaml data.config.yaml. The focused
         # drift test makes profile edits roll this Recreate Deployment so the
         # seed-config init container refreshes the state PVC before startup.
-        verdify.io/hermes-profile-revision: "9bb91d235e80"
+        verdify.io/hermes-profile-revision: "2352c78d651a"
         # sha256[:12] of the digest-verified upstream #75588/#75884 backport. This
         # rolls the singleton whenever the init-time runtime patch changes.
         verdify.io/hermes-compressor-patch-revision: "540f717391e9"

@@ -375,6 +375,9 @@ def test_hermes_profile_pins_bounded_cortex_text_route():
     expected_compression = {"enabled": False}
     expected_auxiliary = {
         "compression": {
+            "provider": "custom",
+            "model": "llm.primary.longctx",
+            "base_url": "https://cortex.vallery.net/v1",
             "context_length": 98304,
             "timeout": 180,
         }

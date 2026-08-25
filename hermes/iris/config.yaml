@@ -45,6 +45,9 @@ compression:
 
 auxiliary:
   compression:
+    provider: "custom"
+    model: "llm.primary.longctx"
+    base_url: "https://cortex.vallery.net/v1"
     context_length: 98304
     timeout: 180
 
