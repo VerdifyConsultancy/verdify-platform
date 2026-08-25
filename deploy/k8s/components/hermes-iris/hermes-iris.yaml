@@ -86,7 +86,7 @@ spec:
         # sha256[:12] of hermes-config.yaml data.config.yaml. The focused
         # drift test makes profile edits roll this Recreate Deployment so the
         # seed-config init container refreshes the state PVC before startup.
-        verdify.io/hermes-profile-revision: "d9d787f2cce4"
+        verdify.io/hermes-profile-revision: "9bb91d235e80"
         # sha256[:12] of the digest-verified upstream #75588/#75884 backport. This
         # rolls the singleton whenever the init-time runtime patch changes.
         verdify.io/hermes-compressor-patch-revision: "540f717391e9"
@@ -236,6 +236,11 @@ spec:
             # liveness probes replace the process to obtain a truthful fresh
             # registration. This may replace a client that recovered silently.
             - name: HERMES_MCP_UNACKNOWLEDGED_DISCONNECT_RESTART_SECONDS
+              value: "600"
+            # Cortex may legitimately spend 4-5 minutes in prefill/reasoning
+            # before a stream delta. Match the finite provider timeout in the
+            # seeded profile so Hermes does not kill a healthy local stream.
+            - name: HERMES_STREAM_STALE_TIMEOUT
               value: "600"
           securityContext:
             allowPrivilegeEscalation: false

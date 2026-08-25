@@ -523,11 +523,34 @@ data:
       # Cortex still bounds every response at this value server-side.
       max_tokens: 16384
 
+    # Cortex can spend several minutes prefilling this planner's 50K+ token prompt
+    # before its first streamed delta. Treat that as healthy local inference, while
+    # keeping a finite upper bound. One application attempt avoids replaying the
+    # same expensive deterministic failure into the next scheduled planner window.
+    providers:
+      custom:
+        request_timeout_seconds: 600
+        stale_timeout_seconds: 600
+
+    # Iris runs one trigger per session and its exact MCP results are safety-relevant.
+    # Disable lossy proactive compaction: the 98,304 context and 16,384 output cap
+    # leave a verified 81,920-token prompt budget. Hermes still invokes its bounded
+    # emergency compressor after a genuine provider overflow; give that local-route
+    # fallback enough time to finish without enabling the observed compaction loop.
+    compression:
+      enabled: false
+
+    auxiliary:
+      compression:
+        context_length: 98304
+        timeout: 180
+
     agent:
       # The bundled custom transport does not forward this scalar. Cortex route 42
       # supplies the verified medium default server-side on vLLM 0.27.1; retaining
       # it here records the client contract and catches future provider support.
       reasoning_effort: medium
+      api_max_retries: 1
       # Iris's longest cycles (SUNRISE/SUNSET) read ~6-10 MCP tools in sequence
       # plus write a plan. 30 turns is generous; over that, suspect a tool-call
       # loop and surface as a Hermes alert instead of letting the cycle run away.

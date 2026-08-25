@@ -47,9 +47,25 @@ data:
       # Keep the experiment transport byte-locked to the live route contract.
       max_tokens: 16384
 
+    # Match the live planner's bounded local-provider latency contract. This
+    # profile is dark until the experiment rollout explicitly selects it.
+    providers:
+      custom:
+        request_timeout_seconds: 600
+        stale_timeout_seconds: 600
+
+    compression:
+      enabled: false
+
+    auxiliary:
+      compression:
+        context_length: 98304
+        timeout: 180
+
     agent:
       # Cortex route 42 supplies the verified medium default server-side.
       reasoning_effort: medium
+      api_max_retries: 1
       # Experiment cycles are template-selection only (a handful of qualified
       # reads + one policy_template_propose or acknowledge_trigger), so the
       # generous live-profile turn budget still applies as a loop fence.
