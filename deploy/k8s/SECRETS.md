@@ -9,10 +9,12 @@ seal + named prod inventory deliverable is **#66**.
 This file is the single source of truth for **which Secret carries which key in
 which env, and how the manifests reference it**. It contains **NO real secret
 material** — keys/refs only. The deploy manifests reference every Secret BY NAME;
-the real value arrives out-of-band from the fleet SOPS+age backend
-(`jvallery/agent-fleet-control`) BEFORE the ArgoCD app reconciles. `kustomize`
-cannot decrypt SOPS, so the in-repo `*.placeholder.yaml` files exist ONLY so
-`kustomize build` / `kubeconform` render a complete, lint-able manifest in CI.
+the protected source is owned under
+`jvallery/agents/platform/gitops/secrets-ksops/verdify-prod/` and reconciled by
+`jvallery/agents/.github/workflows/local-k8s-secret-sync.yml` BEFORE the ArgoCD
+app reconciles. `kustomize` cannot decrypt SOPS, so the in-repo
+`*.placeholder.yaml` files exist ONLY so `kustomize build` / `kubeconform`
+render a complete, lint-able manifest in CI.
 
 ## Design basis
 
@@ -124,26 +126,26 @@ required key names (never their values), then run the task-scoped
 in `CreateContainerConfigError`; Kubernetes still accepts the Deployment object,
 but its rollout cannot complete.
 
-## Sealed-artifact shape (Root delivers; Iris specifies)
+## Protected secret-source ownership (Root delivers; Iris specifies)
 
-Each Secret above maps to a fleet sealed artifact:
+The current fleet-owned source and delivery entry point are:
 
 ```
-agent-fleet-control/
-  registry/secrets/<id>.yaml            # meta: target.namespace + name + key list
-  secrets/encrypted/<id>.enc.yaml       # SOPS+age ciphertext (NEVER decrypted by kustomize)
+jvallery/agents/
+├── platform/gitops/secrets-ksops/verdify-prod/
+└── .github/workflows/local-k8s-secret-sync.yml
 ```
 
-The canonical sealed source for `verdify-app-secrets` is
-`agent-fleet-control/secrets/encrypted/verdify-app-secrets.enc.yaml`, sealed to the
-fleet age key and applied by the GitOps secret-delivery step BEFORE the app
-reconciles. As of 2026-05-31 it is ALREADY present in `verdify-staging` and decrypts
-byte-identical (`POSTGRES_PASSWORD`, `VERDIFY_WRITE_API_KEY`, `ESP32_API_KEY`,
-`MQTT_USER/PASS`) — re-applying is a no-op (avoid DB-auth drift). The dev + prod
-sealed artifacts land with their envs at **M3** (`needs:root`).
+This contract intentionally records only the owning directory, workflow, Secret
+names, and required key names. It does not assert an encrypted filename,
+ciphertext contents, or reconciliation state. Root resolves the exact protected
+artifact in the owning repository and verifies only target metadata and key
+names before running the bounded sync workflow.
 
-For a REAL apply, drop the `- *.placeholder.yaml` lines from the overlay's
-`kustomization.yaml`; the sealed Secret is already in-cluster from the delivery step.
+The in-repo placeholder resources remain local-config-only and never render into
+an Argo application. Runtime delivery is exclusively through the protected
+workflow above; an Argo application sync is not a substitute for Secret
+reconciliation.
 
 ## In-repo placeholder files (local build only)
 

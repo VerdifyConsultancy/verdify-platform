@@ -1373,7 +1373,7 @@ async def noindex_api_responses(request: Request, call_next):
 
 DEFAULT_GREENHOUSE = "vallery"
 PLANNER_GATEWAY_LABEL = os.environ.get("VERDIFY_PLANNER_GATEWAY_LABEL", "hermes-iris")
-PLANNER_MODEL_LABEL = os.environ.get("VERDIFY_PLANNER_MODEL_LABEL", "hermes-iris/openai:gpt-5.6-sol/xhigh")
+PLANNER_MODEL_LABEL = os.environ.get("VERDIFY_PLANNER_MODEL_LABEL", "hermes-iris/custom:llm.primary.longctx/medium")
 WRITE_API_KEY_ENV = "VERDIFY_WRITE_API_KEY"
 ALLOW_UNAUTHENTICATED_WRITES_ENV = "VERDIFY_ALLOW_UNAUTHENTICATED_WRITES"
 PUBLIC_HOME_METRICS_CACHE_TTL_S = 30.0

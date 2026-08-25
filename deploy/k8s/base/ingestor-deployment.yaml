@@ -26,6 +26,11 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: verdify-ingestor
+  annotations:
+    # Run the sole writer only after Argo has observed both MCP (wave 10) and
+    # Hermes (wave 20) Healthy. Deployment metadata only: the ordering marker
+    # does not itself Recreate the current ingestor pod.
+    argocd.argoproj.io/sync-wave: "30"
   labels:
     app.kubernetes.io/part-of: verdify
     app.kubernetes.io/component: ingestor
