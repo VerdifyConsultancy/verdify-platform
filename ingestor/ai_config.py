@@ -6,9 +6,12 @@ and schedule metadata to all AI-powered scripts.
 
 Usage:
     from ai_config import ai
-    client = ai.get_client("planner")
-    prompt = ai.load_template("planner", "prompt")
+    client = ai.get_client("vision")
+    prompt = ai.load_template("vision", "prompt")
     model = ai.model("vision")
+
+The planner entry is audit metadata only. Live planner routing is owned by
+``hermes/iris/config.yaml`` and does not call ``get_client("planner")``.
 """
 
 import os

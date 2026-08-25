@@ -21,7 +21,7 @@ Verdify is an AI-assisted greenhouse control system for a 367 sq ft greenhouse i
 The control stack has three separate responsibilities:
 
 - **Crop/band policy:** database functions compute target temp/VPD bands from crop profiles.
-- **Planner:** Iris currently uses Hermes to choose tactical setpoints and plans through MCP tools. Repo source selects OpenAI GPT-5.6 Sol xhigh as the pending profile; activation requires the documented replay and deterministic checks, and Hermes remains on the prior deployed profile until those checks pass.
+- **Planner:** Iris currently uses Hermes to choose tactical setpoints and plans through MCP tools. The live profile is Cortex `custom:llm.primary.longctx` with medium reasoning, a 98,304-token context contract, and a 16,384-token output fence.
 - **Controller:** ESP32 firmware evaluates real-time climate every 5 seconds and decides relay behavior.
 
 The new LangGraph planner replaces the current Hermes prompt-orchestration path, but it must not replace the control loop. It plans, validates, writes through MCP, and verifies. It does not directly control relays.
@@ -612,7 +612,7 @@ Use these defaults unless Verdify operators override them:
 
 ## 19. Known Compatibility Notes
 
-- Some older docs mention OpenClaw/local Gemma. Current production planning uses Hermes `hermes-iris`; repo source selects OpenAI GPT-5.6 Sol xhigh-reasoning as the pending profile, while live activation remains separate.
+- Some older docs mention OpenClaw/local Gemma. Current production planning uses Hermes `hermes-iris` on Cortex `custom:llm.primary.longctx` with medium reasoning and a 16,384-token output fence.
 - Some schema literals still list planner instances as `opus`, `local`, or `iris-planner`. Current operational docs also mention `hermes-iris`. The standalone planner should make `planner_instance` configurable and compare exactly to Verdify delivery rows when writing through MCP.
 - `/setpoints` compatibility endpoints still exist, but production firmware uses direct ESPHome API pushes/readbacks. Do not build the planner around HTTP setpoint polling.
 - The repo has permission-restricted directories such as `analytics/` and `hermes/iris/`; do not assume full tree access is available to every agent.
