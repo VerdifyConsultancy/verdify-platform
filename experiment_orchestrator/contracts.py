@@ -31,7 +31,9 @@ CONTEXT_SCHEMA = "verdify-selector-context-v2"
 CLIMATE_SOURCE_SCHEMA = "verdify-selector-climate-source-v1"
 FORECAST_SOURCE_SCHEMA = "verdify-selector-forecast-source-v1"
 SELECTOR_IDENTITY_SCHEMA = "verdify-selector-identity-v2"
+OPENAI_SELECTOR_IDENTITY_SCHEMA = "verdify-selector-identity-openai-v1"
 SELECTOR_RESPONSE_SCHEMA = "verdify-selector-response-v2"
+OPENAI_SELECTOR_RESPONSE_SCHEMA = "verdify-selector-decision-openai-v1"
 OUTCOME_PAYLOAD_SCHEMA = "verdify-assigned-day-outcome-v2"
 OUTCOME_IDENTITY_SCHEMA = "verdify-experiment-v2-outcome-evaluator-identity-v1"
 LIFECYCLE_PLAN_SCHEMA = "verdify-experiment-v2-lifecycle-plan-v1"
@@ -319,6 +321,86 @@ def _finite_or_none(value: object, field: str) -> float | None:
     return normalized
 
 
+OPENAI_SELECTOR_REQUEST_PLACEHOLDER = "{{VERDIFY_DAILY_SELECTOR_REQUEST_V2}}"
+OPENAI_SELECTOR_RESPONSE_FORMAT: dict[str, JsonValue] = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "verdify_selector_decision",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "profile": {"type": "string", "enum": list(VALID_PROFILES)},
+            },
+            "required": ["profile"],
+        },
+    },
+}
+
+
+def _bounded_nfc_text(value: object, field: str, maximum_bytes: int) -> str:
+    if (
+        not isinstance(value, str)
+        or not value
+        or len(value.encode("utf-8")) > maximum_bytes
+        or unicodedata.normalize("NFC", value) != value
+    ):
+        raise ContractError(f"{field} must be bounded nonempty NFC text")
+    return value
+
+
+def openai_messages_template_bytes(system_message: str, prompt: str) -> bytes:
+    """Canonical frozen message template, before the DB-owned context is inserted."""
+
+    _bounded_nfc_text(system_message, "selector system_message", 32_768)
+    _bounded_nfc_text(prompt, "selector prompt", 32_768)
+    value = [
+        {"content": system_message, "role": "system"},
+        {
+            "content": f"{prompt}\n\n{OPENAI_SELECTOR_REQUEST_PLACEHOLDER}",
+            "role": "user",
+        },
+    ]
+    _validate_json(value)
+    return json.dumps(
+        value,
+        ensure_ascii=False,
+        allow_nan=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+
+
+def _validate_openai_decoding_parameters(value: object) -> dict[str, JsonValue]:
+    decoding = _exact_object(
+        value,
+        frozenset(
+            {
+                "chat_template_kwargs",
+                "max_tokens",
+                "response_format",
+                "stream",
+                "temperature",
+            }
+        ),
+        "OpenAI decoding parameters",
+    )
+    if decoding["stream"] is not False:
+        raise ContractError("OpenAI selector streaming must be disabled")
+    if type(decoding["max_tokens"]) is not int or not 512 <= decoding["max_tokens"] <= 16_384:
+        raise ContractError("OpenAI selector max_tokens must be an integer in [512,16384]")
+    if type(decoding["temperature"]) not in (int, float) or decoding["temperature"] != 0:
+        raise ContractError("OpenAI selector temperature must be exactly 0")
+    if decoding["chat_template_kwargs"] != {"reasoning_effort": "medium"}:
+        raise ContractError("OpenAI selector reasoning_effort must be exactly medium")
+    if decoding["response_format"] != OPENAI_SELECTOR_RESPONSE_FORMAT:
+        raise ContractError("OpenAI selector response_format differs from the locked schema")
+    normalized = dict(decoding)
+    _validate_json(normalized)
+    return normalized
+
+
 @dataclass(frozen=True)
 class ClimateSourceRecord:
     observed_at: datetime
@@ -461,13 +543,17 @@ class SelectorIdentity:
     runtime_environment_sha256: str
     timeout_milliseconds: int
     max_attempts: int
+    transport_protocol: Literal["verdify_selector_v2", "openai_chat_completions"]
+    system_message: str | None
+    prompt: str | None
+    decoding_parameters: Mapping[str, JsonValue] | None
     canonical_bytes: bytes
     canonical_sha256: str
 
     @classmethod
     def parse(cls, raw: bytes, expected_sha256: str) -> SelectorIdentity:
         payload = parse_canonical_document(raw, expected_sha256)
-        fields = frozenset(
+        common_fields = frozenset(
             {
                 "schema",
                 "provider",
@@ -487,8 +573,24 @@ class SelectorIdentity:
                 "max_attempts",
             }
         )
-        identity = _exact_object(payload, fields, "selector identity")
-        if identity["schema"] != SELECTOR_IDENTITY_SCHEMA:
+        schema = payload.get("schema")
+        if schema == SELECTOR_IDENTITY_SCHEMA:
+            identity = _exact_object(payload, common_fields, "selector identity")
+            transport_protocol: Literal["verdify_selector_v2", "openai_chat_completions"] = "verdify_selector_v2"
+            system_message = None
+            prompt = None
+            decoding_parameters = None
+        elif schema == OPENAI_SELECTOR_IDENTITY_SCHEMA:
+            identity = _exact_object(
+                payload,
+                common_fields | frozenset({"system_message", "prompt", "decoding_parameters"}),
+                "OpenAI selector identity",
+            )
+            transport_protocol = "openai_chat_completions"
+            system_message = _bounded_nfc_text(identity["system_message"], "selector system_message", 32_768)
+            prompt = _bounded_nfc_text(identity["prompt"], "selector prompt", 32_768)
+            decoding_parameters = _validate_openai_decoding_parameters(identity["decoding_parameters"])
+        else:
             raise ContractError("selector identity schema mismatch")
         text_fields = (
             "provider",
@@ -520,11 +622,36 @@ class SelectorIdentity:
             raise ContractError("selector timeout must be an integer in [1,60000]")
         if type(attempts) is not int or not 1 <= attempts <= 3:
             raise ContractError("selector max_attempts must be an integer in [1,3]")
+        if transport_protocol == "openai_chat_completions":
+            assert system_message is not None and prompt is not None and decoding_parameters is not None
+            if normalized_text["provider"] != "cortex-openai":
+                raise ContractError("OpenAI selector provider must be cortex-openai")
+            if normalized_text["tool_contract_revision"] != "none-v1":
+                raise ContractError("OpenAI selector forbids tools")
+            if normalized_text["response_schema_revision"] != OPENAI_SELECTOR_RESPONSE_SCHEMA:
+                raise ContractError("OpenAI selector response schema revision mismatch")
+            actual_prompt_hash = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
+            actual_system_hash = hashlib.sha256(system_message.encode("utf-8")).hexdigest()
+            actual_messages_hash = hashlib.sha256(openai_messages_template_bytes(system_message, prompt)).hexdigest()
+            actual_decoding_hash = hashlib.sha256(canonical_json_bytes(decoding_parameters)).hexdigest()
+            expected_hashes = {
+                "prompt_sha256": actual_prompt_hash,
+                "system_message_sha256": actual_system_hash,
+                "messages_sha256": actual_messages_hash,
+                "decoding_parameters_sha256": actual_decoding_hash,
+            }
+            mismatched = sorted(field for field, actual in expected_hashes.items() if hashes[field] != actual)
+            if mismatched:
+                raise ContractError("OpenAI selector embedded artifact hash mismatch: " + ", ".join(mismatched))
         return cls(
             **normalized_text,
             **hashes,
             timeout_milliseconds=timeout,
             max_attempts=attempts,
+            transport_protocol=transport_protocol,
+            system_message=system_message,
+            prompt=prompt,
+            decoding_parameters=decoding_parameters,
             canonical_bytes=raw,
             canonical_sha256=expected_sha256,
         )
