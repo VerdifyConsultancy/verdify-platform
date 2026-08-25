@@ -48,6 +48,24 @@ WORKDIR /app
 COPY api/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
+# Runtime provenance fallback for the managed Kaniko path. The fleet clone
+# checks out the requested 40-hex revision detached, so .git/HEAD is the exact
+# source receipt. Local builds that pass GIT_SHA keep working even from a
+# linked worktree, where .git is a gitdir pointer file rather than a directory.
+FROM base AS source-metadata
+ARG GIT_SHA=unknown
+COPY .git /tmp/verdify-git-metadata
+RUN set -eu; \
+    candidate="$GIT_SHA"; \
+    if ! printf '%s\n' "$candidate" | grep -Eq '^[0-9a-f]{40}$'; then \
+        test -f /tmp/verdify-git-metadata/HEAD; \
+        candidate="$(tr -d '\r\n' < /tmp/verdify-git-metadata/HEAD)"; \
+    fi; \
+    printf '%s\n' "$candidate" | grep -Eq '^[0-9a-f]{40}$'; \
+    install -d -m 0755 /out; \
+    printf '%s\n' "$candidate" > /out/source-revision; \
+    chmod 0444 /out/source-revision
+
 # ----------------------------------------------------------------------------
 # Final stage
 # ----------------------------------------------------------------------------
@@ -63,6 +81,7 @@ COPY api/main.py ./main.py
 COPY verdify_schemas/ ./verdify_schemas/
 COPY verdify_public/ ./verdify_public/
 RUN python -c "import verdify_public.output_policy"
+COPY --from=source-metadata /out/source-revision /etc/verdify/source-revision
 
 # Non-root user (uid 1000, matches the homelab NFS/source ownership convention).
 RUN useradd -m -u 1000 -s /usr/sbin/nologin appuser \
@@ -83,9 +102,10 @@ ARG GIT_REF=unknown
 ENV VERDIFY_GIT_SHA=$GIT_SHA \
     VERDIFY_BUILD_TIME=$BUILD_TIME \
     VERDIFY_GIT_REF=$GIT_REF
+# The managed Kaniko invocation owns the reserved revision/created OCI labels.
+# Re-declaring them from defaulted ARGs here overwrote truthful values with
+# "unknown" when the shared template omitted build arguments.
 LABEL org.opencontainers.image.source="https://github.com/VerdifyConsultancy/verdify-platform" \
-      org.opencontainers.image.revision=$GIT_SHA \
-      org.opencontainers.image.created=$BUILD_TIME \
       org.opencontainers.image.title="verdify-api"
 
 # Container port 8080 (the compose api port). The deployment makes this

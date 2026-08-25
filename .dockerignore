@@ -6,7 +6,13 @@
 # sync with the COPY lines in api/Dockerfile, mcp/Dockerfile, ingestor/Dockerfile.
 
 # --- VCS / tooling metadata ---
+# Managed CI checks out the exact requested revision detached. Expose only
+# .git/HEAD so image builds can bake a runtime-readable source receipt without
+# sending refs, config, objects, credentials, or any other VCS state to Kaniko.
 .git
+!.git
+.git/*
+!.git/HEAD
 .gitignore
 .github
 .editorconfig
