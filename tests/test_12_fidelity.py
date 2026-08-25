@@ -1652,6 +1652,26 @@ def test_planner_sla_lifecycle_uses_configured_pair_timeout():
     assert "await _sync_planner_trigger_ledger(conn)" in body
 
 
+def test_required_plan_failure_history_survives_current_attempt_retry():
+    migration = (REPO_ROOT / "db/migrations/218-planner-required-failure-history.sql").read_text()
+    alerts = _tasks_submodule_src("alerts")
+
+    assert "had_required_failure boolean NOT NULL DEFAULT false" in migration
+    assert "COALESCE(OLD.had_required_failure, false)" in migration
+    assert "OLD.expected_action = 'set_plan'" in migration
+    assert "NEW.expected_action = 'set_plan'" in migration
+    assert "delivery.event_label ILIKE" in migration
+    assert "required.had_required_failure" in migration
+    assert "required.expected_at > recovery.expected_at" in migration
+    assert "fn_runtime_ordinary_boundary_digest" in migration
+    assert "had_required_failure', 'UPDATE'" in migration
+
+    required_alert = alerts.split("# 7b. Required SUNRISE/SUNSET/MIDNIGHT plans", 1)[1]
+    required_alert = required_alert.split("# 7c. Planner ownership drift", 1)[0]
+    assert "had_required_failure" in required_alert
+    assert "r.expected_action = 'set_plan'" in required_alert
+
+
 def test_active_future_plan_range_guard_uses_tunable_registry():
 
     src = _tasks_src()
@@ -2635,7 +2655,8 @@ def test_required_plan_alert_ignores_validation_ack_only_rows():
     start = src.index("# 7b. Required SUNRISE/SUNSET/MIDNIGHT plans")
     end = src.index("if required_misses:", start)
     body = src[start:end]
-    assert "event_label NOT ILIKE 'validation%ack-only%'" in body
+    assert "r.expected_action = 'set_plan'" in body
+    assert "event_label NOT ILIKE 'validation%ack-only%'" not in body
     assert "unrecovered_required_misses" in body
 
 

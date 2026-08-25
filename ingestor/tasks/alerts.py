@@ -1203,28 +1203,35 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
             WITH recent AS (
                 SELECT id, event_type, event_label, instance, status, expected_at,
                        due_at, delivered_at, plan_delivery_log_id, trigger_id,
-                       resulting_plan_id, terminal_action, failure_class, notes
-                  FROM planner_trigger_ledger
+                       resulting_plan_id, terminal_action, failure_class, notes,
+                       expected_action, had_required_failure
+                 FROM planner_trigger_ledger
                  WHERE event_type IN ('SUNRISE', 'SUNSET', 'MIDNIGHT')
                    AND expected_at > now() - interval '36 hours'
-                   AND event_label NOT ILIKE 'validation%ack-only%'
             ),
             last_required_recovery AS (
                 SELECT max(expected_at) AS expected_at
-                  FROM recent
+                 FROM recent
                  WHERE status = 'plan_written'
                    AND terminal_action = 'set_plan'
+                   AND expected_action = 'set_plan'
             ),
             unrecovered_required_misses AS (
                 SELECT r.*
                   FROM recent r
                   CROSS JOIN last_required_recovery lrr
                  WHERE (
-                         (
-                           r.due_at < now()
-                           AND r.status IN ('missed', 'timed_out', 'delivery_failed', 'expected', 'delivered')
+                         r.had_required_failure
+                         OR (
+                           r.expected_action = 'set_plan'
+                           AND (
+                             (
+                               r.due_at < now()
+                               AND r.status IN ('missed', 'timed_out', 'delivery_failed', 'expected', 'delivered')
+                             )
+                             OR r.status IN ('action_completed', 'neutral_fallback', 'wrong_action', 'acked')
+                           )
                          )
-                         OR r.status IN ('action_completed', 'neutral_fallback', 'wrong_action', 'acked')
                        )
                    AND (
                          lrr.expected_at IS NULL
@@ -1233,7 +1240,7 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
             )
             SELECT id, event_type, event_label, instance, status, expected_at, due_at,
                    delivered_at, plan_delivery_log_id, trigger_id, resulting_plan_id,
-                   terminal_action, failure_class, notes
+                   terminal_action, failure_class, notes, had_required_failure
               FROM unrecovered_required_misses
              ORDER BY expected_at DESC
             """
@@ -1258,6 +1265,7 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                     "resulting_plan_id": r["resulting_plan_id"],
                     "terminal_action": r["terminal_action"],
                     "failure_class": r["failure_class"],
+                    "had_required_failure": bool(r["had_required_failure"]),
                 }
                 for r in required_misses
             ]
