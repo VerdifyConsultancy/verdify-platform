@@ -22,6 +22,11 @@ COPY experiment_orchestrator/*.py /app/experiment_orchestrator/
 # locked implementation under an image-local name so the runtime hashes the
 # same immutable bytes that design lock names.
 COPY research/planner-efficacy/switchback/v2_outcomes.py /app/experiment_orchestrator/_frozen_v2_outcomes.py
+# The managed build clone uses umask 077. Docker/kaniko preserve those source
+# modes on bare COPY, so normalize every runtime module before dropping root;
+# otherwise uid 10001 cannot import a freshly built image.
+RUN chmod 0555 /app /app/experiment_orchestrator \
+    && chmod 0444 /app/experiment_orchestrator/*.py
 
 ARG GIT_SHA=unknown
 ARG BUILD_TIME=unknown
