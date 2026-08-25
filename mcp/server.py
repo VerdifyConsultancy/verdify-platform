@@ -18,12 +18,13 @@ import os
 import sys
 from datetime import date, datetime, timedelta
 from pathlib import Path
+from typing import Annotated
 from uuid import UUID, uuid4
 from zoneinfo import ZoneInfo
 
 import asyncpg
 from mcp.server.fastmcp import FastMCP
-from pydantic import ValidationError
+from pydantic import Field, ValidationError
 
 # verdify_schemas lives one level up from this server file in every worktree.
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -129,6 +130,21 @@ _OPENAI_KEY_FILES = (
 PLAN_REQUIRED_PARAMS = TIER1_REG
 TIER1_TUNABLES = TIER1_REG
 
+# A required plan with eight complete ClimateIntent waypoints serializes to
+# roughly 5K decoded characters. Keep the advertised MCP argument surface well
+# below Hermes's 16K final continuation ceiling so a valid tool call can close
+# its JSON before the completion cap. These are transport bounds only:
+# registry, materialization, coverage and write-fence validation below remain
+# authoritative.
+SET_PLAN_HYPOTHESIS_MAX_CHARS = 2200
+SET_PLAN_TRANSITIONS_MAX_CHARS = 6000
+SET_PLAN_EXPERIMENT_MAX_CHARS = 240
+SET_PLAN_EXPECTED_OUTCOME_MAX_CHARS = 320
+SET_PLAN_ARGUMENTS_MAX_CHARS = 10000
+SET_PLAN_TRANSITIONS_MIN = 3
+SET_PLAN_TRANSITIONS_MAX = 8
+SET_PLAN_REASON_MAX_CHARS = 120
+
 FORCED_ON_SWITCH_PARAMS = frozenset({"sw_fsm_controller_enabled"})
 CLIMATE_TARGET_PARAM_ALIASES = {
     "temp_low_f": "temp_low",
@@ -142,6 +158,14 @@ def _climate_intent_waypoint_errors(waypoints: object) -> list[dict[str, object]
     if not isinstance(waypoints, list):
         return [{"transition_index": -1, "error": "transitions must be a JSON array"}]
     errors: list[dict[str, object]] = []
+    if not SET_PLAN_TRANSITIONS_MIN <= len(waypoints) <= SET_PLAN_TRANSITIONS_MAX:
+        errors.append(
+            {
+                "transition_index": -1,
+                "error": (f"set_plan requires {SET_PLAN_TRANSITIONS_MIN}-{SET_PLAN_TRANSITIONS_MAX} transitions"),
+                "transition_count": len(waypoints),
+            }
+        )
     for idx, wp in enumerate(waypoints):
         if not isinstance(wp, dict):
             errors.append({"transition_index": idx, "error": "transition must be an object"})
@@ -161,7 +185,46 @@ def _climate_intent_waypoint_errors(waypoints: object) -> list[dict[str, object]
                 )
         if "params" in wp and wp.get("params") not in ({}, None):
             errors.append({"transition_index": idx, "error": "raw params are not accepted in set_plan"})
+        reason = wp.get("reason")
+        if isinstance(reason, str) and len(reason) > SET_PLAN_REASON_MAX_CHARS:
+            errors.append(
+                {
+                    "transition_index": idx,
+                    "error": f"reason must be at most {SET_PLAN_REASON_MAX_CHARS} characters",
+                    "reason_chars": len(reason),
+                }
+            )
     return errors
+
+
+def _set_plan_decoded_argument_chars(
+    *,
+    plan_id: str,
+    hypothesis: str,
+    transitions: str,
+    experiment: str,
+    expected_outcome: str,
+    trigger_id: str | None,
+    planner_instance: str | None,
+    valid_from: str | None,
+    expires_at: str | None,
+) -> int:
+    """Count decoded argument text, independent of transport JSON escaping."""
+    return sum(
+        len(value)
+        for value in (
+            plan_id,
+            hypothesis,
+            transitions,
+            experiment,
+            expected_outcome,
+            trigger_id,
+            planner_instance,
+            valid_from,
+            expires_at,
+        )
+        if value is not None
+    )
 
 
 async def _fetch_active_tier1_params(conn: asyncpg.Connection) -> dict[str, float]:
@@ -2968,28 +3031,83 @@ async def _lock_current_planner_attempt(
 
 @mcp.tool()
 async def set_plan(
-    plan_id: str = "",
-    hypothesis: str = "",
-    transitions: str = "",
-    experiment: str = "",
-    expected_outcome: str = "",
-    trigger_id: str | None = None,
-    planner_instance: str | None = None,
-    valid_from: str | None = None,
-    expires_at: str | None = None,
+    plan_id: Annotated[
+        str,
+        Field(
+            min_length=1,
+            max_length=18,
+            pattern=r"^iris-\d{8}-\d{4}$",
+            description="Unique plan ID in iris-YYYYMMDD-HHMM format.",
+        ),
+    ] = "",
+    hypothesis: Annotated[
+        str,
+        Field(
+            min_length=1,
+            max_length=SET_PLAN_HYPOTHESIS_MAX_CHARS,
+            description=(
+                "Compact hypothesis. SUNRISE/SUNSET require one bare "
+                "PlanHypothesisStructured JSON object with at most 2 stress windows and 3 rationales."
+            ),
+        ),
+    ] = "",
+    transitions: Annotated[
+        str,
+        Field(
+            min_length=2,
+            max_length=SET_PLAN_TRANSITIONS_MAX_CHARS,
+            description=(
+                "JSON array of 3-8 time-ordered waypoints. Every waypoint must include all "
+                "ClimateIntent fields and an optional reason of at most 120 characters."
+            ),
+        ),
+    ] = "",
+    experiment: Annotated[
+        str,
+        Field(
+            max_length=SET_PLAN_EXPERIMENT_MAX_CHARS,
+            description="Optional one-line experiment description (240 characters maximum).",
+        ),
+    ] = "",
+    expected_outcome: Annotated[
+        str,
+        Field(
+            max_length=SET_PLAN_EXPECTED_OUTCOME_MAX_CHARS,
+            description="Optional measurable prediction (320 characters maximum).",
+        ),
+    ] = "",
+    trigger_id: Annotated[
+        str | None,
+        Field(max_length=36, description="Audit trigger UUID copied exactly from the planning prompt."),
+    ] = None,
+    planner_instance: Annotated[
+        str | None,
+        Field(max_length=5, description="Audit planner instance: local or opus."),
+    ] = None,
+    valid_from: Annotated[
+        str | None,
+        Field(max_length=40, description="Optional ISO-8601 plan validity start."),
+    ] = None,
+    expires_at: Annotated[
+        str | None,
+        Field(max_length=40, description="Optional ISO-8601 plan expiry."),
+    ] = None,
 ) -> str:
     """Write a 72-hour setpoint plan with multiple time-based waypoints.
     Deactivates all existing future waypoints, writes new ones, and logs a plan journal entry.
     The dispatcher executes these on schedule — the greenhouse follows the plan even if the planner goes offline.
 
     plan_id: unique ID like 'iris-YYYYMMDD-HHMM'
-    hypothesis: what you expect this plan to achieve — may optionally include a
-        fenced ```json block matching PlanHypothesisStructured (conditions +
-        stress_windows + rationale). If present, it's validated and stored in
-        plan_journal.hypothesis_structured for structured downstream rendering.
-    transitions: JSON array of objects: [{"ts": "ISO8601-with-TZ", "climate_intent": {...}, "reason": "..."}]
-    experiment: optional one-line experiment description
-    expected_outcome: optional measurable prediction
+    hypothesis: compact statement of what this plan should achieve, at most
+        2,200 characters. SUNRISE/SUNSET require a bare
+        PlanHypothesisStructured JSON object (conditions + no more than two
+        stress_windows + no more than three rationales). Do not repeat the
+        assembled context.
+    transitions: JSON array of 3-8 objects: [{"ts": "ISO8601-with-TZ",
+        "climate_intent": {...}, "reason": "..."}]. Every ClimateIntent field
+        is required; keep each reason at or below 120 characters.
+    experiment: optional one-line description, at most 240 characters
+    expected_outcome: optional measurable prediction, at most 320 characters
     valid_from, expires_at: optional ISO-8601 validity bounds. When omitted,
         validity starts at the first transition and expires six hours after the
         final transition; the total envelope cannot exceed 78 hours.
@@ -2997,11 +3115,38 @@ async def set_plan(
         through from the audit-headers banner shown at the bottom of every
         planning event prompt (`trigger_id=<uuid>`, `planner_instance='opus'|'local'`).
         Stamped onto plan_journal so SLA monitors and audit queries can
-        correlate plans to deliveries by uuid (not 2h time-window fallback)."""
+        correlate plans to deliveries by uuid (not 2h time-window fallback).
+
+    Keep all decoded string arguments below 9,000 characters total. The MCP
+    boundary rejects totals above 10,000 before opening a database connection."""
     # Sprint 20: validate the whole envelope through Plan schema before any DB writes.
     # This rejects unknown tunables, inverted temp/VPD bands, non-monotonic transitions,
     # bad plan_id format, timezone-naive timestamps, etc. — at the MCP boundary, so
     # partial plans never land in setpoint_plan.
+    decoded_argument_chars = _set_plan_decoded_argument_chars(
+        plan_id=plan_id,
+        hypothesis=hypothesis,
+        transitions=transitions,
+        experiment=experiment,
+        expected_outcome=expected_outcome,
+        trigger_id=trigger_id,
+        planner_instance=planner_instance,
+        valid_from=valid_from,
+        expires_at=expires_at,
+    )
+    if decoded_argument_chars > SET_PLAN_ARGUMENTS_MAX_CHARS:
+        return json.dumps(
+            {
+                "error": "set_plan decoded arguments exceed the compact tool-call contract",
+                "decoded_argument_chars": decoded_argument_chars,
+                "max_decoded_argument_chars": SET_PLAN_ARGUMENTS_MAX_CHARS,
+                "hint": (
+                    "Keep the whole decoded argument object under 9,000 characters: use 3-8 "
+                    "compact transitions, reasons <=120 characters, and do not repeat context."
+                ),
+            }
+        )
+
     normalized_trigger_id: str | None = None
     if not trigger_id:
         return json.dumps(

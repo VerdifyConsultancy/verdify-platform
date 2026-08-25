@@ -12,10 +12,12 @@ import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
+from typing import get_type_hints
 from uuid import uuid4
 
 import pytest
 import yaml
+from pydantic import TypeAdapter
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
@@ -1111,6 +1113,181 @@ def test_materializer_runs_one_canonical_final_normalization_per_output(mcp_serv
 
     assert set(calls) == params
     assert len(calls) == len(params)
+
+
+def _schema_max_length(schema: dict[str, object]) -> int:
+    if "maxLength" in schema:
+        return int(schema["maxLength"])
+    for branch in schema.get("anyOf", []):
+        if "maxLength" in branch:
+            return int(branch["maxLength"])
+    raise AssertionError(f"schema does not advertise maxLength: {schema}")
+
+
+def test_set_plan_tool_schema_advertises_compact_argument_limits(mcp_server):
+    hints = get_type_hints(mcp_server.set_plan, include_extras=True)
+    expected_max_lengths = {
+        "plan_id": 18,
+        "hypothesis": mcp_server.SET_PLAN_HYPOTHESIS_MAX_CHARS,
+        "transitions": mcp_server.SET_PLAN_TRANSITIONS_MAX_CHARS,
+        "experiment": mcp_server.SET_PLAN_EXPERIMENT_MAX_CHARS,
+        "expected_outcome": mcp_server.SET_PLAN_EXPECTED_OUTCOME_MAX_CHARS,
+        "trigger_id": 36,
+        "planner_instance": 5,
+        "valid_from": 40,
+        "expires_at": 40,
+    }
+
+    schemas = {name: TypeAdapter(hints[name]).json_schema() for name in expected_max_lengths}
+    advertised_total = sum(_schema_max_length(schemas[name]) for name in expected_max_lengths)
+
+    assert {name: _schema_max_length(schema) for name, schema in schemas.items()} == expected_max_lengths
+    assert advertised_total < 9000
+    assert "3-8 time-ordered waypoints" in schemas["transitions"]["description"]
+    assert "at most 2 stress windows and 3 rationales" in schemas["hypothesis"]["description"]
+
+
+def test_set_plan_waypoint_contract_accepts_three_to_eight_complete_intents(mcp_server):
+    intent = mcp_server.ClimateIntent().model_dump()
+
+    def waypoints(count: int, *, reason: str = "compact posture") -> list[dict[str, object]]:
+        return [
+            {
+                "ts": f"2026-08-{25 + (idx // 3):02d}T{(idx % 3) * 8:02d}:00:00+00:00",
+                "climate_intent": dict(intent),
+                "reason": reason,
+            }
+            for idx in range(count)
+        ]
+
+    assert mcp_server._climate_intent_waypoint_errors(waypoints(3)) == []
+    assert mcp_server._climate_intent_waypoint_errors(waypoints(8)) == []
+
+    for invalid_count in (2, 9):
+        errors = mcp_server._climate_intent_waypoint_errors(waypoints(invalid_count))
+        assert errors[0]["transition_count"] == invalid_count
+        assert errors[0]["error"] == "set_plan requires 3-8 transitions"
+
+    errors = mcp_server._climate_intent_waypoint_errors(
+        waypoints(3, reason="r" * (mcp_server.SET_PLAN_REASON_MAX_CHARS + 1))
+    )
+    assert errors[0]["reason_chars"] == mcp_server.SET_PLAN_REASON_MAX_CHARS + 1
+    assert errors[0]["error"] == "reason must be at most 120 characters"
+
+    incomplete = waypoints(3)
+    missing_field = mcp_server.CLIMATE_INTENT_FIELDS[0]
+    del incomplete[1]["climate_intent"][missing_field]
+    errors = mcp_server._climate_intent_waypoint_errors(incomplete)
+    missing_error = next(error for error in errors if error["transition_index"] == 1)
+    assert missing_error["error"] == "climate_intent must explicitly set every field"
+    assert missing_error["missing_fields"] == [missing_field]
+
+
+def test_canonical_eight_waypoint_tool_call_fits_final_completion_ceiling(mcp_server):
+    intent = mcp_server.ClimateIntent().model_dump()
+    transitions = json.dumps(
+        [
+            {
+                "ts": (datetime(2026, 8, 25, tzinfo=UTC) + timedelta(hours=8 * idx)).isoformat(),
+                "climate_intent": intent,
+                "reason": "Forecast-anchored compact posture; preserve safety and band compliance.",
+            }
+            for idx in range(8)
+        ],
+        separators=(",", ":"),
+    )
+    hypothesis = json.dumps(
+        {
+            "conditions": {
+                "outdoor_temp_peak_f": 95,
+                "outdoor_rh_min_pct": 12,
+                "solar_peak_w_m2": 900,
+                "cloud_cover_avg_pct": 15,
+                "notes": "hot, dry, clear",
+            },
+            "stress_windows": [
+                {
+                    "kind": "vpd_high",
+                    "start": "2026-08-25T10:00:00-06:00",
+                    "end": "2026-08-25T16:00:00-06:00",
+                    "severity": "high",
+                    "mitigation": "early wet assist with safe dew margin",
+                },
+                {
+                    "kind": "heat_stress",
+                    "start": "2026-08-25T12:00:00-06:00",
+                    "end": "2026-08-25T17:00:00-06:00",
+                    "severity": "medium",
+                    "mitigation": "solar pre-cooling and stage-2 readiness",
+                },
+            ],
+            "rationale": [
+                {
+                    "parameter": "fog_escalation_kpa",
+                    "old_value": 0.4,
+                    "new_value": 0.25,
+                    "forecast_anchor": "RH below 15% at peak",
+                    "expected_effect": "reduce VPD-high stress under 2h",
+                },
+                {
+                    "parameter": "cool_stage2_over_high_f",
+                    "old_value": 1,
+                    "new_value": 0.5,
+                    "forecast_anchor": "95F peak with clear solar",
+                    "expected_effect": "start stage 2 before heat peak",
+                },
+                {
+                    "parameter": "mister_pulse_gap_s",
+                    "old_value": 45,
+                    "new_value": 25,
+                    "forecast_anchor": "dry ventilation period",
+                    "expected_effect": "increase safe moisture duty",
+                },
+            ],
+        },
+        separators=(",", ":"),
+    )
+    arguments = {
+        "plan_id": "iris-20260825-1700",
+        "hypothesis": hypothesis,
+        "transitions": transitions,
+        "experiment": "Compare compact forecast-aware posture to the prior day.",
+        "expected_outcome": "Reduce VPD-high stress below 2h without a dew-margin or water-budget violation.",
+        "trigger_id": "00000000-0000-0000-0000-000000000001",
+        "planner_instance": "local",
+        "valid_from": None,
+        "expires_at": None,
+    }
+
+    decoded_chars = mcp_server._set_plan_decoded_argument_chars(**arguments)
+    serialized_tool_arguments = json.dumps(arguments, separators=(",", ":"))
+
+    assert len(hypothesis) <= mcp_server.SET_PLAN_HYPOTHESIS_MAX_CHARS
+    assert len(transitions) <= mcp_server.SET_PLAN_TRANSITIONS_MAX_CHARS
+    assert decoded_chars < 9000
+    assert len(serialized_tool_arguments) < 10000
+    assert len(serialized_tool_arguments) < 16384
+
+
+@pytest.mark.asyncio
+async def test_set_plan_rejects_only_oversized_decoded_arguments_before_db(mcp_server, monkeypatch):
+    async def unexpected_db():
+        raise AssertionError("decoded argument guard must run before database access")
+
+    monkeypatch.setattr(mcp_server, "_db", unexpected_db)
+    result = json.loads(
+        await mcp_server.set_plan(
+            plan_id="iris-20260825-1700",
+            hypothesis="x" * mcp_server.SET_PLAN_ARGUMENTS_MAX_CHARS,
+            transitions="[]",
+            trigger_id="00000000-0000-0000-0000-000000000001",
+            planner_instance="local",
+        )
+    )
+
+    assert result["error"] == "set_plan decoded arguments exceed the compact tool-call contract"
+    assert result["decoded_argument_chars"] > mcp_server.SET_PLAN_ARGUMENTS_MAX_CHARS
+    assert result["max_decoded_argument_chars"] == mcp_server.SET_PLAN_ARGUMENTS_MAX_CHARS
 
 
 @pytest.mark.asyncio

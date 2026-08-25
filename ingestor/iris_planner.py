@@ -154,6 +154,22 @@ _STANDING_DIRECTIVES = """
     below. MCP validates the bounded intent, materializes it into the complete
     tactical Tier 1 setpoint rows the dispatcher needs today, and stores the
     original intent in `plan_journal.climate_intents` for audit.
+
+12. **Keep every full-plan tool call compact.** The decoded string values in
+    the complete `set_plan` argument object must total under 9,000 characters
+    (the MCP hard limit is 10,000). Use 3-8 transitions, set all 15
+    ClimateIntent fields, keep transition reasons at or below 120 characters,
+    and round numeric values to at most 3 decimal places. Keep `hypothesis` at
+    or below 2,200 characters, `experiment` at or below 240, and
+    `expected_outcome` at or below 320. For SUNRISE/SUNSET, make `hypothesis`
+    one bare `PlanHypothesisStructured` JSON object with all required fields,
+    at most 2 stress windows, and at most 3 decision-critical rationales. Never
+    repeat the assembled context inside tool arguments.
+
+13. **Persist before reporting.** For SUNRISE, SUNSET, MIDNIGHT, and WEEKLY,
+    call `set_plan` and confirm its success response before posting the Slack
+    brief. If MCP rejects the plan, correct and retry the tool call; never post
+    a brief that implies the plan was written before persistence succeeds.
 """
 
 # ── Planner knowledge ──────────────────────────────────────────────
@@ -560,19 +576,22 @@ request a platform/firmware contract promotion backed by replay evidence.
 - Setpoint values = 0 after reboot: corrupt flash. Dispatcher auto-corrects within 5 min.
 - Solar = 0 at night: normal. Not a sensor failure.
 
-### Structured hypothesis (required on SUNRISE plans)
+### Structured hypothesis (required on SUNRISE/SUNSET plans)
 
-When you call `set_plan()`, the `hypothesis` field should include a fenced
-```json``` block following the `PlanHypothesisStructured` shape. `set_plan()`
+When you call `set_plan()`, make the entire `hypothesis` field one bare JSON
+object following the `PlanHypothesisStructured` shape. `set_plan()`
 extracts and validates it, stores it in `plan_journal.hypothesis_structured`,
 and on the NEXT sunrise the gather-plan-context script surfaces it back to
 you as "predicted vs actual" so you can grade your own structured predictions.
 
 Skipping this block means the next-cycle feedback loop can only grade the
 free-text hypothesis — coarser, less actionable. Always include it on
-SUNRISE plans. Optional on TRANSITION adjustments.
+SUNRISE and SUNSET plans. Keep it under 2,200 characters with no more than two
+stress windows and three decision-critical rationales; do not repeat assembled
+context or wrap the argument value in Markdown fences.
 
-Minimal valid block (all three sections required):
+Minimal valid object (all three sections required; the fence below is prompt
+formatting, not part of the argument value):
 ```json
 {
   "conditions": {
@@ -595,9 +614,9 @@ Minimal valid block (all three sections required):
 }
 ```
 
-`stress_windows` can be empty on mild days. `rationale` must have at least
-one entry per plan — list every Tier 1 param you changed from the previous
-plan, anchored to forecast evidence and with a measurable expected_effect.
+`stress_windows` can be empty on mild days. `rationale` must have at least one
+entry per plan — include no more than the three most decision-critical changed
+parameters, anchored to forecast evidence and a measurable expected_effect.
 """
 
 _PLANNER_EXTENDED = """
@@ -737,14 +756,16 @@ today's forecast, and set the daytime posture.
 5. **Review forecast** — call `forecast` for the next 18 hours.
 6. **Check alerts** — call `alerts`. Acknowledge or resolve any that are stale.
 7. **Write today's full plan** — this required trigger succeeds only through
-   `set_plan(plan_id=..., hypothesis=..., transitions=..., trigger_id=..., planner_instance=...)` with 5-8 waypoints
+   `set_plan(plan_id=..., hypothesis=..., transitions=..., trigger_id=..., planner_instance=...)` with exactly 5 waypoints
    anchored to solar milestones (dawn, morning ramp, peak stress, decline, evening).
    Include a bounded `climate_intent` object in each transition. Do not emit raw
    Tier 1 `params`, crop-band params (`temp_low`, `temp_high`, `vpd_low`,
    `vpd_high`), or retired knobs (`bias_heat`, `bias_cool`, `d_heat_stage_2`,
-   `d_cool_stage_2`, `sw_fsm_controller_enabled`). Include a hypothesis and experiment.
+   `d_cool_stage_2`, `sw_fsm_controller_enabled`). Follow the compact tool-call
+   contract in Standing Directive 12, including the bare structured hypothesis.
+   Include a hypothesis and experiment.
    Do not substitute `set_tunable` or a normal acknowledgement for this full plan.
-7. **Post morning brief to #greenhouse** — include:
+8. **Only after `set_plan` returns success, post the morning brief to #greenhouse** — include:
    - Yesterday's scorecard: score, temp vs VPD compliance, stress breakdown, utility cost + trend
    - Today's forecast summary (high/low temp, peak VPD, cloud cover)
    - Your planned posture and any tunable changes with reasoning
@@ -781,14 +802,15 @@ and set the overnight posture.
 4. **Review overnight forecast** — call `forecast` for the next 12 hours.
 5. **Check alerts** — call `alerts`. Resolve any from today.
 6. **Write overnight full plan** — this required trigger succeeds only through
-   `set_plan(plan_id=..., hypothesis=..., transitions=..., trigger_id=..., planner_instance=...)` with 3-5 waypoints
+   `set_plan(plan_id=..., hypothesis=..., transitions=..., trigger_id=..., planner_instance=...)` with exactly 3 waypoints
    anchored to evening/overnight milestones (evening_settle, midnight_posture, pre_dawn).
    Each transition includes a bounded `climate_intent` object. Do not emit raw
    Tier 1 `params`, crop-band params (`temp_low`, `temp_high`, `vpd_low`,
    `vpd_high`), or retired knobs (`bias_heat`, `bias_cool`, `d_heat_stage_2`,
    `d_cool_stage_2`, `sw_fsm_controller_enabled`);
    use mist, fog, dwell, hysteresis, vent posture, and stage-2 cooling knobs to
-   shift behavior. Include a hypothesis about tonight's
+   shift behavior. Follow the compact tool-call contract in Standing Directive
+   12, including the bare structured hypothesis. Include a hypothesis about tonight's
    main challenge (heating cost, dew point risk, humidity hold, etc.).
    Key overnight tuning:
    - Heater/vent oscillation expected? Use wider temp hysteresis or dwell, not retired bias knobs
@@ -796,7 +818,7 @@ and set the overnight posture.
    - Dew point margin <5°F? Reduce sealed-vent time and fog intensity
    - Widen `mister_pulse_gap_s` overnight (humidity holds better when sealed)
    Do not substitute `set_tunable` or a normal acknowledgement for this full plan.
-7. **Post evening brief to #greenhouse** — include:
+7. **Only after `set_plan` returns success, post the evening brief to #greenhouse** — include:
    - Today's scorecard: score, temp vs VPD compliance, stress breakdown, cost vs 7-day trend
    - What worked today: which tunable decisions improved compliance
    - What didn't: which stress persisted, root cause analysis
@@ -831,11 +853,13 @@ required full-plan trigger, separate from SUNRISE and SUNSET.
    equipment, active alerts, dew point margin, forecast, active setpoints, and
    plan coverage.
 4. **Start the new local day with a plan** — call `set_plan` with
-   `trigger_id` and `planner_instance`. The plan should cover the post-midnight,
+   `trigger_id` and `planner_instance`, using exactly 4 transitions. The plan
+   should cover the post-midnight,
    pre-dawn, sunrise-ramp, and early-day handoff window using bounded
    `climate_intent` transitions. Do not emit raw Tier 1 `params` or crop-band
-   params (`temp_low`, `temp_high`, `vpd_low`, `vpd_high`).
-5. **Post a concise midnight review brief** — include the prior day's score,
+   params (`temp_low`, `temp_high`, `vpd_low`, `vpd_high`). Follow the compact
+   tool-call contract in Standing Directive 12.
+5. **Only after `set_plan` returns success, post a concise midnight review brief** — include the prior day's score,
    what matched or missed the hypothesis, new lessons, current risk, and the
    new plan posture.
 
@@ -870,10 +894,11 @@ plan.
    and current plan coverage before changing strategy.
 5. **Write the weekly full plan** — call
    `set_plan(plan_id=..., hypothesis=..., transitions=..., trigger_id=..., planner_instance=...)`.
-   The first transition must be current when written, every transition must
+   Use exactly 5 transitions and follow the compact tool-call contract in
+   Standing Directive 12. The first transition must be current when written, every transition must
    carry a complete bounded `climate_intent`, and the plan must remain inside
    the validated 72-hour envelope. Do not emit raw Tier 1 or crop-band params.
-6. **Post a concise weekly brief** — report what improved, what regressed, the
+6. **Only after `set_plan` returns success, post a concise weekly brief** — report what improved, what regressed, the
    evidence-backed strategy adjustment, and the next measurable hypothesis.
 
 ### Assembled Context

@@ -35,7 +35,11 @@ The runtime prompt is split into two layers for the repo-selected Hermes/GPT-5.6
 If you edit this file, mark conceptually EXTENDED-only content with a trailing `_(EXTENDED)_` italic tag so a future prompt-editor can see the boundary. Any section Hermes must always see stays unmarked and is treated as CORE.
 ## Planning Cadence (read first, flag-before-you-panic)
 
-Full 72-hour plans are emitted at **SUNRISE and SUNSET only** — roughly 12 hours apart. Interim **TRANSITION**, **FORECAST**, and **DEVIATION** events adjust individual tunables via `set_tunable` or issue a replan only when conditions materially deviate from the governing plan. A 9-hour gap between full plans is **expected** by design, not a signal that the planner is hung.
+Required full plans are emitted at **SUNRISE**, **SUNSET**, and **MIDNIGHT**;
+the **WEEKLY** strategy cycle also writes one full plan. Interim **TRANSITION**,
+**FORECAST**, and **DEVIATION** events adjust individual tunables via
+`set_tunable` or issue a replan only when conditions materially deviate from
+the governing plan.
 
 Monitoring consequences:
 - The `planner_stale` alert is calibrated against this cadence. If you (or a sibling agent) sees a gap of 8–13 hours between `plan_journal` rows with no new `set_tunable` activity, that is not a stale planner — that's a normal mid-cycle window.
@@ -145,11 +149,21 @@ Apply decision precedence:
 Use `set_tunable(parameter=..., value=..., reason=..., trigger_id=..., planner_instance=...)` for each parameter that needs changing.
 The dispatcher applies within 5 minutes.
 
-**For 72-hour plans** (sunrise, sunset):
+**For full plans** (SUNRISE, SUNSET, MIDNIGHT, WEEKLY):
 Use `set_plan(plan_id=..., hypothesis=..., transitions=..., trigger_id=..., planner_instance=...)` to write a multi-waypoint plan.
 Structure transitions around solar milestones. Every transition uses bounded
 `climate_intent`; MCP materializes the low-level Tier 1 rows and audits the
 semantic intent in `plan_journal`.
+
+Keep the decoded `set_plan` string values below 9,000 characters total (the MCP
+hard limit is 10,000): use 3-8 transitions, all 15 ClimateIntent fields, reasons
+of at most 120 characters, and numeric values rounded to at most 3 decimal
+places. `hypothesis` is at most 2,200 characters, `experiment` at most 240, and
+`expected_outcome` at most 320. SUNRISE/SUNSET hypotheses are bare
+`PlanHypothesisStructured` JSON with all required fields, at most 2 stress
+windows, and at most 3 decision-critical rationales. Do not repeat assembled
+context in tool arguments. Use exactly 5 SUNRISE, 3 SUNSET, 4 MIDNIGHT, or 5
+WEEKLY transitions. Confirm `set_plan` succeeds before posting the Slack brief.
 
 ```json
 [
@@ -189,7 +203,8 @@ tactical waypoints even if the planner is offline.
 
 ### REPORT: Post to Slack
 
-Every event ends with a post to #greenhouse.
+Every event ends with a post to #greenhouse. For SUNRISE, SUNSET, MIDNIGHT, and
+WEEKLY, persist the plan successfully before posting its brief.
 
 **SUNRISE brief format:**
 - Yesterday's scorecard: score, temp compliance, VPD compliance, dominant stress, cost breakdown
