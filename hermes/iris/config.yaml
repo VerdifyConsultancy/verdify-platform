@@ -1,6 +1,6 @@
 # Hermes profile config for the Verdify Iris planner — single profile,
-# local cortex gateway (llm.primary.longctx.mm, reasoning_effort=xhigh),
-# MCP-only tool surface.
+# Cortex OpenAI-compatible 98K text route with explicit context/output budgets,
+# tool-call guidance, and an MCP-only tool surface.
 #
 # Canonical source: hermes/iris/config.yaml (this repo).
 # Runtime location: /var/lib/verdify/hermes/iris/config.yaml (bind-mounted into
@@ -12,20 +12,24 @@
 # NEVER versioned.
 
 model:
-  # Local cortex gateway (OpenAI-compatible) via the "custom" provider.
-  # OPENAI_API_KEY (the cortex route key in the verdify-hermes Secret) is
-  # picked up automatically. llm.primary.longctx.mm is a cortex route/model
-  # alias, not a raw model name.
-  default: "llm.primary.longctx.mm"
+  # Hermes reaches OpenAI-compatible endpoints through the "custom" provider.
+  # The existing OPENAI_API_KEY environment contract remains unchanged;
+  # llm.primary.longctx is Cortex's text-only planner route alias, not a raw
+  # model name. Pin the published route contract explicitly so Hermes never
+  # falls back to its 256K unknown-model assumption.
+  default: "llm.primary.longctx"
   provider: "custom"
   base_url: "https://cortex.vallery.net/v1"
+  context_length: 98304
+  # A valid planner tool call is comfortably below this client-side fence.
+  # Hermes can still issue bounded continuations up to Cortex's 16K server cap.
+  max_tokens: 8192
 
 agent:
-  # Hermes reads reasoning effort from agent.reasoning_effort. Placing it
-  # under model is silently ignored and falls back to medium.
-  # cortex accepts only xhigh (route default) / medium / low; "high" is
-  # REJECTED with HTTP 400 (verified 2026-08-24) — stay in that vocabulary.
-  reasoning_effort: xhigh
+  # The bundled custom transport does not forward this scalar. Cortex route 42
+  # supplies the verified medium default server-side on vLLM 0.27.1; retaining
+  # it here records the client contract and catches future provider support.
+  reasoning_effort: medium
   # Iris's longest cycles (SUNRISE/SUNSET) read ~6-10 MCP tools in sequence
   # plus write a plan. 30 turns is generous; over that, suspect a tool-call
   # loop and surface as a Hermes alert instead of letting the cycle run away.

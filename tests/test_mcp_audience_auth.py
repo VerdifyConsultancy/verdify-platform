@@ -386,6 +386,10 @@ class TestInventoryAndDriftGuards:
         live_configmap = yaml.safe_load(HERMES_CONFIG_PATH.read_text())
         live_config = yaml.safe_load(live_configmap["data"]["config.yaml"])
         assert server["url"] == live_config["mcp_servers"]["verdify_greenhouse"]["url"]
+        assert hermes_config["model"] == live_config["model"]
+        assert hermes_config["agent"]["reasoning_effort"] == live_config["agent"]["reasoning_effort"] == "medium"
+        assert hermes_config["agent"]["max_turns"] == live_config["agent"]["max_turns"] == 30
+        assert hermes_config["agent"]["disabled_toolsets"] == live_config["agent"]["disabled_toolsets"]
         # Treatment-revealing reads and quarantined writes can never appear.
         forbidden = {
             "get_setpoints",
