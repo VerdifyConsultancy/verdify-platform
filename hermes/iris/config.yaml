@@ -1,6 +1,6 @@
 # Hermes profile config for the Verdify Iris planner — single profile,
-# local cortex gateway (llm.primary.longctx.mm, reasoning_effort=xhigh),
-# MCP-only tool surface.
+# Cortex OpenAI-compatible long-context multimodal route with explicit
+# tool-call enforcement and an MCP-only tool surface.
 #
 # Canonical source: hermes/iris/config.yaml (this repo).
 # Runtime location: /var/lib/verdify/hermes/iris/config.yaml (bind-mounted into
@@ -12,20 +12,22 @@
 # NEVER versioned.
 
 model:
-  # Local cortex gateway (OpenAI-compatible) via the "custom" provider.
-  # OPENAI_API_KEY (the cortex route key in the verdify-hermes Secret) is
-  # picked up automatically. llm.primary.longctx.mm is a cortex route/model
-  # alias, not a raw model name.
+  # Hermes reaches OpenAI-compatible endpoints through the "custom" provider.
+  # The existing OPENAI_API_KEY environment contract remains unchanged;
+  # llm.primary.longctx.mm is a Cortex route alias, not a raw model name.
   default: "llm.primary.longctx.mm"
   provider: "custom"
   base_url: "https://cortex.vallery.net/v1"
 
 agent:
-  # Hermes reads reasoning effort from agent.reasoning_effort. Placing it
-  # under model is silently ignored and falls back to medium.
-  # cortex accepts only xhigh (route default) / medium / low; "high" is
-  # REJECTED with HTTP 400 (verified 2026-08-24) — stay in that vocabulary.
+  # Retained as declarative route intent. The running Hermes revision 404640a
+  # custom-provider transport does not forward this value, so it is not proof
+  # of the Cortex route's effective upstream reasoning effort.
   reasoning_effort: xhigh
+  # Revision 404640a auto-enables tool-use enforcement only for a fixed list of
+  # recognized model families. The Cortex alias llm.primary.longctx.mm matches
+  # none of them, so enforcement must be explicit for the MCP planning loop.
+  tool_use_enforcement: true
   # Iris's longest cycles (SUNRISE/SUNSET) read ~6-10 MCP tools in sequence
   # plus write a plan. 30 turns is generous; over that, suspect a tool-call
   # loop and surface as a Hermes alert instead of letting the cycle run away.

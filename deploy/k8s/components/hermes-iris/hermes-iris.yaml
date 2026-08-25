@@ -76,6 +76,11 @@ spec:
     type: Recreate
   template:
     metadata:
+      annotations:
+        # sha256[:12] of hermes-config.yaml data.config.yaml. The focused
+        # drift test enforces this value so a profile edit always rolls this
+        # Recreate Deployment and reruns seed-config against the state PVC.
+        verdify.io/hermes-profile-revision: "e9018a83b25d"
       labels:
         app.kubernetes.io/part-of: verdify
         app.kubernetes.io/component: hermes-iris

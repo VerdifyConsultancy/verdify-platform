@@ -19,7 +19,7 @@
 #     client include list and the server audience registry; a drift test in
 #     tests/test_mcp_audience_auth.py binds this include list to
 #     TOOL_AUDIENCES so the two surfaces can never diverge.
-#   - Same MCP endpoint, model, reasoning effort, disabled toolsets, API
+#   - Same Cortex route, explicit tool-use enforcement, disabled toolsets, API
 #     server, and dashboard settings as the live profile — the experiment
 #     changes WHAT the planner may see/do, not how it runs.
 apiVersion: v1
@@ -38,14 +38,21 @@ data:
     # The live planner profile stays components/hermes-iris/hermes-config.yaml.
 
     model:
-      # Same provider/model as the live Iris profile — the experiment prompt
-      # and tool surface change, the model does not.
-      default: "gpt-5.6-sol"
+      # Same provider/route as the live Iris profile — the experiment prompt
+      # and tool surface change, the provider route does not.
+      default: "llm.primary.longctx.mm"
       provider: "custom"
-      base_url: "https://api.openai.com/v1"
+      base_url: "https://cortex.vallery.net/v1"
 
     agent:
+      # Retained as declarative route intent. Running Hermes revision 404640a's
+      # custom-provider transport does not forward this value; Cortex owns the
+      # effective upstream reasoning behavior behind the route alias.
       reasoning_effort: xhigh
+      # llm.primary.longctx.mm does not match revision 404640a's fixed
+      # auto-enforcement model-family list, so the experiment MCP loop also
+      # requires explicit tool-use enforcement.
+      tool_use_enforcement: true
       # Experiment cycles are template-selection only (a handful of qualified
       # reads + one policy_template_propose or acknowledge_trigger), so the
       # generous live-profile turn budget still applies as a loop fence.

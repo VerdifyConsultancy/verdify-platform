@@ -1,5 +1,29 @@
 # Controlled planner experiment resumption audit — 2026-08-23
 
+> **2026-08-25 source-routing addendum:** the active-source Hermes profile and
+> the dark experiment profile now select provider `custom`, Cortex's
+> OpenAI-compatible endpoint, alias `llm.primary.longctx.mm`, explicit tool-use
+> enforcement, and the existing 30-turn fence. The retained xhigh config value
+> is not forwarded by running Hermes revision `404640a`'s custom-provider
+> transport. Their distinct MCP audiences remain
+> unchanged. The active Deployment carries a content-derived profile revision,
+> so a reviewed ArgoCD sync recreates and reseeds the singleton Hermes pod.
+> The API's public planner label is supplied by a Deployment env override,
+> avoiding an API image rebuild. This is source/rollout intent only; it does
+> not revise the 2026-08-23 live observations below or claim a completed sync.
+>
+> Two image-baked residues are deliberately held: `api/main.py` retains its
+> pre-Cortex fallback for runtimes that omit the manifest override, and
+> `ingestor/iris_planner.py` retains GPT-5.6-specific self-description in its
+> packaged prompt prose. Changing the former requires a `verdify-api` image;
+> changing the latter requires a `verdify-ingestor` image. Neither controls the
+> Hermes provider route, MCP boundary, reasoning effort, or turn fence. The
+> API also applies its configured current label to every Hermes-backed recent
+> delivery rather than persisting route identity per run; correcting historical
+> attribution requires a separate schema/API image change and is held here. The
+> source documentation in `docs/` is also packaged into future ingestor images
+> for RAG, so the live packaged copy follows at the next normal image build.
+
 > **Planning update:** this report remains the authoritative factual audit of
 > current code/runtime gaps. ADR-0010 and
 > [`planner-experiment-fast-path-2026-08-23.md`](../plans/planner-experiment-fast-path-2026-08-23.md)

@@ -4,18 +4,15 @@
 # ROOT CAUSE THIS CLOSES: Hermes reads its profile from $HERMES_HOME/config.yaml
 # (= /opt/data/config.yaml on the RWO state PVC). That file was historically
 # seeded by the VM-era `make hermes-deploy-config` and was NEVER IaC in k3s, so
-# the live PVC ended up holding the STOCK hermes-agent template — model
-# anthropic/claude-opus-4.6 + provider auto -> base_url openrouter.ai. With no
-# OPENROUTER_API_KEY in the verdify-hermes Secret, every planner LLM call 401'd
-# ("Missing Authentication header"), so all scheduled + crop-deviation plan
-# DELIVERY failed. The verdify-hermes Secret's OPENAI_API_KEY is VALID (proven:
-# 200 on api.openai.com + a gpt-5.5 completion). The bug was the drifted profile
-# pointing at the wrong provider/model, NOT a missing/bad key.
+# the live PVC could silently drift to the stock Hermes provider/model. The
+# seed initContainer below now restores this reviewed profile on every pod
+# start. Runtime authentication keeps the existing OPENAI_API_KEY environment
+# contract; no credential material is stored in this ConfigMap.
 #
-# This is the repo-canonical hermes/iris/config.yaml (cortex.vallery.net
-# llm.primary.longctx.mm / provider custom — OPENAI_API_KEY auto-picked-up,
-# holding the cortex route key since 2026-08-24) with ONE k3s edit: the
-# mcp_servers.verdify_greenhouse.url is the in-cluster ClusterIP
+# This is the repo-canonical hermes/iris/config.yaml (Cortex route
+# llm.primary.longctx.mm / provider custom / base_url cortex.vallery.net/v1)
+# with ONE k3s edit: mcp_servers.verdify_greenhouse.url is the in-cluster
+# ClusterIP
 # verdify-mcp.verdify-prod.svc:8000/mcp (was the VM compose host.docker.internal).
 # The seed initContainer in hermes-iris.yaml installs this onto the PVC at every
 # pod start (idempotent), so a pod restart always restores the correct profile.
@@ -385,8 +382,8 @@ data:
 
   config.yaml: |
     # Hermes profile config for the Verdify Iris planner — single profile,
-    # local cortex gateway (llm.primary.longctx.mm, reasoning_effort=xhigh),
-    # MCP-only tool surface.
+    # Cortex OpenAI-compatible long-context multimodal route with explicit
+    # tool-call enforcement and an MCP-only tool surface.
     #
     # Canonical source: hermes/iris/config.yaml (this repo).
     # Runtime location: /var/lib/verdify/hermes/iris/config.yaml (bind-mounted into
@@ -398,20 +395,22 @@ data:
     # NEVER versioned.
 
     model:
-      # Local cortex gateway (OpenAI-compatible) via the "custom" provider.
-      # OPENAI_API_KEY (the cortex route key in the verdify-hermes Secret) is
-      # picked up automatically. llm.primary.longctx.mm is a cortex route/model
-      # alias, not a raw model name.
+      # Hermes reaches OpenAI-compatible endpoints through the "custom" provider.
+      # The existing OPENAI_API_KEY environment contract remains unchanged;
+      # llm.primary.longctx.mm is a Cortex route alias, not a raw model name.
       default: "llm.primary.longctx.mm"
       provider: "custom"
       base_url: "https://cortex.vallery.net/v1"
 
     agent:
-      # Hermes reads reasoning effort from agent.reasoning_effort. Placing it
-      # under model is silently ignored and falls back to medium.
-      # cortex accepts only xhigh (route default) / medium / low; "high" is
-      # REJECTED with HTTP 400 (verified 2026-08-24) — stay in that vocabulary.
+      # Retained as declarative route intent. The running Hermes revision 404640a
+      # custom-provider transport does not forward this value, so it is not proof
+      # of the Cortex route's effective upstream reasoning effort.
       reasoning_effort: xhigh
+      # Revision 404640a auto-enables tool-use enforcement only for a fixed list of
+      # recognized model families. The Cortex alias llm.primary.longctx.mm matches
+      # none of them, so enforcement must be explicit for the MCP planning loop.
+      tool_use_enforcement: true
       # Iris's longest cycles (SUNRISE/SUNSET) read ~6-10 MCP tools in sequence
       # plus write a plan. 30 turns is generous; over that, suspect a tool-call
       # loop and surface as a Hermes alert instead of letting the cycle run away.

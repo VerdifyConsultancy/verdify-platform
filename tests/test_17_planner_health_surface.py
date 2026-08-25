@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import asyncio
+import hashlib
 import importlib.util
 import io
 import json
@@ -246,7 +247,7 @@ def test_public_planner_health_schema_includes_status_surface_fields():
         "resulting_plan_id": None,
         "plan_written_at": None,
         "planner_gateway": "hermes-iris",
-        "planner_model_label": "hermes-iris/openai:gpt-5.6-sol/xhigh",
+        "planner_model_label": None,
     }
 
     response = PublicPlannerHealthResponse.model_validate(
@@ -269,7 +270,7 @@ def test_public_planner_health_schema_includes_status_surface_fields():
                 "overdue_gt_1h": 0,
             },
             "current_session_key": "hermes:iris:main:trigger:00000000-0000-0000-0000-000000000000",
-            "current_model_label": "hermes-iris/openai:gpt-5.6-sol/xhigh",
+            "current_model_label": "hermes-iris/cortex:llm.primary.longctx.mm",
             "current_hermes_run_id": "run_test",
             "active_plan_range_violation_count": 0,
             "recent_deliveries": [delivery],
@@ -281,12 +282,13 @@ def test_public_planner_health_schema_includes_status_surface_fields():
     assert response.last_delivered_trigger is not None
     assert response.last_resolved_trigger is not None
     assert response.pending_by_sla_age["within_sla"] == 2
-    assert response.current_model_label == "hermes-iris/openai:gpt-5.6-sol/xhigh"
+    assert response.current_model_label == "hermes-iris/cortex:llm.primary.longctx.mm"
     assert response.recent_deliveries[0].planner_gateway == "hermes-iris"
+    assert response.recent_deliveries[0].planner_model_label is None
     assert response.active_plan_range_violation_count == 0
 
 
-def test_public_planner_delivery_schema_proves_gateway_model_session():
+def test_public_planner_delivery_does_not_claim_unpersisted_model_identity():
     delivery = PublicPlannerDelivery.model_validate(
         {
             "id": 1,
@@ -296,13 +298,13 @@ def test_public_planner_delivery_schema_proves_gateway_model_session():
             "session_key": "hermes:iris:main:trigger:00000000-0000-0000-0000-000000000000",
             "hermes_run_id": "run_test",
             "planner_gateway": "hermes-iris",
-            "planner_model_label": "hermes-iris/openai:gpt-5.6-sol/xhigh",
+            "planner_model_label": None,
         }
     )
 
     assert delivery.session_key is not None
     assert delivery.hermes_run_id == "run_test"
-    assert delivery.planner_model_label == "hermes-iris/openai:gpt-5.6-sol/xhigh"
+    assert delivery.planner_model_label is None
 
 
 def test_public_planner_health_endpoint_queries_i_p1_1_sources():
@@ -326,7 +328,13 @@ def test_public_planner_health_endpoint_queries_i_p1_1_sources():
     assert "registry_value_error" in api_source
     assert "planner_gateway" in api_source
     assert "planner_model_label" in api_source
-    assert '"hermes-iris/openai:gpt-5.6-sol/xhigh"' in api_source
+    assert 'os.environ.get("VERDIFY_PLANNER_MODEL_LABEL"' in api_source
+    assert '"hermes-iris/openai:gpt-5.6-sol/xhigh"' not in api_source
+    delivery_projection = api_source[
+        api_source.index("def _public_planner_delivery") : api_source.index("def _pending_sla_age_buckets")
+    ]
+    assert "planner_model_label=None" in delivery_projection
+    assert "PLANNER_MODEL_LABEL" not in delivery_projection
 
 
 def _hermes_config_documents() -> tuple[dict, dict, str]:
@@ -336,7 +344,7 @@ def _hermes_config_documents() -> tuple[dict, dict, str]:
     return manifest, profile, readiness_source
 
 
-def test_hermes_profile_pins_gpt_5_6_sol_xhigh_at_the_runtime_key():
+def test_hermes_profile_pins_cortex_route_and_explicit_tool_enforcement():
     _manifest, embedded, _readiness_source = _hermes_config_documents()
     canonical = yaml.safe_load((REPO_ROOT / "hermes/iris/config.yaml").read_text())
 
@@ -344,21 +352,52 @@ def test_hermes_profile_pins_gpt_5_6_sol_xhigh_at_the_runtime_key():
         embedded["model"]
         == canonical["model"]
         == {
-            "default": "gpt-5.6-sol",
+            "default": "llm.primary.longctx.mm",
             "provider": "custom",
-            "base_url": "https://api.openai.com/v1",
+            "base_url": "https://cortex.vallery.net/v1",
         }
     )
     assert "reasoning_effort" not in embedded["model"]
     assert "reasoning_effort" not in canonical["model"]
     assert embedded["agent"]["reasoning_effort"] == "xhigh"
     assert canonical["agent"]["reasoning_effort"] == "xhigh"
+    assert embedded["agent"]["tool_use_enforcement"] is True
+    assert canonical["agent"]["tool_use_enforcement"] is True
 
     # The embedded k3s profile must remain structurally equivalent as parsed,
     # except for the intentionally environment-specific MCP endpoint.
     normalized = json.loads(json.dumps(embedded))
     normalized["mcp_servers"]["verdify_greenhouse"]["url"] = canonical["mcp_servers"]["verdify_greenhouse"]["url"]
     assert normalized == canonical
+
+
+def test_hermes_profile_revision_rolls_and_reseeds_on_config_change():
+    manifest, _profile, _readiness_source = _hermes_config_documents()
+    expected = hashlib.sha256(manifest["data"]["config.yaml"].encode()).hexdigest()[:12]
+    workloads = yaml.safe_load_all((REPO_ROOT / "deploy/k8s/components/hermes-iris/hermes-iris.yaml").read_text())
+    workload = next(document for document in workloads if document.get("kind") == "Deployment")
+
+    assert workload["spec"]["template"]["metadata"]["annotations"] == {"verdify.io/hermes-profile-revision": expected}
+    init_by_name = {item["name"]: item for item in workload["spec"]["template"]["spec"]["initContainers"]}
+    assert init_by_name["seed-config"]["command"] == [
+        "sh",
+        "-c",
+        "cp -f /etc/verdify/hermes-config/config.yaml /opt/data/config.yaml && "
+        "echo 'seeded /opt/data/config.yaml from verdify-hermes-iris-config'",
+    ]
+
+
+def test_api_public_model_label_is_a_manifest_override_not_an_image_change():
+    documents = yaml.safe_load_all((REPO_ROOT / "deploy/k8s/base/api-deployment.yaml").read_text())
+    manifest = next(document for document in documents if document.get("kind") == "Deployment")
+    container = manifest["spec"]["template"]["spec"]["containers"][0]
+    env_by_name = {item["name"]: item for item in container["env"]}
+
+    assert env_by_name["VERDIFY_PLANNER_MODEL_LABEL"] == {
+        "name": "VERDIFY_PLANNER_MODEL_LABEL",
+        "value": "hermes-iris/cortex:llm.primary.longctx.mm",
+    }
+    assert container["image"] == "ghcr.io/verdifyconsultancy/verdify-api"
 
 
 def _readiness_required_tools(source: str) -> set[str]:

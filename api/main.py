@@ -1373,7 +1373,7 @@ async def noindex_api_responses(request: Request, call_next):
 
 DEFAULT_GREENHOUSE = "vallery"
 PLANNER_GATEWAY_LABEL = os.environ.get("VERDIFY_PLANNER_GATEWAY_LABEL", "hermes-iris")
-PLANNER_MODEL_LABEL = os.environ.get("VERDIFY_PLANNER_MODEL_LABEL", "hermes-iris/openai:gpt-5.6-sol/xhigh")
+PLANNER_MODEL_LABEL = os.environ.get("VERDIFY_PLANNER_MODEL_LABEL") or None
 WRITE_API_KEY_ENV = "VERDIFY_WRITE_API_KEY"
 ALLOW_UNAUTHENTICATED_WRITES_ENV = "VERDIFY_ALLOW_UNAUTHENTICATED_WRITES"
 PUBLIC_HOME_METRICS_CACHE_TTL_S = 30.0
@@ -3260,7 +3260,10 @@ def _public_planner_delivery(row) -> PublicPlannerDelivery | None:
         resulting_plan_id=row["resulting_plan_id"],
         plan_written_at=row["plan_written_at"],
         planner_gateway=PLANNER_GATEWAY_LABEL if hermes_run_id else "legacy",
-        planner_model_label=PLANNER_MODEL_LABEL if hermes_run_id else None,
+        # plan_delivery_log does not yet persist provider/model identity per
+        # run. The deployment label is truthful for the current route only;
+        # applying it to historical rows would rewrite their provenance.
+        planner_model_label=None,
     )
 
 

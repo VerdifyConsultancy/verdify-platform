@@ -85,6 +85,11 @@ spec:
             - configMapRef:
                 name: verdify-config
           env:
+            # Top-level public planner health reports the configured current
+            # Hermes route. Historical delivery rows remain unlabeled until
+            # provider/model identity is persisted per run.
+            - name: VERDIFY_PLANNER_MODEL_LABEL
+              value: "hermes-iris/cortex:llm.primary.longctx.mm"
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
