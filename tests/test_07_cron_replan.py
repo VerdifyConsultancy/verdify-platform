@@ -80,8 +80,15 @@ class TestPlannerConfig:
         sys.path.insert(0, str(repo_root / "ingestor"))
         from ai_config import ai
 
-        assert ai.model_name("planner") == "gpt-5.6-sol"
-        assert ai.config["models"]["planner"]["provider"] == "openai"
+        planner = ai.model("planner")
+        assert planner == {
+            "provider": "custom",
+            "model": "llm.primary.longctx",
+            "reasoning_effort": "medium",
+            "context_length": 98304,
+            "max_output_tokens": 16384,
+            "purpose": "Audit metadata for the live Hermes Iris profile. Runtime source: hermes/iris/config.yaml.",
+        }
 
     def test_anthropic_key_exists(self):
         key_path = "/mnt/agents/shared/credentials/anthropic_api_key.txt"

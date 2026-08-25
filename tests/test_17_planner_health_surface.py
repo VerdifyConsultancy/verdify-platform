@@ -372,6 +372,49 @@ def test_hermes_profile_pins_bounded_cortex_text_route():
     assert normalized == canonical
 
 
+def test_planner_audit_metadata_and_current_docs_match_live_hermes_profile():
+    """Keep secondary planner truth aligned without rewriting dated evidence."""
+    _manifest, profile, _readiness_source = _hermes_config_documents()
+    expected_audit = {
+        "provider": profile["model"]["provider"],
+        "model": profile["model"]["default"],
+        "reasoning_effort": profile["agent"]["reasoning_effort"],
+        "context_length": profile["model"]["context_length"],
+        "max_output_tokens": profile["model"]["max_tokens"],
+        "purpose": "Audit metadata for the live Hermes Iris profile. Runtime source: hermes/iris/config.yaml.",
+    }
+    ai_config = yaml.safe_load((REPO_ROOT / "config/ai.yaml").read_text())
+    vision_copy = yaml.safe_load((REPO_ROOT / "deploy/k8s/vision/src/ai.yaml").read_text())
+    assert ai_config["models"]["planner"] == expected_audit
+    assert vision_copy == ai_config
+
+    current_docs = (
+        "docs/iris-planner-contract.md",
+        "docs/RUNBOOK.md",
+        "docs/planner/greenhouse-playbook.md",
+        "docs/planner/langgraph-external-implementation-context.md",
+        "docs/SYSTEM-ARCHITECTURE.md",
+    )
+    for relative_path in current_docs:
+        source = (REPO_ROOT / relative_path).read_text()
+        assert "llm.primary.longctx" in source, relative_path
+        assert "medium" in source, relative_path
+        assert "16,384" in source, relative_path
+        assert "GPT-5.6 Sol" not in source, relative_path
+        assert "xhigh" not in source, relative_path
+        assert "pending profile" not in source, relative_path
+
+    current_code_surfaces = (
+        "ingestor/iris_planner.py",
+        "scripts/planner-dry.py",
+        "tests/test_prompt_variants.py",
+    )
+    for relative_path in current_code_surfaces:
+        source = (REPO_ROOT / relative_path).read_text()
+        assert "GPT-5.6 Sol" not in source, relative_path
+        assert "xhigh" not in source, relative_path
+
+
 def test_api_public_planner_model_label_is_declarative_and_matches_active_profile():
     _manifest, profile, _readiness_source = _hermes_config_documents()
     expected = (

@@ -19,11 +19,12 @@ keys:
 # ── Models ───────────────────────────────────────────────────────
 models:
   planner:
-    provider: openai
-    model: gpt-5.6-sol
-    temperature: 0.3
-    max_output_tokens: 4096
-    purpose: "Audit label for the Hermes Iris profile. Live planning runs through hermes/iris/config.yaml."
+    provider: custom
+    model: llm.primary.longctx
+    reasoning_effort: medium
+    context_length: 98304
+    max_output_tokens: 16384
+    purpose: "Audit metadata for the live Hermes Iris profile. Runtime source: hermes/iris/config.yaml."
 
   vision:
     provider: gemini
@@ -79,12 +80,12 @@ context:
 #   - ingestor/planner_routing.py (classify_severity + pick_instance + sla_for)
 #   - ingestor/alert_monitor rule 7 (SLA-breach detection)
 # Contract spec: docs/iris-planner-contract.md §2.F (SLA) + §2.G (routing).
-# Repo source selects GPT-5.6 Sol xhigh for Hermes. Live activation follows the
-# declarative deployment and technical validation; the instance field is an audit label only.
+# Live planning uses Cortex custom:llm.primary.longctx with medium reasoning,
+# a 98,304-token context contract, and a 16,384-token output fence. The
+# instance field remains an audit label only.
 planner_routing:
-  # After validated activation, required full-plan cycles use the same
-  # Hermes/GPT-5.6 Sol profile as other triggers. This value is an audit label
-  # carried into plan_delivery_log.
+  # Required full-plan cycles use the same Hermes/Cortex profile as other
+  # triggers. This value is an audit label carried into plan_delivery_log.
   required_full_plan_instance: opus
 
   # Severity thresholds — ingestor.classify_severity returns "major" when any
