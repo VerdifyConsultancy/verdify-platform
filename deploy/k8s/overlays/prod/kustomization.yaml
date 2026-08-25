@@ -210,22 +210,22 @@ patches:
 images:
   - name: ghcr.io/verdifyconsultancy/verdify-api
     newName: registry.vallery.net/verdifyconsultancy/verdify-api
-    digest: sha256:1844a4111081f13973ad30e96c258e2da5620c34037b98ddb02bd37a3b34b7a7
+    digest: sha256:194b0516b58506a4709f61c997bfcaf0780e7f55937614872bafafbfa5f3a5ea
   - name: ghcr.io/verdifyconsultancy/verdify-mcp
     newName: registry.vallery.net/verdifyconsultancy/verdify-mcp
-    digest: sha256:1ca4127aa81705f714cc22b90677c836025cdf27549fd3f4cfe31a7d9cd3fc6d
+    digest: sha256:041dbd0fcb31fabee19bb2de0c65afe316487251b258c915e160d023425f1f7f
   - name: ghcr.io/verdifyconsultancy/verdify-ingestor
     newName: registry.vallery.net/verdifyconsultancy/verdify-ingestor
-    digest: sha256:cc9ce4e93b6bd2380ddcf2ea3a0bba35a79b65b8191cf07dd1b0b2fcb159fb91
+    digest: sha256:c9911027356b4a542a6ac61b517db21ad5ad035519b37f71061e4b12afeab230
   - name: ghcr.io/verdifyconsultancy/verdify-migrate
     newName: registry.vallery.net/verdifyconsultancy/verdify-migrate
-    digest: sha256:76fb6550eea37f8c945467952860097c785a1c856bc80f6fc524c6b4bcc29240
+    digest: sha256:b8cb71a6d2a9211cc059f28bec5f78fe5b637e2622b17dea5a8261cff3d1e214
   # Bootstrap key for the fleet pin actuator. The orchestrator Component stays
   # absent from this overlay until Kaniko replaces the fail-closed zero digest
   # with a verified Zot digest from the exact source revision.
   - name: ghcr.io/verdifyconsultancy/verdify-experiment-v2-orchestrator
     newName: registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator
-    digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+    digest: sha256:f513d44be7acc4b1d2b1345fe371dd12fab8a575d31896bb98db72a4f9593054
   # verdify-planner (#117): real published GHCR digest, resolved read-only via
   # `gh api orgs/VerdifyConsultancy/packages/container/verdify-planner/versions`
   # (the `branch-live-platform-main` build of planner_graph/). The planner image is
