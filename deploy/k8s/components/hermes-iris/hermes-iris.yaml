@@ -87,6 +87,9 @@ spec:
         # drift test makes profile edits roll this Recreate Deployment so the
         # seed-config init container refreshes the state PVC before startup.
         verdify.io/hermes-profile-revision: "d9d787f2cce4"
+        # sha256[:12] of the digest-verified upstream #75588 backport. This
+        # rolls the singleton whenever the init-time runtime patch changes.
+        verdify.io/hermes-compressor-patch-revision: "4ce0844e2192"
       labels:
         app.kubernetes.io/part-of: verdify
         app.kubernetes.io/component: hermes-iris
@@ -129,6 +132,36 @@ spec:
             - name: hermes-config
               mountPath: /etc/verdify/hermes-config
               readOnly: true
+        # The pinned upstream May image contains the short tool-tail compaction
+        # IndexError fixed upstream by NousResearch/hermes-agent#75588. Keep the
+        # reviewed image digest and install only that two-anchor source backport
+        # into a read-only single-file mount. The patcher verifies both the
+        # packaged source and result digests and fails the pod closed on skew.
+        - name: patch-compressor-oob
+          image: nousresearch/hermes-agent@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e
+          command:
+            - python3
+            - /etc/verdify/hermes-config/hermes-compressor-oob-patch.py
+            - --source
+            - /opt/hermes/agent/context_compressor.py
+            - --destination
+            - /opt/hermes-runtime-patch/context_compressor.py
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+          volumeMounts:
+            - name: hermes-config
+              mountPath: /etc/verdify/hermes-config
+              readOnly: true
+            - name: hermes-runtime-patch
+              mountPath: /opt/hermes-runtime-patch
       containers:
         - name: hermes-iris
           # UPSTREAM image, digest PRESERVED from compose:363 (NOT rewritten by
@@ -198,6 +231,10 @@ spec:
               readOnly: true
             - name: tmp
               mountPath: /tmp
+            - name: hermes-runtime-patch
+              mountPath: /opt/hermes/agent/context_compressor.py
+              subPath: context_compressor.py
+              readOnly: true
           livenessProbe:
             exec:
               command: ["python3", "/etc/verdify/hermes-config/tool-readiness.py", "--mode", "liveness"]
@@ -221,6 +258,8 @@ spec:
             secretName: verdify-hermes-slack
             optional: true
         - name: tmp
+          emptyDir: {}
+        - name: hermes-runtime-patch
           emptyDir: {}
         # #213 IaC Hermes profile, seeded onto the PVC by the seed-config init.
         - name: hermes-config

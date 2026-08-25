@@ -26,6 +26,13 @@
 > `hermes-iris/custom:llm.primary.longctx/medium`. The direct
 > `planner_graph` alternative remains inactive and independently versioned.
 
+> The immutable upstream Hermes image remains pinned to revision `404640a2`.
+> That revision can index past a short tool-call/result tail during context
+> compaction (fixed upstream by `NousResearch/hermes-agent#75588`). Production
+> mounts a two-anchor backport generated at startup only after both the packaged
+> source and patched-result SHA-256 values match. Any upstream image skew fails
+> the init container closed; removing the init/mount is the rollback.
+
 ---
 
 ## 1. Context — the question
