@@ -252,7 +252,7 @@ BEGIN
     THEN
         RAISE EXCEPTION 'selector source facade ACL posture drifted';
     END IF;
-    IF (SELECT array_agg(attribute.attname ORDER BY attribute.attnum)
+    IF (SELECT array_agg(attribute.attname::text ORDER BY attribute.attnum)
           FROM pg_attribute attribute
          WHERE attribute.attrelid =
                'public.v_experiment_v2_selector_climate_source'::regclass
@@ -265,7 +265,7 @@ BEGIN
            'outdoor_rh_pct', 'solar_irradiance_w_m2', 'leaf_temp_north',
            'leaf_temp_south', 'leaf_wetness_north', 'leaf_wetness_south',
            'wind_speed_mph', 'precip_in', 'flow_gpm', 'mister_water_today'] OR
-       (SELECT array_agg(attribute.attname ORDER BY attribute.attnum)
+       (SELECT array_agg(attribute.attname::text ORDER BY attribute.attnum)
           FROM pg_attribute attribute
          WHERE attribute.attrelid =
                'public.v_experiment_v2_selector_forecast_source'::regclass

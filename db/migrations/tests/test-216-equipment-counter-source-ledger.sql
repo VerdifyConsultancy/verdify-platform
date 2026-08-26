@@ -17,6 +17,10 @@ BEGIN
     RAISE EXCEPTION 'statement unexpectedly succeeded: %', p_sql;
 END;
 $body$;
+-- Restored-production default ACLs revoke PUBLIC execute on newly
+-- created functions; the fixture helper must stay callable from every
+-- role the test impersonates.
+GRANT EXECUTE ON FUNCTION pg_temp.expect_failure(text, text) TO PUBLIC;
 
 CREATE OR REPLACE FUNCTION pg_temp.direct_observations(p_observed_at timestamptz)
 RETURNS jsonb
@@ -37,6 +41,10 @@ AS $body$
         'mister_center', jsonb_build_object('state', false, 'source_observed_at', p_observed_at)
     );
 $body$;
+-- Restored-production default ACLs revoke PUBLIC execute on newly
+-- created functions; the fixture helper must stay callable from every
+-- role the test impersonates.
+GRANT EXECUTE ON FUNCTION pg_temp.direct_observations(timestamptz) TO PUBLIC;
 
 DO $body$
 DECLARE

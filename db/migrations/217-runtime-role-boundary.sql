@@ -6144,6 +6144,18 @@ GRANT EXECUTE ON FUNCTION
     public.fn_experiment_v2_ops_status()
 TO verdify_ingestor_runtime;
 
+-- The v2 outcome source cycle (migration 216: SECURITY DEFINER, owner
+-- verdify_experiment_v2_owner) evaluates the legacy crop-band curve inside
+-- its definer context. The managed pure-read helpers are hardened against
+-- PUBLIC execute, so without this the first outcome cycle fails closed
+-- (surfaced by the restored-production rehearsal fixture). Grant the exact
+-- managed pair only; the unmanaged pure solar helpers keep their default ACL.
+GRANT EXECUTE ON FUNCTION
+    public.fn_crop_band_value(text,text,timestamptz,text,text,text),
+    public.fn_current_season()
+TO verdify_experiment_v2_owner;
+GRANT SELECT ON public.crop_band_anchors TO verdify_experiment_v2_owner;
+
 -- Effective relation/column/sequence grants are useful only if the object
 -- owner is also trusted.  An arbitrary nonmember owner retains implicit
 -- authority and could rewrite a view or foreign-table target after replay.
@@ -6235,9 +6247,25 @@ BEGIN
                                             current_database())
     LOOP
         IF exposed.relkind = 'S' THEN
-            EXECUTE format('ALTER SEQUENCE %I.%I OWNER TO %I',
-                           exposed.nspname, exposed.relname,
-                           database_owner_name);
+            -- A sequence that is OWNED BY or is the IDENTITY of a table column
+            -- (pg_depend deptype 'a'/'i') cannot be re-owned directly
+            -- (PostgreSQL rejects ALTER SEQUENCE ... OWNER on it); its owner
+            -- follows the parent table's ALTER TABLE OWNER, which this same
+            -- loop performs. Only free-standing sequences take the direct
+            -- path. Surfaced by re-applying this migration against a restored
+            -- production database (identity sequences on the experiment
+            -- ledgers).
+            IF NOT EXISTS (
+                SELECT 1
+                  FROM pg_depend dep
+                 WHERE dep.classid = 'pg_class'::regclass
+                   AND dep.objid = exposed.oid
+                   AND dep.refclassid = 'pg_class'::regclass
+                   AND dep.deptype IN ('a','i')) THEN
+                EXECUTE format('ALTER SEQUENCE %I.%I OWNER TO %I',
+                               exposed.nspname, exposed.relname,
+                               database_owner_name);
+            END IF;
         ELSIF exposed.relkind = 'v' THEN
             EXECUTE format('ALTER VIEW %I.%I OWNER TO %I',
                            exposed.nspname, exposed.relname,
@@ -6331,6 +6359,7 @@ DECLARE
     api_pure_read_helpers regprocedure[];
     ingestor_pure_read_helpers regprocedure[];
     pure_read_helpers regprocedure[];
+    v2_owner_band_helpers regprocedure[];
     invoker_helper_closure regprocedure[];
     transitive_only_helpers regprocedure[];
     database_owner_oid oid;
@@ -6431,6 +6460,10 @@ BEGIN
         'public.fn_system_health()'::regprocedure,
         'public.fn_zone_vpd_targets(timestamptz)'::regprocedure,
         'public.fn_experiment_v2_ops_status()'::regprocedure
+    ];
+    v2_owner_band_helpers := ARRAY[
+        'public.fn_crop_band_value(text,text,timestamptz,text,text,text)'::regprocedure,
+        'public.fn_current_season()'::regprocedure
     ];
     SELECT pg_catalog.array_agg(DISTINCT helper_oid ORDER BY helper_oid)
       INTO pure_read_helpers
@@ -6806,7 +6839,8 @@ BEGIN
                  FROM pg_catalog.aclexplode(helper.proacl) acl
                 WHERE acl.grantee <> helper.proowner) <>
               ((helper.oid = ANY (api_pure_read_helpers))::integer
-               + (helper.oid = ANY (ingestor_pure_read_helpers))::integer)
+               + (helper.oid = ANY (ingestor_pure_read_helpers))::integer
+               + (helper.oid = ANY (v2_owner_band_helpers))::integer)
            OR EXISTS (
                 SELECT 1
                   FROM pg_catalog.aclexplode(helper.proacl) acl
@@ -6823,7 +6857,13 @@ BEGIN
                                             WHERE rolname =
                                                   'verdify_ingestor_runtime')
                              AND helper.oid = ANY (
-                                 ingestor_pure_read_helpers))))) THEN
+                                 ingestor_pure_read_helpers))
+                            OR
+                            (acl.grantee = (SELECT oid FROM pg_roles
+                                            WHERE rolname =
+                                                  'verdify_experiment_v2_owner')
+                             AND helper.oid = ANY (
+                                 v2_owner_band_helpers))))) THEN
             RAISE EXCEPTION 'pure/read helper ACL/owner is not exact for %',
                 helper.oid::regprocedure;
         END IF;

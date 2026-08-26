@@ -73,7 +73,7 @@ spec:
             - name: PGPORT
               value: "55432"
             - name: PGUSER
-              value: postgres
+              value: verdify
             - name: PGDATABASE
               value: verdify_rehearsal
             - name: DB_HOST
@@ -83,7 +83,7 @@ spec:
             - name: DB_NAME
               value: verdify_rehearsal
             - name: DB_USER
-              value: postgres
+              value: verdify
             - name: DB_PASS
               value: unused-local-trust-auth
             - name: VERDIFY_MIGRATIONS_DIR
