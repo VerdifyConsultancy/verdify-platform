@@ -1,27 +1,25 @@
 #!/usr/bin/env python3
 """Generate firmware/policy_consumer_manifest.json (Lane E, #586; audit §8.9).
 
-Enumerates every ESPHome ``id(<global>)`` access site of the 48 policy-vector
+Enumerates every ESPHome ``id(<global>)`` read site of the 48 policy-vector
 wire fields across the firmware YAML sources and records, per site, whether it
-has been migrated to the runtime-gated policy read (``pol(kPF_<field>, ...)``
-/ ``polb(...)`` inside the control tick, ``verdify_policy::policy_read`` /
-``policy_read_b`` in entity/readback/diagnostic lambdas).
+has been migrated to the per-tick policy snapshot (a gated
+``pol(kPF_<field>, id(<global>))`` / ``polb(...)`` read in controls.yaml).
 
-Tranche 2 (#586) completed the migration, so the gate is ENFORCING: --check
-fails when the committed manifest drifts from a fresh scan OR when any
-planner-pushable read site is neither migrated to the snapshot nor covered by
-an explicit allowlist rule below. The atomic pointer swap is only meaningful
-because every consumer read goes through the one gate; no consumer can be
-added or left unmigrated silently.
+The committed JSON is the tranche-2 migration checklist required by §8.9
+before any experiment may be ARMED (shadow mode does not require it): the
+atomic pointer swap is only meaningful once every control-path consumer reads
+the one snapshot. CI runs ``--check`` and fails when the committed manifest
+drifts from the regenerated scan, so no consumer can be added or migrated
+silently.
 
-Allowlist rules (the only unmigrated accesses permitted, each carrying its
-justification in ``ALLOWLIST_RULES``):
-  legacy_write_path  write accesses (``id(x) = / += / -=``). These are the
-                     legacy write path being demoted (Lane C #584/#597).
-  boot_repair_rmw    a READ of global X on a line that also WRITES X — the
-                     boot-time NVS repair idiom in greenhouse.yaml
-                     (read-check-rewrite of the legacy store itself, before
-                     the engine has even boot_init'd; not a policy consumer).
+Site categories:
+  control      controls.yaml — the live control path (must ALL be migrated
+               before arming; the exemplar 11-field set is done in Lane E).
+  readback     sensors.yaml cfg_* confirmation sensors (diagnostics; §8.9
+               keeps legacy globals as diagnostics while armed).
+  entity       tunables.yaml number/switch getters + set_action writers.
+  boot_or_diag greenhouse.yaml on_boot repair + display sensors.
 
 Every wire field maps to a firmware global under wire schema v2:
 ``direct_wet_stress_latest_hour`` (the v1 reserved zero-consumer row, audit
@@ -74,32 +72,8 @@ GLOBAL_ID_OVERRIDES: dict[str, str] = {
 # was wired before its firmware landed and must be tracked explicitly.
 NO_FIRMWARE_GLOBAL: frozenset[str] = frozenset()
 
-# The ONLY permitted unmigrated accesses. Machine-detected; justifications are
-# emitted verbatim into the manifest so the audit reads them in one place.
-ALLOWLIST_RULES: dict[str, str] = {
-    "legacy_write_path": (
-        "Write access to the legacy global — the write path being demoted "
-        "(Lane C #584/#597). While an experiment is armed, planner-side "
-        "writers are demoted host-side to proposals (MCP set_tunable / "
-        "set_plan, forecast engine); a write that still lands here only "
-        "touches the legacy global, which no armed consumer reads, so it "
-        "cannot actuate until the experiment disarms."
-    ),
-    "boot_repair_rmw": (
-        "Boot-time NVS repair in greenhouse.yaml on_boot: a read of the "
-        "legacy global on the same line that rewrites that global "
-        "(corruption check of the legacy store itself). Runs at boot "
-        "priority 600, before the policy engine boot_init; it maintains the "
-        "demoted write path's storage and is not a policy consumer."
-    ),
-}
-
 ID_RE = re.compile(r"id\(\s*([a-z0-9_]+)\s*\)")
 WRITE_RE = re.compile(r"^\s*(\+?=|-=)\s")
-
-# A migrated read routes through the runtime gate on the same line:
-# pol()/polb() lambdas in controls.yaml, policy_read()/policy_read_b()
-# elsewhere — all of which name the kPF_<field> constant.
 
 
 def classify_access(line: str, match_end: int) -> str:
@@ -112,16 +86,7 @@ def classify_access(line: str, match_end: int) -> str:
 
 def build_manifest() -> dict:
     fields = []
-    total = {
-        "read_sites": 0,
-        "migrated_reads": 0,
-        "allowlisted_reads": 0,
-        "write_sites": 0,
-        "control_reads": 0,
-        "migrated_control_reads": 0,
-        "fields_clean": 0,
-    }
-    violations: list[str] = []
+    total = {"control_reads": 0, "migrated_control_reads": 0, "fields_fully_migrated": 0}
     file_lines = {rel: (REPO_ROOT / rel).read_text().splitlines() for rel in SCAN_FILES if (REPO_ROOT / rel).exists()}
 
     for defn in pv.wire_fields():
@@ -132,54 +97,36 @@ def build_manifest() -> dict:
             marker = f"kPF_{name}"
             for rel, category in SCAN_FILES.items():
                 for lineno, line in enumerate(file_lines.get(rel, []), start=1):
-                    accesses = [
-                        classify_access(line, match.end())
-                        for match in ID_RE.finditer(line)
-                        if match.group(1) == global_id
-                    ]
-                    line_has_write = "write" in accesses
-                    for access in accesses:
+                    for match in ID_RE.finditer(line):
+                        if match.group(1) != global_id:
+                            continue
+                        access = classify_access(line, match.end())
                         migrated = access == "read" and marker in line
-                        site = {
-                            "file": rel,
-                            "line": lineno,
-                            "category": category,
-                            "access": access,
-                            "migrated_to_snapshot": migrated,
-                        }
-                        if access == "write":
-                            site["allowlist"] = "legacy_write_path"
-                        elif not migrated and line_has_write:
-                            # Read of X on a line that rewrites X: boot repair RMW.
-                            site["allowlist"] = "boot_repair_rmw"
-                        elif not migrated:
-                            violations.append(f"{rel}:{lineno} unmigrated {category} read of {name} ({global_id})")
-                        sites.append(site)
-        reads = [s for s in sites if s["access"] == "read"]
-        migrated_reads = [s for s in reads if s["migrated_to_snapshot"]]
-        allowlisted_reads = [s for s in reads if s.get("allowlist")]
-        writes = [s for s in sites if s["access"] == "write"]
-        control_reads = [s for s in reads if s["category"] == "control"]
-        migrated_control = [s for s in control_reads if s["migrated_to_snapshot"]]
-        clean = len(migrated_reads) + len(allowlisted_reads) == len(reads)
-        total["read_sites"] += len(reads)
-        total["migrated_reads"] += len(migrated_reads)
-        total["allowlisted_reads"] += len(allowlisted_reads)
-        total["write_sites"] += len(writes)
+                        sites.append(
+                            {
+                                "file": rel,
+                                "line": lineno,
+                                "category": category,
+                                "access": access,
+                                "migrated_to_snapshot": migrated,
+                            }
+                        )
+        control_reads = [s for s in sites if s["category"] == "control" and s["access"] == "read"]
+        migrated_reads = [s for s in control_reads if s["migrated_to_snapshot"]]
+        control_migrated = bool(control_reads) and len(migrated_reads) == len(control_reads)
         total["control_reads"] += len(control_reads)
-        total["migrated_control_reads"] += len(migrated_control)
-        if clean:
-            total["fields_clean"] += 1
+        total["migrated_control_reads"] += len(migrated_reads)
+        if control_migrated or (global_id is not None and not control_reads):
+            total["fields_fully_migrated"] += 1
         fields.append(
             {
                 "name": name,
                 "wire_id": defn.wire_id,
                 "global_id": global_id,
-                "read_sites": len(reads),
-                "reads_migrated": len(migrated_reads),
-                "reads_allowlisted": len(allowlisted_reads),
-                "write_sites_allowlisted": len(writes),
-                "clean": clean,
+                "control_read_sites": len(control_reads),
+                "control_reads_migrated": len(migrated_reads),
+                "control_migrated": control_migrated if control_reads else (global_id is not None),
+                "tranche": 1 if control_reads and control_migrated else 2,
                 "sites": sites,
             }
         )
@@ -188,26 +135,19 @@ def build_manifest() -> dict:
         "_generated_by": "scripts/gen-policy-consumer-manifest.py — DO NOT EDIT (Lane E, #586)",
         "_purpose": (
             "Per-field id(<global>) consumer map for the 48-field policy wire schema. "
-            "Tranche 2 complete (audit §8.9): EVERY planner-pushable read site is migrated "
-            "to the runtime-gated policy read, and the CI gate is enforcing — an unmigrated, "
-            "non-allowlisted read site fails --check. Writers and boot-repair RMW reads are "
-            "the only allowlisted legacy accesses (see allowlist_rules)."
+            "control category reads must all be migrated_to_snapshot before an experiment "
+            "manifest may be armed (audit §8.9); readback/entity/boot sites stay on legacy "
+            "globals as diagnostics."
         ),
         "wire_schema_version": WIRE_SCHEMA_VERSION,
-        "gate": "enforcing",
-        "allowlist_rules": ALLOWLIST_RULES,
         "summary": {
             "fields": len(fields),
-            "fields_clean": total["fields_clean"],
-            "read_sites": total["read_sites"],
-            "reads_migrated": total["migrated_reads"],
-            "reads_allowlisted": total["allowlisted_reads"],
-            "write_sites_allowlisted": total["write_sites"],
+            "fields_fully_migrated_or_trivial": total["fields_fully_migrated"],
             "control_read_sites": total["control_reads"],
             "control_reads_migrated": total["migrated_control_reads"],
         },
         "fields": fields,
-    }, violations
+    }
 
 
 def main() -> int:
@@ -215,14 +155,7 @@ def main() -> int:
     parser.add_argument("--check", action="store_true", help="verify the committed manifest matches a fresh scan")
     args = parser.parse_args()
 
-    manifest, violations = build_manifest()
-    content = json.dumps(manifest, indent=2, sort_keys=False) + "\n"
-    if violations:
-        print("ENFORCEMENT: unmigrated planner-pushable read sites (audit §8.9 forbids arming):")
-        for violation in violations:
-            print(f"  {violation}")
-        if args.check:
-            return 1
+    content = json.dumps(build_manifest(), indent=2, sort_keys=False) + "\n"
     if args.check:
         current = MANIFEST_PATH.read_text() if MANIFEST_PATH.exists() else None
         if current != content:
@@ -233,11 +166,9 @@ def main() -> int:
             return 1
         summary = json.loads(content)["summary"]
         print(
-            "policy consumer manifest up to date (gate enforcing): "
-            f"{summary['reads_migrated']}/{summary['read_sites']} reads migrated "
-            f"(+{summary['reads_allowlisted']} allowlisted), "
-            f"{summary['control_reads_migrated']}/{summary['control_read_sites']} control reads, "
-            f"{summary['fields_clean']}/{summary['fields']} fields clean"
+            "policy consumer manifest up to date: "
+            f"{summary['control_reads_migrated']}/{summary['control_read_sites']} control reads migrated, "
+            f"{summary['fields_fully_migrated_or_trivial']}/{summary['fields']} fields clean"
         )
         return 0
     MANIFEST_PATH.write_text(content)

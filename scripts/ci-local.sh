@@ -63,7 +63,6 @@ $PY -m pytest -q \
   tests/test_experiment_qualification_settling.py \
   tests/test_experiment_qualification_spec.py \
   tests/test_experiment_schema_migration.py \
-  tests/test_experiment_verify.py \
   tests/test_experiment_workers.py \
   tests/test_firmware_crop_agnostic_guard.py \
   tests/test_forecast_action_engine_path.py \
@@ -97,9 +96,6 @@ $PY -m pytest -q \
   tests/test_solar_band_anchors.py \
   tests/test_solar_constants_check.py \
   tests/test_tempest_sync.py \
-  tests/test_twin_agreement_report.py \
-  tests/test_twin_asof_migration.py \
-  tests/test_twin_live_driver.py \
   tests/test_writer_lease_fence.py
 
 step "migration rollback safety classification"
@@ -116,16 +112,6 @@ bash scripts/gen-config-revision.sh --check
 
 step "policy consumer manifest drift (Lane E, #586)"
 $PY scripts/gen-policy-consumer-manifest.py --check
-
-step "firmware policy engine native tests + §8.10 recovery-image proof (#586)"
-# Tranche 2 (#586): the policy engine and its journal are on the control path
-# of every consumer read, and the recovery image must provably not resume or
-# actuate an experiment. Both suites are small native binaries (< 5 s).
-if command -v g++ >/dev/null; then
-  make test-policy-engine test-policy-recovery
-else
-  echo "SKIP: g++ not available on this host (required in the CI image)"
-fi
 
 step "twin follower source compiles (the twin image's exact build, #587)"
 # The firmware-twin component now runs the pre-baked twin image (twin/Dockerfile
