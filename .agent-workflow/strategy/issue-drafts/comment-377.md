@@ -1,3 +1,0 @@
-Jason's July 9 decision is definitive: retire the June `band_track_fraction=0.25` experiment and keep the effective value at **0**.
-
-Current device/readback and repository defaults are already 0, but production `v_active_plan` still returns `operator-relax-pinch-20260618=0.25`. That stale row participates in every reconcile/materialization cycle. The remaining work is delivery correctness, not another value decision: deploy #433 and #427 consumers that normalize/expire intent correctly, then atomically retire the stale row and observe zero repin/repeated write. Close this issue only after live `v_active_plan` and device confirmation both remain 0.
