@@ -7,10 +7,6 @@ dependencies = [
     "numpy>=2.2,<3",
     "scipy>=1.15,<2",
     "scikit-learn>=1.6,<2",
-    # Lane G baseline builder imports verdify_schemas from the repo root
-    # (path shim in baseline/baseline.py), which needs these at runtime.
-    "pydantic>=2,<3",
-    "pyyaml>=6,<7",
 ]
 
 [dependency-groups]
