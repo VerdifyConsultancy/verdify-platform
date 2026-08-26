@@ -70,4 +70,3 @@ firmware/artifacts/
 CLAUDE.md
 .claude-tmp/
 .claude/
-firmware/test/test_policy_engine
