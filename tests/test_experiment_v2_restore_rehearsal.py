@@ -203,7 +203,10 @@ def test_rendered_prod_admits_one_exact_isolated_rehearsal_hook_set():
 def test_script_restores_only_the_bounded_latest_dump_and_runs_real_gates():
     script = _script()
     for required in (
-        "find /backups -maxdepth 1 -type f -name 'verdify-*.dump'",
+        "for candidate in /backups/verdify-*.dump",
+        'stat -c %Y -- "${candidate}"',
+        '[ ! -L "${candidate}" ]',
+        "sort -nr | sed -n '1p'",
         "/backups/verdify-*.dump",
         "dump_age_seconds >= max_dump_age_seconds",
         "latest dump age must be >=0 and <26h",
