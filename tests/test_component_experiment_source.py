@@ -18,15 +18,21 @@ import tasks.component_experiment as component_experiment  # noqa: E402
 from aioesphomeapi.api_pb2 import SubscribeStatesRequest  # noqa: E402
 from tasks.component_experiment import (  # noqa: E402
     RevisionSet,
+    clear_component_entity_inventory,
     component_cfg_source_epochs,
+    component_entity_grid_attestation,
     configure_component_cfg_source,
     record_component_cfg_readback,
     record_component_device_uptime,
+    record_component_entity_inventory,
+    record_component_grid_firmware_revision,
     request_component_state_replay,
 )
 
 from verdify_schemas.component_executor import CANONICAL_FIELD_ORDER, ENTITY_GRIDS
+from verdify_schemas.component_qualification import RuntimeEntityMetadata
 from verdify_schemas.policy_vector import decode_policy_vector
+from verdify_schemas.tunable_registry import REGISTRY
 
 NOW = datetime(2026, 8, 23, 23, 0, tzinfo=UTC)
 EXPERIMENT_ID = "11111111-1111-4111-8111-111111111111"
@@ -47,6 +53,7 @@ def isolated_source(monkeypatch):
     shared.esp32["state_subscription_client"] = None
     shared.esp32["state_subscription_generation"] = None
     shared.cfg_readback.clear()
+    clear_component_entity_inventory()
     configure_component_cfg_source(
         experiment_id=None,
         lease_generation=None,
@@ -58,6 +65,7 @@ def isolated_source(monkeypatch):
     shared.esp32["client"] = None
     shared.esp32["state_subscription_client"] = None
     shared.esp32["state_subscription_generation"] = None
+    clear_component_entity_inventory()
     configure_component_cfg_source(
         experiment_id=None,
         lease_generation=None,
@@ -117,6 +125,37 @@ def install_replay_client(client: ReplayClient, generation: int = 7) -> None:
     shared.esp32["client"] = client
     shared.esp32["state_subscription_client"] = client
     shared.esp32["state_subscription_generation"] = generation
+
+
+def exact_runtime_inventory() -> tuple[RuntimeEntityMetadata, ...]:
+    entities: list[RuntimeEntityMetadata] = []
+    key = 100
+    for field_name in CANONICAL_FIELD_ORDER:
+        definition = REGISTRY[field_name]
+        grid = ENTITY_GRIDS[field_name]
+        key += 1
+        entities.append(
+            RuntimeEntityMetadata(
+                device_id=0,
+                object_id=definition.esp_object_id,
+                entity_type=grid.entity_type,
+                key=key,
+                minimum=grid.minimum,
+                maximum=grid.maximum,
+                step=grid.step,
+                assumed_state=False if grid.entity_type == "switch" else None,
+            )
+        )
+        key += 1
+        entities.append(
+            RuntimeEntityMetadata(
+                device_id=0,
+                object_id=definition.cfg_readback_object_id,
+                entity_type="sensor",
+                key=key,
+            )
+        )
+    return tuple(entities)
 
 
 def test_epoch_uuid_and_timestamps_are_owned_by_raw_callbacks() -> None:
@@ -225,6 +264,29 @@ def test_state_replay_identity_change_resets_throttle_and_old_client_is_rejected
     shared.esp32["client"] = first_client
     with pytest.raises(component_experiment.ComponentStoreError, match="authenticated subscription"):
         request_component_state_replay(monotonic_clock=lambda: 131.0)
+
+
+def test_grid_attestation_reuses_current_subscription_metadata_and_is_generation_fenced(monkeypatch) -> None:
+    monkeypatch.setenv("VERDIFY_GIT_SHA", "a" * 40)
+    monkeypatch.setenv("GREENHOUSE_ID", "vallery")
+    connection = ReplayConnection()
+    client = ReplayClient(connection)
+    install_replay_client(client)
+    record_component_entity_inventory(exact_runtime_inventory(), connection_generation=7, observed_at=NOW)
+
+    assert record_component_grid_firmware_revision("2026.7.10.1500.09ee886", observed_at=NOW) is True
+    evidence = component_entity_grid_attestation()
+    assert evidence is not None
+    assert evidence.field_count == 48
+    assert evidence.connection_generation == 7
+    assert client.subscribe_calls == 0
+    assert client.command_calls == 0
+    assert connection.messages == []
+
+    # Repeated diagnostic callbacks do not forge a second receipt.
+    assert record_component_grid_firmware_revision("2026.7.10.1500.09ee886", observed_at=NOW) is False
+    shared.transport_generation = 8
+    assert component_entity_grid_attestation() is None
 
 
 def test_deployable_ingestor_pins_the_audited_state_replay_client_version() -> None:
@@ -339,6 +401,12 @@ def test_ingestor_callback_hook_is_separate_from_periodic_snapshot_flush() -> No
     assert source.count("record_component_cfg_readback(cfg_param, val)") == 1
     assert source.count("record_component_device_uptime(value)") == 1
     assert source.count("client.subscribe_states(on_generation_state)") == 1
+    assert source.count("record_component_entity_inventory(") == 1
+    assert source.count("record_component_grid_firmware_revision(value, observed_at=observed_at)") == 1
+    enumeration = source.index("entities, services = await client.list_entities_services()")
+    inventory = source.index("record_component_entity_inventory(")
+    subscription = source.index("client.subscribe_states(on_generation_state)")
+    assert enumeration < inventory < subscription
     assert "shared.transport_generation != connection_generation" in source
     assert source.index('shared.esp32["state_subscription_generation"] = connection_generation') < source.index(
         "client.subscribe_states(on_generation_state)"

@@ -477,7 +477,7 @@ class FakeTransport:
 @pytest.fixture(autouse=True)
 def isolated(monkeypatch):
     monkeypatch.setattr(shared, "transport_generation", 7)
-    monkeypatch.setattr(component_experiment, "physical_execution_qualified", lambda _grid: True)
+    monkeypatch.setattr(component_experiment, "physical_execution_qualified", lambda _grid, _observed=None: True)
     monkeypatch.setattr(component_experiment, "request_component_state_replay", lambda: False)
     component_experiment._runtime_reporters.clear()
     component_experiment._pending_runtime_faults.clear()
@@ -1224,7 +1224,7 @@ async def test_unqualified_live_grid_or_prefix_replay_blocks_every_physical_call
     item = work()
     store = FakeStore(item, observation(item, item.baseline_state))
     transport = FakeTransport()
-    monkeypatch.setattr(component_experiment, "physical_execution_qualified", lambda _grid: False)
+    monkeypatch.setattr(component_experiment, "physical_execution_qualified", lambda _grid, _observed=None: False)
 
     result = await executor(store, transport).run_once(EXPERIMENT_ID, fence())
 
