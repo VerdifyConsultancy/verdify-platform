@@ -1,20 +1,17 @@
 # ============================================================================
-# WIRED INTO kustomization.yaml — git==live CAPTURE. (#211/#263) INGESTOR PATCH.
+# WIRED INTO kustomization.yaml — gather-path capture + Gate-1 DB cutover patch.
 # ============================================================================
 # This is the verdify-ingestor Deployment patch that makes gather-plan-context.sh
 # runnable in-pod. It is now LISTED in overlays/prod/kustomization `patches:`
 # (laptop-root 2026-06-07) BECAUSE the live writer (node4) is ALREADY running this
 # exact shape — install-psql initContainer, gather-script + pgclient mounts,
 # PATH/LD_LIBRARY_PATH + HERMES_IRIS_API_KEY + PGPASSWORD env (deliveries proven).
-# Wiring it makes git == live, so an ArgoCD reconcile of verdify-prod-dark
-# (path overlays/prod) RENDERS the same ingestor it already runs and REINFORCES
-# the plan-delivery path instead of STRIPPING it. The original concern — that
-# *applying* this RESTARTS the live single ESP32 writer — still governs any
-# kubectl-apply / manual sync: that remains a laptop-root guarded stop/verify
-# Recreate at the gated window. But omitting it from git was the LARGER hazard
-# (a naive sync would revert live), which this capture closes. The other #210-213
-# ConfigMap pieces (HERMES_URL, gather-script ConfigMap, gather-env) are already
-# live/wired and do NOT restart the ingestor by themselves.
+# The mount, client, and Hermes-auth shape remains the git==live capture. Gate 1
+# intentionally changes only PGPASSWORD from the database-owner key to the
+# ingestor's least-privilege runtime key, in lockstep with the ingestor process
+# credential patch. Applying the production overlay therefore performs a
+# controlled Recreate of the single writer; post-sync validation must prove one
+# Ready writer, unchanged device interlocks, and a functioning gather path.
 #
 # WHAT IT ADDS (all ADDITIVE strategic-merge; base /tmp + ha-token preserved):
 #  1. initContainer `install-psql` — the ingestor image (Debian trixie/glibc) has
@@ -32,8 +29,9 @@
 #  4. container env PATH (prepend /opt/pgclient/bin) + LD_LIBRARY_PATH so the
 #     gather script's bare `psql` (direct mode, VERDIFY_DB_BACKEND=dsn from
 #     verdify-config) resolves and links. PGHOST/PGPORT/PGDATABASE/PGUSER come
-#     from DB_HOST/DB_PORT/DB_NAME/DB_USER (verdify-config); PGPASSWORD from the
-#     ingestor's existing $POSTGRES_PASSWORD — all already in the pod.
+#     from DB_HOST/DB_PORT/DB_NAME/DB_USER (verdify-config). Gate 1 deliberately
+#     repoints PGPASSWORD to the ingestor's least-privilege runtime Secret key;
+#     the mount and connection-transport shape otherwise remain unchanged.
 #
 # NOTE on the ConfigMap mount + the lib subdir: a single ConfigMap volume cannot
 # place a file in a `lib/` subdirectory via plain key mounting (ConfigMap keys are
@@ -91,25 +89,23 @@ spec:
               value: "/opt/pgclient/bin:/home/appuser/.local/bin:/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin"
             - name: LD_LIBRARY_PATH
               value: "/opt/pgclient/lib"
-            # #212/#213 plan-delivery env (git==live capture, laptop-root 2026-06-07):
+            # #212/#213 plan-delivery env plus Gate-1 database-role cutover:
             # HERMES_IRIS_API_KEY authenticates the ingestor's iris_planner POST to
             # the in-cluster hermes-iris gateway (HERMES_URL in verdify-config).
-            # These two are ALREADY on the LIVE writer pod (node4, deliveries proven)
-            # but were the only env the prod overlay did not render — without them a
-            # sync would strip the auth + PGPASSWORD and break delivery. Captured
-            # here (additive strategic merge, keyed by name) so a sync REINFORCES.
+            # The auth and gather-path shape are already proven live. Gate 1 keeps
+            # that shape while repointing PGPASSWORD to the runtime role below.
             - name: HERMES_IRIS_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: verdify-hermes
                   key: HERMES_IRIS_API_KEY
             # PGPASSWORD for the gather script's direct `psql` (its lib reads
-            # $PGPASSWORD); sourced from the same secret/key as POSTGRES_PASSWORD.
+            # $PGPASSWORD); use the same ordinary login as the ingestor process.
             - name: PGPASSWORD
               valueFrom:
                 secretKeyRef:
                   name: verdify-app-secrets
-                  key: POSTGRES_PASSWORD
+                  key: VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD
           volumeMounts:
             - name: gather-script
               mountPath: /srv/verdify/scripts/gather-plan-context.sh

@@ -1,29 +1,10 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-# Reviewable, INACTIVE production target for migration 217's credential
-# cutover. ArgoCD still owns overlays/prod. Do not repoint or copy this
-# component into that overlay until both exact login passwords have been
-# provisioned and the capability-OFF rollout/rollback snapshot is approved.
+# Compatibility/review alias for migration 217's active production credential
+# cutover. The ArgoCD source remains overlays/prod, which now owns the component,
+# namespace, image transformation, and patch ordering. Keep this alias as a pure
+# parent render so review tooling cannot accidentally apply the component twice
+# or diverge from the real production target.
 resources:
   - ../prod
-
-components:
-  - ../../components/runtime-role-boundary
-
-# This review overlay adds the Component one level above prod, after prod's
-# image transformer has run. Copy the already-rendered immutable migrate image
-# into the bootstrap hook without duplicating a digest that the pin actuator
-# would otherwise have to maintain. Direct prod adoption is transformed at the
-# same level and does not need this review-only replacement.
-replacements:
-  - source:
-      kind: Job
-      name: verdify-migrate
-      fieldPath: spec.template.spec.containers.0.image
-    targets:
-      - select:
-          kind: Job
-          name: verdify-runtime-role-bootstrap
-        fieldPaths:
-          - spec.template.spec.containers.0.image

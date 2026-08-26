@@ -101,6 +101,17 @@ components:
   # 214-218 plus the ordinary-runtime write boundary with the candidate
   # migrate digest. Remove this component reference after retained PASS logs.
   - ../../components/experiment-v2-restore-rehearsal
+  # Gate 1 ordinary database-role cutover. The PreSync hook installs and proves
+  # the two migration-217 logins before API/ingestor roll, then the pod patches
+  # remove the database-owner credential from both ordinary containers. Merge
+  # and sync only after the protected four-key reconciliation receipt exists.
+  - ../../components/runtime-role-boundary
+  # Gate 2 experiment credential activation. This remains non-actuating: it
+  # installs and attests the six migration-214/216 function-only logins and
+  # validates the two independent API authorization tokens, but does not set
+  # the experiment capability or active ID. Merge/sync only after the named
+  # protected Secret keys have been reconciled by the fleet authority.
+  - ../../components/experiment-v2-credential-bootstrap
   # #124 verdify-lab — the public Quartz research site (lab.verdify.ai). Pure web
   # tier, stateless (no PVC), NO device path. Built from the
   # verdify-site-legacy Dockerfile.k3s (see components/lab-site/lab-site.yaml).
@@ -182,14 +193,12 @@ patches:
   # subprocess (not the ingestor app / device path). See
   # gather-script-env-configmap.yaml. (Picked up on the gated restart.)
   - path: gather-script-env-configmap.yaml
-  # #211/#263 GIT==LIVE INGESTOR CAPTURE (laptop-root 2026-06-07): the gather-mount
-  # patch — install-psql initContainer + gather-script/pgclient mounts +
-  # PATH/LD_LIBRARY_PATH + HERMES_IRIS_API_KEY + PGPASSWORD env. The LIVE writer
-  # (node4) ALREADY runs this exact shape (plan deliveries proven), so rendering it
-  # makes a verdify-prod-dark reconcile a NO-OP on the ingestor (REINFORCE, not
-  # revert). Applying it via kubectl/sync still RESTARTS the single ESP32 writer —
-  # that is a laptop-root guarded Recreate at the gated window, NOT an autonomous
-  # action. See ingestor-gather-mount.patch.yaml header.
+  # #211/#263 gather-path capture plus Gate-1 credential cutover: retain the
+  # proven install-psql initContainer, gather-script/pgclient mounts,
+  # PATH/LD_LIBRARY_PATH, and HERMES auth. PGPASSWORD deliberately changes from
+  # the database-owner key to the ingestor's least-privilege runtime key, matching
+  # the component's ordinary-process credential. This causes a controlled
+  # single-writer Recreate and is verified after sync. See the patch header.
   - path: ingestor-gather-mount.patch.yaml
   # #130 ingestor state volume: durable RWO PVC at /srv/verdify/state for
   # dispatcher/MCP bookkeeping and DB-outage telemetry spooling.

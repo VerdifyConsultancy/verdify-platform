@@ -9,7 +9,9 @@ metadata:
     # Migration delivery is the default PreSync wave (0). Run only after it has
     # completed, but still before any Sync-wave API or ingestor rollout.
     argocd.argoproj.io/hook: PreSync
-    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+    # Retain the successful proof for the bounded TTL so rollout evidence can
+    # capture completion, exact imageID, and the non-secret attestation line.
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
     argocd.argoproj.io/sync-wave: "1"
 spec:
   backoffLimit: 0
