@@ -1,3 +1,0 @@
-Jason's July 9 authorization covers implementation and the one combined recovery OTA, so the stale separate `gate:jason` label is removed. Deterministic replay, lighting audit, compile, runtime-cycling, heap, weekly, and bake gates remain mandatory.
-
-Scope this to the evidenced software regression: hold prior validity/window intent across brief exterior-lux freshness/solar-boundary flaps, preserve minimum-on semantics across the window edge, and reduce starts without extending light outside hard photoperiod/safety limits. Interior DLI remains unavailable under #435 and cannot be used as acceptance evidence. Judge starts/runtime from #389/#390 and preserve independent qualified-light-minute control.
