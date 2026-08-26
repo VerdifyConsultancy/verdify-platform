@@ -17,8 +17,15 @@ data:
     set -Eeuo pipefail
     umask 077
 
+    # The rehearsal container image is Alpine-based: its busybox find has no
+    # -printf. Enumerate direct children via the shell glob (same depth bound)
+    # and stat each regular non-symlink file for an integer epoch mtime,
+    # producing the identical '<epoch> <path>' record contract.
     latest_record="$({
-      find /backups -maxdepth 1 -type f -name 'verdify-*.dump' -printf '%T@ %p\n'
+      for candidate in /backups/verdify-*.dump; do
+        [ -f "${candidate}" ] && [ ! -L "${candidate}" ] || continue
+        printf '%s %s\n' "$(stat -c %Y -- "${candidate}")" "${candidate}"
+      done
     } | sort -nr | sed -n '1p')"
     if [[ -z "${latest_record}" ]]; then
       echo "[restore-rehearsal] FATAL: no completed verdify dump is available" >&2
