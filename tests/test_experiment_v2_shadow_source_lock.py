@@ -59,6 +59,14 @@ def test_source_lock_derivations_and_artifact_hashes_are_exact() -> None:
         ("system_message_path", "system_message_sha256"),
     ):
         assert _sha256(REPO_ROOT / selector[path_key]) == selector[hash_key]
+    selector_artifact = json.loads((REPO_ROOT / selector["artifact_path"]).read_text())
+    source_contract = selector_artifact["source_contract"]
+    assert source_contract["verified_content_git_sha"] == "a754e873e8c42bfbb05a4c808bdf023c6462691a"
+    assert _sha256(REPO_ROOT / source_contract["provider_source"]) == source_contract["provider_source_sha256"]
+    assert (
+        _sha256(REPO_ROOT / source_contract["selector_contract_source"])
+        == source_contract["selector_contract_source_sha256"]
+    )
     assert _sha256(REPO_ROOT / outcome["schema_path"]) == outcome["schema_sha256"]
     assert _sha256(REPO_ROOT / outcome["evaluator_source"]) == outcome["evaluator_source_sha256"]
     assert _sha256(REPO_ROOT / profiles["artifact_path"]) == profiles["artifact_sha256"]
@@ -194,6 +202,17 @@ def test_source_lock_composes_with_generator_without_claiming_live_authority(tmp
             "and commissioning state remain live-evidence inputs."
         ),
     }
+    assert "source_git_sha" not in LOCK
+    assert LOCK["live_evidence_inputs"] == {
+        "source_git_sha": {
+            "format": "40 lower-case hexadecimal characters",
+            "source": (
+                "exact common VERDIFY_GIT_SHA and OCI revision of the three running experiment-v2 orchestrator pods"
+            ),
+            "status": "required after deployment; deliberately not frozen in this source artifact",
+        }
+    }
+    observed_source_git_sha = "f" * 40
     profile_document = json.loads((REPO_ROOT / LOCK["profiles"]["artifact_path"]).read_text())
     baseline = profile_document["profiles"]["baseline"]
     wire = profile_document["wire_schema"]
@@ -247,7 +266,7 @@ def test_source_lock_composes_with_generator_without_claiming_live_authority(tmp
             "temperature_duplicate_tolerance_f": 0.0,
             "vpd_duplicate_tolerance_kpa": 0.0,
         },
-        "source_git_sha": LOCK["source_git_sha"],
+        "source_git_sha": observed_source_git_sha,
         "study": {
             "assignment_namespace_uuid": study["assignment_namespace"]["uuid"],
             "experiment_id": study["experiment_id"]["uuid"],
@@ -273,6 +292,7 @@ def test_source_lock_composes_with_generator_without_claiming_live_authority(tmp
     assert outcome_identity.vpd_duplicate_tolerance_kpa == 0.0
 
     manifest = json.loads(outputs["packet-manifest.json"])
+    assert manifest["source_artifacts"]["source_git_sha"] == observed_source_git_sha
     assert manifest["no_authority_claims"] == {
         "admission_open": False,
         "arm_or_mapping_present": False,

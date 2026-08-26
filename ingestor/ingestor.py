@@ -3418,12 +3418,23 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
         # Event that fires when the connection drops (set by on_stop callback or ping failure)
         connection_lost = asyncio.Event()
         disconnected_at: datetime | None = None
+        connection_generation: int | None = None
 
         async def on_stop(expected_disconnect: bool) -> None:
             """Called by aioesphomeapi when connection drops."""
             nonlocal disconnected_at
             disconnected_at = datetime.now(UTC)
             _mark_equipment_source_gap("transport_connection_stopped")
+            # Revoke live-grid evidence in the disconnect callback itself.
+            # Waiting for the outer loop cleanup leaves a scheduling window in
+            # which the old client pointers still look current.
+            if connection_generation is None:
+                # connect() may invoke on_stop before this loop has assigned a
+                # transport generation.  The prior inventory was already
+                # cleared above, so an unconditional clear is safe here.
+                clear_component_entity_inventory()
+            else:
+                clear_component_entity_inventory(connection_generation=connection_generation)
             if expected_disconnect:
                 log.info("ESP32 disconnected (expected)")
             else:
@@ -3617,6 +3628,7 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
                     log.warning("Writer lease LOST — SELF-FENCING: disconnecting ESP32 immediately")
                     if disconnected_at is None:
                         disconnected_at = datetime.now(UTC)
+                    clear_component_entity_inventory(connection_generation=connection_generation)
                     connection_lost.set()
                     break
                 try:
@@ -3635,6 +3647,7 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
                             log.warning(f"Keepalive ping failed: {ping_err}")
                             if disconnected_at is None:
                                 disconnected_at = datetime.now(UTC)
+                            clear_component_entity_inventory(connection_generation=connection_generation)
                             connection_lost.set()
                             break
 

@@ -1,11 +1,18 @@
 {
-  "audit_ref": "gate2-shadow/a754e873",
+  "audit_ref": "gate2-shadow",
   "authority": {
     "admission_open": false,
     "device_write": false,
     "packet_ready": false,
     "physical_approval": false,
     "reason": "The deployed runtime identity, running-device entity grid, current firmware/config evidence, and commissioning state remain live-evidence inputs."
+  },
+  "live_evidence_inputs": {
+    "source_git_sha": {
+      "format": "40 lower-case hexadecimal characters",
+      "source": "exact common VERDIFY_GIT_SHA and OCI revision of the three running experiment-v2 orchestrator pods",
+      "status": "required after deployment; deliberately not frozen in this source artifact"
+    }
   },
   "candidate_source_revisions": {
     "config_revision": {
@@ -62,7 +69,7 @@
   "schema": "verdify-experiment-v2-shadow-source-lock-v1",
   "selector": {
     "artifact_path": "research/planner-efficacy/protocols/shadow-v2/selector-artifact-v1.json",
-    "artifact_sha256": "b996781f78b6d81e1d84899a112abab2e47e4cfaa3ba5e91ed6adaadb0007c50",
+    "artifact_sha256": "c818c6185fdc369ccc80c3d9a720235069533a84e8268d3218d8939827421fdf",
     "context_schema_path": "research/planner-efficacy/protocols/shadow-v2/selector-context-v2.schema.json",
     "context_schema_sha256": "d906f02dd8dcc6ae345f3274d60f97b3ed89ca72657471cfdec2df777ee60bc0",
     "decoding_parameters_sha256": "805fed0f1cccca8a1ac272e772dd4ccca77e6c4ec8aa04805fb270932d9965d1",
@@ -87,7 +94,6 @@
     "timeout_milliseconds": 60000,
     "tool_contract_revision": "none-v1"
   },
-  "source_git_sha": "a754e873e8c42bfbb05a4c808bdf023c6462691a",
   "study": {
     "assignment_namespace": {
       "algorithm": "UUIDv5",

@@ -411,3 +411,33 @@ def test_ingestor_callback_hook_is_separate_from_periodic_snapshot_flush() -> No
     assert source.index('shared.esp32["state_subscription_generation"] = connection_generation') < source.index(
         "client.subscribe_states(on_generation_state)"
     )
+
+
+def test_every_immediate_disconnect_signal_revokes_live_grid_evidence_first() -> None:
+    source = (Path(__file__).resolve().parents[1] / "ingestor" / "ingestor.py").read_text()
+
+    on_stop = source.index("async def on_stop(expected_disconnect: bool)")
+    on_stop_signal = source.index("connection_lost.set()", on_stop)
+    assert on_stop < source.index("if connection_generation is None:", on_stop) < on_stop_signal
+    assert on_stop < source.index("clear_component_entity_inventory()", on_stop) < on_stop_signal
+    assert (
+        on_stop
+        < source.index("clear_component_entity_inventory(connection_generation=connection_generation)", on_stop)
+        < on_stop_signal
+    )
+
+    lease_loss = source.index("Writer lease LOST — SELF-FENCING")
+    lease_signal = source.index("connection_lost.set()", lease_loss)
+    assert (
+        lease_loss
+        < source.index("clear_component_entity_inventory(connection_generation=connection_generation)", lease_loss)
+        < lease_signal
+    )
+
+    ping_failure = source.index("Keepalive ping failed")
+    ping_signal = source.index("connection_lost.set()", ping_failure)
+    assert (
+        ping_failure
+        < source.index("clear_component_entity_inventory(connection_generation=connection_generation)", ping_failure)
+        < ping_signal
+    )
