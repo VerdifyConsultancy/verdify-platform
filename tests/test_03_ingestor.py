@@ -8,7 +8,7 @@ import os
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -26,6 +26,7 @@ for key, value in {
     os.environ.setdefault(key, value)
 
 import shared  # noqa: E402
+import tasks as ingestor_tasks  # noqa: E402
 from esp32_push import DeviceCommandOutcome, PushBatchResult  # noqa: E402
 
 import ingestor  # noqa: E402
@@ -107,6 +108,80 @@ def test_cfg_drift_never_advances_transport_generation(caplog):
     assert shared.setpoint_dispatch_requested.is_set()
     assert shared.cfg_drift_versions == {"mister_vpd_weight": 1}
     assert any("reason=cfg_drift" in record.getMessage() for record in caplog.records)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("disconnect_stage", ["connect", "enumeration"])
+async def test_connect_then_immediate_stop_never_publishes_transport_generation(monkeypatch, disconnect_stage):
+    """A stop callback that wins either awaited setup stage must fence publication."""
+
+    class EndInjectedLoop(Exception):
+        pass
+
+    events: list[str] = []
+
+    class StoppedClient:
+        def __init__(self, **_kwargs):
+            self.on_stop = None
+
+        async def connect(self, *, on_stop, login):
+            assert login is True
+            self.on_stop = on_stop
+            events.append("connect")
+            if disconnect_stage == "connect":
+                await on_stop(False)
+                events.append("connect_return_after_stop")
+
+        async def list_entities_services(self):
+            events.append("enumerate")
+            if disconnect_stage == "enumeration":
+                assert self.on_stop is not None
+                await self.on_stop(False)
+                events.append("enumeration_return_after_stop")
+            return [], []
+
+        def subscribe_states(self, _callback):
+            events.append("subscribe")
+
+        async def disconnect(self):
+            events.append("disconnect")
+
+    async def end_after_backoff(delay):
+        assert delay == 30
+        raise EndInjectedLoop
+
+    def reject_generation_publish():
+        events.append("generation_published")
+        raise AssertionError("a stopped connection must not advance the transport generation")
+
+    def reject_inventory_publish(*_args, **_kwargs):
+        events.append("inventory_published")
+        raise AssertionError("a stopped connection must not publish entity inventory")
+
+    async def reject_dispatch(*_args, **_kwargs):
+        events.append("setpoint_dispatched")
+        raise AssertionError("a stopped connection must not dispatch setpoints")
+
+    monkeypatch.setattr(ingestor, "APIClient", StoppedClient)
+    monkeypatch.setattr(ingestor, "_writer_lease", None)
+    monkeypatch.setattr(ingestor.asyncio, "sleep", end_after_backoff)
+    monkeypatch.setattr(shared, "note_transport_connected", reject_generation_publish)
+    monkeypatch.setattr(ingestor, "record_component_entity_inventory", reject_inventory_publish)
+    monkeypatch.setattr(ingestor_tasks, "setpoint_dispatcher", reject_dispatch)
+    monkeypatch.setattr(ingestor, "refresh_latest_occupancy_state", AsyncMock())
+
+    with pytest.raises(EndInjectedLoop):
+        await ingestor.esp32_loop(pool=None)
+
+    assert "generation_published" not in events
+    assert "inventory_published" not in events
+    assert "subscribe" not in events
+    assert "setpoint_dispatched" not in events
+    assert events[-1] == "disconnect"
+    if disconnect_stage == "connect":
+        assert "enumerate" not in events
+    else:
+        assert "enumeration_return_after_stop" in events
 
 
 def test_dynamic_readback_only_context_never_wakes_writer_dispatch():

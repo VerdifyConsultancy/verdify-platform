@@ -3443,6 +3443,8 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
 
         try:
             await client.connect(on_stop=on_stop, login=True)
+            if connection_lost.is_set():
+                raise APIConnectionError("ESP32 connection stopped before connect returned")
             connected_at = datetime.now(UTC)
 
             # Log reconnect gap and backfill if applicable. Use the actual
@@ -3486,6 +3488,8 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
 
             # Enumerate entities to build key→object_id map
             entities, services = await client.list_entities_services()
+            if connection_lost.is_set():
+                raise APIConnectionError("ESP32 connection stopped during entity enumeration")
             for e in entities:
                 obj_id = e.object_id
                 key = e.key
