@@ -11,6 +11,7 @@ from verdify_schemas.component_executor import (
     CANONICAL_FIELD_ORDER,
     COMMON_FIELDS,
     ENTITY_GRIDS,
+    GRID_REVISION,
     RECOVERY_ORDER,
     ROLLBACK_ORDER,
     TREATMENT_FIELD_ORDER,
@@ -55,8 +56,17 @@ def test_registry_routes_grid_and_treatment_ownership_are_exact() -> None:
         assert definition.tier == 1
 
 
-def test_provisional_grid_and_prefix_order_cannot_arm_physical_execution() -> None:
+def test_provisional_grid_and_prefix_order_cannot_arm_physical_execution(monkeypatch) -> None:
     assert physical_execution_qualified("source-grid-r1") is False
+    assert physical_execution_qualified(GRID_REVISION, GRID_REVISION) is False
+
+    qualified_grid = "live-entity-grid-v1:sha256:" + "a" * 64
+    qualified_order = "prefix-replay-v1:sha256:" + "b" * 64
+    monkeypatch.setattr("verdify_schemas.component_executor.GRID_REVISION", qualified_grid)
+    monkeypatch.setattr("verdify_schemas.component_executor.ORDER_REVISION", qualified_order)
+    assert physical_execution_qualified(qualified_grid, None) is False
+    assert physical_execution_qualified(qualified_grid, qualified_grid[:-1] + "c") is False
+    assert physical_execution_qualified(qualified_grid, qualified_grid) is True
 
 
 def test_every_numeric_grid_accepts_bounds_and_one_step_without_rounding() -> None:

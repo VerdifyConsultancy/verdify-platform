@@ -55,16 +55,19 @@ class EntityGrid:
     entity_type: EntityType = "number"
 
 
-def physical_execution_qualified(grid_revision: str) -> bool:
+def physical_execution_qualified(grid_revision: str, observed_grid_revision: str | None = None) -> bool:
     """True only for source-bound live-grid and prefix-replay evidence.
 
     The checked constants deliberately remain provisional for the OFF release.
     Physical work therefore cannot pass this boundary until a reviewed change
-    replaces both values with evidence-addressed qualified revisions and L3
-    resolves work against that exact grid revision.
+    replaces both values with evidence-addressed qualified revisions, L3
+    resolves work against that exact grid revision, and the current ingestor
+    connection independently attests the same live grid. A source constant or
+    arbitrary 64-hex string cannot substitute for current runtime evidence.
     """
     return (
         grid_revision == GRID_REVISION
+        and observed_grid_revision == GRID_REVISION
         and _QUALIFIED_GRID_REVISION.fullmatch(GRID_REVISION) is not None
         and _QUALIFIED_ORDER_REVISION.fullmatch(ORDER_REVISION) is not None
     )

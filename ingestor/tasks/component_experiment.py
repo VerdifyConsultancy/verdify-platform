@@ -67,6 +67,12 @@ from verdify_schemas.component_executor import (
     validate_routine_target,
     validate_work_phase,
 )
+from verdify_schemas.component_qualification import (
+    ComponentGridEvidenceError,
+    LiveEntityGridEvidence,
+    RuntimeEntityMetadata,
+    build_live_entity_grid_evidence,
+)
 from verdify_schemas.experiment_config import (
     active_experiment_id,
     component_experiment_gate,
@@ -358,6 +364,126 @@ _runtime_reporters: dict[tuple[str, str], RuntimeReporterIdentity] = {}
 _pending_runtime_faults: dict[tuple[str, str], PendingRuntimeFault] = {}
 _state_replay_identity: tuple[str, int, int, int, RevisionSet] | None = None
 _state_replay_last_requested_monotonic: float | None = None
+_component_grid_inventory: tuple[RuntimeEntityMetadata, ...] | None = None
+_component_grid_inventory_generation: int | None = None
+_component_grid_inventory_observed_at: datetime | None = None
+_component_grid_attestation: LiveEntityGridEvidence | None = None
+_component_grid_attempted_firmware_revision: str | None = None
+
+
+def record_component_entity_inventory(
+    entities: Sequence[RuntimeEntityMetadata],
+    *,
+    connection_generation: int,
+    observed_at: datetime | None = None,
+) -> None:
+    """Stage metadata from the ingestor's existing authenticated enumeration.
+
+    This function performs no ESPHome call.  The caller supplies the result of
+    the connection loop's one existing ``list_entities_services`` request.
+    Device-reported firmware identity arrives on the existing state callback
+    and completes the evidence separately below.
+    """
+    global _component_grid_inventory, _component_grid_inventory_generation
+    global _component_grid_inventory_observed_at, _component_grid_attestation
+    global _component_grid_attempted_firmware_revision
+    moment = _aware(observed_at or datetime.now(UTC), "entity_inventory_observed_at")
+    _component_grid_inventory = tuple(entities)
+    _component_grid_inventory_generation = connection_generation
+    _component_grid_inventory_observed_at = moment
+    _component_grid_attestation = None
+    _component_grid_attempted_firmware_revision = None
+
+
+def clear_component_entity_inventory(*, connection_generation: int | None = None) -> None:
+    """Discard current-route evidence without deleting historical log proof."""
+    global _component_grid_inventory, _component_grid_inventory_generation
+    global _component_grid_inventory_observed_at, _component_grid_attestation
+    global _component_grid_attempted_firmware_revision
+    if connection_generation is not None and _component_grid_inventory_generation != connection_generation:
+        return
+    _component_grid_inventory = None
+    _component_grid_inventory_generation = None
+    _component_grid_inventory_observed_at = None
+    _component_grid_attestation = None
+    _component_grid_attempted_firmware_revision = None
+
+
+def record_component_grid_firmware_revision(
+    value: object,
+    *,
+    observed_at: datetime | None = None,
+) -> bool:
+    """Complete and log one live-grid attestation from an existing callback.
+
+    Returns ``True`` only when a new current-generation attestation passes.
+    A mismatch is logged once per firmware value and remains non-fatal to the
+    ordinary greenhouse telemetry path; the independent physical execution
+    gate stays closed.
+    """
+    global _component_grid_attestation, _component_grid_attempted_firmware_revision
+    if not isinstance(value, str) or not value:
+        return False
+    inventory = _component_grid_inventory
+    generation = _component_grid_inventory_generation
+    enumerated_at = _component_grid_inventory_observed_at
+    if inventory is None or generation is None or enumerated_at is None:
+        return False
+    if generation != int(shared.transport_generation):
+        clear_component_entity_inventory(connection_generation=generation)
+        return False
+    if _component_grid_attestation is not None and _component_grid_attestation.firmware_revision == value:
+        return False
+    if _component_grid_attempted_firmware_revision == value:
+        return False
+    _component_grid_attempted_firmware_revision = value
+    moment = _aware(observed_at or enumerated_at, "entity_grid_firmware_observed_at")
+    try:
+        evidence = build_live_entity_grid_evidence(
+            inventory,
+            device_id=policy_device_id(os.environ.get("GREENHOUSE_ID", "vallery")),
+            firmware_revision=value,
+            source_revision=os.environ.get("VERDIFY_GIT_SHA", ""),
+            runtime_instance_id=RUNTIME_INSTANCE_ID,
+            connection_generation=generation,
+            observed_at=moment,
+        )
+    except ComponentGridEvidenceError as exc:
+        log.error(
+            "component_entity_grid_attestation status=fail code=%s detail=%s connection_generation=%d",
+            exc.code,
+            exc.detail,
+            generation,
+        )
+        return False
+    _component_grid_attestation = evidence
+    log.info(
+        "component_entity_grid_attestation status=pass grid_revision=%s "
+        "observation_receipt_sha256=%s field_count=%d firmware_revision=%s "
+        "source_revision=%s connection_generation=%d",
+        evidence.grid_revision,
+        evidence.observation_receipt_sha256,
+        evidence.field_count,
+        evidence.firmware_revision,
+        evidence.source_revision,
+        evidence.connection_generation,
+    )
+    return True
+
+
+def component_entity_grid_attestation() -> LiveEntityGridEvidence | None:
+    """Return evidence only while its exact authenticated connection is live."""
+    evidence = _component_grid_attestation
+    if evidence is None or evidence.connection_generation != int(shared.transport_generation):
+        return None
+    client = shared.esp32.get("client")
+    if (
+        client is None
+        or shared.esp32.get("state_subscription_client") is not client
+        or shared.esp32.get("state_subscription_generation") != evidence.connection_generation
+    ):
+        return None
+    return evidence
 
 
 def configure_component_cfg_source(
@@ -2244,7 +2370,11 @@ def _validate_work(work: ResolvedWork, expected_experiment_id: str, fence: Runti
         if work.admission_state != "closed" or work.lifecycle_status != "draft":
             raise ComponentContractError("preview_admission_mismatch")
         return
-    if not physical_execution_qualified(work.revisions.grid_revision):
+    grid_attestation = component_entity_grid_attestation()
+    if not physical_execution_qualified(
+        work.revisions.grid_revision,
+        grid_attestation.grid_revision if grid_attestation is not None else None,
+    ):
         raise ComponentContractError("physical_route_grid_or_prefix_replay_unqualified")
     if work.operation_kind == WORK_KIND_RECOVERY:
         if work.admission_state != "baseline_recovery":
@@ -3392,7 +3522,9 @@ __all__ = [
     "RuntimeAuthority",
     "RuntimeExposureStatus",
     "WorkSignals",
+    "clear_component_entity_inventory",
     "component_cfg_source_epochs",
+    "component_entity_grid_attestation",
     "component_experiment_worker",
     "configure_component_cfg_source",
     "create_component_experiment_pool",
@@ -3401,6 +3533,8 @@ __all__ = [
     "prime_component_startup_hold",
     "record_component_cfg_readback",
     "record_component_device_uptime",
+    "record_component_entity_inventory",
+    "record_component_grid_firmware_revision",
     "request_component_state_replay",
     "validate_current_observation",
     "validate_confirmation_epochs",

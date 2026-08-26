@@ -81,6 +81,7 @@ from tasks import (
     IRRIGATION_SCHEDULE_PARAMS,
     alert_monitor,
     attest_component_safe_startup,
+    clear_component_entity_inventory,
     component_experiment_worker,
     create_component_experiment_pool,
     daily_summary_live,
@@ -103,6 +104,8 @@ from tasks import (
     readback_abs_tolerance,
     record_component_cfg_readback,
     record_component_device_uptime,
+    record_component_entity_inventory,
+    record_component_grid_firmware_revision,
     setpoint_confirmation_monitor,
     setpoint_dispatcher,
     shelly_sync,
@@ -129,6 +132,7 @@ from verdify_schemas import (
     SystemStateRow,
     normalize_moisture_exchange_telemetry,
 )
+from verdify_schemas.component_qualification import RuntimeEntityMetadata
 from verdify_schemas.experiment_config import (
     POLICY_VECTOR_MODE_OFF,
     policy_device_id,
@@ -1604,6 +1608,38 @@ def _request_current_state_burst(client: APIClient, on_state) -> object:
     )
 
 
+def _component_runtime_entity_metadata(entity: object) -> RuntimeEntityMetadata | None:
+    """Project one enumerated entity onto the non-secret grid evidence shape."""
+    common = {
+        "device_id": entity.device_id,
+        "object_id": entity.object_id,
+        "key": entity.key,
+        "disabled_by_default": bool(entity.disabled_by_default),
+    }
+    if isinstance(entity, NumberInfo):
+        return RuntimeEntityMetadata(
+            entity_type="number",
+            minimum=entity.min_value,
+            maximum=entity.max_value,
+            step=entity.step,
+            unit=entity.unit_of_measurement,
+            **common,
+        )
+    if isinstance(entity, SwitchInfo):
+        return RuntimeEntityMetadata(
+            entity_type="switch",
+            assumed_state=entity.assumed_state,
+            **common,
+        )
+    if isinstance(entity, SensorInfo):
+        return RuntimeEntityMetadata(
+            entity_type="sensor",
+            unit=entity.unit_of_measurement,
+            **common,
+        )
+    return None
+
+
 async def write_equipment_direct_state_snapshots(pool: asyncpg.Pool) -> None:
     """Persist complete eleven-component snapshots through one atomic function."""
     if not state.pending_direct_state_snapshots:
@@ -2862,6 +2898,7 @@ def _record_diagnostic(
         state.counter_source_firmware_generation = generation
         state.counter_source_firmware_observed_at = observed_at
         _complete_counter_generation_if_ready()
+        record_component_grid_firmware_revision(value, observed_at=observed_at)
     return True
 
 
@@ -3366,6 +3403,10 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
             while not await _writer_lease.acquire(timeout=30):
                 log.info("Writer lease held by another writer — standing by (will not connect ESP32)")
 
+        # Any prior inventory was tied to an older authenticated connection.
+        # Clearing this in-memory evidence performs no device or cluster call.
+        clear_component_entity_inventory()
+
         log.info(f"Connecting to ESP32 at {ESP32_HOST}:{ESP32_PORT}...")
         client = APIClient(
             address=ESP32_HOST,
@@ -3481,6 +3522,15 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
                 "writer_reconcile reason=transport_reconnect generation=%d action=reconcile_requested",
                 connection_generation,
             )
+            record_component_entity_inventory(
+                tuple(
+                    descriptor
+                    for entity in entities
+                    if (descriptor := _component_runtime_entity_metadata(entity)) is not None
+                ),
+                connection_generation=connection_generation,
+                observed_at=datetime.now(UTC),
+            )
             if pool is not None:
                 try:
                     await refresh_latest_occupancy_state(pool, "esp32_reconnect")
@@ -3594,6 +3644,7 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
             shared.esp32["client"] = None
             shared.esp32["state_subscription_client"] = None
             shared.esp32["state_subscription_generation"] = None
+            clear_component_entity_inventory(connection_generation=connection_generation)
 
         except APIConnectionError as e:
             log.warning(f"ESP32 connection error: {e}. Reconnecting in 30s...")
@@ -3606,6 +3657,7 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
                 last_disconnected_at = datetime.now(UTC)
             await asyncio.sleep(30)
         finally:
+            clear_component_entity_inventory()
             if shared.esp32.get("state_subscription_client") is client:
                 shared.esp32["state_subscription_client"] = None
                 shared.esp32["state_subscription_generation"] = None
