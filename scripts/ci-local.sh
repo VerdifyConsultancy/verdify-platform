@@ -82,6 +82,7 @@ $PY -m pytest -q \
   tests/test_component_experiment_source.py \
   tests/test_component_experiment_store.py \
   tests/test_component_experiment_writer.py \
+  tests/test_component_grid_qualification.py \
   tests/test_esp32_policy_transaction.py \
   tests/test_experiment_api.py \
   tests/test_experiment_gather_mode.py \
@@ -100,6 +101,7 @@ $PY -m pytest -q \
   tests/test_experiment_v2_orchestrator_service.py \
   tests/test_experiment_v2_orchestrator_stores.py \
   tests/test_experiment_v2_restore_rehearsal.py \
+  tests/test_experiment_v2_shadow_source_lock.py \
   tests/test_experiment_v2_data_contract.py \
   tests/test_experiment_verify.py \
   tests/test_experiment_workers.py \
@@ -121,6 +123,8 @@ $PY -m pytest -q \
   tests/test_policy_arbiter_worker.py \
   tests/test_policy_delivery_worker.py \
   tests/test_policy_writer_demotion.py \
+  tests/test_prepare_component_prefix_replay.py \
+  tests/test_prepare_experiment_v2_shadow.py \
   tests/test_psql_verdify_backend.py \
   tests/test_publish_site_content_guard.py \
   tests/test_public_output_generators.py \

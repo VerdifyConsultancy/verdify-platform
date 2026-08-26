@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "climate_missing_reason": {"type": "null"},
+            "temperature_corridor_distance_f": {"minimum": 0, "type": "number"},
+            "vpd_corridor_distance_kpa": {"minimum": 0, "type": "number"}
+          }
+        },
+        {
+          "properties": {
+            "climate_missing_reason": {
+              "enum": ["source_unavailable", "source_contract_invalid", "climate_completeness"]
+            },
+            "temperature_corridor_distance_f": {"type": "null"},
+            "vpd_corridor_distance_kpa": {"type": "null"}
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "equipment_missing_reason": {"type": "null"},
+            "nine_control_state_minutes": {"maximum": 9720, "minimum": 0, "type": "number"}
+          }
+        },
+        {
+          "properties": {
+            "equipment_missing_reason": {
+              "enum": [
+                "source_unavailable",
+                "source_contract_invalid",
+                "counter_samples_unavailable",
+                "counter_reset_or_wrap",
+                "counter_state_reconciliation",
+                "direct_state_snapshot_unavailable",
+                "direct_state_snapshot_invalid"
+              ]
+            },
+            "nine_control_state_minutes": {"type": "null"}
+          }
+        }
+      ]
+    }
+  ],
+  "properties": {
+    "climate_missing_reason": {
+      "type": ["string", "null"]
+    },
+    "equipment_missing_reason": {
+      "type": ["string", "null"]
+    },
+    "nine_control_state_minutes": {
+      "type": ["number", "null"]
+    },
+    "schema": {
+      "const": "verdify-assigned-day-outcome-v2"
+    },
+    "source_bundle_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "temperature_corridor_distance_f": {
+      "type": ["number", "null"]
+    },
+    "vpd_corridor_distance_kpa": {
+      "type": ["number", "null"]
+    }
+  },
+  "required": [
+    "schema",
+    "temperature_corridor_distance_f",
+    "vpd_corridor_distance_kpa",
+    "nine_control_state_minutes",
+    "climate_missing_reason",
+    "equipment_missing_reason",
+    "source_bundle_sha256"
+  ],
+  "title": "Verdify assigned-day outcome v2",
+  "type": "object"
+}

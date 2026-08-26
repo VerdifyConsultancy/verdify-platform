@@ -1,0 +1,45 @@
+{
+  "context_contract": {
+    "excluded_classes": [
+      "private treatment mapping or blinded label",
+      "post-cutoff telemetry",
+      "comparative or treatment-resolved results",
+      "online lesson, model, or prompt updates"
+    ],
+    "schema": "verdify-selector-context-v2",
+    "source": "public.fn_experiment_v2_build_selector_context"
+  },
+  "execution_contract": {
+    "accepted_choices_per_study_local_day": 1,
+    "fallback_profile": "baseline",
+    "idempotency": "one deterministic invocation key; retries cannot create a second accepted choice",
+    "invalid_or_late_response": "baseline",
+    "max_attempts": 2,
+    "timeout_milliseconds": 60000
+  },
+  "profile_contract": {
+    "profile_artifact": "research/planner-efficacy/baseline/planner-switchback-v2-profiles.json",
+    "profile_artifact_sha256": "15ec5d264f703f44bd5125a4aa543d6a5564e94f29998b04c7be0a007b8a7d81",
+    "valid_profiles": ["baseline", "moderate", "aggressive"]
+  },
+  "provider_contract": {
+    "chat_template_kwargs": {"reasoning_effort": "medium"},
+    "endpoint": "https://cortex.vallery.net/v1/chat/completions",
+    "expected_system_fingerprint": "vllm-0.27.1-tp2-514990f7",
+    "max_tokens": 512,
+    "model_identifier": "llm.primary.longctx",
+    "model_revision": "llm.qwen38u.longctx",
+    "response_schema_revision": "verdify-selector-decision-openai-v1",
+    "stream": false,
+    "temperature": 0,
+    "tool_contract_revision": "none-v1"
+  },
+  "schema": "verdify-experiment-v2-selector-artifact-v1",
+  "source_contract": {
+    "provider_source": "experiment_orchestrator/provider.py",
+    "provider_source_sha256": "730ac12c21ca532c7e83bf5d7b56b4f3e6f27e948515c3a3b610ad7f1b12598c",
+    "selector_contract_source": "experiment_orchestrator/contracts.py",
+    "selector_contract_source_sha256": "c1a83c3058d31fab6faa2d44d6d876332d0a1b21a9e16083dd11f7670c578045",
+    "verified_content_git_sha": "a754e873e8c42bfbb05a4c808bdf023c6462691a"
+  }
+}

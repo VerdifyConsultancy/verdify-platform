@@ -1,0 +1,116 @@
+{
+  "audit_ref": "gate2-shadow",
+  "authority": {
+    "admission_open": false,
+    "device_write": false,
+    "packet_ready": false,
+    "physical_approval": false,
+    "reason": "The deployed runtime identity, running-device entity grid, current firmware/config evidence, and commissioning state remain live-evidence inputs."
+  },
+  "live_evidence_inputs": {
+    "source_git_sha": {
+      "format": "40 lower-case hexadecimal characters",
+      "source": "exact common VERDIFY_GIT_SHA and OCI revision of the three running experiment-v2 orchestrator pods",
+      "status": "required after deployment; deliberately not frozen in this source artifact"
+    }
+  },
+  "candidate_source_revisions": {
+    "config_revision": {
+      "revision": "e7db51a9906e",
+      "source": "scripts/gen-config-revision.sh --print"
+    },
+    "firmware_revision": {
+      "revision": "2026.7.10.1500.09ee886",
+      "source": "research/planner-efficacy/baseline/planner-switchback-v2-profiles.json source_evidence.audited_deployed_firmware_revision",
+      "status": "audited source candidate; fresh device evidence required"
+    },
+    "grid_revision": {
+      "revision": "source-grid-parity/main-and-historical-09ee886-live-unverified-v1",
+      "source": "verdify_schemas/component_executor.py GRID_REVISION",
+      "source_entity_grid_sha256": "6852247e30875062ab1340f857e30e9f761ae8591de19b933c97012d6394cd9b",
+      "status": "source candidate; deliberately rejected for physical execution"
+    },
+    "registry_revision": {
+      "revision": "tunable-registry-v1:sha256:5de3c7485b5f9d989602b9cbed29fbe7cc64e7a7f531bab7556148243b5d3b3b",
+      "source": "verdify_schemas/tunable_registry.py",
+      "source_sha256": "5de3c7485b5f9d989602b9cbed29fbe7cc64e7a7f531bab7556148243b5d3b3b"
+    }
+  },
+  "outcome": {
+    "evaluator_source": "research/planner-efficacy/switchback/v2_outcomes.py",
+    "evaluator_source_sha256": "c31e4a8001383a107f2082038cec0b5afdb2e25452ccfbfbf212573daa4faf40",
+    "identity_sha256_with_zero_tolerances": "cc1ea3fe3d97c5fb2b4b8247bd57a0fb462521ef5e05e3739863fd51f5a8ce8c",
+    "schema_path": "research/planner-efficacy/protocols/shadow-v2/assigned-day-outcome-v2.schema.json",
+    "schema_sha256": "57c37e8091add68f0274c7c39d4b14f63645bd9fcc20dff5bedf7e3e44f58da1",
+    "temperature_duplicate_tolerance_f": 0.0,
+    "vpd_duplicate_tolerance_kpa": 0.0
+  },
+  "profiles": {
+    "artifact_path": "research/planner-efficacy/baseline/planner-switchback-v2-profiles.json",
+    "artifact_sha256": "15ec5d264f703f44bd5125a4aa543d6a5564e94f29998b04c7be0a007b8a7d81",
+    "commissioning_state_status": "live read-only evidence required",
+    "state_content_sha256": {
+      "aggressive": "fa08c3e12d4951c77ac13c3584f48f010dfe48cee8385fadce612a938e8b0c1d",
+      "baseline": "6f823c63a56686da33bf258e7c2380a4c87292d431f09b4f79c81e71b285cf8e",
+      "moderate": "816bee6d7557b2ea4dfbc8afe13184c415089bdabb13c1a0ac1f41f8099b1c73"
+    },
+    "wire_bytes": 178,
+    "wire_field_count": 48,
+    "wire_manifest_digest_sha256": "0bdd80472f2a9845c24a78cd7d6662e0523314afc5f3149233c08a8e8aedb318",
+    "wire_schema_version": 2
+  },
+  "schedule": {
+    "boundary_local": "00:00:00",
+    "context_cutoff_local": "23:45:00",
+    "minimum_shadow_hours_before_boundary": 12,
+    "minimum_complete_scheduled_boundaries": 1,
+    "timezone": "America/Denver"
+  },
+  "schema": "verdify-experiment-v2-shadow-source-lock-v1",
+  "selector": {
+    "artifact_path": "research/planner-efficacy/protocols/shadow-v2/selector-artifact-v1.json",
+    "artifact_sha256": "c818c6185fdc369ccc80c3d9a720235069533a84e8268d3218d8939827421fdf",
+    "context_schema_path": "research/planner-efficacy/protocols/shadow-v2/selector-context-v2.schema.json",
+    "context_schema_sha256": "d906f02dd8dcc6ae345f3274d60f97b3ed89ca72657471cfdec2df777ee60bc0",
+    "decoding_parameters_sha256": "805fed0f1cccca8a1ac272e772dd4ccca77e6c4ec8aa04805fb270932d9965d1",
+    "endpoint": "https://cortex.vallery.net/v1/chat/completions",
+    "expected_system_fingerprint": "vllm-0.27.1-tp2-514990f7",
+    "lesson_snapshot_path": "research/planner-efficacy/protocols/shadow-v2/selector-lessons-excluded-v1.json",
+    "lesson_snapshot_sha256": "424fa639ffffc52baf74b34c57ff713e13f4288a50225689333d4e493ca1ae34",
+    "max_attempts": 2,
+    "max_tokens": 512,
+    "messages_sha256": "a58013785c9b4e02de3e141893666cf140cd7d7442c0bfe3c80db2ed4b682e1a",
+    "model_identifier": "llm.primary.longctx",
+    "model_revision": "llm.qwen38u.longctx",
+    "prompt_path": "research/planner-efficacy/protocols/shadow-v2/selector-prompt-v1.txt",
+    "prompt_sha256": "4d4b5eef2822990d865f68c6e8604f41af8bc1c0cfe69051d8d0fb8d926b29b4",
+    "reasoning_effort": "medium",
+    "response_schema_revision": "verdify-selector-decision-openai-v1",
+    "runtime_environment_status": "deployed image digest and source identity required",
+    "stream": false,
+    "system_message_path": "research/planner-efficacy/protocols/shadow-v2/selector-system-message-v1.txt",
+    "system_message_sha256": "589f4ca0d29346d856f92040966bb25755ccdd273a1dc1c0b14f07050e1a6a27",
+    "temperature": 0,
+    "timeout_milliseconds": 60000,
+    "tool_contract_revision": "none-v1"
+  },
+  "study": {
+    "assignment_namespace": {
+      "algorithm": "UUIDv5",
+      "name": "https://verdify.com/identities/confirmed-component-switchback-v2/assignments",
+      "parent_namespace": "URL",
+      "uuid": "0c162b58-5a4c-5ddb-91fd-7d0ca68ff81f"
+    },
+    "experiment_id": {
+      "algorithm": "UUIDv5",
+      "name_components": ["vallery", "verdify-confirmed-component-switchback-v2-2026-08"],
+      "name_separator_hex": "00",
+      "namespace_uuid": "7e8ade63-f0ff-57aa-b777-9ee4b03b7ddb",
+      "uuid": "45039c86-c1d9-52f6-a0a9-d94a17bc4b14"
+    },
+    "greenhouse_id": "vallery",
+    "name": "Verdify confirmed-component AI-vs-frozen-FSM switchback v2",
+    "study_id": "verdify-confirmed-component-switchback-v2-2026-08",
+    "timezone": "America/Denver"
+  }
+}
