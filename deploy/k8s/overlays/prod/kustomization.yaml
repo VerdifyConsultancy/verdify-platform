@@ -91,6 +91,11 @@ components:
   # #119 hermes-iris — the sole planner gateway, ported from the compose `hermes`
   # profile. prod-anchored (run-state PVC + OpenAI key). Image digest preserved.
   - ../../components/hermes-iris
+  # #581/#587 Gate 1 — adopt the v2 control-plane workers feature-off. The
+  # component is readiness-safe without its optional DB/provider inputs and has
+  # no device transport; shadow remains separately gated after role cutover.
+  - ../../components/experiment-v2-orchestrator
+  - ../../components/runtime-role-boundary
   # #124 verdify-lab — the public Quartz research site (lab.verdify.ai). Pure web
   # tier, stateless (no PVC), NO device path. Built from the
   # verdify-site-legacy Dockerfile.k3s (see components/lab-site/lab-site.yaml).
