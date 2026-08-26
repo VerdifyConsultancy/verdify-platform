@@ -1,0 +1,6 @@
+{
+  "lessons": [],
+  "mode": "excluded",
+  "reason": "Protocol v2 forbids online lesson, model, or prompt updates in selector context.",
+  "schema": "verdify-selector-lesson-snapshot-v1"
+}

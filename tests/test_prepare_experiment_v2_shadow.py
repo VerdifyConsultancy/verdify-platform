@@ -90,8 +90,8 @@ def _fixture(tmp_path: Path) -> tuple[Path, dict]:
             "context_cutoff_at": "2026-08-27T05:45:00.000000Z",
             "local_date": "2026-08-27",
             "outcome_schema_path": "outcome-schema.json",
-            "temperature_duplicate_tolerance_f": 0.1,
-            "vpd_duplicate_tolerance_kpa": 0.01,
+            "temperature_duplicate_tolerance_f": 0.0,
+            "vpd_duplicate_tolerance_kpa": 0.0,
         },
         "source_git_sha": "a9ccefb213ab35d11158fd6ba02b400ac043274d",
         "study": {
@@ -135,7 +135,8 @@ def test_packet_is_canonical_mount_ready_redacted_and_non_actuating(tmp_path: Pa
 
     outcome_raw = outputs["outcome-identity/identity.json"]
     outcome = OutcomeIdentity.parse(outcome_raw, hashlib.sha256(outcome_raw).hexdigest())
-    assert outcome.temperature_duplicate_tolerance_f == 0.1
+    assert outcome.temperature_duplicate_tolerance_f == 0.0
+    assert outcome.vpd_duplicate_tolerance_kpa == 0.0
     plan_raw = outputs["lifecycle-plan/plan.json"]
     plan = LifecyclePlan.parse(plan_raw, hashlib.sha256(plan_raw).hexdigest(), experiment_id)
     assert plan.action == "shadow_schedule"

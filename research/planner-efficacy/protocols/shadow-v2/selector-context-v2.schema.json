@@ -1,0 +1,164 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "boundary_at": {
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{6}Z$",
+      "type": "string"
+    },
+    "climate_observations": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "observed_at": {
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{6}Z$",
+            "type": "string"
+          },
+          "schema": {
+            "const": "verdify-selector-climate-source-v1"
+          },
+          "source_row_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "values": {
+            "additionalProperties": false,
+            "properties": {
+              "dew_point_f": {"type": ["number", "null"]},
+              "flow_gpm": {"type": ["number", "null"]},
+              "leaf_temp_north_f": {"type": ["number", "null"]},
+              "leaf_temp_south_f": {"type": ["number", "null"]},
+              "leaf_wetness_north": {"type": ["number", "null"]},
+              "leaf_wetness_south": {"type": ["number", "null"]},
+              "mister_water_today_gal": {"type": ["number", "null"]},
+              "outdoor_rh_pct": {"type": ["number", "null"]},
+              "outdoor_temp_f": {"type": ["number", "null"]},
+              "precip_in": {"type": ["number", "null"]},
+              "rh_avg_pct": {"type": ["number", "null"]},
+              "rh_east_pct": {"type": ["number", "null"]},
+              "rh_north_pct": {"type": ["number", "null"]},
+              "rh_south_pct": {"type": ["number", "null"]},
+              "rh_west_pct": {"type": ["number", "null"]},
+              "solar_irradiance_w_m2": {"type": ["number", "null"]},
+              "temp_avg_f": {"type": "number"},
+              "temp_east_f": {"type": ["number", "null"]},
+              "temp_north_f": {"type": ["number", "null"]},
+              "temp_south_f": {"type": ["number", "null"]},
+              "temp_west_f": {"type": ["number", "null"]},
+              "vpd_avg_kpa": {"type": "number"},
+              "vpd_east_kpa": {"type": ["number", "null"]},
+              "vpd_north_kpa": {"type": ["number", "null"]},
+              "vpd_south_kpa": {"type": ["number", "null"]},
+              "vpd_west_kpa": {"type": ["number", "null"]},
+              "wind_speed_mph": {"type": ["number", "null"]}
+            },
+            "required": [
+              "dew_point_f",
+              "flow_gpm",
+              "leaf_temp_north_f",
+              "leaf_temp_south_f",
+              "leaf_wetness_north",
+              "leaf_wetness_south",
+              "mister_water_today_gal",
+              "outdoor_rh_pct",
+              "outdoor_temp_f",
+              "precip_in",
+              "rh_avg_pct",
+              "rh_east_pct",
+              "rh_north_pct",
+              "rh_south_pct",
+              "rh_west_pct",
+              "solar_irradiance_w_m2",
+              "temp_avg_f",
+              "temp_east_f",
+              "temp_north_f",
+              "temp_south_f",
+              "temp_west_f",
+              "vpd_avg_kpa",
+              "vpd_east_kpa",
+              "vpd_north_kpa",
+              "vpd_south_kpa",
+              "vpd_west_kpa",
+              "wind_speed_mph"
+            ],
+            "type": "object"
+          }
+        },
+        "required": ["schema", "observed_at", "source_row_sha256", "values"],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "context_cutoff_at": {
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{6}Z$",
+      "type": "string"
+    },
+    "forecast_vintage": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "fetched_at": {
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{6}Z$",
+            "type": "string"
+          },
+          "schema": {
+            "const": "verdify-selector-forecast-source-v1"
+          },
+          "source_row_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "valid_at": {
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{6}Z$",
+            "type": "string"
+          },
+          "values": {
+            "additionalProperties": false,
+            "properties": {
+              "cloud_cover_pct": {"type": ["number", "null"]},
+              "direct_radiation_w_m2": {"type": ["number", "null"]},
+              "precip_prob_pct": {"type": ["number", "null"]},
+              "rh_pct": {"type": ["number", "null"]},
+              "solar_w_m2": {"type": ["number", "null"]},
+              "temp_f": {"type": ["number", "null"]},
+              "vpd_kpa": {"type": ["number", "null"]},
+              "wind_speed_mph": {"type": ["number", "null"]}
+            },
+            "required": [
+              "cloud_cover_pct",
+              "direct_radiation_w_m2",
+              "precip_prob_pct",
+              "rh_pct",
+              "solar_w_m2",
+              "temp_f",
+              "vpd_kpa",
+              "wind_speed_mph"
+            ],
+            "type": "object"
+          }
+        },
+        "required": ["schema", "valid_at", "fetched_at", "source_row_sha256", "values"],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "local_date": {
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "type": "string"
+    },
+    "schema": {
+      "const": "verdify-selector-context-v2"
+    }
+  },
+  "required": [
+    "schema",
+    "local_date",
+    "context_cutoff_at",
+    "boundary_at",
+    "climate_observations",
+    "forecast_vintage"
+  ],
+  "title": "Verdify selector context v2",
+  "type": "object"
+}

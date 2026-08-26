@@ -1,0 +1,8 @@
+Select the safest useful profile for the stated local day using only the attached frozen context.
+
+The immutable profile meanings are:
+- baseline: the locked packet's complete 48-field baseline state.
+- moderate: the bounded ordinary heat/dry-load posture. Relative to baseline it sets cool_stage2_over_high_f=0.8, fog_escalation_kpa=0.3, mister_all_kpa=1.35, mister_pulse_gap_s=40, mister_pulse_on_s=60, and mister_water_budget_gal=220. Its other approved treatment fields equal baseline.
+- aggressive: the bounded severe hot/dry-load posture. Relative to baseline it sets cool_stage2_over_high_f=0.5, min_fog_off_s=30, min_fog_on_s=90, mister_engage_kpa=1.0, mister_all_kpa=1.2, mister_all_delay_s=60, mister_pulse_on_s=75, and mister_water_budget_gal=250. Its other approved treatment fields equal baseline.
+
+Use the pre-cutoff observed temperature and VPD together with the latest admitted forecast vintage. Prefer baseline unless the admitted evidence clearly supports a bounded change; prefer moderate for ordinary heat/dry load and aggressive only for clear severe hot/dry load. Do not infer from data outside the supplied context. Return only one JSON object whose sole key is profile.
