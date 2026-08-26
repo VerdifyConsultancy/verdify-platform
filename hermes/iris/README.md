@@ -71,14 +71,14 @@ singleton pod and the init container reseeds the PVC before Hermes starts.
   `https://cortex.vallery.net/v1`, text-only model alias
   `llm.primary.longctx`, `model.context_length: 98304`,
   `model.max_tokens: 8192`, `agent.reasoning_effort: medium`, explicit tool-use
-  guidance, and `max_turns: 30`. Cortex deliberately publishes no context
-  metadata for this alias, so the explicit context value prevents Hermes's
-  256K unknown-model fallback. A read-only user provider plugin mounted below
-  `HERMES_HOME/plugins/model-providers` overrides the bundled `custom` request
-  profile and forwards medium as vLLM `chat_template_kwargs`; auxiliary
-  compression carries the same field explicitly. Cortex issue #166 remains a
-  compatible server-side hardening item. The explicit tool-use boolean remains
-  defense-in-depth for this tool-mandatory workload.
+  guidance, and `max_turns: 30`. Cortex publishes the 98,304-token context,
+  16,384-token default output cap, and medium reasoning default in route
+  metadata. The explicit context and narrower 8,192-token client output values
+  prevent Hermes's unknown-model fallback and fail a runaway turn sooner. The
+  bundled custom provider does not forward Hermes's reasoning scalar, so the
+  effective medium behavior comes from Cortex's verified vLLM 0.27.1 default.
+  The explicit tool-use boolean remains defense-in-depth for this
+  tool-mandatory workload.
 - The dark experiment profile selects the same route and agent limits while
   retaining its narrower, server-bound experiment MCP audience.
 - The API Deployment supplies
@@ -89,11 +89,10 @@ singleton pod and the init container reseeds the PVC before Hermes starts.
   identity is persisted per run, so a route change cannot rewrite their
   provenance.
 - These are source and rollout declarations, not evidence of a completed live
-  sync. Runtime activation is additionally gated on at least one Ready target
-  for the text route and a synthetic request proving medium reasoning. It is
-  proven only after ArgoCD is Synced + Healthy, a new Hermes pod has matching
-  profile/provider revision annotations, and a required cycle writes a
-  correlated plan.
+  sync. Cortex route acceptance is separately proven by public metadata,
+  bounded inference, and Hermes-style auto-tool probes. Verdify activation is
+  proven only after ArgoCD is Synced + Healthy, a new Hermes pod has the matching
+  profile revision annotation, and a required cycle writes a correlated plan.
 
 ## Roll Forward
 

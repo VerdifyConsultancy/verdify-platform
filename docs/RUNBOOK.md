@@ -7,7 +7,7 @@
 
 ## 2026-04-20 Updates (since 2026-03-29)
 
-Consolidated delta from the dual-Iris rollout + overnight incidents. The gateway section is historical; production planning routes through Hermes. Repo source selects Cortex's OpenAI-compatible 98K text route `llm.primary.longctx` with explicit context/output budgets and tool-use guidance, while live activation remains separately gated. A GitOps-mounted user provider supplies Cortex's required `chat_template_kwargs.reasoning_effort=medium` field without changing the pinned Hermes image. Read these before debugging any planner/alert-related issue.
+Consolidated delta from the dual-Iris rollout + overnight incidents. The gateway section is historical; production planning routes through Hermes. Repo source selects Cortex's OpenAI-compatible 98K text route `llm.primary.longctx` with explicit context/output budgets and tool-use guidance, while Verdify activation remains separately gated. Cortex vLLM 0.27.1 supplies the verified medium reasoning default and advertises the route context/output contract. Read these before debugging any planner/alert-related issue.
 
 ### Contract v1.4 + dual-Iris plumbing
 

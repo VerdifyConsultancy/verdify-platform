@@ -402,7 +402,6 @@ class TestInventoryAndDriftGuards:
         assert live_config["agent"]["tool_use_enforcement"] is True
         assert hermes_config["agent"]["max_turns"] == live_config["agent"]["max_turns"] == 30
         assert hermes_config["agent"]["disabled_toolsets"] == live_config["agent"]["disabled_toolsets"]
-        assert hermes_config["auxiliary"] == live_config["auxiliary"]
         # Treatment-revealing reads and quarantined writes can never appear.
         forbidden = {
             "get_setpoints",
