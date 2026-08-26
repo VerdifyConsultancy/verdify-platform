@@ -1,20 +1,5 @@
 ###############################################################################
 # greenhouse/tunables.yaml -- user-adjustable settings exposed to Home Assistant
-#
-# Policy tranche 2 (#586, audit §8.9): entity STATE lambdas for policy wire
-# fields are runtime-gated (verdify_policy::policy_read / _read_b) — while an
-# experiment manifest is armed the entity displays the ACTIVE policy value the
-# control tick actually consumes; while inactive it shows the legacy global,
-# bit-identical to pre-Lane-E behavior.
-#
-# set_action WRITERS deliberately stay on the legacy globals: they ARE the
-# write path being demoted. While an experiment is armed the planner-side
-# writers are already demoted host-side (#584/#597: MCP set_tunable/set_plan
-# and the forecast engine record proposals instead of writing), and any write
-# that still lands here only touches the legacy global, which no armed
-# consumer reads — it cannot actuate until the experiment disarms. These
-# writer sites are explicitly allowlisted in
-# firmware/policy_consumer_manifest.json with this justification.
 ###############################################################################
 
 number:
@@ -78,7 +63,7 @@ number:
     min_value: 0
     max_value: 3
     step: 0.1
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_cool_stage2_over_high_f, id(cool_stage2_over_high_f));"
+    lambda: "return id(cool_stage2_over_high_f);"
     set_action:
       - lambda: |
           id(cfg_first_pull_ok) = true;
@@ -91,7 +76,7 @@ number:
     min_value: 0.3
     max_value: 3
     step: 0.1
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_cool_exit_hysteresis_f, id(cool_exit_hysteresis_f));"
+    lambda: "return id(cool_exit_hysteresis_f);"
     set_action:
       - lambda: |
           id(cfg_first_pull_ok) = true;
@@ -106,7 +91,7 @@ number:
     min_value: 0.3
     max_value: 3
     step: 0.1
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_cool_stage2_exit_hysteresis_f, id(cool_stage2_exit_hysteresis_f));"
+    lambda: "return id(cool_stage2_exit_hysteresis_f);"
     set_action:
       - lambda: |
           id(cfg_first_pull_ok) = true;
@@ -123,7 +108,7 @@ number:
     min_value: 0
     max_value: 1
     step: 0.05
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_band_track_fraction, id(band_track_fraction));"
+    lambda: "return id(band_track_fraction);"
     set_action:
       - lambda: |
           id(cfg_first_pull_ok) = true;
@@ -138,7 +123,7 @@ number:
     min_value: 0.1
     max_value: 0.6
     step: 0.05
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_vent_exchange_fraction, id(vent_exchange_fraction));"
+    lambda: "return id(vent_exchange_fraction);"
     set_action:
       - lambda: |
           id(cfg_first_pull_ok) = true;
@@ -151,7 +136,7 @@ number:
     min_value: 0
     max_value: 15
     step: 0.5
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_cold_vent_guard_delta_f, id(cold_vent_guard_delta_f));"
+    lambda: "return id(cold_vent_guard_delta_f);"
     set_action:
       - lambda: |
           id(cfg_first_pull_ok) = true;
@@ -165,7 +150,7 @@ number:
     min_value: 0.5
     max_value: 3
     step: 0.1
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_temp_hysteresis, id(hyst_temp_f));"
+    lambda: "return id(hyst_temp_f);"
     set_action:
       - lambda: |
           id(hyst_temp_f) = x;
@@ -177,7 +162,7 @@ number:
     min_value: 0
     max_value: 3
     step: 0.1
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_heat_hysteresis, id(heat_hysteresis_f));"
+    lambda: "return id(heat_hysteresis_f);"
     set_action:
       - lambda: |
           id(heat_hysteresis_f) = x;
@@ -215,7 +200,7 @@ number:
     min_value: 0.05
     max_value: 0.50
     step: 0.05
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_vpd_hysteresis, id(hyst_vpd_kpa));"
+    lambda: "return id(hyst_vpd_kpa);"
     set_action:
       - lambda: |
           id(hyst_vpd_kpa) = x;
@@ -228,7 +213,7 @@ number:
     min_value: 30
     max_value: 300
     step: 10
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_min_heat_on_s, id(min_heat_on_s));"
+    lambda: "return id(min_heat_on_s);"
     set_action:
       - lambda: |
           int val = int(roundf(x));
@@ -242,7 +227,7 @@ number:
     min_value: 60
     max_value: 600
     step: 10
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_min_heat_off_s, id(min_heat_off_s));"
+    lambda: "return id(min_heat_off_s);"
     set_action:
       - lambda: |
           int val = int(roundf(x));
@@ -256,7 +241,7 @@ number:
     min_value: 30
     max_value: 300
     step: 10
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_min_fan_on_s, id(min_fan_on_s));"
+    lambda: "return id(min_fan_on_s);"
     set_action:
       - lambda: |
           int val = int(roundf(x));
@@ -270,7 +255,7 @@ number:
     min_value: 30
     max_value: 300
     step: 10
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_min_fan_off_s, id(min_fan_off_s));"
+    lambda: "return id(min_fan_off_s);"
     set_action:
       - lambda: |
           int val = int(roundf(x));
@@ -286,7 +271,7 @@ number:
     min_value: 10
     max_value: 300
     step: 10
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_min_vent_on_s, id(min_vent_on_s));"
+    lambda: "return id(min_vent_on_s);"
     set_action:
       - lambda: |
           int val = int(roundf(x));
@@ -300,7 +285,7 @@ number:
     min_value: 10
     max_value: 300
     step: 10
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_min_vent_off_s, id(min_vent_off_s));"
+    lambda: "return id(min_vent_off_s);"
     set_action:
       - lambda: |
           int val = int(roundf(x));
@@ -316,7 +301,7 @@ number:
     min_value: -5
     max_value: 0
     step: 0.5
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_enthalpy_open, id(enthalpy_open_kjkg));"
+    lambda: "return id(enthalpy_open_kjkg);"
     set_action:
       - lambda: |
           id(enthalpy_open_kjkg) = x;
@@ -327,7 +312,7 @@ number:
     min_value: -5
     max_value: 20
     step: 0.5
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_enthalpy_close, id(enthalpy_close_kjkg));"
+    lambda: "return id(enthalpy_close_kjkg);"
     set_action:
       - lambda: |
           id(enthalpy_close_kjkg) = x;
@@ -508,7 +493,7 @@ number:
     min_value: 0.50
     max_value: 2.50
     step: 0.05
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_mister_engage_kpa, id(mister_engage_kpa));"
+    lambda: "return id(mister_engage_kpa);"
     set_action:
       - lambda: |
           id(mister_engage_kpa) = x;
@@ -520,7 +505,7 @@ number:
     min_value: 1.00
     max_value: 2.50
     step: 0.05
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_mister_all_kpa, id(mister_all_kpa));"
+    lambda: "return id(mister_all_kpa);"
     set_action:
       - lambda: |
           id(mister_all_kpa) = x;
@@ -533,7 +518,7 @@ number:
     min_value: 30
     max_value: 300
     step: 30
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_mister_engage_delay_s, id(mister_engage_delay_s));"
+    lambda: "return id(mister_engage_delay_s);"
     set_action:
       - lambda: |
           int val = int(roundf(x));
@@ -549,7 +534,7 @@ number:
     min_value: 30
     max_value: 90
     step: 5
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_mister_pulse_on_s, id(mister_pulse_on_s));"
+    lambda: "return id(mister_pulse_on_s);"
     set_action:
       - lambda: |
           id(mister_pulse_on_s) = (int)x;
@@ -561,7 +546,7 @@ number:
     min_value: 10
     max_value: 60
     step: 5
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_mister_pulse_gap_s, id(mister_pulse_gap_s));"
+    lambda: "return id(mister_pulse_gap_s);"
     set_action:
       - lambda: |
           id(mister_pulse_gap_s) = (int)x;
@@ -573,7 +558,7 @@ number:
     min_value: 30
     max_value: 120
     step: 5
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_mister_min_off_s, id(mister_min_off_s));"
+    lambda: "return id(mister_min_off_s);"
     set_action:
       - lambda: |
           id(mister_min_off_s) = (int)x;
@@ -585,7 +570,7 @@ number:
     min_value: 0.5
     max_value: 3.0
     step: 0.5
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_mister_vpd_weight, id(mister_vpd_weight));"
+    lambda: "return id(mister_vpd_weight);"
     set_action:
       - lambda: |
           id(mister_vpd_weight) = x;
@@ -597,7 +582,7 @@ number:
     min_value: 0.0
     max_value: 0.25
     step: 0.01
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_night_vpd_bias_kpa, id(night_vpd_bias_kpa));"
+    lambda: "return id(night_vpd_bias_kpa);"
     set_action:
       - lambda: |
           float c = x < 0.0f ? 0.0f : (x > 0.25f ? 0.25f : x);
@@ -658,7 +643,7 @@ number:
     min_value: 0.0
     max_value: 1.0
     step: 0.1
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_mister_center_penalty, id(mister_center_penalty));"
+    lambda: "return id(mister_center_penalty);"
     set_action:
       - lambda: |
           id(mister_center_penalty) = x;
@@ -682,7 +667,7 @@ number:
     min_value: 15
     max_value: 300
     step: 15
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_min_fog_on_s, id(min_fog_on_s));"
+    lambda: "return id(min_fog_on_s);"
     set_action:
       - lambda: |
           id(min_fog_on_s) = x;
@@ -694,7 +679,7 @@ number:
     min_value: 15
     max_value: 300
     step: 15
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_min_fog_off_s, id(min_fog_off_s));"
+    lambda: "return id(min_fog_off_s);"
     set_action:
       - lambda: |
           id(min_fog_off_s) = x;
@@ -706,7 +691,7 @@ number:
     min_value: 15
     max_value: 120
     step: 15
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_vpd_watch_dwell_s, id(vpd_watch_dwell_s));"
+    lambda: "return id(vpd_watch_dwell_s);"
     set_action:
       - lambda: |
           id(vpd_watch_dwell_s) = x;
@@ -730,7 +715,7 @@ number:
     min_value: 120
     max_value: 900
     step: 60
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_mist_max_closed_vent_s, id(mist_max_closed_vent_s));"
+    lambda: "return id(mist_max_closed_vent_s);"
     set_action:
       - lambda: |
           id(mist_max_closed_vent_s) = x;
@@ -742,7 +727,7 @@ number:
     min_value: 0.1
     max_value: 0.5
     step: 0.1
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_fog_escalation_kpa, id(fog_escalation_kpa));"
+    lambda: "return id(fog_escalation_kpa);"
     set_action:
       - lambda: |
           id(fog_escalation_kpa) = x;
@@ -798,7 +783,7 @@ number:
     min_value: 2
     max_value: 15
     step: 0.5
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_vent_prefer_temp_delta_f, id(vent_prefer_temp_delta_f));"
+    lambda: "return id(vent_prefer_temp_delta_f);"
     set_action:
       - lambda: |
           id(vent_prefer_temp_delta_f) = x;
@@ -810,7 +795,7 @@ number:
     min_value: 2
     max_value: 15
     step: 0.5
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_vent_prefer_dp_delta_f, id(vent_prefer_dp_delta_f));"
+    lambda: "return id(vent_prefer_dp_delta_f);"
     set_action:
       - lambda: |
           id(vent_prefer_dp_delta_f) = x;
@@ -822,7 +807,7 @@ number:
     min_value: 120
     max_value: 1800
     step: 30
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_outdoor_staleness_max_s, id(outdoor_staleness_max_s));"
+    lambda: "return id(outdoor_staleness_max_s);"
     set_action:
       - lambda: |
           int v = (int)x; if(v < 120) v = 120; if(v > 1800) v = 1800;
@@ -849,7 +834,7 @@ number:
     min_value: 60000
     max_value: 1800000
     step: 30000
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_dwell_gate_ms, id(dwell_gate_ms));"
+    lambda: "return id(dwell_gate_ms);"
     set_action:
       - lambda: |
           int v = (int)x; if(v < 60000) v = 60000; if(v > 1800000) v = 1800000;
@@ -874,7 +859,7 @@ number:
     min_value: 60
     max_value: 3600
     step: 60
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_mist_backoff_s, id(mist_backoff_s));"
+    lambda: "return id(mist_backoff_s);"
     set_action:
       - lambda: |
           int v = (int)x; if(v < 60) v = 60; if(v > 3600) v = 3600;
@@ -887,7 +872,7 @@ number:
     min_value: 30
     max_value: 300
     step: 30
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_mist_thermal_relief_s, id(mist_thermal_relief_s));"
+    lambda: "return id(mist_thermal_relief_s);"
     set_action:
       - lambda: |
           id(mist_thermal_relief_s) = x;
@@ -923,7 +908,7 @@ number:
     min_value: 60
     max_value: 600
     step: 30
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_mister_all_delay_s, id(mister_all_delay_s));"
+    lambda: "return id(mister_all_delay_s);"
     set_action:
       - lambda: |
           int val = int(roundf(x));
@@ -999,7 +984,7 @@ number:
     min_value: 100
     max_value: 300
     step: 10
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_mister_water_budget_gal, id(mister_water_budget_gal));"
+    lambda: "return id(mister_water_budget_gal);"
     set_action:
       - lambda: |
           id(mister_water_budget_gal) = x;
@@ -1692,7 +1677,7 @@ number:
     min_value: 0
     max_value: 0.5
     step: 0.05
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_direct_wet_stress_vpd_margin_kpa, id(direct_wet_stress_vpd_margin_kpa));"
+    lambda: "return id(direct_wet_stress_vpd_margin_kpa);"
     set_action:
       - lambda: |
           id(cfg_first_pull_ok) = true;
@@ -1705,7 +1690,7 @@ number:
     min_value: 3
     max_value: 15
     step: 0.5
-    lambda: "return verdify_policy::policy_read(verdify_policy::kPF_direct_wet_stress_min_dew_margin_f, id(direct_wet_stress_min_dew_margin_f));"
+    lambda: "return id(direct_wet_stress_min_dew_margin_f);"
     set_action:
       - lambda: |
           id(cfg_first_pull_ok) = true;
@@ -1892,7 +1877,7 @@ switch:
     name: "Cool All Fans At High"
     optimistic: false
     restore_mode: RESTORE_DEFAULT_OFF
-    lambda: "return verdify_policy::policy_read_b(verdify_policy::kPF_sw_cool_all_fans_at_high_enabled, id(cool_all_fans_at_high_enabled));"
+    lambda: "return id(cool_all_fans_at_high_enabled);"
     turn_on_action:
       - lambda: |
           id(cfg_first_pull_ok) = true;
@@ -1930,7 +1915,7 @@ switch:
     name: "Direct Wet Gate Enabled"
     optimistic: false
     restore_mode: RESTORE_DEFAULT_ON
-    lambda: "return verdify_policy::policy_read_b(verdify_policy::kPF_sw_direct_wet_gate_enabled, id(direct_wet_gate_enabled));"
+    lambda: "return id(direct_wet_gate_enabled);"
     turn_on_action:
       - lambda: |
           id(cfg_first_pull_ok) = true;
@@ -1947,7 +1932,7 @@ switch:
     name: "Direct Wet Stress Override Enabled"
     optimistic: false
     restore_mode: RESTORE_DEFAULT_OFF
-    lambda: "return verdify_policy::policy_read_b(verdify_policy::kPF_sw_direct_wet_stress_override_enabled, id(direct_wet_stress_override_enabled));"
+    lambda: "return id(direct_wet_stress_override_enabled);"
     turn_on_action:
       - lambda: |
           id(cfg_first_pull_ok) = true;
@@ -2110,7 +2095,7 @@ switch:
     id: sw_fog_closes_vent
     name: "Fog Closes Vent"
     restore_mode: RESTORE_DEFAULT_OFF
-    lambda: 'return verdify_policy::policy_read_b(verdify_policy::kPF_sw_fog_closes_vent, id(fog_closes_vent));'
+    lambda: 'return id(fog_closes_vent);'
     turn_on_action:
       - lambda: |
           id(fog_closes_vent) = true;
@@ -2125,7 +2110,7 @@ switch:
     id: sw_mister_closes_vent
     name: "Mister Closes Vent"
     restore_mode: RESTORE_DEFAULT_OFF
-    lambda: 'return verdify_policy::policy_read_b(verdify_policy::kPF_sw_mister_closes_vent, id(mister_closes_vent));'
+    lambda: 'return id(mister_closes_vent);'
     turn_on_action:
       - lambda: |
           id(mister_closes_vent) = true;
@@ -2285,7 +2270,7 @@ switch:
     name: "Summer Vent Enabled"
     icon: "mdi:home-thermometer"
     restore_mode: RESTORE_DEFAULT_ON
-    lambda: 'return verdify_policy::policy_read_b(verdify_policy::kPF_sw_summer_vent_enabled, id(sw_summer_vent_enabled));'
+    lambda: 'return id(sw_summer_vent_enabled);'
     turn_on_action:
       - lambda: |
           id(sw_summer_vent_enabled) = true;
@@ -2303,7 +2288,7 @@ switch:
     name: "Dwell Gate Enabled"
     icon: "mdi:timer-lock"
     restore_mode: RESTORE_DEFAULT_OFF
-    lambda: 'return verdify_policy::policy_read_b(verdify_policy::kPF_sw_dwell_gate_enabled, id(sw_dwell_gate_enabled));'
+    lambda: 'return id(sw_dwell_gate_enabled);'
     turn_on_action:
       - lambda: |
           id(sw_dwell_gate_enabled) = true;
