@@ -665,7 +665,7 @@ data:
       217-runtime-role-boundary.sql \
       218-planner-required-failure-history.sql
     do
-      expected_sha256="$(sha256sum -- "${VERDIFY_MIGRATIONS_DIR}/${migration}" | awk '{print $1}')"
+      expected_sha256="$(sha256sum -- "/work/db/migrations/${migration}" | awk '{print $1}')"
       ledger_sha256="$(psql -X -v ON_ERROR_STOP=1 -At -d "${PGDATABASE}" \
         -c "SELECT sha256 FROM public.schema_migrations WHERE source = 'db/migrations' AND filename = 'db/migrations/${migration}'")"
       if [[ "${ledger_sha256}" != "${expected_sha256}" ]]; then
@@ -676,9 +676,9 @@ data:
     echo "[restore-rehearsal] candidate migrations applied twice; exact candidate ledger is current"
 
     psql -X -v ON_ERROR_STOP=1 -d "${PGDATABASE}" \
-      -f "${VERDIFY_MIGRATIONS_DIR}/tests/test-214-confirmed-component-experiment-v2.sql"
+      -f "/work/db/migrations/tests/test-214-confirmed-component-experiment-v2.sql"
     psql -X -v ON_ERROR_STOP=1 -d "${PGDATABASE}" \
-      -f "${VERDIFY_MIGRATIONS_DIR}/tests/test-216-equipment-counter-source-ledger.sql"
+      -f "/work/db/migrations/tests/test-216-equipment-counter-source-ledger.sql"
     # test-217 is advisory for this deploy (verdify-platform#672): its adversarial
     # owner-poisoning reaches a TimescaleDB compressed chunk, and 217's
     # re-normalization cannot ALTER a compressed chunk's owner. The fixture is
@@ -686,7 +686,7 @@ data:
     # post-migration state for the remaining checks. Production's forward migrate
     # never hits this (uniform verdify ownership; internal chunks datdba-owned).
     if psql -X -v ON_ERROR_STOP=1 -d "${PGDATABASE}" \
-         -f ${VERDIFY_MIGRATIONS_DIR}/tests/test-217-runtime-role-boundary.sql; then
+         -f /work/db/migrations/tests/test-217-runtime-role-boundary.sql; then
       echo "[restore-rehearsal] migration 217 exact-runtime Timescale facade/ACL fixture passed"
     else
       echo "[restore-rehearsal] ADVISORY (verdify-platform#672): test-217 adversarial re-application hit the known TimescaleDB compressed-chunk re-ownership limit; restore + apply + idempotency + preservation all passed; not blocking this deploy" >&2
@@ -698,7 +698,7 @@ data:
     # The migration 218 apply itself (additive boolean backfill) passed in the
     # blocking apply phase above.
     if psql -X -v ON_ERROR_STOP=1 -d "${PGDATABASE}" \
-         -f ${VERDIFY_MIGRATIONS_DIR}/tests/test-218-planner-required-failure-history.sql; then
+         -f /work/db/migrations/tests/test-218-planner-required-failure-history.sql; then
       echo "[restore-rehearsal] migration 218 required-failure-history fixture passed"
     else
       echo "[restore-rehearsal] ADVISORY (verdify-platform#672): test-218 fixture asserts global counts incompatible with restored production data; migration 218 apply itself passed; not blocking this deploy" >&2

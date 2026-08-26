@@ -211,7 +211,7 @@ def test_script_restores_only_the_bounded_latest_dump_and_runs_real_gates():
         "dump_age_seconds >= max_dump_age_seconds",
         "latest dump age must be >=0 and <26h",
         "timescaledb_pre_restore()",
-        "pg_restore --exit-on-error --no-owner --no-privileges",
+        "pg_restore --exit-on-error --role verdify",
         "timescaledb_post_restore()",
         "/work/bin/apply-migrations.sh",
         "test-214-confirmed-component-experiment-v2.sql",
