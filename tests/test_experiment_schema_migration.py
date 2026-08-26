@@ -290,6 +290,7 @@ def test_migrate_image_carries_migrations_and_runner():
         "!db/migrations/tests/test-214-confirmed-component-experiment-v2.sql",
         "!db/migrations/tests/test-216-equipment-counter-source-ledger.sql",
         "!db/migrations/tests/test-217-runtime-role-boundary.sql",
+        "!db/migrations/tests/test-218-planner-required-failure-history.sql",
         "!db/ledger",
         "db/ledger/*",
         "!db/ledger/*.sql",
@@ -298,13 +299,14 @@ def test_migrate_image_carries_migrations_and_runner():
     assert indexes == sorted(indexes), "Kaniko re-include rules must stay ordered"
 
     # The production migrate image remains free of the broad SQL fixture tree.
-    # Only the three vertical fixtures executed by the one-release restore
+    # Only the four vertical fixtures executed by the one-release restore
     # rehearsal are admitted into /db/migrations/tests.
     test_fixture_reincludes = [line for line in ignore_lines if line.startswith("!db/migrations/tests/")]
     assert test_fixture_reincludes == [
         "!db/migrations/tests/test-214-confirmed-component-experiment-v2.sql",
         "!db/migrations/tests/test-216-equipment-counter-source-ledger.sql",
         "!db/migrations/tests/test-217-runtime-role-boundary.sql",
+        "!db/migrations/tests/test-218-planner-required-failure-history.sql",
     ]
 
 
