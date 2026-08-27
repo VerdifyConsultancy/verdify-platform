@@ -96,7 +96,7 @@ def test_bootstrap_is_feature_off_function_bounded_and_secret_safe() -> None:
         assert forbidden not in script
 
     patch = yaml.safe_load(JOB_PATCH.read_text())
-    assert patch["metadata"]["name"] == "verdify-experiment-v2-credential-bootstrap"
+    assert patch["metadata"]["name"] == "verdify-runtime-role-bootstrap"
     assert patch["spec"]["activeDeadlineSeconds"] >= 600
     container = patch["spec"]["template"]["spec"]["containers"][0]
     assert container["name"] == "direct-launch-bootstrap"
@@ -137,38 +137,25 @@ def test_prod_render_contains_bootstrap_and_keeps_experiment_disabled() -> None:
     resources = _rendered()
     by_kind_name = {(resource["kind"], resource["metadata"]["name"]): resource for resource in resources}
     assert ("Job", "verdify-experiment-v2-direct-launch-bootstrap") not in by_kind_name
-    job = by_kind_name[("Job", "verdify-experiment-v2-credential-bootstrap")]
+    assert ("Job", "verdify-experiment-v2-credential-bootstrap") not in by_kind_name
+    job = by_kind_name[("Job", "verdify-runtime-role-bootstrap")]
     assert job["spec"]["activeDeadlineSeconds"] >= 600
     assert job["metadata"]["annotations"] == {
         "argocd.argoproj.io/hook": "PreSync",
         "argocd.argoproj.io/hook-delete-policy": "BeforeHookCreation",
-        "argocd.argoproj.io/sync-wave": "2",
-        "operations.vallery.net/temporary-node-placement": (
-            "vm-k3s-node6:adjacent-presync-sandboxes-healthy:2026-08-27"
-        ),
-        "operations.vallery.net/temporary-cni-bypass": ("host-network:combined-bootstrap-only:2026-08-27"),
+        "argocd.argoproj.io/sync-wave": "1",
+        "operations.vallery.net/temporary-pod-reuse": ("runtime-role-bootstrap:three-duties-one-sandbox:2026-08-27"),
     }
     pod = job["spec"]["template"]
     assert pod["metadata"]["labels"]["app.kubernetes.io/component"] == "migrate"
-    assert pod["spec"]["hostNetwork"] is True
-    assert pod["spec"]["dnsPolicy"] == "ClusterFirstWithHostNet"
+    assert "hostNetwork" not in pod["spec"]
     assert pod["spec"]["automountServiceAccountToken"] is False
     containers = {container["name"]: container for container in pod["spec"]["containers"]}
-    assert set(containers) == {"bootstrap-and-attest", "direct-launch-bootstrap"}
-    terms = pod["spec"]["affinity"]["nodeAffinity"]["requiredDuringSchedulingIgnoredDuringExecution"][
-        "nodeSelectorTerms"
-    ]
-    assert terms == [
-        {
-            "matchExpressions": [
-                {
-                    "key": "kubernetes.io/hostname",
-                    "operator": "In",
-                    "values": ["vm-k3s-node6"],
-                }
-            ]
-        }
-    ]
+    assert set(containers) == {
+        "bootstrap-and-attest",
+        "experiment-bootstrap-and-attest",
+        "direct-launch-bootstrap",
+    }
     container = containers["direct-launch-bootstrap"]
     assert container["image"].startswith("registry.vallery.net/verdifyconsultancy/verdify-api@sha256:")
     feature = by_kind_name[("ConfigMap", "verdify-config")]["data"]

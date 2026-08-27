@@ -2,11 +2,11 @@ apiVersion: kustomize.config.k8s.io/v1alpha1
 kind: Component
 
 # Gate-2 credential activation. Migration waves create and normalize the six
-# passwordless experiment LOGIN identities; this PreSync hook installs their
-# protected SCRAM verifiers atomically and proves every exact login/duty/ACL
-# boundary over a new TCP connection while the experiment capability is off.
-resources:
-  - bootstrap-job.yaml
+# passwordless experiment LOGIN identities. Add their credential installer to
+# the already-required runtime-role PreSync pod so all three bootstrap duties
+# share one observed-working sandbox while the experiment capability is off.
+patches:
+  - path: bootstrap-job.yaml
 
 images:
   # The consuming production overlay rewrites this logical key to the same

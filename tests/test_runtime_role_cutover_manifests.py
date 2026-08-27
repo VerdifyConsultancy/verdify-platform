@@ -100,7 +100,7 @@ def test_active_cutover_bootstraps_and_attests_both_actual_logins_before_sync():
 
     spec = bootstrap["spec"]
     assert spec["backoffLimit"] == 0
-    assert spec["activeDeadlineSeconds"] == 180
+    assert spec["activeDeadlineSeconds"] == 600
     assert spec["ttlSecondsAfterFinished"] == 600
     pod = spec["template"]["spec"]
     assert pod["restartPolicy"] == "Never"
@@ -116,8 +116,12 @@ def test_active_cutover_bootstraps_and_attests_both_actual_logins_before_sync():
         "seccompProfile": {"type": "RuntimeDefault"},
     }
 
-    assert len(pod["containers"]) == 1
-    container = pod["containers"][0]
+    assert {item["name"] for item in pod["containers"]} == {
+        "bootstrap-and-attest",
+        "experiment-bootstrap-and-attest",
+        "direct-launch-bootstrap",
+    }
+    container = next(item for item in pod["containers"] if item["name"] == "bootstrap-and-attest")
     migration_container = next(
         item for item in migration["spec"]["template"]["spec"]["containers"] if item["name"] == "migrate"
     )
@@ -197,7 +201,10 @@ def test_active_cutover_bootstraps_and_attests_both_actual_logins_before_sync():
 def test_bootstrap_pipes_raw_passwords_only_to_non_echoing_psql_prompts(tmp_path: Path):
     documents = _render(REVIEW_ALIAS)
     bootstrap = _job(documents, "verdify-runtime-role-bootstrap")
-    script = bootstrap["spec"]["template"]["spec"]["containers"][0]["args"][0]
+    container = next(
+        item for item in bootstrap["spec"]["template"]["spec"]["containers"] if item["name"] == "bootstrap-and-attest"
+    )
+    script = container["args"][0]
 
     fake_psql = tmp_path / "psql"
     fake_psql.write_text(
@@ -304,7 +311,10 @@ esac
 def test_bootstrap_rejects_noncanonical_passwords_before_psql(tmp_path: Path):
     documents = _render(REVIEW_ALIAS)
     bootstrap = _job(documents, "verdify-runtime-role-bootstrap")
-    script = bootstrap["spec"]["template"]["spec"]["containers"][0]["args"][0]
+    container = next(
+        item for item in bootstrap["spec"]["template"]["spec"]["containers"] if item["name"] == "bootstrap-and-attest"
+    )
+    script = container["args"][0]
 
     fake_psql = tmp_path / "psql"
     fake_psql.write_text(
@@ -371,7 +381,11 @@ def test_cutover_is_active_in_production_with_experiment_still_off():
 
     bootstrap = _job(documents, "verdify-runtime-role-bootstrap")
     migration = _job(documents, "verdify-migrate")
-    bootstrap_image = bootstrap["spec"]["template"]["spec"]["containers"][0]["image"]
+    bootstrap_image = next(
+        item["image"]
+        for item in bootstrap["spec"]["template"]["spec"]["containers"]
+        if item["name"] == "bootstrap-and-attest"
+    )
     migration_image = migration["spec"]["template"]["spec"]["containers"][0]["image"]
     assert bootstrap_image == migration_image
     assert bootstrap_image.startswith("registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:")
