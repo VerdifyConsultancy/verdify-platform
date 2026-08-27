@@ -83,9 +83,18 @@ def test_one_hardened_image_has_three_separate_optional_duty_credentials() -> No
         "verdify-experiment-v2-randomizer-db",
         "verdify-experiment-v2-outcome-freezer-db",
     }
+    selector_env = {
+        item["name"]: item
+        for item in deployments["experiment-v2-selector"]["spec"]["template"]["spec"]["containers"][0]["env"]
+    }
+    assert selector_env["VERDIFY_EXPERIMENT_SELECTOR_API_KEY"]["valueFrom"]["secretKeyRef"] == {
+        "name": "verdify-hermes",
+        "key": "OPENAI_API_KEY",
+        "optional": True,
+    }
 
 
-def test_network_policy_is_ingress_dark_and_selector_alone_has_exact_https_egress() -> None:
+def test_network_policy_is_ingress_dark_and_selector_alone_has_openai_https_egress() -> None:
     policies = {
         document["metadata"]["name"]: document
         for document in rendered_documents()
@@ -103,7 +112,29 @@ def test_network_policy_is_ingress_dark_and_selector_alone_has_exact_https_egres
     assert len(lifecycle_egress) == len(freezer_egress) == 2  # DNS + DB only
     assert len(selector_egress) == 3
     endpoint = selector_egress[2]
-    assert endpoint["to"] == [{"ipBlock": {"cidr": "192.0.2.1/32"}}]
+    assert endpoint["to"] == [
+        {
+            "ipBlock": {
+                "cidr": "0.0.0.0/0",
+                "except": [
+                    "0.0.0.0/8",
+                    "10.0.0.0/8",
+                    "100.64.0.0/10",
+                    "127.0.0.0/8",
+                    "169.254.0.0/16",
+                    "172.16.0.0/12",
+                    "192.0.0.0/24",
+                    "192.0.2.0/24",
+                    "192.168.0.0/16",
+                    "198.18.0.0/15",
+                    "198.51.100.0/24",
+                    "203.0.113.0/24",
+                    "224.0.0.0/4",
+                    "240.0.0.0/4",
+                ],
+            }
+        }
+    ]
     assert endpoint["ports"] == [{"port": 443, "protocol": "TCP"}]
     rendered_text = yaml.safe_dump_all(policies.values()).lower()
     for forbidden in ("192.168.30.", "esphome", "mqtt", "setter"):
@@ -119,7 +150,8 @@ def test_component_is_inert_until_explicit_gitops_configuration() -> None:
     assert "VERDIFY_COMPONENT_EXPERIMENT_ENABLED" not in config
     assert "VERDIFY_POLICY_VECTOR_MODE" not in config
     assert "VERDIFY_ACTIVE_EXPERIMENT_ID" not in config
-    assert config["VERDIFY_EXPERIMENT_SELECTOR_ENDPOINT"] == ""
+    assert config["VERDIFY_EXPERIMENT_SELECTOR_ENDPOINT"] == "https://api.openai.com/v1"
+    assert config["VERDIFY_EXPERIMENT_SELECTOR_EGRESS_CIDR"] == "0.0.0.0/0"
     assert config["VERDIFY_EXPERIMENT_V2_LIFECYCLE_PLAN_SHA256"] == ""
 
 
@@ -163,7 +195,10 @@ def test_prod_adopts_feature_off_component_with_nonzero_digest() -> None:
     assert configs["verdify-config"]["VERDIFY_COMPONENT_EXPERIMENT_ENABLED"] == "off"
     assert configs["verdify-config"]["VERDIFY_POLICY_VECTOR_MODE"] == "off"
     assert configs["verdify-config"]["VERDIFY_ACTIVE_EXPERIMENT_ID"] == ""
-    assert configs["experiment-v2-orchestrator-config"]["VERDIFY_EXPERIMENT_SELECTOR_ENDPOINT"] == ""
+    assert (
+        configs["experiment-v2-orchestrator-config"]["VERDIFY_EXPERIMENT_SELECTOR_ENDPOINT"]
+        == "https://api.openai.com/v1"
+    )
     assert configs["experiment-v2-orchestrator-config"]["VERDIFY_EXPERIMENT_V2_LIFECYCLE_PLAN_SHA256"] == ""
 
 

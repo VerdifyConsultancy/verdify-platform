@@ -72,14 +72,14 @@ def _fixture(tmp_path: Path) -> tuple[Path, dict]:
         "schema": INPUT_SCHEMA,
         "selector": {
             "context_schema_path": "context-schema.json",
-            "egress_cidr": "192.168.7.10/32",
-            "endpoint": "https://cortex.vallery.net/v1/chat/completions",
-            "expected_system_fingerprint": "vllm-0.27.1-tp2-514990f7",
+            "egress_cidr": "0.0.0.0/0",
+            "endpoint": "https://api.openai.com/v1/chat/completions",
+            "expected_system_fingerprint": "openai-managed",
             "lesson_snapshot_path": "lesson-snapshot.json",
             "max_attempts": 2,
-            "max_tokens": 512,
-            "model_identifier": "llm.primary.longctx",
-            "model_revision": "llm.qwen38u.longctx",
+            "max_completion_tokens": 512,
+            "model_identifier": "gpt-5.6-sol",
+            "model_revision": "gpt-5.6-sol",
             "prompt_path": "prompt.txt",
             "runtime_environment_sha256": "a" * 64,
             "selector_artifact_path": "selector-artifact.json",
@@ -122,15 +122,15 @@ def test_packet_is_canonical_mount_ready_redacted_and_non_actuating(tmp_path: Pa
 
     identity_raw = outputs["selector-identity/identity.json"]
     identity = SelectorIdentity.parse(identity_raw, hashlib.sha256(identity_raw).hexdigest())
-    assert identity.model_identifier == "llm.primary.longctx"
-    assert identity.model_revision == "llm.qwen38u.longctx"
-    assert identity.expected_system_fingerprint == "vllm-0.27.1-tp2-514990f7"
+    assert identity.provider == "openai"
+    assert identity.model_identifier == "gpt-5.6-sol"
+    assert identity.model_revision == "gpt-5.6-sol"
+    assert identity.expected_system_fingerprint == "openai-managed"
     assert identity.decoding_parameters == {
-        "chat_template_kwargs": {"reasoning_effort": "medium"},
-        "max_tokens": 512,
+        "max_completion_tokens": 512,
+        "reasoning_effort": "medium",
         "response_format": identity.decoding_parameters["response_format"],
         "stream": False,
-        "temperature": 0,
     }
 
     outcome_raw = outputs["outcome-identity/identity.json"]
@@ -203,7 +203,7 @@ def test_stable_experiment_uuid_is_safe_to_generate_before_deployment() -> None:
 
 def test_packet_refuses_unfrozen_or_unsafe_inputs(tmp_path: Path) -> None:
     input_path, spec = _fixture(tmp_path)
-    spec["selector"]["max_tokens"] = 511
+    spec["selector"]["max_completion_tokens"] = 511
     _canonical_write(input_path, spec)
     with pytest.raises(ValueError, match=r"\[512,16384\]"):
         build_packet(repo_root=REPO_ROOT, input_path=input_path)

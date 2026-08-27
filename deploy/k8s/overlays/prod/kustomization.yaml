@@ -98,9 +98,10 @@ components:
   # profile. prod-anchored (run-state PVC + OpenAI key). Image digest preserved.
   - ../../components/hermes-iris
   # Confirmed-component experiment v2 orchestration workers. The component's
-  # base ConfigMap is fail-closed (experiment/vector modes off, no active ID or
-  # selector endpoint), so adopting it here creates only an inert, observable
-  # Gate-1 runtime. Shadow/randomized operation remains a later GitOps change.
+  # base ConfigMap is fail-closed (experiment/vector modes off and no active
+  # ID). Its OpenAI selector endpoint/key references cannot be exercised while
+  # capability is off, so this remains an inert, observable Gate-1 runtime.
+  # Shadow/randomized operation remains a later GitOps change.
   - ../../components/experiment-v2-orchestrator
   # Gate 1 ordinary database-role cutover. The PreSync hook installs and proves
   # the two migration-217 logins before API/ingestor roll, then the pod patches

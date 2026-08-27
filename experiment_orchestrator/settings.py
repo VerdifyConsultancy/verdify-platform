@@ -16,8 +16,7 @@ VECTOR_MODE_ENV = "VERDIFY_POLICY_VECTOR_MODE"
 ACTIVE_EXPERIMENT_ENV = "VERDIFY_ACTIVE_EXPERIMENT_ID"
 MODE_ENV = "VERDIFY_EXPERIMENT_V2_MODE"
 DEFAULT_POLL_INTERVAL_SECONDS = 15.0
-CORTEX_ENDPOINT_HOST = "cortex.vallery.net"
-CORTEX_ENDPOINT_ADDRESS = ipaddress.ip_address("192.168.7.10")
+OPENAI_ENDPOINT_HOST = "api.openai.com"
 
 _DB_CREDENTIAL_ENV = {
     OrchestratorMode.LIFECYCLE: (
@@ -145,11 +144,14 @@ def _provider_settings(env: Mapping[str, str]) -> tuple[ProviderSettings | None,
         network = ipaddress.ip_network(egress_cidr, strict=True)
     except ValueError as exc:
         raise ConfigurationError("selector egress CIDR must be one exact IP host") from exc
-    if network.num_addresses != 1:
-        raise ConfigurationError("selector egress CIDR must be /32 or /128")
+    official_openai_endpoint = parsed.hostname == OPENAI_ENDPOINT_HOST
+    if official_openai_endpoint:
+        if network != ipaddress.ip_network("0.0.0.0/0"):
+            raise ConfigurationError("official OpenAI selector egress must be exactly 0.0.0.0/0")
+    elif network.num_addresses != 1:
+        raise ConfigurationError("selector egress CIDR must be one exact IP host")
     address = network.network_address
-    cortex_service_endpoint = parsed.hostname == CORTEX_ENDPOINT_HOST and address == CORTEX_ENDPOINT_ADDRESS
-    if not address.is_global and not cortex_service_endpoint:
+    if not address.is_global and not official_openai_endpoint:
         raise ConfigurationError("selector egress IP must be globally routable and outside device/private ranges")
     maximum_response_bytes = _bounded_int(
         env.get("VERDIFY_EXPERIMENT_SELECTOR_MAX_RESPONSE_BYTES", "16384"),

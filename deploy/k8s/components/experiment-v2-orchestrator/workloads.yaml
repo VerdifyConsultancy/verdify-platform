@@ -18,7 +18,7 @@ spec:
   template:
     metadata:
       annotations:
-        verdify.io/config-revision: "cf315321b889"
+        verdify.io/config-revision: "4dbb2e691d91"
       labels:
         app.kubernetes.io/part-of: verdify
         app.kubernetes.io/component: experiment-v2-lifecycle
@@ -109,7 +109,7 @@ spec:
   template:
     metadata:
       annotations:
-        verdify.io/config-revision: "cf315321b889"
+        verdify.io/config-revision: "4dbb2e691d91"
       labels:
         app.kubernetes.io/part-of: verdify
         app.kubernetes.io/component: experiment-v2-selector
@@ -146,8 +146,10 @@ spec:
             - name: VERDIFY_EXPERIMENT_SELECTOR_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: verdify-experiment-v2-selector-provider
-                  key: api-key
+                  # Reuse the already-operated OpenAI credential projection;
+                  # no second copied provider Secret is needed.
+                  name: verdify-hermes
+                  key: OPENAI_API_KEY
                   optional: true
           securityContext:
             allowPrivilegeEscalation: false
@@ -200,7 +202,7 @@ spec:
   template:
     metadata:
       annotations:
-        verdify.io/config-revision: "cf315321b889"
+        verdify.io/config-revision: "4dbb2e691d91"
       labels:
         app.kubernetes.io/part-of: verdify
         app.kubernetes.io/component: experiment-v2-freezer

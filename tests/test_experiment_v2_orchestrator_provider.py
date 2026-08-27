@@ -17,12 +17,12 @@ from experiment_orchestrator.contracts import (  # noqa: E402
     CLIMATE_SOURCE_SCHEMA,
     CLIMATE_VALUE_FIELDS,
     CONTEXT_SCHEMA,
-    CORTEX_MAX_MODEL_LEN_TOKENS,
     FORECAST_VALUE_FIELDS,
     OPENAI_SELECTOR_IDENTITY_SCHEMA,
     OPENAI_SELECTOR_RESPONSE_FORMAT,
     OPENAI_SELECTOR_RESPONSE_SCHEMA,
     SELECTOR_IDENTITY_SCHEMA,
+    SELECTOR_MAX_MODEL_LEN_TOKENS,
     SelectorContext,
     SelectorIdentity,
     canonical_json_bytes,
@@ -96,18 +96,17 @@ def _openai_identity(**changes) -> SelectorIdentity:
     system_message = "Choose exactly one allowed greenhouse profile. Return only schema-conforming JSON."
     prompt = "Use only the supplied pre-cutoff context and choose the safest supported profile."
     decoding = {
-        "chat_template_kwargs": {"reasoning_effort": "medium"},
-        "max_tokens": 512,
+        "max_completion_tokens": 512,
+        "reasoning_effort": "medium",
         "response_format": OPENAI_SELECTOR_RESPONSE_FORMAT,
         "stream": False,
-        "temperature": 0,
     }
     payload = {
         "schema": OPENAI_SELECTOR_IDENTITY_SCHEMA,
-        "provider": "cortex-openai",
-        "model_identifier": "llm.primary.longctx",
-        "model_revision": "llm.qwen38u.longctx",
-        "expected_system_fingerprint": "vllm-0.27.1-tp2-514990f7",
+        "provider": "openai",
+        "model_identifier": "gpt-5.6-sol",
+        "model_revision": "gpt-5.6-sol",
+        "expected_system_fingerprint": "openai-managed",
         "prompt": prompt,
         "system_message": system_message,
         "decoding_parameters": decoding,
@@ -161,12 +160,12 @@ def _provider_settings() -> ProviderSettings:
     )
 
 
-def _cortex_provider_settings() -> ProviderSettings:
+def _openai_provider_settings() -> ProviderSettings:
     return ProviderSettings(
-        endpoint="https://cortex.vallery.net/v1",
-        endpoint_host="cortex.vallery.net",
+        endpoint="https://api.openai.com/v1",
+        endpoint_host="api.openai.com",
         endpoint_port=443,
-        egress_network=ipaddress.ip_network("192.168.7.10/32"),
+        egress_network=ipaddress.ip_network("0.0.0.0/0"),
         api_key="not-logged",
     )
 
@@ -175,8 +174,8 @@ def _openai_response(
     *,
     profile: str = "moderate",
     finish_reason: str = "stop",
-    model: str = "llm.qwen38u.longctx",
-    fingerprint: str | None = "vllm-0.27.1-tp2-514990f7",
+    model: str = "gpt-5.6-sol",
+    fingerprint: str | None = "openai-managed",
     content: str | None = None,
     message_changes: dict | None = None,
 ) -> bytes:
@@ -202,14 +201,14 @@ def _openai_response(
     ).encode()
 
 
-def test_cortex_openai_identity_recomputes_embedded_hashes_and_bounds_decoding() -> None:
+def test_openai_identity_recomputes_embedded_hashes_and_bounds_decoding() -> None:
     with pytest.raises(ValueError, match="embedded artifact hash mismatch"):
         _openai_identity(prompt="changed without rebinding its frozen hash")
     with pytest.raises(ValueError, match="forbids tools"):
         _openai_identity(tool_contract_revision="tools-v2")
 
     payload = json.loads(_openai_identity().canonical_bytes)
-    payload["decoding_parameters"]["max_tokens"] = 511
+    payload["decoding_parameters"]["max_completion_tokens"] = 511
     payload["decoding_parameters_sha256"] = hashlib.sha256(
         canonical_json_bytes(payload["decoding_parameters"])
     ).hexdigest()
@@ -246,22 +245,22 @@ async def test_provider_sends_identical_arm_free_request_and_accepts_exact_ident
 
 
 @pytest.mark.asyncio
-async def test_cortex_openai_request_is_exact_bounded_and_accepts_verified_runtime_identity() -> None:
+async def test_openai_request_is_exact_bounded_and_accepts_verified_runtime_identity() -> None:
     transport = Transport(_openai_response())
 
-    async def cortex_resolver(_host: str, _port: int):
+    async def openai_resolver(_host: str, _port: int):
         return frozenset(
             {
-                ipaddress.ip_address("192.168.7.10"),
-                ipaddress.ip_address("::ffff:192.168.7.10"),
+                ipaddress.ip_address("104.18.33.45"),
+                ipaddress.ip_address("::ffff:104.18.33.45"),
             }
         )
 
     identity = _openai_identity()
     adapter = SelectorProviderAdapter(
-        _cortex_provider_settings(),
+        _openai_provider_settings(),
         transport=transport,
-        resolver=cortex_resolver,
+        resolver=openai_resolver,
         clock=lambda: datetime(2026, 8, 24, 23, 50, tzinfo=UTC),
     )
     result = await adapter.select(
@@ -275,7 +274,7 @@ async def test_cortex_openai_request_is_exact_bounded_and_accepts_verified_runti
     assert result.raw_response_sha256 == hashlib.sha256(_openai_response()).hexdigest()
     assert len(transport.calls) == 1
     endpoint, call = transport.calls[0]
-    assert endpoint == "https://cortex.vallery.net/v1/chat/completions"
+    assert endpoint == "https://api.openai.com/v1/chat/completions"
     assert call["timeout_seconds"] == 60
     assert call["headers"] == {
         "accept": "application/json",
@@ -284,11 +283,10 @@ async def test_cortex_openai_request_is_exact_bounded_and_accepts_verified_runti
         "idempotency-key": "11111111-1111-4111-8111-111111111111",
     }
     body = json.loads(call["body"])
-    assert body["model"] == "llm.primary.longctx"
-    assert body["max_tokens"] == 512
-    assert body["temperature"] == 0
+    assert body["model"] == "gpt-5.6-sol"
+    assert body["max_completion_tokens"] == 512
+    assert body["reasoning_effort"] == "medium"
     assert body["stream"] is False
-    assert body["chat_template_kwargs"] == {"reasoning_effort": "medium"}
     assert body["response_format"] == OPENAI_SELECTOR_RESPONSE_FORMAT
     assert "tools" not in body and "tool_choice" not in body
     assert body["messages"][0]["role"] == "system"
@@ -301,7 +299,7 @@ async def test_request_over_context_budget_fails_locally_with_distinct_persistab
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     identity = _openai_identity()
-    budget = CORTEX_MAX_MODEL_LEN_TOKENS - identity.decoding_parameters["max_tokens"]
+    budget = SELECTOR_MAX_MODEL_LEN_TOKENS - identity.decoding_parameters["max_completion_tokens"]
     oversized = b"x" * (budget + 1)
     monkeypatch.setattr(provider_module, "build_openai_request", lambda **_kwargs: oversized)
     transport = Transport(_openai_response())
@@ -327,24 +325,22 @@ async def test_request_over_context_budget_fails_locally_with_distinct_persistab
     [
         _openai_response(finish_reason="length"),
         _openai_response(content='{"profile": "moderate"}'),
-        _openai_response(model="llm.qwen38u.unpinned"),
-        _openai_response(fingerprint=None),
-        _openai_response(fingerprint="vllm-different"),
+        _openai_response(model="gpt-5.6-sol-unpinned"),
         _openai_response(message_changes={"tool_calls": [{"id": "unexpected"}]}),
         _openai_response(content='{"profile":"unknown"}'),
         b"not-json",
     ],
 )
-async def test_cortex_openai_rejects_truncation_noncanonical_body_and_identity_drift(raw: bytes) -> None:
+async def test_openai_rejects_truncation_noncanonical_body_and_identity_drift(raw: bytes) -> None:
     transport = Transport(raw)
 
-    async def cortex_resolver(_host: str, _port: int):
-        return frozenset({ipaddress.ip_address("192.168.7.10")})
+    async def openai_resolver(_host: str, _port: int):
+        return frozenset({ipaddress.ip_address("104.18.33.45")})
 
     result = await SelectorProviderAdapter(
-        _cortex_provider_settings(),
+        _openai_provider_settings(),
         transport=transport,
-        resolver=cortex_resolver,
+        resolver=openai_resolver,
         clock=lambda: datetime(2026, 8, 24, 23, 50, tzinfo=UTC),
     ).select(
         study_id="study",
@@ -368,14 +364,14 @@ class FailingTransport:
 
 
 @pytest.mark.asyncio
-async def test_cortex_http_failure_retries_exactly_then_falls_back() -> None:
+async def test_openai_http_failure_retries_exactly_then_falls_back() -> None:
     transport = FailingTransport()
 
-    async def cortex_resolver(_host: str, _port: int):
-        return frozenset({ipaddress.ip_address("192.168.7.10")})
+    async def openai_resolver(_host: str, _port: int):
+        return frozenset({ipaddress.ip_address("104.18.33.45")})
 
     result = await SelectorProviderAdapter(
-        _cortex_provider_settings(), transport=transport, resolver=cortex_resolver
+        _openai_provider_settings(), transport=transport, resolver=openai_resolver
     ).select(
         study_id="study",
         local_date="2026-08-25",
@@ -408,7 +404,7 @@ async def test_http_transport_rejects_status_content_type_and_oversized_body(
     transport = HttpxProviderTransport(transport=httpx.MockTransport(handler))
     with pytest.raises(ProviderUnavailable):
         await transport.post(
-            "https://cortex.vallery.net/v1/chat/completions",
+            "https://api.openai.com/v1/chat/completions",
             body=b"{}",
             headers={"authorization": "Bearer not-logged"},
             timeout_seconds=1,
@@ -522,7 +518,7 @@ def test_optional_named_database_secret_absence_is_safe_unready_configuration() 
     assert settings.inactive_reason == "database_unconfigured"
 
 
-def test_selector_endpoint_requires_exact_public_or_cortex_host_cidr_and_no_url_credentials() -> None:
+def test_selector_endpoint_requires_safe_public_or_official_openai_egress_and_no_url_credentials() -> None:
     base = {
         "VERDIFY_COMPONENT_EXPERIMENT_ENABLED": "enabled",
         "VERDIFY_POLICY_VECTOR_MODE": "off",
@@ -551,25 +547,48 @@ def test_selector_endpoint_requires_exact_public_or_cortex_host_cidr_and_no_url_
             },
             mode_override="selector",
         )
-    cortex = load_settings(
+    openai = load_settings(
         {
             **base,
-            "VERDIFY_EXPERIMENT_SELECTOR_ENDPOINT": "https://cortex.vallery.net/v1",
-            "VERDIFY_EXPERIMENT_SELECTOR_EGRESS_CIDR": "192.168.7.10/32",
+            "VERDIFY_EXPERIMENT_SELECTOR_ENDPOINT": "https://api.openai.com/v1",
+            "VERDIFY_EXPERIMENT_SELECTOR_EGRESS_CIDR": "0.0.0.0/0",
         },
         mode_override="selector",
     )
-    assert cortex.provider is not None
-    assert cortex.provider.endpoint_host == "cortex.vallery.net"
-    with pytest.raises(ConfigurationError, match="globally routable"):
+    assert openai.provider is not None
+    assert openai.provider.endpoint_host == "api.openai.com"
+    with pytest.raises(ConfigurationError, match="exactly 0.0.0.0/0"):
         load_settings(
             {
                 **base,
-                "VERDIFY_EXPERIMENT_SELECTOR_ENDPOINT": "https://cortex.vallery.net/v1",
-                "VERDIFY_EXPERIMENT_SELECTOR_EGRESS_CIDR": "192.168.7.11/32",
+                "VERDIFY_EXPERIMENT_SELECTOR_ENDPOINT": "https://api.openai.com/v1",
+                "VERDIFY_EXPERIMENT_SELECTOR_EGRESS_CIDR": "0.0.0.0/1",
             },
             mode_override="selector",
         )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("fingerprint", [None, "openai-runtime-marker"])
+async def test_openai_accepts_optional_provider_managed_fingerprint(fingerprint: str | None) -> None:
+    transport = Transport(_openai_response(fingerprint=fingerprint))
+
+    async def openai_resolver(_host: str, _port: int):
+        return frozenset({ipaddress.ip_address("104.18.33.45")})
+
+    result = await SelectorProviderAdapter(
+        _openai_provider_settings(),
+        transport=transport,
+        resolver=openai_resolver,
+        clock=lambda: datetime(2026, 8, 24, 23, 50, tzinfo=UTC),
+    ).select(
+        study_id="study",
+        local_date="2026-08-25",
+        invocation_key="11111111-1111-4111-8111-111111111111",
+        context=_context(),
+        identity=_openai_identity(),
+    )
+    assert (result.profile, result.fallback_reason) == ("moderate", None)
 
 
 def test_selector_empty_endpoint_is_unconfigured_despite_manifest_placeholder_cidr() -> None:

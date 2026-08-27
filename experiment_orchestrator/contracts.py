@@ -33,17 +33,17 @@ FORECAST_SOURCE_SCHEMA = "verdify-selector-forecast-source-v1"
 SELECTOR_IDENTITY_SCHEMA = "verdify-selector-identity-v2"
 OPENAI_SELECTOR_IDENTITY_SCHEMA = "verdify-selector-identity-openai-v1"
 SELECTOR_RESPONSE_SCHEMA = "verdify-selector-response-v2"
-OPENAI_SELECTOR_RESPONSE_SCHEMA = "verdify-selector-decision-openai-v1"
+OPENAI_SELECTOR_RESPONSE_SCHEMA = "verdify-selector-decision-openai-v2"
 OUTCOME_PAYLOAD_SCHEMA = "verdify-assigned-day-outcome-v2"
 OUTCOME_IDENTITY_SCHEMA = "verdify-experiment-v2-outcome-evaluator-identity-v1"
 LIFECYCLE_PLAN_SCHEMA = "verdify-experiment-v2-lifecycle-plan-v1"
 MAX_CLIMATE_OBSERVATIONS = 48
-# The frozen Cortex route exposes 98,304 model tokens and reserves at least
-# 512 for output.  Treat one UTF-8 byte as one prompt token so the byte guard is
-# conservative without depending on a mutable tokenizer implementation.
-CORTEX_MAX_MODEL_LEN_TOKENS = 98_304
+# The study freezes a conservative 98,304-token selector budget even though the
+# locked OpenAI model supports a larger context. Treat one UTF-8 byte as one
+# prompt token so the guard stays tokenizer-independent and fail-closed.
+SELECTOR_MAX_MODEL_LEN_TOKENS = 98_304
 MIN_SELECTOR_OUTPUT_TOKENS = 512
-MAX_SELECTOR_CONTEXT_BYTES = CORTEX_MAX_MODEL_LEN_TOKENS - MIN_SELECTOR_OUTPUT_TOKENS
+MAX_SELECTOR_CONTEXT_BYTES = SELECTOR_MAX_MODEL_LEN_TOKENS - MIN_SELECTOR_OUTPUT_TOKENS
 
 CLIMATE_VALUE_FIELDS = frozenset(
     {
@@ -383,22 +383,19 @@ def _validate_openai_decoding_parameters(value: object) -> dict[str, JsonValue]:
         value,
         frozenset(
             {
-                "chat_template_kwargs",
-                "max_tokens",
+                "max_completion_tokens",
+                "reasoning_effort",
                 "response_format",
                 "stream",
-                "temperature",
             }
         ),
         "OpenAI decoding parameters",
     )
     if decoding["stream"] is not False:
         raise ContractError("OpenAI selector streaming must be disabled")
-    if type(decoding["max_tokens"]) is not int or not 512 <= decoding["max_tokens"] <= 16_384:
-        raise ContractError("OpenAI selector max_tokens must be an integer in [512,16384]")
-    if type(decoding["temperature"]) not in (int, float) or decoding["temperature"] != 0:
-        raise ContractError("OpenAI selector temperature must be exactly 0")
-    if decoding["chat_template_kwargs"] != {"reasoning_effort": "medium"}:
+    if type(decoding["max_completion_tokens"]) is not int or not 512 <= decoding["max_completion_tokens"] <= 16_384:
+        raise ContractError("OpenAI selector max_completion_tokens must be an integer in [512,16384]")
+    if decoding["reasoning_effort"] != "medium":
         raise ContractError("OpenAI selector reasoning_effort must be exactly medium")
     if decoding["response_format"] != OPENAI_SELECTOR_RESPONSE_FORMAT:
         raise ContractError("OpenAI selector response_format differs from the locked schema")
@@ -632,8 +629,8 @@ class SelectorIdentity:
             raise ContractError("selector max_attempts must be an integer in [1,3]")
         if transport_protocol == "openai_chat_completions":
             assert system_message is not None and prompt is not None and decoding_parameters is not None
-            if normalized_text["provider"] != "cortex-openai":
-                raise ContractError("OpenAI selector provider must be cortex-openai")
+            if normalized_text["provider"] != "openai":
+                raise ContractError("OpenAI selector provider must be openai")
             if normalized_text["tool_contract_revision"] != "none-v1":
                 raise ContractError("OpenAI selector forbids tools")
             if normalized_text["response_schema_revision"] != OPENAI_SELECTOR_RESPONSE_SCHEMA:

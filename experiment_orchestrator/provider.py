@@ -16,8 +16,8 @@ from urllib.parse import urlsplit, urlunsplit
 import httpx
 
 from .contracts import (
-    CORTEX_MAX_MODEL_LEN_TOKENS,
     MIN_SELECTOR_OUTPUT_TOKENS,
+    SELECTOR_MAX_MODEL_LEN_TOKENS,
     ContractError,
     ProviderResponse,
     SelectorContext,
@@ -29,10 +29,10 @@ from .settings import ProviderSettings
 
 Resolver = Callable[[str, int], Awaitable[frozenset[ipaddress.IPv4Address | ipaddress.IPv6Address]]]
 
-CORTEX_HOST = "cortex.vallery.net"
-CORTEX_OPENAI_BASE_PATH = "/v1"
-CORTEX_CHAT_COMPLETIONS_PATH = "/v1/chat/completions"
-CORTEX_LONG_CONTEXT_MODEL = "llm.primary.longctx"
+OPENAI_HOST = "api.openai.com"
+OPENAI_BASE_PATH = "/v1"
+OPENAI_CHAT_COMPLETIONS_PATH = "/v1/chat/completions"
+OPENAI_SELECTOR_MODEL = "gpt-5.6-sol"
 
 
 class ProviderTransport(Protocol):
@@ -112,10 +112,10 @@ def _request_budget_bytes(identity: SelectorIdentity) -> int:
 
     reserved_output = MIN_SELECTOR_OUTPUT_TOKENS
     if identity.decoding_parameters is not None:
-        value = identity.decoding_parameters["max_tokens"]
+        value = identity.decoding_parameters["max_completion_tokens"]
         assert type(value) is int  # SelectorIdentity.parse already proves it.
         reserved_output = value
-    return CORTEX_MAX_MODEL_LEN_TOKENS - reserved_output
+    return SELECTOR_MAX_MODEL_LEN_TOKENS - reserved_output
 
 
 def build_request(
@@ -143,18 +143,18 @@ def build_request(
     )
 
 
-def _cortex_chat_completions_endpoint(endpoint: str) -> str:
-    """Resolve only the one configured Cortex OpenAI base/completions URL."""
+def _openai_chat_completions_endpoint(endpoint: str) -> str:
+    """Resolve only the official OpenAI base/completions URL."""
 
     parsed = urlsplit(endpoint)
     path = parsed.path.rstrip("/") or "/"
-    if parsed.scheme != "https" or parsed.hostname != CORTEX_HOST or (parsed.port or 443) != 443:
-        raise ProviderUnavailable("OpenAI selector endpoint is not the locked Cortex authority")
-    if path == CORTEX_OPENAI_BASE_PATH:
-        path = CORTEX_CHAT_COMPLETIONS_PATH
-    elif path != CORTEX_CHAT_COMPLETIONS_PATH:
+    if parsed.scheme != "https" or parsed.hostname != OPENAI_HOST or (parsed.port or 443) != 443:
+        raise ProviderUnavailable("selector endpoint is not the locked official OpenAI authority")
+    if path == OPENAI_BASE_PATH:
+        path = OPENAI_CHAT_COMPLETIONS_PATH
+    elif path != OPENAI_CHAT_COMPLETIONS_PATH:
         raise ProviderUnavailable("OpenAI selector endpoint path is not the locked chat-completions route")
-    return urlunsplit(("https", CORTEX_HOST, path, "", ""))
+    return urlunsplit(("https", OPENAI_HOST, path, "", ""))
 
 
 def build_openai_request(
@@ -165,7 +165,7 @@ def build_openai_request(
     context: SelectorContext,
     identity: SelectorIdentity,
 ) -> bytes:
-    """Build the exact non-streaming Cortex request from one hash-bound identity."""
+    """Build the exact non-streaming official OpenAI request from one identity."""
 
     if (
         identity.transport_protocol != "openai_chat_completions"
@@ -174,8 +174,8 @@ def build_openai_request(
         or identity.decoding_parameters is None
     ):
         raise ContractError("OpenAI selector request artifacts are unavailable")
-    if identity.model_identifier != CORTEX_LONG_CONTEXT_MODEL:
-        raise ContractError("OpenAI selector model differs from the locked Cortex long-context alias")
+    if identity.model_identifier != OPENAI_SELECTOR_MODEL:
+        raise ContractError("OpenAI selector model differs from the locked GPT-5.6 Sol model")
     selector_request = build_request(
         study_id=study_id,
         local_date=local_date,
@@ -214,8 +214,8 @@ def _parse_openai_response(raw: bytes, identity: SelectorIdentity, completed_at:
         raise ContractError("OpenAI selector response is not valid UTF-8 JSON") from exc
     if not isinstance(envelope, dict):
         raise ContractError("OpenAI selector response root must be an object")
-    required = {"id", "object", "created", "model", "choices", "system_fingerprint"}
-    allowed = required | {"kv_transfer_params", "prompt_logprobs", "service_tier", "usage"}
+    required = {"id", "object", "created", "model", "choices"}
+    allowed = required | {"service_tier", "system_fingerprint", "usage"}
     if not required <= set(envelope) or not set(envelope) <= allowed:
         raise ContractError("OpenAI selector response envelope shape mismatch")
     if (
@@ -228,10 +228,9 @@ def _parse_openai_response(raw: bytes, identity: SelectorIdentity, completed_at:
         raise ContractError("OpenAI selector response envelope identity is malformed")
     if envelope["model"] != identity.model_revision:
         raise ContractError("OpenAI selector response model revision mismatch")
-    if envelope["system_fingerprint"] != identity.expected_system_fingerprint:
-        raise ContractError("OpenAI selector response system fingerprint mismatch")
-    if envelope.get("kv_transfer_params") is not None or envelope.get("prompt_logprobs") is not None:
-        raise ContractError("OpenAI selector response unexpectedly contains transfer or prompt-logprob data")
+    fingerprint = envelope.get("system_fingerprint")
+    if fingerprint is not None and (not isinstance(fingerprint, str) or not fingerprint):
+        raise ContractError("OpenAI selector system fingerprint is malformed")
     choices = envelope["choices"]
     if not isinstance(choices, list) or len(choices) != 1:
         raise ContractError("OpenAI selector response must contain exactly one choice")
@@ -279,7 +278,9 @@ def _parse_openai_response(raw: bytes, identity: SelectorIdentity, completed_at:
         provider=identity.provider,
         model_identifier=identity.model_identifier,
         model_revision=identity.model_revision,
-        system_fingerprint=identity.expected_system_fingerprint,
+        # OpenAI manages this infrastructure marker and may omit it. The
+        # immutable model/request/response hashes remain the study identity.
+        system_fingerprint=fingerprint or identity.expected_system_fingerprint,
         completed_at=completed_at.astimezone(UTC),
         raw_response_sha256=hashlib.sha256(raw).hexdigest(),
     )
@@ -378,17 +379,19 @@ class SelectorProviderAdapter:
             try:
                 response_hash = None
                 addresses = await self._resolver(self._settings.endpoint_host, self._settings.endpoint_port)
-                expected = self._settings.egress_network.network_address
                 normalized_addresses = frozenset(
                     address.ipv4_mapped
                     if isinstance(address, ipaddress.IPv6Address) and address.ipv4_mapped is not None
                     else address
                     for address in addresses
                 )
-                if normalized_addresses != frozenset({expected}):
+                if self._settings.endpoint_host == OPENAI_HOST:
+                    if not normalized_addresses or any(not address.is_global for address in normalized_addresses):
+                        raise ProviderUnavailable("official OpenAI DNS resolved outside global address space")
+                elif normalized_addresses != frozenset({self._settings.egress_network.network_address}):
                     raise ProviderUnavailable("selector DNS does not match the exact egress endpoint")
                 endpoint = (
-                    _cortex_chat_completions_endpoint(self._settings.endpoint)
+                    _openai_chat_completions_endpoint(self._settings.endpoint)
                     if identity.transport_protocol == "openai_chat_completions"
                     else self._settings.endpoint
                 )

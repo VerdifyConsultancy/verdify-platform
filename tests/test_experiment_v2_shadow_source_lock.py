@@ -74,11 +74,10 @@ def test_source_lock_derivations_and_artifact_hashes_are_exact() -> None:
     system_message = (REPO_ROOT / selector["system_message_path"]).read_text()
     prompt = (REPO_ROOT / selector["prompt_path"]).read_text()
     decoding = {
-        "chat_template_kwargs": {"reasoning_effort": "medium"},
-        "max_tokens": selector["max_tokens"],
+        "max_completion_tokens": selector["max_completion_tokens"],
+        "reasoning_effort": selector["reasoning_effort"],
         "response_format": OPENAI_SELECTOR_RESPONSE_FORMAT,
         "stream": False,
-        "temperature": 0,
     }
     assert hashlib.sha256(canonical_json_bytes(decoding)).hexdigest() == selector["decoding_parameters_sha256"]
     assert (
@@ -248,12 +247,12 @@ def test_source_lock_composes_with_generator_without_claiming_live_authority(tmp
         "schema": INPUT_SCHEMA,
         "selector": {
             "context_schema_path": _repo_path(selector["context_schema_path"]),
-            "egress_cidr": "192.168.7.10/32",
+            "egress_cidr": "0.0.0.0/0",
             "endpoint": selector["endpoint"],
             "expected_system_fingerprint": selector["expected_system_fingerprint"],
             "lesson_snapshot_path": _repo_path(selector["lesson_snapshot_path"]),
             "max_attempts": selector["max_attempts"],
-            "max_tokens": selector["max_tokens"],
+            "max_completion_tokens": selector["max_completion_tokens"],
             "model_identifier": selector["model_identifier"],
             "model_revision": selector["model_revision"],
             "prompt_path": _repo_path(selector["prompt_path"]),
@@ -287,7 +286,9 @@ def test_source_lock_composes_with_generator_without_claiming_live_authority(tmp
     selector_identity = SelectorIdentity.parse(selector_raw, hashlib.sha256(selector_raw).hexdigest())
     assert selector_identity.max_attempts == 2
     assert selector_identity.timeout_milliseconds == 60_000
-    assert selector_identity.decoding_parameters["max_tokens"] == 512
+    assert selector_identity.provider == "openai"
+    assert selector_identity.decoding_parameters["max_completion_tokens"] == 512
+    assert selector_identity.decoding_parameters["reasoning_effort"] == "medium"
 
     outcome_raw = outputs["outcome-identity/identity.json"]
     outcome_identity = OutcomeIdentity.parse(outcome_raw, hashlib.sha256(outcome_raw).hexdigest())
