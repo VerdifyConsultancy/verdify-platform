@@ -486,14 +486,26 @@ struct Coverage {
     std::string reject_reason;
 
     Coverage() {
-        for (size_t i = 0; i < kFieldCount; ++i) lookup_[kFields[i].component] = (int)i;
+        for (size_t i = 0; i < kFieldCount; ++i) {
+            lookup_[kFields[i].component] = (int)i;
+            last_applied_row_[i] = -1;
+        }
     }
+
+    void begin_row(long row_index) { current_row_ = row_index; }
 
     void mark(const char* component, const char* src) {
         auto it = lookup_.find(component);
         if (it == lookup_.end()) return;
-        source[it->second] = src;
-        applied_rows[it->second]++;
+        const int index = it->second;
+        // Corpus assignment may be overwritten later in the same row by the
+        // out-of-band policy state. Count the effective row once, while keeping
+        // the final source that actually reached validate_setpoints().
+        source[index] = src;
+        if (last_applied_row_[index] != current_row_) {
+            applied_rows[index]++;
+            last_applied_row_[index] = current_row_;
+        }
     }
 
     // Recorded once, after the corpus header is parsed, so the unimposed
@@ -506,16 +518,18 @@ struct Coverage {
         column_read_enabled[it->second] = read_enabled;
     }
 
-    size_t imposed_count() const {
+    size_t imposed_count(long rows) const {
         size_t n = 0;
         for (size_t i = 0; i < kFieldCount; ++i) {
-            if (!source[i].empty() && applied_rows[i] > 0) ++n;
+            if (rows > 0 && !source[i].empty() && applied_rows[i] == rows) ++n;
         }
         return n;
     }
 
  private:
     std::unordered_map<std::string, int> lookup_;
+    long current_row_ = 0;
+    long last_applied_row_[kFieldCount];
 };
 
 inline std::string json_escape(const char* s) {
@@ -549,18 +563,17 @@ constexpr char kCoverageSchema[] = "verdify-replay-invariants-coverage-v1";
 // row; `unimposed` carries the reason for each of the rest, so partial
 // coverage can never be mistaken for certification.
 //
-// `distinct_invariants` also disambiguates the harness's oldest exit-code
-// collision: exit 2 means BOTH "the corpus is unusable" and "exactly two
-// distinct invariants were breached". This line is printed only after the
-// corpus parsed, so its presence (with distinct_invariants == 2) identifies a
-// real breach, and its absence identifies the corpus case.
+// Exact violation counts are evidence, not process-code arithmetic: every
+// safety breach exits 1 while the pre-existing corpus-unusable case keeps exit
+// 2. Carry both counts here so callers never have to infer them from an exit
+// code and cannot accidentally accept two distinct invariant failures.
 inline void print_coverage_line(std::FILE* out, const Coverage& cov, long rows,
                                 int invariant_violations = 0, size_t distinct_invariants = 0) {
     std::string imposed, unimposed;
     size_t imposed_n = 0;
     for (size_t i = 0; i < kFieldCount; ++i) {
         const FieldSpec& spec = kFields[i];
-        const bool held = !cov.source[i].empty() && cov.applied_rows[i] > 0;
+        const bool held = rows > 0 && !cov.source[i].empty() && cov.applied_rows[i] == rows;
         if (held) {
             if (!imposed.empty()) imposed += ",";
             imposed += "\"" + json_escape(spec.component) + "\":{\"source\":\""
@@ -573,6 +586,9 @@ inline void print_coverage_line(std::FILE* out, const Coverage& cov, long rows,
         std::string reason;
         if (spec.sink == Sink::kNone) {
             reason = spec.note ? spec.note : "no compiled-logic consumer";
+        } else if (!cov.source[i].empty() && cov.applied_rows[i] > 0) {
+            reason = "effective assignment held " + std::to_string(cov.applied_rows[i])
+                   + "/" + std::to_string(rows) + " rows; partial-row coverage is unqualified";
         } else if (!cov.source[i].empty()) {
             reason = std::string("corpus column ") + spec.corpus_column
                    + " read but carried no parseable value on any row";

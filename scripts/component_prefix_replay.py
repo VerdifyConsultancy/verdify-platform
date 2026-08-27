@@ -60,12 +60,12 @@ decision for every corpus row from ``greenhouse_logic.h`` and asserts the
 behavioural invariants in ``firmware/test/invariants.h`` (#1..#27, the same set
 ``make firmware-invariants`` gates on).
 
-That harness is corpus-fed: it takes its setpoints from the corpus ``sp_*``
-columns, and it has NO surface for injecting an arbitrary complete 48-field
-policy state.  This tool therefore computes the harness's INJECTION COVERAGE
-from source (which ``sp_*`` columns ``replay_invariants.cpp`` actually assigns
-∩ which of those name one of the 48 executor components ∩ which the corpus
-carries) and adjudicates on that arithmetic:
+The harness accepts a complete 48-field out-of-band policy state, but only 27
+fields have consumers in the compiled decision path.  It prints one
+machine-readable coverage record naming those 27 effective assignments and the
+21 explicitly unimposed fields.  This tool derives the ceiling from the
+compiled binary's policy template, verifies the record says every credited
+field was held on every evaluated row, and adjudicates on that arithmetic:
 
   * a breach  → ``interlock_safe = "unsafe"``  (definitive failure);
   * no breach AND coverage == all 48 fields → ``interlock_safe = "safe"``;
@@ -188,6 +188,12 @@ def _sha256_bytes(raw: bytes) -> str:
     return hashlib.sha256(raw).hexdigest()
 
 
+def prefix_state_sha256(state: Mapping[str, float | bool]) -> str:
+    """Stable identity of the exact complete state adjudicated at one prefix."""
+    ordered = {name: state[name] for name in CANONICAL_FIELD_ORDER}
+    return _sha256_bytes(canonical_json(ordered).encode())
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Clamp bounds
 #
@@ -254,6 +260,8 @@ class ReplayEdge:
             "start_label": self.start_label,
             "target_label": self.target_label,
             "complete_bundle": self.complete_bundle,
+            "start_state_sha256": prefix_state_sha256(self.start_state),
+            "target_state_sha256": prefix_state_sha256(self.target_state),
         }
 
 
@@ -282,18 +290,23 @@ class PrefixVerdict:
     interlock_safe: str  # safe | unsafe | unproven
     ok: bool
     detail: str = ""
+    interlock_evidence_sha256: str | None = None
 
     def digest_row(self) -> dict[str, Any]:
-        """The narrow, wall-clock-free row that feeds the ORDER_REVISION hash."""
+        """The wall-clock-free prefix identity that feeds ORDER_REVISION."""
         return {
+            "applied_fields": list(self.case.applied_fields),
             "edge": self.case.edge,
             "firmware_clamp_ok": self.firmware_clamp_ok,
             "grid_ok": self.grid_ok,
             "index": self.case.index,
+            "interlock_evidence_sha256": self.interlock_evidence_sha256,
             "interlock_safe": self.interlock_safe,
             "ok": self.ok,
             "order_name": self.case.order_name,
+            "pending_fields": list(self.case.pending_fields),
             "registry_clamp_ok": self.registry_clamp_ok,
+            "state_sha256": prefix_state_sha256(self.case.device_state),
         }
 
     def payload(self) -> dict[str, Any]:
@@ -332,6 +345,7 @@ class ReplayResult:
 class InterlockOutcome:
     verdict: str  # safe | unsafe | unproven
     detail: str
+    evidence_sha256: str | None = None
 
 
 class InterlockProbe:
@@ -392,13 +406,49 @@ def harness_injection_coverage(source: str, corpus_columns: Sequence[str]) -> di
     return coverage
 
 
+_COVERAGE_MARKER = "##replay-invariants-coverage-v1"
+
+
+def parse_coverage_payload(output: str) -> dict[str, Any]:
+    """Decode the harness's one self-declared coverage record, fail closed."""
+    lines = [line for line in output.splitlines() if line.startswith(f"{_COVERAGE_MARKER} ")]
+    if len(lines) != 1:
+        raise PrefixReplayError(f"compiled harness emitted {len(lines)} coverage records (expected exactly one)")
+    try:
+        payload = json.loads(lines[0][len(_COVERAGE_MARKER) + 1 :])
+    except json.JSONDecodeError as exc:
+        raise PrefixReplayError("compiled harness coverage record is not JSON") from exc
+    if not isinstance(payload, dict):
+        raise PrefixReplayError("compiled harness coverage record must be an object")
+    return payload
+
+
+def policy_template_injection_coverage(template: str) -> frozenset[str]:
+    """Read the compiled binary's 27-field injection ceiling from its template."""
+    canonical = frozenset(CANONICAL_FIELD_ORDER)
+    rows: dict[str, bool] = {}
+    for line in template.splitlines():
+        tokens = line.split()
+        if not tokens or tokens[0] not in canonical:
+            continue
+        name = tokens[0]
+        if name in rows:
+            raise PrefixReplayError(f"compiled policy template duplicates {name}")
+        rows[name] = "NOT-IMPOSABLE" not in line
+    if frozenset(rows) != canonical:
+        missing = sorted(canonical - frozenset(rows))
+        extra = sorted(frozenset(rows) - canonical)
+        raise PrefixReplayError(f"compiled policy template is not full-48: missing={missing} extra={extra}")
+    return frozenset(name for name, injectable in rows.items() if injectable)
+
+
 class CompiledInvariantInterlock(InterlockProbe):
     """Drives the compiled `replay_invariants` harness over a disturbance corpus.
 
-    For each distinct injected-value tuple the corpus is rewritten with the
-    prefix state imposed on every covered `sp_*` column and the harness is run
-    once; results are cached by tuple, because the covered subset changes far
-    less often than the 48-field prefix state does.
+    For each distinct injectable-value tuple a complete 48-field policy-state
+    file is supplied through the harness's out-of-band surface.  The harness
+    self-declares which fields it held on every row; that machine record, rather
+    than source scanning or exit-code inference, is the coverage authority.
     """
 
     name = "compiled-replay-invariants"
@@ -408,9 +458,8 @@ class CompiledInvariantInterlock(InterlockProbe):
         *,
         binary: Path,
         corpus_path: Path,
-        header: list[str],
-        rows: list[str],
-        coverage: Mapping[str, str],
+        row_count: int,
+        coverage: Sequence[str],
         workdir: Path,
         binary_sha256: str,
         source_sha256: str,
@@ -418,15 +467,12 @@ class CompiledInvariantInterlock(InterlockProbe):
     ) -> None:
         self.binary = binary
         self.corpus_path = corpus_path
-        self.header = header
-        self.rows = rows
-        self.coverage = dict(coverage)
-        self.covered_fields = frozenset(self.coverage)
+        self.row_count = row_count
+        self.covered_fields = frozenset(coverage)
         self.workdir = workdir
         self.binary_sha256 = binary_sha256
         self.source_sha256 = source_sha256
         self.corpus_sha256 = corpus_sha256
-        self._column_index = {name: idx for idx, name in enumerate(header)}
         self._cache: dict[tuple[tuple[str, str], ...], InterlockOutcome] = {}
         self.runs = 0
 
@@ -435,12 +481,13 @@ class CompiledInvariantInterlock(InterlockProbe):
             **super().describe(),
             "binary_sha256": self.binary_sha256,
             "corpus_path": str(self.corpus_path),
-            "corpus_rows": len(self.rows),
+            "corpus_rows": self.row_count,
             "corpus_sha256": self.corpus_sha256,
             "harness_runs": self.runs,
             "harness_source_sha256": self.source_sha256,
-            "injection_columns": {name: self.coverage[name] for name in sorted(self.coverage)},
+            "injection_columns": {name: "policy_state" for name in sorted(self.covered_fields)},
             "uncovered_field_count": len(CANONICAL_FIELD_ORDER) - len(self.covered_fields),
+            "uncovered_fields": sorted(set(CANONICAL_FIELD_ORDER) - self.covered_fields),
             "uncovered_treatment_fields": sorted(set(TREATMENT_FIELD_ORDER) - self.covered_fields),
         }
 
@@ -455,21 +502,55 @@ class CompiledInvariantInterlock(InterlockProbe):
         return str(int(numeric)) if numeric.is_integer() else repr(numeric)
 
     def _key(self, state: Mapping[str, float | bool]) -> tuple[tuple[str, str], ...]:
-        return tuple((name, self._cell(state[name])) for name in sorted(self.coverage))
+        # Cache only byte-identical complete policy files. The remaining 21
+        # fields are explicitly unqualified, but reusing evidence from a
+        # different full state would sever the per-prefix evidence identity.
+        return tuple((name, self._cell(state[name])) for name in CANONICAL_FIELD_ORDER)
 
-    def _run(self, key: tuple[tuple[str, str], ...]) -> InterlockOutcome:
-        cells = dict(key)
-        targets = [(self._column_index[self.coverage[name]], cells[name]) for name in sorted(self.coverage)]
-        path = self.workdir / f"corpus-{hashlib.sha256(canonical_json(key).encode()).hexdigest()[:16]}.tsv"
-        with path.open("w", encoding="utf-8") as handle:
-            handle.write("\t".join(self.header) + "\n")
-            for row in self.rows:
-                columns = row.split("\t")
-                for index, cell in targets:
-                    columns[index] = cell
-                handle.write("\t".join(columns) + "\n")
+    def _coverage_failure(self, payload: Mapping[str, Any], policy_state_sha256: str) -> str | None:
+        expected = set(self.covered_fields)
+        imposed = payload.get("imposed")
+        unimposed = payload.get("unimposed")
+        checks = {
+            "schema": payload.get("schema") == "verdify-replay-invariants-coverage-v1",
+            "field_count": payload.get("field_count") == 48,
+            "injectable_count": payload.get("injectable_count") == len(expected) == 27,
+            "imposed_count": payload.get("imposed_count") == len(expected),
+            "full_coverage": payload.get("full_coverage") is False,
+            "full_injectable_coverage": payload.get("full_injectable_coverage") is True,
+            "rows": payload.get("rows") == self.row_count,
+            "status": payload.get("status") == "ok",
+            "policy_state_sha256": payload.get("policy_state_sha256") == policy_state_sha256,
+            "imposed_shape": isinstance(imposed, dict) and set(imposed) == expected,
+            "unimposed_shape": isinstance(unimposed, dict) and set(unimposed) == set(CANONICAL_FIELD_ORDER) - expected,
+        }
+        failed = [name for name, ok in checks.items() if not ok]
+        if failed:
+            return f"coverage contract mismatch: {','.join(failed)}"
+        assert isinstance(imposed, dict)
+        partial = [
+            name
+            for name, row in imposed.items()
+            if not isinstance(row, dict) or row.get("source") != "policy_state" or row.get("rows") != self.row_count
+        ]
+        if partial:
+            return f"coverage was not effective on every row: {','.join(sorted(partial))}"
+        return None
+
+    def _run(
+        self,
+        key: tuple[tuple[str, str], ...],
+        state: Mapping[str, float | bool],
+    ) -> InterlockOutcome:
+        identity = hashlib.sha256(canonical_json(key).encode()).hexdigest()[:16]
+        path = self.workdir / f"policy-state-{identity}.txt"
+        path.write_text(
+            "".join(f"{name} {self._cell(state[name])}\n" for name in CANONICAL_FIELD_ORDER),
+            encoding="utf-8",
+        )
+        policy_state_sha256 = _sha256_bytes(path.read_bytes())
         proc = subprocess.run(  # offline: local binary, local file, no network
-            [str(self.binary), str(path)],
+            [str(self.binary), str(self.corpus_path), f"--policy-state={path}"],
             capture_output=True,
             text=True,
             timeout=1800,
@@ -478,29 +559,45 @@ class CompiledInvariantInterlock(InterlockProbe):
         path.unlink(missing_ok=True)
         self.runs += 1
         evidence = _sha256_bytes((proc.stdout + proc.stderr).encode())
-        if proc.returncode != 0:
-            breach = " | ".join(line for line in proc.stderr.splitlines() if "INVARIANT FAIL" in line)
-            return InterlockOutcome(
-                UNSAFE,
-                f"replay_invariants exit={proc.returncode} evidence={evidence[:16]} {breach}".strip(),
-            )
-        if self.covered_fields != frozenset(CANONICAL_FIELD_ORDER):
-            missing = len(CANONICAL_FIELD_ORDER) - len(self.covered_fields)
+        try:
+            coverage = parse_coverage_payload(proc.stdout)
+        except PrefixReplayError as exc:
             return InterlockOutcome(
                 UNPROVEN,
-                (
-                    f"no invariant breach over {len(self.rows)} corpus rows (evidence={evidence[:16]}), but the "
-                    f"harness can impose only {len(self.covered_fields)}/48 components — {missing} uncovered, "
-                    "so the prefix state was not actually held during the run"
-                ),
+                f"compiled harness coverage unavailable (exit={proc.returncode}): {exc}",
+                evidence,
             )
-        return InterlockOutcome(SAFE, f"no invariant breach over {len(self.rows)} corpus rows evidence={evidence[:16]}")
+        coverage_failure = self._coverage_failure(coverage, policy_state_sha256)
+        if coverage_failure is not None:
+            return InterlockOutcome(UNPROVEN, coverage_failure, evidence)
+        violations = coverage.get("invariant_violations")
+        if isinstance(violations, int) and not isinstance(violations, bool) and violations > 0:
+            return InterlockOutcome(
+                UNSAFE,
+                f"compiled harness found {violations} invariant violations (exit={proc.returncode})",
+                evidence,
+            )
+        if proc.returncode != 0:
+            return InterlockOutcome(
+                UNPROVEN,
+                f"compiled harness failed without a declared invariant breach (exit={proc.returncode})",
+                evidence,
+            )
+        missing = len(CANONICAL_FIELD_ORDER) - len(self.covered_fields)
+        return InterlockOutcome(
+            UNPROVEN,
+            (
+                f"no invariant breach over {self.row_count} corpus rows, but compiled policy-state coverage is "
+                f"exactly {len(self.covered_fields)}/48; the remaining {missing} fields are explicitly unqualified"
+            ),
+            evidence,
+        )
 
     def verdict(self, case: PrefixCase) -> InterlockOutcome:
         key = self._key(case.device_state)
         cached = self._cache.get(key)
         if cached is None:
-            cached = self._run(key)
+            cached = self._run(key, case.device_state)
             self._cache[key] = cached
         return cached
 
@@ -528,9 +625,15 @@ class ExternalHarnessInterlock(InterlockProbe):
         self.timeout = timeout
         self.covered_fields = frozenset()
         self.calls = 0
+        self.harness_sha256 = _sha256_bytes(harness.read_bytes()) if harness.is_file() else None
 
     def describe(self) -> dict[str, Any]:
-        return {**super().describe(), "harness": str(self.harness), "calls": self.calls}
+        return {
+            **super().describe(),
+            "harness": str(self.harness),
+            "harness_sha256": self.harness_sha256,
+            "calls": self.calls,
+        }
 
     def verdict(self, case: PrefixCase) -> InterlockOutcome:
         request = {
@@ -567,13 +670,25 @@ class ExternalHarnessInterlock(InterlockProbe):
             self.covered_fields = self.covered_fields | frozenset(covered)
         detail = str(answer.get("detail", ""))[:400]
         claimed = answer.get("verdict")
+        raw_evidence = answer.get("evidence_sha256")
+        evidence_sha256 = (
+            raw_evidence
+            if isinstance(raw_evidence, str) and re.fullmatch(r"[0-9a-f]{64}", raw_evidence) is not None
+            else None
+        )
         if claimed == UNSAFE:
-            return InterlockOutcome(UNSAFE, detail or "external harness reported an unsafe prefix state")
+            return InterlockOutcome(
+                UNSAFE,
+                detail or "external harness reported an unsafe prefix state",
+                evidence_sha256,
+            )
         if claimed != SAFE:
-            return InterlockOutcome(UNPROVEN, detail or f"external harness verdict {claimed!r}")
+            return InterlockOutcome(UNPROVEN, detail or f"external harness verdict {claimed!r}", evidence_sha256)
         if not isinstance(covered, list) or frozenset(covered) != frozenset(CANONICAL_FIELD_ORDER):
             return InterlockOutcome(UNPROVEN, "external harness claimed safe without declaring all 48 components")
-        return InterlockOutcome(SAFE, detail or "external harness reported a safe prefix state")
+        if evidence_sha256 is None:
+            return InterlockOutcome(UNPROVEN, "external harness claimed safe without a lowercase sha256 evidence id")
+        return InterlockOutcome(SAFE, detail or "external harness reported a safe prefix state", evidence_sha256)
 
 
 def build_compiled_interlock(
@@ -602,6 +717,23 @@ def build_compiled_interlock(
     if build.returncode != 0 or not binary.is_file():
         return UnprovenInterlock(f"compiled harness build failed: {build.stderr.strip().splitlines()[-1:] or ''}")
 
+    template = subprocess.run(
+        [str(binary), "--print-policy-template"],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if template.returncode != 0:
+        return UnprovenInterlock(f"compiled harness policy template failed: exit={template.returncode}")
+    try:
+        coverage = policy_template_injection_coverage(template.stdout)
+    except PrefixReplayError as exc:
+        return UnprovenInterlock(str(exc))
+    if len(coverage) != 27:
+        return UnprovenInterlock(
+            f"compiled harness injection ceiling changed: expected honest 27/48, observed {len(coverage)}/48"
+        )
+
     opener = gzip.open if corpus.suffix == ".gz" else open
     with opener(corpus, "rt", encoding="utf-8", newline="") as handle:  # type: ignore[operator]
         lines = handle.read().splitlines()
@@ -615,21 +747,17 @@ def build_compiled_interlock(
         return UnprovenInterlock(f"disturbance corpus has no data rows: {corpus}")
 
     source = INVARIANTS_SOURCE.read_text(encoding="utf-8")
-    coverage = harness_injection_coverage(source, header)
-    if not coverage:
-        return UnprovenInterlock(
-            "the compiled harness reads none of the 48 executor components from the corpus — nothing to impose"
-        )
+    execution_corpus = workdir / "replay-corpus.tsv"
+    execution_corpus.write_text("\n".join(["\t".join(header), *rows]) + "\n", encoding="utf-8")
     return CompiledInvariantInterlock(
         binary=binary,
-        corpus_path=corpus,
-        header=header,
-        rows=rows,
-        coverage=coverage,
+        corpus_path=execution_corpus,
+        row_count=len(rows),
+        coverage=sorted(coverage),
         workdir=workdir,
         binary_sha256=_sha256_bytes(binary.read_bytes()),
         source_sha256=_sha256_bytes(source.encode()),
-        corpus_sha256=_sha256_bytes(corpus.read_bytes()),
+        corpus_sha256=_sha256_bytes(execution_corpus.read_bytes()),
     )
 
 
@@ -724,6 +852,7 @@ def _grade(case: PrefixCase, interlock: InterlockOutcome) -> PrefixVerdict:
         interlock_safe=interlock.verdict,
         ok=ok,
         detail="; ".join(details),
+        interlock_evidence_sha256=interlock.evidence_sha256,
     )
 
 
@@ -852,10 +981,33 @@ def replay(
     return result
 
 
+_REVISION_INTERLOCK_KEYS = (
+    "probe",
+    "covered_field_count",
+    "covered_fields",
+    "full_coverage",
+    "binary_sha256",
+    "harness_source_sha256",
+    "harness_sha256",
+    "corpus_sha256",
+    "corpus_rows",
+    "injection_columns",
+    "uncovered_field_count",
+    "uncovered_fields",
+    "uncovered_treatment_fields",
+)
+
+
+def revision_interlock_payload(description: Mapping[str, Any]) -> dict[str, Any]:
+    """Deterministic compiled/HIL identity; excludes paths, clocks and run counts."""
+    return {key: description[key] for key in _REVISION_INTERLOCK_KEYS if description.get(key) is not None}
+
+
 def revision_digest_payload(result: ReplayResult) -> dict[str, Any]:
-    """The exact, wall-clock-free evidence the ORDER_REVISION addresses."""
+    """The exact prefix states, orders and firmware/HIL evidence qualified."""
     return {
         "edges": result.edges,
+        "interlock": revision_interlock_payload(result.interlock),
         "orders": {
             "activation": list(ACTIVATION_ORDER),
             "recovery": list(RECOVERY_ORDER),
@@ -868,13 +1020,11 @@ def revision_digest_payload(result: ReplayResult) -> dict[str, Any]:
 def derive_order_revision(result: ReplayResult, *, revision_prefix: str = ORDER_REVISION_PREFIX) -> str:
     """`prefix-replay-v1:sha256:<H2>` — only ever called on an all-pass result.
 
-    H2 addresses the ORDERS + EDGES + VERDICTS and nothing else, so the same
-    edge set adjudicated by two different probes mints the same string.  The
-    probe's own identity and digests are therefore NOT self-evident from the
-    revision: they travel beside it (the `interlock_evidence:` report line, and
-    the `interlock` block inside the --json payload's `result_sha256`).  A
-    reviewer promoting a revision into `component_executor.ORDER_REVISION` must
-    read that provenance, not the revision alone.
+    H2 binds the exact state at every prefix, fixed orders, boolean verdicts,
+    per-case evidence digests, and the deterministic compiled/HIL identity.
+    Filesystem paths, run counters, free text and wall clocks are excluded so
+    the same evidence re-derives identically without allowing changed firmware,
+    corpus, profiles or prefix values to reuse a stale revision.
     """
     if not result.all_pass:
         raise PrefixReplayError("order_revision is only derivable from an all-pass replay")
@@ -1115,11 +1265,10 @@ def report(checks: Sequence[Check], result: ReplayResult, failures_shown: int = 
     remaining = len(distinct_failures(result.failures)) - failures_shown
     if remaining > 0:
         print(f"    ! … {remaining} more distinct causes ({len(result.failures)} failure lines total)")
-    # The ORDER_REVISION digest addresses the ORDERS + EDGES + VERDICTS only —
-    # it deliberately says nothing about which probe produced those verdicts.
-    # Never review a bare revision: this line is the provenance that belongs
-    # with it, and --json carries the same block under `interlock` inside the
-    # (provenance-covering) result_sha256.
+    # The ORDER_REVISION binds the stable hashes/coverage in this block (and the
+    # exact per-prefix state/evidence ids).  Print the full human-facing block as
+    # well; paths and run counters remain useful diagnostics even though they
+    # are intentionally absent from the deterministic revision preimage.
     print(
         "interlock_evidence: "
         + canonical_json(

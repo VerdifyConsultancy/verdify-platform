@@ -40,13 +40,13 @@
  * consumer inside the compiled control logic at all; the other 21 are read by
  * ESPHome lambdas outside greenhouse_logic.h and can never be certified here.
  *
- * Exit code: 0 if all invariants pass, non-zero = count of distinct
- * invariants violated (so CI fails on any breach). Exit 2 keeps its existing
- * meaning — the corpus is unusable/predates the invariant schema — and
- * `.agent-fleet/ci.yaml` still special-cases it. Exit 64 (EX_USAGE) is new and
- * means the INVOCATION was rejected (bad option, or a policy state that is
- * incomplete / off the wire scale / outside the wire envelope); it is never a
- * statement about firmware safety.
+ * Exit code: 0 if all invariants pass, 1 if any invariant is violated. The
+ * exact distinct/total counts live in the machine-readable coverage record;
+ * they must never become the process code because exit 2 has the pre-existing
+ * corpus-unusable meaning that CI special-cases. Exit 64 (EX_USAGE) means the
+ * INVOCATION was rejected (bad option, or a policy state that is incomplete /
+ * off the wire scale / outside the wire envelope); it is never a statement
+ * about firmware safety.
  */
 
 #include "invariants.h"
@@ -120,6 +120,9 @@ static FailureStats g_stats;
 // Existing meaning: the corpus is unusable / predates the invariant schema.
 // `.agent-fleet/ci.yaml` maps this to "accepted legacy corpus" — do not reuse.
 static constexpr int kExitCorpus = 2;
+// Stable safety-failure code. Never encode the distinct-invariant count here:
+// exactly two breaches would collide with kExitCorpus and be accepted by CI.
+static constexpr int kExitInvariant = 1;
 // New: the invocation itself was rejected (sysexits EX_USAGE). Never a safety
 // verdict, and deliberately far above the highest possible invariant count.
 static constexpr int kExitUsage = 64;
@@ -293,6 +296,7 @@ int main(int argc, char** argv) {
         }
     }
     while (std::getline(f, line)) {
+        coverage.begin_row(rows);
         std::vector<std::string> cols;
         {
             std::istringstream ss(line);
@@ -577,7 +581,7 @@ int main(int argc, char** argv) {
 
     // Coverage declaration — printed on EVERY run, pass or fail, so a clean
     // exit can only be read as certifying the components it actually held.
-    const size_t imposed = coverage.imposed_count();
+    const size_t imposed = coverage.imposed_count(rows);
     std::printf("\n═══ Policy-vector injection coverage — %zu/%zu components imposed"
                 " (compiled-logic ceiling %zu) ═══\n",
                 imposed, policy_injection::kFieldCount, policy_injection::kInjectableCount);
@@ -586,5 +590,5 @@ int main(int argc, char** argv) {
     }
     policy_injection::print_coverage_line(stdout, coverage, rows,
                                           g_stats.total, g_stats.counts_by_id.size());
-    return (int)g_stats.counts_by_id.size();
+    return g_stats.counts_by_id.empty() ? 0 : kExitInvariant;
 }

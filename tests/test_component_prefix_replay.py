@@ -419,6 +419,34 @@ def test_default_compiled_probe_cannot_certify_the_full_grid() -> None:
     assert set(TREATMENT_FIELD_ORDER) - set(coverage), "most treatment components are not injectable"
 
 
+def test_compiled_policy_template_declares_an_exact_27_of_48_ceiling() -> None:
+    injectable = set(CANONICAL_FIELD_ORDER[:27])
+    template = "\n".join(
+        f"{name} 1 # wire_id={index + 1}" + ("" if name in injectable else " NOT-IMPOSABLE")
+        for index, name in enumerate(CANONICAL_FIELD_ORDER)
+    )
+    coverage = tool.policy_template_injection_coverage(template)
+    assert coverage == frozenset(injectable)
+    assert len(set(CANONICAL_FIELD_ORDER) - coverage) == 21
+
+
+def test_coverage_record_parser_requires_one_machine_record() -> None:
+    marker = tool._COVERAGE_MARKER
+    payload = {"schema": "verdify-replay-invariants-coverage-v1", "imposed_count": 27}
+    assert tool.parse_coverage_payload(f"noise\n{marker} {json.dumps(payload)}\n") == payload
+    with pytest.raises(tool.PrefixReplayError):
+        tool.parse_coverage_payload("no declaration")
+    with pytest.raises(tool.PrefixReplayError):
+        tool.parse_coverage_payload(f"{marker} {{}}\n{marker} {{}}\n")
+
+
+def test_invariant_failures_cannot_collide_with_the_ci_legacy_corpus_exit() -> None:
+    source = tool.INVARIANTS_SOURCE.read_text(encoding="utf-8")
+    assert "static constexpr int kExitCorpus = 2;" in source
+    assert "static constexpr int kExitInvariant = 1;" in source
+    assert "return g_stats.counts_by_id.empty() ? 0 : kExitInvariant;" in source
+
+
 def test_harness_coverage_ignores_columns_the_corpus_does_not_carry() -> None:
     source = 'assign_positive_float("sp_fog_escalation_kpa", sp.fog_escalation_kpa);'
     assert tool.harness_injection_coverage(source, []) == {}
@@ -497,7 +525,7 @@ def test_revision_hash_is_deterministic_across_independent_runs(profiles) -> Non
 def test_revision_digest_excludes_wall_clock_and_free_text(profiles) -> None:
     result = passing_result(profiles)
     payload = tool.revision_digest_payload(result)
-    assert set(payload) == {"edges", "orders", "verdicts"}
+    assert set(payload) == {"edges", "interlock", "orders", "verdicts"}
     assert payload["orders"] == {
         "activation": list(ACTIVATION_ORDER),
         "recovery": list(RECOVERY_ORDER),
@@ -505,14 +533,18 @@ def test_revision_digest_excludes_wall_clock_and_free_text(profiles) -> None:
     }
     for row in payload["verdicts"]:
         assert set(row) == {
+            "applied_fields",
             "edge",
             "firmware_clamp_ok",
             "grid_ok",
             "index",
+            "interlock_evidence_sha256",
             "interlock_safe",
             "ok",
             "order_name",
+            "pending_fields",
             "registry_clamp_ok",
+            "state_sha256",
         }
     serialized = tool.canonical_json(payload)
     assert "detail" not in serialized
@@ -533,8 +565,40 @@ def test_any_verdict_change_changes_the_revision(profiles) -> None:
         order_revision=None,
         failures=[],
         edges=result.edges,
+        interlock=result.interlock,
     )
     assert tool.derive_order_revision(mutated) != result.order_revision
+
+
+def test_profile_value_change_with_the_same_changed_fields_changes_revision(profiles) -> None:
+    changed = {name: dict(values) for name, values in profiles.items()}
+    before_fields = [
+        change.field_name
+        for change in tool.fixed_order_differences(changed["baseline"], changed["moderate"], order=ACTIVATION_ORDER)
+    ]
+    changed["moderate"]["fog_escalation_kpa"] = 0.4
+    after_fields = [
+        change.field_name
+        for change in tool.fixed_order_differences(changed["baseline"], changed["moderate"], order=ACTIVATION_ORDER)
+    ]
+    assert after_fields == before_fields
+    assert passing_result(changed).order_revision != passing_result(profiles).order_revision
+
+
+def test_firmware_or_interlock_identity_change_changes_revision(profiles) -> None:
+    result = passing_result(profiles)
+    changed = replace(
+        result,
+        interlock={**result.interlock, "binary_sha256": "a" * 64, "harness_source_sha256": "b" * 64},
+    )
+    assert tool.derive_order_revision(changed) != result.order_revision
+
+
+def test_per_prefix_interlock_evidence_change_changes_revision(profiles) -> None:
+    result = passing_result(profiles)
+    verdicts = [replace(result.verdicts[0], interlock_evidence_sha256="c" * 64), *result.verdicts[1:]]
+    changed = replace(result, verdicts=verdicts)
+    assert tool.derive_order_revision(changed) != result.order_revision
 
 
 def test_a_different_edge_set_changes_the_revision(profiles) -> None:

@@ -158,10 +158,11 @@ TEST(full_48_injection_round_trips_onto_every_injectable_firmware_symbol) {
     Coverage coverage;
     EconLatch econ;
     Setpoints sp = band_setpoints();
+    coverage.begin_row(0);
     policy_injection::apply_policy_state(state, sp, econ, -5.0f, coverage);
 
     // Every injectable component was declared imposed, and nothing else was.
-    ASSERT_EQ(coverage.imposed_count(), (size_t)27);
+    ASSERT_EQ(coverage.imposed_count(1), (size_t)27);
     for (size_t i = 0; i < policy_injection::kFieldCount; ++i) {
         const bool imposed = !coverage.source[i].empty() && coverage.applied_rows[i] > 0;
         ASSERT_EQ(imposed, policy_injection::kFields[i].sink != Sink::kNone);
@@ -234,18 +235,23 @@ TEST(enthalpy_pair_reaches_econ_block_through_the_controls_yaml_deadband) {
     Setpoints sp = band_setpoints();
 
     // dH below the open threshold → economiser unblocked.
+    coverage.begin_row(0);
     policy_injection::apply_policy_state(state, sp, econ, -5.0f, coverage);
     ASSERT_FALSE(sp.econ_block);
     // Inside the deadband → the latch holds its previous value.
+    coverage.begin_row(1);
     policy_injection::apply_policy_state(state, sp, econ, 0.0f, coverage);
     ASSERT_FALSE(sp.econ_block);
     // At/above the close threshold → blocked, and it latches through the band.
+    coverage.begin_row(2);
     policy_injection::apply_policy_state(state, sp, econ, 9.0f, coverage);
     ASSERT_TRUE(sp.econ_block);
+    coverage.begin_row(3);
     policy_injection::apply_policy_state(state, sp, econ, 0.0f, coverage);
     ASSERT_TRUE(sp.econ_block);
     // A NaN intake reading fails safe to blocked (controls.yaml:356-361).
     econ.reset();
+    coverage.begin_row(4);
     policy_injection::apply_policy_state(state, sp, econ, NAN, coverage);
     ASSERT_TRUE(sp.econ_block);
     PASS();
@@ -375,6 +381,7 @@ static int replay_minutes(const PolicyState& state, int minutes, float temp_f, f
     for (int minute = 0; minute < minutes; ++minute) {
         const float row_vpd = (hot_minutes >= 0 && minute >= hot_minutes) ? vpd_settled : vpd_kpa;
         Setpoints sp = band_setpoints();
+        coverage.begin_row(minute);
         policy_injection::apply_policy_state(state, sp, econ, -5.0f, coverage);
         sp.sw_fsm_controller_enabled = true;
         validate_setpoints(sp);
@@ -520,8 +527,11 @@ TEST(coverage_line_declares_exactly_what_the_run_imposed) {
 
     Coverage coverage;
     EconLatch econ;
-    Setpoints sp = band_setpoints();
-    policy_injection::apply_policy_state(state, sp, econ, -5.0f, coverage);
+    for (int row = 0; row < 17; ++row) {
+        Setpoints sp = band_setpoints();
+        coverage.begin_row(row);
+        policy_injection::apply_policy_state(state, sp, econ, -5.0f, coverage);
+    }
     coverage.policy_state_loaded = true;
     coverage.policy_state_path = "state.txt";
 
@@ -550,10 +560,31 @@ TEST(coverage_line_declares_exactly_what_the_run_imposed) {
     PASS();
 }
 
-TEST(coverage_line_disambiguates_the_exit_2_collision) {
-    // Exit 2 means both "corpus unusable" and "exactly two distinct
-    // invariants breached". The line is emitted only after a parsed corpus, so
-    // it is the discriminator; assert it actually carries the counts.
+TEST(coverage_counts_the_final_effective_assignment_once_per_row) {
+    Coverage coverage;
+    const int index = policy_injection::index_of("temp_hysteresis");
+    ASSERT_TRUE(index >= 0);
+
+    coverage.begin_row(0);
+    coverage.mark("temp_hysteresis", "corpus:sp_temp_hysteresis");
+    coverage.mark("temp_hysteresis", "policy_state");
+    ASSERT_EQ(coverage.applied_rows[index], 1L);
+    ASSERT_EQ(coverage.source[index], std::string("policy_state"));
+    ASSERT_EQ(coverage.imposed_count(1), (size_t)1);
+
+    // One effective row out of two is partial evidence and is never credited.
+    ASSERT_EQ(coverage.imposed_count(2), (size_t)0);
+    const std::string line = capture_coverage_line(coverage, 2);
+    ASSERT_TRUE(line.find("\"imposed_count\":0") != std::string::npos);
+    ASSERT_TRUE(line.find("effective assignment held 1/2 rows; partial-row coverage is unqualified")
+                != std::string::npos);
+    PASS();
+}
+
+TEST(coverage_line_reports_invariant_counts_independently_of_the_exit_code) {
+    // Safety failures now use stable exit 1 so they cannot collide with the
+    // legacy corpus-only exit 2. Exact counts remain evidence, not process-code
+    // arithmetic, and must be carried in the machine record.
     Coverage coverage;
     const std::string breach = capture_coverage_line(coverage, 296698, 2740, 2);
     ASSERT_TRUE(breach.find("\"invariant_violations\":2740") != std::string::npos);

@@ -150,6 +150,7 @@ from verdify_schemas.component_executor import (  # noqa: E402
     ENTITY_GRIDS,
     ComponentContractError,
     normalize_complete_state,
+    normalize_component_value,
 )
 from verdify_schemas.component_executor import GRID_REVISION as SOURCE_GRID_REVISION  # noqa: E402
 from verdify_schemas.component_qualification import (  # noqa: E402
@@ -184,6 +185,20 @@ REQUIRED_BAND_SERIES: tuple[str, ...] = (
     "vpd_high",
     "vpd_target",
 )
+
+# The four dispatcher band edges are source-locked registry readbacks.  The two
+# computed targets are read-only telemetry publishes (ingestor/entity_map.py),
+# not policy components, so they are pinned explicitly here.  Merely requiring
+# a non-empty slug would let an artifact relabel an unrelated sensor as one of
+# the six required series.
+EXPECTED_BAND_OBSERVED_SLUGS: dict[str, str] = {
+    "temp_low": str(REGISTRY["temp_low"].cfg_readback_object_id),
+    "temp_high": str(REGISTRY["temp_high"].cfg_readback_object_id),
+    "temp_target": "house_temp_target_f",
+    "vpd_low": str(REGISTRY["vpd_low"].cfg_readback_object_id),
+    "vpd_high": str(REGISTRY["vpd_high"].cfg_readback_object_id),
+    "vpd_target": "house_vpd_target",
+}
 
 REQUIRED_REVISIONS: tuple[str, ...] = (
     "source_revision",
@@ -525,6 +540,48 @@ def _layer_value_text(layer: Mapping[str, Any], label: str) -> str | None:
     return _decimal_text(_as_decimal(value, label))
 
 
+def _layer_values_equal(left: object, right: object, label: str) -> bool:
+    """Compare two engineering values under the transport they declare.
+
+    Two exact decimal strings remain exact-decimal evidence.  If either side is
+    a JSON number, that side represents a decoded ESPHome protobuf float, so
+    equality is the exact binary32 value the physical transport carried.  This
+    admits ``0.05`` and its decoded ``0.05000000074505806`` representation but
+    still rejects an adjacent binary32 value; it never orders or tolerates
+    numeric transport values.
+    """
+    if isinstance(left, bool) or isinstance(right, bool):
+        return type(left) is bool and type(right) is bool and left == right  # noqa: E721
+    if isinstance(left, (str, Decimal)) and isinstance(right, (str, Decimal)):
+        return _as_decimal(left, f"{label}:left") == _as_decimal(right, f"{label}:right")
+    return _binary32(left, f"{label}:left") == _binary32(right, f"{label}:right")
+
+
+def _normalize_observed_component(field_name: str, value: object) -> bool | float:
+    """Map an exact device binary32 readback back to its canonical grid point.
+
+    Exact strings retain the executor's strict decimal-grid semantics.  JSON
+    numbers are raw protobuf-float readbacks, so numeric grids are enumerated
+    and matched by exact four-byte representation.  The returned value is the
+    source decimal grid point, never the noisy decoded binary64 spelling.
+    """
+    grid = ENTITY_GRIDS[field_name]
+    if grid.entity_type == "switch" or isinstance(value, (str, Decimal)):
+        return normalize_component_value(field_name, value)  # type: ignore[arg-type]
+    if isinstance(value, bool):
+        return normalize_component_value(field_name, value)
+    assert grid.minimum is not None and grid.maximum is not None and grid.step is not None
+    observed_bytes = _binary32(value, f"observed_component:{field_name}")
+    candidate = grid.minimum
+    while candidate <= grid.maximum:
+        if observed_bytes == _binary32(candidate, f"observed_component:{field_name}:grid"):
+            return float(candidate)
+        candidate += grid.step
+    # Preserve the executor's stable error taxonomy for a non-grid transport
+    # value.  It will reject rather than round the decoded number.
+    return normalize_component_value(field_name, value)  # type: ignore[arg-type]
+
+
 def _layer_freshness(
     layer: Mapping[str, Any],
     *,
@@ -626,15 +683,25 @@ def evaluate_layer_triple(
             stale = f"{name}_timestamp_invalid:{exc}"
         if stale is not None:
             blockers.append(stale)
+    expected_slug = EXPECTED_BAND_OBSERVED_SLUGS.get(series)
     if not isinstance(observed_slug, str) or not observed_slug:
         blockers.append("observed_slug_missing")
+    elif expected_slug is None:
+        blockers.append("observed_slug_unpinned")
+    elif observed_slug != expected_slug:
+        blockers.append(f"observed_slug_mismatch:expected={expected_slug}:observed={observed_slug}")
     units = {layers[name].get("unit") for name in ("served", "control", "observed")}
     if len(units) != 1:
         blockers.append(f"unit_incoherent:{sorted(str(unit) for unit in units)}")
     if blockers:
         return triple("unobservable", ",".join(sorted(set(blockers))))
 
-    if served_text == control_text == observed_text:
+    raw_values = {name: layers[name].get("value") for name in ("served", "control", "observed")}
+    if (
+        _layer_values_equal(raw_values["served"], raw_values["control"], f"{series}:served-control")
+        and _layer_values_equal(raw_values["control"], raw_values["observed"], f"{series}:control-observed")
+        and _layer_values_equal(raw_values["served"], raw_values["observed"], f"{series}:served-observed")
+    ):
         return triple("resolved", "", coherent=True)
 
     detail = f"served={served_text} control={control_text} observed={observed_text}"
@@ -750,7 +817,10 @@ def evaluate_observed_components(
         if "value" not in row or row["value"] is None:
             failures.append(f"observed_component_value_missing:{field_name}")
             continue
-        raw[field_name] = row["value"]
+        try:
+            raw[field_name] = _normalize_observed_component(field_name, row["value"])
+        except (ComponentContractError, GridCaptureError) as exc:
+            failures.append(f"observed_component_value_invalid:{field_name}:{exc}")
 
     if failures:
         return None, failures

@@ -410,6 +410,36 @@ def test_historical_424_divergence_is_classified_present_and_blocks() -> None:
     assert result.grid_revision is None
 
 
+def test_band_layers_compare_exact_binary32_transport_values() -> None:
+    document = artifact()
+    row = next(entry for entry in document["band_layers"] if entry["series"] == "vpd_low")
+    # The served/control value is the engineering decimal; the raw ESPHome
+    # readback is the same protobuf float decoded into Python binary64.
+    transported = struct.unpack("!f", struct.pack("!f", 0.875))[0]
+    row["served"]["value"] = "0.875"
+    row["control"]["value"] = 0.875
+    row["observed"]["value"] = transported
+    result = run(document)
+    assert next(t for t in result.layer_triples if t.field_name == "vpd_low").coherent is True
+
+    bits = int.from_bytes(struct.pack("!f", transported), "big")
+    row["observed"]["value"] = struct.unpack("!f", (bits + 1).to_bytes(4, "big"))[0]
+    result = run(document)
+    assert next(t for t in result.layer_triples if t.field_name == "vpd_low").coherent is False
+    assert result.grid_revision is None
+
+
+def test_band_series_is_bound_to_its_expected_observed_slug() -> None:
+    document = artifact()
+    row = next(entry for entry in document["band_layers"] if entry["series"] == "vpd_low")
+    row["observed"]["slug"] = BAND_SLUGS["temp_target"]
+    result = run(document)
+    triple = next(t for t in result.layer_triples if t.field_name == "vpd_low")
+    assert triple.classification == "unobservable"
+    assert "observed_slug_mismatch" in triple.detail
+    assert result.grid_revision is None
+
+
 @pytest.mark.parametrize(
     ("layer", "key", "value"),
     [
@@ -495,6 +525,24 @@ def test_off_grid_observed_value_blocks_the_capture() -> None:
     assert result.observed_state_content_sha256 is None
     assert result.grid_revision is None
     assert any("value_off_entity_grid" in failure for failure in result.failures)
+
+
+def test_observed_components_accept_exact_binary32_grid_values_only() -> None:
+    document = artifact()
+    field_name = "direct_wet_stress_vpd_margin_kpa"
+    transported = struct.unpack("!f", struct.pack("!f", 0.05))[0]
+    document["observed_components"][field_name]["value"] = transported
+    result = run(document)
+    assert result.observed_state_ok is True
+    assert result.observed_start_state is not None
+    assert result.observed_start_state[field_name] == 0.05
+
+    bits = int.from_bytes(struct.pack("!f", transported), "big")
+    document["observed_components"][field_name]["value"] = struct.unpack("!f", (bits + 1).to_bytes(4, "big"))[0]
+    result = run(document)
+    assert result.observed_state_ok is False
+    assert result.grid_revision is None
+    assert any(f"observed_component_value_invalid:{field_name}" in failure for failure in result.failures)
 
 
 def test_out_of_range_observed_value_blocks_the_capture() -> None:
