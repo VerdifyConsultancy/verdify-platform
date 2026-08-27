@@ -43,7 +43,11 @@ def _job(documents: list[dict], name: str) -> dict:
 
 
 def _container(job: dict) -> dict:
-    return job["spec"]["template"]["spec"]["containers"][0]
+    containers = job["spec"]["template"]["spec"]["containers"]
+    return next(
+        (container for container in containers if container["name"] == "bootstrap-and-attest"),
+        containers[0],
+    )
 
 
 def _env(job: dict) -> dict[str, dict]:
@@ -69,11 +73,14 @@ def test_bootstrap_is_wave_ordered_bounded_and_uses_exact_migrate_image(rendered
         "argocd.argoproj.io/hook": "PreSync",
         "argocd.argoproj.io/hook-delete-policy": "BeforeHookCreation",
         "argocd.argoproj.io/sync-wave": "2",
+        "operations.vallery.net/temporary-node-exclusion": (
+            "vm-k3s-node4,vm-k3s-node6:cni-pod-sandbox-timeout:2026-08-27"
+        ),
     }
     assert int(migration["metadata"]["annotations"].get("argocd.argoproj.io/sync-wave", "0")) == 0
     assert ordinary["metadata"]["annotations"]["argocd.argoproj.io/sync-wave"] == "1"
     assert experiment["spec"]["backoffLimit"] == 0
-    assert experiment["spec"]["activeDeadlineSeconds"] == 240
+    assert experiment["spec"]["activeDeadlineSeconds"] == 600
     assert experiment["spec"]["ttlSecondsAfterFinished"] == 600
 
     pod = experiment["spec"]["template"]["spec"]
@@ -201,6 +208,7 @@ def test_job_function_allowlists_are_lockstep_with_ledgered_grants(rendered: lis
     for migration_name in (
         "214-confirmed-component-experiment-v2.sql",
         "220-experiment-v2-direct-randomized-launch.sql",
+        "222-experiment-v2-direct-physical-proof.sql",
     ):
         migration = (REPO_ROOT / "db/migrations" / migration_name).read_text()
         blocks.extend(
@@ -222,7 +230,7 @@ def test_job_function_allowlists_are_lockstep_with_ledgered_grants(rendered: lis
         "verdify_experiment_outcome_freezer",
     ):
         matching = [array for array, grant in blocks if f"TO {duty}" in grant]
-        assert len(matching) == (2 if duty == "verdify_experiment_lifecycle" else 1)
+        assert len(matching) == (3 if duty == "verdify_experiment_lifecycle" else 1)
         expected = {signature for array in matching for signature in re.findall(r"'([^']+)'::regprocedure", array)}
         if duty == "verdify_experiment_outcome_freezer":
             # Migration 216 adds the least-information source-cycle grant.
@@ -234,7 +242,7 @@ def test_job_function_allowlists_are_lockstep_with_ledgered_grants(rendered: lis
         "public.fn_record_equipment_direct_state_snapshot(uuid,uuid,text,text,jsonb,double precision,uuid,bigint,text)",
         "public.fn_record_equipment_state_source_receipt(uuid,timestamp with time zone,text,text,jsonb,boolean,uuid,bigint,text)",
     }
-    assert sum(map(len, job_allowlists.values())) == 51
+    assert sum(map(len, job_allowlists.values())) == 56
 
 
 def _activation_env(tmp_path: Path) -> tuple[dict[str, str], tuple[str, ...]]:

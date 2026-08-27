@@ -248,6 +248,7 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "219-selector-context-bounded-sampling.sql",  # bounded selector source/request contract (#588)
         "220-experiment-v2-direct-randomized-launch.sql",  # Jason-authorized one-study direct path (#642)
         "221-experiment-v2-state-replay.sql",  # retry-safe exact feature-off bootstrap (#642)
+        "222-experiment-v2-direct-physical-proof.sql",  # sealed attended baseline/aggressive/baseline proof
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(

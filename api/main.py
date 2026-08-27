@@ -990,6 +990,11 @@ WITH login AS (
         'public.fn_experiment_v2_lock_design(uuid,date,integer,time without time zone,text,text,text,text,text,text,text,text,text,text,text)',
         'public.fn_experiment_v2_direct_launch_lock(uuid,date,integer,time without time zone,text,text,text,text,text,text,text,text,text,text,text,text,text,text,text,text,tstzrange,text,text,text)',
         'public.fn_experiment_v2_direct_launch_approve_day1(uuid,text)',
+        'public.fn_experiment_v2_direct_proof_begin(uuid,text,tstzrange,text,text,text)',
+        'public.fn_experiment_v2_direct_proof_open_aggressive(uuid,uuid,text)',
+        'public.fn_experiment_v2_direct_proof_begin_baseline_after(uuid,uuid,text)',
+        'public.fn_experiment_v2_direct_proof_finish(uuid,text)',
+        'public.fn_experiment_v2_direct_launch_commit(uuid,date,integer,time without time zone,text,text,text,text,text,text,text,text,text,text,text)',
         'public.fn_experiment_v2_register_state(uuid,text,smallint,bytea,bytea,text)',
         'public.fn_experiment_v2_record_approval(uuid,text,text,integer,text,text,tstzrange,timestamptz,text,text,text)',
         'public.fn_experiment_v2_transition(uuid,text,text,text,text)',
@@ -5325,6 +5330,59 @@ class ComponentExperimentDirectLaunchApproveDay1Control(_ComponentExperimentExis
     action: Literal["direct_launch_approve_day1"]
 
 
+class ComponentExperimentDirectProofBeginControl(_ComponentExperimentExistingControl):
+    """Open the exact attended baseline/aggressive/baseline proof authorization."""
+
+    action: Literal["direct_proof_begin"]
+    authorization_ref: str = Field(min_length=1, max_length=500)
+    proof_valid_from: dt.datetime
+    proof_valid_to: dt.datetime
+    supervisor_role: Literal["Jason Vallery"]
+    rescue_owner_role: Literal["Jason Vallery"]
+
+    @model_validator(mode="after")
+    def _attended_window_is_exact(self) -> "ComponentExperimentDirectProofBeginControl":
+        if any(
+            value.tzinfo is None or value.utcoffset() is None for value in (self.proof_valid_from, self.proof_valid_to)
+        ):
+            raise ValueError("direct-proof timestamps must include a UTC offset")
+        duration = self.proof_valid_to - self.proof_valid_from
+        if duration < dt.timedelta(minutes=3) or duration > dt.timedelta(hours=12):
+            raise ValueError("direct-proof window must be between 3 minutes and 12 hours")
+        return self
+
+
+class ComponentExperimentDirectProofWorkControl(_ComponentExperimentExistingControl):
+    aggressive_work_id: uuid.UUID
+
+
+class ComponentExperimentDirectProofOpenAggressiveControl(ComponentExperimentDirectProofWorkControl):
+    action: Literal["direct_proof_open_aggressive"]
+
+
+class ComponentExperimentDirectProofBeginBaselineAfterControl(ComponentExperimentDirectProofWorkControl):
+    action: Literal["direct_proof_begin_baseline_after"]
+
+
+class ComponentExperimentDirectProofFinishControl(_ComponentExperimentExistingControl):
+    action: Literal["direct_proof_finish"]
+
+
+class ComponentExperimentDirectLaunchCommitControl(ComponentExperimentLockDesignControl):
+    """Consume only the database-sealed attended proof to lock the design."""
+
+    action: Literal["direct_launch_commit"]
+
+    @model_validator(mode="after")
+    def _direct_launch_design_is_exact(self) -> "ComponentExperimentDirectLaunchCommitControl":
+        if (
+            self.randomized_pair_count != _COMPONENT_EXPERIMENT_DIRECT_PAIR_COUNT
+            or self.power_artifact_sha256 != _COMPONENT_EXPERIMENT_DIRECT_POWER_SHA256
+        ):
+            raise ValueError("direct launch requires the exact accepted-risk 30-pair power lock")
+        return self
+
+
 class ComponentExperimentRegisterStateControl(_ComponentExperimentExistingControl):
     action: Literal["register_state"]
     profile: Literal["baseline", "moderate", "aggressive", "commissioning_probe"]
@@ -5448,6 +5506,11 @@ ComponentExperimentControlRequest = Annotated[
     | ComponentExperimentLockDesignControl
     | ComponentExperimentDirectLaunchLockControl
     | ComponentExperimentDirectLaunchApproveDay1Control
+    | ComponentExperimentDirectProofBeginControl
+    | ComponentExperimentDirectProofOpenAggressiveControl
+    | ComponentExperimentDirectProofBeginBaselineAfterControl
+    | ComponentExperimentDirectProofFinishControl
+    | ComponentExperimentDirectLaunchCommitControl
     | ComponentExperimentRegisterStateControl
     | ComponentExperimentRecordApprovalControl
     | ComponentExperimentTransitionControl
@@ -5482,6 +5545,11 @@ class ComponentExperimentControlReceipt(BaseModel):
         "lock_design",
         "direct_launch_lock",
         "direct_launch_approve_day1",
+        "direct_proof_begin",
+        "direct_proof_open_aggressive",
+        "direct_proof_begin_baseline_after",
+        "direct_proof_finish",
+        "direct_launch_commit",
         "register_state",
         "record_approval",
         "transition",
@@ -5553,6 +5621,33 @@ SELECT (public.fn_experiment_v2_direct_launch_lock(
 SELECT (public.fn_experiment_v2_direct_launch_approve_day1(
     $1::uuid, $2::text
 )).approval_id::text
+""",
+    "direct_proof_begin": """
+SELECT public.fn_experiment_v2_direct_proof_begin(
+    $1::uuid, $2::text, $3::tstzrange, $4::text, $5::text, $6::text
+)::text
+""",
+    "direct_proof_open_aggressive": """
+SELECT (public.fn_experiment_v2_direct_proof_open_aggressive(
+    $1::uuid, $2::uuid, $3::text
+)).experiment_id::text
+""",
+    "direct_proof_begin_baseline_after": """
+SELECT public.fn_experiment_v2_direct_proof_begin_baseline_after(
+    $1::uuid, $2::uuid, $3::text
+)::text
+""",
+    "direct_proof_finish": """
+SELECT (public.fn_experiment_v2_direct_proof_finish(
+    $1::uuid, $2::text
+)).proof_receipt_id::text
+""",
+    "direct_launch_commit": """
+SELECT (public.fn_experiment_v2_direct_launch_commit(
+    $1::uuid, $2::date, $3::integer, $4::time without time zone,
+    $5::text, $6::text, $7::text, $8::text, $9::text, $10::text,
+    $11::text, $12::text, $13::text, $14::text, $15::text
+)).experiment_id::text
 """,
     "register_state": """
 SELECT (public.fn_experiment_v2_register_state(
@@ -5820,6 +5915,24 @@ async def _execute_component_control(
                 command.rescue_owner_role,
                 actor,
             )
+        elif isinstance(command, ComponentExperimentDirectLaunchCommitControl):
+            args = (
+                experiment_id,
+                command.study_start_local_date,
+                command.randomized_pair_count,
+                command.selector_context_cutoff_local,
+                command.design_lock_sha256,
+                command.source_git_sha,
+                command.schedule_schema_sha256,
+                command.selector_identity_sha256,
+                command.selector_artifact_sha256,
+                command.context_schema_sha256,
+                command.endpoint_artifact_sha256,
+                command.outcome_schema_sha256,
+                command.analyzer_environment_sha256,
+                command.power_artifact_sha256,
+                actor,
+            )
         else:
             args = (
                 experiment_id,
@@ -5839,6 +5952,30 @@ async def _execute_component_control(
                 actor,
             )
     elif isinstance(command, ComponentExperimentDirectLaunchApproveDay1Control):
+        args = (experiment_id, actor)
+    elif isinstance(command, ComponentExperimentDirectProofBeginControl):
+        args = (
+            experiment_id,
+            command.authorization_ref,
+            asyncpg.Range(
+                command.proof_valid_from,
+                command.proof_valid_to,
+                lower_inc=True,
+                upper_inc=False,
+            ),
+            command.supervisor_role,
+            command.rescue_owner_role,
+            actor,
+        )
+    elif isinstance(
+        command,
+        (
+            ComponentExperimentDirectProofOpenAggressiveControl,
+            ComponentExperimentDirectProofBeginBaselineAfterControl,
+        ),
+    ):
+        args = (experiment_id, command.aggressive_work_id, actor)
+    elif isinstance(command, ComponentExperimentDirectProofFinishControl):
         args = (experiment_id, actor)
     elif isinstance(command, ComponentExperimentRegisterStateControl):
         args = (
@@ -5919,6 +6056,8 @@ async def _execute_component_control(
             "configure",
             "lock_design",
             "direct_launch_lock",
+            "direct_launch_commit",
+            "direct_proof_open_aggressive",
             "transition",
             "set_admission",
             "record_facility_safe_closure",
