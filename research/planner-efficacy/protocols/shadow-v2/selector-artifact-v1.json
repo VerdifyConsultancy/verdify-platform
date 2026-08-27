@@ -1,5 +1,12 @@
 {
   "context_contract": {
+    "climate_sampling": {
+      "aggregation": false,
+      "bucket_seconds": 1800,
+      "bucket_source": "Unix epoch",
+      "max_observations": 48,
+      "rule": "last admitted real row per bucket, then newest 48 buckets"
+    },
     "excluded_classes": [
       "private treatment mapping or blinded label",
       "post-cutoff telemetry",
@@ -15,6 +22,8 @@
     "idempotency": "one deterministic invocation key; retries cannot create a second accepted choice",
     "invalid_or_late_response": "baseline",
     "max_attempts": 2,
+    "maximum_request_bytes_at_frozen_max_tokens": 97792,
+    "oversized_request": "baseline with persisted request_exceeds_context_budget before network I/O",
     "timeout_milliseconds": 60000
   },
   "profile_contract": {
@@ -37,9 +46,9 @@
   "schema": "verdify-experiment-v2-selector-artifact-v1",
   "source_contract": {
     "provider_source": "experiment_orchestrator/provider.py",
-    "provider_source_sha256": "730ac12c21ca532c7e83bf5d7b56b4f3e6f27e948515c3a3b610ad7f1b12598c",
+    "provider_source_sha256": "33b1fbdb6a36e6e074a88b74e7e6c903bb6c2e528db0f13cc13c37e6c10f0c8a",
     "selector_contract_source": "experiment_orchestrator/contracts.py",
-    "selector_contract_source_sha256": "c1a83c3058d31fab6faa2d44d6d876332d0a1b21a9e16083dd11f7670c578045",
-    "verified_content_git_sha": "a754e873e8c42bfbb05a4c808bdf023c6462691a"
+    "selector_contract_source_sha256": "6da4083a6e10c9d6442488e59751d0e86d6cc0e80a9716593ffe40b04d2401ac",
+    "verified_content_git_sha": "b9c1e568e8562525e083d106e94b67b5b64a6039"
   }
 }

@@ -104,7 +104,7 @@ components:
   - ../../components/experiment-v2-orchestrator
   # ONE RELEASE ONLY: PreSync -2 restores the latest bounded dump into
   # disposable PostgreSQL 16 / TimescaleDB 2.25.2 and proves migrations
-  # 214-218 plus the ordinary-runtime write boundary with the candidate
+  # 214-219 plus the ordinary-runtime write boundary with the candidate
   # migrate digest. Remove this component reference after retained PASS logs.
   - ../../components/experiment-v2-restore-rehearsal
   # Gate 1 ordinary database-role cutover. The PreSync hook installs and proves
