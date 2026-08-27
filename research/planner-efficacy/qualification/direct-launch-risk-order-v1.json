@@ -1,0 +1,88 @@
+{
+  "accepted_failures": [
+    {
+      "case_id": "recovery/compiled-defaults-to-baseline/prefix-00",
+      "count": 1,
+      "reason": "the inherited ESPHome default has mister_engage_delay_s=45 on a 30-second entity step; the first unconditional recovery command repairs it before every later prefix"
+    },
+    {
+      "case_count": 81,
+      "reason": "compiled invariant coverage is exactly 27/48; migration 220 records the remaining 21 fields as the direct-launch compiled-HIL waiver"
+    }
+  ],
+  "authorization": {
+    "issue": 642,
+    "ref": "VerdifyConsultancy/verdify-platform#642 direct randomized launch accepted-risk directive",
+    "scope": "45039c86-c1d9-52f6-a0a9-d94a17bc4b14"
+  },
+  "compiled_candidate": {
+    "esphome_version": "2026.6.5",
+    "firmware_binary_sha256": "09cc84db336241dd2f3e2abcebefb8e505df9cd56d03fbc86b12d39e04e0e9f4",
+    "generated_main_cpp_sha256": "a7dc1fc837761ef21da08d9969f185c84cf4a0252a498e6e798cbf5c29cfbfdf",
+    "policy_consumer_manifest_sha256": "786c9c7d432518ae1fa4e9fc63dda42d2f4f12c5bfdaaf3407d532d4ff37fd9c"
+  },
+  "forbidden_failures": {
+    "clamp_fail": 0,
+    "cross_field_reject": 0,
+    "interlock_unsafe": 0,
+    "lands_inexact": 0
+  },
+  "live_grid": {
+    "field_count": 48,
+    "firmware_revision": "2026.7.10.1500.09ee886",
+    "grid_revision": "live-entity-grid-v1:sha256:c10f21f692f4772acd98a41f7ee28e43e534e03d4009d3f963fc2e0fb96aa436",
+    "observation_receipt_sha256": "07a7ee9e76b872e1d7066ee9cb1392371acba6b767a52de3343533a4ddcdb082",
+    "source_revision": "1ef68c2a145a41f1b15de7bfd090257bee0e7e9d",
+    "status": "pass"
+  },
+  "orders": {
+    "activation_sha256": "f733901ff92540996b68bdf103523ce5b3e1ae30aec28476872484f7585e903e",
+    "recovery_sha256": "d1f2692b7b654f006dac80ced9dd64da38c6e6fa55a5d498103bcf09f0875e1c",
+    "recovery_first": [
+      "mister_engage_delay_s",
+      "mister_engage_kpa"
+    ],
+    "rollback_sha256": "f733901ff92540996b68bdf103523ce5b3e1ae30aec28476872484f7585e903e"
+  },
+  "profile_artifact_sha256": "c185909cfd2a097c7dc3c7b820f4ebc4609b1261a555b7af8ed6294669ee1ea1",
+  "replay": {
+    "case_count": 81,
+    "clamp_fail": 0,
+    "compiled_covered_field_count": 27,
+    "compiled_harness_binary_sha256": "370f7c784f78c1d732a1943026c83501012534ddafb29c714380a39c572cd26e",
+    "compiled_harness_source_sha256": "e56a9f41615e8f2b01735cc168a30b17b4a704aefc03b152c231a1d1d06a2005",
+    "compiled_uncovered_field_count": 21,
+    "corpus_rows": 296698,
+    "corpus_sha256": "ab03e16bd833fa5530832f85fceb67c36a1d3abb624ba5d5a90415d8b7b234ef",
+    "grid_fail": 1,
+    "interlock_unsafe": 0,
+    "lands_exact": true,
+    "raw_result_sha256": "66f40a475792750f0f87773c0d10d6af47c2c86992b2905efdf4959e1aba6300",
+    "uncovered_fields": [
+      "min_fan_off_s",
+      "min_fan_on_s",
+      "min_fog_off_s",
+      "min_fog_on_s",
+      "min_heat_off_s",
+      "min_heat_on_s",
+      "min_vent_off_s",
+      "min_vent_on_s",
+      "mister_all_kpa",
+      "mister_center_penalty",
+      "mister_engage_delay_s",
+      "mister_engage_kpa",
+      "mister_min_off_s",
+      "mister_pulse_gap_s",
+      "mister_pulse_on_s",
+      "mister_vpd_weight",
+      "mister_water_budget_gal",
+      "night_vpd_bias_kpa",
+      "sw_direct_wet_gate_enabled",
+      "sw_fog_closes_vent",
+      "sw_mister_closes_vent"
+    ]
+  },
+  "schema": "verdify-component-direct-launch-risk-order-v1",
+  "status": "accepted-risk-offline-qualified-pending-supervised-physical-proof",
+  "waived_stage": "compiled_hil_remaining_21_fields"
+}

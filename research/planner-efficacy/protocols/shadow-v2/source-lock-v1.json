@@ -5,7 +5,7 @@
     "device_write": false,
     "packet_ready": false,
     "physical_approval": false,
-    "reason": "The deployed runtime identity, running-device entity grid, current firmware/config evidence, and commissioning state remain live-evidence inputs."
+    "reason": "The running-device 48-field grid is source-stamped and live-attested; current config evidence and the supervised physical proof remain live-evidence inputs."
   },
   "live_evidence_inputs": {
     "source_git_sha": {
@@ -25,10 +25,11 @@
       "status": "audited source candidate; fresh device evidence required"
     },
     "grid_revision": {
-      "revision": "source-grid-parity/main-and-historical-09ee886-live-unverified-v1",
+      "observation_receipt_sha256": "07a7ee9e76b872e1d7066ee9cb1392371acba6b767a52de3343533a4ddcdb082",
+      "revision": "live-entity-grid-v1:sha256:c10f21f692f4772acd98a41f7ee28e43e534e03d4009d3f963fc2e0fb96aa436",
       "source": "verdify_schemas/component_executor.py GRID_REVISION",
       "source_entity_grid_sha256": "6852247e30875062ab1340f857e30e9f761ae8591de19b933c97012d6394cd9b",
-      "status": "source candidate; deliberately rejected for physical execution"
+      "status": "live-attested pass; physical execution still requires exact runtime equality and the supervised direct-launch gate"
     },
     "registry_revision": {
       "revision": "tunable-registry-v1:sha256:5de3c7485b5f9d989602b9cbed29fbe7cc64e7a7f531bab7556148243b5d3b3b",

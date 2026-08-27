@@ -2374,6 +2374,7 @@ def _validate_work(work: ResolvedWork, expected_experiment_id: str, fence: Runti
     if not physical_execution_qualified(
         work.revisions.grid_revision,
         grid_attestation.grid_revision if grid_attestation is not None else None,
+        work.experiment_id,
     ):
         raise ComponentContractError("physical_route_grid_or_prefix_replay_unqualified")
     if work.operation_kind == WORK_KIND_RECOVERY:

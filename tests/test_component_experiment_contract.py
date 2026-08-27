@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import struct
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 
@@ -11,8 +14,10 @@ from verdify_schemas.component_executor import (
     ACTIVATION_ORDER,
     CANONICAL_FIELD_ORDER,
     COMMON_FIELDS,
+    DIRECT_LAUNCH_EXPERIMENT_ID,
     ENTITY_GRIDS,
     GRID_REVISION,
+    ORDER_REVISION,
     RECOVERY_ORDER,
     ROLLBACK_ORDER,
     TREATMENT_FIELD_ORDER,
@@ -27,6 +32,8 @@ from verdify_schemas.component_executor import (
     validate_work_phase,
 )
 from verdify_schemas.tunable_registry import REGISTRY
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def minimum_state() -> dict[str, bool | float]:
@@ -58,9 +65,11 @@ def test_registry_routes_grid_and_treatment_ownership_are_exact() -> None:
         assert definition.tier == 1
 
 
-def test_provisional_grid_and_prefix_order_cannot_arm_physical_execution(monkeypatch) -> None:
+def test_live_grid_and_direct_launch_risk_order_are_scoped_to_the_exact_study(monkeypatch) -> None:
     assert physical_execution_qualified("source-grid-r1") is False
     assert physical_execution_qualified(GRID_REVISION, GRID_REVISION) is False
+    assert physical_execution_qualified(GRID_REVISION, GRID_REVISION, "11111111-1111-4111-8111-111111111111") is False
+    assert physical_execution_qualified(GRID_REVISION, GRID_REVISION, DIRECT_LAUNCH_EXPERIMENT_ID) is True
 
     qualified_grid = "live-entity-grid-v1:sha256:" + "a" * 64
     qualified_order = "prefix-replay-v1:sha256:" + "b" * 64
@@ -69,6 +78,19 @@ def test_provisional_grid_and_prefix_order_cannot_arm_physical_execution(monkeyp
     assert physical_execution_qualified(qualified_grid, None) is False
     assert physical_execution_qualified(qualified_grid, qualified_grid[:-1] + "c") is False
     assert physical_execution_qualified(qualified_grid, qualified_grid) is True
+
+
+def test_direct_launch_risk_revision_is_the_exact_reviewed_artifact() -> None:
+    path = ROOT / "research/planner-efficacy/qualification/direct-launch-risk-order-v1.json"
+    raw = path.read_bytes()
+    artifact = json.loads(raw)
+    assert ORDER_REVISION == f"direct-launch-risk-replay-v1:sha256:{hashlib.sha256(raw).hexdigest()}"
+    assert artifact["authorization"]["scope"] == DIRECT_LAUNCH_EXPERIMENT_ID
+    assert artifact["live_grid"]["grid_revision"] == GRID_REVISION
+    assert artifact["replay"]["compiled_covered_field_count"] == 27
+    assert artifact["replay"]["compiled_uncovered_field_count"] == 21
+    assert artifact["replay"]["interlock_unsafe"] == 0
+    assert set(artifact["forbidden_failures"].values()) == {0}
 
 
 def test_every_numeric_grid_accepts_bounds_and_one_step_without_rounding() -> None:
@@ -161,9 +183,9 @@ def test_fixed_orders_emit_only_differences_and_recovery_covers_all_48() -> None
         == ROLLBACK_ORDER
     )
     recovery = fixed_order_differences(low, high, order=RECOVERY_ORDER)
-    assert tuple(change.field_name for change in recovery) == CANONICAL_FIELD_ORDER
+    assert tuple(change.field_name for change in recovery) == RECOVERY_ORDER
     unconditional = fixed_order_complete_bundle(low, order=RECOVERY_ORDER)
-    assert tuple(change.field_name for change in unconditional) == CANONICAL_FIELD_ORDER
+    assert tuple(change.field_name for change in unconditional) == RECOVERY_ORDER
 
 
 def test_every_activation_rollback_and_recovery_prefix_is_exactly_ordered() -> None:
