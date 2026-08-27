@@ -20,7 +20,7 @@ data:
       },
       "candidate": {
         "firmware_revision": "2026.7.10.1500.09ee886",
-        "config_revision": "cf315321b889",
+        "config_revision": "4dbb2e691d91",
         "registry_revision": "tunable-registry-v1:sha256:5de3c7485b5f9d989602b9cbed29fbe7cc64e7a7f531bab7556148243b5d3b3b",
         "grid_revision": "live-entity-grid-v1:sha256:c10f21f692f4772acd98a41f7ee28e43e534e03d4009d3f963fc2e0fb96aa436"
       },
