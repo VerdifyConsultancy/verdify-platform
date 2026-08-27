@@ -109,14 +109,12 @@ components:
   # and sync only after the protected four-key reconciliation receipt exists.
   - ../../components/runtime-role-boundary
   # Gate 2 experiment credential activation. This remains non-actuating and
-  # patches the existing wave-1 role-bootstrap pod with a second attestation
-  # duty, avoiding another CNI sandbox while capability and active ID stay off.
+  # uses a one-container wave-2 hook while capability and active ID stay off.
   - ../../components/experiment-v2-credential-bootstrap
-  # Accepted-risk direct-launch preparation. A third container in the wave-1
-  # role-bootstrap pod creates only the exact feature-off draft and registers
-  # the three frozen profile vectors. It cannot enable the component, open
-  # admission, randomize, or write a device. Exact replay is idempotent after
-  # migration 221.
+  # Accepted-risk direct-launch preparation. A one-container wave-3 hook creates
+  # only the exact feature-off draft and registers the three frozen profile
+  # vectors. It cannot enable the component, open admission, randomize, or write
+  # a device. Exact replay is idempotent after migration 221.
   - ../../components/experiment-v2-direct-launch-bootstrap
   # #124 verdify-lab — the public Quartz research site (lab.verdify.ai). Pure web
   # tier, stateless (no PVC), NO device path. Built from the

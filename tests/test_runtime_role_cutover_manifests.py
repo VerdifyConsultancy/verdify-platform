@@ -100,7 +100,7 @@ def test_active_cutover_bootstraps_and_attests_both_actual_logins_before_sync():
 
     spec = bootstrap["spec"]
     assert spec["backoffLimit"] == 0
-    assert spec["activeDeadlineSeconds"] == 600
+    assert spec["activeDeadlineSeconds"] == 180
     assert spec["ttlSecondsAfterFinished"] == 600
     pod = spec["template"]["spec"]
     assert pod["restartPolicy"] == "Never"
@@ -116,11 +116,7 @@ def test_active_cutover_bootstraps_and_attests_both_actual_logins_before_sync():
         "seccompProfile": {"type": "RuntimeDefault"},
     }
 
-    assert {item["name"] for item in pod["containers"]} == {
-        "bootstrap-and-attest",
-        "experiment-bootstrap-and-attest",
-        "direct-launch-bootstrap",
-    }
+    assert {item["name"] for item in pod["containers"]} == {"bootstrap-and-attest"}
     container = next(item for item in pod["containers"] if item["name"] == "bootstrap-and-attest")
     migration_container = next(
         item for item in migration["spec"]["template"]["spec"]["containers"] if item["name"] == "migrate"
