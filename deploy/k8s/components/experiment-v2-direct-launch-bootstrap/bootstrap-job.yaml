@@ -4,9 +4,10 @@ metadata:
   name: verdify-experiment-v2-credential-bootstrap
   annotations:
     # Temporary, exact-scope mitigation: node6 failed this sandbox in three
-    # consecutive syncs and node4 then failed identically with no pod IP. Keep
-    # only this combined credential/bootstrap hook off both affected nodes.
-    operations.vallery.net/temporary-node-exclusion: vm-k3s-node4,vm-k3s-node6:cni-pod-sandbox-timeout:2026-08-27
+    # consecutive syncs, then node4 and node5 failed identically with no pod
+    # IP. A fresh node7 batch pod succeeded immediately, so isolate only this
+    # combined credential/bootstrap hook to that observed-good worker.
+    operations.vallery.net/temporary-node-exclusion: vm-k3s-node4,vm-k3s-node5,vm-k3s-node6:cni-pod-sandbox-timeout:2026-08-27
 spec:
   # One pod sandbox now owns credential attestation and the exact-study
   # bootstrap. The latter may wait briefly for first-install credentials, and
@@ -20,8 +21,8 @@ spec:
             nodeSelectorTerms:
               - matchExpressions:
                   - key: kubernetes.io/hostname
-                    operator: NotIn
-                    values: [vm-k3s-node4, vm-k3s-node6]
+                    operator: In
+                    values: [vm-k3s-node7]
       containers:
         - name: direct-launch-bootstrap
           image: ghcr.io/verdifyconsultancy/verdify-api
