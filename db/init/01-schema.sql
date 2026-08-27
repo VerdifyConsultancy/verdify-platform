@@ -7,7 +7,7 @@ CREATE EXTENSION IF NOT EXISTS timescaledb;
 
 -- ============================================================
 -- 1. climate (hypertable)
--- Primary timeseries. ~2 min interval from ESP32, ~720 rows/day.
+-- Primary timeseries. ~1 min interval from ESP32, ~1,440 rows/day.
 -- 51 columns: 30 original + 2 outdoor + 19 future sensors.
 -- NULL = sensor offline or not yet connected.
 -- ============================================================

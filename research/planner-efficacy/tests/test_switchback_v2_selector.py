@@ -215,6 +215,15 @@ def test_context_requires_every_nullable_field_and_one_latest_forecast_vintage()
             cutoff_at=CUTOFF,
             boundary_at=BOUNDARY,
         )
+
+    with pytest.raises(ValueError, match="48-row climate bound"):
+        selector.freeze_context(
+            local_date="2026-09-01",
+            climate_observations=[_climate_row()] * (selector.MAX_CLIMATE_OBSERVATIONS + 1),
+            forecast_vintage=[_forecast_row()],
+            cutoff_at=CUTOFF,
+            boundary_at=BOUNDARY,
+        )
     duplicate = _forecast_row(fetched_at=CUTOFF - timedelta(minutes=4))
     duplicate["source_row_sha256"] = "c" * 64
     with pytest.raises(ValueError, match="one as-of row"):

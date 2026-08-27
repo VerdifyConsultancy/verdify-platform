@@ -30,6 +30,7 @@ VALID_PROFILES: tuple[ProfileId, ...] = ("baseline", "moderate", "aggressive")
 # loop.  The current 10-second/two-attempt identity remains inside this cap.
 MAX_SELECTOR_TIMEOUT_MILLISECONDS = 60_000
 MAX_SELECTOR_ATTEMPTS = 3
+MAX_CLIMATE_OBSERVATIONS = 48
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 _CONTEXT_SCHEMA = "verdify-selector-context-v2"
@@ -343,6 +344,8 @@ def _validated_context_envelope(
     forecast_source = source["forecast_vintage"]
     if not isinstance(climate_source, list) or not isinstance(forecast_source, list):
         raise TypeError("selector context source collections must be arrays")
+    if len(climate_source) > MAX_CLIMATE_OBSERVATIONS:
+        raise ValueError("selector context exceeds the 48-row climate bound")
 
     climate: list[dict[str, Any]] = []
     climate_order: list[tuple[datetime, str]] = []

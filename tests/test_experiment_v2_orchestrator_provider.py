@@ -12,10 +12,12 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+import experiment_orchestrator.provider as provider_module  # noqa: E402
 from experiment_orchestrator.contracts import (  # noqa: E402
     CLIMATE_SOURCE_SCHEMA,
     CLIMATE_VALUE_FIELDS,
     CONTEXT_SCHEMA,
+    CORTEX_MAX_MODEL_LEN_TOKENS,
     FORECAST_VALUE_FIELDS,
     OPENAI_SELECTOR_IDENTITY_SCHEMA,
     OPENAI_SELECTOR_RESPONSE_FORMAT,
@@ -292,6 +294,31 @@ async def test_cortex_openai_request_is_exact_bounded_and_accepts_verified_runti
     assert body["messages"][0]["role"] == "system"
     assert "verdify-daily-selector-request-v2" in body["messages"][1]["content"]
     assert all(term not in call["body"] for term in (b"physical_arm", b"mapping", b"secret"))
+
+
+@pytest.mark.asyncio
+async def test_request_over_context_budget_fails_locally_with_distinct_persistable_reason(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    identity = _openai_identity()
+    budget = CORTEX_MAX_MODEL_LEN_TOKENS - identity.decoding_parameters["max_tokens"]
+    oversized = b"x" * (budget + 1)
+    monkeypatch.setattr(provider_module, "build_openai_request", lambda **_kwargs: oversized)
+    transport = Transport(_openai_response())
+    result = await SelectorProviderAdapter(None, transport=transport).select(
+        study_id="study",
+        local_date="2026-08-25",
+        invocation_key="11111111-1111-4111-8111-111111111111",
+        context=_context(),
+        identity=identity,
+    )
+    assert (result.profile, result.fallback_reason) == (
+        "baseline",
+        "request_exceeds_context_budget",
+    )
+    assert result.raw_request_sha256 == hashlib.sha256(oversized).hexdigest()
+    assert len(result.attempt_receipt_sha256) == 1
+    assert transport.calls == []
 
 
 @pytest.mark.asyncio

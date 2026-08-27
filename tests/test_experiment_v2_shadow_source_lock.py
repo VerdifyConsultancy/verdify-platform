@@ -135,6 +135,7 @@ def test_source_locked_schemas_project_the_runtime_contracts() -> None:
         "forecast_vintage",
     }
     climate = context["properties"]["climate_observations"]["items"]
+    assert context["properties"]["climate_observations"]["maxItems"] == 48
     forecast = context["properties"]["forecast_vintage"]["items"]
     assert set(climate["properties"]["values"]["required"]) == CLIMATE_VALUE_FIELDS
     assert set(climate["properties"]["values"]["properties"]) == CLIMATE_VALUE_FIELDS
