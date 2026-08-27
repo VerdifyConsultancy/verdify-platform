@@ -142,17 +142,24 @@ data:
         password = os.environ.get(password_name, "")
         if not user or not password:
             fail(f"protected database identity is incomplete: {user_name}/{password_name}")
-        return await asyncpg.connect(
-            host=os.environ["DB_HOST"],
-            port=int(os.environ.get("DB_PORT", "5432")),
-            database=os.environ["DB_NAME"],
-            user=user,
-            password=password,
-            server_settings={
-                "application_name": "verdify-experiment-v2-direct-bootstrap",
-                "statement_timeout": "10s",
-            },
-        )
+        for attempt in range(60):
+            try:
+                return await asyncpg.connect(
+                    host=os.environ["DB_HOST"],
+                    port=int(os.environ.get("DB_PORT", "5432")),
+                    database=os.environ["DB_NAME"],
+                    user=user,
+                    password=password,
+                    server_settings={
+                        "application_name": "verdify-experiment-v2-direct-bootstrap",
+                        "statement_timeout": "10s",
+                    },
+                )
+            except (OSError, asyncpg.PostgresError):
+                if attempt == 59:
+                    raise
+                await asyncio.sleep(2)
+        fail("database credential did not become ready")
 
     def assert_feature_off(row, revision):
         expected = (2, "randomized", "draft", "shadow", "closed", False, revision, None, 0)
