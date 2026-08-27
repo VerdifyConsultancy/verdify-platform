@@ -3,7 +3,12 @@ kind: Component
 
 resources:
   - bootstrap-configmap.yaml
-  - bootstrap-job.yaml
+
+# The credential bootstrap already proves and installs the exact lifecycle
+# login this bootstrap consumes. Add a second container to that successful pod
+# instead of allocating a fourth sequential PreSync pod sandbox.
+patches:
+  - path: bootstrap-job.yaml
 
 images:
   - name: ghcr.io/verdifyconsultancy/verdify-api
