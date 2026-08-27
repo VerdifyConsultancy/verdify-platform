@@ -139,6 +139,7 @@ def test_prod_render_contains_bootstrap_and_keeps_experiment_disabled() -> None:
     resources = _rendered()
     by_kind_name = {(resource["kind"], resource["metadata"]["name"]): resource for resource in resources}
     job = by_kind_name[("Job", "verdify-experiment-v2-direct-launch-bootstrap")]
+    assert job["spec"]["activeDeadlineSeconds"] >= 600
     container = job["spec"]["template"]["spec"]["containers"][0]
     assert container["image"].startswith("registry.vallery.net/verdifyconsultancy/verdify-api@sha256:")
     feature = by_kind_name[("ConfigMap", "verdify-config")]["data"]

@@ -12,7 +12,10 @@ metadata:
     argocd.argoproj.io/sync-wave: "3"
 spec:
   backoffLimit: 0
-  activeDeadlineSeconds: 180
+  # The API image can take more than three minutes to materialize on a cold
+  # node. Keep the database operation bounded, but do not spend its entire
+  # deadline in kubelet image/sandbox setup before the bootstrap can run.
+  activeDeadlineSeconds: 600
   ttlSecondsAfterFinished: 600
   template:
     metadata:
