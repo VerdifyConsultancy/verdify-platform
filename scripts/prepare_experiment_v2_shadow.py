@@ -56,18 +56,18 @@ HEX_178_RE = re.compile(r"^[0-9a-f]{356}$")
 AUDIT_REF_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/#@-]{0,95}$")
 CREDENTIAL_TEXT_RE = re.compile(r"(?i)(?:api[_-]?key|authorization|bearer|password|secret|token)\s*[:=]")
 PROFILE_NAMES = ("baseline", "moderate", "aggressive")
-CORTEX_CONTRACT = {
-    "base_endpoint": "https://cortex.vallery.net/v1",
-    "chat_completions_endpoint": "https://cortex.vallery.net/v1/chat/completions",
-    "egress_cidr": "192.168.7.10/32",
-    "max_model_len": 98_304,
-    "max_output_tokens_default": 16_384,
-    "model_identifier": "llm.primary.longctx",
-    "model_revision": "llm.qwen38u.longctx",
+OPENAI_CONTRACT = {
+    "base_endpoint": "https://api.openai.com/v1",
+    "chat_completions_endpoint": "https://api.openai.com/v1/chat/completions",
+    "egress_cidr": "0.0.0.0/0",
+    "max_model_len": 1_050_000,
+    "max_output_tokens_default": 128_000,
+    "model_identifier": "gpt-5.6-sol",
+    "model_revision": "gpt-5.6-sol",
     "modalities": ["text"],
     "reasoning_effort_default": "medium",
-    "system_fingerprint": "vllm-0.27.1-tp2-514990f7",
-    "vllm_version": "0.27.1",
+    "system_fingerprint": "openai-managed",
+    "provider": "openai",
 }
 
 
@@ -523,7 +523,7 @@ def build_packet(*, repo_root: Path, input_path: Path) -> dict[str, bytes]:
             "expected_system_fingerprint",
             "lesson_snapshot_path",
             "max_attempts",
-            "max_tokens",
+            "max_completion_tokens",
             "model_identifier",
             "model_revision",
             "prompt_path",
@@ -534,15 +534,15 @@ def build_packet(*, repo_root: Path, input_path: Path) -> dict[str, bytes]:
         },
         "selector",
     )
-    locked_cortex = {
-        "egress_cidr": CORTEX_CONTRACT["egress_cidr"],
-        "endpoint": CORTEX_CONTRACT["chat_completions_endpoint"],
-        "expected_system_fingerprint": CORTEX_CONTRACT["system_fingerprint"],
-        "model_identifier": CORTEX_CONTRACT["model_identifier"],
-        "model_revision": CORTEX_CONTRACT["model_revision"],
+    locked_openai = {
+        "egress_cidr": OPENAI_CONTRACT["egress_cidr"],
+        "endpoint": OPENAI_CONTRACT["chat_completions_endpoint"],
+        "expected_system_fingerprint": OPENAI_CONTRACT["system_fingerprint"],
+        "model_identifier": OPENAI_CONTRACT["model_identifier"],
+        "model_revision": OPENAI_CONTRACT["model_revision"],
     }
-    if any(selector[field] != expected for field, expected in locked_cortex.items()):
-        raise PreparationError("selector endpoint/model/fingerprint/egress differs from the verified Cortex contract")
+    if any(selector[field] != expected for field, expected in locked_openai.items()):
+        raise PreparationError("selector endpoint/model/egress differs from the verified OpenAI contract")
     paths = {
         field: _source_path(
             selector[field],
@@ -568,11 +568,10 @@ def build_packet(*, repo_root: Path, input_path: Path) -> dict[str, bytes]:
         "selector.runtime_environment_sha256",
     )
     decoding = {
-        "chat_template_kwargs": {"reasoning_effort": "medium"},
-        "max_tokens": selector["max_tokens"],
+        "max_completion_tokens": selector["max_completion_tokens"],
+        "reasoning_effort": "medium",
         "response_format": OPENAI_SELECTOR_RESPONSE_FORMAT,
         "stream": False,
-        "temperature": 0,
     }
     selector_identity = {
         "context_schema_sha256": context_schema_sha256,
@@ -586,7 +585,7 @@ def build_packet(*, repo_root: Path, input_path: Path) -> dict[str, bytes]:
         "model_revision": selector["model_revision"],
         "prompt": prompt,
         "prompt_sha256": _sha256_bytes(prompt.encode("utf-8")),
-        "provider": "cortex-openai",
+        "provider": "openai",
         "response_schema_revision": OPENAI_SELECTOR_RESPONSE_SCHEMA,
         "runtime_environment_sha256": runtime_environment_sha256,
         "schema": OPENAI_SELECTOR_IDENTITY_SCHEMA,
@@ -671,7 +670,7 @@ def build_packet(*, repo_root: Path, input_path: Path) -> dict[str, bytes]:
             "state_profiles_registered": [*PROFILE_NAMES, "commissioning_probe"],
         },
         "artifacts": {path: _sha256_bytes(raw) for path, raw in sorted(outputs.items())},
-        "cortex_contract": CORTEX_CONTRACT,
+        "openai_contract": OPENAI_CONTRACT,
         "experiment_id": experiment_id,
         "experiment_id_derivation": (
             "explicit input" if study["experiment_id"] is not None else "UUIDv5 of vallery NUL study_id"

@@ -20,25 +20,23 @@ schedule or one server-clock boundary cycle. It cannot request both actions or
 enumerate future assignments. An absent plan digest performs no lifecycle
 mutation.
 
-Before enabling selector inference, an overlay must replace both
-`VERDIFY_EXPERIMENT_SELECTOR_ENDPOINT` with one credential-free exact HTTPS URL
-and `VERDIFY_EXPERIMENT_SELECTOR_EGRESS_CIDR` with that endpoint's exact `/32`
-or `/128`. Kustomize injects the same CIDR into the only Internet egress rule.
-The runtime re-resolves the hostname before every attempt and falls back to
-baseline unless the answer is exactly that one address. NetworkPolicy remains
-the hard deny for device/private subnets.
+The checked-in selector endpoint is the credential-free official OpenAI base
+URL. Kubernetes NetworkPolicy cannot select an FQDN, so its only Internet rule
+permits TCP/443 while the runtime independently accepts only
+`api.openai.com:443`, re-resolves it before every attempt, rejects non-global
+answers, ignores proxy environment variables, and rejects redirects. The
+shared capability and active-experiment gates still keep the component inert.
 
 The production selector adapter is deliberately narrower than a generic
-OpenAI client. It accepts only `https://cortex.vallery.net/v1` (normalized to
-the exact `/v1/chat/completions` path) or that exact completions URL, paired
-with `192.168.7.10/32`. The frozen identity must name route alias
-`llm.primary.longctx`, concrete revision `llm.qwen38u.longctx`, and the approved
-vLLM system fingerprint. Requests are non-streaming and tool-free with
-temperature 0, `chat_template_kwargs.reasoning_effort=medium`, a bounded
-`max_tokens`, and a strict canonical profile-only JSON schema. A non-`stop`
-finish, revision/fingerprint drift, malformed envelope/content, DNS drift, or
-transport failure is recorded as a baseline-safe failure and never admitted as
-a provider choice.
+OpenAI client. It accepts only `https://api.openai.com/v1` (normalized to the
+exact `/v1/chat/completions` path) or that exact completions URL. The frozen
+identity names `gpt-5.6-sol` with `reasoning_effort=medium`. Requests are
+non-streaming and tool-free with a bounded `max_completion_tokens` and a strict
+canonical profile-only JSON schema. A non-`stop` finish, model drift, malformed
+envelope/content, DNS drift, or transport failure is recorded as a
+baseline-safe failure and never admitted as a provider choice. OpenAI's
+optional infrastructure fingerprint is retained when present but is not a
+stable model identity.
 
 The outcome freezer accepts only the one DB-snapshotted canonical source
 bundle returned by `fn_experiment_v2_outcome_source_cycle`. Its mounted
@@ -78,7 +76,7 @@ Named external inputs (all optional, values never belong in Git):
 - Secret `verdify-experiment-v2-shadow-scheduler-db`, key `password`;
 - Secret `verdify-experiment-v2-randomizer-db`, key `password`;
 - Secret `verdify-experiment-v2-outcome-freezer-db`, key `password`;
-- Secret `verdify-experiment-v2-selector-provider`, key `api-key`;
+- Secret `verdify-hermes`, key `OPENAI_API_KEY`;
 - ConfigMap `verdify-experiment-v2-lifecycle-plan`, key `plan.json`;
 - ConfigMap `verdify-experiment-v2-selector-identity`, key `identity.json`;
 - ConfigMap `verdify-experiment-v2-outcome-identity`, key `identity.json`.

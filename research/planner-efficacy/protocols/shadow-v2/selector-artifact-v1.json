@@ -22,7 +22,7 @@
     "idempotency": "one deterministic invocation key; retries cannot create a second accepted choice",
     "invalid_or_late_response": "baseline",
     "max_attempts": 2,
-    "maximum_request_bytes_at_frozen_max_tokens": 97792,
+    "maximum_request_bytes_at_frozen_max_completion_tokens": 97792,
     "oversized_request": "baseline with persisted request_exceeds_context_budget before network I/O",
     "timeout_milliseconds": 60000
   },
@@ -32,23 +32,22 @@
     "valid_profiles": ["baseline", "moderate", "aggressive"]
   },
   "provider_contract": {
-    "chat_template_kwargs": {"reasoning_effort": "medium"},
-    "endpoint": "https://cortex.vallery.net/v1/chat/completions",
-    "expected_system_fingerprint": "vllm-0.27.1-tp2-514990f7",
-    "max_tokens": 512,
-    "model_identifier": "llm.primary.longctx",
-    "model_revision": "llm.qwen38u.longctx",
-    "response_schema_revision": "verdify-selector-decision-openai-v1",
+    "endpoint": "https://api.openai.com/v1/chat/completions",
+    "expected_system_fingerprint": "openai-managed",
+    "max_completion_tokens": 512,
+    "model_identifier": "gpt-5.6-sol",
+    "model_revision": "gpt-5.6-sol",
+    "reasoning_effort": "medium",
+    "response_schema_revision": "verdify-selector-decision-openai-v2",
     "stream": false,
-    "temperature": 0,
     "tool_contract_revision": "none-v1"
   },
   "schema": "verdify-experiment-v2-selector-artifact-v1",
   "source_contract": {
     "provider_source": "experiment_orchestrator/provider.py",
-    "provider_source_sha256": "33b1fbdb6a36e6e074a88b74e7e6c903bb6c2e528db0f13cc13c37e6c10f0c8a",
+    "provider_source_sha256": "1e4e62903120901883996c2d3f17066eeb313679faec4ad6780b901ed30661b0",
     "selector_contract_source": "experiment_orchestrator/contracts.py",
-    "selector_contract_source_sha256": "6da4083a6e10c9d6442488e59751d0e86d6cc0e80a9716593ffe40b04d2401ac",
+    "selector_contract_source_sha256": "bf2351f1f81a4c53ca9ac94efa98d1fc783c2d618824f4cdfe05dbacd976cf4b",
     "verified_content_git_sha": "b9c1e568e8562525e083d106e94b67b5b64a6039"
   }
 }

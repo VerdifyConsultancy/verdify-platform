@@ -80,7 +80,7 @@ Service → Secret → key wiring as authored in `deploy/k8s/{base,components}`:
 | `verdify-experiment-v2-shadow-scheduler-db` | `password` | v2 lifecycle scheduler (`secretKeyRef`, optional; username is the migration-owned exact login) | — | — | opt |
 | `verdify-experiment-v2-randomizer-db` | `password` | v2 selector/randomizer (`secretKeyRef`, optional; username is the migration-owned exact login) | — | — | opt |
 | `verdify-experiment-v2-outcome-freezer-db` | `password` | v2 outcome freezer (`secretKeyRef`, optional; username is the migration-owned exact login) | — | — | opt |
-| `verdify-experiment-v2-selector-provider` | `api-key` | v2 selector provider adapter (`secretKeyRef`, optional; no endpoint means no network call) | — | — | opt |
+| `verdify-hermes` | `OPENAI_API_KEY` | Hermes and v2 OpenAI selector provider adapters (`secretKeyRef`, optional while component capability is off) | — | — | req at activation |
 | `verdify-ha-token` | `ha_token.txt` | setpoint-server (volume mount); **device-affecting** | — | — | ✓ |
 | `verdify-hermes` | `OPENAI_API_KEY`, `HERMES_MCP_URL`² | hermes-iris (`envFrom.secretRef`) | — | — | ✓ |
 | `verdify-hermes-slack` | slack channel config | hermes-iris (optional volume mount; **non-secret** channel cfg) | — | — | opt |
@@ -116,7 +116,7 @@ randomizer, and outcome-freezer Secrets. The wave-2 hook requires 64-character
 lowercase-hex, pairwise-distinct activation values, installs all six database
 SCRAM verifiers transactionally, and attests each actual TCP login. It never
 reads or validates the optional selector-provider key; provider activation has
-its own exact endpoint/CIDR/identity gate.
+its own exact official-OpenAI endpoint/model/identity gate.
 
 `verdify-lab-publisher-s3` is non-device but required before enabling the
 `verdify-lab-publisher` CronJob. The durable prod prefixes are

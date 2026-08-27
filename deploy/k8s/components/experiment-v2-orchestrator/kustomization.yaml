@@ -6,10 +6,9 @@ resources:
   - workloads.yaml
   - networkpolicies.yaml
 
-# Kubernetes NetworkPolicy cannot select an FQDN.  The same explicit single-IP
-# value is injected into the selector pod and its only HTTPS egress rule.  The
-# component default is a non-routable TEST-NET address and the endpoint URL is
-# empty, so an unconfigured selector persists baseline without external I/O.
+# Kubernetes NetworkPolicy cannot select an FQDN. The configured CIDR is
+# injected into the selector pod and its HTTPS egress rule; runtime performs
+# the independent api.openai.com/global-address lock.
 replacements:
   - source:
       kind: ConfigMap

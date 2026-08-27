@@ -33,7 +33,9 @@
 > `custom:gpt-5.6-sol` with `agent.reasoning_effort: xhigh`; public attribution
 > is `hermes-iris/custom:gpt-5.6-sol/xhigh`. The two Cortex-only init-time
 > runtime backports and their extended timeouts were removed. The independently
-> configured dark experiment selector remains on its bounded Cortex route.
+> configured experiment selector now also uses official OpenAI
+> `gpt-5.6-sol`/medium with a strict structured-output contract; its study
+> identity, output cap, and capability gate remain independently versioned.
 
 ---
 

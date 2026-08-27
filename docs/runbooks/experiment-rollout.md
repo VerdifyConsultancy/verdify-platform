@@ -286,20 +286,19 @@ the six exact TCP duty attestations is a fail-closed Gate-2 blocker. The
 blinded analyst intentionally remains `NOLOGIN`; the broader #643 credential
 split is not part of this launch gate.
 
-Provider setup is a separate input gate. Keep endpoint and key absent for
-explicit baseline-only fallback, or bind the strict Cortex OpenAI endpoint
-`https://cortex.vallery.net/v1`, single-host egress CIDR `192.168.7.10/32`,
-frozen identity artifact, and provider key together before claiming a real
-provider shadow cycle. The adapter normalizes that base URL to the exact
-`/v1/chat/completions` path and rejects any other authority/path, DNS answer,
-route alias, concrete model revision, system fingerprint, finish reason, or
-response shape. The frozen request uses no tools or streaming, temperature 0,
-medium reasoning, a bounded output cap, and canonical profile-only JSON. Have
-the fleet Secret authority reuse the already authorized Cortex credential
-server-side as
-`verdify-experiment-v2-selector-provider` / `api-key`; never retrieve or relay
-the value through a repository pod. The provider key is not part of the six
-database-password/two-token shape and uniqueness checks.
+Provider setup is a separate input gate. The checked-in adapter binds official
+OpenAI `https://api.openai.com/v1`, the frozen `gpt-5.6-sol` identity artifact,
+and `verdify-hermes` / `OPENAI_API_KEY`. It normalizes the base URL to the exact
+`/v1/chat/completions` path and rejects any other authority/path, non-global DNS
+answer, model revision, finish reason, or response shape. Kubernetes
+NetworkPolicy cannot select an FQDN, so the selector's TCP/443 egress is paired
+with that independent application authority lock, redirects disabled, and
+proxy environment ignored. The frozen request uses no tools or streaming,
+medium reasoning, a bounded completion cap, and canonical profile-only JSON.
+Never retrieve or relay the provider key through a repository pod. The provider
+key is not part of the six database-password/two-token shape and uniqueness
+checks. Missing key or invalid provider behavior remains explicit baseline-only
+fallback and cannot qualify as a real provider shadow cycle.
 
 1. Create one explicit experiment UUID with frozen candidate revisions and an
    assignment/selection preview schedule.
