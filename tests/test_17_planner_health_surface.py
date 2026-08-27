@@ -27,7 +27,7 @@ from verdify_schemas import PublicPlannerDelivery, PublicPlannerHealthResponse
 
 _MISSING_MODULE = object()
 _MCP_STUB_MODULES = ("mcp", "mcp.server", "mcp.server.fastmcp")
-ACTIVE_PLANNER_MODEL_LABEL = "hermes-iris/custom:llm.primary.longctx/medium"
+ACTIVE_PLANNER_MODEL_LABEL = "hermes-iris/custom:gpt-5.6-sol/xhigh"
 
 
 def _install_fastmcp_test_stub() -> None:
@@ -340,7 +340,7 @@ def _hermes_config_documents() -> tuple[dict, dict, str]:
     return manifest, profile, readiness_source
 
 
-def test_hermes_profile_pins_bounded_cortex_text_route():
+def test_hermes_profile_pins_openai_gpt_5_6_sol_xhigh_at_the_runtime_key():
     _manifest, embedded, _readiness_source = _hermes_config_documents()
     canonical = yaml.safe_load((REPO_ROOT / "hermes/iris/config.yaml").read_text())
     experiment_manifest = yaml.safe_load(
@@ -351,41 +351,26 @@ def test_hermes_profile_pins_bounded_cortex_text_route():
     assert (
         embedded["model"]
         == canonical["model"]
-        == experiment["model"]
         == {
-            "default": "llm.primary.longctx",
+            "default": "gpt-5.6-sol",
             "provider": "custom",
-            "base_url": "https://cortex.vallery.net/v1",
-            "context_length": 98304,
-            "max_tokens": 16384,
+            "base_url": "https://api.openai.com/v1",
         }
     )
     assert "reasoning_effort" not in embedded["model"]
     assert "reasoning_effort" not in canonical["model"]
-    assert embedded["agent"]["reasoning_effort"] == canonical["agent"]["reasoning_effort"] == "medium"
+    assert embedded["agent"]["reasoning_effort"] == canonical["agent"]["reasoning_effort"] == "xhigh"
+
+    # The dark experiment selector deliberately remains on the separately
+    # bounded Cortex route; rolling back the live planner must not change it.
+    assert experiment["model"] == {
+        "default": "llm.primary.longctx",
+        "provider": "custom",
+        "base_url": "https://cortex.vallery.net/v1",
+        "context_length": 98304,
+        "max_tokens": 16384,
+    }
     assert experiment["agent"]["reasoning_effort"] == "medium"
-    assert embedded["agent"]["api_max_retries"] == canonical["agent"]["api_max_retries"] == 1
-    assert experiment["agent"]["api_max_retries"] == 1
-    expected_provider_limits = {
-        "custom": {
-            "request_timeout_seconds": 600,
-            "stale_timeout_seconds": 600,
-        }
-    }
-    expected_compression = {"enabled": False}
-    expected_auxiliary = {
-        "compression": {
-            "provider": "custom",
-            "model": "llm.primary.longctx",
-            "base_url": "https://cortex.vallery.net/v1",
-            "context_length": 98304,
-            "timeout": 180,
-        }
-    }
-    for profile in (embedded, canonical, experiment):
-        assert profile["providers"] == expected_provider_limits
-        assert profile["compression"] == expected_compression
-        assert profile["auxiliary"] == expected_auxiliary
 
     # The embedded k3s profile must remain structurally equivalent as parsed,
     # except for the intentionally environment-specific MCP endpoint.
@@ -400,9 +385,8 @@ def test_planner_audit_metadata_and_current_docs_match_live_hermes_profile():
     expected_audit = {
         "provider": profile["model"]["provider"],
         "model": profile["model"]["default"],
+        "base_url": profile["model"]["base_url"],
         "reasoning_effort": profile["agent"]["reasoning_effort"],
-        "context_length": profile["model"]["context_length"],
-        "max_output_tokens": profile["model"]["max_tokens"],
         "purpose": "Audit metadata for the live Hermes Iris profile. Runtime source: hermes/iris/config.yaml.",
     }
     ai_config = yaml.safe_load((REPO_ROOT / "config/ai.yaml").read_text())
@@ -419,11 +403,9 @@ def test_planner_audit_metadata_and_current_docs_match_live_hermes_profile():
     )
     for relative_path in current_docs:
         source = (REPO_ROOT / relative_path).read_text()
-        assert "llm.primary.longctx" in source, relative_path
-        assert "medium" in source, relative_path
-        assert "16,384" in source, relative_path
-        assert "GPT-5.6 Sol" not in source, relative_path
-        assert "xhigh" not in source, relative_path
+        assert "GPT-5.6 Sol" in source, relative_path
+        assert "xhigh" in source, relative_path
+        assert "llm.primary.longctx" not in source, relative_path
         assert "pending profile" not in source, relative_path
 
     current_code_surfaces = (
@@ -433,8 +415,8 @@ def test_planner_audit_metadata_and_current_docs_match_live_hermes_profile():
     )
     for relative_path in current_code_surfaces:
         source = (REPO_ROOT / relative_path).read_text()
-        assert "GPT-5.6 Sol" not in source, relative_path
-        assert "xhigh" not in source, relative_path
+        assert "GPT-5.6 Sol" in source, relative_path
+        assert "Cortex" not in source, relative_path
 
 
 def test_api_public_planner_model_label_is_declarative_and_matches_active_profile():
@@ -479,17 +461,11 @@ def test_argocd_sync_waves_gate_mcp_then_hermes_then_ingestor_without_pod_templa
 def test_hermes_profile_revision_rolls_and_reseeds_on_config_change():
     manifest, _profile, _readiness_source = _hermes_config_documents()
     expected_profile = hashlib.sha256(manifest["data"]["config.yaml"].encode()).hexdigest()[:12]
-    compressor_patch = manifest["data"]["hermes-compressor-oob-patch.py"]
-    expected_compressor_patch = hashlib.sha256(compressor_patch.encode()).hexdigest()[:12]
-    estimator_patch = manifest["data"]["hermes-request-estimator-oob-patch.py"]
-    expected_estimator_patch = hashlib.sha256(estimator_patch.encode()).hexdigest()[:12]
     workloads = yaml.safe_load_all((REPO_ROOT / "deploy/k8s/components/hermes-iris/hermes-iris.yaml").read_text())
     workload = next(document for document in workloads if document.get("kind") == "Deployment")
 
     assert workload["spec"]["template"]["metadata"]["annotations"] == {
         "verdify.io/hermes-profile-revision": expected_profile,
-        "verdify.io/hermes-compressor-patch-revision": expected_compressor_patch,
-        "verdify.io/hermes-request-estimator-patch-revision": expected_estimator_patch,
     }
     init_by_name = {item["name"]: item for item in workload["spec"]["template"]["spec"]["initContainers"]}
     assert init_by_name["seed-config"]["command"] == [
@@ -498,109 +474,23 @@ def test_hermes_profile_revision_rolls_and_reseeds_on_config_change():
         "cp -f /etc/verdify/hermes-config/config.yaml /opt/data/config.yaml && "
         "echo 'seeded /opt/data/config.yaml from verdify-hermes-iris-config'",
     ]
-    env = {
-        item["name"]: item["value"]
-        for item in workload["spec"]["template"]["spec"]["containers"][0]["env"]
-        if "value" in item
-    }
-    assert env["HERMES_STREAM_STALE_TIMEOUT"] == "600"
 
 
-def test_hermes_compressor_backport_is_digest_pinned_fail_closed_and_mounted():
+def test_openai_rollback_removes_cortex_only_runtime_patch_machinery():
     manifest, _profile, _readiness_source = _hermes_config_documents()
-    source = manifest["data"]["hermes-compressor-oob-patch.py"]
-    namespace = {"__name__": "hermes_compressor_patch_test"}
-    exec(compile(source, "hermes-compressor-oob-patch.py", "exec"), namespace)  # noqa: S102
-
-    assert namespace["SOURCE_SHA256"] == "8a5489f5c71c6755a7f81eb91763e231018d823f5269617b6b743eb96282cf4b"
-    assert namespace["PATCHED_SHA256"] == "8e19bea3aa8c393d873e36503b310d4af74a2b09ccae51bae32104c245fc9e9e"
-    fixture = b"".join(before for before, _after in namespace["PATCHES"])
-    patched = namespace["apply_patches"](fixture)
-    assert b"start = max(0, min(start, n))" in patched
-    assert b"end = max(start, min(end, n))" in patched
-    assert b"return min(n, max(cut_idx, head_end + 1))" in patched
-    with pytest.raises(RuntimeError, match="source digest mismatch"):
-        namespace["verified_patch"](fixture)
+    assert "hermes-compressor-oob-patch.py" not in manifest["data"]
+    assert "hermes-request-estimator-oob-patch.py" not in manifest["data"]
 
     documents = yaml.safe_load_all((REPO_ROOT / "deploy/k8s/components/hermes-iris/hermes-iris.yaml").read_text())
     deployment = next(document for document in documents if document.get("kind") == "Deployment")
     pod_spec = deployment["spec"]["template"]["spec"]
-    init_by_name = {item["name"]: item for item in pod_spec["initContainers"]}
-    patch_init = init_by_name["patch-compressor-oob"]
-    assert patch_init["image"] == deployment["spec"]["template"]["spec"]["containers"][0]["image"]
-    assert patch_init["command"] == [
-        "python3",
-        "/etc/verdify/hermes-config/hermes-compressor-oob-patch.py",
-        "--source",
-        "/opt/hermes/agent/context_compressor.py",
-        "--destination",
-        "/opt/hermes-runtime-patch/context_compressor.py",
-    ]
+    init_names = {item["name"] for item in pod_spec["initContainers"]}
+    assert init_names == {"seed-config"}
+    assert {volume["name"] for volume in pod_spec["volumes"]}.isdisjoint({"hermes-runtime-patch", "hermes-agent-patch"})
     main = pod_spec["containers"][0]
-    patch_mount = next(mount for mount in main["volumeMounts"] if mount["name"] == "hermes-runtime-patch")
-    assert patch_mount == {
-        "name": "hermes-runtime-patch",
-        "mountPath": "/opt/hermes/agent/context_compressor.py",
-        "subPath": "context_compressor.py",
-        "readOnly": True,
-    }
-    assert any(volume == {"name": "hermes-runtime-patch", "emptyDir": {}} for volume in pod_spec["volumes"])
-
-
-def test_hermes_request_estimator_backport_counts_schemas_fail_closed_and_mounted():
-    manifest, _profile, _readiness_source = _hermes_config_documents()
-    source = manifest["data"]["hermes-request-estimator-oob-patch.py"]
-    namespace = {"__name__": "hermes_request_estimator_patch_test"}
-    exec(compile(source, "hermes-request-estimator-oob-patch.py", "exec"), namespace)  # noqa: S102
-
-    assert namespace["SOURCE_SHA256"] == "a639cb65862c463a77297efbe41f311d3f8033f5162f7498b5ad7daf2cb3751b"
-    assert namespace["PATCHED_SHA256"] == "187fb9d4f1d127e95013777ae9b692f229fe324284f79f472f52622b7f8dc02b"
-    fixture = namespace["PATCHES"][0][0]
-    patched = namespace["apply_patches"](fixture)
-    assert b"estimate_messages_tokens_rough(api_messages)" not in patched
-    assert b"estimate_request_tokens_rough(" in patched
-    assert b"api_messages, tools=self.tools or None" in patched
-    assert b"system_prompt=" not in patched
-    with pytest.raises(RuntimeError, match="source digest mismatch"):
-        namespace["verified_patch"](fixture)
-
-    documents = yaml.safe_load_all((REPO_ROOT / "deploy/k8s/components/hermes-iris/hermes-iris.yaml").read_text())
-    deployment = next(document for document in documents if document.get("kind") == "Deployment")
-    pod_spec = deployment["spec"]["template"]["spec"]
-    assert pod_spec["securityContext"]["fsGroup"] == 1000
-    init_by_name = {item["name"]: item for item in pod_spec["initContainers"]}
-    patch_init = init_by_name["patch-request-estimator-oob"]
-    assert patch_init["image"] == pod_spec["containers"][0]["image"]
-    assert patch_init["securityContext"]["runAsUser"] == 1000
-    assert patch_init["securityContext"]["runAsGroup"] == 1000
-    assert patch_init["command"] == [
-        "python3",
-        "/etc/verdify/hermes-config/hermes-request-estimator-oob-patch.py",
-        "--source",
-        "/opt/hermes/run_agent.py",
-        "--destination",
-        "/opt/hermes-agent-patch/run_agent.py",
-    ]
-    main = pod_spec["containers"][0]
-    assert "command" not in main
-    assert main["args"] == ["gateway", "run"]
-    init_patch_mount = next(mount for mount in patch_init["volumeMounts"] if mount["name"] == "hermes-agent-patch")
-    assert init_patch_mount == {
-        "name": "hermes-agent-patch",
-        "mountPath": "/opt/hermes-agent-patch",
-    }
-    patch_mount = next(mount for mount in main["volumeMounts"] if mount["name"] == "hermes-agent-patch")
-    assert patch_mount == {
-        "name": "hermes-agent-patch",
-        "mountPath": "/opt/hermes/run_agent.py",
-        "subPath": "run_agent.py",
-        "readOnly": True,
-    }
-    assert any(volume == {"name": "hermes-agent-patch", "emptyDir": {}} for volume in pod_spec["volumes"])
-    # The independent compressor file stays mounted while this patch has its
-    # own init/volume/subPath rollback boundary.
-    assert "patch-compressor-oob" in init_by_name
-    assert any(mount["name"] == "hermes-runtime-patch" for mount in main["volumeMounts"])
+    assert {mount["name"] for mount in main["volumeMounts"]}.isdisjoint({"hermes-runtime-patch", "hermes-agent-patch"})
+    env_names = {item["name"] for item in main["env"]}
+    assert "HERMES_STREAM_STALE_TIMEOUT" not in env_names
 
 
 def _readiness_required_tools(source: str) -> set[str]:

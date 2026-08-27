@@ -83,10 +83,9 @@ class TestPlannerConfig:
         planner = ai.model("planner")
         assert planner == {
             "provider": "custom",
-            "model": "llm.primary.longctx",
-            "reasoning_effort": "medium",
-            "context_length": 98304,
-            "max_output_tokens": 16384,
+            "model": "gpt-5.6-sol",
+            "base_url": "https://api.openai.com/v1",
+            "reasoning_effort": "xhigh",
             "purpose": "Audit metadata for the live Hermes Iris profile. Runtime source: hermes/iris/config.yaml.",
         }
 

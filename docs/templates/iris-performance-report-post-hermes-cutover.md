@@ -1,10 +1,5 @@
 # Iris planner — post-cutover performance report (TEMPLATE)
 
-> **Archived candidate-profile template.** GPT-5.6 Sol/xhigh was not the
-> activated production profile. Current reports must identify the live Cortex
-> `custom:llm.primary.longctx` medium profile and its 16,384-token output fence;
-> preserve the candidate wording below only when reporting a historical window.
-
 **Window:** `<post-cutover-start>` → `<post-cutover-end>` (30 days)
 **Subject:** Iris on Hermes + OpenAI GPT-5.6 Sol (reasoning_effort=xhigh)
 **Author:** `<author>`
