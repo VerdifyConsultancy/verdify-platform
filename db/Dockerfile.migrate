@@ -13,10 +13,11 @@
 # build failed with exit 1. The old reason for inlining, an unreliable
 # NFS-backed worktree, retired with the VM).
 FROM postgres:16-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
-# python3: exact wrap-safety classification for the ledgered runner (#583) —
-# scripts/check_migration_rollback_safety.py decides single-transaction vs
-# unwrapped apply per migration file.
-RUN apk add --no-cache python3
+# python3: exact wrap-safety classification for the ledgered runner (#583).
+# asyncpg also lets the one-container direct-launch bootstrap reuse this
+# repeatedly proven psql image instead of allocating an API-image pod shape
+# that failed CNI sandbox creation on every worker.
+RUN apk add --no-cache python3 py3-asyncpg
 COPY db/schema.sql /db/schema.sql
 COPY db/migrations/000-fresh-schema-hypertable-repair.sql /db/000-fresh-schema-hypertable-repair.sql
 # Ledgered populated-DB delivery path (#583, audit §8.7): the full numbered

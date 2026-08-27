@@ -6,4 +6,4 @@ resources:
   - bootstrap-job.yaml
 
 images:
-  - name: ghcr.io/verdifyconsultancy/verdify-api
+  - name: ghcr.io/verdifyconsultancy/verdify-migrate

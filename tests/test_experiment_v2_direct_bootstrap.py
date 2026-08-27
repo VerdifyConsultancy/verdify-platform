@@ -14,6 +14,7 @@ COMPONENT = ROOT / "deploy/k8s/components/experiment-v2-direct-launch-bootstrap"
 CONFIG = COMPONENT / "bootstrap-configmap.yaml"
 JOB_PATCH = COMPONENT / "bootstrap-job.yaml"
 MIGRATION = ROOT / "db/migrations/221-experiment-v2-state-replay.sql"
+MIGRATE_DOCKERFILE = ROOT / "db/Dockerfile.migrate"
 PROFILE_SOURCE = ROOT / "research/planner-efficacy/baseline/planner-switchback-v2-profiles.json"
 EXPERIMENT_ID = "45039c86-c1d9-52f6-a0a9-d94a17bc4b14"
 
@@ -95,6 +96,8 @@ def test_bootstrap_is_feature_off_function_bounded_and_secret_safe() -> None:
     ):
         assert forbidden not in script
 
+    assert "apk add --no-cache python3 py3-asyncpg" in MIGRATE_DOCKERFILE.read_text()
+
     patch = yaml.safe_load(JOB_PATCH.read_text())
     assert patch["metadata"]["name"] == "verdify-experiment-v2-direct-launch-bootstrap"
     assert patch["spec"]["activeDeadlineSeconds"] >= 600
@@ -151,7 +154,7 @@ def test_prod_render_contains_bootstrap_and_keeps_experiment_disabled() -> None:
     containers = {container["name"]: container for container in pod["spec"]["containers"]}
     assert set(containers) == {"direct-launch-bootstrap"}
     container = containers["direct-launch-bootstrap"]
-    assert container["image"].startswith("registry.vallery.net/verdifyconsultancy/verdify-api@sha256:")
+    assert container["image"].startswith("registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:")
     feature = by_kind_name[("ConfigMap", "verdify-config")]["data"]
     assert feature["VERDIFY_COMPONENT_EXPERIMENT_ENABLED"] == "off"
     assert feature["VERDIFY_ACTIVE_EXPERIMENT_ID"] == ""
