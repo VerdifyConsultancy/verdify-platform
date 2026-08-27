@@ -783,7 +783,10 @@ def test_cli_passes_and_publishes_a_private_result(tmp_path: Path, capsys: pytes
     assert code == 0
     assert "PASS — grid_parity" in out
     assert "PASS — band_coherence_424" in out
-    assert "WARN — source_grid_revision_adoption" in out  # the source constant is still the placeholder
+    # This synthetic fixture has different entity keys than the physical live
+    # receipt, so the CLI must warn instead of pretending it reproduces the
+    # adopted source revision.
+    assert "WARN — source_grid_revision_adoption" in out
     assert "grid_revision=live-entity-grid-v1:sha256:" in out
     assert "0 fail" in out
 
@@ -795,7 +798,7 @@ def test_cli_passes_and_publishes_a_private_result(tmp_path: Path, capsys: pytes
     assert payload["current_state_artifact"]["schema"] == cap.CURRENT_STATE_SCHEMA
     assert set(payload["current_state_artifact"]["values"]) == set(CANONICAL_FIELD_ORDER)
     assert payload["result_sha256"] == cap.result_sha256(payload)
-    assert payload["source_grid_revision_qualified"] is False
+    assert payload["source_grid_revision_qualified"] is True
 
     with pytest.raises(SystemExit) as exit_info:
         cap.main(["--input", str(input_path), "--json", str(output_path)])

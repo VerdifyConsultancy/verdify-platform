@@ -47,7 +47,7 @@ from tasks.component_experiment import (  # noqa: E402
     record_component_device_uptime,
 )
 
-from verdify_schemas.component_executor import CANONICAL_FIELD_ORDER, ENTITY_GRIDS
+from verdify_schemas.component_executor import CANONICAL_FIELD_ORDER, ENTITY_GRIDS, RECOVERY_ORDER
 
 NOW = datetime(2026, 8, 23, 22, 0, tzinfo=UTC)
 EXPERIMENT_ID = "11111111-1111-4111-8111-111111111111"
@@ -477,7 +477,11 @@ class FakeTransport:
 @pytest.fixture(autouse=True)
 def isolated(monkeypatch):
     monkeypatch.setattr(shared, "transport_generation", 7)
-    monkeypatch.setattr(component_experiment, "physical_execution_qualified", lambda _grid, _observed=None: True)
+    monkeypatch.setattr(
+        component_experiment,
+        "physical_execution_qualified",
+        lambda _grid, _observed=None, _experiment_id=None: True,
+    )
     monkeypatch.setattr(component_experiment, "request_component_state_replay", lambda: False)
     component_experiment._runtime_reporters.clear()
     component_experiment._pending_runtime_faults.clear()
@@ -1224,7 +1228,11 @@ async def test_unqualified_live_grid_or_prefix_replay_blocks_every_physical_call
     item = work()
     store = FakeStore(item, observation(item, item.baseline_state))
     transport = FakeTransport()
-    monkeypatch.setattr(component_experiment, "physical_execution_qualified", lambda _grid, _observed=None: False)
+    monkeypatch.setattr(
+        component_experiment,
+        "physical_execution_qualified",
+        lambda _grid, _observed=None, _experiment_id=None: False,
+    )
 
     result = await executor(store, transport).run_once(EXPERIMENT_ID, fence())
 
@@ -1352,7 +1360,7 @@ async def test_full48_paused_recovery_is_fixed_order_and_retains_db_authority():
     transport = FakeTransport()
     result = await executor(store, transport).run_once(EXPERIMENT_ID, fence())
     assert result.disposition == "recovered"
-    assert [call.parameter for call in transport.calls] == list(CANONICAL_FIELD_ORDER)
+    assert [call.parameter for call in transport.calls] == list(RECOVERY_ORDER)
     assert len(transport.calls) == 48
     assert store.opened == []
     assert component_authority_hold() == (True, frozenset(CANONICAL_FIELD_ORDER))
@@ -1378,7 +1386,7 @@ async def test_new_runtime_restart_signal_allows_only_linked_full48_recovery():
     transport = FakeTransport()
     result = await executor(store, transport).run_once(EXPERIMENT_ID, fence(writer_generation=9))
     assert result.disposition == "recovered"
-    assert [call.parameter for call in transport.calls] == list(CANONICAL_FIELD_ORDER)
+    assert [call.parameter for call in transport.calls] == list(RECOVERY_ORDER)
     assert store.opened == []
 
 

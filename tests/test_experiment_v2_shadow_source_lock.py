@@ -201,8 +201,8 @@ def test_source_lock_composes_with_generator_without_claiming_live_authority(tmp
         "packet_ready": False,
         "physical_approval": False,
         "reason": (
-            "The deployed runtime identity, running-device entity grid, current firmware/config evidence, "
-            "and commissioning state remain live-evidence inputs."
+            "The running-device 48-field grid is source-stamped and live-attested; current config evidence "
+            "and the supervised physical proof remain live-evidence inputs."
         ),
     }
     assert "source_git_sha" not in LOCK

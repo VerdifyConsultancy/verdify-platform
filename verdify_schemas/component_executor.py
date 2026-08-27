@@ -32,11 +32,17 @@ type ComponentValue = bool | float
 type RawComponentValue = bool | int | float | Decimal
 type EntityType = Literal["number", "switch"]
 
-GRID_REVISION = "source-grid-parity/main-and-historical-09ee886-live-unverified-v1"
-ORDER_REVISION = "candidate-fixed-order-v1-prefix-replay-unqualified"
+GRID_REVISION = "live-entity-grid-v1:sha256:c10f21f692f4772acd98a41f7ee28e43e534e03d4009d3f963fc2e0fb96aa436"
+# Exact file SHA-256 of
+# research/planner-efficacy/qualification/direct-launch-risk-order-v1.json.
+# The distinct prefix prevents this accepted-risk 27/48 receipt from being
+# mistaken for a generalized 48/48 prefix-replay qualification.
+ORDER_REVISION = "direct-launch-risk-replay-v1:sha256:d72b0a56becac1c14b02d0d47f04a4bc61ff5418b6795bc9164d11541a9482d8"
+DIRECT_LAUNCH_EXPERIMENT_ID = "45039c86-c1d9-52f6-a0a9-d94a17bc4b14"
 
 _QUALIFIED_GRID_REVISION = re.compile(r"^live-entity-grid-v[1-9][0-9]*:sha256:[0-9a-f]{64}$")
 _QUALIFIED_ORDER_REVISION = re.compile(r"^prefix-replay-v[1-9][0-9]*:sha256:[0-9a-f]{64}$")
+_DIRECT_LAUNCH_RISK_ORDER_REVISION = re.compile(r"^direct-launch-risk-replay-v[1-9][0-9]*:sha256:[0-9a-f]{64}$")
 
 
 class ComponentContractError(ValueError):
@@ -56,21 +62,29 @@ class EntityGrid:
     entity_type: EntityType = "number"
 
 
-def physical_execution_qualified(grid_revision: str, observed_grid_revision: str | None = None) -> bool:
+def physical_execution_qualified(
+    grid_revision: str,
+    observed_grid_revision: str | None = None,
+    experiment_id: str | None = None,
+) -> bool:
     """True only for source-bound live-grid and prefix-replay evidence.
 
-    The checked constants deliberately remain provisional for the OFF release.
-    Physical work therefore cannot pass this boundary until a reviewed change
-    replaces both values with evidence-addressed qualified revisions, L3
-    resolves work against that exact grid revision, and the current ingestor
-    connection independently attests the same live grid. A source constant or
-    arbitrary 64-hex string cannot substitute for current runtime evidence.
+    The generalized path requires a full prefix-replay revision.  The exact
+    direct-launch study may instead use the separately-prefixed accepted-risk
+    receipt recorded by migration 220.  Both paths still require L3 work and
+    the current ingestor connection to attest the exact source grid; an
+    arbitrary source string or stale observation cannot pass this boundary.
     """
+    order_qualified = _QUALIFIED_ORDER_REVISION.fullmatch(ORDER_REVISION) is not None
+    direct_launch_risk_accepted = (
+        _DIRECT_LAUNCH_RISK_ORDER_REVISION.fullmatch(ORDER_REVISION) is not None
+        and experiment_id == DIRECT_LAUNCH_EXPERIMENT_ID
+    )
     return (
         grid_revision == GRID_REVISION
         and observed_grid_revision == GRID_REVISION
         and _QUALIFIED_GRID_REVISION.fullmatch(GRID_REVISION) is not None
-        and _QUALIFIED_ORDER_REVISION.fullmatch(ORDER_REVISION) is not None
+        and (order_qualified or direct_launch_risk_accepted)
     )
 
 
@@ -153,7 +167,18 @@ TREATMENT_FIELD_ORDER: tuple[str, ...] = (
 # source orders, not a claim that physical prefix replay has passed.
 ACTIVATION_ORDER: tuple[str, ...] = TREATMENT_FIELD_ORDER
 ROLLBACK_ORDER: tuple[str, ...] = TREATMENT_FIELD_ORDER
-RECOVERY_ORDER: tuple[str, ...] = CANONICAL_FIELD_ORDER
+# Recovery must repair the deployed 45 s engage-delay default immediately and
+# lower the engage threshold before the all-zone threshold.  Canonical wire
+# order did the reverse and transiently violated engage <= all while recovering
+# 1.6/1.9 -> 1.2/1.4.  The remaining fields retain canonical order and the
+# bundle is still unconditional and complete over all 48 fields.
+_RECOVERY_PREREQUISITES: tuple[str, ...] = (
+    "mister_engage_delay_s",
+    "mister_engage_kpa",
+)
+RECOVERY_ORDER: tuple[str, ...] = _RECOVERY_PREREQUISITES + tuple(
+    field_name for field_name in CANONICAL_FIELD_ORDER if field_name not in _RECOVERY_PREREQUISITES
+)
 COMMON_FIELDS: frozenset[str] = frozenset(CANONICAL_FIELD_ORDER) - frozenset(TREATMENT_FIELD_ORDER)
 
 WORK_KIND_PREVIEW = "shadow_preview"
@@ -344,8 +369,8 @@ def fixed_order_complete_bundle(
     wrong component.  Every requested component is still exact-grid checked.
     """
     normalized_target = normalize_complete_state(target)
-    if tuple(order) != CANONICAL_FIELD_ORDER:
-        raise ComponentContractError("recovery_order_not_full_canonical")
+    if tuple(order) != RECOVERY_ORDER:
+        raise ComponentContractError("recovery_order_not_source_locked")
     changes: list[ComponentChange] = []
     for field_name in order:
         definition = REGISTRY[field_name]

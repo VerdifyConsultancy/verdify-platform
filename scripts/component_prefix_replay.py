@@ -27,7 +27,7 @@ Edge set (the permitted directed transitions):
       interposes baseline, so those four are the complete permitted set; the
       change list is the actual difference list from
       ``fixed_order_differences``.
-  (b) full-48 recovery edges over ``CANONICAL_FIELD_ORDER``: from the compiled
+  (b) full-48 recovery edges over ``RECOVERY_ORDER``: from the compiled
       ESPHome defaults and from every supplied observed / reboot / reset /
       common-drift start → baseline, built with
       ``fixed_order_complete_bundle`` (unconditional, because reboot/reset
@@ -906,8 +906,8 @@ def replay(
     if ACTIVATION_ORDER != TREATMENT_FIELD_ORDER or ROLLBACK_ORDER != TREATMENT_FIELD_ORDER:
         failures.append("activation/rollback order is no longer TREATMENT_FIELD_ORDER")
         fixed_order_ok = False
-    if RECOVERY_ORDER != CANONICAL_FIELD_ORDER:
-        failures.append("recovery order is no longer CANONICAL_FIELD_ORDER")
+    if len(RECOVERY_ORDER) != len(CANONICAL_FIELD_ORDER) or set(RECOVERY_ORDER) != set(CANONICAL_FIELD_ORDER):
+        failures.append("recovery order is no longer an exact permutation of CANONICAL_FIELD_ORDER")
         fixed_order_ok = False
 
     for edge in edges:

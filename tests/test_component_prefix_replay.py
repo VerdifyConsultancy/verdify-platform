@@ -138,7 +138,7 @@ def test_recovery_edge_is_the_unconditional_full_48_bundle(profiles, compiled_de
     assert len(cases) == RECOVERY_PREFIXES
     # Unconditional: every one of the 48 components is commanded even where the
     # start already matches the target.
-    assert cases[-1].applied_fields == CANONICAL_FIELD_ORDER
+    assert cases[-1].applied_fields == RECOVERY_ORDER
     already_equal = [f for f in CANONICAL_FIELD_ORDER if compiled_defaults[f] == profiles["baseline"][f]]
     assert already_equal, "fixture must contain at least one already-correct component"
     assert set(already_equal) <= set(cases[-1].applied_fields)
@@ -176,7 +176,9 @@ def test_prefix_states_are_snapshots_not_aliases(profiles) -> None:
 def test_source_order_constants_are_the_ones_this_tool_qualifies() -> None:
     assert ACTIVATION_ORDER == TREATMENT_FIELD_ORDER
     assert ROLLBACK_ORDER == TREATMENT_FIELD_ORDER
-    assert RECOVERY_ORDER == CANONICAL_FIELD_ORDER
+    assert len(RECOVERY_ORDER) == len(CANONICAL_FIELD_ORDER)
+    assert set(RECOVERY_ORDER) == set(CANONICAL_FIELD_ORDER)
+    assert RECOVERY_ORDER[:2] == ("mister_engage_delay_s", "mister_engage_kpa")
     assert tool.SOURCE_ORDERS == {
         "activation": ACTIVATION_ORDER,
         "recovery": RECOVERY_ORDER,
@@ -204,7 +206,7 @@ def test_recovery_order_must_be_the_full_canonical_order(profiles, compiled_defa
             edge="recovery/bad-order",
             complete_bundle=True,
         )
-    assert excinfo.value.code == "recovery_order_not_full_canonical"
+    assert excinfo.value.code == "recovery_order_not_source_locked"
 
 
 def test_duplicate_order_entries_are_refused(profiles) -> None:
@@ -256,15 +258,15 @@ def test_committed_compiled_default_fixture_is_not_entity_grid_clean(compiled_de
 
     The tracked ESPHome constructor fixture boots ``mister_engage_delay_s`` at
     45 s, which is inside every clamp but off the 30 s entity step.  Recovery
-    prefixes therefore carry an off-grid component until the recovery command
-    reaches that exact field, and the run must NOT be able to qualify.
+    recovery now repairs that field first, so only the inherited prefix-zero
+    state is off-grid and the run still must NOT be able to qualify.
     """
     with pytest.raises(ComponentContractError) as excinfo:
         normalize_complete_state(compiled_defaults)
     assert excinfo.value.code == "value_off_entity_grid"
     assert "mister_engage_delay_s" in excinfo.value.detail
 
-    index = CANONICAL_FIELD_ORDER.index("mister_engage_delay_s")
+    index = RECOVERY_ORDER.index("mister_engage_delay_s")
     profiles_ = tool.load_profiles(tool.DEFAULT_PROFILES)
     edge = tool.build_edges(profiles_, {"compiled-defaults": compiled_defaults})[-1]
     result = tool.replay([edge], interlock=StubInterlock())
