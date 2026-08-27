@@ -1124,7 +1124,7 @@ def test_component_direct_launch_lock_binds_waiver_and_supervised_proof_atomical
     proof = {
         "authorization_ref": "github:VerdifyConsultancy/verdify-platform/issues/581#2026-08-27",
         "qualification_artifact_sha256": "bc" * 32,
-        "profile_artifact_sha256": "bd" * 32,
+        "profile_artifact_sha256": main._COMPONENT_EXPERIMENT_DIRECT_PROFILE_SHA256,
         "baseline_before_evidence_sha256": "be" * 32,
         "aggressive_evidence_sha256": "bf" * 32,
         "baseline_after_evidence_sha256": "c0" * 32,
@@ -1143,7 +1143,7 @@ def test_component_direct_launch_lock_binds_waiver_and_supervised_proof_atomical
         "endpoint_artifact_sha256": "88" * 32,
         "outcome_schema_sha256": "99" * 32,
         "analyzer_environment_sha256": "aa" * 32,
-        "power_artifact_sha256": "bb" * 32,
+        "power_artifact_sha256": main._COMPONENT_EXPERIMENT_DIRECT_POWER_SHA256,
     }
     response = client.post(
         f"/api/v1/experiments/{EXP_ID}/component-control/commands",
@@ -1151,7 +1151,7 @@ def test_component_direct_launch_lock_binds_waiver_and_supervised_proof_atomical
         json=_existing_control_payload(
             "direct_launch_lock",
             study_start_local_date="2027-01-10",
-            randomized_pair_count=150,
+            randomized_pair_count=main._COMPONENT_EXPERIMENT_DIRECT_PAIR_COUNT,
             selector_context_cutoff_local="11:45:00",
             **artifacts,
             **proof,
@@ -1166,7 +1166,7 @@ def test_component_direct_launch_lock_binds_waiver_and_supervised_proof_atomical
     assert args[:15] == (
         EXP_ID,
         date(2027, 1, 10),
-        150,
+        main._COMPONENT_EXPERIMENT_DIRECT_PAIR_COUNT,
         time(11, 45),
         artifacts["design_lock_sha256"],
         artifacts["source_git_sha"],
@@ -1200,7 +1200,7 @@ def test_component_direct_launch_requires_aware_positive_proof_window_before_db(
     payload = _existing_control_payload(
         "direct_launch_lock",
         study_start_local_date="2027-01-10",
-        randomized_pair_count=150,
+        randomized_pair_count=main._COMPONENT_EXPERIMENT_DIRECT_PAIR_COUNT,
         selector_context_cutoff_local="11:45:00",
         design_lock_sha256="33" * 32,
         source_git_sha="44" * 20,
@@ -1211,10 +1211,10 @@ def test_component_direct_launch_requires_aware_positive_proof_window_before_db(
         endpoint_artifact_sha256="88" * 32,
         outcome_schema_sha256="99" * 32,
         analyzer_environment_sha256="aa" * 32,
-        power_artifact_sha256="bb" * 32,
+        power_artifact_sha256=main._COMPONENT_EXPERIMENT_DIRECT_POWER_SHA256,
         authorization_ref="issue-581",
         qualification_artifact_sha256="bc" * 32,
-        profile_artifact_sha256="bd" * 32,
+        profile_artifact_sha256=main._COMPONENT_EXPERIMENT_DIRECT_PROFILE_SHA256,
         baseline_before_evidence_sha256="be" * 32,
         aggressive_evidence_sha256="bf" * 32,
         baseline_after_evidence_sha256="c0" * 32,
@@ -1229,6 +1229,54 @@ def test_component_direct_launch_requires_aware_positive_proof_window_before_db(
         json=payload,
     )
     assert response.status_code == 422
+    assert conn.queries == []
+    assert conn.control_queries == []
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("randomized_pair_count", 150),
+        ("power_artifact_sha256", "bb" * 32),
+        ("profile_artifact_sha256", "bd" * 32),
+    ],
+)
+def test_component_direct_launch_rejects_unwaived_power_or_profile_inputs_before_db(monkeypatch, client, field, value):
+    conn = _install(monkeypatch, _Conn(_status_without_work()))
+    payload = _existing_control_payload(
+        "direct_launch_lock",
+        study_start_local_date="2027-01-10",
+        randomized_pair_count=main._COMPONENT_EXPERIMENT_DIRECT_PAIR_COUNT,
+        selector_context_cutoff_local="11:45:00",
+        design_lock_sha256="33" * 32,
+        source_git_sha="44" * 20,
+        schedule_schema_sha256=main._COMPONENT_EXPERIMENT_SCHEDULE_SCHEMA_SHA256,
+        selector_identity_sha256="55" * 32,
+        selector_artifact_sha256="66" * 32,
+        context_schema_sha256="77" * 32,
+        endpoint_artifact_sha256="88" * 32,
+        outcome_schema_sha256="99" * 32,
+        analyzer_environment_sha256="aa" * 32,
+        power_artifact_sha256=main._COMPONENT_EXPERIMENT_DIRECT_POWER_SHA256,
+        authorization_ref="issue-581",
+        qualification_artifact_sha256="bc" * 32,
+        profile_artifact_sha256=main._COMPONENT_EXPERIMENT_DIRECT_PROFILE_SHA256,
+        baseline_before_evidence_sha256="be" * 32,
+        aggressive_evidence_sha256="bf" * 32,
+        baseline_after_evidence_sha256="c0" * 32,
+        proof_valid_from="2027-01-01T10:00:00Z",
+        proof_valid_to="2027-01-01T10:20:00Z",
+        supervisor_role="launch-supervisor",
+        rescue_owner_role="facility-rescue",
+    )
+    payload[field] = value
+    response = client.post(
+        f"/api/v1/experiments/{EXP_ID}/component-control/commands",
+        headers=API_AUTH,
+        json=payload,
+    )
+    assert response.status_code == 422
+    assert "exact accepted-risk 30-pair power/profile lock" in response.text
     assert conn.queries == []
     assert conn.control_queries == []
 
