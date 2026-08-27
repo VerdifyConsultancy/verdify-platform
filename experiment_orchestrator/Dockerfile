@@ -41,4 +41,4 @@ LABEL org.opencontainers.image.source="https://github.com/VerdifyConsultancy/ver
       org.opencontainers.image.title="verdify-experiment-v2-orchestrator"
 
 USER 10001:10001
-CMD ["python", "-m", "experiment_orchestrator"]
+ENTRYPOINT ["python", "-m", "experiment_orchestrator"]
