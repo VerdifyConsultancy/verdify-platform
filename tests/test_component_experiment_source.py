@@ -147,6 +147,8 @@ def exact_runtime_inventory() -> tuple[RuntimeEntityMetadata, ...]:
                 assumed_state=False if grid.entity_type == "switch" else None,
             )
         )
+        if grid.entity_type == "switch" and (definition.cfg_readback_object_id == definition.esp_object_id):
+            continue
         key += 1
         entities.append(
             RuntimeEntityMetadata(

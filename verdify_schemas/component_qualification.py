@@ -248,14 +248,22 @@ def build_live_entity_grid_evidence(
             field_name=field_name,
             route_kind="setter",
         )
-        readback = _required_route(
-            by_route,
-            types_by_object_id,
-            object_id=definition.cfg_readback_object_id,
-            entity_type="sensor",
-            field_name=field_name,
-            route_kind="readback",
-        )
+        # Three boolean tunables publish their current state on the template
+        # switch itself.  For those exact same-slug switch routes the setter is
+        # also the readback; inventing a parallel sensor route would make the
+        # shipped firmware impossible to attest.  Every other field retains
+        # the independent cfg_* sensor requirement.
+        if expected_grid.entity_type == "switch" and (definition.cfg_readback_object_id == definition.esp_object_id):
+            readback = setter
+        else:
+            readback = _required_route(
+                by_route,
+                types_by_object_id,
+                object_id=definition.cfg_readback_object_id,
+                entity_type="sensor",
+                field_name=field_name,
+                route_kind="readback",
+            )
 
         setter_body: dict[str, object] = {
             "device_id": setter.device_id,

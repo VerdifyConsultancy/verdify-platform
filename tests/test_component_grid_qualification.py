@@ -53,6 +53,8 @@ def exact_runtime_inventory() -> tuple[RuntimeEntityMetadata, ...]:
                 assumed_state=False if grid.entity_type == "switch" else None,
             )
         )
+        if grid.entity_type == "switch" and (definition.cfg_readback_object_id == definition.esp_object_id):
+            continue
         key += 1
         entities.append(
             RuntimeEntityMetadata(
@@ -93,6 +95,15 @@ def test_exact_runtime_inventory_produces_stable_content_and_connection_receipt(
     assert receipt["source_revision"] == SOURCE_REVISION
     assert receipt["connection_generation"] == 7
     assert receipt["observed_at"] == "2026-08-26T01:02:03.456789Z"
+    fields = {row["field_name"]: row for row in content["fields"]}
+    routes = {row["field_name"]: row for row in receipt["routes"]}
+    for field_name in (
+        "sw_direct_wet_gate_enabled",
+        "sw_fog_closes_vent",
+        "sw_mister_closes_vent",
+    ):
+        assert fields[field_name]["readback"]["entity_type"] == "switch"
+        assert routes[field_name]["readback_key"] == routes[field_name]["setter_key"]
 
     # Enumeration order is runtime noise. Canonical field order and keys make
     # the same authenticated inventory byte-identical when supplied reversed.
