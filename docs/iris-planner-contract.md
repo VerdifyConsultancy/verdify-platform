@@ -3,8 +3,7 @@
 > Historical contract: this document describes the pre-2026-05-11 OpenClaw /
 > local-Gemma planner path. Production planning routes through Hermes
 > (`hermes-iris`) with the MCP-only tool allowlist in `hermes/iris/config.yaml`.
-> The live profile is Cortex `custom:llm.primary.longctx` with medium reasoning,
-> a 98,304-token context contract, and a 16,384-token output fence. Use
+> The live profile is OpenAI GPT-5.6 Sol with xhigh reasoning. Use
 > `plan_delivery_log.hermes_run_id` as the active gateway correlation field.
 >
 > **For the current planner I/O schema, allowed-tunables/bounds, write-contract
@@ -13,7 +12,7 @@
 > The ledger / exact-trigger-correlation / registry-validation semantics in *this*
 > doc remain active; the gateway/model details below are historical.
 
-**Status:** historical v1.5 by coordinator, 2026-05-04. It ratified the local-first OpenClaw/Gemma path that was superseded on 2026-05-11 by Hermes `hermes-iris`. The live Hermes profile is Cortex `custom:llm.primary.longctx` with medium reasoning and a 16,384-token output fence. The trigger-ledger, exact-correlation, lifecycle-status, and registry-validation rules remain active; the gateway/model details below are historical.
+**Status:** historical v1.5 by coordinator, 2026-05-04. It ratified the local-first OpenClaw/Gemma path that was superseded on 2026-05-11 by Hermes `hermes-iris`. The live Hermes profile is OpenAI GPT-5.6 Sol with xhigh reasoning. The trigger-ledger, exact-correlation, lifecycle-status, and registry-validation rules remain active; the gateway/model details below are historical.
 
 **v1.5 change log (2026-05-04):** makes local Gemma4-on-cortext the default production planner path, defines the trigger ledger shape before more code changes, and closes the unsafe correlation rule: new planner rows correlate to triggers by exact `trigger_id` only. Legacy time-window fallback is permitted only for historical rows where both sides lack a UUID.
 

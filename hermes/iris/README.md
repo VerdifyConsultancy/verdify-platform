@@ -6,9 +6,9 @@ Hermes is now the only production route for Iris planning cycles.
 
 ## Files
 
-- `config.yaml` — active Hermes profile: Cortex's OpenAI-compatible `custom`
-  provider on `llm.primary.longctx`, with 98,304-token context, a 16,384-token
-  client output fence, medium reasoning, and an MCP-only tool surface. The
+- `config.yaml` — active Hermes profile: OpenAI GPT-5.6 Sol through Hermes's
+  OpenAI-compatible `custom` provider, with xhigh reasoning and an MCP-only
+  tool surface. The
   allowlist tightens the toolset to Verdify's MCP server; `query` (raw SQL) is
   excluded.
 - `SOUL.md` — durable identity, authoritative-source priority order,
