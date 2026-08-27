@@ -61,7 +61,7 @@ def test_source_lock_derivations_and_artifact_hashes_are_exact() -> None:
         assert _sha256(REPO_ROOT / selector[path_key]) == selector[hash_key]
     selector_artifact = json.loads((REPO_ROOT / selector["artifact_path"]).read_text())
     source_contract = selector_artifact["source_contract"]
-    assert source_contract["verified_content_git_sha"] == "a754e873e8c42bfbb05a4c808bdf023c6462691a"
+    assert source_contract["verified_content_git_sha"] == "b9c1e568e8562525e083d106e94b67b5b64a6039"
     assert _sha256(REPO_ROOT / source_contract["provider_source"]) == source_contract["provider_source_sha256"]
     assert (
         _sha256(REPO_ROOT / source_contract["selector_contract_source"])
@@ -135,6 +135,9 @@ def test_source_locked_schemas_project_the_runtime_contracts() -> None:
         "forecast_vintage",
     }
     climate = context["properties"]["climate_observations"]["items"]
+    assert context["properties"]["climate_observations"]["maxItems"] == 48
+    assert LOCK["selector"]["context_max_climate_observations"] == 48
+    assert LOCK["selector"]["maximum_request_bytes"] == 97_792
     forecast = context["properties"]["forecast_vintage"]["items"]
     assert set(climate["properties"]["values"]["required"]) == CLIMATE_VALUE_FIELDS
     assert set(climate["properties"]["values"]["properties"]) == CLIMATE_VALUE_FIELDS

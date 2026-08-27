@@ -16,6 +16,8 @@ from urllib.parse import urlsplit, urlunsplit
 import httpx
 
 from .contracts import (
+    CORTEX_MAX_MODEL_LEN_TOKENS,
+    MIN_SELECTOR_OUTPUT_TOKENS,
     ContractError,
     ProviderResponse,
     SelectorContext,
@@ -103,6 +105,17 @@ class SelectorAttemptResult:
     raw_request_sha256: str
     raw_response_sha256: str | None
     attempt_receipt_sha256: tuple[str, ...]
+
+
+def _request_budget_bytes(identity: SelectorIdentity) -> int:
+    """Return a tokenizer-independent prompt ceiling for the frozen route."""
+
+    reserved_output = MIN_SELECTOR_OUTPUT_TOKENS
+    if identity.decoding_parameters is not None:
+        value = identity.decoding_parameters["max_tokens"]
+        assert type(value) is int  # SelectorIdentity.parse already proves it.
+        reserved_output = value
+    return CORTEX_MAX_MODEL_LEN_TOKENS - reserved_output
 
 
 def build_request(
@@ -342,6 +355,15 @@ class SelectorProviderAdapter:
                 identity=identity,
             )
         request_hash = hashlib.sha256(request).hexdigest()
+        if len(request) > _request_budget_bytes(identity):
+            reason = "request_exceeds_context_budget"
+            return SelectorAttemptResult(
+                "baseline",
+                reason,
+                request_hash,
+                None,
+                (_attempt_receipt(1, reason, None),),
+            )
         if self._settings is None:
             return SelectorAttemptResult(
                 "baseline",

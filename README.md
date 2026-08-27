@@ -29,7 +29,7 @@ TimescaleDB (telemetry, views, scorecards, lessons)
   ├── MCP Server (typed tools for Iris)
   └── Quartz (static site with embedded panels)
 
-Planner (Hermes hermes-iris → Cortex custom:llm.primary.longctx / medium → MCP)
+Planner (Hermes hermes-iris → OpenAI GPT-5.6 Sol / xhigh → MCP)
   └── Event-driven + scheduled (incl. weekly deep review) 72h horizon
       → MCP/tools → bounded tunables + decision ledger
 ```

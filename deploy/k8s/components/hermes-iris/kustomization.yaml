@@ -11,7 +11,7 @@ kind: Component
 # classes exist (laptop-root gate). See hermes-iris.yaml header.
 resources:
   - hermes-iris.yaml
-  # #213 IaC Hermes profile (Cortex 98K text route + explicit client bounds), seeded onto the
+  # #213 IaC Hermes profile (OpenAI GPT-5.6 Sol with xhigh reasoning), seeded onto the
   # state PVC by the seed-config initContainer so it can never silently drift back
   # to the stock openrouter/anthropic template that 401'd every planner LLM call.
   - hermes-config.yaml

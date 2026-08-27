@@ -44,13 +44,13 @@ def test_all_profiles_have_exactly_48_source_grid_values_and_only_11_may_differ(
         differences = {field for field in baseline if built[profile_id][field] != baseline[field]}
         assert differences <= profiles.TREATMENT_ALLOWLIST
     assert artifact["profiles"]["baseline"]["policy_state_content_sha256"] == (
-        "6f823c63a56686da33bf258e7c2380a4c87292d431f09b4f79c81e71b285cf8e"
+        "4fbbab8b067c978500f1b45878d7fd11ae2a36c25feeff26dd2e7334b2c2b574"
     )
     assert artifact["profiles"]["moderate"]["policy_state_content_sha256"] == (
-        "816bee6d7557b2ea4dfbc8afe13184c415089bdabb13c1a0ac1f41f8099b1c73"
+        "0484db1f9b03ae3cffa7a69eb95306a63444d8e93671cc6d4ada887ce485d173"
     )
     assert artifact["profiles"]["aggressive"]["policy_state_content_sha256"] == (
-        "fa08c3e12d4951c77ac13c3584f48f010dfe48cee8385fadce612a938e8b0c1d"
+        "34728bbe9d89599d6725974a8a27178e83b253381a7f71def64250f24e43935c"
     )
 
 
@@ -62,7 +62,7 @@ def test_profile_grid_rejects_values_above_exact_entity_max() -> None:
         profiles.validate_profiles(built)
 
 
-def test_every_historical_off_grid_value_has_one_explicit_design_decision() -> None:
+def test_every_profile_override_has_one_explicit_design_decision() -> None:
     artifact = profiles.build_profile_artifact(REPO_ROOT)
     decisions = {(row["profile_scope"], row["field"]): row for row in artifact["explicit_grid_design_decisions"]}
     assert set(decisions) == {
@@ -71,9 +71,11 @@ def test_every_historical_off_grid_value_has_one_explicit_design_decision() -> N
         ("all", "mister_all_delay_s"),
         ("all", "mister_engage_delay_s"),
         ("all", "vpd_watch_dwell_s"),
+        ("all", "sw_dwell_gate_enabled"),
         ("moderate", "mister_pulse_gap_s"),
     }
     assert decisions[("all", "dwell_gate_ms")]["to"] == 240_000
+    assert decisions[("all", "sw_dwell_gate_enabled")]["to"] is False
     assert decisions[("moderate", "mister_pulse_gap_s")]["to"] == 40
 
 

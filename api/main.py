@@ -988,6 +988,8 @@ WITH login AS (
     SELECT unnest(ARRAY[
         'public.fn_experiment_v2_configure(uuid,text,text,text,text,text,text,uuid,text,bigint,text)',
         'public.fn_experiment_v2_lock_design(uuid,date,integer,time without time zone,text,text,text,text,text,text,text,text,text,text,text)',
+        'public.fn_experiment_v2_direct_launch_lock(uuid,date,integer,time without time zone,text,text,text,text,text,text,text,text,text,text,text,text,text,text,text,text,tstzrange,text,text,text)',
+        'public.fn_experiment_v2_direct_launch_approve_day1(uuid,text)',
         'public.fn_experiment_v2_register_state(uuid,text,smallint,bytea,bytea,text)',
         'public.fn_experiment_v2_record_approval(uuid,text,text,integer,text,text,tstzrange,timestamptz,text,text,text)',
         'public.fn_experiment_v2_transition(uuid,text,text,text,text)',
@@ -1374,7 +1376,7 @@ async def noindex_api_responses(request: Request, call_next):
 
 DEFAULT_GREENHOUSE = "vallery"
 PLANNER_GATEWAY_LABEL = os.environ.get("VERDIFY_PLANNER_GATEWAY_LABEL", "hermes-iris")
-PLANNER_MODEL_LABEL = os.environ.get("VERDIFY_PLANNER_MODEL_LABEL", "hermes-iris/custom:llm.primary.longctx/medium")
+PLANNER_MODEL_LABEL = os.environ.get("VERDIFY_PLANNER_MODEL_LABEL", "hermes-iris/custom:gpt-5.6-sol/xhigh")
 WRITE_API_KEY_ENV = "VERDIFY_WRITE_API_KEY"
 ALLOW_UNAUTHENTICATED_WRITES_ENV = "VERDIFY_ALLOW_UNAUTHENTICATED_WRITES"
 PUBLIC_HOME_METRICS_CACHE_TTL_S = 30.0
@@ -5282,6 +5284,38 @@ class ComponentExperimentLockDesignControl(_ComponentExperimentExistingControl):
         return value
 
 
+class ComponentExperimentDirectLaunchLockControl(ComponentExperimentLockDesignControl):
+    """Atomic Jason-authorized direct lock after one supervised physical proof."""
+
+    action: Literal["direct_launch_lock"]
+    authorization_ref: str = Field(min_length=1, max_length=500)
+    qualification_artifact_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    profile_artifact_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    baseline_before_evidence_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    aggressive_evidence_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    baseline_after_evidence_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    proof_valid_from: dt.datetime
+    proof_valid_to: dt.datetime
+    supervisor_role: str = Field(min_length=1, max_length=200)
+    rescue_owner_role: str = Field(min_length=1, max_length=200)
+
+    @model_validator(mode="after")
+    def _direct_launch_proof_window_is_bounded(self) -> "ComponentExperimentDirectLaunchLockControl":
+        if any(
+            value.tzinfo is None or value.utcoffset() is None for value in (self.proof_valid_from, self.proof_valid_to)
+        ):
+            raise ValueError("direct-launch proof timestamps must include a UTC offset")
+        if self.proof_valid_from >= self.proof_valid_to:
+            raise ValueError("direct-launch proof window must have positive duration")
+        return self
+
+
+class ComponentExperimentDirectLaunchApproveDay1Control(_ComponentExperimentExistingControl):
+    """Derive day-1 authorization from the immutable direct-launch waiver."""
+
+    action: Literal["direct_launch_approve_day1"]
+
+
 class ComponentExperimentRegisterStateControl(_ComponentExperimentExistingControl):
     action: Literal["register_state"]
     profile: Literal["baseline", "moderate", "aggressive", "commissioning_probe"]
@@ -5403,6 +5437,8 @@ class ComponentExperimentCompleteControl(_ComponentExperimentExistingControl):
 ComponentExperimentControlRequest = Annotated[
     ComponentExperimentConfigureControl
     | ComponentExperimentLockDesignControl
+    | ComponentExperimentDirectLaunchLockControl
+    | ComponentExperimentDirectLaunchApproveDay1Control
     | ComponentExperimentRegisterStateControl
     | ComponentExperimentRecordApprovalControl
     | ComponentExperimentTransitionControl
@@ -5435,6 +5471,8 @@ class ComponentExperimentControlReceipt(BaseModel):
     action: Literal[
         "configure",
         "lock_design",
+        "direct_launch_lock",
+        "direct_launch_approve_day1",
         "register_state",
         "record_approval",
         "transition",
@@ -5492,6 +5530,20 @@ SELECT (public.fn_experiment_v2_lock_design(
     $5::text, $6::text, $7::text, $8::text, $9::text, $10::text,
     $11::text, $12::text, $13::text, $14::text, $15::text
 )).experiment_id::text
+""",
+    "direct_launch_lock": """
+SELECT (public.fn_experiment_v2_direct_launch_lock(
+    $1::uuid, $2::date, $3::integer, $4::time without time zone,
+    $5::text, $6::text, $7::text, $8::text, $9::text, $10::text,
+    $11::text, $12::text, $13::text, $14::text, $15::text, $16::text,
+    $17::text, $18::text, $19::text, $20::text, $21::tstzrange,
+    $22::text, $23::text, $24::text
+)).experiment_id::text
+""",
+    "direct_launch_approve_day1": """
+SELECT (public.fn_experiment_v2_direct_launch_approve_day1(
+    $1::uuid, $2::text
+)).approval_id::text
 """,
     "register_state": """
 SELECT (public.fn_experiment_v2_register_state(
@@ -5727,23 +5779,58 @@ async def _execute_component_control(
             actor,
         )
     elif isinstance(command, ComponentExperimentLockDesignControl):
-        args = (
-            experiment_id,
-            command.study_start_local_date,
-            command.randomized_pair_count,
-            command.selector_context_cutoff_local,
-            command.design_lock_sha256,
-            command.source_git_sha,
-            command.schedule_schema_sha256,
-            command.selector_identity_sha256,
-            command.selector_artifact_sha256,
-            command.context_schema_sha256,
-            command.endpoint_artifact_sha256,
-            command.outcome_schema_sha256,
-            command.analyzer_environment_sha256,
-            command.power_artifact_sha256,
-            actor,
-        )
+        if isinstance(command, ComponentExperimentDirectLaunchLockControl):
+            args = (
+                experiment_id,
+                command.study_start_local_date,
+                command.randomized_pair_count,
+                command.selector_context_cutoff_local,
+                command.design_lock_sha256,
+                command.source_git_sha,
+                command.schedule_schema_sha256,
+                command.selector_identity_sha256,
+                command.selector_artifact_sha256,
+                command.context_schema_sha256,
+                command.endpoint_artifact_sha256,
+                command.outcome_schema_sha256,
+                command.analyzer_environment_sha256,
+                command.power_artifact_sha256,
+                command.authorization_ref,
+                command.qualification_artifact_sha256,
+                command.profile_artifact_sha256,
+                command.baseline_before_evidence_sha256,
+                command.aggressive_evidence_sha256,
+                command.baseline_after_evidence_sha256,
+                asyncpg.Range(
+                    command.proof_valid_from,
+                    command.proof_valid_to,
+                    lower_inc=True,
+                    upper_inc=False,
+                ),
+                command.supervisor_role,
+                command.rescue_owner_role,
+                actor,
+            )
+        else:
+            args = (
+                experiment_id,
+                command.study_start_local_date,
+                command.randomized_pair_count,
+                command.selector_context_cutoff_local,
+                command.design_lock_sha256,
+                command.source_git_sha,
+                command.schedule_schema_sha256,
+                command.selector_identity_sha256,
+                command.selector_artifact_sha256,
+                command.context_schema_sha256,
+                command.endpoint_artifact_sha256,
+                command.outcome_schema_sha256,
+                command.analyzer_environment_sha256,
+                command.power_artifact_sha256,
+                actor,
+            )
+    elif isinstance(command, ComponentExperimentDirectLaunchApproveDay1Control):
+        args = (experiment_id, actor)
     elif isinstance(command, ComponentExperimentRegisterStateControl):
         args = (
             experiment_id,
@@ -5822,6 +5909,7 @@ async def _execute_component_control(
         in {
             "configure",
             "lock_design",
+            "direct_launch_lock",
             "transition",
             "set_admission",
             "record_facility_safe_closure",

@@ -15,6 +15,8 @@ from experiment_orchestrator.contracts import (
     CONTEXT_SCHEMA,
     FORECAST_SOURCE_SCHEMA,
     FORECAST_VALUE_FIELDS,
+    MAX_CLIMATE_OBSERVATIONS,
+    MAX_SELECTOR_CONTEXT_BYTES,
     SELECTOR_IDENTITY_SCHEMA,
     ContractError,
     LifecyclePlan,
@@ -170,9 +172,15 @@ def test_context_rejects_missing_real_climate_without_fabricating_defaults() -> 
 
 
 def test_context_rejects_unbounded_or_overflowing_source_data() -> None:
-    oversized = b"{" + b" " * (8 * 1024 * 1024) + b"}"
+    oversized = b"{" + b" " * MAX_SELECTOR_CONTEXT_BYTES + b"}"
     with pytest.raises(ContractError, match="byte bound"):
         SelectorContext.parse(oversized, hashlib.sha256(oversized).hexdigest())
+
+    payload = context_payload()
+    payload["climate_observations"] = [climate_row()] * (MAX_CLIMATE_OBSERVATIONS + 1)
+    raw = canonical_json_bytes(payload)
+    with pytest.raises(ContractError, match="48-row climate bound"):
+        SelectorContext.parse(raw, hashlib.sha256(raw).hexdigest())
 
     payload = context_payload()
     payload["climate_observations"][0]["values"]["temp_avg_f"] = 10**1000

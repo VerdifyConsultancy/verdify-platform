@@ -13,3 +13,4 @@ data/replay_overrides.prev.csv.gz
 replay_emit
 replay_emit_follow
 replay_invariants
+test_policy_injection

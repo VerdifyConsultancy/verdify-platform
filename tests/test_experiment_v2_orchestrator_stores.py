@@ -160,6 +160,7 @@ def candidate(kind: str) -> SelectorCandidate:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("reason", ["provider_unconfigured", "request_exceeds_context_budget"])
 @pytest.mark.parametrize(
     ("kind", "function"),
     [
@@ -168,6 +169,7 @@ def candidate(kind: str) -> SelectorCandidate:
     ],
 )
 async def test_selector_store_uses_only_kind_specific_function_and_blind_arguments(
+    reason: str,
     kind: str,
     function: str,
 ) -> None:
@@ -175,7 +177,7 @@ async def test_selector_store_uses_only_kind_specific_function_and_blind_argumen
     store = SelectorFunctionStore(attested(connection, OrchestratorMode.SELECTOR))
     decision = SelectorDecision(
         "baseline",
-        "provider_unconfigured",
+        reason,
         "5" * 64,
         None,
         ("6" * 64,),
@@ -186,7 +188,7 @@ async def test_selector_store_uses_only_kind_specific_function_and_blind_argumen
     assert function in query
     assert "arm" not in query and "mapping" not in query and "secret" not in query
     assert args[:4] == (EXPERIMENT, SUBJECT, SUBJECT, SUBJECT)
-    assert args[4:8] == ("baseline", "provider_unconfigured", "5" * 64, None)
+    assert args[4:8] == ("baseline", reason, "5" * 64, None)
     assert args[-2:] == ("4" * 64, "experiment-v2-orchestrator")
 
 
