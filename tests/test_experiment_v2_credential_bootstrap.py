@@ -12,7 +12,7 @@ import yaml
 
 REPO_ROOT = Path(__file__).parents[1]
 PROD = REPO_ROOT / "deploy/k8s/overlays/prod"
-JOB_NAME = "verdify-experiment-v2-credential-bootstrap"
+JOB_NAME = "verdify-runtime-role-bootstrap"
 
 LOGIN_DUTY = {
     "verdify_experiment_v2_lifecycle_login": "verdify_experiment_lifecycle",
@@ -45,7 +45,7 @@ def _job(documents: list[dict], name: str) -> dict:
 def _container(job: dict) -> dict:
     containers = job["spec"]["template"]["spec"]["containers"]
     return next(
-        (container for container in containers if container["name"] == "bootstrap-and-attest"),
+        (container for container in containers if container["name"] == "experiment-bootstrap-and-attest"),
         containers[0],
     )
 
@@ -64,7 +64,6 @@ def _secret_ref(item: dict, name: str, key: str) -> None:
 
 def test_bootstrap_is_wave_ordered_bounded_and_uses_exact_migrate_image(rendered: list[dict]) -> None:
     migration = _job(rendered, "verdify-migrate")
-    ordinary = _job(rendered, "verdify-runtime-role-bootstrap")
     experiment = _job(rendered, JOB_NAME)
     annotations = experiment["metadata"]["annotations"]
 
@@ -72,22 +71,17 @@ def test_bootstrap_is_wave_ordered_bounded_and_uses_exact_migrate_image(rendered
     assert annotations == {
         "argocd.argoproj.io/hook": "PreSync",
         "argocd.argoproj.io/hook-delete-policy": "BeforeHookCreation",
-        "argocd.argoproj.io/sync-wave": "2",
-        "operations.vallery.net/temporary-node-placement": (
-            "vm-k3s-node6:adjacent-presync-sandboxes-healthy:2026-08-27"
-        ),
-        "operations.vallery.net/temporary-cni-bypass": ("host-network:combined-bootstrap-only:2026-08-27"),
+        "argocd.argoproj.io/sync-wave": "1",
+        "operations.vallery.net/temporary-pod-reuse": ("runtime-role-bootstrap:three-duties-one-sandbox:2026-08-27"),
     }
     assert int(migration["metadata"]["annotations"].get("argocd.argoproj.io/sync-wave", "0")) == 0
-    assert ordinary["metadata"]["annotations"]["argocd.argoproj.io/sync-wave"] == "1"
     assert experiment["spec"]["backoffLimit"] == 0
     assert experiment["spec"]["activeDeadlineSeconds"] == 600
     assert experiment["spec"]["ttlSecondsAfterFinished"] == 600
 
     pod = experiment["spec"]["template"]["spec"]
     assert pod["restartPolicy"] == "Never"
-    assert pod["hostNetwork"] is True
-    assert pod["dnsPolicy"] == "ClusterFirstWithHostNet"
+    assert "hostNetwork" not in pod
     assert pod["automountServiceAccountToken"] is False
     assert pod["enableServiceLinks"] is False
     assert "serviceAccountName" not in pod

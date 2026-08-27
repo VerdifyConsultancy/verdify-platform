@@ -1,42 +1,12 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: verdify-experiment-v2-credential-bootstrap
-  labels:
-    app.kubernetes.io/part-of: verdify
-    app.kubernetes.io/component: experiment-v2-credential-bootstrap
-  annotations:
-    argocd.argoproj.io/hook: PreSync
-    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
-    # Migration is wave 0 and the ordinary-role bootstrap is wave 1. Keep the
-    # experiment login install later than both and before any Sync workload.
-    argocd.argoproj.io/sync-wave: "2"
+  name: verdify-runtime-role-bootstrap
 spec:
-  backoffLimit: 0
-  activeDeadlineSeconds: 240
-  ttlSecondsAfterFinished: 600
   template:
-    metadata:
-      labels:
-        app.kubernetes.io/part-of: verdify
-        # Reuse the migration duty's existing DB-only network-policy contract.
-        app.kubernetes.io/component: migrate
-        app.kubernetes.io/name: verdify-experiment-v2-credential-bootstrap
     spec:
-      restartPolicy: Never
-      automountServiceAccountToken: false
-      enableServiceLinks: false
-      terminationGracePeriodSeconds: 10
-      imagePullSecrets:
-        - name: zot-origin-cluster-pull
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 1000
-        runAsGroup: 1000
-        seccompProfile:
-          type: RuntimeDefault
       containers:
-        - name: bootstrap-and-attest
+        - name: experiment-bootstrap-and-attest
           # Logical transformer key. Production pins this to the same exact Zot
           # migrate digest as migration wave 0 and the ordinary-role bootstrap.
           image: ghcr.io/verdifyconsultancy/verdify-migrate

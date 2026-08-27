@@ -108,20 +108,15 @@ components:
   # remove the database-owner credential from both ordinary containers. Merge
   # and sync only after the protected four-key reconciliation receipt exists.
   - ../../components/runtime-role-boundary
-  # Gate 2 experiment credential activation. This remains non-actuating: it
-  # installs and attests the six migration-214/216 function-only logins and
-  # validates the two independent API authorization tokens, but does not set
-  # the experiment capability or active ID. Merge/sync only after the named
-  # protected Secret keys have been reconciled by the fleet authority.
+  # Gate 2 experiment credential activation. This remains non-actuating and
+  # patches the existing wave-1 role-bootstrap pod with a second attestation
+  # duty, avoiding another CNI sandbox while capability and active ID stay off.
   - ../../components/experiment-v2-credential-bootstrap
-  # Accepted-risk direct-launch preparation. A second container in the wave-2
-  # credential hook creates only the exact feature-off draft and registers the
-  # three frozen profile vectors; sharing that already-proven pod sandbox avoids
-  # a separate sequential CNI allocation. The shared hook temporarily excludes
-  # node6 after three no-IP sandbox deadlines; remove that exact annotation and
-  # node-affinity term after the fleet CNI incident is repaired. It cannot enable
-  # the component, open admission, randomize, or write a device. Exact replay is
-  # idempotent after migration 221.
+  # Accepted-risk direct-launch preparation. A third container in the wave-1
+  # role-bootstrap pod creates only the exact feature-off draft and registers
+  # the three frozen profile vectors. It cannot enable the component, open
+  # admission, randomize, or write a device. Exact replay is idempotent after
+  # migration 221.
   - ../../components/experiment-v2-direct-launch-bootstrap
   # #124 verdify-lab — the public Quartz research site (lab.verdify.ai). Pure web
   # tier, stateless (no PVC), NO device path. Built from the
