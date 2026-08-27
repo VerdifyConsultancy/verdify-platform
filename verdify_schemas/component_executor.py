@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import math
 import re
+import struct
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
@@ -224,6 +225,50 @@ def normalize_component_value(field_name: str, value: RawComponentValue) -> Comp
             f"{field_name}={decimal_value} step={grid.step} origin={grid.minimum}",
         )
     return float(decimal_value)
+
+
+def normalize_observed_component_value(field_name: str, value: object) -> ComponentValue:
+    """Validate one device readback against the exact binary32 entity grid.
+
+    ESPHome number-state protobufs carry IEEE-754 binary32 values.  A decoded
+    readback such as ``0.05000000074505806`` is therefore the exact transport
+    image of the canonical decimal grid point ``0.05`` rather than a command
+    that may be rounded onto the grid.  Match those four bytes against every
+    source grid point and return the canonical point.  An adjacent binary32
+    value remains invalid; this is exact transport equality, not a tolerance.
+
+    Text/Decimal inputs retain the strict command-side decimal semantics, and
+    switches still require an exact bool.  ``normalize_component_value`` is
+    deliberately unchanged so caller-supplied commands remain reject-not-round.
+    """
+    grid = ENTITY_GRIDS.get(field_name)
+    if grid is None:
+        raise ComponentContractError("unknown_component", field_name)
+    if grid.entity_type == "switch" or isinstance(value, (str, Decimal)):
+        return normalize_component_value(field_name, value)  # type: ignore[arg-type]
+    if isinstance(value, bool):
+        return normalize_component_value(field_name, value)
+    try:
+        numeric = float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ComponentContractError("wrong_value_type", f"{field_name} requires a finite number") from exc
+    if not math.isfinite(numeric):
+        raise ComponentContractError("non_finite_value", field_name)
+    try:
+        observed_bytes = struct.pack("!f", numeric)
+    except (OverflowError, struct.error) as exc:
+        raise ComponentContractError("value_outside_entity_grid", field_name) from exc
+
+    assert grid.minimum is not None and grid.maximum is not None and grid.step is not None
+    candidate = grid.minimum
+    while candidate <= grid.maximum:
+        if observed_bytes == struct.pack("!f", float(candidate)):
+            return float(candidate)
+        candidate += grid.step
+
+    # Preserve the command validator's stable outside/off-grid taxonomy for a
+    # transport value that matches no source grid point.
+    return normalize_component_value(field_name, value)  # type: ignore[arg-type]
 
 
 def normalize_complete_state(values: Mapping[str, RawComponentValue]) -> dict[str, ComponentValue]:

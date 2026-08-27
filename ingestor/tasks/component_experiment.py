@@ -62,7 +62,7 @@ from verdify_schemas.component_executor import (
     fixed_order_complete_bundle,
     fixed_order_differences,
     normalize_complete_state,
-    normalize_component_value,
+    normalize_observed_component_value,
     physical_execution_qualified,
     validate_routine_target,
     validate_work_phase,
@@ -595,7 +595,7 @@ def record_component_cfg_readback(
         else:
             return False
     try:
-        normalized = normalize_component_value(field_name, grid_value)
+        normalized = normalize_observed_component_value(field_name, grid_value)
     except ComponentContractError:
         return False
     moment = _aware(observed_at or datetime.now(UTC), "cfg_observed_at")

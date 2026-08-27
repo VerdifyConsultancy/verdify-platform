@@ -150,7 +150,7 @@ from verdify_schemas.component_executor import (  # noqa: E402
     ENTITY_GRIDS,
     ComponentContractError,
     normalize_complete_state,
-    normalize_component_value,
+    normalize_observed_component_value,
 )
 from verdify_schemas.component_executor import GRID_REVISION as SOURCE_GRID_REVISION  # noqa: E402
 from verdify_schemas.component_qualification import (  # noqa: E402
@@ -565,21 +565,7 @@ def _normalize_observed_component(field_name: str, value: object) -> bool | floa
     and matched by exact four-byte representation.  The returned value is the
     source decimal grid point, never the noisy decoded binary64 spelling.
     """
-    grid = ENTITY_GRIDS[field_name]
-    if grid.entity_type == "switch" or isinstance(value, (str, Decimal)):
-        return normalize_component_value(field_name, value)  # type: ignore[arg-type]
-    if isinstance(value, bool):
-        return normalize_component_value(field_name, value)
-    assert grid.minimum is not None and grid.maximum is not None and grid.step is not None
-    observed_bytes = _binary32(value, f"observed_component:{field_name}")
-    candidate = grid.minimum
-    while candidate <= grid.maximum:
-        if observed_bytes == _binary32(candidate, f"observed_component:{field_name}:grid"):
-            return float(candidate)
-        candidate += grid.step
-    # Preserve the executor's stable error taxonomy for a non-grid transport
-    # value.  It will reject rather than round the decoded number.
-    return normalize_component_value(field_name, value)  # type: ignore[arg-type]
+    return normalize_observed_component_value(field_name, value)
 
 
 def _layer_freshness(
