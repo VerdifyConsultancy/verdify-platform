@@ -63,12 +63,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: verdify-hermes-iris
-  annotations:
-    # MCP is wave 10; Argo must observe it Healthy before rolling the gateway.
-    # Ingestor is wave 30 and therefore cannot dispatch into a half-rolled
-    # Hermes session/tool surface. This metadata annotation does not alter the
-    # Recreate Deployment's pod template or restart the current singleton.
-    argocd.argoproj.io/sync-wave: "20"
   labels:
     app.kubernetes.io/part-of: verdify
     app.kubernetes.io/component: hermes-iris
@@ -82,17 +76,6 @@ spec:
     type: Recreate
   template:
     metadata:
-      annotations:
-        # sha256[:12] of hermes-config.yaml data.config.yaml. The focused
-        # drift test makes profile edits roll this Recreate Deployment so the
-        # seed-config init container refreshes the state PVC before startup.
-        verdify.io/hermes-profile-revision: "2352c78d651a"
-        # sha256[:12] of the digest-verified upstream #75588/#75884 backport. This
-        # rolls the singleton whenever the init-time runtime patch changes.
-        verdify.io/hermes-compressor-patch-revision: "540f717391e9"
-        # sha256[:12] of the digest-verified request-size estimator backport.
-        # This independently rolls the singleton if that runtime patch changes.
-        verdify.io/hermes-request-estimator-patch-revision: "a73a251a3748"
       labels:
         app.kubernetes.io/part-of: verdify
         app.kubernetes.io/component: hermes-iris
@@ -135,68 +118,6 @@ spec:
             - name: hermes-config
               mountPath: /etc/verdify/hermes-config
               readOnly: true
-        # The pinned upstream May image contains the short tool-tail compaction
-        # IndexError fixed by issue #75588 / PR #75884 (ad146a0c). Keep the
-        # reviewed image digest and install only that two-anchor source backport
-        # into a read-only single-file mount. The patcher verifies both the
-        # packaged source and result digests and fails the pod closed on skew.
-        - name: patch-compressor-oob
-          image: nousresearch/hermes-agent@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e
-          command:
-            - python3
-            - /etc/verdify/hermes-config/hermes-compressor-oob-patch.py
-            - --source
-            - /opt/hermes/agent/context_compressor.py
-            - --destination
-            - /opt/hermes-runtime-patch/context_compressor.py
-          securityContext:
-            runAsNonRoot: true
-            runAsUser: 1000
-            runAsGroup: 1000
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            capabilities:
-              drop: ["ALL"]
-            seccompProfile:
-              type: RuntimeDefault
-          volumeMounts:
-            - name: hermes-config
-              mountPath: /etc/verdify/hermes-config
-              readOnly: true
-            - name: hermes-runtime-patch
-              mountPath: /opt/hermes-runtime-patch
-        # The pinned gateway imports /opt/hermes/run_agent.py directly. Its
-        # per-request estimate counts the already-assembled api_messages (which
-        # include the system prompt), but omits tool schemas. That leaves the
-        # generic-400 context classifier, compression input, hooks, and logs
-        # blind to the material schema payload. Install only the reviewed
-        # one-anchor fix into a separate read-only single-file mount; exact
-        # packaged-source and patched-result digests make image skew fail closed.
-        - name: patch-request-estimator-oob
-          image: nousresearch/hermes-agent@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e
-          command:
-            - python3
-            - /etc/verdify/hermes-config/hermes-request-estimator-oob-patch.py
-            - --source
-            - /opt/hermes/run_agent.py
-            - --destination
-            - /opt/hermes-agent-patch/run_agent.py
-          securityContext:
-            runAsNonRoot: true
-            runAsUser: 1000
-            runAsGroup: 1000
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            capabilities:
-              drop: ["ALL"]
-            seccompProfile:
-              type: RuntimeDefault
-          volumeMounts:
-            - name: hermes-config
-              mountPath: /etc/verdify/hermes-config
-              readOnly: true
-            - name: hermes-agent-patch
-              mountPath: /opt/hermes-agent-patch
       containers:
         - name: hermes-iris
           # UPSTREAM image, digest PRESERVED from compose:363 (NOT rewritten by
@@ -237,11 +158,6 @@ spec:
             # registration. This may replace a client that recovered silently.
             - name: HERMES_MCP_UNACKNOWLEDGED_DISCONNECT_RESTART_SECONDS
               value: "600"
-            # Cortex may legitimately spend 4-5 minutes in prefill/reasoning
-            # before a stream delta. Match the finite provider timeout in the
-            # seeded profile so Hermes does not kill a healthy local stream.
-            - name: HERMES_STREAM_STALE_TIMEOUT
-              value: "600"
           securityContext:
             allowPrivilegeEscalation: false
             # hermes writes run state under /opt/data (PVC); root FS can stay RO.
@@ -271,14 +187,6 @@ spec:
               readOnly: true
             - name: tmp
               mountPath: /tmp
-            - name: hermes-runtime-patch
-              mountPath: /opt/hermes/agent/context_compressor.py
-              subPath: context_compressor.py
-              readOnly: true
-            - name: hermes-agent-patch
-              mountPath: /opt/hermes/run_agent.py
-              subPath: run_agent.py
-              readOnly: true
           livenessProbe:
             exec:
               command: ["python3", "/etc/verdify/hermes-config/tool-readiness.py", "--mode", "liveness"]
@@ -302,10 +210,6 @@ spec:
             secretName: verdify-hermes-slack
             optional: true
         - name: tmp
-          emptyDir: {}
-        - name: hermes-runtime-patch
-          emptyDir: {}
-        - name: hermes-agent-patch
           emptyDir: {}
         # #213 IaC Hermes profile, seeded onto the PVC by the seed-config init.
         - name: hermes-config
