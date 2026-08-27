@@ -73,8 +73,8 @@ def test_bootstrap_is_wave_ordered_bounded_and_uses_exact_migrate_image(rendered
         "argocd.argoproj.io/hook": "PreSync",
         "argocd.argoproj.io/hook-delete-policy": "BeforeHookCreation",
         "argocd.argoproj.io/sync-wave": "2",
-        "operations.vallery.net/temporary-node-exclusion": (
-            "vm-k3s-node4,vm-k3s-node5,vm-k3s-node6:cni-pod-sandbox-timeout:2026-08-27"
+        "operations.vallery.net/temporary-node-placement": (
+            "vm-k3s-node6:adjacent-presync-sandboxes-healthy:2026-08-27"
         ),
     }
     assert int(migration["metadata"]["annotations"].get("argocd.argoproj.io/sync-wave", "0")) == 0
