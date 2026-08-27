@@ -1,19 +1,37 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: verdify-runtime-role-bootstrap
+  name: verdify-experiment-v2-direct-launch-bootstrap
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: experiment-v2-direct-launch-bootstrap
   annotations:
-    # The separate experiment hook failed to acquire a CNI sandbox on all four
-    # workers while this adjacent PreSync hook repeatedly succeeded. Reuse its
-    # pod for the ordinary-role, experiment-credential, and exact-study duties.
-    operations.vallery.net/temporary-pod-reuse: runtime-role-bootstrap:three-duties-one-sandbox:2026-08-27
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "3"
 spec:
-  # One pod sandbox owns ordinary-role bootstrap, experiment credential
-  # attestation, and exact-study bootstrap. The direct duty waits for the
-  # first-install credentials, and all three remain bounded together.
+  backoffLimit: 0
   activeDeadlineSeconds: 600
+  ttlSecondsAfterFinished: 600
   template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: verdify
+        app.kubernetes.io/component: migrate
+        app.kubernetes.io/name: verdify-experiment-v2-direct-launch-bootstrap
     spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 10
+      imagePullSecrets:
+        - name: zot-origin-cluster-pull
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: direct-launch-bootstrap
           image: ghcr.io/verdifyconsultancy/verdify-api
@@ -71,3 +89,6 @@ spec:
         - name: direct-launch-bootstrap
           configMap:
             name: experiment-v2-direct-launch-bootstrap
+        - name: tmp
+          emptyDir:
+            sizeLimit: 16Mi
