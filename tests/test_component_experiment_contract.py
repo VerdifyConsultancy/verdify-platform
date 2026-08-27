@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import struct
 from decimal import Decimal
 
 import pytest
@@ -20,6 +21,7 @@ from verdify_schemas.component_executor import (
     fixed_order_differences,
     normalize_complete_state,
     normalize_component_value,
+    normalize_observed_component_value,
     physical_execution_qualified,
     validate_routine_target,
     validate_work_phase,
@@ -100,6 +102,28 @@ def test_every_numeric_grid_accepts_bounds_and_one_step_without_rounding() -> No
 def test_known_protocol_candidate_discrepancies_are_rejected(field: str, value: int) -> None:
     with pytest.raises(ComponentContractError, match="value_off_entity_grid"):
         normalize_component_value(field, value)
+
+
+@pytest.mark.parametrize(
+    ("field", "canonical"),
+    [
+        ("temp_hysteresis", 1.6),
+        ("cool_exit_hysteresis_f", 1.6),
+        ("vent_exchange_fraction", 0.3),
+        ("direct_wet_stress_vpd_margin_kpa", 0.05),
+    ],
+)
+def test_observed_binary32_grid_values_map_exactly_without_weakening_commands(field: str, canonical: float) -> None:
+    transported = struct.unpack("!f", struct.pack("!f", canonical))[0]
+    assert normalize_observed_component_value(field, transported) == canonical
+    if transported != canonical:
+        with pytest.raises(ComponentContractError, match="value_off_entity_grid"):
+            normalize_component_value(field, transported)
+
+    bits = int.from_bytes(struct.pack("!f", canonical), "big")
+    adjacent = struct.unpack("!f", (bits + 1).to_bytes(4, "big"))[0]
+    with pytest.raises(ComponentContractError, match="value_off_entity_grid"):
+        normalize_observed_component_value(field, adjacent)
 
 
 def test_unknown_incomplete_nonfinite_and_clamped_values_fail_closed() -> None:

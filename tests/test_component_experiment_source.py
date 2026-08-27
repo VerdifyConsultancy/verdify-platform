@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import struct
 import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -173,6 +174,48 @@ def test_epoch_uuid_and_timestamps_are_owned_by_raw_callbacks() -> None:
     assert decode_policy_vector(epoch.wire_vector) == state
     assert set(epoch.observed_at) == set(CANONICAL_FIELD_ORDER)
     assert set(epoch.observed_at.values()) == {NOW}
+
+
+def test_epoch_accepts_exact_binary32_readbacks_and_persists_canonical_grid_values() -> None:
+    arm()
+    state = minimum_state()
+    state.update(
+        {
+            "temp_hysteresis": 1.6,
+            "cool_exit_hysteresis_f": 1.6,
+            "vent_exchange_fraction": 0.3,
+            "direct_wet_stress_vpd_margin_kpa": 0.05,
+        }
+    )
+    transported = {
+        field: struct.unpack("!f", struct.pack("!f", value))[0] if type(value) is float else value
+        for field, value in state.items()
+    }
+    emit_complete(transported, NOW)
+
+    (epoch,) = component_cfg_source_epochs()
+    assert epoch.values == state
+    assert decode_policy_vector(epoch.wire_vector) == state
+
+
+def test_epoch_rejects_an_adjacent_binary32_value_until_a_valid_callback_arrives() -> None:
+    arm()
+    state = minimum_state()
+    state["direct_wet_stress_vpd_margin_kpa"] = 0.05
+    field = "direct_wet_stress_vpd_margin_kpa"
+    bits = int.from_bytes(struct.pack("!f", state[field]), "big")
+    adjacent = struct.unpack("!f", (bits + 1).to_bytes(4, "big"))[0]
+
+    invalid = dict(state)
+    invalid[field] = adjacent
+    for name in CANONICAL_FIELD_ORDER:
+        assert record_component_cfg_readback(name, invalid[name], observed_at=NOW) is False
+    assert component_cfg_source_epochs() == ()
+
+    transported = struct.unpack("!f", struct.pack("!f", state[field]))[0]
+    assert record_component_cfg_readback(field, transported, observed_at=NOW)
+    (epoch,) = component_cfg_source_epochs()
+    assert epoch.values[field] == 0.05
 
 
 def test_cached_snapshot_flush_cannot_complete_a_second_epoch() -> None:
