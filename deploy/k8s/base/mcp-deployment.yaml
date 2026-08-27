@@ -32,7 +32,7 @@ spec:
         # consumed via envFrom, so a ConfigMap edit alone does NOT restart this
         # pod. Maintained by scripts/gen-config-revision.sh — do NOT hand-edit
         # (the CI gate recomputes it).
-        verdify.io/config-revision: "e7db51a9906e"
+        verdify.io/config-revision: "cf315321b889"
       labels:
         app.kubernetes.io/part-of: verdify
         app.kubernetes.io/component: mcp
@@ -83,6 +83,17 @@ spec:
             # env entries (POSTGRES_PASSWORD above + DB_* from envFrom).
             - name: DB_DSN
               value: "postgresql://$(DB_USER):$(POSTGRES_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)"
+            # Server-side audience credential for the only currently active
+            # MCP client. Hermes receives this same protected value under the
+            # legacy VERDIFY_MCP_TOKEN name from verdify-hermes; mapping the
+            # existing key to the server's explicit IRIS audience avoids any
+            # duplicate secret material. Required (not optional): an absent
+            # credential must block the rollout rather than reopen MCP.
+            - name: VERDIFY_MCP_TOKEN_IRIS
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-hermes
+                  key: VERDIFY_MCP_TOKEN
             # The legacy VM uses a local systemd path unit for immediate site
             # publishing. In k3s, the source-owned lab-publisher CronJob is the
             # publisher; disable the VM-only file trigger instead of writing to

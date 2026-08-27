@@ -202,7 +202,7 @@ def test_script_restores_only_the_bounded_latest_dump_and_runs_real_gates():
         "test-218-planner-required-failure-history.sql",
         "migration 217 exact-runtime Timescale facade/ACL fixture passed",
         "migration 218 required-failure-history fixture passed",
-        "exact 214-220 ledger",
+        "exact 214-221 ledger",
         "current_setting('timescaledb.restoring', true) IS DISTINCT FROM 'off'",
         "fn_experiment_v2_ops_status()",
         "fn_record_equipment_counter_sample",
@@ -279,6 +279,7 @@ def test_script_restores_only_the_bounded_latest_dump_and_runs_real_gates():
         "218-planner-required-failure-history.sql",
         "219-selector-context-bounded-sampling.sql",
         "220-experiment-v2-direct-randomized-launch.sql",
+        "221-experiment-v2-state-replay.sql",
     ):
         assert candidate_migration in script
     compact_script = " ".join(script.split())

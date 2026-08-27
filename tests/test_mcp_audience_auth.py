@@ -35,6 +35,8 @@ HERMES_CONFIG_PATH = REPO_ROOT / "deploy" / "k8s" / "components" / "hermes-iris"
 HERMES_EXPERIMENT_CONFIG_PATH = (
     REPO_ROOT / "deploy" / "k8s" / "components" / "hermes-iris-experiment" / "hermes-config.yaml"
 )
+MCP_DEPLOYMENT_PATH = REPO_ROOT / "deploy" / "k8s" / "base" / "mcp-deployment.yaml"
+BASE_CONFIG_PATH = REPO_ROOT / "deploy" / "k8s" / "base" / "configmap.yaml"
 
 _MISSING_MODULE = object()
 _MCP_STUB_MODULES = ("mcp", "mcp.server", "mcp.server.fastmcp")
@@ -535,3 +537,17 @@ class TestReadyzAuthSurface:
         payload = json.loads(response.body)
         assert payload["auth_unrecognized_token_envs"] == ["VERDIFY_MCP_TOKEN_SUPERUSER"]
         assert "tok-secret" not in response.body.decode()
+
+
+def test_production_mcp_enforces_iris_audience_with_the_existing_hermes_credential() -> None:
+    config = yaml.safe_load(BASE_CONFIG_PATH.read_text())
+    assert config["data"]["VERDIFY_MCP_AUTH_MODE"] == "enforce"
+
+    resources = list(yaml.safe_load_all(MCP_DEPLOYMENT_PATH.read_text()))
+    deployment = next(resource for resource in resources if resource["kind"] == "Deployment")
+    container = deployment["spec"]["template"]["spec"]["containers"][0]
+    env = {entry["name"]: entry for entry in container["env"]}
+    token = env["VERDIFY_MCP_TOKEN_IRIS"]["valueFrom"]["secretKeyRef"]
+    assert token == {"name": "verdify-hermes", "key": "VERDIFY_MCP_TOKEN"}
+    assert "optional" not in token
+    assert "VERDIFY_MCP_TOKEN_ADMIN" not in env
