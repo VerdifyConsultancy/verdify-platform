@@ -197,12 +197,19 @@ def test_job_function_allowlists_are_lockstep_with_ledgered_grants(rendered: lis
     for duty, signature in pairs:
         job_allowlists.setdefault(duty, set()).add(signature)
 
-    migration = (REPO_ROOT / "db/migrations/214-confirmed-component-experiment-v2.sql").read_text()
-    blocks = re.findall(
-        r"FOREACH fn IN ARRAY ARRAY\[(.*?)\] LOOP(.*?)END LOOP;",
-        migration,
-        re.DOTALL,
-    )
+    blocks = []
+    for migration_name in (
+        "214-confirmed-component-experiment-v2.sql",
+        "220-experiment-v2-direct-randomized-launch.sql",
+    ):
+        migration = (REPO_ROOT / "db/migrations" / migration_name).read_text()
+        blocks.extend(
+            re.findall(
+                r"FOREACH fn IN ARRAY ARRAY\[(.*?)\] LOOP(.*?)END LOOP;",
+                migration,
+                re.DOTALL,
+            )
+        )
 
     def normalize(signature: str) -> str:
         return signature.replace("timestamptz", "timestamp with time zone")
@@ -215,8 +222,8 @@ def test_job_function_allowlists_are_lockstep_with_ledgered_grants(rendered: lis
         "verdify_experiment_outcome_freezer",
     ):
         matching = [array for array, grant in blocks if f"TO {duty}" in grant]
-        assert len(matching) == 1
-        expected = set(re.findall(r"'([^']+)'::regprocedure", matching[0]))
+        assert len(matching) == (2 if duty == "verdify_experiment_lifecycle" else 1)
+        expected = {signature for array in matching for signature in re.findall(r"'([^']+)'::regprocedure", array)}
         if duty == "verdify_experiment_outcome_freezer":
             # Migration 216 adds the least-information source-cycle grant.
             expected.add("public.fn_experiment_v2_outcome_source_cycle(uuid)")
@@ -227,7 +234,7 @@ def test_job_function_allowlists_are_lockstep_with_ledgered_grants(rendered: lis
         "public.fn_record_equipment_direct_state_snapshot(uuid,uuid,text,text,jsonb,double precision,uuid,bigint,text)",
         "public.fn_record_equipment_state_source_receipt(uuid,timestamp with time zone,text,text,jsonb,boolean,uuid,bigint,text)",
     }
-    assert sum(map(len, job_allowlists.values())) == 49
+    assert sum(map(len, job_allowlists.values())) == 51
 
 
 def _activation_env(tmp_path: Path) -> tuple[dict[str, str], tuple[str, ...]]:
