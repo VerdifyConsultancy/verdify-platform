@@ -116,9 +116,11 @@ components:
   # Accepted-risk direct-launch preparation. A second container in the wave-2
   # credential hook creates only the exact feature-off draft and registers the
   # three frozen profile vectors; sharing that already-proven pod sandbox avoids
-  # a separate sequential CNI allocation. It cannot enable the component, open
-  # admission, randomize, or write a device. Exact replay is idempotent after
-  # migration 221.
+  # a separate sequential CNI allocation. The shared hook temporarily excludes
+  # node6 after three no-IP sandbox deadlines; remove that exact annotation and
+  # node-affinity term after the fleet CNI incident is repaired. It cannot enable
+  # the component, open admission, randomize, or write a device. Exact replay is
+  # idempotent after migration 221.
   - ../../components/experiment-v2-direct-launch-bootstrap
   # #124 verdify-lab — the public Quartz research site (lab.verdify.ai). Pure web
   # tier, stateless (no PVC), NO device path. Built from the
