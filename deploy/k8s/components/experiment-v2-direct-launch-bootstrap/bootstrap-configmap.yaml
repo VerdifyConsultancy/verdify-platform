@@ -1,0 +1,256 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: experiment-v2-direct-launch-bootstrap
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: experiment-v2-direct-launch-bootstrap
+data:
+  bootstrap.json: |
+    {
+      "schema": "verdify-experiment-v2-direct-bootstrap-v1",
+      "study": {
+        "experiment_id": "45039c86-c1d9-52f6-a0a9-d94a17bc4b14",
+        "greenhouse_id": "vallery",
+        "kind": "randomized",
+        "name": "Verdify confirmed-component AI-vs-frozen-FSM switchback v2",
+        "timezone": "America/Denver",
+        "study_id": "verdify-confirmed-component-switchback-v2-2026-08",
+        "assignment_namespace_uuid": "0c162b58-5a4c-5ddb-91fd-7d0ca68ff81f"
+      },
+      "candidate": {
+        "firmware_revision": "2026.7.10.1500.09ee886",
+        "config_revision": "cf315321b889",
+        "registry_revision": "tunable-registry-v1:sha256:5de3c7485b5f9d989602b9cbed29fbe7cc64e7a7f531bab7556148243b5d3b3b",
+        "grid_revision": "live-entity-grid-v1:sha256:c10f21f692f4772acd98a41f7ee28e43e534e03d4009d3f963fc2e0fb96aa436"
+      },
+      "profiles_artifact_sha256": "c185909cfd2a097c7dc3c7b820f4ebc4609b1261a555b7af8ed6294669ee1ea1",
+      "wire_schema": {
+        "field_count": 48,
+        "manifest_digest_sha256": "0bdd80472f2a9845c24a78cd7d6662e0523314afc5f3149233c08a8e8aedb318",
+        "version": 2
+      },
+      "profiles": {
+        "aggressive": {
+          "field_count": 48,
+          "wire_bytes": 178,
+          "wire_hex": "56505631020bdd80472f2a98453000010000021000031100040a00050500071000080100090003a980000a0002000bfffc000c02000d0a000e005a000f00780010001e0011005a001200b4001300780014003c0015003c00160258001702580018005a0019003c001a18001b05001c001e001d14001e2d001f1e00204b002103002209c400230000240258002501002601002701002800002901002a00002b01002c11002d06002e06002f0800300400313c",
+          "policy_state_content_sha256": "34728bbe9d89599d6725974a8a27178e83b253381a7f71def64250f24e43935c"
+        },
+        "baseline": {
+          "field_count": 48,
+          "wire_bytes": 178,
+          "wire_hex": "56505631020bdd80472f2a98453000010000021000031100040a00050000071000080100090003a980000a0002000bfffc000c02000d0a000e005a000f00780010003c0011003c001200b4001300780014003c0015003c00160258001702580018005a0019005a001a1c001b05001c001e001d18001e2d001f1e00205a00210300220bb800230000240258002501002601002701002800002901002a00002b01002c11002d06002e06002f0800300400313c",
+          "policy_state_content_sha256": "4fbbab8b067c978500f1b45878d7fd11ae2a36c25feeff26dd2e7334b2c2b574"
+        },
+        "moderate": {
+          "field_count": 48,
+          "wire_bytes": 178,
+          "wire_hex": "56505631020bdd80472f2a98453000010000021000031100040a00050800071000080100090003a980000a0002000bfffc000c03000d0a000e005a000f00780010003c0011003c001200b4001300780014003c0015003c00160258001702580018005a0019005a001a1b001b05001c001e001d18001e2d001f2800203c0021030022089800230000240258002501002601002701002800002901002a00002b01002c11002d06002e06002f0800300400313c",
+          "policy_state_content_sha256": "0484db1f9b03ae3cffa7a69eb95306a63444d8e93671cc6d4ada887ce485d173"
+        }
+      }
+    }
+  bootstrap.py: |
+    import asyncio
+    import hashlib
+    import json
+    import os
+    import uuid
+    from pathlib import Path
+
+    import asyncpg
+
+    SPEC_PATH = Path("/etc/verdify/direct-bootstrap/bootstrap.json")
+    EXPECTED_SCHEMA = "verdify-experiment-v2-direct-bootstrap-v1"
+    EXPECTED_EXPERIMENT_ID = "45039c86-c1d9-52f6-a0a9-d94a17bc4b14"
+    EXPECTED_PROFILES = {"baseline", "moderate", "aggressive"}
+
+    STATUS_SQL = """
+    SELECT experiment_id::text, protocol_version, experiment_kind,
+           lifecycle_status, execution_phase, admission_state,
+           component_enabled, lease_generation, revision_bundle_sha256,
+           firmware_revision, config_revision, registry_revision, grid_revision,
+           design_lock_sha256, open_exposure_count
+      FROM public.fn_experiment_v2_api_status($1::uuid)
+    """
+    CREATE_SQL = """
+    SELECT experiment_id::text, greenhouse_id, kind, status, name, timezone
+      FROM public.fn_runtime_v1_create_experiment(
+        $1::uuid, $2::text, $3::text, $4::text, $5::text,
+        NULL::text, NULL::text, NULL::text, NULL::text, NULL::text,
+        NULL::text, NULL::text[], NULL::text[])
+    """
+    CONFIGURE_SQL = """
+    SELECT configured.experiment_id::text, configured.protocol_version,
+           configured.status, configured.execution_phase,
+           configured.admission_state, configured.component_enabled,
+           configured.lease_generation, configured.revision_bundle_sha256
+      FROM public.fn_experiment_v2_configure(
+        $1::uuid, 'legacy_components_v1'::text,
+        $2::text, $3::text, $4::text, $5::text, $6::text, $7::uuid,
+        $8::text, $9::bigint, $10::text) configured
+    """
+    REGISTER_SQL = """
+    SELECT state.state_artifact_id::text, state.profile,
+           state.revision_bundle_sha256, state.state_content_sha256
+      FROM public.fn_experiment_v2_register_state(
+        $1::uuid, $2::text, $3::smallint,
+        $4::bytea, $5::bytea, $6::text) state
+    """
+
+    def fail(message):
+        raise RuntimeError(message)
+
+    def state_hash(version, manifest, vector):
+        return hashlib.sha256(
+            b"verdify-policy-state-content-v1"
+            + b"\x00"
+            + bytes([version])
+            + manifest
+            + vector
+        ).hexdigest()
+
+    def load_spec():
+        iris_token = os.environ.get("MCP_IRIS_TOKEN", "")
+        if len(iris_token) < 16 or any(character.isspace() for character in iris_token):
+            fail("protected Iris MCP credential is absent or malformed")
+        spec = json.loads(SPEC_PATH.read_text(encoding="utf-8"))
+        if spec.get("schema") != EXPECTED_SCHEMA:
+            fail("bootstrap schema mismatch")
+        study = spec.get("study", {})
+        if study.get("experiment_id") != EXPECTED_EXPERIMENT_ID:
+            fail("bootstrap experiment identity mismatch")
+        uuid.UUID(study["experiment_id"])
+        uuid.UUID(study["assignment_namespace_uuid"])
+        if set(spec.get("profiles", {})) != EXPECTED_PROFILES:
+            fail("bootstrap requires exactly three frozen profiles")
+        wire = spec.get("wire_schema", {})
+        manifest = bytes.fromhex(wire.get("manifest_digest_sha256", ""))
+        if wire.get("version") != 2 or wire.get("field_count") != 48 or len(manifest) != 32:
+            fail("bootstrap wire schema mismatch")
+        for name, profile in spec["profiles"].items():
+            vector = bytes.fromhex(profile.get("wire_hex", ""))
+            if profile.get("field_count") != 48 or profile.get("wire_bytes") != 178 or len(vector) != 178:
+                fail(f"{name} wire shape mismatch")
+            if state_hash(wire["version"], manifest, vector) != profile.get("policy_state_content_sha256"):
+                fail(f"{name} state identity mismatch")
+        return spec
+
+    async def connect(user_name, password_name):
+        user = os.environ.get(user_name, "")
+        password = os.environ.get(password_name, "")
+        if not user or not password:
+            fail(f"protected database identity is incomplete: {user_name}/{password_name}")
+        return await asyncpg.connect(
+            host=os.environ["DB_HOST"],
+            port=int(os.environ.get("DB_PORT", "5432")),
+            database=os.environ["DB_NAME"],
+            user=user,
+            password=password,
+            server_settings={
+                "application_name": "verdify-experiment-v2-direct-bootstrap",
+                "statement_timeout": "10s",
+            },
+        )
+
+    def assert_feature_off(row, revision):
+        expected = (2, "randomized", "draft", "shadow", "closed", False, revision, None, 0)
+        actual = (
+            row["protocol_version"], row["experiment_kind"], row["lifecycle_status"],
+            row["execution_phase"], row["admission_state"], row["component_enabled"],
+            row["revision_bundle_sha256"], row["design_lock_sha256"], row["open_exposure_count"],
+        )
+        if actual != expected:
+            fail("bootstrap did not leave the exact feature-off draft state")
+
+    async def main():
+        spec = load_spec()
+        study = spec["study"]
+        candidate = spec["candidate"]
+        lifecycle = await connect("LIFECYCLE_DB_USER", "LIFECYCLE_DB_PASSWORD")
+        ordinary = None
+        try:
+            before = await lifecycle.fetchrow(STATUS_SQL, study["experiment_id"])
+            if before is None:
+                ordinary = await connect("ORDINARY_API_DB_USER", "ORDINARY_API_DB_PASSWORD")
+                created = await ordinary.fetchrow(
+                    CREATE_SQL,
+                    study["experiment_id"], study["greenhouse_id"], study["kind"],
+                    study["name"], study["timezone"],
+                )
+                if created is None or tuple(created[key] for key in (
+                    "experiment_id", "greenhouse_id", "kind", "status", "name", "timezone"
+                )) != (
+                    study["experiment_id"], study["greenhouse_id"], study["kind"],
+                    "draft", study["name"], study["timezone"],
+                ):
+                    fail("protocol-v1 seed replay differs from the exact study")
+
+            async with lifecycle.transaction(isolation="serializable"):
+                observed = await lifecycle.fetchrow(STATUS_SQL, study["experiment_id"])
+                expected_revision = observed["revision_bundle_sha256"] if observed else None
+                expected_lease = observed["lease_generation"] if observed else 0
+                configured = await lifecycle.fetchrow(
+                    CONFIGURE_SQL,
+                    study["experiment_id"], candidate["firmware_revision"],
+                    candidate["config_revision"], candidate["registry_revision"],
+                    candidate["grid_revision"], study["study_id"],
+                    study["assignment_namespace_uuid"], expected_revision,
+                    expected_lease, "gitops:issue-642-direct-bootstrap",
+                )
+                if configured is None:
+                    fail("configure returned no receipt")
+                revision = configured["revision_bundle_sha256"]
+                if tuple(configured[key] for key in (
+                    "experiment_id", "protocol_version", "status", "execution_phase",
+                    "admission_state", "component_enabled"
+                )) != (study["experiment_id"], 2, "draft", "shadow", "closed", False):
+                    fail("configure returned the wrong feature-off state")
+
+                wire = spec["wire_schema"]
+                for profile_name in sorted(EXPECTED_PROFILES):
+                    profile = spec["profiles"][profile_name]
+                    registered = await lifecycle.fetchrow(
+                        REGISTER_SQL, study["experiment_id"], profile_name,
+                        wire["version"], bytes.fromhex(wire["manifest_digest_sha256"]),
+                        bytes.fromhex(profile["wire_hex"]),
+                        f"gitops:issue-642-state-{profile_name}",
+                    )
+                    if registered is None or (
+                        registered["profile"] != profile_name
+                        or registered["revision_bundle_sha256"] != revision
+                        or registered["state_content_sha256"] != profile["policy_state_content_sha256"]
+                    ):
+                        fail(f"{profile_name} registration receipt mismatch")
+                    replayed = await lifecycle.fetchrow(
+                        REGISTER_SQL, study["experiment_id"], profile_name,
+                        wire["version"], bytes.fromhex(wire["manifest_digest_sha256"]),
+                        bytes.fromhex(profile["wire_hex"]),
+                        f"gitops:issue-642-state-{profile_name}-replay",
+                    )
+                    if replayed is None or replayed["state_artifact_id"] != registered["state_artifact_id"]:
+                        fail(f"{profile_name} exact replay was not idempotent")
+
+                after = await lifecycle.fetchrow(STATUS_SQL, study["experiment_id"])
+                if after is None:
+                    fail("configured experiment is absent")
+                assert_feature_off(after, revision)
+                for key in ("firmware_revision", "config_revision", "registry_revision", "grid_revision"):
+                    if after[key] != candidate[key]:
+                        fail(f"candidate revision mismatch: {key}")
+            print(json.dumps({
+                "status": "pass",
+                "experiment_id": study["experiment_id"],
+                "lifecycle_status": "draft",
+                "execution_phase": "shadow",
+                "component_enabled": False,
+                "profile_count": 3,
+                "revision_bundle_sha256": revision,
+            }, sort_keys=True))
+        finally:
+            if ordinary is not None:
+                await ordinary.close()
+            await lifecycle.close()
+
+    asyncio.run(main())

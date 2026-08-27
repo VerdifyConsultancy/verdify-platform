@@ -86,8 +86,7 @@ data:
 
   # ---- MCP transport authorization (#585/#589, audit §8.7) ----------------
   # Audience authorization for the MCP tool surface (mcp/server.py, merged
-  # #589): off -> log -> enforce staged rollout. "off" preserves current
-  # behaviour; "log" records would-be denials without blocking (prod flips to
-  # "log" in a later, separately-reviewed change); "enforce" fail-closes
-  # unauthorized audiences/tools. Same config-revision rule as above applies.
-  VERDIFY_MCP_AUTH_MODE: "off"
+  # #589). Production is fail-closed: the server validates the Iris bearer
+  # credential projected from verdify-hermes and rejects missing, unknown, or
+  # out-of-audience credentials. Same config-revision rule as above applies.
+  VERDIFY_MCP_AUTH_MODE: "enforce"
