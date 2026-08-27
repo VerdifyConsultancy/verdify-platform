@@ -143,12 +143,27 @@ def test_prod_render_contains_bootstrap_and_keeps_experiment_disabled() -> None:
         "argocd.argoproj.io/hook": "PreSync",
         "argocd.argoproj.io/hook-delete-policy": "BeforeHookCreation",
         "argocd.argoproj.io/sync-wave": "2",
+        "operations.vallery.net/temporary-node-exclusion": ("vm-k3s-node6:cni-pod-sandbox-timeout:2026-08-27"),
     }
     pod = job["spec"]["template"]
     assert pod["metadata"]["labels"]["app.kubernetes.io/component"] == "migrate"
     assert pod["spec"]["automountServiceAccountToken"] is False
     containers = {container["name"]: container for container in pod["spec"]["containers"]}
     assert set(containers) == {"bootstrap-and-attest", "direct-launch-bootstrap"}
+    terms = pod["spec"]["affinity"]["nodeAffinity"]["requiredDuringSchedulingIgnoredDuringExecution"][
+        "nodeSelectorTerms"
+    ]
+    assert terms == [
+        {
+            "matchExpressions": [
+                {
+                    "key": "kubernetes.io/hostname",
+                    "operator": "NotIn",
+                    "values": ["vm-k3s-node6"],
+                }
+            ]
+        }
+    ]
     container = containers["direct-launch-bootstrap"]
     assert container["image"].startswith("registry.vallery.net/verdifyconsultancy/verdify-api@sha256:")
     feature = by_kind_name[("ConfigMap", "verdify-config")]["data"]
