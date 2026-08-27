@@ -1,6 +1,5 @@
 # Hermes profile config for the Verdify Iris planner — single profile,
-# Cortex OpenAI-compatible 98K text route with explicit context/output budgets,
-# tool-call guidance, and an MCP-only tool surface.
+# OpenAI GPT-5.6 Sol with reasoning_effort=xhigh, MCP-only tool surface.
 #
 # Canonical source: hermes/iris/config.yaml (this repo).
 # Runtime location: /var/lib/verdify/hermes/iris/config.yaml (bind-mounted into
@@ -12,51 +11,17 @@
 # NEVER versioned.
 
 model:
-  # Hermes reaches OpenAI-compatible endpoints through the "custom" provider.
-  # The existing OPENAI_API_KEY environment contract remains unchanged;
-  # llm.primary.longctx is Cortex's text-only planner route alias, not a raw
-  # model name. Pin the published route contract explicitly so Hermes never
-  # falls back to its 256K unknown-model assumption.
-  default: "llm.primary.longctx"
+  # Hermes doesn't expose a generic "openai" provider — direct OpenAI access
+  # goes through the "custom" provider with an OpenAI-compatible base_url.
+  # OPENAI_API_KEY is picked up automatically.
+  default: "gpt-5.6-sol"
   provider: "custom"
-  base_url: "https://cortex.vallery.net/v1"
-  context_length: 98304
-  # Use Cortex's verified 16,384-token route cap. The former 8,192-token client
-  # fence could truncate a serialized set_plan call before it reached MCP;
-  # Cortex still bounds every response at this value server-side.
-  max_tokens: 16384
-
-# Cortex can spend several minutes prefilling this planner's 50K+ token prompt
-# before its first streamed delta. Treat that as healthy local inference, while
-# keeping a finite upper bound. One application attempt avoids replaying the
-# same expensive deterministic failure into the next scheduled planner window.
-providers:
-  custom:
-    request_timeout_seconds: 600
-    stale_timeout_seconds: 600
-
-# Iris runs one trigger per session and its exact MCP results are safety-relevant.
-# Disable lossy proactive compaction: the 98,304 context and 16,384 output cap
-# leave a verified 81,920-token prompt budget. Hermes still invokes its bounded
-# emergency compressor after a genuine provider overflow; give that local-route
-# fallback enough time to finish without enabling the observed compaction loop.
-compression:
-  enabled: false
-
-auxiliary:
-  compression:
-    provider: "custom"
-    model: "llm.primary.longctx"
-    base_url: "https://cortex.vallery.net/v1"
-    context_length: 98304
-    timeout: 180
+  base_url: "https://api.openai.com/v1"
 
 agent:
-  # The bundled custom transport does not forward this scalar. Cortex route 42
-  # supplies the verified medium default server-side on vLLM 0.27.1; retaining
-  # it here records the client contract and catches future provider support.
-  reasoning_effort: medium
-  api_max_retries: 1
+  # Hermes reads reasoning effort from agent.reasoning_effort. Placing it
+  # under model is silently ignored and falls back to medium.
+  reasoning_effort: xhigh
   # Iris's longest cycles (SUNRISE/SUNSET) read ~6-10 MCP tools in sequence
   # plus write a plan. 30 turns is generous; over that, suspect a tool-call
   # loop and surface as a Hermes alert instead of letting the cycle run away.

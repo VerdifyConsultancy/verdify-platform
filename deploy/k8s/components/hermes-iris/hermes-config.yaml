@@ -12,10 +12,9 @@
 # 200 on api.openai.com + a gpt-5.5 completion). The bug was the drifted profile
 # pointing at the wrong provider/model, NOT a missing/bad key.
 #
-# This is the repo-canonical hermes/iris/config.yaml (Cortex route
-# llm.primary.longctx / provider custom / base_url cortex.vallery.net/v1)
-# with ONE k3s edit: mcp_servers.verdify_greenhouse.url is the in-cluster
-# ClusterIP
+# This is the repo-canonical hermes/iris/config.yaml (gpt-5.6-sol / provider custom /
+# base_url api.openai.com — OPENAI_API_KEY auto-picked-up) with ONE k3s edit: the
+# mcp_servers.verdify_greenhouse.url is the in-cluster ClusterIP
 # verdify-mcp.verdify-prod.svc:8000/mcp (was the VM compose host.docker.internal).
 # The seed initContainer in hermes-iris.yaml installs this onto the PVC at every
 # pod start (idempotent), so a pod restart always restores the correct profile.
@@ -27,117 +26,6 @@ metadata:
     app.kubernetes.io/part-of: verdify
     app.kubernetes.io/component: hermes-iris
 data:
-  hermes-request-estimator-oob-patch.py: |
-    """Count tool schemas in the pinned Hermes request-size estimate."""
-    import argparse
-    import hashlib
-    import os
-    from pathlib import Path
-
-    SOURCE_SHA256 = "a639cb65862c463a77297efbe41f311d3f8033f5162f7498b5ad7daf2cb3751b"
-    PATCHED_SHA256 = "187fb9d4f1d127e95013777ae9b692f229fe324284f79f472f52622b7f8dc02b"
-    PATCHES = (
-        (
-            b"            approx_tokens = estimate_messages_tokens_rough(api_messages)\n",
-            b"            approx_tokens = estimate_request_tokens_rough(\n"
-            b"                api_messages, tools=self.tools or None\n"
-            b"            )\n",
-        ),
-    )
-
-    def apply_patches(source):
-        patched = source
-        for before, after in PATCHES:
-            if patched.count(before) != 1:
-                raise RuntimeError("pinned Hermes request-estimator patch anchor mismatch")
-            patched = patched.replace(before, after, 1)
-        return patched
-
-    def verified_patch(source):
-        if hashlib.sha256(source).hexdigest() != SOURCE_SHA256:
-            raise RuntimeError("pinned Hermes run_agent source digest mismatch")
-        patched = apply_patches(source)
-        if hashlib.sha256(patched).hexdigest() != PATCHED_SHA256:
-            raise RuntimeError("patched Hermes run_agent digest mismatch")
-        return patched
-
-    def main():
-        parser = argparse.ArgumentParser()
-        parser.add_argument("--source", required=True)
-        parser.add_argument("--destination", required=True)
-        args = parser.parse_args()
-        source = Path(args.source)
-        destination = Path(args.destination)
-        patched = verified_patch(source.read_bytes())
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        temporary = destination.with_name(f".{destination.name}.{os.getpid()}.tmp")
-        temporary.write_bytes(patched)
-        os.chmod(temporary, 0o444)
-        os.replace(temporary, destination)
-        print(f"installed verified Hermes request-estimator backport sha256={PATCHED_SHA256}")
-
-    if __name__ == "__main__":
-        main()
-
-  hermes-compressor-oob-patch.py: |
-    """Backport Hermes issue #75588 / PR #75884 onto the immutable May runtime."""
-    import argparse
-    import hashlib
-    import os
-    from pathlib import Path
-
-    SOURCE_SHA256 = "8a5489f5c71c6755a7f81eb91763e231018d823f5269617b6b743eb96282cf4b"
-    PATCHED_SHA256 = "8e19bea3aa8c393d873e36503b310d4af74a2b09ccae51bae32104c245fc9e9e"
-    PATCHES = (
-        (
-            b'        """Find the newest handoff summary inside a compression window."""\n'
-            b"        for idx in range(end - 1, start - 1, -1):\n",
-            b'        """Find the newest handoff summary inside a compression window."""\n'
-            b"        n = len(messages)\n"
-            b"        start = max(0, min(start, n))\n"
-            b"        end = max(start, min(end, n))\n"
-            b"        for idx in range(end - 1, start - 1, -1):\n",
-        ),
-        (
-            b"        return max(cut_idx, head_end + 1)\n",
-            b"        return min(n, max(cut_idx, head_end + 1))\n",
-        ),
-    )
-
-    def apply_patches(source):
-        patched = source
-        for before, after in PATCHES:
-            if patched.count(before) != 1:
-                raise RuntimeError("pinned Hermes compressor patch anchor mismatch")
-            patched = patched.replace(before, after, 1)
-        return patched
-
-    def verified_patch(source):
-        if hashlib.sha256(source).hexdigest() != SOURCE_SHA256:
-            raise RuntimeError("pinned Hermes compressor source digest mismatch")
-        patched = apply_patches(source)
-        if hashlib.sha256(patched).hexdigest() != PATCHED_SHA256:
-            raise RuntimeError("patched Hermes compressor digest mismatch")
-        return patched
-
-    def main():
-        parser = argparse.ArgumentParser()
-        parser.add_argument("--source", required=True)
-        parser.add_argument("--destination", required=True)
-        args = parser.parse_args()
-        source = Path(args.source)
-        destination = Path(args.destination)
-        patched = verified_patch(source.read_bytes())
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        temporary = destination.with_name(f".{destination.name}.{os.getpid()}.tmp")
-        temporary.write_bytes(patched)
-        os.chmod(temporary, 0o444)
-        os.replace(temporary, destination)
-        print(f"installed verified Hermes compressor backport sha256={PATCHED_SHA256}")
-
-    if __name__ == "__main__":
-        main()
-
   tool-readiness.py: |
     """Hermes probes: configured tools, MCP server, and in-process client state."""
     import argparse
@@ -496,8 +384,7 @@ data:
 
   config.yaml: |
     # Hermes profile config for the Verdify Iris planner — single profile,
-    # Cortex OpenAI-compatible 98K text route with explicit context/output budgets,
-    # tool-call guidance, and an MCP-only tool surface.
+    # OpenAI GPT-5.6 Sol with reasoning_effort=xhigh, MCP-only tool surface.
     #
     # Canonical source: hermes/iris/config.yaml (this repo).
     # Runtime location: /var/lib/verdify/hermes/iris/config.yaml (bind-mounted into
@@ -509,51 +396,17 @@ data:
     # NEVER versioned.
 
     model:
-      # Hermes reaches OpenAI-compatible endpoints through the "custom" provider.
-      # The existing OPENAI_API_KEY environment contract remains unchanged;
-      # llm.primary.longctx is Cortex's text-only planner route alias, not a raw
-      # model name. Pin the published route contract explicitly so Hermes never
-      # falls back to its 256K unknown-model assumption.
-      default: "llm.primary.longctx"
+      # Hermes doesn't expose a generic "openai" provider — direct OpenAI access
+      # goes through the "custom" provider with an OpenAI-compatible base_url.
+      # OPENAI_API_KEY is picked up automatically.
+      default: "gpt-5.6-sol"
       provider: "custom"
-      base_url: "https://cortex.vallery.net/v1"
-      context_length: 98304
-      # Use Cortex's verified 16,384-token route cap. The former 8,192-token client
-      # fence could truncate a serialized set_plan call before it reached MCP;
-      # Cortex still bounds every response at this value server-side.
-      max_tokens: 16384
-
-    # Cortex can spend several minutes prefilling this planner's 50K+ token prompt
-    # before its first streamed delta. Treat that as healthy local inference, while
-    # keeping a finite upper bound. One application attempt avoids replaying the
-    # same expensive deterministic failure into the next scheduled planner window.
-    providers:
-      custom:
-        request_timeout_seconds: 600
-        stale_timeout_seconds: 600
-
-    # Iris runs one trigger per session and its exact MCP results are safety-relevant.
-    # Disable lossy proactive compaction: the 98,304 context and 16,384 output cap
-    # leave a verified 81,920-token prompt budget. Hermes still invokes its bounded
-    # emergency compressor after a genuine provider overflow; give that local-route
-    # fallback enough time to finish without enabling the observed compaction loop.
-    compression:
-      enabled: false
-
-    auxiliary:
-      compression:
-        provider: "custom"
-        model: "llm.primary.longctx"
-        base_url: "https://cortex.vallery.net/v1"
-        context_length: 98304
-        timeout: 180
+      base_url: "https://api.openai.com/v1"
 
     agent:
-      # The bundled custom transport does not forward this scalar. Cortex route 42
-      # supplies the verified medium default server-side on vLLM 0.27.1; retaining
-      # it here records the client contract and catches future provider support.
-      reasoning_effort: medium
-      api_max_retries: 1
+      # Hermes reads reasoning effort from agent.reasoning_effort. Placing it
+      # under model is silently ignored and falls back to medium.
+      reasoning_effort: xhigh
       # Iris's longest cycles (SUNRISE/SUNSET) read ~6-10 MCP tools in sequence
       # plus write a plan. 30 turns is generous; over that, suspect a tool-call
       # loop and surface as a Hermes alert instead of letting the cycle run away.
