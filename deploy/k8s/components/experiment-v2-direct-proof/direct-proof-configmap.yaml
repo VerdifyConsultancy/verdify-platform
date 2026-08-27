@@ -22,10 +22,10 @@ data:
     EXPERIMENT_ID = "45039c86-c1d9-52f6-a0a9-d94a17bc4b14"
     AUTHORIZATION_REF = (
         "https://github.com/VerdifyConsultancy/verdify-platform/"
-        "issues/641#issuecomment-5445422561"
+        "issues/641#issuecomment-5446621623"
     )
     AUTHORIZED_FROM = datetime(2026, 8, 27, 21, 0, tzinfo=UTC)
-    AUTHORIZED_TO = datetime(2026, 8, 28, 0, 0, tzinfo=UTC)
+    AUTHORIZED_TO = datetime(2026, 8, 28, 5, 0, tzinfo=UTC)
     ACTOR = "gitops:issue-641-direct-proof"
     SHA256 = re.compile(r"^[0-9a-f]{64}$")
 
