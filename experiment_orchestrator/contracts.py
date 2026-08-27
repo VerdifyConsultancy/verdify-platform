@@ -37,7 +37,13 @@ OPENAI_SELECTOR_RESPONSE_SCHEMA = "verdify-selector-decision-openai-v1"
 OUTCOME_PAYLOAD_SCHEMA = "verdify-assigned-day-outcome-v2"
 OUTCOME_IDENTITY_SCHEMA = "verdify-experiment-v2-outcome-evaluator-identity-v1"
 LIFECYCLE_PLAN_SCHEMA = "verdify-experiment-v2-lifecycle-plan-v1"
-MAX_SELECTOR_CONTEXT_BYTES = 8 * 1024 * 1024
+MAX_CLIMATE_OBSERVATIONS = 48
+# The frozen Cortex route exposes 98,304 model tokens and reserves at least
+# 512 for output.  Treat one UTF-8 byte as one prompt token so the byte guard is
+# conservative without depending on a mutable tokenizer implementation.
+CORTEX_MAX_MODEL_LEN_TOKENS = 98_304
+MIN_SELECTOR_OUTPUT_TOKENS = 512
+MAX_SELECTOR_CONTEXT_BYTES = CORTEX_MAX_MODEL_LEN_TOKENS - MIN_SELECTOR_OUTPUT_TOKENS
 
 CLIMATE_VALUE_FIELDS = frozenset(
     {
@@ -499,6 +505,8 @@ class SelectorContext:
         forecast_payload = context["forecast_vintage"]
         if not isinstance(climate_payload, list) or not isinstance(forecast_payload, list):
             raise ContractError("selector context source collections must be arrays")
+        if len(climate_payload) > MAX_CLIMATE_OBSERVATIONS:
+            raise ContractError("selector context exceeds the 48-row climate bound")
         climate = tuple(ClimateSourceRecord.from_mapping(item) for item in climate_payload)
         forecast = tuple(ForecastSourceRecord.from_mapping(item) for item in forecast_payload)
         if not climate or not any(

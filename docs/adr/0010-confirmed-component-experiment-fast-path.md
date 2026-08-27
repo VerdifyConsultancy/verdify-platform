@@ -123,6 +123,14 @@ cross-endpoint correlation model; marginal 80% for each endpoint is
 insufficient. No sample-size adaptation occurs after the draw. The study must
 not start a known-underpowered fixed screen merely to retain a 30-day calendar.
 
+The frozen selector context preserves replayable source-row provenance while
+remaining within its provider budget: over the preceding 24 hours it retains
+the last admitted real climate row from each Unix-epoch 30-minute bucket and
+then the newest 48 buckets. It performs no floating-point aggregation. The
+provider adapter independently fails closed before network I/O if the complete
+request exceeds the conservative byte ceiling derived from model length minus
+reserved output tokens; that fallback reason is persisted distinctly.
+
 Safety events are stop conditions, not optimization outcomes. Temperature and
 VPD corridor distance remain noninferiority gates. Exactly one operating-
 benefit endpoint, including formula, units, weights, direction, boundary and

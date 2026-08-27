@@ -7,6 +7,7 @@
       "type": "string"
     },
     "climate_observations": {
+      "description": "At most the 48 newest Unix-epoch 30-minute buckets in the preceding 24 hours, retaining the last admitted real row in each bucket without aggregation.",
       "items": {
         "additionalProperties": false,
         "properties": {
@@ -87,6 +88,7 @@
         "required": ["schema", "observed_at", "source_row_sha256", "values"],
         "type": "object"
       },
+      "maxItems": 48,
       "minItems": 1,
       "type": "array"
     },

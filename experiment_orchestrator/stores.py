@@ -28,6 +28,7 @@ _SELECTOR_FALLBACK_REASONS = frozenset(
         "conflicting_latest_forecast_vintage",
         "provider_unconfigured",
         "provider_unavailable",
+        "request_exceeds_context_budget",
         "timeout",
         "invalid_response",
         "late",

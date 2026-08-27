@@ -663,7 +663,8 @@ data:
       215-experiment-v2-ops-observability.sql \
       216-equipment-counter-source-ledger.sql \
       217-runtime-role-boundary.sql \
-      218-planner-required-failure-history.sql
+      218-planner-required-failure-history.sql \
+      219-selector-context-bounded-sampling.sql
     do
       expected_sha256="$(sha256sum -- "/work/db/migrations/${migration}" | awk '{print $1}')"
       ledger_sha256="$(psql -X -v ON_ERROR_STOP=1 -At -d "${PGDATABASE}" \
@@ -859,4 +860,4 @@ data:
     END;
     $assertions$;
     SQL
-    echo "[restore-rehearsal] PASS: recent-dump schema/ACL replay and v2 vertical fixtures; exact 214-218 ledger and runtime facade DML verified (non-superuser rehearsal; not proof of production-superuser denial)"
+    echo "[restore-rehearsal] PASS: recent-dump schema/ACL replay and v2 vertical fixtures; exact 214-219 ledger and runtime facade DML verified (non-superuser rehearsal; not proof of production-superuser denial)"
