@@ -143,7 +143,9 @@ def test_prod_render_contains_bootstrap_and_keeps_experiment_disabled() -> None:
         "argocd.argoproj.io/hook": "PreSync",
         "argocd.argoproj.io/hook-delete-policy": "BeforeHookCreation",
         "argocd.argoproj.io/sync-wave": "2",
-        "operations.vallery.net/temporary-node-exclusion": ("vm-k3s-node6:cni-pod-sandbox-timeout:2026-08-27"),
+        "operations.vallery.net/temporary-node-exclusion": (
+            "vm-k3s-node4,vm-k3s-node6:cni-pod-sandbox-timeout:2026-08-27"
+        ),
     }
     pod = job["spec"]["template"]
     assert pod["metadata"]["labels"]["app.kubernetes.io/component"] == "migrate"
@@ -159,7 +161,7 @@ def test_prod_render_contains_bootstrap_and_keeps_experiment_disabled() -> None:
                 {
                     "key": "kubernetes.io/hostname",
                     "operator": "NotIn",
-                    "values": ["vm-k3s-node6"],
+                    "values": ["vm-k3s-node4", "vm-k3s-node6"],
                 }
             ]
         }
