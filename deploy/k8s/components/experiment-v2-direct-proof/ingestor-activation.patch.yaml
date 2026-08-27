@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-ingestor
+spec:
+  template:
+    metadata:
+      annotations:
+        # One attended #641 proof epoch. Removing this component removes the
+        # overrides and annotation, forcing the sole writer back to coarse off.
+        verdify.io/direct-proof-activation: "2026-08-27-jason-vallery"
+    spec:
+      containers:
+        - name: ingestor
+          env:
+            - name: VERDIFY_POLICY_VECTOR_MODE
+              value: "off"
+            - name: VERDIFY_COMPONENT_EXPERIMENT_ENABLED
+              value: "enabled"
+            - name: VERDIFY_ACTIVE_EXPERIMENT_ID
+              value: "45039c86-c1d9-52f6-a0a9-d94a17bc4b14"
