@@ -185,6 +185,8 @@ spec:
                     ('verdify_experiment_lifecycle', 'public.fn_experiment_v2_request_recovery(uuid,uuid,tstzrange,timestamptz,text,text)'),
                     ('verdify_experiment_lifecycle', 'public.fn_experiment_v2_complete(uuid,text,text)'),
                     ('verdify_experiment_lifecycle', 'public.fn_experiment_v2_api_status(uuid)'),
+                    ('verdify_experiment_lifecycle', 'public.fn_experiment_v2_direct_launch_lock(uuid,date,integer,time without time zone,text,text,text,text,text,text,text,text,text,text,text,text,text,text,text,text,tstzrange,text,text,text)'),
+                    ('verdify_experiment_lifecycle', 'public.fn_experiment_v2_direct_launch_approve_day1(uuid,text)'),
                     ('verdify_experiment_component_executor', 'public.fn_experiment_v2_resolve_readiness(uuid,uuid,bigint)'),
                     ('verdify_experiment_component_executor', 'public.fn_experiment_v2_resolve_randomized(uuid,uuid,bigint)'),
                     ('verdify_experiment_component_executor', 'public.fn_experiment_v2_resolve_recovery(uuid,uuid,bigint)'),
