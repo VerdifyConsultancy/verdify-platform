@@ -36,6 +36,13 @@
       "to": 60
     },
     {
+      "field": "sw_dwell_gate_enabled",
+      "from": true,
+      "profile_scope": "all",
+      "rationale": "disable the redundant software dwell gate because compiled prefix replay shows it can retain an obsolete state across an otherwise valid policy transition; the individual equipment minimum-on/off guards remain active",
+      "to": false
+    },
+    {
       "field": "mister_pulse_gap_s",
       "from": 38.0,
       "profile_scope": "moderate",
@@ -46,7 +53,7 @@
   "profiles": {
     "aggressive": {
       "field_count": 48,
-      "policy_state_content_sha256": "fa08c3e12d4951c77ac13c3584f48f010dfe48cee8385fadce612a938e8b0c1d",
+      "policy_state_content_sha256": "34728bbe9d89599d6725974a8a27178e83b253381a7f71def64250f24e43935c",
       "values": {
         "band_track_fraction": 0.0,
         "cold_vent_guard_delta_f": 8.0,
@@ -86,7 +93,7 @@
         "sw_cool_all_fans_at_high_enabled": true,
         "sw_direct_wet_gate_enabled": true,
         "sw_direct_wet_stress_override_enabled": true,
-        "sw_dwell_gate_enabled": true,
+        "sw_dwell_gate_enabled": false,
         "sw_fog_closes_vent": true,
         "sw_mister_closes_vent": false,
         "sw_summer_vent_enabled": true,
@@ -98,11 +105,11 @@
         "vpd_watch_dwell_s": 60
       },
       "wire_bytes": 178,
-      "wire_hex": "56505631020bdd80472f2a98453000010000021000031100040a00050500071000080100090003a980000a0002000bfffc000c02000d0a000e005a000f00780010001e0011005a001200b4001300780014003c0015003c00160258001702580018005a0019003c001a18001b05001c001e001d14001e2d001f1e00204b002103002209c400230000240258002501002601002701002801002901002a00002b01002c11002d06002e06002f0800300400313c"
+      "wire_hex": "56505631020bdd80472f2a98453000010000021000031100040a00050500071000080100090003a980000a0002000bfffc000c02000d0a000e005a000f00780010001e0011005a001200b4001300780014003c0015003c00160258001702580018005a0019003c001a18001b05001c001e001d14001e2d001f1e00204b002103002209c400230000240258002501002601002701002800002901002a00002b01002c11002d06002e06002f0800300400313c"
     },
     "baseline": {
       "field_count": 48,
-      "policy_state_content_sha256": "6f823c63a56686da33bf258e7c2380a4c87292d431f09b4f79c81e71b285cf8e",
+      "policy_state_content_sha256": "4fbbab8b067c978500f1b45878d7fd11ae2a36c25feeff26dd2e7334b2c2b574",
       "values": {
         "band_track_fraction": 0.0,
         "cold_vent_guard_delta_f": 8.0,
@@ -142,7 +149,7 @@
         "sw_cool_all_fans_at_high_enabled": true,
         "sw_direct_wet_gate_enabled": true,
         "sw_direct_wet_stress_override_enabled": true,
-        "sw_dwell_gate_enabled": true,
+        "sw_dwell_gate_enabled": false,
         "sw_fog_closes_vent": true,
         "sw_mister_closes_vent": false,
         "sw_summer_vent_enabled": true,
@@ -154,11 +161,11 @@
         "vpd_watch_dwell_s": 60
       },
       "wire_bytes": 178,
-      "wire_hex": "56505631020bdd80472f2a98453000010000021000031100040a00050000071000080100090003a980000a0002000bfffc000c02000d0a000e005a000f00780010003c0011003c001200b4001300780014003c0015003c00160258001702580018005a0019005a001a1c001b05001c001e001d18001e2d001f1e00205a00210300220bb800230000240258002501002601002701002801002901002a00002b01002c11002d06002e06002f0800300400313c"
+      "wire_hex": "56505631020bdd80472f2a98453000010000021000031100040a00050000071000080100090003a980000a0002000bfffc000c02000d0a000e005a000f00780010003c0011003c001200b4001300780014003c0015003c00160258001702580018005a0019005a001a1c001b05001c001e001d18001e2d001f1e00205a00210300220bb800230000240258002501002601002701002800002901002a00002b01002c11002d06002e06002f0800300400313c"
     },
     "moderate": {
       "field_count": 48,
-      "policy_state_content_sha256": "816bee6d7557b2ea4dfbc8afe13184c415089bdabb13c1a0ac1f41f8099b1c73",
+      "policy_state_content_sha256": "0484db1f9b03ae3cffa7a69eb95306a63444d8e93671cc6d4ada887ce485d173",
       "values": {
         "band_track_fraction": 0.0,
         "cold_vent_guard_delta_f": 8.0,
@@ -198,7 +205,7 @@
         "sw_cool_all_fans_at_high_enabled": true,
         "sw_direct_wet_gate_enabled": true,
         "sw_direct_wet_stress_override_enabled": true,
-        "sw_dwell_gate_enabled": true,
+        "sw_dwell_gate_enabled": false,
         "sw_fog_closes_vent": true,
         "sw_mister_closes_vent": false,
         "sw_summer_vent_enabled": true,
@@ -210,7 +217,7 @@
         "vpd_watch_dwell_s": 60
       },
       "wire_bytes": 178,
-      "wire_hex": "56505631020bdd80472f2a98453000010000021000031100040a00050800071000080100090003a980000a0002000bfffc000c03000d0a000e005a000f00780010003c0011003c001200b4001300780014003c0015003c00160258001702580018005a0019005a001a1b001b05001c001e001d18001e2d001f2800203c0021030022089800230000240258002501002601002701002801002901002a00002b01002c11002d06002e06002f0800300400313c"
+      "wire_hex": "56505631020bdd80472f2a98453000010000021000031100040a00050800071000080100090003a980000a0002000bfffc000c03000d0a000e005a000f00780010003c0011003c001200b4001300780014003c0015003c00160258001702580018005a0019005a001a1b001b05001c001e001d18001e2d001f2800203c0021030022089800230000240258002501002601002701002800002901002a00002b01002c11002d06002e06002f0800300400313c"
     }
   },
   "runtime_rounding_allowed": false,

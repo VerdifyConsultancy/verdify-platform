@@ -692,6 +692,8 @@ def test_component_control_exact_function_allowlist_has_no_dynamic_sql():
     expected = {
         "configure": "fn_experiment_v2_configure",
         "lock_design": "fn_experiment_v2_lock_design",
+        "direct_launch_lock": "fn_experiment_v2_direct_launch_lock",
+        "direct_launch_approve_day1": "fn_experiment_v2_direct_launch_approve_day1",
         "register_state": "fn_experiment_v2_register_state",
         "record_approval": "fn_experiment_v2_record_approval",
         "transition": "fn_experiment_v2_transition",
@@ -720,15 +722,21 @@ def test_component_control_exact_function_allowlist_has_no_dynamic_sql():
 
 def test_api_attestation_exactly_matches_the_migration_lifecycle_grant() -> None:
     migration = (Path(__file__).parents[1] / "db/migrations/214-confirmed-component-experiment-v2.sql").read_text()
+    direct_launch = (
+        Path(__file__).parents[1] / "db/migrations/220-experiment-v2-direct-randomized-launch.sql"
+    ).read_text()
     grant_statement = "GRANT EXECUTE ON FUNCTION %s TO verdify_experiment_lifecycle"
     grant_end = migration.index(grant_statement)
     grant_start = migration.rfind("FOREACH fn IN ARRAY ARRAY[", 0, grant_end)
     assert grant_start >= 0
     lifecycle_grant = migration[grant_start:grant_end]
     granted = set(re.findall(r"'(public\.fn_experiment_v2_[^']+)'::regprocedure", lifecycle_grant))
+    granted.update(re.findall(r"'(public\.fn_experiment_v2_[^']+)'::regprocedure", direct_launch))
     expected = {
         "public.fn_experiment_v2_configure(uuid,text,text,text,text,text,text,uuid,text,bigint,text)",
         "public.fn_experiment_v2_lock_design(uuid,date,integer,time without time zone,text,text,text,text,text,text,text,text,text,text,text)",
+        "public.fn_experiment_v2_direct_launch_lock(uuid,date,integer,time without time zone,text,text,text,text,text,text,text,text,text,text,text,text,text,text,text,text,tstzrange,text,text,text)",
+        "public.fn_experiment_v2_direct_launch_approve_day1(uuid,text)",
         "public.fn_experiment_v2_register_state(uuid,text,smallint,bytea,bytea,text)",
         "public.fn_experiment_v2_record_approval(uuid,text,text,integer,text,text,tstzrange,timestamptz,text,text,text)",
         "public.fn_experiment_v2_transition(uuid,text,text,text,text)",
@@ -1102,6 +1110,157 @@ def test_component_lock_design_requires_the_complete_artifact_set_before_db(monk
     assert response.status_code == 422
     assert conn.queries == []
     assert conn.control_queries == []
+
+
+def test_component_direct_launch_lock_binds_waiver_and_supervised_proof_atomically(monkeypatch, client):
+    before = _status_without_work(execution_phase="shadow", design_lock_sha256=None)
+    after = _status_without_work(
+        lifecycle_status="locked",
+        execution_phase="randomized",
+        lease_generation=8,
+        design_lock_sha256="33" * 32,
+    )
+    conn = _install(monkeypatch, _Conn([before, after], control_result=EXP_ID))
+    proof = {
+        "authorization_ref": "github:VerdifyConsultancy/verdify-platform/issues/581#2026-08-27",
+        "qualification_artifact_sha256": "bc" * 32,
+        "profile_artifact_sha256": "bd" * 32,
+        "baseline_before_evidence_sha256": "be" * 32,
+        "aggressive_evidence_sha256": "bf" * 32,
+        "baseline_after_evidence_sha256": "c0" * 32,
+        "proof_valid_from": "2027-01-01T10:00:00Z",
+        "proof_valid_to": "2027-01-01T10:20:00Z",
+        "supervisor_role": "launch-supervisor",
+        "rescue_owner_role": "facility-rescue",
+    }
+    artifacts = {
+        "design_lock_sha256": "33" * 32,
+        "source_git_sha": "44" * 20,
+        "schedule_schema_sha256": main._COMPONENT_EXPERIMENT_SCHEDULE_SCHEMA_SHA256,
+        "selector_identity_sha256": "55" * 32,
+        "selector_artifact_sha256": "66" * 32,
+        "context_schema_sha256": "77" * 32,
+        "endpoint_artifact_sha256": "88" * 32,
+        "outcome_schema_sha256": "99" * 32,
+        "analyzer_environment_sha256": "aa" * 32,
+        "power_artifact_sha256": "bb" * 32,
+    }
+    response = client.post(
+        f"/api/v1/experiments/{EXP_ID}/component-control/commands",
+        headers=API_AUTH,
+        json=_existing_control_payload(
+            "direct_launch_lock",
+            study_start_local_date="2027-01-10",
+            randomized_pair_count=150,
+            selector_context_cutoff_local="11:45:00",
+            **artifacts,
+            **proof,
+        ),
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["action"] == "direct_launch_lock"
+    assert response.json()["state"]["execution_phase"] == "randomized"
+    query, args = conn.control_queries[0]
+    assert query == main._EXPERIMENT_V2_CONTROL_SQL["direct_launch_lock"]
+    assert args[:15] == (
+        EXP_ID,
+        date(2027, 1, 10),
+        150,
+        time(11, 45),
+        artifacts["design_lock_sha256"],
+        artifacts["source_git_sha"],
+        artifacts["schedule_schema_sha256"],
+        artifacts["selector_identity_sha256"],
+        artifacts["selector_artifact_sha256"],
+        artifacts["context_schema_sha256"],
+        artifacts["endpoint_artifact_sha256"],
+        artifacts["outcome_schema_sha256"],
+        artifacts["analyzer_environment_sha256"],
+        artifacts["power_artifact_sha256"],
+        proof["authorization_ref"],
+    )
+    assert args[20] == main.asyncpg.Range(
+        datetime(2027, 1, 1, 10, tzinfo=UTC),
+        datetime(2027, 1, 1, 10, 20, tzinfo=UTC),
+        lower_inc=True,
+        upper_inc=False,
+    )
+    assert args[-3:] == (
+        "launch-supervisor",
+        "facility-rescue",
+        "verdify-api:issue-642-direct_launch_lock",
+    )
+    for value in (*artifacts.values(), *proof.values()):
+        assert str(value) not in response.text
+
+
+def test_component_direct_launch_requires_aware_positive_proof_window_before_db(monkeypatch, client):
+    conn = _install(monkeypatch, _Conn(_status_without_work()))
+    payload = _existing_control_payload(
+        "direct_launch_lock",
+        study_start_local_date="2027-01-10",
+        randomized_pair_count=150,
+        selector_context_cutoff_local="11:45:00",
+        design_lock_sha256="33" * 32,
+        source_git_sha="44" * 20,
+        schedule_schema_sha256=main._COMPONENT_EXPERIMENT_SCHEDULE_SCHEMA_SHA256,
+        selector_identity_sha256="55" * 32,
+        selector_artifact_sha256="66" * 32,
+        context_schema_sha256="77" * 32,
+        endpoint_artifact_sha256="88" * 32,
+        outcome_schema_sha256="99" * 32,
+        analyzer_environment_sha256="aa" * 32,
+        power_artifact_sha256="bb" * 32,
+        authorization_ref="issue-581",
+        qualification_artifact_sha256="bc" * 32,
+        profile_artifact_sha256="bd" * 32,
+        baseline_before_evidence_sha256="be" * 32,
+        aggressive_evidence_sha256="bf" * 32,
+        baseline_after_evidence_sha256="c0" * 32,
+        proof_valid_from="2027-01-01T10:20:00",
+        proof_valid_to="2027-01-01T10:00:00",
+        supervisor_role="launch-supervisor",
+        rescue_owner_role="facility-rescue",
+    )
+    response = client.post(
+        f"/api/v1/experiments/{EXP_ID}/component-control/commands",
+        headers=API_AUTH,
+        json=payload,
+    )
+    assert response.status_code == 422
+    assert conn.queries == []
+    assert conn.control_queries == []
+
+
+def test_component_direct_launch_day1_is_derived_by_one_typed_function(monkeypatch, client):
+    armed = _status_without_work(
+        lifecycle_status="armed",
+        execution_phase="randomized",
+        component_enabled=True,
+        lease_generation=8,
+    )
+    conn = _install(monkeypatch, _Conn([armed, armed], control_result=WORK_ID))
+    response = client.post(
+        f"/api/v1/experiments/{EXP_ID}/component-control/commands",
+        headers=API_AUTH,
+        json=_existing_control_payload(
+            "direct_launch_approve_day1",
+            expected_lifecycle_status="armed",
+            expected_execution_phase="randomized",
+            expected_component_enabled=True,
+            expected_lease_generation=8,
+        ),
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["action"] == "direct_launch_approve_day1"
+    assert response.json()["result_id"] == WORK_ID
+    assert conn.control_queries == [
+        (
+            main._EXPERIMENT_V2_CONTROL_SQL["direct_launch_approve_day1"],
+            (EXP_ID, "verdify-api:issue-642-direct_launch_approve_day1"),
+        )
+    ]
 
 
 @pytest.mark.parametrize(

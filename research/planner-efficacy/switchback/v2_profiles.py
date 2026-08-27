@@ -99,6 +99,15 @@ COMMON_GRID_DECISIONS: dict[str, tuple[float, str]] = {
     "mister_engage_delay_s": (30, "historical 40 s cannot land on the 30 s entity grid; select nearest 30 s"),
     "vpd_watch_dwell_s": (60, "historical 56 s cannot land on the 15 s entity grid; select nearest 60 s"),
 }
+COMMON_RUNTIME_DECISIONS: dict[str, tuple[bool, str]] = {
+    "sw_dwell_gate_enabled": (
+        False,
+        (
+            "disable the redundant software dwell gate because compiled prefix replay shows it can retain an obsolete "
+            "state across an otherwise valid policy transition; the individual equipment minimum-on/off guards remain active"
+        ),
+    ),
+}
 PROFILE_GRID_DECISIONS: dict[str, dict[str, tuple[float, str]]] = {
     "moderate": {
         "mister_pulse_gap_s": (
@@ -175,6 +184,12 @@ def build_profile_artifact(repo_root: Path = REPO_ROOT) -> dict[str, Any]:
     baseline = dict(original_baseline)
     decisions: list[dict[str, Any]] = []
     for name, (selected, rationale) in COMMON_GRID_DECISIONS.items():
+        previous = baseline[name]
+        baseline[name] = selected
+        decisions.append(
+            {"field": name, "from": previous, "profile_scope": "all", "rationale": rationale, "to": selected}
+        )
+    for name, (selected, rationale) in COMMON_RUNTIME_DECISIONS.items():
         previous = baseline[name]
         baseline[name] = selected
         decisions.append(

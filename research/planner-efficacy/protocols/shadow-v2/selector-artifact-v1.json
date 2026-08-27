@@ -19,7 +19,7 @@
   },
   "profile_contract": {
     "profile_artifact": "research/planner-efficacy/baseline/planner-switchback-v2-profiles.json",
-    "profile_artifact_sha256": "15ec5d264f703f44bd5125a4aa543d6a5564e94f29998b04c7be0a007b8a7d81",
+    "profile_artifact_sha256": "c185909cfd2a097c7dc3c7b820f4ebc4609b1261a555b7af8ed6294669ee1ea1",
     "valid_profiles": ["baseline", "moderate", "aggressive"]
   },
   "provider_contract": {
