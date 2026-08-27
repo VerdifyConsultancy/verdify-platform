@@ -53,6 +53,7 @@ checks:
       tests/test_generate_daily_plan.py tests/test_mqtt_fanout.py tests/test_planner_memory_ingest.py
       tests/test_site_content_refresh.py tests/test_slack_config.py tests/test_slack_ops.py
       tests/test_soil_dryout_alert.py tests/test_tempest_sync.py tests/test_writer_lease_fence.py
+      tests/test_component_grid_capture.py tests/test_component_prefix_replay.py
   - name: firmware-logic
     command: "bash -lc ' set -euo pipefail; test -f firmware/test/data/replay_overrides.csv\
       \ || gunzip -k firmware/test/data/replay_overrides.csv.gz; cd firmware; g++\
