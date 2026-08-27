@@ -35,7 +35,13 @@ resources:
   - allow-ingestor-device-egress.yaml
   - db-watchdog.yaml
   - writer-watchdog.yaml
-  - ingestor-state-pvc.yaml
+  # ingestor-state-pvc.yaml is intentionally NOT synced while the #382
+  # incident keeps the ingestor `state` volume on emptyDir (see
+  # ingestor-state-volume.yaml): a WaitForFirstConsumer PVC with no
+  # consumer stays Pending forever and blocks the ArgoCD sync health
+  # wait. The manifest file is retained for the revert; re-add this line
+  # together with restoring the persistentVolumeClaim volume once the
+  # storage cap is fixed (storage-infra).
   # #575 / proxmox-infrastructure#86: adopt the already-migrated portable R2
   # Hermes run-state claim in Git. The original component claim is deleted from
   # this production render by the paired retirement patch below.
