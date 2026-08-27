@@ -3,11 +3,12 @@ kind: Job
 metadata:
   name: verdify-experiment-v2-credential-bootstrap
   annotations:
-    # Temporary, exact-scope placement: after the same hook failed its sandbox
-    # on nodes 4, 5, 6, and 7, both adjacent PreSync pods repeatedly acquired
-    # fresh node6 sandboxes. Reuse that currently observed-good placement for
-    # this combined credential/bootstrap hook.
+    # Temporary, exact-scope placement: after the same hook failed its CNI
+    # sandbox on nodes 4, 5, 6, and 7 while adjacent PreSync pods succeeded,
+    # bypass the unhealthy overlay for this short-lived, non-listening,
+    # no-service-account hook. Remove the bypass after bootstrap succeeds.
     operations.vallery.net/temporary-node-placement: vm-k3s-node6:adjacent-presync-sandboxes-healthy:2026-08-27
+    operations.vallery.net/temporary-cni-bypass: host-network:combined-bootstrap-only:2026-08-27
 spec:
   # One pod sandbox now owns credential attestation and the exact-study
   # bootstrap. The latter may wait briefly for first-install credentials, and
@@ -15,6 +16,8 @@ spec:
   activeDeadlineSeconds: 600
   template:
     spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:

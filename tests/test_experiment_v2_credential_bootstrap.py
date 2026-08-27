@@ -76,6 +76,7 @@ def test_bootstrap_is_wave_ordered_bounded_and_uses_exact_migrate_image(rendered
         "operations.vallery.net/temporary-node-placement": (
             "vm-k3s-node6:adjacent-presync-sandboxes-healthy:2026-08-27"
         ),
+        "operations.vallery.net/temporary-cni-bypass": ("host-network:combined-bootstrap-only:2026-08-27"),
     }
     assert int(migration["metadata"]["annotations"].get("argocd.argoproj.io/sync-wave", "0")) == 0
     assert ordinary["metadata"]["annotations"]["argocd.argoproj.io/sync-wave"] == "1"
@@ -85,6 +86,8 @@ def test_bootstrap_is_wave_ordered_bounded_and_uses_exact_migrate_image(rendered
 
     pod = experiment["spec"]["template"]["spec"]
     assert pod["restartPolicy"] == "Never"
+    assert pod["hostNetwork"] is True
+    assert pod["dnsPolicy"] == "ClusterFirstWithHostNet"
     assert pod["automountServiceAccountToken"] is False
     assert pod["enableServiceLinks"] is False
     assert "serviceAccountName" not in pod
