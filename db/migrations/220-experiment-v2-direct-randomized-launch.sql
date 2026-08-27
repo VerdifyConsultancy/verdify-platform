@@ -37,7 +37,8 @@ CREATE TABLE IF NOT EXISTS public.experiment_v2_direct_launch_waivers (
     compiled_unqualified_fields integer NOT NULL CHECK (compiled_unqualified_fields = 21),
     waived_stages text[] NOT NULL CHECK (waived_stages = ARRAY[
         'device_dark_shadow', 'separate_commissioning_canaries',
-        'aa_48_hours', 'compiled_hil_remaining_21_fields']::text[]),
+        'aa_48_hours', 'compiled_hil_remaining_21_fields',
+        'minimum_joint_power_0_80', 'fixed_pair_count_150_to_30']::text[]),
     design_lock_sha256 text NOT NULL CHECK (design_lock_sha256 ~ '^[0-9a-f]{64}$'),
     source_git_sha text NOT NULL CHECK (source_git_sha ~ '^[0-9a-f]{40}$'),
     recorded_by text NOT NULL CHECK (length(recorded_by) > 0),
@@ -167,9 +168,14 @@ BEGIN
            'fc73d212f58db91bd55bb70e3faa1431172b4339ae3b22a11d404ba95147b794' OR
        p_selector_context_cutoff_local IS NULL OR
        p_study_start_local_date IS NULL OR p_randomized_pair_count IS NULL OR
-       p_randomized_pair_count <= 0 OR p_authorization_ref IS NULL OR
+       p_randomized_pair_count <> 30 OR
+       p_power_artifact_sha256 <>
+           '4d751a76465d03dc2e75034dcb398d25dc39b375d9976671bd8fffb018d237a2' OR
+       p_profile_artifact_sha256 <>
+           'c185909cfd2a097c7dc3c7b820f4ebc4609b1261a555b7af8ed6294669ee1ea1' OR
+       p_authorization_ref IS NULL OR
        length(p_authorization_ref) = 0 OR p_actor IS NULL OR length(p_actor) = 0 THEN
-        RAISE EXCEPTION 'direct launch source, design, authorization, and actor are required';
+        RAISE EXCEPTION 'direct launch requires the exact accepted-risk 30-pair power/profile lock, source, authorization, and actor';
     END IF;
     IF p_proof_valid_range IS NULL OR isempty(p_proof_valid_range) OR
        lower_inf(p_proof_valid_range) OR upper_inf(p_proof_valid_range) OR
@@ -237,7 +243,9 @@ BEGIN
          p_aggressive_evidence_sha256, p_baseline_after_evidence_sha256,
          p_proof_valid_range, p_supervisor_role, p_rescue_owner_role,
          27, 21, ARRAY['device_dark_shadow', 'separate_commissioning_canaries',
-                       'aa_48_hours', 'compiled_hil_remaining_21_fields']::text[],
+                       'aa_48_hours', 'compiled_hil_remaining_21_fields',
+                       'minimum_joint_power_0_80',
+                       'fixed_pair_count_150_to_30']::text[],
          p_design_lock_sha256, p_source_git_sha, p_actor, v_now)
     RETURNING * INTO v_waiver;
 

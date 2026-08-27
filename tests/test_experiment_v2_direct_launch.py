@@ -54,6 +54,8 @@ def test_direct_path_is_sealed_to_one_study_and_records_every_explicit_waiver() 
         "separate_commissioning_canaries",
         "aa_48_hours",
         "compiled_hil_remaining_21_fields",
+        "minimum_joint_power_0_80",
+        "fixed_pair_count_150_to_30",
     ):
         assert waived in sql
     assert "launch_path', 'direct_randomized_2026_08_27'" in lock
@@ -73,6 +75,9 @@ def test_direct_lock_retains_minimum_machine_and_physical_truth_gates() -> None:
     assert "baseline-before, aggressive, and baseline-after evidence must be distinct" in lock
     assert "protocol v2 forbids a UTC-offset crossing" in lock
     assert "gen_random_bytes" not in lock
+    assert "p_randomized_pair_count <> 30" in lock
+    assert "4d751a76465d03dc2e75034dcb398d25dc39b375d9976671bd8fffb018d237a2" in lock
+    assert "c185909cfd2a097c7dc3c7b820f4ebc4609b1261a555b7af8ed6294669ee1ea1" in lock
 
 
 def test_ordinary_staged_lock_and_transition_are_not_redefined() -> None:

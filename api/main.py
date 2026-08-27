@@ -5196,6 +5196,9 @@ _COMPONENT_EXPERIMENT_LIFECYCLE_STATUSES = (
 _COMPONENT_EXPERIMENT_PHASES = ("shadow", "commissioning", "aa_rehearsal", "randomized")
 _COMPONENT_EXPERIMENT_ADMISSIONS = ("closed", "open", "baseline_recovery", "emergency_hold")
 _COMPONENT_EXPERIMENT_SCHEDULE_SCHEMA_SHA256 = "fc73d212f58db91bd55bb70e3faa1431172b4339ae3b22a11d404ba95147b794"
+_COMPONENT_EXPERIMENT_DIRECT_PAIR_COUNT = 30
+_COMPONENT_EXPERIMENT_DIRECT_POWER_SHA256 = "4d751a76465d03dc2e75034dcb398d25dc39b375d9976671bd8fffb018d237a2"
+_COMPONENT_EXPERIMENT_DIRECT_PROFILE_SHA256 = "c185909cfd2a097c7dc3c7b820f4ebc4609b1261a555b7af8ed6294669ee1ea1"
 _COMPONENT_EXPERIMENT_AUDIT_REF_PATTERN = r"^[A-Za-z0-9][A-Za-z0-9._:/#@-]{0,95}$"
 
 
@@ -5301,6 +5304,12 @@ class ComponentExperimentDirectLaunchLockControl(ComponentExperimentLockDesignCo
 
     @model_validator(mode="after")
     def _direct_launch_proof_window_is_bounded(self) -> "ComponentExperimentDirectLaunchLockControl":
+        if (
+            self.randomized_pair_count != _COMPONENT_EXPERIMENT_DIRECT_PAIR_COUNT
+            or self.power_artifact_sha256 != _COMPONENT_EXPERIMENT_DIRECT_POWER_SHA256
+            or self.profile_artifact_sha256 != _COMPONENT_EXPERIMENT_DIRECT_PROFILE_SHA256
+        ):
+            raise ValueError("direct launch requires the exact accepted-risk 30-pair power/profile lock")
         if any(
             value.tzinfo is None or value.utcoffset() is None for value in (self.proof_valid_from, self.proof_valid_to)
         ):
