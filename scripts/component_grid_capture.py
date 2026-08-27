@@ -463,11 +463,11 @@ def project_live_entity_grid(entities: Sequence[RuntimeEntityMetadata]) -> tuple
     """Attribute a raw runtime inventory onto the 48 canonical fields.
 
     Routes are keyed by ``(entity_type, object_id)``, exactly as
-    ``component_qualification`` keys them: three switch fields
+    ``component_qualification`` keys them. Three switch fields
     (``sw_direct_wet_gate_enabled``, ``sw_fog_closes_vent``,
-    ``sw_mister_closes_vent``) deliberately publish their cfg readback under the
-    SAME slug as their setter, distinguished only by ESPHome entity type, so
-    object_id alone would double-attribute them.
+    ``sw_mister_closes_vent``) deliberately publish their current-state
+    readback on the SAME template-switch route as their setter, so that one
+    runtime entity supplies both identities.
 
     When the expected setter type is absent the projection still looks for the
     slug under another type — a route present under the WRONG type must reach
@@ -486,16 +486,17 @@ def project_live_entity_grid(entities: Sequence[RuntimeEntityMetadata]) -> tuple
         expected_type = ENTITY_GRIDS[field_name].entity_type
         setter_slug = definition.esp_object_id or ""
         readback_slug = definition.cfg_readback_object_id or ""
-        found_readbacks = by_route.get(("sensor", readback_slug), [])
         found_setters = by_route.get((expected_type, setter_slug), [])
         if not found_setters:
             for other_type in _ENTITY_TYPES:
-                if other_type == expected_type or (other_type == "sensor" and setter_slug == readback_slug):
+                if other_type == expected_type:
                     continue
                 candidates = by_route.get((other_type, setter_slug), [])
                 if candidates:
                     found_setters = candidates
                     break
+        shared_switch_route = expected_type == "switch" and setter_slug == readback_slug
+        found_readbacks = found_setters if shared_switch_route else by_route.get(("sensor", readback_slug), [])
         repeats = max(len(found_setters), len(found_readbacks), 1)
         for index in range(repeats):
             setter = found_setters[index] if index < len(found_setters) else None

@@ -92,6 +92,8 @@ def entity_rows() -> list[dict[str, Any]]:
         else:
             setter["assumed_state"] = False
         rows.append(setter)
+        if grid.entity_type == "switch" and (definition.cfg_readback_object_id == definition.esp_object_id):
+            continue
         key += 1
         rows.append(
             {
