@@ -650,8 +650,8 @@ data:
                     sql=BASELINE_AFTER_SQL,
                     args=(EXPERIMENT_ID, aggressive_work_id, ACTOR),
                     retry_fragment=(
-                        "direct baseline-after requires the completed current aggressive "
-                        "exposure, its single baseline-before, and enough elapsed proof duration"
+                        "direct baseline-after requires the active exact attempt, completed "
+                        "aggressive exposure, and its baseline-before evidence"
                     ),
                     lifecycle="draft",
                     phase="commissioning",
