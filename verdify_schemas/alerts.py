@@ -17,6 +17,24 @@ from .tunables import TunableParameter
 AlertSeverity = Literal["info", "warning", "critical"]
 AlertCategory = Literal["sensor", "equipment", "climate", "water", "system"]
 AlertDisposition = Literal["open", "acknowledged", "resolved", "suppressed"]
+ComponentExperimentIntegrityReason = Literal[
+    "multiple_open_exposures",
+    "terminal_experiment_capability_enabled",
+    "open_exposure_work_expired",
+    "expired_work_not_terminal",
+    "baseline_artifact_missing",
+    "confirmed_baseline_recovery_missing",
+    "runtime_generation_missing",
+    "facility_emergency_hold",
+    "preexposure_state_mismatch",
+    "open_exposure_observation_missing",
+    "open_exposure_observation_stale",
+    "open_exposure_state_mismatch",
+    "open_admission_without_current_work",
+    "completed_with_incomplete_outcomes",
+    "baseline_recovery_in_progress",
+    "runtime_fault_requires_recovery",
+]
 AlertType = Literal[
     "alert_validation_failed",
     "band_anchor_db_read_failed",
@@ -523,18 +541,7 @@ class ComponentExperimentIntegrityDetails(_DetailsBase):
     execution_phase: str
     admission_state: str
     safety_state: str
-    reason: Literal[
-        "multiple_open_exposures",
-        "baseline_artifact_missing",
-        "facility_emergency_hold",
-        "open_exposure_observation_missing",
-        "open_exposure_observation_stale",
-        "open_exposure_state_mismatch",
-        "open_admission_without_current_work",
-        "completed_with_incomplete_outcomes",
-        "baseline_recovery_in_progress",
-        "runtime_fault_requires_recovery",
-    ]
+    reason: ComponentExperimentIntegrityReason
     operation_kind: str | None = None
     observation_truth: Literal["future_identity_masked", "unobserved", "stale", "mismatch", "exact"]
     observation_age_seconds: int | None = Field(default=None, ge=0)

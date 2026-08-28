@@ -4,18 +4,48 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
 import sys
 from pathlib import Path
+from typing import get_args
 
-from verdify_schemas.alerts import AlertEnvelope
+import pytest
+
+from verdify_schemas.alerts import AlertEnvelope, ComponentExperimentIntegrityDetails
 
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATION = ROOT / "db/migrations/215-experiment-v2-ops-observability.sql"
+ROLE_BOUNDARY_MIGRATION = ROOT / "db/migrations/217-runtime-role-boundary.sql"
 DASHBOARD = ROOT / "grafana/provisioning/dashboards/json/confirmed-component-experiment-v2.json"
+
+_ALERT_REASON_CASE = re.compile(
+    r"CASE\s+"
+    r"WHEN coalesce\(exposures\.open_count, 0\) > 1\s+"
+    r"THEN '(multiple_open_exposures)'"
+    r"(?P<remaining_branches>.*?)"
+    r"\s+ELSE NULL\s+END,\s+v_now",
+    re.DOTALL,
+)
 
 
 def _function_body(sql: str) -> str:
     return sql.split("AS $body$", 1)[1].split("$body$;", 1)[0]
+
+
+def _db_integrity_reasons(migration: Path) -> frozenset[str]:
+    migration_sql = migration.read_text()
+    ops_function_sql = migration_sql.split("CREATE OR REPLACE FUNCTION public.fn_experiment_v2_ops_status()", 1)[1]
+    match = _ALERT_REASON_CASE.search(_function_body(ops_function_sql))
+    assert match is not None, f"alert-reason CASE not found in {migration.name}"
+    return frozenset(
+        [
+            match.group(1),
+            *re.findall(r"THEN '([a-z0-9_]+)'", match.group("remaining_branches")),
+        ]
+    )
+
+
+DB_INTEGRITY_REASONS = sorted(_db_integrity_reasons(MIGRATION) | _db_integrity_reasons(ROLE_BOUNDARY_MIGRATION))
 
 
 def _load_rollback_classifier():
@@ -115,6 +145,19 @@ def test_ops_function_alerts_terminal_expiry_and_preexposure_faults():
     assert "experiment_v2_preexposure_mismatch_epochs" in body
 
 
+def test_migration_alert_reasons_and_typed_schema_stay_reconciled():
+    migration_reasons = _db_integrity_reasons(MIGRATION)
+    role_boundary_reasons = _db_integrity_reasons(ROLE_BOUNDARY_MIGRATION)
+    schema_reasons = frozenset(get_args(ComponentExperimentIntegrityDetails.model_fields["reason"].annotation))
+
+    assert migration_reasons == role_boundary_reasons
+    assert migration_reasons == schema_reasons
+    assert {
+        "expired_work_not_terminal",
+        "confirmed_baseline_recovery_missing",
+    } <= schema_reasons
+
+
 def test_dashboard_uses_only_the_blinded_safe_function():
     dashboard = json.loads(DASHBOARD.read_text())
     assert dashboard["uid"] == "confirmed-component-experiment-v2"
@@ -140,6 +183,15 @@ def test_actionable_ops_row_round_trips_the_typed_alert_envelope():
     assert envelope.alert_type == "component_experiment_integrity"
     assert envelope.severity == "warning"
     assert envelope.details["reason"] == "baseline_recovery_in_progress"
+
+
+@pytest.mark.parametrize("reason", DB_INTEGRITY_REASONS)
+def test_every_db_integrity_reason_round_trips_instead_of_falling_back(reason: str):
+    payload = _load_alert_helper()(_ops_row(alert_reason=reason))
+    assert payload is not None
+    envelope = AlertEnvelope.model_validate(payload)
+    assert envelope.alert_type == "component_experiment_integrity"
+    assert envelope.details["reason"] == reason
 
 
 def test_nominal_ops_row_does_not_page():
