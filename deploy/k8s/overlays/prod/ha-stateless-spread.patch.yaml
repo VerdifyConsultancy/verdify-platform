@@ -87,6 +87,8 @@ kind: Deployment
 metadata:
   name: verdify-mcp
 spec:
+  # MCP SDK >=1.27 stateless Streamable HTTP: each authenticated request is
+  # self-contained, so the Service may distribute requests across both pods.
   replicas: 2
   strategy:
     type: RollingUpdate
