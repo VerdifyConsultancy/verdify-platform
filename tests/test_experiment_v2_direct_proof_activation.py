@@ -126,9 +126,9 @@ def test_proof_script_is_syntax_valid_exact_role_bound_and_non_provider() -> Non
     script = config["data"]["proof.py"]
     compile(script, "proof.py", "exec")
     assert 'EXPERIMENT_ID = "45039c86-c1d9-52f6-a0a9-d94a17bc4b14"' in script
-    assert "datetime(2026, 8, 28, 6, 0, tzinfo=UTC)" in script
-    assert "datetime(2026, 8, 28, 18, 0, tzinfo=UTC)" in script
-    assert datetime(2026, 8, 28, 6, tzinfo=UTC) < datetime(2026, 8, 28, 18, tzinfo=UTC)
+    assert "datetime(2026, 8, 28, 17, 45, tzinfo=UTC)" in script
+    assert "datetime(2026, 8, 29, 5, 0, tzinfo=UTC)" in script
+    assert datetime(2026, 8, 28, 17, 45, tzinfo=UTC) < datetime(2026, 8, 29, 5, tzinfo=UTC)
     assert script.count('"Jason Vallery"') == 2
     for function in (
         "fn_experiment_v2_direct_proof_begin(",
@@ -139,6 +139,7 @@ def test_proof_script_is_syntax_valid_exact_role_bound_and_non_provider() -> Non
         "fn_experiment_v2_direct_proof_begin_emergency_recovery(",
         "fn_experiment_v2_direct_proof_retry_emergency_recovery(",
         "fn_experiment_v2_direct_proof_finish_emergency_recovery(",
+        "fn_experiment_v2_direct_proof_resolve_startup_rollover(",
         "fn_experiment_v2_set_admission(",
         "fn_experiment_v2_request_recovery(",
     ):
