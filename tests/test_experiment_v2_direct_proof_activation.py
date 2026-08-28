@@ -44,7 +44,7 @@ def test_only_the_single_ingestor_gets_the_coarse_capability_override() -> None:
     rendered = _render()
     ingestor = _document(rendered, "Deployment", "verdify-ingestor")
     pod = ingestor["spec"]["template"]
-    assert pod["metadata"]["annotations"]["verdify.io/direct-proof-activation"] == ("2026-08-28-jason-vallery-retry")
+    assert pod["metadata"]["annotations"]["verdify.io/direct-proof-activation"] == ("2026-08-28-jason-vallery-retry-2")
     container = next(row for row in pod["spec"]["containers"] if row["name"] == "ingestor")
     env = {row["name"]: row for row in container["env"]}
     assert env["VERDIFY_POLICY_VECTOR_MODE"] == {
@@ -166,6 +166,12 @@ def test_proof_script_is_syntax_valid_exact_role_bound_and_non_provider() -> Non
     assert '"proof-already-sealed"' in script
     assert '"emergency-recovery-admitted"' in script
     assert '"emergency-recovery-retry-admitted"' in script
+    assert "RUNTIME_REGISTRATION_SETTLE_SECONDS = 5 * 60" in script
+    assert '"emergency-recovery-runtime-settle-wait"' in script
+    assert '"emergency-recovery-runtime-settle-complete"' in script
+    assert script.index('"emergency-recovery-runtime-settle-complete"') < script.index(
+        '"emergency-recovery-retry-admitted"'
+    )
     assert "current writer generation is not yet stable" in script
     assert 'attempt["baseline_after_work_id"] is None' in script
 
