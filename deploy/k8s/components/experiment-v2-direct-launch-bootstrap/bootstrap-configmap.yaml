@@ -104,6 +104,16 @@ data:
         $1::uuid, $2::text, $3::smallint,
         $4::bytea, $5::bytea, $6::text) state
     """
+    PROOF_REPLAY_SQL = """
+    SELECT public.fn_experiment_v2_direct_proof_begin(
+        $1::uuid,
+        'https://github.com/VerdifyConsultancy/verdify-platform/issues/641#issuecomment-5446621623'::text,
+        tstzrange('2026-08-27 21:00:00+00'::timestamptz,
+                  '2026-08-28 05:00:00+00'::timestamptz, '[)'),
+        'Jason Vallery'::text, 'Jason Vallery'::text,
+        'gitops:issue-641-direct-proof'::text
+    )::text
+    """
 
     def fail(message):
         raise RuntimeError(message)
@@ -202,6 +212,31 @@ data:
 
             async with lifecycle.transaction(isolation="serializable"):
                 observed = await lifecycle.fetchrow(STATUS_SQL, study["experiment_id"])
+                if observed is not None and tuple(observed[key] for key in (
+                    "protocol_version", "experiment_kind", "lifecycle_status",
+                    "execution_phase", "admission_state", "component_enabled",
+                    "design_lock_sha256", "open_exposure_count",
+                )) == (2, "randomized", "draft", "commissioning",
+                       "baseline_recovery", True, None, 0):
+                    for key in ("firmware_revision", "config_revision", "registry_revision", "grid_revision"):
+                        if observed[key] != candidate[key]:
+                            fail(f"in-progress proof candidate mismatch: {key}")
+                    proof_work_id = await lifecycle.fetchval(
+                        PROOF_REPLAY_SQL, study["experiment_id"]
+                    )
+                    if proof_work_id is None:
+                        fail("in-progress proof replay returned no work identifier")
+                    uuid.UUID(str(proof_work_id))
+                    print(json.dumps({
+                        "status": "pass",
+                        "experiment_id": study["experiment_id"],
+                        "mode": "exact-attended-proof-in-progress",
+                        "lifecycle_status": "draft",
+                        "execution_phase": "commissioning",
+                        "admission_state": "baseline_recovery",
+                        "component_enabled": True,
+                    }, sort_keys=True))
+                    return
                 expected_revision = observed["revision_bundle_sha256"] if observed else None
                 expected_lease = observed["lease_generation"] if observed else 0
                 configured = await lifecycle.fetchrow(
