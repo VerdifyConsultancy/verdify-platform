@@ -264,7 +264,7 @@ data:
             if attempt["emergency_recovery_complete"]:
                 fail("completed emergency recovery cannot remain in commissioning authority")
 
-            if status["admission_state"] == "emergency_hold":
+            if status["admission_state"] in ("emergency_hold", "baseline_recovery"):
                 # A PostSync Job can become Ready before the replacement
                 # ingestor starts its task scheduler and registers its new
                 # runtime instance. Waiting here prevents the retry guard from
@@ -292,16 +292,30 @@ data:
                     assert_authorized_clock(90)
                     current = await read_status(connection)
                     current_attempt = await read_attempt(connection)
-                    assert_status(
-                        current,
-                        lifecycle="draft",
-                        phase="commissioning",
-                        admission="emergency_hold",
-                        enabled=False,
-                        revision=revision,
-                        lease=lease,
-                        open_exposures=0,
-                    )
+                    if current["admission_state"] == "emergency_hold":
+                        assert_status(
+                            current,
+                            lifecycle="draft",
+                            phase="commissioning",
+                            admission="emergency_hold",
+                            enabled=False,
+                            revision=revision,
+                            lease=lease,
+                            open_exposures=0,
+                        )
+                    elif current["admission_state"] == "baseline_recovery":
+                        assert_status(
+                            current,
+                            lifecycle="draft",
+                            phase="commissioning",
+                            admission="baseline_recovery",
+                            enabled=True,
+                            revision=revision,
+                            lease=lease,
+                            open_exposures=0,
+                        )
+                    else:
+                        fail("emergency retry authority changed outside the recovery chain")
                     if (
                         current_attempt is None
                         or current_attempt["authorization_id"]
@@ -313,6 +327,46 @@ data:
                         or current_attempt["emergency_recovery_complete"]
                     ):
                         fail("emergency retry predecessor changed outside the append-only chain")
+                    if current["admission_state"] == "baseline_recovery":
+                        try:
+                            finished_resolution_id = await connection.fetchval(
+                                FINISH_EMERGENCY_RECOVERY_SQL,
+                                EXPERIMENT_ID,
+                                failed_resolution_id,
+                                ACTOR,
+                            )
+                            if finished_resolution_id is None:
+                                fail("emergency recovery finish returned no durable identifier")
+                            uuid.UUID(str(finished_resolution_id))
+                            print(json.dumps(
+                                {"stage": "emergency-recovery-sealed", "status": "pass"},
+                                sort_keys=True,
+                            ))
+                            recovered = await read_status(connection)
+                            assert_status(
+                                recovered,
+                                lifecycle="draft",
+                                phase="shadow",
+                                admission="closed",
+                                enabled=False,
+                                revision=revision,
+                                lease=lease + 1,
+                                open_exposures=0,
+                            )
+                            return recovered
+                        except asyncpg.exceptions.RaiseError as exc:
+                            message = exc.message or str(exc)
+                            if not any(
+                                fragment in message
+                                for fragment in (
+                                    "finishes only from its exact current-lease recovered baseline work",
+                                    "requires two receipt-bound baseline epochs",
+                                )
+                            ):
+                                fail(
+                                    "emergency recovery was rejected outside its bounded "
+                                    "not-ready condition"
+                                )
                     recovery_from = datetime.now(UTC)
                     recovery_to = min(
                         recovery_from + timedelta(minutes=30), AUTHORIZED_TO
@@ -352,14 +406,19 @@ data:
                         ))
                         break
                     except asyncpg.exceptions.RaiseError as exc:
-                        if (
-                            "current writer generation is not yet stable for "
-                            "direct-proof emergency recovery retry"
-                            not in (exc.message or str(exc))
+                        message = exc.message or str(exc)
+                        if not any(
+                            fragment in message
+                            for fragment in (
+                                "current writer generation is not yet stable for "
+                                "direct-proof emergency recovery retry",
+                                "direct-proof emergency recovery retry requires the exact "
+                                "failed predecessor, matching authority, and no open exposure",
+                            )
                         ):
                             fail(
                                 "emergency retry was rejected outside its bounded "
-                                "writer-stability condition"
+                                "predecessor/stability condition"
                             )
                         if asyncio.get_running_loop().time() >= deadline:
                             fail("writer did not become stable before emergency retry timeout")
