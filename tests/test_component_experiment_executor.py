@@ -1492,13 +1492,12 @@ async def test_facility_rescue_yields_releases_writer_and_never_auto_recovers():
 @pytest.mark.parametrize(
     ("mode", "reason"),
     [
-        ("cached", "observation_epoch_separation_too_short"),
         ("mismatch", "observed_state_value_mismatch"),
         ("wrong_kind", "observation_lineage_mismatch"),
         ("wrong_revision", "observation_revision_mismatch"),
     ],
 )
-async def test_cached_mismatched_kind_and_revision_receipts_never_expose(mode, reason):
+async def test_mismatched_kind_and_revision_receipts_never_expose(mode, reason):
     item = work()
     store = FakeStore(item, observation(item, item.baseline_state))
     store.epoch_mode = mode
@@ -1506,6 +1505,20 @@ async def test_cached_mismatched_kind_and_revision_receipts_never_expose(mode, r
     assert result.reason == reason
     assert store.opened == []
     assert store.recoveries == [reason]
+
+
+@pytest.mark.asyncio
+async def test_too_close_epochs_defer_without_exposure_or_recovery() -> None:
+    item = work()
+    store = FakeStore(item, observation(item, item.baseline_state))
+    store.epoch_mode = "cached"
+
+    result = await executor(store).run_once(EXPERIMENT_ID, fence())
+
+    assert result.disposition == "delivered"
+    assert result.reason == "observation_epoch_separation_too_short"
+    assert store.opened == []
+    assert store.recoveries == []
 
 
 @pytest.mark.asyncio

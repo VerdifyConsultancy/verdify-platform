@@ -2523,7 +2523,7 @@ def validate_confirmation_epochs(
     _first_min, first_max = _epoch_timestamp_bounds(first)
     _second_min, second_max = _epoch_timestamp_bounds(second)
     if second_max - first_max < MIN_EPOCH_SEPARATION:
-        return ConfirmationResult(False, False, "observation_epoch_separation_too_short")
+        return ConfirmationResult(False, True, "observation_epoch_separation_too_short")
     for field_name in normalized_expected:
         if _aware(second.observations[field_name].observed_at, "observed_at") <= _aware(
             first.observations[field_name].observed_at, "observed_at"

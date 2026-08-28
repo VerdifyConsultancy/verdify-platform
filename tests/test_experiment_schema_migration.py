@@ -258,6 +258,7 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "229-experiment-v2-recovery-failure-boundary.sql",  # bind writer generation after terminal recovery failure
         "230-experiment-v2-observation-window-bundle-join.sql",  # disambiguate executor observation read
         "231-experiment-v2-emergency-recovery-zero-exposure.sql",  # seal baseline-only recovery without exposure
+        "232-experiment-v2-observation-pair-recovery-retry.sql",  # choose valid fresh pair and retry failed recovery
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(
@@ -311,6 +312,7 @@ def test_migrate_image_carries_migrations_and_runner():
         "!db/migrations/tests/test-229-experiment-v2-recovery-failure-boundary.sql",
         "!db/migrations/tests/test-230-experiment-v2-observation-window-bundle-join.sql",
         "!db/migrations/tests/test-231-experiment-v2-emergency-recovery-zero-exposure.sql",
+        "!db/migrations/tests/test-232-experiment-v2-observation-pair-recovery-retry.sql",
         "!db/ledger",
         "db/ledger/*",
         "!db/ledger/*.sql",
@@ -319,7 +321,7 @@ def test_migrate_image_carries_migrations_and_runner():
     assert indexes == sorted(indexes), "Kaniko re-include rules must stay ordered"
 
     # The production migrate image remains free of the broad SQL fixture tree.
-    # Only the eleven vertical fixtures executed by the one-release restore
+    # Only the twelve vertical fixtures executed by the one-release restore
     # rehearsal are admitted into /db/migrations/tests.
     test_fixture_reincludes = [line for line in ignore_lines if line.startswith("!db/migrations/tests/")]
     assert test_fixture_reincludes == [
@@ -334,6 +336,7 @@ def test_migrate_image_carries_migrations_and_runner():
         "!db/migrations/tests/test-229-experiment-v2-recovery-failure-boundary.sql",
         "!db/migrations/tests/test-230-experiment-v2-observation-window-bundle-join.sql",
         "!db/migrations/tests/test-231-experiment-v2-emergency-recovery-zero-exposure.sql",
+        "!db/migrations/tests/test-232-experiment-v2-observation-pair-recovery-retry.sql",
     ]
 
 
