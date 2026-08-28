@@ -106,7 +106,11 @@ $PY -m pytest -q \
   tests/test_experiment_v2_shadow_source_lock.py \
   tests/test_experiment_v2_data_contract.py \
   tests/test_experiment_v2_direct_launch_runtime.py \
+  tests/test_experiment_v2_direct_proof_activation.py \
+  tests/test_experiment_v2_direct_proof_attempt_status.py \
   tests/test_experiment_v2_direct_proof_retry.py \
+  tests/test_experiment_v2_emergency_recovery_retry.py \
+  tests/test_experiment_v2_recovery_generation_guard.py \
   tests/test_experiment_verify.py \
   tests/test_experiment_workers.py \
   tests/test_firmware_builder_image.py \
