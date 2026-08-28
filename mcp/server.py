@@ -447,6 +447,7 @@ _AUDIENCE_TOKEN_ENV_PREFIX = "VERDIFY_MCP_TOKEN_"
 KNOWN_AUDIENCES = frozenset({"iris", "experiment", "admin"})
 
 _TOOL_AUTH_LOGGER = logging.getLogger("verdify.mcp.auth")
+_MCP_PATH = "/mcp"
 
 
 class ToolAccessDenied(Exception):
@@ -503,6 +504,100 @@ def resolve_token_audience(token: str | None, registry: dict[str, str]) -> str |
         if hmac.compare_digest(token_bytes, registry[audience].encode()) and matched is None:
             matched = audience
     return matched
+
+
+def _bearer_token_from_authorization(value: str | None) -> str | None:
+    """Parse one Authorization header without ever retaining or logging it."""
+    scheme, separator, credential = (value or "").partition(" ")
+    if not separator or scheme.lower() != "bearer":
+        return None
+    return credential.strip() or None
+
+
+def _transport_request_denial(token: str | None) -> dict[str, str | None] | None:
+    """Return a transport-authentication denial, or None for a known audience."""
+    registry, _unrecognized = audience_token_registry()
+    audience = resolve_token_audience(token, registry)
+    if audience is not None:
+        return None
+    return {
+        "audience": None,
+        "reason": "missing_token" if not token else "unknown_token",
+    }
+
+
+def _transport_bearer_token(scope) -> str | None:
+    """Extract exactly one bearer credential from raw ASGI request headers."""
+    authorization_values = [
+        value.decode("latin-1") for name, value in scope.get("headers", []) if name.lower() == b"authorization"
+    ]
+    if len(authorization_values) != 1:
+        return None
+    return _bearer_token_from_authorization(authorization_values[0])
+
+
+async def _send_transport_unauthorized(send) -> None:
+    """Send a deliberately generic 401 without exposing token or inventory data."""
+    body = b'{"error":"unauthorized"}'
+    await send(
+        {
+            "type": "http.response.start",
+            "status": 401,
+            "headers": [
+                (b"content-type", b"application/json"),
+                (b"content-length", str(len(body)).encode("ascii")),
+                (b"www-authenticate", b"Bearer"),
+            ],
+        }
+    )
+    await send({"type": "http.response.body", "body": body})
+
+
+class MCPTransportAuthMiddleware:
+    """Authenticate every MCP HTTP request before FastMCP creates a session.
+
+    This is raw ASGI middleware rather than ``BaseHTTPMiddleware`` so streaming
+    request/response channels are not buffered or replaced. The plain
+    ``/readyz`` custom route intentionally stays public for Kubernetes probes.
+    Per-tool audience authorization remains the second enforcement layer after
+    a known audience reaches the protocol endpoint.
+    """
+
+    def __init__(self, app, *, mcp_path: str = _MCP_PATH) -> None:
+        self.app = app
+        self.mcp_path = mcp_path.rstrip("/") or "/"
+
+    async def __call__(self, scope, receive, send) -> None:
+        path = str(scope.get("path", "")).rstrip("/") or "/"
+        if scope.get("type") != "http" or path != self.mcp_path:
+            await self.app(scope, receive, send)
+            return
+
+        mode = auth_mode()
+        if mode == "off":
+            await self.app(scope, receive, send)
+            return
+
+        denial = _transport_request_denial(_transport_bearer_token(scope))
+        if denial is None:
+            await self.app(scope, receive, send)
+            return
+
+        _TOOL_AUTH_LOGGER.warning(
+            "%s",
+            _json(
+                {
+                    "event": "mcp_transport_authn_denial",
+                    "mode": mode,
+                    "enforced": mode == "enforce",
+                    **denial,
+                }
+            ),
+        )
+        if mode == "enforce":
+            await _send_transport_unauthorized(send)
+            return
+        await self.app(scope, receive, send)
 
 
 def _tool_call_denial(name: str, token: str | None) -> dict | None:
@@ -569,11 +664,7 @@ def _request_bearer_token(server) -> str | None:
     headers = getattr(getattr(ctx, "request", None), "headers", None)
     if headers is None:
         return None
-    value = headers.get("authorization") or ""
-    scheme, _, credential = value.partition(" ")
-    if scheme.lower() != "bearer":
-        return None
-    return credential.strip() or None
+    return _bearer_token_from_authorization(headers.get("authorization"))
 
 
 class AudienceAuthorizedFastMCP(FastMCP):
@@ -590,6 +681,13 @@ class AudienceAuthorizedFastMCP(FastMCP):
     async def call_tool(self, name, arguments):
         authorize_tool_call(name, _request_bearer_token(self))
         return await super().call_tool(name, arguments)
+
+    def streamable_http_app(self):
+        """Wrap the entire protocol endpoint before initialize/list dispatch."""
+        return MCPTransportAuthMiddleware(
+            super().streamable_http_app(),
+            mcp_path=self.settings.streamable_http_path,
+        )
 
 
 mcp = AudienceAuthorizedFastMCP(
@@ -610,6 +708,11 @@ mcp = AudienceAuthorizedFastMCP(
     # docker0 / verdify-internal bridge IP. Default stays 127.0.0.1:8000.
     host=os.environ.get("MCP_HTTP_HOST", "127.0.0.1"),
     port=int(os.environ.get("MCP_HTTP_PORT", "8000")),
+    # MCP Python SDK 1.27 supports stateless Streamable HTTP for legacy clients.
+    # Verdify uses no server-initiated sampling/roots/elicitation, so every
+    # authenticated request can safely land on either prod replica without an
+    # in-memory Mcp-Session-Id and cross-pod 404s.
+    stateless_http=True,
 )
 
 HERMES_REQUIRED_TOOLS = frozenset(

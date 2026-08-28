@@ -5,12 +5,14 @@ Covers, with no live DB or MCP runtime:
 - VERDIFY_MCP_AUTH_MODE behaviors: off (byte-identical bypass), log
   (denials recorded, never blocked), enforce (denials rejected);
 - fail-closed enforce behavior for missing/unknown tokens and unknown modes;
+- transport-level rejection before unauthenticated initialize/tools-list;
 - the per-audience allow/deny matrix for every registered tool;
 - the drift guard holding the hermes-config.yaml tools.include list, the
   readyz HERMES_REQUIRED_TOOLS set, and the server "iris" audience in
   lockstep;
 - TOOL_AUDIENCES completeness against the actual @mcp.tool registrations;
-- the call_tool dispatch wiring and the /readyz auth surface.
+- stateless two-replica GitOps rendering, call_tool dispatch wiring, and the
+  /readyz auth surface.
 
 Import pattern mirrors tests/test_17_planner_health_surface.py: the logic CI
 environment deliberately does not install the MCP runtime, so server.py loads
@@ -23,6 +25,7 @@ import importlib.util
 import inspect
 import json
 import logging
+import subprocess
 import sys
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
@@ -37,6 +40,7 @@ HERMES_EXPERIMENT_CONFIG_PATH = (
 )
 MCP_DEPLOYMENT_PATH = REPO_ROOT / "deploy" / "k8s" / "base" / "mcp-deployment.yaml"
 BASE_CONFIG_PATH = REPO_ROOT / "deploy" / "k8s" / "base" / "configmap.yaml"
+PROD_OVERLAY_PATH = REPO_ROOT / "deploy" / "k8s" / "overlays" / "prod"
 
 _MISSING_MODULE = object()
 _MCP_STUB_MODULES = ("mcp", "mcp.server", "mcp.server.fastmcp")
@@ -50,6 +54,8 @@ def _install_fastmcp_test_stub() -> None:
     class _FastMCP:
         def __init__(self, *_args, **_kwargs) -> None:
             self._registered_tools: list[SimpleNamespace] = []
+            self._init_kwargs = _kwargs
+            self.settings = SimpleNamespace(streamable_http_path="/mcp")
 
         def tool(self, *_args, **_kwargs):
             def decorator(func):
@@ -123,6 +129,66 @@ def _run(coro):
     import asyncio
 
     return asyncio.run(coro)
+
+
+class _InventoryASGIApp:
+    """Fake protocol endpoint whose response makes accidental exposure obvious."""
+
+    def __init__(self) -> None:
+        self.requests: list[dict] = []
+
+    async def __call__(self, _scope, receive, send) -> None:
+        request = await receive()
+        self.requests.append(json.loads(request["body"]))
+        body = b'{"jsonrpc":"2.0","id":1,"result":{"tools":[{"name":"private_tool"}]}}'
+        await send(
+            {
+                "type": "http.response.start",
+                "status": 200,
+                "headers": [(b"content-type", b"application/json")],
+            }
+        )
+        await send({"type": "http.response.body", "body": body})
+
+
+def _transport_request(app, method: str, *, authorization: str | None = None, path: str = "/mcp"):
+    payload = {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": method,
+        "params": (
+            {
+                "protocolVersion": "2025-11-25",
+                "capabilities": {},
+                "clientInfo": {"name": "transport-test", "version": "1"},
+            }
+            if method == "initialize"
+            else {}
+        ),
+    }
+    body = json.dumps(payload).encode()
+    headers = [(b"content-type", b"application/json")]
+    if authorization is not None:
+        headers.append((b"authorization", authorization.encode()))
+    scope = {
+        "type": "http",
+        "method": "POST",
+        "path": path,
+        "headers": headers,
+    }
+    messages = [{"type": "http.request", "body": body, "more_body": False}]
+    sent = []
+
+    async def receive():
+        return messages.pop(0)
+
+    async def send(message):
+        sent.append(message)
+
+    _run(app(scope, receive, send))
+    status = next(message["status"] for message in sent if message["type"] == "http.response.start")
+    response_body = b"".join(message.get("body", b"") for message in sent if message["type"] == "http.response.body")
+    return status, response_body, sent
 
 
 # ─── Token → audience resolution ─────────────────────────────────────────
@@ -474,6 +540,76 @@ class TestCallToolWiring:
         assert mcp_server._request_bearer_token(SimpleNamespace()) is None
 
 
+# ─── HTTP transport authentication ──────────────────────────────────────
+
+
+class TestTransportAuthentication:
+    @pytest.mark.parametrize("method", ["initialize", "tools/list"])
+    def test_enforce_denies_before_protocol_or_inventory_dispatch(self, mcp_server, monkeypatch, method):
+        _configure(monkeypatch, mode="enforce", iris="tok-iris")
+        downstream = _InventoryASGIApp()
+        app = mcp_server.MCPTransportAuthMiddleware(downstream)
+
+        status, body, sent = _transport_request(app, method)
+
+        assert status == 401
+        assert body == b'{"error":"unauthorized"}'
+        assert b"private_tool" not in body
+        assert downstream.requests == []
+        response_start = next(message for message in sent if message["type"] == "http.response.start")
+        assert (b"www-authenticate", b"Bearer") in response_start["headers"]
+
+    @pytest.mark.parametrize("method", ["initialize", "tools/list"])
+    def test_authenticated_iris_reaches_protocol_and_keeps_tool_authz_layer(self, mcp_server, monkeypatch, method):
+        _configure(monkeypatch, mode="enforce", iris="tok-iris")
+        downstream = _InventoryASGIApp()
+        app = mcp_server.MCPTransportAuthMiddleware(downstream)
+
+        status, body, _sent = _transport_request(app, method, authorization="Bearer tok-iris")
+
+        assert status == 200
+        assert b"private_tool" in body
+        assert [request["method"] for request in downstream.requests] == [method]
+        mcp_server.authorize_tool_call("climate", "tok-iris")
+        with pytest.raises(mcp_server.ToolAccessDenied):
+            mcp_server.authorize_tool_call("query", "tok-iris")
+
+    def test_unknown_credentials_fail_closed_without_secret_echo(self, mcp_server, monkeypatch, caplog):
+        _configure(monkeypatch, mode="enforce", iris="tok-secret-value")
+        downstream = _InventoryASGIApp()
+        app = mcp_server.MCPTransportAuthMiddleware(downstream)
+
+        with caplog.at_level(logging.WARNING, logger="verdify.mcp.auth"):
+            status, body, _sent = _transport_request(app, "initialize", authorization="Bearer wrong-secret")
+
+        assert status == 401
+        assert downstream.requests == []
+        assert b"wrong-secret" not in body
+        assert all("wrong-secret" not in record.message for record in caplog.records)
+        assert all("tok-secret-value" not in record.message for record in caplog.records)
+
+    def test_readyz_stays_public_and_off_mode_is_a_pure_bypass(self, mcp_server, monkeypatch):
+        downstream = _InventoryASGIApp()
+        app = mcp_server.MCPTransportAuthMiddleware(downstream)
+
+        _configure(monkeypatch, mode="enforce", iris="tok-iris")
+        status, _body, _sent = _transport_request(app, "ready", path="/readyz")
+        assert status == 200
+
+        def boom():  # pragma: no cover - must not be reached
+            raise AssertionError("off mode must not consult the token registry")
+
+        monkeypatch.delenv("VERDIFY_MCP_AUTH_MODE")
+        monkeypatch.setattr(mcp_server, "audience_token_registry", boom)
+        status, _body, _sent = _transport_request(app, "initialize")
+        assert status == 200
+
+    def test_fastmcp_is_configured_for_supported_stateless_http(self, mcp_server):
+        assert mcp_server.mcp._init_kwargs["stateless_http"] is True
+        requirements = (REPO_ROOT / "mcp" / "requirements.txt").read_text()
+        assert "mcp>=1.27,<2" in requirements
+
+
 # ─── /readyz auth surface ────────────────────────────────────────────────
 
 
@@ -551,3 +687,28 @@ def test_production_mcp_enforces_iris_audience_with_the_existing_hermes_credenti
     assert token == {"name": "verdify-hermes", "key": "VERDIFY_MCP_TOKEN"}
     assert "optional" not in token
     assert "VERDIFY_MCP_TOKEN_ADMIN" not in env
+
+
+def test_rendered_prod_two_replica_mcp_is_stateless_and_not_session_affine() -> None:
+    rendered = subprocess.run(
+        ["kustomize", "build", str(PROD_OVERLAY_PATH)],
+        cwd=REPO_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    resources = [resource for resource in yaml.safe_load_all(rendered) if isinstance(resource, dict)]
+    deployment = next(
+        resource
+        for resource in resources
+        if resource.get("kind") == "Deployment" and resource.get("metadata", {}).get("name") == "verdify-mcp"
+    )
+    service = next(
+        resource
+        for resource in resources
+        if resource.get("kind") == "Service" and resource.get("metadata", {}).get("name") == "verdify-mcp"
+    )
+
+    assert deployment["spec"]["replicas"] == 2
+    assert service["spec"]["sessionAffinity"] == "None"
+    assert "sessionAffinityConfig" not in service["spec"]
