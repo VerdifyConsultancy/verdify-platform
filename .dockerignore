@@ -110,6 +110,7 @@ db/migrations/tests/*
 !db/migrations/tests/test-230-experiment-v2-observation-window-bundle-join.sql
 !db/migrations/tests/test-231-experiment-v2-emergency-recovery-zero-exposure.sql
 !db/migrations/tests/test-232-experiment-v2-observation-pair-recovery-retry.sql
+!db/migrations/tests/test-233-experiment-v2-direct-proof-zero-exposure-seal.sql
 !db/ledger
 db/ledger/*
 !db/ledger/*.sql

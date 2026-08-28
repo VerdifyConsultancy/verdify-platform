@@ -480,7 +480,15 @@ data:
                 print(json.dumps({"stage": label, "status": "pass"}, sort_keys=True))
                 return str(result)
             except asyncpg.exceptions.RaiseError as exc:
-                if retry_fragment not in (exc.message or str(exc)):
+                retry_fragments = (
+                    (retry_fragment,)
+                    if isinstance(retry_fragment, str)
+                    else tuple(retry_fragment)
+                )
+                if not any(
+                    fragment in (exc.message or str(exc))
+                    for fragment in retry_fragments
+                ):
                     fail(f"{label} was rejected outside its bounded not-ready condition")
                 if asyncio.get_running_loop().time() >= deadline:
                     fail(f"{label} timed out before its required physical evidence")
@@ -669,7 +677,15 @@ data:
                 label="proof-sealed",
                 sql=FINISH_SQL,
                 args=(EXPERIMENT_ID, ACTOR),
-                retry_fragment="direct proof requires exactly two linked recovered baselines",
+                retry_fragment=(
+                    "direct proof requires exact-attempt baseline-before, aggressive, "
+                    "baseline-after terminal order",
+                    "direct proof requires zero open exposure before sealing",
+                    "direct proof requires distinct receipt-bound two-epoch evidence for all "
+                    "three exact-attempt states",
+                    "direct proof evidence must span one completed 3-minute-to-12-hour "
+                    "interval inside the active attempt authorization",
+                ),
                 lifecycle="draft",
                 phase="commissioning",
                 admission="baseline_recovery",
