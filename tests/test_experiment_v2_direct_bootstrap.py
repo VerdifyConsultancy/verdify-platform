@@ -110,13 +110,18 @@ def test_bootstrap_is_feature_off_function_bounded_and_secret_safe() -> None:
         "ORDINARY_API_DB_PASSWORD",
         "LIFECYCLE_DB_USER",
         "LIFECYCLE_DB_PASSWORD",
+        "MCP_IRIS_TOKEN",
     }
     assert direct_env <= set(env)
     assert {env[name]["valueFrom"]["secretKeyRef"]["name"] for name in direct_env} == {
         "verdify-app-secrets",
+        "verdify-hermes",
     }
-    assert "MCP_IRIS_TOKEN" not in env
-    assert "MCP_IRIS_TOKEN" not in script
+    assert env["MCP_IRIS_TOKEN"]["valueFrom"]["secretKeyRef"] == {
+        "name": "verdify-hermes",
+        "key": "VERDIFY_MCP_TOKEN",
+    }
+    assert "MCP_IRIS_TOKEN" in script
     assert "python /etc/verdify/direct-bootstrap/bootstrap.py" in container["args"][0]
     volumes = {volume["name"]: volume for volume in patch["spec"]["template"]["spec"]["volumes"]}
     assert volumes["direct-launch-bootstrap"]["configMap"]["name"] == ("experiment-v2-direct-launch-bootstrap")
@@ -146,20 +151,18 @@ def test_prod_render_contains_bootstrap_and_keeps_experiment_disabled() -> None:
         "argocd.argoproj.io/hook": "PreSync",
         "argocd.argoproj.io/hook-delete-policy": "BeforeHookCreation",
         "argocd.argoproj.io/sync-wave": "2",
-        "operations.vallery.net/temporary-node-selection": ("vm-k3s-node7:cni-pod-sandbox-contention:2026-08-28"),
+    }
+    config = by_kind_name[("ConfigMap", "experiment-v2-direct-launch-bootstrap")]
+    assert config["metadata"]["annotations"] == {
+        "argocd.argoproj.io/hook": "PreSync",
+        "argocd.argoproj.io/hook-delete-policy": "BeforeHookCreation",
+        "argocd.argoproj.io/sync-wave": "1",
     }
     pod = job["spec"]["template"]
     assert pod["metadata"]["labels"]["app.kubernetes.io/component"] == "migrate"
     assert "hostNetwork" not in pod["spec"]
     assert pod["spec"]["automountServiceAccountToken"] is False
-    node_match = pod["spec"]["affinity"]["nodeAffinity"]["requiredDuringSchedulingIgnoredDuringExecution"][
-        "nodeSelectorTerms"
-    ][0]["matchExpressions"][0]
-    assert node_match == {
-        "key": "kubernetes.io/hostname",
-        "operator": "In",
-        "values": ["vm-k3s-node7"],
-    }
+    assert "affinity" not in pod["spec"]
     containers = {container["name"]: container for container in pod["spec"]["containers"]}
     assert set(containers) == {"bootstrap-and-attest"}
     container = containers["bootstrap-and-attest"]
