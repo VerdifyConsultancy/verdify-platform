@@ -67,16 +67,16 @@ BEGIN
         v_exp.admission_state = 'baseline_recovery' AND v_exp.component_enabled AND
         EXISTS (
             SELECT 1
-              FROM public.experiment_v2_direct_proof_authorizations authorization
-             WHERE authorization.experiment_id = NEW.experiment_id
-               AND authorization.revision_bundle_sha256 = NEW.revision_bundle_sha256
-               AND authorization.issue_number = 641
-               AND authorization.proof_valid_range = NEW.valid_range
-               AND NEW.expires_at = upper(authorization.proof_valid_range)
-               AND clock_timestamp() <@ authorization.proof_valid_range
-               AND authorization.supervisor_role = 'Jason Vallery'
-               AND authorization.rescue_owner_role = 'Jason Vallery'
-               AND authorization.authorized_by = NEW.created_by);
+              FROM public.experiment_v2_direct_proof_authorizations authz
+             WHERE authz.experiment_id = NEW.experiment_id
+               AND authz.revision_bundle_sha256 = NEW.revision_bundle_sha256
+               AND authz.issue_number = 641
+               AND authz.proof_valid_range = NEW.valid_range
+               AND NEW.expires_at = upper(authz.proof_valid_range)
+               AND clock_timestamp() <@ authz.proof_valid_range
+               AND authz.supervisor_role = 'Jason Vallery'
+               AND authz.rescue_owner_role = 'Jason Vallery'
+               AND authz.authorized_by = NEW.created_by);
     IF NEW.operation_kind = 'commissioning_canary' AND (
        NEW.target_profile NOT IN ('moderate', 'aggressive') OR
        (NOT v_direct_proof AND NOT EXISTS (

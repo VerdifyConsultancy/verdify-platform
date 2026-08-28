@@ -21,17 +21,19 @@ def test_direct_proof_exception_is_exact_and_keeps_ordinary_canary_gate() -> Non
         "v_exp.status = 'draft'",
         "v_exp.execution_phase = 'commissioning'",
         "v_exp.admission_state = 'baseline_recovery'",
-        "authorization.proof_valid_range = NEW.valid_range",
-        "NEW.expires_at = upper(authorization.proof_valid_range)",
-        "clock_timestamp() <@ authorization.proof_valid_range",
-        "authorization.supervisor_role = 'Jason Vallery'",
-        "authorization.rescue_owner_role = 'Jason Vallery'",
-        "authorization.authorized_by = NEW.created_by",
+        "authz.proof_valid_range = NEW.valid_range",
+        "NEW.expires_at = upper(authz.proof_valid_range)",
+        "clock_timestamp() <@ authz.proof_valid_range",
+        "authz.supervisor_role = 'Jason Vallery'",
+        "authz.rescue_owner_role = 'Jason Vallery'",
+        "authz.authorized_by = NEW.created_by",
     ):
         assert required in direct
     assert "NOT v_direct_proof AND NOT EXISTS" in sql
     assert "a.approval_kind = 'combined_physical'" in sql
     assert "INSERT INTO public.experiment_v2_approvals" not in sql
+    assert "direct_proof_authorizations authorization" not in sql
+    assert "direct_proof_authorizations authz" in sql
 
 
 def test_forward_migration_preserves_all_other_work_binding_guards() -> None:
