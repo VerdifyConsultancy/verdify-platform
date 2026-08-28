@@ -89,7 +89,7 @@ def test_launch_design_recomputes_and_binds_every_runtime_artifact() -> None:
     assert design["selector_identity_sha256"] == hashlib.sha256(selector_raw).hexdigest()
     assert design["endpoint_artifact_sha256"] == hashlib.sha256(outcome_raw).hexdigest()
     assert design["analyzer_environment_sha256"] == json.loads(selector_raw)["runtime_environment_sha256"]
-    assert design["source_git_sha"] == "2a9e3db689e9ff2a79f7037c2fcd6f4f00788f6d"
+    assert design["source_git_sha"] == "95a47e8112f2396fdf95f68108381446124a549f"
     script = launch["data"]["launch.py"]
     compile(script, "launch.py", "exec")
     assert "fn_experiment_v2_direct_launch_commit" in script
