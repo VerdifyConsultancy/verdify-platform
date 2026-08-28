@@ -208,6 +208,7 @@ def test_job_function_allowlists_are_lockstep_with_ledgered_grants(rendered: lis
         "220-experiment-v2-direct-randomized-launch.sql",
         "222-experiment-v2-direct-physical-proof.sql",
         "224-experiment-v2-direct-launch-runtime.sql",
+        "225-experiment-v2-direct-proof-retry.sql",
     ):
         migration = (REPO_ROOT / "db/migrations" / migration_name).read_text()
         blocks.extend(
@@ -230,7 +231,7 @@ def test_job_function_allowlists_are_lockstep_with_ledgered_grants(rendered: lis
     ):
         matching = [array for array, grant in blocks if f"TO {duty}" in grant]
         expected_blocks = {
-            "verdify_experiment_lifecycle": 3,
+            "verdify_experiment_lifecycle": 4,
             "verdify_experiment_shadow_scheduler": 2,
         }
         assert len(matching) == expected_blocks.get(duty, 1)
@@ -245,7 +246,7 @@ def test_job_function_allowlists_are_lockstep_with_ledgered_grants(rendered: lis
         "public.fn_record_equipment_direct_state_snapshot(uuid,uuid,text,text,jsonb,double precision,uuid,bigint,text)",
         "public.fn_record_equipment_state_source_receipt(uuid,timestamp with time zone,text,text,jsonb,boolean,uuid,bigint,text)",
     }
-    assert sum(map(len, job_allowlists.values())) == 57
+    assert sum(map(len, job_allowlists.values())) == 60
 
 
 def _activation_env(tmp_path: Path) -> tuple[dict[str, str], tuple[str, ...]]:
