@@ -193,6 +193,7 @@ spec:
                     ('verdify_experiment_lifecycle', 'public.fn_experiment_v2_direct_proof_retry_emergency_recovery(uuid,uuid,uuid,text,bigint,tstzrange,text,text,text)'),
                     ('verdify_experiment_lifecycle', 'public.fn_experiment_v2_direct_proof_finish_emergency_recovery(uuid,uuid,text)'),
                     ('verdify_experiment_lifecycle', 'public.fn_experiment_v2_direct_proof_attempt_status(uuid)'),
+                    ('verdify_experiment_lifecycle', 'public.fn_experiment_v2_direct_proof_resolve_startup_rollover(uuid,uuid,text,text)'),
                     ('verdify_experiment_lifecycle', 'public.fn_experiment_v2_direct_launch_commit(uuid,date,integer,time without time zone,text,text,text,text,text,text,text,text,text,text,text)'),
                     ('verdify_experiment_component_executor', 'public.fn_experiment_v2_resolve_readiness(uuid,uuid,bigint)'),
                     ('verdify_experiment_component_executor', 'public.fn_experiment_v2_resolve_randomized(uuid,uuid,bigint)'),
