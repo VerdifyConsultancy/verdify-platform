@@ -27,6 +27,7 @@ from experiment_orchestrator.stores import (  # noqa: E402
 )
 
 EXPERIMENT = "11111111-1111-4111-8111-111111111111"
+DIRECT_EXPERIMENT = "45039c86-c1d9-52f6-a0a9-d94a17bc4b14"
 SUBJECT = "22222222-2222-4222-8222-222222222222"
 
 
@@ -69,10 +70,10 @@ def attested(connection: Connection, mode: OrchestratorMode) -> AttestedPool:
     return AttestedPool(Pool(connection), mode)
 
 
-def lifecycle_plan(action: str = "shadow_schedule") -> LifecyclePlan:
+def lifecycle_plan(action: str = "shadow_schedule", experiment_id: str = EXPERIMENT) -> LifecyclePlan:
     payload = {
         "schema": "verdify-experiment-v2-lifecycle-plan-v1",
-        "experiment_id": EXPERIMENT,
+        "experiment_id": experiment_id,
         "action": action,
     }
     if action == "shadow_schedule":
@@ -88,7 +89,7 @@ def lifecycle_plan(action: str = "shadow_schedule") -> LifecyclePlan:
             }
         )
     raw = canonical_json_bytes(payload, reject_forbidden_fields=False)
-    return LifecyclePlan.parse(raw, hashlib.sha256(raw).hexdigest(), EXPERIMENT)
+    return LifecyclePlan.parse(raw, hashlib.sha256(raw).hexdigest(), experiment_id)
 
 
 @pytest.mark.asyncio
@@ -124,15 +125,33 @@ async def test_lifecycle_boundary_poll_makes_only_one_server_clock_call() -> Non
     store = LifecycleFunctionStore(attested(connection, OrchestratorMode.LIFECYCLE))
     disposition = await run_lifecycle_cycle(
         store,
-        experiment_id=EXPERIMENT,
-        plan=lifecycle_plan("boundary"),
+        experiment_id=DIRECT_EXPERIMENT,
+        plan=lifecycle_plan("boundary", DIRECT_EXPERIMENT),
     )
     assert disposition == "boundary_finalized"
     assert len(connection.calls) == 1
     query, args = connection.calls[0]
-    assert "fn_experiment_v2_boundary_cycle" in query
+    assert "fn_experiment_v2_direct_launch_cycle" in query
     assert "schedule_shadow" not in query
-    assert args == (EXPERIMENT, "experiment-v2-orchestrator")
+    assert args == (DIRECT_EXPERIMENT, "experiment-v2-orchestrator")
+
+
+@pytest.mark.asyncio
+async def test_lifecycle_boundary_poll_preserves_ordinary_path_for_other_studies() -> None:
+    other_experiment = "4a9a299c-03b2-43ec-bb37-0cbf21f5ac04"
+    connection = Connection([None])
+    store = LifecycleFunctionStore(attested(connection, OrchestratorMode.LIFECYCLE))
+    disposition = await run_lifecycle_cycle(
+        store,
+        experiment_id=other_experiment,
+        plan=lifecycle_plan("boundary", other_experiment),
+    )
+    assert disposition == "idle"
+    assert len(connection.calls) == 1
+    query, args = connection.calls[0]
+    assert "fn_experiment_v2_boundary_cycle" in query
+    assert "fn_experiment_v2_direct_launch_cycle" not in query
+    assert args == (other_experiment, "experiment-v2-orchestrator")
 
 
 def candidate(kind: str) -> SelectorCandidate:

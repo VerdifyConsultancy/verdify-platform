@@ -250,6 +250,7 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "221-experiment-v2-state-replay.sql",  # retry-safe exact feature-off bootstrap (#642)
         "222-experiment-v2-direct-physical-proof.sql",  # sealed attended baseline/aggressive/baseline proof
         "223-experiment-v2-direct-proof-work-binding.sql",  # exact active-proof trigger exception (#641)
+        "224-experiment-v2-direct-launch-runtime.sql",  # exact-study selector/boundary runtime (#642)
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(

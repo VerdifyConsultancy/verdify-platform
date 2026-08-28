@@ -217,6 +217,7 @@ spec:
                     ('verdify_experiment_shadow_scheduler', 'public.fn_experiment_v2_due_shadow_cycle(uuid)'),
                     ('verdify_experiment_shadow_scheduler', 'public.fn_experiment_v2_due_assignment(uuid)'),
                     ('verdify_experiment_shadow_scheduler', 'public.fn_experiment_v2_boundary_cycle(uuid,text)'),
+                    ('verdify_experiment_shadow_scheduler', 'public.fn_experiment_v2_direct_launch_cycle(uuid,text)'),
                     ('verdify_experiment_randomizer', 'public.fn_experiment_v2_finalize_randomization(uuid,text)'),
                     ('verdify_experiment_randomizer', 'public.fn_experiment_v2_selector_cycle(uuid)'),
                     ('verdify_experiment_randomizer', 'public.fn_experiment_v2_record_selector_choice(uuid,uuid,text,text,text,text,text,text,text[],text,text)'),

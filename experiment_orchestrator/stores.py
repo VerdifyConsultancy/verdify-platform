@@ -20,6 +20,7 @@ from .outcome import OutcomeSourceCandidate
 from .service import SelectorCandidate, SelectorDecision
 
 ACTOR = "experiment-v2-orchestrator"
+DIRECT_LAUNCH_EXPERIMENT_ID = "45039c86-c1d9-52f6-a0a9-d94a17bc4b14"
 
 _SELECTOR_FALLBACK_REASONS = frozenset(
     {
@@ -161,9 +162,14 @@ class LifecycleFunctionStore:
         return detached
 
     async def boundary_cycle(self, experiment_id: str) -> Mapping[str, Any] | None:
+        function = (
+            "fn_experiment_v2_direct_launch_cycle"
+            if experiment_id == DIRECT_LAUNCH_EXPERIMENT_ID
+            else "fn_experiment_v2_boundary_cycle"
+        )
         async with self._pool.acquire() as connection:
             row = await connection.fetchrow(
-                "SELECT * FROM public.fn_experiment_v2_boundary_cycle($1::uuid,$2::text)",
+                f"SELECT * FROM public.{function}($1::uuid,$2::text)",
                 experiment_id,
                 ACTOR,
             )
