@@ -250,11 +250,19 @@ data:
                 if configured is None:
                     fail("configure returned no receipt")
                 revision = configured["revision_bundle_sha256"]
-                if tuple(configured[key] for key in (
+                configured_axes = tuple(configured[key] for key in (
                     "experiment_id", "protocol_version", "status", "execution_phase",
                     "admission_state", "component_enabled"
-                )) != (study["experiment_id"], 2, "draft", "shadow", "closed", False):
-                    fail("configure returned the wrong feature-off state")
+                ))
+                expected_axes = (study["experiment_id"], 2, "draft", "shadow", "closed", False)
+                if configured_axes != expected_axes:
+                    fail(
+                        "configure returned the wrong feature-off state: "
+                        + json.dumps(
+                            {"actual": configured_axes, "expected": expected_axes},
+                            separators=(",", ":"),
+                        )
+                    )
 
                 wire = spec["wire_schema"]
                 for profile_name in sorted(EXPECTED_PROFILES):
