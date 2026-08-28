@@ -23,7 +23,6 @@ from .contracts import (
     SelectorContext,
     SelectorIdentity,
     canonical_json_bytes,
-    parse_canonical_document,
 )
 from .settings import ProviderSettings
 
@@ -206,7 +205,7 @@ def _unique_json_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
 
 
 def _parse_openai_response(raw: bytes, identity: SelectorIdentity, completed_at: datetime) -> ProviderResponse:
-    """Extract one canonical profile from a strict OpenAI chat envelope."""
+    """Extract one schema-valid profile from a strict OpenAI chat envelope."""
 
     try:
         envelope = json.loads(raw, object_pairs_hook=_unique_json_object)
@@ -264,9 +263,14 @@ def _parse_openai_response(raw: bytes, identity: SelectorIdentity, completed_at:
     reasoning = message.get("reasoning_content")
     if reasoning is not None and not isinstance(reasoning, str):
         raise ContractError("OpenAI selector reasoning content is malformed")
-    content = message["content"].encode("utf-8")
-    decision = parse_canonical_document(content, hashlib.sha256(content).hexdigest())
-    if set(decision) != {"profile"}:
+    # Structured Outputs constrains the JSON value, not its insignificant
+    # whitespace.  Preserve the complete provider envelope hash below, but do
+    # not require OpenAI to emit our repository's private canonical spelling.
+    try:
+        decision = json.loads(message["content"], object_pairs_hook=_unique_json_object)
+    except json.JSONDecodeError as exc:
+        raise ContractError("OpenAI selector decision is not valid JSON") from exc
+    if not isinstance(decision, dict) or set(decision) != {"profile"}:
         raise ContractError("OpenAI selector decision schema mismatch")
     profile = decision["profile"]
     if profile not in ("baseline", "moderate", "aggressive"):

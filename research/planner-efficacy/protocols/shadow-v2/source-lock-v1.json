@@ -70,7 +70,7 @@
   "schema": "verdify-experiment-v2-shadow-source-lock-v1",
   "selector": {
     "artifact_path": "research/planner-efficacy/protocols/shadow-v2/selector-artifact-v1.json",
-    "artifact_sha256": "96bca624d2e5895f70ce857b9f4cbbeeba0c06594d67e4899ad64a6c23a9f7d9",
+    "artifact_sha256": "cb1e68a4492349da4921c7cd36c9b855ca28d66956815d0acafa4bf887c5a0eb",
     "context_schema_path": "research/planner-efficacy/protocols/shadow-v2/selector-context-v2.schema.json",
     "context_schema_sha256": "4b2c1f430fc38c74247395d5d894ffaba0f9b0dc209c3320e63bf8309887fbf0",
     "context_max_climate_observations": 48,
