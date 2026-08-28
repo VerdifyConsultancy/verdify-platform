@@ -174,6 +174,8 @@ def test_proof_script_is_syntax_valid_exact_role_bound_and_non_provider() -> Non
     )
     assert "current writer generation is not yet stable" in script
     assert 'attempt["baseline_after_work_id"] is None' in script
+    assert "direct aggressive admission requires the active exact attempt " in script
+    assert "and its receipt-confirmed baseline-before work" in script
 
 
 def test_default_config_remains_coarse_off_for_the_removal_rollback() -> None:
