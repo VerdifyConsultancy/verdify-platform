@@ -253,6 +253,7 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "224-experiment-v2-direct-launch-runtime.sql",  # exact-study selector/boundary runtime (#642)
         "225-experiment-v2-direct-proof-retry.sql",  # append-only exact-attempt emergency recovery/retry
         "226-experiment-v2-direct-proof-attempt-status.sql",  # function-only restart-safe proof status
+        "227-experiment-v2-emergency-recovery-retry.sql",  # restart-stable append-only emergency recovery retry
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(
@@ -301,6 +302,7 @@ def test_migrate_image_carries_migrations_and_runner():
         "!db/migrations/tests/test-218-planner-required-failure-history.sql",
         "!db/migrations/tests/test-225-experiment-v2-direct-proof-retry.sql",
         "!db/migrations/tests/test-226-experiment-v2-direct-proof-attempt-status.sql",
+        "!db/migrations/tests/test-227-experiment-v2-emergency-recovery-retry.sql",
         "!db/ledger",
         "db/ledger/*",
         "!db/ledger/*.sql",
@@ -309,7 +311,7 @@ def test_migrate_image_carries_migrations_and_runner():
     assert indexes == sorted(indexes), "Kaniko re-include rules must stay ordered"
 
     # The production migrate image remains free of the broad SQL fixture tree.
-    # Only the six vertical fixtures executed by the one-release restore
+    # Only the seven vertical fixtures executed by the one-release restore
     # rehearsal are admitted into /db/migrations/tests.
     test_fixture_reincludes = [line for line in ignore_lines if line.startswith("!db/migrations/tests/")]
     assert test_fixture_reincludes == [
@@ -319,6 +321,7 @@ def test_migrate_image_carries_migrations_and_runner():
         "!db/migrations/tests/test-218-planner-required-failure-history.sql",
         "!db/migrations/tests/test-225-experiment-v2-direct-proof-retry.sql",
         "!db/migrations/tests/test-226-experiment-v2-direct-proof-attempt-status.sql",
+        "!db/migrations/tests/test-227-experiment-v2-emergency-recovery-retry.sql",
     ]
 
 

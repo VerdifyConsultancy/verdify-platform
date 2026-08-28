@@ -61,6 +61,12 @@ data:
         $6::text, $7::text, $8::text
     )).resolution_id::text
     """
+    RETRY_EMERGENCY_RECOVERY_SQL = """
+    SELECT (public.fn_experiment_v2_direct_proof_retry_emergency_recovery(
+        $1::uuid, $2::uuid, $3::uuid, $4::text, $5::bigint,
+        $6::tstzrange, $7::text, $8::text, $9::text
+    )).resolution_id::text
+    """
     FINISH_EMERGENCY_RECOVERY_SQL = """
     SELECT (public.fn_experiment_v2_direct_proof_finish_emergency_recovery(
         $1::uuid, $2::uuid, $3::text
@@ -256,6 +262,86 @@ data:
                 fail("failed attempt does not have the authorized bounded recovery kind")
             if attempt["emergency_recovery_complete"]:
                 fail("completed emergency recovery cannot remain in commissioning authority")
+
+            if status["admission_state"] == "emergency_hold":
+                deadline = asyncio.get_running_loop().time() + 12 * 60
+                failed_resolution_id = resolution_id
+                while True:
+                    assert_authorized_clock(90)
+                    current = await read_status(connection)
+                    current_attempt = await read_attempt(connection)
+                    assert_status(
+                        current,
+                        lifecycle="draft",
+                        phase="commissioning",
+                        admission="emergency_hold",
+                        enabled=False,
+                        revision=revision,
+                        lease=lease,
+                        open_exposures=0,
+                    )
+                    if (
+                        current_attempt is None
+                        or current_attempt["authorization_id"]
+                        != attempt["authorization_id"]
+                        or str(current_attempt["resolution_id"])
+                        != str(failed_resolution_id)
+                        or not current_attempt["attempt_failed"]
+                        or current_attempt["attempt_superseded"]
+                        or current_attempt["emergency_recovery_complete"]
+                    ):
+                        fail("emergency retry predecessor changed outside the append-only chain")
+                    recovery_from = datetime.now(UTC)
+                    recovery_to = min(
+                        recovery_from + timedelta(minutes=30), AUTHORIZED_TO
+                    )
+                    if (recovery_to - recovery_from).total_seconds() < 3 * 60:
+                        fail("attended window cannot contain a bounded emergency retry")
+                    try:
+                        resolution_id = await connection.fetchval(
+                            RETRY_EMERGENCY_RECOVERY_SQL,
+                            EXPERIMENT_ID,
+                            attempt["authorization_id"],
+                            failed_resolution_id,
+                            revision,
+                            lease,
+                            asyncpg.Range(
+                                recovery_from,
+                                recovery_to,
+                                lower_inc=True,
+                                upper_inc=False,
+                            ),
+                            FACILITY_AUTHORIZATION_REF,
+                            (
+                                "restart-stable retry after startup authority-hold "
+                                "interrupted recovery"
+                            ),
+                            ACTOR,
+                        )
+                        if resolution_id is None:
+                            fail("emergency recovery retry returned no durable identifier")
+                        uuid.UUID(str(resolution_id))
+                        print(json.dumps(
+                            {
+                                "stage": "emergency-recovery-retry-admitted",
+                                "status": "pass",
+                            },
+                            sort_keys=True,
+                        ))
+                        break
+                    except asyncpg.exceptions.RaiseError as exc:
+                        if (
+                            "current writer generation is not yet stable for "
+                            "direct-proof emergency recovery retry"
+                            not in (exc.message or str(exc))
+                        ):
+                            fail(
+                                "emergency retry was rejected outside its bounded "
+                                "writer-stability condition"
+                            )
+                        if asyncio.get_running_loop().time() >= deadline:
+                            fail("writer did not become stable before emergency retry timeout")
+                        await asyncio.sleep(5)
 
         await retry_emergency_finish(
             connection,

@@ -996,6 +996,7 @@ WITH login AS (
         'public.fn_experiment_v2_direct_proof_finish(uuid,text)',
         'public.fn_experiment_v2_direct_proof_resolve_emergency(uuid,uuid,text,bigint,text,text,text,text)',
         'public.fn_experiment_v2_direct_proof_begin_emergency_recovery(uuid,uuid,text,bigint,tstzrange,text,text,text)',
+        'public.fn_experiment_v2_direct_proof_retry_emergency_recovery(uuid,uuid,uuid,text,bigint,tstzrange,text,text,text)',
         'public.fn_experiment_v2_direct_proof_finish_emergency_recovery(uuid,uuid,text)',
         'public.fn_experiment_v2_direct_proof_attempt_status(uuid)',
         'public.fn_experiment_v2_direct_launch_commit(uuid,date,integer,time without time zone,text,text,text,text,text,text,text,text,text,text,text)',
