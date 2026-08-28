@@ -252,6 +252,7 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "223-experiment-v2-direct-proof-work-binding.sql",  # exact active-proof trigger exception (#641)
         "224-experiment-v2-direct-launch-runtime.sql",  # exact-study selector/boundary runtime (#642)
         "225-experiment-v2-direct-proof-retry.sql",  # append-only exact-attempt emergency recovery/retry
+        "226-experiment-v2-direct-proof-attempt-status.sql",  # function-only restart-safe proof status
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(
@@ -298,6 +299,8 @@ def test_migrate_image_carries_migrations_and_runner():
         "!db/migrations/tests/test-216-equipment-counter-source-ledger.sql",
         "!db/migrations/tests/test-217-runtime-role-boundary.sql",
         "!db/migrations/tests/test-218-planner-required-failure-history.sql",
+        "!db/migrations/tests/test-225-experiment-v2-direct-proof-retry.sql",
+        "!db/migrations/tests/test-226-experiment-v2-direct-proof-attempt-status.sql",
         "!db/ledger",
         "db/ledger/*",
         "!db/ledger/*.sql",
@@ -306,7 +309,7 @@ def test_migrate_image_carries_migrations_and_runner():
     assert indexes == sorted(indexes), "Kaniko re-include rules must stay ordered"
 
     # The production migrate image remains free of the broad SQL fixture tree.
-    # Only the four vertical fixtures executed by the one-release restore
+    # Only the six vertical fixtures executed by the one-release restore
     # rehearsal are admitted into /db/migrations/tests.
     test_fixture_reincludes = [line for line in ignore_lines if line.startswith("!db/migrations/tests/")]
     assert test_fixture_reincludes == [
@@ -314,6 +317,8 @@ def test_migrate_image_carries_migrations_and_runner():
         "!db/migrations/tests/test-216-equipment-counter-source-ledger.sql",
         "!db/migrations/tests/test-217-runtime-role-boundary.sql",
         "!db/migrations/tests/test-218-planner-required-failure-history.sql",
+        "!db/migrations/tests/test-225-experiment-v2-direct-proof-retry.sql",
+        "!db/migrations/tests/test-226-experiment-v2-direct-proof-attempt-status.sql",
     ]
 
 

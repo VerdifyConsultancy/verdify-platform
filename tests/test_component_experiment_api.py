@@ -734,6 +734,9 @@ def test_api_attestation_exactly_matches_the_migration_lifecycle_grant() -> None
     direct_proof_retry = (
         Path(__file__).parents[1] / "db/migrations/225-experiment-v2-direct-proof-retry.sql"
     ).read_text()
+    direct_proof_status = (
+        Path(__file__).parents[1] / "db/migrations/226-experiment-v2-direct-proof-attempt-status.sql"
+    ).read_text()
     grant_statement = "GRANT EXECUTE ON FUNCTION %s TO verdify_experiment_lifecycle"
     grant_end = migration.index(grant_statement)
     grant_start = migration.rfind("FOREACH fn IN ARRAY ARRAY[", 0, grant_end)
@@ -743,6 +746,7 @@ def test_api_attestation_exactly_matches_the_migration_lifecycle_grant() -> None
     granted.update(re.findall(r"'(public\.fn_experiment_v2_[^']+)'::regprocedure", direct_launch))
     granted.update(re.findall(r"'(public\.fn_experiment_v2_[^']+)'::regprocedure", direct_proof))
     granted.update(re.findall(r"'(public\.fn_experiment_v2_[^']+)'::regprocedure", direct_proof_retry))
+    granted.update(re.findall(r"'(public\.fn_experiment_v2_[^']+)'::regprocedure", direct_proof_status))
     expected = {
         "public.fn_experiment_v2_configure(uuid,text,text,text,text,text,text,uuid,text,bigint,text)",
         "public.fn_experiment_v2_lock_design(uuid,date,integer,time without time zone,text,text,text,text,text,text,text,text,text,text,text)",
@@ -755,6 +759,7 @@ def test_api_attestation_exactly_matches_the_migration_lifecycle_grant() -> None
         "public.fn_experiment_v2_direct_proof_resolve_emergency(uuid,uuid,text,bigint,text,text,text,text)",
         "public.fn_experiment_v2_direct_proof_begin_emergency_recovery(uuid,uuid,text,bigint,tstzrange,text,text,text)",
         "public.fn_experiment_v2_direct_proof_finish_emergency_recovery(uuid,uuid,text)",
+        "public.fn_experiment_v2_direct_proof_attempt_status(uuid)",
         "public.fn_experiment_v2_direct_launch_commit(uuid,date,integer,time without time zone,text,text,text,text,text,text,text,text,text,text,text)",
         "public.fn_experiment_v2_register_state(uuid,text,smallint,bytea,bytea,text)",
         "public.fn_experiment_v2_record_approval(uuid,text,text,integer,text,text,tstzrange,timestamptz,text,text,text)",

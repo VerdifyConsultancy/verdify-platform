@@ -15,18 +15,22 @@ data:
     import os
     import re
     import uuid
-    from datetime import UTC, datetime
+    from datetime import UTC, datetime, timedelta
 
     import asyncpg
 
     EXPERIMENT_ID = "45039c86-c1d9-52f6-a0a9-d94a17bc4b14"
     AUTHORIZATION_REF = (
         "https://github.com/VerdifyConsultancy/verdify-platform/"
-        "issues/641#issuecomment-5446621623"
+        "issues/641#issuecomment-5448897035"
     )
-    AUTHORIZED_FROM = datetime(2026, 8, 27, 21, 0, tzinfo=UTC)
-    AUTHORIZED_TO = datetime(2026, 8, 28, 5, 0, tzinfo=UTC)
-    ACTOR = "gitops:issue-641-direct-proof"
+    FACILITY_AUTHORIZATION_REF = (
+        "https://github.com/VerdifyConsultancy/verdify-platform/"
+        "issues/641#issuecomment-5448546177"
+    )
+    AUTHORIZED_FROM = datetime(2026, 8, 28, 6, 0, tzinfo=UTC)
+    AUTHORIZED_TO = datetime(2026, 8, 28, 18, 0, tzinfo=UTC)
+    ACTOR = "gitops:issue-641-direct-proof-retry"
     SHA256 = re.compile(r"^[0-9a-f]{64}$")
 
     STATUS_SQL = """
@@ -41,6 +45,26 @@ data:
     SELECT public.fn_experiment_v2_direct_proof_begin(
         $1::uuid, $2::text, $3::tstzrange, $4::text, $5::text, $6::text
     )::text
+    """
+    ATTEMPT_SQL = """
+    SELECT authorization_id::text, attempt_number,
+           revision_bundle_sha256, proof_valid_range,
+           aggressive_work_id::text, baseline_after_work_id::text,
+           attempt_failed, attempt_superseded, resolution_id::text,
+           resolution_kind, recovery_work_id::text, recovery_valid_range,
+           emergency_recovery_complete, proof_receipt_id::text
+      FROM public.fn_experiment_v2_direct_proof_attempt_status($1::uuid)
+    """
+    BEGIN_EMERGENCY_RECOVERY_SQL = """
+    SELECT (public.fn_experiment_v2_direct_proof_begin_emergency_recovery(
+        $1::uuid, $2::uuid, $3::text, $4::bigint, $5::tstzrange,
+        $6::text, $7::text, $8::text
+    )).resolution_id::text
+    """
+    FINISH_EMERGENCY_RECOVERY_SQL = """
+    SELECT (public.fn_experiment_v2_direct_proof_finish_emergency_recovery(
+        $1::uuid, $2::uuid, $3::text
+    )).resolution_id::text
     """
     OPEN_SQL = """
     SELECT (public.fn_experiment_v2_direct_proof_open_aggressive(
@@ -135,6 +159,124 @@ data:
     async def read_status(connection):
         return await connection.fetchrow(STATUS_SQL, EXPERIMENT_ID)
 
+    async def read_attempt(connection):
+        return await connection.fetchrow(ATTEMPT_SQL, EXPERIMENT_ID)
+
+    async def retry_emergency_finish(
+        connection,
+        *,
+        resolution_id,
+        revision,
+        lease,
+        timeout_seconds,
+    ):
+        deadline = asyncio.get_running_loop().time() + timeout_seconds
+        retry_fragments = (
+            "finishes only from its exact current-lease recovered baseline work",
+            "requires two receipt-bound baseline epochs",
+        )
+        while True:
+            assert_authorized_clock(90)
+            row = await read_status(connection)
+            assert_status(
+                row,
+                lifecycle="draft",
+                phase="commissioning",
+                admission="baseline_recovery",
+                enabled=True,
+                revision=revision,
+                lease=lease,
+            )
+            try:
+                result = await connection.fetchval(
+                    FINISH_EMERGENCY_RECOVERY_SQL,
+                    EXPERIMENT_ID,
+                    resolution_id,
+                    ACTOR,
+                )
+                if result is None:
+                    fail("emergency recovery finish returned no durable identifier")
+                uuid.UUID(str(result))
+                print(json.dumps(
+                    {"stage": "emergency-recovery-sealed", "status": "pass"},
+                    sort_keys=True,
+                ))
+                return
+            except asyncpg.exceptions.RaiseError as exc:
+                message = exc.message or str(exc)
+                if not any(fragment in message for fragment in retry_fragments):
+                    fail("emergency recovery was rejected outside its bounded not-ready condition")
+                if asyncio.get_running_loop().time() >= deadline:
+                    fail("emergency recovery timed out before its required physical evidence")
+                await asyncio.sleep(5)
+
+    async def recover_failed_attempt(connection, status, attempt):
+        if attempt is None or attempt["authorization_id"] is None:
+            fail("emergency hold has no append-only proof attempt")
+        if attempt["proof_receipt_id"] is not None or attempt["attempt_superseded"]:
+            fail("emergency hold does not belong to the latest unresolved proof attempt")
+        revision = status["revision_bundle_sha256"]
+        lease = status["lease_generation"]
+        if attempt["revision_bundle_sha256"] != revision:
+            fail("emergency attempt revision differs from current authority")
+
+        resolution_id = attempt["resolution_id"]
+        if resolution_id is None:
+            if status["admission_state"] != "emergency_hold" or status["component_enabled"]:
+                fail("new emergency recovery requires yielded emergency authority")
+            recovery_from = datetime.now(UTC)
+            recovery_to = min(recovery_from + timedelta(minutes=30), AUTHORIZED_TO)
+            if (recovery_to - recovery_from).total_seconds() < 3 * 60:
+                fail("attended window cannot contain a bounded emergency recovery")
+            resolution_id = await connection.fetchval(
+                BEGIN_EMERGENCY_RECOVERY_SQL,
+                EXPERIMENT_ID,
+                attempt["authorization_id"],
+                revision,
+                lease,
+                asyncpg.Range(
+                    recovery_from,
+                    recovery_to,
+                    lower_inc=True,
+                    upper_inc=False,
+                ),
+                FACILITY_AUTHORIZATION_REF,
+                "Jason-confirmed physical baseline after interrupted baseline-before",
+                ACTOR,
+            )
+            if resolution_id is None:
+                fail("emergency recovery begin returned no durable identifier")
+            uuid.UUID(str(resolution_id))
+            print(json.dumps(
+                {"stage": "emergency-recovery-admitted", "status": "pass"},
+                sort_keys=True,
+            ))
+        else:
+            if attempt["resolution_kind"] != "bounded_baseline_recovery":
+                fail("failed attempt does not have the authorized bounded recovery kind")
+            if attempt["emergency_recovery_complete"]:
+                fail("completed emergency recovery cannot remain in commissioning authority")
+
+        await retry_emergency_finish(
+            connection,
+            resolution_id=resolution_id,
+            revision=revision,
+            lease=lease,
+            timeout_seconds=25 * 60,
+        )
+        recovered = await read_status(connection)
+        assert_status(
+            recovered,
+            lifecycle="draft",
+            phase="shadow",
+            admission="closed",
+            enabled=False,
+            revision=revision,
+            lease=lease + 1,
+            open_exposures=0,
+        )
+        return recovered
+
     async def retry_exact(
         connection,
         *,
@@ -197,18 +339,88 @@ data:
         aggressive_work_id = None
         try:
             before = await read_status(connection)
-            assert_status(
-                before,
-                lifecycle="draft",
-                phase="shadow",
-                admission="closed",
-                enabled=False,
-                open_exposures=0,
-            )
+            attempt = await read_attempt(connection)
+            if attempt is not None and attempt["proof_receipt_id"] is not None:
+                assert_status(
+                    before,
+                    lifecycle="draft",
+                    phase="shadow",
+                    admission="closed",
+                    enabled=False,
+                    revision=attempt["revision_bundle_sha256"],
+                    open_exposures=0,
+                )
+                print(json.dumps({
+                    "experiment_id": EXPERIMENT_ID,
+                    "proof_receipt_id": attempt["proof_receipt_id"],
+                    "status": "pass",
+                    "stage": "proof-already-sealed",
+                }, sort_keys=True))
+                return
             if before["design_lock_sha256"] is not None:
                 fail("direct proof cannot start after design lock")
+
+            if (
+                before["lifecycle_status"] == "draft"
+                and before["execution_phase"] == "commissioning"
+                and before["admission_state"] == "emergency_hold"
+                and before["component_enabled"] is False
+            ):
+                assert_status(
+                    before,
+                    lifecycle="draft",
+                    phase="commissioning",
+                    admission="emergency_hold",
+                    enabled=False,
+                    open_exposures=0,
+                )
+                before = await recover_failed_attempt(connection, before, attempt)
+                attempt = await read_attempt(connection)
+            elif (
+                before["lifecycle_status"] == "draft"
+                and before["execution_phase"] == "commissioning"
+                and before["admission_state"] == "baseline_recovery"
+                and before["component_enabled"] is True
+                and attempt is not None
+                and attempt["attempt_failed"]
+                and attempt["resolution_kind"] == "bounded_baseline_recovery"
+                and not attempt["emergency_recovery_complete"]
+            ):
+                # An Argo retry after the recovery was admitted resumes the
+                # one immutable work/range instead of creating another range.
+                before = await recover_failed_attempt(connection, before, attempt)
+                attempt = await read_attempt(connection)
+
             revision = before["revision_bundle_sha256"]
-            initial_lease = before["lease_generation"]
+            if (
+                before["lifecycle_status"] == "draft"
+                and before["execution_phase"] == "shadow"
+                and before["admission_state"] == "closed"
+                and before["component_enabled"] is False
+            ):
+                assert_status(
+                    before,
+                    lifecycle="draft",
+                    phase="shadow",
+                    admission="closed",
+                    enabled=False,
+                    open_exposures=0,
+                )
+                initial_lease = before["lease_generation"]
+                proof_lease = initial_lease + 1
+            elif (
+                before["lifecycle_status"] == "draft"
+                and before["execution_phase"] == "commissioning"
+                and before["admission_state"] in ("baseline_recovery", "open")
+                and before["component_enabled"] is True
+                and attempt is not None
+                and not attempt["attempt_failed"]
+                and not attempt["attempt_superseded"]
+            ):
+                proof_lease = before["lease_generation"]
+            else:
+                fail("direct proof cannot resume from the observed authority state")
+
             aggressive_work_id = await connection.fetchval(
                 BEGIN_SQL,
                 EXPERIMENT_ID,
@@ -227,52 +439,64 @@ data:
                 fail("direct proof begin returned no aggressive work identifier")
             uuid.UUID(str(aggressive_work_id))
             begun = await read_status(connection)
-            proof_lease = initial_lease + 1
-            assert_status(
-                begun,
-                lifecycle="draft",
-                phase="commissioning",
-                admission="baseline_recovery",
-                enabled=True,
-                revision=revision,
-                lease=proof_lease,
-            )
-            print(json.dumps({"stage": "baseline-before-admitted", "status": "pass"}, sort_keys=True))
+            attempt = await read_attempt(connection)
+            if attempt is None or str(attempt["aggressive_work_id"]) != str(aggressive_work_id):
+                fail("direct proof begin is not bound to the latest append-only attempt")
 
-            await retry_exact(
-                connection,
-                label="aggressive-admitted",
-                sql=OPEN_SQL,
-                args=(EXPERIMENT_ID, aggressive_work_id, ACTOR),
-                retry_fragment=(
-                    "direct aggressive admission requires its current attended "
-                    "authorization and recovered baseline"
-                ),
-                lifecycle="draft",
-                phase="commissioning",
-                admission="baseline_recovery",
-                enabled=True,
-                revision=revision,
-                lease=proof_lease,
-                timeout_seconds=20 * 60,
-            )
-            await retry_exact(
-                connection,
-                label="baseline-after-admitted",
-                sql=BASELINE_AFTER_SQL,
-                args=(EXPERIMENT_ID, aggressive_work_id, ACTOR),
-                retry_fragment=(
-                    "direct baseline-after requires the completed current aggressive "
-                    "exposure, its single baseline-before, and enough elapsed proof duration"
-                ),
-                lifecycle="draft",
-                phase="commissioning",
-                admission="open",
-                enabled=True,
-                revision=revision,
-                lease=proof_lease,
-                timeout_seconds=30 * 60,
-            )
+            if attempt["baseline_after_work_id"] is None and begun["admission_state"] == "baseline_recovery":
+                assert_status(
+                    begun,
+                    lifecycle="draft",
+                    phase="commissioning",
+                    admission="baseline_recovery",
+                    enabled=True,
+                    revision=revision,
+                    lease=proof_lease,
+                )
+                print(json.dumps(
+                    {"stage": "baseline-before-admitted", "status": "pass"},
+                    sort_keys=True,
+                ))
+                await retry_exact(
+                    connection,
+                    label="aggressive-admitted",
+                    sql=OPEN_SQL,
+                    args=(EXPERIMENT_ID, aggressive_work_id, ACTOR),
+                    retry_fragment=(
+                        "direct aggressive admission requires its current attended "
+                        "authorization and recovered baseline"
+                    ),
+                    lifecycle="draft",
+                    phase="commissioning",
+                    admission="baseline_recovery",
+                    enabled=True,
+                    revision=revision,
+                    lease=proof_lease,
+                    timeout_seconds=20 * 60,
+                )
+                begun = await read_status(connection)
+
+            if attempt["baseline_after_work_id"] is None and begun["admission_state"] == "open":
+                await retry_exact(
+                    connection,
+                    label="baseline-after-admitted",
+                    sql=BASELINE_AFTER_SQL,
+                    args=(EXPERIMENT_ID, aggressive_work_id, ACTOR),
+                    retry_fragment=(
+                        "direct baseline-after requires the completed current aggressive "
+                        "exposure, its single baseline-before, and enough elapsed proof duration"
+                    ),
+                    lifecycle="draft",
+                    phase="commissioning",
+                    admission="open",
+                    enabled=True,
+                    revision=revision,
+                    lease=proof_lease,
+                    timeout_seconds=30 * 60,
+                )
+            elif attempt["baseline_after_work_id"] is None:
+                fail("direct proof did not converge to aggressive admission")
+
             proof_receipt_id = await retry_exact(
                 connection,
                 label="proof-sealed",

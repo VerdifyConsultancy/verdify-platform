@@ -102,6 +102,8 @@ db/migrations/tests/*
 !db/migrations/tests/test-216-equipment-counter-source-ledger.sql
 !db/migrations/tests/test-217-runtime-role-boundary.sql
 !db/migrations/tests/test-218-planner-required-failure-history.sql
+!db/migrations/tests/test-225-experiment-v2-direct-proof-retry.sql
+!db/migrations/tests/test-226-experiment-v2-direct-proof-attempt-status.sql
 !db/ledger
 db/ledger/*
 !db/ledger/*.sql

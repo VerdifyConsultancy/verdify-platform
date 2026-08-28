@@ -270,8 +270,9 @@ def test_script_restores_only_the_bounded_latest_dump_and_runs_real_gates():
     fixture_217 = script.index("-f /work/db/migrations/tests/test-217-runtime-role-boundary.sql")
     fixture_218 = script.index("-f /work/db/migrations/tests/test-218-planner-required-failure-history.sql")
     fixture_225 = script.index("-f /work/db/migrations/tests/test-225-experiment-v2-direct-proof-retry.sql")
-    final_assertions = script.index("DO $assertions$", fixture_225)
-    assert max(apply_positions) < ledger_gate < fixture_217 < fixture_218 < fixture_225 < final_assertions
+    fixture_226 = script.index("-f /work/db/migrations/tests/test-226-experiment-v2-direct-proof-attempt-status.sql")
+    final_assertions = script.index("DO $assertions$", fixture_226)
+    assert max(apply_positions) < ledger_gate < fixture_217 < fixture_218 < fixture_225 < fixture_226 < final_assertions
     for candidate_migration in (
         "214-confirmed-component-experiment-v2.sql",
         "215-experiment-v2-ops-observability.sql",
@@ -285,6 +286,7 @@ def test_script_restores_only_the_bounded_latest_dump_and_runs_real_gates():
         "223-experiment-v2-direct-proof-work-binding.sql",
         "224-experiment-v2-direct-launch-runtime.sql",
         "225-experiment-v2-direct-proof-retry.sql",
+        "226-experiment-v2-direct-proof-attempt-status.sql",
     ):
         assert candidate_migration in script
     compact_script = " ".join(script.split())
