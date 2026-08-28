@@ -80,6 +80,8 @@ def test_bootstrap_is_feature_off_function_bounded_and_secret_safe() -> None:
     assert "fn_experiment_v2_configure" in script
     assert "fn_experiment_v2_register_state" in script
     assert "fn_experiment_v2_api_status" in script
+    assert "fn_experiment_v2_direct_proof_begin" in script
+    assert '"mode": "exact-attended-proof-in-progress"' in script
     assert 'transaction(isolation="serializable")' in script
     assert 'component_enabled": False' in script
     assert 'profile_count": 3' in script
