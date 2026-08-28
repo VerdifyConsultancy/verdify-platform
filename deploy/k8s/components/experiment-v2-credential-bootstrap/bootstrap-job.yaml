@@ -380,6 +380,14 @@ spec:
               attest_login verdify_experiment_v2_outcome_freezer_login \
                 verdify_experiment_outcome_freezer
 
+              # Reuse this already-proven one-container sandbox for the
+              # feature-off direct bootstrap. A separate wave-3 Pod repeatedly
+              # failed before acquiring an IP even though this exact image and
+              # node had just succeeded. The Python transaction remains the
+              # same immutable ConfigMap payload and runs only after all six
+              # credential attestations above pass.
+              python /etc/verdify/direct-bootstrap/bootstrap.py
+
               unset ATTEST_PASSWORD attested expected_login expected_duty \
                 DB_ADMIN_PASSWORD ORDINARY_API_DB_PASSWORD \
                 ORDINARY_INGESTOR_DB_PASSWORD \
@@ -424,6 +432,11 @@ spec:
                 secretKeyRef:
                   name: verdify-app-secrets
                   key: VERDIFY_API_RUNTIME_DB_PASSWORD
+            - name: ORDINARY_API_DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: VERDIFY_API_RUNTIME_DB_USER
             - name: ORDINARY_INGESTOR_DB_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -435,6 +448,16 @@ spec:
                   name: verdify-app-secrets
                   key: VERDIFY_EXPERIMENT_LIFECYCLE_DB_USER
             - name: VERDIFY_EXPERIMENT_LIFECYCLE_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: VERDIFY_EXPERIMENT_LIFECYCLE_DB_PASSWORD
+            - name: LIFECYCLE_DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: VERDIFY_EXPERIMENT_LIFECYCLE_DB_USER
+            - name: LIFECYCLE_DB_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: verdify-app-secrets
@@ -490,6 +513,11 @@ spec:
                 secretKeyRef:
                   name: verdify-app-secrets
                   key: VERDIFY_EXPERIMENT_OPERATOR_TOKEN
+            - name: MCP_IRIS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-hermes
+                  key: VERDIFY_MCP_TOKEN
             - name: PGAPPNAME
               value: verdify-experiment-v2-credential-bootstrap
           securityContext:
@@ -505,9 +533,15 @@ spec:
               cpu: "250m"
               memory: "128Mi"
           volumeMounts:
+            - name: direct-launch-bootstrap
+              mountPath: /etc/verdify/direct-bootstrap
+              readOnly: true
             - name: tmp
               mountPath: /tmp
       volumes:
+        - name: direct-launch-bootstrap
+          configMap:
+            name: experiment-v2-direct-launch-bootstrap
         - name: tmp
           emptyDir:
             sizeLimit: 16Mi

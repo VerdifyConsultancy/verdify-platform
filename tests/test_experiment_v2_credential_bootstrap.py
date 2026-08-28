@@ -358,6 +358,14 @@ esac
 
 def test_script_pipes_verifiers_and_attests_without_exposing_values(rendered: list[dict], tmp_path: Path) -> None:
     _install_fake_psql(tmp_path)
+    fake_python = tmp_path / "python"
+    fake_python.write_text(
+        "#!/bin/sh\n"
+        '[ "$#" -eq 1 ] || exit 93\n'
+        '[ "$1" = /etc/verdify/direct-bootstrap/bootstrap.py ] || exit 94\n'
+        'printf "%s\\n" direct-bootstrap >>"$FAKE_PSQL_TRACE"\n'
+    )
+    fake_python.chmod(0o755)
     environment, activation_values = _activation_env(tmp_path)
     environment["PATH"] = f"{tmp_path}:{os.environ['PATH']}"
     result = subprocess.run(
@@ -380,6 +388,7 @@ def test_script_pipes_verifiers_and_attests_without_exposing_values(rendered: li
     assert (tmp_path / "psql.trace").read_text().splitlines() == [
         "install",
         *LOGIN_DUTY,
+        "direct-bootstrap",
     ]
 
 

@@ -12,7 +12,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 COMPONENT = ROOT / "deploy/k8s/components/experiment-v2-direct-launch-bootstrap"
 CONFIG = COMPONENT / "bootstrap-configmap.yaml"
-JOB_PATCH = COMPONENT / "bootstrap-job.yaml"
+CREDENTIAL_JOB = ROOT / "deploy/k8s/components/experiment-v2-credential-bootstrap/bootstrap-job.yaml"
 MIGRATION = ROOT / "db/migrations/221-experiment-v2-state-replay.sql"
 MIGRATE_DOCKERFILE = ROOT / "db/Dockerfile.migrate"
 PROFILE_SOURCE = ROOT / "research/planner-efficacy/baseline/planner-switchback-v2-profiles.json"
@@ -98,21 +98,22 @@ def test_bootstrap_is_feature_off_function_bounded_and_secret_safe() -> None:
 
     assert "apk add --no-cache python3 py3-asyncpg" in MIGRATE_DOCKERFILE.read_text()
 
-    patch = yaml.safe_load(JOB_PATCH.read_text())
-    assert patch["metadata"]["name"] == "verdify-experiment-v2-direct-launch-bootstrap"
-    assert patch["spec"]["activeDeadlineSeconds"] >= 600
+    patch = yaml.safe_load(CREDENTIAL_JOB.read_text())
+    assert patch["metadata"]["name"] == "verdify-experiment-v2-credential-bootstrap"
+    assert patch["spec"]["activeDeadlineSeconds"] >= 240
     container = patch["spec"]["template"]["spec"]["containers"][0]
-    assert container["name"] == "direct-launch-bootstrap"
+    assert container["name"] == "bootstrap-and-attest"
     assert container["securityContext"]["readOnlyRootFilesystem"] is True
     env = {entry["name"]: entry for entry in container["env"]}
-    assert set(env) == {
+    direct_env = {
         "ORDINARY_API_DB_USER",
         "ORDINARY_API_DB_PASSWORD",
         "LIFECYCLE_DB_USER",
         "LIFECYCLE_DB_PASSWORD",
         "MCP_IRIS_TOKEN",
     }
-    assert {entry["valueFrom"]["secretKeyRef"]["name"] for entry in env.values()} == {
+    assert direct_env <= set(env)
+    assert {env[name]["valueFrom"]["secretKeyRef"]["name"] for name in direct_env} == {
         "verdify-app-secrets",
         "verdify-hermes",
     }
@@ -120,6 +121,9 @@ def test_bootstrap_is_feature_off_function_bounded_and_secret_safe() -> None:
         "name": "verdify-hermes",
         "key": "VERDIFY_MCP_TOKEN",
     }
+    assert "python /etc/verdify/direct-bootstrap/bootstrap.py" in container["args"][0]
+    volumes = {volume["name"]: volume for volume in patch["spec"]["template"]["spec"]["volumes"]}
+    assert volumes["direct-launch-bootstrap"]["configMap"]["name"] == ("experiment-v2-direct-launch-bootstrap")
     assert "for attempt in range(60)" in script
     assert "await asyncio.sleep(2)" in script
 
@@ -139,22 +143,23 @@ def test_state_registration_exact_replay_is_idempotent_but_changed_bytes_fail() 
 def test_prod_render_contains_bootstrap_and_keeps_experiment_disabled() -> None:
     resources = _rendered()
     by_kind_name = {(resource["kind"], resource["metadata"]["name"]): resource for resource in resources}
-    job = by_kind_name[("Job", "verdify-experiment-v2-direct-launch-bootstrap")]
-    assert ("Job", "verdify-experiment-v2-credential-bootstrap") in by_kind_name
-    assert job["spec"]["activeDeadlineSeconds"] >= 600
+    assert ("Job", "verdify-experiment-v2-direct-launch-bootstrap") not in by_kind_name
+    job = by_kind_name[("Job", "verdify-experiment-v2-credential-bootstrap")]
+    assert job["spec"]["activeDeadlineSeconds"] >= 240
     assert job["metadata"]["annotations"] == {
         "argocd.argoproj.io/hook": "PreSync",
         "argocd.argoproj.io/hook-delete-policy": "BeforeHookCreation",
-        "argocd.argoproj.io/sync-wave": "3",
+        "argocd.argoproj.io/sync-wave": "2",
     }
     pod = job["spec"]["template"]
     assert pod["metadata"]["labels"]["app.kubernetes.io/component"] == "migrate"
     assert "hostNetwork" not in pod["spec"]
     assert pod["spec"]["automountServiceAccountToken"] is False
     containers = {container["name"]: container for container in pod["spec"]["containers"]}
-    assert set(containers) == {"direct-launch-bootstrap"}
-    container = containers["direct-launch-bootstrap"]
+    assert set(containers) == {"bootstrap-and-attest"}
+    container = containers["bootstrap-and-attest"]
     assert container["image"].startswith("registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:")
+    assert "python /etc/verdify/direct-bootstrap/bootstrap.py" in container["args"][0]
     feature = by_kind_name[("ConfigMap", "verdify-config")]["data"]
     assert feature["VERDIFY_COMPONENT_EXPERIMENT_ENABLED"] == "off"
     assert feature["VERDIFY_ACTIVE_EXPERIMENT_ID"] == ""
