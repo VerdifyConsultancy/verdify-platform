@@ -693,7 +693,7 @@ async def test_reset_epoch_is_durably_reported_and_never_used_as_bundle_confirma
 
 
 @pytest.mark.asyncio
-async def test_complete_post_delivery_mismatch_is_durably_faulted_not_filtered(adapter):
+async def test_post_delivery_mismatch_inside_settle_grace_is_consumed(adapter):
     store, connection = adapter
     authority = await store.prepare_runtime(
         EXPERIMENT_ID,
@@ -726,6 +726,46 @@ async def test_complete_post_delivery_mismatch_is_durably_faulted_not_filtered(a
     mismatched["mister_all_kpa"] = float(ENTITY_GRIDS["mister_all_kpa"].maximum)
     for field in CANONICAL_FIELD_ORDER:
         record_component_cfg_readback(field, mismatched[field], observed_at=NOW + timedelta(seconds=7))
+
+    assert await store.observation_epochs(work, bundle) == []
+    assert connection.preexposure_mismatches == []
+    assert component_cfg_source_epochs() == ()
+
+
+@pytest.mark.asyncio
+async def test_complete_post_delivery_mismatch_is_durably_faulted_not_filtered(adapter):
+    store, connection = adapter
+    authority = await store.prepare_runtime(
+        EXPERIMENT_ID,
+        device_id=DEVICE_ID,
+        connection_generation=7,
+        writer_lease_held=True,
+        device_write_enabled=True,
+    )
+    work = await store.claim_next(
+        EXPERIMENT_ID,
+        lease_generation=5,
+        writer_generation=9,
+        connection_generation=7,
+    )
+    reservation = await store.reserve_bundle(
+        work,
+        bundle_id=BUNDLE_ID,
+        purpose="target",
+        expected_state_content_sha256="b" * 64,
+    )
+    bundle = await store.finish_bundle(work, reservation.bundle, NOW + timedelta(seconds=2))
+    configure_component_cfg_source(
+        experiment_id=EXPERIMENT_ID,
+        lease_generation=authority.lease_generation,
+        writer_generation=authority.writer_generation,
+        connection_generation=7,
+        revisions=REVISIONS,
+    )
+    mismatched = baseline_state()
+    mismatched["mister_all_kpa"] = float(ENTITY_GRIDS["mister_all_kpa"].maximum)
+    for field in CANONICAL_FIELD_ORDER:
+        record_component_cfg_readback(field, mismatched[field], observed_at=NOW + timedelta(seconds=37))
     (raw,) = component_cfg_source_epochs()
 
     connection.raise_preexposure_mismatch = True
