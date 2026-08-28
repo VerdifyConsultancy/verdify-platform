@@ -155,7 +155,7 @@ def test_component_is_inert_until_explicit_gitops_configuration() -> None:
     assert config["VERDIFY_EXPERIMENT_V2_LIFECYCLE_PLAN_SHA256"] == ""
 
 
-def test_prod_adopts_feature_off_component_with_nonzero_digest() -> None:
+def test_prod_adopts_orchestrator_component_with_nonzero_managed_or_frozen_digest() -> None:
     prod = yaml.safe_load(PROD.read_text())
     pin = next(image for image in prod["images"] if image["name"] == ORCHESTRATOR_LOGICAL_IMAGE)
     assert pin["newName"] == ORCHESTRATOR_ZOT_IMAGE
@@ -176,11 +176,23 @@ def test_prod_adopts_feature_off_component_with_nonzero_digest() -> None:
         "experiment-v2-selector",
         "experiment-v2-freezer",
     }
+    activation = "../../components/experiment-v2-direct-launch-activation"
     expected_image = f"{ORCHESTRATOR_ZOT_IMAGE}@{pin['digest']}"
+    rendered_images = {
+        deployment["spec"]["template"]["spec"]["containers"][0]["image"] for deployment in deployments.values()
+    }
+    assert len(rendered_images) == 1
+    rendered_image = rendered_images.pop()
+    assert re.fullmatch(rf"{re.escape(ORCHESTRATOR_ZOT_IMAGE)}@sha256:[0-9a-f]{{64}}", rendered_image)
+    # A live direct launch deliberately freezes the qualified runtime inside
+    # its activation component. Later routine managed-pin updates must not
+    # mutate the analyzer environment during the 30-pair study.
+    if activation not in prod.get("components", []):
+        assert rendered_image == expected_image
     for deployment in deployments.values():
         assert deployment["spec"]["replicas"] == 1
         assert deployment["spec"]["strategy"] == {"type": "Recreate"}
-        assert deployment["spec"]["template"]["spec"]["containers"][0]["image"] == expected_image
+        assert deployment["spec"]["template"]["spec"]["containers"][0]["image"] == rendered_image
 
     configs = {
         document["metadata"]["name"]: document["data"]
