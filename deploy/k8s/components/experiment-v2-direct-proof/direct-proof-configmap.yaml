@@ -1,0 +1,356 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: experiment-v2-direct-proof
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: experiment-v2-direct-proof
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+data:
+  proof.py: |
+    import asyncio
+    import json
+    import os
+    import re
+    import uuid
+    from datetime import UTC, datetime
+
+    import asyncpg
+
+    EXPERIMENT_ID = "45039c86-c1d9-52f6-a0a9-d94a17bc4b14"
+    AUTHORIZATION_REF = (
+        "https://github.com/VerdifyConsultancy/verdify-platform/"
+        "issues/641#issuecomment-5446621623"
+    )
+    AUTHORIZED_FROM = datetime(2026, 8, 27, 21, 0, tzinfo=UTC)
+    AUTHORIZED_TO = datetime(2026, 8, 28, 5, 0, tzinfo=UTC)
+    ACTOR = "gitops:issue-641-direct-proof"
+    SHA256 = re.compile(r"^[0-9a-f]{64}$")
+
+    STATUS_SQL = """
+    SELECT experiment_id::text, protocol_version, experiment_kind,
+           lifecycle_status, execution_phase, admission_state,
+           component_enabled, lease_generation, revision_bundle_sha256,
+           firmware_revision, config_revision, registry_revision, grid_revision,
+           design_lock_sha256, open_exposure_count, resolved_at
+      FROM public.fn_experiment_v2_api_status($1::uuid)
+    """
+    BEGIN_SQL = """
+    SELECT public.fn_experiment_v2_direct_proof_begin(
+        $1::uuid, $2::text, $3::tstzrange, $4::text, $5::text, $6::text
+    )::text
+    """
+    OPEN_SQL = """
+    SELECT (public.fn_experiment_v2_direct_proof_open_aggressive(
+        $1::uuid, $2::uuid, $3::text
+    )).experiment_id::text
+    """
+    BASELINE_AFTER_SQL = """
+    SELECT public.fn_experiment_v2_direct_proof_begin_baseline_after(
+        $1::uuid, $2::uuid, $3::text
+    )::text
+    """
+    FINISH_SQL = """
+    SELECT (public.fn_experiment_v2_direct_proof_finish(
+        $1::uuid, $2::text
+    )).proof_receipt_id::text
+    """
+    SET_RECOVERY_SQL = """
+    SELECT (public.fn_experiment_v2_set_admission(
+        $1::uuid, 'baseline_recovery'::text, $2::text, $3::text
+    )).experiment_id::text
+    """
+    REQUEST_RECOVERY_SQL = """
+    SELECT public.fn_experiment_v2_request_recovery(
+        $1::uuid, $2::uuid, $3::tstzrange, $4::timestamptz,
+        $5::text, $6::text
+    )::text
+    """
+
+    class ProofError(RuntimeError):
+        pass
+
+    def fail(message):
+        raise ProofError(message)
+
+    def assert_authorized_clock(minimum_remaining_seconds=0):
+        now = datetime.now(UTC)
+        if not AUTHORIZED_FROM <= now < AUTHORIZED_TO:
+            fail("attended authorization window is not active")
+        if (AUTHORIZED_TO - now).total_seconds() < minimum_remaining_seconds:
+            fail("attended authorization window has insufficient time remaining")
+
+    def assert_status(
+        row,
+        *,
+        lifecycle,
+        phase,
+        admission,
+        enabled,
+        revision=None,
+        lease=None,
+        open_exposures=None,
+    ):
+        if row is None:
+            fail("exact experiment status is absent")
+        actual = (
+            row["experiment_id"],
+            row["protocol_version"],
+            row["experiment_kind"],
+            row["lifecycle_status"],
+            row["execution_phase"],
+            row["admission_state"],
+            row["component_enabled"],
+        )
+        expected = (
+            EXPERIMENT_ID,
+            2,
+            "randomized",
+            lifecycle,
+            phase,
+            admission,
+            enabled,
+        )
+        if actual != expected:
+            fail("experiment authority axes changed outside the direct proof")
+        if not SHA256.fullmatch(row["revision_bundle_sha256"] or ""):
+            fail("candidate revision is absent or malformed")
+        if revision is not None and row["revision_bundle_sha256"] != revision:
+            fail("candidate revision changed during the direct proof")
+        if lease is not None and row["lease_generation"] != lease:
+            fail("lease generation changed during the direct proof")
+        if row["config_revision"] != "4dbb2e691d91":
+            fail("runtime candidate config revision is not the corrected source")
+        if open_exposures is not None and row["open_exposure_count"] != open_exposures:
+            fail("open exposure count differs from the expected proof boundary")
+
+    async def read_status(connection):
+        return await connection.fetchrow(STATUS_SQL, EXPERIMENT_ID)
+
+    async def retry_exact(
+        connection,
+        *,
+        label,
+        sql,
+        args,
+        retry_fragment,
+        lifecycle,
+        phase,
+        admission,
+        enabled,
+        revision,
+        lease,
+        timeout_seconds,
+    ):
+        deadline = asyncio.get_running_loop().time() + timeout_seconds
+        while True:
+            assert_authorized_clock(90)
+            row = await read_status(connection)
+            assert_status(
+                row,
+                lifecycle=lifecycle,
+                phase=phase,
+                admission=admission,
+                enabled=enabled,
+                revision=revision,
+                lease=lease,
+            )
+            try:
+                result = await connection.fetchval(sql, *args)
+                if result is None:
+                    fail(f"{label} returned no durable identifier")
+                uuid.UUID(str(result))
+                print(json.dumps({"stage": label, "status": "pass"}, sort_keys=True))
+                return str(result)
+            except asyncpg.exceptions.RaiseError as exc:
+                if retry_fragment not in (exc.message or str(exc)):
+                    fail(f"{label} was rejected outside its bounded not-ready condition")
+                if asyncio.get_running_loop().time() >= deadline:
+                    fail(f"{label} timed out before its required physical evidence")
+                await asyncio.sleep(5)
+
+    async def main():
+        assert_authorized_clock(15 * 60)
+        user = os.environ.get("LIFECYCLE_DB_USER", "")
+        password = os.environ.get("LIFECYCLE_DB_PASSWORD", "")
+        if not user or not password:
+            fail("function-only lifecycle database identity is incomplete")
+        connection = await asyncpg.connect(
+            host=os.environ["DB_HOST"],
+            port=int(os.environ.get("DB_PORT", "5432")),
+            database=os.environ["DB_NAME"],
+            user=user,
+            password=password,
+            server_settings={
+                "application_name": "verdify-experiment-v2-direct-proof",
+                "statement_timeout": "10s",
+            },
+        )
+        aggressive_work_id = None
+        try:
+            before = await read_status(connection)
+            assert_status(
+                before,
+                lifecycle="draft",
+                phase="shadow",
+                admission="closed",
+                enabled=False,
+                open_exposures=0,
+            )
+            if before["design_lock_sha256"] is not None:
+                fail("direct proof cannot start after design lock")
+            revision = before["revision_bundle_sha256"]
+            initial_lease = before["lease_generation"]
+            aggressive_work_id = await connection.fetchval(
+                BEGIN_SQL,
+                EXPERIMENT_ID,
+                AUTHORIZATION_REF,
+                asyncpg.Range(
+                    AUTHORIZED_FROM,
+                    AUTHORIZED_TO,
+                    lower_inc=True,
+                    upper_inc=False,
+                ),
+                "Jason Vallery",
+                "Jason Vallery",
+                ACTOR,
+            )
+            if aggressive_work_id is None:
+                fail("direct proof begin returned no aggressive work identifier")
+            uuid.UUID(str(aggressive_work_id))
+            begun = await read_status(connection)
+            proof_lease = initial_lease + 1
+            assert_status(
+                begun,
+                lifecycle="draft",
+                phase="commissioning",
+                admission="baseline_recovery",
+                enabled=True,
+                revision=revision,
+                lease=proof_lease,
+            )
+            print(json.dumps({"stage": "baseline-before-admitted", "status": "pass"}, sort_keys=True))
+
+            await retry_exact(
+                connection,
+                label="aggressive-admitted",
+                sql=OPEN_SQL,
+                args=(EXPERIMENT_ID, aggressive_work_id, ACTOR),
+                retry_fragment=(
+                    "direct aggressive admission requires its current attended "
+                    "authorization and recovered baseline"
+                ),
+                lifecycle="draft",
+                phase="commissioning",
+                admission="baseline_recovery",
+                enabled=True,
+                revision=revision,
+                lease=proof_lease,
+                timeout_seconds=20 * 60,
+            )
+            await retry_exact(
+                connection,
+                label="baseline-after-admitted",
+                sql=BASELINE_AFTER_SQL,
+                args=(EXPERIMENT_ID, aggressive_work_id, ACTOR),
+                retry_fragment=(
+                    "direct baseline-after requires the completed current aggressive "
+                    "exposure, its single baseline-before, and enough elapsed proof duration"
+                ),
+                lifecycle="draft",
+                phase="commissioning",
+                admission="open",
+                enabled=True,
+                revision=revision,
+                lease=proof_lease,
+                timeout_seconds=30 * 60,
+            )
+            proof_receipt_id = await retry_exact(
+                connection,
+                label="proof-sealed",
+                sql=FINISH_SQL,
+                args=(EXPERIMENT_ID, ACTOR),
+                retry_fragment="direct proof requires exactly two linked recovered baselines",
+                lifecycle="draft",
+                phase="commissioning",
+                admission="baseline_recovery",
+                enabled=True,
+                revision=revision,
+                lease=proof_lease,
+                timeout_seconds=20 * 60,
+            )
+            after = await read_status(connection)
+            assert_status(
+                after,
+                lifecycle="draft",
+                phase="shadow",
+                admission="closed",
+                enabled=False,
+                revision=revision,
+                lease=proof_lease + 1,
+                open_exposures=0,
+            )
+            print(
+                json.dumps(
+                    {
+                        "experiment_id": EXPERIMENT_ID,
+                        "proof_receipt_id": proof_receipt_id,
+                        "status": "pass",
+                    },
+                    sort_keys=True,
+                )
+            )
+        except Exception:
+            # Fail safe without hiding the original failure. If aggressive
+            # admission is open, atomically revoke it and request the exact
+            # linked baseline through the ordinary recovery function. The
+            # executor remains the only device writer and closes the exposure
+            # at its recovery claim boundary. Any failure of this best-effort
+            # fallback leaves the hook failed for attended intervention.
+            if aggressive_work_id is not None and not connection.is_closed():
+                try:
+                    row = await read_status(connection)
+                    if (
+                        row is not None
+                        and row["lifecycle_status"] == "draft"
+                        and row["execution_phase"] == "commissioning"
+                        and row["admission_state"] == "open"
+                        and row["component_enabled"] is True
+                        and datetime.now(UTC) < AUTHORIZED_TO
+                    ):
+                        await connection.fetchval(
+                            SET_RECOVERY_SQL,
+                            EXPERIMENT_ID,
+                            ACTOR,
+                            "direct-proof-runner-failure",
+                        )
+                        recovery_from = datetime.now(UTC)
+                        await connection.fetchval(
+                            REQUEST_RECOVERY_SQL,
+                            EXPERIMENT_ID,
+                            aggressive_work_id,
+                            asyncpg.Range(
+                                recovery_from,
+                                AUTHORIZED_TO,
+                                lower_inc=True,
+                                upper_inc=False,
+                            ),
+                            AUTHORIZED_TO,
+                            "direct-proof-runner-failure",
+                            ACTOR,
+                        )
+                        print(
+                            json.dumps(
+                                {"stage": "safety-recovery-requested", "status": "pass"},
+                                sort_keys=True,
+                            )
+                        )
+                except Exception:
+                    pass
+            raise
+        finally:
+            await connection.close()
+
+    asyncio.run(main())
