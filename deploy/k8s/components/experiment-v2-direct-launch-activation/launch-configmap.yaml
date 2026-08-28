@@ -1,0 +1,190 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: experiment-v2-direct-launch-activation
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: experiment-v2-direct-launch-activation
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "3"
+data:
+  design.json: |-
+    {"analyzer_environment_sha256":"42ae5c6e47e3e41f4f2f93f13663d712a39cf79ad9d46c963ee28ef4a6191d78","context_schema_sha256":"4b2c1f430fc38c74247395d5d894ffaba0f9b0dc209c3320e63bf8309887fbf0","design_lock_sha256":"38682914860a89e1a1a574ec6dc4039d03fbc6c9d3682206e532df3f932205a0","endpoint_artifact_sha256":"cc1ea3fe3d97c5fb2b4b8247bd57a0fb462521ef5e05e3739863fd51f5a8ce8c","experiment_id":"45039c86-c1d9-52f6-a0a9-d94a17bc4b14","outcome_schema_sha256":"57c37e8091add68f0274c7c39d4b14f63645bd9fcc20dff5bedf7e3e44f58da1","power_artifact_sha256":"4d751a76465d03dc2e75034dcb398d25dc39b375d9976671bd8fffb018d237a2","randomized_pair_count":30,"schedule_schema_sha256":"fc73d212f58db91bd55bb70e3faa1431172b4339ae3b22a11d404ba95147b794","schema":"verdify-experiment-v2-direct-launch-design-v1","selector_artifact_sha256":"cb1e68a4492349da4921c7cd36c9b855ca28d66956815d0acafa4bf887c5a0eb","selector_context_cutoff_local":"23:45:00","selector_identity_sha256":"b2c0b59ec1b2c393f0ab22dfb2504a57a73b8a1297e012324b9f0cb98883d9cb","source_git_sha":"96c50d83f9cf012968a5796a21b7d98499fd3d00","study_start_local_date":"2026-08-28"}
+  openai-preflight.py: |
+    import asyncio
+    import hashlib
+    import ipaddress
+    import os
+    from datetime import UTC, datetime, timedelta
+    from pathlib import Path
+
+    from experiment_orchestrator.contracts import SelectorContext, SelectorIdentity, canonical_json_bytes
+    from experiment_orchestrator.provider import SelectorProviderAdapter
+    from experiment_orchestrator.settings import ProviderSettings
+
+    IDENTITY_PATH = Path("/etc/verdify/experiment-v2-selector/identity.json")
+
+    async def main():
+        raw = IDENTITY_PATH.read_bytes()
+        identity = SelectorIdentity.parse(raw, hashlib.sha256(raw).hexdigest())
+        if identity.provider != "openai" or identity.model_identifier != "gpt-5.6-sol":
+            raise RuntimeError("OpenAI preflight identity differs from the locked selector")
+        key = os.environ.get("VERDIFY_EXPERIMENT_SELECTOR_API_KEY", "")
+        if not key:
+            raise RuntimeError("OpenAI selector credential is unavailable")
+        now = datetime.now(UTC)
+        payload = canonical_json_bytes(
+            {
+                "purpose": "non-actuating-provider-preflight",
+                "schema": "verdify-experiment-v2-openai-preflight-v1",
+            },
+            reject_forbidden_fields=False,
+        )
+        context = SelectorContext(
+            "2026-08-28", now, now + timedelta(minutes=5), (), (),
+            payload, hashlib.sha256(payload).hexdigest(),
+        )
+        provider = SelectorProviderAdapter(
+            ProviderSettings(
+                "https://api.openai.com/v1", "api.openai.com", 443,
+                ipaddress.ip_network("0.0.0.0/0"), key, 16_384,
+            )
+        )
+        result = await provider.select(
+            study_id="verdify-confirmed-component-switchback-v2-2026-08",
+            local_date="2026-08-28",
+            invocation_key=(
+                "verdify-experiment-v2-openai-preflight-"
+                + identity.canonical_sha256[:16]
+            ),
+            context=context,
+            identity=identity,
+        )
+        if result.fallback_reason is not None or result.raw_response_sha256 is None:
+            raise RuntimeError("OpenAI preflight did not return one contract-valid response")
+        print("openai-selector-preflight status=pass model=gpt-5.6-sol")
+
+    asyncio.run(main())
+  launch.py: |
+    import asyncio
+    import hashlib
+    import json
+    import os
+    from pathlib import Path
+
+    import asyncpg
+
+    SPEC_PATH = Path("/etc/verdify/direct-launch/design.json")
+    ACTOR = "gitops:issue-642-openai-direct-launch"
+    EXPERIMENT_ID = "45039c86-c1d9-52f6-a0a9-d94a17bc4b14"
+    EXPECTED_FIELDS = {
+        "analyzer_environment_sha256", "context_schema_sha256",
+        "design_lock_sha256", "endpoint_artifact_sha256", "experiment_id",
+        "outcome_schema_sha256", "power_artifact_sha256",
+        "randomized_pair_count", "schedule_schema_sha256", "schema",
+        "selector_artifact_sha256", "selector_context_cutoff_local",
+        "selector_identity_sha256", "source_git_sha", "study_start_local_date",
+    }
+    SHA_FIELDS = {
+        "analyzer_environment_sha256", "context_schema_sha256",
+        "endpoint_artifact_sha256", "outcome_schema_sha256",
+        "power_artifact_sha256", "schedule_schema_sha256",
+        "selector_artifact_sha256", "selector_identity_sha256",
+    }
+    LAUNCH_SQL = """
+    SELECT launched.status, launched.execution_phase,
+           launched.admission_state, launched.component_enabled,
+           launched.study_start_local_date, launched.randomized_pair_count,
+           launched.selector_context_cutoff_local,
+           launched.design_lock_sha256, launched.source_git_sha,
+           launched.selector_identity_sha256, launched.selector_artifact_sha256,
+           launched.context_schema_sha256, launched.endpoint_artifact_sha256,
+           launched.outcome_schema_sha256, launched.analyzer_environment_sha256,
+           launched.power_artifact_sha256
+      FROM public.fn_experiment_v2_direct_launch_commit(
+        $1::uuid,$2::date,$3::integer,$4::time,$5::text,$6::text,$7::text,
+        $8::text,$9::text,$10::text,$11::text,$12::text,$13::text,$14::text,$15::text
+      ) launched
+    """
+
+    def canonical(value):
+        return json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
+
+    def load_spec():
+        raw = SPEC_PATH.read_bytes()
+        spec = json.loads(raw)
+        if set(spec) != EXPECTED_FIELDS or canonical(spec) != raw.rstrip(b"\n"):
+            raise RuntimeError("launch design is not the exact canonical contract")
+        if spec["schema"] != "verdify-experiment-v2-direct-launch-design-v1" or spec["experiment_id"] != EXPERIMENT_ID:
+            raise RuntimeError("launch design identity mismatch")
+        if spec["randomized_pair_count"] != 30 or spec["selector_context_cutoff_local"] != "23:45:00":
+            raise RuntimeError("launch schedule differs from the accepted-risk design")
+        for field in SHA_FIELDS:
+            value = spec[field]
+            if not isinstance(value, str) or len(value) != 64 or any(c not in "0123456789abcdef" for c in value):
+                raise RuntimeError(f"invalid launch digest field: {field}")
+        if len(spec["source_git_sha"]) != 40 or any(c not in "0123456789abcdef" for c in spec["source_git_sha"]):
+            raise RuntimeError("invalid deployed source identity")
+        preimage = {key: value for key, value in spec.items() if key != "design_lock_sha256"}
+        if hashlib.sha256(canonical(preimage)).hexdigest() != spec["design_lock_sha256"]:
+            raise RuntimeError("launch design digest mismatch")
+        return spec
+
+    async def main():
+        spec = load_spec()
+        user = os.environ.get("LIFECYCLE_DB_USER", "")
+        password = os.environ.get("LIFECYCLE_DB_PASSWORD", "")
+        if not user or not password:
+            raise RuntimeError("lifecycle database identity is incomplete")
+        connection = None
+        for attempt in range(60):
+            try:
+                connection = await asyncpg.connect(
+                    host=os.environ["DB_HOST"],
+                    port=int(os.environ.get("DB_PORT", "5432")),
+                    database=os.environ["DB_NAME"],
+                    user=user,
+                    password=password,
+                    server_settings={
+                        "application_name": "verdify-experiment-v2-direct-launch",
+                        "statement_timeout": "15s",
+                    },
+                )
+                break
+            except (OSError, asyncpg.PostgresError):
+                if attempt == 59:
+                    raise
+                await asyncio.sleep(2)
+        try:
+            row = await connection.fetchrow(
+                LAUNCH_SQL,
+                spec["experiment_id"], spec["study_start_local_date"],
+                spec["randomized_pair_count"], spec["selector_context_cutoff_local"],
+                spec["design_lock_sha256"], spec["source_git_sha"],
+                spec["schedule_schema_sha256"], spec["selector_identity_sha256"],
+                spec["selector_artifact_sha256"], spec["context_schema_sha256"],
+                spec["endpoint_artifact_sha256"], spec["outcome_schema_sha256"],
+                spec["analyzer_environment_sha256"], spec["power_artifact_sha256"],
+                ACTOR,
+            )
+            expected = (
+                "locked", "randomized", "closed", False,
+                spec["study_start_local_date"], spec["randomized_pair_count"],
+                spec["selector_context_cutoff_local"], spec["design_lock_sha256"],
+                spec["source_git_sha"], spec["selector_identity_sha256"],
+                spec["selector_artifact_sha256"], spec["context_schema_sha256"],
+                spec["endpoint_artifact_sha256"], spec["outcome_schema_sha256"],
+                spec["analyzer_environment_sha256"], spec["power_artifact_sha256"],
+            )
+            actual = tuple(str(row[key]) if key in {
+                "study_start_local_date", "selector_context_cutoff_local"
+            } else row[key] for key in row.keys())
+            if actual != expected:
+                raise RuntimeError("database launch receipt differs from the exact design")
+            print("direct-launch-locked status=pass")
+        finally:
+            await connection.close()
+
+    asyncio.run(main())

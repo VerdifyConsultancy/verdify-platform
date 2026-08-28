@@ -1,0 +1,72 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: verdify-experiment-v2-openai-preflight
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: experiment-v2-selector
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "4"
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 180
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: verdify
+        app.kubernetes.io/component: experiment-v2-selector
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      imagePullSecrets:
+        - name: zot-origin-cluster-pull
+      containers:
+        - name: openai-preflight
+          image: registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:42ae5c6e47e3e41f4f2f93f13663d712a39cf79ad9d46c963ee28ef4a6191d78
+          command: ["python", "/etc/verdify/direct-launch/openai-preflight.py"]
+          env:
+            - name: VERDIFY_EXPERIMENT_SELECTOR_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-hermes
+                  key: OPENAI_API_KEY
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: "25m"
+              memory: "64Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          volumeMounts:
+            - name: direct-launch
+              mountPath: /etc/verdify/direct-launch
+              readOnly: true
+            - name: selector-identity
+              mountPath: /etc/verdify/experiment-v2-selector
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: direct-launch
+          configMap:
+            name: experiment-v2-direct-launch-activation
+        - name: selector-identity
+          configMap:
+            name: verdify-experiment-v2-selector-identity
+        - name: tmp
+          emptyDir: {}

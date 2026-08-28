@@ -1,0 +1,83 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: verdify-experiment-v2-direct-launch
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: migrate
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "5"
+    operations.vallery.net/temporary-node-exclusion: vm-k3s-node4,vm-k3s-node6:cni-pod-sandbox-timeout:2026-08-27
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 600
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: verdify
+        app.kubernetes.io/component: migrate
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      imagePullSecrets:
+        - name: zot-origin-cluster-pull
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: NotIn
+                    values: [vm-k3s-node4, vm-k3s-node6]
+      containers:
+        - name: direct-launch
+          image: registry.vallery.net/verdifyconsultancy/verdify-api@sha256:51bb8fafc226cfec36d56efa75691fdb2f112f10c04a70c21b3710c5983cc3fa
+          command: ["python", "/etc/verdify/direct-launch/launch.py"]
+          envFrom:
+            - configMapRef:
+                name: verdify-config
+          env:
+            - name: LIFECYCLE_DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: VERDIFY_EXPERIMENT_LIFECYCLE_DB_USER
+            - name: LIFECYCLE_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: VERDIFY_EXPERIMENT_LIFECYCLE_DB_PASSWORD
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: "25m"
+              memory: "64Mi"
+            limits:
+              cpu: "250m"
+              memory: "192Mi"
+          volumeMounts:
+            - name: direct-launch
+              mountPath: /etc/verdify/direct-launch
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: direct-launch
+          configMap:
+            name: experiment-v2-direct-launch-activation
+        - name: tmp
+          emptyDir: {}

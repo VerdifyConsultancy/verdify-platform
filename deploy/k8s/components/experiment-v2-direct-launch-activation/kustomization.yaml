@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+resources:
+  - runtime-artifacts.yaml
+  - launch-configmap.yaml
+  - openai-preflight-job.yaml
+  - launch-job.yaml
+
+patches:
+  - path: workload-activation.patch.yaml
+
+images:
+  - name: ghcr.io/verdifyconsultancy/verdify-api
+  - name: ghcr.io/verdifyconsultancy/verdify-experiment-v2-orchestrator

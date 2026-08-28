@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: verdify-experiment-v2-lifecycle-plan
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: experiment-v2-lifecycle
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "3"
+data:
+  plan.json: |-
+    {"action":"boundary","experiment_id":"45039c86-c1d9-52f6-a0a9-d94a17bc4b14","schema":"verdify-experiment-v2-lifecycle-plan-v1"}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: verdify-experiment-v2-selector-identity
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: experiment-v2-selector
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "3"
+data:
+  identity.json: |-
+    {"context_schema_sha256":"4b2c1f430fc38c74247395d5d894ffaba0f9b0dc209c3320e63bf8309887fbf0","decoding_parameters":{"max_completion_tokens":512,"reasoning_effort":"medium","response_format":{"json_schema":{"name":"verdify_selector_decision","schema":{"additionalProperties":false,"properties":{"profile":{"enum":["baseline","moderate","aggressive"],"type":"string"}},"required":["profile"],"type":"object"},"strict":true},"type":"json_schema"},"stream":false},"decoding_parameters_sha256":"2040f9e22904dcbb680129eda8f97c1ed0c237d67fc32a2859609cba302c29b4","expected_system_fingerprint":"openai-managed","lesson_snapshot_sha256":"424fa639ffffc52baf74b34c57ff713e13f4288a50225689333d4e493ca1ae34","max_attempts":2,"messages_sha256":"a58013785c9b4e02de3e141893666cf140cd7d7442c0bfe3c80db2ed4b682e1a","model_identifier":"gpt-5.6-sol","model_revision":"gpt-5.6-sol","prompt":"Select the safest useful profile for the stated local day using only the attached frozen context.\n\nThe immutable profile meanings are:\n- baseline: the locked packet's complete 48-field baseline state.\n- moderate: the bounded ordinary heat/dry-load posture. Relative to baseline it sets cool_stage2_over_high_f=0.8, fog_escalation_kpa=0.3, mister_all_kpa=1.35, mister_pulse_gap_s=40, mister_pulse_on_s=60, and mister_water_budget_gal=220. Its other approved treatment fields equal baseline.\n- aggressive: the bounded severe hot/dry-load posture. Relative to baseline it sets cool_stage2_over_high_f=0.5, min_fog_off_s=30, min_fog_on_s=90, mister_engage_kpa=1.0, mister_all_kpa=1.2, mister_all_delay_s=60, mister_pulse_on_s=75, and mister_water_budget_gal=250. Its other approved treatment fields equal baseline.\n\nUse the pre-cutoff observed temperature and VPD together with the latest admitted forecast vintage. Prefer baseline unless the admitted evidence clearly supports a bounded change; prefer moderate for ordinary heat/dry load and aggressive only for clear severe hot/dry load. Do not infer from data outside the supplied context. Return only one JSON object whose sole key is profile.\n","prompt_sha256":"4d4b5eef2822990d865f68c6e8604f41af8bc1c0cfe69051d8d0fb8d926b29b4","provider":"openai","response_schema_revision":"verdify-selector-decision-openai-v2","runtime_environment_sha256":"42ae5c6e47e3e41f4f2f93f13663d712a39cf79ad9d46c963ee28ef4a6191d78","schema":"verdify-selector-identity-openai-v1","system_message":"You are Verdify's bounded once-daily greenhouse profile selector. Use only the hash-bound pre-cutoff context supplied in the user message. Choose exactly one approved profile: baseline, moderate, or aggressive. The deterministic greenhouse firmware and its safety controls remain authoritative. Return only the strict JSON object required by the response schema, with no explanation or additional key. If the evidence is missing, stale, contradictory, or insufficient, choose baseline.\n","system_message_sha256":"589f4ca0d29346d856f92040966bb25755ccdd273a1dc1c0b14f07050e1a6a27","timeout_milliseconds":60000,"tool_contract_revision":"none-v1"}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: verdify-experiment-v2-outcome-identity
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: experiment-v2-freezer
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "3"
+data:
+  identity.json: |-
+    {"evaluator_source_sha256":"c31e4a8001383a107f2082038cec0b5afdb2e25452ccfbfbf212573daa4faf40","outcome_schema_sha256":"57c37e8091add68f0274c7c39d4b14f63645bd9fcc20dff5bedf7e3e44f58da1","schema":"verdify-experiment-v2-outcome-evaluator-identity-v1","temperature_duplicate_tolerance_f":0.0,"vpd_duplicate_tolerance_kpa":0.0}

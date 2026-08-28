@@ -1,0 +1,109 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-ingestor
+spec:
+  template:
+    metadata:
+      annotations:
+        # Preserve the attended-proof pod-template token byte-for-byte while
+        # authority moves to the durable launch component. The identical env
+        # and annotation avoid a second Recreate of the sole device writer.
+        verdify.io/direct-proof-activation: "2026-08-27-jason-vallery"
+    spec:
+      containers:
+        - name: ingestor
+          image: registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:f918ec3405d75e205d601e3adfbbcf000131170c973acd98778be8da47e760cb
+          env:
+            - name: VERDIFY_POLICY_VECTOR_MODE
+              value: "off"
+            - name: VERDIFY_COMPONENT_EXPERIMENT_ENABLED
+              value: "enabled"
+            - name: VERDIFY_ACTIVE_EXPERIMENT_ID
+              value: "45039c86-c1d9-52f6-a0a9-d94a17bc4b14"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-api
+spec:
+  template:
+    metadata:
+      annotations:
+        verdify.io/direct-launch-activation: "2026-08-28-openai"
+    spec:
+      containers:
+        - name: api
+          image: registry.vallery.net/verdifyconsultancy/verdify-api@sha256:51bb8fafc226cfec36d56efa75691fdb2f112f10c04a70c21b3710c5983cc3fa
+          env:
+            - name: VERDIFY_POLICY_VECTOR_MODE
+              value: "off"
+            - name: VERDIFY_COMPONENT_EXPERIMENT_ENABLED
+              value: "enabled"
+            - name: VERDIFY_ACTIVE_EXPERIMENT_ID
+              value: "45039c86-c1d9-52f6-a0a9-d94a17bc4b14"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: experiment-v2-lifecycle
+spec:
+  template:
+    metadata:
+      annotations:
+        verdify.io/direct-launch-activation: "2026-08-28-openai"
+    spec:
+      containers:
+        - name: lifecycle
+          image: registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:42ae5c6e47e3e41f4f2f93f13663d712a39cf79ad9d46c963ee28ef4a6191d78
+          env:
+            - name: VERDIFY_POLICY_VECTOR_MODE
+              value: "off"
+            - name: VERDIFY_COMPONENT_EXPERIMENT_ENABLED
+              value: "enabled"
+            - name: VERDIFY_ACTIVE_EXPERIMENT_ID
+              value: "45039c86-c1d9-52f6-a0a9-d94a17bc4b14"
+            - name: VERDIFY_EXPERIMENT_V2_LIFECYCLE_PLAN_SHA256
+              value: "d8c5a474dd2ead40d5e4acaca9be7edd34a7626f16611b388542018c6ca79c2b"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: experiment-v2-selector
+spec:
+  template:
+    metadata:
+      annotations:
+        verdify.io/direct-launch-activation: "2026-08-28-openai"
+    spec:
+      containers:
+        - name: selector
+          image: registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:42ae5c6e47e3e41f4f2f93f13663d712a39cf79ad9d46c963ee28ef4a6191d78
+          env:
+            - name: VERDIFY_POLICY_VECTOR_MODE
+              value: "off"
+            - name: VERDIFY_COMPONENT_EXPERIMENT_ENABLED
+              value: "enabled"
+            - name: VERDIFY_ACTIVE_EXPERIMENT_ID
+              value: "45039c86-c1d9-52f6-a0a9-d94a17bc4b14"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: experiment-v2-freezer
+spec:
+  template:
+    metadata:
+      annotations:
+        verdify.io/direct-launch-activation: "2026-08-28-openai"
+    spec:
+      containers:
+        - name: freezer
+          image: registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:42ae5c6e47e3e41f4f2f93f13663d712a39cf79ad9d46c963ee28ef4a6191d78
+          env:
+            - name: VERDIFY_POLICY_VECTOR_MODE
+              value: "off"
+            - name: VERDIFY_COMPONENT_EXPERIMENT_ENABLED
+              value: "enabled"
+            - name: VERDIFY_ACTIVE_EXPERIMENT_ID
+              value: "45039c86-c1d9-52f6-a0a9-d94a17bc4b14"
