@@ -1366,7 +1366,8 @@ async def test_mcp_readiness_fails_closed_when_a_required_tool_is_missing(mcp_se
     async def db():
         return connection
 
-    monkeypatch.setattr(mcp_server.mcp, "list_tools", list_tools)
+    monkeypatch.setenv("VERDIFY_MCP_AUTH_MODE", "off")
+    monkeypatch.setattr(mcp_server.mcp, "list_tools_unfiltered", list_tools)
     monkeypatch.setattr(mcp_server, "_db", db)
     response = await mcp_server.mcp_ready(None)
     payload = json.loads(response.body)
@@ -1387,7 +1388,8 @@ async def test_mcp_readiness_recovers_after_prolonged_db_refusal(mcp_server, mon
     async def db():
         return _ReadyConnection(fail=next(attempts))
 
-    monkeypatch.setattr(mcp_server.mcp, "list_tools", list_tools)
+    monkeypatch.setenv("VERDIFY_MCP_AUTH_MODE", "off")
+    monkeypatch.setattr(mcp_server.mcp, "list_tools_unfiltered", list_tools)
     monkeypatch.setattr(mcp_server, "_db", db)
     responses = [await mcp_server.mcp_ready(None) for _ in range(4)]
 

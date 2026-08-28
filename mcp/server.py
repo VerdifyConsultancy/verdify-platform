@@ -15,6 +15,7 @@ import hmac
 import json
 import logging
 import os
+import re
 import sys
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -410,7 +411,7 @@ def _json(obj):
 # ═══════════════════════════════════════════════════════════════
 # SERVER-SIDE AUDIENCE AUTHORIZATION (#585, audit §8.8)
 # ═══════════════════════════════════════════════════════════════
-# Before this layer the ONLY boundary in front of the 26 registered tools was
+# Before this layer the ONLY boundary in front of the 27 registered tools was
 # the NetworkPolicy ingress allowlist: the `Authorization: Bearer
 # ${VERDIFY_MCP_TOKEN}` header Hermes already sends
 # (deploy/k8s/components/hermes-iris/hermes-config.yaml) was never validated.
@@ -419,8 +420,8 @@ def _json(obj):
 # `tools.include` list.
 #
 # Modes (VERDIFY_MCP_AUTH_MODE):
-#   off     — default; authorization is fully bypassed, byte-identical to the
-#             pre-#585 behavior. Safe rollout starting point.
+#   off     — explicit development-only bypass; authorization is fully
+#             disabled, byte-identical to the pre-#585 behavior.
 #   log     — every would-be denial is emitted as one structured JSON log line
 #             (never the token value) and the call proceeds. Prod runs this
 #             first to prove the token registry before any blocking.
@@ -437,14 +438,21 @@ def _json(obj):
 #   VERDIFY_MCP_TOKEN_EXPERIMENT — the experiment-arm planner profile
 #                                  (wired in Lane C/D tranche 2).
 #   VERDIFY_MCP_TOKEN_ADMIN      — operator/debug credential; all tools.
-# Tokens must be distinct per audience; on a duplicate the first audience in
-# sorted order wins deterministically. Token values are never logged, never
-# echoed in errors, and never surfaced by /readyz (names only).
+# Tokens must be distinct per audience and valid RFC 6750 bearer credentials.
+# Invalid and duplicate entries are excluded from the registry. Token values
+# are never logged, never echoed in errors, and never surfaced by /readyz
+# (environment-variable names only).
 
 VERDIFY_MCP_AUTH_MODE_ENV = "VERDIFY_MCP_AUTH_MODE"
 VERDIFY_MCP_AUTH_MODES = ("off", "log", "enforce")
 _AUDIENCE_TOKEN_ENV_PREFIX = "VERDIFY_MCP_TOKEN_"
 KNOWN_AUDIENCES = frozenset({"iris", "experiment", "admin"})
+_AUDIENCE_TOKEN_ENV_NAMES = {
+    f"{_AUDIENCE_TOKEN_ENV_PREFIX}{audience.upper()}": audience for audience in KNOWN_AUDIENCES
+}
+# RFC 6750 b64token. Besides empty/whitespace/control values, this rejects
+# characters that cannot be represented as one unambiguous Bearer credential.
+_BEARER_TOKEN_PATTERN = re.compile(r"[A-Za-z0-9._~+/\-]+=*")
 
 _TOOL_AUTH_LOGGER = logging.getLogger("verdify.mcp.auth")
 _MCP_PATH = "/mcp"
@@ -457,34 +465,57 @@ class ToolAccessDenied(Exception):
 def auth_mode() -> str:
     """Resolve the authorization mode from the environment.
 
-    Absent/empty env → "off" (current behavior). A present-but-unrecognized
-    value fails CLOSED to "enforce" so a typo can never disable authorization.
+    Absent, empty, or unrecognized values fail CLOSED to ``enforce``. Only an
+    explicit supported value can select the development ``off`` bypass.
     """
     raw = os.environ.get(VERDIFY_MCP_AUTH_MODE_ENV, "").strip().lower()
     if not raw:
-        return "off"
+        return "enforce"
     return raw if raw in VERDIFY_MCP_AUTH_MODES else "enforce"
 
 
-def audience_token_registry() -> tuple[dict[str, str], list[str]]:
-    """Read VERDIFY_MCP_TOKEN_<AUDIENCE> env vars.
+def audience_token_configuration() -> tuple[dict[str, str], list[str], list[str], list[str]]:
+    """Read and validate VERDIFY_MCP_TOKEN_<AUDIENCE> env vars.
 
-    Returns (audience → token, unrecognized env var NAMES). An env var naming
-    an audience outside KNOWN_AUDIENCES is ignored for matching but reported
-    (by name only) so /readyz makes the misconfiguration visible instead of
-    silently granting nothing. Empty-valued vars are ignored.
+    Returns (unambiguous audience → token, unrecognized env var NAMES,
+    duplicate-token env var NAMES, invalid-token env var NAMES). Duplicate
+    values remove every affected audience from the matchable registry, so an
+    accidentally shared admin credential can never resolve by lexical
+    ordering. Values never leave this function except in the validated
+    registry and are never logged/readied.
     """
-    registry: dict[str, str] = {}
+    candidates: dict[str, tuple[str, str]] = {}
     unrecognized: list[str] = []
+    invalid: list[str] = []
     for key in sorted(os.environ):
         if not key.startswith(_AUDIENCE_TOKEN_ENV_PREFIX):
             continue
-        audience = key[len(_AUDIENCE_TOKEN_ENV_PREFIX) :].lower()
-        if audience not in KNOWN_AUDIENCES:
+        audience = _AUDIENCE_TOKEN_ENV_NAMES.get(key)
+        if audience is None:
             unrecognized.append(key)
             continue
-        if os.environ[key]:
-            registry[audience] = os.environ[key]
+        token = os.environ[key]
+        if _BEARER_TOKEN_PATTERN.fullmatch(token) is None:
+            invalid.append(key)
+            continue
+        candidates[audience] = (key, token)
+
+    audiences_by_token: dict[str, list[str]] = {}
+    for audience, (_key, token) in candidates.items():
+        audiences_by_token.setdefault(token, []).append(audience)
+    duplicate_audiences = {
+        audience for audiences in audiences_by_token.values() if len(audiences) > 1 for audience in audiences
+    }
+    duplicate_env_names = sorted(candidates[audience][0] for audience in duplicate_audiences)
+    registry = {
+        audience: token for audience, (_key, token) in candidates.items() if audience not in duplicate_audiences
+    }
+    return registry, unrecognized, duplicate_env_names, invalid
+
+
+def audience_token_registry() -> tuple[dict[str, str], list[str]]:
+    """Compatibility view of only the unambiguous audience token registry."""
+    registry, unrecognized, _duplicate_env_names, _invalid_token_env_names = audience_token_configuration()
     return registry, unrecognized
 
 
@@ -493,8 +524,8 @@ def resolve_token_audience(token: str | None, registry: dict[str, str]) -> str |
 
     hmac.compare_digest gives a constant-time comparison per candidate, and the
     loop always scans the full registry (no early exit) so response timing does
-    not reveal which audience matched. First match in sorted-audience order
-    wins if an operator ever configures duplicate tokens.
+    not reveal which audience matched. ``audience_token_configuration`` removes
+    duplicate values before this function can match them.
     """
     if not token:
         return None
@@ -516,7 +547,9 @@ def _bearer_token_from_authorization(value: str | None) -> str | None:
 
 def _transport_request_denial(token: str | None) -> dict[str, str | None] | None:
     """Return a transport-authentication denial, or None for a known audience."""
-    registry, _unrecognized = audience_token_registry()
+    registry, _unrecognized, duplicate_env_names, _invalid_token_env_names = audience_token_configuration()
+    if duplicate_env_names:
+        return {"audience": None, "reason": "duplicate_token_configuration"}
     audience = resolve_token_audience(token, registry)
     if audience is not None:
         return None
@@ -583,18 +616,19 @@ class MCPTransportAuthMiddleware:
             await self.app(scope, receive, send)
             return
 
+        enforced = mode == "enforce" or denial["reason"] == "duplicate_token_configuration"
         _TOOL_AUTH_LOGGER.warning(
             "%s",
             _json(
                 {
                     "event": "mcp_transport_authn_denial",
                     "mode": mode,
-                    "enforced": mode == "enforce",
+                    "enforced": enforced,
                     **denial,
                 }
             ),
         )
-        if mode == "enforce":
+        if enforced:
             await _send_transport_unauthorized(send)
             return
         await self.app(scope, receive, send)
@@ -602,7 +636,13 @@ class MCPTransportAuthMiddleware:
 
 def _tool_call_denial(name: str, token: str | None) -> dict | None:
     """Return a denial record for this (tool, token), or None when allowed."""
-    registry, _unrecognized = audience_token_registry()
+    registry, _unrecognized, duplicate_env_names, _invalid_token_env_names = audience_token_configuration()
+    if duplicate_env_names:
+        return {
+            "tool": name,
+            "audience": None,
+            "reason": "duplicate_token_configuration",
+        }
     audience = resolve_token_audience(token, registry)
     if audience is None:
         return {
@@ -631,16 +671,17 @@ def authorize_tool_call(name: str, token: str | None) -> None:
         return
     # Structured, grep-able denial record. Contains audience/tool/reason —
     # NEVER the presented token.
+    enforced = mode == "enforce" or denial["reason"] == "duplicate_token_configuration"
     _TOOL_AUTH_LOGGER.warning(
         "%s",
-        _json({"event": "mcp_tool_authz_denial", "mode": mode, "enforced": mode == "enforce", **denial}),
+        _json({"event": "mcp_tool_authz_denial", "mode": mode, "enforced": enforced, **denial}),
     )
-    if mode == "enforce":
+    if enforced:
         audience = denial["audience"] or "none (unknown or missing bearer token)"
         raise ToolAccessDenied(
             f"unauthorized: tool '{name}' is not available to this credential "
             f"(audience: {audience}). Server-side audience authorization is in "
-            f"enforce mode (#585)."
+            f"fail-closed mode (#585)."
         )
 
 
@@ -671,7 +712,7 @@ class AudienceAuthorizedFastMCP(FastMCP):
     """FastMCP with server-side audience authorization at the dispatch choke point.
 
     FastMCP.call_tool is the single public method the low-level MCP server
-    invokes for every tool call, so overriding it covers all 26 registered
+    invokes for every tool call, so overriding it covers all 27 registered
     tools without touching any tool body or signature (and without the
     26-decorator / ASGI-middleware fallback). A raised ToolAccessDenied is
     converted by the low-level server into an isError tool result with this
@@ -681,6 +722,25 @@ class AudienceAuthorizedFastMCP(FastMCP):
     async def call_tool(self, name, arguments):
         authorize_tool_call(name, _request_bearer_token(self))
         return await super().call_tool(name, arguments)
+
+    async def list_tools_unfiltered(self):
+        """Internal inventory for readiness/registry checks, never protocol dispatch."""
+        return await super().list_tools()
+
+    async def list_tools(self):
+        """Expose only the in-flight request audience's authorized inventory."""
+        tools = await self.list_tools_unfiltered()
+        mode = auth_mode()
+        if mode == "off":
+            return tools
+        registry, _unrecognized, duplicate_env_names, _invalid_token_env_names = audience_token_configuration()
+        if duplicate_env_names:
+            return []
+        audience = resolve_token_audience(_request_bearer_token(self), registry)
+        if audience is None:
+            return []
+        allowed = audience_allowlist(audience)
+        return [tool for tool in tools if tool.name in allowed]
 
     def streamable_http_app(self):
         """Wrap the entire protocol endpoint before initialize/list dispatch."""
@@ -880,7 +940,9 @@ async def mcp_ready(_request):
     # response dependency off that import path.
     from starlette.responses import JSONResponse
 
-    registered = {tool.name for tool in await mcp.list_tools()}
+    # Readiness validates the complete server registry, not the current probe's
+    # unauthenticated protocol view. Protocol tools/list is audience-filtered.
+    registered = {tool.name for tool in await mcp.list_tools_unfiltered()}
     missing = sorted(HERMES_REQUIRED_TOOLS - registered)
     db_error: str | None = None
     conn: asyncpg.Connection | None = None
@@ -898,8 +960,10 @@ async def mcp_ready(_request):
     # registry would fail-closed every tool call, so that misconfiguration
     # reports not-ready instead of serving a fully bricked tool surface.
     mode = auth_mode()
-    token_registry, unrecognized_token_envs = audience_token_registry()
-    auth_misconfigured = mode == "enforce" and not token_registry
+    token_registry, unrecognized_token_envs, duplicate_token_envs, invalid_token_envs = audience_token_configuration()
+    auth_misconfigured = bool(unrecognized_token_envs or duplicate_token_envs or invalid_token_envs) or (
+        mode == "enforce" and "iris" not in token_registry
+    )
     ready = not missing and db_error is None and not auth_misconfigured
     return JSONResponse(
         {
@@ -911,6 +975,8 @@ async def mcp_ready(_request):
             "auth_mode": mode,
             "auth_audiences_configured": sorted(token_registry),
             "auth_unrecognized_token_envs": unrecognized_token_envs,
+            "auth_duplicate_token_envs": duplicate_token_envs,
+            "auth_invalid_token_envs": invalid_token_envs,
             "auth_misconfigured": auth_misconfigured,
         },
         status_code=200 if ready else 503,
@@ -5107,10 +5173,12 @@ async def knowledge_search(
 
 
 def _sync_registered_tool_names() -> frozenset[str] | None:
-    """Registered tool names, or None when running under CI import stubs.
+    """Unfiltered registered tool names, or None under CI import stubs.
 
-    Schema-only and logic CI import this module with a lightweight FastMCP
-    stub that has no _tool_manager; the completeness guard then runs in
+    Startup deliberately reads the internal tool manager rather than the
+    audience-filtered protocol ``list_tools`` override. Schema-only and logic
+    CI import this module with a lightweight FastMCP stub that has no
+    _tool_manager; the completeness guard then runs in
     tests/test_mcp_audience_auth.py against the stub's recorded registrations
     instead of here.
     """
