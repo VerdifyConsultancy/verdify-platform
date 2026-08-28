@@ -425,7 +425,7 @@ def cmd_config(args: argparse.Namespace) -> list[Check]:
         else intent.get("VERDIFY_ACTIVE_EXPERIMENT_ID", "")
     )
     expected_legacy = args.expect_legacy_writes or intent.get("VERDIFY_LEGACY_DIRECT_POLICY_WRITES_ENABLED", "1")
-    expected_auth = args.expect_auth_mode or intent.get("VERDIFY_MCP_AUTH_MODE", "off")
+    expected_auth = args.expect_auth_mode or intent.get("VERDIFY_MCP_AUTH_MODE", "enforce")
 
     try:
         expected_rev = _expected_config_revision()

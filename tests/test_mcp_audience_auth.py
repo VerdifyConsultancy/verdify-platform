@@ -215,11 +215,44 @@ class TestTokenResolution:
         registry, _ = mcp_server.audience_token_registry()
         assert registry == {}
 
+    @pytest.mark.parametrize(
+        "invalid_token",
+        [
+            "",
+            "   ",
+            "token with space",
+            "token\twith-tab",
+            "token\nwith-newline",
+            "token\x7fwith-control",
+            "token:with-delimiter",
+            "token-with-ünicode",
+        ],
+    )
+    def test_invalid_bearer_values_are_reported_by_env_name_only(self, mcp_server, monkeypatch, invalid_token):
+        monkeypatch.setenv("VERDIFY_MCP_TOKEN_IRIS", invalid_token)
+        registry, unrecognized, duplicates, invalid = mcp_server.audience_token_configuration()
+        assert registry == {}
+        assert unrecognized == []
+        assert duplicates == []
+        assert invalid == ["VERDIFY_MCP_TOKEN_IRIS"]
+
+    def test_rfc6750_b64token_symbols_and_padding_are_valid(self, mcp_server, monkeypatch):
+        monkeypatch.setenv("VERDIFY_MCP_TOKEN_IRIS", "Ab9-._~+/==")
+        registry, unrecognized, duplicates, invalid = mcp_server.audience_token_configuration()
+        assert registry == {"iris": "Ab9-._~+/=="}
+        assert unrecognized == duplicates == invalid == []
+
     def test_unrecognized_audience_env_is_reported_by_name_not_matched(self, mcp_server, monkeypatch):
         monkeypatch.setenv("VERDIFY_MCP_TOKEN_SUPERUSER", "tok-x")
         registry, unrecognized = mcp_server.audience_token_registry()
         assert registry == {}
         assert unrecognized == ["VERDIFY_MCP_TOKEN_SUPERUSER"]
+
+    def test_misspelled_known_audience_env_is_unrecognized(self, mcp_server, monkeypatch):
+        monkeypatch.setenv("VERDIFY_MCP_TOKEN_iris", "tok-x")
+        registry, unrecognized = mcp_server.audience_token_registry()
+        assert registry == {}
+        assert unrecognized == ["VERDIFY_MCP_TOKEN_iris"]
 
     def test_comparison_is_constant_time_full_scan(self, mcp_server):
         source = inspect.getsource(mcp_server.resolve_token_audience)
@@ -227,19 +260,22 @@ class TestTokenResolution:
         # The registry loop must not early-exit on a match.
         assert "break" not in source and "return audience" not in source
 
-    def test_duplicate_tokens_resolve_deterministically(self, mcp_server, monkeypatch):
+    def test_duplicate_tokens_remove_all_affected_audiences(self, mcp_server, monkeypatch):
         _configure(monkeypatch, iris="same", admin="same")
-        registry, _ = mcp_server.audience_token_registry()
-        # First audience in sorted order wins.
-        assert mcp_server.resolve_token_audience("same", registry) == "admin"
+        registry, unrecognized, duplicates, invalid = mcp_server.audience_token_configuration()
+        assert registry == {}
+        assert unrecognized == []
+        assert invalid == []
+        assert duplicates == ["VERDIFY_MCP_TOKEN_ADMIN", "VERDIFY_MCP_TOKEN_IRIS"]
+        assert mcp_server.resolve_token_audience("same", registry) is None
 
 
 # ─── Mode behaviors ──────────────────────────────────────────────────────
 
 
 class TestAuthModes:
-    def test_default_mode_is_off(self, mcp_server):
-        assert mcp_server.auth_mode() == "off"
+    def test_default_mode_is_enforce(self, mcp_server):
+        assert mcp_server.auth_mode() == "enforce"
 
     @pytest.mark.parametrize("mode", ["off", "log", "enforce"])
     def test_explicit_modes(self, mcp_server, monkeypatch, mode):
@@ -252,6 +288,8 @@ class TestAuthModes:
         assert mcp_server.auth_mode() == "enforce"
 
     def test_off_mode_never_denies_and_never_reads_the_registry(self, mcp_server, monkeypatch):
+        _configure(monkeypatch, mode="off")
+
         def boom():  # pragma: no cover - must not be reached
             raise AssertionError("off mode must not consult the token registry")
 
@@ -320,6 +358,12 @@ class TestEnforceFailClosed:
         message = str(excinfo.value)
         assert "plan_run" in message and "iris" in message
         assert "tok-iris" not in message
+
+    def test_admin_and_iris_duplicate_never_resolves_as_admin(self, mcp_server, monkeypatch):
+        _configure(monkeypatch, mode="enforce", iris="shared", admin="shared")
+        for tool in ("climate", "query"):
+            with pytest.raises(mcp_server.ToolAccessDenied, match="fail-closed"):
+                mcp_server.authorize_tool_call(tool, "shared")
 
 
 # ─── Per-audience allow/deny matrix ──────────────────────────────────────
@@ -416,6 +460,12 @@ class TestInventoryAndDriftGuards:
         with pytest.raises(AssertionError, match="climate"):
             mcp_server._assert_tool_audience_registry_complete()
 
+    def test_startup_completeness_reads_unfiltered_tool_manager(self, mcp_server):
+        source = inspect.getsource(mcp_server._sync_registered_tool_names)
+        assert 'getattr(mcp, "_tool_manager", None)' in source
+        assert "manager.list_tools()" in source
+        assert "mcp.list_tools()" not in source
+
     def test_iris_audience_matches_hermes_config_include_list(self, mcp_server):
         """Drift guard: client include list == server iris allowlist == readyz set.
 
@@ -503,6 +553,8 @@ class TestCallToolWiring:
         assert isinstance(mcp_server.mcp, mcp_server.AudienceAuthorizedFastMCP)
 
     def test_off_mode_dispatch_is_a_pure_bypass(self, mcp_server, monkeypatch):
+        _configure(monkeypatch, mode="off")
+
         def boom():  # pragma: no cover - must not be reached
             raise AssertionError("off mode must not consult the token registry")
 
@@ -538,6 +590,39 @@ class TestCallToolWiring:
         assert mcp_server._request_bearer_token(server_with_header("Bearer ")) is None
         assert mcp_server._request_bearer_token(server_with_header(None)) is None
         assert mcp_server._request_bearer_token(SimpleNamespace()) is None
+
+
+# ─── tools/list audience filtering ──────────────────────────────────────
+
+
+class TestListToolsAudienceFiltering:
+    @pytest.mark.parametrize("mode", ["log", "enforce"])
+    @pytest.mark.parametrize(
+        ("audience", "token", "expected_count"),
+        [("iris", "tok-iris", 23), ("experiment", "tok-exp", 8), ("admin", "tok-admin", 27)],
+    )
+    def test_protocol_inventory_matches_exact_audience_allowlist(
+        self, mcp_server, monkeypatch, mode, audience, token, expected_count
+    ):
+        _configure(monkeypatch, mode=mode, **{audience: token})
+        monkeypatch.setattr(mcp_server, "_request_bearer_token", lambda _server: token)
+
+        names = {tool.name for tool in _run(mcp_server.mcp.list_tools())}
+
+        assert names == mcp_server.audience_allowlist(audience)
+        assert len(names) == expected_count
+
+    def test_internal_unfiltered_inventory_is_explicit_and_request_independent(self, mcp_server, monkeypatch):
+        _configure(monkeypatch, mode="enforce", iris="tok-iris")
+        monkeypatch.setattr(mcp_server, "_request_bearer_token", lambda _server: None)
+
+        assert _run(mcp_server.mcp.list_tools()) == []
+        assert {tool.name for tool in _run(mcp_server.mcp.list_tools_unfiltered())} == set(mcp_server.TOOL_AUDIENCES)
+
+    def test_duplicate_configuration_exposes_no_inventory_even_in_log_mode(self, mcp_server, monkeypatch):
+        _configure(monkeypatch, mode="log", iris="shared", admin="shared")
+        monkeypatch.setattr(mcp_server, "_request_bearer_token", lambda _server: "shared")
+        assert _run(mcp_server.mcp.list_tools()) == []
 
 
 # ─── HTTP transport authentication ──────────────────────────────────────
@@ -588,6 +673,17 @@ class TestTransportAuthentication:
         assert all("wrong-secret" not in record.message for record in caplog.records)
         assert all("tok-secret-value" not in record.message for record in caplog.records)
 
+    def test_duplicate_configuration_is_transport_fatal_even_in_log_mode(self, mcp_server, monkeypatch):
+        _configure(monkeypatch, mode="log", iris="shared", admin="shared")
+        downstream = _InventoryASGIApp()
+        app = mcp_server.MCPTransportAuthMiddleware(downstream)
+
+        status, body, _sent = _transport_request(app, "initialize", authorization="Bearer shared")
+
+        assert status == 401
+        assert body == b'{"error":"unauthorized"}'
+        assert downstream.requests == []
+
     def test_readyz_stays_public_and_off_mode_is_a_pure_bypass(self, mcp_server, monkeypatch):
         downstream = _InventoryASGIApp()
         app = mcp_server.MCPTransportAuthMiddleware(downstream)
@@ -599,8 +695,8 @@ class TestTransportAuthentication:
         def boom():  # pragma: no cover - must not be reached
             raise AssertionError("off mode must not consult the token registry")
 
-        monkeypatch.delenv("VERDIFY_MCP_AUTH_MODE")
-        monkeypatch.setattr(mcp_server, "audience_token_registry", boom)
+        _configure(monkeypatch, mode="off")
+        monkeypatch.setattr(mcp_server, "audience_token_configuration", boom)
         status, _body, _sent = _transport_request(app, "initialize")
         assert status == 200
 
@@ -634,13 +730,22 @@ def ready_db(mcp_server, monkeypatch):
 
 
 class TestReadyzAuthSurface:
-    def test_default_off_mode_is_ready_and_visible(self, mcp_server, ready_db):
+    def test_default_enforce_mode_without_tokens_is_not_ready(self, mcp_server, ready_db):
+        response = _run(mcp_server.mcp_ready(None))
+        payload = json.loads(response.body)
+        assert response.status_code == 503
+        assert payload["ready"] is False
+        assert payload["auth_mode"] == "enforce"
+        assert payload["auth_audiences_configured"] == []
+        assert payload["auth_misconfigured"] is True
+
+    def test_explicit_off_mode_is_ready_and_visible(self, mcp_server, ready_db, monkeypatch):
+        _configure(monkeypatch, mode="off")
         response = _run(mcp_server.mcp_ready(None))
         payload = json.loads(response.body)
         assert response.status_code == 200
         assert payload["ready"] is True
         assert payload["auth_mode"] == "off"
-        assert payload["auth_audiences_configured"] == []
         assert payload["auth_misconfigured"] is False
 
     def test_log_mode_with_tokens_is_ready(self, mcp_server, ready_db, monkeypatch):
@@ -667,12 +772,76 @@ class TestReadyzAuthSurface:
         assert payload["auth_audiences_configured"] == ["admin", "iris"]
         assert payload["auth_misconfigured"] is False
 
+    @pytest.mark.parametrize("audience", ["admin", "experiment"])
+    def test_enforce_requires_active_iris_audience(self, mcp_server, ready_db, monkeypatch, audience):
+        _configure(monkeypatch, mode="enforce", **{audience: f"tok-{audience}"})
+        response = _run(mcp_server.mcp_ready(None))
+        payload = json.loads(response.body)
+        assert response.status_code == 503
+        assert payload["ready"] is False
+        assert payload["auth_audiences_configured"] == [audience]
+        assert payload["auth_misconfigured"] is True
+
+    def test_enforce_allows_iris_without_optional_experiment_audience(self, mcp_server, ready_db, monkeypatch):
+        _configure(monkeypatch, mode="enforce", iris="tok-iris")
+        response = _run(mcp_server.mcp_ready(None))
+        payload = json.loads(response.body)
+        assert response.status_code == 200
+        assert payload["ready"] is True
+        assert payload["auth_audiences_configured"] == ["iris"]
+        assert payload["auth_misconfigured"] is False
+
+    def test_duplicate_tokens_report_names_only_and_fail_readiness(self, mcp_server, ready_db, monkeypatch):
+        _configure(monkeypatch, mode="enforce", iris="shared-secret", admin="shared-secret")
+
+        response = _run(mcp_server.mcp_ready(None))
+        payload = json.loads(response.body)
+
+        assert response.status_code == 503
+        assert payload["ready"] is False
+        assert payload["auth_audiences_configured"] == []
+        assert payload["auth_duplicate_token_envs"] == [
+            "VERDIFY_MCP_TOKEN_ADMIN",
+            "VERDIFY_MCP_TOKEN_IRIS",
+        ]
+        assert payload["auth_misconfigured"] is True
+        assert "shared-secret" not in response.body.decode()
+
+    def test_readyz_uses_unfiltered_inventory_path(self, mcp_server, ready_db, monkeypatch):
+        _configure(monkeypatch, mode="enforce", iris="tok-iris")
+
+        async def boom():  # pragma: no cover - must not be reached
+            raise AssertionError("readiness must not use audience-filtered tools/list")
+
+        monkeypatch.setattr(mcp_server.mcp, "list_tools", boom)
+        response = _run(mcp_server.mcp_ready(None))
+        assert response.status_code == 200
+
     def test_readyz_reports_unrecognized_token_env_names_only(self, mcp_server, ready_db, monkeypatch):
         monkeypatch.setenv("VERDIFY_MCP_TOKEN_SUPERUSER", "tok-secret")
         response = _run(mcp_server.mcp_ready(None))
         payload = json.loads(response.body)
+        assert response.status_code == 503
+        assert payload["ready"] is False
         assert payload["auth_unrecognized_token_envs"] == ["VERDIFY_MCP_TOKEN_SUPERUSER"]
+        assert payload["auth_misconfigured"] is True
         assert "tok-secret" not in response.body.decode()
+
+    @pytest.mark.parametrize(
+        "invalid_token",
+        ["", "   ", "secret with space", "secret\twith-tab", "secret\x1fcontrol", "secret:delimiter"],
+    )
+    def test_readyz_reports_invalid_token_env_names_only(self, mcp_server, ready_db, monkeypatch, invalid_token):
+        monkeypatch.setenv("VERDIFY_MCP_TOKEN_IRIS", invalid_token)
+        response = _run(mcp_server.mcp_ready(None))
+        payload = json.loads(response.body)
+        assert response.status_code == 503
+        assert payload["ready"] is False
+        assert payload["auth_audiences_configured"] == []
+        assert payload["auth_invalid_token_envs"] == ["VERDIFY_MCP_TOKEN_IRIS"]
+        assert payload["auth_misconfigured"] is True
+        if invalid_token:
+            assert invalid_token not in response.body.decode()
 
 
 def test_production_mcp_enforces_iris_audience_with_the_existing_hermes_credential() -> None:
@@ -689,7 +858,7 @@ def test_production_mcp_enforces_iris_audience_with_the_existing_hermes_credenti
     assert "VERDIFY_MCP_TOKEN_ADMIN" not in env
 
 
-def test_rendered_prod_two_replica_mcp_is_stateless_and_not_session_affine() -> None:
+def test_rendered_prod_keeps_affinity_through_first_stateless_image_rollout() -> None:
     rendered = subprocess.run(
         ["kustomize", "build", str(PROD_OVERLAY_PATH)],
         cwd=REPO_ROOT,
@@ -708,7 +877,24 @@ def test_rendered_prod_two_replica_mcp_is_stateless_and_not_session_affine() -> 
         for resource in resources
         if resource.get("kind") == "Service" and resource.get("metadata", {}).get("name") == "verdify-mcp"
     )
+    hermes = next(
+        resource
+        for resource in resources
+        if resource.get("kind") == "Deployment" and resource.get("metadata", {}).get("name") == "verdify-hermes-iris"
+    )
+    ingress = next(
+        resource
+        for resource in resources
+        if resource.get("kind") == "IngressRoute" and resource.get("metadata", {}).get("name") == "verdify-t2-mcp"
+    )
 
     assert deployment["spec"]["replicas"] == 2
-    assert service["spec"]["sessionAffinity"] == "None"
-    assert "sessionAffinityConfig" not in service["spec"]
+    assert deployment["metadata"]["annotations"]["argocd.argoproj.io/sync-wave"] == "10"
+    assert hermes["metadata"]["annotations"]["argocd.argoproj.io/sync-wave"] == "20"
+    # Keep compatibility with the previously pinned stateful MCP image during
+    # the first stateless image rollout. Affinity cleanup is a later GitOps PR.
+    assert service["spec"]["sessionAffinity"] == "ClientIP"
+    assert service["spec"]["sessionAffinityConfig"] == {"clientIP": {"timeoutSeconds": 10800}}
+    # The WAN route exposes only the protocol endpoint; internal Service users
+    # and kube probes can still call /readyz directly.
+    assert ingress["spec"]["routes"][0]["match"] == "Host(`mcp.verdify.ai`) && PathPrefix(`/mcp`)"
