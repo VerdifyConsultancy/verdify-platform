@@ -17,6 +17,8 @@ if _INGESTOR_PATH not in sys.path:
 import shared  # noqa: E402
 from esp32_push import ComponentCommandOutcome  # noqa: E402
 from tasks.component_experiment import (  # noqa: E402
+    MAX_EPOCH_SKEW,
+    POST_DELIVERY_SETTLE_GRACE,
     RUNTIME_INSTANCE_ID,
     AsyncpgComponentExperimentStore,
     ComponentRuntimeFault,
@@ -37,6 +39,10 @@ WORK_ID = "22222222-2222-4222-8222-222222222222"
 BUNDLE_ID = "33333333-3333-4333-8333-333333333333"
 DEVICE_ID = "esp32-vallery"
 REVISIONS = RevisionSet("c" * 64, "firmware", "config", "registry", "grid")
+
+
+def test_post_delivery_settle_covers_one_complete_source_epoch() -> None:
+    assert POST_DELIVERY_SETTLE_GRACE == MAX_EPOCH_SKEW == timedelta(seconds=60)
 
 
 class FakeRange:
@@ -725,7 +731,7 @@ async def test_post_delivery_mismatch_inside_settle_grace_is_consumed(adapter):
     mismatched = baseline_state()
     mismatched["mister_all_kpa"] = float(ENTITY_GRIDS["mister_all_kpa"].maximum)
     for field in CANONICAL_FIELD_ORDER:
-        record_component_cfg_readback(field, mismatched[field], observed_at=NOW + timedelta(seconds=7))
+        record_component_cfg_readback(field, mismatched[field], observed_at=NOW + timedelta(seconds=37))
 
     assert await store.observation_epochs(work, bundle) == []
     assert connection.preexposure_mismatches == []
@@ -765,7 +771,7 @@ async def test_complete_post_delivery_mismatch_is_durably_faulted_not_filtered(a
     mismatched = baseline_state()
     mismatched["mister_all_kpa"] = float(ENTITY_GRIDS["mister_all_kpa"].maximum)
     for field in CANONICAL_FIELD_ORDER:
-        record_component_cfg_readback(field, mismatched[field], observed_at=NOW + timedelta(seconds=37))
+        record_component_cfg_readback(field, mismatched[field], observed_at=NOW + timedelta(seconds=67))
     (raw,) = component_cfg_source_epochs()
 
     connection.raise_preexposure_mismatch = True

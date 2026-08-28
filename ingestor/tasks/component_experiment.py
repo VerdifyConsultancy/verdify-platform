@@ -114,9 +114,10 @@ MAX_SNAPSHOT_AGE = timedelta(seconds=90)
 MIN_EPOCH_SEPARATION = timedelta(seconds=30)
 MAX_EPOCH_SKEW = timedelta(seconds=60)
 # ESPHome acknowledges setter services before the corresponding cfg state
-# callbacks. Only complete current-lineage observations timestamped before
-# this edge are settling samples; later mismatches remain durable evidence.
-POST_DELIVERY_SETTLE_GRACE = timedelta(seconds=30)
+# callbacks. A complete epoch may span the entire allowed source-skew window,
+# so it cannot be negative evidence until that same window has elapsed after
+# the last setter. Later mismatches remain durable evidence.
+POST_DELIVERY_SETTLE_GRACE = MAX_EPOCH_SKEW
 COMPONENT_EXECUTOR_INTERVAL_S = 15
 COMPONENT_EXECUTOR_ACTOR = "verdify-component-executor-v2"
 RUNTIME_INSTANCE_ID = str(uuid4())
@@ -1638,6 +1639,13 @@ class AsyncpgComponentExperimentStore:
                 # sample; a mismatch at/after the grace boundary remains
                 # durable negative evidence and yields authority atomically.
                 if raw.completed_at < bundle.finished_at + POST_DELIVERY_SETTLE_GRACE:
+                    log.info(
+                        "component_executor post_delivery_settle_sample status=consumed "
+                        "elapsed_seconds=%.3f epoch_skew_seconds=%.3f mismatch_field_count=%d",
+                        (raw.completed_at - bundle.finished_at).total_seconds(),
+                        (max(raw.observed_at.values()) - min(raw.observed_at.values())).total_seconds(),
+                        sum(raw.values[field] != expected[field] for field in CANONICAL_FIELD_ORDER),
+                    )
                     _consume_component_cfg_source_epoch(raw.source_epoch_id)
                     continue
                 # A complete current-lineage epoch after a completed physical
@@ -1649,6 +1657,13 @@ class AsyncpgComponentExperimentStore:
                     # until the atomic L3 call acknowledges it. A prolonged DB
                     # outage must not let later cfg cycles evict the fault.
                     _cfg_source_unacked_mismatch_epoch = raw
+                log.warning(
+                    "component_executor preexposure_mismatch status=fault "
+                    "elapsed_seconds=%.3f epoch_skew_seconds=%.3f mismatch_field_count=%d",
+                    (raw.completed_at - bundle.finished_at).total_seconds(),
+                    (max(raw.observed_at.values()) - min(raw.observed_at.values())).total_seconds(),
+                    sum(raw.values[field] != expected[field] for field in CANONICAL_FIELD_ORDER),
+                )
                 receipt = await self.record_preexposure_mismatch(raw, work, bundle)
                 _consume_component_cfg_source_epoch(raw.source_epoch_id)
                 set_component_authority_hold(receipt.authority_hold_required, CANONICAL_FIELD_ORDER)
@@ -3477,6 +3492,14 @@ async def component_experiment_worker(
     )
     executor = ConfirmedComponentExecutor(store, transport=transport)
     result = await executor.run_once(experiment_id, fence)
+    if result.disposition != "idle":
+        log.info(
+            "component_executor tick disposition=%s reason=%s work_id=%s setter_calls=%d",
+            result.disposition,
+            result.reason,
+            result.work_id,
+            result.setter_calls,
+        )
     fault_kind = _executor_fault_kind(result.reason)
     if fault_kind is not None:
         return await _stop_for_runtime_fault(
