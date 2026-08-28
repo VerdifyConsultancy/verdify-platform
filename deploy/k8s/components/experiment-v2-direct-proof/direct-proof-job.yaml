@@ -11,10 +11,10 @@ metadata:
     argocd.argoproj.io/hook: PostSync
     argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
     argocd.argoproj.io/sync-wave: "1"
-    operations.vallery.net/temporary-node-exclusion: vm-k3s-node4,vm-k3s-node6:cni-pod-sandbox-timeout:2026-08-27
+    operations.vallery.net/temporary-node-exclusion: vm-k3s-node4,vm-k3s-node6:cni-pod-sandbox-timeout:2026-08-28
 spec:
   backoffLimit: 0
-  activeDeadlineSeconds: 4500
+  activeDeadlineSeconds: 6600
   ttlSecondsAfterFinished: 3600
   template:
     metadata:

@@ -44,7 +44,7 @@ def test_only_the_single_ingestor_gets_the_coarse_capability_override() -> None:
     rendered = _render()
     ingestor = _document(rendered, "Deployment", "verdify-ingestor")
     pod = ingestor["spec"]["template"]
-    assert pod["metadata"]["annotations"]["verdify.io/direct-proof-activation"] == ("2026-08-27-jason-vallery")
+    assert pod["metadata"]["annotations"]["verdify.io/direct-proof-activation"] == ("2026-08-28-jason-vallery-retry")
     container = next(row for row in pod["spec"]["containers"] if row["name"] == "ingestor")
     env = {row["name"]: row for row in container["env"]}
     assert env["VERDIFY_POLICY_VECTOR_MODE"] == {
@@ -77,7 +77,7 @@ def test_proof_job_is_bounded_postsync_nonprivileged_and_avoids_broken_nodes() -
     assert annotations["argocd.argoproj.io/hook-delete-policy"] == "BeforeHookCreation"
     assert annotations["argocd.argoproj.io/sync-wave"] == "1"
     assert job["spec"]["backoffLimit"] == 0
-    assert job["spec"]["activeDeadlineSeconds"] == 4500
+    assert job["spec"]["activeDeadlineSeconds"] == 6600
     pod = job["spec"]["template"]["spec"]
     assert pod["restartPolicy"] == "Never"
     assert pod["automountServiceAccountToken"] is False
@@ -126,15 +126,18 @@ def test_proof_script_is_syntax_valid_exact_role_bound_and_non_provider() -> Non
     script = config["data"]["proof.py"]
     compile(script, "proof.py", "exec")
     assert 'EXPERIMENT_ID = "45039c86-c1d9-52f6-a0a9-d94a17bc4b14"' in script
-    assert "datetime(2026, 8, 27, 21, 0, tzinfo=UTC)" in script
-    assert "datetime(2026, 8, 28, 5, 0, tzinfo=UTC)" in script
-    assert datetime(2026, 8, 27, 21, tzinfo=UTC) < datetime(2026, 8, 28, 5, tzinfo=UTC)
+    assert "datetime(2026, 8, 28, 6, 0, tzinfo=UTC)" in script
+    assert "datetime(2026, 8, 28, 18, 0, tzinfo=UTC)" in script
+    assert datetime(2026, 8, 28, 6, tzinfo=UTC) < datetime(2026, 8, 28, 18, tzinfo=UTC)
     assert script.count('"Jason Vallery"') == 2
     for function in (
         "fn_experiment_v2_direct_proof_begin(",
         "fn_experiment_v2_direct_proof_open_aggressive(",
         "fn_experiment_v2_direct_proof_begin_baseline_after(",
         "fn_experiment_v2_direct_proof_finish(",
+        "fn_experiment_v2_direct_proof_attempt_status(",
+        "fn_experiment_v2_direct_proof_begin_emergency_recovery(",
+        "fn_experiment_v2_direct_proof_finish_emergency_recovery(",
         "fn_experiment_v2_set_admission(",
         "fn_experiment_v2_request_recovery(",
     ):
@@ -159,6 +162,9 @@ def test_proof_script_is_syntax_valid_exact_role_bound_and_non_provider() -> Non
     assert '"direct-proof-runner-failure"' in script
     assert '"safety-recovery-requested"' in script
     assert script.index("SET_RECOVERY_SQL") < script.index("REQUEST_RECOVERY_SQL")
+    assert '"proof-already-sealed"' in script
+    assert '"emergency-recovery-admitted"' in script
+    assert 'attempt["baseline_after_work_id"] is None' in script
 
 
 def test_default_config_remains_coarse_off_for_the_removal_rollback() -> None:
