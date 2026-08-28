@@ -667,7 +667,8 @@ data:
       219-selector-context-bounded-sampling.sql \
       220-experiment-v2-direct-randomized-launch.sql \
       221-experiment-v2-state-replay.sql \
-      222-experiment-v2-direct-physical-proof.sql
+      222-experiment-v2-direct-physical-proof.sql \
+      223-experiment-v2-direct-proof-work-binding.sql
     do
       expected_sha256="$(sha256sum -- "/work/db/migrations/${migration}" | awk '{print $1}')"
       ledger_sha256="$(psql -X -v ON_ERROR_STOP=1 -At -d "${PGDATABASE}" \

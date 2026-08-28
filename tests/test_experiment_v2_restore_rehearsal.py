@@ -281,6 +281,7 @@ def test_script_restores_only_the_bounded_latest_dump_and_runs_real_gates():
         "220-experiment-v2-direct-randomized-launch.sql",
         "221-experiment-v2-state-replay.sql",
         "222-experiment-v2-direct-physical-proof.sql",
+        "223-experiment-v2-direct-proof-work-binding.sql",
     ):
         assert candidate_migration in script
     compact_script = " ".join(script.split())
