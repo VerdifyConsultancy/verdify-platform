@@ -680,7 +680,8 @@ data:
       232-experiment-v2-observation-pair-recovery-retry.sql \
       233-experiment-v2-direct-proof-zero-exposure-seal.sql \
       234-experiment-v2-direct-proof-startup-rollover.sql \
-      235-experiment-v2-direct-proof-raw-reset-rollover.sql
+      235-experiment-v2-direct-proof-raw-reset-rollover.sql \
+      236-experiment-v2-direct-proof-preclaim-raw-reset-rollover.sql
     do
       expected_sha256="$(sha256sum -- "/work/db/migrations/${migration}" | awk '{print $1}')"
       ledger_sha256="$(psql -X -v ON_ERROR_STOP=1 -At -d "${PGDATABASE}" \
@@ -742,6 +743,8 @@ data:
       -f /work/db/migrations/tests/test-234-experiment-v2-direct-proof-startup-rollover.sql
     psql -X -v ON_ERROR_STOP=1 -d "${PGDATABASE}" \
       -f /work/db/migrations/tests/test-235-experiment-v2-direct-proof-raw-reset-rollover.sql
+    psql -X -v ON_ERROR_STOP=1 -d "${PGDATABASE}" \
+      -f /work/db/migrations/tests/test-236-experiment-v2-direct-proof-preclaim-raw-reset-rollover.sql
     psql -X -v ON_ERROR_STOP=1 -d "${PGDATABASE}" <<'SQL'
     DO $assertions$
     BEGIN
