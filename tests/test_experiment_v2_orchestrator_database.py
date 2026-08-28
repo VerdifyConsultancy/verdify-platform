@@ -183,6 +183,7 @@ def test_production_function_allowlists_are_source_locked_for_all_three_duties()
         "public.fn_experiment_v2_due_shadow_cycle(uuid)",
         "public.fn_experiment_v2_due_assignment(uuid)",
         "public.fn_experiment_v2_boundary_cycle(uuid,text)",
+        "public.fn_experiment_v2_direct_launch_cycle(uuid,text)",
     )
     assert database.ROLE_FUNCTIONS[OrchestratorMode.SELECTOR] == (
         "public.fn_experiment_v2_finalize_randomization(uuid,text)",

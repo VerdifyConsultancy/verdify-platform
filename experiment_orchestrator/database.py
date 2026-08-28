@@ -45,6 +45,7 @@ ROLE_FUNCTIONS: dict[OrchestratorMode, tuple[str, ...]] = {
         "public.fn_experiment_v2_due_shadow_cycle(uuid)",
         "public.fn_experiment_v2_due_assignment(uuid)",
         "public.fn_experiment_v2_boundary_cycle(uuid,text)",
+        "public.fn_experiment_v2_direct_launch_cycle(uuid,text)",
     ),
     OrchestratorMode.SELECTOR: (
         "public.fn_experiment_v2_finalize_randomization(uuid,text)",
