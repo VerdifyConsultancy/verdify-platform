@@ -82,6 +82,12 @@ def test_proof_job_is_bounded_postsync_nonprivileged_and_avoids_broken_nodes() -
     assert pod["restartPolicy"] == "Never"
     assert pod["automountServiceAccountToken"] is False
     assert pod["enableServiceLinks"] is False
+    assert pod["securityContext"] == {
+        "runAsNonRoot": True,
+        "runAsUser": 1000,
+        "runAsGroup": 1000,
+        "seccompProfile": {"type": "RuntimeDefault"},
+    }
     assert "serviceAccountName" not in pod
     assert pod["affinity"]["nodeAffinity"]["requiredDuringSchedulingIgnoredDuringExecution"]["nodeSelectorTerms"] == [
         {
