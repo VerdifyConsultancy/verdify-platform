@@ -75,7 +75,8 @@ spec:
         - name: verdify-api
           port: 8080
 ---
-# mcp (Model Context Protocol endpoint).
+# mcp (Model Context Protocol endpoint only). /readyz remains internal through
+# the ClusterIP Service for Kubernetes/Hermes probes and is not WAN-routed.
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
@@ -89,7 +90,7 @@ spec:
   entryPoints: [verdify-web]
   routes:
     - kind: Rule
-      match: Host(`mcp.verdify.ai`)
+      match: Host(`mcp.verdify.ai`) && PathPrefix(`/mcp`)
       middlewares:
         - name: verdify-strip-identity-headers
       services:
