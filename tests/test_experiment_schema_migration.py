@@ -256,6 +256,7 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "227-experiment-v2-emergency-recovery-retry.sql",  # restart-stable append-only emergency recovery retry
         "228-experiment-v2-recovery-generation-guard.sql",  # require a post-failure stable writer generation
         "229-experiment-v2-recovery-failure-boundary.sql",  # bind writer generation after terminal recovery failure
+        "230-experiment-v2-observation-window-bundle-join.sql",  # disambiguate executor observation read
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(
@@ -307,6 +308,7 @@ def test_migrate_image_carries_migrations_and_runner():
         "!db/migrations/tests/test-227-experiment-v2-emergency-recovery-retry.sql",
         "!db/migrations/tests/test-228-experiment-v2-recovery-generation-guard.sql",
         "!db/migrations/tests/test-229-experiment-v2-recovery-failure-boundary.sql",
+        "!db/migrations/tests/test-230-experiment-v2-observation-window-bundle-join.sql",
         "!db/ledger",
         "db/ledger/*",
         "!db/ledger/*.sql",
@@ -315,7 +317,7 @@ def test_migrate_image_carries_migrations_and_runner():
     assert indexes == sorted(indexes), "Kaniko re-include rules must stay ordered"
 
     # The production migrate image remains free of the broad SQL fixture tree.
-    # Only the nine vertical fixtures executed by the one-release restore
+    # Only the ten vertical fixtures executed by the one-release restore
     # rehearsal are admitted into /db/migrations/tests.
     test_fixture_reincludes = [line for line in ignore_lines if line.startswith("!db/migrations/tests/")]
     assert test_fixture_reincludes == [
@@ -328,6 +330,7 @@ def test_migrate_image_carries_migrations_and_runner():
         "!db/migrations/tests/test-227-experiment-v2-emergency-recovery-retry.sql",
         "!db/migrations/tests/test-228-experiment-v2-recovery-generation-guard.sql",
         "!db/migrations/tests/test-229-experiment-v2-recovery-failure-boundary.sql",
+        "!db/migrations/tests/test-230-experiment-v2-observation-window-bundle-join.sql",
     ]
 
 

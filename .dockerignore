@@ -80,7 +80,7 @@ hermes
 # db/ is excluded above (the api/mcp/ingestor images never touch it), but the
 # verdify-migrate image (db/Dockerfile.migrate) COPYs the schema, both runners,
 # every top-level numbered migration, and the two ledger SQL files. Re-include
-# exactly those plus the three bounded experiment-v2 fixtures consumed by the
+# exactly those plus the bounded experiment-v2 fixtures consumed by the
 # one-release restore rehearsal. Keep every other migration fixture/test,
 # init/, roles, @eaDir, and the restore manifests out of every build context.
 # KANIKO QUIRK (2026-07-11, found when the in-cluster zot build shipped an
@@ -107,6 +107,7 @@ db/migrations/tests/*
 !db/migrations/tests/test-227-experiment-v2-emergency-recovery-retry.sql
 !db/migrations/tests/test-228-experiment-v2-recovery-generation-guard.sql
 !db/migrations/tests/test-229-experiment-v2-recovery-failure-boundary.sql
+!db/migrations/tests/test-230-experiment-v2-observation-window-bundle-join.sql
 !db/ledger
 db/ledger/*
 !db/ledger/*.sql
