@@ -513,11 +513,6 @@ spec:
                 secretKeyRef:
                   name: verdify-app-secrets
                   key: VERDIFY_EXPERIMENT_OPERATOR_TOKEN
-            - name: MCP_IRIS_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: verdify-hermes
-                  key: VERDIFY_MCP_TOKEN
             - name: PGAPPNAME
               value: verdify-experiment-v2-credential-bootstrap
           securityContext:

@@ -112,9 +112,6 @@ data:
         ).hexdigest()
 
     def load_spec():
-        iris_token = os.environ.get("MCP_IRIS_TOKEN", "")
-        if len(iris_token) < 16 or any(character.isspace() for character in iris_token):
-            fail("protected Iris MCP credential is absent or malformed")
         spec = json.loads(SPEC_PATH.read_text(encoding="utf-8"))
         if spec.get("schema") != EXPECTED_SCHEMA:
             fail("bootstrap schema mismatch")
