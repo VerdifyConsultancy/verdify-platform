@@ -3400,14 +3400,9 @@ BEGIN
             e.connection_generation = g.connection_generation),
            (v_now - e.last_observed_at <= interval '90 seconds')
       FROM selected s
-      JOIN public.experiment_v2_observation_epochs e
-        ON e.source_epoch_id = s.source_epoch_id
-      JOIN public.experiment_v2_observation_receipts r
-        ON r.source_epoch_id = e.source_epoch_id
-       AND r.work_id = e.work_id
-       AND r.bundle_id = e.bundle_id
-      JOIN public.experiment_v2_delivery_bundle_completions completion
-        ON completion.bundle_id = e.bundle_id
+      JOIN public.experiment_v2_observation_epochs e USING (source_epoch_id)
+      JOIN public.experiment_v2_observation_receipts r USING (source_epoch_id)
+      JOIN public.experiment_v2_delivery_bundle_completions completion USING (bundle_id)
       CROSS JOIN current_generation g
      ORDER BY CASE s.kind WHEN 'current' THEN 0 ELSE 1 END, s.seq;
 END;
