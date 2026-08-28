@@ -114,6 +114,7 @@ db/migrations/tests/*
 !db/migrations/tests/test-234-experiment-v2-direct-proof-startup-rollover.sql
 !db/migrations/tests/test-235-experiment-v2-direct-proof-raw-reset-rollover.sql
 !db/migrations/tests/test-236-experiment-v2-direct-proof-preclaim-raw-reset-rollover.sql
+!db/migrations/tests/test-237-experiment-v2-direct-proof-recovery-range-rollover.sql
 !db/ledger
 db/ledger/*
 !db/ledger/*.sql
