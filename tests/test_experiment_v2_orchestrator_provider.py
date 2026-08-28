@@ -321,10 +321,39 @@ async def test_request_over_context_budget_fails_locally_with_distinct_persistab
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
+    "content",
+    [
+        '{"profile":"moderate"}',
+        '{"profile": "moderate"}',
+        '{\n  "profile": "moderate"\n}',
+    ],
+)
+async def test_openai_accepts_schema_valid_profile_regardless_of_json_whitespace(content: str) -> None:
+    transport = Transport(_openai_response(content=content))
+
+    async def openai_resolver(_host: str, _port: int):
+        return frozenset({ipaddress.ip_address("104.18.33.45")})
+
+    result = await SelectorProviderAdapter(
+        _openai_provider_settings(),
+        transport=transport,
+        resolver=openai_resolver,
+        clock=lambda: datetime(2026, 8, 24, 23, 50, tzinfo=UTC),
+    ).select(
+        study_id="study",
+        local_date="2026-08-25",
+        invocation_key="11111111-1111-4111-8111-111111111111",
+        context=_context(),
+        identity=_openai_identity(),
+    )
+    assert (result.profile, result.fallback_reason) == ("moderate", None)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
     "raw",
     [
         _openai_response(finish_reason="length"),
-        _openai_response(content='{"profile": "moderate"}'),
         _openai_response(model="gpt-5.6-sol-unpinned"),
         _openai_response(message_changes={"tool_calls": [{"id": "unexpected"}]}),
         _openai_response(content='{"profile":"unknown"}'),

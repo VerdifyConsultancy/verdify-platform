@@ -32,7 +32,7 @@ OpenAI client. It accepts only `https://api.openai.com/v1` (normalized to the
 exact `/v1/chat/completions` path) or that exact completions URL. The frozen
 identity names `gpt-5.6-sol` with `reasoning_effort=medium`. Requests are
 non-streaming and tool-free with a bounded `max_completion_tokens` and a strict
-canonical profile-only JSON schema. A non-`stop` finish, model drift, malformed
+profile-only JSON schema. A non-`stop` finish, model drift, malformed
 envelope/content, DNS drift, or transport failure is recorded as a
 baseline-safe failure and never admitted as a provider choice. OpenAI's
 optional infrastructure fingerprint is retained when present but is not a
