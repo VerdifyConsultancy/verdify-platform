@@ -5,6 +5,12 @@ metadata:
   labels:
     app.kubernetes.io/part-of: verdify
     app.kubernetes.io/component: experiment-v2-direct-launch-bootstrap
+  annotations:
+    # The wave-2 credential/direct-bootstrap Job mounts this payload. It must
+    # exist during PreSync, before ordinary Sync resources are applied.
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "1"
 data:
   bootstrap.json: |
     {
@@ -112,6 +118,9 @@ data:
         ).hexdigest()
 
     def load_spec():
+        iris_token = os.environ.get("MCP_IRIS_TOKEN", "")
+        if len(iris_token) < 16 or any(character.isspace() for character in iris_token):
+            fail("protected Iris MCP credential is absent or malformed")
         spec = json.loads(SPEC_PATH.read_text(encoding="utf-8"))
         if spec.get("schema") != EXPECTED_SCHEMA:
             fail("bootstrap schema mismatch")
