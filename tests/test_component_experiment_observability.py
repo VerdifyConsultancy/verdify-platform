@@ -4,18 +4,144 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
 import sys
+from dataclasses import dataclass
 from pathlib import Path
+from typing import get_args
 
-from verdify_schemas.alerts import AlertEnvelope
+import pytest
+
+from verdify_schemas.alerts import AlertEnvelope, ComponentExperimentIntegrityReason
 
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATION = ROOT / "db/migrations/215-experiment-v2-ops-observability.sql"
 DASHBOARD = ROOT / "grafana/provisioning/dashboards/json/confirmed-component-experiment-v2.json"
 
+_OPS_STATUS_SIGNATURE = "CREATE OR REPLACE FUNCTION public.fn_experiment_v2_ops_status()"
+_FUNCTION_BODY_START = re.compile(r"\bAS\s+(?P<tag>\$[A-Za-z_][A-Za-z0-9_]*\$|\$\$)")
+_ALERT_CASES = re.compile(
+    r"e\.admission_state\s*<>\s*'emergency_hold',\s*"
+    r"(?P<severity_case>CASE\s+WHEN\s+.*?\s+ELSE\s+NULL\s+END),\s*"
+    r"(?P<reason_case>CASE\s+WHEN\s+.*?\s+ELSE\s+NULL\s+END),\s*"
+    r"v_now\s+FROM\s+public\.control_experiments",
+    re.DOTALL,
+)
+_CASE_BRANCH = re.compile(
+    r"\bWHEN\s+(?P<condition>.*?)\s+THEN\s+'(?P<value>[a-z0-9_]+)'",
+    re.DOTALL,
+)
+
+
+@dataclass(frozen=True)
+class _CaseBranch:
+    condition: str
+    value: str
+
 
 def _function_body(sql: str) -> str:
     return sql.split("AS $body$", 1)[1].split("$body$;", 1)[0]
+
+
+def _migration_order(path: Path) -> str:
+    # db/apply-migrations.sh uses `LC_ALL=C sort` on complete filenames so
+    # historical suffixed migrations (for example 095a) retain their real
+    # execution order. Repository filenames are ASCII, so Python string order
+    # is the same ordering here.
+    return path.name
+
+
+def _ops_status_definitions(migration: Path) -> tuple[str, ...]:
+    sql = migration.read_text()
+    definitions: list[str] = []
+    cursor = 0
+    while (signature_at := sql.find(_OPS_STATUS_SIGNATURE, cursor)) >= 0:
+        body_start = _FUNCTION_BODY_START.search(sql, signature_at + len(_OPS_STATUS_SIGNATURE))
+        assert body_start is not None, f"function body marker missing in {migration.name}"
+        tag = body_start.group("tag")
+        body_end = sql.find(f"{tag};", body_start.end())
+        assert body_end >= 0, f"function body terminator missing in {migration.name}"
+        definitions.append(sql[body_start.end() : body_end])
+        cursor = body_end + len(tag) + 1
+    return tuple(definitions)
+
+
+def _latest_ops_status_definition() -> tuple[Path, str]:
+    effective: tuple[Path, str] | None = None
+    migrations = sorted((ROOT / "db/migrations").glob("*.sql"), key=_migration_order)
+    for migration in migrations:
+        for body in _ops_status_definitions(migration):
+            effective = migration, body
+    assert effective is not None, "fn_experiment_v2_ops_status has no migration definition"
+    return effective
+
+
+def _case_branches(case_sql: str) -> tuple[_CaseBranch, ...]:
+    return tuple(
+        _CaseBranch(condition=match.group("condition"), value=match.group("value"))
+        for match in _CASE_BRANCH.finditer(case_sql)
+    )
+
+
+def _condition_key(condition: str) -> str:
+    return re.sub(r"[\s()]", "", condition)
+
+
+def _reason_is_covered_by_severity(reason: _CaseBranch, severity: _CaseBranch) -> bool:
+    reason_condition = _condition_key(reason.condition)
+    severity_condition = _condition_key(severity.condition)
+    if reason_condition in severity_condition:
+        return True
+
+    # The critical CASE likewise folds the three observation faults under one
+    # shared open-exposure predicate. A later OR sibling can sit between the
+    # shared predicate and this reason's specific observation predicate.
+    open_exposure_prefix = "coalesceexposures.open_count,0>0AND"
+    if reason_condition.startswith(open_exposure_prefix):
+        observation_fault = reason_condition.removeprefix(open_exposure_prefix)
+        if open_exposure_prefix in severity_condition and observation_fault in severity_condition:
+            return True
+
+    # The critical branch intentionally folds three component-readiness faults
+    # into `component_enabled AND NOT (baseline AND confirmation AND runtime)`.
+    # Preserve that SQL relationship rather than assigning a severity in the
+    # parametrized test data.
+    enabled_prefix = "e.component_enabledAND"
+    if not reason_condition.startswith(enabled_prefix) or "e.component_enabledANDNOT" not in severity_condition:
+        return False
+    failed_requirement = reason_condition.removeprefix(enabled_prefix)
+    if failed_requirement.startswith("NOT"):
+        required_condition = failed_requirement.removeprefix("NOT")
+    elif failed_requirement.endswith("ISNULL"):
+        required_condition = f"{failed_requirement.removesuffix('ISNULL')}ISNOTNULL"
+    else:
+        return False
+    return required_condition in severity_condition
+
+
+def _db_integrity_branches(function_body: str) -> tuple[tuple[str, str], ...]:
+    match = _ALERT_CASES.search(function_body)
+    assert match is not None, "ordered alert severity/reason CASE expressions not found"
+    severity_branches = _case_branches(match.group("severity_case"))
+    reason_branches = _case_branches(match.group("reason_case"))
+    assert severity_branches, "alert severity CASE has no branches"
+    assert reason_branches, "alert reason CASE has no branches"
+
+    emitted: list[tuple[str, str]] = []
+    for reason in reason_branches:
+        matching_severities = tuple(
+            severity.value for severity in severity_branches if _reason_is_covered_by_severity(reason, severity)
+        )
+        assert len(matching_severities) == 1, (
+            f"reason branch {reason.value!r} maps to {matching_severities!r}; "
+            "severity/reason CASE drift must be reconciled explicitly"
+        )
+        emitted.append((reason.value, matching_severities[0]))
+    return tuple(emitted)
+
+
+EFFECTIVE_OPS_MIGRATION, EFFECTIVE_OPS_BODY = _latest_ops_status_definition()
+DB_INTEGRITY_BRANCHES = _db_integrity_branches(EFFECTIVE_OPS_BODY)
 
 
 def _load_rollback_classifier():
@@ -115,6 +241,41 @@ def test_ops_function_alerts_terminal_expiry_and_preexposure_faults():
     assert "experiment_v2_preexposure_mismatch_epochs" in body
 
 
+def test_migration_alert_reasons_and_typed_schema_stay_reconciled():
+    db_reason_branches = tuple(reason for reason, _severity in DB_INTEGRITY_BRANCHES)
+    unique_db_reasons = tuple(dict.fromkeys(db_reason_branches))
+    schema_reasons = get_args(ComponentExperimentIntegrityReason)
+
+    assert schema_reasons == unique_db_reasons
+    assert {
+        "expired_work_not_terminal",
+        "confirmed_baseline_recovery_missing",
+    } <= set(schema_reasons)
+
+
+def test_alert_contract_comes_from_the_latest_ordered_migration_definition():
+    definitions = [
+        (migration, body)
+        for migration in sorted((ROOT / "db/migrations").glob("*.sql"), key=_migration_order)
+        for body in _ops_status_definitions(migration)
+    ]
+    assert definitions
+    assert definitions[-1] == (EFFECTIVE_OPS_MIGRATION, EFFECTIVE_OPS_BODY)
+
+
+def test_case_branch_parser_preserves_order_and_duplicate_outputs():
+    branches = _case_branches(
+        "CASE WHEN first_predicate THEN 'critical' "
+        "WHEN second_predicate THEN 'critical' "
+        "WHEN third_predicate THEN 'warning' ELSE NULL END"
+    )
+    assert tuple((branch.condition, branch.value) for branch in branches) == (
+        ("first_predicate", "critical"),
+        ("second_predicate", "critical"),
+        ("third_predicate", "warning"),
+    )
+
+
 def test_dashboard_uses_only_the_blinded_safe_function():
     dashboard = json.loads(DASHBOARD.read_text())
     assert dashboard["uid"] == "confirmed-component-experiment-v2"
@@ -140,6 +301,20 @@ def test_actionable_ops_row_round_trips_the_typed_alert_envelope():
     assert envelope.alert_type == "component_experiment_integrity"
     assert envelope.severity == "warning"
     assert envelope.details["reason"] == "baseline_recovery_in_progress"
+
+
+@pytest.mark.parametrize(
+    ("reason", "severity"),
+    DB_INTEGRITY_BRANCHES,
+    ids=[f"branch-{index}-{reason}-{severity}" for index, (reason, severity) in enumerate(DB_INTEGRITY_BRANCHES)],
+)
+def test_every_db_integrity_branch_round_trips_instead_of_falling_back(reason: str, severity: str):
+    payload = _load_alert_helper()(_ops_row(alert_reason=reason, alert_severity=severity))
+    assert payload is not None
+    envelope = AlertEnvelope.model_validate(payload)
+    assert envelope.alert_type == "component_experiment_integrity"
+    assert envelope.severity == severity
+    assert envelope.details["reason"] == reason
 
 
 def test_nominal_ops_row_does_not_page():

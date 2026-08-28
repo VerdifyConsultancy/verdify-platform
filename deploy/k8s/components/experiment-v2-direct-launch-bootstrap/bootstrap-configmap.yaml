@@ -107,12 +107,19 @@ data:
     PROOF_REPLAY_SQL = """
     SELECT public.fn_experiment_v2_direct_proof_begin(
         $1::uuid,
-        'https://github.com/VerdifyConsultancy/verdify-platform/issues/641#issuecomment-5446621623'::text,
-        tstzrange('2026-08-27 21:00:00+00'::timestamptz,
-                  '2026-08-28 05:00:00+00'::timestamptz, '[)'),
+        'https://github.com/VerdifyConsultancy/verdify-platform/issues/641#issuecomment-5448897035'::text,
+        tstzrange('2026-08-28 06:00:00+00'::timestamptz,
+                  '2026-08-28 18:00:00+00'::timestamptz, '[)'),
         'Jason Vallery'::text, 'Jason Vallery'::text,
-        'gitops:issue-641-direct-proof'::text
+        'gitops:issue-641-direct-proof-retry'::text
     )::text
+    """
+    ATTEMPT_SQL = """
+    SELECT authorization_id::text, attempt_number,
+           revision_bundle_sha256, attempt_failed, attempt_superseded,
+           resolution_kind, emergency_recovery_complete,
+           proof_receipt_id::text
+      FROM public.fn_experiment_v2_direct_proof_attempt_status($1::uuid)
     """
 
     def fail(message):
@@ -195,6 +202,7 @@ data:
         ordinary = None
         try:
             before = await lifecycle.fetchrow(STATUS_SQL, study["experiment_id"])
+            attempt = await lifecycle.fetchrow(ATTEMPT_SQL, study["experiment_id"])
             if before is None:
                 ordinary = await connect("ORDINARY_API_DB_USER", "ORDINARY_API_DB_PASSWORD")
                 created = await ordinary.fetchrow(
@@ -217,10 +225,55 @@ data:
                     "execution_phase", "admission_state", "component_enabled",
                     "design_lock_sha256", "open_exposure_count",
                 )) == (2, "randomized", "draft", "commissioning",
-                       "baseline_recovery", True, None, 0):
+                       "emergency_hold", False, None, 0):
+                    if (
+                        attempt is None
+                        or attempt["authorization_id"] is None
+                        or attempt["revision_bundle_sha256"]
+                            != observed["revision_bundle_sha256"]
+                        or attempt["attempt_superseded"]
+                        or attempt["proof_receipt_id"] is not None
+                    ):
+                        fail("emergency hold does not match the latest unresolved proof attempt")
+                    for key in ("firmware_revision", "config_revision", "registry_revision", "grid_revision"):
+                        if observed[key] != candidate[key]:
+                            fail(f"emergency proof candidate mismatch: {key}")
+                    print(json.dumps({
+                        "status": "pass",
+                        "experiment_id": study["experiment_id"],
+                        "mode": "exact-emergency-proof-awaiting-bounded-recovery",
+                        "lifecycle_status": "draft",
+                        "execution_phase": "commissioning",
+                        "admission_state": "emergency_hold",
+                        "component_enabled": False,
+                    }, sort_keys=True))
+                    return
+                if observed is not None and tuple(observed[key] for key in (
+                    "protocol_version", "experiment_kind", "lifecycle_status",
+                    "execution_phase", "component_enabled",
+                    "design_lock_sha256", "open_exposure_count",
+                )) == (2, "randomized", "draft", "commissioning",
+                       True, None, 0) and observed["admission_state"] in (
+                           "baseline_recovery", "open"):
                     for key in ("firmware_revision", "config_revision", "registry_revision", "grid_revision"):
                         if observed[key] != candidate[key]:
                             fail(f"in-progress proof candidate mismatch: {key}")
+                    if (
+                        attempt is not None
+                        and attempt["attempt_failed"]
+                        and attempt["resolution_kind"] == "bounded_baseline_recovery"
+                        and not attempt["emergency_recovery_complete"]
+                    ):
+                        print(json.dumps({
+                            "status": "pass",
+                            "experiment_id": study["experiment_id"],
+                            "mode": "bounded-emergency-recovery-in-progress",
+                            "lifecycle_status": "draft",
+                            "execution_phase": "commissioning",
+                            "admission_state": "baseline_recovery",
+                            "component_enabled": True,
+                        }, sort_keys=True))
+                        return
                     proof_work_id = await lifecycle.fetchval(
                         PROOF_REPLAY_SQL, study["experiment_id"]
                     )
@@ -233,7 +286,7 @@ data:
                         "mode": "exact-attended-proof-in-progress",
                         "lifecycle_status": "draft",
                         "execution_phase": "commissioning",
-                        "admission_state": "baseline_recovery",
+                        "admission_state": observed["admission_state"],
                         "component_enabled": True,
                     }, sort_keys=True))
                     return

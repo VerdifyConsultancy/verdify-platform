@@ -11,7 +11,7 @@ metadata:
     argocd.argoproj.io/sync-wave: "3"
 data:
   design.json: |-
-    {"analyzer_environment_sha256":"42ae5c6e47e3e41f4f2f93f13663d712a39cf79ad9d46c963ee28ef4a6191d78","context_schema_sha256":"4b2c1f430fc38c74247395d5d894ffaba0f9b0dc209c3320e63bf8309887fbf0","design_lock_sha256":"38682914860a89e1a1a574ec6dc4039d03fbc6c9d3682206e532df3f932205a0","endpoint_artifact_sha256":"cc1ea3fe3d97c5fb2b4b8247bd57a0fb462521ef5e05e3739863fd51f5a8ce8c","experiment_id":"45039c86-c1d9-52f6-a0a9-d94a17bc4b14","outcome_schema_sha256":"57c37e8091add68f0274c7c39d4b14f63645bd9fcc20dff5bedf7e3e44f58da1","power_artifact_sha256":"4d751a76465d03dc2e75034dcb398d25dc39b375d9976671bd8fffb018d237a2","randomized_pair_count":30,"schedule_schema_sha256":"fc73d212f58db91bd55bb70e3faa1431172b4339ae3b22a11d404ba95147b794","schema":"verdify-experiment-v2-direct-launch-design-v1","selector_artifact_sha256":"cb1e68a4492349da4921c7cd36c9b855ca28d66956815d0acafa4bf887c5a0eb","selector_context_cutoff_local":"23:45:00","selector_identity_sha256":"b2c0b59ec1b2c393f0ab22dfb2504a57a73b8a1297e012324b9f0cb98883d9cb","source_git_sha":"96c50d83f9cf012968a5796a21b7d98499fd3d00","study_start_local_date":"2026-08-28"}
+    {"analyzer_environment_sha256":"42ae5c6e47e3e41f4f2f93f13663d712a39cf79ad9d46c963ee28ef4a6191d78","context_schema_sha256":"4b2c1f430fc38c74247395d5d894ffaba0f9b0dc209c3320e63bf8309887fbf0","design_lock_sha256":"a93bb06118daedc0f01e9f4f818187a43b8e444ff54088b3f1561a160f109c82","endpoint_artifact_sha256":"cc1ea3fe3d97c5fb2b4b8247bd57a0fb462521ef5e05e3739863fd51f5a8ce8c","experiment_id":"45039c86-c1d9-52f6-a0a9-d94a17bc4b14","outcome_schema_sha256":"57c37e8091add68f0274c7c39d4b14f63645bd9fcc20dff5bedf7e3e44f58da1","power_artifact_sha256":"4d751a76465d03dc2e75034dcb398d25dc39b375d9976671bd8fffb018d237a2","randomized_pair_count":30,"schedule_schema_sha256":"fc73d212f58db91bd55bb70e3faa1431172b4339ae3b22a11d404ba95147b794","schema":"verdify-experiment-v2-direct-launch-design-v1","selector_artifact_sha256":"cb1e68a4492349da4921c7cd36c9b855ca28d66956815d0acafa4bf887c5a0eb","selector_context_cutoff_local":"23:45:00","selector_identity_sha256":"b2c0b59ec1b2c393f0ab22dfb2504a57a73b8a1297e012324b9f0cb98883d9cb","source_git_sha":"5fa692f40a9496d1261730480ef467e1562952be","study_start_local_date":"2026-08-29"}
   openai-preflight.py: |
     import asyncio
     import hashlib
@@ -43,7 +43,7 @@ data:
             reject_forbidden_fields=False,
         )
         context = SelectorContext(
-            "2026-08-28", now, now + timedelta(minutes=5), (), (),
+            "2026-08-29", now, now + timedelta(minutes=5), (), (),
             payload, hashlib.sha256(payload).hexdigest(),
         )
         provider = SelectorProviderAdapter(
@@ -54,7 +54,7 @@ data:
         )
         result = await provider.select(
             study_id="verdify-confirmed-component-switchback-v2-2026-08",
-            local_date="2026-08-28",
+            local_date="2026-08-29",
             invocation_key=(
                 "verdify-experiment-v2-openai-preflight-"
                 + identity.canonical_sha256[:16]

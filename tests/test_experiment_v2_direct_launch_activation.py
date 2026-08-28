@@ -80,7 +80,7 @@ def test_launch_design_recomputes_and_binds_every_runtime_artifact() -> None:
         == design["design_lock_sha256"]
     )
     assert design["experiment_id"] == EXPERIMENT_ID
-    assert design["study_start_local_date"] == "2026-08-28"
+    assert design["study_start_local_date"] == "2026-08-29"
     assert design["randomized_pair_count"] == 30
     assert design["selector_context_cutoff_local"] == "23:45:00"
     assert design["selector_artifact_sha256"] == ("cb1e68a4492349da4921c7cd36c9b855ca28d66956815d0acafa4bf887c5a0eb")
@@ -89,7 +89,7 @@ def test_launch_design_recomputes_and_binds_every_runtime_artifact() -> None:
     assert design["selector_identity_sha256"] == hashlib.sha256(selector_raw).hexdigest()
     assert design["endpoint_artifact_sha256"] == hashlib.sha256(outcome_raw).hexdigest()
     assert design["analyzer_environment_sha256"] == json.loads(selector_raw)["runtime_environment_sha256"]
-    assert design["source_git_sha"] == "96c50d83f9cf012968a5796a21b7d98499fd3d00"
+    assert design["source_git_sha"] == "5fa692f40a9496d1261730480ef467e1562952be"
     script = launch["data"]["launch.py"]
     compile(script, "launch.py", "exec")
     assert "fn_experiment_v2_direct_launch_commit" in script
@@ -159,7 +159,7 @@ def test_prod_render_retires_proof_and_activates_only_the_exact_runtime() -> Non
         assert env["VERDIFY_ACTIVE_EXPERIMENT_ID"] == EXPERIMENT_ID
         if name == "verdify-ingestor":
             annotations = deployment["spec"]["template"]["metadata"]["annotations"]
-            assert annotations["verdify.io/direct-proof-activation"] == "2026-08-27-jason-vallery"
+            assert annotations["verdify.io/direct-proof-activation"] == "2026-08-28-jason-vallery-retry"
             assert "verdify.io/direct-launch-activation" not in annotations
     lifecycle = by_kind_name[("Deployment", "experiment-v2-lifecycle")]
     lifecycle_env = {

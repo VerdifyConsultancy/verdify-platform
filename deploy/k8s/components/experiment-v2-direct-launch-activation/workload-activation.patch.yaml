@@ -9,7 +9,7 @@ spec:
         # Preserve the attended-proof pod-template token byte-for-byte while
         # authority moves to the durable launch component. The identical env
         # and annotation avoid a second Recreate of the sole device writer.
-        verdify.io/direct-proof-activation: "2026-08-27-jason-vallery"
+        verdify.io/direct-proof-activation: "2026-08-28-jason-vallery-retry"
     spec:
       containers:
         - name: ingestor

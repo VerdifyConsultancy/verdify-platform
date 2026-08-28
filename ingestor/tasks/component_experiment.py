@@ -113,6 +113,7 @@ L3_SAFE_STARTUP_ATTESTATION = "fn_experiment_v2_safe_startup_attestation"
 MAX_SNAPSHOT_AGE = timedelta(seconds=90)
 MIN_EPOCH_SEPARATION = timedelta(seconds=30)
 MAX_EPOCH_SKEW = timedelta(seconds=60)
+POST_DELIVERY_SETTLE_GRACE = timedelta(seconds=30)
 COMPONENT_EXECUTOR_INTERVAL_S = 15
 COMPONENT_EXECUTOR_ACTOR = "verdify-component-executor-v2"
 RUNTIME_INSTANCE_ID = str(uuid4())
@@ -1626,6 +1627,16 @@ class AsyncpgComponentExperimentStore:
             if min(raw.observed_at.values()) <= bundle.finished_at:
                 continue
             if raw.values != expected:
+                # ESPHome service calls acknowledge before the corresponding
+                # cfg state callback is guaranteed to reflect the new value.
+                # A full replay can therefore straddle the last setter and
+                # briefly contain the prior value even though every command
+                # returned successfully.  Consume only that bounded settling
+                # sample; a mismatch at/after the grace boundary remains
+                # durable negative evidence and yields authority atomically.
+                if raw.completed_at < bundle.finished_at + POST_DELIVERY_SETTLE_GRACE:
+                    _consume_component_cfg_source_epoch(raw.source_epoch_id)
+                    continue
                 # A complete current-lineage epoch after a completed physical
                 # bundle is negative evidence, not an ignorable non-receipt.
                 # One L3 transaction persists the raw all-48 epoch, faults the

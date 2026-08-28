@@ -107,6 +107,11 @@ $PY -m pytest -q \
   tests/test_experiment_v2_data_contract.py \
   tests/test_experiment_v2_direct_launch_runtime.py \
   tests/test_experiment_v2_direct_launch_activation.py \
+  tests/test_experiment_v2_direct_proof_attempt_status.py \
+  tests/test_experiment_v2_direct_proof_retry.py \
+  tests/test_experiment_v2_emergency_recovery_retry.py \
+  tests/test_experiment_v2_recovery_generation_guard.py \
+  tests/test_experiment_v2_recovery_failure_boundary.py \
   tests/test_experiment_verify.py \
   tests/test_experiment_workers.py \
   tests/test_firmware_builder_image.py \
@@ -119,6 +124,7 @@ $PY -m pytest -q \
   tests/test_ingestor_setpoint_placement.py \
   tests/test_lab_publish_k3s_guard.py \
   tests/test_mcp_audience_auth.py \
+  tests/test_mcp_transport_runtime.py \
   tests/test_mqtt_fanout.py \
   tests/test_no_hosted_runner_workflows.py \
   tests/test_planner_graph_contract.py \
