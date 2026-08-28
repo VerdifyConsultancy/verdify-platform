@@ -153,6 +153,7 @@ def test_proof_script_is_syntax_valid_exact_role_bound_and_non_provider() -> Non
         assert forbidden not in script
     assert "direct proof cannot start after design lock" in script
     assert "experiment authority axes changed outside the direct proof" in script
+    assert '"actual": actual, "expected": expected' in script
     assert "open_exposures=0" in script
     assert 'row["admission_state"] == "open"' in script
     assert '"direct-proof-runner-failure"' in script
