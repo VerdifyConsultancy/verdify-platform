@@ -8,7 +8,7 @@ spec:
       annotations:
         # One attended #641 proof epoch. Removing this component removes the
         # overrides and annotation, forcing the sole writer back to coarse off.
-        verdify.io/direct-proof-activation: "2026-08-28-jason-vallery-retry-2"
+        verdify.io/direct-proof-activation: "2026-08-28-jason-vallery-retry-3"
     spec:
       containers:
         - name: ingestor

@@ -44,7 +44,7 @@ def test_only_the_single_ingestor_gets_the_coarse_capability_override() -> None:
     rendered = _render()
     ingestor = _document(rendered, "Deployment", "verdify-ingestor")
     pod = ingestor["spec"]["template"]
-    assert pod["metadata"]["annotations"]["verdify.io/direct-proof-activation"] == ("2026-08-28-jason-vallery-retry-2")
+    assert pod["metadata"]["annotations"]["verdify.io/direct-proof-activation"] == ("2026-08-28-jason-vallery-retry-3")
     container = next(row for row in pod["spec"]["containers"] if row["name"] == "ingestor")
     env = {row["name"]: row for row in container["env"]}
     assert env["VERDIFY_POLICY_VECTOR_MODE"] == {
