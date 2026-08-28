@@ -571,8 +571,8 @@ data:
                     sql=OPEN_SQL,
                     args=(EXPERIMENT_ID, aggressive_work_id, ACTOR),
                     retry_fragment=(
-                        "direct aggressive admission requires its current attended "
-                        "authorization and recovered baseline"
+                        "direct aggressive admission requires the active exact attempt "
+                        "and its receipt-confirmed baseline-before work"
                     ),
                     lifecycle="draft",
                     phase="commissioning",
