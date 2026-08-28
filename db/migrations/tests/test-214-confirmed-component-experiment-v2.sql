@@ -936,6 +936,16 @@ BEGIN
         decode(repeat('04',178),'hex'), v_observations_2,
         'fw-214', 'cfg-214', 'registry-214', 'grid-214',
         v_writer_restart, 0, 'fixture');
+    SELECT count(*) INTO v_n
+      FROM public.fn_experiment_v2_read_observation_window(
+          v_exp, v_probe, v_probe_bundle, 'device-214',
+          (SELECT lease_generation
+             FROM public.control_experiments
+            WHERE experiment_id = v_exp));
+    IF v_n <> 3 THEN
+        RAISE EXCEPTION
+            'observation window did not return current plus two post-delivery rows';
+    END IF;
     v_probe_exposure := public.fn_experiment_v2_open_exposure(
         v_exp, v_probe, 'device-214', 'fixture');
     SELECT lease_generation INTO v_lease FROM public.control_experiments
