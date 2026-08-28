@@ -563,6 +563,8 @@ data:
                     retry_fragment=(
                         "direct-proof startup rollover resolution requires the latest active "
                         "reconnect-failed attempt, its recovered linked baseline, and zero open exposure",
+                        "direct-proof startup rollover resolution requires the latest active "
+                        "raw-reset attempt, its recovered root baseline, and zero open exposure",
                         "direct-proof startup rollover resolution requires two receipt-bound "
                         "recovered baseline epochs",
                     ),

@@ -285,7 +285,10 @@ def test_script_restores_only_the_bounded_latest_dump_and_runs_real_gates():
         "-f /work/db/migrations/tests/test-233-experiment-v2-direct-proof-zero-exposure-seal.sql"
     )
     fixture_234 = script.index("-f /work/db/migrations/tests/test-234-experiment-v2-direct-proof-startup-rollover.sql")
-    final_assertions = script.index("DO $assertions$", fixture_234)
+    fixture_235 = script.index(
+        "-f /work/db/migrations/tests/test-235-experiment-v2-direct-proof-raw-reset-rollover.sql"
+    )
+    final_assertions = script.index("DO $assertions$", fixture_235)
     assert (
         max(apply_positions)
         < ledger_gate
@@ -301,6 +304,7 @@ def test_script_restores_only_the_bounded_latest_dump_and_runs_real_gates():
         < fixture_232
         < fixture_233
         < fixture_234
+        < fixture_235
         < final_assertions
     )
     for candidate_migration in (
@@ -325,6 +329,7 @@ def test_script_restores_only_the_bounded_latest_dump_and_runs_real_gates():
         "232-experiment-v2-observation-pair-recovery-retry.sql",
         "233-experiment-v2-direct-proof-zero-exposure-seal.sql",
         "234-experiment-v2-direct-proof-startup-rollover.sql",
+        "235-experiment-v2-direct-proof-raw-reset-rollover.sql",
     ):
         assert candidate_migration in script
     compact_script = " ".join(script.split())
