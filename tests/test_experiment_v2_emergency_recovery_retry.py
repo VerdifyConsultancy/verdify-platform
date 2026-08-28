@@ -20,7 +20,8 @@ def _body(name: str) -> str:
 def test_recovery_successors_are_append_only_and_exactly_chained() -> None:
     sql = MIGRATION.read_text()
     assert "ADD COLUMN IF NOT EXISTS recovery_attempt_number integer NOT NULL DEFAULT 1" in sql
-    assert "DROP CONSTRAINT IF EXISTS" in sql
+    assert "constraint_row.contype = 'u'" in sql
+    assert "DROP CONSTRAINT %I" in sql
     assert "uq_experiment_v2_direct_proof_emergency_recovery_attempt" in sql
     assert "CREATE TABLE IF NOT EXISTS\n    public.experiment_v2_direct_proof_emergency_recovery_attempt_events" in sql
     assert "failed_resolution_id uuid NOT NULL UNIQUE" in sql
