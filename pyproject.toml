@@ -53,6 +53,9 @@ dev = [
     "scipy>=1.15,<2",
     "pytest>=9.0",
     "pytest-asyncio>=0.24",
+    # Protocol-level auth/inventory tests exercise the production FastMCP
+    # choke points instead of relying only on import stubs.
+    "mcp>=1.27,<2",
     "ruff>=0.11",
     "pre-commit>=4.0",
 ]

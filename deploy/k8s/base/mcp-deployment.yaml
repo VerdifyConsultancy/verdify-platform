@@ -1,13 +1,10 @@
 # Verdify MCP — the Iris/Hermes planner's ONLY tool surface (mcp/server.py,
 # FastMCP streamable-http). ClusterIP-only, non-root (handoff §3.2).
 #
-# DANGER SURFACE: mcp/server.py is on the firmware/safety change list and today
-# has NO transport auth (fails open — gravity's "MCP transport failed open"
-# anti-pattern). The target adds a fail-CLOSED auth guard, but that is a
-# tool-surface code change requiring the full firmware PR artifact set +
-# coordinator(iris-dev) + Iris compatibility validation. This manifest WRAPS/containerizes
-# the server WITHOUT changing tool semantics. NetworkPolicy restricts ingress to
-# in-namespace clients only; it is NEVER given a raw LB IP.
+# DANGER SURFACE: enforce mode authenticates every /mcp request before FastMCP
+# handles initialize or exposes tool inventory, then applies the audience matrix
+# again at tool dispatch. NetworkPolicy additionally restricts ingress to
+# in-namespace clients; this service is NEVER given a raw LB IP.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
