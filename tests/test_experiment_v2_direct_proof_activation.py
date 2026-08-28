@@ -137,6 +137,7 @@ def test_proof_script_is_syntax_valid_exact_role_bound_and_non_provider() -> Non
         "fn_experiment_v2_direct_proof_finish(",
         "fn_experiment_v2_direct_proof_attempt_status(",
         "fn_experiment_v2_direct_proof_begin_emergency_recovery(",
+        "fn_experiment_v2_direct_proof_retry_emergency_recovery(",
         "fn_experiment_v2_direct_proof_finish_emergency_recovery(",
         "fn_experiment_v2_set_admission(",
         "fn_experiment_v2_request_recovery(",
@@ -164,6 +165,8 @@ def test_proof_script_is_syntax_valid_exact_role_bound_and_non_provider() -> Non
     assert script.index("SET_RECOVERY_SQL") < script.index("REQUEST_RECOVERY_SQL")
     assert '"proof-already-sealed"' in script
     assert '"emergency-recovery-admitted"' in script
+    assert '"emergency-recovery-retry-admitted"' in script
+    assert "current writer generation is not yet stable" in script
     assert 'attempt["baseline_after_work_id"] is None' in script
 
 
