@@ -114,7 +114,13 @@ data:
             enabled,
         )
         if actual != expected:
-            fail("experiment authority axes changed outside the direct proof")
+            fail(
+                "experiment authority axes changed outside the direct proof: "
+                + json.dumps(
+                    {"actual": actual, "expected": expected},
+                    separators=(",", ":"),
+                )
+            )
         if not SHA256.fullmatch(row["revision_bundle_sha256"] or ""):
             fail("candidate revision is absent or malformed")
         if revision is not None and row["revision_bundle_sha256"] != revision:
