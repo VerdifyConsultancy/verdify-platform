@@ -260,6 +260,7 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "231-experiment-v2-emergency-recovery-zero-exposure.sql",  # seal baseline-only recovery without exposure
         "232-experiment-v2-observation-pair-recovery-retry.sql",  # choose valid fresh pair and retry failed recovery
         "233-experiment-v2-direct-proof-zero-exposure-seal.sql",  # seal baseline-after recovery without exposure
+        "234-experiment-v2-direct-proof-startup-rollover.sql",  # append-only stable-writer proof successor
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(
@@ -315,6 +316,7 @@ def test_migrate_image_carries_migrations_and_runner():
         "!db/migrations/tests/test-231-experiment-v2-emergency-recovery-zero-exposure.sql",
         "!db/migrations/tests/test-232-experiment-v2-observation-pair-recovery-retry.sql",
         "!db/migrations/tests/test-233-experiment-v2-direct-proof-zero-exposure-seal.sql",
+        "!db/migrations/tests/test-234-experiment-v2-direct-proof-startup-rollover.sql",
         "!db/ledger",
         "db/ledger/*",
         "!db/ledger/*.sql",
@@ -323,7 +325,7 @@ def test_migrate_image_carries_migrations_and_runner():
     assert indexes == sorted(indexes), "Kaniko re-include rules must stay ordered"
 
     # The production migrate image remains free of the broad SQL fixture tree.
-    # Only the thirteen vertical fixtures executed by the one-release restore
+    # Only the fourteen vertical fixtures executed by the one-release restore
     # rehearsal are admitted into /db/migrations/tests.
     test_fixture_reincludes = [line for line in ignore_lines if line.startswith("!db/migrations/tests/")]
     assert test_fixture_reincludes == [
@@ -340,6 +342,7 @@ def test_migrate_image_carries_migrations_and_runner():
         "!db/migrations/tests/test-231-experiment-v2-emergency-recovery-zero-exposure.sql",
         "!db/migrations/tests/test-232-experiment-v2-observation-pair-recovery-retry.sql",
         "!db/migrations/tests/test-233-experiment-v2-direct-proof-zero-exposure-seal.sql",
+        "!db/migrations/tests/test-234-experiment-v2-direct-proof-startup-rollover.sql",
     ]
 
 
