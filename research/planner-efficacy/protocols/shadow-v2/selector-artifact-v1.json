@@ -45,7 +45,7 @@
   "schema": "verdify-experiment-v2-selector-artifact-v1",
   "source_contract": {
     "provider_source": "experiment_orchestrator/provider.py",
-    "provider_source_sha256": "1e4e62903120901883996c2d3f17066eeb313679faec4ad6780b901ed30661b0",
+    "provider_source_sha256": "9d2ef2e49c69e0933e741137b8ebc84e56b40c149740b4a34807afde0c596744",
     "selector_contract_source": "experiment_orchestrator/contracts.py",
     "selector_contract_source_sha256": "bf2351f1f81a4c53ca9ac94efa98d1fc783c2d618824f4cdfe05dbacd976cf4b",
     "verified_content_git_sha": "b9c1e568e8562525e083d106e94b67b5b64a6039"
