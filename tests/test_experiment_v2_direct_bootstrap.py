@@ -146,11 +146,20 @@ def test_prod_render_contains_bootstrap_and_keeps_experiment_disabled() -> None:
         "argocd.argoproj.io/hook": "PreSync",
         "argocd.argoproj.io/hook-delete-policy": "BeforeHookCreation",
         "argocd.argoproj.io/sync-wave": "2",
+        "operations.vallery.net/temporary-node-selection": ("vm-k3s-node7:cni-pod-sandbox-contention:2026-08-28"),
     }
     pod = job["spec"]["template"]
     assert pod["metadata"]["labels"]["app.kubernetes.io/component"] == "migrate"
     assert "hostNetwork" not in pod["spec"]
     assert pod["spec"]["automountServiceAccountToken"] is False
+    node_match = pod["spec"]["affinity"]["nodeAffinity"]["requiredDuringSchedulingIgnoredDuringExecution"][
+        "nodeSelectorTerms"
+    ][0]["matchExpressions"][0]
+    assert node_match == {
+        "key": "kubernetes.io/hostname",
+        "operator": "In",
+        "values": ["vm-k3s-node7"],
+    }
     containers = {container["name"]: container for container in pod["spec"]["containers"]}
     assert set(containers) == {"bootstrap-and-attest"}
     container = containers["bootstrap-and-attest"]
