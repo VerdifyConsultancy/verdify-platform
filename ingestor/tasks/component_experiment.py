@@ -114,7 +114,8 @@ MAX_SNAPSHOT_AGE = timedelta(seconds=90)
 MIN_EPOCH_SEPARATION = timedelta(seconds=30)
 MAX_EPOCH_SKEW = timedelta(seconds=60)
 # ESPHome acknowledges setter services before the corresponding cfg state
-# callbacks; this window applies only to complete observations before its edge.
+# callbacks. Only complete current-lineage observations timestamped before
+# this edge are settling samples; later mismatches remain durable evidence.
 POST_DELIVERY_SETTLE_GRACE = timedelta(seconds=30)
 COMPONENT_EXECUTOR_INTERVAL_S = 15
 COMPONENT_EXECUTOR_ACTOR = "verdify-component-executor-v2"
