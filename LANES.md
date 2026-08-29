@@ -1,5 +1,10 @@
 # Verdify — Floating-Corridor Replan: Lanes, Waves & Worktree Kickoff
 
+> **Current audit (2026-08-29):** current GitHub lane ownership, sprint
+> sequencing, and all open-work handoffs are recorded in
+> [`docs/audits/work-pending-2026-08-29.md`](docs/audits/work-pending-2026-08-29.md).
+> This file remains the detailed historical floating-corridor decomposition.
+
 > Optional ownership and planning map. Lanes describe likely domain ownership;
 > they are not dispatch, permission, approval, or routing boundaries. Work
 > directly from the user's request, current repository state, and live evidence.

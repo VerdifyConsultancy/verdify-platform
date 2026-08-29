@@ -1,11 +1,16 @@
 # Verdify Platform Project Board
 
+> **Current audit (2026-08-29):** the complete issue inventory and normalized
+> milestone/lane/sprint model are recorded in
+> [`docs/audits/work-pending-2026-08-29.md`](docs/audits/work-pending-2026-08-29.md).
+> Board/card counts below predate that audit unless explicitly dated later.
+
 > Optional planning and status reference. Project boards and issue metadata
 > record context; they are not execution authority, prerequisites, or a required
 > workflow. Work directly from the user's request, current repository state, and
 > live evidence.
 
-Last updated: 2026-07-14
+Last updated: 2026-08-29
 
 Agent name: `verdify-platform`
 

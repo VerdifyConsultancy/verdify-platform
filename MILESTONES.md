@@ -1,10 +1,15 @@
 # Verdify Platform Milestones
 
+> **Current audit (2026-08-29):** milestone membership, current sprint sequence,
+> and all 106 starting issue dispositions are recorded in
+> [`docs/audits/work-pending-2026-08-29.md`](docs/audits/work-pending-2026-08-29.md).
+> Counts and sequencing below are a historical controller-replan snapshot.
+
 > Optional planning and status reference. Epics and milestones record context;
 > they are not execution authority, prerequisites, or a required workflow. Work
 > directly from the user's request, current repository state, and live evidence.
 
-Last updated: 2026-07-14
+Last updated: 2026-08-29
 
 Agent name: `verdify-platform`
 

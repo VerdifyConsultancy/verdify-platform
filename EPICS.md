@@ -1,10 +1,15 @@
 # Verdify Platform Epics
 
+> **Current audit (2026-08-29):** the active epic/outcome boundaries, six-step
+> sprint sequence, and complete issue disposition are in
+> [`docs/audits/work-pending-2026-08-29.md`](docs/audits/work-pending-2026-08-29.md).
+> The controller sprint proposal below is retained as historical context.
+
 > Optional planning and status reference. Epics and milestones record context;
 > they are not execution authority, prerequisites, or a required workflow. Work
 > directly from the user's request, current repository state, and live evidence.
 
-Last updated: 2026-06-23
+Last updated: 2026-08-29
 
 Agent name: `verdify-platform`
 
