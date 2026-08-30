@@ -160,13 +160,17 @@ class TestDispatcherWiring:
         ingestor = (REPO_ROOT / "ingestor" / "ingestor.py").read_text()
         shared_source = (REPO_ROOT / "ingestor" / "shared.py").read_text()
         push_helper = (REPO_ROOT / "ingestor" / "esp32_push.py").read_text()
-        assert "shared.recently_pushed[param] = time.time()" in body
+        assert "def _commit_sent_cache(" in push_helper
+        assert "_commit_sent_cache(quantum_outcomes)" in push_helper
+        assert push_helper.index("await _emit_state_until_recorded(request, quantum_outcomes)") < push_helper.index(
+            "_commit_sent_cache(quantum_outcomes)"
+        )
         assert "LISTEN/NOTIFY real-time listener" in body
         assert "reconnect reconcile" in body
         assert "shared.cfg_readback" in body
         assert "cfg_readback: dict[str, float]" in shared_source
-        assert "shared.cfg_readback[cfg_param]" in ingestor
-        assert "await asyncio.sleep(2)" in ingestor
+        assert "shared.note_cfg_readback_observed(cfg_param, val, generation)" in ingestor
+        assert "action=awaiting_readbacks" in ingestor
         assert "_BATCH_PAUSE_EVERY" in push_helper
         assert "_MIN_COMMAND_INTERVAL_S" in push_helper
         assert "async with _PUSH_LOCK" in push_helper
@@ -198,79 +202,32 @@ class TestDispatcherWiring:
         assert "shared.recently_pushed.pop(param, None)" not in body
         assert "shared.recently_pushed_values.pop(param, None)" not in body
 
-    def test_reconnect_seeds_persisted_band_but_force_reconciles_reverting_lighting(self):
-        # #430 Tier 1: the reconnect seed no longer BLANKET-excludes all
-        # BAND_DRIVEN_PARAMS (which force-re-pushed ~74 constants/reconnect ≈
-        # 7,400/day of ESP32 heap churn, #428). NVS-persisted crop-band params
-        # (restore_value:yes) are now seeded from cfg_readback; corrective re-sync
-        # is provided per-param by _readback_drift. BUT the reboot-reverting
-        # lighting params (LIGHTING_POLICY_PARAMS | LIGHTING_CIRCUIT_LUX_PARAMS,
-        # restore_value:no) MUST stay force-reconciled so a reverted/non-republished
-        # device cannot strand the grow lights (the 2026-06-16 incident).
+    def test_reconnect_waits_for_current_readbacks_and_limits_unobserved_restore(self):
+        # #433 startup correctness: every routed field is compared against the
+        # exact current socket generation. Native Number/Switch state covers
+        # legacy fields without cfg_* diagnostics, and a hard ceiling prevents
+        # a broad reconnect wave from escaping if that contract ever drifts.
         body = self._read()
         ingestor = (REPO_ROOT / "ingestor" / "ingestor.py").read_text()
-        # The old blanket force-push log/behavior is gone.
         assert "forcing %d band setpoint(s)" not in body
-        # Reboot-reverting params (lighting + served-band edges + zone vpd_target)
-        # are force-reconciled (unseeded), not delta-seeded.
-        assert "RECONNECT_FORCE_RECONCILE = (" in body
-        assert "LIGHTING_POLICY_PARAMS" in body and "LIGHTING_CIRCUIT_LUX_PARAMS" in body
-        assert "HOUSE_BAND_PARAMS" in body
-        assert 'p for p in CROP_BAND_REG if p.startswith("vpd_target_")' in body
-        assert "if param in RECONNECT_FORCE_RECONCILE:" in body
-        # The 2026-06-16 grow-light-strand rationale is preserved in the seed comment.
-        assert "2026-06-16" in body
-        # readback_drift remains the authoritative re-sync gate at every push site.
+        assert "RECONNECT_UNOBSERVED_RESTORE_PARAMS" in body
+        assert "MAX_RECONNECT_COMMANDS = 12" in body
+        assert "action=blocked_broad_restore" in body
+        assert "shared.current_cfg_readbacks(reconnect_generation)" in body
+        assert "shared.transport_readbacks_ready(reconnect_generation)" in body
+        assert "action=awaiting_readbacks" in ingestor
+        assert "action=readbacks_complete" in ingestor
         assert "and not _readback_drift(param, val)" in body
-        # The dispatcher-owned ESP32 echo-ignore (ingestor side) is unchanged.
         assert "setpoint_changes ignored dispatcher-owned ESP32 echo" in ingestor
         assert "BAND_DRIVEN_PARAMS" in ingestor
 
-    def test_no_reboot_reverting_band_param_is_delta_seeded(self):
-        # ENFORCED INVARIANT (#430 Tier 1, validation case D): every band param that
-        # the reconnect delta-seed keeps (BAND_DRIVEN_PARAMS minus the force-
-        # reconcile set) must be restore_value:yes in firmware globals, so a
-        # reverted/non-republished device can never be masked by a stale
-        # cfg_readback and stranded. A future restore_value:no addition that slips
-        # into the delta-seed fails here.
-        import re as _re
+    def test_reconnect_unobserved_restore_params_have_no_current_readback_route(self):
+        from entity_map import CFG_READBACK_MAP, SETPOINT_MAP
+        from tasks.dispatcher import _RECONNECT_SAFETY_CANDIDATES, RECONNECT_UNOBSERVED_RESTORE_PARAMS
 
-        from tasks._common import (
-            BAND_DRIVEN_PARAMS,
-            CROP_BAND_REG,
-            HOUSE_BAND_PARAMS,
-            LIGHTING_CIRCUIT_LUX_PARAMS,
-            LIGHTING_POLICY_PARAMS,
-        )
-
-        force_reconcile = (
-            LIGHTING_POLICY_PARAMS
-            | LIGHTING_CIRCUIT_LUX_PARAMS
-            | HOUSE_BAND_PARAMS
-            | frozenset(p for p in CROP_BAND_REG if p.startswith("vpd_target_"))
-        )
-        delta_seeded = BAND_DRIVEN_PARAMS - force_reconcile
-
-        gl = (REPO_ROOT / "firmware" / "greenhouse" / "globals.yaml").read_text()
-        restore = {}
-        for blk in _re.split(r"\n  - id: ", gl)[1:]:
-            gid = blk.splitlines()[0].strip()
-            m = _re.search(r"restore_value:\s*(yes|no)", blk)
-            restore[gid] = m.group(1) if m else None
-
-        def reverts(param: str) -> bool:
-            # Direct-name / common-prefix mapping to a firmware global. Params with
-            # no direct global are on-chip-derived from persisted anchors (safe).
-            for gid in (param, f"band_{param}", f"num_{param}"):
-                if gid in restore:
-                    return restore[gid] == "no"
-            return False
-
-        offenders = sorted(p for p in delta_seeded if reverts(p))
-        assert not offenders, (
-            f"restore_value:no band params in the delta-seed (Case D exposure): {offenders} "
-            "— add them to RECONNECT_FORCE_RECONCILE in dispatcher.py"
-        )
+        readback_params = frozenset(CFG_READBACK_MAP.values()) | frozenset(SETPOINT_MAP.values())
+        assert _RECONNECT_SAFETY_CANDIDATES <= readback_params
+        assert RECONNECT_UNOBSERVED_RESTORE_PARAMS.isdisjoint(readback_params)
 
     def test_dispatcher_repushes_active_plan_when_cfg_readback_drifts(self):
         body = self._read()
@@ -652,10 +609,13 @@ class TestContractDriftGuardrails:
     def test_post_boot_readback_repair_covers_static_and_planner_paths(self):
         ingestor_source = (REPO_ROOT / "ingestor" / "ingestor.py").read_text()
         tasks_source = _tasks_source()
-        assert "shared.force_setpoint_push.set()" in ingestor_source
-        assert "prev is not None and not math.isclose" in ingestor_source
+        shared_source = (REPO_ROOT / "ingestor" / "shared.py").read_text()
+        assert "force_setpoint_push.set()" in shared_source
+        assert "transport_expected_cfg_readbacks <= transport_observed_cfg_readbacks" in shared_source
+        assert "shared.force_setpoint_push.set()" not in ingestor_source
+        assert "prev_generation == generation" in ingestor_source
         assert "if shared.force_setpoint_push.is_set():" in tasks_source
-        assert "_last_pushed.clear()" in tasks_source
+        assert "for param in RECONNECT_UNOBSERVED_RESTORE_PARAMS:" in tasks_source
         assert "def _readback_drift(param: str, desired: float) -> bool:" in tasks_source
         assert 'for param in ("temp_low", "temp_high", "vpd_low", "vpd_high"):' in tasks_source
         assert (
