@@ -117,6 +117,7 @@ $PY -m pytest -q \
   tests/test_experiment_v2_direct_proof_recovery_range_rollover.py \
   tests/test_experiment_v2_direct_proof_retry.py \
   tests/test_experiment_v2_gate_r_activation.py \
+  tests/test_experiment_v2_gate_r_readiness_activation.py \
   tests/test_experiment_v2_proof_packet.py \
   tests/test_experiment_v2_readiness_guard.py \
   tests/test_experiment_v2_emergency_recovery_retry.py \

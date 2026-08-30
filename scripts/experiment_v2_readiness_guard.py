@@ -82,6 +82,11 @@ CORE_WORKLOADS = {
     "verdify-mcp",
 }
 APPLICATION_IMAGES = {"verdify-api", "verdify-ingestor", "verdify-mcp"}
+M8_DECISION_URL = "https://github.com/VerdifyConsultancy/verdify-platform/issues/750"
+GATE_R_ISSUE_URL = "https://github.com/VerdifyConsultancy/verdify-platform/issues/641"
+INFORMATIONAL_MAINTENANCE_URLS = {
+    f"https://github.com/VerdifyConsultancy/verdify-platform/issues/{issue}" for issue in (298, 368, 424, 427, 433)
+}
 SHA40 = re.compile(r"^[0-9a-f]{40}$")
 SHA64 = re.compile(r"^[0-9a-f]{64}$")
 DIGEST = re.compile(r"^sha256:[0-9a-f]{64}$")
@@ -738,7 +743,15 @@ def _validate_climate(
     return len(contributors), contributors, excluded, diagnostic_contradiction
 
 
-def _validate_alerts(raw: object, *, now: datetime, blockers: list[str], warnings: list[str]) -> None:
+def _validate_alerts(
+    raw: object,
+    *,
+    now: datetime,
+    mode: Mode,
+    expected: ExpectedPins,
+    blockers: list[str],
+    warnings: list[str],
+) -> None:
     rows = _array(raw, "alerts")
     required_scopes = {"south_wall_probe", "hydroponic_monitor"}
     observed_scopes: set[str] = set()
@@ -781,7 +794,23 @@ def _validate_alerts(raw: object, *, now: datetime, blockers: list[str], warning
             else:
                 warnings.append(f"accepted_nonblocking_degradation:{scope}")
         elif classification != "informational_noncausal":
-            blockers.append(f"unsupported_alert_classification:{scope}")
+            if (
+                classification == "authorized_recovery_target"
+                and mode == "recovery"
+                and scope == f"recovery_target:expired_work_not_terminal:{expected.experiment_id}"
+                and row["decision_issue_url"] == GATE_R_ISSUE_URL
+                and row["maintenance_issue_url"] == ""
+            ):
+                warnings.append("authorized_recovery_target:expired_work_not_terminal")
+            else:
+                blockers.append(f"unsupported_alert_classification:{scope}")
+        elif (
+            row["decision_issue_url"] != M8_DECISION_URL
+            or row["maintenance_issue_url"] not in INFORMATIONAL_MAINTENANCE_URLS
+        ):
+            blockers.append(f"informational_alert_linkage_invalid:{scope}")
+        else:
+            warnings.append(f"informational_noncausal:{scope}")
     missing = required_scopes - observed_scopes
     if missing:
         blockers.append(f"required_degradation_alerts_missing:{sorted(missing)}")
@@ -1273,7 +1302,7 @@ def evaluate_packet(
         "climate_qualification_source_revision",
         blockers,
     )
-    _validate_alerts(top["alerts"], now=now, blockers=blockers, warnings=warnings)
+    _validate_alerts(top["alerts"], now=now, mode=mode, expected=expected, blockers=blockers, warnings=warnings)
     _validate_dependencies(top["dependencies"], expected=expected, repo_root=repo_root, blockers=blockers)
     proof_preflight_receipts = _validate_evidence(
         top["evidence"],

@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../overlays/prod
+
+namespace: verdify-prod
+
+components:
+  - ../../components/experiment-v2-gate-r-readiness
+
+patches:
+  - path: activation-values.patch.yaml

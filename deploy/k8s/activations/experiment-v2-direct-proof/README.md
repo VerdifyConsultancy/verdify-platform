@@ -21,11 +21,18 @@ attempt by changing only `activation-values.patch.yaml` in a dedicated commit:
 3. Replace the invalid Job image with the exact current production API digest,
    add only any currently justified scheduling constraints, then set the Job's
    `spec.suspend` to `false`.
-4. Render this directory, inspect the complete diff, and point Argo at this path
-   only for the authorized attempt. Never add the proof component back to the
-   ordinary production kustomization.
+4. Add the component and exact activation patch to the canonical production
+   overlay, render and inspect the complete diff, then reconcile the complete
+   production Application without pruning or resource selection. Keep its Argo
+   source path at `deploy/k8s/overlays/prod`.
 5. After the immutable receipt (success or failure), return Argo to the ordinary
-   production path. Do not rewrite or reuse an earlier attempt.
+   component-off production overlay. Do not rewrite or reuse an earlier attempt.
+
+The activation does not try to embed its own unknowable commit SHA. At every
+boundary the read-only collector obtains the exact current GitOps revision from
+the Argo Application; the guard then binds all provenance and the full-sync
+operation revision to that exact SHA. The explicit application-source value must
+still match the running image attestation throughout the attempt.
 
 The database proof/attempt/recovery ledgers remain append-only. Removing an
 expired manifest from ordinary desired state does not delete prior evidence.

@@ -151,6 +151,30 @@ def test_recovery_gate_requires_component_authority_off() -> None:
     assert "recovery_component_authority_not_off" in result["blockers"]
 
 
+def test_exact_expired_work_alert_is_a_recovery_target_only() -> None:
+    alert = {
+        "alert_id": "10453",
+        "alert_type": "component_experiment_integrity",
+        "scope": f"recovery_target:expired_work_not_terminal:{EXPERIMENT_ID}",
+        "disposition": "acknowledged",
+        "observed_at": NOW,
+        "classification": "authorized_recovery_target",
+        "causal": False,
+        "decision_issue_url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/641",
+        "maintenance_issue_url": "",
+    }
+    recovery = _apply(BASE, RECOVERY_OVERLAY["operations"])
+    recovery["alerts"].append(alert)
+    result = _evaluate(recovery, RECOVERY_OVERLAY)
+    assert result["blockers"] == []
+    assert "authorized_recovery_target:expired_work_not_terminal" in result["warnings"]
+
+    proof = copy.deepcopy(BASE)
+    proof["alerts"].append(alert)
+    result = _evaluate(proof, {"operations": []})
+    assert any(blocker.startswith("unsupported_alert_classification:recovery_target") for blocker in result["blockers"])
+
+
 def _run(
     packet: dict,
     tmp_path: Path,
