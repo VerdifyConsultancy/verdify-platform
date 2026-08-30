@@ -75,6 +75,7 @@ $PY -m pytest -q \
   tests/test_21_config_revision.py \
   tests/test_component_grid_capture.py \
   tests/test_component_prefix_replay.py \
+  tests/test_db_backup_retry_classifier.py \
   tests/test_action_log_policy_identity.py \
   tests/test_anchor_service_sync.py \
   tests/test_api_public_output_policy.py \
