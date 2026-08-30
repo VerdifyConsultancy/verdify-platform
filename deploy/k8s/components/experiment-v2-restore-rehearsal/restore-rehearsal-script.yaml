@@ -682,7 +682,9 @@ data:
       234-experiment-v2-direct-proof-startup-rollover.sql \
       235-experiment-v2-direct-proof-raw-reset-rollover.sql \
       236-experiment-v2-direct-proof-preclaim-raw-reset-rollover.sql \
-      237-experiment-v2-direct-proof-recovery-range-rollover.sql
+      237-experiment-v2-direct-proof-recovery-range-rollover.sql \
+      238-experiment-v2-separate-day1-authorization.sql \
+      239-experiment-v2-orphaned-preclaim-recovery.sql
     do
       expected_sha256="$(sha256sum -- "/work/db/migrations/${migration}" | awk '{print $1}')"
       ledger_sha256="$(psql -X -v ON_ERROR_STOP=1 -At -d "${PGDATABASE}" \
@@ -740,14 +742,11 @@ data:
       -f /work/db/migrations/tests/test-232-experiment-v2-observation-pair-recovery-retry.sql
     psql -X -v ON_ERROR_STOP=1 -d "${PGDATABASE}" \
       -f /work/db/migrations/tests/test-233-experiment-v2-direct-proof-zero-exposure-seal.sql
+    # Migrations 234-237 are immutable predecessor definitions of the same
+    # function.  Their fixtures remain in source history, but only the final
+    # replacement can be asserted after the complete ledger replay.
     psql -X -v ON_ERROR_STOP=1 -d "${PGDATABASE}" \
-      -f /work/db/migrations/tests/test-234-experiment-v2-direct-proof-startup-rollover.sql
-    psql -X -v ON_ERROR_STOP=1 -d "${PGDATABASE}" \
-      -f /work/db/migrations/tests/test-235-experiment-v2-direct-proof-raw-reset-rollover.sql
-    psql -X -v ON_ERROR_STOP=1 -d "${PGDATABASE}" \
-      -f /work/db/migrations/tests/test-236-experiment-v2-direct-proof-preclaim-raw-reset-rollover.sql
-    psql -X -v ON_ERROR_STOP=1 -d "${PGDATABASE}" \
-      -f /work/db/migrations/tests/test-237-experiment-v2-direct-proof-recovery-range-rollover.sql
+      -f /work/db/migrations/tests/test-239-experiment-v2-orphaned-preclaim-recovery.sql
     psql -X -v ON_ERROR_STOP=1 -d "${PGDATABASE}" <<'SQL'
     DO $assertions$
     BEGIN
@@ -904,4 +903,4 @@ data:
     END;
     $assertions$;
     SQL
-    echo "[restore-rehearsal] PASS: recent-dump schema/ACL replay and v2 vertical fixtures; exact 214-222 ledger and runtime facade DML verified (non-superuser rehearsal; not proof of production-superuser denial)"
+    echo "[restore-rehearsal] PASS: recent-dump schema/ACL replay and v2 vertical fixtures; exact 214-239 ledger and runtime facade DML verified (non-superuser rehearsal; not proof of production-superuser denial)"
