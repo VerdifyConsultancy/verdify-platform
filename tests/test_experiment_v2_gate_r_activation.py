@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -13,8 +14,10 @@ ACTIVATION = ROOT / "deploy/k8s/activations/experiment-v2-gate-r"
 
 
 def _render(path: Path) -> list[dict]:
+    standalone = shutil.which("kustomize")
+    command = [standalone, "build", str(path)] if standalone else ["kubectl", "kustomize", str(path)]
     rendered = subprocess.run(
-        ["kubectl", "kustomize", str(path)],
+        command,
         check=True,
         capture_output=True,
         text=True,
