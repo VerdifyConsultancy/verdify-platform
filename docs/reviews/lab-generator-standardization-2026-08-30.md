@@ -58,7 +58,9 @@ controls, current generated content, and auto-loading Grafana panels.
   retains the four empty names in `_catalog` after garbage collection (the
   behavior tracked by project-zot/zot#3299); backing object storage was not
   modified directly. A checksum-sealed manifest inventory was retained locally
-  as an emergency rollback record, while Git history remains the rebuild path.
+  as an emergency rollback record and is now committed under
+  `docs/evidence/lab-zot-retirement-2026-08-30/`, while Git history remains the
+  rebuild path.
 
 ## Delivery record
 
