@@ -1,0 +1,369 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: experiment-v2-gate-r
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: experiment-v2-gate-r
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+data:
+  gate_r.py: |
+    import asyncio
+    import hashlib
+    import json
+    import os
+    import re
+    import uuid
+    from datetime import UTC, datetime, timedelta
+
+    import asyncpg
+
+    SHA256 = re.compile(r"^[0-9a-f]{64}$")
+    SOURCE_REVISION = re.compile(r"^[0-9a-f]{40}$")
+    CONFIG_REVISION = re.compile(r"^[0-9a-f]{12}$")
+
+    def required(name):
+        value = os.environ.get(name, "").strip()
+        if not value or value.startswith("REPLACE_BEFORE_ACTIVATION"):
+            raise RuntimeError(f"Gate R activation value is absent: {name}")
+        return value
+
+    def required_uuid(name):
+        value = required(name)
+        try:
+            return uuid.UUID(value)
+        except ValueError as exc:
+            raise RuntimeError(f"Gate R activation UUID is invalid: {name}") from exc
+
+    def required_time(name):
+        value = required(name)
+        try:
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError as exc:
+            raise RuntimeError(f"Gate R activation time is invalid: {name}") from exc
+        if parsed.tzinfo is None or parsed.utcoffset() != timedelta(0):
+            raise RuntimeError(f"Gate R activation time must be UTC: {name}")
+        return parsed.astimezone(UTC)
+
+    EXPERIMENT_ID = required_uuid("VERDIFY_GATE_R_EXPERIMENT_ID")
+    PREDECESSOR_AUTHORIZATION_ID = required_uuid(
+        "VERDIFY_GATE_R_PREDECESSOR_AUTHORIZATION_ID"
+    )
+    EXPECTED_AGGRESSIVE_WORK_ID = required_uuid(
+        "VERDIFY_GATE_R_EXPECTED_AGGRESSIVE_WORK_ID"
+    )
+    FACILITY_AUTHORIZATION_REF = required("VERDIFY_GATE_R_FACILITY_AUTHORIZATION_REF")
+    AUTHORIZED_FROM = required_time("VERDIFY_GATE_R_AUTHORIZED_FROM")
+    AUTHORIZED_TO = required_time("VERDIFY_GATE_R_AUTHORIZED_TO")
+    ACTOR = required("VERDIFY_GATE_R_ACTOR")
+    EXPECTED_REVISION = required("VERDIFY_GATE_R_EXPECTED_REVISION_BUNDLE_SHA256")
+    EXPECTED_CONFIG_REVISION = required("VERDIFY_GATE_R_EXPECTED_CONFIG_REVISION")
+    EXPECTED_REGISTRY_REVISION = required("VERDIFY_GATE_R_EXPECTED_REGISTRY_REVISION")
+    EXPECTED_GRID_REVISION = required("VERDIFY_GATE_R_EXPECTED_GRID_REVISION")
+    EXPECTED_LEASE = int(required("VERDIFY_GATE_R_EXPECTED_LEASE_GENERATION"))
+    EXPECTED_WRITER_GENERATION = int(
+        required("VERDIFY_GATE_R_EXPECTED_WRITER_GENERATION")
+    )
+    EXPECTED_CONNECTION_GENERATION = int(
+        required("VERDIFY_GATE_R_EXPECTED_CONNECTION_GENERATION")
+    )
+    EXPECTED_ATTEMPT_NUMBER = int(
+        required("VERDIFY_GATE_R_EXPECTED_ATTEMPT_NUMBER")
+    )
+    EXPECTED_RECOVERY_WORK_ID = required_uuid(
+        "VERDIFY_GATE_R_EXPECTED_RECOVERY_WORK_ID"
+    )
+    EXPECTED_RECOVERY_EVIDENCE_SHA256 = required(
+        "VERDIFY_GATE_R_EXPECTED_RECOVERY_EVIDENCE_SHA256"
+    )
+    EXPECTED_MIGRATION_SHA256 = required("VERDIFY_GATE_R_MIGRATION_239_SHA256")
+    READINESS_PACKET_SHA256 = required("VERDIFY_GATE_R_READINESS_PACKET_SHA256")
+    SOURCE_PIN = required("VERDIFY_GATE_R_SOURCE_PIN")
+    APPLICATION_SOURCE = required("VERDIFY_GATE_R_APPLICATION_SOURCE")
+    WRITER_RUNTIME_REF = required("VERDIFY_GATE_R_WRITER_RUNTIME_REF")
+
+    if EXPERIMENT_ID != uuid.UUID("45039c86-c1d9-52f6-a0a9-d94a17bc4b14"):
+        raise RuntimeError("Gate R activation targets an unexpected experiment")
+    if not timedelta(minutes=3) <= AUTHORIZED_TO - AUTHORIZED_FROM <= timedelta(hours=12):
+        raise RuntimeError("Gate R activation window must be between 3 minutes and 12 hours")
+    if not SHA256.fullmatch(EXPECTED_REVISION):
+        raise RuntimeError("Gate R expected revision bundle is malformed")
+    if not CONFIG_REVISION.fullmatch(EXPECTED_CONFIG_REVISION):
+        raise RuntimeError("Gate R expected config revision is malformed")
+    if not all(
+        SHA256.fullmatch(value)
+        for value in (
+            EXPECTED_MIGRATION_SHA256,
+            EXPECTED_RECOVERY_EVIDENCE_SHA256,
+            READINESS_PACKET_SHA256,
+        )
+    ):
+        raise RuntimeError("Gate R migration/readiness digest is malformed")
+    if not all(SOURCE_REVISION.fullmatch(value) for value in (SOURCE_PIN, APPLICATION_SOURCE)):
+        raise RuntimeError("Gate R source identity is malformed")
+    if min(
+        EXPECTED_LEASE,
+        EXPECTED_WRITER_GENERATION,
+        EXPECTED_CONNECTION_GENERATION,
+        EXPECTED_ATTEMPT_NUMBER,
+    ) < 1:
+        raise RuntimeError("Gate R expected lease/writer/connection/attempt axis is invalid")
+
+    STATUS_SQL = """
+    SELECT experiment_id, protocol_version, experiment_kind, lifecycle_status,
+           execution_phase, admission_state, component_enabled,
+           lease_generation, revision_bundle_sha256, config_revision,
+           registry_revision, grid_revision, open_exposure_count
+      FROM public.fn_experiment_v2_api_status($1::uuid)
+    """
+    ATTEMPT_SQL = """
+    SELECT authorization_id, attempt_number, revision_bundle_sha256,
+           aggressive_work_id, baseline_after_work_id, attempt_failed,
+           attempt_superseded, resolution_id, emergency_recovery_complete,
+           proof_receipt_id
+      FROM public.fn_experiment_v2_direct_proof_attempt_status($1::uuid)
+    """
+    MIGRATION_SQL = """
+    SELECT sha256
+      FROM public.schema_migrations
+     WHERE filename = 'db/migrations/239-experiment-v2-orphaned-preclaim-recovery.sql'
+       AND source = 'db/migrations' AND seq = 239
+    """
+    OPS_SQL = """
+    SELECT writer_generation, connection_generation, open_exposure_count,
+           observation_truth, safety_state, alert_reason
+      FROM public.fn_experiment_v2_ops_status()
+     WHERE experiment_id = $1::uuid
+    """
+    SET_RECOVERY_SQL = """
+    SELECT (public.fn_experiment_v2_set_admission(
+        $1::uuid, 'baseline_recovery'::text, $2::text, $3::text
+    )).experiment_id
+    """
+    RESOLVE_SQL = """
+    SELECT resolution_id, recovery_work_id, recovery_evidence_sha256
+      FROM public.fn_experiment_v2_direct_proof_resolve_startup_rollover(
+        $1::uuid, $2::uuid, $3::text, $4::text
+    )
+    """
+
+    def assert_clock():
+        now = datetime.now(UTC)
+        if not AUTHORIZED_FROM <= now < AUTHORIZED_TO:
+            raise RuntimeError("Gate R bounded authorization window is not active")
+
+    def assert_before(status, attempt, ops):
+        expected = (
+            EXPERIMENT_ID,
+            2,
+            "randomized",
+            "draft",
+            "commissioning",
+            "emergency_hold",
+            False,
+            EXPECTED_LEASE,
+            EXPECTED_REVISION,
+            EXPECTED_CONFIG_REVISION,
+            EXPECTED_REGISTRY_REVISION,
+            EXPECTED_GRID_REVISION,
+            0,
+        )
+        actual = tuple(status) if status is not None else None
+        if actual != expected:
+            raise RuntimeError("Gate R pre-state axes do not match the activation record")
+        if attempt is None:
+            raise RuntimeError("Gate R predecessor attempt is absent")
+        if (
+            attempt["authorization_id"] != PREDECESSOR_AUTHORIZATION_ID
+            or attempt["attempt_number"] != EXPECTED_ATTEMPT_NUMBER
+            or attempt["revision_bundle_sha256"] != EXPECTED_REVISION
+            or attempt["aggressive_work_id"] != EXPECTED_AGGRESSIVE_WORK_ID
+            or attempt["baseline_after_work_id"] is not None
+            or attempt["attempt_failed"]
+            or attempt["attempt_superseded"]
+            or attempt["resolution_id"] is not None
+            or attempt["emergency_recovery_complete"]
+            or attempt["proof_receipt_id"] is not None
+        ):
+            raise RuntimeError("Gate R retained predecessor lineage is not exact and unresolved")
+
+        expected_ops = (
+            EXPECTED_WRITER_GENERATION,
+            EXPECTED_CONNECTION_GENERATION,
+            0,
+            "no_current_work",
+            "facility_emergency_hold",
+            "expired_work_not_terminal",
+        )
+        if ops is None or tuple(ops) != expected_ops:
+            raise RuntimeError("Gate R writer/connection/observation axes are not exact")
+
+    def assert_after(status, attempt, resolution):
+        expected = (
+            EXPERIMENT_ID,
+            2,
+            "randomized",
+            "draft",
+            "shadow",
+            "closed",
+            False,
+            EXPECTED_LEASE + 1,
+            EXPECTED_REVISION,
+            EXPECTED_CONFIG_REVISION,
+            EXPECTED_REGISTRY_REVISION,
+            EXPECTED_GRID_REVISION,
+            0,
+        )
+        if tuple(status) != expected:
+            raise RuntimeError("Gate R did not seal the exact zero-exposure safe state")
+        if (
+            attempt is None
+            or attempt["authorization_id"] != PREDECESSOR_AUTHORIZATION_ID
+            or not attempt["attempt_failed"]
+            or attempt["attempt_superseded"]
+            or attempt["resolution_id"] != resolution["resolution_id"]
+            or not attempt["emergency_recovery_complete"]
+            or attempt["proof_receipt_id"] is not None
+        ):
+            raise RuntimeError("Gate R recovery receipt did not seal the exact predecessor")
+        if (
+            resolution["recovery_work_id"] != EXPECTED_RECOVERY_WORK_ID
+            or resolution["recovery_evidence_sha256"]
+            != EXPECTED_RECOVERY_EVIDENCE_SHA256
+        ):
+            raise RuntimeError("Gate R recovery evidence differs from the activation record")
+
+    def assert_after_ops(ops):
+        if ops is None:
+            raise RuntimeError("Gate R post-state observation axes are absent")
+        expected = (
+            EXPECTED_WRITER_GENERATION,
+            EXPECTED_CONNECTION_GENERATION,
+            0,
+            "no_current_work",
+            "shadow_closed",
+            None,
+        )
+        if tuple(ops) != expected:
+            raise RuntimeError("Gate R did not clear the expired-work alert on the exact writer")
+
+    async def main():
+        assert_clock()
+        user = os.environ.get("LIFECYCLE_DB_USER", "")
+        password = os.environ.get("LIFECYCLE_DB_PASSWORD", "")
+        if not user or not password:
+            raise RuntimeError("Gate R lifecycle database identity is incomplete")
+        connection = await asyncpg.connect(
+            host=os.environ["DB_HOST"],
+            port=int(os.environ.get("DB_PORT", "5432")),
+            database=os.environ["DB_NAME"],
+            user=user,
+            password=password,
+            server_settings={
+                "application_name": "verdify-experiment-v2-gate-r",
+                "statement_timeout": "15s",
+            },
+        )
+        read_connection = await asyncpg.connect(
+            host=os.environ["DB_HOST"],
+            port=int(os.environ.get("DB_PORT", "5432")),
+            database=os.environ["DB_NAME"],
+            user=os.environ["READ_DB_USER"],
+            password=os.environ["READ_DB_PASSWORD"],
+            server_settings={
+                "application_name": "verdify-experiment-v2-gate-r-read",
+                "default_transaction_read_only": "on",
+                "statement_timeout": "15s",
+            },
+        )
+        try:
+            before = await connection.fetchrow(STATUS_SQL, EXPERIMENT_ID)
+            predecessor = await connection.fetchrow(ATTEMPT_SQL, EXPERIMENT_ID)
+            before_ops = await read_connection.fetchrow(OPS_SQL, EXPERIMENT_ID)
+            assert_before(before, predecessor, before_ops)
+            migration_sha = await connection.fetchval(MIGRATION_SQL)
+            if migration_sha != EXPECTED_MIGRATION_SHA256:
+                raise RuntimeError("Gate R migration 239 ledger identity does not match")
+
+            # The admission transition and migration-239 resolver are one
+            # transaction. The singleton writer can never observe committed
+            # component authority: any resolver mismatch rolls the transition
+            # and its authorization event back to the existing emergency hold.
+            async with connection.transaction():
+                assert_clock()
+                admitted = await connection.fetchval(
+                    SET_RECOVERY_SQL,
+                    EXPERIMENT_ID,
+                    ACTOR,
+                    FACILITY_AUTHORIZATION_REF,
+                )
+                if admitted != EXPERIMENT_ID:
+                    raise RuntimeError("Gate R bounded recovery admission returned no exact ID")
+                resolution = await connection.fetchrow(
+                    RESOLVE_SQL,
+                    EXPERIMENT_ID,
+                    PREDECESSOR_AUTHORIZATION_ID,
+                    FACILITY_AUTHORIZATION_REF,
+                    ACTOR,
+                )
+                if resolution is None or resolution["resolution_id"] is None:
+                    raise RuntimeError("Gate R migration-239 resolver returned no exact receipt")
+                inside_status = await connection.fetchrow(STATUS_SQL, EXPERIMENT_ID)
+                inside_attempt = await connection.fetchrow(ATTEMPT_SQL, EXPERIMENT_ID)
+                assert_after(inside_status, inside_attempt, resolution)
+
+            after = await connection.fetchrow(STATUS_SQL, EXPERIMENT_ID)
+            sealed_attempt = await connection.fetchrow(ATTEMPT_SQL, EXPERIMENT_ID)
+            assert_after(after, sealed_attempt, resolution)
+            after_ops = await read_connection.fetchrow(OPS_SQL, EXPERIMENT_ID)
+            assert_after_ops(after_ops)
+            receipt_binding = hashlib.sha256(
+                "|".join(
+                    (
+                        str(EXPERIMENT_ID),
+                        str(PREDECESSOR_AUTHORIZATION_ID),
+                        str(resolution["resolution_id"]),
+                        str(EXPECTED_RECOVERY_WORK_ID),
+                        EXPECTED_RECOVERY_EVIDENCE_SHA256,
+                        FACILITY_AUTHORIZATION_REF,
+                        AUTHORIZED_FROM.isoformat(),
+                        AUTHORIZED_TO.isoformat(),
+                        READINESS_PACKET_SHA256,
+                        SOURCE_PIN,
+                        APPLICATION_SOURCE,
+                        WRITER_RUNTIME_REF,
+                        str(EXPECTED_LEASE),
+                        str(EXPECTED_WRITER_GENERATION),
+                        str(EXPECTED_CONNECTION_GENERATION),
+                    )
+                ).encode("utf-8")
+            ).hexdigest()
+            print(json.dumps(
+                {
+                    "application_source": APPLICATION_SOURCE,
+                    "experiment_id": str(EXPERIMENT_ID),
+                    "connection_generation": EXPECTED_CONNECTION_GENERATION,
+                    "lease_generation_after": EXPECTED_LEASE + 1,
+                    "migration_239_sha256": EXPECTED_MIGRATION_SHA256,
+                    "open_exposure_count": 0,
+                    "predecessor_authorization_id": str(PREDECESSOR_AUTHORIZATION_ID),
+                    "proof_credit": False,
+                    "recovery_evidence_sha256": EXPECTED_RECOVERY_EVIDENCE_SHA256,
+                    "recovery_work_id": str(EXPECTED_RECOVERY_WORK_ID),
+                    "readiness_packet_sha256": READINESS_PACKET_SHA256,
+                    "receipt_binding_sha256": receipt_binding,
+                    "resolution_id": str(resolution["resolution_id"]),
+                    "source_pin": SOURCE_PIN,
+                    "status": "pass",
+                    "writer_runtime_ref": WRITER_RUNTIME_REF,
+                    "writer_generation": EXPECTED_WRITER_GENERATION,
+                },
+                sort_keys=True,
+            ))
+        finally:
+            await read_connection.close()
+            await connection.close()
+
+    asyncio.run(main())
