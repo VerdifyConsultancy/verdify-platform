@@ -31,7 +31,8 @@ def test_gate_r_script_is_atomic_recovery_only() -> None:
     assert "fn_experiment_v2_ops_status" in script
     assert "expired_work_not_terminal" in script
     assert "EXPECTED_RECOVERY_EVIDENCE_SHA256" in script
-    assert "EXPECTED_CONNECTION_GENERATION" in script
+    assert "EXPECTED_RETAINED_CONNECTION_GENERATION" in script
+    assert "EXPECTED_LIVE_CONNECTION_GENERATION" in script
     assert "fn_experiment_v2_direct_proof_begin(" not in script
     assert "fn_experiment_v2_direct_proof_open_aggressive" not in script
     assert "fn_experiment_v2_direct_proof_finish(" not in script

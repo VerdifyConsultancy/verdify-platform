@@ -63,11 +63,14 @@ data:
     EXPECTED_REGISTRY_REVISION = required("VERDIFY_GATE_R_EXPECTED_REGISTRY_REVISION")
     EXPECTED_GRID_REVISION = required("VERDIFY_GATE_R_EXPECTED_GRID_REVISION")
     EXPECTED_LEASE = int(required("VERDIFY_GATE_R_EXPECTED_LEASE_GENERATION"))
-    EXPECTED_WRITER_GENERATION = int(
-        required("VERDIFY_GATE_R_EXPECTED_WRITER_GENERATION")
+    EXPECTED_RETAINED_WRITER_GENERATION = int(
+        required("VERDIFY_GATE_R_EXPECTED_RETAINED_WRITER_GENERATION")
     )
-    EXPECTED_CONNECTION_GENERATION = int(
-        required("VERDIFY_GATE_R_EXPECTED_CONNECTION_GENERATION")
+    EXPECTED_RETAINED_CONNECTION_GENERATION = int(
+        required("VERDIFY_GATE_R_EXPECTED_RETAINED_CONNECTION_GENERATION")
+    )
+    EXPECTED_LIVE_CONNECTION_GENERATION = int(
+        required("VERDIFY_GATE_R_EXPECTED_LIVE_CONNECTION_GENERATION")
     )
     EXPECTED_ATTEMPT_NUMBER = int(
         required("VERDIFY_GATE_R_EXPECTED_ATTEMPT_NUMBER")
@@ -105,8 +108,9 @@ data:
         raise RuntimeError("Gate R source identity is malformed")
     if min(
         EXPECTED_LEASE,
-        EXPECTED_WRITER_GENERATION,
-        EXPECTED_CONNECTION_GENERATION,
+        EXPECTED_RETAINED_WRITER_GENERATION,
+        EXPECTED_RETAINED_CONNECTION_GENERATION,
+        EXPECTED_LIVE_CONNECTION_GENERATION,
         EXPECTED_ATTEMPT_NUMBER,
     ) < 1:
         raise RuntimeError("Gate R expected lease/writer/connection/attempt axis is invalid")
@@ -184,8 +188,8 @@ data:
             raise RuntimeError("Gate R retained predecessor lineage is not exact and unresolved")
 
         expected_ops = (
-            EXPECTED_WRITER_GENERATION,
-            EXPECTED_CONNECTION_GENERATION,
+            EXPECTED_RETAINED_WRITER_GENERATION,
+            EXPECTED_RETAINED_CONNECTION_GENERATION,
             0,
             "no_current_work",
             "facility_emergency_hold",
@@ -233,8 +237,8 @@ data:
         if ops is None:
             raise RuntimeError("Gate R post-state observation axes are absent")
         expected = (
-            EXPECTED_WRITER_GENERATION,
-            EXPECTED_CONNECTION_GENERATION,
+            EXPECTED_RETAINED_WRITER_GENERATION,
+            EXPECTED_RETAINED_CONNECTION_GENERATION,
             0,
             "no_current_work",
             "shadow_closed",
@@ -325,8 +329,9 @@ data:
                         APPLICATION_SOURCE,
                         WRITER_RUNTIME_REF,
                         str(EXPECTED_LEASE),
-                        str(EXPECTED_WRITER_GENERATION),
-                        str(EXPECTED_CONNECTION_GENERATION),
+                        str(EXPECTED_RETAINED_WRITER_GENERATION),
+                        str(EXPECTED_RETAINED_CONNECTION_GENERATION),
+                        str(EXPECTED_LIVE_CONNECTION_GENERATION),
                     )
                 ).encode("utf-8")
             ).hexdigest()
@@ -334,7 +339,7 @@ data:
                 {
                     "application_source": APPLICATION_SOURCE,
                     "experiment_id": str(EXPERIMENT_ID),
-                    "connection_generation": EXPECTED_CONNECTION_GENERATION,
+                    "live_connection_generation": EXPECTED_LIVE_CONNECTION_GENERATION,
                     "lease_generation_after": EXPECTED_LEASE + 1,
                     "migration_239_sha256": EXPECTED_MIGRATION_SHA256,
                     "open_exposure_count": 0,
@@ -348,7 +353,8 @@ data:
                     "source_pin": SOURCE_PIN,
                     "status": "pass",
                     "writer_runtime_ref": WRITER_RUNTIME_REF,
-                    "writer_generation": EXPECTED_WRITER_GENERATION,
+                    "retained_connection_generation": EXPECTED_RETAINED_CONNECTION_GENERATION,
+                    "retained_writer_generation": EXPECTED_RETAINED_WRITER_GENERATION,
                 },
                 sort_keys=True,
             ))

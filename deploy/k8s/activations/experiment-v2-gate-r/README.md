@@ -9,8 +9,9 @@ After the recovery-mode readiness packet passes, create one activation commit:
 1. Supply the exact retained authorization/aggressive/recovery work IDs,
    recovery-evidence and preflight-verified migration-ledger digests,
    experiment axes, source/pin
-   identities, readiness packet digest, current writer/connection generations
-   and runtime reference, and a fresh three-minute-to-twelve-hour Gate R window.
+   identities, readiness packet digest, retained experiment-runtime generation,
+   current live connection generation and writer runtime reference, and a fresh
+   three-minute-to-twelve-hour Gate R window.
 2. Set `spec.suspend: false`, render this directory, and inspect the full diff.
 3. Reconcile the complete render without pruning or resource selection.
 4. Preserve the completed Job and attach its secret-free JSON receipt.
