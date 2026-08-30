@@ -37,7 +37,10 @@ def test_proof_seals_rollover_before_waiting_for_stable_successor() -> None:
     settle = script.index("writer-runtime-settle-wait")
     begin = script.index("aggressive_work_id = await connection.fetchval(", settle)
     assert resolve < settle < begin
-    assert "RUNTIME_REGISTRATION_SETTLE_SECONDS = 5 * 60" in script
+    # The successor-registration hardening in #724 raised this bounded wait to
+    # 30 minutes; keep the rollover ordering contract aligned with that live
+    # proof timeout instead of retaining the superseded five-minute value.
+    assert "RUNTIME_REGISTRATION_SETTLE_SECONDS = 30 * 60" in script
     assert 'activation_time("VERDIFY_DIRECT_PROOF_AUTHORIZED_TO")' in script
     assert 'required_activation_value("VERDIFY_DIRECT_PROOF_AUTHORIZATION_REF")' in script
 
