@@ -108,10 +108,12 @@ spec:
                       echo "[backup] pg_dump succeeded on attempt ${attempt}"
                       break
                     fi
-                    # Only swallow the transient connection-refused race; any other
-                    # pg_dump error (auth, disk, corruption) must fail loudly.
-                    if grep -qiE 'connection.*(refused|reset|timed out)|could not connect|server closed the connection' /tmp/pg_dump.err; then
-                      echo "[backup] attempt ${attempt}: DB not reachable yet (netpol race), retrying in 2s"
+                    # Only swallow transient connection failures, including the
+                    # resolver's explicit temporary-failure (`Try again`) signal.
+                    # Permanent name failures and every auth, permission, disk, or
+                    # corruption error still fail loudly on the first attempt.
+                    if grep -qiE 'connection.*(refused|reset|timed out)|could not connect|server closed the connection|could not translate host name .* to address: Try again' /tmp/pg_dump.err; then
+                      echo "[backup] attempt ${attempt}: DB temporarily unreachable, retrying in 2s"
                       sleep 2
                       continue
                     fi
