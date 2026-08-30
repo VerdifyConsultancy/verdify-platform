@@ -8,13 +8,10 @@
 > Optional ownership and planning map. Lanes describe likely domain ownership;
 > they are not dispatch, permission, approval, or routing boundaries. Work
 > directly from the user's request, current repository state, and live evidence.
-> **Lab-lane staleness notice (2026-07-13):** This file is a generated
-> 2026-06-22 floating-corridor planning snapshot. Its L8/#351 Lab entries and
-> the worktree kickoff below are not the execution plan for the Quartz-to-Astro
-> migration. Use GitHub epic #351 and
-> `docs/plans/lab-astro-migration.md`; they record the accepted Astro stage,
-> current Phase 3–5 dependencies, and execution safeguards. This notice does not
-> supersede the non-Lab control/greenhouse lane content.
+> **Lab-lane staleness notice (2026-08-30):** This file is a generated
+> 2026-06-22 planning snapshot. Its L8/#351 migration entries are historical.
+> The Lab is standardized on the Quartz source/publisher/cache path documented
+> in `docs/site-publishing-pipeline.md`.
 
 _Generated 2026-06-22 from the ADR-0004 edge-case replan. Source of truth: `planning/backlog.yaml` (validated by `planning/schema.py`, `make planning-validate`). Control objective: ADR-0004 floating-corridor (epic #359). User priority #1: **reduce device cycling / minimize runtime**._
 

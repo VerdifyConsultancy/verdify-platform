@@ -104,14 +104,6 @@ images:
   # verdify-planner (#117): SAME env-agnostic digest overlays/prod + dev pin.
   - name: ghcr.io/verdifyconsultancy/verdify-planner
     digest: sha256:3e51abaec6372c0bed26ef9859a80008261fcd20a1e8ec1e37627304e1c6b637
-  # verdify-lab (#124): SAME env-agnostic Quartz digest overlays/prod + dev pin.
-  # 2026-06-07 #263 CONVERGENCE (laptop-root): repointed off the SYNTHETIC 92ab47..
-  # CI temp-vault build to the REAL vault-built bf71018 that overlays/prod serves
-  # on lab.verdify.ai, so no overlay carries the Quartz-starter placeholder. No
-  # ArgoCD app targets overlays/prod-dark today, but keeping it byte-aligned with
-  # overlays/prod means a later (gated) prod-dark adopt can't regress the lab site.
-  - name: ghcr.io/verdifyconsultancy/verdify-lab
-    digest: sha256:98ac23b6affa3b8af3ebb5c7f1c7abe31d00e2379c070f4d61b409130dae9845
   - name: ghcr.io/verdifyconsultancy/verdify-lab-publisher-k3s
     digest: sha256:0f31c222450c55f88111d1b132e58483deb2a63145275d557d7c3b8f085b63da
   # NO verdify-setpoint-server pin: the setpoint-server Component is excluded, so

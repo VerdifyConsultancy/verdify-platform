@@ -1,9 +1,0 @@
----
-import LabPage from "../layouts/LabPage.astro";
-import { recordForRoute } from "../lib/content";
-
-const record = recordForRoute("/");
-if (!record) throw new Error("compiled snapshot lacks the root route");
----
-
-<LabPage record={record} />

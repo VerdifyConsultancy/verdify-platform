@@ -363,43 +363,31 @@ focused VPD/dehum policy lane (#383).
 - User/value statement: The public lab notebook reflects the actual greenhouse
   architecture, data, dashboards, releases, and lessons instead of stale
   implementation assumptions.
-- Scope (promoted 2026-07-13 to the Quartz→Astro migration program): the nine
-  migration surfaces — shared design contract; search/CSP/camera/contact;
-  secure graph fallbacks; media/lightbox; dynamic templates; semantic/route
-  parity; immutable event-driven S3 publishing; quality gates; production
-  cutover and Quartz retirement. Master plan and phase gates:
-  `docs/plans/lab-astro-migration.md` (the authoritative tracker).
+- Scope: one Quartz generator, S3-backed content/state, the in-cluster publisher,
+  the cache-backed nginx runtime, live Grafana/camera embeds, route/content
+  parity, and public-output privacy gates. The abandoned alternate generator,
+  canary, occurrence runtime, and image pipelines were retired 2026-08-30.
 - Non-goals: merging the independent `verdify-www` repo/deployment, CRM,
-  DNS/Cloudflare changes, or raw S3 credential handling. The versioned shell and
-  common in-cluster Astro/Kaniko/Zot/ArgoCD delivery model are deliberate
-  cross-stack interfaces; see `jvallery/agents#2907/#2930`.
-- Acceptance criteria (see the tracker's KPI bar for the measurable form):
-  - Stage serves the latest main Astro digest; the five deployed-stage defects
-    are cleared with a full acceptance run against the deployed build.
-  - All 143 graph occurrences have a secure immutable fallback live.
-  - Exact same-snapshot semantic parity is green; historical-reference gaps
-    dispositioned.
-  - Event-driven immutable S3 publishing replaces the 10-minute mutable
-    publisher.
-  - Production serves Astro and Quartz is retired, behind Jason's APPLY.
+  DNS/Cloudflare changes, or raw S3 credential handling.
+- Acceptance criteria:
+  - `lab.verdify.ai` serves the newest successful Quartz publisher generation.
+  - Left navigation, search, dark/reader controls, interactive Grafana panels,
+    camera media, canonical routes, and public-output guards remain validated.
+  - No alternate Lab generator, stage route, candidate workload, build profile,
+    or content-bearing serving image remains active.
 - Status: `In Progress`
 - Priority: P1
 - Effort: XL
 - Milestone: G3 - Planner, Irrigation, Lab, and Research
 - Sprint: S7 `irrigation-lab-testing-hardening`
-- Related files/issues/PRs: #351, #459, #460, #461, #462, verdify-www#33,
-  `site-astro/`, `docs/plans/lab-astro-migration.md`, `site/`,
-  `scripts/lab-publish-k3s.sh`.
-- Dependencies: #533/#534 protected stage-store and reporting-feed delivery;
-  #535/#537/#540/#542 source completion; #541 two-pass stage proof;
-  network-infra for production route truth; Jason for production cutover.
-- Risks: validated local Phase 4 source being mistaken for main; activating the
-  former per-object layout beyond its budget; parity evidence preceding 143+2
-  materialization; legacy anonymous Grafana being reused instead of the
-  isolated reporting tier.
-- Evidence: `docs/plans/lab-astro-migration.md` ground-truth/work register;
-  `docs/reviews/lab-astro-stage-acceptance-2026-07-14.md`; web subsystem
-  docs and service map.
+- Related files/issues/PRs: #351, `site/`, `scripts/lab-publish-k3s.sh`, and
+  `deploy/k8s/components/lab-site/`.
+- Dependencies: S3 content/state, the publisher CronJob, the Longhorn cache PVC,
+  Grafana's public graph origin, Traefik, and the Cloudflare tunnel.
+- Risks: a content-bearing image or temporary overlay superseding the cache;
+  stale browser caching; invalid public-output content; unavailable graph media.
+- Evidence: `docs/reviews/lab-generator-standardization-2026-08-30.md` and the
+  web/publishing runbooks.
 
 ### L10 Testing And Research
 

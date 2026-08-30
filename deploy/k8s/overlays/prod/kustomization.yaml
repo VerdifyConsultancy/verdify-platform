@@ -125,8 +125,8 @@ components:
   # under deploy/k8s/activations/experiment-v2-direct-proof and be removed again
   # after its append-only receipt. Ordinary convergence stays coarse-off.
   # #124 verdify-lab — the public Quartz research site (lab.verdify.ai). Pure web
-  # tier, stateless (no PVC), NO device path. Built from the
-  # verdify-site-legacy Dockerfile.k3s (see components/lab-site/lab-site.yaml).
+  # tier with no device path. The publisher owns content; a content-free nginx
+  # runtime serves its validated cache PVC.
   - ../../components/lab-site
   # db-backup (M3.3; refs #84/#28/#130) — the verdify-db-dumps NFS PVC + nightly
   # pg_dump -Fc CronJob + retention + allow-db-from-backup. pg_dump is SELECT-only
@@ -156,10 +156,6 @@ components:
   - ../../components/ha-gap-backfill
 
 patches:
-  # ORE OUTAGE: production serves the already-qualified direct Astro image while
-  # the portable Lab cache/publisher contract is normalized off node6. This is
-  # prod-only; staging and development retain the cache-backed Lab component.
-  - path: ore-outage-lab-recovery.patch.yaml
   # Reconcile the live, verified 2026-08-01 Hermes PVC cutover.
   - path: hermes-data-portable.patch.yaml
   # The old, detached pre-portable claim has a readable Completed backup and no
@@ -294,25 +290,6 @@ images:
   - name: ghcr.io/verdifyconsultancy/verdify-setpoint-server
     newName: registry.vallery.net/verdifyconsultancy/verdify-setpoint-server
     digest: sha256:0f8d8a3dffe4e4d6dbccec6f1774721d43e066d0bf8b7bce47283c216c45133f
-  # verdify-lab (#124): real GHCR digest of the Quartz research-site image built
-  # from the verdify-site-legacy repo's Dockerfile.k3s (Quartz `npx quartz build`
-  # -> static public/ -> nginx-unprivileged on :8080). Published + repo-linked by
-  # verdify-site-legacy's publish-lab-image.yml workflow (package repository.name
-  # == verdify-site-legacy) and verified pullable 2026-06-04 — REPLACES the prior
-  # all-zeros placeholder pin whose package 404'd (verdify-site was an orphan GHCR
-  # repo). lab is externally built and hand-pinned here; prod-promote excludes it.
-  # A content/runtime rebuild in verdify-site-legacy advances this digest.
-  #
-  # 2026-06-07 ONE-OFF VAULT RESTORE (laptop-root): the prior 92ab47.. image was
-  # built from a synthetic CI temp-vault (docs/ fallback in Dockerfile.k3s), so it
-  # served the DEFAULT "Welcome to Quartz 4" starter — empty content/ in
-  # verdify-platform. Rebuilt the runtime image from the REAL synced vault
-  # (/Users/jason/Iris/verdify-vault/website, 121 .md -> npx quartz build -> 566
-  # files -> nginx-unprivileged :8080) and pushed to the same GHCR package. The
-  # durable fix (CI sourcing the real vault) is Iris #124; this only advances the
-  # pin so ArgoCD serves the real lab site now.
-  - name: ghcr.io/verdifyconsultancy/verdify-lab
-    digest: sha256:98ac23b6affa3b8af3ebb5c7f1c7abe31d00e2379c070f4d61b409130dae9845
   # verdify-lab-publisher: k3s-owned generated-content and S3 sync workflow for
   # lab.verdify.ai. The k3s-suffixed GHCR package is linked to this repo so
   # GITHUB_TOKEN can publish immutable CI-built digests.

@@ -27,14 +27,6 @@ images:
 - name: verdify-lab-publisher-k3s
   dockerfile: scripts/Dockerfile.lab-publisher
   context: .
-- name: verdify-lab
-  dockerfile: Dockerfile.production
-  context: site-astro
-  test: cd site-astro && npm ci --no-audit --no-fund && npm run snapshot:hydrate
-- name: verdify-lab-astro
-  dockerfile: Dockerfile
-  context: site-astro
-  test: cd site-astro && npm ci --no-audit --no-fund && npm run snapshot:hydrate
 checks:
   steps:
   - name: platform-static
@@ -50,7 +42,8 @@ checks:
       --ignore=verdify_schemas/tests/test_vault_writers.py --ignore=verdify_schemas/tests/test_views.py
       && uv run pytest -q tests/test_device_write_gate.py tests/test_migration_rollback_safety.py
       tests/test_14_site_doctor.py tests/test_climate_intent_replay_evaluator.py tests/test_g5_dualwrite_validation.py
-      tests/test_generate_daily_plan.py tests/test_mqtt_fanout.py tests/test_planner_memory_ingest.py
+      tests/test_generate_daily_plan.py tests/test_lab_generator_standardization.py
+      tests/test_lab_publish_k3s_guard.py tests/test_mqtt_fanout.py tests/test_planner_memory_ingest.py
       tests/test_site_content_refresh.py tests/test_slack_config.py tests/test_slack_ops.py
       tests/test_soil_dryout_alert.py tests/test_tempest_sync.py tests/test_writer_lease_fence.py
       tests/test_component_grid_capture.py tests/test_component_prefix_replay.py

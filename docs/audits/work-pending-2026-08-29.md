@@ -1,5 +1,11 @@
 # Verdify Platform work pending
 
+> Superseded Lab finding (2026-08-30): the public Astro artifact described in
+> this point-in-time audit was an emergency outage substitution, not a completed
+> generator cutover. Production history showed Quartz was authoritative through
+> 2026-08-24. The Lab is now standardized on Quartz; see
+> `docs/reviews/lab-generator-standardization-2026-08-30.md`.
+
 **Audit date:** 2026-08-29 16:48 MDT
 
 **Scope:** all 106 GitHub issues that were open at the start of the audit

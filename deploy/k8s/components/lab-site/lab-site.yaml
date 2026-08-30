@@ -3,24 +3,17 @@
 # WHAT: the public Quartz static research garden ("the lab"). The nginx runtime
 # still serves static HTML on :8080, but the live public tree now comes from the
 # `verdify-lab-site-cache` PVC populated by the in-cluster lab publisher. The
-# baked image remains a bootstrap fallback only.
-#
-# IMAGE — BUILT/PUBLISHED BY GITHUB CI, THEN PINNED BY PLATFORM GITOPS:
-#   ghcr.io/verdifyconsultancy/verdify-lab
-# Runtime/source changes land in VerdifyConsultancy/verdify-site-legacy@v4,
-# whose publish-lab-image workflow builds Dockerfile.k3s and pushes an immutable
-# GHCR digest. verdify-platform overlays pin that digest under
-# deploy/k8s/overlays/{dev,prod,prod-dark}; ArgoCD syncs the rendered k3s
-# manifests. Do not rebuild or patch this workload by hand on the cluster.
+# serving image contains no site content: the validated cache is the only public
+# tree, so a stale or unrelated baked frontend cannot supersede Quartz.
 #
 # RUNTIME / PORT (load-bearing): the Quartz output is plain static HTML served by
 # nginx. To preserve the non-root posture used across the web tier (runAsNonRoot,
 # readOnlyRootFilesystem, drop ALL caps) the image MUST run nginx-unprivileged and
 # LISTEN ON 8080 — NOT the privileged :80 the in-repo site/nginx.conf currently
-# uses. The verdify-site-legacy Dockerfile.k3s owns that nginx listen-port + the static-site
-# location/try_files rules (mirroring site/nginx.conf, adjusted to :8080). The
-# container :8080 + Service targetPort + probe all stay in lockstep on 8080, the
-# same contract Traefik's kubernetescrd provider resolves against (Service port).
+# uses. The pinned generic nginx runtime is content-free; the ConfigMap below
+# owns the static-site location/try_files rules. The container :8080 + Service
+# targetPort + probe all stay in lockstep on 8080, the same contract Traefik's
+# kubernetescrd provider resolves against (Service port).
 #
 # WHY A KUSTOMIZE COMPONENT (not a base resource): lab-site is an optional prod
 # web surface, not part of every base workload. A Component keeps the workload
@@ -165,13 +158,10 @@ spec:
           type: RuntimeDefault
       containers:
         - name: lab-site
-          # Pinned to an immutable @sha256 digest by each consuming overlay's
-          # images: transformer (NEVER a mutable :latest/:sha tag). Image name
-          # only here. Built from the verdify-site-legacy Dockerfile.k3s (see header).
-          image: ghcr.io/verdifyconsultancy/verdify-lab
-          # No command override: the verdify-site Dockerfile.k3s CMD (nginx -g
-          # 'daemon off;') stays authoritative, so the build source owns the
-          # serve config (nginx-unprivileged listening on :8080 — see header).
+          # Content-free runtime, pinned by digest. The Lab PVC and ConfigMap are
+          # the only content/config authority; no Astro or baked Quartz payload
+          # exists in this container to replace the published site accidentally.
+          image: nginxinc/nginx-unprivileged:1.29-alpine@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6
           ports:
             - name: http
               containerPort: 8080
@@ -228,32 +218,9 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 10
       initContainers:
-        # Copy the baked fallback without touching the PVC.  The next init owns
-        # all shared-cache mutation under the publisher's persistent lock.
-        - name: extract-baked-public
-          # Same image as the serving container. If the lab cache PVC is empty,
-          # seed it from the baked static site so lab.verdify.ai stays available
-          # before the first S3-backed publisher run completes.
-          image: ghcr.io/verdifyconsultancy/verdify-lab
-          command:
-            - sh
-            - -ec
-            - |
-              cp -a /usr/share/nginx/html/. /bootstrap/
-          securityContext:
-            runAsNonRoot: true
-            runAsUser: 1000
-            runAsGroup: 1000
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            capabilities:
-              drop: ["ALL"]
-          volumeMounts:
-            - name: bootstrap
-              mountPath: /bootstrap
-        # Use the publisher image for the same flock/ready-marker protocol as
-        # the CronJob.  Migration and bootstrap replacement finish before the
-        # main container can mount publisher/public.
+        # Use the publisher image for the same lock, validation, and ready-marker
+        # protocol as the CronJob. An empty cache stays unready until a publisher
+        # installs a validated Quartz tree; it is never filled from a baked site.
         - name: prepare-private-public-root
           image: ghcr.io/verdifyconsultancy/verdify-lab-publisher-k3s
           imagePullPolicy: IfNotPresent
@@ -263,8 +230,6 @@ spec:
             - /work/publisher
             - --legacy
             - /work/public
-            - --bootstrap
-            - /bootstrap
           securityContext:
             runAsNonRoot: true
             runAsUser: 1000
@@ -276,9 +241,6 @@ spec:
           volumeMounts:
             - name: lab-cache
               mountPath: /work
-            - name: bootstrap
-              mountPath: /bootstrap
-              readOnly: true
       # Endpoint-drain window for the preStop hook above (HA #231); 30s explicit.
       terminationGracePeriodSeconds: 30
       volumes:
@@ -294,8 +256,6 @@ spec:
         - name: nginx-config
           configMap:
             name: verdify-lab-nginx-config
-        - name: bootstrap
-          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
