@@ -252,7 +252,7 @@ images:
   # images; the component remains inert until its explicit GitOps feature gate.
   - name: ghcr.io/verdifyconsultancy/verdify-experiment-v2-orchestrator
     newName: registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator
-    digest: sha256:8d1bb4505b17151f78edc6442c796592b396d6a0e96b0e21dd454b4028fbb805
+    digest: sha256:ee1e7b1b2ceb692d144a14a4f77aa844ab1fa1db6fff24a36111d05a2e813386
   # verdify-planner (#117): real published GHCR digest, resolved read-only via
   # `gh api orgs/VerdifyConsultancy/packages/container/verdify-planner/versions`
   # (the `branch-live-platform-main` build of planner_graph/). The planner image is
