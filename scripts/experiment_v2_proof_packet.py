@@ -29,7 +29,7 @@ import urllib.parse
 import urllib.request
 import uuid
 from collections.abc import Mapping, Sequence
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -73,9 +73,38 @@ SURFACES = {
     "executor_control": "ingestor/tasks/component_experiment.py",
     "locked_outcome": "research/planner-efficacy/switchback/v2_outcomes.py",
 }
-BOUNDARY_SEQUENCE = ("gate-p", "baseline-before", "aggressive", "baseline-after")
+BOUNDARY_SEQUENCE = {
+    "recovery": ("gate-r",),
+    "proof": ("gate-p", "baseline-before", "aggressive", "baseline-after"),
+}
 ZONES = ("north", "south", "east", "west")
 METRICS = {"temp_f": "temp", "rh_pct": "rh", "vpd_kpa": "vpd"}
+M8_STARTED_AT = datetime(2026, 8, 30, 10, 42, 18, tzinfo=UTC)
+M8_DECISION_URL = "https://github.com/VerdifyConsultancy/verdify-platform/issues/750"
+GATE_R_ISSUE_URL = "https://github.com/VerdifyConsultancy/verdify-platform/issues/641"
+HISTORICAL_ALERT_ISSUES = {
+    ("sensor_offline", "equipment.sntp_status"): "https://github.com/VerdifyConsultancy/verdify-platform/issues/368",
+    ("sensor_offline", "state.lead_fan"): "https://github.com/VerdifyConsultancy/verdify-platform/issues/368",
+    ("forecast_deviation", "forecast.deviation"): "https://github.com/VerdifyConsultancy/verdify-platform/issues/427",
+    (
+        "irrigation_feedback_gap",
+        "irrigation.feedback.south_soil_probe_1",
+    ): "https://github.com/VerdifyConsultancy/verdify-platform/issues/298",
+    (
+        "tunable_zero_variance",
+        "setpoint.temp_high",
+    ): "https://github.com/VerdifyConsultancy/verdify-platform/issues/424",
+    ("tunable_zero_variance", "setpoint.temp_low"): "https://github.com/VerdifyConsultancy/verdify-platform/issues/424",
+    ("esp32_push_failed", ""): "https://github.com/VerdifyConsultancy/verdify-platform/issues/433",
+    (
+        "esp32_push_failed",
+        "setpoint.sw_cool_all_fans_at_high_enabled",
+    ): "https://github.com/VerdifyConsultancy/verdify-platform/issues/433",
+    (
+        "esp32_push_failed",
+        "setpoint.cool_stage2_over_high_f",
+    ): "https://github.com/VerdifyConsultancy/verdify-platform/issues/433",
+}
 ATTESTATION = re.compile(
     r"^(?P<time>\S+) INFO component_entity_grid_attestation status=pass "
     r"grid_revision=(?P<grid>\S+) observation_receipt_sha256=(?P<receipt>[0-9a-f]{64}) "
@@ -90,6 +119,7 @@ DESTABILIZER = re.compile(
 )
 BACKUP_PATH = re.compile(r"/backups/(?P<name>verdify-(?P<stamp>\d{8}T\d{6}Z)\.dump)")
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
+SHA40 = re.compile(r"^[0-9a-f]{40}$")
 
 
 class CollectionError(RuntimeError):
@@ -211,14 +241,18 @@ def _pod_container(pod: Mapping[str, Any], name: str) -> Mapping[str, Any]:
 def collect_kube(
     kube: KubeReader,
     *,
-    git_pin: str,
+    mode: str,
+    git_pin: str | None,
     application_source: str,
     experiment_id: str,
 ) -> dict[str, Any]:
     now = datetime.now(UTC)
     observed_at = zulu(now)
     app = kube.json(f"/apis/argoproj.io/v1alpha1/namespaces/{ARGO_NAMESPACE}/applications/{ARGO_APPLICATION}")
-    if app.get("status", {}).get("sync", {}).get("revision") != git_pin:
+    argo_revision = str(app.get("status", {}).get("sync", {}).get("revision") or "")
+    if not SHA40.fullmatch(argo_revision):
+        raise CollectionError("Argo current revision is not an exact lowercase Git SHA")
+    if git_pin is not None and argo_revision != git_pin:
         raise CollectionError("Argo current revision differs from the expected Git pin")
 
     resources: dict[str, dict[str, Any]] = {}
@@ -299,16 +333,22 @@ def collect_kube(
         raise CollectionError("current component-grid attestation has wrong count/source")
     if int(attestation["connection"]) < 1:
         raise CollectionError("current component-grid attestation has invalid connection generation")
-    ingestor_env = {
+    config = kube.json(f"/api/v1/namespaces/{NAMESPACE}/configmaps/verdify-config").get("data", {})
+    if not isinstance(config, Mapping):
+        raise CollectionError("verdify-config data is malformed")
+    ingestor_overrides = {
         row["name"]: row.get("value")
         for row in _container(resources["verdify-ingestor"], "ingestor").get("env", [])
-        if "name" in row
+        if "name" in row and "value" in row
     }
-    if (
-        ingestor_env.get("VERDIFY_POLICY_VECTOR_MODE"),
-        ingestor_env.get("VERDIFY_COMPONENT_EXPERIMENT_ENABLED"),
-        ingestor_env.get("VERDIFY_ACTIVE_EXPERIMENT_ID"),
-    ) != ("off", "enabled", experiment_id):
+    capability_names = (
+        "VERDIFY_POLICY_VECTOR_MODE",
+        "VERDIFY_COMPONENT_EXPERIMENT_ENABLED",
+        "VERDIFY_ACTIVE_EXPERIMENT_ID",
+    )
+    ingestor_env = {name: ingestor_overrides.get(name, config.get(name)) for name in capability_names}
+    expected_capability = ("off", "off", "") if mode == "recovery" else ("off", "enabled", experiment_id)
+    if tuple(ingestor_env[name] for name in capability_names) != expected_capability:
         raise CollectionError("direct-proof ingestor capability is not the exact isolated configuration")
 
     stable_events: list[datetime] = [parse_time(writer_pod["status"]["startTime"])]
@@ -343,6 +383,7 @@ def collect_kube(
     resource_selector = sync.get("resources")
     prune = bool(sync.get("prune", False))
     return {
+        "git_pin": argo_revision,
         "observed_at": observed_at,
         "workloads": workloads,
         "images": images,
@@ -352,6 +393,7 @@ def collect_kube(
         "writer_stable_since": zulu(stable_since),
         "writer_recurring_errors": recurring,
         "attestation": attestation,
+        "ingestor_env": ingestor_env,
         "argo": {
             "revision": app_status["sync"]["revision"],
             "source_path": app["spec"]["source"]["path"],
@@ -400,7 +442,7 @@ async def _connect(prefix: str) -> asyncpg.Connection:
     return connection
 
 
-async def collect_db(experiment_id: str) -> dict[str, Any]:
+async def collect_db(experiment_id: str, *, mode: str) -> dict[str, Any]:
     connection = await _connect("READ")
     try:
         status = await connection.fetchrow("SELECT * FROM public.fn_experiment_v2_api_status($1::uuid)", experiment_id)
@@ -451,18 +493,24 @@ async def collect_db(experiment_id: str) -> dict[str, Any]:
         open_alerts = await connection.fetch(
             """
             SELECT id, ts, alert_type, severity, category, sensor_id, message,
-                   disposition, updated_at
+                   details, source, disposition, updated_at
               FROM public.v_open_alerts ORDER BY ts, id
             """
         )
     finally:
         await connection.close()
-    if status is None or runtime is None or generation is None or len(climate) != 2 or targets is None:
+    if (
+        status is None
+        or runtime is None
+        or (mode == "proof" and generation is None)
+        or len(climate) != 2
+        or targets is None
+    ):
         raise CollectionError("database readiness projection is incomplete")
     return {
         "status": dict(status),
         "runtime": dict(runtime),
-        "generation": dict(generation),
+        "generation": None if generation is None else dict(generation),
         "climate": [dict(row) for row in climate],
         "bands": [dict(row) for row in bands],
         "targets": dict(targets),
@@ -814,11 +862,67 @@ def cached_preflights(cache: Path) -> dict[str, Any]:
     return value
 
 
-def chain(boundary: str, state_path: Path) -> dict[str, Any]:
-    sequence = BOUNDARY_SEQUENCE.index(boundary)
+def recovery_preflights(
+    template: Mapping[str, Any], *, observed_at: str, application_source: str, experiment_id: str
+) -> dict[str, Any]:
+    rows = copy.deepcopy(template["evidence"])
+    rows["authentication_686"].update(
+        {
+            "status": "not-run-recovery-mode",
+            "replica_count": 0,
+            "replicas_checked": 0,
+            "public_unauthenticated_denied": False,
+            "unknown_bearer_denied": False,
+            "authenticated_iris_passed": False,
+            "admin_query_denied": False,
+            "session_identifier_absent": False,
+        }
+    )
+    rows["provider_preflight"].update(
+        {
+            "status": "not-run-recovery-mode",
+            "non_actuating": True,
+            "credential_present": False,
+            "provider_reachable": False,
+            "request_count": 0,
+            "device_call_count": 0,
+        }
+    )
+    rows["served_control_observed_424"].update(
+        {
+            "status": "not-run-recovery-mode",
+            "passive": True,
+            "agreement": False,
+            "series_checked": 0,
+            "device_call_count": 0,
+        }
+    )
+    for label in ("authentication_686", "provider_preflight", "served_control_observed_424"):
+        row = rows[label]
+        row.update(
+            {
+                "observed_at": observed_at,
+                "application_source_revision": application_source,
+                "experiment_id": experiment_id,
+                "receipt_sha256": receipt(
+                    {
+                        "label": label,
+                        "status": "not-run-recovery-mode",
+                        "observed_at": observed_at,
+                        "application_source_revision": application_source,
+                        "experiment_id": experiment_id,
+                    }
+                ),
+            }
+        )
+    return rows
+
+
+def chain(mode: str, boundary: str, state_path: Path) -> dict[str, Any]:
+    sequence = BOUNDARY_SEQUENCE[mode].index(boundary)
     if sequence == 0:
         if state_path.exists():
-            raise CollectionError("Gate P cannot start with an existing readiness chain")
+            raise CollectionError("an initial boundary cannot start with an existing readiness chain")
         return {"attempt_id": str(uuid.uuid4()), "sequence": 0, "previous_receipt_sha256": None}
     try:
         state = json.loads(state_path.read_text())
@@ -850,7 +954,70 @@ def source_dependencies(template: Mapping[str, Any], root: Path, *, application_
     return dependencies
 
 
-def alert_projection(db: Mapping[str, Any], *, observed_at: str) -> list[dict[str, Any]]:
+def _alert_details(row: Mapping[str, Any]) -> Mapping[str, Any]:
+    raw = row.get("details")
+    if isinstance(raw, Mapping):
+        return raw
+    if isinstance(raw, str):
+        try:
+            value = json.loads(raw)
+        except json.JSONDecodeError:
+            return {}
+        return value if isinstance(value, Mapping) else {}
+    return {}
+
+
+def _historical_alert_issue(row: Mapping[str, Any]) -> str | None:
+    try:
+        opened_at = row["ts"] if isinstance(row["ts"], datetime) else parse_time(str(row["ts"]))
+    except (KeyError, CollectionError, ValueError):
+        return None
+    if opened_at.astimezone(UTC) >= M8_STARTED_AT:
+        return None
+    key = (str(row.get("alert_type") or ""), str(row.get("sensor_id") or ""))
+    issue = HISTORICAL_ALERT_ISSUES.get(key)
+    allowed_sources = {
+        "forecast_deviation": "ingestor",
+        "esp32_push_failed": {"dispatcher", "setpoint_listener"},
+    }
+    expected_source = allowed_sources.get(key[0], "system")
+    source = str(row.get("source") or "")
+    if isinstance(expected_source, set):
+        source_matches = source in expected_source
+    else:
+        source_matches = source == expected_source
+    return issue if issue and source_matches else None
+
+
+def _safe_historical_heap_warning(row: Mapping[str, Any], *, observed_at: str) -> bool:
+    if (
+        row.get("alert_type") != "heap_pressure_warning"
+        or row.get("sensor_id") != "equipment.heap_pressure_warning"
+        or row.get("severity") != "warning"
+        or row.get("source") != "system"
+    ):
+        return False
+    details = _alert_details(row)
+    try:
+        diagnostic_at = parse_time(str(details["heap_diag_ts"]))
+        observed = parse_time(observed_at)
+        heap_free = float(details["heap_free_kb"])
+        largest = float(details["heap_largest_free_block_kb"])
+    except (KeyError, TypeError, ValueError, CollectionError):
+        return False
+    return (
+        timedelta(0) <= observed - diagnostic_at <= timedelta(minutes=5)
+        and heap_free >= 30.0
+        and largest >= 20.0
+        and details.get("heap_low_watermark_warning") is True
+        and details.get("heap_fragmentation_warning") is False
+        and details.get("last_true_ts") is None
+        and details.get("last_warning_log_ts") is None
+        and details.get("warning_logs_30m") == 0
+    )
+
+
+def alert_projection(db: Mapping[str, Any], *, observed_at: str, experiment_id: str) -> list[dict[str, Any]]:
     open_rows = db["open_alerts"]
     south = [
         row
@@ -891,6 +1058,36 @@ def alert_projection(db: Mapping[str, Any], *, observed_at: str) -> list[dict[st
             continue
         alert_type = str(row.get("alert_type") or "unknown")
         sensor_id = str(row.get("sensor_id") or row["id"])
+        details = _alert_details(row)
+        recovery_target = (
+            alert_type == "component_experiment_integrity"
+            and sensor_id == f"experiment.v2.{experiment_id}"
+            and row.get("source") == "system"
+            and row.get("severity") == "critical"
+            and details.get("experiment_id") == experiment_id
+            and details.get("reason") == "expired_work_not_terminal"
+            and details.get("open_exposure_count") == 0
+        )
+        historical_issue = _historical_alert_issue(row)
+        heap_warning = _safe_historical_heap_warning(row, observed_at=observed_at)
+        if recovery_target:
+            classification = "authorized_recovery_target"
+            causal = False
+            scope = f"recovery_target:expired_work_not_terminal:{experiment_id}"
+            decision_url = GATE_R_ISSUE_URL
+            maintenance_url = ""
+        elif historical_issue or heap_warning:
+            classification = "informational_noncausal"
+            causal = False
+            scope = f"historical_alert:{alert_type}:{sensor_id}"
+            decision_url = M8_DECISION_URL
+            maintenance_url = historical_issue or "https://github.com/VerdifyConsultancy/verdify-platform/issues/433"
+        else:
+            classification = "unclassified"
+            causal = True
+            scope = f"open_alert:{alert_type}:{sensor_id}"
+            decision_url = ""
+            maintenance_url = ""
         # Unknown open alerts retain safe metadata but no free-form message.
         # Until an explicit source-grounded classification exists, conservatively
         # treat each as causal and let the guard block physical work.
@@ -898,13 +1095,13 @@ def alert_projection(db: Mapping[str, Any], *, observed_at: str) -> list[dict[st
             {
                 "alert_id": str(row["id"]),
                 "alert_type": alert_type,
-                "scope": f"open_alert:{alert_type}:{sensor_id}",
+                "scope": scope,
                 "disposition": str(row.get("disposition") or "open"),
                 "observed_at": observed_at,
-                "classification": "unclassified",
-                "causal": True,
-                "decision_issue_url": "",
-                "maintenance_issue_url": "",
+                "classification": classification,
+                "causal": causal,
+                "decision_issue_url": decision_url,
+                "maintenance_issue_url": maintenance_url,
             }
         )
     return projection
@@ -929,6 +1126,7 @@ def fresh_gate_p_authorization(now: datetime) -> bool:
 def assemble(
     template: dict[str, Any],
     *,
+    mode: str,
     boundary: str,
     git_pin: str,
     application_source: str,
@@ -945,16 +1143,20 @@ def assemble(
     status = db["status"]
     runtime = db["runtime"]
     generation = db["generation"]
-    if runtime.get("writer_generation") is None or runtime.get("connection_generation") is None:
+    if mode == "proof" and (runtime.get("writer_generation") is None or runtime.get("connection_generation") is None):
         # Gate P may run before the component worker has observed the just-rolled
         # source.  Do not borrow an old generation: fail collection until the
         # current component-enabled writer registers its exact runtime lineage.
         raise CollectionError("current component runtime generation is not registered")
-    if int(generation["connection_generation"]) != int(kube_facts["attestation"]["connection"]):
+    if mode == "proof" and (
+        generation is None or int(generation["connection_generation"]) != int(kube_facts["attestation"]["connection"])
+    ):
         raise CollectionError("database/current transport connection generations differ")
     lease_generation = int(status["lease_generation"])
-    writer_generation = int(runtime["writer_generation"])
-    connection_generation = int(runtime["connection_generation"])
+    writer_generation = 0 if mode == "recovery" else int(runtime["writer_generation"])
+    connection_generation = (
+        int(kube_facts["attestation"]["connection"]) if mode == "recovery" else int(runtime["connection_generation"])
+    )
     registry_revision = str(status["registry_revision"])
     backup, full_acceptance = backup_evidence(kube, kube_facts)
     writer_fact = dict(kube_facts["writer_fact"])
@@ -997,11 +1199,11 @@ def assemble(
     packet.update(
         {
             "schema": INPUT_SCHEMA,
-            "mode": "proof",
+            "mode": mode,
             "boundary": boundary,
             "packet_id": str(uuid.uuid4()),
             "captured_at": now,
-            "guard": chain(boundary, state_path),
+            "guard": chain(mode, boundary, state_path),
             "provenance": {
                 "git_pin": git_pin,
                 "application_source_revision": application_source,
@@ -1026,8 +1228,8 @@ def assemble(
             "workloads": kube_facts["workloads"],
             "runtime": {
                 "experiment_feature_mode": "off",
-                "active_experiment_id": experiment_id,
-                "policy_vector_mode": "off",
+                "active_experiment_id": kube_facts["ingestor_env"]["VERDIFY_ACTIVE_EXPERIMENT_ID"],
+                "policy_vector_mode": kube_facts["ingestor_env"]["VERDIFY_POLICY_VECTOR_MODE"],
                 "component_enabled": bool(status["component_enabled"]),
                 "admission_state": str(status["admission_state"]),
                 "open_exposure_count": int(status["open_exposure_count"]),
@@ -1044,7 +1246,7 @@ def assemble(
                 "qualification_capture": {**QUALIFICATION, "application_source_revision": application_source},
                 "samples": climate_samples(db["climate"]),
             },
-            "alerts": alert_projection(db, observed_at=now),
+            "alerts": alert_projection(db, observed_at=now, experiment_id=experiment_id),
             "dependencies": source_dependencies(template, repo_root, application_source=application_source),
             "evidence": {
                 "component_grid": component,
@@ -1093,8 +1295,17 @@ def assemble(
 
 def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(description=__doc__)
-    result.add_argument("--boundary", choices=BOUNDARY_SEQUENCE, required=True)
-    result.add_argument("--expected-git-pin", required=True)
+    result.add_argument("--mode", choices=tuple(BOUNDARY_SEQUENCE), required=True)
+    result.add_argument(
+        "--boundary", choices=tuple(item for values in BOUNDARY_SEQUENCE.values() for item in values), required=True
+    )
+    git_pin = result.add_mutually_exclusive_group(required=True)
+    git_pin.add_argument("--expected-git-pin")
+    git_pin.add_argument(
+        "--derive-git-pin-from-argo",
+        action="store_true",
+        help="bind the packet to the exact current Argo Application revision",
+    )
     result.add_argument("--expected-application-source", required=True)
     result.add_argument("--experiment-id", required=True)
     result.add_argument("--state", type=Path, required=True)
@@ -1115,30 +1326,44 @@ def parser() -> argparse.ArgumentParser:
 
 async def async_main(args: argparse.Namespace) -> int:
     try:
+        if args.boundary not in BOUNDARY_SEQUENCE[args.mode]:
+            raise CollectionError("boundary does not belong to mode")
+        if args.expected_git_pin is not None and not SHA40.fullmatch(args.expected_git_pin):
+            raise CollectionError("expected Git pin is not an exact lowercase Git SHA")
+        if not SHA40.fullmatch(args.expected_application_source):
+            raise CollectionError("expected application source is not an exact lowercase Git SHA")
         template = json.loads(args.template.read_text())
         kube = KubeReader()
         kube_facts = collect_kube(
             kube,
+            mode=args.mode,
             git_pin=args.expected_git_pin,
             application_source=args.expected_application_source,
             experiment_id=args.experiment_id,
         )
-        db = await collect_db(args.experiment_id)
-        preflights = (
-            gate_p_preflights(
+        db = await collect_db(args.experiment_id, mode=args.mode)
+        if args.mode == "recovery":
+            preflights = recovery_preflights(
+                template,
+                observed_at=zulu(datetime.now(UTC)),
+                application_source=args.expected_application_source,
+                experiment_id=args.experiment_id,
+            )
+        elif args.boundary == "gate-p":
+            preflights = gate_p_preflights(
                 kube=kube,
                 db=db,
                 application_source=args.expected_application_source,
                 experiment_id=args.experiment_id,
                 cache=args.preflight_cache,
             )
-            if args.boundary == "gate-p"
-            else cached_preflights(args.preflight_cache)
-        )
+        else:
+            preflights = cached_preflights(args.preflight_cache)
         packet = assemble(
             template,
+            mode=args.mode,
             boundary=args.boundary,
-            git_pin=args.expected_git_pin,
+            git_pin=kube_facts["git_pin"],
             application_source=args.expected_application_source,
             experiment_id=args.experiment_id,
             state_path=args.state,

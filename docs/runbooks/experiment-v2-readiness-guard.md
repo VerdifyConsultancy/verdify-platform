@@ -92,12 +92,24 @@ without a registered classification fails closed.
 The collector never drops other open alerts. It retains their IDs, type,
 sensor scope, and disposition, omits free-form message text, and conservatively
 marks them `unclassified` and causal until a source-grounded classification is
-added. That is an intentional physical-work blocker.
+added. The exact `expired_work_not_terminal` alert for the requested experiment
+is an `authorized_recovery_target` only in `recovery / gate-r`; it remains a
+blocker in proof mode. Known alerts opened before the M8.1 decision can be
+`informational_noncausal` only through the collector's exact type/sensor/source
+rules and linked open maintenance issues. The heap warning exception is still
+narrower: it requires fresh diagnostics, healthy current free/largest-block
+values, no warning event or log, and only the firmware lifetime low-watermark
+flag. A new or mismatched alert remains an intentional physical-work blocker.
 
 ## Invocation
 
-Use exact expected values from the activation/recovery source, not values copied
-back out of the packet:
+For offline review, pass the exact GitOps pin, application source, and experiment
+identity recorded by the attended activation. In-cluster activation avoids the
+impossible self-reference of embedding a commit's own SHA: the read-only
+collector obtains the exact current revision from the Argo Application, then
+the guard requires every packet provenance copy and the full-sync operation
+revision to equal that 40-character SHA. Application source and experiment ID
+remain explicit precommitted activation values.
 
 ```sh
 python3 scripts/experiment_v2_readiness_guard.py \
@@ -170,16 +182,19 @@ it closes the exposure first in the same transaction, disables component
 authority, increments the lease generation, and preserves the failed attempt.
 The guard itself never performs that mutation or a device write.
 
-`scripts/experiment_v2_proof_packet.py` is the live proof-mode collector. The
-direct-proof Job invokes it and this guard before Gate P and before every
-baseline/aggressive/baseline transition. It has GET/LIST-only Kubernetes RBAC,
-a default-read-only database login, read-only backup-PVC access, and no device
-client. Its egress policy allows only DNS, the exact Kubernetes service, DB,
-MCP, and public TLS with private/device networks excluded. Gate P runs the
-current service plus every ready MCP replica acceptance, service and replica
-readiness, the non-actuating provider preflight, and passive #424 agreement
-once; later boundaries reuse their exact receipt hashes while recollecting all
-other current evidence.
+`scripts/experiment_v2_proof_packet.py` is the live two-mode collector. The
+read-only Gate R readiness Job invokes it with `--mode recovery --boundary
+gate-r`, then runs this guard and retains the secret-free result before the
+separate migration-239 activation can be prepared. Gate R collection does not
+call MCP or the provider and cannot write the lifecycle database. The direct-
+proof Job invokes the same collector with `--mode proof` before Gate P and
+before every baseline/aggressive/baseline transition.
 
-The separate recovery hook remains responsible for invoking `recovery /
-gate-r`; the proof collector does not duplicate that resolver.
+Both Jobs have GET/LIST-only Kubernetes RBAC, an exact `verdify-config` GET,
+a default-read-only database login, read-only backup-PVC access, and no device
+client. Recovery egress is limited to DNS, DB, and the exact Kubernetes service.
+Proof egress additionally allows MCP and public TLS with private/device networks
+excluded. Gate P runs the current service plus every ready MCP replica
+acceptance, service and replica readiness, the non-actuating provider preflight,
+and passive #424 agreement once; later boundaries reuse their exact receipt
+hashes while recollecting all other current evidence.

@@ -97,7 +97,7 @@ def test_passive_424_requires_exact_six_series_agreement() -> None:
 
 def test_chain_uses_only_guard_committed_predecessor(tmp_path: Path) -> None:
     state = tmp_path / "state.json"
-    gate = collector.chain("gate-p", state)
+    gate = collector.chain("proof", "gate-p", state)
     assert gate["sequence"] == 0 and gate["previous_receipt_sha256"] is None
     state.write_text(
         json.dumps(
@@ -109,14 +109,14 @@ def test_chain_uses_only_guard_committed_predecessor(tmp_path: Path) -> None:
             }
         )
     )
-    baseline = collector.chain("baseline-before", state)
+    baseline = collector.chain("proof", "baseline-before", state)
     assert baseline == {
         "attempt_id": gate["attempt_id"],
         "sequence": 1,
         "previous_receipt_sha256": "a" * 64,
     }
     with pytest.raises(collector.CollectionError, match="sequence"):
-        collector.chain("aggressive", state)
+        collector.chain("proof", "aggressive", state)
 
 
 def test_gate_p_authorization_is_current_bounded_and_never_uses_placeholder(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -159,7 +159,11 @@ def test_alert_projection_preserves_unknown_alerts_as_causal_blockers() -> None:
         "disposition": "acknowledged",
         "message": "must never enter the packet",
     }
-    projected = collector.alert_projection({"open_alerts": [*known, unknown]}, observed_at="2026-08-30T12:00:00Z")
+    projected = collector.alert_projection(
+        {"open_alerts": [*known, unknown]},
+        observed_at="2026-08-30T12:00:00Z",
+        experiment_id="45039c86-c1d9-52f6-a0a9-d94a17bc4b14",
+    )
     assert {row["scope"] for row in projected[:2]} == {"south_wall_probe", "hydroponic_monitor"}
     assert projected[2] == {
         "alert_id": "5",
@@ -173,6 +177,71 @@ def test_alert_projection_preserves_unknown_alerts_as_causal_blockers() -> None:
         "maintenance_issue_url": "",
     }
     assert "message" not in projected[2]
+
+
+def test_alert_projection_classifies_only_exact_source_grounded_exceptions() -> None:
+    experiment_id = "45039c86-c1d9-52f6-a0a9-d94a17bc4b14"
+    required = [
+        {"id": 1, "alert_type": "sensor_offline", "sensor_id": "climate.temp_south"},
+        {"id": 2, "alert_type": "sensor_offline", "sensor_id": "climate.rh_south"},
+        {"id": 3, "alert_type": "sensor_offline", "sensor_id": "climate.vpd_south"},
+        {"id": 4, "alert_type": "sensor_offline", "sensor_id": "climate.hydro_ph"},
+    ]
+    recovery = {
+        "id": 5,
+        "alert_type": "component_experiment_integrity",
+        "severity": "critical",
+        "sensor_id": f"experiment.v2.{experiment_id}",
+        "source": "system",
+        "details": {
+            "experiment_id": experiment_id,
+            "reason": "expired_work_not_terminal",
+            "open_exposure_count": 0,
+        },
+    }
+    historical = {
+        "id": 6,
+        "ts": "2026-07-01T00:00:00Z",
+        "alert_type": "forecast_deviation",
+        "sensor_id": "forecast.deviation",
+        "source": "ingestor",
+    }
+    heap = {
+        "id": 7,
+        "alert_type": "heap_pressure_warning",
+        "severity": "warning",
+        "sensor_id": "equipment.heap_pressure_warning",
+        "source": "system",
+        "details": {
+            "heap_diag_ts": "2026-08-30T11:59:00Z",
+            "heap_free_kb": 75.0,
+            "heap_largest_free_block_kb": 50.0,
+            "heap_low_watermark_warning": True,
+            "heap_fragmentation_warning": False,
+            "last_true_ts": None,
+            "last_warning_log_ts": None,
+            "warning_logs_30m": 0,
+        },
+    }
+    projected = collector.alert_projection(
+        {"open_alerts": [*required, recovery, historical, heap]},
+        observed_at="2026-08-30T12:00:00Z",
+        experiment_id=experiment_id,
+    )
+    by_id = {row["alert_id"]: row for row in projected[2:]}
+    assert by_id["5"]["classification"] == "authorized_recovery_target"
+    assert by_id["5"]["causal"] is False
+    assert by_id["6"]["classification"] == "informational_noncausal"
+    assert by_id["7"]["classification"] == "informational_noncausal"
+
+    heap["details"]["last_true_ts"] = "2026-08-30T11:59:30Z"
+    blocked = collector.alert_projection(
+        {"open_alerts": [*required, heap]},
+        observed_at="2026-08-30T12:00:00Z",
+        experiment_id=experiment_id,
+    )[-1]
+    assert blocked["classification"] == "unclassified"
+    assert blocked["causal"] is True
 
 
 def test_collector_source_has_no_device_client_or_mutating_kubernetes_method() -> None:
@@ -191,3 +260,30 @@ def test_collector_source_has_no_device_client_or_mutating_kubernetes_method() -
     assert "ORDER BY ts DESC LIMIT 2" in source
     assert '"--readiness-url", "service=http://verdify-mcp:8000/readyz"' in source
     assert os.path.basename(SCRIPT) == "experiment_v2_proof_packet.py"
+
+
+def test_git_pin_is_either_exact_expected_or_derived_from_argo(tmp_path: Path) -> None:
+    common = [
+        "--mode",
+        "recovery",
+        "--boundary",
+        "gate-r",
+        "--expected-application-source",
+        "b" * 40,
+        "--experiment-id",
+        "45039c86-c1d9-52f6-a0a9-d94a17bc4b14",
+        "--state",
+        str(tmp_path / "state.json"),
+        "--output",
+        str(tmp_path / "packet.json"),
+    ]
+    exact = collector.parser().parse_args([*common, "--expected-git-pin", "a" * 40])
+    assert exact.expected_git_pin == "a" * 40
+    assert exact.derive_git_pin_from_argo is False
+    derived = collector.parser().parse_args([*common, "--derive-git-pin-from-argo"])
+    assert derived.expected_git_pin is None
+    assert derived.derive_git_pin_from_argo is True
+    with pytest.raises(SystemExit):
+        collector.parser().parse_args(common)
+    with pytest.raises(SystemExit):
+        collector.parser().parse_args([*common, "--expected-git-pin", "a" * 40, "--derive-git-pin-from-argo"])

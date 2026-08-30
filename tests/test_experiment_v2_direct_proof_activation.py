@@ -202,6 +202,12 @@ def test_proof_read_capability_is_exact_and_nonmutating() -> None:
 
     role = _document(rendered, "Role", "verdify-experiment-v2-direct-proof-read")
     assert role["rules"] == [
+        {
+            "apiGroups": [""],
+            "resources": ["configmaps"],
+            "resourceNames": ["verdify-config"],
+            "verbs": ["get"],
+        },
         {"apiGroups": [""], "resources": ["pods"], "verbs": ["get", "list"]},
         {"apiGroups": [""], "resources": ["pods/log"], "verbs": ["get"]},
         {
@@ -338,7 +344,6 @@ def test_proof_script_is_syntax_valid_runtime_bound_and_non_provider() -> None:
         "VERDIFY_DIRECT_PROOF_RESCUE_OWNER_ROLE",
         "VERDIFY_DIRECT_PROOF_ACTOR",
         "VERDIFY_DIRECT_PROOF_CONFIG_REVISION",
-        "VERDIFY_DIRECT_PROOF_GIT_PIN",
         "VERDIFY_DIRECT_PROOF_APPLICATION_SOURCE",
     ):
         assert variable in script
@@ -401,6 +406,8 @@ def test_proof_script_is_syntax_valid_runtime_bound_and_non_provider() -> None:
     assert "current writer generation is not yet stable" in script
     assert "experiment_v2_proof_packet.py" in script
     assert "experiment_v2_readiness_guard.py" in script
+    assert '"--derive-git-pin-from-argo"' in script
+    assert 'json.loads(packet.read_text())["provenance"]["git_pin"]' in script
     assert 'run_readiness_boundary("gate-p")' in script
     assert 'run_readiness_boundary("baseline-before")' in script
     assert 'readiness_boundary="aggressive"' in script
@@ -460,4 +467,5 @@ def test_dormant_activation_values_are_invalid_placeholders() -> None:
     rendered = _render(ACTIVATION)
     activation = _document(rendered, "ConfigMap", "experiment-v2-direct-proof-activation")
     assert activation["data"]
+    assert "VERDIFY_DIRECT_PROOF_GIT_PIN" not in activation["data"]
     assert set(activation["data"].values()) == {"REPLACE_BEFORE_ACTIVATION"}

@@ -1,0 +1,99 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: verdify-experiment-v2-gate-r-readiness
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: experiment-v2-gate-r-readiness
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  suspend: true
+  backoffLimit: 0
+  activeDeadlineSeconds: 600
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: verdify
+        app.kubernetes.io/component: experiment-v2-gate-r-readiness
+    spec:
+      restartPolicy: Never
+      serviceAccountName: verdify-experiment-v2-gate-r-readiness
+      automountServiceAccountToken: true
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
+      imagePullSecrets:
+        - name: zot-origin-cluster-pull
+      containers:
+        - name: readiness
+          image: ghcr.io/verdifyconsultancy/verdify-experiment-v2-orchestrator
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              python /app/scripts/experiment_v2_proof_packet.py \
+                --mode recovery \
+                --boundary gate-r \
+                --derive-git-pin-from-argo \
+                --expected-application-source "$VERDIFY_GATE_R_READINESS_APPLICATION_SOURCE" \
+                --experiment-id "$VERDIFY_GATE_R_READINESS_EXPERIMENT_ID" \
+                --state /tmp/gate-r-readiness-state.json \
+                --output /tmp/gate-r-readiness-packet.json
+              GIT_PIN="$(python -c 'import json; print(json.load(open("/tmp/gate-r-readiness-packet.json"))["provenance"]["git_pin"])')"
+              exec python /app/scripts/experiment_v2_readiness_guard.py \
+                --input /tmp/gate-r-readiness-packet.json \
+                --mode recovery \
+                --boundary gate-r \
+                --expected-git-pin "$GIT_PIN" \
+                --expected-application-source "$VERDIFY_GATE_R_READINESS_APPLICATION_SOURCE" \
+                --expected-experiment-id "$VERDIFY_GATE_R_READINESS_EXPERIMENT_ID" \
+                --repo-root /app/readiness-source
+          envFrom:
+            - configMapRef:
+                name: verdify-config
+            - configMapRef:
+                name: experiment-v2-gate-r-readiness-activation
+          env:
+            - name: READ_DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: VERDIFY_INGESTOR_RUNTIME_DB_USER
+            - name: READ_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: "25m"
+              memory: "64Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: backups
+              mountPath: /backups
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: backups
+          persistentVolumeClaim:
+            claimName: verdify-db-dumps
+            readOnly: true

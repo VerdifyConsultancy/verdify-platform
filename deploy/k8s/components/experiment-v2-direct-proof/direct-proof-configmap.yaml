@@ -59,14 +59,10 @@ data:
     RUNTIME_REGISTRATION_SETTLE_SECONDS = 30 * 60
     SHA256 = re.compile(r"^[0-9a-f]{64}$")
     SOURCE_REVISION = re.compile(r"^[0-9a-f]{40}$")
-    EXPECTED_GIT_PIN = required_activation_value("VERDIFY_DIRECT_PROOF_GIT_PIN")
     EXPECTED_APPLICATION_SOURCE = required_activation_value(
         "VERDIFY_DIRECT_PROOF_APPLICATION_SOURCE"
     )
-    if not all(
-        SOURCE_REVISION.fullmatch(value)
-        for value in (EXPECTED_GIT_PIN, EXPECTED_APPLICATION_SOURCE)
-    ):
+    if not SOURCE_REVISION.fullmatch(EXPECTED_APPLICATION_SOURCE):
         raise RuntimeError("direct-proof source identity is malformed")
     READINESS_COLLECTOR = Path("/app/scripts/experiment_v2_proof_packet.py")
     READINESS_GUARD = Path("/app/scripts/experiment_v2_readiness_guard.py")
@@ -151,10 +147,11 @@ data:
             [
                 "python",
                 str(READINESS_COLLECTOR),
+                "--mode",
+                "proof",
                 "--boundary",
                 boundary,
-                "--expected-git-pin",
-                EXPECTED_GIT_PIN,
+                "--derive-git-pin-from-argo",
                 "--expected-application-source",
                 EXPECTED_APPLICATION_SOURCE,
                 "--experiment-id",
@@ -171,6 +168,12 @@ data:
         )
         if collector.returncode != 0:
             fail(f"readiness packet collection failed closed at {boundary}")
+        try:
+            expected_git_pin = json.loads(packet.read_text())["provenance"]["git_pin"]
+        except (OSError, KeyError, TypeError, json.JSONDecodeError):
+            fail(f"readiness packet has no exact GitOps identity at {boundary}")
+        if not SOURCE_REVISION.fullmatch(expected_git_pin):
+            fail(f"readiness packet GitOps identity is malformed at {boundary}")
         guarded = subprocess.run(
             [
                 "python",
@@ -182,7 +185,7 @@ data:
                 "--boundary",
                 boundary,
                 "--expected-git-pin",
-                EXPECTED_GIT_PIN,
+                expected_git_pin,
                 "--expected-application-source",
                 EXPECTED_APPLICATION_SOURCE,
                 "--expected-experiment-id",

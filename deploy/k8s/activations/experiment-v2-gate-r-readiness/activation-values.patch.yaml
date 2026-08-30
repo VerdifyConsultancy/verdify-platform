@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: experiment-v2-gate-r-readiness-activation
+data:
+  VERDIFY_GATE_R_READINESS_APPLICATION_SOURCE: "REPLACE_BEFORE_ACTIVATION"
+  VERDIFY_GATE_R_READINESS_EXPERIMENT_ID: "REPLACE_BEFORE_ACTIVATION"
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: verdify-experiment-v2-gate-r-readiness
+spec:
+  suspend: true
+  template:
+    spec:
+      containers:
+        - name: readiness
+          image: invalid.local/replace-before-activation:never

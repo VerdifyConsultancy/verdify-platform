@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: verdify-experiment-v2-direct-proof
+  name: verdify-experiment-v2-gate-r-readiness
   labels:
     app.kubernetes.io/part-of: verdify
-    app.kubernetes.io/component: experiment-v2-direct-proof
+    app.kubernetes.io/component: experiment-v2-gate-r-readiness
   annotations:
     argocd.argoproj.io/hook: PostSync
     argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
@@ -14,10 +14,10 @@ automountServiceAccountToken: true
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: verdify-experiment-v2-direct-proof-read
+  name: verdify-experiment-v2-gate-r-readiness
   labels:
     app.kubernetes.io/part-of: verdify
-    app.kubernetes.io/component: experiment-v2-direct-proof
+    app.kubernetes.io/component: experiment-v2-gate-r-readiness
   annotations:
     argocd.argoproj.io/hook: PostSync
     argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
@@ -51,29 +51,29 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: verdify-experiment-v2-direct-proof-read
+  name: verdify-experiment-v2-gate-r-readiness
   labels:
     app.kubernetes.io/part-of: verdify
-    app.kubernetes.io/component: experiment-v2-direct-proof
+    app.kubernetes.io/component: experiment-v2-gate-r-readiness
   annotations:
     argocd.argoproj.io/hook: PostSync
     argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
     argocd.argoproj.io/sync-wave: "-2"
 subjects:
   - kind: ServiceAccount
-    name: verdify-experiment-v2-direct-proof
+    name: verdify-experiment-v2-gate-r-readiness
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: verdify-experiment-v2-direct-proof-read
+  name: verdify-experiment-v2-gate-r-readiness
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: verdify-prod-experiment-v2-direct-proof-argo-read
+  name: verdify-prod-experiment-v2-gate-r-readiness-argo-read
   labels:
     app.kubernetes.io/part-of: verdify
-    app.kubernetes.io/component: experiment-v2-direct-proof
+    app.kubernetes.io/component: experiment-v2-gate-r-readiness
   annotations:
     argocd.argoproj.io/hook: PostSync
     argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
@@ -87,19 +87,19 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: verdify-prod-experiment-v2-direct-proof-argo-read
+  name: verdify-prod-experiment-v2-gate-r-readiness-argo-read
   labels:
     app.kubernetes.io/part-of: verdify
-    app.kubernetes.io/component: experiment-v2-direct-proof
+    app.kubernetes.io/component: experiment-v2-gate-r-readiness
   annotations:
     argocd.argoproj.io/hook: PostSync
     argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
     argocd.argoproj.io/sync-wave: "-2"
 subjects:
   - kind: ServiceAccount
-    name: verdify-experiment-v2-direct-proof
+    name: verdify-experiment-v2-gate-r-readiness
     namespace: verdify-prod
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: verdify-prod-experiment-v2-direct-proof-argo-read
+  name: verdify-prod-experiment-v2-gate-r-readiness-argo-read
