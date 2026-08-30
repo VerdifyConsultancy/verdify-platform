@@ -1,0 +1,356 @@
+{
+  "schema": "verdify-experiment-v2-readiness-input-v1",
+  "mode": "proof",
+  "boundary": "gate-p",
+  "packet_id": "00000000-0000-4000-8000-000000000001",
+  "captured_at": "2026-08-30T12:01:30.000000Z",
+  "guard": {
+    "attempt_id": "10000000-0000-4000-8000-000000000001",
+    "sequence": 0,
+    "previous_receipt_sha256": null
+  },
+  "provenance": {
+    "git_pin": "6b48dba7217438f5fdd7fb14fc8e067975cf1c35",
+    "application_source_revision": "b9b7a9dd12c07e53f4370b629774c73125f035f7",
+    "rendered_git_pin": "6b48dba7217438f5fdd7fb14fc8e067975cf1c35",
+    "running_git_pin": "6b48dba7217438f5fdd7fb14fc8e067975cf1c35",
+    "experiment_id": "45039c86-c1d9-52f6-a0a9-d94a17bc4b14",
+    "registry_revision": "registry-v1",
+    "images": [
+      {
+        "workload": "verdify-api",
+        "rendered_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "running_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "application_source_revision": "b9b7a9dd12c07e53f4370b629774c73125f035f7"
+      },
+      {
+        "workload": "verdify-ingestor",
+        "rendered_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "running_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "application_source_revision": "b9b7a9dd12c07e53f4370b629774c73125f035f7"
+      },
+      {
+        "workload": "verdify-mcp",
+        "rendered_digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "running_digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "application_source_revision": "b9b7a9dd12c07e53f4370b629774c73125f035f7"
+      }
+    ],
+    "writer": {
+      "lease_holder": "verdify-ingestor-current",
+      "current_writer_count": 1,
+      "lease_generation": 16,
+      "writer_generation": 4,
+      "connection_generation": 1,
+      "stable_since": "2026-08-30T11:30:00.000000Z",
+      "observed_at": "2026-08-30T12:01:25.000000Z",
+      "application_source_revision": "b9b7a9dd12c07e53f4370b629774c73125f035f7",
+      "running_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "recurring_error_count": 0
+    }
+  },
+  "workloads": [
+    {"name": "verdify-api", "kind": "Deployment", "ready": 2, "desired": 2, "healthy": true, "observed_at": "2026-08-30T12:01:25.000000Z"},
+    {"name": "verdify-db", "kind": "StatefulSet", "ready": 1, "desired": 1, "healthy": true, "observed_at": "2026-08-30T12:01:25.000000Z"},
+    {"name": "verdify-hermes-iris", "kind": "Deployment", "ready": 1, "desired": 1, "healthy": true, "observed_at": "2026-08-30T12:01:25.000000Z"},
+    {"name": "verdify-ingestor", "kind": "Deployment", "ready": 1, "desired": 1, "healthy": true, "observed_at": "2026-08-30T12:01:25.000000Z"},
+    {"name": "verdify-mcp", "kind": "Deployment", "ready": 2, "desired": 2, "healthy": true, "observed_at": "2026-08-30T12:01:25.000000Z"}
+  ],
+  "runtime": {
+    "experiment_feature_mode": "off",
+    "active_experiment_id": "",
+    "policy_vector_mode": "off",
+    "component_enabled": false,
+    "admission_state": "closed",
+    "open_exposure_count": 0,
+    "experiment_id": "45039c86-c1d9-52f6-a0a9-d94a17bc4b14",
+    "lease_generation": 16,
+    "writer_generation": 4,
+    "connection_generation": 1,
+    "registry_revision": "registry-v1"
+  },
+  "backup": {
+    "corrected_one_off": {
+      "status": "succeeded",
+      "completed_at": "2026-08-30T11:45:00.000000Z",
+      "artifact_bytes": 1048576,
+      "restorable": true,
+      "partial_artifact": false,
+      "source_git_pin": "6b48dba7217438f5fdd7fb14fc8e067975cf1c35",
+      "receipt_sha256": "abababababababababababababababababababababababababababababababab"
+    },
+    "controller_owned": {
+      "status": "succeeded",
+      "completed_at": "2026-08-30T11:50:00.000000Z",
+      "artifact_bytes": 1048576,
+      "restorable": true,
+      "partial_artifact": false,
+      "source_git_pin": "6b48dba7217438f5fdd7fb14fc8e067975cf1c35",
+      "receipt_sha256": "6666666666666666666666666666666666666666666666666666666666666666"
+    },
+    "policy_max_age_seconds": 93600
+  },
+  "argo": {
+    "revision": "6b48dba7217438f5fdd7fb14fc8e067975cf1c35",
+    "sync_status": "Synced",
+    "health_status": "Healthy",
+    "operation_phase": "Succeeded",
+    "prune": false,
+    "resource_selector": null,
+    "observed_at": "2026-08-30T12:01:20.000000Z"
+  },
+  "climate": {
+    "max_source_age_seconds": 90,
+    "qualification_capture": {
+      "status": "degraded-pass",
+      "source_kind": "ha_cycle_aligned_events",
+      "evidence_class": "source_qualification",
+      "window_started_at": "2026-08-30T11:31:00.000000Z",
+      "window_ended_at": "2026-08-30T12:01:00.000000Z",
+      "sample_count": 109,
+      "minimum_contributors": 3,
+      "application_source_revision": "b9b7a9dd12c07e53f4370b629774c73125f035f7",
+      "receipt_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+    },
+    "samples": [
+      {
+        "cycle_id": "ha-cycle-120000",
+        "sample_at": "2026-08-30T12:00:00.000000Z",
+        "declared_contributors": ["north", "east", "west"],
+        "zones": {
+          "north": {
+            "temp_f": {"value": 75.0, "observed_at": "2026-08-30T11:59:58.000000Z", "source_event_id": "n-t-1", "source_cycle_id": "ha-cycle-120000"},
+            "rh_pct": {"value": 60.0, "observed_at": "2026-08-30T11:59:58.100000Z", "source_event_id": "n-r-1", "source_cycle_id": "ha-cycle-120000"},
+            "vpd_kpa": {"value": 0.9, "observed_at": "2026-08-30T11:59:58.200000Z", "source_event_id": "n-v-1", "source_cycle_id": "ha-cycle-120000"}
+          },
+          "south": {
+            "temp_f": {"value": null, "observed_at": "2026-08-30T11:59:58.300000Z", "source_event_id": "s-t-1", "source_cycle_id": "ha-cycle-120000"},
+            "rh_pct": {"value": null, "observed_at": "2026-08-30T11:59:58.400000Z", "source_event_id": "s-r-1", "source_cycle_id": "ha-cycle-120000"},
+            "vpd_kpa": {"value": null, "observed_at": "2026-08-30T11:59:58.500000Z", "source_event_id": "s-v-1", "source_cycle_id": "ha-cycle-120000"}
+          },
+          "east": {
+            "temp_f": {"value": 77.0, "observed_at": "2026-08-30T11:59:58.600000Z", "source_event_id": "e-t-1", "source_cycle_id": "ha-cycle-120000"},
+            "rh_pct": {"value": 62.0, "observed_at": "2026-08-30T11:59:58.700000Z", "source_event_id": "e-r-1", "source_cycle_id": "ha-cycle-120000"},
+            "vpd_kpa": {"value": 1.1, "observed_at": "2026-08-30T11:59:58.800000Z", "source_event_id": "e-v-1", "source_cycle_id": "ha-cycle-120000"}
+          },
+          "west": {
+            "temp_f": {"value": 76.0, "observed_at": "2026-08-30T11:59:58.900000Z", "source_event_id": "w-t-1", "source_cycle_id": "ha-cycle-120000"},
+            "rh_pct": {"value": 61.0, "observed_at": "2026-08-30T11:59:59.000000Z", "source_event_id": "w-r-1", "source_cycle_id": "ha-cycle-120000"},
+            "vpd_kpa": {"value": 1.0, "observed_at": "2026-08-30T11:59:59.100000Z", "source_event_id": "w-v-1", "source_cycle_id": "ha-cycle-120000"}
+          }
+        },
+        "aggregates": {
+          "temp_f": {"value": 76.0, "observed_at": "2026-08-30T11:59:59.200000Z", "source_event_id": "a-t-1", "source_cycle_id": "ha-cycle-120000"},
+          "rh_pct": {"value": 61.0, "observed_at": "2026-08-30T11:59:59.300000Z", "source_event_id": "a-r-1", "source_cycle_id": "ha-cycle-120000"},
+          "vpd_kpa": {"value": 1.0, "observed_at": "2026-08-30T11:59:59.400000Z", "source_event_id": "a-v-1", "source_cycle_id": "ha-cycle-120000"}
+        },
+        "diagnostics": {"active_probe_count": 4, "probe_health": "OK"}
+      },
+      {
+        "cycle_id": "ha-cycle-120100",
+        "sample_at": "2026-08-30T12:01:00.000000Z",
+        "declared_contributors": ["north", "east", "west"],
+        "zones": {
+          "north": {
+            "temp_f": {"value": 75.3, "observed_at": "2026-08-30T12:00:58.000000Z", "source_event_id": "n-t-2", "source_cycle_id": "ha-cycle-120100"},
+            "rh_pct": {"value": 60.3, "observed_at": "2026-08-30T12:00:58.100000Z", "source_event_id": "n-r-2", "source_cycle_id": "ha-cycle-120100"},
+            "vpd_kpa": {"value": 0.93, "observed_at": "2026-08-30T12:00:58.200000Z", "source_event_id": "n-v-2", "source_cycle_id": "ha-cycle-120100"}
+          },
+          "south": {
+            "temp_f": {"value": null, "observed_at": "2026-08-30T12:00:58.300000Z", "source_event_id": "s-t-2", "source_cycle_id": "ha-cycle-120100"},
+            "rh_pct": {"value": null, "observed_at": "2026-08-30T12:00:58.400000Z", "source_event_id": "s-r-2", "source_cycle_id": "ha-cycle-120100"},
+            "vpd_kpa": {"value": null, "observed_at": "2026-08-30T12:00:58.500000Z", "source_event_id": "s-v-2", "source_cycle_id": "ha-cycle-120100"}
+          },
+          "east": {
+            "temp_f": {"value": 77.3, "observed_at": "2026-08-30T12:00:58.600000Z", "source_event_id": "e-t-2", "source_cycle_id": "ha-cycle-120100"},
+            "rh_pct": {"value": 62.3, "observed_at": "2026-08-30T12:00:58.700000Z", "source_event_id": "e-r-2", "source_cycle_id": "ha-cycle-120100"},
+            "vpd_kpa": {"value": 1.13, "observed_at": "2026-08-30T12:00:58.800000Z", "source_event_id": "e-v-2", "source_cycle_id": "ha-cycle-120100"}
+          },
+          "west": {
+            "temp_f": {"value": 76.3, "observed_at": "2026-08-30T12:00:58.900000Z", "source_event_id": "w-t-2", "source_cycle_id": "ha-cycle-120100"},
+            "rh_pct": {"value": 61.3, "observed_at": "2026-08-30T12:00:59.000000Z", "source_event_id": "w-r-2", "source_cycle_id": "ha-cycle-120100"},
+            "vpd_kpa": {"value": 1.03, "observed_at": "2026-08-30T12:00:59.100000Z", "source_event_id": "w-v-2", "source_cycle_id": "ha-cycle-120100"}
+          }
+        },
+        "aggregates": {
+          "temp_f": {"value": 76.3, "observed_at": "2026-08-30T12:00:59.200000Z", "source_event_id": "a-t-2", "source_cycle_id": "ha-cycle-120100"},
+          "rh_pct": {"value": 61.3, "observed_at": "2026-08-30T12:00:59.300000Z", "source_event_id": "a-r-2", "source_cycle_id": "ha-cycle-120100"},
+          "vpd_kpa": {"value": 1.03, "observed_at": "2026-08-30T12:00:59.400000Z", "source_event_id": "a-v-2", "source_cycle_id": "ha-cycle-120100"}
+        },
+        "diagnostics": {"active_probe_count": 4, "probe_health": "OK"}
+      }
+    ]
+  },
+  "alerts": [
+    {
+      "alert_id": "south-offline-current",
+      "alert_type": "sensor_offline",
+      "scope": "south_wall_probe",
+      "disposition": "acknowledged",
+      "observed_at": "2026-08-30T12:01:10.000000Z",
+      "classification": "accepted_nonblocking_degradation",
+      "causal": false,
+      "decision_issue_url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/748",
+      "maintenance_issue_url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/751"
+    },
+    {
+      "alert_id": "hydro-offline-current",
+      "alert_type": "sensor_offline",
+      "scope": "hydroponic_monitor",
+      "disposition": "open",
+      "observed_at": "2026-08-30T12:01:10.000000Z",
+      "classification": "accepted_nonblocking_degradation",
+      "causal": false,
+      "decision_issue_url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/748",
+      "maintenance_issue_url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/751"
+    }
+  ],
+  "dependencies": {
+    "application_source_revision": "b9b7a9dd12c07e53f4370b629774c73125f035f7",
+    "classifications": [
+      {"dependency": "aggregate_rh", "classification": "required_causal", "causal": true},
+      {"dependency": "aggregate_temperature", "classification": "required_causal", "causal": true},
+      {"dependency": "aggregate_vpd", "classification": "required_causal", "causal": true},
+      {"dependency": "component_grid", "classification": "required_causal", "causal": true},
+      {"dependency": "device_cfg_readback", "classification": "required_causal", "causal": true},
+      {"dependency": "equipment_counter", "classification": "required_causal", "causal": true},
+      {"dependency": "equipment_state", "classification": "required_causal", "causal": true},
+      {"dependency": "experiment_authority", "classification": "required_causal", "causal": true},
+      {"dependency": "forecast", "classification": "required_causal", "causal": true},
+      {"dependency": "registry_revision", "classification": "required_causal", "causal": true},
+      {"dependency": "writer_connection_generation", "classification": "required_causal", "causal": true},
+      {"dependency": "writer_lease", "classification": "required_causal", "causal": true}
+    ],
+    "surfaces": [
+      {
+        "name": "component_proof",
+        "path": "scripts/verify_component_proof_packet.py",
+        "source_sha256": "a0932ac9111e755ec25105bbff55de904f7701545e66600424d4f1dd5fe365e1",
+        "application_source_revision": "b9b7a9dd12c07e53f4370b629774c73125f035f7",
+        "causal_dependencies": ["component_grid", "device_cfg_readback", "experiment_authority", "registry_revision", "writer_connection_generation", "writer_lease"],
+        "hydro_references": []
+      },
+      {
+        "name": "selector",
+        "path": "research/planner-efficacy/switchback/v2_selector.py",
+        "source_sha256": "e8d194ceb3763e5549e832dd4c4fd6655716c42f7ba9e4978ea6a3901f04b431",
+        "application_source_revision": "b9b7a9dd12c07e53f4370b629774c73125f035f7",
+        "causal_dependencies": ["aggregate_rh", "aggregate_temperature", "aggregate_vpd", "equipment_state", "forecast"],
+        "hydro_references": []
+      },
+      {
+        "name": "executor_control",
+        "path": "ingestor/tasks/component_experiment.py",
+        "source_sha256": "b48c01b38fb49021b8b2bbd16603d0dbe06d69049ea8618c2b358d0e015e4c26",
+        "application_source_revision": "b9b7a9dd12c07e53f4370b629774c73125f035f7",
+        "causal_dependencies": ["component_grid", "device_cfg_readback", "experiment_authority", "registry_revision", "writer_connection_generation", "writer_lease"],
+        "hydro_references": []
+      },
+      {
+        "name": "locked_outcome",
+        "path": "research/planner-efficacy/switchback/v2_outcomes.py",
+        "source_sha256": "c31e4a8001383a107f2082038cec0b5afdb2e25452ccfbfbf212573daa4faf40",
+        "application_source_revision": "b9b7a9dd12c07e53f4370b629774c73125f035f7",
+        "causal_dependencies": ["aggregate_temperature", "aggregate_vpd", "equipment_counter", "equipment_state"],
+        "hydro_references": []
+      }
+    ]
+  },
+  "evidence": {
+    "component_grid": {
+      "status": "pass",
+      "observed_at": "2026-08-30T12:01:20.000000Z",
+      "application_source_revision": "b9b7a9dd12c07e53f4370b629774c73125f035f7",
+      "experiment_id": "45039c86-c1d9-52f6-a0a9-d94a17bc4b14",
+      "receipt_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+      "expected_components": 48,
+      "observed_components": 48,
+      "fresh": true,
+      "registry_revision": "registry-v1",
+      "lease_generation": 16,
+      "writer_generation": 4,
+      "connection_generation": 1
+    },
+    "authentication_686": {
+      "status": "pass",
+      "observed_at": "2026-08-30T12:00:00.000000Z",
+      "application_source_revision": "b9b7a9dd12c07e53f4370b629774c73125f035f7",
+      "experiment_id": "45039c86-c1d9-52f6-a0a9-d94a17bc4b14",
+      "receipt_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+      "replica_count": 2,
+      "replicas_checked": 2,
+      "public_unauthenticated_denied": true,
+      "unknown_bearer_denied": true,
+      "authenticated_iris_passed": true,
+      "admin_query_denied": true,
+      "session_identifier_absent": true
+    },
+    "provider_preflight": {
+      "status": "pass",
+      "observed_at": "2026-08-30T12:01:00.000000Z",
+      "application_source_revision": "b9b7a9dd12c07e53f4370b629774c73125f035f7",
+      "experiment_id": "45039c86-c1d9-52f6-a0a9-d94a17bc4b14",
+      "receipt_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+      "non_actuating": true,
+      "credential_present": true,
+      "provider_reachable": true,
+      "request_count": 1,
+      "device_call_count": 0
+    },
+    "served_control_observed_424": {
+      "status": "pass",
+      "observed_at": "2026-08-30T12:01:00.000000Z",
+      "application_source_revision": "b9b7a9dd12c07e53f4370b629774c73125f035f7",
+      "experiment_id": "45039c86-c1d9-52f6-a0a9-d94a17bc4b14",
+      "receipt_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+      "passive": true,
+      "agreement": true,
+      "series_checked": 6,
+      "device_call_count": 0
+    },
+    "writer_433": {
+      "status": "pass",
+      "observed_at": "2026-08-30T12:01:20.000000Z",
+      "application_source_revision": "b9b7a9dd12c07e53f4370b629774c73125f035f7",
+      "experiment_id": "45039c86-c1d9-52f6-a0a9-d94a17bc4b14",
+      "receipt_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+      "current_writer_count": 1,
+      "lease_holder_matches": true,
+      "generation_stable": true,
+      "component_truth_48_of_48": true,
+      "lease_generation": 16,
+      "writer_generation": 4,
+      "connection_generation": 1
+    }
+  },
+  "issue_state": {
+    "decision_748": {
+      "accepted": true,
+      "issue_url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/748"
+    },
+    "maintenance_751": {
+      "deferred": true,
+      "issue_url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/751"
+    },
+    "recovery_747": {
+      "corrected_one_off_complete": true,
+      "full_acceptance_complete": true,
+      "issue_url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/747"
+    },
+    "gate_p_641": {
+      "issue_url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/641",
+      "prerequisites": [
+        {"name": "boundary_observation_contract", "complete": true},
+        {"name": "climate_quorum", "complete": true},
+        {"name": "component_grid_48_of_48", "complete": true},
+        {"name": "controller_backup_current", "complete": true},
+        {"name": "degradation_classified", "complete": true},
+        {"name": "exact_source_and_images_pinned", "complete": true},
+        {"name": "fresh_gate_p_authorization", "complete": true},
+        {"name": "recovery_path_ready", "complete": true},
+        {"name": "stable_writer_lease_generation", "complete": true},
+        {"name": "zero_exposure", "complete": true}
+      ]
+    }
+  }
+}
