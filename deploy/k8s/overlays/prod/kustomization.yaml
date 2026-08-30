@@ -103,6 +103,10 @@ components:
   # capability is off, so this remains an inert, observable Gate-1 runtime.
   # Shadow/randomized operation remains a later GitOps change.
   - ../../components/experiment-v2-orchestrator
+  # M8.1 recovery-only Gate R readiness. This attended PostSync Job is read-only,
+  # carries no lifecycle/provider/device credential, and cannot activate Gate R.
+  # Remove it after retaining the immutable packet/guard receipt.
+  - ../../components/experiment-v2-gate-r-readiness
   # Gate 1 ordinary database-role cutover. The PreSync hook installs and proves
   # the two migration-217 logins before API/ingestor roll, then the pod patches
   # remove the database-owner credential from both ordinary containers. Merge
@@ -172,6 +176,10 @@ patches:
   # Numbered migrations run in the PreSync hook on the same exact revision,
   # before API/ingestor workloads can consume the new schema.
   - path: migration-ledger.patch.yaml
+  # One-shot M8.1 recovery readiness activation. The exact application source
+  # and immutable orchestrator digest are bound here; the collector reads the
+  # operation's exact GitOps revision directly from the Argo Application.
+  - path: experiment-v2-gate-r-readiness.patch.yaml
   # ⚠️ TEMPORARY (#382, 2026-06-20): the ingestor `state` volume is emptyDir, not the
   # iSCSI PVC — defined DIRECTLY in ingestor-state-volume.yaml. (The old
   # TEMP-ingestor-state-emptydir.patch.yaml `$patch: replace` here never overrode the
