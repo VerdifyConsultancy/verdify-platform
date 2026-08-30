@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -33,6 +34,7 @@ def test_normalized_desired_observed_comparison(parameter, observed, desired, eq
 
 def test_targeted_readback_drift_does_not_depend_on_reconnect_event(monkeypatch):
     monkeypatch.setattr(shared, "cfg_readback", {"mister_vpd_weight": 0.4})
+    monkeypatch.setattr(shared, "cfg_readback_generation", {"mister_vpd_weight": 11})
     monkeypatch.setattr(shared, "transport_generation", 11)
     monkeypatch.setattr(shared, "reconciled_transport_generation", 11)
 
@@ -75,6 +77,9 @@ def test_reconnect_reconcile_is_generation_gated_and_cfg_drift_is_separate():
     assert "if reconnect_event_set and reconnect_pending:" in source
     assert "shared.clear_cfg_drift(drift_versions)" in source
     assert "shared.mark_transport_reconciled(reconnect_generation)" in source
+    assert "shared.transport_readbacks_ready(reconnect_generation)" in source
+    assert "action=blocked_readbacks_incomplete" in source
+    assert "expected_connection_generation=reconnect_generation" in source
 
 
 def test_runtime_probe_classifies_reconnect_drift_retry_and_broad_batches():
@@ -107,9 +112,30 @@ def test_runtime_probe_classifies_reconnect_drift_retry_and_broad_batches():
 def test_unchanged_anchor_probe_uses_observed_readback_not_constant(monkeypatch):
     anchor = next(iter(dispatcher.band_anchors.ANCHOR_SYNC_PARAMS))
     monkeypatch.setattr(shared, "cfg_readback", {anchor: 1.25})
+    monkeypatch.setattr(shared, "cfg_readback_generation", {anchor: shared.transport_generation})
 
     assert dispatcher._unchanged_anchor_dispatch_count([(anchor, 1.25, "band")]) == 1
     assert dispatcher._unchanged_anchor_dispatch_count([(anchor, 1.5, "band")]) == 0
+
+
+@pytest.mark.asyncio
+async def test_reconnect_dispatch_never_queries_or_writes_before_current_readbacks(monkeypatch):
+    monkeypatch.setattr(shared, "transport_generation", 12)
+    monkeypatch.setattr(shared, "reconciled_transport_generation", 11)
+    monkeypatch.setattr(shared, "transport_expected_cfg_readbacks", frozenset({"a", "b"}))
+    monkeypatch.setattr(shared, "transport_observed_cfg_readbacks", {"a"})
+    monkeypatch.setattr(shared, "transport_readbacks_generation", 0)
+    pool = MagicMock()
+
+    await dispatcher.setpoint_dispatcher(pool)
+
+    pool.acquire.assert_not_called()
+    assert shared.reconciled_transport_generation == 11
+
+
+def test_reconnect_blind_restore_set_is_empty_while_all_candidates_have_readbacks():
+    assert dispatcher.RECONNECT_UNOBSERVED_RESTORE_PARAMS == frozenset()
+    assert dispatcher.MAX_RECONNECT_COMMANDS < 40
 
 
 def test_durable_lifecycle_mapping_keeps_retry_nonterminal_and_other_states_exact():

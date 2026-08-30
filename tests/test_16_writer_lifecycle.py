@@ -161,6 +161,8 @@ async def test_terminal_lifecycle_failure_is_bounded_and_fail_closes_writer(monk
     assert blocked.failed_count == 1
     assert blocked.outcomes[0].reason == "lifecycle_persistence_unavailable"
     assert calls == [1]
+    assert shared.recently_pushed == {}
+    assert shared.recently_pushed_values == {}
     assert shared.writer_fatal_event.is_set()
 
 
@@ -353,6 +355,25 @@ async def test_queued_request_cannot_cross_transport_generation():
     assert [outcome.status for outcome in result.outcomes] == ["sent", "failed"]
     assert result.outcomes[1].reason == "transport_generation_changed"
     assert all(outcome.connection_generation == 4 for outcome in result.outcomes)
+
+
+@pytest.mark.asyncio
+async def test_stale_dispatch_generation_is_rejected_before_queue_or_send():
+    calls: list[int] = []
+
+    async def command(key, _value):
+        calls.append(key)
+
+    _install_number_client(command)
+    result = await esp32_push.push_to_esp32_detailed(
+        [("cmd_1", 1.0, "number")],
+        expected_connection_generation=3,
+    )
+
+    assert calls == []
+    assert result.failed_count == 1
+    assert result.outcomes[0].reason == "transport_generation_changed"
+    assert result.outcomes[0].connection_generation == 3
 
 
 @pytest.mark.asyncio

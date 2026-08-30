@@ -3307,14 +3307,15 @@ def test_irrigation_feedback_alias_sets_stay_aligned():
         assert not any("tds" in key for key in container)
 
 
-def test_irrigation_number_states_refresh_cfg_snapshot_path():
+def test_writable_entity_states_refresh_generation_fenced_cfg_snapshot_path():
     ingestor_src = Path("ingestor/ingestor.py").read_text()
 
     assert "def _mirror_irrigation_number_readback" in ingestor_src
-    assert "param not in IRRIGATION_SCHEDULE_PARAMS" in ingestor_src
+    assert "param not in _RECONCILABLE_CFG_PARAMS" in ingestor_src
     assert "state.cfg_readback[param] = val" in ingestor_src
-    assert "shared.cfg_readback[param] = val" in ingestor_src
+    assert "shared.note_cfg_readback_observed(param, val, generation)" in ingestor_src
     assert ingestor_src.count("_mirror_irrigation_number_readback(param, val)") >= 2
+    assert "_mirror_irrigation_number_readback(param, 1.0 if val else 0.0)" in ingestor_src
 
 
 def test_ingestor_accepts_live_mqtt_feedback_without_retained_state():

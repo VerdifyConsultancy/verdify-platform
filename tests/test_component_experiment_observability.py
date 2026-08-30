@@ -12,7 +12,11 @@ from typing import get_args
 
 import pytest
 
-from verdify_schemas.alerts import AlertEnvelope, ComponentExperimentIntegrityReason
+from verdify_schemas.alerts import (
+    AlertEnvelope,
+    ComponentExperimentIntegrityReason,
+    ComponentExperimentObservationTruth,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATION = ROOT / "db/migrations/215-experiment-v2-ops-observability.sql"
@@ -29,6 +33,12 @@ _ALERT_CASES = re.compile(
 )
 _CASE_BRANCH = re.compile(
     r"\bWHEN\s+(?P<condition>.*?)\s+THEN\s+'(?P<value>[a-z0-9_]+)'",
+    re.DOTALL,
+)
+_OBSERVATION_TRUTH_CASE = re.compile(
+    r"(?P<truth_case>CASE\s+WHEN\s+selected\.future_masked\s+THEN\s+"
+    r"'future_identity_masked'.*?ELSE\s+'exact'\s+END),\s*"
+    r"coalesce\(exposures\.open_count",
     re.DOTALL,
 )
 
@@ -138,6 +148,14 @@ def _db_integrity_branches(function_body: str) -> tuple[tuple[str, str], ...]:
         )
         emitted.append((reason.value, matching_severities[0]))
     return tuple(emitted)
+
+
+def _db_observation_truth_values(function_body: str) -> tuple[str, ...]:
+    match = _OBSERVATION_TRUTH_CASE.search(function_body)
+    assert match is not None, "observation-truth CASE expression not found"
+    branches = tuple(branch.value for branch in _case_branches(match.group("truth_case")))
+    assert "ELSE 'exact'" in match.group("truth_case")
+    return (*branches, "exact")
 
 
 EFFECTIVE_OPS_MIGRATION, EFFECTIVE_OPS_BODY = _latest_ops_status_definition()
@@ -251,6 +269,18 @@ def test_migration_alert_reasons_and_typed_schema_stay_reconciled():
         "expired_work_not_terminal",
         "confirmed_baseline_recovery_missing",
     } <= set(schema_reasons)
+
+
+def test_migration_observation_truth_and_typed_producer_stay_reconciled():
+    assert get_args(ComponentExperimentObservationTruth) == _db_observation_truth_values(EFFECTIVE_OPS_BODY)
+
+
+@pytest.mark.parametrize("observation_truth", get_args(ComponentExperimentObservationTruth))
+def test_every_db_observation_truth_round_trips_the_typed_alert(observation_truth: str):
+    payload = _load_alert_helper()(_ops_row(observation_truth=observation_truth))
+    assert payload is not None
+    envelope = AlertEnvelope.model_validate(payload)
+    assert envelope.details["observation_truth"] == observation_truth
 
 
 def test_alert_contract_comes_from_the_latest_ordered_migration_definition():

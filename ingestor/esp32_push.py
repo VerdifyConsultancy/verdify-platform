@@ -545,8 +545,6 @@ async def _execute_one(request: _WriteRequest, index: int) -> DeviceCommandOutco
         return _outcome(request, index, "failed", f"command_error:{type(exc).__name__}")
 
     parameter = _parameter_for(obj_id, entity_type)
-    shared.recently_pushed[parameter] = time.time()
-    shared.recently_pushed_values[parameter] = float(value)
     outcome = _outcome(request, index, "sent", "api_command_returned")
     log.info(
         "writer_delivery phase=transport status=sent reason=api_command_returned param=%s generation=%d attempt=%d",
@@ -555,6 +553,16 @@ async def _execute_one(request: _WriteRequest, index: int) -> DeviceCommandOutco
         request.attempt,
     )
     return outcome
+
+
+def _commit_sent_cache(outcomes: Sequence[DeviceCommandOutcome]) -> None:
+    """Advance echo suppression only after the sent milestone is durable."""
+    committed_at = time.time()
+    for outcome in outcomes:
+        if outcome.status != "sent":
+            continue
+        shared.recently_pushed[outcome.parameter] = committed_at
+        shared.recently_pushed_values[outcome.parameter] = outcome.value
 
 
 def _pop_ready_request(now: float) -> tuple[_WriteRequest | None, float | None]:
@@ -671,6 +679,7 @@ async def _writer_worker() -> None:
             except LifecyclePersistenceError:
                 _abort_all_requests("lifecycle_persistence_unavailable")
                 return
+            _commit_sent_cache(quantum_outcomes)
 
         if request.next_index >= len(request.changes):
             if not await _finish_request(request, ()):
@@ -709,6 +718,7 @@ async def _immediate_result(
     reason: str,
     attempt: int,
     on_state: StateCallback | None,
+    accepted_generation: int | None = None,
 ) -> PushBatchResult:
     loop = asyncio.get_running_loop()
     placeholder = _WriteRequest(
@@ -717,7 +727,9 @@ async def _immediate_result(
         ready=asyncio.Event(),
         on_state=on_state,
         attempt=attempt,
-        accepted_generation=int(shared.transport_generation),
+        accepted_generation=(
+            int(shared.transport_generation) if accepted_generation is None else int(accepted_generation)
+        ),
         accepted_client=shared.esp32.get("client"),
         command_versions=tuple(0.0 for _ in changes),
     )
@@ -792,6 +804,7 @@ async def push_to_esp32_detailed(
     attempt: int = 1,
     on_state: StateCallback | None = None,
     command_versions: Sequence[float] | None = None,
+    expected_connection_generation: int | None = None,
 ) -> PushBatchResult:
     """Queue a bounded batch and return a truthful terminal result per command.
 
@@ -805,6 +818,16 @@ async def push_to_esp32_detailed(
     batch = tuple((obj_id, float(value), entity_type) for obj_id, value, entity_type in changes)
     if not batch:
         return PushBatchResult(())
+    accepted_generation = int(shared.transport_generation)
+    if expected_connection_generation is not None and expected_connection_generation != accepted_generation:
+        return await _immediate_result(
+            batch,
+            "failed",
+            "transport_generation_changed",
+            attempt,
+            on_state,
+            accepted_generation=expected_connection_generation,
+        )
     if len(batch) > _MAX_BATCH_COMMANDS:
         return await _immediate_result(batch, "failed", "batch_limit_exceeded", attempt, on_state)
     if failure := _preflight_failure():
@@ -822,7 +845,7 @@ async def push_to_esp32_detailed(
         ready=asyncio.Event(),
         on_state=on_state,
         attempt=attempt,
-        accepted_generation=int(shared.transport_generation),
+        accepted_generation=accepted_generation,
         accepted_client=shared.esp32.get("client"),
         command_versions=versions,
     )
@@ -1166,8 +1189,6 @@ async def push_component_bundle(
                             reason = f"command_error:{type(exc).__name__}"
 
                 if reason is None:
-                    shared.recently_pushed[call.parameter] = time.time()
-                    shared.recently_pushed_values[call.parameter] = float(call.value)
                     outcome = _component_outcome(
                         call, index, "sent", "api_command_returned", expected_writer_generation, accepted_generation
                     )
@@ -1177,6 +1198,9 @@ async def push_component_bundle(
                     )
                 terminal.append(outcome)
                 await _emit_component_state(on_state, (outcome,))
+                if outcome.status == "sent":
+                    shared.recently_pushed[call.parameter] = time.time()
+                    shared.recently_pushed_values[call.parameter] = float(call.value)
 
                 if outcome.status == "failed":
                     cancelled = tuple(

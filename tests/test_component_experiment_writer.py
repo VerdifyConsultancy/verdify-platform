@@ -60,6 +60,8 @@ def writer_state(monkeypatch):
     monkeypatch.setattr(shared, "writer_lease_strictly_held", lambda minimum_remaining_s=0: True)
     monkeypatch.setattr(shared, "transport_generation", 7)
     monkeypatch.setattr(shared, "esp32", {"client": FakeClient(), "keys": {}, "services": {}})
+    monkeypatch.setattr(shared, "recently_pushed", {})
+    monkeypatch.setattr(shared, "recently_pushed_values", {})
     monkeypatch.setattr(esp32_push, "_pace_command", lambda: asyncio.sleep(0))
     monkeypatch.setattr(esp32_push, "_LIFECYCLE_RETRY_S", 0.0)
     set_component_authority_hold(False)
@@ -347,6 +349,8 @@ async def test_callback_db_failure_self_fences_and_does_not_starve_queued_writer
     ordinary = await asyncio.wait_for(ordinary_task, timeout=1)
     assert ordinary.fatal_error == "component_lifecycle_persistence_unavailable"
     assert client.calls == [("component", 1.0)]
+    assert shared.recently_pushed == {}
+    assert shared.recently_pushed_values == {}
 
 
 @pytest.mark.asyncio

@@ -35,6 +35,15 @@ ComponentExperimentIntegrityReason = Literal[
     "baseline_recovery_in_progress",
     "runtime_fault_requires_recovery",
 ]
+ComponentExperimentObservationTruth = Literal[
+    "future_identity_masked",
+    "no_current_work",
+    "expected_state_missing",
+    "unobserved",
+    "stale",
+    "mismatch",
+    "exact",
+]
 AlertType = Literal[
     "alert_validation_failed",
     "band_anchor_db_read_failed",
@@ -543,7 +552,7 @@ class ComponentExperimentIntegrityDetails(_DetailsBase):
     safety_state: str
     reason: ComponentExperimentIntegrityReason
     operation_kind: str | None = None
-    observation_truth: Literal["future_identity_masked", "unobserved", "stale", "mismatch", "exact"]
+    observation_truth: ComponentExperimentObservationTruth
     observation_age_seconds: int | None = Field(default=None, ge=0)
     open_exposure_count: int = Field(..., ge=0)
     writer_generation: int | None = Field(default=None, ge=0)
