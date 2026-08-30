@@ -5,9 +5,11 @@ resources:
   - activation-configmap.yaml
   - direct-proof-configmap.yaml
   - direct-proof-job.yaml
+  - direct-proof-read-rbac.yaml
+  - direct-proof-networkpolicies.yaml
 
 patches:
   - path: ingestor-activation.patch.yaml
 
 images:
-  - name: ghcr.io/verdifyconsultancy/verdify-api
+  - name: ghcr.io/verdifyconsultancy/verdify-experiment-v2-orchestrator

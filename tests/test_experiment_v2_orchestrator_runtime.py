@@ -62,6 +62,7 @@ def test_package_has_executable_entrypoint_and_no_device_imports() -> None:
     assert (package / "requirements.txt").read_text().splitlines() == [
         "asyncpg==0.31.0",
         "httpx==0.28.1",
+        "pyyaml==6.0.3",
         "tzdata==2026.3",
     ]
     dockerfile = (package / "Dockerfile").read_text()
@@ -72,11 +73,11 @@ def test_package_has_executable_entrypoint_and_no_device_imports() -> None:
     assert "COPY experiment_orchestrator/ /app" not in dockerfile
     source_copy = dockerfile.index("COPY experiment_orchestrator/*.py")
     evaluator_copy = dockerfile.index("COPY research/planner-efficacy/switchback/v2_outcomes.py")
-    mode_normalization = dockerfile.index("RUN chmod 0555 /app /app/experiment_orchestrator")
+    mode_normalization = dockerfile.index("RUN find /app -type d -exec chmod 0555 {} +")
     non_root_runtime = dockerfile.index("USER 10001:10001")
     assert source_copy < mode_normalization
     assert evaluator_copy < mode_normalization < non_root_runtime
-    assert "chmod 0444 /app/experiment_orchestrator/*.py" in dockerfile
+    assert "find /app -type f -exec chmod 0444 {} +" in dockerfile
     dockerignore = (package.parent / ".dockerignore").read_text()
     assert "__pycache__" in dockerignore and "*.pyc" in dockerignore
     evaluator = (package.parent / "research" / "planner-efficacy" / "switchback" / "v2_outcomes.py").read_text().lower()

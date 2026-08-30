@@ -14,8 +14,10 @@ data:
     import json
     import os
     import re
+    import subprocess
     import uuid
     from datetime import UTC, datetime, timedelta
+    from pathlib import Path
 
     import asyncpg
 
@@ -54,8 +56,22 @@ data:
     EXPECTED_CONFIG_REVISION = required_activation_value("VERDIFY_DIRECT_PROOF_CONFIG_REVISION")
     if not re.fullmatch(r"[0-9a-f]{12}", EXPECTED_CONFIG_REVISION):
         raise RuntimeError("direct-proof config revision must be a 12-character lowercase hex digest")
-    RUNTIME_REGISTRATION_SETTLE_SECONDS = 5 * 60
+    RUNTIME_REGISTRATION_SETTLE_SECONDS = 30 * 60
     SHA256 = re.compile(r"^[0-9a-f]{64}$")
+    SOURCE_REVISION = re.compile(r"^[0-9a-f]{40}$")
+    EXPECTED_GIT_PIN = required_activation_value("VERDIFY_DIRECT_PROOF_GIT_PIN")
+    EXPECTED_APPLICATION_SOURCE = required_activation_value(
+        "VERDIFY_DIRECT_PROOF_APPLICATION_SOURCE"
+    )
+    if not all(
+        SOURCE_REVISION.fullmatch(value)
+        for value in (EXPECTED_GIT_PIN, EXPECTED_APPLICATION_SOURCE)
+    ):
+        raise RuntimeError("direct-proof source identity is malformed")
+    READINESS_COLLECTOR = Path("/app/scripts/experiment_v2_proof_packet.py")
+    READINESS_GUARD = Path("/app/scripts/experiment_v2_readiness_guard.py")
+    READINESS_STATE = Path("/tmp/experiment-v2-readiness-state.json")
+    READINESS_PENDING_STATE = Path("/tmp/experiment-v2-readiness-state.pending.json")
 
     STATUS_SQL = """
     SELECT experiment_id::text, protocol_version, experiment_kind,
@@ -116,16 +132,10 @@ data:
         $1::uuid, $2::text
     )).proof_receipt_id::text
     """
-    SET_RECOVERY_SQL = """
+    SET_EMERGENCY_HOLD_SQL = """
     SELECT (public.fn_experiment_v2_set_admission(
-        $1::uuid, 'baseline_recovery'::text, $2::text, $3::text
+        $1::uuid, 'emergency_hold'::text, $2::text, $3::text
     )).experiment_id::text
-    """
-    REQUEST_RECOVERY_SQL = """
-    SELECT public.fn_experiment_v2_request_recovery(
-        $1::uuid, $2::uuid, $3::tstzrange, $4::timestamptz,
-        $5::text, $6::text
-    )::text
     """
 
     class ProofError(RuntimeError):
@@ -133,6 +143,96 @@ data:
 
     def fail(message):
         raise ProofError(message)
+
+    def run_readiness_boundary(boundary):
+        packet = Path(f"/tmp/experiment-v2-readiness-{boundary}.json")
+        READINESS_PENDING_STATE.unlink(missing_ok=True)
+        collector = subprocess.run(
+            [
+                "python",
+                str(READINESS_COLLECTOR),
+                "--boundary",
+                boundary,
+                "--expected-git-pin",
+                EXPECTED_GIT_PIN,
+                "--expected-application-source",
+                EXPECTED_APPLICATION_SOURCE,
+                "--experiment-id",
+                EXPERIMENT_ID,
+                "--state",
+                str(READINESS_STATE),
+                "--output",
+                str(packet),
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
+        if collector.returncode != 0:
+            fail(f"readiness packet collection failed closed at {boundary}")
+        guarded = subprocess.run(
+            [
+                "python",
+                str(READINESS_GUARD),
+                "--input",
+                str(packet),
+                "--mode",
+                "proof",
+                "--boundary",
+                boundary,
+                "--expected-git-pin",
+                EXPECTED_GIT_PIN,
+                "--expected-application-source",
+                EXPECTED_APPLICATION_SOURCE,
+                "--expected-experiment-id",
+                EXPERIMENT_ID,
+                "--state",
+                str(READINESS_STATE),
+                "--next-state",
+                str(READINESS_PENDING_STATE),
+                "--repo-root",
+                "/app/readiness-source",
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        try:
+            receipt = json.loads(guarded.stdout)
+        except json.JSONDecodeError:
+            fail(f"readiness guard returned no metadata receipt at {boundary}")
+        if guarded.returncode != 0 or receipt.get("status") not in ("pass", "degraded-pass"):
+            fail(f"readiness guard failed closed at {boundary}")
+        if not READINESS_PENDING_STATE.is_file():
+            fail(f"readiness guard emitted no pending chain state at {boundary}")
+        print(
+            json.dumps(
+                {
+                    "boundary": boundary,
+                    "packet_sha256": receipt["packet_sha256"],
+                    "readiness_receipt_sha256": receipt["receipt_sha256"],
+                    "stage": "readiness-boundary-passed-pending-transition",
+                    "status": receipt["status"],
+                },
+                sort_keys=True,
+            )
+        )
+        return READINESS_PENDING_STATE
+
+    def commit_readiness_boundary(pending, boundary):
+        os.replace(pending, READINESS_STATE)
+        print(
+            json.dumps(
+                {
+                    "boundary": boundary,
+                    "stage": "readiness-boundary-state-committed",
+                    "status": "pass",
+                },
+                sort_keys=True,
+            )
+        )
 
     def assert_authorized_clock(minimum_remaining_seconds=0):
         now = datetime.now(UTC)
@@ -486,6 +586,7 @@ data:
         revision,
         lease,
         timeout_seconds,
+        readiness_boundary=None,
     ):
         deadline = asyncio.get_running_loop().time() + timeout_seconds
         while True:
@@ -500,14 +601,23 @@ data:
                 revision=revision,
                 lease=lease,
             )
+            pending_readiness = (
+                run_readiness_boundary(readiness_boundary)
+                if readiness_boundary is not None
+                else None
+            )
             try:
                 result = await connection.fetchval(sql, *args)
                 if result is None:
                     fail(f"{label} returned no durable identifier")
                 uuid.UUID(str(result))
+                if pending_readiness is not None:
+                    commit_readiness_boundary(pending_readiness, readiness_boundary)
                 print(json.dumps({"stage": label, "status": "pass"}, sort_keys=True))
                 return str(result)
             except asyncpg.exceptions.RaiseError as exc:
+                if pending_readiness is not None:
+                    pending_readiness.unlink(missing_ok=True)
                 retry_fragments = (
                     (retry_fragment,)
                     if isinstance(retry_fragment, str)
@@ -676,20 +786,27 @@ data:
             else:
                 fail("direct proof cannot resume from the observed authority state")
 
-            aggressive_work_id = await connection.fetchval(
-                BEGIN_SQL,
-                EXPERIMENT_ID,
-                AUTHORIZATION_REF,
-                asyncpg.Range(
-                    AUTHORIZED_FROM,
-                    AUTHORIZED_TO,
-                    lower_inc=True,
-                    upper_inc=False,
-                ),
-                SUPERVISOR_ROLE,
-                RESCUE_OWNER_ROLE,
-                ACTOR,
-            )
+            gate_p_pending = run_readiness_boundary("gate-p")
+            commit_readiness_boundary(gate_p_pending, "gate-p")
+            baseline_before_pending = run_readiness_boundary("baseline-before")
+            try:
+                aggressive_work_id = await connection.fetchval(
+                    BEGIN_SQL,
+                    EXPERIMENT_ID,
+                    AUTHORIZATION_REF,
+                    asyncpg.Range(
+                        AUTHORIZED_FROM,
+                        AUTHORIZED_TO,
+                        lower_inc=True,
+                        upper_inc=False,
+                    ),
+                    SUPERVISOR_ROLE,
+                    RESCUE_OWNER_ROLE,
+                    ACTOR,
+                )
+            except Exception:
+                baseline_before_pending.unlink(missing_ok=True)
+                raise
             if aggressive_work_id is None:
                 fail("direct proof begin returned no aggressive work identifier")
             uuid.UUID(str(aggressive_work_id))
@@ -697,6 +814,7 @@ data:
             attempt = await read_attempt(connection)
             if attempt is None or str(attempt["aggressive_work_id"]) != str(aggressive_work_id):
                 fail("direct proof begin is not bound to the latest append-only attempt")
+            commit_readiness_boundary(baseline_before_pending, "baseline-before")
 
             if attempt["baseline_after_work_id"] is None and begun["admission_state"] == "baseline_recovery":
                 assert_status(
@@ -728,6 +846,7 @@ data:
                     revision=revision,
                     lease=proof_lease,
                     timeout_seconds=20 * 60,
+                    readiness_boundary="aggressive",
                 )
                 begun = await read_status(connection)
 
@@ -748,6 +867,7 @@ data:
                     revision=revision,
                     lease=proof_lease,
                     timeout_seconds=30 * 60,
+                    readiness_boundary="baseline-after",
                 )
             elif attempt["baseline_after_work_id"] is None:
                 fail("direct proof did not converge to aggressive admission")
@@ -796,12 +916,13 @@ data:
                 )
             )
         except Exception:
-            # Fail safe without hiding the original failure. If aggressive
-            # admission is open, atomically revoke it and request the exact
-            # linked baseline through the ordinary recovery function. The
-            # executor remains the only device writer and closes the exposure
-            # at its recovery claim boundary. Any failure of this best-effort
-            # fallback leaves the hook failed for attended intervention.
+            # Fail safe without hiding the original failure. Emergency hold is
+            # committed first: fn_experiment_v2_set_admission closes every open
+            # exposure in the same transaction before revoking nonbaseline
+            # authority and incrementing the lease. Only after that durable
+            # close-first boundary may a distinct bounded recovery resolution
+            # end the attempt and admit the executor-owned baseline. If the
+            # second step fails, the already-committed emergency hold remains.
             if aggressive_work_id is not None and not connection.is_closed():
                 try:
                     row = await read_status(connection)
@@ -809,28 +930,64 @@ data:
                         row is not None
                         and row["lifecycle_status"] == "draft"
                         and row["execution_phase"] == "commissioning"
-                        and row["admission_state"] == "open"
+                        and row["admission_state"] in ("open", "baseline_recovery")
                         and row["component_enabled"] is True
                         and datetime.now(UTC) < AUTHORIZED_TO
                     ):
+                        failed_lease = row["lease_generation"]
                         await connection.fetchval(
-                            SET_RECOVERY_SQL,
+                            SET_EMERGENCY_HOLD_SQL,
                             EXPERIMENT_ID,
                             ACTOR,
                             "direct-proof-runner-failure",
                         )
+                        held = await read_status(connection)
+                        assert_status(
+                            held,
+                            lifecycle="draft",
+                            phase="commissioning",
+                            admission="emergency_hold",
+                            enabled=False,
+                            revision=row["revision_bundle_sha256"],
+                            lease=failed_lease + 1,
+                            open_exposures=0,
+                        )
+                        print(
+                            json.dumps(
+                                {
+                                    "stage": "safety-exposure-closed-hold-entered",
+                                    "status": "pass",
+                                },
+                                sort_keys=True,
+                            )
+                        )
+                        failed_attempt = await read_attempt(connection)
+                        if (
+                            failed_attempt is None
+                            or failed_attempt["authorization_id"] is None
+                            or failed_attempt["proof_receipt_id"] is not None
+                            or failed_attempt["attempt_superseded"]
+                        ):
+                            fail("safety recovery has no exact active attempt")
                         recovery_from = datetime.now(UTC)
+                        recovery_to = min(
+                            recovery_from + timedelta(minutes=30), AUTHORIZED_TO
+                        )
+                        if (recovery_to - recovery_from).total_seconds() < 3 * 60:
+                            fail("attended window cannot contain safety recovery")
                         await connection.fetchval(
-                            REQUEST_RECOVERY_SQL,
+                            BEGIN_EMERGENCY_RECOVERY_SQL,
                             EXPERIMENT_ID,
-                            aggressive_work_id,
+                            failed_attempt["authorization_id"],
+                            row["revision_bundle_sha256"],
+                            failed_lease + 1,
                             asyncpg.Range(
                                 recovery_from,
-                                AUTHORIZED_TO,
+                                recovery_to,
                                 lower_inc=True,
                                 upper_inc=False,
                             ),
-                            AUTHORIZED_TO,
+                            FACILITY_AUTHORIZATION_REF,
                             "direct-proof-runner-failure",
                             ACTOR,
                         )
