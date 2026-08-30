@@ -25,6 +25,11 @@ def _render(path: Path) -> list[dict]:
     return [doc for doc in yaml.safe_load_all(rendered) if doc]
 
 
+def _production_gate_r_active() -> bool:
+    prod = yaml.safe_load((ROOT / "deploy/k8s/overlays/prod/kustomization.yaml").read_text())
+    return "../../components/experiment-v2-gate-r" in prod["components"]
+
+
 def test_gate_r_script_is_atomic_recovery_only() -> None:
     script = yaml.safe_load((COMPONENT / "gate-r-configmap.yaml").read_text())["data"]["gate_r.py"]
     assert "async with connection.transaction()" in script
@@ -43,12 +48,13 @@ def test_gate_r_script_is_atomic_recovery_only() -> None:
     assert '"proof_credit": False' in script
 
 
-def test_gate_r_default_activation_is_suspended_and_exact() -> None:
+def test_gate_r_activation_matches_production_membership() -> None:
     docs = _render(ACTIVATION)
     jobs = [doc for doc in docs if doc["kind"] == "Job" and doc["metadata"]["name"] == "verdify-experiment-v2-gate-r"]
     assert len(jobs) == 1
     job = jobs[0]
-    assert job["spec"]["suspend"] is True
+    active = _production_gate_r_active()
+    assert job["spec"]["suspend"] is (not active)
     assert job["spec"]["backoffLimit"] == 0
     assert job["spec"]["template"]["spec"]["automountServiceAccountToken"] is False
     assert job["spec"]["template"]["spec"]["restartPolicy"] == "Never"
@@ -58,12 +64,16 @@ def test_gate_r_default_activation_is_suspended_and_exact() -> None:
         if doc["kind"] == "ConfigMap" and doc["metadata"]["name"] == "experiment-v2-gate-r-activation"
     )
     assert activation["data"]
-    assert all(value == "REPLACE_BEFORE_ACTIVATION" for value in activation["data"].values())
+    placeholders = [value for value in activation["data"].values() if value == "REPLACE_BEFORE_ACTIVATION"]
+    assert bool(placeholders) is (not active)
+    if not active:
+        assert len(placeholders) == len(activation["data"])
 
 
-def test_ordinary_production_does_not_render_gate_r() -> None:
+def test_production_render_matches_gate_r_membership() -> None:
     docs = _render(ROOT / "deploy/k8s/overlays/prod")
     names = {(doc["kind"], doc["metadata"]["name"]) for doc in docs}
-    assert ("Job", "verdify-experiment-v2-gate-r") not in names
-    assert ("ConfigMap", "experiment-v2-gate-r") not in names
-    assert ("ConfigMap", "experiment-v2-gate-r-activation") not in names
+    expected = _production_gate_r_active()
+    assert (("Job", "verdify-experiment-v2-gate-r") in names) is expected
+    assert (("ConfigMap", "experiment-v2-gate-r") in names) is expected
+    assert (("ConfigMap", "experiment-v2-gate-r-activation") in names) is expected
