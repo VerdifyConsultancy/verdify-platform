@@ -11,14 +11,14 @@ kind: Job
 metadata:
   name: verdify-experiment-v2-gate-r-readiness
   annotations:
-    verdify.io/gate-r-readiness-activation: "m81-20260830-bc8ad7d5"
+    verdify.io/gate-r-readiness-activation: "m81-20260830-e27d9831"
 spec:
   suspend: false
   template:
     metadata:
       annotations:
-        verdify.io/gate-r-readiness-activation: "m81-20260830-bc8ad7d5"
+        verdify.io/gate-r-readiness-activation: "m81-20260830-e27d9831"
     spec:
       containers:
         - name: readiness
-          image: registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:2cd02366cfa8ca492c4cdb92d160ece8a125666781f311b0f4aaecbc7a041460
+          image: registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:614c5d6392cbe68fc8f2e092fd8052d06e3d648a8fa9eac5d8e3b18cbe2afc89
