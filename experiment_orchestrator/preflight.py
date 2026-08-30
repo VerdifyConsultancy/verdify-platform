@@ -1,7 +1,7 @@
 """Non-actuating strict OpenAI selector-profile preflight.
 
 The preflight has provider-network authority only.  It has no database,
-Kubernetes, or device client, and its persisted receipt intentionally omits the
+Kubernetes, or equipment endpoint, and its persisted receipt intentionally omits the
 selected profile and complete provider response.
 """
 

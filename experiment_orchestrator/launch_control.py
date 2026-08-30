@@ -1,6 +1,6 @@
 """Audited API-only commands used by dormant M8 GitOps components.
 
-There is no database client or device client in this module.  Kubernetes Jobs
+There is no database client or equipment endpoint integration in this module.  Kubernetes Jobs
 invoke exactly one lifecycle action through the authenticated component API;
 the manifests are not referenced by a production overlay until an operator
 deliberately selects the matching stage.
