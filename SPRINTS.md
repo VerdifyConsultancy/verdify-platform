@@ -133,18 +133,15 @@ corpus.
 Primary lanes:
 
 - #350 L8 Irrigation, Fertilization, and Orchids.
-- #351 L9 Lab Notebook, Website, and Publishing. (2026-07-13: executing as
-  the Quartz->Astro migration program, In Progress/P1/XL — see
-  `docs/plans/lab-astro-migration.md`; site-astro changes are gated by the
-  site-astro test/verify suite in `site-astro/package.json` in addition to
-  `make site-lint`/`make site-doctor` for the legacy path.)
+- #351 L9 Lab Notebook, Website, and Publishing. (2026-08-30: standardized on
+  the Quartz generator, in-cluster publisher, and cache-backed nginx runtime.)
 - #352 L10 Testing and Research.
 
 Verification:
 
 - Irrigation: targeted Makefile irrigation checks from the issue.
-- Lab/site: relevant `site-astro/package.json` gates plus `make ci`; use
-  `make site-lint`/`make site-doctor` only for the legacy Quartz path.
+- Lab/site: `make site-lint`, `make site-doctor`, targeted publisher guards,
+  prod Kustomize render, and live route/graph checks.
 - Firmware/test harness: firmware gates plus all-year/extreme scenario outputs.
 
 ### S8: Vanda Night Dehum (vent+reheat + telemetry + gated activation)

@@ -1,37 +1,6 @@
+# Temporary retirement tombstone. Sync this exact revision with prune=true so
+# ArgoCD removes every former Lab stage resource before the owning Application
+# and this empty overlay are deleted.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-
-namespace: verdify-platform
-
-resources:
-  - ../../components/lab-astro-stage
-  - ../../candidates/lab-release-runtime
-  - ingressroute.yaml
-
-images:
-  # The serving static Astro image remains the separately accepted stage
-  # release; changing it requires its own validated exact-source pin.
-  - name: registry.vallery.net/verdifyconsultancy/verdify-lab-astro
-    newName: registry.vallery.net/verdifyconsultancy/verdify-lab-astro
-    digest: sha256:1852cf2523041ef840b3eb1092050e4b3b19d2027494fc6b6c9809b930de93b7
-  # These exact-source runtime images remain dormant under the replicas-zero
-  # patch. A separate validated activation must add the store contract and raise
-  # replicas; digest presence alone is not rollout authority.
-  - name: registry.vallery.net/verdifyconsultancy/verdify-lab-release-agent
-    newName: registry.vallery.net/verdifyconsultancy/verdify-lab-release-agent
-    digest: sha256:e5e20f942003bbb9405b0918169f7c43ac2ea342de9481be6bf626ae169d9d28
-  - name: registry.vallery.net/verdifyconsultancy/verdify-lab-release-nginx
-    newName: registry.vallery.net/verdifyconsultancy/verdify-lab-release-nginx
-    digest: sha256:0b49d3977b50c55745c05a25a74cc040df39bb0236dabd7ba536a15ae78a67cb
-  - name: registry.vallery.net/verdifyconsultancy/verdify-lab-occurrence-exporter
-    newName: registry.vallery.net/verdifyconsultancy/verdify-lab-occurrence-exporter
-    digest: sha256:35da85cf7798b2f2e88ec0adde57209fe3f7cd29be0d1286df2464ea9b5fba01
-
-patches:
-  - path: lab-release-runtime-dormant.patch.yaml
-
-labels:
-  - pairs:
-      app.kubernetes.io/instance: verdify-platform-lab-stage
-      verdify.ai/environment: lab-stage
-    includeSelectors: false
+resources: []

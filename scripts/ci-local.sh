@@ -133,6 +133,7 @@ $PY -m pytest -q \
   tests/test_grafana_cm_check.py \
   tests/test_grafana_manifest_security.py \
   tests/test_ingestor_setpoint_placement.py \
+  tests/test_lab_generator_standardization.py \
   tests/test_lab_publish_k3s_guard.py \
   tests/test_mcp_audience_auth.py \
   tests/test_mcp_transport_runtime.py \

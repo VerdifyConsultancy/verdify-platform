@@ -1,135 +1,57 @@
-# Legacy Runbook: Quartz vault -> lab.verdify.ai pipeline (#124 / #219)
+# Runbook: Quartz content -> lab.verdify.ai
 
-> **Legacy production-only path.** This document preserves the current Quartz
-> recovery/diagnostic procedure until #482 retires it. Its GitHub Actions,
-> GHCR, dev/staging overlay, and cross-repo image-publish instructions are
-> historical and must not be used for a new release. Current Astro build/pin/
-> stage work uses in-cluster Argo Workflows, Kaniko, Zot, and ArgoCD as tracked
-> in `docs/plans/lab-astro-migration.md` and
-> `docs/site-publishing-pipeline.md`.
+Quartz under `site/` is the only supported Lab generator. The production
+publisher runs every 10 minutes, builds the newest S3-backed content, validates
+it, and atomically installs it on the `verdify-lab-site-cache` PVC.
 
-Current legacy production state (2026-07-14): `lab.verdify.ai` content is published
-by the k3s `verdify-lab-publisher` CronJob with S3-compatible object storage as
-the durable content/public/state store. The `verdify-lab` image is now a serving
-runtime and bootstrap fallback; routine content changes should not require a new
-site image digest. See `docs/site-publishing-pipeline.md`.
-
-The older vault-snapshot/image-bake flow below is retained as historical context
-for the `verdify-site-legacy` image divergence and should not be extended unless
-we deliberately return to content-in-image publishing.
-
-## Problem this fixes
-
-- The `verdify-lab` CI image (`verdify-site-legacy/.github/workflows/publish-lab-image.yml`)
-  seeded from the stock Quartz `docs/` tree ("Welcome to Quartz 4"), so the published
-  `@sha256` was **synthetic** — never the real site.
-- The live cluster only served the real site because it was built **manually** against
-  the external vault symlink (image `bf71018…`). The repo/GitOps overlay pin
-  (`92ab470…`, synthetic) therefore **diverged** from what serves live. An ArgoCD
-  reconcile to the repo digest would have replaced the real site with the Quartz manual.
-
-## Architecture (two stages, one gate)
-
-```
-[FLEET] scripts/sync-lab-content.sh        # only stage with vault access
-   rsync curated vault website/ subtree -> content-snapshot/  (scrub private/templates)
-   -> PR into VerdifyConsultancy/verdify-site-legacy (branch v4)
-        |
-        v  (merge)
-[CI]    verdify-site-legacy publish-lab-image.yml
-   build verdify-lab image from committed content-snapshot/  (REAL site, deterministic)
-   -> push ghcr.io/verdifyconsultancy/verdify-lab@sha256:<new>
-        |
-        v
-[GATE]  verdify-platform overlay digest write-back   <-- exact-target prod-promotion safeguard
-   repin lab-site image digest in deploy/k8s/overlays/{dev,prod,prod-dark}
-   -> ArgoCD sync (gated, one-at-a-time, health-checked)
-```
-
-GitHub-hosted CI **cannot** reach the synced vault (`~/Iris/verdify-vault` /
-`/mnt/iris/verdify-vault`), which is why Stage 1 runs fleet-side.
-
-## Stage 1 — refresh the content snapshot (fleet-side)
-
-Run where the synced vault replica is reachable (an operator Mac via laptop-root, or
-a fleet host / self-hosted runner with the vault mounted):
+## Fast status
 
 ```bash
-# dry-run first — shows the diff stat, makes no commit/PR
-verdify-platform/scripts/sync-lab-content.sh --dry-run
-
-# open the content PR into verdify-site-legacy
-verdify-platform/scripts/sync-lab-content.sh
-
-# include the ~350MB launch video (Git LFS) when it changes
-verdify-platform/scripts/sync-lab-content.sh --include-video
+kubectl -n verdify-prod get cronjob verdify-lab-publisher
+kubectl -n verdify-prod get jobs --sort-by=.metadata.creationTimestamp | tail
+kubectl -n verdify-prod logs job/<latest-successful-job> --all-containers=true
+curl -fsSI https://lab.verdify.ai/
+curl -fsS https://lab.verdify.ai/ | rg 'sidebar left|grafana-embed|Verdify.*Lab'
 ```
 
-The script reads ONLY the public `website/` subtree, scrubs `private/`, `templates/`,
-`.obsidian/`, Syncthing/Synology metadata, then PRs `content-snapshot/`.
+A healthy completion includes `rebuild complete`, a non-zero Quartz page count,
+`public-output guard: clean`, S3 delta summaries, and
+`k3s lab publish complete`.
 
-Schedule (recommended): a weekly fleet cron / RemoteTrigger, plus on-demand after a
-notable vault content edit. (A GitHub `schedule` cannot do this — no vault access.)
+## Force a content refresh
 
-## Stage 2 — build + publish (GitHub CI, automatic on merge)
-
-Merging the Stage-1 PR into `verdify-site-legacy@v4` triggers
-`publish-lab-image.yml`, which builds the image from `content-snapshot/` and publishes
-a new immutable `@sha256` (printed in the run summary). To force a rebuild without a
-content change (e.g. weekly), use the workflow's `schedule`/`workflow_dispatch`, or fire
-the `verdify-platform` **Lab Content Pipeline** workflow with `trigger_image_rebuild=true`
-(needs the `LAB_REPO_TOKEN` secret with cross-repo `actions:write`).
-
-`verdify-platform`'s `lab-content-pipeline.yml` `lab-build-smoke` job independently
-proves the Quartz toolchain + lab config still build a valid site (and, when the
-snapshot is present, asserts the build is the REAL Verdify site, not the Quartz manual).
-
-Quartz runtime/source changes, such as components, styles, scripts, or static
-brand assets, must also land in `verdify-site-legacy@v4` before publishing the
-image. A content snapshot update alone does not move runtime behavior.
-
-## Stage 3 — overlay digest write-back  [SAFEGUARD: exact-target execution]
-
-**Do NOT auto-merge.** Once Stage 2 publishes `verdify-lab@sha256:<new>`:
-
-1. Confirm the digest is pullable and serves the expected content (the Stage-2 run
-   summary prints the digest; the live probe is below).
-2. Repin the lab-site image digest in the overlays:
-
-   ```bash
-   cd verdify-platform/deploy/k8s/overlays/dev
-   kustomize edit set image ghcr.io/verdifyconsultancy/verdify-lab@sha256:<new>
-   # repeat for overlays/prod and overlays/prod-dark (lab pins the SAME
-   # env-agnostic digest across envs — static content).
-   ```
-
-3. Open a PR; the `K8s Manifests` gate (kubeconform) must pass.
-4. **execution safeguard:** prod promotion. Merge -> ArgoCD sync the dev overlay first,
-   health-check, then prod, one at a time, re-probe durability.
-
-### Verification probe (live, read-only)
+Do not edit the PVC or running pod. Create a one-off Job from the committed
+CronJob template so it uses the same image, environment, Secret references,
+lock, and validation path:
 
 ```bash
-ssh jason@192.168.30.32 'POD=$(sudo k3s kubectl get pods -n verdify-prod \
-  -l app.kubernetes.io/component=lab-site -o jsonpath="{.items[0].metadata.name}"); \
-  sudo k3s kubectl exec -n verdify-prod "$POD" -- \
-  sh -c "grep -o \"<title>[^<]*</title>\" /usr/share/nginx/html/index.html | head -1"'
-# EXPECT: <title>Verdify: A Longmont, Colorado AI greenhouse with public telemetry — Verdify Lab</title>
-# (NOT "Welcome to Quartz 4")
+job="verdify-lab-publisher-manual-$(date +%s)"
+kubectl -n verdify-prod create job --from=cronjob/verdify-lab-publisher "$job"
+kubectl -n verdify-prod wait --for=condition=complete --timeout=20m "job/$job"
+kubectl -n verdify-prod logs "job/$job" --all-containers=true
 ```
 
-## Current divergence to reconcile (as of this PR)
+This is an operational execution of committed desired state, not an alternate
+publishing path. If it fails, inspect the logs; the last known-good public tree
+remains served.
 
-- Live deploy image: `verdify-lab@sha256:bf71018…` (real, manually built).
-- Repo/overlay pin: `verdify-lab@sha256:92ab470…` (synthetic Quartz manual).
+## Source and generated content
 
-After the first Stage-1 -> Stage-2 -> Stage-3 cycle, the repo pin advances to a CI-built
-REAL-content digest and the divergence closes (the repo can reproduce the live site).
+- Hand-authored/generated source is durable under the configured S3
+  `lab/content` prefix.
+- Repo-owned generator and theme code is under `site/` and `scripts/`.
+- `plans/YYYY-MM-DD.md`, forecast, lessons, AI tunables, zone pages, evidence,
+  and public datasets are generator-owned; change their generators rather than
+  editing generated output.
+- `/work/publisher/public` and S3 `lab/public` are build artifacts.
 
-## www (#219) — does NOT use this pipeline
+## Deployment changes
 
-`verdify-www` (marketing site, `verdify.ai`) is an **Astro** site whose content is
-authored **directly in the `verdify-www` repo** (`content/` collections), NOT sourced
-from the Obsidian vault. So the vault->site sync is **lab-specific**; www needs no vault
-snapshot and is already CI-reproducible from its own repo. This is noted so a future
-agent does not bolt a vault pipeline onto www.
+Change `deploy/k8s/components/lab-site/` or the prod overlay, run the targeted
+tests and Kustomize render in `docs/site-publishing-pipeline.md`, commit/push,
+then sync `verdify-prod-dark`. Do not route production to a baked frontend as a
+fallback.
+
+The retired `verdify-site-legacy` image workflow, GHCR Lab image, alternate
+generator, and Lab stage host are historical only. Recover them from Git history
+for forensic comparison, not for publication.

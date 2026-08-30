@@ -255,7 +255,9 @@ replace_public_from() {
     echo "Lab cache public candidate copy failed" >&2
     return 1
   fi
-  chmod 0755 -- "$candidate"
+  # BSD chmod (the operator Mac) does not accept GNU's post-mode `--` form.
+  # `candidate` is an absolute mktemp path, so no option ambiguity exists.
+  chmod 0755 "$candidate"
   if ! validate_public_tree "$candidate"; then
     rm -rf -- "$candidate"
     return 1
@@ -317,7 +319,7 @@ validate_public_tree "$PUBLIC" "Lab cache public tree validation failed" "$ready
 # Do not certify an empty publisher-only cache: the later site initializer must
 # validate its baked bootstrap (or a publisher-generated homepage) first.
 if has_regular_homepage; then
-  chmod 0600 -- "$ready_tmp"
+  chmod 0600 "$ready_tmp"
   mv -f -- "$ready_tmp" "$READY"
 else
   rm -f -- "$ready_tmp" "$READY"

@@ -1126,13 +1126,10 @@ def test_deployed_cache_layout_is_unique_restricted_and_preserves_time_budget():
     cache_pvc = _resource(publisher_docs, "PersistentVolumeClaim", "verdify-lab-site-cache")
     assert cache_pvc["spec"]["accessModes"] == ["ReadWriteOnce"]
     assert [item["name"] for item in publisher_spec["initContainers"]] == ["prepare-private-work-root"]
-    assert [item["name"] for item in site_spec["initContainers"]] == [
-        "extract-baked-public",
-        "prepare-private-public-root",
-    ]
+    assert [item["name"] for item in site_spec["initContainers"]] == ["prepare-private-public-root"]
 
     publisher_init = publisher_spec["initContainers"][0]
-    site_prepare = site_spec["initContainers"][1]
+    site_prepare = site_spec["initContainers"][0]
     assert publisher_init["command"] == [
         "prepare-lab-cache",
         "--root",
@@ -1140,11 +1137,7 @@ def test_deployed_cache_layout_is_unique_restricted_and_preserves_time_budget():
         "--legacy",
         "/work/public",
     ]
-    assert site_prepare["command"] == [
-        *publisher_init["command"],
-        "--bootstrap",
-        "/bootstrap",
-    ]
+    assert site_prepare["command"] == publisher_init["command"]
     assert site_prepare["image"] == publisher_init["image"]
 
     site_container = site_spec["containers"][0]
@@ -1159,7 +1152,7 @@ def test_deployed_cache_layout_is_unique_restricted_and_preserves_time_budget():
     assert "root /lab-cache/publisher/public;" in nginx_default
     assert "root /usr/share/nginx/html;" not in nginx_default
     assert "try_files $uri $uri.html $uri/index.html =404;" in nginx_default
-    assert any(volume == {"name": "bootstrap", "emptyDir": {}} for volume in site_spec["volumes"])
+    assert not any(volume["name"] == "bootstrap" for volume in site_spec["volumes"])
 
     publisher_container = publisher_spec["containers"][0]
     publisher_env = {item["name"]: item.get("value") for item in publisher_container["env"]}
@@ -1191,7 +1184,7 @@ def test_deployed_cache_layout_is_unique_restricted_and_preserves_time_budget():
             assert "ALL" in capabilities["drop"]
 
 
-def test_rendered_prod_ore_recovery_keeps_qualified_site_and_portable_publisher():
+def test_rendered_prod_uses_only_the_cache_backed_quartz_runtime():
     rendered = subprocess.run(
         ["kustomize", "build", "deploy/k8s/overlays/prod"],
         check=True,
@@ -1235,15 +1228,28 @@ def test_rendered_prod_ore_recovery_keeps_qualified_site_and_portable_publisher(
     assert deployment["spec"]["replicas"] == 2
     assert "nodeSelector" not in deployment_pod
     assert deployment_pod["affinity"] == expected_affinity
-    assert deployment_pod["initContainers"] == []
+    assert [item["name"] for item in deployment_pod["initContainers"]] == ["prepare-private-public-root"]
     assert site_container["image"] == (
-        "registry.vallery.net/verdifyconsultancy/verdify-lab-astro"
-        "@sha256:1852cf2523041ef840b3eb1092050e4b3b19d2027494fc6b6c9809b930de93b7"
+        "nginxinc/nginx-unprivileged:1.29-alpine"
+        "@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6"
     )
-    assert {item["name"] for item in site_container["volumeMounts"]} == {"tmp", "nginx-cache", "nginx-run"}
-    assert {item["name"] for item in deployment_pod["volumes"]} == {"tmp", "nginx-cache", "nginx-run"}
-    assert deployment["metadata"]["annotations"]["operations.vallery.net/temporary-placement"] == (
-        "ore-motherboard-outage-20260824"
+    assert "verdify-lab-astro" not in site_container["image"]
+    assert {item["name"] for item in site_container["volumeMounts"]} == {
+        "lab-cache",
+        "tmp",
+        "nginx-cache",
+        "nginx-run",
+        "nginx-config",
+    }
+    assert {item["name"] for item in deployment_pod["volumes"]} == {
+        "lab-cache",
+        "tmp",
+        "nginx-cache",
+        "nginx-run",
+        "nginx-config",
+    }
+    assert not any(
+        key.startswith("operations.vallery.net/temporary-") for key in deployment["metadata"].get("annotations", {})
     )
 
     assert "nodeSelector" not in publisher_pod

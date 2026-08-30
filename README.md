@@ -52,8 +52,7 @@ weather, optional heavyweight reasoning, and public delivery support.
 | `templates/` | Jinja2 planner prompt + reference docs |
 | `config/` | AI model config, zone definitions |
 | `tests/` | Smoke, drift, and integration tests |
-| `site/` | Quartz static site source (serves prod lab.verdify.ai) |
-| `site-astro/` | Astro lab-site replacement — staged at lab-stage.verdify.ai; prod cutover tracked in `docs/plans/lab-astro-migration.md` |
+| `site/` | Canonical Quartz static-site generator for `lab.verdify.ai` |
 
 ## Development
 

@@ -48,8 +48,7 @@ Everything below works from a kubectl-equipped pod or host.
   - GOTCHA: `scripts/verdify-db.sh prod < file.sql` does **not** apply (stdin is
     swallowed). Apply SQL files with
     `kubectl exec -i -n verdify-prod verdify-db-0 -c postgres -- psql -U verdify -d verdify -v ON_ERROR_STOP=1 < file.sql`.
-- **Deploy / GitOps (one greenhouse environment, plus an isolated static Lab
-  canary):**
+- **Deploy / GitOps (one greenhouse environment):**
   ```text
   commit to main with make ci green
     → in-cluster verdify-platform-ci / repo-build WorkflowTemplate
@@ -57,8 +56,6 @@ Everything below works from a kubectl-equipped pod or host.
     → zot origin registry.vallery.net/verdifyconsultancy/<image>@sha256:...
     → digest-only pin commit
     → prod: explicit manual sync of verdify-prod-dark after render/diff validation
-    → Astro stage: validated lab-stage pin + stage-only rollout + T0/T+10
-       acceptance, then restore the manual-sync posture
   ```
   GitHub Actions and GHCR publishing are retired; do not create new GHCR pins.
   See `docs/runbooks/prod-promotion.md` for the current Kaniko→zot procedure.
@@ -71,11 +68,9 @@ Everything below works from a kubectl-equipped pod or host.
   Pre-check: `kustomize build deploy/k8s/overlays/prod | kubectl diff -f -`; confirm
   the **ingestor Deployment** (the single device writer) only changes when intended.
   Prod promotable set = api/mcp/ingestor/migrate/planner; setpoint-server and
-  the current Quartz lab images remain hand-pinned. ArgoCD app
-  `verdify-prod-dark` is **manual-sync, prune:false**. The Astro canary is a
-  static, no-device/no-DB surface, not a second greenhouse environment. Its
-  validated zot digest is pinned in
-  `deploy/k8s/overlays/lab-stage/kustomization.yaml`.
+  the Quartz Lab publisher remain hand-pinned. ArgoCD app
+  `verdify-prod-dark` is **manual-sync, prune:false**. The Lab web Deployment
+  uses a pinned content-free nginx image and serves only the publisher cache.
 - **Grafana dashboards** (non-control-path, safe to iterate): edit
   `grafana/dashboards/*.json` → `python3 scripts/gen-grafana-dashboard-cms.py` →
   commit → SSA-apply the CM → the provisioner reloads on a **300 s** cycle (force
@@ -194,15 +189,11 @@ milestones:
    lists source path/name mismatches (MQTT_*, HERMES_IRIS_API_KEY,
    API_WRITE_TOKEN↔VERDIFY_WRITE_API_KEY) to reconcile before SOPS/age sealing.
    The age private key lives in the fleet secret store.
-3. **Lab Astro dynamic publishing / production cutover** — PARTIAL, tracked by
-   #351 and `docs/plans/lab-astro-migration.md`. The Quartz publisher is
-   S3-backed, and the accepted Astro stage hydrates a digest-bound sanitized
-   snapshot before Kaniko; its static runtime needs no vault/NFS mount, PVC,
-   Secret, DB, Grafana, or egress. Full autonomy and cutover still require the
-   event-driven S3 release adapter, graph occurrence exporter/reporting tier,
-   privacy-safe camera sanitizer/fallback, exact same-snapshot parity, and
-   an explicit production cutover with Quartz rollback retained. Do not add a new
-   `/mnt/iris` dependency.
+3. **Lab static publishing** — Quartz is the sole generator. The S3-backed
+   `verdify-lab-publisher` builds and validates content every 10 minutes, then
+   atomically updates the Longhorn cache served by content-free nginx. See
+   `docs/site-publishing-pipeline.md`. Do not add a new `/mnt/iris` dependency
+   or a second static-site generator.
 4. **Orbit context dump** (`/Users/jason/Orbit/context_dump/verdify-platform/`) —
    historical backlog/handoff/evidence, **not in git**. Treat as archive; the
    live tracker is GitHub issues and the durable knowledge is in `docs/`.
