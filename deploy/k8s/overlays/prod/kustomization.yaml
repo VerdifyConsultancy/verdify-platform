@@ -241,13 +241,13 @@ patches:
 images:
   - name: ghcr.io/verdifyconsultancy/verdify-api
     newName: registry.vallery.net/verdifyconsultancy/verdify-api
-    digest: sha256:742cd0ead823dac91788912fafe00835537545b2e1361109e4c6d19f552377e6
+    digest: sha256:3091ab604e8a22ae737d02518cd1f59eab662af81fe1c7d181226d1555b4d859
   - name: ghcr.io/verdifyconsultancy/verdify-mcp
     newName: registry.vallery.net/verdifyconsultancy/verdify-mcp
-    digest: sha256:08ac92f0790af699075759fbe9d83eeb0e4697cc703939aa6bb2d177c450f28c
+    digest: sha256:349a0542b439defce625ff956020620f3a9bbecbae34e9f2ca42f8ef549bb7fe
   - name: ghcr.io/verdifyconsultancy/verdify-ingestor
     newName: registry.vallery.net/verdifyconsultancy/verdify-ingestor
-    digest: sha256:c83f336e03a70d2f797afbbdf7f2eea1dd2e117a8fe206770c6149e39e26c174
+    digest: sha256:1322d72b818a23377046a38cd6232df81fcc44fef6b56151c04493b122b3266f
   - name: ghcr.io/verdifyconsultancy/verdify-migrate
     newName: registry.vallery.net/verdifyconsultancy/verdify-migrate
     digest: sha256:62f1cf34173ea26b7169d26ec5f5c49e8879ee8ee02d8d7cec198d4fa5d2e155
