@@ -125,12 +125,6 @@ data:
            proof_receipt_id
       FROM public.fn_experiment_v2_direct_proof_attempt_status($1::uuid)
     """
-    MIGRATION_SQL = """
-    SELECT sha256
-      FROM public.schema_migrations
-     WHERE filename = 'db/migrations/239-experiment-v2-orphaned-preclaim-recovery.sql'
-       AND source = 'db/migrations' AND seq = 239
-    """
     OPS_SQL = """
     SELECT writer_generation, connection_generation, open_exposure_count,
            observation_truth, safety_state, alert_reason
@@ -283,10 +277,6 @@ data:
             predecessor = await connection.fetchrow(ATTEMPT_SQL, EXPERIMENT_ID)
             before_ops = await read_connection.fetchrow(OPS_SQL, EXPERIMENT_ID)
             assert_before(before, predecessor, before_ops)
-            migration_sha = await connection.fetchval(MIGRATION_SQL)
-            if migration_sha != EXPECTED_MIGRATION_SHA256:
-                raise RuntimeError("Gate R migration 239 ledger identity does not match")
-
             # The admission transition and migration-239 resolver are one
             # transaction. The singleton writer can never observe committed
             # component authority: any resolver mismatch rolls the transition

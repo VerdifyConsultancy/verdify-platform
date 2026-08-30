@@ -35,6 +35,7 @@ def test_gate_r_script_is_atomic_recovery_only() -> None:
     assert "fn_experiment_v2_direct_proof_begin(" not in script
     assert "fn_experiment_v2_direct_proof_open_aggressive" not in script
     assert "fn_experiment_v2_direct_proof_finish(" not in script
+    assert "schema_migrations" not in script
     assert '"proof_credit": False' in script
 
 
