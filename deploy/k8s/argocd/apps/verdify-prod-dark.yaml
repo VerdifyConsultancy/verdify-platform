@@ -8,21 +8,12 @@
 # CR is reconciled here to MATCH the live App (path overlays/prod). It is a
 # STANDALONE App (no app-of-apps owner) applied imperatively to the argocd ns.
 #
-# *** RENAME TO verdify-prod — SAFE, GATED PROCEDURE (NOT yet executed) ***
-# ArgoCD Application names are IMMUTABLE, so "rename" = create a new App named
-# verdify-prod + delete this one. The live App manages the SINGLE-WRITER ingestor,
-# so a naive delete (default cascade) would PRUNE every child incl. the ingestor.
-# Execute ONLY with this orphan-readopt sequence, operator-scoped:
-#   1. kubectl -n argocd delete application verdify-prod-dark --cascade=orphan
-#      (orphan: leaves ALL live resources running, only removes the App object)
-#   2. kubectl apply -f this file with metadata.name: verdify-prod (same project,
-#      same source path overlays/prod, same destination ns verdify-prod, manual
-#      sync, prune:false) — ArgoCD ADOPTS the orphaned resources by tracking-id.
-#   3. Verify: the new verdify-prod App reports the SAME resource set, Synced/
-#      Healthy, and the ingestor pod UID is UNCHANGED (no restart).
-# Do NOT run this unattended; one mis-step prunes the live writer. The name is
-# cosmetic — leaving it as verdify-prod-dark is harmless; the rename is documented
-# and ready for a gated window.
+# *** CANONICAL APPLICATION IDENTITY ***
+# Keep the historical verdify-prod-dark object name. It is only an identifier;
+# the source path and destination below define the live production environment.
+# The unused duplicate verdify-prod Application manifest and its staged rename
+# procedure were retired on 2026-08-30. Reintroducing a second owner for these
+# single-writer production resources requires a separately reviewed migration.
 #
 # *** MANUAL SYNC ON PURPOSE *** — NO syncPolicy.automated block. prod sync is
 # operator-initiated (argocd app sync) so a device-writer reconcile is never
