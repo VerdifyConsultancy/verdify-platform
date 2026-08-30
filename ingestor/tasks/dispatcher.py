@@ -5,6 +5,7 @@ original module. The tasks package __init__ re-exports the public
 surface so every `from tasks import X` still resolves.
 """
 
+from entity_map import CFG_READBACK_MAP, SETPOINT_MAP
 from esp32_push import (
     DeviceCommandOutcome,
     LifecyclePersistenceError,
@@ -76,6 +77,21 @@ from ._common import (
     registry_value_error,
     shared,
 )
+
+# Reconnect restoration is intentionally small and explicit.  These are the
+# only legacy safety controls in the old force-reconcile set. Every field has
+# either a cfg_* diagnostic or native Number/Switch readback route, so this set
+# is intentionally empty today. A future genuinely unobserved field is bounded
+# here and by MAX_RECONNECT_COMMANDS instead of reopening a broad blind restore.
+_RECONNECT_SAFETY_CANDIDATES = (
+    LIGHTING_POLICY_PARAMS
+    | LIGHTING_CIRCUIT_LUX_PARAMS
+    | HOUSE_BAND_PARAMS
+    | frozenset(p for p in CROP_BAND_REG if p.startswith("vpd_target_"))
+)
+_CURRENT_READBACK_PARAMS = frozenset(CFG_READBACK_MAP.values()) | frozenset(SETPOINT_MAP.values())
+RECONNECT_UNOBSERVED_RESTORE_PARAMS = frozenset(_RECONNECT_SAFETY_CANDIDATES - _CURRENT_READBACK_PARAMS)
+MAX_RECONNECT_COMMANDS = 12
 
 
 def _upsert_change(changes: list[tuple[str, float]], param: str, value: float) -> None:
@@ -330,7 +346,7 @@ def _heap_push_defer_active(
 
 def _readback_drift(param: str, desired: float) -> bool:
     """True when ESP32 cfg_* readback disagrees with the desired value."""
-    readback = shared.cfg_readback.get(param)
+    readback = shared.current_cfg_readbacks().get(param)
     if readback is None:
         return False
     return not readback_values_equivalent(param, readback, desired)
@@ -338,10 +354,11 @@ def _readback_drift(param: str, desired: float) -> bool:
 
 def _unchanged_anchor_dispatch_count(changes: list[tuple[str, float, str]]) -> int:
     """Count anchor commands whose canonical cfg readback already matches."""
+    current_readbacks = shared.current_cfg_readbacks()
     return sum(
         param in band_anchors.ANCHOR_SYNC_PARAMS
-        and param in shared.cfg_readback
-        and readback_values_equivalent(param, shared.cfg_readback[param], value)
+        and param in current_readbacks
+        and readback_values_equivalent(param, current_readbacks[param], value)
         for param, value, _source in changes
     )
 
@@ -602,61 +619,35 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
     else:
         dispatch_reason = "desired_change"
 
+    if reconnect_pending and not shared.transport_readbacks_ready(reconnect_generation):
+        missing = shared.missing_transport_cfg_readbacks(reconnect_generation)
+        log.warning(
+            "writer_reconcile reason=transport_reconnect generation=%d "
+            "action=blocked_readbacks_incomplete expected=%d missing=%d",
+            reconnect_generation,
+            len(shared.transport_expected_cfg_readbacks),
+            len(missing),
+        )
+        return
+
     def complete_dispatch_trigger() -> None:
         if reconnect_pending:
             shared.mark_transport_reconciled(reconnect_generation)
         shared.clear_cfg_drift(drift_versions)
 
-    # On a REAL ESP32 transport generation, rebuild the cache from firmware
-    # cfg_* readbacks. Generic cfg drift never enters this block or clears the
-    # sent-value cache.
-    # Values already confirmed by the device do not need to be pushed again;
-    # params without a readback still flow through as a conservative fallback.
-    #
-    # NVS-persisted band params (CROP_BAND_REG — temp/vpd anchors, zone targets,
-    # priorities, boosts, taper) are seeded here too (#430 Tier 1). They were
-    # formerly force-re-pushed on every reconnect; but they are restore_value:yes
-    # (survive reboot), so seeding from cfg_readback is safe and their per-param
-    # `_readback_drift` gate still re-pushes any value that actually differs from
-    # authoritative (a changed band, or a device echoing a wrong value). The old
-    # blanket exclusion re-asserted all ~74 BAND_DRIVEN_PARAMS with UNCHANGED
-    # values every reconnect (~7,400 constant pushes/day, ~100 reconnects/day) —
-    # the churn the recently_pushed comment below names as driving ESP32 heap into
-    # critical-pressure transients (#428).
-    #
-    # EXCEPTION (must stay force-reconciled): band params that REVERT to cold
-    # defaults on a reboot/OTA (restore_value:no). Seeding these from the device's
-    # possibly-reverted — or silently-not-republished — cfg_readback could mask a
-    # reverted device and strand the greenhouse on a stale value, and
-    # `_readback_drift` reads the same stale cache so it can't catch it (Case D).
-    # They are left UNSEEDED so the next dispatch re-asserts the authoritative
-    # value unconditionally. Two groups:
-    #   • lighting lux/policy — the 2026-06-16 grow-light-strand incident
-    #     (_common.py:111); force-reconciled before and after this change.
-    #   • served-band edges + per-zone vpd_target (HOUSE_BAND_PARAMS + vpd_target_*)
-    #     back onto restore_value:no globals. Harmless in the live anchors regime —
-    #     recomputed on-chip every cycle from the restore_value:yes anchors and NOT
-    #     pushed while anchors_live — so force-reconciling them costs ~0 churn there;
-    #     included as defense-in-depth against a legacy on-chip-band-disabled fallback.
-    # The delta-seeded remainder (crop-band anchors/priorities/boosts/taper) is all
-    # restore_value:yes; a test pins that no reverting param slips into the seed.
-    RECONNECT_FORCE_RECONCILE = (
-        LIGHTING_POLICY_PARAMS
-        | LIGHTING_CIRCUIT_LUX_PARAMS
-        | HOUSE_BAND_PARAMS
-        | frozenset(p for p in CROP_BAND_REG if p.startswith("vpd_target_"))
-    )
+    # Rebuild the comparison cache only from callbacks belonging to this exact
+    # connection. Readback-routed controls, including restore_value:no fields,
+    # are delta-repaired from live truth. Any future control with no observable
+    # route is deliberately forgotten and conservatively restored below.
     reconnect_event_set = False
     if shared.force_setpoint_push.is_set():
         reconnect_event_set = True
     if reconnect_event_set and reconnect_pending:
-        _last_pushed.clear()
+        current_readbacks = shared.current_cfg_readbacks(reconnect_generation)
+        for param in RECONNECT_UNOBSERVED_RESTORE_PARAMS:
+            _last_pushed.pop(param, None)
         seeded = 0
-        force_reconciled = 0
-        for param, val in shared.cfg_readback.items():
-            if param in RECONNECT_FORCE_RECONCILE:
-                force_reconciled += 1
-                continue
+        for param, val in current_readbacks.items():
             _last_pushed[param] = float(val)
             seeded += 1
         if SWITCH_CONFIRM_EQUIPMENT:
@@ -672,17 +663,17 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                 )
             equipment_state = {row["equipment"]: bool(row["state"]) for row in equipment_rows}
             for param, equipment in SWITCH_CONFIRM_EQUIPMENT.items():
-                if param in shared.cfg_readback:
+                if param in current_readbacks:
                     continue
                 if equipment in equipment_state:
                     _last_pushed[param] = 1.0 if equipment_state[equipment] else 0.0
                     seeded += 1
         log.info(
             "writer_reconcile reason=transport_reconnect generation=%d seeded=%d "
-            "force_reconciled=%d comparison=desired_vs_observed",
+            "unobserved_restore_limit=%d comparison=current_generation_readbacks",
             reconnect_generation,
             seeded,
-            force_reconciled,
+            len(RECONNECT_UNOBSERVED_RESTORE_PARAMS),
         )
     async with pool.acquire() as conn:
         # Compute crop-science band, per-zone VPD targets, the DB-owned house
@@ -1073,7 +1064,7 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                 changes.append((param, planned_val))
 
         for param in FORCED_ON_SWITCH_PARAMS:
-            readback = shared.cfg_readback.get(param)
+            readback = shared.current_cfg_readbacks().get(param)
             if readback is not None and readback < 0.5:
                 if not any(existing_param == param for existing_param, _ in changes):
                     log.warning(
@@ -1098,6 +1089,22 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         for param, value in changes:
             deduped_changes[param] = float(value)
         changes = list(deduped_changes.items())
+
+        if reconnect_pending and len(changes) > MAX_RECONNECT_COMMANDS:
+            # A reconnect is recovery work, not authority to enqueue another
+            # historical 40+ command restore storm.  Leave the generation
+            # unreconciled and retry on the ordinary cadence after operators
+            # can inspect the current-generation comparison evidence.
+            shared.defer_failed_dispatch(reconnect_generation, drift_versions)
+            log.error(
+                "writer_reconcile reason=transport_reconnect generation=%d "
+                "action=blocked_broad_restore command_count=%d limit=%d",
+                reconnect_generation,
+                len(changes),
+                MAX_RECONNECT_COMMANDS,
+            )
+            (STATE_DIR / "setpoint-dispatcher.log").touch()
+            return
 
         if not changes:
             clamp_rows_written = await _write_clamp_audit_rows(conn, clamps_to_log, set())
@@ -1334,14 +1341,6 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             param = str(record["parameter"])
             value = float(record["value"])
             status = _persisted_delivery_status(outcome, final_attempt)
-            if outcome.status == "sent":
-                # Physical API return is the first point at which sent caches
-                # may advance.  Confirmation still waits for cfg/equipment
-                # readback in the independent confirmation path.
-                _last_pushed[param] = value
-                # Compatibility invariant text: the physical helper performs
-                # shared.recently_pushed[param] = time.time() only after the API
-                # command returns; the dispatcher deliberately never pre-marks.
             allowed = list(delivery_transition_prior_statuses(status))
             async with pool.acquire() as state_conn:
                 persisted = await state_conn.fetchval(
@@ -1375,6 +1374,11 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                         if preserved is None:
                             raise RuntimeError(f"illegal delivery transition {current!r} -> {status!r} for {param}")
                         status = preserved
+            if outcome.status == "sent":
+                # Advance the desired/sent cache only after the corresponding
+                # durable terminal callback succeeded. Confirmation remains an
+                # independent cfg/equipment readback transition.
+                _last_pushed[param] = value
             log.info(
                 "writer_delivery phase=persisted status=%s reason=%s param=%s generation=%d attempt=%d",
                 status,
@@ -1446,6 +1450,7 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             attempt=attempt,
             on_state=on_state,
             command_versions=[record["requested_at"].timestamp() for record in pending_records],
+            expected_connection_generation=reconnect_generation,
         )
         if result.fatal_error:
             raise LifecyclePersistenceError(result.fatal_error)

@@ -266,6 +266,8 @@ CLIMATE_RELAY_FIELD_DENYLIST: frozenset[str] = frozenset(
 # `rh_ceiling`/`temp_low`/`occupancy`) plus the ESPHome manual/safety + interlock
 # path (firmware/greenhouse/controls.yaml → `served`/`vent_interlock`/
 # `irrigation`/`resource_budget`/`time_invalid`/`leak_detected`/`relay_min_off`).
+# `wet_taper` is retained for historical rows written by the pre-curve-only
+# firmware even though the current shared-logic taper is inert.
 # test_climate_intent.test_fog_block_reasons_cover_stored_db_values guards this
 # against the live climate_action_log column.
 FOG_BLOCK_REASONS: tuple[str, ...] = (
@@ -286,6 +288,7 @@ FOG_BLOCK_REASONS: tuple[str, ...] = (
     "leak_detected",  # leak-detect safety lock
     "feed_hold",  # FRT-6 absorption hold after a feed
     "dusk_cutoff",  # SAF-3 VPD-independent dusk cutoff rail
+    "wet_taper",  # historical pre-curve-only firmware observation truth
 )
 
 

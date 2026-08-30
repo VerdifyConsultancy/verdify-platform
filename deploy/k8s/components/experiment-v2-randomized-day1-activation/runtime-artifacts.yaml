@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: verdify-experiment-v2-lifecycle-plan
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: experiment-v2-lifecycle
+data:
+  plan.json: '{"action":"boundary","experiment_id":"45039c86-c1d9-52f6-a0a9-d94a17bc4b14","schema":"verdify-experiment-v2-lifecycle-plan-v1"}'

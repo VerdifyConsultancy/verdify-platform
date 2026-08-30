@@ -38,8 +38,8 @@ def test_proof_seals_rollover_before_waiting_for_stable_successor() -> None:
     begin = script.index("aggressive_work_id = await connection.fetchval(", settle)
     assert resolve < settle < begin
     assert "RUNTIME_REGISTRATION_SETTLE_SECONDS = 5 * 60" in script
-    assert "datetime(2026, 8, 29, 5, 0, tzinfo=UTC)" in script
-    assert "extended-through-23:00-MT" in script
+    assert 'activation_time("VERDIFY_DIRECT_PROOF_AUTHORIZED_TO")' in script
+    assert 'required_activation_value("VERDIFY_DIRECT_PROOF_AUTHORIZATION_REF")' in script
 
 
 def test_rollover_resolution_is_function_only_and_append_only() -> None:

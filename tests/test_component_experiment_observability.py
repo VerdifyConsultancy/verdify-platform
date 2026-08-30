@@ -12,7 +12,11 @@ from typing import get_args
 
 import pytest
 
-from verdify_schemas.alerts import AlertEnvelope, ComponentExperimentIntegrityReason
+from verdify_schemas.alerts import (
+    AlertEnvelope,
+    ComponentExperimentIntegrityReason,
+    ComponentExperimentObservationTruth,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATION = ROOT / "db/migrations/215-experiment-v2-ops-observability.sql"
@@ -29,6 +33,12 @@ _ALERT_CASES = re.compile(
 )
 _CASE_BRANCH = re.compile(
     r"\bWHEN\s+(?P<condition>.*?)\s+THEN\s+'(?P<value>[a-z0-9_]+)'",
+    re.DOTALL,
+)
+_OBSERVATION_TRUTH_CASE = re.compile(
+    r"(?P<truth_case>CASE\s+WHEN\s+selected\.future_masked\s+THEN\s+"
+    r"'future_identity_masked'.*?ELSE\s+'exact'\s+END),\s*"
+    r"coalesce\(exposures\.open_count",
     re.DOTALL,
 )
 
@@ -138,6 +148,14 @@ def _db_integrity_branches(function_body: str) -> tuple[tuple[str, str], ...]:
         )
         emitted.append((reason.value, matching_severities[0]))
     return tuple(emitted)
+
+
+def _db_observation_truth_values(function_body: str) -> tuple[str, ...]:
+    match = _OBSERVATION_TRUTH_CASE.search(function_body)
+    assert match is not None, "observation-truth CASE expression not found"
+    branches = tuple(branch.value for branch in _case_branches(match.group("truth_case")))
+    assert "ELSE 'exact'" in match.group("truth_case")
+    return (*branches, "exact")
 
 
 EFFECTIVE_OPS_MIGRATION, EFFECTIVE_OPS_BODY = _latest_ops_status_definition()
@@ -253,6 +271,18 @@ def test_migration_alert_reasons_and_typed_schema_stay_reconciled():
     } <= set(schema_reasons)
 
 
+def test_migration_observation_truth_and_typed_producer_stay_reconciled():
+    assert get_args(ComponentExperimentObservationTruth) == _db_observation_truth_values(EFFECTIVE_OPS_BODY)
+
+
+@pytest.mark.parametrize("observation_truth", get_args(ComponentExperimentObservationTruth))
+def test_every_db_observation_truth_round_trips_the_typed_alert(observation_truth: str):
+    payload = _load_alert_helper()(_ops_row(observation_truth=observation_truth))
+    assert payload is not None
+    envelope = AlertEnvelope.model_validate(payload)
+    assert envelope.details["observation_truth"] == observation_truth
+
+
 def test_alert_contract_comes_from_the_latest_ordered_migration_definition():
     definitions = [
         (migration, body)
@@ -281,7 +311,12 @@ def test_dashboard_uses_only_the_blinded_safe_function():
     assert dashboard["uid"] == "confirmed-component-experiment-v2"
     sql_targets = [target["rawSql"] for panel in dashboard["panels"] for target in panel.get("targets", [])]
     assert len(sql_targets) >= 5
-    assert all("fn_experiment_v2_ops_status()" in query for query in sql_targets)
+    allowed = (
+        "fn_experiment_v2_ops_status()",
+        "fn_experiment_v2_launch_gate_status()",
+    )
+    assert all(any(function in query for function in allowed) for query in sql_targets)
+    assert any("fn_experiment_v2_launch_gate_status()" in query for query in sql_targets)
     combined = "\n".join(sql_targets).lower()
     for forbidden in (
         "control_arm_resolutions",

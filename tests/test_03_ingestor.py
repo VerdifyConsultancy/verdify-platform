@@ -84,6 +84,10 @@ def _reset_reconcile_state(monkeypatch):
     monkeypatch.setattr(shared, "reconciled_transport_generation", 0)
     monkeypatch.setattr(shared, "cfg_drift_versions", {})
     monkeypatch.setattr(shared, "_cfg_drift_version", 0)
+    monkeypatch.setattr(shared, "cfg_readback_generation", {})
+    monkeypatch.setattr(shared, "transport_expected_cfg_readbacks", frozenset())
+    monkeypatch.setattr(shared, "transport_observed_cfg_readbacks", set())
+    monkeypatch.setattr(shared, "transport_readbacks_generation", 0)
     monkeypatch.setattr(shared, "force_setpoint_push", asyncio.Event())
     monkeypatch.setattr(shared, "setpoint_dispatch_requested", asyncio.Event())
     monkeypatch.setattr(shared, "setpoint_dispatch_lock", asyncio.Lock())
@@ -94,16 +98,16 @@ def _reset_reconcile_state(monkeypatch):
 
 
 def test_cfg_drift_never_advances_transport_generation(caplog):
-    shared.transport_generation = 7
-    shared.reconciled_transport_generation = 7
     wire_id = "cfg___mister_vpd_weight"
+    generation = shared.note_transport_connected(frozenset({"mister_vpd_weight"}))
 
     assert ingestor._record_cfg_readback(wire_id, 42.0) is True
+    shared.mark_transport_reconciled(generation)
     with caplog.at_level(logging.INFO, logger="ingestor"):
         assert ingestor._record_cfg_readback(wire_id, 43.0) is True
 
-    assert shared.transport_generation == 7
-    assert shared.reconciled_transport_generation == 7
+    assert shared.transport_generation == generation
+    assert shared.reconciled_transport_generation == generation
     assert not shared.force_setpoint_push.is_set()
     assert shared.setpoint_dispatch_requested.is_set()
     assert shared.cfg_drift_versions == {"mister_vpd_weight": 1}
@@ -358,16 +362,21 @@ async def test_writer_fatal_monitor_forces_supervised_process_failure():
 
 
 def test_real_connect_generation_is_monotonic_and_never_erases_newer_reconnect():
-    first = shared.note_transport_connected()
-    second = shared.note_transport_connected()
+    first = shared.note_transport_connected(frozenset({"first"}))
+    assert not shared.force_setpoint_push.is_set()
+    assert not shared.setpoint_dispatch_requested.is_set()
+    assert shared.note_cfg_readback_observed("first", 1.0, first)
+    shared.mark_transport_reconciled(first)
+    second = shared.note_transport_connected(frozenset({"second"}))
 
     assert (first, second) == (1, 2)
-    assert shared.force_setpoint_push.is_set()
-    assert shared.setpoint_dispatch_requested.is_set()
+    assert not shared.force_setpoint_push.is_set()
+    assert not shared.setpoint_dispatch_requested.is_set()
 
     shared.mark_transport_reconciled(first)
     assert shared.reconciled_transport_generation == 1
-    assert shared.force_setpoint_push.is_set(), "generation 1 must not erase pending generation 2"
+    assert shared.note_cfg_readback_observed("second", 2.0, second)
+    assert shared.force_setpoint_push.is_set()
 
     shared.mark_transport_reconciled(second)
     assert shared.reconciled_transport_generation == 2
@@ -386,9 +395,11 @@ def test_cfg_drift_clear_is_version_safe():
 
 def test_old_drift_completion_cannot_erase_newer_reconnect_wake():
     observed = {"mister_vpd_weight": shared.note_cfg_drift("mister_vpd_weight")}
-    first_generation = shared.note_transport_connected()
+    first_generation = shared.note_transport_connected(frozenset({"first"}))
+    assert shared.note_cfg_readback_observed("first", 1.0, first_generation)
     shared.mark_transport_reconciled(first_generation)
-    newer_generation = shared.note_transport_connected()
+    newer_generation = shared.note_transport_connected(frozenset({"newer"}))
+    assert shared.note_cfg_readback_observed("newer", 2.0, newer_generation)
 
     shared.clear_cfg_drift(observed)
 
@@ -399,7 +410,8 @@ def test_old_drift_completion_cannot_erase_newer_reconnect_wake():
 
 
 def test_failed_dispatch_consumes_only_its_immediate_wake_without_claiming_reconcile():
-    generation = shared.note_transport_connected()
+    generation = shared.note_transport_connected(frozenset({"current"}))
+    assert shared.note_cfg_readback_observed("current", 1.0, generation)
     observed = {"mister_vpd_weight": shared.note_cfg_drift("mister_vpd_weight")}
 
     shared.defer_failed_dispatch(generation, observed)
@@ -410,10 +422,46 @@ def test_failed_dispatch_consumes_only_its_immediate_wake_without_claiming_recon
     assert not shared.setpoint_dispatch_requested.is_set()
 
     shared.setpoint_dispatch_requested.set()
-    newer_generation = shared.note_transport_connected()
+    newer_generation = shared.note_transport_connected(frozenset({"newer"}))
+    assert shared.note_cfg_readback_observed("newer", 2.0, newer_generation)
     shared.defer_failed_dispatch(generation, observed)
     assert newer_generation == 2
     assert shared.setpoint_dispatch_requested.is_set()
+
+
+def test_reconnect_readback_barrier_clears_stale_cache_and_opens_once_complete():
+    shared.cfg_readback.update({"stale": 1.0})
+    shared.cfg_readback_generation.update({"stale": 9})
+
+    generation = shared.note_transport_connected(frozenset({"a", "b"}))
+
+    assert shared.cfg_readback == {}
+    assert shared.current_cfg_readbacks() == {}
+    assert not shared.transport_readbacks_ready(generation)
+    assert not shared.note_cfg_readback_observed("a", 1.0, generation)
+    assert not shared.transport_readbacks_ready(generation)
+    assert shared.note_cfg_readback_observed("b", 2.0, generation)
+    assert shared.transport_readbacks_ready(generation)
+    assert shared.current_cfg_readbacks() == {"a": 1.0, "b": 2.0}
+
+
+def test_late_readback_cannot_complete_or_pollute_newer_generation():
+    first = shared.note_transport_connected(frozenset({"a"}))
+    second = shared.note_transport_connected(frozenset({"b"}))
+
+    assert not shared.note_cfg_readback_observed("a", 1.0, first)
+    assert shared.current_cfg_readbacks() == {}
+    assert shared.note_cfg_readback_observed("b", 2.0, second)
+    assert shared.transport_readbacks_ready(second)
+
+
+def test_native_number_readback_completes_replay_for_field_without_cfg_sensor():
+    generation = shared.note_transport_connected(frozenset({"mister_on_s"}))
+
+    ingestor._mirror_irrigation_number_readback("mister_on_s", 300.0)
+
+    assert shared.transport_readbacks_ready(generation)
+    assert shared.current_cfg_readbacks() == {"mister_on_s": 300.0}
 
 
 @pytest.mark.asyncio

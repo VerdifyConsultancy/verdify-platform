@@ -219,10 +219,12 @@ esp32 = {
 recently_pushed: dict[str, float] = {}
 recently_pushed_values: dict[str, float] = {}
 
-# param -> latest cfg_* readback from ESP32. Used by reconnect dispatch to
-# reconcile desired setpoints against device state instead of force-pushing
-# values the firmware has already confirmed.
+# param -> latest writable-field readback from ESP32 (cfg_* diagnostics or the
+# native Number/Switch state when no cfg_* sensor exists). Used by reconnect
+# dispatch to compare desired state against device truth. The parallel
+# generation map is authoritative: an earlier socket is never current truth.
 cfg_readback: dict[str, float] = {}
+cfg_readback_generation: dict[str, int] = {}
 
 # Lane C (#584) / contract v2 (#586): latest device-echoed policy identity,
 # keyed by verdify_schemas.policy_transport.POLICY_IDENTITY_SENSOR — the ONE
@@ -238,6 +240,15 @@ policy_readback: dict[str, str] = {}
 transport_generation = 0
 reconciled_transport_generation = 0
 
+# A reconnect is not eligible for reconciliation until the native API has
+# replayed every writable field enumerated on that exact connection.
+# ESPHome sends the initial states asynchronously after subscribe_states(); a
+# fixed sleep races that replay and caused broad startup restore batches to be
+# computed from the preceding connection's cache (#433/#641).
+transport_expected_cfg_readbacks: frozenset[str] = frozenset()
+transport_observed_cfg_readbacks: set[str] = set()
+transport_readbacks_generation = 0
+
 # cfg parameter -> monotonic drift version.  Versioning lets a dispatcher clear
 # only the drift it actually observed; a newer readback arriving mid-dispatch
 # remains pending for the next targeted pass.
@@ -247,23 +258,85 @@ _cfg_drift_version = 0
 # Wake the scheduler for targeted cfg drift without advancing transport state.
 setpoint_dispatch_requested = asyncio.Event()
 
-# Compatibility reconnect event.  This event is now set ONLY by
-# note_transport_connected(); generic cfg drift must never set it.
+# Compatibility reconnect event. This event is set only when the exact current
+# generation finishes its initial replay; generic cfg drift must never set it.
 force_setpoint_push = asyncio.Event()
 
 
-def note_transport_connected() -> int:
-    """Advance and return the one monotonic generation for a real API connect."""
-    global transport_generation
+def note_transport_connected(expected_cfg_readbacks: frozenset[str] = frozenset()) -> int:
+    """Start one transport generation whose readback replay is not yet ready.
+
+    The caller supplies only writable parameters actually enumerated on this
+    connection.  An empty inventory stays unready: blindly restoring against a
+    socket that exposed no device truth is less safe than waiting.
+    """
+    global transport_generation, transport_expected_cfg_readbacks
+    global transport_observed_cfg_readbacks, transport_readbacks_generation
     transport_generation += 1
-    force_setpoint_push.set()
-    setpoint_dispatch_requested.set()
+    transport_expected_cfg_readbacks = frozenset(expected_cfg_readbacks)
+    transport_observed_cfg_readbacks = set()
+    transport_readbacks_generation = 0
+    cfg_readback.clear()
+    cfg_readback_generation.clear()
+    force_setpoint_push.clear()
+    setpoint_dispatch_requested.clear()
     return transport_generation
+
+
+def note_cfg_readback_observed(param: str, value: float, generation: int) -> bool:
+    """Record one writable value only inside the exact current replay.
+
+    Returns true exactly once when the last expected parameter for this
+    generation arrives.  Late callbacks are fenced by the connection callback,
+    but the explicit generation check keeps this helper safe in isolation too.
+    """
+    global transport_readbacks_generation
+    if generation != transport_generation:
+        return False
+    cfg_readback[param] = float(value)
+    cfg_readback_generation[param] = generation
+    if param in transport_expected_cfg_readbacks:
+        transport_observed_cfg_readbacks.add(param)
+    if (
+        transport_expected_cfg_readbacks
+        and transport_expected_cfg_readbacks <= transport_observed_cfg_readbacks
+        and transport_readbacks_generation != generation
+    ):
+        transport_readbacks_generation = generation
+        force_setpoint_push.set()
+        setpoint_dispatch_requested.set()
+        return True
+    return False
+
+
+def transport_readbacks_ready(generation: int) -> bool:
+    """Return true only for a complete replay from the exact live generation."""
+    return (
+        generation == transport_generation
+        and generation == transport_readbacks_generation
+        and bool(transport_expected_cfg_readbacks)
+        and transport_expected_cfg_readbacks <= transport_observed_cfg_readbacks
+    )
+
+
+def current_cfg_readbacks(generation: int | None = None) -> dict[str, float]:
+    """Copy only writable values observed on the requested/current socket."""
+    current = transport_generation if generation is None else generation
+    return {param: value for param, value in cfg_readback.items() if cfg_readback_generation.get(param) == current}
+
+
+def missing_transport_cfg_readbacks(generation: int) -> frozenset[str]:
+    """Report the exact current-generation replay gap for bounded logging."""
+    if generation != transport_generation:
+        return transport_expected_cfg_readbacks
+    return transport_expected_cfg_readbacks - transport_observed_cfg_readbacks
 
 
 def mark_transport_reconciled(generation: int) -> None:
     """Mark one completed generation without erasing a newer reconnect."""
     global reconciled_transport_generation
+    if not transport_readbacks_ready(generation):
+        return
     reconciled_transport_generation = max(reconciled_transport_generation, generation)
     if transport_generation <= reconciled_transport_generation:
         force_setpoint_push.clear()

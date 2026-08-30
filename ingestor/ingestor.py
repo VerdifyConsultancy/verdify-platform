@@ -78,7 +78,6 @@ from occupancy import refresh_latest_occupancy_state, sync_occupancy_state
 from pydantic import ValidationError
 from tasks import (
     BAND_DRIVEN_PARAMS,
-    IRRIGATION_SCHEDULE_PARAMS,
     alert_monitor,
     attest_component_safe_startup,
     clear_component_entity_inventory,
@@ -2928,9 +2927,18 @@ def _record_cfg_readback(obj_id: str, value: Any) -> bool:
             )
             return True
 
+    generation = int(shared.transport_generation)
     prev = shared.cfg_readback.get(cfg_param)
+    prev_generation = shared.cfg_readback_generation.get(cfg_param)
+    replay_was_ready = shared.transport_readbacks_ready(generation)
     state.cfg_readback[cfg_param] = val
-    shared.cfg_readback[cfg_param] = val
+    replay_completed = shared.note_cfg_readback_observed(cfg_param, val, generation)
+    if replay_completed:
+        log.info(
+            "writer_reconcile reason=transport_reconnect generation=%d action=readbacks_complete readback_count=%d",
+            generation,
+            len(shared.transport_observed_cfg_readbacks),
+        )
     # #433/#639: capture the original ESPHome callback timestamp.  The
     # component source collector freezes an epoch only after all 48 callbacks
     # advance; periodic cached setpoint_snapshot flushes never call this hook.
@@ -2938,6 +2946,8 @@ def _record_cfg_readback(obj_id: str, value: Any) -> bool:
     drift_version: int | None = None
     if (
         cfg_param in _RECONCILABLE_CFG_PARAMS
+        and replay_was_ready
+        and prev_generation == generation
         and prev is not None
         and not math.isclose(prev, val, rel_tol=0.01, abs_tol=0.001)
     ):
@@ -2948,7 +2958,7 @@ def _record_cfg_readback(obj_id: str, value: Any) -> bool:
             shared.transport_generation,
             drift_version,
         )
-    if cfg_param in FORCED_ON_SWITCH_PARAMS and val < 0.5:
+    if cfg_param in FORCED_ON_SWITCH_PARAMS and val < 0.5 and replay_was_ready:
         if drift_version is None:
             drift_version = shared.note_cfg_drift(cfg_param)
         log.warning(
@@ -2961,26 +2971,35 @@ def _record_cfg_readback(obj_id: str, value: Any) -> bool:
 
 
 def _mirror_irrigation_number_readback(param: str, value: Any) -> None:
-    """Treat ESP32 irrigation number-state reports as cfg readbacks.
+    """Treat ESP32 writable-entity state reports as current device truth.
 
-    The irrigation schedule knobs are persisted firmware globals exposed both
-    as writable Number entities and cfg_* diagnostic template sensors. Mirroring
-    the ESP32 Number state keeps setpoint_snapshot fresh when a cfg_* template
-    sensor fails to republish after a reconnect.
+    Most writable fields also expose cfg_* diagnostic sensors, but a small
+    legacy set only has its native Number/Switch state. Mirroring every mapped
+    writable entity closes that gap so reconnect never needs a blind restore.
+    The historical helper name is retained for compatibility with source
+    contract tests and callers.
     """
-    if param not in IRRIGATION_SCHEDULE_PARAMS:
+    if param not in _RECONCILABLE_CFG_PARAMS:
         return
     try:
         val = float(value)
     except (TypeError, ValueError):
-        log.warning("irrigation number readback rejected non-numeric: %s=%r", param, value)
+        log.warning("writable entity readback rejected non-numeric: %s=%r", param, value)
         return
     if math.isnan(val):
         return
+    generation = int(shared.transport_generation)
     prev = shared.cfg_readback.get(param)
+    prev_generation = shared.cfg_readback_generation.get(param)
+    replay_was_ready = shared.transport_readbacks_ready(generation)
     state.cfg_readback[param] = val
-    shared.cfg_readback[param] = val
-    if prev is not None and not math.isclose(prev, val, rel_tol=0.01, abs_tol=0.001):
+    shared.note_cfg_readback_observed(param, val, generation)
+    if (
+        replay_was_ready
+        and prev_generation == generation
+        and prev is not None
+        and not math.isclose(prev, val, rel_tol=0.01, abs_tol=0.001)
+    ):
         drift_version = shared.note_cfg_drift(param)
         log.info(
             "writer_reconcile reason=cfg_drift param=%s generation=%d drift_version=%d source=number_mirror",
@@ -3123,6 +3142,10 @@ def on_state_change(entity_state) -> None:
         val = entity_state.state
         if _record_cfg_readback(obj_id, 1.0 if val else 0.0):
             return
+
+        param = SETPOINT_MAP.get(obj_id)
+        if param:
+            _mirror_irrigation_number_readback(param, 1.0 if val else 0.0)
 
         equip = EQUIPMENT_SWITCH_MAP.get(obj_id)
         if equip:
@@ -3523,19 +3546,26 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
             )
 
             # Advance the transport generation exactly once for this successful
-            # API connect.  cfg drift has a separate targeted wakeup and can
-            # never reach this generation counter.
+            # API connect. Reconciliation remains blocked until the native API
+            # replays every writable field enumerated on this socket.
+            # This prevents a replacement writer from comparing desired state
+            # against the preceding generation's in-memory cache.
             import time as _time_mod
 
-            connection_generation = shared.note_transport_connected()
-            # Compatibility event is set inside note_transport_connected(); it
-            # remains reconnect-only and is consumed after this generation is
-            # reconciled.
-            shared.force_setpoint_push.set()
+            expected_cfg_readbacks = frozenset(
+                readback_param
+                for entity in entities
+                if (readback_param := SETPOINT_MAP.get(entity.object_id) or CFG_READBACK_MAP.get(entity.object_id))
+                in _RECONCILABLE_CFG_PARAMS
+            )
+            connection_generation = shared.note_transport_connected(expected_cfg_readbacks)
+            state.cfg_readback.clear()
             shared.esp32_connected_at = _time_mod.time()
             log.info(
-                "writer_reconcile reason=transport_reconnect generation=%d action=reconcile_requested",
+                "writer_reconcile reason=transport_reconnect generation=%d "
+                "action=awaiting_readbacks expected_readback_count=%d",
                 connection_generation,
+                len(expected_cfg_readbacks),
             )
             record_component_entity_inventory(
                 tuple(

@@ -52,6 +52,7 @@ $PY -m pytest -q \
   tests/test_03_ingestor.py \
   research/planner-efficacy/tests/test_protocol_template_contract.py \
   research/planner-efficacy/tests/test_switchback_v2_design.py \
+  research/planner-efficacy/tests/test_switchback_v2_day1_export.py \
   research/planner-efficacy/tests/test_switchback_v2_randomization.py \
   research/planner-efficacy/tests/test_switchback_v2_selector.py
 $PY research/planner-efficacy/generate_v2_artifacts.py --check
@@ -61,11 +62,13 @@ $PY -m pytest -q tests/test_device_write_gate.py
 
 step "pure-logic / contract tests"
 $PY -m pytest -q \
+  tests/test_05_dispatcher.py \
   tests/test_10_planner_routing.py \
   tests/test_11_planner_milestones.py \
   tests/test_13_grafana_band_traceability.py \
   tests/test_14_shadow_mode.py \
   tests/test_14_site_doctor.py \
+  tests/test_16_writer_lifecycle.py \
   tests/test_17_planner_health_surface.py \
   tests/test_18_twin_divergence_dashboard.py \
   tests/test_20_vision_src_sync.py \
@@ -105,9 +108,12 @@ $PY -m pytest -q \
   tests/test_experiment_v2_restore_rehearsal.py \
   tests/test_experiment_v2_shadow_source_lock.py \
   tests/test_experiment_v2_data_contract.py \
+  tests/test_experiment_v2_day1_authorization.py \
   tests/test_experiment_v2_direct_launch_runtime.py \
+  tests/test_experiment_v2_launch_artifacts.py \
   tests/test_experiment_v2_direct_proof_activation.py \
   tests/test_experiment_v2_direct_proof_attempt_status.py \
+  tests/test_experiment_v2_direct_proof_recovery_range_rollover.py \
   tests/test_experiment_v2_direct_proof_retry.py \
   tests/test_experiment_v2_emergency_recovery_retry.py \
   tests/test_experiment_v2_recovery_generation_guard.py \
@@ -157,6 +163,7 @@ $PY -m pytest -q \
   tests/test_twin_asof_migration.py \
   tests/test_twin_live_driver.py \
   tests/test_verdify_traefik_placement.py \
+  tests/test_verify_component_proof_packet.py \
   tests/test_writer_lease_fence.py
 
 step "migration rollback safety classification"

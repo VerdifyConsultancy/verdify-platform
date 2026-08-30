@@ -6,9 +6,10 @@ spec:
   template:
     metadata:
       annotations:
-        # One attended #641 proof epoch. Removing this component removes the
-        # overrides and annotation, forcing the sole writer back to coarse off.
-        verdify.io/direct-proof-activation: "2026-08-28-jason-vallery-retry-2"
+        # Dormant component default. The isolated activation render must replace
+        # this marker with a fresh unique attempt reference in the same commit
+        # that supplies a current bounded window and unsuspends the proof Job.
+        verdify.io/direct-proof-activation: "dormant-no-authority"
     spec:
       containers:
         - name: ingestor
@@ -16,6 +17,6 @@ spec:
             - name: VERDIFY_POLICY_VECTOR_MODE
               value: "off"
             - name: VERDIFY_COMPONENT_EXPERIMENT_ENABLED
-              value: "enabled"
+              value: "off"
             - name: VERDIFY_ACTIVE_EXPERIMENT_ID
-              value: "45039c86-c1d9-52f6-a0a9-d94a17bc4b14"
+              value: ""

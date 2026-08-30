@@ -264,6 +264,7 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "235-experiment-v2-direct-proof-raw-reset-rollover.sql",  # seal pre-claim raw-reset recovery
         "236-experiment-v2-direct-proof-preclaim-raw-reset-rollover.sql",  # order pre-claim reset from work creation
         "237-experiment-v2-direct-proof-recovery-range-rollover.sql",  # bind rollover to current recovery range
+        "238-experiment-v2-separate-day1-authorization.sql",  # separate finalization from audited day-1 approval
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(
