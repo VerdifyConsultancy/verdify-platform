@@ -202,7 +202,7 @@ def test_script_restores_only_the_bounded_latest_dump_and_runs_real_gates():
         "test-218-planner-required-failure-history.sql",
         "migration 217 exact-runtime Timescale facade/ACL fixture passed",
         "migration 218 required-failure-history fixture passed",
-        "exact 214-222 ledger",
+        "exact 214-239 ledger",
         "current_setting('timescaledb.restoring', true) IS DISTINCT FROM 'off'",
         "fn_experiment_v2_ops_status()",
         "fn_record_equipment_counter_sample",
@@ -284,17 +284,8 @@ def test_script_restores_only_the_bounded_latest_dump_and_runs_real_gates():
     fixture_233 = script.index(
         "-f /work/db/migrations/tests/test-233-experiment-v2-direct-proof-zero-exposure-seal.sql"
     )
-    fixture_234 = script.index("-f /work/db/migrations/tests/test-234-experiment-v2-direct-proof-startup-rollover.sql")
-    fixture_235 = script.index(
-        "-f /work/db/migrations/tests/test-235-experiment-v2-direct-proof-raw-reset-rollover.sql"
-    )
-    fixture_236 = script.index(
-        "-f /work/db/migrations/tests/test-236-experiment-v2-direct-proof-preclaim-raw-reset-rollover.sql"
-    )
-    fixture_237 = script.index(
-        "-f /work/db/migrations/tests/test-237-experiment-v2-direct-proof-recovery-range-rollover.sql"
-    )
-    final_assertions = script.index("DO $assertions$", fixture_237)
+    fixture_239 = script.index("-f /work/db/migrations/tests/test-239-experiment-v2-orphaned-preclaim-recovery.sql")
+    final_assertions = script.index("DO $assertions$", fixture_239)
     assert (
         max(apply_positions)
         < ledger_gate
@@ -309,10 +300,7 @@ def test_script_restores_only_the_bounded_latest_dump_and_runs_real_gates():
         < fixture_231
         < fixture_232
         < fixture_233
-        < fixture_234
-        < fixture_235
-        < fixture_236
-        < fixture_237
+        < fixture_239
         < final_assertions
     )
     for candidate_migration in (
@@ -340,6 +328,8 @@ def test_script_restores_only_the_bounded_latest_dump_and_runs_real_gates():
         "235-experiment-v2-direct-proof-raw-reset-rollover.sql",
         "236-experiment-v2-direct-proof-preclaim-raw-reset-rollover.sql",
         "237-experiment-v2-direct-proof-recovery-range-rollover.sql",
+        "238-experiment-v2-separate-day1-authorization.sql",
+        "239-experiment-v2-orphaned-preclaim-recovery.sql",
     ):
         assert candidate_migration in script
     compact_script = " ".join(script.split())

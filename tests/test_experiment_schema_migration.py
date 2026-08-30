@@ -265,6 +265,7 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "236-experiment-v2-direct-proof-preclaim-raw-reset-rollover.sql",  # order pre-claim reset from work creation
         "237-experiment-v2-direct-proof-recovery-range-rollover.sql",  # bind rollover to current recovery range
         "238-experiment-v2-separate-day1-authorization.sql",  # separate finalization from audited day-1 approval
+        "239-experiment-v2-orphaned-preclaim-recovery.sql",  # seal retained noncausal recovery without proof credit
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(
@@ -324,6 +325,7 @@ def test_migrate_image_carries_migrations_and_runner():
         "!db/migrations/tests/test-235-experiment-v2-direct-proof-raw-reset-rollover.sql",
         "!db/migrations/tests/test-236-experiment-v2-direct-proof-preclaim-raw-reset-rollover.sql",
         "!db/migrations/tests/test-237-experiment-v2-direct-proof-recovery-range-rollover.sql",
+        "!db/migrations/tests/test-239-experiment-v2-orphaned-preclaim-recovery.sql",
         "!db/ledger",
         "db/ledger/*",
         "!db/ledger/*.sql",
@@ -332,8 +334,8 @@ def test_migrate_image_carries_migrations_and_runner():
     assert indexes == sorted(indexes), "Kaniko re-include rules must stay ordered"
 
     # The production migrate image remains free of the broad SQL fixture tree.
-    # Only the seventeen vertical fixtures executed by the one-release restore
-    # rehearsal are admitted into /db/migrations/tests.
+    # Only the eighteen bounded vertical/predecessor fixtures retained by the
+    # one-release restore rehearsal are admitted into /db/migrations/tests.
     test_fixture_reincludes = [line for line in ignore_lines if line.startswith("!db/migrations/tests/")]
     assert test_fixture_reincludes == [
         "!db/migrations/tests/test-214-confirmed-component-experiment-v2.sql",
@@ -353,6 +355,7 @@ def test_migrate_image_carries_migrations_and_runner():
         "!db/migrations/tests/test-235-experiment-v2-direct-proof-raw-reset-rollover.sql",
         "!db/migrations/tests/test-236-experiment-v2-direct-proof-preclaim-raw-reset-rollover.sql",
         "!db/migrations/tests/test-237-experiment-v2-direct-proof-recovery-range-rollover.sql",
+        "!db/migrations/tests/test-239-experiment-v2-orphaned-preclaim-recovery.sql",
     ]
 
 
