@@ -21,4 +21,4 @@ spec:
     spec:
       containers:
         - name: readiness
-          image: registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:614c5d6392cbe68fc8f2e092fd8052d06e3d648a8fa9eac5d8e3b18cbe2afc89
+          image: registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:66e0132ba39c86d80f6fd74b442b376be004675262fbb03e48fbb486986617e9
