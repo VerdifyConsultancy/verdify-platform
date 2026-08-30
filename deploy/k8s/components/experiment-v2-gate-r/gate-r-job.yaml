@@ -1,0 +1,93 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: verdify-experiment-v2-gate-r
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: migrate
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  # Gate R is separately authorized, but source stays inert until an exact
+  # activation commit supplies the bounded runtime record and unsuspends this
+  # one-shot Job.
+  suspend: true
+  backoffLimit: 0
+  activeDeadlineSeconds: 300
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: verdify
+        app.kubernetes.io/component: migrate
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      imagePullSecrets:
+        - name: zot-origin-cluster-pull
+      containers:
+        - name: gate-r
+          # Script-only hook: reuse the exact production API image, which
+          # already contains Python and asyncpg. No application rebuild is
+          # justified for this one-shot lifecycle transaction.
+          image: ghcr.io/verdifyconsultancy/verdify-api
+          command: ["python", "/etc/verdify/gate-r/gate_r.py"]
+          envFrom:
+            - configMapRef:
+                name: verdify-config
+            - configMapRef:
+                name: experiment-v2-gate-r-activation
+          env:
+            - name: LIFECYCLE_DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: VERDIFY_EXPERIMENT_LIFECYCLE_DB_USER
+            - name: LIFECYCLE_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: VERDIFY_EXPERIMENT_LIFECYCLE_DB_PASSWORD
+            - name: READ_DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: VERDIFY_INGESTOR_RUNTIME_DB_USER
+            - name: READ_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: "25m"
+              memory: "64Mi"
+            limits:
+              cpu: "250m"
+              memory: "192Mi"
+          volumeMounts:
+            - name: gate-r
+              mountPath: /etc/verdify/gate-r
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: gate-r
+          configMap:
+            name: experiment-v2-gate-r
+        - name: tmp
+          emptyDir: {}

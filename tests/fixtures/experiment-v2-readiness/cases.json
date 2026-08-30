@@ -1,0 +1,357 @@
+[
+  {
+    "name": "false_green_null_south",
+    "operations": [],
+    "expected_status": "degraded-pass",
+    "expected_contributors": 3,
+    "expected_excluded": ["south"],
+    "expected_contradiction": true,
+    "expected_blocker": null
+  },
+  {
+    "name": "stale_south_is_not_a_contributor",
+    "operations": [
+      {"op": "set", "path": "/climate/samples/0/zones/south/temp_f/value", "value": 75.5},
+      {"op": "set", "path": "/climate/samples/0/zones/south/rh_pct/value", "value": 60.5},
+      {"op": "set", "path": "/climate/samples/0/zones/south/vpd_kpa/value", "value": 0.95},
+      {"op": "set", "path": "/climate/samples/0/zones/south/temp_f/observed_at", "value": "2026-08-30T11:50:00.000000Z"},
+      {"op": "set", "path": "/climate/samples/0/zones/south/rh_pct/observed_at", "value": "2026-08-30T11:50:00.000000Z"},
+      {"op": "set", "path": "/climate/samples/0/zones/south/vpd_kpa/observed_at", "value": "2026-08-30T11:50:00.000000Z"},
+      {"op": "set", "path": "/climate/samples/1/zones/south/temp_f/value", "value": 75.8},
+      {"op": "set", "path": "/climate/samples/1/zones/south/rh_pct/value", "value": 60.8},
+      {"op": "set", "path": "/climate/samples/1/zones/south/vpd_kpa/value", "value": 0.98},
+      {"op": "set", "path": "/climate/samples/1/zones/south/temp_f/observed_at", "value": "2026-08-30T11:50:00.000000Z"},
+      {"op": "set", "path": "/climate/samples/1/zones/south/rh_pct/observed_at", "value": "2026-08-30T11:50:00.000000Z"},
+      {"op": "set", "path": "/climate/samples/1/zones/south/vpd_kpa/observed_at", "value": "2026-08-30T11:50:00.000000Z"}
+    ],
+    "expected_status": "degraded-pass",
+    "expected_contributors": 3,
+    "expected_excluded": ["south"],
+    "expected_contradiction": true,
+    "expected_blocker": null
+  },
+  {
+    "name": "stale_cycle_cannot_supply_advancement_evidence",
+    "operations": [
+      {"op": "set", "path": "/climate/samples/0/sample_at", "value": "2026-08-30T11:59:59.000000Z"}
+    ],
+    "expected_status": "fail",
+    "expected_blocker": "climate_sample:0_cached"
+  },
+  {
+    "name": "missing_zone_fails_closed",
+    "operations": [{"op": "delete", "path": "/climate/samples/1/zones/south"}],
+    "expected_status": "malformed",
+    "expected_blocker": "climate.samples[1].zones keys mismatch"
+  },
+  {
+    "name": "nan_triplet_is_not_a_contributor",
+    "operations": [
+      {"op": "set", "path": "/climate/samples/0/zones/south/temp_f/value", "value": "NaN"},
+      {"op": "set", "path": "/climate/samples/0/zones/south/rh_pct/value", "value": "Infinity"},
+      {"op": "set", "path": "/climate/samples/0/zones/south/vpd_kpa/value", "value": "-Infinity"},
+      {"op": "set", "path": "/climate/samples/1/zones/south/temp_f/value", "value": "NaN"},
+      {"op": "set", "path": "/climate/samples/1/zones/south/rh_pct/value", "value": "Infinity"},
+      {"op": "set", "path": "/climate/samples/1/zones/south/vpd_kpa/value", "value": "-Infinity"}
+    ],
+    "expected_status": "degraded-pass",
+    "expected_contributors": 3,
+    "expected_excluded": ["south"],
+    "expected_blocker": null
+  },
+  {
+    "name": "two_probe_loss_fails_quorum",
+    "operations": [
+      {"op": "set", "path": "/climate/samples/0/zones/west/temp_f/value", "value": null},
+      {"op": "set", "path": "/climate/samples/0/zones/west/rh_pct/value", "value": null},
+      {"op": "set", "path": "/climate/samples/0/zones/west/vpd_kpa/value", "value": null},
+      {"op": "set", "path": "/climate/samples/0/declared_contributors", "value": ["north", "east"]},
+      {"op": "set", "path": "/climate/samples/1/zones/west/temp_f/value", "value": null},
+      {"op": "set", "path": "/climate/samples/1/zones/west/rh_pct/value", "value": null},
+      {"op": "set", "path": "/climate/samples/1/zones/west/vpd_kpa/value", "value": null},
+      {"op": "set", "path": "/climate/samples/1/declared_contributors", "value": ["north", "east"]}
+    ],
+    "expected_status": "fail",
+    "expected_contributors": 2,
+    "expected_blocker": "climate_quorum_below_three:0"
+  },
+  {
+    "name": "partial_triplet_is_ambiguous",
+    "operations": [{"op": "set", "path": "/climate/samples/1/zones/east/vpd_kpa/value", "value": null}],
+    "expected_status": "fail",
+    "expected_blocker": "ambiguous_contributor_triplet:1:east"
+  },
+  {
+    "name": "asynchronous_db_membership_is_rejected",
+    "operations": [{"op": "set", "path": "/climate/samples/1/zones/east/temp_f/source_cycle_id", "value": "ha-cycle-previous"}],
+    "expected_status": "fail",
+    "expected_blocker": "asynchronous_source_membership:1:east:temp_f"
+  },
+  {
+    "name": "declared_membership_ambiguity_fails",
+    "operations": [{"op": "set", "path": "/climate/samples/1/declared_contributors", "value": ["north", "south", "east", "west"]}],
+    "expected_status": "fail",
+    "expected_blocker": "ambiguous_contributor_set:1"
+  },
+  {
+    "name": "missing_aggregate_fails",
+    "operations": [{"op": "set", "path": "/climate/samples/1/aggregates/temp_f/value", "value": null}],
+    "expected_status": "fail",
+    "expected_blocker": "aggregate_non_finite:1:temp_f"
+  },
+  {
+    "name": "nonfinite_aggregate_fails",
+    "operations": [{"op": "set", "path": "/climate/samples/1/aggregates/vpd_kpa/value", "value": "NaN"}],
+    "expected_status": "fail",
+    "expected_blocker": "aggregate_non_finite:1:vpd_kpa"
+  },
+  {
+    "name": "aggregate_timestamp_must_advance",
+    "operations": [{"op": "set", "path": "/climate/samples/1/aggregates/rh_pct/observed_at", "value": "2026-08-30T11:59:59.300000Z"}],
+    "expected_status": "fail",
+    "expected_blocker": "aggregate_not_advancing:rh_pct"
+  },
+  {
+    "name": "aggregate_mean_mismatch_fails",
+    "operations": [{"op": "set", "path": "/climate/samples/1/aggregates/temp_f/value", "value": 80.0}],
+    "expected_status": "fail",
+    "expected_blocker": "aggregate_mean_mismatch:1:temp_f"
+  },
+  {
+    "name": "implausible_cross_zone_spread_fails",
+    "operations": [
+      {"op": "set", "path": "/climate/samples/1/zones/north/temp_f/value", "value": 50.0},
+      {"op": "set", "path": "/climate/samples/1/aggregates/temp_f/value", "value": 67.8666666667}
+    ],
+    "expected_status": "fail",
+    "expected_blocker": "implausible_cross_zone_spread:1:temp_f"
+  },
+  {
+    "name": "temperature_and_vpd_exact_spread_boundaries_pass",
+    "operations": [
+      {"op": "set", "path": "/climate/samples/1/zones/north/temp_f/value", "value": 74.0},
+      {"op": "set", "path": "/climate/samples/1/zones/east/temp_f/value", "value": 78.0},
+      {"op": "set", "path": "/climate/samples/1/zones/west/temp_f/value", "value": 76.0},
+      {"op": "set", "path": "/climate/samples/1/aggregates/temp_f/value", "value": 76.0},
+      {"op": "set", "path": "/climate/samples/1/zones/north/vpd_kpa/value", "value": 0.7},
+      {"op": "set", "path": "/climate/samples/1/zones/east/vpd_kpa/value", "value": 1.2},
+      {"op": "set", "path": "/climate/samples/1/zones/west/vpd_kpa/value", "value": 0.95},
+      {"op": "set", "path": "/climate/samples/1/aggregates/vpd_kpa/value", "value": 0.95}
+    ],
+    "expected_status": "degraded-pass",
+    "expected_blocker": null
+  },
+  {
+    "name": "vpd_spread_above_source_limit_fails",
+    "operations": [
+      {"op": "set", "path": "/climate/samples/1/zones/north/vpd_kpa/value", "value": 0.6},
+      {"op": "set", "path": "/climate/samples/1/zones/east/vpd_kpa/value", "value": 1.2},
+      {"op": "set", "path": "/climate/samples/1/zones/west/vpd_kpa/value", "value": 0.9},
+      {"op": "set", "path": "/climate/samples/1/aggregates/vpd_kpa/value", "value": 0.9}
+    ],
+    "expected_status": "fail",
+    "expected_blocker": "implausible_cross_zone_spread:1:vpd_kpa"
+  },
+  {
+    "name": "rh_has_no_invented_independent_spread_limit",
+    "operations": [
+      {"op": "set", "path": "/climate/samples/1/zones/north/rh_pct/value", "value": 30.0},
+      {"op": "set", "path": "/climate/samples/1/zones/east/rh_pct/value", "value": 90.0},
+      {"op": "set", "path": "/climate/samples/1/zones/west/rh_pct/value", "value": 60.0},
+      {"op": "set", "path": "/climate/samples/1/aggregates/rh_pct/value", "value": 60.0}
+    ],
+    "expected_status": "degraded-pass",
+    "expected_blocker": null
+  },
+  {
+    "name": "running_revision_mismatch_fails",
+    "operations": [{"op": "set", "path": "/provenance/running_git_pin", "value": "0000000000000000000000000000000000000000"}],
+    "expected_status": "fail",
+    "expected_blocker": "provenance_running_git_pin_mismatch"
+  },
+  {
+    "name": "application_source_mismatch_fails",
+    "operations": [{"op": "set", "path": "/evidence/component_grid/application_source_revision", "value": "0000000000000000000000000000000000000000"}],
+    "expected_status": "fail",
+    "expected_blocker": "component_grid_source_revision_mismatch"
+  },
+  {
+    "name": "writer_generation_change_fails",
+    "operations": [{"op": "set", "path": "/evidence/component_grid/writer_generation", "value": 5}],
+    "expected_status": "fail",
+    "expected_blocker": "component_grid_writer_generation_mismatch"
+  },
+  {
+    "name": "writer_stability_exactly_thirty_minutes_passes",
+    "operations": [
+      {"op": "set", "path": "/provenance/writer/stable_since", "value": "2026-08-30T11:31:25.000000Z"}
+    ],
+    "expected_status": "degraded-pass",
+    "expected_blocker": null
+  },
+  {
+    "name": "writer_stability_below_thirty_minutes_fails",
+    "operations": [
+      {"op": "set", "path": "/provenance/writer/stable_since", "value": "2026-08-30T11:31:26.000000Z"}
+    ],
+    "expected_status": "fail",
+    "expected_blocker": "writer_generation_not_stable"
+  },
+  {
+    "name": "runtime_writer_mismatch_fails",
+    "operations": [{"op": "set", "path": "/runtime/connection_generation", "value": 2}],
+    "expected_status": "fail",
+    "expected_blocker": "runtime_connection_generation_mismatch"
+  },
+  {
+    "name": "cached_packet_fails",
+    "now": "2026-08-30T12:10:00.000000Z",
+    "operations": [],
+    "expected_status": "fail",
+    "expected_blocker": "readiness_packet_cached"
+  },
+  {
+    "name": "long_lived_source_qualification_receipt_accepts_fresh_cycles",
+    "operations": [
+      {"op": "set", "path": "/climate/qualification_capture/window_started_at", "value": "2026-08-30T10:00:00.000000Z"},
+      {"op": "set", "path": "/climate/qualification_capture/window_ended_at", "value": "2026-08-30T10:30:00.000000Z"}
+    ],
+    "expected_status": "degraded-pass",
+    "expected_blocker": null
+  },
+  {
+    "name": "cached_current_gate_qualification_capture_fails",
+    "operations": [
+      {"op": "set", "path": "/climate/qualification_capture/evidence_class", "value": "current_gate_capture"},
+      {"op": "set", "path": "/climate/qualification_capture/window_started_at", "value": "2026-08-30T11:00:00.000000Z"},
+      {"op": "set", "path": "/climate/qualification_capture/window_ended_at", "value": "2026-08-30T11:30:00.000000Z"}
+    ],
+    "expected_status": "fail",
+    "expected_blocker": "climate_qualification_capture_cached"
+  },
+  {
+    "name": "unclassified_new_dependency_fails",
+    "operations": [{"op": "append", "path": "/dependencies/surfaces/1/causal_dependencies", "value": "new_humidity_proxy"}],
+    "expected_status": "fail",
+    "expected_blocker": "unclassified_causal_dependency:selector:new_humidity_proxy"
+  },
+  {
+    "name": "hydro_dependency_fails",
+    "operations": [{"op": "append", "path": "/dependencies/surfaces/2/hydro_references", "value": "hydro_water_temp"}],
+    "expected_status": "fail",
+    "expected_blocker": "hydro_causal_dependency_present:executor_control"
+  },
+  {
+    "name": "unclassified_alert_fails",
+    "operations": [{
+      "op": "append",
+      "path": "/alerts",
+      "value": {
+        "alert_id": "new-current",
+        "alert_type": "semantic_contradiction",
+        "scope": "new_source",
+        "disposition": "open",
+        "observed_at": "2026-08-30T12:01:10.000000Z",
+        "classification": "unclassified",
+        "causal": false,
+        "decision_issue_url": "",
+        "maintenance_issue_url": ""
+      }
+    }],
+    "expected_status": "fail",
+    "expected_blocker": "unclassified_alert:new_source"
+  },
+  {
+    "name": "causal_alert_fails_even_if_named",
+    "operations": [{"op": "set", "path": "/alerts/1/causal", "value": true}],
+    "expected_status": "fail",
+    "expected_blocker": "causal_alert:hydroponic_monitor"
+  },
+  {
+    "name": "proof_requires_747_complete",
+    "operations": [{"op": "set", "path": "/issue_state/recovery_747/full_acceptance_complete", "value": false}],
+    "expected_status": "fail",
+    "expected_blocker": "issue_747_full_acceptance_incomplete"
+  },
+  {
+    "name": "proof_requires_synced_healthy_argo",
+    "operations": [{"op": "set", "path": "/argo/health_status", "value": "Degraded"}],
+    "expected_status": "fail",
+    "expected_blocker": "proof_argo_not_exact_synced_healthy"
+  },
+  {
+    "name": "recovery_accepts_degraded_argo_and_only_one_off_backup",
+    "mode": "recovery",
+    "boundary": "gate-r",
+    "operations": [
+      {"op": "set", "path": "/mode", "value": "recovery"},
+      {"op": "set", "path": "/boundary", "value": "gate-r"},
+      {"op": "set", "path": "/runtime/admission_state", "value": "emergency_hold"},
+      {"op": "set", "path": "/argo/health_status", "value": "Degraded"},
+      {"op": "set", "path": "/argo/operation_phase", "value": "Failed"},
+      {"op": "set", "path": "/backup/controller_owned/status", "value": "failed"},
+      {"op": "set", "path": "/backup/controller_owned/artifact_bytes", "value": 0},
+      {"op": "set", "path": "/backup/controller_owned/restorable", "value": false},
+      {"op": "set", "path": "/issue_state/recovery_747/full_acceptance_complete", "value": false}
+    ],
+    "expected_status": "degraded-pass",
+    "expected_gate": "R",
+    "expected_blocker": null
+  },
+  {
+    "name": "recovery_requires_corrected_one_off_receipt",
+    "mode": "recovery",
+    "boundary": "gate-r",
+    "operations": [
+      {"op": "set", "path": "/mode", "value": "recovery"},
+      {"op": "set", "path": "/boundary", "value": "gate-r"},
+      {"op": "set", "path": "/runtime/admission_state", "value": "emergency_hold"},
+      {"op": "set", "path": "/backup/corrected_one_off/status", "value": "failed"}
+    ],
+    "expected_status": "fail",
+    "expected_blocker": "corrected_one_off_backup_failed"
+  },
+  {
+    "name": "proof_boundary_failure_after_exposure_orders_close_first",
+    "mode": "proof",
+    "boundary": "baseline-after",
+    "prior": {
+      "mode": "proof",
+      "attempt_id": "10000000-0000-4000-8000-000000000001",
+      "next_sequence": 3,
+      "last_receipt_sha256": "6666666666666666666666666666666666666666666666666666666666666666"
+    },
+    "operations": [
+      {"op": "set", "path": "/boundary", "value": "baseline-after"},
+      {"op": "set", "path": "/guard/sequence", "value": 3},
+      {"op": "set", "path": "/guard/previous_receipt_sha256", "value": "6666666666666666666666666666666666666666666666666666666666666666"},
+      {"op": "set", "path": "/runtime/component_enabled", "value": true},
+      {"op": "set", "path": "/runtime/admission_state", "value": "open"},
+      {"op": "set", "path": "/runtime/open_exposure_count", "value": 1},
+      {"op": "set", "path": "/alerts/1/causal", "value": true}
+    ],
+    "expected_status": "fail",
+    "expected_blocker": "causal_alert:hydroponic_monitor",
+    "expected_action": "close_exposure_first_revoke_nonbaseline_enter_emergency_hold_preserve_attempt"
+  },
+  {
+    "name": "boundary_chain_replay_fails",
+    "mode": "proof",
+    "boundary": "aggressive",
+    "prior": {
+      "mode": "proof",
+      "attempt_id": "10000000-0000-4000-8000-000000000001",
+      "next_sequence": 2,
+      "last_receipt_sha256": "7777777777777777777777777777777777777777777777777777777777777777"
+    },
+    "operations": [
+      {"op": "set", "path": "/boundary", "value": "aggressive"},
+      {"op": "set", "path": "/guard/sequence", "value": 2},
+      {"op": "set", "path": "/guard/previous_receipt_sha256", "value": "8888888888888888888888888888888888888888888888888888888888888888"},
+      {"op": "set", "path": "/runtime/component_enabled", "value": true},
+      {"op": "set", "path": "/runtime/admission_state", "value": "baseline_recovery"}
+    ],
+    "expected_status": "fail",
+    "expected_blocker": "guard_chain_replay_or_gap"
+  }
+]
