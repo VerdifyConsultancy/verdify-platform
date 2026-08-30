@@ -1,0 +1,66 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: verdify-experiment-v2-openai-preflight
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: experiment-v2-openai-preflight
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "4"
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 180
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: verdify
+        app.kubernetes.io/component: experiment-v2-openai-preflight
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      imagePullSecrets:
+        - name: zot-origin-cluster-pull
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: preflight
+          image: ghcr.io/verdifyconsultancy/verdify-experiment-v2-orchestrator
+          command:
+            - python
+            - -m
+            - experiment_orchestrator.preflight
+            - --identity
+            - /etc/verdify/experiment-v2-selector/identity.json
+          env:
+            - name: VERDIFY_EXPERIMENT_SELECTOR_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-hermes
+                  key: OPENAI_API_KEY
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          volumeMounts:
+            - name: selector-identity
+              mountPath: /etc/verdify/experiment-v2-selector
+              readOnly: true
+      volumes:
+        - name: selector-identity
+          configMap:
+            name: verdify-experiment-v2-selector-identity

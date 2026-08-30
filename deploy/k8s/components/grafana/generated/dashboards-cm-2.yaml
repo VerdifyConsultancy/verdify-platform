@@ -168,10 +168,32 @@ data:
               }
             }
           ]
+        },
+        {
+          "id": 7,
+          "type": "table",
+          "title": "Launch authorization and exposure-close-first rollback",
+          "gridPos": {
+            "h": 7,
+            "w": 24,
+            "x": 0,
+            "y": 27
+          },
+          "targets": [
+            {
+              "rawSql": "SELECT experiment_id AS \"Experiment\", lifecycle_status AS \"Lifecycle\", execution_phase AS \"Phase\", admission_state AS \"Admission\", design_locked AS \"Design locked\", randomization_finalized AS \"Finalized once\", randomized_day_1_approved AS \"Day-1 approved\", launch_gate AS \"Launch gate\", open_exposure_count AS \"Open exposures\", kill_action AS \"Kill action\", rollback_action AS \"Rollback action\", rollback_ready AS \"Rollback ready\" FROM public.fn_experiment_v2_launch_gate_status() ORDER BY experiment_id",
+              "refId": "A",
+              "format": "table",
+              "datasource": {
+                "uid": "verdify-tsdb",
+                "type": "grafana-postgresql-datasource"
+              }
+            }
+          ]
         }
       ],
       "schemaVersion": 39,
-      "version": 1,
+      "version": 2,
       "style": "light"
     }
   band-tuning-diurnal.json: |

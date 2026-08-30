@@ -1,0 +1,99 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-ingestor
+spec:
+  template:
+    metadata:
+      annotations:
+        verdify.io/randomized-day1-stage: "emergency-hold"
+    spec:
+      containers:
+        - name: ingestor
+          env:
+            - name: VERDIFY_POLICY_VECTOR_MODE
+              value: "off"
+            - name: VERDIFY_COMPONENT_EXPERIMENT_ENABLED
+              value: "off"
+            - name: VERDIFY_ACTIVE_EXPERIMENT_ID
+              value: ""
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-api
+spec:
+  template:
+    metadata:
+      annotations:
+        verdify.io/randomized-day1-stage: "emergency-hold"
+    spec:
+      containers:
+        - name: api
+          env:
+            - name: VERDIFY_POLICY_VECTOR_MODE
+              value: "off"
+            - name: VERDIFY_COMPONENT_EXPERIMENT_ENABLED
+              value: "off"
+            - name: VERDIFY_ACTIVE_EXPERIMENT_ID
+              value: ""
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: experiment-v2-lifecycle
+spec:
+  template:
+    metadata:
+      annotations:
+        verdify.io/randomized-day1-stage: "emergency-hold"
+    spec:
+      containers:
+        - name: lifecycle
+          env:
+            - name: VERDIFY_POLICY_VECTOR_MODE
+              value: "off"
+            - name: VERDIFY_COMPONENT_EXPERIMENT_ENABLED
+              value: "off"
+            - name: VERDIFY_ACTIVE_EXPERIMENT_ID
+              value: ""
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: experiment-v2-selector
+spec:
+  template:
+    metadata:
+      annotations:
+        verdify.io/randomized-day1-stage: "emergency-hold"
+    spec:
+      containers:
+        - name: selector
+          env:
+            - name: VERDIFY_POLICY_VECTOR_MODE
+              value: "off"
+            - name: VERDIFY_COMPONENT_EXPERIMENT_ENABLED
+              value: "off"
+            - name: VERDIFY_ACTIVE_EXPERIMENT_ID
+              value: ""
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: experiment-v2-freezer
+spec:
+  template:
+    metadata:
+      annotations:
+        verdify.io/randomized-day1-stage: "emergency-hold"
+    spec:
+      containers:
+        - name: freezer
+          env:
+            - name: VERDIFY_POLICY_VECTOR_MODE
+              value: "off"
+            - name: VERDIFY_COMPONENT_EXPERIMENT_ENABLED
+              value: "off"
+            - name: VERDIFY_ACTIVE_EXPERIMENT_ID
+              value: ""
