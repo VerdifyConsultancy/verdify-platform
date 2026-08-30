@@ -11,8 +11,11 @@ metadata:
     argocd.argoproj.io/hook: PostSync
     argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
     argocd.argoproj.io/sync-wave: "1"
-    operations.vallery.net/temporary-node-exclusion: vm-k3s-node4,vm-k3s-node6:cni-pod-sandbox-timeout:2026-08-28
 spec:
+  # Safe component default. A fresh attended activation must explicitly patch
+  # this to false in the isolated activation render after supplying a new exact
+  # authorization/window and enabling only the existing singleton ingestor.
+  suspend: true
   backoffLimit: 0
   activeDeadlineSeconds: 6600
   ttlSecondsAfterFinished: 3600
@@ -33,14 +36,6 @@ spec:
           type: RuntimeDefault
       imagePullSecrets:
         - name: zot-origin-cluster-pull
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-              - matchExpressions:
-                  - key: kubernetes.io/hostname
-                    operator: NotIn
-                    values: [vm-k3s-node4, vm-k3s-node6]
       containers:
         - name: direct-proof
           image: ghcr.io/verdifyconsultancy/verdify-api
@@ -48,6 +43,8 @@ spec:
           envFrom:
             - configMapRef:
                 name: verdify-config
+            - configMapRef:
+                name: experiment-v2-direct-proof-activation
           env:
             - name: LIFECYCLE_DB_USER
               valueFrom:
