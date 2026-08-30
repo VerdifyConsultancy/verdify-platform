@@ -28,11 +28,7 @@ def test_quartz_is_the_only_lab_generator_source_and_deployment_path():
     assert all(not (REPO_ROOT / path).exists() for path in retired)
     assert (REPO_ROOT / "site/quartz.config.ts").is_file()
     assert (REPO_ROOT / "site/quartz.layout.ts").is_file()
-    stage_overlay = REPO_ROOT / "deploy/k8s/overlays/lab-stage"
-    if stage_overlay.exists():
-        assert list(stage_overlay.iterdir()) == [stage_overlay / "kustomization.yaml"]
-        tombstone = yaml.safe_load((stage_overlay / "kustomization.yaml").read_text())
-        assert tombstone["resources"] == []
+    assert not (REPO_ROOT / "deploy/k8s/overlays/lab-stage").exists()
 
 
 def test_generated_ci_has_no_retired_lab_image_profile():

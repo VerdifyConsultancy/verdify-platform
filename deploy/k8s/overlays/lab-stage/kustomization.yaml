@@ -1,6 +1,0 @@
-# Temporary retirement tombstone. Sync this exact revision with prune=true so
-# ArgoCD removes every former Lab stage resource before the owning Application
-# and this empty overlay are deleted.
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-resources: []
