@@ -32,14 +32,14 @@ def test_every_checked_in_day1_case_replays_to_identical_bytes_and_hash() -> Non
 
 
 def test_exposure_is_fidelity_only_and_never_selects_the_primary_itt_row() -> None:
-    common = dict(
-        assignment_id="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-        local_date="2026-11-02",
-        blinded_label="X",
-        climate=(0.1, 0.2, None),
-        equipment=(30.0, None),
-        fallback_or_rescue=False,
-    )
+    common = {
+        "assignment_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "local_date": "2026-11-02",
+        "blinded_label": "X",
+        "climate": (0.1, 0.2, None),
+        "equipment": (30.0, None),
+        "fallback_or_rescue": False,
+    }
     zero = make_randomized_itt_row(**common, exposure_seconds=0)
     full = make_randomized_itt_row(**common, exposure_seconds=64_800)
     zero_payload = json.loads(freeze_blinded_day_export([zero])[0])["rows"][0]
