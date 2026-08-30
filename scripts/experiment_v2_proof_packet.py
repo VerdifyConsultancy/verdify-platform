@@ -238,6 +238,32 @@ def _pod_container(pod: Mapping[str, Any], name: str) -> Mapping[str, Any]:
         raise CollectionError(f"running container status is absent: {name}") from exc
 
 
+def current_argo_revision(app: Mapping[str, Any]) -> str:
+    """Return the revision the attended operation is actually proving.
+
+    Argo can compare a manual-sync Application to a newer ``main`` commit while
+    an explicitly revision-pinned operation is still running.  In that case
+    ``status.sync.revision`` is the newer desired comparison, not the revision
+    executing the PostSync hook.  The top-level operation exists only while the
+    attended operation is active, so its exact revision is authoritative then;
+    outside an active operation the ordinary status revision remains the only
+    honest current revision.
+    """
+
+    active_operation = app.get("operation")
+    if isinstance(active_operation, Mapping):
+        active_sync = active_operation.get("sync")
+        revision = active_sync.get("revision") if isinstance(active_sync, Mapping) else None
+    else:
+        status = app.get("status")
+        sync_status = status.get("sync") if isinstance(status, Mapping) else None
+        revision = sync_status.get("revision") if isinstance(sync_status, Mapping) else None
+    value = str(revision or "")
+    if not SHA40.fullmatch(value):
+        raise CollectionError("Argo current operation revision is not an exact lowercase Git SHA")
+    return value
+
+
 def collect_kube(
     kube: KubeReader,
     *,
@@ -249,9 +275,7 @@ def collect_kube(
     now = datetime.now(UTC)
     observed_at = zulu(now)
     app = kube.json(f"/apis/argoproj.io/v1alpha1/namespaces/{ARGO_NAMESPACE}/applications/{ARGO_APPLICATION}")
-    argo_revision = str(app.get("status", {}).get("sync", {}).get("revision") or "")
-    if not SHA40.fullmatch(argo_revision):
-        raise CollectionError("Argo current revision is not an exact lowercase Git SHA")
+    argo_revision = current_argo_revision(app)
     if git_pin is not None and argo_revision != git_pin:
         raise CollectionError("Argo current revision differs from the expected Git pin")
 
@@ -395,7 +419,7 @@ def collect_kube(
         "attestation": attestation,
         "ingestor_env": ingestor_env,
         "argo": {
-            "revision": app_status["sync"]["revision"],
+            "revision": argo_revision,
             "source_path": app["spec"]["source"]["path"],
             "sync_status": app_status["sync"]["status"],
             "health_status": app_status["health"]["status"],

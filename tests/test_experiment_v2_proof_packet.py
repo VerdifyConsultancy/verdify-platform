@@ -287,3 +287,32 @@ def test_git_pin_is_either_exact_expected_or_derived_from_argo(tmp_path: Path) -
         collector.parser().parse_args(common)
     with pytest.raises(SystemExit):
         collector.parser().parse_args([*common, "--expected-git-pin", "a" * 40, "--derive-git-pin-from-argo"])
+
+
+def test_active_argo_operation_revision_wins_over_newer_desired_comparison() -> None:
+    active = "a" * 40
+    newer_main = "b" * 40
+    app = {
+        "operation": {"sync": {"revision": active}},
+        "status": {
+            "sync": {"revision": newer_main, "status": "OutOfSync"},
+            "operationState": {
+                "phase": "Running",
+                "operation": {"sync": {"revision": active}},
+                "syncResult": {"revision": active},
+            },
+        },
+    }
+    assert collector.current_argo_revision(app) == active
+
+    app.pop("operation")
+    assert collector.current_argo_revision(app) == newer_main
+
+
+def test_active_argo_operation_revision_must_be_exact() -> None:
+    app = {
+        "operation": {"sync": {"revision": "main"}},
+        "status": {"sync": {"revision": "c" * 40}},
+    }
+    with pytest.raises(collector.CollectionError, match="operation revision"):
+        collector.current_argo_revision(app)
