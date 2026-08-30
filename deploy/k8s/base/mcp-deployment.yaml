@@ -155,13 +155,10 @@ metadata:
     app.kubernetes.io/component: mcp
 spec:
   type: ClusterIP   # never a raw LB IP — DANGER surface (handoff §3.2)
-  # FastMCP streamable-http keeps session state in-process. Keep each client pod
-  # pinned to one MCP replica so Hermes session requests do not bounce between
-  # pods and return 404/session-terminated during tool calls.
-  sessionAffinity: ClientIP
-  sessionAffinityConfig:
-    clientIP:
-      timeoutSeconds: 10800
+  # mcp/server.py uses MCP SDK >=1.27's stateless Streamable HTTP mode. Every
+  # request carries its own bearer audience and protocol context, so kube-proxy
+  # may distribute calls across both replicas without Mcp-Session-Id loss.
+  sessionAffinity: None
   selector:
     app.kubernetes.io/component: mcp
   ports:

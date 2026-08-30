@@ -858,7 +858,7 @@ def test_production_mcp_enforces_iris_audience_with_the_existing_hermes_credenti
     assert "VERDIFY_MCP_TOKEN_ADMIN" not in env
 
 
-def test_rendered_prod_keeps_affinity_through_first_stateless_image_rollout() -> None:
+def test_rendered_prod_is_stateless_without_client_ip_affinity() -> None:
     rendered = subprocess.run(
         ["kustomize", "build", str(PROD_OVERLAY_PATH)],
         cwd=REPO_ROOT,
@@ -891,10 +891,8 @@ def test_rendered_prod_keeps_affinity_through_first_stateless_image_rollout() ->
     assert deployment["spec"]["replicas"] == 2
     assert deployment["metadata"]["annotations"]["argocd.argoproj.io/sync-wave"] == "10"
     assert hermes["metadata"]["annotations"]["argocd.argoproj.io/sync-wave"] == "20"
-    # Keep compatibility with the previously pinned stateful MCP image during
-    # the first stateless image rollout. Affinity cleanup is a later GitOps PR.
-    assert service["spec"]["sessionAffinity"] == "ClientIP"
-    assert service["spec"]["sessionAffinityConfig"] == {"clientIP": {"timeoutSeconds": 10800}}
+    assert service["spec"]["sessionAffinity"] == "None"
+    assert "sessionAffinityConfig" not in service["spec"]
     # The WAN route exposes only the protocol endpoint; internal Service users
     # and kube probes can still call /readyz directly.
     assert ingress["spec"]["routes"][0]["match"] == "Host(`mcp.verdify.ai`) && PathPrefix(`/mcp`)"

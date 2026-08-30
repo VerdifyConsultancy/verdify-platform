@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: experiment-v2-direct-proof-activation
+data:
+  VERDIFY_DIRECT_PROOF_EXPERIMENT_ID: "REPLACE_BEFORE_ACTIVATION"
+  VERDIFY_DIRECT_PROOF_AUTHORIZATION_REF: "REPLACE_BEFORE_ACTIVATION"
+  VERDIFY_DIRECT_PROOF_FACILITY_AUTHORIZATION_REF: "REPLACE_BEFORE_ACTIVATION"
+  VERDIFY_DIRECT_PROOF_AUTHORIZED_FROM: "REPLACE_BEFORE_ACTIVATION"
+  VERDIFY_DIRECT_PROOF_AUTHORIZED_TO: "REPLACE_BEFORE_ACTIVATION"
+  VERDIFY_DIRECT_PROOF_SUPERVISOR_ROLE: "REPLACE_BEFORE_ACTIVATION"
+  VERDIFY_DIRECT_PROOF_RESCUE_OWNER_ROLE: "REPLACE_BEFORE_ACTIVATION"
+  VERDIFY_DIRECT_PROOF_ACTOR: "REPLACE_BEFORE_ACTIVATION"
+  VERDIFY_DIRECT_PROOF_CONFIG_REVISION: "REPLACE_BEFORE_ACTIVATION"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-ingestor
+spec:
+  template:
+    metadata:
+      annotations:
+        verdify.io/direct-proof-activation: "dormant-no-authority"
+    spec:
+      containers:
+        - name: ingestor
+          env:
+            - name: VERDIFY_POLICY_VECTOR_MODE
+              value: "off"
+            - name: VERDIFY_COMPONENT_EXPERIMENT_ENABLED
+              value: "off"
+            - name: VERDIFY_ACTIVE_EXPERIMENT_ID
+              value: ""
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: verdify-experiment-v2-direct-proof
+spec:
+  suspend: true
+  template:
+    spec:
+      containers:
+        - name: direct-proof
+          # The activation overlay wraps prod after its image transformer has
+          # run, so require a deliberate current immutable pin here as well.
+          image: invalid.local/replace-before-activation:never

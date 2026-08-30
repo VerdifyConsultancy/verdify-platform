@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: experiment-v2-direct-proof-activation
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: experiment-v2-direct-proof
+data:
+  # This component is deliberately incapable of running as committed. A fresh
+  # attended activation patches every value below, enables the singleton
+  # ingestor, and unsuspends the Job together in the isolated activation path.
+  VERDIFY_DIRECT_PROOF_EXPERIMENT_ID: "REPLACE_BEFORE_ACTIVATION"
+  VERDIFY_DIRECT_PROOF_AUTHORIZATION_REF: "REPLACE_BEFORE_ACTIVATION"
+  VERDIFY_DIRECT_PROOF_FACILITY_AUTHORIZATION_REF: "REPLACE_BEFORE_ACTIVATION"
+  VERDIFY_DIRECT_PROOF_AUTHORIZED_FROM: "REPLACE_BEFORE_ACTIVATION"
+  VERDIFY_DIRECT_PROOF_AUTHORIZED_TO: "REPLACE_BEFORE_ACTIVATION"
+  VERDIFY_DIRECT_PROOF_SUPERVISOR_ROLE: "REPLACE_BEFORE_ACTIVATION"
+  VERDIFY_DIRECT_PROOF_RESCUE_OWNER_ROLE: "REPLACE_BEFORE_ACTIVATION"
+  VERDIFY_DIRECT_PROOF_ACTOR: "REPLACE_BEFORE_ACTIVATION"
+  VERDIFY_DIRECT_PROOF_CONFIG_REVISION: "REPLACE_BEFORE_ACTIVATION"

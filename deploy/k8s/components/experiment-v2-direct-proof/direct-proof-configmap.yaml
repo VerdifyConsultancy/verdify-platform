@@ -19,18 +19,41 @@ data:
 
     import asyncpg
 
-    EXPERIMENT_ID = "45039c86-c1d9-52f6-a0a9-d94a17bc4b14"
-    AUTHORIZATION_REF = (
-        "codex-session:jason-vallery:2026-08-28:"
-        "extended-through-23:00-MT"
+    def required_activation_value(name):
+        value = os.environ.get(name, "").strip()
+        if not value or value.startswith("REPLACE_BEFORE_ACTIVATION"):
+            raise RuntimeError(f"direct-proof activation value is absent: {name}")
+        return value
+
+    def activation_time(name):
+        value = required_activation_value(name)
+        try:
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            raise RuntimeError(f"direct-proof activation time is invalid: {name}")
+        if parsed.tzinfo is None or parsed.utcoffset() != timedelta(0):
+            raise RuntimeError(f"direct-proof activation time must be UTC: {name}")
+        return parsed.astimezone(UTC)
+
+    EXPERIMENT_ID = required_activation_value("VERDIFY_DIRECT_PROOF_EXPERIMENT_ID")
+    try:
+        uuid.UUID(EXPERIMENT_ID)
+    except ValueError:
+        raise RuntimeError("direct-proof experiment ID is not a UUID")
+    AUTHORIZATION_REF = required_activation_value("VERDIFY_DIRECT_PROOF_AUTHORIZATION_REF")
+    FACILITY_AUTHORIZATION_REF = required_activation_value(
+        "VERDIFY_DIRECT_PROOF_FACILITY_AUTHORIZATION_REF"
     )
-    FACILITY_AUTHORIZATION_REF = (
-        "codex-session:jason-vallery:2026-08-28:"
-        "physical-recovery-and-proof"
-    )
-    AUTHORIZED_FROM = datetime(2026, 8, 28, 17, 45, tzinfo=UTC)
-    AUTHORIZED_TO = datetime(2026, 8, 29, 5, 0, tzinfo=UTC)
-    ACTOR = "gitops:issue-641-direct-proof-startup-rollover-retry"
+    AUTHORIZED_FROM = activation_time("VERDIFY_DIRECT_PROOF_AUTHORIZED_FROM")
+    AUTHORIZED_TO = activation_time("VERDIFY_DIRECT_PROOF_AUTHORIZED_TO")
+    if not timedelta(minutes=3) <= AUTHORIZED_TO - AUTHORIZED_FROM <= timedelta(hours=12):
+        raise RuntimeError("direct-proof activation window must be between 3 minutes and 12 hours")
+    SUPERVISOR_ROLE = required_activation_value("VERDIFY_DIRECT_PROOF_SUPERVISOR_ROLE")
+    RESCUE_OWNER_ROLE = required_activation_value("VERDIFY_DIRECT_PROOF_RESCUE_OWNER_ROLE")
+    ACTOR = required_activation_value("VERDIFY_DIRECT_PROOF_ACTOR")
+    EXPECTED_CONFIG_REVISION = required_activation_value("VERDIFY_DIRECT_PROOF_CONFIG_REVISION")
+    if not re.fullmatch(r"[0-9a-f]{12}", EXPECTED_CONFIG_REVISION):
+        raise RuntimeError("direct-proof config revision must be a 12-character lowercase hex digest")
     RUNTIME_REGISTRATION_SETTLE_SECONDS = 5 * 60
     SHA256 = re.compile(r"^[0-9a-f]{64}$")
 
@@ -163,7 +186,7 @@ data:
             fail("candidate revision changed during the direct proof")
         if lease is not None and row["lease_generation"] != lease:
             fail("lease generation changed during the direct proof")
-        if row["config_revision"] != "4dbb2e691d91":
+        if row["config_revision"] != EXPECTED_CONFIG_REVISION:
             fail("runtime candidate config revision is not the corrected source")
         if open_exposures is not None and row["open_exposure_count"] != open_exposures:
             fail("open exposure count differs from the expected proof boundary")
@@ -660,8 +683,8 @@ data:
                     lower_inc=True,
                     upper_inc=False,
                 ),
-                "Jason Vallery",
-                "Jason Vallery",
+                SUPERVISOR_ROLE,
+                RESCUE_OWNER_ROLE,
                 ACTOR,
             )
             if aggressive_work_id is None:

@@ -1,9 +1,8 @@
-"""Contract gates for the one-sync attended direct physical proof."""
+"""Contract gates for the dormant, one-sync attended physical-proof surface."""
 
 from __future__ import annotations
 
 import subprocess
-from datetime import UTC, datetime
 from pathlib import Path
 
 import yaml
@@ -11,12 +10,12 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 COMPONENT = ROOT / "deploy/k8s/components/experiment-v2-direct-proof"
 PROD = ROOT / "deploy/k8s/overlays/prod/kustomization.yaml"
-EXPERIMENT_ID = "45039c86-c1d9-52f6-a0a9-d94a17bc4b14"
+ACTIVATION = ROOT / "deploy/k8s/activations/experiment-v2-direct-proof"
 
 
-def _render() -> list[dict]:
+def _render(path: Path) -> list[dict]:
     result = subprocess.run(
-        ["kustomize", "build", "deploy/k8s/overlays/prod"],
+        ["kustomize", "build", str(path)],
         cwd=ROOT,
         check=True,
         capture_output=True,
@@ -31,20 +30,51 @@ def _document(rendered: list[dict], kind: str, name: str) -> dict:
     )
 
 
-def test_activation_is_explicitly_included_as_one_attended_component() -> None:
+def test_ordinary_production_excludes_all_direct_proof_activation_resources() -> None:
     prod = yaml.safe_load(PROD.read_text())
-    assert "../../components/experiment-v2-direct-proof" in prod["components"]
+    assert "../../components/experiment-v2-direct-proof" not in prod["components"]
+    rendered = _render(PROD.parent)
+    names = {(document.get("kind"), document.get("metadata", {}).get("name")) for document in rendered}
+    assert ("Job", "verdify-experiment-v2-direct-proof") not in names
+    assert ("ConfigMap", "experiment-v2-direct-proof") not in names
+    assert ("ConfigMap", "experiment-v2-direct-proof-activation") not in names
+
+    ingestor = _document(rendered, "Deployment", "verdify-ingestor")
+    annotations = ingestor["spec"]["template"]["metadata"].get("annotations", {})
+    assert "verdify.io/direct-proof-activation" not in annotations
+    container = next(row for row in ingestor["spec"]["template"]["spec"]["containers"] if row["name"] == "ingestor")
+    explicit_env = {row["name"] for row in container["env"]}
+    assert (
+        not {
+            "VERDIFY_POLICY_VECTOR_MODE",
+            "VERDIFY_COMPONENT_EXPERIMENT_ENABLED",
+            "VERDIFY_ACTIVE_EXPERIMENT_ID",
+        }
+        & explicit_env
+    )
+    config = _document(rendered, "ConfigMap", "verdify-config")["data"]
+    assert config["VERDIFY_POLICY_VECTOR_MODE"] == "off"
+    assert config["VERDIFY_COMPONENT_EXPERIMENT_ENABLED"] == "off"
+    assert config["VERDIFY_ACTIVE_EXPERIMENT_ID"] == ""
+
+
+def test_dormant_activation_is_explicit_and_self_contained() -> None:
+    activation = yaml.safe_load((ACTIVATION / "kustomization.yaml").read_text())
+    assert activation["resources"] == ["../../overlays/prod"]
+    assert activation["components"] == ["../../components/experiment-v2-direct-proof"]
+    assert activation["patches"] == [{"path": "activation-values.patch.yaml"}]
     assert set(yaml.safe_load((COMPONENT / "kustomization.yaml").read_text())["resources"]) == {
+        "activation-configmap.yaml",
         "direct-proof-configmap.yaml",
         "direct-proof-job.yaml",
     }
 
 
-def test_only_the_single_ingestor_gets_the_coarse_capability_override() -> None:
-    rendered = _render()
+def test_dormant_render_grants_no_ingestor_capability() -> None:
+    rendered = _render(ACTIVATION)
     ingestor = _document(rendered, "Deployment", "verdify-ingestor")
     pod = ingestor["spec"]["template"]
-    assert pod["metadata"]["annotations"]["verdify.io/direct-proof-activation"] == ("2026-08-28-jason-vallery-retry-2")
+    assert pod["metadata"]["annotations"]["verdify.io/direct-proof-activation"] == "dormant-no-authority"
     container = next(row for row in pod["spec"]["containers"] if row["name"] == "ingestor")
     env = {row["name"]: row for row in container["env"]}
     assert env["VERDIFY_POLICY_VECTOR_MODE"] == {
@@ -53,11 +83,11 @@ def test_only_the_single_ingestor_gets_the_coarse_capability_override() -> None:
     }
     assert env["VERDIFY_COMPONENT_EXPERIMENT_ENABLED"] == {
         "name": "VERDIFY_COMPONENT_EXPERIMENT_ENABLED",
-        "value": "enabled",
+        "value": "off",
     }
     assert env["VERDIFY_ACTIVE_EXPERIMENT_ID"] == {
         "name": "VERDIFY_ACTIVE_EXPERIMENT_ID",
-        "value": EXPERIMENT_ID,
+        "value": "",
     }
     for deployment in (
         document
@@ -69,13 +99,14 @@ def test_only_the_single_ingestor_gets_the_coarse_capability_override() -> None:
         )
 
 
-def test_proof_job_is_bounded_postsync_nonprivileged_and_avoids_broken_nodes() -> None:
-    rendered = _render()
+def test_proof_job_is_suspended_bounded_postsync_and_nonprivileged() -> None:
+    rendered = _render(ACTIVATION)
     job = _document(rendered, "Job", "verdify-experiment-v2-direct-proof")
     annotations = job["metadata"]["annotations"]
     assert annotations["argocd.argoproj.io/hook"] == "PostSync"
     assert annotations["argocd.argoproj.io/hook-delete-policy"] == "BeforeHookCreation"
     assert annotations["argocd.argoproj.io/sync-wave"] == "1"
+    assert job["spec"]["suspend"] is True
     assert job["spec"]["backoffLimit"] == 0
     assert job["spec"]["activeDeadlineSeconds"] == 6600
     pod = job["spec"]["template"]["spec"]
@@ -89,19 +120,10 @@ def test_proof_job_is_bounded_postsync_nonprivileged_and_avoids_broken_nodes() -
         "seccompProfile": {"type": "RuntimeDefault"},
     }
     assert "serviceAccountName" not in pod
-    assert pod["affinity"]["nodeAffinity"]["requiredDuringSchedulingIgnoredDuringExecution"]["nodeSelectorTerms"] == [
-        {
-            "matchExpressions": [
-                {
-                    "key": "kubernetes.io/hostname",
-                    "operator": "NotIn",
-                    "values": ["vm-k3s-node4", "vm-k3s-node6"],
-                }
-            ]
-        }
-    ]
+    assert "affinity" not in pod
+    assert "operations.vallery.net/temporary-node-exclusion" not in annotations
     container = pod["containers"][0]
-    assert container["image"].startswith("registry.vallery.net/verdifyconsultancy/verdify-api@sha256:")
+    assert container["image"] == "invalid.local/replace-before-activation:never"
     assert container["securityContext"] == {
         "allowPrivilegeEscalation": False,
         "readOnlyRootFilesystem": True,
@@ -118,18 +140,37 @@ def test_proof_job_is_bounded_postsync_nonprivileged_and_avoids_broken_nodes() -
             "key": "VERDIFY_EXPERIMENT_LIFECYCLE_DB_PASSWORD",
         },
     }
+    assert {row["configMapRef"]["name"] for row in container["envFrom"]} == {
+        "verdify-config",
+        "experiment-v2-direct-proof-activation",
+    }
 
 
-def test_proof_script_is_syntax_valid_exact_role_bound_and_non_provider() -> None:
-    rendered = _render()
+def test_proof_script_is_syntax_valid_runtime_bound_and_non_provider() -> None:
+    rendered = _render(ACTIVATION)
     config = _document(rendered, "ConfigMap", "experiment-v2-direct-proof")
     script = config["data"]["proof.py"]
     compile(script, "proof.py", "exec")
-    assert 'EXPERIMENT_ID = "45039c86-c1d9-52f6-a0a9-d94a17bc4b14"' in script
-    assert "datetime(2026, 8, 28, 17, 45, tzinfo=UTC)" in script
-    assert "datetime(2026, 8, 29, 5, 0, tzinfo=UTC)" in script
-    assert datetime(2026, 8, 28, 17, 45, tzinfo=UTC) < datetime(2026, 8, 29, 5, tzinfo=UTC)
-    assert script.count('"Jason Vallery"') == 2
+    for variable in (
+        "VERDIFY_DIRECT_PROOF_EXPERIMENT_ID",
+        "VERDIFY_DIRECT_PROOF_AUTHORIZATION_REF",
+        "VERDIFY_DIRECT_PROOF_FACILITY_AUTHORIZATION_REF",
+        "VERDIFY_DIRECT_PROOF_AUTHORIZED_FROM",
+        "VERDIFY_DIRECT_PROOF_AUTHORIZED_TO",
+        "VERDIFY_DIRECT_PROOF_SUPERVISOR_ROLE",
+        "VERDIFY_DIRECT_PROOF_RESCUE_OWNER_ROLE",
+        "VERDIFY_DIRECT_PROOF_ACTOR",
+        "VERDIFY_DIRECT_PROOF_CONFIG_REVISION",
+    ):
+        assert variable in script
+    assert "required_activation_value" in script
+    assert "activation_time" in script
+    assert "activation window must be between 3 minutes and 12 hours" in script
+    assert "SUPERVISOR_ROLE" in script and "RESCUE_OWNER_ROLE" in script
+    assert "2026-08-28" not in script
+    assert "2026-08-29" not in script
+    assert "extended-through-23:00-MT" not in script
+    assert "4dbb2e691d91" not in script
     for function in (
         "fn_experiment_v2_direct_proof_begin(",
         "fn_experiment_v2_direct_proof_open_aggressive(",
@@ -186,3 +227,10 @@ def test_default_config_remains_coarse_off_for_the_removal_rollback() -> None:
     assert base["VERDIFY_POLICY_VECTOR_MODE"] == "off"
     assert base["VERDIFY_COMPONENT_EXPERIMENT_ENABLED"] == "off"
     assert base["VERDIFY_ACTIVE_EXPERIMENT_ID"] == ""
+
+
+def test_dormant_activation_values_are_invalid_placeholders() -> None:
+    rendered = _render(ACTIVATION)
+    activation = _document(rendered, "ConfigMap", "experiment-v2-direct-proof-activation")
+    assert activation["data"]
+    assert set(activation["data"].values()) == {"REPLACE_BEFORE_ACTIVATION"}

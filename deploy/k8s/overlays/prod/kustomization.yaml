@@ -116,11 +116,10 @@ components:
   # vectors. It cannot enable the component, open admission, randomize, or write
   # a device. Exact replay is idempotent after migration 221.
   - ../../components/experiment-v2-direct-launch-bootstrap
-  # ONE ATTENDED RETRY ONLY (Jason Vallery, 2026-08-28 06:00-18:00 UTC):
-  # temporarily arms only the ingestor's bounded component executor and runs
-  # the immutable baseline -> aggressive -> baseline PostSync proof. Remove
-  # immediately after its PASS receipt to Recreate the sole writer coarse-off.
-  - ../../components/experiment-v2-direct-proof
+  # Direct physical proof is deliberately absent from ordinary production.
+  # A fresh attended attempt must use the separate, suspended activation render
+  # under deploy/k8s/activations/experiment-v2-direct-proof and be removed again
+  # after its append-only receipt. Ordinary convergence stays coarse-off.
   # #124 verdify-lab — the public Quartz research site (lab.verdify.ai). Pure web
   # tier, stateless (no PVC), NO device path. Built from the
   # verdify-site-legacy Dockerfile.k3s (see components/lab-site/lab-site.yaml).
