@@ -1,0 +1,86 @@
+{
+  "cases": [
+    {
+      "canonical_export": {
+        "rows": [
+          {
+            "assignment_id": "11111111-1111-4111-8111-111111111111",
+            "blinded_label": "X",
+            "execution_phase": "randomized",
+            "fallback_or_rescue": false,
+            "fidelity": {
+              "exposure_seconds": 64800,
+              "per_protocol_exposure_complete": true
+            },
+            "fixed_window_utc_end": "2026-11-03T07:00:00Z",
+            "fixed_window_utc_start": "2026-11-02T13:00:00Z",
+            "local_date": "2026-11-02",
+            "missing_reason": null,
+            "nine_control_state_minutes": 90.0,
+            "outcome_complete": true,
+            "temperature_corridor_distance_f": 0.0,
+            "vpd_corridor_distance_kpa": 0.0
+          }
+        ],
+        "schema": "verdify-experiment-v2-blinded-day-export-v1"
+      },
+      "export_sha256": "7300da5156713478ac69345795706235e66bc2ea85546360bf1b035119ac44fa",
+      "name": "complete_full_fidelity"
+    },
+    {
+      "canonical_export": {
+        "rows": [
+          {
+            "assignment_id": "22222222-2222-4222-8222-222222222222",
+            "blinded_label": "Y",
+            "execution_phase": "randomized",
+            "fallback_or_rescue": true,
+            "fidelity": {
+              "exposure_seconds": 0,
+              "per_protocol_exposure_complete": false
+            },
+            "fixed_window_utc_end": "2026-11-03T07:00:00Z",
+            "fixed_window_utc_start": "2026-11-02T13:00:00Z",
+            "local_date": "2026-11-02",
+            "missing_reason": null,
+            "nine_control_state_minutes": 0.0,
+            "outcome_complete": true,
+            "temperature_corridor_distance_f": 0.25,
+            "vpd_corridor_distance_kpa": 0.05
+          }
+        ],
+        "schema": "verdify-experiment-v2-blinded-day-export-v1"
+      },
+      "export_sha256": "0f5053d24b76a9a27db48ee6194a1f5bdd9fb3eec24ad2ad28621c76e9606946",
+      "name": "fallback_zero_exposure"
+    },
+    {
+      "canonical_export": {
+        "rows": [
+          {
+            "assignment_id": "33333333-3333-4333-8333-333333333333",
+            "blinded_label": "X",
+            "execution_phase": "randomized",
+            "fallback_or_rescue": true,
+            "fidelity": {
+              "exposure_seconds": 1200,
+              "per_protocol_exposure_complete": false
+            },
+            "fixed_window_utc_end": "2026-11-03T07:00:00Z",
+            "fixed_window_utc_start": "2026-11-02T13:00:00Z",
+            "local_date": "2026-11-02",
+            "missing_reason": "climate_completeness",
+            "nine_control_state_minutes": null,
+            "outcome_complete": false,
+            "temperature_corridor_distance_f": null,
+            "vpd_corridor_distance_kpa": null
+          }
+        ],
+        "schema": "verdify-experiment-v2-blinded-day-export-v1"
+      },
+      "export_sha256": "61dc111db2691341af7202882931f3a89c8fda61eb9afc3397a936eba0cbcb6a",
+      "name": "rescue_null_outcome"
+    }
+  ],
+  "schema": "verdify-experiment-v2-day1-export-fixtures-v1"
+}

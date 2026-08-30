@@ -311,7 +311,12 @@ def test_dashboard_uses_only_the_blinded_safe_function():
     assert dashboard["uid"] == "confirmed-component-experiment-v2"
     sql_targets = [target["rawSql"] for panel in dashboard["panels"] for target in panel.get("targets", [])]
     assert len(sql_targets) >= 5
-    assert all("fn_experiment_v2_ops_status()" in query for query in sql_targets)
+    allowed = (
+        "fn_experiment_v2_ops_status()",
+        "fn_experiment_v2_launch_gate_status()",
+    )
+    assert all(any(function in query for function in allowed) for query in sql_targets)
+    assert any("fn_experiment_v2_launch_gate_status()" in query for query in sql_targets)
     combined = "\n".join(sql_targets).lower()
     for forbidden in (
         "control_arm_resolutions",

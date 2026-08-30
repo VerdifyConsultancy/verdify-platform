@@ -52,6 +52,7 @@ $PY -m pytest -q \
   tests/test_03_ingestor.py \
   research/planner-efficacy/tests/test_protocol_template_contract.py \
   research/planner-efficacy/tests/test_switchback_v2_design.py \
+  research/planner-efficacy/tests/test_switchback_v2_day1_export.py \
   research/planner-efficacy/tests/test_switchback_v2_randomization.py \
   research/planner-efficacy/tests/test_switchback_v2_selector.py
 $PY research/planner-efficacy/generate_v2_artifacts.py --check
@@ -107,7 +108,9 @@ $PY -m pytest -q \
   tests/test_experiment_v2_restore_rehearsal.py \
   tests/test_experiment_v2_shadow_source_lock.py \
   tests/test_experiment_v2_data_contract.py \
+  tests/test_experiment_v2_day1_authorization.py \
   tests/test_experiment_v2_direct_launch_runtime.py \
+  tests/test_experiment_v2_launch_artifacts.py \
   tests/test_experiment_v2_direct_proof_activation.py \
   tests/test_experiment_v2_direct_proof_attempt_status.py \
   tests/test_experiment_v2_direct_proof_recovery_range_rollover.py \

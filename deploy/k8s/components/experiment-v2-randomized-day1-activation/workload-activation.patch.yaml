@@ -1,0 +1,101 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-ingestor
+spec:
+  template:
+    metadata:
+      annotations:
+        verdify.io/randomized-day1-stage: "authorized"
+    spec:
+      containers:
+        - name: ingestor
+          env:
+            - name: VERDIFY_POLICY_VECTOR_MODE
+              value: "off"
+            - name: VERDIFY_COMPONENT_EXPERIMENT_ENABLED
+              value: "enabled"
+            - name: VERDIFY_ACTIVE_EXPERIMENT_ID
+              value: "45039c86-c1d9-52f6-a0a9-d94a17bc4b14"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-api
+spec:
+  template:
+    metadata:
+      annotations:
+        verdify.io/randomized-day1-stage: "authorized"
+    spec:
+      containers:
+        - name: api
+          env:
+            - name: VERDIFY_POLICY_VECTOR_MODE
+              value: "off"
+            - name: VERDIFY_COMPONENT_EXPERIMENT_ENABLED
+              value: "enabled"
+            - name: VERDIFY_ACTIVE_EXPERIMENT_ID
+              value: "45039c86-c1d9-52f6-a0a9-d94a17bc4b14"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: experiment-v2-lifecycle
+spec:
+  template:
+    metadata:
+      annotations:
+        verdify.io/randomized-day1-stage: "authorized"
+    spec:
+      containers:
+        - name: lifecycle
+          env:
+            - name: VERDIFY_POLICY_VECTOR_MODE
+              value: "off"
+            - name: VERDIFY_COMPONENT_EXPERIMENT_ENABLED
+              value: "enabled"
+            - name: VERDIFY_ACTIVE_EXPERIMENT_ID
+              value: "45039c86-c1d9-52f6-a0a9-d94a17bc4b14"
+            - name: VERDIFY_EXPERIMENT_V2_LIFECYCLE_PLAN_SHA256
+              value: "d8c5a474dd2ead40d5e4acaca9be7edd34a7626f16611b388542018c6ca79c2b"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: experiment-v2-selector
+spec:
+  template:
+    metadata:
+      annotations:
+        verdify.io/randomized-day1-stage: "authorized"
+    spec:
+      containers:
+        - name: selector
+          env:
+            - name: VERDIFY_POLICY_VECTOR_MODE
+              value: "off"
+            - name: VERDIFY_COMPONENT_EXPERIMENT_ENABLED
+              value: "enabled"
+            - name: VERDIFY_ACTIVE_EXPERIMENT_ID
+              value: "45039c86-c1d9-52f6-a0a9-d94a17bc4b14"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: experiment-v2-freezer
+spec:
+  template:
+    metadata:
+      annotations:
+        verdify.io/randomized-day1-stage: "authorized"
+    spec:
+      containers:
+        - name: freezer
+          env:
+            - name: VERDIFY_POLICY_VECTOR_MODE
+              value: "off"
+            - name: VERDIFY_COMPONENT_EXPERIMENT_ENABLED
+              value: "enabled"
+            - name: VERDIFY_ACTIVE_EXPERIMENT_ID
+              value: "45039c86-c1d9-52f6-a0a9-d94a17bc4b14"

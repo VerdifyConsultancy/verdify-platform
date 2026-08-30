@@ -1,0 +1,63 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: verdify-experiment-v2-day1-approval
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: experiment-v2-day1-approval
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 180
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: verdify
+        app.kubernetes.io/component: experiment-v2-day1-approval
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      imagePullSecrets:
+        - name: zot-origin-cluster-pull
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: approve-day1
+          image: ghcr.io/verdifyconsultancy/verdify-experiment-v2-orchestrator
+          command:
+            - python
+            - -m
+            - experiment_orchestrator.launch_control
+            - approve-day1
+            - --audit-ref
+            - issue-642-randomized-day1-approval
+          env:
+            - name: VERDIFY_EXPERIMENT_API_BASE_URL
+              value: http://verdify-api:8000
+            - name: VERDIFY_ACTIVE_EXPERIMENT_ID
+              value: "45039c86-c1d9-52f6-a0a9-d94a17bc4b14"
+            - name: VERDIFY_EXPERIMENT_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: VERDIFY_EXPERIMENT_API_TOKEN
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 192Mi
