@@ -4,9 +4,7 @@ metadata:
   name: verdify-experiment-v2-direct-proof
   labels:
     app.kubernetes.io/part-of: verdify
-    # Reuse the existing exact DB-egress policy selector; this Job has no
-    # service account token or non-DB network requirement.
-    app.kubernetes.io/component: migrate
+    app.kubernetes.io/component: experiment-v2-direct-proof
   annotations:
     argocd.argoproj.io/hook: PostSync
     argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
@@ -17,28 +15,30 @@ spec:
   # authorization/window and enabling only the existing singleton ingestor.
   suspend: true
   backoffLimit: 0
-  activeDeadlineSeconds: 6600
+  activeDeadlineSeconds: 7800
   ttlSecondsAfterFinished: 3600
   template:
     metadata:
       labels:
         app.kubernetes.io/part-of: verdify
-        app.kubernetes.io/component: migrate
+        app.kubernetes.io/component: experiment-v2-direct-proof
     spec:
       restartPolicy: Never
-      automountServiceAccountToken: false
+      serviceAccountName: verdify-experiment-v2-direct-proof
+      automountServiceAccountToken: true
       enableServiceLinks: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
         runAsGroup: 1000
+        fsGroup: 999
         seccompProfile:
           type: RuntimeDefault
       imagePullSecrets:
         - name: zot-origin-cluster-pull
       containers:
         - name: direct-proof
-          image: ghcr.io/verdifyconsultancy/verdify-api
+          image: ghcr.io/verdifyconsultancy/verdify-experiment-v2-orchestrator
           command: ["python", "/etc/verdify/direct-proof/proof.py"]
           envFrom:
             - configMapRef:
@@ -56,6 +56,26 @@ spec:
                 secretKeyRef:
                   name: verdify-app-secrets
                   key: VERDIFY_EXPERIMENT_LIFECYCLE_DB_PASSWORD
+            - name: READ_DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: VERDIFY_INGESTOR_RUNTIME_DB_USER
+            - name: READ_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD
+            - name: VERDIFY_MCP_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-hermes
+                  key: VERDIFY_MCP_TOKEN
+            - name: VERDIFY_EXPERIMENT_SELECTOR_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-hermes
+                  key: OPENAI_API_KEY
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -67,16 +87,23 @@ spec:
               memory: "64Mi"
             limits:
               cpu: "250m"
-              memory: "192Mi"
+              memory: "256Mi"
           volumeMounts:
             - name: direct-proof
               mountPath: /etc/verdify/direct-proof
               readOnly: true
             - name: tmp
               mountPath: /tmp
+            - name: backups
+              mountPath: /backups
+              readOnly: true
       volumes:
         - name: direct-proof
           configMap:
             name: experiment-v2-direct-proof
         - name: tmp
           emptyDir: {}
+        - name: backups
+          persistentVolumeClaim:
+            claimName: verdify-db-dumps
+            readOnly: true

@@ -92,9 +92,11 @@
   },
   "argo": {
     "revision": "6b48dba7217438f5fdd7fb14fc8e067975cf1c35",
+    "source_path": "deploy/k8s/overlays/prod",
     "sync_status": "Synced",
     "health_status": "Healthy",
     "operation_phase": "Succeeded",
+    "operation_revision": "6b48dba7217438f5fdd7fb14fc8e067975cf1c35",
     "prune": false,
     "resource_selector": null,
     "observed_at": "2026-08-30T12:01:20.000000Z"

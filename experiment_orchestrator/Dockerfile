@@ -22,11 +22,22 @@ COPY experiment_orchestrator/*.py /app/experiment_orchestrator/
 # locked implementation under an image-local name so the runtime hashes the
 # same immutable bytes that design lock names.
 COPY research/planner-efficacy/switchback/v2_outcomes.py /app/experiment_orchestrator/_frozen_v2_outcomes.py
+# The attended direct-proof Job reuses this non-device runtime.  Carry only its
+# source-stamped, read-only collector/guard surfaces and the exact source files
+# whose hashes the readiness packet binds; none imports a device client.
+COPY scripts/experiment_v2_proof_packet.py scripts/experiment_v2_readiness_guard.py scripts/mcp-security-acceptance.py /app/scripts/
+COPY scripts/verify_component_proof_packet.py /app/readiness-source/scripts/verify_component_proof_packet.py
+COPY research/planner-efficacy/switchback/v2_selector.py /app/readiness-source/research/planner-efficacy/switchback/v2_selector.py
+COPY research/planner-efficacy/switchback/v2_outcomes.py /app/readiness-source/research/planner-efficacy/switchback/v2_outcomes.py
+COPY research/planner-efficacy/protocols/shadow-v2/selector-artifact-v1.json /app/readiness-source/research/planner-efficacy/protocols/shadow-v2/selector-artifact-v1.json
+COPY ingestor/tasks/component_experiment.py /app/readiness-source/ingestor/tasks/component_experiment.py
+COPY deploy/k8s/components/hermes-iris/hermes-config.yaml /app/readiness-source/deploy/k8s/components/hermes-iris/hermes-config.yaml
+COPY tests/fixtures/experiment-v2-readiness/base-proof.json /app/readiness-source/tests/fixtures/experiment-v2-readiness/base-proof.json
 # The managed build clone uses umask 077. Docker/kaniko preserve those source
 # modes on bare COPY, so normalize every runtime module before dropping root;
 # otherwise uid 10001 cannot import a freshly built image.
-RUN chmod 0555 /app /app/experiment_orchestrator \
-    && chmod 0444 /app/experiment_orchestrator/*.py
+RUN find /app -type d -exec chmod 0555 {} + \
+    && find /app -type f -exec chmod 0444 {} +
 
 ARG GIT_SHA=unknown
 ARG BUILD_TIME=unknown

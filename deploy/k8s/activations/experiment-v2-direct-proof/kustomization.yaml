@@ -6,6 +6,12 @@ kind: Kustomization
 resources:
   - ../../overlays/prod
 
+# Do not rely on Argo CD's destination namespace injection for the outer
+# component resources.  The nested production overlay already uses this exact
+# namespace, so this also makes local and server-side render validation match
+# the one-sync production apply.
+namespace: verdify-prod
+
 components:
   - ../../components/experiment-v2-direct-proof
 

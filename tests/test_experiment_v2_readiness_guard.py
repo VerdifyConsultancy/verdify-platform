@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import importlib.util
 import json
+import os
 import re
 import subprocess
 import sys
@@ -57,7 +58,22 @@ def _apply(document: dict, operations: list[dict]) -> dict:
 
 
 def _prior(raw: dict | None):
-    return None if raw is None else guard.ChainState(**raw)
+    if raw is None:
+        return None
+    lineage = {
+        "git_pin": GIT_PIN,
+        "application_source_revision": APP_SOURCE,
+        "experiment_id": EXPERIMENT_ID,
+        "lease_generation": BASE["runtime"]["lease_generation"],
+        "writer_generation": BASE["runtime"]["writer_generation"],
+        "connection_generation": BASE["runtime"]["connection_generation"],
+        "registry_revision": BASE["runtime"]["registry_revision"],
+        "authentication_686_receipt_sha256": BASE["evidence"]["authentication_686"]["receipt_sha256"],
+        "provider_preflight_receipt_sha256": BASE["evidence"]["provider_preflight"]["receipt_sha256"],
+        "served_control_observed_424_receipt_sha256": BASE["evidence"]["served_control_observed_424"]["receipt_sha256"],
+    }
+    lineage.update(raw)
+    return guard.ChainState(**lineage)
 
 
 def _evaluate(packet: dict, case: dict):
@@ -128,35 +144,64 @@ def test_recovery_packet_overlay_binds_only_gate_r_requirements() -> None:
     }
 
 
-def _run(packet: dict, tmp_path: Path, *, boundary: str, state: Path) -> subprocess.CompletedProcess[str]:
+def test_recovery_gate_requires_component_authority_off() -> None:
+    packet = _apply(BASE, RECOVERY_OVERLAY["operations"])
+    packet["runtime"]["component_enabled"] = True
+    result = _evaluate(packet, RECOVERY_OVERLAY)
+    assert "recovery_component_authority_not_off" in result["blockers"]
+
+
+def _run(
+    packet: dict,
+    tmp_path: Path,
+    *,
+    boundary: str,
+    state: Path,
+    next_state: Path | None = None,
+) -> subprocess.CompletedProcess[str]:
     packet_path = tmp_path / f"{boundary}.json"
     packet_path.write_text(json.dumps(packet, sort_keys=True))
+    command = [
+        sys.executable,
+        str(SCRIPT),
+        "--input",
+        str(packet_path),
+        "--mode",
+        "proof",
+        "--boundary",
+        boundary,
+        "--expected-git-pin",
+        GIT_PIN,
+        "--expected-application-source",
+        APP_SOURCE,
+        "--expected-experiment-id",
+        EXPERIMENT_ID,
+        "--now",
+        NOW,
+        "--state",
+        str(state),
+    ]
+    if next_state is not None:
+        command.extend(("--next-state", str(next_state)))
     return subprocess.run(
-        [
-            sys.executable,
-            str(SCRIPT),
-            "--input",
-            str(packet_path),
-            "--mode",
-            "proof",
-            "--boundary",
-            boundary,
-            "--expected-git-pin",
-            GIT_PIN,
-            "--expected-application-source",
-            APP_SOURCE,
-            "--expected-experiment-id",
-            EXPERIMENT_ID,
-            "--now",
-            NOW,
-            "--state",
-            str(state),
-        ],
+        command,
         cwd=ROOT,
         text=True,
         capture_output=True,
         check=False,
     )
+
+
+def _set_generations(packet: dict, *, lease: int, writer: int, connection: int) -> None:
+    for target in (
+        packet["provenance"]["writer"],
+        packet["runtime"],
+        packet["evidence"]["component_grid"],
+        packet["evidence"]["writer_433"],
+    ):
+        target["lease_generation"] = lease
+        target["writer_generation"] = writer
+        target["connection_generation"] = connection
 
 
 def test_all_proof_boundaries_require_distinct_chained_packets_and_replay_fails(tmp_path: Path) -> None:
@@ -169,6 +214,18 @@ def test_all_proof_boundaries_require_distinct_chained_packets_and_replay_fails(
         packet["boundary"] = boundary
         packet["guard"]["sequence"] = sequence
         packet["guard"]["previous_receipt_sha256"] = previous
+        if boundary != "gate-p":
+            # The isolated proof activation may roll the writer after Gate P.
+            # Baseline-before establishes the one physical lineage retained by
+            # every later boundary.
+            _set_generations(packet, lease=17, writer=5, connection=2)
+            packet["runtime"]["active_experiment_id"] = EXPERIMENT_ID
+        if boundary in ("aggressive", "baseline-after"):
+            # Gate P owns the active preflight calls. Later physical boundaries
+            # retain their exact receipt identities through the chain instead
+            # of repeatedly contacting non-actuating external dependencies.
+            for label in ("authentication_686", "provider_preflight", "served_control_observed_424"):
+                packet["evidence"][label]["observed_at"] = "2026-08-01T00:00:00.000000Z"
         if boundary == "aggressive":
             packet["runtime"]["component_enabled"] = True
             packet["runtime"]["admission_state"] = "baseline_recovery"
@@ -185,9 +242,108 @@ def test_all_proof_boundaries_require_distinct_chained_packets_and_replay_fails(
         previous = result["receipt_sha256"]
         packets.append(packet)
 
+    state_payload = json.loads(state.read_text())
+    assert state_payload["schema"] == guard.STATE_SCHEMA
+    assert state_payload["git_pin"] == GIT_PIN
+    assert state_payload["application_source_revision"] == APP_SOURCE
+    assert state_payload["experiment_id"] == EXPERIMENT_ID
+    assert state_payload["lease_generation"] == 17
+    assert state_payload["writer_generation"] == 5
+    assert state_payload["connection_generation"] == 2
+    assert state_payload["authentication_686_receipt_sha256"] == "2" * 64
+    assert state_payload["provider_preflight_receipt_sha256"] == "3" * 64
+    assert state_payload["served_control_observed_424_receipt_sha256"] == "4" * 64
+
     replay = _run(packets[-1], tmp_path, boundary="baseline-after", state=state)
     assert replay.returncode == 1
     assert "guard_chain_replay_or_gap" in json.loads(replay.stdout)["blockers"]
+
+
+def test_successor_state_can_be_deferred_until_the_boundary_transition_commits(tmp_path: Path) -> None:
+    state = tmp_path / "guard-state.json"
+    pending = tmp_path / "guard-state.pending.json"
+    gate_p = copy.deepcopy(BASE)
+    completed = _run(gate_p, tmp_path, boundary="gate-p", state=state, next_state=pending)
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+    gate_p_receipt = json.loads(completed.stdout)["receipt_sha256"]
+    assert not state.exists()
+    assert json.loads(pending.read_text())["last_receipt_sha256"] == gate_p_receipt
+
+    os.replace(pending, state)
+    baseline = copy.deepcopy(BASE)
+    baseline["packet_id"] = "00000000-0000-4000-8000-000000000091"
+    baseline["boundary"] = "baseline-before"
+    baseline["guard"]["sequence"] = 1
+    baseline["guard"]["previous_receipt_sha256"] = gate_p_receipt
+    baseline["runtime"]["active_experiment_id"] = EXPERIMENT_ID
+    completed = _run(baseline, tmp_path, boundary="baseline-before", state=state, next_state=pending)
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+    assert json.loads(state.read_text())["last_receipt_sha256"] == gate_p_receipt
+    assert json.loads(pending.read_text())["last_receipt_sha256"] == json.loads(completed.stdout)["receipt_sha256"]
+
+
+def test_internal_generation_consistency_cannot_cross_physical_boundary_lineage(tmp_path: Path) -> None:
+    state = tmp_path / "guard-state.json"
+    previous = None
+    for sequence, boundary in enumerate(("gate-p", "baseline-before")):
+        packet = copy.deepcopy(BASE)
+        packet["packet_id"] = f"00000000-0000-4000-8000-{sequence + 20:012d}"
+        packet["boundary"] = boundary
+        packet["guard"]["sequence"] = sequence
+        packet["guard"]["previous_receipt_sha256"] = previous
+        if boundary == "baseline-before":
+            _set_generations(packet, lease=17, writer=5, connection=2)
+            packet["runtime"]["active_experiment_id"] = EXPERIMENT_ID
+        completed = _run(packet, tmp_path, boundary=boundary, state=state)
+        assert completed.returncode == 0, completed.stdout + completed.stderr
+        previous = json.loads(completed.stdout)["receipt_sha256"]
+
+    aggressive = copy.deepcopy(BASE)
+    aggressive["packet_id"] = "00000000-0000-4000-8000-000000000022"
+    aggressive["boundary"] = "aggressive"
+    aggressive["guard"]["sequence"] = 2
+    aggressive["guard"]["previous_receipt_sha256"] = previous
+    aggressive["runtime"]["component_enabled"] = True
+    aggressive["runtime"]["admission_state"] = "baseline_recovery"
+    aggressive["runtime"]["active_experiment_id"] = EXPERIMENT_ID
+    # Every section agrees internally, but the generation is not the one bound
+    # by baseline-before, so cross-boundary mixing must still fail.
+    _set_generations(aggressive, lease=18, writer=6, connection=3)
+    completed = _run(aggressive, tmp_path, boundary="aggressive", state=state)
+    assert completed.returncode == 1
+    blockers = json.loads(completed.stdout)["blockers"]
+    assert "guard_chain_lease_generation_mismatch" in blockers
+    assert "guard_chain_writer_generation_mismatch" in blockers
+    assert "guard_chain_connection_generation_mismatch" in blockers
+
+
+def test_gate_p_preflight_receipts_cannot_be_swapped_at_later_boundary(tmp_path: Path) -> None:
+    state = tmp_path / "guard-state.json"
+    previous = None
+    for sequence, boundary in enumerate(("gate-p", "baseline-before")):
+        packet = copy.deepcopy(BASE)
+        packet["packet_id"] = f"00000000-0000-4000-8000-{sequence + 30:012d}"
+        packet["boundary"] = boundary
+        packet["guard"]["sequence"] = sequence
+        packet["guard"]["previous_receipt_sha256"] = previous
+        if boundary == "baseline-before":
+            packet["runtime"]["active_experiment_id"] = EXPERIMENT_ID
+        completed = _run(packet, tmp_path, boundary=boundary, state=state)
+        assert completed.returncode == 0, completed.stdout + completed.stderr
+        previous = json.loads(completed.stdout)["receipt_sha256"]
+
+    aggressive = copy.deepcopy(BASE)
+    aggressive["packet_id"] = "00000000-0000-4000-8000-000000000032"
+    aggressive["boundary"] = "aggressive"
+    aggressive["guard"]["sequence"] = 2
+    aggressive["guard"]["previous_receipt_sha256"] = previous
+    aggressive["runtime"]["component_enabled"] = True
+    aggressive["runtime"]["admission_state"] = "baseline_recovery"
+    aggressive["runtime"]["active_experiment_id"] = EXPERIMENT_ID
+    aggressive["evidence"]["provider_preflight"]["receipt_sha256"] = "f" * 64
+    completed = _run(aggressive, tmp_path, boundary="aggressive", state=state)
+    assert completed.returncode == 1
+    assert "guard_chain_provider_preflight_receipt_mismatch" in json.loads(completed.stdout)["blockers"]
 
 
 def test_noninitial_boundary_without_chain_state_is_rejected(tmp_path: Path) -> None:
@@ -197,6 +353,7 @@ def test_noninitial_boundary_without_chain_state_is_rejected(tmp_path: Path) -> 
     packet["guard"]["previous_receipt_sha256"] = "a" * 64
     packet["runtime"]["component_enabled"] = True
     packet["runtime"]["admission_state"] = "baseline_recovery"
+    packet["runtime"]["active_experiment_id"] = EXPERIMENT_ID
     path = tmp_path / "packet.json"
     path.write_text(json.dumps(packet))
     completed = subprocess.run(
@@ -247,6 +404,23 @@ def test_dependency_trace_is_hash_bound_and_contains_no_hydro_source_dependency(
         source = (ROOT / surface["path"]).read_bytes()
         assert guard.hashlib.sha256(source).hexdigest() == surface["source_sha256"]
         assert not guard.re.search(rb"(?i)\b(hydro|hydroponic|yinmik)\b", source)
+
+
+def test_postsync_running_argo_operation_is_honest_exact_pin_evidence() -> None:
+    packet = copy.deepcopy(BASE)
+    packet["argo"]["operation_phase"] = "Running"
+    result = _evaluate(packet, {"operations": []})
+    assert "proof_argo_not_exact_synced_healthy" not in result["blockers"]
+    assert "argo_operation_revision_mismatch" not in result["blockers"]
+
+
+def test_argo_operation_and_source_must_be_exact_full_prod_sync() -> None:
+    packet = copy.deepcopy(BASE)
+    packet["argo"]["source_path"] = "deploy/k8s/activations/experiment-v2-direct-proof"
+    packet["argo"]["operation_revision"] = "f" * 40
+    result = _evaluate(packet, {"operations": []})
+    assert "argo_source_path_mismatch" in result["blockers"]
+    assert "argo_operation_revision_mismatch" in result["blockers"]
 
 
 def test_packet_contract_cannot_carry_credentials_or_secret_payloads() -> None:

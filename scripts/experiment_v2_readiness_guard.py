@@ -7,9 +7,10 @@ authentication, provider, Argo and backup preflights.  It never reads a
 credential, talks to a device, or changes database/Kubernetes state.
 
 Proof packets form a one-use chain: gate-p -> baseline-before -> aggressive ->
-baseline-after.  The optional state file records only the previous receipt hash
-and rejects replay/cached packets.  Recovery has its own one-item gate-r chain
-and can authorize Gate R only.
+baseline-after. The optional state file binds source, generation, registry,
+preflight receipts, and the previous boundary receipt so replay/cached or
+cross-lineage packets fail. Recovery has its own one-item gate-r chain and can
+authorize Gate R only.
 """
 
 from __future__ import annotations
@@ -29,7 +30,7 @@ from uuid import UUID
 
 INPUT_SCHEMA = "verdify-experiment-v2-readiness-input-v1"
 RESULT_SCHEMA = "verdify-experiment-v2-readiness-result-v1"
-STATE_SCHEMA = "verdify-experiment-v2-readiness-chain-v1"
+STATE_SCHEMA = "verdify-experiment-v2-readiness-chain-v2"
 CORRECTED_ONE_OFF_SOURCE_PIN = "6b48dba7217438f5fdd7fb14fc8e067975cf1c35"
 
 Mode = Literal["recovery", "proof"]
@@ -123,6 +124,16 @@ class ChainState:
     attempt_id: str
     next_sequence: int
     last_receipt_sha256: str | None
+    git_pin: str
+    application_source_revision: str
+    experiment_id: str
+    lease_generation: int
+    writer_generation: int
+    connection_generation: int
+    registry_revision: str
+    authentication_686_receipt_sha256: str
+    provider_preflight_receipt_sha256: str
+    served_control_observed_424_receipt_sha256: str
 
 
 def _canonical(value: object) -> bytes:
@@ -391,8 +402,13 @@ def _validate_runtime(
     )
     if value["experiment_feature_mode"] != "off":
         blockers.append("experiment_feature_not_off")
-    if value["active_experiment_id"] != "":
+    active_id = _text(value["active_experiment_id"], "runtime.active_experiment_id", empty=True)
+    if mode == "recovery" and active_id != "":
         blockers.append("active_experiment_id_not_empty")
+    elif mode == "proof" and boundary == "gate-p" and active_id not in ("", expected.experiment_id):
+        blockers.append("proof_active_experiment_id_mismatch")
+    elif mode == "proof" and boundary != "gate-p" and active_id != expected.experiment_id:
+        blockers.append("proof_active_experiment_id_mismatch")
     if value["policy_vector_mode"] != "off":
         blockers.append("policy_vector_mode_not_off")
     if _uuid(value["experiment_id"], "runtime.experiment_id") != expected.experiment_id:
@@ -408,6 +424,8 @@ def _validate_runtime(
         blockers.append("baseline_after_boundary_authority_mismatch")
     if boundary == "gate-r" and (admission not in ("emergency_hold", "baseline_recovery")):
         blockers.append("recovery_boundary_authority_mismatch")
+    if boundary == "gate-r" and component_enabled:
+        blockers.append("recovery_component_authority_not_off")
     if boundary != "baseline-after" and exposures != 0:
         blockers.append("open_exposure_before_actuation")
     if boundary == "baseline-after" and exposures not in (0, 1):
@@ -479,7 +497,7 @@ def _validate_backup(raw: object, *, mode: Mode, expected: ExpectedPins, now: da
         raise PacketError("backup.controller_owned.source_git_pin must be a lowercase Git SHA")
     policy_age = _integer(value["policy_max_age_seconds"], "backup.policy_max_age_seconds", minimum=1)
     if mode == "proof":
-        if controller_source != expected.git_pin:
+        if controller_source != CORRECTED_ONE_OFF_SOURCE_PIN:
             blockers.append("controller_owned_backup_source_pin_mismatch")
         if controller_status != "succeeded":
             blockers.append("controller_owned_backup_failed")
@@ -501,16 +519,38 @@ def _validate_backup(raw: object, *, mode: Mode, expected: ExpectedPins, now: da
 def _validate_argo(raw: object, *, mode: Mode, expected: ExpectedPins, now: datetime, blockers: list[str]) -> None:
     value = _exact_keys(
         raw,
-        {"revision", "sync_status", "health_status", "operation_phase", "prune", "resource_selector", "observed_at"},
+        {
+            "revision",
+            "source_path",
+            "sync_status",
+            "health_status",
+            "operation_phase",
+            "operation_revision",
+            "prune",
+            "resource_selector",
+            "observed_at",
+        },
         "argo",
     )
     revision = _text(value["revision"], "argo.revision")
+    source_path = _text(value["source_path"], "argo.source_path")
     sync_status = _text(value["sync_status"], "argo.sync_status")
     health_status = _text(value["health_status"], "argo.health_status")
     operation_phase = _text(value["operation_phase"], "argo.operation_phase")
+    operation_revision = _text(value["operation_revision"], "argo.operation_revision")
     if revision != expected.git_pin:
         blockers.append("argo_revision_mismatch")
-    if mode == "proof" and (sync_status != "Synced" or health_status != "Healthy" or operation_phase != "Succeeded"):
+    if source_path != "deploy/k8s/overlays/prod":
+        blockers.append("argo_source_path_mismatch")
+    # A PostSync hook is part of the operation it proves, so its only honest
+    # in-flight phase is Running.  Exact operation revision + full non-pruning,
+    # non-selective sync is required in that case.  Completed evidence remains
+    # acceptable only at Succeeded.
+    if operation_revision != expected.git_pin:
+        blockers.append("argo_operation_revision_mismatch")
+    if mode == "proof" and (
+        sync_status != "Synced" or health_status != "Healthy" or operation_phase not in ("Running", "Succeeded")
+    ):
         blockers.append("proof_argo_not_exact_synced_healthy")
     if _boolean(value["prune"], "argo.prune"):
         blockers.append("argo_prune_enabled")
@@ -832,6 +872,7 @@ def _validate_evidence(
     raw: object,
     *,
     mode: Mode,
+    boundary: Boundary,
     expected: ExpectedPins,
     registry_revision: str,
     lease_generation: int,
@@ -839,7 +880,7 @@ def _validate_evidence(
     connection_generation: int,
     now: datetime,
     blockers: list[str],
-) -> None:
+) -> dict[str, str]:
     value = _exact_keys(
         raw,
         {"component_grid", "authentication_686", "provider_preflight", "served_control_observed_424", "writer_433"},
@@ -986,6 +1027,7 @@ def _validate_evidence(
         writer["connection_generation"], connection_generation, "writer_433_connection_generation", blockers
     )
 
+    proof_preflight_receipts: dict[str, str] = {}
     for label, row, max_age, required_mode in (
         ("component_grid", component, MAX_COMPONENT_AGE, "shared"),
         ("authentication_686", auth, MAX_AUTH_AGE, "proof"),
@@ -1000,12 +1042,16 @@ def _validate_evidence(
         receipt = _text(row["receipt_sha256"], f"evidence.{label}.receipt_sha256")
         if not SHA64.fullmatch(receipt):
             raise PacketError(f"evidence.{label}.receipt_sha256 must be a SHA-256")
+        if label in ("authentication_686", "provider_preflight", "served_control_observed_424"):
+            proof_preflight_receipts[label] = receipt
         if required_mode == "proof" and mode != "proof":
             continue
-        _fresh(observed, now=now, max_age=max_age, label=f"{label}_evidence", blockers=blockers)
+        if required_mode == "shared" or boundary == "gate-p":
+            _fresh(observed, now=now, max_age=max_age, label=f"{label}_evidence", blockers=blockers)
         _source_match(source, expected.application_source, f"{label}_source_revision", blockers)
         if experiment_id != expected.experiment_id:
             blockers.append(f"{label}_experiment_id_mismatch")
+    return proof_preflight_receipts
 
 
 def _validate_issue_state(raw: object, *, mode: Mode, blockers: list[str]) -> None:
@@ -1081,6 +1127,62 @@ def _validate_guard_chain(
     return attempt_id, sequence, previous
 
 
+def _validate_chain_lineage(
+    prior: ChainState | None,
+    *,
+    mode: Mode,
+    boundary: Boundary,
+    expected: ExpectedPins,
+    lease_generation: int,
+    writer_generation: int,
+    connection_generation: int,
+    registry_revision: str,
+    blockers: list[str],
+) -> None:
+    if prior is None:
+        return
+    if prior.git_pin != expected.git_pin:
+        blockers.append("guard_chain_git_pin_mismatch")
+    if prior.application_source_revision != expected.application_source:
+        blockers.append("guard_chain_application_source_mismatch")
+    if prior.experiment_id != expected.experiment_id:
+        blockers.append("guard_chain_experiment_id_mismatch")
+    # Enabling the isolated proof runtime can deliberately create a new writer
+    # between the non-actuating Gate P check and baseline-before. Baseline-before
+    # therefore establishes the physical attempt's generation lineage; every
+    # later, potentially actuating boundary must remain on exactly that lineage.
+    if mode != "proof" or boundary in ("gate-p", "baseline-before"):
+        return
+    if prior.lease_generation != lease_generation:
+        blockers.append("guard_chain_lease_generation_mismatch")
+    if prior.writer_generation != writer_generation:
+        blockers.append("guard_chain_writer_generation_mismatch")
+    if prior.connection_generation != connection_generation:
+        blockers.append("guard_chain_connection_generation_mismatch")
+    if prior.registry_revision != registry_revision:
+        blockers.append("guard_chain_registry_revision_mismatch")
+
+
+def _validate_chain_proof_preflights(
+    prior: ChainState | None,
+    *,
+    mode: Mode,
+    boundary: Boundary,
+    receipts: Mapping[str, str],
+    blockers: list[str],
+) -> None:
+    if prior is None or mode != "proof" or boundary == "gate-p":
+        return
+    expected = {
+        "authentication_686": prior.authentication_686_receipt_sha256,
+        "provider_preflight": prior.provider_preflight_receipt_sha256,
+        "served_control_observed_424": prior.served_control_observed_424_receipt_sha256,
+    }
+    for label, expected_receipt in expected.items():
+        if receipts.get(label) != expected_receipt:
+            blockers.append(f"guard_chain_{label}_receipt_mismatch")
+
+
 def evaluate_packet(
     packet: object,
     *,
@@ -1132,6 +1234,17 @@ def evaluate_packet(
     lease, writer_generation, connection_generation, registry = _validate_provenance(
         top["provenance"], expected, now=now, blockers=blockers
     )
+    _validate_chain_lineage(
+        prior,
+        mode=mode,
+        boundary=boundary,
+        expected=expected,
+        lease_generation=lease,
+        writer_generation=writer_generation,
+        connection_generation=connection_generation,
+        registry_revision=registry,
+        blockers=blockers,
+    )
     _validate_workloads(top["workloads"], now=now, blockers=blockers)
     open_exposures = _validate_runtime(
         top["runtime"], mode=mode, boundary=boundary, expected=expected, blockers=blockers
@@ -1162,15 +1275,23 @@ def evaluate_packet(
     )
     _validate_alerts(top["alerts"], now=now, blockers=blockers, warnings=warnings)
     _validate_dependencies(top["dependencies"], expected=expected, repo_root=repo_root, blockers=blockers)
-    _validate_evidence(
+    proof_preflight_receipts = _validate_evidence(
         top["evidence"],
         mode=mode,
+        boundary=boundary,
         expected=expected,
         registry_revision=registry,
         lease_generation=lease,
         writer_generation=writer_generation,
         connection_generation=connection_generation,
         now=now,
+        blockers=blockers,
+    )
+    _validate_chain_proof_preflights(
+        prior,
+        mode=mode,
+        boundary=boundary,
+        receipts=proof_preflight_receipts,
         blockers=blockers,
     )
     _validate_issue_state(top["issue_state"], mode=mode, blockers=blockers)
@@ -1209,6 +1330,13 @@ def evaluate_packet(
             "application_source_revision": expected.application_source,
             "experiment_id": expected.experiment_id,
         },
+        "generation_lineage": {
+            "lease_generation": lease,
+            "writer_generation": writer_generation,
+            "connection_generation": connection_generation,
+            "registry_revision": registry,
+        },
+        "proof_preflight_receipts": proof_preflight_receipts,
     }
     return {**receipt_preimage, "receipt_sha256": _sha256(receipt_preimage)}
 
@@ -1227,28 +1355,84 @@ def _load_state(path: Path) -> ChainState | None:
     if not path.exists():
         return None
     raw = _exact_keys(
-        _load_json(path), {"schema", "mode", "attempt_id", "next_sequence", "last_receipt_sha256"}, "state"
+        _load_json(path),
+        {
+            "schema",
+            "mode",
+            "attempt_id",
+            "next_sequence",
+            "last_receipt_sha256",
+            "git_pin",
+            "application_source_revision",
+            "experiment_id",
+            "lease_generation",
+            "writer_generation",
+            "connection_generation",
+            "registry_revision",
+            "authentication_686_receipt_sha256",
+            "provider_preflight_receipt_sha256",
+            "served_control_observed_424_receipt_sha256",
+        },
+        "state",
     )
     if raw["schema"] != STATE_SCHEMA or raw["mode"] not in BOUNDARY_SEQUENCE:
         raise PacketError("readiness chain state schema/mode mismatch")
     receipt = raw["last_receipt_sha256"]
     if receipt is not None and (not isinstance(receipt, str) or not SHA64.fullmatch(receipt)):
         raise PacketError("readiness chain state receipt is invalid")
+    for name in (
+        "authentication_686_receipt_sha256",
+        "provider_preflight_receipt_sha256",
+        "served_control_observed_424_receipt_sha256",
+    ):
+        if not isinstance(raw[name], str) or not SHA64.fullmatch(raw[name]):
+            raise PacketError(f"readiness chain state {name} is invalid")
     return ChainState(
         mode=raw["mode"],
         attempt_id=_uuid(raw["attempt_id"], "state.attempt_id"),
         next_sequence=_integer(raw["next_sequence"], "state.next_sequence"),
         last_receipt_sha256=receipt,
+        git_pin=_text(raw["git_pin"], "state.git_pin"),
+        application_source_revision=_text(raw["application_source_revision"], "state.application_source_revision"),
+        experiment_id=_uuid(raw["experiment_id"], "state.experiment_id"),
+        lease_generation=_integer(raw["lease_generation"], "state.lease_generation", minimum=1),
+        writer_generation=_integer(raw["writer_generation"], "state.writer_generation"),
+        connection_generation=_integer(raw["connection_generation"], "state.connection_generation", minimum=1),
+        registry_revision=_safe_revision(raw["registry_revision"], "state.registry_revision"),
+        authentication_686_receipt_sha256=_text(
+            raw["authentication_686_receipt_sha256"], "state.authentication_686_receipt_sha256"
+        ),
+        provider_preflight_receipt_sha256=_text(
+            raw["provider_preflight_receipt_sha256"], "state.provider_preflight_receipt_sha256"
+        ),
+        served_control_observed_424_receipt_sha256=_text(
+            raw["served_control_observed_424_receipt_sha256"],
+            "state.served_control_observed_424_receipt_sha256",
+        ),
     )
 
 
 def _write_state(path: Path, result: Mapping[str, object]) -> None:
+    expected = result["expected"]
+    lineage = result["generation_lineage"]
+    proof_preflights = result["proof_preflight_receipts"]
+    assert isinstance(expected, Mapping) and isinstance(lineage, Mapping) and isinstance(proof_preflights, Mapping)
     payload = {
         "schema": STATE_SCHEMA,
         "mode": result["mode"],
         "attempt_id": result["attempt_id"],
         "next_sequence": int(result["sequence"]) + 1,
         "last_receipt_sha256": result["receipt_sha256"],
+        "git_pin": expected["git_pin"],
+        "application_source_revision": expected["application_source_revision"],
+        "experiment_id": expected["experiment_id"],
+        "lease_generation": lineage["lease_generation"],
+        "writer_generation": lineage["writer_generation"],
+        "connection_generation": lineage["connection_generation"],
+        "registry_revision": lineage["registry_revision"],
+        "authentication_686_receipt_sha256": proof_preflights["authentication_686"],
+        "provider_preflight_receipt_sha256": proof_preflights["provider_preflight"],
+        "served_control_observed_424_receipt_sha256": proof_preflights["served_control_observed_424"],
     }
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(path.name + f".tmp-{os.getpid()}")
@@ -1272,6 +1456,11 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--expected-experiment-id", required=True)
     parser.add_argument("--now", help="deterministic UTC evaluation time; defaults to current UTC")
     parser.add_argument("--state", type=Path, help="one-use boundary chain state file")
+    parser.add_argument(
+        "--next-state",
+        type=Path,
+        help="write a passing successor state here instead of committing --state in place",
+    )
     parser.add_argument("--repo-root", type=Path, help="also verify dependency source files/hashes locally")
     return parser
 
@@ -1289,6 +1478,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         boundary: Boundary = args.boundary
         if boundary not in BOUNDARY_SEQUENCE[mode]:
             raise PacketError("boundary does not belong to mode")
+        if args.next_state and not args.state:
+            raise PacketError("--next-state requires --state")
+        if args.next_state and args.next_state.resolve() == args.state.resolve():
+            raise PacketError("--next-state must differ from --state")
         prior = _load_state(args.state) if args.state else None
         if BOUNDARY_SEQUENCE[mode].index(boundary) > 0 and args.state is None:
             raise PacketError("proof boundaries after gate-p require --state replay protection")
@@ -1324,7 +1517,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     print(json.dumps(result, sort_keys=True, separators=(",", ":")))
     if result["status"] == "fail":
         return 1
-    if args.state:
+    if args.next_state:
+        _write_state(args.next_state, result)
+    elif args.state:
         _write_state(args.state, result)
     return 0
 

@@ -19,8 +19,12 @@ The guard has two intentionally separate modes:
   materializes against `base-proof.json` and binds the corrected one-off receipt
   plus fresh cycle-aligned HA contributor evidence.
 - `proof` can authorize only Gate P. It additionally requires issue #747 full
-  acceptance, an exact-pin Synced/Healthy successful Argo state, current
-  controller-owned backup, and the complete named #641 Gate P prerequisite set.
+  acceptance, an exact-pin Synced/Healthy Argo state, current controller-owned
+  backup, and the complete named #641 Gate P prerequisite set. A completed
+  ordinary sync must be `Succeeded`; the attended PostSync proof hook may
+  truthfully observe its own operation as `Running`, but only at the same exact
+  revision with no pruning or resource selector and the canonical production
+  source path.
   Four distinct packets form the one-use chain `gate-p -> baseline-before ->
   aggressive -> baseline-after`.
 
@@ -35,8 +39,8 @@ Secret payloads, response bodies, or device command payloads.
 | `provenance`, `workloads`, `argo` | exact GitOps render, running workload/image inspection, and Argo application status |
 | `backup` | corrected one-off backup receipt and controller-owned backup freshness/status |
 | `climate.qualification_capture` | source-stamped 30-minute #748 HA qualification receipt or current gate capture |
-| `climate.samples` | fresh, cycle-aligned Home Assistant entity events for every zonal and aggregate temperature/RH/VPD value |
-| `alerts` | current `sensor-health-sweep.sh` / alert-log metadata projection |
+| `climate.samples` | exact newest two committed production climate rows, without filtering, for every zonal and aggregate temperature/RH/VPD value |
+| `alerts` | every current open alert-log row projected without free-form message text |
 | `evidence.component_grid` | `scripts/component_grid_capture.py` 48/48 result |
 | `evidence.served_control_observed_424` | passive #424 served/control/observed capture |
 | `evidence.writer_433` | current #433 writer/lease/generation and component-truth receipt |
@@ -47,14 +51,17 @@ Secret payloads, response bodies, or device command payloads.
 The corrected one-off is an immutable accepted receipt, not a rolling backup:
 its source pin is fixed to the reconciled #752 revision
 `6b48dba7217438f5fdd7fb14fc8e067975cf1c35` and its completion must not be in
-the future. Gate P separately requires a current controller-owned backup bound
-to the requested Git pin and backup-age policy.
+the future. Gate P separately requires a current controller-owned scheduled
+backup produced by the same corrected implementation and within the backup-age
+policy.
 
-Do not substitute an arbitrary same-row `climate` query for the HA event
-projection. The #748 audit found cycle-aligned HA events coherent while
-asynchronous database rows could mix contributor membership. Every metric cell
-therefore carries both `source_event_id` and `source_cycle_id`; all cells in a
-sample must bind to the exact sample cycle. Cross-cycle membership fails closed.
+The reusable 30-minute qualification remains the accepted cycle-aligned Home
+Assistant capture from #748. At each live boundary, the in-cluster collector
+reads exactly the newest two committed database rows with `ORDER BY ts DESC
+LIMIT 2`, then restores chronological order. It never searches backward for a
+passing pair or filters a null/failed cycle. Every metric cell is stamped to the
+row timestamp and exact field/value receipt; all cells in a sample bind to that
+same committed cycle. Cross-cycle membership still fails closed.
 
 Contributor status is computed independently from the four complete zonal
 temperature/RH/VPD triplets. A triplet contributes only when every value is
@@ -81,6 +88,11 @@ only with classification `accepted_nonblocking_degradation`, `causal=false`,
 and exact links to decision #748 and maintenance #751. Any unclassified alert,
 causal alert, hydro reference in a causal source surface, or causal dependency
 without a registered classification fails closed.
+
+The collector never drops other open alerts. It retains their IDs, type,
+sensor scope, and disposition, omits free-form message text, and conservatively
+marks them `unclassified` and causal until a source-grounded classification is
+added. That is an intentional physical-work blocker.
 
 ## Invocation
 
@@ -116,8 +128,25 @@ python3 scripts/experiment_v2_readiness_guard.py \
 Repeat with a newly captured packet for `baseline-before`, `aggressive`, and
 `baseline-after`. A packet is current for at most 120 seconds. A later boundary
 without the state file, a skipped/repeated sequence, a predecessor mismatch, or
-a reused packet fails. The state file contains only mode, attempt UUID, next
-sequence, and receipt hash; it is updated atomically only after a passing guard.
+a reused packet fails. The state file binds mode, attempt UUID, source identity,
+next sequence, receipt hash, registry, lease, writer, and connection generation;
+it is updated atomically only after a passing guard. The proof activation may
+deliberately roll the writer after the non-actuating Gate P check, so
+`baseline-before` establishes the physical attempt's generation lineage.
+`aggressive` and `baseline-after` must retain that exact lineage even when every
+section of a later packet is internally consistent with a different generation.
+Gate P is also the one boundary that executes and freshness-checks the #686,
+provider, and passive #424 preflights. Their three exact receipt hashes are
+carried in the chain state; later physical boundaries must present those same
+receipts and cannot swap them, but do not repeat external non-actuating calls.
+Current component-grid, writer, climate, workload, Argo, backup, authority, and
+exposure evidence remains freshly evaluated at every boundary.
+
+An actuation consumer must not advance replay state before its corresponding
+database transition succeeds. Pass `--state /run/guard-state.json --next-state
+/run/guard-state.pending.json`; after the transition commits, atomically rename
+the pending file over the current state. If the transition fails, discard the
+pending candidate and retain the last committed boundary.
 
 Exit codes are `0` for `pass` or `degraded-pass`, `1` for a well-formed unsafe
 packet, and `2` for malformed input/arguments. Results never echo alert text,
@@ -141,15 +170,16 @@ it closes the exposure first in the same transaction, disables component
 authority, increments the lease generation, and preserves the failed attempt.
 The guard itself never performs that mutation or a device write.
 
-The source implementation intentionally does not include a universal live
-collector. Production evidence currently comes from several separately scoped
-read-only identities and tools. The caller must assemble their metadata-only
-projections immediately before each gate/boundary; missing live input is a
-blocker, never inferred from an older packet.
+`scripts/experiment_v2_proof_packet.py` is the live proof-mode collector. The
+direct-proof Job invokes it and this guard before Gate P and before every
+baseline/aggressive/baseline transition. It has GET/LIST-only Kubernetes RBAC,
+a default-read-only database login, read-only backup-PVC access, and no device
+client. Its egress policy allows only DNS, the exact Kubernetes service, DB,
+MCP, and public TLS with private/device networks excluded. Gate P runs the
+current service plus every ready MCP replica acceptance, service and replica
+readiness, the non-actuating provider preflight, and passive #424 agreement
+once; later boundaries reuse their exact receipt hashes while recollecting all
+other current evidence.
 
-This source change also does not yet wire invocation into the existing
-all-in-one direct-proof Job. Until that consumer integration invokes the guard
-before Gate P and each baseline/aggressive/baseline transition (and honors its
-failure action), issue #749 acceptance is incomplete. The separate recovery
-hook likewise remains responsible for invoking `recovery / gate-r`; the guard
-does not duplicate that resolver.
+The separate recovery hook remains responsible for invoking `recovery /
+gate-r`; the proof collector does not duplicate that resolver.
