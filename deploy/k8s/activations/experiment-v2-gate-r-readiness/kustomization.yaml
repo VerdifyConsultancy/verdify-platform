@@ -4,7 +4,8 @@ kind: Kustomization
 resources:
   - ../../overlays/prod
 
-# During the attended M8.1 run the exact component and activation patch live in
-# the canonical production overlay so the Argo Application source path remains
-# deploy/k8s/overlays/prod. Restore this standalone dormant wrapper after the
-# one-shot receipt is retained.
+components:
+  - ../../components/experiment-v2-gate-r-readiness
+
+patches:
+  - path: activation-values.patch.yaml
