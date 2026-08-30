@@ -46,11 +46,33 @@ controls, current generated content, and auto-loading Grafana panels.
   and vendored shell artifacts.
 - Lab Astro stage component/overlay and `lab-stage.verdify.ai` IngressRoute.
 - Astro production candidate, dormant release runtime, and reporting boundary.
+- The empty `verdify-lab-occurrences` Garage bucket, its scoped reader/writer
+  keys, the two stage Secrets, and their declarative storage request/plan.
 - Astro CI build profiles, bespoke build/pin workflow branches, and admission
   entries.
 - Fleet-owned Lab stage Argo Application/AppProject and Cloudflare stage route.
-- Zot Astro/release/occurrence image repositories after live workloads and
-  admission paths are removed.
+- Zot Astro/release/occurrence image content: all 536 manifests were deleted
+  after confirming there were no live workload, desired-state, admission, or
+  protected-digest references. Each of the four retired repositories now has
+  zero tags, and every formerly deployed digest returns not found. Zot 2.1.x
+  retains the four empty names in `_catalog` after garbage collection (the
+  behavior tracked by project-zot/zot#3299); backing object storage was not
+  modified directly. A checksum-sealed manifest inventory was retained locally
+  as an emergency rollback record, while Git history remains the rebuild path.
+
+## Delivery record
+
+- Platform source/runtime retirement: PR #763 (`b8037a4d`) and final stage
+  overlay deletion: PR #764 (`41b9b1f0`).
+- Fleet CI/GitOps retirement: jvallery/agents PR #4133 (`16dda893`) and final
+  stage AppProject/Application cleanup: PR #4135 (`14e9d21f`).
+- Occurrence-store desired state and provider resources: jvallery/storage-infra
+  PR #440 (`ad4dbfe4`), followed by the original create-run rollback receipt.
+  The bucket was confirmed empty before removal; post-checks prove the bucket,
+  both aliases, and both Kubernetes Secrets are absent.
+- The obsolete Astro migration epic and its remaining implementation issues
+  were closed as superseded. Still-desired improvements must be specified
+  against the surviving Quartz architecture.
 
 Git history is the rollback/audit record. Reintroducing an alternate generator
 requires a new explicit architecture decision; it is not an outage fallback.
