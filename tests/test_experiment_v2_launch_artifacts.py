@@ -65,8 +65,8 @@ def _identity() -> SelectorIdentity:
     payload = {
         "schema": OPENAI_SELECTOR_IDENTITY_SCHEMA,
         "provider": "openai",
-        "model_identifier": "gpt-5.6-sol",
-        "model_revision": "gpt-5.6-sol",
+        "model_identifier": "gpt-5.6-luna",
+        "model_revision": "gpt-5.6-luna",
         "expected_system_fingerprint": "openai-managed",
         "prompt": prompt,
         "system_message": system,

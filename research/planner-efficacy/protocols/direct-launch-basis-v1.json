@@ -6,7 +6,7 @@
   "missed_start_policy": "new_preregistration_and_new_design_lock",
   "modeled_joint_advance_power": "0.13776",
   "provider_contract": {
-    "model": "gpt-5.6-sol",
+    "model": "gpt-5.6-luna",
     "profile_only": true,
     "reasoning_effort": "medium",
     "strict_structured_output": true,

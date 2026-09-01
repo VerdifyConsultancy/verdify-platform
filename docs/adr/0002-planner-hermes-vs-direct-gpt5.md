@@ -5,6 +5,7 @@
 - **Model-profile amendment:** 2026-07-15 — select GPT-5.6 Sol xhigh for Hermes.
 - **Model-profile amendment:** 2026-08-25 — active Hermes profile moved to Cortex `custom:llm.primary.longctx` with medium reasoning.
 - **Model-profile amendment:** 2026-08-27 — roll the active profile back to OpenAI GPT-5.6 Sol xhigh after the Cortex route rejected every full planner request.
+- **Model-profile amendment:** 2026-09-01 — move all active OpenAI GPT-5.6 workloads to Luna to reduce high-volume token cost; retain each workload's reasoning and tool contract.
 - **Owner lane:** verdify-platform. **Closes:** #346 AC1 (L4 — AI Planner and Tunables).
 - **Refs:** `hermes/iris/config.yaml`, `mcp/server.py`, `verdify_schemas/tunable_registry.py`, `ingestor/iris_planner.py`, `ingestor/tasks/heartbeat.py`, `planner_graph/`, `docs/iris-planner-contract.md` (v1.5 — ledger/correlation semantics active; the Gemma/OpenClaw gateway details are historical), #214/#315 (planner pipeline health), `docs/agents/genai.md`.
 
@@ -37,21 +38,28 @@
 > `gpt-5.6-sol`/medium with a strict structured-output contract; its study
 > identity, output cap, and capability gate remain independently versioned.
 
+> **2026-09-01 profile amendment:** the live Hermes planner now uses OpenAI
+> `custom:gpt-5.6-luna` with `agent.reasoning_effort: xhigh`; public
+> attribution is `hermes-iris/custom:gpt-5.6-luna/xhigh`. The independently
+> configured experiment selector uses `gpt-5.6-luna`/medium. Model selection
+> changed without changing either workload's tool surface, output contract, or
+> safety boundary.
+
 ---
 
 ## 1. Context — the question
 
 The greenhouse has an AI planner that runs over a 72-hour horizon and adjusts **bounded tunables** (never targets, rails, or FSM logic). The open question (Lane 4 brief): *"It is unclear whether Hermes adds value or whether a direct GPT-5 prompt with structured data would be simpler."*
 
-**Production architecture (the thing this ADR ratifies):** the ingestor fires solar/forecast triggers (`ingestor/tasks/heartbeat.py` `_compute_milestones` + the `PLANNER_TRIGGER_MATRIX`), builds a 72h context pack, and dispatches to the **Hermes gateway** (`verdify-hermes-iris`, ns `verdify-prod`). The active Hermes profile uses OpenAI **GPT-5.6 Sol with xhigh reasoning** and an **MCP-only tool allowlist** (`hermes/iris/config.yaml`: 30-turn agentic loop, `mcp_servers` → Verdify MCP). Hermes reads the required MCP tools in sequence, then writes via `set_plan` / `set_tunable` / `acknowledge_trigger` (`mcp/server.py`). Every write is validated against `verdify_schemas/tunable_registry.py` (the `planner_pushable` gate + per-tunable min/max) before it reaches `setpoint_plan` / `plan_journal`; the dispatcher pushes the resulting bounded waypoints to the device.
+**Production architecture (the thing this ADR ratifies):** the ingestor fires solar/forecast triggers (`ingestor/tasks/heartbeat.py` `_compute_milestones` + the `PLANNER_TRIGGER_MATRIX`), builds a 72h context pack, and dispatches to the **Hermes gateway** (`verdify-hermes-iris`, ns `verdify-prod`). The active Hermes profile uses OpenAI **GPT-5.6 Luna with xhigh reasoning** and an **MCP-only tool allowlist** (`hermes/iris/config.yaml`: 30-turn agentic loop, `mcp_servers` → Verdify MCP). Hermes reads the required MCP tools in sequence, then writes via `set_plan` / `set_tunable` / `acknowledge_trigger` (`mcp/server.py`). Every write is validated against `verdify_schemas/tunable_registry.py` (the `planner_pushable` gate + per-tunable min/max) before it reaches `setpoint_plan` / `plan_journal`; the dispatcher pushes the resulting bounded waypoints to the device.
 
 **The two options:**
-- **(A) Hermes-orchestrated** OpenAI `custom:gpt-5.6-sol` xhigh + MCP: a managed agent gateway provides the multi-turn tool-use loop, session/conversation memory (kanban), the scheduler, and auth.
+- **(A) Hermes-orchestrated** OpenAI `custom:gpt-5.6-luna` xhigh + MCP: a managed agent gateway provides the multi-turn tool-use loop, session/conversation memory (kanban), the scheduler, and auth.
 - **(B) Direct GPT-5.5** from the ingestor: on each trigger the ingestor calls the OpenAI API with a structured prompt, runs the function-calling tool loop itself, and applies the same registry-validated writes. Fewer moving parts (no Hermes deployment, no kanban DB).
 
 ## 2. Decision
 
-**Keep Hermes (option A) as the production planner orchestrator.** Model selection is independently versioned: the active Hermes profile is OpenAI `custom:gpt-5.6-sol` with xhigh reasoning, while the inactive direct rollback remains GPT-5.5/medium pending parity evaluation. The orchestration decision and the MCP/registry safety boundary do not depend on those profile versions.
+**Keep Hermes (option A) as the production planner orchestrator.** Model selection is independently versioned: the active Hermes profile is OpenAI `custom:gpt-5.6-luna` with xhigh reasoning, while the inactive direct rollback remains GPT-5.5/medium pending parity evaluation. The orchestration decision and the MCP/registry safety boundary do not depend on those profile versions.
 
 **The safety boundary is the MCP server + `tunable_registry`, NOT Hermes.** The bounded-write contract (only `planner_pushable=True` tunables, clamped to registry min/max; targets/`crop_band_anchors` rejected via `push_owner='band'`; safety rails/FSM not exposed) is enforced at the MCP/registry boundary and is **independent of the orchestrator**. So this decision carries low risk and is cleanly reversible.
 

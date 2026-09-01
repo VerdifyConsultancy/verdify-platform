@@ -2,7 +2,7 @@
 iris_planner.py — Send planning events to Iris via the Hermes gateway.
 
 Assembles greenhouse context by running gather-plan-context.sh, then delivers
-it to Hermes's API server (POST /v1/runs). Live planning uses OpenAI GPT-5.6 Sol
+it to Hermes's API server (POST /v1/runs). Live planning uses OpenAI GPT-5.6 Luna
 with xhigh reasoning. Hermes reasons over the Verdify MCP
 toolset, and the gathered context pack is the planner memory source of truth.
 """
@@ -30,7 +30,7 @@ from verdify_schemas import AlertEnvelope  # noqa: E402
 
 log = logging.getLogger("iris_planner")
 
-# Audit label only — both values collapse to the same Hermes/GPT-5.6 Sol profile.
+# Audit label only — both values collapse to the same Hermes/GPT-5.6 Luna profile.
 # Retained so plan_delivery_log rows continue to carry the field; the value is
 # propagated into MCP write tools so plan_journal can be filtered by caller.
 PlannerInstance = Literal["opus", "local"]
@@ -175,7 +175,7 @@ _STANDING_DIRECTIVES = """
 #
 # Two layers, both static per planner-session and so safely prompt-cacheable.
 # Order matters for the Anthropic cache (stable prefix first, drop-in addendum
-# after). Hermes/GPT-5.6 Sol receives the full prompt = directives + CORE + EXTENDED.
+# after). Hermes/GPT-5.6 Luna receives the full prompt = directives + CORE + EXTENDED.
 #
 #   _PLANNER_CORE      — decision precedence, KPIs, the tactical Tier 1
 #                        tunables table, stress-type definitions, data quality
@@ -621,7 +621,7 @@ parameters, anchored to forecast evidence and a measurable expected_effect.
 _PLANNER_EXTENDED = """
 ## Extended Reference
 
-The following sections are reference material sent to the single Hermes/GPT-5.6 Sol
+The following sections are reference material sent to the single Hermes/GPT-5.6 Luna
 planner profile on top of CORE.
 
 ### Interpreting Stress Types
@@ -711,7 +711,7 @@ Gas heating is 3.9x cheaper per BTU than electric.
 
 
 def _compose_preamble(instance: PlannerInstance = "local") -> str:
-    """Compose the prompt preamble. Always use the full Hermes/GPT-5.6 Sol prefix.
+    """Compose the prompt preamble. Always use the full Hermes/GPT-5.6 Luna prefix.
 
     _STANDING_DIRECTIVES  (trigger handling rules)
     _PLANNER_CORE         (must-know tables + hypothesis format)

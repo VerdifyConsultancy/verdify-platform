@@ -39,7 +39,7 @@ The selector reuses `verdify-hermes` / `OPENAI_API_KEY` only when the frozen
 selector identity and experiment capability are active. The adapter accepts
 only official `https://api.openai.com/v1` (normalized internally to
 `/v1/chat/completions`) or that exact completions URL and the locked
-`gpt-5.6-sol` / medium-reasoning contract. It sends the canonical
+`gpt-5.6-luna` / medium-reasoning contract. It sends the canonical
 `verdify-daily-selector-request-v2` document inside frozen system/user messages
 and admits only the locked model, `stop` finish, and canonical profile-only JSON
 response. Kubernetes allows selector TCP/443 egress because NetworkPolicy

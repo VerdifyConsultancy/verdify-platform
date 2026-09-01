@@ -20,7 +20,7 @@ keys:
 models:
   planner:
     provider: custom
-    model: gpt-5.6-sol
+    model: gpt-5.6-luna
     base_url: https://api.openai.com/v1
     reasoning_effort: xhigh
     purpose: "Audit metadata for the live Hermes Iris profile. Runtime source: hermes/iris/config.yaml."
@@ -79,7 +79,7 @@ context:
 #   - ingestor/planner_routing.py (classify_severity + pick_instance + sla_for)
 #   - ingestor/alert_monitor rule 7 (SLA-breach detection)
 # Contract spec: docs/iris-planner-contract.md §2.F (SLA) + §2.G (routing).
-# Live planning uses OpenAI GPT-5.6 Sol through Hermes's custom transport with
+# Live planning uses OpenAI GPT-5.6 Luna through Hermes's custom transport with
 # xhigh reasoning. The instance field remains an audit label only.
 planner_routing:
   # Required full-plan cycles use the same Hermes/OpenAI profile as other

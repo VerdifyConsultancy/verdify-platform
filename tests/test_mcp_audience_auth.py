@@ -509,7 +509,7 @@ class TestInventoryAndDriftGuards:
         # OpenAI rollback profile. Audience/tool drift is the shared contract.
         assert hermes_config["model"]["default"] == "llm.primary.longctx"
         assert hermes_config["agent"]["reasoning_effort"] == "medium"
-        assert live_config["model"]["default"] == "gpt-5.6-sol"
+        assert live_config["model"]["default"] == "gpt-5.6-luna"
         assert live_config["agent"]["reasoning_effort"] == "xhigh"
         assert hermes_config["agent"]["max_turns"] == live_config["agent"]["max_turns"] == 30
         assert hermes_config["agent"]["disabled_toolsets"] == live_config["agent"]["disabled_toolsets"]

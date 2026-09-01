@@ -104,8 +104,8 @@ def _openai_identity(**changes) -> SelectorIdentity:
     payload = {
         "schema": OPENAI_SELECTOR_IDENTITY_SCHEMA,
         "provider": "openai",
-        "model_identifier": "gpt-5.6-sol",
-        "model_revision": "gpt-5.6-sol",
+        "model_identifier": "gpt-5.6-luna",
+        "model_revision": "gpt-5.6-luna",
         "expected_system_fingerprint": "openai-managed",
         "prompt": prompt,
         "system_message": system_message,
@@ -174,7 +174,7 @@ def _openai_response(
     *,
     profile: str = "moderate",
     finish_reason: str = "stop",
-    model: str = "gpt-5.6-sol",
+    model: str = "gpt-5.6-luna",
     fingerprint: str | None = "openai-managed",
     content: str | None = None,
     message_changes: dict | None = None,
@@ -283,7 +283,7 @@ async def test_openai_request_is_exact_bounded_and_accepts_verified_runtime_iden
         "idempotency-key": "11111111-1111-4111-8111-111111111111",
     }
     body = json.loads(call["body"])
-    assert body["model"] == "gpt-5.6-sol"
+    assert body["model"] == "gpt-5.6-luna"
     assert body["max_completion_tokens"] == 512
     assert body["reasoning_effort"] == "medium"
     assert body["stream"] is False
@@ -354,7 +354,7 @@ async def test_openai_accepts_schema_valid_profile_regardless_of_json_whitespace
     "raw",
     [
         _openai_response(finish_reason="length"),
-        _openai_response(model="gpt-5.6-sol-unpinned"),
+        _openai_response(model="gpt-5.6-luna-unpinned"),
         _openai_response(message_changes={"tool_calls": [{"id": "unexpected"}]}),
         _openai_response(content='{"profile":"unknown"}'),
         b"not-json",

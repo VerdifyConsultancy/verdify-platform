@@ -1,5 +1,5 @@
 # Hermes profile config for the Verdify Iris planner — single profile,
-# OpenAI GPT-5.6 Sol with reasoning_effort=xhigh, MCP-only tool surface.
+# OpenAI GPT-5.6 Luna with reasoning_effort=xhigh, MCP-only tool surface.
 #
 # Canonical source: hermes/iris/config.yaml (this repo).
 # Runtime location: /var/lib/verdify/hermes/iris/config.yaml (bind-mounted into
@@ -14,7 +14,7 @@ model:
   # Hermes doesn't expose a generic "openai" provider — direct OpenAI access
   # goes through the "custom" provider with an OpenAI-compatible base_url.
   # OPENAI_API_KEY is picked up automatically.
-  default: "gpt-5.6-sol"
+  default: "gpt-5.6-luna"
   provider: "custom"
   base_url: "https://api.openai.com/v1"
 

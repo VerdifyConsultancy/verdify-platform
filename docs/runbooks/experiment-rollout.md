@@ -287,7 +287,7 @@ blinded analyst intentionally remains `NOLOGIN`; the broader #643 credential
 split is not part of this launch gate.
 
 Provider setup is a separate input gate. The checked-in adapter binds official
-OpenAI `https://api.openai.com/v1`, the frozen `gpt-5.6-sol` identity artifact,
+OpenAI `https://api.openai.com/v1`, the frozen `gpt-5.6-luna` identity artifact,
 and `verdify-hermes` / `OPENAI_API_KEY`. It normalizes the base URL to the exact
 `/v1/chat/completions` path and rejects any other authority/path, non-global DNS
 answer, model revision, finish reason, or response shape. Kubernetes

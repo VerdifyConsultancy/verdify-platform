@@ -27,7 +27,7 @@ from verdify_schemas import PublicPlannerDelivery, PublicPlannerHealthResponse
 
 _MISSING_MODULE = object()
 _MCP_STUB_MODULES = ("mcp", "mcp.server", "mcp.server.fastmcp")
-ACTIVE_PLANNER_MODEL_LABEL = "hermes-iris/custom:gpt-5.6-sol/xhigh"
+ACTIVE_PLANNER_MODEL_LABEL = "hermes-iris/custom:gpt-5.6-luna/xhigh"
 
 
 def _install_fastmcp_test_stub() -> None:
@@ -340,7 +340,7 @@ def _hermes_config_documents() -> tuple[dict, dict, str]:
     return manifest, profile, readiness_source
 
 
-def test_hermes_profile_pins_openai_gpt_5_6_sol_xhigh_at_the_runtime_key():
+def test_hermes_profile_pins_openai_gpt_5_6_luna_xhigh_at_the_runtime_key():
     _manifest, embedded, _readiness_source = _hermes_config_documents()
     canonical = yaml.safe_load((REPO_ROOT / "hermes/iris/config.yaml").read_text())
     experiment_manifest = yaml.safe_load(
@@ -352,7 +352,7 @@ def test_hermes_profile_pins_openai_gpt_5_6_sol_xhigh_at_the_runtime_key():
         embedded["model"]
         == canonical["model"]
         == {
-            "default": "gpt-5.6-sol",
+            "default": "gpt-5.6-luna",
             "provider": "custom",
             "base_url": "https://api.openai.com/v1",
         }
@@ -403,7 +403,7 @@ def test_planner_audit_metadata_and_current_docs_match_live_hermes_profile():
     )
     for relative_path in current_docs:
         source = (REPO_ROOT / relative_path).read_text()
-        assert "GPT-5.6 Sol" in source, relative_path
+        assert "GPT-5.6 Luna" in source, relative_path
         assert "xhigh" in source, relative_path
         assert "llm.primary.longctx" not in source, relative_path
         assert "pending profile" not in source, relative_path
@@ -415,7 +415,7 @@ def test_planner_audit_metadata_and_current_docs_match_live_hermes_profile():
     )
     for relative_path in current_code_surfaces:
         source = (REPO_ROOT / relative_path).read_text()
-        assert "GPT-5.6 Sol" in source, relative_path
+        assert "GPT-5.6 Luna" in source, relative_path
         assert "Cortex" not in source, relative_path
 
 

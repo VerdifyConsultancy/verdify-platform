@@ -18,7 +18,7 @@ prompt therefore cannot be reduced to an unexplained list of three labels.
   packet builder's stable UUIDv5 rule.
 - Assignment/invocation namespace: `0c162b58-5a4c-5ddb-91fd-7d0ca68ff81f`,
   UUIDv5(URL, `https://verdify.com/identities/confirmed-component-switchback-v2/assignments`).
-- Selector: OpenAI `gpt-5.6-sol`, medium reasoning, strict structured output,
+- Selector: OpenAI `gpt-5.6-luna`, medium reasoning, strict structured output,
   non-streaming, 512 output tokens, 60,000 ms per attempt, two attempts, no
   tools, one accepted choice per study/local day, baseline on every failure.
 - Context cutoff: 23:45 America/Denver for the next 00:00 boundary. Scheduling

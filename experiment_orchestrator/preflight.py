@@ -102,12 +102,12 @@ async def run_preflight(
     started = clock().astimezone(UTC)
     if (
         identity.provider != "openai"
-        or identity.model_identifier != "gpt-5.6-sol"
-        or identity.model_revision != "gpt-5.6-sol"
+        or identity.model_identifier != "gpt-5.6-luna"
+        or identity.model_revision != "gpt-5.6-luna"
         or identity.tool_contract_revision != "none-v1"
         or identity.transport_protocol != "openai_chat_completions"
     ):
-        raise ContractError("preflight identity is not the strict tool-free GPT-5.6 Sol contract")
+        raise ContractError("preflight identity is not the strict tool-free GPT-5.6 Luna contract")
     context = _preflight_context(started)
     invocation = str(
         uuid.uuid5(

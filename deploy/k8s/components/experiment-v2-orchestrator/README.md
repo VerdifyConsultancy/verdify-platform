@@ -30,7 +30,7 @@ shared capability and active-experiment gates still keep the component inert.
 The production selector adapter is deliberately narrower than a generic
 OpenAI client. It accepts only `https://api.openai.com/v1` (normalized to the
 exact `/v1/chat/completions` path) or that exact completions URL. The frozen
-identity names `gpt-5.6-sol` with `reasoning_effort=medium`. Requests are
+identity names `gpt-5.6-luna` with `reasoning_effort=medium`. Requests are
 non-streaming and tool-free with a bounded `max_completion_tokens` and a strict
 profile-only JSON schema. A non-`stop` finish, model drift, malformed
 envelope/content, DNS drift, or transport failure is recorded as a

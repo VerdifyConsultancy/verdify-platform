@@ -14,7 +14,7 @@
 
 ## Overview
 
-Verdify is a greenhouse automation platform running primarily on a single VM. An ESP32 controller manages 367 sq ft of greenhouse climate (fans, heaters, misters, fog) using a deterministic controller (`greenhouse_logic.h`). A Python ingestor captures 172 sensor entities into TimescaleDB, and an AI agent named Iris runs through Hermes as the sole planner gateway. The current planner profile is OpenAI GPT-5.6 Sol with xhigh reasoning. Iris manages tunables event-driven at solar milestones and deviations through typed MCP tools, but the ESP32 owns real-time relay control.
+Verdify is a greenhouse automation platform running primarily on a single VM. An ESP32 controller manages 367 sq ft of greenhouse climate (fans, heaters, misters, fog) using a deterministic controller (`greenhouse_logic.h`). A Python ingestor captures 172 sensor entities into TimescaleDB, and an AI agent named Iris runs through Hermes as the sole planner gateway. The current planner profile is OpenAI GPT-5.6 Luna with xhigh reasoning. Iris manages tunables event-driven at solar milestones and deviations through typed MCP tools, but the ESP32 owns real-time relay control.
 
 ```
 ESP32 (192.168.10.111, IoT VLAN)
@@ -26,7 +26,7 @@ TimescaleDB (44 tables, 54 views, 23 functions, 2.54M+ rows)
   ├─→ API (api.verdify.ai, crop endpoints + compatibility /setpoints)
   └─→ lab.verdify.ai (Quartz static lab site with embedded Grafana panels)
 
-Iris Planner (Hermes + OpenAI GPT-5.6 Sol/xhigh, MCP-only tool surface)
+Iris Planner (Hermes + OpenAI GPT-5.6 Luna/xhigh, MCP-only tool surface)
   └─→ Event-driven (sunrise/transitions/sunset/forecast/deviation)
       → MCP tools (climate, scorecard, set_tunable) → setpoint_changes table
 ```

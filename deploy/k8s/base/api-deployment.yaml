@@ -90,7 +90,7 @@ spec:
             # explicit as well as api/main.py's safe default so an older image
             # cannot publish a stale label after a declarative rollout.
             - name: VERDIFY_PLANNER_MODEL_LABEL
-              value: "hermes-iris/custom:gpt-5.6-sol/xhigh"
+              value: "hermes-iris/custom:gpt-5.6-luna/xhigh"
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:

@@ -31,7 +31,7 @@ Resolver = Callable[[str, int], Awaitable[frozenset[ipaddress.IPv4Address | ipad
 OPENAI_HOST = "api.openai.com"
 OPENAI_BASE_PATH = "/v1"
 OPENAI_CHAT_COMPLETIONS_PATH = "/v1/chat/completions"
-OPENAI_SELECTOR_MODEL = "gpt-5.6-sol"
+OPENAI_SELECTOR_MODEL = "gpt-5.6-luna"
 
 
 class ProviderTransport(Protocol):
@@ -174,7 +174,7 @@ def build_openai_request(
     ):
         raise ContractError("OpenAI selector request artifacts are unavailable")
     if identity.model_identifier != OPENAI_SELECTOR_MODEL:
-        raise ContractError("OpenAI selector model differs from the locked GPT-5.6 Sol model")
+        raise ContractError("OpenAI selector model differs from the locked GPT-5.6 Luna model")
     selector_request = build_request(
         study_id=study_id,
         local_date=local_date,

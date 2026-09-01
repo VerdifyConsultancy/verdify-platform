@@ -78,8 +78,8 @@ def _fixture(tmp_path: Path) -> tuple[Path, dict]:
             "lesson_snapshot_path": "lesson-snapshot.json",
             "max_attempts": 2,
             "max_completion_tokens": 512,
-            "model_identifier": "gpt-5.6-sol",
-            "model_revision": "gpt-5.6-sol",
+            "model_identifier": "gpt-5.6-luna",
+            "model_revision": "gpt-5.6-luna",
             "prompt_path": "prompt.txt",
             "runtime_environment_sha256": "a" * 64,
             "selector_artifact_path": "selector-artifact.json",
@@ -123,8 +123,8 @@ def test_packet_is_canonical_mount_ready_redacted_and_non_actuating(tmp_path: Pa
     identity_raw = outputs["selector-identity/identity.json"]
     identity = SelectorIdentity.parse(identity_raw, hashlib.sha256(identity_raw).hexdigest())
     assert identity.provider == "openai"
-    assert identity.model_identifier == "gpt-5.6-sol"
-    assert identity.model_revision == "gpt-5.6-sol"
+    assert identity.model_identifier == "gpt-5.6-luna"
+    assert identity.model_revision == "gpt-5.6-luna"
     assert identity.expected_system_fingerprint == "openai-managed"
     assert identity.decoding_parameters == {
         "max_completion_tokens": 512,
