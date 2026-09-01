@@ -61,7 +61,7 @@ def test_source_lock_derivations_and_artifact_hashes_are_exact() -> None:
         assert _sha256(REPO_ROOT / selector[path_key]) == selector[hash_key]
     selector_artifact = json.loads((REPO_ROOT / selector["artifact_path"]).read_text())
     source_contract = selector_artifact["source_contract"]
-    assert source_contract["verified_content_git_sha"] == "b9c1e568e8562525e083d106e94b67b5b64a6039"
+    assert source_contract["verified_content_git_sha"] == "25064a0c6b6981119a1899f042556d255bb56d26"
     assert _sha256(REPO_ROOT / source_contract["provider_source"]) == source_contract["provider_source_sha256"]
     assert (
         _sha256(REPO_ROOT / source_contract["selector_contract_source"])

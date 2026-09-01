@@ -35,8 +35,8 @@
     "endpoint": "https://api.openai.com/v1/chat/completions",
     "expected_system_fingerprint": "openai-managed",
     "max_completion_tokens": 512,
-    "model_identifier": "gpt-5.6-sol",
-    "model_revision": "gpt-5.6-sol",
+    "model_identifier": "gpt-5.6-luna",
+    "model_revision": "gpt-5.6-luna",
     "reasoning_effort": "medium",
     "response_schema_revision": "verdify-selector-decision-openai-v2",
     "stream": false,
@@ -45,9 +45,9 @@
   "schema": "verdify-experiment-v2-selector-artifact-v1",
   "source_contract": {
     "provider_source": "experiment_orchestrator/provider.py",
-    "provider_source_sha256": "9d2ef2e49c69e0933e741137b8ebc84e56b40c149740b4a34807afde0c596744",
+    "provider_source_sha256": "3eabdd7a5707d8bbe91b27b3b84472f4b8ab8f6a72227c501ead69d5590fb8d0",
     "selector_contract_source": "experiment_orchestrator/contracts.py",
     "selector_contract_source_sha256": "bf2351f1f81a4c53ca9ac94efa98d1fc783c2d618824f4cdfe05dbacd976cf4b",
-    "verified_content_git_sha": "b9c1e568e8562525e083d106e94b67b5b64a6039"
+    "verified_content_git_sha": "25064a0c6b6981119a1899f042556d255bb56d26"
   }
 }
