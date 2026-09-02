@@ -12,6 +12,10 @@ ROOT = Path(__file__).resolve().parents[1]
 PROD = ROOT / "deploy/k8s/overlays/prod"
 ACTIVATION = ROOT / "deploy/k8s/activations/experiment-v2-gate-r-readiness"
 ATTENDED_PATCH = PROD / "experiment-v2-gate-r-readiness.patch.yaml"
+PROVEN_READINESS_IMAGE = (
+    "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator"
+    "@sha256:66e0132ba39c86d80f6fd74b442b376be004675262fbb03e48fbb486986617e9"
+)
 
 
 def _render(path: Path) -> list[dict]:
@@ -56,7 +60,8 @@ def test_production_gate_r_readiness_is_absent_or_exactly_attended() -> None:
     pin = next(
         row for row in prod["images"] if row["name"] == "ghcr.io/verdifyconsultancy/verdify-experiment-v2-orchestrator"
     )
-    assert image == f"{pin['newName']}@{pin['digest']}"
+    assert image == PROVEN_READINESS_IMAGE
+    assert image != f"{pin['newName']}@{pin['digest']}"
     assert activation["data"]["VERDIFY_GATE_R_READINESS_EXPERIMENT_ID"] == ("45039c86-c1d9-52f6-a0a9-d94a17bc4b14")
     assert re.fullmatch(r"[0-9a-f]{40}", activation["data"]["VERDIFY_GATE_R_READINESS_APPLICATION_SOURCE"])
 

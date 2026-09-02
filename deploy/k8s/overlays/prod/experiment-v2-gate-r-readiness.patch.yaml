@@ -11,13 +11,13 @@ kind: Job
 metadata:
   name: verdify-experiment-v2-gate-r-readiness
   annotations:
-    verdify.io/gate-r-readiness-activation: "m81-20260830-e27d9831"
+    verdify.io/gate-r-readiness-activation: "m81-20260831-750240a0"
 spec:
   suspend: false
   template:
     metadata:
       annotations:
-        verdify.io/gate-r-readiness-activation: "m81-20260830-e27d9831"
+        verdify.io/gate-r-readiness-activation: "m81-20260831-750240a0"
     spec:
       containers:
         - name: readiness
