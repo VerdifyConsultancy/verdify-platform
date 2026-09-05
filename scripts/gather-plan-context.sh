@@ -880,25 +880,31 @@ FROM (SELECT DISTINCT ON (parameter) parameter, value FROM setpoint_changes ORDE
 WHERE parameter IN (${ACTIVE_CONTEXT_PARAMS_SQL})
 ORDER BY parameter;
 " 2>/dev/null
-echo "Band-driven values above reflect current diurnal crop profiles and shift throughout the day."
-echo "Nighttime values are typically lower (temp_high ~62-65°F, vpd_high ~0.6-0.8 kPa). These are normal, not corruption."
+echo "Rows above are desired setpoint history, not confirmed active or consumed device state."
+echo "House-anchor reconstructions are not immutable historical crop targets; investigate lineage before interpreting a numeric difference."
 echo "Do not set band-driven, retired bias, or lighting-policy params in your plan; use tactical mist, fog, hysteresis, and dwell knobs instead."
 echo "Per-circuit gl_main_target_light_minutes/gl_grow_target_light_minutes and lux threshold/hysteresis params are planner-managed; legacy gl_*_dli_target values are telemetry compatibility, not the primary control goal."
 echo ""
 
-echo "--- BAND SETPOINT PROVENANCE (crop -> dispatcher/API -> firmware -> cfg readback) ---"
-echo "parameter|crop_target|dispatcher_or_api|firmware_push|cfg_readback|automation_source"
+echo "--- BAND DATABASE LINEAGE (diagnostic only; consumed state unobservable) ---"
+echo "parameter|unit|reconstructed_dispatcher|reconstructed_at|desired_value|desired_recorded_at|cfg_snapshot|cfg_snapshot_captured_at"
 "${DB[@]}" -c "
 SELECT parameter,
-       round(crop_target_value::numeric, 2) AS crop_target,
-       round(dispatcher_value::numeric, 2) AS dispatcher_or_api,
-       round(firmware_setpoint_value::numeric, 2) AS firmware_push,
-       round(cfg_readback_value::numeric, 2) AS cfg_readback,
-       automation_source
+       CASE WHEN parameter LIKE 'temp_%' THEN '°F' ELSE 'kPa' END AS unit,
+       dispatcher_value AS reconstructed_dispatcher,
+       ts AS reconstructed_at,
+       firmware_setpoint_value AS desired_value,
+       firmware_setpoint_ts AS desired_recorded_at,
+       CASE WHEN cfg_readback_ts BETWEEN ts - interval '15 minutes' AND ts
+            THEN cfg_readback_value END AS cfg_snapshot,
+       cfg_readback_ts AS cfg_snapshot_captured_at
   FROM fn_band_setpoint_provenance(now(), '${GREENHOUSE_ID}')
  ORDER BY parameter;
 " 2>/dev/null || echo "(band provenance unavailable)"
-echo "Use this as a read-only source trace: crop profiles define the target, dispatcher/API derive the value, firmware pushes it, cfg_* readbacks prove acceptance."
+echo "Legacy firmware_* SQL columns above are relabeled desired history, never delivery confirmation."
+echo "A recent database capture can repeat a stale cache: raw sensor age and runtime/connection identity remain unverified."
+echo "Matching numbers do not prove acceptance or consumption. In onchip_curve mode scalar cfg edges are not consumed edges."
+echo "Do not change bands, switch to legacy mode, raise water caps or infer physical-proof eligibility from these diagnostics."
 echo ""
 
 echo "Firmware invariants (always active, not planner-controlled):"

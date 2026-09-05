@@ -32,13 +32,15 @@ crop_target_profiles            fn_band_setpoints(ts)          dispatcher       
   hour_of_day, season, greenhouse_id)`. Columns:
   `temp_ideal_min/max`, `temp_stress_low/high`, `vpd_ideal_min/max`, `vpd_stress_low/high`,
   `dli_target_mol`, `source`.
-- **`fn_band_setpoints(target_ts)`** (`db/schema.sql:388`) resolves the band for a moment:
-  `local_hour = EXTRACT(hour FROM ts AT TIME ZONE 'America/Denver')`, takes
-  `MAX(temp_ideal_min), MIN(temp_ideal_max)` etc. across the active crops for that hour, and
-  **linearly interpolates** to the next hour by the minute fraction. So the curve is smooth,
-  not a 24-step staircase.
-- **`fn_band_timeline(...)`** (`db/schema.sql:429`) is the full timeline view (crop band vs
-  projected vs actual vs firmware) the band-viz dashboard renders.
+- **`fn_band_setpoints(target_ts)`**: migration 171 supersedes the old hourly
+  crop-profile interpolation described here historically. It reconstructs the
+  CURRENT house anchors at the requested solar phase, not immutable historical
+  crop targets or confirmed device-consumed state.
+- **`fn_band_timeline(...)`** is a legacy reconstruction/desired/planned timeline.
+  Its actual/firmware labels do not establish delivery, raw freshness or consumed
+  branches. Do not tune bands to improve those reported compliance labels; use
+  the [current lineage contract](../band-traceability-contract.md) and #424
+  qualification before interpreting a mismatch.
 
 ### 1.1 The "orchid time-of-day" curve = the orchid rows of this table
 

@@ -60,7 +60,7 @@ BAND_SLUGS: dict[str, str] = {
     "temp_target": "house_temp_target_f",
     "vpd_low": "cfg___vpd_low__kpa_",
     "vpd_high": "cfg___vpd_high__kpa_",
-    "vpd_target": "house_vpd_target",
+    "vpd_target": "house_vpd_target_kpa",
 }
 
 
@@ -145,7 +145,7 @@ def band_layer_rows() -> list[dict[str, Any]]:
                     "value": value,
                     "unit": unit,
                     "as_of": LAYER_AS_OF,
-                    "source": f"firmware global gh_{series}",
+                    "source": f"Setpoints.{series} in confirmed dispatcher_legacy branch",
                 },
                 "observed": {
                     "value": value,
@@ -165,6 +165,13 @@ def artifact() -> dict[str, Any]:
         "device_id": DEVICE_ID,
         "observed_at": cap._timestamp_text(OBSERVED_AT),
         "runtime": {"runtime_instance_id": RUNTIME_INSTANCE_ID, "connection_generation": 7},
+        "band_source": {
+            "slug": "band_source",
+            "value": "dispatcher_legacy",
+            "as_of": LAYER_AS_OF,
+            "runtime_instance_id": RUNTIME_INSTANCE_ID,
+            "connection_generation": 7,
+        },
         "revisions": {
             "source_revision": SOURCE_REVISION,
             "firmware_revision": FIRMWARE_REVISION,
@@ -491,6 +498,103 @@ def test_unit_incoherence_between_layers_blocks() -> None:
     assert triple.classification == "unobservable"
     assert "unit_incoherent" in triple.detail
     assert result.grid_revision is None
+
+
+@pytest.mark.parametrize("series", cap.REQUIRED_BAND_SERIES)
+def test_agreement_in_wrong_units_is_not_truthful_band_evidence(series: str) -> None:
+    document = artifact()
+    row = next(entry for entry in document["band_layers"] if entry["series"] == series)
+    for name in ("served", "control", "observed"):
+        row[name]["unit"] = "degC" if series.startswith("temp_") else "hPa"
+    result = run(document)
+    triple = next(t for t in result.layer_triples if t.field_name == series)
+    assert triple.classification == "unobservable"
+    assert "unit_not_canonical_for_series" in triple.detail
+    assert result.grid_revision is None
+
+
+def test_boolean_agreement_is_not_a_numeric_band() -> None:
+    document = artifact()
+    for name in ("served", "control", "observed"):
+        document["band_layers"][0][name]["value"] = True
+    result = run(document)
+    assert result.grid_revision is None
+    assert "value_not_numeric" in result.layer_triples[0].detail
+
+
+def test_onchip_curve_cannot_be_observed_by_legacy_scalar_readbacks() -> None:
+    document = artifact()
+    document["band_source"]["value"] = "onchip_curve"
+    result = run(document)
+    assert result.grid_parity_ok is True
+    assert result.observed_state_ok is True
+    assert result.band_coherence_ok is False
+    assert result.grid_revision is None
+    for triple in result.layer_triples:
+        if triple.field_name in cap.SCALAR_EDGE_SERIES:
+            assert triple.classification == "unobservable"
+            assert "does_not_observe_consumed_onchip_curve" in triple.detail
+        else:
+            # Targets really publish the consumed Setpoints target, unlike cfg edges.
+            assert triple.classification == "resolved"
+
+
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [
+        ("value", "unknown"),
+        ("slug", "setpoint_snapshot"),
+        ("connection_generation", 6),
+        ("connection_generation", True),
+        ("runtime_instance_id", "22222222-2222-4222-8222-222222222222"),
+        ("as_of", "2026-08-25T01:00:00Z"),
+        ("as_of", "2026-08-27T01:00:00Z"),
+        ("as_of", None),
+    ],
+)
+def test_unknown_stale_or_different_generation_branch_blocks(key: str, value: Any) -> None:
+    document = artifact()
+    document["band_source"][key] = value
+    result = run(document)
+    assert result.grid_revision is None
+    assert all(t.classification == "unobservable" for t in result.layer_triples)
+    assert any(f.startswith("band_source:") for f in result.failures)
+
+
+def test_version_one_cannot_be_reused_as_a_version_two_qualification() -> None:
+    document = artifact()
+    document["schema"] = "verdify-component-grid-capture-input-v1"
+    with pytest.raises(cap.GridCaptureError, match="schema"):
+        run(document)
+    document["schema"] = cap.INPUT_SCHEMA
+    del document["band_source"]
+    with pytest.raises(cap.GridCaptureError, match="missing"):
+        run(document)
+
+
+def test_low_level_capture_cannot_remove_required_series_to_bypass_branch_proof() -> None:
+    parsed = cap.parse_input_artifact(artifact())
+    arguments = vars(parsed).copy()
+    arguments["band_layers"] = []
+    result = cap.capture(**arguments, required_band_series=())
+    assert result.grid_revision is None
+    assert "band_layer_required_series_cannot_be_reduced" in result.failures
+
+
+def test_db_target_alias_is_not_the_raw_firmware_slug() -> None:
+    document = artifact()
+    row = next(entry for entry in document["band_layers"] if entry["series"] == "vpd_target")
+    row["observed"]["slug"] = "house_vpd_target"
+    result = run(document)
+    assert result.grid_revision is None
+    assert "observed_slug_mismatch" in next(t.detail for t in result.layer_triples if t.field_name == "vpd_target")
+    hardware = (ROOT / "firmware/greenhouse/hardware.yaml").read_text()
+    routes = (ROOT / "ingestor/entity_map.py").read_text()
+    controls = (ROOT / "firmware/greenhouse/controls.yaml").read_text()
+    assert 'name: "House VPD Target kPa"' in hardware
+    assert '"house_vpd_target_kpa": "house_vpd_target"' in routes
+    assert "id(gh_house_vpd_target).publish_state(setpts.vpd_target)" in controls
+    assert ".vpd_low = id(sw_onchip_band_enabled) ? sv2_vpd_low : VPDlo" in controls
 
 
 @pytest.mark.parametrize("series", list(cap.REQUIRED_BAND_SERIES))
