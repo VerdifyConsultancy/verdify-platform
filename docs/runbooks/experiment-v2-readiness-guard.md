@@ -54,6 +54,18 @@ consumed branch. An old agreement-only packet or an on-chip curve compared to
 legacy scalar readbacks cannot receive proof credit. Historical Gate R packet
 compatibility remains recovery-only; it does not bypass the later physical gate.
 
+Gate P independently requires `wetting_incident_778_disposition` in the named
+prerequisite set. A missing or incomplete disposition blocks proof even if the
+band receipt is otherwise qualified; a resolved incident cannot qualify an
+unobservable band receipt. The current packet producer deliberately emits this
+incident prerequisite as incomplete. The frozen September 4 analysis remains an
+unresolved hold: recorded runtime zeros and counter plateaus do not establish
+continuous physical off-state or the cause of the interruption. Release requires
+reviewed source-bound incident evidence, not manually changing the packet boolean
+or increasing a cap. Neither proof-only requirement broadens or revokes the
+existing exact Gate R recovery contract, which retains its own authority, safety,
+identity and zero-exposure checks.
+
 The corrected one-off is an immutable accepted receipt, not a rolling backup:
 its source pin is fixed to the reconciled #752 revision
 `6b48dba7217438f5fdd7fb14fc8e067975cf1c35` and its completion must not be in

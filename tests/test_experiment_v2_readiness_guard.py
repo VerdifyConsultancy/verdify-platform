@@ -151,6 +151,26 @@ def test_recovery_gate_requires_component_authority_off() -> None:
     assert "recovery_component_authority_not_off" in result["blockers"]
 
 
+@pytest.mark.parametrize("missing", [False, True])
+def test_unresolved_or_missing_wetting_incident_disposition_blocks_proof_not_recovery(missing):
+    packet = copy.deepcopy(BASE)
+    rows = packet["issue_state"]["gate_p_641"]["prerequisites"]
+    row = next(r for r in rows if r["name"] == "wetting_incident_778_disposition")
+    if missing:
+        rows.remove(row)
+    else:
+        row["complete"] = False
+    result = _evaluate(packet, {})
+    assert any("wetting_incident_778_disposition" in blocker for blocker in result["blockers"])
+    recovery = _apply(packet, RECOVERY_OVERLAY["operations"])
+    assert _evaluate(recovery, RECOVERY_OVERLAY)["blockers"] == []
+
+
+def test_current_packet_producer_does_not_claim_the_incident_is_resolved():
+    source = (ROOT / "scripts/experiment_v2_proof_packet.py").read_text()
+    assert '("wetting_incident_778_disposition", False)' in source
+
+
 @pytest.mark.parametrize(
     ("key", "value", "blocker"),
     [
@@ -198,6 +218,30 @@ def test_onchip_capture_disposition_reaches_gate_p():
     result = _evaluate(proof, {})
     assert "served_control_observed_consumed_edges_unobservable" in result["blockers"]
     assert "served_control_observed_not_resolved" in result["blockers"]
+
+
+@pytest.mark.parametrize("incident_resolved", [False, True])
+@pytest.mark.parametrize("lineage_resolved", [False, True])
+def test_incident_and_band_proof_requirements_are_independent_and_preserve_bounded_recovery(
+    incident_resolved, lineage_resolved
+):
+    packet = copy.deepcopy(BASE)
+    incident = next(
+        row
+        for row in packet["issue_state"]["gate_p_641"]["prerequisites"]
+        if row["name"] == "wetting_incident_778_disposition"
+    )
+    incident["complete"] = incident_resolved
+    if not lineage_resolved:
+        packet["evidence"]["served_control_observed_424"].update(
+            disposition="unobservable", consumed_branch="onchip_curve"
+        )
+    blockers = _evaluate(packet, {})["blockers"]
+    assert any("wetting_incident_778_disposition" in b for b in blockers) is (not incident_resolved)
+    assert ("served_control_observed_consumed_edges_unobservable" in blockers) is (not lineage_resolved)
+    assert (blockers == []) is (incident_resolved and lineage_resolved)
+    recovery = _apply(packet, RECOVERY_OVERLAY["operations"])
+    assert _evaluate(recovery, RECOVERY_OVERLAY)["blockers"] == []
 
 
 def test_exact_expired_work_alert_is_a_recovery_target_only() -> None:

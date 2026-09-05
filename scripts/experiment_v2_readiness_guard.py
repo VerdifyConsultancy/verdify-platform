@@ -72,6 +72,7 @@ GATE_P_PREREQUISITES = {
     "fresh_gate_p_authorization",
     "recovery_path_ready",
     "stable_writer_lease_generation",
+    "wetting_incident_778_disposition",
     "zero_exposure",
 }
 CORE_WORKLOADS = {
