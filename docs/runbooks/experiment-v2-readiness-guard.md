@@ -48,6 +48,12 @@ Secret payloads, response bodies, or device command payloads.
 | `evidence.provider_preflight` | non-actuating current provider preflight |
 | `dependencies` | source hashes and classified causal inputs for the component proof, selector, executor control contract, and locked outcome calculation |
 
+Gate P's passive #424 receipt now requires the [version-2 band lineage
+contract](band-lineage-qualification.md): explicit disposition and observed
+consumed branch. An old agreement-only packet or an on-chip curve compared to
+legacy scalar readbacks cannot receive proof credit. Historical Gate R packet
+compatibility remains recovery-only; it does not bypass the later physical gate.
+
 The corrected one-off is an immutable accepted receipt, not a rolling backup:
 its source pin is fixed to the reconciled #752 revision
 `6b48dba7217438f5fdd7fb14fc8e067975cf1c35` and its completion must not be in

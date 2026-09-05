@@ -151,6 +151,55 @@ def test_recovery_gate_requires_component_authority_off() -> None:
     assert "recovery_component_authority_not_off" in result["blockers"]
 
 
+@pytest.mark.parametrize(
+    ("key", "value", "blocker"),
+    [
+        ("lineage_contract_version", 1, "lineage_unverified"),
+        ("lineage_contract_version", 2.0, "lineage_unverified"),
+        ("lineage_contract_version", "2", "lineage_unverified"),
+        ("disposition", "unobservable", "not_resolved"),
+        ("disposition", "present", "not_resolved"),
+        ("consumed_branch", "onchip_curve", "consumed_edges_unobservable"),
+        ("consumed_branch", "unknown", "consumed_edges_unobservable"),
+    ],
+)
+def test_gate_p_rejects_unverified_band_lineage_despite_old_agreement(key, value, blocker):
+    packet = copy.deepcopy(BASE)
+    packet["evidence"]["served_control_observed_424"][key] = value
+    result = _evaluate(packet, {})
+    assert f"served_control_observed_{blocker}" in result["blockers"]
+
+
+def test_old_passive_packet_has_no_new_proof_credit_but_preserves_recovery():
+    proof = copy.deepcopy(BASE)
+    for name in ("lineage_contract_version", "disposition", "consumed_branch"):
+        del proof["evidence"]["served_control_observed_424"][name]
+    assert "served_control_observed_lineage_unverified" in _evaluate(proof, {})["blockers"]
+    recovery = _apply(proof, RECOVERY_OVERLAY["operations"])
+    assert _evaluate(recovery, RECOVERY_OVERLAY)["blockers"] == []
+
+
+def test_onchip_capture_disposition_reaches_gate_p():
+    import test_component_grid_capture as fixture
+
+    artifact = fixture.artifact()
+    artifact["band_source"]["value"] = "onchip_curve"
+    capture = fixture.run(artifact)
+    assert capture.grid_revision is None
+    proof = copy.deepcopy(BASE)
+    passive = proof["evidence"]["served_control_observed_424"]
+    passive.update(
+        agreement=capture.band_coherence_ok,
+        disposition="unobservable"
+        if any(t.classification == "unobservable" for t in capture.layer_triples)
+        else "resolved",
+        consumed_branch=capture.band_source["value"],
+    )
+    result = _evaluate(proof, {})
+    assert "served_control_observed_consumed_edges_unobservable" in result["blockers"]
+    assert "served_control_observed_not_resolved" in result["blockers"]
+
+
 def test_exact_expired_work_alert_is_a_recovery_target_only() -> None:
     alert = {
         "alert_id": "10453",

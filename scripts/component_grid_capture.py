@@ -4,7 +4,7 @@
 This tool is the qualification half of the live-grid proof.  It is deliberately
 OFFLINE and NON-ACTUATING: it opens no socket, imports no ESPHome client, reads
 no database, reads no Kubernetes Secret and never invokes a setter or service.
-It consumes ONE input artifact (``verdify-component-grid-capture-input-v1``, see
+It consumes ONE input artifact (``verdify-component-grid-capture-input-v2``, see
 INPUT ARTIFACT SCHEMA below) produced by a separately-approved, read-only in-pod
 emitter, and answers three questions with fail-closed evidence:
 
@@ -49,7 +49,7 @@ gate.  Firmware/config/registry pins are therefore carried in the observation
 receipt and in this tool's result payload, exactly where the shipped evidence
 module puts them, not inside the semantic identity of an unchanged grid.
 
-INPUT ARTIFACT SCHEMA (``verdify-component-grid-capture-input-v1``)
+INPUT ARTIFACT SCHEMA (``verdify-component-grid-capture-input-v2``)
 -------------------------------------------------------------------
 A future in-pod ``commissioning_probe`` emitter (#641-gated, root-controller
 owned) must produce exactly this shape.  Every field is read-only device/DB
@@ -58,12 +58,19 @@ or per-row keys are rejected, so the emitter cannot smuggle extra state past
 this contract::
 
     {
-      "schema": "verdify-component-grid-capture-input-v1",
+      "schema": "verdify-component-grid-capture-input-v2",
       "device_id": "vallery/greenhouse-controller",   # policy device id, NFC text
       "observed_at": "2026-08-26T01:02:03.456789Z",   # capture instant, UTC, Z
       "runtime": {
         "runtime_instance_id": "<uuid4>",             # ingestor process identity
         "connection_generation": 7                    # transport generation >= 1
+      },
+      "band_source": {                                # raw TextSensorInfo, same connection
+        "slug": "band_source",
+        "value": "dispatcher_legacy",                 # or onchip_curve, which blocks scalar-edge proof
+        "as_of": "2026-08-26T01:01:59.000000Z",
+        "runtime_instance_id": "<uuid4>",
+        "connection_generation": 7
       },
       "revisions": {
         "source_revision": "<40 lowercase hex>",      # running image git sha
@@ -99,7 +106,7 @@ this contract::
           "served":   {"value": 0.875, "unit": "kPa", "as_of": "...Z",
                        "source": "fn_band_setpoints(now())"},
           "control":  {"value": 0.56,  "unit": "kPa", "as_of": "...Z",
-                       "source": "firmware global gh_vpd_low"},
+                       "source": "Setpoints.vpd_low in confirmed dispatcher_legacy branch"},
           "observed": {"value": 0.56,  "unit": "kPa", "as_of": "...Z",
                        "source": "setpoint_snapshot",
                        "slug": "cfg___vpd_low__kpa_"}
@@ -120,6 +127,13 @@ decoded from the ESPHome protobuf ``float`` transport (compared by exact
 IEEE-754 binary32 bytes, the same rule ``component_qualification`` already
 uses).  Neither path is a tolerance window: binary32 equality is the exact
 representation the transport can carry, and one adjacent ULP is a mismatch.
+
+Version 2 requires fresh, generation-bound raw band_source telemetry. In the
+onchip_curve branch the four cfg_* scalar edges DO NOT observe the consumed
+curve; even identical numbers are unobservable, not proof of convergence.
+The two target publishes observe setpts targets; their raw slugs are pinned
+separately from database aliases. Canonical units are °F and kPa. Version-1
+artifacts cannot establish these semantics and must be recaptured, not relabeled.
 """
 
 from __future__ import annotations
@@ -166,8 +180,8 @@ from verdify_schemas.policy_vector import (  # noqa: E402
 )
 from verdify_schemas.tunable_registry import REGISTRY, WIRE_SCHEMA_VERSION  # noqa: E402
 
-INPUT_SCHEMA = "verdify-component-grid-capture-input-v1"
-RESULT_SCHEMA = "verdify-component-grid-capture-result-v1"
+INPUT_SCHEMA = "verdify-component-grid-capture-input-v2"
+RESULT_SCHEMA = "verdify-component-grid-capture-result-v2"
 # Emitted verbatim so scripts/prepare_component_prefix_replay.py can consume the
 # captured start state as a --current-state input without a translation step.
 CURRENT_STATE_SCHEMA = "verdify-component-current-state-v1"
@@ -197,8 +211,11 @@ EXPECTED_BAND_OBSERVED_SLUGS: dict[str, str] = {
     "temp_target": "house_temp_target_f",
     "vpd_low": str(REGISTRY["vpd_low"].cfg_readback_object_id),
     "vpd_high": str(REGISTRY["vpd_high"].cfg_readback_object_id),
-    "vpd_target": "house_vpd_target",
+    "vpd_target": "house_vpd_target_kpa",
 }
+
+EXPECTED_BAND_UNITS = {series: "°F" if series.startswith("temp_") else "kPa" for series in REQUIRED_BAND_SERIES}
+SCALAR_EDGE_SERIES = frozenset({"temp_low", "temp_high", "vpd_low", "vpd_high"})
 
 REQUIRED_REVISIONS: tuple[str, ...] = (
     "source_revision",
@@ -303,6 +320,7 @@ class GridCaptureResult:
     observed_wire_vector_hex: str | None
     revisions: dict[str, str]
     runtime: dict[str, Any]
+    band_source: dict[str, Any]
     device_id: str
     observed_at: str
     live_grid: tuple[LiveEntityGrid, ...]
@@ -594,6 +612,7 @@ def evaluate_layer_triple(
     *,
     observed_at: datetime,
     max_age_s: int,
+    band_source: str | None = None,
 ) -> LayerTriple:
     """Classify one #424 series as resolved / present / unobservable.
 
@@ -655,12 +674,20 @@ def evaluate_layer_triple(
         )
 
     blockers: list[str] = sorted(malformed.values())
+    if band_source not in {"dispatcher_legacy", "onchip_curve"}:
+        blockers.append("consumed_branch_unobservable")
+    elif band_source == "onchip_curve" and series in SCALAR_EDGE_SERIES:
+        blockers.append("legacy_scalar_readback_does_not_observe_consumed_onchip_curve")
     for name, text in (("served", served_text), ("control", control_text), ("observed", observed_text)):
+        if isinstance(layers[name].get("value"), bool):
+            blockers.append(f"{name}_value_not_numeric")
         if text is None and name not in malformed:
             blockers.append(f"{name}_value_missing")
         unit = layers[name].get("unit")
         if not isinstance(unit, str) or not unit:
             blockers.append(f"{name}_unit_missing")
+        elif unit != EXPECTED_BAND_UNITS.get(series):
+            blockers.append(f"{name}_unit_not_canonical_for_series")
         source = layers[name].get("source")
         if not isinstance(source, str) or not source:
             blockers.append(f"{name}_provenance_missing")
@@ -715,9 +742,13 @@ def evaluate_layer_triples(
     observed_at: datetime,
     max_age_s: int,
     required: Sequence[str] = REQUIRED_BAND_SERIES,
+    band_source: str | None = None,
 ) -> tuple[tuple[LayerTriple, ...], list[str]]:
     """Evaluate every supplied series and report the blocking failures."""
-    triples = tuple(evaluate_layer_triple(row, observed_at=observed_at, max_age_s=max_age_s) for row in rows)
+    triples = tuple(
+        evaluate_layer_triple(row, observed_at=observed_at, max_age_s=max_age_s, band_source=band_source)
+        for row in rows
+    )
     failures: list[str] = []
     seen = [triple.field_name for triple in triples]
     for name in sorted(set(name for name in seen if seen.count(name) > 1)):
@@ -843,6 +874,36 @@ def derive_grid_revision(result: GridCaptureResult) -> str | None:
     return revision
 
 
+def evaluate_band_source(
+    observation: Mapping[str, Any] | None, *, observed_at: datetime, runtime: Mapping[str, Any], max_age_s: int
+) -> tuple[str | None, list[str]]:
+    """A cached/derived label or previous connection cannot identify the consumed branch."""
+    keys = {"slug", "value", "as_of", "runtime_instance_id", "connection_generation"}
+    if not isinstance(observation, Mapping) or set(observation) != keys:
+        return None, ["band_source:missing_or_invalid_observation"]
+    failures: list[str] = []
+    if observation["slug"] != "band_source":
+        failures.append("band_source:wrong_raw_slug")
+    value = observation["value"]
+    if not isinstance(value, str) or value not in {"dispatcher_legacy", "onchip_curve"}:
+        failures.append("band_source:unknown_consumed_branch")
+    generation = observation["connection_generation"]
+    if (
+        isinstance(generation, bool)
+        or not isinstance(generation, int)
+        or generation != runtime.get("connection_generation")
+        or observation["runtime_instance_id"] != runtime.get("runtime_instance_id")
+    ):
+        failures.append("band_source:runtime_generation_mismatch")
+    try:
+        freshness = _layer_freshness(observation, label="band_source", observed_at=observed_at, max_age_s=max_age_s)
+        if freshness is not None:
+            failures.append(f"band_source:{freshness}")
+    except GridCaptureError:
+        failures.append("band_source:invalid_observation_time")
+    return (None if failures else value), failures
+
+
 def capture(
     *,
     device_id: str,
@@ -852,6 +913,7 @@ def capture(
     band_layers: Sequence[Mapping[str, Any]],
     revisions: Mapping[str, str],
     runtime: Mapping[str, Any],
+    band_source: Mapping[str, Any] | None = None,
     max_observation_age_s: int = DEFAULT_MAX_OBSERVATION_AGE_S,
     required_band_series: Sequence[str] = REQUIRED_BAND_SERIES,
 ) -> GridCaptureResult:
@@ -878,12 +940,19 @@ def capture(
         failures.append(f"live_grid_evidence_inputs:{exc}")
     grid_parity_ok = not grid_failures and evidence is not None
 
+    consumed_branch, source_failures = evaluate_band_source(
+        band_source, observed_at=observed_at, runtime=runtime, max_age_s=max_observation_age_s
+    )
     triples, band_failures = evaluate_layer_triples(
         band_layers,
         observed_at=observed_at,
         max_age_s=max_observation_age_s,
         required=required_band_series,
+        band_source=consumed_branch,
     )
+    band_failures.extend(source_failures)
+    if not set(REQUIRED_BAND_SERIES).issubset(required_band_series):
+        band_failures.append("band_layer_required_series_cannot_be_reduced")
     failures.extend(band_failures)
     band_coherence_ok = not band_failures
 
@@ -912,6 +981,7 @@ def capture(
         observed_wire_vector_hex=wire_hex,
         revisions=dict(revisions),
         runtime=dict(runtime),
+        band_source={} if band_source is None else dict(band_source),
         device_id=device_id,
         observed_at=_timestamp_text(observed_at),
         live_grid=live_grid,
@@ -1004,6 +1074,7 @@ class CaptureInput:
     band_layers: tuple[dict[str, Any], ...]
     revisions: dict[str, str]
     runtime: dict[str, Any]
+    band_source: dict[str, Any]
 
 
 def parse_input_artifact(document: Mapping[str, Any]) -> CaptureInput:
@@ -1019,6 +1090,7 @@ def parse_input_artifact(document: Mapping[str, Any]) -> CaptureInput:
         "entities",
         "observed_components",
         "band_layers",
+        "band_source",
     }
     unknown = sorted(set(document) - expected_keys)
     if unknown:
@@ -1028,6 +1100,10 @@ def parse_input_artifact(document: Mapping[str, Any]) -> CaptureInput:
         raise GridCaptureError(f"input artifact is missing: {missing}")
     if document["schema"] != INPUT_SCHEMA:
         raise GridCaptureError(f"input artifact schema must be {INPUT_SCHEMA!r}")
+    if not isinstance(document["band_source"], Mapping):
+        raise GridCaptureError("band_source must be a raw observation object")
+    if set(document["band_source"]) != {"slug", "value", "as_of", "runtime_instance_id", "connection_generation"}:
+        raise GridCaptureError("band_source must carry exactly the version-2 observation fields")
 
     revisions_raw = document["revisions"]
     if not isinstance(revisions_raw, Mapping):
@@ -1081,6 +1157,7 @@ def parse_input_artifact(document: Mapping[str, Any]) -> CaptureInput:
         band_layers=band_layers,
         revisions=revisions,
         runtime={"runtime_instance_id": instance_id, "connection_generation": generation},
+        band_source=dict(document["band_source"]),
     )
 
 
@@ -1099,6 +1176,7 @@ def capture_from_artifact(
         band_layers=parsed.band_layers,
         revisions=parsed.revisions,
         runtime=parsed.runtime,
+        band_source=parsed.band_source,
         max_observation_age_s=max_observation_age_s,
     )
 
@@ -1130,7 +1208,7 @@ def result_sha256(payload: Mapping[str, Any]) -> str:
     return hashlib.sha256(canonical_json(hashed).encode()).hexdigest()
 
 
-_BAND_FAILURE_PREFIXES = ("band_layer", "missing_band_series", "duplicate_band_series")
+_BAND_FAILURE_PREFIXES = ("band_layer", "band_source:", "missing_band_series", "duplicate_band_series")
 _STATE_FAILURE_PREFIXES = ("observed_component", "observed_state")
 
 
@@ -1208,6 +1286,7 @@ def build_payload(
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "band_coherence": {
+            "consumed_branch_observation": result.band_source,
             "ok": result.band_coherence_ok,
             "required_series": list(REQUIRED_BAND_SERIES),
             "series": [triple.payload() for triple in result.layer_triples],
