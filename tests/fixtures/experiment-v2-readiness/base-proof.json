@@ -351,6 +351,7 @@
         {"name": "fresh_gate_p_authorization", "complete": true},
         {"name": "recovery_path_ready", "complete": true},
         {"name": "stable_writer_lease_generation", "complete": true},
+        {"name": "wetting_incident_778_disposition", "complete": true},
         {"name": "zero_exposure", "complete": true}
       ]
     }

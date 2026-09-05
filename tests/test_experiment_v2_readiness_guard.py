@@ -151,6 +151,26 @@ def test_recovery_gate_requires_component_authority_off() -> None:
     assert "recovery_component_authority_not_off" in result["blockers"]
 
 
+@pytest.mark.parametrize("missing", [False, True])
+def test_unresolved_or_missing_wetting_incident_disposition_blocks_proof_not_recovery(missing):
+    packet = copy.deepcopy(BASE)
+    rows = packet["issue_state"]["gate_p_641"]["prerequisites"]
+    row = next(r for r in rows if r["name"] == "wetting_incident_778_disposition")
+    if missing:
+        rows.remove(row)
+    else:
+        row["complete"] = False
+    result = _evaluate(packet, {})
+    assert any("wetting_incident_778_disposition" in blocker for blocker in result["blockers"])
+    recovery = _apply(packet, RECOVERY_OVERLAY["operations"])
+    assert _evaluate(recovery, RECOVERY_OVERLAY)["blockers"] == []
+
+
+def test_current_packet_producer_does_not_claim_the_incident_is_resolved():
+    source = (ROOT / "scripts/experiment_v2_proof_packet.py").read_text()
+    assert '("wetting_incident_778_disposition", False)' in source
+
+
 def test_exact_expired_work_alert_is_a_recovery_target_only() -> None:
     alert = {
         "alert_id": "10453",
