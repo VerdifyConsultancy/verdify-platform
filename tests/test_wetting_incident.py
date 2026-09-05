@@ -88,6 +88,8 @@ def test_interruption_and_counter_plateau_never_authorize_wetting_or_name_a_caus
     hourly, climate, projection = inputs()
     report = incident.analyze(csv_bytes(hourly), csv_bytes(climate), json.dumps(projection).encode())
     assert report["three_hour_recorded_zero_wetting"] is True
+    assert report["equipment_observation_coverage_verified"] is False
+    assert "fills absent equipment intervals with zero" in " ".join(report["limitations"])
     assert report["five_minute_peak_vpd_bin"]["vpd_avg_kpa"] == 5.395
     assert report["counter_plateau_15_to_18_local"]["water_total_gal"]["is_budget_limit"] is False
     assert report["counter_plateau_15_to_18_local"]["mister_water_today_gal"]["max"] == 157.38

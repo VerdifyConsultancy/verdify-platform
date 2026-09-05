@@ -1,7 +1,10 @@
 # September 4 wetting interruption — unresolved hold (#778 / #749)
 
-The reproducible [result](results-wetting-incident-2026-09-04.json) establishes
-recorded wetting interruption under hot/dry conditions, **not its cause**.
+The reproducible [v2 result](results-wetting-incident-2026-09-04-v2.json) establishes
+recorded runtime zeros under hot/dry conditions, **not verified equipment
+coverage, actual continuous off-state, or a cause**. The earlier
+[v1 result](results-wetting-incident-2026-09-04.json) is retained, superseded by
+the explicit equipment-coverage limitation in v2.
 `physical_wetting_proof_allowed` is false. No controller setting, cap, mode,
 firmware or device was changed during this investigation.
 
@@ -20,6 +23,14 @@ they cannot be clipped into half-hour results from the aggregate alone.
 | 18:00–19:00 | 83.861 / 2.303 | 36.017 | 0 | 29.061 |
 
 Fans and vent each have 60 recorded minutes in all three zero-wetting hours.
+The current hourly exporter uses `coalesce(..., 0)` for absent equipment
+intervals. Climate sample counts do not establish equipment-state coverage.
+Thus these zeros cannot distinguish a confirmed off-state from missing state
+evidence; raw equipment rows/continuity are a necessary part of the causal join.
+The v2 report explicitly sets `equipment_observation_coverage_verified: false`.
+The exporter also carries the last known on-state to the export boundary without
+an observation-age limit, so 60 recorded fan/vent minutes are not independent
+proof of continuous physical operation either.
 The five-minute VPD peak is 15:30 Denver (21:30 UTC): 100.48°F, 5.395 kPa,
 94.17°F outdoors, five source samples. Both counters are constant across all
 37 five-minute samples from 15:00 through 18:00 inclusive: cumulative meter

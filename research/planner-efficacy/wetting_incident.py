@@ -229,7 +229,7 @@ def analyze(hourly_raw, climate_raw, projection_raw):
     if len(dry_hours) == 3 and all(r["recorded_zero_wetting"] is not None for r in dry_hours):
         interrupted = all(r["recorded_zero_wetting"] for r in dry_hours)
     return {
-        "analysis_contract": 1,
+        "analysis_contract": 2,
         "issue": 778,
         "window_start_utc": START.isoformat(),
         "window_end_utc": END.isoformat(),
@@ -246,11 +246,13 @@ def analyze(hourly_raw, climate_raw, projection_raw):
                 "ingestor/ingestor.py",
                 "ingestor/esp32_push.py",
                 "ingestor/occupancy.py",
+                "scripts/export-hourly-performance-dataset.py",
             )
         },
         "audited_source_matches_running_device_verified": False,
         "hourly_context_not_clipped": sorted(hourly, key=lambda r: r["hour_start_utc"]),
         "three_hour_recorded_zero_wetting": interrupted,
+        "equipment_observation_coverage_verified": False,
         "five_minute_peak_vpd_bin": peak,
         "counter_plateau_15_to_18_local": counters,
         "log_event_counts": counts,
@@ -266,6 +268,7 @@ def analyze(hourly_raw, climate_raw, projection_raw):
             "as-of forecast vintage",
         ],
         "limitations": [
+            "Hourly exporter fills absent equipment intervals with zero; the CSV cannot distinguish confirmed off from missing state evidence.",
             "Binned public observations reproduce an interruption, not precise actuator transitions or its cause.",
             "House averages are not a fixed-panel or center-canopy physical outcome.",
             "Cumulative meter and mister-today estimates have different reset/scope semantics; neither establishes a limit.",
