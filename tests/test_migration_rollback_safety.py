@@ -75,7 +75,7 @@ def test_check_fails_on_bad_fixture():
 # ── Real non-self-transactional migrations (146/147): SAFE to wrap ───────────
 
 
-@pytest.mark.parametrize("num", ["146", "147"])
+@pytest.mark.parametrize("num", ["146", "147", "241", "242"])
 def test_non_self_transactional_migrations_are_safe_to_wrap(num):
     c = guard.classify(_mig(num))
     assert c.self_committing is False, f"{num} wrongly flagged: {c.reasons}"

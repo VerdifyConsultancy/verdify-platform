@@ -5,6 +5,8 @@ original module. The tasks package __init__ re-exports the public
 surface so every `from tasks import X` still resolves.
 """
 
+from climate_minute_metrics import refresh_observed_minute_metrics
+
 from ._common import (
     _GRADE_RELAYS,
     _GRADED_ZONES,
@@ -1314,6 +1316,12 @@ async def _refresh_daily_summary_for_date(
     await _write_graded_compliance(conn, target_day, graded)
 
     temp_max = float(climate["temp_max"]) if climate and climate["temp_max"] else 0.0
+    # Separate versioned diagnostics: do not reinterpret or overwrite legacy
+    # binary/graded fields or the locked experiment endpoint. Migration245
+    # atomically captures this payload through the revision ledger from244.
+    minute_metrics = await refresh_observed_minute_metrics(conn, target_day)
+    if minute_metrics is None:
+        log.warning("Observed-minute metrics unavailable for %s: migration245 is absent", target_day)
     return ct, temp_max, compliance_pct
 
 

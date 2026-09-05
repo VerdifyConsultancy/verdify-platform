@@ -364,14 +364,15 @@ echo "date|score|comp|temp%|vpd%|stress_h|heat|cold|vpd_hi|vpd_lo|kwh|therms|wat
 SELECT date, planner_score, compliance_pct, temp_compliance_pct, vpd_compliance_pct,
        total_stress_h, heat_stress_h, cold_stress_h, vpd_high_stress_h, vpd_low_stress_h,
        kwh, therms, water_gal, cost_total
-FROM v_daily_kpi
+FROM mv_daily_kpi
 WHERE date >= (now() AT TIME ZONE 'America/Denver')::date - 7
   AND date < (now() AT TIME ZONE 'America/Denver')::date
 ORDER BY date DESC;
 " 2>/dev/null || echo "(7-day KPI trend unavailable within DB query budget)"
-echo "Score = 80% compliance (both temp AND VPD in band) + 20% cost efficiency (<\$5/day=full marks)"
-echo "compliance_pct = % time both temp AND VPD in band. temp_comp / vpd_comp = individual axes."
-echo "VPD compliance is usually the bottleneck on dry spring days (tight band, 15% outdoor RH)."
+echo "planner_score is historical graded controller credit plus 20% cost only when resource_terms_available=1; otherwise resource weight is zero. It is not physical compliance."
+echo "Only scorecard_contract_version=2 verifies binary field semantics. Unversioned scorecards can contain graded credit under compliance_pct."
+echo "Version 2 compliance_pct = fraction of scored house-average readings with both axes in historical desired bands; temp/vpd fields are individual binary reading fractions."
+echo "Not duration-weighted, not a fixed sensor panel or confirmed firmware/crop target. Coverage is unverified; nominal stress counts assume one minute per reading. Graded fields are separate diagnostics."
 echo "Dew point margin: <5°F = condensation risk, <3°F = imminent. dp_risk_h = hours below 5°F. Target: 0h."
 echo ""
 
@@ -783,10 +784,10 @@ fi
 echo ""
 
 # ── 19. FORECAST BIAS (7-day rolling correction) ──────────────────
-BIAS=$("${DB[@]}" -c "SELECT * FROM fn_forecast_correction('temp_f', 24);" 2>/dev/null)
+BIAS=$("${DB[@]}" -c "SELECT parameter, avg_error, samples FROM fn_forecast_correction('temp_f', 24) CROSS JOIN v_forecast_verification_contract WHERE verification_contract_version=2;" 2>/dev/null)
 if [ -n "$BIAS" ] && [ "$BIAS" != "" ]; then
   echo "--- FORECAST BIAS ---"
-  echo "param|bias_f|window_hours"
+  echo "param|outdoor_bias_f|paired_valid_hours"
   echo "$BIAS"
   echo ""
 fi
@@ -829,68 +830,46 @@ echo "  knowledge_search(\"VPD-low recovery overnight prior observations\", sour
 echo ""
 
 # ── 20a-2. FORECAST CALIBRATION (Codex P1: forecast-bias-corrected priors) ─
-# Open-Meteo can materially overshoot solar and VPD at 0-24h leads. Iris should
-# use the live rolling bias rows below instead of hard-coded intuition,
-# especially
-# for dry-day pre-staging. Without this, the May VPD-low overshoot pattern
-# repeats — Iris plans for the forecast (bright + dry) and the day arrives
-# cooler/wetter, so the aggressive misting becomes over-humidification.
-echo "--- FORECAST CALIBRATION (apply these biases when interpreting today's forecast) ---"
+# Outdoor provider error is separate from indoor greenhouse response. Corrected
+# priors are diagnostics with explicit lead, sampling and availability limits.
+echo "--- OUTDOOR FORECAST VERIFICATION (diagnostic, not automatic retuning) ---"
 echo "Forecast freshness:"
 "${DB[@]}" -c "
 SELECT 'latest_fetch_mdt=' ||
        COALESCE(to_char(max(fetched_at) AT TIME ZONE 'America/Denver', 'YYYY-MM-DD HH24:MI'), 'NULL') ||
        ' age_min=' || COALESCE(round((EXTRACT(epoch FROM now() - max(fetched_at)) / 60.0)::numeric, 1)::text, 'NULL') ||
        ' distinct_future_24h=' || count(DISTINCT ts) FILTER (WHERE ts BETWEEN now() AND now() + interval '24 hours')::text
-  FROM weather_forecast;
+  FROM weather_forecast WHERE fetched_at <= now();
 " 2>/dev/null || echo "(forecast freshness unavailable)"
 echo "Rule: if forecast age is over 120 minutes, treat forecast freshness as degraded system health. Do not tune merely because forecast data is stale."
 echo "Open-Meteo forecast bias (last 7 days, by lead time):"
 "${DB[@]}" -c "
-SELECT param,
-       lead_bucket,
-       round(AVG(bias)::numeric, 2)  AS bias,
-       round(AVG(mae)::numeric, 2)   AS mae
+SELECT param, lead_bucket, sum(samples) AS paired_hours,
+       sum(observed_minutes) AS observed_minutes,
+       round(sum(bias * samples) / NULLIF(sum(samples), 0), 3) AS bias,
+       round(sum(mae * samples) / NULLIF(sum(samples), 0), 3) AS mae,
+       round(sum(mean_lead_hours * samples) / NULLIF(sum(samples), 0), 2) AS mean_lead_hours
   FROM v_forecast_accuracy_lead_buckets
- WHERE date >= CURRENT_DATE - 7
+ WHERE date >= (now() AT TIME ZONE 'America/Denver')::date - 7
+   AND verification_contract_version = 2
  GROUP BY param, lead_bucket
  ORDER BY param, lead_bucket;
-" 2>/dev/null
-echo "Rule: positive bias = forecast OVERSHOOTS reality. Discount accordingly."
-echo "Solar bias historically +47 W/m^2 (~5-15%% of peak). Do not pre-stage aggressive"
-echo "misting until live morning VPD confirms the predicted dry ramp."
-echo "Bias-corrected next-24h planning priors (corrected = raw forecast - recent bias):"
+" 2>/dev/null || echo "(versioned outdoor calibration unavailable; do not infer zero bias)"
+echo "Contract 2: outdoor forecast versus outdoor observations, never indoor greenhouse VPD."
+echo "Samples are paired valid hours; observed_minutes disclose sparse truth. Positive bias means forecast minus observed."
+echo "fetched_at is recorded availability, not provider issued_at. This does not establish indoor response."
+echo "Next-24h diagnostic priors (matching lead; missing or stale calibration stays NULL):"
 "${DB[@]}" -c "
-WITH bias AS (
-  SELECT param, avg(bias)::float AS bias
-    FROM v_forecast_accuracy_lead_buckets
-   WHERE date >= CURRENT_DATE - 7
-     AND lead_bucket IN ('00-06h', '0-6h', '06-24h', '6-24h')
-     AND param IN ('temp_f', 'vpd_kpa', 'solar_w_m2')
-   GROUP BY param
-), latest_forecast AS (
-  SELECT DISTINCT ON (ts) ts, temp_f, vpd_kpa, solar_w_m2
-    FROM weather_forecast
-   WHERE ts > now()
-     AND ts <= now() + interval '24 hours'
-   ORDER BY ts, fetched_at DESC
-), sampled AS (
-  SELECT *
-    FROM latest_forecast
-   WHERE extract(hour FROM ts AT TIME ZONE 'America/Denver') IN (6, 9, 12, 15, 18, 21)
-)
-SELECT to_char(ts AT TIME ZONE 'America/Denver', 'MM-DD HH24:MI') AS mdt,
-       round(temp_f::numeric, 1) AS raw_temp_f,
-       round((temp_f - COALESCE((SELECT bias FROM bias WHERE param = 'temp_f'), 0))::numeric, 1) AS corrected_temp_f,
-       round(vpd_kpa::numeric, 2) AS raw_vpd_kpa,
-       round((vpd_kpa - COALESCE((SELECT bias FROM bias WHERE param = 'vpd_kpa'), 0))::numeric, 2) AS corrected_vpd_kpa,
-       round(solar_w_m2::numeric, 0) AS raw_solar_w_m2,
-       round(GREATEST(0, solar_w_m2 - COALESCE((SELECT bias FROM bias WHERE param = 'solar_w_m2'), 0))::numeric, 0) AS corrected_solar_w_m2
-  FROM sampled
- ORDER BY ts
- LIMIT 8;
-" 2>/dev/null || echo "(forecast calibration unavailable)"
-echo "Use corrected_vpd_kpa as the planning prior; keep raw_vpd_kpa as weather context."
+SELECT decision_at, valid_at, available_at, param, verification_contract_version,
+       round(lead_hours, 2) AS lead_hours, round(fetch_age_minutes, 1) AS fetch_age_minutes,
+       lead_bucket, round(raw_forecast::numeric, 3) AS raw_forecast,
+       round(bias::numeric, 3) AS outdoor_bias, round(corrected_prior::numeric, 3) AS corrected_prior,
+       calibration_paired_hours, calibration_observed_minutes, availability
+FROM v_forecast_planning_priors
+WHERE extract(hour FROM valid_at AT TIME ZONE 'America/Denver') IN (6, 9, 12, 15, 18, 21)
+ORDER BY valid_at, param LIMIT 24;
+" 2>/dev/null || echo "(versioned forecast priors unavailable)"
+echo "Keep raw and corrected priors separate. Inspect lead, freshness and sample coverage; no automatic control retuning or locked-study change."
 echo ""
 
 # ── 20b. CURRENT ACTIVE SETPOINTS (for mandatory waypoint emission) ─

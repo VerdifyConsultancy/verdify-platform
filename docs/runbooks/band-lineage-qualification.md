@@ -145,12 +145,37 @@ The current public reader is restricted to `vallery` because the existing
 crop resolver is greenhouse-global. Other greenhouses fail explicitly instead
 of receiving vallery's crop targets.
 
-Normal delivery should install additive migration 243 before the new API image.
-If the function is absent, the API returns 503 and does not fall back to old
-semantics. Shared-schema and docs/script image consumers still follow the
-registered build-input contract. Migrations 241/242 belong to the other pending
-C0 branches; serialize migration delivery from reviewed main. No deployment,
+For a standalone band-reader release, additive migration 243 can precede the new
+API image. The integrated C0 release must instead honor migration241's compatible
+consumer-first order in `scorecard-contract-2.md`: the migrate image can carry
+241/242/243/244/245/246 together, so do not move that whole image ahead of the
+compatible consumers just to install243. Until243 is installed, the new band
+endpoint returns503 without falling back to old semantics. That bounded
+unavailable interval is a rollout state, not final acceptance or physical proof.
+The new minute diagnostic likewise remains unavailable until its reader exists.
+Complete the ledgered migration and all endpoint checks before accepting release.
+Shared-schema and docs/script image consumers follow the registered build-input
+contract; serialize migration delivery from reviewed main. No deployment,
 private-ledger check or passive physical proof is claimed by these edits.
+
+## Shared-source integration
+
+The band PR is stacked on the forecast PR, which includes the scorecard repair.
+Merge the actual API/schema/gather/dashboard sources before resolving generated
+artifacts. Run `python scripts/gen-gather-configmap.py`,
+`scripts/gen-config-revision.sh` and `python scripts/gen-grafana-dashboard-cms.py`,
+then their `--check` modes. Never choose an old branch's rollout hash to resolve
+a merge conflict: the hash must describe the combined mounted script. The shared
+rollout annotation changes six workload files/eight annotations; it does not
+authorize image, mode, cap, experiment or device changes.
+
+Validate a ConfigMap-only Kustomize render against both source scripts and all
+dashboard JSON sources. The deployed gather script is subPath-mounted, so a
+ConfigMap edit alone is insufficient; require the reconciled pod revision and
+actual script identity. Preserve scorecard binary/graded separation, forecast
+as-of/outdoor semantics and the band model's unobservable-physical-proof status
+through this combined path. Passing separate offline suites is not a restored
+production-data rehearsal or acceptance of a live physical endpoint.
 
 ## Checks and rollback
 

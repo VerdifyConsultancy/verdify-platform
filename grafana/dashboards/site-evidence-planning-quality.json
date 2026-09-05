@@ -13,7 +13,7 @@
       "id": 2,
       "type": "stat",
       "title": "Planner Score Today",
-      "description": "Composite score from compliance and cost pressure.",
+      "description": "Historical graded controller credit; not binary physical compliance. Resource cost contributes 20% only when resource_terms_available=1; otherwise it is excluded.",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "verdify-tsdb"
@@ -140,7 +140,7 @@
     {
       "id": 4,
       "type": "stat",
-      "title": "Compliance Today",
+      "title": "Binary Reading Fraction Today",
       "description": "",
       "datasource": {
         "type": "grafana-postgresql-datasource",
@@ -204,7 +204,7 @@
     {
       "id": 5,
       "type": "stat",
-      "title": "Stress Hours Today",
+      "title": "Nominal Binary Stress Hours Today",
       "description": "",
       "datasource": {
         "type": "grafana-postgresql-datasource",
@@ -401,7 +401,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "verdify-tsdb"
       },
-      "description": "Daily percent of samples inside the temperature band, VPD band, and both bands at the same time. Percent units only; no stress-hour scaling.",
+      "description": "Contract 2: fractions of scored house-average readings against historical desired setpoints. Not duration-weighted, fixed-panel crop outcomes or confirmed firmware consumption. Coverage is unverified; no center probe is measured.",
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
@@ -533,7 +533,7 @@
           "rawSql": "SELECT (date + time '12:00')::timestamptz AS time,\n       temp_compliance_pct AS \"Temp Compliance %\",\n       vpd_compliance_pct AS \"VPD Compliance %\",\n       compliance_pct AS \"Total Compliance %\"\nFROM v_planner_performance\nWHERE $__timeFilter((date + time '12:00')::timestamptz)\nORDER BY date"
         }
       ],
-      "title": "Firmware Band Compliance \u2014 Temp, VPD, Both",
+      "title": "Desired-Band Binary Reading Fractions \u2014 Temp, VPD, Both",
       "type": "timeseries",
       "transparent": true
     },
@@ -542,7 +542,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "verdify-tsdb"
       },
-      "description": "Daily hours outside the temperature band, outside the VPD band, and total stress hours. Hours are time, not percent, and are not scaled.",
+      "description": "Contract 2: binary out-of-band counts assuming one minute per scored reading. Axes overlap; totals can exceed wall time. Coverage is unverified; not duration-weighted exposure or graded deficit integrals.",
       "fieldConfig": {
         "defaults": {
           "unit": "short",
@@ -727,7 +727,7 @@
           "rawSql": "SELECT (date + time '12:00')::timestamptz AS time,\n       round((heat_stress_h + cold_stress_h)::numeric, 2) AS \"Temp Stress Hours\",\n       round((vpd_high_stress_h + vpd_low_stress_h)::numeric, 2) AS \"VPD Stress Hours\",\n       round(total_stress_h::numeric, 2) AS \"Total Stress-Category Hours\"\nFROM v_planner_performance\nWHERE $__timeFilter((date + time '12:00')::timestamptz)\nORDER BY date"
         }
       ],
-      "title": "Planner Stress-Category Hours \u2014 Temp, VPD, Total",
+      "title": "Nominal Binary Stress-Axis Hours \u2014 Temp, VPD, Total",
       "type": "timeseries",
       "transparent": true
     },
@@ -2714,7 +2714,7 @@
       "id": 15,
       "type": "timeseries",
       "title": "Cost vs Stress Tradeoff",
-      "description": "Shows whether the system is buying lower stress at a reasonable operating cost.",
+      "description": "Descriptive cost versus nominal binary stress counts only; not causal efficiency evidence. Resource costs are gated for eligibility and missing values must not be interpreted as zero.",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "verdify-tsdb"
@@ -3020,7 +3020,7 @@
       "id": 17,
       "type": "table",
       "title": "Latest Planner Scorecard",
-      "description": "Raw scorecard values for today.",
+      "description": "Versioned scorecard values. Contract 2 separates binary reading fractions from graded controller credit. Partial days and missing evidence remain unavailable; inspect metric_semantics in the scorecard API.",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "verdify-tsdb"
