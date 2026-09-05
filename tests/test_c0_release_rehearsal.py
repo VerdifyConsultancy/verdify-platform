@@ -6,10 +6,12 @@ not a production restore, complete migration history, or physical qualification.
 Set SCORECARD_TEST_PG_BIN to server/client binaries; no ambient DB is contacted.
 """
 
+import ast
 import asyncio
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 from datetime import date
@@ -155,6 +157,147 @@ def assert_applied(query, paths=MIGRATIONS):
         assert row["sha256"] == hashlib.sha256(path.read_bytes()).hexdigest()
         assert row["seq"] == int(path.name.split("-")[0])
         assert row["applied_by"] == "scorecard_fixture" and row["duration_ms"] >= 0
+
+
+def install_actual_attestation_probe(query):
+    """Actual 217 digest/attestor, synthetic catalog closure, no security normalization.
+
+    Missing protected relations are inert placeholders. Missing callees are
+    throwing stubs: the real digest may inspect their catalogs, never execute
+    their bodies. This is a fingerprint compatibility counterexample, not a
+    full migration-217 boundary qualification or authorization to recapture it.
+    """
+    if query("SELECT count(*) FROM pg_available_extensions WHERE name='pgcrypto'") != "1":
+        pytest.skip("this private PostgreSQL build needs pgcrypto for actual 217 digest")
+    query("CREATE EXTENSION IF NOT EXISTS pgcrypto")
+    source = (ROOT / "db/migrations/217-runtime-role-boundary.sql").read_text()
+    digest_start = source.index("CREATE OR REPLACE FUNCTION public.fn_runtime_ordinary_boundary_digest(")
+    attest_end = source.index("\nDO $attestation_objects$", digest_start)
+    functions = source[digest_start:attest_end]
+    declarations = functions[: functions.index("\nBEGIN\n")]
+    protected = re.search(r"v_protected_relations text\[\] := ARRAY\[(.*?)\];", declarations, re.S).group(1)
+    sequences = re.search(r"v_protected_sequences text\[\] := ARRAY\[(.*?)\];", declarations, re.S).group(1)
+    relation_names = re.findall(r"'([a-z_0-9]+)'", protected)
+    sequence_names = re.findall(r"'([a-z_0-9]+)'", sequences)
+    signatures = re.findall(r"'(public\.[a-z_0-9]+\([^']*\))'::regprocedure", declarations)
+    assert len(relation_names) == 50 and len(sequence_names) == 6 and len(signatures) == 55
+    query("""
+ALTER ROLE verdify_api_runtime_login LOGIN;
+ALTER ROLE verdify_ingestor_runtime_login LOGIN;
+GRANT verdify_api_runtime TO verdify_api_runtime_login;
+GRANT verdify_ingestor_runtime TO verdify_ingestor_runtime_login;
+CREATE TABLE public.runtime_ordinary_login_attestation_receipts (
+    login_name text PRIMARY KEY, boundary_sha256 bytea NOT NULL,
+    captured_at timestamptz NOT NULL DEFAULT pg_catalog.clock_timestamp());
+REVOKE ALL ON public.runtime_ordinary_login_attestation_receipts FROM PUBLIC;
+""")
+    for name in sorted(set(relation_names + sequence_names)):
+        if query(f"SELECT to_regclass('public.{name}') IS NULL") == "t":
+            query(
+                f"CREATE SEQUENCE public.{name}"
+                if name in sequence_names
+                else f"CREATE TABLE public.{name} (fixture_only integer)"
+            )
+    for signature in signatures:
+        if query(f"SELECT to_regprocedure('{signature}') IS NULL") == "t":
+            # Arguments/names come only from the exact versioned source above.
+            query(f"""CREATE FUNCTION {signature} RETURNS text LANGUAGE plpgsql AS $stub$
+            BEGIN RAISE EXCEPTION 'catalog-only fixture stub must never execute'; END;
+            $stub$; REVOKE ALL ON FUNCTION {signature} FROM PUBLIC;""")
+    query(functions)
+    query("""
+REVOKE ALL ON FUNCTION public.fn_runtime_ordinary_boundary_digest(text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.fn_runtime_attest_ordinary_login() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.fn_runtime_attest_ordinary_login()
+    TO verdify_api_runtime, verdify_ingestor_runtime;
+INSERT INTO public.runtime_ordinary_login_attestation_receipts (login_name, boundary_sha256)
+SELECT login_name, public.fn_runtime_ordinary_boundary_digest(login_name)
+FROM (VALUES ('verdify_api_runtime_login'), ('verdify_ingestor_runtime_login')) names(login_name);
+""")
+
+
+def attestation_probe(query):
+    startup_sql = []
+    for name in ("api/main.py", "ingestor/ingestor.py"):
+        tree = ast.parse((ROOT / name).read_text())
+        assignment = next(
+            node
+            for node in tree.body
+            if isinstance(node, ast.Assign)
+            and any(
+                isinstance(target, ast.Name) and target.id == "_ORDINARY_RUNTIME_ROLE_ATTESTATION_SQL"
+                for target in node.targets
+            )
+        )
+        startup_sql.append(ast.literal_eval(assignment.value))
+    assert startup_sql[0] == startup_sql[1]
+    result = {}
+    for kind in ("api", "ingestor"):
+        login = f"verdify_{kind}_runtime_login"
+        result[kind] = query(f"""SET SESSION AUTHORIZATION {login};
+            SET search_path = pg_catalog, public, pg_temp;
+            {startup_sql[0]};
+            RESET SESSION AUTHORIZATION;""")
+    return result
+
+
+@pytest.mark.parametrize("migration_index", range(6), ids=[path.name[:3] for path in MIGRATIONS])
+def test_each_c0_migration_invalidates_prior_startup_attestation(rehearsal, migration_index):
+    """Release-blocking counterexample: SQL success is not successful next startup."""
+    query, directory, run = rehearsal
+    predecessors = MIGRATIONS[:migration_index]
+    copy_migrations(directory, predecessors)
+    if predecessors:
+        previous = run()
+        assert previous.returncode == 0, previous.stderr
+    install_actual_attestation_probe(query)
+    assert attestation_probe(query) == {"api": "t", "ingestor": "t"}
+    receipt_before = query(
+        "SELECT jsonb_agg(to_jsonb(r) ORDER BY login_name) FROM runtime_ordinary_login_attestation_receipts r"
+    )
+    copy_migrations(directory, (MIGRATIONS[migration_index],))
+    applied = run()
+    assert applied.returncode == 0, applied.stderr
+    assert_applied(query, MIGRATIONS[: migration_index + 1])
+    # A direct digest call must succeed and differ. This rules out the attestor's
+    # catch-all hiding a missing object, throwing stub, or other SQL error.
+    assert (
+        query("""SELECT bool_and(boundary_sha256 <>
+        public.fn_runtime_ordinary_boundary_digest(login_name))
+        FROM public.runtime_ordinary_login_attestation_receipts""")
+        == "t"
+    )
+    assert attestation_probe(query) == {"api": "f", "ingestor": "f"}
+    assert (
+        query("SELECT jsonb_agg(to_jsonb(r) ORDER BY login_name) FROM runtime_ordinary_login_attestation_receipts r")
+        == receipt_before
+    )
+
+
+def test_attestation_mutation_rollback_and_complete_c0_bundle(rehearsal):
+    query, directory, run = rehearsal
+    install_actual_attestation_probe(query)
+    assert attestation_probe(query) == {"api": "t", "ingestor": "t"}
+    # Real source migration inside the same outer transaction as a startup probe.
+    rolled_back = query(
+        "BEGIN;"
+        + MIGRATIONS[0].read_text()
+        + "SET LOCAL SESSION AUTHORIZATION verdify_ingestor_runtime_login;"
+        + "SELECT public.fn_runtime_attest_ordinary_login(); ROLLBACK;"
+    )
+    assert rolled_back.splitlines()[-1] == "f"
+    assert attestation_probe(query) == {"api": "t", "ingestor": "t"}
+    copy_migrations(directory)
+    applied = run()
+    assert applied.returncode == 0, applied.stderr
+    assert_applied(query)
+    assert (
+        query("""SELECT bool_and(boundary_sha256 <>
+        public.fn_runtime_ordinary_boundary_digest(login_name))
+        FROM public.runtime_ordinary_login_attestation_receipts""")
+        == "t"
+    )
+    assert attestation_probe(query) == {"api": "f", "ingestor": "f"}
 
 
 def test_combined_runner_plan_apply_roles_consumers_and_noop(rehearsal):

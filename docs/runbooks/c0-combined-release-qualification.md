@@ -1,5 +1,13 @@
 # C0 combined migration release qualification
 
+**Release hold: ordinary-login attestation transition is not qualified.** The
+new actual-function probe shows each migration 241–246, and the complete bundle,
+invalidates both stored API/ingestor startup attestations. Existing SQL/consumer
+passes below are not evidence that those services can restart after migration.
+Do not deploy this bundle until an explicitly validated boundary transition
+preserves the fail-closed startup guard. Do not disable that guard, blindly
+replace stored hashes, or rerun immutable migration 217 to bless changed state.
+
 The measurement, forecast, band-lineage and incident PRs are a stacked release.
 Passing each SQL fixture separately does not prove their shared tables, roles,
 triggers and readers coexist. `tests/test_c0_release_rehearsal.py` exercises the
@@ -102,7 +110,60 @@ selection through its owning registry contract, not by hand-editing generated YA
 5. Retain pre-release image/configuration identities and data exports. Use reviewed
    forward corrections for already committed migrations; do not delete append-only
    evidence, edit applied SQL in place or assume a failed later file undid earlier
-   ones. Runtime rollback must respect the changed scorecard semantics.
+  ones. Runtime rollback must respect the changed scorecard semantics.
+
+## Newly reproduced startup-attestation incompatibility
+
+Migration 217 seals the API/ingestor security-active catalog in
+`runtime_ordinary_login_attestation_receipts`. Its actual
+`fn_runtime_ordinary_boundary_digest(text)` includes granted view definitions,
+function definitions, relevant columns/ACLs and the protected write interfaces;
+its actual `fn_runtime_attest_ordinary_login()` compares that current digest with
+the stored one. A legitimate source change still changes that digest. Startup
+does not infer authorization from a successful schema-migration ledger stamp.
+
+Seven additional private-database cases install those two **unchanged source
+functions**, then exercise the exact startup SQL extracted from both API and
+ingestor source using both exact session identities:
+
+1. Six cases capture a synthetic attestation at each predecessor prefix, prove
+   both startup checks true, apply the next actual migration through the normal
+   runner, and prove both checks false while receipt rows remain unchanged.
+2. One case applies real migration 241 inside an outer transaction: the attestor
+   returns false inside it; rollback restores true for both identities. Applying
+   all six through the runner then leaves both false despite correct ledger
+   hashes and successful SQL completion.
+
+Direct digest calls must succeed and differ from the stored hashes. This rules
+out the attestor's catch-all returning false because an object is missing or a
+fixture stub raised an error. These tests intentionally **pass when the release
+incompatibility is reproduced**; they are counterexample evidence, not repair
+acceptance or permission to ship.
+
+This remains a synthetic catalog test: missing protected relations are inert
+placeholders; missing named function signatures have throwing, never-executed
+bodies. The actual digest/attestor implementations are not rewritten or mocked.
+The initial receipt is captured only in that isolated synthetic fixture. This
+does not execute all migration-217 security normalization/assertions, prove
+production role completeness, or authorize receipt recapture in any real DB.
+The private server must supply `pgcrypto`; otherwise these seven tests skip
+explicitly. PostgreSQL 16 coverage is required until the PostgreSQL 15 test
+installation also supplies that extension.
+
+The production deployment manifests were read with a strict nonsecret allowlist
+on September 5: `VERDIFY_API_RUNTIME_DB_ROLE_REQUIRED=1` and
+`VERDIFY_INGESTOR_RUNTIME_DB_ROLE_REQUIRED=1`. No production DB was queried and
+no deployment/device state was changed. This identifies a relevant release
+hazard, not a claim that the currently running services have failed or that it
+caused remote CI failures.
+
+The repair must prove a trusted predecessor boundary, validate the exact
+authorized schema/privilege transition, preserve denial of unrelated drift,
+and establish matching startup receipts transactionally at the appropriate
+release boundary. Test hostile preexisting drift, injected migration failures,
+receipt integrity, rollback/resume, exact ordinary-login startup and the actual
+restored production schema. A generic "recompute the hash after migrations"
+step would erase the security property and is not an acceptable repair.
 
 Physical Gate P, protocol lock/draw and randomized launch remain separately
 authorized transitions. Neither this rehearsal nor deployment clears the incident
