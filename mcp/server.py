@@ -78,6 +78,7 @@ from verdify_schemas.experiment_config import (  # noqa: E402
     demoted_policy_write_gate,
     submit_policy_proposal,
 )
+from verdify_schemas.observed_minute_reader import read_observed_minute_evidence  # noqa: E402
 from verdify_schemas.plan import (  # noqa: E402
     classify_planner_terminal_action,
     plan_current_coverage_error,
@@ -1149,6 +1150,12 @@ async def scorecard(target_date: str = "") -> str:
     scores. Null means unavailable, not zero or perfect. Composite outcome fields
     remain null until their physical evidence contract is implemented.
 
+    observed_minute_evidence is a separately versioned, captured house-average
+    diagnostic with per-axis/joint eligible counts, coverage and distance. Inspect
+    availability, window and revision; snapshot freshness is not assessed. It is
+    not continuous exposure, fixed-panel crop compliance, a confirmed consumed
+    target or an experiment endpoint. Never substitute it for the scalar metrics.
+
     Response is validated through verdify_schemas.ScorecardResponse. Partial days
     may contain null metrics; inspect evidence limitations before using a score."""
     conn = await _db()
@@ -1178,6 +1185,7 @@ async def scorecard(target_date: str = "") -> str:
                     "raw": {r["metric"]: (float(r["value"]) if r["value"] is not None else None) for r in rows},
                 }
             )
+        sc.observed_minute_evidence = await read_observed_minute_evidence(conn, d)
         return sc.model_dump_json(by_alias=True)
     finally:
         await conn.close()

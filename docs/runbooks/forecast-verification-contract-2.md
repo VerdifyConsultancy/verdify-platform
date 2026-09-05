@@ -77,6 +77,13 @@ GitOps. A post-commit rollback is a reviewed forward migration restoring capture
 definitions, with old calibration explicitly withheld rather than relabeled.
 
 Require exact-source Argo Synced+Healthy and current DB/planner/public readback.
+The production gather script is mounted from a fixed-name ConfigMap: an ingestor
+image rebuild alone is insufficient. Run `python scripts/gen-gather-configmap.py`
+and `scripts/gen-config-revision.sh` after integration, commit the generated
+script and shared workload revision, and check both tools with `--check`.
+Require exact rendered script parity and the reconciled pod-template revision.
+Do not reuse a revision from another branch: scorecard, forecast and band-lineage
+edits must be integrated in source before regenerating this shared toolchain.
 Keep #780 open until frozen production inputs/outputs are hashed, lead-bucket
 old-versus-corrected priors are reconciled, role/latency checks pass on real data
 and publication is observed. The historical +1.453/+0.539 kPa comparison is a

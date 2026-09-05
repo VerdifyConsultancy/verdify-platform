@@ -53,6 +53,16 @@ the migrate image carrying 241 through the existing ledgered PreSync hook.
 Do not hand-apply SQL, edit an applied migration, bypass a failed ledger/role
 attestation or create unmanaged workload drift.
 
+The production planner uses a subPath-mounted ConfigMap copy of the gather
+script. An image rebuild alone does not replace that copy. After source changes,
+run `python scripts/gen-gather-configmap.py` and `scripts/gen-config-revision.sh`,
+commit both generated files and workload annotations, and validate both tools
+with `--check`. Also run the existing byte-parity test in
+`tests/test_dli_availability.py` and `tests/test_21_config_revision.py`.
+The shared revision intentionally updates six workload files/eight annotations;
+it changes no modes, image pins or device authority. Verify the reconciled
+ConfigMap bytes and running pod-template revision through the authorized path.
+
 Before migration delivery, retain last-good source/image pins, a fresh verified
 backup receipt and secret-free definitions/OID/owner/ACL snapshots of the two
 views, materialized view and scorecard function through an authorized DB path.

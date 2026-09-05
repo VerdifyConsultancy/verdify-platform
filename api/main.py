@@ -31,6 +31,7 @@ from email.message import EmailMessage
 from email.utils import formataddr, make_msgid
 from pathlib import Path
 from typing import Annotated, Literal
+from zoneinfo import ZoneInfo
 
 import asyncpg
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
@@ -116,6 +117,7 @@ from verdify_schemas.experiment_config import (  # noqa: E402
     component_experiment_mode,
 )
 from verdify_schemas.mcp_responses import ScorecardResponse  # noqa: E402
+from verdify_schemas.observed_minute_reader import read_observed_minute_evidence  # noqa: E402
 from verdify_schemas.telemetry import DliEvidence  # noqa: E402
 from verdify_schemas.tunable_registry import (  # noqa: E402
     CROP_BAND_REG,
@@ -2710,9 +2712,12 @@ async def status():
 async def planner_scorecard(scorecard_date: Annotated[date | None, Query(alias="date")] = None):
     """Planner scorecard metrics for a given date, defaulting to today."""
     async with pool.acquire() as conn:
+        if scorecard_date is None:
+            scorecard_date = await conn.fetchval("SELECT (now() AT TIME ZONE 'America/Denver')::date")
         rows = await _fetch_planner_scorecard(conn, scorecard_date)
+        observed = await read_observed_minute_evidence(conn, scorecard_date)
     try:
-        return ScorecardResponse.from_metric_rows(rows)
+        result = ScorecardResponse.from_metric_rows(rows)
     except ValidationError:
         # Belt-and-suspenders (band-compliance §7.1): ScorecardResponse uses
         # extra='forbid', so a brand-new fn_planner_scorecard metric (e.g. the
@@ -2721,7 +2726,9 @@ async def planner_scorecard(scorecard_date: Annotated[date | None, Query(alias="
         # serve the metrics we DO recognize rather than failing the request.
         known = ScorecardResponse.metric_names()
         kept = [r for r in rows if str(r["metric"]) in known]
-        return ScorecardResponse.from_metric_rows(kept)
+        result = ScorecardResponse.from_metric_rows(kept)
+    result.observed_minute_evidence = observed
+    return result
 
 
 @app.get("/api/v1/dli", response_model=DliEvidence)
@@ -3712,10 +3719,15 @@ async def public_home_metrics(greenhouse_id: str = DEFAULT_GREENHOUSE):
             """,
             greenhouse_id,
         )
-        score_rows = await _fetch_planner_scorecard(conn)
+        score_day = generated_at.astimezone(ZoneInfo("America/Denver")).date()
+        score_rows = await _fetch_planner_scorecard(conn, score_day)
+        observed = await read_observed_minute_evidence(conn, score_day, greenhouse_id)
         scorecard = {r["metric"]: _to_float(r["value"]) for r in score_rows}
         climate_evidence = ScorecardResponse.model_validate(
-            {k: v for k, v in scorecard.items() if k in ScorecardResponse.metric_names()}
+            {
+                **{k: v for k, v in scorecard.items() if k in ScorecardResponse.metric_names()},
+                "observed_minute_evidence": observed,
+            }
         ).climate_evidence()
         water_resource = await _fetchrow_optional(
             conn,
@@ -3890,6 +3902,7 @@ async def public_home_metrics(greenhouse_id: str = DEFAULT_GREENHOUSE):
         planner_score_resource_weight_pct=scorecard.get("planner_score_resource_weight_pct") or 0,
         planner_score_resource_terms_available=scorecard.get("resource_terms_available") == 1.0,
         compliance_pct_today=climate_evidence["both_axis_compliance_pct"],
+        observed_minute_evidence=observed,
         cost_today_usd=(
             scorecard.get("cost_total")
             if water_resource
@@ -3946,10 +3959,15 @@ async def public_evidence_snapshot(greenhouse_id: str = DEFAULT_GREENHOUSE):
     """Crawler-friendly public proof snapshot for evidence subpages."""
     async with pool.acquire() as conn:
         generated_at = await conn.fetchval("SELECT now()")
-        score_rows = await _fetch_planner_scorecard(conn)
+        score_day = generated_at.astimezone(ZoneInfo("America/Denver")).date()
+        score_rows = await _fetch_planner_scorecard(conn, score_day)
+        observed = await read_observed_minute_evidence(conn, score_day, greenhouse_id)
         scorecard = {r["metric"]: _to_float(r["value"]) for r in score_rows}
         climate_evidence = ScorecardResponse.model_validate(
-            {k: v for k, v in scorecard.items() if k in ScorecardResponse.metric_names()}
+            {
+                **{k: v for k, v in scorecard.items() if k in ScorecardResponse.metric_names()},
+                "observed_minute_evidence": observed,
+            }
         ).climate_evidence()
         water_resource = await _fetchrow_optional(
             conn,
