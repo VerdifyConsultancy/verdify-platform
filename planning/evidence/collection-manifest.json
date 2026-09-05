@@ -1,0 +1,1101 @@
+{
+  "completed_at": "2026-09-05T15:11:16.819906+00:00",
+  "requests": [
+    {
+      "file": "data-health.json",
+      "url": "https://api.verdify.ai/api/v1/public/data-health",
+      "requested_at": "2026-09-05T15:09:13.759208+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1485,
+      "sha256": "8808f34db9f4c160bd54a684f313ab27e013454d7cf1cc58ef19242e3fc80833"
+    },
+    {
+      "file": "planner-health.json",
+      "url": "https://api.verdify.ai/api/v1/public/planner-health",
+      "requested_at": "2026-09-05T15:09:13.761545+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 11873,
+      "sha256": "75217356616218ffe22eec293e8c93af5526a5bb833785dfed9d06ba8186d59c"
+    },
+    {
+      "file": "band-trace.json",
+      "url": "https://api.verdify.ai/api/v1/public/band-trace",
+      "requested_at": "2026-09-05T15:09:13.762873+00:00",
+      "status": 500,
+      "error": "HTTPError"
+    },
+    {
+      "file": "home-metrics.json",
+      "url": "https://api.verdify.ai/api/v1/public/home-metrics",
+      "requested_at": "2026-09-05T15:09:14.162736+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 2180,
+      "sha256": "87aff08a4abd0d9d3019b6e0c57c55e6a2b4b00b6a152096ae03bf91c190957a"
+    },
+    {
+      "file": "evidence-snapshot.json",
+      "url": "https://api.verdify.ai/api/v1/public/evidence-snapshot",
+      "requested_at": "2026-09-05T15:09:20.249112+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 7052,
+      "sha256": "87b0d42759537b0a979578c3d41f4a5d21cb33e54b44f4901194a8d18d4c3dba"
+    },
+    {
+      "file": "dli.json",
+      "url": "https://api.verdify.ai/api/v1/dli",
+      "requested_at": "2026-09-05T15:09:20.871814+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 257,
+      "sha256": "47703154a532078823c3591c5623a736643a15d05b993f0e596f8b584a5a0583"
+    },
+    {
+      "file": "hourly-manifest.json",
+      "url": "https://lab.verdify.ai/static/data/hourly-performance/manifest.json",
+      "requested_at": "2026-09-05T15:09:21.034722+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 23999,
+      "sha256": "bcd2b6d25ab6e507b53d0144d4eac7d14e800da6c56d29ea2d8b90664e9e4d70"
+    },
+    {
+      "file": "hourly.csv",
+      "url": "https://lab.verdify.ai/static/data/hourly-performance/greenhouse-performance-hourly-30d-latest.csv",
+      "requested_at": "2026-09-05T15:09:21.108283+00:00",
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "bytes": 208276,
+      "sha256": "d0eb193dedc699d9396a6d011cbbb70c24b701043bdf36050f83d957c8264bf3"
+    },
+    {
+      "file": "climate-7d.csv",
+      "url": "https://lab.verdify.ai/static/data/verdify-sample-7d-climate.csv",
+      "requested_at": "2026-09-05T15:09:21.184973+00:00",
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "bytes": 169651,
+      "sha256": "1191ca396ec9b1d0d4ada8a97e854500fdee4b4e44742abf7d8779b40090653e"
+    },
+    {
+      "file": "plans-30d.csv",
+      "url": "https://lab.verdify.ai/static/data/verdify-sample-30d-plan-outcomes.csv",
+      "requested_at": "2026-09-05T15:09:21.265337+00:00",
+      "status": 200,
+      "content_type": "application/octet-stream",
+      "bytes": 361886,
+      "sha256": "c14cb2251bc2fdc077050e195999376a5bafe4361acba73fd83cf229701f049c"
+    },
+    {
+      "file": "score-2026-07-11.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-07-11",
+      "requested_at": "2026-09-05T15:09:21.342987+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1105,
+      "sha256": "3e1d1ebeefaa016f40a1849a0209f203c3c98a688b247bffcdc7418dd95f46db"
+    },
+    {
+      "file": "resources-2026-07-11.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-07-11",
+      "requested_at": "2026-09-05T15:09:21.419374+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 5942,
+      "sha256": "80441d2ed57650ebb90d740bd2f9b869144020d6c64608b4bef23df2691105cb"
+    },
+    {
+      "file": "score-2026-07-12.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-07-12",
+      "requested_at": "2026-09-05T15:09:27.860151+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1105,
+      "sha256": "bfd31899c370785135c31514b72ccdcc48fe01b8a28931eb9a372921c5a63741"
+    },
+    {
+      "file": "resources-2026-07-12.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-07-12",
+      "requested_at": "2026-09-05T15:09:27.956923+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6404,
+      "sha256": "f6e186f35669a3aaa4a138d9c03597c939366bf8beb1240dd1d134691e332ad9"
+    },
+    {
+      "file": "score-2026-07-13.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-07-13",
+      "requested_at": "2026-09-05T15:09:28.127905+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1106,
+      "sha256": "500c170f4f88dc5897f35013ce1637096bbbef34de7f73c5ef7f549c32b11f3d"
+    },
+    {
+      "file": "resources-2026-07-13.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-07-13",
+      "requested_at": "2026-09-05T15:09:28.223569+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 5942,
+      "sha256": "3d32d2aa83f772e547b39c17dc360668c404786b6b5e4db118693770726a1fec"
+    },
+    {
+      "file": "score-2026-07-14.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-07-14",
+      "requested_at": "2026-09-05T15:09:29.188670+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1108,
+      "sha256": "14f07f3c5afe67c69061e96b7afbc02db95c102f104ddaf56f1fe5e54b65a3c8"
+    },
+    {
+      "file": "resources-2026-07-14.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-07-14",
+      "requested_at": "2026-09-05T15:09:29.259873+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6383,
+      "sha256": "2166d1322d4adf399dcbfb1b9452a667bb8fa2b6fed78d245d9162c5708da852"
+    },
+    {
+      "file": "score-2026-07-15.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-07-15",
+      "requested_at": "2026-09-05T15:09:34.418406+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1106,
+      "sha256": "bc058d7c72e3526c798ca0599902e85cf04f1c93134ad25e68f37b037ef0ff36"
+    },
+    {
+      "file": "resources-2026-07-15.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-07-15",
+      "requested_at": "2026-09-05T15:09:34.505326+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6382,
+      "sha256": "2b04b0af594a2bb4153a70e60850327f21afe1323c30bf62d8a62342e38afc89"
+    },
+    {
+      "file": "score-2026-07-16.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-07-16",
+      "requested_at": "2026-09-05T15:09:34.856179+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1106,
+      "sha256": "fd9a12330d662e7fa99ba568cab48cec12b27efe0fb894f7934a8705d416bfea"
+    },
+    {
+      "file": "resources-2026-07-16.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-07-16",
+      "requested_at": "2026-09-05T15:09:34.941025+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6383,
+      "sha256": "b1ffbefc438948914a5bdc5e3c655439d98f9163bb66a6bd015094ba044db070"
+    },
+    {
+      "file": "score-2026-07-17.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-07-17",
+      "requested_at": "2026-09-05T15:09:35.566094+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1107,
+      "sha256": "f08d4f78aa5408f8b86a2bc9f71eb2c999200192a27e1504d4fe95fe5332bc45"
+    },
+    {
+      "file": "resources-2026-07-17.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-07-17",
+      "requested_at": "2026-09-05T15:09:35.659642+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6382,
+      "sha256": "61a440877a3a9d581e6582535f0642ad532bb8815ea2b4a47d8000aa9ba2381c"
+    },
+    {
+      "file": "score-2026-07-18.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-07-18",
+      "requested_at": "2026-09-05T15:09:40.960103+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1107,
+      "sha256": "cfb3940831a134b5277fbd92a0d9ac6918d429002ccc813863f9481ecd6bc91a"
+    },
+    {
+      "file": "resources-2026-07-18.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-07-18",
+      "requested_at": "2026-09-05T15:09:41.053090+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6382,
+      "sha256": "f42df873f73b2e28d18b6175cbc491b22229b12099cb783446fd4beec8ce5743"
+    },
+    {
+      "file": "score-2026-07-19.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-07-19",
+      "requested_at": "2026-09-05T15:09:41.275369+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1107,
+      "sha256": "79edd9d0b42aa52046493a066362566448dfef55b807d3128c0caacce11e057d"
+    },
+    {
+      "file": "resources-2026-07-19.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-07-19",
+      "requested_at": "2026-09-05T15:09:41.367729+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6381,
+      "sha256": "0f0f0a467542e357ad6daebbe1d95b07fc443030e49e8a391f4f5e9f811faafa"
+    },
+    {
+      "file": "score-2026-07-20.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-07-20",
+      "requested_at": "2026-09-05T15:09:42.094783+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1107,
+      "sha256": "1a23caddd7284ac51f13c33c82be9b35d9f326ebbe78cfc764b08d9b00f9fe2d"
+    },
+    {
+      "file": "resources-2026-07-20.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-07-20",
+      "requested_at": "2026-09-05T15:09:42.171614+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6382,
+      "sha256": "fe73a84695e3c1ba493e89e8877b26e542e77cb6a278103480726d5aee02472a"
+    },
+    {
+      "file": "score-2026-07-21.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-07-21",
+      "requested_at": "2026-09-05T15:09:46.580815+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1107,
+      "sha256": "60e0220d247cdd7dab96e017178d2f4330783c17fe12a37238034c1ae5b7291f"
+    },
+    {
+      "file": "resources-2026-07-21.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-07-21",
+      "requested_at": "2026-09-05T15:09:46.672601+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6382,
+      "sha256": "742e2f4e617972905d0a97d294130bc0dba8e8497e03c252bf3ccf5970b2cb15"
+    },
+    {
+      "file": "score-2026-07-22.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-07-22",
+      "requested_at": "2026-09-05T15:09:47.153300+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1105,
+      "sha256": "6ba9e9f0bf10bb76e247e3a6c6c01360ce75faeb8ab24b33f25ff61e4dd7e46a"
+    },
+    {
+      "file": "resources-2026-07-22.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-07-22",
+      "requested_at": "2026-09-05T15:09:47.244351+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6363,
+      "sha256": "4a593a03d664c0546f219615bf7f32efcef01b72b8c9db4ee554fb957ba9af12"
+    },
+    {
+      "file": "score-2026-07-23.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-07-23",
+      "requested_at": "2026-09-05T15:09:48.095327+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1104,
+      "sha256": "896827b716f6f45f7d67f0fde1169342ec93b40f18efc456209bca869ab00c32"
+    },
+    {
+      "file": "resources-2026-07-23.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-07-23",
+      "requested_at": "2026-09-05T15:09:48.185834+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6379,
+      "sha256": "1bda9041494a7205c88ae73cabd41920c3c31b30500742f21bda8c32a24d84b9"
+    },
+    {
+      "file": "score-2026-07-24.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-07-24",
+      "requested_at": "2026-09-05T15:09:52.591628+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1104,
+      "sha256": "20a96ec26f11f60202f9980122032937109bf11d3810037af4da09bab67d32a4"
+    },
+    {
+      "file": "resources-2026-07-24.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-07-24",
+      "requested_at": "2026-09-05T15:09:52.611817+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6385,
+      "sha256": "ec991554d9152e95c99949a98f675d29ac6639e114930f3625f6e9a5f74d28ed"
+    },
+    {
+      "file": "score-2026-07-25.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-07-25",
+      "requested_at": "2026-09-05T15:09:52.681331+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1104,
+      "sha256": "25bd5bf35a81430ca052e9881fce9955331e2bee6c14fb51d4e8ce3c4fce99dc"
+    },
+    {
+      "file": "resources-2026-07-25.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-07-25",
+      "requested_at": "2026-09-05T15:09:52.778502+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6378,
+      "sha256": "7d874d595c14fcfc1164c5f9d0cbac27eca41ac38fa7014f916e2f2c9e300bf0"
+    },
+    {
+      "file": "score-2026-07-26.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-07-26",
+      "requested_at": "2026-09-05T15:09:53.474830+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1104,
+      "sha256": "c85ddacef598b677a69b3dfa48c53bc1e447918e4876e9aba3dbe816680ff90a"
+    },
+    {
+      "file": "resources-2026-07-26.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-07-26",
+      "requested_at": "2026-09-05T15:09:53.559542+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6387,
+      "sha256": "311f17723c6c0b3d01c68faac9004f9d344a7d6dbf59ce5dc45929442e85710d"
+    },
+    {
+      "file": "score-2026-07-27.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-07-27",
+      "requested_at": "2026-09-05T15:09:58.121042+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1105,
+      "sha256": "b1a8b6d22a89c02f279b4882a7a717d1755fc34d1cc0d35be203bf4bd55d96fe"
+    },
+    {
+      "file": "resources-2026-07-27.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-07-27",
+      "requested_at": "2026-09-05T15:09:58.204840+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6388,
+      "sha256": "a55014ec75a68de0bca1850f8b6827803f7ebcb657b10dab73e5cad3bb239b54"
+    },
+    {
+      "file": "score-2026-07-28.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-07-28",
+      "requested_at": "2026-09-05T15:09:58.260065+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1103,
+      "sha256": "bdce345f1544a5ccd01b20d74eefbed105a5ad0fd53ffaa0599eddd996821f77"
+    },
+    {
+      "file": "resources-2026-07-28.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-07-28",
+      "requested_at": "2026-09-05T15:09:58.344878+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6380,
+      "sha256": "ab5974ef09cc28e79ac75111cc745fa62b4de396b243d5df4e564c1c516c1504"
+    },
+    {
+      "file": "score-2026-07-29.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-07-29",
+      "requested_at": "2026-09-05T15:09:59.666087+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1102,
+      "sha256": "0dcd46ca5147e51b61f8ba9596983742abff286dd3416a4cf6d463ce1d9107f8"
+    },
+    {
+      "file": "resources-2026-07-29.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-07-29",
+      "requested_at": "2026-09-05T15:09:59.744244+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6358,
+      "sha256": "1ec1b2d2598c5e2922024f7459837e1dfcff9dd2025bc60fa9793f3322076b6b"
+    },
+    {
+      "file": "score-2026-07-30.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-07-30",
+      "requested_at": "2026-09-05T15:10:03.714728+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1104,
+      "sha256": "202d731d1afac63a2ba641d2d65e30ced9370f95a84a42411c9ca78cbcb446ca"
+    },
+    {
+      "file": "resources-2026-07-30.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-07-30",
+      "requested_at": "2026-09-05T15:10:03.808393+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6364,
+      "sha256": "b2dde2dd80068b4ec56c8b8c05de09dfa9466e9ea9400aa0375771b18da7bb0f"
+    },
+    {
+      "file": "score-2026-07-31.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-07-31",
+      "requested_at": "2026-09-05T15:10:04.387159+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1107,
+      "sha256": "ce8e445cf249524dfa36583fdea62507766b38fb5319d653743ac0323cab3607"
+    },
+    {
+      "file": "resources-2026-07-31.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-07-31",
+      "requested_at": "2026-09-05T15:10:04.473304+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6363,
+      "sha256": "919ea3406efa1b907f7fc0a77b053eb4ee1a6fa58db1c85fefb196bc7e30552a"
+    },
+    {
+      "file": "score-2026-08-01.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-08-01",
+      "requested_at": "2026-09-05T15:10:05.216925+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1108,
+      "sha256": "d670d62a28960130effb29c1cbc91bfd62ad92252511761c285a44562a0eb27f"
+    },
+    {
+      "file": "resources-2026-08-01.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-08-01",
+      "requested_at": "2026-09-05T15:10:05.314036+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6360,
+      "sha256": "4be2078d03fad6e8213849d9235e661872ad010f409e7bcb97dfb62b26515739"
+    },
+    {
+      "file": "score-2026-08-02.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-08-02",
+      "requested_at": "2026-09-05T15:10:09.669440+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1108,
+      "sha256": "31084c7001c190785eb68d0e5e0a7395d4d3cb719ca02f54511cdae23849fdb3"
+    },
+    {
+      "file": "resources-2026-08-02.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-08-02",
+      "requested_at": "2026-09-05T15:10:09.758394+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6365,
+      "sha256": "63cd736c1c16ebf560fcbd78a498516db1db76f238db1099304ea9a6f6d05787"
+    },
+    {
+      "file": "score-2026-08-03.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-08-03",
+      "requested_at": "2026-09-05T15:10:10.919634+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1108,
+      "sha256": "a12afdba0c546ea52b497e16f60fc7dd8c90597db2c1c510987abd39436548ac"
+    },
+    {
+      "file": "resources-2026-08-03.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-08-03",
+      "requested_at": "2026-09-05T15:10:11.018672+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6366,
+      "sha256": "b7b8f464122dbcd4c98b403d1afe0b7a921497c6f2dd2e06832a377f53e4b0de"
+    },
+    {
+      "file": "score-2026-08-04.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-08-04",
+      "requested_at": "2026-09-05T15:10:11.219238+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1106,
+      "sha256": "9a5b72fc72c411b84e50bb86126b71bc4f60b556cc123df5281345614d560049"
+    },
+    {
+      "file": "resources-2026-08-04.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-08-04",
+      "requested_at": "2026-09-05T15:10:11.301181+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6361,
+      "sha256": "05456fa085d8a8cda6a0dfbd7c0014531810ad0c8b59eb088a766e7cbbddf6f8"
+    },
+    {
+      "file": "score-2026-08-05.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-08-05",
+      "requested_at": "2026-09-05T15:10:16.157268+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1105,
+      "sha256": "99d99948bd20406521e55bfe434aae6970a318e179c76acc73cbd628dfa74cde"
+    },
+    {
+      "file": "resources-2026-08-05.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-08-05",
+      "requested_at": "2026-09-05T15:10:16.246152+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6365,
+      "sha256": "dbc1e9a7c407c8bfd86cabaeec3a0e888e9f5371e5dbed30f91588441d1a10ec"
+    },
+    {
+      "file": "score-2026-08-06.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-08-06",
+      "requested_at": "2026-09-05T15:10:16.589990+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1107,
+      "sha256": "8a25f791fff29745e510d6ed2664d37cb63a364446da7a8ac5afa9a8bb7f5343"
+    },
+    {
+      "file": "resources-2026-08-06.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-08-06",
+      "requested_at": "2026-09-05T15:10:16.687885+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6365,
+      "sha256": "27f8690391eb0dd3eeaebd97774d717682a9887f6b7aa00923f5787053ca93b5"
+    },
+    {
+      "file": "score-2026-08-07.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-08-07",
+      "requested_at": "2026-09-05T15:10:17.380671+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1106,
+      "sha256": "892348edaca2e1a15f2f3cddc84b7f308babbba97c22bae3d1641cbb6262673a"
+    },
+    {
+      "file": "resources-2026-08-07.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-08-07",
+      "requested_at": "2026-09-05T15:10:17.470630+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6368,
+      "sha256": "e76b0d6f8a3947da8cb49b2938eb8d4fde37f6628d3c69598686eb07f10d887d"
+    },
+    {
+      "file": "score-2026-08-08.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-08-08",
+      "requested_at": "2026-09-05T15:10:22.750929+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1107,
+      "sha256": "42c270e0edd04ab6455484a8da78bc4f0f7145161a4b77d896c8716fef214b3e"
+    },
+    {
+      "file": "resources-2026-08-08.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-08-08",
+      "requested_at": "2026-09-05T15:10:22.860522+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6367,
+      "sha256": "ee098e5d49835a8590d282d910f6466707ada941972ce6dd29b773692f3ac663"
+    },
+    {
+      "file": "score-2026-08-09.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-08-09",
+      "requested_at": "2026-09-05T15:10:22.993218+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1105,
+      "sha256": "1235d6ea79e50ac935fda548a274029fb47bd3ac689d05aba42d58e2cd8e9fe4"
+    },
+    {
+      "file": "resources-2026-08-09.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-08-09",
+      "requested_at": "2026-09-05T15:10:23.226570+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6360,
+      "sha256": "3693ef1a30879e15b3d9329c605c31c3a66694395f252aaa01730e19c8b30582"
+    },
+    {
+      "file": "score-2026-08-10.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-08-10",
+      "requested_at": "2026-09-05T15:10:24.454690+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1105,
+      "sha256": "221115c2747beb4ae7165844291e1152a1a457245a5ce693e702cf099368e44f"
+    },
+    {
+      "file": "resources-2026-08-10.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-08-10",
+      "requested_at": "2026-09-05T15:10:24.546644+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6384,
+      "sha256": "00e34818cb0a36a2b6816d253f795ddce34224d464ea60b52d9d67494a297201"
+    },
+    {
+      "file": "score-2026-08-11.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-08-11",
+      "requested_at": "2026-09-05T15:10:28.420879+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1107,
+      "sha256": "4e656a208480093216a5b72d82a6cfea422ccdfceef1d17f38019f4321e4ef4f"
+    },
+    {
+      "file": "resources-2026-08-11.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-08-11",
+      "requested_at": "2026-09-05T15:10:28.498937+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6363,
+      "sha256": "da41861d153919ab3601da635dcdf40303ceadc7c7538cd04c39a04be0dfa01b"
+    },
+    {
+      "file": "score-2026-08-12.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-08-12",
+      "requested_at": "2026-09-05T15:10:28.907779+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1105,
+      "sha256": "15c8c0d8c5709f1827d6d15167cdbb5708dabd143c20109fbc9f1a396eaaa70d"
+    },
+    {
+      "file": "resources-2026-08-12.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-08-12",
+      "requested_at": "2026-09-05T15:10:28.998834+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6364,
+      "sha256": "b592b6c7a9ac859caed8ab29f0b17371ce1add74c560462af27f4d1863daf092"
+    },
+    {
+      "file": "score-2026-08-13.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-08-13",
+      "requested_at": "2026-09-05T15:10:30.884989+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1105,
+      "sha256": "395fd30494e2d16f66b9fee3bb4e547a3db4b67842899e3f0cdf483a6b30f1ea"
+    },
+    {
+      "file": "resources-2026-08-13.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-08-13",
+      "requested_at": "2026-09-05T15:10:30.970995+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6360,
+      "sha256": "5c96fea326c76936c9b6f8a3b32af1dbbe025ee51c3e88f53add30441b68c682"
+    },
+    {
+      "file": "score-2026-08-14.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-08-14",
+      "requested_at": "2026-09-05T15:10:34.359395+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1103,
+      "sha256": "29911880903779a17638be41984a86a2d5401681437d6d66e513088d8cbab2bb"
+    },
+    {
+      "file": "resources-2026-08-14.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-08-14",
+      "requested_at": "2026-09-05T15:10:34.472092+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6373,
+      "sha256": "34da0e0a2cac87725016913076cd04944acf57ad493393a6fe739395bf965316"
+    },
+    {
+      "file": "score-2026-08-15.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-08-15",
+      "requested_at": "2026-09-05T15:10:34.959699+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1103,
+      "sha256": "8aefd86b2e8e6129d6128e06d3c35786a5836bcfccf8f4ca3ff6100d8ef013c9"
+    },
+    {
+      "file": "resources-2026-08-15.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-08-15",
+      "requested_at": "2026-09-05T15:10:35.061835+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6360,
+      "sha256": "39c1d2168b6463bd7a4849418d7c6f7f1ab933235e28502badcbb35fa1af55d8"
+    },
+    {
+      "file": "score-2026-08-16.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-08-16",
+      "requested_at": "2026-09-05T15:10:36.700491+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1105,
+      "sha256": "2838f8d7ece9b249fb5ca21a58db456c63201c745529b1bb18bae33e2f427e7c"
+    },
+    {
+      "file": "resources-2026-08-16.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-08-16",
+      "requested_at": "2026-09-05T15:10:36.796053+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6363,
+      "sha256": "ce76316bc36d3722f542a6f9ddf02039083994b3e81f158b7879d6dfb9da3130"
+    },
+    {
+      "file": "score-2026-08-17.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-08-17",
+      "requested_at": "2026-09-05T15:10:39.518004+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1105,
+      "sha256": "1ee28db9125c996bf69349bb40fdb3ef02d5d4819b54d14466774bd7a786fba0"
+    },
+    {
+      "file": "resources-2026-08-17.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-08-17",
+      "requested_at": "2026-09-05T15:10:39.618087+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6365,
+      "sha256": "e125201067c2a3759fa77ba82f84392d03c12fdc0000f48598da3280381b1f45"
+    },
+    {
+      "file": "score-2026-08-18.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-08-18",
+      "requested_at": "2026-09-05T15:10:40.875355+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1104,
+      "sha256": "c872e2b7832ec45e3cb374e51f5c7d7ed4e7ef2fe6fa4dfc0a447bc3c893bfd4"
+    },
+    {
+      "file": "resources-2026-08-18.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-08-18",
+      "requested_at": "2026-09-05T15:10:40.955787+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6387,
+      "sha256": "93fe3ebcd82abdeb27e1a49de723406fd7e080b17e05fe95dc5841cbeb785b8c"
+    },
+    {
+      "file": "score-2026-08-19.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-08-19",
+      "requested_at": "2026-09-05T15:10:42.247578+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1105,
+      "sha256": "a7bb80f9a009337eda85886f18c4b96c05e5dd21edfed5e84f8b0796772b3317"
+    },
+    {
+      "file": "resources-2026-08-19.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-08-19",
+      "requested_at": "2026-09-05T15:10:42.339483+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6384,
+      "sha256": "5e9e167b73a71371a42bf7335444302f69fb8b159bb7758e21004397cd92ba4c"
+    },
+    {
+      "file": "score-2026-08-20.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-08-20",
+      "requested_at": "2026-09-05T15:10:45.103922+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1108,
+      "sha256": "bf30e7b7e3f1bb3c73c3b4ac140de5574fc31702347f9b186f7ef849689af228"
+    },
+    {
+      "file": "resources-2026-08-20.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-08-20",
+      "requested_at": "2026-09-05T15:10:45.187210+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6362,
+      "sha256": "2f5079ad6eb20db78557aeac22c96512eb57177f355286d1677a9393ad303c9c"
+    },
+    {
+      "file": "score-2026-08-21.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-08-21",
+      "requested_at": "2026-09-05T15:10:46.837362+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1106,
+      "sha256": "0edb02eb9369ac7fe06bd9d977b0a766b3d452b55319cd0ca29ec03a4ee80c5a"
+    },
+    {
+      "file": "resources-2026-08-21.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-08-21",
+      "requested_at": "2026-09-05T15:10:46.918908+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6383,
+      "sha256": "d580ae57c6ca66d52fe80c90524692d1130ab0fa1ac0d83bd80760fcc2214601"
+    },
+    {
+      "file": "score-2026-08-22.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-08-22",
+      "requested_at": "2026-09-05T15:10:47.496285+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1104,
+      "sha256": "b3fc285946b3e9f5bbabbd277688e8d93f522519ab367045e340ee5a894e0336"
+    },
+    {
+      "file": "resources-2026-08-22.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-08-22",
+      "requested_at": "2026-09-05T15:10:47.585004+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6364,
+      "sha256": "5e8cb018c059df88dc03375523bf671df8436b5bf100f71313ced2ba288fbad2"
+    },
+    {
+      "file": "score-2026-08-23.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-08-23",
+      "requested_at": "2026-09-05T15:10:50.852302+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1105,
+      "sha256": "cd28246e4dc272af80e9b296271b63ba48077d41e37c437e95a43e9226fd22b3"
+    },
+    {
+      "file": "resources-2026-08-23.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-08-23",
+      "requested_at": "2026-09-05T15:10:50.945231+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6381,
+      "sha256": "3e80a3d125fcda96158044d1abc679114f0fa00c440503a05f36324d0801c446"
+    },
+    {
+      "file": "score-2026-08-24.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-08-24",
+      "requested_at": "2026-09-05T15:10:52.462291+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1104,
+      "sha256": "66e1ac882432ff82905cc55862c125fd8d18f72ae85a26f4636b8990dd475269"
+    },
+    {
+      "file": "resources-2026-08-24.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-08-24",
+      "requested_at": "2026-09-05T15:10:52.548211+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6361,
+      "sha256": "74f6a27bc700f2f6ff1658511bcb794520b403b611198b858ef06ff82f468d8e"
+    },
+    {
+      "file": "score-2026-08-25.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-08-25",
+      "requested_at": "2026-09-05T15:10:52.907252+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1105,
+      "sha256": "519810c7fcdacc9334cd575908647f98f87631801d784831579813c9c77868d7"
+    },
+    {
+      "file": "resources-2026-08-25.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-08-25",
+      "requested_at": "2026-09-05T15:10:52.998577+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6361,
+      "sha256": "ba49205409791d7b04ce13efb9912b4b90979f4fde82b41778dcb918aa3badac"
+    },
+    {
+      "file": "score-2026-08-26.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-08-26",
+      "requested_at": "2026-09-05T15:10:56.131893+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1104,
+      "sha256": "01e41d0b7a48b63b24cc2cf1b0a79067c43816c2e11e4addce3430355aeb5094"
+    },
+    {
+      "file": "resources-2026-08-26.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-08-26",
+      "requested_at": "2026-09-05T15:10:56.235144+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6361,
+      "sha256": "1ff2ee028ca2dd5dcc6da607ff06274ec2d6ee5f36b9b480d822e63d4283491b"
+    },
+    {
+      "file": "score-2026-08-27.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-08-27",
+      "requested_at": "2026-09-05T15:10:58.044546+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1105,
+      "sha256": "06d542c4dec496b78f8dde9edc1092b89bd016e519fbd8d0fd054db0d205c109"
+    },
+    {
+      "file": "resources-2026-08-27.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-08-27",
+      "requested_at": "2026-09-05T15:10:58.130216+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6361,
+      "sha256": "a464db0ce6986be89887c20ec6fc9259e8d54c79b92c6289ab12b543ecd0949f"
+    },
+    {
+      "file": "score-2026-08-28.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-08-28",
+      "requested_at": "2026-09-05T15:10:58.652111+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1104,
+      "sha256": "9bd0fc069068cf450709bcdcb0db6d17e0f213bff0b4fbfb1c30a067bd25610f"
+    },
+    {
+      "file": "resources-2026-08-28.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-08-28",
+      "requested_at": "2026-09-05T15:10:58.736052+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6389,
+      "sha256": "bd5426840830083cd39a3a1d892792f00b93b2d1fd3fd88b2bc555315c288dad"
+    },
+    {
+      "file": "score-2026-08-29.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-08-29",
+      "requested_at": "2026-09-05T15:11:01.133561+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1106,
+      "sha256": "8b32bbb8607a11f0c4da472745562240e113c9943bf2bb54a068ea5f9f4da73b"
+    },
+    {
+      "file": "resources-2026-08-29.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-08-29",
+      "requested_at": "2026-09-05T15:11:01.225141+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6388,
+      "sha256": "beb0b201ce16a193b265befb407e1c79e9e37b4971f08144d541c82b6dc8b377"
+    },
+    {
+      "file": "score-2026-08-30.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-08-30",
+      "requested_at": "2026-09-05T15:11:03.695165+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1102,
+      "sha256": "cdd27c43d3afe1a964e9e4086322d616f95fc8bde541a61c4ed175dea1d3abb6"
+    },
+    {
+      "file": "resources-2026-08-30.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-08-30",
+      "requested_at": "2026-09-05T15:11:03.782539+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6358,
+      "sha256": "06a56c88a3fd26ff924de6da8209f221634b20cfc575958d9c44c577867979be"
+    },
+    {
+      "file": "score-2026-08-31.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-08-31",
+      "requested_at": "2026-09-05T15:11:04.260587+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1102,
+      "sha256": "7b296925a451f41246becbfdaed58ce02a1ab9ad4f0e2879175ef8fe907e6b54"
+    },
+    {
+      "file": "resources-2026-08-31.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-08-31",
+      "requested_at": "2026-09-05T15:11:04.334704+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6360,
+      "sha256": "5753a3d04344f5afb28df7222bce521c4c266e1075ac23a9be9896b0eb9b5189"
+    },
+    {
+      "file": "score-2026-09-01.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-09-01",
+      "requested_at": "2026-09-05T15:11:06.101981+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1102,
+      "sha256": "6a6865e74220c835dce4d2f38a7cb03c97220cca3c8f8bbad4e1cc4271f74b11"
+    },
+    {
+      "file": "resources-2026-09-01.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-09-01",
+      "requested_at": "2026-09-05T15:11:06.184333+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6362,
+      "sha256": "38d6d5b800d1294af1eba89862d8712355630d70cd12dc3841ead74574c1cda3"
+    },
+    {
+      "file": "score-2026-09-02.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-09-02",
+      "requested_at": "2026-09-05T15:11:09.051293+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1102,
+      "sha256": "16e10e1b58d4748fea84de74c3fbf1561676d6655aa19f2bbfe0e352841cac72"
+    },
+    {
+      "file": "resources-2026-09-02.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-09-02",
+      "requested_at": "2026-09-05T15:11:09.141608+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6384,
+      "sha256": "ec560123648fbb2089c3ae0f06b9804c203da15f8f902c2572cef9fd41010b37"
+    },
+    {
+      "file": "score-2026-09-03.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-09-03",
+      "requested_at": "2026-09-05T15:11:09.537497+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1101,
+      "sha256": "d2de14e363d0cd2e8286b79dc2df296e10bbf6f2194fcf7f5d650638895fc640"
+    },
+    {
+      "file": "resources-2026-09-03.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-09-03",
+      "requested_at": "2026-09-05T15:11:09.607394+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6387,
+      "sha256": "fb5f8969fe6f81bf32b86779ea3ca98c3117abff9cf5e4bc8da828dba8954993"
+    },
+    {
+      "file": "score-2026-09-04.json",
+      "url": "https://api.verdify.ai/api/v1/scorecard?date=2026-09-04",
+      "requested_at": "2026-09-05T15:11:11.412091+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 1102,
+      "sha256": "c2da2e27c5b890c9207de83b2c3fcf0513f1583d1d62196a7cfdea673e56ce62"
+    },
+    {
+      "file": "resources-2026-09-04.json",
+      "url": "https://api.verdify.ai/api/v1/resources/daily?date=2026-09-04",
+      "requested_at": "2026-09-05T15:11:11.501742+00:00",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 6389,
+      "sha256": "51cb24e48fc6a8ad501388404146734e0ceaa8c10ef6a158b9edf75cb9900c50"
+    }
+  ]
+}

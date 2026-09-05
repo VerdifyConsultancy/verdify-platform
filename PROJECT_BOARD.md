@@ -1,166 +1,19 @@
-# Verdify Platform Project Board
+# Campaign roadmap — September 5, 2026
 
-> **Current audit (2026-08-29):** the complete issue inventory and normalized
-> milestone/lane/sprint model are recorded in
-> [`docs/audits/work-pending-2026-08-29.md`](docs/audits/work-pending-2026-08-29.md).
-> Board/card counts below predate that audit unless explicitly dated later.
+Generated from [planning/backlog.yaml](planning/backlog.yaml). Edit the source and run `python -m planning.render`; do not maintain a competing roadmap.
 
-> Optional planning and status reference. Project boards and issue metadata
-> record context; they are not execution authority, prerequisites, or a required
-> workflow. Work directly from the user's request, current repository state, and
-> live evidence.
+The [campaign strategy](planning/CAMPAIGN.md) defines scope, release bundles, evidence gates and deferred work. Historical June/August plans are [archived](planning/archive/2026-09-05/README.md), not execution instructions.
 
-Last updated: 2026-08-29
+| Stage | Exit | Owner role | Issues |
+|---|---|---|---|
+| C0 — Measurement and incident truth | A trustworthy fixed-panel climate/resource contract and a safely classified September 4 wetting interruption. | Evidence/data lead | [#775](https://github.com/VerdifyConsultancy/verdify-platform/issues/775), [#778](https://github.com/VerdifyConsultancy/verdify-platform/issues/778), [#371](https://github.com/VerdifyConsultancy/verdify-platform/issues/371), [#424](https://github.com/VerdifyConsultancy/verdify-platform/issues/424), [#779](https://github.com/VerdifyConsultancy/verdify-platform/issues/779), [#780](https://github.com/VerdifyConsultancy/verdify-platform/issues/780), [#781](https://github.com/VerdifyConsultancy/verdify-platform/issues/781), [#782](https://github.com/VerdifyConsultancy/verdify-platform/issues/782) |
+| C1 — Recovery and integrated physical qualification | Fresh restore-backed vertical evidence and one separately authorized, sealed physical proof; finish baseline-confirmed and off. | Runtime/release lead | [#750](https://github.com/VerdifyConsultancy/verdify-platform/issues/750), [#747](https://github.com/VerdifyConsultancy/verdify-platform/issues/747), [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749), [#641](https://github.com/VerdifyConsultancy/verdify-platform/issues/641), [#639](https://github.com/VerdifyConsultancy/verdify-platform/issues/639), [#587](https://github.com/VerdifyConsultancy/verdify-platform/issues/587), [#783](https://github.com/VerdifyConsultancy/verdify-platform/issues/783) |
+| C2 — Seasonal design lock and randomized start | A declared exploratory pilot or justified revised study, one immutable draw, and separately authorized day 1. | Research/release lead | [#581](https://github.com/VerdifyConsultancy/verdify-platform/issues/581), [#588](https://github.com/VerdifyConsultancy/verdify-platform/issues/588), [#642](https://github.com/VerdifyConsultancy/verdify-platform/issues/642) |
+| C3 — Complete pilot and decision report | All assigned days retained, blinded exports frozen, one-way reveal and a reproducible decision with bounded claims. | Research lead | [#640](https://github.com/VerdifyConsultancy/verdify-platform/issues/640), [#784](https://github.com/VerdifyConsultancy/verdify-platform/issues/784), [#785](https://github.com/VerdifyConsultancy/verdify-platform/issues/785) |
+| C4 — Delivery and runtime reliability | Exact-source delivery, truthful planner/writer/alert health, real compile and device-safe release checks. | Platform lead | [#644](https://github.com/VerdifyConsultancy/verdify-platform/issues/644), [#322](https://github.com/VerdifyConsultancy/verdify-platform/issues/322), [#304](https://github.com/VerdifyConsultancy/verdify-platform/issues/304), [#303](https://github.com/VerdifyConsultancy/verdify-platform/issues/303), [#390](https://github.com/VerdifyConsultancy/verdify-platform/issues/390), [#433](https://github.com/VerdifyConsultancy/verdify-platform/issues/433), [#427](https://github.com/VerdifyConsultancy/verdify-platform/issues/427), [#75](https://github.com/VerdifyConsultancy/verdify-platform/issues/75), [#563](https://github.com/VerdifyConsultancy/verdify-platform/issues/563), [#394](https://github.com/VerdifyConsultancy/verdify-platform/issues/394), [#89](https://github.com/VerdifyConsultancy/verdify-platform/issues/89), [#671](https://github.com/VerdifyConsultancy/verdify-platform/issues/671), [#399](https://github.com/VerdifyConsultancy/verdify-platform/issues/399), [#419](https://github.com/VerdifyConsultancy/verdify-platform/issues/419), [#386](https://github.com/VerdifyConsultancy/verdify-platform/issues/386) |
+| C5 — Durability and least privilege | Role-complete recoverable backups, durable ingest state, measured RPO/RTO and a rehearsed HA cutover option. | Data/platform lead | [#218](https://github.com/VerdifyConsultancy/verdify-platform/issues/218), [#670](https://github.com/VerdifyConsultancy/verdify-platform/issues/670), [#672](https://github.com/VerdifyConsultancy/verdify-platform/issues/672), [#382](https://github.com/VerdifyConsultancy/verdify-platform/issues/382), [#396](https://github.com/VerdifyConsultancy/verdify-platform/issues/396), [#245](https://github.com/VerdifyConsultancy/verdify-platform/issues/245), [#643](https://github.com/VerdifyConsultancy/verdify-platform/issues/643), [#49](https://github.com/VerdifyConsultancy/verdify-platform/issues/49) |
+| C6 — Evidence-led control and irrigation | Safe behavior-preserving firmware simplification, grounded control decisions and commissioned irrigation feedback. | Control lead | [#359](https://github.com/VerdifyConsultancy/verdify-platform/issues/359), [#430](https://github.com/VerdifyConsultancy/verdify-platform/issues/430), [#428](https://github.com/VerdifyConsultancy/verdify-platform/issues/428), [#368](https://github.com/VerdifyConsultancy/verdify-platform/issues/368), [#367](https://github.com/VerdifyConsultancy/verdify-platform/issues/367), [#370](https://github.com/VerdifyConsultancy/verdify-platform/issues/370), [#369](https://github.com/VerdifyConsultancy/verdify-platform/issues/369), [#324](https://github.com/VerdifyConsultancy/verdify-platform/issues/324), [#410](https://github.com/VerdifyConsultancy/verdify-platform/issues/410), [#378](https://github.com/VerdifyConsultancy/verdify-platform/issues/378), [#361](https://github.com/VerdifyConsultancy/verdify-platform/issues/361), [#214](https://github.com/VerdifyConsultancy/verdify-platform/issues/214), [#350](https://github.com/VerdifyConsultancy/verdify-platform/issues/350), [#434](https://github.com/VerdifyConsultancy/verdify-platform/issues/434), [#299](https://github.com/VerdifyConsultancy/verdify-platform/issues/299), [#297](https://github.com/VerdifyConsultancy/verdify-platform/issues/297), [#296](https://github.com/VerdifyConsultancy/verdify-platform/issues/296) |
+| C7 — Physical and seasonal commissioning | Only explicitly commissioned sensors/equipment are used for control or scientific claims. | Operator with data/control lead | [#16](https://github.com/VerdifyConsultancy/verdify-platform/issues/16), [#751](https://github.com/VerdifyConsultancy/verdify-platform/issues/751), [#298](https://github.com/VerdifyConsultancy/verdify-platform/issues/298), [#398](https://github.com/VerdifyConsultancy/verdify-platform/issues/398), [#45](https://github.com/VerdifyConsultancy/verdify-platform/issues/45), [#51](https://github.com/VerdifyConsultancy/verdify-platform/issues/51), [#52](https://github.com/VerdifyConsultancy/verdify-platform/issues/52), [#412](https://github.com/VerdifyConsultancy/verdify-platform/issues/412) |
+| C8 — Comparator and full resource claim | A justified next comparison, measured heating/overnight economics, or independently qualified future platform capability. | Research/platform lead | [#174](https://github.com/VerdifyConsultancy/verdify-platform/issues/174), [#14](https://github.com/VerdifyConsultancy/verdify-platform/issues/14), [#31](https://github.com/VerdifyConsultancy/verdify-platform/issues/31), [#606](https://github.com/VerdifyConsultancy/verdify-platform/issues/606), [#638](https://github.com/VerdifyConsultancy/verdify-platform/issues/638), [#586](https://github.com/VerdifyConsultancy/verdify-platform/issues/586), [#786](https://github.com/VerdifyConsultancy/verdify-platform/issues/786), [#379](https://github.com/VerdifyConsultancy/verdify-platform/issues/379), [#787](https://github.com/VerdifyConsultancy/verdify-platform/issues/787) |
 
-Agent name: `verdify-platform`
-
-## Connection Status
-
-- Recorded board: `verdify-platform`.
-- Current board: `VerdifyConsultancy` project #5,
-  <https://github.com/orgs/VerdifyConsultancy/projects/5>.
-- Current finding: the exact `verdify-platform` board exists with 45 issue
-  cards and 22 fields.
-- Repository link: linked to `VerdifyConsultancy/verdify-platform`.
-- Current planning surface: the ten controller-replan lane epics #343-#352,
-  with the 2026-06-23 climate/control audit overlay in
-  `planning/backlog.yaml`.
-- 2026-08-30: L9 (#351) is standardized on the single Quartz
-  source/publisher/cache architecture. The abandoned alternate generator and
-  its stage/candidate paths are retired; historical cards remain for audit.
-- Legacy/evidence cards remain on the board so old issue history is not lost;
-  they are no longer the primary planning decomposition.
-- Optional issue-body mirror: `## Project Tracking` can preserve planning
-  metadata when project fields drift.
-
-Historical board-workflow details live in `docs/PROJECT_BOARD_WORKFLOW.md`.
-
-## Optional Issue Metadata Example
-
-```markdown
-## Project Tracking
-
-- Status: Ready
-- Priority: P1
-- Effort: L
-- Component: firmware/ingestor/db/grafana/docs
-- Sprint: S5 firmware-first-climate-core
-- Milestone: G1 - Firmware-First Determinism
-- Epic: L2 Firmware Core
-- Agent Lane: verdify-platform
-- Related Issues/PRs: #287, #344
-- Dependencies: firmware preflight/rollback; schema-first sequencing
-- Evidence: AGENTS.md, EPICS.md
-```
-
-## Field Vocabulary
-
-Statuses: `Backlog`, `Ready`, `In Progress`, `In Review`, `Done`.
-
-Fields: `Priority`, `Effort`, `Component`, `Sprint`, `Epic`, `Agent Lane`,
-`Milestone`, `Related Issues/PRs`, `Dependencies`, `Evidence`.
-
-Board cards group planning context as EPICS. Child issues and tasks may carry
-more detail; neither representation is a prerequisite for requested work.
-
-## 2026-06-23 Audit Overlay
-
-The June 22-23 reviews supersede the ADR-0003 target-hugging framing in several
-open issue bodies. ADR-0004 is the active climate-control architecture baseline: float
-inside the crop corridor, act at the edges, and grade outcomes plus cost.
-
-Immediate planning changes:
-
-- Pull DB solar phase parity forward under L5/L6 and #293 before any seasonal
-  anchor retune. The DB helper hardcodes solar noon at 13:00 local and is wrong
-  seasonally, even though current June divergence is small.
-- Keep #377 `band_track_fraction -> 0` as the highest-leverage control
-  experiment, but treat it as Jason/operator-scoped because it changes live device
-  behavior even without OTA.
-- Add outcome/corridor KPIs and moisture-estimator telemetry before deeper VPD
-  and overnight dehum tuning; #383 now tracks that policy tuning after the
-  evidence surfaces exist.
-- 2026-06-23 local follow-through: `outcome_kpi(target_date)` MCP read surface
-  now reports served/pinched compliance, VPD misses, cycles/runtime, dew, water,
-  DLI/DIF, solar-phase buckets, energy/cost, and action effectiveness from
-  existing telemetry. It also compresses `climate_action_log` into action
-  episodes so #383 can see wet->dehum and dehum->wet ping-pong counters plus
-  heat-dehum episodes. The #327 moisture-estimator source path is also wired:
-  firmware publishes `climate_moisture_exchange`, the ingestor stores it in
-  `climate_action_log.source_system_state`, and `outcome_kpi()` summarizes it
-  when rows exist. Live rows still require a validated OTA plus service deploy;
-  durable DB/dashboard rollups remain open.
-- 2026-06-23 local #383 policy progress: firmware source now has a bounded
-  closed-vent `heat_dehum` path for low-wet night rows when the estimator says
-  heat-assist is effective and venting is stale, overcooling, or weak. It is
-  headroom-limited, heat1-only, VPD-priority tagged, and mirrored into the
-  firmware twin. Offline firmware checks passed; live proof still requires the
-  validated OTA/deploy path and before/after outcome KPI review.
-- 2026-06-23 tracker cleanup done for #359, #365, #371, #293, #377, #327,
-  plus #361, #378, and #379; #17/#20 superseded/closed, #366 closed, and #383
-  created.
-- Stale PRs targeting retired `live/platform-main` closed; old superseded main
-  PR #311 closed 2026-06-23; draft CODEOWNERS PR #208 remains open for separate
-  repo-policy disposition.
-
-## Canonical Current Lane Cards
-
-| Status | Priority | Epic card | Sprint | Milestone |
-|---|---|---|---|---|
-| Done | P1 | #343 L1 Architecture Audit, Drift Check, and CI/CD | S4 controller-architecture-audit | G0 - Controller Architecture Audit |
-| Done (2026-06-17) | P1 | #344 L2 Firmware Core | S5 firmware-first-climate-core | G1 - Firmware-First Determinism |
-| Done base / follow-through active | P1 | #345 L3 Climate Control; #359 floating-control overlay | S5 firmware-first-climate-core; G2 follow-through | G1 base done; G2 data/observability follow-through |
-| Ready | P1 | #346 L4 AI Planner and Tunables | S6 data-observability-planner-contracts | G3 - Planner, Irrigation, Lab, and Research |
-| Ready | P1 | #347 L5 Data, Schema, and Source of Truth | S6 data-observability-planner-contracts | G2 - Data Contracts and Observability |
-| Ready | P1 | #348 L6 Observability, Dashboards, and KPIs | S6 data-observability-planner-contracts | G2 - Data Contracts and Observability |
-| Ready | P1 | #349 L7 Lighting and Occupancy | S5 firmware-first-climate-core | G1 - Firmware-First Determinism |
-| Ready | P1 | #350 L8 Irrigation, Fertilization, and Orchids | S7 irrigation-lab-testing-hardening | G3 - Planner, Irrigation, Lab, and Research |
-| In Progress | P1 | #351 L9 Lab Notebook, Website, and Publishing | S7 irrigation-lab-testing-hardening | G3 - Planner, Irrigation, Lab, and Research |
-| Ready | P1 | #352 L10 Testing and Research | S7 irrigation-lab-testing-hardening | G3 - Planner, Irrigation, Lab, and Research |
-
-## Legacy And Evidence Cards
-
-These cards remain useful issue anchors. Treat them as evidence, child umbrellas,
-or historical workstreams under the current lane epics instead of adding new
-top-level planning around them.
-
-| Status | Epic card | Current relationship |
-|---|---|---|
-| Done | #334 Lane Board Normalization | Historical board setup evidence |
-| Ready | #207 Platform Architecture Inventory | L1 evidence/child anchor |
-| Done | #331 API/Service Map | L1 evidence |
-| In Progress | #335 CI/CD And Promotion Hardening | L1 child anchor |
-| In Progress | #336 ArgoCD Deployment And GitOps Cleanup | L1 child anchor |
-| In Progress | #288 Deploy Enablement And Agent Access | L1/L10 enabling anchor |
-| In Progress | #218 Data/Storage Durability And DB HA/PITR | L5 data reliability anchor |
-| Ready | #75 Observability, Data Hygiene, And Product Health | L6 child anchor |
-| In Progress | #287 Greenhouse Control Optimization | L2/L3/L7/L8 legacy umbrella |
-| In Progress | #225 HA Resilience | L1/L5 reliability anchor |
-| Ready | #13 Band And Compliance Rearchitecture | L3/L6 anchor |
-| Ready | #14 Firmware Digital Twins | L10 anchor |
-| Ready | #337 Decommission, Auth, And Residual Product Plane | L9/L1 residual anchor |
-| Backlog | #16 Hardware And Seasonal Operations | L8 hardware anchor |
-| Backlog | #332 Fable Workstream Clarification | Not in current greenhouse lanes |
-| Ready | #330 Repo Cleanup And Branch Review | L1 hygiene anchor |
-| Done | #333 Historical Completed Milestones | Historical evidence |
-
-## Known Issue Anchors
-
-| Lane | Existing issue evidence |
-|---|---|
-| L1 Architecture/CI/CD | #207, #335, #336, #339, #341, #342 |
-| L2 Firmware core | #287, #289, #290, #292, #299, #300, #323, #324, #327, #340 |
-| L3 Climate control | #13, #17, #20, #291, #292, #293, #323, #324, #328, #341, #359, #361, #365-#371, #377-#379, #383 |
-| L4 Planner/tunables | #214, #315, #293, #300 |
-| L5 Data/schema/source of truth | #13, #14, #31, #207, #293, #324, #327, #341, #347 |
-| L6 Observability/KPIs | #75, #89, #200, #241, #308, #327, #328, #341, #348, #371, #383 |
-| L7 Lighting/occupancy | #118, #294, #295, #300, #341 |
-| L8 Irrigation/fertilization | #16, #37, #45, #296, #297, #298 |
-| L9 Lab/site/publishing | #43, #219, #308, #337 |
-| L10 Testing/research | #14, #31, #303, #322, #335, #340 |
-
-## Access Notes
-
-Project fields are useful for views, but issue `## Project Tracking` blocks
-remain the durable fallback. The 2026-06-16 replan added milestones G0-G3,
-issues #343-#352, and project card metadata for each lane.
+The previous ProjectV2 #5 link did not resolve and the accessible organization project inventory was empty on September 5. The delivered board is this index plus GitHub milestones, native sub-issues and native blocked-by dependencies; no inaccessible board is claimed updated.

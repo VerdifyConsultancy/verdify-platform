@@ -1,81 +1,19 @@
-# Verdify Platform Milestones
+# Campaign milestones
 
-> **Current audit (2026-08-29):** milestone membership, current sprint sequence,
-> and all 106 starting issue dispositions are recorded in
-> [`docs/audits/work-pending-2026-08-29.md`](docs/audits/work-pending-2026-08-29.md).
-> Counts and sequencing below are a historical controller-replan snapshot.
+Generated from [planning/backlog.yaml](planning/backlog.yaml). Edit the source and run `python -m planning.render`; do not maintain a competing roadmap.
 
-> Optional planning and status reference. Epics and milestones record context;
-> they are not execution authority, prerequisites, or a required workflow. Work
-> directly from the user's request, current repository state, and live evidence.
+The [campaign strategy](planning/CAMPAIGN.md) defines scope, release bundles, evidence gates and deferred work. Historical June/August plans are [archived](planning/archive/2026-09-05/README.md), not execution instructions.
 
-Last updated: 2026-08-29
+Milestones C0–C8 replace active issue placement in the old M8/M8.1/G/S milestones. Old milestones and closed issue membership remain historical; no old milestone is marked completed merely by moving its open work.
 
-Agent name: `verdify-platform`
-
-## Active Controller-Replan Milestones
-
-| Milestone | Open | Closed | Purpose |
-|---|---:|---:|---|
-| G0 - Controller Architecture Audit | 0 | 1 | **DONE 2026-06-17.** L1 actual-vs-intended architecture, dead/stale path inventory, CI/CD/release checklist, and failure-mode docs — delivered + drift remediated (PRs #353-#358) + prod deploy executed. |
-| G1 - Firmware-First Determinism | 1 | 2 | **L2 #344 + L3 #345 DONE 2026-06-17** for the firmware/control base: firmware-internals FSM/relay/safety/bands/72h spec (`docs/firmware-fsm-spec.md`) + safety-rail + 72h-disconnected + crop-agnostic + compliance-feasibility test rails, proven offline (222/0 native, 193,525-row invariants) + live-prod confirmation. **L7 #349** lighting/occupancy remains open. June 23 follow-through now lives under G2/#359/#293/#347/#348. |
-| G2 - Data Contracts and Observability | 2 | 0 | L5/L6 schema authority, source-of-truth/readback contracts, drift detection, DB solar phase parity, floating-corridor outcome KPIs, moisture-estimator telemetry, and the evidence-gated VPD/dehum policy lane. |
-| G3 - Planner, Irrigation, Lab, and Research | 4 | 0 | L4/L8/L9/L10 planner boundary, irrigation/fertilization decisions, lab notebook publishing, and all-year/extreme-weather test harness. L9 static stage is 2/2 Ready on `878c522…d56b`; build/probe/pin is green. Phase 4 work #533-#542 owns packs, protected resources, executable producer/runtime, and two-pass stage proof; prod remains Quartz. |
-
-## Legacy/Open Milestones
-
-These milestones remain in GitHub because their issues are useful historical or
-child anchors. Do not use them as the primary current planning decomposition.
-
-| Milestone | Open | Closed | Current relationship |
-|---|---:|---:|---|
-| Cutover Complete (done) | 0 | 30 | Historical done bucket; do not add new active work. |
-| Enablement: Three-Env (dev/stage parity) | 7 | 2 | Legacy name. Three-env work is superseded by single-env prod; open issues are L1/legacy cleanup anchors. |
-| Enablement: Compliance & Twins | 5 | 4 | Child/evidence anchors for L3/L5/L6/L10. |
-| Enablement: Data Hygiene & Observability | 10 | 8 | Child/evidence anchors for L5/L6/L9. |
-| Enablement: Decommission & Auth | 7 | 0 | Child/evidence anchors for L1/L9 residual cleanup. |
-| Hardware / Seasonal (operator-scoped) | 6 | 0 | Child/evidence anchors for L8 operator-scoped physical work. |
-| M7 - HA: first-principles resilience | 10 | 15 | Child/evidence anchors for L1/L5 reliability work. |
-| Greenhouse Control Optimization | 17 | 0 | Legacy umbrella under L2/L3/L7/L8. |
-| Deploy Enablement (agent access + firmware CI/OTA) | 12 | 0 | Child/evidence anchors for L1/L10 enabling work. |
-| M1 - CI unblocked + images published | 0 | 22 | Historical completed work. |
-| M2 - Data safe before migration | 0 | 8 | Historical completed work. |
-| M3 - Dev/prod substrate ready (+ SHADOW_MODE) | 0 | 4 | Historical completed work; dev is now deleted. |
-| M4 - Handoff safety green | 0 | 3 | Historical completed work. |
-| M5 - Single-writer cutover (Jason) | 0 | 1 | Historical completed work. |
-| M6 - Iris decommission ready + product plane | 0 | 3 | Historical completed work. |
-
-## Historical Milestones
-
-| Milestone | Evidence |
-|---|---|
-| M1 - CI unblocked + images published | Closed issue #69; issues #78, #81, #82, #92, #99, #126-#128. |
-| M2 - Data safe before migration | Closed issue #72; parity and schema work including #129. |
-| M3 - Dev/prod substrate ready | Closed issues #25, #28, #84; dev/staging language is historical after the 2026-06-16 single-env change. |
-| M4 - Handoff safety green | Closed issue #71 and related route/device safety work. |
-| M5 - Single-writer cutover | Record issue #216 documents execution on 2026-06-07. |
-| M6 - Iris decommission ready + product plane | Record issue #217 documents VM powered off; product follow-ups remain as legacy anchors. |
-
-## Next Milestone Recommendation
-
-**G0 is DONE (2026-06-17).** The audit's actual-vs-intended map, stale-path
-inventory, and release/failure-mode checklist exist, drift was remediated, and
-CI/CD was hardened. The audit flagged specific risks to pull forward into the
-next milestones (see `docs/reviews/lane1-architecture-audit-2026-06-16.md` §8):
-- **G2 (L5/L6):** DB PITR / replica (P0 — single-replica StatefulSet, RPO ≤24h);
-  out-of-band writer-absent alert (P0 — spec handed to monitoring-stack); repoint
-  compliance dashboards to device-truth (`setpoint_snapshot`).
-- **G1 (L2/L3): DONE 2026-06-17.** L2 #344 + L3 #345 closed — the firmware
-  control core was already correct; this work delivered the authoritative
-  `docs/firmware-fsm-spec.md` and closed the test-rail gaps (safety-heat +
-  sensor-fault invariants #25/#26, the 72h-disconnected determinism tests, the
-  crop-agnostic guard, the compliance-feasibility classifier), proven offline +
-  confirmed live in prod. The band-curve replay gate is blocking (Phase 1).
-  **G1 remainder: L7 #349** (lighting/occupancy).
-- **2026-06-23 G2 pull-forward:** DB solar phase parity is now the top data/SOT
-  fix because `fn_solar_altitude()` hardcodes solar noon at 13:00 local. After
-  that, run the safety-checked #377 float trial and verify the locally implemented
-  outcome/moisture telemetry through the OTA/deploy path before deeper VPD
-  policy changes (#383). See
-  `planning/backlog.yaml`.
-Proceed to L7 (G1) + G2/G3 next; pull urgent L5/L6 safety/data items forward per the audits.
+| Stage | Exit | Owner role | Issues |
+|---|---|---|---|
+| C0 — Measurement and incident truth | A trustworthy fixed-panel climate/resource contract and a safely classified September 4 wetting interruption. | Evidence/data lead | [#775](https://github.com/VerdifyConsultancy/verdify-platform/issues/775), [#778](https://github.com/VerdifyConsultancy/verdify-platform/issues/778), [#371](https://github.com/VerdifyConsultancy/verdify-platform/issues/371), [#424](https://github.com/VerdifyConsultancy/verdify-platform/issues/424), [#779](https://github.com/VerdifyConsultancy/verdify-platform/issues/779), [#780](https://github.com/VerdifyConsultancy/verdify-platform/issues/780), [#781](https://github.com/VerdifyConsultancy/verdify-platform/issues/781), [#782](https://github.com/VerdifyConsultancy/verdify-platform/issues/782) |
+| C1 — Recovery and integrated physical qualification | Fresh restore-backed vertical evidence and one separately authorized, sealed physical proof; finish baseline-confirmed and off. | Runtime/release lead | [#750](https://github.com/VerdifyConsultancy/verdify-platform/issues/750), [#747](https://github.com/VerdifyConsultancy/verdify-platform/issues/747), [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749), [#641](https://github.com/VerdifyConsultancy/verdify-platform/issues/641), [#639](https://github.com/VerdifyConsultancy/verdify-platform/issues/639), [#587](https://github.com/VerdifyConsultancy/verdify-platform/issues/587), [#783](https://github.com/VerdifyConsultancy/verdify-platform/issues/783) |
+| C2 — Seasonal design lock and randomized start | A declared exploratory pilot or justified revised study, one immutable draw, and separately authorized day 1. | Research/release lead | [#581](https://github.com/VerdifyConsultancy/verdify-platform/issues/581), [#588](https://github.com/VerdifyConsultancy/verdify-platform/issues/588), [#642](https://github.com/VerdifyConsultancy/verdify-platform/issues/642) |
+| C3 — Complete pilot and decision report | All assigned days retained, blinded exports frozen, one-way reveal and a reproducible decision with bounded claims. | Research lead | [#640](https://github.com/VerdifyConsultancy/verdify-platform/issues/640), [#784](https://github.com/VerdifyConsultancy/verdify-platform/issues/784), [#785](https://github.com/VerdifyConsultancy/verdify-platform/issues/785) |
+| C4 — Delivery and runtime reliability | Exact-source delivery, truthful planner/writer/alert health, real compile and device-safe release checks. | Platform lead | [#644](https://github.com/VerdifyConsultancy/verdify-platform/issues/644), [#322](https://github.com/VerdifyConsultancy/verdify-platform/issues/322), [#304](https://github.com/VerdifyConsultancy/verdify-platform/issues/304), [#303](https://github.com/VerdifyConsultancy/verdify-platform/issues/303), [#390](https://github.com/VerdifyConsultancy/verdify-platform/issues/390), [#433](https://github.com/VerdifyConsultancy/verdify-platform/issues/433), [#427](https://github.com/VerdifyConsultancy/verdify-platform/issues/427), [#75](https://github.com/VerdifyConsultancy/verdify-platform/issues/75), [#563](https://github.com/VerdifyConsultancy/verdify-platform/issues/563), [#394](https://github.com/VerdifyConsultancy/verdify-platform/issues/394), [#89](https://github.com/VerdifyConsultancy/verdify-platform/issues/89), [#671](https://github.com/VerdifyConsultancy/verdify-platform/issues/671), [#399](https://github.com/VerdifyConsultancy/verdify-platform/issues/399), [#419](https://github.com/VerdifyConsultancy/verdify-platform/issues/419), [#386](https://github.com/VerdifyConsultancy/verdify-platform/issues/386) |
+| C5 — Durability and least privilege | Role-complete recoverable backups, durable ingest state, measured RPO/RTO and a rehearsed HA cutover option. | Data/platform lead | [#218](https://github.com/VerdifyConsultancy/verdify-platform/issues/218), [#670](https://github.com/VerdifyConsultancy/verdify-platform/issues/670), [#672](https://github.com/VerdifyConsultancy/verdify-platform/issues/672), [#382](https://github.com/VerdifyConsultancy/verdify-platform/issues/382), [#396](https://github.com/VerdifyConsultancy/verdify-platform/issues/396), [#245](https://github.com/VerdifyConsultancy/verdify-platform/issues/245), [#643](https://github.com/VerdifyConsultancy/verdify-platform/issues/643), [#49](https://github.com/VerdifyConsultancy/verdify-platform/issues/49) |
+| C6 — Evidence-led control and irrigation | Safe behavior-preserving firmware simplification, grounded control decisions and commissioned irrigation feedback. | Control lead | [#359](https://github.com/VerdifyConsultancy/verdify-platform/issues/359), [#430](https://github.com/VerdifyConsultancy/verdify-platform/issues/430), [#428](https://github.com/VerdifyConsultancy/verdify-platform/issues/428), [#368](https://github.com/VerdifyConsultancy/verdify-platform/issues/368), [#367](https://github.com/VerdifyConsultancy/verdify-platform/issues/367), [#370](https://github.com/VerdifyConsultancy/verdify-platform/issues/370), [#369](https://github.com/VerdifyConsultancy/verdify-platform/issues/369), [#324](https://github.com/VerdifyConsultancy/verdify-platform/issues/324), [#410](https://github.com/VerdifyConsultancy/verdify-platform/issues/410), [#378](https://github.com/VerdifyConsultancy/verdify-platform/issues/378), [#361](https://github.com/VerdifyConsultancy/verdify-platform/issues/361), [#214](https://github.com/VerdifyConsultancy/verdify-platform/issues/214), [#350](https://github.com/VerdifyConsultancy/verdify-platform/issues/350), [#434](https://github.com/VerdifyConsultancy/verdify-platform/issues/434), [#299](https://github.com/VerdifyConsultancy/verdify-platform/issues/299), [#297](https://github.com/VerdifyConsultancy/verdify-platform/issues/297), [#296](https://github.com/VerdifyConsultancy/verdify-platform/issues/296) |
+| C7 — Physical and seasonal commissioning | Only explicitly commissioned sensors/equipment are used for control or scientific claims. | Operator with data/control lead | [#16](https://github.com/VerdifyConsultancy/verdify-platform/issues/16), [#751](https://github.com/VerdifyConsultancy/verdify-platform/issues/751), [#298](https://github.com/VerdifyConsultancy/verdify-platform/issues/298), [#398](https://github.com/VerdifyConsultancy/verdify-platform/issues/398), [#45](https://github.com/VerdifyConsultancy/verdify-platform/issues/45), [#51](https://github.com/VerdifyConsultancy/verdify-platform/issues/51), [#52](https://github.com/VerdifyConsultancy/verdify-platform/issues/52), [#412](https://github.com/VerdifyConsultancy/verdify-platform/issues/412) |
+| C8 — Comparator and full resource claim | A justified next comparison, measured heating/overnight economics, or independently qualified future platform capability. | Research/platform lead | [#174](https://github.com/VerdifyConsultancy/verdify-platform/issues/174), [#14](https://github.com/VerdifyConsultancy/verdify-platform/issues/14), [#31](https://github.com/VerdifyConsultancy/verdify-platform/issues/31), [#606](https://github.com/VerdifyConsultancy/verdify-platform/issues/606), [#638](https://github.com/VerdifyConsultancy/verdify-platform/issues/638), [#586](https://github.com/VerdifyConsultancy/verdify-platform/issues/586), [#786](https://github.com/VerdifyConsultancy/verdify-platform/issues/786), [#379](https://github.com/VerdifyConsultancy/verdify-platform/issues/379), [#787](https://github.com/VerdifyConsultancy/verdify-platform/issues/787) |

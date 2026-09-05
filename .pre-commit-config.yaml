@@ -16,9 +16,9 @@ repos:
       # This audited embedded patch must stay byte-exact or `git apply` fails:
       # git's format is whitespace-significant (context lines, "-- " terminator).
       - id: trailing-whitespace
-        exclude: '\.md$|^docs/handoff/verdify-site-legacy-lab-image-identity\.patch$'
+        exclude: '\.md$|^docs/handoff/verdify-site-legacy-lab-image-identity\.patch$|^planning/archive/'
       - id: end-of-file-fixer
-        exclude: '\.md$|^docs/handoff/verdify-site-legacy-lab-image-identity\.patch$'
+        exclude: '\.md$|^docs/handoff/verdify-site-legacy-lab-image-identity\.patch$|^planning/archive/'
       - id: check-yaml
         args: [--allow-multiple-documents]
         exclude: 'firmware/'  # ESPHome YAML has special syntax

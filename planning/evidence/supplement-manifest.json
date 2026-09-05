@@ -1,0 +1,34 @@
+[
+  {
+    "file": "band-trace.json",
+    "url": "https://api.verdify.ai/api/v1/public/band-trace",
+    "requested_at": "2026-09-05T15:12:31.526394+00:00",
+    "status": 200,
+    "bytes": 1033,
+    "sha256": "2f7fb30043ebb86e1484039d751f87b06587a853e1f742fdf8995a3591b5ca67"
+  },
+  {
+    "file": "hourly-20260814.csv",
+    "url": "https://lab.verdify.ai/static/data/hourly-performance/greenhouse-performance-hourly-30d-20260814.csv",
+    "requested_at": "2026-09-05T15:12:31.528184+00:00",
+    "status": 200,
+    "bytes": 213208,
+    "sha256": "852b5c98566a82bbd56b857821010ca39850c57784b71d52e6fe532afd71aaf7"
+  },
+  {
+    "file": "hourly-20260715.csv",
+    "url": "https://lab.verdify.ai/static/data/hourly-performance/greenhouse-performance-hourly-30d-20260715.csv",
+    "requested_at": "2026-09-05T15:12:31.631845+00:00",
+    "status": 200,
+    "bytes": 215992,
+    "sha256": "7c4188be7693d0e6a651f0146bbba037aeba6a82cf7381302a77b6e71376d271"
+  },
+  {
+    "file": "hourly-20260615.csv",
+    "url": "https://lab.verdify.ai/static/data/hourly-performance/greenhouse-performance-hourly-30d-20260615.csv",
+    "requested_at": "2026-09-05T15:12:31.714172+00:00",
+    "status": 200,
+    "bytes": 215315,
+    "sha256": "1214050961e862042bbd8af27046cf97cffca6f83f428b7d0cd77a4d909aa5f9"
+  }
+]

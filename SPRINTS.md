@@ -1,171 +1,63 @@
-# Verdify Platform Sprints
+# Implementation sequence and estimates
 
-> Optional planning and history reference. No sprint selection, sprint artifact,
-> board update, or routing step is required for repository work. Work directly
-> from the user's request, current repository state, and live evidence.
+Generated from [planning/backlog.yaml](planning/backlog.yaml). Edit the source and run `python -m planning.render`; do not maintain a competing roadmap.
 
-Last updated: 2026-06-17
+The [campaign strategy](planning/CAMPAIGN.md) defines scope, release bundles, evidence gates and deferred work. Historical June/August plans are [archived](planning/archive/2026-09-05/README.md), not execution instructions.
 
-Agent name: `verdify-platform`
+Engineering-day estimates are planning ranges, not calendar promises or mandatory soak gates. S = up to one engineering day; M = roughly 1–3; L = 3–5 or a roll-up to split into coherent PRs. Stage ranges are bundle estimates, not sums of duplicated epic effort.
 
-Sprint names are planning labels for Project Tracking blocks, not branch names.
-Sprint-number-driven agent routing is retired. Current work lands through GitHub
-issues and PR-scoped verification.
+## C0 — Measurement and incident truth
 
-## Historical Sprints
+3–5 engineering days; raw-ledger access is the main uncertainty.
 
-### S0: Lane Board Normalization
+Exit: A trustworthy fixed-panel climate/resource contract and a safely classified September 4 wetting interruption.
 
-Status: `Done`
+## C1 — Recovery and integrated physical qualification
 
-Goal: create the exact `verdify-platform` Project Board, epic-level cards,
-fallback issue blocks, root lane docs, and dependency requests.
+3–5 engineering days, overlapping C0; physical window is not a promised date.
 
-Evidence: #334, #331, #333, `PROJECT_BOARD.md`, `docs/PROJECT_BOARD_WORKFLOW.md`.
+Exit: Fresh restore-backed vertical evidence and one separately authorized, sealed physical proof; finish baseline-confirmed and off.
 
-### S1: Platform Inventory And Service Map
+## C2 — Seasonal design lock and randomized start
 
-Status: `Done`
+2–3 engineering days after C0/C1 evidence, plus the eligible seasonal start window.
 
-Goal: produce a current service map for entrypoints, ports, data stores,
-external dependencies, and verification commands.
+Exit: A declared exploratory pilot or justified revised study, one immutable draw, and separately authorized day 1.
 
-Evidence: #331 and `docs/SERVICE_MAP.md`.
+## C3 — Complete pilot and decision report
 
-### S2: GitOps And Access Hardening
+60 local days if the accepted 30-pair pilot is retained; 2–3 days for final analysis.
 
-Status: `Legacy/In Progress`
+Exit: All assigned days retained, blinded exports frozen, one-way reveal and a reproducible decision with bounded claims.
 
-Goal: close least-privilege gaps for ArgoCD ownership, secret metadata,
-namespace-local access, prod promotion, and direct-cluster-change exceptions.
+## C4 — Delivery and runtime reliability
 
-Existing anchors: #301-#307, #317, #318, #320, #321, #335, #336.
+5–8 engineering days in coherent bundles; may run alongside C0–C3 without changing locked trial identity.
 
-### S3: Data/Storage And Observability Requests
+Exit: Exact-source delivery, truthful planner/writer/alert health, real compile and device-safe release checks.
 
-Status: `Legacy/Backlog`
+## C5 — Durability and least privilege
 
-Goal: align persistence, backup, CNPG/PITR, health checks, dashboards, and alert
-handoffs with dependency agents.
+5–8 engineering days; any production DB cutover is a separately bounded release.
 
-Existing anchors: #13, #14, #75, #89, #218, #233, #241, #243-#245.
+Exit: Role-complete recoverable backups, durable ingest state, measured RPO/RTO and a rehearsed HA cutover option.
 
-## Current Controller-Replan Sprints
+## C6 — Evidence-led control and irrigation
 
-### S4: Controller Architecture Audit
+2–3 implementation sprints after evidence; no treatment-affecting changes during a locked study.
 
-Status: `Done` (2026-06-17)
+Exit: Safe behavior-preserving firmware simplification, grounded control decisions and commissioned irrigation feedback.
 
-Goal: determine what is real, stale, broken, duplicated, dead, authoritative,
-fallback-only, or delete/rewrite candidate across firmware, Kubernetes,
-ingestor, database, dashboards, planner, lab notebook, Home Assistant, weather,
-S3, Cloudflare, and CI/CD.
+## C7 — Physical and seasonal commissioning
 
-Primary lane:
+Condition-triggered; no assumed hardware purchase or install date.
 
-- #343 L1 Architecture Audit, Drift Check, and CI/CD.
+Exit: Only explicitly commissioned sensors/equipment are used for control or scientific claims.
 
-Evidence: `docs/reviews/lane1-architecture-audit-2026-06-16.md`,
-`docs/RELEASE-CHECKLIST.md`, `docs/handoff/monitoring-writer-absent-alert.md`;
-PRs #353-#358 (dead-weight purge, schema regen + mig 180, dead dashboards, CI
-gates, ingestor reliability, prod promote); prod deploy executed (mig 180 live,
-images promoted/synced). Note: the original audit-only non-goal was superseded
-when Jason authorized the prod sync/deploy in-session.
+## C8 — Comparator and full resource claim
 
-Verification:
+Separate future campaigns, estimated after C3 readout; not launch prerequisites.
 
-- Docs-only changes: `git diff --check`.
-- Live diagnostics are read-only unless a later issue explicitly gates them.
-- No prod sync, OTA, device VLAN, destructive DB, credential, or edge actions.
+Exit: A justified next comparison, measured heating/overnight economics, or independently qualified future platform capability.
 
-### S5: Firmware-First Climate Core
-
-Status: `In Progress` (L2 #344 + L3 #345 **Done 2026-06-17**; L7 #349 remains)
-
-Goal: simplify and prove firmware-first deterministic control for climate,
-lighting/occupancy, safety rails, relay transitions, disconnected behavior, and
-diurnal target curves.
-
-Primary lanes:
-
-- #344 L2 Firmware Core — **Done 2026-06-17** (`docs/firmware-fsm-spec.md` +
-  safety-rail/72h/crop-agnostic test rails; proven offline, 222/0 + 193,525-row
-  invariants).
-- #345 L3 Climate Control — **Done 2026-06-17** (curve math + bands/hysteresis +
-  energy-waste/outdoor-air guards + graded feasibility-aware compliance; offline
-  + live-prod confirmed).
-- #349 L7 Lighting and Occupancy — Ready (next in S5).
-
-Verification:
-
-- Firmware: `make test-firmware`, `make firmware-invariants`, firmware replay,
-  `make firmware-replay-band` for band-curve changes, and `make firmware-check`.
-- Lighting: `make lighting-audit-static`; live/current audit only when the
-  issue calls for it and access/gates are satisfied.
-
-### S6: Data, Observability, And Planner Contracts
-
-Status: `In Progress`
-
-Goal: define source-of-truth contracts, read/write authority, drift detection,
-dashboard/KPI truth, and the bounded planner tunable contract.
-
-Primary lanes:
-
-- #347 L5 Data, Schema, and Source of Truth.
-- #348 L6 Observability, Dashboards, and KPIs.
-- #346 L4 AI Planner and Tunables.
-
-Verification:
-
-- Schema/migration changes: `make migration-rollback-safety` plus targeted proof.
-- Python/runtime changes: `make lint`, then `make test`.
-- Dashboard/site changes: relevant Makefile/site command and render check.
-
-### S7: Irrigation, Lab, And Testing Hardening
-
-Status: `Ready`
-
-Goal: make irrigation/fertilization decisions explicit, repair lab notebook
-truth, and build all-year/extreme-weather firmware confidence beyond the replay
-corpus.
-
-Primary lanes:
-
-- #350 L8 Irrigation, Fertilization, and Orchids.
-- #351 L9 Lab Notebook, Website, and Publishing. (2026-08-30: standardized on
-  the Quartz generator, in-cluster publisher, and cache-backed nginx runtime.)
-- #352 L10 Testing and Research.
-
-Verification:
-
-- Irrigation: targeted Makefile irrigation checks from the issue.
-- Lab/site: `make site-lint`, `make site-doctor`, targeted publisher guards,
-  prod Kustomize render, and live route/graph checks.
-- Firmware/test harness: firmware gates plus all-year/extreme scenario outputs.
-
-### S8: Vanda Night Dehum (vent+reheat + telemetry + gated activation)
-
-Status: `Executing — 48h flag-OFF soak (OTA ab18fe8 accepted 2026-07-04T01:33Z; flag-ON eligible ~07-06T01:33Z, execution safeguard)`
-
-Goal: dry the overnight center-zone air per #410 (02-06h median VPD 0.61 ->
->=0.78) via the design-validated vent+reheat held-temp path, shipped flag-OFF and
-activated behind the #411/#377 execution safeguards with a 48h canary bake
-(night_min >= 64F rollback trigger).
-
-The implementation history is retained in the durable issue, migration, ADR,
-and release records linked below.
-
-Primary lanes:
-
-- #410 firmware vent+reheat hold (flag OFF, replay-identical).
-- #327 moisture-estimator telemetry (migration 187) — bake prerequisite.
-- #413 doc drift: pinch re-pin step, OTA-reset mechanics, envelope notes.
-- #411 night-anchor migration 188 — blocked on the safeguard:runtime-preflight decision.
-
-Verification:
-
-- Firmware: replay (flag-OFF zero-divergence), invariants, cold-night fixture,
-  `make firmware-check`; migrations: `make migration-rollback-safety` + proofs;
-  docs: `git diff --check`; activation evidence: `outcome_kpi()` + the bake
-  report with recorded envelope + band_track_fraction + flag state.
+C0 and independent C1 qualification can overlap. C4/C5 changes may run alongside the study only when they preserve its frozen identities and outcomes; otherwise defer or follow the locked safety-abort/deviation contract. No opportunistic tuning, meter reinterpretation or sensor-panel substitution during assigned days.
