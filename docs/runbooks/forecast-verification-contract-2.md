@@ -81,3 +81,52 @@ Keep #780 open until frozen production inputs/outputs are hashed, lead-bucket
 old-versus-corrected priors are reconciled, role/latency checks pass on real data
 and publication is observed. The historical +1.453/+0.539 kPa comparison is a
 prior capture, not a promised value for today's revised sampling/window contract.
+
+## Frozen-input reconciliation
+
+`research/planner-efficacy/forecast_replay.py` is an offline reconciliation tool,
+not a production database client. It never discovers credentials or accepts a
+DSN. First generate a bounded allowlisted export query for the historical decision
+timestamps under review (at most a seven-day span):
+
+```sh
+python research/planner-efficacy/forecast_replay.py emit-sql \
+  --decision 2026-09-04T12:00:00Z --decision 2026-09-05T12:00:00Z
+```
+
+Have the authorized database collector execute that query with unaligned,
+tuples-only, quiet output (`psql -X -qAt -v ON_ERROR_STOP=1`) and preserve its JSON
+outside Git. The query uses one repeatable-read, read-only transaction and a
+120-second statement timeout. It exports explicit raw outdoor/forecast columns
+and the old verifier's actual `v_climate_merged` inputs, not a fabricated proxy.
+The single-house guard is required because the legacy views are unscoped. This
+does not grant a repo pod new DB, exec, or cross-namespace authority. Do not
+substitute the public 15-minute lifecycle or hourly sample exports: they cannot
+recover valid-time one-minute truth or prove all 60 preceding solar bins.
+
+Then, on an analysis host with PostgreSQL server binaries, run:
+
+```sh
+python research/planner-efficacy/forecast_replay.py replay \
+  --input /private-evidence/forecast-input.json --pg-bin /path/to/postgresql/bin
+```
+
+Save the JSON report outside Git with the export. The runner creates and removes
+only its own private-socket cluster, disables TCP, ignores inherited `PG*`
+configuration, and does not use an existing database. The report includes SHA-256
+input/tool/SQL identities, export metadata, row counts, old and corrected daily
+and lead-bucket outputs, old/new correction functions and prospective priors at
+each frozen decision. The repository SQL is unmodified; `now()` is bound to a
+private stable clock and hourly `time_bucket` is emulated with UTC `date_bin`.
+An outer-transaction migration rollback must restore baseline results and view
+identities before the local commit/replay proceeds. This is not a production
+backup restore, latency proof, or live acceptance receipt.
+
+Review paired-hour counts, forecast availability/freshness, missing truth and
+changed priors explicitly. Export bounds cannot attest that retention preserved
+all requested rows. Observation event times are not observation arrival times;
+late/backfilled/corrected observations remain an as-of limitation unless a
+contemporaneous snapshot or arrival lineage is independently supplied. Old
+conflicting-vintage tie selection is unspecified, and old/new windows and sample
+denominators differ. Keep those limits in any published aggregate. Never publish
+raw exports or present synthetic replay fixtures as a production backtest.
