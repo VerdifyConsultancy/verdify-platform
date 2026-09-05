@@ -169,6 +169,17 @@ UPDATE climate SET solar_irradiance_w_m2=900 WHERE ts >= (SELECT hour FROM fixtu
     assert row["actual_solar"] == 100
     assert row["solar_error_w"] == 0
     assert row["solar_minutes"] == 60
+    # A later weather forecast is valid for instant temperature/VPD but was
+    # fetched after the solar averaging window began. Keep solar's own vintage.
+    query("""INSERT INTO weather_forecast SELECT hour, hour-interval '30 minutes',
+        77,100,0,900,0 FROM fixture_hour;""")
+    row = json.loads(query("SELECT row_to_json(v) FROM v_forecast_accuracy v;"))
+    assert row["lead_hours"] == 0.5
+    assert row["solar_lead_hours"] == 2
+    assert row["forecast_solar"] == 100
+    assert row["solar_error_w"] == 0
+    assert query("SELECT samples FROM fn_forecast_correction('solar_w_m2',24);") == "1"
+    assert query("SELECT bias FROM v_forecast_accuracy_lead_buckets WHERE param='solar_w_m2';") == "0.0"
     # A missing solar minute is not extrapolated into a complete hourly truth.
     query("DELETE FROM climate WHERE ts=(SELECT hour-interval '1 hour' FROM fixture_hour);")
     assert query("SELECT actual_solar IS NULL AND solar_error_w IS NULL FROM v_forecast_accuracy;") == "t"

@@ -101,16 +101,25 @@ REVOKE ALL ON public.v_forecast_outdoor_hourly, public.v_forecast_outdoor_pairs 
 GRANT SELECT ON public.v_forecast_outdoor_pairs TO verdify_ingestor_runtime;
 
 CREATE OR REPLACE VIEW public.v_forecast_accuracy AS
-SELECT DISTINCT ON (forecast_hour)
-    forecast_hour, fetched_at, round(lead_hours, 1) AS lead_hours,
-    forecast_temp, actual_temp, round(temp_error_f::numeric, 1) AS temp_error_f,
-    forecast_vpd, actual_vpd, round(vpd_error_kpa::numeric, 2) AS vpd_error_kpa,
-    forecast_solar, actual_solar, round(solar_error_w::numeric, 1) AS solar_error_w,
-    forecast_rh, actual_rh, rh_error_pct,
-    temp_minutes, rh_minutes, vpd_minutes, solar_minutes,
-    vintage_rows, vintage_conflict, verification_contract_version
-FROM public.v_forecast_outdoor_pairs
-ORDER BY forecast_hour, fetched_at DESC;
+WITH weather AS (
+    SELECT DISTINCT ON (forecast_hour) *
+    FROM public.v_forecast_outdoor_pairs ORDER BY forecast_hour, fetched_at DESC
+), solar AS (
+    SELECT DISTINCT ON (forecast_hour) *
+    FROM public.v_forecast_outdoor_pairs WHERE lead_hours >= 1
+    ORDER BY forecast_hour, fetched_at DESC
+)
+SELECT
+    w.forecast_hour, w.fetched_at, round(w.lead_hours, 1) AS lead_hours,
+    w.forecast_temp, w.actual_temp, round(w.temp_error_f::numeric, 1) AS temp_error_f,
+    w.forecast_vpd, w.actual_vpd, round(w.vpd_error_kpa::numeric, 2) AS vpd_error_kpa,
+    s.forecast_solar, s.actual_solar, round(s.solar_error_w::numeric, 1) AS solar_error_w,
+    w.forecast_rh, w.actual_rh, w.rh_error_pct,
+    w.temp_minutes, w.rh_minutes, w.vpd_minutes, s.solar_minutes,
+    w.vintage_rows, w.vintage_conflict, w.verification_contract_version,
+    s.fetched_at AS solar_fetched_at, s.lead_hours AS solar_lead_hours,
+    s.vintage_conflict AS solar_vintage_conflict
+FROM weather w LEFT JOIN solar s USING (forecast_hour);
 
 CREATE OR REPLACE VIEW public.v_forecast_accuracy_daily AS
 SELECT (f.forecast_hour AT TIME ZONE 'America/Denver')::date AS date,
@@ -119,7 +128,8 @@ SELECT (f.forecast_hour AT TIME ZONE 'America/Denver')::date AS date,
     avg(p.actual) FILTER (WHERE p.forecast IS NOT NULL) AS observed_avg,
     avg(p.forecast - p.actual) AS bias,
     avg(abs(p.forecast - p.actual)) AS abs_error,
-    round(avg(f.lead_hours) FILTER (WHERE p.forecast IS NOT NULL AND p.actual IS NOT NULL), 1) AS horizon_hours,
+    round(avg(CASE WHEN p.param = 'solar_w_m2' THEN f.solar_lead_hours ELSE f.lead_hours END)
+        FILTER (WHERE p.forecast IS NOT NULL AND p.actual IS NOT NULL), 1) AS horizon_hours,
     count(p.forecast - p.actual) AS samples,
     sum(p.observed_minutes) FILTER (WHERE p.forecast IS NOT NULL AND p.actual IS NOT NULL) AS observed_minutes,
     2 AS verification_contract_version
@@ -135,28 +145,31 @@ WHERE f.forecast_hour >= now() - interval '14 days'
 GROUP BY 1, p.param;
 
 CREATE OR REPLACE VIEW public.v_forecast_accuracy_lead_buckets AS
-WITH selected AS (
-    SELECT DISTINCT ON (forecast_hour, lead_bucket) *
-    FROM public.v_forecast_outdoor_pairs
-    ORDER BY forecast_hour, lead_bucket, fetched_at DESC
+WITH candidates AS (
+    SELECT f.*, p.param, p.error, p.observed_minutes
+    FROM public.v_forecast_outdoor_pairs f
+    CROSS JOIN LATERAL (VALUES
+        ('temp_f', f.temp_error_f, f.temp_minutes),
+        ('rh_pct', f.rh_error_pct, f.rh_minutes),
+        ('vpd_kpa', f.vpd_error_kpa, f.vpd_minutes),
+        ('solar_w_m2', f.solar_error_w, f.solar_minutes)
+    ) p(param, error, observed_minutes)
+    WHERE p.param <> 'solar_w_m2' OR f.lead_hours >= 1
+), selected AS (
+    SELECT DISTINCT ON (forecast_hour, lead_bucket, param) *
+    FROM candidates ORDER BY forecast_hour, lead_bucket, param, fetched_at DESC
 )
 SELECT (f.forecast_hour AT TIME ZONE 'America/Denver')::date AS date,
-    f.lead_bucket, p.param,
-    count(p.error) AS samples,
-    round(avg(p.error)::numeric, CASE p.param WHEN 'vpd_kpa' THEN 3 WHEN 'solar_w_m2' THEN 1 ELSE 2 END) AS bias,
-    round(avg(abs(p.error))::numeric, CASE p.param WHEN 'vpd_kpa' THEN 3 WHEN 'solar_w_m2' THEN 1 ELSE 2 END) AS mae,
-    round(avg(f.lead_hours) FILTER (WHERE p.error IS NOT NULL), 2) AS mean_lead_hours,
-    sum(p.observed_minutes) FILTER (WHERE p.error IS NOT NULL) AS observed_minutes,
+    f.lead_bucket, f.param,
+    count(f.error) AS samples,
+    round(avg(f.error)::numeric, CASE f.param WHEN 'vpd_kpa' THEN 3 WHEN 'solar_w_m2' THEN 1 ELSE 2 END) AS bias,
+    round(avg(abs(f.error))::numeric, CASE f.param WHEN 'vpd_kpa' THEN 3 WHEN 'solar_w_m2' THEN 1 ELSE 2 END) AS mae,
+    round(avg(f.lead_hours) FILTER (WHERE f.error IS NOT NULL), 2) AS mean_lead_hours,
+    sum(f.observed_minutes) FILTER (WHERE f.error IS NOT NULL) AS observed_minutes,
     count(*) FILTER (WHERE f.vintage_conflict) AS conflicting_hours,
     2 AS verification_contract_version
 FROM selected f
-CROSS JOIN LATERAL (VALUES
-    ('temp_f', f.temp_error_f, f.temp_minutes),
-    ('rh_pct', f.rh_error_pct, f.rh_minutes),
-    ('vpd_kpa', f.vpd_error_kpa, f.vpd_minutes),
-    ('solar_w_m2', f.solar_error_w, f.solar_minutes)
-) p(param, error, observed_minutes)
-GROUP BY 1, f.lead_bucket, p.param;
+GROUP BY 1, f.lead_bucket, f.param;
 
 CREATE OR REPLACE VIEW public.v_forecast_vs_actual AS
 SELECT forecast_hour AS hour,
@@ -179,6 +192,7 @@ LANGUAGE sql STABLE AS $function$
         FROM public.v_forecast_outdoor_pairs
         WHERE forecast_hour > now() - interval '7 days'
           AND lead_hours <= lead_hours_max
+          AND (param <> 'solar_w_m2' OR lead_hours >= 1)
         ORDER BY forecast_hour, fetched_at DESC
     ), errors AS (
         SELECT CASE param
@@ -211,22 +225,23 @@ COMMENT ON VIEW public.v_forecast_accuracy_lead_buckets IS
 -- Prospective context uses only data available NOW, with per-row freshness and
 -- matching lead bucket. Missing calibration is NULL, not a zero-bias estimate.
 CREATE VIEW public.v_forecast_planning_priors AS
-WITH selected_history AS (
-    SELECT DISTINCT ON (forecast_hour, lead_bucket) *
-    FROM public.v_forecast_outdoor_pairs
-    WHERE forecast_hour > now() - interval '7 days'
-    ORDER BY forecast_hour, lead_bucket, fetched_at DESC
-), calibration AS (
-    SELECT f.lead_bucket, p.param, avg(p.error) AS bias,
-        count(p.error) AS paired_hours,
-        sum(p.observed_minutes) FILTER (WHERE p.error IS NOT NULL) AS observed_minutes
-    FROM selected_history f
+WITH history_candidates AS (
+    SELECT f.*, p.param, p.error, p.observed_minutes
+    FROM public.v_forecast_outdoor_pairs f
     CROSS JOIN LATERAL (VALUES
         ('temp_f', f.temp_error_f, f.temp_minutes),
         ('vpd_kpa', f.vpd_error_kpa, f.vpd_minutes),
         ('solar_w_m2', f.solar_error_w, f.solar_minutes)
     ) p(param, error, observed_minutes)
-    GROUP BY f.lead_bucket, p.param
+    WHERE f.forecast_hour > now() - interval '7 days'
+      AND (p.param <> 'solar_w_m2' OR f.lead_hours >= 1)
+), selected_history AS (
+    SELECT DISTINCT ON (forecast_hour, lead_bucket, param) *
+    FROM history_candidates ORDER BY forecast_hour, lead_bucket, param, fetched_at DESC
+), calibration AS (
+    SELECT lead_bucket, param, avg(error) AS bias, count(error) AS paired_hours,
+        sum(observed_minutes) FILTER (WHERE error IS NOT NULL) AS observed_minutes
+    FROM selected_history GROUP BY lead_bucket, param
 ), vintages AS (
     SELECT ts, fetched_at,
         count(DISTINCT jsonb_build_array(temp_f, vpd_kpa, solar_w_m2)) > 1 AS vintage_conflict,
@@ -258,12 +273,14 @@ SELECT now() AS decision_at, f.ts AS valid_at, f.fetched_at AS available_at,
     c.observed_minutes AS calibration_observed_minutes,
     CASE WHEN NOT f.vintage_conflict AND f.fetch_age_minutes <= 120
               AND f.raw_forecast IS NOT NULL AND c.paired_hours > 0
+              AND (f.param <> 'solar_w_m2' OR f.lead_hours >= 1)
          THEN CASE WHEN f.param = 'temp_f' THEN f.raw_forecast - c.bias
                    ELSE greatest(0, f.raw_forecast - c.bias) END
     END AS corrected_prior,
     CASE WHEN f.vintage_conflict THEN 'conflicting_vintage'
          WHEN f.raw_forecast IS NULL THEN 'missing_forecast'
          WHEN f.fetch_age_minutes > 120 THEN 'stale_forecast'
+         WHEN f.param = 'solar_w_m2' AND f.lead_hours < 1 THEN 'partial_window_nowcast'
          WHEN COALESCE(c.paired_hours, 0) = 0 THEN 'missing_calibration'
          ELSE 'available_diagnostic' END AS availability,
     2 AS verification_contract_version

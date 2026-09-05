@@ -24,8 +24,10 @@ preceding-hour mean shortwave radiation. The observation contract is:
   unavailable. A post-valid-time fetch cannot become a pre-valid forecast.
 - Summary selection uses the latest vintage per valid time and lead bucket.
   `samples` means paired valid times, not forecast rows multiplied by telemetry.
-  A later partial-window solar vintage can therefore make that selected row's
-  solar metric unavailable even if an older solar forecast exists.
+  Solar selects independently from pre-window vintages, with its own fetch/lead
+  fields; later weather vintages do not hide an eligible older solar forecast.
+  Prospective solar nowcasts issued after the averaging window started are
+  explicitly labeled and do not become corrected forecast priors.
 - Daily error uses matched pairs; MAE is mean absolute hourly error, not absolute
   daily bias (opposite signed errors must not cancel).
 
