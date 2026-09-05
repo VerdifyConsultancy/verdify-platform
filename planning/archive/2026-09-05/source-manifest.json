@@ -1,0 +1,55 @@
+{
+  "revision": "963ea818aad09b02259509cffa6bfdafb48d1702",
+  "files": [
+    {
+      "source_path": "PROJECT_BOARD.md",
+      "archive_path": "prior-source/PROJECT_BOARD.md",
+      "sha256": "e0a440469b7ce681987adedffa40d883390910be6fc91cf97861f709dcad7ee7"
+    },
+    {
+      "source_path": "MILESTONES.md",
+      "archive_path": "prior-source/MILESTONES.md",
+      "sha256": "ad4a8650507ff86be3cbcf869a294cd180ddb30c972f12633d3585b2b471c3cd"
+    },
+    {
+      "source_path": "SPRINTS.md",
+      "archive_path": "prior-source/SPRINTS.md",
+      "sha256": "ba3c320d59797361c5cc1a0ba53e7c41ee8b8bfcf4d8bee1225fa7eda465a26c"
+    },
+    {
+      "source_path": "LANES.md",
+      "archive_path": "prior-source/LANES.md",
+      "sha256": "362c13c48cb17f0f7e0e268dbd4f04275711541122772768e2896c117e0833e5"
+    },
+    {
+      "source_path": "EPICS.md",
+      "archive_path": "prior-source/EPICS.md",
+      "sha256": "097fd80b0c3c26b58f4e8c1a18302884c07edcb182746791f8f35f9e0c767928"
+    },
+    {
+      "source_path": "planning/README.md",
+      "archive_path": "prior-source/planning/README.md",
+      "sha256": "c6550168e5866863342ca28381108580bdf719a5b4189f36aa6ebb974db64caa"
+    },
+    {
+      "source_path": "planning/backlog.yaml",
+      "archive_path": "prior-source/planning/backlog.yaml",
+      "sha256": "04200f8c5f22c7fe4c305e4c929d1112ce2006905f1e17ee82458651874b82b9"
+    },
+    {
+      "source_path": "planning/schema.py",
+      "archive_path": "prior-source/planning/schema.py.txt",
+      "sha256": "4cb67461c6079184ebfef0bbe5a8262c1e3e02c697fbd6cac578dd6a63c2998b"
+    },
+    {
+      "source_path": "planning/issues_manifest.json",
+      "archive_path": "prior-source/planning/issues_manifest.json",
+      "sha256": "1ce828c675946b46c3738247bd2441472198cfbdd248037f1413ffafe630d4a7"
+    },
+    {
+      "source_path": "planning/tests/test_backlog.py",
+      "archive_path": "prior-source/planning/tests/test_backlog.py.txt",
+      "sha256": "5162625c72ff790b6e02d118af52208705b18c83ced12ada228102ba89f03269"
+    }
+  ]
+}

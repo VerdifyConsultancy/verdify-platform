@@ -1,0 +1,2432 @@
+{
+  "source_revision": "963ea818aad09b02259509cffa6bfdafb48d1702",
+  "method": "equal-day score means; hourly climate means sample-weighted; raw public snapshots retained; descriptive only",
+  "score_periods": {
+    "2026-07-11_2026-08-14": {
+      "start": "2026-07-11",
+      "end_exclusive": "2026-08-14",
+      "days": 34,
+      "scores": {
+        "planner_score": {
+          "n": 34,
+          "mean": 65.93823529411765,
+          "median": 66.15,
+          "min": 49.8,
+          "max": 85.0,
+          "sum": 2241.9,
+          "p95_nearest_rank": 81.4
+        },
+        "compliance_pct": {
+          "n": 34,
+          "mean": 65.93823529411765,
+          "median": 66.15,
+          "min": 49.8,
+          "max": 85.0,
+          "sum": 2241.9,
+          "p95_nearest_rank": 81.4
+        },
+        "temp_compliance_pct": {
+          "n": 34,
+          "mean": 49.15588235294118,
+          "median": 48.65,
+          "min": 44.5,
+          "max": 57.8,
+          "sum": 1671.3,
+          "p95_nearest_rank": 56.1
+        },
+        "vpd_compliance_pct": {
+          "n": 34,
+          "mean": 40.71176470588235,
+          "median": 40.1,
+          "min": 28.1,
+          "max": 53.3,
+          "sum": 1384.2,
+          "p95_nearest_rank": 52.6
+        },
+        "total_stress_h": {
+          "n": 34,
+          "mean": 22.93764705882353,
+          "median": 22.880000000000003,
+          "min": 10.07,
+          "max": 28.29,
+          "sum": 779.88,
+          "p95_nearest_rank": 27.65
+        },
+        "heat_stress_h": {
+          "n": 34,
+          "mean": 10.27,
+          "median": 10.675,
+          "min": 5.32,
+          "max": 12.02,
+          "sum": 349.18,
+          "p95_nearest_rank": 11.68
+        },
+        "vpd_high_stress_h": {
+          "n": 34,
+          "mean": 11.618529411764706,
+          "median": 12.27,
+          "min": 3.86,
+          "max": 16.64,
+          "sum": 395.03000000000003,
+          "p95_nearest_rank": 15.97
+        },
+        "cold_stress_h": {
+          "n": 34,
+          "mean": 0.06470588235294118,
+          "median": 0.0,
+          "min": 0.0,
+          "max": 2.2,
+          "sum": 2.2,
+          "p95_nearest_rank": 0.0
+        },
+        "vpd_low_stress_h": {
+          "n": 34,
+          "mean": 0.9844117647058823,
+          "median": 0.14,
+          "min": 0.0,
+          "max": 5.03,
+          "sum": 33.47,
+          "p95_nearest_rank": 4.07
+        },
+        "planner_score_resource_weight_pct": {
+          "n": 34,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "max": 0.0,
+          "sum": 0.0,
+          "p95_nearest_rank": 0.0
+        },
+        "cost_total": {
+          "n": 0
+        }
+      },
+      "resources": {
+        "water_quality": {
+          "missing": 2,
+          "discontinuous": 6,
+          "ok": 26
+        },
+        "water_scoring_days": 24,
+        "measured_energy_scoring_days": 34,
+        "modeled_energy_scoring_days": 0,
+        "water_totals_all_days": {
+          "quality_filtered_meter_gal": {
+            "n": 32,
+            "mean": 262.65625,
+            "median": 318.0,
+            "min": 22.0,
+            "max": 501.0,
+            "sum": 8405.0,
+            "p95_nearest_rank": 413.0
+          },
+          "attributed_gal": {
+            "n": 32,
+            "mean": 103.28125,
+            "median": 93.0,
+            "min": 5.0,
+            "max": 282.0,
+            "sum": 3305.0,
+            "p95_nearest_rank": 244.0
+          },
+          "ambiguous_gal": {
+            "n": 32,
+            "mean": 143.0625,
+            "median": 165.0,
+            "min": 0.0,
+            "max": 253.0,
+            "sum": 4578.0,
+            "p95_nearest_rank": 253.0
+          },
+          "manual_or_unattributed_gal": {
+            "n": 32,
+            "mean": 16.3125,
+            "median": 14.0,
+            "min": 3.0,
+            "max": 45.0,
+            "sum": 522.0,
+            "p95_nearest_rank": 40.0
+          },
+          "wall_irrigation_gal": {
+            "n": 32,
+            "mean": 0.0,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "sum": 0.0,
+            "p95_nearest_rank": 0.0
+          },
+          "wall_fertigation_gal": {
+            "n": 32,
+            "mean": 0.0,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "sum": 0.0,
+            "p95_nearest_rank": 0.0
+          },
+          "climate_wetting_gal": {
+            "n": 32,
+            "mean": 103.28125,
+            "median": 93.0,
+            "min": 5.0,
+            "max": 282.0,
+            "sum": 3305.0,
+            "p95_nearest_rank": 244.0
+          }
+        },
+        "eligible_water": {
+          "n": 24,
+          "mean": 290.0416666666667,
+          "median": 348.0,
+          "min": 62.0,
+          "max": 501.0,
+          "sum": 6961.0,
+          "p95_nearest_rank": 405.0
+        },
+        "partial_measured_kwh": {
+          "n": 34,
+          "mean": 7.509470588235295,
+          "median": 7.366,
+          "min": 2.579,
+          "max": 14.618,
+          "sum": 255.322,
+          "p95_nearest_rank": 13.499
+        },
+        "ineligible_modeled_kwh": {
+          "n": 23,
+          "mean": 16.491130434782608,
+          "median": 16.144,
+          "min": 9.953,
+          "max": 24.681,
+          "sum": 379.296,
+          "p95_nearest_rank": 20.806
+        },
+        "max_absolute_water_conservation_error": 0
+      }
+    },
+    "2026-08-14_2026-09-05": {
+      "start": "2026-08-14",
+      "end_exclusive": "2026-09-05",
+      "days": 22,
+      "scores": {
+        "planner_score": {
+          "n": 22,
+          "mean": 65.49090909090908,
+          "median": 61.45,
+          "min": 54.0,
+          "max": 85.8,
+          "sum": 1440.8,
+          "p95_nearest_rank": 82.3
+        },
+        "compliance_pct": {
+          "n": 22,
+          "mean": 65.49090909090908,
+          "median": 61.45,
+          "min": 54.0,
+          "max": 85.8,
+          "sum": 1440.8,
+          "p95_nearest_rank": 82.3
+        },
+        "temp_compliance_pct": {
+          "n": 22,
+          "mean": 56.17272727272727,
+          "median": 52.55,
+          "min": 45.8,
+          "max": 72.5,
+          "sum": 1235.8,
+          "p95_nearest_rank": 70.8
+        },
+        "vpd_compliance_pct": {
+          "n": 22,
+          "mean": 53.39545454545455,
+          "median": 49.45,
+          "min": 37.2,
+          "max": 84.5,
+          "sum": 1174.7,
+          "p95_nearest_rank": 79.3
+        },
+        "total_stress_h": {
+          "n": 22,
+          "mean": 17.35409090909091,
+          "median": 19.795,
+          "min": 4.68,
+          "max": 34.01,
+          "sum": 381.79,
+          "p95_nearest_rank": 23.23
+        },
+        "heat_stress_h": {
+          "n": 22,
+          "mean": 8.549090909090909,
+          "median": 9.14,
+          "min": 4.08,
+          "max": 17.29,
+          "sum": 188.07999999999998,
+          "p95_nearest_rank": 11.01
+        },
+        "vpd_high_stress_h": {
+          "n": 22,
+          "mean": 6.652272727272727,
+          "median": 7.2,
+          "min": 0.13,
+          "max": 16.25,
+          "sum": 146.35,
+          "p95_nearest_rank": 12.25
+        },
+        "cold_stress_h": {
+          "n": 22,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "max": 0.0,
+          "sum": 0.0,
+          "p95_nearest_rank": 0.0
+        },
+        "vpd_low_stress_h": {
+          "n": 22,
+          "mean": 2.152727272727273,
+          "median": 1.3900000000000001,
+          "min": 0.0,
+          "max": 8.3,
+          "sum": 47.36,
+          "p95_nearest_rank": 7.6
+        },
+        "planner_score_resource_weight_pct": {
+          "n": 22,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "max": 0.0,
+          "sum": 0.0,
+          "p95_nearest_rank": 0.0
+        },
+        "cost_total": {
+          "n": 0
+        }
+      },
+      "resources": {
+        "water_quality": {
+          "ok": 15,
+          "discontinuous": 7
+        },
+        "water_scoring_days": 13,
+        "measured_energy_scoring_days": 22,
+        "modeled_energy_scoring_days": 0,
+        "water_totals_all_days": {
+          "quality_filtered_meter_gal": {
+            "n": 22,
+            "mean": 229.4090909090909,
+            "median": 236.5,
+            "min": 29.0,
+            "max": 402.0,
+            "sum": 5047.0,
+            "p95_nearest_rank": 382.0
+          },
+          "attributed_gal": {
+            "n": 22,
+            "mean": 61.86363636363637,
+            "median": 50.5,
+            "min": 12.0,
+            "max": 156.0,
+            "sum": 1361.0,
+            "p95_nearest_rank": 138.0
+          },
+          "ambiguous_gal": {
+            "n": 22,
+            "mean": 157.5,
+            "median": 162.0,
+            "min": 15.0,
+            "max": 271.0,
+            "sum": 3465.0,
+            "p95_nearest_rank": 254.0
+          },
+          "manual_or_unattributed_gal": {
+            "n": 22,
+            "mean": 10.045454545454545,
+            "median": 8.5,
+            "min": 1.0,
+            "max": 35.0,
+            "sum": 221.0,
+            "p95_nearest_rank": 18.0
+          },
+          "wall_irrigation_gal": {
+            "n": 22,
+            "mean": 0.0,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "sum": 0.0,
+            "p95_nearest_rank": 0.0
+          },
+          "wall_fertigation_gal": {
+            "n": 22,
+            "mean": 0.0,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "sum": 0.0,
+            "p95_nearest_rank": 0.0
+          },
+          "climate_wetting_gal": {
+            "n": 22,
+            "mean": 61.86363636363637,
+            "median": 50.5,
+            "min": 12.0,
+            "max": 156.0,
+            "sum": 1361.0,
+            "p95_nearest_rank": 138.0
+          }
+        },
+        "eligible_water": {
+          "n": 13,
+          "mean": 181.6153846153846,
+          "median": 129.0,
+          "min": 29.0,
+          "max": 382.0,
+          "sum": 2361.0,
+          "p95_nearest_rank": 382.0
+        },
+        "partial_measured_kwh": {
+          "n": 22,
+          "mean": 5.653818181818182,
+          "median": 5.7115,
+          "min": 0.901,
+          "max": 11.385,
+          "sum": 124.384,
+          "p95_nearest_rank": 10.647
+        },
+        "ineligible_modeled_kwh": {
+          "n": 21,
+          "mean": 16.28690476190476,
+          "median": 15.795,
+          "min": 11.96,
+          "max": 21.574,
+          "sum": 342.02500000000003,
+          "p95_nearest_rank": 20.334
+        },
+        "max_absolute_water_conservation_error": 0
+      }
+    },
+    "2026-08-06_2026-09-05": {
+      "start": "2026-08-06",
+      "end_exclusive": "2026-09-05",
+      "days": 30,
+      "scores": {
+        "planner_score": {
+          "n": 30,
+          "mean": 66.37,
+          "median": 63.1,
+          "min": 54.0,
+          "max": 85.8,
+          "sum": 1991.1,
+          "p95_nearest_rank": 85.0
+        },
+        "compliance_pct": {
+          "n": 30,
+          "mean": 66.37,
+          "median": 63.1,
+          "min": 54.0,
+          "max": 85.8,
+          "sum": 1991.1,
+          "p95_nearest_rank": 85.0
+        },
+        "temp_compliance_pct": {
+          "n": 30,
+          "mean": 54.096666666666664,
+          "median": 51.1,
+          "min": 44.5,
+          "max": 72.5,
+          "sum": 1622.9,
+          "p95_nearest_rank": 70.8
+        },
+        "vpd_compliance_pct": {
+          "n": 30,
+          "mean": 49.54,
+          "median": 48.85,
+          "min": 28.1,
+          "max": 84.5,
+          "sum": 1486.2,
+          "p95_nearest_rank": 79.3
+        },
+        "total_stress_h": {
+          "n": 30,
+          "mean": 19.098666666666666,
+          "median": 20.259999999999998,
+          "min": 4.68,
+          "max": 34.01,
+          "sum": 572.96,
+          "p95_nearest_rank": 28.29
+        },
+        "heat_stress_h": {
+          "n": 30,
+          "mean": 9.030666666666667,
+          "median": 9.895,
+          "min": 4.08,
+          "max": 17.29,
+          "sum": 270.92,
+          "p95_nearest_rank": 11.68
+        },
+        "vpd_high_stress_h": {
+          "n": 30,
+          "mean": 8.337,
+          "median": 8.85,
+          "min": 0.13,
+          "max": 16.64,
+          "sum": 250.10999999999999,
+          "p95_nearest_rank": 16.25
+        },
+        "cold_stress_h": {
+          "n": 30,
+          "mean": 0.07333333333333333,
+          "median": 0.0,
+          "min": 0.0,
+          "max": 2.2,
+          "sum": 2.2,
+          "p95_nearest_rank": 0.0
+        },
+        "vpd_low_stress_h": {
+          "n": 30,
+          "mean": 1.6576666666666666,
+          "median": 0.78,
+          "min": 0.0,
+          "max": 8.3,
+          "sum": 49.73,
+          "p95_nearest_rank": 7.6
+        },
+        "planner_score_resource_weight_pct": {
+          "n": 30,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "max": 0.0,
+          "sum": 0.0,
+          "p95_nearest_rank": 0.0
+        },
+        "cost_total": {
+          "n": 0
+        }
+      },
+      "resources": {
+        "water_quality": {
+          "ok": 22,
+          "discontinuous": 8
+        },
+        "water_scoring_days": 20,
+        "measured_energy_scoring_days": 30,
+        "modeled_energy_scoring_days": 0,
+        "water_totals_all_days": {
+          "quality_filtered_meter_gal": {
+            "n": 30,
+            "mean": 230.5,
+            "median": 236.5,
+            "min": 29.0,
+            "max": 402.0,
+            "sum": 6915.0,
+            "p95_nearest_rank": 382.0
+          },
+          "attributed_gal": {
+            "n": 30,
+            "mean": 74.26666666666667,
+            "median": 59.0,
+            "min": 12.0,
+            "max": 282.0,
+            "sum": 2228.0,
+            "p95_nearest_rank": 165.0
+          },
+          "ambiguous_gal": {
+            "n": 30,
+            "mean": 145.06666666666666,
+            "median": 156.5,
+            "min": 0.0,
+            "max": 271.0,
+            "sum": 4352.0,
+            "p95_nearest_rank": 254.0
+          },
+          "manual_or_unattributed_gal": {
+            "n": 30,
+            "mean": 11.166666666666666,
+            "median": 10.0,
+            "min": 1.0,
+            "max": 36.0,
+            "sum": 335.0,
+            "p95_nearest_rank": 35.0
+          },
+          "wall_irrigation_gal": {
+            "n": 30,
+            "mean": 0.0,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "sum": 0.0,
+            "p95_nearest_rank": 0.0
+          },
+          "wall_fertigation_gal": {
+            "n": 30,
+            "mean": 0.0,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "sum": 0.0,
+            "p95_nearest_rank": 0.0
+          },
+          "climate_wetting_gal": {
+            "n": 30,
+            "mean": 74.26666666666667,
+            "median": 59.0,
+            "min": 12.0,
+            "max": 282.0,
+            "sum": 2228.0,
+            "p95_nearest_rank": 165.0
+          }
+        },
+        "eligible_water": {
+          "n": 20,
+          "mean": 207.2,
+          "median": 176.5,
+          "min": 29.0,
+          "max": 382.0,
+          "sum": 4144.0,
+          "p95_nearest_rank": 373.0
+        },
+        "partial_measured_kwh": {
+          "n": 30,
+          "mean": 6.526066666666667,
+          "median": 6.0395,
+          "min": 0.901,
+          "max": 13.499,
+          "sum": 195.782,
+          "p95_nearest_rank": 12.309
+        },
+        "ineligible_modeled_kwh": {
+          "n": 29,
+          "mean": 16.256172413793102,
+          "median": 16.144,
+          "min": 11.682,
+          "max": 21.574,
+          "sum": 471.42900000000003,
+          "p95_nearest_rank": 20.334
+        },
+        "max_absolute_water_conservation_error": 0
+      }
+    },
+    "2026-08-29_2026-09-05": {
+      "start": "2026-08-29",
+      "end_exclusive": "2026-09-05",
+      "days": 7,
+      "scores": {
+        "planner_score": {
+          "n": 7,
+          "mean": 77.68571428571428,
+          "median": 77.8,
+          "min": 62.6,
+          "max": 85.8,
+          "sum": 543.8,
+          "p95_nearest_rank": 85.8
+        },
+        "compliance_pct": {
+          "n": 7,
+          "mean": 77.68571428571428,
+          "median": 77.8,
+          "min": 62.6,
+          "max": 85.8,
+          "sum": 543.8,
+          "p95_nearest_rank": 85.8
+        },
+        "temp_compliance_pct": {
+          "n": 7,
+          "mean": 65.8,
+          "median": 69.4,
+          "min": 45.8,
+          "max": 72.5,
+          "sum": 460.6,
+          "p95_nearest_rank": 72.5
+        },
+        "vpd_compliance_pct": {
+          "n": 7,
+          "mean": 68.95714285714286,
+          "median": 70.7,
+          "min": 46.6,
+          "max": 84.5,
+          "sum": 482.7,
+          "p95_nearest_rank": 84.5
+        },
+        "total_stress_h": {
+          "n": 7,
+          "mean": 10.817142857142857,
+          "median": 7.33,
+          "min": 4.68,
+          "max": 34.01,
+          "sum": 75.72,
+          "p95_nearest_rank": 34.01
+        },
+        "heat_stress_h": {
+          "n": 7,
+          "mean": 6.441428571428571,
+          "median": 4.63,
+          "min": 4.08,
+          "max": 17.29,
+          "sum": 45.09,
+          "p95_nearest_rank": 17.29
+        },
+        "vpd_high_stress_h": {
+          "n": 7,
+          "mean": 4.308571428571429,
+          "median": 3.03,
+          "min": 0.13,
+          "max": 16.25,
+          "sum": 30.16,
+          "p95_nearest_rank": 16.25
+        },
+        "cold_stress_h": {
+          "n": 7,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "max": 0.0,
+          "sum": 0.0,
+          "p95_nearest_rank": 0.0
+        },
+        "vpd_low_stress_h": {
+          "n": 7,
+          "mean": 0.06714285714285714,
+          "median": 0.0,
+          "min": 0.0,
+          "max": 0.47,
+          "sum": 0.47,
+          "p95_nearest_rank": 0.47
+        },
+        "planner_score_resource_weight_pct": {
+          "n": 7,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "max": 0.0,
+          "sum": 0.0,
+          "p95_nearest_rank": 0.0
+        },
+        "cost_total": {
+          "n": 0
+        }
+      },
+      "resources": {
+        "water_quality": {
+          "discontinuous": 4,
+          "ok": 3
+        },
+        "water_scoring_days": 3,
+        "measured_energy_scoring_days": 7,
+        "modeled_energy_scoring_days": 0,
+        "water_totals_all_days": {
+          "quality_filtered_meter_gal": {
+            "n": 7,
+            "mean": 232.71428571428572,
+            "median": 245.0,
+            "min": 40.0,
+            "max": 402.0,
+            "sum": 1629.0,
+            "p95_nearest_rank": 402.0
+          },
+          "attributed_gal": {
+            "n": 7,
+            "mean": 74.57142857142857,
+            "median": 65.0,
+            "min": 12.0,
+            "max": 156.0,
+            "sum": 522.0,
+            "p95_nearest_rank": 156.0
+          },
+          "ambiguous_gal": {
+            "n": 7,
+            "mean": 145.57142857142858,
+            "median": 151.0,
+            "min": 27.0,
+            "max": 254.0,
+            "sum": 1019.0,
+            "p95_nearest_rank": 254.0
+          },
+          "manual_or_unattributed_gal": {
+            "n": 7,
+            "mean": 12.571428571428571,
+            "median": 10.0,
+            "min": 1.0,
+            "max": 35.0,
+            "sum": 88.0,
+            "p95_nearest_rank": 35.0
+          },
+          "wall_irrigation_gal": {
+            "n": 7,
+            "mean": 0.0,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "sum": 0.0,
+            "p95_nearest_rank": 0.0
+          },
+          "wall_fertigation_gal": {
+            "n": 7,
+            "mean": 0.0,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "sum": 0.0,
+            "p95_nearest_rank": 0.0
+          },
+          "climate_wetting_gal": {
+            "n": 7,
+            "mean": 74.57142857142857,
+            "median": 65.0,
+            "min": 12.0,
+            "max": 156.0,
+            "sum": 522.0,
+            "p95_nearest_rank": 156.0
+          }
+        },
+        "eligible_water": {
+          "n": 3,
+          "mean": 123.66666666666667,
+          "median": 113.0,
+          "min": 40.0,
+          "max": 218.0,
+          "sum": 371.0,
+          "p95_nearest_rank": 218.0
+        },
+        "partial_measured_kwh": {
+          "n": 7,
+          "mean": 6.175,
+          "median": 6.041,
+          "min": 0.901,
+          "max": 11.385,
+          "sum": 43.225,
+          "p95_nearest_rank": 11.385
+        },
+        "ineligible_modeled_kwh": {
+          "n": 7,
+          "mean": 16.31257142857143,
+          "median": 16.419,
+          "min": 12.42,
+          "max": 19.722,
+          "sum": 114.188,
+          "p95_nearest_rank": 19.722
+        },
+        "max_absolute_water_conservation_error": 0
+      }
+    }
+  },
+  "hourly_exports": {
+    "hourly-20260615.csv": {
+      "rows": 720,
+      "first": "2026-05-16 23:00:00",
+      "last": "2026-06-15 22:00:00",
+      "complete_days": 29,
+      "complete_start": "2026-05-17",
+      "complete_end_inclusive": "2026-06-14",
+      "complete_day_samples": 40214,
+      "expected_samples_at_one_per_minute": 41760,
+      "hours_with_zero_samples": 12,
+      "mean_temp_f": 72.15310180534142,
+      "mean_vpd_kpa": 0.9636005868602974,
+      "runtime_minutes": {
+        "fan1": 12172.971,
+        "fan2": 12097.397,
+        "heat1": 10727.097,
+        "heat2": 1265.542,
+        "fog": 2377.357,
+        "vent": 16089.96,
+        "mister_south": 373.661,
+        "mister_west": 97.638,
+        "mister_center": 1696.203
+      },
+      "nine_stream_minutes_per_day": 1961.9940000000001,
+      "night_heat1_minutes_per_day_00_06": 128.08013793103447,
+      "runtime_minute_range_invalid_cells": 0,
+      "sensor_hours": {
+        "north": 684,
+        "east": 684,
+        "south": 684,
+        "west": 684
+      },
+      "midday_zone_vpd_kpa": {
+        "north": 1.868857476635514,
+        "east": 1.3691270443925232,
+        "south": 0.9957181658878504,
+        "west": 0.7288971962616823
+      },
+      "midday_zone_temp_f": {
+        "north": 83.62341691004673,
+        "east": 80.93709185163551,
+        "south": 79.79584506425235,
+        "west": 77.69941282126169
+      }
+    },
+    "hourly-20260715.csv": {
+      "rows": 720,
+      "first": "2026-06-15 23:00:00",
+      "last": "2026-07-15 22:00:00",
+      "complete_days": 29,
+      "complete_start": "2026-06-16",
+      "complete_end_inclusive": "2026-07-14",
+      "complete_day_samples": 41419,
+      "expected_samples_at_one_per_minute": 41760,
+      "hours_with_zero_samples": 0,
+      "mean_temp_f": 75.77390683019871,
+      "mean_vpd_kpa": 0.9889005045993384,
+      "runtime_minutes": {
+        "fan1": 9515.954,
+        "fan2": 9536.965,
+        "heat1": 2893.849,
+        "heat2": 46.409,
+        "fog": 5126.495,
+        "vent": 12631.985,
+        "mister_south": 917.034,
+        "mister_west": 200.286,
+        "mister_center": 2292.651
+      },
+      "nine_stream_minutes_per_day": 1488.3319999999999,
+      "night_heat1_minutes_per_day_00_06": 34.278862068965516,
+      "runtime_minute_range_invalid_cells": 0,
+      "sensor_hours": {
+        "north": 696,
+        "east": 696,
+        "south": 696,
+        "west": 696
+      },
+      "midday_zone_vpd_kpa": {
+        "north": 2.2324137168141593,
+        "east": 1.2334089970501476,
+        "south": 1.0436774336283186,
+        "west": 0.7056640117994101
+      },
+      "midday_zone_temp_f": {
+        "north": 87.52455206489675,
+        "east": 82.30104941002949,
+        "south": 82.35463849557523,
+        "west": 80.26858628318584
+      }
+    },
+    "hourly-20260814.csv": {
+      "rows": 720,
+      "first": "2026-07-15 23:00:00",
+      "last": "2026-08-14 22:00:00",
+      "complete_days": 29,
+      "complete_start": "2026-07-16",
+      "complete_end_inclusive": "2026-08-13",
+      "complete_day_samples": 41609,
+      "expected_samples_at_one_per_minute": 41760,
+      "hours_with_zero_samples": 0,
+      "mean_temp_f": 77.32101499675551,
+      "mean_vpd_kpa": 1.156719291499435,
+      "runtime_minutes": {
+        "fan1": 16906.063,
+        "fan2": 17320.013,
+        "heat1": 1421.326,
+        "heat2": 16.234,
+        "fog": 6589.205,
+        "vent": 21087.131,
+        "mister_south": 0,
+        "mister_west": 0,
+        "mister_center": 3197.364
+      },
+      "nine_stream_minutes_per_day": 2294.390896551724,
+      "night_heat1_minutes_per_day_00_06": 8.340551724137931,
+      "runtime_minute_range_invalid_cells": 0,
+      "sensor_hours": {
+        "north": 696,
+        "east": 696,
+        "south": 425,
+        "west": 696
+      },
+      "midday_zone_vpd_kpa": {
+        "north": 2.163199839807769,
+        "east": 1.2337938859965292,
+        "south": 0.7078724489795918,
+        "west": 1.2722851421706047
+      },
+      "midday_zone_temp_f": {
+        "north": 87.48946295554666,
+        "east": 82.94552663195836,
+        "south": 81.46988326530612,
+        "west": 83.91144640234948
+      }
+    },
+    "hourly.csv": {
+      "rows": 720,
+      "first": "2026-08-06 08:00:00",
+      "last": "2026-09-05 07:00:00",
+      "complete_days": 29,
+      "complete_start": "2026-08-07",
+      "complete_end_inclusive": "2026-09-04",
+      "complete_day_samples": 41549,
+      "expected_samples_at_one_per_minute": 41760,
+      "hours_with_zero_samples": 0,
+      "mean_temp_f": 76.12637618233893,
+      "mean_vpd_kpa": 1.083883679510939,
+      "runtime_minutes": {
+        "fan1": 12311.151,
+        "fan2": 12797.318,
+        "heat1": 1980.483,
+        "heat2": 0,
+        "fog": 5278.035,
+        "vent": 16831.178,
+        "mister_south": 0,
+        "mister_west": 0,
+        "mister_center": 3228.754
+      },
+      "nine_stream_minutes_per_day": 1807.8247931034484,
+      "night_heat1_minutes_per_day_00_06": 9.034620689655172,
+      "runtime_minute_range_invalid_cells": 0,
+      "sensor_hours": {
+        "north": 696,
+        "east": 696,
+        "south": 0,
+        "west": 696
+      },
+      "midday_zone_vpd_kpa": {
+        "north": 1.99180505842331,
+        "east": 1.2425037716314153,
+        "south": null,
+        "west": 1.2577529951190651
+      },
+      "midday_zone_temp_f": {
+        "north": 86.0926005028842,
+        "east": 82.97722245229997,
+        "south": null,
+        "west": 83.48539151013163
+      }
+    }
+  },
+  "daily_hourly": [
+    {
+      "date": "2026-05-17",
+      "samples": 1425,
+      "mean_temp_f": 69.657375,
+      "nine_stream_minutes": 1512.285,
+      "heat1_minutes": 925.354,
+      "heat2_minutes": 70.06,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-05-18",
+      "samples": 1439,
+      "mean_temp_f": 67.75066666666666,
+      "nine_stream_minutes": 1659.655,
+      "heat1_minutes": 1344.21,
+      "heat2_minutes": 315.19100000000003,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-05-19",
+      "samples": 1434,
+      "mean_temp_f": 67.94979166666667,
+      "nine_stream_minutes": 1626.199,
+      "heat1_minutes": 1344.799,
+      "heat2_minutes": 263.253,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-05-20",
+      "samples": 1435,
+      "mean_temp_f": 68.54479166666667,
+      "nine_stream_minutes": 1592.812,
+      "heat1_minutes": 1191.948,
+      "heat2_minutes": 168.904,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-05-21",
+      "samples": 1431,
+      "mean_temp_f": 69.1375,
+      "nine_stream_minutes": 1632.823,
+      "heat1_minutes": 914.252,
+      "heat2_minutes": 139.996,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-05-22",
+      "samples": 1420,
+      "mean_temp_f": 69.255625,
+      "nine_stream_minutes": 2034.007,
+      "heat1_minutes": 887.126,
+      "heat2_minutes": 146.007,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-05-23",
+      "samples": 1401,
+      "mean_temp_f": 69.808375,
+      "nine_stream_minutes": 2465.461,
+      "heat1_minutes": 622.154,
+      "heat2_minutes": 103.003,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-05-24",
+      "samples": 1405,
+      "mean_temp_f": 70.75966666666666,
+      "nine_stream_minutes": 2620.748,
+      "heat1_minutes": 493.19100000000003,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-05-25",
+      "samples": 1421,
+      "mean_temp_f": 71.44029166666667,
+      "nine_stream_minutes": 2649.177,
+      "heat1_minutes": 379.095,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-05-26",
+      "samples": 1424,
+      "mean_temp_f": 70.76195833333334,
+      "nine_stream_minutes": 2457.19,
+      "heat1_minutes": 135.4,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-05-27",
+      "samples": 1425,
+      "mean_temp_f": 68.76433333333334,
+      "nine_stream_minutes": 1476.183,
+      "heat1_minutes": 104.993,
+      "heat2_minutes": 9.195,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-05-28",
+      "samples": 1424,
+      "mean_temp_f": 71.55820833333334,
+      "nine_stream_minutes": 2635.27,
+      "heat1_minutes": 405.376,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-05-29",
+      "samples": 1425,
+      "mean_temp_f": 70.81629166666667,
+      "nine_stream_minutes": 2142.895,
+      "heat1_minutes": 90.95100000000001,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-05-30",
+      "samples": 1173,
+      "mean_temp_f": 72.0547,
+      "nine_stream_minutes": 910.007,
+      "heat1_minutes": 332.731,
+      "heat2_minutes": 33.998000000000005,
+      "south_hours": 20
+    },
+    {
+      "date": "2026-05-31",
+      "samples": 905,
+      "mean_temp_f": 77.2338125,
+      "nine_stream_minutes": 1679.789,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 16
+    },
+    {
+      "date": "2026-06-01",
+      "samples": 1403,
+      "mean_temp_f": 73.29166666666667,
+      "nine_stream_minutes": 2241.252,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-06-02",
+      "samples": 1405,
+      "mean_temp_f": 72.439625,
+      "nine_stream_minutes": 1480.646,
+      "heat1_minutes": 67.746,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-06-03",
+      "samples": 1402,
+      "mean_temp_f": 72.86358333333334,
+      "nine_stream_minutes": 1692.041,
+      "heat1_minutes": 39.739000000000004,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-06-04",
+      "samples": 1399,
+      "mean_temp_f": 73.7135,
+      "nine_stream_minutes": 1818.148,
+      "heat1_minutes": 69.906,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-06-05",
+      "samples": 1399,
+      "mean_temp_f": 75.10245833333333,
+      "nine_stream_minutes": 3004.49,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-06-06",
+      "samples": 1399,
+      "mean_temp_f": 76.29170833333333,
+      "nine_stream_minutes": 3728.107,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-06-07",
+      "samples": 1393,
+      "mean_temp_f": 75.826375,
+      "nine_stream_minutes": 3075.309,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-06-08",
+      "samples": 1401,
+      "mean_temp_f": 74.15208333333334,
+      "nine_stream_minutes": 2969.367,
+      "heat1_minutes": 101.423,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-06-09",
+      "samples": 1382,
+      "mean_temp_f": 74.02945833333334,
+      "nine_stream_minutes": 1913.274,
+      "heat1_minutes": 1.967,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-06-10",
+      "samples": 1385,
+      "mean_temp_f": 75.09954166666667,
+      "nine_stream_minutes": 2091.273,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-06-11",
+      "samples": 1395,
+      "mean_temp_f": 73.80416666666667,
+      "nine_stream_minutes": 948.913,
+      "heat1_minutes": 351.584,
+      "heat2_minutes": 6.76,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-06-12",
+      "samples": 1425,
+      "mean_temp_f": 73.82091666666666,
+      "nine_stream_minutes": 1282.394,
+      "heat1_minutes": 455.476,
+      "heat2_minutes": 9.175,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-06-13",
+      "samples": 1422,
+      "mean_temp_f": 74.60445833333333,
+      "nine_stream_minutes": 823.401,
+      "heat1_minutes": 159.89600000000002,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-06-14",
+      "samples": 1417,
+      "mean_temp_f": 74.00075,
+      "nine_stream_minutes": 734.71,
+      "heat1_minutes": 307.78,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-06-15",
+      "samples": 1398,
+      "mean_temp_f": 74.428375,
+      "nine_stream_minutes": 1184.97,
+      "heat1_minutes": 258.856,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-06-16",
+      "samples": 1410,
+      "mean_temp_f": 74.874875,
+      "nine_stream_minutes": 1879.531,
+      "heat1_minutes": 433.367,
+      "heat2_minutes": 6.543,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-06-17",
+      "samples": 1410,
+      "mean_temp_f": 76.4845,
+      "nine_stream_minutes": 1510.881,
+      "heat1_minutes": 71.934,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-06-18",
+      "samples": 1410,
+      "mean_temp_f": 74.90620833333334,
+      "nine_stream_minutes": 1473.493,
+      "heat1_minutes": 383.712,
+      "heat2_minutes": 31.388,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-06-19",
+      "samples": 1418,
+      "mean_temp_f": 74.69675,
+      "nine_stream_minutes": 1202.771,
+      "heat1_minutes": 231.696,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-06-20",
+      "samples": 1394,
+      "mean_temp_f": 75.46020833333334,
+      "nine_stream_minutes": 1370.581,
+      "heat1_minutes": 63.555,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-06-21",
+      "samples": 1404,
+      "mean_temp_f": 75.67379166666667,
+      "nine_stream_minutes": 1503.593,
+      "heat1_minutes": 10.47,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-06-22",
+      "samples": 1403,
+      "mean_temp_f": 75.71745833333334,
+      "nine_stream_minutes": 1792.439,
+      "heat1_minutes": 45.005,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-06-23",
+      "samples": 1408,
+      "mean_temp_f": 75.51879166666667,
+      "nine_stream_minutes": 1756.625,
+      "heat1_minutes": 43.32599999999999,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-06-24",
+      "samples": 1403,
+      "mean_temp_f": 75.86475,
+      "nine_stream_minutes": 1179.252,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-06-25",
+      "samples": 2063,
+      "mean_temp_f": 73.99633333333334,
+      "nine_stream_minutes": 726.6659999999999,
+      "heat1_minutes": 417.989,
+      "heat2_minutes": 8.478,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-06-26",
+      "samples": 1426,
+      "mean_temp_f": 74.469375,
+      "nine_stream_minutes": 1406.539,
+      "heat1_minutes": 319.475,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-06-27",
+      "samples": 1426,
+      "mean_temp_f": 75.52925,
+      "nine_stream_minutes": 1943.7,
+      "heat1_minutes": 40.572,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-06-28",
+      "samples": 1408,
+      "mean_temp_f": 75.10241666666667,
+      "nine_stream_minutes": 1394.041,
+      "heat1_minutes": 114.616,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-06-29",
+      "samples": 1406,
+      "mean_temp_f": 75.21066666666667,
+      "nine_stream_minutes": 1460.782,
+      "heat1_minutes": 73.225,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-06-30",
+      "samples": 1406,
+      "mean_temp_f": 74.64033333333333,
+      "nine_stream_minutes": 498.588,
+      "heat1_minutes": 126.458,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-07-01",
+      "samples": 1404,
+      "mean_temp_f": 75.30604166666667,
+      "nine_stream_minutes": 1202.48,
+      "heat1_minutes": 167.349,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-07-02",
+      "samples": 1407,
+      "mean_temp_f": 75.482375,
+      "nine_stream_minutes": 1599.392,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-07-03",
+      "samples": 1406,
+      "mean_temp_f": 75.33554166666667,
+      "nine_stream_minutes": 1468.22,
+      "heat1_minutes": 81.572,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-07-04",
+      "samples": 1404,
+      "mean_temp_f": 76.02229166666666,
+      "nine_stream_minutes": 753.807,
+      "heat1_minutes": 8.977,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-07-05",
+      "samples": 1403,
+      "mean_temp_f": 76.33108333333334,
+      "nine_stream_minutes": 1591.211,
+      "heat1_minutes": 24.769000000000002,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-07-06",
+      "samples": 1402,
+      "mean_temp_f": 76.45879166666667,
+      "nine_stream_minutes": 1199.272,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-07-07",
+      "samples": 1403,
+      "mean_temp_f": 76.687125,
+      "nine_stream_minutes": 1045.782,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-07-08",
+      "samples": 1400,
+      "mean_temp_f": 76.50274999999999,
+      "nine_stream_minutes": 1294.301,
+      "heat1_minutes": 1.974,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-07-09",
+      "samples": 1389,
+      "mean_temp_f": 75.42895833333333,
+      "nine_stream_minutes": 845.224,
+      "heat1_minutes": 73.794,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-07-10",
+      "samples": 1393,
+      "mean_temp_f": 75.75554166666667,
+      "nine_stream_minutes": 861.574,
+      "heat1_minutes": 137.684,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-07-11",
+      "samples": 1388,
+      "mean_temp_f": 76.65208333333334,
+      "nine_stream_minutes": 2065.44,
+      "heat1_minutes": 22.330000000000002,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-07-12",
+      "samples": 1388,
+      "mean_temp_f": 77.900875,
+      "nine_stream_minutes": 2716.87,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-07-13",
+      "samples": 1419,
+      "mean_temp_f": 77.97033333333333,
+      "nine_stream_minutes": 2668.029,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-07-14",
+      "samples": 1418,
+      "mean_temp_f": 77.73479166666667,
+      "nine_stream_minutes": 2750.544,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-07-15",
+      "samples": 1408,
+      "mean_temp_f": 77.25570833333333,
+      "nine_stream_minutes": 2616.406,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-07-16",
+      "samples": 1407,
+      "mean_temp_f": 77.69529166666666,
+      "nine_stream_minutes": 2476.765,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-07-17",
+      "samples": 1402,
+      "mean_temp_f": 77.75241666666666,
+      "nine_stream_minutes": 2663.993,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-07-18",
+      "samples": 1411,
+      "mean_temp_f": 78.05529166666666,
+      "nine_stream_minutes": 2950.291,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-07-19",
+      "samples": 1420,
+      "mean_temp_f": 78.41070833333333,
+      "nine_stream_minutes": 3178.908,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-07-20",
+      "samples": 1418,
+      "mean_temp_f": 78.94129166666667,
+      "nine_stream_minutes": 3394.28,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-07-21",
+      "samples": 1417,
+      "mean_temp_f": 78.84775,
+      "nine_stream_minutes": 2923.753,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-07-22",
+      "samples": 1412,
+      "mean_temp_f": 77.696625,
+      "nine_stream_minutes": 1946.765,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-07-23",
+      "samples": 1420,
+      "mean_temp_f": 77.62091666666667,
+      "nine_stream_minutes": 2288.662,
+      "heat1_minutes": 35.382,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-07-24",
+      "samples": 1420,
+      "mean_temp_f": 77.20845833333334,
+      "nine_stream_minutes": 2129.921,
+      "heat1_minutes": 8.692,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-07-25",
+      "samples": 1418,
+      "mean_temp_f": 79.11,
+      "nine_stream_minutes": 792.442,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-07-26",
+      "samples": 1958,
+      "mean_temp_f": 79.2595,
+      "nine_stream_minutes": 2386.491,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-07-27",
+      "samples": 1416,
+      "mean_temp_f": 78.40358333333333,
+      "nine_stream_minutes": 2638.329,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-07-28",
+      "samples": 1516,
+      "mean_temp_f": 77.64420833333334,
+      "nine_stream_minutes": 2080.303,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-07-29",
+      "samples": 1405,
+      "mean_temp_f": 76.68920833333334,
+      "nine_stream_minutes": 1555.183,
+      "heat1_minutes": 16.687,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-07-30",
+      "samples": 1405,
+      "mean_temp_f": 77.5615,
+      "nine_stream_minutes": 2695.967,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-07-31",
+      "samples": 1405,
+      "mean_temp_f": 77.12975,
+      "nine_stream_minutes": 2180.268,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-08-01",
+      "samples": 1412,
+      "mean_temp_f": 76.45733333333334,
+      "nine_stream_minutes": 2438.589,
+      "heat1_minutes": 51.291,
+      "heat2_minutes": 0.0,
+      "south_hours": 24
+    },
+    {
+      "date": "2026-08-02",
+      "samples": 1414,
+      "mean_temp_f": 77.2155,
+      "nine_stream_minutes": 2988.438,
+      "heat1_minutes": 41.073,
+      "heat2_minutes": 0.0,
+      "south_hours": 17
+    },
+    {
+      "date": "2026-08-03",
+      "samples": 1417,
+      "mean_temp_f": 76.95808333333333,
+      "nine_stream_minutes": 2114.949,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 0
+    },
+    {
+      "date": "2026-08-04",
+      "samples": 1418,
+      "mean_temp_f": 74.85775,
+      "nine_stream_minutes": 1108.069,
+      "heat1_minutes": 367.252,
+      "heat2_minutes": 0.0,
+      "south_hours": 0
+    },
+    {
+      "date": "2026-08-05",
+      "samples": 1437,
+      "mean_temp_f": 74.71383333333333,
+      "nine_stream_minutes": 2097.342,
+      "heat1_minutes": 491.505,
+      "heat2_minutes": 16.234,
+      "south_hours": 0
+    },
+    {
+      "date": "2026-08-06",
+      "samples": 1440,
+      "mean_temp_f": 76.90412500000001,
+      "nine_stream_minutes": 2714.988,
+      "heat1_minutes": 250.256,
+      "heat2_minutes": 0.0,
+      "south_hours": 0
+    },
+    {
+      "date": "2026-08-07",
+      "samples": 1440,
+      "mean_temp_f": 77.663375,
+      "nine_stream_minutes": 2735.115,
+      "heat1_minutes": 126.37100000000001,
+      "heat2_minutes": 0.0,
+      "south_hours": 0
+    },
+    {
+      "date": "2026-08-08",
+      "samples": 1440,
+      "mean_temp_f": 76.66170833333334,
+      "nine_stream_minutes": 3540.725,
+      "heat1_minutes": 32.817,
+      "heat2_minutes": 0.0,
+      "south_hours": 0
+    },
+    {
+      "date": "2026-08-09",
+      "samples": 1440,
+      "mean_temp_f": 71.24404166666667,
+      "nine_stream_minutes": 614.2669999999999,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 0
+    },
+    {
+      "date": "2026-08-10",
+      "samples": 1421,
+      "mean_temp_f": 77.81591666666667,
+      "nine_stream_minutes": 2178.358,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 0
+    },
+    {
+      "date": "2026-08-11",
+      "samples": 1360,
+      "mean_temp_f": 77.588125,
+      "nine_stream_minutes": 2795.876,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 0
+    },
+    {
+      "date": "2026-08-12",
+      "samples": 1361,
+      "mean_temp_f": 76.57966666666667,
+      "nine_stream_minutes": 1426.023,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 0
+    },
+    {
+      "date": "2026-08-13",
+      "samples": 1359,
+      "mean_temp_f": 76.56454166666667,
+      "nine_stream_minutes": 1502.276,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 0
+    },
+    {
+      "date": "2026-08-14",
+      "samples": 1376,
+      "mean_temp_f": 74.91304166666667,
+      "nine_stream_minutes": 1401.046,
+      "heat1_minutes": 147.94899999999998,
+      "heat2_minutes": 0.0,
+      "south_hours": 0
+    },
+    {
+      "date": "2026-08-15",
+      "samples": 1417,
+      "mean_temp_f": 74.27395833333333,
+      "nine_stream_minutes": 945.397,
+      "heat1_minutes": 226.93200000000002,
+      "heat2_minutes": 0.0,
+      "south_hours": 0
+    },
+    {
+      "date": "2026-08-16",
+      "samples": 1415,
+      "mean_temp_f": 75.45320833333334,
+      "nine_stream_minutes": 2119.097,
+      "heat1_minutes": 162.37199999999999,
+      "heat2_minutes": 0.0,
+      "south_hours": 0
+    },
+    {
+      "date": "2026-08-17",
+      "samples": 1416,
+      "mean_temp_f": 76.10229166666667,
+      "nine_stream_minutes": 2805.664,
+      "heat1_minutes": 192.619,
+      "heat2_minutes": 0.0,
+      "south_hours": 0
+    },
+    {
+      "date": "2026-08-18",
+      "samples": 1414,
+      "mean_temp_f": 76.02133333333333,
+      "nine_stream_minutes": 2108.574,
+      "heat1_minutes": 72.255,
+      "heat2_minutes": 0.0,
+      "south_hours": 0
+    },
+    {
+      "date": "2026-08-19",
+      "samples": 1408,
+      "mean_temp_f": 76.98433333333334,
+      "nine_stream_minutes": 1453.289,
+      "heat1_minutes": 53.721,
+      "heat2_minutes": 0.0,
+      "south_hours": 0
+    },
+    {
+      "date": "2026-08-20",
+      "samples": 1414,
+      "mean_temp_f": 76.79645833333333,
+      "nine_stream_minutes": 2313.272,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 0
+    },
+    {
+      "date": "2026-08-21",
+      "samples": 1414,
+      "mean_temp_f": 77.17975,
+      "nine_stream_minutes": 2359.684,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 0
+    },
+    {
+      "date": "2026-08-22",
+      "samples": 1415,
+      "mean_temp_f": 77.320875,
+      "nine_stream_minutes": 2051.165,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 0
+    },
+    {
+      "date": "2026-08-23",
+      "samples": 1468,
+      "mean_temp_f": 77.03116666666666,
+      "nine_stream_minutes": 2123.82,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 0
+    },
+    {
+      "date": "2026-08-24",
+      "samples": 1417,
+      "mean_temp_f": 76.37741666666666,
+      "nine_stream_minutes": 1214.056,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 0
+    },
+    {
+      "date": "2026-08-25",
+      "samples": 1414,
+      "mean_temp_f": 76.36545833333334,
+      "nine_stream_minutes": 678.201,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 0
+    },
+    {
+      "date": "2026-08-26",
+      "samples": 1403,
+      "mean_temp_f": 75.63458333333334,
+      "nine_stream_minutes": 846.544,
+      "heat1_minutes": 56.095,
+      "heat2_minutes": 0.0,
+      "south_hours": 0
+    },
+    {
+      "date": "2026-08-27",
+      "samples": 1411,
+      "mean_temp_f": 75.33520833333333,
+      "nine_stream_minutes": 998.047,
+      "heat1_minutes": 55.5,
+      "heat2_minutes": 0.0,
+      "south_hours": 0
+    },
+    {
+      "date": "2026-08-28",
+      "samples": 1405,
+      "mean_temp_f": 75.908625,
+      "nine_stream_minutes": 2000.217,
+      "heat1_minutes": 108.918,
+      "heat2_minutes": 0.0,
+      "south_hours": 0
+    },
+    {
+      "date": "2026-08-29",
+      "samples": 2072,
+      "mean_temp_f": 77.04366666666667,
+      "nine_stream_minutes": 1922.254,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 0
+    },
+    {
+      "date": "2026-08-30",
+      "samples": 1632,
+      "mean_temp_f": 75.35770833333333,
+      "nine_stream_minutes": 603.234,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 0
+    },
+    {
+      "date": "2026-08-31",
+      "samples": 1361,
+      "mean_temp_f": 75.25450000000001,
+      "nine_stream_minutes": 1033.142,
+      "heat1_minutes": 0.0,
+      "heat2_minutes": 0.0,
+      "south_hours": 0
+    },
+    {
+      "date": "2026-09-01",
+      "samples": 1360,
+      "mean_temp_f": 74.96545833333333,
+      "nine_stream_minutes": 1557.205,
+      "heat1_minutes": 109.885,
+      "heat2_minutes": 0.0,
+      "south_hours": 0
+    },
+    {
+      "date": "2026-09-02",
+      "samples": 1373,
+      "mean_temp_f": 75.39383333333333,
+      "nine_stream_minutes": 1913.219,
+      "heat1_minutes": 177.872,
+      "heat2_minutes": 0.0,
+      "south_hours": 0
+    },
+    {
+      "date": "2026-09-03",
+      "samples": 1354,
+      "mean_temp_f": 75.4675,
+      "nine_stream_minutes": 2303.374,
+      "heat1_minutes": 194.554,
+      "heat2_minutes": 0.0,
+      "south_hours": 0
+    },
+    {
+      "date": "2026-09-04",
+      "samples": 1369,
+      "mean_temp_f": 77.0955,
+      "nine_stream_minutes": 2883.778,
+      "heat1_minutes": 262.623,
+      "heat2_minutes": 0.0,
+      "south_hours": 0
+    }
+  ],
+  "recent_weather": {
+    "first": "2026-08-29 08:55",
+    "last": "2026-09-05 08:55",
+    "six_complete_day_bins": 1728,
+    "expected_five_minute_bins": 1728,
+    "source_samples": 8449,
+    "metrics": {
+      "temp_avg_f": {
+        "n": 1728,
+        "mean": 75.58747106481482,
+        "median": 74.235,
+        "min": 66.04,
+        "max": 100.48,
+        "sum": 130615.15,
+        "p95_nearest_rank": 85.93
+      },
+      "vpd_avg_kpa": {
+        "n": 1728,
+        "mean": 1.1277887731481482,
+        "median": 1.0365,
+        "min": 0.458,
+        "max": 5.395,
+        "sum": 1948.819,
+        "p95_nearest_rank": 1.916
+      },
+      "outdoor_temp_f": {
+        "n": 1728,
+        "mean": 73.52874421296296,
+        "median": 71.515,
+        "min": 57.51,
+        "max": 94.37,
+        "sum": 127057.67,
+        "p95_nearest_rank": 90.38
+      },
+      "outdoor_rh_pct": {
+        "n": 1728,
+        "mean": 46.4904224537037,
+        "median": 45.265,
+        "min": 16.59,
+        "max": 88.61,
+        "sum": 80335.45,
+        "p95_nearest_rank": 83.33
+      },
+      "solar_irradiance_w_m2": {
+        "n": 1728,
+        "mean": 231.47372685185184,
+        "median": 22.1,
+        "min": 0.0,
+        "max": 1177.8,
+        "sum": 399986.6,
+        "p95_nearest_rank": 928.0
+      }
+    }
+  },
+  "plan_export": {
+    "rows": 73,
+    "unique_plans": 73,
+    "days": 26,
+    "first_day": "2026-08-11",
+    "last_day": "2026-09-05",
+    "deduplicated_days": {
+      "compliance_pct": {
+        "n": 26,
+        "mean": 17.411538461538463,
+        "median": 16.799999999999997,
+        "min": 2.8,
+        "max": 32.4,
+        "sum": 452.7,
+        "p95_nearest_rank": 31.0
+      },
+      "graded_compliance_attributable_pct": {
+        "n": 26,
+        "mean": 65.91153846153846,
+        "median": 61.45,
+        "min": 54.0,
+        "max": 85.8,
+        "sum": 1713.7,
+        "p95_nearest_rank": 85.5
+      },
+      "temp_compliance_pct": {
+        "n": 26,
+        "mean": 39.62692307692308,
+        "median": 36.95,
+        "min": 8.7,
+        "max": 62.9,
+        "sum": 1030.3,
+        "p95_nearest_rank": 55.9
+      },
+      "vpd_compliance_pct": {
+        "n": 26,
+        "mean": 44.488461538461536,
+        "median": 44.1,
+        "min": 3.5,
+        "max": 80.0,
+        "sum": 1156.7,
+        "p95_nearest_rank": 73.2
+      },
+      "water_used_gal": {
+        "n": 16,
+        "mean": 187.125,
+        "median": 154.0,
+        "min": 29.0,
+        "max": 382.0,
+        "sum": 2994.0,
+        "p95_nearest_rank": 382.0
+      },
+      "kwh": {
+        "n": 26,
+        "mean": 5.346923076923077,
+        "median": 5.205,
+        "min": 0.9,
+        "max": 11.39,
+        "sum": 139.02,
+        "p95_nearest_rank": 10.65
+      },
+      "therms_estimated": {
+        "n": 25,
+        "mean": 0.0,
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "sum": 0.0,
+        "p95_nearest_rank": 0.0
+      }
+    },
+    "note": "Daily climate/resource values repeat on every plan row; deduplicated by date, never summed by plan.",
+    "complete_day_compliance_periods": {
+      "2026-08-14": {
+        "compliance_pct": {
+          "n": 22,
+          "mean": 17.895454545454545,
+          "median": 16.799999999999997,
+          "min": 3.2,
+          "max": 32.4,
+          "sum": 393.7,
+          "p95_nearest_rank": 31.0
+        },
+        "graded_compliance_attributable_pct": {
+          "n": 22,
+          "mean": 65.49090909090908,
+          "median": 61.45,
+          "min": 54.0,
+          "max": 85.8,
+          "sum": 1440.8,
+          "p95_nearest_rank": 82.3
+        },
+        "temp_compliance_pct": {
+          "n": 22,
+          "mean": 39.695454545454545,
+          "median": 36.8,
+          "min": 33.9,
+          "max": 62.9,
+          "sum": 873.3,
+          "p95_nearest_rank": 51.1
+        },
+        "vpd_compliance_pct": {
+          "n": 22,
+          "mean": 45.34090909090909,
+          "median": 44.1,
+          "min": 11.1,
+          "max": 80.0,
+          "sum": 997.5,
+          "p95_nearest_rank": 73.2
+        }
+      },
+      "2026-08-29": {
+        "compliance_pct": {
+          "n": 7,
+          "mean": 11.957142857142857,
+          "median": 11.7,
+          "min": 3.2,
+          "max": 23.4,
+          "sum": 83.7,
+          "p95_nearest_rank": 23.4
+        },
+        "graded_compliance_attributable_pct": {
+          "n": 7,
+          "mean": 77.68571428571428,
+          "median": 77.8,
+          "min": 62.6,
+          "max": 85.8,
+          "sum": 543.8,
+          "p95_nearest_rank": 85.8
+        },
+        "temp_compliance_pct": {
+          "n": 7,
+          "mean": 39.32857142857143,
+          "median": 35.2,
+          "min": 34.3,
+          "max": 62.9,
+          "sum": 275.3,
+          "p95_nearest_rank": 62.9
+        },
+        "vpd_compliance_pct": {
+          "n": 7,
+          "mean": 36.857142857142854,
+          "median": 35.4,
+          "min": 11.1,
+          "max": 58.2,
+          "sum": 258.0,
+          "p95_nearest_rank": 58.2
+        }
+      },
+      "2026-09-04": {
+        "compliance_pct": {
+          "n": 1,
+          "mean": 6.1,
+          "median": 6.1,
+          "min": 6.1,
+          "max": 6.1,
+          "sum": 6.1,
+          "p95_nearest_rank": 6.1
+        },
+        "graded_compliance_attributable_pct": {
+          "n": 1,
+          "mean": 85.8,
+          "median": 85.8,
+          "min": 85.8,
+          "max": 85.8,
+          "sum": 85.8,
+          "p95_nearest_rank": 85.8
+        },
+        "temp_compliance_pct": {
+          "n": 1,
+          "mean": 34.3,
+          "median": 34.3,
+          "min": 34.3,
+          "max": 34.3,
+          "sum": 34.3,
+          "p95_nearest_rank": 34.3
+        },
+        "vpd_compliance_pct": {
+          "n": 1,
+          "mean": 30.8,
+          "median": 30.8,
+          "min": 30.8,
+          "max": 30.8,
+          "sum": 30.8,
+          "p95_nearest_rank": 30.8
+        }
+      }
+    }
+  },
+  "sensor_composition_sensitivity": {
+    "last_south_nonnull_hour": "2026-08-02 16:00:00",
+    "interpretation": "Equal-weight hourly three-probe minus four-probe arithmetic sensitivity, not a correction to the 15-minute weather-matched causal contrast.",
+    "all_hours": {
+      "n": 426,
+      "mean": 0.09124256651017214,
+      "median": 0.056624999999999925,
+      "min": -0.15941666666666676,
+      "max": 0.5889166666666665,
+      "sum": 38.86933333333333,
+      "p95_nearest_rank": 0.39241666666666686
+    },
+    "midday_12_16": {
+      "n": 72,
+      "mean": 0.1899699074074074,
+      "median": 0.17300000000000004,
+      "min": -0.09583333333333344,
+      "max": 0.5610000000000002,
+      "sum": 13.677833333333332,
+      "p95_nearest_rank": 0.4412499999999999
+    }
+  },
+  "september_4_episode": {
+    "hourly": [
+      {
+        "hour_start_local": "2026-09-04 13:00:00",
+        "temp_avg_f": "85.116",
+        "vpd_avg_kpa": "1.720",
+        "temp_north_f": "89.051",
+        "temp_east_f": "82.201",
+        "temp_west_f": "84.159",
+        "runtime_fan1_min": "50.180",
+        "runtime_fan2_min": "48.712",
+        "runtime_vent_min": "58.946",
+        "runtime_fog_min": "50.180",
+        "runtime_mister_center_min": "38.430",
+        "runtime_water_flowing_min": "55.195"
+      },
+      {
+        "hour_start_local": "2026-09-04 14:00:00",
+        "temp_avg_f": "87.593",
+        "vpd_avg_kpa": "2.155",
+        "temp_north_f": "91.318",
+        "temp_east_f": "84.048",
+        "temp_west_f": "87.459",
+        "runtime_fan1_min": "60.000",
+        "runtime_fan2_min": "60.000",
+        "runtime_vent_min": "60.000",
+        "runtime_fog_min": "57.056",
+        "runtime_mister_center_min": "16.021",
+        "runtime_water_flowing_min": "47.113"
+      },
+      {
+        "hour_start_local": "2026-09-04 15:00:00",
+        "temp_avg_f": "98.337",
+        "vpd_avg_kpa": "5.004",
+        "temp_north_f": "100.331",
+        "temp_east_f": "95.309",
+        "temp_west_f": "99.389",
+        "runtime_fan1_min": "60.000",
+        "runtime_fan2_min": "60.000",
+        "runtime_vent_min": "60.000",
+        "runtime_fog_min": "0.000",
+        "runtime_mister_center_min": "0.000",
+        "runtime_water_flowing_min": "0.000"
+      },
+      {
+        "hour_start_local": "2026-09-04 16:00:00",
+        "temp_avg_f": "93.504",
+        "vpd_avg_kpa": "4.282",
+        "temp_north_f": "92.960",
+        "temp_east_f": "93.487",
+        "temp_west_f": "94.034",
+        "runtime_fan1_min": "60.000",
+        "runtime_fan2_min": "60.000",
+        "runtime_vent_min": "60.000",
+        "runtime_fog_min": "0.000",
+        "runtime_mister_center_min": "0.000",
+        "runtime_water_flowing_min": "0.000"
+      },
+      {
+        "hour_start_local": "2026-09-04 17:00:00",
+        "temp_avg_f": "90.967",
+        "vpd_avg_kpa": "3.828",
+        "temp_north_f": "91.257",
+        "temp_east_f": "90.606",
+        "temp_west_f": "91.015",
+        "runtime_fan1_min": "60.000",
+        "runtime_fan2_min": "60.000",
+        "runtime_vent_min": "60.000",
+        "runtime_fog_min": "0.000",
+        "runtime_mister_center_min": "0.000",
+        "runtime_water_flowing_min": "0.000"
+      },
+      {
+        "hour_start_local": "2026-09-04 18:00:00",
+        "temp_avg_f": "83.861",
+        "vpd_avg_kpa": "2.303",
+        "temp_north_f": "83.373",
+        "temp_east_f": "84.295",
+        "temp_west_f": "83.858",
+        "runtime_fan1_min": "48.766",
+        "runtime_fan2_min": "57.546",
+        "runtime_vent_min": "60.000",
+        "runtime_fog_min": "36.017",
+        "runtime_mister_center_min": "0.000",
+        "runtime_water_flowing_min": "29.061"
+      }
+    ],
+    "peak_five_minute_vpd_sample": {
+      "bucket_local": "2026-09-04 15:30",
+      "temp_avg_f": "100.48",
+      "rh_avg_pct": "19.01",
+      "vpd_avg_kpa": "5.395",
+      "outdoor_temp_f": "94.17",
+      "source_samples": "5"
+    },
+    "over_95f_five_minute_bins": 14,
+    "over_3kpa_five_minute_bins": 39
+  },
+  "power_reproduction": {
+    "pairs": 30,
+    "repetitions": 25000,
+    "seed": 588640,
+    "diluted_true_effect": {
+      "vpd_corridor_distance_kpa": 0.0,
+      "temperature_corridor_distance_f": 0.0,
+      "nine_control_state_minutes": -283.21872568925926
+    },
+    "complete_all_pairs_probability_model": 0.9851082442083701,
+    "simulated_complete_fraction": 0.98552,
+    "marginal_unconditional_power": {
+      "vpd_corridor_distance_kpa": 0.575,
+      "temperature_corridor_distance_f": 0.98548,
+      "nine_control_state_minutes": 0.28976
+    },
+    "joint_advance_power": 0.13776,
+    "monte_carlo_standard_error": 0.0021797447777205476,
+    "passes_minimum_joint_power": false
+  },
+  "power_sensitivity": [
+    {
+      "nonbaseline_frequency": 0.25,
+      "complete_pair_probability": 0.99,
+      "probability_all_30_pairs_complete": 0.7397003733882802,
+      "joint_advance_power": 0.02196
+    },
+    {
+      "nonbaseline_frequency": 0.25,
+      "complete_pair_probability": 0.95,
+      "probability_all_30_pairs_complete": 0.21463876394293727,
+      "joint_advance_power": 0.00724
+    },
+    {
+      "nonbaseline_frequency": 0.5,
+      "complete_pair_probability": 0.99,
+      "probability_all_30_pairs_complete": 0.7397003733882802,
+      "joint_advance_power": 0.05756
+    },
+    {
+      "nonbaseline_frequency": 0.5,
+      "complete_pair_probability": 0.95,
+      "probability_all_30_pairs_complete": 0.21463876394293727,
+      "joint_advance_power": 0.01756
+    },
+    {
+      "nonbaseline_frequency": 0.7,
+      "complete_pair_probability": 0.99,
+      "probability_all_30_pairs_complete": 0.7397003733882802,
+      "joint_advance_power": 0.10172
+    },
+    {
+      "nonbaseline_frequency": 0.7,
+      "complete_pair_probability": 0.95,
+      "probability_all_30_pairs_complete": 0.21463876394293727,
+      "joint_advance_power": 0.02964
+    },
+    {
+      "nonbaseline_frequency": 1.0,
+      "complete_pair_probability": 0.99,
+      "probability_all_30_pairs_complete": 0.7397003733882802,
+      "joint_advance_power": 0.1976
+    },
+    {
+      "nonbaseline_frequency": 1.0,
+      "complete_pair_probability": 0.95,
+      "probability_all_30_pairs_complete": 0.21463876394293727,
+      "joint_advance_power": 0.05776
+    }
+  ],
+  "verified_input_hashes": 125
+}

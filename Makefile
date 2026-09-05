@@ -553,6 +553,7 @@ clean: ## Remove Python bytecode and pytest cache
 	find . -type d -name .pytest_cache -exec rm -rf {} + 2>/dev/null || true
 	find . -name "*.pyc" -delete 2>/dev/null || true
 
-planning-validate: ## Validate planning/backlog.yaml against the pydantic schema (lane/wave plan consistency)
+planning-validate: ## Validate campaign coverage, dependencies, source paths and generated views
 	$(PYTHON) planning/schema.py planning/backlog.yaml
+	$(PYTHON) -m planning.render --check
 	$(PYTHON) -m pytest planning/tests/test_backlog.py -q

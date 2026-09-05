@@ -1,774 +1,821 @@
 {
- "new_issues": [],
- "existing": [
-  {
-   "number": "377",
-   "lane": "L1-CLIMATE",
-   "wave": "W1",
-   "add_labels": [
-    "lane:L1-climate",
-    "wave:W1"
-   ]
-  },
-  {
-   "number": "299",
-   "lane": "L1-CLIMATE",
-   "wave": "W2",
-   "add_labels": [
-    "lane:L1-climate",
-    "wave:W2"
-   ]
-  },
-  {
-   "number": "386",
-   "lane": "L1-CLIMATE",
-   "wave": "W2",
-   "add_labels": [
-    "lane:L1-climate",
-    "wave:W2"
-   ]
-  },
-  {
-   "number": "367",
-   "lane": "L1-CLIMATE",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L1-climate",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "383",
-   "lane": "L1-CLIMATE",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L1-climate",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "368",
-   "lane": "L1-CLIMATE",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L1-climate",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "370",
-   "lane": "L1-CLIMATE",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L1-climate",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "14",
-   "lane": "L1-CLIMATE",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L1-climate",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "31",
-   "lane": "L1-CLIMATE",
-   "wave": "W0",
-   "add_labels": [
-    "lane:L1-climate",
-    "wave:W0"
-   ]
-  },
-  {
-   "number": "300",
-   "lane": "L1-CLIMATE",
-   "wave": "W0",
-   "add_labels": [
-    "lane:L1-climate",
-    "wave:W0"
-   ]
-  },
-  {
-   "number": "291",
-   "lane": "L1-CLIMATE",
-   "wave": "W0",
-   "add_labels": [
-    "lane:L1-climate",
-    "wave:W0"
-   ]
-  },
-  {
-   "number": "326",
-   "lane": "L1-CLIMATE",
-   "wave": "W0",
-   "add_labels": [
-    "lane:L1-climate",
-    "wave:W0"
-   ]
-  },
-  {
-   "number": "369",
-   "lane": "L1-CLIMATE",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L1-climate",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "361",
-   "lane": "L1-CLIMATE",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L1-climate",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "323",
-   "lane": "L1-CLIMATE",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L1-climate",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "324",
-   "lane": "L1-CLIMATE",
-   "wave": "W0",
-   "add_labels": [
-    "lane:L1-climate",
-    "wave:W0"
-   ]
-  },
-  {
-   "number": "371",
-   "lane": "L2-OBS",
-   "wave": "W0",
-   "add_labels": [
-    "lane:L2-obs",
-    "wave:W0"
-   ]
-  },
-  {
-   "number": "387",
-   "lane": "L2-OBS",
-   "wave": "W0",
-   "add_labels": [
-    "lane:L2-obs",
-    "wave:W0"
-   ]
-  },
-  {
-   "number": "348",
-   "lane": "L2-OBS",
-   "wave": "W0",
-   "add_labels": [
-    "lane:L2-obs",
-    "wave:W0"
-   ]
-  },
-  {
-   "number": "89",
-   "lane": "L2-OBS",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L2-obs",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "75",
-   "lane": "L2-OBS",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L2-obs",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "49",
-   "lane": "L2-OBS",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L2-obs",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "215",
-   "lane": "L2-OBS",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L2-obs",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "365",
-   "lane": "L3-PLANNER",
-   "wave": "W1",
-   "add_labels": [
-    "lane:L3-planner",
-    "wave:W1"
-   ]
-  },
-  {
-   "number": "388",
-   "lane": "L3-PLANNER",
-   "wave": "W0",
-   "add_labels": [
-    "lane:L3-planner",
-    "wave:W0"
-   ]
-  },
-  {
-   "number": "214",
-   "lane": "L3-PLANNER",
-   "wave": "W0",
-   "add_labels": [
-    "lane:L3-planner",
-    "wave:W0"
-   ]
-  },
-  {
-   "number": "210",
-   "lane": "L3-PLANNER",
-   "wave": "W0",
-   "add_labels": [
-    "lane:L3-planner",
-    "wave:W0"
-   ]
-  },
-  {
-   "number": "379",
-   "lane": "L3-PLANNER",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L3-planner",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "293",
-   "lane": "L4-DATA",
-   "wave": "W1",
-   "add_labels": [
-    "lane:L4-data",
-    "wave:W1"
-   ]
-  },
-  {
-   "number": "327",
-   "lane": "L4-DATA",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L4-data",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "389",
-   "lane": "L4-DATA",
-   "wave": "W0",
-   "add_labels": [
-    "lane:L4-data",
-    "wave:W0"
-   ]
-  },
-  {
-   "number": "347",
-   "lane": "L4-DATA",
-   "wave": "W0",
-   "add_labels": [
-    "lane:L4-data",
-    "wave:W0"
-   ]
-  },
-  {
-   "number": "303",
-   "lane": "L5-DEPLOY",
-   "wave": "W0",
-   "add_labels": [
-    "lane:L5-deploy",
-    "wave:W0"
-   ]
-  },
-  {
-   "number": "304",
-   "lane": "L5-DEPLOY",
-   "wave": "W0",
-   "add_labels": [
-    "lane:L5-deploy",
-    "wave:W0"
-   ]
-  },
-  {
-   "number": "390",
-   "lane": "L5-DEPLOY",
-   "wave": "W1",
-   "add_labels": [
-    "lane:L5-deploy",
-    "wave:W1"
-   ]
-  },
-  {
-   "number": "391",
-   "lane": "L5-DEPLOY",
-   "wave": "W0",
-   "add_labels": [
-    "lane:L5-deploy",
-    "wave:W0"
-   ]
-  },
-  {
-   "number": "392",
-   "lane": "L5-DEPLOY",
-   "wave": "W0",
-   "add_labels": [
-    "lane:L5-deploy",
-    "wave:W0"
-   ]
-  },
-  {
-   "number": "393",
-   "lane": "L5-DEPLOY",
-   "wave": "W0",
-   "add_labels": [
-    "lane:L5-deploy",
-    "wave:W0"
-   ]
-  },
-  {
-   "number": "338",
-   "lane": "L5-DEPLOY",
-   "wave": "W0",
-   "add_labels": [
-    "lane:L5-deploy",
-    "wave:W0"
-   ]
-  },
-  {
-   "number": "319",
-   "lane": "L5-DEPLOY",
-   "wave": "W0",
-   "add_labels": [
-    "lane:L5-deploy",
-    "wave:W0"
-   ]
-  },
-  {
-   "number": "320",
-   "lane": "L5-DEPLOY",
-   "wave": "W0",
-   "add_labels": [
-    "lane:L5-deploy",
-    "wave:W0"
-   ]
-  },
-  {
-   "number": "317",
-   "lane": "L5-DEPLOY",
-   "wave": "W2",
-   "add_labels": [
-    "lane:L5-deploy",
-    "wave:W2"
-   ]
-  },
-  {
-   "number": "318",
-   "lane": "L5-DEPLOY",
-   "wave": "W2",
-   "add_labels": [
-    "lane:L5-deploy",
-    "wave:W2"
-   ]
-  },
-  {
-   "number": "336",
-   "lane": "L5-DEPLOY",
-   "wave": "W2",
-   "add_labels": [
-    "lane:L5-deploy",
-    "wave:W2"
-   ]
-  },
-  {
-   "number": "335",
-   "lane": "L5-DEPLOY",
-   "wave": "W0",
-   "add_labels": [
-    "lane:L5-deploy",
-    "wave:W0"
-   ]
-  },
-  {
-   "number": "288",
-   "lane": "L5-DEPLOY",
-   "wave": "W2",
-   "add_labels": [
-    "lane:L5-deploy",
-    "wave:W2"
-   ]
-  },
-  {
-   "number": "322",
-   "lane": "L5-DEPLOY",
-   "wave": "W0",
-   "add_labels": [
-    "lane:L5-deploy",
-    "wave:W0"
-   ]
-  },
-  {
-   "number": "339",
-   "lane": "L5-DEPLOY",
-   "wave": "W2",
-   "add_labels": [
-    "lane:L5-deploy",
-    "wave:W2"
-   ]
-  },
-  {
-   "number": "330",
-   "lane": "L5-DEPLOY",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L5-deploy",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "332",
-   "lane": "L5-DEPLOY",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L5-deploy",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "382",
-   "lane": "L6-HA",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L6-ha",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "394",
-   "lane": "L6-HA",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L6-ha",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "395",
-   "lane": "L6-HA",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L6-ha",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "218",
-   "lane": "L6-HA",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L6-ha",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "396",
-   "lane": "L6-HA",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L6-ha",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "245",
-   "lane": "L6-HA",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L6-ha",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "225",
-   "lane": "L6-HA",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L6-ha",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "238",
-   "lane": "L6-HA",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L6-ha",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "235",
-   "lane": "L6-HA",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L6-ha",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "207",
-   "lane": "L6-HA",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L6-ha",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "114",
-   "lane": "L6-HA",
-   "wave": "W0",
-   "add_labels": [
-    "lane:L6-ha",
-    "wave:W0"
-   ]
-  },
-  {
-   "number": "297",
-   "lane": "L7-IRRIG",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L7-irrig",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "397",
-   "lane": "L7-IRRIG",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L7-irrig",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "398",
-   "lane": "L7-IRRIG",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L7-irrig",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "298",
-   "lane": "L7-IRRIG",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L7-irrig",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "45",
-   "lane": "L7-IRRIG",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L7-irrig",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "37",
-   "lane": "L7-IRRIG",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L7-irrig",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "296",
-   "lane": "L7-IRRIG",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L7-irrig",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "350",
-   "lane": "L7-IRRIG",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L7-irrig",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "16",
-   "lane": "L7-IRRIG",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L7-irrig",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "51",
-   "lane": "L7-IRRIG",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L7-irrig",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "52",
-   "lane": "L7-IRRIG",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L7-irrig",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "118",
-   "lane": "L8-PRODUCT",
-   "wave": "W0",
-   "add_labels": [
-    "lane:L8-product",
-    "wave:W0"
-   ]
-  },
-  {
-   "number": "399",
-   "lane": "L8-PRODUCT",
-   "wave": "W0",
-   "add_labels": [
-    "lane:L8-product",
-    "wave:W0"
-   ]
-  },
-  {
-   "number": "43",
-   "lane": "L8-PRODUCT",
-   "wave": "W0",
-   "add_labels": [
-    "lane:L8-product",
-    "wave:W0"
-   ]
-  },
-  {
-   "number": "400",
-   "lane": "L8-PRODUCT",
-   "wave": "W0",
-   "add_labels": [
-    "lane:L8-product",
-    "wave:W0"
-   ]
-  },
-  {
-   "number": "174",
-   "lane": "L8-PRODUCT",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L8-product",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "175",
-   "lane": "L8-PRODUCT",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L8-product",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "337",
-   "lane": "L8-PRODUCT",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L8-product",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "177",
-   "lane": "L8-PRODUCT",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L8-product",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "351",
-   "lane": "L8-PRODUCT",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L8-product",
-    "wave:W3"
-   ]
-  },
-  {
-   "number": "352",
-   "lane": "L8-PRODUCT",
-   "wave": "W3",
-   "add_labels": [
-    "lane:L8-product",
-    "wave:W3"
-   ]
-  }
- ],
- "body_updates": [
-  {
-   "number": "299",
-   "body": "**Lane:** L1-CLIMATE \u00b7 **Wave:** W2 \u00b7 **Story:** S1-QUIET \u00b7 **Preflight:** firmware-preflight\n\n### What\nAdd a min-on/min-off dwell floor and a per-relay max-cycles/hr governor to the three climate misters (center/south/west), which today bypass the dwell-protected R[] array entirely.\n\n### Why\nVerified: the misters are NOT in the RelayMeta R[] array (controls.yaml:92-99 \u2014 only heat1/heat2/fan1/fan2/fog/vent are); the mister relays are toggled directly by the pulse-timer FSM (controls.yaml:1336-1338) with only a per-zone VPD hysteresis floor (mister_hysteresis_kpa) and no min-on/min-off. Result (lead evidence): mister_center 505 on-events/7d, 202 sub-60s, 79 sub-30s incl 0s pulses, 191 refires <90s; mister_south 220/80/28; vs vent/fan/heat 0-1 sub-60s because their dwell works. This is the REAL chatter the PR #385 observability does not fix. A 120s/60s dwell + VPD hysteresis floor collapses a sub-120s pulse-train into one held pulse, ~40-55% fewer mister on-events with moisture delivery preserved.\n\n### How\nAdd new ESPHome globals mister_min_on_s (default 120) and mister_min_off_s (default 60) in globals.yaml + number entities in tunables.yaml + cfg_mister_min_on_s / cfg_mister_min_off_s readbacks in sensors.yaml (CI no-new-fire-and-forget). Wire the dwell through the mister FSM turn-on path (controls.yaml ~1336-1338 center_mister/south_wall_mister/west_wall_mister .turn_on) and the pulse/gap timer (PULSE_ON_MS/PULSE_GAP_MS at ~1228) and the BLOCKED off path (~1186-1200) \u2014 NOT the RelayMeta R[] climate-relay array. Add per-zone last_on/last_off stamps and a rolling on-edge counter for a max-cycles/hr clamp. Add invariant in firmware/test/invariants.h (TraceRow already carries eq_mister_south/west/center per invariant #2/#6) asserting no mister on-edge within mister_min_off_s and no off within mister_min_on_s, and on-edges/hr per relay under the governor. Add unit tests in test_greenhouse_logic.cpp replaying a sub-120s pulse-train.\n\n### Acceptance\n- [ ] No mister exceeds its max-cycles/hr over the replay corpus (new invariant); make firmware-invariants green\n- [ ] Mister min-on/min-off enforced \u2014 new unit test in test_greenhouse_logic.cpp + make test-firmware green\n- [ ] cfg_mister_min_on_s / cfg_mister_min_off_s readbacks present (no-new-fire-and-forget CI green)\n- [ ] make firmware-replay OLD=<base> NEW=HEAD divergence is the documented intended dwell-collapse only (THRESHOLD_PCT override + coordinator note per freeze rule 8)\n- [ ] make firmware-check compiles\n\n### Dependencies\n#377, #300\n\n_Re-scoped by the 2026-06-22 floating-corridor replan._"
-  },
-  {
-   "number": "383",
-   "body": "**Lane:** L1-CLIMATE \u00b7 **Wave:** W3 \u00b7 **Story:** S2-DEHUM \u00b7 **Preflight:** firmware-preflight\n\n### What\nRe-scope the hardcoded-active overnight closed-vent heat_dehum path (greenhouse_logic.h:1580) as opt-in behind a new tunable defaulting OFF with a cfg_* readback, add a fog/mister anti-ping-pong post-wet hold, and ship as a separate OTA after the #377 float trial is observed clean, with a before/after overnight-heat1 outcome check.\n\n### Why\nVerified: closed_heat_dehum_wanted (greenhouse_logic.h:1447) is hardcoded-active with no enable flag; the override fires at line 1580 whenever the 11-condition night/edge/estimator conditions hold. The lead's edge-case check confirms it is technically ADR-0004-compliant (edge-acting: fires only when in.vpd_kpa < served vpd_low - HV, night, temp-in-band, heat1-only, vent closed, estimator-proven, heat1 has a 180s min-off rail) \u2014 BUT bundling it with the float-flip CONFOUNDS the float trial and adds overnight IDLE->heat1 runtime in the exact wet-night regime the sprint is quieting (orchid overnight RH 84% regression is the plant value at stake). Replay: 50 rows / 0.03%, all IDLE-mode + heat1-only, all March cold-spring nights (DORMANT in summer). Also: fog/mister self-induces wet corrections that ping-pong with dehum (fog 87 of 471 re-ons within 90s).\n\n### How\nAdd ESPHome global closed_heat_dehum_enabled (bool default false) + entity in tunables.yaml + cfg_closed_heat_dehum_enabled readback in sensors.yaml. Guard the override block (greenhouse_logic.h:1580 and the closed_heat_dehum_wanted predicate at 1447) on the new flag. Add a post-wet anti-ping-pong hold: after a fog/mister burst ends, suppress the immediate vent/dehum response for a short settle so VPD stabilizes before the next correction, and symmetrically block re-fog within ~90s (settle ONE mechanism per BC-8). Ship as a SEPARATE OTA AFTER #377 is read clean; validate the enable=true decision on an outcome_kpi/replay before/after overnight-heat1 on-events check. Requires #327 moisture telemetry live (climate_moisture_exchange currently returns 0 rows in prod \u2014 the moisture KPI is inert pre-deploy).\n\n### Acceptance\n- [ ] closed_heat_dehum_enabled defaults false; cfg_closed_heat_dehum_enabled readback present (no-new-fire-and-forget green)\n- [ ] make firmware-replay OLD=<base> shows the heat1-only divergence is forced to zero when the flag is OFF (default), and the documented heat1-only rows only when ON\n- [ ] Before/after overnight heat1 on-events report from #371 KPI surface (requires #327 moisture telemetry live)\n- [ ] Unit tests cover overnight low-wet idle, fog/dehum anti-ping-pong, and the enable-flag OFF/ON branches (make test-firmware)\n- [ ] make firmware-invariants + make firmware-check green; OTA safety-checked, separate from the #299/grow-light window\n\n### Dependencies\n#377, #327, #371, #293\n\n_Re-scoped by the 2026-06-22 floating-corridor replan._"
-  }
- ],
- "close_candidates": [
-  "316"
- ],
- "lane_labels": [
-  "lane:L0-schema",
-  "lane:L1-climate",
-  "lane:L2-obs",
-  "lane:L3-planner",
-  "lane:L4-data",
-  "lane:L5-deploy",
-  "lane:L6-ha",
-  "lane:L7-irrig",
-  "lane:L8-product"
- ],
- "milestones": {
-  "Greenhouse Control Optimization": 15,
-  "Deploy Enablement (agent access + firmware CI/OTA)": 16,
-  "M7 \u2014 HA: first-principles resilience": 14,
-  "Hardware / Seasonal (operator-scoped)": 13,
-  "Enablement: Decommission & Auth": 12
- }
+  "campaign": "greenhouse-evidence-2026-09-05",
+  "issues": [
+    {
+      "key": "775",
+      "number": 775,
+      "title": "[C0][P0] Campaign: trustworthy greenhouse outcomes \u2192 qualified pilot \u2192 evidence-backed control",
+      "stage": "C0",
+      "parent": null,
+      "blocked_by": [],
+      "body_sha256": "007b0c899899ba8f32228cde0137cfab00a69226bb79e1bb494e70f0e192be12"
+    },
+    {
+      "key": "incident",
+      "number": 778,
+      "title": "[C0][P0] Investigate September 4 hot/dry peak and three-hour wetting interruption",
+      "stage": "C0",
+      "parent": 775,
+      "blocked_by": [],
+      "body_sha256": "72901436202a3ab2c107982946978a88707feff421ac0b3da800493f591902d6"
+    },
+    {
+      "key": "371",
+      "number": 371,
+      "title": "[C0][P0] Repair climate score semantics and publish physical outcomes separately from credit",
+      "stage": "C0",
+      "parent": 359,
+      "blocked_by": [],
+      "body_sha256": "69a7d0eee51f211bad94e130c89997c8acbd736908f53a61ce48a000c703c84e"
+    },
+    {
+      "key": "424",
+      "number": 424,
+      "title": "[C0][P0] Resolve served, consumed and raw-readback band lineage without fabricated device truth",
+      "stage": "C0",
+      "parent": 359,
+      "blocked_by": [],
+      "body_sha256": "5ae900cd073756030bbf6bfe7fc8fec0701ea1aad1de88551a3381955d4f358e"
+    },
+    {
+      "key": "sensor_reanalysis",
+      "number": 779,
+      "title": "[C0][P1] Re-run historical planner comparisons on a fixed sensor panel and fixed target contract",
+      "stage": "C0",
+      "parent": 775,
+      "blocked_by": [
+        371
+      ],
+      "body_sha256": "6ff47acd467f847b530bf57f11819d7cdfb0dbd5cfe89e45f4c0e5c5f2340e39"
+    },
+    {
+      "key": "forecast_truth",
+      "number": 780,
+      "title": "[C0][P0] Score as-of outdoor forecasts against outdoor truth and separate indoor response",
+      "stage": "C0",
+      "parent": 775,
+      "blocked_by": [],
+      "body_sha256": "cfa932c954ee561f0e271644e8ea1ee95175fbe9ffe9f87b0bdca8b9610b2ff6"
+    },
+    {
+      "key": "resource_contract",
+      "number": 781,
+      "title": "[C0][P0] Commission a claim-safe water and electricity endpoint contract",
+      "stage": "C0",
+      "parent": 775,
+      "blocked_by": [],
+      "body_sha256": "3b8625f69c82013a87b1f0edbecdf18ce69bc59ffb24f14ddb5f5f5ad0a913e0"
+    },
+    {
+      "key": "581",
+      "number": 581,
+      "title": "[C2][P0] Experiment program: qualify, run and read out the bounded AI-admission pilot",
+      "stage": "C2",
+      "parent": 775,
+      "blocked_by": [],
+      "body_sha256": "ef292e0f25287e9623e0d62fdb734826cd76b7415340a555e5dfda771b316a76"
+    },
+    {
+      "key": "750",
+      "number": 750,
+      "title": "[C1][P0] Recovery/proof campaign: rebaseline current state and seal one safe physical receipt",
+      "stage": "C1",
+      "parent": 581,
+      "blocked_by": [],
+      "body_sha256": "856fc20cd5c2c37a3c5870fb5d6186b008b103279c8f67a58094e5e383543e1f"
+    },
+    {
+      "key": "747",
+      "number": 747,
+      "title": "[C1][P0] Verify corrected scheduled backups and current production recovery health",
+      "stage": "C1",
+      "parent": 750,
+      "blocked_by": [],
+      "body_sha256": "48e41f34f3207d22dccdfe37c53b05377a090ae55e9d622c4067adb912a39762"
+    },
+    {
+      "key": "749",
+      "number": 749,
+      "title": "[C1][P0] Qualify current three-probe readiness and explicit safety dependencies",
+      "stage": "C1",
+      "parent": 750,
+      "blocked_by": [
+        424,
+        778
+      ],
+      "body_sha256": "7ffb9b7d317791efc946fd80cea75f05dec5137af98ad49689ef5bc29846bec6"
+    },
+    {
+      "key": "641",
+      "number": 641,
+      "title": "[C1][P0] Execute authorized orphan recovery and one separately attended physical proof",
+      "stage": "C1",
+      "parent": 750,
+      "blocked_by": [
+        747,
+        749,
+        639,
+        587
+      ],
+      "body_sha256": "3a7ab2bd0ead27885978d85948db18c2c2f20bb05922de8f290e4302cafa9bd8"
+    },
+    {
+      "key": "639",
+      "number": 639,
+      "title": "[C1][P0] Qualify the existing component executor and full-state recovery before launch",
+      "stage": "C1",
+      "parent": 581,
+      "blocked_by": [],
+      "body_sha256": "ffb5b641832e4eba1d133959f80a3c60ebdeaca5d47ad955f527f67aeec9dce7"
+    },
+    {
+      "key": "587",
+      "number": 587,
+      "title": "[C1][P0] Qualify fail-closed lifecycle, kill switch and blinded operational visibility",
+      "stage": "C1",
+      "parent": 581,
+      "blocked_by": [],
+      "body_sha256": "f75c9467b31a7f4173c6e8bae6f424a35944ccfbe9ed9f97c6273bf82f421bc9"
+    },
+    {
+      "key": "study_design",
+      "number": 782,
+      "title": "[C0][P0] Choose a season-appropriate exploratory pilot and freeze the scientific contract",
+      "stage": "C0",
+      "parent": 581,
+      "blocked_by": [
+        371,
+        779,
+        780,
+        781
+      ],
+      "body_sha256": "6d05ddfb837128cc2124eaa57263282cb90279dec8c1a57cc63ca5187e4bfc16"
+    },
+    {
+      "key": "integration",
+      "number": 783,
+      "title": "[C1][P0] Prove restore \u2192 selector \u2192 setter schema \u2192 receipt \u2192 frozen outcome end to end",
+      "stage": "C1",
+      "parent": 581,
+      "blocked_by": [
+        639,
+        587,
+        782
+      ],
+      "body_sha256": "0d9db0ea1a923913aad9bb369392fe5bf81f4f4a0be0fa0d8397d48723da9903"
+    },
+    {
+      "key": "588",
+      "number": 588,
+      "title": "[C2][P0] Lock the qualified pilot identity and finalize exactly one internal random draw",
+      "stage": "C2",
+      "parent": 581,
+      "blocked_by": [
+        641,
+        782,
+        783
+      ],
+      "body_sha256": "f5769a63eb798b743b3416e765db0aae79633cdf56da0cf4bc7bec83977c89dd"
+    },
+    {
+      "key": "642",
+      "number": 642,
+      "title": "[C2][P0] Authorize and verify one randomized day-1 activation from the locked pilot",
+      "stage": "C2",
+      "parent": 581,
+      "blocked_by": [
+        588
+      ],
+      "body_sha256": "498f5292bb2cb339ac6ffd307d5d2fc1dac0f522f3644ae1524629665531c031"
+    },
+    {
+      "key": "640",
+      "number": 640,
+      "title": "[C3][P0] Freeze the first assigned-day ITT outcome and blinded reproducible export",
+      "stage": "C3",
+      "parent": 581,
+      "blocked_by": [
+        642
+      ],
+      "body_sha256": "6d5965d8a65b12ee24473d640503ee05c19b5a8a9c069377d5a42086f37a0fa6"
+    },
+    {
+      "key": "pilot_run",
+      "number": 784,
+      "title": "[C3][P1] Operate the complete blinded pilot and preserve every assigned day",
+      "stage": "C3",
+      "parent": 581,
+      "blocked_by": [
+        640
+      ],
+      "body_sha256": "9d8e7233b472aa16f6500f93ef4ae597207ec15987229851e56f9dd6197a9e54"
+    },
+    {
+      "key": "readout",
+      "number": 785,
+      "title": "[C3][P1] Reveal once, reproduce the frozen analysis and publish the campaign decision",
+      "stage": "C3",
+      "parent": 581,
+      "blocked_by": [
+        784
+      ],
+      "body_sha256": "bb857c1ada6a6d9898214eed74c9198f702ee4e723441e8259c0510aaccdb297"
+    },
+    {
+      "key": "644",
+      "number": 644,
+      "title": "[C4][P1] Integrate exact-SHA, path-aware and device-safe delivery receipts",
+      "stage": "C4",
+      "parent": 775,
+      "blocked_by": [],
+      "body_sha256": "7d0af99bab24813b7fca5fe2fccd0d1b9db8436af9871981f8c27800ea959289"
+    },
+    {
+      "key": "322",
+      "number": 322,
+      "title": "[C4][P1] Replace remaining VM-era tests with current k3s delivery contracts",
+      "stage": "C4",
+      "parent": 644,
+      "blocked_by": [],
+      "body_sha256": "78dd5310d3ce400ecf5b5369e789f4f7eeee735a2bee6eaa4dc93dfdc2cf7020"
+    },
+    {
+      "key": "304",
+      "number": 304,
+      "title": "[C4][P1] Provide reproducible least-authority firmware and database diagnostic tooling",
+      "stage": "C4",
+      "parent": 644,
+      "blocked_by": [],
+      "body_sha256": "5b0157db700ae0dc08582f925466d9abb71a63d6a42fd11a7ec970aa56a92911"
+    },
+    {
+      "key": "303",
+      "number": 303,
+      "title": "[C4][P1] Run real portable ESPHome compilation for declared firmware targets",
+      "stage": "C4",
+      "parent": 644,
+      "blocked_by": [
+        304,
+        322
+      ],
+      "body_sha256": "f2508a71b4bb5a2f91e632af7b6fd0c5c3b4de62b08e6228dda103b1cf2bd8da"
+    },
+    {
+      "key": "390",
+      "number": 390,
+      "title": "[C4][P1] Gate firmware releases on topology, cycling, runtime safety and rollback evidence",
+      "stage": "C4",
+      "parent": 644,
+      "blocked_by": [
+        303,
+        419
+      ],
+      "body_sha256": "9b421f3239da089ed203bf1c470df2e217c37705c23c9412522bc692d44b1f00"
+    },
+    {
+      "key": "433",
+      "number": 433,
+      "title": "[C4][P1] Finish truthful single-writer command lifecycle and no-reconcile-storm acceptance",
+      "stage": "C4",
+      "parent": 430,
+      "blocked_by": [],
+      "body_sha256": "2fe40641fd3c04992c6a7a63769bdcd3132e22907efabc8b0f5db48f6468f2ab"
+    },
+    {
+      "key": "427",
+      "number": 427,
+      "title": "[C4][P1] Prove active Hermes/MCP recovery and truthful non-authoritative worker health",
+      "stage": "C4",
+      "parent": 775,
+      "blocked_by": [
+        433
+      ],
+      "body_sha256": "0dbd10a1d15c444d2328cda8338d1e344ecffc1f220961eb95b935bbff81745e"
+    },
+    {
+      "key": "75",
+      "number": 75,
+      "title": "[C4][P1] Observability program: prove actionable health from source through device",
+      "stage": "C4",
+      "parent": 775,
+      "blocked_by": [],
+      "body_sha256": "ac9b8bb2c9a6820ef3d61ee7081b20e0bfd91de35b5192e82a6b49a40780f043"
+    },
+    {
+      "key": "563",
+      "number": 563,
+      "title": "[C4][P1] Enforce the actual ConfigMap-based alert delivery contract",
+      "stage": "C4",
+      "parent": 75,
+      "blocked_by": [],
+      "body_sha256": "fcb66eb511a3ed0200f6719afa74da3255b3c33ea1fcc2acf6a907d6a1b8c7f4"
+    },
+    {
+      "key": "394",
+      "number": 394,
+      "title": "[C4][P1] Deliver and fault-test live split-brain and no-writer alerts",
+      "stage": "C4",
+      "parent": 75,
+      "blocked_by": [
+        563
+      ],
+      "body_sha256": "83f88277a0c36d0d6119f525b68b401c3f1a8b7baad754008843aed5fc0168e7"
+    },
+    {
+      "key": "89",
+      "number": 89,
+      "title": "[C4][P1] Verify exact-source post-deploy smoke and device-route health",
+      "stage": "C4",
+      "parent": 75,
+      "blocked_by": [
+        563
+      ],
+      "body_sha256": "5ed604f2f026f4d8b6ff8eb3b236844c03d17a511789b99fc036bd849bcd4d0b"
+    },
+    {
+      "key": "671",
+      "number": 671,
+      "title": "[C4][P1] Make Lab publishing failures and cache contention observable",
+      "stage": "C4",
+      "parent": 75,
+      "blocked_by": [],
+      "body_sha256": "90a3062ec1c9d04c002869643b347714bb5bf18c8e7a6d88c95779aca9f657e5"
+    },
+    {
+      "key": "399",
+      "number": 399,
+      "title": "[C4][P1] Prove the HA grow-light writer remains within the single-writer contract",
+      "stage": "C4",
+      "parent": 644,
+      "blocked_by": [],
+      "body_sha256": "ee9c7f297e5df56ee3522a3a6b60b632808a6a938a89eed5f8137bc3b3aad026"
+    },
+    {
+      "key": "419",
+      "number": 419,
+      "title": "[C4][P1] Populate real outdoor freshness in replay and enforce branch coverage",
+      "stage": "C4",
+      "parent": 390,
+      "blocked_by": [],
+      "body_sha256": "1bf185d364552d3ae356b146d2bce655886c6fda85d21bc84ca4b006baf6ed02"
+    },
+    {
+      "key": "386",
+      "number": 386,
+      "title": "[C4][P1] Prove grow-light minimum-on behavior at the solar-window boundary",
+      "stage": "C4",
+      "parent": 359,
+      "blocked_by": [
+        303
+      ],
+      "body_sha256": "54196258820fb2a7eeed8e715bc63463c04008fa75463085d4f72677b3aa8a96"
+    },
+    {
+      "key": "218",
+      "number": 218,
+      "title": "[C5][P1] Durability program: recoverable backups, measured RPO/RTO and safe HA option",
+      "stage": "C5",
+      "parent": 775,
+      "blocked_by": [],
+      "body_sha256": "87a43dad79907d896c70dae7cf04bc079925d765e4e361b146c5b9a0c567b0db"
+    },
+    {
+      "key": "670",
+      "number": 670,
+      "title": "[C5][P1] Make backup artifacts sufficient to restore roles, ownership and memberships safely",
+      "stage": "C5",
+      "parent": 218,
+      "blocked_by": [],
+      "body_sha256": "a1dc06dee850a451de4af1555c99e29eac2a3a61722bb31a7ba6baa3da06a6e1"
+    },
+    {
+      "key": "672",
+      "number": 672,
+      "title": "[C5][P1] Make compressed-chunk ownership restoration a supported blocking rehearsal test",
+      "stage": "C5",
+      "parent": 218,
+      "blocked_by": [
+        670
+      ],
+      "body_sha256": "bc266d2b4c92f3773d5f2caf83be208fa05818a09db2807b5430e95098e24a70"
+    },
+    {
+      "key": "382",
+      "number": 382,
+      "title": "[C5][P1] Persist ingestor queue and spool across restart and node loss",
+      "stage": "C5",
+      "parent": 218,
+      "blocked_by": [],
+      "body_sha256": "20465c93c6ebc733cc2a014fe9f10be5b8eaa5e2bd08045e048482f2e1dcf396"
+    },
+    {
+      "key": "396",
+      "number": 396,
+      "title": "[C5][P1] Design and rehearse CNPG alongside the live database on current storage",
+      "stage": "C5",
+      "parent": 218,
+      "blocked_by": [
+        670,
+        672
+      ],
+      "body_sha256": "a5301d551385de648530eb0ff32533df96a360d6926e8fa2fbc3bd7301c39ea1"
+    },
+    {
+      "key": "245",
+      "number": 245,
+      "title": "[C5][P1] Execute a separately bounded database cutover only after parity and rollback proof",
+      "stage": "C5",
+      "parent": 218,
+      "blocked_by": [
+        396,
+        382
+      ],
+      "body_sha256": "37684eafcab330c64865c47b35f17c36a8415704f944562a0aab2b8b404bb2d3"
+    },
+    {
+      "key": "643",
+      "number": 643,
+      "title": "[C5][P1] Extend least-privilege database roles beyond the already-required experiment boundary",
+      "stage": "C5",
+      "parent": 218,
+      "blocked_by": [
+        670
+      ],
+      "body_sha256": "20edc56d3eaee674b9426c583a4df52241aa31dd7747cad61428c07d081ee8d3"
+    },
+    {
+      "key": "49",
+      "number": 49,
+      "title": "[C5][P1] Audit and close historical suppressed sensor alerts without false count-parity assumptions",
+      "stage": "C5",
+      "parent": 75,
+      "blocked_by": [],
+      "body_sha256": "236b0bed55e3774cd00fdc91b1f78e2a0620eb771d13d3f4de9c91cfdbbd1f3f"
+    },
+    {
+      "key": "359",
+      "number": 359,
+      "title": "[C6][P1] Control program: truthful crop corridors before evidence-led tuning",
+      "stage": "C6",
+      "parent": 775,
+      "blocked_by": [],
+      "body_sha256": "4bb6a606bbf051754de9dfbe66f74add368374cf2a3b8425d422c66f566de957"
+    },
+    {
+      "key": "430",
+      "number": 430,
+      "title": "[C6][P1] Simplify firmware only while preserving autonomous control and observable truth",
+      "stage": "C6",
+      "parent": 359,
+      "blocked_by": [],
+      "body_sha256": "181c70247e1cec60d8258b1387abd4af50998e355a6b48119ccc266bd2018511"
+    },
+    {
+      "key": "428",
+      "number": 428,
+      "title": "[C6][P1] Diagnose heap/watchdog risk and qualify the actual last-good firmware floor",
+      "stage": "C6",
+      "parent": 430,
+      "blocked_by": [
+        433
+      ],
+      "body_sha256": "a21384a1bf34054129c6fb0c4eb4ea5755eadd2ce974588ce45619ceaa37fee9"
+    },
+    {
+      "key": "368",
+      "number": 368,
+      "title": "[C6][P1] Define shared sensor jump, flatline and contributor-integrity semantics",
+      "stage": "C6",
+      "parent": 359,
+      "blocked_by": [
+        424
+      ],
+      "body_sha256": "b0621476de95cde85bd783c9bc56f5802bd729456a69dc089608047a3e689e74"
+    },
+    {
+      "key": "367",
+      "number": 367,
+      "title": "[C6][P1] Consolidate anti-chatter into one explicit dwell contract",
+      "stage": "C6",
+      "parent": 430,
+      "blocked_by": [
+        390
+      ],
+      "body_sha256": "9ffe2b0b657ef02620285ae8140466c111948426471baa4c3236fcaafb4f1101"
+    },
+    {
+      "key": "370",
+      "number": 370,
+      "title": "[C6][P1] Consolidate equipment conflict resolution into one pure arbitration function",
+      "stage": "C6",
+      "parent": 430,
+      "blocked_by": [
+        390,
+        367
+      ],
+      "body_sha256": "47284f568874068f3677ed766903bac4824a89287b6ad97445a631e0a2534d26"
+    },
+    {
+      "key": "369",
+      "number": 369,
+      "title": "[C6][P1] Remove dead tunables and code from a verified consumer inventory",
+      "stage": "C6",
+      "parent": 430,
+      "blocked_by": [
+        433,
+        390
+      ],
+      "body_sha256": "e2b2b68f9e193ed05a1c578e3471da5f2c4456aefac413d38ffb2ac659a2ce84"
+    },
+    {
+      "key": "324",
+      "number": 324,
+      "title": "[C6][P1] Extend zonal band lineage compatibly for future deterministic control",
+      "stage": "C6",
+      "parent": 359,
+      "blocked_by": [
+        424,
+        371
+      ],
+      "body_sha256": "13bbc50d69235eec759ff0c3cc3a176ec26ebd21964b62db54ac43ec2abb2a5f"
+    },
+    {
+      "key": "410",
+      "number": 410,
+      "title": "[C6][P1] Measure realized solar-night dry-out before changing the controller",
+      "stage": "C6",
+      "parent": 359,
+      "blocked_by": [
+        424,
+        371,
+        419
+      ],
+      "body_sha256": "69ea39744a276ca087fd199e2622fe1805d6aded307c5e843acb7ed95d3b7671"
+    },
+    {
+      "key": "378",
+      "number": 378,
+      "title": "[C6][P1] Decide corridor widths from fixed-target crop and resource evidence",
+      "stage": "C6",
+      "parent": 359,
+      "blocked_by": [
+        371,
+        785
+      ],
+      "body_sha256": "98841e82ed2570369f14feba9ec38ddabc4e784f785e51cfb6556ef758a0e17a"
+    },
+    {
+      "key": "361",
+      "number": 361,
+      "title": "[C6][P1] Reassess diurnal anchors only after solar parity and measured corridor evidence",
+      "stage": "C6",
+      "parent": 359,
+      "blocked_by": [
+        378,
+        410
+      ],
+      "body_sha256": "0eae8e586e151bc25a0e4dc247061eeb4ab5eaad719d69712d9693dd77cc49de"
+    },
+    {
+      "key": "214",
+      "number": 214,
+      "title": "[C6][P1] Prove crop-deviation trigger \u2192 valid plan on the sole operational planner path",
+      "stage": "C6",
+      "parent": 775,
+      "blocked_by": [
+        427,
+        780
+      ],
+      "body_sha256": "fa696ea188949d958dc3d89ae32eab9da336f26a576ebfeaed8989c1d9f45cb3"
+    },
+    {
+      "key": "350",
+      "number": 350,
+      "title": "[C6][P1] Irrigation program: topology truth, overwatering protection and commissioned wall feed",
+      "stage": "C6",
+      "parent": 775,
+      "blocked_by": [],
+      "body_sha256": "e857bf4c86072de9ba07e44adbdbed7e442ed60e00172813679a09fc550c9076"
+    },
+    {
+      "key": "434",
+      "number": 434,
+      "title": "[C6][P1] Enforce center-only climate mist and commissioned wall-only fertigation",
+      "stage": "C6",
+      "parent": 350,
+      "blocked_by": [
+        390,
+        299
+      ],
+      "body_sha256": "8ea7e4544ac1e59f5b3498f6003080212c7fdb24b09e86666248365c829ef041"
+    },
+    {
+      "key": "299",
+      "number": 299,
+      "title": "[C6][P1] Preserve center-mister re-fire protection through topology and reset recovery",
+      "stage": "C6",
+      "parent": 350,
+      "blocked_by": [
+        390
+      ],
+      "body_sha256": "547b251e0b9b448f5b1a4fe0b73b2b366af4c6749f693d5f7b47fba6857e1ac5"
+    },
+    {
+      "key": "297",
+      "number": 297,
+      "title": "[C6][P1] Add saturation alerts and a commissioned dispatcher-side drip-skip loop",
+      "stage": "C6",
+      "parent": 350,
+      "blocked_by": [
+        398,
+        45
+      ],
+      "body_sha256": "cd9c0a6d1ed5fe8c8a61507dad6d7635638544612d784744e9a6f0a282385f8d"
+    },
+    {
+      "key": "296",
+      "number": 296,
+      "title": "[C6][P1] Consider slow-hysteresis firmware irrigation feedback only after dispatcher evidence",
+      "stage": "C6",
+      "parent": 350,
+      "blocked_by": [
+        297,
+        434,
+        45
+      ],
+      "body_sha256": "fca36efc14f87546ee56696fb47a54f85f861f49e538056e6a4765cc0b051923"
+    },
+    {
+      "key": "16",
+      "number": 16,
+      "title": "[C7][P2] Hardware program: commission only the sensing and equipment justified by evidence",
+      "stage": "C7",
+      "parent": 775,
+      "blocked_by": [],
+      "body_sha256": "974c778e43fc075186ad4631c4d341d8a7b26dd4f60753ffc2b4fb5f75f0bec0"
+    },
+    {
+      "key": "751",
+      "number": 751,
+      "title": "[C7][P2] Replace the failed south climate probe and diagnose hydro telemetry in a bounded window",
+      "stage": "C7",
+      "parent": 16,
+      "blocked_by": [],
+      "body_sha256": "b869d2f39617ab68d4d86e8e1fa64eae5de43b0203efceb5719c03f519a52137"
+    },
+    {
+      "key": "298",
+      "number": 298,
+      "title": "[C7][P2] Rebaseline actual crop, pot and probe topology before feedback control",
+      "stage": "C7",
+      "parent": 16,
+      "blocked_by": [],
+      "body_sha256": "b7ed3a69a984a9679db0f83886969e92aca879f0c08520ae0783d60f2f80102b"
+    },
+    {
+      "key": "398",
+      "number": 398,
+      "title": "[C7][P2] Replace stale soil threshold seeds with commissioned crop/substrate truth",
+      "stage": "C7",
+      "parent": 16,
+      "blocked_by": [
+        298
+      ],
+      "body_sha256": "c0deac0b61eecbd4af3151961904338606fb5b1b01f5554a25ad8d320b197e73"
+    },
+    {
+      "key": "45",
+      "number": 45,
+      "title": "[C7][P2] Commission soil and runoff feedback before enabling irrigation decisions",
+      "stage": "C7",
+      "parent": 16,
+      "blocked_by": [
+        398
+      ],
+      "body_sha256": "85a788d3e96eeeeafdc54d90390004be4c500f28867a600f8d94c757276e73dc"
+    },
+    {
+      "key": "51",
+      "number": 51,
+      "title": "[C7][P2] Calibrate CO2 against a real reference and publish measurement uncertainty",
+      "stage": "C7",
+      "parent": 16,
+      "blocked_by": [],
+      "body_sha256": "1f093871568896a27fedfc06be540efa6afd8bafa1473bc3805ed844a95effe2"
+    },
+    {
+      "key": "52",
+      "number": 52,
+      "title": "[C7][P2] Define species-appropriate seasonal dormancy care from operator observations",
+      "stage": "C7",
+      "parent": 16,
+      "blocked_by": [],
+      "body_sha256": "1718cfe96a750f8fbf3113cd53cb0802755406d2a97510b67065fa559beb83a0"
+    },
+    {
+      "key": "412",
+      "number": 412,
+      "title": "[C7][P2] Close the seasonal door screen only when measured night conditions justify it",
+      "stage": "C7",
+      "parent": 16,
+      "blocked_by": [],
+      "body_sha256": "d50d2eb0eac67371787d71bfc79939cb820d446f5bc084a9418af9e05d32ed42"
+    },
+    {
+      "key": "174",
+      "number": 174,
+      "title": "[C8][P2] Rehome only current Verdify admin surfaces to global SSO, fail closed",
+      "stage": "C8",
+      "parent": 775,
+      "blocked_by": [],
+      "body_sha256": "602b50392dbab3d318bcbfb6e5fe857bbbca67c51bcec9eb7355aba8d24c8a09"
+    },
+    {
+      "key": "14",
+      "number": 14,
+      "title": "[C8][P2] Twin program: qualify declared oracle coverage before using divergence as a gate",
+      "stage": "C8",
+      "parent": 775,
+      "blocked_by": [],
+      "body_sha256": "df38baec643ff6fe30b26763a33e566219c5cc77557785a44aa06a6c42f651fd"
+    },
+    {
+      "key": "31",
+      "number": 31,
+      "title": "[C8][P2] Close twin setpoint and actuator coverage gaps with generated consumer truth",
+      "stage": "C8",
+      "parent": 14,
+      "blocked_by": [],
+      "body_sha256": "cf78fef4295e0ed8c7bfb66e081b3b46eccdfcf28497ab5e09fd7493bb02b89d"
+    },
+    {
+      "key": "606",
+      "number": 606,
+      "title": "[C8][P2] Register the twin build profile only through its owning fleet contract",
+      "stage": "C8",
+      "parent": 14,
+      "blocked_by": [],
+      "body_sha256": "016a9398e08ddcda8afb43f47f08d07bd045d744a7d4574f9e67e0f014fed2a4"
+    },
+    {
+      "key": "638",
+      "number": 638,
+      "title": "[C8][P2] Unify future manifest/vector wire schema and content identity offline",
+      "stage": "C8",
+      "parent": 775,
+      "blocked_by": [],
+      "body_sha256": "65742167c0668aa1f751b9ebdccc954314461dde3d9f81ffdcc955f40458922e"
+    },
+    {
+      "key": "586",
+      "number": 586,
+      "title": "[C8][P2] Qualify a future atomic firmware policy engine with crash-safe recovery",
+      "stage": "C8",
+      "parent": 775,
+      "blocked_by": [
+        638,
+        390,
+        785
+      ],
+      "body_sha256": "ab9f0015be0b1b41bd1b529b241c498c339926fabbee15d56d04a6f59a73564b"
+    },
+    {
+      "key": "comparator",
+      "number": 786,
+      "title": "[C8][P2] Design the next comparison against a deterministic forecast-aware selector",
+      "stage": "C8",
+      "parent": 775,
+      "blocked_by": [
+        785,
+        780
+      ],
+      "body_sha256": "c9943e8e35bd794e3da680cd9109c21308650ec8841ec30292ff727691db81d6"
+    },
+    {
+      "key": "379",
+      "number": 379,
+      "title": "[C8][P2] Gate grey-box forecasting and MPC on validated response models and simpler baselines",
+      "stage": "C8",
+      "parent": 359,
+      "blocked_by": [
+        786,
+        419,
+        371
+      ],
+      "body_sha256": "d2c7aab0c293037db3807e187f90a4a28faa2fef01355ce75167e891244eb4ba"
+    },
+    {
+      "key": "economics",
+      "number": 787,
+      "title": "[C8][P2] Plan measured heating, overnight and whole-resource economics as a separate claim",
+      "stage": "C8",
+      "parent": 775,
+      "blocked_by": [
+        785,
+        781,
+        410
+      ],
+      "body_sha256": "8cec6f67119acece31232f1d08842f5edba26f0bf42a75c25ca426bcd2c2c419"
+    }
+  ]
 }

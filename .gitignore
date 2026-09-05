@@ -47,6 +47,9 @@ analytics/umami-admin.txt
 
 # Archived / deprecated
 archive/
+# Versioned planning history is an intentional rollback artifact, not runtime archive.
+!planning/archive/
+!planning/archive/**
 
 # Quartz site (separate build, too large for main repo)
 verdify-site/
