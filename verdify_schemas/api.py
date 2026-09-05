@@ -17,6 +17,7 @@ from typing import Any, Literal
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
 from .crops import Observation
+from .observed_minutes import ObservedMinuteEvidence
 
 
 class APIStatus(BaseModel):
@@ -159,6 +160,7 @@ class PublicHomeMetrics(BaseModel):
     planner_score_resource_weight_pct: float = Field(default=0, ge=0, le=100)
     planner_score_resource_terms_available: bool = False
     compliance_pct_today: float | None = None
+    observed_minute_evidence: ObservedMinuteEvidence = Field(default_factory=ObservedMinuteEvidence)
     cost_today_usd: float | None = None
     cost_today_estimate_usd: float | None = None
     water_today_gal: float | None = None
@@ -193,35 +195,109 @@ class PublicHomeMetrics(BaseModel):
     data_health_warnings: list[PublicDataHealthCheck] = Field(default_factory=list)
 
 
+class PublicBandEdgeLineage(BaseModel):
+    """Database capture lineage only; numeric equality is not wire/consumption proof."""
+
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
+
+    unit: Literal["°F", "kPa"]
+    raw_slug: str
+    desired_value: float | None
+    desired_recorded_at: AwareDatetime | None
+    desired_conflict: bool
+    cfg_snapshot_value: float | None
+    cfg_snapshot_captured_at: AwareDatetime | None
+    cfg_snapshot_conflict: bool
+    numeric_comparison: Literal["unavailable", "equal_numeric", "different_numeric"]
+
+
+class PublicTempLowLineage(PublicBandEdgeLineage):
+    unit: Literal["°F"]
+    raw_slug: Literal["cfg___temp_low___f_"]
+
+
+class PublicTempHighLineage(PublicBandEdgeLineage):
+    unit: Literal["°F"]
+    raw_slug: Literal["cfg___temp_high___f_"]
+
+
+class PublicVpdLowLineage(PublicBandEdgeLineage):
+    unit: Literal["kPa"]
+    raw_slug: Literal["cfg___vpd_low__kpa_"]
+
+
+class PublicVpdHighLineage(PublicBandEdgeLineage):
+    unit: Literal["kPa"]
+    raw_slug: Literal["cfg___vpd_high__kpa_"]
+
+
+class PublicBandEdges(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    temp_low: PublicTempLowLineage
+    temp_high: PublicTempHighLineage
+    vpd_low: PublicVpdLowLineage
+    vpd_high: PublicVpdHighLineage
+
+
+class PublicBandLineage(BaseModel):
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
+
+    edges: PublicBandEdges
+    band_source_snapshot: Literal["onchip_curve", "dispatcher_legacy"] | None
+    diagnostic_captured_at: AwareDatetime | None
+    temp_target_snapshot: float | None
+    vpd_target_snapshot: float | None
+    target_snapshot_captured_at: AwareDatetime
+    raw_observation_freshness_verified: Literal[False]
+    runtime_connection_identity_verified: Literal[False]
+    consumed_band_verified: Literal[False]
+    disposition: Literal["unobservable"]
+
+
 class PublicBandTraceLatest(BaseModel):
     """Latest sample from the canonical band trace surface."""
 
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="ignore", allow_inf_nan=False)
 
     ts: AwareDatetime
     greenhouse_id: str
+    lineage_contract_version: Literal[2]
+    lineage: PublicBandLineage
     temp_avg: float | None = None
     vpd_avg: float | None = None
     temp_avg_smooth_15m: float | None = None
     vpd_avg_smooth_30m: float | None = None
-    crop_temp_low: float | None = None
-    crop_temp_high: float | None = None
-    crop_vpd_low: float | None = None
-    crop_vpd_high: float | None = None
+    reconstructed_temp_low: float | None = None
+    reconstructed_temp_high: float | None = None
+    reconstructed_vpd_low: float | None = None
+    reconstructed_vpd_high: float | None = None
+    crop_temp_low: None = None
+    crop_temp_high: None = None
+    crop_vpd_low: None = None
+    crop_vpd_high: None = None
+    crop_both_in_band: None = None
     house_vpd_low: float | None = None
     house_vpd_high: float | None = None
-    fw_temp_low: float | None = None
-    fw_temp_high: float | None = None
-    fw_vpd_low: float | None = None
-    fw_vpd_high: float | None = None
-    rb_temp_low: float | None = None
-    rb_temp_high: float | None = None
-    rb_vpd_low: float | None = None
-    rb_vpd_high: float | None = None
-    crop_both_in_band: bool | None = None
-    fw_both_in_band: bool | None = None
-    readback_matches_fw_band: bool | None = None
-    trace_quality_flag: str
+    # Deprecated firmware-labeled aliases cannot carry desired rows in v2.
+    fw_temp_low: None = None
+    fw_temp_high: None = None
+    fw_vpd_low: None = None
+    fw_vpd_high: None = None
+    # Snapshot values now require their timestamps and routes under lineage.edges.
+    rb_temp_low: None = None
+    rb_temp_high: None = None
+    rb_vpd_low: None = None
+    rb_vpd_high: None = None
+    reconstructed_temp_in_band: bool | None = None
+    reconstructed_vpd_in_band: bool | None = None
+    reconstructed_both_in_band: bool | None = None
+    fw_both_in_band: None = None
+    readback_matches_fw_band: None = None
+    desired_temp_in_band: bool | None = None
+    desired_vpd_in_band: bool | None = None
+    desired_both_in_band: bool | None = None
+    trace_quality_flag: Literal["unobservable_consumed_band"]
 
 
 class PublicBandTraceSummary(BaseModel):
@@ -231,14 +307,49 @@ class PublicBandTraceSummary(BaseModel):
 
     hours: int = Field(..., ge=1)
     sample_count: int = Field(..., ge=0)
-    crop_temp_compliance_pct: float | None = Field(default=None, ge=0, le=100)
-    crop_vpd_compliance_pct: float | None = Field(default=None, ge=0, le=100)
-    crop_both_compliance_pct: float | None = Field(default=None, ge=0, le=100)
-    fw_temp_compliance_pct: float | None = Field(default=None, ge=0, le=100)
-    fw_vpd_compliance_pct: float | None = Field(default=None, ge=0, le=100)
-    fw_both_compliance_pct: float | None = Field(default=None, ge=0, le=100)
-    readback_match_pct: float | None = Field(default=None, ge=0, le=100)
-    ok_trace_pct: float | None = Field(default=None, ge=0, le=100)
+    reconstructed_temp_eligible_samples: int = Field(..., ge=0)
+    reconstructed_vpd_eligible_samples: int = Field(..., ge=0)
+    reconstructed_both_eligible_samples: int = Field(..., ge=0)
+    desired_temp_eligible_samples: int = Field(..., ge=0)
+    desired_vpd_eligible_samples: int = Field(..., ge=0)
+    desired_both_eligible_samples: int = Field(..., ge=0)
+    consumed_band_eligible_samples: Literal[0] = 0
+    reconstructed_temp_compliance_pct: float | None = Field(default=None, ge=0, le=100)
+    reconstructed_vpd_compliance_pct: float | None = Field(default=None, ge=0, le=100)
+    reconstructed_both_compliance_pct: float | None = Field(default=None, ge=0, le=100)
+    desired_temp_compliance_pct: float | None = Field(default=None, ge=0, le=100)
+    desired_vpd_compliance_pct: float | None = Field(default=None, ge=0, le=100)
+    desired_both_compliance_pct: float | None = Field(default=None, ge=0, le=100)
+    crop_temp_compliance_pct: None = None
+    crop_vpd_compliance_pct: None = None
+    crop_both_compliance_pct: None = None
+    fw_temp_compliance_pct: None = None
+    fw_vpd_compliance_pct: None = None
+    fw_both_compliance_pct: None = None
+    readback_match_pct: None = None
+    ok_trace_pct: None = None
+
+
+class PublicBandTraceSemantics(BaseModel):
+    contract_version: Literal[2] = 2
+    reconstructed_basis: Literal["current_house_anchor_curve_not_versioned_crop_targets"] = (
+        "current_house_anchor_curve_not_versioned_crop_targets"
+    )
+    desired_basis: Literal["setpoint_changes_not_delivery_confirmation"] = "setpoint_changes_not_delivery_confirmation"
+    cfg_basis: Literal["setpoint_snapshot_not_raw_observation_time"] = "setpoint_snapshot_not_raw_observation_time"
+    target_basis: Literal["climate_snapshot_not_raw_observation_time"] = "climate_snapshot_not_raw_observation_time"
+    raw_temp_target_slug: Literal["house_temp_target_f"] = "house_temp_target_f"
+    raw_vpd_target_slug: Literal["house_vpd_target_kpa"] = "house_vpd_target_kpa"
+    fraction_basis: Literal["non_null_sample_comparisons_not_elapsed_time"] = (
+        "non_null_sample_comparisons_not_elapsed_time"
+    )
+    snapshot_lookback_seconds: Literal[900] = 900
+    immutable_crop_definition_verified: Literal[False] = False
+    fixed_sensor_panel_verified: Literal[False] = False
+    physical_proof_eligible: Literal[False] = False
+    legacy_aliases: Literal["crop_*,fw_*,rb_*,readback_match_pct,ok_trace_pct_are_deprecated_and_null"] = (
+        "crop_*,fw_*,rb_*,readback_match_pct,ok_trace_pct_are_deprecated_and_null"
+    )
 
 
 class PublicBandTraceResponse(BaseModel):
@@ -250,6 +361,7 @@ class PublicBandTraceResponse(BaseModel):
     greenhouse_id: str
     latest: PublicBandTraceLatest | None = None
     summary: PublicBandTraceSummary
+    semantics: PublicBandTraceSemantics = Field(default_factory=PublicBandTraceSemantics)
 
 
 class PublicGpuPowerPoint(BaseModel):

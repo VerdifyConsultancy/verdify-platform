@@ -300,6 +300,9 @@
       "device_call_count": 0
     },
     "served_control_observed_424": {
+      "lineage_contract_version": 2,
+      "disposition": "resolved",
+      "consumed_branch": "dispatcher_legacy",
       "status": "pass",
       "observed_at": "2026-08-30T12:01:00.000000Z",
       "application_source_revision": "b9b7a9dd12c07e53f4370b629774c73125f035f7",

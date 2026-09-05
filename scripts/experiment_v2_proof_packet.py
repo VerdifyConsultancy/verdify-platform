@@ -37,7 +37,7 @@ import asyncpg
 
 INPUT_SCHEMA = "verdify-experiment-v2-readiness-input-v1"
 STATE_SCHEMA = "verdify-experiment-v2-readiness-chain-v2"
-PREFLIGHT_CACHE_SCHEMA = "verdify-experiment-v2-proof-preflight-cache-v1"
+PREFLIGHT_CACHE_SCHEMA = "verdify-experiment-v2-proof-preflight-cache-v2"
 NAMESPACE = "verdify-prod"
 ARGO_NAMESPACE = "argocd"
 ARGO_APPLICATION = "verdify-prod-dark"
@@ -492,25 +492,33 @@ async def collect_db(experiment_id: str, *, mode: str) -> dict[str, Any]:
                    c.rh_avg, c.rh_north, c.rh_south, c.rh_east, c.rh_west,
                    c.vpd_avg, c.vpd_north, c.vpd_south, c.vpd_east, c.vpd_west,
                    d.active_probe_count, d.probe_health
-              FROM (SELECT * FROM public.climate ORDER BY ts DESC LIMIT 2) c
+              FROM (SELECT * FROM public.climate WHERE greenhouse_id='vallery' ORDER BY ts DESC LIMIT 2) c
               LEFT JOIN LATERAL (
                 SELECT active_probe_count, probe_health FROM public.diagnostics
-                 WHERE ts <= c.ts ORDER BY ts DESC LIMIT 1
+                 WHERE greenhouse_id=c.greenhouse_id
+                   AND ts <= c.ts AND ts >= c.ts - interval '90 seconds'
+                 ORDER BY ts DESC LIMIT 1
               ) d ON true
              ORDER BY c.ts
             """
         )
         bands = await connection.fetch(
-            "SELECT * FROM public.fn_band_setpoint_provenance(clock_timestamp(),'vallery') ORDER BY parameter"
+            """
+            SELECT parameter, ts, dispatcher_value,
+                   firmware_setpoint_value, firmware_setpoint_ts,
+                   cfg_readback_value, cfg_readback_ts
+              FROM public.fn_band_setpoint_provenance(clock_timestamp(),'vallery')
+             ORDER BY parameter
+            """
         )
         targets = await connection.fetchrow(
             """
             SELECT c.ts, c.house_temp_target_f, c.house_vpd_target,
-                   b.temp_target AS served_temp_target,
-                   b.vpd_target AS served_vpd_target
+                   b.temp_target AS reconstructed_temp_target,
+                   b.vpd_target AS reconstructed_vpd_target
               FROM public.climate c
-              CROSS JOIN LATERAL public.fn_band_setpoints(c.ts) b
-             WHERE c.house_temp_target_f IS NOT NULL AND c.house_vpd_target IS NOT NULL
+              LEFT JOIN LATERAL public.fn_band_setpoints(c.ts) b ON true
+             WHERE c.greenhouse_id='vallery'
              ORDER BY c.ts DESC LIMIT 1
             """
         )
@@ -523,13 +531,7 @@ async def collect_db(experiment_id: str, *, mode: str) -> dict[str, Any]:
         )
     finally:
         await connection.close()
-    if (
-        status is None
-        or runtime is None
-        or (mode == "proof" and generation is None)
-        or len(climate) != 2
-        or targets is None
-    ):
+    if status is None or runtime is None or (mode == "proof" and generation is None) or len(climate) != 2:
         raise CollectionError("database readiness projection is incomplete")
     return {
         "status": dict(status),
@@ -537,7 +539,7 @@ async def collect_db(experiment_id: str, *, mode: str) -> dict[str, Any]:
         "generation": None if generation is None else dict(generation),
         "climate": [dict(row) for row in climate],
         "bands": [dict(row) for row in bands],
-        "targets": dict(targets),
+        "targets": {} if targets is None else dict(targets),
         "open_alerts": [dict(row) for row in open_alerts],
     }
 
@@ -589,72 +591,90 @@ def climate_samples(rows: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
 
 
 def passive_424(db: Mapping[str, Any], *, observed_at: str) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Build the six-series passive receipt with exact numeric equality."""
+    """Retain DB diagnostics without promoting captures to raw consumed proof.
 
-    rows = {str(row["parameter"]): row for row in db["bands"]}
-    targets = db["targets"]
+    The legacy provenance function's firmware_* columns are desired history.
+    Snapshot timestamps can reflect cached values and do not bind raw events to
+    this runtime/connection generation. Only the separate source-authenticated
+    input supplied to component-grid-capture-v2 can potentially qualify observable
+    legacy edges; this DB-only collector has no such transport evidence.
+    """
+
+    def number(value: Any) -> float | None:
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+            return None
+        return float(value)
+
+    def timestamp(value: Any) -> str | None:
+        return None if value is None else zulu(value)
+
     series: list[dict[str, Any]] = []
-    for name in ("temp_low", "temp_high", "vpd_low", "vpd_high"):
-        row = rows.get(name)
-        if row is None:
-            series.append({"series": name, "status": "unobservable"})
-            continue
+    for name, unit, slug in (
+        ("temp_low", "°F", "cfg___temp_low___f_"),
+        ("temp_high", "°F", "cfg___temp_high___f_"),
+        ("vpd_low", "kPa", "cfg___vpd_low__kpa_"),
+        ("vpd_high", "kPa", "cfg___vpd_high__kpa_"),
+    ):
+        diagnostics = [
+            {
+                "reconstructed_dispatcher_value": number(row.get("dispatcher_value")),
+                "reconstructed_at": timestamp(row.get("ts")),
+                "desired_value": number(row.get("firmware_setpoint_value")),
+                "desired_recorded_at": timestamp(row.get("firmware_setpoint_ts")),
+                "cfg_snapshot_value": number(row.get("cfg_readback_value")),
+                "cfg_snapshot_captured_at": timestamp(row.get("cfg_readback_ts")),
+            }
+            for row in db.get("bands", [])
+            if row.get("parameter") == name
+        ]
         series.append(
             {
                 "series": name,
-                "served": row["dispatcher_value"],
-                "control": row["firmware_setpoint_value"],
-                "observed": row["cfg_readback_value"],
-                "served_at": zulu(row["ts"]),
-                "control_at": None if row["firmware_setpoint_ts"] is None else zulu(row["firmware_setpoint_ts"]),
-                "observed_at": None if row["cfg_readback_ts"] is None else zulu(row["cfg_readback_ts"]),
-                "status": "present",
+                "unit": unit,
+                "raw_slug": slug,
+                "status": "unobservable",
+                "agreement": False,
+                "database_diagnostics": diagnostics,
             }
         )
-    for name, served_key, device_key in (
-        ("temp_target", "served_temp_target", "house_temp_target_f"),
-        ("vpd_target", "served_vpd_target", "house_vpd_target"),
+    targets = db.get("targets") or {}
+    for name, key, reconstructed_key, unit, slug in (
+        ("temp_target", "house_temp_target_f", "reconstructed_temp_target", "°F", "house_temp_target_f"),
+        ("vpd_target", "house_vpd_target", "reconstructed_vpd_target", "kPa", "house_vpd_target_kpa"),
     ):
         series.append(
             {
                 "series": name,
-                "served": targets[served_key],
-                # These are firmware-computed publishes (migration 182), not a
-                # desired row or inferred cfg route.  The one passive publish is
-                # both the controller's reported effective target and its raw
-                # observed telemetry value; source semantics stay explicit.
-                "control": targets[device_key],
-                "observed": targets[device_key],
-                "served_at": zulu(targets["ts"]),
-                "control_at": zulu(targets["ts"]),
-                "observed_at": zulu(targets["ts"]),
-                "status": "present",
+                "unit": unit,
+                "raw_slug": slug,
+                "status": "unobservable",
+                "agreement": False,
+                "target_snapshot_value": number(targets.get(key)),
+                "reconstructed_target_value": number(targets.get(reconstructed_key)),
+                "target_snapshot_captured_at": timestamp(targets.get("ts")),
             }
         )
-    agreement = True
-    for row in series:
-        values = (row.get("served"), row.get("control"), row.get("observed"))
-        finite = all(
-            isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) for value in values
-        )
-        row["agreement"] = finite and float(values[0]) == float(values[1]) == float(values[2])
-        row["status"] = "resolved" if row["agreement"] else row["status"]
-        agreement = agreement and bool(row["agreement"])
     raw_receipt = {
-        "schema": "verdify-experiment-v2-passive-424-v1",
+        "schema": "verdify-experiment-v2-passive-424-v2",
         "observed_at": observed_at,
         "passive": True,
         "device_call_count": 0,
+        "raw_observation_freshness_verified": False,
+        "runtime_connection_identity_verified": False,
+        "disposition": "unobservable",
         "series": series,
     }
     evidence = {
-        "status": "pass" if agreement else "fail",
+        "status": "fail",
         "observed_at": observed_at,
         "receipt_sha256": receipt(raw_receipt),
         "passive": True,
-        "agreement": agreement,
+        "agreement": False,
         "series_checked": len(series),
         "device_call_count": 0,
+        "lineage_contract_version": 2,
+        "disposition": "unobservable",
+        "consumed_branch": "unobservable",
     }
     return evidence, raw_receipt
 
@@ -780,6 +800,8 @@ def gate_p_preflights(
     experiment_id: str,
     cache: Path,
 ) -> dict[str, Any]:
+    if cache.exists():
+        raise CollectionError("Gate P preflight cache already exists; preserve the previous attempt")
     observed_at = zulu(datetime.now(UTC))
     mcp_pods = [
         pod
@@ -869,7 +891,8 @@ def gate_p_preflights(
             "served_control_observed_424": passive_raw,
         },
     }
-    cache.write_text(json.dumps(payload, allow_nan=False, indent=2, sort_keys=True) + "\n")
+    with cache.open("x", encoding="utf-8") as handle:
+        handle.write(json.dumps(payload, allow_nan=False, indent=2, sort_keys=True) + "\n")
     return payload
 
 
@@ -878,11 +901,31 @@ def cached_preflights(cache: Path) -> dict[str, Any]:
         value = json.loads(cache.read_text())
     except (OSError, json.JSONDecodeError) as exc:
         raise CollectionError("Gate P preflight cache is absent or malformed") from exc
-    if value.get("schema") != PREFLIGHT_CACHE_SCHEMA:
+    if not isinstance(value, dict) or value.get("schema") != PREFLIGHT_CACHE_SCHEMA:
         raise CollectionError("Gate P preflight cache has the wrong schema")
     for label in ("authentication_686", "provider_preflight", "served_control_observed_424"):
-        if not SHA256.fullmatch(str(value.get(label, {}).get("receipt_sha256", ""))):
+        if not isinstance(value.get(label), dict) or not SHA256.fullmatch(str(value[label].get("receipt_sha256", ""))):
             raise CollectionError(f"Gate P preflight cache receipt is invalid: {label}")
+    passive = value["served_control_observed_424"]
+    supporting = value.get("supporting")
+    raw = supporting.get("served_control_observed_424") if isinstance(supporting, dict) else None
+    if (
+        not isinstance(raw, dict)
+        or raw.get("schema") != "verdify-experiment-v2-passive-424-v2"
+        or passive.get("receipt_sha256") != receipt(raw)
+        or passive.get("lineage_contract_version") != 2
+        or passive.get("disposition") != "unobservable"
+        or passive.get("agreement") is not False
+        or passive.get("status") != "fail"
+        or passive.get("consumed_branch") != "unobservable"
+        or raw.get("disposition") != "unobservable"
+        or raw.get("raw_observation_freshness_verified") is not False
+        or raw.get("runtime_connection_identity_verified") is not False
+        or not isinstance(raw.get("series"), list)
+        or len(raw["series"]) != 6
+        or any(not isinstance(row, dict) or row.get("status") != "unobservable" for row in raw["series"])
+    ):
+        raise CollectionError("Gate P passive cache does not match the DB-only lineage contract")
     return value
 
 
@@ -919,6 +962,9 @@ def recovery_preflights(
             "agreement": False,
             "series_checked": 0,
             "device_call_count": 0,
+            "lineage_contract_version": 2,
+            "disposition": "unobservable",
+            "consumed_branch": "unobservable",
         }
     )
     for label in ("authentication_686", "provider_preflight", "served_control_observed_424"):

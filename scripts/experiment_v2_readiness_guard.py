@@ -1010,11 +1010,26 @@ def _validate_evidence(
     ):
         blockers.append("provider_preflight_device_call_detected")
 
+    lineage_keys = {"lineage_contract_version", "disposition", "consumed_branch"}
+    passive_raw = value["served_control_observed_424"]
+    # Historical Gate R packets remain valid recovery evidence, not proof credit.
+    # Gate P must carry the new semantic disposition, not a bare old agreement bit.
+    has_lineage = isinstance(passive_raw, Mapping) and bool(set(passive_raw) & lineage_keys)
     passive = _exact_keys(
         value["served_control_observed_424"],
-        common_keys | {"passive", "agreement", "series_checked", "device_call_count"},
+        common_keys
+        | {"passive", "agreement", "series_checked", "device_call_count"}
+        | (lineage_keys if has_lineage else set()),
         "evidence.served_control_observed_424",
     )
+    if mode == "proof":
+        version = passive.get("lineage_contract_version")
+        if not isinstance(version, int) or isinstance(version, bool) or version != 2:
+            blockers.append("served_control_observed_lineage_unverified")
+        if passive.get("disposition") != "resolved":
+            blockers.append("served_control_observed_not_resolved")
+        if passive.get("consumed_branch") != "dispatcher_legacy":
+            blockers.append("served_control_observed_consumed_edges_unobservable")
     passive_only = _boolean(passive["passive"], "evidence.served_control_observed_424.passive")
     if mode == "proof" and (passive["status"] != "pass" or not passive_only):
         blockers.append("served_control_observed_not_passive")
