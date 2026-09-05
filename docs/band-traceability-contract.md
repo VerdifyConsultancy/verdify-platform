@@ -1,40 +1,89 @@
 # Band Traceability Contract
 
-Status: deployed to the live TimescaleDB on 2026-05-15.
+Status: September 5 source correction for #424. The original May 15 contract is
+retained in Git history and applied migration 119; its descriptions of desired
+rows and snapshots as device proof are superseded here. Source changes are not
+a claim of deployment or a resolved physical discrepancy.
 
-Verdify has three band concepts. Do not collapse them in code, dashboards, copy, or planner prompts.
+## Distinct evidence layers
 
-| Band | Source | Meaning |
+| Layer | Source | What it can establish |
 | --- | --- | --- |
-| Crop target band | `fn_band_setpoints(ts)` | Plant-policy envelope from crop target profiles. |
-| Firmware-enforced band | `setpoint_changes` via dispatcher pushes | The temp/VPD band the ESP32 state machine enforces. This is what compliance and stress scorecards use. |
-| Readback band | `setpoint_snapshot` cfg_* values | Firmware-side echo that proves the ESP32 accepted the pushed values. |
+| Agronomic crop targets | Versioned crop/solar definition with historical identity | Requires an explicit frozen definition; not established by current resolver replay |
+| Current house-anchor reconstruction | `fn_band_setpoints(ts)`, migration 171 | Current house anchors evaluated at the supplied timestamp; not immutable crop history or observed consumption |
+| Desired history | `setpoint_changes` | Recorded desired values and expiry; not accepted, sent, or consumed state |
+| Database cfg snapshot | Four scalar parameters in `setpoint_snapshot` | Captured legacy cfg values; capture time is not raw observation time or runtime/connection binding |
+| Computed target snapshot | `climate.house_temp_target_f` / `house_vpd_target` | Captured target publishes; original raw slugs differ from DB aliases |
+| Consumed band | Source-authenticated raw observation plus branch, unit, grid, timestamp and generation | Requires the separate six-series qualification; cannot be inferred from matching cached numbers |
 
-## Canonical SQL Surface
+Firmware selects on-chip curves or the legacy scalar branch. The four scalar
+cfg values are not the consumed edges in `onchip_curve`. The two target
+publishes alone do not complete six-series proof. Never switch branches, widen
+bands, relax resource caps or invoke OTA to manufacture qualification.
 
-- `fn_house_vpd_control_band(ts)` derives the firmware house VPD band from the crop VPD envelope plus zone VPD targets. It mirrors dispatcher semantics: median zone target, low-side relaxation, and `0.55 kPa` minimum width.
-- `fn_timeline_setpoint_value(greenhouse_id, parameter, ts, default)` resolves non-band tunables for timeline graphs: actual pushed values through `now()`, active/planned schedule after `now()`, latest push/default as fallback.
-- `fn_band_timeline(start_ts, end_ts, step, greenhouse_id)` is the dashboard timeline. Samples at or before `now()` use actual pushed firmware setpoints from `setpoint_changes`; samples after `now()` use the dispatcher-projected crop/house band. It also derives firmware trigger and padding thresholds from the same tunables and sensor context the ESP32 uses: temperature heat/cool thresholds, outdoor-cold vent padding, solar cooling lead, VPD humidify/dehumidify hysteresis, effective VPD edges, and fog escalation thresholds. This keeps history and future bound into one continuous graph without flattening the forecast.
-- `fn_band_setpoint_provenance(ts, greenhouse_id)` is the operator source trace for the four rendered compliance edges. It shows crop target value, dispatcher-derived value, latest pushed firmware setpoint, latest `cfg_*` readback, latest planner context, and the source chain. Use this table for "where did this setpoint come from?" instead of adding more lines to the trend graph.
-- `fn_band_trace(start_ts, end_ts, greenhouse_id)` returns raw and smoothed climate, crop band, firmware band, cfg readback band, compliance flags for crop and firmware bands, readback match flags, and `trace_quality_flag`.
-- `v_band_trace_recent` is the rolling 14-day production trace.
-- `v_band_trace_latest` is the latest production sample.
-- `fn_setpoint_at(greenhouse_id, parameter, ts)` is the greenhouse-aware pushed-setpoint lookup. The older `fn_setpoint_at(parameter, ts)` remains for legacy consumers.
+The exact six-series mapping, capture-v2 format, freshness/generation checks and
+Gate P hold are documented in
+[band-lineage qualification](runbooks/band-lineage-qualification.md). The offline
+capture tool validates an artifact; its supplying collector must authenticate
+the underlying raw observations. It does not authenticate transport itself.
 
-## Runtime Contract
+## Public reader and deprecated SQL
 
-- `ingestor/tasks.py::setpoint_dispatcher()` must use `fn_house_vpd_control_band(now())` for `vpd_low` and `vpd_high`.
-- `api/main.py::get_setpoints()` must use the same function so the legacy ESP32 polling fallback matches direct pushes.
-- Temperature still uses the crop band directly for future projection today; VPD may differ because firmware controls one air mass while zone mister targets remain local.
-- The VPD compliance fill may look smoother than temperature because it is the normalized whole-house VPD control band. Temperature uses the crop temperature envelope directly.
-- Planner- and public-facing compliance language must say "firmware-enforced band" unless it explicitly uses the crop compliance flags from `fn_band_trace`.
-- Operator trend graphs should stay sparse: actual climate and forecast pressure plus the green firmware-compliance low/high band. Do not render planner setpoint rows, derived actuator triggers, padding thresholds, or event rails on the public operator graph. Keep crop provenance, clear thresholds, hysteresis padding, heat-stage details, and readback proof in `fn_band_setpoint_provenance()` / `fn_band_timeline()` tables and tests rather than rendering every derived line.
+Forward migration 243 adds `fn_public_band_trace_v2` and the public API v2
+contract. It exposes reconstructed/desired comparisons and timestamped
+snapshots separately. Missing samples/axes/resolver output remain missing
+comparisons with explicit eligible counts. A known failing axis plus an unknown
+second axis is not a measured joint failure. Fractions are sample-weighted
+house-average diagnostics, not duration-weighted fixed-panel crop endpoints.
 
-## Deployment Notes
+Public `crop_*`, `fw_*`, bare `rb_*`, readback-match and ok-trace aliases are
+deprecated and null. A 900-second database capture lookback does not verify raw
+freshness. Public disposition remains unobservable and physical-proof
+eligibility false. An absent migration yields 503, never legacy fallback.
 
-This contract touches `verdify_schemas/**`, `ingestor/tasks.py`, `api/main.py`, and DB functions. After merge, bounce:
+Legacy `fn_band_trace`, `fn_band_setpoint_provenance`,
+`fn_band_timeline`, and their views remain for compatibility. Their
+crop/actual/firmware names are not a semantic guarantee. `fn_setpoint_at`
+likewise does not confirm delivery; timeline helpers can use planned/default
+fallbacks. Do not use those labels for crop-outcome or firmware-consumption
+claims. Grafana timeline fills still need explicit source labeling/deprecation;
+they must not be treated as physical compliance while that work remains.
 
-- `verdify-api`
-- `verdify-ingestor`
+## Planner and proof collector
 
-No firmware OTA is required for this traceability change.
+The mounted planner context relabels legacy provenance values as reconstructed
+dispatcher, desired history and cfg database capture, preserving timestamps.
+It withholds stale cfg values and warns that neither equality nor recapture
+establishes acceptance, raw freshness or consumption.
+
+The DB-only proof collector emits passive-424 receipt v2 with all six series
+unobservable, never resolved from cache equality. It retains diagnostic values,
+duplicate rows and missing targets without calling them control/observed
+agreement. Migration 181's target columns are retained as explicitly reconstructed
+values, distinct from target snapshots. The collector no longer searches backward
+for an older complete target row or drops that row if the resolver is empty.
+Climate/diagnostic queries are greenhouse-bound and bound
+diagnostic capture age without promoting it to raw-event freshness.
+
+Gate P cannot use this DB-only collector as a successful six-series source.
+Integrating authenticated raw capture results remains required; no manual
+agreement switch or arbitrary receipt injection is provided. Version-1 caches
+cannot be relabeled as current proof. Version-2 passive cache content is checked
+against its receipt hash, and a forged pass is rejected. Recovery preflight
+metadata stays explicitly unobservable without widening or blocking the
+separately bounded Gate R contract.
+
+## Delivery and rollback
+
+Commit source plus verbatim planner ConfigMap and owning config-revision
+annotations. The mounted subPath script needs the declarative rollout trigger
+to reload. Build affected registered runtime inputs and deliver digests through
+the owning GitOps path. Install additive SQL before the v2 API image. Preserve
+prior pins, migration ledger/definition/owner/ACLs and failed evidence; require
+exact running source, Argo Synced + Healthy, live public/planner adoption and
+authenticated passive qualification before issue closure.
+
+No manual pod bounce, unmanaged SQL, physical actuation or experimental launch
+is authorized by this document. Do not roll back to false proof: retain the
+hold/endpoint unavailability when the truthful contract cannot be served.
+Applied migrations stay immutable; removal or correction is ledgered forward.

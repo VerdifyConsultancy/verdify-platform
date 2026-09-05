@@ -206,7 +206,13 @@ def isolated_pg(tmp_path):
 
 
 def baseline():
-    return """
+    # Execute the actual current six-column resolver body (migration 181), with
+    # synthetic anchor lookup values. This is not a production crop calibration.
+    source = (ROOT / "db/migrations/181-serve-band-target-one-source.sql").read_text()
+    resolver = source[
+        source.index("CREATE OR REPLACE FUNCTION public.fn_band_setpoints") : source.index("COMMENT ON FUNCTION")
+    ]
+    return f"""
 CREATE ROLE verdify_api_runtime;
 CREATE ROLE band_trace_denied;
 CREATE TABLE public.climate (
@@ -217,9 +223,11 @@ CREATE TABLE public.setpoint_changes (
 CREATE TABLE public.setpoint_snapshot (
     ts timestamptz, greenhouse_id text, parameter text, value float8);
 CREATE TABLE public.diagnostics (ts timestamptz, greenhouse_id text, band_source text);
-CREATE FUNCTION public.fn_band_setpoints(timestamptz)
-RETURNS TABLE(temp_low float8, temp_high float8, vpd_low float8, vpd_high float8)
-LANGUAGE sql STABLE AS $$ SELECT 60::float8, 90::float8, 0.5::float8, 1.5::float8 $$;
+CREATE FUNCTION public.fn_crop_band_value(text,text,timestamptz)
+RETURNS float8 LANGUAGE sql STABLE AS $$ SELECT CASE $2
+WHEN 'temp_low' THEN 60 WHEN 'temp_high' THEN 90 WHEN 'vpd_low' THEN 0.5
+WHEN 'vpd_high' THEN 1.5 WHEN 'temp_target' THEN 80 WHEN 'vpd_target' THEN 1.2 END::float8 $$;
+{resolver}
 CREATE FUNCTION public.fn_band_trace(timestamptz,timestamptz,text)
 RETURNS integer LANGUAGE sql AS $$ SELECT 119 $$;
 CREATE VIEW public.legacy_dependent AS SELECT public.fn_band_trace(now(),now(),'vallery') AS value;
@@ -409,7 +417,7 @@ RESET ROLE;
 
     # Empty resolver output must not erase climate rows. Missing is not a zero score.
     q(
-        "CREATE OR REPLACE FUNCTION public.fn_band_setpoints(timestamptz) RETURNS TABLE(temp_low float8,temp_high float8,vpd_low float8,vpd_high float8) LANGUAGE sql STABLE AS $$ SELECT 60::float8,90::float8,0.5::float8,1.5::float8 WHERE false $$"
+        "CREATE OR REPLACE FUNCTION public.fn_band_setpoints(target_ts timestamptz) RETURNS TABLE(temp_low float8,temp_high float8,vpd_low float8,vpd_high float8,temp_target float8,vpd_target float8) LANGUAGE sql STABLE AS $$ SELECT 60::float8,90::float8,0.5::float8,1.5::float8,80::float8,1.2::float8 WHERE false $$"
     )
     rows = as_json(q, f"SELECT * FROM {CALL}")
     assert len(rows) == 4
