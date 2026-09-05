@@ -79,6 +79,54 @@ BAND_LINEAGE_DESCRIPTION = (
     "Cfg database snapshots cannot establish consumption; source-authenticated six-series "
     "qualification remains required. Indoor/outdoor observations and forecasts are separate series."
 )
+CACHED_BAND_PROVENANCE = (
+    "Database reconstruction from v_band_curve (materialized cache); refresh age is not established here. "
+    "Not frozen historical crop targets, crop-outcome compliance, or observed firmware consumption. "
+)
+CACHED_BAND_LABELS = {
+    "tracking": {
+        "Target Band Base": "Reconstructed Track Low",
+        "Target Band": "Reconstructed Track High",
+        "House Band Base": "Reconstructed Track Low",
+        "House Band": "Reconstructed Track High",
+        "Target": "Reconstructed Target",
+        "House Target": "Reconstructed Target",
+    },
+    "zones": {f"{zone} Target": f"{zone} Reconstructed Target" for zone in ("South", "West", "East", "Center")},
+    "delta": {
+        "Norm Temp Δ": "Reconstructed Temp Δ",
+        "Norm VPD Δ": "Reconstructed VPD Δ",
+        "In-Band Low": "Reference -1",
+        "In-Band High": "Reference +1",
+        "On Target": "Reference Zero",
+    },
+}
+CACHED_BAND_TITLES = {
+    "Temperature Compliance Band": "Temperature Reconstructed Tracking Band",
+    "VPD Compliance Band": "VPD Reconstructed Tracking Band",
+    "Zone Temperature vs House Band": "Zone Temperature vs Reconstructed Tracking Band",
+    "Zone VPD vs Per-Zone Targets": "Zone VPD vs Reconstructed Zone Targets",
+    "Climate Delta & State Machine (normalized)": "Reconstructed Climate Delta & Recorded State",
+}
+CACHED_BAND_DETAILS = {
+    "tracking": (
+        "House-anchor edges are narrowed toward the reconstructed target using the latest cached "
+        "band_track_fraction or default 0.25 across the entire time window; fraction age, historical "
+        "validity and device acceptance are unverified. This is not the full low..high envelope. "
+        "Temperature uses °F and VPD uses kPa; measured climate and recorded relay series are separate."
+    ),
+    "zones": (
+        "Dashed zone targets are cached fn_zone_vpd_targets output in kPa, not time-frozen crop-profile "
+        "history or measured device targets. Measured zone VPD is a separate series."
+    ),
+    "delta": (
+        "Diagnostic only: 15-minute climate averages minus cached targets, divided by half-width "
+        "with floors 0.5°F / 0.05 kPa and clipped to ±2.5. The ±1 reference is NOT a measured band "
+        "edge when the target is asymmetric or the width floor applies. Zero refers to the cached "
+        "target, not accepted control. Climate rows are not greenhouse-filtered in this legacy query. "
+        "Recorded system-state families are separate; this is not the device arbitration calculation."
+    ),
+}
 LIGHTING_THRESHOLD_BAND_FILL_OPACITY = 22
 HOMEPAGE_LIGHTING_THRESHOLD_LINE_WIDTH = 1
 HOMEPAGE_LIGHTING_GROW_THRESHOLD_LINE_STYLE = {"fill": "dash", "dash": [6, 4]}
@@ -1553,12 +1601,15 @@ def strengthen_homepage_target_lines(panel: dict[str, Any]) -> None:
         "VPD Compliance Band",
         "Temperature Reconstructed House Band",
         "VPD Reconstructed House Band",
+        "Temperature Reconstructed Tracking Band",
+        "VPD Reconstructed Tracking Band",
     }:
         return
-    if "Target" not in target_aliases(panel) and not override_props(panel, "Target"):
+    label = "Reconstructed Target" if cached_band_kind(panel) == "tracking" else "Target"
+    if label not in target_aliases(panel) and not override_props(panel, label):
         return
 
-    target_override = override_for_label(panel, "Target")
+    target_override = override_for_label(panel, label)
     upsert_override_property(target_override, "color", {"fixedColor": HOMEPAGE_TARGET_LINE_COLOR, "mode": "fixed"})
     upsert_override_property(target_override, "custom.drawStyle", "line")
     upsert_override_property(target_override, "custom.lineWidth", HOMEPAGE_TARGET_LINE_WIDTH)
@@ -1713,7 +1764,12 @@ def normalize_public_panel_schema(panel: dict[str, Any]) -> None:
     normalize_runtime_electric_sources(panel)
 
     if (
-        title in {"Temperature Compliance Band", "Temperature Reconstructed House Band"}
+        title
+        in {
+            "Temperature Compliance Band",
+            "Temperature Reconstructed House Band",
+            "Temperature Reconstructed Tracking Band",
+        }
         and panel.get("type") == "timeseries"
     ):
         if panel_has_relay_state_lanes(panel, TEMPERATURE_RELAY_STATE_LANES):
@@ -1721,7 +1777,10 @@ def normalize_public_panel_schema(panel: dict[str, Any]) -> None:
             ensure_relay_state_lane_overrides(panel, TEMPERATURE_RELAY_STATE_LANES)
         strengthen_homepage_target_lines(panel)
 
-    if title in {"VPD Compliance Band", "VPD Reconstructed House Band"} and panel.get("type") == "timeseries":
+    if (
+        title in {"VPD Compliance Band", "VPD Reconstructed House Band", "VPD Reconstructed Tracking Band"}
+        and panel.get("type") == "timeseries"
+    ):
         if panel_has_relay_state_lanes(panel, VPD_RELAY_STATE_LANES):
             replace_equipment_state_targets_with_lanes(panel, VPD_RELAY_STATE_LANES)
             ensure_relay_state_lane_overrides(panel, VPD_RELAY_STATE_LANES)
@@ -1838,7 +1897,10 @@ def normalize_public_panel_schema(panel: dict[str, Any]) -> None:
         upsert_override_property(sun_override, "color", {"fixedColor": BRAND["gold"], "mode": "fixed"})
         upsert_override_property(sun_override, "mappings", lighting_sun_mapping())
 
-    if title in {"VPD Compliance Band", "VPD Reconstructed House Band"} and panel.get("type") == "timeseries":
+    if (
+        title in {"VPD Compliance Band", "VPD Reconstructed House Band", "VPD Reconstructed Tracking Band"}
+        and panel.get("type") == "timeseries"
+    ):
         for target in panel.get("targets", []) or []:
             raw_sql = target.get("rawSql")
             if isinstance(raw_sql, str):
@@ -2201,6 +2263,82 @@ def has_band_timeline(panel: dict[str, Any]) -> bool:
     return any("fn_band_timeline" in target.get("rawSql", "") for target in panel.get("targets", []))
 
 
+def cached_band_kind(panel: dict[str, Any]) -> str | None:
+    sql = "\n".join(t.get("rawSql", "") for t in panel.get("targets", []))
+    if "v_band_curve" not in sql:
+        return None
+    if "band_track_fraction" in sql:
+        return "tracking"
+    if "vpd_target_south" in sql:
+        return "zones"
+    if "c.temp_avg - b.temp_target" in sql:
+        return "delta"
+    return "unknown"
+
+
+def normalize_cached_band_lineage(panel: dict[str, Any]) -> None:
+    kind = cached_band_kind(panel)
+    if panel.get("type") != "timeseries" or kind not in CACHED_BAND_LABELS:
+        return
+    labels = CACHED_BAND_LABELS[kind]
+    for target in panel.get("targets", []):
+        if "rawSql" not in target:
+            continue
+        for old, new in labels.items():
+            target["rawSql"] = target["rawSql"].replace(f'AS "{old}"', f'AS "{new}"')
+    for override in panel.get("fieldConfig", {}).get("overrides", []):
+        matcher = override.get("matcher", {})
+        if matcher.get("id") == "byName":
+            if matcher.get("options") in labels:
+                matcher["options"] = labels[matcher["options"]]
+            if matcher.get("options") in labels.values():
+                upsert_override_property(override, "custom.hideFrom", {"legend": False, "tooltip": False, "viz": False})
+        for prop in override.get("properties", []):
+            if prop.get("id") == "custom.fillBelowTo" and prop.get("value") in labels:
+                prop["value"] = labels[prop["value"]]
+    panel["title"] = CACHED_BAND_TITLES.get(panel.get("title"), panel.get("title"))
+    panel["description"] = CACHED_BAND_PROVENANCE + CACHED_BAND_DETAILS[kind]
+    panel.setdefault("options", {}).setdefault("legend", {})["showLegend"] = True
+    panel["options"].setdefault("tooltip", {})["mode"] = "multi"
+
+
+def check_cached_band_lineage(label: str, panel: dict[str, Any]) -> list[str]:
+    kind = cached_band_kind(panel)
+    if kind is None:
+        return []
+    prefix = f"{label}: panel {panel.get('id')} cached-band lineage"
+    if kind not in CACHED_BAND_LABELS:
+        return [f"{prefix}: unknown cached-curve consumer requires explicit provenance"]
+    findings = []
+    if panel.get("title") not in CACHED_BAND_TITLES.values():
+        findings.append(f"{prefix}: missing reconstruction title")
+    if panel.get("description") != CACHED_BAND_PROVENANCE + CACHED_BAND_DETAILS[kind]:
+        findings.append(f"{prefix}: missing cache/projection limitations")
+    labels = CACHED_BAND_LABELS[kind]
+    aliases = target_aliases(panel)
+    for old in labels:
+        if old in aliases or override_props(panel, old):
+            findings.append(f"{prefix}: ambiguous legacy label {old}")
+    for name in set(labels.values()):
+        if name not in aliases:
+            findings.append(f"{prefix}: missing explicit series {name}")
+        if override_props(panel, name).get("custom.hideFrom") != {"legend": False, "tooltip": False, "viz": False}:
+            findings.append(f"{prefix}: {name} must remain visible in legend/tooltip")
+    if kind in {"tracking", "delta"}:
+        low, high = (
+            ("Reconstructed Track Low", "Reconstructed Track High")
+            if kind == "tracking"
+            else ("Reference -1", "Reference +1")
+        )
+        if override_props(panel, high).get("custom.fillBelowTo") != low:
+            findings.append(f"{prefix}: broken reference fill")
+    if panel.get("options", {}).get("legend", {}).get("showLegend") is not True:
+        findings.append(f"{prefix}: hidden legend")
+    if panel.get("options", {}).get("tooltip", {}).get("mode") != "multi":
+        findings.append(f"{prefix}: hidden tooltip")
+    return findings
+
+
 def normalize_band_lineage(panel: dict[str, Any]) -> None:
     """Relabel only timeline reconstruction panels; never change queried values."""
     if panel.get("type") != "timeseries" or not has_band_timeline(panel):
@@ -2227,6 +2365,9 @@ def normalize_band_lineage(panel: dict[str, Any]) -> None:
 
 def strengthen_compliance_band(panel: dict[str, Any]) -> None:
     if panel.get("type") != "timeseries":
+        return
+    if cached_band_kind(panel) is not None:
+        normalize_cached_band_lineage(panel)
         return
     normalize_band_lineage(panel)
     aliases = target_aliases(panel)
@@ -2527,6 +2668,7 @@ def check_daylight_dashboard_data(label: str, dashboard: dict[str, Any]) -> list
 def check_compliance_dashboard_data(label: str, dashboard: dict[str, Any]) -> list[str]:
     findings: list[str] = []
     for panel in iter_panels(dashboard.get("panels", [])):
+        findings.extend(check_cached_band_lineage(label, panel))
         if panel.get("type") != "timeseries":
             continue
         aliases = target_aliases(panel)
@@ -3350,7 +3492,7 @@ def main() -> int:
     parser.add_argument(
         "--band-lineage-only",
         action="store_true",
-        help="normalize/check timeline provenance only, preserving unrelated dashboard styling",
+        help="normalize/check timeline and cached-curve provenance only, preserving unrelated dashboard styling",
     )
     args = parser.parse_args()
 
@@ -3364,7 +3506,7 @@ def main() -> int:
             before = json.dumps(dashboard, sort_keys=True)
             if not args.check:
                 for panel in iter_panels(dashboard.get("panels", [])):
-                    if has_band_timeline(panel):
+                    if has_band_timeline(panel) or cached_band_kind(panel) is not None:
                         strengthen_compliance_band(panel)
             findings.extend(check_compliance_dashboard_data(str(path), dashboard))
             if not args.check and before != json.dumps(dashboard, sort_keys=True):

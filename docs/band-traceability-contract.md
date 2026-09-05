@@ -58,7 +58,8 @@ crop-outcome compliance and observed firmware consumption. The existing green
 fill is a reference band, not a pass/fail signal. These four-edge charts do not
 provide the separate six-series qualification or replace target lineage.
 
-`scripts/brand-grafana-embeds.py --band-lineage-only` updates only this contract;
+`scripts/brand-grafana-embeds.py --band-lineage-only` updates this contract and
+the cached-curve consumers below without broad styling changes;
 add `--check` for a read-only check. The general branding path preserves it too.
 Run `scripts/gen-grafana-dashboard-cms.py` and its `--check` gate to regenerate
 the owning ConfigMaps without changing dashboard UID, panel ID, SQL values or
@@ -67,12 +68,28 @@ exact Argo revision is Synced + Healthy, loaded dashboard JSON has the new
 contract, and representative temperature/VPD panels actually render legible
 titles, legend and tooltip. A cached PNG or healthy old revision is insufficient.
 
-The two `site-home` panels use a different `v_band_curve` path: a materialized
-house-anchor curve narrowed by the latest cached `band_track_fraction` (or a
-default), plus the reconstructed target. Their legacy Compliance Band titles
-and Target Band labels still need a separately scoped repair; they are not
-physical compliance or consumed-band evidence. The timeline-only check does
-not certify those panels or the complete Grafana/site branding contract.
+The five `site-home` cached-curve panels have a separate reconstruction contract:
+
+- Panels 30/31/40 plot materialized house-anchor curves narrowed by the latest
+  cached `band_track_fraction` (or default 0.25), plus the reconstructed target.
+  Their labels are Reconstructed Track Low/High and Reconstructed Target. This
+  is not the full low..high envelope; the fraction is applied across the whole
+  window without establishing historical validity, cache age or device acceptance.
+- Panel 41 labels cached per-zone target curves as reconstructed zone targets,
+  not time-frozen crop-profile history or observed device targets.
+- Panel 42 labels its normalized climate-minus-cached-target calculation as a
+  reconstructed diagnostic, not firmware arbitration. The ±1 fill is a numeric
+  reference, not a compliance band: asymmetric targets and the denominator floor
+  invalidate an edge interpretation. Clipping to ±2.5 also hides larger magnitude.
+  Its legacy climate aggregation is not greenhouse-filtered and remains diagnostic
+  only; this label repair does not qualify that query for outcome measurement.
+
+The cached consumers retain their SQL calculations and recorded state/relay
+series, with cache-age and physical-proof limitations stated in each description.
+All reconstructed/reference labels remain visible in legend and tooltip. These
+checks do not certify the complete Grafana/site styling, live loaded source or
+physical compliance. A future outcome-quality query must establish historical
+target lineage, time/greenhouse scope and eligible sample/duration denominators.
 
 ## Planner and proof collector
 

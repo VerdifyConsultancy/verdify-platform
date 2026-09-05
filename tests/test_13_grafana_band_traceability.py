@@ -255,3 +255,89 @@ def test_lineage_only_check_never_writes_source(monkeypatch):
     monkeypatch.setattr(sys, "argv", ["brand", "--band-lineage-only", "--check"])
     assert _brand().main() == 0
     assert before == {path: path.read_bytes() for path in _dashboard_paths()}
+
+
+def _cached_panel(panel_id):
+    dashboard = json.loads(Path("grafana/dashboards/site-home.json").read_text())
+    return next(p for p in _iter_panels(dashboard) if p.get("id") == panel_id)
+
+
+def test_all_cached_curve_consumers_have_explicit_nonphysical_provenance():
+    brand = _brand()
+    found = []
+    for path in _dashboard_paths():
+        for panel in _iter_panels(json.loads(path.read_text())):
+            if "v_band_curve" not in _panel_sql(panel):
+                continue
+            found.append((path.name, panel["id"]))
+            assert not brand.check_cached_band_lineage(str(path), panel)
+    assert set(found) == {("site-home.json", i) for i in (30, 31, 40, 41, 42)}
+
+
+@pytest.mark.parametrize("panel_id", [30, 31, 40, 41, 42])
+def test_cached_normalizer_preserves_calculations_styles_and_general_brand_lineage(panel_id):
+    brand = _brand()
+    panel = _cached_panel(panel_id)
+    labels = brand.CACHED_BAND_LABELS[brand.cached_band_kind(panel)]
+    reverse = {new: old for old, new in labels.items()}
+    legacy = deepcopy(panel)
+    for target in legacy["targets"]:
+        for new, old in reverse.items():
+            if "rawSql" in target:
+                target["rawSql"] = target["rawSql"].replace(f'AS "{new}"', f'AS "{old}"')
+    for override in legacy["fieldConfig"]["overrides"]:
+        matcher = override["matcher"]
+        if matcher.get("id") == "byName" and matcher.get("options") in reverse:
+            matcher["options"] = reverse[matcher["options"]]
+        for prop in override["properties"]:
+            if prop["id"] == "custom.fillBelowTo" and prop["value"] in reverse:
+                prop["value"] = reverse[prop["value"]]
+    legacy["title"] = next(old for old, new in brand.CACHED_BAND_TITLES.items() if new == panel["title"])
+    legacy["description"] = "legacy physical claim"
+    brand.strengthen_compliance_band(legacy)
+    assert legacy == panel  # entire data source/query/style preserved except explicit label/provenance edits
+    brand.strengthen_compliance_band(legacy)
+    assert legacy == panel
+    brand.normalize_public_panel_schema(legacy)
+    brand.brand_field_config(legacy, "site-home")
+    assert not brand.check_cached_band_lineage("branded", legacy)
+    if panel_id in (30, 31):
+        props = brand.override_props(legacy, "Reconstructed Target")
+        assert props["color"]["fixedColor"] == brand.HOMEPAGE_TARGET_LINE_COLOR
+        assert props["custom.lineStyle"] == brand.HOMEPAGE_TARGET_LINE_STYLE
+
+
+@pytest.mark.parametrize("panel_id", [30, 31, 40, 41, 42])
+@pytest.mark.parametrize("regression", ["old_title", "old_alias", "claim", "hidden", "missing_series", "unknown_query"])
+def test_cached_lineage_checker_rejects_false_proof_and_missing_labels(panel_id, regression):
+    brand = _brand()
+    panel = _cached_panel(panel_id)
+    labels = brand.CACHED_BAND_LABELS[brand.cached_band_kind(panel)]
+    alias = next(name for name in labels.values() if name in brand.target_aliases(panel))
+    if regression == "old_title":
+        panel["title"] = "Firmware Compliance Band"
+    elif regression == "old_alias":
+        old = next(old for old, new in labels.items() if new == alias)
+        for target in panel["targets"]:
+            if "rawSql" in target:
+                target["rawSql"] = target["rawSql"].replace(f'AS "{alias}"', f'AS "{old}"')
+    elif regression == "claim":
+        panel["description"] = "On-chip firmware arbitration and historical crop compliance"
+    elif regression == "hidden":
+        brand.upsert_override_property(
+            brand.override_for_label(panel, alias), "custom.hideFrom", {"legend": True, "tooltip": True, "viz": False}
+        )
+    elif regression == "missing_series":
+        panel["fieldConfig"]["overrides"].remove(_by_name_override(panel, alias))
+    elif regression == "unknown_query":
+        panel["targets"] = [{"rawSql": "SELECT ts FROM v_band_curve"}]
+    assert brand.check_cached_band_lineage("regressed", panel)
+
+
+def test_normalized_reference_is_not_an_asymmetric_band_edge():
+    # The retained display formula's ±1 lines are not physical edge tests.
+    low, target, high = 60, 80, 90
+    normalized_at_high = (high - target) / max(0.5, (high - low) / 2)
+    assert normalized_at_high == pytest.approx(2 / 3)
+    assert normalized_at_high != 1
+    assert "±1 reference is NOT a measured band edge" in _cached_panel(42)["description"]
