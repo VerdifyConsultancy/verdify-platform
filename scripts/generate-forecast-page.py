@@ -189,8 +189,11 @@ def _daily_4to7() -> list[dict]:
 def _bias_correction() -> dict[str, tuple[str, str]]:
     """7-day rolling bias correction per forecast parameter."""
     out = {}
-    for p in ("temp_f", "rh_pct", "solar_w_m2"):
-        rows = psql(f"SELECT avg_error, samples FROM fn_forecast_correction('{p}', 24)")
+    for p in ("temp_f", "rh_pct", "vpd_kpa", "solar_w_m2"):
+        rows = psql(
+            f"SELECT avg_error, samples FROM fn_forecast_correction('{p}', 24) "
+            "CROSS JOIN v_forecast_verification_contract WHERE verification_contract_version=2"
+        )
         if rows and rows[0][0]:
             out[p] = (rows[0][0], rows[0][1])
     return out
@@ -248,8 +251,8 @@ def _render(hours: list[ForecastHour], daily: list[dict], bias: dict, deviations
         "# Greenhouse Weather Forecast",
         "",
         "*This page regenerates every 30 minutes from the latest Open-Meteo sync. "
-        "Open-Meteo's biases are tracked and reported below; apply them to the raw "
-        "numbers for a more accurate expectation.*",
+        "Outdoor forecast errors are reported below as diagnostics, not verified "
+        "indoor response or an automatic correction rule.*",
         "",
         "Verdify plans against future heat, VPD, solar load, wind, and precipitation. "
         "The graphs below show the next 48 hours in the same public Grafana layer "
@@ -288,13 +291,19 @@ def _render(hours: list[ForecastHour], daily: list[dict], bias: dict, deviations
         '<iframe src="https://graphs.verdify.ai/d-solo/greenhouse-weather/?orgId=1&panelId=910&theme=light&from=now-7d&to=now" width="100%" height="320" frameborder="0"></iframe>',
         "</div>",
         "",
-        "## Bias correction (7-day rolling)",
+        "## Outdoor forecast verification (contract 2, last 7 days)",
+        "",
+        "Temperature/RH/VPD use the valid-time outdoor minute; solar uses the complete "
+        "preceding hour. Forecast availability is recorded fetch time, not provider issuance. "
+        "Samples count paired valid hours, not repeated telemetry rows. Positive error "
+        "means forecast minus observed; missing calibration is not zero bias.",
         "",
     ]
     if bias:
         interp = {
             "temp_f": "Open-Meteo under/over-predicts temp",
             "rh_pct": "Open-Meteo under/over-predicts RH",
+            "vpd_kpa": "Open-Meteo under/over-predicts outdoor VPD",
             "solar_w_m2": "Open-Meteo under/over-predicts solar radiation",
         }
         rows = []
@@ -302,7 +311,7 @@ def _render(hours: list[ForecastHour], daily: list[dict], bias: dict, deviations
             rows.append((p, err, n, interp.get(p, "")))
         lines.append(
             _lab_table(
-                ["Metric", "Avg error", "Samples", "Interpretation"],
+                ["Metric", "Avg error", "Paired valid hours", "Interpretation"],
                 rows,
                 numeric_cols={1, 2},
                 nowrap_cols={0, 1, 2},
