@@ -42,7 +42,62 @@ If writer code changes, preserve this receipt; publish a new revision and compar
 results rather than regenerating over the historical baseline or making a failing
 acceptance test green by changing its expected physical meaning.
 
-## Required repair, still open
+## Revision capture prerequisite (migration 244)
+
+`244-daily-climate-metric-revisions.sql` adds an append-only ledger for the
+seven stored binary/nominal-stress values and nine graded diagnostics. A
+write-serializing lock protects the initial baseline and trigger installation in
+one transaction. Row inserts, before/after metric updates, identity/day changes
+and deletions are recorded atomically with their source write. Unrelated-field
+and same-value refreshes do not manufacture metric revisions. A capture failure
+fails the source statement too, including rollback of a partial before-image.
+
+`daily-summary-capture-v1` versions the **capture layout**, not the calculation.
+The baseline is only the stored value at installation time; earlier revisions
+cannot be reconstructed from it. Database timestamps and transaction IDs are
+not writer-image identity, raw sample hashes, sensor membership, target versions
+or proof of valid measurement. PostgreSQL nonfinite numeric values are retained
+as JSON strings such as `NaN`, never converted to measured zero.
+
+Runtime API/ingestor roles can read the ledger, but cannot insert, modify,
+delete, truncate or alter triggers on it. Capture runs through a database-owner
+security-definer trigger with a fixed search path; no new raw-table grants are
+made. Ledger updates/deletes/truncation are also rejected by guards, and source
+`TRUNCATE` is blocked because it bypasses row capture. Privileged owners can
+still change DDL: this is application-level append-only storage, not a claim of
+tamper-proof storage against database administrators.
+
+### Delivery and validation
+
+Apply only through the normal reviewed migration-image/GitOps path. The owning
+`db/apply-migrations.sh` classifies this file as wrap-safe and uses
+`--single-transaction` plus its migration ledger/advisory lock. It must not be
+run as separate autocommitted statements. A successful ledgered application is
+not to be replayed manually; a failed transaction leaves no partial seed/trigger.
+
+Before production: verify the existing migration ledger and database ownership,
+take and restore-test the current backup, inspect source-write latency/lock
+conditions, preserve source table OID/ACLs and previous pins, and measure baseline
+size/capture overhead on the restored database. Require exact migration hash,
+Argo Synced + Healthy and live ledger capture/readback through authorized roles.
+No production adoption or restored production-data proof is supplied by the
+small isolated PostgreSQL tests.
+
+The isolated tests exercise PostgreSQL 15 and 16: unchanged baseline values,
+null/zero/NaN preservation, actual ingestor-triggered writes, no-op suppression,
+identity changes, deletions, API-role reads, denied mutation/sequence/function
+privileges, temporary-schema shadow resistance, failure atomicity, writer lock
+and full outer rollback preserving source OID/ACLs/values. Tests use
+`SCORECARD_TEST_PG_BIN` and their own private socket cluster, never production
+credentials. These tests do not qualify a new physical measurement formula.
+
+Rollback preparation must retain/export the revision ledger as well as the
+source values. Do not drop the ledger or disable capture to hide failed writes.
+If capture needs correction, hold the new metric activation and deliver a
+forward migration preserving existing revisions. This migration changes no
+daily metric formula, resource calculation, device state or trial authority.
+
+## Required measurement repair, still open
 
 The next writer contract must preserve prior daily results and publish identified
 measurement revisions. Changing the every-30-minute writer directly would also
