@@ -188,7 +188,12 @@ seq_of() {
   n=$(printf '%s' "$1" | sed -E 's/^([0-9]+)[a-zA-Z]?-.*/\1/')
   case "$n" in
     ''|*[!0-9]*) printf 'NULL' ;;
-    *) printf '%d' "$((10#$n))" ;;
+    *)
+      # POSIX sh has no base#number arithmetic (dash rejects even 10#241).
+      # Strip zero padding before printf so 008/095 are not treated as octal.
+      n=$(printf '%s' "$n" | sed 's/^0*//')
+      printf '%d' "${n:-0}"
+      ;;
   esac
 }
 
