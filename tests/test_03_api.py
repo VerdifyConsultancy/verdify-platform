@@ -87,13 +87,13 @@ class TestAPIHealth:
         data = json.loads(body)
         assert data["greenhouse_id"] == "vallery"
         assert data["summary"]["sample_count"] > 0
-        assert data["latest"]["trace_quality_flag"] in {
-            "ok",
-            "missing_crop_band",
-            "missing_fw_band",
-            "missing_readback",
-            "readback_drift",
-        }
+        assert data["semantics"]["contract_version"] == 2
+        assert data["latest"]["trace_quality_flag"] == "unobservable_consumed_band"
+        assert data["summary"]["readback_match_pct"] is None
+        assert data["latest"]["fw_vpd_high"] is None
+        assert data["latest"]["lineage"]["consumed_band_verified"] is False
+        assert data["summary"]["reconstructed_both_eligible_samples"] <= data["summary"]["sample_count"]
+        assert data["summary"]["crop_both_compliance_pct"] is None
         for key in ("crop_vpd_high", "fw_vpd_high", "rb_vpd_high"):
             assert key in data["latest"], f"band trace latest missing {key}"
 
