@@ -67,10 +67,54 @@ bindings. New diagnostic changes receive before/after revision capture; repeated
 identical results do not create revisions. No existing daily values are backfilled
 or relabeled by the migration itself.
 
+## Typed read contract
+
+Migration246 adds `fn_observed_minute_diagnostic(date,text)`: exactly one explicit
+day, vallery only, with API-duty EXECUTE and no new raw-table grants. It is a
+database-owner SECURITY DEFINER function with a fixed search path and qualified
+relations. The reader selects the newest capture **before** checking it. A
+missing daily row, uncomputed diagnostic or current/captured payload mismatch is
+unavailable, never a fallback to an older valid capture. It changes no stored
+metrics or prior revision rows and is safe under the normal outer transaction.
+
+`verdify_schemas/observed_minutes.py` validates the entire diagnostic's definition,
+hash formats, window/day/greenhouse, counts, percentages, units, distance sums,
+missingness, possible joint intersections and eligibility flags. An available
+snapshot must have matching v2 capture metadata and nonfuture evaluation and
+revision timestamps. Empty eligible fractions remain null; measured zero remains
+zero. Unknown fields and malformed/promoted evidence are withheld without echoing
+payloads or validation inputs. This is internal consistency checking, not raw
+recomputation or authentication of the recorded calculation hash.
+
+The shared API/MCP adapter uses a 3-second server statement budget, a 3.5-second
+client query budget and a transaction/savepoint. Missing migration/reader grants
+or timeouts become explicit unavailable reasons without poisoning an outer
+transaction. Other database failures are not silently hidden.
+
+`observed_minute_evidence` is separate from numeric `fn_planner_scorecard` metrics
+in the scorecard API/MCP, public home response and evidence snapshot. Default-day
+scorecards bind the numeric and diagnostic reads to the same resolved Denver day;
+public snapshots bind it to their generated-at day. They are not claimed to be a
+single transaction across every legacy metric and public query. The static
+publisher revalidates the envelope and day before showing per-axis/joint eligible
+denominators, evaluated window, revision and source/input hashes. It does not
+substitute legacy controller credit when the diagnostic is missing.
+
+Availability means a structurally valid **captured snapshot**, not a fresh live
+measurement. `currentness=captured_snapshot_not_live_freshness_not_assessed` is
+explicit: even a recent unrelated climate-metric revision may retain the same
+older diagnostic window. Coverage is relative to that evaluated window, not
+automatically a complete local day. Inspect window_end as well as recorded_at.
+This release does not modify planner rewards, the standalone planner's context
+collector or any scientific endpoint. MCP documentation keeps diagnostic-only
+limitations visible to tool readers.
+
 ## Delivery and remaining work
 
-Deliver migrations244/245 through the reviewed ledgered migrate-image path, then
-the compatible ingestor image. The ingestor handles absent245 without fabricating
+Deliver migrations244/245/246 through the reviewed ledgered migrate-image path, then
+the compatible ingestor image. Compatible API/MCP/publisher images may precede246
+and return unavailable until it arrives. Preserve migration241's consumer-first
+requirements documented in the contract-2 runbook. The ingestor handles absent245 without fabricating
 diagnostics, but must not be called deployed merely because old pods are healthy.
 Require exact source/pins, migration hashes/ledger, Argo Synced + Healthy, restored
 production-data/role/lock/overhead checks and actual daily diagnostic/revision
@@ -78,8 +122,9 @@ readback. Retain both raw exports and the append-only revision ledger for rollba
 leave the legacy fields intact and use forward corrections instead of erasing
 evidence. No live migration or physical action is performed by these instructions.
 
-Typed API/MCP/public/planner publication of this new field is still to implement.
-The old public aliases are not automatically upgraded by its presence. #371 also
+API/MCP/public publication is implemented but not yet deployed or live-qualified;
+the standalone planner collector is unchanged. The old public aliases are not
+automatically upgraded by this diagnostic's presence. #371 also
 still needs a fixed sensor/target contract, true crop-band distance/severity and
 worst-zone outputs, historical/current-day source-bound comparisons and normal
 runtime acceptance. The locked experiment's minute/bin/missingness rules and

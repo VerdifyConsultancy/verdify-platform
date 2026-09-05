@@ -17,6 +17,7 @@ from typing import Any, Literal
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
 from .crops import Observation
+from .observed_minutes import ObservedMinuteEvidence
 
 
 class APIStatus(BaseModel):
@@ -159,6 +160,7 @@ class PublicHomeMetrics(BaseModel):
     planner_score_resource_weight_pct: float = Field(default=0, ge=0, le=100)
     planner_score_resource_terms_available: bool = False
     compliance_pct_today: float | None = None
+    observed_minute_evidence: ObservedMinuteEvidence = Field(default_factory=ObservedMinuteEvidence)
     cost_today_usd: float | None = None
     cost_today_estimate_usd: float | None = None
     water_today_gal: float | None = None
