@@ -30,11 +30,16 @@ case does not establish that such a row reaches the current live loop.
 Run from the repository root:
 
 ```sh
-python scripts/scorecard_measurement_audit.py --check planning/evidence/scorecard-writer-counterexamples-20260905.json
+python scripts/scorecard_measurement_audit.py --check planning/evidence/scorecard-writer-counterexamples-observed-minute-20260905.json
 python -m pytest tests/test_scorecard_measurement_audit.py
 ```
 
 The check verifies baseline reproduction, **not acceptance of these behaviors**.
+The original receipt is retained unchanged. The observed-minute extension adds
+an independent writer call outside that legacy block; its newer receipt has
+the updated whole-file hash but the same executed AST and nine legacy results.
+See [observed-minute diagnostics](observed-minute-diagnostics.md) for the new,
+separate calculation. Neither receipt presents the legacy behavior as corrected.
 The tests explicitly expect defects in the retained writer. The mutation test
 changes the source denominator and proves the audit executes that source rather
 than a copied algorithm. `--output NEW_PATH` refuses to overwrite prior evidence.

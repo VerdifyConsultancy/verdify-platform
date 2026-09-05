@@ -291,7 +291,9 @@ def changed_columns(before: dict[str, Any], after: dict[str, Any]) -> list[str]:
 
 
 async def reconcile_day(conn: asyncpg.Connection, day: date, apply: bool) -> DayResult:
-    tx = conn.transaction()
+    # Match the nested observed-minute diagnostic's repeatable snapshot. Keep
+    # dry-run rollback and the entire day refresh in the same outer transaction.
+    tx = conn.transaction(isolation="repeatable_read")
     await tx.start()
     try:
         before = await daily_snapshot(conn, day)
