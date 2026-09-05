@@ -46,8 +46,33 @@ Legacy `fn_band_trace`, `fn_band_setpoint_provenance`,
 crop/actual/firmware names are not a semantic guarantee. `fn_setpoint_at`
 likewise does not confirm delivery; timeline helpers can use planned/default
 fallbacks. Do not use those labels for crop-outcome or firmware-consumption
-claims. Grafana timeline fills still need explicit source labeling/deprecation;
-they must not be treated as physical compliance while that work remains.
+claims.
+
+## Grafana reconstruction panels
+
+The 24 `fn_band_timeline` panels across 12 source dashboards label the unchanged
+`projected_*` values **Reconstructed Low/High**, with a visible reconstruction
+title, legend and tooltip. The description identifies current house-anchor
+reconstruction in °F/kPa and explicitly excludes frozen historical crop targets,
+crop-outcome compliance and observed firmware consumption. The existing green
+fill is a reference band, not a pass/fail signal. These four-edge charts do not
+provide the separate six-series qualification or replace target lineage.
+
+`scripts/brand-grafana-embeds.py --band-lineage-only` updates only this contract;
+add `--check` for a read-only check. The general branding path preserves it too.
+Run `scripts/gen-grafana-dashboard-cms.py` and its `--check` gate to regenerate
+the owning ConfigMaps without changing dashboard UID, panel ID, SQL values or
+bucket assignment. Source/render parity is not live acceptance: verify the
+exact Argo revision is Synced + Healthy, loaded dashboard JSON has the new
+contract, and representative temperature/VPD panels actually render legible
+titles, legend and tooltip. A cached PNG or healthy old revision is insufficient.
+
+The two `site-home` panels use a different `v_band_curve` path: a materialized
+house-anchor curve narrowed by the latest cached `band_track_fraction` (or a
+default), plus the reconstructed target. Their legacy Compliance Band titles
+and Target Band labels still need a separately scoped repair; they are not
+physical compliance or consumed-band evidence. The timeline-only check does
+not certify those panels or the complete Grafana/site branding contract.
 
 ## Planner and proof collector
 
