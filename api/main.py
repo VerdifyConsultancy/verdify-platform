@@ -3714,6 +3714,9 @@ async def public_home_metrics(greenhouse_id: str = DEFAULT_GREENHOUSE):
         )
         score_rows = await _fetch_planner_scorecard(conn)
         scorecard = {r["metric"]: _to_float(r["value"]) for r in score_rows}
+        climate_evidence = ScorecardResponse.model_validate(
+            {k: v for k, v in scorecard.items() if k in ScorecardResponse.metric_names()}
+        ).climate_evidence()
         water_resource = await _fetchrow_optional(
             conn,
             f"""
@@ -3886,7 +3889,7 @@ async def public_home_metrics(greenhouse_id: str = DEFAULT_GREENHOUSE):
         ),
         planner_score_resource_weight_pct=scorecard.get("planner_score_resource_weight_pct") or 0,
         planner_score_resource_terms_available=scorecard.get("resource_terms_available") == 1.0,
-        compliance_pct_today=scorecard.get("compliance_pct"),
+        compliance_pct_today=climate_evidence["both_axis_compliance_pct"],
         cost_today_usd=(
             scorecard.get("cost_total")
             if water_resource
@@ -3945,6 +3948,9 @@ async def public_evidence_snapshot(greenhouse_id: str = DEFAULT_GREENHOUSE):
         generated_at = await conn.fetchval("SELECT now()")
         score_rows = await _fetch_planner_scorecard(conn)
         scorecard = {r["metric"]: _to_float(r["value"]) for r in score_rows}
+        climate_evidence = ScorecardResponse.model_validate(
+            {k: v for k, v in scorecard.items() if k in ScorecardResponse.metric_names()}
+        ).climate_evidence()
         water_resource = await _fetchrow_optional(
             conn,
             f"""
@@ -4146,11 +4152,7 @@ async def public_evidence_snapshot(greenhouse_id: str = DEFAULT_GREENHOUSE):
         ),
         "planner_score_resource_weight_pct": scorecard.get("planner_score_resource_weight_pct") or 0,
         "planner_score_resource_terms_available": scorecard.get("resource_terms_available") == 1.0,
-        "both_axis_compliance_pct": scorecard.get("compliance_pct"),
-        "graded_compliance_attributable_pct": scorecard.get("compliance_v2_attributable_pct"),
-        "temp_compliance_pct": scorecard.get("temp_compliance_pct"),
-        "vpd_compliance_pct": scorecard.get("vpd_compliance_pct"),
-        "stress_axis_hours": scorecard.get("total_stress_h"),
+        **climate_evidence,
         "active_plan_id": active_plan_id,
         "active_plan_status": active_plan_status,
         "last_plan_id": last_plan["plan_id"] if last_plan else None,
@@ -4188,17 +4190,7 @@ async def public_evidence_snapshot(greenhouse_id: str = DEFAULT_GREENHOUSE):
             ),
             "planner_score_resource_weight_pct": scorecard.get("planner_score_resource_weight_pct") or 0,
             "resource_terms_available": scorecard.get("resource_terms_available") == 1.0,
-            "both_axis_compliance_pct": scorecard.get("compliance_pct"),
-            "graded_compliance_attributable_pct": scorecard.get("compliance_v2_attributable_pct"),
-            "temp_compliance_pct": scorecard.get("temp_compliance_pct"),
-            "vpd_compliance_pct": scorecard.get("vpd_compliance_pct"),
-            "stress_axis_hours": scorecard.get("total_stress_h"),
-            "stress_breakdown": {
-                "heat_h": scorecard.get("heat_stress_h"),
-                "cold_h": scorecard.get("cold_stress_h"),
-                "vpd_high_h": scorecard.get("vpd_high_stress_h"),
-                "vpd_low_h": scorecard.get("vpd_low_stress_h"),
-            },
+            **climate_evidence,
             "last_validated_plan": dict(last_validated_plan) if last_validated_plan else None,
             "last_plan": dict(last_plan) if last_plan else None,
             "latest_lesson": (

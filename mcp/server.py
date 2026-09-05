@@ -1124,47 +1124,33 @@ async def climate() -> str:
 
 @mcp.tool()
 async def scorecard(target_date: str = "") -> str:
-    """Get the planner scorecard for a given day.
-    Includes: planner_score, compliance_v2_attributable_pct (the current scored
-    compliance field), dev_temp_norm_median_day/night + dev_temp_norm_p95
-    (+ dev_vpd_*) as target-reference diagnostics only, compliance_v2_raw_pct,
-    compliance_v2_unachievable_frac, the legacy binary compliance_pct /
-    temp_compliance_pct / vpd_compliance_pct, stress hours (heat/cold/vpd_high/
-    vpd_low), utility usage (kwh, therms, water_gal, mister_water_gal), costs
-    (electric/gas/water/total), dew point safety, and 7-day averages. Pass date
-    as YYYY-MM-DD or omit for today.
+    """Get a daily scorecard; pass YYYY-MM-DD or omit for today.
 
-    Compliance is GRADED + PER-ZONE + CONTROLLER-ATTRIBUTABLE (band-compliance
-    rearchitecture, migrations 146-147), and the scored compliance number is
-    compliance_v2_attributable_pct. ADR-0004 supersedes target hugging: use this
-    as a corridor/outcome guard, not as permission to spend water/energy/wear
-    reducing target-reference deviation while readings are already inside the
-    crop corridor. GRADED severity still distinguishes small edge misses from large
-    stress. PER-ZONE: each zone graded against what is actually planted there
-    (center = Vanda orchid; east = lettuce/strawberry/pepper), aggregated to a house
-    number (center weight 0.60, east 0.40). CONTROLLER-ATTRIBUTABLE: every miss is
-    split into controller-error (a cooling/heating stage was idle with authority
-    available) vs physically-unachievable (e.g. vent saturated and outdoor >= the
-    served high edge — an exhaust-only box cannot beat ambient); the unachievable
-    misses are credited back so weather Iris cannot change is not scored against her.
-    compliance_v2_raw_pct and compliance_v2_unachievable_frac are reported context — a
-    high unachievable_frac should cue WIDENING the served envelope, not working the
-    actuators harder.
+    Inspect scorecard_contract_version and metric_semantics first. Only contract
+    2 verifies that compliance_pct / temp_compliance_pct / vpd_compliance_pct are
+    BINARY fractions of scored house-average readings against historical desired
+    setpoints. Earlier versions mislabeled graded credit under those keys.
+    These fractions are not duration-weighted, fixed-panel crop outcomes or proof
+    of firmware-consumed targets. Coverage is unverified; no center probe is
+    measured. Binary stress hours assume one minute per scored reading and axes
+    can overlap; graded_*_stress_h are separate deficit-integral diagnostics.
 
-    Resource cost receives its historical 20% weight only when conserved water
-    and the whole-runtime energy model are both scoring-eligible. Otherwise the
-    climate term is normalized to 100% and resource scalars remain null; inspect
+    compliance_v2_raw_pct, compliance_v2_attributable_pct, graded axis fields and
+    compliance_v2_unachievable_frac describe the historical grading/feasibility
+    per-zone model, not measured crop compliance. Controller-attributable credit refunds
+    modeled unachievable misses; it must not hide physical exposure. The legacy
+    center zone uses a house-average proxy, not a center measurement. Never widen
+    served bands to improve credit or treat target-distance as a crop outcome.
+
+    planner_score retains historical graded credit and resource rules: cost
+    receives 20% weight only when conserved water and the whole-runtime energy
+    model are scoring-eligible. Otherwise resource weight is zero. Inspect
     planner_score_resource_weight_pct and resource_terms_available before comparing
-    scores across scopes.
+    scores. Null means unavailable, not zero or perfect. Composite outcome fields
+    remain null until their physical evidence contract is implemented.
 
-    The scorecard still reads compliance_v2_attributable_pct per day and falls back
-    to the legacy binary compliance_pct (% of readings with BOTH temp and VPD in the
-    served band) only for days before the graded column was populated. Treat binary
-    compliance_pct as transitional/diagnostic context only.
-
-    Response is validated through verdify_schemas.ScorecardResponse — partial
-    days emit a subset of metrics as null. DB drift (new metric) surfaces as a
-    validation error with the raw values preserved so Iris can still read the card."""
+    Response is validated through verdify_schemas.ScorecardResponse. Partial days
+    may contain null metrics; inspect evidence limitations before using a score."""
     conn = await _db()
     try:
         if target_date:

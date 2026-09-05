@@ -117,6 +117,12 @@ def planning_block(data: dict) -> str:
     last_plan = pq.get("last_plan") or {}
     latest_lesson = pq.get("latest_lesson") or {}
     stress = pq.get("stress_breakdown") or {}
+    semantics = pq.get("metric_semantics") or {}
+    binary_verified = semantics.get("contract_version") == 2
+    # Also fail closed with an older public API during publisher-first rollout.
+    binary = pq if binary_verified else {}
+    if not binary_verified:
+        stress = {}
 
     latest_lesson_span = "No validated lesson in snapshot"
     latest_lesson_text = "No latest lesson was present in the public evidence snapshot."
@@ -145,7 +151,7 @@ def planning_block(data: dict) -> str:
     graded_attributable = pq.get("graded_compliance_attributable_pct")
     graded_card = (
         f'\n  <div class="metric-card"><strong>{esc(fmt_number(graded_attributable, 1, "%"))}</strong>'
-        "<p>Graded compliance (controller-attributable)</p></div>"
+        "<p>Graded controller credit (diagnostic, not binary compliance)</p></div>"
         if graded_attributable is not None
         else ""
     )
@@ -154,14 +160,15 @@ def planning_block(data: dict) -> str:
 
 <div class="metric-grid">
   <div class="metric-card"><strong>{esc(fmt_number(pq.get("planner_score_today"), 1))}</strong><p>Today's planner score</p></div>
-  <div class="metric-card"><strong>{esc(fmt_number(pq.get("both_axis_compliance_pct"), 1, "%"))}</strong><p>Both-axis compliance (binary, house)</p></div>{graded_card}
-  <div class="metric-card"><strong>{esc(fmt_number(pq.get("temp_compliance_pct"), 1, "%"))}</strong><p>Temperature compliance</p></div>
-  <div class="metric-card"><strong>{esc(fmt_number(pq.get("vpd_compliance_pct"), 1, "%"))}</strong><p>VPD compliance</p></div>
-  <div class="metric-card"><strong>{esc(fmt_number(pq.get("stress_axis_hours"), 2, "h"))}</strong><p>Stress-axis hours</p></div>
+  <div class="metric-card"><strong>{esc(fmt_number(binary.get("both_axis_compliance_pct"), 1, "%"))}</strong><p>Both-axis compliance (binary reading fraction, house average)</p></div>{graded_card}
+  <div class="metric-card"><strong>{esc(fmt_number(binary.get("temp_compliance_pct"), 1, "%"))}</strong><p>Temperature binary reading fraction</p></div>
+  <div class="metric-card"><strong>{esc(fmt_number(binary.get("vpd_compliance_pct"), 1, "%"))}</strong><p>VPD binary reading fraction</p></div>
+  <div class="metric-card"><strong>{esc(fmt_number(binary.get("stress_axis_hours"), 2, "h"))}</strong><p>Nominal binary stress-axis hours</p></div>
   <div class="metric-card"><strong>{esc(plan_day(last_validated_plan_id))}</strong><p>Last validated plan</p></div>
 </div>
 
 <div class="data-table">
+  <div class="data-row"><strong>Measurement basis</strong><span>{"Contract 2" if binary_verified else "Unverified contract; binary metrics withheld"}</span><p>Legacy house-average readings against historical desired setpoints; not duration-weighted, fixed-panel crop compliance or confirmed firmware consumption. Coverage is unverified and no center probe is measured. Stress assumes one minute per scored reading.</p></div>
   <div class="data-row"><strong>Last validated plan</strong><span>{esc(last_validated_plan_id)}</span><p>Validated {esc(validated_at)}{esc(outcome_text)}.</p></div>
   <div class="data-row"><strong>Latest plan status</strong><span>{esc(last_plan_id)} · {esc(last_plan_status)}</span><p>Written {esc(last_plan_created)}; age {esc(last_plan_age)} at snapshot time.</p></div>
   <div class="data-row"><strong>Stress breakdown</strong><span>heat {esc(fmt_number(stress.get("heat_h"), 2, "h"))} · cold {esc(fmt_number(stress.get("cold_h"), 2, "h"))} · VPD-high {esc(fmt_number(stress.get("vpd_high_h"), 2, "h"))} · VPD-low {esc(fmt_number(stress.get("vpd_low_h"), 2, "h"))}</span><p>Total stress-axis hours can exceed wall-clock hours because temperature and VPD are independent stress axes.</p></div>

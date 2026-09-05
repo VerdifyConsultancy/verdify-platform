@@ -16,6 +16,40 @@ from typing import Any, cast
 from uuid import UUID
 
 
+def scorecard_context(scorecard: dict[str, Any]) -> dict[str, str | float | int | bool]:
+    """Keep the standalone planner's flat contract explicit across DB rollout."""
+    verified = scorecard.get("scorecard_contract_version") == 2
+    result: dict[str, str | float | int | bool] = {
+        "binary_fields_verified": verified,
+        "measurement_basis": (
+            "Legacy house-average scored reading fractions against historical desired "
+            "setpoints; not duration-weighted, fixed-panel crop outcomes or confirmed "
+            "firmware consumption. Coverage unverified; no measured center probe."
+        ),
+        "score_basis": (
+            "planner_score and compliance_v2_* are historical graded controller credit, "
+            "not physical compliance. Never widen served bands to improve credit."
+        ),
+    }
+    keys = [
+        "scorecard_contract_version",
+        "planner_score",
+        "planner_score_resource_weight_pct",
+        "resource_terms_available",
+        "compliance_v2_raw_pct",
+        "compliance_v2_attributable_pct",
+        "compliance_v2_unachievable_frac",
+        "graded_temp_compliance_pct",
+        "graded_vpd_compliance_pct",
+    ]
+    if verified:
+        keys.extend(["compliance_pct", "temp_compliance_pct", "vpd_compliance_pct"])
+    # This standalone service's flat context rejects nulls: omit unavailable
+    # metrics, never replace missing evidence with zero.
+    result.update({key: scorecard[key] for key in keys if scorecard.get(key) is not None})
+    return result
+
+
 @dataclass(frozen=True)
 class TriggerRecord:
     trigger_id: str
@@ -115,17 +149,9 @@ class VerdifyReadClient:
                 )
                 climate = cast(dict[str, object], dict(cast(Any, cur.fetchone() or {})))
 
-                cur.execute(
-                    "SELECT * FROM fn_planner_scorecard((now() AT TIME ZONE 'America/Denver')::date)"
-                )
-                scorecard_rows = [
-                    cast(dict[str, object], dict(cast(Any, row)))
-                    for row in cur.fetchall()
-                ]
-                scorecard = {
-                    str(row["metric"]): self._coerce_numeric(row["value"])
-                    for row in scorecard_rows
-                }
+                cur.execute("SELECT * FROM fn_planner_scorecard((now() AT TIME ZONE 'America/Denver')::date)")
+                scorecard_rows = [cast(dict[str, object], dict(cast(Any, row))) for row in cur.fetchall()]
+                scorecard = {str(row["metric"]): self._coerce_numeric(row["value"]) for row in scorecard_rows}
 
                 cur.execute(
                     """
@@ -142,9 +168,7 @@ class VerdifyReadClient:
                       ) AS forecast_24h
                     """
                 )
-                forecast = cast(
-                    dict[str, object], dict(cast(Any, cur.fetchone() or {}))
-                )
+                forecast = cast(dict[str, object], dict(cast(Any, cur.fetchone() or {})))
 
                 cur.execute(
                     """
@@ -180,10 +204,7 @@ class VerdifyReadClient:
                      LIMIT 5
                     """
                 )
-                alerts = [
-                    cast(dict[str, object], dict(cast(Any, row)))
-                    for row in cur.fetchall()
-                ]
+                alerts = [cast(dict[str, object], dict(cast(Any, row))) for row in cur.fetchall()]
 
                 cur.execute(
                     """
@@ -201,13 +222,9 @@ class VerdifyReadClient:
                       FROM setpoint_snapshot
                     """
                 )
-                guardrails = cast(
-                    dict[str, object], dict(cast(Any, cur.fetchone() or {}))
-                )
+                guardrails = cast(dict[str, object], dict(cast(Any, cur.fetchone() or {})))
 
-        alerts_summary = [f"{row['severity']}: {row['message']}" for row in alerts] or [
-            "No blocking alerts"
-        ]
+        alerts_summary = [f"{row['severity']}: {row['message']}" for row in alerts] or ["No blocking alerts"]
         forecast_summary = {
             "headline": (
                 f"24h high {forecast.get('max_temp_f')}F, "
@@ -216,12 +233,7 @@ class VerdifyReadClient:
             "forecast_hours": 24,
             "max_solar_w_m2": forecast.get("max_solar_w_m2"),
         }
-        scorecard_summary = {
-            "planner_score": scorecard.get("planner_score"),
-            "compliance_pct": scorecard.get("compliance_pct"),
-            "temp_compliance_pct": scorecard.get("temp_compliance_pct"),
-            "vpd_compliance_pct": scorecard.get("vpd_compliance_pct"),
-        }
+        scorecard_summary = scorecard_context(scorecard)
         active_plan_summary = {
             "plan_id": plan.get("plan_id"),
             "created_local": plan.get("created_local"),
@@ -230,9 +242,7 @@ class VerdifyReadClient:
         clamp_summary = {
             "active_clamps_24h": clamps.get("clamp_events_24h", 0),
             "last_clamp_at": (
-                cast(datetime, clamps["last_clamp_at"]).isoformat()
-                if clamps.get("last_clamp_at") is not None
-                else None
+                cast(datetime, clamps["last_clamp_at"]).isoformat() if clamps.get("last_clamp_at") is not None else None
             ),
         }
         guardrail_summary = {
@@ -258,9 +268,7 @@ class VerdifyReadClient:
             "clamp_summary": clamp_summary,
             "guardrail_audit_summary": guardrail_summary,
         }
-        digest_payload = json.dumps(context, sort_keys=True, default=str).encode(
-            "utf-8"
-        )
+        digest_payload = json.dumps(context, sort_keys=True, default=str).encode("utf-8")
         context["context_digest"] = hashlib.sha256(digest_payload).hexdigest()[:16]
         return context
 
@@ -293,9 +301,7 @@ class VerdifyReadClient:
         from psycopg.rows import dict_row
 
         if self.dsn is None:
-            raise RuntimeError(
-                "VerdifyReadClient requires a DSN for database-backed mode"
-            )
+            raise RuntimeError("VerdifyReadClient requires a DSN for database-backed mode")
         return cast(Any, psycopg.connect(self.dsn, row_factory=dict_row))  # pyright: ignore[reportArgumentType]
 
     @staticmethod
