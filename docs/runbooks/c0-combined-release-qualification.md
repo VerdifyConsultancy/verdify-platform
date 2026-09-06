@@ -7,6 +7,8 @@ passes below are not evidence that those services can restart after migration.
 Do not deploy this bundle until an explicitly validated boundary transition
 preserves the fail-closed startup guard. Do not disable that guard, blindly
 replace stored hashes, or rerun immutable migration 217 to bless changed state.
+The old digest also omits the new private climate-capture payload helper; a
+fresh hash alone would leave that newly reachable function unprotected.
 
 The measurement, forecast, band-lineage and incident PRs are a stacked release.
 Passing each SQL fixture separately does not prove their shared tables, roles,
@@ -164,6 +166,75 @@ release boundary. Test hostile preexisting drift, injected migration failures,
 receipt integrity, rollback/resume, exact ordinary-login startup and the actual
 restored production schema. A generic "recompute the hash after migrations"
 step would erase the security property and is not an acceptable repair.
+
+### Read-only explanation of the exact digest changes
+
+`scripts/ordinary-boundary-diff.py` supplies the catalog comparison needed to
+review that transition. It **does not implement the receipt transition** and
+does not remove the release hold. It has no DB client or permission-changing
+operation. `emit-sql` emits one bounded repeatable-read, read-only transaction
+for either exact ordinary login; only an already-authorized operator should run
+it against an isolated restored target. No extra access is implied.
+
+```sh
+python scripts/ordinary-boundary-diff.py emit-sql \
+  --login verdify_api_runtime_login
+python scripts/ordinary-boundary-diff.py compare \
+  --before /authorized/evidence/before.json \
+  --after /authorized/evidence/after.json \
+  --output /authorized/evidence/new-comparison.json
+SCORECARD_TEST_PG_BIN=/path/to/private-postgres16/bin python -m pytest -q \
+  tests/test_ordinary_boundary_diff.py tests/test_c0_release_rehearsal.py \
+  tests/test_apply_migrations_runner.py
+```
+
+The emitter pins the complete immutable migration-217 source SHA256 and projects
+its actual `security_entries` expression, not a newly invented subset. It checks
+the installed digest function's body hash, owner, language, definer mode and
+search path, and requires its independently recomputed full digest to equal the
+installed function's result. PostgreSQL deparses object names according to the
+search path; the emitted query deliberately uses the digest function's exact
+`pg_catalog, pg_temp` path, not the application's startup search path.
+
+Outputs contain catalog categories, object identities and per-entry hashes.
+They do not expose function/view definitions, role-setting values or raw catalog
+preimages. All 13 source categories, including internal/trigger functions, are
+retained. Multiple entries for one object are compared as hash multisets, so
+duplicate/removed entries cannot disappear through dictionary overwrites.
+Unknown categories, unverified installed source, projection disagreement,
+incompatible login/database-name/server-version pairs and malformed hashes are
+refused. The comparison uses exclusive output creation and binds both input
+file hashes and tool hash. These are byte bindings, not signatures or proof of
+the same physical database; authorization flags are always false.
+
+Actual PostgreSQL tests compare both logins before and after each source
+migration. A separate counterexample grants SELECT WITH GRANT OPTION on
+`v_planner_performance` after its legitimate source change: the set of changed
+object names is **identical**, but the per-entry hashes reveal the additional
+privilege expansion. Therefore merely allowing the named objects touched by a
+migration would silently accept unauthorized ACL changes. The eventual repair
+must qualify the specific definition/ownership/ACL/column/constraint/trigger
+transition, not just that object list. Another case replaces the installed
+digest function and proves the comparator refuses it rather than treating its
+replacement result as evidence.
+
+A further actual-function test applies 241–244, captures synthetic matching
+receipts, then changes only the private
+`fn_daily_climate_metric_payload(public.daily_summary)` body. Both full digest
+values and both startup checks remain unchanged. An ordinary ingestor update
+then changes a climate metric without creating the required capture revisions:
+the altered helper makes OLD and NEW payloads equal. This is not a defect in
+the comparator—it exactly reproduces the installed digest's **incomplete new
+callee coverage**. Migration 217's fixed internal-function list predates this
+helper. The repair must extend the attested reachable-function contract as well
+as validate the authorized predecessor/successor transition; an unchanged old
+digest is not adequate acceptance for the new capture path. The mutation and
+suppressed capture occurred only in the private synthetic fixture.
+
+Optional `C0_BOUNDARY_REPORT_DIR` in the tests writes exclusive synthetic
+before/after projections and deltas to an existing local evidence directory.
+Those artifacts are explicitly marked synthetic and cannot be used as approved
+production fingerprints or permission to refresh a real receipt.
 
 Physical Gate P, protocol lock/draw and randomized launch remain separately
 authorized transitions. Neither this rehearsal nor deployment clears the incident
