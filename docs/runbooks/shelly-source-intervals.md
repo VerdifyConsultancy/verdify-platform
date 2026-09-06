@@ -25,9 +25,11 @@ becomes `kwh_today`; unverified heat/fan/other attribution remains NULL.
 
 Migration 248 appends evidence columns and bounded insert grants to the existing
 owner-sealed write facade; it grants no base-table DML or runtime function. The
-interval calculation is inlined into the attested daily and health views, not an
-untracked private callee; mutation tests verify both fingerprints cover each copy. Old
-rows retain their existing field values and NULL revision, not invented source provenance.
+interval calculation is inlined into `v_energy_daily` and the API's actual
+`v_resource_accounting_health` reader, not a private health callee. Mutation tests
+verify both fingerprints cover each copy using the energy-related grants extracted
+from immutable migration 217. Old rows retain their existing field values and
+NULL revision, not invented source provenance.
 All polls participate in sequencing, including invalid/null polls. Duplicate
 timestamps cannot supply an interval. Valid intervals end at the earliest next
 poll, collection+300s or either source+300s. The final sample has no extrapolated
@@ -48,6 +50,32 @@ does not define waste. The public projection retains scope and false eligibility
 Both daily writers use the null-preserving consumer to clear stale derived totals
 and peaks for the intended greenhouse/day. Frozen research files and outcomes
 are not rewritten, and no calibration, daily reset or installed circuit is inferred.
+
+## Source-derived reader boundary
+
+The required existing, non-grantable table-level SELECT grants are:
+
+| Reader view | Duty role |
+|---|---|
+| `v_energy_daily` | `verdify_ingestor_runtime` |
+| `v_energy_estimate_reconciliation` | `verdify_api_runtime` |
+| `v_resource_accounting_health` | `verdify_api_runtime` |
+
+These ACL entries put each body in both 217 catalog fingerprints. Missing,
+indirect-only, PUBLIC-only or grantable substitutes are refused before columns or
+privileges change. The migration does not repair or invent a reader grant. This
+checks the required energy subset, not the complete production role inventory.
+
+The earlier `cdf423f5` fixture granted API access directly to private
+`v_energy_meter_health` and to `v_energy_daily`; those are not migration 217's API
+grants. Its mutation pass therefore did not establish the real reader boundary.
+The corrected test proves that changing the old private health body can leave
+both fingerprints unchanged. The repaired outer view contains its own power-health
+calculation and preserves the existing water/runtime-model UNION branches. The
+old private health view becomes a compatibility projection of that outer view;
+the dependency no longer runs from the public reader into the private helper.
+API access to both private health and the ingestor-only daily view stays denied.
+No new SELECT privilege is added.
 
 ## Qualification and delivery
 

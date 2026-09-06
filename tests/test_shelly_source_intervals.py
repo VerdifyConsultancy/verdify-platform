@@ -3,6 +3,7 @@
 import ast
 import asyncio
 import json
+import re
 import shutil
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -97,10 +98,32 @@ def predecessor(isolated_pg):
         SELECT ts,watts_total,watts_heat,watts_fans,watts_other,kwh_today FROM public.energy;
         GRANT INSERT(ts,watts_total,watts_heat,watts_fans,watts_other,kwh_today)
         ON public.v_runtime_energy_write TO verdify_ingestor_runtime;
-        GRANT SELECT ON public.v_energy_daily,public.v_energy_estimate_reconciliation,public.v_energy_meter_health TO verdify_api_runtime;
         ALTER TABLE public.daily_summary ADD COLUMN peak_kw float8;
         ALTER TABLE public.daily_summary ADD COLUMN captured_at timestamptz;
     """)
+    # Use the energy-related subset of the immutable owning role migration,
+    # not invented fixture grants that would hide untracked private callees.
+    source = (ROOT / "db/migrations/217-runtime-role-boundary.sql").read_text()
+    related = {
+        "energy",
+        "v_energy_daily",
+        "v_energy_meter_health",
+        "v_runtime_energy_daily",
+        "v_energy_estimate_reconciliation",
+        "v_resource_accounting_health",
+    }
+    selected = {}
+    for block, role in re.findall(
+        r"^GRANT SELECT ON TABLE\s*\n(.*?)^TO (verdify_api_runtime|verdify_ingestor_runtime);", source, re.S | re.M
+    ):
+        names = set(re.findall(r"public\.([a-z_0-9]+)", block)) & related
+        selected.setdefault(role, set()).update(names)
+        if names:
+            q("GRANT SELECT ON " + ",".join("public." + name for name in sorted(names)) + " TO " + role)
+    assert selected == {
+        "verdify_api_runtime": {"v_energy_estimate_reconciliation", "v_resource_accounting_health"},
+        "verdify_ingestor_runtime": {"energy", "v_energy_daily", "v_runtime_energy_daily"},
+    }
     assert q("SELECT extversion FROM pg_extension WHERE extname='timescaledb'") == "2.25.2"
     return q
 
@@ -196,7 +219,15 @@ def test_cross_midnight_signed_energy_conserved(database):
 
 def test_real_duty_insert_and_api_read_not_base_write(database):
     insert_many(database, [sample(), sample(NOW + timedelta(seconds=300))], duty=True)
-    assert database("SET ROLE verdify_api_runtime; SELECT measured_kwh FROM public.v_energy_daily") == "0.083"
+    assert (
+        database(
+            "SET ROLE verdify_api_runtime; SELECT measured_kwh FROM public.v_energy_estimate_reconciliation WHERE date='2026-08-14' AND greenhouse_id='vallery'"
+        )
+        == "0.083"
+    )
+    for relation in ("v_energy_daily", "v_energy_meter_health"):
+        with pytest.raises(AssertionError, match="permission denied"):
+            database("SET ROLE verdify_api_runtime; SELECT * FROM public." + relation)
     for role in ("verdify_api_runtime", "verdify_ingestor_runtime"):
         assert database(f"SELECT has_table_privilege('{role}','public.energy','INSERT')") == "f"
     with pytest.raises(AssertionError, match="permission denied"):
@@ -255,6 +286,57 @@ def test_unknown_facade_refuses_before_schema_changes(predecessor):
     )
 
 
+@pytest.mark.parametrize(
+    "view,duty",
+    [
+        ("v_energy_daily", "verdify_ingestor_runtime"),
+        ("v_energy_estimate_reconciliation", "verdify_api_runtime"),
+        ("v_resource_accounting_health", "verdify_api_runtime"),
+    ],
+)
+@pytest.mark.parametrize("mode", ["missing", "indirect", "public_only", "grantable"])
+def test_reader_boundary_predecessor_refuses_without_repair(predecessor, view, duty, mode):
+    q = predecessor
+    q(f"REVOKE SELECT ON public.{view} FROM {duty}")
+    if mode == "indirect":
+        q(
+            f"CREATE ROLE unrelated_reader NOLOGIN; GRANT SELECT ON public.{view} TO unrelated_reader; GRANT unrelated_reader TO {duty}"
+        )
+        assert q(f"SELECT has_table_privilege('{duty}','public.{view}','SELECT')") == "t"
+    elif mode == "public_only":
+        q(f"GRANT SELECT ON public.{view} TO PUBLIC")
+    elif mode == "grantable":
+        q(f"GRANT SELECT ON public.{view} TO {duty} WITH GRANT OPTION")
+    snapshot_sql = """SELECT jsonb_agg(to_jsonb(r) ORDER BY relname) FROM (
+        SELECT oid,relname,relacl FROM pg_class WHERE relnamespace='public'::regnamespace) r"""
+    before = q(snapshot_sql)
+    with pytest.raises(AssertionError, match="attested reader predecessor"):
+        q("BEGIN;" + MIGRATION.read_text() + "COMMIT;")
+    assert q(snapshot_sql) == before
+    assert (
+        q(
+            "SELECT count(*) FROM pg_attribute WHERE attrelid='public.energy'::regclass AND attname='measurement_revision'"
+        )
+        == "0"
+    )
+
+
+def test_legacy_private_health_mutation_is_not_in_either_digest(predecessor):
+    """Counterexample with source-derived217 grants, not an endorsement of legacy health."""
+    q = predecessor
+    install_actual_attestation_probe(q)
+    digest_sql = "SELECT jsonb_object_agg(login_name,encode(public.fn_runtime_ordinary_boundary_digest(login_name),'hex')) FROM public.runtime_ordinary_login_attestation_receipts;"
+    before = q(digest_sql)
+    source = (ROOT / "db/migrations/194-scope-aware-resource-accounting.sql").read_text()
+    body = source.split("CREATE OR REPLACE VIEW public.v_energy_meter_health AS", 1)[1].split(
+        "COMMENT ON VIEW public.v_energy_meter_health", 1
+    )[0]
+    assert "10 minutes" in body
+    changed = "CREATE OR REPLACE VIEW public.v_energy_meter_health AS" + body.replace("10 minutes", "11 minutes")
+    assert q("BEGIN;" + changed + digest_sql + "ROLLBACK;") == before
+    assert q(digest_sql) == before
+
+
 def test_actual_attestation_refuses_changed_boundary_without_refresh(predecessor):
     q = predecessor
     install_actual_attestation_probe(q)
@@ -266,7 +348,8 @@ def test_actual_attestation_refuses_changed_boundary_without_refresh(predecessor
     metadata_sql = """SELECT jsonb_agg(to_jsonb(r) ORDER BY relname) FROM (
         SELECT oid,relname,relowner,relacl FROM pg_class WHERE oid IN (
         'public.v_runtime_energy_write'::regclass,'public.v_energy_daily'::regclass,
-        'public.v_energy_meter_health'::regclass,'public.v_energy_estimate_reconciliation'::regclass)) r"""
+        'public.v_energy_meter_health'::regclass,'public.v_energy_estimate_reconciliation'::regclass,
+        'public.v_resource_accounting_health'::regclass)) r"""
     metadata_before = q(metadata_sql)
     q("BEGIN;" + MIGRATION.read_text() + "COMMIT;")
     assert (
@@ -283,8 +366,8 @@ def test_actual_attestation_refuses_changed_boundary_without_refresh(predecessor
     current = json.loads(q(digest_sql))
     source = MIGRATION.read_text()
     for name, next_name in (
-        ("v_energy_daily", "v_energy_meter_health"),
-        ("v_energy_meter_health", "v_energy_estimate_reconciliation"),
+        ("v_energy_daily", "v_resource_accounting_health"),
+        ("v_resource_accounting_health", "v_energy_meter_health"),
     ):
         statement = source.split("CREATE OR REPLACE VIEW public." + name + " AS", 1)[1].split(
             "CREATE OR REPLACE VIEW public." + next_name + " AS", 1
@@ -323,6 +406,64 @@ def test_public_resource_projection_keeps_scopes_and_unqualified_flags(database)
     assert output["estimate_delta_kwh"] is None
     assert output["measured_available_for_scoring"] is False
     assert output["measured_scope"] == "partial_shelly_two_channels"
+
+
+@pytest.mark.parametrize("age,status", [(0, "fresh"), (1200, "stale"), (None, "unavailable")])
+def test_public_health_and_compatibility_agree_without_enabling_scoring(database, age, status):
+    if age is not None:
+        observed = datetime.fromisoformat(database("SELECT now()::text")) - timedelta(seconds=age)
+        insert_many(database, [sample(observed)])
+    public = json.loads(
+        database(
+            "SET ROLE verdify_api_runtime; SELECT to_jsonb(h) FROM public.v_resource_accounting_health h WHERE resource='energy_partial_meter' AND greenhouse_id='vallery'"
+        )
+    )
+    private = json.loads(
+        database("SELECT to_jsonb(h) FROM public.v_energy_meter_health h WHERE greenhouse_id='vallery'")
+    )
+    assert public["detail"]["current_meter_status"] == private["meter_status"] == status
+    assert public["observed_through"] == private["latest_ts"]
+    assert public["detail"]["recent_sample_count"] == private["recent_sample_count"] == (1 if status == "fresh" else 0)
+    assert private["fresh_for_observation"] is (status == "fresh")
+    assert public["available_for_scoring"] is False
+
+
+def test_public_health_owns_power_calculation_not_private_compatibility(database):
+    from test_api_public_output_policy import load_api
+
+    source = (ROOT / "db/migrations/194-scope-aware-resource-accounting.sql").read_text()
+    old = source.split("CREATE OR REPLACE VIEW public.v_resource_accounting_health AS\n", 1)[1].split(
+        "COMMENT ON VIEW public.v_resource_accounting_health", 1
+    )[0]
+    unchanged = old.split("UNION ALL\nSELECT\n    'energy_partial_meter'", 1)[0]
+    assert unchanged in MIGRATION.read_text()  # preserve water and whole-model branches
+    relations_sql = """SELECT coalesce(jsonb_agg(DISTINCT ref.relname),'[]')
+        FROM pg_rewrite rw JOIN pg_depend dep ON dep.classid='pg_rewrite'::regclass AND dep.objid=rw.oid
+        JOIN pg_class ref ON dep.refclassid='pg_class'::regclass AND ref.oid=dep.refobjid
+        WHERE rw.ev_class='public.v_resource_accounting_health'::regclass"""
+    assert "v_energy_meter_health" not in json.loads(database(relations_sql))
+    # The API has its actual outer-view grant, not a test-only grant to private health.
+    row = json.loads(
+        database(
+            "SET ROLE verdify_api_runtime; SELECT to_jsonb(h) FROM public.v_resource_accounting_health h WHERE resource='energy_partial_meter' AND greenhouse_id='vallery'"
+        )
+    )
+    output = load_api()._project_resource_health(row)
+    assert output["quality"] == "unavailable" and output["available_for_scoring"] is False
+    assert output["detail"]["scope"] == "partial_shelly_two_channels"
+    before = database(
+        "SELECT to_jsonb(h) FROM public.v_resource_accounting_health h WHERE resource='energy_partial_meter' AND greenhouse_id='vallery'"
+    )
+    # A change to the compatibility projection cannot alter the API calculation.
+    definition = database("SELECT pg_get_viewdef('public.v_energy_meter_health'::regclass,true)")
+    assert "'fresh'::text" in definition
+    changed = definition.replace("'fresh'::text", "'invented'::text")
+    observed = database(
+        "BEGIN; CREATE OR REPLACE VIEW public.v_energy_meter_health AS "
+        + changed
+        + "SELECT to_jsonb(h) FROM public.v_resource_accounting_health h WHERE resource='energy_partial_meter' AND greenhouse_id='vallery';ROLLBACK;"
+    )
+    assert observed == before
 
 
 def test_both_daily_paths_call_missingness_preserving_consumer():
