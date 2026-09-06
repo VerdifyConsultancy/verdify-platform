@@ -51,7 +51,6 @@ checks:
     command: export PYTHONPATH="$PWD" && uv sync --python 3.12 --extra dev --extra
       api --extra planner --extra planner-graph && uv pip install --python .venv/bin/python
       -r ingestor/requirements-image.txt && python3 /usr/local/bin/verdify-campaign-ci
-    image: registry.vallery.net/jvallery/agents-agent-dev-runtime@sha256:cdcf02963267134bc8fd7d0f979ba7ed5e001d3860f17e5145bc28f25fc3e333
   - name: firmware-logic
     command: "bash -lc ' set -euo pipefail; test -f firmware/test/data/replay_overrides.csv\
       \ || gunzip -k firmware/test/data/replay_overrides.csv.gz; cd firmware; g++\
