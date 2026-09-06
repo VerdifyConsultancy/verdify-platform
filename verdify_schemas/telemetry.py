@@ -348,9 +348,9 @@ class EquipmentStateEvent(BaseModel):
 
 
 class EnergySample(BaseModel):
-    """energy hypertable row — 5 min from Shelly EM50 + derived breakdown."""
+    """Energy row; optional revisioned HA evidence is not circuit commissioning."""
 
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="ignore", allow_inf_nan=False)
 
     ts: AwareDatetime
     greenhouse_id: str = "vallery"
@@ -359,6 +359,15 @@ class EnergySample(BaseModel):
     watts_fans: float | None = None
     watts_other: float | None = None
     kwh_today: float | None = Field(default=None, ge=0)
+    measurement_revision: str | None = None
+    ch0_power_w: float | None = None
+    ch1_power_w: float | None = None
+    ch0_source_ts: AwareDatetime | None = None
+    ch1_source_ts: AwareDatetime | None = None
+    ch0_entity_id: str | None = None
+    ch1_entity_id: str | None = None
+    ch0_quality: str | None = None
+    ch1_quality: str | None = None
 
 
 class SystemStateRow(BaseModel):

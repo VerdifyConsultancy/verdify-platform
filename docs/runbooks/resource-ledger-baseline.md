@@ -1,5 +1,9 @@
 # Frozen resource ledger and commissioning boundary
 
+The historical producer counterexamples are now superseded in source by the
+[paired producer/interval repair](shelly-source-intervals.md). That candidate is
+not deployed or commissioned; the frozen baseline below remains byte-unchanged.
+
 Campaign #775 / #781. This is historical baseline evidence and a versioned
 offline data contract, **not resource commissioning or a runtime correction**.
 The 22 completed America/Denver dates are August 14 through September 4, 2026.

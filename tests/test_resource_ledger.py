@@ -360,19 +360,32 @@ def test_window_refusal(extraction, start, end):
 @pytest.mark.parametrize(
     "states,expected",
     [
-        ({"a": 120}, (120, 0, 120)),
-        ({"b": 80}, (80, 80, 0)),
-        ({"counter": 12}, (0, 0, 0)),
-        ({"a": 120, "b": 80}, (200, 80, 120)),
+        ({"a": 120}, None),
+        ({"b": 80}, None),
+        ({"counter": 12}, None),
+        ({"a": 120, "b": 80}, 200),
         ({}, None),
     ],
 )
-def test_current_shelly_writer_baseline_counterexample(states, expected):
-    """Execute the actual function with I/O doubles, documenting—not endorsing—its defect.
+def test_shelly_writer_supersedes_zero_fill_counterexample(states, expected):
+    """Same historical counterexamples, now asserting the repaired actual writer.
 
-    A future producer correction must intentionally revise/supersede this baseline.
-    AST isolation avoids importing task startup, projected tokens, or HA clients.
+    Only I/O is doubled; actual source converter and typed schema run. No tasks,
+    projected tokens or HA clients are imported and no frozen baseline is edited.
     """
+    from ingestor import shelly_energy as energy
+
+    observed_at = datetime.now(UTC)
+    response = {
+        entity: {
+            "entity_id": entity,
+            "state": str(states[key]),
+            "attributes": {"unit_of_measurement": "W"},
+            "last_updated": observed_at.isoformat(),
+        }
+        for key, entity in zip(("a", "b"), energy.POWER_ENTITIES, strict=True)
+        if key in states
+    }
     tree = ast.parse((ROOT / "ingestor/tasks/ha.py").read_text())
     function = next(node for node in tree.body if isinstance(node, ast.AsyncFunctionDef) and node.name == "shelly_sync")
     assert not function.decorator_list
@@ -382,19 +395,13 @@ def test_current_shelly_writer_baseline_counterexample(states, expected):
         "UTC": UTC,
         "HA_TOKEN_FILE": "unused-test-placeholder",
         "_load_token": lambda _: "noncredential-test-placeholder",
-        "_fetch_ha_batch": lambda *_: states,
-        "_SHELLY_ENTITIES": {
-            "a": ("ch0_power_w", None),
-            "b": ("ch1_power_w", None),
-            "counter": ("ch0_energy_kwh", None),
-        },
-        "_ha_state": lambda rows, name: SimpleNamespace(as_float=lambda: rows[name]) if name in rows else None,
-        "ValidationError": ValueError,
+        "_fetch_ha_batch": lambda *_: response,
+        "POWER_ENTITIES": energy.POWER_ENTITIES,
+        "WRITE_FIELDS": energy.WRITE_FIELDS,
+        "SHELLY_INSERT_SQL": energy.INSERT_SQL,
+        "build_sample": energy.build_sample,
         "log": SimpleNamespace(info=lambda *_: None, debug=lambda *_: None),
     }
-    from verdify_schemas.telemetry import EnergySample
-
-    namespace["EnergySample"] = EnergySample
     exec(compile(ast.Module(body=[function], type_ignores=[]), "actual-shelly-sync", "exec"), namespace)  # noqa: S102
     writes = []
 
@@ -406,15 +413,13 @@ def test_current_shelly_writer_baseline_counterexample(states, expected):
             return False
 
         async def execute(self, sql, *values):
-            assert "INSERT INTO v_runtime_energy_write" in sql
+            assert sql == energy.INSERT_SQL
             writes.append(values)
 
     pool = SimpleNamespace(acquire=Connection)
     asyncio.run(namespace["shelly_sync"](pool))
-    if expected is None:
-        assert not writes
-    else:
-        assert len(writes) == 1
-        values = writes[0]
-        assert (values[1], values[2], values[4]) == expected
-        assert values[0].tzinfo is UTC
+    assert len(writes) == 1
+    values = dict(zip(energy.WRITE_FIELDS, writes[0], strict=True))
+    assert values["watts_total"] == expected
+    assert all(values[field] is None for field in ("watts_heat", "watts_fans", "watts_other", "kwh_today"))
+    assert values["ts"].tzinfo is UTC
