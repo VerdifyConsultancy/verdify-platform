@@ -6,11 +6,12 @@ metadata:
     app.kubernetes.io/part-of: verdify
     app.kubernetes.io/component: experiment-v2-restore-rehearsal
   annotations:
-    # This hook rehearses schema compatibility and effective ACLs for the
-    # disposable non-superuser role. It is not a production-superuser denial
-    # proof and it does not contact the production database.
+    # Legacy candidates rehearse schema compatibility and disposable-role ACLs.
+    # C0 candidates only inspect the restored catalog, then intentionally HOLD
+    # with exit 1; this is not a migration qualification or deployment approval.
+    # Neither path contacts the production database.
     argocd.argoproj.io/hook: PreSync
-    # Keep the successful Job and its pod log as the release evidence. A later
+    # Keep the successful or held Job and its pod log as evidence. A later
     # deliberate rehearsal replaces it; this one-shot hook must not erase its
     # own proof on success.
     argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
@@ -47,6 +48,23 @@ spec:
               cp -R /db/. /work/db/
               cp /usr/local/bin/apply-migrations.sh /work/bin/apply-migrations.sh
               cp /scripts/check_migration_rollback_safety.py /work/scripts/check_migration_rollback_safety.py
+              # BEGIN C0_INSPECTION_PREPARE
+              # Generate exact read-only SQL in the Python-equipped candidate
+              # image; the restore image does not need a Python installation.
+              c0_inventory=0
+              for candidate in /db/migrations/24[1-7]*.sql; do
+                if [ -f "${candidate}" ]; then c0_inventory=1; fi
+              done
+              if [ "${c0_inventory}" = "1" ]; then
+                python3 -c 'import importlib.util; s=importlib.util.spec_from_file_location("c0", "/scripts/c0-boundary-transition.py"); m=importlib.util.module_from_spec(s); s.loader.exec_module(m); m.checked_sources()'
+                install -d /work/c0-inspection
+                for login in verdify_api_runtime_login verdify_ingestor_runtime_login; do
+                  python3 /scripts/ordinary-boundary-diff.py emit-sql --login "${login}" > "/work/c0-inspection/${login}.sql"
+                done
+                sha256sum /db/migrations/217-runtime-role-boundary.sql /db/migrations/24[1-7]*.sql /scripts/ordinary-boundary-diff.py > /work/c0-inspection/source.sha256
+                (cd /work/c0-inspection && sha256sum ./*.sql > sql.sha256)
+              fi
+              # END C0_INSPECTION_PREPARE
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

@@ -112,6 +112,55 @@ stand in for the new owning-path tests. The audited backfill fixture test also
 explicitly requires all seven C0 files to remain absent from historical baseline
 stamps. No applied migration or baseline artifact is rewritten.
 
+## Restored-catalog inspection is a hold, not qualification
+
+The retained `experiment-v2-restore-rehearsal` component remains **inactive** in
+production. Its legacy per-file replay cannot qualify the C0 atomic transition.
+For an image containing any 241–247 source, the candidate init container now
+checks the fixed seven-file source closure and generates the exact read-only
+catalog SQL for both ordinary logins. Python runs in the candidate migrate
+image; the Timescale restore image needs only its existing shell/psql utilities.
+
+After restoring a recent dump with owners/ACLs and refreshing materialized views,
+the C0 path verifies the generated SQL checksums, emits names/hashes-only catalog
+observations and their SHA256s, then deliberately exits 1 with `HOLD`. It never
+reaches legacy baseline recovery, per-file apply or the old advisory fixtures.
+It does not run C0 migrations, rerun 217, refresh receipts, generate an approved
+contract or declare a successful qualification. A held/Failed Job must not be
+converted to PASS to permit later PreSync work. Raw restore and inspection errors
+are retained only in private temporary files, not published as database output.
+
+This is a diagnostic preparation path, not an activation instruction. Before a
+bounded real rehearsal, the owning release must resolve its source/image digest,
+fresh backup provenance, effective isolation, evidence retention and authorized
+broker access. No backup or live database access is granted by these manifests.
+The candidate component is not enabled and no digest is changed by this repair.
+Retain failed attempts and their sanitized artifacts before a replacement hook;
+`BeforeHookCreation` replaces the previous hook, and `prune:false` does not clean
+up resources removed from Git. Any eventual cleanup requires exact owned targets
+and retained evidence. Reverting this inactive source has no runtime rollback
+effect; it does not undo a future database transition.
+
+Restored receipt hashes may differ because database identity, role OIDs and
+cluster-level role settings are not reproduced by a database dump alone. The
+legacy role preseed is not a verified production role inventory. Explain those
+differences against authorized target metadata; do not transplant restored or
+synthetic hashes into a production contract or treat mismatch as approval.
+An isolated restored-data transition, role/SQL/setter/export/analyzer proof and
+independent target-specific contract review remain required before deployment.
+
+`tests/test_c0_restore_inspection.py` runs a real custom-format `pg_dump` and
+`pg_restore` on synthetic native Timescale 2.25.2/PG16 data into a second database
+in the same private cluster. It verifies retained stale receipts, both source-
+verified projections, explicit hold, unchanged catalog/data/ledger/receipts and
+unchanged dump bytes. It also checks changed-SQL rejection, error-value redaction
+and a Secret-free component render. It does not test a production backup, a new
+cluster's complete role reconstruction, compressed chunks, the full container
+entrypoint or deployed Job isolation. Run it with the same explicit PG binary
+binding above and add it to the owning CI contract; missing dependencies/skips
+are not qualification. No full Secret-bearing production render is required
+for this component-only check.
+
 ## Delivery boundary
 
 Add this owning-path module to the CI contract in the owning fleet registry;
