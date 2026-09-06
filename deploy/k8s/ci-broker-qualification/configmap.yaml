@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: verdify-ci-broker-qualification
+  namespace: verdify-platform
+  labels:
+    app.kubernetes.io/name: verdify-ci-broker-qualification
+    app.kubernetes.io/part-of: verdify-ci-delivery-test
+data:
+  purpose: repository-scoped Argo plan/apply/status qualification
+  payload-version: "1"
