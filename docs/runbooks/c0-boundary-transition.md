@@ -3,9 +3,10 @@
 Campaign #775 / restore qualification #783 / C0 release PR #793.
 `scripts/c0-boundary-transition.py` emits one transaction for the exact seven
 migrations 241–247 and both ordinary-login attestation receipts. It never
-connects to a database. **No approved production contract ships with it, and
-the normal migration runner/image is not yet wired to invoke it. The release
-hold remains.** Do not run emitted SQL manually against production.
+connects to a database. The [owning delivery path](c0-migration-delivery.md) now
+selects it automatically for a C0-bearing inventory and verifies committed state.
+**No approved production contract or deployed candidate image is supplied. The
+release hold remains.** Do not run emitted SQL manually against production.
 
 ## Trust and scope
 
@@ -122,9 +123,9 @@ No production hash or qualification approval is inferred from test success.
 
 Before releasing, still establish the real backup/restore evidence and exact
 target-specific contract; review full predecessor/successor differences and
-callee closure; qualify supported server/extension/role state; integrate this
-transaction into the owning migrate image/job without allowing the ordinary
-per-file path to commit 241–247 first; add the tests to owning generated CI;
+callee closure; qualify supported server/extension/role state and the integrated
+owning delivery path on that restore; provision the exact contract artifact and
+pin for the PreSync job; add the tests to owning generated CI;
 obtain exact-SHA validation and Kaniko/Zot digest evidence; then verify Argo
 Synced + Healthy and both ordinary application sessions/consumer adoption.
 

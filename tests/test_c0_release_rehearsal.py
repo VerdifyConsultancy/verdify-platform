@@ -1,8 +1,10 @@
-"""One private database, actual ledger runner, and the combined C0 contracts.
+"""One private database, frozen legacy ledger runner, combined C0 counterexamples.
 
 Synthetic baseline only: resource-view stand-ins, date_bin instead of Timescale,
 synthetic crop anchors, and a legacy band-function dependency sentinel. This is
 not a production restore, complete migration history, or physical qualification.
+The hash-pinned historical runner preserves the original per-file behavior
+under test. Current owning-runner behavior is tested in test_c0_migration_delivery.
 Set SCORECARD_TEST_PG_BIN to server/client binaries; no ambient DB is contacted.
 """
 
@@ -30,6 +32,8 @@ from verdify_schemas.observed_minute_reader import read_observed_minute_evidence
 
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATIONS = tuple(sorted((ROOT / "db/migrations").glob("24[1-6]-*.sql")))
+LEGACY_RUNNER = ROOT / "tests/fixtures/c0-legacy-apply-migrations.sh"
+LEGACY_RUNNER_SHA256 = "88995161bec0957e126fcd24564ec921605e3b8b0c553a21bfb3aa02bb64dc6e"
 DAY = date(2026, 9, 4)
 
 
@@ -76,7 +80,8 @@ def snapshot(query):
         "relations": "SELECT oid, relname, relkind, relowner, relacl::text FROM pg_class WHERE relnamespace='public'::regnamespace",
         "columns": "SELECT a.* FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid WHERE c.relnamespace='public'::regnamespace",
         "constraints": "SELECT oid, conname, conrelid, pg_get_constraintdef(oid) AS definition FROM pg_constraint WHERE connamespace='public'::regnamespace",
-        "functions": "SELECT oid, proowner, proacl::text, pg_get_functiondef(oid) AS definition FROM pg_proc WHERE pronamespace='public'::regnamespace",
+        "functions": "SELECT oid, proowner, proacl::text, prokind, prosrc, probin, CASE WHEN prokind<>'a' THEN pg_get_functiondef(oid) END AS definition FROM pg_proc WHERE pronamespace='public'::regnamespace",
+        "aggregates": "SELECT a.* FROM pg_aggregate a JOIN pg_proc p ON p.oid=a.aggfnoid WHERE p.pronamespace='public'::regnamespace",
         "triggers": "SELECT t.oid, pg_get_triggerdef(t.oid) AS definition FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid WHERE c.relnamespace='public'::regnamespace",
         "views": "SELECT oid, pg_get_viewdef(oid) AS definition FROM pg_class WHERE relnamespace='public'::regnamespace AND relkind IN ('v','m')",
         "materialized_rows": "SELECT * FROM mv_daily_kpi",
@@ -95,6 +100,7 @@ def snapshot(query):
 
 @pytest.fixture
 def rehearsal(isolated_pg, tmp_path):
+    assert hashlib.sha256(LEGACY_RUNNER.read_bytes()).hexdigest() == LEGACY_RUNNER_SHA256
     query = isolated_pg
     baseline = combined_baseline()
     query(baseline)
@@ -129,7 +135,7 @@ def rehearsal(isolated_pg, tmp_path):
 
     def run(*args):
         return subprocess.run(
-            ["sh", str(ROOT / "db/apply-migrations.sh"), *args],
+            ["sh", str(LEGACY_RUNNER), *args],
             env=env,
             text=True,
             capture_output=True,

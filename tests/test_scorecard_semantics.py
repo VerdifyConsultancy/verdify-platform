@@ -115,7 +115,7 @@ def test_standalone_planner_keeps_grade_separate_and_missing_absent():
 
 
 @pytest.fixture
-def isolated_pg(tmp_path):
+def isolated_pg(tmp_path, *, preload=None):
     bin_dir = os.environ.get("SCORECARD_TEST_PG_BIN")
     if not bin_dir:
         pytest.skip("set SCORECARD_TEST_PG_BIN to run isolated PostgreSQL proof")
@@ -126,6 +126,10 @@ def isolated_pg(tmp_path):
     pg_bin = Path(bin_dir)
     env = {k: v for k, v in os.environ.items() if not k.startswith("PG")}
     env["LC_ALL"] = "C"
+    assert preload in (None, "timescaledb")
+    server_options = (
+        "" if preload is None else " -c shared_preload_libraries=timescaledb -c timescaledb.telemetry_level=off"
+    )
 
     def run(args, **kwargs):
         result = subprocess.run(args, env=env, text=True, capture_output=True, timeout=60, **kwargs)
@@ -155,7 +159,7 @@ def isolated_pg(tmp_path):
                 "-l",
                 str(cluster / "server.log"),
                 "-o",
-                f"-k {cluster} -c listen_addresses='' -p 55472",
+                f"-k {cluster} -c listen_addresses='' -p 55472{server_options}",
                 "-w",
                 "start",
             ]

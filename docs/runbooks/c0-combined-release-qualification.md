@@ -16,17 +16,22 @@ An [exact-boundary transaction emitter](c0-boundary-transition.md) now provides
 the transition mechanism for qualification: independently reviewed predecessor
 and successor hashes, all seven migrations and both receipts in one transaction,
 strict drift refusal, full rollback and exact-state retry. Its synthetic tests
-exercise the real startup SQL. No approved target-specific production contract
-or migration-image/job integration ships yet; the release hold is unchanged.
+exercise the real startup SQL. The [owning runner/image integration](c0-migration-delivery.md)
+now dispatches to that transaction before bootstrap/replay and verifies committed
+state. No approved target-specific production contract or deployed candidate
+image is supplied; the release hold is unchanged.
 
 The measurement, forecast, band-lineage and incident PRs are a stacked release.
 Passing each SQL fixture separately does not prove their shared tables, roles,
 triggers and readers coexist. `tests/test_c0_release_rehearsal.py` exercises the
-combined migrations 241–246 through `db/apply-migrations.sh`, using one newly
-created private PostgreSQL database per scenario.
+combined migrations 241–246 through the byte-exact historical runner fixture
+`tests/fixtures/c0-legacy-apply-migrations.sh`, using one newly created private
+PostgreSQL database per scenario. Its SHA256 is pinned in the test module.
 `tests/test_inline_climate_capture.py` additionally applies the complete prefix
-through 247 via that same runner and qualifies the repaired capture path. The
-earlier counterexamples deliberately retain the unpatched 241–246 prefix.
+through 247 via that same historical runner and qualifies the repaired capture
+path. The earlier counterexamples deliberately retain the unpatched 241–246
+prefix. Current `db/apply-migrations.sh` behavior is separately exercised by
+`tests/test_c0_migration_delivery.py`; it has no legacy-C0 bypass switch.
 
 ## Reproduce the private rehearsal
 

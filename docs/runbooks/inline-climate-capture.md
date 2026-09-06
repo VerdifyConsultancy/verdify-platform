@@ -61,6 +61,9 @@ SCORECARD_TEST_PG_BIN=/path/to/private-postgres/bin python -m pytest -q \
   tests/test_inline_climate_capture.py
 ```
 
+These per-file regression fixtures use the hash-pinned historical runner at
+`tests/fixtures/c0-legacy-apply-migrations.sh`; the current owning runner's
+atomic C0 path is tested separately in `tests/test_c0_migration_delivery.py`.
 The fixtures start separate socket-only clusters, use synthetic identities and
 source-derived C0 tables/functions, and never use production credentials. Exact
 ordinary-role membership and schema-CREATE denial are explicit fixture setup,
@@ -102,8 +105,10 @@ qualified startup-boundary transition, exact CI/build digests and normal GitOps
 Synced + Healthy/runtime verification must all be satisfied before deployment.
 
 Before applying, retain a current backup and restore/call-site evidence. A failed
-247 rolls back within its normal runner transaction, including the function
-drop; an unexpected dependency remains intact. After a committed deployment,
+247 rolls back within its historical per-file regression transaction, including
+the function drop; the current C0 delivery path rolls back the entire 241–247
+bundle and both startup receipts. An unexpected dependency remains intact.
+After a committed deployment,
 do not edit/replay older applied migration files or assume an image rollback
 restores a removed private function. Any reversal must be a reviewed forward
 change with its own boundary qualification; retaining the inline capture is
