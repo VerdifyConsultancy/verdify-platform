@@ -262,7 +262,8 @@ data:
     # An old receipt will often differ after restore (database identity, role
     # OIDs/settings). Observe that difference; do not recapture or rerun 217.
     c0_inventory=0
-    for candidate in /work/db/migrations/24[1-7]*.sql; do
+    # The resource successor is also held even if the earlier files are omitted.
+    for candidate in /work/db/migrations/24[1-8]*.sql; do
       if [ -f "${candidate}" ]; then c0_inventory=1; fi
     done
     if [[ "${c0_inventory}" == "1" ]]; then

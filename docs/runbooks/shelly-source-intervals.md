@@ -6,6 +6,16 @@ not authorized by the seven-file 241–247 C0 transition. Do not deploy it with 
 older contract, silently expand that inventory, rerun 217 or recapture startup
 receipts. A separately reviewed transition and real restored-target proof remain.
 
+Both migration entrypoints and the inactive restore-rehearsal detector include
+248 even when 241–247 are absent from a selected inventory. This is detection,
+not expansion of the seven-file transition: a 248-only delivery fails exact
+inventory admission before database contact or legacy bootstrap, in apply and
+plan modes. The restored inspection path remains an explicit hold. A native
+disposable counterexample against the prior dispatch showed legacy 248-only
+apply returning success while changing the database and making both ordinary
+startup probes fail. Regression cases preserve this release-boundary failure;
+they do not authorize a resource transition or a receipt refresh.
+
 ## Evidence and interval contract
 
 `ingestor/shelly_energy.py` converts only the two named HA power entities. Payload

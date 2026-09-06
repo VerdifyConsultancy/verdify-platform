@@ -52,7 +52,9 @@ spec:
               # Generate exact read-only SQL in the Python-equipped candidate
               # image; the restore image does not need a Python installation.
               c0_inventory=0
-              for candidate in /db/migrations/24[1-7]*.sql; do
+              # 248 detection keeps resource-only inventories out of legacy replay;
+              # it does not extend the checked seven-file transition.
+              for candidate in /db/migrations/24[1-8]*.sql; do
                 if [ -f "${candidate}" ]; then c0_inventory=1; fi
               done
               if [ "${c0_inventory}" = "1" ]; then
@@ -61,7 +63,7 @@ spec:
                 for login in verdify_api_runtime_login verdify_ingestor_runtime_login; do
                   python3 /scripts/ordinary-boundary-diff.py emit-sql --login "${login}" > "/work/c0-inspection/${login}.sql"
                 done
-                sha256sum /db/migrations/217-runtime-role-boundary.sql /db/migrations/24[1-7]*.sql /scripts/ordinary-boundary-diff.py > /work/c0-inspection/source.sha256
+                sha256sum /db/migrations/217-runtime-role-boundary.sql /db/migrations/24[1-8]*.sql /scripts/ordinary-boundary-diff.py > /work/c0-inspection/source.sha256
                 (cd /work/c0-inspection && sha256sum ./*.sql > sql.sha256)
               fi
               # END C0_INSPECTION_PREPARE

@@ -73,8 +73,11 @@ q() { $PSQL -tA -c "$1"; }
 
 # C0 ordinary-login transition must precede ANY bootstrap or per-file writes.
 # Dispatch by source inventory, not presence of an attestor that could be missing
-# or altered. No environment flag can opt back into the old C0 apply behavior.
-for c0_candidate in "$MIGRATIONS_DIR"/24[1-7]*.sql; do
+# or altered. Include the unqualified resource successor: a narrowed 248-only
+# inventory must fail exact-profile admission, not escape into legacy delivery.
+# Detection is not expansion of the immutable seven-file transition.
+# No environment flag can opt back into the old C0 apply behavior.
+for c0_candidate in "$MIGRATIONS_DIR"/24[1-8]*.sql; do
   [ -f "$c0_candidate" ] || continue
   C0_DELIVERY="${SCRIPT_DIR}/../scripts/c0-migration-delivery.py"
   [ -f "$C0_DELIVERY" ] || C0_DELIVERY="/scripts/c0-migration-delivery.py"

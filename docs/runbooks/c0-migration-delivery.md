@@ -8,6 +8,13 @@ off before schema replay, repair, ledger bootstrap or per-file migration writes.
 The existing `VERDIFY_MIGRATE_LEDGER=1` job opt-in remains required at the image
 entrypoint. There is no legacy-C0 bypass flag and no fallback after a refusal.
 
+Detection also includes the unqualified resource migration 248. Selecting only
+248 must not escape through the old per-file path: apply and plan both reject
+the incomplete exact C0 inventory before DB contact. This does not add 248 to
+the approved seven-file profile. The inactive restore-rehearsal init and main
+detectors likewise recognize a resource-only inventory and cannot skip the
+source-checked inspection/hold path.
+
 **The source integration is not production deployment.** A real restored-target
 qualification, reviewed target-specific contract/pin, exact CI/build results and
 GitOps/runtime adoption remain required. No production contract is supplied and
