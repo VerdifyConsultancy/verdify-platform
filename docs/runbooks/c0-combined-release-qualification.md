@@ -7,14 +7,19 @@ passes below are not evidence that those services can restart after migration.
 Do not deploy this bundle until an explicitly validated boundary transition
 preserves the fail-closed startup guard. Do not disable that guard, blindly
 replace stored hashes, or rerun immutable migration 217 to bless changed state.
-The old digest also omits the new private climate-capture payload helper; a
-fresh hash alone would leave that newly reachable function unprotected.
+The old digest also omits the private climate-capture payload helper introduced
+by 244. Forward migration 247 now removes that dependency by inlining the payload
+in the attested trigger; see [the repair and validation](inline-climate-capture.md).
+That fixes the private-callee gap in source, not the startup-receipt transition.
 
 The measurement, forecast, band-lineage and incident PRs are a stacked release.
 Passing each SQL fixture separately does not prove their shared tables, roles,
 triggers and readers coexist. `tests/test_c0_release_rehearsal.py` exercises the
 combined migrations 241–246 through `db/apply-migrations.sh`, using one newly
 created private PostgreSQL database per scenario.
+`tests/test_inline_climate_capture.py` additionally applies the complete prefix
+through 247 via that same runner and qualifies the repaired capture path. The
+earlier counterexamples deliberately retain the unpatched 241–246 prefix.
 
 ## Reproduce the private rehearsal
 
