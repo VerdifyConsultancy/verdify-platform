@@ -267,6 +267,15 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "238-experiment-v2-separate-day1-authorization.sql",  # separate finalization from audited day-1 approval
         "239-experiment-v2-orphaned-preclaim-recovery.sql",  # seal retained noncausal recovery without proof credit
         "240-experiment-v2-readiness-reader-grants.sql",  # bounded read surface for attended readiness
+        # C0 must apply atomically with its qualified startup receipts; none of
+        # these may be silently pre-stamped by the historical baseline artifact.
+        "241-scorecard-binary-semantics.sql",
+        "242-outdoor-forecast-verification.sql",
+        "243-public-band-lineage.sql",
+        "244-daily-climate-metric-revisions.sql",
+        "245-observed-minute-diagnostics.sql",
+        "246-observed-minute-reader.sql",
+        "247-inline-climate-capture-payload.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(

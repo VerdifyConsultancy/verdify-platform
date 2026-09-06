@@ -71,17 +71,6 @@ q() { $PSQL -tA -c "$1"; }
 [ -d "$MIGRATIONS_DIR" ] || die "migrations dir not found: $MIGRATIONS_DIR"
 [ -f "$LEDGER_BOOTSTRAP" ] || die "ledger bootstrap SQL not found: $LEDGER_BOOTSTRAP"
 
-# C0 ordinary-login transition must precede ANY bootstrap or per-file writes.
-# Dispatch by source inventory, not presence of an attestor that could be missing
-# or altered. No environment flag can opt back into the old C0 apply behavior.
-for c0_candidate in "$MIGRATIONS_DIR"/24[1-7]*.sql; do
-  [ -f "$c0_candidate" ] || continue
-  C0_DELIVERY="${SCRIPT_DIR}/../scripts/c0-migration-delivery.py"
-  [ -f "$C0_DELIVERY" ] || C0_DELIVERY="/scripts/c0-migration-delivery.py"
-  [ -f "$C0_DELIVERY" ] || die "C0 delivery implementation missing; no per-file fallback"
-  exec python3 "$C0_DELIVERY" --migrations-dir "$MIGRATIONS_DIR" "$@"
-done
-
 q "SELECT 1" >/dev/null || die "cannot reach ${DB_HOST}:${DB_PORT:-5432}/${DB_NAME}"
 
 # ── 1. Ledger bootstrap ─────────────────────────────────────────────────────
