@@ -12,6 +12,13 @@ by 244. Forward migration 247 now removes that dependency by inlining the payloa
 in the attested trigger; see [the repair and validation](inline-climate-capture.md).
 That fixes the private-callee gap in source, not the startup-receipt transition.
 
+An [exact-boundary transaction emitter](c0-boundary-transition.md) now provides
+the transition mechanism for qualification: independently reviewed predecessor
+and successor hashes, all seven migrations and both receipts in one transaction,
+strict drift refusal, full rollback and exact-state retry. Its synthetic tests
+exercise the real startup SQL. No approved target-specific production contract
+or migration-image/job integration ships yet; the release hold is unchanged.
+
 The measurement, forecast, band-lineage and incident PRs are a stacked release.
 Passing each SQL fixture separately does not prove their shared tables, roles,
 triggers and readers coexist. `tests/test_c0_release_rehearsal.py` exercises the
@@ -203,7 +210,8 @@ search path; the emitted query deliberately uses the digest function's exact
 
 Outputs contain catalog categories, object identities and per-entry hashes.
 They do not expose function/view definitions, role-setting values or raw catalog
-preimages. All 13 source categories, including internal/trigger functions, are
+preimages. All 14 source categories, including database-specific role settings
+and internal/trigger functions, are
 retained. Multiple entries for one object are compared as hash multisets, so
 duplicate/removed entries cannot disappear through dictionary overwrites.
 Unknown categories, unverified installed source, projection disagreement,

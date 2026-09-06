@@ -24,6 +24,7 @@ CATEGORIES = {
     "role",
     "member",
     "database",
+    "database-role-setting",
     "schema",
     "relation",
     "sequence",
@@ -46,7 +47,8 @@ def require(condition, message):
         raise ValueError(message)
 
 
-def emit_sql(login, raw_source=None):
+def source_projection(login, raw_source=None):
+    """Return the exact pinned body and catalog CTE, without executing SQL."""
     require(login in LOGINS, "unsupported login")
     raw = SOURCE.read_bytes() if raw_source is None else raw_source
     require(sha256(raw) == SOURCE_SHA256, "unreviewed digest source")
@@ -77,6 +79,11 @@ def emit_sql(login, raw_source=None):
         not re.search(r"\bv_(?:protected|internal|invoker|duty)\w*\b|\bp_login_name\b", cte),
         "unresolved source variable",
     )
+    return body, cte
+
+
+def emit_sql(login, raw_source=None):
+    body, cte = source_projection(login, raw_source)
     body_sha = sha256(body.encode())
     return f"""-- {VERSION}; exact migration-217 source SHA256 {SOURCE_SHA256}
 BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;

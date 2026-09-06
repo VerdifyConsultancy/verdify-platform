@@ -4,6 +4,7 @@ import copy
 import importlib.util
 import json
 import os
+import re
 from pathlib import Path
 
 import pytest
@@ -55,6 +56,25 @@ def test_read_only_sql_pinned_source_and_no_runtime_function_redefinition(login)
 def test_arbitrary_login_sql_refused():
     with pytest.raises(ValueError, match="unsupported login"):
         boundary.emit_sql("not-a-supported-login")
+
+
+def test_every_category_in_the_pinned_source_is_accepted():
+    _, cte = boundary.source_projection(boundary.LOGINS[0])
+    assert set(re.findall(r"'([a-z-]+)\|", cte)) == boundary.CATEGORIES
+
+
+def test_database_specific_role_setting_is_hashed_not_disclosed(rehearsal):
+    query, _, _ = rehearsal
+    install_actual_attestation_probe(query)
+    login = boundary.LOGINS[0]
+    before = json.loads(query(boundary.emit_sql(login)))
+    query(f"ALTER ROLE {login} IN DATABASE postgres SET application_name='fixture-setting-value-not-for-artifacts'")
+    after = json.loads(query(boundary.emit_sql(login)))
+    report = boundary.compare(before, after)
+    assert any(entry["category"] == "database-role-setting" for entry in report["changes"])
+    assert "fixture-setting-value-not-for-artifacts" not in json.dumps(after)
+    assert report["successor_receipt_matches"] is False
+    assert report["transition_authorized"] is False
 
 
 @pytest.mark.parametrize(
