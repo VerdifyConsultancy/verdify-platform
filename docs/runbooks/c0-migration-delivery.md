@@ -54,6 +54,14 @@ stamps are refused. This is a bounded release profile, not permission to skip
 unqualified predecessors or automatically approve future migration 248+. A later
 boundary-changing release needs its own coherent reviewed transition.
 
+The candidate now also supports the separately versioned
+[`c0-resource-boundary-transition-241-248-v1`](c0-resource-transition.md) profile.
+Only a contract explicitly naming that version selects the fixed eight-file
+cohort. It requires all eight files pending (or the exact eight-file successor
+for no-write retry), not seven already applied plus a pending 248. No contract,
+the seven-file version, unknown versions, partial cohorts and out-of-profile
+pending migrations still refuse; no production contract/pin is supplied.
+
 The wrapper preserves the entrypoint's read-only Timescale-extension and existing
 `climate`, `setpoint_changes`, `equipment_state` checks. Missing prerequisites
 are not repaired automatically. A fresh target must first have a separately
@@ -68,9 +76,10 @@ connection arguments and bounded timeouts. No generated SQL file or writable
 application directory is needed; Python bytecode writes are disabled in the
 candidate image.
 
-The transaction applies all seven immutable migration sources, stamps them and
+The transaction applies all immutable migration sources in the explicitly selected
+profile (seven for the original version, eight for the resource version), stamps them and
 updates both approved literal successor receipts atomically. After psql exits,
-the wrapper opens new read-only connections to verify all seven exact stamps,
+the wrapper opens new read-only connections to verify every selected exact stamp,
 the predecessor ledger identity, receipt count, installed attestation functions,
 ledger shape and both full successor fingerprints/receipts. This is committed
 state readback, not merely success inferred from the submission or process start.

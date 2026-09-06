@@ -1,12 +1,16 @@
 # C0 exact-boundary transaction qualification
 
 Campaign #775 / restore qualification #783 / C0 release PR #793.
-`scripts/c0-boundary-transition.py` emits one transaction for the exact seven
+The original profile of `scripts/c0-boundary-transition.py` emits one transaction for the exact seven
 migrations 241–247 and both ordinary-login attestation receipts. It never
 connects to a database. The [owning delivery path](c0-migration-delivery.md) now
 selects it automatically for a C0-bearing inventory and verifies committed state.
 **No approved production contract or deployed candidate image is supplied. The
 release hold remains.** Do not run emitted SQL manually against production.
+
+The separately versioned [eight-file resource candidate](c0-resource-transition.md)
+adds 248 only when its explicit contract version is selected. The seven-file
+version and the behavior documented below do not gain that migration implicitly.
 
 ## Trust and scope
 

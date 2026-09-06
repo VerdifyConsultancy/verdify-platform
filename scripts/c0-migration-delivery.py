@@ -24,6 +24,7 @@ CORE_SQL = """BEGIN READ ONLY;
 SET LOCAL statement_timeout = '30s';
 SELECT jsonb_build_object(
     'timescale', EXISTS(SELECT 1 FROM pg_catalog.pg_extension WHERE extname='timescaledb'),
+    'timescale_version', (SELECT extversion FROM pg_catalog.pg_extension WHERE extname='timescaledb'),
     'core', to_regclass('public.climate') IS NOT NULL
         AND to_regclass('public.setpoint_changes') IS NOT NULL
         AND to_regclass('public.equipment_state') IS NOT NULL);
@@ -129,11 +130,12 @@ def ledger_rows(environment):
     return result
 
 
-def verify_inventory_ledger(files, rows, *, after=False):
+def verify_inventory_ledger(files, rows, *, after=False, version=transition.VERSION):
+    migrations = transition.release_migrations(version)
     pending = 0
     for name, sha in files.items():
         row = rows.get(("db/migrations", "db/migrations/" + name))
-        if name in transition.MIGRATIONS:
+        if name in migrations:
             if row is None:
                 pending += 1
                 require(not after, "C0 stamp missing after transaction")
@@ -148,14 +150,15 @@ def verify_inventory_ledger(files, rows, *, after=False):
                 row["sha256"] == sha or (row["sha256"] is None and row["stamp_method"] == "baseline"),
                 "prior image/ledger source mismatch",
             )
-    require(pending in (0, 7), "partial C0 release must not resume per-file")
+    require(pending in (0, len(migrations)), "partial C0 release must not resume per-file")
     return pending
 
 
 def successor_probe(contract):
+    migrations = transition.release_migrations(contract["version"])
     member = (
         "source='db/migrations' AND filename IN ("
-        + ",".join(transition.literal("db/migrations/" + name) for name in transition.MIGRATIONS)
+        + ",".join(transition.literal("db/migrations/" + name) for name in migrations)
         + ")"
     )
     return f"""BEGIN READ ONLY;
@@ -164,7 +167,7 @@ SET LOCAL statement_timeout = '30s';
 DO $c0_delivery_readback$
 DECLARE v_digest text;
 BEGIN
-    {transition.function_guard()}
+    {transition.function_guard(contract["version"])}
     {transition.ledger_shape_guard()}
     IF ({transition.ledger_digest_sql("NOT (" + member + ")")})
         IS DISTINCT FROM '{contract["predecessor_ledger_sha256"]}'
@@ -181,6 +184,13 @@ def deliver(directory, *, plan=False, environment=None):
     env = dict(os.environ if environment is None else environment)
     files = inventory(directory)
     contract, pin = load_contract(env, plan=plan)
+    version = contract["version"] if contract else transition.VERSION
+    migrations = transition.release_migrations(version)
+    require(
+        all(files.get(name) == sha for name, sha in migrations.items()),
+        "complete exact selected release inventory required",
+    )
+    transition.checked_sources(version)
     # Preserve the entrypoint's existing core/Timescale guard after dispatch,
     # but never reach schema replay or repair when this prerequisite is missing.
     core = json.loads(psql(CORE_SQL, env))
@@ -188,19 +198,23 @@ def deliver(directory, *, plan=False, environment=None):
         isinstance(core, dict) and core.get("timescale") is True and core.get("core") is True,
         "Timescale extension and existing core schema required",
     )
+    if version == transition.RESOURCE_VERSION:
+        require(core.get("timescale_version") == "2.25.2", "resource qualification requires TimescaleDB 2.25.2")
     rows = ledger_rows(env)
-    pending = verify_inventory_ledger(files, rows)
+    pending = verify_inventory_ledger(files, rows, version=version)
     if plan:
-        print(f"C0 PLAN: {pending} pending; atomic bundle=241-247; contract_supplied={contract is not None}.")
+        bundle = "241-248" if version == transition.RESOURCE_VERSION else "241-247"
+        print(f"C0 PLAN: {pending} pending; atomic bundle={bundle}; contract_supplied={contract is not None}.")
         print("Read-only inventory check only; target fingerprints, execution and deployment remain unverified.")
         return
     sql = transition.emit_sql(contract, pin)
     sql_sha = hashlib.sha256(sql.encode()).hexdigest()
     print(f"C0 atomic delivery: contract_sha256={pin}; sql_sha256={sql_sha}", flush=True)
     psql(sql, env)
-    verify_inventory_ledger(files, ledger_rows(env), after=True)
+    verify_inventory_ledger(files, ledger_rows(env), after=True, version=version)
     psql(successor_probe(contract), env)
-    print("C0 committed state verified: seven exact stamps and both successor receipts/catalogs.")
+    count = "eight" if version == transition.RESOURCE_VERSION else "seven"
+    print(f"C0 committed state verified: {count} exact stamps and both successor receipts/catalogs.")
     print("Ordinary application sessions, Argo health and live consumer adoption require separate verification.")
 
 
