@@ -19,6 +19,7 @@ SPEC = importlib.util.spec_from_file_location("ordinary_boundary_diff", ROOT / "
 boundary = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(boundary)
 VERSION = "c0-boundary-transition-241-247-v1"
+RESOURCE_VERSION = "c0-resource-boundary-transition-241-248-v1"
 # Immutable release membership: neither filenames nor executable SQL come from
 # the external contract. Any extension requires a separate source review.
 MIGRATIONS = {
@@ -29,6 +30,9 @@ MIGRATIONS = {
     "245-observed-minute-diagnostics.sql": "28f490631031e5e2424ff2425f8d344835d15d4b1bca79fc78c8c3559ce84e45",
     "246-observed-minute-reader.sql": "9e45f1b075ec1670392a6075f83fee4beb18d75d032adf722ebf6969312873db",
     "247-inline-climate-capture-payload.sql": "0efec8266296d930dcbef5662c13bea18256b7964db70cf412bc68630bbd0049",
+}
+RESOURCE_MIGRATION = {
+    "248-shelly-source-interval-accounting.sql": "45b3fb28c8e11608e14407f5b18bc15018dff54c7dc8dd7b882352d961027b56",
 }
 
 
@@ -45,13 +49,20 @@ def literal(value):
     return "'" + value.replace("'", "''") + "'"
 
 
+def release_migrations(version):
+    # The contract selects a separately source-reviewed fixed profile, never
+    # filenames, executable SQL or hashes. The original version stays seven.
+    require(version in (VERSION, RESOURCE_VERSION), "unsupported contract version")
+    return MIGRATIONS if version == VERSION else {**MIGRATIONS, **RESOURCE_MIGRATION}
+
+
 def validate(contract):
     require(isinstance(contract, dict), "contract must be an object")
     require(
         set(contract) == {"version", "database", "server_version_num", "predecessor_ledger_sha256", "before", "after"},
         "unexpected contract fields",
     )
-    require(contract["version"] == VERSION, "unsupported contract version")
+    release_migrations(contract["version"])
     require(
         isinstance(contract["database"], str) and re.fullmatch(r"[a-zA-Z_][a-zA-Z_0-9-]{0,62}", contract["database"]),
         "unsupported database name",
@@ -80,9 +91,9 @@ def ledger_digest_sql(where="true"):
         FROM public.schema_migrations WHERE {where}"""
 
 
-def checked_sources():
+def checked_sources(version=VERSION):
     result = []
-    for name, expected in MIGRATIONS.items():
+    for name, expected in release_migrations(version).items():
         raw = (ROOT / "db/migrations" / name).read_bytes()
         require(hashlib.sha256(raw).hexdigest() == expected, "migration source drift")
         result.append((name, expected, raw.decode()))
@@ -91,7 +102,7 @@ def checked_sources():
     return result
 
 
-def function_guard():
+def function_guard(version=VERSION):
     raw = boundary.SOURCE.read_bytes()
     require(hashlib.sha256(raw).hexdigest() == boundary.SOURCE_SHA256, "attestation source drift")
     source = raw.decode()
@@ -129,6 +140,11 @@ def function_guard():
         WHERE p.oid=to_regprocedure('public.digest(text,text)')), false) THEN
         RAISE EXCEPTION 'C0 transition refuses changed digest primitive';
     END IF;""")
+    if version == RESOURCE_VERSION:
+        statements.append("""IF (SELECT extversion FROM pg_extension WHERE extname='timescaledb')
+            IS DISTINCT FROM '2.25.2' THEN
+            RAISE EXCEPTION 'C0 resource transition refuses unsupported TimescaleDB version';
+        END IF;""")
     return "\n".join(statements)
 
 
@@ -196,17 +212,19 @@ def digest_guard(expected, receipt_expected=None):
 def emit_sql(contract, contract_sha256):
     validate(contract)
     require(is_hash(contract_sha256), "invalid contract binding")
-    sources = checked_sources()
-    paths = ["db/migrations/" + name for name in MIGRATIONS]
+    version = contract["version"]
+    migrations = release_migrations(version)
+    sources = checked_sources(version)
+    paths = ["db/migrations/" + name for name in migrations]
     member = "source='db/migrations' AND filename IN (" + ",".join(map(literal, paths)) + ")"
     values = ",\n".join(
-        f"({literal('db/migrations/' + name)}, '{sha}', {int(name[:3])})" for name, sha in MIGRATIONS.items()
+        f"({literal('db/migrations/' + name)}, '{sha}', {int(name[:3])})" for name, sha in migrations.items()
     )
-    identity = function_guard()
+    identity = function_guard(version)
     before = digest_guard(contract["before"], contract["before"])
     after = digest_guard(contract["after"], contract["after"])
     successor = digest_guard(contract["after"], contract["before"])
-    sql = f"""-- {VERSION}; reviewed contract SHA256 {contract_sha256}
+    sql = f"""-- {version}; reviewed contract SHA256 {contract_sha256}
 -- This is mutating SQL. Execute only via qualified owning delivery, psql -X.
 \\set ON_ERROR_STOP on
 BEGIN;
@@ -238,7 +256,7 @@ BEGIN
     SELECT count(*) INTO v_count FROM public.schema_migrations WHERE {member};
     IF v_count = 0 THEN
         {before}
-    ELSIF v_count = 7 AND NOT EXISTS (
+    ELSIF v_count = {len(migrations)} AND NOT EXISTS (
         SELECT 1 FROM (VALUES {values}) expected(filename, sha, seq)
         LEFT JOIN public.schema_migrations actual ON actual.source='db/migrations' AND actual.filename=expected.filename
         WHERE actual.sha256 IS DISTINCT FROM expected.sha OR actual.seq IS DISTINCT FROM expected.seq
