@@ -9,13 +9,36 @@ DO $predecessor$
 DECLARE
     owner_oid oid;
     relation_name text;
+    duty_name text;
 BEGIN
     SELECT datdba INTO owner_oid FROM pg_database WHERE datname=current_database();
     FOREACH relation_name IN ARRAY ARRAY['energy','v_runtime_energy_write',
-        'v_energy_daily','v_energy_meter_health','v_energy_estimate_reconciliation'] LOOP
+        'v_energy_daily','v_energy_meter_health','v_energy_estimate_reconciliation',
+        'v_resource_accounting_health'] LOOP
         IF NOT EXISTS (SELECT 1 FROM pg_class WHERE oid=to_regclass('public.'||relation_name)
                        AND relowner=owner_oid) THEN
             RAISE EXCEPTION 'Shelly interval repair refuses missing or non-owner predecessor';
+        END IF;
+    END LOOP;
+    -- These exact existing table-level grants make all three public bodies
+    -- enter BOTH 217 fingerprints through its fixed ordinary-duty ACL branch.
+    -- Effective privilege inherited through an unrelated role is not enough.
+    FOR relation_name,duty_name IN
+        SELECT * FROM (VALUES
+            ('v_energy_daily','verdify_ingestor_runtime'),
+            ('v_energy_estimate_reconciliation','verdify_api_runtime'),
+            ('v_resource_accounting_health','verdify_api_runtime')
+        ) required(relation_name,duty_name)
+    LOOP
+        IF NOT EXISTS (
+            SELECT 1 FROM pg_class c
+            CROSS JOIN LATERAL pg_catalog.aclexplode(c.relacl) a
+            JOIN pg_roles r ON r.oid=a.grantee
+            WHERE c.oid=to_regclass('public.'||relation_name)
+              AND r.rolname=duty_name AND a.privilege_type='SELECT'
+              AND NOT a.is_grantable
+        ) THEN
+            RAISE EXCEPTION 'Shelly interval repair requires its attested reader predecessor';
         END IF;
     END LOOP;
     IF regexp_replace(pg_get_viewdef('public.v_runtime_energy_write'::regclass,true),
@@ -124,7 +147,8 @@ ORDER BY local_date;
 COMMENT ON VIEW public.v_energy_daily IS
 'Source-qualified HA two-channel diagnostic integration, not commissioned measurement. Denver local-day splits and actual 23/24/25-hour denominator; max 300-second source hold, no null bridging or trailing extrapolation. Missing/legacy energy remains NULL. 90% is an operational coverage label only; scoring remains false until a separately reviewed endpoint is commissioned.';
 
-CREATE OR REPLACE VIEW public.v_energy_meter_health AS
+CREATE OR REPLACE VIEW public.v_resource_accounting_health AS
+WITH energy_meter_health AS (
 WITH intervals AS (
 WITH checked AS (
     SELECT e.ts,e.greenhouse_id,e.watts_total,e.ch0_source_ts,e.ch1_source_ts,
@@ -175,7 +199,79 @@ SELECT h.id AS greenhouse_id, l.latest_ts,
          WHEN l.latest_ts > now() THEN 'unavailable' ELSE 'fresh' END AS meter_status,
     COALESCE(l.latest_ts BETWEEN now()-interval '10 minutes' AND now(),false) AS fresh_for_observation,
     'partial_shelly_two_channels'::text AS measured_scope
-FROM public.greenhouses h LEFT JOIN latest l ON l.greenhouse_id=h.id;
+FROM public.greenhouses h LEFT JOIN latest l ON l.greenhouse_id=h.id
+)
+SELECT
+    'water_ledger'::text AS resource,
+    h.greenhouse_id,
+    h.ledger_status AS quality,
+    h.available_for_scoring,
+    h.materialized_through_ts AS observed_through,
+    jsonb_build_object(
+        'raw_latest_ts', h.raw_latest_ts,
+        'raw_age_seconds', h.raw_age_seconds,
+        'materializer_lag_seconds', h.materializer_lag_seconds,
+        'latest_gap_ts', h.latest_gap_ts,
+        'latest_discontinuity_ts', h.latest_discontinuity_ts
+    ) AS detail
+FROM public.v_water_ledger_health h
+UNION ALL
+SELECT
+    'energy_runtime_model',
+    e.greenhouse_id,
+    e.model_quality,
+    e.available_for_scoring,
+    (e.date + 1)::timestamp AT TIME ZONE 'America/Denver',
+    jsonb_build_object(
+        'modeled_kwh', e.modeled_kwh,
+        'modeled_kwh_low', e.modeled_kwh_low,
+        'modeled_kwh_high', e.modeled_kwh_high,
+        'runtime_coverage_pct', e.runtime_coverage_pct,
+        'scope', e.modeled_scope,
+        'coefficient_revisions', e.coefficient_revisions,
+        'runtime_evidence', e.runtime_evidence
+    )
+FROM public.v_runtime_energy_daily e
+WHERE e.date = (now() AT TIME ZONE 'America/Denver')::date - 1
+UNION ALL
+SELECT
+    'energy_partial_meter',
+    h.greenhouse_id,
+    CASE
+        WHEN h.meter_status <> 'fresh' THEN h.meter_status
+        ELSE COALESCE(e.measured_quality, 'unavailable')
+    END,
+    h.meter_status = 'fresh'
+      AND COALESCE(e.available_for_scoring, false),
+    h.latest_ts,
+    jsonb_build_object(
+        'measured_kwh', e.measured_kwh,
+        'meter_coverage_pct', e.meter_coverage_pct,
+        'scope', h.measured_scope,
+        'sample_count', e.sample_count,
+        'current_meter_status', h.meter_status,
+        'sample_age_seconds', h.sample_age_seconds,
+        'recent_sample_count', h.recent_sample_count,
+        'completed_day_quality', e.measured_quality
+    )
+FROM energy_meter_health h
+LEFT JOIN public.v_energy_daily e
+  ON e.greenhouse_id = h.greenhouse_id
+ AND e.date = (now() AT TIME ZONE 'America/Denver')::date - 1;
+COMMENT ON VIEW public.v_resource_accounting_health IS
+'Preserved water/runtime-model health with source-qualified partial-power health inlined in the API-attested view; no private power-health callee. Uncommissioned power never becomes scoring eligible.';
+
+CREATE OR REPLACE VIEW public.v_energy_meter_health AS
+SELECT greenhouse_id,observed_through AS latest_ts,
+       (detail->>'sample_age_seconds')::numeric AS sample_age_seconds,
+       (detail->>'recent_sample_count')::bigint AS recent_sample_count,
+       detail->>'current_meter_status' AS meter_status,
+       COALESCE(detail->>'current_meter_status'='fresh',false) AS fresh_for_observation,
+       detail->>'scope' AS measured_scope
+FROM public.v_resource_accounting_health
+WHERE resource='energy_partial_meter';
+COMMENT ON VIEW public.v_energy_meter_health IS
+'Compatibility projection from the attested public resource-health view. No public resource reader depends on this private projection; ordinary reader grants are unchanged.';
 
 -- Keep every public column/type, but stop subtracting non-comparable scopes.
 CREATE OR REPLACE VIEW public.v_energy_estimate_reconciliation AS
