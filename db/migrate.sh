@@ -24,7 +24,9 @@ PSQL="psql -h ${DB_HOST} -p ${DB_PORT:-5432} -U ${DB_USER} -d ${DB_NAME} -q"
 # Delegate before schema replay/repair or ledger bootstrap can mutate anything.
 # Keep the existing ledger opt-in; never turn on migration delivery implicitly.
 if [ "${VERDIFY_MIGRATE_LEDGER:-0}" = "1" ]; then
-  for c0_candidate in "${VERDIFY_MIGRATIONS_DIR:-/db/migrations}"/24[1-7]*.sql; do
+  # Also hold a narrowed resource-248 inventory before any legacy DB operation.
+  # The owning exact seven-file profile will refuse it; this adds no authority.
+  for c0_candidate in "${VERDIFY_MIGRATIONS_DIR:-/db/migrations}"/24[1-8]*.sql; do
     [ -f "$c0_candidate" ] || continue
     echo "[migrate] C0 inventory detected — qualified atomic delivery required."
     exec /usr/local/bin/apply-migrations.sh ${VERDIFY_MIGRATE_PLAN:+--plan}

@@ -121,9 +121,19 @@ def test_restore_error_sql_is_not_published(tmp_path):
     assert "sensitive-restore-sql-canary" not in result.stdout + result.stderr
 
 
-def test_real_dump_restore_inspection_retains_stale_receipts_without_approval(owning, prepared, tmp_path):
+@pytest.mark.parametrize("resource_only", [False, True])
+def test_real_dump_restore_inspection_retains_stale_receipts_without_approval(
+    owning, prepared, tmp_path, resource_only
+):
     source_query, _, _, env, _ = owning
     paths, inspect_script = prepared
+    if resource_only:
+        # Narrow only this disposable copied inventory, never the repo sources.
+        directory = paths["work"] / "db/migrations"
+        for name in delivery.transition.MIGRATIONS:
+            (directory / name).unlink()
+        name = "248-shelly-source-interval-accounting.sql"
+        shutil.copyfile(ROOT / "db/migrations" / name, directory / name)
     pg_bin = Path(os.environ["SCORECARD_TEST_PG_BIN"])
     source_env = dict(env, PGHOST=env["DB_HOST"], PGPORT="55472", PGUSER="scorecard_fixture", PGDATABASE="postgres")
     dump = tmp_path / "synthetic.dump"
@@ -195,6 +205,19 @@ def test_real_dump_restore_inspection_retains_stale_receipts_without_approval(ow
         delivery.transition.boundary.validate(data)
     assert (snapshot(target), target(receipt_sql)) == before
     assert hashlib.sha256(dump.read_bytes()).hexdigest() == dump_sha
+
+
+def test_resource_only_inspection_preparation_does_not_skip_source_checks(tmp_path):
+    paths = {name: tmp_path / name for name in ("work", "scripts", "db", "tmp")}
+    (paths["db"] / "migrations").mkdir(parents=True)
+    name = "248-shelly-source-interval-accounting.sql"
+    shutil.copyfile(ROOT / "db/migrations" / name, paths["db"] / "migrations" / name)
+    # No packaged transition helper: detecting 248 must try the checked-source
+    # path and fail, never report successful preparation with no inspection SQL.
+    prep = relocate(section(scripts()[0], "C0_INSPECTION_PREPARE"), paths)
+    result = subprocess.run(["sh", "-ec", prep], text=True, capture_output=True, timeout=30)
+    assert result.returncode != 0
+    assert not (paths["work"] / "c0-inspection").exists()
 
 
 def test_component_stays_inactive_and_can_render_without_secret_resources(tmp_path):

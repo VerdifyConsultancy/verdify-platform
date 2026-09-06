@@ -276,6 +276,9 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "245-observed-minute-diagnostics.sql",
         "246-observed-minute-reader.sql",
         "247-inline-climate-capture-payload.sql",
+        # Resource repair is a separate, unqualified boundary transition. The
+        # historical baseline must not mark it applied to bypass that delivery.
+        "248-shelly-source-interval-accounting.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(

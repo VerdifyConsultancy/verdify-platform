@@ -3,8 +3,10 @@
 import ast
 import asyncio
 import json
+import os
 import re
 import shutil
+import subprocess
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -390,6 +392,71 @@ def test_seven_file_owning_runner_refuses_pending_248_without_mutation(owning):
     assert "pending migration outside the qualified C0 bundle" in result.stderr
     assert "no per-file fallback" in result.stderr
     assert snapshot(query) == before
+
+
+@pytest.mark.parametrize("entrypoint", [False, True])
+@pytest.mark.parametrize("plan", [False, True])
+@pytest.mark.parametrize("unreachable", [False, True])
+def test_resource_only_inventory_cannot_reach_legacy_runner(predecessor, tmp_path, entrypoint, plan, unreachable):
+    q = predecessor
+    q((ROOT / "db/ledger/schema_migrations.sql").read_text())
+    q("SELECT stamp_migration('qualification/synthetic-resource-predecessor.sql','db/migrations',NULL,NULL,'manual')")
+    install_actual_attestation_probe(q)
+    state_sql = """SELECT jsonb_build_object(
+        'columns',(SELECT jsonb_agg(to_jsonb(a) ORDER BY attnum) FROM pg_attribute a
+            WHERE attrelid='public.energy'::regclass AND attnum>0),
+        'facade',pg_get_viewdef('public.v_runtime_energy_write'::regclass,true),
+        'ledger',(SELECT jsonb_agg(to_jsonb(m) ORDER BY source,filename) FROM public.schema_migrations m),
+        'receipts',(SELECT jsonb_agg(to_jsonb(r) ORDER BY login_name)
+            FROM public.runtime_ordinary_login_attestation_receipts r))"""
+    before = q(state_sql)
+    directory = tmp_path / "resource-only"
+    directory.mkdir()
+    shutil.copyfile(MIGRATION, directory / MIGRATION.name)
+    env = {
+        key: value
+        for key, value in os.environ.items()
+        if not key.startswith(
+            ("PG", "DB_", "POSTGRES_", "VERDIFY_C0", "VERDIFY_MIGR", "VERDIFY_LEDGER", "VERDIFY_SAFETY")
+        )
+    }
+    env.update(
+        PATH=f"{os.environ['SCORECARD_TEST_PG_BIN']}:{env['PATH']}",
+        DB_HOST="/nonexistent-resource-fixture-socket" if unreachable else q("SHOW unix_socket_directories"),
+        DB_PORT="55472",
+        DB_NAME="postgres",
+        DB_USER="scorecard_fixture",
+        DB_PASS="private-synthetic-fixture-only",  # noqa: S106 - private trust-auth fixture
+        VERDIFY_MIGRATIONS_DIR=str(directory),
+        VERDIFY_MIGRATE_LEDGER="1",
+    )
+    runner = ROOT / "db/apply-migrations.sh"
+    if entrypoint:
+        script = tmp_path / "relocated-entrypoint.sh"
+        source = (ROOT / "db/migrate.sh").read_text()
+        assert source.count("/usr/local/bin/apply-migrations.sh") == 2
+        script.write_text(source.replace("/usr/local/bin/apply-migrations.sh", str(runner)))
+        runner = script
+        if plan:
+            env["VERDIFY_MIGRATE_PLAN"] = "1"
+    result = subprocess.run(
+        ["sh", str(runner), *(["--plan"] if plan and not entrypoint else [])],
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    observed = {
+        "refused": result.returncode != 0,
+        "state_unchanged": q(state_sql) == before,
+        "ordinary_startup": attestation_probe(q),
+    }
+    assert observed == {"refused": True, "state_unchanged": True, "ordinary_startup": {"api": "t", "ingestor": "t"}}
+    assert "complete exact C0 inventory required" in result.stderr
+    assert "no per-file fallback" in result.stderr
+    assert "bootstrapping" not in result.stdout and "verify-not-rebuild" not in result.stdout
+    assert q(state_sql) == before
+    assert attestation_probe(q) == {"api": "t", "ingestor": "t"}
 
 
 def test_public_resource_projection_keeps_scopes_and_unqualified_flags(database):
