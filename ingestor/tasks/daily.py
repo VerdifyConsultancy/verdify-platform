@@ -6,12 +6,14 @@ surface so every `from tasks import X` still resolves.
 """
 
 from climate_minute_metrics import refresh_observed_minute_metrics
+from partial_energy import refresh_partial_energy
 
 from ._common import (
     _GRADE_RELAYS,
     _GRADED_ZONES,
     COMPLIANCE_ZONE_WEIGHTS_DEFAULT,
     DEFAULT_ZONE_BAND,
+    GREENHOUSE_ID,
     HOUSE_BAND_PARAMS,
     REGISTRY,
     RELAY_TRUTH_START,
@@ -822,28 +824,10 @@ async def grow_light_daily(pool: asyncpg.Pool) -> None:
             therms=therms,
             water_gal=water_gal,
         )
-        # B5 / M3: kwh_total comes from the Shelly clamp power integral
-        # (v_energy_daily.measured_kwh), which only meters 2 channels and so
-        # UNDERCOUNTS whole-greenhouse draw by 3-6.6x (verified: kwh_total ~4-15
-        # vs runtime-estimate kwh_estimated ~20-30 on the same day). It is kept
-        # for the peak_kw panel and partial-load visibility only. The
-        # The provenance-bearing runtime model is the whole controlled-equipment
-        # scope, but its scalar/cost remains NULL for scoring while runtime or
-        # coefficient evidence is incomplete/uncertain. kwh_total must NOT be
-        # presented as a reliable whole-house total.
-        await conn.execute(
-            """
-            UPDATE daily_summary ds
-               SET kwh_total = ed.measured_kwh::double precision,
-                   peak_kw = (ed.peak_watts / 1000.0)::double precision,
-                   captured_at = now()
-              FROM v_energy_daily ed
-             WHERE ds.date = $1
-               AND ed.date = ds.date
-               AND ed.measured_kwh IS NOT NULL
-            """,
-            yesterday,
-        )
+        # Source-qualified partial-channel diagnostic, not whole-house energy.
+        # Model/partial-meter ratios do not prove a measured undercount or waste.
+        # Preserve missingness, including clearing stale derived summary values.
+        await refresh_partial_energy(conn, yesterday, GREENHOUSE_ID)
 
     log.info(
         "Daily summary (%s): runtime-model kWh=%s, %.3f therms, eligible total cost=%s",
@@ -1289,23 +1273,9 @@ async def _refresh_daily_summary_for_date(
         therms=therms,
         water_gal=water_gal,
     )
-    # B5 / M3: kwh_total = Shelly 2-channel partial meter (undercounts whole-house
-    # draw 3-6.6x). Kept for peak_kw / partial-load visibility only. The planner
-    # consumes the provenance-bearing reconciliation view and excludes uncertain
-    # or incomplete terms from scoring; neither scalar is sufficient alone.
-    await conn.execute(
-        """
-        UPDATE daily_summary ds
-           SET kwh_total = ed.measured_kwh::double precision,
-               peak_kw = (ed.peak_watts / 1000.0)::double precision,
-               captured_at = now()
-          FROM v_energy_daily ed
-         WHERE ds.date = $1
-           AND ed.date = ds.date
-           AND ed.measured_kwh IS NOT NULL
-        """,
-        target_day,
-    )
+    # Partial-channel diagnostic only; no whole-house or model-subtraction claim.
+    # A corrected NULL/no-row must clear an older unqualified summary value.
+    await refresh_partial_energy(conn, target_day, GREENHOUSE_ID)
 
     # ── Graded + feasibility dual-write (migration 146, §6.6/§6.7) ────────
     # Writes the new *_v2 / graded columns + daily_zone_compliance rows ONLY;

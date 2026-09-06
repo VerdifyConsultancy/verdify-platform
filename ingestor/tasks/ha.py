@@ -5,6 +5,9 @@ original module. The tasks package __init__ re-exports the public
 surface so every `from tasks import X` still resolves.
 """
 
+from shelly_energy import INSERT_SQL as SHELLY_INSERT_SQL
+from shelly_energy import POWER_ENTITIES, WRITE_FIELDS, build_sample
+
 from ._common import (
     _CENTER_FEEDBACK_MAP,
     _HA_STATE_FILE,
@@ -13,7 +16,6 @@ from ._common import (
     _LIGHT_ENTITIES,
     _OCCUPANCY_ENTITIES,
     _POPULATE_SITE_CONTENT_SCRIPT,
-    _SHELLY_ENTITIES,
     _TEMPEST_MAP,
     FEEDBACK_VALUE_RANGES,
     GREENHOUSE_ID,
@@ -26,7 +28,6 @@ from ._common import (
     UTC,
     AlertEnvelope,
     ClimateRow,
-    EnergySample,
     EquipmentStateEvent,
     ValidationError,
     _fetch_all_cpu_samples,
@@ -304,47 +305,13 @@ async def site_content_refresh(pool: asyncpg.Pool) -> None:
 async def shelly_sync(pool: asyncpg.Pool) -> None:
     token = _load_token(HA_TOKEN_FILE)
     loop = asyncio.get_event_loop()
-    states = await loop.run_in_executor(None, _fetch_ha_batch, token, list(_SHELLY_ENTITIES.keys()))
-    if not states:
-        return
-
-    vals = {}
-    for eid, (col, conv) in _SHELLY_ENTITIES.items():
-        ha = _ha_state(states, eid)
-        if ha is None:
-            continue
-        v = ha.as_float()
-        if v is not None:
-            vals[col] = conv(v) if conv else v
-    if not vals:
-        return
-
-    ts = datetime.now(UTC)
-    watts_total = vals.get("ch0_power_w", 0) + vals.get("ch1_power_w", 0)
-    kwh_total = vals.get("ch0_energy_kwh") or 0
-    try:
-        sample = EnergySample(
-            ts=ts,
-            watts_total=watts_total,
-            watts_heat=vals.get("ch1_power_w", 0),
-            watts_fans=0,
-            watts_other=vals.get("ch0_power_w", 0),
-            kwh_today=kwh_total,
-        )
-    except ValidationError as e:
-        log.error("Shelly sample failed schema validation: %s", e)
-        return
+    states = await loop.run_in_executor(None, _fetch_ha_batch, token, list(POWER_ENTITIES))
+    # Keep a gap row even on complete fetch failure. The interval reader must
+    # see missingness rather than bridge it from the last successful poll.
+    sample = build_sample(states, datetime.now(UTC))
     async with pool.acquire() as conn:
-        await conn.execute(
-            "INSERT INTO v_runtime_energy_write (ts, watts_total, watts_heat, watts_fans, watts_other, kwh_today) VALUES ($1,$2,$3,$4,$5,$6)",
-            sample.ts,
-            sample.watts_total,
-            sample.watts_heat,
-            sample.watts_fans,
-            sample.watts_other,
-            sample.kwh_today,
-        )
-    log.debug("Shelly: %dW (ch0=%d ch1=%d)", watts_total, vals.get("ch0_power_w", 0), vals.get("ch1_power_w", 0))
+        await conn.execute(SHELLY_INSERT_SQL, *(getattr(sample, field) for field in WRITE_FIELDS))
+    log.debug("Shelly power evidence: ch0=%s ch1=%s", sample.ch0_quality, sample.ch1_quality)
 
 
 async def gpu_power_sync(pool: asyncpg.Pool) -> None:
