@@ -896,3 +896,12 @@ def test_rendered_prod_is_stateless_without_client_ip_affinity() -> None:
     # The WAN route exposes only the protocol endpoint; internal Service users
     # and kube probes can still call /readyz directly.
     assert ingress["spec"]["routes"][0]["match"] == "Host(`mcp.verdify.ai`) && PathPrefix(`/mcp`)"
+
+
+def test_observer_authenticates_transport_but_cannot_call_any_tool(mcp_server, monkeypatch):
+    _configure(monkeypatch, mode="enforce", observer="tok-observer")
+    assert mcp_server._transport_request_denial("tok-observer") is None
+    assert mcp_server.audience_allowlist("observer") == frozenset()
+    for tool in mcp_server.TOOL_AUDIENCES:
+        with pytest.raises(mcp_server.ToolAccessDenied, match="observer"):
+            mcp_server.authorize_tool_call(tool, "tok-observer")

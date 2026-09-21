@@ -438,6 +438,7 @@ def _json(obj):
 #   VERDIFY_MCP_TOKEN_EXPERIMENT — the experiment-arm planner profile
 #                                  (wired in Lane C/D tranche 2).
 #   VERDIFY_MCP_TOKEN_ADMIN      — operator/debug credential; all tools.
+#   VERDIFY_MCP_TOKEN_OBSERVER   — protocol-only availability probe; no tools.
 # Tokens must be distinct per audience and valid RFC 6750 bearer credentials.
 # Invalid and duplicate entries are excluded from the registry. Token values
 # are never logged, never echoed in errors, and never surfaced by /readyz
@@ -446,7 +447,7 @@ def _json(obj):
 VERDIFY_MCP_AUTH_MODE_ENV = "VERDIFY_MCP_AUTH_MODE"
 VERDIFY_MCP_AUTH_MODES = ("off", "log", "enforce")
 _AUDIENCE_TOKEN_ENV_PREFIX = "VERDIFY_MCP_TOKEN_"
-KNOWN_AUDIENCES = frozenset({"iris", "experiment", "admin"})
+KNOWN_AUDIENCES = frozenset({"iris", "experiment", "admin", "observer"})
 _AUDIENCE_TOKEN_ENV_NAMES = {
     f"{_AUDIENCE_TOKEN_ENV_PREFIX}{audience.upper()}": audience for audience in KNOWN_AUDIENCES
 }

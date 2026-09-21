@@ -84,6 +84,7 @@ resources:
 # Components, NOT added to base, so future overlays must opt in explicitly. The
 # fan-out broker runs in PROD ONLY. The planner is NOT a device writer.
 components:
+  - ../../components/mcp-observer
   # In-cluster firmware OTA capability (handoff §5.1 closed 2026-07-13):
   # suspended-CronJob build/flash template + durable artifacts PVC (the
   # rollback floor lives HERE now, not on the laptop) + toolchain cache.

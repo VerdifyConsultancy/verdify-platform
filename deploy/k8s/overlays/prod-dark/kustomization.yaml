@@ -67,6 +67,7 @@ resources:
 # device writer (grow-light + HA setpoint push), so it has NO place in the
 # device-dark shape. Its absence is a hard part of "prod-dark has no writer".
 components:
+  - ../../components/mcp-observer
   - ../../components/planner
   - ../../components/mqtt-broker
   - ../../components/hermes-iris
