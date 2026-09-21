@@ -40,3 +40,10 @@ remains separate and is not exposed as an external authentication bypass.
 Rollback reverts the MCP image/component together while retaining the sealed
 Secret. No existing credential is revoked or rotated. This probe proves MCP
 transport/protocol availability, not greenhouse device execution or tool data.
+
+Qualified image source: b09a298d29dfb512ad5859e477d5a9da450708b3.
+Native build: `repo-build-verdify-mcp-1b5fa910a865f87807f8bda5`, Succeeded.
+Digest: `sha256:56b1c48bdf3416e336243cf238f31a3402efbc11ae8258989e49b2fd790dcae6`.
+Post-merge restart: verdify-mcp, via the owning Argo Deployment rollout only.
+The initial source CI failed its restart-documentation check; that failure is
+retained and this explicit delivery statement corrects it without bypassing CI.
