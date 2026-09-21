@@ -1,10 +1,9 @@
 # Agent Instructions
 
-Work directly from the user's request. Use reasonable judgment, implement the requested outcome, run relevant checks, and verify the real end state.
+Fix forward to the requested, verified outcome with the smallest complete change. Ask only about material ambiguity; add no approval, planning, or issue/PR ceremony unless requested.
 
-- Preserve unrelated work already present in the repository.
-- Never expose or commit secrets.
-- Use the repository's source and documentation for technical context.
-- Follow existing CI/CD for validation and delivery.
-- For k3s or GitOps changes, commit the declarative source and allow ArgoCD to reconcile it; avoid unmanaged cluster drift.
-- Ask only when the target or outcome cannot be determined safely.
+- Use focused checks or direct probes. Docs-only edits need diff/readback. Add tests only for meaningful risks to critical behavior, security, data integrity, or subtle logic.
+- Reuse CI/CD; honor enforced checks without adding pipelines or gates unnecessarily. Broaden checks only for affected behavior; stop rechecking once verified.
+- Search narrowly, reuse current evidence, avoid repeated polling/replanning, and report results briefly.
+- Preserve unrelated work and secrets. Use owning sources/generators and practical recovery options for destructive work.
+- For GitOps changes, commit declarative state, let ArgoCD reconcile, and verify the affected runtime.
