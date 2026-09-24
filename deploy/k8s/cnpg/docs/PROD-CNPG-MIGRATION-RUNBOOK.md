@@ -62,9 +62,11 @@ verdify-prod/verdify-db (StatefulSet)    verdify-prod/verdify-db-cnpg (CNPG Clus
   operand base) — NOT the `localhost/` dev import. Build/publish it via the
   `cnpg-image` workflow (see §9) and pin `@sha256:` in the prod overlay.
 - **WAL/PITR target:** an **OFF-NAS / external object store** (S3-compatible, NOT
-  the dev in-namespace MinIO and NOT a bucket on the same Synology whose loss is
-  correlated with the cluster's). Credentials via the fleet SOPS+age backend, not
-  a plaintext Secret.
+  a throwaway in-namespace store and NOT a bucket on the same Synology whose loss
+  is correlated with the cluster's). MinIO is deprecated estate-wide (the dev
+  MinIO fixture was removed 2026-09-24); request the bucket and key from
+  `jvallery/storage-infra`, which owns the estate's S3 platform (Garage).
+  Credentials via the fleet SOPS+age backend, not a plaintext Secret.
 - **Services:** CNPG provisions `verdify-db-cnpg-rw` (primary-following),
   `-ro` (replicas), `-r` (any). The app flips `DB_HOST` to the **`-rw`** service.
 

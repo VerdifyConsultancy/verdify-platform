@@ -6,7 +6,6 @@
 #   * the timescaledb extension loads (shared_preload_libraries) and hypertables
 #     + native compression survive a pg_dump/restore of the live schema;
 #   * synchronous replication gives RPO=0 (sync standby);
-#   * Barman WAL archiving + base backups ship to MinIO and PITR restores work;
 #   * kill-primary failover promotes a standby in < RTO with no committed-row
 #     loss.
 #
@@ -122,28 +121,11 @@ spec:
         - CREATE EXTENSION IF NOT EXISTS vector;
 
   # --- Backup / WAL archiving / PITR --------------------------------------
-  # In-tree Barman object store (CNPG 1.29.1 still supports it). archive_mode is
-  # turned ON automatically by CNPG when backup.barmanObjectStore is present →
-  # continuous WAL shipping to MinIO = the PITR foundation. Base backups are
-  # taken by the ScheduledBackup (30-scheduledbackup.yaml) and on demand.
-  backup:
-    retentionPolicy: "7d"
-    barmanObjectStore:
-      destinationPath: s3://verdify-wal/
-      endpointURL: http://minio-dev:9000
-      s3Credentials:
-        accessKeyId:
-          name: minio-dev-creds
-          key: AWS_ACCESS_KEY_ID
-        secretAccessKey:
-          name: minio-dev-creds
-          key: AWS_SECRET_ACCESS_KEY
-      wal:
-        compression: gzip
-        maxParallel: 4
-      data:
-        compression: gzip
-        jobs: 2
+  # None. The throwaway in-namespace MinIO WAL store, its ScheduledBackup and
+  # the PITR drill were removed on 2026-09-24 (MinIO is deprecated estate-wide).
+  # To run a WAL/PITR drill again, request a bucket and key from
+  # jvallery/storage-infra on its Garage platform (s3-hdd.vallery.net) and
+  # configure the CNPG barman-cloud plugin against it.
 
   # DEV resources sized to fit node6/node7 (node4/5 are memory-saturated). PROD
   # #244 sizes these to >= the live StatefulSet (cpu 500m / mem 2Gi req, 6Gi
