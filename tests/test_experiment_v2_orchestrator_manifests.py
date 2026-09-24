@@ -61,7 +61,7 @@ def test_one_hardened_image_has_three_separate_optional_duty_credentials() -> No
             },
             "initialDelaySeconds": 5,
             "periodSeconds": 5,
-            "timeoutSeconds": 2,
+            "timeoutSeconds": 10 if deployment["metadata"]["name"] == "experiment-v2-lifecycle" else 2,
             "successThreshold": 1,
             "failureThreshold": 3,
         }
