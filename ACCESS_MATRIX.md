@@ -5,7 +5,7 @@
 > define workflow prerequisites. Current credentials and live probes determine
 > available mechanics; root `AGENTS.md` and the user's request govern work.
 
-Last updated: 2026-07-14
+Last updated: 2026-09-23
 
 Agent name: `verdify-platform`
 
@@ -15,8 +15,7 @@ does not include raw secret values.
 | Resource | Current access | Required access | Scope | Owner | Status |
 |---|---|---|---|---|---|
 | `VerdifyConsultancy/verdify-platform` checkout | Local read/write | Read/write repo files | Single repo | Verdify repo admins | Granted locally |
-| GitHub issues/PRs | Auth via local `gh` as `jvallery` | Repo-scoped issue/PR read/write | Single repo | Verdify repo admins | Available |
-| GitHub Project Board | Project scope available through local `gh`; project #5 includes lane epics and current Lab children | Maintain issue fields, native parents, and blockers | Project only | Verdify org/project admins | Available |
+| GitHub issues/PRs | Repo pods: GitHub App installation token; operator Mac: `gh` keyring login | Repo-scoped issue/PR read/write | Single repo | Verdify repo admins | Available |
 | In-cluster CI/publishing | Argo Events/Workflows + Kaniko; exact revisions publish to Zot | Submit/observe validated repo-build workflows; no GitHub Actions publishing | `agent-fleet-ci` / repo scope | Agent Fleet + repo owners | Available through the fixed pipeline |
 | Zot application images | `registry.vallery.net` digest pins; in-cluster origin push | Resolve/pin immutable digests through CI | Verdify image namespace | Agent Fleet / registry owners | CI-owned |
 | GHCR holdovers | Read-only legacy references only | Never publish new images; the Lab serving runtime is content-free and the publisher image is pinned from Zot | Legacy images | Repo/Jason | Retirement in progress |
@@ -32,12 +31,11 @@ does not include raw secret values.
 
 ## GitHub Credential Notes
 
-- Local `gh` is authenticated as `jvallery` through the macOS keyring and has
-  repo/project/workflow scopes sufficient for issue, milestone, and Project
-  Board maintenance.
-- The 2026-06-16 replan created GitHub milestones G0-G3, issues #343-#352, and
-  Project #5 metadata without printing raw token values.
-- Do not replace the keyring token with alternate token files; use the existing
+- Repo pods use the GitHub App installation token that the pod runtime
+  provides; the operator Mac uses its `gh` keyring login.
+- Planning lives in `planning/backlog.yaml` (rendered into `PROJECT_BOARD.md`)
+  and GitHub milestones; there is no GitHub Project board.
+- Do not replace either credential with alternate token files; use the existing
   scoped credential mechanism.
 
 ## Secrets Policy

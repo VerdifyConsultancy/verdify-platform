@@ -70,7 +70,6 @@ firmware/artifacts/
 # Claude Code local settings — per-worktree, never committed
 .claude/settings.local.json
 
-CLAUDE.md
 .claude-tmp/
 .claude/
 firmware/test/test_policy_engine

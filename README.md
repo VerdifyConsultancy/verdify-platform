@@ -47,7 +47,7 @@ weather, optional heavyweight reasoning, and public delivery support.
 | `firmware/` | ESPHome YAML + C++ headers — 8-state climate controller (greenhouse_logic.h) |
 | `mcp/` | FastMCP server — typed tools for Iris agent (climate, scorecard, set_tunable, etc.) |
 | `scripts/` | Operational scripts — planner, vision analysis, forecast sync, monitoring |
-| `provisioning/` | Grafana dashboard JSON + datasource config |
+| `grafana/` | Grafana dashboard JSON + provisioning config (dashboards render into ConfigMaps under `deploy/k8s/components/grafana/`) |
 | `db/` | Schema, analytical views, functions, and migrations |
 | `templates/` | Jinja2 planner prompt + reference docs |
 | `config/` | AI model config, zone definitions |
@@ -62,15 +62,16 @@ weather, optional heavyweight reasoning, and public delivery support.
 # Create/update repo-local tooling environment (.venv)
 make setup
 
-# Run all checks (lint + test + firmware compile)
-make check
+# Full offline pre-merge gate (scripts/ci-local.sh)
+make ci
 
 # Individual commands
-make lint              # Ruff linter (0 errors)
+make lint              # Ruff linter
 make format            # Auto-format Python
-make test              # 324 Python tests (~65s)
+make test-firmware     # Native firmware logic tests + replay
 make firmware-check    # Compile ESP32 firmware
 make planner-dry       # Render planner prompt (no API call)
+make test              # tests/, including live-stack smoke tests (needs kubectl + prod access)
 make help              # List all targets
 ```
 
@@ -79,21 +80,9 @@ Argo Workflows/Kaniko CI. GitHub Actions publishing was removed; application
 images publish to Zot and are promoted by validated digest pins.
 **Config:** `pyproject.toml` is the single source of truth for deps, lint rules, and test config. `make setup` reads it directly; there is no checked-in duplicate requirements file for local tooling.
 
-### Codex quickstart
+### Agents
 
-Codex sessions should start with `AGENTS.md` (symlinked to `CLAUDE.md`) and
-`README.md`. Historical handoffs, repo-cleanup inventories, retired backlogs,
-and reusable prompt/context files live outside this repo in the local Orbit
-vault at `/Users/jason/Orbit/context_dump/verdify-platform/`.
-
-A safe orientation pass is: read `AGENTS.md`, `README.md`,
-the root lane docs (`AGENT_LANE.md`, `PROJECT_BOARD.md`, `EPICS.md`,
-`MILESTONES.md`, `SPRINTS.md`, `HISTORY.md`, `ARGOCD.md`,
-`ACCESS_MATRIX.md`, GitHub issues),
-`docs/runbooks/laptop-operator.md`, `Makefile`, `pyproject.toml`,
-`.github/workflows/ci.yml`, and the Orbit dump manifest if available; then
-report branch/worktree state, access assumptions, current goal, safety gates,
-and verification plan before editing.
+Agent guidance lives in `CLAUDE.md`; `AGENTS.md` is a symlink to it.
 
 ## The Greenhouse
 

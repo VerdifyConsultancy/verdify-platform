@@ -7,7 +7,7 @@
 - **Model-profile amendment:** 2026-08-27 — roll the active profile back to OpenAI GPT-5.6 Sol xhigh after the Cortex route rejected every full planner request.
 - **Model-profile amendment:** 2026-09-01 — move all active OpenAI GPT-5.6 workloads to Luna to reduce high-volume token cost; retain each workload's reasoning and tool contract.
 - **Owner lane:** verdify-platform. **Closes:** #346 AC1 (L4 — AI Planner and Tunables).
-- **Refs:** `hermes/iris/config.yaml`, `mcp/server.py`, `verdify_schemas/tunable_registry.py`, `ingestor/iris_planner.py`, `ingestor/tasks/heartbeat.py`, `planner_graph/`, `docs/iris-planner-contract.md` (v1.5 — ledger/correlation semantics active; the Gemma/OpenClaw gateway details are historical), #214/#315 (planner pipeline health), `docs/agents/genai.md`.
+- **Refs:** `hermes/iris/config.yaml`, `mcp/server.py`, `verdify_schemas/tunable_registry.py`, `ingestor/iris_planner.py`, `ingestor/tasks/heartbeat.py`, `planner_graph/`, `docs/iris-planner-contract.md` (v1.5 — ledger/correlation semantics active; the Gemma/OpenClaw gateway details are historical), #214/#315 (planner pipeline health), `CLAUDE.md` (planner checks).
 
 > Documentation artifact. No secrets/keys/PSKs — credentials referenced by name only.
 

@@ -1,6 +1,6 @@
 # Verdify Platform ArgoCD
 
-Last updated: 2026-08-30
+Last updated: 2026-09-23
 
 Agent name: `verdify-platform`
 
@@ -9,15 +9,11 @@ Agent name: `verdify-platform`
 All Kubernetes desired state owned by this lane must be represented in Git and
 reconciled by ArgoCD. Do not make durable changes with direct
 `kubectl apply/edit/patch` except emergency rollback or read-only diagnostics.
-Any exception must be documented in the owning issue.
 
 Every workload, namespace, secret reference, ingress, PVC, RBAC, and config
-change must trace to:
-
-- repo file or PR,
-- ArgoCD Application sync/health evidence,
-- issue or `## Project Tracking` block,
-- verification command or runbook evidence.
+change must trace to a commit on `main`, ArgoCD Application sync/health
+evidence, and a verification command or runbook evidence. Link an issue when
+one exists.
 
 ## Environment Model
 
@@ -38,7 +34,6 @@ revive the old branch model.
 | App | Namespace | Source path | Sync policy | Notes |
 |---|---|---|---|---|
 | `verdify-prod-dark` | `verdify-prod` | `deploy/k8s/overlays/prod` | Manual | Legacy live app name; currently the real production writer. Sync uses the release preflight and rollback checks. |
-| `verdify-prod` | `verdify-prod` | `deploy/k8s/overlays/prod` | Manual | Intended rename target only. Apply through the orphan/readopt runbook if scheduled. |
 
 Production Application manifests live in `deploy/k8s/argocd/apps/`. The former
 `verdify-platform-lab-stage` Application/AppProject and its source overlay were
@@ -78,6 +73,7 @@ Quartz cache PVC. Merging a pin changes Git only. Production remains a separate
   `kustomize build deploy/k8s/overlays/prod`.
 - CI gate: `make ci` plus the in-cluster repo-build/PR-CI render and policy
   checks.
-- Promotion must use exact Zot digests and the validated pin workflow described
-  in `docs/runbooks/prod-promotion.md`; merge changes Git only. The manual prod
-  sync remains safety-checked.
+- Promotion follows the Promotion Model above: exact Zot digests committed by
+  the `verdify-platform-ci` pin actuator (planner, setpoint-server and
+  lab-publisher by hand); commands in `docs/runbooks/laptop-operator.md` §2.
+  Merge changes Git only. The manual prod sync remains safety-checked.

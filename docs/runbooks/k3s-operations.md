@@ -29,13 +29,17 @@ Everything below works from a kubectl-equipped pod or host.
 - **Build / test / lint:**
   - `make setup` creates/updates the repo-local `.venv` from `pyproject.toml`
     (Python 3.12+ required; 3.13 preferred for parity).
-  - `make lint` (ruff) — required.
-  - `make test` (pytest) — required; 1 pre-existing flaky timeout
-    (`test_dew_point_risk_computes`) is tolerated, everything else must pass.
-  - DB-backed targets default to `VERDIFY_DB_BACKEND=kube` (Makefile) → they hit
-    the in-cluster DB. Python tooling runs from the repo `.venv` by default;
-    the legacy `/srv/greenhouse/.venv` is used only if it exists or `VENV=...`
-    is passed explicitly.
+  - `make ci` (`scripts/ci-local.sh`) is the full offline pre-merge gate;
+    `make lint` (ruff) runs one piece of it.
+  - `make test` runs `tests/`, including smoke tests against the live stack;
+    use it only when live access is intended.
+  - Only the firmware preflight defaults to `VERDIFY_DB_BACKEND=kube`
+    (Makefile `FIRMWARE_DB_BACKEND`). Other shell DB helpers
+    (`scripts/lib/psql-verdify.sh`) default to the VM-era docker backend, so
+    export `VERDIFY_DB_BACKEND=kube` to reach the in-cluster DB.
+  - Python tooling runs from the repo `.venv` by default; the legacy
+    `/srv/greenhouse/.venv` is used only if it exists or `VENV=...` is passed
+    explicitly.
 - **Database access** (read-only is safe; mutations use the explicit live path):
   ```bash
   scripts/verdify-db.sh prod -c "SELECT count(*) FROM climate;"   # one-shot
@@ -58,7 +62,7 @@ Everything below works from a kubectl-equipped pod or host.
     → prod: explicit manual sync of verdify-prod-dark after render/diff validation
   ```
   GitHub Actions and GHCR publishing are retired; do not create new GHCR pins.
-  See `docs/runbooks/prod-promotion.md` for the current Kaniko→zot procedure.
+  The merge-triggered build and pin flow is in `docs/runbooks/laptop-operator.md` §2.
   The prod sync remains the only step that can touch the live writer.
   The explicit sync, from any kubectl host:
   ```bash
@@ -67,8 +71,8 @@ Everything below works from a kubectl-equipped pod or host.
   ```
   Pre-check: `kustomize build deploy/k8s/overlays/prod | kubectl diff -f -`; confirm
   the **ingestor Deployment** (the single device writer) only changes when intended.
-  Prod promotable set = api/mcp/ingestor/migrate/planner; setpoint-server and
-  the Quartz Lab publisher remain hand-pinned. ArgoCD app
+  The pin actuator pins api/mcp/ingestor/migrate/experiment-v2-orchestrator;
+  planner, setpoint-server and the Quartz Lab publisher remain hand-pinned. ArgoCD app
   `verdify-prod-dark` is **manual-sync, prune:false**. The Lab web Deployment
   uses a pinned content-free nginx image and serves only the publisher cache.
 - **Grafana dashboards** (non-control-path, safe to iterate): edit
@@ -84,7 +88,7 @@ Everything below works from a kubectl-equipped pod or host.
 | Surface | Source of truth in git | Drift watch |
 |---|---|---|
 | k8s manifests | `deploy/k8s/overlays/prod` + components | `kustomize build … \| kubectl diff` |
-| Image digests | `overlays/prod/kustomization.yaml` (advanced only by `prod-promote`) | live pod `@sha256` == overlay pins |
+| Image digests | `overlays/prod/kustomization.yaml` (advanced by the `verdify-platform-ci` pin actuator; planner, setpoint-server and lab-publisher by hand) | live pod `@sha256` == overlay pins |
 | Grafana dashboards | `grafana/dashboards/*.json` → generated CMs | **UI edits do NOT sync back — always edit the JSON** |
 | DB migrations | `db/migrations/` (sequential) | applied by the `verdify-migrate` Job; CI `migration-rollback-safety` check |
 | Firmware (source) | `firmware/**` | `diagnostics.firmware_version` == intended (see §4) |
@@ -211,8 +215,6 @@ and #322/#339 (retired-VM doc/test cleanup).
 
 ## 6. Durable gotchas (carry these — they were laptop tribal knowledge)
 
-- **`ripgrep`/`rg` is unreliable in this repo** (silently returns empty/misses,
-  especially `.sql`). Use `grep -rnE` or Python globs; cross-check any "zero hits."
 - **Verify device firmware from `diagnostics.firmware_version`,** not
   `firmware/artifacts/last-good.version` (rollback floor, lags during the bake).
 - **The pinched band IS the device's control band** (pinch machinery wired since

@@ -5,9 +5,9 @@
 **State of the world:** `main` is the single canonical branch. **`verdify-dev`
 and staging are DECOMMISSIONED and DELETED — prod (`verdify-prod`, ArgoCD app
 `verdify-prod-dark`, manual-sync behind the device-write gate) is the ONLY
-environment** (serves lab/graphs/api.verdify.ai). Prod is advanced by the
-`prod-promote` workflow off published image digests (ZOT as of 2026-07-11 — see docs/runbooks/prod-promotion.md; GHCR is retired per ADR-0021)
-(no more `bump-dev-digests` / dev render / dev-equality guard). Any section
+environment** (serves lab/graphs/api.verdify.ai). Prod is advanced by
+digest-pin commits to `deploy/k8s/overlays/prod/kustomization.yaml` (§2) and
+then the gated sync; GHCR is retired per ADR-0021. Any section
 below that mentions a dev environment, `overlays/dev`, dev DB restore, or the
 dev proving flow is HISTORICAL — those resources no longer exist.
 
@@ -15,7 +15,7 @@ dev proving flow is HISTORICAL — those resources no longer exist.
 > agents. **Every command below is runnable from any kubectl-equipped host** (the
 > title is historical). The k3s-agent operating model, the portable dev loop, and
 > the firmware-OTA tribal knowledge are consolidated in
-> [`../handoff/k3s-agent-handoff.md`](../handoff/k3s-agent-handoff.md) — read that
+> [`k3s-operations.md`](./k3s-operations.md) — read that
 > first. The only laptop-bound workflow is the firmware OTA toolchain itself (§3).
 
 ## 0. One-time host setup
@@ -56,26 +56,16 @@ Historical derived-data reconciliation lives in
 by default; a production apply requires its explicit apply flag and technical
 preflight.
 
-## 2. CI/CD: push publishes, dispatch promotes to prod (single-env)
+## 2. CI/CD: merge publishes and pins, the gated sync deploys (single-env)
 
-- **Push to `main`** (or merge a PR): `container-publish.yml` builds the
-  impacted images (api/mcp/ingestor/migrate/planner + artifact-only
-  setpoint-server) and validated them build-only on GHCR-era CI; as of 2026-07-11 publishing is the in-cluster Kaniko→zot flow (immutable
-  `:sha-<sha>` + mutable `:branch-main`). There is **no environment write-back**
-  — `bump-dev-digests` / dev auto-sync are removed (dev is gone). `ci.yml` (all
-  gates), `k8s-manifests.yml` (kubeconform) and `cnpg-image.yml` fire on `main` too.
-- **Full-pipeline button:** `gh workflow run container-publish.yml --ref main`
-  — a manual dispatch builds + publishes ALL images.
-- **Promote to prod:**
-  `gh workflow run prod-promote.yml --ref main -f mode=pull-request`
-  (or `mode=dry-run`). Resolves each promotable image's `:branch-main` digest
-  from the zot origin (registry.vallery.net), surgically bumps `overlays/prod/kustomization.yaml`,
-  runs the Device-Write-Safety-Gate, opens a `prod-promote` PR.
-  `promote-diff-guard` (required check) re-asserts a **digests-only** change
-  surface. Merge = git change only; then the gated sync below.
-  - Known race: `verdify-migrate` rebuilds on every publish, so a push that
-    lands while a promote PR is open can advance the published `:branch-main`
-    migrate digest. Re-run prod-promote after the pipeline settles.
+- **Merge to `main`:** a fleet Argo Event submits the exact revision to the
+  in-cluster `repo-build` WorkflowTemplate (Kaniko → zot origin) for the images
+  declared in `.agent-fleet/ci.yaml`. The `verdify-platform-ci` pin actuator
+  then commits a digest-only change to `overlays/prod/kustomization.yaml` for
+  api, mcp, ingestor, migrate and experiment-v2-orchestrator; planner,
+  setpoint-server and lab-publisher are pinned by hand. This repo has no GitHub
+  Actions workflows (`make ci` / `scripts/ci-local.sh` is the gate). Merge = git
+  change only; then the gated sync below.
 - **The gated prod sync (the ONLY step that touches the live writer):**
   ```bash
   kubectl patch application verdify-prod-dark -n argocd --type merge \
@@ -83,10 +73,16 @@ preflight.
   ```
   Pre-check with `kustomize build deploy/k8s/overlays/prod | kubectl diff -f -`
   and confirm the ingestor Deployment (strategy: Recreate — never two writers)
-  changes only when you intend it. KNOWN ISSUE: unscoped sync operations on
-  this app sometimes get rewritten to a stale selective scope — if the
-  syncResult covers too few resources, submit the operation with an explicit
-  `resources:` list built from the app's OutOfSync set (see issue tracker).
+  changes only when you intend it. KNOWN ISSUE (#317, closed 2026-08-30 as
+  non-reproducible; keep the check): unscoped sync operations on this app were
+  rewritten to a stale selective scope. Right after submitting, read
+  `.status.operationState.operation.sync.resources`; it must be absent or
+  empty. If selectors appear or the syncResult covers too few
+  resources, STOP and do not retry. The explicit `resources:` list
+  (`scripts/gen-sync-resource-vector.sh`, reviewed first; see
+  `attended-convergence.md`) is a fallback only: Argo CD skips every hook on a
+  selective sync, including the `verdify-migrate` PreSync, and does not record
+  it in history.
 
 ## 3. Firmware OTA from the laptop
 
@@ -107,7 +103,7 @@ The secrets
 reconstruction (k3s sources) and the **false-rollback gotcha** (the post-OTA
 checks default to the wrong DB backend off-laptop and can auto-rollback a
 healthy OTA) are documented in
-[`../handoff/k3s-agent-handoff.md`](../handoff/k3s-agent-handoff.md) §4 — read it
+[`k3s-operations.md`](./k3s-operations.md) §4 — read it
 before flashing.
 
 **Pinch resets on every flash (#413/#377):** `band_track_fraction` is

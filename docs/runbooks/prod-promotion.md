@@ -1,6 +1,17 @@
 # Prod Promotion Runbook
 
-**Status:** current for the single-environment model as of 2026-06-19.
+**Status:** partly superseded as of 2026-09-23. A merge to `main` now builds
+every image in `.agent-fleet/ci.yaml` (a fleet Argo Event runs `repo-build`),
+and the `verdify-platform-ci` pin actuator commits the api, mcp, ingestor,
+migrate and experiment-v2-orchestrator digests. For the `.agent-fleet/ci.yaml`
+images, do not submit `repo-build` Workflows, and do not hand-commit the
+actuator's digests; the planner, setpoint-server and lab-publisher-k3s digests
+are still pinned by hand. An image outside `.agent-fleet/ci.yaml` (today
+`verdify-twin`, see `deploy/k8s/components/twin-builder/`) still uses the
+manual `repo-build` submission in Flow step 3, which stays current for that
+case. The rest of the Flow and the Promotable Images list are historical; the
+current flow is `ARGOCD.md` (Promotion Model) and
+`docs/runbooks/laptop-operator.md` §2.
 
 `main` is the canonical source branch. The retired `live/platform-main`,
 `verdify-dev`, and `verdify-staging` promotion chain is not part of the deploy
@@ -15,7 +26,9 @@ builds only (`Container Publish` runs every Dockerfile with `push: false`).
 1. Merge to `main` with `make ci` green (GitHub Actions is REMOVED as of
    2026-07-11 — `scripts/ci-local.sh` is the entire validation gate, runnable
    on any host or in the in-cluster `verdify-platform-ci` Workflow).
-3. Publish happens IN-CLUSTER: submit one `repo-build` Argo Workflow per
+3. (Current only for an image outside `.agent-fleet/ci.yaml`, such as
+   `verdify-twin`; merges build the rest.) Publish happens IN-CLUSTER: submit
+   one `repo-build` Argo Workflow per
    changed image in namespace `agent-fleet-ci` (Kaniko builds the exact main
    revision and pushes `registry.vallery.net/verdifyconsultancy/<image>@sha256:…`
    using the org push secret `zot-origin-verdifyconsultancy-ci-dockerconfig`):
