@@ -148,7 +148,7 @@ modelled on `ScorecardResponse` (the MCP `scorecard()` tool and the public
 | `outcome_wet_dry_completion` | `float \| null` | Wet→dry cycle completion component (mister duty + soil moisture) |
 | `outcome_cost_cycling_penalty` | `float \| null` | Subtracted resource penalty: energy + water + actuator cycling/wear |
 
-Contract status and sequencing (CLAUDE.md discipline #1 — schema first,
+Contract status and sequencing (AGENTS.md cross-layer contracts — schema first,
 consumers next):
 
 - **#388 (this): names + nullability only.** All six are `Optional`, default

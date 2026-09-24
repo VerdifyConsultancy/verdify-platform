@@ -1,4 +1,4 @@
-"""Tests for the service-restart drift guard (CLAUDE.md rule 7, #391).
+"""Tests for the service-restart drift guard (AGENTS.md rule 7, #391).
 
 The retired ci.yml job matched ``/(restart|bounce|service|systemctl)/i`` — the
 bare word "service" appears in nearly every PR body, so any schema-touching
@@ -83,7 +83,7 @@ def test_incidental_word_service_fails(tmp_path):
     repo, base = _make_repo(tmp_path, "mcp/server.py", "improved service quality")
     result = _run_guard(repo, base)
     assert result.returncode == 1, result.stdout + result.stderr
-    assert "CLAUDE.md rule 7" in result.stderr
+    assert "AGENTS.md rule 7" in result.stderr
 
 
 def test_bare_restart_without_named_service_fails(tmp_path):

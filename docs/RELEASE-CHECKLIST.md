@@ -94,7 +94,7 @@ prod `argocd app sync`, device-VLAN actions, destructive prod DB work, and outwa
       screen-window OPEN/CLOSED (open ~2026-06-19 → fall per #412; ~3× passive night air exchange
       while open). **Never change the window state mid-bake.**
 - [ ] PR body / commit carries the **required artifacts**: replay-diff output, invariant-suite
-      output, unit-test delta (CLAUDE.md firmware rule 9).
+      output, unit-test delta.
 - [ ] **Bake 48 h** with no critical alert, then `make firmware-promote-last-good FW_VERSION=<v>`.
 
 ---

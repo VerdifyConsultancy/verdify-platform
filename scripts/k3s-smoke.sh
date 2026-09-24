@@ -32,7 +32,7 @@
 #                          single-writer invariant. STUB: read-only, prints what
 #                          it sees; wire into alerting separately.
 #
-# SAFETY (hard rules this script obeys — see CLAUDE.md + k3s-cutover-sequence.md)
+# SAFETY (hard rules this script obeys — see AGENTS.md + k3s-cutover-sequence.md)
 #   - READ-ONLY against the cluster. Only `kubectl get/exec`(read commands) and
 #     a localhost `kubectl port-forward` (which mutates nothing server-side).
 #   - Never scales, patches, applies, deletes, or syncs anything.

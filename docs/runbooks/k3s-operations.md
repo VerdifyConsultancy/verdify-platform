@@ -167,7 +167,7 @@ secrets. The procedure and its traps:
   the **critical-alert check protects plant safety—investigate the alert rather
   than blind-overriding it.**
 - Full firmware iteration loop: `docs/runbooks/verdify-firmware-safe-iteration-loop.md`;
-  freeze rules in `CLAUDE.md`.
+  deploy gates in `AGENTS.md` (Deliver and verify).
 
 ---
 

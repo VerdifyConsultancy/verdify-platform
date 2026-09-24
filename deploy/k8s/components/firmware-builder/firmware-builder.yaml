@@ -14,7 +14,7 @@
 #     python3 -c 'import json,sys; j=json.load(sys.stdin); c=j["spec"]["template"]["spec"]["containers"][0]; \
 #       [e.update(value="1") for e in c["env"] if e["name"]=="FLASH"]; print(json.dumps(j))' | kubectl create -f -
 #
-# The OTA itself REMAINS safety-checked policy-wise (CLAUDE.md): the agent runs
+# The OTA itself REMAINS safety-checked policy-wise (AGENTS.md): the agent runs
 # scripts/firmware-deploy-preflight.sh (kube backend) and asks; only an
 # an explicit FLASH=1 request triggers the job after the preflight passes.
 #

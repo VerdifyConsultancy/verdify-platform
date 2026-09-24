@@ -82,7 +82,7 @@ images publish to Zot and are promoted by validated digest pins.
 
 ### Agents
 
-Agent guidance lives in `CLAUDE.md`; `AGENTS.md` is a symlink to it.
+Agent guidance lives in `AGENTS.md`, which Claude Code and Codex both read.
 
 ## The Greenhouse
 
