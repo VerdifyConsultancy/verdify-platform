@@ -75,7 +75,9 @@ spec:
               command: ["python", "-m", "experiment_orchestrator.readiness", "check"]
             initialDelaySeconds: 5
             periodSeconds: 5
-            timeoutSeconds: 2
+            # This Python check takes 3-4s to start on the production node.
+            # Keep the attestation check; allow its successful result to return.
+            timeoutSeconds: 10
             successThreshold: 1
             failureThreshold: 3
           volumeMounts:
