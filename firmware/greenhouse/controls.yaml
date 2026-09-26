@@ -23,55 +23,6 @@ interval:
     then:
       - lambda: |-
           const uint32_t control_loop_started_us = micros();
-          /*************** POLICY ENGINE SNAPSHOT (Lane E, #586) *****************/
-          // ONE by-value policy snapshot at the top of the control tick
-          // (audit §8.9). Until an experiment manifest is armed through the
-          // policy_* api services, psnap.experiment_active is false and every
-          // gated read below falls through to the legacy global — behavior is
-          // bit-identical to pre-Lane-E firmware (feature-off equivalence).
-          // Lazy one-time boot init: bind the NVS journal and resolve the
-          // persisted policy once the clock is valid, or conservatively boot
-          // the ROM baseline after a 5-minute SNTP grace window.
-          {
-            static bool policy_boot_done = false;
-            if (!policy_boot_done) {
-              auto boot_now = id(sntp_time).now();
-              const bool boot_clock_valid = boot_now.is_valid();
-              if (boot_clock_valid || millis() > 300000UL) {
-                verdify_policy::policy_engine().bind_storage(&esp_policy_journal());
-                const uint32_t boot_day = boot_clock_valid
-                    ? uint32_t(boot_now.year) * 1000UL + uint32_t(boot_now.day_of_year) : 0UL;
-                const verdify_policy::ResetEvent reset_ev = verdify_policy::policy_engine().boot_init(
-                    boot_clock_valid ? uint32_t(boot_now.timestamp) : 0UL, boot_clock_valid, boot_day);
-                ESP_LOGI("policy", "boot_init outcome=%d gen=%u manifest=%d water_consumed=%d",
-                         (int) reset_ev.outcome, (unsigned) reset_ev.resumed_generation,
-                         (int) reset_ev.manifest_rearmed, (int) reset_ev.water_budget_marked_consumed);
-                policy_boot_done = true;
-              }
-            }
-          }
-          auto policy_now = id(sntp_time).now();
-          const bool policy_clock_valid = policy_now.is_valid();
-          const uint32_t policy_day = policy_clock_valid
-              ? uint32_t(policy_now.year) * 1000UL + uint32_t(policy_now.day_of_year) : 0UL;
-          const verdify_policy::PolicySnapshot psnap = verdify_policy::policy_engine().on_tick(
-              policy_clock_valid ? uint32_t(policy_now.timestamp) : 0UL, policy_clock_valid, policy_day);
-          // Gated reads for the exemplar consumer set (the 11-field §8.2
-          // allowlist): legacy global until an experiment is armed, snapshot
-          // value while armed. Tranche 2 migrates the remaining consumers
-          // (see firmware/policy_consumer_manifest.json) before arming.
-          const auto pol = [&](uint8_t f, float legacy) -> float {
-              return psnap.experiment_active ? psnap.values[f] : legacy;
-          };
-          const auto polb = [&](uint8_t f, bool legacy) -> bool {
-              return psnap.experiment_active ? (psnap.values[f] != 0.0f) : legacy;
-          };
-          // Journal-visible daily water high-water mark (§8.9 conservative
-          // reboot rule): never rolls backward; only a journaled same-day
-          // mark lifts the consumed flag after a reboot.
-          if (policy_clock_valid) {
-              verdify_policy::policy_engine().note_water_high_water(policy_day, id(mister_water_today));
-          }
           /*************** CONFIG CONSTANTS **************************************/
           const uint32_t MIN_HEAT_ON_MS    = uint32_t(id(min_heat_on_s))  * 1000UL;
           const uint32_t MIN_HEAT_OFF_MS   = uint32_t(id(min_heat_off_s)) * 1000UL;
@@ -79,8 +30,8 @@ interval:
           const uint32_t MIN_FAN_OFF_MS    = uint32_t(id(min_fan_off_s))  * 1000UL;
           const uint32_t MIN_VENT_ON_MS    = uint32_t(id(min_vent_on_s))  * 1000UL;
           const uint32_t MIN_VENT_OFF_MS   = uint32_t(id(min_vent_off_s)) * 1000UL;
-          const uint32_t MIN_FOG_ON_MS     = uint32_t(pol(verdify_policy::kPF_min_fog_on_s,  id(min_fog_on_s)))  * 1000UL;
-          const uint32_t MIN_FOG_OFF_MS    = uint32_t(pol(verdify_policy::kPF_min_fog_off_s, id(min_fog_off_s))) * 1000UL;
+          const uint32_t MIN_FOG_ON_MS     = uint32_t(id(min_fog_on_s))  * 1000UL;
+          const uint32_t MIN_FOG_OFF_MS    = uint32_t(id(min_fog_off_s)) * 1000UL;
 
           const float    EXTRA_COOL_S3_DELTA_F = 2.0f;
           const uint32_t LEAD_ROTATE_TIMEOUT_MS =
@@ -578,10 +529,9 @@ interval:
               .sealed_max_ms = uint32_t(id(mist_max_closed_vent_s)) * 1000UL,
               .relief_duration_ms = uint32_t(id(mist_thermal_relief_s)) * 1000UL,
               .vpd_watch_dwell_ms = uint32_t(id(vpd_watch_dwell_s)) * 1000UL,
-              .mist_s2_delay_ms =
-                  uint32_t(pol(verdify_policy::kPF_mister_all_delay_s, id(mister_all_delay_s))) * 1000UL,
+              .mist_s2_delay_ms = uint32_t(id(mister_all_delay_s)) * 1000UL,
               .max_relief_cycles = (uint32_t)id(max_relief_cycles),
-              .fog_escalation_kpa = pol(verdify_policy::kPF_fog_escalation_kpa, id(fog_escalation_kpa)),
+              .fog_escalation_kpa = id(fog_escalation_kpa),
               .fog_rh_ceiling = (float)id(fog_rh_ceiling_pct),
               .fog_min_temp = (float)id(fog_min_temp_f),
               .dehum_aggressive_kpa = id(dehum_aggressive_kpa),
@@ -603,12 +553,11 @@ interval:
               // ESPHome control loop forces this ON so planner, dispatcher,
               // and ESP32 share one live control path.
               .sw_fsm_controller_enabled = id(sw_fsm_controller_enabled),
-              .cool_stage2_over_high_f = pol(verdify_policy::kPF_cool_stage2_over_high_f, id(cool_stage2_over_high_f)),
+              .cool_stage2_over_high_f = id(cool_stage2_over_high_f),
               .cool_stage2_exit_hysteresis_f = id(cool_stage2_exit_hysteresis_f),
               .cool_exit_hysteresis_f = id(cool_exit_hysteresis_f),
               .cold_vent_guard_delta_f = id(cold_vent_guard_delta_f),
-              .cool_all_fans_at_high_enabled =
-                  polb(verdify_policy::kPF_sw_cool_all_fans_at_high_enabled, id(cool_all_fans_at_high_enabled)),
+              .cool_all_fans_at_high_enabled = id(cool_all_fans_at_high_enabled),
               // Firmware-v2: ONE stress-wetting rule (band-high + margin, dew-
               // gated, solar-night-aware). Replaces the clock-window stress paths.
               .direct_wet_stress_override_enabled = id(direct_wet_stress_override_enabled),
@@ -861,8 +810,7 @@ interval:
           const bool climate_vpd_emergency =
               !isnan(budget_vpd_max) && (budget_vpd_max > id(safety_vpd_max_kpa));
           const bool climate_water_budget_block =
-              id(mister_water_today) >= pol(verdify_policy::kPF_mister_water_budget_gal, id(mister_water_budget_gal))
-              && !climate_vpd_emergency;
+              id(mister_water_today) >= id(mister_water_budget_gal) && !climate_vpd_emergency;
           // SAF-4: absolute daily volume hard-ceiling. Unlike the soft budget
           // above, this is NOT bypassed by climate_vpd_emergency — even a VPD
           // emergency cannot push wetting past the hard cap. It sits above the
@@ -970,8 +918,7 @@ interval:
           char direct_wet_zone_mask[48] = "unknown";
           {
             const uint32_t MISTER_ENGAGE_DELAY_MS = uint32_t(id(mister_engage_delay_s)) * 1000UL;
-            const uint32_t MISTER_ALL_DELAY_MS    =
-                uint32_t(pol(verdify_policy::kPF_mister_all_delay_s, id(mister_all_delay_s))) * 1000UL;
+            const uint32_t MISTER_ALL_DELAY_MS    = uint32_t(id(mister_all_delay_s))    * 1000UL;
 
             float south_vpd = id(vpd_south).state;
             float west_vpd  = id(vpd_west).state;
@@ -1124,7 +1071,7 @@ interval:
               if(west_wet_allowed && !isnan(west_vpd) && id(vpd_target_west) > 0 && west_vpd > id(vpd_target_west)) any_zone_stressed = true;
               if(!isnan(east_vpd) && id(vpd_target_east) > 0 && east_vpd > id(vpd_target_east)) any_zone_stressed = true;
               if(center_wet_allowed && id(vpd_target_center) > 0 && avg_vpd > id(vpd_target_center)) any_zone_stressed = true;
-              bool global_stressed = (avg_vpd > pol(verdify_policy::kPF_mister_engage_kpa, id(mister_engage_kpa)));
+              bool global_stressed = (avg_vpd > id(mister_engage_kpa));
               bool budget_block = climate_water_budget_block;
               bool irrigation_block = irrigation_water_conflict;
               bool zone_mister_demand = humidity_demand && mister_vent_ok;
@@ -1182,7 +1129,7 @@ interval:
 
             if(mister_blocked && id(mister_state) > 0){
               ESP_LOGI("mister","BLOCKED (budget=%.0f/%.0f humid=%d zone=%d occ=%d)",
-                       id(mister_water_today), pol(verdify_policy::kPF_mister_water_budget_gal, id(mister_water_budget_gal)),
+                       id(mister_water_today), id(mister_water_budget_gal),
                        humidity_demand, any_zone_stressed, occupancy_blocks);
               if(id(irrig_state) == 0) {
                 id(south_wall_mister).turn_off();
@@ -1225,10 +1172,8 @@ interval:
               //  lowest water, so it leads. The mister_state machine below only RUNS once the FSM
               //  has escalated past fog — see fsm_escalated_to_misters at the humidity_demand gate.)
 
-              const uint32_t PULSE_ON_MS  =
-                  uint32_t(pol(verdify_policy::kPF_mister_pulse_on_s, id(mister_pulse_on_s))) * 1000UL;
-              const uint32_t PULSE_GAP_MS =
-                  uint32_t(pol(verdify_policy::kPF_mister_pulse_gap_s, id(mister_pulse_gap_s))) * 1000UL;
+              const uint32_t PULSE_ON_MS  = uint32_t(id(mister_pulse_on_s)) * 1000UL;
+              const uint32_t PULSE_GAP_MS = uint32_t(id(mister_pulse_gap_s)) * 1000UL;
 
               // Center mist is climate/VPD-only. Every zone uses the base pulse
               // cadence; there is no dawn or midday watering substitution.
@@ -1257,8 +1202,7 @@ interval:
               // operator-tunable mister_hysteresis_kpa (default 0.10) so the
               // mister state machine cannot chatter inside a tight band. Still
               // capped by band width (HV) and the engage-kPa-derived term.
-              const float MISTER_HYST = fminf(HV, fmaxf(id(mister_hysteresis_kpa),
-                  pol(verdify_policy::kPF_mister_engage_kpa, id(mister_engage_kpa)) * 0.25f));
+              const float MISTER_HYST = fminf(HV, fmaxf(id(mister_hysteresis_kpa), id(mister_engage_kpa) * 0.25f));
 
               // Helper: select mister zone with highest stress score.
               // Each zone has its own VPD target from its planted crops.
@@ -1476,7 +1420,7 @@ interval:
               if(id(mister_state) == 1){
                 id(humid_s2_duration_ms) += dt_ms;
                 if(id(humid_s2_duration_ms) >= MISTER_ALL_DELAY_MS
-                   && avg_vpd > pol(verdify_policy::kPF_mister_all_kpa, id(mister_all_kpa))){
+                   && avg_vpd > id(mister_all_kpa)){
                     id(mister_state) = 2;  // S2 = all zones rotating
                     id(mister_rotation_index) = 0;
                     int zone = select_zone_for_pulse();
@@ -1504,8 +1448,7 @@ interval:
               // This is tracked separately — see willFog gate at line ~439.
 
               // --- DE-ESCALATE S2 → S1 ---
-              if(id(mister_state) == 2
-                 && avg_vpd < (pol(verdify_policy::kPF_mister_all_kpa, id(mister_all_kpa)) - MISTER_HYST)){
+              if(id(mister_state) == 2 && avg_vpd < (id(mister_all_kpa) - MISTER_HYST)){
                 ESP_LOGI("mister","S2→S1: VPD=%.2f", avg_vpd);
                   id(mister_state) = 1;
                   id(humid_s2_duration_ms) = 0;
@@ -1516,8 +1459,7 @@ interval:
               }
 
               // --- DE-ESCALATE S1 → off ---
-              if(id(mister_state) == 1 && !any_zone_stressed
-                 && avg_vpd < (pol(verdify_policy::kPF_mister_engage_kpa, id(mister_engage_kpa)) - MISTER_HYST)){
+              if(id(mister_state) == 1 && !any_zone_stressed && avg_vpd < (id(mister_engage_kpa) - MISTER_HYST)){
                 ESP_LOGI("mister","S1→off: VPD=%.2f", avg_vpd);
                 turn_off_all_misters();
                 id(mister_state) = 0;

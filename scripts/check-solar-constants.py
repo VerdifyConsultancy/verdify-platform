@@ -7,6 +7,7 @@ docs/design/firmware-v2-contract-2026-06-10.md §B1):
 
   * ingestor/solar.py                                  — the editable SSOT
   * firmware/lib/greenhouse_solar.h                    — on-chip NOAA engine
+  * deploy/k8s/components/firmware-twin/src/greenhouse_solar.h — vendored twin copy
   * db/migrations/186-noaa-solar-phase-parity.sql      — fn_solar_* helper bodies
   * db/schema.sql                                      — dumped fn_solar_* bodies
 
@@ -111,10 +112,9 @@ def _canonical(errors: list[str]) -> dict[str, Occurrence]:
 def _surface_occurrences(errors: list[str]) -> list[Occurrence]:
     occurrences: list[Occurrence] = []
 
-    # (#587: the vendored firmware-twin src copy is retired — the twin image
-    # builds from the canonical firmware/lib/greenhouse_solar.h directly.)
     header_rels = [
         "firmware/lib/greenhouse_solar.h",
+        "deploy/k8s/components/firmware-twin/src/greenhouse_solar.h",
     ]
     for rel in header_rels:
         text = _read(rel, errors)
