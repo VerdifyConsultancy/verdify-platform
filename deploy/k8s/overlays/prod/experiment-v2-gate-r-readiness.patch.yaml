@@ -21,4 +21,7 @@ spec:
     spec:
       containers:
         - name: readiness
-          image: registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:66e0132ba39c86d80f6fd74b442b376be004675262fbb03e48fbb486986617e9
+          # Resolved by this overlay's images transformer to the pinned
+          # experiment-v2-orchestrator digest, so the readiness hook always runs
+          # the same image as the experiment workers (the pin actuator moves both).
+          image: ghcr.io/verdifyconsultancy/verdify-experiment-v2-orchestrator
