@@ -1,0 +1,1 @@
+pg_dump: error: query failed: ERROR: permission denied for table climate

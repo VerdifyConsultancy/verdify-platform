@@ -1,10 +1,14 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
+namespace: verdify-prod
 
 resources:
   - ../../overlays/prod
 
-# During the attended M8.1 run the exact component and activation patch live in
-# the canonical production overlay so the Argo Application source path remains
-# deploy/k8s/overlays/prod. Restore this standalone dormant wrapper after the
-# one-shot receipt is retained.
+# The one-shot component is absent from the Argo source. Keep a dormant,
+# invalid-value render for a future separately reviewed attended activation.
+components:
+  - ../../components/experiment-v2-gate-r-readiness
+
+patches:
+  - path: activation-values.patch.yaml

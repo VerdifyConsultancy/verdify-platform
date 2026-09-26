@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import copy
 import importlib.util
 import json
 import os
@@ -68,31 +70,197 @@ def _passive_db(*, disagreement: bool) -> dict:
         "bands": bands,
         "targets": {
             "ts": now,
-            "served_temp_target": 70.0,
+            "reconstructed_temp_target": 70.0,
             "house_temp_target_f": 70.0,
-            "served_vpd_target": 1.0,
+            "reconstructed_vpd_target": 1.0,
             "house_vpd_target": 1.0,
         },
     }
 
 
-def test_passive_424_requires_exact_six_series_agreement() -> None:
-    passed, raw = collector.passive_424(_passive_db(disagreement=False), observed_at="2026-08-30T12:00:00Z")
-    assert passed == {
-        "status": "pass",
+@pytest.mark.parametrize("disagreement", [False, True])
+def test_passive_424_never_promotes_database_equality_to_consumed_proof(disagreement) -> None:
+    evidence, raw = collector.passive_424(_passive_db(disagreement=disagreement), observed_at="2026-08-30T12:00:00Z")
+    assert evidence == {
+        "status": "fail",
         "observed_at": "2026-08-30T12:00:00Z",
         "receipt_sha256": collector.receipt(raw),
         "passive": True,
-        "agreement": True,
+        "agreement": False,
         "series_checked": 6,
         "device_call_count": 0,
+        "lineage_contract_version": 2,
+        "disposition": "unobservable",
+        "consumed_branch": "unobservable",
     }
-    assert all(row["status"] == "resolved" for row in raw["series"])
+    assert raw["schema"] == "verdify-experiment-v2-passive-424-v2"
+    assert all(row["status"] == "unobservable" for row in raw["series"])
+    assert all("control" not in row and "observed" not in row for row in raw["series"])
+    assert raw["runtime_connection_identity_verified"] is False
+    assert raw["raw_observation_freshness_verified"] is False
+    edge = raw["series"][0]["database_diagnostics"][0]
+    assert edge["desired_value"] == (2 if disagreement else 1)
+    assert edge["cfg_snapshot_value"] == 1
 
-    failed, raw = collector.passive_424(_passive_db(disagreement=True), observed_at="2026-08-30T12:00:00Z")
-    assert failed["status"] == "fail"
-    assert failed["agreement"] is False
-    assert next(row for row in raw["series"] if row["series"] == "temp_low")["status"] == "present"
+
+def test_passive_missing_targets_and_duplicate_rows_remain_diagnostics() -> None:
+    db = _passive_db(disagreement=False)
+    db["bands"].append(copy.deepcopy(db["bands"][0]))
+    db["bands"][-1]["cfg_readback_value"] = 99
+    db["targets"] = {}
+    evidence, raw = collector.passive_424(db, observed_at="2026-08-30T12:00:00Z")
+    assert evidence["agreement"] is False
+    assert len(raw["series"][0]["database_diagnostics"]) == 2
+    assert raw["series"][-1]["target_snapshot_value"] is None
+    assert raw["series"][-1]["raw_slug"] == "house_vpd_target_kpa"
+
+
+def test_db_only_receipt_blocks_actual_gate_p_evaluation() -> None:
+    from test_experiment_v2_readiness_guard import BASE, _evaluate
+
+    packet = copy.deepcopy(BASE)
+    evidence, _ = collector.passive_424(_passive_db(disagreement=False), observed_at="2026-08-30T12:00:00Z")
+    packet["evidence"]["served_control_observed_424"].update(evidence)
+    result = _evaluate(packet, {})
+    assert result["status"] != "pass"
+    assert "served_control_observed_not_resolved" in result["blockers"]
+    assert "served_control_observed_consumed_edges_unobservable" in result["blockers"]
+
+
+@pytest.mark.parametrize("mode", ["proof", "recovery"])
+def test_collect_db_preserves_latest_missing_target_without_claiming_consumption(monkeypatch, mode) -> None:
+    class Connection:
+        def __init__(self):
+            self.queries = []
+            self.closed = False
+
+        async def fetchrow(self, sql, *args):
+            self.queries.append(sql)
+            return None if "house_temp_target_f" in sql else {}
+
+        async def fetch(self, sql, *args):
+            self.queries.append(sql)
+            return (
+                [_climate_row(datetime(2026, 8, 30, 12, i, tzinfo=UTC), 0) for i in (0, 1)]
+                if "temp_north" in sql
+                else []
+            )
+
+        async def close(self):
+            self.closed = True
+
+    connection = Connection()
+
+    async def connect(*args):
+        return connection
+
+    monkeypatch.setattr(collector, "_connect", connect)
+    db = asyncio.run(collector.collect_db("45039c86-c1d9-52f6-a0a9-d94a17bc4b14", mode=mode))
+    assert connection.closed
+    assert db["targets"] == {}
+    assert len(db["climate"]) == 2
+    target_sql = next(sql for sql in connection.queries if "house_temp_target_f" in sql)
+    assert "b.temp_target AS reconstructed_temp_target" in target_sql
+    assert "b.vpd_target AS reconstructed_vpd_target" in target_sql
+    assert "LEFT JOIN LATERAL" in target_sql
+    assert all("IS NOT NULL" not in sql for sql in connection.queries if "house_temp_target_f" in sql)
+    climate_sql = next(sql for sql in connection.queries if "temp_north" in sql)
+    assert "greenhouse_id='vallery'" in climate_sql
+    assert "greenhouse_id=c.greenhouse_id" in climate_sql
+    assert "interval '90 seconds'" in climate_sql
+
+
+def test_passive_cache_checks_version_and_content_identity(tmp_path) -> None:
+    evidence, raw = collector.passive_424(_passive_db(disagreement=False), observed_at="2026-08-30T12:00:00Z")
+    payload = {
+        "schema": collector.PREFLIGHT_CACHE_SCHEMA,
+        "authentication_686": {"receipt_sha256": "a" * 64},
+        "provider_preflight": {"receipt_sha256": "b" * 64},
+        "served_control_observed_424": evidence,
+        "supporting": {"served_control_observed_424": raw},
+    }
+    cache = tmp_path / "preflight.json"
+    cache.write_text(json.dumps(payload))
+    assert collector.cached_preflights(cache)["served_control_observed_424"]["disposition"] == "unobservable"
+    for change in (
+        "old_cache",
+        "tampered_support",
+        "asserted_pass",
+        "support_not_object",
+        "root_not_object",
+        "rehash_false_resolution",
+    ):
+        changed = copy.deepcopy(payload)
+        if change == "old_cache":
+            changed["schema"] = "verdify-experiment-v2-proof-preflight-cache-v1"
+        elif change == "tampered_support":
+            changed["supporting"]["served_control_observed_424"]["series"][0]["status"] = "resolved"
+        elif change == "support_not_object":
+            changed["supporting"] = []
+        elif change == "root_not_object":
+            changed = []
+        elif change == "rehash_false_resolution":
+            changed["supporting"]["served_control_observed_424"]["series"][0]["status"] = "resolved"
+            changed["served_control_observed_424"]["receipt_sha256"] = collector.receipt(
+                changed["supporting"]["served_control_observed_424"]
+            )
+        else:
+            changed["served_control_observed_424"]["agreement"] = True
+            changed["served_control_observed_424"]["status"] = "pass"
+        cache.write_text(json.dumps(changed))
+        with pytest.raises(collector.CollectionError):
+            collector.cached_preflights(cache)
+
+
+def test_gate_p_preserves_existing_cache_before_any_external_preflight(tmp_path) -> None:
+    cache = tmp_path / "prior.json"
+    prior = b'{"schema":"prior-attempt"}\n'
+    cache.write_bytes(prior)
+
+    class NoExternalCalls:
+        def json(self, *args):
+            pytest.fail("existing cache must be checked before external reads or provider calls")
+
+    with pytest.raises(collector.CollectionError, match="already exists"):
+        collector.gate_p_preflights(
+            kube=NoExternalCalls(),
+            db={},
+            application_source="a" * 40,
+            experiment_id="45039c86-c1d9-52f6-a0a9-d94a17bc4b14",
+            cache=cache,
+        )
+    assert cache.read_bytes() == prior
+
+
+def test_recovery_preflight_does_not_inherit_resolved_proof_metadata() -> None:
+    from test_experiment_v2_readiness_guard import APP_SOURCE, BASE, EXPERIMENT_ID, RECOVERY_OVERLAY, _apply, _evaluate
+
+    result = collector.recovery_preflights(
+        BASE,
+        observed_at="2026-08-30T12:00:00Z",
+        application_source=APP_SOURCE,
+        experiment_id=EXPERIMENT_ID,
+    )["served_control_observed_424"]
+    assert result["disposition"] == "unobservable"
+    assert result["consumed_branch"] == "unobservable"
+    assert result["agreement"] is False
+    assert result["series_checked"] == 0
+    recovery = _apply(BASE, RECOVERY_OVERLAY["operations"])
+    recovery["evidence"]["served_control_observed_424"].update(result)
+    assert _evaluate(recovery, RECOVERY_OVERLAY)["blockers"] == []
+
+
+def test_planner_context_labels_db_lineage_and_keeps_deployed_mirror() -> None:
+    source = (ROOT / "scripts/gather-plan-context.sh").read_text()
+    mirror = (ROOT / "deploy/k8s/components/ingestor-gather-script/gather-script-configmap.yaml").read_text()
+    for text in ("cfg_* readbacks prove acceptance", "AS firmware_push", "AS crop_target"):
+        assert text not in source
+        assert text not in mirror
+    assert "Matching numbers do not prove acceptance or consumption" in source
+    assert "firmware_setpoint_value AS desired_value" in source
+    assert "cfg_readback_ts BETWEEN ts - interval '15 minutes' AND ts" in source
+    literal = "".join(line if not line.strip("\r\n") else f"    {line}" for line in source.splitlines(keepends=True))
+    assert f"  gather-plan-context.sh: |\n{literal}" in mirror
 
 
 def test_chain_uses_only_guard_committed_predecessor(tmp_path: Path) -> None:

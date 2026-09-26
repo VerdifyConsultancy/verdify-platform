@@ -6,9 +6,18 @@
 > CronJob independent of the ingestor that checks the
 > `verdify-ingestor-writer` Lease age (>180 s → CRITICAL `writer_absent`) and
 > climate freshness (>600 s → CRITICAL `telemetry_stall`), paging via direct
-> `alert_log` rows + k8s Events when the DB is down. The PrometheusRule below
-> is STILL WANTED as the fully out-of-cluster backstop (this repo has no RBAC
-> in `observability`), and Slack wiring waits on the token-secret sealing.
+> `alert_log` rows + k8s Events when the DB is down. An out-of-cluster
+> Prometheus backstop remains a separate monitoring-stack task (#394).
+
+**Current delivery contract (#563, for #89/#394):** Prometheus in `observability`
+loads `/etc/prometheus/rules/*.yml` from the `prometheus-rules` ConfigMap.
+The source is `jvallery/monitoring-stack/deploy/observability/prometheus/prometheus-rules.yaml`,
+following its `verdify-backup.yml` rule-file entry. Its
+`prometheus-config.yaml` declares `rule_files`; `prometheus.yaml` mounts the
+ConfigMap. A `PrometheusRule` CR in Verdify's `deploy/k8s/**` is inert because
+this stack does not use prometheus-operator. Add the rule in the monitoring
+owner and confirm it appears in Prometheus's loaded-rule state after that
+owner reconciles. Do not patch the `observability` namespace from this repo.
 
 **From:** `verdify-platform` (L1 audit P0) · **Date:** 2026-06-17 · **Tracker:** `jvallery/agents` monitoring-stack; cross-ref `VerdifyConsultancy/verdify-platform#343`, GitHub issues.
 
@@ -47,41 +56,25 @@ via the in-cluster Prometheus). No new exporter is needed for the writer-absent 
 ## Asks
 
 ### 1. Writer-absent alert (NEW — the P0)
-A `PrometheusRule` on `sum(verdify_esp32_writer_estab) == 0`, Slack-routed to `#greenhouse`,
-independent of the ingestor. Suggested rule:
+Add a rule-file entry in the monitoring-owned `prometheus-rules` ConfigMap,
+independent of the ingestor. Suggested rule body for #394:
 
 ```yaml
-apiVersion: monitoring.coreos.com/v1
-kind: PrometheusRule
-metadata:
-  name: verdify-writer-presence
-  namespace: observability           # wherever the writer-exporter rules live
-  labels:
-    # match your Prometheus ruleSelector (this repo ships NO PrometheusRules; they live here)
-    release: <kube-prometheus-stack release>
-spec:
-  groups:
-    - name: verdify-writer
-      rules:
-        - alert: VerdifyEsp32WriterAbsent
-          expr: sum(verdify_esp32_writer_estab) == 0
-          for: 3m                     # tolerate a normal Recreate roll; page if it persists
-          labels:
-            severity: critical
-            domain: verdify-greenhouse
-          annotations:
-            summary: "No ESP32 writer — the sole greenhouse writer is down"
-            description: >-
-              sum(verdify_esp32_writer_estab)=0 for 3m. Telemetry capture, setpoint
-              dispatch, and the in-ingestor alert engine are ALL down. The ESP32 keeps
-              running its last NVS band autonomously (no immediate plant risk), but
-              nothing is being recorded or tuned. Runbook below.
-        - alert: VerdifyEsp32WriterSplitBrain      # keep/confirm vs #241
-          expr: sum(verdify_esp32_writer_estab) >= 2
-          for: 1m
-          labels: { severity: critical, domain: verdify-greenhouse }
-          annotations:
-            summary: "Two ESP32 writers — split-brain device thrash risk"
+groups:
+  - name: verdify-writer
+    rules:
+      - alert: VerdifyEsp32WriterAbsent
+        expr: (sum(verdify_esp32_writer_estab) or vector(0)) == 0
+        for: 3m  # tolerate a normal Recreate roll
+        labels: {severity: critical, domain: verdify-greenhouse}
+        annotations:
+          summary: "No ESP32 writer — the sole greenhouse writer is down"
+      - alert: VerdifyEsp32WriterSplitBrain  # confirm against the existing #241 alarm
+        expr: sum(verdify_esp32_writer_estab) >= 2
+        for: 1m
+        labels: {severity: critical, domain: verdify-greenhouse}
+        annotations:
+          summary: "Two ESP32 writers — split-brain device thrash risk"
 ```
 
 `for: 3m` is deliberate: a normal ingestor Recreate (single-writer rollout) has a brief
@@ -118,9 +111,9 @@ When `VerdifyEsp32WriterAbsent` fires:
 4. Confirm single-writer after recovery: `sum(verdify_esp32_writer_estab)` returns to `1`.
 
 ## Notes / boundaries
-- This repo (`verdify-platform`) ships **no PrometheusRules** — Verdify alerting is either the
-  in-ingestor engine or lives in monitoring-stack. The writer-presence rule belongs **here**
-  (monitoring-stack), reading the `observability`-namespace exporter.
+- This repo (`verdify-platform`) ships **no PrometheusRules**. The writer-presence
+  rule belongs in the monitoring-stack ConfigMap rule-file source, reading the
+  `observability`-namespace exporter.
 - Keep these alerts **out-of-band** (do not co-locate in the ingestor) — that independence is
   the entire point.
 - Cross-ref: `docs/reviews/lane1-architecture-audit-2026-06-16.md` §8 (P0 #2), and the

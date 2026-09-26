@@ -137,7 +137,10 @@ for f in "${ANNOTATED_FILES[@]}"; do
     echo "STALE: $f has $ANNOTATION values [${current_revisions[*]}], expected only \"$revision\"" >&2
     status=1
   else
-    sed -i -E "s|($ANNOTATION: )\"[0-9a-f]*\"|\\1\"$revision\"|" "$f"
+    # An explicit backup suffix works with both GNU and BSD sed; the bare
+    # `-i -E` form makes BSD sed parse `-E` as the backup suffix.
+    sed -i.bak -E "s|($ANNOTATION: )\"[0-9a-f]*\"|\\1\"$revision\"|" "$f"
+    rm -f -- "$f.bak"
     echo "updated $f -> $revision"
   fi
 done

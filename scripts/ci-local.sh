@@ -144,6 +144,7 @@ $PY -m pytest -q \
   tests/test_policy_arbiter_migration.py \
   tests/test_policy_arbiter_worker.py \
   tests/test_policy_delivery_worker.py \
+  tests/test_prometheus_rule_source_guard.py \
   tests/test_policy_writer_demotion.py \
   tests/test_prepare_component_prefix_replay.py \
   tests/test_prepare_experiment_v2_shadow.py \
@@ -217,6 +218,9 @@ elif command -v kubectl >/dev/null; then
 else
   echo "SKIP: no kustomize/kubectl on this host (required in the CI image)"
 fi
+
+step "Prometheus rule-file delivery guard (#563)"
+$PY scripts/check-prometheus-rule-source.py
 
 # ── Diff-scoped gates (merge-base semantics from the retired PR workflows) ──
 if [ -n "${CI_BASE_REF:-}" ]; then

@@ -23,14 +23,12 @@
 #                            4. In prod, use device-monitor for the separate
 #                               single-writer socket invariant.
 #
-#     device-monitor      — prod exactly-one-writer monitor STUB. Counts the
-#                          number of distinct pods in the target namespace
-#                          (default verdify-prod) holding an ESTABLISHED TCP
-#                          connection to 192.168.10.111:6053 (the live ESP32
+#     device-monitor      — prod exactly-one-writer monitor. Counts the
+#                          ESTABLISHED TCP sockets in the target namespace
+#                          (default verdify-prod) connected to
+#                          192.168.10.111:6053 (the live ESP32
 #                          ESPHome native API) and asserts the count is exactly
-#                          one. This is the network-observable form of the
-#                          single-writer invariant. STUB: read-only, prints what
-#                          it sees; wire into alerting separately.
+#                          one. An unreadable pod makes the result unknown.
 #
 # SAFETY (hard rules this script obeys — see AGENTS.md + k3s-cutover-sequence.md)
 #   - READ-ONLY against the cluster. Only `kubectl get/exec`(read commands) and
@@ -38,9 +36,8 @@
 #   - Never scales, patches, applies, deletes, or syncs anything.
 #   - Never writes the argocd namespace and never triggers an ArgoCD sync.
 #   - Never touches the live VM, docker-compose, the ESP32, or pushes a setpoint.
-#   - The `ss`/`netstat` device-connection checks run INSIDE a target pod via
-#     `kubectl exec` and only INSPECT that pod's own sockets; they open no new
-#     device connection.
+#   - The socket checks read each pod's own /proc/net/tcp via `kubectl exec`
+#     (falling back to ss/netstat); they open no new device connection.
 #
 # USAGE
 #   KUBECONFIG=/home/jason/.kube/verdify-agent.config \
@@ -262,12 +259,15 @@ run_smoke() {
   print_summary
 }
 
-# ── Mode: device-monitor (prod exactly-one-writer STUB) ─────────────────────
+# ── Mode: device-monitor (prod exactly-one-writer) ──────────────────────────
 run_device_monitor() {
-  echo "=== k3s device-route monitor STUB ($(date '+%Y-%m-%d %H:%M:%S')) — namespace=${NAMESPACE} ==="
+  echo "=== k3s device-route monitor ($(date '+%Y-%m-%d %H:%M:%S')) — namespace=${NAMESPACE} ==="
   echo "(READ-ONLY: inspects pods' own sockets; asserts EXACTLY ONE writer to ${DEVICE_ESP32_IP}:${DEVICE_PORT}.)"
   echo ""
-  local pods pod writers=0 tool_found=0
+  local pods pod sockets=0 unknown=0 out count
+  local octet1 octet2 octet3 octet4 remote_hex
+  IFS=. read -r octet1 octet2 octet3 octet4 <<< "${DEVICE_ESP32_IP}"
+  remote_hex="$(printf '%02X%02X%02X%02X:%04X' "${octet4}" "${octet3}" "${octet2}" "${octet1}" "${DEVICE_PORT}")"
   pods="$("${KC[@]}" get pods --field-selector=status.phase=Running \
     -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null || true)"
   if [ -z "${pods}" ]; then
@@ -276,31 +276,34 @@ run_device_monitor() {
   fi
   while IFS= read -r pod; do
     [ -z "${pod}" ] && continue
-    local out
-    out="$("${KC[@]}" exec "${pod}" -- sh -c \
-      "command -v ss >/dev/null 2>&1 && ss -tnp 2>/dev/null || (command -v netstat >/dev/null 2>&1 && netstat -tnp 2>/dev/null) || echo __NO_SOCKET_TOOL__" \
-      2>/dev/null || true)"
-    if echo "${out}" | grep -q '__NO_SOCKET_TOOL__'; then
-      info "pod ${pod}: no ss/netstat — cannot observe its device socket"
-      continue
+    if out="$("${KC[@]}" exec "${pod}" -- cat /proc/net/tcp 2>/dev/null)"; then
+      count="$(awk -v remote="${remote_hex}" 'NR > 1 && $3 == remote && $4 == "01" { n++ } END { print n+0 }' <<< "${out}")"
+    else
+      # Images without cat may still include a socket tool. A failed exec is
+      # UNKNOWN, never proof that the pod has zero device sockets.
+      out="$("${KC[@]}" exec "${pod}" -- sh -c \
+        'command -v ss >/dev/null 2>&1 && ss -tn 2>/dev/null || (command -v netstat >/dev/null 2>&1 && netstat -tn 2>/dev/null)' \
+        2>/dev/null)" || out=""
+      if [ -z "${out}" ]; then
+        unknown=$((unknown+1))
+        info "pod ${pod}: socket table unavailable (UNKNOWN)"
+        continue
+      fi
+      count="$(awk -v remote="${DEVICE_ESP32_IP}:${DEVICE_PORT}" \
+        '($1 == "ESTAB" || $6 == "ESTABLISHED") && index($0, remote) { n++ } END { print n+0 }' <<< "${out}")"
     fi
-    tool_found=1
-    if echo "${out}" | grep -E 'ESTAB|ESTABLISHED' \
-        | grep -q "${DEVICE_ESP32_IP}:${DEVICE_PORT}"; then
-      writers=$((writers+1))
-      info "pod ${pod}: HOLDS the ESP32 native-API connection (${DEVICE_ESP32_IP}:${DEVICE_PORT})"
-    fi
+    sockets=$((sockets+count))
+    info "pod ${pod}: ${count} established ESP32 socket(s)"
   done <<< "${pods}"
 
-  if [ "${tool_found}" -eq 0 ]; then
-    info "no pod exposed ss/netstat — STUB cannot observe sockets in this cluster build"
-    fail "device-monitor: socket inspection unavailable; wire a sidecar/exporter to observe the single writer"
-  elif [ "${writers}" -eq 1 ]; then
-    pass "device-monitor: EXACTLY ONE pod holds the ESP32 writer connection (single-writer invariant observed)"
-  elif [ "${writers}" -eq 0 ]; then
-    fail "device-monitor: ZERO pods hold the ESP32 writer connection (no writer — device loop down?)"
+  if [ "${unknown}" -gt 0 ]; then
+    fail "device-monitor: ${unknown} pod(s) unobservable; ${sockets} socket(s) observed (writer count UNKNOWN)"
+  elif [ "${sockets}" -eq 1 ]; then
+    pass "device-monitor: EXACTLY ONE ESP32 writer connection observed"
+  elif [ "${sockets}" -eq 0 ]; then
+    fail "device-monitor: ZERO ESP32 writer connections observed (device loop down?)"
   else
-    fail "device-monitor: ${writers} pods hold the ESP32 writer connection — MULTI-WRITER, device-thrash risk"
+    fail "device-monitor: ${sockets} ESP32 writer connections observed — MULTI-WRITER risk"
   fi
   echo ""
   print_summary

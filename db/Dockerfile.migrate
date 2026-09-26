@@ -27,13 +27,15 @@ COPY db/migrations/ /db/migrations/
 COPY db/ledger/ /db/ledger/
 COPY db/apply-migrations.sh /usr/local/bin/apply-migrations.sh
 COPY scripts/check_migration_rollback_safety.py /scripts/check_migration_rollback_safety.py
+COPY scripts/c0-migration-delivery.py scripts/c0-boundary-transition.py scripts/ordinary-boundary-diff.py /scripts/
 COPY db/migrate.sh /usr/local/bin/migrate.sh
 RUN chmod 0755 /usr/local/bin/migrate.sh /usr/local/bin/apply-migrations.sh \
     && chmod 0644 /db/*.sql \
     && find /db/migrations /db/ledger -type f -exec chmod 0644 {} + \
     && chmod 0644 /scripts/check_migration_rollback_safety.py
 USER 1000:1000
-ENV VERDIFY_MIGRATIONS_DIR=/db/migrations \
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    VERDIFY_MIGRATIONS_DIR=/db/migrations \
     VERDIFY_LEDGER_DIR=/db/ledger \
     VERDIFY_SAFETY_CLASSIFIER=/scripts/check_migration_rollback_safety.py
 ENTRYPOINT ["/usr/local/bin/migrate.sh"]

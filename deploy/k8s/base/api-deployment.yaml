@@ -40,7 +40,7 @@ spec:
         # consumed via envFrom, so a ConfigMap edit alone does NOT restart this
         # pod. Maintained by scripts/gen-config-revision.sh — do NOT hand-edit
         # (the CI gate recomputes it).
-        verdify.io/config-revision: "4dbb2e691d91"
+        verdify.io/config-revision: "af470ca0c26c"
       labels:
         app.kubernetes.io/part-of: verdify
         app.kubernetes.io/component: api

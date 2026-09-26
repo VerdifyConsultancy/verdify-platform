@@ -18,3 +18,18 @@ spec:
           env:
             - name: VERDIFY_MIGRATE_LEDGER
               value: "1"
+            - name: VERDIFY_C0_BOUNDARY_CONTRACT
+              value: /db/c0-boundary-contract.json
+            # Independent review pin for the exact ConfigMap file bytes.
+            - name: VERDIFY_C0_BOUNDARY_CONTRACT_SHA256
+              value: 90fac3dafbf927e6dfc67d8ec73e6b41c4f818f5c983216550848be8bf9dff6f
+          volumeMounts:
+            - name: c0-boundary-contract
+              mountPath: /db/c0-boundary-contract.json
+              subPath: contract.json
+              readOnly: true
+      volumes:
+        - name: c0-boundary-contract
+          configMap:
+            name: verdify-c0-boundary-contract-240-248
+            defaultMode: 0444

@@ -71,6 +71,20 @@ q() { $PSQL -tA -c "$1"; }
 [ -d "$MIGRATIONS_DIR" ] || die "migrations dir not found: $MIGRATIONS_DIR"
 [ -f "$LEDGER_BOOTSTRAP" ] || die "ledger bootstrap SQL not found: $LEDGER_BOOTSTRAP"
 
+# C0 ordinary-login transition must precede ANY bootstrap or per-file writes.
+# Dispatch by source inventory, not presence of an attestor that could be missing
+# or altered. Include the unqualified resource successor: a narrowed 248-only
+# inventory must fail exact-profile admission, not escape into legacy delivery.
+# Detection is not expansion of the immutable seven-file transition.
+# No environment flag can opt back into the old C0 apply behavior.
+for c0_candidate in "$MIGRATIONS_DIR"/24[1-8]*.sql; do
+  [ -f "$c0_candidate" ] || continue
+  C0_DELIVERY="${SCRIPT_DIR}/../scripts/c0-migration-delivery.py"
+  [ -f "$C0_DELIVERY" ] || C0_DELIVERY="/scripts/c0-migration-delivery.py"
+  [ -f "$C0_DELIVERY" ] || die "C0 delivery implementation missing; no per-file fallback"
+  exec python3 "$C0_DELIVERY" --migrations-dir "$MIGRATIONS_DIR" "$@"
+done
+
 q "SELECT 1" >/dev/null || die "cannot reach ${DB_HOST}:${DB_PORT:-5432}/${DB_NAME}"
 
 # ── 1. Ledger bootstrap ─────────────────────────────────────────────────────
@@ -188,7 +202,12 @@ seq_of() {
   n=$(printf '%s' "$1" | sed -E 's/^([0-9]+)[a-zA-Z]?-.*/\1/')
   case "$n" in
     ''|*[!0-9]*) printf 'NULL' ;;
-    *) printf '%d' "$((10#$n))" ;;
+    *)
+      # POSIX sh has no base#number arithmetic (dash rejects even 10#241).
+      # Strip zero padding before printf so 008/095 are not treated as octal.
+      n=$(printf '%s' "$n" | sed 's/^0*//')
+      printf '%d' "${n:-0}"
+      ;;
   esac
 }
 
