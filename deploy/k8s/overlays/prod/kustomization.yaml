@@ -256,7 +256,7 @@ images:
     digest: sha256:845dfbeb531c1b9b14b61da96af1b26de49f8fa23e713ce31fbeead08b2108a9
   - name: ghcr.io/verdifyconsultancy/verdify-migrate
     newName: registry.vallery.net/verdifyconsultancy/verdify-migrate
-    digest: sha256:7652faa25533f957a93a56e6d1533c2d2286935482e8d9db5d6cf8312e5e84e4
+    digest: sha256:b3f5c221d09154734ad9d2f62780a3318d7b7df0b4ab3dea8a5ba911627a2ca5
   # Fleet pin-actuator key for the feature-off experiment-v2 orchestrator.
   # Every source build advances this pin with the other managed application
   # images; the component remains inert until its explicit GitOps feature gate.

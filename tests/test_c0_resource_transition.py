@@ -185,6 +185,30 @@ def test_nine_file_owning_commit_readback_and_no_write_retry(cohort):
     assert "per-file" not in repeated.stdout
 
 
+@pytest.mark.parametrize("position", [0, 8, "receipt"])
+def test_nine_file_fault_rolls_back_ledger_catalog_and_receipts(cohort, position):
+    q, contract, _, _, env, run = cohort
+    sql = delivery.transition.emit_sql(contract, env["VERDIFY_C0_BOUNDARY_CONTRACT_SHA256"])
+    marker = (
+        "    GET DIAGNOSTICS v_rows = ROW_COUNT;"
+        if position == "receipt"
+        else f"-- END EXACT SOURCE {PATHS[position].name}"
+    )
+    fault = (
+        "RAISE EXCEPTION 'synthetic nine-file fault';"
+        if position == "receipt"
+        else "DO $$ BEGIN RAISE EXCEPTION 'synthetic nine-file fault'; END $$;"
+    )
+    assert sql.count(marker) == 1
+    before = state(q)
+    with pytest.raises(delivery.DeliveryError, match="database command refused"):
+        delivery.psql(sql.replace(marker, marker + "\n" + fault), env)
+    assert state(q) == before
+    assert attestation_probe(q) == {"api": "t", "ingestor": "t"}
+    assert run().returncode == 0
+    assert_applied(q, PATHS)
+
+
 @pytest.mark.parametrize(
     "failure", ["old-version", "pin", "missing-resource", "unknown-version", "outside-pending", "wrong-successor"]
 )
