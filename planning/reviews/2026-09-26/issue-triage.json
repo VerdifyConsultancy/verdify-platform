@@ -1,0 +1,2443 @@
+{
+  "source_main_sha": "a409e774ffd5a0efb6707afe024cfaa60f655b08",
+  "issue_count": 80,
+  "issues": [
+    {
+      "number": 14,
+      "title": "[C8][P2] Twin program: qualify declared oracle coverage before using divergence as a gate",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/14",
+      "stage": "C8",
+      "priority": "P2",
+      "effort": "L",
+      "milestone": "C8 \u2014 Comparator and full resource claim",
+      "labels": [
+        "P2",
+        "area:firmware",
+        "audit:2026-08-29",
+        "campaign:C8",
+        "campaign:evidence-2026-09",
+        "epic",
+        "epic:product-plane",
+        "lane:L1-climate",
+        "theme:Firmware/Validation",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Open rollup",
+      "parent": "VerdifyConsultancy/verdify-platform#775",
+      "blocked_by": [],
+      "blocking": [],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:51:32Z"
+    },
+    {
+      "number": 16,
+      "title": "[C7][P2] Hardware program: commission only the sensing and equipment justified by evidence",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/16",
+      "stage": "C7",
+      "priority": "P2",
+      "effort": "L",
+      "milestone": "C7 \u2014 Physical and seasonal commissioning",
+      "labels": [
+        "P2",
+        "audit:2026-08-29",
+        "campaign:C7",
+        "campaign:evidence-2026-09",
+        "epic",
+        "epic:product-plane",
+        "gate:hardware",
+        "lane:L7-irrig",
+        "theme:Hardware-gated",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Open rollup",
+      "parent": "VerdifyConsultancy/verdify-platform#775",
+      "blocked_by": [],
+      "blocking": [],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:51:14Z"
+    },
+    {
+      "number": 31,
+      "title": "[C8][P2] Close twin setpoint and actuator coverage gaps with generated consumer truth",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/31",
+      "stage": "C8",
+      "priority": "P2",
+      "effort": "L",
+      "milestone": "C8 \u2014 Comparator and full resource claim",
+      "labels": [
+        "P2",
+        "area:firmware",
+        "audit:2026-08-29",
+        "campaign:C8",
+        "campaign:evidence-2026-09",
+        "epic:product-plane",
+        "lane:L1-climate",
+        "theme:firmware-validation",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "No issue blocker",
+      "parent": "VerdifyConsultancy/verdify-platform#14",
+      "blocked_by": [],
+      "blocking": [
+        "jvallery/monitoring-stack#627"
+      ],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:51:35Z"
+    },
+    {
+      "number": 45,
+      "title": "[C7][P2] Commission soil and runoff feedback before enabling irrigation decisions",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/45",
+      "stage": "C7",
+      "priority": "P2",
+      "effort": "L",
+      "milestone": "C7 \u2014 Physical and seasonal commissioning",
+      "labels": [
+        "P2",
+        "audit:2026-08-29",
+        "campaign:C7",
+        "campaign:evidence-2026-09",
+        "epic:product-plane",
+        "gate:hardware",
+        "lane:L7-irrig",
+        "theme:Irrigation-feedback bring-up",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Blocked for acceptance",
+      "parent": "VerdifyConsultancy/verdify-platform#16",
+      "blocked_by": [
+        "VerdifyConsultancy/verdify-platform#398"
+      ],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#296",
+        "VerdifyConsultancy/verdify-platform#297"
+      ],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-26T20:20:46Z"
+    },
+    {
+      "number": 49,
+      "title": "[C5][P1] Audit and close historical suppressed sensor alerts without false count-parity assumptions",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/49",
+      "stage": "C5",
+      "priority": "P1",
+      "effort": "S",
+      "milestone": "C5 \u2014 Durability and least privilege",
+      "labels": [
+        "P1",
+        "audit:2026-08-29",
+        "campaign:C5",
+        "campaign:evidence-2026-09",
+        "epic:data-durability",
+        "lane:L2-obs",
+        "theme:alert-lifecycle",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "No issue blocker",
+      "parent": "VerdifyConsultancy/verdify-platform#75",
+      "blocked_by": [],
+      "blocking": [],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:50:34Z"
+    },
+    {
+      "number": 51,
+      "title": "[C7][P2] Calibrate CO2 against a real reference and publish measurement uncertainty",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/51",
+      "stage": "C7",
+      "priority": "P2",
+      "effort": "S",
+      "milestone": "C7 \u2014 Physical and seasonal commissioning",
+      "labels": [
+        "P2",
+        "audit:2026-08-29",
+        "campaign:C7",
+        "campaign:evidence-2026-09",
+        "epic:product-plane",
+        "gate:hardware",
+        "lane:L7-irrig",
+        "theme:Hardware-gated",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Physical work gated",
+      "parent": "VerdifyConsultancy/verdify-platform#16",
+      "blocked_by": [],
+      "blocking": [],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:51:24Z"
+    },
+    {
+      "number": 52,
+      "title": "[C7][P2] Define species-appropriate seasonal dormancy care from operator observations",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/52",
+      "stage": "C7",
+      "priority": "P2",
+      "effort": "M",
+      "milestone": "C7 \u2014 Physical and seasonal commissioning",
+      "labels": [
+        "P2",
+        "audit:2026-08-29",
+        "campaign:C7",
+        "campaign:evidence-2026-09",
+        "epic:product-plane",
+        "gate:hardware",
+        "lane:L7-irrig",
+        "theme:Climate/Seasonal (deferred)",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Physical work gated",
+      "parent": "VerdifyConsultancy/verdify-platform#16",
+      "blocked_by": [],
+      "blocking": [],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:51:27Z"
+    },
+    {
+      "number": 75,
+      "title": "[C4][P1] Observability program: prove actionable health from source through device",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/75",
+      "stage": "C4",
+      "priority": "P1",
+      "effort": "L",
+      "milestone": "C4 \u2014 Delivery and runtime reliability",
+      "labels": [
+        "P1",
+        "audit:2026-08-29",
+        "campaign:C4",
+        "campaign:evidence-2026-09",
+        "epic",
+        "epic:product-plane",
+        "lane:L2-obs",
+        "theme:Observability",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Open rollup",
+      "parent": "VerdifyConsultancy/verdify-platform#775",
+      "blocked_by": [],
+      "blocking": [
+        "jvallery/monitoring-stack#629",
+        "jvallery/monitoring-stack#627"
+      ],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:50:07Z"
+    },
+    {
+      "number": 89,
+      "title": "[C4][P1] Verify exact-source post-deploy smoke and device-route health",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/89",
+      "stage": "C4",
+      "priority": "P1",
+      "effort": "M",
+      "milestone": "C4 \u2014 Delivery and runtime reliability",
+      "labels": [
+        "P1",
+        "audit:2026-08-29",
+        "campaign:C4",
+        "campaign:evidence-2026-09",
+        "epic:device-safety",
+        "lane:L2-obs",
+        "theme:Observability",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Blocked for acceptance",
+      "parent": "VerdifyConsultancy/verdify-platform#75",
+      "blocked_by": [
+        "VerdifyConsultancy/verdify-platform#563"
+      ],
+      "blocking": [],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-26T20:26:17Z"
+    },
+    {
+      "number": 174,
+      "title": "[C8][P2] Rehome only current Verdify admin surfaces to global SSO, fail closed",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/174",
+      "stage": "C8",
+      "priority": "P2",
+      "effort": "M",
+      "milestone": "C8 \u2014 Comparator and full resource claim",
+      "labels": [
+        "P2",
+        "audit:2026-08-29",
+        "campaign:C8",
+        "campaign:evidence-2026-09",
+        "epic:product-plane",
+        "lane:L8-product",
+        "theme:Infra/Access",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "No issue blocker",
+      "parent": "VerdifyConsultancy/verdify-platform#775",
+      "blocked_by": [],
+      "blocking": [],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:51:30Z"
+    },
+    {
+      "number": 214,
+      "title": "[C6][P1] Prove crop-deviation trigger \u2192 valid plan on the sole operational planner path",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/214",
+      "stage": "C6",
+      "priority": "P1",
+      "effort": "M",
+      "milestone": "C6 \u2014 Evidence-led control and irrigation",
+      "labels": [
+        "P1",
+        "area:genai",
+        "audit:2026-08-29",
+        "bug",
+        "campaign:C6",
+        "campaign:evidence-2026-09",
+        "epic:product-plane",
+        "lane:L3-planner",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Blocked for acceptance",
+      "parent": "VerdifyConsultancy/verdify-platform#775",
+      "blocked_by": [
+        "VerdifyConsultancy/verdify-platform#780",
+        "VerdifyConsultancy/verdify-platform#427"
+      ],
+      "blocking": [],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:51:00Z"
+    },
+    {
+      "number": 218,
+      "title": "[C5][P1] Durability program: recoverable backups, measured RPO/RTO and safe HA option",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/218",
+      "stage": "C5",
+      "priority": "P1",
+      "effort": "L",
+      "milestone": "C5 \u2014 Durability and least privilege",
+      "labels": [
+        "P1",
+        "audit:2026-08-29",
+        "campaign:C5",
+        "campaign:evidence-2026-09",
+        "epic",
+        "epic:data-durability",
+        "lane:L6-ha",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Open rollup",
+      "parent": "VerdifyConsultancy/verdify-platform#775",
+      "blocked_by": [],
+      "blocking": [
+        "jvallery/monitoring-stack#628"
+      ],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:50:22Z"
+    },
+    {
+      "number": 245,
+      "title": "[C5][P1] Execute a separately bounded database cutover only after parity and rollback proof",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/245",
+      "stage": "C5",
+      "priority": "P1",
+      "effort": "L",
+      "milestone": "C5 \u2014 Durability and least privilege",
+      "labels": [
+        "P1",
+        "audit:2026-08-29",
+        "campaign:C5",
+        "campaign:evidence-2026-09",
+        "epic:data-durability",
+        "epic:ha-resilience",
+        "gate:jason",
+        "lane:L6-ha",
+        "theme:Infra/Database",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Blocked for acceptance",
+      "parent": "VerdifyConsultancy/verdify-platform#218",
+      "blocked_by": [
+        "VerdifyConsultancy/verdify-platform#396",
+        "VerdifyConsultancy/verdify-platform#382"
+      ],
+      "blocking": [],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-26T20:20:48Z"
+    },
+    {
+      "number": 296,
+      "title": "[C6][P1] Consider slow-hysteresis firmware irrigation feedback only after dispatcher evidence",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/296",
+      "stage": "C6",
+      "priority": "P1",
+      "effort": "L",
+      "milestone": "C6 \u2014 Evidence-led control and irrigation",
+      "labels": [
+        "P1",
+        "area:firmware",
+        "audit:2026-08-29",
+        "campaign:C6",
+        "campaign:evidence-2026-09",
+        "epic:control-optimization",
+        "epic:irrigation",
+        "lane:L7-irrig",
+        "req:D",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Blocked for acceptance",
+      "parent": "VerdifyConsultancy/verdify-platform#350",
+      "blocked_by": [
+        "VerdifyConsultancy/verdify-platform#434",
+        "VerdifyConsultancy/verdify-platform#297",
+        "VerdifyConsultancy/verdify-platform#45"
+      ],
+      "blocking": [],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:51:11Z"
+    },
+    {
+      "number": 297,
+      "title": "[C6][P1] Add saturation alerts and a commissioned dispatcher-side drip-skip loop",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/297",
+      "stage": "C6",
+      "priority": "P1",
+      "effort": "M",
+      "milestone": "C6 \u2014 Evidence-led control and irrigation",
+      "labels": [
+        "P1",
+        "area:ingestor",
+        "audit:2026-08-29",
+        "campaign:C6",
+        "campaign:evidence-2026-09",
+        "epic:control-optimization",
+        "epic:irrigation",
+        "lane:L7-irrig",
+        "req:D",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Blocked for acceptance",
+      "parent": "VerdifyConsultancy/verdify-platform#350",
+      "blocked_by": [
+        "VerdifyConsultancy/verdify-platform#398",
+        "VerdifyConsultancy/verdify-platform#45"
+      ],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#296"
+      ],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:51:08Z"
+    },
+    {
+      "number": 298,
+      "title": "[C7][P2] Rebaseline actual crop, pot and probe topology before feedback control",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/298",
+      "stage": "C7",
+      "priority": "P2",
+      "effort": "M",
+      "milestone": "C7 \u2014 Physical and seasonal commissioning",
+      "labels": [
+        "P2",
+        "area:coordinator-infra",
+        "audit:2026-08-29",
+        "campaign:C7",
+        "campaign:evidence-2026-09",
+        "epic:control-optimization",
+        "epic:irrigation",
+        "gate:hardware",
+        "lane:L7-irrig",
+        "req:D",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Physical work gated",
+      "parent": "VerdifyConsultancy/verdify-platform#16",
+      "blocked_by": [],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#398"
+      ],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-26T20:20:51Z"
+    },
+    {
+      "number": 299,
+      "title": "[C6][P1] Preserve center-mister re-fire protection through topology and reset recovery",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/299",
+      "stage": "C6",
+      "priority": "P1",
+      "effort": "M",
+      "milestone": "C6 \u2014 Evidence-led control and irrigation",
+      "labels": [
+        "P1",
+        "area:firmware",
+        "audit:2026-08-29",
+        "campaign:C6",
+        "campaign:evidence-2026-09",
+        "epic:control-optimization",
+        "epic:firmware-control",
+        "lane:L1-climate",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Blocked for acceptance",
+      "parent": "VerdifyConsultancy/verdify-platform#350",
+      "blocked_by": [
+        "VerdifyConsultancy/verdify-platform#390"
+      ],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#434"
+      ],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:51:06Z"
+    },
+    {
+      "number": 303,
+      "title": "[C4][P1] Run real portable ESPHome compilation for declared firmware targets",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/303",
+      "stage": "C4",
+      "priority": "P1",
+      "effort": "L",
+      "milestone": "C4 \u2014 Delivery and runtime reliability",
+      "labels": [
+        "P1",
+        "audit:2026-08-29",
+        "campaign:C4",
+        "campaign:evidence-2026-09",
+        "epic:deploy-enablement",
+        "lane:L5-deploy",
+        "triage:valid",
+        "workstream:deploy-enablement"
+      ],
+      "triage": "valid, remains open",
+      "state": "Blocked for acceptance",
+      "parent": "VerdifyConsultancy/verdify-platform#644",
+      "blocked_by": [
+        "VerdifyConsultancy/verdify-platform#322",
+        "VerdifyConsultancy/verdify-platform#304"
+      ],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#386",
+        "VerdifyConsultancy/verdify-platform#390"
+      ],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-26T20:20:53Z"
+    },
+    {
+      "number": 304,
+      "title": "[C4][P1] Provide reproducible least-authority firmware and database diagnostic tooling",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/304",
+      "stage": "C4",
+      "priority": "P1",
+      "effort": "S",
+      "milestone": "C4 \u2014 Delivery and runtime reliability",
+      "labels": [
+        "P1",
+        "audit:2026-08-29",
+        "campaign:C4",
+        "campaign:evidence-2026-09",
+        "epic:deploy-enablement",
+        "lane:L5-deploy",
+        "triage:valid",
+        "workstream:deploy-enablement"
+      ],
+      "triage": "valid, remains open",
+      "state": "No issue blocker",
+      "parent": "VerdifyConsultancy/verdify-platform#644",
+      "blocked_by": [],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#303"
+      ],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:49:58Z"
+    },
+    {
+      "number": 322,
+      "title": "[C4][P1] Replace remaining VM-era tests with current k3s delivery contracts",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/322",
+      "stage": "C4",
+      "priority": "P1",
+      "effort": "M",
+      "milestone": "C4 \u2014 Delivery and runtime reliability",
+      "labels": [
+        "P1",
+        "audit:2026-08-29",
+        "bug",
+        "campaign:C4",
+        "campaign:evidence-2026-09",
+        "epic:deploy-enablement",
+        "lane:L5-deploy",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "No issue blocker",
+      "parent": "VerdifyConsultancy/verdify-platform#644",
+      "blocked_by": [],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#303"
+      ],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:49:56Z"
+    },
+    {
+      "number": 324,
+      "title": "[C6][P1] Extend zonal band lineage compatibly for future deterministic control",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/324",
+      "stage": "C6",
+      "priority": "P1",
+      "effort": "M",
+      "milestone": "C6 \u2014 Evidence-led control and irrigation",
+      "labels": [
+        "P1",
+        "audit:2026-08-29",
+        "campaign:C6",
+        "campaign:evidence-2026-09",
+        "epic:control-optimization",
+        "lane:L1-climate",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Blocked for acceptance",
+      "parent": "VerdifyConsultancy/verdify-platform#359",
+      "blocked_by": [
+        "VerdifyConsultancy/verdify-platform#424",
+        "VerdifyConsultancy/verdify-platform#371"
+      ],
+      "blocking": [],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:50:50Z"
+    },
+    {
+      "number": 350,
+      "title": "[C6][P1] Irrigation program: topology truth, overwatering protection and commissioned wall feed",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/350",
+      "stage": "C6",
+      "priority": "P1",
+      "effort": "L",
+      "milestone": "C6 \u2014 Evidence-led control and irrigation",
+      "labels": [
+        "P1",
+        "area:firmware",
+        "audit:2026-08-29",
+        "campaign:C6",
+        "campaign:evidence-2026-09",
+        "epic",
+        "epic:irrigation",
+        "lane:L7-irrig",
+        "theme:Irrigation",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Open rollup",
+      "parent": "VerdifyConsultancy/verdify-platform#775",
+      "blocked_by": [],
+      "blocking": [],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:51:03Z"
+    },
+    {
+      "number": 359,
+      "title": "[C6][P1] Control program: truthful crop corridors before evidence-led tuning",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/359",
+      "stage": "C6",
+      "priority": "P1",
+      "effort": "L",
+      "milestone": "C6 \u2014 Evidence-led control and irrigation",
+      "labels": [
+        "P1",
+        "area:climate-band",
+        "audit:2026-08-29",
+        "campaign:C6",
+        "campaign:evidence-2026-09",
+        "epic",
+        "epic:climate-band",
+        "lane:L1-climate",
+        "theme:Climate/Bands",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Open rollup",
+      "parent": "VerdifyConsultancy/verdify-platform#775",
+      "blocked_by": [],
+      "blocking": [],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:50:36Z"
+    },
+    {
+      "number": 361,
+      "title": "[C6][P1] Reassess diurnal anchors only after solar parity and measured corridor evidence",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/361",
+      "stage": "C6",
+      "priority": "P1",
+      "effort": "M",
+      "milestone": "C6 \u2014 Evidence-led control and irrigation",
+      "labels": [
+        "P1",
+        "area:climate-band",
+        "area:genai",
+        "audit:2026-08-29",
+        "campaign:C6",
+        "campaign:evidence-2026-09",
+        "epic:climate-band",
+        "lane:L1-climate",
+        "theme:Climate/Solar",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Blocked for acceptance",
+      "parent": "VerdifyConsultancy/verdify-platform#359",
+      "blocked_by": [
+        "VerdifyConsultancy/verdify-platform#410",
+        "VerdifyConsultancy/verdify-platform#378"
+      ],
+      "blocking": [],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:50:58Z"
+    },
+    {
+      "number": 367,
+      "title": "[C6][P1] Consolidate anti-chatter into one explicit dwell contract",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/367",
+      "stage": "C6",
+      "priority": "P1",
+      "effort": "M",
+      "milestone": "C6 \u2014 Evidence-led control and irrigation",
+      "labels": [
+        "P1",
+        "area:firmware",
+        "audit:2026-08-29",
+        "campaign:C6",
+        "campaign:evidence-2026-09",
+        "epic:climate-band",
+        "lane:L1-climate",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Blocked for acceptance",
+      "parent": "VerdifyConsultancy/verdify-platform#430",
+      "blocked_by": [
+        "VerdifyConsultancy/verdify-platform#390"
+      ],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#370"
+      ],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:50:42Z"
+    },
+    {
+      "number": 368,
+      "title": "[C6][P1] Define shared sensor jump, flatline and contributor-integrity semantics",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/368",
+      "stage": "C6",
+      "priority": "P1",
+      "effort": "M",
+      "milestone": "C6 \u2014 Evidence-led control and irrigation",
+      "labels": [
+        "P1",
+        "area:firmware",
+        "area:ingestor",
+        "audit:2026-08-29",
+        "campaign:C6",
+        "campaign:evidence-2026-09",
+        "epic:climate-band",
+        "lane:L1-climate",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Blocked for acceptance",
+      "parent": "VerdifyConsultancy/verdify-platform#359",
+      "blocked_by": [
+        "VerdifyConsultancy/verdify-platform#424"
+      ],
+      "blocking": [],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:50:40Z"
+    },
+    {
+      "number": 369,
+      "title": "[C6][P1] Remove dead tunables and code from a verified consumer inventory",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/369",
+      "stage": "C6",
+      "priority": "P1",
+      "effort": "L",
+      "milestone": "C6 \u2014 Evidence-led control and irrigation",
+      "labels": [
+        "P1",
+        "area:firmware",
+        "area:ingestor",
+        "audit:2026-08-29",
+        "campaign:C6",
+        "campaign:evidence-2026-09",
+        "epic:climate-band",
+        "lane:L1-climate",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Blocked for acceptance",
+      "parent": "VerdifyConsultancy/verdify-platform#430",
+      "blocked_by": [
+        "VerdifyConsultancy/verdify-platform#433",
+        "VerdifyConsultancy/verdify-platform#390"
+      ],
+      "blocking": [],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:50:48Z"
+    },
+    {
+      "number": 370,
+      "title": "[C6][P1] Consolidate equipment conflict resolution into one pure arbitration function",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/370",
+      "stage": "C6",
+      "priority": "P1",
+      "effort": "M",
+      "milestone": "C6 \u2014 Evidence-led control and irrigation",
+      "labels": [
+        "P1",
+        "area:firmware",
+        "audit:2026-08-29",
+        "campaign:C6",
+        "campaign:evidence-2026-09",
+        "epic:climate-band",
+        "lane:L1-climate",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Blocked for acceptance",
+      "parent": "VerdifyConsultancy/verdify-platform#430",
+      "blocked_by": [
+        "VerdifyConsultancy/verdify-platform#390",
+        "VerdifyConsultancy/verdify-platform#367"
+      ],
+      "blocking": [],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:50:45Z"
+    },
+    {
+      "number": 371,
+      "title": "[C0][P0] Repair climate score semantics and publish physical outcomes separately from credit",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/371",
+      "stage": "C0",
+      "priority": "P0",
+      "effort": "L",
+      "milestone": "C0 \u2014 Measurement and incident truth",
+      "labels": [
+        "P0",
+        "area:observability",
+        "area:web",
+        "audit:2026-08-29",
+        "campaign:C0",
+        "campaign:evidence-2026-09",
+        "epic:climate-band",
+        "lane:L2-obs",
+        "sprint:2026-09-28",
+        "theme:Observability",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "PR in progress",
+      "parent": "VerdifyConsultancy/verdify-platform#359",
+      "blocked_by": [],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#379",
+        "VerdifyConsultancy/verdify-platform#378",
+        "VerdifyConsultancy/verdify-platform#410",
+        "VerdifyConsultancy/verdify-platform#324",
+        "VerdifyConsultancy/verdify-platform#782",
+        "VerdifyConsultancy/verdify-platform#779"
+      ],
+      "open_prs": [
+        789,
+        793
+      ],
+      "next_sprint": true,
+      "updated_at": "2026-09-26T20:25:28Z"
+    },
+    {
+      "number": 378,
+      "title": "[C6][P1] Decide corridor widths from fixed-target crop and resource evidence",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/378",
+      "stage": "C6",
+      "priority": "P1",
+      "effort": "M",
+      "milestone": "C6 \u2014 Evidence-led control and irrigation",
+      "labels": [
+        "P1",
+        "area:climate-band",
+        "audit:2026-08-29",
+        "campaign:C6",
+        "campaign:evidence-2026-09",
+        "epic:climate-band",
+        "lane:L1-climate",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Blocked for acceptance",
+      "parent": "VerdifyConsultancy/verdify-platform#359",
+      "blocked_by": [
+        "VerdifyConsultancy/verdify-platform#785",
+        "VerdifyConsultancy/verdify-platform#371"
+      ],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#361"
+      ],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:50:56Z"
+    },
+    {
+      "number": 379,
+      "title": "[C8][P2] Gate grey-box forecasting and MPC on validated response models and simpler baselines",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/379",
+      "stage": "C8",
+      "priority": "P2",
+      "effort": "L",
+      "milestone": "C8 \u2014 Comparator and full resource claim",
+      "labels": [
+        "P2",
+        "area:genai",
+        "area:ingestor",
+        "audit:2026-08-29",
+        "campaign:C8",
+        "campaign:evidence-2026-09",
+        "epic:climate-band",
+        "lane:L3-planner",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Blocked for acceptance",
+      "parent": "VerdifyConsultancy/verdify-platform#359",
+      "blocked_by": [
+        "VerdifyConsultancy/verdify-platform#786",
+        "VerdifyConsultancy/verdify-platform#419",
+        "VerdifyConsultancy/verdify-platform#371"
+      ],
+      "blocking": [],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:51:39Z"
+    },
+    {
+      "number": 382,
+      "title": "[C5][P1] Persist ingestor queue and spool across restart and node loss",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/382",
+      "stage": "C5",
+      "priority": "P1",
+      "effort": "L",
+      "milestone": "C5 \u2014 Durability and least privilege",
+      "labels": [
+        "P1",
+        "audit:2026-08-29",
+        "campaign:C5",
+        "campaign:evidence-2026-09",
+        "epic:ha-resilience",
+        "lane:L6-ha",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "No issue blocker",
+      "parent": "VerdifyConsultancy/verdify-platform#218",
+      "blocked_by": [],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#245"
+      ],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-26T20:20:56Z"
+    },
+    {
+      "number": 386,
+      "title": "[C4][P1] Prove grow-light minimum-on behavior at the solar-window boundary",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/386",
+      "stage": "C4",
+      "priority": "P1",
+      "effort": "M",
+      "milestone": "C4 \u2014 Delivery and runtime reliability",
+      "labels": [
+        "P1",
+        "area:firmware",
+        "audit:2026-08-29",
+        "campaign:C4",
+        "campaign:evidence-2026-09",
+        "epic:lighting",
+        "lane:L1-climate",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Blocked for acceptance",
+      "parent": "VerdifyConsultancy/verdify-platform#359",
+      "blocked_by": [
+        "VerdifyConsultancy/verdify-platform#303"
+      ],
+      "blocking": [],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:50:19Z"
+    },
+    {
+      "number": 390,
+      "title": "[C4][P1] Gate firmware releases on topology, cycling, runtime safety and rollback evidence",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/390",
+      "stage": "C4",
+      "priority": "P1",
+      "effort": "L",
+      "milestone": "C4 \u2014 Delivery and runtime reliability",
+      "labels": [
+        "P1",
+        "area:firmware",
+        "area:observability",
+        "audit:2026-08-29",
+        "campaign:C4",
+        "campaign:evidence-2026-09",
+        "epic:deploy-enablement",
+        "lane:L5-deploy",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Blocked for acceptance",
+      "parent": "VerdifyConsultancy/verdify-platform#644",
+      "blocked_by": [
+        "VerdifyConsultancy/verdify-platform#419",
+        "VerdifyConsultancy/verdify-platform#303"
+      ],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#586",
+        "VerdifyConsultancy/verdify-platform#299",
+        "VerdifyConsultancy/verdify-platform#434",
+        "VerdifyConsultancy/verdify-platform#369",
+        "VerdifyConsultancy/verdify-platform#370",
+        "VerdifyConsultancy/verdify-platform#367"
+      ],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:50:03Z"
+    },
+    {
+      "number": 394,
+      "title": "[C4][P1] Deliver and fault-test live split-brain and no-writer alerts",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/394",
+      "stage": "C4",
+      "priority": "P1",
+      "effort": "M",
+      "milestone": "C4 \u2014 Delivery and runtime reliability",
+      "labels": [
+        "P1",
+        "area:observability",
+        "audit:2026-08-29",
+        "campaign:C4",
+        "campaign:evidence-2026-09",
+        "epic:ha-resilience",
+        "lane:L6-ha",
+        "theme:Reliability",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Blocked for acceptance",
+      "parent": "VerdifyConsultancy/verdify-platform#75",
+      "blocked_by": [
+        "VerdifyConsultancy/verdify-platform#563"
+      ],
+      "blocking": [],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-26T20:26:19Z"
+    },
+    {
+      "number": 396,
+      "title": "[C5][P1] Design and rehearse CNPG alongside the live database on current storage",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/396",
+      "stage": "C5",
+      "priority": "P1",
+      "effort": "L",
+      "milestone": "C5 \u2014 Durability and least privilege",
+      "labels": [
+        "P1",
+        "audit:2026-08-29",
+        "campaign:C5",
+        "campaign:evidence-2026-09",
+        "epic:data-durability",
+        "epic:ha-resilience",
+        "lane:L6-ha",
+        "theme:Infra/Database",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Blocked for acceptance",
+      "parent": "VerdifyConsultancy/verdify-platform#218",
+      "blocked_by": [
+        "VerdifyConsultancy/verdify-platform#672",
+        "VerdifyConsultancy/verdify-platform#670"
+      ],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#245"
+      ],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-26T20:21:01Z"
+    },
+    {
+      "number": 398,
+      "title": "[C7][P2] Replace stale soil threshold seeds with commissioned crop/substrate truth",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/398",
+      "stage": "C7",
+      "priority": "P2",
+      "effort": "M",
+      "milestone": "C7 \u2014 Physical and seasonal commissioning",
+      "labels": [
+        "P2",
+        "area:ingestor",
+        "audit:2026-08-29",
+        "campaign:C7",
+        "campaign:evidence-2026-09",
+        "epic:irrigation",
+        "gate:hardware",
+        "lane:L7-irrig",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Blocked for acceptance",
+      "parent": "VerdifyConsultancy/verdify-platform#16",
+      "blocked_by": [
+        "VerdifyConsultancy/verdify-platform#298"
+      ],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#45",
+        "VerdifyConsultancy/verdify-platform#297"
+      ],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-26T20:21:03Z"
+    },
+    {
+      "number": 399,
+      "title": "[C4][P1] Prove the HA grow-light writer remains within the single-writer contract",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/399",
+      "stage": "C4",
+      "priority": "P1",
+      "effort": "S",
+      "milestone": "C4 \u2014 Delivery and runtime reliability",
+      "labels": [
+        "P1",
+        "area:firmware",
+        "audit:2026-08-29",
+        "campaign:C4",
+        "campaign:evidence-2026-09",
+        "epic:device-safety",
+        "lane:L8-product",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "No issue blocker",
+      "parent": "VerdifyConsultancy/verdify-platform#644",
+      "blocked_by": [],
+      "blocking": [],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:50:16Z"
+    },
+    {
+      "number": 410,
+      "title": "[C6][P1] Measure realized solar-night dry-out before changing the controller",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/410",
+      "stage": "C6",
+      "priority": "P1",
+      "effort": "L",
+      "milestone": "C6 \u2014 Evidence-led control and irrigation",
+      "labels": [
+        "P1",
+        "area:climate-band",
+        "area:firmware",
+        "audit:2026-08-29",
+        "campaign:C6",
+        "campaign:evidence-2026-09",
+        "epic:climate-band",
+        "lane:L1-climate",
+        "theme:Climate/Heat",
+        "theme:Firmware/OTA",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Blocked for acceptance",
+      "parent": "VerdifyConsultancy/verdify-platform#359",
+      "blocked_by": [
+        "VerdifyConsultancy/verdify-platform#424",
+        "VerdifyConsultancy/verdify-platform#419",
+        "VerdifyConsultancy/verdify-platform#371"
+      ],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#787",
+        "VerdifyConsultancy/verdify-platform#361"
+      ],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:50:53Z"
+    },
+    {
+      "number": 412,
+      "title": "[C7][P2] Close the seasonal door screen only when measured night conditions justify it",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/412",
+      "stage": "C7",
+      "priority": "P2",
+      "effort": "S",
+      "milestone": "C7 \u2014 Physical and seasonal commissioning",
+      "labels": [
+        "P2",
+        "area:climate-band",
+        "audit:2026-08-29",
+        "campaign:C7",
+        "campaign:evidence-2026-09",
+        "epic:climate-band",
+        "gate:hardware",
+        "lane:L1-climate",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Physical work gated",
+      "parent": "VerdifyConsultancy/verdify-platform#16",
+      "blocked_by": [],
+      "blocking": [],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:39:44Z"
+    },
+    {
+      "number": 419,
+      "title": "[C4][P1] Populate real outdoor freshness in replay and enforce branch coverage",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/419",
+      "stage": "C4",
+      "priority": "P1",
+      "effort": "M",
+      "milestone": "C4 \u2014 Delivery and runtime reliability",
+      "labels": [
+        "P1",
+        "area:firmware",
+        "area:observability",
+        "audit:2026-08-29",
+        "campaign:C4",
+        "campaign:evidence-2026-09",
+        "epic:control-optimization",
+        "lane:L1-climate",
+        "theme:Firmware/Validation",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "No issue blocker",
+      "parent": "VerdifyConsultancy/verdify-platform#390",
+      "blocked_by": [],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#379",
+        "VerdifyConsultancy/verdify-platform#410",
+        "VerdifyConsultancy/verdify-platform#390"
+      ],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:37:47Z"
+    },
+    {
+      "number": 424,
+      "title": "[C0][P0] Resolve served, consumed and raw-readback band lineage without fabricated device truth",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/424",
+      "stage": "C0",
+      "priority": "P0",
+      "effort": "L",
+      "milestone": "C0 \u2014 Measurement and incident truth",
+      "labels": [
+        "P0",
+        "area:climate-band",
+        "area:firmware",
+        "audit:2026-08-29",
+        "campaign:C0",
+        "campaign:evidence-2026-09",
+        "epic:climate-band",
+        "epic:planner-experiment",
+        "lane:experiment",
+        "sprint:2026-09-28",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "PR in progress",
+      "parent": "VerdifyConsultancy/verdify-platform#359",
+      "blocked_by": [],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#410",
+        "VerdifyConsultancy/verdify-platform#324",
+        "VerdifyConsultancy/verdify-platform#368",
+        "VerdifyConsultancy/verdify-platform#749"
+      ],
+      "open_prs": [
+        791
+      ],
+      "next_sprint": true,
+      "updated_at": "2026-09-26T20:25:32Z"
+    },
+    {
+      "number": 427,
+      "title": "[C4][P1] Prove active Hermes/MCP recovery and truthful non-authoritative worker health",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/427",
+      "stage": "C4",
+      "priority": "P1",
+      "effort": "L",
+      "milestone": "C4 \u2014 Delivery and runtime reliability",
+      "labels": [
+        "P1",
+        "area:genai",
+        "area:observability",
+        "audit:2026-08-29",
+        "campaign:C4",
+        "campaign:evidence-2026-09",
+        "epic:planner-experiment",
+        "lane:experiment",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Blocked for acceptance",
+      "parent": "VerdifyConsultancy/verdify-platform#775",
+      "blocked_by": [
+        "VerdifyConsultancy/verdify-platform#433"
+      ],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#214"
+      ],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-26T20:26:20Z"
+    },
+    {
+      "number": 428,
+      "title": "[C6][P1] Diagnose heap/watchdog risk and qualify the actual last-good firmware floor",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/428",
+      "stage": "C6",
+      "priority": "P1",
+      "effort": "L",
+      "milestone": "C6 \u2014 Evidence-led control and irrigation",
+      "labels": [
+        "P1",
+        "area:firmware",
+        "audit:2026-08-29",
+        "campaign:C6",
+        "campaign:evidence-2026-09",
+        "epic:control-optimization",
+        "lane:L1-climate",
+        "theme:Firmware/Validation",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Blocked for acceptance",
+      "parent": "VerdifyConsultancy/verdify-platform#430",
+      "blocked_by": [
+        "VerdifyConsultancy/verdify-platform#433"
+      ],
+      "blocking": [],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:38:28Z"
+    },
+    {
+      "number": 430,
+      "title": "[C6][P1] Simplify firmware only while preserving autonomous control and observable truth",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/430",
+      "stage": "C6",
+      "priority": "P1",
+      "effort": "L",
+      "milestone": "C6 \u2014 Evidence-led control and irrigation",
+      "labels": [
+        "P1",
+        "area:firmware",
+        "area:ingestor",
+        "audit:2026-08-29",
+        "campaign:C6",
+        "campaign:evidence-2026-09",
+        "epic",
+        "lane:L1-climate",
+        "theme:Firmware/Validation",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Open rollup",
+      "parent": "VerdifyConsultancy/verdify-platform#359",
+      "blocked_by": [],
+      "blocking": [],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:38:25Z"
+    },
+    {
+      "number": 433,
+      "title": "[C4][P1] Finish truthful single-writer command lifecycle and no-reconcile-storm acceptance",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/433",
+      "stage": "C4",
+      "priority": "P1",
+      "effort": "L",
+      "milestone": "C4 \u2014 Delivery and runtime reliability",
+      "labels": [
+        "P1",
+        "area:ingestor",
+        "audit:2026-08-29",
+        "bug",
+        "campaign:C4",
+        "campaign:evidence-2026-09",
+        "epic:planner-experiment",
+        "lane:experiment",
+        "sprint:2026-09-28",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "No issue blocker",
+      "parent": "VerdifyConsultancy/verdify-platform#430",
+      "blocked_by": [],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#369",
+        "VerdifyConsultancy/verdify-platform#428",
+        "VerdifyConsultancy/verdify-platform#427"
+      ],
+      "open_prs": [],
+      "next_sprint": true,
+      "updated_at": "2026-09-26T20:26:16Z"
+    },
+    {
+      "number": 434,
+      "title": "[C6][P1] Enforce center-only climate mist and commissioned wall-only fertigation",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/434",
+      "stage": "C6",
+      "priority": "P1",
+      "effort": "L",
+      "milestone": "C6 \u2014 Evidence-led control and irrigation",
+      "labels": [
+        "P1",
+        "area:firmware",
+        "audit:2026-08-29",
+        "campaign:C6",
+        "campaign:evidence-2026-09",
+        "epic:irrigation",
+        "lane:L7-irrig",
+        "theme:Irrigation",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Blocked for acceptance",
+      "parent": "VerdifyConsultancy/verdify-platform#350",
+      "blocked_by": [
+        "VerdifyConsultancy/verdify-platform#390",
+        "VerdifyConsultancy/verdify-platform#299"
+      ],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#296"
+      ],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:39:04Z"
+    },
+    {
+      "number": 563,
+      "title": "[C4][P1] Enforce the actual ConfigMap-based alert delivery contract",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/563",
+      "stage": "C4",
+      "priority": "P1",
+      "effort": "S",
+      "milestone": "C4 \u2014 Delivery and runtime reliability",
+      "labels": [
+        "P1",
+        "area:observability",
+        "audit:2026-08-29",
+        "campaign:C4",
+        "campaign:evidence-2026-09",
+        "epic:device-safety",
+        "lane:L2-obs",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "No issue blocker",
+      "parent": "VerdifyConsultancy/verdify-platform#75",
+      "blocked_by": [],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#89",
+        "VerdifyConsultancy/verdify-platform#394"
+      ],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:37:30Z"
+    },
+    {
+      "number": 581,
+      "title": "[C2][P0] Experiment program: qualify, run and read out the bounded AI-admission pilot",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/581",
+      "stage": "C2",
+      "priority": "P0",
+      "effort": "L",
+      "milestone": "C2 \u2014 Seasonal design lock and randomized start",
+      "labels": [
+        "P0",
+        "area:firmware",
+        "area:genai",
+        "area:ingestor",
+        "audit:2026-08-30",
+        "campaign:C2",
+        "campaign:evidence-2026-09",
+        "epic",
+        "epic:planner-experiment",
+        "lane:experiment",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Open rollup",
+      "parent": "VerdifyConsultancy/verdify-platform#775",
+      "blocked_by": [],
+      "blocking": [],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:36:21Z"
+    },
+    {
+      "number": 586,
+      "title": "[C8][P2] Qualify a future atomic firmware policy engine with crash-safe recovery",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/586",
+      "stage": "C8",
+      "priority": "P2",
+      "effort": "L",
+      "milestone": "C8 \u2014 Comparator and full resource claim",
+      "labels": [
+        "P2",
+        "area:firmware",
+        "audit:2026-08-29",
+        "campaign:C8",
+        "campaign:evidence-2026-09",
+        "epic:planner-experiment",
+        "lane:experiment",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Blocked for acceptance",
+      "parent": "VerdifyConsultancy/verdify-platform#775",
+      "blocked_by": [
+        "VerdifyConsultancy/verdify-platform#785",
+        "VerdifyConsultancy/verdify-platform#638",
+        "VerdifyConsultancy/verdify-platform#390"
+      ],
+      "blocking": [],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-26T20:21:09Z"
+    },
+    {
+      "number": 587,
+      "title": "[C1][P0] Qualify fail-closed lifecycle, kill switch and blinded operational visibility",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/587",
+      "stage": "C1",
+      "priority": "P0",
+      "effort": "M",
+      "milestone": "C1 \u2014 Recovery and integrated physical qualification",
+      "labels": [
+        "P0",
+        "area:observability",
+        "area:web",
+        "audit:2026-08-30",
+        "campaign:C1",
+        "campaign:evidence-2026-09",
+        "epic:planner-experiment",
+        "lane:experiment",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "No issue blocker",
+      "parent": "VerdifyConsultancy/verdify-platform#581",
+      "blocked_by": [],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#783",
+        "VerdifyConsultancy/verdify-platform#641"
+      ],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-23T18:20:22Z"
+    },
+    {
+      "number": 588,
+      "title": "[C2][P0] Lock the qualified pilot identity and finalize exactly one internal random draw",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/588",
+      "stage": "C2",
+      "priority": "P0",
+      "effort": "M",
+      "milestone": "C2 \u2014 Seasonal design lock and randomized start",
+      "labels": [
+        "P0",
+        "area:genai",
+        "audit:2026-08-30",
+        "campaign:C2",
+        "campaign:evidence-2026-09",
+        "epic:planner-experiment",
+        "lane:experiment",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Blocked for acceptance",
+      "parent": "VerdifyConsultancy/verdify-platform#581",
+      "blocked_by": [
+        "VerdifyConsultancy/verdify-platform#783",
+        "VerdifyConsultancy/verdify-platform#782",
+        "VerdifyConsultancy/verdify-platform#641"
+      ],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#642"
+      ],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:49:47Z"
+    },
+    {
+      "number": 606,
+      "title": "[C8][P2] Register the twin build profile only through its owning fleet contract",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/606",
+      "stage": "C8",
+      "priority": "P2",
+      "effort": "M",
+      "milestone": "C8 \u2014 Comparator and full resource claim",
+      "labels": [
+        "P2",
+        "area:coordinator-infra",
+        "area:web",
+        "audit:2026-08-29",
+        "campaign:C8",
+        "campaign:evidence-2026-09",
+        "epic:deploy-enablement",
+        "lane:L5-deploy",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "No issue blocker",
+      "parent": "VerdifyConsultancy/verdify-platform#14",
+      "blocked_by": [],
+      "blocking": [],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-26T20:21:11Z"
+    },
+    {
+      "number": 638,
+      "title": "[C8][P2] Unify future manifest/vector wire schema and content identity offline",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/638",
+      "stage": "C8",
+      "priority": "P2",
+      "effort": "L",
+      "milestone": "C8 \u2014 Comparator and full resource claim",
+      "labels": [
+        "P2",
+        "area:firmware",
+        "area:ingestor",
+        "audit:2026-08-29",
+        "campaign:C8",
+        "campaign:evidence-2026-09",
+        "epic:planner-experiment",
+        "lane:experiment",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "No issue blocker",
+      "parent": "VerdifyConsultancy/verdify-platform#775",
+      "blocked_by": [],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#586"
+      ],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-26T20:21:13Z"
+    },
+    {
+      "number": 639,
+      "title": "[C1][P0] Qualify the existing component executor and full-state recovery before launch",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/639",
+      "stage": "C1",
+      "priority": "P0",
+      "effort": "L",
+      "milestone": "C1 \u2014 Recovery and integrated physical qualification",
+      "labels": [
+        "P0",
+        "area:genai",
+        "area:ingestor",
+        "audit:2026-08-30",
+        "campaign:C1",
+        "campaign:evidence-2026-09",
+        "epic:planner-experiment",
+        "lane:experiment",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "No issue blocker",
+      "parent": "VerdifyConsultancy/verdify-platform#581",
+      "blocked_by": [],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#783",
+        "VerdifyConsultancy/verdify-platform#641"
+      ],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:49:41Z"
+    },
+    {
+      "number": 640,
+      "title": "[C3][P0] Freeze the first assigned-day ITT outcome and blinded reproducible export",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/640",
+      "stage": "C3",
+      "priority": "P0",
+      "effort": "M",
+      "milestone": "C3 \u2014 Complete pilot and decision report",
+      "labels": [
+        "P0",
+        "area:observability",
+        "area:web",
+        "audit:2026-08-30",
+        "campaign:C3",
+        "campaign:evidence-2026-09",
+        "epic:planner-experiment",
+        "lane:experiment",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Blocked for acceptance",
+      "parent": "VerdifyConsultancy/verdify-platform#581",
+      "blocked_by": [
+        "VerdifyConsultancy/verdify-platform#642"
+      ],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#784"
+      ],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:49:52Z"
+    },
+    {
+      "number": 641,
+      "title": "[C1][P0] Execute authorized orphan recovery and one separately attended physical proof",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/641",
+      "stage": "C1",
+      "priority": "P0",
+      "effort": "L",
+      "milestone": "C1 \u2014 Recovery and integrated physical qualification",
+      "labels": [
+        "P0",
+        "audit:2026-08-30",
+        "campaign:C1",
+        "campaign:evidence-2026-09",
+        "epic:planner-experiment",
+        "gate:jason",
+        "lane:experiment",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Blocked for acceptance",
+      "parent": "VerdifyConsultancy/verdify-platform#750",
+      "blocked_by": [
+        "VerdifyConsultancy/verdify-platform#749",
+        "VerdifyConsultancy/verdify-platform#747",
+        "VerdifyConsultancy/verdify-platform#639",
+        "VerdifyConsultancy/verdify-platform#587"
+      ],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#588"
+      ],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:49:39Z"
+    },
+    {
+      "number": 642,
+      "title": "[C2][P0] Authorize and verify one randomized day-1 activation from the locked pilot",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/642",
+      "stage": "C2",
+      "priority": "P0",
+      "effort": "M",
+      "milestone": "C2 \u2014 Seasonal design lock and randomized start",
+      "labels": [
+        "P0",
+        "area:observability",
+        "audit:2026-08-30",
+        "campaign:C2",
+        "campaign:evidence-2026-09",
+        "epic:planner-experiment",
+        "gate:jason",
+        "lane:experiment",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Blocked for acceptance",
+      "parent": "VerdifyConsultancy/verdify-platform#581",
+      "blocked_by": [
+        "VerdifyConsultancy/verdify-platform#588"
+      ],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#640"
+      ],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:49:50Z"
+    },
+    {
+      "number": 643,
+      "title": "[C5][P1] Extend least-privilege database roles beyond the already-required experiment boundary",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/643",
+      "stage": "C5",
+      "priority": "P1",
+      "effort": "L",
+      "milestone": "C5 \u2014 Durability and least privilege",
+      "labels": [
+        "P1",
+        "audit:2026-08-29",
+        "campaign:C5",
+        "campaign:evidence-2026-09",
+        "epic:planner-experiment",
+        "lane:experiment",
+        "theme:Infra/Database",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Blocked for acceptance",
+      "parent": "VerdifyConsultancy/verdify-platform#218",
+      "blocked_by": [
+        "VerdifyConsultancy/verdify-platform#670"
+      ],
+      "blocking": [],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-26T20:21:16Z"
+    },
+    {
+      "number": 644,
+      "title": "[C4][P1] Integrate exact-SHA, path-aware and device-safe delivery receipts",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/644",
+      "stage": "C4",
+      "priority": "P1",
+      "effort": "L",
+      "milestone": "C4 \u2014 Delivery and runtime reliability",
+      "labels": [
+        "P1",
+        "audit:2026-08-30",
+        "campaign:C4",
+        "campaign:evidence-2026-09",
+        "epic:cicd-green",
+        "lane:L5-deploy",
+        "theme:CI/Infra",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "No issue blocker",
+      "parent": "VerdifyConsultancy/verdify-platform#775",
+      "blocked_by": [],
+      "blocking": [],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:40:53Z"
+    },
+    {
+      "number": 670,
+      "title": "[C5][P1] Make backup artifacts sufficient to restore roles, ownership and memberships safely",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/670",
+      "stage": "C5",
+      "priority": "P1",
+      "effort": "L",
+      "milestone": "C5 \u2014 Durability and least privilege",
+      "labels": [
+        "P1",
+        "audit:2026-08-29",
+        "campaign:C5",
+        "campaign:evidence-2026-09",
+        "epic:data-durability",
+        "lane:L6-ha",
+        "theme:Infra/Database",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "No issue blocker",
+      "parent": "VerdifyConsultancy/verdify-platform#218",
+      "blocked_by": [],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#643",
+        "VerdifyConsultancy/verdify-platform#396",
+        "VerdifyConsultancy/verdify-platform#672"
+      ],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:37:56Z"
+    },
+    {
+      "number": 671,
+      "title": "[C4][P1] Make Lab publishing failures and cache contention observable",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/671",
+      "stage": "C4",
+      "priority": "P1",
+      "effort": "M",
+      "milestone": "C4 \u2014 Delivery and runtime reliability",
+      "labels": [
+        "P1",
+        "area:observability",
+        "audit:2026-08-29",
+        "campaign:C4",
+        "campaign:evidence-2026-09",
+        "epic:product-plane",
+        "lane:L8-product",
+        "theme:Reliability",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "No issue blocker",
+      "parent": "VerdifyConsultancy/verdify-platform#75",
+      "blocked_by": [],
+      "blocking": [],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:37:40Z"
+    },
+    {
+      "number": 672,
+      "title": "[C5][P1] Make compressed-chunk ownership restoration a supported blocking rehearsal test",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/672",
+      "stage": "C5",
+      "priority": "P1",
+      "effort": "M",
+      "milestone": "C5 \u2014 Durability and least privilege",
+      "labels": [
+        "P1",
+        "audit:2026-08-29",
+        "campaign:C5",
+        "campaign:evidence-2026-09",
+        "epic:data-durability",
+        "lane:L6-ha",
+        "theme:Infra/Database",
+        "theme:Migration safety / CI",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Blocked for acceptance",
+      "parent": "VerdifyConsultancy/verdify-platform#218",
+      "blocked_by": [
+        "VerdifyConsultancy/verdify-platform#670"
+      ],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#396"
+      ],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:38:00Z"
+    },
+    {
+      "number": 747,
+      "title": "[C1][P0] Verify corrected scheduled backups and current production recovery health",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/747",
+      "stage": "C1",
+      "priority": "P0",
+      "effort": "S",
+      "milestone": "C1 \u2014 Recovery and integrated physical qualification",
+      "labels": [
+        "P0",
+        "area:observability",
+        "audit:2026-08-30",
+        "campaign:C1",
+        "campaign:evidence-2026-09",
+        "sprint:2026-09-28",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "No issue blocker",
+      "parent": "VerdifyConsultancy/verdify-platform#750",
+      "blocked_by": [],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#641"
+      ],
+      "open_prs": [],
+      "next_sprint": true,
+      "updated_at": "2026-09-26T20:26:21Z"
+    },
+    {
+      "number": 749,
+      "title": "[C1][P0] Qualify current three-probe readiness and explicit safety dependencies",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/749",
+      "stage": "C1",
+      "priority": "P0",
+      "effort": "M",
+      "milestone": "C1 \u2014 Recovery and integrated physical qualification",
+      "labels": [
+        "P0",
+        "area:ingestor",
+        "area:observability",
+        "audit:2026-08-30",
+        "campaign:C1",
+        "campaign:evidence-2026-09",
+        "epic:planner-experiment",
+        "lane:experiment",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "PR in progress",
+      "parent": "VerdifyConsultancy/verdify-platform#750",
+      "blocked_by": [
+        "VerdifyConsultancy/verdify-platform#778",
+        "VerdifyConsultancy/verdify-platform#424"
+      ],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#641"
+      ],
+      "open_prs": [
+        792
+      ],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T20:13:19Z"
+    },
+    {
+      "number": 750,
+      "title": "[C1][P0] Recovery/proof campaign: rebaseline current state and seal one safe physical receipt",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/750",
+      "stage": "C1",
+      "priority": "P0",
+      "effort": "L",
+      "milestone": "C1 \u2014 Recovery and integrated physical qualification",
+      "labels": [
+        "P0",
+        "audit:2026-08-30",
+        "campaign:C1",
+        "campaign:evidence-2026-09",
+        "epic",
+        "epic:planner-experiment",
+        "lane:experiment",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "PR in progress",
+      "parent": "VerdifyConsultancy/verdify-platform#581",
+      "blocked_by": [],
+      "blocking": [],
+      "open_prs": [
+        776
+      ],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:36:25Z"
+    },
+    {
+      "number": 751,
+      "title": "[C7][P2] Replace the failed south climate probe and diagnose hydro telemetry in a bounded window",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/751",
+      "stage": "C7",
+      "priority": "P2",
+      "effort": "M",
+      "milestone": "C7 \u2014 Physical and seasonal commissioning",
+      "labels": [
+        "P2",
+        "area:firmware",
+        "area:observability",
+        "audit:2026-08-30",
+        "campaign:C7",
+        "campaign:evidence-2026-09",
+        "gate:hardware",
+        "theme:Hardware-gated",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Physical work gated",
+      "parent": "VerdifyConsultancy/verdify-platform#16",
+      "blocked_by": [],
+      "blocking": [],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-05T16:39:22Z"
+    },
+    {
+      "number": 775,
+      "title": "[C0][P0] Campaign: trustworthy greenhouse outcomes \u2192 qualified pilot \u2192 evidence-backed control",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/775",
+      "stage": "C0",
+      "priority": "P0",
+      "effort": "L",
+      "milestone": "C0 \u2014 Measurement and incident truth",
+      "labels": [
+        "P0",
+        "audit:2026-08-30",
+        "campaign:C0",
+        "campaign:evidence-2026-09",
+        "epic",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Open rollup",
+      "parent": null,
+      "blocked_by": [],
+      "blocking": [],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-06T03:53:27Z"
+    },
+    {
+      "number": 778,
+      "title": "[C0][P0] Investigate September 4 hot/dry peak and three-hour wetting interruption",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/778",
+      "stage": "C0",
+      "priority": "P0",
+      "effort": "L",
+      "milestone": "C0 \u2014 Measurement and incident truth",
+      "labels": [
+        "P0",
+        "campaign:C0",
+        "campaign:evidence-2026-09",
+        "sprint:2026-09-28",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "PR in progress",
+      "parent": "VerdifyConsultancy/verdify-platform#775",
+      "blocked_by": [],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#749"
+      ],
+      "open_prs": [
+        792
+      ],
+      "next_sprint": true,
+      "updated_at": "2026-09-26T20:25:35Z"
+    },
+    {
+      "number": 779,
+      "title": "[C0][P1] Re-run historical planner comparisons on a fixed sensor panel and fixed target contract",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/779",
+      "stage": "C0",
+      "priority": "P1",
+      "effort": "L",
+      "milestone": "C0 \u2014 Measurement and incident truth",
+      "labels": [
+        "P1",
+        "campaign:C0",
+        "campaign:evidence-2026-09",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "PR in progress",
+      "parent": "VerdifyConsultancy/verdify-platform#775",
+      "blocked_by": [
+        "VerdifyConsultancy/verdify-platform#371"
+      ],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#782"
+      ],
+      "open_prs": [
+        794
+      ],
+      "next_sprint": false,
+      "updated_at": "2026-09-26T20:21:20Z"
+    },
+    {
+      "number": 780,
+      "title": "[C0][P0] Score as-of outdoor forecasts against outdoor truth and separate indoor response",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/780",
+      "stage": "C0",
+      "priority": "P0",
+      "effort": "M",
+      "milestone": "C0 \u2014 Measurement and incident truth",
+      "labels": [
+        "P0",
+        "campaign:C0",
+        "campaign:evidence-2026-09",
+        "sprint:2026-09-28",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "PR in progress",
+      "parent": "VerdifyConsultancy/verdify-platform#775",
+      "blocked_by": [],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#786",
+        "VerdifyConsultancy/verdify-platform#214",
+        "VerdifyConsultancy/verdify-platform#782"
+      ],
+      "open_prs": [
+        790
+      ],
+      "next_sprint": true,
+      "updated_at": "2026-09-26T20:25:38Z"
+    },
+    {
+      "number": 781,
+      "title": "[C0][P0] Commission a claim-safe water and electricity endpoint contract",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/781",
+      "stage": "C0",
+      "priority": "P0",
+      "effort": "L",
+      "milestone": "C0 \u2014 Measurement and incident truth",
+      "labels": [
+        "P0",
+        "campaign:C0",
+        "campaign:evidence-2026-09",
+        "sprint:2026-09-28",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "PR in progress",
+      "parent": "VerdifyConsultancy/verdify-platform#775",
+      "blocked_by": [],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#787",
+        "VerdifyConsultancy/verdify-platform#782"
+      ],
+      "open_prs": [
+        795,
+        798,
+        799
+      ],
+      "next_sprint": true,
+      "updated_at": "2026-09-26T20:25:41Z"
+    },
+    {
+      "number": 782,
+      "title": "[C0][P0] Choose a season-appropriate exploratory pilot and freeze the scientific contract",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/782",
+      "stage": "C0",
+      "priority": "P0",
+      "effort": "L",
+      "milestone": "C0 \u2014 Measurement and incident truth",
+      "labels": [
+        "P0",
+        "campaign:C0",
+        "campaign:evidence-2026-09",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "PR in progress",
+      "parent": "VerdifyConsultancy/verdify-platform#581",
+      "blocked_by": [
+        "VerdifyConsultancy/verdify-platform#781",
+        "VerdifyConsultancy/verdify-platform#780",
+        "VerdifyConsultancy/verdify-platform#779",
+        "VerdifyConsultancy/verdify-platform#371"
+      ],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#588",
+        "VerdifyConsultancy/verdify-platform#783"
+      ],
+      "open_prs": [
+        794
+      ],
+      "next_sprint": false,
+      "updated_at": "2026-09-26T20:21:27Z"
+    },
+    {
+      "number": 783,
+      "title": "[C1][P0] Prove restore \u2192 selector \u2192 setter schema \u2192 receipt \u2192 frozen outcome end to end",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/783",
+      "stage": "C1",
+      "priority": "P0",
+      "effort": "L",
+      "milestone": "C1 \u2014 Recovery and integrated physical qualification",
+      "labels": [
+        "P0",
+        "campaign:C1",
+        "campaign:evidence-2026-09",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "PR in progress",
+      "parent": "VerdifyConsultancy/verdify-platform#581",
+      "blocked_by": [
+        "VerdifyConsultancy/verdify-platform#782",
+        "VerdifyConsultancy/verdify-platform#639",
+        "VerdifyConsultancy/verdify-platform#587"
+      ],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#588"
+      ],
+      "open_prs": [
+        793
+      ],
+      "next_sprint": false,
+      "updated_at": "2026-09-26T20:21:29Z"
+    },
+    {
+      "number": 784,
+      "title": "[C3][P1] Operate the complete blinded pilot and preserve every assigned day",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/784",
+      "stage": "C3",
+      "priority": "P1",
+      "effort": "L",
+      "milestone": "C3 \u2014 Complete pilot and decision report",
+      "labels": [
+        "P1",
+        "campaign:C3",
+        "campaign:evidence-2026-09",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Blocked for acceptance",
+      "parent": "VerdifyConsultancy/verdify-platform#581",
+      "blocked_by": [
+        "VerdifyConsultancy/verdify-platform#640"
+      ],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#785"
+      ],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-26T20:21:32Z"
+    },
+    {
+      "number": 785,
+      "title": "[C3][P1] Reveal once, reproduce the frozen analysis and publish the campaign decision",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/785",
+      "stage": "C3",
+      "priority": "P1",
+      "effort": "M",
+      "milestone": "C3 \u2014 Complete pilot and decision report",
+      "labels": [
+        "P1",
+        "campaign:C3",
+        "campaign:evidence-2026-09",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Blocked for acceptance",
+      "parent": "VerdifyConsultancy/verdify-platform#581",
+      "blocked_by": [
+        "VerdifyConsultancy/verdify-platform#784"
+      ],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#787",
+        "VerdifyConsultancy/verdify-platform#786",
+        "VerdifyConsultancy/verdify-platform#586",
+        "VerdifyConsultancy/verdify-platform#378"
+      ],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-26T20:21:35Z"
+    },
+    {
+      "number": 786,
+      "title": "[C8][P2] Design the next comparison against a deterministic forecast-aware selector",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/786",
+      "stage": "C8",
+      "priority": "P2",
+      "effort": "L",
+      "milestone": "C8 \u2014 Comparator and full resource claim",
+      "labels": [
+        "P2",
+        "campaign:C8",
+        "campaign:evidence-2026-09",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Blocked for acceptance",
+      "parent": "VerdifyConsultancy/verdify-platform#775",
+      "blocked_by": [
+        "VerdifyConsultancy/verdify-platform#785",
+        "VerdifyConsultancy/verdify-platform#780"
+      ],
+      "blocking": [
+        "VerdifyConsultancy/verdify-platform#379"
+      ],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-26T20:21:37Z"
+    },
+    {
+      "number": 787,
+      "title": "[C8][P2] Plan measured heating, overnight and whole-resource economics as a separate claim",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/787",
+      "stage": "C8",
+      "priority": "P2",
+      "effort": "L",
+      "milestone": "C8 \u2014 Comparator and full resource claim",
+      "labels": [
+        "P2",
+        "campaign:C8",
+        "campaign:evidence-2026-09",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Blocked for acceptance",
+      "parent": "VerdifyConsultancy/verdify-platform#775",
+      "blocked_by": [
+        "VerdifyConsultancy/verdify-platform#785",
+        "VerdifyConsultancy/verdify-platform#781",
+        "VerdifyConsultancy/verdify-platform#410"
+      ],
+      "blocking": [],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-26T20:21:40Z"
+    },
+    {
+      "number": 801,
+      "title": "[VP-02] Exclude www-dev and proposals-hello from the verdify-tier1-forward HostRegexp",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/801",
+      "stage": "EST",
+      "priority": "P2",
+      "effort": null,
+      "milestone": null,
+      "labels": [
+        "P2",
+        "estate-rationalization",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Blocked for acceptance",
+      "parent": null,
+      "blocked_by": [
+        "jvallery/agents#4461"
+      ],
+      "blocking": [],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-26T20:26:22Z"
+    },
+    {
+      "number": 802,
+      "title": "[VP-01] Put verdify-descheduler under Argo (manual) with Git equal to live enforce mode",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/802",
+      "stage": "EST",
+      "priority": "P3",
+      "effort": null,
+      "milestone": null,
+      "labels": [
+        "P3",
+        "estate-rationalization",
+        "triage:valid"
+      ],
+      "triage": "valid, remains open",
+      "state": "Blocked for acceptance",
+      "parent": null,
+      "blocked_by": [
+        "jvallery/agents#4451",
+        "jvallery/agents#4459"
+      ],
+      "blocking": [],
+      "open_prs": [],
+      "next_sprint": false,
+      "updated_at": "2026-09-26T20:26:23Z"
+    }
+  ]
+}
