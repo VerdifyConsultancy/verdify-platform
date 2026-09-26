@@ -147,7 +147,7 @@ def test_planner_prompt_keeps_binary_as_legacy_context_only() -> None:
 
 
 def test_scorecard_docstring_names_graded_attributable_score() -> None:
-    """The MCP scorecard tool docstring must lead with the graded attributable score."""
+    """Historical graded credit stays named, separate from versioned binary data."""
     body = _scorecard_docstring()
     assert "compliance_v2_attributable_pct" in body, (
         "scorecard() docstring must name compliance_v2_attributable_pct as the scored "
@@ -158,6 +158,9 @@ def test_scorecard_docstring_names_graded_attributable_score() -> None:
         assert token in lowered, (
             f"scorecard() docstring must describe '{token}' compliance semantics ({MCP_SERVER_PATH})."
         )
+    for token in ("scorecard_contract_version", "not measured crop compliance", "never widen"):
+        assert token in lowered
+    assert "widening the served envelope" not in lowered
 
 
 def test_scorecard_docstring_drops_binary_scored_framing() -> None:

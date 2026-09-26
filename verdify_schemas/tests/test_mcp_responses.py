@@ -129,7 +129,9 @@ class TestScorecard:
         #388): outcome_score_composite + its component sub-scores — accepted
         BEFORE the #371 DB function emits them, same 500-proofing pattern."""
         names = ScorecardResponse.metric_names()
-        assert len(names) == 27 + 9 + 2 + 6
+        assert len(names) == 27 + 9 + 2 + 6 + 1
+        assert "scorecard_contract_version" in names
+        assert "metric_semantics" not in names  # metadata is not a numeric SQL metric
         assert "planner_score" in names
         assert "7d_avg_score" in names
         assert "7d_avg_stress" in names  # CI-only until G15

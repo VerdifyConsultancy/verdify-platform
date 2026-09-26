@@ -1,0 +1,315 @@
+{
+  "schema": "verdify-scorecard-writer-counterexamples-v1",
+  "source_path": "ingestor/tasks/daily.py",
+  "source_sha256": "cda0c17b5c07e13ed8cbbd6e876ca1c751d87211ba00ec6af4f46b7e84004f14",
+  "executed_ast_sha256": "1a61201a8d530568ec83040b375e958e0b7d1cd2eae5a2c1cee2155f74ebc4bd",
+  "synthetic_only": true,
+  "outcome_acceptance": false,
+  "input_contract": {
+    "bands": {
+      "temp_low": 60.0,
+      "temp_high": 80.0,
+      "vpd_low": 0.5,
+      "vpd_high": 1.5
+    },
+    "temperature_unit": "degF",
+    "vpd_unit": "kPa",
+    "target_basis": "synthetic desired history; not frozen crop targets or device consumption"
+  },
+  "limitations": [
+    "No DB query, role, SQL migration or runtime adoption is tested.",
+    "No fixed sensor panel, physical elapsed exposure or historical target validity is inferred.",
+    "Graded accumulation is stubbed; only the actual binary writer block is executed.",
+    "Repair must preserve prior metric revisions instead of silently rewriting history."
+  ],
+  "cases": [
+    {
+      "case": "empty",
+      "input_sha256": "316abc9f56273759b9f56a588fd2f59447fe0a1a68eae6c64a7e1f3bc536de9b",
+      "input_rows": 0,
+      "unique_observed_minutes": 0,
+      "legacy_scored_readings": 0,
+      "legacy_denominator": 1,
+      "legacy_binary_pct": {
+        "joint": 0.0,
+        "temp": 0.0,
+        "vpd": 0.0
+      },
+      "legacy_nominal_stress_h": {
+        "heat": 0,
+        "vpd_high": 0,
+        "cold": 0,
+        "vpd_low": 0
+      },
+      "independent_axis_reading_reference": {
+        "temp": {
+          "eligible_readings": 0,
+          "in_band_pct": null
+        },
+        "vpd": {
+          "eligible_readings": 0,
+          "in_band_pct": null
+        }
+      },
+      "findings": [
+        "temp_eligible_reading_fraction_mismatch",
+        "vpd_eligible_reading_fraction_mismatch"
+      ]
+    },
+    {
+      "case": "missing_vpd",
+      "input_sha256": "2a7d0f7d45ccc15fddb9795c6124ccd6e8db8e5568e16c355f70e8d0a59e2972",
+      "input_rows": 1,
+      "unique_observed_minutes": 1,
+      "legacy_scored_readings": 0,
+      "legacy_denominator": 1,
+      "legacy_binary_pct": {
+        "joint": 0.0,
+        "temp": 0.0,
+        "vpd": 0.0
+      },
+      "legacy_nominal_stress_h": {
+        "heat": 0,
+        "vpd_high": 0,
+        "cold": 0,
+        "vpd_low": 0
+      },
+      "independent_axis_reading_reference": {
+        "temp": {
+          "eligible_readings": 1,
+          "in_band_pct": 100.0
+        },
+        "vpd": {
+          "eligible_readings": 0,
+          "in_band_pct": null
+        }
+      },
+      "findings": [
+        "temp_eligible_reading_fraction_mismatch",
+        "vpd_eligible_reading_fraction_mismatch"
+      ]
+    },
+    {
+      "case": "missing_temperature",
+      "input_sha256": "403a66d302db396b72e41ba0786b659e18559ce4f75b1ce35db18406a22b3bdb",
+      "input_rows": 1,
+      "unique_observed_minutes": 1,
+      "legacy_scored_readings": 0,
+      "legacy_denominator": 1,
+      "legacy_binary_pct": {
+        "joint": 0.0,
+        "temp": 0.0,
+        "vpd": 0.0
+      },
+      "legacy_nominal_stress_h": {
+        "heat": 0,
+        "vpd_high": 0,
+        "cold": 0,
+        "vpd_low": 0
+      },
+      "independent_axis_reading_reference": {
+        "temp": {
+          "eligible_readings": 0,
+          "in_band_pct": null
+        },
+        "vpd": {
+          "eligible_readings": 1,
+          "in_band_pct": 100.0
+        }
+      },
+      "findings": [
+        "temp_eligible_reading_fraction_mismatch",
+        "vpd_eligible_reading_fraction_mismatch"
+      ]
+    },
+    {
+      "case": "missing_vpd_target",
+      "input_sha256": "56c6554e9af5c0da364e6c5855951d15c38b26bb575d93d8c5fcc5aeba1269da",
+      "input_rows": 1,
+      "unique_observed_minutes": 1,
+      "legacy_scored_readings": 0,
+      "legacy_denominator": 1,
+      "legacy_binary_pct": {
+        "joint": 0.0,
+        "temp": 0.0,
+        "vpd": 0.0
+      },
+      "legacy_nominal_stress_h": {
+        "heat": 0,
+        "vpd_high": 0,
+        "cold": 0,
+        "vpd_low": 0
+      },
+      "independent_axis_reading_reference": {
+        "temp": {
+          "eligible_readings": 1,
+          "in_band_pct": 100.0
+        },
+        "vpd": {
+          "eligible_readings": 0,
+          "in_band_pct": null
+        }
+      },
+      "findings": [
+        "temp_eligible_reading_fraction_mismatch",
+        "vpd_eligible_reading_fraction_mismatch"
+      ]
+    },
+    {
+      "case": "duplicate_hot_minute",
+      "input_sha256": "3ece1c8a38cc003c166de06ef2414cb6eabe5147970907b3c7a4fbc284211472",
+      "input_rows": 60,
+      "unique_observed_minutes": 1,
+      "legacy_scored_readings": 60,
+      "legacy_denominator": 60,
+      "legacy_binary_pct": {
+        "joint": 0.0,
+        "temp": 0.0,
+        "vpd": 100.0
+      },
+      "legacy_nominal_stress_h": {
+        "heat": 1.0,
+        "vpd_high": 0,
+        "cold": 0,
+        "vpd_low": 0
+      },
+      "independent_axis_reading_reference": {
+        "temp": {
+          "eligible_readings": 60,
+          "in_band_pct": 0.0
+        },
+        "vpd": {
+          "eligible_readings": 60,
+          "in_band_pct": 100.0
+        }
+      },
+      "findings": [
+        "duplicate_rows_counted_as_distinct_nominal_minutes"
+      ]
+    },
+    {
+      "case": "sparse_hot_samples",
+      "input_sha256": "b4af2b756808c46ad09c75802d2805e356cc31a06285f5530aa9bb3bf410de02",
+      "input_rows": 2,
+      "unique_observed_minutes": 2,
+      "legacy_scored_readings": 2,
+      "legacy_denominator": 2,
+      "legacy_binary_pct": {
+        "joint": 0.0,
+        "temp": 0.0,
+        "vpd": 100.0
+      },
+      "legacy_nominal_stress_h": {
+        "heat": 0.03,
+        "vpd_high": 0,
+        "cold": 0,
+        "vpd_low": 0
+      },
+      "independent_axis_reading_reference": {
+        "temp": {
+          "eligible_readings": 2,
+          "in_band_pct": 0.0
+        },
+        "vpd": {
+          "eligible_readings": 2,
+          "in_band_pct": 100.0
+        }
+      },
+      "findings": [
+        "nominal_row_hours_do_not_establish_elapsed_exposure"
+      ]
+    },
+    {
+      "case": "nan_temperature",
+      "input_sha256": "f599647faf15b6728ad69c38bcc47a3b8acac40c549bda1d3c550e0a33d19b24",
+      "input_rows": 1,
+      "unique_observed_minutes": 1,
+      "legacy_scored_readings": 1,
+      "legacy_denominator": 1,
+      "legacy_binary_pct": {
+        "joint": 0.0,
+        "temp": 0.0,
+        "vpd": 100.0
+      },
+      "legacy_nominal_stress_h": {
+        "heat": 0,
+        "vpd_high": 0,
+        "cold": 0,
+        "vpd_low": 0
+      },
+      "independent_axis_reading_reference": {
+        "temp": {
+          "eligible_readings": 0,
+          "in_band_pct": null
+        },
+        "vpd": {
+          "eligible_readings": 1,
+          "in_band_pct": 100.0
+        }
+      },
+      "findings": [
+        "temp_eligible_reading_fraction_mismatch"
+      ]
+    },
+    {
+      "case": "fully_observed_in_band",
+      "input_sha256": "df8c88194565fda5988775f0aa6e4c735d7ea858d559737f3d99d6fd0503fc53",
+      "input_rows": 1,
+      "unique_observed_minutes": 1,
+      "legacy_scored_readings": 1,
+      "legacy_denominator": 1,
+      "legacy_binary_pct": {
+        "joint": 100.0,
+        "temp": 100.0,
+        "vpd": 100.0
+      },
+      "legacy_nominal_stress_h": {
+        "heat": 0,
+        "vpd_high": 0,
+        "cold": 0,
+        "vpd_low": 0
+      },
+      "independent_axis_reading_reference": {
+        "temp": {
+          "eligible_readings": 1,
+          "in_band_pct": 100.0
+        },
+        "vpd": {
+          "eligible_readings": 1,
+          "in_band_pct": 100.0
+        }
+      },
+      "findings": []
+    },
+    {
+      "case": "fully_observed_out_of_band",
+      "input_sha256": "b9de2d1c9fd43f11a65dfecfa0cbb91e3ad34e0f9c2d3d386fa350f7ed5d9af3",
+      "input_rows": 1,
+      "unique_observed_minutes": 1,
+      "legacy_scored_readings": 1,
+      "legacy_denominator": 1,
+      "legacy_binary_pct": {
+        "joint": 0.0,
+        "temp": 0.0,
+        "vpd": 0.0
+      },
+      "legacy_nominal_stress_h": {
+        "heat": 0.02,
+        "vpd_high": 0.02,
+        "cold": 0,
+        "vpd_low": 0
+      },
+      "independent_axis_reading_reference": {
+        "temp": {
+          "eligible_readings": 1,
+          "in_band_pct": 0.0
+        },
+        "vpd": {
+          "eligible_readings": 1,
+          "in_band_pct": 0.0
+        }
+      },
+      "findings": []
+    }
+  ]
+}

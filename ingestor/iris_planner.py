@@ -226,10 +226,10 @@ about pre-change behavior.
 2. **Band compliance / corridor outcomes** — keep each zone's temp AND VPD inside
    its agronomic corridor. PRIMARY objective. ADR-0004 supersedes target-hugging:
    the target line is a centering/diagnostic reference, not something to chase while
-   readings are already inside the crop corridor. Compliance is PER-ZONE (center=Vanda
-   orchid, east=lettuce/strawberry/pepper — each graded against what is planted there,
-   not one house average) and FEASIBILITY-AWARE (a miss you cannot fix — vent saturated,
-   outdoor hotter than the served high edge — is not held against you). Every tuning
+   readings are already inside the crop corridor. Historical grading is PER-ZONE
+   and FEASIBILITY-AWARE, but its center zone uses a house-average proxy, not a
+   measured center probe. Modeled feasibility credit does not erase physical
+   exposure and cannot establish measured crop outcomes. Every tuning
    decision should first ask: "is there a controller-attributable edge miss, forecast
    edge risk, or daily-integral miss worth spending water/energy/wear on?" Do not spend
    effort merely to reduce distance to the target line inside the corridor.
@@ -242,11 +242,18 @@ about pre-change behavior.
 
 ### KPI: Planner Score (0-100)
 
-- **80% Compliance** — the current scored field is still
+**Measurement contract 2:** inspect `scorecard_contract_version` and
+`metric_semantics`. Binary fields are legacy house-average scored reading
+fractions against historical desired setpoints, not duration-weighted fixed-panel
+crop outcomes or confirmed firmware consumption. Coverage is unverified and no
+center probe is measured. Earlier unversioned scorecards mislabeled graded credit
+as binary compliance. Keep physical exposure separate from controller credit.
+
+- **Historical controller-credit term** — the current scored field is still
   **`compliance_v2_attributable_pct`**: graded, per-zone,
-  controller-attributable band compliance, aggregated to a house number
-  (center=Vanda 0.60, east=food 0.40). ADR-0004 changes how to use it: treat it as
-  a corridor/outcome guard, not as permission to chase the target line. A good day
+  controller-attributable graded credit, aggregated to a house number
+  (center proxy 0.60, east 0.40). It is a diagnostic, not measured physical crop
+  compliance or permission to chase the target line. A good day
   is high served-corridor time, low controller-attributable edge misses, acceptable
   dew margin, and stable DLI-independent lighting behavior. Interior crop DLI is
   explicitly unavailable while the physical sensor is broken; do not infer it
@@ -258,10 +265,12 @@ about pre-change behavior.
   DIF, provenance-gated water/energy, runtime,
   cycle, dew-margin, and solar-phase buckets; until then, read the existing score
   through ADR-0004.
-- **20% Cost efficiency** — daily utility spend plus water/wear context. <$5/day =
-  full marks, $15+ = zero, but do not add cost to make in-corridor air hug the
-  target line.
-- Call `scorecard()` to check current and historical scores (25 metrics).
+- **Resource scope:** the historical 80/20 weighting applies only when
+  `resource_terms_available=1`; otherwise controller credit has 100% weight and
+  resource cost is excluded. The cost term declines from full at $0 to zero at
+  $15/day. Null resource evidence is not zero cost. Do not compare scores across
+  scopes or spend more merely to improve credit.
+- Call `scorecard()` to inspect current and historical metrics and their semantics.
 
 **Utility metrics** (all in `scorecard()` output):
 - `kwh` — daily electricity usage. Covers fans, fog, grow lights. **UNRELIABLE — do
@@ -285,24 +294,23 @@ Use the breakdown to understand resource shifts:
 - Cost > $5/day = review whether stress reduction justifies the spend.
 
 **Compliance metrics** (all in `scorecard()` output):
-- `compliance_v2_attributable_pct` — **the scored compliance number**: graded,
-  per-zone, controller-attributable. Physically-unachievable misses are credited
-  back, so it rewards exactly the lever you own. This is what `planner_score`'s 80%
-  compliance half reads today; interpret it through ADR-0004 as a corridor/outcome
-  guard, not a target-distance mandate.
-- `compliance_v2_raw_pct` — graded, per-zone compliance with the weather and all
-  (no feasibility credit). Reported context: a low raw with a high attributable means
-  the band is structurally out of reach, not that you are failing.
-- `compliance_v2_unachievable_frac` — share of misses you could not fix. When it is
-  high, the lever is to **widen the served envelope** (the dispatcher owns that), not
-  to push the actuators harder.
-- `compliance_pct` — legacy binary house metric: % of readings where **both** temp AND
-  VPD are in the served band. Kept as transitional context and as the per-day fallback
+- `compliance_v2_attributable_pct` — historical graded, per-zone,
+  controller-attributable credit. Modeled unachievable misses are credited back;
+  this does not establish which exposure was physically avoidable. The historical
+  `planner_score` uses it at 80% or 100% depending on resource eligibility.
+- `compliance_v2_raw_pct` — graded per-zone credit without feasibility refunds;
+  still not binary physical compliance. A large difference from attributable
+  credit is a reason to inspect the model, not proof the band was unreachable.
+- `compliance_v2_unachievable_frac` — modeled share of unachievable misses. When it is
+  high, inspect the feasibility assumptions and physical exposure. Never widen the
+  served envelope to improve credit, and do not automatically push actuators harder.
+- `compliance_pct` — contract-2 legacy binary house metric: % of scored readings where
+  **both** temp AND VPD are in historical desired bands. Kept as context and as the per-day fallback
   the reward uses only before the graded column was populated. Do not optimize for it;
   it cannot see severity, per-zone reality, or feasibility.
-- `temp_compliance_pct` — % of readings where temp alone is in the served band (legacy,
+- `temp_compliance_pct` — % of scored readings where temp alone is in the historical desired band (legacy,
   binary, diagnostic only).
-- `vpd_compliance_pct` — % of readings where VPD alone is in the served band (legacy,
+- `vpd_compliance_pct` — % of scored readings where VPD alone is in the historical desired band (legacy,
   binary, diagnostic only).
 
 **Graded compliance (decision #2).** Use graded severity to tell small edge misses

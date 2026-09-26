@@ -364,14 +364,15 @@ echo "date|score|comp|temp%|vpd%|stress_h|heat|cold|vpd_hi|vpd_lo|kwh|therms|wat
 SELECT date, planner_score, compliance_pct, temp_compliance_pct, vpd_compliance_pct,
        total_stress_h, heat_stress_h, cold_stress_h, vpd_high_stress_h, vpd_low_stress_h,
        kwh, therms, water_gal, cost_total
-FROM v_daily_kpi
+FROM mv_daily_kpi
 WHERE date >= (now() AT TIME ZONE 'America/Denver')::date - 7
   AND date < (now() AT TIME ZONE 'America/Denver')::date
 ORDER BY date DESC;
 " 2>/dev/null || echo "(7-day KPI trend unavailable within DB query budget)"
-echo "Score = 80% compliance (both temp AND VPD in band) + 20% cost efficiency (<\$5/day=full marks)"
-echo "compliance_pct = % time both temp AND VPD in band. temp_comp / vpd_comp = individual axes."
-echo "VPD compliance is usually the bottleneck on dry spring days (tight band, 15% outdoor RH)."
+echo "planner_score is historical graded controller credit plus 20% cost only when resource_terms_available=1; otherwise resource weight is zero. It is not physical compliance."
+echo "Only scorecard_contract_version=2 verifies binary field semantics. Unversioned scorecards can contain graded credit under compliance_pct."
+echo "Version 2 compliance_pct = fraction of scored house-average readings with both axes in historical desired bands; temp/vpd fields are individual binary reading fractions."
+echo "Not duration-weighted, not a fixed sensor panel or confirmed firmware/crop target. Coverage is unverified; nominal stress counts assume one minute per reading. Graded fields are separate diagnostics."
 echo "Dew point margin: <5°F = condensation risk, <3°F = imminent. dp_risk_h = hours below 5°F. Target: 0h."
 echo ""
 
