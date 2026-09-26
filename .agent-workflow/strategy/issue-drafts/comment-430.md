@@ -1,3 +1,0 @@
-July 9 live re-audit: Tier 1 is deployed but the runtime outcome is **not clean**. The ESPHome transport stays connected, yet ordinary cfg readback changes still trigger a mislabeled 69-value reconnect batch every ~5–6 minutes; all 56 staged anchor readback IDs mismatch actual ESPHome wire slugs; a batch occupies the serial task loop for ~4m38s; and pre-delivery cache/row updates make cancellation accounting unreliable.
-
-The bounded residual P0 is now #433. Treat #433 as the required prerequisite before deciding whether Tier 2/3 entity removal is still needed. #430 remains the broader heap/simplification epic; PRs #431/#432 are evidence of a partial fix, not acceptance of the stable-connection outcome.
