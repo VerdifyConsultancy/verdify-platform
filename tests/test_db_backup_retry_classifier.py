@@ -133,6 +133,8 @@ def test_temporary_dns_failure_retries_then_atomically_publishes_dump(tmp_path: 
     [
         "non-transient-auth.stderr",
         "non-transient-permanent-dns.stderr",
+        "non-transient-permission.stderr",
+        "non-transient-disk-full.stderr",
     ],
 )
 def test_non_transient_failures_fail_loudly_without_retry(tmp_path: Path, fixture: str):
