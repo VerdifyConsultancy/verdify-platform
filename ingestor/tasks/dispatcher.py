@@ -15,7 +15,7 @@ from esp32_push import (
     push_to_esp32_detailed,
 )
 
-from . import band_anchors
+from . import band_anchors, bounded_reconcile
 from ._common import (
     _PHYSICS_INVARIANTS,
     ACTIVITY_MIRROR_PARAMS,
@@ -1090,15 +1090,44 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             deduped_changes[param] = float(value)
         changes = list(deduped_changes.items())
 
-        if reconnect_pending and len(changes) > MAX_RECONNECT_COMMANDS:
-            # A reconnect is recovery work, not authority to enqueue another
-            # historical 40+ command restore storm.  Leave the generation
-            # unreconciled and retry on the ordinary cadence after operators
-            # can inspect the current-generation comparison evidence.
+        stage_decision = bounded_reconcile.Decision("ordinary")
+        if reconnect_pending and (
+            len(changes) > MAX_RECONNECT_COMMANDS
+            or (STATE_DIR / bounded_reconcile.APPROVAL_NAME).exists()
+            or (STATE_DIR / bounded_reconcile.STATE_NAME).exists()
+        ):
+            stage_decision = await bounded_reconcile.choose_stage(
+                conn, changes, planned or [], reconnect_generation, STATE_DIR, MAX_RECONNECT_COMMANDS
+            )
+            if stage_decision.action == "hold":
+                shared.defer_failed_dispatch(reconnect_generation, drift_versions)
+                log.error(
+                    "writer_reconcile reason=transport_reconnect generation=%d action=blocked_stage reason=%s",
+                    reconnect_generation,
+                    stage_decision.reason,
+                )
+                (STATE_DIR / "setpoint-dispatcher.log").touch()
+                return
+            if stage_decision.action == "send":
+                changes = list(stage_decision.changes)
+                log.info(
+                    "writer_reconcile reason=transport_reconnect generation=%d "
+                    "action=%s run_id=%s command_count=%d limit=%d",
+                    reconnect_generation,
+                    "bounded_rollback" if stage_decision.rollback else "bounded_stage",
+                    stage_decision.run_id,
+                    len(changes),
+                    MAX_RECONNECT_COMMANDS,
+                )
+
+        if len(changes) > MAX_RECONNECT_COMMANDS:
+            # A broad desired delta is never authority to enqueue a 40+
+            # command storm, including after the reconnect generation ends.
+            # A separately approved stage stays at or below this same cap.
             shared.defer_failed_dispatch(reconnect_generation, drift_versions)
             log.error(
-                "writer_reconcile reason=transport_reconnect generation=%d "
-                "action=blocked_broad_restore command_count=%d limit=%d",
+                "writer_reconcile reason=%s generation=%d action=blocked_broad_restore command_count=%d limit=%d",
+                dispatch_reason,
                 reconnect_generation,
                 len(changes),
                 MAX_RECONNECT_COMMANDS,
@@ -1155,7 +1184,7 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         prequeue_failures: list[tuple[str, str]] = []
         skipped_heap_deferred = 0
         for param, val in changes:
-            source = _dispatch_source(param, planner_params, quiet_params)
+            source = "manual" if stage_decision.rollback else _dispatch_source(param, planner_params, quiet_params)
 
             requested_val = float(val)
             registry_val, registry_violation = _coerce_registry_value(param, requested_val)
@@ -1514,7 +1543,19 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         except Exception:
             log.exception("terminal-failure alert write failed; continuing to dispatch cleanup")
 
-    if not _dispatch_trigger_completed(final_failures):
+    if stage_decision.action == "send":
+        bounded_reconcile.finish_stage(STATE_DIR, stage_decision, delivery_records, final_failures)
+        # Keep the generation unreconciled until every approved stage has a
+        # durable confirmation and current-generation cfg readback.
+        shared.defer_failed_dispatch(reconnect_generation, drift_versions)
+        log.info(
+            "writer_reconcile reason=transport_reconnect generation=%d "
+            "action=stage_awaiting_confirmation run_id=%s failure_count=%d",
+            reconnect_generation,
+            stage_decision.run_id,
+            len(final_failures),
+        )
+    elif not _dispatch_trigger_completed(final_failures):
         shared.defer_failed_dispatch(reconnect_generation, drift_versions)
         log.error(
             "writer_reconcile reason=%s generation=%d action=incomplete failure_count=%d",
