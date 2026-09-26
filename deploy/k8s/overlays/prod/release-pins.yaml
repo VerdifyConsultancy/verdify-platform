@@ -1,0 +1,56 @@
+# Release pins: the digests production runs for the five images that the
+# verdify-platform-ci pin actuator manages (api, mcp, ingestor, migrate and
+# experiment-v2-orchestrator).
+#
+# The actuator rewrites those five entries in kustomization.yaml `images:` after
+# every build of `main`. Those entries are build candidates: this file is listed
+# under `transformers:`, which kustomize runs after the `images:` field, so the
+# digests below replace the candidate digests in every rendered workload, CronJob
+# and hook Job. A source build therefore changes Git only and leaves the prod
+# render, and what Argo compares against live, unchanged.
+#
+# Promote: `python3 scripts/promote-release-pins.py` copies the candidate
+# digests into this file. Commit that digest-only change, merge it, then run the
+# gated `verdify-prod-dark` sync in the same attended session
+# (docs/runbooks/laptop-operator.md §2). Promote all five together unless the
+# schema allows otherwise: the migrate hook carries the migrations the api, mcp
+# and ingestor digests expect.
+apiVersion: builtin
+kind: ImageTagTransformer
+metadata:
+  name: release-pin-verdify-api
+imageTag:
+  name: registry.vallery.net/verdifyconsultancy/verdify-api
+  digest: sha256:81da694a89f0754a4443e07168e5b64b35cd105c7edc3f677afd51573fa44d71
+---
+apiVersion: builtin
+kind: ImageTagTransformer
+metadata:
+  name: release-pin-verdify-mcp
+imageTag:
+  name: registry.vallery.net/verdifyconsultancy/verdify-mcp
+  digest: sha256:31b58a99a8e9c0734b4593fc92d23766ab662370b4b9ad6ee9c1c49af5ce03bd
+---
+apiVersion: builtin
+kind: ImageTagTransformer
+metadata:
+  name: release-pin-verdify-ingestor
+imageTag:
+  name: registry.vallery.net/verdifyconsultancy/verdify-ingestor
+  digest: sha256:6fbd2b238d5ccf2192644c65dc45b77414cf0248cad31393082f53ab7751ac47
+---
+apiVersion: builtin
+kind: ImageTagTransformer
+metadata:
+  name: release-pin-verdify-migrate
+imageTag:
+  name: registry.vallery.net/verdifyconsultancy/verdify-migrate
+  digest: sha256:27ab14f0fec12464cd98460a2a852fb7c1bfd210ae15b56a6e3747b23f094d68
+---
+apiVersion: builtin
+kind: ImageTagTransformer
+metadata:
+  name: release-pin-verdify-experiment-v2-orchestrator
+imageTag:
+  name: registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator
+  digest: sha256:cccbd040cf97911aa947ff397f75244357c688f476db5f6ff57a391033f20f65

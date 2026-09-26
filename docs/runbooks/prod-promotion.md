@@ -3,10 +3,13 @@
 **Status:** partly superseded as of 2026-09-23. A merge to `main` now builds
 every image in `.agent-fleet/ci.yaml` (a fleet Argo Event runs `repo-build`),
 and the `verdify-platform-ci` pin actuator commits the api, mcp, ingestor,
-migrate and experiment-v2-orchestrator digests. For the `.agent-fleet/ci.yaml`
-images, do not submit `repo-build` Workflows, and do not hand-commit the
-actuator's digests; the planner, setpoint-server and lab-publisher-k3s digests
-are still pinned by hand. An image outside `.agent-fleet/ci.yaml` (today
+migrate and experiment-v2-orchestrator digests to the prod overlay's `images:`
+block as build candidates, which do not render. For the `.agent-fleet/ci.yaml`
+images, do not submit `repo-build` Workflows, and do not hand-edit the
+actuator's candidate entries. Promotion copies candidate digests into
+`deploy/k8s/overlays/prod/release-pins.yaml`, the digests production runs, with
+`scripts/promote-release-pins.py` (#808); the planner, setpoint-server and lab-publisher-k3s release pins are
+still edited by hand. An image outside `.agent-fleet/ci.yaml` (today
 `verdify-twin`, see `deploy/k8s/components/twin-builder/`) still uses the
 manual `repo-build` submission in Flow step 3, which stays current for that
 case. The rest of the Flow and the Promotable Images list are historical; the

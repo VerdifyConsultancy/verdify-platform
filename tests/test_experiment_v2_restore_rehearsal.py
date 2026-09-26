@@ -172,11 +172,13 @@ def test_rendered_prod_does_not_retain_the_one_release_rehearsal_hooks():
         if document["kind"] == "Job" and document["metadata"]["name"] == "verdify-migrate"
     )
     migrate_image = migrate["spec"]["template"]["spec"]["containers"][0]["image"]
-    prod = yaml.safe_load(PROD.read_text())
+    migrate_zot = "registry.vallery.net/verdifyconsultancy/verdify-migrate"
     migrate_pin = next(
-        image for image in prod["images"] if image["name"] == "ghcr.io/verdifyconsultancy/verdify-migrate"
+        row["imageTag"]
+        for row in yaml.safe_load_all((PROD.parent / "release-pins.yaml").read_text())
+        if row["imageTag"]["name"] == migrate_zot
     )
-    assert migrate_image == f"{migrate_pin['newName']}@{migrate_pin['digest']}"
+    assert migrate_image == f"{migrate_zot}@{migrate_pin['digest']}"
     assert migrate_image.startswith("registry.vallery.net/")
     assert migrate["metadata"]["annotations"]["argocd.argoproj.io/hook"] == "PreSync"
     assert "argocd.argoproj.io/sync-wave" not in migrate["metadata"]["annotations"]

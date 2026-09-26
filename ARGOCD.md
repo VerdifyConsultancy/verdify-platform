@@ -60,12 +60,22 @@ retired with the abandoned alternate Lab generator on 2026-08-30.
 
 GitHub Actions no longer publishes this repo. A fleet Argo Event submits the
 exact `main` revision to the `repo-build` WorkflowTemplate in
-`agent-fleet-ci`; Kaniko pushes to the in-cluster Zot origin and the resulting
-`registry.vallery.net/...@sha256:` identities are committed through validated
-digest-pin changes. The Lab publisher image follows this model; the Lab web
+`agent-fleet-ci`; Kaniko pushes to the in-cluster Zot origin, and the
+`verdify-platform-ci` pin actuator records the api, mcp, ingestor, migrate and
+experiment-v2-orchestrator `registry.vallery.net/...@sha256:` identities as
+build candidates in the `images:` block of `deploy/k8s/overlays/prod/kustomization.yaml`.
+The prod render runs the release pins instead: `release-pins.yaml`, a
+`transformers:` entry applied after `images:`, for those five images, and the
+hand-pinned `images:` entries for planner, setpoint-server and
+lab-publisher-k3s. So `main` renders what production runs, and a build changes
+neither the render nor Argo's comparison with live (#808).
+
+Promotion is a digest-only commit that moves release pins (for the five, copy
+the candidates into `release-pins.yaml` together), followed by
+`argocd app sync verdify-prod-dark` in the same attended session. Merging a pin
+changes Git only; no image build or pin authorizes that sync. The Lab web
 runtime uses a pinned content-free nginx image and serves only the validated
-Quartz cache PVC. Merging a pin changes Git only. Production remains a separate
-`argocd app sync verdify-prod-dark`; no image build or pin authorizes that sync.
+Quartz cache PVC.
 
 ## Verification
 
@@ -73,7 +83,8 @@ Quartz cache PVC. Merging a pin changes Git only. Production remains a separate
   `kustomize build deploy/k8s/overlays/prod`.
 - CI gate: `make ci` plus the in-cluster repo-build/PR-CI render and policy
   checks.
-- Promotion follows the Promotion Model above: exact Zot digests committed by
-  the `verdify-platform-ci` pin actuator (planner, setpoint-server and
-  lab-publisher by hand); commands in `docs/runbooks/laptop-operator.md` §2.
-  Merge changes Git only. The manual prod sync remains safety-checked.
+- Promotion follows the Promotion Model above: a digest-only release-pin
+  commit (`release-pins.yaml` for the five actuator-built images, the
+  `images:` entries for planner, setpoint-server and lab-publisher), then the
+  gated sync; commands in `docs/runbooks/laptop-operator.md` §2. Merge changes
+  Git only. The manual prod sync remains safety-checked.
