@@ -38,10 +38,9 @@
 # export corpus and fall back to default_setpoints() — so for any field the
 # dispatcher tuned away from default, the twin diverges for a CONFIG reason,
 # not a code reason. The divergence metric is NOT trustworthy as a gate until
-# #31 (setpoint coverage) closes. The §8.10 step-4 LIVE twin is now wired:
-# TWIN_MODE=live (below) runs twin/live_driver.py against migration 211's
-# v_policy_twin_asof_input + twin_live_results grants, and
-# twin/report_agreement.py computes the 7–14d shadow agreement gate.
+# #31 (setpoint coverage) closes. The §8.10 step-4 live twin additionally
+# needs the live as-of adapter + v_policy_twin_asof_input + the SELECT-only
+# twin role (Lane B/E coordination) before the 7–14d shadow agreement gate.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -91,33 +90,17 @@ spec:
               # PGPASSWORD up from the environment.
               export PGPASSWORD="${TWIN_DB_PASSWORD}"
               export TWIN_DSN="${TWIN_DSN_BASE}"
-              export TWIN_BINARY=/usr/local/bin/replay_emit_follow
-              if [ "${TWIN_MODE:-corpus}" = "live" ]; then
-                # §8.9 LIVE follower (#587): incremental
-                # v_policy_twin_asof_input polling, decode of the paired
-                # device-confirmed 48-field vector, INSERT-only into
-                # twin_live_results. Requires migration 211 (view + results
-                # grants for the twin login's group role). Same L1-L4
-                # read-only construction; still no actuation, no device
-                # egress (the NetworkPolicy below is unchanged).
-                exec python /usr/local/bin/live_driver.py
-              fi
-              # Corpus shadow (default): the driver asserts read-only at
-              # startup (L2), then replays the corpus, INSERT-only into
-              # twin_decisions. Loop the corpus so the shadow keeps
-              # producing rows for the dashboard.
+              # The driver asserts read-only at startup (L2), then replays the
+              # corpus, INSERT-only into twin_decisions. Loop the corpus so the
+              # shadow keeps producing rows for the dashboard.
               while true; do
+                TWIN_BINARY=/usr/local/bin/replay_emit_follow \
                 TWIN_CSV=/corpus/replay_sample.csv \
                 python /usr/local/bin/offline_driver.py
                 echo "[twin] corpus pass complete; sleeping ${TWIN_LOOP_SLEEP:-300}s"
                 sleep "${TWIN_LOOP_SLEEP:-300}"
               done
           env:
-            # corpus (default) replays the mounted sample; live follows
-            # v_policy_twin_asof_input (§8.9). Flip via a component/overlay
-            # patch at §8.10 rollout step 4 — never by editing the cluster.
-            - name: TWIN_MODE
-              value: corpus
             - name: TWIN_ENV
               value: prod
             - name: TWIN_REF

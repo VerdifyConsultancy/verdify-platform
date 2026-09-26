@@ -19690,7 +19690,7 @@ data:
               },
               "options": {
                 "mode": "markdown",
-                "content": "### Controlled experiment \u2014 blinded ops board (#587, audit \u00a78.7/\u00a78.10)\n\nLive panels for the controlled planner experiment (migrations 207\u2013210: `control_experiments`, `control_assignments`, `policy_delivery_outbox`, `policy_device_snapshots`, `policy_exposures`, `experiment_events`).\n\n**Blinded fields ONLY (visible during the run):**\n- opaque assignment id (UUID, no treatment meaning)\n- activation receipt (staged/activated times, device-echoed confirmation)\n- expected-vs-confirmed identity equality (boolean only \u2014 never the hashes)\n- exposure coverage fraction + close/fallback reason\n- delivery lag (outbox enqueue \u2192 device activation)\n- safety/fallback + protocol-deviation events (kind/severity/actor only)\n- active experiment lifecycle state (kind/status \u2014 public GitOps facts)\n\n**NEVER on this board while an experiment runs:** treatment labels or the X/Y\u2192A/B mapping, template content hashes, component values, proposal source, or any efficacy/outcome metric. The outcome-analysis role is blinded by construction (\u00a78.7); this board must not leak what the database refuses. Verified by tests/test_experiment_verify.py."
+                "content": "### Controlled experiment \u2014 blinded ops board (#587, audit \u00a78.7/\u00a78.10)\n\nSkeleton panels for the controlled planner experiment. The backing tables land with **Lane B (migration 207)**: `control_assignments`, `policy_delivery_outbox`, `policy_device_snapshots`, `policy_exposures`. Until then the stat/table panels below intentionally return NULL (their real SQL is staged in each panel description).\n\n**Blinded fields ONLY (visible during the run):**\n- opaque assignment id (UUID, no arm meaning)\n- activation receipt (device-echoed generation acknowledged)\n- expected-vs-confirmed identity equality (boolean)\n- exposure coverage fraction + close/fallback reason\n- delivery lag (outbox enqueue -> device activation)\n- safety/fallback + protocol-deviation events\n- tested-rollback receipt (last baseline-recovery drill)\n\n**NEVER on this board while an experiment runs:** arm labels or the X/Y->A/B mapping, template content hashes, component values, or any efficacy/outcome metric. The outcome analysis role is blinded by construction (\u00a78.7); this board must not leak what the database refuses."
               }
             },
             {
@@ -19701,7 +19701,7 @@ data:
               "id": 120,
               "type": "stat",
               "title": "Exposure coverage (7d)",
-              "description": "Fraction of the trailing 7 days covered by identity-confirmed exposure intervals (policy_exposures, clipped to the window). Blinded: coverage only \u2014 no treatment labels, no content identity.",
+              "description": "PENDING Lane B (migration 207). Staged SQL:\nSELECT COALESCE(SUM(EXTRACT(EPOCH FROM (upper(confirmed_interval) - lower(confirmed_interval)))) / (7*86400.0), 0) AS coverage\nFROM policy_exposures\nWHERE lower(confirmed_interval) > now() - interval '7 days';\nBlinded: coverage only \u2014 no arm, no content identity.",
               "gridPos": {
                 "h": 4,
                 "w": 6,
@@ -19712,13 +19712,13 @@ data:
                 {
                   "refId": "A",
                   "format": "table",
-                  "rawSql": "SELECT COALESCE(SUM(EXTRACT(EPOCH FROM (LEAST(COALESCE(ended_at, now()), now()) - GREATEST(started_at, now() - interval '7 days')))) / (7 * 86400.0), 0) AS coverage\nFROM policy_exposures\nWHERE identity_confirmed\n  AND COALESCE(ended_at, now()) > now() - interval '7 days';"
+                  "rawSql": "-- pending Lane B (migration 207): policy_exposures; staged SQL in panel description\nSELECT NULL::float8 AS coverage;"
                 }
               ],
               "fieldConfig": {
                 "defaults": {
                   "unit": "percentunit",
-                  "noValue": "no exposures (7d)",
+                  "noValue": "pending Lane B",
                   "thresholds": {
                     "mode": "absolute",
                     "steps": [
@@ -19749,7 +19749,7 @@ data:
               "id": 121,
               "type": "stat",
               "title": "Expected = confirmed (24h)",
-              "description": "BOOL_AND over exposures updated in the last 24h with a device-observed activation identity: does the device-echoed identity equal the expected one? Blinded: the equality boolean only \u2014 the hashes themselves NEVER render here.",
+              "description": "PENDING Lane B (migration 207). Staged SQL:\nSELECT BOOL_AND(expected_activation_hash = observed_activation_hash) AS identity_ok\nFROM policy_device_snapshots\nWHERE snapshot_at > now() - interval '24 hours';\nBlinded: equality boolean only \u2014 the hashes themselves NEVER render here.",
               "gridPos": {
                 "h": 4,
                 "w": 6,
@@ -19760,12 +19760,12 @@ data:
                 {
                   "refId": "A",
                   "format": "table",
-                  "rawSql": "SELECT BOOL_AND(observed_activation_sha256 = expected_activation_sha256) AS identity_ok\nFROM policy_exposures\nWHERE observed_activation_sha256 IS NOT NULL\n  AND updated_at > now() - interval '24 hours';"
+                  "rawSql": "-- pending Lane B (migration 207): policy_device_snapshots; staged SQL in panel description\nSELECT NULL::boolean AS identity_ok;"
                 }
               ],
               "fieldConfig": {
                 "defaults": {
-                  "noValue": "no confirmations (24h)",
+                  "noValue": "pending Lane B",
                   "thresholds": {
                     "mode": "absolute",
                     "steps": [
@@ -19796,7 +19796,7 @@ data:
               "id": 122,
               "type": "table",
               "title": "Assignment receipts (opaque)",
-              "description": "Latest delivery receipt + exposure state per assignment: opaque UUID, staged/activated times, enqueue\u2192activation lag, identity-confirmed flag, coverage, close/fallback reason. Blinded: no treatment labels, no X/Y\u2192A/B resolution, no content hashes, no component values.",
+              "description": "PENDING Lane B (migration 207). Staged SQL:\nSELECT a.assignment_id, o.activated_at, o.activated_at - o.enqueued_at AS delivery_lag, e.close_reason\nFROM control_assignments a\nLEFT JOIN policy_delivery_outbox o USING (assignment_id)\nLEFT JOIN policy_exposures e USING (assignment_id)\nORDER BY a.assigned_range DESC LIMIT 20;\nBlinded: opaque UUIDs, receipts, lag, close/fallback reason \u2014 no arm, no X/Y, no content hash, no component values.",
               "gridPos": {
                 "h": 5,
                 "w": 12,
@@ -19807,142 +19807,16 @@ data:
                 {
                   "refId": "A",
                   "format": "table",
-                  "rawSql": "SELECT a.assignment_id,\n       lower(a.valid_range) AS starts_at,\n       o.staged_at,\n       o.activated_at,\n       o.activated_at - o.created_at AS delivery_lag,\n       e.identity_confirmed,\n       e.coverage_fraction,\n       e.close_reason\nFROM control_assignments a\nLEFT JOIN LATERAL (\n  SELECT ob.staged_at, ob.activated_at, ob.created_at\n  FROM policy_delivery_outbox ob\n  JOIN effective_policy_vectors v ON v.vector_id = ob.vector_id\n  WHERE v.assignment_id = a.assignment_id\n  ORDER BY ob.created_at DESC LIMIT 1\n) o ON true\nLEFT JOIN LATERAL (\n  SELECT ex.identity_confirmed, ex.coverage_fraction, ex.close_reason\n  FROM policy_exposures ex\n  WHERE ex.assignment_id = a.assignment_id\n  ORDER BY ex.started_at DESC LIMIT 1\n) e ON true\nORDER BY lower(a.valid_range) DESC\nLIMIT 20;"
+                  "rawSql": "-- pending Lane B (migration 207): control_assignments / policy_delivery_outbox / policy_exposures; staged SQL in panel description\nSELECT NULL::uuid AS assignment_id, NULL::timestamptz AS activated_at, NULL::interval AS delivery_lag, NULL::text AS close_reason WHERE FALSE;"
                 }
               ],
               "fieldConfig": {
                 "defaults": {
-                  "noValue": "no assignments yet"
+                  "noValue": "pending Lane B"
                 },
                 "overrides": []
               },
               "options": {}
-            },
-            {
-              "datasource": {
-                "type": "grafana-postgresql-datasource",
-                "uid": "verdify-tsdb"
-              },
-              "id": 123,
-              "type": "stat",
-              "title": "Delivery outbox (24h)",
-              "description": "Outbox health: vector transactions in flight, failed, max attempt count and median enqueue\u2192activation lag. Blinded: counts and timing only.",
-              "gridPos": {
-                "h": 4,
-                "w": 6,
-                "x": 12,
-                "y": 64
-              },
-              "targets": [
-                {
-                  "refId": "A",
-                  "format": "table",
-                  "rawSql": "SELECT count(*) FILTER (WHERE state NOT IN ('activated', 'abandoned')) AS in_flight,\n       count(*) FILTER (WHERE state = 'failed') AS failed,\n       COALESCE(max(attempt_count), 0) AS max_attempts,\n       EXTRACT(EPOCH FROM percentile_cont(0.5) WITHIN GROUP (ORDER BY activated_at - created_at)) AS median_lag_s\nFROM policy_delivery_outbox\nWHERE created_at > now() - interval '24 hours';"
-                }
-              ],
-              "fieldConfig": {
-                "defaults": {
-                  "noValue": "outbox empty (24h)",
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                      {
-                        "color": "text",
-                        "value": null
-                      }
-                    ]
-                  }
-                },
-                "overrides": []
-              },
-              "options": {
-                "reduceOptions": {
-                  "calcs": [
-                    "lastNotNull"
-                  ]
-                },
-                "colorMode": "none",
-                "graphMode": "none"
-              }
-            },
-            {
-              "datasource": {
-                "type": "grafana-postgresql-datasource",
-                "uid": "verdify-tsdb"
-              },
-              "id": 124,
-              "type": "table",
-              "title": "Safety / protocol events (7d)",
-              "description": "experiment_events with warning/critical severity or deviation/override/emergency kind. Kind, severity, actor and time only \u2014 the detail payload is deliberately NOT rendered (it may carry identifying lineage).",
-              "gridPos": {
-                "h": 5,
-                "w": 12,
-                "x": 0,
-                "y": 64
-              },
-              "targets": [
-                {
-                  "refId": "A",
-                  "format": "table",
-                  "rawSql": "SELECT recorded_at, event_kind, severity, actor\nFROM experiment_events\nWHERE recorded_at > now() - interval '7 days'\n  AND (severity <> 'info' OR event_kind IN ('protocol_deviation', 'override', 'emergency_action'))\nORDER BY recorded_at DESC\nLIMIT 30;"
-                }
-              ],
-              "fieldConfig": {
-                "defaults": {
-                  "noValue": "no safety/protocol events (7d)"
-                },
-                "overrides": []
-              },
-              "options": {}
-            },
-            {
-              "datasource": {
-                "type": "grafana-postgresql-datasource",
-                "uid": "verdify-tsdb"
-              },
-              "id": 125,
-              "type": "stat",
-              "title": "Active experiment",
-              "description": "Lifecycle state of the at-most-one armed/running/paused experiment (kind/status/timezone are public GitOps facts; no treatment information).",
-              "gridPos": {
-                "h": 4,
-                "w": 6,
-                "x": 18,
-                "y": 64
-              },
-              "targets": [
-                {
-                  "refId": "A",
-                  "format": "table",
-                  "rawSql": "SELECT kind, status, timezone, started_at\nFROM control_experiments\nWHERE status IN ('armed', 'running', 'paused')\nORDER BY updated_at DESC\nLIMIT 1;"
-                }
-              ],
-              "fieldConfig": {
-                "defaults": {
-                  "noValue": "none armed/running",
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                      {
-                        "color": "text",
-                        "value": null
-                      }
-                    ]
-                  }
-                },
-                "overrides": []
-              },
-              "options": {
-                "reduceOptions": {
-                  "calcs": [
-                    "lastNotNull"
-                  ],
-                  "fields": "/^(kind|status)$/"
-                },
-                "colorMode": "none",
-                "graphMode": "none",
-                "textMode": "name_and_value"
-              }
             }
           ]
         }

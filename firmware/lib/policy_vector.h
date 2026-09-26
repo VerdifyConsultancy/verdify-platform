@@ -43,28 +43,6 @@
 
 namespace verdify_policy {
 
-// ── Recovery image (#586, audit §8.10 step 3) ───────────────────────────────
-// Compile with -DPOLICY_ENGINE_RECOVERY to build the RECOVERY image: the
-// proven control logic WITHOUT the policy-engine actuation surface but WITH
-// the generated vector/baseline schema compiled in. In a recovery build:
-//   * staging / validate / commit / manifest arming reject with
-//     kRecoveryImage before touching the arena (dead actuation surface);
-//   * boot_init() never resumes a journaled active policy, pending slot, or
-//     armed manifest — the ROM baseline is held unconditionally (the journal
-//     is still read for the conservative same-day water high-water rule, and
-//     journal writes continue, so a recovery boot leaves ROM-baseline state
-//     behind and a later full-image flash does NOT silently resume the
-//     aborted experiment);
-//   * PolicySnapshot.experiment_active is hard-false, so every runtime-gated
-//     consumer reads its legacy global permanently (bit-identical control);
-//   * identity_readback() still decodes and echoes policy identity, with
-//     apply_state "recovery" so host tooling can confirm the image type.
-#ifdef POLICY_ENGINE_RECOVERY
-inline constexpr bool kRecoveryImage = true;
-#else
-inline constexpr bool kRecoveryImage = false;
-#endif
-
 // ── Wire/manifest constants ─────────────────────────────────────────────────
 
 constexpr uint8_t kManifestMagic[4] = {'V', 'P', 'M', '1'};
@@ -237,7 +215,6 @@ enum class PolicyError : uint8_t {
   kNotValidated,       // commit without successful validate
   kNotStaging,         // chunk/validate without begin
   kClockInvalid,       // operation requires a valid clock
-  kRecoveryImage,      // POLICY_ENGINE_RECOVERY build: actuation surface disabled
 };
 
 const char* policy_error_name(PolicyError error);
@@ -373,18 +350,6 @@ class PolicyEngine {
       event.water_budget_marked_consumed = water_budget_consumed_;
     }
 
-#ifdef POLICY_ENGINE_RECOVERY
-    // §8.10 recovery image: the journaled manifest, pending slots, and active
-    // policy are deliberately NOT resumed — the ROM baseline is held
-    // unconditionally. last_committed_generation_ and the conservative water
-    // high-water restore above are kept, so subsequent journal writes carry
-    // them forward and a later full-image flash can neither replay a stale
-    // generation nor un-consume the day's water budget.
-    event.outcome = BootOutcome::kRomNoJournal;
-    copy_sha8(event.active_content_sha8, kRomBaselinePolicy.content_sha256);
-    return event;
-#endif
-
     if (state.has_manifest) {
       ExperimentPolicyManifest manifest{};
       if (parse_manifest(state.manifest_bytes, state.manifest_len, &manifest) == PolicyError::kNone) {
@@ -439,11 +404,7 @@ class PolicyEngine {
   }
 
   // ── Manifest staging ──────────────────────────────────────────────────────
-  // Every entry point of the actuation surface (staging, validation, commit,
-  // manifest arming) fails closed with kRecoveryImage in a recovery build —
-  // the branch is constant-folded away in normal images.
   bool manifest_begin(size_t expected_len) {
-    if (kRecoveryImage) return fail(PolicyError::kRecoveryImage);
     if (transfer_.kind != TransferKind::kNone) return fail(PolicyError::kBusy);
     if (expected_len < kManifestMinSize || expected_len > kManifestMaxSize) return fail(PolicyError::kBadHeader);
     transfer_ = Transfer{};
@@ -453,7 +414,6 @@ class PolicyEngine {
   }
 
   bool manifest_commit() {
-    if (kRecoveryImage) return fail(PolicyError::kRecoveryImage);
     if (transfer_.kind != TransferKind::kManifest) return fail(PolicyError::kNotStaging);
     if (transfer_.received != transfer_.expected_len) return fail(PolicyError::kIncomplete);
     // Arming (or re-arming) a manifest invalidates any pending vectors: the
@@ -488,7 +448,6 @@ class PolicyEngine {
 
   // ── Vector staging ────────────────────────────────────────────────────────
   bool begin_policy(const uint8_t* header, size_t header_len) {
-    if (kRecoveryImage) return fail(PolicyError::kRecoveryImage);
     if (transfer_.kind != TransferKind::kNone) return fail(PolicyError::kBusy);
     PendingHeader parsed{};
     if (!parse_begin_header(header, header_len, &parsed)) return fail(PolicyError::kBadHeader);
@@ -503,7 +462,6 @@ class PolicyEngine {
   }
 
   bool stage_chunk(size_t offset, const uint8_t* data, size_t len) {
-    if (kRecoveryImage) return fail(PolicyError::kRecoveryImage);
     if (transfer_.kind == TransferKind::kNone) return fail(PolicyError::kNotStaging);
     if (data == nullptr || len == 0 || len > kMaxStageChunk) return fail(PolicyError::kBadChunk);
     // Ordered staging: each chunk must start exactly where the last ended —
@@ -517,7 +475,6 @@ class PolicyEngine {
   }
 
   bool validate_policy() {
-    if (kRecoveryImage) return fail(PolicyError::kRecoveryImage);
     if (transfer_.kind != TransferKind::kVector) return fail(PolicyError::kNotStaging);
     const PendingHeader header = transfer_.header;
     SlotRec& slot = slot_for(header.slot);
@@ -532,7 +489,6 @@ class PolicyEngine {
   }
 
   bool commit_policy(PolicySlot which, uint32_t effective_at_s) {
-    if (kRecoveryImage) return fail(PolicyError::kRecoveryImage);
     SlotRec& slot = slot_for(which);
     if (slot.state != SlotState::kValidated) return fail(PolicyError::kNotValidated);
     if (effective_at_s == 0) return fail(PolicyError::kClockInvalid);
@@ -664,7 +620,7 @@ class PolicyEngine {
       activation[0] = '-';
       activation[1] = '\0';
     }
-    const char* state = kRecoveryImage ? "recovery" : (rom_baseline_active() ? "rom_baseline" : "active");
+    const char* state = rom_baseline_active() ? "rom_baseline" : "active";
     std::snprintf(out, cap, "%u|%lu|%s|%s|%s", static_cast<unsigned>(active_->schema_version),
                   static_cast<unsigned long>(active_->generation), assignment, activation, state);
   }
@@ -764,9 +720,7 @@ class PolicyEngine {
     std::memcpy(snap.values, active_->values, sizeof(snap.values));
     snap.generation = active_->generation;
     snap.schema_version = active_->schema_version;
-    // Recovery image: the consumer switchover is compiled out — the snapshot
-    // can never activate, so every gated consumer stays on its legacy global.
-    snap.experiment_active = !kRecoveryImage && manifest_armed_;
+    snap.experiment_active = manifest_armed_;
     copy_sha8(snap.content_sha8, active_->content_sha256);
     return snap;
   }
@@ -1323,7 +1277,6 @@ inline const char* policy_error_name(PolicyError error) {
     case PolicyError::kNotValidated: return "not_validated";
     case PolicyError::kNotStaging: return "not_staging";
     case PolicyError::kClockInvalid: return "clock_invalid";
-    case PolicyError::kRecoveryImage: return "recovery_image";
   }
   return "unknown";
 }
@@ -1333,27 +1286,6 @@ inline const char* policy_error_name(PolicyError error) {
 inline PolicyEngine& policy_engine() {
   static PolicyEngine engine;
   return engine;
-}
-
-// ── Tranche-2 consumer helpers (#586, audit §8.9) ───────────────────────────
-// Runtime-gated policy reads for consumers OUTSIDE the control tick: cfg_*
-// readback sensors, tunable entity state lambdas, and diagnostic display
-// sensors. Same gate as the control tick's pol()/polb() lambdas — engine
-// inactive ⇒ legacy global (bit-identical to pre-Lane-E firmware), armed ⇒
-// the ACTIVE policy value, so device-confirmed readbacks reflect what the
-// control path actually uses. These read the engine's active policy directly
-// (no snapshot copy): everything runs on the ESPHome main loop, and between
-// two on_tick() calls the active pointer cannot move, so an entity lambda
-// observes the same values the current tick's snapshot carries. Zero new
-// statics — .bss delta of the tranche-2 migration is 0 by construction.
-inline bool policy_experiment_active() { return !kRecoveryImage && policy_engine().manifest_armed(); }
-
-inline float policy_read(uint8_t field, float legacy) {
-  return policy_experiment_active() ? policy_engine().active().values[field] : legacy;
-}
-
-inline bool policy_read_b(uint8_t field, bool legacy) {
-  return policy_experiment_active() ? (policy_engine().active().values[field] != 0.0f) : legacy;
 }
 
 // Hex decode helper for the native API string transport (cheapest heap-safe

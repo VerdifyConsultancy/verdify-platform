@@ -74,55 +74,6 @@ and sockets on an ESP32 that was already close to heap limits.
 `vpd_high`, which is the house mode-control ceiling; zone misters may also fire
 when an individual zone exceeds its crop VPD target.
 
-## Policy Snapshot Consumers (tranche 2, #586)
-
-Every read of a policy wire-schema field is runtime-gated on the atomic
-policy engine (`lib/policy_vector.h`):
-
-- The control tick captures ONE `PolicySnapshot` at the top of each loop and
-  reads every field through the local `pol()`/`polb()` lambdas in
-  `greenhouse/controls.yaml`.
-- Readback (`cfg_*`), tunable entity state, and diagnostic display lambdas use
-  `verdify_policy::policy_read()`/`policy_read_b()` — the same gate against
-  the engine's active policy, valid outside the tick because everything runs
-  on the ESPHome main loop.
-- Engine inactive (no armed experiment manifest): every gated read returns the
-  legacy global — bit-identical to pre-Lane-E firmware. Engine armed: every
-  gated read returns the ACTIVE policy value, so `cfg_*` readbacks are
-  device-confirmed truth for what the control path actually consumes.
-- `set_action` writers in `greenhouse/tunables.yaml` stay on the legacy
-  globals: they are the write path being demoted (Lane C #584/#597 demotes
-  planner writers host-side to proposals while an experiment is armed; a
-  write that still lands only touches the legacy global, which no armed
-  consumer reads).
-
-`firmware/policy_consumer_manifest.json`
-(`scripts/gen-policy-consumer-manifest.py`) maps every `id(<global>)` access
-of the 48 wire fields and is CI-ENFORCING: an unmigrated, non-allowlisted
-read site fails the gate. The only allowlisted legacy accesses are the
-writers above and the boot-time NVS repair reads in `greenhouse.yaml`
-(read-check-rewrite of the legacy store itself).
-
-## Recovery Image (#586, audit §8.10 step 3)
-
-`firmware/greenhouse-recovery.yaml` builds the RECOVERY image: the identical
-proven control logic with `-DPOLICY_ENGINE_RECOVERY`, which
-
-- fail-closes every policy actuation service (`policy_*` calls reject with
-  `recovery_image` before touching the staging arena),
-- compiles the journal resume of active policy / pending slots / armed
-  manifest out of `boot_init` (ROM baseline held unconditionally; generation
-  high-water and the conservative water rule carry forward, and continued
-  journal writes converge the journal on ROM-baseline state so a later
-  full-image flash cannot silently resume the aborted experiment),
-- keeps the generated vector/baseline schema, so the `Policy Identity`
-  sensor still echoes `<schema>|<generation>|-|-|recovery`.
-
-Consumers are therefore permanently legacy in a recovery flash. Build with
-`make firmware-recovery-check`; host proof runs as `make
-test-policy-recovery` (part of `test-firmware` and `ci-local.sh`) against a
-journal fixture holding a live experiment.
-
 ## Safety Layers
 
 Relay output is constrained by several independent layers:

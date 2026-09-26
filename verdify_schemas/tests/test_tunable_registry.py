@@ -446,10 +446,7 @@ class TestActivityDirectWetGuards:
             "if(center_wet_allowed) return 3",
             "wet_dew_margin_f",
             "climate_wet_assist_permitted(sensor_in, setpts)",
-            # Tranche 2 (#586): the dew-margin gate reads the runtime-gated
-            # policy snapshot (legacy global only while no experiment is armed).
-            "wet_dew_margin_f < pol(verdify_policy::kPF_direct_wet_stress_min_dew_margin_f, "
-            "id(direct_wet_stress_min_dew_margin_f))",
+            "wet_dew_margin_f < id(direct_wet_stress_min_dew_margin_f)",
             "past_wet_taper(sensor_in, setpts) && !stress_wet_override_permitted(sensor_in, setpts)",
         ]
         missing = [needle for needle in required if needle not in controls_yaml]
