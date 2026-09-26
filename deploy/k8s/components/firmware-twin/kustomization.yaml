@@ -1,32 +1,37 @@
 apiVersion: kustomize.config.k8s.io/v1alpha1
 kind: Component
 
-# Kustomize COMPONENT: firmware digital-twin — durable Tier-1 form
-# (#34 / #255 / FW-OPT-6 / #587).
+# Kustomize COMPONENT: firmware digital-twin PROD-SHADOW (#34 / #255 / FW-OPT-6).
 #
-# Stands up the twin as a read-only / INSERT-only shadow running the PRE-BAKED
-# twin image (twin/Dockerfile, built in-cluster via
-# ../twin-builder/twin-builder.yaml and pushed to the zot origin). See
-# twin-shadow-deployment.yaml for the four-layer safety model, the #31
-# divergence-trust gate, and the digest-pin rollout note. This component is
-# NOT referenced by any overlay yet — wiring it into overlays/prod is §8.10
-# rollout step 4.
+# Stands up the merged-but-not-deployed twin as a read-only / INSERT-only shadow
+# (see twin-shadow-deployment.yaml for the four-layer safety model and the #31
+# divergence-trust gate). The old verdify-dev safe-shadow environment is
+# retired; any future prod shadow needs migration 155 on the prod DB + a prod
+# twin login user — GATED on the runtime preflight (live-prod schema change).
 #
-# The vendored src/ ConfigMap of the dev-proof shape is RETIRED: the image
-# builds from the canonical firmware sources at an exact git revision, so
-# there are no copies to drift (the old tests/test_19 byte-identity gate went
-# with it; scripts/ci-local.sh still syntax-checks the exact image compile).
-#
-# The verdify-twin-secrets Secret (TWIN_DSN_BASE + TWIN_DB_PASSWORD for the
-# INSERT-only twin login user) is provisioned out-of-band (never in a
-# manifest/migration), exactly like the grafana-admin / obs by-name secrets.
+# The source ConfigMap carries the exact firmware sources the rule-8 replay gate
+# compiles (greenhouse_logic.h / greenhouse_types.h / replay_emit.cpp) plus the
+# offline driver; the corpus ConfigMap carries a trimmed replay sample. Both
+# stay well under the 1MiB ConfigMap limit. The verdify-twin-secrets Secret
+# (TWIN_DSN_BASE + TWIN_DB_PASSWORD for the INSERT-only twin login user) is
+# provisioned out-of-band (never in a manifest/migration), exactly like the
+# grafana-admin / obs by-name secrets.
 resources:
   - twin-shadow-deployment.yaml
 
 configMapGenerator:
-  # Trimmed replay sample the shadow loops through (well under the 1MiB
-  # ConfigMap limit). The §8.10 step-4 LIVE twin replaces this corpus feed
-  # with the as-of adapter view (Lane B/E) — corpus stays for the shadow form.
+  # src/ holds COPIES of the canonical firmware sources (kustomize's
+  # LoadRestrictionsRootOnly forbids referencing files outside this dir, and
+  # ArgoCD runs with that restrictor). They MUST stay identical to
+  # firmware/lib/{greenhouse_logic,greenhouse_types}.h, firmware/test/
+  # replay_emit.cpp and twin/offline_driver.py — tests/test_19_firmware_twin_
+  # shadow_src_sync.py enforces byte-identity so a drift fails CI.
+  - name: verdify-twin-src
+    files:
+      - src/greenhouse_logic.h
+      - src/greenhouse_types.h
+      - src/replay_emit.cpp
+      - src/offline_driver.py
   - name: verdify-twin-corpus
     files:
       - corpus/replay_sample.csv
