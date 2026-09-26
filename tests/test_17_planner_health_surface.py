@@ -344,15 +344,6 @@ def _hermes_config_documents() -> tuple[dict, dict, str]:
     return manifest, profile, readiness_source
 
 
-def _cortex_provider_document() -> dict:
-    return yaml.safe_load((REPO_ROOT / "deploy/k8s/components/hermes-iris/cortex-provider.yaml").read_text())
-
-
-def _configmap_data_revision(data: dict[str, str]) -> str:
-    payload = "\0".join(f"{key}\0{value}" for key, value in sorted(data.items()))
-    return hashlib.sha256(payload.encode()).hexdigest()[:12]
-
-
 def test_hermes_profile_pins_cortex_route_and_explicit_tool_enforcement():
     _manifest, embedded, _readiness_source = _hermes_config_documents()
     canonical = yaml.safe_load((REPO_ROOT / "hermes/iris/config.yaml").read_text())
@@ -374,10 +365,6 @@ def test_hermes_profile_pins_cortex_route_and_explicit_tool_enforcement():
     assert canonical["agent"]["reasoning_effort"] == "medium"
     assert embedded["agent"]["tool_use_enforcement"] is True
     assert canonical["agent"]["tool_use_enforcement"] is True
-    assert embedded["auxiliary"]["compression"]["extra_body"] == {
-        "chat_template_kwargs": {"reasoning_effort": "medium"}
-    }
-
     # The embedded k3s profile must remain structurally equivalent as parsed,
     # except for the intentionally environment-specific MCP endpoint.
     normalized = json.loads(json.dumps(embedded))
@@ -388,14 +375,11 @@ def test_hermes_profile_pins_cortex_route_and_explicit_tool_enforcement():
 def test_hermes_profile_revision_rolls_and_reseeds_on_config_change():
     manifest, _profile, _readiness_source = _hermes_config_documents()
     expected_profile = hashlib.sha256(manifest["data"]["config.yaml"].encode()).hexdigest()[:12]
-    provider_manifest = _cortex_provider_document()
-    expected_provider = _configmap_data_revision(provider_manifest["data"])
     workloads = yaml.safe_load_all((REPO_ROOT / "deploy/k8s/components/hermes-iris/hermes-iris.yaml").read_text())
     workload = next(document for document in workloads if document.get("kind") == "Deployment")
 
     assert workload["spec"]["template"]["metadata"]["annotations"] == {
         "verdify.io/hermes-profile-revision": expected_profile,
-        "verdify.io/hermes-provider-revision": expected_provider,
     }
     init_by_name = {item["name"]: item for item in workload["spec"]["template"]["spec"]["initContainers"]}
     assert init_by_name["seed-config"]["command"] == [
@@ -404,58 +388,6 @@ def test_hermes_profile_revision_rolls_and_reseeds_on_config_change():
         "cp -f /etc/verdify/hermes-config/config.yaml /opt/data/config.yaml && "
         "echo 'seeded /opt/data/config.yaml from verdify-hermes-iris-config'",
     ]
-
-
-def test_cortex_provider_mount_and_medium_reasoning_contract():
-    provider_manifest = _cortex_provider_document()
-    assert provider_manifest["metadata"]["name"] == "verdify-hermes-cortex-provider"
-    assert yaml.safe_load(provider_manifest["data"]["plugin.yaml"])["kind"] == "model-provider"
-
-    registered: list[object] = []
-
-    class _ProviderProfile:
-        def __init__(self, **kwargs):
-            for key, value in kwargs.items():
-                setattr(self, key, value)
-
-    providers_module = ModuleType("providers")
-    providers_module.register_provider = registered.append
-    providers_base_module = ModuleType("providers.base")
-    providers_base_module.ProviderProfile = _ProviderProfile
-    saved_modules = {name: sys.modules.get(name, _MISSING_MODULE) for name in ("providers", "providers.base")}
-    try:
-        sys.modules["providers"] = providers_module
-        sys.modules["providers.base"] = providers_base_module
-        exec(  # noqa: S102 - execute the reviewed ConfigMap source under stubs
-            compile(provider_manifest["data"]["__init__.py"], "cortex-provider/__init__.py", "exec"),
-            {"__name__": "verdify_cortex_provider_test"},
-        )
-    finally:
-        for name, previous in saved_modules.items():
-            if previous is _MISSING_MODULE:
-                sys.modules.pop(name, None)
-            else:
-                sys.modules[name] = previous
-
-    assert len(registered) == 1
-    profile = registered[0]
-    assert profile.name == "custom"
-    extra_body, top_level = profile.build_api_kwargs_extras(reasoning_config={"enabled": True, "effort": "medium"})
-    assert extra_body == {"chat_template_kwargs": {"reasoning_effort": "medium"}}
-    assert top_level == {}
-
-    workloads = yaml.safe_load_all((REPO_ROOT / "deploy/k8s/components/hermes-iris/hermes-iris.yaml").read_text())
-    workload = next(document for document in workloads if document.get("kind") == "Deployment")
-    pod_spec = workload["spec"]["template"]["spec"]
-    container = next(item for item in pod_spec["containers"] if item["name"] == "hermes-iris")
-    mounts = {item["name"]: item for item in container["volumeMounts"]}
-    assert mounts["cortex-provider"] == {
-        "name": "cortex-provider",
-        "mountPath": "/opt/data/plugins/model-providers/verdify-cortex",
-        "readOnly": True,
-    }
-    volumes = {item["name"]: item for item in pod_spec["volumes"]}
-    assert volumes["cortex-provider"]["configMap"]["name"] == "verdify-hermes-cortex-provider"
 
 
 def test_api_public_model_label_is_a_manifest_override_not_an_image_change():

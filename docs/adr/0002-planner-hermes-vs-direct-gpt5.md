@@ -22,18 +22,18 @@
 > profiles use provider `custom`, the OpenAI-compatible endpoint
 > `https://cortex.vallery.net/v1`, and Cortex's text-only alias
 > `llm.primary.longctx`. The 98,304-token context contract and an 8,192-token
-> per-call output fence are explicit because Cortex currently publishes no
-> context metadata for the alias. Both profiles declare
+> per-call output fence remain explicit client-side bounds within Cortex's
+> published route metadata. Both profiles declare
 > `agent.reasoning_effort: medium`, retain `max_turns: 30`, and set
-> `agent.tool_use_enforcement: true`. A GitOps-mounted user provider override
-> forwards effort as vLLM `chat_template_kwargs`, including on the separately
-> configured compression path. Cortex issue #166 remains compatible hardening
-> rather than an activation dependency. Cortex owns the
+> `agent.tool_use_enforcement: true`. Cortex vLLM 0.27.1 supplies the effective
+> medium reasoning default server-side and caps otherwise-unbounded output at
+> 16,384 tokens; the 8,192-token client fence fails this planner workload sooner.
+> Cortex owns the
 > upstream model resolution behind the alias; Verdify does not claim a fixed
 > first-party model identity. The MCP allowlists,
 > server-side audiences, and registry write boundary are unchanged. Content
-> revisions for both profile and provider make the next reviewed sync recreate
-> and reseed Hermes; this source amendment alone is not live-sync evidence.
+> revision of the profile makes the next reviewed sync recreate and reseed
+> Hermes; this source amendment alone is not live-sync evidence.
 
 ---
 
@@ -41,7 +41,7 @@
 
 The greenhouse has an AI planner that runs over a 72-hour horizon and adjusts **bounded tunables** (never targets, rails, or FSM logic). The open question (Lane 4 brief): *"It is unclear whether Hermes adds value or whether a direct GPT-5 prompt with structured data would be simpler."*
 
-**Production architecture (the thing this ADR ratifies):** the ingestor fires solar/forecast triggers (`ingestor/tasks/heartbeat.py` `_compute_milestones` + the `PLANNER_TRIGGER_MATRIX`), builds a 72h context pack, and dispatches to the **Hermes gateway** (`verdify-hermes-iris`, ns `verdify-prod`). Repo source configures Hermes for **Cortex's 98K text route `llm.primary.longctx` with explicit context/output budgets and tool-use guidance** and an **MCP-only tool allowlist** (`hermes/iris/config.yaml`: provider `custom`, OpenAI-compatible Cortex base URL, 30-turn agentic loop, `mcp_servers` → Verdify MCP). A GitOps-mounted provider override sends the declared `agent.reasoning_effort=medium` through vLLM's chat-template field. After separately validated activation, Hermes reads ~6–10 MCP tools in sequence, then writes via `set_plan` / `set_tunable` / `acknowledge_trigger` (`mcp/server.py`). Every write is validated against `verdify_schemas/tunable_registry.py` (the `planner_pushable` gate + per-tunable min/max) before it reaches `setpoint_plan` / `plan_journal`; the dispatcher pushes the resulting bounded waypoints to the device. Git source selection and live activation remain separate facts.
+**Production architecture (the thing this ADR ratifies):** the ingestor fires solar/forecast triggers (`ingestor/tasks/heartbeat.py` `_compute_milestones` + the `PLANNER_TRIGGER_MATRIX`), builds a 72h context pack, and dispatches to the **Hermes gateway** (`verdify-hermes-iris`, ns `verdify-prod`). Repo source configures Hermes for **Cortex's 98K text route `llm.primary.longctx` with explicit context/output budgets and tool-use guidance** and an **MCP-only tool allowlist** (`hermes/iris/config.yaml`: provider `custom`, OpenAI-compatible Cortex base URL, 30-turn agentic loop, `mcp_servers` → Verdify MCP). Cortex vLLM 0.27.1 supplies the effective medium reasoning default and a 16,384-token server output cap; Verdify retains its narrower 8,192-token client fence. After separately validated activation, Hermes reads ~6–10 MCP tools in sequence, then writes via `set_plan` / `set_tunable` / `acknowledge_trigger` (`mcp/server.py`). Every write is validated against `verdify_schemas/tunable_registry.py` (the `planner_pushable` gate + per-tunable min/max) before it reaches `setpoint_plan` / `plan_journal`; the dispatcher pushes the resulting bounded waypoints to the device. Git source selection and live activation remain separate facts.
 
 **The two options:**
 - **(A) Hermes-orchestrated** Cortex `llm.primary.longctx` + MCP with explicit budgets/tool-use guidance (repo-selected; live activation gated): a managed agent gateway provides the multi-turn tool-use loop, session/conversation memory (kanban), the scheduler, and auth.

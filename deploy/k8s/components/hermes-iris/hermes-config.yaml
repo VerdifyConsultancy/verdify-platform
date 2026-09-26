@@ -398,9 +398,8 @@ data:
       # Hermes reaches OpenAI-compatible endpoints through the "custom" provider.
       # The existing OPENAI_API_KEY environment contract remains unchanged;
       # llm.primary.longctx is Cortex's text-only planner route alias, not a raw
-      # model name. Cortex's /v1/models response currently publishes no context
-      # metadata, so pin the validated route contract instead of letting Hermes
-      # fall back to its 256K unknown-model assumption.
+      # model name. Pin the published route contract explicitly so Hermes never
+      # falls back to its 256K unknown-model assumption.
       default: "llm.primary.longctx"
       provider: "custom"
       base_url: "https://cortex.vallery.net/v1"
@@ -411,9 +410,9 @@ data:
       max_tokens: 8192
 
     agent:
-      # The production GitOps component mounts a user `custom` provider override
-      # that forwards this contract as vLLM chat_template_kwargs. Cortex #166 may
-      # later make medium the server default, but the planner does not depend on it.
+      # The bundled custom transport does not forward this scalar. Cortex route 42
+      # supplies the verified medium default server-side on vLLM 0.27.1; retaining
+      # it here records the client contract and catches future provider support.
       reasoning_effort: medium
       # Revision 404640a auto-enables tool-use enforcement only for a fixed list of
       # recognized model families. The Cortex alias llm.primary.longctx matches
@@ -434,14 +433,6 @@ data:
         - terminal
         - filesystem
         - browser
-
-    # Compression uses Hermes's auxiliary client rather than the primary provider
-    # transport. Supply the same Cortex chat-template contract on that path.
-    auxiliary:
-      compression:
-        extra_body:
-          chat_template_kwargs:
-            reasoning_effort: medium
 
     mcp_servers:
       verdify_greenhouse:

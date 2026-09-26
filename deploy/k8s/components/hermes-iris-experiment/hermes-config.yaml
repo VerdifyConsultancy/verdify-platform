@@ -43,15 +43,14 @@ data:
       default: "llm.primary.longctx"
       provider: "custom"
       base_url: "https://cortex.vallery.net/v1"
-      # Cortex publishes no context metadata for this alias. Keep the dark
-      # profile on the same explicit, validated planner budget as live.
+      # Keep the dark profile on the same explicit, published planner budget
+      # as live instead of relying on Hermes's unknown-model fallback.
       context_length: 98304
       max_tokens: 8192
 
     agent:
-      # The production GitOps component's user provider override forwards this
-      # as vLLM chat_template_kwargs. A future Cortex #166 server default is
-      # compatible but not required by this profile.
+      # The bundled custom transport does not forward this scalar. Cortex route
+      # 42 supplies the verified medium default server-side on vLLM 0.27.1.
       reasoning_effort: medium
       # llm.primary.longctx does not match revision 404640a's fixed
       # auto-enforcement model-family list, so the experiment MCP loop also
@@ -70,14 +69,6 @@ data:
         - terminal
         - filesystem
         - browser
-
-    # Compression bypasses the primary provider profile, so pin the same
-    # Cortex chat-template effort on its auxiliary request path.
-    auxiliary:
-      compression:
-        extra_body:
-          chat_template_kwargs:
-            reasoning_effort: medium
 
     mcp_servers:
       verdify_greenhouse:

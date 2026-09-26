@@ -16,7 +16,3 @@ resources:
   # state PVC by the seed-config initContainer so it can never silently drift back
   # to the stock openrouter/anthropic template that 401'd every planner LLM call.
   - hermes-config.yaml
-  # Read-only user provider plugin that adds Cortex's required vLLM
-  # chat_template_kwargs.reasoning_effort=medium field without rebuilding the
-  # pinned upstream Hermes image.
-  - cortex-provider.yaml

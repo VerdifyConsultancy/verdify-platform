@@ -5,8 +5,8 @@
 > (`hermes-iris`) with the MCP-only tool allowlist in `hermes/iris/config.yaml`.
 > Repo source selects Cortex's OpenAI-compatible 98K text route
 > `llm.primary.longctx` with explicit context/output budgets and tool-use
-> guidance; live activation is separately gated. A GitOps-mounted user provider
-> forwards the declared medium effort through vLLM's chat-template field. Use
+> guidance; Verdify activation is separately gated. Cortex vLLM 0.27.1 supplies
+> the verified medium chat-template default server-side. Use
 > `plan_delivery_log.hermes_run_id` as the active gateway
 > correlation field.
 >

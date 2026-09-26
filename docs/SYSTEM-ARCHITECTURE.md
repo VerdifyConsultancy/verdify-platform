@@ -14,7 +14,7 @@
 
 ## Overview
 
-Verdify is a greenhouse automation platform running primarily on a single VM. An ESP32 controller manages 367 sq ft of greenhouse climate (fans, heaters, misters, fog) using a deterministic controller (`greenhouse_logic.h`). A Python ingestor captures 172 sensor entities into TimescaleDB, and an AI agent named Iris runs through Hermes as the sole planner gateway. Repo source selects Cortex's OpenAI-compatible 98K text route `llm.primary.longctx` with explicit context/output budgets and tool-use guidance; live activation is separately gated. A GitOps-mounted user provider forwards the declared `agent.reasoning_effort: medium` through vLLM's chat-template field. Iris manages tunables event-driven at solar milestones and deviations through typed MCP tools, but the ESP32 owns real-time relay control.
+Verdify is a greenhouse automation platform running primarily on a single VM. An ESP32 controller manages 367 sq ft of greenhouse climate (fans, heaters, misters, fog) using a deterministic controller (`greenhouse_logic.h`). A Python ingestor captures 172 sensor entities into TimescaleDB, and an AI agent named Iris runs through Hermes as the sole planner gateway. Repo source selects Cortex's OpenAI-compatible 98K text route `llm.primary.longctx` with explicit context/output budgets and tool-use guidance; Verdify activation is separately gated. Cortex vLLM 0.27.1 supplies the verified medium chat-template default server-side. Iris manages tunables event-driven at solar milestones and deviations through typed MCP tools, but the ESP32 owns real-time relay control.
 
 ```
 ESP32 (192.168.10.111, IoT VLAN)
