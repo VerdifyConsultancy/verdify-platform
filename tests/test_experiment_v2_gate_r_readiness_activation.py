@@ -52,11 +52,14 @@ def test_production_gate_r_readiness_is_absent_or_exactly_attended() -> None:
         r"registry\.vallery\.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:[0-9a-f]{64}",
         image,
     )
-    prod = yaml.safe_load((PROD / "kustomization.yaml").read_text())
+    # The hook runs the orchestrator release pin, the same image as the workers.
+    orchestrator = "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator"
     pin = next(
-        row for row in prod["images"] if row["name"] == "ghcr.io/verdifyconsultancy/verdify-experiment-v2-orchestrator"
+        row["imageTag"]
+        for row in yaml.safe_load_all((PROD / "release-pins.yaml").read_text())
+        if row["imageTag"]["name"] == orchestrator
     )
-    assert image == f"{pin['newName']}@{pin['digest']}"
+    assert image == f"{orchestrator}@{pin['digest']}"
     assert activation["data"]["VERDIFY_GATE_R_READINESS_EXPERIMENT_ID"] == ("45039c86-c1d9-52f6-a0a9-d94a17bc4b14")
     assert re.fullmatch(r"[0-9a-f]{40}", activation["data"]["VERDIFY_GATE_R_READINESS_APPLICATION_SOURCE"])
 

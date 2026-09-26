@@ -176,7 +176,13 @@ def test_prod_adopts_feature_off_component_with_nonzero_digest() -> None:
         "experiment-v2-selector",
         "experiment-v2-freezer",
     }
-    expected_image = f"{ORCHESTRATOR_ZOT_IMAGE}@{pin['digest']}"
+    # `pin` is the actuator's build candidate; the workers run the release pin.
+    release = next(
+        row["imageTag"]
+        for row in yaml.safe_load_all((PROD.parent / "release-pins.yaml").read_text())
+        if row["imageTag"]["name"] == ORCHESTRATOR_ZOT_IMAGE
+    )
+    expected_image = f"{ORCHESTRATOR_ZOT_IMAGE}@{release['digest']}"
     for deployment in deployments.values():
         assert deployment["spec"]["replicas"] == 1
         assert deployment["spec"]["strategy"] == {"type": "Recreate"}

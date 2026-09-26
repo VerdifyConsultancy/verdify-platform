@@ -58,7 +58,8 @@ Everything below works from a kubectl-equipped pod or host.
     → in-cluster verdify-platform-ci / repo-build WorkflowTemplate
        (Kaniko builds the exact revision in agent-fleet-ci)
     → zot origin registry.vallery.net/verdifyconsultancy/<image>@sha256:...
-    → digest-only pin commit
+    → actuator commits build candidates (overlays/prod kustomization images:; not rendered)
+    → promotion: digest-only release-pin commit (overlays/prod/release-pins.yaml)
     → prod: explicit manual sync of verdify-prod-dark after render/diff validation
   ```
   GitHub Actions and GHCR publishing are retired; do not create new GHCR pins.
@@ -71,8 +72,9 @@ Everything below works from a kubectl-equipped pod or host.
   ```
   Pre-check: `kustomize build deploy/k8s/overlays/prod | kubectl diff -f -`; confirm
   the **ingestor Deployment** (the single device writer) only changes when intended.
-  The pin actuator pins api/mcp/ingestor/migrate/experiment-v2-orchestrator;
-  planner, setpoint-server and the Quartz Lab publisher remain hand-pinned. ArgoCD app
+  The pin actuator records api/mcp/ingestor/migrate/experiment-v2-orchestrator
+  build candidates; their release pins are `overlays/prod/release-pins.yaml`.
+  Planner, setpoint-server and the Quartz Lab publisher remain hand-pinned. ArgoCD app
   `verdify-prod-dark` is **manual-sync, prune:false**. The Lab web Deployment
   uses a pinned content-free nginx image and serves only the publisher cache.
 - **Grafana dashboards** (non-control-path, safe to iterate): edit
@@ -88,7 +90,7 @@ Everything below works from a kubectl-equipped pod or host.
 | Surface | Source of truth in git | Drift watch |
 |---|---|---|
 | k8s manifests | `deploy/k8s/overlays/prod` + components | `kustomize build … \| kubectl diff` |
-| Image digests | `overlays/prod/kustomization.yaml` (advanced by the `verdify-platform-ci` pin actuator; planner, setpoint-server and lab-publisher by hand) | live pod `@sha256` == overlay pins |
+| Image digests | release pins: `overlays/prod/release-pins.yaml` for the five actuator-built images, `images:` in `overlays/prod/kustomization.yaml` for planner, setpoint-server and lab-publisher (the actuator's candidate entries there do not render) | live pod `@sha256` == rendered `overlays/prod` digests |
 | Grafana dashboards | `grafana/dashboards/*.json` → generated CMs | **UI edits do NOT sync back — always edit the JSON** |
 | DB migrations | `db/migrations/` (sequential) | applied by the `verdify-migrate` Job; CI `migration-rollback-safety` check |
 | Firmware (source) | `firmware/**` | `diagnostics.firmware_version` == intended (see §4) |

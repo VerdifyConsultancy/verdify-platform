@@ -6,8 +6,8 @@
 and staging are DECOMMISSIONED and DELETED — prod (`verdify-prod`, ArgoCD app
 `verdify-prod-dark`, manual-sync behind the device-write gate) is the ONLY
 environment** (serves lab/graphs/api.verdify.ai). Prod is advanced by
-digest-pin commits to `deploy/k8s/overlays/prod/kustomization.yaml` (§2) and
-then the gated sync; GHCR is retired per ADR-0021. Any section
+release-pin commits in `deploy/k8s/overlays/prod` (§2) and then the gated
+sync; GHCR is retired per ADR-0021. Any section
 below that mentions a dev environment, `overlays/dev`, dev DB restore, or the
 dev proving flow is HISTORICAL — those resources no longer exist.
 
@@ -56,16 +56,27 @@ Historical derived-data reconciliation lives in
 by default; a production apply requires its explicit apply flag and technical
 preflight.
 
-## 2. CI/CD: merge publishes and pins, the gated sync deploys (single-env)
+## 2. CI/CD: merge publishes, promotion pins, the gated sync deploys (single-env)
 
 - **Merge to `main`:** a fleet Argo Event submits the exact revision to the
   in-cluster `repo-build` WorkflowTemplate (Kaniko → zot origin) for the images
   declared in `.agent-fleet/ci.yaml`. The `verdify-platform-ci` pin actuator
-  then commits a digest-only change to `overlays/prod/kustomization.yaml` for
-  api, mcp, ingestor, migrate and experiment-v2-orchestrator; planner,
-  setpoint-server and lab-publisher are pinned by hand. This repo has no GitHub
+  then commits the api, mcp, ingestor, migrate and experiment-v2-orchestrator
+  digests to the `images:` block of `overlays/prod/kustomization.yaml` as
+  build candidates. They do not render: `overlays/prod/release-pins.yaml`, a
+  `transformers:` entry applied after `images:`, holds the digests production
+  runs, so `main` keeps rendering what is live (#808). This repo has no GitHub
   Actions workflows (`make ci` / `scripts/ci-local.sh` is the gate). Merge = git
-  change only; then the gated sync below.
+  change only.
+- **Promote:** in one attended session, commit a digest-only change that copies
+  the candidate digests you intend to ship into `release-pins.yaml` (all five
+  together: the migrate hook carries the schema the others expect), merge it,
+  then run the gated sync below. Planner, setpoint-server and lab-publisher
+  release pins are edited by hand in the `images:` block. Check the rendered
+  change first:
+  ```bash
+  kustomize build deploy/k8s/overlays/prod | grep -o 'verdify-[a-z0-9-]*@sha256:[0-9a-f]*' | sort -u
+  ```
 - **The gated prod sync (the ONLY step that touches the live writer):**
   ```bash
   kubectl patch application verdify-prod-dark -n argocd --type merge \

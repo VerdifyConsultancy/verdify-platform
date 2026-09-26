@@ -240,10 +240,18 @@ patches:
   # stay at replicas:1. ingestor/setpoint-server are NOT in this patch.
   - path: ha-stateless-spread.patch.yaml
 
-# Image digest pins. Same canonical namespace as staging
-# (ghcr.io/verdifyconsultancy/verdify-*), pinned to immutable @sha256 digests
-# (NEVER :latest/:staging). PLACEHOLDER digests; the promotion flow writes real
-# GHCR digests in-repo.
+# Image digests. Workloads name their image by the canonical key
+# ghcr.io/verdifyconsultancy/verdify-*; each entry maps it to the zot origin at
+# an immutable @sha256 digest (never a tag).
+#
+# The api, mcp, ingestor, migrate and experiment-v2-orchestrator entries are
+# BUILD CANDIDATES. The verdify-platform-ci pin actuator rewrites them after
+# every build of main, and they do not decide what production runs: the
+# release-pins.yaml transformer at the end of this file replaces their digests
+# in the render. Do not hand-edit those five entries or change their
+# name/newName/digest shape; the actuator fails unless each appears exactly once.
+# The planner, setpoint-server and lab-publisher-k3s entries are release pins,
+# advanced by hand.
 images:
   - name: ghcr.io/verdifyconsultancy/verdify-api
     newName: registry.vallery.net/verdifyconsultancy/verdify-api
@@ -257,9 +265,9 @@ images:
   - name: ghcr.io/verdifyconsultancy/verdify-migrate
     newName: registry.vallery.net/verdifyconsultancy/verdify-migrate
     digest: sha256:27ab14f0fec12464cd98460a2a852fb7c1bfd210ae15b56a6e3747b23f094d68
-  # Fleet pin-actuator key for the feature-off experiment-v2 orchestrator.
-  # Every source build advances this pin with the other managed application
-  # images; the component remains inert until its explicit GitOps feature gate.
+  # Build candidate for the feature-off experiment-v2 orchestrator (its release
+  # digest is in release-pins.yaml). The component remains inert until its
+  # explicit GitOps feature gate.
   - name: ghcr.io/verdifyconsultancy/verdify-experiment-v2-orchestrator
     newName: registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator
     digest: sha256:cccbd040cf97911aa947ff397f75244357c688f476db5f6ff57a391033f20f65
@@ -283,3 +291,11 @@ images:
   - name: ghcr.io/verdifyconsultancy/verdify-lab-publisher-k3s
     newName: registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s
     digest: sha256:0eab3a60b40926f9e2e8c34db4c7d82f39df16ca52b977362755579f02e89e98
+
+# Release pins: the digests production runs for the five actuator-managed
+# images. kustomize applies `transformers:` after `images:`, so these replace
+# the build-candidate digests above in every workload, CronJob and hook Job.
+# A build changes Git only; promotion is a digest-only edit of
+# release-pins.yaml followed by the gated sync.
+transformers:
+  - release-pins.yaml

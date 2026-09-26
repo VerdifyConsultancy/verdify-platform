@@ -148,6 +148,7 @@ $PY -m pytest -q \
   tests/test_policy_writer_demotion.py \
   tests/test_prepare_component_prefix_replay.py \
   tests/test_prepare_experiment_v2_shadow.py \
+  tests/test_prod_release_pins.py \
   tests/test_psql_verdify_backend.py \
   tests/test_publish_site_content_guard.py \
   tests/test_public_output_generators.py \

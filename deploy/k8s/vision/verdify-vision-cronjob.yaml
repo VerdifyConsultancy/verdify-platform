@@ -52,10 +52,10 @@ spec:
           containers:
             - name: vision
               # Canonical image-name KEY only (never pulled as-is): the
-              # overlays/prod images transformer rewrites it to the pinned
-              # registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256
-              # digest, so vision advances in lock-step with the ingestor on
-              # every gitops(pin) commit + gated sync.
+              # overlays/prod image transformers rewrite it to the ingestor
+              # release pin, registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256
+              # (release-pins.yaml), so vision advances in lock-step with the
+              # ingestor on each promotion + gated sync.
               image: ghcr.io/verdifyconsultancy/verdify-ingestor
               imagePullPolicy: IfNotPresent
               command: ["sh", "-c"]
