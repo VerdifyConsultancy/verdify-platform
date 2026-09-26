@@ -44,6 +44,7 @@ async def test_real_mcp_127_stateless_protocol_filters_exact_audience_inventorie
         "iris": "runtime-test-iris",
         "experiment": "runtime-test-experiment",
         "admin": "runtime-test-admin",
+        "observer": "runtime-test-observer",
     }
     for audience, token in tokens.items():
         monkeypatch.setenv(f"VERDIFY_MCP_TOKEN_{audience.upper()}", token)
@@ -86,7 +87,7 @@ async def test_real_mcp_127_stateless_protocol_filters_exact_audience_inventorie
                 assert unauthenticated_list.status_code == 200
                 assert _protocol_payload(unauthenticated_list)["result"]["tools"] == []
 
-            expected_counts = {"iris": 23, "experiment": 8, "admin": 27}
+            expected_counts = {"iris": 23, "experiment": 8, "admin": 27, "observer": 0}
             for request_id, (audience, token) in enumerate(tokens.items(), start=10):
                 auth_headers = {**common_headers, "authorization": f"Bearer {token}"}
                 initialized = await client.post("/mcp", headers=auth_headers, json=initialize)
@@ -117,6 +118,20 @@ async def test_real_mcp_127_stateless_protocol_filters_exact_audience_inventorie
                 assert query_result["isError"] is True
                 assert "iris" in query_result["content"][0]["text"]
                 assert tokens["iris"] not in iris_query.text
+                observer_call = await client.post(
+                    "/mcp",
+                    headers={
+                        **common_headers,
+                        "authorization": f"Bearer {tokens['observer']}",
+                        "mcp-protocol-version": "2025-11-25",
+                    },
+                    json=_request("tools/call", 31, {"name": "query", "arguments": {"sql": "SELECT 1"}}),
+                )
+                observer_result = _protocol_payload(observer_call)["result"]
+                assert observer_result["isError"] is True
+                assert "unauthorized" in observer_result["content"][0]["text"]
+                assert "observer" in observer_result["content"][0]["text"]
+                assert tokens["observer"] not in observer_call.text
 
 
 @pytest.mark.asyncio
