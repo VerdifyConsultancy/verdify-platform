@@ -13,6 +13,7 @@ from __future__ import annotations
 import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -119,3 +120,22 @@ def test_a_build_candidate_change_leaves_the_prod_render_unchanged(tmp_path: Pat
     assert moved == len(ACTUATOR_IMAGES)
     copy.write_text("".join(lines))
     assert _render(copy.parent) == prod_render
+
+
+def test_promote_script_makes_the_render_run_the_candidates(tmp_path: Path) -> None:
+    shutil.copytree(ROOT / "deploy/k8s", tmp_path / "deploy/k8s")
+    (tmp_path / "scripts").mkdir()
+    shutil.copy(ROOT / "scripts/promote-release-pins.py", tmp_path / "scripts")
+    subprocess.run([sys.executable, "scripts/promote-release-pins.py"], cwd=tmp_path, check=True, capture_output=True)
+
+    kustomization = yaml.safe_load((tmp_path / "deploy/k8s/overlays/prod/kustomization.yaml").read_text())
+    candidates = {
+        row["name"].removeprefix(CANONICAL): row["digest"]
+        for row in kustomization["images"]
+        if row["name"].removeprefix(CANONICAL) in ACTUATOR_IMAGES
+    }
+    images = _container_images(
+        [document for document in yaml.safe_load_all(_render(tmp_path / "deploy/k8s/overlays/prod")) if document]
+    )
+    for image, digest in candidates.items():
+        assert {ref for ref in images if ref.split("@")[0] == ZOT + image} == {f"{ZOT}{image}@{digest}"}

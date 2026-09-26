@@ -68,10 +68,11 @@ preflight.
   runs, so `main` keeps rendering what is live (#808). This repo has no GitHub
   Actions workflows (`make ci` / `scripts/ci-local.sh` is the gate). Merge = git
   change only.
-- **Promote:** in one attended session, commit a digest-only change that copies
-  the candidate digests you intend to ship into `release-pins.yaml` (all five
-  together: the migrate hook carries the schema the others expect), merge it,
-  then run the gated sync below. Planner, setpoint-server and lab-publisher
+- **Promote:** in one attended session, run
+  `python3 scripts/promote-release-pins.py` (it copies the candidate digests
+  into `release-pins.yaml`, all five by default: the migrate hook carries the
+  schema the others expect), commit that digest-only change, merge it, then run
+  the gated sync below. Planner, setpoint-server and lab-publisher
   release pins are edited by hand in the `images:` block. Check the rendered
   change first:
   ```bash

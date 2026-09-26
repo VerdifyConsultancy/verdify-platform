@@ -9,14 +9,12 @@
 # and hook Job. A source build therefore changes Git only and leaves the prod
 # render, and what Argo compares against live, unchanged.
 #
-# Promote: copy the candidate digests you intend to ship from the `images:`
-# block into this file as a digest-only change, merge it, then run the gated
-# `verdify-prod-dark` sync in the same attended session
-# (docs/runbooks/laptop-operator.md §2). Promote all five together: the migrate
-# hook must carry the schema the api, mcp and ingestor digests expect.
-#
-# Current values: the set the 2026-09-01 sync applied (revision 963ea818, pin
-# commit a9cb256b). The PreSync verdify-migrate hook ran 62f1cf34.
+# Promote: `python3 scripts/promote-release-pins.py` copies the candidate
+# digests into this file. Commit that digest-only change, merge it, then run the
+# gated `verdify-prod-dark` sync in the same attended session
+# (docs/runbooks/laptop-operator.md §2). Promote all five together unless the
+# schema allows otherwise: the migrate hook carries the migrations the api, mcp
+# and ingestor digests expect.
 apiVersion: builtin
 kind: ImageTagTransformer
 metadata:
