@@ -263,42 +263,23 @@ images:
   - name: ghcr.io/verdifyconsultancy/verdify-experiment-v2-orchestrator
     newName: registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator
     digest: sha256:5c2430f33db1808cea8568ee1b42cc53cece351cb65bb69d854ffd88897c1f80
-  # verdify-planner (#117): real published GHCR digest, resolved read-only via
-  # `gh api orgs/VerdifyConsultancy/packages/container/verdify-planner/versions`
-  # (the `branch-live-platform-main` build of planner_graph/). The planner image is
-  # env-agnostic (it carries its own planner_graph package; per-env DB/secrets come
-  # from each overlay's verdify-config + sealed secret). prod is safety-checked and
-  # its digest is advanced only by a validated digest-pin commit.
+  # Hand-pinned planner: C0 source 3f8b7eb1, in-cluster build
+  # verdify-c0-verdify-planner-5qgd8. It carries the flat scorecard context.
   - name: ghcr.io/verdifyconsultancy/verdify-planner
     newName: registry.vallery.net/verdifyconsultancy/verdify-planner
-    digest: sha256:0b47e84747396918a54ac0a6b7b82cdb656e8e03271757740030d5515ce59ab2
-  # verdify-setpoint-server (#118): grow-light writer + setpoint-diagnostics image
-  # built from scripts/Dockerfile.setpoint-server. setpoint-server is a PROD-ONLY
-  # device-affecting Component, so it is excluded from prod-promote and remains
-  # hand-pinned. A rebuild alone does not advance it.
-  #
-  # #447 HAND-PIN ADVANCE (2026-07-13): f5ac817 is the zot-origin build carrying
-  # commit 7e0d8c0 — /setpoints queries through the asyncpg pool (_db_text_safe);
-  # the VM-era _resolve_psql_prefix docker/psql shell-out is GONE. It REPLACES
-  # the stale 2026-06-04 f49868cb pin, whose /setpoints path resolved
-  # `docker exec` and returned HTTP 500 in the k3s pod (no docker binary).
-  # f5ac817 is what verdify-prod has been RUNNING since 2026-07-11 (hand-rolled
-  # with the #447 fix); repinning here makes the gated ArgoCD sync a NO-OP for
-  # this workload instead of a ROLLBACK to the broken image. Verified live
-  # 2026-07-13 (read-only, in-pod): GET /setpoints -> HTTP 200, 205 params;
-  # GET /health -> 200; image script has _db_text_safe, no _resolve_psql_prefix,
-  # no subprocess import. Rollback = revert this digest line (restores the
-  # previous rendered shape; the live pod is only touched by a gated sync).
-  # Regression fence: tests/test_setpoint_server_db_backend.py refuses the
-  # pre-fix digest.
+    digest: sha256:396ff60b1d9cea9e396c1326ae03481d8f80a19a84a09531b0b0f3b9cdbf40b0
+  # Hand-pinned grow-light writer: C0 source 3f8b7eb1, in-cluster build
+  # verdify-c0-verdify-setpoint-server-wxmzr. Its copied verdify_schemas package
+  # changed; focused backend tests preserve the #447 asyncpg path. This prod-only
+  # pod rolls only on the explicit Argo sync.
   # hermes-agent is deliberately ABSENT from this transformer — its upstream
   # @sha256 is preserved inline in the component (NOT transformer-pinned).
   - name: ghcr.io/verdifyconsultancy/verdify-setpoint-server
     newName: registry.vallery.net/verdifyconsultancy/verdify-setpoint-server
-    digest: sha256:0f8d8a3dffe4e4d6dbccec6f1774721d43e066d0bf8b7bce47283c216c45133f
-  # verdify-lab-publisher: k3s-owned generated-content and S3 sync workflow for
-  # lab.verdify.ai. The k3s-suffixed GHCR package is linked to this repo so
-  # GITHUB_TOKEN can publish immutable CI-built digests.
+    digest: sha256:220da9c413ab1c027e864010f423d6837a7b3330d2ee8f129875c6528e60c8d6
+  # Hand-pinned lab publisher: C0 source 3f8b7eb1, in-cluster build
+  # verdify-c0-verdify-lab-publisher-k3s-kqsl4. Its copied scripts, ingestor,
+  # MCP and schema inputs changed with the integrated source.
   - name: ghcr.io/verdifyconsultancy/verdify-lab-publisher-k3s
     newName: registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s
-    digest: sha256:b2f8096c9e485d53543c3356e261f6ed923a42f9a8a565c0ea43e1f59487b3f9
+    digest: sha256:3fa2ffbb584abaafd49d99144daa5687894af3ac80a3e44120dd70bb866d65c6

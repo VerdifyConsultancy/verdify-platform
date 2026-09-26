@@ -5,12 +5,13 @@ The original profile of `scripts/c0-boundary-transition.py` emits one transactio
 migrations 241–247 and both ordinary-login attestation receipts. It never
 connects to a database. The [owning delivery path](c0-migration-delivery.md) now
 selects it automatically for a C0-bearing inventory and verifies committed state.
-**No approved production contract or deployed candidate image is supplied. The
-release hold remains.** Do not run emitted SQL manually against production.
+The production-target nine-file contract and candidate image are bound in the
+owning prod overlay; production delivery still requires the exact full Argo
+sync and live readback. Do not run emitted SQL manually against production.
 
-The separately versioned [eight-file resource candidate](c0-resource-transition.md)
-adds 248 only when its explicit contract version is selected. The seven-file
-version and the behavior documented below do not gain that migration implicitly.
+The separately versioned [nine-file resource release](c0-resource-transition.md)
+adds 240 and 248 only when its explicit contract version is selected. The
+seven-file version and the behavior documented below do not gain them implicitly.
 
 ## Trust and scope
 

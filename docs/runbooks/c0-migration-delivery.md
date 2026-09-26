@@ -8,17 +8,17 @@ off before schema replay, repair, ledger bootstrap or per-file migration writes.
 The existing `VERDIFY_MIGRATE_LEDGER=1` job opt-in remains required at the image
 entrypoint. There is no legacy-C0 bypass flag and no fallback after a refusal.
 
-Detection also includes the unqualified resource migration 248. Selecting only
-248 must not escape through the old per-file path: apply and plan both reject
-the incomplete exact C0 inventory before DB contact. This does not add 248 to
-the approved seven-file profile. The inactive restore-rehearsal init and main
-detectors likewise recognize a resource-only inventory and cannot skip the
-source-checked inspection/hold path.
+Detection also includes resource migration 248. Selecting only 248 must not
+escape through the old per-file path: apply and plan both reject the incomplete
+exact C0 inventory before DB contact. The nine-file profile also includes
+pending migration 240, whose grants change both protected catalog digests.
+It must not run in a separate predecessor sync. The inactive restore-rehearsal
+detectors still recognize a resource-only inventory and hold.
 
-**The source integration is not production deployment.** A real restored-target
-qualification, reviewed target-specific contract/pin, exact CI/build results and
-GitOps/runtime adoption remain required. No production contract is supplied and
-no source test is permission to execute manual production SQL or launch a study.
+**The source integration is not production deployment.** The production-target
+contract and image are now bound in the owning prod overlay after isolated
+physical-clone qualification. Exact-head CI, GitOps sync and runtime adoption
+remain required. No source test authorizes manual production SQL or a study.
 
 ## Inputs and admission
 
@@ -39,12 +39,11 @@ An artifact/pin is mandatory for apply even when all C0 files appear ledgered.
 A missing, partial or invalid binding fails before contacting the database.
 Do not place the pin only in `envFrom`: the hook may run before the new ordinary
 ConfigMap is reconciled. The artifact must exist before PreSync execution and
-be matched by a direct job pin. A source-managed immutable, content-addressed
-ConfigMap may be provisioned through the owning GitOps ordering; mount its JSON
-with `subPath` as a regular read-only file. Ordinary ConfigMap symlink paths are
-rejected by the contract reader. A baked regular artifact is another option
-only if its COPY/build-context admission and independent job pin are reviewed.
-No placeholder ConfigMap, artifact or hash is installed by this change.
+be matched by a direct job pin. The prod overlay generates a content-addressed
+PreSync ConfigMap at wave -1. The wave-0 Job mounts its JSON key with `subPath`
+as a regular read-only file at `/db/c0-boundary-contract.json`; ordinary
+ConfigMap symlink paths are rejected by the contract reader. Its exact SHA256
+is pinned directly in the Job, outside `envFrom`.
 
 The complete exact seven-file cohort must be present and match the pinned image
 sources. Other migration files in the selected inventory must already have
@@ -54,13 +53,13 @@ stamps are refused. This is a bounded release profile, not permission to skip
 unqualified predecessors or automatically approve future migration 248+. A later
 boundary-changing release needs its own coherent reviewed transition.
 
-The candidate now also supports the separately versioned
-[`c0-resource-boundary-transition-241-248-v1`](c0-resource-transition.md) profile.
-Only a contract explicitly naming that version selects the fixed eight-file
-cohort. It requires all eight files pending (or the exact eight-file successor
-for no-write retry), not seven already applied plus a pending 248. No contract,
+The production candidate selects the separately versioned
+[`c0-resource-boundary-transition-240-248-v1`](c0-resource-transition.md) profile.
+Only an exact contract naming that version selects the fixed nine-file cohort.
+It requires all nine files pending (or the exact nine-file successor for
+no-write retry), not seven already applied plus pending 240/248. No contract,
 the seven-file version, unknown versions, partial cohorts and out-of-profile
-pending migrations still refuse; no production contract/pin is supplied.
+pending migrations still refuse.
 
 The wrapper preserves the entrypoint's read-only Timescale-extension and existing
 `climate`, `setpoint_changes`, `equipment_state` checks. Missing prerequisites
@@ -77,7 +76,7 @@ application directory is needed; Python bytecode writes are disabled in the
 candidate image.
 
 The transaction applies all immutable migration sources in the explicitly selected
-profile (seven for the original version, eight for the resource version), stamps them and
+profile (seven for the original version, nine for the resource version), stamps them and
 updates both approved literal successor receipts atomically. After psql exits,
 the wrapper opens new read-only connections to verify every selected exact stamp,
 the predecessor ledger identity, receipt count, installed attestation functions,

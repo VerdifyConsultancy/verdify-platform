@@ -1,110 +1,31 @@
-# Explicit C0 plus resource transition candidate
+# C0 resource transition: exact 240–248 release
 
 Campaign #775 / resource #781 / restored qualification #783 / delivery #644.
-**Held source candidate; not production approval, deployment or commissioning.**
+The owning C0 release branch is [#806](https://github.com/VerdifyConsultancy/verdify-platform/pull/806). Source, contract and image qualification do not imply a production sync.
 
-The owning emitter and runner support two separately named fixed profiles:
-
-| Contract version | Exact migration membership | Allowed delivery states |
+| Contract version | Fixed source membership | Allowed ledger state |
 |---|---|---|
 | `c0-boundary-transition-241-247-v1` | 241–247 | All seven pending, or exact seven-file successor retry |
-| `c0-resource-boundary-transition-241-248-v1` | Same seven plus hash-pinned 248 | All eight pending, or exact eight-file successor retry |
+| `c0-resource-boundary-transition-240-248-v1` | 240–248 | All nine pending, or exact nine-file successor retry |
 
-The new version is explicit in the independently hash-pinned JSON contract. It
-does not expand the old version, infer authority from file presence, accept file
-paths/SQL/hashes from that JSON, or permit a 248-only inventory to bypass the
-early detector. The fixed source hash for 248 is
-`45b3fb28c8e11608e14407f5b18bc15018dff54c7dc8dd7b882352d961027b56`.
-Changing that source requires a new source review; an external contract cannot
-override it. The seven original migration sources and historical baseline stay
-unchanged. No new migration is pre-stamped as applied.
+Migration 240 is part of the resource release because its two EXECUTE and two SELECT grants change **both** migration-217 protected catalog digests. Applying 240 separately leaves both ordinary-login receipts stale. The nine sources, their normal ledger stamps and both approved successor receipts therefore share one transaction. Do not run a current-main migration hook ahead of the nine-file release while 240 is pending.
 
-## Trust, transaction and refusal
+The source pins include 240 SHA256 `7fc9a584a7cdc3fc2b89c0bea18c1e3ec5fdd8c9e6261ccf3c2cb908320e7999` and 248 SHA256 `45b3fb28c8e11608e14407f5b18bc15018dff54c7dc8dd7b882352d961027b56`. Neither contract JSON nor operator input can provide filenames, source SQL or alternate hashes. The old seven-file profile remains distinct and cannot admit pending 240 or 248. A partial or changed release refuses without per-file fallback.
 
-Use the existing [contract structure and trust boundary](c0-boundary-transition.md)
-with the explicit resource version. The same regular-file artifact and independent
-`VERDIFY_C0_BOUNDARY_CONTRACT_SHA256` binding are mandatory. No real or placeholder
-production artifact, ConfigMap, pin or hook activation is installed here.
+## Target contract and rehearsal
 
-The eight-file transition binds the database name, exact PG16 version, full
-predecessor migration ledger and independently reviewed before/after fingerprints
-for both ordinary logins. It verifies the actual 217 functions and independent
-catalog projection before/after execution. All eight immutable SQL bodies,
-normal runner stamps and the two approved literal successor receipts commit
-together under the existing locks/timeouts. The wrapper then verifies committed
-stamps, predecessor identity and successor catalogs/receipts on new connections.
-The resource profile additionally requires the installed TimescaleDB version to
-be exactly 2.25.2, matching its native source qualification. Other versions
-refuse before ledger/migration execution; the original profile is unchanged.
+The reviewed candidate contract is `deploy/k8s/overlays/prod/c0-boundary-contract-240-248.json`, SHA256 `90fac3dafbf927e6dfc67d8ec73e6b41c4f818f5c983216550848be8bf9dff6f`. It binds database `verdify`, PostgreSQL 16.11, the full predecessor ledger identity, and both before/after ordinary-login digests. The prod overlay generates a content-hashed PreSync ConfigMap at wave -1. The wave-0 `verdify-migrate` Job mounts its key as a regular read-only `subPath` file at `/db/c0-boundary-contract.json` and pins the exact byte hash directly in `VERDIFY_C0_BOUNDARY_CONTRACT_SHA256`. The regular-file mount is required because the contract reader rejects Kubernetes ConfigMap key symlinks.
 
-Unknown versions, source/inventory drift, wrong pins, missing 248, out-of-profile
-pending work and unreviewed successor state refuse without legacy fallback.
-Seven already committed plus one pending is a partial eight-file release and
-is refused, even if the seven-file startup boundary is valid. If current target
-evidence shows that state, this profile is not its upgrade path: qualify a
-separate successor transition instead of editing the ledger or replacing pins.
+The qualification used an isolated Longhorn snapshot clone of the sole production database, with the same database/role OIDs, PostgreSQL 16.11, TimescaleDB 2.25.2, a Unix-only socket and a deny-all NetworkPolicy. Before projection, its ledger SHA256 `cf0ee5e4b764587c539608a9b5db214be812987d82ae849fe6fb1e23f914f7c5` and both installed digests/receipts matched the live read-only predecessor. Exact 240–248 sources ran inside `BEGIN … ROLLBACK`; the independently extracted migration-217 catalog projection matched the installed digest for both logins before and after. A fresh session proved zero 240–248 stamps and unchanged predecessor receipts after rollback. The exact transaction then committed on that disposable clone; fresh-session readback verified all nine stamps, both approved successor receipts and both independently projected catalogs. The ordinary ingestor login exercised the new grants in a read-only session with no write privilege.
 
-The no-write retry requires the exact full eight-file successor. A lost readback
-after commit is unverified, not rollback; retry verifies the same state without
-refreshing receipt timestamps or replaying migrations. A failed pre-commit
-successor check rolls back SQL, data, stamps and receipts together. Sequence
-allocations are not transactional. Image-only rollback after DB commit remains
-insufficient; preserve backup, old source/digests and target contract, and qualify
-the appropriate forward correction or restore/data-recovery boundary.
+The latest 269.4 MB logical dump (`verdify-20260926T081706Z.dump`, SHA256 `740c195b8d597b1b7ab9c52621ed6fd2a64b2edbfcfe86860e6242b5b09f0061`) restored into a separate disposable cluster, but its generic catalog inspection refused before the rollback probe. A logical restore can change cluster role/database OIDs, so its fingerprints cannot be transplanted into this target contract. The physical snapshot clone is the exact-target proof. Preserve the logical restore failure as a DR follow-up.
 
-`--plan` with the explicit resource contract reports eight pending and remains
-read-only, without verifying live fingerprints or authorizing application. An
-unbound plan keeps the old default profile and refuses pending 248. No implicit
-profile selection or auto-generated approval is available.
+The candidate migrate image is `registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:b3f5c221d09154734ad9d2f62780a3318d7b7df0b4ab3dea8a5ba911627a2ca5`, built by Workflow `agent-fleet-ci/verdify-c0-nine-migrate-ph285` from source `3f8b7eb1b3415d97ae63564739a1c95f53a1ba47`. The final GitOps render must show the same image for migration wave 0 and credential bootstrap waves 1 and 2, the contract hash and zero Secrets. The actual image entrypoint must also pass on a fresh isolated physical clone with the rendered volume/env before production sync.
 
-## Native source qualification
+## Delivery and readback
 
-```sh
-SCORECARD_TEST_PG_BIN=/path/to/pg16-timescale252/bin python -m pytest -q \
-  tests/test_c0_resource_transition.py tests/test_c0_boundary_transition.py \
-  tests/test_c0_migration_delivery.py tests/test_shelly_source_intervals.py \
-  tests/test_c0_restore_inspection.py
-```
+Use a full, no-prune Argo sync after reviewing every resource in the exact desired revision. Selective sync skips PreSync migrations. Wave 0 must complete the nine-file transaction and new-session readback before wave-1 ordinary-role credential attestation and wave-2 experiment-credential attestation. Only then may Sync-wave API, MCP, planner, ingestor and the other workloads reconcile. The former one-shot Gate R PostSync activation, bound to an obsolete source revision, is absent from this production render; collect fresh Gate R readiness separately after this release.
 
-The new fixture composes existing climate/band/forecast fixture inputs with
-actual migration-194 resource relations and migration-217's relevant reader
-grants, in one private socket-only PG16/TimescaleDB 2.25.2 database. Resource views
-are not the old climate fixture's table stand-ins. All eight actual migrations
-run together. Expected hashes are sampled only during a rollback rehearsal on
-that disposable fixture; no production qualification hash is inferred.
+After sync, verify Argo `Synced` + `Healthy` at the intended revision, all nine exact ledger hashes, both installed digests and stored receipts under ordinary sessions, running image IDs, API/MCP/DB smoke, one real ESP32 socket and five minutes without ingestor schema-validation drops. Resource availability and scientific eligibility remain independently evaluated; a successful migration does not commission the meter or authorize physical experiments.
 
-Tests cover the owning shell/Python delivery path, eight exact stamps, both real
-ordinary startup probes, rollback on wrong successor, profile/pin/inventory
-refusals, read-only planning, partial release refusal, committed readback loss
-and no-write retry. The partial-state case actually applies the seven-file
-transaction before trying the eight-file profile; it does not fabricate those
-ledger records. Historical C0/source/restore tests remain separate regression
-coverage and must still pass without dependency skips.
-
-This is not a full migration-217 normalization, production role inventory,
-production dump restore, realistic-volume lock/disk measurement, container build,
-live device clock/calibration proof or deployment. The inactive restore component
-still performs observation followed by HOLD, not this new transition. Do not
-convert that hold to a successful qualification hook.
-
-## Remaining real release work
-
-Verify the actual target's unapplied/applied set before selecting a profile.
-Obtain a fresh authorized isolated restore and explain role/OID/database-identity
-differences; do not transplant synthetic/restored fingerprints into production.
-Review full before/after target projections and callee closure, independently
-pin the exact target contract, and qualify the restored end-to-end role/SQL/
-setter/export/analyzer path with rollback evidence.
-
-Add the new test module to the owning fleet CI registry, not its generated
-mirror. Obtain exact-SHA CI artifacts and Kaniko/Zot digest evidence, provision
-the approved contract in the owning PreSync ordering, and deliver via GitOps.
-The new producer needs the expanded facade; after 248 the old producer's rows
-are unqualified. Verify that bounded schema/consumer/producer handoff rather
-than allowing a mixed release to claim measurement quality. Acceptance remains
-Argo Synced + Healthy, exact running digests, both ordinary startup sessions and
-current source-qualified data with eligibility still false until commissioning.
-
-Physical Gate P, scientific/season decisions, lock/draw, separate randomized
-launch, complete blinded execution/readout and owned C4–C8 follow-through remain
-campaign requirements outside this migration transition.
+Native PG16/Timescale regression coverage lives in `tests/test_c0_resource_transition.py`; the Mac fallback runs static checks but skips native database cases. The production snapshot-clone rehearsal and exact-head in-cluster CI supply the release evidence for this target.

@@ -5,8 +5,9 @@ deployed.** Forward migration 248 changes the ordinary runtime boundary and is
 not authorized by the seven-file 241–247 C0 transition. Do not deploy it with the
 older contract, silently expand that inventory, rerun 217 or recapture startup
 receipts. A separately reviewed transition and real restored-target proof remain.
-The [eight-file transition candidate](c0-resource-transition.md) provides the
-owning-runner source for that qualification, not an approved production contract.
+The [nine-file transition](c0-resource-transition.md) binds 240–248 and a
+production-target contract in the owning PreSync path. Production delivery and
+meter commissioning remain separate live checks.
 
 Both migration entrypoints and the inactive restore-rehearsal detector include
 248 even when 241–247 are absent from a selected inventory. This is detection,
