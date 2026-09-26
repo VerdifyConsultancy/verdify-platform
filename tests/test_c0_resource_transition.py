@@ -26,8 +26,9 @@ from test_shelly_source_intervals import predecessor as predecessor
 
 ROOT = Path(__file__).resolve().parents[1]
 RESOURCE_NAME = "248-shelly-source-interval-accounting.sql"
-RESOURCE_VERSION = "c0-resource-boundary-transition-241-248-v1"
-PATHS = [ROOT / "db/migrations" / name for name in (*delivery.transition.MIGRATIONS, RESOURCE_NAME)]
+RESOURCE_VERSION = "c0-resource-boundary-transition-240-248-v1"
+PATHS = [ROOT / "db/migrations" / name for name in delivery.transition.release_migrations(RESOURCE_VERSION)]
+SEVEN_PATHS = [ROOT / "db/migrations" / name for name in delivery.transition.MIGRATIONS]
 
 
 def state(query):
@@ -86,6 +87,14 @@ def cohort(predecessor, tmp_path):
         f"SELECT stamp_migration('qualification/synthetic-combined-resource.sql','db/migrations',NULL,'{hashlib.sha256(baseline.encode()).hexdigest()}','manual')"
     )
     q("REVOKE CREATE ON SCHEMA public FROM PUBLIC")
+    # The pending 240 source grants four existing production read surfaces.
+    # Supply their signatures on the synthetic predecessor before attesting.
+    q("""CREATE TABLE public.experiment_v2_runtime_generations (fixture_only integer);
+        CREATE VIEW public.v_open_alerts AS SELECT 1 AS fixture_only;
+        CREATE FUNCTION public.fn_experiment_v2_api_status(uuid) RETURNS jsonb
+            LANGUAGE sql AS $$ SELECT '{}'::jsonb $$;
+        CREATE FUNCTION public.fn_experiment_v2_executor_runtime(uuid,text) RETURNS jsonb
+            LANGUAGE sql AS $$ SELECT '{}'::jsonb $$;""")
     install_actual_attestation_probe(q)
     assert attestation_probe(q) == {"api": "t", "ingestor": "t"}
     contract = fixture_contract()
@@ -103,7 +112,7 @@ def cohort(predecessor, tmp_path):
     directory.mkdir()
     for path in PATHS:
         shutil.copyfile(path, directory / path.name)
-    contract_file = tmp_path / "synthetic-eight-file-contract.json"
+    contract_file = tmp_path / "synthetic-nine-file-contract.json"
     contract_file.write_text(json.dumps(contract, sort_keys=True))
     env = {
         key: value
@@ -138,7 +147,7 @@ def cohort(predecessor, tmp_path):
 
 def test_combined_sources_rehearse_without_receipt_refresh(cohort):
     q, contract, _, _, _, _ = cohort
-    assert len(PATHS) == 8
+    assert len(PATHS) == 9
     assert attestation_probe(q) == {"api": "t", "ingestor": "t"}
     assert q("SELECT count(*) FROM schema_migrations WHERE stamp_method='runner'") == "0"
     assert contract["version"] == RESOURCE_VERSION
@@ -149,11 +158,11 @@ def repin(contract, path, env):
     env["VERDIFY_C0_BOUNDARY_CONTRACT_SHA256"] = hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def test_eight_file_owning_commit_readback_and_no_write_retry(cohort):
+def test_nine_file_owning_commit_readback_and_no_write_retry(cohort):
     q, _, _, _, _, run = cohort
     result = run()
     assert result.returncode == 0, result.stderr
-    assert "eight exact stamps and both successor receipts/catalogs" in result.stdout
+    assert "nine exact stamps and both successor receipts/catalogs" in result.stdout
     assert_applied(q, PATHS)
     assert attestation_probe(q) == {"api": "t", "ingestor": "t"}
     assert (
@@ -192,7 +201,7 @@ def test_explicit_profile_and_exact_successor_refusals_preserve_state(cohort, fa
         contract["version"] = "unreviewed-resource-v2"
         repin(contract, path, env)
     elif failure == "outside-pending":
-        name = "240-experiment-v2-readiness-reader-grants.sql"
+        name = "239-experiment-v2-orphaned-preclaim-recovery.sql"
         shutil.copyfile(ROOT / "db/migrations" / name, directory / name)
     else:
         contract["after"]["verdify_api_runtime_login"] = "0" * 64
@@ -208,12 +217,12 @@ def test_explicit_profile_and_exact_successor_refusals_preserve_state(cohort, fa
         assert "complete exact selected release inventory required" in result.stderr
 
 
-def test_eight_file_plan_requires_explicit_profile_and_does_not_write(cohort):
+def test_nine_file_plan_requires_explicit_profile_and_does_not_write(cohort):
     q, _, _, _, _, run = cohort
     before = state(q)
     result = run("--plan")
     assert result.returncode == 0, result.stderr
-    assert "8 pending; atomic bundle=241-248; contract_supplied=True" in result.stdout
+    assert "9 pending; atomic bundle=240-248; contract_supplied=True" in result.stdout
     assert "remain unverified" in result.stdout
     assert state(q) == before
     implicit = run("--plan", overrides={"VERDIFY_C0_BOUNDARY_CONTRACT": "", "VERDIFY_C0_BOUNDARY_CONTRACT_SHA256": ""})
@@ -221,17 +230,17 @@ def test_eight_file_plan_requires_explicit_profile_and_does_not_write(cohort):
     assert state(q) == before
 
 
-def test_already_committed_seven_file_release_is_not_eight_file_predecessor(cohort):
+def test_already_committed_seven_file_release_is_not_nine_file_predecessor(cohort):
     q, contract, _, _, env, run = cohort
     seven = dict(contract, version=delivery.transition.VERSION)
     seven["after"] = json.loads(
-        q("BEGIN;\n" + "\n".join(path.read_text() for path in PATHS[:-1]) + DIGESTS + "ROLLBACK;").splitlines()[-1]
+        q("BEGIN;\n" + "\n".join(path.read_text() for path in SEVEN_PATHS) + DIGESTS + "ROLLBACK;").splitlines()[-1]
     )
     # Apply and stamp the actual seven sources through their reviewed-profile
     # emitter on this fixture. Never simulate this with fabricated ledger rows.
     pin = hashlib.sha256(json.dumps(seven, sort_keys=True).encode()).hexdigest()
     delivery.psql(delivery.transition.emit_sql(seven, pin), env)
-    assert_applied(q, PATHS[:-1])
+    assert_applied(q, SEVEN_PATHS)
     assert attestation_probe(q) == {"api": "t", "ingestor": "t"}
     before = state(q)
     result = run()
@@ -268,7 +277,7 @@ def test_committed_but_lost_readback_is_unverified_and_retry_is_no_write(cohort,
 def test_profiles_are_separate_and_contract_cannot_supply_migration_sources():
     transition = delivery.transition
     assert len(transition.release_migrations(transition.VERSION)) == 7
-    assert len(transition.release_migrations(RESOURCE_VERSION)) == 8
+    assert len(transition.release_migrations(RESOURCE_VERSION)) == 9
     assert RESOURCE_NAME not in transition.release_migrations(transition.VERSION)
     assert transition.checked_sources() == transition.checked_sources(transition.VERSION)
     contract = fixture_contract()

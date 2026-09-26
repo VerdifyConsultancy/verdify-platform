@@ -203,7 +203,7 @@ def deliver(directory, *, plan=False, environment=None):
     rows = ledger_rows(env)
     pending = verify_inventory_ledger(files, rows, version=version)
     if plan:
-        bundle = "241-248" if version == transition.RESOURCE_VERSION else "241-247"
+        bundle = "240-248" if version == transition.RESOURCE_VERSION else "241-247"
         print(f"C0 PLAN: {pending} pending; atomic bundle={bundle}; contract_supplied={contract is not None}.")
         print("Read-only inventory check only; target fingerprints, execution and deployment remain unverified.")
         return
@@ -213,7 +213,7 @@ def deliver(directory, *, plan=False, environment=None):
     psql(sql, env)
     verify_inventory_ledger(files, ledger_rows(env), after=True, version=version)
     psql(successor_probe(contract), env)
-    count = "eight" if version == transition.RESOURCE_VERSION else "seven"
+    count = "nine" if version == transition.RESOURCE_VERSION else "seven"
     print(f"C0 committed state verified: {count} exact stamps and both successor receipts/catalogs.")
     print("Ordinary application sessions, Argo health and live consumer adoption require separate verification.")
 

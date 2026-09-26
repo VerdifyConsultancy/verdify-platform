@@ -19,7 +19,7 @@ SPEC = importlib.util.spec_from_file_location("ordinary_boundary_diff", ROOT / "
 boundary = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(boundary)
 VERSION = "c0-boundary-transition-241-247-v1"
-RESOURCE_VERSION = "c0-resource-boundary-transition-241-248-v1"
+RESOURCE_VERSION = "c0-resource-boundary-transition-240-248-v1"
 # Immutable release membership: neither filenames nor executable SQL come from
 # the external contract. Any extension requires a separate source review.
 MIGRATIONS = {
@@ -33,6 +33,9 @@ MIGRATIONS = {
 }
 RESOURCE_MIGRATION = {
     "248-shelly-source-interval-accounting.sql": "45b3fb28c8e11608e14407f5b18bc15018dff54c7dc8dd7b882352d961027b56",
+}
+READINESS_MIGRATION = {
+    "240-experiment-v2-readiness-reader-grants.sql": "7fc9a584a7cdc3fc2b89c0bea18c1e3ec5fdd8c9e6261ccf3c2cb908320e7999",
 }
 
 
@@ -53,7 +56,7 @@ def release_migrations(version):
     # The contract selects a separately source-reviewed fixed profile, never
     # filenames, executable SQL or hashes. The original version stays seven.
     require(version in (VERSION, RESOURCE_VERSION), "unsupported contract version")
-    return MIGRATIONS if version == VERSION else {**MIGRATIONS, **RESOURCE_MIGRATION}
+    return MIGRATIONS if version == VERSION else {**READINESS_MIGRATION, **MIGRATIONS, **RESOURCE_MIGRATION}
 
 
 def validate(contract):

@@ -12,14 +12,22 @@ SPEC.loader.exec_module(probe)
 
 def test_probe_has_exact_source_and_cannot_commit() -> None:
     sql = probe.emit_sql()
-    assert sql.count("\n-- BEGIN EXACT SOURCE ") == 8
+    assert sql.count("\n-- BEGIN EXACT SOURCE ") == 9
     assert sql.count("\nROLLBACK;\n") == 1
     assert not re.search(r"(?m)^COMMIT;\s*$", sql)
     assert "current_database() <> 'verdify_rehearsal'" in sql
-    assert "seq BETWEEN 241 AND 248" in sql
+    assert "seq BETWEEN 240 AND 248" in sql
     assert "INSERT INTO public.schema_migrations" not in sql
     assert "UPDATE public.runtime_ordinary_login_attestation_receipts" not in sql
     for stage in ("BEFORE", "AFTER"):
         for login in probe.boundary.LOGINS:
             assert sql.count(f"\\echo C0_PROBE_{stage}_{login}") == 1
     assert sql.rstrip().endswith("\\echo C0_PROBE_ROLLED_BACK")
+
+
+def test_physical_clone_probe_requires_offline_identity() -> None:
+    sql = probe.emit_sql(physical_clone=True)
+    assert "current_database() <> 'verdify'" in sql
+    assert "current_setting('cluster_name') <> 'verdify-c0-contract-clone-20260926'" in sql
+    assert "current_setting('port') <> '55433'" in sql
+    assert "current_setting('listen_addresses') <> ''" in sql
