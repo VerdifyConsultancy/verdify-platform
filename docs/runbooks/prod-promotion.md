@@ -28,7 +28,7 @@ builds only (`Container Publish` runs every Dockerfile with `push: false`).
    on any host or in the in-cluster `verdify-platform-ci` Workflow).
 3. (Current only for an image outside `.agent-fleet/ci.yaml`, such as
    `verdify-twin`; merges build the rest.) Publish happens IN-CLUSTER: submit
-   one `repo-build` Argo Workflow per
+   one `repo-build-verdifyconsultancy` Argo Workflow per
    changed image in namespace `agent-fleet-ci` (Kaniko builds the exact main
    revision and pushes `registry.vallery.net/verdifyconsultancy/<image>@sha256:…`
    using the org push secret `zot-origin-verdifyconsultancy-ci-dockerconfig`):
@@ -41,7 +41,7 @@ builds only (`Container Publish` runs every Dockerfile with `push: false`).
      generateName: verdify-platform-build-<image>-
      labels: {agent-fleet.vallery.net/repo: verdify-platform}
    spec:
-     workflowTemplateRef: {name: repo-build}
+     workflowTemplateRef: {name: repo-build-verdifyconsultancy}
      arguments:
        parameters:
          - {name: repo, value: https://github.com/VerdifyConsultancy/verdify-platform.git}
@@ -49,9 +49,10 @@ builds only (`Container Publish` runs every Dockerfile with `push: false`).
          - {name: dockerfile, value: <path/to/Dockerfile>}
          - {name: context, value: "."}
          - {name: image, value: verdifyconsultancy/verdify-<image>}
-         - {name: push_secret, value: zot-origin-verdifyconsultancy-ci-dockerconfig}
    WF
    ```
+   The generic `repo-build` template permits only the `jvallery` and `vallery`
+   image scopes. It can build a Verdify archive but refuses to publish it.
 4. Collect each workflow's `digest` output parameter and commit a digest-only
    change to `deploy/k8s/overlays/prod/kustomization.yaml`
    (`newName: registry.vallery.net/verdifyconsultancy/<image>` + `digest:`).
