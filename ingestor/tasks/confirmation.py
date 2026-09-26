@@ -28,7 +28,7 @@ from ._common import (
 # ``requested``/``deferred_heap_pressure`` rows cannot be double-delivered.
 
 _WRITER_FIELD_RE = re.compile(
-    r"\b(reason|status|phase|generation|count|command_count|anchor_count|unchanged_anchor_count|failed_count)=([^\s]+)"
+    r"\b(action|reason|status|phase|generation|count|command_count|anchor_count|unchanged_anchor_count|failed_count)=([^\s]+)"
 )
 _LEGACY_DIRECT_PUSH_RE = re.compile(r"direct-pushed\s+(\d+)/(\d+)")
 
@@ -60,6 +60,7 @@ def summarize_writer_log_lines(lines) -> dict[str, int]:
     summary = {
         "classified_lines": 0,
         "transport_reconnects": 0,
+        "blocked_broad_restores": 0,
         "cfg_drifts": 0,
         "desired_dispatches": 0,
         "retry_batches": 0,
@@ -82,7 +83,12 @@ def summarize_writer_log_lines(lines) -> dict[str, int]:
         event = parsed["event"]
         reason = parsed.get("reason")
         if event == "writer_reconcile" and reason == "transport_reconnect":
-            summary["transport_reconnects"] += 1
+            # A failed generation retries on the ordinary dispatcher cadence.
+            # Count the actual new socket, not each attempt to reconcile it.
+            if parsed.get("action") == "awaiting_readbacks":
+                summary["transport_reconnects"] += 1
+            elif parsed.get("action") == "blocked_broad_restore":
+                summary["blocked_broad_restores"] += 1
         elif event == "writer_reconcile" and reason == "cfg_drift":
             summary["cfg_drifts"] += 1
         elif event == "writer_dispatch":
