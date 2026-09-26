@@ -5,24 +5,23 @@ allow-list. It can initialize the stateless protocol and list zero tools.
 All operational tool calls remain denied in the production `enforce` mode.
 Existing Iris, experiment and admin audience privileges are unchanged.
 
-The shared `mcp-observer` Kustomize component is staged and references only
-`verdify-prod/verdify-mcp-observer`, key `token`. Neither production overlay
-includes it until the Secret exists live. Agents owns the encrypted Secret under
-its existing Secret-only, non-pruning `verdify-prod-secrets-local-prod`
-Application. No credential is stored here. `overlays/prod-dark` is not an Argo
-source.
+The shared `mcp-observer` Kustomize component references only
+`verdify-prod/verdify-mcp-observer`, key `token`. The active `overlays/prod`
+includes it after the Secret was reconciled by the Agents-owned, Secret-only,
+non-pruning `verdify-prod-secrets-local-prod` Application. No credential is
+stored here. `overlays/prod-dark` is not an Argo source.
 
 Delivery order:
 
-1. Merge and reconcile the encrypted provider Secret through its owning Agents
+1. The encrypted provider Secret is reconciled through its owning Agents
    application; verify name, key names and tracking metadata only.
 2. Build MCP from the integrated current source and pin its new Zot digest.
    The earlier `b09a298d` observer build predates later MCP changes and is not
    a valid pin for this branch. Preserve the old running digest for rollback.
-3. Enable the component in `overlays/prod`, review the entire Argo diff and
-   coordinate with any pending C0 migration or hook. Use a full hook-running
-   sync for a combined release. An MCP-only selective sync is valid only when
-   no migration or hook part is involved and the full pending diff is reviewed.
+3. Review the entire Argo diff and coordinate with any pending C0 migration or
+   hook. Use a full hook-running sync for a combined release. An MCP-only
+   selective sync is valid only when no migration or hook part is involved and
+   the full pending diff is reviewed.
 4. Verify both replicas, source and running digest, transport authentication and
    audience denial locally and through the public Cloudflare route.
 5. After qualification, publish the separate encrypted consumer profile and

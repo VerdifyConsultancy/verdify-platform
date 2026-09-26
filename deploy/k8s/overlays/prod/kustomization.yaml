@@ -122,6 +122,9 @@ components:
   # remove the database-owner credential from both ordinary containers. Merge
   # and sync only after the protected four-key reconciliation receipt exists.
   - ../../components/runtime-role-boundary
+  # Protocol-only MCP observer. The credential is owned by the agents KSOPS
+  # lane and was reconciled before this workload reference.
+  - ../../components/mcp-observer
   # Gate 2 experiment credential activation. This remains non-actuating and
   # uses a one-container wave-2 hook while capability and active ID stay off.
   - ../../components/experiment-v2-credential-bootstrap
