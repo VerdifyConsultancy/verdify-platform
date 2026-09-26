@@ -39,7 +39,8 @@
 #
 # USAGE
 #   KUBECONFIG=/home/jason/.kube/verdify-agent.config \
-#     scripts/k3s-smoke.sh [smoke|device-monitor] [--namespace NS]
+#     scripts/k3s-smoke.sh smoke --expected-api-sha SHA --expected-api-digest sha256:HEX [--namespace NS]
+#     scripts/k3s-smoke.sh device-monitor [--namespace NS]
 #
 #   Environment / flags:
 #     KUBECONFIG            (required) path to the scoped kubeconfig.

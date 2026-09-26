@@ -98,9 +98,13 @@ After the prod ArgoCD app is green, run read-only smoke checks from a host with 
 scoped kubeconfig:
 
 ```sh
-KUBECONFIG=/path/to/verdify-agent.config scripts/k3s-smoke.sh smoke
+KUBECONFIG=/path/to/verdify-agent.config scripts/k3s-smoke.sh smoke \
+  --expected-api-sha "$API_BUILD_SHA" --expected-api-digest "$API_DIGEST"
 KUBECONFIG=/path/to/verdify-agent.config scripts/k3s-smoke.sh device-monitor
 ```
 
-`smoke` checks API, MCP, and DB health. `device-monitor` checks that exactly one
-pod holds the ESP32 native API connection.
+Set `API_BUILD_SHA` and `API_DIGEST` from the reviewed API build and Git pin
+receipt before running smoke. It checks exact API source and running digest,
+fresh climate/action data and complete cfg readbacks, authenticated MCP tools,
+and DB health. `device-monitor` checks that exactly one pod holds the ESP32
+native API connection.
