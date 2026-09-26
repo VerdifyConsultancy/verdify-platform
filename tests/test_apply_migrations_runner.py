@@ -103,6 +103,31 @@ def _sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+@pytest.mark.parametrize("shell", ["sh", "bash"])
+@pytest.mark.parametrize(
+    "filename,expected",
+    [
+        ("000-zero.sql", "0"),
+        ("008-eight.sql", "8"),
+        ("070-first.sql", "70"),
+        ("095a-suffixed.sql", "95"),
+        ("241-scorecard.sql", "241"),
+        ("not-numbered.sql", "NULL"),
+    ],
+)
+def test_sequence_parser_is_decimal_under_declared_shell(shell, filename, expected):
+    source = RUNNER.read_text()
+    function = source[source.index("seq_of() {") : source.index("\nis_wrap_safe() {")]
+    result = subprocess.run(
+        [shell, "-c", function + '\nseq_of "$1"', "sequence-fixture", filename],
+        capture_output=True,
+        text=True,
+        timeout=5,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == expected
+
+
 def test_plan_mode_lists_pending_with_shas_and_applies_nothing(runner_env):
     res = _run(
         runner_env,

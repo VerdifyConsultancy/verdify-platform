@@ -1,0 +1,218 @@
+{
+  "analysis_contract": 2,
+  "audited_source_file_sha256": {
+    "firmware/greenhouse/controls.yaml": "c987ef3187e69a3fbbb178ad3e0b949d6fcedbd9c86a572df3a4a0d3c5a7d4ce",
+    "firmware/lib/greenhouse_logic.h": "ee546b60ed707539e45ad4b8ae72f975e34218a97de24552f975e9554dbee09f",
+    "ingestor/esp32_push.py": "317c3c811871e9a68039eac2bef3a7f0c1d9800f0300fb00429f474dd41e2851",
+    "ingestor/ingestor.py": "a35a04a03b4f0968fa6ccf9dd52af67597b6add71b1cdd51d4f5c54236dcfd90",
+    "ingestor/occupancy.py": "0afc9c4297a0391f4a570a6161be10396298dedb0f1268e770fe13a6f3bf3afb",
+    "scripts/export-hourly-performance-dataset.py": "01753037333dc023f5c0f39390b1c12c118719bb49ac84c1343c2f2aa7642ebf"
+  },
+  "audited_source_matches_running_device_verified": false,
+  "counter_plateau_15_to_18_local": {
+    "mister_water_today_gal": {
+      "is_budget_limit": false,
+      "max": 157.38,
+      "min": 157.38,
+      "samples": 37
+    },
+    "water_total_gal": {
+      "is_budget_limit": false,
+      "max": 600.0,
+      "min": 600.0,
+      "samples": 37
+    }
+  },
+  "disposition": "unresolved_hold",
+  "equipment_observation_coverage_verified": false,
+  "five_minute_peak_vpd_bin": {
+    "bucket_local": "2026-09-04 15:30",
+    "bucket_utc": "2026-09-04T21:30:00+00:00",
+    "mister_water_today_gal": 157.38,
+    "outdoor_temp_f": 94.17,
+    "source_samples": 5.0,
+    "temp_avg_f": 100.48,
+    "vpd_avg_kpa": 5.395,
+    "water_total_gal": 600.0
+  },
+  "hourly_context_not_clipped": [
+    {
+      "climate_sample_count": 57.0,
+      "hour_start_local": "2026-09-04 14:00:00",
+      "hour_start_utc": "2026-09-04T20:00:00+00:00",
+      "recorded_zero_wetting": false,
+      "runtime_fan1_min": 60.0,
+      "runtime_fan2_min": 60.0,
+      "runtime_fert_master_valve_min": 0.0,
+      "runtime_fog_min": 57.056,
+      "runtime_mister_center_min": 16.021,
+      "runtime_occupancy_quiet_override_active_min": 0.0,
+      "runtime_vent_min": 60.0,
+      "runtime_water_flowing_min": 47.113,
+      "temp_avg_f": 87.593,
+      "temp_east_f": 84.048,
+      "temp_north_f": 91.318,
+      "temp_west_f": 87.459,
+      "vpd_avg_kpa": 2.155
+    },
+    {
+      "climate_sample_count": 57.0,
+      "hour_start_local": "2026-09-04 15:00:00",
+      "hour_start_utc": "2026-09-04T21:00:00+00:00",
+      "recorded_zero_wetting": true,
+      "runtime_fan1_min": 60.0,
+      "runtime_fan2_min": 60.0,
+      "runtime_fert_master_valve_min": 0.0,
+      "runtime_fog_min": 0.0,
+      "runtime_mister_center_min": 0.0,
+      "runtime_occupancy_quiet_override_active_min": 0.0,
+      "runtime_vent_min": 60.0,
+      "runtime_water_flowing_min": 0.0,
+      "temp_avg_f": 98.337,
+      "temp_east_f": 95.309,
+      "temp_north_f": 100.331,
+      "temp_west_f": 99.389,
+      "vpd_avg_kpa": 5.004
+    },
+    {
+      "climate_sample_count": 57.0,
+      "hour_start_local": "2026-09-04 16:00:00",
+      "hour_start_utc": "2026-09-04T22:00:00+00:00",
+      "recorded_zero_wetting": true,
+      "runtime_fan1_min": 60.0,
+      "runtime_fan2_min": 60.0,
+      "runtime_fert_master_valve_min": 0.0,
+      "runtime_fog_min": 0.0,
+      "runtime_mister_center_min": 0.0,
+      "runtime_occupancy_quiet_override_active_min": 0.0,
+      "runtime_vent_min": 60.0,
+      "runtime_water_flowing_min": 0.0,
+      "temp_avg_f": 93.504,
+      "temp_east_f": 93.487,
+      "temp_north_f": 92.96,
+      "temp_west_f": 94.034,
+      "vpd_avg_kpa": 4.282
+    },
+    {
+      "climate_sample_count": 58.0,
+      "hour_start_local": "2026-09-04 17:00:00",
+      "hour_start_utc": "2026-09-04T23:00:00+00:00",
+      "recorded_zero_wetting": true,
+      "runtime_fan1_min": 60.0,
+      "runtime_fan2_min": 60.0,
+      "runtime_fert_master_valve_min": 0.0,
+      "runtime_fog_min": 0.0,
+      "runtime_mister_center_min": 0.0,
+      "runtime_occupancy_quiet_override_active_min": 0.0,
+      "runtime_vent_min": 60.0,
+      "runtime_water_flowing_min": 0.0,
+      "temp_avg_f": 90.967,
+      "temp_east_f": 90.606,
+      "temp_north_f": 91.257,
+      "temp_west_f": 91.015,
+      "vpd_avg_kpa": 3.828
+    },
+    {
+      "climate_sample_count": 59.0,
+      "hour_start_local": "2026-09-04 18:00:00",
+      "hour_start_utc": "2026-09-05T00:00:00+00:00",
+      "recorded_zero_wetting": false,
+      "runtime_fan1_min": 48.766,
+      "runtime_fan2_min": 57.546,
+      "runtime_fert_master_valve_min": 0.0,
+      "runtime_fog_min": 36.017,
+      "runtime_mister_center_min": 0.0,
+      "runtime_occupancy_quiet_override_active_min": 0.0,
+      "runtime_vent_min": 60.0,
+      "runtime_water_flowing_min": 29.061,
+      "temp_avg_f": 83.861,
+      "temp_east_f": 84.295,
+      "temp_north_f": 83.373,
+      "temp_west_f": 83.858,
+      "vpd_avg_kpa": 2.303
+    }
+  ],
+  "input_sha256": {
+    "five_minute_csv": "1191ca396ec9b1d0d4ada8a97e854500fdee4b4e44742abf7d8779b40090653e",
+    "hourly_csv": "d0eb193dedc699d9396a6d011cbbb70c24b701043bdf36050f83d957c8264bf3",
+    "log_projection_json": "cd2edb60566a07d8f3a64597d05b63f037233099270a5b3626338e2b0143b8f9"
+  },
+  "issue": 778,
+  "limitations": [
+    "Hourly exporter fills absent equipment intervals with zero; the CSV cannot distinguish confirmed off from missing state evidence.",
+    "Binned public observations reproduce an interruption, not precise actuator transitions or its cause.",
+    "House averages are not a fixed-panel or center-canopy physical outcome.",
+    "Cumulative meter and mister-today estimates have different reset/scope semantics; neither establishes a limit.",
+    "Repeated empty-occupancy pushes are command-log evidence, not firmware readback or exclusion of occupancy.",
+    "Reported connection gaps are rounded log values, not proof of reboot or a causal control outage.",
+    "ESP32 interlocks are written separately to DB/Loki; pod stdout absence cannot clear them.",
+    "No cap increase, mode change, OTA or physical proof is authorized by this report."
+  ],
+  "log_event_counts": {
+    "occupancy_latch:empty": 56,
+    "occupancy_push:empty": 54,
+    "transport_connected": 5,
+    "transport_expected_disconnect": 4,
+    "transport_lost": 1
+  },
+  "missing_causal_inputs": [
+    "firmware interlock/admission reasons",
+    "effective consumed guards/limits",
+    "raw commanded/actual equipment and reset epochs",
+    "requested/sent/confirmed plan lineage",
+    "manual/occupancy confirmation",
+    "as-of forecast vintage"
+  ],
+  "physical_wetting_proof_allowed": false,
+  "three_hour_recorded_zero_wetting": true,
+  "tool_sha256": "7f009ab1968a6c8da04d9d42d0d95358dd23c8018a3dac353e694dae53c18d46",
+  "transport_observations": [
+    {
+      "kind": "transport_expected_disconnect",
+      "ts": "2026-09-04T21:02:49.774923+00:00"
+    },
+    {
+      "kind": "transport_connected",
+      "reported_gap_seconds": 8,
+      "ts": "2026-09-04T21:02:57.874188+00:00"
+    },
+    {
+      "kind": "transport_expected_disconnect",
+      "ts": "2026-09-04T22:57:17.688583+00:00"
+    },
+    {
+      "kind": "transport_connected",
+      "reported_gap_seconds": 30,
+      "ts": "2026-09-04T22:57:47.812835+00:00"
+    },
+    {
+      "kind": "transport_expected_disconnect",
+      "ts": "2026-09-04T23:46:17.863846+00:00"
+    },
+    {
+      "kind": "transport_connected",
+      "reported_gap_seconds": 4,
+      "ts": "2026-09-04T23:46:18.370849+00:00"
+    },
+    {
+      "kind": "transport_lost",
+      "ts": "2026-09-05T00:08:18.466714+00:00"
+    },
+    {
+      "kind": "transport_connected",
+      "reported_gap_seconds": 0,
+      "ts": "2026-09-05T00:08:18.575500+00:00"
+    },
+    {
+      "kind": "transport_expected_disconnect",
+      "ts": "2026-09-05T00:18:41.655330+00:00"
+    },
+    {
+      "kind": "transport_connected",
+      "reported_gap_seconds": 462,
+      "ts": "2026-09-05T00:26:13.838211+00:00"
+    }
+  ],
+  "window_end_utc": "2026-09-05T00:45:00+00:00",
+  "window_start_utc": "2026-09-04T20:30:00+00:00"
+}

@@ -7,6 +7,11 @@
 # pending numbered migrations under an advisory lock with exact SHA receipts.
 # On a fresh DB it first builds the schema snapshot and repairs hypertable
 # metadata. The hook-delete-policy replaces the Job on every sync.
+# Exception: a candidate image containing C0 migrations 241–247 delegates to
+# the exact-boundary profile BEFORE replay/bootstrap, including on a fresh DB.
+# It requires an already-qualified predecessor and reviewed contract/hash pin;
+# missing/invalid inputs fail without a per-file fallback. Supply the qualified
+# artifact and pin through the owning release, not this generic base template.
 #
 # DATA MIGRATION SAFETY (handoff §3.6): this Job applies schema migrations
 # against the in-cluster verdify-db. The copy-not-move TimescaleDB restore

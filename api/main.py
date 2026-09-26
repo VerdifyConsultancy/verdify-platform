@@ -31,6 +31,7 @@ from email.message import EmailMessage
 from email.utils import formataddr, make_msgid
 from pathlib import Path
 from typing import Annotated, Literal
+from zoneinfo import ZoneInfo
 
 import asyncpg
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
@@ -116,6 +117,7 @@ from verdify_schemas.experiment_config import (  # noqa: E402
     component_experiment_mode,
 )
 from verdify_schemas.mcp_responses import ScorecardResponse  # noqa: E402
+from verdify_schemas.observed_minute_reader import read_observed_minute_evidence  # noqa: E402
 from verdify_schemas.telemetry import DliEvidence  # noqa: E402
 from verdify_schemas.tunable_registry import (  # noqa: E402
     CROP_BAND_REG,
@@ -2710,9 +2712,12 @@ async def status():
 async def planner_scorecard(scorecard_date: Annotated[date | None, Query(alias="date")] = None):
     """Planner scorecard metrics for a given date, defaulting to today."""
     async with pool.acquire() as conn:
+        if scorecard_date is None:
+            scorecard_date = await conn.fetchval("SELECT (now() AT TIME ZONE 'America/Denver')::date")
         rows = await _fetch_planner_scorecard(conn, scorecard_date)
+        observed = await read_observed_minute_evidence(conn, scorecard_date)
     try:
-        return ScorecardResponse.from_metric_rows(rows)
+        result = ScorecardResponse.from_metric_rows(rows)
     except ValidationError:
         # Belt-and-suspenders (band-compliance §7.1): ScorecardResponse uses
         # extra='forbid', so a brand-new fn_planner_scorecard metric (e.g. the
@@ -2721,7 +2726,9 @@ async def planner_scorecard(scorecard_date: Annotated[date | None, Query(alias="
         # serve the metrics we DO recognize rather than failing the request.
         known = ScorecardResponse.metric_names()
         kept = [r for r in rows if str(r["metric"]) in known]
-        return ScorecardResponse.from_metric_rows(kept)
+        result = ScorecardResponse.from_metric_rows(kept)
+    result.observed_minute_evidence = observed
+    return result
 
 
 @app.get("/api/v1/dli", response_model=DliEvidence)
@@ -2825,14 +2832,11 @@ async def _fetch_public_band_trace_latest(greenhouse_id: str) -> asyncpg.Record 
         return await conn.fetchrow(
             """
             SELECT ts, greenhouse_id, temp_avg, vpd_avg,
-                   temp_avg_smooth_15m, vpd_avg_smooth_30m,
-                   crop_temp_low, crop_temp_high, crop_vpd_low, crop_vpd_high,
-                   house_vpd_low, house_vpd_high,
-                   fw_temp_low, fw_temp_high, fw_vpd_low, fw_vpd_high,
-                   rb_temp_low, rb_temp_high, rb_vpd_low, rb_vpd_high,
-                   crop_both_in_band, fw_both_in_band,
-                   readback_matches_fw_band, trace_quality_flag
-              FROM fn_band_trace(now() - interval '2 hours', now(), $1)
+                   reconstructed_temp_low, reconstructed_temp_high, reconstructed_vpd_low, reconstructed_vpd_high,
+                   reconstructed_temp_in_band, reconstructed_vpd_in_band, reconstructed_both_in_band,
+                   desired_temp_in_band, desired_vpd_in_band, desired_both_in_band,
+                   lineage_contract_version, trace_quality_flag, lineage
+              FROM fn_public_band_trace_v2(now() - interval '2 hours', now(), $1)
              ORDER BY ts DESC
              LIMIT 1
             """,
@@ -2845,28 +2849,29 @@ async def _fetch_public_band_trace_summary(hours: int, greenhouse_id: str) -> as
         return await conn.fetchrow(
             """
             WITH rows AS (
-                SELECT crop_temp_in_band, crop_vpd_in_band, crop_both_in_band,
-                       fw_temp_in_band, fw_vpd_in_band, fw_both_in_band,
-                       readback_matches_fw_band, trace_quality_flag
-                  FROM fn_band_trace(now() - ($1::int * interval '1 hour'), now(), $2)
+                SELECT reconstructed_temp_in_band, reconstructed_vpd_in_band, reconstructed_both_in_band,
+                       desired_temp_in_band, desired_vpd_in_band, desired_both_in_band
+                  FROM fn_public_band_trace_v2(now() - ($1::int * interval '1 hour'), now(), $2)
             )
             SELECT count(*)::int AS sample_count,
-                   round(avg(CASE WHEN crop_temp_in_band THEN 100.0 ELSE 0.0 END)::numeric, 1)::float
-                       AS crop_temp_compliance_pct,
-                   round(avg(CASE WHEN crop_vpd_in_band THEN 100.0 ELSE 0.0 END)::numeric, 1)::float
-                       AS crop_vpd_compliance_pct,
-                   round(avg(CASE WHEN crop_both_in_band THEN 100.0 ELSE 0.0 END)::numeric, 1)::float
-                       AS crop_both_compliance_pct,
-                   round(avg(CASE WHEN fw_temp_in_band THEN 100.0 ELSE 0.0 END)::numeric, 1)::float
-                       AS fw_temp_compliance_pct,
-                   round(avg(CASE WHEN fw_vpd_in_band THEN 100.0 ELSE 0.0 END)::numeric, 1)::float
-                       AS fw_vpd_compliance_pct,
-                   round(avg(CASE WHEN fw_both_in_band THEN 100.0 ELSE 0.0 END)::numeric, 1)::float
-                       AS fw_both_compliance_pct,
-                   round(avg(CASE WHEN readback_matches_fw_band THEN 100.0 ELSE 0.0 END)::numeric, 1)::float
-                       AS readback_match_pct,
-                   round(avg(CASE WHEN trace_quality_flag = 'ok' THEN 100.0 ELSE 0.0 END)::numeric, 1)::float
-                       AS ok_trace_pct
+                   count(reconstructed_temp_in_band)::int AS reconstructed_temp_eligible_samples,
+                   count(reconstructed_vpd_in_band)::int AS reconstructed_vpd_eligible_samples,
+                   count(reconstructed_both_in_band)::int AS reconstructed_both_eligible_samples,
+                   count(desired_temp_in_band)::int AS desired_temp_eligible_samples,
+                   count(desired_vpd_in_band)::int AS desired_vpd_eligible_samples,
+                   count(desired_both_in_band)::int AS desired_both_eligible_samples,
+                   round(avg(reconstructed_temp_in_band::int) * 100, 1)::float
+                       AS reconstructed_temp_compliance_pct,
+                   round(avg(reconstructed_vpd_in_band::int) * 100, 1)::float
+                       AS reconstructed_vpd_compliance_pct,
+                   round(avg(reconstructed_both_in_band::int) * 100, 1)::float
+                       AS reconstructed_both_compliance_pct,
+                   round(avg(desired_temp_in_band::int) * 100, 1)::float
+                       AS desired_temp_compliance_pct,
+                   round(avg(desired_vpd_in_band::int) * 100, 1)::float
+                       AS desired_vpd_compliance_pct,
+                   round(avg(desired_both_in_band::int) * 100, 1)::float
+                       AS desired_both_compliance_pct
               FROM rows
             """,
             hours,
@@ -2879,34 +2884,50 @@ async def public_band_trace(
     greenhouse_id: str = DEFAULT_GREENHOUSE,
     hours: Annotated[int, Query(ge=1, le=168)] = 24,
 ):
-    """Public-safe crop-vs-firmware-vs-readback band trace summary."""
+    """Public-safe reconstruction/desired/snapshot lineage, never consumed proof."""
+    if greenhouse_id != DEFAULT_GREENHOUSE:
+        raise HTTPException(status_code=422, detail="Band trace is only available for vallery")
     cache_key = f"{greenhouse_id}:{hours}"
     now_mono = time.monotonic()
     cached = _PUBLIC_BAND_TRACE_CACHE.get(cache_key)
     if cached and now_mono - cached[0] < PUBLIC_BAND_TRACE_CACHE_TTL_S:
         return cached[1]
 
-    generated_at, latest, summary = await asyncio.gather(
-        _fetch_public_band_trace_generated_at(),
-        _fetch_public_band_trace_latest(greenhouse_id),
-        _fetch_public_band_trace_summary(hours, greenhouse_id),
-    )
+    try:
+        generated_at, latest, summary = await asyncio.gather(
+            _fetch_public_band_trace_generated_at(),
+            _fetch_public_band_trace_latest(greenhouse_id),
+            _fetch_public_band_trace_summary(hours, greenhouse_id),
+        )
+    except asyncpg.exceptions.UndefinedFunctionError:
+        # An additive migration may lag the API image. Never fall back to the
+        # legacy function's misleading firmware labels or missing-as-failure rate.
+        raise HTTPException(status_code=503, detail="Band lineage contract is not installed") from None
 
     response = PublicBandTraceResponse(
         generated_at=generated_at,
         greenhouse_id=greenhouse_id,
-        latest=PublicBandTraceLatest.model_validate(dict(latest)) if latest else None,
+        latest=PublicBandTraceLatest.model_validate(_coerce_jsonb(dict(latest), "lineage")) if latest else None,
         summary=PublicBandTraceSummary(
             hours=hours,
             sample_count=summary["sample_count"] if summary else 0,
-            crop_temp_compliance_pct=_to_float(summary["crop_temp_compliance_pct"]) if summary else None,
-            crop_vpd_compliance_pct=_to_float(summary["crop_vpd_compliance_pct"]) if summary else None,
-            crop_both_compliance_pct=_to_float(summary["crop_both_compliance_pct"]) if summary else None,
-            fw_temp_compliance_pct=_to_float(summary["fw_temp_compliance_pct"]) if summary else None,
-            fw_vpd_compliance_pct=_to_float(summary["fw_vpd_compliance_pct"]) if summary else None,
-            fw_both_compliance_pct=_to_float(summary["fw_both_compliance_pct"]) if summary else None,
-            readback_match_pct=_to_float(summary["readback_match_pct"]) if summary else None,
-            ok_trace_pct=_to_float(summary["ok_trace_pct"]) if summary else None,
+            **{
+                f"{basis}_{axis}_eligible_samples": summary[f"{basis}_{axis}_eligible_samples"] if summary else 0
+                for basis in ("reconstructed", "desired")
+                for axis in ("temp", "vpd", "both")
+            },
+            reconstructed_temp_compliance_pct=_to_float(summary["reconstructed_temp_compliance_pct"])
+            if summary
+            else None,
+            reconstructed_vpd_compliance_pct=_to_float(summary["reconstructed_vpd_compliance_pct"])
+            if summary
+            else None,
+            reconstructed_both_compliance_pct=_to_float(summary["reconstructed_both_compliance_pct"])
+            if summary
+            else None,
+            desired_temp_compliance_pct=_to_float(summary["desired_temp_compliance_pct"]) if summary else None,
+            desired_vpd_compliance_pct=_to_float(summary["desired_vpd_compliance_pct"]) if summary else None,
+            desired_both_compliance_pct=_to_float(summary["desired_both_compliance_pct"]) if summary else None,
         ),
     )
     response = PublicBandTraceResponse.model_validate(redact_public_data(response.model_dump()))
@@ -3712,8 +3733,16 @@ async def public_home_metrics(greenhouse_id: str = DEFAULT_GREENHOUSE):
             """,
             greenhouse_id,
         )
-        score_rows = await _fetch_planner_scorecard(conn)
+        score_day = generated_at.astimezone(ZoneInfo("America/Denver")).date()
+        score_rows = await _fetch_planner_scorecard(conn, score_day)
+        observed = await read_observed_minute_evidence(conn, score_day, greenhouse_id)
         scorecard = {r["metric"]: _to_float(r["value"]) for r in score_rows}
+        climate_evidence = ScorecardResponse.model_validate(
+            {
+                **{k: v for k, v in scorecard.items() if k in ScorecardResponse.metric_names()},
+                "observed_minute_evidence": observed,
+            }
+        ).climate_evidence()
         water_resource = await _fetchrow_optional(
             conn,
             f"""
@@ -3886,7 +3915,8 @@ async def public_home_metrics(greenhouse_id: str = DEFAULT_GREENHOUSE):
         ),
         planner_score_resource_weight_pct=scorecard.get("planner_score_resource_weight_pct") or 0,
         planner_score_resource_terms_available=scorecard.get("resource_terms_available") == 1.0,
-        compliance_pct_today=scorecard.get("compliance_pct"),
+        compliance_pct_today=climate_evidence["both_axis_compliance_pct"],
+        observed_minute_evidence=observed,
         cost_today_usd=(
             scorecard.get("cost_total")
             if water_resource
@@ -3943,8 +3973,16 @@ async def public_evidence_snapshot(greenhouse_id: str = DEFAULT_GREENHOUSE):
     """Crawler-friendly public proof snapshot for evidence subpages."""
     async with pool.acquire() as conn:
         generated_at = await conn.fetchval("SELECT now()")
-        score_rows = await _fetch_planner_scorecard(conn)
+        score_day = generated_at.astimezone(ZoneInfo("America/Denver")).date()
+        score_rows = await _fetch_planner_scorecard(conn, score_day)
+        observed = await read_observed_minute_evidence(conn, score_day, greenhouse_id)
         scorecard = {r["metric"]: _to_float(r["value"]) for r in score_rows}
+        climate_evidence = ScorecardResponse.model_validate(
+            {
+                **{k: v for k, v in scorecard.items() if k in ScorecardResponse.metric_names()},
+                "observed_minute_evidence": observed,
+            }
+        ).climate_evidence()
         water_resource = await _fetchrow_optional(
             conn,
             f"""
@@ -4146,11 +4184,7 @@ async def public_evidence_snapshot(greenhouse_id: str = DEFAULT_GREENHOUSE):
         ),
         "planner_score_resource_weight_pct": scorecard.get("planner_score_resource_weight_pct") or 0,
         "planner_score_resource_terms_available": scorecard.get("resource_terms_available") == 1.0,
-        "both_axis_compliance_pct": scorecard.get("compliance_pct"),
-        "graded_compliance_attributable_pct": scorecard.get("compliance_v2_attributable_pct"),
-        "temp_compliance_pct": scorecard.get("temp_compliance_pct"),
-        "vpd_compliance_pct": scorecard.get("vpd_compliance_pct"),
-        "stress_axis_hours": scorecard.get("total_stress_h"),
+        **climate_evidence,
         "active_plan_id": active_plan_id,
         "active_plan_status": active_plan_status,
         "last_plan_id": last_plan["plan_id"] if last_plan else None,
@@ -4188,17 +4222,7 @@ async def public_evidence_snapshot(greenhouse_id: str = DEFAULT_GREENHOUSE):
             ),
             "planner_score_resource_weight_pct": scorecard.get("planner_score_resource_weight_pct") or 0,
             "resource_terms_available": scorecard.get("resource_terms_available") == 1.0,
-            "both_axis_compliance_pct": scorecard.get("compliance_pct"),
-            "graded_compliance_attributable_pct": scorecard.get("compliance_v2_attributable_pct"),
-            "temp_compliance_pct": scorecard.get("temp_compliance_pct"),
-            "vpd_compliance_pct": scorecard.get("vpd_compliance_pct"),
-            "stress_axis_hours": scorecard.get("total_stress_h"),
-            "stress_breakdown": {
-                "heat_h": scorecard.get("heat_stress_h"),
-                "cold_h": scorecard.get("cold_stress_h"),
-                "vpd_high_h": scorecard.get("vpd_high_stress_h"),
-                "vpd_low_h": scorecard.get("vpd_low_stress_h"),
-            },
+            **climate_evidence,
             "last_validated_plan": dict(last_validated_plan) if last_validated_plan else None,
             "last_plan": dict(last_plan) if last_plan else None,
             "latest_lesson": (

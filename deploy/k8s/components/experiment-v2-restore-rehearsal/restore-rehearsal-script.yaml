@@ -76,7 +76,7 @@ data:
     # in the live forward migration.
     initdb -D "${PGDATA}" --username=verdify --auth-local=trust --auth-host=reject >/dev/null
     pg_ctl -D "${PGDATA}" \
-      -o "-k ${PGHOST} -p ${PGPORT} -c listen_addresses=''" \
+      -o "-k ${PGHOST} -p ${PGPORT} -c listen_addresses='' -c shared_preload_libraries=timescaledb -c timescaledb.telemetry_level=off" \
       -w start >/dev/null
     cleanup() {
       pg_ctl -D "${PGDATA}" -m fast -w stop >/dev/null 2>&1 || true
@@ -218,9 +218,16 @@ data:
     # production (all internal chunks are datdba-owned there). Otherwise those
     # chunks are owned by the connecting superuser and migration 217's owner
     # normalization tries a direct ALTER TABLE on them (unsupported on chunks).
-    pg_restore --exit-on-error --role verdify \
+    # BEGIN RESTORE_ERROR_REDACTION
+    # A restore error may echo SQL/function bodies or row values. Retain raw
+    # output only in private tmp files; never publish it in the Job log.
+    if ! pg_restore --exit-on-error --role verdify \
       --use-list=/tmp/restore.toc.filtered \
-      --dbname="${PGDATABASE}" "${dump_path}"
+      --dbname="${PGDATABASE}" "${dump_path}" >/tmp/restore.stdout 2>/tmp/restore.stderr; then
+      echo "[restore-rehearsal] FATAL: pg_restore failed; raw database output withheld" >&2
+      exit 1
+    fi
+    # END RESTORE_ERROR_REDACTION
     psql -X -v ON_ERROR_STOP=1 -d "${PGDATABASE}" \
       -c 'SELECT timescaledb_post_restore()' >/dev/null
     matviews_remaining="$(psql -X -At -d "${PGDATABASE}" \
@@ -250,6 +257,38 @@ data:
       fi
     done
     echo "[restore-rehearsal] recent production dump restored; all matviews refreshed (rounds=${refresh_rounds})"
+
+    # BEGIN C0_CATALOG_INSPECTION
+    # An old receipt will often differ after restore (database identity, role
+    # OIDs/settings). Observe that difference; do not recapture or rerun 217.
+    c0_inventory=0
+    for candidate in /work/db/migrations/24[1-7]*.sql; do
+      if [ -f "${candidate}" ]; then c0_inventory=1; fi
+    done
+    if [[ "${c0_inventory}" == "1" ]]; then
+      if ! (cd /work/c0-inspection && sha256sum -c sql.sha256 >/dev/null 2>&1); then
+        echo "[restore-rehearsal] FATAL: source-bound C0 inspection SQL is missing or changed" >&2
+        exit 1
+      fi
+      echo "[restore-rehearsal] C0 catalog observation only; transition_authorized=false receipt_refresh_allowed=false"
+      sed -n '1,20p' /work/c0-inspection/source.sha256
+      for login in verdify_api_runtime_login verdify_ingestor_runtime_login; do
+        echo "[restore-rehearsal] C0_CATALOG_BEGIN ${login}"
+        if ! psql -X -qAt -v ON_ERROR_STOP=1 -d "${PGDATABASE}" \
+          -f "/work/c0-inspection/${login}.sql" > "/tmp/${login}.catalog.json" 2>/tmp/c0-inspection.stderr; then
+          echo "[restore-rehearsal] FATAL: C0 catalog inspection failed; raw database output withheld" >&2
+          exit 1
+        fi
+        cat "/tmp/${login}.catalog.json"
+        sha256sum "/tmp/${login}.catalog.json"
+        echo "[restore-rehearsal] C0_CATALOG_END ${login}"
+      done
+      echo "[restore-rehearsal] HOLD: restored catalog inspection complete; no C0 migration or receipt refresh executed; reviewed target contract still required" >&2
+      # A diagnostic artifact is not a successful qualification hook and must
+      # not let later PreSync migration/workload rollout proceed automatically.
+      exit 1
+    fi
+    # END C0_CATALOG_INSPECTION
 
     candidate_object_snapshot() {
       psql -X -v ON_ERROR_STOP=1 -At -d "${PGDATABASE}" <<'SQL'

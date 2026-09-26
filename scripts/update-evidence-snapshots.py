@@ -13,9 +13,12 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+from pydantic import ValidationError
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 from verdify_public.output_policy import redact_non_public_crop_references  # noqa: E402
+from verdify_schemas.observed_minutes import ObservedMinuteEvidence  # noqa: E402
 
 DEFAULT_API_URL = "https://api.verdify.ai/api/v1/public/evidence-snapshot"
 DEFAULT_VAULT = Path("/mnt/iris/verdify-vault/website")
@@ -110,6 +113,41 @@ def fetch_snapshot(url: str) -> dict:
         return json.loads(response.read().decode("utf-8"))
 
 
+def observed_minute_block(payload, expected_day: str | None = None) -> str:
+    """Revalidate even cached/older public JSON; never fall back to legacy credit."""
+    try:
+        evidence = ObservedMinuteEvidence.model_validate(payload)
+        if (
+            evidence.availability == "available"
+            and expected_day is not None
+            and evidence.day.isoformat() != expected_day
+        ):
+            raise ValueError("snapshot date mismatch")
+    except (ValidationError, TypeError, ValueError):
+        evidence = ObservedMinuteEvidence(unavailable_reason="invalid_diagnostic")
+    if evidence.availability != "available":
+        return '<div class="data-row"><strong>Observed-minute diagnostic</strong><span>Unavailable</span><p>No validated captured diagnostic in this snapshot; missing evidence is not zero or perfect.</p></div>'
+    d = evidence.diagnostic
+    rows = []
+    for label, axis in (("Temperature", d.axes.temp), ("VPD", d.axes.vpd), ("Both axes", d.joint)):
+        rows.append(
+            f"{label}: {esc(fmt_number(axis.in_band_pct, 1, '%'))} in band; "
+            f"{axis.in_band_minutes}/{axis.eligible_minutes} eligible slots in band; "
+            f"{axis.eligible_minutes}/{d.expected_minutes} evaluated slots eligible"
+        )
+    return (
+        '<div class="data-row"><strong>Observed-minute diagnostic</strong>'
+        f"<span>{' · '.join(rows)}</span><p>House-average UTC-minute slots against "
+        "provenance-unqualified setpoint-log events. Not continuous exposure, fixed-panel "
+        "crop compliance, physical proof or an experiment endpoint. "
+        f"Evaluated {esc(d.window_start.isoformat())} to {esc(d.window_end.isoformat())}; "
+        f"captured revision {evidence.revision_id} at {esc(evidence.recorded_at.isoformat())}. "
+        "Snapshot freshness is not assessed; coverage refers only to this evaluated window. "
+        f"Definition {esc(d.definition)}; calculation SHA-256 {esc(d.calculation_source_sha256)}; "
+        f"input SHA-256 {esc(d.input_sha256)}.</p></div>"
+    )
+
+
 def planning_block(data: dict) -> str:
     pq = data.get("planning_quality") or {}
     score_date = fmt_score_date(data)
@@ -117,6 +155,12 @@ def planning_block(data: dict) -> str:
     last_plan = pq.get("last_plan") or {}
     latest_lesson = pq.get("latest_lesson") or {}
     stress = pq.get("stress_breakdown") or {}
+    semantics = pq.get("metric_semantics") or {}
+    binary_verified = semantics.get("contract_version") == 2
+    # Also fail closed with an older public API during publisher-first rollout.
+    binary = pq if binary_verified else {}
+    if not binary_verified:
+        stress = {}
 
     latest_lesson_span = "No validated lesson in snapshot"
     latest_lesson_text = "No latest lesson was present in the public evidence snapshot."
@@ -145,7 +189,7 @@ def planning_block(data: dict) -> str:
     graded_attributable = pq.get("graded_compliance_attributable_pct")
     graded_card = (
         f'\n  <div class="metric-card"><strong>{esc(fmt_number(graded_attributable, 1, "%"))}</strong>'
-        "<p>Graded compliance (controller-attributable)</p></div>"
+        "<p>Graded controller credit (diagnostic, not binary compliance)</p></div>"
         if graded_attributable is not None
         else ""
     )
@@ -154,14 +198,16 @@ def planning_block(data: dict) -> str:
 
 <div class="metric-grid">
   <div class="metric-card"><strong>{esc(fmt_number(pq.get("planner_score_today"), 1))}</strong><p>Today's planner score</p></div>
-  <div class="metric-card"><strong>{esc(fmt_number(pq.get("both_axis_compliance_pct"), 1, "%"))}</strong><p>Both-axis compliance (binary, house)</p></div>{graded_card}
-  <div class="metric-card"><strong>{esc(fmt_number(pq.get("temp_compliance_pct"), 1, "%"))}</strong><p>Temperature compliance</p></div>
-  <div class="metric-card"><strong>{esc(fmt_number(pq.get("vpd_compliance_pct"), 1, "%"))}</strong><p>VPD compliance</p></div>
-  <div class="metric-card"><strong>{esc(fmt_number(pq.get("stress_axis_hours"), 2, "h"))}</strong><p>Stress-axis hours</p></div>
+  <div class="metric-card"><strong>{esc(fmt_number(binary.get("both_axis_compliance_pct"), 1, "%"))}</strong><p>Both-axis compliance (binary reading fraction, house average)</p></div>{graded_card}
+  <div class="metric-card"><strong>{esc(fmt_number(binary.get("temp_compliance_pct"), 1, "%"))}</strong><p>Temperature binary reading fraction</p></div>
+  <div class="metric-card"><strong>{esc(fmt_number(binary.get("vpd_compliance_pct"), 1, "%"))}</strong><p>VPD binary reading fraction</p></div>
+  <div class="metric-card"><strong>{esc(fmt_number(binary.get("stress_axis_hours"), 2, "h"))}</strong><p>Nominal binary stress-axis hours</p></div>
   <div class="metric-card"><strong>{esc(plan_day(last_validated_plan_id))}</strong><p>Last validated plan</p></div>
 </div>
 
 <div class="data-table">
+  {observed_minute_block(pq.get("observed_minute_evidence"), score_date)}
+  <div class="data-row"><strong>Measurement basis</strong><span>{"Contract 2" if binary_verified else "Unverified contract; binary metrics withheld"}</span><p>Legacy house-average readings against historical desired setpoints; not duration-weighted, fixed-panel crop compliance or confirmed firmware consumption. Coverage is unverified and no center probe is measured. Stress assumes one minute per scored reading.</p></div>
   <div class="data-row"><strong>Last validated plan</strong><span>{esc(last_validated_plan_id)}</span><p>Validated {esc(validated_at)}{esc(outcome_text)}.</p></div>
   <div class="data-row"><strong>Latest plan status</strong><span>{esc(last_plan_id)} · {esc(last_plan_status)}</span><p>Written {esc(last_plan_created)}; age {esc(last_plan_age)} at snapshot time.</p></div>
   <div class="data-row"><strong>Stress breakdown</strong><span>heat {esc(fmt_number(stress.get("heat_h"), 2, "h"))} · cold {esc(fmt_number(stress.get("cold_h"), 2, "h"))} · VPD-high {esc(fmt_number(stress.get("vpd_high_h"), 2, "h"))} · VPD-low {esc(fmt_number(stress.get("vpd_low_h"), 2, "h"))}</span><p>Total stress-axis hours can exceed wall-clock hours because temperature and VPD are independent stress axes.</p></div>

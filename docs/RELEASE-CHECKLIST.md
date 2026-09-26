@@ -106,8 +106,10 @@ prod `argocd app sync`, device-VLAN actions, destructive prod DB work, and outwa
 - [ ] Regenerate the ConfigMaps: `scripts/gen-grafana-dashboard-cms.py` →
       `deploy/k8s/components/grafana/generated/dashboards-cm-*.yaml`.
 - [ ] `make grafana-brand-check` (and `-live` when appropriate) for embed styling.
-- [ ] Prefer the **device-truth** source (`setpoint_snapshot`) over DB-derived (`fn_band_timeline`)
-      for band/compliance panels (audit D11).
+- [ ] Separate reconstructed/desired bands from database snapshots and actual
+      consumed observations. `setpoint_snapshot` alone is not raw device truth;
+      require fresh source/runtime/connection lineage for any consumed-band claim
+      ([current contract](band-traceability-contract.md), #424).
 - [ ] Verify render locally / on `graphs.verdify.ai` after the prod sync — type-checks don't catch
       visual regressions.
 

@@ -21,9 +21,10 @@ from datetime import date as DateType
 from decimal import Decimal
 from typing import Any, Literal
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, computed_field
 
 from .lessons import LessonConfidence
+from .observed_minutes import ObservedMinuteEvidence
 from .telemetry import DliEvidence
 
 
@@ -97,13 +98,18 @@ class ScorecardResponse(BaseModel):
     via aliases; downstream consumers (Iris prompt, daily-plan renderer,
     Grafana panels) keep reading the same shape.
 
-    Authoritative metric list is `db/migrations/096-scorecard-live-resync.sql`
-    and the matching `db/schema.sql` dump.
+    Contract 2 is defined by migration 241. Earlier functions mislabeled
+    graded controller credit as binary compliance; do not infer semantics
+    from those unversioned field names.
     """
 
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
+    # Separate typed snapshot, never a scalar scorecard metric or reward term.
+    observed_minute_evidence: ObservedMinuteEvidence = Field(default_factory=ObservedMinuteEvidence)
+
     # ── Score + compliance ──────────────────────────────────────────
+    scorecard_contract_version: float | None = None
     planner_score: float | None = None
     planner_score_resource_weight_pct: float | None = None
     resource_terms_available: float | None = None
@@ -144,7 +150,7 @@ class ScorecardResponse(BaseModel):
     vpd_high_stress_h: float | None = None
     vpd_low_stress_h: float | None = None
 
-    # ── Graded stress hours (deficit integral; subsumes binary paths) ─────
+    # ── Graded stress hours (deficit integral; not binary duration) ─────
     graded_heat_stress_h: float | None = None
     graded_cold_stress_h: float | None = None
     graded_vpd_high_stress_h: float | None = None
@@ -180,6 +186,47 @@ class ScorecardResponse(BaseModel):
     avg_stress_7d: float | None = Field(default=None, alias="7d_avg_stress")
     avg_dp_risk_7d: float | None = Field(default=None, alias="7d_avg_dp_risk")
 
+    @computed_field
+    @property
+    def metric_semantics(self) -> dict[str, Any]:
+        """Explicit limitations, also serialized for API and MCP readers."""
+        return {
+            "contract_version": self.scorecard_contract_version,
+            "binary_fields_verified": self.scorecard_contract_version == 2,
+            "binary_basis": "legacy_house_average_scored_reading_fraction",
+            "target_basis": "historical_desired_setpoints_not_confirmed_firmware_consumption",
+            "stress_basis": "binary_nominal_one_minute_per_scored_reading_axis_sum",
+            "graded_basis": "legacy_controller_credit_not_physical_compliance",
+            "coverage_status": "unverified",
+            "historical_missing_evidence_may_be_zero": True,
+            "fixed_sensor_panel": False,
+            "center_probe_measured": False,
+            "duration_weighted": False,
+            "crop_outcome_eligible": False,
+        }
+
+    def climate_evidence(self) -> dict[str, Any]:
+        """Public projection fails closed during a mixed-version rollout."""
+        verified = self.scorecard_contract_version == 2
+        return {
+            "metric_semantics": self.metric_semantics,
+            "observed_minute_evidence": self.observed_minute_evidence.model_dump(mode="json"),
+            "both_axis_compliance_pct": self.compliance_pct if verified else None,
+            "temp_compliance_pct": self.temp_compliance_pct if verified else None,
+            "vpd_compliance_pct": self.vpd_compliance_pct if verified else None,
+            "stress_axis_hours": self.total_stress_h if verified else None,
+            "stress_breakdown": {
+                "heat_h": self.heat_stress_h if verified else None,
+                "cold_h": self.cold_stress_h if verified else None,
+                "vpd_high_h": self.vpd_high_stress_h if verified else None,
+                "vpd_low_h": self.vpd_low_stress_h if verified else None,
+            },
+            "graded_compliance_attributable_pct": self.compliance_v2_attributable_pct,
+            "graded_compliance_raw_pct": self.compliance_v2_raw_pct,
+            "graded_temp_compliance_pct": self.graded_temp_compliance_pct,
+            "graded_vpd_compliance_pct": self.graded_vpd_compliance_pct,
+        }
+
     @classmethod
     def from_metric_rows(cls, rows: Iterable[Any]) -> ScorecardResponse:
         """Build from `fn_planner_scorecard()` rows.
@@ -202,6 +249,8 @@ class ScorecardResponse(BaseModel):
         """Wire-format metric names this schema recognizes (with 7d_ aliases)."""
         names: set[str] = set()
         for field_name, field in cls.model_fields.items():
+            if field_name == "observed_minute_evidence":
+                continue
             names.add(field.alias or field_name)
         return frozenset(names)
 

@@ -20,6 +20,17 @@ set -eu
 export PGPASSWORD="$DB_PASS"
 PSQL="psql -h ${DB_HOST} -p ${DB_PORT:-5432} -U ${DB_USER} -d ${DB_NAME} -q"
 
+# The C0 profile requires an already-qualified predecessor, even on a fresh DB.
+# Delegate before schema replay/repair or ledger bootstrap can mutate anything.
+# Keep the existing ledger opt-in; never turn on migration delivery implicitly.
+if [ "${VERDIFY_MIGRATE_LEDGER:-0}" = "1" ]; then
+  for c0_candidate in "${VERDIFY_MIGRATIONS_DIR:-/db/migrations}"/24[1-7]*.sql; do
+    [ -f "$c0_candidate" ] || continue
+    echo "[migrate] C0 inventory detected — qualified atomic delivery required."
+    exec /usr/local/bin/apply-migrations.sh ${VERDIFY_MIGRATE_PLAN:+--plan}
+  done
+fi
+
 # Opt-in ledgered numbered-migration delivery (#583, audit §8.7). DEFAULT
 # BEHAVIOR UNCHANGED: until the GitOps Job sets VERDIFY_MIGRATE_LEDGER=1
 # (Lane F rollout step, not this repo change), a populated DB stays on the

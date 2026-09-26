@@ -307,7 +307,7 @@ data:
             "type": "grafana-postgresql-datasource",
             "uid": "verdify-tsdb"
           },
-          "description": "Indoor temperature against the green firmware compliance band, with only the heat entry and fan/cooling entry thresholds rendered. Crop/planner provenance, dispatcher math, cfg readbacks, and padding details remain in the band traceability SQL contract.",
+          "description": "Green fill: database reconstruction of the current house-anchor band at each timestamp (fn_band_timeline projected_*; temperature in \u00b0F, VPD in kPa). Not frozen historical crop targets, crop-outcome compliance, or observed firmware consumption. Cfg database snapshots cannot establish consumption; source-authenticated six-series qualification remains required. Indoor/outdoor observations and forecasts are separate series.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -514,7 +514,7 @@ data:
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "Compliant High"
+                  "options": "Reconstructed High"
                 },
                 "properties": [
                   {
@@ -530,7 +530,7 @@ data:
                   },
                   {
                     "id": "custom.fillBelowTo",
-                    "value": "Compliant Low"
+                    "value": "Reconstructed Low"
                   },
                   {
                     "id": "custom.fillOpacity",
@@ -539,8 +539,8 @@ data:
                   {
                     "id": "custom.hideFrom",
                     "value": {
-                      "legend": true,
-                      "tooltip": true,
+                      "legend": false,
+                      "tooltip": false,
                       "viz": false
                     }
                   },
@@ -553,7 +553,7 @@ data:
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "Compliant Low"
+                  "options": "Reconstructed Low"
                 },
                 "properties": [
                   {
@@ -570,8 +570,8 @@ data:
                   {
                     "id": "custom.hideFrom",
                     "value": {
-                      "legend": true,
-                      "tooltip": true,
+                      "legend": false,
+                      "tooltip": false,
                       "viz": false
                     }
                   },
@@ -928,7 +928,7 @@ data:
               "editorMode": "code",
               "format": "table",
               "rawQuery": true,
-              "rawSql": "SELECT ts AS time,\n    projected_temp_low::float AS \"Compliant Low\",\n    projected_temp_high::float AS \"Compliant High\"\nFROM fn_band_timeline($__timeFrom(), $__timeTo(), interval '30 minutes', 'vallery')\nORDER BY ts",
+              "rawSql": "SELECT ts AS time,\n    projected_temp_low::float AS \"Reconstructed Low\",\n    projected_temp_high::float AS \"Reconstructed High\"\nFROM fn_band_timeline($__timeFrom(), $__timeTo(), interval '30 minutes', 'vallery')\nORDER BY ts",
               "refId": "D"
             },
             {
@@ -1094,7 +1094,7 @@ data:
               }
             }
           ],
-          "title": "Temperature Compliance Band",
+          "title": "Temperature Reconstructed House Band",
           "type": "timeseries",
           "transparent": true
         },
@@ -1325,7 +1325,7 @@ data:
         {
           "id": 937,
           "type": "timeseries",
-          "title": "Temperature Compliance Band",
+          "title": "Temperature Reconstructed House Band",
           "gridPos": {
             "h": 12,
             "w": 24,
@@ -1363,7 +1363,7 @@ data:
               "editorMode": "code",
               "format": "table",
               "rawQuery": true,
-              "rawSql": "SELECT ts AS time,\n    projected_temp_low::float AS \"Compliant Low\",\n    projected_temp_high::float AS \"Compliant High\"\nFROM fn_band_timeline($__timeFrom(), $__timeTo(), interval '30 minutes', 'vallery')\nORDER BY ts",
+              "rawSql": "SELECT ts AS time,\n    projected_temp_low::float AS \"Reconstructed Low\",\n    projected_temp_high::float AS \"Reconstructed High\"\nFROM fn_band_timeline($__timeFrom(), $__timeTo(), interval '30 minutes', 'vallery')\nORDER BY ts",
               "refId": "C"
             },
             {
@@ -1807,7 +1807,7 @@ data:
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "Compliant High"
+                  "options": "Reconstructed High"
                 },
                 "properties": [
                   {
@@ -1823,7 +1823,7 @@ data:
                   },
                   {
                     "id": "custom.fillBelowTo",
-                    "value": "Compliant Low"
+                    "value": "Reconstructed Low"
                   },
                   {
                     "id": "custom.fillOpacity",
@@ -1832,8 +1832,8 @@ data:
                   {
                     "id": "custom.hideFrom",
                     "value": {
-                      "legend": true,
-                      "tooltip": true,
+                      "legend": false,
+                      "tooltip": false,
                       "viz": false
                     }
                   },
@@ -1846,7 +1846,7 @@ data:
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "Compliant Low"
+                  "options": "Reconstructed Low"
                 },
                 "properties": [
                   {
@@ -1863,8 +1863,8 @@ data:
                   {
                     "id": "custom.hideFrom",
                     "value": {
-                      "legend": true,
-                      "tooltip": true,
+                      "legend": false,
+                      "tooltip": false,
                       "viz": false
                     }
                   },
@@ -2121,7 +2121,7 @@ data:
               "sort": "desc"
             }
           },
-          "description": "Indoor temperature against the green firmware compliance band, with only the heat entry and fan/cooling entry thresholds rendered. Crop/planner provenance, dispatcher math, cfg readbacks, and padding details remain in the band traceability SQL contract.",
+          "description": "Green fill: database reconstruction of the current house-anchor band at each timestamp (fn_band_timeline projected_*; temperature in \u00b0F, VPD in kPa). Not frozen historical crop targets, crop-outcome compliance, or observed firmware consumption. Cfg database snapshots cannot establish consumption; source-authenticated six-series qualification remains required. Indoor/outdoor observations and forecasts are separate series.",
           "transparent": true
         },
         {
@@ -2910,7 +2910,7 @@ data:
         {
           "id": 920,
           "type": "timeseries",
-          "title": "Temperature Compliance Band",
+          "title": "Temperature Reconstructed House Band",
           "gridPos": {
             "h": 10,
             "w": 24,
@@ -2948,7 +2948,7 @@ data:
               "editorMode": "code",
               "format": "table",
               "rawQuery": true,
-              "rawSql": "SELECT ts AS time,\n    projected_temp_low::float AS \"Compliant Low\",\n    projected_temp_high::float AS \"Compliant High\"\nFROM fn_band_timeline($__timeFrom(), $__timeTo(), interval '30 minutes', 'vallery')\nORDER BY ts",
+              "rawSql": "SELECT ts AS time,\n    projected_temp_low::float AS \"Reconstructed Low\",\n    projected_temp_high::float AS \"Reconstructed High\"\nFROM fn_band_timeline($__timeFrom(), $__timeTo(), interval '30 minutes', 'vallery')\nORDER BY ts",
               "refId": "C"
             },
             {
@@ -3392,7 +3392,7 @@ data:
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "Compliant High"
+                  "options": "Reconstructed High"
                 },
                 "properties": [
                   {
@@ -3408,7 +3408,7 @@ data:
                   },
                   {
                     "id": "custom.fillBelowTo",
-                    "value": "Compliant Low"
+                    "value": "Reconstructed Low"
                   },
                   {
                     "id": "custom.fillOpacity",
@@ -3417,8 +3417,8 @@ data:
                   {
                     "id": "custom.hideFrom",
                     "value": {
-                      "legend": true,
-                      "tooltip": true,
+                      "legend": false,
+                      "tooltip": false,
                       "viz": false
                     }
                   },
@@ -3431,7 +3431,7 @@ data:
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "Compliant Low"
+                  "options": "Reconstructed Low"
                 },
                 "properties": [
                   {
@@ -3448,8 +3448,8 @@ data:
                   {
                     "id": "custom.hideFrom",
                     "value": {
-                      "legend": true,
-                      "tooltip": true,
+                      "legend": false,
+                      "tooltip": false,
                       "viz": false
                     }
                   },
@@ -3706,7 +3706,7 @@ data:
               "sort": "desc"
             }
           },
-          "description": "Indoor temperature against the green firmware compliance band, with only the heat entry and fan/cooling entry thresholds rendered. Crop/planner provenance, dispatcher math, cfg readbacks, and padding details remain in the band traceability SQL contract.",
+          "description": "Green fill: database reconstruction of the current house-anchor band at each timestamp (fn_band_timeline projected_*; temperature in \u00b0F, VPD in kPa). Not frozen historical crop targets, crop-outcome compliance, or observed firmware consumption. Cfg database snapshots cannot establish consumption; source-authenticated six-series qualification remains required. Indoor/outdoor observations and forecasts are separate series.",
           "transparent": true
         },
         {
@@ -4185,7 +4185,7 @@ data:
       "editable": true,
       "panels": [
         {
-          "description": "Indoor VPD against the green firmware compliance band, with only the dehumidify/fan entry and fog entry thresholds rendered. Crop/planner provenance, dispatcher math, cfg readbacks, and padding details remain in the band traceability SQL contract.",
+          "description": "Green fill: database reconstruction of the current house-anchor band at each timestamp (fn_band_timeline projected_*; temperature in \u00b0F, VPD in kPa). Not frozen historical crop targets, crop-outcome compliance, or observed firmware consumption. Cfg database snapshots cannot establish consumption; source-authenticated six-series qualification remains required. Indoor/outdoor observations and forecasts are separate series.",
           "fieldConfig": {
             "defaults": {
               "custom": {
@@ -4289,7 +4289,7 @@ data:
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "Compliant High"
+                  "options": "Reconstructed High"
                 },
                 "properties": [
                   {
@@ -4305,7 +4305,7 @@ data:
                   },
                   {
                     "id": "custom.fillBelowTo",
-                    "value": "Compliant Low"
+                    "value": "Reconstructed Low"
                   },
                   {
                     "id": "custom.fillOpacity",
@@ -4314,8 +4314,8 @@ data:
                   {
                     "id": "custom.hideFrom",
                     "value": {
-                      "legend": true,
-                      "tooltip": true,
+                      "legend": false,
+                      "tooltip": false,
                       "viz": false
                     }
                   },
@@ -4328,7 +4328,7 @@ data:
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "Compliant Low"
+                  "options": "Reconstructed Low"
                 },
                 "properties": [
                   {
@@ -4345,8 +4345,8 @@ data:
                   {
                     "id": "custom.hideFrom",
                     "value": {
-                      "legend": true,
-                      "tooltip": true,
+                      "legend": false,
+                      "tooltip": false,
                       "viz": false
                     }
                   },
@@ -4595,7 +4595,7 @@ data:
               "editorMode": "code",
               "format": "table",
               "rawQuery": true,
-              "rawSql": "SELECT ts AS time,\n    projected_vpd_low::float AS \"Compliant Low\",\n    projected_vpd_high::float AS \"Compliant High\"\nFROM fn_band_timeline($__timeFrom(), $__timeTo(), interval '30 minutes', 'vallery')\nORDER BY ts",
+              "rawSql": "SELECT ts AS time,\n    projected_vpd_low::float AS \"Reconstructed Low\",\n    projected_vpd_high::float AS \"Reconstructed High\"\nFROM fn_band_timeline($__timeFrom(), $__timeTo(), interval '30 minutes', 'vallery')\nORDER BY ts",
               "refId": "C"
             },
             {
@@ -4722,7 +4722,7 @@ data:
               }
             }
           ],
-          "title": "VPD Compliance Band",
+          "title": "VPD Reconstructed House Band",
           "type": "timeseries",
           "transparent": true
         },
@@ -4783,7 +4783,7 @@ data:
             "type": "grafana-postgresql-datasource",
             "uid": "verdify-tsdb"
           },
-          "description": "Indoor VPD against the green firmware compliance band, with only the dehumidify/fan entry and fog entry thresholds rendered. Crop/planner provenance, dispatcher math, cfg readbacks, and padding details remain in the band traceability SQL contract.",
+          "description": "Green fill: database reconstruction of the current house-anchor band at each timestamp (fn_band_timeline projected_*; temperature in \u00b0F, VPD in kPa). Not frozen historical crop targets, crop-outcome compliance, or observed firmware consumption. Cfg database snapshots cannot establish consumption; source-authenticated six-series qualification remains required. Indoor/outdoor observations and forecasts are separate series.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -4894,7 +4894,7 @@ data:
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "Compliant High"
+                  "options": "Reconstructed High"
                 },
                 "properties": [
                   {
@@ -4910,7 +4910,7 @@ data:
                   },
                   {
                     "id": "custom.fillBelowTo",
-                    "value": "Compliant Low"
+                    "value": "Reconstructed Low"
                   },
                   {
                     "id": "custom.fillOpacity",
@@ -4919,8 +4919,8 @@ data:
                   {
                     "id": "custom.hideFrom",
                     "value": {
-                      "legend": true,
-                      "tooltip": true,
+                      "legend": false,
+                      "tooltip": false,
                       "viz": false
                     }
                   },
@@ -4933,7 +4933,7 @@ data:
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "Compliant Low"
+                  "options": "Reconstructed Low"
                 },
                 "properties": [
                   {
@@ -4950,8 +4950,8 @@ data:
                   {
                     "id": "custom.hideFrom",
                     "value": {
-                      "legend": true,
-                      "tooltip": true,
+                      "legend": false,
+                      "tooltip": false,
                       "viz": false
                     }
                   },
@@ -5262,7 +5262,7 @@ data:
               "editorMode": "code",
               "format": "table",
               "rawQuery": true,
-              "rawSql": "SELECT ts AS time,\n    projected_vpd_low::float AS \"Compliant Low\",\n    projected_vpd_high::float AS \"Compliant High\"\nFROM fn_band_timeline($__timeFrom(), $__timeTo(), interval '30 minutes', 'vallery')\nORDER BY ts",
+              "rawSql": "SELECT ts AS time,\n    projected_vpd_low::float AS \"Reconstructed Low\",\n    projected_vpd_high::float AS \"Reconstructed High\"\nFROM fn_band_timeline($__timeFrom(), $__timeTo(), interval '30 minutes', 'vallery')\nORDER BY ts",
               "refId": "D"
             },
             {
@@ -5378,7 +5378,7 @@ data:
               }
             }
           ],
-          "title": "VPD Compliance Band",
+          "title": "VPD Reconstructed House Band",
           "type": "timeseries",
           "transparent": true
         },
@@ -7515,7 +7515,7 @@ data:
           "id": 2,
           "type": "stat",
           "title": "Planner Score Today",
-          "description": "Composite score from compliance and cost pressure.",
+          "description": "Historical graded controller credit; not binary physical compliance. Resource cost contributes 20% only when resource_terms_available=1; otherwise it is excluded.",
           "datasource": {
             "type": "grafana-postgresql-datasource",
             "uid": "verdify-tsdb"
@@ -7642,7 +7642,7 @@ data:
         {
           "id": 4,
           "type": "stat",
-          "title": "Compliance Today",
+          "title": "Binary Reading Fraction Today",
           "description": "",
           "datasource": {
             "type": "grafana-postgresql-datasource",
@@ -7706,7 +7706,7 @@ data:
         {
           "id": 5,
           "type": "stat",
-          "title": "Stress Hours Today",
+          "title": "Nominal Binary Stress Hours Today",
           "description": "",
           "datasource": {
             "type": "grafana-postgresql-datasource",
@@ -7903,7 +7903,7 @@ data:
             "type": "grafana-postgresql-datasource",
             "uid": "verdify-tsdb"
           },
-          "description": "Daily percent of samples inside the temperature band, VPD band, and both bands at the same time. Percent units only; no stress-hour scaling.",
+          "description": "Contract 2: fractions of scored house-average readings against historical desired setpoints. Not duration-weighted, fixed-panel crop outcomes or confirmed firmware consumption. Coverage is unverified; no center probe is measured.",
           "fieldConfig": {
             "defaults": {
               "unit": "percent",
@@ -8035,7 +8035,7 @@ data:
               "rawSql": "SELECT (date + time '12:00')::timestamptz AS time,\n       temp_compliance_pct AS \"Temp Compliance %\",\n       vpd_compliance_pct AS \"VPD Compliance %\",\n       compliance_pct AS \"Total Compliance %\"\nFROM v_planner_performance\nWHERE $__timeFilter((date + time '12:00')::timestamptz)\nORDER BY date"
             }
           ],
-          "title": "Firmware Band Compliance \u2014 Temp, VPD, Both",
+          "title": "Desired-Band Binary Reading Fractions \u2014 Temp, VPD, Both",
           "type": "timeseries",
           "transparent": true
         },
@@ -8044,7 +8044,7 @@ data:
             "type": "grafana-postgresql-datasource",
             "uid": "verdify-tsdb"
           },
-          "description": "Daily hours outside the temperature band, outside the VPD band, and total stress hours. Hours are time, not percent, and are not scaled.",
+          "description": "Contract 2: binary out-of-band counts assuming one minute per scored reading. Axes overlap; totals can exceed wall time. Coverage is unverified; not duration-weighted exposure or graded deficit integrals.",
           "fieldConfig": {
             "defaults": {
               "unit": "short",
@@ -8229,15 +8229,15 @@ data:
               "rawSql": "SELECT (date + time '12:00')::timestamptz AS time,\n       round((heat_stress_h + cold_stress_h)::numeric, 2) AS \"Temp Stress Hours\",\n       round((vpd_high_stress_h + vpd_low_stress_h)::numeric, 2) AS \"VPD Stress Hours\",\n       round(total_stress_h::numeric, 2) AS \"Total Stress-Category Hours\"\nFROM v_planner_performance\nWHERE $__timeFilter((date + time '12:00')::timestamptz)\nORDER BY date"
             }
           ],
-          "title": "Planner Stress-Category Hours \u2014 Temp, VPD, Total",
+          "title": "Nominal Binary Stress-Axis Hours \u2014 Temp, VPD, Total",
           "type": "timeseries",
           "transparent": true
         },
         {
           "id": 11,
           "type": "timeseries",
-          "title": "Temperature Compliance Band",
-          "description": "Indoor temperature against the green firmware compliance band, with only the heat entry and fan/cooling entry thresholds rendered. Crop/planner provenance, dispatcher math, cfg readbacks, and padding details remain in the band traceability SQL contract.",
+          "title": "Temperature Reconstructed House Band",
+          "description": "Green fill: database reconstruction of the current house-anchor band at each timestamp (fn_band_timeline projected_*; temperature in \u00b0F, VPD in kPa). Not frozen historical crop targets, crop-outcome compliance, or observed firmware consumption. Cfg database snapshots cannot establish consumption; source-authenticated six-series qualification remains required. Indoor/outdoor observations and forecasts are separate series.",
           "datasource": {
             "type": "grafana-postgresql-datasource",
             "uid": "verdify-tsdb"
@@ -8279,7 +8279,7 @@ data:
               },
               "format": "time_series",
               "rawQuery": true,
-              "rawSql": "SELECT ts AS time,\n    projected_temp_low::float AS \"Compliant Low\",\n    projected_temp_high::float AS \"Compliant High\"\nFROM fn_band_timeline($__timeFrom(), $__timeTo(), interval '30 minutes', 'vallery')\nORDER BY ts",
+              "rawSql": "SELECT ts AS time,\n    projected_temp_low::float AS \"Reconstructed Low\",\n    projected_temp_high::float AS \"Reconstructed High\"\nFROM fn_band_timeline($__timeFrom(), $__timeTo(), interval '30 minutes', 'vallery')\nORDER BY ts",
               "editorMode": "code"
             },
             {
@@ -8371,7 +8371,7 @@ data:
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "Compliant High"
+                  "options": "Reconstructed High"
                 },
                 "properties": [
                   {
@@ -8387,7 +8387,7 @@ data:
                   },
                   {
                     "id": "custom.fillBelowTo",
-                    "value": "Compliant Low"
+                    "value": "Reconstructed Low"
                   },
                   {
                     "id": "custom.fillOpacity",
@@ -8396,8 +8396,8 @@ data:
                   {
                     "id": "custom.hideFrom",
                     "value": {
-                      "legend": true,
-                      "tooltip": true,
+                      "legend": false,
+                      "tooltip": false,
                       "viz": false
                     }
                   },
@@ -8410,7 +8410,7 @@ data:
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "Compliant Low"
+                  "options": "Reconstructed Low"
                 },
                 "properties": [
                   {
@@ -8427,8 +8427,8 @@ data:
                   {
                     "id": "custom.hideFrom",
                     "value": {
-                      "legend": true,
-                      "tooltip": true,
+                      "legend": false,
+                      "tooltip": false,
                       "viz": false
                     }
                   },
@@ -9056,8 +9056,8 @@ data:
         {
           "id": 12,
           "type": "timeseries",
-          "title": "VPD Compliance Band",
-          "description": "Indoor VPD against the green firmware compliance band, with only the dehumidify/fan entry and fog entry thresholds rendered. Crop/planner provenance, dispatcher math, cfg readbacks, and padding details remain in the band traceability SQL contract.",
+          "title": "VPD Reconstructed House Band",
+          "description": "Green fill: database reconstruction of the current house-anchor band at each timestamp (fn_band_timeline projected_*; temperature in \u00b0F, VPD in kPa). Not frozen historical crop targets, crop-outcome compliance, or observed firmware consumption. Cfg database snapshots cannot establish consumption; source-authenticated six-series qualification remains required. Indoor/outdoor observations and forecasts are separate series.",
           "datasource": {
             "type": "grafana-postgresql-datasource",
             "uid": "verdify-tsdb"
@@ -9099,7 +9099,7 @@ data:
               },
               "format": "time_series",
               "rawQuery": true,
-              "rawSql": "SELECT ts AS time,\n    projected_vpd_low::float AS \"Compliant Low\",\n    projected_vpd_high::float AS \"Compliant High\"\nFROM fn_band_timeline($__timeFrom(), $__timeTo(), interval '30 minutes', 'vallery')\nORDER BY ts",
+              "rawSql": "SELECT ts AS time,\n    projected_vpd_low::float AS \"Reconstructed Low\",\n    projected_vpd_high::float AS \"Reconstructed High\"\nFROM fn_band_timeline($__timeFrom(), $__timeTo(), interval '30 minutes', 'vallery')\nORDER BY ts",
               "editorMode": "code"
             },
             {
@@ -9195,7 +9195,7 @@ data:
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "Compliant High"
+                  "options": "Reconstructed High"
                 },
                 "properties": [
                   {
@@ -9211,7 +9211,7 @@ data:
                   },
                   {
                     "id": "custom.fillBelowTo",
-                    "value": "Compliant Low"
+                    "value": "Reconstructed Low"
                   },
                   {
                     "id": "custom.fillOpacity",
@@ -9220,8 +9220,8 @@ data:
                   {
                     "id": "custom.hideFrom",
                     "value": {
-                      "legend": true,
-                      "tooltip": true,
+                      "legend": false,
+                      "tooltip": false,
                       "viz": false
                     }
                   },
@@ -9234,7 +9234,7 @@ data:
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "Compliant Low"
+                  "options": "Reconstructed Low"
                 },
                 "properties": [
                   {
@@ -9251,8 +9251,8 @@ data:
                   {
                     "id": "custom.hideFrom",
                     "value": {
-                      "legend": true,
-                      "tooltip": true,
+                      "legend": false,
+                      "tooltip": false,
                       "viz": false
                     }
                   },
@@ -10216,7 +10216,7 @@ data:
           "id": 15,
           "type": "timeseries",
           "title": "Cost vs Stress Tradeoff",
-          "description": "Shows whether the system is buying lower stress at a reasonable operating cost.",
+          "description": "Descriptive cost versus nominal binary stress counts only; not causal efficiency evidence. Resource costs are gated for eligibility and missing values must not be interpreted as zero.",
           "datasource": {
             "type": "grafana-postgresql-datasource",
             "uid": "verdify-tsdb"
@@ -10522,7 +10522,7 @@ data:
           "id": 17,
           "type": "table",
           "title": "Latest Planner Scorecard",
-          "description": "Raw scorecard values for today.",
+          "description": "Versioned scorecard values. Contract 2 separates binary reading fractions from graded controller credit. Partial days and missing evidence remain unavailable; inspect metric_semantics in the scorecard API.",
           "datasource": {
             "type": "grafana-postgresql-datasource",
             "uid": "verdify-tsdb"
@@ -11149,7 +11149,7 @@ data:
             "type": "grafana-postgresql-datasource",
             "uid": "verdify-tsdb"
           },
-          "description": "Indoor VPD against the green firmware compliance band, with only the dehumidify/fan entry and fog entry thresholds rendered. Crop/planner provenance, dispatcher math, cfg readbacks, and padding details remain in the band traceability SQL contract.",
+          "description": "Green fill: database reconstruction of the current house-anchor band at each timestamp (fn_band_timeline projected_*; temperature in \u00b0F, VPD in kPa). Not frozen historical crop targets, crop-outcome compliance, or observed firmware consumption. Cfg database snapshots cannot establish consumption; source-authenticated six-series qualification remains required. Indoor/outdoor observations and forecasts are separate series.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -11260,7 +11260,7 @@ data:
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "Compliant High"
+                  "options": "Reconstructed High"
                 },
                 "properties": [
                   {
@@ -11276,7 +11276,7 @@ data:
                   },
                   {
                     "id": "custom.fillBelowTo",
-                    "value": "Compliant Low"
+                    "value": "Reconstructed Low"
                   },
                   {
                     "id": "custom.fillOpacity",
@@ -11285,8 +11285,8 @@ data:
                   {
                     "id": "custom.hideFrom",
                     "value": {
-                      "legend": true,
-                      "tooltip": true,
+                      "legend": false,
+                      "tooltip": false,
                       "viz": false
                     }
                   },
@@ -11299,7 +11299,7 @@ data:
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "Compliant Low"
+                  "options": "Reconstructed Low"
                 },
                 "properties": [
                   {
@@ -11316,8 +11316,8 @@ data:
                   {
                     "id": "custom.hideFrom",
                     "value": {
-                      "legend": true,
-                      "tooltip": true,
+                      "legend": false,
+                      "tooltip": false,
                       "viz": false
                     }
                   },
@@ -12093,7 +12093,7 @@ data:
               "editorMode": "code",
               "format": "table",
               "rawQuery": true,
-              "rawSql": "SELECT ts AS time,\n    projected_vpd_low::float AS \"Compliant Low\",\n    projected_vpd_high::float AS \"Compliant High\"\nFROM fn_band_timeline($__timeFrom(), $__timeTo(), interval '30 minutes', 'vallery')\nORDER BY ts",
+              "rawSql": "SELECT ts AS time,\n    projected_vpd_low::float AS \"Reconstructed Low\",\n    projected_vpd_high::float AS \"Reconstructed High\"\nFROM fn_band_timeline($__timeFrom(), $__timeTo(), interval '30 minutes', 'vallery')\nORDER BY ts",
               "refId": "D"
             },
             {
@@ -12125,7 +12125,7 @@ data:
               }
             }
           ],
-          "title": "VPD Compliance Band",
+          "title": "VPD Reconstructed House Band",
           "type": "timeseries",
           "transparent": true
         },
@@ -12760,7 +12760,7 @@ data:
             "type": "grafana-postgresql-datasource",
             "uid": "verdify-tsdb"
           },
-          "description": "Indoor temperature against the green firmware compliance band, with only the heat entry and fan/cooling entry thresholds rendered. Crop/planner provenance, dispatcher math, cfg readbacks, and padding details remain in the band traceability SQL contract.",
+          "description": "Green fill: database reconstruction of the current house-anchor band at each timestamp (fn_band_timeline projected_*; temperature in \u00b0F, VPD in kPa). Not frozen historical crop targets, crop-outcome compliance, or observed firmware consumption. Cfg database snapshots cannot establish consumption; source-authenticated six-series qualification remains required. Indoor/outdoor observations and forecasts are separate series.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -12967,7 +12967,7 @@ data:
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "Compliant High"
+                  "options": "Reconstructed High"
                 },
                 "properties": [
                   {
@@ -12983,7 +12983,7 @@ data:
                   },
                   {
                     "id": "custom.fillBelowTo",
-                    "value": "Compliant Low"
+                    "value": "Reconstructed Low"
                   },
                   {
                     "id": "custom.fillOpacity",
@@ -12992,8 +12992,8 @@ data:
                   {
                     "id": "custom.hideFrom",
                     "value": {
-                      "legend": true,
-                      "tooltip": true,
+                      "legend": false,
+                      "tooltip": false,
                       "viz": false
                     }
                   },
@@ -13006,7 +13006,7 @@ data:
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "Compliant Low"
+                  "options": "Reconstructed Low"
                 },
                 "properties": [
                   {
@@ -13023,8 +13023,8 @@ data:
                   {
                     "id": "custom.hideFrom",
                     "value": {
-                      "legend": true,
-                      "tooltip": true,
+                      "legend": false,
+                      "tooltip": false,
                       "viz": false
                     }
                   },
@@ -13717,7 +13717,7 @@ data:
               "editorMode": "code",
               "format": "table",
               "rawQuery": true,
-              "rawSql": "SELECT ts AS time,\n    projected_temp_low::float AS \"Compliant Low\",\n    projected_temp_high::float AS \"Compliant High\"\nFROM fn_band_timeline($__timeFrom(), $__timeTo(), interval '30 minutes', 'vallery')\nORDER BY ts",
+              "rawSql": "SELECT ts AS time,\n    projected_temp_low::float AS \"Reconstructed Low\",\n    projected_temp_high::float AS \"Reconstructed High\"\nFROM fn_band_timeline($__timeFrom(), $__timeTo(), interval '30 minutes', 'vallery')\nORDER BY ts",
               "refId": "D"
             },
             {
@@ -13771,7 +13771,7 @@ data:
               }
             }
           ],
-          "title": "Temperature Compliance Band",
+          "title": "Temperature Reconstructed House Band",
           "type": "timeseries",
           "transparent": true
         },
@@ -13780,7 +13780,7 @@ data:
             "type": "grafana-postgresql-datasource",
             "uid": "verdify-tsdb"
           },
-          "description": "Indoor VPD against the green firmware compliance band, with only the dehumidify/fan entry and fog entry thresholds rendered. Crop/planner provenance, dispatcher math, cfg readbacks, and padding details remain in the band traceability SQL contract.",
+          "description": "Green fill: database reconstruction of the current house-anchor band at each timestamp (fn_band_timeline projected_*; temperature in \u00b0F, VPD in kPa). Not frozen historical crop targets, crop-outcome compliance, or observed firmware consumption. Cfg database snapshots cannot establish consumption; source-authenticated six-series qualification remains required. Indoor/outdoor observations and forecasts are separate series.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -13891,7 +13891,7 @@ data:
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "Compliant High"
+                  "options": "Reconstructed High"
                 },
                 "properties": [
                   {
@@ -13907,7 +13907,7 @@ data:
                   },
                   {
                     "id": "custom.fillBelowTo",
-                    "value": "Compliant Low"
+                    "value": "Reconstructed Low"
                   },
                   {
                     "id": "custom.fillOpacity",
@@ -13916,8 +13916,8 @@ data:
                   {
                     "id": "custom.hideFrom",
                     "value": {
-                      "legend": true,
-                      "tooltip": true,
+                      "legend": false,
+                      "tooltip": false,
                       "viz": false
                     }
                   },
@@ -13930,7 +13930,7 @@ data:
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "Compliant Low"
+                  "options": "Reconstructed Low"
                 },
                 "properties": [
                   {
@@ -13947,8 +13947,8 @@ data:
                   {
                     "id": "custom.hideFrom",
                     "value": {
-                      "legend": true,
-                      "tooltip": true,
+                      "legend": false,
+                      "tooltip": false,
                       "viz": false
                     }
                   },
@@ -14724,7 +14724,7 @@ data:
               "editorMode": "code",
               "format": "table",
               "rawQuery": true,
-              "rawSql": "SELECT ts AS time,\n    projected_vpd_low::float AS \"Compliant Low\",\n    projected_vpd_high::float AS \"Compliant High\"\nFROM fn_band_timeline($__timeFrom(), $__timeTo(), interval '30 minutes', 'vallery')\nORDER BY ts",
+              "rawSql": "SELECT ts AS time,\n    projected_vpd_low::float AS \"Reconstructed Low\",\n    projected_vpd_high::float AS \"Reconstructed High\"\nFROM fn_band_timeline($__timeFrom(), $__timeTo(), interval '30 minutes', 'vallery')\nORDER BY ts",
               "refId": "D"
             },
             {
@@ -14756,7 +14756,7 @@ data:
               }
             }
           ],
-          "title": "VPD Compliance Band",
+          "title": "VPD Reconstructed House Band",
           "type": "timeseries",
           "transparent": true
         }
@@ -15683,7 +15683,7 @@ data:
             "type": "grafana-postgresql-datasource",
             "uid": "verdify-tsdb"
           },
-          "description": "Daily percent of samples inside the temperature band, VPD band, and both bands at the same time. Percent units only; no stress-hour scaling.",
+          "description": "Contract 2: fractions of scored house-average readings against historical desired setpoints. Not duration-weighted, fixed-panel crop outcomes or confirmed firmware consumption. Coverage is unverified; no center probe is measured.",
           "fieldConfig": {
             "defaults": {
               "unit": "percent",
@@ -15814,7 +15814,7 @@ data:
               "rawSql": "SELECT (date + time '12:00')::timestamptz AS time,\n       temp_compliance_pct AS \"Temp Compliance %\",\n       vpd_compliance_pct AS \"VPD Compliance %\",\n       compliance_pct AS \"Total Compliance %\"\nFROM v_planner_performance\nWHERE $__timeFilter((date + time '12:00')::timestamptz)\nORDER BY date"
             }
           ],
-          "title": "Firmware Band Compliance \u2014 Temp, VPD, Both",
+          "title": "Desired-Band Binary Reading Fractions \u2014 Temp, VPD, Both",
           "type": "timeseries",
           "transparent": true
         },
@@ -15823,7 +15823,7 @@ data:
             "type": "grafana-postgresql-datasource",
             "uid": "verdify-tsdb"
           },
-          "description": "Daily hours outside the temperature band, outside the VPD band, and total stress hours. Hours are time, not percent, and are not scaled.",
+          "description": "Contract 2: binary out-of-band counts assuming one minute per scored reading. Axes overlap; totals can exceed wall time. Coverage is unverified; not duration-weighted exposure or graded deficit integrals.",
           "fieldConfig": {
             "defaults": {
               "unit": "short",
@@ -16007,7 +16007,7 @@ data:
               "rawSql": "SELECT (date + time '12:00')::timestamptz AS time,\n       round((heat_stress_h + cold_stress_h)::numeric, 2) AS \"Temp Stress Hours\",\n       round((vpd_high_stress_h + vpd_low_stress_h)::numeric, 2) AS \"VPD Stress Hours\",\n       round(total_stress_h::numeric, 2) AS \"Total Stress-Category Hours\"\nFROM v_planner_performance\nWHERE $__timeFilter((date + time '12:00')::timestamptz)\nORDER BY date"
             }
           ],
-          "title": "Planner Stress-Category Hours \u2014 Temp, VPD, Total",
+          "title": "Nominal Binary Stress-Axis Hours \u2014 Temp, VPD, Total",
           "type": "timeseries",
           "transparent": true
         },
@@ -16016,7 +16016,7 @@ data:
             "type": "grafana-postgresql-datasource",
             "uid": "verdify-tsdb"
           },
-          "description": "Greenhouse temperature, outdoor conditions, forecast pressure, solar context, target band, and active relay state.",
+          "description": "Database reconstruction from v_band_curve (materialized cache); refresh age is not established here. Not frozen historical crop targets, crop-outcome compliance, or observed firmware consumption. House-anchor edges are narrowed toward the reconstructed target using the latest cached band_track_fraction or default 0.25 across the entire time window; fraction age, historical validity and device acceptance are unverified. This is not the full low..high envelope. Temperature uses \u00b0F and VPD uses kPa; measured climate and recorded relay series are separate.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -16249,7 +16249,7 @@ data:
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "Target Band Base"
+                  "options": "Reconstructed Track Low"
                 },
                 "properties": [
                   {
@@ -16274,8 +16274,8 @@ data:
                   {
                     "id": "custom.hideFrom",
                     "value": {
-                      "legend": true,
-                      "tooltip": true,
+                      "legend": false,
+                      "tooltip": false,
                       "viz": false
                     }
                   }
@@ -16284,7 +16284,7 @@ data:
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "Target Band"
+                  "options": "Reconstructed Track High"
                 },
                 "properties": [
                   {
@@ -16300,7 +16300,7 @@ data:
                   },
                   {
                     "id": "custom.fillBelowTo",
-                    "value": "Target Band Base"
+                    "value": "Reconstructed Track Low"
                   },
                   {
                     "id": "custom.fillOpacity",
@@ -16314,7 +16314,7 @@ data:
                     "id": "custom.hideFrom",
                     "value": {
                       "legend": false,
-                      "tooltip": true,
+                      "tooltip": false,
                       "viz": false
                     }
                   }
@@ -16323,7 +16323,7 @@ data:
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "Target"
+                  "options": "Reconstructed Target"
                 },
                 "properties": [
                   {
@@ -16361,6 +16361,14 @@ data:
                         6,
                         4
                       ]
+                    }
+                  },
+                  {
+                    "id": "custom.hideFrom",
+                    "value": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
                     }
                   }
                 ]
@@ -17203,7 +17211,7 @@ data:
               "editorMode": "code",
               "format": "table",
               "rawQuery": true,
-              "rawSql": "SELECT ts AS time,\n    temp_low + f.frac * (temp_target - temp_low) AS \"Target Band Base\",\n    temp_high - f.frac * (temp_high - temp_target) AS \"Target Band\",\n    temp_target AS \"Target\"\nFROM v_band_curve,\n     (SELECT COALESCE((SELECT value FROM setpoint_snapshot WHERE parameter='band_track_fraction' AND greenhouse_id='vallery' ORDER BY ts DESC LIMIT 1), 0.25) AS frac) f\nWHERE $__timeFilter(ts) ORDER BY ts",
+              "rawSql": "SELECT ts AS time,\n    temp_low + f.frac * (temp_target - temp_low) AS \"Reconstructed Track Low\",\n    temp_high - f.frac * (temp_high - temp_target) AS \"Reconstructed Track High\",\n    temp_target AS \"Reconstructed Target\"\nFROM v_band_curve,\n     (SELECT COALESCE((SELECT value FROM setpoint_snapshot WHERE parameter='band_track_fraction' AND greenhouse_id='vallery' ORDER BY ts DESC LIMIT 1), 0.25) AS frac) f\nWHERE $__timeFilter(ts) ORDER BY ts",
               "refId": "C",
               "sql": {
                 "columns": [
@@ -17560,7 +17568,7 @@ data:
               "rawSql": "SELECT $__time(ts), CASE WHEN state THEN 50.8::float8 ELSE 48.4::float8 END AS \"Heat 2 (Gas)\", 48.4::float8 AS \"Heat 2 (Gas) Base\" FROM equipment_state WHERE greenhouse_id='vallery' AND equipment='heat2' AND $__timeFilter(ts) ORDER BY ts"
             }
           ],
-          "title": "Temperature Compliance Band",
+          "title": "Temperature Reconstructed Tracking Band",
           "type": "timeseries",
           "transparent": true
         },
@@ -17569,7 +17577,7 @@ data:
             "type": "grafana-postgresql-datasource",
             "uid": "verdify-tsdb"
           },
-          "description": "Greenhouse VPD, outdoor pressure, forecast pressure, solar context, target band, and active mist/fog state.",
+          "description": "Database reconstruction from v_band_curve (materialized cache); refresh age is not established here. Not frozen historical crop targets, crop-outcome compliance, or observed firmware consumption. House-anchor edges are narrowed toward the reconstructed target using the latest cached band_track_fraction or default 0.25 across the entire time window; fraction age, historical validity and device acceptance are unverified. This is not the full low..high envelope. Temperature uses \u00b0F and VPD uses kPa; measured climate and recorded relay series are separate.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -17802,7 +17810,7 @@ data:
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "Target Band Base"
+                  "options": "Reconstructed Track Low"
                 },
                 "properties": [
                   {
@@ -17827,8 +17835,8 @@ data:
                   {
                     "id": "custom.hideFrom",
                     "value": {
-                      "legend": true,
-                      "tooltip": true,
+                      "legend": false,
+                      "tooltip": false,
                       "viz": false
                     }
                   }
@@ -17837,7 +17845,7 @@ data:
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "Target Band"
+                  "options": "Reconstructed Track High"
                 },
                 "properties": [
                   {
@@ -17853,7 +17861,7 @@ data:
                   },
                   {
                     "id": "custom.fillBelowTo",
-                    "value": "Target Band Base"
+                    "value": "Reconstructed Track Low"
                   },
                   {
                     "id": "custom.fillOpacity",
@@ -17867,7 +17875,7 @@ data:
                     "id": "custom.hideFrom",
                     "value": {
                       "legend": false,
-                      "tooltip": true,
+                      "tooltip": false,
                       "viz": false
                     }
                   }
@@ -17876,7 +17884,7 @@ data:
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "Target"
+                  "options": "Reconstructed Target"
                 },
                 "properties": [
                   {
@@ -17914,6 +17922,14 @@ data:
                         6,
                         4
                       ]
+                    }
+                  },
+                  {
+                    "id": "custom.hideFrom",
+                    "value": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
                     }
                   }
                 ]
@@ -18750,7 +18766,7 @@ data:
               "editorMode": "code",
               "format": "table",
               "rawQuery": true,
-              "rawSql": "SELECT ts AS time,\n    vpd_low + f.frac * (vpd_target - vpd_low) AS \"Target Band Base\",\n    vpd_high - f.frac * (vpd_high - vpd_target) AS \"Target Band\",\n    vpd_target AS \"Target\"\nFROM v_band_curve,\n     (SELECT COALESCE((SELECT value FROM setpoint_snapshot WHERE parameter='band_track_fraction' AND greenhouse_id='vallery' ORDER BY ts DESC LIMIT 1), 0.25) AS frac) f\nWHERE $__timeFilter(ts) ORDER BY ts",
+              "rawSql": "SELECT ts AS time,\n    vpd_low + f.frac * (vpd_target - vpd_low) AS \"Reconstructed Track Low\",\n    vpd_high - f.frac * (vpd_high - vpd_target) AS \"Reconstructed Track High\",\n    vpd_target AS \"Reconstructed Target\"\nFROM v_band_curve,\n     (SELECT COALESCE((SELECT value FROM setpoint_snapshot WHERE parameter='band_track_fraction' AND greenhouse_id='vallery' ORDER BY ts DESC LIMIT 1), 0.25) AS frac) f\nWHERE $__timeFilter(ts) ORDER BY ts",
               "refId": "C",
               "sql": {
                 "columns": [
@@ -19107,7 +19123,7 @@ data:
               "rawSql": "SELECT $__time(ts), CASE WHEN state THEN -0.8::float8 ELSE -0.96::float8 END AS \"Heat 2 (Gas)\", -0.96::float8 AS \"Heat 2 (Gas) Base\" FROM equipment_state WHERE greenhouse_id='vallery' AND equipment='heat2' AND $__timeFilter(ts) ORDER BY ts"
             }
           ],
-          "title": "VPD Compliance Band",
+          "title": "VPD Reconstructed Tracking Band",
           "type": "timeseries",
           "transparent": true
         },
@@ -20392,7 +20408,7 @@ data:
             "type": "grafana-postgresql-datasource",
             "uid": "verdify-tsdb"
           },
-          "description": "Per-zone air temperatures (labeled by crop) against the shared on-chip house temperature band (green envelope = low..high) and the house target center line. Band renders 24h forward; zone lines are past-only.",
+          "description": "Database reconstruction from v_band_curve (materialized cache); refresh age is not established here. Not frozen historical crop targets, crop-outcome compliance, or observed firmware consumption. House-anchor edges are narrowed toward the reconstructed target using the latest cached band_track_fraction or default 0.25 across the entire time window; fraction age, historical validity and device acceptance are unverified. This is not the full low..high envelope. Temperature uses \u00b0F and VPD uses kPa; measured climate and recorded relay series are separate.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -20444,7 +20460,7 @@ data:
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "House Band Base"
+                  "options": "Reconstructed Track Low"
                 },
                 "properties": [
                   {
@@ -20473,8 +20489,8 @@ data:
                   {
                     "id": "custom.hideFrom",
                     "value": {
-                      "legend": true,
-                      "tooltip": true,
+                      "legend": false,
+                      "tooltip": false,
                       "viz": false
                     }
                   }
@@ -20483,7 +20499,7 @@ data:
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "House Band"
+                  "options": "Reconstructed Track High"
                 },
                 "properties": [
                   {
@@ -20499,7 +20515,7 @@ data:
                   },
                   {
                     "id": "custom.fillBelowTo",
-                    "value": "House Band Base"
+                    "value": "Reconstructed Track Low"
                   },
                   {
                     "id": "custom.fillOpacity",
@@ -20517,7 +20533,7 @@ data:
                     "id": "custom.hideFrom",
                     "value": {
                       "legend": false,
-                      "tooltip": true,
+                      "tooltip": false,
                       "viz": false
                     }
                   }
@@ -20526,7 +20542,7 @@ data:
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "House Target"
+                  "options": "Reconstructed Target"
                 },
                 "properties": [
                   {
@@ -20555,6 +20571,14 @@ data:
                   {
                     "id": "custom.showPoints",
                     "value": "never"
+                  },
+                  {
+                    "id": "custom.hideFrom",
+                    "value": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    }
                   }
                 ]
               },
@@ -20763,7 +20787,7 @@ data:
               "editorMode": "code",
               "format": "table",
               "rawQuery": true,
-              "rawSql": "SELECT ts AS time,\n    temp_low + f.frac * (temp_target - temp_low) AS \"House Band Base\",\n    temp_high - f.frac * (temp_high - temp_target) AS \"House Band\",\n    temp_target AS \"House Target\"\nFROM v_band_curve,\n     (SELECT COALESCE((SELECT value FROM setpoint_snapshot WHERE parameter='band_track_fraction' AND greenhouse_id='vallery' ORDER BY ts DESC LIMIT 1), 0.25) AS frac) f\nWHERE $__timeFilter(ts) ORDER BY ts",
+              "rawSql": "SELECT ts AS time,\n    temp_low + f.frac * (temp_target - temp_low) AS \"Reconstructed Track Low\",\n    temp_high - f.frac * (temp_high - temp_target) AS \"Reconstructed Track High\",\n    temp_target AS \"Reconstructed Target\"\nFROM v_band_curve,\n     (SELECT COALESCE((SELECT value FROM setpoint_snapshot WHERE parameter='band_track_fraction' AND greenhouse_id='vallery' ORDER BY ts DESC LIMIT 1), 0.25) AS frac) f\nWHERE $__timeFilter(ts) ORDER BY ts",
               "refId": "A"
             },
             {
@@ -20822,7 +20846,7 @@ data:
               "refId": "F"
             }
           ],
-          "title": "Zone Temperature vs House Band",
+          "title": "Zone Temperature vs Reconstructed Tracking Band",
           "type": "timeseries",
           "transparent": true
         },
@@ -20831,7 +20855,7 @@ data:
             "type": "grafana-postgresql-datasource",
             "uid": "verdify-tsdb"
           },
-          "description": "Per-zone vapour-pressure deficit (solid, by crop) each against ITS OWN target curve (dashed, matched color) from fn_zone_vpd_targets: South=Cannabis (driest), West=Lime, East=Pepper, Center=Vanda (lowest). Targets render 24h forward.",
+          "description": "Database reconstruction from v_band_curve (materialized cache); refresh age is not established here. Not frozen historical crop targets, crop-outcome compliance, or observed firmware consumption. Dashed zone targets are cached fn_zone_vpd_targets output in kPa, not time-frozen crop-profile history or measured device targets. Measured zone VPD is a separate series.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -21023,7 +21047,7 @@ data:
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "South Target"
+                  "options": "South Reconstructed Target"
                 },
                 "properties": [
                   {
@@ -21062,13 +21086,21 @@ data:
                         4
                       ]
                     }
+                  },
+                  {
+                    "id": "custom.hideFrom",
+                    "value": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    }
                   }
                 ]
               },
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "West Target"
+                  "options": "West Reconstructed Target"
                 },
                 "properties": [
                   {
@@ -21107,13 +21139,21 @@ data:
                         4
                       ]
                     }
+                  },
+                  {
+                    "id": "custom.hideFrom",
+                    "value": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    }
                   }
                 ]
               },
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "East Target"
+                  "options": "East Reconstructed Target"
                 },
                 "properties": [
                   {
@@ -21152,13 +21192,21 @@ data:
                         4
                       ]
                     }
+                  },
+                  {
+                    "id": "custom.hideFrom",
+                    "value": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    }
                   }
                 ]
               },
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "Center Target"
+                  "options": "Center Reconstructed Target"
                 },
                 "properties": [
                   {
@@ -21197,6 +21245,14 @@ data:
                         4
                       ]
                     }
+                  },
+                  {
+                    "id": "custom.hideFrom",
+                    "value": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    }
                   }
                 ]
               }
@@ -21230,7 +21286,7 @@ data:
               "editorMode": "code",
               "format": "table",
               "rawQuery": true,
-              "rawSql": "SELECT ts AS time,\n    vpd_target_south AS \"South Target\",\n    vpd_target_west AS \"West Target\",\n    vpd_target_east AS \"East Target\",\n    vpd_target_center AS \"Center Target\"\nFROM v_band_curve WHERE $__timeFilter(ts) ORDER BY ts",
+              "rawSql": "SELECT ts AS time,\n    vpd_target_south AS \"South Reconstructed Target\",\n    vpd_target_west AS \"West Reconstructed Target\",\n    vpd_target_east AS \"East Reconstructed Target\",\n    vpd_target_center AS \"Center Reconstructed Target\"\nFROM v_band_curve WHERE $__timeFilter(ts) ORDER BY ts",
               "refId": "A"
             },
             {
@@ -21278,7 +21334,7 @@ data:
               "refId": "E"
             }
           ],
-          "title": "Zone VPD vs Per-Zone Targets",
+          "title": "Zone VPD vs Reconstructed Zone Targets",
           "type": "timeseries",
           "transparent": true
         },
@@ -21287,7 +21343,7 @@ data:
             "type": "grafana-postgresql-datasource",
             "uid": "verdify-tsdb"
           },
-          "description": "Firmware arbitration view: normalized temp & VPD deltas (0 = on target, \u00b11 = band edge \u2014 the dimensionless temp-vs-VPD 'equality statement', bigger |\u0394| wins). Faint green = in-band (|\u0394|<1). FSM state family lane at top (Heat/Cool-Vent/Mist-Fog/Idle from system_state). Actuals stop at now; the in-band reference renders \u00b172h forward.",
+          "description": "Database reconstruction from v_band_curve (materialized cache); refresh age is not established here. Not frozen historical crop targets, crop-outcome compliance, or observed firmware consumption. Diagnostic only: 15-minute climate averages minus cached targets, divided by half-width with floors 0.5\u00b0F / 0.05 kPa and clipped to \u00b12.5. The \u00b11 reference is NOT a measured band edge when the target is asymmetric or the width floor applies. Zero refers to the cached target, not accepted control. Climate rows are not greenhouse-filtered in this legacy query. Recorded system-state families are separate; this is not the device arbitration calculation.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -21341,7 +21397,7 @@ data:
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "In-Band Low"
+                  "options": "Reference -1"
                 },
                 "properties": [
                   {
@@ -21366,8 +21422,8 @@ data:
                   {
                     "id": "custom.hideFrom",
                     "value": {
-                      "legend": true,
-                      "tooltip": true,
+                      "legend": false,
+                      "tooltip": false,
                       "viz": false
                     }
                   }
@@ -21376,7 +21432,7 @@ data:
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "In-Band High"
+                  "options": "Reference +1"
                 },
                 "properties": [
                   {
@@ -21392,7 +21448,7 @@ data:
                   },
                   {
                     "id": "custom.fillBelowTo",
-                    "value": "In-Band Low"
+                    "value": "Reference -1"
                   },
                   {
                     "id": "custom.fillOpacity",
@@ -21406,7 +21462,7 @@ data:
                     "id": "custom.hideFrom",
                     "value": {
                       "legend": false,
-                      "tooltip": true,
+                      "tooltip": false,
                       "viz": false
                     }
                   }
@@ -21415,7 +21471,7 @@ data:
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "On Target"
+                  "options": "Reference Zero"
                 },
                 "properties": [
                   {
@@ -21446,13 +21502,21 @@ data:
                   {
                     "id": "custom.showPoints",
                     "value": "never"
+                  },
+                  {
+                    "id": "custom.hideFrom",
+                    "value": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    }
                   }
                 ]
               },
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "Norm Temp \u0394"
+                  "options": "Reconstructed Temp \u0394"
                 },
                 "properties": [
                   {
@@ -21510,13 +21574,21 @@ data:
                     "value": {
                       "mode": "off"
                     }
+                  },
+                  {
+                    "id": "custom.hideFrom",
+                    "value": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    }
                   }
                 ]
               },
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "Norm VPD \u0394"
+                  "options": "Reconstructed VPD \u0394"
                 },
                 "properties": [
                   {
@@ -21540,6 +21612,14 @@ data:
                     "value": {
                       "fixedColor": "#5794F2",
                       "mode": "fixed"
+                    }
+                  },
+                  {
+                    "id": "custom.hideFrom",
+                    "value": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
                     }
                   }
                 ]
@@ -21958,7 +22038,7 @@ data:
               "editorMode": "code",
               "format": "table",
               "rawQuery": true,
-              "rawSql": "SELECT b.ts AS time,\n  GREATEST(-2.5, LEAST(2.5, (c.temp_avg - b.temp_target)/GREATEST(0.5,(b.temp_high-b.temp_low)/2)))::float AS \"Norm Temp \u0394\",\n  GREATEST(-2.5, LEAST(2.5, (c.vpd_avg - b.vpd_target)/GREATEST(0.05,(b.vpd_high-b.vpd_low)/2)))::float AS \"Norm VPD \u0394\"\nFROM v_band_curve b\nJOIN LATERAL (\n  SELECT avg(temp_avg) AS temp_avg, avg(vpd_avg) AS vpd_avg FROM climate\n  WHERE ts >= b.ts AND ts < b.ts + interval '15 minutes' AND temp_avg IS NOT NULL AND vpd_avg IS NOT NULL\n) c ON c.temp_avg IS NOT NULL\nWHERE $__timeFilter(b.ts) AND b.ts <= now()\nORDER BY b.ts",
+              "rawSql": "SELECT b.ts AS time,\n  GREATEST(-2.5, LEAST(2.5, (c.temp_avg - b.temp_target)/GREATEST(0.5,(b.temp_high-b.temp_low)/2)))::float AS \"Reconstructed Temp \u0394\",\n  GREATEST(-2.5, LEAST(2.5, (c.vpd_avg - b.vpd_target)/GREATEST(0.05,(b.vpd_high-b.vpd_low)/2)))::float AS \"Reconstructed VPD \u0394\"\nFROM v_band_curve b\nJOIN LATERAL (\n  SELECT avg(temp_avg) AS temp_avg, avg(vpd_avg) AS vpd_avg FROM climate\n  WHERE ts >= b.ts AND ts < b.ts + interval '15 minutes' AND temp_avg IS NOT NULL AND vpd_avg IS NOT NULL\n) c ON c.temp_avg IS NOT NULL\nWHERE $__timeFilter(b.ts) AND b.ts <= now()\nORDER BY b.ts",
               "refId": "A"
             },
             {
@@ -21969,7 +22049,7 @@ data:
               "editorMode": "code",
               "format": "table",
               "rawQuery": true,
-              "rawSql": "SELECT g.ts AS time,\n  (-1.0)::float AS \"In-Band Low\",\n  ( 1.0)::float AS \"In-Band High\",\n  ( 0.0)::float AS \"On Target\"\nFROM generate_series($__timeFrom()::timestamptz, $__timeTo()::timestamptz, interval '15 minutes') g(ts)\nORDER BY g.ts",
+              "rawSql": "SELECT g.ts AS time,\n  (-1.0)::float AS \"Reference -1\",\n  ( 1.0)::float AS \"Reference +1\",\n  ( 0.0)::float AS \"Reference Zero\"\nFROM generate_series($__timeFrom()::timestamptz, $__timeTo()::timestamptz, interval '15 minutes') g(ts)\nORDER BY g.ts",
               "refId": "C"
             },
             {
@@ -21984,7 +22064,7 @@ data:
               "refId": "B"
             }
           ],
-          "title": "Climate Delta & State Machine (normalized)",
+          "title": "Reconstructed Climate Delta & Recorded State",
           "type": "timeseries",
           "transparent": true
         }
