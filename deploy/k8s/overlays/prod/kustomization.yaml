@@ -263,23 +263,23 @@ images:
   - name: ghcr.io/verdifyconsultancy/verdify-experiment-v2-orchestrator
     newName: registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator
     digest: sha256:cccbd040cf97911aa947ff397f75244357c688f476db5f6ff57a391033f20f65
-  # Hand-pinned planner: C0 source 3f8b7eb1, in-cluster build
-  # verdify-c0-verdify-planner-5qgd8. It carries the flat scorecard context.
+  # Hand-pinned planner: merged C0 source fb92b948, build-planner in
+  # agent-fleet-ci/verdify-platform-ci-lrqdz. It carries the flat scorecard context.
   - name: ghcr.io/verdifyconsultancy/verdify-planner
     newName: registry.vallery.net/verdifyconsultancy/verdify-planner
-    digest: sha256:396ff60b1d9cea9e396c1326ae03481d8f80a19a84a09531b0b0f3b9cdbf40b0
-  # Hand-pinned grow-light writer: C0 source 3f8b7eb1, in-cluster build
-  # verdify-c0-verdify-setpoint-server-wxmzr. Its copied verdify_schemas package
-  # changed; focused backend tests preserve the #447 asyncpg path. This prod-only
+    digest: sha256:4205c53fecdec6e3a2505b01f3392594ec1300c946d91a6824732b9a5d6c9afe
+  # Hand-pinned grow-light writer: merged C0 source fb92b948,
+  # build-setpoint-server in agent-fleet-ci/verdify-platform-ci-lrqdz. Its copied
+  # verdify_schemas package changed; focused backend tests preserve the #447 asyncpg path. This prod-only
   # pod rolls only on the explicit Argo sync.
   # hermes-agent is deliberately ABSENT from this transformer — its upstream
   # @sha256 is preserved inline in the component (NOT transformer-pinned).
   - name: ghcr.io/verdifyconsultancy/verdify-setpoint-server
     newName: registry.vallery.net/verdifyconsultancy/verdify-setpoint-server
-    digest: sha256:220da9c413ab1c027e864010f423d6837a7b3330d2ee8f129875c6528e60c8d6
-  # Hand-pinned lab publisher: C0 source 3f8b7eb1, in-cluster build
-  # verdify-c0-verdify-lab-publisher-k3s-kqsl4. Its copied scripts, ingestor,
-  # MCP and schema inputs changed with the integrated source.
+    digest: sha256:aae6c8ba5aa79f3103be95c4bf21c553a1e6968bdc19dfc4f7415cbc1b3ba5ab
+  # Hand-pinned lab publisher: merged C0 source fb92b948,
+  # build-lab-publisher in agent-fleet-ci/verdify-platform-ci-lrqdz. Its copied
+  # scripts, ingestor, MCP and schema inputs changed with the integrated source.
   - name: ghcr.io/verdifyconsultancy/verdify-lab-publisher-k3s
     newName: registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s
-    digest: sha256:3fa2ffbb584abaafd49d99144daa5687894af3ac80a3e44120dd70bb866d65c6
+    digest: sha256:0eab3a60b40926f9e2e8c34db4c7d82f39df16ca52b977362755579f02e89e98
