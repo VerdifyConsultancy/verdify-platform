@@ -338,8 +338,9 @@ pod_departed() {
   fi
   IFS='|' read -r uid phase restart_policy containers terminations <<< "${state}"
   ended="${terminations//[!;]/}"
-  [ -z "${uid}" ] || [ "${uid}" != "${expected_uid}" ] || [ "${phase}" != "Running" ] || \
-    { [ "${restart_policy}" = "Never" ] && [ -n "${containers}" ] && \
+  [ -z "${uid}" ] || [ "${uid}" != "${expected_uid}" ] || \
+    [ "${phase}" = "Succeeded" ] || [ "${phase}" = "Failed" ] || \
+    { [ "${phase}" = "Running" ] && [ "${restart_policy}" = "Never" ] && [ -n "${containers}" ] && \
       [ "${#containers}" -eq "${#ended}" ] && [[ "${terminations}" =~ ^([^\;]+\;)+$ ]]; }
 }
 

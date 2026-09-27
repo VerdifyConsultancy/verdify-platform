@@ -60,6 +60,14 @@ def test_device_monitor_socket_verdicts(tmp_path, writer_rows, other_rows, expec
     ("initial_pods", "final_pods", "new_state", "expected_code", "expected_verdict"),
     [
         ("writer uid-w\nvanished uid-v\n", "writer uid-w\n", "", 0, "EXACTLY ONE ESP32 writer connection"),
+        ("writer uid-w\nvanished uid-v\n", "writer uid-w\n", "uid-v|Unknown|Never|x|;", 1, "writer count UNKNOWN"),
+        (
+            "writer uid-w\nvanished uid-v\n",
+            "writer uid-w\n",
+            "uid-v|Unknown|Never|x|2026-09-27T03:08:13Z;",
+            1,
+            "writer count UNKNOWN",
+        ),
         ("writer uid-w\n", "writer uid-w\nnew uid-n\n", "uid-n|Running|Never|x|;", 1, "writer count UNKNOWN"),
         (
             "writer uid-w\n",
@@ -88,7 +96,7 @@ def test_device_monitor_running_pod_churn(
         "  *' get pods --field-selector=status.phase=Running '*)\n"
         '    if [ -e "$MOCK_LISTED" ]; then printf "%s" "$MOCK_FINAL_PODS"; '
         'else touch "$MOCK_LISTED"; printf "%s" "$MOCK_INITIAL_PODS"; fi ;;\n'
-        "  *' get pod vanished --ignore-not-found '*) printf 'uid-v|Running|Never|x|2026-09-27T03:08:13Z;' ;;\n"
+        "  *' get pod vanished --ignore-not-found '*) printf '%s' \"$MOCK_VANISHED_STATE\" ;;\n"
         "  *' get pod new --ignore-not-found '*) printf '%s' \"$MOCK_NEW_STATE\" ;;\n"
         "  *' exec writer -- cat /proc/net/tcp '*) cat \"$MOCK_WRITER_TCP\" ;;\n"
         "  *) exit 1 ;;\n"
@@ -105,11 +113,14 @@ def test_device_monitor_running_pod_churn(
         MOCK_INITIAL_PODS=initial_pods,
         MOCK_FINAL_PODS=final_pods,
         MOCK_NEW_STATE=new_state,
+        MOCK_VANISHED_STATE=(
+            new_state if "vanished" in initial_pods and new_state else "uid-v|Running|Never|x|2026-09-27T03:08:13Z;"
+        ),
         MOCK_WRITER_TCP=str(writer_tcp),
     )
     result = subprocess.run(["bash", str(SCRIPT), "device-monitor"], env=env, capture_output=True, text=True)
 
     assert result.returncode == expected_code
     assert expected_verdict in result.stdout
-    if "vanished" in initial_pods:
+    if "vanished" in initial_pods and expected_code == 0:
         assert "departed before socket read" in result.stdout
