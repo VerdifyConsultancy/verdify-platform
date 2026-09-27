@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 from datetime import UTC, date, datetime, timedelta
@@ -11,6 +12,7 @@ from unittest.mock import patch
 import pytest
 
 SOURCE = Path(__file__).resolve().parents[1] / "research/planner-efficacy/winter_feasibility.py"
+ROOT = SOURCE.parents[2]
 spec = importlib.util.spec_from_file_location("winter_feasibility", SOURCE)
 assert spec and spec.loader
 winter = importlib.util.module_from_spec(spec)
@@ -64,6 +66,14 @@ def test_register_binds_real_source_bytes_and_rejects_missed_start(tmp_path):
     files = [tmp_path / name for name in ("panel.json", "target.json", "cfg.json")]
     for index, path in enumerate(files):
         path.write_bytes(f"source-{index}\n".encode())
+    files[1].write_bytes(
+        winter.canonical(
+            {
+                "qualified_prospective_crop_target": True,
+                "frozen_15_minute_target_bins_available": True,
+            }
+        )
+    )
     expected = instance()
     with patch.object(
         winter,
@@ -101,6 +111,23 @@ def test_register_binds_real_source_bytes_and_rejects_missed_start(tmp_path):
                 archive_id=expected["archive_id"],
                 now=datetime(2026, 11, 2, 13, tzinfo=UTC),
             )
+        files[1].write_bytes(
+            (
+                ROOT
+                / "research/planner-efficacy/protocols/winter-2026-27-source-candidates/crop-target-reference-only.json"
+            ).read_bytes()
+        )
+        with pytest.raises(ValueError, match="no qualified prospective frozen bins"):
+            winter.register(
+                start=date(2026, 11, 2),
+                panel_source=files[0],
+                crop_target_source=files[1],
+                cfg_schema_source=files[2],
+                firmware_revision=expected["firmware_revision"],
+                observer_role=expected["observer_role"],
+                archive_id=expected["archive_id"],
+                now=datetime(2026, 9, 27, 16, tzinfo=UTC),
+            )
 
 
 def test_all_queries_are_selects_and_day_coverage_discloses_raw_basis():
@@ -132,6 +159,24 @@ def test_all_queries_are_selects_and_day_coverage_discloses_raw_basis():
     assert coverage["bins_meeting_12_of_15_database_minutes"] == 1
     assert coverage["complete_48_cfg_flush_batches"] == 1
     assert coverage["physical_panel_eligible"] is False
+
+
+def test_source_candidates_bind_current_bytes_without_false_qualification():
+    folder = ROOT / "research/planner-efficacy/protocols/winter-2026-27-source-candidates"
+    panel = json.loads((folder / "route-only-panel.json").read_bytes())
+    target = json.loads((folder / "crop-target-reference-only.json").read_bytes())
+    cfg = json.loads((folder / "cfg-schema-source.json").read_bytes())
+    for candidate in (panel, target, cfg):
+        for relative, expected in candidate["source_file_sha256"].items():
+            assert hashlib.sha256((ROOT / relative).read_bytes()).hexdigest() == expected
+    assert [member["zone"] for member in panel["members"]] == ["north", "east", "west"]
+    assert panel["physical_hardware_identity_verified"] is False
+    assert target["qualified_prospective_crop_target"] is False
+    assert target["frozen_15_minute_target_bins_available"] is False
+    from verdify_schemas.component_executor import CANONICAL_FIELD_ORDER
+
+    assert cfg["canonical_field_order"] == list(CANONICAL_FIELD_ORDER)
+    assert cfg["field_count"] == 48
 
 
 def test_manifest_accounts_for_every_day_and_rejects_tampering(tmp_path):

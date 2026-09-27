@@ -83,6 +83,9 @@ calendar crossing a Denver UTC-offset change. Use actual observed firmware
 revision and a named observer role. Do not invent source files merely to make
 registration pass. For the current candidate, the first window is
 2026-11-02 13:00Z–2026-11-03 07:00Z and the last ends 2027-01-01 07:00Z.
+The `winter-2026-27-source-candidates/` files identify route-only probes and
+the cfg schema, but its crop-target reference explicitly lacks qualified
+future bins and must not be used to register the study.
 
 ```sh
 python3 research/planner-efficacy/winter_feasibility.py register \
