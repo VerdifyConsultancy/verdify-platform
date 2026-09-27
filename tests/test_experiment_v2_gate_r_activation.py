@@ -79,8 +79,14 @@ def test_attended_production_gate_r_is_bound_and_one_shot() -> None:
     assert all(value and not value.startswith("REPLACE_BEFORE_ACTIVATION") for value in values.values())
     assert values["VERDIFY_GATE_R_PREDECESSOR_AUTHORIZATION_ID"] == "d00304d1-74f9-4872-857e-6944de53ac46"
     assert values["VERDIFY_GATE_R_EXPECTED_AGGRESSIVE_WORK_ID"] == "7aa1f560-a309-4d17-b9ad-57a20574f05d"
-    assert values["VERDIFY_GATE_R_EXPECTED_RECOVERY_WORK_ID"] == "c4a323fa-942e-4105-9a23-9a77f996b81e"
+    assert values["VERDIFY_GATE_R_EXPECTED_LIVE_CONNECTION_GENERATION"] == "3"
+    assert values["VERDIFY_GATE_R_EXPECTED_RECOVERY_WORK_ID"] == "7093f8c3-a36e-49f2-8b4b-443d32a9a51b"
+    assert (
+        values["VERDIFY_GATE_R_EXPECTED_RECOVERY_EVIDENCE_SHA256"]
+        == "0fa6d172de87cf2008d5908ff4a3517eeca1d1cd4811e86461fc349c25f41b91"
+    )
     assert (
         values["VERDIFY_GATE_R_READINESS_PACKET_SHA256"]
-        == "7c809675c428a83de54fb2a9db22503b35599af0940ced05fc0c61d50c2c097d"
+        == "c3ba4bb3b80e212425aaf9fce0ea4c0c4c165fc1872ede85da3e61c5a2bc2700"
     )
+    assert values["VERDIFY_GATE_R_SOURCE_PIN"] == "1b499fcc52a7fca52d0971d670bad0369e97090f"
