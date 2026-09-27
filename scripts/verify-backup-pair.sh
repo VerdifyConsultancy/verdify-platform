@@ -36,7 +36,10 @@ for suffix in dump roles.sql; do
     exit 1
   fi
 done
-if ! (cd "${backup_dir}" && sha256sum -c -- "${stem}.sha256" >/dev/null 2>&1); then
+# BusyBox sha256sum (in the TimescaleDB image) treats the metadata header as a
+# checksum record, unlike GNU coreutils. Validate the header above, then feed
+# only the two exact checksum records to the portable verifier.
+if ! (cd "${backup_dir}" && tail -n +2 "${stem}.sha256" | sha256sum -c - >/dev/null 2>&1); then
   echo "[backup-pair] checksum mismatch" >&2
   exit 1
 fi
