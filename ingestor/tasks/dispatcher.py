@@ -1097,7 +1097,15 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             or (STATE_DIR / bounded_reconcile.STATE_NAME).exists()
         ):
             stage_decision = await bounded_reconcile.choose_stage(
-                conn, changes, planned or [], reconnect_generation, STATE_DIR, MAX_RECONNECT_COMMANDS
+                conn,
+                changes,
+                planned or [],
+                reconnect_generation,
+                STATE_DIR,
+                MAX_RECONNECT_COMMANDS,
+                {param: round(float(zone_row[param]), 2) for param in bounded_reconcile.ZONE_VPD_TARGETS}
+                if zone_row
+                else None,
             )
             if stage_decision.action == "hold":
                 shared.defer_failed_dispatch(reconnect_generation, drift_versions)

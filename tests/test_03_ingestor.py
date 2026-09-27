@@ -559,6 +559,46 @@ async def test_failed_forced_dispatch_is_throttled_not_relaunched_each_tick():
 
 
 @pytest.mark.asyncio
+async def test_atomic_approval_replacement_wakes_once_after_throttle(tmp_path):
+    shared.setpoint_dispatch_requested.clear()
+    observed, pending = ingestor._poll_stage_approval(tmp_path, None, None)
+    assert observed is None and pending is None
+    approval = tmp_path / ingestor.bounded_reconcile.APPROVAL_NAME
+    temporary = tmp_path / "approval.tmp"
+    temporary.write_text('{"run_id":"approved"}')
+    temporary.replace(approval)
+    observed, pending = ingestor._poll_stage_approval(tmp_path, observed, pending)
+    assert pending == observed and shared.setpoint_dispatch_requested.is_set()
+
+    # A running dispatcher may consume the event; the new approval remains
+    # pending until a subsequent launch that also honors the 30s minimum.
+    shared.setpoint_dispatch_requested.clear()
+    observed, pending = ingestor._poll_stage_approval(tmp_path, observed, pending)
+    assert shared.setpoint_dispatch_requested.is_set()
+
+    async def dispatcher(_pool):
+        return None
+
+    tasks = [("setpoint_dispatch", 300.0, dispatcher)]
+    last_run = {"setpoint_dispatch": 100.0}
+    running = {}
+    assert (
+        ingestor._launch_due_tasks(
+            None, tasks, last_run, running, 129.9, {"setpoint_dispatch": 300.0}, {"setpoint_dispatch"}
+        )
+        == []
+    )
+    assert ingestor._launch_due_tasks(
+        None, tasks, last_run, running, 130.0, {"setpoint_dispatch": 300.0}, {"setpoint_dispatch"}
+    ) == ["setpoint_dispatch"]
+    pending = None
+    shared.setpoint_dispatch_requested.clear()
+    observed, pending = ingestor._poll_stage_approval(tmp_path, observed, pending)
+    assert pending is None and not shared.setpoint_dispatch_requested.is_set()
+    await asyncio.gather(*running.values())
+
+
+@pytest.mark.asyncio
 async def test_restart_terminalizes_only_unsent_in_memory_queue_states():
     class Connection:
         def __init__(self):
