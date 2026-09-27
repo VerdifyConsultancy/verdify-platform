@@ -43,6 +43,11 @@ SUCCESSOR_249_DIGESTS = {
     "verdify_api_runtime_login": "8b895d1a4dcf403098fcfa8dc9645ed330e7b43ae8b08128456692cd0a89105a",
     "verdify_ingestor_runtime_login": "2556baed8f07bb9d9537b963e7749610004b32814e71666a8d12ae2177908cd2",
 }
+SUCCESSOR_254 = "254-post-253-ordinary-login-attestation.sql"
+SUCCESSOR_254_DIGESTS = {
+    "verdify_api_runtime_login": "9b5e6841cebc95cff6020f1a899e65c1f504d927844f66f7045ecfb1eef23451",
+    "verdify_ingestor_runtime_login": "52c1d03192df977396e4e61075616ee18ecb66c6b771005261c510980e97adc3",
+}
 
 
 class DeliveryError(ValueError):
@@ -254,8 +259,9 @@ def verify_post_249(contract, environment, *, later=()):
     )
     require(digest == contract["predecessor_ledger_sha256"], "post-C0 predecessor ledger drift")
     # Later migrations may intentionally change ordinary runtime grants. The
-    # exact 249 boundary is checked before the first one; on resume its receipt
-    # values and narrowed column grant must still match the reviewed source.
+    # exact 249 boundary is checked before the first one; 254 advances the
+    # receipts only after its own pinned proof. Future migrations must carry
+    # their own reviewed receipt successor if they change the digest.
     sql = """BEGIN READ ONLY;
 SET LOCAL statement_timeout='30s';
 SELECT jsonb_build_object(
@@ -280,7 +286,13 @@ COMMIT;"""
         "column_update": True,
         "table_update": False,
     }
-    if later:
+    if SUCCESSOR_254 in later:
+        require(not any(int(name[:3]) > 254 for name in later), "unreviewed post-254 receipt successor")
+        expected["api"] = SUCCESSOR_254_DIGESTS["verdify_api_runtime_login"]
+        expected["ingestor"] = SUCCESSOR_254_DIGESTS["verdify_ingestor_runtime_login"]
+        expected["api_receipt"] = SUCCESSOR_254_DIGESTS["verdify_api_runtime_login"]
+        expected["ingestor_receipt"] = SUCCESSOR_254_DIGESTS["verdify_ingestor_runtime_login"]
+    elif later:
         state.pop("api", None)
         state.pop("ingestor", None)
         expected.pop("api")
@@ -319,6 +331,7 @@ def run_post_249(directory, later, environment, *, plan):
 
 def deliver_resource_successor(directory, files, rows, contract, environment, *, plan):
     later = post_249_inventory(files, rows)
+    require(not any(int(name[:3]) > 254 for name in later), "unreviewed post-254 receipt successor")
     pending_later = [name for name in later if ("db/migrations", "db/migrations/" + name) not in rows]
     row = rows.get(("db/migrations", "db/migrations/" + SUCCESSOR_249))
     if row is not None:
@@ -349,6 +362,7 @@ def deliver_resource_successor(directory, files, rows, contract, environment, *,
                 all(after_rows.get(("db/migrations", "db/migrations/" + name)) for name in later),
                 "post-249 stamp missing after runner",
             )
+            verify_post_249(contract, environment, later=list(later))
             print(f"Post-C0 migrations 250+ verified: {len(later)} exact runner stamps.")
         else:
             print(f"Post-C0 successor PLAN: {len(later)} later migration(s); no writes.")

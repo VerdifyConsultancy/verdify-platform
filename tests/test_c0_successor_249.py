@@ -187,9 +187,9 @@ def test_delivery_hands_off_only_after_exact_c0_and_249(tmp_path, monkeypatch):
 
     monkeypatch.setattr(delivery, "run_post_249", run_later)
     delivery.deliver(tmp_path, environment={})
-    assert calls == ["boundary", "later"]
+    assert calls == ["boundary", "later", "boundary"]
     delivery.deliver(tmp_path, environment={})
-    assert calls == ["boundary", "later", "boundary"]  # read-only replay
+    assert calls == ["boundary", "later", "boundary", "boundary", "boundary"]  # read-only replay
     del rows[
         next(
             ("db/migrations", "db/migrations/" + name)
@@ -198,7 +198,7 @@ def test_delivery_hands_off_only_after_exact_c0_and_249(tmp_path, monkeypatch):
     ]
     with pytest.raises(delivery.DeliveryError, match="partial C0 release"):
         delivery.deliver(tmp_path, environment={})
-    assert calls == ["boundary", "later", "boundary"]
+    assert calls == ["boundary", "later", "boundary", "boundary", "boundary"]
 
 
 def test_post_apply_readback_excludes_exact_later_stamps_but_refuses_predecessor_drift(monkeypatch):
