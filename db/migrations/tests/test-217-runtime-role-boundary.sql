@@ -347,6 +347,87 @@ SELECT public.compress_chunk(chunk_oid)
       'public.test_217_compressed_acl_poison',
       older_than => now() - interval '99 years') chunk_oid;
 
+-- The restored-data hostile case must exercise Timescale owner repair through
+-- the logical hypertable. equipment_state is a real hypertable and this
+-- fixture has a compressed companion. ALTER OWNER on either parent propagates
+-- to their chunks; ALTER OWNER on an internal chunk is unsupported by 2.25.2.
+-- Preserve the hostile-owner observation, then repair only these parents
+-- before immutable migration 217 replays its broad ordinary-object cleanup.
+ALTER TABLE public.test_217_compressed_acl_poison OWNER TO test_217_rogue;
+DO $supported_timescale_owner_repair$
+DECLARE
+    parent_name text;
+    owner_name text;
+    parent_oid oid;
+    v_hypertable_id integer;
+    v_compressed_hypertable_id integer;
+    chunk_count integer;
+    compressed_count integer;
+BEGIN
+    SELECT owner_role.rolname INTO owner_name
+      FROM pg_database database_row
+      JOIN pg_roles owner_role ON owner_role.oid = database_row.datdba
+     WHERE database_row.datname = current_database();
+    FOREACH parent_name IN ARRAY ARRAY[
+        'equipment_state', 'test_217_compressed_acl_poison'
+    ] LOOP
+        parent_oid := to_regclass(format('public.%I', parent_name));
+        SELECT h.id, h.compressed_hypertable_id
+          INTO v_hypertable_id, v_compressed_hypertable_id
+          FROM _timescaledb_catalog.hypertable h
+         WHERE h.schema_name = 'public' AND h.table_name = parent_name;
+        SELECT count(*), count(*) FILTER (
+                   WHERE c.hypertable_id = v_compressed_hypertable_id)
+          INTO chunk_count, compressed_count
+          FROM _timescaledb_catalog.chunk c
+         WHERE c.hypertable_id IN (v_hypertable_id, v_compressed_hypertable_id)
+           AND NOT c.dropped;
+        IF parent_oid IS NULL OR v_hypertable_id IS NULL OR chunk_count < 2
+           OR (parent_name = 'test_217_compressed_acl_poison'
+               AND compressed_count <> 1)
+           OR (SELECT relation.relowner FROM pg_class relation
+                WHERE relation.oid = parent_oid) <> 'test_217_rogue'::regrole
+           OR EXISTS (
+                SELECT 1 FROM _timescaledb_catalog.chunk c
+                LEFT JOIN pg_class relation ON relation.oid = to_regclass(
+                    format('%I.%I', c.schema_name, c.table_name))
+               WHERE c.hypertable_id IN (v_hypertable_id, v_compressed_hypertable_id)
+                 AND NOT c.dropped
+                 AND relation.relowner IS DISTINCT FROM 'test_217_rogue'::regrole)
+           OR NOT has_column_privilege(
+                'verdify_ingestor_runtime',
+                'public.test_217_compressed_acl_poison',
+                'allowed_value', 'INSERT') THEN
+            RAISE EXCEPTION 'hostile Timescale parent/chunk owner or column ACL fixture invalid for %',
+                parent_name;
+        END IF;
+
+        EXECUTE format('ALTER TABLE public.%I OWNER TO %I', parent_name, owner_name);
+        EXECUTE format('ALTER TABLE public.%I OWNER TO %I', parent_name, owner_name);
+        IF (SELECT relation.relowner FROM pg_class relation
+             WHERE relation.oid = parent_oid) <> (
+               SELECT datdba FROM pg_database
+                WHERE datname = current_database())
+           OR EXISTS (
+                SELECT 1 FROM _timescaledb_catalog.chunk c
+                LEFT JOIN pg_class relation ON relation.oid = to_regclass(
+                    format('%I.%I', c.schema_name, c.table_name))
+               WHERE c.hypertable_id IN (v_hypertable_id, v_compressed_hypertable_id)
+                 AND NOT c.dropped
+                 AND relation.relowner IS DISTINCT FROM (
+                     SELECT datdba FROM pg_database
+                      WHERE datname = current_database()))
+           OR NOT has_column_privilege(
+                'verdify_ingestor_runtime',
+                'public.test_217_compressed_acl_poison',
+                'allowed_value', 'INSERT') THEN
+            RAISE EXCEPTION 'supported Timescale parent owner repair changed chunks or column ACL for %',
+                parent_name;
+        END IF;
+    END LOOP;
+END;
+$supported_timescale_owner_repair$;
+
 -- Facades themselves are safely replay-normalized by DROP/CREATE RESTRICT.
 ALTER VIEW public.v_runtime_equipment_state_write
     SET (security_invoker = true);
