@@ -35,6 +35,8 @@ AS $body$
            FROM public.experiment_v2_direct_proof_emergency_recovery_receipts receipt
            JOIN public.experiment_v2_direct_proof_emergency_resolutions resolution
              USING (resolution_id)
+           JOIN public.experiment_v2_direct_proof_authorizations authz
+             ON authz.authorization_id = receipt.authorization_id
            WHERE receipt.experiment_id = p_experiment_id
              AND receipt.resolution_id =
                  'ace2d26c-539d-4007-ad9c-d25ad812644f'::uuid
@@ -45,6 +47,24 @@ AS $body$
              AND receipt.recovery_evidence_sha256 =
                  '0fa6d172de87cf2008d5908ff4a3517eeca1d1cd4811e86461fc349c25f41b91'
              AND resolution.resolution_kind = 'bounded_baseline_recovery')
+       AND EXISTS (
+           SELECT 1
+           FROM public.experiment_v2_direct_proof_authorizations authz
+           WHERE authz.authorization_id =
+                 'd00304d1-74f9-4872-857e-6944de53ac46'::uuid
+             AND authz.experiment_id = p_experiment_id
+             AND authz.attempt_number = (
+                 SELECT max(latest.attempt_number)
+                 FROM public.experiment_v2_direct_proof_authorizations latest
+                 WHERE latest.experiment_id = p_experiment_id)
+             AND EXISTS (
+                 SELECT 1 FROM public.experiment_v2_direct_proof_attempt_events failed
+                 WHERE failed.authorization_id = authz.authorization_id
+                   AND failed.event_kind = 'failed')
+             AND NOT EXISTS (
+                 SELECT 1 FROM public.experiment_v2_direct_proof_attempt_events superseded
+                 WHERE superseded.authorization_id = authz.authorization_id
+                   AND superseded.event_kind = 'superseded'))
        AND EXISTS (
            SELECT 1 FROM public.experiment_v2_runtime_faults fault
            WHERE fault.experiment_id = p_experiment_id

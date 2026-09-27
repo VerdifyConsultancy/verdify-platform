@@ -17,6 +17,12 @@ CREATE TABLE public.experiment_v2_direct_proof_emergency_recovery_receipts (
 CREATE TABLE public.experiment_v2_direct_proof_emergency_resolutions (
     resolution_id uuid, resolution_kind text
 );
+CREATE TABLE public.experiment_v2_direct_proof_authorizations (
+    authorization_id uuid, experiment_id uuid, attempt_number integer
+);
+CREATE TABLE public.experiment_v2_direct_proof_attempt_events (
+    authorization_id uuid, event_kind text
+);
 CREATE TABLE public.experiment_v2_runtime_faults (
     experiment_id uuid, fault_report_id uuid, reported_fault_kind text,
     close_reason text, recovery_work_id uuid, admission_state_after text,
@@ -41,6 +47,11 @@ INSERT INTO public.control_experiments VALUES (
     '3e26a2da1863bd14d255d58fe00d8e94aae9226f9b588ddd9d4f993e6bcb7016');
 INSERT INTO public.experiment_v2_direct_proof_emergency_resolutions VALUES (
     'ace2d26c-539d-4007-ad9c-d25ad812644f', 'bounded_baseline_recovery');
+INSERT INTO public.experiment_v2_direct_proof_authorizations VALUES (
+    'd00304d1-74f9-4872-857e-6944de53ac46',
+    '45039c86-c1d9-52f6-a0a9-d94a17bc4b14', 3);
+INSERT INTO public.experiment_v2_direct_proof_attempt_events VALUES (
+    'd00304d1-74f9-4872-857e-6944de53ac46', 'failed');
 INSERT INTO public.experiment_v2_direct_proof_emergency_recovery_receipts VALUES (
     'ace2d26c-539d-4007-ad9c-d25ad812644f',
     'd00304d1-74f9-4872-857e-6944de53ac46',
