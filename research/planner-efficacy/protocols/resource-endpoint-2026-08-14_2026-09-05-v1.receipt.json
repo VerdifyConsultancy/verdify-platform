@@ -1,0 +1,63 @@
+{
+  "claim_limit": "Historical diagnostics only; no measured or modeled resource savings, cost, gas, DLI or whole-facility claim.",
+  "contract_version": "resource-endpoint-v1",
+  "cost_claim_eligible": false,
+  "electricity": {
+    "complete_period_kwh": "124.384",
+    "historical_source_eligible_days": 22,
+    "missing_days": 0,
+    "observed_days": 22,
+    "observed_subtotal_kwh": "124.384",
+    "reason": "circuit_map_clock_calibration_and_uncertainty_unverified",
+    "scientific_endpoint_eligible": false,
+    "scope": "partial_shelly_two_channels",
+    "unit": "kWh"
+  },
+  "gas_therms": null,
+  "input_sha256": {
+    "endpoint_contract": "d65ce69a6c909d0dfd7bae4b4c6f51bc6a875c82c7c0d12fc69d6b0d9d250bc1",
+    "ledger": "aa7ef5097efc3a44e6dd15e7ce851fba872af8b3792ab7faff93cf70e8f7d6a3"
+  },
+  "interior_dli": null,
+  "measured_uncertainty": null,
+  "resource_cost_usd": null,
+  "runtime_model": {
+    "complete_period_kwh": null,
+    "missing_days": 1,
+    "observed_days": 21,
+    "observed_subtotal_kwh": "342.025",
+    "scientific_endpoint_eligible": false,
+    "scope": "whole_controlled_equipment_runtime"
+  },
+  "selected_exploratory_benefit": "nine_control_state_minutes",
+  "selected_resource_endpoint": null,
+  "tool_sha256": "b4312aaef40618ef1f6568e512ab85b55d71c7055e885b1e014fd66eee61e549",
+  "water": {
+    "accepted_gal": "5047.0",
+    "ambiguous_gal": "3465.0",
+    "analyzed_days": 22,
+    "attributed_by_scope_gal": {
+      "climate_wetting_gal": "1361.0",
+      "unsupported_path_gal": "0.0",
+      "wall_fertigation_gal": "0.0",
+      "wall_irrigation_gal": "0.0"
+    },
+    "attributed_gal": "1361.0",
+    "conservation_error_gal": "0.0",
+    "historical_quality_ok_days": 13,
+    "historical_source_eligible_days": 13,
+    "manual_or_unattributed_gal": "221.0",
+    "missing_partition_days": 0,
+    "reason": "calibration_counter_epoch_and_uncertainty_unverified; shared_supply_attribution_incomplete",
+    "scientific_endpoint_eligible": false,
+    "scope": "main_pulse_shared_supply",
+    "unit": "gal"
+  },
+  "whole_resource_claim_eligible": false,
+  "window": {
+    "days": 22,
+    "end_exclusive": "2026-09-05",
+    "start_inclusive": "2026-08-14",
+    "timezone": "America/Denver"
+  }
+}

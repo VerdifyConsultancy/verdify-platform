@@ -1,0 +1,54 @@
+{
+  "contract_version": "resource-endpoint-v1",
+  "greenhouse_id": "vallery",
+  "local_day_timezone": "America/Denver",
+  "water": {
+    "meter_id": "main_pulse",
+    "source": "climate.water_total_gal",
+    "unit": "gal",
+    "sampling_boundary": "controller cumulative total at climate.ts; ledger deltas are assigned to the ending local day",
+    "reset_epoch": "ledger detects reset, phantom zero and gap events; authenticated physical counter epoch is unavailable",
+    "daily_source_coverage": "first and last raw samples within 10 minutes of local-day bounds, max raw gap 300 seconds, materializer through last raw sample, no missing interval or quality event",
+    "attribution_classes": [
+      "meter_attributed:climate_wetting",
+      "meter_attributed:wall_irrigation",
+      "meter_attributed:wall_fertigation",
+      "meter_attributed:unsupported_path",
+      "ambiguous_overlap",
+      "manual_or_unattributed"
+    ],
+    "conservation_tolerance_gal": "0.001",
+    "scientific_minimum_coverage": "every analyzed local day must meet the source continuity rule; missing days remain null and in the randomized ITT denominator",
+    "calibration_evidence": null,
+    "physical_counter_epoch_evidence": null,
+    "measurement_uncertainty_gal": null,
+    "commissioned": false
+  },
+  "electricity": {
+    "scope": "partial_shelly_two_channels",
+    "channels": [
+      "sensor.shellyproem50_ac15186daafc_energy_meter_0_power",
+      "sensor.shellyproem50_ac15186daafc_energy_meter_1_power"
+    ],
+    "input_unit": "W",
+    "output_unit": "kWh",
+    "sampling_boundary": "HA last_updated is a gateway state timestamp; qualified samples integrate forward at most 300 seconds, without crossing an invalid poll or local-day bound",
+    "reset_epoch": "no daily-reset energy counter is used; integrated power is bounded by source-qualified intervals",
+    "diagnostic_minimum_daily_coverage_pct": 90,
+    "scientific_minimum_daily_coverage_pct": 100,
+    "scientific_minimum_coverage": "each analyzed local day must have fully source-qualified intervals; any missing day stays null in the randomized ITT row, and only complete matched pairs enter a resource contrast",
+    "circuit_map_evidence": null,
+    "clock_validation_evidence": null,
+    "calibration_evidence": null,
+    "measurement_uncertainty_kwh": null,
+    "commissioned": false
+  },
+  "runtime_model": {
+    "scope": "whole_controlled_equipment_runtime",
+    "unit": "kWh",
+    "status": "burden diagnostic only; coefficient low/nominal/high values are not meter uncertainty"
+  },
+  "cost_policy": "No cost or savings scalar until matching measured scopes and dated tariff inputs are locked; do not subtract partial measured electricity from a whole-runtime model or price absent gas/water inputs.",
+  "missing_policy": "Missing, stale, reset-ambiguous and unmeasured values stay null; zero is an observed value only; no model imputation upgrades a measured endpoint.",
+  "claim_policy": "No commissioned water, electricity, whole-resource, gas, DLI or cost endpoint in v1; the selected trial benefit remains nine_control_state_minutes with its heterogeneous-burden label."
+}
