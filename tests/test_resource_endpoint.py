@@ -41,7 +41,8 @@ def test_frozen_22_day_reconciliation_and_claim_boundary():
     assert result["water"]["historical_source_eligible_days"] == 13
     assert result["electricity"]["scope"] == "partial_shelly_two_channels"
     assert result["electricity"]["historical_source_eligible_days"] == 22
-    assert result["electricity"]["complete_period_kwh"] == "124.384"
+    assert result["electricity"]["observed_subtotal_kwh"] == "124.384"
+    assert result["electricity"]["complete_period_kwh"] is None
     assert result["runtime_model"]["observed_subtotal_kwh"] == "342.025"
     assert result["runtime_model"]["complete_period_kwh"] is None
     assert result["selected_resource_endpoint"] is None
@@ -91,6 +92,15 @@ def test_missing_partial_energy_stays_null_and_model_remains_separate():
     assert result["electricity"]["complete_period_kwh"] is None
     assert result["electricity"]["missing_days"] == 1
     assert result["runtime_model"]["observed_subtotal_kwh"] == "342.025"
+
+
+def test_complete_period_requires_full_meter_coverage_on_every_day():
+    ledger = endpoint.parse(LEDGER.read_bytes())
+    for row in ledger["days"]:
+        row["energy"]["meter_coverage_pct"] = "100"
+    result = decide(ledger=ledger)
+    assert result["electricity"]["complete_period_kwh"] == "124.384"
+    assert result["electricity"]["scientific_endpoint_eligible"] is False
 
 
 @pytest.mark.parametrize(

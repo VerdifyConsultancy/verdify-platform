@@ -3,7 +3,7 @@
   "contract_version": "resource-endpoint-v1",
   "cost_claim_eligible": false,
   "electricity": {
-    "complete_period_kwh": "124.384",
+    "complete_period_kwh": null,
     "historical_source_eligible_days": 22,
     "missing_days": 0,
     "observed_days": 22,
@@ -31,7 +31,7 @@
   },
   "selected_exploratory_benefit": "nine_control_state_minutes",
   "selected_resource_endpoint": null,
-  "tool_sha256": "b4312aaef40618ef1f6568e512ab85b55d71c7055e885b1e014fd66eee61e549",
+  "tool_sha256": "b491bfe40582ed5eee3b659161ae923fc56a882da54b62ba1064dbd8cc629493",
   "water": {
     "accepted_gal": "5047.0",
     "ambiguous_gal": "3465.0",

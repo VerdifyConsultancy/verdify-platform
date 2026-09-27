@@ -106,6 +106,7 @@ def decision(ledger, contract, *, ledger_sha256, contract_sha256):
     water_observed = dict.fromkeys(totals, 0)
     measured_total, modeled_subtotal = Decimal(0), Decimal(0)
     measured_days = modeled_days = water_source_days = water_quality_days = energy_source_days = 0
+    fully_covered_measured_days = 0
     water_missing = measured_missing = modeled_missing = 0
     for index, row in enumerate(days):
         require(
@@ -154,6 +155,7 @@ def decision(ledger, contract, *, ledger_sha256, contract_sha256):
             modeled_days += 1
         coverage = quantity(energy.get("meter_coverage_pct"), nullable=True)
         require(coverage is None or coverage <= 100, "invalid meter coverage")
+        fully_covered_measured_days += measured is not None and coverage == 100
         energy_source_flag = energy.get("source_measured_available_for_scoring")
         require(energy_source_flag is None or type(energy_source_flag) is bool, "invalid energy source flag")
         energy_source_days += energy_source_flag is True
@@ -235,7 +237,9 @@ def decision(ledger, contract, *, ledger_sha256, contract_sha256):
             "scope": SCOPE_PARTIAL,
             "unit": "kWh",
             "observed_subtotal_kwh": str(measured_total) if measured_days else None,
-            "complete_period_kwh": str(measured_total) if measured_days and measured_missing == 0 else None,
+            "complete_period_kwh": (
+                str(measured_total) if measured_days == len(days) and fully_covered_measured_days == len(days) else None
+            ),
             "observed_days": measured_days,
             "missing_days": measured_missing,
             "historical_source_eligible_days": energy_source_days,
