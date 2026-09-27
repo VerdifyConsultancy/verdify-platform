@@ -40,6 +40,40 @@ def instance() -> dict:
     }
 
 
+def target_source() -> dict:
+    start = date(2026, 11, 2)
+    bins = [
+        {
+            "bucket_start": (
+                winter.bounds(start + timedelta(days=day))[0] + timedelta(minutes=15 * quarter)
+            ).isoformat(),
+            "temp_low": 60.0,
+            "temp_high": 80.0,
+            "vpd_low": 0.5,
+            "vpd_high": 1.5,
+        }
+        for day in range(60)
+        for quarter in range(72)
+    ]
+    return {
+        "schema": winter.TARGET_SCHEMA,
+        "study_id": winter.STUDY_ID,
+        "greenhouse_id": "vallery",
+        "timezone": "America/Denver",
+        "start_local_date": "2026-11-02",
+        "recorded_at": "2026-09-27T15:00:00+00:00",
+        "effective_from": winter.bounds(start)[0].isoformat(),
+        "effective_to": winter.bounds(start + timedelta(days=59))[1].isoformat(),
+        "target_version": "test-prospective-crop-v1",
+        "fixed_panel_target_revision_id": 1,
+        "source_profile_state_sha256": "a" * 64,
+        "profile_revision_ids": [1, 2],
+        "crop_assignment_revision_sha256": "b" * 64,
+        "target_bins_sha256": winter.digest(winter.canonical(bins)),
+        "target_bins": bins,
+    }
+
+
 def test_winter_calendar_is_sixty_actual_eighteen_hour_windows():
     study = instance()
     assert winter.validate_instance(study, require_current_source=False)[0] == date(2026, 11, 2)
@@ -66,14 +100,7 @@ def test_register_binds_real_source_bytes_and_rejects_missed_start(tmp_path):
     files = [tmp_path / name for name in ("panel.json", "target.json", "cfg.json")]
     for index, path in enumerate(files):
         path.write_bytes(f"source-{index}\n".encode())
-    files[1].write_bytes(
-        winter.canonical(
-            {
-                "qualified_prospective_crop_target": True,
-                "frozen_15_minute_target_bins_available": True,
-            }
-        )
-    )
+    files[1].write_bytes(winter.canonical(target_source()))
     expected = instance()
     with patch.object(
         winter,
@@ -100,7 +127,7 @@ def test_register_binds_real_source_bytes_and_rejects_missed_start(tmp_path):
         (archive / "panel-source").write_bytes(b"tampered\n")
         with pytest.raises(ValueError, match="missing or changed"):
             winter.verify_archived_sources(value, archive.parent)
-        with pytest.raises(ValueError, match="not registered before"):
+        with pytest.raises(ValueError, match="before registration and first observation"):
             winter.register(
                 start=date(2026, 11, 2),
                 panel_source=files[0],
@@ -117,7 +144,7 @@ def test_register_binds_real_source_bytes_and_rejects_missed_start(tmp_path):
                 / "research/planner-efficacy/protocols/winter-2026-27-source-candidates/crop-target-reference-only.json"
             ).read_bytes()
         )
-        with pytest.raises(ValueError, match="no qualified prospective frozen bins"):
+        with pytest.raises(ValueError, match="canonical frozen-target contract"):
             winter.register(
                 start=date(2026, 11, 2),
                 panel_source=files[0],
@@ -128,6 +155,33 @@ def test_register_binds_real_source_bytes_and_rejects_missed_start(tmp_path):
                 archive_id=expected["archive_id"],
                 now=datetime(2026, 9, 27, 16, tzinfo=UTC),
             )
+
+
+def test_frozen_target_rejects_marker_only_missing_bin_and_tampering():
+    now = datetime(2026, 9, 27, 16, tzinfo=UTC)
+    start = date(2026, 11, 2)
+    with pytest.raises(ValueError, match="canonical frozen-target contract"):
+        winter.validate_target_source(
+            winter.canonical(
+                {"qualified_prospective_crop_target": True, "frozen_15_minute_target_bins_available": True}
+            ),
+            start=start,
+            registered_at=now,
+        )
+    valid = target_source()
+    winter.validate_target_source(winter.canonical(valid), start=start, registered_at=now)
+    missing = target_source()
+    missing["target_bins"].pop(23)
+    with pytest.raises(ValueError, match="exactly 4,320"):
+        winter.validate_target_source(winter.canonical(missing), start=start, registered_at=now)
+    changed = target_source()
+    changed["target_bins"][0]["temp_high"] = 81.0
+    with pytest.raises(ValueError, match="bins hash mismatch"):
+        winter.validate_target_source(winter.canonical(changed), start=start, registered_at=now)
+    revised = target_source()
+    revised["fixed_panel_target_revision_id"] = 0
+    with pytest.raises(ValueError, match="positive fixed-panel target revision"):
+        winter.validate_target_source(winter.canonical(revised), start=start, registered_at=now)
 
 
 def test_all_queries_are_selects_and_day_coverage_discloses_raw_basis():
