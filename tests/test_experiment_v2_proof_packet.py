@@ -223,6 +223,8 @@ def test_collect_db_preserves_latest_missing_target_without_claiming_consumption
 
         async def fetchrow(self, sql, *args):
             self.queries.append(sql)
+            if "fn_experiment_v2_gate_p_sealed_recovery_target" in sql:
+                return {"gate_p_recovery_target": False}
             return None if "house_temp_target_f" in sql else {}
 
         async def fetch(self, sql, *args):
@@ -497,6 +499,46 @@ def test_alert_projection_classifies_only_exact_source_grounded_exceptions() -> 
     )[-1]
     assert blocked["classification"] == "unclassified"
     assert blocked["causal"] is True
+
+
+def test_gate_p_fault_projection_requires_sealed_target_and_exact_alert() -> None:
+    experiment_id = "45039c86-c1d9-52f6-a0a9-d94a17bc4b14"
+    fault = {
+        "id": 8,
+        "alert_type": "component_experiment_integrity",
+        "severity": "critical",
+        "sensor_id": f"experiment.v2.{experiment_id}",
+        "source": "system",
+        "details": {
+            "experiment_id": experiment_id,
+            "reason": "runtime_fault_requires_recovery",
+            "open_exposure_count": 0,
+        },
+    }
+
+    def projected(sealed: bool) -> dict:
+        return collector.alert_projection(
+            {
+                "open_alerts": [
+                    {"id": 1, "alert_type": "sensor_offline", "sensor_id": "climate.temp_south"},
+                    {"id": 2, "alert_type": "sensor_offline", "sensor_id": "climate.rh_south"},
+                    {"id": 3, "alert_type": "sensor_offline", "sensor_id": "climate.vpd_south"},
+                    {"id": 4, "alert_type": "sensor_offline", "sensor_id": "climate.hydro_ph"},
+                    fault,
+                ],
+                "gate_p_recovery_target": sealed,
+            },
+            observed_at="2026-08-30T12:00:00Z",
+            experiment_id=experiment_id,
+        )[-1]
+
+    assert projected(False)["classification"] == "unclassified"
+    assert projected(True)["scope"] == (f"recovery_target:runtime_fault_requires_recovery:{experiment_id}")
+    fault["details"]["reason"] = "expired_work_not_terminal"
+    assert projected(True)["scope"] == (f"recovery_target:runtime_fault_requires_recovery:{experiment_id}")
+    fault["details"]["reason"] = "runtime_fault_requires_recovery"
+    fault["details"]["open_exposure_count"] = 1
+    assert projected(True)["classification"] == "unclassified"
 
 
 def test_recovery_only_alert_projection_is_bound_to_exact_existing_rows() -> None:

@@ -744,6 +744,7 @@ def _validate_alerts(
     *,
     now: datetime,
     mode: Mode,
+    boundary: Boundary,
     expected: ExpectedPins,
     blockers: list[str],
     warnings: list[str],
@@ -812,6 +813,15 @@ def _validate_alerts(
                 and row["maintenance_issue_url"] == ""
             ):
                 warnings.append("authorized_recovery_target:expired_work_not_terminal")
+            elif (
+                classification == "authorized_recovery_target"
+                and mode == "proof"
+                and boundary == "gate-p"
+                and scope == f"recovery_target:runtime_fault_requires_recovery:{expected.experiment_id}"
+                and row["decision_issue_url"] == GATE_R_ISSUE_URL
+                and row["maintenance_issue_url"] == ""
+            ):
+                warnings.append("authorized_recovery_target:runtime_fault_requires_recovery")
             else:
                 blockers.append(f"unsupported_alert_classification:{scope}")
         elif (
@@ -1332,7 +1342,15 @@ def evaluate_packet(
         "climate_qualification_source_revision",
         blockers,
     )
-    _validate_alerts(top["alerts"], now=now, mode=mode, expected=expected, blockers=blockers, warnings=warnings)
+    _validate_alerts(
+        top["alerts"],
+        now=now,
+        mode=mode,
+        boundary=boundary,
+        expected=expected,
+        blockers=blockers,
+        warnings=warnings,
+    )
     _validate_dependencies(top["dependencies"], expected=expected, repo_root=repo_root, blockers=blockers)
     proof_preflight_receipts = _validate_evidence(
         top["evidence"],

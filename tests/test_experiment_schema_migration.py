@@ -287,6 +287,7 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "251-experiment-v2-legacy-expired-recovery-terminalization.sql",
         # Fixed-panel source history must be installed before future qualification.
         "252-fixed-panel-source-history.sql",
+        "253-gate-p-sealed-recovery-target.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(

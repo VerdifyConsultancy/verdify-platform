@@ -555,6 +555,13 @@ async def collect_db(experiment_id: str, *, mode: str) -> dict[str, Any]:
               FROM public.v_open_alerts ORDER BY ts, id
             """
         )
+        gate_p_recovery_target = False
+        if mode == "proof":
+            gate_p_binding = await connection.fetchrow(
+                "SELECT public.fn_experiment_v2_gate_p_sealed_recovery_target($1::uuid) AS gate_p_recovery_target",
+                experiment_id,
+            )
+            gate_p_recovery_target = gate_p_binding is not None and gate_p_binding["gate_p_recovery_target"] is True
     finally:
         await connection.close()
     if status is None or runtime is None or (mode == "proof" and generation is None) or len(climate) != 2:
@@ -567,6 +574,7 @@ async def collect_db(experiment_id: str, *, mode: str) -> dict[str, Any]:
         "bands": [dict(row) for row in bands],
         "targets": {} if targets is None else dict(targets),
         "open_alerts": [dict(row) for row in open_alerts],
+        "gate_p_recovery_target": gate_p_recovery_target,
     }
 
 
@@ -1190,10 +1198,30 @@ def alert_projection(db: Mapping[str, Any], *, observed_at: str, experiment_id: 
             and details.get("reason") == "expired_work_not_terminal"
             and details.get("open_exposure_count") == 0
         )
+        gate_p_recovery_target = (
+            db.get("gate_p_recovery_target") is True
+            and alert_type == "component_experiment_integrity"
+            and sensor_id == f"experiment.v2.{experiment_id}"
+            and row.get("source") == "system"
+            and row.get("severity") == "critical"
+            and details.get("experiment_id") == experiment_id
+            # The alert monitor may still show its earlier expired-work
+            # reason after migration 251 has terminalized those five rows.
+            # The DB projection above must already report the newer exact
+            # runtime fault before either spelling is accepted for Gate P.
+            and details.get("reason") in ("runtime_fault_requires_recovery", "expired_work_not_terminal")
+            and details.get("open_exposure_count") == 0
+        )
         historical_issue = _historical_alert_issue(row)
         heap_warning = _safe_historical_heap_warning(row, observed_at=observed_at)
         recovery_only = _recovery_only_alert(row)
-        if recovery_target:
+        if gate_p_recovery_target:
+            classification = "authorized_recovery_target"
+            causal = False
+            scope = f"recovery_target:runtime_fault_requires_recovery:{experiment_id}"
+            decision_url = GATE_R_ISSUE_URL
+            maintenance_url = ""
+        elif recovery_target:
             classification = "authorized_recovery_target"
             causal = False
             scope = f"recovery_target:expired_work_not_terminal:{experiment_id}"

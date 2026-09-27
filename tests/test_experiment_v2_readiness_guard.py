@@ -283,6 +283,30 @@ def test_exact_expired_work_alert_is_a_recovery_target_only() -> None:
     assert any(blocker.startswith("unsupported_alert_classification:recovery_target") for blocker in result["blockers"])
 
 
+def test_exact_sealed_fault_target_is_allowed_only_at_gate_p() -> None:
+    alert = {
+        "alert_id": "10454",
+        "alert_type": "component_experiment_integrity",
+        "scope": f"recovery_target:runtime_fault_requires_recovery:{EXPERIMENT_ID}",
+        "disposition": "acknowledged",
+        "observed_at": NOW,
+        "classification": "authorized_recovery_target",
+        "causal": False,
+        "decision_issue_url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/641",
+        "maintenance_issue_url": "",
+    }
+    proof = copy.deepcopy(BASE)
+    proof["alerts"].append(alert)
+    result = _evaluate(proof, {"operations": []})
+    assert result["blockers"] == []
+    assert "authorized_recovery_target:runtime_fault_requires_recovery" in result["warnings"]
+
+    recovery = _apply(BASE, RECOVERY_OVERLAY["operations"])
+    recovery["alerts"].append(alert)
+    result = _evaluate(recovery, RECOVERY_OVERLAY)
+    assert any(blocker.startswith("unsupported_alert_classification:recovery_target") for blocker in result["blockers"])
+
+
 def test_exact_open_equipment_and_push_alerts_are_recovery_only() -> None:
     alerts = []
     for scope, (alert_id, alert_type, disposition, issue) in guard.RECOVERY_ONLY_ALERTS.items():
