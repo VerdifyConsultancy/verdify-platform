@@ -107,6 +107,10 @@ metadata:
     app.kubernetes.io/part-of: verdify
     app.kubernetes.io/component: lab-site
 spec:
+  # Each replacement validates the shared public tree before it can become
+  # Ready. Two sequential cache scans exceeded Kubernetes' 600-second default
+  # during the 2026-09-27 rollout while both old and new sites stayed healthy.
+  progressDeadlineSeconds: 1500
   replicas: 1
   selector:
     matchLabels:
