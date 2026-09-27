@@ -34,6 +34,10 @@ PLAN_SEND_MARGIN = timedelta(minutes=5)  # dispatcher task timeout for a 12-comm
 ZONE_VPD_TARGETS = frozenset({"vpd_target_south", "vpd_target_west", "vpd_target_east", "vpd_target_center"})
 
 
+class SnapshotBehindReadbacks(ValueError):
+    """The atomic DB snapshot has not caught up to this connection's cfg values."""
+
+
 @dataclass(frozen=True)
 class Decision:
     action: str  # ordinary | hold | send | complete
@@ -121,8 +125,10 @@ async def _fresh_readbacks(conn, generation: int) -> dict[str, float]:
         raise ValueError("canonical readbacks are not one atomic batch")
     for row in rows:
         param = row["parameter"]
-        if param not in current or not _equal(current[param], row["value"]):
-            raise ValueError(f"snapshot does not match current connection: {param}")
+        if param not in current:
+            raise ValueError(f"current connection missing readback: {param}")
+        if not _equal(current[param], row["value"]):
+            raise SnapshotBehindReadbacks(f"snapshot does not match current connection: {param}")
     return current
 
 
@@ -206,7 +212,22 @@ def _validated_residual(
         for param, value in approved["changes"]
         if param not in ZONE_VPD_TARGETS and param not in completed
     ]
-    current_fixed = [[param, value] for param, value in preview["changes"] if param not in ZONE_VPD_TARGETS]
+    from .dispatcher import readback_values_equivalent
+
+    current_fixed = []
+    for param, value in preview["changes"]:
+        if param in ZONE_VPD_TARGETS:
+            continue
+        if param in completed:
+            if (
+                param not in state.get("completed_values", {})
+                or float(state["completed_values"][param]) != float(approved_changes[param])
+                or float(value) != float(approved_changes[param])
+                or not readback_values_equivalent(param, preview["readbacks"].get(param), value)
+            ):
+                raise ValueError(f"completed fixed candidate drifted: {param}")
+            continue
+        current_fixed.append([param, value])
     if current_fixed != approved_fixed:
         raise ValueError("desired fixed candidate changed or completed field reappeared")
     if any(param not in approved_changes for param in current_changes):
@@ -218,8 +239,6 @@ def _validated_residual(
             raise ValueError(f"completed zone VPD target exceeds ordinary handoff: {param}")
         if zone_vpd_targets is None or param not in zone_vpd_targets or not _equal(value, zone_vpd_targets[param]):
             raise ValueError(f"zone VPD source changed or unavailable: {param}")
-    from .dispatcher import readback_values_equivalent
-
     for param in (approved_changes.keys() & ZONE_VPD_TARGETS) - current_changes.keys():
         # Dispatcher omits a target only when its current cfg readback is
         # equivalent to the fresh crop target. Prove that before skipping it.
@@ -378,7 +397,35 @@ async def choose_stage(
         state = _read(state_path)
         prior = state.get("approved_preview") if state else approval.get("approved_preview") if approval else None
         baseline_names = set(prior["readbacks"]) if prior else set()
-        preview = await _preview(conn, changes, planned, generation, baseline_names)
+        try:
+            preview = await _preview(conn, changes, planned, generation, baseline_names)
+        except SnapshotBehindReadbacks as error:
+            # The 48-field DB batch is written on a slower cadence than live
+            # cfg callbacks. A just-sent stage can be confirmed before its
+            # next atomic snapshot arrives. Keep only that pending stage
+            # durable and let the existing bounded recheck wait for the batch.
+            if state is None or state.get("status") != "awaiting_confirmation":
+                raise
+            approved = state["approved_preview"]
+            if approval is None or state["run_id"] != approval.get("run_id"):
+                raise ValueError("approval changed during run") from error
+            if (
+                approved["session_id"] != SESSION_ID
+                or approved["pod"] != os.environ.get("HOSTNAME", "")
+                or approved["source_revision"] != os.environ.get("VERDIFY_GIT_SHA", "unknown")
+                or approved["generation"] != generation
+            ):
+                raise ValueError("writer identity changed") from error
+            plan_rows, _expiry = await _plan_identity(conn, planned)
+            if plan_rows != approved["plan_rows"]:
+                raise ValueError("effective plan or one-shot changed") from error
+            now = datetime.now(UTC)
+            if now - _time(state["stage_started_at"]) > CONFIRM_DEADLINE:
+                raise ValueError("stage confirmation deadline exceeded") from error
+            if now >= _time(state["expires_at"]) or now + PLAN_SEND_MARGIN >= _time(approved["earliest_plan_expiry"]):
+                raise ValueError("stage approval or effective plan expired") from error
+            _wake_for_confirmation()
+            return Decision("hold", reason=f"awaiting fresh atomic snapshot: {error}", run_id=state["run_id"])
         _write(state_dir / PREVIEW_NAME, preview)
         if approval is None and state is None:
             return Decision("ordinary")
@@ -433,7 +480,26 @@ async def choose_stage(
         if state["status"] == "inflight":
             raise ValueError("prior stage outcome unknown; operator recovery required")
         if state["status"] == "complete":
-            return Decision("ordinary")
+            if (
+                state["approved_preview"]["session_id"] != SESSION_ID
+                or state["approved_preview"]["generation"] != generation
+            ):
+                return Decision("ordinary")
+            from .dispatcher import readback_values_equivalent
+
+            completed_fixed = {
+                param: value
+                for param, value in state.get("completed_values", {}).items()
+                if param not in ZONE_VPD_TARGETS
+            }
+            remaining = tuple(
+                (param, value)
+                for param, value in preview["changes"]
+                if param not in completed_fixed
+                or float(value) != float(completed_fixed[param])
+                or not readback_values_equivalent(param, preview["readbacks"].get(param), value)
+            )
+            return Decision("complete", changes=remaining, run_id=state["run_id"])
         if state["status"] == "awaiting_confirmation":
             records = state["records"]
             if not await _check_records(conn, records, preview["readbacks"], state["stage_started_at"]):
@@ -456,7 +522,8 @@ async def choose_stage(
             # lifecycle and global cap in this same sole-writer pass.
             state["status"] = "complete"
             _write(state_path, state)
-            return Decision("complete", run_id=state["run_id"])
+            handoff = tuple((param, value) for param, value in preview["changes"] if param in ZONE_VPD_TARGETS)
+            return Decision("complete", changes=handoff, run_id=state["run_id"])
         selected = tuple(residual[:limit])
         if not selected or len(selected) > limit:
             raise ValueError("invalid stage size")
