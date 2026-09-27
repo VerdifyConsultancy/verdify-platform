@@ -44,7 +44,7 @@ if grep -Eq '^(CREATE|ALTER) ROLE .* PASSWORD ' "${backup_dir}/${stem}.roles.sql
   echo "[backup-pair] role artifact contains a password clause" >&2
   exit 1
 fi
-if ! grep -Fxq "CREATE ROLE ${owner};" "${backup_dir}/${stem}.roles.sql"; then
+if [ "$(grep -Fxc "CREATE ROLE ${owner};" "${backup_dir}/${stem}.roles.sql" || true)" -ne 1 ]; then
   echo "[backup-pair] database owner role is absent" >&2
   exit 1
 fi
