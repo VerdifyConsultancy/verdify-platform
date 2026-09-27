@@ -44,6 +44,51 @@ current resolver, or relabel historical dispatched bands as crop targets.
 
 ## Frozen input contracts
 
+### Source-owned provenance for future pretrial replay
+
+`research/planner-efficacy/pretrial_provenance.py` verifies a separate, private
+`verdify-fixed-panel-provenance-v1` manifest before producing the existing
+measurement contract. Its three `member_sources` must be SHA-256-bound JSON
+files with schema `verdify-contributor-history-v1`. Each records its fixed
+north/east/west route, distinct physical serial and contributor ID, source
+revision SHA-256, installation validity interval covering the whole window,
+source record time no later than the window start, and a source export time
+after the window. An entity name or Modbus address alone is not a serial.
+
+The manifest's `target_sources` must be SHA-256-bound
+`verdify-crop-target-history-v1` files from an actual versioned crop target
+history. Each records the source revision, the time the target version was
+recorded, its effective interval, an export after the measured window, and
+explicit UTC 15-minute rows of temperature/VPD bounds. The record must predate
+the effective interval. Every measured bin needs exactly one row from a
+version valid at that bin; missing, duplicate, inverted or retrospectively
+recorded targets fail. This path emits only
+`frozen_historical_crop_definition`. A fixed counterfactual can still be
+analyzed separately with the older contract, but cannot be promoted as
+physical historical crop truth or used to close #782's input requirement.
+
+Keep the manifest and source JSON files in one private directory and record
+their immutable byte hashes. The source files contain physical inventory and
+target values, so do not put them in Git, issue comments or public lab content.
+The tool makes no database or device connection and creates only a new output:
+
+```sh
+python research/planner-efficacy/pretrial_provenance.py \
+  --manifest /private/provenance/manifest.json \
+  --contract-output /private/provenance/fixed-panel-contract.json
+```
+
+The stdout receipt carries source and contract hashes and explicitly says
+`physical_truth_authenticated: false`: byte hashes and structural checks do
+not authenticate a source ledger or a claimed hardware serial. A reviewer
+must verify the source-owned revision, capture path and physical inventory.
+The current production `crop_target_profiles` has no historical validity or
+recorded-at lineage, and old climate routes have no proven serial history.
+Consequently, the 2025 winter and 2026 warm analogue windows cannot be
+qualified through this verifier by filling them with today's targets or
+invented serials. A source-owned target-history and contributor-history
+capture is still required before future selector replay and joint power.
+
 The export object contains exactly:
 
 - `contract_version: 1`, `sample_basis: database_flush_snapshot`,
