@@ -3443,6 +3443,7 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
         connection_lost = asyncio.Event()
         disconnected_at: datetime | None = None
         connection_generation: int | None = None
+        pending_gap: tuple[datetime, datetime, str] | None = None
 
         async def on_stop(expected_disconnect: bool) -> None:
             """Called by aioesphomeapi when connection drops."""
@@ -3478,10 +3479,7 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
                 gap = (connected_at - last_disconnected_at).total_seconds()
                 log.info(f"Connected to ESP32 (gap: {gap:.0f}s since disconnect)")
                 if gap > 120:  # >2 min gap — record and backfill
-                    try:
-                        await backfill_gap(pool, last_disconnected_at, connected_at)
-                    except Exception as e:
-                        log.error(f"Gap backfill failed: {e}")
+                    pending_gap = (last_disconnected_at, connected_at, "ingestor_restart")
             elif first_connect:
                 # M6 / B11: first connect of this process. last_disconnected_at is
                 # None not because there was no gap, but because the prior
@@ -3497,10 +3495,7 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
                     gap = (connected_at - last_telemetry_ts).total_seconds()
                     if gap > 120:
                         log.info(f"Connected to ESP32 (restart gap: {gap:.0f}s since last telemetry)")
-                        try:
-                            await backfill_gap(pool, last_telemetry_ts, connected_at, reason="ingestor_process_restart")
-                        except Exception as e:
-                            log.error(f"Restart-gap backfill failed: {e}")
+                        pending_gap = (last_telemetry_ts, connected_at, "ingestor_process_restart")
                     else:
                         log.info("Connected to ESP32")
                 else:
@@ -3514,6 +3509,8 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
             entities, services = await client.list_entities_services()
             if connection_lost.is_set():
                 raise APIConnectionError("ESP32 connection stopped during entity enumeration")
+            state.key_to_object_id.clear()
+            state.key_to_type.clear()
             for e in entities:
                 obj_id = e.object_id
                 key = e.key
@@ -3614,6 +3611,22 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
             shared.esp32["state_subscription_generation"] = connection_generation
             client.subscribe_states(on_generation_state)
 
+            # A gap is only a complete snapshot after this connection has an
+            # enumerated entity map and its own fresh, fenced state burst.
+            if pending_gap is not None:
+                try:
+                    await backfill_gap(
+                        pool,
+                        *pending_gap,
+                        client=client,
+                        generation=connection_generation,
+                        connection_lost=connection_lost,
+                    )
+                except Exception as e:
+                    log.error("Gap backfill failed: %s", e)
+                finally:
+                    pending_gap = None
+
             # Keep ESP32 log streaming opt-in. Heap pressure is covered by
             # binary sensors and diagnostics; a live API log stream costs heap.
             if ESP32_LOG_LEVEL != LogLevel.LOG_LEVEL_NONE:
@@ -3705,6 +3718,20 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
                 last_disconnected_at = datetime.now(UTC)
             await asyncio.sleep(30)
         finally:
+            if pending_gap is not None:
+                # Enumeration/subscription failed before a current-state read.
+                # Keep the detected outage visible without claiming a snapshot.
+                connection_lost.set()
+                try:
+                    await backfill_gap(
+                        pool,
+                        *pending_gap,
+                        client=client,
+                        generation=connection_generation or 0,
+                        connection_lost=connection_lost,
+                    )
+                except Exception as e:
+                    log.error("Incomplete gap record failed: %s", e)
             clear_component_entity_inventory()
             if shared.esp32.get("state_subscription_client") is client:
                 shared.esp32["state_subscription_client"] = None
@@ -4409,34 +4436,107 @@ async def _last_telemetry_ts(pool: asyncpg.Pool) -> datetime | None:
 
 
 async def backfill_gap(
-    pool: asyncpg.Pool, gap_start: datetime, gap_end: datetime, reason: str = "ingestor_restart"
+    pool: asyncpg.Pool,
+    gap_start: datetime,
+    gap_end: datetime,
+    reason: str,
+    *,
+    client: APIClient,
+    generation: int,
+    connection_lost: asyncio.Event,
 ) -> None:
-    """Record data gap and snapshot current equipment state after reconnect."""
+    """Persist only this connection's observed relay states with an honest gap status."""
     duration = (gap_end - gap_start).total_seconds()
-    async with pool.acquire() as conn:
-        await conn.execute(
-            "INSERT INTO data_gaps (start_ts, end_ts, duration_s, reason, backfill_status) "
-            "VALUES ($1, $2, $3, $4, 'snapshot_taken')",
-            gap_start,
-            gap_end,
-            duration,
-            reason,
+    expected: dict[int, str] = {}
+    for key, obj_id in state.key_to_object_id.items():
+        entity_type = state.key_to_type.get(key)
+        if entity_type == "binary":
+            equipment = EQUIPMENT_BINARY_MAP.get(obj_id)
+        elif entity_type == "switch":
+            equipment = EQUIPMENT_SWITCH_MAP.get(obj_id)
+        else:
+            equipment = None
+        if equipment is not None:
+            expected[key] = equipment
+
+    def current_connection() -> bool:
+        return bool(
+            not connection_lost.is_set()
+            and shared.transport_generation == generation
+            and shared.esp32.get("client") is client
+            and shared.esp32.get("state_subscription_client") is client
+            and shared.esp32.get("state_subscription_generation") == generation
         )
 
-        # Snapshot current equipment state (we know NOW, not what happened during gap)
-        for obj_id in list(state.key_to_object_id.values()):
-            from entity_map import EQUIPMENT_BINARY_MAP, EQUIPMENT_SWITCH_MAP
+    observed: dict[int, tuple[bool, datetime]] = {}
+    invalid: set[int] = set()
+    complete = asyncio.Event()
+    burst_failed = False
 
-            equip = EQUIPMENT_BINARY_MAP.get(obj_id) or EQUIPMENT_SWITCH_MAP.get(obj_id)
-            if equip and obj_id in state.equipment:
-                await conn.execute(
+    def on_fresh_state(entity_state) -> None:
+        if not current_connection():
+            return
+        key = entity_state.key
+        if key not in expected:
+            return
+        value = entity_state.state
+        if type(value) is not bool or (key in observed and observed[key][0] != value):
+            invalid.add(key)
+            observed.pop(key, None)
+        elif key not in invalid:
+            observed.setdefault(key, (value, _equipment_source_now()))
+        if invalid or set(observed) == set(expected):
+            complete.set()
+
+    if expected and current_connection():
+        remove_callback = None
+        try:
+            remove_callback = _request_current_state_burst(client, on_fresh_state)
+            await asyncio.wait_for(complete.wait(), timeout=20)
+            # Accept buffered same-key responses before declaring one coherent burst.
+            await asyncio.sleep(0.1)
+        except Exception as e:
+            burst_failed = True
+            log.warning("Gap equipment state burst incomplete: %s", e)
+        finally:
+            if callable(remove_callback):
+                remove_callback()
+
+    fenced = current_connection()
+    if not fenced:
+        observed.clear()
+    snapshot_complete = bool(
+        fenced and expected and not burst_failed and not invalid and set(observed) == set(expected)
+    )
+    rows = [(observed_at, expected[key], value) for key, (value, observed_at) in observed.items()]
+    for observed_at, equipment, value in rows:
+        EquipmentStateEvent(ts=observed_at, equipment=equipment, state=value, greenhouse_id=GREENHOUSE_ID)
+
+    status = "snapshot_taken" if snapshot_complete else "snapshot_incomplete"
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            if rows:
+                await conn.executemany(
                     "INSERT INTO v_runtime_equipment_state_write (ts, equipment, state) VALUES ($1, $2, $3)",
-                    gap_end,
-                    equip,
-                    state.equipment[obj_id],
+                    rows,
                 )
+            await conn.execute(
+                "INSERT INTO data_gaps (start_ts, end_ts, duration_s, reason, backfill_status) "
+                "VALUES ($1, $2, $3, $4, $5)",
+                gap_start,
+                gap_end,
+                duration,
+                reason,
+                status,
+            )
 
-    log.info("Gap backfill: %.0fs gap recorded, equipment state snapshot taken", duration)
+    log.info(
+        "Gap backfill: %.0fs gap recorded, %d/%d equipment states persisted, status=%s",
+        duration,
+        len(rows),
+        len(expected),
+        status,
+    )
 
 
 async def reconcile_interrupted_device_writes(pool: asyncpg.Pool) -> int:
