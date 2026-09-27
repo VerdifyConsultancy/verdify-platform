@@ -44,6 +44,21 @@ export byte for byte with its source; then run the aggregate data and bounded
 privilege audit. A nonzero Job exit is a failed restore. Retain its Job, Pod,
 and source coordinates for diagnosis; never retry against the production DB.
 
+The restore now blocks if any TimescaleDB 2.25.2 internal regular or compressed
+chunk has an owner different from its logical hypertable, or if a referenced
+parent/chunk relation is missing. It then runs a rollback-only hostile fixture:
+create an old compressed chunk and a current uncompressed chunk, transfer the
+user-owned parent to a rogue role, verify Timescale propagates that owner to
+both physical chunk forms, use `REASSIGN OWNED` twice to restore ownership,
+and verify the SELECT grant survives. The fixture never directly alters an
+internal chunk. If the read-only guard reports an unsupported state, preserve
+the failed Job and inspect the logical parent and source owner. In a disposable
+restore, repair an ordinary parent through `ALTER TABLE parent OWNER TO owner`
+and rerun the guard; never issue `ALTER TABLE` against a Timescale chunk.
+This is a supported owner-path check, not proof that the broad migration-217
+hostile fixture now passes; that fixture remains separately advisory until a
+fresh restored-data run can make it blocking without hiding its other cases.
+
 This is logical recovery evidence. The C0 physical-clone receipt contract
 deliberately includes database and role OIDs and is qualified separately.
 For #670 completion, observe a **scheduled** CronJob publishing the pair,
