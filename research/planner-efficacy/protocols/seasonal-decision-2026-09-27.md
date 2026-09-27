@@ -70,3 +70,59 @@ data under the ordinary operating contract. It cannot satisfy #641 physical
 proof, #424 on-chip consumed-band lineage, #778 live wetting safety, #783
 restored-data vertical qualification, #588 lock/draw, or #642 randomized
 activation. Those remain separate evidence requirements for the hot/dry pilot.
+
+## Immutable read-only collection
+
+`research/planner-efficacy/winter_feasibility.py` is the extractor for this
+separate observational packet. Before the first 06:00 Denver observation,
+register one instance from concrete, retained files for the fixed panel,
+crop-target history and 48-field cfg schema. The `register` command copies
+those source bytes into a private archive, hashes them, records the exact Git
+commit and extractor/protocol bytes, and refuses a past start or a 60-day
+calendar crossing a Denver UTC-offset change. Use actual observed firmware
+revision and a named observer role. Do not invent source files merely to make
+registration pass. For the current candidate, the first window is
+2026-11-02 13:00Z–2026-11-03 07:00Z and the last ends 2027-01-01 07:00Z.
+
+```sh
+python3 research/planner-efficacy/winter_feasibility.py register \
+  --output-dir /private/archive/winter-2026-27 \
+  --start 2026-11-02 \
+  --panel-source /retained/panel-source.json \
+  --crop-target-source /retained/crop-target-source.json \
+  --cfg-schema-source /retained/cfg-schema-source.json \
+  --firmware-revision 'observed-version' \
+  --observer-role 'read_only_research' \
+  --archive-id 'winter-2026-27-v1'
+```
+
+After each *completed* local day, run from the registered exact Git revision
+with an existing `DB_DSN` in the process environment. The collector opens one
+repeatable-read, read-only transaction with bounded statements, makes only
+`SELECT` calls, and writes one exclusive mode-0600 day artifact. It does not
+connect to ESPHome, invoke lifecycle functions or write to the database. Keep
+the archive outside a public web root and back it up by the existing policy.
+
+```sh
+python3 research/planner-efficacy/winter_feasibility.py collect \
+  --instance /private/archive/winter-2026-27/instance.json \
+  --output-dir /private/archive/winter-2026-27 \
+  --day 2026-11-02
+python3 research/planner-efficacy/winter_feasibility.py manifest \
+  --instance /private/archive/winter-2026-27/instance.json \
+  --output-dir /private/archive/winter-2026-27 \
+  --as-of 2027-01-02T00:00:00+00:00
+```
+
+Every manifest has exactly 60 calendar rows. Completed days without a frozen
+artifact remain `uncollected_completed`; future days remain `scheduled`.
+Collection more than 24 hours after a window ends remains `captured_late`,
+not a timely prospective day. Captured days report each source row count and
+a hash of the canonical day bytes. The fixed-panel coverage count is based on complete north/east/west
+**database flush** minutes and is explicitly ineligible as a physical result
+without the separate panel and target proofs. The 48-field cfg rows likewise
+show shared flush timestamps, not independent device callback times or
+generation. Served bands are not on-chip consumed bands. Power, water and
+equipment rows are raw, scope-unqualified observations, not whole-resource
+savings. Virtual selector choice/fallback is `unobservable` until a frozen
+selector replay is supplied; no randomized assignment is inferred.
