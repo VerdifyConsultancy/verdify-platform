@@ -53,4 +53,4 @@ metadata:
   name: release-pin-verdify-experiment-v2-orchestrator
 imageTag:
   name: registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator
-  digest: sha256:cccbd040cf97911aa947ff397f75244357c688f476db5f6ff57a391033f20f65
+  digest: sha256:4471be5f0e4f9fc91c6ca886d8610aa7f36952ae5a1caf0c35b13501c23e3e1a
