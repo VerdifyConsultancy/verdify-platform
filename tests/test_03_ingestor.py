@@ -25,6 +25,7 @@ for key, value in {
 }.items():
     os.environ.setdefault(key, value)
 
+import esp32_push  # noqa: E402
 import shared  # noqa: E402
 import tasks as ingestor_tasks  # noqa: E402
 from esp32_push import DeviceCommandOutcome, PushBatchResult  # noqa: E402
@@ -506,6 +507,92 @@ async def test_long_writer_does_not_delay_short_periodic_task_past_cadence():
 
     release_writer.set()
     await asyncio.gather(*running.values())
+
+
+@pytest.mark.asyncio
+async def test_real_writer_queue_contention_does_not_starve_periodic_confirmation(monkeypatch):
+    first_command_entered = asyncio.Event()
+    release_first_command = asyncio.Event()
+    urgent_queued = asyncio.Event()
+    physical_calls: list[int] = []
+    confirmation_starts: list[float] = []
+    heartbeat_starts: list[float] = []
+    cadence = 1.0
+
+    async def command(key, _value):
+        physical_calls.append(key)
+        if key == 1:
+            first_command_entered.set()
+            await release_first_command.wait()
+
+    client = MagicMock()
+    client.number_command = command
+    monkeypatch.setenv("VERDIFY_DEVICE_WRITE_ENABLED", "1")
+    monkeypatch.setattr(shared, "is_shadow_mode", lambda: False)
+    monkeypatch.setattr(shared, "writer_lease_held", lambda: True)
+    monkeypatch.setattr(shared, "transport_generation", 4)
+    monkeypatch.setattr(
+        shared, "esp32", {"client": client, "keys": {f"cmd_{i}": i for i in range(1, 7)} | {"urgent": 999}}
+    )
+    monkeypatch.setattr(esp32_push, "_MIN_COMMAND_INTERVAL_S", 0.0)
+    monkeypatch.setattr(esp32_push, "_BATCH_PAUSE_S", 0.0)
+
+    async def dispatcher(_pool):
+        return await esp32_push.push_to_esp32_detailed([(f"cmd_{i}", float(i), "number") for i in range(1, 7)])
+
+    async def confirmation(_pool):
+        confirmation_starts.append(last_run["setpoint_confirmation"])
+
+    async def heartbeat(_pool):
+        heartbeat_starts.append(last_run["planning_heartbeat"])
+
+    tasks = [
+        ("setpoint_dispatch", 300.0, dispatcher),
+        ("setpoint_confirmation", cadence, confirmation),
+        ("planning_heartbeat", cadence, heartbeat),
+    ]
+    last_run = {name: 0.0 for name, _interval, _fn in tasks}
+    running: dict[str, asyncio.Task[None]] = {}
+    pool = MagicMock()
+
+    try:
+        assert ingestor._launch_due_tasks(pool, tasks, last_run, running, 400.0, {}) == [
+            "setpoint_dispatch",
+            "setpoint_confirmation",
+            "planning_heartbeat",
+        ]
+        await asyncio.wait_for(first_command_entered.wait(), timeout=0.2)
+
+        async def on_urgent_state(outcomes):
+            if all(outcome.status == "queued" for outcome in outcomes):
+                urgent_queued.set()
+
+        urgent = asyncio.create_task(
+            esp32_push.push_to_esp32_detailed([("urgent", 1.0, "number")], on_state=on_urgent_state)
+        )
+        await asyncio.wait_for(urgent_queued.wait(), timeout=0.2)
+
+        for tick in (401.1, 402.2, 403.3):
+            await asyncio.gather(running["setpoint_confirmation"], running["planning_heartbeat"])
+            assert ingestor._launch_due_tasks(pool, tasks, last_run, running, tick, {}) == [
+                "setpoint_confirmation",
+                "planning_heartbeat",
+            ]
+            await asyncio.sleep(0)
+            assert not running["setpoint_dispatch"].done()
+            assert not urgent.done()
+
+        await asyncio.gather(running["setpoint_confirmation"], running["planning_heartbeat"])
+        for starts in (confirmation_starts, heartbeat_starts):
+            assert starts == [400.0, 401.1, 402.2, 403.3]
+            assert max(later - earlier for earlier, later in zip(starts, starts[1:], strict=False)) < cadence * 2
+    finally:
+        release_first_command.set()
+        await asyncio.gather(*running.values(), return_exceptions=True)
+        if "urgent" in locals():
+            await asyncio.gather(urgent, return_exceptions=True)
+
+    assert physical_calls == [1, 2, 999, 3, 4, 5, 6]
 
 
 @pytest.mark.asyncio
