@@ -61,32 +61,9 @@ def test_gate_r_default_activation_is_suspended_and_exact() -> None:
     assert all(value == "REPLACE_BEFORE_ACTIVATION" for value in activation["data"].values())
 
 
-def test_attended_production_gate_r_is_bound_and_one_shot() -> None:
+def test_ordinary_production_does_not_render_gate_r() -> None:
     docs = _render(ROOT / "deploy/k8s/overlays/prod")
-    jobs = [doc for doc in docs if doc["kind"] == "Job" and doc["metadata"]["name"] == "verdify-experiment-v2-gate-r"]
-    assert len(jobs) == 1
-    job = jobs[0]
-    assert job["spec"]["suspend"] is False
-    assert job["spec"]["backoffLimit"] == 0
-    assert job["metadata"]["annotations"]["argocd.argoproj.io/hook"] == "PostSync"
-    assert job["metadata"]["annotations"]["argocd.argoproj.io/sync-wave"] == "1"
-    activation = next(
-        doc
-        for doc in docs
-        if doc["kind"] == "ConfigMap" and doc["metadata"]["name"] == "experiment-v2-gate-r-activation"
-    )
-    values = activation["data"]
-    assert all(value and not value.startswith("REPLACE_BEFORE_ACTIVATION") for value in values.values())
-    assert values["VERDIFY_GATE_R_PREDECESSOR_AUTHORIZATION_ID"] == "d00304d1-74f9-4872-857e-6944de53ac46"
-    assert values["VERDIFY_GATE_R_EXPECTED_AGGRESSIVE_WORK_ID"] == "7aa1f560-a309-4d17-b9ad-57a20574f05d"
-    assert values["VERDIFY_GATE_R_EXPECTED_LIVE_CONNECTION_GENERATION"] == "3"
-    assert values["VERDIFY_GATE_R_EXPECTED_RECOVERY_WORK_ID"] == "7093f8c3-a36e-49f2-8b4b-443d32a9a51b"
-    assert (
-        values["VERDIFY_GATE_R_EXPECTED_RECOVERY_EVIDENCE_SHA256"]
-        == "0fa6d172de87cf2008d5908ff4a3517eeca1d1cd4811e86461fc349c25f41b91"
-    )
-    assert (
-        values["VERDIFY_GATE_R_READINESS_PACKET_SHA256"]
-        == "c3ba4bb3b80e212425aaf9fce0ea4c0c4c165fc1872ede85da3e61c5a2bc2700"
-    )
-    assert values["VERDIFY_GATE_R_SOURCE_PIN"] == "1b499fcc52a7fca52d0971d670bad0369e97090f"
+    names = {(doc["kind"], doc["metadata"]["name"]) for doc in docs}
+    assert ("Job", "verdify-experiment-v2-gate-r") not in names
+    assert ("ConfigMap", "experiment-v2-gate-r") not in names
+    assert ("ConfigMap", "experiment-v2-gate-r-activation") not in names
