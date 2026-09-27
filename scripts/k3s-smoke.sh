@@ -329,21 +329,40 @@ print("ARRAY[" + ",".join("\x27" + name + "\x27" for name in CANONICAL_FIELD_ORD
 }
 
 # ── Mode: device-monitor (prod exactly-one-writer) ──────────────────────────
+pod_departed() {
+  local pod="$1" expected_uid="$2" state uid phase restart_policy containers terminations ended
+  if ! state="$("${KC[@]}" get pod "${pod}" --ignore-not-found \
+    -o jsonpath='{.metadata.uid}{"|"}{.status.phase}{"|"}{.spec.restartPolicy}{"|"}{range .spec.containers[*]}x{end}{range .spec.ephemeralContainers[*]}x{end}{"|"}{range .status.containerStatuses[*]}{.state.terminated.finishedAt}{";"}{end}{range .status.ephemeralContainerStatuses[*]}{.state.terminated.finishedAt}{";"}{end}' \
+    2>/dev/null)"; then
+    return 1
+  fi
+  IFS='|' read -r uid phase restart_policy containers terminations <<< "${state}"
+  ended="${terminations//[!;]/}"
+  [ -z "${uid}" ] || [ "${uid}" != "${expected_uid}" ] || \
+    [ "${phase}" = "Succeeded" ] || [ "${phase}" = "Failed" ] || \
+    { [ "${phase}" = "Running" ] && [ "${restart_policy}" = "Never" ] && [ -n "${containers}" ] && \
+      [ "${#containers}" -eq "${#ended}" ] && [[ "${terminations}" =~ ^([^\;]+\;)+$ ]]; }
+}
+
 run_device_monitor() {
   echo "=== k3s device-route monitor ($(date '+%Y-%m-%d %H:%M:%S')) — namespace=${NAMESPACE} ==="
   echo "(READ-ONLY: inspects pods' own sockets; asserts EXACTLY ONE writer to ${DEVICE_ESP32_IP}:${DEVICE_PORT}.)"
   echo ""
-  local pods pod sockets=0 unknown=0 out count
+  local pods final_pods pod uid sockets=0 unknown=0 out count
+  local socket_holders=""
   local octet1 octet2 octet3 octet4 remote_hex
   IFS=. read -r octet1 octet2 octet3 octet4 <<< "${DEVICE_ESP32_IP}"
   remote_hex="$(printf '%02X%02X%02X%02X:%04X' "${octet4}" "${octet3}" "${octet2}" "${octet1}" "${DEVICE_PORT}")"
-  pods="$("${KC[@]}" get pods --field-selector=status.phase=Running \
-    -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null || true)"
+  if ! pods="$("${KC[@]}" get pods --field-selector=status.phase=Running \
+    -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.metadata.uid}{"\n"}{end}' 2>/dev/null)"; then
+    fail "device-monitor: Running pod inventory unavailable (writer count UNKNOWN)"
+    print_summary; return
+  fi
   if [ -z "${pods}" ]; then
     fail "device-monitor: no Running pods in ${NAMESPACE} — cannot observe the single writer"
     print_summary; return
   fi
-  while IFS= read -r pod; do
+  while read -r pod uid; do
     [ -z "${pod}" ] && continue
     if out="$("${KC[@]}" exec "${pod}" -- cat /proc/net/tcp 2>/dev/null)"; then
       count="$(awk -v remote="${remote_hex}" 'NR > 1 && $3 == remote && $4 == "01" { n++ } END { print n+0 }' <<< "${out}")"
@@ -354,6 +373,13 @@ run_device_monitor() {
         'command -v ss >/dev/null 2>&1 && ss -tn 2>/dev/null || (command -v netstat >/dev/null 2>&1 && netstat -tn 2>/dev/null)' \
         2>/dev/null)" || out=""
       if [ -z "${out}" ]; then
+        # A short-lived Job may finish after the Running snapshot. Only a
+        # confirmed departed pod is safe to omit; a live unreadable pod is
+        # still an unknown possible device writer.
+        if pod_departed "${pod}" "${uid}"; then
+          info "pod ${pod}: departed before socket read"
+          continue
+        fi
         unknown=$((unknown+1))
         info "pod ${pod}: socket table unavailable (UNKNOWN)"
         continue
@@ -362,8 +388,36 @@ run_device_monitor() {
         '($1 == "ESTAB" || $6 == "ESTABLISHED") && index($0, remote) { n++ } END { print n+0 }' <<< "${out}")"
     fi
     sockets=$((sockets+count))
+    if [ "${count}" -gt 0 ]; then
+      socket_holders+="${pod} ${uid}"$'\n'
+    fi
     info "pod ${pod}: ${count} established ESP32 socket(s)"
   done <<< "${pods}"
+
+  if ! final_pods="$("${KC[@]}" get pods --field-selector=status.phase=Running \
+    -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.metadata.uid}{"\n"}{end}' 2>/dev/null)"; then
+    unknown=$((unknown+1))
+    info "final Running pod inventory unavailable (UNKNOWN)"
+  else
+    while read -r pod uid; do
+      [ -z "${pod}" ] && continue
+      if ! grep -Fxq "${pod} ${uid}" <<< "${pods}"; then
+        if pod_departed "${pod}" "${uid}"; then
+          info "pod ${pod}: appeared and departed during socket scan"
+        else
+          unknown=$((unknown+1))
+          info "pod ${pod}: appeared after socket scan (UNKNOWN)"
+        fi
+      fi
+    done <<< "${final_pods}"
+    while read -r pod uid; do
+      [ -z "${pod}" ] && continue
+      if ! grep -Fxq "${pod} ${uid}" <<< "${final_pods}"; then
+        unknown=$((unknown+1))
+        info "pod ${pod}: observed socket holder no longer Running (UNKNOWN)"
+      fi
+    done <<< "${socket_holders}"
+  fi
 
   if [ "${unknown}" -gt 0 ]; then
     fail "device-monitor: ${unknown} pod(s) unobservable; ${sockets} socket(s) observed (writer count UNKNOWN)"
