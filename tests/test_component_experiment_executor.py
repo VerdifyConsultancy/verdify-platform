@@ -985,7 +985,7 @@ async def test_component_database_login_requires_exact_function_only_duty(monkey
                 "fn_experiment_v2_record_preexposure_mismatch(uuid,uuid,uuid,text,uuid,bytea,jsonb,"
                 "text,text,text,text,uuid,bigint,bigint,bigint,text)" in query
             )
-            assert "fn_experiment_v2_safe_startup_attestation(text,uuid)" in query
+            assert "fn_experiment_v2_safe_startup_after_recovery_only(text,uuid)" in query
             assert "experiment_v2_%" in query
             assert "namespace.nspname = 'public'" in query
             return dict(attestation)
@@ -1119,7 +1119,7 @@ async def test_safe_startup_attestation_holds_before_off_mode_writers(monkeypatc
 
     class ProbeConnection:
         async def fetchrow(self, query, *args):
-            assert "fn_experiment_v2_safe_startup_attestation" in query
+            assert "fn_experiment_v2_safe_startup_after_recovery_only" in query
             assert args == ("esp32-vallery", None)
             return {
                 "attested_at": NOW,

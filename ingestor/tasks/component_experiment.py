@@ -108,7 +108,7 @@ L3_RECORD_RUNTIME_SNAPSHOT = "fn_experiment_v2_record_runtime_snapshot"
 L3_RECORD_PREEXPOSURE_MISMATCH = "fn_experiment_v2_record_preexposure_mismatch"
 L3_MONITOR_OPEN_EXPOSURE = "fn_experiment_v2_monitor_open_exposure"
 L3_REPORT_RUNTIME_FAULT = "fn_experiment_v2_report_runtime_fault"
-L3_SAFE_STARTUP_ATTESTATION = "fn_experiment_v2_safe_startup_attestation"
+L3_SAFE_STARTUP_ATTESTATION = "fn_experiment_v2_safe_startup_after_recovery_only"
 
 MAX_SNAPSHOT_AGE = timedelta(seconds=90)
 MIN_EPOCH_SEPARATION = timedelta(seconds=30)
@@ -2070,7 +2070,7 @@ WITH login AS (
         'public.fn_experiment_v2_close_exposure(uuid,text,text)',
         'public.fn_experiment_v2_request_recovery(uuid,uuid,tstzrange,timestamptz,text,text)',
         'public.fn_experiment_v2_report_runtime_fault(uuid,text,uuid,bigint,uuid,bigint,bigint,text,text,text)',
-        'public.fn_experiment_v2_safe_startup_attestation(text,uuid)'
+        'public.fn_experiment_v2_safe_startup_after_recovery_only(text,uuid)'
     ]::text[])
 )
 SELECT current_user::text AS current_user_name,

@@ -282,7 +282,7 @@ class FunctionOnlyConnection:
                 "facility_authority_yielded": False,
                 "recorded_at": NOW,
             }
-        if "fn_experiment_v2_safe_startup_attestation" in query:
+        if "fn_experiment_v2_safe_startup_after_recovery_only" in query:
             return {
                 "attested_at": NOW,
                 "device_id": args[0],
@@ -648,9 +648,9 @@ async def test_runtime_fault_and_startup_attestation_use_exact_bounded_functions
     assert attestation.requested_experiment_id == EXPERIMENT_ID
 
     fault_query = next(query for query in connection.queries if "report_runtime_fault" in query)
-    startup_query = next(query for query in connection.queries if "safe_startup_attestation" in query)
+    startup_query = next(query for query in connection.queries if "safe_startup_after_recovery_only" in query)
     assert fault_query.startswith("SELECT (public.fn_experiment_v2_report_runtime_fault")
-    assert startup_query.startswith("SELECT * FROM public.fn_experiment_v2_safe_startup_attestation")
+    assert startup_query.startswith("SELECT * FROM public.fn_experiment_v2_safe_startup_after_recovery_only")
     assert all(" FROM public.experiment_v2_" not in query for query in (fault_query, startup_query))
 
 

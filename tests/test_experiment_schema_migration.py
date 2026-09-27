@@ -290,6 +290,8 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "253-gate-p-sealed-recovery-target.sql",
         # The exact post-253 ordinary-login receipt advance is a live migration.
         "254-post-253-ordinary-login-attestation.sql",
+        # Recovery-only successor is inert until exact lifecycle duty invocation.
+        "255-experiment-v2-recovery-only-handoff.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(
