@@ -61,6 +61,16 @@ no-write retry), not seven already applied plus pending 240/248. No contract,
 the seven-file version, unknown versions, partial cohorts and out-of-profile
 pending migrations still refuse.
 
+Migration 249 is a separately reviewed successor after all nine C0 stamps are
+exact. It grants only the observed-minute column UPDATE privilege. That grant
+changes both ordinary-login boundary digests, so the wrap-safe numbered runner
+applies the grant, updates both receipts to literals reproduced on two isolated
+snapshot clones, and stamps the exact 249 source in one transaction. The C0
+wrapper verifies the old catalog before the first 249 run and the exact new
+digests, receipts, narrow grant and stamp afterward. Replays verify without a
+new grant or receipt write. A fresh or partial C0 database still refuses 249;
+the handoff does not expose a general C0 bypass or admit other pending files.
+
 The wrapper preserves the entrypoint's read-only Timescale-extension and existing
 `climate`, `setpoint_changes`, `equipment_state` checks. Missing prerequisites
 are not repaired automatically. A fresh target must first have a separately

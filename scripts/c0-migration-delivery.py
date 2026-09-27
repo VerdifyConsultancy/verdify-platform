@@ -12,8 +12,10 @@ import importlib.util
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -35,6 +37,12 @@ SELECT coalesce(jsonb_agg(jsonb_build_object('source',source,'filename',filename
     'seq',seq,'sha256',sha256,'stamp_method',stamp_method) ORDER BY source,filename),'[]')
 FROM public.schema_migrations;
 COMMIT;"""
+SUCCESSOR_249 = "249-observed-minute-runtime-write-grant.sql"
+SUCCESSOR_249_SHA256 = "9f1ad8a9c9b721bbfdce8696a59c260a510f90eff34b4a202f99c60e0d9855ab"
+SUCCESSOR_249_DIGESTS = {
+    "verdify_api_runtime_login": "8b895d1a4dcf403098fcfa8dc9645ed330e7b43ae8b08128456692cd0a89105a",
+    "verdify_ingestor_runtime_login": "2556baed8f07bb9d9537b963e7749610004b32814e71666a8d12ae2177908cd2",
+}
 
 
 class DeliveryError(ValueError):
@@ -180,6 +188,105 @@ $c0_delivery_readback$;
 COMMIT;"""
 
 
+def completed_resource_successor(files, rows, contract):
+    """Admit the first post-C0 migration only after all nine exact C0 stamps."""
+    if contract is None or contract["version"] != transition.RESOURCE_VERSION or SUCCESSOR_249 not in files:
+        return False
+    migrations = transition.release_migrations(contract["version"])
+    if not all(rows.get(("db/migrations", "db/migrations/" + name)) is not None for name in migrations):
+        return False
+    require(files[SUCCESSOR_249] == SUCCESSOR_249_SHA256, "reviewed successor source drift")
+    prior = {name: sha for name, sha in files.items() if name != SUCCESSOR_249}
+    require(verify_inventory_ledger(prior, rows, version=contract["version"]) == 0, "C0 predecessor incomplete")
+    require(
+        all(rows.get(("db/migrations", "db/migrations/" + name)) is not None for name in prior),
+        "pending migration outside reviewed successor",
+    )
+    row = rows.get(("db/migrations", "db/migrations/" + SUCCESSOR_249))
+    if row is not None:
+        require(
+            row["sha256"] == SUCCESSOR_249_SHA256 and row["seq"] == 249 and row["stamp_method"] == "runner",
+            "successor stamp is not exact",
+        )
+    return True
+
+
+def verify_post_249(contract, environment):
+    """The frozen C0 after digest legitimately changes at the reviewed grant."""
+    migrations = transition.release_migrations(contract["version"])
+    excluded = ["db/migrations/" + name for name in migrations] + ["db/migrations/" + SUCCESSOR_249]
+    member = "source='db/migrations' AND filename IN (" + ",".join(map(transition.literal, excluded)) + ")"
+    digest = psql(
+        "BEGIN READ ONLY; SET LOCAL statement_timeout='30s'; "
+        + transition.ledger_digest_sql("NOT (" + member + ")")
+        + "; COMMIT;",
+        environment,
+    )
+    require(digest == contract["predecessor_ledger_sha256"], "post-C0 predecessor ledger drift")
+    sql = """BEGIN READ ONLY;
+SET LOCAL statement_timeout='30s';
+SELECT jsonb_build_object(
+    'api', encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'), 'hex'),
+    'ingestor', encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'), 'hex'),
+    'api_receipt', (SELECT encode(boundary_sha256, 'hex') FROM public.runtime_ordinary_login_attestation_receipts
+                    WHERE login_name='verdify_api_runtime_login'),
+    'ingestor_receipt', (SELECT encode(boundary_sha256, 'hex') FROM public.runtime_ordinary_login_attestation_receipts
+                         WHERE login_name='verdify_ingestor_runtime_login'),
+    'receipt_count', (SELECT count(*) FROM public.runtime_ordinary_login_attestation_receipts),
+    'column_update', has_column_privilege('verdify_ingestor_runtime_login', 'public.daily_summary',
+                                          'climate_observed_minute_metrics', 'UPDATE'),
+    'table_update', has_table_privilege('verdify_ingestor_runtime_login', 'public.daily_summary', 'UPDATE'));
+COMMIT;"""
+    state = json.loads(psql(sql, environment))
+    require(
+        state
+        == {
+            "api": SUCCESSOR_249_DIGESTS["verdify_api_runtime_login"],
+            "ingestor": SUCCESSOR_249_DIGESTS["verdify_ingestor_runtime_login"],
+            "api_receipt": SUCCESSOR_249_DIGESTS["verdify_api_runtime_login"],
+            "ingestor_receipt": SUCCESSOR_249_DIGESTS["verdify_ingestor_runtime_login"],
+            "receipt_count": 2,
+            "column_update": True,
+            "table_update": False,
+        },
+        "reviewed post-249 boundary is not exact",
+    )
+
+
+def run_successor_249(directory, environment, *, plan):
+    runner = ROOT / "db/apply-migrations.sh"
+    if not runner.is_file():
+        runner = Path("/usr/local/bin/apply-migrations.sh")
+    require(runner.is_file(), "ledgered successor runner missing")
+    with tempfile.TemporaryDirectory(prefix="verdify-c0-successor-") as temporary:
+        shutil.copyfile(directory / SUCCESSOR_249, Path(temporary) / SUCCESSOR_249)
+        env = dict(environment, VERDIFY_MIGRATIONS_DIR=temporary)
+        command = ["sh", str(runner)] + (["--plan"] if plan else [])
+        result = subprocess.run(command, env=env, text=True, capture_output=True, timeout=1200)
+        require(result.returncode == 0, "ledgered successor runner failed")
+
+
+def deliver_resource_successor(directory, files, rows, contract, environment, *, plan):
+    row = rows.get(("db/migrations", "db/migrations/" + SUCCESSOR_249))
+    if row is not None:
+        verify_post_249(contract, environment)
+        print("Post-C0 migration 249 verified; no writes.")
+        return
+    psql(successor_probe(contract), environment)
+    run_successor_249(directory, environment, plan=plan)
+    if not plan:
+        after_rows = ledger_rows(environment)
+        require(completed_resource_successor(files, after_rows, contract), "successor ledger readback failed")
+        require(
+            after_rows.get(("db/migrations", "db/migrations/" + SUCCESSOR_249)) is not None,
+            "successor stamp missing after transaction",
+        )
+        verify_post_249(contract, environment)
+        print("Post-C0 migration 249 committed with exact grant, receipts and ledger stamp.")
+    else:
+        print("C0 successor PLAN: only reviewed migration 249; no writes.")
+
+
 def deliver(directory, *, plan=False, environment=None):
     env = dict(os.environ if environment is None else environment)
     files = inventory(directory)
@@ -201,6 +308,9 @@ def deliver(directory, *, plan=False, environment=None):
     if version == transition.RESOURCE_VERSION:
         require(core.get("timescale_version") == "2.25.2", "resource qualification requires TimescaleDB 2.25.2")
     rows = ledger_rows(env)
+    if completed_resource_successor(files, rows, contract):
+        deliver_resource_successor(directory, files, rows, contract, env, plan=plan)
+        return
     pending = verify_inventory_ledger(files, rows, version=version)
     if plan:
         bundle = "240-248" if version == transition.RESOURCE_VERSION else "241-247"
