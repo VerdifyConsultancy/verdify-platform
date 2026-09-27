@@ -206,7 +206,9 @@ class KubeReader:
     def logs(self, pod: str) -> str:
         raw = self._get(
             f"/api/v1/namespaces/{NAMESPACE}/pods/{urllib.parse.quote(pod)}/log?container=ingestor&timestamps=false",
-            accept="text/plain",
+            # Kubernetes serves pod logs as a streamed response and returns
+            # HTTP 406 for a strict text/plain Accept on this cluster.
+            accept="*/*",
         )
         if len(raw) > 16 * 1024 * 1024:
             raise CollectionError("writer log response exceeded bounded size")
@@ -695,7 +697,7 @@ def _backup_artifact(job: Mapping[str, Any], kube: KubeReader) -> dict[str, Any]
     pod = sorted(succeeded, key=lambda row: row["metadata"]["creationTimestamp"])[-1]
     raw = kube._get(
         f"/api/v1/namespaces/{NAMESPACE}/pods/{pod['metadata']['name']}/log?container=pg-dump",
-        accept="text/plain",
+        accept="*/*",
     ).decode("utf-8", errors="replace")
     artifact = _published_backup_name(raw)
     path = Path("/backups") / artifact

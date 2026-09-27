@@ -23,6 +23,20 @@ sys.modules[SPEC.name] = collector
 SPEC.loader.exec_module(collector)
 
 
+def test_writer_log_request_accepts_kubernetes_stream(monkeypatch) -> None:
+    reader = collector.KubeReader.__new__(collector.KubeReader)
+    seen = {}
+
+    def get(path, *, accept):
+        seen.update(path=path, accept=accept)
+        return b"writer attestation\n"
+
+    monkeypatch.setattr(reader, "_get", get)
+    assert reader.logs("writer-pod") == "writer attestation\n"
+    assert seen["path"].endswith("/pods/writer-pod/log?container=ingestor&timestamps=false")
+    assert seen["accept"] == "*/*"
+
+
 def _climate_row(moment: datetime, offset: float) -> dict:
     row = {
         "ts": moment,

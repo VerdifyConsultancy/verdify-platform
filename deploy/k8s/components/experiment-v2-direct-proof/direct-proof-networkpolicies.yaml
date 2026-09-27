@@ -50,6 +50,13 @@ spec:
             cidr: 10.43.0.1/32
       ports:
         - {protocol: TCP, port: 443}
+    # k3s DNATs the service to control-plane endpoints before policy matching.
+    - to:
+        - ipBlock: {cidr: 192.168.30.31/32}
+        - ipBlock: {cidr: 192.168.30.32/32}
+        - ipBlock: {cidr: 192.168.30.33/32}
+      ports:
+        - {protocol: TCP, port: 6443}
     # NetworkPolicy cannot select api.openai.com by FQDN. The provider adapter
     # separately locks the hostname and rejects non-global DNS answers. Exclude
     # every private, device, loopback, link-local, benchmark, documentation,
