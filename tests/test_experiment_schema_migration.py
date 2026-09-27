@@ -288,6 +288,8 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         # Fixed-panel source history must be installed before future qualification.
         "252-fixed-panel-source-history.sql",
         "253-gate-p-sealed-recovery-target.sql",
+        # The exact post-253 ordinary-login receipt advance is a live migration.
+        "254-post-253-ordinary-login-attestation.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(
