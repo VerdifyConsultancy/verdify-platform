@@ -95,16 +95,19 @@ while [ "${remaining}" -gt 0 ]; do
   fi
 done
 
-# Re-export the normalized role catalog from the restored cluster. It must
-# match the backup's password-free role source byte for byte.
+# Re-export the normalized role catalog from the restored cluster. pg_dumpall
+# generates a fresh random psql \restrict/\unrestrict key for every invocation;
+# remove only those two transport lines before the byte-for-byte comparison.
 if ! pg_dumpall --roles-only --no-role-passwords --no-comments --no-security-labels \
     -h "${PGHOST}" -p "${PGPORT}" -U "${owner}" -l postgres \
     > /tmp/roles.restored.sql 2>/tmp/roles-diff.stderr; then
   echo "[restore-pair] FATAL: restored role inventory failed" >&2
   exit 1
 fi
-if ! cmp -s "${roles}" /tmp/roles.restored.sql; then
-  echo "[restore-pair] FATAL: role attributes, settings or memberships differ source_sha256=$(sha256sum "${roles}" | awk '{print $1}') restored_sha256=$(sha256sum /tmp/roles.restored.sql | awk '{print $1}')" >&2
+awk '$1 != "\\restrict" && $1 != "\\unrestrict" { print }' "${roles}" > /tmp/roles.source.canonical
+awk '$1 != "\\restrict" && $1 != "\\unrestrict" { print }' /tmp/roles.restored.sql > /tmp/roles.restored.canonical
+if ! cmp -s /tmp/roles.source.canonical /tmp/roles.restored.canonical; then
+  echo "[restore-pair] FATAL: role attributes, settings or memberships differ source_sha256=$(sha256sum /tmp/roles.source.canonical | awk '{print $1}') restored_sha256=$(sha256sum /tmp/roles.restored.canonical | awk '{print $1}')" >&2
   exit 1
 fi
 echo "[restore-pair] exact password-free role parity=true matview_refresh_rounds=${round}"
