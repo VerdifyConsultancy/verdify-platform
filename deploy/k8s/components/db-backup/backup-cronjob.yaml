@@ -92,6 +92,23 @@ spec:
                   # write-partial-then-atomic-rename safety.
                   ts="$(date -u +%Y%m%dT%H%M%SZ)"
                   out="${BACKUP_DIR}/verdify-${ts}.dump"
+                  roles="${BACKUP_DIR}/verdify-${ts}.roles.sql"
+                  manifest="${BACKUP_DIR}/verdify-${ts}.sha256"
+                  # The checksum manifest is the commit marker for a complete
+                  # dump/roles pair. A crash can leave a complete .dump behind,
+                  # but a restore must never select it without this marker.
+                  if [ -e "${out}" ] || [ -e "${roles}" ] || [ -e "${manifest}" ]; then
+                    echo "[backup] FATAL: timestamp already has a backup artifact" >&2
+                    exit 1
+                  fi
+                  published=0
+                  cleanup_incomplete_pair() {
+                    if [ "${published}" -ne 1 ]; then
+                      rm -f -- "${out}.partial" "${roles}.partial" "${manifest}.partial" \
+                        "${out}" "${roles}" "${manifest}"
+                    fi
+                  }
+                  trap cleanup_incomplete_pair EXIT
                   # -Fc custom format (compressed, restorable with pg_restore;
                   # preserves the TimescaleDB hypertable/compression catalog when
                   # paired with timescaledb_pre/post_restore at restore time).
@@ -127,18 +144,69 @@ spec:
                     rm -f "${out}.partial" || true
                     exit 1
                   fi
-                  # Atomic publish: rename the completed .partial to its final name
-                  # so the prune / a restore never sees a truncated file.
+                  # Cluster roles and memberships are omitted by pg_dump. Export
+                  # them without password hashes; credentials are restored through
+                  # their separately authorized Secret source, never this artifact.
+                  # A role setting can itself hold a token. The live role
+                  # settings are search_path only; fail closed if that changes.
+                  unsafe_role_settings="$(psql -X -qAt -v ON_ERROR_STOP=1 \
+                    -h "${DB_HOST}" -p "${DB_PORT}" -U "${DB_USER}" -d "${DB_NAME}" \
+                    -c "SELECT count(*) FROM pg_db_role_setting, LATERAL unnest(setconfig) setting WHERE split_part(setting, '=', 1) <> 'search_path'")"
+                  if [ "${unsafe_role_settings}" != 0 ]; then
+                    echo "[backup] FATAL: unapproved role setting could expose a secret" >&2
+                    exit 1
+                  fi
+                  if ! pg_dumpall --roles-only --no-role-passwords --no-comments --no-security-labels \
+                       -h "${DB_HOST}" -p "${DB_PORT}" -U "${DB_USER}" -l "${DB_NAME}" \
+                       > "${roles}.partial" 2>/tmp/pg_dumpall.err; then
+                    echo "[backup] FATAL: password-free role export failed; pair not published" >&2
+                    exit 1
+                  fi
+                  if grep -Eq '^(CREATE|ALTER) ROLE .* PASSWORD ' "${roles}.partial"; then
+                    echo "[backup] FATAL: role export contains a password clause" >&2
+                    exit 1
+                  fi
+                  owner="$(psql -X -qAt -v ON_ERROR_STOP=1 \
+                    -h "${DB_HOST}" -p "${DB_PORT}" -U "${DB_USER}" -d "${DB_NAME}" \
+                    -c 'SELECT pg_get_userbyid(datdba) FROM pg_database WHERE datname = current_database()')"
+                  if [ ! -s "${out}.partial" ] || [ ! -s "${roles}.partial" ] \
+                     || [[ ! "${owner}" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+                    echo "[backup] FATAL: dump, roles or database owner is incomplete" >&2
+                    exit 1
+                  fi
+                  dump_sha="$(sha256sum -- "${out}.partial" | awk '{print $1}')"
+                  roles_sha="$(sha256sum -- "${roles}.partial" | awk '{print $1}')"
+                  {
+                    printf '# verdify-backup-pair-v1 database=%s owner=%s\n' "${DB_NAME}" "${owner}"
+                    printf '%s  %s\n' "${dump_sha}" "$(basename -- "${out}")"
+                    printf '%s  %s\n' "${roles_sha}" "$(basename -- "${roles}")"
+                  } > "${manifest}.partial"
+                  # Publish the manifest last: consumers require it and verify
+                  # both hashes before creating the isolated restore database.
+                  mv "${roles}.partial" "${roles}"
                   mv "${out}.partial" "${out}"
-                  echo "[backup] wrote ${out} ($(du -h "${out}" | cut -f1))"
+                  mv "${manifest}.partial" "${manifest}"
+                  if ! (cd "${BACKUP_DIR}" && tail -n +2 "$(basename -- "${manifest}")" \
+                      | sha256sum -c - >/dev/null 2>&1); then
+                    echo "[backup] FATAL: published pair failed checksum verification" >&2
+                    exit 1
+                  fi
+                  published=1
+                  echo "[backup] wrote paired ${out} ($(du -h "${out}" | cut -f1)) roles=${roles} manifest=${manifest}"
                   # RETENTION: keep the newest ${RETENTION_DAYS} days of dumps;
                   # delete older ones. Also sweep any stale *.partial from a
                   # crashed prior run. Pruning never touches the live DB.
                   echo "[backup] pruning dumps older than ${RETENTION_DAYS}d in ${BACKUP_DIR}"
                   find "${BACKUP_DIR}" -maxdepth 1 -type f -name 'verdify-*.dump' \
                     -mtime "+${RETENTION_DAYS}" -print -delete || true
-                  find "${BACKUP_DIR}" -maxdepth 1 -type f -name 'verdify-*.dump.partial' \
-                    -mtime +1 -print -delete || true
+                  for pattern in 'verdify-*.roles.sql' 'verdify-*.sha256'; do
+                    find "${BACKUP_DIR}" -maxdepth 1 -type f -name "${pattern}" \
+                      -mtime "+${RETENTION_DAYS}" -print -delete || true
+                  done
+                  for pattern in 'verdify-*.dump.partial' 'verdify-*.roles.sql.partial' 'verdify-*.sha256.partial'; do
+                    find "${BACKUP_DIR}" -maxdepth 1 -type f -name "${pattern}" \
+                      -mtime +1 -print -delete || true
+                  done
                   echo "[backup] done"
               env:
                 # Non-secret connection fields from the shared verdify-config

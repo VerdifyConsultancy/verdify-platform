@@ -42,7 +42,15 @@ def _write_executable(path: Path, content: str) -> None:
     path.chmod(0o755)
 
 
-def _run_backup(tmp_path: Path, fixture: str, *, succeed_on_attempt: int | None) -> subprocess.CompletedProcess[str]:
+def _run_backup(
+    tmp_path: Path,
+    fixture: str,
+    *,
+    succeed_on_attempt: int | None,
+    unsafe_role_settings: bool = False,
+    role_export_has_password: bool = False,
+    role_export_fails: bool = False,
+) -> subprocess.CompletedProcess[str]:
     fake_bin = tmp_path / "bin"
     fake_bin.mkdir()
     backup_dir = tmp_path / "backups"
@@ -83,6 +91,37 @@ cat "$PG_DUMP_FIXTURE" >&2
 exit 1
 """,
     )
+    _write_executable(
+        fake_bin / "psql",
+        """#!/bin/sh
+case "$*" in
+  *pg_db_role_setting*)
+    printf '%s\\n' "${UNSAFE_ROLE_SETTINGS:-0}" ;;
+  *pg_get_userbyid*)
+    printf 'verdify\\n' ;;
+  *) exit 98 ;;
+esac
+""",
+    )
+    _write_executable(
+        fake_bin / "pg_dumpall",
+        """#!/bin/sh
+set -eu
+for required in --roles-only --no-role-passwords --no-comments --no-security-labels; do
+  case " $* " in
+    *" $required "*) ;;
+    *) exit 97 ;;
+  esac
+done
+printf 'CREATE ROLE verdify;\\nGRANT duty TO login;\\n'
+if [ "${ROLE_EXPORT_FAILS:-0}" = 1 ]; then
+  exit 1
+fi
+if [ "${ROLE_EXPORT_HAS_PASSWORD:-0}" = 1 ]; then
+  printf "ALTER ROLE verdify PASSWORD 'should-never-publish';\\n"
+fi
+""",
+    )
 
     env = os.environ.copy()
     env.update(
@@ -96,6 +135,9 @@ exit 1
             "DB_USER": "verdify",
             "DB_NAME": "verdify",
             "RETENTION_DAYS": "14",
+            "UNSAFE_ROLE_SETTINGS": "1" if unsafe_role_settings else "0",
+            "ROLE_EXPORT_HAS_PASSWORD": "1" if role_export_has_password else "0",
+            "ROLE_EXPORT_FAILS": "1" if role_export_fails else "0",
         }
     )
     if succeed_on_attempt is not None:
@@ -113,7 +155,7 @@ exit 1
     return result
 
 
-def test_temporary_dns_failure_retries_then_atomically_publishes_dump(tmp_path: Path):
+def test_temporary_dns_failure_retries_then_publishes_verified_pair(tmp_path: Path):
     script = _backup_script()
     assert "for attempt in $(seq 1 30)" in script
 
@@ -125,6 +167,33 @@ def test_temporary_dns_failure_retries_then_atomically_publishes_dump(tmp_path: 
     dumps = list(result.backup_dir.glob("verdify-*.dump"))  # type: ignore[attr-defined]
     assert len(dumps) == 1
     assert dumps[0].stat().st_size > 0
+    roles = dumps[0].with_suffix(".roles.sql")
+    manifest = dumps[0].with_suffix(".sha256")
+    assert roles.stat().st_size > 0
+    assert "password" not in roles.read_text().lower()
+    assert manifest.read_text().startswith("# verdify-backup-pair-v1 database=verdify owner=verdify\n")
+    verified = subprocess.run(
+        ["sha256sum", "-c", manifest.name],
+        cwd=manifest.parent,
+        capture_output=True,
+        text=True,
+    )
+    assert verified.returncode == 0, verified.stderr
+    pair_check = subprocess.run(
+        [str(REPO_ROOT / "scripts/verify-backup-pair.sh"), str(manifest.parent), dumps[0].stem],
+        capture_output=True,
+        text=True,
+    )
+    assert pair_check.returncode == 0, pair_check.stderr
+    assert pair_check.stdout.strip() == "verdify|verdify"
+    roles.write_text(roles.read_text() + "-- changed after publication\n")
+    tampered = subprocess.run(
+        [str(REPO_ROOT / "scripts/verify-backup-pair.sh"), str(manifest.parent), dumps[0].stem],
+        capture_output=True,
+        text=True,
+    )
+    assert tampered.returncode == 1
+    assert "checksum mismatch" in tampered.stderr
     assert not list(result.backup_dir.glob("*.partial"))  # type: ignore[attr-defined]
 
 
@@ -143,3 +212,43 @@ def test_non_transient_failures_fail_loudly_without_retry(tmp_path: Path, fixtur
     assert result.returncode == 1
     assert result.attempts == 1  # type: ignore[attr-defined]
     assert "FATAL: pg_dump failed with a non-transient error" in result.stderr
+    assert not list(result.backup_dir.glob("verdify-*"))  # type: ignore[attr-defined]
+
+
+@pytest.mark.parametrize(
+    ("unsafe_settings", "password_clause", "expected_error"),
+    [
+        (True, False, "unapproved role setting"),
+        (False, True, "role export contains a password clause"),
+    ],
+)
+def test_secret_bearing_roles_fail_without_publishing_pair(
+    tmp_path: Path,
+    unsafe_settings: bool,
+    password_clause: bool,
+    expected_error: str,
+):
+    result = _run_backup(
+        tmp_path,
+        "transient-dns-try-again.stderr",
+        succeed_on_attempt=1,
+        unsafe_role_settings=unsafe_settings,
+        role_export_has_password=password_clause,
+    )
+
+    assert result.returncode == 1
+    assert expected_error in result.stderr
+    assert not list(result.backup_dir.glob("verdify-*"))  # type: ignore[attr-defined]
+
+
+def test_role_export_failure_does_not_publish_the_completed_dump(tmp_path: Path):
+    result = _run_backup(
+        tmp_path,
+        "transient-dns-try-again.stderr",
+        succeed_on_attempt=1,
+        role_export_fails=True,
+    )
+
+    assert result.returncode == 1
+    assert "role export failed; pair not published" in result.stderr
+    assert not list(result.backup_dir.glob("verdify-*"))  # type: ignore[attr-defined]

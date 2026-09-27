@@ -2,6 +2,10 @@
 -- This checks logical recovery; it does not replace the physical-clone C0
 -- catalog/receipt comparison, which intentionally includes database/role OIDs.
 \set ON_ERROR_STOP on
+\if :{?role_source}
+\else
+\set role_source 'rehearsal-seeded; not a paired backup globals artifact'
+\endif
 
 DO $audit$
 DECLARE
@@ -72,6 +76,6 @@ SELECT jsonb_build_object(
   'hypertables', (SELECT count(*) FROM timescaledb_information.hypertables),
   'unpopulated_matviews', (SELECT count(*) FROM pg_matviews WHERE NOT ispopulated),
   'bounded_runtime_memberships', 6,
-  'role_source', 'rehearsal-seeded; not a paired backup globals artifact',
+  'role_source', :'role_source',
   'physical_clone_c0_contract', 'not evaluated'
 );
