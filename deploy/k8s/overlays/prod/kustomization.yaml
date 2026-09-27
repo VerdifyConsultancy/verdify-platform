@@ -133,12 +133,6 @@ components:
   # vectors. It cannot enable the component, open admission, randomize, or write
   # a device. Exact replay is idempotent after migration 221.
   - ../../components/experiment-v2-direct-launch-bootstrap
-  # One-shot, read-only Gate R packet. Its collector verifies the current
-  # CronJob-owned backup artifact and does not grant experiment authority.
-  - ../../components/experiment-v2-gate-r-readiness
-  # One-shot, recovery-only resolution of the retained attempt-3 orphan.
-  # Remove with the immediate post-receipt retirement commit.
-  - ../../components/experiment-v2-gate-r
   # Direct physical proof is deliberately absent from ordinary production.
   # A fresh attended attempt must use the separate, suspended activation render
   # under deploy/k8s/activations/experiment-v2-direct-proof and be removed again
@@ -175,8 +169,6 @@ components:
   - ../../components/ha-gap-backfill
 
 patches:
-  - path: experiment-v2-gate-r-readiness.patch.yaml
-  - path: experiment-v2-gate-r.patch.yaml
   # Reconcile the live, verified 2026-08-01 Hermes PVC cutover.
   - path: hermes-data-portable.patch.yaml
   # The old, detached pre-portable claim has a readable Completed backup and no
