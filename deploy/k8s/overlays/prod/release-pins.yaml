@@ -37,7 +37,7 @@ metadata:
   name: release-pin-verdify-ingestor
 imageTag:
   name: registry.vallery.net/verdifyconsultancy/verdify-ingestor
-  digest: sha256:96094935992a715977250d2d033b2bda08c6309b527df5376338020c0b8004fa
+  digest: sha256:090da412024f4140dd580011cb8e3e1307322d97dc2181df15b34ab2865489fd
 ---
 apiVersion: builtin
 kind: ImageTagTransformer
