@@ -188,7 +188,7 @@ def parse_direct_launch_design(
     start = _exact_local_date(payload["study_start_local_date"])
     if not _window_has_one_utc_offset(start):
         raise ContractError("direct-launch 60-day window crosses a UTC-offset transition")
-    today = date.today() if now_local_date is None else now_local_date
+    today = datetime.now(ZoneInfo(TIMEZONE)).date() if now_local_date is None else now_local_date
     if type(today) is not date or date.fromisoformat(start) <= today:
         raise ContractError("direct-launch start must remain future; missed starts require a new preregistration")
     if not isinstance(payload["source_git_sha"], str) or not re.fullmatch(r"[0-9a-f]{40}", payload["source_git_sha"]):

@@ -11,6 +11,7 @@ import httpx
 import pytest
 import yaml
 
+import experiment_orchestrator.launch_artifacts as launch_artifacts
 from experiment_orchestrator.contracts import (
     OPENAI_SELECTOR_IDENTITY_SCHEMA,
     OPENAI_SELECTOR_RESPONSE_FORMAT,
@@ -104,6 +105,25 @@ def test_future_design_hash_is_immutable_complete_and_offset_stable() -> None:
         )
     with pytest.raises(ValueError, match="missed starts"):
         parse_direct_launch_design(design.canonical_bytes, now_local_date=date(2026, 11, 2))
+
+
+def test_default_start_guard_uses_denver_date_at_utc_boundary(monkeypatch: pytest.MonkeyPatch) -> None:
+    design = _design()
+
+    class FrozenDatetime(datetime):
+        current_utc = datetime(2026, 11, 2, 1, tzinfo=UTC)
+
+        @classmethod
+        def now(cls, tz=None):
+            assert tz is not None
+            return cls.current_utc.astimezone(tz)
+
+    monkeypatch.setattr(launch_artifacts, "datetime", FrozenDatetime)
+    assert parse_direct_launch_design(design.canonical_bytes) == design
+
+    FrozenDatetime.current_utc = datetime(2026, 11, 2, 7, tzinfo=UTC)
+    with pytest.raises(ValueError, match="missed starts"):
+        parse_direct_launch_design(design.canonical_bytes)
 
 
 @pytest.mark.asyncio
