@@ -38,8 +38,13 @@ local development and rehearsal.
 
 Private endpoints:
 - `GET /health`
+- `GET /livez`
 - `POST /planner-runs`
 - `GET /planner-runs/{trigger_id}`
+
+`/health` is readiness: it fails while the worker cannot reach its store.
+`/livez` stays green during that retry loop but fails if the worker thread exits,
+so Kubernetes can restart an otherwise permanently NotReady planner pod.
 
 Interaction model:
 1. Verdify assembles a planning request.

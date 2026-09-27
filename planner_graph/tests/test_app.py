@@ -20,6 +20,7 @@ from planner_graph.clients.openai import OpenAIPlannerClient
 from planner_graph.runtime import ExecutionHooks
 from planner_graph.state import PROTECTED_MCP_TOOLS
 from planner_graph.verdify_contract import CLIMATE_INTENT_FIELD_NAMES
+from planner_graph.worker import WorkerHealth
 
 
 def planner_request(
@@ -136,12 +137,37 @@ def test_health_endpoint_reports_production_service() -> None:
     }
 
 
-def test_liveness_is_process_only_and_explicitly_non_authoritative() -> None:
+def test_liveness_requires_the_worker_thread_and_is_explicitly_non_authoritative() -> None:
     with TestClient(create_app()) as client:
         response = client.get("/livez")
 
     assert response.status_code == 200
     assert response.json() == {"live": True, "production_authority": "non-authoritative"}
+
+
+def test_liveness_restarts_a_dead_worker_without_confusing_store_readiness() -> None:
+    service = PlannerService()
+    with TestClient(create_app(service)) as client:
+        service.worker.stop()
+        dead = client.get("/livez")
+        assert dead.status_code == 503
+        assert dead.json()["detail"] == {
+            "live": False,
+            "worker_alive": False,
+            "production_authority": "non-authoritative",
+        }
+
+
+def test_store_outage_is_not_a_liveness_restart(monkeypatch) -> None:
+    service = PlannerService()
+    with TestClient(create_app(service)) as client:
+        monkeypatch.setattr(
+            service.worker,
+            "health",
+            lambda: WorkerHealth(True, False, 3, 1.0, "OperationalError"),
+        )
+        assert client.get("/livez").status_code == 200
+        assert client.get("/health").status_code == 503
 
 
 def test_planner_run_endpoint_accepts_request_and_returns_quickly() -> None:
