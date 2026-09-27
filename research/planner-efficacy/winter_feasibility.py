@@ -355,6 +355,15 @@ def register(
     now: datetime,
 ) -> dict:
     """Create a concrete preregistration from preserved source artifact bytes."""
+    try:
+        target_source = json.loads(crop_target_source.read_bytes())
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ValueError("crop target source must be a qualified JSON artifact") from exc
+    if not isinstance(target_source, dict) or (
+        target_source.get("qualified_prospective_crop_target") is not True
+        or target_source.get("frozen_15_minute_target_bins_available") is not True
+    ):
+        raise ValueError("crop target source has no qualified prospective frozen bins")
     commit, extractor_sha, protocol_sha = _source_identity()
     instance = {
         "schema": INSTANCE_SCHEMA,
