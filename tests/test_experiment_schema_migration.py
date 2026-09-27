@@ -279,6 +279,8 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         # Resource repair is a separate, unqualified boundary transition. The
         # historical baseline must not mark it applied to bypass that delivery.
         "248-shelly-source-interval-accounting.sql",
+        # A live runtime grant repair must run through the ledgered migration.
+        "249-observed-minute-runtime-write-grant.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(
