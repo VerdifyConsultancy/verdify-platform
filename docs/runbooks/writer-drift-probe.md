@@ -8,19 +8,20 @@ It creates no second ESPHome connection and never edits an active plan.
 
 ## Field and bounded effect
 
-The only eligible field is `outdoor_staleness_max_s`. The September 27 #433
-readback and active plan both held **600 seconds**, with no pending command for
+The only eligible field is `cool_stage2_exit_hysteresis_f`. The September 27
+#433 readback and active plan both held **1.0°F**, with no pending command for
 that field. Recheck a fresh preview before use; historical values are not
-authority. Firmware and registry allow 120–1800 seconds in 30-second Number
-steps. The probe sends **570 seconds**, waits for durable confirmation and cfg
-readback, then requires the only desired candidate to be **600 seconds** before
-one corrective command. Both phases use one attempt through the existing
-dispatcher queue and `requested` → `sent` → `confirmed` lifecycle.
+authority. Firmware and registry allow 0.3–3.0°F in 0.1°F Number steps. The
+probe sends **1.1°F**, waits for durable confirmation and cfg readback, then
+requires the only desired candidate to be **1.0°F** before one corrective
+command. Both phases use one attempt through the existing dispatcher queue
+and `requested` → `sent` → `confirmed` lifecycle.
 
-For the brief interval at 570 seconds, the summer vent preference gate treats
-outdoor weather data aged 570–599 seconds as stale instead of fresh. Data
-younger than 570 seconds or at least 600 seconds produces the same gate input.
-Safety limits, direct-wet controls, and crop-band anchors are not changed.
+For the brief interval at 1.1°F, an already latched cooling fan2 clears at
+`temp_high + cool_stage2_over_high_f − 1.1°F` instead of the same threshold
+minus 1.0°F. Fan2 can remain on for an additional 0.1°F of cooling near that
+exit threshold. Fan2 entry, safety limits, direct-wet controls, and crop-band
+anchors are not changed.
 
 ## Arm from the exact running pod
 

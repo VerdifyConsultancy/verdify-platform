@@ -1,6 +1,6 @@
 """One-shot, in-process cfg drift proof for the sole Verdify device writer.
 
-An atomic approval names one step shorter outdoor-data freshness window. The dispatcher
+An atomic approval names one 0.1 F extension of fan2 cooling exit hysteresis. The dispatcher
 persists each phase before using its existing lifecycle and ESPHome queue. A
 missing or uncertain receipt stops the probe; it never opens another client.
 """
@@ -17,10 +17,10 @@ import shared
 
 from . import bounded_reconcile as bounded
 
-PARAMETER = "outdoor_staleness_max_s"
-STEP = 30.0
-MIN_BASELINE = 150.0
-MAX_BASELINE = 1800.0
+PARAMETER = "cool_stage2_exit_hysteresis_f"
+STEP = 0.1
+MIN_BASELINE = 0.3
+MAX_BASELINE = 2.9
 PREVIEW_NAME = "writer-drift-preview.json"
 APPROVAL_NAME = "writer-drift-approval.json"
 STATE_NAME = "writer-drift-state.json"
@@ -47,7 +47,11 @@ def approval_file_stamp(state_dir: Path) -> tuple[int, int, int] | None:
 
 
 def _safe_baseline(value: float) -> bool:
-    return math.isfinite(value) and MIN_BASELINE <= value <= MAX_BASELINE and value % STEP == 0
+    return (
+        math.isfinite(value)
+        and MIN_BASELINE <= value <= MAX_BASELINE
+        and math.isclose(value * 10, round(value * 10), rel_tol=0, abs_tol=1e-5)
+    )
 
 
 async def _preview(conn, planned: list, generation: int, desired: float) -> dict:
@@ -66,7 +70,7 @@ async def _preview(conn, planned: list, generation: int, desired: float) -> dict
         "plan_rows": plan_rows,
         "desired": desired,
         "parameter": PARAMETER,
-        "probe_value": desired - STEP,
+        "probe_value": round(desired + STEP, 1),
         "readbacks": {
             key: readbacks[key] for key in sorted({PARAMETER} | {field.name for field in bounded.wire_fields()})
         },

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -20,16 +21,20 @@ def prepare(preview: dict, now: datetime) -> dict:
     plan_expiry = datetime.fromisoformat(preview["earliest_plan_expiry"])
     if captured.tzinfo is None or plan_expiry.tzinfo is None:
         raise ValueError("preview timestamps must have an offset")
-    if preview.get("version") != 1 or preview.get("parameter") != "outdoor_staleness_max_s":
+    if preview.get("version") != 1 or preview.get("parameter") != "cool_stage2_exit_hysteresis_f":
         raise ValueError("not a supported drift preview")
     if now - captured > timedelta(minutes=6) or captured > now + timedelta(seconds=15):
         raise ValueError("drift preview stale or future-dated")
     if len(preview.get("readbacks", {})) < 48:
         raise ValueError("drift preview lacks canonical cfg baseline")
     desired = float(preview["desired"])
-    if not 150 <= desired <= 1800 or desired % 30 or float(preview["probe_value"]) != desired - 30:
-        raise ValueError("drift step outside outdoor-data freshness Number grid")
-    if abs(float(preview["readbacks"]["outdoor_staleness_max_s"]) - desired) > 1e-5:
+    if (
+        not 0.3 <= desired <= 2.9
+        or not math.isclose(desired * 10, round(desired * 10), rel_tol=0, abs_tol=1e-5)
+        or not math.isclose(float(preview["probe_value"]), desired + 0.1, rel_tol=0, abs_tol=1e-5)
+    ):
+        raise ValueError("drift step outside fan2 hysteresis Number grid")
+    if abs(float(preview["readbacks"]["cool_stage2_exit_hysteresis_f"]) - desired) > 1e-5:
         raise ValueError("cfg already differs from source-owned desired")
     expires = min(now + timedelta(minutes=10), plan_expiry - timedelta(minutes=1))
     if expires <= now + timedelta(minutes=2):
@@ -37,7 +42,7 @@ def prepare(preview: dict, now: datetime) -> dict:
     return {
         "version": 1,
         "run_id": uuid.uuid4().hex,
-        "parameter": "outdoor_staleness_max_s",
+        "parameter": "cool_stage2_exit_hysteresis_f",
         "session_id": preview["session_id"],
         "generation": preview["generation"],
         "fingerprint": preview["fingerprint"],

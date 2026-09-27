@@ -29,7 +29,7 @@ class Fixture:
     def __init__(self):
         self.ts = datetime.now(UTC)
         self.expiry = self.ts + timedelta(minutes=40)
-        self.plan_value = 600.0
+        self.plan_value = 1.0
         self.readbacks = {field.name: 0.0 for field in wire_fields()}
         self.readbacks[drift_probe.PARAMETER] = self.plan_value
         self.rows = {}
@@ -80,32 +80,32 @@ def record(decision):
 async def test_one_probe_then_exactly_one_confirmed_correction(fixture, tmp_path):
     db = fixture
     await arm(db, tmp_path)
-    probe = await drift_probe.choose(db, [], db.planned(), 600.0, 3, False, tmp_path)
+    probe = await drift_probe.choose(db, [], db.planned(), 1.0, 3, False, tmp_path)
     assert probe.action == "send" and probe.phase == "probe"
-    assert probe.changes == ((drift_probe.PARAMETER, 570.0),)
+    assert probe.changes == ((drift_probe.PARAMETER, 1.1),)
     assert bounded._read(tmp_path / drift_probe.STATE_NAME)["status"] == "probe_inflight"
 
     probe_record = record(probe)
     drift_probe.finish(tmp_path, probe, [probe_record], [])
     db.rows[(probe_record["requested_at"], drift_probe.PARAMETER)] = {"delivery_status": "sent", "confirmed_at": None}
-    awaiting = await drift_probe.choose(db, [], db.planned(), 600.0, 3, False, tmp_path)
+    awaiting = await drift_probe.choose(db, [], db.planned(), 1.0, 3, False, tmp_path)
     assert awaiting.action == "hold"
-    db.readbacks[drift_probe.PARAMETER] = 570.0
+    db.readbacks[drift_probe.PARAMETER] = 1.1
     db.rows[(probe_record["requested_at"], drift_probe.PARAMETER)] = {
         "delivery_status": "confirmed",
         "confirmed_at": datetime.now(UTC),
     }
-    restore = await drift_probe.choose(db, [(drift_probe.PARAMETER, 600.0)], db.planned(), 600.0, 3, False, tmp_path)
+    restore = await drift_probe.choose(db, [(drift_probe.PARAMETER, 1.0)], db.planned(), 1.0, 3, False, tmp_path)
     assert restore.action == "send" and restore.phase == "restore"
-    assert restore.changes == ((drift_probe.PARAMETER, 600.0),)
+    assert restore.changes == ((drift_probe.PARAMETER, 1.0),)
     restore_record = record(restore)
     drift_probe.finish(tmp_path, restore, [restore_record], [])
-    db.readbacks[drift_probe.PARAMETER] = 600.0
+    db.readbacks[drift_probe.PARAMETER] = 1.0
     db.rows[(restore_record["requested_at"], drift_probe.PARAMETER)] = {
         "delivery_status": "confirmed",
         "confirmed_at": datetime.now(UTC),
     }
-    done = await drift_probe.choose(db, [], db.planned(), 600.0, 3, False, tmp_path)
+    done = await drift_probe.choose(db, [], db.planned(), 1.0, 3, False, tmp_path)
     assert done.action == "ordinary"
     state = bounded._read(tmp_path / drift_probe.STATE_NAME)
     assert state["status"] == "complete"
@@ -113,10 +113,10 @@ async def test_one_probe_then_exactly_one_confirmed_correction(fixture, tmp_path
     assert state["restore_record"]["requested_at"] == restore_record["requested_at"].isoformat()
     # A retained approval is one-shot: later ordinary desired work is untouched.
     assert (
-        await drift_probe.choose(db, [("safety_max", 100.0)], db.planned(), 600.0, 3, False, tmp_path)
+        await drift_probe.choose(db, [("safety_max", 100.0)], db.planned(), 1.0, 3, False, tmp_path)
     ).action == "ordinary"
     (tmp_path / drift_probe.APPROVAL_NAME).write_text("malformed-retained-approval")
-    assert (await drift_probe.choose(db, [], db.planned(), 600.0, 3, False, tmp_path)).action == "ordinary"
+    assert (await drift_probe.choose(db, [], db.planned(), 1.0, 3, False, tmp_path)).action == "ordinary"
 
 
 @pytest.mark.asyncio
@@ -124,12 +124,12 @@ async def test_lease_loss_or_other_candidate_blocks_before_any_probe_command(fix
     db = fixture
     await arm(db, tmp_path)
     monkeypatch.setattr(shared, "writer_lease_strictly_held", lambda minimum_remaining_s=0: False)
-    blocked = await drift_probe.choose(db, [], db.planned(), 600.0, 3, False, tmp_path)
+    blocked = await drift_probe.choose(db, [], db.planned(), 1.0, 3, False, tmp_path)
     assert blocked.action == "hold" and "lease" in blocked.reason
     assert not (tmp_path / drift_probe.STATE_NAME).exists()
 
     monkeypatch.setattr(shared, "writer_lease_strictly_held", lambda minimum_remaining_s=0: True)
-    blocked = await drift_probe.choose(db, [("safety_max", 100.0)], db.planned(), 600.0, 3, False, tmp_path)
+    blocked = await drift_probe.choose(db, [("safety_max", 100.0)], db.planned(), 1.0, 3, False, tmp_path)
     assert blocked.action == "hold" and "nonempty" in blocked.reason
     assert not (tmp_path / drift_probe.STATE_NAME).exists()
 
@@ -138,17 +138,17 @@ async def test_lease_loss_or_other_candidate_blocks_before_any_probe_command(fix
 async def test_generation_or_plan_change_halts_without_correction(fixture, tmp_path):
     db = fixture
     await arm(db, tmp_path)
-    probe = await drift_probe.choose(db, [], db.planned(), 600.0, 3, False, tmp_path)
+    probe = await drift_probe.choose(db, [], db.planned(), 1.0, 3, False, tmp_path)
     drift_probe.finish(tmp_path, probe, [record(probe)], [])
-    assert (await drift_probe.choose(db, [], db.planned(), 600.0, 4, True, tmp_path)).action == "hold"
+    assert (await drift_probe.choose(db, [], db.planned(), 1.0, 4, True, tmp_path)).action == "hold"
     assert bounded._read(tmp_path / drift_probe.STATE_NAME)["status"] == "halted"
 
     other = tmp_path / "plan"
     await arm(db, other)
-    probe = await drift_probe.choose(db, [], db.planned(), 600.0, 3, False, other)
+    probe = await drift_probe.choose(db, [], db.planned(), 1.0, 3, False, other)
     drift_probe.finish(other, probe, [record(probe)], [])
-    db.plan_value = 570.0
-    assert (await drift_probe.choose(db, [], db.planned(), 570.0, 3, False, other)).action == "hold"
+    db.plan_value = 1.1
+    assert (await drift_probe.choose(db, [], db.planned(), 1.1, 3, False, other)).action == "hold"
     assert bounded._read(other / drift_probe.STATE_NAME)["status"] == "halted"
 
 
@@ -156,11 +156,11 @@ async def test_generation_or_plan_change_halts_without_correction(fixture, tmp_p
 async def test_uncertain_or_failed_dispatch_stops_and_does_not_retry(fixture, tmp_path):
     db = fixture
     await arm(db, tmp_path)
-    probe = await drift_probe.choose(db, [], db.planned(), 600.0, 3, False, tmp_path)
-    assert (await drift_probe.choose(db, [], db.planned(), 600.0, 3, False, tmp_path)).action == "hold"
+    probe = await drift_probe.choose(db, [], db.planned(), 1.0, 3, False, tmp_path)
+    assert (await drift_probe.choose(db, [], db.planned(), 1.0, 3, False, tmp_path)).action == "hold"
     drift_probe.finish(tmp_path, probe, [], [(drift_probe.PARAMETER, "command_timeout_outcome_unknown")])
     assert bounded._read(tmp_path / drift_probe.STATE_NAME)["status"] == "halted"
-    assert (await drift_probe.choose(db, [], db.planned(), 600.0, 3, False, tmp_path)).action == "hold"
+    assert (await drift_probe.choose(db, [], db.planned(), 1.0, 3, False, tmp_path)).action == "hold"
     source = (ROOT / "ingestor" / "tasks" / "dispatcher.py").read_text()
     assert 'max_attempts = 1 if probe_decision.action == "send" else 3' in source
 
@@ -169,10 +169,10 @@ async def test_uncertain_or_failed_dispatch_stops_and_does_not_retry(fixture, tm
 async def test_lease_loss_after_probe_halts_before_correction(fixture, tmp_path, monkeypatch):
     db = fixture
     await arm(db, tmp_path)
-    probe = await drift_probe.choose(db, [], db.planned(), 600.0, 3, False, tmp_path)
+    probe = await drift_probe.choose(db, [], db.planned(), 1.0, 3, False, tmp_path)
     drift_probe.finish(tmp_path, probe, [record(probe)], [])
     monkeypatch.setattr(shared, "writer_lease_strictly_held", lambda minimum_remaining_s=0: False)
-    blocked = await drift_probe.choose(db, [(drift_probe.PARAMETER, 600.0)], db.planned(), 600.0, 3, False, tmp_path)
+    blocked = await drift_probe.choose(db, [(drift_probe.PARAMETER, 1.0)], db.planned(), 1.0, 3, False, tmp_path)
     assert blocked.action == "hold" and "lease" in blocked.reason
     assert bounded._read(tmp_path / drift_probe.STATE_NAME)["status"] == "halted"
 
@@ -181,7 +181,7 @@ async def test_lease_loss_after_probe_halts_before_correction(fixture, tmp_path,
 async def test_partial_cfg_batch_waits_without_replaying_probe(fixture, tmp_path, monkeypatch):
     db = fixture
     await arm(db, tmp_path)
-    probe = await drift_probe.choose(db, [], db.planned(), 600.0, 3, False, tmp_path)
+    probe = await drift_probe.choose(db, [], db.planned(), 1.0, 3, False, tmp_path)
     drift_probe.finish(tmp_path, probe, [record(probe)], [])
     original_fetch = db.fetch
 
@@ -192,7 +192,7 @@ async def test_partial_cfg_batch_waits_without_replaying_probe(fixture, tmp_path
         return rows
 
     monkeypatch.setattr(db, "fetch", partial_fetch)
-    pending = await drift_probe.choose(db, [], db.planned(), 600.0, 3, False, tmp_path)
+    pending = await drift_probe.choose(db, [], db.planned(), 1.0, 3, False, tmp_path)
     assert pending.action == "hold" and "atomic cfg batch" in pending.reason
     assert bounded._read(tmp_path / drift_probe.STATE_NAME)["status"] == "probe_awaiting"
 
@@ -201,9 +201,9 @@ def test_prepare_rejects_stale_preview(fixture, tmp_path):
     preview = {
         "version": 1,
         "parameter": drift_probe.PARAMETER,
-        "desired": 600.0,
-        "probe_value": 570.0,
-        "readbacks": {str(n): 600.0 for n in range(48)},
+        "desired": 1.0,
+        "probe_value": 1.1,
+        "readbacks": {str(n): 1.0 for n in range(48)},
         "captured_at": (datetime.now(UTC) - timedelta(minutes=7)).isoformat(),
         "earliest_plan_expiry": (datetime.now(UTC) + timedelta(minutes=40)).isoformat(),
     }
