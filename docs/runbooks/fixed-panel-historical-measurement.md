@@ -97,7 +97,7 @@ Its first target-profile records are
 explicitly **migration-time baselines**; later insert, update and delete events
 are captured by database triggers. Updates to unrelated source rows do not
 change the production crop resolver or experiment authority. `TRUNCATE` is
-rejected because it would skip row capture. Both history tables reject updates,
+rejected because it would skip row capture. All three history tables reject updates,
 deletes and truncation. Runtime roles have no direct access to either table.
 
 For each future target contract, use profile revisions recorded before the
