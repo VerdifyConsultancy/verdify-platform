@@ -8,16 +8,17 @@ is safe. The canonical input example is
 
 The guard has two intentionally separate modes:
 
-- `recovery / gate-r` can authorize only Gate R. It requires the corrected
-  one-off backup, healthy core workloads, one stable current writer/lease,
+- `recovery / gate-r` can authorize only Gate R. It requires a current
+  successful controller-owned backup, healthy core workloads, one stable
+  current writer/lease,
   current 48/48 component truth, climate quorum, feature-off/empty-ID/vector-off
   and zero exposure. Writer/lease/generation stability must cover at least 30
-  minutes. It records Argo, controller-owned backup, #686, provider, #424, and
-  Gate P issue state but does not use those proof-only fields to authorize Gate
-  R. The deterministic recovery packet overlay is
+  minutes. It records Argo, #686, provider, #424, and Gate P issue state but
+  does not use those proof-only fields to authorize Gate R. The deterministic
+  recovery packet overlay is
   `tests/fixtures/experiment-v2-readiness/recovery-gate-r.overlay.json`; it
-  materializes against `base-proof.json` and binds the corrected one-off receipt
-  plus fresh cycle-aligned HA contributor evidence.
+  materializes against `base-proof.json` and binds the current scheduled
+  backup receipt plus fresh cycle-aligned HA contributor evidence.
 - `proof` can authorize only Gate P. It additionally requires issue #747 full
   acceptance, an exact-pin Synced/Healthy Argo state, current controller-owned
   backup, and the complete named #641 Gate P prerequisite set. A completed
@@ -37,7 +38,7 @@ Secret payloads, response bodies, or device command payloads.
 | Packet section | Existing authoritative producer |
 | --- | --- |
 | `provenance`, `workloads`, `argo` | exact GitOps render, running workload/image inspection, and Argo application status |
-| `backup` | corrected one-off backup receipt and controller-owned backup freshness/status |
+| `backup` | current controller-owned scheduled Job and artifact receipt, with freshness/status |
 | `climate.qualification_capture` | source-stamped 30-minute #748 HA qualification receipt or current gate capture |
 | `climate.samples` | exact newest two committed production climate rows, without filtering, for every zonal and aggregate temperature/RH/VPD value |
 | `alerts` | every current open alert-log row projected without free-form message text |
@@ -51,8 +52,8 @@ Secret payloads, response bodies, or device command payloads.
 Gate P's passive #424 receipt now requires the [version-2 band lineage
 contract](band-lineage-qualification.md): explicit disposition and observed
 consumed branch. An old agreement-only packet or an on-chip curve compared to
-legacy scalar readbacks cannot receive proof credit. Historical Gate R packet
-compatibility remains recovery-only; it does not bypass the later physical gate.
+legacy scalar readbacks cannot receive proof credit. Gate R remains recovery-only;
+it does not bypass the later proof boundary.
 
 Gate P independently requires `wetting_incident_778_disposition` in the named
 prerequisite set. A missing or incomplete disposition blocks proof even if the
@@ -66,12 +67,12 @@ or increasing a cap. Neither proof-only requirement broadens or revokes the
 existing exact Gate R recovery contract, which retains its own authority, safety,
 identity and zero-exposure checks.
 
-The corrected one-off is an immutable accepted receipt, not a rolling backup:
-its source pin is fixed to the reconciled #752 revision
-`6b48dba7217438f5fdd7fb14fc8e067975cf1c35` and its completion must not be in
-the future. Gate P separately requires a current controller-owned scheduled
-backup produced by the same corrected implementation and within the backup-age
-policy.
+Both modes require the latest retained successful Job owned by the current
+`verdify-db-backup` CronJob, scheduled after #747 acceptance. The collector
+binds the CronJob and Job UIDs, successful pod, `PGDMP` artifact header, positive
+artifact size, and absence of a partial artifact. The guard enforces the
+26-hour maximum age. The historical one-off Job is no longer retained, so it
+cannot serve as a live prerequisite or a claimed source pin.
 
 The reusable 30-minute qualification remains the accepted cycle-aligned Home
 Assistant capture from #748. At each live boundary, the in-cluster collector

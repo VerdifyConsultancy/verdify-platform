@@ -136,7 +136,7 @@ def test_recovery_packet_overlay_binds_only_gate_r_requirements() -> None:
     assert result["status"] == "degraded-pass"
     assert result["authorized_gate"] == "R"
     assert result["blockers"] == []
-    assert packet["backup"]["corrected_one_off"]["source_git_pin"] == GIT_PIN
+    assert packet["backup"]["controller_owned"]["cronjob_uid"] == "00000000-0000-4000-8000-000000000747"
     assert packet["climate"]["qualification_capture"]["source_kind"] == "ha_cycle_aligned_events"
     assert {sample["cycle_id"] for sample in packet["climate"]["samples"]} == {
         "ha-cycle-120000",

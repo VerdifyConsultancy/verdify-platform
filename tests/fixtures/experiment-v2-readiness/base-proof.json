@@ -1,5 +1,5 @@
 {
-  "schema": "verdify-experiment-v2-readiness-input-v1",
+  "schema": "verdify-experiment-v2-readiness-input-v2",
   "mode": "proof",
   "boundary": "gate-p",
   "packet_id": "00000000-0000-4000-8000-000000000001",
@@ -70,22 +70,14 @@
     "registry_revision": "registry-v1"
   },
   "backup": {
-    "corrected_one_off": {
-      "status": "succeeded",
-      "completed_at": "2026-08-30T11:45:00.000000Z",
-      "artifact_bytes": 1048576,
-      "restorable": true,
-      "partial_artifact": false,
-      "source_git_pin": "6b48dba7217438f5fdd7fb14fc8e067975cf1c35",
-      "receipt_sha256": "abababababababababababababababababababababababababababababababab"
-    },
     "controller_owned": {
       "status": "succeeded",
       "completed_at": "2026-08-30T11:50:00.000000Z",
       "artifact_bytes": 1048576,
       "restorable": true,
       "partial_artifact": false,
-      "source_git_pin": "6b48dba7217438f5fdd7fb14fc8e067975cf1c35",
+      "cronjob_uid": "00000000-0000-4000-8000-000000000747",
+      "job_uid": "00000000-0000-4000-8000-000000000748",
       "receipt_sha256": "6666666666666666666666666666666666666666666666666666666666666666"
     },
     "policy_max_age_seconds": 93600
@@ -338,7 +330,7 @@
       "issue_url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/751"
     },
     "recovery_747": {
-      "corrected_one_off_complete": true,
+      "controller_backup_current": true,
       "full_acceptance_complete": true,
       "issue_url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/747"
     },
