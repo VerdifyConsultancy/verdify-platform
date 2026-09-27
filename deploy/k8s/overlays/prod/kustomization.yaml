@@ -293,7 +293,7 @@ images:
   # and schema inputs include the C0 evidence contract.
   - name: ghcr.io/verdifyconsultancy/verdify-lab-publisher-k3s
     newName: registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s
-    digest: sha256:d76c73744101f55fdda51176bed59703acf25da2df87785a472b233c474cc085
+    digest: sha256:a36ef328a5d51006e9b35d48885f061224d95e167408bbc44bdac892b0374157
 
 # Release pins: the digests production runs for the five actuator-managed
 # images. kustomize applies `transformers:` after `images:`, so these replace
