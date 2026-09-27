@@ -39,6 +39,54 @@ def _climate_row(moment: datetime, offset: float) -> dict:
     return row
 
 
+def test_backup_packet_uses_current_controller_job_without_expired_one_off(monkeypatch) -> None:
+    now = datetime(2026, 9, 26, 12, 0, tzinfo=UTC)
+    cron_uid = "00000000-0000-4000-8000-000000000747"
+    job_uid = "00000000-0000-4000-8000-000000000748"
+    job = {
+        "metadata": {
+            "name": "verdify-db-backup-current",
+            "uid": job_uid,
+            "annotations": {
+                "batch.kubernetes.io/cronjob-scheduled-timestamp": collector.zulu(now - timedelta(hours=4))
+            },
+            "ownerReferences": [{"uid": cron_uid, "controller": True}],
+        },
+        "status": {"conditions": [{"type": "Complete", "status": "True"}]},
+    }
+    facts = {
+        "cronjob": {"metadata": {"uid": cron_uid}},
+        "backup_jobs": [job],
+        "observed_at": collector.zulu(now),
+    }
+    artifact = {
+        "job_uid": job_uid,
+        "pod_uid": "00000000-0000-4000-8000-000000000749",
+        "completed_at": collector.zulu(now - timedelta(hours=4)),
+        "artifact": "verdify-20260926T080000Z.dump",
+        "artifact_bytes": 1024,
+        "restorable": True,
+        "partial_artifact": False,
+    }
+    monkeypatch.setattr(collector, "_backup_artifact", lambda actual, _kube: artifact if actual is job else None)
+    packet, complete = collector.backup_evidence(None, facts)
+    assert complete
+    assert packet["controller_owned"]["cronjob_uid"] == cron_uid
+    assert packet["controller_owned"]["job_uid"] == job_uid
+    assert "corrected_one_off" not in packet
+    assert "source_git_pin" not in packet["controller_owned"]
+
+
+def test_backup_packet_fails_when_no_controller_owned_success_is_retained() -> None:
+    facts = {
+        "cronjob": {"metadata": {"uid": "00000000-0000-4000-8000-000000000747"}},
+        "backup_jobs": [],
+        "observed_at": "2026-09-26T12:00:00Z",
+    }
+    with pytest.raises(collector.CollectionError, match="no successful controller-owned"):
+        collector.backup_evidence(None, facts)
+
+
 def test_climate_projection_uses_exact_supplied_newest_two_rows_without_filtering() -> None:
     first = datetime(2026, 8, 30, 12, 0, tzinfo=UTC)
     rows = [_climate_row(first, 0), _climate_row(first + timedelta(minutes=1), 0.01)]

@@ -28,10 +28,9 @@ from pathlib import Path
 from typing import Any, Literal
 from uuid import UUID
 
-INPUT_SCHEMA = "verdify-experiment-v2-readiness-input-v1"
+INPUT_SCHEMA = "verdify-experiment-v2-readiness-input-v2"
 RESULT_SCHEMA = "verdify-experiment-v2-readiness-result-v1"
 STATE_SCHEMA = "verdify-experiment-v2-readiness-chain-v2"
-CORRECTED_ONE_OFF_SOURCE_PIN = "6b48dba7217438f5fdd7fb14fc8e067975cf1c35"
 
 Mode = Literal["recovery", "proof"]
 Boundary = Literal["gate-r", "gate-p", "baseline-before", "aggressive", "baseline-after"]
@@ -442,41 +441,7 @@ def _validate_runtime(
 
 
 def _validate_backup(raw: object, *, mode: Mode, expected: ExpectedPins, now: datetime, blockers: list[str]) -> None:
-    value = _exact_keys(raw, {"corrected_one_off", "controller_owned", "policy_max_age_seconds"}, "backup")
-    one_off = _exact_keys(
-        value["corrected_one_off"],
-        {
-            "status",
-            "completed_at",
-            "artifact_bytes",
-            "restorable",
-            "partial_artifact",
-            "source_git_pin",
-            "receipt_sha256",
-        },
-        "backup.corrected_one_off",
-    )
-    one_off_status = _text(one_off["status"], "backup.corrected_one_off.status")
-    if one_off_status != "succeeded":
-        blockers.append("corrected_one_off_backup_failed")
-    if _integer(one_off["artifact_bytes"], "backup.corrected_one_off.artifact_bytes") < 1:
-        blockers.append("corrected_one_off_backup_empty")
-    if not _boolean(one_off["restorable"], "backup.corrected_one_off.restorable"):
-        blockers.append("corrected_one_off_backup_not_restorable")
-    if _boolean(one_off["partial_artifact"], "backup.corrected_one_off.partial_artifact"):
-        blockers.append("corrected_one_off_backup_partial")
-    one_off_at = _timestamp(one_off["completed_at"], "backup.corrected_one_off.completed_at")
-    if one_off_at > now + MAX_SOURCE_FUTURE_SKEW:
-        blockers.append("corrected_one_off_backup_from_future")
-    one_off_receipt = _text(one_off["receipt_sha256"], "backup.corrected_one_off.receipt_sha256")
-    if not SHA64.fullmatch(one_off_receipt):
-        raise PacketError("backup.corrected_one_off.receipt_sha256 must be a SHA-256")
-    one_off_source = _text(one_off["source_git_pin"], "backup.corrected_one_off.source_git_pin")
-    if not SHA40.fullmatch(one_off_source):
-        raise PacketError("backup.corrected_one_off.source_git_pin must be a lowercase Git SHA")
-    if one_off_source != CORRECTED_ONE_OFF_SOURCE_PIN:
-        blockers.append("corrected_one_off_backup_source_pin_mismatch")
-
+    value = _exact_keys(raw, {"controller_owned", "policy_max_age_seconds"}, "backup")
     controller = _exact_keys(
         value["controller_owned"],
         {
@@ -485,7 +450,8 @@ def _validate_backup(raw: object, *, mode: Mode, expected: ExpectedPins, now: da
             "artifact_bytes",
             "restorable",
             "partial_artifact",
-            "source_git_pin",
+            "cronjob_uid",
+            "job_uid",
             "receipt_sha256",
         },
         "backup.controller_owned",
@@ -498,28 +464,24 @@ def _validate_backup(raw: object, *, mode: Mode, expected: ExpectedPins, now: da
     controller_receipt = _text(controller["receipt_sha256"], "backup.controller_owned.receipt_sha256")
     if not SHA64.fullmatch(controller_receipt):
         raise PacketError("backup.controller_owned.receipt_sha256 must be a SHA-256")
-    controller_source = _text(controller["source_git_pin"], "backup.controller_owned.source_git_pin")
-    if not SHA40.fullmatch(controller_source):
-        raise PacketError("backup.controller_owned.source_git_pin must be a lowercase Git SHA")
+    _uuid(controller["cronjob_uid"], "backup.controller_owned.cronjob_uid")
+    _uuid(controller["job_uid"], "backup.controller_owned.job_uid")
     policy_age = _integer(value["policy_max_age_seconds"], "backup.policy_max_age_seconds", minimum=1)
-    if mode == "proof":
-        if controller_source != CORRECTED_ONE_OFF_SOURCE_PIN:
-            blockers.append("controller_owned_backup_source_pin_mismatch")
-        if controller_status != "succeeded":
-            blockers.append("controller_owned_backup_failed")
-        if controller_bytes < 1:
-            blockers.append("controller_owned_backup_empty")
-        if not controller_restorable:
-            blockers.append("controller_owned_backup_not_restorable")
-        if controller_partial:
-            blockers.append("controller_owned_backup_partial")
-        _fresh(
-            controller_at,
-            now=now,
-            max_age=min(MAX_BACKUP_AGE, timedelta(seconds=policy_age)),
-            label="controller_owned_backup",
-            blockers=blockers,
-        )
+    if controller_status != "succeeded":
+        blockers.append("controller_owned_backup_failed")
+    if controller_bytes < 1:
+        blockers.append("controller_owned_backup_empty")
+    if not controller_restorable:
+        blockers.append("controller_owned_backup_not_restorable")
+    if controller_partial:
+        blockers.append("controller_owned_backup_partial")
+    _fresh(
+        controller_at,
+        now=now,
+        max_age=min(MAX_BACKUP_AGE, timedelta(seconds=policy_age)),
+        label="controller_owned_backup",
+        blockers=blockers,
+    )
 
 
 def _validate_argo(raw: object, *, mode: Mode, expected: ExpectedPins, now: datetime, blockers: list[str]) -> None:
@@ -1113,10 +1075,10 @@ def _validate_issue_state(raw: object, *, mode: Mode, blockers: list[str]) -> No
         blockers.append("maintenance_751_not_bound")
     recovery = _exact_keys(
         value["recovery_747"],
-        {"corrected_one_off_complete", "full_acceptance_complete", "issue_url"},
+        {"controller_backup_current", "full_acceptance_complete", "issue_url"},
         "issue_state.recovery_747",
     )
-    if not _boolean(recovery["corrected_one_off_complete"], "issue_state.recovery_747.corrected_one_off_complete"):
+    if not _boolean(recovery["controller_backup_current"], "issue_state.recovery_747.controller_backup_current"):
         blockers.append("issue_747_recovery_acceptance_incomplete")
     full_recovery_complete = _boolean(
         recovery["full_acceptance_complete"], "issue_state.recovery_747.full_acceptance_complete"

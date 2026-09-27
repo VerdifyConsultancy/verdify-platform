@@ -35,15 +35,13 @@ from typing import Any
 
 import asyncpg
 
-INPUT_SCHEMA = "verdify-experiment-v2-readiness-input-v1"
+INPUT_SCHEMA = "verdify-experiment-v2-readiness-input-v2"
 STATE_SCHEMA = "verdify-experiment-v2-readiness-chain-v2"
 PREFLIGHT_CACHE_SCHEMA = "verdify-experiment-v2-proof-preflight-cache-v2"
 NAMESPACE = "verdify-prod"
 ARGO_NAMESPACE = "argocd"
 ARGO_APPLICATION = "verdify-prod-dark"
 DEVICE_ID = "vallery/greenhouse-controller"
-CORRECTED_ONE_OFF_PIN = "6b48dba7217438f5fdd7fb14fc8e067975cf1c35"
-CORRECTED_ONE_OFF_JOB = "verdify-db-backup-verify-20260830t110155z"
 QUALIFICATION = {
     "status": "degraded-pass",
     "source_kind": "ha_cycle_aligned_events",
@@ -434,7 +432,6 @@ def collect_kube(
         "backup_jobs": kube.json(_list_path("batch/v1", "jobs", selector="app.kubernetes.io/component=db-backup"))[
             "items"
         ],
-        "one_off_job": kube.json(f"/apis/batch/v1/namespaces/{NAMESPACE}/jobs/{CORRECTED_ONE_OFF_JOB}"),
         "writer_fact": {
             "pod": writer_name,
             "pod_uid": writer_pod["metadata"]["uid"],
@@ -715,7 +712,6 @@ def _backup_artifact(job: Mapping[str, Any], kube: KubeReader) -> dict[str, Any]
 
 
 def backup_evidence(kube: KubeReader, facts: Mapping[str, Any]) -> tuple[dict[str, Any], bool]:
-    one_off = _backup_artifact(facts["one_off_job"], kube)
     controller_jobs = []
     cron_uid = facts["cronjob"]["metadata"]["uid"]
     for job in facts["backup_jobs"]:
@@ -738,41 +734,30 @@ def backup_evidence(kube: KubeReader, facts: Mapping[str, Any]) -> tuple[dict[st
             for condition in row.get("status", {}).get("conditions", [])
         )
     ]
-    if successful:
-        controller = _backup_artifact(successful[-1], kube)
-        controller_status = "succeeded"
-    else:
-        latest = controller_jobs[-1] if controller_jobs else facts["one_off_job"]
-        controller = {
-            "job_uid": latest["metadata"]["uid"],
-            "completed_at": latest.get("status", {}).get("completionTime")
-            or latest.get("metadata", {}).get("creationTimestamp"),
-            "artifact_bytes": 0,
-            "restorable": False,
-            "partial_artifact": True,
-        }
-        controller_status = "failed"
-    full_acceptance = bool(successful)
-
-    def guarded(row: Mapping[str, Any], *, status: str, source_pin: str) -> dict[str, Any]:
-        return {
-            "status": status,
-            "completed_at": zulu(parse_time(str(row["completed_at"]))),
-            "artifact_bytes": int(row["artifact_bytes"]),
-            "restorable": bool(row["restorable"]),
-            "partial_artifact": bool(row["partial_artifact"]),
-            "source_git_pin": source_pin,
-            "receipt_sha256": receipt(row),
-        }
+    if not successful:
+        raise CollectionError("no successful controller-owned scheduled backup is retained")
+    controller = _backup_artifact(successful[-1], kube)
+    completed_at = parse_time(str(controller["completed_at"]))
+    full_acceptance = (
+        controller["artifact_bytes"] > 0
+        and controller["restorable"]
+        and not controller["partial_artifact"]
+        and timedelta(0) <= parse_time(facts["observed_at"]) - completed_at <= timedelta(hours=26)
+    )
+    controller_receipt = {
+        "status": "succeeded",
+        "completed_at": zulu(completed_at),
+        "artifact_bytes": int(controller["artifact_bytes"]),
+        "restorable": bool(controller["restorable"]),
+        "partial_artifact": bool(controller["partial_artifact"]),
+        "cronjob_uid": cron_uid,
+        "job_uid": controller["job_uid"],
+        "receipt_sha256": receipt({"cronjob_uid": cron_uid, **controller}),
+    }
 
     return (
         {
-            "corrected_one_off": guarded(one_off, status="succeeded", source_pin=CORRECTED_ONE_OFF_PIN),
-            "controller_owned": guarded(
-                controller,
-                status=controller_status,
-                source_pin=CORRECTED_ONE_OFF_PIN,
-            ),
+            "controller_owned": controller_receipt,
             "policy_max_age_seconds": 93600,
         },
         full_acceptance,
@@ -1335,7 +1320,7 @@ def assemble(
                     "issue_url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/751",
                 },
                 "recovery_747": {
-                    "corrected_one_off_complete": True,
+                    "controller_backup_current": full_acceptance,
                     "full_acceptance_complete": full_acceptance,
                     "issue_url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/747",
                 },
