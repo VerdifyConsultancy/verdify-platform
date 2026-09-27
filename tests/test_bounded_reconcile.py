@@ -262,7 +262,76 @@ def test_fresh_reconnect_skips_only_equivalent_quantized_durations():
         "mister_pulse_gap_s": 48.0,
         "min_fog_off_s": 80.0,
     }
-    assert dispatcher._without_equivalent_reconnect_durations(changes, readbacks) == [("min_fog_off_s", 99.0)]
+    assert dispatcher._without_equivalent_duration_candidates(changes, readbacks) == [("min_fog_off_s", 99.0)]
+
+
+def test_equivalent_seconds_are_filtered_again_on_later_cfg_drift_pass():
+    quantized = [
+        ("min_fog_on_s", 54.75),
+        ("mister_engage_delay_s", 46.5),
+        ("mister_pulse_gap_s", 48.75),
+    ]
+    readbacks = {
+        "min_fog_on_s": 54.0,
+        "mister_engage_delay_s": 47.0,
+        "mister_pulse_gap_s": 48.0,
+        "min_fog_off_s": 80.0,
+    }
+    residual = [("min_fog_off_s", 99.0)]
+    first = dispatcher._without_equivalent_duration_replays(
+        quantized + residual,
+        readbacks,
+        reconnect_pending=True,
+        drift_pending=False,
+        staged_state_exists=False,
+    )
+    assert first == residual
+    second = dispatcher._without_equivalent_duration_replays(
+        quantized,
+        readbacks,
+        reconnect_pending=False,
+        drift_pending=True,
+        staged_state_exists=False,
+    )
+    assert second == []  # no redundant physical commands after cfg callback
+
+    changed = dict(readbacks, min_fog_on_s=52.0)
+    assert dispatcher._without_equivalent_duration_replays(
+        quantized,
+        changed,
+        reconnect_pending=False,
+        drift_pending=True,
+        staged_state_exists=False,
+    ) == [("min_fog_on_s", 54.75)]
+    missing = dict(readbacks)
+    missing.pop("min_fog_on_s")  # stale generations are absent from current_cfg_readbacks
+    assert ("min_fog_on_s", 54.75) in dispatcher._without_equivalent_duration_replays(
+        quantized,
+        missing,
+        reconnect_pending=False,
+        drift_pending=True,
+        staged_state_exists=False,
+    )
+    assert (
+        dispatcher._without_equivalent_duration_replays(
+            quantized,
+            readbacks,
+            reconnect_pending=False,
+            drift_pending=True,
+            staged_state_exists=True,
+        )
+        == quantized
+    )
+    assert (
+        dispatcher._without_equivalent_duration_replays(
+            quantized,
+            readbacks,
+            reconnect_pending=False,
+            drift_pending=False,
+            staged_state_exists=False,
+        )
+        == quantized
+    )
 
 
 @pytest.mark.asyncio
