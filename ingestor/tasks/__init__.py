@@ -24,6 +24,7 @@ from . import (  # noqa: F401
     confirmation,
     daily,
     dispatcher,
+    drift_probe,
     experiment_assignments,
     experiment_qualification,
     forecast,
