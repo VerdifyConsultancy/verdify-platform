@@ -16,6 +16,7 @@ sys.path.insert(0, str(ROOT / "ingestor"))
 
 import shared  # noqa: E402
 from tasks import bounded_reconcile as bounded  # noqa: E402
+from tasks import dispatcher  # noqa: E402
 
 from verdify_schemas.policy_vector import wire_fields  # noqa: E402
 
@@ -28,6 +29,7 @@ class ReadOnlyFixture:
     def __init__(self, parameters: list[str]):
         self.names = [field.name for field in wire_fields()]
         self.readbacks = {name: 0.0 for name in self.names}
+        self.snapshot_readbacks = None
         self.parameters = parameters
         self.ts = datetime.now(UTC)
         self.expiry = self.ts + timedelta(minutes=40)
@@ -35,7 +37,8 @@ class ReadOnlyFixture:
 
     async def fetch(self, sql, *_args):
         if "FROM setpoint_snapshot" in sql:
-            return [{"parameter": name, "value": self.readbacks[name], "ts": self.ts} for name in self.names]
+            snapshot = self.snapshot_readbacks if self.snapshot_readbacks is not None else self.readbacks
+            return [{"parameter": name, "value": snapshot[name], "ts": self.ts} for name in self.names]
         if "FROM setpoint_plan" in sql:
             return [
                 {"parameter": param, "plan_id": "iris-test", "ts": self.ts, "expires_at": self.expiry}
@@ -124,6 +127,142 @@ async def test_approved_run_advances_only_after_confirmation_and_current_readbac
     done = await bounded.choose_stage(db, [], db.planned(), 3, tmp_path, 12)
     assert done.action == "complete"
     assert bounded._read(tmp_path / bounded.STATE_NAME)["status"] == "complete"
+
+
+@pytest.mark.asyncio
+async def test_atomic_snapshot_lag_waits_only_for_pending_confirmation_within_deadline(fixture, tmp_path):
+    db = fixture
+    full = [(param, 1.0) for param in db.parameters]
+    await bounded.choose_stage(db, full, db.planned(), 3, tmp_path, 12)
+    approve(bounded._read(tmp_path / bounded.PREVIEW_NAME), tmp_path)
+    first = await bounded.choose_stage(db, full, db.planned(), 3, tmp_path, 12)
+    assert first.action == "send" and len(first.changes) == 12
+    inflight = tmp_path.parent / "snapshot-lag-inflight"
+    shutil.copytree(tmp_path, inflight)
+    first_records = records(first.changes)
+    bounded.finish_stage(tmp_path, first, first_records, [])
+    old_snapshot = dict(db.readbacks)
+    for record in first_records:
+        db.readbacks[record["parameter"]] = record["value"]
+        db.rows[(record["requested_at"], record["parameter"])] = {
+            "delivery_status": "confirmed",
+            "confirmed_at": datetime.now(UTC),
+        }
+    db.snapshot_readbacks = old_snapshot  # one atomic 48-field batch behind live cfg callbacks
+
+    lagged = await bounded.choose_stage(db, full[12:], db.planned(), 3, tmp_path, 12)
+    assert lagged.action == "hold" and "awaiting fresh atomic snapshot" in lagged.reason
+    pending = bounded._read(tmp_path / bounded.STATE_NAME)
+    assert pending["status"] == "awaiting_confirmation"
+    assert pending["completed"] == [] and len(pending["records"]) == 12
+
+    other = await bounded.choose_stage(db, full[12:], db.planned(), 3, inflight, 12)
+    assert other.action == "hold" and "snapshot does not match" in other.reason
+    assert bounded._read(inflight / bounded.STATE_NAME)["status"] == "halted"
+
+    missing = tmp_path.parent / "snapshot-lag-missing-readback"
+    shutil.copytree(tmp_path, missing)
+    removed = db.readbacks.pop(db.names[0])
+    absent = await bounded.choose_stage(db, full[12:], db.planned(), 3, missing, 12)
+    assert absent.action == "hold" and "missing readback" in absent.reason
+    assert bounded._read(missing / bounded.STATE_NAME)["status"] == "halted"
+    db.readbacks[db.names[0]] = removed
+
+    changed_plan = tmp_path.parent / "snapshot-lag-plan-change"
+    shutil.copytree(tmp_path, changed_plan)
+    db.expiry += timedelta(minutes=1)
+    changed = await bounded.choose_stage(db, full[12:], db.planned(), 3, changed_plan, 12)
+    assert changed.action == "hold" and "effective plan" in changed.reason
+    assert bounded._read(changed_plan / bounded.STATE_NAME)["status"] == "halted"
+    db.expiry -= timedelta(minutes=1)
+
+    deadline = tmp_path.parent / "snapshot-lag-deadline"
+    shutil.copytree(tmp_path, deadline)
+    expired = bounded._read(deadline / bounded.STATE_NAME)
+    expired["stage_started_at"] = (datetime.now(UTC) - bounded.CONFIRM_DEADLINE - timedelta(seconds=1)).isoformat()
+    bounded._write(deadline / bounded.STATE_NAME, expired)
+    timed_out = await bounded.choose_stage(db, full[12:], db.planned(), 3, deadline, 12)
+    assert timed_out.action == "hold" and "deadline exceeded" in timed_out.reason
+    assert bounded._read(deadline / bounded.STATE_NAME)["status"] == "halted"
+
+    db.snapshot_readbacks = dict(db.readbacks)
+    second = await bounded.choose_stage(db, full[12:], db.planned(), 3, tmp_path, 12)
+    assert second.action == "send" and second.changes == (full[12],)
+
+
+@pytest.mark.asyncio
+async def test_confirmed_quantized_seconds_do_not_block_eight_remaining_or_repushed(fixture, tmp_path):
+    db = fixture
+    db.parameters = db.names[:44]
+    quantized = {
+        "min_fog_on_s": (54.75, 54.0),
+        "mister_engage_delay_s": (46.5, 47.0),
+        "mister_pulse_gap_s": (48.75, 48.0),
+    }
+    desired = {param: quantized[param][0] if param in quantized else 1.0 for param in db.parameters}
+    full = [(param, desired[param]) for param in db.parameters]
+    await bounded.choose_stage(db, full, db.planned(), 3, tmp_path, 12)
+    approve(bounded._read(tmp_path / bounded.PREVIEW_NAME), tmp_path)
+    for stage in range(3):
+        selected = await bounded.choose_stage(db, full[stage * 12 :], db.planned(), 3, tmp_path, 12)
+        assert selected.action == "send" and len(selected.changes) == 12
+        stage_records = records(selected.changes)
+        bounded.finish_stage(tmp_path, selected, stage_records, [])
+        for record in stage_records:
+            db.readbacks[record["parameter"]] = quantized.get(record["parameter"], (0, record["value"]))[1]
+            db.rows[(record["requested_at"], record["parameter"])] = {
+                "delivery_status": "confirmed",
+                "confirmed_at": datetime.now(UTC),
+            }
+    reappeared = [(param, desired[param]) for param in quantized]
+    candidate = full[36:] + reappeared
+    assert len(candidate) == 11
+    drift = tmp_path.parent / "quantized-true-drift"
+    shutil.copytree(tmp_path, drift)
+    bad = [(param, value + 1.0 if param == "min_fog_on_s" else value) for param, value in candidate]
+    rejected = await bounded.choose_stage(db, bad, db.planned(), 3, drift, 12)
+    assert rejected.action == "hold" and "completed fixed candidate drifted" in rejected.reason
+    assert bounded._read(drift / bounded.STATE_NAME)["status"] == "halted"
+
+    wrong_record = tmp_path.parent / "quantized-wrong-confirmed-value"
+    shutil.copytree(tmp_path, wrong_record)
+    corrupted = bounded._read(wrong_record / bounded.STATE_NAME)
+    corrupted["completed_values"]["min_fog_on_s"] = 60.0
+    bounded._write(wrong_record / bounded.STATE_NAME, corrupted)
+    rejected = await bounded.choose_stage(db, candidate, db.planned(), 3, wrong_record, 12)
+    assert rejected.action == "hold"
+    assert bounded._read(wrong_record / bounded.STATE_NAME)["status"] == "halted"
+
+    final_stage = await bounded.choose_stage(db, candidate, db.planned(), 3, tmp_path, 12)
+    assert final_stage.action == "send" and final_stage.changes == tuple(full[36:])
+    final_records = records(final_stage.changes)
+    bounded.finish_stage(tmp_path, final_stage, final_records, [])
+    for record in final_records:
+        db.readbacks[record["parameter"]] = record["value"]
+        db.rows[(record["requested_at"], record["parameter"])] = {
+            "delivery_status": "confirmed",
+            "confirmed_at": datetime.now(UTC),
+        }
+    complete = await bounded.choose_stage(db, reappeared, db.planned(), 3, tmp_path, 12)
+    assert complete.action == "complete" and complete.changes == ()
+    again = await bounded.choose_stage(db, reappeared, db.planned(), 3, tmp_path, 12)
+    assert again.action == "complete" and again.changes == ()
+
+
+def test_fresh_reconnect_skips_only_equivalent_quantized_durations():
+    changes = [
+        ("min_fog_on_s", 54.75),
+        ("mister_engage_delay_s", 46.5),
+        ("mister_pulse_gap_s", 48.75),
+        ("min_fog_off_s", 99.0),
+    ]
+    readbacks = {
+        "min_fog_on_s": 54.0,
+        "mister_engage_delay_s": 47.0,
+        "mister_pulse_gap_s": 48.0,
+        "min_fog_off_s": 80.0,
+    }
+    assert dispatcher._without_equivalent_reconnect_durations(changes, readbacks) == [("min_fog_off_s", 99.0)]
 
 
 @pytest.mark.asyncio

@@ -104,6 +104,19 @@ def _upsert_change(changes: list[tuple[str, float]], param: str, value: float) -
     changes.append((param, clean_value))
 
 
+def _without_equivalent_reconnect_durations(
+    changes: list[tuple[str, float]], readbacks: dict[str, float]
+) -> list[tuple[str, float]]:
+    """Avoid repushing firmware-quantized seconds already equivalent on cfg."""
+    return [
+        (param, value)
+        for param, value in changes
+        if param not in SECOND_READBACK_ABS_TOLERANCE_PARAMS
+        or param not in readbacks
+        or not readback_values_equivalent(param, readbacks[param], value)
+    ]
+
+
 def _apply_manual_overlay(changes: list[tuple[str, float]], overlay: dict[str, float]) -> set[str]:
     """Force an operator overlay into the dispatcher batch."""
     overlay_params: set[str] = set()
@@ -1090,6 +1103,13 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             deduped_changes[param] = float(value)
         changes = list(deduped_changes.items())
 
+        if reconnect_pending and not (STATE_DIR / bounded_reconcile.STATE_NAME).exists():
+            # Firmware rounds several duration controls to whole seconds.
+            # A fresh reconnect seeds the comparison cache from that cfg
+            # readback; do not repush an already equivalent desired value.
+            current = shared.current_cfg_readbacks(reconnect_generation)
+            changes = _without_equivalent_reconnect_durations(changes, current)
+
         stage_decision = bounded_reconcile.Decision("ordinary")
         if reconnect_pending and (
             len(changes) > MAX_RECONNECT_COMMANDS
@@ -1127,6 +1147,8 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                     len(changes),
                     MAX_RECONNECT_COMMANDS,
                 )
+            elif stage_decision.action == "complete":
+                changes = list(stage_decision.changes)
 
         if len(changes) > MAX_RECONNECT_COMMANDS:
             # A broad desired delta is never authority to enqueue a 40+
