@@ -607,16 +607,29 @@ def _validate_climate(
         )
         cycle_id = _text(sample["cycle_id"], f"climate.samples[{index}].cycle_id")
         sample_at = _timestamp(sample["sample_at"], f"climate.samples[{index}].sample_at")
-        if previous_sample_at is not None and sample_at <= previous_sample_at:
-            blockers.append("climate_sample_timestamps_not_advancing")
+        if previous_sample_at is not None:
+            if sample_at <= previous_sample_at:
+                blockers.append("climate_sample_timestamps_not_advancing")
+            # The source emits one cycle per minute.  Requiring *both* recent
+            # cycles to be <=90 seconds old makes the first cycle fail during
+            # part of every healthy minute.  Bound each prior cycle to its
+            # successor, and the newest cycle to this packet's capture time.
+            _fresh(
+                previous_sample_at,
+                now=sample_at,
+                max_age=max_age,
+                label=f"climate_sample:{index - 1}",
+                blockers=blockers,
+            )
         previous_sample_at = sample_at
-        _fresh(
-            sample_at,
-            now=captured_at,
-            max_age=max_age,
-            label=f"climate_sample:{index}",
-            blockers=blockers,
-        )
+        if index == len(samples) - 1:
+            _fresh(
+                sample_at,
+                now=captured_at,
+                max_age=max_age,
+                label=f"climate_sample:{index}",
+                blockers=blockers,
+            )
 
         zones = _exact_keys(sample["zones"], set(ZONES), f"climate.samples[{index}].zones")
         contributors: list[str] = []
