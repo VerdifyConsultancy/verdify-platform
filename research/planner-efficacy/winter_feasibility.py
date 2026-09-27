@@ -27,6 +27,7 @@ STUDY_ID = "verdify-winter-feasibility-2026-27"
 INSTANCE_SCHEMA = "verdify-winter-feasibility-instance-v1"
 DAY_SCHEMA = "verdify-winter-feasibility-day-v1"
 MANIFEST_SCHEMA = "verdify-winter-feasibility-manifest-v1"
+TARGET_SCHEMA = "verdify-winter-frozen-crop-target-v1"
 DAY_COUNT = 60
 DAILY_COLLECTION_GRACE = timedelta(hours=24)
 SHA256 = re.compile(r"[0-9a-f]{64}\Z")
@@ -343,6 +344,97 @@ def _write_exclusive(path: Path, raw: bytes) -> None:
         os.fsync(output.fileno())
 
 
+def validate_target_source(raw: bytes, *, start: date, registered_at: datetime) -> dict:
+    """Require one pre-window target revision with every scheduled quarter hour."""
+    try:
+        value = json.loads(raw)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ValueError("crop target source is not valid JSON") from exc
+    required = {
+        "schema",
+        "study_id",
+        "greenhouse_id",
+        "timezone",
+        "start_local_date",
+        "recorded_at",
+        "effective_from",
+        "effective_to",
+        "target_version",
+        "fixed_panel_target_revision_id",
+        "source_profile_state_sha256",
+        "profile_revision_ids",
+        "crop_assignment_revision_sha256",
+        "target_bins_sha256",
+        "target_bins",
+    }
+    if not isinstance(value, dict) or set(value) != required or canonical(value) != raw:
+        raise ValueError("crop target source is not the canonical frozen-target contract")
+    if (value["schema"], value["study_id"], value["greenhouse_id"], value["timezone"], value["start_local_date"]) != (
+        TARGET_SCHEMA,
+        STUDY_ID,
+        "vallery",
+        "America/Denver",
+        start.isoformat(),
+    ):
+        raise ValueError("crop target source study identity differs from registration")
+    first_start = bounds(start)[0]
+    last_end = bounds(start + timedelta(days=DAY_COUNT - 1))[1]
+    recorded = _timestamp(value["recorded_at"])
+    if not recorded <= registered_at.astimezone(UTC) < first_start:
+        raise ValueError("crop target revision was not recorded before registration and first observation")
+    if _timestamp(value["effective_from"]) != first_start or _timestamp(value["effective_to"]) != last_end:
+        raise ValueError("crop target effective interval differs from 60-day calendar")
+    if not isinstance(value["target_version"], str) or not re.fullmatch(
+        r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}", value["target_version"]
+    ):
+        raise ValueError("crop target version is not a concrete bounded identifier")
+    revision = value["fixed_panel_target_revision_id"]
+    if type(revision) is not int or revision < 1:
+        raise ValueError("positive fixed-panel target revision ID required")
+    revisions = value["profile_revision_ids"]
+    if (
+        not isinstance(revisions, list)
+        or not revisions
+        or len(revisions) > 10_000
+        or any(type(item) is not int or item < 1 for item in revisions)
+        or revisions != sorted(set(revisions))
+    ):
+        raise ValueError("source profile revision IDs must be positive, unique and sorted")
+    for key in ("source_profile_state_sha256", "crop_assignment_revision_sha256", "target_bins_sha256"):
+        if not isinstance(value[key], str) or not SHA256.fullmatch(value[key]):
+            raise ValueError(f"{key} must be a SHA-256")
+    bins = value["target_bins"]
+    if not isinstance(bins, list) or len(bins) != DAY_COUNT * 72:
+        raise ValueError("crop target source must contain exactly 4,320 scheduled bins")
+    expected_keys = {"bucket_start", "temp_low", "temp_high", "vpd_low", "vpd_high"}
+    index = 0
+    for offset in range(DAY_COUNT):
+        window_start, _ = bounds(start + timedelta(days=offset))
+        for quarter in range(72):
+            item = bins[index]
+            expected_ts = window_start + timedelta(minutes=15 * quarter)
+            if (
+                not isinstance(item, dict)
+                or set(item) != expected_keys
+                or _timestamp(item["bucket_start"]) != expected_ts
+            ):
+                raise ValueError(f"crop target bin {index} is missing, reordered or outside the calendar")
+            for axis in ("temp", "vpd"):
+                low, high = item[f"{axis}_low"], item[f"{axis}_high"]
+                if (
+                    type(low) not in (float, int)
+                    or type(high) not in (float, int)
+                    or not math.isfinite(low)
+                    or not math.isfinite(high)
+                    or low > high
+                ):
+                    raise ValueError(f"crop target bin {index} has invalid {axis} bounds")
+            index += 1
+    if digest(canonical(bins)) != value["target_bins_sha256"]:
+        raise ValueError("frozen crop target bins hash mismatch")
+    return value
+
+
 def register(
     *,
     start: date,
@@ -355,15 +447,7 @@ def register(
     now: datetime,
 ) -> dict:
     """Create a concrete preregistration from preserved source artifact bytes."""
-    try:
-        target_source = json.loads(crop_target_source.read_bytes())
-    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise ValueError("crop target source must be a qualified JSON artifact") from exc
-    if not isinstance(target_source, dict) or (
-        target_source.get("qualified_prospective_crop_target") is not True
-        or target_source.get("frozen_15_minute_target_bins_available") is not True
-    ):
-        raise ValueError("crop target source has no qualified prospective frozen bins")
+    validate_target_source(crop_target_source.read_bytes(), start=start, registered_at=now)
     commit, extractor_sha, protocol_sha = _source_identity()
     instance = {
         "schema": INSTANCE_SCHEMA,

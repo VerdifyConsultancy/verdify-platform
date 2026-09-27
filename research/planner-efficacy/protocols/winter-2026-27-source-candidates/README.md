@@ -35,3 +35,16 @@ can still describe raw data availability; it cannot derive crop compliance
 from this reference candidate. No physical walkthrough is a gate for the
 route-only observational packet. The separate hot/dry efficacy qualification
 still needs its own physical and authority evidence.
+
+The `register` command accepts only canonical JSON with schema
+`verdify-winter-frozen-crop-target-v1`: exact study/house/timezone/start,
+`recorded_at` before registration and observation, exact first/last window
+`effective_from`/`effective_to`, a positive
+`fixed_panel_target_revision_id`, concrete `target_version`, sorted positive
+`profile_revision_ids`, `source_profile_state_sha256`,
+`crop_assignment_revision_sha256`, and exactly 4,320 ordered `target_bins`.
+Each bin has an explicit UTC `bucket_start` and finite ordered temperature/VPD
+low/high bounds. `target_bins_sha256` is SHA-256 of the extractor's canonical
+JSON encoding of that bin list (including its trailing newline). This checks
+the frozen input shape and bytes; the source revision and crop assignment
+still need independent provenance review. A marker-only JSON file is rejected.
