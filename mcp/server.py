@@ -79,7 +79,7 @@ from verdify_schemas.experiment_config import (  # noqa: E402
     submit_policy_proposal,
 )
 from verdify_schemas.observed_minute_reader import read_observed_minute_evidence  # noqa: E402
-from verdify_schemas.physical_crop_band_reader import read_physical_crop_band_evidence  # noqa: E402
+from verdify_schemas.physical_crop_band import unpublished_physical_crop_band_evidence  # noqa: E402
 from verdify_schemas.plan import (  # noqa: E402
     classify_planner_terminal_action,
     plan_current_coverage_error,
@@ -1188,7 +1188,7 @@ async def scorecard(target_date: str = "") -> str:
                 }
             )
         sc.observed_minute_evidence = await read_observed_minute_evidence(conn, d)
-        sc.physical_crop_band_evidence = await read_physical_crop_band_evidence(conn, d)
+        sc.physical_crop_band_evidence = unpublished_physical_crop_band_evidence(d)
         return sc.model_dump_json(by_alias=True)
     finally:
         await conn.close()

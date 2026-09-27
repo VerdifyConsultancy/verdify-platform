@@ -11,8 +11,7 @@ import pytest
 from pydantic import ValidationError
 
 from verdify_schemas.mcp_responses import ScorecardResponse
-from verdify_schemas.physical_crop_band import PhysicalCropBandEvidence
-from verdify_schemas.physical_crop_band_reader import parse_physical_crop_band_row
+from verdify_schemas.physical_crop_band import PhysicalCropBandEvidence, unpublished_physical_crop_band_evidence
 
 ROOT = Path(__file__).resolve().parents[1]
 DAY = date(2026, 9, 25)
@@ -36,6 +35,7 @@ def qualified_row() -> dict:
     start = datetime.combine(DAY, time(), ZoneInfo("America/Denver")).astimezone(UTC)
     end = datetime.combine(DAY + timedelta(days=1), time(), ZoneInfo("America/Denver")).astimezone(UTC)
     return {
+        "availability": "available",
         "day": DAY,
         "greenhouse_id": "vallery",
         "served_at": end + timedelta(seconds=2),
@@ -84,7 +84,7 @@ def _publisher():
 
 
 def test_physical_crop_compliance_stays_separate_from_controller_credit_and_house_average():
-    physical = parse_physical_crop_band_row(qualified_row(), DAY)
+    physical = PhysicalCropBandEvidence.model_validate(qualified_row())
     assert physical.availability == "available"
     card = ScorecardResponse.from_metric_rows(
         [
@@ -120,24 +120,33 @@ def test_physical_crop_compliance_stays_separate_from_controller_credit_and_hous
 def test_unqualified_claim_is_withheld(field, invalid):
     row = qualified_row()
     row["diagnostic"][field] = invalid
-    evidence = parse_physical_crop_band_row(row, DAY)
-    assert evidence.availability == "unavailable"
-    assert evidence.unavailable_reason == "invalid_evidence"
-    assert evidence.diagnostic is None
+    with pytest.raises(ValidationError):
+        PhysicalCropBandEvidence.model_validate(row)
+    assert "Unavailable" in _publisher().physical_crop_band_block(row, DAY.isoformat())
 
 
 def test_invalid_counts_and_day_are_withheld():
     row = qualified_row()
     row["diagnostic"]["joint"]["in_band_bins"] = 21
-    assert parse_physical_crop_band_row(row, DAY).availability == "unavailable"
+    with pytest.raises(ValidationError):
+        PhysicalCropBandEvidence.model_validate(row)
     row = qualified_row()
-    assert parse_physical_crop_band_row(row, DAY + timedelta(days=1)).availability == "unavailable"
     assert "Unavailable" in _publisher().physical_crop_band_block(row, (DAY + timedelta(days=1)).isoformat())
 
 
 def test_model_rejects_unscoped_physical_percent():
     row = qualified_row()
-    row["availability"] = "available"
     row["diagnostic"]["target_manifest_sha256"] = "counterfactual"
     with pytest.raises(ValidationError):
         PhysicalCropBandEvidence.model_validate(row)
+
+
+def test_production_publication_is_explicitly_unqualified_with_no_database_reader():
+    held = unpublished_physical_crop_band_evidence(DAY)
+    assert held.availability == "unavailable"
+    assert held.unavailable_reason == "publication_not_qualified"
+    assert held.diagnostic is None
+    for path in ("api/main.py", "mcp/server.py"):
+        source = (ROOT / path).read_text()
+        assert "read_physical_crop_band_evidence" not in source
+        assert "unpublished_physical_crop_band_evidence" in source

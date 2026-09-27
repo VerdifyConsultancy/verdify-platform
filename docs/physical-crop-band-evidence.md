@@ -5,28 +5,31 @@ contract-2 `compliance_pct` is a binary fraction of house-average readings
 against historical desired setpoints, while `compliance_v2_attributable_pct`
 is graded controller credit. Neither is a physical crop-band outcome.
 
-Migration 250 adds an append-only, owner-written daily revision and a bounded
-reader for a third, separate measurement. Its `fixed-panel-crop-band-v1`
-diagnostic requires immutable crop targets as of each evaluated bin, a fixed
-north/east/west panel of fresh probes, a complete Denver local-day 15-minute
-window, axis and joint eligible denominators, high/low miss counts and mean
-outside distances, and the worst measured zone. The typed API/MCP reader
-rejects inconsistent revisions. The public snapshot labels these as sampled
-bins, never continuous exposure. A missing or malformed latest revision is
-explicitly unavailable; it cannot fall back to an older revision or to a
-legacy metric.
+The API and MCP scorecard now carry a **separate** typed physical crop-band
+field, also projected to the public snapshot and planning page. It always
+returns `publication_not_qualified` with no physical percentage. The deployed
+API and MCP currently use the `verdify` PostgreSQL superuser login. No table
+grant, in-database validity flag, or hash can independently authenticate a
+physical revision while that writer credential is shared. This change adds
+no physical evidence table, writer, DB read, historical backfill, or planner
+reward term.
 
-There is deliberately no automatic writer or historical backfill. A future
-qualified producer must retain the immutable target, fixed panel, input, and
-calculation manifests identified by the diagnostic hashes; independently
-verify their contents, revision timing and per-probe freshness; and write a
-complete daily revision as the database owner. A hash or `verified` flag is a
-claim, not independent proof. The September 4 fixed-panel analysis in #823
-used a hypothetical house reference because historical crop targets and probe
-freshness were unavailable; its 28.125% figure is counterfactual and must not
-be inserted as a physical revision. The September 4 and 25 observed-minute
-backfills also had zero jointly eligible minutes because their latest
-setpoint-log bounds were invalid; they do not imply zero physical compliance.
+The typed `fixed-panel-crop-band-v1` diagnostic describes the future
+qualification contract: immutable crop targets as of each evaluated bin, a
+fixed north/east/west panel of fresh probes, a complete Denver local-day
+15-minute window, axis and joint eligible denominators, high/low miss counts
+and mean outside distances, and the worst measured zone. This is a sampled-bin
+measure, not continuous exposure. Validating a diagnostic's internal shape
+does not authenticate its source.
 
-The center probe, DLI, gas and resource-cost outcomes remain unavailable.
-The physical result is not an experiment endpoint or a planner reward term.
+The September 4 analysis in #823 used a hypothetical house reference because
+historical crop targets and probe freshness were unavailable. Its 28.125%
+figure is counterfactual, not physical compliance. The September 4 and 25
+observed-minute backfills had zero jointly eligible minutes because their
+latest setpoint-log bounds were invalid; they do not imply zero physical
+compliance.
+
+#371 remains open for a separately authenticated producer, an ordinary-login
+API/MCP credential cutover, and source-to-live validation before any physical
+result can be published. The center probe, DLI, gas, resource-cost outcomes,
+and experiment endpoint are unavailable.

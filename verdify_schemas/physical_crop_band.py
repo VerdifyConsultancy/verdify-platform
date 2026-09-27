@@ -164,3 +164,12 @@ class PhysicalCropBandEvidence(BaseModel):
         ):
             raise ValueError("available physical evidence needs a scoped completed revision")
         return self
+
+
+def unpublished_physical_crop_band_evidence(day: date, greenhouse_id: str = "vallery") -> PhysicalCropBandEvidence:
+    """Fail closed until a separate authenticated producer and reader exist."""
+    return PhysicalCropBandEvidence(
+        day=day,
+        greenhouse_id=greenhouse_id,
+        unavailable_reason="publication_not_qualified",
+    )

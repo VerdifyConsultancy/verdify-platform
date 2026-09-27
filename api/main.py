@@ -118,7 +118,7 @@ from verdify_schemas.experiment_config import (  # noqa: E402
 )
 from verdify_schemas.mcp_responses import ScorecardResponse  # noqa: E402
 from verdify_schemas.observed_minute_reader import read_observed_minute_evidence  # noqa: E402
-from verdify_schemas.physical_crop_band_reader import read_physical_crop_band_evidence  # noqa: E402
+from verdify_schemas.physical_crop_band import unpublished_physical_crop_band_evidence  # noqa: E402
 from verdify_schemas.telemetry import DliEvidence  # noqa: E402
 from verdify_schemas.tunable_registry import (  # noqa: E402
     CROP_BAND_REG,
@@ -2717,7 +2717,7 @@ async def planner_scorecard(scorecard_date: Annotated[date | None, Query(alias="
             scorecard_date = await conn.fetchval("SELECT (now() AT TIME ZONE 'America/Denver')::date")
         rows = await _fetch_planner_scorecard(conn, scorecard_date)
         observed = await read_observed_minute_evidence(conn, scorecard_date)
-        physical = await read_physical_crop_band_evidence(conn, scorecard_date)
+        physical = unpublished_physical_crop_band_evidence(scorecard_date)
     try:
         result = ScorecardResponse.from_metric_rows(rows)
     except ValidationError:
@@ -3739,7 +3739,7 @@ async def public_home_metrics(greenhouse_id: str = DEFAULT_GREENHOUSE):
         score_day = generated_at.astimezone(ZoneInfo("America/Denver")).date()
         score_rows = await _fetch_planner_scorecard(conn, score_day)
         observed = await read_observed_minute_evidence(conn, score_day, greenhouse_id)
-        physical = await read_physical_crop_band_evidence(conn, score_day, greenhouse_id)
+        physical = unpublished_physical_crop_band_evidence(score_day, greenhouse_id)
         scorecard = {r["metric"]: _to_float(r["value"]) for r in score_rows}
         climate_evidence = ScorecardResponse.model_validate(
             {
@@ -3982,7 +3982,7 @@ async def public_evidence_snapshot(greenhouse_id: str = DEFAULT_GREENHOUSE):
         score_day = generated_at.astimezone(ZoneInfo("America/Denver")).date()
         score_rows = await _fetch_planner_scorecard(conn, score_day)
         observed = await read_observed_minute_evidence(conn, score_day, greenhouse_id)
-        physical = await read_physical_crop_band_evidence(conn, score_day, greenhouse_id)
+        physical = unpublished_physical_crop_band_evidence(score_day, greenhouse_id)
         scorecard = {r["metric"]: _to_float(r["value"]) for r in score_rows}
         climate_evidence = ScorecardResponse.model_validate(
             {

@@ -343,16 +343,12 @@ def test_actual_scorecard_consumers_attach_separate_typed_snapshot(consumer, use
     from verdify_schemas.physical_crop_band import PhysicalCropBandEvidence
 
     evidence = parse_observed_minute_row(captured(), DAY)
-    physical = PhysicalCropBandEvidence(day=DAY, unavailable_reason="not_computed")
+    physical = PhysicalCropBandEvidence(day=DAY, unavailable_reason="publication_not_qualified")
     calls = []
 
     async def read(conn, day):
         calls.append(day)
         return evidence
-
-    async def read_physical(conn, day):
-        calls.append(day)
-        return physical
 
     async def fetch(*args):
         return [{"metric": "scorecard_contract_version", "value": 2}, {"metric": "compliance_pct", "value": 6.1}]
@@ -378,7 +374,7 @@ def test_actual_scorecard_consumers_attach_separate_typed_snapshot(consumer, use
         ScorecardResponse=ScorecardResponse,
         ValidationError=ValidationError,
         read_observed_minute_evidence=read,
-        read_physical_crop_band_evidence=read_physical,
+        unpublished_physical_crop_band_evidence=lambda day: physical,
         _fetch_planner_scorecard=fetch,
         pool=SimpleNamespace(acquire=Checkout),
         _db=db,
@@ -395,7 +391,7 @@ def test_actual_scorecard_consumers_attach_separate_typed_snapshot(consumer, use
         result = ScorecardResponse.model_validate(wire)
     assert result.compliance_pct == 6.1 and result.observed_minute_evidence == evidence
     assert result.physical_crop_band_evidence == physical
-    assert calls[:3] == ["resolved_day_once", DAY, DAY] if use_today else calls[:2] == [DAY, DAY]
+    assert calls[:2] == ["resolved_day_once", DAY] if use_today else calls[0] == DAY
     if consumer == "mcp":
         assert calls[-1] == "closed"
 
