@@ -281,6 +281,8 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "248-shelly-source-interval-accounting.sql",
         # A live runtime grant repair must run through the ledgered migration.
         "249-observed-minute-runtime-write-grant.sql",
+        # The band provenance correction must run through the live ledger.
+        "250-band-divergence-provenance.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(
