@@ -36,6 +36,9 @@ def prepare(preview: dict, now: datetime) -> dict:
         "session_id": preview["session_id"],
         "generation": preview["generation"],
         "fingerprint": preview["fingerprint"],
+        # Retain the approved vector so the running writer can verify a fresh
+        # candidate after the four solar-time VPD targets naturally move.
+        "approved_preview": preview,
         "approved_at": now.isoformat(),
         "expires_at": deadline.isoformat(),
         "authority": "desired_all_five_layers",

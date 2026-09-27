@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import shutil
 import sys
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -34,7 +35,7 @@ class ReadOnlyFixture:
 
     async def fetch(self, sql, *_args):
         if "FROM setpoint_snapshot" in sql:
-            return [{"parameter": name, "value": value, "ts": self.ts} for name, value in self.readbacks.items()]
+            return [{"parameter": name, "value": self.readbacks[name], "ts": self.ts} for name in self.names]
         if "FROM setpoint_plan" in sql:
             return [
                 {"parameter": param, "plan_id": "iris-test", "ts": self.ts, "expires_at": self.expiry}
@@ -201,3 +202,93 @@ async def test_near_plan_expiry_and_lease_loss_block_first_stage(fixture, tmp_pa
     monkeypatch.setattr(shared, "writer_lease_strictly_held", lambda minimum_remaining_s=0: False)
     blocked = await bounded.choose_stage(db, full, db.planned(), 3, other, 12)
     assert blocked.action == "hold" and "lease" in blocked.reason
+
+
+@pytest.mark.asyncio
+async def test_noncanonical_baseline_and_only_crop_vpd_target_can_move(fixture, tmp_path):
+    db = fixture
+    fixed = db.names[:10] + ["safety_max", "direct_wet_min_temp_f"]
+    db.parameters = fixed + ["vpd_target_south"]
+    for param in db.parameters[10:]:
+        assert param not in db.names
+        db.readbacks[param] = 0.0
+    db.readbacks["outdoor_dewpoint_f"] = 39.102
+    full = [(param, 1.0) for param in fixed] + [("vpd_target_south", 1.0)]
+    await bounded.choose_stage(db, full, db.planned(), 3, tmp_path, 12, {"vpd_target_south": 1.0})
+    preview = bounded._read(tmp_path / bounded.PREVIEW_NAME)
+    assert len(preview["readbacks"]) == 51
+    assert len(preview["diagnostic_readbacks"]) == 52
+    approval = prepare_writer_stage.prepare(preview, datetime.now(UTC))
+    bounded._write(tmp_path / bounded.APPROVAL_NAME, approval)
+
+    db.readbacks["outdoor_dewpoint_f"] = 38.5665
+    current = full[:-1] + [("vpd_target_south", 1.01)]
+    first = await bounded.choose_stage(db, current, db.planned(), 3, tmp_path, 12, {"vpd_target_south": 1.01})
+    assert first.action == "send" and first.changes == tuple(full[:-1])
+    assert bounded._read(tmp_path / bounded.STATE_NAME)["approved_preview"]["fingerprint"] == preview["fingerprint"]
+    first_records = records(first.changes)
+    bounded.finish_stage(tmp_path, first, first_records, [])
+    for record in first_records:
+        db.readbacks[record["parameter"]] = record["value"]
+        db.rows[(record["requested_at"], record["parameter"])] = {
+            "delivery_status": "confirmed",
+            "confirmed_at": datetime.now(UTC),
+        }
+    second = await bounded.choose_stage(
+        db, [("vpd_target_south", 1.02)], db.planned(), 3, tmp_path, 12, {"vpd_target_south": 1.02}
+    )
+    assert second.action == "send" and second.changes == (("vpd_target_south", 1.02),)
+    second_records = records(second.changes)
+    bounded.finish_stage(tmp_path, second, second_records, [])
+    db.readbacks["vpd_target_south"] = 1.02
+    db.rows[(second_records[0]["requested_at"], "vpd_target_south")] = {
+        "delivery_status": "confirmed",
+        "confirmed_at": datetime.now(UTC),
+    }
+    reappeared = tmp_path.parent / "reappeared"
+    omitted_drift = tmp_path.parent / "omitted-drift"
+    shutil.copytree(tmp_path, reappeared)
+    shutil.copytree(tmp_path, omitted_drift)
+    handoff = await bounded.choose_stage(
+        db, [("vpd_target_south", 1.03)], db.planned(), 3, reappeared, 12, {"vpd_target_south": 1.03}
+    )
+    assert handoff.action == "complete"
+    assert bounded._read(reappeared / bounded.PREVIEW_NAME)["changes"] == [["vpd_target_south", 1.03]]
+    over_limit = tmp_path.parent / "over-limit"
+    shutil.copytree(tmp_path, over_limit)
+    held = await bounded.choose_stage(
+        db, [("vpd_target_south", 1.03)], db.planned(), 3, over_limit, 0, {"vpd_target_south": 1.03}
+    )
+    assert held.action == "hold" and "ordinary handoff" in held.reason
+    held = await bounded.choose_stage(db, [], db.planned(), 3, omitted_drift, 12, {"vpd_target_south": 1.5})
+    assert held.action == "hold" and "omitted zone VPD target" in held.reason
+    done = await bounded.choose_stage(db, [], db.planned(), 3, tmp_path, 12, {"vpd_target_south": 1.02})
+    assert done.action == "complete"
+
+
+@pytest.mark.asyncio
+async def test_unapproved_fixed_drift_and_unverified_vpd_source_halt(fixture, tmp_path):
+    db = fixture
+    db.parameters = ["safety_max", "vpd_target_south"] + db.names[:11]
+    db.readbacks.update({"safety_max": 0.0, "vpd_target_south": 0.0})
+    full = [(param, 1.0) for param in db.parameters]
+    await bounded.choose_stage(db, full, db.planned(), 3, tmp_path, 12, {"vpd_target_south": 1.0})
+    bounded._write(
+        tmp_path / bounded.APPROVAL_NAME,
+        prepare_writer_stage.prepare(bounded._read(tmp_path / bounded.PREVIEW_NAME), datetime.now(UTC)),
+    )
+    changed = [(param, 2.0 if param == "safety_max" else val) for param, val in full]
+    held = await bounded.choose_stage(db, changed, db.planned(), 3, tmp_path, 12, {"vpd_target_south": 1.0})
+    assert held.action == "hold" and "fixed candidate" in held.reason
+    assert not (tmp_path / bounded.STATE_NAME).exists()
+    held = await bounded.choose_stage(
+        db,
+        full[:-12] + [("vpd_target_south", 1.01)] + full[-11:],
+        db.planned(),
+        3,
+        tmp_path,
+        12,
+        {"vpd_target_south": 1.02},
+    )
+    assert held.action == "hold" and "zone VPD source" in held.reason
+    assert not (tmp_path / bounded.STATE_NAME).exists()

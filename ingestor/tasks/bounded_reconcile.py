@@ -31,6 +31,7 @@ MAX_STAGE_AGE = timedelta(minutes=6)
 CONFIRM_DEADLINE = timedelta(minutes=8)
 CONFIRM_RECHECK_SECONDS = 20
 PLAN_SEND_MARGIN = timedelta(minutes=5)  # dispatcher task timeout for a 12-command batch
+ZONE_VPD_TARGETS = frozenset({"vpd_target_south", "vpd_target_west", "vpd_target_east", "vpd_target_center"})
 
 
 @dataclass(frozen=True)
@@ -88,6 +89,15 @@ def _equal(actual: float, expected: float) -> bool:
 def _wake_for_confirmation() -> None:
     # Existing scheduler/event path; no new ESPHome client or extra worker.
     asyncio.get_running_loop().call_later(CONFIRM_RECHECK_SECONDS, shared.setpoint_dispatch_requested.set)
+
+
+def approval_file_stamp(state_dir: Path) -> tuple[int, int, int] | None:
+    """Observe atomic approval replacement without reading its contents."""
+    try:
+        stat = (state_dir / APPROVAL_NAME).stat()
+    except FileNotFoundError:
+        return None
+    return stat.st_ino, stat.st_mtime_ns, stat.st_size
 
 
 async def _fresh_readbacks(conn, generation: int) -> dict[str, float]:
@@ -150,14 +160,20 @@ async def _plan_identity(conn, planned: list) -> tuple[list[dict], str]:
     return selected, earliest.isoformat()
 
 
-async def _preview(conn, changes, planned, generation: int) -> dict:
-    readbacks = await _fresh_readbacks(conn, generation)
+async def _preview(conn, changes, planned, generation: int, baseline_names: set[str] | None = None) -> dict:
+    all_readbacks = await _fresh_readbacks(conn, generation)
     plan_rows, earliest = await _plan_identity(conn, planned)
     ordered = [[str(param), float(value)] for param, value in changes]
     if len(ordered) != len({param for param, _value in ordered}):
         raise ValueError("candidate contains duplicate parameters")
-    if any(param not in readbacks for param, _value in ordered):
+    required = (
+        {field.name for field in wire_fields()} | {param for param, _value in ordered} | (baseline_names or set())
+    )
+    if any(param not in all_readbacks for param in required):
         raise ValueError("candidate contains a field without current-generation readback")
+    # Bind all 48 canonical fields and every candidate, including controls
+    # outside the canonical vector. Keep other live diagnostics for audit only.
+    readbacks = {param: all_readbacks[param] for param in sorted(required)}
     identity = {
         "session_id": SESSION_ID,
         "pod": os.environ.get("HOSTNAME", ""),
@@ -172,11 +188,62 @@ async def _preview(conn, changes, planned, generation: int) -> dict:
         "captured_at": datetime.now(UTC).isoformat(),
         "earliest_plan_expiry": earliest,
         "fingerprint": _digest(identity),
+        "diagnostic_readbacks": all_readbacks,
         **identity,
     }
 
 
-def _validate_state(preview: dict, state: dict, now: datetime) -> None:
+def _validated_residual(
+    preview: dict, state: dict, zone_vpd_targets: dict[str, float] | None, limit: int
+) -> list[tuple[str, float]]:
+    """Keep every fixed command exact; rebase only crop-owned zone VPD targets."""
+    approved = state["approved_preview"]
+    completed = set(state["completed"])
+    approved_changes = dict(approved["changes"])
+    current_changes = dict(preview["changes"])
+    approved_fixed = [
+        [param, value]
+        for param, value in approved["changes"]
+        if param not in ZONE_VPD_TARGETS and param not in completed
+    ]
+    current_fixed = [[param, value] for param, value in preview["changes"] if param not in ZONE_VPD_TARGETS]
+    if current_fixed != approved_fixed:
+        raise ValueError("desired fixed candidate changed or completed field reappeared")
+    if any(param not in approved_changes for param in current_changes):
+        raise ValueError("unapproved candidate appeared")
+    for param, value in current_changes.items():
+        if param not in ZONE_VPD_TARGETS:
+            continue
+        if param in completed and (approved_fixed or len(current_changes) > limit):
+            raise ValueError(f"completed zone VPD target exceeds ordinary handoff: {param}")
+        if zone_vpd_targets is None or param not in zone_vpd_targets or not _equal(value, zone_vpd_targets[param]):
+            raise ValueError(f"zone VPD source changed or unavailable: {param}")
+    from .dispatcher import readback_values_equivalent
+
+    for param in (approved_changes.keys() & ZONE_VPD_TARGETS) - current_changes.keys():
+        # Dispatcher omits a target only when its current cfg readback is
+        # equivalent to the fresh crop target. Prove that before skipping it.
+        if (
+            zone_vpd_targets is None
+            or param not in zone_vpd_targets
+            or not readback_values_equivalent(param, preview["readbacks"].get(param), zone_vpd_targets[param])
+        ):
+            raise ValueError(f"omitted zone VPD target lacks equivalent readback: {param}")
+    # Fixed fields retain their approved ordering. VPD is delivered last so
+    # solar-time changes during the earlier stages do not stale its request.
+    return [
+        *(tuple(item) for item in approved_fixed),
+        *(
+            (param, current_changes[param])
+            for param, _ in approved["changes"]
+            if param in ZONE_VPD_TARGETS and param not in completed and param in current_changes
+        ),
+    ]
+
+
+def _validate_state(
+    preview: dict, state: dict, now: datetime, zone_vpd_targets: dict[str, float] | None, limit: int
+) -> list[tuple[str, float]]:
     approved = state["approved_preview"]
     if preview["session_id"] != approved["session_id"] or preview["pod"] != approved["pod"]:
         raise ValueError("writer session changed")
@@ -192,8 +259,9 @@ def _validate_state(preview: dict, state: dict, now: datetime) -> None:
         raise ValueError("stage approval expired")
     completed = set(state["completed"])
     desired = dict(approved["changes"])
+    completed_values = state.get("completed_values", {})
     for param, baseline in approved["readbacks"].items():
-        expected = desired[param] if param in completed else baseline
+        expected = completed_values.get(param, desired.get(param)) if param in completed else baseline
         observed = preview["readbacks"].get(param)
         if observed is None:
             raise ValueError(f"readback disappeared: {param}")
@@ -205,9 +273,7 @@ def _validate_state(preview: dict, state: dict, now: datetime) -> None:
                 raise ValueError(f"confirmed readback drifted: {param}")
         elif not _equal(observed, expected):
             raise ValueError(f"unapproved readback changed: {param}")
-    residual = [[param, val] for param, val in approved["changes"] if param not in completed]
-    if preview["changes"] != residual:
-        raise ValueError("desired candidate changed or completed field reappeared")
+    return _validated_residual(preview, state, zone_vpd_targets, limit)
 
 
 async def _check_records(conn, records: list[dict], readbacks: dict, started_at: str) -> bool:
@@ -295,39 +361,64 @@ async def _rollback_decision(conn, preview: dict, state: dict, state_dir: Path, 
     return Decision("send", selected, run_id=state["run_id"], rollback=True)
 
 
-async def choose_stage(conn, changes, planned, generation: int, state_dir: Path, limit: int) -> Decision:
+async def choose_stage(
+    conn,
+    changes,
+    planned,
+    generation: int,
+    state_dir: Path,
+    limit: int,
+    zone_vpd_targets: dict[str, float] | None = None,
+) -> Decision:
     """Write a read-only preview; select at most one durable stage if approved."""
     approval_path = state_dir / APPROVAL_NAME
     state_path = state_dir / STATE_NAME
     try:
-        preview = await _preview(conn, changes, planned, generation)
-        _write(state_dir / PREVIEW_NAME, preview)
         approval = _read(approval_path)
         state = _read(state_path)
+        prior = state.get("approved_preview") if state else approval.get("approved_preview") if approval else None
+        baseline_names = set(prior["readbacks"]) if prior else set()
+        preview = await _preview(conn, changes, planned, generation, baseline_names)
+        _write(state_dir / PREVIEW_NAME, preview)
         if approval is None and state is None:
             return Decision("ordinary")
         if approval is None:
             raise ValueError("approval removed during run")
         now = datetime.now(UTC)
         if state is None:
-            if approval.get("version") != 1 or approval.get("fingerprint") != preview["fingerprint"]:
+            approved_preview = approval.get("approved_preview", preview)
+            identity = {
+                key: approved_preview[key]
+                for key in ("session_id", "pod", "source_revision", "generation", "changes", "plan_rows", "readbacks")
+            }
+            if (
+                approval.get("version") != 1
+                or approval.get("fingerprint") != approved_preview["fingerprint"]
+                or _digest(identity) != approved_preview["fingerprint"]
+            ):
+                raise ValueError("approval does not match captured candidate/baseline")
+            if "approved_preview" not in approval and approval["fingerprint"] != preview["fingerprint"]:
                 raise ValueError("approval does not match fresh candidate/baseline")
             if approval.get("session_id") != SESSION_ID or approval.get("generation") != generation:
                 raise ValueError("approval bound to another writer generation")
             if not approval.get("run_id") or not isinstance(approval["run_id"], str):
                 raise ValueError("approval run ID missing")
-            if now - _time(preview["captured_at"]) > MAX_STAGE_AGE:
+            if now - _time(approved_preview["captured_at"]) > MAX_STAGE_AGE:
                 raise ValueError("preview stale")
+            if now >= _time(approval["expires_at"]):
+                raise ValueError("approval expired")
             if _time(approval["expires_at"]) > now + timedelta(minutes=30):
                 raise ValueError("approval duration exceeds 30 minutes")
             state = {
                 "version": 1,
                 "run_id": approval["run_id"],
                 "expires_at": approval["expires_at"],
-                "approved_preview": preview,
+                "approved_preview": approved_preview,
                 "completed": [],
+                "completed_values": {},
                 "status": "ready",
             }
+            _validate_state(preview, state, now, zone_vpd_targets, limit)
             _write(state_path, state)
         if state["run_id"] != approval.get("run_id"):
             raise ValueError("approval changed during run")
@@ -348,18 +439,21 @@ async def choose_stage(conn, changes, planned, generation: int, state_dir: Path,
             if not await _check_records(conn, records, preview["readbacks"], state["stage_started_at"]):
                 return Decision("hold", reason="awaiting durable confirmation", run_id=state["run_id"])
             state["completed"].extend(record["parameter"] for record in records)
+            state.setdefault("completed_values", {}).update(
+                {record["parameter"]: record["value"] for record in records}
+            )
             state["records"] = []
             state["status"] = "ready"
             _write(state_path, state)
-        _validate_state(preview, state, now)
+        residual = _validate_state(preview, state, now, zone_vpd_targets, limit)
         if shared.esp32.get("client") is None:
             raise ValueError("sole ESPHome client unavailable")
         if not shared.writer_lease_strictly_held(minimum_remaining_s=3):
             raise ValueError("sole-writer lease not strictly held")
-        residual = [
-            (param, val) for param, val in state["approved_preview"]["changes"] if param not in state["completed"]
-        ]
         if not residual:
+            # A fresh <=limit crop VPD delta may remain after the last stage.
+            # Returning complete lets dispatcher send it through its ordinary
+            # lifecycle and global cap in this same sole-writer pass.
             state["status"] = "complete"
             _write(state_path, state)
             return Decision("complete", run_id=state["run_id"])

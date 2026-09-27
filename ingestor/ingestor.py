@@ -80,6 +80,7 @@ from tasks import (
     BAND_DRIVEN_PARAMS,
     alert_monitor,
     attest_component_safe_startup,
+    bounded_reconcile,
     clear_component_entity_inventory,
     component_experiment_worker,
     create_component_experiment_pool,
@@ -3786,6 +3787,21 @@ def _launch_due_tasks(
     return started
 
 
+def _poll_stage_approval(
+    state_dir: Path,
+    observed: tuple[int, int, int] | None,
+    pending: tuple[int, int, int] | None,
+) -> tuple[tuple[int, int, int] | None, tuple[int, int, int] | None]:
+    stamp = bounded_reconcile.approval_file_stamp(state_dir)
+    if stamp != observed:
+        pending = stamp
+    # Reassert until a dispatcher launch consumes this replacement. A prior
+    # in-flight pass may clear the event after the file was replaced.
+    if pending is not None:
+        shared.setpoint_dispatch_requested.set()
+    return stamp, pending
+
+
 async def _run_restricted_component_worker(component_pool: object | None) -> None:
     """Run the separately credentialed component worker only outside shadow."""
     if shared.is_shadow_mode():
@@ -3896,6 +3912,8 @@ async def task_loop(
     ]
     last_run: dict[str, float] = {name: 0.0 for name, _, _ in TASKS}
     running: dict[str, asyncio.Task[None]] = {}
+    approval_stamp = None
+    pending_approval_stamp = None
 
     # Stagger startup: wait 30s for ESP32 connection to establish first
     await asyncio.sleep(30)
@@ -3905,8 +3923,13 @@ async def task_loop(
         while True:
             await asyncio.sleep(1)
             now = asyncio.get_running_loop().time()
+            approval_stamp, pending_approval_stamp = _poll_stage_approval(
+                STATE_DIR, approval_stamp, pending_approval_stamp
+            )
             forced = {"setpoint_dispatch"} if shared.setpoint_dispatch_requested.is_set() else set()
             started = _launch_due_tasks(pool, TASKS, last_run, running, now, task_timeouts, forced)
+            if "setpoint_dispatch" in started:
+                pending_approval_stamp = None
             if started:
                 log.debug("Task scheduler launched: %s", ", ".join(started))
     finally:
