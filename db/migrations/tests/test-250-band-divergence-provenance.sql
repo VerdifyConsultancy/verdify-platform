@@ -39,7 +39,7 @@ VALUES (now() - interval '30 seconds', 77.25, 1.03);
 INSERT INTO public.diagnostics(ts, band_source)
 VALUES (now() - interval '30 seconds', 'onchip_curve');
 
-\i db/migrations/251-band-divergence-provenance.sql
+\i db/migrations/250-band-divergence-provenance.sql
 
 DO $$
 BEGIN
