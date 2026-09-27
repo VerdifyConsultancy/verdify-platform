@@ -4967,6 +4967,47 @@ TEST(fan_requires_open_vent_carves_out_bypass_and_safety) {
     PASS();
 }
 
+TEST(september_4_hot_dry_fog_keeps_open_vent_exception) {
+    // The observed controller kept selecting VENT_COOL_FOG_ASSIST above 90 F,
+    // but the sealed-mode 95-5 F margin cleared vent_mist_assist_active.
+    // Fog must retain the open-vent exception; center mist remains separate.
+    auto sp = band_setpoints();
+    sp.safety_max = 95.0f;
+    sp.safety_max_seal_margin_f = 5.0f;
+    sp.temp_high = 84.0f;
+    sp.vpd_high = 1.22f;
+    sp.fog_escalation_kpa = 0.4f;
+    auto hot_dry = make_inputs(90.02f, 2.56f, 48.0f);
+    set_solar_day(hot_dry, 15);
+    auto controller = initial_state();
+    ASSERT_EQ(determine_mode(hot_dry, sp, controller, 5000), VENTILATE);
+    ASSERT_FALSE(controller.vent_mist_assist_active);
+    auto requested = resolve_equipment(VENTILATE, hot_dry, sp, controller, true);
+    ASSERT_TRUE(requested.fog);
+    ASSERT_TRUE(open_vent_fog_assist_permitted(VENTILATE, requested));
+
+    hot_dry.temp_f = 95.36f;
+    controller = initial_state();
+    ASSERT_EQ(determine_mode(hot_dry, sp, controller, 5000), SAFETY_COOL);
+    requested = resolve_equipment(SAFETY_COOL, hot_dry, sp, controller, true);
+    ASSERT_TRUE(requested.fog);
+    ASSERT_TRUE(open_vent_fog_assist_permitted(SAFETY_COOL, requested));
+
+    RelayOutputs fog_request = relays_off();
+    fog_request.fog = true;
+    fog_request.vent = true;
+
+    ASSERT_TRUE(open_vent_fog_assist_permitted(VENTILATE, fog_request));
+    ASSERT_TRUE(open_vent_fog_assist_permitted(SAFETY_COOL, fog_request));
+    fog_request.fog = false;
+    ASSERT_FALSE(open_vent_fog_assist_permitted(VENTILATE, fog_request));
+    ASSERT_FALSE(open_vent_fog_assist_permitted(SAFETY_COOL, fog_request));
+    fog_request.fog = true;
+    ASSERT_FALSE(open_vent_fog_assist_permitted(SEALED_MIST, fog_request));
+    ASSERT_FALSE(open_vent_fog_assist_permitted(SENSOR_FAULT, fog_request));
+    PASS();
+}
+
 // Item-3 per-zone arbiter: lowest priority_rank among zones that want wetting AND
 // have an actuator wins; ties break on urgency; EAST (no relay) is excluded.
 TEST(arbiter_priority_then_urgency_then_actuator) {

@@ -401,9 +401,15 @@ class TestHeapPressureObservability:
         body = (REPO_ROOT / "firmware/greenhouse/controls.yaml").read_text()
         assert "open_vent_fog_assist" in body
         assert "open_vent_mister_assist" in body
-        assert "ctl_state.vent_mist_assist_active && relay_out.fog" in body
-        assert "id(fog_closes_vent) && vent_is_open && !open_vent_fog_assist" in body
-        assert "open_vent_mister_assist || !id(mister_closes_vent) || !vent_is_open" in body
+        assert "open_vent_fog_assist_permitted(mode, relay_out)" in body
+        assert (
+            "polb(verdify_policy::kPF_sw_fog_closes_vent, id(fog_closes_vent)) && vent_is_open && !open_vent_fog_assist"
+            in body
+        )
+        assert (
+            "open_vent_mister_assist || !polb(verdify_policy::kPF_sw_mister_closes_vent, id(mister_closes_vent)) || !vent_is_open"
+            in body
+        )
 
     def test_greenhouse_state_refresh_registered(self):
         body = _tasks_source()
@@ -595,13 +601,16 @@ class TestContractDriftGuardrails:
         assert "vent_blocks_moisture" not in controls_source
         assert "open_vent_fog_assist" in controls_source
         assert "open_vent_mister_assist" in controls_source
-        assert "if (id(fog_closes_vent) && vent_is_open && !open_vent_fog_assist)" in controls_source
         assert (
-            "const bool mister_vent_ok = open_vent_mister_assist || !id(mister_closes_vent) || !vent_is_open;"
+            "polb(verdify_policy::kPF_sw_fog_closes_vent, id(fog_closes_vent)) && vent_is_open && !open_vent_fog_assist"
             in controls_source
         )
         assert (
-            "const bool climate_wet_assist_demand = (mode == SEALED_MIST) || ctl_state.vent_mist_assist_active;"
+            "const bool mister_vent_ok = open_vent_mister_assist || !polb(verdify_policy::kPF_sw_mister_closes_vent, id(mister_closes_vent)) || !vent_is_open;"
+            in controls_source
+        )
+        assert (
+            "((mode == SEALED_MIST) && fsm_escalated_to_misters) || ctl_state.vent_mist_assist_active;"
             in controls_source
         )
         assert "bool humidity_demand = climate_wet_assist_demand && mister_vent_ok;" in controls_source

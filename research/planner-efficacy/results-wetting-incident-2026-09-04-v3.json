@@ -1,0 +1,57 @@
+{
+  "analysis_contract": 3,
+  "issue": 778,
+  "window_start_utc": "2026-09-04T20:30:00Z",
+  "window_end_utc_exclusive": "2026-09-05T00:45:00Z",
+  "supersedes_causal_disposition_of": "results-wetting-incident-2026-09-04-v2.json",
+  "source": {
+    "device_reported_firmware_version": "2026.7.10.1500.09ee886",
+    "mapped_git_sha": "09ee886f1a6fbd6452064460e1a57e5dc1399a70",
+    "mapping_is_binary_attestation": false,
+    "firmware_logic_sha256": "4c9717c2a64458db6498362a8a1ec66d1f4f6da591eb48f3c18b1cef9002ca4c",
+    "firmware_controls_sha256": "a692c007673900dcf891acd08b9c27de897d25fbd6afb7bc90423dca9799a451"
+  },
+  "private_evidence": {
+    "path": "/Users/jason/verdify-778-evidence-20260927",
+    "extraction_script_sha256": "6d652b3322ceb0f5e8ae993efa0be3d9d796b810200e231e66fad86192e21785",
+    "manifest_sha256": "8ccd79d1cbb394e906962530272c496aa7b14792499737983bb6ce32f0c431df",
+    "exports": {
+      "climate": {"rows": 244, "sha256": "bd60075c2393632ffe1b20a999506c16ae5d25870f4d1f5d97dc7be62151a647"},
+      "controller_actions": {"rows": 271, "sha256": "901fd6dd07704bb1296bd0b2920d1b336f87e91866fe7051913520ef748c3c9a"},
+      "equipment_state": {"rows": 173, "sha256": "52f9657e42252daed97df1f98d92570eb899239e026300ac19cd5542bf0ac568"},
+      "equipment_receipts": {"rows": 38, "sha256": "597007d7f86564d4d048c3ef8dbbd2ae809f67df45ce2cb099c3be2c97a10fb4"},
+      "diagnostics": {"rows": 244, "sha256": "dff236019ce704d115ce8245704086522246604507bd87fb2496ce6acdba65a1"},
+      "setpoint_snapshots": {"rows": 2921, "sha256": "7078911e4f9ce3a65a3117d33f55c836095bec1d03764ca0346c5c37d2d913c9"},
+      "system_state": {"rows": 169, "sha256": "cd4536f842cbe15901b14d3059eadab5db0e8645251cfe77dcbea30a8b54cbe9"},
+      "override_events": {"rows": 3, "sha256": "5065cf4e5350bf04b6048c4c5ee3a8b675235dc49c1480873518ab9d0210d944"},
+      "water_meter_events": {"rows": 37, "sha256": "e0edebe600230ceb7323b926c4853aaba068cd6eaf1b0a9af3165f7ae4911df6"},
+      "plan_delivery": {"rows": 2, "sha256": "9e1a62117fe248331cd58281bfce8e3366689410a557bacb4950c9bd7c92ba9d"},
+      "setpoint_changes": {"rows": 3, "sha256": "e64b562a579e02ece78d654459c08f1a35d2d404a0241e4a8902d41c3bc81bd5"},
+      "forecast_asof": {"rows": 4, "sha256": "d7fc3c831b40f5377948f6f4a480f3a596861862a375b44b94a1bea175f0b5dd"}
+    }
+  },
+  "causal_result": {
+    "classification": "source_backed_controller_vent_interlock_refusal",
+    "threshold_f": 90.0,
+    "threshold_formula": "safety_max - safety_max_seal_margin_f",
+    "observed_setpoint_values": {"safety_max_f": 95.0, "safety_max_seal_margin_f": 5.0, "sw_fog_closes_vent": true, "mister_water_budget_gal": 300.0},
+    "fog_off_equipment_observation_utc": "2026-09-04T20:57:03.386706Z",
+    "fog_on_equipment_observation_utc": "2026-09-05T00:13:03.672217Z",
+    "interruption_action_rows": 199,
+    "interruption_action_max_gap_seconds": 66.289615,
+    "interruption_action_counts": {"VENT_COOL_FOG_ASSIST": 129, "SAFETY_COOL": 70},
+    "interruption_fog_false_vent_true_vent_interlock_rows": 199,
+    "first_action_row_sha256": "f31dc346abab3ea8f5d27558a60cf48d58d90d99161f009ad8f9183ebfb8fff9",
+    "last_blocked_action_row_sha256": "cbdde01f5b16d3b3fb89e16f25efc855afbeb33a331be47db93fd36a9af0b22d",
+    "first_recovered_action_row_sha256": "445e7075f4766cb1cae825370e3f6dc055cb24588c2797256bd9f04c650756f8"
+  },
+  "limits": {
+    "device_binary_independently_attested": false,
+    "physical_actuator_continuously_observed": false,
+    "equipment_source_receipt_coverage_complete": false,
+    "hard_volume_readback_available": false,
+    "native_equipment_counter_reset_epoch_available": false,
+    "physical_wetting_proof_allowed": false,
+    "controller_fix_deployed": false
+  }
+}

@@ -841,7 +841,7 @@ interval:
           //     bypasses both so dry-hot cooling can add moisture without
           //     pretending the house is sealed.
           const bool open_vent_fog_assist =
-              (mode == VENTILATE) && ctl_state.vent_mist_assist_active && relay_out.fog;
+              open_vent_fog_assist_permitted(mode, relay_out);
           const bool open_vent_mister_assist =
               (mode == VENTILATE) && ctl_state.vent_mist_assist_active;
           const bool occupancy_moisture_block = id(occupancy_inhibit_enabled) && id(greenhouse_occupied);

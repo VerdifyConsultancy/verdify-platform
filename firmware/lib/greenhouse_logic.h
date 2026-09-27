@@ -2668,3 +2668,14 @@ inline bool fan_requires_open_vent(Mode mode,
         && !vent_bypass_active
         && fan_on_or_wanted;
 }
+
+// A hot-house fog request must not inherit the temperature margin used to
+// forbid *closing* the vent for sealed humidification. resolve_equipment()
+// can request vented fog even after vent_mist_assist_active drops at that
+// margin; SAFETY_COOL can request fog above the hard temperature rail too.
+// This only exempts an explicit controller fog request from the vent interlock.
+// The caller still applies leak, occupancy, feed, clock and water limits.
+inline bool open_vent_fog_assist_permitted(Mode mode,
+                                           const RelayOutputs& requested) noexcept {
+    return requested.fog && (mode == VENTILATE || mode == SAFETY_COOL);
+}
