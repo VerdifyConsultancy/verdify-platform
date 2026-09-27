@@ -12,11 +12,30 @@ kubectl -n verdify-prod get jobs --sort-by=.metadata.creationTimestamp | tail
 kubectl -n verdify-prod logs job/<latest-successful-job> --all-containers=true
 curl -fsSI https://lab.verdify.ai/
 curl -fsS https://lab.verdify.ai/ | rg 'sidebar left|grafana-embed|Verdify.*Lab'
+curl -fsS https://lab.verdify.ai/_publication-status.json
 ```
 
 A healthy completion includes `rebuild complete`, a non-zero Quartz page count,
 `public-output guard: clean`, S3 delta summaries, and
 `k3s lab publish complete`.
+
+`/_publication-status.json` is an uncached, redacted PVC receipt. `last_attempt`
+distinguishes a running, failed, and successful publisher; failures use fixed
+classes such as `source_list_credentials_permission`, `source_list_dns`,
+`source_sync_timeout`, `generator_or_build_failure`, and
+`public_upload_unavailable`. `last_success` records UTC completion and freshness
+deadline, source-prefix identity hash, source-content hash, and published-tree
+hash. `served_public_sha256` identifies the complete tree currently served even
+when a later S3 mirror step fails. Missing or expired `last_success` is stale,
+regardless of the CronJob's most recent Job condition.
+
+The publisher retries object-store operations at most twice, with a five-minute
+limit per attempt. A cache initializer or another publisher holding the shared
+kernel lock yields `active_cache_contention` and exit 75; it records
+`last_contention_at_utc` without advancing `last_success` or declaring a corrupt
+cache. A leftover lock *file* with no holder does not block publication. S3
+errors do not fall back to cached source as though the refresh succeeded; the
+validated served site remains available while the failure is reported.
 
 ## Force a content refresh
 

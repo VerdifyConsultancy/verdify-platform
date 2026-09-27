@@ -116,12 +116,37 @@ def stage_changed(local: str, changed: list[str], parent: str) -> str:
     return staging
 
 
-def write_manifest(local_manifest: str, manifest_uri: str, endpoint: str | None, files: dict[str, str]) -> None:
+def _manifest_candidate(local_manifest: str, files: dict[str, str]) -> str:
     os.makedirs(os.path.dirname(local_manifest) or ".", exist_ok=True)
-    payload = json.dumps({"version": MANIFEST_VERSION, "files": files}, sort_keys=True)
-    with open(local_manifest, "w", encoding="utf-8") as fh:
-        fh.write(payload)
-    run_aws(endpoint, "s3", "cp", local_manifest, manifest_uri, "--only-show-errors")
+    payload = json.dumps({"version": MANIFEST_VERSION, "files": files}, sort_keys=True) + "\n"
+    descriptor, candidate = tempfile.mkstemp(prefix=".s3-manifest-", dir=os.path.dirname(local_manifest) or ".")
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+            stream.write(payload)
+            stream.flush()
+            os.fsync(stream.fileno())
+    except BaseException:
+        os.unlink(candidate)
+        raise
+    return candidate
+
+
+def write_manifest(local_manifest: str, manifest_uri: str, endpoint: str | None, files: dict[str, str]) -> None:
+    candidate = _manifest_candidate(local_manifest, files)
+    try:
+        # The local cache is a success receipt. Never advance it before the S3
+        # manifest commits, or a failed remote write makes the next run skip
+        # objects that were not durably published.
+        run_aws(endpoint, "s3", "cp", candidate, manifest_uri, "--only-show-errors")
+        os.replace(candidate, local_manifest)
+    finally:
+        if os.path.exists(candidate):
+            os.unlink(candidate)
+
+
+def cache_manifest(local_manifest: str, files: dict[str, str]) -> None:
+    candidate = _manifest_candidate(local_manifest, files)
+    os.replace(candidate, local_manifest)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -161,6 +186,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if not changed and not deleted:
         log(label, "no content changes — skipping upload (change gate)")
+        if not args.dry_run:
+            # A new cache PVC may have loaded the committed manifest from S3.
+            # Materialize the observed tree locally for the publication receipt.
+            cache_manifest(args.local_manifest, new_files)
         return 0
 
     if args.dry_run:

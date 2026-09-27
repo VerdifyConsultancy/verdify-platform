@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import os
 import subprocess
@@ -152,6 +153,14 @@ def harness(tmp_path: Path):
 set -euo pipefail
 printf '%s:%s\n' "${FIXTURE_RUN_ID:-default}" "$*" >> "$FIXTURE_AWS_LOG"
 if [[ "$1 $2" == "s3 ls" ]]; then
+  if [[ "${FIXTURE_FAIL_LS:-}" == 'credentials' ]]; then
+    echo 'AccessDenied' >&2
+    exit 1
+  fi
+  if [[ "${FIXTURE_FAIL_LS:-}" == 'dns' ]]; then
+    echo 'Could not connect to the endpoint URL' >&2
+    exit 1
+  fi
   echo '2026-07-11 00:00:00          1 index.md'
   exit 0
 fi
@@ -175,11 +184,34 @@ exit 0
         """#!/usr/bin/env bash
 set -euo pipefail
 label=''
+local_dir=''
+local_manifest=''
 while [[ $# -gt 0 ]]; do
-  if [[ "$1" == '--label' ]]; then label="$2"; shift 2; else shift; fi
+  case "$1" in
+    --label) label="$2"; shift 2 ;;
+    --local) local_dir="$2"; shift 2 ;;
+    --local-manifest) local_manifest="$2"; shift 2 ;;
+    *) shift ;;
+  esac
 done
 printf '%s\n' "$label" >> "$FIXTURE_DELTA_LOG"
 if [[ "${FIXTURE_FAIL_STATE_SYNC:-0}" == '1' && "$label" == 'state' ]]; then exit 9; fi
+if [[ "${FIXTURE_FAIL_PUBLIC_UPLOAD:-0}" == '1' && "$label" == 'public' ]]; then
+  echo 'AccessDenied' >&2
+  exit 9
+fi
+if [[ "$label" == 'content' || "$label" == 'public' ]]; then
+  file=''
+  if [[ -f "$local_dir/index.md" ]]; then file='index.md'; fi
+  if [[ -f "$local_dir/index.html" ]]; then file='index.html'; fi
+  mkdir -p "$(dirname "$local_manifest")"
+  if [[ -n "$file" ]]; then
+    digest="$(shasum -a 256 "$local_dir/$file" | awk '{print $1}')"
+    printf '{"version":1,"files":{"%s":"%s"}}\n' "$file" "$digest" > "$local_manifest"
+  else
+    printf '{"version":1,"files":{}}\n' > "$local_manifest"
+  fi
+fi
 """,
         encoding="utf-8",
     )
@@ -191,6 +223,10 @@ if [[ "${FIXTURE_FAIL_STATE_SYNC:-0}" == '1' && "$label" == 'state' ]]; then exi
 set -euo pipefail
 printf 'fixture publish\n' >> "$LAB_WORK_ROOT/state/publish.log"
 printf '%s\n' "$VERDIFY_PUBLIC_CONTENT_ROOT" > "$LAB_WORK_ROOT/state/public-content-root"
+if [[ "${FIXTURE_PUBLISH_RC:-0}" == '0' && -n "${FIXTURE_PUBLIC_CONTENT:-}" ]]; then
+  mkdir -p "$VERDIFY_SITE_PUBLIC"
+  printf '%s\n' "${FIXTURE_PUBLIC_CONTENT:-complete fixture page}" > "$VERDIFY_SITE_PUBLIC/index.html"
+fi
 exit "${FIXTURE_PUBLISH_RC:-0}"
 """,
         encoding="utf-8",
@@ -209,6 +245,9 @@ exit "${FIXTURE_PUBLISH_RC:-0}"
         reason: str = "k3s-publisher",
         run_id: str = "default",
         block_sync: bool = False,
+        fail_ls: str = "",
+        fail_public_upload: bool = False,
+        public_content: str = "",
     ) -> dict[str, str]:
         env = dict(os.environ)
         env.update(
@@ -231,6 +270,9 @@ exit "${FIXTURE_PUBLISH_RC:-0}"
                 "FIXTURE_BLOCK_SYNC": "1" if block_sync else "0",
                 "FIXTURE_BLOCK_SIGNAL": str(block_signal),
                 "FIXTURE_BLOCK_RELEASE": str(block_release),
+                "FIXTURE_FAIL_LS": fail_ls,
+                "FIXTURE_FAIL_PUBLIC_UPLOAD": "1" if fail_public_upload else "0",
+                "FIXTURE_PUBLIC_CONTENT": public_content,
                 "LAB_PUBLISH_REASON": reason,
                 "VERDIFY_SCRIPT_ROOT": str(REPO_ROOT / "scripts"),
             }
@@ -243,12 +285,18 @@ exit "${FIXTURE_PUBLISH_RC:-0}"
         fail_state_sync: bool = False,
         reason: str = "k3s-publisher",
         run_id: str = "default",
+        fail_ls: str = "",
+        fail_public_upload: bool = False,
+        public_content: str = "",
     ):
         env = make_env(
             publish_rc=publish_rc,
             fail_state_sync=fail_state_sync,
             reason=reason,
             run_id=run_id,
+            fail_ls=fail_ls,
+            fail_public_upload=fail_public_upload,
+            public_content=public_content,
         )
         proc = subprocess.run(
             ["bash", str(SCRIPT), "2026-07-11"],
@@ -283,7 +331,7 @@ def test_failed_candidate_syncs_state_but_never_content_or_public(harness):
 
     assert proc.returncode == 23
     assert deltas == ["state"]
-    assert "syncing state only" in proc.stderr
+    assert "class=generator_or_build_failure" in proc.stderr
     assert any("--delete --exact-timestamps" in call for call in aws_calls)
 
 
@@ -291,8 +339,8 @@ def test_state_sync_failure_preserves_original_publish_status(harness):
     proc, deltas, _ = harness(publish_rc=42, fail_state_sync=True)
 
     assert proc.returncode == 42
-    assert deltas == ["state"]
-    assert "State sync also failed" in proc.stderr
+    assert deltas == ["state", "state"]  # bounded retry, original rc preserved
+    assert "state mirror failed" in proc.stderr
 
 
 def test_successful_candidate_syncs_content_public_then_state(harness):
@@ -307,6 +355,102 @@ def test_successful_candidate_syncs_content_public_then_state(harness):
     runtime_link = harness.site_runtime / "content"
     assert runtime_link.is_symlink()
     assert runtime_link.resolve() == exported_root.resolve()
+    status = json.loads((harness.work / "state" / "publish-status.json").read_text(encoding="utf-8"))
+    assert status["last_attempt"]["outcome"] == "succeeded"
+    assert status["last_attempt"]["failure_class"] is None
+    assert status["last_success"]["source"] == "s3_content_prefix"
+    assert status["last_success"]["content_sha256"].startswith("sha256:")
+    assert status["last_success"]["public_sha256"].startswith("sha256:")
+    assert status["last_success"]["fresh_until_utc"].endswith("Z")
+    assert "fixture-bucket" not in json.dumps(status)
+
+
+@pytest.mark.parametrize(
+    ("failure", "expected_class"),
+    [("credentials", "source_list_credentials_permission"), ("dns", "source_list_dns")],
+)
+def test_source_failure_is_classified_and_does_not_fall_back_to_cached_content(
+    harness, failure: str, expected_class: str
+):
+    cached_content = harness.work / "content" / "index.md"
+    cached_content.parent.mkdir(parents=True)
+    cached_content.write_text("cached source", encoding="utf-8")
+    last_good = harness.work / "public" / "index.html"
+    last_good.parent.mkdir()
+    last_good.write_text("last good site", encoding="utf-8")
+
+    proc, deltas, aws_calls = harness(fail_ls=failure)
+
+    assert proc.returncode == 1
+    assert f"class={expected_class}" in proc.stderr
+    assert "fixture-bucket" not in proc.stderr
+    assert len([call for call in aws_calls if "s3 ls" in call]) == 2
+    assert not any("s3 sync" in call for call in aws_calls)
+    assert deltas == ["state"]
+    assert cached_content.read_text(encoding="utf-8") == "cached source"
+    assert last_good.read_text(encoding="utf-8") == "last good site"
+    status = json.loads((harness.work / "state" / "publish-status.json").read_text(encoding="utf-8"))
+    assert status["last_attempt"]["failure_class"] == expected_class
+    assert status["last_success"] is None
+
+
+def test_upload_failure_then_success_clears_failure_and_updates_identity(harness):
+    first, _, _ = harness(public_content="first complete site")
+    assert first.returncode == 0, first.stdout + first.stderr
+    status_path = harness.work / "state" / "publish-status.json"
+    first_status = json.loads(status_path.read_text(encoding="utf-8"))
+    first_success = first_status["last_success"]
+
+    failed, deltas, _ = harness(publish_rc=23)
+    assert failed.returncode == 23
+    assert deltas[-1] == "state"
+    failed_status = json.loads(status_path.read_text(encoding="utf-8"))
+    assert failed_status["last_attempt"]["failure_class"] == "generator_or_build_failure"
+    assert failed_status["last_success"] == first_success
+    assert failed_status["served_public_sha256"] == first_success["public_sha256"]
+    assert (harness.work / "public" / "index.html").read_text(encoding="utf-8") == "first complete site\n"
+
+    recovered, _, _ = harness(public_content="second complete site")
+    assert recovered.returncode == 0, recovered.stdout + recovered.stderr
+    recovered_status = json.loads(status_path.read_text(encoding="utf-8"))
+    assert recovered_status["last_attempt"]["failure_class"] is None
+    assert recovered_status["last_attempt"]["outcome"] == "succeeded"
+    assert recovered_status["last_success"]["public_sha256"] != first_success["public_sha256"]
+
+
+def test_public_upload_failure_is_bounded_and_classified(harness):
+    proc, deltas, _ = harness(fail_public_upload=True)
+    assert proc.returncode == 1
+    assert deltas == ["content", "public", "public", "state"]
+    assert "class=public_upload_credentials_permission" in proc.stderr
+    status = json.loads((harness.work / "state" / "publish-status.json").read_text(encoding="utf-8"))
+    assert status["last_attempt"]["failure_class"] == "public_upload_credentials_permission"
+    assert status["last_success"] is None
+    assert status["served_public_sha256"].startswith("sha256:")
+
+
+def test_delta_manifest_cache_advances_only_after_remote_commit(tmp_path: Path, monkeypatch):
+    source = REPO_ROOT / "scripts" / "s3-delta-sync.py"
+    spec = importlib.util.spec_from_file_location("lab_s3_delta_sync", source)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    local_manifest = tmp_path / "public.json"
+    old_files = {"index.html": "a" * 64}
+    new_files = {"index.html": "b" * 64}
+    module.cache_manifest(str(local_manifest), old_files)
+
+    def fail_remote(*_args):
+        raise subprocess.CalledProcessError(1, ["aws", "s3", "cp"])
+
+    monkeypatch.setattr(module, "run_aws", fail_remote)
+    with pytest.raises(subprocess.CalledProcessError):
+        module.write_manifest(str(local_manifest), "s3://fixture/manifests/public.json", None, new_files)
+    assert json.loads(local_manifest.read_text(encoding="utf-8"))["files"] == old_files
+
+    monkeypatch.setattr(module, "run_aws", lambda *_args: None)
+    module.write_manifest(str(local_manifest), "s3://fixture/manifests/public.json", None, new_files)
+    assert json.loads(local_manifest.read_text(encoding="utf-8"))["files"] == new_files
 
 
 def test_wrapper_logs_allowlisted_reason_class_without_raw_text_or_digest(harness):
@@ -336,13 +480,32 @@ def test_outer_lock_blocks_loser_before_candidate_sync(harness):
         loser, _, aws_calls = harness(run_id="loser")
 
         assert loser.returncode == 75, loser.stdout + loser.stderr
-        assert "k3s lab publish already running" in loser.stderr
+        assert "class=active_cache_contention" in loser.stderr
         assert not any(call.startswith("loser:") for call in aws_calls)
         assert not (harness.work / "content" / "index.md").exists()
+        busy_status = json.loads((harness.work / "state" / "publish-status.json").read_text(encoding="utf-8"))
+        assert busy_status["last_contention_at_utc"].endswith("Z")
+        assert busy_status["last_success"] is None
     finally:
         harness.block_release.touch()
     winner_stdout, winner_stderr = winner.communicate(timeout=20)
     assert winner.returncode == 0, winner_stdout + winner_stderr
+    finished_status = json.loads((harness.work / "state" / "publish-status.json").read_text(encoding="utf-8"))
+    assert finished_status["last_attempt"]["outcome"] == "succeeded"
+    assert finished_status["last_contention_at_utc"] == busy_status["last_contention_at_utc"]
+
+
+def test_released_lock_file_does_not_look_like_active_contention(harness):
+    first, _, _ = harness(run_id="first")
+    assert first.returncode == 0, first.stdout + first.stderr
+    lock_path = harness.work / "locks" / "publish-wrapper.lock"
+    assert lock_path.is_file()
+
+    second, _, _ = harness(run_id="second")
+    assert second.returncode == 0, second.stdout + second.stderr
+    status = json.loads((harness.work / "state" / "publish-status.json").read_text(encoding="utf-8"))
+    assert status["last_contention_at_utc"] is None
+    assert status["last_attempt"]["outcome"] == "succeeded"
 
 
 def test_k3s_build_lock_contention_is_a_publish_failure():
@@ -1150,6 +1313,8 @@ def test_deployed_cache_layout_is_unique_restricted_and_preserves_time_budget():
     assert "subPath" not in served_mount
     nginx_default = nginx_config["data"]["default.conf"]
     assert "root /lab-cache/publisher/public;" in nginx_default
+    assert "location = /_publication-status.json" in nginx_default
+    assert "alias /lab-cache/publisher/state/publish-status.json;" in nginx_default
     assert "root /usr/share/nginx/html;" not in nginx_default
     assert "try_files $uri $uri.html $uri/index.html =404;" in nginx_default
     assert not any(volume["name"] == "bootstrap" for volume in site_spec["volumes"])

@@ -40,6 +40,14 @@ data:
         index index.html;
         absolute_redirect off;
 
+        # The receipt contains fixed failure classes, UTC freshness, and
+        # content/source hashes only. Keep all other state/log files private.
+        location = /_publication-status.json {
+            alias /lab-cache/publisher/state/publish-status.json;
+            default_type application/json;
+            add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+        }
+
         # Quartz emits <page>/index.html for folder notes; redirect a trailing
         # slash to the clean path when the folder index exists.
         location ~ ^(.+)/$ {

@@ -76,6 +76,9 @@ CACHE_LOCK_HELPER="${VERDIFY_CACHE_LOCK_HELPER:-/usr/local/bin/prepare-lab-cache
 if [[ ! -f "$CACHE_LOCK_HELPER" && -f "$VERDIFY_SCRIPT_ROOT/prepare-lab-cache-lock.py" ]]; then
   CACHE_LOCK_HELPER="$VERDIFY_SCRIPT_ROOT/prepare-lab-cache-lock.py"
 fi
+receipt() {
+  "$CACHE_PYTHON" "${VERDIFY_SCRIPT_ROOT}/lab-publish-receipt.py" "$@" --state-dir "$STATE_DIR"
+}
 
 # Serialize the entire S3 -> candidate -> publish -> S3 flow on the exact same
 # descriptor-safe lock used by cache initialization.  The helper creates and
@@ -91,14 +94,19 @@ if [[ ! -f "$CACHE_LOCK_HELPER" ]]; then
   exit 2
 fi
 if [[ "${VERDIFY_CACHE_LOCK_HELD_FD:-}" != "8" ]]; then
-  exec "$CACHE_PYTHON" "$CACHE_LOCK_HELPER" \
+  lock_rc=0
+  "$CACHE_PYTHON" "$CACHE_LOCK_HELPER" \
     --root "$WORK_ROOT" \
     --fd 8 \
     --nonblocking \
     --busy-exit-code "$WRAPPER_LOCKED_RC" \
-    --busy-message "k3s lab publish already running; skipping reason_class=${REASON_CLASS}" \
+    --busy-message "k3s lab publish skipped class=active_cache_contention reason_class=${REASON_CLASS}" \
     -- \
-    bash "$0" "${ORIGINAL_ARGS[@]}"
+    bash "$0" "${ORIGINAL_ARGS[@]}" || lock_rc=$?
+  if [[ "$lock_rc" -eq "$WRAPPER_LOCKED_RC" ]]; then
+    receipt contention || echo "Lab publisher contention receipt failed" >&2
+  fi
+  exit "$lock_rc"
 fi
 if ! "$CACHE_PYTHON" "$CACHE_LOCK_HELPER" --root "$WORK_ROOT" --fd 8 --verify-held >/dev/null 2>&1; then
   echo "Lab cache lock initialization failed" >&2
@@ -107,9 +115,73 @@ fi
 
 aws_s3() {
   if [[ -n "$ENDPOINT_URL" ]]; then
-    aws --endpoint-url "$ENDPOINT_URL" s3 "$@"
+    timeout --kill-after=5s "${S3_TIMEOUT}s" aws --endpoint-url "$ENDPOINT_URL" s3 "$@"
   else
-    aws s3 "$@"
+    timeout --kill-after=5s "${S3_TIMEOUT}s" aws s3 "$@"
+  fi
+}
+
+# Only fixed classes reach the public receipt. AWS stderr is captured locally
+# for classification, never echoed with endpoint, bucket, or credential text.
+classify_s3_error() {
+  local report="$1"
+  local rc="$2"
+  if [[ "$rc" -eq 124 || "$rc" -eq 137 ]] || grep -Eqi 'timed? ?out|timeout' "$report"; then
+    printf 'timeout'
+  elif grep -Eqi 'AccessDenied|InvalidAccessKeyId|SignatureDoesNotMatch|Forbidden|(^|[^0-9])(401|403)([^0-9]|$)|permission' "$report"; then
+    printf 'credentials_permission'
+  elif grep -Eqi 'Could not connect to the endpoint|Name or service not known|Temporary failure in name resolution|No such host|nodename nor servname' "$report"; then
+    printf 'dns'
+  else
+    printf 'unavailable'
+  fi
+}
+
+S3_ATTEMPTS="${LAB_S3_ATTEMPTS:-2}"
+S3_TIMEOUT="${LAB_S3_TIMEOUT:-300}"
+if ! [[ "$S3_ATTEMPTS" =~ ^[1-3]$ && "$S3_TIMEOUT" =~ ^[0-9]+$ ]] \
+  || (( S3_TIMEOUT < 30 || S3_TIMEOUT > 600 )); then
+  echo "Lab object-store retry configuration failed" >&2
+  exit 2
+fi
+
+S3_ERROR_CLASS=unavailable
+bounded_s3() {
+  local attempt rc report
+  report="$(mktemp "$STATE_DIR/.s3-error.XXXXXX")"
+  for ((attempt=1; attempt<=S3_ATTEMPTS; attempt++)); do
+    rc=0
+    "$@" 2>"$report" || rc=$?
+    if [[ "$rc" -eq 0 ]]; then
+      rm -f -- "$report"
+      return 0
+    fi
+    S3_ERROR_CLASS="$(classify_s3_error "$report" "$rc")"
+    echo "Lab object-store attempt ${attempt}/${S3_ATTEMPTS} failed class=${S3_ERROR_CLASS}" >&2
+    if (( attempt < S3_ATTEMPTS )); then sleep 2; fi
+  done
+  rm -f -- "$report"
+  return 1
+}
+
+PUBLISH_TERMINAL_RECORDED=0
+record_failure() {
+  local class="$1" rc="$2" mirror_state="${3:-yes}"
+  receipt failure --class "$class" --public-dir "$PUBLIC_DIR" || echo "Lab publisher failure receipt failed" >&2
+  PUBLISH_TERMINAL_RECORDED=1
+  echo "Lab publish failed class=${class}; validated public tree remains served" >&2
+  # Preserve the original error if the state mirror also fails.
+  if [[ "$mirror_state" == yes ]]; then
+    bounded_s3 delta_sync state "$STATE_DIR" "$STATE_URI" || \
+      echo "Lab publisher state mirror failed class=${S3_ERROR_CLASS}" >&2
+  fi
+  exit "$rc"
+}
+
+on_exit() {
+  local rc=$?
+  if [[ "$rc" -ne 0 && "$PUBLISH_TERMINAL_RECORDED" -eq 0 ]]; then
+    receipt failure --class unexpected_failure --public-dir "$PUBLIC_DIR" || true
   fi
 }
 
@@ -118,7 +190,7 @@ aws_s3() {
 # changed, so the every-10-min rebuild no longer re-pushes the whole tree to the
 # (HDD-backed) endpoint just because Quartz refreshed every mtime.
 delta_sync() {
-  "$PYTHON" "${VERDIFY_SCRIPT_ROOT}/s3-delta-sync.py" \
+  timeout --kill-after=5s "${S3_TIMEOUT}s" "$PYTHON" "${VERDIFY_SCRIPT_ROOT}/s3-delta-sync.py" \
     --label "$1" \
     --local "$2" \
     --remote "$3" \
@@ -129,27 +201,24 @@ delta_sync() {
 }
 
 mkdir -p "$CONTENT_DIR" "$PUBLIC_DIR" "$STATE_DIR" "$BUILD_ROOT" "$LOCK_DIR" "$MANIFEST_DIR"
+receipt start
+trap on_exit EXIT
 
 CONTENT_LIST="${STATE_DIR}/s3-content-list.tmp"
-if aws_s3 ls "${CONTENT_URI}/" >"$CONTENT_LIST" 2>/dev/null && [[ -s "$CONTENT_LIST" ]]; then
-  echo "Syncing lab content source from ${CONTENT_URI}/"
-  aws_s3 sync "${CONTENT_URI}/" "${CONTENT_DIR}/" --delete --exact-timestamps
-elif find "$CONTENT_DIR" -name '*.md' -print -quit | grep -q .; then
-  echo "S3 content prefix is empty/unreadable; using existing PVC content cache."
-else
-  cat >&2 <<EOF
-No lab content source found.
-Seed ${CONTENT_URI}/ with the website Markdown/static tree before enabling the
-k3s publisher. Example from a trusted workstation:
-  aws s3 sync /Users/jason/Iris/verdify-vault/website/ ${CONTENT_URI}/ --delete
-EOF
-  exit 2
+if ! bounded_s3 aws_s3 ls "${CONTENT_URI}/" >"$CONTENT_LIST"; then
+  record_failure "source_list_${S3_ERROR_CLASS}" 1
+fi
+if [[ ! -s "$CONTENT_LIST" ]]; then
+  record_failure source_empty 1
+fi
+echo "Syncing lab content source class=s3_content_prefix"
+if ! bounded_s3 aws_s3 sync "${CONTENT_URI}/" "${CONTENT_DIR}/" --delete --exact-timestamps; then
+  record_failure "source_sync_${S3_ERROR_CLASS}" 1
 fi
 rm -f "$CONTENT_LIST"
 
 if ! find "$CONTENT_DIR" -name '*.md' -print -quit | grep -q .; then
-  echo "Lab content source contains no Markdown files: ${CONTENT_DIR}" >&2
-  exit 2
+  record_failure source_no_markdown 1
 fi
 
 mkdir -p \
@@ -197,16 +266,23 @@ publish_rc=0
 "$PUBLISH_SCRIPT" --date "$DATE_ARG" --reason "$REASON" || publish_rc=$?
 
 if [[ "$publish_rc" -ne 0 ]]; then
-  echo "Lab publish failed (rc=${publish_rc}); syncing state only" >&2
-  if ! delta_sync state "$STATE_DIR" "$STATE_URI"; then
-    echo "State sync also failed after publish failure; local state remains available" >&2
-  fi
-  exit "$publish_rc"
+  record_failure generator_or_build_failure "$publish_rc"
 fi
 
 echo "Publishing content-hash deltas to object storage (skips unchanged trees)"
-delta_sync content "$CONTENT_DIR" "$CONTENT_URI"
-delta_sync public "$PUBLIC_DIR" "$PUBLIC_URI"
-delta_sync state "$STATE_DIR" "$STATE_URI"
+if ! bounded_s3 delta_sync content "$CONTENT_DIR" "$CONTENT_URI"; then
+  record_failure "content_upload_${S3_ERROR_CLASS}" 1
+fi
+if ! bounded_s3 delta_sync public "$PUBLIC_DIR" "$PUBLIC_URI"; then
+  record_failure "public_upload_${S3_ERROR_CLASS}" 1
+fi
+receipt success \
+  --content-manifest "$MANIFEST_DIR/content.json" \
+  --public-manifest "$MANIFEST_DIR/public.json" \
+  --source-uri "$CONTENT_URI"
+if ! bounded_s3 delta_sync state "$STATE_DIR" "$STATE_URI"; then
+  record_failure "state_upload_${S3_ERROR_CLASS}" 1 no
+fi
+PUBLISH_TERMINAL_RECORDED=1
 
 echo "k3s lab publish complete: date=${DATE_ARG} reason_class=${REASON_CLASS}"
