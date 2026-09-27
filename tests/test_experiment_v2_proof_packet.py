@@ -499,6 +499,58 @@ def test_alert_projection_classifies_only_exact_source_grounded_exceptions() -> 
     assert blocked["causal"] is True
 
 
+def test_recovery_only_alert_projection_is_bound_to_exact_existing_rows() -> None:
+    required = [
+        {"id": 1, "alert_type": "sensor_offline", "sensor_id": "climate.temp_south"},
+        {"id": 2, "alert_type": "sensor_offline", "sensor_id": "climate.rh_south"},
+        {"id": 3, "alert_type": "sensor_offline", "sensor_id": "climate.vpd_south"},
+        {"id": 4, "alert_type": "sensor_offline", "sensor_id": "climate.hydro_ph"},
+    ]
+    observed = []
+    for alert_id, (alert_type, sensor, disposition, source, opened, _issue) in collector.RECOVERY_ONLY_ALERTS.items():
+        details = (
+            {"type": "equipment", "staleness_ratio": 4.7}
+            if alert_type == "sensor_offline"
+            else {"parameter": "sw_cool_all_fans_at_high_enabled", "failure_reason": "transport_disconnected"}
+        )
+        observed.append(
+            {
+                "id": alert_id,
+                "ts": opened,
+                "alert_type": alert_type,
+                "sensor_id": sensor,
+                "disposition": disposition,
+                "source": source,
+                "severity": "warning",
+                "details": details,
+            }
+        )
+    projected = collector.alert_projection(
+        {"open_alerts": [*required, *observed]},
+        observed_at="2026-09-27T08:32:13Z",
+        experiment_id="45039c86-c1d9-52f6-a0a9-d94a17bc4b14",
+    )
+    assert len(projected[2:]) == 11
+    assert all(row["classification"] == "accepted_recovery_only_degradation" for row in projected[2:])
+    assert all(row["causal"] is False for row in projected[2:])
+
+    for mutation in (
+        {"id": 99999},
+        {"source": "other"},
+        {"severity": "critical"},
+        {"ts": "2026-09-09T16:06:11Z"},
+        {"details": {}},
+    ):
+        changed = {**observed[0], **mutation}
+        blocked = collector.alert_projection(
+            {"open_alerts": [*required, changed]},
+            observed_at="2026-09-27T08:32:13Z",
+            experiment_id="45039c86-c1d9-52f6-a0a9-d94a17bc4b14",
+        )[-1]
+        assert blocked["classification"] == "unclassified"
+        assert blocked["causal"] is True
+
+
 def test_collector_source_has_no_device_client_or_mutating_kubernetes_method() -> None:
     source = SCRIPT.read_text()
     for forbidden in (

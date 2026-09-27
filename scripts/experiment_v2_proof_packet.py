@@ -103,6 +103,30 @@ HISTORICAL_ALERT_ISSUES = {
         "setpoint.cool_stage2_over_high_f",
     ): "https://github.com/VerdifyConsultancy/verdify-platform/issues/433",
 }
+# These exact open rows do not cause the zero-exposure Gate R database
+# recovery. They remain open and must still block Gate P's physical proof.
+# The equipment catalog expects periodic samples from change-only relay state,
+# so its old timestamps cannot be presented as current equipment evidence.
+RECOVERY_ONLY_ALERTS = {
+    11537: ("sensor_offline", "equipment.mister_south_fert", "acknowledged", "system", "2026-09-08T16:06:11Z", 16),
+    11538: ("sensor_offline", "equipment.mister_west_fert", "acknowledged", "system", "2026-09-08T16:06:11Z", 16),
+    11539: ("sensor_offline", "equipment.drip_wall", "acknowledged", "system", "2026-09-08T16:06:11Z", 16),
+    11540: ("sensor_offline", "equipment.drip_center", "acknowledged", "system", "2026-09-08T16:06:11Z", 16),
+    11541: ("sensor_offline", "equipment.drip_wall_fert", "acknowledged", "system", "2026-09-08T16:06:11Z", 16),
+    11543: ("sensor_offline", "equipment.mister_any", "acknowledged", "system", "2026-09-08T16:06:11Z", 16),
+    11544: ("sensor_offline", "equipment.mister_south", "acknowledged", "system", "2026-09-08T16:06:11Z", 16),
+    11545: ("sensor_offline", "equipment.mister_west", "acknowledged", "system", "2026-09-08T16:06:11Z", 16),
+    11546: ("sensor_offline", "equipment.drip_center_fert", "acknowledged", "system", "2026-09-08T16:06:11Z", 16),
+    11547: ("sensor_offline", "equipment.fert_master_valve", "acknowledged", "system", "2026-09-08T16:06:11Z", 16),
+    11104: (
+        "esp32_push_failed",
+        "setpoint.sw_cool_all_fans_at_high_enabled",
+        "open",
+        "setpoint_listener",
+        "2026-09-06T00:41:51Z",
+        433,
+    ),
+}
 ATTESTATION = re.compile(
     r"^(?P<time>\S+) INFO component_entity_grid_attestation status=pass "
     r"grid_revision=(?P<grid>\S+) observation_receipt_sha256=(?P<receipt>[0-9a-f]{64}) "
@@ -1083,6 +1107,38 @@ def _safe_historical_heap_warning(row: Mapping[str, Any], *, observed_at: str) -
     )
 
 
+def _recovery_only_alert(row: Mapping[str, Any]) -> tuple[str, str] | None:
+    """Classify only the observed alert identities, never a future recurrence."""
+    try:
+        alert_id = int(row["id"])
+        expected = RECOVERY_ONLY_ALERTS[alert_id]
+        opened = row["ts"] if isinstance(row["ts"], datetime) else parse_time(str(row["ts"]))
+    except (KeyError, TypeError, ValueError, CollectionError):
+        return None
+    alert_type, sensor, disposition, source, opened_second, issue = expected
+    if (
+        row.get("alert_type") != alert_type
+        or row.get("sensor_id") != sensor
+        or row.get("disposition") != disposition
+        or row.get("source") != source
+        or row.get("severity") != "warning"
+        or opened.astimezone(UTC).replace(microsecond=0) != parse_time(opened_second)
+    ):
+        return None
+    details = _alert_details(row)
+    if alert_type == "sensor_offline" and details.get("type") != "equipment":
+        return None
+    if alert_type == "esp32_push_failed" and (
+        details.get("parameter") != "sw_cool_all_fans_at_high_enabled"
+        or details.get("failure_reason") != "transport_disconnected"
+    ):
+        return None
+    return (
+        f"recovery_only:{alert_type}:{sensor}",
+        f"https://github.com/VerdifyConsultancy/verdify-platform/issues/{issue}",
+    )
+
+
 def alert_projection(db: Mapping[str, Any], *, observed_at: str, experiment_id: str) -> list[dict[str, Any]]:
     open_rows = db["open_alerts"]
     south = [
@@ -1136,12 +1192,18 @@ def alert_projection(db: Mapping[str, Any], *, observed_at: str, experiment_id: 
         )
         historical_issue = _historical_alert_issue(row)
         heap_warning = _safe_historical_heap_warning(row, observed_at=observed_at)
+        recovery_only = _recovery_only_alert(row)
         if recovery_target:
             classification = "authorized_recovery_target"
             causal = False
             scope = f"recovery_target:expired_work_not_terminal:{experiment_id}"
             decision_url = GATE_R_ISSUE_URL
             maintenance_url = ""
+        elif recovery_only:
+            classification = "accepted_recovery_only_degradation"
+            causal = False
+            scope, maintenance_url = recovery_only
+            decision_url = GATE_R_ISSUE_URL
         elif historical_issue or heap_warning:
             classification = "informational_noncausal"
             causal = False

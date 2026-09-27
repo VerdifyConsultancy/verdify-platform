@@ -283,6 +283,41 @@ def test_exact_expired_work_alert_is_a_recovery_target_only() -> None:
     assert any(blocker.startswith("unsupported_alert_classification:recovery_target") for blocker in result["blockers"])
 
 
+def test_exact_open_equipment_and_push_alerts_are_recovery_only() -> None:
+    alerts = []
+    for scope, (alert_id, alert_type, disposition, issue) in guard.RECOVERY_ONLY_ALERTS.items():
+        alerts.append(
+            {
+                "alert_id": alert_id,
+                "alert_type": alert_type,
+                "scope": scope,
+                "disposition": disposition,
+                "observed_at": NOW,
+                "classification": "accepted_recovery_only_degradation",
+                "causal": False,
+                "decision_issue_url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/641",
+                "maintenance_issue_url": f"https://github.com/VerdifyConsultancy/verdify-platform/issues/{issue}",
+            }
+        )
+    recovery = _apply(BASE, RECOVERY_OVERLAY["operations"])
+    recovery["alerts"].extend(alerts)
+    result = _evaluate(recovery, RECOVERY_OVERLAY)
+    assert result["blockers"] == []
+    assert sum(warning.startswith("accepted_recovery_only_degradation:") for warning in result["warnings"]) == 11
+
+    proof = copy.deepcopy(BASE)
+    proof["alerts"].extend(alerts)
+    result = _evaluate(proof, {"operations": []})
+    assert (
+        sum(blocker.startswith("unsupported_alert_classification:recovery_only:") for blocker in result["blockers"])
+        == 11
+    )
+
+    recovery["alerts"][-1]["alert_id"] = "different-incident"
+    result = _evaluate(recovery, RECOVERY_OVERLAY)
+    assert any(blocker.startswith("unsupported_alert_classification:recovery_only:") for blocker in result["blockers"])
+
+
 def _run(
     packet: dict,
     tmp_path: Path,
