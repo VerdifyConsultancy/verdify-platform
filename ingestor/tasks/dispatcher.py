@@ -15,7 +15,7 @@ from esp32_push import (
     push_to_esp32_detailed,
 )
 
-from . import band_anchors, bounded_reconcile
+from . import band_anchors, bounded_reconcile, drift_probe
 from ._common import (
     _PHYSICS_INVARIANTS,
     ACTIVITY_MIRROR_PARAMS,
@@ -1131,6 +1131,30 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                 staged_state_exists=(STATE_DIR / bounded_reconcile.STATE_NAME).exists(),
             )
 
+        probe_decision = await drift_probe.choose(
+            conn,
+            changes,
+            planned or [],
+            planner_params.get(drift_probe.PARAMETER),
+            reconnect_generation,
+            reconnect_pending,
+            STATE_DIR,
+        )
+        if probe_decision.action == "hold":
+            shared.defer_failed_dispatch(reconnect_generation, drift_versions)
+            log.error("writer_drift_probe action=hold reason=%s", probe_decision.reason)
+            (STATE_DIR / "setpoint-dispatcher.log").touch()
+            return
+        if probe_decision.action == "send":
+            changes = list(probe_decision.changes)
+            log.info(
+                "writer_drift_probe action=%s run_id=%s generation=%d command_count=%d",
+                probe_decision.phase,
+                probe_decision.run_id,
+                reconnect_generation,
+                len(changes),
+            )
+
         stage_decision = bounded_reconcile.Decision("ordinary")
         if reconnect_pending and (
             len(changes) > MAX_RECONNECT_COMMANDS
@@ -1240,7 +1264,11 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         prequeue_failures: list[tuple[str, str]] = []
         skipped_heap_deferred = 0
         for param, val in changes:
-            source = "manual" if stage_decision.rollback else _dispatch_source(param, planner_params, quiet_params)
+            source = (
+                "manual"
+                if stage_decision.rollback or probe_decision.phase == "probe"
+                else _dispatch_source(param, planner_params, quiet_params)
+            )
 
             requested_val = float(val)
             registry_val, registry_violation = _coerce_registry_value(param, requested_val)
@@ -1475,7 +1503,8 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
 
     pending_records = list(delivery_records)
     terminal_failures: list[tuple[str, str]] = []
-    for attempt in (1, 2, 3):
+    max_attempts = 1 if probe_decision.action == "send" else 3
+    for attempt in range(1, max_attempts + 1):
         if not pending_records:
             break
 
@@ -1526,7 +1555,7 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         async def on_state(
             outcomes: tuple[DeviceCommandOutcome, ...],
             records: list[dict[str, object]] = pending_records,
-            is_final: bool = attempt == 3,
+            is_final: bool = attempt == max_attempts,
         ) -> None:
             await persist_delivery_states(records, outcomes, final_attempt=is_final)
 
@@ -1544,17 +1573,18 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             if outcome.status != "failed":
                 continue
             record = pending_records[outcome.index]
-            if delivery_failure_retryable(outcome) and attempt < 3:
+            if delivery_failure_retryable(outcome) and attempt < max_attempts:
                 failed_records.append(record)
             else:
                 terminal_failures.append((str(record["parameter"]), outcome.reason))
         if not failed_records:
             break
-        if attempt < 3:
+        if attempt < max_attempts:
             log.warning(
-                "writer_dispatch reason=retry generation=%d attempt %d/3 failed_count=%d",
+                "writer_dispatch reason=retry generation=%d attempt %d/%d failed_count=%d",
                 reconnect_generation,
                 attempt + 1,
+                max_attempts,
                 len(failed_records),
             )
             pending_records = failed_records
@@ -1599,7 +1629,10 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         except Exception:
             log.exception("terminal-failure alert write failed; continuing to dispatch cleanup")
 
-    if stage_decision.action == "send":
+    if probe_decision.action == "send":
+        drift_probe.finish(STATE_DIR, probe_decision, delivery_records, final_failures)
+        shared.defer_failed_dispatch(reconnect_generation, drift_versions)
+    elif stage_decision.action == "send":
         bounded_reconcile.finish_stage(STATE_DIR, stage_decision, delivery_records, final_failures)
         # Keep the generation unreconciled until every approved stage has a
         # durable confirmation and current-generation cfg readback.
