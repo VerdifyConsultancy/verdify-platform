@@ -85,12 +85,21 @@ preflight.
   ```
   Pre-check with `kustomize build deploy/k8s/overlays/prod | kubectl diff -f -`
   and confirm the ingestor Deployment (strategy: Recreate — never two writers)
-  changes only when you intend it. KNOWN ISSUE (#317, closed 2026-08-30 as
-  non-reproducible; keep the check): unscoped sync operations on this app were
-  rewritten to a stale selective scope. Right after submitting, read
+  changes only when you intend it. If the last completed operation has
+  `.status.operationState.operation.sync.resources`, Argo CD 3.4 can inherit
+  that selective scope on the next full sync ([#317](https://github.com/VerdifyConsultancy/verdify-platform/issues/317),
+  [upstream #28701](https://github.com/argoproj/argo-cd/issues/28701)). With no
+  operation active, submit the exact intended revision and clear the stale
+  operation state in **one** patch instead of the plain patch above:
+  ```bash
+  kubectl patch application verdify-prod-dark -n argocd --type merge \
+    -p '{"operation":{"initiatedBy":{"username":"laptop-root"},"sync":{"revision":"<exact-main-sha>","prune":false}},"status":{"operationState":null}}'
+  ```
+  The current Application CRD has no status subresource, so this patch is
+  atomic. Right after either submission, read
   `.status.operationState.operation.sync.resources`; it must be absent or
   empty. If selectors appear or the syncResult covers too few
-  resources, STOP and do not retry. The explicit `resources:` list
+  resources, STOP and investigate before another operation. The explicit `resources:` list
   (`scripts/gen-sync-resource-vector.sh`, reviewed first; see
   `attended-convergence.md`) is a fallback only: Argo CD skips every hook on a
   selective sync, including the `verdify-migrate` PreSync, and does not record

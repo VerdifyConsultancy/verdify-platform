@@ -12,13 +12,15 @@ full-sync path. The new code is inert until an approval file is placed in the
 loses its approval and stops. Never open another ESPHome session.
 
 The dispatcher writes `/srv/verdify/state/writer-stage-preview.json` on a
-broad-restore hold. That file binds the full ordered candidate, all
-current-generation cfg readbacks, one atomic 48-field canonical DB snapshot,
-the active plan rows and their earliest expiry, image source revision, pod,
-session, and connection generation. An approval applies to that exact preview
-and expires in at most 30 minutes, or five minutes before the first
-plan/one-shot expiry. A changed
-plan, readback, session, or generation stops the run before another stage.
+broad-restore hold. It captures all current-generation cfg readbacks for audit.
+The approval fingerprint binds the canonical 48 fields, every candidate and
+prior-stage field, one atomic 48-field DB snapshot, the active plan rows and
+their earliest expiry, image source revision, pod, session, and connection
+generation. Unrelated changing sensor values do not invalidate the approval.
+An approval expires in at most 30 minutes, or five minutes before the first
+plan/one-shot expiry. A changed fixed desired value, bound readback, plan,
+session, or generation stops the run before another stage. Only the four crop
+VPD targets may move with their fresh source calculation; they are sent last.
 
 ## Arm once from a fresh preview
 
@@ -45,7 +47,9 @@ durable `inflight` state **before** any request row or physical call, then
 uses its existing `requested` → `sent` → `confirmed` lifecycle and the same
 ESPHome connection. The next stage waits for every exact DB row to be
 `confirmed` with `confirmed_at` and matching current-generation cfg readback.
-It rechecks through the existing scheduler every 20 seconds while awaiting
+An atomic approval replacement wakes the existing dispatcher within its
+one-second scheduler loop, subject to the existing 30-second retry throttle.
+It rechecks through that scheduler every 20 seconds while awaiting
 confirmation; the eight-minute deadline is a stop condition, not a sleep.
 The generation stays unreconciled until all approved values are confirmed.
 
@@ -59,9 +63,13 @@ kubectl -n verdify-prod exec deploy/verdify-ingestor -c ingestor -- \
 scripts/k3s-smoke.sh device-monitor
 ```
 
-Successful completion is `status: complete`, no residual candidate, one
-connection, and 48 fresh readbacks. Preserve the preview, approval, state,
-and prior private baseline outside the pod for the recovery record.
+Successful completion is `status: complete`, no remaining desired candidate,
+one connection, and 48 fresh readbacks. A newly moved crop VPD target may pass
+from the final stage into the ordinary writer only when its fresh source
+matches and the whole current candidate is at most 12 commands; verify that
+ordinary lifecycle reaches `confirmed` and its cfg readback matches before
+recording no residual candidate. Preserve the preview, approval, state, and
+prior private baseline outside the pod for the recovery record.
 
 ## Stop and bounded rollback
 

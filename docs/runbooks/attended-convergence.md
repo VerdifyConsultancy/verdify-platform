@@ -31,15 +31,19 @@ selective-scope behavior (#317) and running ONE attended convergence.
 
 ## The operation
 
-Normal path first: submit a plain full sync (NO `--prune`, `resources`
-**absent or empty**). Immediately verify the recorded operation:
+For a prior full operation, submit a plain full sync (NO `--prune`, `resources`
+**absent or empty**). If the prior completed operation was selective, use the
+atomic status-clear full-sync patch in `docs/runbooks/laptop-operator.md` §2;
+Argo CD's merge-patch bug otherwise retains its stale resource selector
+([upstream #28701](https://github.com/argoproj/argo-cd/issues/28701)).
+Immediately verify the recorded operation:
 
 - `kubectl -n argocd get app verdify-prod-dark -o jsonpath='{.status.operationState.operation.sync.resources}'`
   must be **absent or empty**.
 - **If stale selectors appear or the result is narrow: STOP. Do not retry.**
 
-Fallback (only after the STOP, reviewed separately): the #317
-explicit-resource-vector workaround. Generate the vector from source with
+Fallback only for a change proven independent of migrations and hooks:
+the #317 explicit-resource-vector workaround. Generate the vector from source with
 `scripts/gen-sync-resource-vector.sh` (renders the overlay; no cluster
 access), review it, and submit the operation with that explicit `resources:`
 list per `docs/runbooks/laptop-operator.md` §2. Never include `--prune`.
