@@ -97,6 +97,16 @@ contradiction: it compares different/unverified sources. Conversely, this source
 audit does not resolve a real VPD discrepancy. #424 remains open until passive
 current-source/generation observations explicitly disposition it and the public
 SQL/API lineage surfaces are repaired through forward migration and delivery.
+
+Migration 197's `v_band_device_divergence` has a separate false-green path:
+`band_house_*` rows in `setpoint_snapshot` are inserted by
+`ingestor/tasks/band_anchors.py:emit_band_audit` from the server's anchor
+calculation. They are not controller callbacks. Migration 251 removes those rows
+from the view's device side; on-chip or unknown branch edge/difference fields
+are null, while a fresh `dispatcher_legacy` branch still compares its scalar
+cfg snapshots to the served envelope. The Grafana VPD panel labels the same
+`band_house_*` values as a server audit. Neither a near-zero pre-251 view
+difference nor a server audit plot resolves the consumed on-chip band.
 #749 also still needs the September 4 incident disposition and current safety
 evidence. This tool does not authorize or execute either physical gate.
 
