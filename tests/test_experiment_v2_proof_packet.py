@@ -87,6 +87,31 @@ def test_backup_packet_fails_when_no_controller_owned_success_is_retained() -> N
         collector.backup_evidence(None, facts)
 
 
+@pytest.mark.parametrize("published", ["wrote", "wrote paired"])
+def test_backup_log_selects_published_dump_before_pruned_paths(published: str) -> None:
+    log = (
+        "[backup] pg_dump -Fc verdify@verdify-db -> /backups/verdify-20260926T081706Z.dump\n"
+        f"[backup] {published} /backups/verdify-20260926T081706Z.dump (269.4M)\n"
+        "[backup] pruning dumps older than 14d in /backups\n"
+        "/backups/verdify-20260910T081717Z.dump\n"
+        "/backups/verdify-20260911T081708Z.dump\n"
+    )
+    assert collector._published_backup_name(log) == "verdify-20260926T081706Z.dump"
+
+
+@pytest.mark.parametrize(
+    "log",
+    [
+        "[backup] pg_dump -Fc verdify@verdify-db -> /backups/verdify-20260926T081706Z.dump\n",
+        "[backup] wrote /backups/verdify-20260926T081706Z.dump (269.4M)\n"
+        "[backup] wrote paired /backups/verdify-20260926T081707Z.dump (269.4M)\n",
+    ],
+)
+def test_backup_log_fails_closed_without_unique_publish_line(log: str) -> None:
+    with pytest.raises(collector.CollectionError, match="no unique published dump path"):
+        collector._published_backup_name(log)
+
+
 def test_climate_projection_uses_exact_supplied_newest_two_rows_without_filtering() -> None:
     first = datetime(2026, 8, 30, 12, 0, tzinfo=UTC)
     rows = [_climate_row(first, 0), _climate_row(first + timedelta(minutes=1), 0.01)]

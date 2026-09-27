@@ -115,7 +115,10 @@ DESTABILIZER = re.compile(
     r"Writer lease LOST|reason=transport_reconnect|connection_generation_change|"
     r"component_entity_grid_attestation status=pass"
 )
-BACKUP_PATH = re.compile(r"/backups/(?P<name>verdify-(?P<stamp>\d{8}T\d{6}Z)\.dump)")
+BACKUP_WRITTEN = re.compile(
+    r"^\[backup\] wrote(?: paired)? /backups/(?P<name>verdify-\d{8}T\d{6}Z\.dump) \(",
+    re.MULTILINE,
+)
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
 SHA40 = re.compile(r"^[0-9a-f]{40}$")
 
@@ -676,6 +679,13 @@ def passive_424(db: Mapping[str, Any], *, observed_at: str) -> tuple[dict[str, A
     return evidence, raw_receipt
 
 
+def _published_backup_name(log: str) -> str:
+    matches = list(BACKUP_WRITTEN.finditer(log))
+    if len(matches) != 1:
+        raise CollectionError("scheduled backup has no unique published dump path")
+    return matches[0]["name"]
+
+
 def _backup_artifact(job: Mapping[str, Any], kube: KubeReader) -> dict[str, Any]:
     name = job["metadata"]["name"]
     pods = kube.json(_list_path("core", "pods", selector=f"batch.kubernetes.io/job-name={name}"))["items"]
@@ -687,8 +697,7 @@ def _backup_artifact(job: Mapping[str, Any], kube: KubeReader) -> dict[str, Any]
         f"/api/v1/namespaces/{NAMESPACE}/pods/{pod['metadata']['name']}/log?container=pg-dump",
         accept="text/plain",
     ).decode("utf-8", errors="replace")
-    matches = list(BACKUP_PATH.finditer(raw))
-    artifact = matches[-1]["name"] if matches else ""
+    artifact = _published_backup_name(raw)
     path = Path("/backups") / artifact
     complete = any(
         row.get("type") == "Complete" and row.get("status") == "True"
@@ -699,7 +708,7 @@ def _backup_artifact(job: Mapping[str, Any], kube: KubeReader) -> dict[str, Any]
             header = handle.read(5)
     else:
         header = b""
-    partial = Path(str(path) + ".partial").exists() if artifact else True
+    partial = Path(str(path) + ".partial").exists()
     return {
         "job_uid": job["metadata"]["uid"],
         "pod_uid": pod["metadata"]["uid"],
