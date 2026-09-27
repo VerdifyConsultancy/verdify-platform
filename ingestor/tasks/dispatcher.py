@@ -104,7 +104,7 @@ def _upsert_change(changes: list[tuple[str, float]], param: str, value: float) -
     changes.append((param, clean_value))
 
 
-def _without_equivalent_reconnect_durations(
+def _without_equivalent_duration_candidates(
     changes: list[tuple[str, float]], readbacks: dict[str, float]
 ) -> list[tuple[str, float]]:
     """Avoid repushing firmware-quantized seconds already equivalent on cfg."""
@@ -115,6 +115,20 @@ def _without_equivalent_reconnect_durations(
         or param not in readbacks
         or not readback_values_equivalent(param, readbacks[param], value)
     ]
+
+
+def _without_equivalent_duration_replays(
+    changes: list[tuple[str, float]],
+    readbacks: dict[str, float],
+    *,
+    reconnect_pending: bool,
+    drift_pending: bool,
+    staged_state_exists: bool,
+) -> list[tuple[str, float]]:
+    """Filter equivalent seconds only in ordinary current-generation recovery passes."""
+    if staged_state_exists or not (reconnect_pending or drift_pending):
+        return changes
+    return _without_equivalent_duration_candidates(changes, readbacks)
 
 
 def _apply_manual_overlay(changes: list[tuple[str, float]], overlay: dict[str, float]) -> set[str]:
@@ -1103,12 +1117,19 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             deduped_changes[param] = float(value)
         changes = list(deduped_changes.items())
 
-        if reconnect_pending and not (STATE_DIR / bounded_reconcile.STATE_NAME).exists():
+        if reconnect_pending or drift_versions:
             # Firmware rounds several duration controls to whole seconds.
-            # A fresh reconnect seeds the comparison cache from that cfg
-            # readback; do not repush an already equivalent desired value.
+            # Reconnect and its later cfg-drift callback can each rediscover
+            # the same equivalent value. Keep staged runs under their own
+            # exact candidate validation.
             current = shared.current_cfg_readbacks(reconnect_generation)
-            changes = _without_equivalent_reconnect_durations(changes, current)
+            changes = _without_equivalent_duration_replays(
+                changes,
+                current,
+                reconnect_pending=reconnect_pending,
+                drift_pending=bool(drift_versions),
+                staged_state_exists=(STATE_DIR / bounded_reconcile.STATE_NAME).exists(),
+            )
 
         stage_decision = bounded_reconcile.Decision("ordinary")
         if reconnect_pending and (
