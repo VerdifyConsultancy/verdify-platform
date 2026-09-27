@@ -33,8 +33,13 @@ def get_planner_service(request: Request):
 
 
 @router.get("/livez")
-def livez() -> dict[str, object]:
-    """Process-only liveness; worker/store truth belongs to /health readiness."""
+def livez(request: Request) -> dict[str, object]:
+    """Restart a process whose background worker exited; store outages stay live."""
+    if not get_planner_service(request).worker.health().alive:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"live": False, "worker_alive": False, "production_authority": "non-authoritative"},
+        )
     return {"live": True, "production_authority": "non-authoritative"}
 
 
