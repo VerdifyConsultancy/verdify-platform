@@ -288,12 +288,12 @@ images:
   - name: ghcr.io/verdifyconsultancy/verdify-setpoint-server
     newName: registry.vallery.net/verdifyconsultancy/verdify-setpoint-server
     digest: sha256:aae6c8ba5aa79f3103be95c4bf21c553a1e6968bdc19dfc4f7415cbc1b3ba5ab
-  # Hand-pinned lab publisher: merged C0 source fb92b948,
-  # build-lab-publisher in agent-fleet-ci/verdify-platform-ci-lrqdz. Its copied
-  # scripts, ingestor, MCP and schema inputs changed with the integrated source.
+  # Hand-pinned lab publisher: source 3828f784, build-lab-publisher in
+  # agent-fleet-ci/verdify-platform-ci-xbxzs. Its copied scripts, ingestor, MCP
+  # and schema inputs include the C0 evidence contract.
   - name: ghcr.io/verdifyconsultancy/verdify-lab-publisher-k3s
     newName: registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s
-    digest: sha256:0eab3a60b40926f9e2e8c34db4c7d82f39df16ca52b977362755579f02e89e98
+    digest: sha256:d76c73744101f55fdda51176bed59703acf25da2df87785a472b233c474cc085
 
 # Release pins: the digests production runs for the five actuator-managed
 # images. kustomize applies `transformers:` after `images:`, so these replace
