@@ -48,6 +48,7 @@ def _install_number_client(command):
 @pytest.mark.asyncio
 async def test_partial_delivery_records_only_returned_commands_as_sent():
     calls: list[int] = []
+    milestones: list[tuple[int, str]] = []
 
     async def command(key, _value):
         calls.append(key)
@@ -58,6 +59,10 @@ async def test_partial_delivery_records_only_returned_commands_as_sent():
     states: list[esp32_push.DeviceCommandOutcome] = []
 
     async def on_state(outcomes):
+        if all(outcome.status == "queued" for outcome in outcomes):
+            assert calls == [], "queue acceptance must persist before any command"
+        for outcome in outcomes:
+            milestones.append((outcome.index, outcome.status))
         states.extend(outcomes)
 
     result = await esp32_push.push_to_esp32_detailed(
@@ -72,6 +77,64 @@ async def test_partial_delivery_records_only_returned_commands_as_sent():
     assert shared.recently_pushed_values == {"cmd_1": 1.0, "cmd_3": 3.0}
     assert [outcome.status for outcome in states[:3]] == ["queued", "queued", "queued"]
     assert "sent" not in [outcome.status for outcome in states[:3]]
+    assert milestones == [
+        (0, "queued"),
+        (1, "queued"),
+        (2, "queued"),
+        (0, "sent"),
+        (1, "failed"),
+        (2, "sent"),
+    ]
+    assert not any(outcome.status == "confirmed" for outcome in states)
+
+
+@pytest.mark.asyncio
+async def test_retry_keeps_requested_to_queued_to_retrying_to_sent_order():
+    from tasks import dispatcher
+
+    durable_status = "requested"
+    history = [durable_status]
+    physical_status_at_send: list[str] = []
+
+    async def command(_key, _value):
+        physical_status_at_send.append(durable_status)
+        if len(physical_status_at_send) == 1:
+            raise ConnectionError("first attempt never completed")
+
+    _install_number_client(command)
+
+    def callback(final_attempt):
+        async def on_state(outcomes):
+            nonlocal durable_status
+            for outcome in outcomes:
+                next_status = dispatcher._persisted_delivery_status(outcome, final_attempt)
+                assert durable_status in esp32_push.delivery_transition_prior_statuses(next_status)
+                durable_status = next_status
+                history.append(next_status)
+
+        return on_state
+
+    first = await esp32_push.push_to_esp32_detailed(
+        [("cmd_1", 1.0, "number")],
+        attempt=1,
+        command_versions=[123.0],
+        on_state=callback(False),
+    )
+    assert first.failed_count == 1
+    assert durable_status == "retrying"
+    assert shared.recently_pushed_values == {}
+
+    second = await esp32_push.push_to_esp32_detailed(
+        [("cmd_1", 1.0, "number")],
+        attempt=2,
+        command_versions=[123.0],
+        on_state=callback(True),
+    )
+    assert second.sent_count == 1
+    assert history == ["requested", "queued", "retrying", "queued", "sent"]
+    assert physical_status_at_send == ["queued", "queued"]
+    assert shared.recently_pushed_values == {"cmd_1": 1.0}
+    assert "confirmed" not in history  # A later matching readback owns confirmation.
 
 
 @pytest.mark.asyncio
@@ -270,6 +333,15 @@ async def test_cancellation_keeps_inflight_truth_and_cancels_every_unsent_comman
     assert calls == [1]
     terminal_states = [outcome.status for outcome in states if outcome.status != "queued"]
     assert terminal_states == ["sent", "cancelled", "cancelled"]
+    assert [(outcome.index, outcome.status) for outcome in states] == [
+        (0, "queued"),
+        (1, "queued"),
+        (2, "queued"),
+        (0, "sent"),
+        (1, "cancelled"),
+        (2, "cancelled"),
+    ]
+    assert not any(outcome.status == "confirmed" for outcome in states)
     assert shared.recently_pushed_values == {"cmd_1": 1.0}
 
 
