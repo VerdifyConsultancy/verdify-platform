@@ -315,10 +315,16 @@ def test_proof_network_reach_excludes_device_and_private_networks() -> None:
     assert egress["podSelector"] == {"matchLabels": {"app.kubernetes.io/component": "experiment-v2-direct-proof"}}
     assert egress["policyTypes"] == ["Ingress", "Egress"]
     assert egress["ingress"] == []
-    assert len(egress["egress"]) == 5
+    assert len(egress["egress"]) == 6
     destinations = [target for rule in egress["egress"] for target in rule["to"]]
     ip_blocks = [target["ipBlock"] for target in destinations if "ipBlock" in target]
-    assert {block["cidr"] for block in ip_blocks} == {"10.43.0.1/32", "0.0.0.0/0"}
+    api_destinations = {
+        "10.43.0.1/32",
+        "192.168.30.31/32",
+        "192.168.30.32/32",
+        "192.168.30.33/32",
+    }
+    assert {block["cidr"] for block in ip_blocks} == api_destinations | {"0.0.0.0/0"}
     public = next(block for block in ip_blocks if block["cidr"] == "0.0.0.0/0")
     assert {
         "10.0.0.0/8",
@@ -326,7 +332,7 @@ def test_proof_network_reach_excludes_device_and_private_networks() -> None:
         "192.168.0.0/16",
         "169.254.0.0/16",
     }.issubset(set(public["except"]))
-    assert all(not block["cidr"].startswith("192.168.") for block in ip_blocks)
+    assert all(block["cidr"] in api_destinations for block in ip_blocks if block["cidr"].startswith("192.168."))
 
 
 def test_proof_script_is_syntax_valid_runtime_bound_and_non_provider() -> None:

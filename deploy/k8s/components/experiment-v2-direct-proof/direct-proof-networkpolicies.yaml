@@ -43,8 +43,8 @@ spec:
               app.kubernetes.io/component: mcp
       ports:
         - {protocol: TCP, port: 8000}
-    # The in-cluster reader uses only GET requests and exact RBAC names. This is
-    # the well-known production service IP, not a node or device-VLAN address.
+    # The in-cluster reader uses only GET requests and exact RBAC names. Permit
+    # the service IP and the three control-plane endpoints after k3s DNAT.
     - to:
         - ipBlock:
             cidr: 10.43.0.1/32
