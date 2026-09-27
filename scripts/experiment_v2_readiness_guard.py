@@ -87,6 +87,26 @@ GATE_R_ISSUE_URL = "https://github.com/VerdifyConsultancy/verdify-platform/issue
 INFORMATIONAL_MAINTENANCE_URLS = {
     f"https://github.com/VerdifyConsultancy/verdify-platform/issues/{issue}" for issue in (298, 368, 424, 427, 433)
 }
+# Only these already observed rows may be noncausal to zero-exposure Gate R.
+# Gate P must continue to block them until separate current evidence exists.
+RECOVERY_ONLY_ALERTS = {
+    "recovery_only:sensor_offline:equipment.mister_south_fert": ("11537", "sensor_offline", "acknowledged", 16),
+    "recovery_only:sensor_offline:equipment.mister_west_fert": ("11538", "sensor_offline", "acknowledged", 16),
+    "recovery_only:sensor_offline:equipment.drip_wall": ("11539", "sensor_offline", "acknowledged", 16),
+    "recovery_only:sensor_offline:equipment.drip_center": ("11540", "sensor_offline", "acknowledged", 16),
+    "recovery_only:sensor_offline:equipment.drip_wall_fert": ("11541", "sensor_offline", "acknowledged", 16),
+    "recovery_only:sensor_offline:equipment.mister_any": ("11543", "sensor_offline", "acknowledged", 16),
+    "recovery_only:sensor_offline:equipment.mister_south": ("11544", "sensor_offline", "acknowledged", 16),
+    "recovery_only:sensor_offline:equipment.mister_west": ("11545", "sensor_offline", "acknowledged", 16),
+    "recovery_only:sensor_offline:equipment.drip_center_fert": ("11546", "sensor_offline", "acknowledged", 16),
+    "recovery_only:sensor_offline:equipment.fert_master_valve": ("11547", "sensor_offline", "acknowledged", 16),
+    "recovery_only:esp32_push_failed:setpoint.sw_cool_all_fans_at_high_enabled": (
+        "11104",
+        "esp32_push_failed",
+        "open",
+        433,
+    ),
+}
 SHA40 = re.compile(r"^[0-9a-f]{40}$")
 SHA64 = re.compile(r"^[0-9a-f]{64}$")
 DIGEST = re.compile(r"^sha256:[0-9a-f]{64}$")
@@ -756,6 +776,20 @@ def _validate_alerts(
                 blockers.append(f"degradation_alert_linkage_invalid:{scope}")
             else:
                 warnings.append(f"accepted_nonblocking_degradation:{scope}")
+        elif classification == "accepted_recovery_only_degradation":
+            expected_alert = RECOVERY_ONLY_ALERTS.get(scope)
+            if (
+                mode != "recovery"
+                or expected_alert is None
+                or (row["alert_id"], row["alert_type"], row["disposition"]) != expected_alert[:3]
+                or causal
+                or row["decision_issue_url"] != GATE_R_ISSUE_URL
+                or row["maintenance_issue_url"]
+                != f"https://github.com/VerdifyConsultancy/verdify-platform/issues/{expected_alert[3]}"
+            ):
+                blockers.append(f"unsupported_alert_classification:{scope}")
+            else:
+                warnings.append(f"accepted_recovery_only_degradation:{scope}")
         elif classification != "informational_noncausal":
             if (
                 classification == "authorized_recovery_target"
