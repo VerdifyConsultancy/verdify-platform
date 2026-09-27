@@ -321,8 +321,9 @@ shows exactly one k3s writer, prove the loop is healthy before declaring success
   lands in the prod DB (continuity probe `max(ts) FROM climate` advances with no
   gap across the handoff).
 - [ ] **G10 post-deploy smoke GREEN** (`scripts/k3s-smoke.sh smoke
-  --namespace verdify-prod` — api `/health/detailed` provenance + mcp surface +
-  DB reachable) and the **device-route monitor steady at exactly 1**.
+  --namespace verdify-prod --expected-api-sha "$API_BUILD_SHA"
+  --expected-api-digest "$API_DIGEST"`, using the reviewed build/pin receipt)
+  and the **device-route monitor steady at exactly 1**.
 - [ ] **ESP32 still owns relay safety deterministically** (8-state FSM, 5 s loop)
   — confirm no controller logic moved cloud-side (migrate-as-is). Tempest UDP
   broadcast (L2-local, direct to the ESP32) confirmed unaffected — never relayed
@@ -379,18 +380,21 @@ stopped so its side is structurally 0). For continuous alerting, wire BOTH:
 ### 7.2 G10 post-deploy smoke (the #89 smoke gate)
 
 Run AFTER ArgoCD reports the prod instance green, as the post-deploy verifier
-(`scripts/k3s-smoke.sh smoke --namespace verdify-prod`). It asserts:
+(`scripts/k3s-smoke.sh smoke --namespace verdify-prod
+--expected-api-sha "$API_BUILD_SHA" --expected-api-digest "$API_DIGEST"`).
+Set both variables from the reviewed build/pin receipt. It asserts:
 
-1. **api `/health/detailed`** reachable and the baked `VERDIFY_GIT_SHA` matches
-   the deployed image's `sha-<gitsha>` tag (image==source provenance; depends on
-   #58 implementing `/health/detailed`).
-2. **mcp** Deployment Ready and the FastMCP `/mcp` streamable-http surface
-   responds to a `tools/list` JSON-RPC POST.
-3. **DB reachable** (folded into [1]: `checks.db_reachable=true`).
-4. **device-route monitor steady at exactly 1** (§7.1) — wired as a smoke
-   sub-check on prod, the post-cutover steady-state assertion.
-5. (staging variant only: ingestor `replicas==0` + ZERO device-VLAN writes — the
-   device-dark interlock; prod is the inverse and asserts exactly-one instead.)
+1. **API identity:** `/health/detailed` reports the reviewed source SHA; the
+   Deployment and every ready API pod use the reviewed digest and image ID.
+2. **MCP tools:** every ready MCP replica authenticates and lists the exact
+   source-owned Iris inventory.
+3. **Current data:** DB reachability, climate and controller action proof, and
+   one fresh complete 48-field cfg readback batch.
+4. **Device route:** run `scripts/k3s-smoke.sh device-monitor` separately; it
+   must find exactly one ESP32 socket in production (§7.1).
+
+There is no active staging namespace, so this smoke cannot claim a live
+nonproduction zero-write proof.
 
 **Wire it as a cutover gate:** the green-cycle proof (§6.3) requires the G10
 smoke GREEN before the handoff is declared done. The smoke is read-only and

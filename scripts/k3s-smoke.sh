@@ -12,14 +12,12 @@
 #   Two modes:
 #     smoke   (default)  — full post-green smoke of an instance (default ns
 #                          verdify-prod). Asserts:
-#                            1. api /health/detailed is reachable and the baked
-#                               VERDIFY_GIT_SHA matches the SHA derived from the
-#                               deployed api image digest/tag.
-#                            2. mcp is serving the streamable-http /mcp surface
-#                               (process Ready + protocol responds), and a
-#                               read-only tool-list round-trips.
-#                            3. the database is reachable (api reports
-#                               checks.db_reachable=true).
+#                            1. api source SHA and desired/running digest match
+#                               the explicit, reviewed release receipt.
+#                            2. every MCP replica authenticates and returns the
+#                               exact Iris tool inventory without exporting a token.
+#                            3. database, climate/action data, and setpoint
+#                               readbacks are fresh.
 #                            4. In prod, use device-monitor for the separate
 #                               single-writer socket invariant.
 #
@@ -41,15 +39,17 @@
 #
 # USAGE
 #   KUBECONFIG=/home/jason/.kube/verdify-agent.config \
-#     scripts/k3s-smoke.sh [smoke|device-monitor] [--namespace NS]
+#     scripts/k3s-smoke.sh smoke --expected-api-sha SHA --expected-api-digest sha256:HEX [--namespace NS]
+#     scripts/k3s-smoke.sh device-monitor [--namespace NS]
 #
 #   Environment / flags:
 #     KUBECONFIG            (required) path to the scoped kubeconfig.
 #     --namespace NS        target namespace (default: verdify-prod).
 #     --mode MODE           same as the positional MODE arg.
 #     --api-port PORT       localhost port for the api port-forward (default 18080).
-#     --mcp-port PORT       localhost port for the mcp port-forward (default 18000).
 #     --timeout SECS        per-check curl/exec timeout (default 10).
+#     --expected-api-sha SHA     40-hex source commit of the built API image.
+#     --expected-api-digest sha256:HEX  API digest from the reviewed Git pin.
 #     -h | --help
 #
 #   Exit code 0 = all checks passed. Non-zero = at least one check failed (the
@@ -65,8 +65,9 @@ set -uo pipefail
 MODE="smoke"
 NAMESPACE=""
 API_PORT="18080"
-MCP_PORT="18000"
 TIMEOUT="10"
+EXPECTED_API_SHA=""
+EXPECTED_API_DIGEST=""
 DEVICE_VLAN_CIDR="192.168.10.0/24"
 DEVICE_ESP32_IP="192.168.10.111"
 DEVICE_PORT="6053"
@@ -78,8 +79,9 @@ while [ $# -gt 0 ]; do
     --mode) MODE="${2:-}"; shift 2 ;;
     --namespace|-n) NAMESPACE="${2:-}"; shift 2 ;;
     --api-port) API_PORT="${2:-}"; shift 2 ;;
-    --mcp-port) MCP_PORT="${2:-}"; shift 2 ;;
     --timeout) TIMEOUT="${2:-}"; shift 2 ;;
+    --expected-api-sha) EXPECTED_API_SHA="${2:-}"; shift 2 ;;
+    --expected-api-digest) EXPECTED_API_DIGEST="${2:-}"; shift 2 ;;
     -h|--help)
       sed -n '2,80p' "$0" | sed 's/^# \{0,1\}//'
       exit 0 ;;
@@ -98,6 +100,13 @@ fi
 if ! command -v kubectl >/dev/null 2>&1; then
   echo "ERROR: kubectl not found on PATH." >&2
   exit 2
+fi
+if [ "${MODE}" = "smoke" ]; then
+  if ! [[ "${EXPECTED_API_SHA}" =~ ^[0-9a-f]{40}$ ]] ||
+     ! [[ "${EXPECTED_API_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+    echo "ERROR: smoke requires --expected-api-sha (40 hex) and --expected-api-digest (sha256:64 hex) from the reviewed release receipt." >&2
+    exit 2
+  fi
 fi
 
 KC=(kubectl --kubeconfig "${KUBECONFIG}" -n "${NAMESPACE}")
@@ -122,19 +131,6 @@ trap cleanup EXIT INT TERM
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
-# Derive the short git SHA the deployed api image points at, from the image
-# reference on the running Deployment. The kustomization pins a @sha256 digest,
-# but the IMAGE TAG (sha-<gitsha>) is what carries the source commit. We read
-# both: prefer the sha-<gitsha> tag if present, else fall back to comparing the
-# image digest is non-empty (provenance present). Returns the expected git_sha
-# token (may be empty if only a digest with no readable tag is present).
-expected_git_sha_from_image() {
-  local img
-  img="$("${KC[@]}" get deploy verdify-api \
-    -o jsonpath='{.spec.template.spec.containers[?(@.name=="api")].image}' 2>/dev/null)"
-  echo "${img}"
-}
-
 # Start a localhost port-forward to a Service; record pid for cleanup. Returns
 # 0 if the forward came up within TIMEOUT, else 1. port-forward mutates nothing
 # server-side — it is a local tunnel.
@@ -158,48 +154,79 @@ run_smoke() {
   echo "(READ-ONLY: no scale/patch/apply/sync; no device touch.)"
   echo ""
 
-  # 1. api /health/detailed reachable + baked VERDIFY_GIT_SHA matches the
-  #    deployed image's sha-<gitsha> tag.
+  # 1. Bind the reviewed source and digest to the Deployment and every running
+  #    API container. Digest-only Kubernetes images carry no source SHA tag.
   echo "[1] api /health/detailed — image provenance"
-  local img expected_tag
-  img="$(expected_git_sha_from_image)"
+  local img
+  img="$("${KC[@]}" get deploy verdify-api \
+    -o jsonpath='{.spec.template.spec.containers[?(@.name=="api")].image}' 2>/dev/null || true)"
   if [ -z "${img}" ]; then
     fail "api: could not read deployed image off Deployment verdify-api"
   else
     info "deployed api image: ${img}"
-    # Extract a sha-<gitsha> tag token if the image is tagged that way.
-    expected_tag="$(echo "${img}" | grep -oE 'sha-[0-9a-f]{7,40}' | head -1 || true)"
+    if [[ "${img}" == *@"${EXPECTED_API_DIGEST}" ]]; then
+      pass "api: Deployment digest matches reviewed ${EXPECTED_API_DIGEST}"
+    else
+      fail "api: Deployment digest differs from reviewed ${EXPECTED_API_DIGEST}"
+    fi
+    local pods_json image_verdict
+    pods_json="$("${KC[@]}" get pods -l app.kubernetes.io/component=api -o json 2>/dev/null || true)"
+    image_verdict="$(printf '%s' "${pods_json}" | python3 -c '
+import json, sys
+try:
+    pods = json.load(sys.stdin)["items"]
+    expected = sys.argv[1]
+    assert pods, "no API pods"
+    for pod in pods:
+        name = pod["metadata"]["name"]
+        assert pod["status"]["phase"] == "Running", f"{name} not Running"
+        matches = [s for s in pod["status"].get("containerStatuses", []) if s["name"] == "api"]
+        assert len(matches) == 1 and matches[0]["ready"], f"{name} API container unready"
+        spec_matches = [c for c in pod["spec"]["containers"] if c["name"] == "api"]
+        assert len(spec_matches) == 1 and spec_matches[0]["image"] == expected, f"{name} spec image differs"
+        assert matches[0]["imageID"].split("@")[-1] == expected.split("@")[-1], f"{name} running imageID differs"
+    print(f"{len(pods)} ready API pod(s) run Deployment digest")
+except (ValueError, KeyError, AssertionError, TypeError) as exc:
+    print(f"running image identity unavailable/mismatch: {exc}")
+    sys.exit(1)
+' "${img}" 2>/dev/null)"
+    if [ "$?" -eq 0 ]; then pass "api: ${image_verdict}"; else fail "api: ${image_verdict}"; fi
     if start_port_forward verdify-api "${API_PORT}" 8080; then
-      local body git_sha db_ok
+      local body git_sha db_ok health_body health_verdict
       body="$(curl -fsS --max-time "${TIMEOUT}" "http://127.0.0.1:${API_PORT}/health/detailed" 2>/dev/null || true)"
       if [ -z "${body}" ]; then
         fail "api: /health/detailed unreachable / empty response"
       else
-        git_sha="$(echo "${body}" | sed -n 's/.*"git_sha"[ :]*"\([^"]*\)".*/\1/p')"
-        db_ok="$(echo "${body}" | grep -o '"db_reachable"[ :]*true' || true)"
+        git_sha="$(printf '%s' "${body}" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("git_sha", ""))' 2>/dev/null || true)"
+        db_ok="$(printf '%s' "${body}" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("checks", {}).get("db_reachable", False))' 2>/dev/null || true)"
         info "/health/detailed git_sha=${git_sha:-<none>}"
-        if [ -z "${git_sha}" ] || [ "${git_sha}" = "unknown" ]; then
-          fail "api: baked VERDIFY_GIT_SHA missing/unknown in /health/detailed"
-        elif [ -n "${expected_tag}" ]; then
-          # The image tag carries sha-<gitsha>; the baked git_sha should match
-          # the gitsha portion (prefix-compare, tags may be truncated).
-          local tag_sha="${expected_tag#sha-}"
-          if [ "${git_sha}" = "${tag_sha}" ] || [ "${git_sha#"${tag_sha}"}" != "${git_sha}" ] || [ "${tag_sha#"${git_sha}"}" != "${tag_sha}" ]; then
-            pass "api: baked git_sha (${git_sha}) matches deployed image tag (${expected_tag})"
-          else
-            fail "api: baked git_sha (${git_sha}) does NOT match deployed image tag (${expected_tag})"
-          fi
+        if [ "${git_sha}" = "${EXPECTED_API_SHA}" ]; then
+          pass "api: baked git_sha matches reviewed source ${EXPECTED_API_SHA}"
         else
-          # Image pinned only by @sha256 digest with no readable sha-<gitsha>
-          # tag on the Deployment: we can still assert a real baked SHA exists.
-          pass "api: baked git_sha present (${git_sha}); image pinned by digest, no sha-tag to cross-check"
+          fail "api: baked git_sha differs from reviewed source ${EXPECTED_API_SHA}"
         fi
-        # 3. db reachability (folded in — same endpoint reports it).
-        if [ -n "${db_ok}" ]; then
+        if [ "${db_ok}" = "True" ]; then
           pass "db: reachable (api /health/detailed checks.db_reachable=true)"
         else
           fail "db: NOT reachable (api /health/detailed checks.db_reachable!=true)"
         fi
+        health_body="$(curl -fsS --max-time "${TIMEOUT}" "http://127.0.0.1:${API_PORT}/health" 2>/dev/null || true)"
+        health_verdict="$(printf '%s' "${health_body}" | python3 -c '
+import json, sys
+try:
+    body = json.load(sys.stdin)
+    checks = body["checks"]
+    assert body["status"] == "ok", "API data status is degraded"
+    for key in ("climate_age_seconds", "climate_action_log_age_seconds"):
+        age = checks[key]
+        assert isinstance(age, (int, float)) and 0 <= age <= 300, f"{key} stale/missing"
+    assert checks["climate_action_log_proof_missing"] == "", "controller action proof missing"
+    print("climate and controller action proof fresh (<=300s)")
+except (ValueError, KeyError, AssertionError, TypeError) as exc:
+    print(f"data freshness unavailable/degraded: {exc}")
+    sys.exit(1)
+' 2>/dev/null)"
+        if [ "$?" -eq 0 ]; then pass "api: ${health_verdict}"; else fail "api: ${health_verdict}"; fi
       fi
     else
       fail "api: port-forward to svc/verdify-api:8080 did not come up within ${TIMEOUT}s"
@@ -207,53 +234,95 @@ run_smoke() {
   fi
   echo ""
 
-  # 2. mcp serving — process Ready + streamable-http /mcp protocol responds +
-  #    read-only tool-list round-trips.
+  # 2. Authenticate from inside each MCP pod. The bearer stays in the pod env;
+  #    an HTTP 401 or empty inventory never passes this smoke.
   echo "[2] mcp — streamable-http /mcp tool surface"
-  local mcp_ready
-  mcp_ready="$("${KC[@]}" get deploy verdify-mcp \
-    -o jsonpath='{.status.readyReplicas}' 2>/dev/null || true)"
-  if [ "${mcp_ready:-0}" -ge 1 ] 2>/dev/null; then
-    info "mcp Deployment readyReplicas=${mcp_ready}"
+  local expected_tools mcp_pods pod mcp_verdict mcp_desired mcp_ready mcp_count
+  expected_tools="$(python3 -c 'import sys,yaml; p=yaml.safe_load(open(sys.argv[1])); c=yaml.safe_load(p["data"]["config.yaml"]); print(",".join(sorted(c["mcp_servers"]["verdify_greenhouse"]["tools"]["include"])))' \
+    "$(dirname "$0")/../deploy/k8s/components/hermes-iris/hermes-config.yaml" 2>/dev/null || true)"
+  mcp_pods="$("${KC[@]}" get pods -l app.kubernetes.io/component=mcp --field-selector=status.phase=Running \
+    -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null || true)"
+  mcp_desired="$("${KC[@]}" get deploy verdify-mcp -o jsonpath='{.spec.replicas}' 2>/dev/null || true)"
+  mcp_ready="$("${KC[@]}" get deploy verdify-mcp -o jsonpath='{.status.readyReplicas}' 2>/dev/null || true)"
+  mcp_count="$(printf '%s\n' "${mcp_pods}" | awk 'NF { n++ } END { print n+0 }')"
+  if [[ "${mcp_desired}" =~ ^[0-9]+$ ]] && [ "${mcp_desired}" -gt 0 ] &&
+     [ "${mcp_desired}" = "${mcp_ready}" ] && [ "${mcp_desired}" = "${mcp_count}" ]; then
+    pass "mcp: ${mcp_count}/${mcp_desired} replicas Running and Ready"
   else
-    fail "mcp: Deployment has no ready replicas (readyReplicas=${mcp_ready:-0})"
+    fail "mcp: desired=${mcp_desired:-?} ready=${mcp_ready:-?} Running=${mcp_count}"
   fi
-  if start_port_forward verdify-mcp "${MCP_PORT}" 8000; then
-    # FastMCP streamable-http: a tools/list JSON-RPC POST to /mcp. We accept any
-    # HTTP response (even a protocol/auth error) as proof the surface is live;
-    # a non-empty tool list is the strong pass.
-    local mcp_resp
-    mcp_resp="$(curl -fsS --max-time "${TIMEOUT}" \
-      -H 'Content-Type: application/json' \
-      -H 'Accept: application/json, text/event-stream' \
-      -X POST "http://127.0.0.1:${MCP_PORT}/mcp" \
-      -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' 2>/dev/null || true)"
-    if [ -z "${mcp_resp}" ]; then
-      # curl -f fails on HTTP >=400; retry without -f to detect a live-but-erroring surface.
-      local code
-      code="$(curl -s -o /dev/null -w '%{http_code}' --max-time "${TIMEOUT}" \
-        -H 'Content-Type: application/json' \
-        -H 'Accept: application/json, text/event-stream' \
-        -X POST "http://127.0.0.1:${MCP_PORT}/mcp" \
-        -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' 2>/dev/null || true)"
-      if [ -n "${code}" ] && [ "${code}" != "000" ]; then
-        pass "mcp: /mcp surface live (HTTP ${code}; tool-list needs a session handshake — surface confirmed)"
-      else
-        fail "mcp: /mcp surface did not respond"
-      fi
-    elif echo "${mcp_resp}" | grep -q '"tools"'; then
-      local n
-      n="$(echo "${mcp_resp}" | grep -o '"name"' | wc -l | tr -d ' ')"
-      pass "mcp: tools/list round-tripped (~${n} tool entries)"
-    else
-      pass "mcp: /mcp surface responded to tools/list (non-empty body)"
-    fi
+  if [ -z "${expected_tools}" ] || [ -z "${mcp_pods}" ]; then
+    fail "mcp: canonical Iris inventory or Running pods unavailable"
   else
-    fail "mcp: port-forward to svc/verdify-mcp:8000 did not come up within ${TIMEOUT}s"
+    while IFS= read -r pod; do
+      [ -z "${pod}" ] && continue
+      mcp_verdict="$("${KC[@]}" exec -i "${pod}" -c mcp -- python - "${expected_tools}" "${TIMEOUT}" <<'PY' 2>/dev/null
+import json, os, sys, urllib.error, urllib.request
+
+def request(method, ident, token):
+    payload = {"jsonrpc": "2.0", "id": ident, "method": method, "params": {}}
+    if method == "initialize":
+        payload["params"] = {"protocolVersion": "2025-11-25", "capabilities": {},
+                             "clientInfo": {"name": "verdify-g10-smoke", "version": "1"}}
+    headers = {"accept": "application/json, text/event-stream", "content-type": "application/json",
+               "authorization": "Bearer " + token}
+    if method != "initialize":
+        headers["mcp-protocol-version"] = "2025-11-25"
+    req = urllib.request.Request("http://127.0.0.1:8000/mcp", json.dumps(payload).encode(),
+                                 headers=headers, method="POST")
+    with urllib.request.urlopen(req, timeout=float(sys.argv[2])) as response:
+        if response.status != 200:
+            raise ValueError("protocol HTTP status was not 200")
+        raw = response.read(1048577)
+        if len(raw) > 1048576:
+            raise ValueError("protocol response too large")
+        if response.headers.get("content-type", "").startswith("text/event-stream"):
+            raw = next(line[6:] for line in raw.splitlines() if line.startswith(b"data: "))
+        return json.loads(raw)
+
+try:
+    token = os.environ["VERDIFY_MCP_TOKEN_IRIS"]
+    assert token, "Iris bearer absent"
+    assert "result" in request("initialize", 1, token), "initialize result absent"
+    actual = {tool["name"] for tool in request("tools/list", 2, token)["result"]["tools"]}
+    expected = set(sys.argv[1].split(","))
+    assert actual == expected, "Iris inventory differs from source"
+    print(f"authenticated initialize and exact {len(actual)}-tool Iris inventory")
+except (OSError, KeyError, StopIteration, ValueError, AssertionError, TypeError) as exc:
+    print(f"authenticated MCP tool-list failed: {type(exc).__name__}: {exc}")
+    sys.exit(1)
+PY
+)"
+      if [ "$?" -eq 0 ]; then pass "mcp pod ${pod}: ${mcp_verdict}"; else fail "mcp pod ${pod}: ${mcp_verdict:-tool-list unavailable}"; fi
+    done <<< "${mcp_pods}"
   fi
   echo ""
 
-  info "smoke mode covers service health only; run device-monitor for the prod single-writer socket invariant"
+  # 3. Setpoint readbacks must keep advancing. This is observation, not a
+  #    synthetic setpoint write or confirmation claim for a particular plan.
+  echo "[3] setpoint observation — fresh snapshot"
+  local snapshot fields snapshot_age snapshot_count
+  fields="$(PYTHONPATH="$(dirname "$0")/.." python3 -c '
+from verdify_schemas.component_executor import CANONICAL_FIELD_ORDER
+assert len(CANONICAL_FIELD_ORDER) == 48
+assert all(name.replace("_", "").isalnum() for name in CANONICAL_FIELD_ORDER)
+print("ARRAY[" + ",".join("\x27" + name + "\x27" for name in CANONICAL_FIELD_ORDER) + "]::text[]")
+' 2>/dev/null || true)"
+  if [ -n "${fields}" ]; then
+    snapshot="$("${KC[@]}" exec verdify-db-0 -c postgres -- psql -U verdify -d verdify -At \
+      -c "WITH complete AS (SELECT ts FROM setpoint_snapshot WHERE greenhouse_id='vallery' AND zone IS NULL AND band_role IS NULL AND parameter=ANY(${fields}) AND ts>now()-interval '5 minutes' GROUP BY ts HAVING count(DISTINCT parameter)=48 ORDER BY ts DESC LIMIT 1) SELECT coalesce(extract(epoch from now()-max(ts))::int,999999),count(*) FROM complete" \
+      2>/dev/null || true)"
+  else
+    snapshot=""
+  fi
+  IFS='|' read -r snapshot_age snapshot_count <<< "${snapshot}"
+  if [[ "${snapshot_age}" =~ ^[0-9]+$ ]] && [ "${snapshot_count}" = "1" ] &&
+     [ "${snapshot_age}" -le 300 ]; then
+    pass "setpoint snapshot fresh (${snapshot_age}s; complete canonical 48-field batch)"
+  else
+    fail "setpoint snapshot stale/incomplete/unavailable (age=${snapshot_age:-?}s; complete batches=${snapshot_count:-?})"
+  fi
+  info "run device-monitor for the separate production single-writer socket invariant"
   echo ""
 
   print_summary
