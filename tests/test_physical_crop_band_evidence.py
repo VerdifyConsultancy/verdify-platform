@@ -103,6 +103,52 @@ def test_physical_crop_compliance_stays_separate_from_controller_credit_and_hous
     assert "2/96" in rendered
     assert "85.8%" not in rendered
     assert "continuous exposure" in rendered
+    assert "temperature 20/96 and VPD 10/96" in rendered
+    assert "Temperature: 40 high and 36 low miss bins" in rendered
+    assert "VPD: 50 high and 36 low miss bins" in rendered
+    assert "worst measured zone north" in rendered
+    assert "worst measured zone west" in rendered
+    assert "crop-targets-2026-09-25" in rendered
+    assert "definition fixed-panel-crop-band-v1" in rendered
+
+
+def test_joint_pass_can_exceed_separate_axis_pass_after_shared_slot_recalculation():
+    # In fixed_panel.py, the two axis means use their own eligible slots, while
+    # the joint means are recalculated on the six-field intersection. An axis
+    # can miss separately and pass jointly without violating the measurement.
+    row = qualified_row()
+    row["diagnostic"]["temp"] = _axis(0, 50, 46, "north")
+    physical = PhysicalCropBandEvidence.model_validate(row)
+    assert physical.diagnostic.temp.in_band_bins == 0
+    assert physical.diagnostic.joint.in_band_bins == 2
+    rendered = _publisher().physical_crop_band_block(physical.model_dump(mode="json"), DAY.isoformat())
+    assert "2/96 joint in band" in rendered
+    assert "temperature 0/96" in rendered
+
+
+def test_worst_zone_can_miss_when_panel_mean_is_in_band():
+    row = qualified_row()
+    row["diagnostic"]["temp"] = {
+        **_axis(96, 0, 0, "north"),
+        "in_band_pct": 100,
+        "mean_high_distance": 0,
+        "mean_low_distance": 0,
+        "mean_outside_distance": 0,
+    }
+    physical = PhysicalCropBandEvidence.model_validate(row)
+    assert physical.diagnostic.temp.in_band_pct == 100
+    assert physical.diagnostic.temp.worst_measured_zone == "north"
+
+
+@pytest.mark.parametrize(
+    ("high", "low", "mean_high"),
+    [(41, 36, 0.2), (40, 35, 0.2), (40, 36, 0)],
+)
+def test_axis_rejects_inconsistent_panel_miss_partition_and_distance(high, low, mean_high):
+    row = qualified_row()
+    row["diagnostic"]["temp"].update(high_miss_bins=high, low_miss_bins=low, mean_high_distance=mean_high)
+    with pytest.raises(ValidationError):
+        PhysicalCropBandEvidence.model_validate(row)
 
 
 @pytest.mark.parametrize(
