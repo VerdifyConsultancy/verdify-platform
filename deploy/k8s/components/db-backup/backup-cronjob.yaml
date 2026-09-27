@@ -186,6 +186,11 @@ spec:
                   mv "${roles}.partial" "${roles}"
                   mv "${out}.partial" "${out}"
                   mv "${manifest}.partial" "${manifest}"
+                  if ! (cd "${BACKUP_DIR}" && tail -n +2 "$(basename -- "${manifest}")" \
+                      | sha256sum -c - >/dev/null 2>&1); then
+                    echo "[backup] FATAL: published pair failed checksum verification" >&2
+                    exit 1
+                  fi
                   published=1
                   echo "[backup] wrote paired ${out} ($(du -h "${out}" | cut -f1)) roles=${roles} manifest=${manifest}"
                   # RETENTION: keep the newest ${RETENTION_DAYS} days of dumps;
