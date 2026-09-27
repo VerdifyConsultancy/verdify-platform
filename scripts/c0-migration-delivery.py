@@ -268,10 +268,11 @@ def run_successor_249(directory, environment, *, plan):
 
 def deliver_resource_successor(directory, files, rows, contract, environment, *, plan):
     row = rows.get(("db/migrations", "db/migrations/" + SUCCESSOR_249))
-    if row is None:
-        psql(successor_probe(contract), environment)
-    else:
+    if row is not None:
         verify_post_249(contract, environment)
+        print("Post-C0 migration 249 verified; no writes.")
+        return
+    psql(successor_probe(contract), environment)
     run_successor_249(directory, environment, plan=plan)
     if not plan:
         after_rows = ledger_rows(environment)
