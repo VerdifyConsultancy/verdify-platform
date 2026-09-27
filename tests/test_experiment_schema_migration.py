@@ -283,6 +283,8 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "249-observed-minute-runtime-write-grant.sql",
         # The band provenance correction must run through the live ledger.
         "250-band-divergence-provenance.sql",
+        # Source-only recovery repairs must reach the ledgered runner in order.
+        "251-experiment-v2-legacy-expired-recovery-terminalization.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(
