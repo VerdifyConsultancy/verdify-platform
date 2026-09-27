@@ -19,6 +19,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 from verdify_public.output_policy import redact_non_public_crop_references  # noqa: E402
 from verdify_schemas.observed_minutes import ObservedMinuteEvidence  # noqa: E402
+from verdify_schemas.physical_crop_band import PhysicalCropBandEvidence  # noqa: E402
 
 DEFAULT_API_URL = "https://api.verdify.ai/api/v1/public/evidence-snapshot"
 DEFAULT_VAULT = Path("/mnt/iris/verdify-vault/website")
@@ -148,6 +149,35 @@ def observed_minute_block(payload, expected_day: str | None = None) -> str:
     )
 
 
+def physical_crop_band_block(payload, expected_day: str | None = None) -> str:
+    """Show only a validated, complete fixed-panel crop result."""
+    try:
+        evidence = PhysicalCropBandEvidence.model_validate(payload)
+        if (
+            evidence.availability == "available"
+            and expected_day is not None
+            and evidence.day.isoformat() != expected_day
+        ):
+            raise ValueError("physical snapshot date mismatch")
+    except (ValidationError, TypeError, ValueError):
+        evidence = PhysicalCropBandEvidence(unavailable_reason="invalid_evidence")
+    if evidence.availability != "available":
+        return '<div class="data-row"><strong>Physical crop-band compliance</strong><span>Unavailable</span><p>No qualified fixed-panel crop result for this day. Legacy house averages, controller credit and the Sep 4 counterfactual cannot fill this value.</p></div>'
+    d = evidence.diagnostic
+    return (
+        '<div class="data-row"><strong>Physical crop-band compliance</strong>'
+        f"<span>{esc(fmt_number(d.joint.in_band_pct, 1, '%'))} joint · "
+        f"{esc(fmt_number(d.temp.in_band_pct, 1, '%'))} temperature · "
+        f"{esc(fmt_number(d.vpd.in_band_pct, 1, '%'))} VPD</span>"
+        f"<p>Qualified fixed north/east/west panel bins: {d.joint.in_band_bins}/{d.joint.eligible_bins} "
+        f"joint in band; {d.joint.eligible_bins}/{d.expected_bins} bins eligible. "
+        f"Target {esc(d.target_version)} ({esc(d.target_manifest_sha256)}); "
+        f"panel {esc(d.panel_version)} ({esc(d.panel_manifest_sha256)}); "
+        f"revision {evidence.revision_id}. These are sampled 15-minute bins, not continuous exposure; "
+        "center, DLI, gas and resource-cost outcomes remain unavailable.</p></div>"
+    )
+
+
 def planning_block(data: dict) -> str:
     pq = data.get("planning_quality") or {}
     score_date = fmt_score_date(data)
@@ -207,6 +237,7 @@ def planning_block(data: dict) -> str:
 
 <div class="data-table">
   {observed_minute_block(pq.get("observed_minute_evidence"), score_date)}
+  {physical_crop_band_block(pq.get("physical_crop_band_evidence"), score_date)}
   <div class="data-row"><strong>Measurement basis</strong><span>{"Contract 2" if binary_verified else "Unverified contract; binary metrics withheld"}</span><p>Legacy house-average readings against historical desired setpoints; not duration-weighted, fixed-panel crop compliance or confirmed firmware consumption. Coverage is unverified and no center probe is measured. Stress assumes one minute per scored reading.</p></div>
   <div class="data-row"><strong>Last validated plan</strong><span>{esc(last_validated_plan_id)}</span><p>Validated {esc(validated_at)}{esc(outcome_text)}.</p></div>
   <div class="data-row"><strong>Latest plan status</strong><span>{esc(last_plan_id)} · {esc(last_plan_status)}</span><p>Written {esc(last_plan_created)}; age {esc(last_plan_age)} at snapshot time.</p></div>
