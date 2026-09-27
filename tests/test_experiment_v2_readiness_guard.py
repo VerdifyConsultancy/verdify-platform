@@ -129,6 +129,21 @@ def test_false_green_fixture_reports_truthful_degraded_pass() -> None:
     assert "accepted_nonblocking_degradation:hydroponic_monitor" in result["warnings"]
 
 
+def test_adjacent_climate_cycles_pass_when_previous_cycle_exceeds_capture_age() -> None:
+    packet = copy.deepcopy(BASE)
+    packet["captured_at"] = "2026-08-30T12:01:44.000000Z"
+    result = _evaluate(packet, {"now": packet["captured_at"]})
+    assert result["status"] == "degraded-pass"
+    assert not [blocker for blocker in result["blockers"] if blocker.startswith("climate_sample:")]
+
+
+def test_newest_climate_cycle_still_requires_90_second_freshness() -> None:
+    packet = copy.deepcopy(BASE)
+    packet["captured_at"] = "2026-08-30T12:02:31.000000Z"
+    result = _evaluate(packet, {"now": packet["captured_at"]})
+    assert "climate_sample:1_cached" in result["blockers"]
+
+
 def test_recovery_packet_overlay_binds_only_gate_r_requirements() -> None:
     assert RECOVERY_OVERLAY["base"] == "base-proof.json"
     packet = _apply(BASE, RECOVERY_OVERLAY["operations"])
