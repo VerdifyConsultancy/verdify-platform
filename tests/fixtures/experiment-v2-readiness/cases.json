@@ -33,7 +33,7 @@
   {
     "name": "stale_cycle_cannot_supply_advancement_evidence",
     "operations": [
-      {"op": "set", "path": "/climate/samples/0/sample_at", "value": "2026-08-30T11:59:59.000000Z"}
+      {"op": "set", "path": "/climate/samples/0/sample_at", "value": "2026-08-30T11:59:00.000000Z"}
     ],
     "expected_status": "fail",
     "expected_blocker": "climate_sample:0_cached"

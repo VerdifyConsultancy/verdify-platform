@@ -3,7 +3,7 @@ kind: ConfigMap
 metadata:
   name: experiment-v2-gate-r-readiness-activation
 data:
-  VERDIFY_GATE_R_READINESS_APPLICATION_SOURCE: "6c5c03b602902abc43a3b6f38bf1a109516839e2"
+  VERDIFY_GATE_R_READINESS_APPLICATION_SOURCE: "0dd67132fd937854d687c4e6474f8d67a5c93525"
   VERDIFY_GATE_R_READINESS_EXPERIMENT_ID: "45039c86-c1d9-52f6-a0a9-d94a17bc4b14"
 ---
 apiVersion: batch/v1

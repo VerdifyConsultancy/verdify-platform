@@ -23,6 +23,20 @@ sys.modules[SPEC.name] = collector
 SPEC.loader.exec_module(collector)
 
 
+def test_writer_log_request_accepts_kubernetes_stream(monkeypatch) -> None:
+    reader = collector.KubeReader.__new__(collector.KubeReader)
+    seen = {}
+
+    def get(path, *, accept):
+        seen.update(path=path, accept=accept)
+        return b"writer attestation\n"
+
+    monkeypatch.setattr(reader, "_get", get)
+    assert reader.logs("writer-pod") == "writer attestation\n"
+    assert seen["path"].endswith("/pods/writer-pod/log?container=ingestor&timestamps=false")
+    assert seen["accept"] == "*/*"
+
+
 def _climate_row(moment: datetime, offset: float) -> dict:
     row = {
         "ts": moment,
@@ -85,6 +99,31 @@ def test_backup_packet_fails_when_no_controller_owned_success_is_retained() -> N
     }
     with pytest.raises(collector.CollectionError, match="no successful controller-owned"):
         collector.backup_evidence(None, facts)
+
+
+@pytest.mark.parametrize("published", ["wrote", "wrote paired"])
+def test_backup_log_selects_published_dump_before_pruned_paths(published: str) -> None:
+    log = (
+        "[backup] pg_dump -Fc verdify@verdify-db -> /backups/verdify-20260926T081706Z.dump\n"
+        f"[backup] {published} /backups/verdify-20260926T081706Z.dump (269.4M)\n"
+        "[backup] pruning dumps older than 14d in /backups\n"
+        "/backups/verdify-20260910T081717Z.dump\n"
+        "/backups/verdify-20260911T081708Z.dump\n"
+    )
+    assert collector._published_backup_name(log) == "verdify-20260926T081706Z.dump"
+
+
+@pytest.mark.parametrize(
+    "log",
+    [
+        "[backup] pg_dump -Fc verdify@verdify-db -> /backups/verdify-20260926T081706Z.dump\n",
+        "[backup] wrote /backups/verdify-20260926T081706Z.dump (269.4M)\n"
+        "[backup] wrote paired /backups/verdify-20260926T081707Z.dump (269.4M)\n",
+    ],
+)
+def test_backup_log_fails_closed_without_unique_publish_line(log: str) -> None:
+    with pytest.raises(collector.CollectionError, match="no unique published dump path"):
+        collector._published_backup_name(log)
 
 
 def test_climate_projection_uses_exact_supplied_newest_two_rows_without_filtering() -> None:
@@ -458,6 +497,58 @@ def test_alert_projection_classifies_only_exact_source_grounded_exceptions() -> 
     )[-1]
     assert blocked["classification"] == "unclassified"
     assert blocked["causal"] is True
+
+
+def test_recovery_only_alert_projection_is_bound_to_exact_existing_rows() -> None:
+    required = [
+        {"id": 1, "alert_type": "sensor_offline", "sensor_id": "climate.temp_south"},
+        {"id": 2, "alert_type": "sensor_offline", "sensor_id": "climate.rh_south"},
+        {"id": 3, "alert_type": "sensor_offline", "sensor_id": "climate.vpd_south"},
+        {"id": 4, "alert_type": "sensor_offline", "sensor_id": "climate.hydro_ph"},
+    ]
+    observed = []
+    for alert_id, (alert_type, sensor, disposition, source, opened, _issue) in collector.RECOVERY_ONLY_ALERTS.items():
+        details = (
+            {"type": "equipment", "staleness_ratio": 4.7}
+            if alert_type == "sensor_offline"
+            else {"parameter": "sw_cool_all_fans_at_high_enabled", "failure_reason": "transport_disconnected"}
+        )
+        observed.append(
+            {
+                "id": alert_id,
+                "ts": opened,
+                "alert_type": alert_type,
+                "sensor_id": sensor,
+                "disposition": disposition,
+                "source": source,
+                "severity": "warning",
+                "details": details,
+            }
+        )
+    projected = collector.alert_projection(
+        {"open_alerts": [*required, *observed]},
+        observed_at="2026-09-27T08:32:13Z",
+        experiment_id="45039c86-c1d9-52f6-a0a9-d94a17bc4b14",
+    )
+    assert len(projected[2:]) == 11
+    assert all(row["classification"] == "accepted_recovery_only_degradation" for row in projected[2:])
+    assert all(row["causal"] is False for row in projected[2:])
+
+    for mutation in (
+        {"id": 99999},
+        {"source": "other"},
+        {"severity": "critical"},
+        {"ts": "2026-09-09T16:06:11Z"},
+        {"details": {}},
+    ):
+        changed = {**observed[0], **mutation}
+        blocked = collector.alert_projection(
+            {"open_alerts": [*required, changed]},
+            observed_at="2026-09-27T08:32:13Z",
+            experiment_id="45039c86-c1d9-52f6-a0a9-d94a17bc4b14",
+        )[-1]
+        assert blocked["classification"] == "unclassified"
+        assert blocked["causal"] is True
 
 
 def test_collector_source_has_no_device_client_or_mutating_kubernetes_method() -> None:

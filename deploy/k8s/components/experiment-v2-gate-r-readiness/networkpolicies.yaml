@@ -37,6 +37,14 @@ spec:
             cidr: 10.43.0.1/32
       ports:
         - {protocol: TCP, port: 443}
+    # k3s DNATs the Kubernetes service to these control-plane endpoints before
+    # the egress policy is enforced. Keep both service and endpoint paths narrow.
+    - to:
+        - ipBlock: {cidr: 192.168.30.31/32}
+        - ipBlock: {cidr: 192.168.30.32/32}
+        - ipBlock: {cidr: 192.168.30.33/32}
+      ports:
+        - {protocol: TCP, port: 6443}
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy

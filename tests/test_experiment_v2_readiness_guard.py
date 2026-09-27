@@ -129,6 +129,21 @@ def test_false_green_fixture_reports_truthful_degraded_pass() -> None:
     assert "accepted_nonblocking_degradation:hydroponic_monitor" in result["warnings"]
 
 
+def test_adjacent_climate_cycles_pass_when_previous_cycle_exceeds_capture_age() -> None:
+    packet = copy.deepcopy(BASE)
+    packet["captured_at"] = "2026-08-30T12:01:44.000000Z"
+    result = _evaluate(packet, {"now": packet["captured_at"]})
+    assert result["status"] == "degraded-pass"
+    assert not [blocker for blocker in result["blockers"] if blocker.startswith("climate_sample:")]
+
+
+def test_newest_climate_cycle_still_requires_90_second_freshness() -> None:
+    packet = copy.deepcopy(BASE)
+    packet["captured_at"] = "2026-08-30T12:02:31.000000Z"
+    result = _evaluate(packet, {"now": packet["captured_at"]})
+    assert "climate_sample:1_cached" in result["blockers"]
+
+
 def test_recovery_packet_overlay_binds_only_gate_r_requirements() -> None:
     assert RECOVERY_OVERLAY["base"] == "base-proof.json"
     packet = _apply(BASE, RECOVERY_OVERLAY["operations"])
@@ -266,6 +281,41 @@ def test_exact_expired_work_alert_is_a_recovery_target_only() -> None:
     proof["alerts"].append(alert)
     result = _evaluate(proof, {"operations": []})
     assert any(blocker.startswith("unsupported_alert_classification:recovery_target") for blocker in result["blockers"])
+
+
+def test_exact_open_equipment_and_push_alerts_are_recovery_only() -> None:
+    alerts = []
+    for scope, (alert_id, alert_type, disposition, issue) in guard.RECOVERY_ONLY_ALERTS.items():
+        alerts.append(
+            {
+                "alert_id": alert_id,
+                "alert_type": alert_type,
+                "scope": scope,
+                "disposition": disposition,
+                "observed_at": NOW,
+                "classification": "accepted_recovery_only_degradation",
+                "causal": False,
+                "decision_issue_url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/641",
+                "maintenance_issue_url": f"https://github.com/VerdifyConsultancy/verdify-platform/issues/{issue}",
+            }
+        )
+    recovery = _apply(BASE, RECOVERY_OVERLAY["operations"])
+    recovery["alerts"].extend(alerts)
+    result = _evaluate(recovery, RECOVERY_OVERLAY)
+    assert result["blockers"] == []
+    assert sum(warning.startswith("accepted_recovery_only_degradation:") for warning in result["warnings"]) == 11
+
+    proof = copy.deepcopy(BASE)
+    proof["alerts"].extend(alerts)
+    result = _evaluate(proof, {"operations": []})
+    assert (
+        sum(blocker.startswith("unsupported_alert_classification:recovery_only:") for blocker in result["blockers"])
+        == 11
+    )
+
+    recovery["alerts"][-1]["alert_id"] = "different-incident"
+    result = _evaluate(recovery, RECOVERY_OVERLAY)
+    assert any(blocker.startswith("unsupported_alert_classification:recovery_only:") for blocker in result["blockers"])
 
 
 def _run(
@@ -512,6 +562,15 @@ def test_recovery_mode_cannot_request_gate_p() -> None:
             mode="recovery",
             boundary="gate-r",
         )
+
+
+def test_recovery_accepts_unrun_authentication_counters_without_proof_credit() -> None:
+    packet = _apply(BASE, RECOVERY_OVERLAY["operations"])
+    auth = packet["evidence"]["authentication_686"]
+    auth.update(status="not-run-recovery-mode", replica_count=0, replicas_checked=0)
+    result = _evaluate(packet, RECOVERY_OVERLAY)
+    assert result["blockers"] == []
+    assert result["authorized_gate"] == "R"
 
 
 def test_dependency_trace_is_hash_bound_and_contains_no_hydro_source_dependency() -> None:

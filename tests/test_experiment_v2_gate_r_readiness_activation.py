@@ -123,4 +123,4 @@ def test_read_capability_and_network_are_exact() -> None:
     ip_blocks = [
         target["ipBlock"]["cidr"] for rule in policy["spec"]["egress"] for target in rule["to"] if "ipBlock" in target
     ]
-    assert ip_blocks == ["10.43.0.1/32"]
+    assert ip_blocks == ["10.43.0.1/32", "192.168.30.31/32", "192.168.30.32/32", "192.168.30.33/32"]
