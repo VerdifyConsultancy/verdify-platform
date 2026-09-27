@@ -47,14 +47,14 @@ BEGIN
     SELECT * INTO v_exp FROM public.control_experiments
      WHERE experiment_id = p_experiment_id FOR UPDATE;
     IF v_exp.experiment_id IS NULL OR
-       v_exp.protocol_version <> 2 OR
-       v_exp.kind <> 'randomized' OR
-       v_exp.status <> 'draft' OR
-       v_exp.execution_phase <> 'shadow' OR
-       v_exp.admission_state <> 'closed' OR
-       v_exp.component_enabled OR
-       v_exp.lease_generation <> p_expected_lease_generation OR
-       v_exp.revision_bundle_sha256 <>
+       v_exp.protocol_version IS DISTINCT FROM 2 OR
+       v_exp.kind IS DISTINCT FROM 'randomized' OR
+       v_exp.status IS DISTINCT FROM 'draft' OR
+       v_exp.execution_phase IS DISTINCT FROM 'shadow' OR
+       v_exp.admission_state IS DISTINCT FROM 'closed' OR
+       v_exp.component_enabled IS DISTINCT FROM false OR
+       v_exp.lease_generation IS DISTINCT FROM p_expected_lease_generation OR
+       v_exp.revision_bundle_sha256 IS DISTINCT FROM
            '3e26a2da1863bd14d255d58fe00d8e94aae9226f9b588ddd9d4f993e6bcb7016' OR
        EXISTS (
            SELECT 1 FROM public.experiment_v2_exposures exposure
@@ -211,10 +211,10 @@ BEGIN
     SELECT * INTO v_ops FROM public.fn_experiment_v2_ops_status()
      WHERE experiment_id = p_experiment_id;
     IF v_ops.experiment_id IS NULL OR v_unresolved <> 0 OR
-       v_ops.safety_state <> 'runtime_fault' OR
-       v_ops.alert_reason <> 'runtime_fault_requires_recovery' OR
-       v_ops.open_exposure_count <> 0 OR
-       v_ops.observation_truth <> 'no_current_work' THEN
+       v_ops.safety_state IS DISTINCT FROM 'runtime_fault' OR
+       v_ops.alert_reason IS DISTINCT FROM 'runtime_fault_requires_recovery' OR
+       v_ops.open_exposure_count IS DISTINCT FROM 0 OR
+       v_ops.observation_truth IS DISTINCT FROM 'no_current_work' THEN
         RAISE EXCEPTION 'legacy recovery terminalization did not preserve truthful runtime-fault hold';
     END IF;
     RETURN v_inserted;

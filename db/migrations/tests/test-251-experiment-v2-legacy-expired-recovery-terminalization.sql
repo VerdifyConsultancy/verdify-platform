@@ -169,6 +169,20 @@ BEGIN
     END IF;
     DELETE FROM public.experiment_v2_work_events;
 
+    UPDATE public.control_experiments SET component_enabled = NULL;
+    BEGIN
+        PERFORM public.fn_experiment_v2_terminalize_legacy_expired_recovery(
+            '45039c86-c1d9-52f6-a0a9-d94a17bc4b14',
+            'ace2d26c-539d-4007-ad9c-d25ad812644f', 17, 'fixture');
+        RAISE EXCEPTION 'null component state unexpectedly passed';
+    EXCEPTION WHEN OTHERS THEN
+        IF SQLERRM = 'null component state unexpectedly passed' THEN RAISE; END IF;
+    END;
+    UPDATE public.control_experiments SET component_enabled = false;
+    IF EXISTS (SELECT 1 FROM public.experiment_v2_work_events) THEN
+        RAISE EXCEPTION 'null state appended work history';
+    END IF;
+
     SELECT public.fn_experiment_v2_terminalize_legacy_expired_recovery(
         '45039c86-c1d9-52f6-a0a9-d94a17bc4b14',
         'ace2d26c-539d-4007-ad9c-d25ad812644f', 17, 'fixture')
