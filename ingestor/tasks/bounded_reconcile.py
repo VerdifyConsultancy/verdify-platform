@@ -32,6 +32,20 @@ CONFIRM_DEADLINE = timedelta(minutes=8)
 CONFIRM_RECHECK_SECONDS = 20
 PLAN_SEND_MARGIN = timedelta(minutes=5)  # dispatcher task timeout for a 12-command batch
 ZONE_VPD_TARGETS = frozenset({"vpd_target_south", "vpd_target_west", "vpd_target_east", "vpd_target_center"})
+# Only these active-plan fields can change effective value when the live
+# VPD-high moisture cap engages or releases. Every other fixed candidate stays
+# bound to the approved value. New guardrail fields require an explicit review.
+DYNAMIC_MOISTURE_GUARDRAIL_PARAMS = frozenset(
+    {
+        "fog_escalation_kpa",
+        "min_fog_off_s",
+        "mister_all_delay_s",
+        "mister_all_kpa",
+        "mister_engage_delay_s",
+        "mister_engage_kpa",
+        "mister_pulse_gap_s",
+    }
+)
 
 
 class SnapshotBehindReadbacks(ValueError):
@@ -200,23 +214,35 @@ async def _preview(conn, changes, planned, generation: int, baseline_names: set[
 
 
 def _validated_residual(
-    preview: dict, state: dict, zone_vpd_targets: dict[str, float] | None, limit: int
+    preview: dict,
+    state: dict,
+    zone_vpd_targets: dict[str, float] | None,
+    limit: int,
+    guardrail_values: dict[str, float] | None = None,
 ) -> list[tuple[str, float]]:
-    """Keep every fixed command exact; rebase only crop-owned zone VPD targets."""
+    """Bind fixed values; rebase only crop VPD and proven live moisture caps."""
     approved = state["approved_preview"]
     completed = set(state["completed"])
     approved_changes = dict(approved["changes"])
     current_changes = dict(preview["changes"])
+    approved_plan_params = {row["parameter"] for row in approved["plan_rows"]}
+    dynamic_guardrails = (
+        DYNAMIC_MOISTURE_GUARDRAIL_PARAMS & approved_plan_params & approved_changes.keys()
+        if guardrail_values is not None
+        else frozenset()
+    )
     approved_fixed = [
         [param, value]
         for param, value in approved["changes"]
-        if param not in ZONE_VPD_TARGETS and param not in completed
+        if param not in ZONE_VPD_TARGETS and param not in dynamic_guardrails and param not in completed
     ]
     from .dispatcher import readback_values_equivalent
 
     current_fixed = []
     for param, value in preview["changes"]:
         if param in ZONE_VPD_TARGETS:
+            continue
+        if param in dynamic_guardrails:
             continue
         if param in completed:
             if (
@@ -232,6 +258,24 @@ def _validated_residual(
         raise ValueError("desired fixed candidate changed or completed field reappeared")
     if any(param not in approved_changes for param in current_changes):
         raise ValueError("unapproved candidate appeared")
+    # The dispatcher supplies these values after applying the current live
+    # guardrail to the unchanged active plan. A missing candidate is valid only
+    # when the current-generation readback already matches that value.
+    dynamic_residual = []
+    for param, _approved_value in approved["changes"]:
+        if param not in dynamic_guardrails:
+            continue
+        if guardrail_values is None or param not in guardrail_values:
+            raise ValueError(f"live guardrail source unavailable: {param}")
+        effective = float(guardrail_values[param])
+        observed = preview["readbacks"].get(param)
+        current = current_changes.get(param)
+        if current is not None and float(current) != effective:
+            raise ValueError(f"live guardrail candidate changed outside source: {param}")
+        if current is None and not readback_values_equivalent(param, observed, effective):
+            raise ValueError(f"omitted live guardrail candidate lacks equivalent readback: {param}")
+        if current is not None and not readback_values_equivalent(param, observed, effective):
+            dynamic_residual.append((param, effective))
     for param, value in current_changes.items():
         if param not in ZONE_VPD_TARGETS:
             continue
@@ -252,6 +296,7 @@ def _validated_residual(
     # solar-time changes during the earlier stages do not stale its request.
     return [
         *(tuple(item) for item in approved_fixed),
+        *dynamic_residual,
         *(
             (param, current_changes[param])
             for param, _ in approved["changes"]
@@ -261,7 +306,12 @@ def _validated_residual(
 
 
 def _validate_state(
-    preview: dict, state: dict, now: datetime, zone_vpd_targets: dict[str, float] | None, limit: int
+    preview: dict,
+    state: dict,
+    now: datetime,
+    zone_vpd_targets: dict[str, float] | None,
+    limit: int,
+    guardrail_values: dict[str, float] | None = None,
 ) -> list[tuple[str, float]]:
     approved = state["approved_preview"]
     if preview["session_id"] != approved["session_id"] or preview["pod"] != approved["pod"]:
@@ -292,7 +342,7 @@ def _validate_state(
                 raise ValueError(f"confirmed readback drifted: {param}")
         elif not _equal(observed, expected):
             raise ValueError(f"unapproved readback changed: {param}")
-    return _validated_residual(preview, state, zone_vpd_targets, limit)
+    return _validated_residual(preview, state, zone_vpd_targets, limit, guardrail_values)
 
 
 async def _check_records(conn, records: list[dict], readbacks: dict, started_at: str) -> bool:
@@ -388,6 +438,7 @@ async def choose_stage(
     state_dir: Path,
     limit: int,
     zone_vpd_targets: dict[str, float] | None = None,
+    guardrail_values: dict[str, float] | None = None,
 ) -> Decision:
     """Write a read-only preview; select at most one durable stage if approved."""
     approval_path = state_dir / APPROVAL_NAME
@@ -465,7 +516,7 @@ async def choose_stage(
                 "completed_values": {},
                 "status": "ready",
             }
-            _validate_state(preview, state, now, zone_vpd_targets, limit)
+            _validate_state(preview, state, now, zone_vpd_targets, limit, guardrail_values)
             _write(state_path, state)
         if state["run_id"] != approval.get("run_id"):
             raise ValueError("approval changed during run")
@@ -511,7 +562,7 @@ async def choose_stage(
             state["records"] = []
             state["status"] = "ready"
             _write(state_path, state)
-        residual = _validate_state(preview, state, now, zone_vpd_targets, limit)
+        residual = _validate_state(preview, state, now, zone_vpd_targets, limit, guardrail_values)
         if shared.esp32.get("client") is None:
             raise ValueError("sole ESPHome client unavailable")
         if not shared.writer_lease_strictly_held(minimum_remaining_s=3):

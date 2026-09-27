@@ -34,6 +34,7 @@ class ReadOnlyFixture:
         self.ts = datetime.now(UTC)
         self.expiry = self.ts + timedelta(minutes=40)
         self.rows = {}
+        self.plan_values = {}
 
     async def fetch(self, sql, *_args):
         if "FROM setpoint_snapshot" in sql:
@@ -51,7 +52,10 @@ class ReadOnlyFixture:
         return self.rows.get((ts, parameter))
 
     def planned(self):
-        return [{"parameter": param, "value": 1.0, "plan_id": "iris-test", "ts": self.ts} for param in self.parameters]
+        return [
+            {"parameter": param, "value": self.plan_values.get(param, 1.0), "plan_id": "iris-test", "ts": self.ts}
+            for param in self.parameters
+        ]
 
 
 @pytest.fixture
@@ -249,6 +253,74 @@ async def test_confirmed_quantized_seconds_do_not_block_eight_remaining_or_repus
     assert again.action == "complete" and again.changes == ()
 
 
+@pytest.mark.asyncio
+async def test_completed_live_moisture_cap_can_lift_and_reengage_under_same_plan(fixture, tmp_path):
+    db = fixture
+    fog = "fog_escalation_kpa"
+    zones = ["vpd_target_south", "vpd_target_west"]
+    db.parameters = [param for param in db.names[:13] if param != fog][:11] + [fog] + zones
+    db.readbacks.update({param: 0.0 for param in zones})
+    zone_targets = {param: 1.0 for param in zones}
+    db.plan_values[fog] = 0.35
+    initial = [(param, 0.3 if param == fog else 1.0) for param in db.parameters]
+    await bounded.choose_stage(db, initial, db.planned(), 3, tmp_path, 12, zone_targets, {fog: 0.3})
+    approve(bounded._read(tmp_path / bounded.PREVIEW_NAME), tmp_path)
+    first = await bounded.choose_stage(db, initial, db.planned(), 3, tmp_path, 12, zone_targets, {fog: 0.3})
+    assert first.action == "send" and len(first.changes) == 12 and first.changes[-1] == (fog, 0.3)
+    first_records = records(first.changes)
+    bounded.finish_stage(tmp_path, first, first_records, [])
+    for record in first_records:
+        db.readbacks[record["parameter"]] = record["value"]
+        db.rows[(record["requested_at"], record["parameter"])] = {
+            "delivery_status": "confirmed",
+            "confirmed_at": datetime.now(UTC),
+        }
+
+    source_mismatch = tmp_path.parent / "guardrail-source-mismatch"
+    shutil.copytree(tmp_path, source_mismatch)
+    changed = [(param, 1.0) for param in zones] + [(fog, 0.4)]
+    held = await bounded.choose_stage(db, changed, db.planned(), 3, source_mismatch, 12, zone_targets, {fog: 0.35})
+    assert held.action == "hold" and "outside source" in held.reason
+
+    fixed_mismatch = tmp_path.parent / "ordinary-fixed-mismatch"
+    shutil.copytree(tmp_path, fixed_mismatch)
+    held = await bounded.choose_stage(
+        db,
+        changed[:-1] + [(db.parameters[0], 2.0), (fog, 0.35)],
+        db.planned(),
+        3,
+        fixed_mismatch,
+        12,
+        zone_targets,
+        {fog: 0.35},
+    )
+    assert held.action == "hold" and "completed fixed candidate drifted" in held.reason
+
+    lifted = [(param, 1.0) for param in zones] + [(fog, 0.35)]
+    second = await bounded.choose_stage(db, lifted, db.planned(), 3, tmp_path, 12, zone_targets, {fog: 0.35})
+    assert second.action == "send" and second.changes == ((fog, 0.35), *[(param, 1.0) for param in zones])
+    second_records = records(second.changes)
+    bounded.finish_stage(tmp_path, second, second_records, [])
+    for record in second_records:
+        db.readbacks[record["parameter"]] = record["value"]
+        db.rows[(record["requested_at"], record["parameter"])] = {
+            "delivery_status": "confirmed",
+            "confirmed_at": datetime.now(UTC),
+        }
+
+    capped_again = await bounded.choose_stage(db, [(fog, 0.3)], db.planned(), 3, tmp_path, 12, zone_targets, {fog: 0.3})
+    assert capped_again.action == "send" and capped_again.changes == ((fog, 0.3),)
+    third_record = records(capped_again.changes)
+    bounded.finish_stage(tmp_path, capped_again, third_record, [])
+    db.readbacks[fog] = 0.3
+    db.rows[(third_record[0]["requested_at"], fog)] = {
+        "delivery_status": "confirmed",
+        "confirmed_at": datetime.now(UTC),
+    }
+    done = await bounded.choose_stage(db, [], db.planned(), 3, tmp_path, 12, zone_targets, {fog: 0.3})
+    assert done.action == "complete" and done.changes == ()
+
+
 def test_fresh_reconnect_skips_only_equivalent_quantized_durations():
     changes = [
         ("min_fog_on_s", 54.75),
@@ -263,6 +335,14 @@ def test_fresh_reconnect_skips_only_equivalent_quantized_durations():
         "min_fog_off_s": 80.0,
     }
     assert dispatcher._without_equivalent_duration_candidates(changes, readbacks) == [("min_fog_off_s", 99.0)]
+
+
+def test_dynamic_stage_fields_cover_only_the_live_moisture_guardrail():
+    live = dispatcher._vpd_high_moisture_guardrails(
+        {"vpd_low": 0.26, "vpd_high": 0.81},
+        {"temp_avg": 66.3, "dew_point": 53.5, "vpd_avg": 0.95},
+    )
+    assert set(live) == bounded.DYNAMIC_MOISTURE_GUARDRAIL_PARAMS
 
 
 def test_equivalent_seconds_are_filtered_again_on_later_cfg_drift_pass():

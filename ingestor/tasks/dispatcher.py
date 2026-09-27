@@ -1147,6 +1147,11 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                 {param: round(float(zone_row[param]), 2) for param in bounded_reconcile.ZONE_VPD_TARGETS}
                 if zone_row
                 else None,
+                {
+                    param: float(planner_params[param])
+                    for param in bounded_reconcile.DYNAMIC_MOISTURE_GUARDRAIL_PARAMS
+                    if param in planner_params
+                },
             )
             if stage_decision.action == "hold":
                 shared.defer_failed_dispatch(reconnect_generation, drift_versions)

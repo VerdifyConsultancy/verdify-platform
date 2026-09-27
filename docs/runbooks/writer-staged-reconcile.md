@@ -18,9 +18,14 @@ prior-stage field, one atomic 48-field DB snapshot, the active plan rows and
 their earliest expiry, image source revision, pod, session, and connection
 generation. Unrelated changing sensor values do not invalidate the approval.
 An approval expires in at most 30 minutes, or five minutes before the first
-plan/one-shot expiry. A changed fixed desired value, bound readback, plan,
-session, or generation stops the run before another stage. Only the four crop
+plan/one-shot expiry. A changed unrelated fixed desired value, bound readback,
+plan, session, or generation stops the run before another stage. The four crop
 VPD targets may move with their fresh source calculation; they are sent last.
+The seven named VPD-high moisture guardrail fields may also change effective
+value under the same unchanged plan when the live guardrail engages or releases.
+The dispatcher verifies each against its freshly calculated effective value;
+other planner fields stay fixed to approval. Already confirmed guardrail values
+must retain their readback until a new bounded stage sends the changed value.
 
 ## Arm once from a fresh preview
 
