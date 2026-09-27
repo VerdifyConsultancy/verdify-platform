@@ -21,6 +21,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 MIGRATION = ROOT / "db/migrations/242-outdoor-forecast-verification.sql"
+ASOF_DIAGNOSTICS = ROOT / "research/planner-efficacy/forecast_asof_diagnostics.sql"
 TABLES = {
     "climate": {
         "ts": "timestamptz",
@@ -218,6 +219,7 @@ def replay(query, bundle):
         correction.index("CREATE OR REPLACE FUNCTION fn_forecast_correction") : correction.index("-- 2. v_active_plan")
     ]
     migration = MIGRATION.read_text()
+    asof_diagnostics = ASOF_DIAGNOSTICS.read_text()
     execute = query
 
     def query(sql):
@@ -275,10 +277,20 @@ LANGUAGE sql IMMUTABLE AS $$ SELECT date_bin($1, $2, timestamptz '1970-01-01 UTC
     if restored_identities != identities:
         raise RuntimeError("outer migration rollback changed baseline view identities")
     query("BEGIN;\n" + migration + "\nCOMMIT;")
+    query("BEGIN;\n" + asof_diagnostics + "\nROLLBACK;")
+    if query("SELECT to_regclass('public.v_forecast_indoor_response') IS NULL;") != "t":
+        raise RuntimeError("local as-of SQL rollback did not remove its views")
+    query("BEGIN;\n" + asof_diagnostics + "\nCOMMIT;")
     after = capture()
     for result, decision in zip(after, decisions, strict=True):
         query(f"TRUNCATE replay_clock; INSERT INTO replay_clock VALUES ({literal(decision.isoformat())});")
         result["priors"] = read_rows("SELECT * FROM v_forecast_planning_priors")
+        result["asof_priors"] = read_rows(
+            f"SELECT * FROM fn_forecast_planning_priors_as_of({literal(decision.isoformat())}::timestamptz)"
+        )
+        result["indoor_response"] = read_rows(
+            "SELECT * FROM v_forecast_indoor_response WHERE valid_at >= now() - interval '7 days'"
+        )
     return {
         "replay_contract": 1,
         "verification_contract_version": 2,
@@ -290,6 +302,7 @@ LANGUAGE sql IMMUTABLE AS $$ SELECT date_bin($1, $2, timestamptz '1970-01-01 UTC
         },
         "source_sha256": {
             "migration_242": digest(migration.encode()),
+            "local_asof_diagnostics": digest(asof_diagnostics.encode()),
             "baseline_101_slice": digest(baseline.encode()),
             "baseline_049_view": digest(legacy.encode()),
             "baseline_050_function": digest(correction.encode()),
@@ -302,6 +315,7 @@ LANGUAGE sql IMMUTABLE AS $$ SELECT date_bin($1, $2, timestamptz '1970-01-01 UTC
             "Unmodified SQL binds now() to a private replay clock; time_bucket uses UTC date_bin.",
             "Forecast availability uses fetched_at, not unrecorded provider issuance.",
             "Observation timestamps are not ingestion availability: retrospective corrections/late rows may leak.",
+            "The separate indoor/outdoor differential is observational, not provider forecast error or a causal response.",
             "Snapshot export bounds are not proof of raw retention or sensor coverage.",
             "Legacy DISTINCT ON conflicting ties are unspecified by the old source SQL.",
             "Old correction's second argument means observation age; new one means forecast lead.",

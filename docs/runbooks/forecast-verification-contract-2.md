@@ -4,6 +4,15 @@ Migration 242 replaces indoor/outdoor VPD comparisons and duplicated sample
 counts with versioned outdoor verification. It does not establish indoor response,
 crop outcomes, causal control benefit or a new study protocol.
 
+The private replay runs `research/planner-efficacy/forecast_asof_diagnostics.sql`
+against a disposable local database. Its `fn_forecast_planning_priors_as_of`
+applies recorded `fetched_at <= decision_at` before latest-vintage selection and
+uses only valid hours completed before that decision for calibration. Its
+`v_forecast_indoor_response` separately labels the observed indoor-minus-outdoor
+VPD differential at the valid-time minute. An outdoor forecast can have zero
+error while this differential is nonzero. The historical SQL changes no
+production catalog or runtime role; migration 242 remains the live contract.
+
 ## Definition
 
 The provider's [hourly parameter definitions](https://open-meteo.com/en/docs),
@@ -123,10 +132,13 @@ only its own private-socket cluster, disables TCP, ignores inherited `PG*`
 configuration, and does not use an existing database. The report includes SHA-256
 input/tool/SQL identities, export metadata, row counts, old and corrected daily
 and lead-bucket outputs, old/new correction functions and prospective priors at
-each frozen decision. The repository SQL is unmodified; `now()` is bound to a
+each frozen decision. It also includes the local SQL's explicit as-of priors and
+separately labeled indoor/outdoor VPD differential. The repository SQL is
+unmodified; `now()` is bound to a
 private stable clock and hourly `time_bucket` is emulated with UTC `date_bin`.
 An outer-transaction migration rollback must restore baseline results and view
-identities before the local commit/replay proceeds. This is not a production
+identities before the local commit/replay proceeds. The local diagnostics SQL
+also must roll back cleanly before replay. This is not a production
 backup restore, latency proof, or live acceptance receipt.
 
 Review paired-hour counts, forecast availability/freshness, missing truth and

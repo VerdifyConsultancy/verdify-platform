@@ -7,6 +7,7 @@ from test_scorecard_semantics import isolated_pg as isolated_pg
 
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATION = ROOT / "db/migrations/242-outdoor-forecast-verification.sql"
+ASOF_DIAGNOSTICS = ROOT / "research/planner-efficacy/forecast_asof_diagnostics.sql"
 
 
 def _baseline():
@@ -210,3 +211,44 @@ INSERT INTO weather_forecast SELECT hour+interval '1 hour', hour-interval '1 hou
         )
         == 0
     )
+
+
+def test_historical_decision_cutoff_and_indoor_response_are_separate(isolated_pg):
+    query = isolated_pg
+    query(_baseline())
+    query("BEGIN;\n" + MIGRATION.read_text() + "\nCOMMIT;")
+    sql = ASOF_DIAGNOSTICS.read_text()
+    query("BEGIN;\n" + sql + "\nROLLBACK;")
+    assert query("SELECT to_regclass('v_forecast_indoor_response') IS NULL;") == "t"
+    query("BEGIN;\n" + sql + "\nCOMMIT;")
+    assert query("SELECT has_table_privilege('verdify_ingestor_runtime', 'weather_forecast', 'SELECT');") == "f"
+    query("""
+INSERT INTO weather_forecast
+SELECT date_bin(interval '1 hour', now(), timestamptz '1970-01-01 UTC') + interval '2 hours',
+       now() - interval '45 minutes', 77, 100, 0, 100, 0;
+INSERT INTO weather_forecast
+SELECT date_bin(interval '1 hour', now(), timestamptz '1970-01-01 UTC') + interval '2 hours',
+       now() - interval '15 minutes', 77, 100, 4, 100, 0;
+""")
+    old = json.loads(
+        query("""
+SELECT row_to_json(p) FROM fn_forecast_planning_priors_as_of(now()-interval '30 minutes') p
+WHERE param='vpd_kpa';""")
+    )
+    current = json.loads(
+        query("""
+SELECT row_to_json(p) FROM fn_forecast_planning_priors_as_of(now()) p
+WHERE param='vpd_kpa';""")
+    )
+    assert old["raw_forecast"] == 0
+    assert current["raw_forecast"] == 4
+    assert old["available_at"] != current["available_at"]
+    assert old["calibration_paired_hours"] == current["calibration_paired_hours"] == 1
+    assert query("SELECT count(*) FROM fn_forecast_planning_priors_as_of(now());") == "3"
+    assert query("SELECT count(*) FROM fn_forecast_planning_priors_as_of(now()+interval '1 minute');") == "0"
+    response = json.loads(query("SELECT row_to_json(v) FROM v_forecast_indoor_response v;"))
+    assert response["indoor_vpd_kpa"] == 8
+    assert response["outdoor_vpd_kpa"] == 0
+    assert response["indoor_minus_outdoor_vpd_kpa"] == 8
+    assert response["outcome_label"] == "observed_indoor_outdoor_differential_not_forecast_error"
+    assert query("SELECT vpd_error_kpa FROM v_forecast_accuracy;") == "0.00"

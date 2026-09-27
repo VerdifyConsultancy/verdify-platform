@@ -110,7 +110,11 @@ def assert_replay(report):
     assert (new["samples"], new["bias"], new["observed_minutes"]) == (1, 0, 1)
     for result, expected in zip(report["corrected"], [0, 4], strict=True):
         prior = next(r for r in result["priors"] if r["param"] == "vpd_kpa")
+        asof_prior = next(r for r in result["asof_priors"] if r["param"] == "vpd_kpa")
         assert prior["raw_forecast"] == expected
+        assert asof_prior["raw_forecast"] == expected
+        assert asof_prior["available_at"] == prior["available_at"]
+        assert asof_prior["calibration_paired_hours"] == 1
         assert prior["corrected_prior"] == expected
         assert prior["calibration_paired_hours"] == 1
         assert replayer.timestamp(prior["available_at"]) <= replayer.timestamp(result["decision_at"])
@@ -118,12 +122,16 @@ def assert_replay(report):
         solar = next(r for r in result["priors"] if r["param"] == "solar_w_m2")
         assert solar["availability"] == "partial_window_nowcast"
         assert solar["corrected_prior"] is None
+        response = next(r for r in result["indoor_response"] if r["valid_at"].startswith("2019-01-02T09:00"))
+        assert response["indoor_minus_outdoor_vpd_kpa"] == 8
+        assert response["outcome_label"] == "observed_indoor_outdoor_differential_not_forecast_error"
 
 
 def test_historical_clock_and_decision_cutoff_bind_to_unmodified_sql(isolated_pg):
     report = replayer.replay(isolated_pg, copy.deepcopy(bundle()))
     assert_replay(report)
     assert report["source_sha256"]["migration_242"] == replayer.digest(replayer.MIGRATION.read_bytes())
+    assert report["source_sha256"]["local_asof_diagnostics"] == replayer.digest(replayer.ASOF_DIAGNOSTICS.read_bytes())
     assert "Observation timestamps are not ingestion availability" in " ".join(report["limitations"])
 
 
