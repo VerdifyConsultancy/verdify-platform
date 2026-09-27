@@ -6,8 +6,5 @@ kind: Kustomization
 resources:
   - ../../overlays/prod
 
-components:
-  - ../../components/experiment-v2-gate-r
-
 patches:
   - path: activation-values.patch.yaml
