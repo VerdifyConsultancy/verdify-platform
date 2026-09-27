@@ -45,7 +45,9 @@ class PhysicalBandAxis(BaseModel):
         n, inside = self.eligible_bins, self.in_band_bins
         outside = n - inside
         high, low = self.high_miss_bins, self.low_miss_bins
-        if inside > n or max(high, low) > outside or high + low < outside:
+        # Each eligible panel mean is either in band, low, or high. Zone
+        # excursions are separate and may occur while the panel mean is in band.
+        if inside > n or high + low != outside:
             raise ValueError("physical axis bin counts conflict")
         if not _close(self.in_band_pct, 100 * inside / n if n else None):
             raise ValueError("physical axis percentage conflicts with denominator")
@@ -59,10 +61,10 @@ class PhysicalBandAxis(BaseModel):
         else:
             if not _close(self.mean_outside_distance, self.mean_high_distance + self.mean_low_distance):
                 raise ValueError("physical high/low distance does not sum to outside distance")
-            if (high == 0 and self.mean_high_distance != 0) or (low == 0 and self.mean_low_distance != 0):
-                raise ValueError("nonzero distance without a measured miss")
-        if (outside > 0) != (self.worst_measured_zone is not None):
-            raise ValueError("worst measured zone must track observed misses")
+            if (self.mean_high_distance > 0) != (high > 0) or (self.mean_low_distance > 0) != (low > 0):
+                raise ValueError("physical distance and panel miss counts conflict")
+        if (n == 0 and self.worst_measured_zone is not None) or (outside > 0 and self.worst_measured_zone is None):
+            raise ValueError("worst measured zone conflicts with eligible panel bins")
         return self
 
 
@@ -129,9 +131,11 @@ class PhysicalCropBandDiagnostic(BaseModel):
             self.temp.eligible_bins > self.expected_bins
             or self.vpd.eligible_bins > self.expected_bins
             or self.joint.eligible_bins > min(self.temp.eligible_bins, self.vpd.eligible_bins)
-            or self.joint.in_band_bins > min(self.temp.in_band_bins, self.vpd.in_band_bins)
         ):
             raise ValueError("physical axis/joint coverage conflicts")
+        # The joint calculation recomputes both panel means on the shared
+        # six-field slots. Its pass count need not be a subset of either axis'
+        # independently computed pass count.
         return self
 
 

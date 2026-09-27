@@ -17,8 +17,14 @@ reward term.
 The typed `fixed-panel-crop-band-v1` diagnostic describes the future
 qualification contract: immutable crop targets as of each evaluated bin, a
 fixed north/east/west panel of fresh probes, a complete Denver local-day
-15-minute window, axis and joint eligible denominators, high/low miss counts
-and mean outside distances, and the worst measured zone. This is a sampled-bin
+15-minute window, axis and joint eligible denominators, high/low panel-mean
+miss counts and mean outside distances, and the worst measured zone. Every
+eligible axis panel mean is in band, low or high, so its high/low miss counts
+must partition its out-of-band bins. The joint means are recalculated on the
+shared six-field sample slots; their pass count can exceed either separate
+axis pass count. A measured zone can miss while the three-zone panel mean
+passes. The public projection reports each denominator, both directions of
+severity and the zone separately from controller credit. This is a sampled-bin
 measure, not continuous exposure. Validating a diagnostic's internal shape
 does not authenticate its source.
 
