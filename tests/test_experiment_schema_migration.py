@@ -285,6 +285,8 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "250-band-divergence-provenance.sql",
         # Source-only recovery repairs must reach the ledgered runner in order.
         "251-experiment-v2-legacy-expired-recovery-terminalization.sql",
+        # Fixed-panel source history must be installed before future qualification.
+        "252-fixed-panel-source-history.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(

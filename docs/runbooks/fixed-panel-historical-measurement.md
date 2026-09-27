@@ -82,12 +82,55 @@ The stdout receipt carries source and contract hashes and explicitly says
 `physical_truth_authenticated: false`: byte hashes and structural checks do
 not authenticate a source ledger or a claimed hardware serial. A reviewer
 must verify the source-owned revision, capture path and physical inventory.
-The current production `crop_target_profiles` has no historical validity or
+Before migration 252, `crop_target_profiles` had no historical validity or
 recorded-at lineage, and old climate routes have no proven serial history.
 Consequently, the 2025 winter and 2026 warm analogue windows cannot be
 qualified through this verifier by filling them with today's targets or
 invented serials. A source-owned target-history and contributor-history
 capture is still required before future selector replay and joint power.
+
+### Forward source capture after migration 252
+
+Migration 252 adds `crop_target_profile_revisions`,
+`fixed_panel_target_revisions` and `fixed_panel_contributor_revisions`.
+Its first target-profile records are
+explicitly **migration-time baselines**; later insert, update and delete events
+are captured by database triggers. Updates to unrelated source rows do not
+change the production crop resolver or experiment authority. `TRUNCATE` is
+rejected because it would skip row capture. All three history tables reject updates,
+deletes and truncation. Runtime roles have no direct access to either table.
+
+For each future target contract, use profile revisions recorded before the
+outcome window, retain their IDs and hashes privately, and resolve explicit
+crop/zone/season 15-minute bounds. Append the frozen bins to
+`fixed_panel_target_revisions` with a distinct target version and a future
+effective interval. The insertion trigger rejects backdating; this table
+does not feed the live crop resolver. Independently verify its bin payload
+through `pretrial_provenance.py`. The profile audit alone does not prove the
+crop assignment or convert `crop_target_profiles` into the served band. A
+transaction can commit after its `recorded_at`; leave a conservative margin
+between the source capture and the outcome window. Earlier windows remain
+unqualified.
+
+The contributor ledger starts **empty**. At this source revision the route
+names and Modbus addresses are north `north_wall_probe`/2, east
+`east_wall_probe`/5, and west `west_wall_probe`/3, with matching `temp_*` and
+`vpd_*` climate columns. These are source routes, not physical serials. A
+future owner may append a `route_only` row with no serial, or append a
+`hardware_attested` row containing a distinct private serial and SHA-256 of
+the independently reviewed inventory evidence. Both need a pinned source
+revision and a validity interval beginning **after** record time. A route
+change or probe replacement gets a new row and a new panel version; never
+backdate or edit an earlier row. If intervals overlap or evidence cannot
+authenticate the serial, do not emit the corresponding
+`verdify-contributor-history-v1` source to the verifier. The ledger stores
+an external claim; its hash and SQL constraints cannot verify physical truth.
+
+The private export for `pretrial_provenance.py` must still carry source file
+SHA-256, export time after the full measurement window, three distinct
+serials with complete validity intervals, and target bins from a frozen
+pre-window definition. Migration 252 is capture infrastructure only; it does
+not qualify #782, authorize a design lock, draw, or device action.
 
 The export object contains exactly:
 
