@@ -278,11 +278,11 @@ images:
   - name: ghcr.io/verdifyconsultancy/verdify-experiment-v2-orchestrator
     newName: registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator
     digest: sha256:a9c6c347eec4b1dde20c3d44571a507d3ed3c1393abf1c2237d80f0e53176511
-  # Hand-pinned planner: merged C0 source fb92b948, build-planner in
-  # agent-fleet-ci/verdify-platform-ci-lrqdz. It carries the flat scorecard context.
+  # Hand-pinned planner: merged source 96a1d6bd includes the #822 liveness fix;
+  # built by agent-fleet-ci/verdify-platform-build-planner-96a1d6bd-vdbkv.
   - name: ghcr.io/verdifyconsultancy/verdify-planner
     newName: registry.vallery.net/verdifyconsultancy/verdify-planner
-    digest: sha256:4205c53fecdec6e3a2505b01f3392594ec1300c946d91a6824732b9a5d6c9afe
+    digest: sha256:2bf4889b96b39887d6880d5e14df060a4e15da76471a1a4e8ca5bd83ef26c124
   # Hand-pinned grow-light writer: merged C0 source fb92b948,
   # build-setpoint-server in agent-fleet-ci/verdify-platform-ci-lrqdz. Its copied
   # verdify_schemas package changed; focused backend tests preserve the #447 asyncpg path. This prod-only
