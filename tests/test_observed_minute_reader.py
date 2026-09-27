@@ -340,7 +340,10 @@ def extract_function(path, name, namespace):
 @pytest.mark.parametrize("consumer", ["api", "mcp"])
 @pytest.mark.parametrize("use_today", [False, True])
 def test_actual_scorecard_consumers_attach_separate_typed_snapshot(consumer, use_today):
+    from verdify_schemas.physical_crop_band import PhysicalCropBandEvidence
+
     evidence = parse_observed_minute_row(captured(), DAY)
+    physical = PhysicalCropBandEvidence(day=DAY, unavailable_reason="publication_not_qualified")
     calls = []
 
     async def read(conn, day):
@@ -371,6 +374,7 @@ def test_actual_scorecard_consumers_attach_separate_typed_snapshot(consumer, use
         ScorecardResponse=ScorecardResponse,
         ValidationError=ValidationError,
         read_observed_minute_evidence=read,
+        unpublished_physical_crop_band_evidence=lambda day: physical,
         _fetch_planner_scorecard=fetch,
         pool=SimpleNamespace(acquire=Checkout),
         _db=db,
@@ -386,6 +390,7 @@ def test_actual_scorecard_consumers_attach_separate_typed_snapshot(consumer, use
         assert wire.pop("metric_semantics")["crop_outcome_eligible"] is False
         result = ScorecardResponse.model_validate(wire)
     assert result.compliance_pct == 6.1 and result.observed_minute_evidence == evidence
+    assert result.physical_crop_band_evidence == physical
     assert calls[:2] == ["resolved_day_once", DAY] if use_today else calls[0] == DAY
     if consumer == "mcp":
         assert calls[-1] == "closed"
