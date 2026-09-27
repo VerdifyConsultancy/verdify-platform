@@ -133,10 +133,9 @@ components:
   # vectors. It cannot enable the component, open admission, randomize, or write
   # a device. Exact replay is idempotent after migration 221.
   - ../../components/experiment-v2-direct-launch-bootstrap
-  # Direct physical proof is deliberately absent from ordinary production.
-  # A fresh attended attempt must use the separate, suspended activation render
-  # under deploy/k8s/activations/experiment-v2-direct-proof and be removed again
-  # after its append-only receipt. Ordinary convergence stays coarse-off.
+  # One-shot #641 Gate P activation. Retire after the immutable proof or failed
+  # attempt receipt; the ordinary overlay remains coarse-off afterward.
+  - ../../components/experiment-v2-direct-proof
   # #124 verdify-lab — the public Quartz research site (lab.verdify.ai). Pure web
   # tier with no device path. The publisher owns content; a content-free nginx
   # runtime serves its validated cache PVC.
@@ -169,6 +168,8 @@ components:
   - ../../components/ha-gap-backfill
 
 patches:
+  # Local copy because Kustomize restricts patch files outside this overlay.
+  - path: direct-proof-activation.patch.yaml
   # Reconcile the live, verified 2026-08-01 Hermes PVC cutover.
   - path: hermes-data-portable.patch.yaml
   # The old, detached pre-portable claim has a readable Completed backup and no

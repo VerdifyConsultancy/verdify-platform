@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: experiment-v2-direct-proof-activation
+data:
+  VERDIFY_DIRECT_PROOF_EXPERIMENT_ID: "45039c86-c1d9-52f6-a0a9-d94a17bc4b14"
+  VERDIFY_DIRECT_PROOF_AUTHORIZATION_REF: "jason-just-run-it-20260927-7d2533e3-b178-47cf-8353-af34058e2f74"
+  VERDIFY_DIRECT_PROOF_FACILITY_AUTHORIZATION_REF: "jason-rescue-availability-20260927-e5ae6dd5-6bf4-482a-a62c-1f5bed54b855"
+  VERDIFY_DIRECT_PROOF_AUTHORIZED_FROM: "REPLACE_AFTER_FINAL_BUILD_UTC"
+  VERDIFY_DIRECT_PROOF_AUTHORIZED_TO: "REPLACE_AFTER_FINAL_BUILD_UTC"
+  VERDIFY_DIRECT_PROOF_SUPERVISOR_ROLE: "Jason Vallery"
+  VERDIFY_DIRECT_PROOF_RESCUE_OWNER_ROLE: "Jason Vallery"
+  VERDIFY_DIRECT_PROOF_ACTOR: "jason-root-agent"
+  VERDIFY_DIRECT_PROOF_CONFIG_REVISION: "4dbb2e691d91"
+  VERDIFY_DIRECT_PROOF_APPLICATION_SOURCE: "REPLACE_AFTER_FINAL_BUILD_SOURCE_SHA"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-ingestor
+spec:
+  template:
+    metadata:
+      annotations:
+        verdify.io/direct-proof-activation: "21f6920c-7946-4a83-8385-465c6f9a2523"
+    spec:
+      containers:
+        - name: ingestor
+          env:
+            - name: VERDIFY_POLICY_VECTOR_MODE
+              value: "off"
+            - name: VERDIFY_COMPONENT_EXPERIMENT_ENABLED
+              value: "enabled"
+            - name: VERDIFY_ACTIVE_EXPERIMENT_ID
+              value: "45039c86-c1d9-52f6-a0a9-d94a17bc4b14"
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: verdify-experiment-v2-direct-proof
+spec:
+  suspend: false
+  template:
+    spec:
+      containers:
+        - name: direct-proof
+          # The activation overlay wraps prod after its image transformer has
+          # run, so require a deliberate current immutable pin here as well.
+          image: invalid.local/replace-after-final-build:never
