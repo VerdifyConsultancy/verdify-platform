@@ -61,9 +61,26 @@ def test_gate_r_default_activation_is_suspended_and_exact() -> None:
     assert all(value == "REPLACE_BEFORE_ACTIVATION" for value in activation["data"].values())
 
 
-def test_ordinary_production_does_not_render_gate_r() -> None:
+def test_attended_production_gate_r_is_bound_and_one_shot() -> None:
     docs = _render(ROOT / "deploy/k8s/overlays/prod")
-    names = {(doc["kind"], doc["metadata"]["name"]) for doc in docs}
-    assert ("Job", "verdify-experiment-v2-gate-r") not in names
-    assert ("ConfigMap", "experiment-v2-gate-r") not in names
-    assert ("ConfigMap", "experiment-v2-gate-r-activation") not in names
+    jobs = [doc for doc in docs if doc["kind"] == "Job" and doc["metadata"]["name"] == "verdify-experiment-v2-gate-r"]
+    assert len(jobs) == 1
+    job = jobs[0]
+    assert job["spec"]["suspend"] is False
+    assert job["spec"]["backoffLimit"] == 0
+    assert job["metadata"]["annotations"]["argocd.argoproj.io/hook"] == "PostSync"
+    assert job["metadata"]["annotations"]["argocd.argoproj.io/sync-wave"] == "1"
+    activation = next(
+        doc
+        for doc in docs
+        if doc["kind"] == "ConfigMap" and doc["metadata"]["name"] == "experiment-v2-gate-r-activation"
+    )
+    values = activation["data"]
+    assert all(value and not value.startswith("REPLACE_BEFORE_ACTIVATION") for value in values.values())
+    assert values["VERDIFY_GATE_R_PREDECESSOR_AUTHORIZATION_ID"] == "d00304d1-74f9-4872-857e-6944de53ac46"
+    assert values["VERDIFY_GATE_R_EXPECTED_AGGRESSIVE_WORK_ID"] == "7aa1f560-a309-4d17-b9ad-57a20574f05d"
+    assert values["VERDIFY_GATE_R_EXPECTED_RECOVERY_WORK_ID"] == "c4a323fa-942e-4105-9a23-9a77f996b81e"
+    assert (
+        values["VERDIFY_GATE_R_READINESS_PACKET_SHA256"]
+        == "7c809675c428a83de54fb2a9db22503b35599af0940ced05fc0c61d50c2c097d"
+    )
