@@ -16,10 +16,10 @@ study:
   greenhouse_id: vallery
   timezone: America/Denver
   start_local_date: "TO-LOCK: YYYY-MM-DD of local day 1"
-  local_days_target: 30
-  pairs_target: 15
-  local_days: "TO-LOCK: even count justified by frozen power artifact"
-  pairs: "TO-LOCK: local_days / 2; 15 only if the power gate passes"
+  local_days_target: 60
+  pairs_target: 30
+  local_days: "TO-LOCK: 60 consecutive local days with one UTC offset"
+  pairs: "TO-LOCK: 30 adjacent pairs; fixed before the internal draw"
   pair_structure: adjacent_ab_ba
   assignment_namespace_uuid: "TO-LOCK: fixed UUIDv5 namespace"
   # Protocol v2 rejects every window that crosses a UTC-offset change. A later
@@ -758,24 +758,32 @@ design_power:
     contexts and publish baseline/moderate/aggressive frequencies, fallback
     frequency and uncertainty without randomized outcomes
   selection_frequency_artifact_sha256: "TO-LOCK"
-  minimum_joint_advance_power: 0.80
+  accepted_underpowered_design: true
+  provisional_modeled_joint_advance_power: 0.13776
+  historical_joint_advance_power_target: 0.80
   evaluated_for:
     - both climate noninferiority gates
     - the selected operating-benefit superiority gate
     - selection dilution and the 06:00-24:00 completeness distribution
     - joint intersection-union advance event under plausible locked cross-endpoint correlation
   fixed_design_rule: >-
-    choose one fixed m from pretrial data before randomization. Fifteen pairs may
-    be locked only if the joint probability that all three IUT conditions pass
-    is at least 0.80 under locked smallest relevant effects, selector mix,
-    missingness and a versioned plausible correlation model; otherwise choose a
-    larger fixed m. No internal sample-size adaptation occurs after the draw
+    The accepted exploratory pilot fixes m=30 adjacent pairs over 60 local days
+    before the internal draw, despite provisional modeled joint advance power
+    0.13776 under historical assumptions. Recompute and freeze the actual
+    pretrial selector mix, 18-hour outcome scales, missingness and plausible
+    correlation before lock; label weak or low-opportunity evidence inconclusive,
+    not an efficacy finding. The historical 0.80 target is not a launch gate.
+    No internal sample-size adaptation occurs after the draw
   type_i_note: >-
     the intersection-union test needs no multiplicity penalty for type-I error,
     but that does not make marginal per-endpoint power equal joint decision power
   correlation_artifact_sha256: "TO-LOCK"
   power_artifact_sha256: "TO-LOCK"
 
+# Historical staged-v2 gates below remain a template reference. The one-study
+# accepted direct launch records explicit waivers for shadow, separate canaries
+# and 48-hour A/A in migration 220; its live prerequisite is the sealed #641
+# baseline/aggressive/baseline proof, not these extra duration holds.
 pre_randomization_gates:
   software_vertical:
     - recent restored PostgreSQL assignment-to-outcome happy path

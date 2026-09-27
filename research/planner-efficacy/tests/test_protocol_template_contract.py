@@ -22,6 +22,9 @@ V1_TEMPLATE = yaml.safe_load(
 V2_TEMPLATE = yaml.safe_load(
     (ROOT / "research/planner-efficacy/protocols/planner-switchback-v2.template.yaml").read_text(encoding="utf-8")
 )
+DIRECT_LAUNCH_BASIS = json.loads(
+    (ROOT / "research/planner-efficacy/protocols/direct-launch-basis-v1.json").read_text(encoding="utf-8")
+)
 WIRE_FIXTURE = json.loads(
     (ROOT / "verdify_schemas/tests/fixtures/policy_vector_goldens.json").read_text(encoding="utf-8")
 )
@@ -415,20 +418,23 @@ def test_v2_localized_safety_is_feasible_and_claim_limited() -> None:
     assert "never an implicit fast-path prerequisite" in safety["reference_disagreement"]["hardware_rule"]
 
 
-def test_v2_pair_count_and_estimator_follow_locked_power_design() -> None:
+def test_v2_pair_count_and_estimator_follow_accepted_direct_launch_design() -> None:
     study = V2_TEMPLATE["study"]
     analysis = V2_TEMPLATE["analysis"]
     power = V2_TEMPLATE["design_power"]
 
-    assert study["pairs_target"] == 15
+    assert study["local_days_target"] == DIRECT_LAUNCH_BASIS["window_days"] == 60
+    assert study["pairs_target"] == DIRECT_LAUNCH_BASIS["randomized_pair_count"] == 30
     assert isinstance(study["pairs"], str) and study["pairs"].startswith("TO-LOCK")
     assert "all precommitted adjacent-day pairs" in analysis["primary_estimand"]
     assert "15" not in analysis["primary_estimand"]
     assert "df=m-1" in analysis["upper_confidence_bound"]
     assert "all locked pairs" in analysis["complete_pair_primary_rule"]
-    assert power["minimum_joint_advance_power"] == 0.80
-    assert "choose one fixed m" in power["fixed_design_rule"]
-    assert "larger fixed m" in power["fixed_design_rule"]
+    assert power["accepted_underpowered_design"] is DIRECT_LAUNCH_BASIS["accepted_underpowered_design"]
+    assert str(power["provisional_modeled_joint_advance_power"]) == DIRECT_LAUNCH_BASIS["modeled_joint_advance_power"]
+    assert power["historical_joint_advance_power_target"] == 0.80
+    assert "0.80 target is not a launch gate" in power["fixed_design_rule"]
+    assert "m=30 adjacent pairs over 60 local days" in power["fixed_design_rule"]
     assert "No internal sample-size adaptation" in power["fixed_design_rule"]
 
 
