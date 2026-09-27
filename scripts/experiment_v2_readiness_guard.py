@@ -931,8 +931,13 @@ def _validate_evidence(
     )
     if mode == "proof" and auth["status"] != "pass":
         blockers.append("authentication_acceptance_failed")
-    replicas = _integer(auth["replica_count"], "evidence.authentication_686.replica_count", minimum=1)
-    checked = _integer(auth["replicas_checked"], "evidence.authentication_686.replicas_checked", minimum=1)
+    # Gate R deliberately does not run the proof-only authentication preflight.
+    # Its zero counters represent no test, and never grant proof credit.
+    minimum_replicas = 0 if mode == "recovery" else 1
+    replicas = _integer(auth["replica_count"], "evidence.authentication_686.replica_count", minimum=minimum_replicas)
+    checked = _integer(
+        auth["replicas_checked"], "evidence.authentication_686.replicas_checked", minimum=minimum_replicas
+    )
     if mode == "proof" and checked != replicas:
         blockers.append("authentication_not_checked_on_current_replicas")
     for key in (

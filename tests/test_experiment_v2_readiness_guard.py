@@ -514,6 +514,15 @@ def test_recovery_mode_cannot_request_gate_p() -> None:
         )
 
 
+def test_recovery_accepts_unrun_authentication_counters_without_proof_credit() -> None:
+    packet = _apply(BASE, RECOVERY_OVERLAY["operations"])
+    auth = packet["evidence"]["authentication_686"]
+    auth.update(status="not-run-recovery-mode", replica_count=0, replicas_checked=0)
+    result = _evaluate(packet, RECOVERY_OVERLAY)
+    assert result["blockers"] == []
+    assert result["authorized_gate"] == "R"
+
+
 def test_dependency_trace_is_hash_bound_and_contains_no_hydro_source_dependency() -> None:
     result = _evaluate(BASE, {"operations": []})
     assert not [blocker for blocker in result["blockers"] if blocker.startswith("dependency_")]
