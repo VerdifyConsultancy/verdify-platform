@@ -94,6 +94,72 @@ def records(selection):
 
 
 @pytest.mark.asyncio
+async def test_broad_desired_change_stages_without_reconnect_and_archives_completed_run(fixture, tmp_path):
+    db = fixture
+    db.parameters = [
+        name for name in db.names if name not in bounded.DYNAMIC_MOISTURE_GUARDRAIL_PARAMS | bounded.ZONE_VPD_TARGETS
+    ][:15]
+    assert len(db.parameters) == 15
+    first_candidate = [(param, 1.0) for param in db.parameters]
+
+    async def choose(changes):
+        return await dispatcher._choose_bounded_stage_if_required(db, changes, db.planned(), 3, tmp_path, None, {})
+
+    # Generation 3 is already reconciled; the broad desired candidate must
+    # still produce an approval-bound preview and send nothing yet.
+    ordinary = await choose(first_candidate)
+    assert ordinary.action == "ordinary"
+    preview = bounded._read(tmp_path / bounded.PREVIEW_NAME)
+    assert len(preview["changes"]) == 15 and len(preview["readbacks"]) == 48
+    approve(preview, tmp_path)
+    approval = bounded._read(tmp_path / bounded.APPROVAL_NAME)
+
+    first = await choose(first_candidate)
+    assert first.action == "send" and len(first.changes) == 12, first
+    first_records = records(first.changes)
+    bounded.finish_stage(tmp_path, first, first_records, [])
+    for record in first_records:
+        db.readbacks[record["parameter"]] = record["value"]
+        db.rows[(record["requested_at"], record["parameter"])] = {
+            "delivery_status": "confirmed",
+            "confirmed_at": datetime.now(UTC),
+        }
+    second = await choose(first_candidate[12:])
+    assert second.action == "send" and second.changes == tuple(first_candidate[12:])
+    second_records = records(second.changes)
+    bounded.finish_stage(tmp_path, second, second_records, [])
+    for record in second_records:
+        db.readbacks[record["parameter"]] = record["value"]
+        db.rows[(record["requested_at"], record["parameter"])] = {
+            "delivery_status": "confirmed",
+            "confirmed_at": datetime.now(UTC),
+        }
+    completed = await choose([])
+    assert completed.action == "complete" and completed.changes == ()
+    old_state = bounded._read(tmp_path / bounded.STATE_NAME)
+    assert old_state["status"] == "complete"
+
+    # A later 15-command plan in the same pod must require a second approval,
+    # while retaining the first run's completion and approval receipts.
+    db.ts = datetime.now(UTC)
+    db.expiry = db.ts + timedelta(minutes=40)
+    db.plan_values = {param: 2.0 for param in db.parameters}
+    next_candidate = [(param, 2.0) for param in db.parameters]
+    next_preview_only = await choose(next_candidate)
+    assert next_preview_only.action == "ordinary"
+    assert not (tmp_path / bounded.APPROVAL_NAME).exists()
+    assert not (tmp_path / bounded.STATE_NAME).exists()
+    archived = bounded._read(tmp_path / f"writer-stage-completed-{old_state['run_id']}.json")
+    assert archived == {"schema": "verdify-writer-stage-completed-v1", "approval": approval, "state": old_state}
+    next_preview = bounded._read(tmp_path / bounded.PREVIEW_NAME)
+    assert next_preview["changes"] == [[param, 2.0] for param in db.parameters]
+    approve(next_preview, tmp_path)
+    next_first = await choose(next_candidate)
+    assert next_first.action == "send" and len(next_first.changes) == 12
+    assert bounded._read(tmp_path / f"writer-stage-completed-{old_state['run_id']}.json") == archived
+
+
+@pytest.mark.asyncio
 async def test_approved_run_advances_only_after_confirmation_and_current_readback(fixture, tmp_path):
     db = fixture
     full = [(param, 1.0) for param in db.parameters]

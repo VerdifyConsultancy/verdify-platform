@@ -11,8 +11,9 @@ full-sync path. The new code is inert until an approval file is placed in the
 **running ingestor pod**. The state volume is `emptyDir`; a replacement pod
 loses its approval and stops. Never open another ESPHome session.
 
-The dispatcher writes `/srv/verdify/state/writer-stage-preview.json` on a
-broad-restore hold. It captures all current-generation cfg readbacks for audit.
+The dispatcher writes `/srv/verdify/state/writer-stage-preview.json` when any
+desired candidate exceeds 12 commands, whether it follows a reconnect, cfg
+drift, or a changed plan. It captures all current-generation cfg readbacks for audit.
 The approval fingerprint binds the canonical 48 fields, every candidate and
 prior-stage field, one atomic 48-field DB snapshot, the active plan rows and
 their earliest expiry, image source revision, pod, session, and connection
@@ -56,7 +57,9 @@ An atomic approval replacement wakes the existing dispatcher within its
 one-second scheduler loop, subject to the existing 30-second retry throttle.
 It rechecks through that scheduler every 20 seconds while awaiting
 confirmation; the eight-minute deadline is a stop condition, not a sleep.
-The generation stays unreconciled until all approved values are confirmed.
+A reconnect generation stays unreconciled until all approved values are
+confirmed. An ordinary desired-change run keeps its existing reconciled
+generation and defers its dispatch trigger until the stage is confirmed.
 
 Inspect progress without modifying the device:
 
@@ -68,6 +71,10 @@ kubectl -n verdify-prod exec deploy/verdify-ingestor -c ingestor -- \
 scripts/k3s-smoke.sh device-monitor
 ```
 
+The `writer_reconcile reason=` field names the actual trigger, including
+`desired_change` for a refreshed plan and `transport_reconnect` for a new
+socket. Both paths use the same stage approval and 12-command cap.
+
 Successful completion is `status: complete`, no remaining desired candidate,
 one connection, and 48 fresh readbacks. A newly moved crop VPD target may pass
 from the final stage into the ordinary writer only when its fresh source
@@ -75,6 +82,13 @@ matches and the whole current candidate is at most 12 commands; verify that
 ordinary lifecycle reaches `confirmed` and its cfg readback matches before
 recording no residual candidate. Preserve the preview, approval, state, and
 prior private baseline outside the pod for the recovery record.
+
+After a completed stage, a later desired candidate above 12 commands gets a
+new preview and requires a new approval. The ingestor first writes
+`writer-stage-completed-<run_id>.json` with the old state and approval, then
+removes their active names. Keep that archived receipt with the operator copy
+before replacing the pod; its `emptyDir` is lost on restart. If archival cannot
+be verified, the writer holds the broad candidate.
 
 ## Stop and bounded rollback
 

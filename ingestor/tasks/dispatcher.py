@@ -131,6 +131,32 @@ def _without_equivalent_duration_replays(
     return _without_equivalent_duration_candidates(changes, readbacks)
 
 
+async def _choose_bounded_stage_if_required(
+    conn, changes, planned, generation, state_dir, zone_row, planner_params
+) -> bounded_reconcile.Decision:
+    """Route any broad candidate or existing stage through the same sole-writer fence."""
+    if (
+        len(changes) <= MAX_RECONNECT_COMMANDS
+        and not (state_dir / bounded_reconcile.APPROVAL_NAME).exists()
+        and not (state_dir / bounded_reconcile.STATE_NAME).exists()
+    ):
+        return bounded_reconcile.Decision("ordinary")
+    return await bounded_reconcile.choose_stage(
+        conn,
+        changes,
+        planned,
+        generation,
+        state_dir,
+        MAX_RECONNECT_COMMANDS,
+        {param: round(float(zone_row[param]), 2) for param in bounded_reconcile.ZONE_VPD_TARGETS} if zone_row else None,
+        {
+            param: float(planner_params[param])
+            for param in bounded_reconcile.DYNAMIC_MOISTURE_GUARDRAIL_PARAMS
+            if param in planner_params
+        },
+    )
+
+
 def _apply_manual_overlay(changes: list[tuple[str, float]], overlay: dict[str, float]) -> set[str]:
     """Force an operator overlay into the dispatcher batch."""
     overlay_params: set[str] = set()
@@ -1155,50 +1181,32 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                 len(changes),
             )
 
-        stage_decision = bounded_reconcile.Decision("ordinary")
-        if reconnect_pending and (
-            len(changes) > MAX_RECONNECT_COMMANDS
-            or (STATE_DIR / bounded_reconcile.APPROVAL_NAME).exists()
-            or (STATE_DIR / bounded_reconcile.STATE_NAME).exists()
-        ):
-            stage_decision = await bounded_reconcile.choose_stage(
-                conn,
-                changes,
-                planned or [],
+        stage_decision = await _choose_bounded_stage_if_required(
+            conn, changes, planned or [], reconnect_generation, STATE_DIR, zone_row, planner_params
+        )
+        if stage_decision.action == "hold":
+            shared.defer_failed_dispatch(reconnect_generation, drift_versions)
+            log.error(
+                "writer_reconcile reason=%s generation=%d action=blocked_stage reason=%s",
+                dispatch_reason,
                 reconnect_generation,
-                STATE_DIR,
-                MAX_RECONNECT_COMMANDS,
-                {param: round(float(zone_row[param]), 2) for param in bounded_reconcile.ZONE_VPD_TARGETS}
-                if zone_row
-                else None,
-                {
-                    param: float(planner_params[param])
-                    for param in bounded_reconcile.DYNAMIC_MOISTURE_GUARDRAIL_PARAMS
-                    if param in planner_params
-                },
+                stage_decision.reason,
             )
-            if stage_decision.action == "hold":
-                shared.defer_failed_dispatch(reconnect_generation, drift_versions)
-                log.error(
-                    "writer_reconcile reason=transport_reconnect generation=%d action=blocked_stage reason=%s",
-                    reconnect_generation,
-                    stage_decision.reason,
-                )
-                (STATE_DIR / "setpoint-dispatcher.log").touch()
-                return
-            if stage_decision.action == "send":
-                changes = list(stage_decision.changes)
-                log.info(
-                    "writer_reconcile reason=transport_reconnect generation=%d "
-                    "action=%s run_id=%s command_count=%d limit=%d",
-                    reconnect_generation,
-                    "bounded_rollback" if stage_decision.rollback else "bounded_stage",
-                    stage_decision.run_id,
-                    len(changes),
-                    MAX_RECONNECT_COMMANDS,
-                )
-            elif stage_decision.action == "complete":
-                changes = list(stage_decision.changes)
+            (STATE_DIR / "setpoint-dispatcher.log").touch()
+            return
+        if stage_decision.action == "send":
+            changes = list(stage_decision.changes)
+            log.info(
+                "writer_reconcile reason=%s generation=%d action=%s run_id=%s command_count=%d limit=%d",
+                dispatch_reason,
+                reconnect_generation,
+                "bounded_rollback" if stage_decision.rollback else "bounded_stage",
+                stage_decision.run_id,
+                len(changes),
+                MAX_RECONNECT_COMMANDS,
+            )
+        elif stage_decision.action == "complete":
+            changes = list(stage_decision.changes)
 
         if len(changes) > MAX_RECONNECT_COMMANDS:
             # A broad desired delta is never authority to enqueue a 40+
@@ -1638,8 +1646,8 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         # durable confirmation and current-generation cfg readback.
         shared.defer_failed_dispatch(reconnect_generation, drift_versions)
         log.info(
-            "writer_reconcile reason=transport_reconnect generation=%d "
-            "action=stage_awaiting_confirmation run_id=%s failure_count=%d",
+            "writer_reconcile reason=%s generation=%d action=stage_awaiting_confirmation run_id=%s failure_count=%d",
+            dispatch_reason,
             reconnect_generation,
             stage_decision.run_id,
             len(final_failures),

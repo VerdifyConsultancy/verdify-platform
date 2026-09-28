@@ -1,4 +1,4 @@
-"""Opt-in, single-writer staged reconciliation after a broad reconnect hold.
+"""Opt-in, single-writer staged reconciliation for a broad desired delta.
 
 The ordinary 12-command cap remains the default. An operator may approve one
 fresh preview from the *running* ingestor by atomically placing an approval file
@@ -97,6 +97,26 @@ def _write(path: Path, value: dict) -> None:
         os.replace(temporary, path)
     finally:
         temporary.unlink(missing_ok=True)
+
+
+def _archive_completed_run(state_dir: Path, state: dict, approval: dict | None) -> None:
+    """Retain a completed receipt before allowing a new broad preview in this pod."""
+    run_id = uuid.UUID(str(state["run_id"])).hex
+    path = state_dir / f"writer-stage-completed-{run_id}.json"
+    archived = _read(path)
+    if archived is None:
+        if approval is None or approval.get("run_id") != state["run_id"]:
+            raise ValueError("completed stage approval missing or changed")
+        if approval.get("fingerprint") != state["approved_preview"]["fingerprint"]:
+            raise ValueError("completed stage approval fingerprint changed")
+        archived = {"schema": "verdify-writer-stage-completed-v1", "approval": approval, "state": state}
+        _write(path, archived)
+    if archived.get("schema") != "verdify-writer-stage-completed-v1" or archived.get("state") != state:
+        raise ValueError("completed stage archive differs from active receipt")
+    if approval is not None and archived.get("approval") != approval:
+        raise ValueError("completed stage archive differs from active approval")
+    (state_dir / APPROVAL_NAME).unlink(missing_ok=True)
+    (state_dir / STATE_NAME).unlink()
 
 
 def _equal(actual: float, expected: float) -> bool:
@@ -478,6 +498,12 @@ async def choose_stage(
             _wake_for_confirmation()
             return Decision("hold", reason=f"awaiting fresh atomic snapshot: {error}", run_id=state["run_id"])
         _write(state_dir / PREVIEW_NAME, preview)
+        if state is not None and state.get("status") == "complete" and len(changes) > limit:
+            # A later broad desired delta needs its own fingerprint and
+            # approval. Archive both completed receipts before clearing the
+            # active names; a crash between unlinks resumes from the archive.
+            _archive_completed_run(state_dir, state, approval)
+            return Decision("ordinary")
         if approval is None and state is None:
             return Decision("ordinary")
         if approval is None:

@@ -1,5 +1,5 @@
-# Observational #782 packet only. The schedule remains suspended until the
-# prospective instance and exact source snapshot are registered on the PVC.
+# Observational #782 packet only. The registered instance and exact source
+# snapshot are staged on the PVC, so the daily schedule is active.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
