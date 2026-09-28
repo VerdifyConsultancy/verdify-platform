@@ -1,0 +1,194 @@
+# Observational #782 packet only. The schedule remains suspended until the
+# prospective instance and exact source snapshot are registered on the PVC.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: verdify-winter-feasibility-archive
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: winter-feasibility
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: longhorn-v1-workspace-rwo
+  resources:
+    requests:
+      storage: 10Gi
+---
+# Bind the WaitForFirstConsumer claim while the daily CronJob is suspended.
+# Existing directories and evidence are preserved on later Argo syncs.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: verdify-winter-archive-init
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: winter-feasibility
+spec:
+  backoffLimit: 1
+  activeDeadlineSeconds: 300
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: verdify
+        app.kubernetes.io/component: winter-feasibility
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      imagePullSecrets:
+        - name: zot-origin-cluster-pull
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: init-archive
+          image: registry.vallery.net/verdifyconsultancy/verdify-api@sha256:5f6ff2377d7ca04a1e0cb77deb6269f6c8af28611336d3392125eafa87a1c3a9
+          command: [python, -c]
+          args:
+            - |
+              from pathlib import Path
+              for name in ('source', 'winter-2026-27'):
+                  (Path('/archive') / name).mkdir(mode=0o700, exist_ok=True)
+              print('[winter] archive directories ready')
+          volumeMounts:
+            - {name: archive, mountPath: /archive}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          resources:
+            requests: {cpu: 50m, memory: 64Mi}
+            limits: {memory: 256Mi}
+      volumes:
+        - name: archive
+          persistentVolumeClaim: {claimName: verdify-winter-feasibility-archive}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: verdify-winter-feasibility
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: winter-feasibility
+spec:
+  schedule: "30 0 * * *"
+  timeZone: America/Denver
+  suspend: true
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 3600
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 1200
+      backoffLimit: 2
+      ttlSecondsAfterFinished: 172800
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/part-of: verdify
+            app.kubernetes.io/component: winter-feasibility
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          imagePullSecrets:
+            - name: zot-origin-cluster-pull
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
+            fsGroupChangePolicy: OnRootMismatch
+            seccompProfile: {type: RuntimeDefault}
+          containers:
+            - name: collect
+              # Carries Python 3.13 + asyncpg. The frozen extractor/protocol
+              # come from the read-only PVC source snapshot, not image source.
+              image: registry.vallery.net/verdifyconsultancy/verdify-api@sha256:5f6ff2377d7ca04a1e0cb77deb6269f6c8af28611336d3392125eafa87a1c3a9
+              command: [python, /opt/winter/run-daily.py]
+              env:
+                - name: SOURCE_SHA
+                  value: f77ef0005b8cf211130eebbd4b54d881d14c335a
+                - name: DB_DSN
+                  valueFrom:
+                    secretKeyRef:
+                      name: verdify-agent-secrets
+                      key: AGENT_RO_DSN
+                - name: PYTHONDONTWRITEBYTECODE
+                  value: "1"
+                - name: HOME
+                  value: /tmp
+              volumeMounts:
+                - {name: archive, mountPath: /source, subPath: source, readOnly: true}
+                - {name: archive, mountPath: /archive, subPath: winter-2026-27}
+                - {name: runner, mountPath: /opt/winter, readOnly: true}
+                - {name: tmp, mountPath: /tmp}
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities: {drop: [ALL]}
+              resources:
+                requests: {cpu: 100m, memory: 256Mi}
+                limits: {memory: 1Gi}
+          volumes:
+            - name: archive
+              persistentVolumeClaim: {claimName: verdify-winter-feasibility-archive}
+            - name: tmp
+              emptyDir: {}
+            - name: runner
+              configMap:
+                name: verdify-winter-feasibility-runner
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: verdify-winter-feasibility-db-only
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: winter-feasibility
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: winter-feasibility
+  policyTypes: [Ingress, Egress]
+  ingress: []
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: db
+      ports:
+        - {protocol: TCP, port: 5432}
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - {protocol: UDP, port: 53}
+        - {protocol: TCP, port: 53}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-db-from-winter-feasibility
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: winter-feasibility
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: db
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: winter-feasibility
+      ports:
+        - {protocol: TCP, port: 5432}

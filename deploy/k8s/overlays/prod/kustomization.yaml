@@ -102,6 +102,9 @@ components:
   # suspended-CronJob build/flash template + durable artifacts PVC (the
   # rollback floor lives HERE now, not on the laptop) + toolchain cache.
   - ../../components/firmware-builder
+  # #782 read-only observational winter packet. Suspended until a prospective
+  # registration and exact source snapshot are staged on its archive PVC.
+  - ../../components/winter-feasibility
   - ../../components/planner
   - ../../components/mqtt-broker
   # #118 verdify-setpoint-server — the grow-light writer + setpoint diagnostics.

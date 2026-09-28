@@ -101,6 +101,11 @@ def test_register_binds_real_source_bytes_and_rejects_missed_start(tmp_path):
     for index, path in enumerate(files):
         path.write_bytes(f"source-{index}\n".encode())
     files[1].write_bytes(winter.canonical(target_source()))
+    files[2].write_bytes(
+        (
+            ROOT / "research/planner-efficacy/protocols/winter-2026-27-source-candidates/cfg-schema-source.json"
+        ).read_bytes()
+    )
     expected = instance()
     with patch.object(
         winter,
@@ -231,6 +236,45 @@ def test_source_candidates_bind_current_bytes_without_false_qualification():
 
     assert cfg["canonical_field_order"] == list(CANONICAL_FIELD_ORDER)
     assert cfg["field_count"] == 48
+    assert winter.validate_cfg_schema((folder / "cfg-schema-source.json").read_bytes()) == CANONICAL_FIELD_ORDER
+
+
+def test_cfg_schema_rejects_changed_field_set():
+    folder = ROOT / "research/planner-efficacy/protocols/winter-2026-27-source-candidates"
+    cfg = json.loads((folder / "cfg-schema-source.json").read_bytes())
+    cfg["canonical_field_order"][1] = cfg["canonical_field_order"][0]
+    with pytest.raises(ValueError, match="frozen 48-field"):
+        winter.validate_cfg_schema(winter.canonical(cfg))
+
+
+def test_retained_source_identity_without_git(tmp_path):
+    source = tmp_path / "research/planner-efficacy/winter_feasibility.py"
+    protocol = tmp_path / "research/planner-efficacy/protocols/seasonal-decision-2026-09-27.md"
+    source.parent.mkdir(parents=True)
+    protocol.parent.mkdir(parents=True)
+    source.write_bytes(b"exact extractor\n")
+    protocol.write_bytes(b"exact protocol\n")
+    (tmp_path / "source-revision").write_text("a" * 40 + "\n")
+    with (
+        patch.object(winter, "REPO", tmp_path),
+        patch.object(winter, "SOURCE", source),
+        patch.object(winter, "PROTOCOL", protocol),
+    ):
+        assert winter._source_identity() == (
+            "a" * 40,
+            winter.digest(source.read_bytes()),
+            winter.digest(protocol.read_bytes()),
+        )
+
+
+def test_exclusive_day_publication_leaves_no_partial_final(tmp_path):
+    artifact = tmp_path / "days/2026-11-02.json"
+    with patch.object(winter.os, "link", side_effect=OSError("publication interrupted")):
+        with pytest.raises(OSError, match="interrupted"):
+            winter._write_exclusive(artifact, b"day\n")
+    assert not artifact.exists()
+    winter._write_exclusive(artifact, b"day\n")
+    assert artifact.read_bytes() == b"day\n"
 
 
 def test_manifest_accounts_for_every_day_and_rejects_tampering(tmp_path):

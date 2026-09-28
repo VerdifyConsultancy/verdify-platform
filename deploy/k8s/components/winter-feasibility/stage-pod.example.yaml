@@ -1,0 +1,38 @@
+# One-time operator staging only. This Pod is deliberately not in kustomization.
+# Delete the exact Pod after copying and reading back the registration bundle.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: verdify-winter-stage
+  namespace: verdify-prod
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: winter-feasibility
+spec:
+  restartPolicy: Never
+  automountServiceAccountToken: false
+  imagePullSecrets:
+    - name: zot-origin-cluster-pull
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    fsGroupChangePolicy: OnRootMismatch
+    seccompProfile: {type: RuntimeDefault}
+  containers:
+    - name: stage
+      image: registry.vallery.net/verdifyconsultancy/verdify-api@sha256:5f6ff2377d7ca04a1e0cb77deb6269f6c8af28611336d3392125eafa87a1c3a9
+      command: [sleep, "3600"]
+      volumeMounts:
+        - {name: archive, mountPath: /archive}
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities: {drop: [ALL]}
+      resources:
+        requests: {cpu: 50m, memory: 64Mi}
+        limits: {memory: 256Mi}
+  volumes:
+    - name: archive
+      persistentVolumeClaim: {claimName: verdify-winter-feasibility-archive}
