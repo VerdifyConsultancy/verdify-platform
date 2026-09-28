@@ -54,6 +54,9 @@ LIGHTS = {
     "main": {"ha_entity": "switch.greenhouse_main", "equipment": "grow_light_main"},
     "grow": {"ha_entity": "switch.greenhouse_grow", "equipment": "grow_light_grow"},
 }
+# The HTTP light route may only call these Lutron switches. In particular, an
+# ESPHome climate switch or an Alarm.com light wrapper is never a fallback.
+AUTHORIZED_LIGHT_ENTITIES = frozenset({"switch.greenhouse_main", "switch.greenhouse_grow"})
 
 FIRMWARE_SETPOINT_PARAMS = frozenset(SETPOINT_MAP_REG.values())
 
@@ -147,6 +150,9 @@ def load_token() -> str:
 def ha_call(service: str, entity_id: str) -> bool:
     """Call HA REST API service. Returns True on success."""
     global _ha_token
+    if service not in ("turn_on", "turn_off") or entity_id not in AUTHORIZED_LIGHT_ENTITIES:
+        log.error("Rejected out-of-scope HA light command: %s %s", service, entity_id)
+        return False
     if _ha_token is None:
         _ha_token = load_token()
     domain = entity_id.split(".", 1)[0]
