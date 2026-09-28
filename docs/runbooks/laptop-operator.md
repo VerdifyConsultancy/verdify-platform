@@ -147,16 +147,30 @@ SECRETS_SRC=$HOME/.verdify/esphome-secrets.yaml \
 ESPHOME_BIN=$PWD/.venv/bin/esphome \
   scripts/firmware-esphome-worktree.sh config    # or: compile
 
+# Fetch the historically baked rollback binary from the artifacts PVC into
+# this worktree. Set both values from an independent, verified release receipt;
+# a newly compiled candidate is not a last-good rollback target.
+python3 scripts/stage-firmware-last-good.py \
+  --expected-version "$BAKED_ROLLBACK_VERSION" \
+  --expected-ota-sha256 "$BAKED_ROLLBACK_SHA256"
+
 # Preflight gates only (8 gates, DB-backed via kube backend):
 VERDIFY_DB_BACKEND=kube bash scripts/firmware-deploy-preflight.sh
 
 # The real deploy (compile + OTA + sensor-health + auto-rollback):
 OTA_PW="$(kubectl -n verdify-prod get secret verdify-firmware-ota \
   -o jsonpath='{.data.ota_password}' | base64 -d)" \
+VERDIFY_DB_BACKEND=kube \
 SECRETS_SRC=$HOME/.verdify/esphome-secrets.yaml \
 ESPHOME_BIN=$PWD/.venv/bin/esphome \
   make firmware-deploy
 ```
+
+The staging helper mounts the PVC read-only and requires matching archived
+binary and metadata, the externally supplied OTA hash and version, an intact
+source revision, and an original deployment time and file mtime at least 48
+hours old. It preserves that mtime for the local preflight and auto-rollback.
+If the PVC lacks a qualified historical last-good artifact, OTA remains held.
 
 The gates are real: no OTA while `alert_log` has unresolved critical/high
 rows, 48h bake on `last-good.ota.bin` mtime, ≤1 OTA/calendar week, telemetry

@@ -183,14 +183,16 @@ milestones:
    (`kubectl -n verdify-prod create job --from=cronjob/verdify-firmware-builder …`)
    runs the official esphome image, assembles `secrets.yaml` from k8s Secrets
    (`verdify-firmware-ota`, `verdify-app-secrets/ESP32_API_KEY`,
-   `verdify-firmware-wifi`, `verdify-github-token`), compiles with the
-   toolchain cached on a PVC, archives to the `verdify-firmware-artifacts`
-   PVC (**the rollback floor `last-good.ota.bin` now lives THERE, not on the
-   workstation**), and—only with the explicit `FLASH=1` live flag—uploads to
-   192.168.10.111:3232 through its own scoped egress NetworkPolicy. The
-   preflight/verify steps (`firmware-deploy-preflight.sh`,
-   `wait-for-firmware-version.sh`, `make sensor-health`) already run
-   kube-backend from any cluster pod.
+   `verdify-firmware-wifi`, `verdify-github-token`), compiles with a bounded
+   per-Job toolchain cache, archives to the `verdify-firmware-artifacts` PVC,
+   and—only with the explicit `FLASH=1` live flag—uploads to 192.168.10.111:3232
+   through its own scoped egress NetworkPolicy. The PVC is the intended durable
+   home for `last-good.ota.bin`; verify that a historically deployed, baked
+   binary actually exists there before OTA. The laptop preflight and automatic
+   rollback still use `firmware/artifacts/last-good.ota.bin` locally: stage it
+   read-only from the PVC with `scripts/stage-firmware-last-good.py`, an
+   independently verified version and SHA-256, and its original deployment
+   timestamp. A newly compiled candidate does not qualify as last-good.
 2. **Secret sealing / source reconciliation** — `docs/runbooks/verdify-secret-sealing-plan.md`
    lists source path/name mismatches (MQTT_*, HERMES_IRIS_API_KEY,
    API_WRITE_TOKEN↔VERDIFY_WRITE_API_KEY) to reconcile before SOPS/age sealing.
