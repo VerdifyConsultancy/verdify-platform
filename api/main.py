@@ -116,6 +116,7 @@ from verdify_schemas.experiment_config import (  # noqa: E402
     component_experiment_gate,
     component_experiment_mode,
 )
+from verdify_schemas.fixed_panel_native_route import read_native_fixed_panel_route_evidence  # noqa: E402
 from verdify_schemas.mcp_responses import ScorecardResponse  # noqa: E402
 from verdify_schemas.observed_minute_reader import read_observed_minute_evidence  # noqa: E402
 from verdify_schemas.physical_crop_band import unpublished_physical_crop_band_evidence  # noqa: E402
@@ -2720,6 +2721,7 @@ async def planner_scorecard(scorecard_date: Annotated[date | None, Query(alias="
         observed = await read_observed_minute_evidence(conn, scorecard_date)
         physical = unpublished_physical_crop_band_evidence(scorecard_date)
         route_only = await read_route_only_crop_band_evidence(conn, scorecard_date)
+        native_route = await read_native_fixed_panel_route_evidence(conn, scorecard_date)
     try:
         result = ScorecardResponse.from_metric_rows(rows)
     except ValidationError:
@@ -2734,6 +2736,7 @@ async def planner_scorecard(scorecard_date: Annotated[date | None, Query(alias="
     result.observed_minute_evidence = observed
     result.physical_crop_band_evidence = physical
     result.route_only_crop_band_evidence = route_only
+    result.native_fixed_panel_route_evidence = native_route
     return result
 
 
@@ -3744,6 +3747,7 @@ async def public_home_metrics(greenhouse_id: str = DEFAULT_GREENHOUSE):
         observed = await read_observed_minute_evidence(conn, score_day, greenhouse_id)
         physical = unpublished_physical_crop_band_evidence(score_day, greenhouse_id)
         route_only = await read_route_only_crop_band_evidence(conn, score_day, greenhouse_id)
+        native_route = await read_native_fixed_panel_route_evidence(conn, score_day, greenhouse_id)
         scorecard = {r["metric"]: _to_float(r["value"]) for r in score_rows}
         climate_evidence = ScorecardResponse.model_validate(
             {
@@ -3751,6 +3755,7 @@ async def public_home_metrics(greenhouse_id: str = DEFAULT_GREENHOUSE):
                 "observed_minute_evidence": observed,
                 "physical_crop_band_evidence": physical,
                 "route_only_crop_band_evidence": route_only,
+                "native_fixed_panel_route_evidence": native_route,
             }
         ).climate_evidence()
         water_resource = await _fetchrow_optional(
@@ -3929,6 +3934,7 @@ async def public_home_metrics(greenhouse_id: str = DEFAULT_GREENHOUSE):
         observed_minute_evidence=observed,
         physical_crop_band_evidence=physical,
         route_only_crop_band_evidence=route_only,
+        native_fixed_panel_route_evidence=native_route,
         cost_today_usd=(
             scorecard.get("cost_total")
             if water_resource
@@ -3990,6 +3996,7 @@ async def public_evidence_snapshot(greenhouse_id: str = DEFAULT_GREENHOUSE):
         observed = await read_observed_minute_evidence(conn, score_day, greenhouse_id)
         physical = unpublished_physical_crop_band_evidence(score_day, greenhouse_id)
         route_only = await read_route_only_crop_band_evidence(conn, score_day, greenhouse_id)
+        native_route = await read_native_fixed_panel_route_evidence(conn, score_day, greenhouse_id)
         scorecard = {r["metric"]: _to_float(r["value"]) for r in score_rows}
         climate_evidence = ScorecardResponse.model_validate(
             {
@@ -3997,6 +4004,7 @@ async def public_evidence_snapshot(greenhouse_id: str = DEFAULT_GREENHOUSE):
                 "observed_minute_evidence": observed,
                 "physical_crop_band_evidence": physical,
                 "route_only_crop_band_evidence": route_only,
+                "native_fixed_panel_route_evidence": native_route,
             }
         ).climate_evidence()
         water_resource = await _fetchrow_optional(

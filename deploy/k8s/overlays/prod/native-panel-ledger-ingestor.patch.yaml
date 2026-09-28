@@ -1,0 +1,15 @@
+# Prospective source-route callback ledger. Only the sole ingestor consumes
+# this flag; its pod-template change Recreates one writer after the PreSync
+# migration 262 hook. Code defaults to deny outside this production overlay.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-ingestor
+spec:
+  template:
+    spec:
+      containers:
+        - name: ingestor
+          env:
+            - name: VERDIFY_FIXED_PANEL_NATIVE_LEDGER_ENABLED
+              value: "1"

@@ -2,41 +2,50 @@
 -- backfill, hardware serial claim, Modbus poll timestamp, or change to the
 -- separate migration-257 database-flush publication.
 --
--- SEAL PENDING: migration 259/260 must land first. Replace the literal
+-- SEAL PENDING: migration 261 must land first. Replace the literal
 -- placeholders in the first and final blocks with independently reviewed
 -- exact ledger and ordinary-login successor digests. This file deliberately
 -- refuses to apply until then. Never self-seal an unreviewed ACL boundary.
 SET LOCAL search_path = pg_catalog, public, pg_temp;
 LOCK TABLE public.schema_migrations,
-           public.runtime_ordinary_login_attestation_receipts
+           public.runtime_ordinary_login_attestation_receipts,
+           public.mcp_runtime_boundary_receipt
     IN SHARE ROW EXCLUSIVE MODE;
 
 DO $preflight$
 BEGIN
-    IF '__PIN_260_LEDGER_SHA256__' !~ '^[0-9a-f]{64}$'
-       OR '__PIN_POST_260_INGESTOR_DIGEST__' !~ '^[0-9a-f]{64}$'
-       OR '__PIN_POST_260_API_DIGEST__' !~ '^[0-9a-f]{64}$'
+    IF '__PIN_261_LEDGER_SHA256__' !~ '^[0-9a-f]{64}$'
        OR '__PIN_POST_261_INGESTOR_DIGEST__' !~ '^[0-9a-f]{64}$'
+       OR '__PIN_POST_261_API_DIGEST__' !~ '^[0-9a-f]{64}$'
+       OR '__PIN_POST_261_MCP_DIGEST__' !~ '^[0-9a-f]{64}$'
+       OR '__PIN_POST_262_INGESTOR_DIGEST__' !~ '^[0-9a-f]{64}$'
+       OR '__PIN_POST_262_API_DIGEST__' !~ '^[0-9a-f]{64}$'
+       OR '__PIN_POST_262_MCP_DIGEST__' !~ '^[0-9a-f]{64}$'
        OR NOT EXISTS (
            SELECT 1 FROM public.schema_migrations
-            WHERE source = 'db/migrations' AND seq = 260
-              AND sha256 = '__PIN_260_LEDGER_SHA256__' AND stamp_method = 'runner'
+            WHERE source = 'db/migrations' AND seq = 261
+              AND sha256 = '__PIN_261_LEDGER_SHA256__' AND stamp_method = 'runner'
        ) OR EXISTS (
            SELECT 1 FROM public.schema_migrations
-            WHERE source = 'db/migrations' AND seq >= 261
+            WHERE source = 'db/migrations' AND seq >= 262
        ) OR (SELECT count(*) FROM public.runtime_ordinary_login_attestation_receipts) <> 2
        OR EXISTS (
            SELECT 1 FROM (VALUES
-               ('verdify_ingestor_runtime_login', '__PIN_POST_260_INGESTOR_DIGEST__'),
-               ('verdify_api_runtime_login', '__PIN_POST_260_API_DIGEST__')
+               ('verdify_ingestor_runtime_login', '__PIN_POST_261_INGESTOR_DIGEST__'),
+               ('verdify_api_runtime_login', '__PIN_POST_261_API_DIGEST__')
            ) expected(login_name, digest)
            LEFT JOIN public.runtime_ordinary_login_attestation_receipts receipt
              ON receipt.login_name = expected.login_name
            WHERE encode(receipt.boundary_sha256, 'hex') IS DISTINCT FROM expected.digest
               OR encode(public.fn_runtime_ordinary_boundary_digest(expected.login_name), 'hex')
                  IS DISTINCT FROM expected.digest
-       ) THEN
-        RAISE EXCEPTION '261 refuses unsealed post-260 ledger or ordinary boundary';
+       ) OR (SELECT count(*) FROM public.mcp_runtime_boundary_receipt) <> 1
+         OR (SELECT encode(boundary_sha256, 'hex')
+               FROM public.mcp_runtime_boundary_receipt WHERE singleton)
+            IS DISTINCT FROM '__PIN_POST_261_MCP_DIGEST__'
+         OR encode(public.fn_mcp_runtime_boundary_digest(), 'hex')
+            IS DISTINCT FROM '__PIN_POST_261_MCP_DIGEST__' THEN
+        RAISE EXCEPTION '262 refuses unsealed post-261 ledger or ordinary boundary';
     END IF;
 END;
 $preflight$;
@@ -312,6 +321,7 @@ DECLARE
     v_end timestamptz;
     v_target public.fixed_panel_target_revisions%ROWTYPE;
     v_contributor_count integer;
+    v_contributor_zone_count integer;
     v_source_hash_count integer;
     v_panel_source_sha256 text;
     v_callback_count bigint;
@@ -367,9 +377,11 @@ BEGIN
     ) THEN
         RAISE EXCEPTION 'fixed-panel native projection lacks exactly 72 target bins';
     END IF;
-    SELECT count(*), count(DISTINCT r.source_revision_sha256),
+    SELECT count(*), count(DISTINCT r.zone),
+           count(DISTINCT r.source_revision_sha256),
            min(r.source_revision_sha256)
-      INTO v_contributor_count, v_source_hash_count, v_panel_source_sha256
+      INTO v_contributor_count, v_contributor_zone_count,
+           v_source_hash_count, v_panel_source_sha256
       FROM public.fixed_panel_contributor_revisions r
       JOIN (VALUES ('north',2),('west',3),('east',5)) expected(zone,address)
         ON expected.zone = r.zone AND expected.address = r.modbus_address
@@ -380,7 +392,8 @@ BEGIN
        AND r.route_id = r.zone || '_wall_probe'
        AND r.temp_field = 'temp_' || r.zone AND r.vpd_field = 'vpd_' || r.zone
        AND r.recorded_at < v_start AND r.valid_from <= v_start AND r.valid_to >= v_end;
-    IF v_contributor_count <> 3 OR v_source_hash_count <> 1
+    IF v_contributor_count <> 3 OR v_contributor_zone_count <> 3
+       OR v_source_hash_count <> 1
        OR (SELECT count(*) FROM public.fixed_panel_contributor_revisions r
             WHERE r.greenhouse_id = 'vallery'
               AND r.valid_from < v_end AND r.valid_to > v_start) <> 3 THEN
@@ -649,20 +662,116 @@ REVOKE ALL ON FUNCTION public.fn_guard_fixed_panel_native_day_receipt(),
     FROM PUBLIC, verdify_api_runtime, verdify_ingestor_runtime,
          verdify_api_runtime_login, verdify_ingestor_runtime_login;
 
+-- API and MCP receive only the newest frozen aggregate for one day. They get
+-- neither raw callbacks nor the private per-bin projection JSON. A malformed
+-- latest receipt fails closed; the reader never falls back to an older one.
+CREATE FUNCTION public.fn_fixed_panel_native_route_day_receipt(
+    p_day date, p_greenhouse text DEFAULT 'vallery'
+) RETURNS TABLE (
+    day date, greenhouse_id text, served_at timestamptz,
+    receipt_id bigint, frozen_at timestamptz, projection_sha256 text,
+    target_revision_id bigint, contributor_revision_ids bigint[],
+    source_binding_id bigint, panel_source_sha256 text,
+    firmware_revision text, collector_revision text,
+    declared_route_sha256 text, source_callback_count bigint,
+    source_continuity_verified boolean, eligible_bins integer,
+    joint_in_band_bins integer, route_18h_available boolean,
+    unavailable_reason text, physical_serial_verified boolean,
+    modbus_poll_time_verified boolean, physical_proof_eligible boolean,
+    experiment_endpoint_eligible boolean, causal_effect_estimate boolean
+) LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = pg_catalog, public, pg_temp
+AS $reader$
+BEGIN
+    IF p_day IS NULL OR p_greenhouse IS DISTINCT FROM 'vallery' THEN
+        RAISE EXCEPTION 'one explicit day and supported greenhouse required'
+            USING ERRCODE = '22023';
+    END IF;
+    RETURN QUERY
+    WITH latest AS (
+        SELECT p.* FROM public.fixed_panel_native_day_receipts p
+         WHERE p.day = p_day ORDER BY p.receipt_id DESC LIMIT 1
+    ), checked AS (
+        SELECT p.*,
+               (p.projection_sha256 = encode(pg_catalog.sha256(
+                    convert_to(p.projection::text, 'UTF8')), 'hex')
+                AND p.projection->>'definition' = 'fixed-panel-native-route-observation-v1'
+                AND p.projection->>'day' = p.day::text
+                AND p.projection->>'target_revision_id' = p.target_revision_id::text
+                AND p.projection->'contributor_revision_ids' = to_jsonb(p.contributor_revision_ids)
+                AND CASE WHEN jsonb_typeof(p.projection->'bins') = 'array'
+                     THEN jsonb_array_length(p.projection->'bins') = 72
+                     ELSE false END
+                AND p.projection->'physical_serial_verified' = 'false'::jsonb
+                AND p.projection->'modbus_poll_time_verified' = 'false'::jsonb
+                AND p.projection->'physical_proof_eligible' = 'false'::jsonb
+                AND p.projection->'experiment_endpoint_eligible' = 'false'::jsonb
+                AND p.projection->'causal_effect_estimate' = 'false'::jsonb
+               ) AS valid
+          FROM latest p
+    )
+    SELECT p_day, p_greenhouse, statement_timestamp(),
+           p.receipt_id, p.frozen_at, p.projection_sha256,
+           p.target_revision_id, p.contributor_revision_ids,
+           CASE WHEN p.valid AND p.projection->>'source_binding_id' ~ '^[0-9]{1,18}$'
+                THEN (p.projection->>'source_binding_id')::bigint END,
+           CASE WHEN p.valid THEN p.projection->>'panel_source_sha256' END,
+           CASE WHEN p.valid THEN p.projection->>'firmware_revision' END,
+           CASE WHEN p.valid THEN p.projection->>'collector_revision' END,
+           CASE WHEN p.valid THEN p.projection->>'declared_route_sha256' END,
+           CASE WHEN p.valid AND p.projection->>'source_callback_count' ~ '^[0-9]{1,18}$'
+                THEN (p.projection->>'source_callback_count')::bigint END,
+           CASE WHEN p.valid THEN p.projection->>'source_continuity_verified' = 'true' END,
+           CASE WHEN p.valid AND p.projection->>'eligible_bins' ~ '^[0-9]{1,2}$'
+                THEN (p.projection->>'eligible_bins')::integer END,
+           CASE WHEN p.valid AND p.projection->>'joint_in_band_bins' ~ '^[0-9]{1,2}$'
+                THEN (p.projection->>'joint_in_band_bins')::integer END,
+           coalesce(p.valid AND p.projection->>'route_18h_available' = 'true', false),
+           CASE WHEN p.receipt_id IS NULL THEN 'not_frozen'
+                WHEN NOT coalesce(p.valid, false) THEN 'invalid_receipt'
+                WHEN p.projection->>'route_18h_available' = 'true' THEN NULL
+                WHEN p.projection->>'source_continuity_verified' <> 'true'
+                    THEN 'source_continuity_unverified'
+                ELSE 'incomplete_six_route_coverage' END,
+           false, false, false, false, false
+      FROM (SELECT 1) singleton LEFT JOIN checked p ON true;
+END;
+$reader$;
+REVOKE ALL ON FUNCTION public.fn_fixed_panel_native_route_day_receipt(date,text)
+    FROM PUBLIC, verdify_api_runtime, verdify_ingestor_runtime,
+         verdify_mcp_runtime, verdify_api_runtime_login,
+         verdify_ingestor_runtime_login, verdify_mcp_runtime_login;
+GRANT EXECUTE ON FUNCTION public.fn_fixed_panel_native_route_day_receipt(date,text)
+    TO verdify_api_runtime, verdify_mcp_runtime;
+COMMENT ON FUNCTION public.fn_fixed_panel_native_route_day_receipt(date,text) IS
+'One frozen route-only 18-hour aggregate or typed unavailability; no raw '
+'callbacks, physical serial, Modbus poll proof, experiment endpoint or causal claim.';
+
 DO $successor$
 BEGIN
-    IF '__PIN_POST_261_INGESTOR_DIGEST__' !~ '^[0-9a-f]{64}$' THEN
-        RAISE EXCEPTION '261 ordinary-login successor not pinned';
+    IF '__PIN_POST_262_INGESTOR_DIGEST__' !~ '^[0-9a-f]{64}$'
+       OR '__PIN_POST_262_API_DIGEST__' !~ '^[0-9a-f]{64}$'
+       OR '__PIN_POST_262_MCP_DIGEST__' !~ '^[0-9a-f]{64}$' THEN
+        RAISE EXCEPTION '262 ordinary-login successor not pinned';
     END IF;
     UPDATE public.runtime_ordinary_login_attestation_receipts
-       SET boundary_sha256 = decode('__PIN_POST_261_INGESTOR_DIGEST__', 'hex'),
+       SET boundary_sha256 = decode('__PIN_POST_262_INGESTOR_DIGEST__', 'hex'),
            captured_at = clock_timestamp()
      WHERE login_name = 'verdify_ingestor_runtime_login';
+    UPDATE public.runtime_ordinary_login_attestation_receipts
+       SET boundary_sha256 = decode('__PIN_POST_262_API_DIGEST__', 'hex'),
+           captured_at = clock_timestamp()
+     WHERE login_name = 'verdify_api_runtime_login';
+    UPDATE public.mcp_runtime_boundary_receipt
+       SET boundary_sha256 = decode('__PIN_POST_262_MCP_DIGEST__', 'hex')
+     WHERE singleton;
     IF encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'), 'hex')
-          IS DISTINCT FROM '__PIN_POST_261_INGESTOR_DIGEST__'
+          IS DISTINCT FROM '__PIN_POST_262_INGESTOR_DIGEST__'
        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'), 'hex')
-          IS DISTINCT FROM '__PIN_POST_260_API_DIGEST__' THEN
-        RAISE EXCEPTION '261 postflight ordinary boundary mismatch';
+          IS DISTINCT FROM '__PIN_POST_262_API_DIGEST__'
+       OR encode(public.fn_mcp_runtime_boundary_digest(), 'hex')
+          IS DISTINCT FROM '__PIN_POST_262_MCP_DIGEST__' THEN
+        RAISE EXCEPTION '262 postflight ordinary boundary mismatch';
     END IF;
 END;
 $successor$;

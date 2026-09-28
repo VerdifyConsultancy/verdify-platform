@@ -23,6 +23,7 @@ from typing import Any, Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, computed_field
 
+from .fixed_panel_native_route import NativeFixedPanelRouteEvidence
 from .lessons import LessonConfidence
 from .observed_minutes import ObservedMinuteEvidence
 from .physical_crop_band import PhysicalCropBandEvidence, RouteOnlyCropBandEvidence
@@ -110,6 +111,9 @@ class ScorecardResponse(BaseModel):
     observed_minute_evidence: ObservedMinuteEvidence = Field(default_factory=ObservedMinuteEvidence)
     physical_crop_band_evidence: PhysicalCropBandEvidence = Field(default_factory=PhysicalCropBandEvidence)
     route_only_crop_band_evidence: RouteOnlyCropBandEvidence = Field(default_factory=RouteOnlyCropBandEvidence)
+    native_fixed_panel_route_evidence: NativeFixedPanelRouteEvidence = Field(
+        default_factory=NativeFixedPanelRouteEvidence
+    )
 
     # ── Score + compliance ──────────────────────────────────────────
     scorecard_contract_version: float | None = None
@@ -216,6 +220,7 @@ class ScorecardResponse(BaseModel):
             "observed_minute_evidence": self.observed_minute_evidence.model_dump(mode="json"),
             "physical_crop_band_evidence": self.physical_crop_band_evidence.model_dump(mode="json"),
             "route_only_crop_band_evidence": self.route_only_crop_band_evidence.model_dump(mode="json"),
+            "native_fixed_panel_route_evidence": self.native_fixed_panel_route_evidence.model_dump(mode="json"),
             "both_axis_compliance_pct": self.compliance_pct if verified else None,
             "temp_compliance_pct": self.temp_compliance_pct if verified else None,
             "vpd_compliance_pct": self.vpd_compliance_pct if verified else None,
@@ -258,6 +263,7 @@ class ScorecardResponse(BaseModel):
                 "observed_minute_evidence",
                 "physical_crop_band_evidence",
                 "route_only_crop_band_evidence",
+                "native_fixed_panel_route_evidence",
             }:
                 continue
             names.add(field.alias or field_name)

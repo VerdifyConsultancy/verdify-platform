@@ -80,6 +80,37 @@ def test_retry_queue_overflow_has_a_sticky_gap_and_new_generation():
     assert evidence.peek_events()[-1].transport_generation == 2
 
 
+def test_repeated_pre_day_overflow_keeps_session_invalidation_until_db_commit(monkeypatch):
+    evidence = tracker(max_pending_events=8)
+    north = source.ROUTES["north"]["temp"]
+    pre_day = datetime(2026, 9, 29, 10, tzinfo=UTC)
+    day_start = datetime(2026, 9, 29, 12, tzinfo=UTC)  # Denver 06:00
+    evidence.mark_connected(1, pre_day)
+    evidence.observe(north, 75.0, pre_day, 1, "fw-1")  # initial subscription state
+    for second in range(100):
+        evidence.observe(north, 75.0, pre_day + timedelta(seconds=second + 1), 1, "fw-1")
+    sticky = evidence.pending_invalidations[1]
+    assert sticky.kind == "gap" and sticky.reason == "buffer_overflow"
+    assert sticky.received_at < day_start
+    for second in range(100):
+        evidence.observe(north, 75.0, day_start + timedelta(seconds=second), 1, "fw-1")
+    assert sticky in evidence.peek_events()
+    assert sticky not in evidence.events  # ordinary queue compaction already dropped it
+
+    monkeypatch.setattr(ingestor.state, "fixed_panel_native", evidence)
+    with pytest.raises(OSError, match="injected DB outage"):
+        asyncio.run(ingestor.write_fixed_panel_native_events(_Pool(True)))
+    assert evidence.pending_invalidations[1] == sticky
+    good = _Pool(False)
+    asyncio.run(ingestor.write_fixed_panel_native_events(good))
+    assert evidence.peek_events() == ()
+    assert evidence.pending_invalidations == {}
+    assert any(
+        f'"source_sequence": {sticky.source_sequence}' in payload and '"kind": "gap"' in payload
+        for payload in good.connection.payloads
+    )
+
+
 def test_schema_rejects_nonfinite_values_and_physical_claims():
     evidence = tracker()
     evidence.mark_connected(1, AT)
@@ -156,10 +187,10 @@ def test_db_error_keeps_events_for_exact_retry(monkeypatch):
     assert '"kind": "connected"' in good.connection.payloads[0]
 
 
-def test_261_is_inert_until_post_260_seal_and_keeps_257_publication_separate():
-    migration = (ROOT / "db/migrations/261-fixed-panel-native-callback-ledger.sql").read_text()
-    assert "__PIN_260_LEDGER_SHA256__" in migration
-    assert "261 refuses unsealed post-260 ledger or ordinary boundary" in migration
+def test_262_is_inert_until_post_261_seal_and_keeps_257_publication_separate():
+    migration = (ROOT / "db/migrations/262-fixed-panel-native-callback-ledger.sql").read_text()
+    assert "__PIN_261_LEDGER_SHA256__" in migration
+    assert "262 refuses unsealed post-261 ledger or ordinary boundary" in migration
     assert "add_retention_policy('public.fixed_panel_native_events', interval '180 days')" in migration
     assert "CREATE TABLE public.fixed_panel_native_sessions" in migration
     assert "CREATE TABLE public.fixed_panel_native_day_receipts" in migration
@@ -167,4 +198,5 @@ def test_261_is_inert_until_post_260_seal_and_keeps_257_publication_separate():
     assert "REVOKE ALL ON public.fixed_panel_native_day_receipts" in migration
     assert "physical_proof_eligible', false" in migration
     assert "CREATE FUNCTION public.fn_fixed_panel_native_day_projection" in migration
+    assert "v_contributor_zone_count <> 3" in migration
     assert "route_only_crop_band_publications" not in migration

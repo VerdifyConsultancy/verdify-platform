@@ -185,6 +185,9 @@ patches:
   - path: db-storageclass-iscsi.yaml
   # DEVICE-WRITE INTERLOCK (#79): VERDIFY_DEVICE_WRITE_ENABLED=1 — prod only.
   - path: device-write-configmap.yaml
+  # Native callback capture is ingestor-only; use a narrow pod env patch so
+  # this activation Recreates only the sole writer, not all config consumers.
+  - path: native-panel-ledger-ingestor.patch.yaml
   # Numbered migrations run in the PreSync hook on the same exact revision,
   # before API/ingestor workloads can consume the new schema.
   - path: migration-ledger.patch.yaml

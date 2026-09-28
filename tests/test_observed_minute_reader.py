@@ -356,6 +356,12 @@ def test_actual_scorecard_consumers_attach_separate_typed_snapshot(consumer, use
 
         return RouteOnlyCropBandEvidence(day=day)
 
+    async def read_native_route(conn, day):
+        calls.append(("native_route_only", day))
+        from verdify_schemas.fixed_panel_native_route import NativeFixedPanelRouteEvidence
+
+        return NativeFixedPanelRouteEvidence(day=day)
+
     async def fetch(*args):
         return [{"metric": "scorecard_contract_version", "value": 2}, {"metric": "compliance_pct", "value": 6.1}]
 
@@ -381,6 +387,7 @@ def test_actual_scorecard_consumers_attach_separate_typed_snapshot(consumer, use
         ValidationError=ValidationError,
         read_observed_minute_evidence=read,
         read_route_only_crop_band_evidence=read_route,
+        read_native_fixed_panel_route_evidence=read_native_route,
         unpublished_physical_crop_band_evidence=lambda day: physical,
         _fetch_planner_scorecard=fetch,
         pool=SimpleNamespace(acquire=Checkout),
@@ -398,6 +405,8 @@ def test_actual_scorecard_consumers_attach_separate_typed_snapshot(consumer, use
         result = ScorecardResponse.model_validate(wire)
     assert result.compliance_pct == 6.1 and result.observed_minute_evidence == evidence
     assert result.physical_crop_band_evidence == physical
+    assert result.native_fixed_panel_route_evidence.availability == "unavailable"
+    assert result.native_fixed_panel_route_evidence.physical_serial_verified is False
     assert calls[:2] == ["resolved_day_once", DAY] if use_today else calls[0] == DAY
     if consumer == "mcp":
         assert calls[-1] == "closed"

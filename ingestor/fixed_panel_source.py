@@ -48,6 +48,10 @@ class NativeProbeTracker:
         self.max_pending_events = max(4, max_pending_events)
         self.source_sequence = 0
         self.events: list[FixedPanelNativeEvent] = []
+        # A queue compaction may discard ordinary callbacks, but it must never
+        # erase the only uncommitted invalidation for a transport generation.
+        # The DB session is marked invalid only after this gap is committed.
+        self.pending_invalidations: dict[int, FixedPanelNativeEvent] = {}
         self.generation = 0
         self.first_seen: set[str] = set()
         self.pending: dict[str, dict] = {}
@@ -69,34 +73,35 @@ class NativeProbeTracker:
         if len(self.events) >= self.max_pending_events - 2:
             del self.events[: self.max_pending_events // 2]
             self.source_sequence += 1
-            self.events.append(
-                FixedPanelNativeEvent(
-                    kind="gap",
-                    runtime_instance_id=self.runtime_instance_id,
-                    source_sequence=self.source_sequence,
-                    transport_generation=self.generation,
-                    received_at=received_at,
-                    collector_revision=self.collector_revision,
-                    declared_route_sha256=ROUTE_SOURCE_SHA256,
-                    reason="buffer_overflow",
-                )
-            )
-        self.source_sequence += 1
-        self.events.append(
-            FixedPanelNativeEvent(
-                kind=kind,
+            overflow = FixedPanelNativeEvent(
+                kind="gap",
                 runtime_instance_id=self.runtime_instance_id,
                 source_sequence=self.source_sequence,
                 transport_generation=self.generation,
                 received_at=received_at,
                 collector_revision=self.collector_revision,
                 declared_route_sha256=ROUTE_SOURCE_SHA256,
-                object_id=object_id,
-                value=value,
-                firmware_revision=firmware_revision,
-                reason=reason,
+                reason="buffer_overflow",
             )
+            self.events.append(overflow)
+            self.pending_invalidations.setdefault(self.generation, overflow)
+        self.source_sequence += 1
+        event = FixedPanelNativeEvent(
+            kind=kind,
+            runtime_instance_id=self.runtime_instance_id,
+            source_sequence=self.source_sequence,
+            transport_generation=self.generation,
+            received_at=received_at,
+            collector_revision=self.collector_revision,
+            declared_route_sha256=ROUTE_SOURCE_SHA256,
+            object_id=object_id,
+            value=value,
+            firmware_revision=firmware_revision,
+            reason=reason,
         )
+        self.events.append(event)
+        if kind == "gap":
+            self.pending_invalidations.setdefault(self.generation, event)
 
     def mark_connected(self, generation: int, received_at: datetime | None = None) -> None:
         if generation < 1:
@@ -119,10 +124,19 @@ class NativeProbeTracker:
             self._append_event("gap", received_at, reason="callback_clock_regression")
 
     def peek_events(self, limit: int = 500) -> tuple[FixedPanelNativeEvent, ...]:
-        return tuple(self.events[:limit])
+        # Sorting/deduping keeps retries in source order even when the sticky
+        # gap has been compacted out of the bounded ordinary event queue.
+        pending = {event.source_sequence: event for event in self.events}
+        pending.update((event.source_sequence, event) for event in self.pending_invalidations.values())
+        return tuple(sorted(pending.values(), key=lambda event: event.source_sequence)[:limit])
 
     def acknowledge_through(self, source_sequence: int) -> None:
         self.events[:] = [event for event in self.events if event.source_sequence > source_sequence]
+        self.pending_invalidations = {
+            generation: event
+            for generation, event in self.pending_invalidations.items()
+            if event.source_sequence > source_sequence
+        }
 
     def observe(
         self,

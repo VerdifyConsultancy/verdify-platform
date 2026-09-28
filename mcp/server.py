@@ -79,6 +79,7 @@ from verdify_schemas.experiment_config import (  # noqa: E402
     demoted_policy_write_gate,
     submit_policy_proposal,
 )
+from verdify_schemas.fixed_panel_native_route import read_native_fixed_panel_route_evidence  # noqa: E402
 from verdify_schemas.observed_minute_reader import read_observed_minute_evidence  # noqa: E402
 from verdify_schemas.physical_crop_band import unpublished_physical_crop_band_evidence  # noqa: E402
 from verdify_schemas.plan import (  # noqa: E402
@@ -1244,6 +1245,7 @@ async def scorecard(target_date: str = "") -> str:
         sc.observed_minute_evidence = await read_observed_minute_evidence(conn, d)
         sc.physical_crop_band_evidence = unpublished_physical_crop_band_evidence(d)
         sc.route_only_crop_band_evidence = await read_route_only_crop_band_evidence(conn, d)
+        sc.native_fixed_panel_route_evidence = await read_native_fixed_panel_route_evidence(conn, d)
         return sc.model_dump_json(by_alias=True)
     finally:
         await conn.close()
