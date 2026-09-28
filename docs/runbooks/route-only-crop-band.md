@@ -43,7 +43,7 @@ no qualifying prospective result exists today.
 
 ## Publication qualification
 
-Migration 257 is currently an unsealed, fail-closed source draft. Its
+Migration 257 is a sealed, forward-only source change. Its
 append-only table stores only the summary diagnostic, artifact hash, frozen
 target revision, and three route contributor revisions. The guarded owner
 insert requires a complete prospective 06:00–24:00 Denver window and matching
@@ -58,10 +58,14 @@ ingestor grants in a rollback transaction. It cannot provide production
 successor hashes: the ordinary-login catalog digest includes numeric role OIDs
 and object ACLs, which a logical restore does not preserve. The read-only live
 catalog projection reproduced both sealed 255 hashes, but OID normalization
-still left multiple ACL and function differences on the clone. Qualify the
-exact 256 predecessor and 257 successor against the live catalog in a bounded
-rollback-only transaction after the device writer window; advance the two
-receipt rows and migration ledger atomically in the final forward migration.
-Do not substitute clone hashes. Only publish a completed prospective day whose
+still left multiple ACL and function differences on the clone. A bounded live
+255 -> 256 -> draft-257 transaction measured both exact successor hashes, then
+rolled back; independent read-only verification proved the old ledger,
+receipts, and catalog remained. The final sealed migration checks the exact
+256 ledger and both predecessor receipts before DDL, updates both fixed
+successor receipts, and verifies them after DDL. Rehearse the final 256 and 257
+files unchanged with `scripts/probe-257-rollback-only.py`; the migration runner
+then stamps each ledger row in the same transaction as its migration. Do not
+substitute clone hashes. Only publish a completed prospective day whose
 retained source artifacts and fixed-panel result reproduce exactly. Do not
 modify migration 255 or fabricate a September historical result.

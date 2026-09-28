@@ -2,19 +2,48 @@
 -- Source artifact contains summary counts only: no raw climate, crop notes,
 -- physical serials or privileged lineage rows. No historical backfill.
 -- The guarded writer is the database owner; runtime roles receive only the
--- one-day, read-only projection below. This draft is deliberately unsealed:
--- qualification requires exact live predecessor/successor ordinary-login
--- digests. A logical restore changes catalog OIDs and ACLs, so its hashes
--- cannot be substituted for production hashes.
-DO $unsealed$
-BEGIN
-    RAISE EXCEPTION 'migration 257 requires exact live boundary qualification';
-END;
-$unsealed$;
+-- one-day, read-only projection below. Exact ordinary-login successor hashes
+-- came from a bounded live 255 -> 256 -> 257 BEGIN/ROLLBACK probe; the
+-- independent read-only proof confirmed production remained at 255. A logical
+-- restore cannot supply these hashes because its catalog OIDs and ACLs differ.
 SET LOCAL search_path = pg_catalog, public, pg_temp;
 LOCK TABLE public.schema_migrations,
            public.runtime_ordinary_login_attestation_receipts
     IN SHARE ROW EXCLUSIVE MODE;
+
+DO $preflight$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM public.schema_migrations
+         WHERE source = 'db/migrations'
+           AND filename = 'db/migrations/256-experiment-v2-end-study-recovery-completion.sql'
+           AND seq = 256
+           AND sha256 = 'b35ed01468ef505dc46b035b6b3c15ee57ba96d6600183ffd98b9975d4fffe0f'
+           AND stamp_method = 'runner'
+    ) OR EXISTS (
+        SELECT 1 FROM public.schema_migrations
+         WHERE source = 'db/migrations' AND seq >= 257
+    ) THEN
+        RAISE EXCEPTION 'route-only publication refuses post-256 migration ledger drift';
+    END IF;
+    IF (SELECT count(*) FROM public.runtime_ordinary_login_attestation_receipts) <> 2
+       OR EXISTS (
+           SELECT 1 FROM (VALUES
+               ('verdify_api_runtime_login',
+                '7c8b0d3f8dcfa8552068ca8373e0f394aafb3c27aab1fda72c7eebd3083c904a'),
+               ('verdify_ingestor_runtime_login',
+                '7783f5d743751224ae157fe063941c76e00167a0208cd233150a9b68b06633fa')
+           ) expected(login_name, digest)
+           LEFT JOIN public.runtime_ordinary_login_attestation_receipts receipt
+             ON receipt.login_name = expected.login_name
+           WHERE encode(receipt.boundary_sha256, 'hex') IS DISTINCT FROM expected.digest
+              OR encode(public.fn_runtime_ordinary_boundary_digest(expected.login_name), 'hex')
+                 IS DISTINCT FROM expected.digest
+       ) THEN
+        RAISE EXCEPTION 'route-only publication refuses unreviewed ordinary boundary';
+    END IF;
+END;
+$preflight$;
 
 CREATE TABLE public.route_only_crop_band_publications (
     publication_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -196,3 +225,37 @@ GRANT EXECUTE ON FUNCTION public.fn_route_only_crop_band_diagnostic(date,text) T
 COMMENT ON FUNCTION public.fn_route_only_crop_band_diagnostic(date,text) IS
 'One-day route-only observational summary. No raw climate or source-history access, '
 'physical efficacy, experiment or causal claim. The newest publication alone is considered.';
+
+-- The runner stamps migration 257 in the same transaction as this receipt
+-- advance. The two fixed literals were measured after the exact reviewed DDL,
+-- never calculated during migration execution.
+UPDATE public.runtime_ordinary_login_attestation_receipts
+   SET boundary_sha256 = decode(CASE login_name
+       WHEN 'verdify_api_runtime_login' THEN
+           '444063bd61ccb69f02888ede5f2c2338d7882b954af7141e267cdb53b4ed9c7e'
+       WHEN 'verdify_ingestor_runtime_login' THEN
+           '86660529322d02ce6e735d329f6c5e320eeb53f9a8b2890a9a285eaf852f88f5'
+       END, 'hex'),
+       captured_at = pg_catalog.clock_timestamp()
+ WHERE login_name IN ('verdify_api_runtime_login', 'verdify_ingestor_runtime_login');
+
+DO $postflight$
+BEGIN
+    IF (SELECT count(*) FROM public.runtime_ordinary_login_attestation_receipts) <> 2
+       OR EXISTS (
+           SELECT 1 FROM (VALUES
+               ('verdify_api_runtime_login',
+                '444063bd61ccb69f02888ede5f2c2338d7882b954af7141e267cdb53b4ed9c7e'),
+               ('verdify_ingestor_runtime_login',
+                '86660529322d02ce6e735d329f6c5e320eeb53f9a8b2890a9a285eaf852f88f5')
+           ) expected(login_name, digest)
+           LEFT JOIN public.runtime_ordinary_login_attestation_receipts receipt
+             ON receipt.login_name = expected.login_name
+           WHERE encode(receipt.boundary_sha256, 'hex') IS DISTINCT FROM expected.digest
+              OR encode(public.fn_runtime_ordinary_boundary_digest(expected.login_name), 'hex')
+                 IS DISTINCT FROM expected.digest
+       ) THEN
+        RAISE EXCEPTION 'route-only publication successor receipts are not exact';
+    END IF;
+END;
+$postflight$;

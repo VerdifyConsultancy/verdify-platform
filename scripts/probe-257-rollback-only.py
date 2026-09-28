@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Emit a pinned, rollback-only live 255 -> 256 -> draft-257 catalog probe.
+"""Emit a pinned, rollback-only live 255 -> 256 -> sealed-257 rehearsal.
 
 This generator does not connect to a database. The operator reviews its SQL,
 then runs it with psql ON_ERROR_STOP=1 after the attended writer window. Both
-source files must match the reviewed hashes; the draft-257 fail-closed barrier
-is removed in memory only. No synthetic day or publication row is inserted.
+source files must match the reviewed hashes and run unchanged, including their
+exact predecessor checks and successor receipt updates. No day is published.
 
   set -o pipefail
   python3 scripts/probe-257-rollback-only.py | \
@@ -26,7 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 MIGRATION_256 = "db/migrations/256-experiment-v2-end-study-recovery-completion.sql"
 MIGRATION_257 = "db/migrations/257-route-only-crop-band-publication.sql"
 SHA_256 = "b35ed01468ef505dc46b035b6b3c15ee57ba96d6600183ffd98b9975d4fffe0f"
-SHA_257_DRAFT = "a3a35779b8898ebf987fae3079a729d5c60315c239117c0b8d881f7a7e341c31"
+SHA_257 = "48dc31ad941bc55a353e9a3514692f20e64e11806faca6d83a19aa771b0e1ac4"
 PREDECESSORS = {
     "verdify_api_runtime_login": "a52e94f2b6fdecf792cfa819a33f6cd4a950d1076fec1895e9870a63b362cf62",
     "verdify_ingestor_runtime_login": "5bdcd842aa593e15f7d33f4f335dfac0278adc62a0ea929b2590880adbf24c8d",
@@ -35,13 +35,10 @@ POST_256 = {
     "verdify_api_runtime_login": "7c8b0d3f8dcfa8552068ca8373e0f394aafb3c27aab1fda72c7eebd3083c904a",
     "verdify_ingestor_runtime_login": "7783f5d743751224ae157fe063941c76e00167a0208cd233150a9b68b06633fa",
 }
-BARRIER = (
-    "DO $unsealed$\n"
-    "BEGIN\n"
-    "    RAISE EXCEPTION 'migration 257 requires exact live boundary qualification';\n"
-    "END;\n"
-    "$unsealed$;\n"
-)
+POST_257 = {
+    "verdify_api_runtime_login": "444063bd61ccb69f02888ede5f2c2338d7882b954af7141e267cdb53b4ed9c7e",
+    "verdify_ingestor_runtime_login": "86660529322d02ce6e735d329f6c5e320eeb53f9a8b2890a9a285eaf852f88f5",
+}
 
 
 def pinned_source(path: Path, expected_sha: str) -> str:
@@ -102,10 +99,7 @@ def main() -> None:
     args = parser.parse_args()
     if not args.verify_only:
         source_256 = pinned_source(args.migration_256, SHA_256)
-        source_257 = pinned_source(ROOT / MIGRATION_257, SHA_257_DRAFT)
-        if source_257.count(BARRIER) != 1:
-            raise SystemExit("draft-257 fail-closed barrier shape changed")
-        source_257 = source_257.replace(BARRIER, "", 1)
+        source_257 = pinned_source(ROOT / MIGRATION_257, SHA_257)
         print("BEGIN;")
         print("SET LOCAL lock_timeout = '2s';")
         print("SET LOCAL statement_timeout = '30s';")
@@ -133,6 +127,27 @@ def main() -> None:
         print("END;")
         print("$pre_257$;")
         print(source_257)
+        print(
+            "INSERT INTO public.schema_migrations "
+            "(filename, source, seq, sha256, stamp_method, applied_at, duration_ms, applied_by) "
+            f"VALUES ('{MIGRATION_257}', 'db/migrations', 257, '{SHA_257}', "
+            "'runner', clock_timestamp(), 0, current_user);"
+        )
+        print("DO $final_257$")
+        print("BEGIN")
+        for index, (login, digest) in enumerate(POST_257.items()):
+            prefix = "    IF" if index == 0 else "       OR"
+            print(
+                f"{prefix} encode(public.fn_runtime_ordinary_boundary_digest('{login}'), 'hex') IS DISTINCT FROM '{digest}'"
+            )
+            print(
+                "       OR (SELECT encode(boundary_sha256, 'hex') "
+                "FROM public.runtime_ordinary_login_attestation_receipts "
+                f"WHERE login_name = '{login}') IS DISTINCT FROM '{digest}'"
+            )
+        print("    THEN RAISE EXCEPTION 'exact post-257 successor changed'; END IF;")
+        print("END;")
+        print("$final_257$;")
         print(
             "SELECT 'PROBE_257_API', encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'), 'hex');"
         )
