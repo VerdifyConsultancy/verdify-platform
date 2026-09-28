@@ -241,6 +241,11 @@ def test_job_function_allowlists_are_lockstep_with_ledgered_grants(rendered: lis
         if duty == "verdify_experiment_outcome_freezer":
             # Migration 216 adds the least-information source-cycle grant.
             expected.add("public.fn_experiment_v2_outcome_source_cycle(uuid)")
+            # Migration 262 adds the bounded previous-day native route freeze.
+            native = (REPO_ROOT / "db/migrations/262-fixed-panel-native-callback-ledger.sql").read_text()
+            assert "GRANT EXECUTE ON FUNCTION public.fn_freeze_fixed_panel_native_previous_day()" in native
+            assert "TO verdify_experiment_outcome_freezer" in native
+            expected.add("public.fn_freeze_fixed_panel_native_previous_day()")
         if duty == "verdify_experiment_lifecycle":
             rollover = (REPO_ROOT / "db/migrations/234-experiment-v2-direct-proof-startup-rollover.sql").read_text()
             assert "fn_experiment_v2_direct_proof_resolve_startup_rollover" in rollover
@@ -259,7 +264,7 @@ def test_job_function_allowlists_are_lockstep_with_ledgered_grants(rendered: lis
         "public.fn_record_equipment_direct_state_snapshot(uuid,uuid,text,text,jsonb,double precision,uuid,bigint,text)",
         "public.fn_record_equipment_state_source_receipt(uuid,timestamp with time zone,text,text,jsonb,boolean,uuid,bigint,text)",
     }
-    assert sum(map(len, job_allowlists.values())) == 64
+    assert sum(map(len, job_allowlists.values())) == 65
 
 
 def _activation_env(tmp_path: Path) -> tuple[dict[str, str], tuple[str, ...]]:

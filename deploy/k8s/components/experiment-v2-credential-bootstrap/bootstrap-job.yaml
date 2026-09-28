@@ -234,7 +234,8 @@ spec:
                     ('verdify_experiment_outcome_freezer', 'public.fn_experiment_v2_freeze_outcome(uuid,uuid,jsonb,boolean,boolean,boolean,boolean,boolean,text)'),
                     ('verdify_experiment_outcome_freezer', 'public.fn_experiment_v2_freeze_day_evidence(uuid,uuid,jsonb,jsonb,jsonb,text)'),
                     ('verdify_experiment_outcome_freezer', 'public.fn_experiment_v2_freeze_export(uuid,text,text)'),
-                    ('verdify_experiment_outcome_freezer', 'public.fn_experiment_v2_record_shadow_outcome_preview(uuid,uuid,jsonb,text)')
+                    ('verdify_experiment_outcome_freezer', 'public.fn_experiment_v2_record_shadow_outcome_preview(uuid,uuid,jsonb,text)'),
+                    ('verdify_experiment_outcome_freezer', 'public.fn_freeze_fixed_panel_native_previous_day()')
               ), expected AS (
                   SELECT function_signature
                     FROM expected_functions
