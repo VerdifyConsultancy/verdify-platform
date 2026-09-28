@@ -194,6 +194,46 @@ data:
         if actual != expected:
             fail("bootstrap did not leave the exact feature-off draft state")
 
+    def assert_settled_emergency_hold(row, attempt, study, candidate):
+        expected = (
+            study["experiment_id"], 2, "randomized", "draft", "shadow",
+            "emergency_hold", False, None, 0,
+        )
+        actual = tuple(row[key] for key in (
+            "experiment_id", "protocol_version", "experiment_kind", "lifecycle_status",
+            "execution_phase", "admission_state", "component_enabled",
+            "design_lock_sha256", "open_exposure_count",
+        ))
+        if actual != expected or type(row["lease_generation"]) is not int or row["lease_generation"] < 1:
+            fail("settled emergency hold is not the exact feature-off draft state")
+        for key in ("firmware_revision", "config_revision", "registry_revision", "grid_revision"):
+            if row[key] != candidate[key]:
+                fail(f"settled emergency hold candidate mismatch: {key}")
+        revision = row["revision_bundle_sha256"]
+        if not isinstance(revision, str) or len(revision) != 64:
+            fail("settled emergency hold revision identity is absent")
+        try:
+            bytes.fromhex(revision)
+        except ValueError:
+            fail("settled emergency hold revision identity is malformed")
+        if (
+            attempt is None
+            or attempt["authorization_id"] is None
+            or type(attempt["attempt_number"]) is not int
+            or attempt["attempt_number"] < 1
+            or attempt["revision_bundle_sha256"] != revision
+            or attempt["attempt_failed"] is not True
+            or attempt["attempt_superseded"] is not False
+            or attempt["resolution_kind"] != "bounded_baseline_recovery"
+            or attempt["emergency_recovery_complete"] is not True
+            or attempt["proof_receipt_id"] is not None
+        ):
+            fail("settled emergency hold does not match the recovered proof attempt")
+        try:
+            uuid.UUID(str(attempt["authorization_id"]))
+        except ValueError:
+            fail("settled emergency hold authorization identity is malformed")
+
     async def main():
         spec = load_spec()
         study = spec["study"]
@@ -202,7 +242,6 @@ data:
         ordinary = None
         try:
             before = await lifecycle.fetchrow(STATUS_SQL, study["experiment_id"])
-            attempt = await lifecycle.fetchrow(ATTEMPT_SQL, study["experiment_id"])
             if before is None:
                 ordinary = await connect("ORDINARY_API_DB_USER", "ORDINARY_API_DB_PASSWORD")
                 created = await ordinary.fetchrow(
@@ -220,6 +259,19 @@ data:
 
             async with lifecycle.transaction(isolation="serializable"):
                 observed = await lifecycle.fetchrow(STATUS_SQL, study["experiment_id"])
+                attempt = await lifecycle.fetchrow(ATTEMPT_SQL, study["experiment_id"])
+                if observed is not None and observed["execution_phase"] == "shadow" and observed["admission_state"] == "emergency_hold":
+                    assert_settled_emergency_hold(observed, attempt, study, candidate)
+                    print(json.dumps({
+                        "status": "pass",
+                        "experiment_id": study["experiment_id"],
+                        "mode": "exact-settled-feature-off-emergency-hold",
+                        "lifecycle_status": "draft",
+                        "execution_phase": "shadow",
+                        "admission_state": "emergency_hold",
+                        "component_enabled": False,
+                    }, sort_keys=True))
+                    return
                 if observed is not None and tuple(observed[key] for key in (
                     "protocol_version", "experiment_kind", "lifecycle_status",
                     "execution_phase", "admission_state", "component_enabled",
