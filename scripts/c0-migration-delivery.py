@@ -96,6 +96,10 @@ SUCCESSOR_262_DIGESTS = {
     "verdify_ingestor_runtime_login": "1ee6b4aa40eb9e56c7ab90ebb18cc6c2cb094a0e5d67092c8c406f72fc321fbc",
 }
 SUCCESSOR_262_MCP_DIGEST = "c34f6091839412a8578c1061a0bddae987fe65d8cf8cf5551fddca63924cfff3"
+SUCCESSOR_263 = "263-scorecard-fixed-minute-grid.sql"
+SUCCESSOR_263_SHA256 = "1c5dc4e421d8db4f50e0fba983b0573e5291a8a0a787eb580adc0fc63fe2debc"
+SUCCESSOR_263_DIGESTS = SUCCESSOR_262_DIGESTS
+SUCCESSOR_263_MCP_DIGEST = "83d71d757200e93d288eb005ef09449cd6737c73164eb042d511725446cf4382"
 
 
 class DeliveryError(ValueError):
@@ -119,6 +123,7 @@ def reviewed_post_254(later, files=None):
         SUCCESSOR_260,
         SUCCESSOR_261,
         SUCCESSOR_262,
+        SUCCESSOR_263,
     )
     require(successors == list(reviewed[: len(successors)]), "unreviewed post-254 receipt successor")
     if successors:
@@ -135,6 +140,7 @@ def reviewed_post_254(later, files=None):
                 SUCCESSOR_260_SHA256,
                 SUCCESSOR_261_SHA256,
                 SUCCESSOR_262_SHA256,
+                SUCCESSOR_263_SHA256,
             ),
             strict=True,
         ):
@@ -379,6 +385,7 @@ COMMIT;"""
         (SUCCESSOR_260, SUCCESSOR_260_DIGESTS),
         (SUCCESSOR_261, SUCCESSOR_261_DIGESTS),
         (SUCCESSOR_262, SUCCESSOR_262_DIGESTS),
+        (SUCCESSOR_263, SUCCESSOR_263_DIGESTS),
     ):
         if name in later:
             expected["api"] = expected["api_receipt"] = digests["verdify_api_runtime_login"]
@@ -421,15 +428,20 @@ COMMIT;"""
         repaired = SUCCESSOR_260 in later
         acl_repaired = SUCCESSOR_261 in later
         native_ledger = SUCCESSOR_262 in later
+        fixed_grid = SUCCESSOR_263 in later
         require(
             mcp_state
             == {
-                "mcp": SUCCESSOR_262_MCP_DIGEST
+                "mcp": SUCCESSOR_263_MCP_DIGEST
+                if fixed_grid
+                else SUCCESSOR_262_MCP_DIGEST
                 if native_ledger
                 else SUCCESSOR_261_MCP_DIGEST
                 if acl_repaired
                 else (SUCCESSOR_260_MCP_DIGEST if repaired else SUCCESSOR_259_MCP_DIGEST),
-                "mcp_receipt": SUCCESSOR_262_MCP_DIGEST
+                "mcp_receipt": SUCCESSOR_263_MCP_DIGEST
+                if fixed_grid
+                else SUCCESSOR_262_MCP_DIGEST
                 if native_ledger
                 else SUCCESSOR_261_MCP_DIGEST
                 if acl_repaired
