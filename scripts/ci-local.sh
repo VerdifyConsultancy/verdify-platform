@@ -132,6 +132,7 @@ $PY -m pytest -q \
   tests/test_generate_daily_plan.py \
   tests/test_grafana_cm_check.py \
   tests/test_grafana_manifest_security.py \
+  tests/test_ha_light_writer_boundary.py \
   tests/test_ingestor_setpoint_placement.py \
   tests/test_ingestor_gap_snapshot.py \
   tests/test_lab_generator_standardization.py \

@@ -1,6 +1,6 @@
 # Verdify Service Map
 
-Last updated: 2026-06-16
+Last updated: 2026-09-28
 
 This is the current k3s-era service map for the `verdify-platform` lane. Treat
 `AGENTS.md`, `docs/runbooks/laptop-operator.md`, `deploy/k8s/`, this file, and
@@ -12,7 +12,7 @@ but may describe services or overlays that have since moved or been retired.
 
 | Environment | ArgoCD app | Namespace | Desired state | Sync model | Device posture |
 |---|---|---|---|---|---|
-| Prod | `verdify-prod-dark` | `verdify-prod` | `deploy/k8s/overlays/prod` | Manual, behind device-write safeguards | Single live writer; `VERDIFY_DEVICE_WRITE_ENABLED=1`; sync requires exact-target preflight and rollback. |
+| Prod | `verdify-prod-dark` | `verdify-prod` | `deploy/k8s/overlays/prod` | Manual, behind device-write safeguards | One ESP32 native-API climate/setpoint writer (`verdify-ingestor`, `VERDIFY_DEVICE_WRITE_ENABLED=1`). Grow-light service calls have the separate HA route below. |
 | Prod rename target | `verdify-prod` | `verdify-prod` | `deploy/k8s/overlays/prod` | Manual | Intended replacement name for the legacy `verdify-prod-dark` app; only through a gated orphan/readopt plan. |
 | Dev | Historical/deleted | `verdify-dev` | removed | n/a | Decommissioned/deleted 2026-06-16; do not add new work here. |
 | Staging | Historical/deleted | `verdify-staging` | removed | n/a | Decommissioned/deleted; do not add new work here. |
@@ -46,7 +46,7 @@ new validated issue.
 | `verdify-mcp` | `mcp/server.py`, FastMCP streamable HTTP | `deploy/k8s/base/mcp-deployment.yaml` | `ghcr.io/verdifyconsultancy/verdify-mcp` | `8000`, ClusterIP; prod `mcp.verdify.ai` | `verdify-config`; `verdify-app-secrets/POSTGRES_PASSWORD`; planner tool surface. |
 | `verdify-ingestor` | `ingestor/ingestor.py` | `deploy/k8s/base/ingestor-deployment.yaml` plus prod patches | `ghcr.io/verdifyconsultancy/verdify-ingestor` | No inbound service; connect-out worker | ESP32 `192.168.10.111:6053`, HA `192.168.30.107:8123`, MQTT, TimescaleDB, Open-Meteo, Slack, Hermes. Single-writer invariant: replicas `1`, strategy `Recreate`. |
 | `verdify-planner` | `planner_graph/`, `python -m planner_graph.server` | `deploy/k8s/components/planner/planner-deployment.yaml` | `ghcr.io/verdifyconsultancy/verdify-planner` | `8080`, ClusterIP, `/health` | TimescaleDB run store; optional `OPENAI_API_KEY`; reached by Hermes/Iris and cron replan paths. |
-| `verdify-setpoint-server` | `scripts/setpoint-server.py` | `deploy/k8s/components/setpoint-server/setpoint-server.yaml` | `ghcr.io/verdifyconsultancy/verdify-setpoint-server` | `8200`, ClusterIP | Prod-only grow-light writer and diagnostics; HA token Secret mount; TimescaleDB. Device-affecting cutover is safety-checked. |
+| `verdify-setpoint-server` | `scripts/setpoint-server.py` | `deploy/k8s/components/setpoint-server/setpoint-server.yaml` | `ghcr.io/verdifyconsultancy/verdify-setpoint-server` | `8200`, ClusterIP | Prod-only manual grow-light route: `/lights/{main,grow}/{on,off}` calls HA `switch.turn_*` for the two Lutron switches only, then confirms HA state; HA token Secret mount; TimescaleDB. One `Recreate` pod. |
 | `verdify-hermes-iris` | upstream Hermes gateway, args `gateway run` | `deploy/k8s/components/hermes-iris/hermes-iris.yaml` | `nousresearch/hermes-agent@sha256:...` | `8642`, ClusterIP | Secret `verdify-hermes`, optional `verdify-hermes-slack`, production PVC `verdify-hermes-iris-data-portable-20260801`, MCP URL to `verdify-mcp`. |
 | `verdify-mqtt` | Mosquitto fan-out broker | `deploy/k8s/components/mqtt-broker/mqtt-broker.yaml` | `eclipse-mosquitto:2` | `1883`, ClusterIP | In-cluster telemetry fan-out; separate from HAOS/Sentinel broker; no persistence. |
 | `verdify-lab` | static Quartz nginx runtime | `deploy/k8s/components/lab-site/lab-site.yaml` | `ghcr.io/verdifyconsultancy/verdify-lab` | `8080`, ClusterIP; prod lab hosts | Public research site. Serves the `verdify-lab-site-cache` PVC read-only; baked image content is bootstrap fallback. |
@@ -55,6 +55,26 @@ new validated issue.
 
 App Secret contracts are documented by name and key in `deploy/k8s/SECRETS.md`.
 Do not print or commit raw secret values.
+
+### Device command ownership
+
+The ingestor is the **only ESP32 native-API climate/setpoint command writer**.
+Its writer lease, device-write flag, one replica, and `Recreate` strategy guard
+that route. Grow lights use HA and have several declared command origins; do
+not count HA light service calls as extra ingestor sockets or claim one
+exclusive upstream light sender:
+
+| Origin | Route and target | Authority |
+|---|---|---|
+| ESP32 firmware lighting policy | `firmware/greenhouse/controls.yaml` calls the template switches in `firmware/greenhouse/hardware.yaml`; their `homeassistant.service` actions call HA `switch.turn_on/off` for `switch.greenhouse_main` and `switch.greenhouse_grow` (Lutron Caseta). | Autonomous light policy on the controller. It does not send native-API climate setpoints. |
+| `verdify-setpoint-server` | HTTP `/lights/{main,grow}/{on,off}` → HA REST `/api/services/switch/turn_{on,off}` → the same Lutron switches. | Explicit manual/recovery light request. The handler allowlists both switches and confirms state before reporting success. |
+| HA exterior lights override | In `jvallery/homeassistant`, `packages/controls_global/lighting_master_override.yaml` includes `switch.greenhouse_grow_light_{main,grow}` ESPHome proxy switches in `switch.all_exterior_light_switches`; engage/enforce sends `homeassistant.turn_off` while `input_boolean.exterior_lights_override` is on. | House-wide user override, conditional and off after its 30-minute timer. It can request light off through the firmware's HA service route; it is not an ESP32 climate writer. |
+
+The Verdify API `POST /api/v1/greenhouses/{id}/lights/{circuit}/{action}`
+currently records an `equipment_state` intent only; it does not call HA or
+publish a live MQTT light command. HA UI/manual calls to the Lutron switches
+remain possible. See [the read-only ownership check](runbooks/ha-grow-light-writer-ownership.md)
+and `tests/test_ha_light_writer_boundary.py` before changing any route.
 
 ## Operational Components
 
