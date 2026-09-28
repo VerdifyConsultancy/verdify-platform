@@ -301,6 +301,7 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         # by a historical baseline whose state precedes their reservation.
         "258-mcp-runtime-inert-roles.sql",
         "259-mcp-ordinary-runtime-boundary.sql",
+        "260-restore-climate-action-daily-scorecard.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(
