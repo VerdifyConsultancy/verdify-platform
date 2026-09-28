@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 
 import pytest
+
+# isort: split
 from switchback.v2_analysis import analyze_revealed_paired_export
 from switchback.v2_day1_export import freeze_blinded_paired_day_export, replay_blinded_paired_day_export
 from switchback.v2_outcomes import make_randomized_itt_row
