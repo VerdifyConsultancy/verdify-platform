@@ -107,7 +107,11 @@ def validate(bundle, contract):
         raise ValueError("unsupported measurement contract")
     for name in ("panel_version", "target_version"):
         identifier(contract[name])
-    if contract["target_basis"] not in ("frozen_historical_crop_definition", "fixed_counterfactual_crop_definition"):
+    if contract["target_basis"] not in (
+        "frozen_historical_crop_definition",
+        "fixed_counterfactual_crop_definition",
+        "prospective_frozen_panel_mean_crop_reference",
+    ):
         raise ValueError(
             "explicit frozen crop target basis required; dispatched/current-resolver bands are not accepted"
         )
