@@ -35,7 +35,9 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 class PlannerPerformance(BaseModel):
     """v_planner_performance row — the Planner Score for a given date.
 
-    planner_score = 80% compliance + 20% cost efficiency (0–100). Target: >70.
+    planner_score uses historical controller credit and gives cost efficiency
+    20% weight only when resource terms are scoring-eligible. It is not a
+    fixed-panel physical crop outcome. Target: >70.
     """
 
     model_config = ConfigDict(extra="ignore")
@@ -46,11 +48,10 @@ class PlannerPerformance(BaseModel):
     vpd_high_stress_h: float | None = Field(default=None, ge=0, le=24)
     vpd_low_stress_h: float | None = Field(default=None, ge=0, le=24)
     total_stress_h: float | None = Field(default=None, ge=0, le=96)  # 4 axes, max 4×24
-    # Reward column: re-pointed in migration 147 to the controller-attributable
-    # graded value (compliance_v2_attributable_pct), falling back to binary during
-    # the dual-write co-existence window. The column name stays `compliance_pct`
-    # (CREATE OR REPLACE VIEW forbids renaming existing columns; v_plan_window_scorecard
-    # depends on it by name), so consumers read the new reward through this field.
+    # Migration 241 restored this field to the binary fraction of scored
+    # house-average readings against historical desired bands. The separate
+    # planner_score still uses graded controller credit when available. Neither
+    # is fixed-panel crop compliance or duration-weighted physical exposure.
     compliance_pct: Decimal | None = Field(default=None, ge=0, le=100)
     temp_compliance_pct: Decimal | None = Field(default=None, ge=0, le=100)
     vpd_compliance_pct: Decimal | None = Field(default=None, ge=0, le=100)
@@ -60,10 +61,9 @@ class PlannerPerformance(BaseModel):
     cost_water: float | None = Field(default=None, ge=0)
     cost_per_stress_hour: Decimal | None = None
     planner_score: Decimal | None = Field(default=None, ge=0, le=100)
-    # Unscored context columns appended by migration 147 (positions 16-18):
-    # the prior binary compliance, the raw (non-attributable) graded compliance,
-    # and the unachievable fraction. Exposed for transparency during the
-    # dual-write co-existence window; not part of planner_score.
+    # Migration 147's context columns remain for compatibility. Since 241,
+    # compliance_binary_pct duplicates the binary compliance_pct; the raw
+    # graded value and modeled unachievable fraction remain distinct diagnostics.
     compliance_binary_pct: Decimal | None = Field(default=None, ge=0, le=100)
     compliance_raw_graded_pct: Decimal | None = Field(default=None, ge=0, le=100)
     unachievable_frac: Decimal | None = Field(default=None, ge=0, le=1)

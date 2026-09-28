@@ -963,7 +963,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Temp Compliance %"
+              "options": "Temp in desired band (%)"
             },
             "properties": [
               {
@@ -978,7 +978,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "VPD Compliance %"
+              "options": "VPD in desired band (%)"
             },
             "properties": [
               {
@@ -993,7 +993,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Total Compliance %"
+              "options": "Both axes in desired band (%)"
             },
             "properties": [
               {
@@ -1039,10 +1039,10 @@
           "format": "time_series",
           "rawQuery": true,
           "editorMode": "code",
-          "rawSql": "SELECT (date + time '12:00')::timestamptz AS time,\n       temp_compliance_pct AS \"Temp Compliance %\",\n       vpd_compliance_pct AS \"VPD Compliance %\",\n       compliance_pct AS \"Total Compliance %\"\nFROM v_planner_performance\nWHERE $__timeFilter((date + time '12:00')::timestamptz)\nORDER BY date"
+          "rawSql": "SELECT (date + time '12:00')::timestamptz AS time,\n       temp_compliance_pct AS \"Temp in desired band (%)\",\n       vpd_compliance_pct AS \"VPD in desired band (%)\",\n       compliance_pct AS \"Both axes in desired band (%)\"\nFROM v_planner_performance\nWHERE $__timeFilter((date + time '12:00')::timestamptz)\nORDER BY date"
         }
       ],
-      "title": "Desired-Band Binary Reading Fractions \u2014 Temp, VPD, Both",
+      "title": "House-Average Desired-Band Reading Fractions \u2014 Temp, VPD, Both",
       "type": "timeseries",
       "transparent": true
     },
