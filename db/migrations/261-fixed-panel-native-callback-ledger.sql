@@ -54,7 +54,9 @@ CREATE TABLE public.fixed_panel_native_source_bindings (
     binding_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     recorded_at timestamptz NOT NULL DEFAULT clock_timestamp(),
     panel_source_sha256 text NOT NULL CHECK (panel_source_sha256 ~ '^[0-9a-f]{64}$'),
-    firmware_revision text NOT NULL CHECK (length(firmware_revision) BETWEEN 1 AND 512),
+    firmware_revision text NOT NULL CHECK (
+        length(firmware_revision) BETWEEN 1 AND 512
+        AND firmware_revision = normalize(firmware_revision, NFC)),
     collector_revision text NOT NULL CHECK (collector_revision ~ '^[0-9a-f]{40}$'),
     declared_route_sha256 text NOT NULL CHECK (
         declared_route_sha256 = '36d3f8ee0be85895683f319aeafad2a4262e1b4cf26741b45cac2d1adbe3729d'),
@@ -136,13 +138,13 @@ CREATE INDEX fixed_panel_native_events_source_sequence
     ON public.fixed_panel_native_events (source_runtime_instance_id, source_sequence);
 CREATE INDEX fixed_panel_native_events_day_lookup
     ON public.fixed_panel_native_events (received_at DESC, event_kind, object_id);
-SELECT add_retention_policy('public.fixed_panel_native_events', interval '90 days');
+SELECT add_retention_policy('public.fixed_panel_native_events', interval '180 days');
 COMMENT ON TABLE public.fixed_panel_native_events IS
-'Append-only until 90-day Timescale chunk retention. Host receive callbacks '
+'Append-only until 180-day Timescale chunk retention. Host receive callbacks '
 'after first subscription state, not Modbus poll time or authenticated physical '
 'sensor serial. Six fixed source routes only. No old climate-row backfill.';
 
--- Connection boundaries outlive raw callback retention. A 90-day-old stable
+-- Connection boundaries outlive raw callback retention. A 180-day-old stable
 -- native transport must not lose its initial continuity anchor merely because
 -- the rolling callback chunks expired.
 CREATE TABLE public.fixed_panel_native_sessions (
@@ -157,7 +159,7 @@ CREATE TABLE public.fixed_panel_native_sessions (
     UNIQUE (source_runtime_instance_id, source_sequence)
 );
 COMMENT ON TABLE public.fixed_panel_native_sessions IS
-'Prospective source transport connection anchors, retained after 90-day raw '
+'Prospective source transport connection anchors, retained after 180-day raw '
 'callback chunks expire. A gap permanently invalidates this generation; no '
 'physical device or serial identity is asserted.';
 
@@ -284,6 +286,9 @@ REVOKE ALL ON public.fixed_panel_native_installation,
               public.fixed_panel_native_events,
               public.fixed_panel_native_sessions,
               public.fixed_panel_native_source_bindings
+    FROM PUBLIC, verdify_api_runtime, verdify_ingestor_runtime,
+         verdify_api_runtime_login, verdify_ingestor_runtime_login;
+REVOKE ALL ON SEQUENCE public.fixed_panel_native_source_bindings_binding_id_seq
     FROM PUBLIC, verdify_api_runtime, verdify_ingestor_runtime,
          verdify_api_runtime_login, verdify_ingestor_runtime_login;
 REVOKE ALL ON FUNCTION public.fn_guard_fixed_panel_native_events(),
@@ -553,7 +558,7 @@ REVOKE ALL ON FUNCTION public.fn_fixed_panel_native_day_projection(date,bigint,b
     FROM PUBLIC, verdify_api_runtime, verdify_ingestor_runtime,
          verdify_api_runtime_login, verdify_ingestor_runtime_login;
 
--- Preserve each explicit post-window aggregate before the raw 90-day chunks
+-- Preserve each explicit post-window aggregate before the raw 180-day chunks
 -- expire. This is a source-anchored route receipt, not physical proof. Repeated
 -- freezes append a new as-of receipt; they cannot rewrite earlier evidence.
 CREATE TABLE public.fixed_panel_native_day_receipts (
@@ -572,7 +577,7 @@ CREATE INDEX fixed_panel_native_day_receipts_day
     ON public.fixed_panel_native_day_receipts (day, receipt_id DESC);
 COMMENT ON TABLE public.fixed_panel_native_day_receipts IS
 'Owner-frozen, append-only route aggregate and unavailable flags, retained '
-'after 90-day raw callback deletion and included in nightly paired pg_dump. '
+'after 180-day raw callback deletion and included in nightly paired pg_dump. '
 'It never verifies a physical serial, poll timestamp, crop placement or causal effect.';
 
 CREATE FUNCTION public.fn_guard_fixed_panel_native_day_receipt()
@@ -634,6 +639,9 @@ BEGIN
 END;
 $freeze$;
 REVOKE ALL ON public.fixed_panel_native_day_receipts
+    FROM PUBLIC, verdify_api_runtime, verdify_ingestor_runtime,
+         verdify_api_runtime_login, verdify_ingestor_runtime_login;
+REVOKE ALL ON SEQUENCE public.fixed_panel_native_day_receipts_receipt_id_seq
     FROM PUBLIC, verdify_api_runtime, verdify_ingestor_runtime,
          verdify_api_runtime_login, verdify_ingestor_runtime_login;
 REVOKE ALL ON FUNCTION public.fn_guard_fixed_panel_native_day_receipt(),

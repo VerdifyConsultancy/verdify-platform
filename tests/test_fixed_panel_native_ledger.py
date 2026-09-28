@@ -160,7 +160,7 @@ def test_261_is_inert_until_post_260_seal_and_keeps_257_publication_separate():
     migration = (ROOT / "db/migrations/261-fixed-panel-native-callback-ledger.sql").read_text()
     assert "__PIN_260_LEDGER_SHA256__" in migration
     assert "261 refuses unsealed post-260 ledger or ordinary boundary" in migration
-    assert "add_retention_policy('public.fixed_panel_native_events', interval '90 days')" in migration
+    assert "add_retention_policy('public.fixed_panel_native_events', interval '180 days')" in migration
     assert "CREATE TABLE public.fixed_panel_native_sessions" in migration
     assert "CREATE TABLE public.fixed_panel_native_day_receipts" in migration
     assert "CREATE FUNCTION public.fn_freeze_fixed_panel_native_day" in migration
