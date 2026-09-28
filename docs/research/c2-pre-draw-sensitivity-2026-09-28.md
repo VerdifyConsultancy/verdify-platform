@@ -1,5 +1,21 @@
 # #782 bounded pre-draw seasonal and retention sensitivity
 
+## Calendar decision from this audit
+
+The separate [warm-season calendar preregistration](../../research/planner-efficacy/protocols/warm-season-calendar-prereg-2027-v1.json)
+selects **June 1–July 30, 2027 inclusive** as the first future 60-local-day,
+UTC-offset-stable window supported by the audited complete climate-eligible analogue:
+the same 2026 dates yielded 60/60 eligible days and 30/30 necessary
+climate-only adjacent pairs. Each prospective assigned-day endpoint remains
+the template's local [06:00,24:00) 18-hour window. This calendar selection
+supersedes the older hot/dry calendar uncertainty in
+`research/planner-efficacy/protocols/seasonal-decision-2026-09-27.md` without
+changing that frozen winter-observer protocol, the current direct-launch basis,
+production bootstrap, or a device state. It does not lock the full design,
+draw, arm, or authorize day 1. Actual target, selector, equipment, paired
+three-endpoint, and source-faithful power inputs remain outstanding before
+Gate P. The November–December winter observer remains a separate passive study.
+
 The redacted [artifact](../../planning/evidence/c2-predraw-sensitivity-20260928.json)
 is a reproducible audit of the accepted exploratory 30-adjacent-pair,
 60-local-day design. It does not lock a date or design, replay a selector,
