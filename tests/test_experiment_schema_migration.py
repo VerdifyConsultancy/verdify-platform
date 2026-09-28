@@ -290,6 +290,9 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "253-gate-p-sealed-recovery-target.sql",
         # The exact post-253 ordinary-login receipt advance is a live migration.
         "254-post-253-ordinary-login-attestation.sql",
+        # Prospective crop-assignment lineage must run through the live ledger;
+        # the historical baseline cannot pre-stamp migration 255.
+        "255-fixed-panel-crop-assignment-lineage.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(
