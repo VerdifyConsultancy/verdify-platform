@@ -89,6 +89,13 @@ SUCCESSOR_261_DIGESTS = {
     "verdify_ingestor_runtime_login": "2fe7dfba3f23e1c1b053b8f5d245319072546d93f40f6643902f1bdf4c7e2a97",
 }
 SUCCESSOR_261_MCP_DIGEST = "116b10bdf81496423026f3c467a9c10aa6b2767867cb428e03271c71a34393fe"
+SUCCESSOR_262 = "262-fixed-panel-native-callback-ledger.sql"
+SUCCESSOR_262_SHA256 = "6b9ebfb1ee429fac2a31c07253014ccfbc1832e08307f7f0e0aad867fc46020e"
+SUCCESSOR_262_DIGESTS = {
+    "verdify_api_runtime_login": "fcedb02292df921dcc0f106e41ee53338065a16c6b8ed8e58780c544bd03551b",
+    "verdify_ingestor_runtime_login": "1ee6b4aa40eb9e56c7ab90ebb18cc6c2cb094a0e5d67092c8c406f72fc321fbc",
+}
+SUCCESSOR_262_MCP_DIGEST = "c34f6091839412a8578c1061a0bddae987fe65d8cf8cf5551fddca63924cfff3"
 
 
 class DeliveryError(ValueError):
@@ -103,7 +110,16 @@ def require(ok, message):
 def reviewed_post_254(later, files=None):
     """Admit only the reviewed, ordered receipt successors after 254."""
     successors = [name for name in later if int(name[:3]) > 254]
-    reviewed = (SUCCESSOR_255, SUCCESSOR_256, SUCCESSOR_257, SUCCESSOR_258, SUCCESSOR_259, SUCCESSOR_260, SUCCESSOR_261)
+    reviewed = (
+        SUCCESSOR_255,
+        SUCCESSOR_256,
+        SUCCESSOR_257,
+        SUCCESSOR_258,
+        SUCCESSOR_259,
+        SUCCESSOR_260,
+        SUCCESSOR_261,
+        SUCCESSOR_262,
+    )
     require(successors == list(reviewed[: len(successors)]), "unreviewed post-254 receipt successor")
     if successors:
         require(SUCCESSOR_254 in later, "unreviewed post-254 receipt successor")
@@ -118,6 +134,7 @@ def reviewed_post_254(later, files=None):
                 SUCCESSOR_259_SHA256,
                 SUCCESSOR_260_SHA256,
                 SUCCESSOR_261_SHA256,
+                SUCCESSOR_262_SHA256,
             ),
             strict=True,
         ):
@@ -361,6 +378,7 @@ COMMIT;"""
         (SUCCESSOR_259, SUCCESSOR_259_DIGESTS),
         (SUCCESSOR_260, SUCCESSOR_260_DIGESTS),
         (SUCCESSOR_261, SUCCESSOR_261_DIGESTS),
+        (SUCCESSOR_262, SUCCESSOR_262_DIGESTS),
     ):
         if name in later:
             expected["api"] = expected["api_receipt"] = digests["verdify_api_runtime_login"]
@@ -402,13 +420,18 @@ COMMIT;"""
         mcp_state = json.loads(psql(mcp_sql, environment))
         repaired = SUCCESSOR_260 in later
         acl_repaired = SUCCESSOR_261 in later
+        native_ledger = SUCCESSOR_262 in later
         require(
             mcp_state
             == {
-                "mcp": SUCCESSOR_261_MCP_DIGEST
+                "mcp": SUCCESSOR_262_MCP_DIGEST
+                if native_ledger
+                else SUCCESSOR_261_MCP_DIGEST
                 if acl_repaired
                 else (SUCCESSOR_260_MCP_DIGEST if repaired else SUCCESSOR_259_MCP_DIGEST),
-                "mcp_receipt": SUCCESSOR_261_MCP_DIGEST
+                "mcp_receipt": SUCCESSOR_262_MCP_DIGEST
+                if native_ledger
+                else SUCCESSOR_261_MCP_DIGEST
                 if acl_repaired
                 else (SUCCESSOR_260_MCP_DIGEST if repaired else SUCCESSOR_259_MCP_DIGEST),
                 "mcp_login": True,

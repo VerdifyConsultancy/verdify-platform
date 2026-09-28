@@ -2,10 +2,9 @@
 -- backfill, hardware serial claim, Modbus poll timestamp, or change to the
 -- separate migration-257 database-flush publication.
 --
--- SEAL PENDING: migration 261 must land first. Replace the literal
--- placeholders in the first and final blocks with independently reviewed
--- exact ledger and ordinary-login successor digests. This file deliberately
--- refuses to apply until then. Never self-seal an unreviewed ACL boundary.
+-- Requires the exact migration-261 source and receipt. Successor digests were
+-- computed by a single rollback-only 261-then-262 rehearsal on live ledger 260;
+-- the transaction was aborted and the ledger/schema readback stayed at 260.
 SET LOCAL search_path = pg_catalog, public, pg_temp;
 LOCK TABLE public.schema_migrations,
            public.runtime_ordinary_login_attestation_receipts,
@@ -14,25 +13,25 @@ LOCK TABLE public.schema_migrations,
 
 DO $preflight$
 BEGIN
-    IF '__PIN_261_LEDGER_SHA256__' !~ '^[0-9a-f]{64}$'
-       OR '__PIN_POST_261_INGESTOR_DIGEST__' !~ '^[0-9a-f]{64}$'
-       OR '__PIN_POST_261_API_DIGEST__' !~ '^[0-9a-f]{64}$'
-       OR '__PIN_POST_261_MCP_DIGEST__' !~ '^[0-9a-f]{64}$'
-       OR '__PIN_POST_262_INGESTOR_DIGEST__' !~ '^[0-9a-f]{64}$'
-       OR '__PIN_POST_262_API_DIGEST__' !~ '^[0-9a-f]{64}$'
-       OR '__PIN_POST_262_MCP_DIGEST__' !~ '^[0-9a-f]{64}$'
+    IF '159d67ec9e34ec386a9e8bda5d57fbaf76243c5ce1f11dd276927c9834d86896' !~ '^[0-9a-f]{64}$'
+       OR '2fe7dfba3f23e1c1b053b8f5d245319072546d93f40f6643902f1bdf4c7e2a97' !~ '^[0-9a-f]{64}$'
+       OR 'd259673dee68b8eefc6e4b164f82412c78587ea5043715e410ea199db4a553c2' !~ '^[0-9a-f]{64}$'
+       OR '116b10bdf81496423026f3c467a9c10aa6b2767867cb428e03271c71a34393fe' !~ '^[0-9a-f]{64}$'
+       OR '1ee6b4aa40eb9e56c7ab90ebb18cc6c2cb094a0e5d67092c8c406f72fc321fbc' !~ '^[0-9a-f]{64}$'
+       OR 'fcedb02292df921dcc0f106e41ee53338065a16c6b8ed8e58780c544bd03551b' !~ '^[0-9a-f]{64}$'
+       OR 'c34f6091839412a8578c1061a0bddae987fe65d8cf8cf5551fddca63924cfff3' !~ '^[0-9a-f]{64}$'
        OR NOT EXISTS (
            SELECT 1 FROM public.schema_migrations
             WHERE source = 'db/migrations' AND seq = 261
-              AND sha256 = '__PIN_261_LEDGER_SHA256__' AND stamp_method = 'runner'
+              AND sha256 = '159d67ec9e34ec386a9e8bda5d57fbaf76243c5ce1f11dd276927c9834d86896' AND stamp_method = 'runner'
        ) OR EXISTS (
            SELECT 1 FROM public.schema_migrations
             WHERE source = 'db/migrations' AND seq >= 262
        ) OR (SELECT count(*) FROM public.runtime_ordinary_login_attestation_receipts) <> 2
        OR EXISTS (
            SELECT 1 FROM (VALUES
-               ('verdify_ingestor_runtime_login', '__PIN_POST_261_INGESTOR_DIGEST__'),
-               ('verdify_api_runtime_login', '__PIN_POST_261_API_DIGEST__')
+               ('verdify_ingestor_runtime_login', '2fe7dfba3f23e1c1b053b8f5d245319072546d93f40f6643902f1bdf4c7e2a97'),
+               ('verdify_api_runtime_login', 'd259673dee68b8eefc6e4b164f82412c78587ea5043715e410ea199db4a553c2')
            ) expected(login_name, digest)
            LEFT JOIN public.runtime_ordinary_login_attestation_receipts receipt
              ON receipt.login_name = expected.login_name
@@ -42,9 +41,9 @@ BEGIN
        ) OR (SELECT count(*) FROM public.mcp_runtime_boundary_receipt) <> 1
          OR (SELECT encode(boundary_sha256, 'hex')
                FROM public.mcp_runtime_boundary_receipt WHERE singleton)
-            IS DISTINCT FROM '__PIN_POST_261_MCP_DIGEST__'
+            IS DISTINCT FROM '116b10bdf81496423026f3c467a9c10aa6b2767867cb428e03271c71a34393fe'
          OR encode(public.fn_mcp_runtime_boundary_digest(), 'hex')
-            IS DISTINCT FROM '__PIN_POST_261_MCP_DIGEST__' THEN
+            IS DISTINCT FROM '116b10bdf81496423026f3c467a9c10aa6b2767867cb428e03271c71a34393fe' THEN
         RAISE EXCEPTION '262 refuses unsealed post-261 ledger or ordinary boundary';
     END IF;
 END;
@@ -660,7 +659,123 @@ REVOKE ALL ON SEQUENCE public.fixed_panel_native_day_receipts_receipt_id_seq
 REVOKE ALL ON FUNCTION public.fn_guard_fixed_panel_native_day_receipt(),
                        public.fn_freeze_fixed_panel_native_day(date,bigint,bigint[])
     FROM PUBLIC, verdify_api_runtime, verdify_ingestor_runtime,
-         verdify_api_runtime_login, verdify_ingestor_runtime_login;
+         verdify_api_runtime_login, verdify_ingestor_runtime_login,
+         verdify_mcp_runtime, verdify_mcp_runtime_login,
+         verdify_experiment_outcome_freezer,
+         verdify_experiment_v2_outcome_freezer_login;
+
+-- One scheduled call freezes exactly the previous completed Denver day. The
+-- existing outcome-freezer duty can invoke only this bounded wrapper; it gets
+-- no raw callback, target, source-binding or private receipt table SELECT.
+CREATE FUNCTION public.fn_freeze_fixed_panel_native_previous_day()
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = pg_catalog, public, pg_temp
+AS $daily_freeze$
+DECLARE
+    v_day date := (clock_timestamp() AT TIME ZONE 'America/Denver')::date - 1;
+    v_start timestamptz;
+    v_end timestamptz;
+    v_overlap_count integer;
+    v_target_id bigint;
+    v_contributor_count integer;
+    v_zone_count integer;
+    v_source_count integer;
+    v_contributor_ids bigint[];
+    v_receipt_id bigint;
+    v_projection jsonb;
+    v_stored_sha text;
+BEGIN
+    v_start := ((v_day::timestamp + interval '6 hours') AT TIME ZONE 'America/Denver');
+    v_end := ((v_day + 1)::timestamp AT TIME ZONE 'America/Denver');
+    IF v_end - v_start IS DISTINCT FROM interval '18 hours'
+       OR clock_timestamp() < v_end + interval '15 minutes' THEN
+        RAISE EXCEPTION 'native previous-day freeze requires completed 18-hour window';
+    END IF;
+    PERFORM pg_advisory_xact_lock(hashtextextended('fixed-panel-native-freeze:' || v_day::text, 262));
+    SELECT r.receipt_id, r.projection, r.projection_sha256
+      INTO v_receipt_id, v_projection, v_stored_sha
+      FROM public.fixed_panel_native_day_receipts r
+     WHERE r.day = v_day ORDER BY r.receipt_id DESC LIMIT 1;
+    IF FOUND THEN
+        IF v_stored_sha IS DISTINCT FROM encode(pg_catalog.sha256(
+              convert_to(v_projection::text, 'UTF8')), 'hex')
+           OR v_projection->>'day' IS DISTINCT FROM v_day::text THEN
+            RAISE EXCEPTION 'native previous-day freeze latest receipt is invalid';
+        END IF;
+        RETURN jsonb_build_object('day', v_day, 'status', 'already_frozen',
+            'receipt_id', v_receipt_id, 'projection_sha256', v_stored_sha,
+            'route_18h_available', v_projection->'route_18h_available');
+    END IF;
+    SELECT count(*) INTO v_overlap_count
+      FROM public.fixed_panel_target_revisions t
+     WHERE t.greenhouse_id = 'vallery'
+       AND t.effective_from < v_end AND t.effective_to > v_start;
+    IF v_overlap_count = 0 THEN
+        RETURN jsonb_build_object('day', v_day, 'status', 'not_declared',
+            'receipt_id', NULL, 'route_18h_available', false);
+    END IF;
+    IF v_overlap_count <> 1 THEN
+        RAISE EXCEPTION 'native previous-day freeze has ambiguous target';
+    END IF;
+    SELECT t.revision_id INTO v_target_id
+      FROM public.fixed_panel_target_revisions t
+     WHERE t.greenhouse_id = 'vallery'
+       AND t.recorded_at < v_start
+       AND t.effective_from <= v_start AND t.effective_to >= v_end
+       AND jsonb_array_length(t.target_bins) = 72;
+    IF v_target_id IS NULL THEN
+        RAISE EXCEPTION 'native previous-day freeze lacks complete prospective target';
+    END IF;
+    SELECT count(*), count(DISTINCT r.zone),
+           count(DISTINCT r.source_revision_sha256),
+           array_agg(r.revision_id ORDER BY r.zone)
+      INTO v_contributor_count, v_zone_count, v_source_count, v_contributor_ids
+      FROM public.fixed_panel_contributor_revisions r
+      JOIN (VALUES ('north',2),('west',3),('east',5)) expected(zone,address)
+        ON expected.zone = r.zone AND expected.address = r.modbus_address
+     WHERE r.greenhouse_id = 'vallery'
+       AND r.capture_scope = 'route_only'
+       AND r.physical_serial IS NULL AND r.physical_evidence_sha256 IS NULL
+       AND r.route_id = r.zone || '_wall_probe'
+       AND r.temp_field = 'temp_' || r.zone AND r.vpd_field = 'vpd_' || r.zone
+       AND r.recorded_at < v_start
+       AND r.valid_from <= v_start AND r.valid_to >= v_end;
+    IF v_contributor_count <> 3 OR v_zone_count <> 3 OR v_source_count <> 1
+       OR (SELECT count(*) FROM public.fixed_panel_contributor_revisions r
+            WHERE r.greenhouse_id = 'vallery'
+              AND r.valid_from < v_end AND r.valid_to > v_start) <> 3 THEN
+        RAISE EXCEPTION 'native previous-day freeze lacks exact three-route lineage';
+    END IF;
+    v_receipt_id := public.fn_freeze_fixed_panel_native_day(
+        v_day, v_target_id, v_contributor_ids);
+    SELECT r.projection, r.projection_sha256
+      INTO v_projection, v_stored_sha
+      FROM public.fixed_panel_native_day_receipts r
+     WHERE r.receipt_id = v_receipt_id;
+    IF NOT FOUND OR v_stored_sha IS DISTINCT FROM encode(pg_catalog.sha256(
+          convert_to(v_projection::text, 'UTF8')), 'hex')
+       OR v_projection->>'day' IS DISTINCT FROM v_day::text THEN
+        RAISE EXCEPTION 'native previous-day freeze receipt readback failed';
+    END IF;
+    RETURN jsonb_build_object('day', v_day, 'status', 'frozen',
+        'receipt_id', v_receipt_id, 'projection_sha256', v_stored_sha,
+        'route_18h_available', v_projection->'route_18h_available');
+END;
+$daily_freeze$;
+REVOKE ALL ON FUNCTION public.fn_freeze_fixed_panel_native_previous_day()
+    FROM PUBLIC, verdify_api_runtime, verdify_ingestor_runtime,
+         verdify_mcp_runtime, verdify_api_runtime_login,
+         verdify_ingestor_runtime_login, verdify_mcp_runtime_login,
+         verdify_experiment_v2_outcome_freezer_login;
+GRANT EXECUTE ON FUNCTION public.fn_freeze_fixed_panel_native_previous_day()
+    TO verdify_experiment_outcome_freezer;
+REVOKE ALL ON public.fixed_panel_native_installation,
+              public.fixed_panel_native_events,
+              public.fixed_panel_native_sessions,
+              public.fixed_panel_native_source_bindings,
+              public.fixed_panel_native_day_receipts
+    FROM verdify_experiment_outcome_freezer,
+         verdify_experiment_v2_outcome_freezer_login;
 
 -- API and MCP receive only the newest frozen aggregate for one day. They get
 -- neither raw callbacks nor the private per-bin projection JSON. A malformed
@@ -749,28 +864,28 @@ COMMENT ON FUNCTION public.fn_fixed_panel_native_route_day_receipt(date,text) IS
 
 DO $successor$
 BEGIN
-    IF '__PIN_POST_262_INGESTOR_DIGEST__' !~ '^[0-9a-f]{64}$'
-       OR '__PIN_POST_262_API_DIGEST__' !~ '^[0-9a-f]{64}$'
-       OR '__PIN_POST_262_MCP_DIGEST__' !~ '^[0-9a-f]{64}$' THEN
+    IF '1ee6b4aa40eb9e56c7ab90ebb18cc6c2cb094a0e5d67092c8c406f72fc321fbc' !~ '^[0-9a-f]{64}$'
+       OR 'fcedb02292df921dcc0f106e41ee53338065a16c6b8ed8e58780c544bd03551b' !~ '^[0-9a-f]{64}$'
+       OR 'c34f6091839412a8578c1061a0bddae987fe65d8cf8cf5551fddca63924cfff3' !~ '^[0-9a-f]{64}$' THEN
         RAISE EXCEPTION '262 ordinary-login successor not pinned';
     END IF;
     UPDATE public.runtime_ordinary_login_attestation_receipts
-       SET boundary_sha256 = decode('__PIN_POST_262_INGESTOR_DIGEST__', 'hex'),
+       SET boundary_sha256 = decode('1ee6b4aa40eb9e56c7ab90ebb18cc6c2cb094a0e5d67092c8c406f72fc321fbc', 'hex'),
            captured_at = clock_timestamp()
      WHERE login_name = 'verdify_ingestor_runtime_login';
     UPDATE public.runtime_ordinary_login_attestation_receipts
-       SET boundary_sha256 = decode('__PIN_POST_262_API_DIGEST__', 'hex'),
+       SET boundary_sha256 = decode('fcedb02292df921dcc0f106e41ee53338065a16c6b8ed8e58780c544bd03551b', 'hex'),
            captured_at = clock_timestamp()
      WHERE login_name = 'verdify_api_runtime_login';
     UPDATE public.mcp_runtime_boundary_receipt
-       SET boundary_sha256 = decode('__PIN_POST_262_MCP_DIGEST__', 'hex')
+       SET boundary_sha256 = decode('c34f6091839412a8578c1061a0bddae987fe65d8cf8cf5551fddca63924cfff3', 'hex')
      WHERE singleton;
     IF encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'), 'hex')
-          IS DISTINCT FROM '__PIN_POST_262_INGESTOR_DIGEST__'
+          IS DISTINCT FROM '1ee6b4aa40eb9e56c7ab90ebb18cc6c2cb094a0e5d67092c8c406f72fc321fbc'
        OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'), 'hex')
-          IS DISTINCT FROM '__PIN_POST_262_API_DIGEST__'
+          IS DISTINCT FROM 'fcedb02292df921dcc0f106e41ee53338065a16c6b8ed8e58780c544bd03551b'
        OR encode(public.fn_mcp_runtime_boundary_digest(), 'hex')
-          IS DISTINCT FROM '__PIN_POST_262_MCP_DIGEST__' THEN
+          IS DISTINCT FROM 'c34f6091839412a8578c1061a0bddae987fe65d8cf8cf5551fddca63924cfff3' THEN
         RAISE EXCEPTION '262 postflight ordinary boundary mismatch';
     END IF;
 END;

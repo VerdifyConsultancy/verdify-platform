@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import os
 import sys
 from datetime import UTC, datetime, timedelta
@@ -187,14 +188,21 @@ def test_db_error_keeps_events_for_exact_retry(monkeypatch):
     assert '"kind": "connected"' in good.connection.payloads[0]
 
 
-def test_262_is_inert_until_post_261_seal_and_keeps_257_publication_separate():
-    migration = (ROOT / "db/migrations/262-fixed-panel-native-callback-ledger.sql").read_text()
-    assert "__PIN_261_LEDGER_SHA256__" in migration
+def test_262_requires_exact_261_seal_and_keeps_257_publication_separate():
+    source = ROOT / "db/migrations/262-fixed-panel-native-callback-ledger.sql"
+    migration = source.read_text()
+    runner = (ROOT / "scripts/c0-migration-delivery.py").read_text()
+    assert f'SUCCESSOR_262_SHA256 = "{hashlib.sha256(source.read_bytes()).hexdigest()}"' in runner
+    assert "SUCCESSOR_262 in later" in runner
+    assert "159d67ec9e34ec386a9e8bda5d57fbaf76243c5ce1f11dd276927c9834d86896" in migration
+    assert "__PIN_POST_262_INGESTOR_DIGEST__" not in migration
     assert "262 refuses unsealed post-261 ledger or ordinary boundary" in migration
     assert "add_retention_policy('public.fixed_panel_native_events', interval '180 days')" in migration
     assert "CREATE TABLE public.fixed_panel_native_sessions" in migration
     assert "CREATE TABLE public.fixed_panel_native_day_receipts" in migration
     assert "CREATE FUNCTION public.fn_freeze_fixed_panel_native_day" in migration
+    assert "CREATE FUNCTION public.fn_freeze_fixed_panel_native_previous_day()" in migration
+    assert "TO verdify_experiment_outcome_freezer" in migration
     assert "REVOKE ALL ON public.fixed_panel_native_day_receipts" in migration
     assert "physical_proof_eligible', false" in migration
     assert "CREATE FUNCTION public.fn_fixed_panel_native_day_projection" in migration
