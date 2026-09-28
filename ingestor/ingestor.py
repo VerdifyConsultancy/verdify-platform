@@ -66,6 +66,7 @@ from esp32_push import (
     preserved_terminal_status,
     push_to_esp32_detailed,
 )
+from fixed_panel_source import NativeProbeTracker
 from mqtt_fanout import (
     FanoutPublisher,
     assert_modes_consistent,
@@ -373,6 +374,9 @@ class State:
         self.climate: dict[str, float] = {}
         # Last-known values with timestamps (never cleared, used as fallback)
         self.climate_latest: dict[str, tuple[float, datetime]] = {}
+        # Native callback receive evidence is separate from climate's 600 s
+        # carry-forward cache. It grants no physical probe freshness.
+        self.fixed_panel_native = NativeProbeTracker(COUNTER_SOURCE_RUNTIME_INSTANCE_ID)
         self.equipment: dict[str, bool] = {}
         self.system: dict[str, str] = {}
         self.setpoints: dict[str, float] = {}
@@ -3047,7 +3051,7 @@ def _record_equipment_callback(
     )
 
 
-def on_state_change(entity_state) -> None:
+def on_state_change(entity_state, *, native_generation: int | None = None) -> None:
     """Called by aioesphomeapi on any entity state change."""
     source_observed_at = _equipment_source_now()
     source_generation = shared.transport_generation
@@ -3090,6 +3094,10 @@ def on_state_change(entity_state) -> None:
             return
 
         if _record_climate_sensor(obj_id, val):
+            # Only the callback fenced by the current native subscription can
+            # contribute. Direct callers and retained/old callbacks cannot.
+            if native_generation is not None and source_clock_valid:
+                state.fixed_panel_native.observe(obj_id, val, source_observed_at, native_generation)
             return
 
         if _record_diagnostic(obj_id, val, source_observed_at):
@@ -3236,11 +3244,22 @@ async def flush_loop(
     last_climate = 0.0
     last_climate_action_log = 0.0
     last_diag = 0.0
+    last_fixed_panel_report = 0.0
 
     while True:
         await asyncio.sleep(5)
         now = asyncio.get_event_loop().time()
         ts = datetime.now(UTC)
+
+        # One compact source-side report per minute. This deliberately does
+        # not relabel 60 s DB flush rows as fresh native observations. Logs are
+        # an operational signal, not a durable 18 h evidence ledger.
+        if now - last_fixed_panel_report >= 60:
+            log.info(
+                "fixed_panel_native_callbacks %s",
+                json.dumps(state.fixed_panel_native.drain(ts), sort_keys=True),
+            )
+            last_fixed_panel_report = now
 
         # Climate row every 60s
         if now - last_climate >= CLIMATE_FLUSH_INTERVAL:
@@ -3558,6 +3577,7 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
                 in _RECONCILABLE_CFG_PARAMS
             )
             connection_generation = shared.note_transport_connected(expected_cfg_readbacks)
+            state.fixed_panel_native.mark_connected(connection_generation)
             state.cfg_readback.clear()
             shared.esp32_connected_at = _time_mod.time()
             log.info(
@@ -3606,7 +3626,7 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
                     or shared.esp32.get("state_subscription_generation") != connection_generation
                 ):
                     return
-                on_state_change(entity_state)
+                on_state_change(entity_state, native_generation=connection_generation)
 
             shared.esp32["state_subscription_client"] = client
             shared.esp32["state_subscription_generation"] = connection_generation
