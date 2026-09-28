@@ -123,4 +123,18 @@ fi
 echo "[restore-pair] exact password-free role parity=true matview_refresh_rounds=${round}"
 psql -X -qAt -v ON_ERROR_STOP=1 -v role_source=paired-password-free-backup \
   -d "${PGDATABASE}" -f "${AUDIT_SQL}"
+if [ -n "${V2_INTERFACE_SQL:-}" ]; then
+  if [ "${V2_INTERFACE_SQL}" != /scripts/qualify-v2-restored-interface.sql ]; then
+    echo "[restore-pair] FATAL: unrecognized v2 interface audit path" >&2
+    exit 1
+  fi
+  first_interface="$(psql -X -qAt -v ON_ERROR_STOP=1 -d "${PGDATABASE}" -f "${V2_INTERFACE_SQL}")"
+  second_interface="$(psql -X -qAt -v ON_ERROR_STOP=1 -d "${PGDATABASE}" -f "${V2_INTERFACE_SQL}")"
+  if [ "${first_interface}" != "${second_interface}" ]; then
+    echo "[restore-pair] FATAL: restored v2 interface audit changed across read-only replays" >&2
+    exit 1
+  fi
+  echo "${first_interface}"
+  echo "[restore-pair] PASS: restored v2 interface/role boundary (no assignment or setter call)"
+fi
 echo "[restore-pair] PASS: paired logical restore and bounded audit complete"

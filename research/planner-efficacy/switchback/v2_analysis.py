@@ -10,10 +10,12 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 
 import numpy as np
 from scipy.stats import t as student_t
+
+from .v2_day1_export import replay_blinded_paired_day_export
 
 ONE_SIDED_CONFIDENCE_LEVEL = 0.975
 
@@ -110,4 +112,44 @@ def frozen_interface_manifest() -> dict[str, Any]:
         "one_sided_confidence_level": ONE_SIDED_CONFIDENCE_LEVEL,
         "missingness": "any null locked pair is inconclusive; no imputation/replacement/denominator change",
         "exposure_filter": "forbidden",
+    }
+
+
+def analyze_revealed_paired_export(
+    raw: bytes, expected_sha256: str, *, locked_pairs: int, ai_label: Literal["X", "Y"]
+) -> dict[str, Any]:
+    """Consume the exact frozen bytes after one-way arm reveal; retain ITT rows."""
+    if type(locked_pairs) is not int or locked_pairs < 2 or ai_label not in ("X", "Y"):
+        raise ValueError("revealed analysis needs locked pair count and exact X/Y mapping")
+    assigned = replay_blinded_paired_day_export(raw, expected_sha256)
+    by_pair: dict[int, dict[str, Any]] = {}
+    for index, row in assigned:
+        if index >= locked_pairs:
+            raise ValueError("frozen assignment exceeds the locked pair count")
+        by_pair.setdefault(index, {})[row.blinded_label] = row
+    if any(set(by_pair.get(index, {})) != {"X", "Y"} for index in range(locked_pairs)):
+        return {
+            "decision": "inconclusive_incomplete_locked_pairs",
+            "locked_pairs": locked_pairs,
+            "assigned_days": len(assigned),
+            "observed_pair_indexes": sorted(by_pair),
+            "source_export_sha256": expected_sha256,
+            "no_pair_replacement": True,
+        }
+    frozen_label = "Y" if ai_label == "X" else "X"
+    contrasts = []
+    for index in range(locked_pairs):
+        ai = by_pair[index][ai_label]
+        frozen = by_pair[index][frozen_label]
+        values = {}
+        for endpoint in ENDPOINTS:
+            a = getattr(ai, endpoint.name)
+            b = getattr(frozen, endpoint.name)
+            values[endpoint.name] = None if a is None or b is None else a - b
+        contrasts.append(PairContrast(index, values))
+    return {
+        **analyze_frozen_pairs(contrasts, locked_pairs=locked_pairs),
+        "assigned_days": len(assigned),
+        "source_export_sha256": expected_sha256,
+        "reveal_applied_after_freeze": True,
     }

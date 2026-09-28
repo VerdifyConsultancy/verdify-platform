@@ -18,10 +18,11 @@ SCRIPT_NAMES = (
     "check-timescale-ownership.sql",
     "test-timescale-parent-owner.sql",
     "test-restored-timescale-parent-owner.sql",
+    "qualify-v2-restored-interface.sql",
 )
 
 
-def render(stem: str, run_id: str) -> list[dict]:
+def render(stem: str, run_id: str, *, v2_interface_audit: bool = False) -> list[dict]:
     if not re.fullmatch(r"verdify-[0-9]{8}T[0-9]{6}Z", stem):
         raise ValueError("backup stem must be verdify-YYYYMMDDTHHMMSSZ")
     if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,15}", run_id):
@@ -60,6 +61,8 @@ def render(stem: str, run_id: str) -> list[dict]:
         "OWNER_REPAIR_TEST_SQL": "/scripts/test-timescale-parent-owner.sql",
         "RESTORED_OWNER_TEST_SQL": "/scripts/test-restored-timescale-parent-owner.sql",
     }
+    if v2_interface_audit:
+        env["V2_INTERFACE_SQL"] = "/scripts/qualify-v2-restored-interface.sql"
     job = {
         "apiVersion": "batch/v1",
         "kind": "Job",
@@ -126,8 +129,14 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--backup-stem", required=True)
     parser.add_argument("--run-id", required=True)
+    parser.add_argument("--v2-interface-audit", action="store_true")
     args = parser.parse_args()
-    print(yaml.safe_dump_all(render(args.backup_stem, args.run_id), sort_keys=False), end="")
+    print(
+        yaml.safe_dump_all(
+            render(args.backup_stem, args.run_id, v2_interface_audit=args.v2_interface_audit), sort_keys=False
+        ),
+        end="",
+    )
 
 
 if __name__ == "__main__":

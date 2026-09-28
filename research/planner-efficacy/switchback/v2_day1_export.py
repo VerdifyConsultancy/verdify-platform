@@ -18,6 +18,8 @@ from .v2_outcomes import ANALYZED_SECONDS, RandomizedIttRow, _local_window, make
 
 DAY1_EXPORT_SCHEMA = "verdify-experiment-v2-blinded-day-export-v1"
 DAY1_EXPORT_DOMAIN = b"verdify-experiment-v2-blinded-day-export-v1\x00"
+PAIRED_EXPORT_SCHEMA = "verdify-experiment-v2-blinded-paired-day-export-v1"
+PAIRED_EXPORT_DOMAIN = b"verdify-experiment-v2-blinded-paired-day-export-v1\x00"
 
 _TOP_FIELDS = {"rows", "schema"}
 _ROW_FIELDS = {
@@ -154,3 +156,71 @@ def replay_blinded_day_export(
     if reproduced != raw or reproduced_sha != expected_sha256:
         raise ValueError("blinded day replay did not reproduce identical bytes and hash")
     return tuple(replayed)
+
+
+def freeze_blinded_paired_day_export(
+    assignments: list[tuple[int, RandomizedIttRow]], *, timezone: str = "America/Denver"
+) -> tuple[bytes, str]:
+    """Bind the DB assignment's pair_index without adding physical-arm mapping."""
+    if not assignments or any(type(index) is not int or not 0 <= index <= 0xFFFFFFFF for index, _ in assignments):
+        raise ValueError("paired export requires source uint32 pair indexes")
+    rows = [row for _, row in assignments]
+    # Validate the unchanged day-row contract before adding source pair identity.
+    freeze_blinded_day_export(rows, timezone=timezone)
+    if len({row.assignment_id for row in rows}) != len(rows):
+        raise ValueError("paired export repeats an immutable assignment ID")
+    ordered = sorted(assignments, key=lambda item: (item[0], item[1].local_date, item[1].assignment_id))
+    by_pair: dict[int, set[str]] = {}
+    dates_by_pair: dict[int, set[str]] = {}
+    for index, row in ordered:
+        labels = by_pair.setdefault(index, set())
+        if row.blinded_label in labels:
+            raise ValueError("paired export repeats a blinded label within one pair")
+        labels.add(row.blinded_label)
+        dates = dates_by_pair.setdefault(index, set())
+        if row.local_date in dates:
+            raise ValueError("paired export repeats a local day within one pair")
+        dates.add(row.local_date)
+    payload = {
+        "rows": [{**_row_payload(row, timezone=timezone), "pair_index": index} for index, row in ordered],
+        "schema": PAIRED_EXPORT_SCHEMA,
+    }
+    raw = _canonical(payload)
+    return raw, hashlib.sha256(PAIRED_EXPORT_DOMAIN + raw).hexdigest()
+
+
+def replay_blinded_paired_day_export(
+    raw: bytes, expected_sha256: str, *, timezone: str = "America/Denver"
+) -> tuple[tuple[int, RandomizedIttRow], ...]:
+    """Verify exact paired bytes, then reuse the strict frozen day-row reader."""
+    if type(raw) is not bytes or hashlib.sha256(PAIRED_EXPORT_DOMAIN + raw).hexdigest() != expected_sha256:
+        raise ValueError("paired export byte/hash binding mismatch")
+    try:
+        payload = json.loads(raw)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ValueError("paired export is not valid UTF-8 JSON") from exc
+    if not isinstance(payload, dict) or set(payload) != _TOP_FIELDS or payload["schema"] != PAIRED_EXPORT_SCHEMA:
+        raise ValueError("paired export schema mismatch")
+    items = payload["rows"]
+    if _canonical(payload) != raw or not isinstance(items, list) or not items:
+        raise ValueError("paired export is not canonical or has no rows")
+    if any(not isinstance(item, dict) or set(item) != _ROW_FIELDS | {"pair_index"} for item in items):
+        raise ValueError("paired export row shape mismatch")
+    indexes = [item["pair_index"] for item in items]
+    if any(type(index) is not int or not 0 <= index <= 0xFFFFFFFF for index in indexes):
+        raise ValueError("paired export has invalid source pair index")
+    day_items = [{key: value for key, value in item.items() if key != "pair_index"} for item in items]
+    day_payload = {
+        "rows": sorted(day_items, key=lambda item: (item["local_date"], item["assignment_id"])),
+        "schema": DAY1_EXPORT_SCHEMA,
+    }
+    day_raw = _canonical(day_payload)
+    rows = replay_blinded_day_export(
+        day_raw, hashlib.sha256(DAY1_EXPORT_DOMAIN + day_raw).hexdigest(), timezone=timezone
+    )
+    rows_by_id = {row.assignment_id: row for row in rows}
+    paired = tuple((item["pair_index"], rows_by_id[item["assignment_id"]]) for item in items)
+    reproduced, reproduced_sha = freeze_blinded_paired_day_export(list(paired), timezone=timezone)
+    if reproduced != raw or reproduced_sha != expected_sha256:
+        raise ValueError("paired export did not reproduce identical bytes and hash")
+    return paired

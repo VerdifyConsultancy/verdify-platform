@@ -44,3 +44,25 @@ def test_rendered_restore_uses_source_bound_owner_checks():
     assert restore.index('-f "${RESTORED_OWNER_TEST_SQL}"') < restore.index('-f "${AUDIT_SQL}"')
     assert policy["spec"]["policyTypes"] == ["Ingress", "Egress"]
     assert job["spec"]["template"]["spec"]["automountServiceAccountToken"] is False
+
+
+def test_optional_v2_interface_audit_uses_same_denied_restore_and_blocks_on_drift():
+    module_path = ROOT / "scripts/render-backup-pair-restore-job.py"
+    spec = importlib.util.spec_from_file_location("backup_pair_restore_v2", module_path)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    _, _, ordinary = module.render("verdify-20260927T081703Z", "ordinary")
+    configmap, policy, audited = module.render("verdify-20260927T081703Z", "v2-interface", v2_interface_audit=True)
+    ordinary_env = {row["name"] for row in ordinary["spec"]["template"]["spec"]["containers"][0]["env"]}
+    audit_env = {row["name"]: row["value"] for row in audited["spec"]["template"]["spec"]["containers"][0]["env"]}
+    assert "V2_INTERFACE_SQL" not in ordinary_env
+    assert audit_env["V2_INTERFACE_SQL"] == "/scripts/qualify-v2-restored-interface.sql"
+    assert "qualify-v2-restored-interface.sql" in configmap["data"]
+    assert "BEGIN TRANSACTION READ ONLY" in configmap["data"]["qualify-v2-restored-interface.sql"]
+    restore = configmap["data"]["restore-backup-pair.sh"]
+    assert restore.index('-f "${AUDIT_SQL}"') < restore.index('first_interface="$(psql')
+    assert "first_interface}" in restore and "second_interface}" in restore
+    assert policy["spec"]["policyTypes"] == ["Ingress", "Egress"]
+    assert audited["spec"]["template"]["spec"]["automountServiceAccountToken"] is False
