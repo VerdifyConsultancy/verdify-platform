@@ -282,21 +282,20 @@ images:
   - name: ghcr.io/verdifyconsultancy/verdify-planner
     newName: registry.vallery.net/verdifyconsultancy/verdify-planner
     digest: sha256:2bf4889b96b39887d6880d5e14df060a4e15da76471a1a4e8ca5bd83ef26c124
-  # Hand-pinned grow-light writer: merged C0 source fb92b948,
-  # build-setpoint-server in agent-fleet-ci/verdify-platform-ci-lrqdz. Its copied
-  # verdify_schemas package changed; focused backend tests preserve the #447 asyncpg path. This prod-only
-  # pod rolls only on the explicit Argo sync.
+  # Hand-pinned grow-light writer: source e32df41e, build-setpoint-server in
+  # agent-fleet-ci/verdify-platform-ci-5dgwr. The #399 HA call allowlist confines
+  # this prod-only writer to the declared main/grow light switches.
   # hermes-agent is deliberately ABSENT from this transformer — its upstream
   # @sha256 is preserved inline in the component (NOT transformer-pinned).
   - name: ghcr.io/verdifyconsultancy/verdify-setpoint-server
     newName: registry.vallery.net/verdifyconsultancy/verdify-setpoint-server
-    digest: sha256:aae6c8ba5aa79f3103be95c4bf21c553a1e6968bdc19dfc4f7415cbc1b3ba5ab
-  # Hand-pinned lab publisher: source cffd9fb3, build
-  # agent-fleet-ci/verdify-lab-publisher-cffd9fb3-j95l5. Includes the
-  # classified publication receipt and winter/C0 source contracts.
+    digest: sha256:cbf053b817e8c113cc71a4b68222ce023061f38e1b524c385dbf50f841efe8f5
+  # Hand-pinned lab publisher: source e32df41e, build-lab-publisher in
+  # agent-fleet-ci/verdify-platform-ci-5dgwr. Includes the route-only
+  # observational block, which remains absent until a qualified publication.
   - name: ghcr.io/verdifyconsultancy/verdify-lab-publisher-k3s
     newName: registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s
-    digest: sha256:2826421ca73bd4223c2b60269b35d34e6a161c32c74e720d188fbd0b427261dc
+    digest: sha256:d3dc8ac954f7291c81d243e6530083be04135f21c1c8a317c0dd5f3b7127ec75
 
 # Release pins: the digests production runs for the five actuator-managed
 # images. kustomize applies `transformers:` after `images:`, so these replace
