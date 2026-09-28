@@ -376,7 +376,11 @@ class State:
         self.climate_latest: dict[str, tuple[float, datetime]] = {}
         # Native callback receive evidence is separate from climate's 600 s
         # carry-forward cache. It grants no physical probe freshness.
-        self.fixed_panel_native = NativeProbeTracker(COUNTER_SOURCE_RUNTIME_INSTANCE_ID)
+        self.fixed_panel_native = NativeProbeTracker(
+            COUNTER_SOURCE_RUNTIME_INSTANCE_ID,
+            collector_revision=os.environ.get("VERDIFY_GIT_SHA", "unknown"),
+            ledger_enabled=os.environ.get("VERDIFY_FIXED_PANEL_NATIVE_LEDGER_ENABLED") == "1",
+        )
         self.equipment: dict[str, bool] = {}
         self.system: dict[str, str] = {}
         self.setpoints: dict[str, float] = {}
@@ -916,6 +920,23 @@ async def write_climate(pool: asyncpg.Pool, ts: datetime) -> None:
     except Exception:
         _spool_climate_row(row)
         raise
+
+
+async def write_fixed_panel_native_events(pool: asyncpg.Pool) -> None:
+    """Persist one bounded batch without acknowledging an uncertain DB commit."""
+    tracker = state.fixed_panel_native
+    if not tracker.ledger_enabled:
+        return
+    batch = tracker.peek_events()
+    if not batch:
+        return
+    async with pool.acquire() as conn, conn.transaction():
+        for event in batch:
+            await conn.fetchval(
+                "SELECT public.fn_append_fixed_panel_native_event($1::jsonb)",
+                json.dumps(event.model_dump(mode="json", by_alias=True), sort_keys=True),
+            )
+    tracker.acknowledge_through(batch[-1].source_sequence)
 
 
 def _valid_source_firmware(value: object) -> bool:
@@ -3073,6 +3094,7 @@ def on_state_change(entity_state, *, native_generation: int | None = None) -> No
             # Never regress the barrier. The sticky gap survives subsequent
             # forward callbacks until a gap-marked receipt commits.
             _mark_equipment_source_gap("callback_clock_nonmonotonic")
+            state.fixed_panel_native.mark_clock_gap(datetime.now(UTC))
             source_clock_valid = False
         else:
             if previous_generation >= 1 and previous_generation != source_generation:
@@ -3097,7 +3119,12 @@ def on_state_change(entity_state, *, native_generation: int | None = None) -> No
             # Only the callback fenced by the current native subscription can
             # contribute. Direct callers and retained/old callbacks cannot.
             if native_generation is not None and source_clock_valid:
-                state.fixed_panel_native.observe(obj_id, val, source_observed_at, native_generation)
+                firmware_revision = (
+                    state.diagnostics.get("firmware_version")
+                    if state.counter_source_firmware_generation == source_generation
+                    else None
+                )
+                state.fixed_panel_native.observe(obj_id, val, source_observed_at, native_generation, firmware_revision)
             return
 
         if _record_diagnostic(obj_id, val, source_observed_at):
@@ -3245,11 +3272,20 @@ async def flush_loop(
     last_climate_action_log = 0.0
     last_diag = 0.0
     last_fixed_panel_report = 0.0
+    last_fixed_panel_db_error = 0.0
 
     while True:
         await asyncio.sleep(5)
         now = asyncio.get_event_loop().time()
         ts = datetime.now(UTC)
+
+        if state.fixed_panel_native.ledger_enabled:
+            try:
+                await write_fixed_panel_native_events(pool)
+            except Exception as e:
+                if now - last_fixed_panel_db_error >= 60:
+                    log.error("fixed-panel native callback ledger write failed: %s", e)
+                    last_fixed_panel_db_error = now
 
         # One compact source-side report per minute. This deliberately does
         # not relabel 60 s DB flush rows as fresh native observations. Logs are
@@ -3577,7 +3613,7 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
                 in _RECONCILABLE_CFG_PARAMS
             )
             connection_generation = shared.note_transport_connected(expected_cfg_readbacks)
-            state.fixed_panel_native.mark_connected(connection_generation)
+            state.fixed_panel_native.mark_connected(connection_generation, datetime.now(UTC))
             state.cfg_readback.clear()
             shared.esp32_connected_at = _time_mod.time()
             log.info(
@@ -3722,6 +3758,7 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
 
             log.warning("Connection lost — will reconnect")
             _mark_equipment_source_gap("transport_connection_lost")
+            state.fixed_panel_native.mark_disconnected(datetime.now(UTC))
             last_disconnected_at = disconnected_at or datetime.now(UTC)
             shared.esp32["client"] = None
             shared.esp32["state_subscription_client"] = None

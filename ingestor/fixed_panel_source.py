@@ -10,7 +10,10 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import re
 from datetime import UTC, datetime
+
+from verdify_schemas.fixed_panel_native import FixedPanelNativeEvent
 
 ROUTES = {
     "north": {"modbus_address": 2, "temp": "north_temp___f_", "rh": "north_rh____"},
@@ -29,15 +32,73 @@ OBJECT_FIELDS = {
 class NativeProbeTracker:
     """Keep only callbacks since the last report, fenced to one API generation."""
 
-    def __init__(self, runtime_instance_id: str):
+    def __init__(
+        self,
+        runtime_instance_id: str,
+        *,
+        collector_revision: str = "unknown",
+        ledger_enabled: bool = False,
+        max_pending_events: int = 8192,
+    ):
         self.runtime_instance_id = runtime_instance_id
+        self.collector_revision = collector_revision
+        self.ledger_enabled = ledger_enabled
+        if ledger_enabled and not re.fullmatch(r"[0-9a-f]{40}", collector_revision):
+            raise ValueError("native callback ledger needs an exact collector source SHA")
+        self.max_pending_events = max(4, max_pending_events)
+        self.source_sequence = 0
+        self.events: list[FixedPanelNativeEvent] = []
         self.generation = 0
         self.first_seen: set[str] = set()
         self.pending: dict[str, dict] = {}
         self.replay_excluded = 0
         self.generation_changed = False
 
-    def mark_connected(self, generation: int) -> None:
+    def _append_event(
+        self,
+        kind: str,
+        received_at: datetime,
+        *,
+        object_id: str | None = None,
+        value: float | None = None,
+        firmware_revision: str | None = None,
+        reason: str | None = None,
+    ) -> None:
+        if not self.ledger_enabled:
+            return
+        if len(self.events) >= self.max_pending_events - 2:
+            del self.events[: self.max_pending_events // 2]
+            self.source_sequence += 1
+            self.events.append(
+                FixedPanelNativeEvent(
+                    kind="gap",
+                    runtime_instance_id=self.runtime_instance_id,
+                    source_sequence=self.source_sequence,
+                    transport_generation=self.generation,
+                    received_at=received_at,
+                    collector_revision=self.collector_revision,
+                    declared_route_sha256=ROUTE_SOURCE_SHA256,
+                    reason="buffer_overflow",
+                )
+            )
+        self.source_sequence += 1
+        self.events.append(
+            FixedPanelNativeEvent(
+                kind=kind,
+                runtime_instance_id=self.runtime_instance_id,
+                source_sequence=self.source_sequence,
+                transport_generation=self.generation,
+                received_at=received_at,
+                collector_revision=self.collector_revision,
+                declared_route_sha256=ROUTE_SOURCE_SHA256,
+                object_id=object_id,
+                value=value,
+                firmware_revision=firmware_revision,
+                reason=reason,
+            )
+        )
+
+    def mark_connected(self, generation: int, received_at: datetime | None = None) -> None:
         if generation < 1:
             raise ValueError("native API generation must be positive")
         if generation == self.generation:
@@ -47,8 +108,30 @@ class NativeProbeTracker:
         self.replay_excluded = 0
         self.generation = generation
         self.generation_changed = True
+        self._append_event("connected", received_at or datetime.now(UTC))
 
-    def observe(self, object_id: str, value: object, received_at: datetime, generation: int) -> bool:
+    def mark_disconnected(self, received_at: datetime) -> None:
+        if self.generation >= 1:
+            self._append_event("gap", received_at, reason="transport_disconnected")
+
+    def mark_clock_gap(self, received_at: datetime) -> None:
+        if self.generation >= 1:
+            self._append_event("gap", received_at, reason="callback_clock_regression")
+
+    def peek_events(self, limit: int = 500) -> tuple[FixedPanelNativeEvent, ...]:
+        return tuple(self.events[:limit])
+
+    def acknowledge_through(self, source_sequence: int) -> None:
+        self.events[:] = [event for event in self.events if event.source_sequence > source_sequence]
+
+    def observe(
+        self,
+        object_id: str,
+        value: object,
+        received_at: datetime,
+        generation: int,
+        firmware_revision: str | None = None,
+    ) -> bool:
         if object_id not in OBJECT_FIELDS or generation != self.generation or generation < 1:
             return False
         if received_at.tzinfo is None or received_at.utcoffset() is None:
@@ -57,6 +140,8 @@ class NativeProbeTracker:
             return False
         zone, metric = OBJECT_FIELDS[object_id]
         if metric == "rh" and not 0 <= value <= 100:
+            return False
+        if metric == "temp" and not -80 <= value <= 180:
             return False
         if object_id not in self.first_seen:
             self.first_seen.add(object_id)
@@ -74,6 +159,13 @@ class NativeProbeTracker:
             "received_at": timestamp.isoformat(),
             "callback_count": 1 if previous is None else previous["callback_count"] + 1,
         }
+        self._append_event(
+            "callback",
+            timestamp,
+            object_id=object_id,
+            value=float(value),
+            firmware_revision=firmware_revision,
+        )
         return True
 
     def drain(self, reported_at: datetime) -> dict:

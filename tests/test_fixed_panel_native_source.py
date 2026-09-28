@@ -9,6 +9,8 @@ from pathlib import Path
 from types import SimpleNamespace
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 INGESTOR_PATH = str(ROOT / "ingestor")
 if INGESTOR_PATH not in sys.path:
     sys.path.insert(0, INGESTOR_PATH)
