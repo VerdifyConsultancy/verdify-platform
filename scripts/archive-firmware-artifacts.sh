@@ -29,7 +29,7 @@ done
 REPO_ROOT="${REPO_ROOT:-$(git rev-parse --show-toplevel)}"
 REPO_ROOT="$(cd "$REPO_ROOT" && pwd)"
 cd "$REPO_ROOT"
-BUILD_DIR="$REPO_ROOT/firmware/.esphome/build/greenhouse/.pioenvs/greenhouse"
+BUILD_DIR="${BUILD_DIR:-$REPO_ROOT/firmware/.esphome/build/greenhouse/.pioenvs/greenhouse}"
 ARTIFACT_ROOT="${ARTIFACT_ROOT:-$REPO_ROOT/firmware/artifacts}"
 DEST="$ARTIFACT_ROOT/$FW_VERSION"
 PROVENANCE_DIR="$DEST/provenance"

@@ -29,8 +29,9 @@
 # verdify-firmware-artifacts PVC — archive-firmware-artifacts.sh runs with
 # ARTIFACT_ROOT=/artifacts, so last-good.ota.bin (the rollback floor read by
 # firmware-rollback.sh and the deploy preflight's bake clock) is durable and
-# cluster-resident. The .platformio/.esphome toolchain cache PVC makes rebuild
-# runs minutes, not the first-run ~15 min toolchain download.
+# cluster-resident. The old node-bound toolchain cache PVC is retained for
+# recovery, but builds use a bounded per-Job cache so they can run on any
+# eligible worker.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -118,7 +119,7 @@ spec:
           containers:
             - name: builder
               # Official ESPHome image: carries the esphome CLI; PlatformIO
-              # pulls the xtensa toolchain into the cache PVC on first run.
+              # pulls the xtensa toolchain into the per-Job cache.
               image: ghcr.io/esphome/esphome:2026.6.5@sha256:ffe23402d169fc9b8ff29fc3c9fc13b3c47e8a53726fce4569e2280bd534c84c
               securityContext:
                 allowPrivilegeEscalation: false
@@ -173,13 +174,10 @@ spec:
                   SECRETS
 
                   cd /work/firmware
-                  echo "[builder] compiling (first run downloads the xtensa toolchain into the cache PVC)"
+                  echo "[builder] compiling (downloads the xtensa toolchain into the per-Job cache)"
                   esphome -s fw_version "${FW_VERSION}" compile greenhouse.yaml
 
-                  BUILD_DIR="$(find /cache/esphome-data/build -maxdepth 3 -name firmware.ota.bin -printf '%h\n' 2>/dev/null | head -1)"
-                  if [ -z "$BUILD_DIR" ]; then
-                    BUILD_DIR="$(find .esphome/build -maxdepth 3 -name firmware.ota.bin -printf '%h\n' | head -1)"
-                  fi
+                  BUILD_DIR="${ESPHOME_DATA_DIR}/build/greenhouse/.pioenvs/greenhouse"
                   echo "[builder] build dir: ${BUILD_DIR}"
                   sha256sum "${BUILD_DIR}/firmware.ota.bin"
 
@@ -221,7 +219,7 @@ spec:
             - name: artifacts
               persistentVolumeClaim: {claimName: verdify-firmware-artifacts}
             - name: cache
-              persistentVolumeClaim: {claimName: verdify-firmware-toolchain-cache}
+              emptyDir: {sizeLimit: 10Gi}
             - name: work
               emptyDir: {}
             - name: tmp
