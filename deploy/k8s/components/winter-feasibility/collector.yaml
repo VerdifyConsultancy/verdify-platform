@@ -79,7 +79,7 @@ metadata:
 spec:
   schedule: "30 0 * * *"
   timeZone: America/Denver
-  suspend: true
+  suspend: false
   concurrencyPolicy: Forbid
   startingDeadlineSeconds: 3600
   successfulJobsHistoryLimit: 3

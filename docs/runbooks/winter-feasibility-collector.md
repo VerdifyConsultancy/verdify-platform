@@ -90,7 +90,9 @@ hashes. Staging is a one-time operation; the Mac can disconnect for the 60
 daily Jobs.
 
 Unsuspend the CronJob in Git only after the exact staged source and instance
-pass readback. Render/diff first; sync only the reviewed resources with prune
-off and no unrelated migration/hook change. Verify Argo Synced/Healthy, the
-live CronJob source pin, a first Job's read-only DB login, the day-file hash,
-and Longhorn backup/readback. Do not mark missing or late days timely.
+pass readback. Render/diff first; full-sync the exact revision with prune off
+and verify the hook result. Verify Argo Synced/Healthy and the live CronJob
+source pin immediately. The first daily Jobs before November 2 are expected
+to exit without a day or a DB query. From November 3 onward, verify a Job's
+read-only DB login, the first day-file hash, and Longhorn backup/readback.
+Do not mark missing or late days timely.
