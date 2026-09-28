@@ -307,6 +307,19 @@ def declaration_sql(draft: dict) -> str:
     ]
     return f"""-- Review and apply only after migration 255 is live. This changes analysis source only.
 BEGIN;
+LOCK TABLE public.fixed_panel_target_revisions IN SHARE ROW EXCLUSIVE MODE;
+DO $preflight$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM public.fixed_panel_target_revisions
+         WHERE greenhouse_id = 'vallery'
+           AND effective_from < '{draft["effective_to"]}'::timestamptz
+           AND effective_to > '{draft["effective_from"]}'::timestamptz
+    ) THEN
+        RAISE EXCEPTION 'prospective panel target interval already has a declaration';
+    END IF;
+END;
+$preflight$;
 WITH source_bins AS (SELECT $winter_bins${bins}$winter_bins$::jsonb AS bins)
 INSERT INTO public.fixed_panel_target_revisions
     (greenhouse_id, target_version, effective_from, effective_to,

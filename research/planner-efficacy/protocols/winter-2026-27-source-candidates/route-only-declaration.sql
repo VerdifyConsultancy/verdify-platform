@@ -7,6 +7,7 @@
 -- firmware/greenhouse/sensors.yaml, and
 -- ingestor/entity_map.py SHA-256 entries matched branch source on 2026-09-27.
 BEGIN;
+LOCK TABLE public.fixed_panel_contributor_revisions IN SHARE ROW EXCLUSIVE MODE;
 DO $preflight$
 BEGIN
     IF EXISTS (

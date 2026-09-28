@@ -82,7 +82,10 @@ def test_4320_bins_use_east_pepper_and_north_west_defaults():
     assert draft["target_bins"][0]["vpd_low"] == pytest.approx(0.4)
     assert draft["target_bins"][0]["vpd_high"] == pytest.approx(1.2)
     assert draft["target_bins_sha256"] == freezer._sha(freezer._canonical(draft["target_bins"]))
-    assert "INSERT INTO public.fixed_panel_target_revisions" in freezer.declaration_sql(draft)
+    sql = freezer.declaration_sql(draft)
+    assert "INSERT INTO public.fixed_panel_target_revisions" in sql
+    assert "LOCK TABLE public.fixed_panel_target_revisions IN SHARE ROW EXCLUSIVE MODE" in sql
+    assert "prospective panel target interval already has a declaration" in sql
 
 
 def test_missing_default_and_incomplete_lineage_fail_closed():
