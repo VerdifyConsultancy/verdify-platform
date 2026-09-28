@@ -115,6 +115,8 @@ spec:
             runAsNonRoot: true
             runAsUser: 1000
             runAsGroup: 1000
+            fsGroup: 1000
+            fsGroupChangePolicy: OnRootMismatch
             seccompProfile: {type: RuntimeDefault}
           containers:
             - name: builder
@@ -149,6 +151,8 @@ spec:
                   value: /cache/platformio
                 - name: ESPHOME_DATA_DIR
                   value: /cache/esphome-data
+                - name: ESPHOME_DEFAULT_COMPILE_PROCESS_LIMIT
+                  value: "1"         # serial compile stays within the 6Gi namespace limit
                 - name: HOME
                   value: /tmp
               command: [bash, -euo, pipefail, -c]
