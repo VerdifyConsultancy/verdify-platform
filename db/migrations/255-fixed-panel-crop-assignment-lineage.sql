@@ -1,8 +1,48 @@
 -- #782: prospective crop assignment lineage for frozen fixed-panel targets.
 -- The seed records migration-time state only; it does not reconstruct past
 -- plantings or assert that a future crop will remain physically in its zone.
+-- The ordinary login digests include the crops relation's trigger definitions.
+-- This wrap-safe file advances their sealed receipts together with its DDL and
+-- runner ledger stamp, from exact reviewed 254 predecessors only.
 SET LOCAL search_path = pg_catalog, public, pg_temp;
+LOCK TABLE public.schema_migrations,
+           public.runtime_ordinary_login_attestation_receipts
+    IN SHARE ROW EXCLUSIVE MODE;
 LOCK TABLE public.crops IN SHARE ROW EXCLUSIVE MODE;
+
+DO $preflight$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM public.schema_migrations
+         WHERE source = 'db/migrations'
+           AND filename = 'db/migrations/254-post-253-ordinary-login-attestation.sql'
+           AND seq = 254
+           AND sha256 = 'd4f5a0d5366caf4ed74835aa5a768ed8261cd5683afe09a0c1c14b4f07ef1cd8'
+           AND stamp_method = 'runner'
+    ) OR EXISTS (
+        SELECT 1 FROM public.schema_migrations
+         WHERE source = 'db/migrations' AND seq >= 255
+    ) THEN
+        RAISE EXCEPTION 'post-254 crop lineage refuses migration ledger drift';
+    END IF;
+    IF (SELECT count(*) FROM public.runtime_ordinary_login_attestation_receipts) <> 2
+       OR EXISTS (
+           SELECT 1 FROM (VALUES
+               ('verdify_api_runtime_login',
+                '9b5e6841cebc95cff6020f1a899e65c1f504d927844f66f7045ecfb1eef23451'),
+               ('verdify_ingestor_runtime_login',
+                '52c1d03192df977396e4e61075616ee18ecb66c6b771005261c510980e97adc3')
+           ) expected(login_name, digest)
+           LEFT JOIN public.runtime_ordinary_login_attestation_receipts receipt
+             ON receipt.login_name = expected.login_name
+           WHERE encode(receipt.boundary_sha256, 'hex') IS DISTINCT FROM expected.digest
+              OR encode(public.fn_runtime_ordinary_boundary_digest(expected.login_name), 'hex')
+                 IS DISTINCT FROM expected.digest
+       ) THEN
+        RAISE EXCEPTION 'post-254 crop lineage refuses unreviewed boundary digest';
+    END IF;
+END;
+$preflight$;
 
 CREATE TABLE public.crop_assignment_revisions (
     revision_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -203,3 +243,37 @@ BEGIN
     RETURN NEW;
 END;
 $function$;
+
+-- These literals came from a bounded, rollback-only live 254 -> 255 catalog
+-- probe. The owning runner stamps 255 in this same transaction. A changed
+-- predecessor, source result, or receipt refuses before commit.
+UPDATE public.runtime_ordinary_login_attestation_receipts
+   SET boundary_sha256 = decode(CASE login_name
+       WHEN 'verdify_api_runtime_login' THEN
+           'a52e94f2b6fdecf792cfa819a33f6cd4a950d1076fec1895e9870a63b362cf62'
+       WHEN 'verdify_ingestor_runtime_login' THEN
+           '5bdcd842aa593e15f7d33f4f335dfac0278adc62a0ea929b2590880adbf24c8d'
+       END, 'hex'),
+       captured_at = pg_catalog.clock_timestamp()
+ WHERE login_name IN ('verdify_api_runtime_login', 'verdify_ingestor_runtime_login');
+
+DO $postflight$
+BEGIN
+    IF (SELECT count(*) FROM public.runtime_ordinary_login_attestation_receipts) <> 2
+       OR EXISTS (
+           SELECT 1 FROM (VALUES
+               ('verdify_api_runtime_login',
+                'a52e94f2b6fdecf792cfa819a33f6cd4a950d1076fec1895e9870a63b362cf62'),
+               ('verdify_ingestor_runtime_login',
+                '5bdcd842aa593e15f7d33f4f335dfac0278adc62a0ea929b2590880adbf24c8d')
+           ) expected(login_name, digest)
+           LEFT JOIN public.runtime_ordinary_login_attestation_receipts receipt
+             ON receipt.login_name = expected.login_name
+           WHERE encode(receipt.boundary_sha256, 'hex') IS DISTINCT FROM expected.digest
+              OR encode(public.fn_runtime_ordinary_boundary_digest(expected.login_name), 'hex')
+                 IS DISTINCT FROM expected.digest
+       ) THEN
+        RAISE EXCEPTION 'post-254 crop lineage successor receipts are not exact';
+    END IF;
+END;
+$postflight$;
