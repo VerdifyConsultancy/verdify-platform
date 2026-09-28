@@ -5,6 +5,7 @@ original module. The tasks package __init__ re-exports the public
 surface so every `from tasks import X` still resolves.
 """
 
+from planner_local_fallback import LOCAL_FALLBACK_FAILURE_CLASS, record_required_local_fallback
 from planner_routing import required_trigger_disposition
 
 from config import HERMES_API_KEY, HERMES_URL
@@ -731,6 +732,10 @@ async def _sync_planner_trigger_ledger(conn: asyncpg.Connection) -> None:
                updated_at        = now()
           FROM plan_delivery_log pdl
          WHERE ptl.plan_delivery_log_id = pdl.id
+           AND NOT (
+               ptl.status = 'neutral_fallback'
+               AND ptl.failure_class = 'ingestor_local_fallback_after_required_failure'
+           )
            AND pdl.status IN (
                'acked', 'plan_written', 'action_completed', 'neutral_fallback',
                'wrong_action', 'timed_out', 'delivery_failed'
@@ -1248,6 +1253,16 @@ async def _retry_missed_required_triggers(pool: asyncpg.Pool) -> None:
         if row["expected_at"].astimezone(_DENVER).date() == today_local:
             continue
         if _attempts_for(row["id"]) >= MAX_REQUIRED_TRIGGER_ATTEMPTS:
+            try:
+                if await record_required_local_fallback(pool, row["id"]):
+                    log.error(
+                        "Carried required planner trigger %s entered local neutral fallback after %d attempts; "
+                        "no plan or device write",
+                        row["id"],
+                        MAX_REQUIRED_TRIGGER_ATTEMPTS,
+                    )
+            except Exception as e:
+                log.warning("Carried required planner trigger %s local fallback write failed: %s", row["id"], e)
             continue
         event_type = str(row["event_type"])
         label = f"{row['event_label'] or event_type} (cross-midnight catch-up)"
@@ -1342,6 +1357,20 @@ async def planning_heartbeat(pool: asyncpg.Pool) -> None:
                     log.info("Required planner trigger %s remains in-flight until %s", key, terminal["due_at"])
                     continue
                 if _attempts_for(expected_trigger_id) >= MAX_REQUIRED_TRIGGER_ATTEMPTS:
+                    if not _milestones_fired.get(f"{key}:fallback_recorded"):
+                        try:
+                            if await record_required_local_fallback(pool, expected_trigger_id):
+                                _milestones_fired[f"{key}:fallback_recorded"] = True
+                                _save_milestone_state()
+                                log.error(
+                                    "Required planner trigger %s entered local neutral fallback after "
+                                    "%d attempts (%s); no plan or device write",
+                                    key,
+                                    MAX_REQUIRED_TRIGGER_ATTEMPTS,
+                                    LOCAL_FALLBACK_FAILURE_CLASS,
+                                )
+                        except Exception as e:
+                            log.warning("Required planner trigger %s local fallback write failed: %s", key, e)
                     if not _milestones_fired.get(f"{key}:attempts_exhausted"):
                         _milestones_fired[f"{key}:attempts_exhausted"] = True
                         _save_milestone_state()
