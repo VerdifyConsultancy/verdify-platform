@@ -1,0 +1,113 @@
+{
+  "calendar_timezone": "America/Denver",
+  "claim_limits": [
+    "Historical climate eligibility is necessary only; it does not authenticate probe identity or freshness.",
+    "Historical target lineage and as-of selector/equipment inputs are absent in both analogue windows.",
+    "The warm bin-level temperature/VPD level correlation is not paired randomized endpoint covariance.",
+    "Retention scenarios assume independent identical pair completion and keep provisional conditional power fixed.",
+    "The provisional model uses historical 22-hour scales while the protocol outcome window is 18 hours.",
+    "No effect, endpoint variance, causal efficacy, physical proof or experimental readiness is estimated."
+  ],
+  "climate_rule": {
+    "complete_minutes_per_bin": 12,
+    "eligible_bins_per_day": 66,
+    "max_contiguous_missing_bins": 2,
+    "window_local": "[06:00,24:00)"
+  },
+  "fixed_panel_routes": [
+    "north",
+    "east",
+    "west"
+  ],
+  "historical_analogues": {
+    "warm_analogue_2026": {
+      "climate_eligible_adjacent_pairs": 30,
+      "climate_eligible_days": 60,
+      "correlation_scope": "descriptive eligible bin levels; not randomized paired endpoint covariance",
+      "expected_bins": 4320,
+      "expected_minutes": 64800,
+      "first_full_local_day_elapsed_hours": 24,
+      "first_local_date": "2026-06-01",
+      "joint_complete_minutes": 63214,
+      "joint_eligible_bins": 4309,
+      "last_local_date": "2026-07-30",
+      "level_correlation_pairs": 4309,
+      "primary_window_elapsed_hours": 18,
+      "raw_temperature_vpd_level_correlation": 0.696008497926266
+    },
+    "winter_analogue_2025": {
+      "climate_eligible_adjacent_pairs": 0,
+      "climate_eligible_days": 0,
+      "correlation_scope": "descriptive eligible bin levels; not randomized paired endpoint covariance",
+      "expected_bins": 4320,
+      "expected_minutes": 64800,
+      "first_full_local_day_elapsed_hours": 25,
+      "first_local_date": "2025-11-02",
+      "joint_complete_minutes": 16827,
+      "joint_eligible_bins": 0,
+      "last_local_date": "2025-12-31",
+      "level_correlation_pairs": 0,
+      "primary_window_elapsed_hours": 18,
+      "raw_temperature_vpd_level_correlation": null
+    }
+  },
+  "provisional_model": {
+    "conditional_pass_probability_in_provisional_model_only": 0.13984250036472237,
+    "interpretation": "assumption-only reweighting; historical effects, selector mix and covariance are unavailable",
+    "reference_complete_pair_probability": 0.9995,
+    "reference_monte_carlo_standard_error": 0.0021797447777205476,
+    "retention_sensitivity": [
+      {
+        "absolute_joint_advance_upper_bound_from_retention": 0.9851082442083701,
+        "all_30_pairs_retained_probability": 0.9851082442083701,
+        "assumed_independent_complete_pair_probability": 0.9995,
+        "provisional_model_only_rescaled_joint_power": 0.13776
+      },
+      {
+        "absolute_joint_advance_upper_bound_from_retention": 0.7397003733882802,
+        "all_30_pairs_retained_probability": 0.7397003733882802,
+        "assumed_independent_complete_pair_probability": 0.99,
+        "provisional_model_only_rescaled_joint_power": 0.10344154973533586
+      },
+      {
+        "absolute_joint_advance_upper_bound_from_retention": 0.21463876394293727,
+        "all_30_pairs_retained_probability": 0.21463876394293727,
+        "assumed_independent_complete_pair_probability": 0.95,
+        "provisional_model_only_rescaled_joint_power": 0.030015621424973764
+      }
+    ],
+    "thirty_pair_joint_advance_power": 0.13776
+  },
+  "schema": "verdify-c2-pre-draw-seasonal-sensitivity-v1",
+  "selector_input_presence": {
+    "actual_selector_choices": 0,
+    "empirical_fallback_rate": null,
+    "empirical_profile_mix": null,
+    "historical_asof_forecast_rows": 0,
+    "historical_equipment_receipts": 0,
+    "interpretation": "source absence; zero observed choices does not mean zero fallback",
+    "selector_effect_dilution": null
+  },
+  "source_sha256": {
+    "climate_bins.csv": "05c96485a34cf3cdce3a2955e62e7ed98580a1e21546162724a285443abce486",
+    "climate_summary.json": "462d19ca78906f53cd72122e50537e3337e1b5a9edfa631d9e51125fcf927c49",
+    "input_presence.txt": "2f9b27713efe3366cdda40b2648b0d404413c3a83e2233eff2f764d176ed3c83",
+    "planner-switchback-v2-power.json": "43317d4c242746f31e637ec96d43de10db10a54206ffbd4a6d439a94b49a405a",
+    "pre_draw_sensitivity.py": "de04c952c71e22a8b1f9ec6d7d6672b582000ddfbf625b789af6a4e54375dcc2",
+    "research/planner-efficacy/protocols/direct-launch-basis-v1.json": "1f51e9bbaf5c018e1303ae450f4d926000ae42655484636711855036000f4d41",
+    "research/planner-efficacy/protocols/planner-switchback-v2.template.yaml": "7fba770073bb2c6eeec99210a5f460e13680950119b252f19c68eef71f3b9a43",
+    "research/planner-efficacy/switchback/v2_outcomes.py": "c31e4a8001383a107f2082038cec0b5afdb2e25452ccfbfbf212573daa4faf40",
+    "research/planner-efficacy/switchback/v2_power.py": "fa39a9157da04a15b899dadea66a4d82b7a365521cf1c48dadede7e8c0c11921",
+    "research/planner-efficacy/switchback/v2_selector.py": "e8d194ceb3763e5549e832dd4c4fd6655716c42f7ba9e4978ea6a3901f04b431"
+  },
+  "status": "bounded_pre_draw_sensitivity_not_design_lock",
+  "study_scope": "accepted exploratory 30 adjacent pairs / 60 local days; this script makes no draw",
+  "three_endpoint_estimands": {
+    "complete_nine_state_direct_source_available": false,
+    "frozen_historical_crop_targets_available": false,
+    "paired_endpoint_effects": null,
+    "paired_endpoint_variance": null,
+    "paired_three_endpoint_covariance": null,
+    "source_faithful_joint_advance_power": null
+  }
+}
