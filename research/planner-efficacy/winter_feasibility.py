@@ -18,6 +18,7 @@ import math
 import os
 import re
 import subprocess
+import tempfile
 from datetime import UTC, date, datetime, time, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -156,19 +157,25 @@ def bounds(local_day: date) -> tuple[datetime, datetime]:
 
 
 def _source_identity() -> tuple[str, str, str]:
-    commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=REPO, text=True).strip()
+    if (REPO / ".git").exists():
+        commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=REPO, text=True).strip()
+    else:
+        # A retained source snapshot on the collector PVC has no Git binary.
+        # Registration still binds the exact extractor and protocol bytes below.
+        commit = (REPO / "source-revision").read_text().strip()
     if not GIT_SHA.fullmatch(commit):
         raise ValueError("source Git revision is invalid")
     for path in (SOURCE, PROTOCOL):
         relative = path.relative_to(REPO).as_posix()
-        try:
-            committed = subprocess.check_output(
-                ["git", "show", f"HEAD:{relative}"], cwd=REPO, stderr=subprocess.DEVNULL
-            )
-        except subprocess.CalledProcessError as exc:
-            raise ValueError(f"source file is not committed at HEAD: {relative}") from exc
-        if committed != path.read_bytes():
-            raise ValueError(f"source file differs from HEAD: {relative}")
+        if (REPO / ".git").exists():
+            try:
+                committed = subprocess.check_output(
+                    ["git", "show", f"HEAD:{relative}"], cwd=REPO, stderr=subprocess.DEVNULL
+                )
+            except subprocess.CalledProcessError as exc:
+                raise ValueError(f"source file is not committed at HEAD: {relative}") from exc
+            if committed != path.read_bytes():
+                raise ValueError(f"source file differs from HEAD: {relative}")
     return commit, digest(SOURCE.read_bytes()), digest(PROTOCOL.read_bytes())
 
 
@@ -280,7 +287,7 @@ def _coverage(
     }
 
 
-async def capture(instance: dict, local_day: date, dsn: str) -> dict:
+async def capture(instance: dict, local_day: date, dsn: str, canonical_fields: tuple[str, ...]) -> dict:
     start_day, instance_sha = validate_instance(instance)
     if not start_day <= local_day < start_day + timedelta(days=DAY_COUNT):
         raise ValueError("day is outside the registered 60-day calendar")
@@ -289,13 +296,23 @@ async def capture(instance: dict, local_day: date, dsn: str) -> dict:
         raise ValueError("observation window is not complete")
     import asyncpg  # optional until a read-only collection is actually run
 
-    from verdify_schemas.component_executor import CANONICAL_FIELD_ORDER
-
     conn = await asyncpg.connect(dsn=dsn, timeout=10)
     try:
         async with conn.transaction(isolation="repeatable_read", readonly=True):
             await conn.execute("SET LOCAL statement_timeout = '30s'")
             await conn.execute("SET LOCAL lock_timeout = '2s'")
+            identity = await conn.fetchrow(
+                "SELECT current_user AS login, current_setting('transaction_read_only') AS read_only, "
+                "rolsuper, rolcreatedb, rolcreaterole, rolbypassrls "
+                "FROM pg_roles WHERE rolname = current_user"
+            )
+            if (
+                identity is None
+                or identity["login"] != instance["observer_role"]
+                or identity["read_only"] != "on"
+                or any(identity[key] for key in ("rolsuper", "rolcreatedb", "rolcreaterole", "rolbypassrls"))
+            ):
+                raise ValueError("database observer is not the registered nonprivileged read-only login")
             extracted_at = await conn.fetchval("SELECT statement_timestamp()")
             snapshot = await conn.fetchval("SELECT pg_current_snapshot()::text")
             sources = {}
@@ -304,7 +321,7 @@ async def capture(instance: dict, local_day: date, dsn: str) -> dict:
                     (window_start,)
                     if name == "equipment_seed"
                     else (
-                        (window_start, window_end, list(CANONICAL_FIELD_ORDER))
+                        (window_start, window_end, list(canonical_fields))
                         if name == "cfg_readback"
                         else (window_start, window_end)
                     )
@@ -330,18 +347,30 @@ async def capture(instance: dict, local_day: date, dsn: str) -> dict:
             "virtual_selector_choice_fallback",
         ],
         "resource_scope": "raw_observations_only_no_complete_metered_total_or_savings_claim",
-        "coverage": _coverage(sources, window_start, window_end, CANONICAL_FIELD_ORDER),
+        "coverage": _coverage(sources, window_start, window_end, canonical_fields),
         "sources": sources,
     }
 
 
 def _write_exclusive(path: Path, raw: bytes) -> None:
     path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-    with os.fdopen(descriptor, "wb") as output:
-        output.write(raw)
-        output.flush()
-        os.fsync(output.fileno())
+    if path.exists():
+        raise FileExistsError(path)
+    descriptor, temporary = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+    try:
+        os.fchmod(descriptor, 0o600)
+        with os.fdopen(descriptor, "wb") as output:
+            output.write(raw)
+            output.flush()
+            os.fsync(output.fileno())
+        os.link(temporary, path)  # atomic, exclusive publication on the same PVC
+        directory = os.open(path.parent, os.O_RDONLY)
+        try:
+            os.fsync(directory)
+        finally:
+            os.close(directory)
+    finally:
+        os.unlink(temporary)
 
 
 def validate_target_source(raw: bytes, *, start: date, registered_at: datetime) -> dict:
@@ -448,6 +477,7 @@ def register(
 ) -> dict:
     """Create a concrete preregistration from preserved source artifact bytes."""
     validate_target_source(crop_target_source.read_bytes(), start=start, registered_at=now)
+    validate_cfg_schema(cfg_schema_source.read_bytes())
     commit, extractor_sha, protocol_sha = _source_identity()
     instance = {
         "schema": INSTANCE_SCHEMA,
@@ -478,6 +508,27 @@ ARCHIVED_SOURCES = {
     "crop_target_source_sha256": "crop-target-source",
     "cfg_schema_sha256": "cfg-schema-source",
 }
+
+
+def validate_cfg_schema(raw: bytes) -> tuple[str, ...]:
+    try:
+        value = json.loads(raw)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ValueError("cfg schema source is not valid JSON") from exc
+    fields = value.get("canonical_field_order") if isinstance(value, dict) else None
+    if (
+        not isinstance(value, dict)
+        or value.get("schema") != "verdify-winter-cfg-schema-source-v1"
+        or value.get("study_id") != STUDY_ID
+        or value.get("field_count") != 48
+        or not isinstance(fields, list)
+        or len(fields) != 48
+        or any(not isinstance(field, str) or not re.fullmatch(r"[a-z][a-z0-9_]*", field) for field in fields)
+        or len(set(fields)) != 48
+        or canonical(value) != raw
+    ):
+        raise ValueError("cfg schema source is not the frozen 48-field contract")
+    return tuple(fields)
 
 
 def verify_archived_sources(instance: dict, out_dir: Path) -> None:
@@ -619,7 +670,8 @@ def main() -> None:
             if not dsn:
                 parser.error("DB_DSN must identify an existing read-only DB connection")
             day = _day(args.day)
-            payload = asyncio.run(capture(instance, day, dsn))
+            fields = validate_cfg_schema((args.output_dir / "sources" / "cfg-schema-source").read_bytes())
+            payload = asyncio.run(capture(instance, day, dsn, fields))
             target = args.output_dir / "days" / f"{day.isoformat()}.json"
             _write_exclusive(target, canonical(payload))
             print(f"{target} sha256={digest(target.read_bytes())}")
