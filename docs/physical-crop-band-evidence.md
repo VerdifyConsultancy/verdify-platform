@@ -7,10 +7,12 @@ is graded controller credit. Neither is a physical crop-band outcome.
 
 The API and MCP scorecard now carry a **separate** typed physical crop-band
 field, also projected to the public snapshot and planning page. It always
-returns `publication_not_qualified` with no physical percentage. The deployed
-API and MCP currently use the `verdify` PostgreSQL superuser login. No table
-grant, in-database validity flag, or hash can independently authenticate a
-physical revision while that writer credential is shared. This change adds
+returns `publication_not_qualified` with no physical percentage. The API uses
+the ordinary `verdify_api_runtime_login` role. The MCP source
+at migration 259 selects distinct ordinary `verdify_mcp_runtime_login`; verify
+that login in the live pod after the migration and Secret bootstrap sync.
+No table grant, in-database validity flag, or hash can independently authenticate
+a physical probe revision. This change adds
 no physical evidence table, writer, DB read, historical backfill, or planner
 reward term.
 
@@ -35,7 +37,7 @@ observed-minute backfills had zero jointly eligible minutes because their
 latest setpoint-log bounds were invalid; they do not imply zero physical
 compliance.
 
-#371 remains open for a separately authenticated producer, an ordinary-login
-API/MCP credential cutover, and source-to-live validation before any physical
-result can be published. The center probe, DLI, gas, resource-cost outcomes,
+#371 remains open for a separately authenticated producer and source-to-live
+validation before any physical result can be published. The center probe,
+DLI, gas, resource-cost outcomes,
 and experiment endpoint are unavailable.

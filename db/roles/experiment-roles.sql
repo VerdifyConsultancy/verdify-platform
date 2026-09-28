@@ -74,11 +74,10 @@ GRANT SELECT ON public.experiment_context_snapshots TO verdify_iris_context;
 -- LANE-C: GRANT SELECT ON the frozen-context views (v_experiment_context_*)
 -- once they exist; this role gets NO generic table read.
 
--- verdify_mcp_runtime — proposal-function EXECUTE, no direct table DML.
--- LANE-C: GRANT EXECUTE on the individually audited non-study tool functions
--- and the proposal-submission function (fn_submit_policy_proposal) when they
--- land. Structurally available today:
-GRANT SELECT ON public.control_experiments, public.policy_proposals TO verdify_mcp_runtime;
+-- verdify_mcp_runtime was implemented by numbered migration 259 with exact
+-- non-study tool DML and a narrow blinded assignment helper. Keep all MCP
+-- grants there; this older design scaffold must never grant broad SELECT on
+-- control_experiments or control_assignments to the MCP login.
 
 -- verdify_planner_graph — its own claim/lease/run/memory DML + proposal EXECUTE.
 GRANT SELECT, INSERT ON public.planner_inference_runs TO verdify_planner_graph;

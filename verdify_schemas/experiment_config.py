@@ -172,17 +172,8 @@ def policy_device_id(greenhouse_id: str) -> str:
 # ── Writer-demotion gate (MCP set_plan/set_tunable + forecast engine) ────────
 
 _ARMED_ASSIGNMENT_SQL = """
-SELECT e.experiment_id::text AS experiment_id,
-       e.greenhouse_id,
-       a.assignment_id::text AS assignment_id
-  FROM public.control_experiments e
-  LEFT JOIN public.control_assignments a
-    ON a.experiment_id = e.experiment_id
-   AND a.status = 'active'
-   AND now() <@ a.valid_range
- WHERE e.status IN ('armed', 'running')
- ORDER BY e.armed_at DESC NULLS LAST
- LIMIT 1
+SELECT experiment_id::text, greenhouse_id, assignment_id::text
+  FROM public.fn_mcp_armed_assignment_context()
 """
 
 

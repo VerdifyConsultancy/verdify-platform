@@ -60,26 +60,23 @@ spec:
             - configMapRef:
                 name: verdify-config   # provides MCP_HTTP_HOST=0.0.0.0, MCP_HTTP_PORT=8000, DB_HOST/PORT/NAME/USER
           env:
-            - name: POSTGRES_PASSWORD
+            - name: DB_USER
+              value: verdify_mcp_runtime_login
+            - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: verdify-app-secrets
-                  key: POSTGRES_PASSWORD
-            - name: DB_PASS
+                  name: verdify-mcp-runtime-db
+                  key: password
+            - name: PGPASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: verdify-app-secrets
-                  key: POSTGRES_PASSWORD
-            # #81 DB-env reconcile: mcp/server.py reads ONLY DB_DSN (server.py:81)
-            # — it does NOT build a DSN from DB_HOST/DB_PASS the way api/main.py
-            # does. Without DB_DSN it falls back to localhost:5432 / password
-            # 'verdify' (a hardcoded /srv/verdify/.env path that does not exist
-            # in-container), so in-cluster it would never reach verdify-db.
-            # Construct the DSN here from the ConfigMap connection fields +
-            # the Secret password. $(VAR) references resolve against the other
-            # env entries (POSTGRES_PASSWORD above + DB_* from envFrom).
+                  name: verdify-mcp-runtime-db
+                  key: password
+            - name: VERDIFY_MCP_RUNTIME_DB_ROLE_REQUIRED
+              value: "1"
+            # The DB_DSN and the psql helper both use this isolated login.
             - name: DB_DSN
-              value: "postgresql://$(DB_USER):$(POSTGRES_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)"
+              value: "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)"
             # Server-side audience credential for the only currently active
             # MCP client. Hermes receives this same protected value under the
             # legacy VERDIFY_MCP_TOKEN name from verdify-hermes; mapping the
