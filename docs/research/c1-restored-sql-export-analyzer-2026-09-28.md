@@ -17,7 +17,10 @@ stopped. These rows are **not** pilot observations.
 
 `switchback.v2_analysis.analyze_revealed_sql_export` now checks that exact SQL
 hash and frozen payload directly, binds the expected experiment and analyzer
-environment, validates each assigned-day outcome against the source contract,
+environment, verifies every SQL `itt_range` against its assigned Denver local
+[06:00,24:00) window across UTC-offset changes, recomputes the ordered
+evidence-bundle hash under the freezer's SQL domain, validates each
+assigned-day outcome against the source contract,
 and computes paired contrasts without producing a second export format. The
 restored fixture yields an inconclusive null-endpoint decision while retaining
 all four assignments. The standalone Python day-export fixture remains a
