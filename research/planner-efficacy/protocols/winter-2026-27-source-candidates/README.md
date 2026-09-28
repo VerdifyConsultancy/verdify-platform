@@ -82,6 +82,10 @@ python research/planner-efficacy/freeze_winter_target.py finalize \
 ```
 
 Only the finalized file is eligible for `winter_feasibility.py register`.
+The separate `route-only-declaration.sql` is a reviewable three-row,
+future-only route binding for the same interval. Its source SHA-256 is the
+retained `route-only-panel.json` bytes; every physical identity field is NULL.
+Apply it only after rechecking those source bytes and before registration.
 The explicit grading rule follows `fn_zone_band`: use the future local hour,
 season with its global spring fallback, active crop/catalog joins and ideal
 intersection for each zone; when no crop profile joins, use that hour's

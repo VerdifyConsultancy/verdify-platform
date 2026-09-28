@@ -123,3 +123,19 @@ def test_final_artifact_requires_exact_declaration_readback():
     row["target_bins"] = row["target_bins"][:-1]
     with pytest.raises(ValueError, match="declared target_bins differs"):
         freezer.finalize(draft, row)
+
+
+def test_declaration_sql_rejects_tampered_draft():
+    draft = freezer.build(
+        source_snapshot(), start=future_start(), target_version="winter-test-v1", source_sha256="c" * 64
+    )
+    for key, bad in (
+        ("target_version", "x'; DROP TABLE public.crops;--"),
+        ("effective_from", "2020-01-01T00:00:00+00:00"),
+        ("source_assignment_state_sha256", "bad"),
+        ("assignment_revision_ids", [2, 1]),
+        ("target_bins_sha256", "d" * 64),
+    ):
+        changed = {**draft, key: bad}
+        with pytest.raises((ValueError, TypeError)):
+            freezer.declaration_sql(changed)

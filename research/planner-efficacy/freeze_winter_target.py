@@ -247,8 +247,57 @@ def build(snapshot: dict, *, start: date, target_version: str, source_sha256: st
 
 
 def declaration_sql(draft: dict) -> str:
-    if draft.get("schema") != DRAFT_SCHEMA or draft.get("target_rule") != RULE:
+    required = {
+        "schema",
+        "study_id",
+        "greenhouse_id",
+        "timezone",
+        "start_local_date",
+        "source_snapshot_sha256",
+        "source_captured_at",
+        "target_rule",
+        "target_version",
+        "effective_from",
+        "effective_to",
+        "source_profile_state_sha256",
+        "source_assignment_state_sha256",
+        "profile_revision_ids",
+        "assignment_revision_ids",
+        "target_bins_sha256",
+        "target_bins",
+    }
+    if (
+        not isinstance(draft, dict)
+        or set(draft) != required
+        or draft["schema"] != DRAFT_SCHEMA
+        or draft["target_rule"] != RULE
+    ):
         raise ValueError("wrong declaration draft")
+    if not isinstance(draft["source_snapshot_sha256"], str) or not SHA.fullmatch(draft["source_snapshot_sha256"]):
+        raise ValueError("source snapshot SHA-256 invalid")
+    _ids(draft["assignment_revision_ids"], "assignment_revision_ids")
+    source = {
+        "schema": winter.TARGET_SCHEMA,
+        "study_id": draft["study_id"],
+        "greenhouse_id": draft["greenhouse_id"],
+        "timezone": draft["timezone"],
+        "start_local_date": draft["start_local_date"],
+        "recorded_at": draft["source_captured_at"],
+        "effective_from": draft["effective_from"],
+        "effective_to": draft["effective_to"],
+        "target_version": draft["target_version"],
+        "fixed_panel_target_revision_id": 1,  # shape check only; not a claimed revision
+        "source_profile_state_sha256": draft["source_profile_state_sha256"],
+        "profile_revision_ids": draft["profile_revision_ids"],
+        "crop_assignment_revision_sha256": draft["source_assignment_state_sha256"],
+        "target_bins_sha256": draft["target_bins_sha256"],
+        "target_bins": draft["target_bins"],
+    }
+    winter.validate_target_source(
+        _canonical(source),
+        start=date.fromisoformat(draft["start_local_date"]),
+        registered_at=datetime.now(UTC),
+    )
     bins = _canonical(draft["target_bins"]).decode()
     if "$winter_bins$" in bins:
         raise ValueError("unexpected SQL delimiter in target bins")

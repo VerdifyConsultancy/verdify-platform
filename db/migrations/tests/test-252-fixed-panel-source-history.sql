@@ -1,4 +1,7 @@
 -- Disposable empty PostgreSQL database only. Never run against production.
+-- Pre-255 fixture: creates the minimal source table, installs migration 252
+-- alone, and rolls back. Its target insert intentionally has the 252 column
+-- shape; the current-schema successor is test-255-fixed-panel-crop-assignment-lineage.sql.
 -- Exercises source DML capture, future-only declarations and mutation guards.
 \set ON_ERROR_STOP on
 BEGIN;
