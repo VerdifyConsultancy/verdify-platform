@@ -55,9 +55,15 @@ internal chunk. If the read-only guard reports an unsupported state, preserve
 the failed Job and inspect the logical parent and source owner. In a disposable
 restore, repair an ordinary parent through `ALTER TABLE parent OWNER TO owner`
 and rerun the guard; never issue `ALTER TABLE` against a Timescale chunk.
-This is a supported owner-path check, not proof that the broad migration-217
-hostile fixture now passes; that fixture remains separately advisory until a
-fresh restored-data run can make it blocking without hiding its other cases.
+The blocking successor fixture also selects a real restored hypertable with
+regular and compressed chunks and an explicit ACL. It changes only that
+parent's owner, checks propagation to every physical chunk, repairs twice via
+`REASSIGN OWNED`, and compares exact relation/column ACLs and both sealed C0
+runtime login receipts before rolling back. No candidate or a changed catalog
+fails the Job with an actionable error. The broad migration-217 fixture remains
+separately advisory: rerunning that immutable migration against the current C0
+sealed receipts fails before its owner poison, so treating the whole legacy
+fixture as blocking would reject the qualified restore for a different reason.
 
 This is logical recovery evidence. The C0 physical-clone receipt contract
 deliberately includes database and role OIDs and is qualified separately.
