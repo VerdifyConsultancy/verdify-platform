@@ -18,7 +18,7 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
 from .crops import Observation
 from .observed_minutes import ObservedMinuteEvidence
-from .physical_crop_band import PhysicalCropBandEvidence
+from .physical_crop_band import PhysicalCropBandEvidence, RouteOnlyCropBandEvidence
 
 
 class APIStatus(BaseModel):
@@ -163,6 +163,7 @@ class PublicHomeMetrics(BaseModel):
     compliance_pct_today: float | None = None
     observed_minute_evidence: ObservedMinuteEvidence = Field(default_factory=ObservedMinuteEvidence)
     physical_crop_band_evidence: PhysicalCropBandEvidence = Field(default_factory=PhysicalCropBandEvidence)
+    route_only_crop_band_evidence: RouteOnlyCropBandEvidence = Field(default_factory=RouteOnlyCropBandEvidence)
     cost_today_usd: float | None = None
     cost_today_estimate_usd: float | None = None
     water_today_gal: float | None = None

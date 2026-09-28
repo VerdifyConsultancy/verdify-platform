@@ -25,7 +25,7 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, computed_field
 
 from .lessons import LessonConfidence
 from .observed_minutes import ObservedMinuteEvidence
-from .physical_crop_band import PhysicalCropBandEvidence
+from .physical_crop_band import PhysicalCropBandEvidence, RouteOnlyCropBandEvidence
 from .telemetry import DliEvidence
 
 
@@ -109,6 +109,7 @@ class ScorecardResponse(BaseModel):
     # Separate typed snapshot, never a scalar scorecard metric or reward term.
     observed_minute_evidence: ObservedMinuteEvidence = Field(default_factory=ObservedMinuteEvidence)
     physical_crop_band_evidence: PhysicalCropBandEvidence = Field(default_factory=PhysicalCropBandEvidence)
+    route_only_crop_band_evidence: RouteOnlyCropBandEvidence = Field(default_factory=RouteOnlyCropBandEvidence)
 
     # ── Score + compliance ──────────────────────────────────────────
     scorecard_contract_version: float | None = None
@@ -214,6 +215,7 @@ class ScorecardResponse(BaseModel):
             "metric_semantics": self.metric_semantics,
             "observed_minute_evidence": self.observed_minute_evidence.model_dump(mode="json"),
             "physical_crop_band_evidence": self.physical_crop_band_evidence.model_dump(mode="json"),
+            "route_only_crop_band_evidence": self.route_only_crop_band_evidence.model_dump(mode="json"),
             "both_axis_compliance_pct": self.compliance_pct if verified else None,
             "temp_compliance_pct": self.temp_compliance_pct if verified else None,
             "vpd_compliance_pct": self.vpd_compliance_pct if verified else None,
@@ -252,7 +254,11 @@ class ScorecardResponse(BaseModel):
         """Wire-format metric names this schema recognizes (with 7d_ aliases)."""
         names: set[str] = set()
         for field_name, field in cls.model_fields.items():
-            if field_name in {"observed_minute_evidence", "physical_crop_band_evidence"}:
+            if field_name in {
+                "observed_minute_evidence",
+                "physical_crop_band_evidence",
+                "route_only_crop_band_evidence",
+            }:
                 continue
             names.add(field.alias or field_name)
         return frozenset(names)
