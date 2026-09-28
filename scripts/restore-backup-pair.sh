@@ -13,6 +13,7 @@ umask 077
 : "${AUDIT_SQL:?}"
 : "${OWNERSHIP_SQL:?}"
 : "${OWNER_REPAIR_TEST_SQL:?}"
+: "${RESTORED_OWNER_TEST_SQL:?}"
 if [ "${PGDATABASE}" != verdify_rehearsal ]; then
   echo "[restore-pair] FATAL: disposable database name required" >&2
   exit 1
@@ -74,6 +75,7 @@ psql -X -v ON_ERROR_STOP=1 -d "${PGDATABASE}" \
 # supported owner repair path; direct ALTER of an internal chunk is not.
 psql -X -qAt -v ON_ERROR_STOP=1 -d "${PGDATABASE}" -f "${OWNERSHIP_SQL}"
 psql -X -qAt -v ON_ERROR_STOP=1 -d "${PGDATABASE}" -f "${OWNER_REPAIR_TEST_SQL}"
+psql -X -qAt -v ON_ERROR_STOP=1 -d "${PGDATABASE}" -f "${RESTORED_OWNER_TEST_SQL}"
 
 # pg_restore's hardened empty search_path can prevent dependent matviews from
 # refreshing in archive order. Refresh them afterward, to a bounded fixed point.

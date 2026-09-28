@@ -17,6 +17,7 @@ SCRIPT_NAMES = (
     "logical-restore-audit.sql",
     "check-timescale-ownership.sql",
     "test-timescale-parent-owner.sql",
+    "test-restored-timescale-parent-owner.sql",
 )
 
 
@@ -57,6 +58,7 @@ def render(stem: str, run_id: str) -> list[dict]:
         "AUDIT_SQL": "/scripts/logical-restore-audit.sql",
         "OWNERSHIP_SQL": "/scripts/check-timescale-ownership.sql",
         "OWNER_REPAIR_TEST_SQL": "/scripts/test-timescale-parent-owner.sql",
+        "RESTORED_OWNER_TEST_SQL": "/scripts/test-restored-timescale-parent-owner.sql",
     }
     job = {
         "apiVersion": "batch/v1",

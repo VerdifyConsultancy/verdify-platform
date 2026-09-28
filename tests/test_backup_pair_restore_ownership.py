@@ -19,18 +19,28 @@ def test_rendered_restore_uses_source_bound_owner_checks():
     scripts = configmap["data"]
     assert "check-timescale-ownership.sql" in scripts
     assert "test-timescale-parent-owner.sql" in scripts
+    assert "test-restored-timescale-parent-owner.sql" in scripts
     assert "_timescaledb_catalog.chunk" in scripts["check-timescale-ownership.sql"]
     assert "compressed_hypertable_id" in scripts["check-timescale-ownership.sql"]
     assert "REASSIGN OWNED BY test_672_rogue" in scripts["test-timescale-parent-owner.sql"]
     assert "ALTER TABLE _timescaledb_internal" not in scripts["test-timescale-parent-owner.sql"]
+    real_fixture = scripts["test-restored-timescale-parent-owner.sql"]
+    assert "runtime_ordinary_login_attestation_receipts" in real_fixture
+    assert "REASSIGN OWNED BY test_672_restored_rogue" in real_fixture
+    assert "217-runtime-role-boundary.sql" in real_fixture
+    assert "\\ir ../217-runtime-role-boundary.sql" not in real_fixture
+    assert "ALTER TABLE _timescaledb_internal" not in real_fixture
 
     container = job["spec"]["template"]["spec"]["containers"][0]
     env = {row["name"]: row["value"] for row in container["env"]}
     assert env["OWNERSHIP_SQL"] == "/scripts/check-timescale-ownership.sql"
     assert env["OWNER_REPAIR_TEST_SQL"] == "/scripts/test-timescale-parent-owner.sql"
+    assert env["RESTORED_OWNER_TEST_SQL"] == "/scripts/test-restored-timescale-parent-owner.sql"
     restore = scripts["restore-backup-pair.sh"]
     assert restore.index("timescaledb_post_restore()") < restore.index('-f "${OWNERSHIP_SQL}"')
     assert restore.index('-f "${OWNERSHIP_SQL}"') < restore.index('-f "${OWNER_REPAIR_TEST_SQL}"')
     assert restore.index('-f "${OWNER_REPAIR_TEST_SQL}"') < restore.index('-f "${AUDIT_SQL}"')
+    assert restore.index('-f "${OWNER_REPAIR_TEST_SQL}"') < restore.index('-f "${RESTORED_OWNER_TEST_SQL}"')
+    assert restore.index('-f "${RESTORED_OWNER_TEST_SQL}"') < restore.index('-f "${AUDIT_SQL}"')
     assert policy["spec"]["policyTypes"] == ["Ingress", "Egress"]
     assert job["spec"]["template"]["spec"]["automountServiceAccountToken"] is False
