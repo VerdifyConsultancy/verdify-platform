@@ -19,7 +19,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 from verdify_public.output_policy import redact_non_public_crop_references  # noqa: E402
 from verdify_schemas.observed_minutes import ObservedMinuteEvidence  # noqa: E402
-from verdify_schemas.physical_crop_band import PhysicalCropBandEvidence  # noqa: E402
+from verdify_schemas.physical_crop_band import (  # noqa: E402
+    PhysicalCropBandEvidence,
+    RouteOnlyCropBandEvidence,
+)
 
 DEFAULT_API_URL = "https://api.verdify.ai/api/v1/public/evidence-snapshot"
 DEFAULT_VAULT = Path("/mnt/iris/verdify-vault/website")
@@ -194,6 +197,32 @@ def physical_crop_band_block(payload, expected_day: str | None = None) -> str:
     )
 
 
+def route_only_crop_band_block(payload, expected_day: str | None = None) -> str:
+    """Render a route observation under its own label, never as physical proof."""
+    try:
+        evidence = RouteOnlyCropBandEvidence.model_validate(payload)
+        if evidence.availability != "observational" or (
+            expected_day is not None and evidence.day.isoformat() != expected_day
+        ):
+            return ""
+    except (ValidationError, TypeError, ValueError):
+        return ""
+    d = evidence.diagnostic
+    return (
+        '<div class="data-row"><strong>Route-only fixed-panel observation</strong>'
+        f"<span>{esc(fmt_number(d.joint.in_band_pct, 1, '%'))} joint · "
+        f"{d.joint.eligible_bins}/{d.expected_bins} bins eligible</span>"
+        f"<p>North/east/west database-flush readings against frozen panel-mean target "
+        f"{esc(d.target_version)}; temperature {esc(fmt_number(d.temp.in_band_pct, 1, '%'))}, "
+        f"VPD {esc(fmt_number(d.vpd.in_band_pct, 1, '%'))}. "
+        "Source routes are declared, but physical sensor identity, per-probe freshness "
+        "and actual crop placement are unverified. This is a sampled observational "
+        "comparison, not continuous exposure, physical crop efficacy, controller credit "
+        "or an experiment result. "
+        f"Revision {evidence.revision_id}; day artifact SHA-256 {esc(d.day_artifact_sha256)}.</p></div>"
+    )
+
+
 def planning_block(data: dict) -> str:
     pq = data.get("planning_quality") or {}
     score_date = fmt_score_date(data)
@@ -254,6 +283,7 @@ def planning_block(data: dict) -> str:
 <div class="data-table">
   {observed_minute_block(pq.get("observed_minute_evidence"), score_date)}
   {physical_crop_band_block(pq.get("physical_crop_band_evidence"), score_date)}
+  {route_only_crop_band_block(pq.get("route_only_crop_band_evidence"), score_date)}
   <div class="data-row"><strong>Measurement basis</strong><span>{"Contract 2" if binary_verified else "Unverified contract; binary metrics withheld"}</span><p>Legacy house-average readings against historical desired setpoints; not duration-weighted, fixed-panel crop compliance or confirmed firmware consumption. Coverage is unverified and no center probe is measured. Stress assumes one minute per scored reading.</p></div>
   <div class="data-row"><strong>Last validated plan</strong><span>{esc(last_validated_plan_id)}</span><p>Validated {esc(validated_at)}{esc(outcome_text)}.</p></div>
   <div class="data-row"><strong>Latest plan status</strong><span>{esc(last_plan_id)} · {esc(last_plan_status)}</span><p>Written {esc(last_plan_created)}; age {esc(last_plan_age)} at snapshot time.</p></div>

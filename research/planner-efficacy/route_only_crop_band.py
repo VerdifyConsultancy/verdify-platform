@@ -197,6 +197,14 @@ def build(instance_raw: bytes, day_raw: bytes, panel_raw: bytes, target_raw: byt
         "contributor_scope": "source_route_only_no_physical_identity",
         "collection_timely": day_artifact["daily_collection_timely"],
         "panel_members": list(fixed_panel.ZONES),
+        "panel_routes": [
+            {
+                "zone": member["zone"],
+                "route_id": member["route_id"],
+                "modbus_address": member["modbus_address"],
+            }
+            for member in panel["members"]
+        ],
         "crop_placement_verified": False,
         "physical_hardware_identity_verified": False,
         "per_probe_freshness_verified": False,

@@ -149,6 +149,8 @@ def test_high_controller_credit_does_not_mask_low_route_observation():
         unavailable_reason=None,
         day=DAY,
         served_at=END + timedelta(hours=1),
+        revision_id=7,
+        recorded_at=END + timedelta(minutes=2),
         diagnostic=observation,
     )
     evidence = card.climate_evidence()
