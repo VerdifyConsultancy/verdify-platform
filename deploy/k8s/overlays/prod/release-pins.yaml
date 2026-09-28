@@ -45,7 +45,7 @@ metadata:
   name: release-pin-verdify-migrate
 imageTag:
   name: registry.vallery.net/verdifyconsultancy/verdify-migrate
-  digest: sha256:05e90c8edf4dda7bc81af16376e4bca5b28380b113eb567aeeaa5a6eacef7698
+  digest: sha256:beb7c47e3db467c6bcd893658b1114aec7c9d90ae085c8cb44557124b84101b6
 ---
 apiVersion: builtin
 kind: ImageTagTransformer
