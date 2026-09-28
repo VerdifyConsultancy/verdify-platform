@@ -137,6 +137,16 @@ class _FakeConnection:
         self.live_rows = live_rows
         self.live_cycles_queried = False
         self.closed = False
+        self.statement_timeout_ms = 15_000
+        self.transaction_exit_type = None
+
+    def transaction(self, *, readonly=False):
+        assert readonly is True
+        return _FakeReadOnlyTransaction(self)
+
+    async def execute(self, sql):
+        assert sql == "SET LOCAL statement_timeout = '30000ms'"
+        self.statement_timeout_ms = 30_000
 
     async def fetchval(self, sql, *args):
         assert "AT TIME ZONE 'America/Denver'" in sql
@@ -158,6 +168,9 @@ class _FakeConnection:
         raise AssertionError(f"unexpected fetchrow: {sql[:120]}")
 
     async def fetch(self, sql, *args):
+        if "fn_climate_action_daily_scorecard" in sql:
+            assert self.statement_timeout_ms == 30_000
+            return []
         if "FROM mv_equipment_runtime_daily" in sql:
             return list(self.snapshot_rows)
         if "FROM v_equipment_runtime_daily" in sql:
@@ -176,6 +189,20 @@ class _FakeConnection:
 
     async def close(self):
         self.closed = True
+
+
+class _FakeReadOnlyTransaction:
+    def __init__(self, conn):
+        self.conn = conn
+
+    async def __aenter__(self):
+        assert self.conn.statement_timeout_ms == 15_000
+        return self
+
+    async def __aexit__(self, exc_type, *_args):
+        self.conn.transaction_exit_type = exc_type
+        self.conn.statement_timeout_ms = 15_000
+        return False
 
 
 class _FakeAcquire:
@@ -215,6 +242,42 @@ class TestDayStatusClassification:
         assert mcp_server._cycle_day_status(date(2026, 7, 11), TODAY) == "complete"
         assert mcp_server._cycle_day_status(TODAY, TODAY) == "partial_day_excluded"
         assert mcp_server._cycle_day_status(date(2026, 7, 14), TODAY) == "future_date_excluded"
+
+
+class TestActionScorecardStatementBudget:
+    def test_only_action_fetch_gets_30_seconds_and_pool_connection_resets(self, mcp_server):
+        conn = _FakeConnection(snapshot_rows=[], live_rows=[])
+
+        async def exercise():
+            rows = await mcp_server._fetch_kpi_action_scorecard(
+                conn, "SELECT * FROM fn_climate_action_daily_scorecard($1::date)", TODAY, "vallery"
+            )
+            assert rows == []
+            assert conn.statement_timeout_ms == 15_000
+            return await conn.fetch("SELECT * FROM mv_equipment_runtime_daily", TODAY, "vallery")
+
+        assert asyncio.run(exercise()) == []
+        assert conn.transaction_exit_type is None
+
+    @pytest.mark.parametrize("failure", [asyncio.CancelledError, "database_timeout"])
+    def test_cancelled_action_fetch_rolls_back_local_budget(self, mcp_server, monkeypatch, failure):
+        conn = _FakeConnection(snapshot_rows=[], live_rows=[])
+        error = mcp_server.asyncpg.QueryCanceledError if failure == "database_timeout" else failure
+
+        async def cancelled_fetch(sql, *_args):
+            assert "fn_climate_action_daily_scorecard" in sql
+            assert conn.statement_timeout_ms == 30_000
+            raise error("bounded action read cancelled")
+
+        monkeypatch.setattr(conn, "fetch", cancelled_fetch)
+        with pytest.raises(error):
+            asyncio.run(
+                mcp_server._fetch_kpi_action_scorecard(
+                    conn, "SELECT * FROM fn_climate_action_daily_scorecard($1::date)", TODAY, "vallery"
+                )
+            )
+        assert conn.transaction_exit_type is error
+        assert conn.statement_timeout_ms == 15_000
 
 
 class TestSnapshotStaleness:

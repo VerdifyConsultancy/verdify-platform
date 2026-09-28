@@ -160,6 +160,9 @@ MCP_DB_STATEMENT_TIMEOUT_MS = max(
     1000,
     int(os.environ.get("VERDIFY_MCP_DB_STATEMENT_TIMEOUT_MS", "15000")),
 )
+# The single-day action scorecard performs four historical setpoint lookups per
+# decision. Keep its read bounded without widening every MCP query's DB budget.
+KPI_ACTION_SCORECARD_TIMEOUT_MS = 30_000
 # Legacy planner.py removed — planning runs via iris_planner.py → Hermes /v1/runs
 BAND_OWNED_PARAMS = BAND_OWNED_REG
 # P1a (B6): the crop temp/VPD band targets (temp_low/high, vpd_low/high, per-zone
@@ -971,6 +974,15 @@ async def _kpi_fanout_pool_get() -> "asyncpg.Pool":
                     **pool_options,
                 )
     return _kpi_fanout_pool
+
+
+async def _fetch_kpi_action_scorecard(conn: asyncpg.Connection, sql: str, target_day: date, greenhouse_id: str):
+    # SET LOCAL expires on both commit and rollback, including cancellation.
+    # The following moisture/policy reads on this pooled connection retain the
+    # normal 15 s session setting.
+    async with conn.transaction(readonly=True):
+        await conn.execute(f"SET LOCAL statement_timeout = '{KPI_ACTION_SCORECARD_TIMEOUT_MS}ms'")
+        return await conn.fetch(sql, target_day, greenhouse_id)
 
 
 def _custom_route(path: str, *, methods: list[str]):
@@ -2199,7 +2211,7 @@ async def outcome_kpi(target_date: str = "") -> str:
             return await c.fetchrow(dif_sql, d, greenhouse_id)
 
         async def _action_log_task(c: asyncpg.Connection):
-            action_rows = await c.fetch(actions_sql, d, greenhouse_id)
+            action_rows = await _fetch_kpi_action_scorecard(c, actions_sql, d, greenhouse_id)
             moisture_rows = await c.fetch(moisture_sql, d, greenhouse_id)
             vpd_policy_row = await c.fetchrow(vpd_policy_sql, d, greenhouse_id)
             vpd_policy_reason_rows = await c.fetch(vpd_policy_reason_sql, d, greenhouse_id)
