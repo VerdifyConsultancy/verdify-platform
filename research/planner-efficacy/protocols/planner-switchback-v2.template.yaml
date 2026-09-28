@@ -552,11 +552,17 @@ outcomes:
           air-dew screening only; without a commissioned center, canopy-surface
           or leaf-wetness sensor it cannot establish true center/canopy/leaf
           condensation safety
-      manual_crop_inspection:
+      crop_observation:
         protocol: >-
-          TO-LOCK: facility-approved crown/leaf wetness and visible-condensation
-          inspection timing, rubric, stop rule and immutable observation record
-          for each physical canary and randomized safety review
+          Use the current measured wall-zone and approved proxy telemetry,
+          air-dew screening, equipment receipts and remote alerts at each
+          safety review. Record any voluntarily reported crop observation as
+          context with its source and time; no on-site or manual inspection is
+          a prerequisite for Gate P, canaries or randomized admission
+        claim_limit: >-
+          Remote measurements cannot establish crown/leaf wetness, visible
+          condensation or crop condition. Report these as unobserved unless a
+          separately commissioned source directly measures them
       reference_disagreement:
         mode: "TO-LOCK: commissioned_pair or no_continuous_pair"
         commissioned_pair:
@@ -565,18 +571,20 @@ outcomes:
           maximum_difference_and_duration: "TO-LOCK if selected"
         no_continuous_pair: >-
           if issue 641 verifies no redundant continuous pair, freeze calibration
-          age, cross-wall plausibility limits and independent handheld spot-check
-          timing/rubric/stop rules; explicitly report that continuous reference
-          disagreement was unavailable and do not imply redundant sensing
+          age and cross-wall plausibility limits from current remote evidence;
+          fail the gate if either is unavailable or outside its locked limit.
+          Explicitly report that continuous reference disagreement was
+          unavailable and do not imply redundant sensing or require a handheld
+          spot-check
         hardware_rule: >-
           requiring a new continuous reference makes it an explicit issue-641
           hardware/calibration/timeline gate; it is never an implicit fast-path prerequisite
       missingness: >-
-        any required measured wall-zone, approved proxy or reference/spot-check
-        evidence under the locked mode, or required manual inspection, failing its locked completeness/
+        any required measured wall-zone, approved proxy, calibration-age or
+        reference evidence under the locked mode failing its locked completeness/
         freshness invalidates the safety gate; no interpolation
       decision: >-
-        any hard absolute or air-dew/manual-inspection stop condition triggers a
+        any hard absolute or air-dew stop condition triggers a
         safety stop; any missing, excessive worst-measured-wall-zone corridor or
         reference-disagreement gate prevents advance. Thresholds, approved
         proxy inputs and horticultural/HVAC/facility approval are frozen in the

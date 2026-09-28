@@ -411,7 +411,12 @@ def test_v2_localized_safety_is_feasible_and_claim_limited() -> None:
     assert "same measured zone and minute slot" in safety["air_dew_margin_proxy"]["dewpoint_formula"]
     assert "fail the safety gate" in safety["air_dew_margin_proxy"]["dewpoint_formula"]
     assert "cannot establish true center/canopy/leaf" in safety["air_dew_margin_proxy"]["claim_limit"]
-    assert "crown/leaf wetness" in safety["manual_crop_inspection"]["protocol"]
+    assert "no on-site or manual inspection" in safety["crop_observation"]["protocol"]
+    assert "cannot establish crown/leaf wetness" in safety["crop_observation"]["claim_limit"]
+    assert "fail the gate" in safety["reference_disagreement"]["no_continuous_pair"]
+    assert "do not imply redundant sensing" in safety["reference_disagreement"]["no_continuous_pair"]
+    assert "require a handheld" in safety["reference_disagreement"]["no_continuous_pair"]
+    assert "manual inspection" not in safety["missingness"]
     assert "no true center" in safety["claim_limit"]
     assert "surface_sensor_ids" not in str(safety)
     assert safety["reference_disagreement"]["mode"] == "TO-LOCK: commissioned_pair or no_continuous_pair"
