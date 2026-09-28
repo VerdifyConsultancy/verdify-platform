@@ -82,6 +82,13 @@ SUCCESSOR_260 = "260-restore-climate-action-daily-scorecard.sql"
 SUCCESSOR_260_SHA256 = "3f1b1d0c7c055db75f008ab171ec505665ec2df14e918c2845dfbce3ff98cb80"
 SUCCESSOR_260_DIGESTS = SUCCESSOR_259_DIGESTS
 SUCCESSOR_260_MCP_DIGEST = "c61838a50ec877274a1d6a90a4a0b0f7e6d7c879e3f08a6421cefac56aa21fb5"
+SUCCESSOR_261 = "261-outcome-kpi-ordinary-acl.sql"
+SUCCESSOR_261_SHA256 = "159d67ec9e34ec386a9e8bda5d57fbaf76243c5ce1f11dd276927c9834d86896"
+SUCCESSOR_261_DIGESTS = {
+    "verdify_api_runtime_login": "d259673dee68b8eefc6e4b164f82412c78587ea5043715e410ea199db4a553c2",
+    "verdify_ingestor_runtime_login": "2fe7dfba3f23e1c1b053b8f5d245319072546d93f40f6643902f1bdf4c7e2a97",
+}
+SUCCESSOR_261_MCP_DIGEST = "116b10bdf81496423026f3c467a9c10aa6b2767867cb428e03271c71a34393fe"
 
 
 class DeliveryError(ValueError):
@@ -96,7 +103,7 @@ def require(ok, message):
 def reviewed_post_254(later, files=None):
     """Admit only the reviewed, ordered receipt successors after 254."""
     successors = [name for name in later if int(name[:3]) > 254]
-    reviewed = (SUCCESSOR_255, SUCCESSOR_256, SUCCESSOR_257, SUCCESSOR_258, SUCCESSOR_259, SUCCESSOR_260)
+    reviewed = (SUCCESSOR_255, SUCCESSOR_256, SUCCESSOR_257, SUCCESSOR_258, SUCCESSOR_259, SUCCESSOR_260, SUCCESSOR_261)
     require(successors == list(reviewed[: len(successors)]), "unreviewed post-254 receipt successor")
     if successors:
         require(SUCCESSOR_254 in later, "unreviewed post-254 receipt successor")
@@ -110,6 +117,7 @@ def reviewed_post_254(later, files=None):
                 SUCCESSOR_258_SHA256,
                 SUCCESSOR_259_SHA256,
                 SUCCESSOR_260_SHA256,
+                SUCCESSOR_261_SHA256,
             ),
             strict=True,
         ):
@@ -352,6 +360,7 @@ COMMIT;"""
         (SUCCESSOR_258, SUCCESSOR_258_DIGESTS),
         (SUCCESSOR_259, SUCCESSOR_259_DIGESTS),
         (SUCCESSOR_260, SUCCESSOR_260_DIGESTS),
+        (SUCCESSOR_261, SUCCESSOR_261_DIGESTS),
     ):
         if name in later:
             expected["api"] = expected["api_receipt"] = digests["verdify_api_runtime_login"]
@@ -378,20 +387,40 @@ SELECT jsonb_build_object(
     'outcome_scorecard', to_regprocedure('public.fn_climate_action_daily_scorecard(date)') IS NOT NULL,
     'outcome_scorecard_exec', coalesce(has_function_privilege(
          'verdify_mcp_runtime_login',
-         to_regprocedure('public.fn_climate_action_daily_scorecard(date)'), 'EXECUTE'), false));
+         to_regprocedure('public.fn_climate_action_daily_scorecard(date)'), 'EXECUTE'), false),
+    'outcome_band_exec', has_function_privilege('verdify_mcp_runtime_login',
+         'public.fn_crop_band_value(text,text,timestamptz,text,text,text)', 'EXECUTE'),
+    'outcome_season_exec', has_function_privilege('verdify_mcp_runtime_login',
+         'public.fn_current_season()', 'EXECUTE'),
+    'outcome_zone_exec', has_function_privilege('verdify_mcp_runtime_login',
+         'public.fn_zone_vpd_targets(timestamptz)', 'EXECUTE'),
+    'outcome_anchor_read', has_table_privilege('verdify_mcp_runtime_login',
+         'public.crop_band_anchors', 'SELECT'),
+    'outcome_profile_read', has_table_privilege('verdify_mcp_runtime_login',
+         'public.crop_target_profiles', 'SELECT'));
 COMMIT;"""
         mcp_state = json.loads(psql(mcp_sql, environment))
         repaired = SUCCESSOR_260 in later
+        acl_repaired = SUCCESSOR_261 in later
         require(
             mcp_state
             == {
-                "mcp": SUCCESSOR_260_MCP_DIGEST if repaired else SUCCESSOR_259_MCP_DIGEST,
-                "mcp_receipt": SUCCESSOR_260_MCP_DIGEST if repaired else SUCCESSOR_259_MCP_DIGEST,
+                "mcp": SUCCESSOR_261_MCP_DIGEST
+                if acl_repaired
+                else (SUCCESSOR_260_MCP_DIGEST if repaired else SUCCESSOR_259_MCP_DIGEST),
+                "mcp_receipt": SUCCESSOR_261_MCP_DIGEST
+                if acl_repaired
+                else (SUCCESSOR_260_MCP_DIGEST if repaired else SUCCESSOR_259_MCP_DIGEST),
                 "mcp_login": True,
                 "mcp_arm_read": False,
                 "mcp_experiment_read": False,
                 "outcome_scorecard": repaired,
                 "outcome_scorecard_exec": repaired,
+                "outcome_band_exec": acl_repaired,
+                "outcome_season_exec": acl_repaired,
+                "outcome_zone_exec": acl_repaired,
+                "outcome_anchor_read": acl_repaired,
+                "outcome_profile_read": acl_repaired,
             },
             "reviewed MCP ordinary boundary is not exact",
         )
