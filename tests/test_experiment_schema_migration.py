@@ -297,6 +297,9 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         # the historical baseline must not pre-stamp their receipt advances.
         "256-experiment-v2-end-study-recovery-completion.sql",
         "257-route-only-crop-band-publication.sql",
+        # Inert MCP OIDs must be created by a ledgered forward migration, not
+        # by a historical baseline whose state precedes their reservation.
+        "258-mcp-runtime-inert-roles.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(

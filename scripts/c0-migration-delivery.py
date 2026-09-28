@@ -66,6 +66,11 @@ SUCCESSOR_257_DIGESTS = {
     "verdify_api_runtime_login": "444063bd61ccb69f02888ede5f2c2338d7882b954af7141e267cdb53b4ed9c7e",
     "verdify_ingestor_runtime_login": "86660529322d02ce6e735d329f6c5e320eeb53f9a8b2890a9a285eaf852f88f5",
 }
+SUCCESSOR_258 = "258-mcp-runtime-inert-roles.sql"
+SUCCESSOR_258_SHA256 = "5558c4be0d3624ccd5821d2e0231b4625feaa64a6657e5fe53ca67b79d55e78e"
+# Reserving two NOLOGIN roles grants nothing to either existing runtime.  The
+# predecessor receipts must remain exact until a separately sealed cutover.
+SUCCESSOR_258_DIGESTS = SUCCESSOR_257_DIGESTS
 
 
 class DeliveryError(ValueError):
@@ -80,12 +85,16 @@ def require(ok, message):
 def reviewed_post_254(later, files=None):
     """Admit only the reviewed, ordered receipt successors after 254."""
     successors = [name for name in later if int(name[:3]) > 254]
-    reviewed = (SUCCESSOR_255, SUCCESSOR_256, SUCCESSOR_257)
+    reviewed = (SUCCESSOR_255, SUCCESSOR_256, SUCCESSOR_257, SUCCESSOR_258)
     require(successors == list(reviewed[: len(successors)]), "unreviewed post-254 receipt successor")
     if successors:
         require(SUCCESSOR_254 in later, "unreviewed post-254 receipt successor")
     if successors and files is not None:
-        for name, sha in zip(reviewed, (SUCCESSOR_255_SHA256, SUCCESSOR_256_SHA256, SUCCESSOR_257_SHA256), strict=True):
+        for name, sha in zip(
+            reviewed,
+            (SUCCESSOR_255_SHA256, SUCCESSOR_256_SHA256, SUCCESSOR_257_SHA256, SUCCESSOR_258_SHA256),
+            strict=True,
+        ):
             if name in successors:
                 require(files.get(name) == sha, f"reviewed {name[:3]} successor source drift")
 
@@ -322,6 +331,7 @@ COMMIT;"""
         (SUCCESSOR_255, SUCCESSOR_255_DIGESTS),
         (SUCCESSOR_256, SUCCESSOR_256_DIGESTS),
         (SUCCESSOR_257, SUCCESSOR_257_DIGESTS),
+        (SUCCESSOR_258, SUCCESSOR_258_DIGESTS),
     ):
         if name in later:
             expected["api"] = expected["api_receipt"] = digests["verdify_api_runtime_login"]
