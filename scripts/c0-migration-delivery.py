@@ -72,10 +72,10 @@ SUCCESSOR_258_SHA256 = "5558c4be0d3624ccd5821d2e0231b4625feaa64a6657e5fe53ca67b7
 # predecessor receipts must remain exact until a separately sealed cutover.
 SUCCESSOR_258_DIGESTS = SUCCESSOR_257_DIGESTS
 SUCCESSOR_259 = "259-mcp-ordinary-runtime-boundary.sql"
-SUCCESSOR_259_SHA256 = "656d704eb08142d2eaa604209d0642c7f4d9cc21c6bb25d392a4c633247a4e4f"
+SUCCESSOR_259_SHA256 = "5eb45e7264eb28d05aa30acab76bd571d7a5e7466f51b9a877fcea0beab13054"
 SUCCESSOR_259_DIGESTS = {
-    "verdify_api_runtime_login": "7066af287ab1aa0989568d0d3ddc794a67f5314df82e84f3f4de3bdfa1b47fb0",
-    "verdify_ingestor_runtime_login": "44f5d289f9a0dc4e91264ccf61f35ea9adcd2eeebba130197574e319470e61b0",
+    "verdify_api_runtime_login": "edb663118ffc9c5fc2a6e00a9525433fdec92faebf071943c5e5feed4bbc5524",
+    "verdify_ingestor_runtime_login": "9349738c72983658a23f17ba1435c2fc42e2392ac58c35c34365a93c96345915",
 }
 SUCCESSOR_259_MCP_DIGEST = "c8b68f940995824e9dfbe6334f7c66ac38952fa2efd9423682dc2b9cd4542ba8"
 

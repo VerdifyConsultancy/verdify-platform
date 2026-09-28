@@ -131,6 +131,11 @@ GRANT USAGE ON SEQUENCE
     public.slack_command_audit_id_seq, public.treatments_id_seq
 TO verdify_mcp_runtime;
 
+-- The ingestor's required-cycle neutral fallback records this one additional
+-- terminal ledger fact. Keep its ordinary role's UPDATE scope column-bound.
+GRANT UPDATE (had_required_failure) ON public.planner_trigger_ledger
+TO verdify_ingestor_runtime;
+
 GRANT EXECUTE ON FUNCTION
     public.fn_band_setpoints(timestamptz),
     public.fn_dli_proxy_lesson_invalid(text,text),
@@ -152,8 +157,8 @@ TO verdify_mcp_runtime;
 -- have been committed. These literals are filled from a rollback-only probe.
 UPDATE public.runtime_ordinary_login_attestation_receipts
    SET boundary_sha256 = CASE login_name
-       WHEN 'verdify_api_runtime_login' THEN decode('7066af287ab1aa0989568d0d3ddc794a67f5314df82e84f3f4de3bdfa1b47fb0', 'hex')
-       WHEN 'verdify_ingestor_runtime_login' THEN decode('44f5d289f9a0dc4e91264ccf61f35ea9adcd2eeebba130197574e319470e61b0', 'hex')
+       WHEN 'verdify_api_runtime_login' THEN decode('edb663118ffc9c5fc2a6e00a9525433fdec92faebf071943c5e5feed4bbc5524', 'hex')
+       WHEN 'verdify_ingestor_runtime_login' THEN decode('9349738c72983658a23f17ba1435c2fc42e2392ac58c35c34365a93c96345915', 'hex')
    END
  WHERE login_name IN ('verdify_api_runtime_login',
                       'verdify_ingestor_runtime_login');
@@ -334,8 +339,8 @@ BEGIN
     IF (SELECT count(*) FROM public.runtime_ordinary_login_attestation_receipts) <> 2
        OR EXISTS (
            SELECT 1 FROM (VALUES
-               ('verdify_api_runtime_login', '7066af287ab1aa0989568d0d3ddc794a67f5314df82e84f3f4de3bdfa1b47fb0'),
-               ('verdify_ingestor_runtime_login', '44f5d289f9a0dc4e91264ccf61f35ea9adcd2eeebba130197574e319470e61b0')
+               ('verdify_api_runtime_login', 'edb663118ffc9c5fc2a6e00a9525433fdec92faebf071943c5e5feed4bbc5524'),
+               ('verdify_ingestor_runtime_login', '9349738c72983658a23f17ba1435c2fc42e2392ac58c35c34365a93c96345915')
            ) expected(login_name, digest)
            LEFT JOIN public.runtime_ordinary_login_attestation_receipts receipt
              ON receipt.login_name = expected.login_name
