@@ -303,6 +303,7 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "259-mcp-ordinary-runtime-boundary.sql",
         "260-restore-climate-action-daily-scorecard.sql",
         "261-outcome-kpi-ordinary-acl.sql",
+        "262-fixed-panel-native-callback-ledger.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(
