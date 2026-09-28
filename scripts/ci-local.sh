@@ -159,6 +159,8 @@ $PY -m pytest -q \
   tests/test_public_output_remediation.py \
   tests/test_public_zone_renderer.py \
   tests/test_release_dockerfile_base_pins.py \
+  tests/test_route_only_crop_band.py \
+  tests/test_route_only_crop_band_reader.py \
   tests/test_runtime_role_cutover_manifests.py \
   tests/test_service_restart_drift_guard.py \
   tests/test_setpoint_server_db_backend.py \
