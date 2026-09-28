@@ -120,18 +120,63 @@ async def test_one_probe_then_exactly_one_confirmed_correction(fixture, tmp_path
 
 
 @pytest.mark.asyncio
-async def test_lease_loss_or_other_candidate_blocks_before_any_probe_command(fixture, tmp_path, monkeypatch):
+async def test_unstarted_probe_yields_to_ordinary_candidate_then_starts_only_on_fresh_match(fixture, tmp_path):
+    db = fixture
+    await arm(db, tmp_path)
+    ordinary = await drift_probe.choose(db, [("safety_max", 100.0)], db.planned(), 1.0, 3, False, tmp_path)
+    assert ordinary.action == "ordinary" and not ordinary.changes
+    assert "nonempty" in ordinary.reason
+    assert not (tmp_path / drift_probe.STATE_NAME).exists()
+
+    probe = await drift_probe.choose(db, [], db.planned(), 1.0, 3, False, tmp_path)
+    assert probe.action == "send" and probe.changes == ((drift_probe.PARAMETER, 1.1),)
+    assert bounded._read(tmp_path / drift_probe.STATE_NAME)["status"] == "probe_inflight"
+
+
+@pytest.mark.asyncio
+async def test_changed_fingerprint_or_expired_approval_never_starts_probe(fixture, tmp_path):
+    db = fixture
+    approval = await arm(db, tmp_path)
+    other_field = next(name for name in db.readbacks if name != drift_probe.PARAMETER)
+    db.readbacks[other_field] = 1.0
+    changed = await drift_probe.choose(db, [], db.planned(), 1.0, 3, False, tmp_path)
+    assert changed.action == "ordinary" and not changed.changes
+    assert "does not match" in changed.reason
+    assert not (tmp_path / drift_probe.STATE_NAME).exists()
+
+    db.readbacks[other_field] = 0.0
+    approval["captured_at"] = (datetime.now(UTC) - timedelta(minutes=7)).isoformat()
+    bounded._write(tmp_path / drift_probe.APPROVAL_NAME, approval)
+    expired = await drift_probe.choose(db, [], db.planned(), 1.0, 3, False, tmp_path)
+    assert expired.action == "ordinary" and not expired.changes
+    assert "stale" in expired.reason
+    assert not (tmp_path / drift_probe.STATE_NAME).exists()
+
+
+@pytest.mark.asyncio
+async def test_unstarted_lease_loss_or_malformed_approval_does_not_hold_ordinary_writer(fixture, tmp_path, monkeypatch):
     db = fixture
     await arm(db, tmp_path)
     monkeypatch.setattr(shared, "writer_lease_strictly_held", lambda minimum_remaining_s=0: False)
-    blocked = await drift_probe.choose(db, [], db.planned(), 1.0, 3, False, tmp_path)
-    assert blocked.action == "hold" and "lease" in blocked.reason
+    unavailable = await drift_probe.choose(db, [], db.planned(), 1.0, 3, False, tmp_path)
+    assert unavailable.action == "ordinary" and "lease" in unavailable.reason
+    assert not (tmp_path / drift_probe.STATE_NAME).exists()
+    (tmp_path / drift_probe.APPROVAL_NAME).write_text("malformed-approval")
+    invalid = await drift_probe.choose(db, [("safety_max", 100.0)], db.planned(), 1.0, 3, False, tmp_path)
+    assert invalid.action == "ordinary" and "unreadable" in invalid.reason
     assert not (tmp_path / drift_probe.STATE_NAME).exists()
 
-    monkeypatch.setattr(shared, "writer_lease_strictly_held", lambda minimum_remaining_s=0: True)
-    blocked = await drift_probe.choose(db, [("safety_max", 100.0)], db.planned(), 1.0, 3, False, tmp_path)
-    assert blocked.action == "hold" and "nonempty" in blocked.reason
-    assert not (tmp_path / drift_probe.STATE_NAME).exists()
+
+@pytest.mark.asyncio
+async def test_started_probe_still_holds_on_unreadable_approval(fixture, tmp_path):
+    db = fixture
+    await arm(db, tmp_path)
+    probe = await drift_probe.choose(db, [], db.planned(), 1.0, 3, False, tmp_path)
+    assert probe.action == "send"
+    (tmp_path / drift_probe.APPROVAL_NAME).write_text("malformed-approval")
+    blocked = await drift_probe.choose(db, [], db.planned(), 1.0, 3, False, tmp_path)
+    assert blocked.action == "hold" and "unreadable" in blocked.reason
+    assert bounded._read(tmp_path / drift_probe.STATE_NAME)["status"] == "probe_inflight"
 
 
 @pytest.mark.asyncio

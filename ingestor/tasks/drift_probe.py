@@ -153,6 +153,8 @@ async def choose(
     try:
         approval = bounded._read(approval_path)
     except Exception as error:
+        if state is None:
+            return Decision("ordinary", reason=f"unstarted probe approval unreadable: {error}")
         return Decision("hold", reason=f"probe approval unreadable: {error}")
     if approval is None and state is None and (reconnect_pending or desired is None or changes):
         return Decision("ordinary")
@@ -165,6 +167,10 @@ async def choose(
         except Exception:
             pass  # A passive preview must never hold the normal writer.
         return Decision("ordinary")
+    if state is None and changes:
+        # An approval alone has not reserved the writer. Let ordinary desired
+        # work run, and revalidate the entire approval if the candidate clears.
+        return Decision("ordinary", reason="ordinary candidate is nonempty before probe")
 
     try:
         if approval is None:
@@ -191,8 +197,6 @@ async def choose(
                 or bounded._time(approval["expires_at"]) > now + MAX_APPROVAL_AGE
             ):
                 raise ValueError("probe approval expired or too long")
-            if changes:
-                raise ValueError("ordinary candidate is nonempty before probe")
         if state is not None:
             if state.get("run_id") != approval.get("run_id"):
                 raise ValueError("probe approval changed")
@@ -261,6 +265,10 @@ async def choose(
             return Decision("ordinary")
         raise ValueError("probe state invalid")
     except Exception as error:
+        if state is None and not state_path.exists():
+            # No phase was durably started, so this approval cannot hold the
+            # normal writer. A later pass still needs a fresh exact match.
+            return Decision("ordinary", reason=f"unstarted probe skipped: {error}")
         if state_path.exists():
             try:
                 state = bounded._read(state_path)

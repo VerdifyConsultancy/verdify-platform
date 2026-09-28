@@ -1180,6 +1180,8 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                 reconnect_generation,
                 len(changes),
             )
+        elif probe_decision.reason:
+            log.info("writer_drift_probe action=skipped reason=%s", probe_decision.reason)
 
         stage_decision = await _choose_bounded_stage_if_required(
             conn, changes, planned or [], reconnect_generation, STATE_DIR, zone_row, planner_params

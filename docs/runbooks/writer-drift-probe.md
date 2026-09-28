@@ -29,7 +29,11 @@ Require `device-monitor` to show one ESP32 connection and use a preview from
 that same Ready ingestor. The preview binds all 48 current-generation cfg
 fields, the active plan, source revision, pod, process session, and generation.
 It is valid for six minutes. A nonempty ordinary candidate, changed plan or
-readback, lost lease, or changed connection stops the probe before a command.
+readback, lost lease, expired approval, or changed connection skips an unstarted
+probe and lets ordinary desired reconciliation continue. The approval remains
+conditional: the first probe command still requires a fresh exact match of the
+plan and all 48 readbacks within its expiry. Once an active probe state file
+exists, uncertainty holds the writer for receipt and cfg inspection.
 
 ```bash
 scripts/k3s-smoke.sh device-monitor
