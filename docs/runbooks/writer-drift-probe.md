@@ -1,9 +1,11 @@
 # #433 one-field cfg drift proof
 
 This source-only probe is for the **sole running ingestor** after Gate R/C1
-recovery and the two-hour #433 quiet observation. Deploying a new ingestor
-image restarts its writer-stability clock, so do not promote it during that
-window. The feature is inert without an approval file in that pod's `emptyDir`.
+recovery and fresh one-socket, complete-48-readback, zero-ordinary-candidate
+checks. Run the bounded probe before the final two-hour #433 steady-writer
+observation when that avoids an idle wait. A new ingestor image or connection
+restarts the observation clock, so keep the writer fixed during that window.
+The feature is inert without an approval file in that pod's `emptyDir`.
 It creates no second ESPHome connection and never edits an active plan.
 
 ## Field and bounded effect
