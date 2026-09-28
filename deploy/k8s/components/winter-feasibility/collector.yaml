@@ -20,6 +20,9 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: verdify-winter-archive-init
+  annotations:
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
   labels:
     app.kubernetes.io/part-of: verdify
     app.kubernetes.io/component: winter-feasibility

@@ -31,9 +31,10 @@ remain explicit in the packet.
 - `verdify-winter-feasibility-archive` is a 10 GiB Longhorn workspace RWO PVC
   with two replicas and the storage lane's `standard` recurring group (daily
   snapshot and backup jobs). It holds the exact source snapshot, registration
-  inputs, immutable day files, and manifests. A one-time archive-init Job binds
-  the WaitForFirstConsumer PVC while the collector is suspended; it creates
-  directories only and carries no DB credential. Confirm actual backup objects
+  inputs, immutable day files, and manifests. The idempotent archive-init Sync
+  hook binds the WaitForFirstConsumer PVC while the collector is suspended; it
+  recreates on later full syncs, creates directories only, and carries no DB
+  credential. Confirm actual backup objects
   and restore/readback separately before claiming off-cluster recovery.
 
 ## One-time staging before the first window
@@ -63,7 +64,7 @@ cp research/planner-efficacy/protocols/seasonal-decision-2026-09-27.md \
 git rev-parse HEAD > /Users/jason/Documents/Codex/verdify-winter-package-2026/source/source-revision
 ```
 
-The PVC, archive-init Job and suspended CronJob are declared in
+The PVC, archive-init hook and suspended CronJob are declared in
 `deploy/k8s/components/winter-feasibility/`; apply them through the owning Argo
 app after reviewing its full diff. Verify the init Job completed and the PVC
 bound, then use the **unreferenced**
