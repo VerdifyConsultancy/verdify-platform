@@ -64,6 +64,44 @@ its frozen historical crop-target outcome and causal interpretation remain
 unavailable. A future prospective source revision under #371 can qualify new
 windows; it cannot retroactively turn this archive into verified crop truth.
 
+## Matched-bin delivery check
+
+A September 28 read-only query joined the same 93 retained pairs to the live
+`setpoint_changes` history. It bins **confirmed_at** for successful delivery
+and request `ts` for failed delivery into the selected 15-minute intervals;
+these are different event clocks. Counts are matched-pair bin occurrences,
+not independent bins, because 85 unique controls serve 93 pairs.
+
+| Selected arm | Source | Bins with confirmed delivery / 93 | Confirmed rows | Bins with failed requests / 93 | Failed rows |
+|---|---|---:|---:|---:|---:|
+| Stale | Plan | 0 | 0 | 93 | 3,876 |
+| Stale | Band | 0 | 0 | 93 | 6,303 |
+| Stale | Preemptive | 0 | 0 | 8 | 19 |
+| Matched control | Plan | 47 | 448 | 0 | 0 |
+| Matched control | Band | 81 | 1,107 | 6 | 428 |
+| Matched control | Preemptive | 2 | 6 | 0 | 0 |
+
+The stale label is therefore inseparable from a contemporaneous delivery
+failure in this matched population. A plan interval or historical setpoint is
+not evidence that a fresh command reached the controller. Final row status
+and confirmation timestamps establish recorded delivery, but do not reconstruct
+every retained device value, firmware action, or physical crop response.
+There are no confirmed stale-arm plan/band deliveries with which to estimate a
+within-arm delivery contrast. The fixed-panel VPD differences above remain
+descriptive and cannot be attributed to planner policy.
+
+The private 186 selected-bin identifiers, one-statement SQL and CSV result are
+preserved alongside the raw inputs. Their SHA-256 values are respectively
+`d9897e2ff098b51ce14e6d9785ad9cc914c5cc86280fe7ce8b47b4e76908613c`,
+`1b7b85d2ab718fc6d811951c613f08c21f0911d97b781abdd2f371f52c44e81c`,
+and `b69e9ac67673d8ff8ed26ca95d2d1bcabbf75496ebaa8644b5f9602d3ea8fefc`.
+The selected IDs were regenerated from the frozen inputs with the existing
+same-slot matcher and 12/15-minute joint-panel rule. Re-running the current
+main replay on those inputs reproduced the existing
+`5d2f6d675fb213a42428262b67c7e6ecfbc2367c50ca8dc7593ecbc933747d84`
+report byte-for-byte. No settings, targets, study assignments, or database rows
+were changed.
+
 ## Immutable input and output identities
 
 Private raw files and detailed bin-level reports are retained outside Git at
