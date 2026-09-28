@@ -350,6 +350,12 @@ def test_actual_scorecard_consumers_attach_separate_typed_snapshot(consumer, use
         calls.append(day)
         return evidence
 
+    async def read_route(conn, day):
+        calls.append(("route_only", day))
+        from verdify_schemas.physical_crop_band import RouteOnlyCropBandEvidence
+
+        return RouteOnlyCropBandEvidence(day=day)
+
     async def fetch(*args):
         return [{"metric": "scorecard_contract_version", "value": 2}, {"metric": "compliance_pct", "value": 6.1}]
 
@@ -374,6 +380,7 @@ def test_actual_scorecard_consumers_attach_separate_typed_snapshot(consumer, use
         ScorecardResponse=ScorecardResponse,
         ValidationError=ValidationError,
         read_observed_minute_evidence=read,
+        read_route_only_crop_band_evidence=read_route,
         unpublished_physical_crop_band_evidence=lambda day: physical,
         _fetch_planner_scorecard=fetch,
         pool=SimpleNamespace(acquire=Checkout),

@@ -33,23 +33,35 @@ The frozen target is a panel-mean reference; actual crop placement and on-chip
 consumption remain unverified. This observation is never a physical-efficacy,
 experiment, or causal result.
 
-The API/MCP schema has a separate `route_only_crop_band_evidence` field, default
-`unavailable`; the existing `physical_crop_band_evidence` remains unavailable.
-No production reader or diagnostic row is installed yet. The earliest winter
-archive day is 2026-11-02, so no qualifying prospective result exists today.
+The API/MCP schema has a separate `route_only_crop_band_evidence` field. Its
+bounded one-day reader returns `unavailable` when the publication function or
+day row is absent, and rejects a malformed newest row without falling back.
+The existing `physical_crop_band_evidence` remains unavailable. The site
+labels a valid route result as observational and renders no route result when
+the scorecard day differs. The earliest winter archive day is 2026-11-02, so
+no qualifying prospective result exists today.
 
 ## Publication qualification
 
-Before adding a live reader, restore an exact migration-255 production backup to
-an isolated, network-denied PostgreSQL clone. On that clone, test a forward-only
-publication migration that stores immutable day/instance/source hashes and the
-typed diagnostic, grants only a one-day read projection to the API runtime, and
-leaves ingestor and ordinary runtime roles without raw lineage-table access or
-publication writes. Select the newest revision before validation; never fall
-back to an older valid row. Run positive and negative ordinary-login tests,
-derive and pin both new boundary digests from the reviewed catalog, and verify
-the owning migration runner stamps its ledger in the same transaction. Then add
-the bounded API/MCP adapter with validation and timeout handling, and render an
-explicitly **observational** site block. Only publish a completed prospective
-day whose retained source artifacts and fixed-panel result reproduce exactly.
-Do not modify migration 255 or fabricate a September historical result.
+Migration 257 is currently an unsealed, fail-closed source draft. Its
+append-only table stores only the summary diagnostic, artifact hash, frozen
+target revision, and three route contributor revisions. The guarded owner
+insert requires a complete prospective 06:00–24:00 Denver window and matching
+pre-window lineage. It never grants runtime roles publication writes or raw
+lineage reads; only the API runtime can execute the one-day read projection.
+The latest publication alone is considered. The ingestor has no read or write
+grant on this contract.
+
+An isolated, network-denied logical restore of a migration-255 backup proved
+the SQL shape, missing-day behavior, owner future-day rejection, and API versus
+ingestor grants in a rollback transaction. It cannot provide production
+successor hashes: the ordinary-login catalog digest includes numeric role OIDs
+and object ACLs, which a logical restore does not preserve. The read-only live
+catalog projection reproduced both sealed 255 hashes, but OID normalization
+still left multiple ACL and function differences on the clone. Qualify the
+exact 256 predecessor and 257 successor against the live catalog in a bounded
+rollback-only transaction after the device writer window; advance the two
+receipt rows and migration ledger atomically in the final forward migration.
+Do not substitute clone hashes. Only publish a completed prospective day whose
+retained source artifacts and fixed-panel result reproduce exactly. Do not
+modify migration 255 or fabricate a September historical result.

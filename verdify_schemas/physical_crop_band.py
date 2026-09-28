@@ -170,6 +170,14 @@ class PhysicalCropBandEvidence(BaseModel):
         return self
 
 
+class RouteOnlyPanelRoute(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    zone: Zone
+    route_id: str = Field(min_length=1, max_length=128)
+    modbus_address: Annotated[int, Field(strict=True, ge=1, le=247)]
+
+
 class RouteOnlyCropBandDiagnostic(BaseModel):
     """Prospective fixed-column comparison, never a qualified physical outcome."""
 
@@ -192,6 +200,7 @@ class RouteOnlyCropBandDiagnostic(BaseModel):
     contributor_scope: Literal["source_route_only_no_physical_identity"]
     collection_timely: bool
     panel_members: tuple[Literal["north"], Literal["east"], Literal["west"]]
+    panel_routes: tuple[RouteOnlyPanelRoute, RouteOnlyPanelRoute, RouteOnlyPanelRoute]
     crop_placement_verified: Literal[False]
     physical_hardware_identity_verified: Literal[False]
     per_probe_freshness_verified: Literal[False]
@@ -212,6 +221,11 @@ class RouteOnlyCropBandDiagnostic(BaseModel):
         end = datetime.combine(self.day + timedelta(days=1), time(), LOCAL_TZ).astimezone(UTC)
         if self.window_start != start or self.window_end != end or (end - start) != timedelta(hours=18):
             raise ValueError("route observation must cover the complete 06:00–24:00 Denver window")
+        if (
+            tuple(route.zone for route in self.panel_routes) != self.panel_members
+            or len({route.route_id for route in self.panel_routes}) != 3
+        ):
+            raise ValueError("route observation panel routes conflict")
         if (
             self.temp.eligible_bins > self.expected_bins
             or self.vpd.eligible_bins > self.expected_bins
@@ -241,6 +255,8 @@ class RouteOnlyCropBandEvidence(BaseModel):
     day: date | None = None
     greenhouse_id: str = "vallery"
     served_at: AwareDatetime | None = None
+    revision_id: Annotated[int, Field(strict=True, gt=0)] | None = None
+    recorded_at: AwareDatetime | None = None
     diagnostic: RouteOnlyCropBandDiagnostic | None = None
 
     @model_validator(mode="after")
@@ -254,7 +270,11 @@ class RouteOnlyCropBandEvidence(BaseModel):
             or self.day != self.diagnostic.day
             or self.greenhouse_id != self.diagnostic.greenhouse_id
             or self.served_at is None
+            or self.revision_id is None
+            or self.recorded_at is None
             or self.served_at < self.diagnostic.window_end
+            or self.recorded_at < self.diagnostic.window_end
+            or self.recorded_at > self.served_at
         ):
             raise ValueError("observational evidence needs a completed scoped diagnostic")
         return self
