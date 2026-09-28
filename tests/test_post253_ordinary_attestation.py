@@ -12,6 +12,7 @@ SPEC = importlib.util.spec_from_file_location("c0_delivery_post253", ROOT / "scr
 delivery = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(delivery)
 SOURCE = ROOT / "db/migrations" / delivery.SUCCESSOR_254
+SOURCE_255 = ROOT / "db/migrations" / delivery.SUCCESSOR_255
 
 
 def test_receipt_successor_pins_exact_source_ledger_and_negative_privileges():
@@ -98,4 +99,58 @@ def test_later_successor_refuses_before_runner_even_when_receipts_match(monkeypa
         delivery.deliver_resource_successor(ROOT / "db/migrations", {later[-1]: "0" * 64}, {}, contract, {}, plan=False)
     monkeypatch.setattr(delivery, "psql", lambda sql, env: "0" * 64)
     with pytest.raises(delivery.DeliveryError, match="predecessor ledger drift"):
-        delivery.verify_post_249(contract, {}, later=later)
+        delivery.verify_post_249(contract, {}, later=[delivery.SUCCESSOR_254, delivery.SUCCESSOR_255])
+
+
+def test_only_exact_255_source_is_a_reviewed_post_254_successor():
+    assert hashlib.sha256(SOURCE_255.read_bytes()).hexdigest() == delivery.SUCCESSOR_255_SHA256
+    sql = SOURCE_255.read_text()
+    assert "COMMIT;" not in sql
+    assert "post-254 crop lineage refuses unreviewed boundary digest" in sql
+    assert "post-254 crop lineage successor receipts are not exact" in sql
+    for login in delivery.SUCCESSOR_254_DIGESTS:
+        assert login in sql
+        assert delivery.SUCCESSOR_254_DIGESTS[login] in sql
+        assert sql.count(delivery.SUCCESSOR_255_DIGESTS[login]) >= 2
+    later = [delivery.SUCCESSOR_254, delivery.SUCCESSOR_255]
+    delivery.reviewed_post_254(later, {delivery.SUCCESSOR_255: delivery.SUCCESSOR_255_SHA256})
+    with pytest.raises(delivery.DeliveryError, match="reviewed 255 successor source drift"):
+        delivery.reviewed_post_254(later, {delivery.SUCCESSOR_255: "0" * 64})
+    for extra in ("255-unreviewed.sql", "256-future.sql"):
+        with pytest.raises(delivery.DeliveryError, match="unreviewed post-254 receipt successor"):
+            delivery.reviewed_post_254(later + [extra])
+
+
+def test_255_requires_exact_new_catalog_and_both_successor_receipts(monkeypatch):
+    contract = {"version": delivery.transition.RESOURCE_VERSION, "predecessor_ledger_sha256": "a" * 64}
+    before = [next((ROOT / "db/migrations").glob(f"{number}-*.sql")).name for number in range(250, 254)]
+    before.append(delivery.SUCCESSOR_254)
+    after = before + [delivery.SUCCESSOR_255]
+    old = delivery.SUCCESSOR_254_DIGESTS
+    new = delivery.SUCCESSOR_255_DIGESTS
+    state = {
+        "api": old["verdify_api_runtime_login"],
+        "ingestor": old["verdify_ingestor_runtime_login"],
+        "api_receipt": old["verdify_api_runtime_login"],
+        "ingestor_receipt": old["verdify_ingestor_runtime_login"],
+        "receipt_count": 2,
+        "column_update": True,
+        "table_update": False,
+    }
+    calls = []
+
+    def read(sql, environment):
+        calls.append(sql)
+        return contract["predecessor_ledger_sha256"] if len(calls) % 2 else json.dumps(state)
+
+    monkeypatch.setattr(delivery, "psql", read)
+    delivery.verify_post_249(contract, {}, later=before)
+    with pytest.raises(delivery.DeliveryError, match="reviewed post-249 boundary"):
+        delivery.verify_post_249(contract, {}, later=after)
+    state["api"] = new["verdify_api_runtime_login"]
+    state["ingestor"] = new["verdify_ingestor_runtime_login"]
+    with pytest.raises(delivery.DeliveryError, match="reviewed post-249 boundary"):
+        delivery.verify_post_249(contract, {}, later=after)
+    state["api_receipt"] = new["verdify_api_runtime_login"]
+    state["ingestor_receipt"] = new["verdify_ingestor_runtime_login"]
+    delivery.verify_post_249(contract, {}, later=after)

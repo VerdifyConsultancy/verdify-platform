@@ -48,6 +48,12 @@ SUCCESSOR_254_DIGESTS = {
     "verdify_api_runtime_login": "9b5e6841cebc95cff6020f1a899e65c1f504d927844f66f7045ecfb1eef23451",
     "verdify_ingestor_runtime_login": "52c1d03192df977396e4e61075616ee18ecb66c6b771005261c510980e97adc3",
 }
+SUCCESSOR_255 = "255-fixed-panel-crop-assignment-lineage.sql"
+SUCCESSOR_255_SHA256 = "c9276c02fa7641f37bad82b1d7fb829aba81c143d16d514606c5b6f6b8facd7b"
+SUCCESSOR_255_DIGESTS = {
+    "verdify_api_runtime_login": "a52e94f2b6fdecf792cfa819a33f6cd4a950d1076fec1895e9870a63b362cf62",
+    "verdify_ingestor_runtime_login": "5bdcd842aa593e15f7d33f4f335dfac0278adc62a0ea929b2590880adbf24c8d",
+}
 
 
 class DeliveryError(ValueError):
@@ -57,6 +63,16 @@ class DeliveryError(ValueError):
 def require(ok, message):
     if not ok:
         raise DeliveryError(message)
+
+
+def reviewed_post_254(later, files=None):
+    """Only the exact source-owned crop-lineage successor may follow 254."""
+    successors = [name for name in later if int(name[:3]) > 254]
+    require(successors in ([], [SUCCESSOR_255]), "unreviewed post-254 receipt successor")
+    if successors:
+        require(SUCCESSOR_254 in later, "unreviewed post-254 receipt successor")
+    if successors and files is not None:
+        require(files.get(SUCCESSOR_255) == SUCCESSOR_255_SHA256, "reviewed 255 successor source drift")
 
 
 def inventory(directory):
@@ -247,6 +263,7 @@ def post_249_inventory(files, rows):
 
 def verify_post_249(contract, environment, *, later=()):
     """The frozen C0 after digest legitimately changes at the reviewed grant."""
+    reviewed_post_254(later)
     migrations = transition.release_migrations(contract["version"])
     excluded = ["db/migrations/" + name for name in migrations] + ["db/migrations/" + SUCCESSOR_249]
     excluded += ["db/migrations/" + name for name in later]
@@ -287,11 +304,15 @@ COMMIT;"""
         "table_update": False,
     }
     if SUCCESSOR_254 in later:
-        require(not any(int(name[:3]) > 254 for name in later), "unreviewed post-254 receipt successor")
         expected["api"] = SUCCESSOR_254_DIGESTS["verdify_api_runtime_login"]
         expected["ingestor"] = SUCCESSOR_254_DIGESTS["verdify_ingestor_runtime_login"]
         expected["api_receipt"] = SUCCESSOR_254_DIGESTS["verdify_api_runtime_login"]
         expected["ingestor_receipt"] = SUCCESSOR_254_DIGESTS["verdify_ingestor_runtime_login"]
+        if SUCCESSOR_255 in later:
+            expected["api"] = SUCCESSOR_255_DIGESTS["verdify_api_runtime_login"]
+            expected["ingestor"] = SUCCESSOR_255_DIGESTS["verdify_ingestor_runtime_login"]
+            expected["api_receipt"] = SUCCESSOR_255_DIGESTS["verdify_api_runtime_login"]
+            expected["ingestor_receipt"] = SUCCESSOR_255_DIGESTS["verdify_ingestor_runtime_login"]
     elif later:
         state.pop("api", None)
         state.pop("ingestor", None)
@@ -331,7 +352,7 @@ def run_post_249(directory, later, environment, *, plan):
 
 def deliver_resource_successor(directory, files, rows, contract, environment, *, plan):
     later = post_249_inventory(files, rows)
-    require(not any(int(name[:3]) > 254 for name in later), "unreviewed post-254 receipt successor")
+    reviewed_post_254(later, files)
     pending_later = [name for name in later if ("db/migrations", "db/migrations/" + name) not in rows]
     row = rows.get(("db/migrations", "db/migrations/" + SUCCESSOR_249))
     if row is not None:
