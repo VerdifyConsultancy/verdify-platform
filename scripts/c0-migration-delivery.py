@@ -54,6 +54,18 @@ SUCCESSOR_255_DIGESTS = {
     "verdify_api_runtime_login": "a52e94f2b6fdecf792cfa819a33f6cd4a950d1076fec1895e9870a63b362cf62",
     "verdify_ingestor_runtime_login": "5bdcd842aa593e15f7d33f4f335dfac0278adc62a0ea929b2590880adbf24c8d",
 }
+SUCCESSOR_256 = "256-experiment-v2-end-study-recovery-completion.sql"
+SUCCESSOR_256_SHA256 = "b35ed01468ef505dc46b035b6b3c15ee57ba96d6600183ffd98b9975d4fffe0f"
+SUCCESSOR_256_DIGESTS = {
+    "verdify_api_runtime_login": "7c8b0d3f8dcfa8552068ca8373e0f394aafb3c27aab1fda72c7eebd3083c904a",
+    "verdify_ingestor_runtime_login": "7783f5d743751224ae157fe063941c76e00167a0208cd233150a9b68b06633fa",
+}
+SUCCESSOR_257 = "257-route-only-crop-band-publication.sql"
+SUCCESSOR_257_SHA256 = "48dc31ad941bc55a353e9a3514692f20e64e11806faca6d83a19aa771b0e1ac4"
+SUCCESSOR_257_DIGESTS = {
+    "verdify_api_runtime_login": "444063bd61ccb69f02888ede5f2c2338d7882b954af7141e267cdb53b4ed9c7e",
+    "verdify_ingestor_runtime_login": "86660529322d02ce6e735d329f6c5e320eeb53f9a8b2890a9a285eaf852f88f5",
+}
 
 
 class DeliveryError(ValueError):
@@ -66,13 +78,16 @@ def require(ok, message):
 
 
 def reviewed_post_254(later, files=None):
-    """Only the exact source-owned crop-lineage successor may follow 254."""
+    """Admit only the reviewed, ordered receipt successors after 254."""
     successors = [name for name in later if int(name[:3]) > 254]
-    require(successors in ([], [SUCCESSOR_255]), "unreviewed post-254 receipt successor")
+    reviewed = (SUCCESSOR_255, SUCCESSOR_256, SUCCESSOR_257)
+    require(successors == list(reviewed[: len(successors)]), "unreviewed post-254 receipt successor")
     if successors:
         require(SUCCESSOR_254 in later, "unreviewed post-254 receipt successor")
     if successors and files is not None:
-        require(files.get(SUCCESSOR_255) == SUCCESSOR_255_SHA256, "reviewed 255 successor source drift")
+        for name, sha in zip(reviewed, (SUCCESSOR_255_SHA256, SUCCESSOR_256_SHA256, SUCCESSOR_257_SHA256), strict=True):
+            if name in successors:
+                require(files.get(name) == sha, f"reviewed {name[:3]} successor source drift")
 
 
 def inventory(directory):
@@ -276,9 +291,8 @@ def verify_post_249(contract, environment, *, later=()):
     )
     require(digest == contract["predecessor_ledger_sha256"], "post-C0 predecessor ledger drift")
     # Later migrations may intentionally change ordinary runtime grants. The
-    # exact 249 boundary is checked before the first one; 254 advances the
-    # receipts only after its own pinned proof. Future migrations must carry
-    # their own reviewed receipt successor if they change the digest.
+    # exact 249 boundary is checked before the first one. Every reviewed
+    # receipt successor advances both runtime digests with an exact source pin.
     sql = """BEGIN READ ONLY;
 SET LOCAL statement_timeout='30s';
 SELECT jsonb_build_object(
@@ -303,17 +317,16 @@ COMMIT;"""
         "column_update": True,
         "table_update": False,
     }
-    if SUCCESSOR_254 in later:
-        expected["api"] = SUCCESSOR_254_DIGESTS["verdify_api_runtime_login"]
-        expected["ingestor"] = SUCCESSOR_254_DIGESTS["verdify_ingestor_runtime_login"]
-        expected["api_receipt"] = SUCCESSOR_254_DIGESTS["verdify_api_runtime_login"]
-        expected["ingestor_receipt"] = SUCCESSOR_254_DIGESTS["verdify_ingestor_runtime_login"]
-        if SUCCESSOR_255 in later:
-            expected["api"] = SUCCESSOR_255_DIGESTS["verdify_api_runtime_login"]
-            expected["ingestor"] = SUCCESSOR_255_DIGESTS["verdify_ingestor_runtime_login"]
-            expected["api_receipt"] = SUCCESSOR_255_DIGESTS["verdify_api_runtime_login"]
-            expected["ingestor_receipt"] = SUCCESSOR_255_DIGESTS["verdify_ingestor_runtime_login"]
-    elif later:
+    for name, digests in (
+        (SUCCESSOR_254, SUCCESSOR_254_DIGESTS),
+        (SUCCESSOR_255, SUCCESSOR_255_DIGESTS),
+        (SUCCESSOR_256, SUCCESSOR_256_DIGESTS),
+        (SUCCESSOR_257, SUCCESSOR_257_DIGESTS),
+    ):
+        if name in later:
+            expected["api"] = expected["api_receipt"] = digests["verdify_api_runtime_login"]
+            expected["ingestor"] = expected["ingestor_receipt"] = digests["verdify_ingestor_runtime_login"]
+    if later and SUCCESSOR_254 not in later:
         state.pop("api", None)
         state.pop("ingestor", None)
         expected.pop("api")
