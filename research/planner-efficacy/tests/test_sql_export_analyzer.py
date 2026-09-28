@@ -2,10 +2,16 @@
 
 import hashlib
 import json
+from datetime import UTC, date, datetime, time, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import pytest
-from switchback.v2_analysis import SQL_EXPORT_DOMAIN, analyze_revealed_sql_export
+from switchback.v2_analysis import (
+    SQL_EVIDENCE_BUNDLE_DOMAIN,
+    SQL_EXPORT_DOMAIN,
+    analyze_revealed_sql_export,
+)
 
 ROOT = Path(__file__).resolve().parents[3]
 FIXTURE_BYTES = (ROOT / "tests/fixtures/experiment_v2_restored_255_sql_export.json").read_bytes()
@@ -36,6 +42,14 @@ def reseal(payload: dict) -> tuple[bytes, str]:
 def test_exact_restored_sql_export_replays_twice_into_paired_decision():
     assert hashlib.sha256(SQL_EXPORT_DOMAIN + RAW).hexdigest() == SHA256
     assert b'"physical_arm"' not in RAW and b'"mapping"' not in RAW
+    payload = json.loads(RAW)
+    assert (
+        hashlib.sha256(
+            SQL_EVIDENCE_BUNDLE_DOMAIN
+            + "".join(row["evidence_bundle_sha256"] for row in payload["rows"]).encode("ascii")
+        ).hexdigest()
+        == payload["evidence_bundle_sha256"]
+    )
     first = analyze()
     second = analyze()
     assert first == second
@@ -98,3 +112,34 @@ def test_rehashed_mapping_duplicate_and_endpoint_flag_corruption_fail_closed():
     assert raw != RAW
     with pytest.raises(ValueError, match="duplicate JSON key"):
         analyze(raw, hashlib.sha256(SQL_EXPORT_DOMAIN + raw).hexdigest())
+
+
+def test_rehashed_corrupt_itt_range_and_evidence_bundle_fail_closed():
+    payload = json.loads(RAW)
+    payload["rows"][0]["itt_range"] = '["2026-09-29 13:00:00+00","2026-09-30 06:00:00+00")'
+    with pytest.raises(ValueError, match="ITT range differs"):
+        analyze(*reseal(payload))
+
+    payload = json.loads(RAW)
+    payload["rows"][0]["itt_range"] = '["2026-09-29 12:00:00","2026-09-30 06:00:00+00")'
+    with pytest.raises(ValueError, match="lacks UTC offsets"):
+        analyze(*reseal(payload))
+
+    payload = json.loads(RAW)
+    payload["rows"][0]["evidence_bundle_sha256"] = "a" * 64
+    with pytest.raises(ValueError, match="evidence bundle differs"):
+        analyze(*reseal(payload))
+
+
+@pytest.mark.parametrize("first_day", [date(2026, 3, 7), date(2026, 10, 31)])
+def test_denver_itt_ranges_cover_dst_offsets(first_day: date):
+    payload = json.loads(RAW)
+    denver = ZoneInfo("America/Denver")
+    for position, row in enumerate(payload["rows"]):
+        local_day = first_day + timedelta(days=position)
+        next_day = local_day + timedelta(days=1)
+        start = datetime.combine(local_day, time(6), denver).astimezone(UTC)
+        end = datetime.combine(next_day, time.min, denver).astimezone(UTC)
+        row["assigned_local_date"] = local_day.isoformat()
+        row["itt_range"] = f'["{start:%Y-%m-%d %H:%M:%S}+00","{end:%Y-%m-%d %H:%M:%S}+00")'
+    assert analyze(*reseal(payload))["decision"] == "inconclusive_null_endpoint"

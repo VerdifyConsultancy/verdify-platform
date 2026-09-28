@@ -11,10 +11,12 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import re
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from typing import Any, Literal
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 import numpy as np
 from scipy.stats import t as student_t
@@ -23,6 +25,9 @@ from .v2_day1_export import replay_blinded_paired_day_export
 
 ONE_SIDED_CONFIDENCE_LEVEL = 0.975
 SQL_EXPORT_DOMAIN = b"verdify-experiment-v2-frozen-export-v1\x00"
+SQL_EVIDENCE_BUNDLE_DOMAIN = b"verdify-experiment-v2-evidence-bundle-v1\x00"
+_SQL_ITT_RANGE_PATTERN = re.compile(r'^\["([^"]+)","([^"]+)"\)$')
+_STUDY_TIMEZONE = ZoneInfo("America/Denver")
 _SQL_EXPORT_FIELDS = {"analyzer_environment_sha256", "evidence_bundle_sha256", "experiment_id", "rows"}
 _SQL_ROW_FIELDS = {
     "assigned_local_date",
@@ -194,6 +199,26 @@ def _is_sha256(value: object) -> bool:
     return isinstance(value, str) and len(value) == 64 and all(char in "0123456789abcdef" for char in value)
 
 
+def _validate_sql_itt_range(value: object, local_date: date) -> None:
+    """Check PostgreSQL tstzrange text against the locked Denver local window."""
+    match = _SQL_ITT_RANGE_PATTERN.fullmatch(value) if isinstance(value, str) else None
+    if match is None:
+        raise ValueError("frozen SQL export ITT range shape mismatch")
+    try:
+        start, end = (datetime.fromisoformat(bound) for bound in match.groups())
+    except ValueError as exc:
+        raise ValueError("frozen SQL export ITT range timestamp is invalid") from exc
+    if start.utcoffset() is None or end.utcoffset() is None:
+        raise ValueError("frozen SQL export ITT range lacks UTC offsets")
+    expected_start = datetime.combine(local_date, time(6), _STUDY_TIMEZONE)
+    expected_end = datetime.combine(local_date + timedelta(days=1), time.min, _STUDY_TIMEZONE)
+    if (start.astimezone(UTC), end.astimezone(UTC)) != (
+        expected_start.astimezone(UTC),
+        expected_end.astimezone(UTC),
+    ):
+        raise ValueError("frozen SQL export ITT range differs from locked local window")
+
+
 def analyze_revealed_sql_export(
     raw: bytes,
     expected_sha256: str,
@@ -274,19 +299,16 @@ def analyze_revealed_sql_export(
             )
         ):
             raise ValueError("frozen SQL export flags are malformed")
-        if (
-            not isinstance(row["itt_range"], str)
-            or not row["itt_range"]
-            or any(
-                not _is_sha256(row[name])
-                for name in (
-                    "deviation_sha256",
-                    "environment_sha256",
-                    "evidence_bundle_sha256",
-                    "fidelity_sha256",
-                    "integrity_sha256",
-                    "outcome_sha256",
-                )
+        _validate_sql_itt_range(row["itt_range"], local_date)
+        if any(
+            not _is_sha256(row[name])
+            for name in (
+                "deviation_sha256",
+                "environment_sha256",
+                "evidence_bundle_sha256",
+                "fidelity_sha256",
+                "integrity_sha256",
+                "outcome_sha256",
             )
         ):
             raise ValueError("frozen SQL export row hashes are malformed")
@@ -310,6 +332,12 @@ def analyze_revealed_sql_export(
         if label in labels:
             raise ValueError("frozen SQL export repeats a blinded label in one pair")
         labels[label] = typed_outcome
+
+    evidence_bundle = hashlib.sha256(
+        SQL_EVIDENCE_BUNDLE_DOMAIN + "".join(row["evidence_bundle_sha256"] for row in rows).encode("ascii")
+    ).hexdigest()
+    if evidence_bundle != payload["evidence_bundle_sha256"]:
+        raise ValueError("frozen SQL export evidence bundle differs from ordered row hashes")
 
     if len(rows) != locked_pairs * 2 or any(set(by_pair.get(index, {})) != {"X", "Y"} for index in range(locked_pairs)):
         return {
