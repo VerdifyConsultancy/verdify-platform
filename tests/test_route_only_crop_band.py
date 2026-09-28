@@ -175,6 +175,32 @@ def test_missing_history_or_changed_source_never_becomes_observation():
         route.build(changed_instance, winter.canonical(changed_day), panel, bad_target)
 
 
+def test_missing_registered_source_hash_rejects_without_fallback():
+    raw = fixture()
+    instance = json.loads(raw[0])
+    del instance["panel_source_sha256"]
+    with pytest.raises(ValueError, match="instance field set differs"):
+        route.build(winter.canonical(instance), *raw[1:])
+    instance["panel_source_sha256"] = None
+    with pytest.raises(ValueError, match="must be a SHA-256"):
+        route.build(winter.canonical(instance), *raw[1:])
+
+
+def test_worst_zone_is_null_only_when_every_zone_is_in_band():
+    raw = fixture()
+    day = json.loads(raw[1])
+    for row in day["sources"]["climate_flush"]:
+        row.update(temp_north=70.0, temp_east=70.0, temp_west=70.0)
+    all_inside = route.build(raw[0], winter.canonical(day), raw[2], raw[3])
+    assert all_inside.temp.in_band_bins == 1
+    assert all_inside.temp.worst_measured_zone is None
+    for row in day["sources"]["climate_flush"]:
+        row.update(temp_north=100.0, temp_east=70.0, temp_west=70.0)
+    panel_inside_zone_outside = route.build(raw[0], winter.canonical(day), raw[2], raw[3])
+    assert panel_inside_zone_outside.temp.in_band_bins == 1
+    assert panel_inside_zone_outside.temp.worst_measured_zone == "north"
+
+
 def test_route_only_claims_are_enforced_and_unavailable_history_stays_null():
     raw = fixture()
     panel = json.loads(raw[2])

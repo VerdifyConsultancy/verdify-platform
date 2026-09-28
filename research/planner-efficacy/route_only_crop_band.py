@@ -84,7 +84,7 @@ def _axis(report: dict, axis: str) -> dict:
     zone_distance = {
         zone: sum(row["zones"][zone]["outside_distance"] for row in eligible) for zone in fixed_panel.ZONES
     }
-    worst = max(fixed_panel.ZONES, key=lambda zone: zone_distance[zone]) if eligible else None
+    worst = max(fixed_panel.ZONES, key=lambda zone: zone_distance[zone]) if any(zone_distance.values()) else None
     summary = report["summary"][axis]
     return {
         "eligible_bins": len(eligible),
