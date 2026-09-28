@@ -71,6 +71,13 @@ SUCCESSOR_258_SHA256 = "5558c4be0d3624ccd5821d2e0231b4625feaa64a6657e5fe53ca67b7
 # Reserving two NOLOGIN roles grants nothing to either existing runtime.  The
 # predecessor receipts must remain exact until a separately sealed cutover.
 SUCCESSOR_258_DIGESTS = SUCCESSOR_257_DIGESTS
+SUCCESSOR_259 = "259-mcp-ordinary-runtime-boundary.sql"
+SUCCESSOR_259_SHA256 = "656d704eb08142d2eaa604209d0642c7f4d9cc21c6bb25d392a4c633247a4e4f"
+SUCCESSOR_259_DIGESTS = {
+    "verdify_api_runtime_login": "7066af287ab1aa0989568d0d3ddc794a67f5314df82e84f3f4de3bdfa1b47fb0",
+    "verdify_ingestor_runtime_login": "44f5d289f9a0dc4e91264ccf61f35ea9adcd2eeebba130197574e319470e61b0",
+}
+SUCCESSOR_259_MCP_DIGEST = "c8b68f940995824e9dfbe6334f7c66ac38952fa2efd9423682dc2b9cd4542ba8"
 
 
 class DeliveryError(ValueError):
@@ -85,14 +92,20 @@ def require(ok, message):
 def reviewed_post_254(later, files=None):
     """Admit only the reviewed, ordered receipt successors after 254."""
     successors = [name for name in later if int(name[:3]) > 254]
-    reviewed = (SUCCESSOR_255, SUCCESSOR_256, SUCCESSOR_257, SUCCESSOR_258)
+    reviewed = (SUCCESSOR_255, SUCCESSOR_256, SUCCESSOR_257, SUCCESSOR_258, SUCCESSOR_259)
     require(successors == list(reviewed[: len(successors)]), "unreviewed post-254 receipt successor")
     if successors:
         require(SUCCESSOR_254 in later, "unreviewed post-254 receipt successor")
     if successors and files is not None:
         for name, sha in zip(
             reviewed,
-            (SUCCESSOR_255_SHA256, SUCCESSOR_256_SHA256, SUCCESSOR_257_SHA256, SUCCESSOR_258_SHA256),
+            (
+                SUCCESSOR_255_SHA256,
+                SUCCESSOR_256_SHA256,
+                SUCCESSOR_257_SHA256,
+                SUCCESSOR_258_SHA256,
+                SUCCESSOR_259_SHA256,
+            ),
             strict=True,
         ):
             if name in successors:
@@ -332,6 +345,7 @@ COMMIT;"""
         (SUCCESSOR_256, SUCCESSOR_256_DIGESTS),
         (SUCCESSOR_257, SUCCESSOR_257_DIGESTS),
         (SUCCESSOR_258, SUCCESSOR_258_DIGESTS),
+        (SUCCESSOR_259, SUCCESSOR_259_DIGESTS),
     ):
         if name in later:
             expected["api"] = expected["api_receipt"] = digests["verdify_api_runtime_login"]
@@ -342,6 +356,32 @@ COMMIT;"""
         expected.pop("api")
         expected.pop("ingestor")
     require(state == expected, "reviewed post-249 boundary is not exact")
+    if SUCCESSOR_259 in later:
+        mcp_sql = """BEGIN READ ONLY;
+SET LOCAL statement_timeout='30s';
+SELECT jsonb_build_object(
+    'mcp', encode(public.fn_mcp_runtime_boundary_digest(), 'hex'),
+    'mcp_receipt', (SELECT encode(boundary_sha256, 'hex')
+                      FROM public.mcp_runtime_boundary_receipt WHERE singleton),
+    'mcp_login', (SELECT rolcanlogin AND rolinherit AND NOT rolsuper
+                    FROM pg_roles WHERE rolname='verdify_mcp_runtime_login'),
+    'mcp_arm_read', has_table_privilege('verdify_mcp_runtime_login',
+                        'public.control_assignments', 'SELECT'),
+    'mcp_experiment_read', has_table_privilege('verdify_mcp_runtime_login',
+                               'public.control_experiments', 'SELECT'));
+COMMIT;"""
+        mcp_state = json.loads(psql(mcp_sql, environment))
+        require(
+            mcp_state
+            == {
+                "mcp": SUCCESSOR_259_MCP_DIGEST,
+                "mcp_receipt": SUCCESSOR_259_MCP_DIGEST,
+                "mcp_login": True,
+                "mcp_arm_read": False,
+                "mcp_experiment_read": False,
+            },
+            "reviewed MCP ordinary boundary is not exact",
+        )
 
 
 def run_successor_249(directory, environment, *, plan):

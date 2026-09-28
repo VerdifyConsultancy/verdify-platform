@@ -905,3 +905,93 @@ def test_observer_authenticates_transport_but_cannot_call_any_tool(mcp_server, m
     for tool in mcp_server.TOOL_AUDIENCES:
         with pytest.raises(mcp_server.ToolAccessDenied, match="observer"):
             mcp_server.authorize_tool_call(tool, "tok-observer")
+
+
+def test_ordinary_mcp_db_contract_rejects_owner_and_owner_secret(mcp_server, monkeypatch):
+    monkeypatch.setenv("VERDIFY_MCP_RUNTIME_DB_ROLE_REQUIRED", "1")
+    monkeypatch.setenv("DB_USER", "verdify_mcp_runtime_login")
+    monkeypatch.setenv("DB_PASSWORD", "ordinary-password")
+    monkeypatch.delenv("DB_PASS", raising=False)
+    monkeypatch.delenv("POSTGRES_PASSWORD", raising=False)
+    monkeypatch.setattr(mcp_server, "DB_DSN", "postgresql://verdify:owner@verdify-db:5432/verdify")
+    with pytest.raises(RuntimeError, match="ordinary database login contract"):
+        mcp_server._validate_mcp_runtime_dsn()
+    monkeypatch.setattr(
+        mcp_server, "DB_DSN", "postgresql://verdify_mcp_runtime_login:ordinary-password@verdify-db:5432/verdify"
+    )
+    mcp_server._validate_mcp_runtime_dsn()
+    monkeypatch.setenv("POSTGRES_PASSWORD", "owner-password")
+    with pytest.raises(RuntimeError, match="ordinary database login contract"):
+        mcp_server._validate_mcp_runtime_dsn()
+
+
+def test_ordinary_mcp_connection_attestation_fails_closed(mcp_server, monkeypatch):
+    monkeypatch.setenv("VERDIFY_MCP_RUNTIME_DB_ROLE_REQUIRED", "1")
+
+    class UnattestedConnection:
+        closed = False
+
+        async def fetchval(self, query):
+            assert "fn_mcp_runtime_attest_ordinary_login" in query
+            return False
+
+        async def close(self):
+            self.closed = True
+
+    conn = UnattestedConnection()
+
+    async def connect(*_args, **_kwargs):
+        return conn
+
+    monkeypatch.setattr(mcp_server.asyncpg, "connect", connect)
+    with pytest.raises(RuntimeError, match="attestation failed"):
+        _run(mcp_server._db())
+    assert conn.closed is True
+
+
+def test_slack_tool_uses_attested_connection(mcp_server, monkeypatch):
+    class Connection:
+        closed = False
+
+        async def close(self):
+            self.closed = True
+
+    conn = Connection()
+
+    async def attested_db():
+        return conn
+
+    async def command(_request, **kwargs):
+        assert kwargs["conn"] is conn
+        assert "dsn" not in kwargs
+        return SimpleNamespace(model_dump_json=lambda: '{"ok":true}')
+
+    monkeypatch.setattr(mcp_server, "_db", attested_db)
+    monkeypatch.setattr(mcp_server, "handle_slack_command", command)
+    monkeypatch.setattr(
+        mcp_server, "load_slack_settings", lambda: SimpleNamespace(channel_id="C1", channel_name="greenhouse")
+    )
+    assert _run(mcp_server.slack_ops("status")) == '{"ok":true}'
+    assert conn.closed is True
+
+
+def test_rendered_prod_mcp_uses_only_dedicated_ordinary_db_secret() -> None:
+    rendered = subprocess.run(
+        ["kustomize", "build", str(PROD_OVERLAY_PATH)],
+        cwd=REPO_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    deployment = next(
+        resource
+        for resource in yaml.safe_load_all(rendered)
+        if isinstance(resource, dict)
+        and resource.get("kind") == "Deployment"
+        and resource.get("metadata", {}).get("name") == "verdify-mcp"
+    )
+    env = {entry["name"]: entry for entry in deployment["spec"]["template"]["spec"]["containers"][0]["env"]}
+    assert env["DB_USER"]["value"] == "verdify_mcp_runtime_login"
+    assert env["DB_PASSWORD"]["valueFrom"]["secretKeyRef"] == {"name": "verdify-mcp-runtime-db", "key": "password"}
+    assert env["VERDIFY_MCP_RUNTIME_DB_ROLE_REQUIRED"]["value"] == "1"
+    assert "POSTGRES_PASSWORD" not in env and "DB_PASS" not in env

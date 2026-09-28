@@ -1,0 +1,124 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: verdify-mcp-runtime-role-bootstrap
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: runtime-role-bootstrap
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 180
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: verdify
+        app.kubernetes.io/component: migrate
+        app.kubernetes.io/name: verdify-mcp-runtime-role-bootstrap
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 10
+      imagePullSecrets:
+        - name: zot-origin-cluster-pull
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: bootstrap-and-attest
+          image: ghcr.io/verdifyconsultancy/verdify-migrate
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              fail() {
+                printf '%s\n' "[mcp-runtime-role-bootstrap] fail-closed: $1" >&2
+                exit 1
+              }
+
+              [ "${DB_ADMIN_USER}" = "verdify" ] || fail "admin username mismatch"
+              [ -n "${DB_ADMIN_PASSWORD}" ] || fail "admin credential empty"
+              [ "${#MCP_DB_PASSWORD}" -eq 64 ] || fail "MCP credential shape mismatch"
+              case "${MCP_DB_PASSWORD}" in
+                *[!0-9a-f]*) fail "MCP credential shape mismatch" ;;
+              esac
+              [ "${MCP_DB_PASSWORD}" != "${DB_ADMIN_PASSWORD}" ] \
+                || fail "MCP credential equals owner credential"
+
+              ledger_ok="$(
+                PGPASSWORD="${DB_ADMIN_PASSWORD}" \
+                  psql -X --no-password --quiet --tuples-only --no-align \
+                    -h "${DB_HOST}" -p "${DB_PORT}" -U verdify -d "${DB_NAME}" \
+                    -c "SELECT EXISTS (SELECT 1 FROM public.schema_migrations WHERE source='db/migrations' AND seq=259 AND filename='db/migrations/259-mcp-ordinary-runtime-boundary.sql' AND stamp_method='runner')"
+              )" || fail "migration ledger query failed"
+              [ "${ledger_ok}" = "t" ] || fail "migration 259 not ledgered"
+
+              # psql's \password installs a SCRAM verifier without putting the
+              # password in argv, SQL text, a file, or logs.
+              if ! printf '%s\n%s\n' "${MCP_DB_PASSWORD}" "${MCP_DB_PASSWORD}" |
+                PGPASSWORD="${DB_ADMIN_PASSWORD}" \
+                  psql -X --no-password --quiet --set=ON_ERROR_STOP=1 \
+                    --single-transaction \
+                    -h "${DB_HOST}" -p "${DB_PORT}" -U verdify -d "${DB_NAME}" \
+                    --command="SET password_encryption = 'scram-sha-256'" \
+                    --command='\password verdify_mcp_runtime_login'
+              then
+                fail "transactional MCP verifier installation failed"
+              fi
+
+              attested="$(
+                PGPASSWORD="${MCP_DB_PASSWORD}" \
+                  psql -X --no-password --quiet --tuples-only --no-align \
+                    -h "${DB_HOST}" -p "${DB_PORT}" \
+                    -U verdify_mcp_runtime_login -d "${DB_NAME}" <<'SQL'
+              SELECT current_user = session_user
+                 AND current_user = 'verdify_mcp_runtime_login'
+                 AND pg_catalog.current_setting('search_path') =
+                     'pg_catalog, public, pg_temp'
+                 AND public.fn_mcp_runtime_attest_ordinary_login();
+              SQL
+              )" || fail "MCP actual-login connection failed"
+              [ "${attested}" = "t" ] || fail "MCP actual-login attestation failed"
+              unset DB_ADMIN_PASSWORD MCP_DB_PASSWORD
+              printf '%s\n' '[mcp-runtime-role-bootstrap] ordinary login installed and attested'
+          env:
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef: {name: verdify-config, key: DB_HOST}
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef: {name: verdify-config, key: DB_PORT}
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef: {name: verdify-config, key: DB_NAME}
+            - name: DB_ADMIN_USER
+              valueFrom:
+                configMapKeyRef: {name: verdify-config, key: DB_USER}
+            - name: DB_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef: {name: verdify-app-secrets, key: POSTGRES_PASSWORD}
+            - name: MCP_DB_PASSWORD
+              valueFrom:
+                secretKeyRef: {name: verdify-mcp-runtime-db, key: password}
+            - name: PGAPPNAME
+              value: verdify-mcp-runtime-role-bootstrap
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: ["ALL"]}
+          resources:
+            requests: {cpu: "25m", memory: "32Mi"}
+            limits: {cpu: "250m", memory: "128Mi"}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {sizeLimit: 16Mi}

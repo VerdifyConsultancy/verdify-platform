@@ -65,7 +65,7 @@ Service → Secret → key wiring as authored in `deploy/k8s/{base,components}`:
 
 | Secret | Key | Consumed by (ref type) | dev | staging | prod |
 |---|---|---|---|---|---|
-| `verdify-app-secrets` | `POSTGRES_PASSWORD` | db / mcp / migrate / planner / setpoint-server and the bounded runtime-role bootstrap; API/ingestor only outside the prod Gate-1 cutover (`secretKeyRef`) | ✓ | ✓ | ✓ |
+| `verdify-app-secrets` | `POSTGRES_PASSWORD` | db / migrate / planner / setpoint-server and the bounded runtime-role bootstraps; absent from the production API, ingestor, and MCP pods (`secretKeyRef`) | ✓ | ✓ | ✓ |
 | `verdify-app-secrets` | `VERDIFY_WRITE_API_KEY` | api (`secretKeyRef`; write guard `api/main.py`) | ✓ | ✓ | ✓ |
 | `verdify-app-secrets` | `MQTT_USER` | ingestor (`secretKeyRef`) | ✓ | ✓ | ✓ |
 | `verdify-app-secrets` | `MQTT_PASS` | ingestor (`secretKeyRef`) | ✓ | ✓ | ✓ |
@@ -80,6 +80,7 @@ Service → Secret → key wiring as authored in `deploy/k8s/{base,components}`:
 | `verdify-experiment-v2-shadow-scheduler-db` | `password` | v2 lifecycle scheduler (`secretKeyRef`, optional; username is the migration-owned exact login) | — | — | opt |
 | `verdify-experiment-v2-randomizer-db` | `password` | v2 selector/randomizer (`secretKeyRef`, optional; username is the migration-owned exact login) | — | — | opt |
 | `verdify-experiment-v2-outcome-freezer-db` | `password` | v2 outcome freezer (`secretKeyRef`, optional; username is the migration-owned exact login) | — | — | opt |
+| `verdify-mcp-runtime-db` | `password` | production MCP and its dedicated PreSync role bootstrap (`secretKeyRef`; username is migration-owned `verdify_mcp_runtime_login`) | — | — | ✓ |
 | `verdify-hermes` | `OPENAI_API_KEY` | Hermes and v2 OpenAI selector provider adapters (`secretKeyRef`, optional while component capability is off) | — | — | req at activation |
 | `verdify-ha-token` | `ha_token.txt` | setpoint-server (volume mount); **device-affecting** | — | — | ✓ |
 | `verdify-hermes` | `OPENAI_API_KEY`, `HERMES_MCP_URL`² | hermes-iris (`envFrom.secretRef`) | — | — | ✓ |
@@ -98,11 +99,11 @@ but is never exercised — those envs never connect to the live ESP32.
 ² `HERMES_MCP_URL` is the migration doc **R7** gate: it must point at
 `verdify-mcp.verdify-prod.svc:8000` and is repointed at SEAL time, never committed.
 
-The production overlay performs migration 217's Gate-1 role cutover: API and
-ingestor ordinary-process aliases reference their distinct runtime credentials,
-and the database-owner credential is absent from both ordinary pods. The owner
+The production overlay performs migration 217's API/ingestor role cutover and
+migration 259's MCP cutover: all three workloads reference distinct ordinary
+runtime credentials, and the database-owner credential is absent from their pods. The owner
 credential remains bounded to database administration, migrations, and the
-PreSync runtime-role bootstrap. The four runtime keys must be reconciled before
+PreSync runtime-role bootstraps. The ordinary runtime Secrets must be reconciled before
 any sync. `deploy/k8s/overlays/prod-runtime-role-boundary` is a compatibility
 review alias that renders byte-identically to the active `overlays/prod` source;
 it is not a second activation layer.

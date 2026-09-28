@@ -8,6 +8,7 @@ kind: Component
 # ordinary process independently attests its exact login/duty pair at startup.
 resources:
   - bootstrap-job.yaml
+  - mcp-bootstrap-job.yaml
 
 images:
   # Declare the logical key inside the Component so the consuming overlay's

@@ -17,6 +17,7 @@ import logging
 import os
 import re
 import sys
+import urllib.parse
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Annotated
@@ -110,6 +111,46 @@ if _env_path.exists():
 # in-cluster Postgres endpoint moves this service off the VM with no code change.
 # Default below preserves the live VM connection (localhost:5432).
 DB_DSN = os.environ.get("DB_DSN", f"postgresql://verdify:{_db_pass}@localhost:5432/verdify")
+MCP_RUNTIME_DB_ROLE_REQUIRED_ENV = "VERDIFY_MCP_RUNTIME_DB_ROLE_REQUIRED"
+MCP_RUNTIME_DB_LOGIN = "verdify_mcp_runtime_login"
+_MCP_RUNTIME_DB_ATTESTATION_SQL = """
+SELECT current_user = session_user
+   AND current_user = 'verdify_mcp_runtime_login'
+   AND pg_catalog.current_setting('search_path') =
+       'pg_catalog, public, pg_temp'
+   AND public.fn_mcp_runtime_attest_ordinary_login()
+"""
+
+
+def _mcp_runtime_db_role_required() -> bool:
+    return os.environ.get(MCP_RUNTIME_DB_ROLE_REQUIRED_ENV, "").strip() == "1"
+
+
+def _validate_mcp_runtime_dsn() -> None:
+    if not _mcp_runtime_db_role_required():
+        return
+    try:
+        dsn_user = urllib.parse.unquote(urllib.parse.urlsplit(DB_DSN).username or "")
+        dsn_password = urllib.parse.urlsplit(DB_DSN).password
+    except ValueError as exc:
+        raise RuntimeError("MCP ordinary database DSN is malformed") from exc
+    if (
+        not hmac.compare_digest(dsn_user, MCP_RUNTIME_DB_LOGIN)
+        or not hmac.compare_digest(os.environ.get("DB_USER", ""), MCP_RUNTIME_DB_LOGIN)
+        or not dsn_password
+        or not os.environ.get("DB_PASSWORD")
+        or os.environ.get("POSTGRES_PASSWORD")
+        or os.environ.get("DB_PASS")
+    ):
+        raise RuntimeError("MCP ordinary database login contract failed")
+
+
+async def _attest_mcp_runtime_connection(conn: asyncpg.Connection) -> None:
+    if _mcp_runtime_db_role_required() and await conn.fetchval(_MCP_RUNTIME_DB_ATTESTATION_SQL) is not True:
+        raise RuntimeError("MCP ordinary database attestation failed")
+
+
+_validate_mcp_runtime_dsn()
 SITE_PUBLISH_TRIGGER_PATH = os.environ.get(
     "VERDIFY_SITE_PUBLISH_TRIGGER_PATH",
     "/var/local/verdify/state/plan-publish-trigger",
@@ -880,13 +921,19 @@ async def _db() -> asyncpg.Connection:
     # query budget. A server-side fence prevents a timed-out tool call from
     # leaving a PostgreSQL backend consuming memory until it reaches a send
     # boundary.
-    return await asyncpg.connect(
+    conn = await asyncpg.connect(
         DB_DSN,
         server_settings={
             "application_name": "verdify-mcp",
             "statement_timeout": f"{MCP_DB_STATEMENT_TIMEOUT_MS}ms",
         },
     )
+    try:
+        await _attest_mcp_runtime_connection(conn)
+    except Exception:
+        await conn.close()
+        raise
+    return conn
 
 
 # #387: outcome_kpi() fans its independent section fetches out concurrently,
@@ -910,6 +957,7 @@ async def _kpi_fanout_pool_get() -> "asyncpg.Pool":
     if _kpi_fanout_pool is None:
         async with _kpi_fanout_pool_lock:
             if _kpi_fanout_pool is None:
+                pool_options = {"init": _attest_mcp_runtime_connection} if _mcp_runtime_db_role_required() else {}
                 _kpi_fanout_pool = await asyncpg.create_pool(
                     DB_DSN,
                     min_size=0,
@@ -919,6 +967,7 @@ async def _kpi_fanout_pool_get() -> "asyncpg.Pool":
                         "application_name": "verdify-mcp",
                         "statement_timeout": f"{MCP_DB_STATEMENT_TIMEOUT_MS}ms",
                     },
+                    **pool_options,
                 )
     return _kpi_fanout_pool
 
@@ -1011,8 +1060,12 @@ async def slack_ops(
         channel_name=settings.channel_name,
         raw_event={"source": "mcp.slack_ops"},
     )
-    response = await handle_slack_command(req, dsn=DB_DSN, settings=settings, role_override=role_override)
-    return response.model_dump_json()
+    conn = await _db()
+    try:
+        response = await handle_slack_command(req, conn=conn, settings=settings, role_override=role_override)
+        return response.model_dump_json()
+    finally:
+        await conn.close()
 
 
 async def _insert_plan_delivery_log(conn: asyncpg.Connection, result: dict) -> str | None:
@@ -5220,4 +5273,11 @@ _assert_tool_audience_registry_complete()
 if __name__ == "__main__":
     os.environ.setdefault("MCP_HTTP_HOST", "127.0.0.1")
     os.environ.setdefault("MCP_HTTP_PORT", "8000")
+    if _mcp_runtime_db_role_required():
+
+        async def _startup_db_attestation() -> None:
+            conn = await _db()
+            await conn.close()
+
+        asyncio.run(_startup_db_attestation())
     mcp.run(transport="streamable-http")

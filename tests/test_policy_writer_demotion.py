@@ -144,7 +144,7 @@ class TestGate:
         conn = FakeConn(
             [
                 (
-                    "FROM public.control_experiments",
+                    "FROM public.fn_mcp_armed_assignment_context()",
                     {"experiment_id": TRIGGER_ID, "greenhouse_id": "vallery", "assignment_id": ASSIGNMENT_ID},
                 )
             ]
@@ -159,7 +159,7 @@ class TestGate:
     def test_experiment_env_without_armed_assignment_fails_open(self, monkeypatch):
         monkeypatch.setenv("VERDIFY_POLICY_VECTOR_MODE", "live")
         monkeypatch.setenv("VERDIFY_ACTIVE_EXPERIMENT_ID", TRIGGER_ID)
-        conn = FakeConn([("FROM public.control_experiments", None)])
+        conn = FakeConn([("FROM public.fn_mcp_armed_assignment_context()", None)])
         assert _run(experiment_config.demoted_policy_write_gate(conn)) is None
 
     def test_probe_error_fails_open_when_legacy_enabled(self, monkeypatch):
@@ -169,12 +169,12 @@ class TestGate:
         def boom(_args):
             raise RuntimeError("relation does not exist")
 
-        conn = FakeConn([("FROM public.control_experiments", boom)])
+        conn = FakeConn([("FROM public.fn_mcp_armed_assignment_context()", boom)])
         assert _run(experiment_config.demoted_policy_write_gate(conn)) is None
 
     def test_legacy_disabled_demotes_even_without_assignment(self, monkeypatch):
         monkeypatch.setenv("VERDIFY_LEGACY_DIRECT_POLICY_WRITES_ENABLED", "0")
-        conn = FakeConn([("FROM public.control_experiments", None)])
+        conn = FakeConn([("FROM public.fn_mcp_armed_assignment_context()", None)])
         gate = _run(experiment_config.demoted_policy_write_gate(conn))
         assert gate is not None and gate["assignment_id"] is None
 
