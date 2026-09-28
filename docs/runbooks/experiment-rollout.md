@@ -344,8 +344,9 @@ After that diagnostic:
   lifecycle and scheduler-nonstarvation acceptance;
 - #424 has direct raw proof that served, controller and observed band semantics
   are coherent and versioned;
-- #641 contains the probe evidence and its second, combined multidisciplinary
-  physical signoff before any moderate/aggressive canary or A/A;
+- #641 contains the probe evidence and its second, combined remote-evidence
+  decision before any moderate/aggressive canary or A/A; on-site crop
+  inspection and handheld spot-checks are not prerequisites;
 - baseline and both templates land exactly on deployed setter steps;
 - facility rescue and automatic baseline recovery have named on-call ownership;
 - no planned maintenance/feed/flush/irrigation action conflicts with the

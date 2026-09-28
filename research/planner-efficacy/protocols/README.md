@@ -60,7 +60,9 @@ The authoritative reasoning and execution model are:
    first experiment-owned write; ledger #424/#433 diagnostics as immutable
    `commissioning_probe` readiness work. Regenerate baseline, moderate and
    aggressive artifacts on the actual deployed ESPHome entity grid, then
-   obtain #641's combined multidisciplinary physical signoff before canaries.
+   record #641's combined remote-evidence decision before canaries. An on-site
+   crop inspection or handheld spot-check is not a gate; current telemetry,
+   readbacks, calibration-age and safety limits still must pass.
 2. **Software evidence.** Pass the recent-Postgres assignment → selector →
    exclusive component calls → two distinct post-delivery observation epochs →
    exposure → outcome/analyzer vertical test and its injected-failure matrix,
