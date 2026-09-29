@@ -30,7 +30,7 @@ exec > >(tee -a "$LOG") 2>&1
 
 echo ""
 echo "══════════════════════════════════════════════════════════════"
-echo "  FIRMWARE ROLLBACK  —  $(date -Is)"
+echo "  FIRMWARE ROLLBACK  —  $(date '+%Y-%m-%dT%H:%M:%S%z')"
 echo "══════════════════════════════════════════════════════════════"
 echo "  Target: $ESP32_HOST:$ESP32_OTA_PORT"
 echo "  Binary: $ROLLBACK_BIN"
@@ -40,6 +40,19 @@ if [[ ! -f "$ROLLBACK_BIN" ]]; then
     echo "  MANUAL RECOVERY: re-run previous commit's firmware-deploy,"
     echo "                   or serial-console the ESP32 to flash recovery image."
     exit 1
+fi
+
+if [[ -n "${FIRMWARE_ROLLBACK_SHA256:-}" ]]; then
+    if [[ ! "$FIRMWARE_ROLLBACK_SHA256" =~ ^[0-9a-f]{64}$ ]]; then
+        echo "  ✗ Invalid expected rollback SHA-256."
+        exit 1
+    fi
+    actual_sha="$(sha256sum "$ROLLBACK_BIN" | awk '{print $1}')"
+    if [[ "$actual_sha" != "$FIRMWARE_ROLLBACK_SHA256" ]]; then
+        echo "  ✗ Rollback binary SHA-256 mismatch; refusing OTA."
+        exit 1
+    fi
+    echo "  ✓ Rollback binary SHA-256 verified."
 fi
 
 # OTA password: env-provided OTA_PW wins (re-homed feed). Otherwise fall back to
