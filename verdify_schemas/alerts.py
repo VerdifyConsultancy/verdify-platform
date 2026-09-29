@@ -308,6 +308,7 @@ class RequiredPlanMissDetails(PlanDeliveryFailureDetails):
     # ingestor/tasks/alerts.py).
     terminal_action: str | None = None
     failure_class: str | None = None
+    had_required_failure: bool = False
 
 
 class PlannerRequiredPlanMissedDetails(_DetailsBase):

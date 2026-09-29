@@ -101,6 +101,7 @@ def test_heartbeat_required_plan_missed_shape():
                         "resulting_plan_id": None,
                         "terminal_action": "timeout",
                         "failure_class": "expected_trigger_not_delivered",
+                        "had_required_failure": True,
                     }
                 ]
             },
@@ -108,6 +109,30 @@ def test_heartbeat_required_plan_missed_shape():
     )
     assert env.severity == "critical"
     assert env.details["misses"][0]["failure_class"] == "expected_trigger_not_delivered"
+    assert env.details["misses"][0]["had_required_failure"] is True
+
+
+def test_required_plan_missed_legacy_payload_without_failure_history():
+    """Earlier alert producers did not include the ledger failure-history flag."""
+    env = AlertEnvelope.model_validate(
+        {
+            "alert_type": "planner_required_plan_missed",
+            "severity": "critical",
+            "category": "system",
+            "message": "SUNRISE did not produce a plan by SLA",
+            "details": {
+                "misses": [
+                    {
+                        "id": 341631,
+                        "event_type": "SUNRISE",
+                        "status": "neutral_fallback",
+                        "gateway_body": "",
+                    }
+                ]
+            },
+        }
+    )
+    assert env.details["misses"][0]["had_required_failure"] is False
 
 
 def test_validation_failed_fallback_preserves_critical_severity():
