@@ -143,13 +143,13 @@ secrets. The procedure and its traps:
     192.168.10.0/24); `wifi_password` ← that WLAN's passphrase in the fleet net
     audit (`~/Agents/nexus/state/net-audit-*/raw/wlanconf.json` on the laptop;
     re-home this into a k8s Secret for k3s).
-- **THE false-rollback gotcha:** `make firmware-deploy` passes
-  `VERDIFY_DB_BACKEND=kube` only to the **preflight**, not to the post-OTA
-  `wait-for-firmware-version.sh` / `sensor-health` calls. From a non-laptop host
-  those default to docker-exec (no `verdify-timescaledb` container) → the version
-  query returns empty → 180 s timeout → the `else` branch **flashes last-good
-  back, rolling back a perfectly healthy OTA**. **Mitigation — run the steps by
-  hand with the kube backend exported throughout:**
+- **The post-OTA DB backend:** `make firmware-deploy` now passes its
+  `FIRMWARE_DB_BACKEND` (default `kube`) through preflight, version wait, and
+  both sensor-health sweeps. Older checkouts did not and could roll back a
+  healthy OTA after querying the decommissioned Docker database. The manual
+  sequence remains useful when an operator needs to inspect each step. The
+  accepted version pin is written to `FIRMWARE_STATE_DIR` (default
+  `~/.verdify/state`) after the archived build and health sweep succeed:
   1. `VERDIFY_DB_BACKEND=kube FIRMWARE_OTA_FREEZE_OVERRIDE_REASON="…" bash scripts/firmware-deploy-preflight.sh`
   2. `FW_VERSION="$(date +%Y.%-m.%-d.%H%M).$(git rev-parse --short HEAD)"; echo "$FW_VERSION" > firmware/artifacts/pending-fw-version.txt`
   3. `ESPHOME_BIN=<esphome> SECRETS_SRC=<secrets.yaml> scripts/firmware-esphome-worktree.sh -s fw_version "$FW_VERSION" compile && … upload --device 192.168.10.111`
@@ -168,6 +168,18 @@ secrets. The procedure and its traps:
   proof. Freeze overrides need the documented reason-bearing environment values;
   the **critical-alert check protects plant safety—investigate the alert rather
   than blind-overriding it.**
+- **When the accepted last-good binary is genuinely missing:** a separately
+  verified recompile may be used only as a *provisional* automatic rollback
+  target. Keep its own version, SHA-256, and provenance; do not copy it to
+  `last-good.ota.bin` or call it accepted. Run `make firmware-deploy` from a
+  clean checkout with `FIRMWARE_ROLLBACK_BIN=/absolute/path/to/candidate.ota.bin`,
+  `FIRMWARE_ROLLBACK_SHA256=<verified 64-hex digest>`, and a specific
+  `FIRMWARE_OTA_FREEZE_OVERRIDE_REASON` (at least 12 characters). Preflight
+  verifies and audits the candidate without bypassing critical-alert or stale
+  telemetry checks. Automatic rollback verifies its bytes again before OTA.
+  If rollback occurs, identify the rebuilt firmware by its *own* diagnostic
+  version and perform a fresh sensor-health sweep; the original accepted
+  release remains unrecovered.
 - Full firmware iteration loop: `docs/runbooks/verdify-firmware-safe-iteration-loop.md`;
   deploy gates in `AGENTS.md` (Deliver and verify).
 

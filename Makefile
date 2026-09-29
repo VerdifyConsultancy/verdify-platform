@@ -43,6 +43,9 @@ FIRMWARE_OTA_BIN := firmware/.esphome/build/greenhouse/.pioenvs/greenhouse/firmw
 # Override to `docker` only if a local verdify-timescaledb container is reachable
 # (legacy VM), or `dsn` when running in-cluster with PG*/POSTGRES_PASSWORD set.
 FIRMWARE_DB_BACKEND ?= kube
+FIRMWARE_ROLLBACK_BIN ?= firmware/artifacts/last-good.ota.bin
+FIRMWARE_ROLLBACK_SHA256 ?=
+FIRMWARE_STATE_DIR ?= $(HOME)/.verdify/state
 REPLAY_CORPUS_GZ := firmware/test/data/replay_overrides.csv.gz
 REPLAY_CORPUS_TMP ?= /tmp/verdify-replay-overrides.csv
 HERMES_IRIS_RUNTIME_DIR ?= /var/lib/verdify/hermes/iris
@@ -441,7 +444,7 @@ irrigation-post-deploy-acceptance-plan: ## Print non-mutating post-deploy accept
 irrigation-post-deploy-acceptance: irrigation-full-acceptance ## Post-deploy production proof after merge/restart/site publish
 
 firmware-deploy: ## Compile + OTA deploy to ESP32 + post-deploy sensor-health sweep + auto-rollback on failure
-	VERDIFY_DB_BACKEND=$(FIRMWARE_DB_BACKEND) bash scripts/firmware-deploy-preflight.sh
+	VERDIFY_DB_BACKEND=$(FIRMWARE_DB_BACKEND) FIRMWARE_ROLLBACK_BIN="$(FIRMWARE_ROLLBACK_BIN)" FIRMWARE_ROLLBACK_SHA256="$(FIRMWARE_ROLLBACK_SHA256)" bash scripts/firmware-deploy-preflight.sh
 	@mkdir -p firmware/artifacts
 	@DIRTY="$$(git diff --quiet -- . && git diff --cached --quiet -- . || echo .dirty)"; \
 	if [ -n "$$DIRTY" ] && [ "$(ALLOW_DIRTY_FIRMWARE_DEPLOY)" != "1" ]; then \
@@ -470,22 +473,22 @@ firmware-deploy: ## Compile + OTA deploy to ESP32 + post-deploy sensor-health sw
 	# Pass → archive the new binary and update the expected-firmware pin.
 	# Rollback target stays on the prior last-good until an explicit
 	# firmware-promote-last-good after the 48-hour bake.
-	# Fail → flash last-good back to ESP32 via firmware-rollback.sh.
-	@if bash scripts/wait-for-firmware-version.sh "$$(cat firmware/artifacts/pending-fw-version.txt)" --timeout 180 && \
-		EXPECTED_FW_VERSION="$$(cat firmware/artifacts/pending-fw-version.txt)" $(MAKE) sensor-health SINCE='5 minutes'; then \
-		FIRMWARE_DEPLOYED_AT="$$(date '+%Y-%m-%dT%H:%M:%S%z')" bash scripts/archive-firmware-artifacts.sh "$$(cat firmware/artifacts/pending-fw-version.txt)" ; \
-		mkdir -p /srv/verdify/state ; \
-		cp firmware/artifacts/pending-fw-version.txt /srv/verdify/state/expected-firmware-version ; \
+	# Fail → flash the preflight-verified rollback binary via firmware-rollback.sh.
+	@if VERDIFY_DB_BACKEND=$(FIRMWARE_DB_BACKEND) bash scripts/wait-for-firmware-version.sh "$$(cat firmware/artifacts/pending-fw-version.txt)" --timeout 180 && \
+		VERDIFY_DB_BACKEND=$(FIRMWARE_DB_BACKEND) EXPECTED_FW_VERSION="$$(cat firmware/artifacts/pending-fw-version.txt)" $(MAKE) sensor-health SINCE='5 minutes'; then \
+		FIRMWARE_DEPLOYED_AT="$$(date '+%Y-%m-%dT%H:%M:%S%z')" bash scripts/archive-firmware-artifacts.sh "$$(cat firmware/artifacts/pending-fw-version.txt)" || exit 1 ; \
+		mkdir -p "$(FIRMWARE_STATE_DIR)" || exit 1 ; \
+		cp firmware/artifacts/pending-fw-version.txt "$(FIRMWARE_STATE_DIR)/expected-firmware-version" || exit 1 ; \
 		echo "✓ Deploy accepted. Archived build outputs + promoted expected firmware pin. Rollback target unchanged while this build bakes." ; \
 	else \
 		echo "" ; \
 		echo "▓▓▓  SENSOR-HEALTH FAILED POST-OTA  —  initiating auto-rollback  ▓▓▓" ; \
-		bash scripts/firmware-rollback.sh firmware/artifacts/last-good.ota.bin ; \
+		FIRMWARE_ROLLBACK_SHA256="$(FIRMWARE_ROLLBACK_SHA256)" bash scripts/firmware-rollback.sh "$(FIRMWARE_ROLLBACK_BIN)" || exit 1 ; \
 		echo "" ; \
 		echo "Waiting 60s for ESP32 to reboot onto rolled-back firmware..." ; \
 		sleep 60 ; \
 		echo "Re-running sensor-health against rolled-back firmware:" ; \
-		$(MAKE) sensor-health SINCE='5 minutes' ; \
+		VERDIFY_DB_BACKEND=$(FIRMWARE_DB_BACKEND) $(MAKE) sensor-health SINCE='5 minutes' ; \
 		exit 1 ; \
 	fi
 

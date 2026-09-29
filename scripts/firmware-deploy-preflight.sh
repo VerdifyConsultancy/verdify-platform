@@ -61,7 +61,7 @@ record_override() {
         mkdir -p "$(dirname "$override_log")"
     fi
     printf '%s\tgate=%s\treason=%s\tdetail=%s\tworktree=%s\tsha=%s\n' \
-        "$(date -Is)" \
+        "$(date '+%Y-%m-%dT%H:%M:%S%z')" \
         "$gate" \
         "$override_reason" \
         "$detail" \
@@ -172,7 +172,19 @@ else
 fi
 
 last_good="firmware/artifacts/last-good.ota.bin"
-if [[ -f "$last_good" ]]; then
+rollback_bin="${FIRMWARE_ROLLBACK_BIN:-$last_good}"
+if [[ "$rollback_bin" != "$last_good" ]]; then
+    [[ -f "$rollback_bin" ]] || fail "Provisional rollback candidate missing at $rollback_bin"
+    [[ "${FIRMWARE_ROLLBACK_SHA256:-}" =~ ^[0-9a-f]{64}$ ]] ||
+        fail "Provisional rollback candidate requires its exact SHA-256"
+    actual_sha="$(sha256sum "$rollback_bin" | awk '{print $1}')"
+    [[ "$actual_sha" == "$FIRMWARE_ROLLBACK_SHA256" ]] ||
+        fail "Provisional rollback candidate SHA-256 mismatch"
+    require_override_reason "provisional rollback candidate"
+    record_override "provisional rollback candidate" \
+        "unbaked recovery binary $rollback_bin sha256=$actual_sha; not accepted last-good"
+    pass "Verified provisional rollback candidate (not accepted last-good)"
+elif [[ -f "$last_good" ]]; then
     age_s=$(( $(date +%s) - $(mtime_of "$last_good") ))
     if (( age_s < 172800 )); then
         require_override_reason "48-hour bake"
@@ -181,7 +193,7 @@ if [[ -f "$last_good" ]]; then
         pass "48-hour bake check passed for $last_good"
     fi
 else
-    guard_or_fail "No last-good rollback artifact at $last_good; auto-rollback would be unavailable"
+    fail "No last-good rollback artifact at $last_good; supply a verified provisional rollback candidate"
 fi
 
 week_versions="$("${DB[@]}" \
