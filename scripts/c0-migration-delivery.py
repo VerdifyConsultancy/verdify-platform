@@ -100,6 +100,12 @@ SUCCESSOR_263 = "263-mcp-timescale-chunk-boundary-digest.sql"
 SUCCESSOR_263_SHA256 = "9f5fa53cde76224b06865095bfd9a531aadae058f6ca13e50e74ecd95ad5770b"
 SUCCESSOR_263_DIGESTS = SUCCESSOR_262_DIGESTS
 SUCCESSOR_263_MCP_DIGEST = "81836c70a76578da82b77899da5d1cafee4597ea819e35ee68a3fd6cf669fa45"
+SUCCESSOR_264 = "264-facility-safe-closure-startup-handoff.sql"
+SUCCESSOR_264_SHA256 = "406f284c941e599d142c336ce0a9afec1efd46d108d06c2f8069d0a08d7b1dc3"
+# The closure attestation is executable only by the experiment component duty;
+# it changes no ordinary API, ingestor, or MCP login boundary.
+SUCCESSOR_264_DIGESTS = SUCCESSOR_263_DIGESTS
+SUCCESSOR_264_MCP_DIGEST = SUCCESSOR_263_MCP_DIGEST
 # Exact emergency hotfix predecessor: the 262 receipt was resealed to this
 # live digest while 263 was prepared. Only a pending 263 may admit either the
 # original reviewed 262 pair or this pair; mixed receipt/live values fail.
@@ -128,6 +134,7 @@ def reviewed_post_254(later, files=None):
         SUCCESSOR_261,
         SUCCESSOR_262,
         SUCCESSOR_263,
+        SUCCESSOR_264,
     )
     require(successors == list(reviewed[: len(successors)]), "unreviewed post-254 receipt successor")
     if successors:
@@ -145,6 +152,7 @@ def reviewed_post_254(later, files=None):
                 SUCCESSOR_261_SHA256,
                 SUCCESSOR_262_SHA256,
                 SUCCESSOR_263_SHA256,
+                SUCCESSOR_264_SHA256,
             ),
             strict=True,
         ):
@@ -394,6 +402,7 @@ COMMIT;"""
         (SUCCESSOR_261, SUCCESSOR_261_DIGESTS),
         (SUCCESSOR_262, SUCCESSOR_262_DIGESTS),
         (SUCCESSOR_263, SUCCESSOR_263_DIGESTS),
+        (SUCCESSOR_264, SUCCESSOR_264_DIGESTS),
     ):
         if name in later:
             expected["api"] = expected["api_receipt"] = digests["verdify_api_runtime_login"]
@@ -437,8 +446,11 @@ COMMIT;"""
         acl_repaired = SUCCESSOR_261 in later
         native_ledger = SUCCESSOR_262 in later
         stable_chunks = SUCCESSOR_263 in later
+        facility_closure = SUCCESSOR_264 in later
         expected_mcp = (
-            SUCCESSOR_263_MCP_DIGEST
+            SUCCESSOR_264_MCP_DIGEST
+            if facility_closure
+            else SUCCESSOR_263_MCP_DIGEST
             if stable_chunks
             else SUCCESSOR_262_MCP_DIGEST
             if native_ledger

@@ -306,6 +306,8 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "262-fixed-panel-native-callback-ledger.sql",
         # Generated Timescale chunk boundary repair is a forward migration.
         "263-mcp-timescale-chunk-boundary-digest.sql",
+        # Facility closure handoff remains a ledgered function replacement.
+        "264-facility-safe-closure-startup-handoff.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(
