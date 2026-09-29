@@ -90,15 +90,19 @@ if [[ -z "$FIRMWARE_PYTHON" ]]; then
         FIRMWARE_PYTHON="$(command -v python3 || command -v python)"
     fi
 fi
-"$FIRMWARE_PYTHON" - <<PYEOF
+export OTA_PW
+"$FIRMWARE_PYTHON" - "$ESP32_HOST" "$ESP32_OTA_PORT" "$ROLLBACK_BIN" <<'PYEOF'
+import os
 import sys
 from pathlib import Path
 from esphome import espota2
+
+host, port, binary = sys.argv[1:]
 rc, version = espota2.run_ota(
-    remote_host="$ESP32_HOST",
-    remote_port=$ESP32_OTA_PORT,
-    password="$OTA_PW",
-    filename=Path("$ROLLBACK_BIN"),
+    remote_host=host,
+    remote_port=int(port),
+    password=os.environ["OTA_PW"],
+    filename=Path(binary),
 )
 sys.exit(rc)
 PYEOF

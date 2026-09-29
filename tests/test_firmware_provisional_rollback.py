@@ -10,7 +10,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def _rollback(tmp_path: Path, *, expected_sha: str, ota_credential: str) -> subprocess.CompletedProcess[str]:
+def _rollback(
+    tmp_path: Path, *, expected_sha: str, ota_credential: str, mock_interpreter: Path | None = None
+) -> subprocess.CompletedProcess[str]:
     candidate = tmp_path / "candidate.ota.bin"
     candidate.write_bytes(b"offline test candidate; never an ESP32 image")
     environment = os.environ.copy()
@@ -23,6 +25,9 @@ def _rollback(tmp_path: Path, *, expected_sha: str, ota_credential: str) -> subp
             "SECRETS_YAML": str(tmp_path / "absent-secrets.yaml"),
         }
     )
+    if mock_interpreter is not None:
+        environment["FIRMWARE_PYTHON"] = str(mock_interpreter)
+        environment["FIRMWARE_MOCK_STDIN"] = str(tmp_path / "ota-python-source.txt")
     return subprocess.run(
         ["bash", "scripts/firmware-rollback.sh", str(candidate)],
         cwd=ROOT,
@@ -48,3 +53,15 @@ def test_matching_provisional_sha_still_requires_ota_credential(tmp_path: Path) 
     assert "Rollback binary SHA-256 verified" in result.stdout
     assert "No OTA_PW env" in result.stdout
     assert "Flashing previous binary" not in result.stdout
+
+
+def test_ota_credential_is_not_interpolated_into_python_source(tmp_path: Path) -> None:
+    mock = tmp_path / "mock-python"
+    mock.write_text('#!/bin/sh\ncat > "$FIRMWARE_MOCK_STDIN"\n')
+    mock.chmod(0o700)
+    expected = hashlib.sha256(b"offline test candidate; never an ESP32 image").hexdigest()
+    marker = "offline-ota-credential-marker"
+    result = _rollback(tmp_path, expected_sha=expected, ota_credential=marker, mock_interpreter=mock)
+    assert result.returncode == 0
+    assert "Rollback binary SHA-256 verified" in result.stdout
+    assert marker not in (tmp_path / "ota-python-source.txt").read_text()
