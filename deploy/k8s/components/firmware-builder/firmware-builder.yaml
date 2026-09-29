@@ -190,17 +190,8 @@ spec:
                   PROMOTE_FLAG=""
                   if [ "${PROMOTE_LAST_GOOD}" = "1" ]; then PROMOTE_FLAG="--promote-last-good"; fi
                   ARTIFACT_ROOT=/artifacts BUILD_DIR="${BUILD_DIR}" \
-                    bash scripts/archive-firmware-artifacts.sh "${FW_VERSION}" ${PROMOTE_FLAG} \
-                    || { # older script versions derive BUILD_DIR themselves; fall back to a direct archive
-                      DEST="/artifacts/${FW_VERSION}"; mkdir -p "${DEST}"
-                      cp "${BUILD_DIR}"/firmware.ota.bin "${BUILD_DIR}"/firmware.bin "${BUILD_DIR}"/firmware.elf "${BUILD_DIR}"/firmware.map "${DEST}/" 2>/dev/null || cp "${BUILD_DIR}"/firmware.ota.bin "${DEST}/"
-                      { echo "firmware_version=${FW_VERSION}"; echo "source_sha=$(git rev-parse HEAD)"; echo "archived_at=$(date -Is)"; echo "builder=in-cluster"; } > "${DEST}/metadata.env"
-                      if [ "${PROMOTE_LAST_GOOD}" = "1" ]; then
-                        cp "${DEST}/firmware.ota.bin" /artifacts/last-good.ota.bin
-                        printf '%s\n' "${FW_VERSION}" > /artifacts/last-good.version
-                        cp "${DEST}/metadata.env" /artifacts/last-good.metadata.env
-                      fi
-                    }
+                    bash scripts/archive-firmware-artifacts.sh "${FW_VERSION}" ${PROMOTE_FLAG}
+                  (cd "/artifacts/${FW_VERSION}" && sha256sum -c SHA256SUMS)
                   ls -la /artifacts/ | head
 
                   if [ "${FLASH}" = "1" ]; then

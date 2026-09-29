@@ -30,6 +30,8 @@ REPO_ROOT="${REPO_ROOT:-$(git rev-parse --show-toplevel)}"
 REPO_ROOT="$(cd "$REPO_ROOT" && pwd)"
 cd "$REPO_ROOT"
 BUILD_DIR="${BUILD_DIR:-$REPO_ROOT/firmware/.esphome/build/greenhouse/.pioenvs/greenhouse}"
+GENERATED_BUILD_DIR="$(dirname "$(dirname "$BUILD_DIR")")"
+ESPHOME_DATA_ROOT="$(dirname "$(dirname "$GENERATED_BUILD_DIR")")"
 ARTIFACT_ROOT="${ARTIFACT_ROOT:-$REPO_ROOT/firmware/artifacts}"
 DEST="$ARTIFACT_ROOT/$FW_VERSION"
 PROVENANCE_DIR="$DEST/provenance"
@@ -72,8 +74,8 @@ done
 if [[ -f "$BUILD_DIR/project_description.json" ]]; then
     cp "$BUILD_DIR/project_description.json" "$DEST/project_description.json"
 fi
-if [[ -f "$REPO_ROOT/firmware/.esphome/storage/greenhouse.yaml.json" ]]; then
-    cp "$REPO_ROOT/firmware/.esphome/storage/greenhouse.yaml.json" "$DEST/esphome-storage.json"
+if [[ -f "$ESPHOME_DATA_ROOT/storage/greenhouse.yaml.json" ]]; then
+    cp "$ESPHOME_DATA_ROOT/storage/greenhouse.yaml.json" "$DEST/esphome-storage.json"
 fi
 
 {
@@ -125,13 +127,11 @@ while IFS= read -r -d '' path; do
     cp -a "$path" "$PROVENANCE_DIR/untracked/$path"
 done < "$PROVENANCE_DIR/untracked-source-files.z"
 
-for path in \
-    firmware/.esphome/build/greenhouse/src/main.cpp \
-    firmware/.esphome/build/greenhouse/src/esphome.h
-do
-    if [[ -f "$path" ]]; then
-        mkdir -p "$GENERATED_SOURCE_DIR/$(dirname "$path")"
-        cp -a "$path" "$GENERATED_SOURCE_DIR/$path"
+for generated_file in main.cpp esphome.h; do
+    if [[ -f "$GENERATED_BUILD_DIR/src/$generated_file" ]]; then
+        generated_path="firmware/.esphome/build/greenhouse/src/$generated_file"
+        mkdir -p "$GENERATED_SOURCE_DIR/$(dirname "$generated_path")"
+        cp -a "$GENERATED_BUILD_DIR/src/$generated_file" "$GENERATED_SOURCE_DIR/$generated_path"
     fi
 done
 
@@ -142,6 +142,10 @@ done
         | sort -z \
         | xargs -0r sha256sum > SOURCE_SHA256SUMS
 )
+
+# Verify the archived bytes against the build before updating last-good.
+(cd "$BUILD_DIR" && sha256sum "${required[@]}") > "$DEST/BUILD_SHA256SUMS"
+(cd "$DEST" && sha256sum -c BUILD_SHA256SUMS)
 
 if [[ "$PROMOTE" -eq 1 ]]; then
     cp "$DEST/firmware.ota.bin" "$ARTIFACT_ROOT/last-good.ota.bin"
