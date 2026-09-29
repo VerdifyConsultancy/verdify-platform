@@ -168,6 +168,11 @@ secrets. The procedure and its traps:
   proof. Freeze overrides need the documented reason-bearing environment values;
   the **critical-alert check protects plant safety—investigate the alert rather
   than blind-overriding it.**
+- The post-OTA sensor sweep checks each climate field. The historically absent
+  south temperature/RH/VPD triplet is a warning only when a populated prior
+  24-hour baseline also has zero values for that field. A newly lost south
+  reading, any other missing field, Modbus timeout, recent watchdog reset, or
+  new critical sensor/control alert still fails the sweep.
 - **When the accepted last-good binary is genuinely missing:** a separately
   verified recompile may be used only as a *provisional* automatic rollback
   target. Keep its own version, SHA-256, and provenance; do not copy it to

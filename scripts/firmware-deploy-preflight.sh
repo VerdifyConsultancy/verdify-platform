@@ -11,7 +11,9 @@ DB_STATEMENT_TIMEOUT_MS="${VERDIFY_DB_STATEMENT_TIMEOUT_MS:-5000}"
 # preserves the exact prior argv on the VM). The PGOPTIONS statement-timeout is
 # injected as a docker-exec extra flag in docker-exec mode.
 . "$(dirname "${BASH_SOURCE[0]}")/lib/psql-verdify.sh"
-mapfile -t DB < <(verdify_psql_cmd -e "PGOPTIONS=-c statement_timeout=${DB_STATEMENT_TIMEOUT_MS}")
+DB=()
+while IFS= read -r arg; do DB+=("$arg"); done \
+    < <(verdify_psql_cmd -e "PGOPTIONS=-c statement_timeout=${DB_STATEMENT_TIMEOUT_MS}")
 DB+=(-t -A -F '|' -c)
 
 fail() { echo "✗ $1" >&2; exit 1; }
