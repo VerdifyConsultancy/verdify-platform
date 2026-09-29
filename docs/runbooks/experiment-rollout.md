@@ -71,6 +71,37 @@ require that proof, except when an immutable facility-owned emergency-safe-state
 event explicitly transfers responsibility. Emergency-hold release always needs
 facility authorization.
 
+### C1 source-grid proposal
+
+To prepare a C1 experiment candidate from the ordinary source-owned desired
+policy, export its complete 48-field field/value map as JSON. It is distinct
+from the raw `cfg_*` readback epochs used to prove what the controller actually
+served. For each off-grid desired number, record an exact `from`, a selected
+entity-grid `to`, and a field-specific `rationale` in a second field-keyed JSON
+object. For example, the historical `COMMON_GRID_DECISIONS` in
+`research/planner-efficacy/switchback/v2_profiles.py` selects 240000 ms from
+225000 ms for `dwell_gate_ms`; that historical choice does not authorize a
+different live source value or a silent rounding rule.
+
+For that value, the decisions file contains:
+
+```json
+{
+  "dwell_gate_ms": {
+    "from": 225000,
+    "to": 240000,
+    "rationale": "Select the longer anti-chatter dwell for the C1 candidate"
+  }
+}
+```
+
+Run `python3 scripts/c1-project-grid-state.py --source desired.json --decisions decisions.json --output c1-proposal.json`. The tool refuses missing, stale,
+extra, out-of-bounds or off-grid decisions; the output contains a decision row
+for every field and an exact 48-field policy-vector identity. It does not
+change ordinary writer policy, issue controller commands, or assert live
+grid/prefix/rollback qualification. Bind any later experiment use to fresh raw
+readbacks and the independently qualified execution evidence.
+
 ## Audited lifecycle control surface
 
 Use `POST /api/v1/experiments/{experiment_id}/component-control/commands`
