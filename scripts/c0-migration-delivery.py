@@ -96,6 +96,14 @@ SUCCESSOR_262_DIGESTS = {
     "verdify_ingestor_runtime_login": "1ee6b4aa40eb9e56c7ab90ebb18cc6c2cb094a0e5d67092c8c406f72fc321fbc",
 }
 SUCCESSOR_262_MCP_DIGEST = "c34f6091839412a8578c1061a0bddae987fe65d8cf8cf5551fddca63924cfff3"
+SUCCESSOR_263 = "263-mcp-timescale-chunk-boundary-digest.sql"
+SUCCESSOR_263_SHA256 = "9f5fa53cde76224b06865095bfd9a531aadae058f6ca13e50e74ecd95ad5770b"
+SUCCESSOR_263_DIGESTS = SUCCESSOR_262_DIGESTS
+SUCCESSOR_263_MCP_DIGEST = "81836c70a76578da82b77899da5d1cafee4597ea819e35ee68a3fd6cf669fa45"
+# Exact emergency hotfix predecessor: the 262 receipt was resealed to this
+# live digest while 263 was prepared. Only a pending 263 may admit either the
+# original reviewed 262 pair or this pair; mixed receipt/live values fail.
+SUCCESSOR_263_HOTFIX_PREDECESSOR_MCP_DIGEST = "c6e6952976cbc27f8342ae2304fb69ecdbec682c46ed1ddaeb8b7a00894d6bd7"
 
 
 class DeliveryError(ValueError):
@@ -119,6 +127,7 @@ def reviewed_post_254(later, files=None):
         SUCCESSOR_260,
         SUCCESSOR_261,
         SUCCESSOR_262,
+        SUCCESSOR_263,
     )
     require(successors == list(reviewed[: len(successors)]), "unreviewed post-254 receipt successor")
     if successors:
@@ -135,6 +144,7 @@ def reviewed_post_254(later, files=None):
                 SUCCESSOR_260_SHA256,
                 SUCCESSOR_261_SHA256,
                 SUCCESSOR_262_SHA256,
+                SUCCESSOR_263_SHA256,
             ),
             strict=True,
         ):
@@ -328,9 +338,13 @@ def post_249_inventory(files, rows):
     return later
 
 
-def verify_post_249(contract, environment, *, later=()):
+def verify_post_249(contract, environment, *, later=(), hotfix_predecessor_263=False):
     """The frozen C0 after digest legitimately changes at the reviewed grant."""
     reviewed_post_254(later)
+    if hotfix_predecessor_263:
+        require(
+            SUCCESSOR_262 in later and SUCCESSOR_263 not in later, "263 hotfix predecessor requires exact applied 262"
+        )
     migrations = transition.release_migrations(contract["version"])
     excluded = ["db/migrations/" + name for name in migrations] + ["db/migrations/" + SUCCESSOR_249]
     excluded += ["db/migrations/" + name for name in later]
@@ -379,6 +393,7 @@ COMMIT;"""
         (SUCCESSOR_260, SUCCESSOR_260_DIGESTS),
         (SUCCESSOR_261, SUCCESSOR_261_DIGESTS),
         (SUCCESSOR_262, SUCCESSOR_262_DIGESTS),
+        (SUCCESSOR_263, SUCCESSOR_263_DIGESTS),
     ):
         if name in later:
             expected["api"] = expected["api_receipt"] = digests["verdify_api_runtime_login"]
@@ -421,19 +436,32 @@ COMMIT;"""
         repaired = SUCCESSOR_260 in later
         acl_repaired = SUCCESSOR_261 in later
         native_ledger = SUCCESSOR_262 in later
+        stable_chunks = SUCCESSOR_263 in later
+        expected_mcp = (
+            SUCCESSOR_263_MCP_DIGEST
+            if stable_chunks
+            else SUCCESSOR_262_MCP_DIGEST
+            if native_ledger
+            else SUCCESSOR_261_MCP_DIGEST
+            if acl_repaired
+            else (SUCCESSOR_260_MCP_DIGEST if repaired else SUCCESSOR_259_MCP_DIGEST)
+        )
+        if hotfix_predecessor_263:
+            require(
+                mcp_state.get("mcp")
+                in {
+                    SUCCESSOR_262_MCP_DIGEST,
+                    SUCCESSOR_263_HOTFIX_PREDECESSOR_MCP_DIGEST,
+                }
+                and mcp_state.get("mcp_receipt") == mcp_state.get("mcp"),
+                "263 predecessor MCP boundary is not exact",
+            )
+            expected_mcp = mcp_state["mcp"]
         require(
             mcp_state
             == {
-                "mcp": SUCCESSOR_262_MCP_DIGEST
-                if native_ledger
-                else SUCCESSOR_261_MCP_DIGEST
-                if acl_repaired
-                else (SUCCESSOR_260_MCP_DIGEST if repaired else SUCCESSOR_259_MCP_DIGEST),
-                "mcp_receipt": SUCCESSOR_262_MCP_DIGEST
-                if native_ledger
-                else SUCCESSOR_261_MCP_DIGEST
-                if acl_repaired
-                else (SUCCESSOR_260_MCP_DIGEST if repaired else SUCCESSOR_259_MCP_DIGEST),
+                "mcp": expected_mcp,
+                "mcp_receipt": expected_mcp,
                 "mcp_login": True,
                 "mcp_arm_read": False,
                 "mcp_experiment_read": False,
@@ -485,7 +513,12 @@ def deliver_resource_successor(directory, files, rows, contract, environment, *,
     row = rows.get(("db/migrations", "db/migrations/" + SUCCESSOR_249))
     if row is not None:
         applied_later = [name for name in later if rows.get(("db/migrations", "db/migrations/" + name))]
-        verify_post_249(contract, environment, later=applied_later)
+        verify_post_249(
+            contract,
+            environment,
+            later=applied_later,
+            hotfix_predecessor_263=(SUCCESSOR_262 in applied_later and SUCCESSOR_263 in pending_later),
+        )
         print("Post-C0 migration 249 verified.")
     else:
         psql(successor_probe(contract), environment)
