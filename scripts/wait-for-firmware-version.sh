@@ -29,7 +29,8 @@ fi
 # #24: DB access via the shared psql-verdify abstraction (docker-exec default
 # preserves prior VM argv).
 . "$(dirname "${BASH_SOURCE[0]}")/lib/psql-verdify.sh"
-mapfile -t DB < <(verdify_psql_cmd)
+DB=()
+while IFS= read -r arg; do DB+=("$arg"); done < <(verdify_psql_cmd)
 DB+=(-t -A -F '|' -c)
 deadline=$((SECONDS + TIMEOUT_S))
 latest=""

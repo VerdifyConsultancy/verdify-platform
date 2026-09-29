@@ -34,7 +34,8 @@ SINCE="${SINCE% ago}"
 # #24: DB access via the shared psql-verdify abstraction (docker-exec default
 # preserves prior VM argv). Build an argv array; call sites use "${DB[@]}".
 . "$(dirname "${BASH_SOURCE[0]}")/lib/psql-verdify.sh"
-mapfile -t DB < <(verdify_psql_cmd)
+DB=()
+while IFS= read -r arg; do DB+=("$arg"); done < <(verdify_psql_cmd)
 DB+=(-t -A -c)
 PASS=0; FAIL=0; WARN=0
 
@@ -52,7 +53,8 @@ echo "════════════════════════�
 
 # ── 1. CLIMATE SENSORS ─────────────────────────────────────────────
 # Every climate column must have a fresh non-null value in the last 5 min.
-# Columns checked match the zone probes + derived values + outdoor + env.
+# The known absent south triplet may warn only when it also had no values in
+# a populated pre-OTA 24-hour baseline; a newly lost south reading still fails.
 section "Climate sensors (freshness + non-null)"
 
 CLIMATE_COLS=(
@@ -70,7 +72,18 @@ for col in "${CLIMATE_COLS[@]}"; do
     if [[ -n "$v" ]]; then
         pass "$col = $v"
     else
-        fail "$col — no non-null value in last 5 min"
+        case "$col" in
+            temp_south|rh_south|vpd_south)
+                prior=$("${DB[@]}" "SELECT count(*), count($col) FROM climate WHERE ts >= now() - interval '24 hours' AND ts < now() - interval '10 minutes'" 2>/dev/null)
+                IFS='|' read -r prior_rows prior_nonnull <<< "$prior"
+                if [[ "${prior_rows:-0}" =~ ^[0-9]+$ && "${prior_nonnull:-}" == "0" && "${prior_rows:-0}" -ge 100 ]]; then
+                    warn "$col — absent in last 5 min and throughout populated pre-OTA 24-hour baseline"
+                else
+                    fail "$col — no non-null value in last 5 min (previously present or baseline unavailable)"
+                fi
+                ;;
+            *) fail "$col — no non-null value in last 5 min" ;;
+        esac
     fi
 done
 
