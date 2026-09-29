@@ -176,6 +176,7 @@ fi
 last_good="firmware/artifacts/last-good.ota.bin"
 rollback_bin="${FIRMWARE_ROLLBACK_BIN:-$last_good}"
 if [[ "$rollback_bin" != "$last_good" ]]; then
+    [[ "$rollback_bin" == /* ]] || fail "Provisional rollback candidate path must be absolute"
     [[ -f "$rollback_bin" ]] || fail "Provisional rollback candidate missing at $rollback_bin"
     [[ "${FIRMWARE_ROLLBACK_SHA256:-}" =~ ^[0-9a-f]{64}$ ]] ||
         fail "Provisional rollback candidate requires its exact SHA-256"
