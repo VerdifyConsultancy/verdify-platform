@@ -740,6 +740,12 @@ def test_api_attestation_exactly_matches_the_migration_lifecycle_grant() -> None
     emergency_recovery_retry = (
         Path(__file__).parents[1] / "db/migrations/227-experiment-v2-emergency-recovery-retry.sql"
     ).read_text()
+    startup_rollover = (
+        Path(__file__).parents[1] / "db/migrations/239-experiment-v2-orphaned-preclaim-recovery.sql"
+    ).read_text()
+    legacy_terminalization = (
+        Path(__file__).parents[1] / "db/migrations/251-experiment-v2-legacy-expired-recovery-terminalization.sql"
+    ).read_text()
     grant_statement = "GRANT EXECUTE ON FUNCTION %s TO verdify_experiment_lifecycle"
     grant_end = migration.index(grant_statement)
     grant_start = migration.rfind("FOREACH fn IN ARRAY ARRAY[", 0, grant_end)
@@ -751,6 +757,22 @@ def test_api_attestation_exactly_matches_the_migration_lifecycle_grant() -> None
     granted.update(re.findall(r"'(public\.fn_experiment_v2_[^']+)'::regprocedure", direct_proof_retry))
     granted.update(re.findall(r"'(public\.fn_experiment_v2_[^']+)'::regprocedure", direct_proof_status))
     granted.update(re.findall(r"'(public\.fn_experiment_v2_[^']+)'::regprocedure", emergency_recovery_retry))
+    assert re.search(
+        r"GRANT EXECUTE ON FUNCTION\s+public\.fn_experiment_v2_direct_proof_resolve_startup_rollover\s*"
+        r"\(\s*uuid,\s*uuid,\s*text,\s*text\s*\)\s*TO verdify_experiment_lifecycle",
+        startup_rollover,
+    )
+    assert re.search(
+        r"GRANT EXECUTE ON FUNCTION\s+public\.fn_experiment_v2_terminalize_legacy_expired_recovery\s*"
+        r"\(\s*uuid,\s*uuid,\s*bigint,\s*text\s*\)\s*TO verdify_experiment_lifecycle",
+        legacy_terminalization,
+    )
+    granted.update(
+        {
+            "public.fn_experiment_v2_direct_proof_resolve_startup_rollover(uuid,uuid,text,text)",
+            "public.fn_experiment_v2_terminalize_legacy_expired_recovery(uuid,uuid,bigint,text)",
+        }
+    )
     expected = {
         "public.fn_experiment_v2_configure(uuid,text,text,text,text,text,text,uuid,text,bigint,text)",
         "public.fn_experiment_v2_lock_design(uuid,date,integer,time without time zone,text,text,text,text,text,text,text,text,text,text,text)",
@@ -765,6 +787,8 @@ def test_api_attestation_exactly_matches_the_migration_lifecycle_grant() -> None
         "public.fn_experiment_v2_direct_proof_retry_emergency_recovery(uuid,uuid,uuid,text,bigint,tstzrange,text,text,text)",
         "public.fn_experiment_v2_direct_proof_finish_emergency_recovery(uuid,uuid,text)",
         "public.fn_experiment_v2_direct_proof_attempt_status(uuid)",
+        "public.fn_experiment_v2_direct_proof_resolve_startup_rollover(uuid,uuid,text,text)",
+        "public.fn_experiment_v2_terminalize_legacy_expired_recovery(uuid,uuid,bigint,text)",
         "public.fn_experiment_v2_direct_launch_commit(uuid,date,integer,time without time zone,text,text,text,text,text,text,text,text,text,text,text)",
         "public.fn_experiment_v2_register_state(uuid,text,smallint,bytea,bytea,text)",
         "public.fn_experiment_v2_record_approval(uuid,text,text,integer,text,text,tstzrange,timestamptz,text,text,text)",
@@ -777,7 +801,8 @@ def test_api_attestation_exactly_matches_the_migration_lifecycle_grant() -> None
         "public.fn_experiment_v2_api_status(uuid)",
     }
     assert granted == expected
-    assert all(signature in main._EXPERIMENT_LIFECYCLE_ROLE_ATTESTATION_SQL for signature in expected)
+    allowed = set(re.findall(r"'(public\.fn_experiment_v2_[^']+)'", main._EXPERIMENT_LIFECYCLE_ROLE_ATTESTATION_SQL))
+    assert allowed == expected
 
 
 def test_component_transition_is_serializable_and_optimistically_checked(monkeypatch, client):
