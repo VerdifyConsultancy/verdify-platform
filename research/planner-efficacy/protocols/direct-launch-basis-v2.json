@@ -1,0 +1,59 @@
+{
+  "schema": "verdify-experiment-v2-direct-launch-basis-v2",
+  "status": "pre_draw_candidate_not_design_locked",
+  "study_id": "verdify-confirmed-component-switchback-v2-2026-08",
+  "experiment_id": "45039c86-c1d9-52f6-a0a9-d94a17bc4b14",
+  "study_question": "Exploratory paired hot/dry comparison of the confirmed-component AI selector and frozen FSM baseline",
+  "selection_policy": "preregistered_warm_season_calendar_only",
+  "candidate_start_local_date": "2027-06-01",
+  "candidate_last_local_date_inclusive": "2027-07-30",
+  "timezone": "America/Denver",
+  "window_days": 60,
+  "randomized_pair_count": 30,
+  "assigned_day_endpoint_local": "[06:00,24:00)",
+  "assigned_day_endpoint_seconds": 64800,
+  "accepted_underpowered_design": true,
+  "provisional_model_only_joint_advance_power": 0.13776,
+  "source_faithful_joint_advance_power": null,
+  "selected_operating_benefit": "nine_control_state_minutes",
+  "claim_scope": "Climate noninferiority within +0.05 kPa VPD and +0.50 F temperature margins plus selected nine-state control burden; no metered energy, water, cost, carbon or whole-resource savings claim",
+  "provider_contract": {
+    "model": "gpt-5.6-luna",
+    "profile_only": true,
+    "reasoning_effort": "medium",
+    "strict_structured_output": true,
+    "tools": false
+  },
+  "generalized_vector_mode": "off",
+  "randomization_contract": {
+    "caller_supplied_randomness": false,
+    "draws": 1,
+    "no_redraw": true,
+    "source": "internal_os_csprng"
+  },
+  "missed_start_policy": "new_preregistration_and_new_design_lock",
+  "source_contract": {
+    "historical_direct_launch_basis": "research/planner-efficacy/protocols/direct-launch-basis-v1.json",
+    "historical_direct_launch_basis_sha256": "1f51e9bbaf5c018e1303ae450f4d926000ae42655484636711855036000f4d41",
+    "warm_calendar_preregistration": "research/planner-efficacy/protocols/warm-season-calendar-prereg-2027-v1.json",
+    "warm_calendar_preregistration_sha256": "f63dcca480c5413fcd66480e81eb5afb18f4f8395885b4392975cd4eca6d1301",
+    "climate_only_sensitivity": "planning/evidence/c2-predraw-sensitivity-20260928.json",
+    "climate_only_sensitivity_sha256": "f88f225f0564209692af5f82a0d344127ac337d4f7919ea8a7641e4c3db036e8",
+    "august_fixed_panel_delivery_replay": "docs/research/planner-fixed-panel-august-2026-gap-audit.md",
+    "august_fixed_panel_delivery_replay_sha256": "ec5dce9b1ac4cc773279641a7bd079d9e835afa2dcef78899d11684dcc1f86d9",
+    "fixed_protocol_template": "research/planner-efficacy/protocols/planner-switchback-v2.template.yaml"
+  },
+  "historical_evidence_limit": "The 93 August matched pairs have no frozen historical crop target or contributor revisions; all 93 stale bins lack confirmed plan and band delivery. They cannot identify a crop-band or planner-policy effect. The June-July climate analogue proves only necessary coverage.",
+  "pre_draw_empirical_inputs": {
+    "exact_frozen_selector_profile_mix_and_fallback": null,
+    "asof_forecast_and_direct_equipment_receipts": null,
+    "future_fixed_panel_targets_and_contributor_revisions": null,
+    "eighteen_hour_three_endpoint_paired_variance_and_covariance": null,
+    "joint_advance_power": null
+  },
+  "design_lock_sha256": null,
+  "blinded_schedule_sha256": null,
+  "first_randomized_day_authorization": null,
+  "winter_observer_study_id": "verdify-winter-feasibility-2026-27",
+  "production_effect": "none; this source-only candidate is not mounted in the production render"
+}

@@ -8,6 +8,7 @@ from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parents[3]
 PREREG = ROOT / "research/planner-efficacy/protocols/warm-season-calendar-prereg-2027-v1.json"
+BASIS_V2 = ROOT / "research/planner-efficacy/protocols/direct-launch-basis-v2.json"
 
 
 def test_warm_calendar_has_thirty_adjacent_eighteen_hour_pairs():
@@ -56,3 +57,37 @@ def test_prereg_is_bound_to_climate_evidence_without_claiming_a_lock():
         "first_randomized_day_authorization",
     ):
         assert decision[key] is None
+
+
+def test_warm_launch_basis_preserves_historical_receipts_and_has_no_draw():
+    basis = json.loads(BASIS_V2.read_text())
+    calendar = json.loads(PREREG.read_text())
+    old_path = ROOT / "research/planner-efficacy/protocols/direct-launch-basis-v1.json"
+    old = json.loads(old_path.read_text())
+    assert basis["schema"] == "verdify-experiment-v2-direct-launch-basis-v2"
+    assert basis["status"] == "pre_draw_candidate_not_design_locked"
+    assert basis["study_id"] == old["study_id"] == calendar["study_id"]
+    assert basis["experiment_id"] == old["experiment_id"] == calendar["experiment_id"]
+    assert basis["provider_contract"] == old["provider_contract"]
+    assert basis["randomization_contract"] == old["randomization_contract"]
+    assert basis["candidate_start_local_date"] == calendar["calendar"]["start_local_date"]
+    assert basis["candidate_last_local_date_inclusive"] == calendar["calendar"]["last_local_date_inclusive"]
+    assert basis["window_days"] == calendar["calendar"]["consecutive_local_days"]
+    assert basis["randomized_pair_count"] == calendar["calendar"]["adjacent_pairs"]
+    assert basis["assigned_day_endpoint_seconds"] == calendar["calendar"]["assigned_day_endpoint_seconds"]
+    assert basis["selected_operating_benefit"] == calendar["fixed_primary_decision"]["selected_operating_benefit"]
+    assert basis["source_faithful_joint_advance_power"] is None
+    assert basis["pre_draw_empirical_inputs"]["joint_advance_power"] is None
+    assert basis["design_lock_sha256"] is None
+    assert basis["blinded_schedule_sha256"] is None
+    assert basis["first_randomized_day_authorization"] is None
+    assert basis["winter_observer_study_id"] != basis["study_id"]
+    for name in (
+        "historical_direct_launch_basis",
+        "warm_calendar_preregistration",
+        "climate_only_sensitivity",
+        "august_fixed_panel_delivery_replay",
+    ):
+        source = basis["source_contract"][name]
+        digest = basis["source_contract"][f"{name}_sha256"]
+        assert hashlib.sha256((ROOT / source).read_bytes()).hexdigest() == digest
