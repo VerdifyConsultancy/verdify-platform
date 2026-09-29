@@ -304,6 +304,8 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "260-restore-climate-action-daily-scorecard.sql",
         "261-outcome-kpi-ordinary-acl.sql",
         "262-fixed-panel-native-callback-ledger.sql",
+        # Generated Timescale chunk boundary repair is a forward migration.
+        "263-mcp-timescale-chunk-boundary-digest.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(
