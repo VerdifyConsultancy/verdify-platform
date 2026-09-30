@@ -23,6 +23,7 @@ def test_admin_oauth_is_confidential_and_group_scoped_with_password_clients_disa
         "GF_AUTH_GENERIC_OAUTH_ALLOW_ASSIGN_GRAFANA_ADMIN": "false",
     }.items():
         assert env[name]["value"] == value
+    assert env["GF_AUTH_GENERIC_OAUTH_SCOPES"]["value"] == "openid profile email groups"
     assert env["GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET"]["valueFrom"]["secretKeyRef"] == {
         "name": "verdify-grafana-oauth",
         "key": "GRAFANA_OAUTH_CLIENT_SECRET",
