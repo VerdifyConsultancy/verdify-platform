@@ -16,6 +16,12 @@ spec:
               value: "30000"
             - name: SOURCE_SPOOL_MAX_BYTES
               value: "134217728"
+            - name: VERDIFY_CLIMATE_EVENT_SPOOL_ENABLED
+              value: "1"
+            - name: CLIMATE_EVENT_SPOOL_MAX_BYTES
+              value: "134217728"
+            - name: CLIMATE_SPOOL_MAX_ROWS
+              value: "2880"
           volumeMounts:
             - name: state
               mountPath: /srv/verdify/state
