@@ -17,9 +17,10 @@ import logging
 import math
 import os
 import sys
+import time
 import unicodedata
 import urllib.request
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime, timedelta
 from datetime import time as dt_time
 from decimal import Decimal, InvalidOperation
@@ -77,6 +78,7 @@ from mqtt_fanout import (
 )
 from occupancy import refresh_latest_occupancy_state, sync_occupancy_state
 from pydantic import ValidationError
+from source_spool import SourceSpool
 from tasks import (
     BAND_DRIVEN_PARAMS,
     alert_monitor,
@@ -352,6 +354,7 @@ class PendingEquipmentStateEvent:
     source_runtime_instance_id: str
     source_connection_generation: int
     firmware_revision: str
+    event_id: str = field(default_factory=lambda: str(uuid4()))
 
 
 @dataclass(frozen=True)
@@ -458,6 +461,87 @@ class State:
 
 
 state = State()
+
+# Enabled only with the reviewed durable mount. No import-time filesystem I/O.
+_source_spool: SourceSpool | None = None
+_source_spool_warning_at = 0.0
+
+
+def _durable_source_spool() -> SourceSpool | None:
+    global _source_spool
+    if os.environ.get("VERDIFY_SOURCE_SPOOL_ENABLED") != "1":
+        return None
+    if _source_spool is None:
+        _source_spool = SourceSpool(
+            STATE_DIR / "spool" / "equipment-source-v1.sqlite",
+            max_rows=int(os.environ.get("SOURCE_SPOOL_MAX_ROWS", "30000")),
+            max_bytes=int(os.environ.get("SOURCE_SPOOL_MAX_BYTES", "134217728")),
+        )
+    return _source_spool
+
+
+def _persist_source(kind: str, identity: str, value: object, *, replace: tuple[str, ...] = ()) -> bool:
+    try:
+        spool = _durable_source_spool()
+        if spool is None:
+            return True
+        payload = json.loads(json.dumps(asdict(value), default=_json_safe_value))
+        spool.put(kind, identity, payload, replace=replace)
+    except Exception as exc:
+        _mark_equipment_source_gap("durable_source_accept_failed")
+        log.error("equipment source durable acceptance failed: %s", type(exc).__name__)
+        return False
+    try:
+        global _source_spool_warning_at
+        now = time.monotonic()
+        if now - _source_spool_warning_at >= 60:
+            depth, size = spool.backlog()
+            if depth >= spool.max_rows * 0.8 or size >= spool.max_bytes * 0.8:
+                log.warning("equipment source spool backlog high rows=%d bytes=%d", depth, size)
+                _source_spool_warning_at = now
+    except Exception as exc:
+        log.error("equipment source backlog read failed after durable acceptance: %s", type(exc).__name__)
+    return True
+
+
+def _ack_source(identities: list[str]) -> None:
+    spool = _durable_source_spool()
+    if spool is not None:
+        spool.acknowledge(identities)
+
+
+def _restore_source_spool() -> None:
+    spool = _durable_source_spool()
+    if spool is None:
+        return
+    for kind, _identity, payload in spool.rows():
+        if kind == "event":
+            payload["source_observed_at"] = _coerce_spooled_ts(payload["source_observed_at"])
+            state.pending_equipment.append(PendingEquipmentStateEvent(**payload))
+        elif kind == "counter":
+            payload["source_observed_at"] = _coerce_spooled_ts(payload["source_observed_at"])
+            state.pending_counter_samples.append(PendingEquipmentCounterSample(**payload))
+        elif kind == "snapshot":
+            payload["observations"] = tuple(
+                (name, value, _coerce_spooled_ts(at)) for name, value, at in payload["observations"]
+            )
+            state.pending_direct_state_snapshots.append(PendingEquipmentDirectStateSnapshot(**payload))
+        elif kind == "receipt":
+            payload["source_observed_through"] = _coerce_spooled_ts(payload["source_observed_through"])
+            events = []
+            for event in payload["events"]:
+                event["source_observed_at"] = _coerce_spooled_ts(event["source_observed_at"])
+                events.append(PendingEquipmentStateEvent(**event))
+            payload["events"] = tuple(events)
+            receipt = PendingEquipmentStateReceipt(**payload)
+            state.pending_equipment_receipts.append(receipt)
+            state.equipment_source_gap_version = max(state.equipment_source_gap_version, receipt.gap_version)
+        else:
+            raise ValueError("unsupported durable source record kind")
+    # Replaying old receipts never establishes a fresh connection's continuity.
+    _mark_equipment_source_gap("durable_source_process_start")
+    log.warning("equipment source restored backlog rows=%d", len(spool.rows()))
+
 
 # Telemetry fan-out publisher (#113). None unless VERDIFY_MQTT_PUBLISH_ALL=1
 # (prod-only). Set up in main(); used by the flush path to re-emit every flushed
@@ -966,6 +1050,8 @@ def _append_pending_equipment_event(event: PendingEquipmentStateEvent) -> bool:
             EQUIPMENT_STATE_EVENT_BUFFER_MAX_ROWS,
         )
         return False
+    if not _persist_source("event", event.event_id, event):
+        return False
     state.pending_equipment.append(event)
     return True
 
@@ -998,6 +1084,10 @@ def _append_pending_equipment_receipt(receipt: PendingEquipmentStateReceipt) -> 
             "equipment source receipt rejected at bounded buffer rows=%d",
             EQUIPMENT_STATE_RECEIPT_BUFFER_MAX_ROWS,
         )
+        return False
+    if not _persist_source(
+        "receipt", receipt.receipt_id, receipt, replace=tuple(event.event_id for event in receipt.events)
+    ):
         return False
     state.pending_equipment_receipts.append(receipt)
     return True
@@ -1074,7 +1164,7 @@ async def write_equipment_events(pool: asyncpg.Pool, _ts: datetime) -> None:
                 if is_current and last_device_observed_at is not None
                 else max(event.source_observed_at for event in batch)
             )
-            _append_pending_equipment_receipt(
+            sealed = _append_pending_equipment_receipt(
                 _new_equipment_receipt(
                     source_observed_through=barrier,
                     events=batch,
@@ -1083,6 +1173,9 @@ async def write_equipment_events(pool: asyncpg.Pool, _ts: datetime) -> None:
                     firmware_revision=lineage[2],
                 )
             )
+            if not sealed:
+                state.pending_equipment[:0] = unsealed[start:]
+                break
             start = end
 
     last_receipt = state.equipment_source_last_receipt_at
@@ -1162,9 +1255,13 @@ async def write_equipment_events(pool: asyncpg.Pool, _ts: datetime) -> None:
                         receipt.source_connection_generation,
                         receipt.firmware_revision,
                     )
+        _ack_source([receipt.receipt_id for receipt in receipts])
     except BaseException:
         combined = receipts + state.pending_equipment_receipts
-        if len(combined) > EQUIPMENT_STATE_RECEIPT_BUFFER_MAX_ROWS:
+        if (
+            len(combined) > EQUIPMENT_STATE_RECEIPT_BUFFER_MAX_ROWS
+            and os.environ.get("VERDIFY_SOURCE_SPOOL_ENABLED") != "1"
+        ):
             dropped = len(combined) - EQUIPMENT_STATE_RECEIPT_BUFFER_MAX_ROWS
             combined = combined[:EQUIPMENT_STATE_RECEIPT_BUFFER_MAX_ROWS]
             _mark_equipment_source_gap("state_receipt_retry_overflow")
@@ -1430,20 +1527,21 @@ def _append_equipment_counter_sample(
             COUNTER_SAMPLE_BUFFER_MAX_ROWS,
         )
         return
-    state.pending_counter_samples.append(
-        PendingEquipmentCounterSample(
-            sample_id=str(uuid4()),
-            source_observed_at=observed_at,
-            stream=stream,
-            native_value=native_value,
-            native_unit=native_unit,
-            counter_reset_epoch_id=state.counter_reset_epoch_id,
-            device_uptime_seconds=device_uptime_seconds,
-            source_runtime_instance_id=COUNTER_SOURCE_RUNTIME_INSTANCE_ID,
-            source_connection_generation=connection_generation,
-            firmware_revision=firmware_revision,
-        )
+    sample = PendingEquipmentCounterSample(
+        sample_id=str(uuid4()),
+        source_observed_at=observed_at,
+        stream=stream,
+        native_value=native_value,
+        native_unit=native_unit,
+        counter_reset_epoch_id=state.counter_reset_epoch_id,
+        device_uptime_seconds=device_uptime_seconds,
+        source_runtime_instance_id=COUNTER_SOURCE_RUNTIME_INSTANCE_ID,
+        source_connection_generation=connection_generation,
+        firmware_revision=firmware_revision,
     )
+    if not _persist_source("counter", sample.sample_id, sample):
+        return
+    state.pending_counter_samples.append(sample)
     state.counter_last_native_values[daily_column] = native_value
 
 
@@ -1597,9 +1695,10 @@ async def write_equipment_counter_samples(pool: asyncpg.Pool) -> None:
                     """,
                     rows,
                 )
+        _ack_source([sample.sample_id for sample in samples])
     except BaseException:
         combined = samples + state.pending_counter_samples
-        if len(combined) > COUNTER_SAMPLE_BUFFER_MAX_ROWS:
+        if len(combined) > COUNTER_SAMPLE_BUFFER_MAX_ROWS and os.environ.get("VERDIFY_SOURCE_SPOOL_ENABLED") != "1":
             dropped = len(combined) - COUNTER_SAMPLE_BUFFER_MAX_ROWS
             combined = combined[:COUNTER_SAMPLE_BUFFER_MAX_ROWS]
             _mark_equipment_source_gap("counter_sample_retry_overflow")
@@ -1707,9 +1806,13 @@ async def write_equipment_direct_state_snapshots(pool: asyncpg.Pool) -> None:
                     """,
                     rows,
                 )
+        _ack_source([snapshot.snapshot_id for snapshot in snapshots])
     except BaseException:
         combined = snapshots + state.pending_direct_state_snapshots
-        if len(combined) > DIRECT_STATE_SNAPSHOT_BUFFER_MAX_ROWS:
+        if (
+            len(combined) > DIRECT_STATE_SNAPSHOT_BUFFER_MAX_ROWS
+            and os.environ.get("VERDIFY_SOURCE_SPOOL_ENABLED") != "1"
+        ):
             dropped = len(combined) - DIRECT_STATE_SNAPSHOT_BUFFER_MAX_ROWS
             combined = combined[:DIRECT_STATE_SNAPSHOT_BUFFER_MAX_ROWS]
             _mark_equipment_source_gap("direct_snapshot_retry_overflow")
@@ -1904,19 +2007,20 @@ async def equipment_direct_state_snapshot_source(pool: asyncpg.Pool) -> None:
             DIRECT_STATE_SNAPSHOT_BUFFER_MAX_ROWS,
         )
         return
-    state.pending_direct_state_snapshots.append(
-        PendingEquipmentDirectStateSnapshot(
-            snapshot_id=str(uuid4()),
-            source_epoch_id=str(uuid4()),
-            observations=tuple(
-                (stream, value, observed_at) for stream, (value, observed_at) in sorted(observations.items())
-            ),
-            device_uptime_seconds=device_uptime[0],
-            source_runtime_instance_id=COUNTER_SOURCE_RUNTIME_INSTANCE_ID,
-            source_connection_generation=generation,
-            firmware_revision=firmware_revision[0],
-        )
+    snapshot = PendingEquipmentDirectStateSnapshot(
+        snapshot_id=str(uuid4()),
+        source_epoch_id=str(uuid4()),
+        observations=tuple(
+            (stream, value, observed_at) for stream, (value, observed_at) in sorted(observations.items())
+        ),
+        device_uptime_seconds=device_uptime[0],
+        source_runtime_instance_id=COUNTER_SOURCE_RUNTIME_INSTANCE_ID,
+        source_connection_generation=generation,
+        firmware_revision=firmware_revision[0],
     )
+    if not _persist_source("snapshot", snapshot.snapshot_id, snapshot):
+        return
+    state.pending_direct_state_snapshots.append(snapshot)
     state.last_direct_state_snapshot_local_date = local_date
     await write_equipment_direct_state_snapshots(pool)
 
@@ -4727,6 +4831,10 @@ async def main() -> None:
         return
 
     component_pool, equipment_source_pool = await create_dedicated_mutation_pools()
+    if os.environ.get("VERDIFY_SOURCE_SPOOL_ENABLED") == "1" and equipment_source_pool is None:
+        raise RuntimeError("durable equipment source spool requires its dedicated collector login")
+    if equipment_source_pool is not None:
+        _restore_source_spool()
 
     # ── Capture mode (prod, and the legacy VM single-writer) ──────────────────
     log.info("Verdify ingestor starting (greenhouse: %s)...", GREENHOUSE_ID)
