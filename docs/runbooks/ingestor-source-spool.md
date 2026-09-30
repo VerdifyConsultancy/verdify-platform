@@ -121,10 +121,11 @@ this inventory immediately before adoption; it is time-sensitive.
    gaps. Store a complete tar archive off the Pod before any pod deletion. Preserve
    file ownership, permissions and all SQLite rollback journals if present. Read
    the archive locally, hash it and fsync the local file and parent directory.
-   Capture twice and compare per-file hashes; retain both captures if files changed.
-   Never infer a quiescent boundary from a single live tar. The first transition
-   cannot preserve memory-only samples or callbacks arriving after the last capture;
-   record the actual cutover interval as a source gap, not continuity proof.
+   Preliminary live captures are recovery checkpoints only: compare per-file hashes
+   and retain both if files changed. They cannot be the final accepted-file handoff.
+   Use the bounded quiescent boundary below before replacing the old Pod. The first
+   transition cannot preserve memory-only/nonaccepted samples; record that cutover
+   interval as a source gap, not continuity proof.
 2. If legacy `spool/climate.jsonl` is nonempty, preserve its exact bytes/hashes and
    leave the **climate gate off** for adoption until its backlog has an explicit
    resolution. The old plain INSERT path cannot establish unknown-commit identity.
@@ -148,12 +149,80 @@ this inventory immediately before adoption; it is time-sensitive.
    with the archive manifest. Keep the original archive outside Kubernetes too.
    This bootstrap writes persistent storage and is performed only in the coordinated
    adoption window; source preparation does not authorize an unattended transfer.
-5. End and remove only the owned transfer Pod, release its RWO mount, and preserve
-   the seeded claim. Root performs the normal full `prune:false` attended sync at
+5. Execute the final quiescent handoff below, then seed from that final archive
+   (preliminary copies are not authoritative). End and remove only the owned
+   transfer Pod, release its RWO mount, and preserve the seeded claim. Root performs the normal full `prune:false` attended sync at
    the exact integrated/pinned revision. The ingestor remains replicas1/Recreate;
    never start a second native consumer to test the volume. Record old/new Pod UIDs
    and actual connection generation boundaries. Do not claim old capture-status
    or HA bookkeeping files are fresh observations after restoration.
+
+### Final accepted-file handoff: stop acceptance while emptyDir remains readable
+
+Two live archives, even with an empty JSONL, do not prevent acceptance between
+capture and deletion. The final archive must be made while the exact old ingestor
+process is stopped and its Pod/emptyDir remain intact. Do not execute this step
+until matched images/hooks and the transfer destination are ready.
+
+The actual baseline command is `python ingestor.py`, PID1 in its container. Its
+exec liveness runs `python ingestor-healthz.py` and accepts exit0 (climate age at
+most300s) **or exit2 (DB query error)**; period30s, timeout10s, failureThreshold5,
+no readiness/startup probes, termination grace15s. Do not rely on a container-local
+`kill -STOP 1`: namespace-init signal restrictions can ignore it. SIGTERM alone
+can trigger a container restart before capture. Do not freeze the container task
+or whole cgroup, because that can freeze the capture/probe process as well.
+
+Use the existing node operator surface, or an attended Kubernetes node-debug Pod
+with hostPID and the standard `sysadmin` profile; neither requires a new SSH
+credential. This helper has no device client or ingestor entrypoint. Resolve the
+old Pod's exact node, UID, runtime containerID and host PID using the node's existing
+CRI tooling (`crictl inspect`). Bind a watchdog to **all four identities** plus
+`/proc/<hostPID>/stat` starttime and the original cgroup. Verify the host process
+command and its namespace PID1 before sending any signal. Never resume a reused
+PID: recheck starttime, containerID/cgroup and PodUID every time. Remove only the
+owned helper afterwards. If this supported host operator surface is unavailable,
+leave the old Pod running and the preliminary archive retained; finish image/claim
+preparation and report that the final accepted-file transfer is not executable.
+Do not substitute racing archives, add a second device consumer or invent a gate.
+
+Before pause, run the existing health probe with `--max-age 240` and require exit0;
+record the actual climate age. Verify archive-size/read throughput allows final
+capture, closed-file hash verification and local fsync within **45 seconds**.
+This bound leaves climate freshness below the actual300s liveness threshold;
+DB errors remain accepted by the existing liveness command. A preexisting stale
+climate result is not a verified pause budget. Preserve an external preliminary
+archive before attempting the bounded handoff.
+
+1. Arm an independent45s watchdog on the existing host operator/helper. On timeout,
+   operator disconnect, capture/hash error or cancellation, it sends SIGCONT only
+   to the same still-existing process with the bound starttime/container/cgroup/UID.
+   The failure path runs before pod deletion. Confirm the watchdog is active before
+   the pause; never leave a suspended writer without that recovery path.
+2. From the ancestor host PID namespace, send SIGSTOP to that exact hostPID. Read
+   `/proc/<hostPID>/status` and require stopped state `T`/`t`, unchanged identity,
+   and no container restart. Kubelet probes and separate `kubectl exec` utilities
+   can still execute: only the writer process is stopped. Record pause UTC.
+3. Capture the **final** full state archive and per-file manifest through a separate
+   exec utility while stopped. The original emptyDir is still mounted/readable.
+   Include SQLite databases and all journals as bytes; do not open/replay/repair
+   them. Require unchanged stopped process/Pod identity before and after capture.
+   Close the archive, fsync it and its parent, hash it and validate member hashes.
+   The complete final archive replaces the preliminary capture for PVC seeding.
+   Inspect legacy JSONL in this final stopped capture; if nonempty retain the
+   climate-gate-off path. Zero bytes in an earlier live snapshot is insufficient.
+4. Only after the final archive is durable and verified within the budget, root
+   scales the old Deployment to0/deletes the old Pod **while it remains stopped**.
+   The writer never resumes to accept another file between final capture and
+   deletion. Record deletion and terminated old container identities. The watchdog
+   disarms only after confirming that exact process/container is gone; it must not
+   send SIGCONT to a reused host PID. Finish the source-declared transfer-only Pod
+   restoration/hash proof, release its RWO mount, then perform the matched full sync
+   with the new sole writer at replicas1. Source gap covers this interval.
+
+If any step cannot finish before the verified45s bound, resume the same old writer,
+retain the archive as a checkpoint, make no continuity claim, and do not delete the
+old Pod. Prepare a faster bounded copy or compatible source-owned quiescence path
+before retrying. Accepted old files are never discarded merely to fit the window.
 
 ### Verify adoption and preserve rollback
 

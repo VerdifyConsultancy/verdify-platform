@@ -9,13 +9,13 @@
   "delivery_prerequisites": [
     "Registry integrity must be restored before native image delivery.",
     "Integrate this source then build exact integrated commit; promote matching five images with migrate hook265; full sync only.",
-    "Preserve old emptyDir twice with file hashes, retain captures and truthful first-cutover source gap; memory-only samples cannot be reconstructed.",
+    "Preserve preliminary live checkpoints, then final accepted-file archive under bounded verified host-PID stop while old emptyDir remains readable; watchdog binds PID starttime, containerID/cgroup and podUID. Resume on failure before deletion; delete old Pod while stopped only after final archive is closed/fsynced/hash-verified. Memory-only/nonaccepted loss remains a labeled gap.",
     "Provision source-declared retained claim and seed with credential-free transfer-only Pod in coordinated adoption; validate fsync/hash/UID1000/capacity/replicas and release RWO mount before full sync.",
     "Nonempty legacy JSONL blocks climate activation; retain gate-off and resolve unknown commits explicitly, without new UUIDs or timestamp dedup.",
     "Verify live ledger, roles, release digests, PVC, single writer and queues before authorized interrupted replay/outage proof."
   ],
   "image": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:faae1b44650771074c669471f64775dec4c8f9ad1af81467c04f50dac02b6588",
-  "legacy_climate_jsonl": "absent in read-only inventory; recheck exact final preservation archive before enabling climate gate",
+  "legacy_climate_jsonl": "Absent in read-only inventory only; require final stopped-writer archive absence/zero size, or keep climate gate off.",
   "migration265_sha256": "f7bded636fd1d98ef37a192ecf4fdd085585ac3a0ceadb388d1330edea067ae2",
   "replicas": 1,
   "retained_pvc_present": false,
