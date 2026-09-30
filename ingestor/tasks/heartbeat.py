@@ -1501,7 +1501,7 @@ async def planning_heartbeat(pool: asyncpg.Pool) -> None:
                     )
             except Exception as e:
                 log.warning("deviation ledger pre-delivery write failed (proceeding): %s", e)
-            await _deliver_and_log(
+            delivered = await _deliver_and_log(
                 pool,
                 spec.event_type,
                 deviations_str,
@@ -1509,10 +1509,12 @@ async def planning_heartbeat(pool: asyncpg.Pool) -> None:
                 instance=instance,
                 expected_trigger_id=deviation_ledger_id,
             )
-            if forecast_alert_id is not None:
+            # Failed delivery keeps the source trigger pending for retry.
+            # HTTP acceptance still does not imply a terminal planner action.
+            if delivered and forecast_alert_id is not None:
                 async with pool.acquire() as conn:
                     await _resolve_forecast_deviation_alert(conn, forecast_alert_id)
-            if legacy_trigger_file:
+            if delivered and legacy_trigger_file:
                 trigger_file = STATE_DIR / "replan-needed.json"
                 trigger_file.unlink(missing_ok=True)
         except Exception as e:
