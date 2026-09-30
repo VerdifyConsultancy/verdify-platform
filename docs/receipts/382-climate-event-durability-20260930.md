@@ -86,7 +86,8 @@ Successor projections:
    matching release and reviewed activation patch only through the attended full sync.
 4. Verify source collector login, startup attestation, mounted retained PVC, queue
    capacity/backlog/errors, original-timestamp FIFO replay and no duplicate UUID climate
-   inserts. An outage/restart drill needs separate root approval after source review.
+   inserts. Perform the scoped outage/restart drill in the attended campaign
+   session after preserving accepted state and verifying recovery coordinates.
 5. If rolling back the application, preserve both SQLite files and their rollback
    journals and the DB event ledger. Disabling the gate would leave new events parked
    and revert new writes to legacy behavior; it is not equivalent durability. Prefer
