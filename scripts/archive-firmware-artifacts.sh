@@ -111,10 +111,12 @@ git ls-files --others --exclude-standard -z -- \
     firmware/greenhouse.yaml \
     firmware/greenhouse \
     firmware/lib \
+    firmware/build_api_batch_patch.py \
+    firmware/patches \
     > "$PROVENANCE_DIR/untracked-source-files.z"
 tr '\0' '\n' < "$PROVENANCE_DIR/untracked-source-files.z" > "$PROVENANCE_DIR/untracked-source-files.txt"
 
-for path in firmware/greenhouse.yaml firmware/greenhouse firmware/lib; do
+for path in firmware/greenhouse.yaml firmware/greenhouse firmware/lib firmware/build_api_batch_patch.py firmware/patches; do
     if [[ -e "$path" ]]; then
         mkdir -p "$SOURCE_SNAPSHOT_DIR/$(dirname "$path")"
         cp -a "$path" "$SOURCE_SNAPSHOT_DIR/$path"
@@ -127,7 +129,7 @@ while IFS= read -r -d '' path; do
     cp -a "$path" "$PROVENANCE_DIR/untracked/$path"
 done < "$PROVENANCE_DIR/untracked-source-files.z"
 
-for generated_file in main.cpp esphome.h; do
+for generated_file in main.cpp esphome.h esphome/core/version.h esphome/components/api/api_connection.h esphome/components/api/api_connection.cpp; do
     if [[ -f "$GENERATED_BUILD_DIR/src/$generated_file" ]]; then
         generated_path="firmware/.esphome/build/greenhouse/src/$generated_file"
         mkdir -p "$GENERATED_SOURCE_DIR/$(dirname "$generated_path")"
