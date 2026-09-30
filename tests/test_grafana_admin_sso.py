@@ -24,7 +24,7 @@ def test_admin_oauth_is_confidential_and_group_scoped_with_password_clients_disa
     }.items():
         assert env[name]["value"] == value
     assert env["GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET"]["valueFrom"]["secretKeyRef"] == {
-        "name": "verdify-grafana-secrets",
+        "name": "verdify-grafana-oauth",
         "key": "GRAFANA_OAUTH_CLIENT_SECRET",
     }
     assert env["GF_AUTH_GENERIC_OAUTH_AUTH_URL"]["value"] == "https://auth.vallery.net/application/o/authorize/"
