@@ -14,8 +14,8 @@ metadata:
   name: verdify-config
 data:
   VERDIFY_DEVICE_WRITE_ENABLED: "1"
-  # Existing sole-client log subscription; retain warning/error Modbus evidence.
-  ESP32_LOG_LEVEL: "NONE"
+  # Existing sole-client WARN diagnostics for API/UDP failures; no extra client.
+  ESP32_LOG_LEVEL: "WARN"
   # BAND AUTHORITY (firmware-v2 contract B2/B7) — prod only. The device runs in
   # on-chip band mode (sw_onchip_band_enabled=true) and ignores the legacy
   # dispatcher band push, so the deterministic crop_band_anchors curve only
