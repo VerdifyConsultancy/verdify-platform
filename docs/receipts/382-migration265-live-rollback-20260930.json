@@ -1,0 +1,130 @@
+{
+  "after_separate_connection": {
+    "climate_event_function": null,
+    "climate_source_events": null,
+    "database": "verdify",
+    "observed_utc": "2026-09-30T21:14:25.958015+00:00",
+    "predecessor264": {
+      "filename": "db/migrations/264-facility-safe-closure-startup-handoff.sql",
+      "sha256": "406f284c941e599d142c336ce0a9afec1efd46d108d06c2f8069d0a08d7b1dc3",
+      "stamp_method": "runner"
+    },
+    "receipts": [
+      {
+        "actual": "fcedb02292df921dcc0f106e41ee53338065a16c6b8ed8e58780c544bd03551b",
+        "captured_at": "2026-09-28T20:06:50.93042+00:00",
+        "login": "verdify_api_runtime_login",
+        "stored": "fcedb02292df921dcc0f106e41ee53338065a16c6b8ed8e58780c544bd03551b"
+      },
+      {
+        "actual": "1ee6b4aa40eb9e56c7ab90ebb18cc6c2cb094a0e5d67092c8c406f72fc321fbc",
+        "captured_at": "2026-09-28T20:06:50.930198+00:00",
+        "login": "verdify_ingestor_runtime_login",
+        "stored": "1ee6b4aa40eb9e56c7ab90ebb18cc6c2cb094a0e5d67092c8c406f72fc321fbc"
+      }
+    ],
+    "role": "verdify",
+    "seq265_count": 0
+  },
+  "argo_before": {
+    "automated": null,
+    "observed_utc": "2026-09-30T21:14:13.235402+00:00",
+    "operation": null,
+    "operation_phase": "Succeeded",
+    "revision": "2c82853bcd941e1156276966bb2dc49b2013eb52"
+  },
+  "artifact_directory": "/Users/jason/Documents/Codex/verdify-265-exact-live-rollback-20260930",
+  "artifact_sha256": {
+    "265-idempotent-climate-source-events.sql": "f7bded636fd1d98ef37a192ecf4fdd085585ac3a0ceadb388d1330edea067ae2",
+    "after.json": "6ad48a4e116fd4083bd3222d57631081ecbf92bcac71be32b0b6790af109a386",
+    "argo-before-transaction.json": "3ba6e22ecb7c751e2a6d1cf0e14bae817fa9c1d2f78c5c6d9f50589f5e4467a9",
+    "before.json": "3cb8da19ed499068693de18db16cba08a663b3eedcf47c502638fe5c7f3e8959",
+    "exact-rollback-run.log": "f61d9a2a91eb7fc5ae8a2a62119ef830ab3716ef43bc62ac064a40d923c7aed1",
+    "exact-rollback-run.sql": "eb587a6c27de66b2698540e962cdbc34fe93ed664bf5894ddab8b488b7b9d35a",
+    "integrated-prod-render.yaml": "6c59f0ba9b5b6083e2ccb9fe1aaddcba6ec674bb073950f1d43025374220ee45",
+    "read-boundary.sql": "54a86ef5ede7dc44afc0342f1573223bff616e1b1179af31f0977284afa62280"
+  },
+  "before": {
+    "climate_event_function": null,
+    "climate_source_events": null,
+    "database": "verdify",
+    "observed_utc": "2026-09-30T21:13:04.553441+00:00",
+    "predecessor264": {
+      "filename": "db/migrations/264-facility-safe-closure-startup-handoff.sql",
+      "sha256": "406f284c941e599d142c336ce0a9afec1efd46d108d06c2f8069d0a08d7b1dc3",
+      "stamp_method": "runner"
+    },
+    "receipts": [
+      {
+        "actual": "fcedb02292df921dcc0f106e41ee53338065a16c6b8ed8e58780c544bd03551b",
+        "captured_at": "2026-09-28T20:06:50.93042+00:00",
+        "login": "verdify_api_runtime_login",
+        "stored": "fcedb02292df921dcc0f106e41ee53338065a16c6b8ed8e58780c544bd03551b"
+      },
+      {
+        "actual": "1ee6b4aa40eb9e56c7ab90ebb18cc6c2cb094a0e5d67092c8c406f72fc321fbc",
+        "captured_at": "2026-09-28T20:06:50.930198+00:00",
+        "login": "verdify_ingestor_runtime_login",
+        "stored": "1ee6b4aa40eb9e56c7ab90ebb18cc6c2cb094a0e5d67092c8c406f72fc321fbc"
+      }
+    ],
+    "role": "verdify",
+    "seq265_count": 0
+  },
+  "claim": "exact unmodified migration265 real production catalog qualification within explicitly rolled-back transaction; no adoption, ledger stamp, climate event or retained storage mutation",
+  "classifier": "safe-to-wrap",
+  "command": "scripts/verdify-db.sh prod -X -v ON_ERROR_STOP=1 < exact-rollback-run.sql",
+  "inside_rolled_back_transaction": {
+    "api_can_execute": false,
+    "climate_event_function": "fn_record_climate_source_event(uuid,timestamp with time zone,text,uuid,bigint,jsonb,jsonb)",
+    "climate_source_events": "climate_source_events",
+    "ingestor_can_execute": true,
+    "inside_transaction_utc": "2026-09-30T21:14:14.596544+00:00",
+    "receipts": [
+      {
+        "actual": "0f166e52d683519ed94cd72d1b074c3e0aed85aa404299220fe85d4bf8235b38",
+        "login": "verdify_api_runtime_login",
+        "stored": "0f166e52d683519ed94cd72d1b074c3e0aed85aa404299220fe85d4bf8235b38"
+      },
+      {
+        "actual": "582eed065ddcd463d8542af6f0184b7e90780ce0f28c42360a0e494fb396489d",
+        "login": "verdify_ingestor_runtime_login",
+        "stored": "582eed065ddcd463d8542af6f0184b7e90780ce0f28c42360a0e494fb396489d"
+      }
+    ],
+    "seq265_count": 0,
+    "synthetic_or_live_events": 0
+  },
+  "integrated_candidate_render": {
+    "queue_gates": {
+      "VERDIFY_CLIMATE_EVENT_SPOOL_ENABLED": "1",
+      "VERDIFY_SOURCE_SPOOL_ENABLED": "1"
+    },
+    "replicas": 1,
+    "secrets": 0,
+    "state_pvc": {
+      "accessModes": [
+        "ReadWriteOnce"
+      ],
+      "resources": {
+        "requests": {
+          "storage": "2Gi"
+        }
+      },
+      "storageClassName": "longhorn-v1-workspace-rwo"
+    },
+    "state_volume": {
+      "name": "state",
+      "persistentVolumeClaim": {
+        "claimName": "verdify-ingestor-state"
+      }
+    },
+    "strategy": "Recreate"
+  },
+  "migration_sha256": "f7bded636fd1d98ef37a192ecf4fdd085585ac3a0ceadb388d1330edea067ae2",
+  "result": "PASS; exact successor matched inside; separate predecessor and captured_at equality after rollback",
+  "timeouts": {
+    "lock_timeout": "2s",
+    "statement_timeout": "20s"
+  }
+}
