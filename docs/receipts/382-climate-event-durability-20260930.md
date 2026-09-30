@@ -58,14 +58,11 @@ attest with clone-specific raw successor receipts; a widened API grant fails clo
 All probe changes roll back. Missing role map fails exit3. The exact final migration
 also fails exit3 against the clone-specific raw predecessor, as required.
 
-The final unmodified migration has **not** positively run on a logical clone: its
-real production predecessor/successor guards intentionally include production
-OID/database identity. Its exact DDL/function/grant core ran on both clones; the
-literals are independently qualified projections. Production application must still
-match the real exact predecessor and verify the exact successor in the same owning
-runner transaction. Entry hashes, role map, raw file hashes and probes are retained
-in `tests/fixtures/climate_source_events/qualification-receipt.json`. Full private
-raw catalog entries are not copied to Git.
+The exact final unmodified migration (SHA256`f7bded636fd1d98ef37a192ecf4fdd085585ac3a0ceadb388d1330edea067ae2`) also passed an explicitly authorized real production catalog qualification at21:14:14.596544Z on Sep30, inside `BEGIN` with2s lock timeout/20s statement timeout, followed by explicit `ROLLBACK`. The owning wrapper used existing credentials; Argo was manual with no active operation or hooks. Actual postflight successors matched both literals, API execution remained denied, ingestor execution allowed, and the private ledger contained zero events. No synthetic climate event or migration265 ledger stamp was created.
+
+A separate post-rollback connection proved migration265 and both private objects absent, and the exact predecessor264 ledger, stored receipts, actual digests and receipt timestamps unchanged. No projection, digest refresh or source rewrite bypass was used. The commands, exact file, outputs and before/after JSON are retained privately and hashed in `382-migration265-live-rollback-20260930.json`. This closes the exact final migration positive qualification gap; actual durable-PVC adoption and outage/restart proof remain pending root review and execution.
+
+The original two-clone evidence remains in `tests/fixtures/climate_source_events/qualification-receipt.json`; it retains the preexisting restore identity mismatch and catalog entry hashes. Full private raw catalog entries are not copied to Git.
 
 Successor projections:
 
@@ -75,8 +72,9 @@ Successor projections:
 ## Deployment, rollback and state preservation
 
 1. Root reviews265 together with efc0a95b retained Longhorn state PVC/mount and both
-   call-site changes. The activation patch in the fixture directory is deliberately
-   excluded from production rendering. Never enable on emptyDir and claim pod durability.
+   call-site changes. The integrated prod render enables both gates and the retained claim together;
+   the isolated fixture activation patch remains excluded. Never enable on emptyDir
+   and claim pod durability.
 2. Before the sole Recreate writer restarts, inventory and preserve current
    `/srv/verdify/state`, including any legacy JSONL. Resolve nonempty legacy backlog
    explicitly; never delete, assign new identities or infer successful commits.
