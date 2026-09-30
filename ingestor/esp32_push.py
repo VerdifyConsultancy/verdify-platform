@@ -184,6 +184,8 @@ class _WriteRequest:
     accepted_generation: int
     accepted_client: object | None
     command_versions: tuple[float, ...]
+    source_fence: Callable[[], str | None] | None = None
+    source_guard: Callable[[], Awaitable[str | None]] | None = None
     next_index: int = 0
     outcomes: list[DeviceCommandOutcome] = field(default_factory=list)
     cancel_requested: bool = False
@@ -470,6 +472,11 @@ def _request_fence_failure(request: _WriteRequest) -> str | None:
         return "transport_generation_changed"
     if request.accepted_client is not shared.esp32.get("client"):
         return "transport_client_changed"
+    if request.source_fence is not None:
+        try:
+            return request.source_fence()
+        except Exception:
+            return "source_authority_unavailable"
     return None
 
 
@@ -492,6 +499,13 @@ async def _execute_one(request: _WriteRequest, index: int) -> DeviceCommandOutco
         # physical chokepoint explicit and protects direct test/reload edges.
         async with _PUSH_LOCK:
             await _pace_command()
+            if request.source_guard is not None:
+                try:
+                    guard_failure = await request.source_guard()
+                except Exception:
+                    guard_failure = "source_authority_unavailable"
+                if guard_failure:
+                    return _outcome(request, index, "failed", guard_failure)
             # Fence again inside the physical chokepoint.  A lease loss or
             # reconnect during lock/pacing wait must never send through the
             # client captured before that wait.
@@ -805,6 +819,8 @@ async def push_to_esp32_detailed(
     on_state: StateCallback | None = None,
     command_versions: Sequence[float] | None = None,
     expected_connection_generation: int | None = None,
+    source_fence: Callable[[], str | None] | None = None,
+    source_guard: Callable[[], Awaitable[str | None]] | None = None,
 ) -> PushBatchResult:
     """Queue a bounded batch and return a truthful terminal result per command.
 
@@ -848,6 +864,8 @@ async def push_to_esp32_detailed(
         accepted_generation=accepted_generation,
         accepted_client=shared.esp32.get("client"),
         command_versions=versions,
+        source_fence=source_fence,
+        source_guard=source_guard,
     )
     superseded = _supersede_older_queued_commands(request)
     if superseded:

@@ -15,7 +15,7 @@ from esp32_push import (
     push_to_esp32_detailed,
 )
 
-from . import band_anchors, bounded_reconcile, drift_probe
+from . import band_anchors, bounded_reconcile, c1_overlay, drift_probe
 from ._common import (
     _PHYSICS_INVARIANTS,
     ACTIVITY_MIRROR_PARAMS,
@@ -135,6 +135,8 @@ async def _choose_bounded_stage_if_required(
     conn, changes, planned, generation, state_dir, zone_row, planner_params
 ) -> bounded_reconcile.Decision:
     """Route any broad candidate or existing stage through the same sole-writer fence."""
+    if c1_overlay.owns_bounded_stage(state_dir):
+        return bounded_reconcile.Decision("ordinary")
     if (
         len(changes) <= MAX_RECONNECT_COMMANDS
         and not (state_dir / bounded_reconcile.APPROVAL_NAME).exists()
@@ -155,6 +157,105 @@ async def _choose_bounded_stage_if_required(
             if param in planner_params
         },
     )
+
+
+def _c1_policy_inputs(planned, anchors, origin, lighting, circuits, activity, safety, quiet, direct_wet, ai_moisture):
+    """Stable policy provenance; SQL function query timestamps are not identities."""
+    return {
+        "iris": [dict(row) for row in sorted(planned, key=lambda row: row["parameter"])],
+        "band_source": band_anchors.band_source(),
+        "crop_anchors": anchors,
+        "anchor_origin": origin,
+        "lighting_policy": {k: v for k, v in dict(lighting).items() if k != "ts"} if lighting else None,
+        "lighting_circuits": [{k: v for k, v in dict(row).items() if k != "ts"} for row in circuits or []],
+        "activity_defaults": activity,
+        "safety_defaults": safety,
+        "quiet_state": quiet,
+        "support": {"direct_wet": direct_wet, "ai_moisture": ai_moisture},
+    }
+
+
+async def _c1_source_guard(pool, selection):
+    """Fresh read-only policy/cap check after pacing, only for a C1 setter."""
+    if failure := c1_overlay.physical_fence(STATE_DIR, selection):
+        return failure
+    state = bounded_reconcile._read(STATE_DIR / c1_overlay.STATE_NAME)
+    worksheet = state["worksheet"]
+    async with pool.acquire() as conn:
+        planned = await conn.fetch(
+            "SELECT parameter, value, ts, plan_id, reason, trigger_id, planner_instance FROM v_active_plan"
+        )
+        anchors, origin = await band_anchors.crop_band_anchor_values(conn)
+        lighting = await conn.fetchrow("SELECT * FROM fn_lighting_policy(now())")
+        circuits = await conn.fetch("SELECT * FROM fn_lighting_minutes_policy(now()) ORDER BY light_key")
+        band = await conn.fetchrow("SELECT * FROM fn_band_setpoints(now())")
+        house = await conn.fetchrow("SELECT * FROM fn_house_vpd_control_band(now())")
+        control = _control_band_from_house_row(house)
+        caps = _vpd_high_moisture_guardrails(control, await _fetch_moisture_guard_context(conn) if control else None)
+        quiet = await _fetch_quiet_state(conn)
+    # Each query reads current committed inputs; no long snapshot transaction.
+    params = {}
+    for row in planned:
+        name = row["parameter"]
+        if name not in PLANNER_PUSHABLE_REG:
+            continue
+        value, _reason = _validate_physics(name, float(row["value"]))
+        if name in FORCED_ON_SWITCH_PARAMS and value < 0.5:
+            value = 1.0
+        params[name] = min(value, caps[name]) if name in caps else value
+    direct = _direct_wet_policy_supported()
+    activity = {}
+    if direct:
+        activity = _activity_defaults_from_lighting(lighting, circuits)
+        minutes = (
+            {row["light_key"]: float(int(row["target_light_minutes"])) for row in circuits or []}
+            if band_anchors.band_source() == band_anchors.BAND_SOURCE_ANCHORS
+            else {}
+        )
+        anchored = (
+            band_anchors.lighting_circuit_overrides(band_anchors.local_solar_context().times, minutes)
+            if band_anchors.band_source() == band_anchors.BAND_SOURCE_ANCHORS and circuits
+            else {}
+        )
+        activity = _mirror_activity_to_anchored_window(activity, anchored, minutes)
+        activity = _align_activity_defaults_with_planned_lighting(activity, params)
+    inputs = _c1_policy_inputs(
+        planned,
+        anchors,
+        origin,
+        lighting,
+        circuits,
+        activity,
+        {"safety_max": 100.0, "safety_min": 40.0},
+        quiet,
+        direct,
+        _ai_moisture_stress_policy_supported(),
+    )
+    source_inputs = json.loads(json.dumps(inputs, sort_keys=True, default=str))
+    defaults = {}
+    if band and control:
+        high = float(control["vpd_high"])
+        defaults = {
+            "mister_engage_kpa": round(high + 0.05, 2),
+            "mister_all_kpa": round(high + 0.25, 2),
+            "mister_engage_delay_s": 30,
+            "mister_all_delay_s": 60,
+            "mister_center_penalty": 0.5,
+        }
+    current = {
+        **worksheet["preview"],
+        "base_values": c1_overlay.ordinary_base48(params, defaults),
+        "base_inputs": source_inputs,
+        "base_inputs_sha256": bounded_reconcile._digest(source_inputs),
+    }
+    try:
+        c1_overlay.validate_worksheet(
+            worksheet, current, now=datetime.now(UTC), physics=_validate_physics, guardrails=caps
+        )
+    except (ValueError, KeyError, TypeError) as error:
+        log.warning("c1_qualification physical_source_guard=halt reason=%s", error)
+        return "c1_source_policy_or_guardrail_changed"
+    return c1_overlay.physical_fence(STATE_DIR, selection)
 
 
 def _apply_manual_overlay(changes: list[tuple[str, float]], overlay: dict[str, float]) -> set[str]:
@@ -1057,6 +1158,7 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
 
         # Mister tuning defaults: band-derived fallbacks, planner can override
         # engage/all_kpa default to band ceiling; planner may set different values
+        mister_defaults = {}
         if band_row and control_band:
             vpd_hi = float(control_band["vpd_high"])
             mister_defaults = {
@@ -1210,6 +1312,40 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         elif stage_decision.action == "complete":
             changes = list(stage_decision.changes)
 
+        c1_selection = c1_overlay.Selection()
+        if stage_decision.action != "send" and probe_decision.action != "send":
+            c1_selection = await c1_overlay.choose(
+                conn,
+                changes,
+                base_values=c1_overlay.ordinary_base48(planner_params, mister_defaults),
+                base_inputs=_c1_policy_inputs(
+                    planned or [],
+                    anchor_values,
+                    anchor_origin,
+                    lighting_row,
+                    lighting_circuit_rows,
+                    activity_defaults if direct_wet_supported else {},
+                    safety_defaults,
+                    quiet_state,
+                    direct_wet_supported,
+                    ai_moisture_stress_supported,
+                ),
+                guardrails=moisture_guardrails,
+                physics=_validate_physics,
+                state_dir=STATE_DIR,
+                generation=reconnect_generation,
+            )
+            if c1_selection.phase in ("hold", "awaiting_confirmation"):
+                shared.defer_failed_dispatch(reconnect_generation, drift_versions)
+                log.warning("c1_qualification phase=%s reason=%s", c1_selection.phase, c1_selection.reason)
+                return
+            if c1_selection.phase in ("send", "yield"):
+                changes = list(c1_selection.changes)
+            elif c1_selection.phase == "active":
+                # Keep explicit targets even when ordinary base would repair
+                # their temporary projection at the next drift callback.
+                changes = list(c1_selection.changes)
+
         if len(changes) > MAX_RECONNECT_COMMANDS:
             # A broad desired delta is never authority to enqueue a 40+
             # command storm, including after the reconnect generation ends.
@@ -1276,7 +1412,7 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         for param, val in changes:
             source = (
                 "manual"
-                if stage_decision.rollback or probe_decision.phase == "probe"
+                if stage_decision.rollback or probe_decision.phase == "probe" or c1_selection.phase == "send"
                 else _dispatch_source(param, planner_params, quiet_params)
             )
 
@@ -1575,6 +1711,10 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             on_state=on_state,
             command_versions=[record["requested_at"].timestamp() for record in pending_records],
             expected_connection_generation=reconnect_generation,
+            source_fence=(lambda: c1_overlay.physical_fence(STATE_DIR, c1_selection))
+            if c1_selection.phase == "send"
+            else None,
+            source_guard=(lambda: _c1_source_guard(pool, c1_selection)) if c1_selection.phase == "send" else None,
         )
         if result.fatal_error:
             raise LifecyclePersistenceError(result.fatal_error)
@@ -1639,7 +1779,10 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         except Exception:
             log.exception("terminal-failure alert write failed; continuing to dispatch cleanup")
 
-    if probe_decision.action == "send":
+    if c1_selection.phase in ("send", "yield"):
+        c1_overlay.finish(STATE_DIR, c1_selection, delivery_records, final_failures)
+        shared.defer_failed_dispatch(reconnect_generation, drift_versions)
+    elif probe_decision.action == "send":
         drift_probe.finish(STATE_DIR, probe_decision, delivery_records, final_failures)
         shared.defer_failed_dispatch(reconnect_generation, drift_versions)
     elif stage_decision.action == "send":

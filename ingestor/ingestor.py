@@ -84,6 +84,7 @@ from tasks import (
     attest_component_safe_startup,
     bounded_reconcile,
     c1_capture,
+    c1_overlay,
     clear_component_entity_inventory,
     component_experiment_worker,
     create_component_experiment_pool,
@@ -4041,6 +4042,7 @@ async def task_loop(
             drift_approval_stamp, pending_drift_approval_stamp = _poll_drift_approval(
                 STATE_DIR, drift_approval_stamp, pending_drift_approval_stamp
             )
+            c1_overlay.poll(STATE_DIR)
             forced = {"setpoint_dispatch"} if shared.setpoint_dispatch_requested.is_set() else set()
             started = _launch_due_tasks(pool, TASKS, last_run, running, now, task_timeouts, forced)
             if "setpoint_dispatch" in started:
