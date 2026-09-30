@@ -16,6 +16,16 @@ case. The rest of the Flow and the Promotable Images list are historical; the
 current flow is `ARGOCD.md` (Promotion Model) and
 `docs/runbooks/laptop-operator.md` §2.
 
+For an immutable source-only promotion receipt, run from clean tracked source:
+`python3 scripts/promote-release-pins.py --receipt /private/path/new-promotion.json`.
+The helper refuses an existing receipt path or malformed candidate digest before
+changing release pins. It records the exact promotion-input Git SHA, candidate
+file hash, before/after release-pin hashes, selected changes and all five rollback
+pins. Preserve the receipt with the release. Its Git SHA identifies the pin
+inputs, not the images' build source; CI, build provenance and final Argo/runtime
+adoption require their separate existing receipts. The command performs no
+cluster, secret or device operation.
+
 `main` is the canonical source branch. The retired `live/platform-main`,
 `verdify-dev`, and `verdify-staging` promotion chain is not part of the deploy
 path anymore.
