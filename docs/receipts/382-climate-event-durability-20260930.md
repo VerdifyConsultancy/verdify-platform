@@ -72,8 +72,9 @@ Successor projections:
 ## Deployment, rollback and state preservation
 
 1. Root reviews265 together with efc0a95b retained Longhorn state PVC/mount and both
-   call-site changes. The activation patch in the fixture directory is deliberately
-   excluded from production rendering. Never enable on emptyDir and claim pod durability.
+   call-site changes. The integrated prod render enables both gates and the retained claim together;
+   the isolated fixture activation patch remains excluded. Never enable on emptyDir
+   and claim pod durability.
 2. Before the sole Recreate writer restarts, inventory and preserve current
    `/srv/verdify/state`, including any legacy JSONL. Resolve nonempty legacy backlog
    explicitly; never delete, assign new identities or infer successful commits.
