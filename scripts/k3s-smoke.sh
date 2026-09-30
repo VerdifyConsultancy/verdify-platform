@@ -348,7 +348,7 @@ run_device_monitor() {
   echo "=== k3s device-route monitor ($(date '+%Y-%m-%d %H:%M:%S')) — namespace=${NAMESPACE} ==="
   echo "(READ-ONLY: inspects pods' own sockets; asserts EXACTLY ONE writer to ${DEVICE_ESP32_IP}:${DEVICE_PORT}.)"
   echo ""
-  local pods final_pods pod uid sockets=0 unknown=0 out count
+  local pods final_pods pod uid sockets=0 unknown=0 out count containers container observed_uid
   local socket_holders=""
   local octet1 octet2 octet3 octet4 remote_hex
   IFS=. read -r octet1 octet2 octet3 octet4 <<< "${DEVICE_ESP32_IP}"
@@ -364,7 +364,24 @@ run_device_monitor() {
   fi
   while read -r pod uid; do
     [ -z "${pod}" ] && continue
-    if out="$("${KC[@]}" exec "${pod}" -- cat /proc/net/tcp 2>/dev/null)"; then
+    out="$("${KC[@]}" exec "${pod}" -- cat /proc/net/tcp 2>/dev/null)" || out=""
+    if [ -z "${out}" ]; then
+      # A Running pod may have a completed default container and a live
+      # sidecar/ephemeral container. They share the pod network namespace.
+      # Bind the fallback to the inventoried UID; a replacement stays UNKNOWN.
+      containers="$("${KC[@]}" get pod "${pod}" -o jsonpath='{.metadata.uid}{"\n"}{range .status.containerStatuses[?(@.state.running)]}{.name}{"\n"}{end}{range .status.ephemeralContainerStatuses[?(@.state.running)]}{.name}{"\n"}{end}' 2>/dev/null)" || containers=""
+      observed_uid="${containers%%$'\n'*}"
+      if [ "${observed_uid}" = "${uid}" ]; then
+        while read -r container; do
+          [ -z "${container}" ] && continue
+          if out="$("${KC[@]}" exec "${pod}" -c "${container}" -- cat /proc/net/tcp 2>/dev/null)" && [ -n "${out}" ]; then
+            break
+          fi
+          out=""
+        done <<< "${containers#*$'\n'}"
+      fi
+    fi
+    if [ -n "${out}" ]; then
       count="$(awk -v remote="${remote_hex}" 'NR > 1 && $3 == remote && $4 == "01" { n++ } END { print n+0 }' <<< "${out}")"
     else
       # Images without cat may still include a socket tool. A failed exec is

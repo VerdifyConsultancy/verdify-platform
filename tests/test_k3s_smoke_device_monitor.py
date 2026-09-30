@@ -124,3 +124,32 @@ def test_device_monitor_running_pod_churn(
     assert expected_verdict in result.stdout
     if "vanished" in initial_pods and expected_code == 0:
         assert "departed before socket read" in result.stdout
+
+
+@pytest.mark.parametrize("observed_uid,expected_code", [("uid-o", 0), ("replacement-uid", 1)])
+def test_completed_default_container_uses_live_shared_network(tmp_path, observed_uid, expected_code):
+    """A live ephemeral container is observable; a replaced pod is not."""
+    fake_kubectl = tmp_path / "kubectl"
+    fake_kubectl.write_text(
+        "#!/bin/sh\n"
+        'case " $* " in\n'
+        "  *' get pods --field-selector=status.phase=Running '*) printf 'writer uid-w\\nother uid-o\\n' ;;\n"
+        "  *' exec writer -- cat /proc/net/tcp '*) printf '%s' \"$MOCK_WRITER_TCP\" ;;\n"
+        "  *' get pod other -o jsonpath='*) printf '%s\\npython-qualification\\n' \"$MOCK_OBSERVED_UID\" ;;\n"
+        "  *' exec other -c python-qualification -- cat /proc/net/tcp '*) printf '%s' \"$MOCK_OTHER_TCP\" ;;\n"
+        "  *' get pod other --ignore-not-found '*) printf 'uid-o|Running|Never|xx|2026-09-30T18:00:00Z;;' ;;\n"
+        "  *) exit 1 ;;\n"
+        "esac\n"
+    )
+    fake_kubectl.chmod(0o755)
+    env = dict(os.environ)
+    env.update(
+        PATH=f"{tmp_path}:{env['PATH']}",
+        KUBECONFIG=str(tmp_path / "kubeconfig"),
+        MOCK_WRITER_TCP=HEADER + TARGET,
+        MOCK_OTHER_TCP=HEADER + OTHER,
+        MOCK_OBSERVED_UID=observed_uid,
+    )
+    result = subprocess.run(["bash", str(SCRIPT), "device-monitor"], env=env, capture_output=True, text=True)
+    assert result.returncode == expected_code
+    assert ("EXACTLY ONE ESP32 writer connection" if expected_code == 0 else "writer count UNKNOWN") in result.stdout
