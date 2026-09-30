@@ -1023,3 +1023,131 @@ def test_invalid_firmware_never_releases_counter_generation(firmware: str) -> No
     assert not ingestor.state.counter_generation_ready
     assert "runtime_heat1_min" in ingestor.state.counter_generation_observations
     assert ingestor._equipment_source_gap_pending()
+
+
+@pytest.fixture
+def durable_source(monkeypatch, tmp_path):
+    monkeypatch.setenv("VERDIFY_SOURCE_SPOOL_ENABLED", "1")
+    monkeypatch.setattr(ingestor, "STATE_DIR", tmp_path)
+    monkeypatch.setattr(ingestor, "_source_spool", None)
+    yield
+    if ingestor._source_spool is not None:
+        ingestor._source_spool.close()
+
+
+def test_durable_counter_process_restart_retains_uuid_and_original_generation(durable_source):
+    _prime_source()
+    ingestor._queue_equipment_counter_sample("runtime_heat1_min", 1.0)
+    original = ingestor.state.pending_counter_samples[0]
+    ingestor._source_spool.close()
+    ingestor._source_spool = None
+    ingestor.state.pending_counter_samples.clear()
+    ingestor.shared.transport_generation = 99
+    ingestor._restore_source_spool()
+    assert ingestor.state.pending_counter_samples == [original]
+    assert ingestor._equipment_source_gap_pending()
+    assert ingestor.state.equipment_source_last_receipt_at is None
+    pool = _Pool()
+    asyncio.run(ingestor.write_equipment_counter_samples(pool))
+    rows = pool.connection.calls[0][1]
+    assert rows[0][0] == original.sample_id
+    assert rows[0][1] == original.source_observed_at
+    assert rows[0][10] == original.source_connection_generation
+    assert ingestor._source_spool.rows() == []
+
+
+def test_durable_unknown_commit_and_interrupted_replay_keeps_exact_batch(durable_source, monkeypatch):
+    _prime_source()
+    ingestor._queue_equipment_counter_sample("runtime_heat1_min", 1.0)
+    originals = ingestor.state.pending_counter_samples.copy()
+    spool = ingestor._durable_source_spool()
+    real_ack = spool.acknowledge
+    monkeypatch.setattr(spool, "acknowledge", lambda _ids: (_ for _ in ()).throw(OSError("injected local ack failure")))
+    pool = _Pool()
+    with pytest.raises(OSError, match="ack failure"):
+        asyncio.run(ingestor.write_equipment_counter_samples(pool))
+    assert ingestor.state.pending_counter_samples == originals
+    assert len(spool.rows()) == 1
+    monkeypatch.setattr(spool, "acknowledge", real_ack)
+    asyncio.run(ingestor.write_equipment_counter_samples(pool))
+    assert pool.connection.calls[0][1] == pool.connection.calls[1][1]
+    assert spool.rows() == []
+
+
+def test_durable_event_sealing_is_atomic_and_old_receipt_cannot_make_freshness(durable_source):
+    at = datetime(2000, 1, 1, tzinfo=UTC)
+    event = ingestor.PendingEquipmentStateEvent(at, "heat1", True, "11111111-1111-4111-8111-111111111111", 2, "old-fw")
+    assert ingestor._append_pending_equipment_event(event)
+    spool = ingestor._durable_source_spool()
+    assert spool.rows()[0][0] == "event"
+    receipt = ingestor._new_equipment_receipt(
+        source_observed_through=at,
+        events=(event,),
+        source_runtime_instance_id=event.source_runtime_instance_id,
+        source_connection_generation=2,
+        firmware_revision="old-fw",
+    )
+    assert ingestor._append_pending_equipment_receipt(receipt)
+    assert [row[0] for row in spool.rows()] == ["receipt"]
+    spool.close()
+    ingestor._source_spool = None
+    ingestor.state.pending_equipment.clear()
+    ingestor.state.pending_equipment_receipts.clear()
+    ingestor._restore_source_spool()
+    assert ingestor.state.pending_equipment_receipts == [receipt]
+    asyncio.run(ingestor.write_equipment_events(_Pool(), datetime.now(UTC)))
+    assert ingestor.state.equipment_source_last_receipt_at is None
+    assert ingestor._equipment_source_gap_pending()
+    assert ingestor._source_spool.rows() == []
+
+
+def test_durable_snapshot_roundtrip_retains_all_observation_times(durable_source):
+    at = datetime(2000, 1, 1, tzinfo=UTC)
+    original = ingestor.PendingEquipmentDirectStateSnapshot(
+        "11111111-1111-4111-8111-111111111111",
+        "22222222-2222-4222-8222-222222222222",
+        (("heat1", True, at),),
+        42,
+        "33333333-3333-4333-8333-333333333333",
+        2,
+        "old-fw",
+    )
+    assert ingestor._persist_source("snapshot", original.snapshot_id, original)
+    ingestor._source_spool.close()
+    ingestor._source_spool = None
+    ingestor._restore_source_spool()
+    assert ingestor.state.pending_direct_state_snapshots == [original]
+    asyncio.run(ingestor.write_equipment_direct_state_snapshots(_Pool()))
+    assert ingestor._source_spool.rows() == []
+
+
+def test_durable_full_queue_rejects_new_event_without_losing_previous(durable_source, monkeypatch):
+    monkeypatch.setenv("SOURCE_SPOOL_MAX_ROWS", "1")
+    at = datetime(2000, 1, 1, tzinfo=UTC)
+    first = ingestor.PendingEquipmentStateEvent(at, "heat1", True, "11111111-1111-4111-8111-111111111111", 2, "old-fw")
+    second = ingestor.PendingEquipmentStateEvent(
+        at, "heat1", False, "11111111-1111-4111-8111-111111111111", 2, "old-fw"
+    )
+    assert ingestor._append_pending_equipment_event(first)
+    assert not ingestor._append_pending_equipment_event(second)
+    assert ingestor.state.pending_equipment == [first]
+    assert ingestor._equipment_source_gap_pending()
+    assert [row[1] for row in ingestor._source_spool.rows()] == [first.event_id]
+
+
+@pytest.mark.parametrize("cancel", [False, True])
+def test_durable_database_interruption_survives_process_state_loss(durable_source, cancel):
+    _prime_source()
+    ingestor._queue_equipment_counter_sample("runtime_heat1_min", 1.0)
+    original = ingestor.state.pending_counter_samples[0]
+    expected = asyncio.CancelledError if cancel else OSError
+    with pytest.raises(expected):
+        asyncio.run(ingestor.write_equipment_counter_samples(_Pool(fail=not cancel, cancel=cancel)))
+    assert ingestor.state.pending_counter_samples == [original]
+    ingestor._source_spool.close()
+    ingestor._source_spool = None
+    ingestor.state.pending_counter_samples.clear()
+    ingestor._restore_source_spool()
+    assert ingestor.state.pending_counter_samples == [original]
+    asyncio.run(ingestor.write_equipment_counter_samples(_Pool()))
+    assert ingestor._source_spool.rows() == []

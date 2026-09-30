@@ -36,13 +36,8 @@ resources:
   - allow-ingestor-device-egress.yaml
   - db-watchdog.yaml
   - writer-watchdog.yaml
-  # ingestor-state-pvc.yaml is intentionally NOT synced while the #382
-  # incident keeps the ingestor `state` volume on emptyDir (see
-  # ingestor-state-volume.yaml): a WaitForFirstConsumer PVC with no
-  # consumer stays Pending forever and blocks the ArgoCD sync health
-  # wait. The manifest file is retained for the revert; re-add this line
-  # together with restoring the persistentVolumeClaim volume once the
-  # storage cap is fixed (storage-infra).
+  # #382 durable source spool: claim and sole consumer land together.
+  - ingestor-state-pvc.yaml
   # #575 / proxmox-infrastructure#86: adopt the already-migrated portable R2
   # Hermes run-state claim in Git. The original component claim is deleted from
   # this production render by the paired retirement patch below.
@@ -194,12 +189,8 @@ patches:
   # Numbered migrations run in the PreSync hook on the same exact revision,
   # before API/ingestor workloads can consume the new schema.
   - path: migration-ledger.patch.yaml
-  # ⚠️ TEMPORARY (#382, 2026-06-20): the ingestor `state` volume is emptyDir, not the
-  # iSCSI PVC — defined DIRECTLY in ingestor-state-volume.yaml. (The old
-  # TEMP-ingestor-state-emptydir.patch.yaml `$patch: replace` here never overrode the
-  # PVC in the render, leaving git=PVC vs live=emptyDir → ArgoCD OutOfSync; the
-  # emptyDir now lives in ingestor-state-volume.yaml so git==live.) REVERT that file
-  # to the PVC once the iSCSI cap is fixed. See the storage-wedge tracking issue.
+  # #382 state mount now proposes the declared Longhorn claim; adoption
+  # changes the sole writer podSpec and needs an attended convergence.
   # HA-3.1 FAST FAILOVER (#239, task-authorized 2026-06-20): pin the ingestor to
   # priorityClassName verdify-device-writer + 20s NoExecute tolerations + a cpu
   # request (no cpu LIMIT) + terminationGracePeriodSeconds:15, so the sole writer
