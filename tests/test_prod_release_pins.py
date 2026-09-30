@@ -10,6 +10,8 @@ prod render, and keep the candidate block in the shape the actuator requires.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 import shutil
 import subprocess
@@ -139,3 +141,76 @@ def test_promote_script_makes_the_render_run_the_candidates(tmp_path: Path) -> N
     )
     for image, digest in candidates.items():
         assert {ref for ref in images if ref.split("@")[0] == ZOT + image} == {f"{ZOT}{image}@{digest}"}
+
+
+def _promotion_checkout(tmp_path: Path) -> Path:
+    prod = tmp_path / "deploy/k8s/overlays/prod"
+    prod.mkdir(parents=True)
+    for name in ("kustomization.yaml", "release-pins.yaml"):
+        shutil.copy(PROD / name, prod)
+    (tmp_path / "scripts").mkdir()
+    shutil.copy(ROOT / "scripts/promote-release-pins.py", tmp_path / "scripts")
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True)
+    subprocess.run(
+        ["git", "-c", "user.name=Offline test", "-c", "user.email=offline@example.invalid", "commit", "-qm", "fixture"],
+        cwd=tmp_path,
+        check=True,
+    )
+    return prod
+
+
+def test_malformed_candidate_leaves_every_release_pin_unchanged(tmp_path: Path) -> None:
+    prod = _promotion_checkout(tmp_path)
+    before = (prod / "release-pins.yaml").read_bytes()
+    candidate = prod / "kustomization.yaml"
+    value = yaml.safe_load(candidate.read_text())
+    for row in value["images"]:
+        if row["name"] == CANONICAL + "verdify-experiment-v2-orchestrator":
+            row["digest"] = "sha256:not-a-digest"
+    candidate.write_text(yaml.safe_dump(value))
+    result = subprocess.run(
+        [sys.executable, "scripts/promote-release-pins.py"], cwd=tmp_path, capture_output=True, text=True
+    )
+    assert result.returncode == 1
+    assert "invalid candidate digest" in result.stderr
+    assert (prod / "release-pins.yaml").read_bytes() == before
+
+
+def test_promotion_receipt_binds_actual_source_bytes_and_all_rollback_pins(tmp_path: Path) -> None:
+    prod = _promotion_checkout(tmp_path)
+    before = (prod / "release-pins.yaml").read_bytes()
+    candidates = (prod / "kustomization.yaml").read_bytes()
+    sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=tmp_path, text=True).strip()
+    receipt = tmp_path / "receipt.json"
+    subprocess.run(
+        [sys.executable, "scripts/promote-release-pins.py", "--receipt", str(receipt), "verdify-mcp"],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    saved = json.loads(receipt.read_text())
+    assert saved["promotion_input_source_sha"] == sha
+    assert saved["candidate_file_sha256"] == hashlib.sha256(candidates).hexdigest()
+    assert saved["release_pins_before_sha256"] == hashlib.sha256(before).hexdigest()
+    assert saved["release_pins_after_sha256"] == hashlib.sha256((prod / "release-pins.yaml").read_bytes()).hexdigest()
+    assert set(saved["changes"]) == {"verdify-mcp"}
+    assert set(saved["rollback_pins"]) == ACTUATOR_IMAGES
+    assert "live adoption remain separate" in saved["evidence_scope"]
+
+
+def test_existing_receipt_refuses_promotion_without_mutating_either_file(tmp_path: Path) -> None:
+    prod = _promotion_checkout(tmp_path)
+    before = (prod / "release-pins.yaml").read_bytes()
+    receipt = tmp_path / "receipt.json"
+    receipt.write_text("retained earlier operation\n")
+    result = subprocess.run(
+        [sys.executable, "scripts/promote-release-pins.py", "--receipt", str(receipt)],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 1
+    assert "receipt refused" in result.stderr
+    assert receipt.read_text() == "retained earlier operation\n"
+    assert (prod / "release-pins.yaml").read_bytes() == before
