@@ -4,21 +4,9 @@
 # under /srv/verdify/state. This must survive ingestor pod restarts; otherwise a
 # DB outage plus a pod restart can still lose queued greenhouse telemetry.
 #
-# Storage tier: longhorn-v1-workspace-rwo. This PVC is currently retained as
-# durable app-state backing, while the live ingestor still uses the explicit
-# emptyDir override in ingestor-state-volume.yaml until a separate gated restart
-# re-enables the PVC mount.
-#
-# 2026-06-17 storage incident — VERIFIED ROOT CAUSE (synology-csi-controller-0
-# logs): the Synology DSM hit its iSCSI *target-count* limit — "Failed to create
-# target ... Number of target reach limit". That fails NEW iSCSI volume
-# provisioning on BOTH /volume1 AND /volume2; it is NOT a per-volume / SSD-tier
-# hardware failure (the earlier "/volume1 DIED" note was a misdiagnosis). The
-# prior ingestor-state LUN wedged on the deploy's Recreate because CreateVolume
-# kept failing until a target freed up, stranding the sole ESP32 writer. Moving
-# to synology-iscsi-ssd (/volume1) would not help because the DSM target cap is
-# shared; move the retained PVC to the Longhorn RWO plane instead. State is
-# small (~2Gi: spool + bookkeeping).
+# Storage tier: longhorn-v1-workspace-rwo (two replicas, Retain, WFFC).
+# Claim and sole Recreate consumer render together. The historical Synology
+# iSCSI target cap is not a dependency of this Longhorn claim.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
