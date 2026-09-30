@@ -94,13 +94,25 @@ def _upsert(changes, targets, readbacks):
 async def choose(conn, changes, *, base_values, base_inputs, guardrails, physics, state_dir, generation):
     from .component_experiment import RUNTIME_INSTANCE_ID, component_entity_grid_attestation
 
+    state_path = state_dir / STATE_NAME
+    try:
+        state = bounded_reconcile._read(state_path)
+    except (ValueError, OSError):
+        return Selection("hold", reason="existing C1 outcome history unavailable")
+    try:
+        worksheet = bounded_reconcile._read(state_dir / WORKSHEET_NAME)
+    except (ValueError, OSError):
+        if state is None:
+            return Selection(reason="unadmitted C1 worksheet malformed")
+        worksheet = None  # Retained admitted history owns fresh restoration.
+    admitted = state is not None and state.get("status") != "yielded"
     now = datetime.now(UTC)
     evidence = component_entity_grid_attestation()
     if evidence is None or not shared.transport_readbacks_ready(generation):
-        return Selection("hold", reason="current grid/readback evidence unavailable")
+        return Selection("hold" if admitted else "ordinary", reason="current grid/readback evidence unavailable")
     readbacks = shared.current_cfg_readbacks(generation)
     if not set(CANONICAL_FIELD_ORDER).issubset(readbacks):
-        return Selection("hold", reason="current complete 48 cfg readbacks unavailable")
+        return Selection("hold" if admitted else "ordinary", reason="current complete 48 cfg readbacks unavailable")
     # Source inputs include Iris, crop anchor/lighting sources, activity and
     # safety defaults. Ordinary solar curves continue resolving from those
     # same inputs; no cached target is substituted into the five policy layers.
@@ -125,9 +137,6 @@ async def choose(conn, changes, *, base_values, base_inputs, guardrails, physics
         "qualification_claimed": False,
     }
     bounded_reconcile._write(state_dir / PREVIEW_NAME, preview)
-    worksheet = bounded_reconcile._read(state_dir / WORKSHEET_NAME)
-    state_path = state_dir / STATE_NAME
-    state = bounded_reconcile._read(state_path)
     old = state
     if old and old.get("status") == "yielded" and worksheet and old["worksheet_id"] != worksheet.get("worksheet_id"):
         # Completed history stays archived before a distinct worksheet starts.

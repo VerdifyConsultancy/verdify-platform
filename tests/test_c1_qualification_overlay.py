@@ -292,3 +292,66 @@ async def test_async_source_guard_runs_after_pacing_before_any_setter(monkeypatc
     assert result.status == "failed"
     assert result.reason == "c1_source_policy_or_guardrail_changed"
     assert events == ["paced", "fresh-db-policy-changed"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("missing", ["attestation", "canonical_readbacks"])
+async def test_unadmitted_c1_readiness_cannot_hold_ordinary_dispatch(tmp_path, monkeypatch, missing):
+    from types import SimpleNamespace
+
+    import shared
+    from tasks import component_experiment
+
+    monkeypatch.setattr(
+        component_experiment,
+        "component_entity_grid_attestation",
+        lambda: None if missing == "attestation" else SimpleNamespace(),
+    )
+    monkeypatch.setattr(shared, "transport_readbacks_ready", lambda generation: True)
+    monkeypatch.setattr(shared, "current_cfg_readbacks", lambda generation: {})
+    result = await overlay.choose(
+        None,
+        [("mister_engage_delay_s", 45.0)],
+        base_values={},
+        base_inputs={},
+        guardrails={},
+        physics=dispatcher._validate_physics,
+        state_dir=tmp_path,
+        generation=3,
+    )
+    assert result.phase == "ordinary"
+    assert not (tmp_path / overlay.STATE_NAME).exists()
+
+
+@pytest.mark.asyncio
+async def test_malformed_unadmitted_worksheet_has_no_ordinary_authority(tmp_path):
+    (tmp_path / overlay.WORKSHEET_NAME).write_text("{invalid")
+    result = await overlay.choose(
+        None,
+        [],
+        base_values={},
+        base_inputs={},
+        guardrails={},
+        physics=dispatcher._validate_physics,
+        state_dir=tmp_path,
+        generation=3,
+    )
+    assert result.phase == "ordinary"
+    assert not (tmp_path / overlay.STATE_NAME).exists()
+
+
+@pytest.mark.asyncio
+async def test_unreadable_existing_outcomes_hold_without_replaying(tmp_path):
+    (tmp_path / overlay.STATE_NAME).write_text("{invalid")
+    result = await overlay.choose(
+        None,
+        [],
+        base_values={},
+        base_inputs={},
+        guardrails={},
+        physics=dispatcher._validate_physics,
+        state_dir=tmp_path,
+        generation=3,
+    )
+    assert result.phase == "hold"
+    assert (tmp_path / overlay.STATE_NAME).read_text() == "{invalid"
