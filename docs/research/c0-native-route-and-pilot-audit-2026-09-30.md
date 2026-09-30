@@ -89,3 +89,25 @@ completed November 2 day. Daily completeness, retained 60-row final manifest,
 virtual selector opportunity/fallback and future observed resource scope
 remain future deliverables. The winter packet cannot replace the randomized
 hot/dry pilot.
+
+## Restored receipt durability witness
+
+`scripts/qualify-restored-native-route.sql` provides a read-only witness for a
+retained route receipt after a real paired restore. It refuses a database other
+than `verdify_rehearsal`, TCP connectivity or nonempty `listen_addresses`.
+The caller supplies the independently retained day, receipt ID and projection
+hash. Both the immutable stored projection and the bounded reader must match;
+all physical/experiment/causal eligibility flags must remain false.
+
+On a held socket-only paired restore, invoke:
+
+```sh
+psql -X -qAt -v ON_ERROR_STOP=1 -d verdify_rehearsal \
+  -v route_day=2026-09-29 -v route_receipt_id=1 \
+  -v route_projection_sha256=2837c7a22a4d23eefca47ff24bf9a276a9fd461401dd61f5919832cb78f75074 \
+  -f scripts/qualify-restored-native-route.sql
+```
+
+The restore's independently verified paired backup remains the source of these
+rows. This script inserts no synthetic receipt or outcome and cannot establish
+a connected randomized executor path or physical device evidence.
