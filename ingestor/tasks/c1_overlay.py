@@ -77,7 +77,7 @@ def validate_worksheet(worksheet, preview, *, now, physics, guardrails):
     return projection
 
 
-def _upsert(changes, targets, readbacks):
+def _upsert(changes, targets, readbacks, *, confirmed_ordinary=None):
     # Restoration targets are first, so unrelated ordinary drift cannot starve
     # an expired worksheet's return to freshly resolved source policy.
     selected = dict(targets)
@@ -85,7 +85,14 @@ def _upsert(changes, targets, readbacks):
     for param, value in targets.items():
         if param not in readbacks:
             raise ValueError("C1 target lacks current-generation cfg route: " + param)
-        if bounded_reconcile._equal(readbacks[param], value):
+        from .dispatcher import readback_values_equivalent
+
+        restored = (
+            confirmed_ordinary is not None
+            and confirmed_ordinary.get(param) == value
+            and readback_values_equivalent(param, readbacks[param], value)
+        )
+        if bounded_reconcile._equal(readbacks[param], value) or restored:
             selected.pop(param, None)
         else:
             selected[param] = float(value)
@@ -94,6 +101,7 @@ def _upsert(changes, targets, readbacks):
 
 async def choose(conn, changes, *, base_values, base_inputs, guardrails, physics, state_dir, generation):
     from .component_experiment import RUNTIME_INSTANCE_ID, component_entity_grid_attestation
+    from .dispatcher import readback_values_equivalent
 
     state_path = state_dir / STATE_NAME
     try:
@@ -134,7 +142,9 @@ async def choose(conn, changes, *, base_values, base_inputs, guardrails, physics
         "base_inputs": source_inputs,
         "base_inputs_sha256": bounded_reconcile._digest(source_inputs),
         "readbacks": {name: readbacks[name] for name in CANONICAL_FIELD_ORDER},
-        "base_converged": all(bounded_reconcile._equal(readbacks[n], base_values[n]) for n in CANONICAL_FIELD_ORDER),
+        "base_converged": all(
+            readback_values_equivalent(n, readbacks[n], base_values[n]) for n in CANONICAL_FIELD_ORDER
+        ),
         "qualification_claimed": False,
     }
     bounded_reconcile._write(state_dir / PREVIEW_NAME, preview)
@@ -227,6 +237,11 @@ async def choose(conn, changes, *, base_values, base_inputs, guardrails, physics
         try:
             if not await bounded_reconcile._check_records(conn, old["records"], readbacks, old["stage_started_at"]):
                 return Selection("hold", reason="awaiting fresh ordinary restoration confirmation")
+            restored = old.setdefault("confirmed_restored_values", {})
+            for record in old["records"]:
+                param = record["parameter"]
+                if param in old.get("touched", []) and record["value"] == base_values[param]:
+                    restored[param] = record["value"]
         except ValueError as error:
             bounded_reconcile._write(state_path, {**old, "status": "restore_failed", "reason": str(error)})
             return Selection("hold", reason="fresh restoration failed; retain outcomes")
@@ -236,7 +251,7 @@ async def choose(conn, changes, *, base_values, base_inputs, guardrails, physics
     # An unadmitted worksheet has touched no hardware and grants no restoration
     # authority. Never send arbitrary fields from a malformed file.
     targets = {name: base_values[name] for name in sorted(touched)}
-    selected = _upsert(changes, targets, readbacks)
+    selected = _upsert(changes, targets, readbacks, confirmed_ordinary=old.get("confirmed_restored_values", {}))
     if not shared.writer_lease_strictly_held(minimum_remaining_s=3):
         return Selection("hold", reason="sole writer lease unavailable")
     bounded_reconcile._write(

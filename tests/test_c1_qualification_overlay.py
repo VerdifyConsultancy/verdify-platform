@@ -355,3 +355,20 @@ async def test_unreadable_existing_outcomes_hold_without_replaying(tmp_path):
     )
     assert result.phase == "hold"
     assert (tmp_path / overlay.STATE_NAME).read_text() == "{invalid"
+
+
+def test_fractional_ordinary_restore_requires_native_confirmation_before_equivalence():
+    name = "min_fog_on_s"
+    target, observed = 63.75, 63.0
+    assert dispatcher.readback_values_equivalent(name, observed, target)
+    assert overlay._upsert([], {name: target}, {name: observed}) == ((name, target),)
+    assert overlay._upsert([], {name: target}, {name: observed}, confirmed_ordinary={name: target}) == ()
+    changed = 63.8
+    assert overlay._upsert([], {name: changed}, {name: observed}, confirmed_ordinary={name: target}) == (
+        (name, changed),
+    )
+
+
+def test_grid_projection_comparison_never_uses_ordinary_fractional_equivalence():
+    name = "min_fog_on_s"
+    assert overlay._upsert([], {name: 60.0}, {name: 59.0}) == ((name, 60.0),)
