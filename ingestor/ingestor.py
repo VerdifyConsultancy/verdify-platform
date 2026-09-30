@@ -1614,6 +1614,22 @@ async def write_equipment_counter_samples(pool: asyncpg.Pool) -> None:
         raise
 
 
+def _observe_current_state_messages(client: APIClient, on_state) -> object:
+    """Observe the just-requested initial subscription without sending a replay.
+
+    The pinned API registers handlers synchronously. Directly awaiting backfill
+    after subscribe_states, without an intervening await, installs this observer
+    before the event loop can deliver initial responses. No prior cache is read.
+    """
+    from functools import partial
+
+    from aioesphomeapi.client import SUBSCRIBE_STATES_MSG_TYPES
+    from aioesphomeapi.client_base import on_state_msg
+
+    connection = client._get_connection()  # noqa: SLF001 - pinned observer-only adapter
+    return connection.add_message_callback(partial(on_state_msg, on_state, {}), SUBSCRIBE_STATES_MSG_TYPES)
+
+
 def _request_current_state_burst(client: APIClient, on_state) -> object:
     """Request one current-state burst on the already fenced API connection.
 
@@ -3690,6 +3706,7 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
                         client=client,
                         generation=connection_generation,
                         connection_lost=connection_lost,
+                        observe_initial_subscription=True,
                     )
                 except Exception as e:
                     log.error("Gap backfill failed: %s", e)
@@ -4535,8 +4552,14 @@ async def backfill_gap(
     client: APIClient,
     generation: int,
     connection_lost: asyncio.Event,
+    observe_initial_subscription: bool = False,
 ) -> None:
-    """Persist only this connection's observed relay states with an honest gap status."""
+    """Persist newly received relay states with an honest gap status.
+
+    Startup observes its already-requested initial stream. This option is valid
+    only directly after primary subscribe_states with no intervening await.
+    Other callers retain explicit replay. Neither path reads old cached states.
+    """
     duration = (gap_end - gap_start).total_seconds()
     expected: dict[int, str] = {}
     for key, obj_id in state.key_to_object_id.items():
@@ -4582,7 +4605,10 @@ async def backfill_gap(
     if expected and current_connection():
         remove_callback = None
         try:
-            remove_callback = _request_current_state_burst(client, on_fresh_state)
+            if observe_initial_subscription:
+                remove_callback = _observe_current_state_messages(client, on_fresh_state)
+            else:
+                remove_callback = _request_current_state_burst(client, on_fresh_state)
             await asyncio.wait_for(complete.wait(), timeout=20)
             # Accept buffered same-key responses before declaring one coherent burst.
             await asyncio.sleep(0.1)
