@@ -136,6 +136,15 @@ required key names (never their values), then run the task-scoped
 in `CreateContainerConfigError`; Kubernetes still accepts the Deployment object,
 but its rollout cannot complete.
 
+### Grafana global SSO (#174)
+
+The staged admin SSO source also requires `GRAFANA_OAUTH_CLIENT_SECRET` in
+`verdify-grafana-secrets`, matching the dedicated Authentik confidential client
+`verdify-grafana`. The public client ID is source-owned; the secret value stays
+in the owning KSOPS lane in `jvallery/agents`. Provision and read back the exact
+provider/callback/group boundary before deploying this configuration. Never
+print the provider secret or store it in this repository.
+
 ## Protected secret-source ownership (Root delivers; Iris specifies)
 
 The current fleet-owned source and delivery entry point are:
