@@ -261,6 +261,20 @@ async def capture_native_source(pool):
     client = shared.esp32.get("client")
     if client is None or shared.esp32.get("state_subscription_client") is not client:
         return
+    if request.get("qualification_worksheet_id"):
+        from . import bounded_reconcile, c1_overlay
+
+        qualification = bounded_reconcile._read(state_dir / c1_overlay.STATE_NAME)
+        if (
+            qualification is None
+            or qualification.get("status") != "active"
+            or qualification.get("worksheet_id") != request["qualification_worksheet_id"]
+            or now >= datetime.fromisoformat(qualification["worksheet"]["expires_at"])
+            or expiry > datetime.fromisoformat(qualification["worksheet"]["expires_at"])
+            or now - datetime.fromisoformat(qualification["validated_at"]) > timedelta(seconds=30)
+        ):
+            COLLECTOR.blocked_reason = "qualification authority ended or not freshly validated"
+            return
     COLLECTOR.configure(request, runtime=RUNTIME_INSTANCE_ID, generation=generation, entities=_component_grid_inventory)
     output = state_dir / "c1-capture" / request["request_id"]
     if COLLECTOR.blocked_reason is not None:
