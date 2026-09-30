@@ -15,26 +15,36 @@ delivery = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(delivery)
 
 
-def test_exact_source_and_ordered_successor():
-    assert delivery.SUCCESSOR_264_SHA256 == hashlib.sha256(MIGRATION.read_bytes()).hexdigest()
-    assert delivery.SUCCESSOR_264_DIGESTS == delivery.SUCCESSOR_263_DIGESTS
-    assert delivery.SUCCESSOR_264_MCP_DIGEST == delivery.SUCCESSOR_263_MCP_DIGEST
-    later = [delivery.SUCCESSOR_254] + [getattr(delivery, f"SUCCESSOR_{seq}") for seq in range(255, 265)]
+@pytest.mark.parametrize("seq", [264, 265])
+def test_exact_source_and_ordered_successor(seq):
+    name = getattr(delivery, f"SUCCESSOR_{seq}")
+    source = ROOT / "db/migrations" / name
+    assert getattr(delivery, f"SUCCESSOR_{seq}_SHA256") == hashlib.sha256(source.read_bytes()).hexdigest()
+    assert getattr(delivery, f"SUCCESSOR_{seq}_MCP_DIGEST") == delivery.SUCCESSOR_263_MCP_DIGEST
+    if seq == 264:
+        assert delivery.SUCCESSOR_264_DIGESTS == delivery.SUCCESSOR_263_DIGESTS
+    else:
+        sql = source.read_text()
+        for login in delivery.SUCCESSOR_265_DIGESTS:
+            assert delivery.SUCCESSOR_264_DIGESTS[login] in sql
+            assert sql.count(delivery.SUCCESSOR_265_DIGESTS[login]) >= 2
+    later = [delivery.SUCCESSOR_254] + [getattr(delivery, f"SUCCESSOR_{seq}") for seq in range(255, seq + 1)]
     pins = {
         name: getattr(delivery, f"SUCCESSOR_{seq}_SHA256")
-        for seq, name in ((seq, getattr(delivery, f"SUCCESSOR_{seq}")) for seq in range(255, 265))
+        for seq, name in ((seq, getattr(delivery, f"SUCCESSOR_{seq}")) for seq in range(255, seq + 1))
     }
     delivery.reviewed_post_254(later, pins)
-    with pytest.raises(delivery.DeliveryError, match="reviewed 264 successor source drift"):
-        delivery.reviewed_post_254(later, dict(pins, **{delivery.SUCCESSOR_264: "0" * 64}))
+    with pytest.raises(delivery.DeliveryError, match=f"reviewed {seq} successor source drift"):
+        delivery.reviewed_post_254(later, dict(pins, **{name: "0" * 64}))
     with pytest.raises(delivery.DeliveryError, match="unreviewed post-254 receipt successor"):
-        delivery.reviewed_post_254(later[:-2] + [delivery.SUCCESSOR_264], pins)
+        delivery.reviewed_post_254(later[:-2] + [name], pins)
 
 
-def test_264_requires_unchanged_ordinary_and_mcp_boundaries(monkeypatch):
-    later = [delivery.SUCCESSOR_254] + [getattr(delivery, f"SUCCESSOR_{seq}") for seq in range(255, 265)]
-    ordinary = delivery.SUCCESSOR_264_DIGESTS
-    mcp_digest = delivery.SUCCESSOR_264_MCP_DIGEST
+@pytest.mark.parametrize("seq", [264, 265])
+def test_qualified_successor_requires_exact_ordinary_and_mcp_boundaries(monkeypatch, seq):
+    later = [delivery.SUCCESSOR_254] + [getattr(delivery, f"SUCCESSOR_{seq}") for seq in range(255, seq + 1)]
+    ordinary = getattr(delivery, f"SUCCESSOR_{seq}_DIGESTS")
+    mcp_digest = getattr(delivery, f"SUCCESSOR_{seq}_MCP_DIGEST")
     state = {
         "api": ordinary["verdify_api_runtime_login"],
         "ingestor": ordinary["verdify_ingestor_runtime_login"],
@@ -79,3 +89,9 @@ def test_264_requires_unchanged_ordinary_and_mcp_boundaries(monkeypatch):
     mcp["mcp"] = mcp_digest
     with pytest.raises(delivery.DeliveryError, match="exact applied 262"):
         delivery.verify_post_249(contract, {}, later=later, hotfix_predecessor_263=True)
+
+
+def test_265_rejects_unknown_future_successor():
+    later = [delivery.SUCCESSOR_254] + [getattr(delivery, f"SUCCESSOR_{seq}") for seq in range(255, 266)]
+    with pytest.raises(delivery.DeliveryError, match="unreviewed post-254 receipt successor"):
+        delivery.reviewed_post_254(later + ["266-unqualified.sql"])
