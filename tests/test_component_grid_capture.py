@@ -940,3 +940,26 @@ def test_cli_refuses_a_missing_or_malformed_artifact(tmp_path: Path) -> None:
     with pytest.raises(SystemExit) as exit_info:
         cap.main(["--input", str(malformed)])
     assert exit_info.value.code == 2
+
+
+def test_onchip_curve_consumed_edges_require_real_routes_and_exact_values():
+    document = artifact()
+    document["band_source"]["value"] = "onchip_curve"
+    for row in document["band_layers"]:
+        row["observed"]["slug"] = cap.CONSUMED_BAND_OBSERVED_SLUGS[row["series"]]
+    for index, series in enumerate(sorted(cap.SCALAR_EDGE_SERIES)):
+        document["entities"].append(
+            {
+                "object_id": cap.CONSUMED_BAND_OBSERVED_SLUGS[series],
+                "entity_type": "sensor",
+                "key": 9000 + index,
+                "unit": cap.EXPECTED_BAND_UNITS[series],
+            }
+        )
+    assert run(document).grid_revision is not None
+    missing = copy.deepcopy(document)
+    missing["entities"].pop()
+    assert run(missing).grid_revision is None
+    wrong = copy.deepcopy(document)
+    wrong["band_layers"][0]["observed"]["value"] = "75.20"
+    assert run(wrong).grid_revision is None

@@ -692,6 +692,11 @@ def request_component_state_replay(*, monotonic_clock: Callable[[], float] = tim
     ):
         return False
     try:
+        # Cached API replay is useful for discovery/recovery readiness, but
+        # cannot become independent C1 physical source-epoch credit.
+        from .c1_capture import invalidate_for_cached_replay
+
+        invalidate_for_cached_replay()
         client._get_connection().send_message(SubscribeStatesRequest())
     except Exception as exc:
         raise ComponentStoreError("state replay request failed") from exc
