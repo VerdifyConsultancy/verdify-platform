@@ -266,6 +266,24 @@ ESP32_LOG_LEVEL = LOG_LEVEL_BY_NAME.get(os.environ.get("ESP32_LOG_LEVEL", "NONE"
 if ESP32_LOG_LEVEL is None:
     ESP32_LOG_LEVEL = LogLevel.LOG_LEVEL_NONE
 ESP32_LOG_LEVEL_NAME = LOG_LEVEL_MAP.get(ESP32_LOG_LEVEL, "NONE")
+# Opt-in diagnostic dump on the existing log connection, once per process.
+# NONE still sends no subscription; this never opens another device client.
+ESP32_LOG_DUMP_CONFIG_ON_CONNECT = os.environ.get("ESP32_LOG_DUMP_CONFIG_ON_CONNECT", "0").strip() == "1"
+_esp32_config_dump_sent = False
+
+
+def _subscribe_to_esp32_logs(client: APIClient) -> None:
+    global _esp32_config_dump_sent
+    if ESP32_LOG_LEVEL == LogLevel.LOG_LEVEL_NONE:
+        return
+    if ESP32_LOG_DUMP_CONFIG_ON_CONNECT and not _esp32_config_dump_sent:
+        client.subscribe_logs(on_log_message, log_level=ESP32_LOG_LEVEL, dump_config=True)
+        # Latch only after enqueue succeeds; a disconnected client can retry.
+        _esp32_config_dump_sent = True
+        log.info("ESP32 diagnostic config dump requested once on existing connection")
+    else:
+        client.subscribe_logs(on_log_message, log_level=ESP32_LOG_LEVEL)
+
 
 logging.basicConfig(
     level=logging.INFO,
@@ -3926,7 +3944,7 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
             # Keep ESP32 log streaming opt-in. Heap pressure is covered by
             # binary sensors and diagnostics; a live API log stream costs heap.
             if ESP32_LOG_LEVEL != LogLevel.LOG_LEVEL_NONE:
-                client.subscribe_logs(on_log_message, log_level=ESP32_LOG_LEVEL)
+                _subscribe_to_esp32_logs(client)
                 log.info("Subscribed to ESP32 logs (%s+)", ESP32_LOG_LEVEL_NAME)
             else:
                 log.info("ESP32 log subscription disabled")
