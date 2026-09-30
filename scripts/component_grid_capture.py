@@ -216,6 +216,14 @@ EXPECTED_BAND_OBSERVED_SLUGS: dict[str, str] = {
 
 EXPECTED_BAND_UNITS = {series: "°F" if series.startswith("temp_") else "kPa" for series in REQUIRED_BAND_SERIES}
 SCALAR_EDGE_SERIES = frozenset({"temp_low", "temp_high", "vpd_low", "vpd_high"})
+CONSUMED_BAND_OBSERVED_SLUGS = {
+    **EXPECTED_BAND_OBSERVED_SLUGS,
+    "temp_low": "consumed_temp_low_f",
+    "temp_high": "consumed_temp_high_f",
+    "vpd_low": "consumed_vpd_low_kpa",
+    "vpd_high": "consumed_vpd_high_kpa",
+}
+
 
 REQUIRED_REVISIONS: tuple[str, ...] = (
     "source_revision",
@@ -676,7 +684,11 @@ def evaluate_layer_triple(
     blockers: list[str] = sorted(malformed.values())
     if band_source not in {"dispatcher_legacy", "onchip_curve"}:
         blockers.append("consumed_branch_unobservable")
-    elif band_source == "onchip_curve" and series in SCALAR_EDGE_SERIES:
+    elif (
+        band_source == "onchip_curve"
+        and series in SCALAR_EDGE_SERIES
+        and observed_slug != CONSUMED_BAND_OBSERVED_SLUGS.get(series)
+    ):
         blockers.append("legacy_scalar_readback_does_not_observe_consumed_onchip_curve")
     for name, text in (("served", served_text), ("control", control_text), ("observed", observed_text)):
         if isinstance(layers[name].get("value"), bool):
@@ -697,7 +709,9 @@ def evaluate_layer_triple(
             stale = f"{name}_timestamp_invalid:{exc}"
         if stale is not None:
             blockers.append(stale)
-    expected_slug = EXPECTED_BAND_OBSERVED_SLUGS.get(series)
+    expected_slug = (
+        CONSUMED_BAND_OBSERVED_SLUGS if band_source == "onchip_curve" else EXPECTED_BAND_OBSERVED_SLUGS
+    ).get(series)
     if not isinstance(observed_slug, str) or not observed_slug:
         blockers.append("observed_slug_missing")
     elif expected_slug is None:
@@ -951,6 +965,17 @@ def capture(
         band_source=consumed_branch,
     )
     band_failures.extend(source_failures)
+    if consumed_branch == "onchip_curve":
+        for series in SCALAR_EDGE_SERIES:
+            slug = CONSUMED_BAND_OBSERVED_SLUGS[series]
+            routes = [entity for entity in entities if entity.object_id == slug]
+            if (
+                len(routes) != 1
+                or routes[0].entity_type != "sensor"
+                or routes[0].unit != EXPECTED_BAND_UNITS[series]
+                or routes[0].disabled_by_default
+            ):
+                band_failures.append(f"consumed_band_route_unobservable:{series}:{slug}")
     if not set(REQUIRED_BAND_SERIES).issubset(required_band_series):
         band_failures.append("band_layer_required_series_cannot_be_reduced")
     failures.extend(band_failures)

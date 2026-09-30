@@ -577,3 +577,15 @@ CFG_READBACK_MAP: dict[str, str] = {
 # ──────────────────────────────────────────────────────────────
 PARAM_TO_ENTITY = {v: k for k, v in SETPOINT_MAP.items() if not v.startswith("sw_")}
 SWITCH_TO_ENTITY = {v: k for k, v in SETPOINT_MAP.items() if v.startswith("sw_")}
+
+# C1 consumed Setpoints observations are callback evidence, not DB climate
+# columns or writable tunables. The source capture owns their timestamps.
+C1_OBSERVATION_SLUGS = frozenset(
+    {
+        "consumed_temp_low_f",
+        "consumed_temp_high_f",
+        "consumed_vpd_low_kpa",
+        "consumed_vpd_high_kpa",
+        "consumed_band_sample_epoch",
+    }
+)

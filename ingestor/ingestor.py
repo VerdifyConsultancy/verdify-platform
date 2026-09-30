@@ -45,6 +45,7 @@ from aioesphomeapi.model import (
 )
 from dotenv import load_dotenv
 from entity_map import (
+    C1_OBSERVATION_SLUGS,
     CFG_READBACK_MAP,
     CLIMATE_MAP,
     DAILY_ACCUM_MAP,
@@ -82,6 +83,7 @@ from tasks import (
     alert_monitor,
     attest_component_safe_startup,
     bounded_reconcile,
+    c1_capture,
     clear_component_entity_inventory,
     component_experiment_worker,
     create_component_experiment_pool,
@@ -1627,6 +1629,7 @@ def _request_current_state_burst(client: APIClient, on_state) -> object:
     from aioesphomeapi.client_base import on_state_msg
 
     connection = client._get_connection()  # noqa: SLF001 - bounded pinned-library adapter
+    c1_capture.invalidate_for_cached_replay()
     return connection.send_message_callback_response(
         SubscribeStatesRequest(),
         partial(on_state_msg, on_state, {}),
@@ -3107,6 +3110,14 @@ def on_state_change(entity_state, *, native_generation: int | None = None) -> No
     if obj_id is None:
         return
 
+    if native_generation == source_generation and source_clock_valid:
+        source_slug = "uptime_s" if DIAGNOSTIC_MAP.get(obj_id) == "uptime_s" else obj_id
+        c1_capture.record_native_callback(
+            source_slug, entity_state.state, observed_at=source_observed_at, generation=source_generation
+        )
+    if obj_id in C1_OBSERVATION_SLUGS:
+        return  # callback-only evidence; not a new climate DB column
+
     if etype == "sensor":
         val = entity_state.state
         if val is None or (isinstance(val, float) and math.isnan(val)):
@@ -4003,6 +4014,7 @@ async def task_loop(
         # exclusive environment gate before constructing or querying L3 and is
         # therefore zero-DB/zero-device under the default disabled posture.
         ("component_experiment", 15, restricted_component_experiment_worker),
+        ("c1_native_capture", 15, c1_capture.capture_native_source),
         # Qualification-phase step-test scheduler (#584/#588): additionally
         # inert unless mode=live AND the active experiment is
         # kind=qualification, armed/running.
