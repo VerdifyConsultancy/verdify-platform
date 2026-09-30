@@ -48,14 +48,16 @@ class NativeCapture:
         self.last_uptime = None
         self.reset_detected = False
         self.blocked_reason = None
+        self.firmware_attestation = None
 
-    def configure(self, request, *, runtime, generation, entities):
+    def configure(self, request, *, runtime, generation, entities, firmware_attestation=None):
         identity = (request["request_id"], runtime, generation)
         if identity != self.identity:
             self.__init__()
             self.identity = identity
             self.request = request
             self.entities = [asdict(e) for e in entities]
+            self.firmware_attestation = firmware_attestation
 
     def record(self, slug, value, *, observed_at, generation):
         if self.blocked_reason is not None:
@@ -74,8 +76,6 @@ class NativeCapture:
                     self.reset_detected = True
                 self.last_uptime = value
             return False
-        if slug == "firmware_version":
-            self.band[slug] = {"value": value, "observed_at": observed_at.isoformat(), "slug": slug}
         if slug in {*BAND_SLUGS.values(), "band_source", "consumed_band_sample_epoch"}:
             self.band_pending[slug] = {"value": value, "observed_at": observed_at.isoformat(), "slug": slug}
             if slug == "consumed_band_sample_epoch":
@@ -116,6 +116,7 @@ class NativeCapture:
                 "observed_components": dict(self.pending),
                 "entities": self.entities,
                 "band_callbacks": dict(self.band),
+                "firmware_attestation": self.firmware_attestation,
             }
         )
         self.last_completed = {n: datetime.fromisoformat(r["observed_at"]) for n, r in self.pending.items()}
@@ -261,7 +262,17 @@ async def capture_native_source(pool):
     client = shared.esp32.get("client")
     if client is None or shared.esp32.get("state_subscription_client") is not client:
         return
-    COLLECTOR.configure(request, runtime=RUNTIME_INSTANCE_ID, generation=generation, entities=_component_grid_inventory)
+    COLLECTOR.configure(
+        request,
+        runtime=RUNTIME_INSTANCE_ID,
+        generation=generation,
+        entities=_component_grid_inventory,
+        firmware_attestation={
+            "firmware_revision": evidence.firmware_revision,
+            "observation_receipt_sha256": evidence.observation_receipt_sha256,
+            "observed_at": evidence.observed_at.isoformat(),
+        },
+    )
     output = state_dir / "c1-capture" / request["request_id"]
     if COLLECTOR.blocked_reason is not None:
         _atomic(
@@ -282,11 +293,13 @@ async def capture_native_source(pool):
         if input_path.exists():
             continue  # never retime or rewrite an immutable source packet
         bands = epoch["band_callbacks"]
-        if not all(
-            s in bands for s in (*BAND_SLUGS.values(), "band_source", "consumed_band_sample_epoch", "firmware_version")
-        ):
+        if not all(s in bands for s in (*BAND_SLUGS.values(), "band_source", "consumed_band_sample_epoch")):
             continue
-        if epoch["reset_detected"] or bands["firmware_version"]["value"] != evidence.firmware_revision:
+        if (
+            epoch["reset_detected"]
+            or epoch["firmware_attestation"] is None
+            or epoch["firmware_attestation"]["firmware_revision"] != evidence.firmware_revision
+        ):
             continue
         try:
             sample = _validated_band_sample(epoch, now)

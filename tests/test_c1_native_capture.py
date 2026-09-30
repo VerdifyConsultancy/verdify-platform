@@ -147,3 +147,20 @@ def test_invalid_device_sample_and_callback_clocks_are_unavailable():
         with pytest.raises(ValueError):
             _validated_band_sample(bad, now)
     assert valid["band_callbacks"]["consumed_temp_low_f"]["value"] == 70.0
+
+
+def test_firmware_identity_is_attestation_metadata_not_retimed_callback():
+    c = NativeCapture()
+    now = datetime.now(UTC)
+    attestation = {
+        "firmware_revision": "intended",
+        "observation_receipt_sha256": "a" * 64,
+        "observed_at": (now - timedelta(minutes=2)).isoformat(),
+    }
+    c.configure(
+        {"request_id": str(uuid4())}, runtime=str(uuid4()), generation=3, entities=[], firmware_attestation=attestation
+    )
+    fill(c, now)
+    assert c.epochs[0]["firmware_attestation"] == attestation
+    assert "firmware_version" not in c.epochs[0]["band_callbacks"]
+    assert c.epochs[0]["completed_at"] != attestation["observed_at"]
