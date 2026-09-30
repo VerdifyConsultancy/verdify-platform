@@ -1,0 +1,66 @@
+{
+  "current_pods": [
+    {
+      "name": "verdify-ingestor-75bf785789-cc92r",
+      "phase": "Running",
+      "uid": "e2768094-c1cb-4355-bb52-39c1b87bf73f"
+    }
+  ],
+  "delivery_prerequisites": [
+    "Registry integrity must be restored before native image delivery.",
+    "Integrate this source then build exact integrated commit; promote matching five images with migrate hook265; full sync only.",
+    "Preserve old emptyDir twice with file hashes, retain captures and truthful first-cutover source gap; memory-only samples cannot be reconstructed.",
+    "Provision source-declared retained claim and seed with credential-free transfer-only Pod in coordinated adoption; validate fsync/hash/UID1000/capacity/replicas and release RWO mount before full sync.",
+    "Nonempty legacy JSONL blocks climate activation; retain gate-off and resolve unknown commits explicitly, without new UUIDs or timestamp dedup.",
+    "Verify live ledger, roles, release digests, PVC, single writer and queues before authorized interrupted replay/outage proof."
+  ],
+  "image": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:faae1b44650771074c669471f64775dec4c8f9ad1af81467c04f50dac02b6588",
+  "legacy_climate_jsonl": "absent in read-only inventory; recheck exact final preservation archive before enabling climate gate",
+  "migration265_sha256": "f7bded636fd1d98ef37a192ecf4fdd085585ac3a0ceadb388d1330edea067ae2",
+  "replicas": 1,
+  "retained_pvc_present": false,
+  "scope": "read-only preparation; no runtime/PVC/image pin/main changes",
+  "source_base": "2c82853bcd941e1156276966bb2dc49b2013eb52",
+  "source_branch": "fix/382-adoption-linear-20260930",
+  "source_preparation_commit": "43ab18ed1fa29e6a4c1f4a94c6894eb4195ab811",
+  "state_inventory": {
+    "files": [
+      {
+        "bytes": 22386,
+        "path": "writer-stage-preview.json",
+        "sha256": "f13c5d6c7402d0fca9bbf1ebccd1a5491f39f25ca3cc0f0959c5e447de3c6b32"
+      },
+      {
+        "bytes": 0,
+        "path": "setpoint-dispatcher.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "bytes": 323,
+        "path": "ha-sensor-sync-state.json",
+        "sha256": "ee85a20561f3e6cd8ff36904547d55b3655da4868328c70bf4344a085d47f63b"
+      },
+      {
+        "bytes": 695,
+        "path": "c1-capture-status.json",
+        "sha256": "89b99cf2c77da28e423fd15a165b97472cec56ff853e5d4cf8913a6e72143255"
+      },
+      {
+        "bytes": 110,
+        "path": "milestones-fired.json",
+        "sha256": "5673f9833df6b9b6254adf907a3d761524bb86250909fbfcf3a282ca662b049a"
+      }
+    ],
+    "gid": 1000,
+    "observed_utc": "2026-09-30T21:36:58.992100+00:00",
+    "uid": 1000
+  },
+  "state_volume": {
+    "emptyDir": {},
+    "name": "state"
+  },
+  "strategy": {
+    "type": "Recreate"
+  },
+  "validation": "Critical implementation unchanged from e50cdb2: 88 previously passing focused tests reused; docs diff/readback and commit hooks pass. Exact migration bytes unchanged. No optional retest repeated."
+}
