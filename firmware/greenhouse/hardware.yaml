@@ -224,6 +224,11 @@ text_sensor:
     entity_category: diagnostic
     update_interval: never
   - platform: template
+    id: gh_consumed_band_sample_epoch
+    name: "Consumed Band Sample Epoch"
+    entity_category: diagnostic
+    update_interval: never
+  - platform: template
     id: gh_band_source
     name: "Band Source"
     entity_category: diagnostic
@@ -676,6 +681,34 @@ sensor:
   - platform: template
     id: gh_solar_sunset_min
     name: "Solar Sunset (min local)"
+    entity_category: diagnostic
+    update_interval: never
+  - platform: template
+    id: gh_consumed_temp_low_f
+    name: "Consumed Temp Low F"
+    unit_of_measurement: "°F"
+    accuracy_decimals: 3
+    entity_category: diagnostic
+    update_interval: never
+  - platform: template
+    id: gh_consumed_temp_high_f
+    name: "Consumed Temp High F"
+    unit_of_measurement: "°F"
+    accuracy_decimals: 3
+    entity_category: diagnostic
+    update_interval: never
+  - platform: template
+    id: gh_consumed_vpd_low_kpa
+    name: "Consumed VPD Low kPa"
+    unit_of_measurement: "kPa"
+    accuracy_decimals: 3
+    entity_category: diagnostic
+    update_interval: never
+  - platform: template
+    id: gh_consumed_vpd_high_kpa
+    name: "Consumed VPD High kPa"
+    unit_of_measurement: "kPa"
+    accuracy_decimals: 3
     entity_category: diagnostic
     update_interval: never
   - platform: template

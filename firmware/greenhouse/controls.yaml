@@ -1773,6 +1773,13 @@ interval:
               id(gh_solar_sunrise_min).publish_state(sv2_solar.sunrise_min);
               id(gh_solar_noon_min).publish_state(sv2_solar.solar_noon_min);
               id(gh_solar_sunset_min).publish_state(sv2_solar.sunset_min);
+              // Publish the edges actually consumed by controller_tick.
+              // cfg_* scalar globals are not these edges under onchip_curve.
+              // Keep this batch aligned with targets/phase/band_source below.
+              id(gh_consumed_temp_low_f).publish_state(setpts.temp_low);
+              id(gh_consumed_temp_high_f).publish_state(setpts.temp_high);
+              id(gh_consumed_vpd_low_kpa).publish_state(setpts.vpd_low);
+              id(gh_consumed_vpd_high_kpa).publish_state(setpts.vpd_high);
               id(gh_house_temp_target).publish_state(setpts.temp_target);
               id(gh_house_temp_delta).publish_state(Tin - setpts.temp_target);
               id(gh_house_vpd_target).publish_state(setpts.vpd_target);
@@ -1787,6 +1794,11 @@ interval:
               id(gh_zone_vpd_delta_east).publish_state(std::isfinite(zvpd[ZONE_EAST]) ? zvpd[ZONE_EAST] - zb[ZONE_EAST].target : NAN);
               id(gh_zone_wet_granted).publish_state(won < 0 ? "none" : ZONE_NAMES[won]);
               id(gh_band_source).publish_state(id(sw_onchip_band_enabled) ? "onchip_curve" : "dispatcher_legacy");
+              // Exact text epoch dates this computed batch; float epoch sensors
+              // lose seconds and cached SubscribeStates callbacks are not a
+              // fresh controller computation. Invalid controller time is empty.
+              id(gh_consumed_band_sample_epoch).publish_state(
+                controller_time_valid ? std::to_string(sntp_now.timestamp) : "");
               last_climate_band_diag_ms = climate_diag_now_ms;
             }
 
