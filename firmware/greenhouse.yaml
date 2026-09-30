@@ -23,6 +23,7 @@ esphome:
   min_version: 2026.1.4
   includes:
     - lib/heap_diagnostics.h
+    - lib/sntp_acquisition.h
     - lib/greenhouse_types.h
     - lib/greenhouse_solar.h
     - lib/irrigation_policy.h
@@ -210,6 +211,9 @@ esp32:
   framework:
     type: esp-idf
     version: recommended
+    sdkconfig_options:
+      # lwIP otherwise defaults to one slot and silently ignores pool.ntp.org.
+      CONFIG_LWIP_SNTP_MAX_SERVERS: "2"
 
 
 packages:
@@ -358,7 +362,11 @@ time:
     on_time_sync:
       then:
         - lambda: |-
-            id(sntp_last_sync_ms) = millis();
+            // get_sync_status is consumed here, never by ESPHome. A valid
+            // retained RTC startup callback must not fabricate acquisition.
+            const bool completed = esp_sntp_get_sync_status() == SNTP_SYNC_STATUS_COMPLETED;
+            if (!record_sntp_acquisition(completed, id(sntp_time).now().is_valid(), millis(),
+                                         id(sntp_acquired), id(sntp_last_sync_ms))) return;
             id(sntp_heartbeat_misses) = 0;
             id(sntp_failed) = false;
     on_time:
@@ -368,6 +376,8 @@ time:
         then:
           - lambda: |-
               if(id(sntp_time).now().is_valid()){
+                // Retained RTC supports existing offline physical control.
+                // Its validity does not establish or refresh SNTP acquisition.
                 if(id(sntp_failed)){
                   ESP_LOGI("sntp","controller time recovered");
                 }

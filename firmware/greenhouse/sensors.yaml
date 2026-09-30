@@ -786,7 +786,8 @@ sensor:
     accuracy_decimals: 0
     update_interval: 60s
     lambda: |-
-      return id(sntp_time).now().is_valid() && !id(sntp_failed) ? 1.0f : 0.0f;
+      return sntp_acquisition_valid(id(sntp_acquired), id(sntp_time).now().is_valid(),
+                                    id(sntp_failed)) ? 1.0f : 0.0f;
 
   - platform: template
     id: sntp_miss_count
@@ -805,7 +806,7 @@ sensor:
     accuracy_decimals: 0
     update_interval: 60s
     lambda: |-
-      if(id(sntp_last_sync_ms) == 0) return NAN;
+      if(!id(sntp_acquired)) return NAN;
       return (float)((millis() - id(sntp_last_sync_ms)) / 1000UL);
 
   # Absolute humidity inside

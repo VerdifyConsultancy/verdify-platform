@@ -257,6 +257,10 @@ globals:
     initial_value: '0'
 
   # ─── Controller time failure detection (A3) ───
+  - id: sntp_acquired
+    type: bool
+    restore_value: no
+    initial_value: 'false'
   - id: sntp_failed
     type: bool
     restore_value: no

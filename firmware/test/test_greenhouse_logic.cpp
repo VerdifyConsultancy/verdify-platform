@@ -7,6 +7,7 @@
 
 #include "greenhouse_logic.h"
 #include "irrigation_policy.h"
+#include "sntp_acquisition.h"
 #include "invariants.h"
 #include <cstdio>
 #include <cstring>
@@ -5509,6 +5510,43 @@ TEST(irrigation_wall_sequence_is_prewet_feed_fertilizer_off_immediate_clean_flus
     ASSERT_FALSE(relays.wall_clean);
     ASSERT_FALSE(relays.wall_fertilized);
     ASSERT_FALSE(relays.fertilizer_master);
+    PASS();
+}
+
+TEST(sntp_retained_rtc_is_not_acquisition) {
+    bool acquired = false;
+    uint32_t last_sync_ms = 0;
+    ASSERT_FALSE(record_sntp_acquisition(false, true, 2000, acquired, last_sync_ms));
+    ASSERT_FALSE(acquired);
+    ASSERT_EQ(last_sync_ms, 0u);
+    ASSERT_FALSE(sntp_acquisition_valid(acquired, true, false));
+    PASS();
+}
+
+TEST(sntp_completed_callback_acquires_and_ordinary_rtc_does_not_refresh) {
+    bool acquired = false;
+    uint32_t last_sync_ms = 0;
+    ASSERT_TRUE(record_sntp_acquisition(true, true, 2000, acquired, last_sync_ms));
+    ASSERT_TRUE(sntp_acquisition_valid(acquired, true, false));
+    ASSERT_EQ(last_sync_ms, 2000u);
+    ASSERT_FALSE(record_sntp_acquisition(false, true, 62000, acquired, last_sync_ms));
+    ASSERT_EQ(last_sync_ms, 2000u);
+    ASSERT_EQ(uint32_t(62000 - last_sync_ms), 60000u);
+    ASSERT_TRUE(record_sntp_acquisition(true, true, 900000, acquired, last_sync_ms));
+    ASSERT_EQ(last_sync_ms, 900000u);
+    ASSERT_FALSE(sntp_acquisition_valid(acquired, false, false));
+    ASSERT_FALSE(sntp_acquisition_valid(acquired, true, true));
+    PASS();
+}
+
+TEST(sntp_completed_invalid_rtc_does_not_acquire_and_zero_millis_is_valid) {
+    bool acquired = false;
+    uint32_t last_sync_ms = 0;
+    ASSERT_FALSE(record_sntp_acquisition(true, false, 2000, acquired, last_sync_ms));
+    ASSERT_FALSE(acquired);
+    ASSERT_TRUE(record_sntp_acquisition(true, true, 0, acquired, last_sync_ms));
+    ASSERT_TRUE(acquired);
+    ASSERT_EQ(last_sync_ms, 0u);
     PASS();
 }
 
