@@ -10,6 +10,9 @@ spec:
       containers:
         - name: ingestor
           env:
+            # Existing sole-client diagnostics; scope the override to this writer.
+            - name: ESP32_LOG_LEVEL
+              value: "WARN"
             - name: VERDIFY_SOURCE_SPOOL_ENABLED
               value: "1"
             - name: SOURCE_SPOOL_MAX_ROWS
