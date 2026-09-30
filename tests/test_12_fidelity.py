@@ -1339,7 +1339,7 @@ def test_alert_monitor_detects_planner_delivery_outages():
     assert "planner_required_plan_missed" in src
     assert "system.planner_required_plan" in src
     assert "planner_trigger_ledger" in src
-    assert "event_type IN ('SUNRISE', 'SUNSET', 'MIDNIGHT')" in src
+    assert "event_type IN ('SUNRISE', 'SUNSET', 'MIDNIGHT', 'FORECAST_DEVIATION', 'DEVIATION', 'FORECAST')" in src
     assert "last_required_recovery" in src
     assert "COALESCE(r.expected_at, pdl.delivered_at) > lrr.expected_at" in src
     assert "r.status IN ('missed', 'timed_out', 'delivery_failed', 'expected', 'delivered')" in src
