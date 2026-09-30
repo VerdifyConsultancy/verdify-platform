@@ -139,7 +139,7 @@ but its rollout cannot complete.
 ### Grafana global SSO (#174)
 
 The staged admin SSO source also requires `GRAFANA_OAUTH_CLIENT_SECRET` in
-`verdify-grafana-secrets`, matching the dedicated Authentik confidential client
+a separate immutable `verdify-grafana-oauth` Secret, matching the dedicated Authentik confidential client
 `verdify-grafana`. The public client ID is source-owned; the secret value stays
 in the owning KSOPS lane in `jvallery/agents`. Provision and read back the exact
 provider/callback/group boundary before deploying this configuration. Never
