@@ -112,11 +112,11 @@ _STANDING_DIRECTIVES = """
    the bottom of this prompt. The dispatcher pushes changes to the ESP32
    within 5 minutes.
 
-6. **If a routine FORECAST/TRANSITION/HEARTBEAT needs no change,** call
+6. **If a routine TRANSITION/HEARTBEAT needs no change,** call
    `acknowledge_trigger(trigger_id, reason, planner_instance)` using the
    audit values at the bottom of this prompt. This closes the delivery SLA
    without writing a fake plan.
-   **Do not acknowledge SUNRISE, SUNSET, or MIDNIGHT as a normal no-op.** A
+   **Do not acknowledge SUNRISE, SUNSET, MIDNIGHT, or FORECAST_DEVIATION as a normal no-op.** A
    required cycle succeeds only through one valid full `set_plan`. If a tool or
    required input fails and no safe plan can be produced, call
    `acknowledge_trigger(..., neutral_fallback=true)` to record an explicit
@@ -165,7 +165,7 @@ _STANDING_DIRECTIVES = """
     at most 2 stress windows, and at most 3 decision-critical rationales. Never
     repeat the assembled context inside tool arguments.
 
-13. **Persist before reporting.** For SUNRISE, SUNSET, MIDNIGHT, and WEEKLY,
+13. **Persist before reporting.** For SUNRISE, SUNSET, MIDNIGHT, FORECAST_DEVIATION, and WEEKLY,
     call `set_plan` and confirm its success response before posting the Slack
     brief. If MCP rejects the plan, correct and retry the tool call; never post
     a brief that implies the plan was written before persistence succeeds.
@@ -1014,20 +1014,20 @@ threshold tripped):
    forecast error? Apply FORECAST CALIBRATION (assembled context); a
    deviation that goes the SAME direction as the historical bias is the
    forecast catching up to reality, not a regime change.
-4. **Do not tune for data gaps** — if the payload is only
-   `forecast_missing_min`, stale forecast data, or another forecast-ingestor
-   health gap, call `acknowledge_trigger`. Missing forecast freshness is system
-   health, not a climate regime change.
-5. **Adjust tunables only for live weather misses** — use `set_tunable` to
-   adapt to actual conditions:
-   - If hotter than expected: increase misting, consider lowering
-     `fog_escalation_kpa`.
-   - If cooler than expected: reduce misting aggressiveness and check heat
-     hysteresis/dwell posture.
-   - If more humid: watch dew point margin and use VPD hysteresis, vent posture,
-     and fog/mister thresholds instead of retired bias knobs.
-6. **Post what changed** — explain the deviation, your diagnosis, and your
-   response.
+4. **Fail explicitly for data gaps** — if required forecast or crop context is
+   unavailable, do not invent a regime change or plan. Call
+   `acknowledge_trigger(..., neutral_fallback=true)` with the audit identifiers
+   and the unavailable input. This records a neutral terminal outcome, not
+   successful required-plan acceptance.
+5. **Write one valid full expiring plan** — call `set_plan` using bounded
+   ClimateIntent transitions, current crop corridors, and the assembled
+   forecast calibration. Retain safe current policy if the deviation needs
+   no change; a normal acknowledgement or one-off `set_tunable` cannot satisfy
+   this trigger. Preserve deterministic safety and experiment-owned fields;
+   proposals for those fields remain shadow proposals.
+6. **Confirm persistence before reporting** — correct rejected plans and retry
+   within the delivery SLA. Report the actual plan or explicit neutral fallback,
+   without claiming unconfirmed device execution.
 
 ### Assembled Context
 {context}
@@ -1086,6 +1086,7 @@ _PROMPT_BUILDERS = {
     # from the pre-Phase-4 emission path will route through here. New code
     # paths in ingestor/tasks.py emit FORECAST_DEVIATION only.
     "DEVIATION": lambda ctx, lbl, instance="local": _compose_preamble(instance) + _forecast_deviation_prompt(ctx, lbl),
+    "FORECAST": lambda ctx, lbl, instance="local": _compose_preamble(instance) + _forecast_deviation_prompt(ctx, lbl),
 }
 
 

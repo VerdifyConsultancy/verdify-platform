@@ -1099,7 +1099,10 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                 }
                 for r in gateway_failures
             ]
-            required_failed = any(f["event_type"] in ("SUNRISE", "SUNSET", "MIDNIGHT") for f in failures)
+            required_failed = any(
+                f["event_type"] in ("SUNRISE", "SUNSET", "MIDNIGHT", "FORECAST_DEVIATION", "DEVIATION", "FORECAST")
+                for f in failures
+            )
             host_down = any(f["gateway_status"] == 0 for f in failures)
             severity = "critical" if required_failed or host_down or len(failures) >= 3 else "warning"
             first = failures[0]
@@ -1135,7 +1138,7 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
             last_required_recovery AS (
                 SELECT max(expected_at) AS expected_at
                   FROM recent
-                 WHERE event_type IN ('SUNRISE', 'SUNSET', 'MIDNIGHT')
+                 WHERE event_type IN ('SUNRISE', 'SUNSET', 'MIDNIGHT', 'FORECAST_DEVIATION', 'DEVIATION', 'FORECAST')
                    AND status = 'plan_written'
                    AND terminal_action = 'set_plan'
             )
@@ -1149,7 +1152,7 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
              WHERE pdl.status = 'timed_out'
                AND pdl.delivered_at > now() - interval '6 hours'
                AND (
-                     pdl.event_type NOT IN ('SUNRISE', 'SUNSET', 'MIDNIGHT')
+                     pdl.event_type NOT IN ('SUNRISE', 'SUNSET', 'MIDNIGHT', 'FORECAST_DEVIATION', 'DEVIATION', 'FORECAST')
                      OR lrr.expected_at IS NULL
                      OR COALESCE(r.expected_at, pdl.delivered_at) > lrr.expected_at
                    )
@@ -1173,7 +1176,10 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                 }
                 for r in timed_out_deliveries
             ]
-            required_timed_out = any(t["event_type"] in ("SUNRISE", "SUNSET", "MIDNIGHT") for t in timeouts)
+            required_timed_out = any(
+                t["event_type"] in ("SUNRISE", "SUNSET", "MIDNIGHT", "FORECAST_DEVIATION", "DEVIATION", "FORECAST")
+                for t in timeouts
+            )
             severity = "critical" if required_timed_out else "warning"
             latest = timeouts[0]
             alerts.append(
@@ -1195,7 +1201,7 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                 }
             )
 
-        # 7b. Required SUNRISE/SUNSET/MIDNIGHT plans. planner_trigger_ledger is
+        # 7b. Required SUNRISE/SUNSET/MIDNIGHT/FORECAST_DEVIATION plans. planner_trigger_ledger is
         # materialized before delivery, so this catches both failure modes:
         # delivered-but-no-plan and no delivery row at all.
         required_misses = await conn.fetch(
@@ -1206,7 +1212,7 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                        resulting_plan_id, terminal_action, failure_class, notes,
                        expected_action, had_required_failure
                  FROM planner_trigger_ledger
-                 WHERE event_type IN ('SUNRISE', 'SUNSET', 'MIDNIGHT')
+                 WHERE event_type IN ('SUNRISE', 'SUNSET', 'MIDNIGHT', 'FORECAST_DEVIATION', 'DEVIATION', 'FORECAST')
                    AND expected_at > now() - interval '36 hours'
             ),
             last_required_recovery AS (
@@ -1494,7 +1500,7 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
             next_required AS (
                 SELECT event_type, due_at
                   FROM planner_trigger_ledger
-                 WHERE event_type IN ('SUNRISE', 'SUNSET', 'MIDNIGHT')
+                 WHERE event_type IN ('SUNRISE', 'SUNSET', 'MIDNIGHT', 'FORECAST_DEVIATION', 'DEVIATION', 'FORECAST')
                    AND status IN ('expected', 'delivered')
                    AND due_at >= now() - interval '2 hours'
                  ORDER BY due_at

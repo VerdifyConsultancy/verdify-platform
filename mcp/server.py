@@ -3153,7 +3153,7 @@ async def query(sql: str) -> str:
 # PLANNING TOOLS
 # ═══════════════════════════════════════════════════════════════
 
-_REQUIRED_FULL_PLAN_EVENTS = frozenset({"SUNRISE", "SUNSET", "MIDNIGHT"})
+_REQUIRED_FULL_PLAN_EVENTS = frozenset({"SUNRISE", "SUNSET", "MIDNIGHT", "FORECAST_DEVIATION", "DEVIATION", "FORECAST"})
 _LEDGER_BACKED_EVENTS = frozenset(
     {
         "SUNRISE",
@@ -3921,7 +3921,7 @@ async def acknowledge_trigger(
 ) -> str:
     """Record that Iris read a planning trigger and intentionally wrote no plan.
 
-    Use this only when a FORECAST/TRANSITION/HEARTBEAT cycle needs no setpoint
+    Use this only when a TRANSITION/HEARTBEAT cycle needs no setpoint
     change. It turns the matching plan_delivery_log row from pending -> acked,
     so SLA monitors can distinguish "read/no action" from "silent drop"."""
     try:

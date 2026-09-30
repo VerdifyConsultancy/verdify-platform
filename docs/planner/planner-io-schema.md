@@ -180,4 +180,8 @@ heartbeat (`ingestor/tasks/heartbeat.py`): **MIDNIGHT** (end-of-day review),
 **MANUAL** (MCP `plan_run`), and **WEEKLY** (deep performance review + strategy
 adjustment, materialized once per week on the review weekday). MIDNIGHT and WEEKLY
 are review-cadence triggers; the solar set drives tactical day-shape planning;
-FORECAST_DEVIATION is the dynamic-replanning path.
+FORECAST_DEVIATION is the dynamic-replanning path and requires one valid,
+expiring full `set_plan`. An explicit `neutral_fallback` records unavailable
+inputs as a terminal failure to plan; ordinary acknowledgement or a one-off
+`set_tunable` does not satisfy required-plan acceptance. Experiment-owned
+fields remain shadow proposals and deterministic safety remains authoritative.

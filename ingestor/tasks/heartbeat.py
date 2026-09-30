@@ -54,6 +54,8 @@ from .forecast import (
 
 
 def _trigger_spec_for_event(event_type: str, label: str | None = None) -> PlannerTriggerSpec | None:
+    if event_type in ("DEVIATION", "FORECAST"):
+        event_type = "FORECAST_DEVIATION"
     normalized_label = (label or "").lower()
     matches = [spec for spec in PLANNER_TRIGGER_MATRIX.values() if spec.event_type == event_type]
     if len(matches) <= 1 or not normalized_label:
