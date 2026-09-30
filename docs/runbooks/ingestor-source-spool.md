@@ -141,7 +141,8 @@ this inventory immediately before adoption; it is time-sensitive.
    native connection. Mount only this claim at `/restore`, run as UID/GID1000,
    fsGroup1000. Its scheduling binds the WFFC claim. Verify claim/PV identity,
    capacity and two healthy Longhorn replicas before old-pod replacement.
-4. Restore the reviewed archive through `kubectl exec -i` into the transfer Pod,
+4. Keep the bound transfer destination empty until the final quiescent handoff
+   below. Restore that final archive through `kubectl exec -i` into the transfer Pod,
    refusing a nonempty destination rather than overwriting retained state. Extract
    only relative regular files/directories: reject absolute paths, `..`, symlinks
    and hardlinks. Preserve the original content and write permissions for UID1000;
