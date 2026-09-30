@@ -1737,13 +1737,11 @@ def test_dispatcher_gates_ai_moisture_stress_until_firmware_supports_entities():
         "sw_direct_wet_stress_override_enabled",
         "direct_wet_stress_vpd_margin_kpa",
         "direct_wet_stress_min_dew_margin_f",
-        "direct_wet_stress_latest_hour",
     } == tasks.AI_MOISTURE_STRESS_POLICY_PARAMS
     assert {
         "direct_wet_stress_override_enabled",
         "direct_wet_stress_vpd_margin_kpa",
         "direct_wet_stress_min_dew_margin_f",
-        "direct_wet_stress_latest_hour",
     } == tasks.AI_MOISTURE_STRESS_REQUIRED_OBJECT_IDS
 
     src = _tasks_src()
@@ -1762,10 +1760,21 @@ def test_dispatcher_gates_ai_moisture_stress_until_firmware_supports_entities():
 
         tasks.shared.cfg_readback.update({param: 0.0 for param in tasks.AI_MOISTURE_STRESS_POLICY_PARAMS})
         assert tasks._ai_moisture_stress_policy_supported() is True
+        for required in tasks.AI_MOISTURE_STRESS_POLICY_PARAMS:
+            tasks.shared.cfg_readback.pop(required)
+            assert tasks._ai_moisture_stress_policy_supported() is False
+            tasks.shared.cfg_readback[required] = 0.0
 
         tasks.shared.cfg_readback.clear()
         tasks.shared.esp32["keys"] = {key: object() for key in tasks.AI_MOISTURE_STRESS_REQUIRED_OBJECT_IDS}
         assert tasks._ai_moisture_stress_policy_supported() is True
+        # Every current physical route remains mandatory. The retired clock
+        # route is absent from this successful connected-firmware fixture.
+        for required in tasks.AI_MOISTURE_STRESS_REQUIRED_OBJECT_IDS:
+            tasks.shared.esp32["keys"].pop(required)
+            assert tasks._ai_moisture_stress_policy_supported() is False
+            tasks.shared.esp32["keys"][required] = object()
+        assert "direct_wet_stress_latest_hour" not in tasks.AI_MOISTURE_STRESS_REQUIRED_OBJECT_IDS
     finally:
         tasks.shared.esp32["keys"] = original_keys
         tasks.shared.cfg_readback.clear()
