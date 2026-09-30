@@ -380,6 +380,8 @@ class State:
         self.climate: dict[str, float] = {}
         # Last-known values with timestamps (never cleared, used as fallback)
         self.climate_latest: dict[str, tuple[float, datetime]] = {}
+        self.climate_provenance: dict[str, dict[str, Any]] = {}
+        self.climate_latest_provenance: dict[str, dict[str, Any]] = {}
         # Native callback receive evidence is separate from climate's 600 s
         # carry-forward cache. It grants no physical probe freshness.
         self.fixed_panel_native = NativeProbeTracker(
@@ -570,6 +572,15 @@ def _fanout_publish(table: str, row: dict[str, Any]) -> None:
     _fanout_publisher.publish_row(table, GREENHOUSE_ID, row)
 
 
+def _note_climate_provenance(column: str, transport: str) -> None:
+    state.climate_provenance[column] = {
+        "received_at": datetime.now(UTC).isoformat(),
+        "runtime_instance_id": COUNTER_SOURCE_RUNTIME_INSTANCE_ID,
+        "transport": transport,
+        "connection_generation": shared.transport_generation if transport == "esphome" else None,
+    }
+
+
 def _record_mqtt_feedback(topic: str, payload: str) -> bool:
     """Record a live MQTT feedback payload into the next climate flush."""
     col = MQTT_FEEDBACK_MAP.get(topic)
@@ -580,6 +591,7 @@ def _record_mqtt_feedback(topic: str, payload: str) -> bool:
         log.warning("MQTT feedback rejected invalid value: %s column=%s payload=%r", topic, col, payload)
         return False
     state.climate[col] = val
+    _note_climate_provenance(col, "mqtt")
     return True
 
 
@@ -594,8 +606,10 @@ def _record_climate_sensor(obj_id: str, value: Any) -> bool:
             log.warning("ESPHome feedback rejected invalid value: %s column=%s value=%r", obj_id, col, value)
             return True
         state.climate[col] = normalized
+        _note_climate_provenance(col, "esphome")
         return True
     state.climate[col] = value
+    _note_climate_provenance(col, "esphome")
     return True
 
 
@@ -910,6 +924,85 @@ async def create_equipment_source_pool() -> asyncpg.Pool | None:
     return pool
 
 
+_climate_event_spool: SourceSpool | None = None
+
+
+def _climate_event_spool_enabled() -> bool:
+    return os.environ.get("VERDIFY_CLIMATE_EVENT_SPOOL_ENABLED") == "1"
+
+
+def _get_climate_event_spool() -> SourceSpool:
+    global _climate_event_spool
+    if _climate_event_spool is None:
+        if CLIMATE_SPOOL_PATH.exists() and CLIMATE_SPOOL_PATH.stat().st_size:
+            raise RuntimeError("legacy climate JSONL lacks event identities; preserve and review before activation")
+        _climate_event_spool = SourceSpool(
+            STATE_DIR / "spool" / "climate-events-v1.sqlite",
+            max_rows=CLIMATE_SPOOL_MAX_ROWS,
+            max_bytes=int(os.environ.get("CLIMATE_EVENT_SPOOL_MAX_BYTES", "134217728")),
+        )
+    return _climate_event_spool
+
+
+async def _drain_climate_event_spool(pool: asyncpg.Pool) -> None:
+    spool = _get_climate_event_spool()
+    for kind, identity, event in spool.rows():
+        if kind != "climate":
+            raise ValueError("unsupported climate event spool record")
+        row = event["row"]
+        ts = _coerce_spooled_ts(row["ts"])
+        payload = {key: value for key, value in row.items() if key != "ts"}
+        async with pool.acquire() as conn:
+            inserted = await conn.fetchval(
+                "SELECT public.fn_record_climate_source_event($1::uuid,$2::timestamptz,$3::text,$4::uuid,$5::bigint,$6::jsonb,$7::jsonb)",
+                identity,
+                ts,
+                event["greenhouse_id"],
+                event["runtime_instance_id"],
+                event["connection_generation"],
+                json.dumps(payload, sort_keys=True, allow_nan=False),
+                json.dumps(event["sample_provenance"], sort_keys=True, allow_nan=False),
+            )
+        # Unknown DB commit retains the same UUID and immutable payload. A retry
+        # returns false, so it cannot fan out a second row or grant confirmation.
+        spool.acknowledge([identity])
+        if inserted:
+            _fanout_publish("climate", {"ts": ts, **payload})
+
+
+def _accept_climate_event(ts: datetime, merged: dict[str, Any]) -> None:
+    fresh = dict(state.climate)
+    lineage = {
+        column: state.climate_latest_provenance.get(column, {"received_at": None, "source": "unknown_legacy_cache"})
+        for column in merged
+    }
+    lineage.update(
+        {
+            column: state.climate_provenance.get(column, {"received_at": None, "source": "unknown_legacy_cache"})
+            for column in fresh
+        }
+    )
+    event = {
+        "row": {"ts": ts.isoformat(), **merged},
+        "greenhouse_id": GREENHOUSE_ID,
+        "runtime_instance_id": COUNTER_SOURCE_RUNTIME_INSTANCE_ID,
+        "connection_generation": shared.transport_generation,
+        "sample_provenance": lineage,
+    }
+    spool = _get_climate_event_spool()
+    spool.put("climate", str(uuid4()), event)
+    # No await occurs between snapshot, durable commit and clearing fresh data.
+    # If capacity/fsync fails, the original fresh buffer remains unchanged.
+    for column, value in fresh.items():
+        state.climate_latest[column] = (value, ts)
+        state.climate_latest_provenance[column] = lineage[column]
+    state.climate.clear()
+    state.climate_provenance.clear()
+    depth, size = spool.backlog()
+    if depth >= spool.max_rows * 0.8 or size >= spool.max_bytes * 0.8:
+        log.warning("climate event spool backlog high rows=%d bytes=%d", depth, size)
+
+
 async def _drain_climate_spool(pool: asyncpg.Pool) -> None:
     try:
         rows = _read_climate_spool_rows()
@@ -967,16 +1060,14 @@ async def write_climate(pool: asyncpg.Pool, ts: datetime) -> None:
     # Step 2: Overlay fresh values (always take precedence)
     merged.update(state.climate)
 
-    # Step 3: Update last-known with any fresh values
-    for col, val in state.climate.items():
-        state.climate_latest[col] = (val, ts)
-
-    # Step 4: Clear fresh buffer
-    state.climate.clear()
-
     # Step 5: Validate + write merged row
     cols = list(merged.keys())
     if not cols:
+        if _climate_event_spool_enabled():
+            try:
+                await _drain_climate_event_spool(pool)
+            except Exception as exc:
+                log.error("retained climate event awaits replay: %s", type(exc).__name__)
         return
     # Validate ranges on every known column (rh∈[0,100], vpd∈[0,20], etc.).
     # extra="ignore" means novel column names pass through to the INSERT —
@@ -999,6 +1090,21 @@ async def write_climate(pool: asyncpg.Pool, ts: datetime) -> None:
             # Continue — the write still attempts. Validation is observability,
             # not a hard gate (yet). A future sprint will promote to fail-closed
             # once the known-false-positive-free baseline is proven.
+
+    if _climate_event_spool_enabled():
+        _accept_climate_event(ts, merged)
+        try:
+            await _drain_climate_event_spool(pool)
+        except Exception as exc:
+            log.error("durably accepted climate event awaits replay: %s", type(exc).__name__)
+        return
+
+    # Step 3: Update last-known with any fresh values
+    for col, val in state.climate.items():
+        state.climate_latest[col] = (val, ts)
+
+    # Step 4: Clear fresh buffer
+    state.climate.clear()
 
     await _drain_climate_spool(pool)
     row = {"ts": ts, **merged}
@@ -3417,10 +3523,10 @@ async def flush_loop(
         if now - last_climate >= CLIMATE_FLUSH_INTERVAL:
             try:
                 await write_climate(pool, ts)
+                last_climate = now
                 if now - last_climate_action_log >= CLIMATE_ACTION_LOG_INTERVAL:
                     if await write_climate_action_log(pool, ts):
                         last_climate_action_log = now
-                last_climate = now
             except Exception as e:
                 log.error(f"climate write error: {e}")
 
@@ -4844,6 +4950,13 @@ async def main() -> None:
         )
         return
 
+    if _climate_event_spool_enabled():
+        _get_climate_event_spool()
+        async with pool.acquire() as conn:
+            if not await conn.fetchval(
+                "SELECT to_regprocedure('public.fn_record_climate_source_event(uuid,timestamptz,text,uuid,bigint,jsonb,jsonb)') IS NOT NULL"
+            ):
+                raise RuntimeError("climate event spool requires migration 265 before device startup")
     component_pool, equipment_source_pool = await create_dedicated_mutation_pools()
     if os.environ.get("VERDIFY_SOURCE_SPOOL_ENABLED") == "1" and equipment_source_pool is None:
         raise RuntimeError("durable equipment source spool requires its dedicated collector login")
