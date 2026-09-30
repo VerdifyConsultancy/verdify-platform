@@ -1,0 +1,18 @@
+# Review candidate only; deliberately not included by the prod kustomization.
+# Requires migration265, the retained state PVC, and source collector login.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-ingestor
+spec:
+  template:
+    spec:
+      containers:
+        - name: ingestor
+          env:
+            - name: VERDIFY_CLIMATE_EVENT_SPOOL_ENABLED
+              value: "1"
+            - name: CLIMATE_EVENT_SPOOL_MAX_BYTES
+              value: "134217728"
+            - name: CLIMATE_SPOOL_MAX_ROWS
+              value: "2880"
