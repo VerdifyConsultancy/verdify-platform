@@ -105,3 +105,45 @@ def test_cached_state_replay_invalidates_entire_request(monkeypatch):
     c.configure({"request_id": str(uuid4())}, runtime=c.identity[1], generation=3, entities=[])
     fill(c, moment + timedelta(seconds=60))
     assert len(c.epochs) == 1  # new reviewed request, naturally published values
+
+
+def test_invalid_device_sample_and_callback_clocks_are_unavailable():
+    import copy
+
+    import pytest
+    from tasks.c1_capture import _validated_band_sample
+
+    now = datetime.now(UTC)
+    valid = {
+        "completed_at": now.isoformat(),
+        "band_callbacks": {
+            "consumed_band_sample_epoch": {"value": str(int(now.timestamp())), "observed_at": now.isoformat()},
+            "consumed_temp_low_f": {"value": 70.0, "observed_at": now.isoformat()},
+        },
+    }
+    assert _validated_band_sample(valid, now) <= now
+    for marker in [
+        "",
+        "nan",
+        "-1",
+        "4294967296",
+        str(int((now + timedelta(minutes=1)).timestamp())),
+        str(int((now - timedelta(minutes=16)).timestamp())),
+        None,
+        1,
+    ]:
+        bad = copy.deepcopy(valid)
+        bad["band_callbacks"]["consumed_band_sample_epoch"]["value"] = marker
+        with pytest.raises(ValueError):
+            _validated_band_sample(bad, now)
+    for timestamp in [
+        "invalid",
+        now.replace(tzinfo=None).isoformat(),
+        (now + timedelta(seconds=1)).isoformat(),
+        (now - timedelta(minutes=16)).isoformat(),
+    ]:
+        bad = copy.deepcopy(valid)
+        bad["band_callbacks"]["consumed_temp_low_f"]["observed_at"] = timestamp
+        with pytest.raises(ValueError):
+            _validated_band_sample(bad, now)
+    assert valid["band_callbacks"]["consumed_temp_low_f"]["value"] == 70.0

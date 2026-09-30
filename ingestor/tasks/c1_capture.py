@@ -181,6 +181,31 @@ def _source_revisions():
     }
 
 
+def _validated_band_sample(epoch, now):
+    """Validate exact device computation clock and original callback clocks."""
+    bands = epoch["band_callbacks"]
+    raw = bands["consumed_band_sample_epoch"]["value"]
+    if not isinstance(raw, str) or not raw.isascii() or not raw.isdecimal() or len(raw) > 10:
+        raise ValueError("consumed_band_sample_clock_unavailable")
+    seconds = int(raw)
+    if not 0 < seconds <= 0xFFFFFFFF:
+        raise ValueError("consumed_band_sample_clock_out_of_range")
+    sample = datetime.fromtimestamp(seconds, UTC)
+    completed = datetime.fromisoformat(epoch["completed_at"])
+    if completed.tzinfo is None or completed > now:
+        raise ValueError("source_epoch_clock_invalid")
+    if not 0 <= (completed - sample).total_seconds() <= 900:
+        raise ValueError("consumed_band_sample_clock_not_current")
+    for row in bands.values():
+        try:
+            moment = datetime.fromisoformat(row["observed_at"])
+        except (TypeError, ValueError, KeyError) as exc:
+            raise ValueError("band_callback_clock_invalid") from exc
+        if moment.tzinfo is None or not 0 <= (completed - moment).total_seconds() <= 900:
+            raise ValueError("band_callback_clock_not_current")
+    return sample
+
+
 async def capture_native_source(pool):
     """Two passive callback epochs after initial subscription readiness.
 
@@ -263,8 +288,19 @@ async def capture_native_source(pool):
             continue
         if epoch["reset_detected"] or bands["firmware_version"]["value"] != evidence.firmware_revision:
             continue
-        sample = datetime.fromtimestamp(int(bands["consumed_band_sample_epoch"]["value"]), UTC)
-        if not 0 <= (now - sample).total_seconds() <= 900:
+        try:
+            sample = _validated_band_sample(epoch, now)
+        except ValueError as error:
+            unavailable = output / (epoch["source_epoch_id"] + ".unavailable.json")
+            if not unavailable.exists():
+                _atomic(
+                    unavailable,
+                    {
+                        "source_epoch_id": epoch["source_epoch_id"],
+                        "reason": str(error),
+                        "qualification_claimed": False,
+                    },
+                )
             continue
         # Firmware consumes integer local minutes. Preserve the original sample
         # time separately; evaluate served values for exactly its control minute.
