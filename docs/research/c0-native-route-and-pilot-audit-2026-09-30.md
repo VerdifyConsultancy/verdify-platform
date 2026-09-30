@@ -111,3 +111,41 @@ psql -X -qAt -v ON_ERROR_STOP=1 -d verdify_rehearsal \
 The restore's independently verified paired backup remains the source of these
 rows. This script inserts no synthetic receipt or outcome and cannot establish
 a connected randomized executor path or physical device evidence.
+
+### September 30 measured restore
+
+The natural 08:17 UTC backup pair `verdify-20260930T081706Z` predates later
+runtime delivery. Its dump SHA-256 is
+`35bbad3b02cbba31b75adc227f501279e75f25139b6cade67c7431cfcf10d8bb`;
+password-free roles SHA-256 is
+`c3d7e6c41408ce9c3018e11aa6aea5b397b6f1a53b8e3b21b8e8f6c5d53fe200`.
+The disposable `verdify-backup-pair-restore-c52630930` Job on node4 restored
+23 hypertables and 426,420 climate rows through migration 263 (270 source
+migration entries; 271 total ledger rows), with zero unpopulated materialized
+views. Exact password-free role parity, Timescale parent/chunk owner/ACL checks,
+and the twice-replayed five-function/29-column blinded interface all passed.
+The immutable September 29 native receipt and its bounded reader matched the
+independently retained projection SHA-256 above in the restored database.
+
+The clone had no credentials or service-account token, deny-all ingress/egress,
+Unix-socket-only PostgreSQL, read-only backup mount, and bounded scratch, CPU
+and memory. This is real backup durability evidence for an existing route
+observation. No randomized row, fake climate observation or device transport
+was used for this durability witness. It supplies no connected randomized
+selector/setter/outcome qualification or physical proof.
+
+A negative probe exposed that PostgreSQL 16 `psql` ignores an argument to
+`\quit`, returning success despite the intended mismatch denial. The verifier
+now raises a SQL exception under `ON_ERROR_STOP`. A separate minimal,
+explicitly synthetic socket-only empty-receipt fixture verified mismatch denial
+at exit 3. That negative fixture is verifier behavior evidence only. The
+successful restore's SQL comparison was already observed against real backup
+rows; its success branch was unaffected by the exception correction.
+
+The private complete-restore log SHA-256 is
+`b027021e51106549124ed23b21805feb971681f31b702557d798c1fa15a72595`;
+the negative-fixture log SHA-256 is
+`396153c708524e8b231f5522ce1429d273253bec23f05abe0b87a777ebc3bfba`.
+Exact manifests and final Job identities are retained beside these logs.
+Both owned Jobs, their pods, ConfigMap and NetworkPolicy were removed and
+label-selected absence verified. The scheduled backup pair was preserved.
