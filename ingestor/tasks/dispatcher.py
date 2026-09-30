@@ -1412,7 +1412,7 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         for param, val in changes:
             source = (
                 "manual"
-                if stage_decision.rollback or probe_decision.phase == "probe" or c1_selection.phase == "send"
+                if stage_decision.rollback or probe_decision.phase == "probe" or param in c1_selection.override_fields
                 else _dispatch_source(param, planner_params, quiet_params)
             )
 
@@ -1450,6 +1450,9 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                 meta = planner_meta.get(param, {})
                 change_trigger_id = meta.get("trigger_id")
                 change_planner_instance = meta.get("planner_instance")
+                if param in c1_selection.override_fields:
+                    change_trigger_id = c1_selection.worksheet_id
+                    change_planner_instance = None
                 SetpointChange(
                     ts=(requested_at := datetime.now(UTC)),
                     parameter=param,

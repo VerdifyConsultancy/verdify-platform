@@ -32,6 +32,7 @@ class Selection:
     changes: tuple[tuple[str, float], ...] = ()
     worksheet_id: str | None = None
     reason: str = ""
+    override_fields: tuple[str, ...] = ()
 
 
 def ordinary_base48(planner_params, mister_defaults):
@@ -211,7 +212,7 @@ async def choose(conn, changes, *, base_values, base_inputs, guardrails, physics
             },
         )
         bounded_reconcile._wake_for_confirmation()
-        return Selection("send", selected, worksheet["worksheet_id"])
+        return Selection("send", selected, worksheet["worksheet_id"], override_fields=tuple(worksheet["decisions"]))
     except (ValueError, KeyError, TypeError) as error:
         reason = str(error)
     if old is None:
@@ -339,6 +340,16 @@ def physical_fence(state_dir, selection):
     if datetime.now(UTC) >= bounded_reconcile._time(worksheet["expires_at"]):
         return "c1_worksheet_expired"
     identity = worksheet["preview"]["identity"]
+    from .component_experiment import component_entity_grid_attestation
+
+    evidence = component_entity_grid_attestation()
+    if (
+        evidence is None
+        or evidence.firmware_revision != identity["firmware_revision"]
+        or evidence.grid_revision != identity["grid_revision"]
+        or not shared.writer_lease_strictly_held(minimum_remaining_s=3)
+    ):
+        return "c1_firmware_grid_or_lease_changed"
     if (
         identity["source_revision"] != os.environ.get("VERDIFY_GIT_SHA")
         or identity["pod"] != os.environ.get("HOSTNAME")
