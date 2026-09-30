@@ -10,7 +10,7 @@ SELECT current_database() = 'verdify_rehearsal'
 \if :isolated_restore_verified
 \else
     \echo 'FATAL: socket-only disposable restored database required'
-    \quit 1
+    DO $$ BEGIN RAISE EXCEPTION 'restored native route qualification failed'; END $$;
 \endif
 SELECT count(*) = 1 AND coalesce(bool_and(
     r.day = :'route_day'::date
@@ -29,7 +29,7 @@ WHERE r.receipt_id = :'route_receipt_id'::bigint
 \if :restored_native_receipt_verified
 \else
     \echo 'FATAL: restored native route receipt differs from retained source receipt'
-    \quit 1
+    DO $$ BEGIN RAISE EXCEPTION 'restored native route qualification failed'; END $$;
 \endif
 SELECT receipt_id = :'route_receipt_id'::bigint
     AND projection_sha256 = :'route_projection_sha256'
@@ -42,7 +42,7 @@ FROM public.fn_fixed_panel_native_route_day_receipt(:'route_day'::date, 'vallery
 \if :restored_native_reader_verified
 \else
     \echo 'FATAL: restored bounded native route reader differs from retained source receipt'
-    \quit 1
+    DO $$ BEGIN RAISE EXCEPTION 'restored native route qualification failed'; END $$;
 \endif
 SELECT jsonb_build_object(
     'qualification', 'restored-native-route-receipt-v1',
