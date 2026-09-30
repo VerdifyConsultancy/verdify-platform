@@ -21,6 +21,10 @@ esphome:
   friendly_name: Greenhouse
   name_add_mac_suffix: false
   min_version: 2026.1.4
+  platformio_options:
+    extra_scripts:
+      # Exact ESPHome2026.6.5 source/hash guard; no device/control change.
+      - pre:../../../build_api_batch_patch.py
   includes:
     - lib/heap_diagnostics.h
     - lib/sntp_acquisition.h
