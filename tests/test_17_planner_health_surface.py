@@ -115,7 +115,8 @@ class _ReadyConnection:
 
 
 class _RequiredTunableConnection:
-    def __init__(self) -> None:
+    def __init__(self, event_type="SUNRISE") -> None:
+        self.event_type = event_type
         self.executed: list[tuple[str, tuple[object, ...]]] = []
         self.closed = False
 
@@ -127,7 +128,7 @@ class _RequiredTunableConnection:
             return {
                 "id": 1,
                 "trigger_id": "00000000-0000-0000-0000-000000000001",
-                "event_type": "SUNRISE",
+                "event_type": self.event_type,
                 "event_label": "Morning planning cycle",
                 "status": "pending",
                 "instance": "local",
@@ -137,7 +138,7 @@ class _RequiredTunableConnection:
             "id": 2,
             "trigger_id": "00000000-0000-0000-0000-000000000001",
             "plan_delivery_log_id": 1,
-            "event_type": "SUNRISE",
+            "event_type": self.event_type,
             "status": "delivered",
             "expected_action": "set_plan",
         }
@@ -194,7 +195,7 @@ class _RequiredAckConnection:
 
     async def fetchval(self, sql: str, *args):
         self.executed.append((sql, args))
-        return 2
+        return 1 if "UPDATE plan_delivery_log" in sql else 2
 
     async def close(self):
         self.closed = True
@@ -1420,8 +1421,9 @@ async def test_mcp_db_connections_enforce_server_side_query_budget(mcp_server, m
 
 
 @pytest.mark.asyncio
-async def test_required_set_plan_rejects_set_tunable_without_writing_a_waypoint(mcp_server, monkeypatch):
-    connection = _RequiredTunableConnection()
+@pytest.mark.parametrize("event_type", ["SUNRISE", "FORECAST_DEVIATION", "DEVIATION", "FORECAST"])
+async def test_required_set_plan_rejects_set_tunable_without_writing_a_waypoint(mcp_server, monkeypatch, event_type):
+    connection = _RequiredTunableConnection(event_type)
 
     async def db():
         return connection
@@ -1467,7 +1469,7 @@ async def test_set_tunable_rejects_value_outside_stricter_firmware_bound(mcp_ser
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("event_type", ["SUNRISE", "SUNSET"])
+@pytest.mark.parametrize("event_type", ["SUNRISE", "SUNSET", "FORECAST_DEVIATION", "DEVIATION", "FORECAST"])
 async def test_required_set_plan_accepts_only_explicit_neutral_ack_fallback(mcp_server, monkeypatch, event_type):
     connection = _RequiredAckConnection(event_type)
 
@@ -1675,3 +1677,38 @@ def test_required_trigger_fired_state_waits_for_terminal_full_plan():
     assert "WHEN $3 = 'delivered' THEN NULL" in heartbeat
     assert "'wrong_action', 'neutral_fallback', 'timed_out'" in heartbeat
     assert "another SUNRISE plan exists within last 4h" not in heartbeat
+
+
+@pytest.mark.asyncio
+async def test_deviation_normal_ack_is_wrong_action(mcp_server, monkeypatch):
+    connection = _RequiredAckConnection("FORECAST_DEVIATION")
+
+    async def db():
+        return connection
+
+    monkeypatch.setattr(mcp_server, "_db", db)
+    result = json.loads(
+        await mcp_server.acknowledge_trigger(
+            trigger_id="00000000-0000-0000-0000-000000000001",
+            reason="No weather adjustment needed",
+            planner_instance="local",
+        )
+    )
+    assert result["status"] == "wrong_action"
+    assert result["terminal_action"] == "wrong_action"
+    assert all("INSERT INTO setpoint_plan" not in sql for sql, _args in connection.executed)
+    assert connection.closed
+
+
+def test_deviation_prompt_requires_expiring_full_plan_and_preserves_safety():
+    from iris_planner import _forecast_deviation_prompt
+
+    prompt = _forecast_deviation_prompt("bounded non-actuating context", "weather miss")
+    assert "one valid full expiring plan" in prompt
+    assert "`set_plan`" in prompt
+    assert "neutral_fallback=true" in prompt
+    assert "experiment-owned fields" in prompt
+    assert "shadow proposals" in prompt
+    assert "normal acknowledgement or one-off `set_tunable`" in prompt
+    assert "Confirm persistence before reporting" in prompt
+    assert "Adjust tunables only" not in prompt

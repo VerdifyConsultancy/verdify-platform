@@ -86,7 +86,9 @@ def test_required_full_plan_instance_override_routes_required_cycles_only():
     assert pick_instance("SUNRISE", "minor", config=cfg) == "opus"
     assert pick_instance("SUNSET", "major", config=cfg) == "opus"
     assert pick_instance("MIDNIGHT", "minor", config=cfg) == "opus"
-    assert pick_instance("FORECAST", "major", config=cfg) == "local"
+    assert pick_instance("DEVIATION", "minor", config=cfg) == "opus"
+    assert pick_instance("FORECAST_DEVIATION", "major", config=cfg) == "opus"
+    assert pick_instance("FORECAST", "major", config=cfg) == "opus"
     assert pick_instance("TRANSITION", "minor", config=cfg) == "local"
 
 

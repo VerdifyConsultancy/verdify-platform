@@ -268,7 +268,10 @@ def pick_instance(
     if trigger_type == "MANUAL":
         return "local"
     cfg = config or load_routing_config()
-    if trigger_type in ("SUNRISE", "SUNSET", "MIDNIGHT") and cfg.required_full_plan_instance:
+    if (
+        trigger_type in ("SUNRISE", "SUNSET", "MIDNIGHT", "DEVIATION", "FORECAST_DEVIATION", "FORECAST")
+        and cfg.required_full_plan_instance
+    ):
         return cfg.required_full_plan_instance
     return _ROUTING_TABLE.get((trigger_type, severity), "local")
 

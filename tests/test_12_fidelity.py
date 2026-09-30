@@ -1475,10 +1475,10 @@ def test_planning_milestones_use_phase4_trigger_set():
     assert matrix["WEEKLY"].expected_action == "set_plan"
     assert matrix["WEEKLY"].required_plan is False
     assert {matrix[key].hermes_route for key in matrix} == {"hermes-iris"}
-    for key in ("SUNRISE", "SUNSET", "MIDNIGHT"):
+    for key in ("SUNRISE", "SUNSET", "MIDNIGHT", "FORECAST_DEVIATION"):
         assert matrix[key].required_plan is True
         assert matrix[key].expected_action == "set_plan"
-    for key in ("SOLAR_MAX", "TRANSITION:peak_stress", "TRANSITION:decline", "FORECAST_DEVIATION", "MANUAL"):
+    for key in ("SOLAR_MAX", "TRANSITION:peak_stress", "TRANSITION:decline", "MANUAL"):
         assert matrix[key].expected_action == "any"
         assert matrix[key].required_plan is False
     for retired in (
@@ -1552,7 +1552,8 @@ def test_planner_trigger_matrix_drives_labels_and_expected_actions():
     assert tasks._milestone_event("TRANSITION:peak_stress") == ("TRANSITION", "Peak Stress")
     assert tasks._expected_action_for_event("SUNRISE", "Morning planning cycle") == "set_plan"
     assert tasks._expected_action_for_event("MIDNIGHT", "End-of-day review and reset") == "set_plan"
-    assert tasks._expected_action_for_event("FORECAST_DEVIATION", "weather miss") == "any"
+    for event in ("FORECAST_DEVIATION", "DEVIATION", "FORECAST"):
+        assert tasks._expected_action_for_event(event, "weather miss") == "set_plan"
     assert (
         tasks._expected_action_for_event("MANUAL", "validation ack-only: Ad-hoc planning cycle via MCP plan_run")
         == "acknowledge_trigger"
@@ -1668,7 +1669,7 @@ def test_required_plan_failure_history_survives_current_attempt_retry():
     assert "fn_runtime_ordinary_boundary_digest" in migration
     assert "had_required_failure', 'UPDATE'" in migration
 
-    required_alert = alerts.split("# 7b. Required SUNRISE/SUNSET/MIDNIGHT plans", 1)[1]
+    required_alert = alerts.split("# 7b. Required SUNRISE/SUNSET/MIDNIGHT/FORECAST_DEVIATION plans", 1)[1]
     required_alert = required_alert.split("# 7c. Planner ownership drift", 1)[0]
     assert "had_required_failure" in required_alert
     assert "r.expected_action = 'set_plan'" in required_alert
@@ -2664,7 +2665,7 @@ def test_mcp_classifies_required_ack_as_wrong_or_explicit_neutral():
 def test_required_plan_alert_ignores_validation_ack_only_rows():
 
     src = _tasks_src()
-    start = src.index("# 7b. Required SUNRISE/SUNSET/MIDNIGHT plans")
+    start = src.index("# 7b. Required SUNRISE/SUNSET/MIDNIGHT/FORECAST_DEVIATION plans")
     end = src.index("if required_misses:", start)
     body = src[start:end]
     assert "r.expected_action = 'set_plan'" in body

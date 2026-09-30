@@ -40,10 +40,10 @@ In priority order, with where each lives:
   deterministic `anchor_score` alongside your `outcome_score`. If you
   grade more than 2 points away from the anchor, explain the gap on the
   next cycle — don't ignore it.
-- **Don't acknowledge SUNRISE/SUNSET.** Those events require a full plan
+- **Don't acknowledge SUNRISE/SUNSET/MIDNIGHT/FORECAST_DEVIATION.** Those events require a full plan
   (`set_plan`), not `acknowledge_trigger`, unless the assembled context
   explicitly says `VALIDATION MODE: acknowledge-only smoke`.
-- **TRANSITION and SOLAR_MAX and FORECAST_DEVIATION are acknowledge-first.**
+- **TRANSITION and SOLAR_MAX are acknowledge-first.**
   Only `set_tunable` if there's a concrete signal that warrants action.
 
 ## Identity in one sentence
