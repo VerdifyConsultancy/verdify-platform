@@ -74,9 +74,11 @@ spec:
                 - name: GEMINI_API_KEY_FILE
                   value: /vkey/gemini_api_key.txt
                 - name: VERDIFY_FRIGATE_URL
-                  value: http://frigate.frigate.svc.cluster.local:5000
-                - name: VERDIFY_GO2RTC_PUBLIC_BASE_URL
-                  value: http://frigate.frigate.svc.cluster.local:1984
+                  value: https://frigate.frigate.svc.cluster.local:8971
+                - name: VERDIFY_FRIGATE_TLS_SERVER_NAME
+                  value: cameras.vallery.net
+                - name: VERDIFY_FRIGATE_TOKEN_FILE
+                  value: /vfrigate/token
                 - name: VERDIFY_SNAPSHOT_DIR
                   value: /snap
                 - name: VERDIFY_ZONES_CONFIG
@@ -111,6 +113,9 @@ spec:
                 - name: vkey
                   mountPath: /vkey
                   readOnly: true
+                - name: frigate-auth
+                  mountPath: /vfrigate
+                  readOnly: true
                 - name: snap
                   mountPath: /snap
           volumes:
@@ -120,5 +125,11 @@ spec:
             - name: vkey
               secret:
                 secretName: verdify-vision-key
+            - name: frigate-auth
+              secret:
+                secretName: verdify-frigate-vision-auth
+                items:
+                  - key: token
+                    path: token
             - name: snap
               emptyDir: {}

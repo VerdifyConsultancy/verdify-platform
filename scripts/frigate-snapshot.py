@@ -9,13 +9,13 @@ Usage:
     frigate-snapshot.py --camera greenhouse_2   # specific camera
 """
 
+import http.client
 import logging
 import os
+import ssl
 import subprocess
 import sys
-import urllib.error
 import urllib.parse
-import urllib.request
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -27,11 +27,11 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-# Frigate NVR now runs IN k3s (svc frigate.frigate.svc.cluster.local:5000);
-# the old operator-LAN host 192.168.30.142 is retired. Overridable by env so the
-# same script works from a k3s CronJob (in-cluster svc) or a laptop (LAN/host).
-FRIGATE_URL = os.environ.get("VERDIFY_FRIGATE_URL", "http://192.168.30.142:5000")
-GO2RTC_URL = os.environ.get("VERDIFY_GO2RTC_PUBLIC_BASE_URL", "http://192.168.30.142:1984")
+# Service8971 is the authenticated HTTPS proxy, not Frigate's admin API.
+FRIGATE_URL = os.environ.get("VERDIFY_FRIGATE_URL", "https://frigate.frigate.svc.cluster.local:8971")
+TLS_SERVER_NAME = os.environ.get("VERDIFY_FRIGATE_TLS_SERVER_NAME", "cameras.vallery.net")
+TOKEN_FILE = Path(os.environ.get("VERDIFY_FRIGATE_TOKEN_FILE", "/vfrigate/token"))
+MAX_SNAPSHOT_BYTES = 8 * 1024 * 1024
 CAMERAS = ["greenhouse_1", "greenhouse_2"]
 # Snapshot sink: the Syncthing vault (/mnt/iris) is gone with the iris-VM; in
 # k3s point this at an emptyDir/PVC shared with the analyze step.
@@ -39,40 +39,64 @@ VAULT_DIR = Path(os.environ.get("VERDIFY_SNAPSHOT_DIR", "/mnt/iris/verdify-vault
 DENVER = ZoneInfo("America/Denver")
 
 
+class SnapshotHTTPSConnection(http.client.HTTPSConnection):
+    """Connect through cluster DNS while verifying the provider's TLS identity."""
+
+    def connect(self):
+        http.client.HTTPConnection.connect(self)
+        self.sock = self._context.wrap_socket(self.sock, server_hostname=TLS_SERVER_NAME)
+
+
 def capture_snapshot(camera: str) -> bool:
-    """Capture latest snapshot from Frigate camera. Returns True on success."""
-    now = datetime.now(DENVER)
-    date_dir = VAULT_DIR / now.strftime("%Y-%m-%d")
-    date_dir.mkdir(parents=True, exist_ok=True)
-
-    filename = f"{camera}_{now.strftime('%H%M')}.jpg"
-    filepath = date_dir / filename
-
-    urls = [
-        f"{GO2RTC_URL.rstrip('/')}/api/frame.jpeg?{urllib.parse.urlencode({'src': camera, 'h': 1080})}",
-        f"{FRIGATE_URL.rstrip('/')}/api/{camera}/latest.jpg?h=720&quality=100",
-    ]
-
-    for url in urls:
-        req = urllib.request.Request(url, headers={"User-Agent": "verdify-snapshot/1.0"})
-        try:
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                data = resp.read()
-                if len(data) < 1000:
-                    log.warning("%s: response too small (%d bytes) — camera may be offline", camera, len(data))
-                    continue
-                filepath.write_bytes(data)
-                log.info("%s: saved %s (%d KB)", camera, filepath, len(data) // 1024)
-                return True
-        except urllib.error.HTTPError as e:
-            if e.code == 404:
-                log.warning("%s: camera not found (404) — may be offline", camera)
-            else:
-                log.warning("%s: HTTP %d — %s", camera, e.code, e.reason)
-        except Exception as e:
-            log.warning("%s: %s", camera, e)
-    log.error("%s: no snapshot endpoint succeeded", camera)
-    return False
+    """Fetch one allowed snapshot; never follow redirects or log credentials."""
+    if camera not in CAMERAS:
+        log.error("Unsupported greenhouse camera")
+        return False
+    connection = None
+    try:
+        endpoint = urllib.parse.urlsplit(FRIGATE_URL)
+        if endpoint.scheme != "https" or not endpoint.hostname or endpoint.username or endpoint.password:
+            raise ValueError("HTTPS endpoint required")
+        if endpoint.path not in ("", "/") or endpoint.query or endpoint.fragment:
+            raise ValueError("Endpoint must be an HTTPS origin")
+        token = TOKEN_FILE.read_text().strip()
+        if not token or any(c.isspace() for c in token):
+            raise ValueError("Invalid dedicated credential")
+        connection = SnapshotHTTPSConnection(
+            endpoint.hostname, endpoint.port or 443, timeout=15, context=ssl.create_default_context()
+        )
+        connection.request(
+            "GET",
+            f"/api/vision/{camera}/latest.jpg",
+            headers={"Host": TLS_SERVER_NAME, "Authorization": f"Bearer {token}", "User-Agent": "verdify-snapshot/2.0"},
+        )
+        response = connection.getresponse()
+        if response.status != 200:
+            log.error("%s: snapshot HTTP %d", camera, response.status)
+            return False
+        data = response.read(MAX_SNAPSHOT_BYTES + 1)
+        if (
+            response.getheader("Content-Type", "").split(";", 1)[0].strip().lower() != "image/jpeg"
+            or not 1000 <= len(data) <= MAX_SNAPSHOT_BYTES
+            or not data.startswith(b"\xff\xd8")
+            or not data.endswith(b"\xff\xd9")
+        ):
+            log.error("%s: invalid or oversized JPEG response", camera)
+            return False
+        now = datetime.now(DENVER)
+        date_dir = VAULT_DIR / now.strftime("%Y-%m-%d")
+        date_dir.mkdir(parents=True, exist_ok=True)
+        filepath = date_dir / f"{camera}_{now.strftime('%H%M')}.jpg"
+        filepath.write_bytes(data)
+        log.info("%s: saved %s (%d KB)", camera, filepath, len(data) // 1024)
+        return True
+    except Exception as error:
+        # HTTP/provider exception text can contain auth headers or bodies.
+        log.error("%s: snapshot failed (%s)", camera, type(error).__name__)
+        return False
+    finally:
+        if connection is not None:
+            connection.close()
 
 
 def main():
@@ -107,10 +131,14 @@ def main():
             if result.returncode == 0:
                 log.info("Analysis complete")
             else:
-                log.warning("Analysis failed: %s", result.stderr[:200] if result.stderr else "no output")
-        except Exception as e:
-            log.warning("Analysis trigger error: %s", e)
+                log.error("Analysis failed (exit %d)", result.returncode)
+                return 1
+        except Exception as error:
+            log.error("Analysis trigger failed (%s)", type(error).__name__)
+            return 1
+
+    return 0 if success == len(cameras) else 1
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

@@ -74,6 +74,7 @@ $PY -m pytest -q \
   tests/test_17_planner_health_surface.py \
   tests/test_18_twin_divergence_dashboard.py \
   tests/test_20_vision_src_sync.py \
+  tests/test_vision_authenticated_snapshots.py \
   tests/test_21_config_revision.py \
   tests/test_component_grid_capture.py \
   tests/test_c1_grid_projection.py \
