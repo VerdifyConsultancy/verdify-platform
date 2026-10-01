@@ -357,3 +357,19 @@ def test_target_profile_refuses_every_unlisted_catalog_delta(drift):
         target["seals"]["ordinary"][0][1] = "a" * 64
     with pytest.raises(ValueError):
         c0.compare(source, target)
+
+
+def test_restore_summary_preserves_actual_raw_parity_failure():
+    exact = roles.verify(SOURCE, SOURCE + MANAGEMENT)
+    assert roles.restore_summary(exact) == "[restore-pair] exact password-free role parity=true"
+    selected_mapping = mapping()
+    translated = SOURCE.replace("GRANTED BY verdify;", "GRANTED BY postgres;")
+    report = roles.verify(SOURCE, translated + MANAGEMENT, mapping=selected_mapping)
+    summary = roles.restore_summary(report)
+    assert "byte parity=false" in summary
+    assert "bootstrap-grantor-equivalence=true" in summary
+    assert "retained_grantor_differences=1" in summary
+    assert "role parity=true" not in summary
+    report["role_posture_settings_and_membership_options_equal"] = False
+    with pytest.raises(ValueError):
+        roles.restore_summary(report)

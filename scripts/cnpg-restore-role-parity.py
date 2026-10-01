@@ -226,6 +226,23 @@ def verify(source, restored, mapping=None):
     }
 
 
+def restore_summary(report):
+    if report["role_byte_parity"]:
+        return "[restore-pair] exact password-free role parity=true"
+    require(
+        report["role_posture_settings_and_membership_options_equal"]
+        and report["bootstrap_grantor_translation"]
+        and report["bootstrap_grantor_translation"]["profile"] == BOOTSTRAP_PROFILE
+        and report["raw_membership_differences"],
+        "unqualified non-byte-parity summary refused",
+    )
+    return (
+        "[restore-pair] raw password-free role byte parity=false "
+        "bootstrap-grantor-equivalence=true "
+        f"retained_grantor_differences={len(report['raw_membership_differences'])}"
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", required=True, type=Path)
@@ -235,6 +252,7 @@ def main():
     parser.add_argument("--management-before-sha256")
     parser.add_argument("--role-prefix-custody", type=Path)
     parser.add_argument("--role-prefix-current", type=Path)
+    parser.add_argument("--restore-summary", action="store_true")
     parser.add_argument("--bootstrap-identity", type=Path)
     parser.add_argument("--source-witness", type=Path)
     parser.add_argument("--source-witness-sha256")
@@ -291,10 +309,14 @@ def main():
         require(not args.role_prefix_current, "unexpected partial role artifact")
         result = prepare(source, current, mapping=mapping) if args.replay else None
     if args.replay:
+        require(not args.restore_summary, "summary requires completed verification")
         with args.replay.open("x") as stream:
             stream.write(result)
     else:
-        print(verify(source, current, mapping=mapping))
+        report = verify(source, current, mapping=mapping)
+        print(report)
+        if args.restore_summary:
+            print(restore_summary(report))
 
 
 if __name__ == "__main__":
