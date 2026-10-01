@@ -1,0 +1,24 @@
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: verdify-cnpg-rehearsal-backup
+  namespace: verdify-db-rehearsal
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: cnpg-rehearsal
+spec:
+  configuration:
+    destinationPath: s3://verdify-cnpg-rehearsal/postgresql
+    endpointURL: https://s3-hdd.vallery.net
+    s3Credentials:
+      accessKeyId:
+        name: verdify-cnpg-rehearsal-s3-writer
+        key: AWS_ACCESS_KEY_ID
+      secretAccessKey:
+        name: verdify-cnpg-rehearsal-s3-writer
+        key: AWS_SECRET_ACCESS_KEY
+    wal:
+      compression: gzip
+    data:
+      compression: gzip
+  retentionPolicy: 14d

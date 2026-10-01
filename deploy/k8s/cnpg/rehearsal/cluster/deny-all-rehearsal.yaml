@@ -1,0 +1,13 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-all-rehearsal
+  namespace: verdify-db-rehearsal
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: cnpg-rehearsal
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress

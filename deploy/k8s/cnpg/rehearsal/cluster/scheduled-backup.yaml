@@ -1,0 +1,16 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: verdify-cnpg-rehearsal-daily
+  namespace: verdify-db-rehearsal
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: cnpg-rehearsal
+spec:
+  cluster:
+    name: verdify-cnpg-rehearsal
+  schedule: 0 30 3 * * *
+  backupOwnerReference: self
+  method: plugin
+  pluginConfiguration:
+    name: barman-cloud.cloudnative-pg.io

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: verdify-db-rehearsal
+  labels:
+    verdify.ai/purpose: disposable-db-qualification
+    pod-security.kubernetes.io/enforce: restricted
