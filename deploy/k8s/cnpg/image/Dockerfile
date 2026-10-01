@@ -41,6 +41,7 @@ FROM ${CNPG_PG_BASE}
 #                          (timescaledb.control default_version, the catalog key)
 #   TIMESCALEDB_APT_PKG  = the full Debian package version (upstream~distro-build)
 # Keep both in lockstep when bumping.
+ARG POSTGRES_VERSION=16.13
 ARG TIMESCALEDB_VERSION=2.25.2
 ARG TIMESCALEDB_APT_PKG=2.25.2~debian12-1613
 # Pin the base distro codename explicitly: the CNPG operand image has no
@@ -56,7 +57,10 @@ USER root
 # is supplied via the Cluster spec's postgresql.parameters, see the cluster
 # manifest). The exact package version is asserted; the build FAILS LOUDLY if
 # the pinned 2.25.2 build is ever pulled from the repo.
+# Preserve the pinned server binary: extension/dev packages otherwise upgrade
+# postgresql-16 to the newest PGDG minor, silently changing the operand version.
 RUN set -eux; \
+    apt-mark hold postgresql-16; \
     apt-get update; \
     apt-get install -y --no-install-recommends gnupg wget ca-certificates; \
     echo "deb https://packagecloud.io/timescale/timescaledb/debian/ ${DEBIAN_CODENAME} main" \
@@ -102,6 +106,7 @@ RUN set -eux; \
     barman-cloud-wal-archive --help >/dev/null; \
     barman-cloud-backup --help >/dev/null; \
     barman-cloud-check-wal-archive --help >/dev/null; \
+    /usr/lib/postgresql/16/bin/postgres --version | grep -E "PostgreSQL\) ${POSTGRES_VERSION}([[:space:]]|$)"; \
     rm -rf /var/lib/apt/lists/*
 
 # Restore the CNPG operand contract: the operator runs the instance as uid 26
