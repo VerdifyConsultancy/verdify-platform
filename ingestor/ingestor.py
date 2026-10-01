@@ -3904,9 +3904,9 @@ async def flush_loop(
 async def esp32_loop(pool: asyncpg.Pool = None) -> None:
     """Connect to ESP32 and subscribe to all entity states.
 
-    Uses two mechanisms to detect dead connections:
-    1. on_stop callback from connect() — fires when library detects disconnect
-    2. Periodic keepalive ping via device_info() every 60s — catches silent TCP death
+    aioesphomeapi owns transport liveness: native PingRequest deadlines and
+    socket errors invoke on_stop. Any valid protobuf satisfies its keepalive.
+    The writer lease is independently checked every two seconds.
 
     On disconnect, logs the gap duration and reconnects automatically.
     """
@@ -3943,7 +3943,7 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
             noise_psk=ESP32_API_KEY,
         )
 
-        # Event that fires when the connection drops (set by on_stop callback or ping failure)
+        # Event that fires when native transport liveness fails (on_stop callback)
         connection_lost = asyncio.Event()
         disconnected_at: datetime | None = None
         connection_generation: int | None = None
@@ -4164,17 +4164,13 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
             except Exception as e:
                 log.error(f"Post-reconnect dispatch failed: {e}")
 
-            # Keepalive loop: ping every 60s via device_info().
-            # Watches for: (a) on_stop callback via connection_lost; (b) silent
-            # TCP death via the keepalive ping; (c) HA-3.2 FENCE — loss of the
-            # writer Lease (renew-or-die). The fence is polled on a SHORT cadence
-            # (every keepalive_wait) so a lease loss disconnects the ESP32 within
-            # a couple seconds — well inside the 15s lease window — guaranteeing
-            # the OLD pod drops its device ESTAB before any replacement can
-            # acquire the lease and connect (never two, even under partition).
+            # Native aioesphomeapi keepalive detects silent TCP death and invokes
+            # on_stop; sensor callbacks also prove transport liveness. A separate
+            # DeviceInfo RPC timeout is not evidence of a dead connection and can
+            # disconnect a live stream. Keep lease loss independent and bounded
+            # to two seconds, inside the 15s lease window.
             fenced = _writer_lease is not None and _writer_lease.enabled
-            keepalive_elapsed = 0.0
-            keepalive_wait = 2.0 if fenced else 60.0
+            liveness_wait = 2.0 if fenced else 60.0
             while not connection_lost.is_set():
                 # FENCE check FIRST: if we no longer hold the lease, self-fence
                 # immediately (disconnect + stop pushing). Telemetry-read could
@@ -4188,24 +4184,13 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
                     connection_lost.set()
                     break
                 try:
-                    # Wait up to keepalive_wait — if connection_lost fires, break.
-                    await asyncio.wait_for(connection_lost.wait(), timeout=keepalive_wait)
+                    # Wait up to liveness_wait — if connection_lost fires, break.
+                    await asyncio.wait_for(connection_lost.wait(), timeout=liveness_wait)
                     break
                 except TimeoutError:
-                    keepalive_elapsed += keepalive_wait
-                    # Send the device keepalive ping only every ~60s, regardless
-                    # of the (shorter, fence-driven) poll cadence.
-                    if keepalive_elapsed >= 60.0:
-                        keepalive_elapsed = 0.0
-                        try:
-                            await asyncio.wait_for(client.device_info(), timeout=10.0)
-                        except (TimeoutError, Exception) as ping_err:
-                            log.warning(f"Keepalive ping failed: {ping_err}")
-                            if disconnected_at is None:
-                                disconnected_at = datetime.now(UTC)
-                            clear_component_entity_inventory(connection_generation=connection_generation)
-                            connection_lost.set()
-                            break
+                    # The timeout only schedules the next lease check. Native
+                    # transport failure wakes the Event immediately via on_stop.
+                    continue
 
             log.warning("Connection lost — will reconnect")
             _mark_equipment_source_gap("transport_connection_lost")
