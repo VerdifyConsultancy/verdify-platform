@@ -1,0 +1,55 @@
+{
+  "schema": "verdify-warm-pilot-daily-observer-preparation-v1",
+  "status": "prepared_not_locked_not_scheduled",
+  "experiment_id": "45039c86-c1d9-52f6-a0a9-d94a17bc4b14",
+  "candidate_calendar": {
+    "timezone": "America/Denver",
+    "first_local_date": "2027-06-01",
+    "last_local_date": "2027-07-30",
+    "local_days": 60,
+    "adjacent_pairs": 30,
+    "outcome_window": "[06:00,24:00)",
+    "outcome_seconds": 64800
+  },
+  "proposed_cadence": {
+    "local_time": "00:45",
+    "timezone": "America/Denver",
+    "first_due_local_datetime": "2027-06-02T00:45:00-06:00",
+    "last_due_local_datetime": "2027-07-31T00:45:00-06:00",
+    "timeliness": "Retain actual server as_of; runs later than 24 hours after a day ends are late. Never backdate or replace days.",
+    "executor": "attended read-only laptop operator command; no scheduler installed",
+    "accountable_owner_role": "Research lead (#784)"
+  },
+  "qualified_reconciler_source_revision": "9743121c5294fb045320aa78729cb3f66c202976",
+  "source_files": {
+    "scripts/experiment-v2-reconcile.py": "79ee3825b53d192bb51d59820905c6178525e478fa94b9c4fbcfe121a9b7bdcb",
+    "research/planner-efficacy/protocols/daily-reconciliation-v1.schema.json": "686608212139d381299877ccdbb4890d67ad04d07c6ab8d8dbde202483ad6f99",
+    "research/planner-efficacy/protocols/warm-season-calendar-prereg-2027-v1.json": "f63dcca480c5413fcd66480e81eb5afb18f4f8395885b4392975cd4eca6d1301"
+  },
+  "custody": {
+    "receipt_filename": "receipt-<actual-UTC-capture-timestamp>.json",
+    "mode": "exclusive0600/file_and_directory_fsync",
+    "archive_separate_from_winter": true,
+    "publication": "blinded integrity receipts and immutable archive manifest only; no efficacy or X/Y mapping",
+    "paired_db_backup_scope": "Existing database-owned assignment/freeze/evidence/export data; latest paired backup receipt recorded independently. Local receipt archive backup has no current acceptance proof.",
+    "off_host_receipt_archive_backup_receipt": null
+  },
+  "scientific_inputs": {
+    "prospective_fixed_panel_physical_lineage": null,
+    "future_crop_targets_and_contributor_revisions": null,
+    "asof_frozen_selector_forecast_equipment_replay": null,
+    "exact_18h_paired_covariance_carryover_joint_power": null,
+    "qualified_physical_receipt": null,
+    "design_lock_sha256": null,
+    "single_blinded_draw_receipt": null,
+    "randomized_day1_authority": null
+  },
+  "daily_source_boundaries": {
+    "assignment_outcome_evidence_export_hashes": "covered by standalone reconciliation CLI",
+    "choice_fallback_delivery_rescue_reset": "source details remain in hashed frozen evidence; CLI reports retained flags, not an independent safety or reset classification",
+    "live_safety_maintenance_weather_resource_eligibility": "not independently observed by CLI; preserve separate source-stamped incident/environment receipts",
+    "backup": "not checked by CLI; use actual existing owner receipt without inventing successful backup"
+  },
+  "winter_scope": "Separate registered passive Nov2-Dec31,2026 packet; do not alter/re-register or reuse its PVC. No warm assignment inferred from winter receipt.",
+  "completion_scope": "Preparation only. Reconciled scheduled snapshots or verified archive indexes do not qualify a launch, completed sixty-day pilot, reveal or causal/resource claim."
+}
