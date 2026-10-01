@@ -93,9 +93,19 @@ done
 # be healthy if only one address is affected.
 section "Modbus bus (timeout distribution, last 2 min)"
 
-MODBUS_ROWS=$("${DB[@]}" "SELECT regexp_replace(message, '.*from ([0-9]+) .*', '\1') AS addr, count(*) FROM esp32_logs WHERE ts > now() - interval '2 min' AND message ILIKE '%modbus:064%' GROUP BY 1 ORDER BY 1" 2>/dev/null)
+# ESPHome embeds its tag and source line in message; the separate tag column
+# can be NULL. Match the timeout itself, independent of vendor line numbers.
+if ! MODBUS_ROWS=$("${DB[@]}" "SELECT substring(message from 'Stop waiting for response from ([0-9]+) ') AS addr, count(*) FROM esp32_logs WHERE ts > now() - interval '2 min' AND message ~ '[[]modbus:[0-9]+]: Stop waiting for response from [0-9]+ [0-9]+ms after last send' GROUP BY 1 ORDER BY 1" 2>/dev/null); then
+    fail "Modbus timeout query unavailable — bus health unknown"
+    MODBUS_ROWS=""
+    MODBUS_QUERY_FAILED=1
+else
+    MODBUS_QUERY_FAILED=0
+fi
 
-if [[ -z "$MODBUS_ROWS" ]]; then
+if [[ "$MODBUS_QUERY_FAILED" -eq 1 ]]; then
+    : # Query failure above must not become a false healthy result.
+elif [[ -z "$MODBUS_ROWS" ]]; then
     pass "No Modbus timeouts on any address"
 else
     while IFS='|' read -r addr count; do
