@@ -19,6 +19,7 @@ spec = importlib.util.spec_from_file_location("boundary", ROOT / "scripts/ordina
 boundary = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(boundary)
 VERSION = "cnpg-c0-logical-recovery-witness-v2"
+BOOTSTRAP_PROFILE = "cnpg-source-bootstrap-grantor-v1"
 MCP_SOURCE = "db/migrations/263-mcp-timescale-chunk-boundary-digest.sql"
 MCP_SHA = "9f5fa53cde76224b06865095bfd9a531aadae058f6ca13e50e74ecd95ad5770b"
 MIGRATION_268_SHA = "aed9c4e562ff0420e315d14211224d1fff6469b9e0d2a541aedbc0bc562447e0"
@@ -125,7 +126,9 @@ def ordinary_projection(login, *, semantic=False):
     return body, cte
 
 
-def emit_sql(target=False):
+def emit_sql(target=False, *, bootstrap_grantor_profile=False):
+    require(not bootstrap_grantor_profile or target, "bootstrap translation is target-only")
+    profile_sql = "'" + BOOTSTRAP_PROFILE + "'" if bootstrap_grantor_profile else "NULL"
     database, version = ("verdify_rehearsal", 160013) if target else ("verdify", 160011)
     guard = "OR current_setting('cluster_name') <> 'verdify-cnpg-rehearsal'" if target else ""
     queries = []
@@ -194,6 +197,8 @@ END $implementation_guard$;
 SELECT jsonb_build_object(
  'version','{VERSION}', 'database',current_database(), 'server',current_setting('server_version_num')::int,
  'roles',(SELECT jsonb_object_agg(oid::text,rolname) FROM pg_roles),
+ 'bootstrap_grantor_profile',{profile_sql},
+ 'bootstrap_identity',(SELECT jsonb_build_object('oid',oid::int,'name',rolname,'superuser',rolsuper) FROM pg_roles WHERE oid=10),
  'database_owner',(SELECT pg_get_userbyid(datdba) FROM pg_database WHERE datname=current_database()),
  'database_acl',(SELECT jsonb_agg(jsonb_build_array(
       CASE WHEN a.grantee=0 THEN 'PUBLIC' ELSE pg_get_userbyid(a.grantee) END,
@@ -309,12 +314,79 @@ def checked(snapshot, *, target):
         if not target:
             seal = ordinary[login] if login in ordinary else snapshot["seals"]["mcp"][0]
             require(seal == digest, "source receipt is stale")
+        if login in ordinary:
+            require(
+                sorted(e for e in data["raw_entries"] if e.startswith("member|"))
+                == sorted(e for e in data["semantic_entries"] if e.startswith("member|")),
+                "semantic membership differs from native raw membership",
+            )
         semantic[login] = sorted(
             data["semantic_entries"]
             if login in ordinary
             else [semantic_mcp(e, roles, namespaces) for e in data["raw_entries"]]
         )
     return semantic
+
+
+def bootstrap_profile(source, target):
+    marker = target.get("bootstrap_grantor_profile")
+    if marker is None:
+        return None
+    require(marker == BOOTSTRAP_PROFILE, "unsupported target bootstrap grantor profile")
+    require(source["roles"].get("10") == "verdify", "frozen source OID10 bootstrap fact required")
+    require(
+        target["roles"].get("10") == "postgres"
+        and target.get("bootstrap_identity") == {"oid": 10, "name": "postgres", "superuser": True},
+        "native target OID10 bootstrap fact required",
+    )
+    return {
+        "profile": BOOTSTRAP_PROFILE,
+        "source_oid": 10,
+        "source_name": "verdify",
+        "target_oid": 10,
+        "target_name": "postgres",
+    }
+
+
+def translate_bootstrap_memberships(source, target, left, right):
+    profile = bootstrap_profile(source, target)
+    if profile is None:
+        return right, []
+    translated, changes = {}, []
+    for login, entries in right.items():
+        translated[login] = []
+        ordinary = login in boundary.LOGINS
+        for entry in entries:
+            parts = entry.split("|")
+            slot = 3
+            marker = "grantor=postgres" if ordinary else "postgres"
+            if parts[0] == "member" and parts[slot] == marker:
+                require(len(parts) == 7, "unexpected member projection shape")
+                if ordinary:
+                    require(
+                        entry in target["boundaries"][login]["raw_entries"],
+                        "semantic member differs from native raw member",
+                    )
+                    parts[slot] = "grantor=verdify"
+                else:
+                    require(
+                        any(
+                            raw.split("|")[0] == "member"
+                            and raw.split("|")[3] == "10"
+                            and semantic_mcp(raw, target["roles"], target["namespaces"]) == entry
+                            for raw in target["boundaries"][login]["raw_entries"]
+                        ),
+                        "member grantor not native bootstrap OID10",
+                    )
+                    parts[slot] = "verdify"
+                counterpart = "|".join(parts)
+                require(counterpart in left[login], "bootstrap change has no exact source membership counterpart")
+                changes.append({"login": login, "source": counterpart, "target": entry})
+                entry = counterpart
+            translated[login].append(entry)
+        translated[login].sort()
+    require(changes, "bootstrap profile has no native grantor delta")
+    return translated, changes
 
 
 def compare(source, target):
@@ -325,10 +397,15 @@ def compare(source, target):
         source["portable_catalog"] and source["portable_catalog"] == target["portable_catalog"],
         "full workload object/ACL/definition catalog drift",
     )
-    require(left == right, "semantic boundary drift beyond role OIDs/database name")
+    physical_semantic_equal = left == right
+    translated, changes = translate_bootstrap_memberships(source, target, left, right)
+    require(left == translated, "semantic boundary drift beyond qualified typed target profile")
     return {
         "version": VERSION,
         "semantic_boundaries_equal": True,
+        "physical_semantic_boundaries_equal": physical_semantic_equal,
+        "bootstrap_grantor_profile": bootstrap_profile(source, target),
+        "raw_bootstrap_grantor_differences": changes,
         "original_ledger_and_seals_retained": True,
         "runtime_transition_installed": False,
         "target_native_digests": {k: v["native"] for k, v in target["boundaries"].items()},
@@ -338,6 +415,7 @@ def compare(source, target):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--target", action="store_true")
+    parser.add_argument("--bootstrap-grantor-profile", action="store_true")
     parser.add_argument("--source", type=Path)
     parser.add_argument("--restored", type=Path)
     parser.add_argument("--output", required=True, type=Path)
@@ -349,7 +427,7 @@ def main():
         result = compare(source, target) | {"source_witness_sha256": source_sha, "target_witness_sha256": target_sha}
         content = json.dumps(result, indent=2) + "\n"
     else:
-        content = emit_sql(args.target)
+        content = emit_sql(args.target, bootstrap_grantor_profile=args.bootstrap_grantor_profile)
     with args.output.open("x") as stream:
         stream.write(content)
 

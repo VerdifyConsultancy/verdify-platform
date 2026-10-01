@@ -91,10 +91,15 @@ def target_receipt_shape():
         FROM pg_index WHERE indrelid=to_regclass('{TABLE}'))"""
 
 
-def target_body(original, mcp=False):
+def target_body(original, mcp=False, bootstrap_grantor_profile=False):
+    bootstrap_guard = (
+        " OR NOT EXISTS(SELECT 1 FROM pg_catalog.pg_roles WHERE oid=10 AND rolname='postgres' AND rolsuper)"
+        if bootstrap_grantor_profile
+        else ""
+    )
     guard = f"""\n    IF current_database()<>'{DATABASE}' OR current_setting('server_version_num')::int<>{SERVER}
        OR current_setting('cluster_name')<>'{operator.CLUSTER}' OR pg_is_in_recovery()
-       OR current_user<>'verdify' OR NOT coalesce(({target_receipt_shape()}),false) THEN
+       OR current_user<>'verdify' OR NOT coalesce(({target_receipt_shape()}),false){bootstrap_guard} THEN
         RETURN false;
     END IF;
     IF (SELECT count(*) FROM {TABLE})<>3
@@ -122,7 +127,7 @@ def classify_ddl(sql):
     return {"self_committing": False, "reasons": []}
 
 
-def ddl():
+def ddl(bootstrap_grantor_profile=False):
     c0.require(digest(c0.boundary.SOURCE.read_bytes()) == c0.boundary.SOURCE_SHA256, "ordinary source drift")
     c0.require(digest(MCP_ATTEST_SOURCE.read_bytes()) == MCP_ATTEST_SHA, "MCP attester source drift")
     ordinary = (
@@ -142,7 +147,7 @@ def ddl():
         ("fn_mcp_runtime_attest_ordinary_login", mcp, True),
     ]:
         original = suffix.split("AS $body$", 1)[1].split("$body$;", 1)[0]
-        body = target_body(original, is_mcp)
+        body = target_body(original, is_mcp, bootstrap_grantor_profile)
         bodies[name] = body
         statements.append("CREATE OR REPLACE FUNCTION public." + name + "()" + suffix.replace(original, body, 1))
     table = f"""CREATE TABLE {TABLE} (
@@ -158,11 +163,11 @@ def ddl():
     return result, bodies
 
 
-def witness_select():
+def witness_select(target=None):
     c0.require(c0.VERSION == "cnpg-c0-logical-recovery-witness-v2", "full identity v2 prerequisite missing")
     # Use the same independently source-pinned witness, including executable
     # digest guards; its attester definitions legitimately differ after DDL.
-    sql = c0.emit_sql(target=True)
+    sql = c0.emit_sql(target=True, bootstrap_grantor_profile=bool(target and target.get("bootstrap_grantor_profile")))
     return sql[sql.index("DO $guard$") : sql.rindex("COMMIT;")].strip()
 
 
@@ -194,8 +199,25 @@ def validate_post(before, after):
     # The original qualifier checks executable native digest functions unchanged,
     # but does not claim post-DDL semantic equality with the old source catalog.
     c0.checked(after, target=True)
-    for field in ["database", "server", "roles", "namespaces", "database_owner", "database_acl", "ledger", "seals"]:
-        c0.require(before[field] == after[field], "post-DDL historical/identity drift")
+    for field in [
+        "database",
+        "server",
+        "roles",
+        "namespaces",
+        "database_owner",
+        "database_acl",
+        "ledger",
+        "seals",
+        "bootstrap_grantor_profile",
+        "bootstrap_identity",
+    ]:
+        c0.require(before.get(field) == after.get(field), "post-DDL historical/identity drift")
+    for login in LOGINS:
+        c0.require(
+            sorted(e for e in before["boundaries"][login]["raw_entries"] if e.startswith("member|"))
+            == sorted(e for e in after["boundaries"][login]["raw_entries"] if e.startswith("member|")),
+            "post-DDL native membership drift",
+        )
     left = {(r[0], r[1]): r[2] for r in before["portable_catalog"]}
     right = {(r[0], r[1]): r[2] for r in after["portable_catalog"]}
     changed = {k for k in left.keys() & right.keys() if left[k] != right[k]}
@@ -232,7 +254,10 @@ def checked_qualification(before, record):
     c0.require(
         record["version"] == VERSION and record["mode"] == "rollback-qualification", "unqualified native result mode"
     )
-    c0.require(record["ddl_sha256"] == digest(ddl()[0].encode()), "changed source DDL qualification")
+    c0.require(
+        record["ddl_sha256"] == digest(ddl(bool(before.get("bootstrap_grantor_profile")))[0].encode()),
+        "changed source DDL qualification",
+    )
     c0.require(record["before_witness"] == before, "qualification target predecessor mismatch")
     validate_post(before, record["post_witness"])
     return record["post_witness"]
@@ -240,9 +265,12 @@ def checked_qualification(before, record):
 
 def emit_sql(target, *, reviewed_post=None, qualification_sha256=None):
     c0.checked(target, target=True)
-    payload, bodies = ddl()
+    c0.require(
+        target.get("bootstrap_grantor_profile") in (None, c0.BOOTSTRAP_PROFILE), "unsupported target bootstrap profile"
+    )
+    payload, bodies = ddl(bool(target.get("bootstrap_grantor_profile")))
     before = json.dumps(target, separators=(",", ":"))
-    witness = witness_select()
+    witness = witness_select(target)
     select = witness[witness.index("SELECT jsonb_build_object(") :].rstrip().removesuffix(";")
     guards = witness[: witness.index("SELECT jsonb_build_object(")]
     sql = f"""\\set ON_ERROR_STOP on
@@ -313,7 +341,7 @@ SELECT current_setting('verdify.cnpg_transition_result');
     return sql
 
 
-def execute(sql, binding, receipt_dir, source_roles):
+def execute(sql, binding, receipt_dir, source_roles, bootstrap_mapping=None):
     """Same CNPG UID custody as paired import; never create a Pod or credential."""
     os.umask(0o077)
     receipt_dir.mkdir(mode=0o700, parents=True, exist_ok=False)
@@ -383,7 +411,7 @@ def execute(sql, binding, receipt_dir, source_roles):
         (receipt_dir / (label + "-roles-private.sql")).write_bytes(result.stdout)
         (receipt_dir / (label + "-roles-private.stderr")).write_bytes(result.stderr)
         c0.require(result.returncode == 0, "native role metadata export failed")
-        return role_parity.verify(source_roles, result.stdout.decode())
+        return role_parity.verify(source_roles, result.stdout.decode(), mapping=bootstrap_mapping)
 
     roles_before = read_roles("before")
     with (receipt_dir / "native.stdout").open("wb") as out, (receipt_dir / "native.stderr").open("wb") as err:
@@ -454,6 +482,8 @@ def main():
         source_role_names == {name for name in data["source"]["roles"].values() if not name.startswith("pg_")},
         "role artifact/witness identity mismatch",
     )
+    if c0.bootstrap_profile(data["source"], data["target"]):
+        role_parity.bootstrap_mapping(data["source"], role_raw.decode(), data["target"]["bootstrap_identity"])
     post = None
     qualification_sha = None
     if args.reviewed_qualification:
@@ -467,7 +497,13 @@ def main():
         out.write(sql)
     if args.execute:
         c0.require(args.receipt_dir is not None, "private execution receipt directory required")
-        execute(sql, data["binding"], args.receipt_dir, role_raw.decode())
+        execute(
+            sql,
+            data["binding"],
+            args.receipt_dir,
+            role_raw.decode(),
+            bootstrap_mapping=c0.bootstrap_profile(data["source"], data["target"]),
+        )
     else:
         c0.require(args.receipt_dir is None, "execution receipts require explicit execution")
 

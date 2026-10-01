@@ -234,10 +234,10 @@ def startups(query):
     return result
 
 
-def qualify_install(query, monkeypatch):
+def qualify_install(query, monkeypatch, *, bootstrap_profile=False):
     # Mac16.15 is explicitly a synthetic execution fixture, not PG16.13 credit.
     monkeypatch.setattr(t, "SERVER", int(query("SHOW server_version_num")))
-    ddl, _ = t.ddl()
+    ddl, _ = t.ddl(bootstrap_profile)
     before = originals(query)
     measured = json.loads(
         query(
@@ -380,6 +380,7 @@ def test_complete_atomic_sql_rolls_back_qualification_and_bad_successor_then_adm
     # Exercise its actual atomic SQL/CAS/historical retention with real DDL and
     # the selected217/259 attesters, then leave real target proof to ROOT.
     monkeypatch.setattr(t.c0, "checked", lambda *args, **kwargs: None)
+    native_members = """(SELECT coalesce(jsonb_agg(format('member|%s|%s|%s|%s|%s|%s',roleid,member,grantor,admin_option,inherit_option,set_option) ORDER BY roleid,member,grantor),'[]'::jsonb) FROM pg_auth_members)"""
     selects = (
         """SELECT jsonb_build_object(
       'database',current_database(),'server',current_setting('server_version_num')::int,
@@ -388,14 +389,15 @@ def test_complete_atomic_sql_rolls_back_qualification_and_bad_successor_then_adm
       'database_owner','verdify','database_acl','fixture',
       'ledger',(SELECT jsonb_agg(to_jsonb(r)) FROM public.schema_migrations r),
       'seals',jsonb_build_object('ordinary',(SELECT jsonb_agg(to_jsonb(r) ORDER BY login_name) FROM public.runtime_ordinary_login_attestation_receipts r),'mcp',(SELECT jsonb_agg(to_jsonb(r)) FROM public.mcp_runtime_boundary_receipt r)),
-      'boundaries',jsonb_build_object('verdify_api_runtime_login',jsonb_build_object('native',encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex')),
-          'verdify_ingestor_runtime_login',jsonb_build_object('native',encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex')),
-          'verdify_mcp_runtime_login',jsonb_build_object('native',encode(public.fn_mcp_runtime_boundary_digest(),'hex'))),
+      'boundaries',jsonb_build_object('verdify_api_runtime_login',jsonb_build_object('raw_entries',__NATIVE_MEMBERS__,'native',encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex')),
+          'verdify_ingestor_runtime_login',jsonb_build_object('raw_entries',__NATIVE_MEMBERS__,'native',encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex')),
+          'verdify_mcp_runtime_login',jsonb_build_object('raw_entries',__NATIVE_MEMBERS__,'native',encode(public.fn_mcp_runtime_boundary_digest(),'hex'))),
       'portable_catalog',("""
         + t.c0.portable_catalog_sql()
         + """));"""
     )
-    monkeypatch.setattr(t, "witness_select", lambda: selects)
+    selects = selects.replace("__NATIVE_MEMBERS__", native_members)
+    monkeypatch.setattr(t, "witness_select", lambda target=None: selects)
     before = json.loads(q("SET search_path=pg_catalog,pg_temp; " + selects))
     historical = originals(q)
     result = q(t.emit_sql(before)).splitlines()
@@ -459,3 +461,17 @@ def test_executor_timeout_preserves_unknown_and_never_retries(tmp_path, monkeypa
     assert result["outcome"] == "timeout-unknown" and result["rollback_not_inferred"] and result["no_retry"]
     assert len(calls) == 2 and len(identities) == 1
     assert (path / "custody-before.json").exists()
+
+
+def test_native_profile_bootstrap_identity_guard_survives_matching_digest(private_pg, monkeypatch):
+    q = private_pg
+    q("ALTER ROLE c5_fixture RENAME TO postgres")
+    qualify_install(q, monkeypatch, bootstrap_profile=True)
+    assert set(startups(q).values()) == {"t"}
+    q("ALTER ROLE postgres RENAME TO wrong_bootstrap")
+    # Refresh measured fixture digests so identity failure cannot be attributed
+    # to a stale expected catalog hash. Native OID10 still exists and is super.
+    q(
+        f"UPDATE {t.TABLE} SET boundary_sha256=CASE WHEN login_name='verdify_mcp_runtime_login' THEN fn_mcp_runtime_boundary_digest() ELSE fn_runtime_ordinary_boundary_digest(login_name) END"
+    )
+    assert set(startups(q).values()) == {"f"}

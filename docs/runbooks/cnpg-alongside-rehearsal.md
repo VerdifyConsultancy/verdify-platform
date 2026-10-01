@@ -149,7 +149,41 @@ login posture and only the captured `pg_monitor` membership; collisions,
 additional settings or changed membership fail closed. Its verified management
 profile is separately enumerated, rather than credited as restored source data.
 Standalone restores retain a fresh private `mktemp` directory under TMPDIR.
-No command here authorizes retry after partial role or database mutation.
+The ordinary path never retries partial role or database mutation. A separate
+membership-prefix continuation below accepts only the captured R3 failure.
+
+### Explicit bootstrap-grantor target profile and R3 continuation
+
+The frozen source witness proves source bootstrap OID10 is `verdify`; native CNPG
+proves target bootstrap OID10 is `postgres`. PostgreSQL16 rejects the original
+`GRANTED BY verdify` memberships on this target even with restored SUPERUSER.
+The optional `cnpg-source-bootstrap-grantor-v1` profile deliberately translates
+only the 17 source membership grantors to native bootstrap `postgres`. It keeps
+raw role-byte parity **false** and records each original/translated statement.
+Role/member names, ADMIN/INHERIT/SET flags, ownership, ACL grantors, settings and
+all other catalog facts remain exact. It adds no temporary ADMIN membership.
+The default comparison still rejects any grantor change.
+
+For ROOT's reviewed new exclusive attempt, add these to the original bound
+invocation and the new-stage/management options above:
+
+```text
+--bootstrap-grantor-profile
+--role-prefix-custody <hash-pinned R3 six-field descriptor JSON>
+--role-prefix-custody-sha256 <descriptor file SHA256>
+--role-prefix-current <captured password-free roles-after-r3.sql>
+```
+
+The descriptor binds the old stage name and original manifest, before-role,
+replay, error and current-role artifact hashes. Before allocating a new stage,
+the adapter rechecks the retained old native files and manifest. Before SQL, it
+requires the product DB absent, the full current role prefix equal to captured
+source attributes/settings plus the exact four CNPG management roles, zero
+source memberships, and the exact first-GRANT failure. It verifies the old replay
+was source-derived. Only membership GRANTs run in one BEGIN/COMMIT transaction;
+full role verification precedes database creation. Unknown or drifted partial
+states fail closed; this is not generic skip/resume. Preserve R1/R2/R3 unchanged.
+No actual R4 restore or runtime admission is credited by source qualification.
 
 `cnpg-c0-restore-qualification.py` emits read-only source/target witnesses. Source
 PG16.11 and targetPG16.13 are fixed; Timescale2.25.2/vector0.8.1 and the exact268
