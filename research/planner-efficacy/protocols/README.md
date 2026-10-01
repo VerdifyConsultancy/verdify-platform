@@ -123,3 +123,40 @@ manifest/vector identity, 96-transition qualification and seven-day A/A.
 Do not delete those artifacts: they remain useful for the deferred platform-v2
 work in #586/#638. Do not use them as the current experiment runbook or claim
 that their passing unit tests make the fast path executable.
+
+## Blinded daily assignment reconciliation (#784)
+
+`python scripts/experiment-v2-reconcile.py --experiment-id UUID --output /private/receipt.json`
+uses the existing `experiment-aa-gates.py` read-only operator connection contract
+(`VERDIFY_DB_BACKEND=kube` on the laptop, or `dsn` with existing process-environment
+credentials). It runs one bounded SELECT with `default_transaction_read_only=on`.
+It does not call lifecycle, selector, randomization, reveal, setter or device APIs.
+The operator needs SELECT on the assignment/outcome/evidence relations; the
+current analyst-only view inner-joins freezes and cannot supply the full missing-day
+denominator. This command adds no grants and makes no analyst-role qualification claim.
+
+The source is every immutable assignment, with LEFT JOINs for absent outcomes,
+freezes and evidence. It checks the locked adjacent-day/pair calendar and Denver
+`[06:00,24:00)` 64,800-second window; exposure, failure, fallback, rescue, zero and
+null flags never remove a row. A draft has no invented assignments or denominator.
+Missing calendar assignments and completed days without freeze/evidence remain
+explicit. No efficacy, forecast, resource saving, carryover or power is estimated.
+
+Exact PostgreSQL JSONB text preimages are independently hashed with the existing
+migration-214 domains and UUID bytes. The final export must match its exact byte
+hash, every assignment and frozen row, ordered evidence bundle and locked analyzer
+identity. `status=reconciled` means the snapshot accounts for the locked assignment
+calendar and has no missing evidence for already completed days. Future rows
+remain `scheduled`; `export_verified=false` can coexist with a reconciled
+snapshot. Neither status nor exit 0 means a completed pilot, accepted launch,
+physical qualification or a revealed analysis. Reset/source details remain in their hashed evidence; this receipt does not
+invent a reset classification from exposure or null outcomes.
+
+Output is exclusive mode-0600, fsynced together with its directory, and conforms
+to `daily-reconciliation-v1.schema.json`. Its hash is SHA256 of
+`verdify-experiment-v2-daily-reconciliation-v1` + NUL + the sorted-key compact JSON
+receipt bytes. Exit 0 means a structurally reconciled snapshot or explicitly
+unlocked draft; 1 means missing assignment/day evidence; 2 means refusal. Preserve
+all receipts and prior failures. Publication cadence, archive/backup custody and
+observer owner must be bound in the prospective design; this source command does
+not activate a scheduler, publish a notification or replace actual assigned days.

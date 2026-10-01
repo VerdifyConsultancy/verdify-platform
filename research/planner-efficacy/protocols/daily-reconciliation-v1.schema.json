@@ -1,0 +1,240 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "verdify-experiment-v2-daily-reconciliation-v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "receipt",
+    "sha256"
+  ],
+  "properties": {
+    "receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "experiment_id",
+        "as_of",
+        "design_lock_sha256",
+        "timezone",
+        "window_local",
+        "expected_seconds",
+        "locked_assigned_day_denominator",
+        "observed_assignments",
+        "missing_calendar_days",
+        "completed_days_missing_freeze_or_evidence",
+        "rows",
+        "export_verified",
+        "export_sha256",
+        "status",
+        "claim_scope"
+      ],
+      "properties": {
+        "schema": {
+          "const": "verdify-experiment-v2-daily-reconciliation-v1"
+        },
+        "experiment_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "as_of": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "design_lock_sha256": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "timezone": {
+          "const": "America/Denver"
+        },
+        "window_local": {
+          "const": "[06:00,24:00)"
+        },
+        "expected_seconds": {
+          "const": 64800
+        },
+        "locked_assigned_day_denominator": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 2,
+          "maximum": 300
+        },
+        "observed_assignments": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "missing_calendar_days": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        "completed_days_missing_freeze_or_evidence": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "rows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "assignment_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "local_date": {
+                "type": "string",
+                "format": "date"
+              },
+              "pair_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "blinded_label": {
+                "enum": [
+                  "X",
+                  "Y",
+                  null
+                ]
+              },
+              "state": {
+                "enum": [
+                  "scheduled",
+                  "frozen_verified",
+                  "missing_evidence",
+                  "missing_freeze",
+                  "missing_outcome"
+                ]
+              },
+              "hashes": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "outcome_sha256": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  },
+                  "deviation_sha256": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  },
+                  "fidelity_sha256": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  },
+                  "environment_sha256": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  },
+                  "integrity_sha256": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  },
+                  "evidence_bundle_sha256": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  }
+                }
+              },
+              "delivery_failed": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "fallback_used": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "facility_rescue": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "zero_value_retained": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "null_value_retained": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "exposure_seconds": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 64800
+              }
+            },
+            "required": [
+              "assignment_id",
+              "local_date",
+              "pair_index",
+              "blinded_label",
+              "state",
+              "hashes",
+              "delivery_failed",
+              "fallback_used",
+              "facility_rescue",
+              "zero_value_retained",
+              "null_value_retained",
+              "exposure_seconds"
+            ]
+          }
+        },
+        "export_verified": {
+          "type": "boolean"
+        },
+        "export_sha256": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "enum": [
+            "not_design_locked",
+            "incomplete",
+            "reconciled"
+          ]
+        },
+        "claim_scope": {
+          "const": "blinded integrity only; no efficacy, physical qualification or launch claim"
+        }
+      }
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}
