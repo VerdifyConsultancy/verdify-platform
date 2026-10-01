@@ -694,6 +694,38 @@ async def table_columns(conn: asyncpg.Connection, table: str) -> set[str]:
     return {row["column_name"] for row in rows}
 
 
+async def energy_relation(conn: asyncpg.Connection) -> tuple[str, bool]:
+    """Bind the identifier-free energy write projection, never relax another table."""
+    columns = await table_columns(conn, "energy")
+    required = {"ts", "watts_total", "watts_heat", "watts_fans", "watts_other", "kwh_today"}
+    if not required <= columns:
+        raise RuntimeError("energy projection lacks required fields")
+    if "greenhouse_id" in columns:
+        return "energy", True
+    identity = await conn.fetchrow("SELECT current_schema() AS schema, current_user AS role")
+    projection = required | {
+        "measurement_revision",
+        "ch0_power_w",
+        "ch1_power_w",
+        "ch0_source_ts",
+        "ch1_source_ts",
+        "ch0_entity_id",
+        "ch1_entity_id",
+        "ch0_quality",
+        "ch1_quality",
+    }
+    if (
+        identity["schema"] != "verdify_ha_backfill_runtime"
+        or identity["role"] != "verdify_ha_backfill_runtime_login"
+        or columns != projection
+        or GREENHOUSE_ID != "vallery"
+    ):
+        raise RuntimeError("unrecognized identifier-free energy projection")
+    # 268 exposes the existing fixed-house energy write boundary without its identifier.
+    # Qualify the relation explicitly; owner/public energy retains its house filter.
+    return "verdify_ha_backfill_runtime.energy", False
+
+
 async def try_advisory_lock(conn: asyncpg.Connection) -> bool:
     return bool(await conn.fetchval("SELECT pg_try_advisory_lock(hashtext($1))", ADVISORY_LOCK_NAME))
 
@@ -714,19 +746,18 @@ async def detect_sample_windows(
     last_expected = floor_time(end, cadence_seconds)
     if first_expected > last_expected:
         return []
+    relation, house_filter = await energy_relation(conn) if table == "energy" else (table, True)
+    predicate = "greenhouse_id = $4 AND " if house_filter else ""
+    params = (start, end, cadence_seconds, GREENHOUSE_ID) if house_filter else (start, end, cadence_seconds)
     rows = await conn.fetch(
         f"""
         SELECT DISTINCT to_timestamp(floor(extract(epoch from ts) / $3::double precision) * $3)::timestamptz AS bucket
-          FROM {table}
-         WHERE greenhouse_id = $4
-           AND ts >= $1
+          FROM {relation}
+         WHERE {predicate}ts >= $1
            AND ts <= $2
          ORDER BY 1
         """,
-        start,
-        end,
-        cadence_seconds,
-        GREENHOUSE_ID,
+        *params,
     )
     buckets = [row["bucket"].astimezone(UTC) for row in rows]
     windows: list[Window] = []
@@ -812,18 +843,17 @@ async def existing_buckets(
     end: datetime,
     cadence_seconds: int,
 ) -> set[datetime]:
+    relation, house_filter = await energy_relation(conn) if table == "energy" else (table, True)
+    predicate = "greenhouse_id = $4 AND " if house_filter else ""
+    params = (start, end, cadence_seconds, GREENHOUSE_ID) if house_filter else (start, end, cadence_seconds)
     rows = await conn.fetch(
         f"""
         SELECT DISTINCT to_timestamp(floor(extract(epoch from ts) / $3::double precision) * $3)::timestamptz AS bucket
-          FROM {table}
-         WHERE greenhouse_id = $4
-           AND ts >= $1
+          FROM {relation}
+         WHERE {predicate}ts >= $1
            AND ts <= $2
         """,
-        start,
-        end,
-        cadence_seconds,
-        GREENHOUSE_ID,
+        *params,
     )
     return {row["bucket"].astimezone(UTC) for row in rows}
 
@@ -1030,6 +1060,7 @@ async def backfill_energy(
     mappings: MappingSet,
     args: argparse.Namespace,
 ) -> int:
+    relation, house_filter = await energy_relation(conn)
     existing = await existing_buckets(conn, "energy", window.start, window.end, args.energy_sample_seconds)
     rows: list[dict[str, Any]] = []
     by_target = {mapping.target: mapping for mapping in mappings.energy}
@@ -1068,8 +1099,16 @@ async def backfill_energy(
         rows.append(row)
     return await insert_dict_rows(
         conn,
-        "energy",
-        ["ts", "greenhouse_id", "watts_total", "watts_heat", "watts_fans", "watts_other", "kwh_today"],
+        relation,
+        [
+            "ts",
+            *(["greenhouse_id"] if house_filter else []),
+            "watts_total",
+            "watts_heat",
+            "watts_fans",
+            "watts_other",
+            "kwh_today",
+        ],
         rows,
         args.apply,
     )
