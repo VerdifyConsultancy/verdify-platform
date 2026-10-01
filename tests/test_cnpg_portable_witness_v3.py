@@ -216,3 +216,73 @@ def test_semantic_projection_hashes_must_be_independently_reproduced(private_pg,
         ] = "[]"
     with pytest.raises((ValueError, IndexError)):
         c0.checked(target, target=True)
+
+
+def test_native_old_new_when_preserves_user_definition_and_exact_raw_guard(private_pg):
+    """Private PG reproduces actual multi-relation WHEN; no estate proof."""
+    import hashlib
+
+    from test_cnpg_target_runtime_transition import t
+
+    q = private_pg
+    q("""CREATE TABLE portable_when(id integer, value integer);
+      CREATE FUNCTION portable_when_fn() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RETURN NEW; END $$;
+      CREATE TRIGGER compare_old_new BEFORE UPDATE ON portable_when FOR EACH ROW
+        WHEN (OLD.value IS DISTINCT FROM NEW.value) EXECUTE FUNCTION portable_when_fn();""")
+    legacy = q(
+        "SELECT pg_get_expr(t.tgqual,t.tgrelid) FROM pg_trigger t WHERE t.tgname='compare_old_new';", check=False
+    )
+    assert legacy.returncode != 0 and "expression contains variables of more than one relation" in legacy.stderr
+    result = projection(q)
+    fact = next(f for f in result["facts"]["triggers"] if f["native"]["tgname"] == "compare_old_new")
+    native = json.loads(
+        q(
+            "SELECT jsonb_build_object('qualification',tgqual::text,'definition',pg_get_triggerdef(oid,true)) FROM pg_trigger WHERE tgname='compare_old_new';"
+        )
+    )
+    assert not fact["typed_fk"]
+    assert fact["qualification"] == fact["native"]["tgqual"] == native["qualification"]
+    assert fact["definition"] == native["definition"]
+    assert "WHEN (old.value IS DISTINCT FROM new.value)" in native["definition"]
+    projected = c0.projected_hash([fact["native"]["tgenabled"], native["definition"]])
+    raw = entries(result["raw"], "trigger", "public.portable_when")
+    semantic = entries(result["semantic"], "trigger", "public.portable_when")
+    assert raw == semantic == [["trigger", "public.portable_when.compare_old_new", projected]]
+    original_raw_sql = c0.raw_portable_catalog_sql()
+    original_raw_hash = hashlib.sha256(original_raw_sql.encode()).hexdigest()
+    target = target_from_projection(result, q)
+    assert c0.checked(target, target=True)
+    changed = copy.deepcopy(target)
+    changed_fact = next(
+        f for f in changed["portability_native_facts"]["triggers"] if f["native"]["tgname"] == "compare_old_new"
+    )
+    changed_fact["qualification"] = "tampered raw qualification"
+    # Python user-trigger semantic equality uses complete supported definition;
+    # qualification remains independently exact custody inside the SQL guard.
+    assert c0.checked(changed, target=True)
+    ddl, _ = t.ddl()
+    collector = "SELECT jsonb_build_object('portability_native_facts',(" + c0.portability_native_facts_sql() + "))"
+    guarded = (
+        """BEGIN;
+DO $raw_guard_fixture$ DECLARE v_before jsonb; v_post jsonb;
+BEGIN
+"""
+        + collector
+        + " INTO v_before;\n"
+        + ddl
+        + "\n"
+        + collector
+        + " INTO v_post;\n"
+    )
+    guarded += "SELECT jsonb_set(v_post,ARRAY['portability_native_facts','triggers',(ordinality-1)::text,'qualification'],to_jsonb('tampered raw qualification'::text)) INTO v_post FROM jsonb_array_elements(v_post->'portability_native_facts'->'triggers') WITH ORDINALITY WHERE value->>'raw_identity'='public.portable_when.compare_old_new';\n"
+    guarded += t.raw_facts_guard_sql(False) + "\nEND $raw_guard_fixture$;\nROLLBACK;"
+    refused = q(guarded, check=False)
+    assert refused.returncode != 0 and "raw existing/addition custody drift" in refused.stderr
+    assert q("SELECT to_regclass('public.cnpg_qualified_runtime_receipts') IS NULL;") == "t"
+    assert hashlib.sha256(c0.raw_portable_catalog_sql().encode()).hexdigest() == original_raw_hash
+    q(
+        "DROP TRIGGER compare_old_new ON portable_when; CREATE TRIGGER compare_old_new BEFORE UPDATE ON portable_when FOR EACH ROW WHEN (OLD.value > NEW.value) EXECUTE FUNCTION portable_when_fn();"
+    )
+    modified = projection(q)
+    assert entries(modified["semantic"], "trigger", "public.portable_when") != semantic
+    assert entries(modified["raw"], "trigger", "public.portable_when") != raw

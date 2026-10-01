@@ -213,7 +213,8 @@ def portability_native_facts_sql():
         'native',to_jsonb(t),'constraint',to_jsonb(x),'function',to_jsonb(fn),
        'schema',n.nspname,'relation',c.relname,
        'constraint_definition',pg_get_constraintdef(x.oid,true),
-       'qualification',pg_get_expr(t.tgqual,t.tgrelid),
+       'qualification',CASE WHEN {typed_fk_predicate()} THEN pg_get_expr(t.tgqual,t.tgrelid)
+                            ELSE t.tgqual::text END,
        'referenced_relation',jsonb_build_array(refn.nspname,ref.relname),
        'language',lang.lanname,'typed_fk',coalesce({typed_fk_predicate()},false),
        'definition',pg_get_triggerdef(t.oid,true)) ORDER BY n.nspname,c.relname,t.tgname),'[]'::jsonb)
