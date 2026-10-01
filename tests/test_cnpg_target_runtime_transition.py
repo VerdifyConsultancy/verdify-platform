@@ -24,6 +24,13 @@ t = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(t)
 
 
+@pytest.fixture(autouse=True)
+def synthetic_frozen_catalog_pin(monkeypatch):
+    monkeypatch.setattr(
+        t.c0, "FROZEN_SOURCE_V2_CATALOG_SHA256", t.c0.catalog_sha256([["function", "vision.example()", "d" * 64]])
+    )
+
+
 def binding():
     return {
         "cluster_uid": "a" * 8 + "-" + "a" * 4 + "-" + "a" * 4 + "-" + "a" * 4 + "-" + "a" * 12,
@@ -79,10 +86,13 @@ def test_install_cannot_be_emitted_without_reviewed_successor_hash():
 
 
 @pytest.fixture
-def private_pg():
+def private_pg(request):
     directory = os.environ.get("CNPG_TEST_PG_BIN")
     if not directory:
         pytest.skip("set CNPG_TEST_PG_BIN for private socket native attester proof")
+    peer_profile = getattr(request, "param", None) == "bootstrap_peer"
+    bootstrap = "postgres" if peer_profile else "c5_fixture"
+    setting_up = True
     pg = Path(directory)
     cluster = Path(tempfile.mkdtemp(prefix="c5-native-pg-"))
     env = {k: v for k, v in os.environ.items() if not k.startswith(("PG", "DB_", "POSTGRES_"))}
@@ -94,6 +104,10 @@ def private_pg():
         return r.stdout.strip()
 
     def query(sql, *, database="verdify_rehearsal", user="verdify", check=True):
+        connection_user = user
+        if setting_up and peer_profile and user == "verdify":
+            connection_user = bootstrap
+            sql = "SET SESSION AUTHORIZATION verdify;\n" + sql
         r = subprocess.run(
             [
                 str(pg / "psql"),
@@ -106,7 +120,7 @@ def private_pg():
                 "-p",
                 "55475",
                 "-U",
-                user,
+                connection_user,
                 "-d",
                 database,
             ],
@@ -128,13 +142,20 @@ def private_pg():
                 "-D",
                 str(cluster / "data"),
                 "-U",
-                "c5_fixture",
-                "--auth-local=trust",
+                bootstrap,
+                "--auth-local=" + ("peer" if peer_profile else "trust"),
                 "--auth-host=reject",
                 "--no-locale",
                 "--encoding=UTF8",
             ]
         )
+        if peer_profile:
+            import getpass
+
+            # Initial disposable fixture configuration only: never edit estate
+            # HBA or add a password. The only admitted peer role is postgres.
+            (cluster / "data/pg_ident.conf").write_text("c5_peer " + getpass.getuser() + " postgres\n")
+            (cluster / "data/pg_hba.conf").write_text("local all postgres peer map=c5_peer\nlocal all all reject\n")
         run(
             [
                 str(pg / "pg_ctl"),
@@ -152,7 +173,7 @@ def private_pg():
         query(
             "CREATE ROLE verdify SUPERUSER LOGIN; CREATE DATABASE verdify_rehearsal OWNER verdify;",
             database="postgres",
-            user="c5_fixture",
+            user=bootstrap,
         )
         query(
             "CREATE EXTENSION pgcrypto; CREATE TABLE control_experiments(x integer); CREATE TABLE control_assignments(x integer); "
@@ -195,6 +216,7 @@ def private_pg():
             "REVOKE ALL ON FUNCTION fn_runtime_ordinary_boundary_digest(text),fn_mcp_runtime_boundary_digest(),fn_runtime_attest_ordinary_login(),fn_mcp_runtime_attest_ordinary_login() FROM PUBLIC; "
             "GRANT EXECUTE ON FUNCTION fn_runtime_attest_ordinary_login() TO verdify_api_runtime,verdify_ingestor_runtime; GRANT EXECUTE ON FUNCTION fn_mcp_runtime_attest_ordinary_login() TO verdify_mcp_runtime;"
         )
+        setting_up = False
         yield query
     finally:
         if started:
@@ -394,6 +416,10 @@ def test_complete_atomic_sql_rolls_back_qualification_and_bad_successor_then_adm
           'verdify_mcp_runtime_login',jsonb_build_object('raw_entries',__NATIVE_MEMBERS__,'native',encode(public.fn_mcp_runtime_boundary_digest(),'hex'))),
       'portable_catalog',("""
         + t.c0.portable_catalog_sql()
+        + """),'raw_portable_catalog_v2',("""
+        + t.c0.raw_portable_catalog_sql()
+        + """),'portability_native_facts',("""
+        + t.c0.portability_native_facts_sql()
         + """));"""
     )
     selects = selects.replace("__NATIVE_MEMBERS__", native_members)
@@ -415,8 +441,31 @@ def test_complete_atomic_sql_rolls_back_qualification_and_bad_successor_then_adm
     failure = q(t.emit_sql(stale), check=False)
     assert failure.returncode != 0 and "stale exact target witness" in failure.stderr
     assert json.loads(q("SET search_path=pg_catalog,pg_temp; " + selects)) == before
+    original_ddl = t.ddl
+    for injected in [
+        "GRANT SELECT ON public.control_experiments TO PUBLIC;",
+        "CREATE TABLE public.unapproved_native_object(x integer);",
+        f"ALTER TABLE {t.TABLE} SET UNLOGGED;",
+    ]:
+        with monkeypatch.context() as scope:
+
+            def modified_ddl(profile=False):
+                payload, bodies = original_ddl(profile)
+                return payload + "\n" + injected, bodies
+
+            scope.setattr(t, "ddl", modified_ddl)
+            refused = q(t.emit_sql(before, reviewed_post=after, qualification_sha256="a" * 64), check=False)
+            assert refused.returncode != 0
+            assert "CNPG native transition refuses raw" in refused.stderr or "new raw object shape" in refused.stderr
+        assert json.loads(q("SET search_path=pg_catalog,pg_temp; " + selects)) == before
+        assert originals(q) == historical
     installed = json.loads(q(t.emit_sql(before, reviewed_post=after, qualification_sha256="a" * 64)).splitlines()[-1])
-    assert installed["mode"] == "install" and installed["post_witness"] == after
+    assert installed["mode"] == "install"
+    assert {k: v for k, v in installed["post_witness"].items() if k != "portability_native_facts"} == {
+        k: v for k, v in after.items() if k != "portability_native_facts"
+    }
+    t.validate_raw_delta(before, installed["post_witness"])
+    assert installed["post_witness"]["portability_native_facts"] != after["portability_native_facts"]
     assert originals(q) == historical and set(startups(q).values()) == {"t"}
 
 
@@ -448,18 +497,27 @@ def test_executor_timeout_preserves_unknown_and_never_retries(tmp_path, monkeypa
     def run(command, **kwargs):
         calls.append(command)
         assert "uid-guard" in command and binding()["pod_uid"] in command
+        assert command[command.index("-U") + 1] == "postgres"
         if "pg_dumpall" in command:
+            assert command[command.index("-l") + 1] == "postgres"
             return subprocess.CompletedProcess(command, 0, stdout=source.encode(), stderr=b"")
+        if "-c" in command and "BEGIN READ ONLY" in command[-1]:
+            return subprocess.CompletedProcess(
+                command,
+                0,
+                stdout=b'{"session_user":"postgres","current_user":"postgres","bootstrap":{"oid":10,"name":"postgres","superuser":true}}',
+                stderr=b"",
+            )
         raise subprocess.TimeoutExpired(command, 180)
 
     monkeypatch.setattr(t.operator, "read_target", read_target)
     monkeypatch.setattr(t.subprocess, "run", run)
     path = tmp_path / "new-custody"
     with pytest.raises(ValueError, match="unknown outcome"):
-        t.execute("generated-fixture-sql", binding(), path, source)
+        t.execute("\\set ON_ERROR_STOP on\nBEGIN;\nROLLBACK;\n", binding(), path, source)
     result = json.loads((path / "execution-result.json").read_text())
     assert result["outcome"] == "timeout-unknown" and result["rollback_not_inferred"] and result["no_retry"]
-    assert len(calls) == 2 and len(identities) == 1
+    assert len(calls) == 3 and len(identities) == 1
     assert (path / "custody-before.json").exists()
 
 
@@ -475,3 +533,46 @@ def test_native_profile_bootstrap_identity_guard_survives_matching_digest(privat
         f"UPDATE {t.TABLE} SET boundary_sha256=CASE WHEN login_name='verdify_mcp_runtime_login' THEN fn_mcp_runtime_boundary_digest() ELSE fn_runtime_ordinary_boundary_digest(login_name) END"
     )
     assert set(startups(q).values()) == {"f"}
+
+
+@pytest.mark.parametrize("private_pg", ["bootstrap_peer"], indirect=True)
+def test_native_postgres_only_peer_bridge_preserves_owner_and_bootstrap(private_pg, monkeypatch):
+    q = private_pg
+    monkeypatch.setattr(t, "SERVER", int(q("SHOW server_version_num", user="postgres")))
+    refused = q("SELECT current_user;", user="verdify", check=False)
+    assert refused.returncode != 0 and "rejects connection" in refused.stderr
+    before = q("SELECT " + t.bootstrap_facts_sql(), user="postgres")
+    catalog_before = q(
+        "SELECT jsonb_agg(jsonb_build_array(oid,rolname,rolsuper,rolinherit,rolcreatedb,rolcreaterole,rolcanlogin,rolreplication,rolbypassrls,rolconfig) ORDER BY oid) FROM pg_roles",
+        user="postgres",
+    )
+    owner_sql = """\\set ON_ERROR_STOP on
+BEGIN;
+DO $identity$ BEGIN
+ IF current_user<>'verdify' OR session_user<>'verdify' THEN RAISE EXCEPTION 'wrong owner DDL session'; END IF;
+END $identity$;
+CREATE TABLE public.peer_owner_probe(x integer);
+SELECT pg_get_userbyid(relowner) FROM pg_class WHERE oid='public.peer_owner_probe'::regclass;
+ROLLBACK;
+"""
+    result = q(t.bootstrap_owner_sql(owner_sql), user="postgres")
+    assert "verdify" in result.splitlines()
+    assert q("SELECT to_regclass('public.peer_owner_probe') IS NULL;", user="postgres") == "t"
+    assert q("SELECT " + t.bootstrap_facts_sql(), user="postgres") == before
+    assert (
+        q(
+            "SELECT jsonb_agg(jsonb_build_array(oid,rolname,rolsuper,rolinherit,rolcreatedb,rolcreaterole,rolcanlogin,rolreplication,rolbypassrls,rolconfig) ORDER BY oid) FROM pg_roles",
+            user="postgres",
+        )
+        == catalog_before
+    )
+    # Guard rejects a privileged peer connection to the wrong target context.
+    wrong = q(t.bootstrap_owner_sql(owner_sql), user="postgres", database="postgres", check=False)
+    assert wrong.returncode != 0 and "refuses privileged peer bootstrap" in wrong.stderr
+    changed = owner_sql.replace("CREATE TABLE public.peer_owner_probe(x integer);", "ALTER ROLE postgres NOCREATEDB;")
+    changed = changed.replace(
+        "SELECT pg_get_userbyid(relowner) FROM pg_class WHERE oid='public.peer_owner_probe'::regclass;", ""
+    )
+    refused = q(t.bootstrap_owner_sql(changed), user="postgres", check=False)
+    assert refused.returncode != 0 and "changed bootstrap/owner custody" in refused.stderr
+    assert q("SELECT " + t.bootstrap_facts_sql(), user="postgres") == before

@@ -291,6 +291,8 @@ def load_c0():
     s = importlib.util.spec_from_file_location("c0_bootstrap", ROOT / "scripts/cnpg-c0-restore-qualification.py")
     c0 = importlib.util.module_from_spec(s)
     s.loader.exec_module(c0)
+    # This suite's synthetic predecessor is not the frozen estate ec9 witness.
+    c0.FROZEN_SOURCE_V2_CATALOG_SHA256 = c0.catalog_sha256([["function", "vision.example()", "d" * 64]])
     return c0
 
 

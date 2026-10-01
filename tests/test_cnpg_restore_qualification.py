@@ -23,6 +23,21 @@ acl = load("cnpg-source-database-acl")
 operator = load("cnpg-paired-restore")
 
 
+@pytest.fixture(autouse=True)
+def synthetic_frozen_catalog_pin(monkeypatch):
+    # Synthetic tests qualify their synthetic predecessor, never the actual ec9.
+    monkeypatch.setattr(
+        c0, "FROZEN_SOURCE_V2_CATALOG_SHA256", c0.catalog_sha256([["function", "vision.example()", "d" * 64]])
+    )
+
+
+@pytest.fixture(autouse=True)
+def synthetic_acl_dependency_pin(monkeypatch):
+    monkeypatch.setattr(
+        acl.c0, "FROZEN_SOURCE_V2_CATALOG_SHA256", c0.catalog_sha256([["function", "vision.example()", "d" * 64]])
+    )
+
+
 def witnesses():
     source = {
         "version": c0.VERSION,
@@ -69,6 +84,8 @@ def witnesses():
         "ordinary": [[login, source["boundaries"][login]["native"]] for login in c0.boundary.LOGINS],
         "mcp": [source["boundaries"]["verdify_mcp_runtime_login"]["native"]],
     }
+    source["raw_portable_catalog_v2"] = copy.deepcopy(source["portable_catalog"])
+    source["portability_native_facts"] = {"relations": [], "indexes": [], "constraints": [], "triggers": []}
     target = copy.deepcopy(source)
     target.update(
         database="verdify_rehearsal",
@@ -209,13 +226,16 @@ def test_operator_refuses_prod_namespace_replacement_uid_and_unadopted_image():
         operator.target_identity(cluster, bad, cluster_uid=cluster_uid, pod_uid=pod_uid)
 
 
-def test_full_identities_with_same_63_character_prefix_remain_distinct():
+def test_full_identities_with_same_63_character_prefix_remain_distinct(monkeypatch):
     source, target = witnesses()
     prefix = "column." + "x" * 60
     entries = [["column", prefix + suffix, digest * 64] for suffix, digest in [(".first", "a"), (".second", "b")]]
     assert entries[0][1][:63] == entries[1][1][:63]
     source["portable_catalog"] = copy.deepcopy(entries)
     target["portable_catalog"] = copy.deepcopy(entries)
+    source["raw_portable_catalog_v2"] = copy.deepcopy(entries)
+    target["raw_portable_catalog_v2"] = copy.deepcopy(entries)
+    monkeypatch.setattr(c0, "FROZEN_SOURCE_V2_CATALOG_SHA256", c0.catalog_sha256(entries))
     assert c0.compare(source, target)["semantic_boundaries_equal"]
     target["portable_catalog"][1][2] = "c" * 64
     with pytest.raises(ValueError, match="catalog drift"):
