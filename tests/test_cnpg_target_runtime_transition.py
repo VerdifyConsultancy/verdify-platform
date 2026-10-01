@@ -858,3 +858,77 @@ def test_native_refresh_custody_acquisition_keeps_lock_timeout(private_pg):
         if process.poll() is None:
             process.kill()
             process.communicate(timeout=10)
+
+
+@pytest.mark.parametrize("older_database", ["verdify_rehearsal", "postgres"])
+def test_native_creation_horizon_with_older_transaction(private_pg, monkeypatch, older_database):
+    q = private_pg
+    command = [
+        str(Path(os.environ["CNPG_TEST_PG_BIN"]) / "psql"),
+        "-X",
+        "-qAt",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-h",
+        q("SHOW unix_socket_directories"),
+        "-p",
+        q("SHOW port"),
+        "-U",
+        "verdify",
+        "-d",
+        older_database,
+    ]
+    env = {k: v for k, v in os.environ.items() if not k.startswith(("PG", "DB_", "POSTGRES_"))}
+    process = subprocess.Popen(
+        command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env
+    )
+    try:
+        process.stdin.write("BEGIN; SELECT pg_current_xact_id();\n")
+        process.stdin.flush()
+        older_xid = int(process.stdout.readline().strip())
+        prefix = t.ddl()[0].split("CREATE OR REPLACE FUNCTION", 1)[0]
+        # Exact SPI utility boundary: capture the expected horizon before the
+        # selected source CREATE/ALTER/REVOKE, then independently read its facts.
+        facts = json.loads(
+            q(
+                """BEGIN; DO $creation$ DECLARE creating bigint; horizon bigint; actual jsonb;
+        BEGIN
+          creating := pg_current_xact_id()::text::bigint % 4294967296;
+          horizon := pg_snapshot_xmin(pg_current_snapshot())::text::bigint % 4294967296;
+        """
+                + prefix
+                + """
+          SELECT jsonb_build_object('creating',creating,'horizon',horizon,
+             'frozen',c.relfrozenxid::text::bigint,'class_xmin',c.xmin::text::bigint) INTO actual
+          FROM pg_class c WHERE c.oid='public.cnpg_qualified_runtime_receipts'::regclass;
+          PERFORM set_config('c5.creation_facts',actual::text,true);
+        END $creation$; SELECT current_setting('c5.creation_facts'); ROLLBACK;"""
+            )
+        )
+        assert facts["horizon"] == facts["frozen"] == older_xid
+        assert facts["creating"] == facts["class_xmin"] > older_xid
+        # Complete selected emitter, rollback record, literal installation and
+        # all actual ordinary startup SQL still qualify under this concurrency.
+        test_complete_atomic_sql_rolls_back_qualification_and_bad_successor_then_admits(q, monkeypatch)
+    finally:
+        if process.poll() is None:
+            process.stdin.write("ROLLBACK;\n")
+            process.stdin.flush()
+            process.communicate(timeout=10)
+
+
+@pytest.mark.parametrize("variable", ["v_creation_frozenxid", "v_creation_xid"])
+def test_native_creation_horizon_tamper_refused(private_pg, monkeypatch, variable):
+    q = private_pg
+    real_emit = t.emit_sql
+
+    def tampered(*args, **kwargs):
+        sql = real_emit(*args, **kwargs)
+        marker = " v_creation_frozenxid := (pg_snapshot_xmin(pg_current_snapshot())::text::bigint % 4294967296);"
+        assert sql.count(marker) == 1
+        return sql.replace(marker, marker + f"\n {variable} := {variable} + 1;", 1)
+
+    monkeypatch.setattr(t, "emit_sql", tampered)
+    with pytest.raises(AssertionError, match="new native OID binding drift"):
+        test_complete_atomic_sql_rolls_back_qualification_and_bad_successor_then_admits(q, monkeypatch)
+    assert q("SELECT to_regclass('public.cnpg_qualified_runtime_receipts') IS NULL") == "t"
