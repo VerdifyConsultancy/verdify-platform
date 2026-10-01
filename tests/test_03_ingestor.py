@@ -715,3 +715,37 @@ async def test_restart_terminalizes_only_unsent_in_memory_queue_states():
     assert "delivery_status IN ('requested', 'queued', 'retrying')" in connection.query
     assert "delivery_status = 'failed'" in connection.query
     assert "'sent'" not in connection.query.split("delivery_status IN", 1)[1]
+
+
+@pytest.mark.asyncio
+async def test_cold_boot_nan_blocks_without_db_work_until_native_replay_and_reconnect_fences(caplog):
+    from tasks import dispatcher
+
+    expected = frozenset({"mister_vpd_weight", "mister_on_s"})
+    generation = shared.note_transport_connected(expected)
+    # Firmware intentionally withholds cfg values before its first confirmed pull.
+    assert ingestor._record_cfg_readback("cfg___mister_vpd_weight", float("nan"))
+    assert shared.current_cfg_readbacks() == {}
+    pool = MagicMock()
+    with caplog.at_level(logging.WARNING):
+        await dispatcher.setpoint_dispatcher(pool)
+    pool.acquire.assert_not_called()
+    assert any("missing_params=mister_on_s,mister_vpd_weight" in r.getMessage() for r in caplog.records)
+
+    ingestor._mirror_irrigation_number_readback("mister_on_s", 300.0)
+    assert not shared.transport_readbacks_ready(generation)
+    ingestor._mirror_irrigation_number_readback("mister_vpd_weight", 1.5)
+    assert shared.transport_readbacks_ready(generation)
+    assert shared.current_cfg_readbacks() == {"mister_on_s": 300.0, "mister_vpd_weight": 1.5}
+
+    # Previous native truth cannot satisfy a replacement socket's barrier.
+    second = shared.note_transport_connected(expected)
+    assert shared.current_cfg_readbacks() == {}
+    assert not shared.note_cfg_readback_observed("mister_on_s", 300.0, generation)
+    assert not shared.transport_readbacks_ready(second)
+    assert ingestor._record_cfg_readback("cfg___mister_vpd_weight", float("nan"))
+    await dispatcher.setpoint_dispatcher(pool)
+    pool.acquire.assert_not_called()
+    ingestor._mirror_irrigation_number_readback("mister_on_s", 300.0)
+    ingestor._mirror_irrigation_number_readback("mister_vpd_weight", 1.5)
+    assert shared.transport_readbacks_ready(second)
