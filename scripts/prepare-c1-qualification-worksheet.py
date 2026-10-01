@@ -11,6 +11,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from verdify_schemas.c1_grid_projection import project_c1_grid_state
+from verdify_schemas.component_executor import CANONICAL_FIELD_ORDER
 
 
 def prepare(preview, decisions, *, now):
@@ -19,10 +20,10 @@ def prepare(preview, decisions, *, now):
         raise ValueError("source-owned preview must be current within60seconds")
     if not preview["base_converged"]:
         raise ValueError("ordinary full48 baseline is not converged")
-    if not 1 <= len(decisions) <= 12:
-        raise ValueError("explicit decision count must be1..12")
+    if not 1 <= len(decisions) <= len(CANONICAL_FIELD_ORDER):
+        raise ValueError("explicit decisions must fit the complete canonical vector")
     return {
-        "schema": "verdify-c1-qualification-worksheet-v1",
+        "schema": "verdify-c1-qualification-worksheet-v2",
         "worksheet_id": str(uuid4()),
         "expires_at": (captured + timedelta(minutes=6)).isoformat(),
         "preview": preview,
