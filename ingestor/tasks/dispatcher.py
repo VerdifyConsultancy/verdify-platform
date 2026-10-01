@@ -125,9 +125,12 @@ def _without_equivalent_duration_replays(
     drift_pending: bool,
     staged_state_exists: bool,
 ) -> list[tuple[str, float]]:
-    """Filter equivalent seconds only in ordinary current-generation recovery passes."""
-    if staged_state_exists or not (reconnect_pending or drift_pending):
-        return changes
+    """Apply the same ordinary duration semantics before and after admission.
+
+    Recovery flags and durable stage existence cannot turn an equivalent cfg
+    value into a new desired command. Explicit C1/rollback effects are selected
+    later and retain their own confirmation requirements.
+    """
     return _without_equivalent_duration_candidates(changes, readbacks)
 
 
@@ -1246,19 +1249,9 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             deduped_changes[param] = float(value)
         changes = list(deduped_changes.items())
 
-        if reconnect_pending or drift_versions:
-            # Firmware rounds several duration controls to whole seconds.
-            # Reconnect and its later cfg-drift callback can each rediscover
-            # the same equivalent value. Keep staged runs under their own
-            # exact candidate validation.
-            current = shared.current_cfg_readbacks(reconnect_generation)
-            changes = _without_equivalent_duration_replays(
-                changes,
-                current,
-                reconnect_pending=reconnect_pending,
-                drift_pending=bool(drift_versions),
-                staged_state_exists=(STATE_DIR / bounded_reconcile.STATE_NAME).exists(),
-            )
+        # Only current-generation cfg values may suppress an equivalent
+        # duration. Apply this before bounded admission on every ordinary pass.
+        changes = _without_equivalent_duration_candidates(changes, shared.current_cfg_readbacks(reconnect_generation))
 
         probe_decision = await drift_probe.choose(
             conn,

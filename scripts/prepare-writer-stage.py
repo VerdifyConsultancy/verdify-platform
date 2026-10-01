@@ -79,18 +79,76 @@ def prepare_rollback(preview: dict, state: dict, now: datetime) -> dict:
     }
 
 
+def prepare_forward(preview: dict, custody: dict, requests: list[dict], writer_custody: dict, now: datetime) -> dict:
+    """Prepare explicit archive authority, never setter authority or a reset."""
+    import sys
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ingestor"))
+    from tasks import bounded_reconcile as bounded
+
+    # Use the same freshness/canonical baseline checks as a new stage proposal.
+    prepare(preview, now)
+    state = json.loads(custody[bounded.STATE_NAME])
+    approval = json.loads(custody[bounded.APPROVAL_NAME])
+    bounded._confirmed_halt_shape(state, approval)
+    if preview["plan_rows"] != state["approved_preview"]["plan_rows"]:
+        raise ValueError("forward handoff effective plan changed")
+    bounded._confirmed_halt_writer_custody(state, writer_custody)
+    native = bounded._forward_request_receipt(requests, state, now)
+    return {
+        "version": 1,
+        "authority": bounded.FORWARD_AUTHORITY,
+        "source_run_id": state["run_id"],
+        "original_writer_custody": writer_custody,
+        "writer_custody_digest": bounded._digest(writer_custody),
+        "state_digest": bounded._digest(state),
+        "approval_digest": bounded._digest(approval),
+        "original_approval": approval,
+        "custody": custody,
+        "custody_sha256": bounded._digest(custody),
+        "native_requests": native,
+        "observed_readbacks": preview["readbacks"],
+        "current_identity": {key: preview[key] for key in ("source_revision", "session_id", "pod", "generation")},
+        "approved_at": now.isoformat(),
+        "expires_at": (now + timedelta(minutes=6)).isoformat(),
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("preview", type=Path)
     parser.add_argument("output", type=Path)
-    parser.add_argument("--rollback-state", type=Path, help="halted state receipt for bounded last-stage rollback")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--rollback-state", type=Path, help="halted state receipt for bounded last-stage rollback")
+    mode.add_argument(
+        "--confirmed-halt-custody", type=Path, help="raw original active-file custody for confirmed forward archive"
+    )
+    parser.add_argument(
+        "--native-requests", type=Path, help="read-only export of the exact original confirmed requests"
+    )
+    parser.add_argument(
+        "--original-writer-custody", type=Path, help="original full Pod and same-identity preview operator receipt"
+    )
     args = parser.parse_args()
     preview = json.loads(args.preview.read_text())
-    approval = (
-        prepare_rollback(preview, json.loads(args.rollback_state.read_text()), datetime.now(UTC))
-        if args.rollback_state
-        else prepare(preview, datetime.now(UTC))
-    )
+    if args.confirmed_halt_custody:
+        if not args.native_requests or not args.original_writer_custody:
+            parser.error("confirmed halt requires --native-requests and --original-writer-custody")
+        approval = prepare_forward(
+            preview,
+            json.loads(args.confirmed_halt_custody.read_text()),
+            json.loads(args.native_requests.read_text()),
+            json.loads(args.original_writer_custody.read_text()),
+            datetime.now(UTC),
+        )
+    else:
+        if args.native_requests or args.original_writer_custody:
+            parser.error("native request custody is only valid with --confirmed-halt-custody")
+        approval = (
+            prepare_rollback(preview, json.loads(args.rollback_state.read_text()), datetime.now(UTC))
+            if args.rollback_state
+            else prepare(preview, datetime.now(UTC))
+        )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     fd = os.open(args.output, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     with os.fdopen(fd, "w") as handle:

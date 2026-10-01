@@ -175,3 +175,54 @@ expiry times, become the recovered archive evidence. The existing confirmation
 monitor then owns any terminal-alert resolution. This closes a confirmation
 window; it proves neither earlier delivery nor failure and does not resume the
 stopped desired-policy run.
+
+### Forward from one fully confirmed halted stage
+
+A redundant seconds candidate can halt a run after every command in its first
+stage has already been confirmed. Preserve that stopped run; do not roll back
+valid desired crop values, reset its state, or reuse its approval. Ordinary
+candidate construction consistently omits durations already equivalent on the
+current-generation cfg readback. The residual validator additionally permits
+only an unapproved seconds candidate whose original plan value and original
+baseline readback are unchanged and equivalent.
+
+The explicit `confirmed_halt_forward` handoff applies only to a halted run with
+one stage of 1–12 parameters, an empty pending-record array, exactly those
+completed parameters/values, and no rollback history. Retain the raw active
+files as a JSON object mapping filenames to their exact text. Retain a full
+original Pod readback plus `current.source`, `current.pod`, and
+`current.preview` in the operator receipt; its Pod UID/name and original
+source/session/generation must agree. Export exactly the original native
+request rows (`ts`, `parameter`, `value`, `source`, `delivery_status`,
+`confirmed_at`, `expired_at`) read-only, excluding ESP32 observation rows.
+Every row must be confirmed with a non-null confirmation and no expiry.
+
+After source adoption, capture a fresh preview from the new sole writer. The
+following command writes **only a local handoff manifest**:
+
+```bash
+python scripts/prepare-writer-stage.py current-preview.json local-forward.json \
+  --confirmed-halt-custody original-raw-active-files.json \
+  --native-requests original-native-requests.json \
+  --original-writer-custody original-writer-before.json
+```
+
+The owning operator installs this manifest as `writer-stage-recovery.json`
+with exact live Pod/file-custody checks and atomic publication. It grants no
+setter authority. The writer rechecks the exact native rows, rejects any later
+request on those fields, and verifies the unchanged plan, confirmed completed
+readbacks, and exact untouched baseline. Its six-minute identity/baseline
+binding governs initial archive creation. The immutable
+`writer-stage-confirmed-halt-<original-run-id>.json` retains the old state,
+approval, raw custody, Pod provenance, and native outcomes. The old active
+state/approval remain unchanged; the writer holds for fresh authority.
+
+Only after that archive exists, prepare a distinct ordinary approval from a
+fresh current preview using the normal command above this section. The writer
+rechecks archived native history and readbacks, then runs all normal fresh
+source/session/generation, plan, expiry, lease, candidate and bounded-send
+checks before replacing the active state. Archive-time identity is retained
+as history, never relabelled as the new admission identity. A refused fresh
+approval leaves the original stopped state and archive intact. No DB outcome
+is edited or original request replayed. This path does not recover an unknown,
+failed, partially confirmed, or multi-stage halted run.
