@@ -450,6 +450,82 @@ async def _rollback_decision(conn, preview: dict, state: dict, state_dir: Path, 
     return Decision("send", selected, run_id=state["run_id"], rollback=True)
 
 
+async def _settled_recovery_archive(conn, preview: dict, state: dict, approval: dict | None, state_dir: Path) -> bool:
+    """Retain a stopped run and admit only a new independently guarded approval."""
+    from .dispatcher import readback_values_equivalent
+
+    parameters = state.get("stage_parameters", [])
+    if not parameters or len(parameters) > 12:
+        raise ValueError("settled recovery lacks bounded last stage")
+    baseline = state["approved_preview"]["readbacks"]
+    if any(not readback_values_equivalent(p, preview["readbacks"].get(p), baseline[p]) for p in parameters):
+        raise ValueError("settled last-stage baseline changed")
+    recovery = _read(state_dir / RECOVERY_NAME)
+    if recovery is None or recovery.get("source_run_id") != state["run_id"] or recovery.get("parameters") != parameters:
+        raise ValueError("settled recovery evidence missing")
+    rows = await conn.fetch(
+        "SELECT ts, parameter, value, delivery_status, confirmed_at FROM setpoint_changes "
+        "WHERE parameter = ANY($1::text[]) AND ts >= $2 AND ts <= $3 "
+        "AND COALESCE(source, '') <> 'esp32' ORDER BY ts, parameter",
+        parameters,
+        _time(state["stage_started_at"]),
+        _time(recovery["approved_at"]),
+    )
+    known = {"deferred_heap_pressure", "confirmed", "failed", "cancelled", "superseded", "expired"}
+    if len(rows) != len(parameters) or set(r["parameter"] for r in rows) != set(parameters):
+        raise ValueError("last-stage durable request evidence incomplete")
+    if any(
+        r["delivery_status"] not in known or (r["delivery_status"] == "confirmed" and r["confirmed_at"] is None)
+        for r in rows
+    ):
+        raise ValueError("last-stage outcome remains unknown")
+    outstanding = await conn.fetch(
+        "SELECT delivery_status, confirmed_at FROM setpoint_changes "
+        "WHERE parameter = ANY($1::text[]) AND ts > $2 AND COALESCE(source, '') <> 'esp32'",
+        parameters,
+        _time(recovery["approved_at"]),
+    )
+    if any(
+        r["delivery_status"] not in known or (r["delivery_status"] == "confirmed" and r["confirmed_at"] is None)
+        for r in outstanding
+    ):
+        raise ValueError("later last-stage request outcome remains unknown")
+    for record in state.get("rollback_records", []):
+        row = await conn.fetchrow(
+            "SELECT delivery_status, confirmed_at FROM setpoint_changes WHERE ts = $1 AND parameter = $2",
+            _time(record["requested_at"]),
+            record["parameter"],
+        )
+        if row is None or row["delivery_status"] != "confirmed" or row["confirmed_at"] is None:
+            raise ValueError("settled rollback confirmation changed")
+    archive_path = state_dir / f"writer-stage-recovered-{uuid.UUID(str(state['run_id'])).hex}.json"
+    archive = _read(archive_path)
+    if archive is None:
+        if approval is None or approval.get("run_id") != state["run_id"]:
+            raise ValueError("original stopped approval missing before archive")
+        archive = {
+            "schema": "verdify-writer-stage-recovered-v1",
+            "state": state,
+            "approval": approval,
+            "recovery": recovery,
+            "settled_baseline": {p: preview["readbacks"][p] for p in parameters},
+            "known_requests": [
+                {k: v.isoformat() if isinstance(v, datetime) else v for k, v in dict(r).items()} for r in rows
+            ],
+        }
+        _write(archive_path, archive)
+    if (
+        archive.get("schema") != "verdify-writer-stage-recovered-v1"
+        or archive.get("state") != state
+        or archive.get("recovery") != recovery
+        or (approval is not None and approval.get("run_id") == state["run_id"] and archive.get("approval") != approval)
+        or archive.get("known_requests")
+        != [{k: v.isoformat() if isinstance(v, datetime) else v for k, v in dict(r).items()} for r in rows]
+    ):
+        raise ValueError("settled history changed")
+    return approval is not None and approval.get("run_id") != state["run_id"]
+
+
 async def choose_stage(
     conn,
     changes,
@@ -463,6 +539,7 @@ async def choose_stage(
     """Write a read-only preview; select at most one durable stage if approved."""
     approval_path = state_dir / APPROVAL_NAME
     state_path = state_dir / STATE_NAME
+    recovered_admission = False
     try:
         approval = _read(approval_path)
         state = _read(state_path)
@@ -504,6 +581,13 @@ async def choose_stage(
             # active names; a crash between unlinks resumes from the archive.
             _archive_completed_run(state_dir, state, approval)
             return Decision("ordinary")
+        if state is not None and state.get("status") == "rollback_complete":
+            if not await _settled_recovery_archive(conn, preview, state, approval, state_dir):
+                return Decision("hold", reason="settled rollback archived; fresh approval required")
+            # Keep the terminal state on disk until the new approval validates.
+            # Its history is already immutable; no deferred DB row is replayed.
+            state = None
+            recovered_admission = True
         if approval is None and state is None:
             return Decision("ordinary")
         if approval is None:
@@ -544,6 +628,8 @@ async def choose_stage(
             }
             _validate_state(preview, state, now, zone_vpd_targets, limit, guardrail_values)
             _write(state_path, state)
+            if recovered_admission:
+                (state_dir / RECOVERY_NAME).unlink()  # Exact old authority retained in recovered archive.
         if state["run_id"] != approval.get("run_id"):
             raise ValueError("approval changed during run")
         if state["status"] in {
@@ -627,7 +713,15 @@ async def choose_stage(
         return Decision("hold", reason=str(error))
 
 
-def finish_stage(state_dir: Path, decision: Decision, records: list[dict], failures: list) -> None:
+def finish_stage(
+    state_dir: Path,
+    decision: Decision,
+    records: list[dict],
+    failures: list,
+    *,
+    deferred_records: list[dict] | None = None,
+    api_dispatch_attempts: int | None = None,
+) -> None:
     """Durably fence a stage outcome before the next dispatcher invocation."""
     if decision.action != "send":
         return
@@ -638,7 +732,29 @@ def finish_stage(state_dir: Path, decision: Decision, records: list[dict], failu
         raise RuntimeError("stage state lost after physical dispatch")
     expected = list(decision.changes)
     actual = [(record["parameter"], float(record["value"])) for record in records]
-    if failures or actual != expected:
+    deferred = deferred_records or []
+    if (
+        expected
+        and not decision.rollback
+        and not failures
+        and not records
+        and api_dispatch_attempts == 0
+        and [(r["parameter"], float(r["value"])) for r in deferred] == expected
+        and all(
+            r.get("delivery_status") == "deferred_heap_pressure" and isinstance(r.get("requested_at"), datetime)
+            for r in deferred
+        )
+    ):
+        state.setdefault("deferred_stages", []).append(
+            {
+                "stage_started_at": state["stage_started_at"],
+                "records": [{**r, "requested_at": r["requested_at"].isoformat()} for r in deferred],
+                "api_dispatch_attempts": 0,
+            }
+        )
+        state["status"] = "ready"
+        state["defer_reason"] = "entire bounded stage durably deferred for heap pressure; no API attempt"
+    elif failures or actual != expected or deferred:
         state["status"] = "rollback_failed" if decision.rollback else "halted"
         state["halt_reason"] = (
             f"stage dispatch incomplete: {len(failures)} failures, {len(actual)}/{len(expected)} records"
