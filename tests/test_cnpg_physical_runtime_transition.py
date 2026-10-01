@@ -4,6 +4,7 @@ import copy
 import importlib.util
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from test_cnpg_restore_qualification import witnesses
@@ -14,6 +15,39 @@ spec = importlib.util.spec_from_file_location("physical", ROOT / "scripts/cnpg-p
 p = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(p)
 t = p.t
+
+
+def test_physical_inputs_dispatch_only_the_two_logical_records_to_composite_reader(monkeypatch):
+    calls = []
+    args = SimpleNamespace(captures=Path("capture"))
+    for key in p.INPUT_KEYS:
+        setattr(args, key, Path(key))
+        setattr(args, key + "_sha256", "a" * 64)
+
+    def single(path):
+        calls.append((path.name, "single"))
+        return {}, "a" * 64
+
+    def composite(path, *, version, mode):
+        calls.append((path.name, version, mode))
+        return {}, "a" * 64
+
+    class AfterInputDispatch(Exception):
+        pass
+
+    def stop_before_independent_capture_qualification(*args):
+        raise AfterInputDispatch
+
+    monkeypatch.setattr(p.t.c0, "read_witness", single)
+    monkeypatch.setattr(p.t, "read_transition_record", composite)
+    monkeypatch.setattr(p.pitr, "validate_captures", stop_before_independent_capture_qualification)
+    with pytest.raises(AfterInputDispatch):
+        p.qualified_inputs(args)
+    assert {row for row in calls if len(row) == 3} == {
+        ("logical_rollback", t.VERSION, "rollback-qualification"),
+        ("logical_install", t.VERSION, "install"),
+    }
+    assert {row[0] for row in calls if len(row) == 2} == set(p.INPUT_KEYS) - {"logical_rollback", "logical_install"}
 
 
 @pytest.mark.parametrize("profile", t.PHYSICAL_TARGETS)

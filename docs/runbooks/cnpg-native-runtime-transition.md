@@ -113,6 +113,15 @@ The native stdout contains the rollback-qualification JSON record. Preserve its
 exact bytes/hash and the surrounding UID, SQL, role and terminal receipts. A
 transport timeout remains **unknown**, never inferred rolled back or retried.
 
+The actual native record contains two full roughly 35 MB witnesses. A separate
+typed reader accepts only the fixed logical/physical rollback or install
+envelope, with two independently bounded witnesses and fixed metadata. Every
+individual witness keeps its existing 64 MiB limit; bindings, source inputs and
+other single-witness files keep their existing reader. Duplicate keys, extra
+fields, wrong versions/modes, oversized individual witnesses and symlinks are
+refused. The full native qualification/install validators still run after
+reading; a record's larger file allowance earns no admission by itself.
+
 Review that real record and its before/after digests. The validator requires
 unchanged original ledger/seals/role identities and only the enumerated source
 DDL catalog delta. The install emitter verifies the qualification mode, identical

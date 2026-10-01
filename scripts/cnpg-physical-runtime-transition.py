@@ -336,7 +336,14 @@ def input_arguments(parser):
 def qualified_inputs(args):
     data = {}
     for key in INPUT_KEYS:
-        value, sha = t.c0.read_witness(getattr(args, key))
+        if key in {"logical_rollback", "logical_install"}:
+            value, sha = t.read_transition_record(
+                getattr(args, key),
+                version=t.VERSION,
+                mode="rollback-qualification" if key == "logical_rollback" else "install",
+            )
+        else:
+            value, sha = t.c0.read_witness(getattr(args, key))
         require(sha == getattr(args, key + "_sha256"), "physical input custody mismatch")
         data[key] = value
     pitr.validate_captures(data["markers"], args.captures)
@@ -376,7 +383,9 @@ def qualified_inputs(args):
     )
     post, qualification_sha = None, None
     if args.reviewed_physical:
-        record, qualification_sha = t.c0.read_witness(args.reviewed_physical)
+        record, qualification_sha = t.read_transition_record(
+            args.reviewed_physical, version=VERSION, mode="rollback-qualification"
+        )
         require(qualification_sha == args.reviewed_physical_sha256, "physical review custody mismatch")
         post = checked_physical_qualification(data["physical_before"], record, args.profile)
     else:

@@ -357,11 +357,15 @@ def main():
     args = parser.parse_args()
     data, post, reviewed_sha = physical.qualified_inputs(args)
     require(post is not None and reviewed_sha is not None, "actual physical rollback qualification required")
-    installation, install_sha = t.c0.read_witness(args.physical_install)
+    installation, install_sha = t.read_transition_record(
+        args.physical_install, version=physical.VERSION, mode="install"
+    )
     require(install_sha == args.physical_install_sha256, "physical install custody mismatch")
     native, native_sha = t.c0.read_witness(args.native_binding)
     require(native_sha == args.native_binding_sha256, "raw native physical custody mismatch")
-    reviewed, sha = t.c0.read_witness(args.reviewed_physical)
+    reviewed, sha = t.read_transition_record(
+        args.reviewed_physical, version=physical.VERSION, mode="rollback-qualification"
+    )
     require(sha == reviewed_sha, "reviewed physical record changed")
     objects = render(
         args.profile,
