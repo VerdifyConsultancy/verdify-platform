@@ -131,6 +131,12 @@ SUCCESSOR_267_DIGESTS = {
     "verdify_ingestor_runtime_login": "15e4eff5d86ff58bf3fc98075dfc4613b5fd2a418bf3be9251fd7e6b1634a96e",
 }
 SUCCESSOR_267_MCP_DIGEST = SUCCESSOR_266_MCP_DIGEST
+# Six independent normal duties preserve all three sealed267 boundaries.
+# Exact268 guard/source bytes qualified on the isolated restored role fixture.
+SUCCESSOR_268 = "268-six-runtime-workload-role-boundaries.sql"
+SUCCESSOR_268_SHA256 = "aed9c4e562ff0420e315d14211224d1fff6469b9e0d2a541aedbc0bc562447e0"
+SUCCESSOR_268_DIGESTS = SUCCESSOR_267_DIGESTS
+SUCCESSOR_268_MCP_DIGEST = SUCCESSOR_267_MCP_DIGEST
 # Exact emergency hotfix predecessor: the 262 receipt was resealed to this
 # live digest while 263 was prepared. Only a pending 263 may admit either the
 # original reviewed 262 pair or this pair; mixed receipt/live values fail.
@@ -163,6 +169,7 @@ def reviewed_post_254(later, files=None):
         SUCCESSOR_265,
         SUCCESSOR_266,
         SUCCESSOR_267,
+        SUCCESSOR_268,
     )
     require(successors == list(reviewed[: len(successors)]), "unreviewed post-254 receipt successor")
     if successors:
@@ -184,6 +191,7 @@ def reviewed_post_254(later, files=None):
                 SUCCESSOR_265_SHA256,
                 SUCCESSOR_266_SHA256,
                 SUCCESSOR_267_SHA256,
+                SUCCESSOR_268_SHA256,
             ),
             strict=True,
         ):
@@ -437,6 +445,7 @@ COMMIT;"""
         (SUCCESSOR_265, SUCCESSOR_265_DIGESTS),
         (SUCCESSOR_266, SUCCESSOR_266_DIGESTS),
         (SUCCESSOR_267, SUCCESSOR_267_DIGESTS),
+        (SUCCESSOR_268, SUCCESSOR_268_DIGESTS),
     ):
         if name in later:
             expected["api"] = expected["api_receipt"] = digests["verdify_api_runtime_login"]
