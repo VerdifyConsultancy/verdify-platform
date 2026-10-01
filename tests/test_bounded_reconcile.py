@@ -35,6 +35,7 @@ class ReadOnlyFixture:
         self.expiry = self.ts + timedelta(minutes=40)
         self.rows = {}
         self.plan_values = {}
+        self.stage_rows = []
 
     async def fetch(self, sql, *_args):
         if "FROM setpoint_snapshot" in sql:
@@ -45,6 +46,8 @@ class ReadOnlyFixture:
                 {"parameter": param, "plan_id": "iris-test", "ts": self.ts, "expires_at": self.expiry}
                 for param in self.parameters
             ]
+        if "FROM setpoint_changes" in sql:
+            return self.stage_rows
         raise AssertionError(sql)
 
     async def fetchrow(self, sql, ts, parameter):
@@ -646,3 +649,139 @@ async def test_unapproved_fixed_drift_and_unverified_vpd_source_halt(fixture, tm
     )
     assert held.action == "hold" and "zone VPD source" in held.reason
     assert not (tmp_path / bounded.STATE_NAME).exists()
+
+
+@pytest.mark.asyncio
+async def test_entire_durable_heap_deferral_resumes_under_same_approval_without_replaying_rows(fixture, tmp_path):
+    db = fixture
+    full = [(p, 1.0) for p in db.parameters]
+    await bounded.choose_stage(db, full, db.planned(), 3, tmp_path, 12)
+    approve(bounded._read(tmp_path / bounded.PREVIEW_NAME), tmp_path)
+    first = await bounded.choose_stage(db, full, db.planned(), 3, tmp_path, 12)
+    old = bounded._read(tmp_path / bounded.STATE_NAME)
+    deferred = [{**r, "delivery_status": "deferred_heap_pressure"} for r in records(first.changes)]
+    bounded.finish_stage(tmp_path, first, [], [], deferred_records=deferred, api_dispatch_attempts=0)
+    ready = bounded._read(tmp_path / bounded.STATE_NAME)
+    assert ready["status"] == "ready" and ready["completed"] == []
+    assert ready["expires_at"] == old["expires_at"] and ready["approved_preview"] == old["approved_preview"]
+    assert ready["deferred_stages"][0]["records"][0]["requested_at"] == deferred[0]["requested_at"].isoformat()
+    resumed = await bounded.choose_stage(db, full, db.planned(), 3, tmp_path, 12)
+    assert resumed.action == "send" and resumed.run_id == first.run_id and resumed.changes == first.changes
+    assert bounded._read(tmp_path / bounded.STATE_NAME)["deferred_stages"] == ready["deferred_stages"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("case", ["empty", "partial", "api_attempt", "failure", "mixed", "bad_status"])
+async def test_zero_records_only_truthful_entire_deferral_is_resumable(fixture, tmp_path, case):
+    db = fixture
+    full = [(p, 1.0) for p in db.parameters]
+    await bounded.choose_stage(db, full, db.planned(), 3, tmp_path, 12)
+    approve(bounded._read(tmp_path / bounded.PREVIEW_NAME), tmp_path)
+    first = await bounded.choose_stage(db, full, db.planned(), 3, tmp_path, 12)
+    deferred = [{**r, "delivery_status": "deferred_heap_pressure"} for r in records(first.changes)]
+    if case == "empty":
+        deferred = []
+    if case == "partial":
+        deferred.pop()
+    if case == "bad_status":
+        deferred[0]["delivery_status"] = "requested"
+    bounded.finish_stage(
+        tmp_path,
+        first,
+        records(first.changes[:1]) if case == "mixed" else [],
+        [("x", "failure")] if case == "failure" else [],
+        deferred_records=deferred,
+        api_dispatch_attempts=1 if case == "api_attempt" else 0,
+    )
+    assert bounded._read(tmp_path / bounded.STATE_NAME)["status"] == "halted"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "defect", [None, "unknown", "baseline", "incomplete", "changed_plan", "rollover", "bad_approval"]
+)
+async def test_settled_recovery_preserves_history_and_requires_fresh_guarded_residual_approval(
+    fixture, tmp_path, defect, monkeypatch
+):
+    db = fixture
+    full = [(p, 1.0) for p in db.parameters]
+    await bounded.choose_stage(db, full, db.planned(), 3, tmp_path, 12)
+    approve(bounded._read(tmp_path / bounded.PREVIEW_NAME), tmp_path)
+    first = await bounded.choose_stage(db, full, db.planned(), 3, tmp_path, 12)
+    bounded.finish_stage(tmp_path, first, [], [])  # Historical halt; no fabricated successful send.
+    await bounded.choose_stage(db, full, db.planned(), 3, tmp_path, 12)
+    state = bounded._read(tmp_path / bounded.STATE_NAME)
+    preview = bounded._read(tmp_path / bounded.PREVIEW_NAME)
+    recovery = prepare_writer_stage.prepare_rollback(preview, state, datetime.now(UTC))
+    bounded._write(tmp_path / bounded.RECOVERY_NAME, recovery)
+    settled = await bounded.choose_stage(db, full, db.planned(), 3, tmp_path, 12)
+    assert settled.action == "hold"
+    state = bounded._read(tmp_path / bounded.STATE_NAME)
+    assert state["status"] == "rollback_complete" and state["completed"] == []
+    db.stage_rows = [
+        {
+            "ts": datetime.now(UTC),
+            "parameter": p,
+            "value": v,
+            "delivery_status": "deferred_heap_pressure",
+            "confirmed_at": None,
+        }
+        for p, v in first.changes
+    ]
+    generation = 3
+    if defect == "rollover":
+        generation = 4
+        monkeypatch.setattr(bounded, "SESSION_ID", uuid.uuid4().hex)
+        monkeypatch.setattr(shared, "transport_readbacks_ready", lambda g: g == generation)
+        monkeypatch.setenv("HOSTNAME", "replacement-writer")
+        monkeypatch.setenv("VERDIFY_GIT_SHA", "replacement-source")
+    held = await bounded.choose_stage(db, full, db.planned(), generation, tmp_path, 12)
+    assert held.action == "hold" and "fresh approval" in held.reason
+    archive_path = tmp_path / f"writer-stage-recovered-{state['run_id']}.json"
+    archive = bounded._read(archive_path)
+    assert archive["state"] == state and archive["recovery"] == recovery
+    residual = full[:6]
+    await bounded.choose_stage(db, residual, db.planned(), generation, tmp_path, 12)
+    fresh = prepare_writer_stage.prepare(bounded._read(tmp_path / bounded.PREVIEW_NAME), datetime.now(UTC))
+    if defect == "bad_approval":
+        fresh["fingerprint"] = "invalid"
+    bounded._write(tmp_path / bounded.APPROVAL_NAME, fresh)
+    if defect == "unknown":
+        db.stage_rows[0]["delivery_status"] = "sent"
+    if defect == "baseline":
+        db.readbacks[first.changes[0][0]] = 1.0
+    if defect == "incomplete":
+        db.stage_rows.pop()
+    if defect == "changed_plan":
+        db.expiry += timedelta(minutes=1)
+    new = await bounded.choose_stage(db, residual, db.planned(), generation, tmp_path, 12)
+    assert bounded._read(archive_path) == archive
+    if defect not in (None, "rollover"):
+        assert new.action == "hold"
+        assert bounded._read(tmp_path / bounded.STATE_NAME) == state
+    else:
+        assert new.action == "send" and new.run_id == fresh["run_id"] and new.changes == tuple(residual)
+        assert bounded._read(tmp_path / bounded.STATE_NAME)["completed"] == []
+        assert not (tmp_path / bounded.RECOVERY_NAME).exists()
+        if defect == "rollover":
+            assert fresh["generation"] == 4 and fresh["session_id"] == bounded.SESSION_ID
+            assert archive["approval"]["session_id"] != fresh["session_id"]
+            assert fresh["approved_preview"]["pod"] == "replacement-writer"
+            assert fresh["approved_preview"]["source_revision"] == "replacement-source"
+
+
+@pytest.mark.asyncio
+async def test_deferred_stage_revalidates_original_expiry_before_any_retry(fixture, tmp_path):
+    db = fixture
+    full = [(p, 1.0) for p in db.parameters]
+    await bounded.choose_stage(db, full, db.planned(), 3, tmp_path, 12)
+    approve(bounded._read(tmp_path / bounded.PREVIEW_NAME), tmp_path)
+    first = await bounded.choose_stage(db, full, db.planned(), 3, tmp_path, 12)
+    deferred = [{**r, "delivery_status": "deferred_heap_pressure"} for r in records(first.changes)]
+    bounded.finish_stage(tmp_path, first, [], [], deferred_records=deferred, api_dispatch_attempts=0)
+    state = bounded._read(tmp_path / bounded.STATE_NAME)
+    state["expires_at"] = (datetime.now(UTC) - timedelta(seconds=1)).isoformat()
+    bounded._write(tmp_path / bounded.STATE_NAME, state)
+    stopped = await bounded.choose_stage(db, full, db.planned(), 3, tmp_path, 12)
+    assert stopped.action == "hold" and "expired" in stopped.reason
+    assert bounded._read(tmp_path / bounded.STATE_NAME)["completed"] == []

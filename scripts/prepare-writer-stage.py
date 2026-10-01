@@ -21,8 +21,8 @@ def prepare(preview: dict, now: datetime) -> dict:
     expiry = datetime.fromisoformat(preview["earliest_plan_expiry"])
     if captured.tzinfo is None or expiry.tzinfo is None:
         raise ValueError("preview timestamps must include UTC offset")
-    if preview.get("version") != 1 or len(preview.get("changes", [])) <= 12:
-        raise ValueError("expected a version-1 broad-restore preview")
+    if preview.get("version") != 1 or not preview.get("changes"):
+        raise ValueError("expected a nonempty version-1 bounded delivery preview")
     if now - captured > timedelta(minutes=6) or captured > now + timedelta(seconds=15):
         raise ValueError("preview is stale or future-dated")
     if len(preview.get("readbacks", {})) < 48:

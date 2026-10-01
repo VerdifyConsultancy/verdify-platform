@@ -777,10 +777,11 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         missing = shared.missing_transport_cfg_readbacks(reconnect_generation)
         log.warning(
             "writer_reconcile reason=transport_reconnect generation=%d "
-            "action=blocked_readbacks_incomplete expected=%d missing=%d",
+            "action=blocked_readbacks_incomplete expected=%d missing=%d missing_params=%s",
             reconnect_generation,
             len(shared.transport_expected_cfg_readbacks),
             len(missing),
+            ",".join(sorted(missing)),
         )
         return
 
@@ -1407,6 +1408,7 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
 
         dispatchable_changes: list[tuple[str, float, str]] = []
         delivery_records: list[dict[str, object]] = []
+        deferred_records: list[dict[str, object]] = []
         prequeue_failures: list[tuple[str, str]] = []
         skipped_heap_deferred = 0
         for param, val in changes:
@@ -1489,6 +1491,14 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                     source,
                     change_trigger_id,
                     change_planner_instance,
+                )
+                deferred_records.append(
+                    {
+                        "parameter": param,
+                        "value": float(val),
+                        "requested_at": requested_at,
+                        "delivery_status": "deferred_heap_pressure",
+                    }
                 )
                 skipped_heap_deferred += 1
                 _last_pushed.pop(param, None)
@@ -1650,6 +1660,7 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                 outcome.attempt,
             )
 
+    api_dispatch_attempts = 0
     pending_records = list(delivery_records)
     terminal_failures: list[tuple[str, str]] = []
     max_attempts = 1 if probe_decision.action == "send" else 3
@@ -1708,6 +1719,7 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         ) -> None:
             await persist_delivery_states(records, outcomes, final_attempt=is_final)
 
+        api_dispatch_attempts += 1
         result = await push_to_esp32_detailed(
             [record["route"] for record in pending_records],
             attempt=attempt,
@@ -1789,7 +1801,14 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         drift_probe.finish(STATE_DIR, probe_decision, delivery_records, final_failures)
         shared.defer_failed_dispatch(reconnect_generation, drift_versions)
     elif stage_decision.action == "send":
-        bounded_reconcile.finish_stage(STATE_DIR, stage_decision, delivery_records, final_failures)
+        bounded_reconcile.finish_stage(
+            STATE_DIR,
+            stage_decision,
+            delivery_records,
+            final_failures,
+            deferred_records=deferred_records,
+            api_dispatch_attempts=api_dispatch_attempts,
+        )
         # Keep the generation unreconciled until every approved stage has a
         # durable confirmation and current-generation cfg readback.
         shared.defer_failed_dispatch(reconnect_generation, drift_versions)
