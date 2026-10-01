@@ -67,13 +67,27 @@ END $guard$;
 SQL
   pg_dumpall --roles-only --no-role-passwords --no-comments --no-security-labels \
     > "${work_dir}/roles.before.sql" 2>"${work_dir}/roles-before.stderr"
+  bootstrap_args=()
+  if [ "${CNPG_BOOTSTRAP_GRANTOR_PROFILE:-}" = cnpg-source-bootstrap-grantor-v1 ]; then
+    psql -X -qAt -v ON_ERROR_STOP=1 -d postgres -c "SELECT json_build_object('oid',oid::int,'name',rolname,'superuser',rolsuper) FROM pg_roles WHERE oid=10" > "${work_dir}/bootstrap-identity.json"
+    bootstrap_args=(--bootstrap-identity "${work_dir}/bootstrap-identity.json" --source-witness "${CNPG_SOURCE_WITNESS:?}" --source-witness-sha256 "${CNPG_SOURCE_WITNESS_SHA256:?}")
+  elif [ -n "${CNPG_BOOTSTRAP_GRANTOR_PROFILE:-}" ]; then
+    echo '[restore-pair] FATAL: unsupported bootstrap grantor profile' >&2
+    exit 1
+  fi
   management_args=()
   if [ -n "${CNPG_MANAGEMENT_BEFORE:-}" ]; then
     [ "${CNPG_MANAGEMENT_BEFORE}" = "${stage}/management-before.sql" ]
     management_args=(--management-before "${CNPG_MANAGEMENT_BEFORE}" --management-before-sha256 "${CNPG_MANAGEMENT_BEFORE_SHA256:?}")
   fi
+  prefix_args=()
+  if [ -n "${CNPG_ROLE_PREFIX_CUSTODY:-}" ]; then
+    [ "${CNPG_ROLE_PREFIX_CUSTODY}" = "${stage}/role-prefix-custody.json" ]
+    [ "${CNPG_ROLE_PREFIX_CURRENT:?}" = "${stage}/role-prefix-current.sql" ]
+    prefix_args=(--role-prefix-custody "${CNPG_ROLE_PREFIX_CUSTODY}" --role-prefix-current "${CNPG_ROLE_PREFIX_CURRENT}")
+  fi
   python3 "${CNPG_ROLE_HELPER}" --source "${roles}" --current "${work_dir}/roles.before.sql" \
-    "${management_args[@]}" --replay "${work_dir}/roles.replay.sql"
+    "${management_args[@]}" "${prefix_args[@]}" "${bootstrap_args[@]}" --replay "${work_dir}/roles.replay.sql"
 elif [ "${RESTORE_SERVER_MODE:-standalone}" = standalone ]; then
   work_dir="$(mktemp -d "${TMPDIR:-/tmp}/verdify-restore.XXXXXXXX")"
 # The TimescaleDB image can run as backup-plane uid 999 without a passwd entry.
@@ -104,6 +118,11 @@ if ! psql -X -v ON_ERROR_STOP=1 -d postgres -f "${work_dir}/roles.replay.sql" \
     >"${work_dir}/roles.stdout" 2>"${work_dir}/roles.stderr"; then
   echo "[restore-pair] FATAL: role replay failed; raw SQL output withheld" >&2
   exit 1
+fi
+if [ "${RESTORE_SERVER_MODE:-standalone}" = cnpg ]; then
+  pg_dumpall --roles-only --no-role-passwords --no-comments --no-security-labels \
+    > "${work_dir}/roles.after-replay.sql" 2>"${work_dir}/roles-after-replay.stderr"
+  python3 "${CNPG_ROLE_HELPER}" --source "${roles}" --current "${work_dir}/roles.after-replay.sql" "${bootstrap_args[@]}"
 fi
 createdb -O "${owner}" "${PGDATABASE}"
 if [ "${RESTORE_SERVER_MODE:-standalone}" = cnpg ]; then
@@ -173,7 +192,7 @@ fi
 awk '$1 != "\\restrict" && $1 != "\\unrestrict" { print }' "${roles}" > "${work_dir}/roles.source.canonical"
 awk '$1 != "\\restrict" && $1 != "\\unrestrict" { print }' "${work_dir}/roles.restored.sql" > "${work_dir}/roles.restored.canonical"
 if [ "${RESTORE_SERVER_MODE:-standalone}" = cnpg ]; then
-  python3 "${CNPG_ROLE_HELPER}" --source "${roles}" --current "${work_dir}/roles.restored.sql"
+  python3 "${CNPG_ROLE_HELPER}" --source "${roles}" --current "${work_dir}/roles.restored.sql" "${bootstrap_args[@]}"
 elif ! cmp -s "${work_dir}/roles.source.canonical" "${work_dir}/roles.restored.canonical"; then
   echo "[restore-pair] FATAL: role attributes, settings or memberships differ source_sha256=$(sha256sum "${work_dir}/roles.source.canonical" | awk '{print $1}') restored_sha256=$(sha256sum "${work_dir}/roles.restored.canonical" | awk '{print $1}')" >&2
   exit 1

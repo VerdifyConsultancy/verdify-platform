@@ -109,6 +109,10 @@ def main():
     parser.add_argument("--prior-custody-manifest-sha256")
     parser.add_argument("--management-before", type=Path)
     parser.add_argument("--management-before-sha256")
+    parser.add_argument("--bootstrap-grantor-profile", action="store_true")
+    parser.add_argument("--role-prefix-custody", type=Path)
+    parser.add_argument("--role-prefix-custody-sha256")
+    parser.add_argument("--role-prefix-current", type=Path)
     parser.add_argument("--bash", default="/opt/homebrew/bin/bash")
     args = parser.parse_args()
     stage = stage_path(
@@ -118,6 +122,27 @@ def main():
         raw_management = regular(args.management_before).read_bytes()
         c0.require(
             hashlib.sha256(raw_management).hexdigest() == args.management_before_sha256, "management custody mismatch"
+        )
+    prefix = None
+    if args.role_prefix_custody:
+        c0.require(args.stage_name and args.role_prefix_current, "new exclusive prefix continuation custody required")
+        prefix_raw = regular(args.role_prefix_custody).read_bytes()
+        c0.require(
+            hashlib.sha256(prefix_raw).hexdigest() == args.role_prefix_custody_sha256,
+            "partial descriptor custody mismatch",
+        )
+        role_spec = importlib.util.spec_from_file_location("role_custody", ROOT / "scripts/cnpg-restore-role-parity.py")
+        role_helper = importlib.util.module_from_spec(role_spec)
+        role_spec.loader.exec_module(role_helper)
+        prefix = role_helper.prefix_descriptor(prefix_raw)
+        c0.require(prefix["stage_name"] != args.stage_name, "partial custody reuse refused")
+        c0.require(
+            hashlib.sha256(regular(args.role_prefix_current).read_bytes()).hexdigest() == prefix["current_sha256"],
+            "partial current artifact mismatch",
+        )
+    else:
+        c0.require(
+            not args.role_prefix_current and not args.role_prefix_custody_sha256, "unexpected partial continuation"
         )
     c0.require(re.fullmatch(r"verdify-\d{8}T\d{6}Z", args.stem), "invalid pair identity")
     c0.require(re.fullmatch(r"verdify-cnpg-rehearsal-[1-9]\d*", args.pod), "invalid rehearsal pod")
@@ -141,6 +166,9 @@ def main():
     files["source-witness.json"] = regular(args.source_witness)
     if args.management_before:
         files["management-before.sql"] = regular(args.management_before)
+    if prefix:
+        files["role-prefix-custody.json"] = regular(args.role_prefix_custody)
+        files["role-prefix-current.sql"] = regular(args.role_prefix_current)
     files.update({f"scripts/{name}": regular(ROOT / "scripts" / name) for name in SCRIPTS})
     files.update({f"db/migrations/{name}": regular(ROOT / "db/migrations" / name) for name in MIGRATIONS})
     hashes = {}
@@ -159,6 +187,8 @@ def main():
         "prior_custody_manifest_sha256": args.prior_custody_manifest_sha256,
         "management_before_sha256": args.management_before_sha256,
         "production_endpoint_changed": False,
+        "role_prefix_custody": prefix,
+        "bootstrap_grantor_profile": "cnpg-source-bootstrap-grantor-v1" if args.bootstrap_grantor_profile else None,
     }
     (args.receipt_dir / "custody-before.json").write_text(json.dumps(receipt, indent=2) + "\n")
     manifest = args.receipt_dir / "custody.sha256"
@@ -177,6 +207,30 @@ def main():
         ):
             subprocess.run(
                 exec_args + ["sh", "-c", guard, "uid-guard", args.pod_uid, "sh", "-c", predecessor],
+                check=True,
+                stdout=out,
+                stderr=err,
+                timeout=120,
+            )
+    if prefix:
+        old = "/var/lib/postgresql/data/" + prefix["stage_name"]
+        checks = [
+            f'test "$(cd {old} && pwd -P)" = {old}',
+            f"test \"$(sha256sum {old}/custody.sha256 | cut -d' ' -f1)\" = {prefix['manifest_sha256']}",
+            f"cd {old} && sha256sum -c custody.sha256",
+        ]
+        for filename, field in [
+            ("roles.before.sql", "before_sha256"),
+            ("roles.replay.sql", "replay_sha256"),
+            ("roles.stderr", "error_sha256"),
+        ]:
+            checks.append(f"test \"$(sha256sum {old}/work/{filename} | cut -d' ' -f1)\" = {prefix[field]}")
+        with (
+            (args.receipt_dir / "partial-custody.stdout").open("wb") as out,
+            (args.receipt_dir / "partial-custody.stderr").open("wb") as err,
+        ):
+            subprocess.run(
+                exec_args + ["sh", "-c", guard, "uid-guard", args.pod_uid, "sh", "-c", " && ".join(checks)],
                 check=True,
                 stdout=out,
                 stderr=err,
@@ -247,6 +301,11 @@ def main():
     if args.management_before:
         env["CNPG_MANAGEMENT_BEFORE"] = stage + "/management-before.sql"
         env["CNPG_MANAGEMENT_BEFORE_SHA256"] = args.management_before_sha256
+    if args.bootstrap_grantor_profile:
+        env["CNPG_BOOTSTRAP_GRANTOR_PROFILE"] = "cnpg-source-bootstrap-grantor-v1"
+    if prefix:
+        env["CNPG_ROLE_PREFIX_CUSTODY"] = stage + "/role-prefix-custody.json"
+        env["CNPG_ROLE_PREFIX_CURRENT"] = stage + "/role-prefix-current.sql"
     command = [
         "env",
         *[f"{key}={value}" for key, value in env.items()],

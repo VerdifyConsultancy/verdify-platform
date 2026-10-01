@@ -14,6 +14,18 @@ password-free role artifact must match the source witness's nonbuiltin role name
 actual execution independently exports and checks the target's full role
 attributes, settings and memberships with the existing role-parity helper.
 
+The explicit `cnpg-source-bootstrap-grantor-v1` logical target profile permits
+only source OID10 `verdify` to target OID10 `postgres` membership-grantor mapping.
+Generate its target witness using `cnpg-c0-restore-qualification.py --target
+--bootstrap-grantor-profile`; the original frozen source witness remains intact.
+The target witness retains raw grantor differences and physical parity failure
+separately from typed bootstrap-privilege equivalence. Owners, object ACLs,
+membership flags, all ledger rows and original seals are never normalized.
+The source-derived target217/259 attesters additionally require the actual native
+OID10/name/postgres/SUPERUSER fact at runtime. Rollback qualification and literal
+install bind the profiled DDL hash and native before/post membership facts.
+Neither the profile nor the local PG16.15 fixtures certify an actual16.13 restore.
+
 The executor reuses the paired import's namespace/Cluster/Pod UID/operand checks
 and downward API UID guard inside the selected primary. SQL independently requires
 `verdify_rehearsal`, PostgreSQL **160013**, `verdify-cnpg-rehearsal`, a primary,
