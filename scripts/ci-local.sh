@@ -78,6 +78,8 @@ $PY -m pytest -q \
   tests/test_21_config_revision.py \
   tests/test_component_grid_capture.py \
   tests/test_c1_grid_projection.py \
+  tests/test_c1_qualification_overlay.py \
+  tests/test_c1_native_capture.py \
   tests/test_component_prefix_replay.py \
   tests/test_cnpg_rehearsal.py \
   tests/test_cnpg_runtime_client_qualification.py \

@@ -45,7 +45,12 @@ def ordinary_base48(planner_params, mister_defaults):
 
 
 def validate_worksheet(worksheet, preview, *, now, physics, guardrails, admitted=False):
-    if worksheet.get("schema") != "verdify-c1-qualification-worksheet-v1":
+    schema = worksheet.get("schema")
+    limits = {
+        "verdify-c1-qualification-worksheet-v1": 12,
+        "verdify-c1-qualification-worksheet-v2": len(CANONICAL_FIELD_ORDER),
+    }
+    if schema not in limits:
         raise ValueError("invalid C1 worksheet schema")
     if str(UUID(worksheet["worksheet_id"])) != worksheet["worksheet_id"]:
         raise ValueError("invalid C1 worksheet identity")
@@ -90,7 +95,7 @@ def validate_worksheet(worksheet, preview, *, now, physics, guardrails, admitted
         raise ValueError("C1 immutable decisions/projection mismatch")
     if projection["grid_revision"] != preview["identity"]["grid_revision"]:
         raise ValueError("C1 actual device grid changed")
-    if not 1 <= len(decisions) <= 12:
+    if not 1 <= len(decisions) <= limits[schema]:
         raise ValueError("C1 decision bundle exceeds existing bound")
     # Validate after projection; never silently round or change an explicit
     # choice to fit physics, registry or current moisture guardrails.
@@ -245,7 +250,7 @@ async def choose(conn, changes, *, base_values, base_inputs, guardrails, physics
                 "worksheet": worksheet,
                 "worksheet_id": worksheet["worksheet_id"],
                 "status": "inflight",
-                "touched": sorted(set((old or {}).get("touched", [])) | set(worksheet["decisions"])),
+                "touched": sorted(set((old or {}).get("touched", [])) | {name for name, _ in selected}),
                 "stage_started_at": now.isoformat(),
                 "selected": list(selected),
                 "qualification_claimed": False,

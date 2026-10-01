@@ -76,3 +76,18 @@ holds without resetting its run. No historical failed experiment row is replayed
 The state and packet always say `qualification_claimed: false`. ToolA must
 validate the real callback packet separately; source projection and confirmed
 writes do not prove callback freshness, control fidelity or natural fog behavior.
+
+### Full-vector decisions and bounded delivery
+
+New worksheets use `verdify-c1-qualification-worksheet-v2`: every off-grid
+value in the complete 48-field source policy needs an explicit decision, even
+when there are more than 12. On-grid fields remain unchanged. Historical v1
+worksheets retain their original 12-decision admission limit.
+
+This changes the size of the reviewed decision vector, not the physical write
+stage: each stage still sends at most 12 changes and requires durable
+confirmation before the next stage. All stages share the original six-minute
+expiry, exact source/runtime/generation/grid identity and fresh policy, physics
+and moisture guards. Restoration owns only fields selected for an actual
+delivery attempt; an unattempted later stage gains no restoration authority.
+There is no partial full-vector qualification or automatic expiry extension.

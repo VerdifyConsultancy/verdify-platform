@@ -541,3 +541,181 @@ def test_fractional_ordinary_restore_requires_native_confirmation_before_equival
 def test_grid_projection_comparison_never_uses_ordinary_fractional_equivalence():
     name = "min_fog_on_s"
     assert overlay._upsert([], {name: 60.0}, {name: 59.0}) == ((name, 60.0),)
+
+
+@pytest.fixture
+def full_vector(runtime):
+    sheet, preview, readbacks = runtime
+    choices = {
+        "cool_exit_hysteresis_f": (1.96, 2.0),
+        "cool_stage2_over_high_f": (1.73, 1.7),
+        "fog_escalation_kpa": (0.25, 0.2),
+        "min_fog_off_s": (72.0, 60.0),
+        "min_fog_on_s": (59.25, 60.0),
+        "mister_all_delay_s": (93.0, 90.0),
+        "mister_all_kpa": (1.154, 1.15),
+        "mister_engage_delay_s": (46.5, 30.0),
+        "mister_engage_kpa": (0.9540000000000001, 0.95),
+        "mister_pulse_gap_s": (41.25, 40.0),
+        "mister_vpd_weight": (1.65, 1.5),
+        "temp_hysteresis": (1.96, 2.0),
+        "vpd_hysteresis": (0.20750000000000002, 0.2),
+        "vpd_watch_dwell_s": (67.5, 60.0),
+    }
+    sheet["schema"] = "verdify-c1-qualification-worksheet-v2"
+    preview["base_values"].update({name: pair[0] for name, pair in choices.items()})
+    readbacks.update(preview["base_values"])
+    sheet["decisions"] = {
+        name: {"from": pair[0], "to": pair[1], "rationale": "Explicit regression choice within the physical grid"}
+        for name, pair in choices.items()
+    }
+    sheet["projection"] = project_c1_grid_state(preview["base_values"], sheet["decisions"])
+    return runtime
+
+
+def test_full_vector_v2_and_historical_v1_limits(full_vector):
+    sheet, preview, _ = full_vector
+    result = overlay.validate_worksheet(
+        sheet, preview, now=datetime.now(UTC), physics=dispatcher._validate_physics, guardrails={}
+    )
+    assert result["field_count"] == 48 and result["explicit_selection_count"] == 14
+    sheet["schema"] = "verdify-c1-qualification-worksheet-v1"
+    with pytest.raises(ValueError, match="bundle exceeds"):
+        overlay.validate_worksheet(
+            sheet, preview, now=datetime.now(UTC), physics=dispatcher._validate_physics, guardrails={}
+        )
+
+
+async def admit_full_vector(runtime, tmp_path):
+    sheet, preview, _ = runtime
+    args = dict(
+        base_values=preview["base_values"],
+        base_inputs=preview["base_inputs"],
+        guardrails={},
+        physics=dispatcher._validate_physics,
+        state_dir=tmp_path,
+        generation=3,
+    )
+    await overlay.choose(None, [], **args)
+    sheet["preview"] = bounded._read(tmp_path / overlay.PREVIEW_NAME)
+    bounded._write(tmp_path / overlay.WORKSHEET_NAME, sheet)
+    return await overlay.choose(None, [], **args), args
+
+
+class StageConfirmation:
+    def __init__(self):
+        self.confirmed = False
+
+    async def fetchrow(self, query, requested_at, parameter):
+        return {
+            "delivery_status": "confirmed" if self.confirmed else "sent",
+            "confirmed_at": datetime.now(UTC) if self.confirmed else None,
+        }
+
+
+@pytest.mark.asyncio
+async def test_full_vector_two_stages_require_confirmation_and_preserve_expiry(full_vector, tmp_path):
+    first, args = await admit_full_vector(full_vector, tmp_path)
+    sheet, _, readbacks = full_vector
+    assert first.phase == "send" and len(first.changes) == 12
+    conn = StageConfirmation()
+    first_ts = datetime.now(UTC)
+    overlay.finish(
+        tmp_path, first, [{"parameter": k, "value": v, "requested_at": first_ts} for k, v in first.changes], []
+    )
+    readbacks.update(dict(first.changes))
+    awaiting = await overlay.choose(conn, [], **args)
+    assert awaiting.phase == "awaiting_confirmation" and not awaiting.changes
+    assert bounded._read(tmp_path / overlay.STATE_NAME)["touched"] == sorted(k for k, _ in first.changes)
+    conn.confirmed = True
+    second = await overlay.choose(conn, [], **args)
+    assert second.phase == "send" and len(second.changes) == 2
+    assert not set(dict(first.changes)) & set(dict(second.changes))
+    second_ts = datetime.now(UTC)
+    overlay.finish(
+        tmp_path, second, [{"parameter": k, "value": v, "requested_at": second_ts} for k, v in second.changes], []
+    )
+    readbacks.update(dict(second.changes))
+    active = await overlay.choose(conn, [], **args)
+    assert active.phase == "active" and not active.changes
+    state = bounded._read(tmp_path / overlay.STATE_NAME)
+    assert state["worksheet"] == sheet and state["worksheet"]["expires_at"] == sheet["expires_at"]
+    assert len(state["stages"]) == 2 and len(state["touched"]) == 14
+    assert state["qualification_claimed"] is False
+    # Expiry never gains more authority; restoration uses fresh source in the same bounded stages.
+    state["worksheet"]["expires_at"] = (datetime.now(UTC) - timedelta(seconds=1)).isoformat()
+    bounded._write(tmp_path / overlay.STATE_NAME, state)
+    bounded._write(tmp_path / overlay.WORKSHEET_NAME, state["worksheet"])
+    restored = await overlay.choose(conn, [], **args)
+    assert restored.phase == "yield" and len(restored.changes) == 12
+    restore_ts = datetime.now(UTC)
+    overlay.finish(
+        tmp_path, restored, [{"parameter": k, "value": v, "requested_at": restore_ts} for k, v in restored.changes], []
+    )
+    readbacks.update(dict(restored.changes))
+    remainder = await overlay.choose(conn, [], **args)
+    assert remainder.phase == "yield" and len(remainder.changes) == 2
+    overlay.finish(
+        tmp_path,
+        remainder,
+        [{"parameter": k, "value": v, "requested_at": datetime.now(UTC)} for k, v in remainder.changes],
+        [],
+    )
+    readbacks.update(dict(remainder.changes))
+    yielded = await overlay.choose(conn, [], **args)
+    assert yielded.phase == "yield" and not yielded.changes
+    state = bounded._read(tmp_path / overlay.STATE_NAME)
+    assert state["status"] == "yielded" and len(state["stages"]) == 4
+
+
+@pytest.mark.asyncio
+async def test_expiry_before_second_stage_restores_only_attempted_fields(full_vector, tmp_path):
+    first, args = await admit_full_vector(full_vector, tmp_path)
+    ts = datetime.now(UTC)
+    overlay.finish(tmp_path, first, [{"parameter": k, "value": v, "requested_at": ts} for k, v in first.changes], [])
+    full_vector[2].update(dict(first.changes))
+    state = bounded._read(tmp_path / overlay.STATE_NAME)
+    state["worksheet"]["expires_at"] = (datetime.now(UTC) - timedelta(seconds=1)).isoformat()
+    bounded._write(tmp_path / overlay.STATE_NAME, state)
+    bounded._write(tmp_path / overlay.WORKSHEET_NAME, state["worksheet"])
+    restoration = await overlay.choose(None, [], **args)
+    assert restoration.phase == "yield"
+    assert set(dict(restoration.changes)) == set(dict(first.changes))
+    assert not (set(full_vector[0]["decisions"]) - set(dict(first.changes))) & set(dict(restoration.changes))
+
+
+def test_preparer_requires_complete_fresh_v2_projection(full_vector):
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("c1_prepare", ROOT / "scripts/prepare-c1-qualification-worksheet.py")
+    prepare = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(prepare)
+    sheet, preview, _ = full_vector
+    preview["base_converged"] = True
+    now = datetime.now(UTC)
+    actual = prepare.prepare(preview, sheet["decisions"], now=now)
+    assert actual["schema"] == "verdify-c1-qualification-worksheet-v2"
+    assert actual["projection"]["explicit_selection_count"] == 14
+    assert actual["projection"]["field_count"] == 48
+    assert datetime.fromisoformat(actual["expires_at"]) == datetime.fromisoformat(preview["captured_at"]) + timedelta(
+        minutes=6
+    )
+    incomplete = dict(sheet["decisions"])
+    incomplete.pop("vpd_watch_dwell_s")
+    with pytest.raises(ValueError, match="requires from, to, and rationale"):
+        prepare.prepare(preview, incomplete, now=now)
+    with pytest.raises(ValueError, match="current within"):
+        prepare.prepare(preview, sheet["decisions"], now=now + timedelta(seconds=61))
+    preview["base_converged"] = False
+    with pytest.raises(ValueError, match="not converged"):
+        prepare.prepare(preview, sheet["decisions"], now=now)
+
+
+@pytest.mark.asyncio
+async def test_full_vector_unknown_stage_outcome_is_retained_not_replayed(full_vector, tmp_path):
+    first, args = await admit_full_vector(full_vector, tmp_path)
+    original = (tmp_path / overlay.STATE_NAME).read_bytes()
+    held = await overlay.choose(None, [], **args)
+    assert first.phase == "send" and len(first.changes) == 12
+    assert held.phase == "hold" and not held.changes
+    assert (tmp_path / overlay.STATE_NAME).read_bytes() == original
