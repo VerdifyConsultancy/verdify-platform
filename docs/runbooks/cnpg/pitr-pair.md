@@ -1,0 +1,128 @@
+# Native reader-key-only A/B PITR
+
+`scripts/render-cnpg-pitr-pair.py` prepares two **new** Clusters in
+`verdify-db-rehearsal`. It never connects, creates Secrets, commits markers,
+requests backups, applies resources, deletes storage, or qualifies recovery.
+The input captures must come from the actual admitted `verdify-cnpg-rehearsal`
+Cluster, exact UID `e11f1014-a77e-4ccf-9d97-e8cf5c037484`, PostgreSQL 160013 and
+qualified operand digest `8b461e37…`. Fixture tests are refusal tests only.
+
+## Collect native inputs after admission
+
+1. Preserve current source Cluster, primary and replica Pod identities, PVC/PV
+   identities, nodes/physical domains, image digest, original logical import,
+   original ledger/seals and actual admitted native witness. All required live
+   checks precede the mutation they protect. The renderer does not replace them.
+2. Consume a naturally completed native Backup when available, or one explicit
+   Backup through the unchanged Barman plugin. Preserve the raw Backup JSON,
+   UID, `status.backupId`, begin/end WAL, timestamps and source identity. Preserve
+   a raw ScheduledBackup JSON when it is the Backup's owner. The script verifies
+   direct Cluster UID ownership or the exact ScheduledBackup UID lineage. A
+   Backup `completed` phase is not proof of restoration or archived marker WAL.
+3. Through a UID-bound service client, commit three genuine uniquely identified
+   sentinel transactions **A, B and C** in the existing `rehearsal_bootstrap`
+   database. Use the source-owned sentinel relation; leave `verdify_rehearsal`
+   catalog, historical ledger and seals untouched. Record source system identity,
+   primary UID, native timeline, transaction xid32, server UTC immediately after
+   transaction start, acknowledged flush LSN and server UTC after COMMIT returns.
+   `acknowledged_at` is a post-commit bound, not an invented exact commit time.
+   Do not equate a sampled write LSN with a WAL commit record.
+4. Between A's acknowledged time and B's transaction start, query and retain a
+   native server `clock_timestamp()` as target A. Between B's acknowledged time
+   and C's transaction start, capture target B in the same manner. Require strict
+   order and a stable primary UID/timeline. Retain C as the genuine transaction
+   crossing target B: a time target beyond the last commit can remain unreached.
+   No sleep or arbitrary duration is required; obtain distinct native clock
+   readings. If identity or chronology changes, preserve the failed attempt and
+   collect a new complete source-bound attempt.
+5. Require native Barman read-only inventory and reader credential retrieval of
+   the successful base backup and WAL covering **through C**. Preserve full
+   serverName, backup ID, timeline, WAL/object paths and hashes. The renderer does
+   not infer this from Backup completion, `ContinuousArchiving=True`, or a
+   Garage access probe. ROOT must verify it before recovery.
+
+## Custody input contract
+
+`--cluster` and `--backup` are raw native JSON; `--scheduled-backup` is optional
+raw owner JSON. `--markers` has schema `verdify-cnpg-pitr-marker-custody-v1`:
+
+| Field | Required native facts |
+| --- | --- |
+| `source` | namespace, cluster_name, cluster_uid, image, server_version_num=160013, database=rehearsal_bootstrap |
+| `backup_uid`, `backup_id` | exact captured Backup UID and native Barman ID |
+| `primary_pod_uid`, `timeline` | stable native primary UID and positive numeric timeline |
+| `markers.A`, `.B`, `.C` | transaction_started_at, acknowledged_at, primary_pod_uid, timeline, xid, marker_id, acknowledged_flush_lsn, capture_sha256 |
+| `targets.A`, `.B` | explicitly UTC native server-clock observations at the two boundaries |
+| `target_capture_sha256` | hash of the complete raw boundary capture |
+
+All timestamps require explicit UTC. Each transaction capture under `--captures`
+is `A.json`, `B.json`, or `C.json`, containing exactly `{source, marker}` with the
+above marker fields except `capture_sha256`. `target-boundaries.json` contains
+exactly `{source, primary_pod_uid, timeline, targets}`. Retain the original native
+SQL/client transcript beside these structured captures. The script verifies
+capture byte hashes and exact content agreement; hashes alone cannot prove that
+an operator supplied genuine observations.
+
+```sh
+python scripts/render-cnpg-pitr-pair.py \
+  --cluster "$CUSTODY/source-cluster.json" \
+  --backup "$CUSTODY/completed-backup.json" \
+  --markers "$CUSTODY/marker-custody.json" \
+  --captures "$CUSTODY/native-captures" \
+  --out "$CUSTODY/new-render-directory"
+# Add --scheduled-backup "$CUSTODY/scheduled-backup.json" if that owns the Backup.
+```
+
+The output directory must be absent. It contains `recovery-pair.yaml` and an
+input/render SHA256 record explicitly labeled `render-only`, never a recovery
+receipt. The renderer emits one reader ObjectStore and the distinct
+`verdify-cnpg-pitr-a` / `verdify-cnpg-pitr-b` Clusters. Both use the **original**
+archive serverName `verdify-cnpg-rehearsal`, destination
+`s3://verdify-cnpg-rehearsal/postgresql`, reader-only SecretRefs and the declared
+public Garage-region SecretRef. They pin the actual backup ID and numeric source
+timeline, use separate target times and retain three-instance physical-domain
+anti-affinity and separate Longhorn data/WAL PVCs. They declare no WAL archiver,
+writer Secret, retention policy, ScheduledBackup, service writer or product
+endpoint. Reader-only refers to archive permissions; the restored databases
+promote normally and still require ordinary-role SQL qualification.
+
+## Live apply and acceptance, owned by ROOT
+
+Before creating either Cluster, verify its name and every associated PVC are
+absent, original source/storage identities are unchanged, declared isolation
+still applies, reader permissions are intact and capacity supports six additional
+30Gi data + 10Gi WAL instances (240Gi logical / 480Gi replicated at two copies).
+Do not recover in place, reuse a failed target's storage, or apply this pair to
+production. Capture each new Cluster/Pod/PVC/PV UID and actual domain placement.
+
+Require actual PostgreSQL recovery-target-reached evidence and recovered
+sentinels: A target contains A, excludes B and C; B target contains A+B, excludes
+C. Preserve actual original and new timelines/LSNs, marker payload hashes and
+failed probes. A+B in one generic restored snapshot is not two-target proof.
+
+**New-cluster C0 admission is still a separate required source change.** Existing
+logical-target attesters bind `cluster_name=verdify-cnpg-rehearsal`; copied
+receipt tables cannot admit `verdify-cnpg-pitr-a` or `-b`. Use an explicit
+source-owned physical-recovery profile that independently binds new identities,
+original backup/WAL/sentinel custody, exact native implementations 217/259/263,
+raw historical seals, role/member/ACL/catalog/dataset parity and genuine new
+witnesses. Keep the guarded rollback-only DDL inspection and reviewed literal
+install; do not weaken the existing guard, reseal whatever the current digest
+happens to be, or treat copied history as new admission. Preserve all original
+raw history. Repeat real authenticated ordinary-role pool startup and hot SQL on
+each admitted physical target. The existing original-target client adapter does
+not authorize these new identities.
+
+## Native API references
+
+The installed owner is CNPG 1.29.1. Its live `clusters.postgresql.cnpg.io` v1
+structural schema exposes `recoveryTarget.backupID`, `targetTime`, numeric-string
+`targetTLI`, and `exclusive`; the live Backup schema exposes `backupId` (lowercase
+`d`), `startedAt`, `stoppedAt`, `beginWal`, and `endWal`. Checked offline fixture
+renders conform to those installed schemas; no server apply was performed.
+
+[CNPG 1.29 recovery](https://cloudnative-pg.io/docs/1.29/recovery/) documents new
+Cluster bootstrap and original external plugin serverName. [CNPG 1.29 API](https://cloudnative-pg.io/docs/1.29/cloudnative-pg.v1/)
+defines explicit backup and target fields. [PostgreSQL 16 recovery targets](https://www.postgresql.org/docs/16/runtime-config-wal.html#RUNTIME-CONFIG-WAL-RECOVERY-TARGET)
+defines target stop and timeline behavior. Actual archive retrieval and each
+native recovered target remain required proof.
