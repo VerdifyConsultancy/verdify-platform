@@ -40,6 +40,15 @@ VERSION = "cnpg-native-runtime-transition-v2"
 DATABASE = "verdify_rehearsal"
 SERVER = 160013
 TABLE = "public.cnpg_qualified_runtime_receipts"
+PHYSICAL_TABLE = "public.cnpg_physical_runtime_receipts"
+PHYSICAL_TARGETS = ("verdify-cnpg-pitr-a", "verdify-cnpg-pitr-b")
+
+
+def profile(physical_target=None):
+    c0.require(physical_target is None or physical_target in PHYSICAL_TARGETS, "unsupported physical target")
+    return (physical_target, PHYSICAL_TABLE) if physical_target else (operator.CLUSTER, TABLE)
+
+
 LOGINS = (*c0.boundary.LOGINS, "verdify_mcp_runtime_login")
 MCP_ATTEST_SOURCE = ROOT / "db/migrations/259-mcp-ordinary-runtime-boundary.sql"
 MCP_ATTEST_SHA = "5eb45e7264eb28d05aa30acab76bd571d7a5e7466f51b9a877fcea0beab13054"
@@ -53,7 +62,8 @@ def literal(value):
     return transaction.literal(value)
 
 
-def target_receipt_shape():
+def target_receipt_shape(physical_target=None):
+    _, table = profile(physical_target)
     # Checked inside each definer before reading expected digest data. No view,
     # inherited table, executable defaults, policies or extra write grantee.
     checks = [
@@ -66,57 +76,58 @@ def target_receipt_shape():
     return f"""coalesce((SELECT c.relkind='r' AND c.relpersistence='p'
       AND NOT c.relrowsecurity AND NOT c.relforcerowsecurity AND NOT c.relispartition
       AND pg_get_userbyid(c.relowner)='verdify'
-      FROM pg_class c WHERE c.oid=to_regclass('{TABLE}')),false)
-      AND NOT EXISTS(SELECT 1 FROM pg_trigger WHERE tgrelid=to_regclass('{TABLE}'))
-      AND NOT EXISTS(SELECT 1 FROM pg_rewrite WHERE ev_class=to_regclass('{TABLE}'))
-      AND NOT EXISTS(SELECT 1 FROM pg_policy WHERE polrelid=to_regclass('{TABLE}'))
-      AND NOT EXISTS(SELECT 1 FROM pg_inherits WHERE inhrelid=to_regclass('{TABLE}') OR inhparent=to_regclass('{TABLE}'))
+      FROM pg_class c WHERE c.oid=to_regclass('{table}')),false)
+      AND NOT EXISTS(SELECT 1 FROM pg_trigger WHERE tgrelid=to_regclass('{table}'))
+      AND NOT EXISTS(SELECT 1 FROM pg_rewrite WHERE ev_class=to_regclass('{table}'))
+      AND NOT EXISTS(SELECT 1 FROM pg_policy WHERE polrelid=to_regclass('{table}'))
+      AND NOT EXISTS(SELECT 1 FROM pg_inherits WHERE inhrelid=to_regclass('{table}') OR inhparent=to_regclass('{table}'))
       AND NOT EXISTS(SELECT 1 FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid,
-        LATERAL aclexplode(a.attacl) x WHERE c.oid=to_regclass('{TABLE}'))
+        LATERAL aclexplode(a.attacl) x WHERE c.oid=to_regclass('{table}'))
       AND NOT EXISTS(SELECT 1 FROM pg_class c,
         LATERAL aclexplode(coalesce(c.relacl,acldefault('r',c.relowner))) x
-        WHERE c.oid=to_regclass('{TABLE}') AND x.grantee<>c.relowner)
+        WHERE c.oid=to_regclass('{table}') AND x.grantee<>c.relowner)
       AND (SELECT array_agg(attname||':'||format_type(atttypid,atttypmod)||':'||attnotnull::text ORDER BY attnum)
-        FROM pg_attribute WHERE attrelid=to_regclass('{TABLE}') AND attnum>0 AND NOT attisdropped)
+        FROM pg_attribute WHERE attrelid=to_regclass('{table}') AND attnum>0 AND NOT attisdropped)
         =ARRAY['login_name:text:true','boundary_sha256:bytea:true','qualification_sha256:text:true']::text[]
-      AND NOT EXISTS(SELECT 1 FROM pg_attribute WHERE attrelid=to_regclass('{TABLE}')
+      AND NOT EXISTS(SELECT 1 FROM pg_attribute WHERE attrelid=to_regclass('{table}')
         AND attnum>0 AND (attisdropped OR attgenerated<>'' OR attidentity<>''))
-      AND NOT EXISTS(SELECT 1 FROM pg_attrdef WHERE adrelid=to_regclass('{TABLE}'))
+      AND NOT EXISTS(SELECT 1 FROM pg_attrdef WHERE adrelid=to_regclass('{table}'))
       AND (SELECT array_agg(pg_get_constraintdef(oid) ORDER BY conname) FROM pg_constraint
-         WHERE conrelid=to_regclass('{TABLE}'))={expected_checks}
-      AND NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid=to_regclass('{TABLE}')
+         WHERE conrelid=to_regclass('{table}'))={expected_checks}
+      AND NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid=to_regclass('{table}')
         AND (NOT convalidated OR condeferrable OR condeferred))
       AND (SELECT count(*)=1 AND bool_and(indisprimary AND indisunique AND indisvalid AND indisready
         AND indexprs IS NULL AND indpred IS NULL AND indnatts=1 AND indnkeyatts=1)
-        FROM pg_index WHERE indrelid=to_regclass('{TABLE}'))"""
+        FROM pg_index WHERE indrelid=to_regclass('{table}'))"""
 
 
-def target_body(original, mcp=False, bootstrap_grantor_profile=False):
+def target_body(original, mcp=False, bootstrap_grantor_profile=False, *, physical_target=None):
+    cluster, table = profile(physical_target)
     bootstrap_guard = (
         " OR NOT EXISTS(SELECT 1 FROM pg_catalog.pg_roles WHERE oid=10 AND rolname='postgres' AND rolsuper)"
         if bootstrap_grantor_profile
         else ""
     )
     guard = f"""\n    IF current_database()<>'{DATABASE}' OR current_setting('server_version_num')::int<>{SERVER}
-       OR current_setting('cluster_name')<>'{operator.CLUSTER}' OR pg_is_in_recovery()
-       OR current_user<>'verdify' OR NOT coalesce(({target_receipt_shape()}),false){bootstrap_guard} THEN
+       OR current_setting('cluster_name')<>'{cluster}' OR pg_is_in_recovery()
+       OR current_user<>'verdify' OR NOT coalesce(({target_receipt_shape(physical_target)}),false){bootstrap_guard} THEN
         RETURN false;
     END IF;
-    IF (SELECT count(*) FROM {TABLE})<>3
-       OR (SELECT array_agg(login_name ORDER BY login_name) FROM {TABLE})
+    IF (SELECT count(*) FROM {table})<>3
+       OR (SELECT array_agg(login_name ORDER BY login_name) FROM {table})
           IS DISTINCT FROM ARRAY['verdify_api_runtime_login','verdify_ingestor_runtime_login','verdify_mcp_runtime_login']::text[]
        OR NOT (SELECT count(DISTINCT qualification_sha256)=1
-          AND bool_and(qualification_sha256 ~ '^[0-9a-f]{{64}}$') FROM {TABLE}) THEN
+          AND bool_and(qualification_sha256 ~ '^[0-9a-f]{{64}}$') FROM {table}) THEN
        RETURN false;
     END IF;\n"""
     body = original.replace("\nBEGIN\n", "\nBEGIN\n" + guard, 1)
     if mcp:
         body = body.replace(
-            "public.mcp_runtime_boundary_receipt r WHERE r.singleton", f"{TABLE} r WHERE r.login_name=session_user"
+            "public.mcp_runtime_boundary_receipt r WHERE r.singleton", f"{table} r WHERE r.login_name=session_user"
         )
     else:
-        body = body.replace("public.runtime_ordinary_login_attestation_receipts receipt", f"{TABLE} receipt")
-    c0.require(body != original and body.count(TABLE) >= 2, "unexpected attester source shape")
+        body = body.replace("public.runtime_ordinary_login_attestation_receipts receipt", f"{table} receipt")
+    c0.require(body != original and body.count(table) >= 2, "unexpected attester source shape")
     return body
 
 
@@ -127,7 +138,8 @@ def classify_ddl(sql):
     return {"self_committing": False, "reasons": []}
 
 
-def ddl(bootstrap_grantor_profile=False):
+def ddl(bootstrap_grantor_profile=False, *, physical_target=None):
+    _, receipt_table = profile(physical_target)
     c0.require(digest(c0.boundary.SOURCE.read_bytes()) == c0.boundary.SOURCE_SHA256, "ordinary source drift")
     c0.require(digest(MCP_ATTEST_SOURCE.read_bytes()) == MCP_ATTEST_SHA, "MCP attester source drift")
     ordinary = (
@@ -147,27 +159,32 @@ def ddl(bootstrap_grantor_profile=False):
         ("fn_mcp_runtime_attest_ordinary_login", mcp, True),
     ]:
         original = suffix.split("AS $body$", 1)[1].split("$body$;", 1)[0]
-        body = target_body(original, is_mcp, bootstrap_grantor_profile)
+        body = target_body(original, is_mcp, bootstrap_grantor_profile, physical_target=physical_target)
         bodies[name] = body
         statements.append("CREATE OR REPLACE FUNCTION public." + name + "()" + suffix.replace(original, body, 1))
-    table = f"""CREATE TABLE {TABLE} (
+    table = f"""CREATE TABLE {receipt_table} (
       login_name text PRIMARY KEY CHECK(login_name IN ('{LOGINS[0]}','{LOGINS[1]}','{LOGINS[2]}')),
       boundary_sha256 bytea NOT NULL CHECK(octet_length(boundary_sha256)=32),
       qualification_sha256 text NOT NULL CHECK(qualification_sha256 ~ '^[0-9a-f]{{64}}$')
     );
-    ALTER TABLE {TABLE} OWNER TO verdify;
-    REVOKE ALL ON TABLE {TABLE} FROM PUBLIC;\n"""
+    ALTER TABLE {receipt_table} OWNER TO verdify;
+    REVOKE ALL ON TABLE {receipt_table} FROM PUBLIC;\n"""
     result = table + "\n".join(statements)
     # Reuse the owning rollback-safety classifier before any outer transaction.
     classify_ddl(result)
     return result, bodies
 
 
-def witness_select(target=None):
+def witness_select(target=None, *, physical_target=None):
+    cluster, _ = profile(physical_target)
     c0.require(c0.VERSION == "cnpg-c0-logical-recovery-witness-v3", "typed full identity v3 prerequisite missing")
     # Use the same independently source-pinned witness, including executable
     # digest guards; its attester definitions legitimately differ after DDL.
     sql = c0.emit_sql(target=True, bootstrap_grantor_profile=bool(target and target.get("bootstrap_grantor_profile")))
+    if physical_target:
+        old_guard = "OR current_setting('cluster_name') <> '" + operator.CLUSTER + "'"
+        c0.require(sql.count(old_guard) == 1, "unexpected exact witness identity guard")
+        sql = sql.replace(old_guard, "OR current_setting('cluster_name') <> '" + cluster + "'", 1)
     return sql[sql.index("DO $guard$") : sql.rindex("COMMIT;")].strip()
 
 
@@ -195,7 +212,8 @@ def validate_inputs(source, target, binding):
     return result
 
 
-def validate_post(before, after):
+def validate_post(before, after, *, physical_target=None):
+    profile(physical_target)
     # The original qualifier checks executable native digest functions unchanged,
     # but does not claim post-DDL semantic equality with the old source catalog.
     c0.checked(after, target=True)
@@ -218,12 +236,13 @@ def validate_post(before, after):
             == sorted(e for e in after["boundaries"][login]["raw_entries"] if e.startswith("member|")),
             "post-DDL native membership drift",
         )
-    validate_raw_delta(before, after)
+    validate_raw_delta(before, after, physical_target=physical_target)
     for field in ["portable_catalog", "raw_portable_catalog_v2"]:
-        validate_catalog_delta(before[field], after[field])
+        validate_catalog_delta(before[field], after[field], physical_target=physical_target)
 
 
-def validate_catalog_delta(before, after):
+def validate_catalog_delta(before, after, *, physical_target=None):
+    _, receipt_table = profile(physical_target)
     left = {(r[0], r[1]): r[2] for r in before}
     right = {(r[0], r[1]): r[2] for r in after}
     changed = {k for k in left.keys() & right.keys() if left[k] != right[k]}
@@ -238,15 +257,19 @@ def validate_catalog_delta(before, after):
         },
         "uncontrolled replaced object",
     )
-    expected = {("relation", TABLE), ("index", TABLE + "_pkey"), ("column", TABLE + "_pkey.login_name")}
-    expected |= {("column", TABLE + "." + c) for c in ["login_name", "boundary_sha256", "qualification_sha256"]}
+    expected = {
+        ("relation", receipt_table),
+        ("index", receipt_table + "_pkey"),
+        ("column", receipt_table + "_pkey.login_name"),
+    }
+    expected |= {("column", receipt_table + "." + c) for c in ["login_name", "boundary_sha256", "qualification_sha256"]}
     expected |= {
-        ("constraint", TABLE + "." + c)
+        ("constraint", receipt_table + "." + c)
         for c in [
-            "cnpg_qualified_runtime_receipts_pkey",
-            "cnpg_qualified_runtime_receipts_login_name_check",
-            "cnpg_qualified_runtime_receipts_boundary_sha256_check",
-            "cnpg_qualified_runtime_receipts_qualification_sha256_check",
+            receipt_table.split(".")[1] + "_pkey",
+            receipt_table.split(".")[1] + "_login_name_check",
+            receipt_table.split(".")[1] + "_boundary_sha256_check",
+            receipt_table.split(".")[1] + "_qualification_sha256_check",
         ]
     }
     c0.require(added == expected, "uncontrolled new target object")
@@ -269,25 +292,27 @@ def checked_qualification(before, record):
     return record["post_witness"]
 
 
-def raw_additions():
+def raw_additions(*, physical_target=None):
+    _, receipt_table = profile(physical_target)
+    table_name = receipt_table.split(".")[1]
     return {
-        "relations": [TABLE],
-        "indexes": [TABLE + "_pkey"],
+        "relations": [receipt_table],
+        "indexes": [receipt_table + "_pkey"],
         "constraints": [
-            TABLE + "." + n
+            receipt_table + "." + n
             for n in [
-                "cnpg_qualified_runtime_receipts_pkey",
-                "cnpg_qualified_runtime_receipts_login_name_check",
-                "cnpg_qualified_runtime_receipts_boundary_sha256_check",
-                "cnpg_qualified_runtime_receipts_qualification_sha256_check",
+                table_name + "_pkey",
+                table_name + "_login_name_check",
+                table_name + "_boundary_sha256_check",
+                table_name + "_qualification_sha256_check",
             ]
         ],
         "triggers": [],
     }
 
 
-def validate_raw_delta(before, after):
-    for field, allowed in raw_additions().items():
+def validate_raw_delta(before, after, *, physical_target=None):
+    for field, allowed in raw_additions(physical_target=physical_target).items():
         key = "raw_identity" if field == "triggers" else "identity"
         old = {f[key]: f for f in before["portability_native_facts"][field]}
         new = {f[key]: f for f in after["portability_native_facts"][field]}
@@ -302,11 +327,68 @@ def validate_raw_delta(before, after):
         c0.require(all(new.get(k) == v for k, v in old.items()), "pre-existing raw native facts changed")
 
 
-def raw_facts_guard_sql(reviewed):
+def validate_installed_post(before, qualified, installed, *, physical_target=None):
+    """Compare reviewed rollback and real install; only enumerated new OIDs differ."""
+    validate_post(before, installed, physical_target=physical_target)
+    c0.require(
+        {k: v for k, v in qualified.items() if k != "portability_native_facts"}
+        == {k: v for k, v in installed.items() if k != "portability_native_facts"},
+        "installed semantic/native witness differs from reviewed qualification",
+    )
+    additions = raw_additions(physical_target=physical_target)
+    slots = {
+        "relations": {"oid", "relfilenode", "reltype", "reltoastrelid", "relfrozenxid"},
+        "indexes": {"oid", "relfilenode"},
+        "constraints": {"oid", "conrelid", "conindid"},
+        "triggers": set(),
+    }
+    for field, allowed in additions.items():
+
+        def selected(witness):
+            values = []
+            for fact in witness["portability_native_facts"][field]:
+                key = "raw_identity" if field == "triggers" else "identity"
+                if fact[key] not in allowed:
+                    continue
+                value = dict(fact)
+                value["native"] = {k: v for k, v in fact["native"].items() if k not in slots[field]}
+                if field == "indexes":
+                    value["index"] = {k: v for k, v in fact["index"].items() if k not in ("indexrelid", "indrelid")}
+                values.append(value)
+            return sorted(values, key=lambda f: f["identity"])
+
+        c0.require(selected(qualified) == selected(installed), "installed new raw object shape differs from review")
+    _, receipt_table = profile(physical_target)
+    facts = installed["portability_native_facts"]
+    relation = next(f["native"] for f in facts["relations"] if f["identity"] == receipt_table)
+    index = next(f for f in facts["indexes"] if f["identity"] == receipt_table + "_pkey")
+    c0.require(
+        relation["relfilenode"] == relation["oid"]
+        and int(relation["reltype"]) > 0
+        and int(relation["reltoastrelid"]) > 0
+        and index["native"]["relfilenode"] == index["native"]["oid"]
+        and index["index"]["indexrelid"] == index["native"]["oid"]
+        and index["index"]["indrelid"] == relation["oid"],
+        "installed new relation/index OID binding drift",
+    )
+    for fact in facts["constraints"]:
+        if fact["identity"] in additions["constraints"]:
+            native = fact["native"]
+            c0.require(
+                native["conrelid"] == relation["oid"]
+                and native["conindid"] == (index["native"]["oid"] if native["contype"] == "p" else "0"),
+                "installed new constraint OID binding drift",
+            )
+    return installed
+
+
+def raw_facts_guard_sql(reviewed, *, physical_target=None):
+    _, receipt_table = profile(physical_target)
+    table_name = receipt_table.split(".")[1]
     # Executed in the same DDL transaction, before any COMMIT. Existing facts
     # remain byte-exact. Only source-enumerated new receipt objects may appear.
     result = ""
-    for field, allowed in raw_additions().items():
+    for field, allowed in raw_additions(physical_target=physical_target).items():
         key = "raw_identity" if field == "triggers" else "identity"
         identities = "ARRAY[" + ",".join(literal(n) for n in allowed) + "]::text[]"
 
@@ -352,16 +434,16 @@ def raw_facts_guard_sql(reviewed):
  IF NOT EXISTS(SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
     JOIN pg_type rt ON rt.oid=c.reltype AND rt.typrelid=c.oid
     JOIN pg_class toast ON toast.oid=c.reltoastrelid AND toast.relkind='t'
-    WHERE n.nspname='public' AND c.relname='cnpg_qualified_runtime_receipts' AND c.relkind='r'
+    WHERE n.nspname='public' AND c.relname='{table_name}' AND c.relkind='r'
       AND c.relpersistence='p' AND c.relfilenode=c.oid AND pg_get_userbyid(c.relowner)='verdify'
       AND c.relfrozenxid::text::bigint=(pg_current_xact_id()::text::bigint % 4294967296))
   OR NOT EXISTS(SELECT 1 FROM pg_index i JOIN pg_class c ON c.oid=i.indexrelid
-     WHERE i.indrelid='{TABLE}'::regclass AND i.indexrelid='{TABLE}_pkey'::regclass
+     WHERE i.indrelid='{receipt_table}'::regclass AND i.indexrelid='{receipt_table}_pkey'::regclass
        AND i.indisprimary AND i.indisunique AND c.relfilenode=c.oid)
-  OR EXISTS(SELECT 1 FROM pg_constraint x WHERE x.conrelid='{TABLE}'::regclass
-     AND (x.conname NOT IN ('cnpg_qualified_runtime_receipts_pkey','cnpg_qualified_runtime_receipts_login_name_check',
-        'cnpg_qualified_runtime_receipts_boundary_sha256_check','cnpg_qualified_runtime_receipts_qualification_sha256_check')
-       OR (x.contype='p' AND x.conindid<>'{TABLE}_pkey'::regclass)
+  OR EXISTS(SELECT 1 FROM pg_constraint x WHERE x.conrelid='{receipt_table}'::regclass
+     AND (x.conname NOT IN ('{table_name}_pkey','{table_name}_login_name_check',
+        '{table_name}_boundary_sha256_check','{table_name}_qualification_sha256_check')
+       OR (x.contype='p' AND x.conindid<>'{receipt_table}_pkey'::regclass)
        OR (x.contype='c' AND x.conindid<>0))) THEN
    RAISE EXCEPTION 'CNPG native transition refuses new native OID binding drift';
  END IF;
@@ -369,16 +451,30 @@ def raw_facts_guard_sql(reviewed):
     return result
 
 
-def emit_sql(target, *, reviewed_post=None, qualification_sha256=None):
+def emit_sql(target, *, reviewed_post=None, qualification_sha256=None, physical_target=None, logical_receipts=None):
+    cluster, receipt_table = profile(physical_target)
+    c0.require((physical_target is None) == (logical_receipts is None), "physical history custody required")
     c0.checked(target, target=True)
     c0.require(
         target.get("bootstrap_grantor_profile") in (None, c0.BOOTSTRAP_PROFILE), "unsupported target bootstrap profile"
     )
-    payload, bodies = ddl(bool(target.get("bootstrap_grantor_profile")))
+    bootstrap_profile = bool(target.get("bootstrap_grantor_profile"))
+    payload, bodies = (
+        ddl(bootstrap_profile, physical_target=physical_target) if physical_target else ddl(bootstrap_profile)
+    )
     before = json.dumps(target, separators=(",", ":"))
-    witness = witness_select(target)
+    witness = witness_select(target, physical_target=physical_target) if physical_target else witness_select(target)
     select = witness[witness.index("SELECT jsonb_build_object(") :].rstrip().removesuffix(";")
     guards = witness[: witness.index("SELECT jsonb_build_object(")]
+    history_guard = ""
+    history_lock = ""
+    if physical_target:
+        history_lock = f"LOCK TABLE {TABLE} IN SHARE MODE;"
+        expected = literal(json.dumps(logical_receipts, separators=(",", ":")))
+        history_guard = f"""IF (SELECT jsonb_agg(jsonb_build_array(login_name,encode(boundary_sha256,'hex'),qualification_sha256)
+            ORDER BY login_name) FROM {TABLE}) IS DISTINCT FROM {expected}::jsonb THEN
+            RAISE EXCEPTION 'physical admission refuses copied logical receipt drift';
+        END IF;"""
     sql = f"""\\set ON_ERROR_STOP on
 BEGIN;
 SET LOCAL search_path=pg_catalog,pg_temp;
@@ -387,13 +483,14 @@ SET LOCAL lock_timeout='2s';
 SELECT pg_advisory_xact_lock(hashtext('verdify-schema-migrations'));
 DO $identity$ BEGIN
  IF current_database()<>'{DATABASE}' OR current_setting('server_version_num')::int<>{SERVER}
-    OR current_setting('cluster_name')<>'{operator.CLUSTER}' OR inet_client_addr() IS NOT NULL
+    OR current_setting('cluster_name')<>'{cluster}' OR inet_client_addr() IS NOT NULL
     OR pg_is_in_recovery() OR current_user<>session_user OR current_user<>'verdify'
     OR (SELECT pg_get_userbyid(datdba) FROM pg_database WHERE datname=current_database())<>'verdify' THEN
    RAISE EXCEPTION 'CNPG native transition refuses target/session';
  END IF;
 END $identity$;
 LOCK TABLE public.schema_migrations,public.runtime_ordinary_login_attestation_receipts,public.mcp_runtime_boundary_receipt IN SHARE MODE;
+{history_lock}
 {guards}
 DO $native_transition$
 DECLARE v_original jsonb; v_before jsonb; v_post jsonb;
@@ -404,16 +501,17 @@ BEGIN
  IF v_before IS DISTINCT FROM {literal(before)}::jsonb THEN
    RAISE EXCEPTION 'CNPG native transition refuses stale exact target witness';
  END IF;
+ {history_guard}
  {payload}
 """
     if reviewed_post is not None:
-        validate_post(target, reviewed_post)
+        validate_post(target, reviewed_post, physical_target=physical_target)
         c0.require(transaction.is_hash(qualification_sha256), "reviewed qualification hash required")
         values = ",".join(
             f"({literal(login)},decode({literal(reviewed_post['boundaries'][login]['native'])},'hex'),{literal(qualification_sha256)})"
             for login in LOGINS
         )
-        sql += f"INSERT INTO {TABLE} (login_name,boundary_sha256,qualification_sha256) VALUES {values};\n"
+        sql += f"INSERT INTO {receipt_table} (login_name,boundary_sha256,qualification_sha256) VALUES {values};\n"
     sql += f"{select} INTO v_post;\n"
     for name, body in bodies.items():
         sql += f"""
@@ -425,11 +523,12 @@ BEGIN
  END IF;
 """
     sql += f"""
+ {history_guard}
  IF {original_facts_sql()} IS DISTINCT FROM v_original THEN
    RAISE EXCEPTION 'CNPG native transition changed original historical facts';
  END IF;
 """
-    sql += raw_facts_guard_sql(reviewed_post is not None)
+    sql += raw_facts_guard_sql(reviewed_post is not None, physical_target=physical_target)
     if reviewed_post is not None:
         sql += f"""
  IF (v_post - 'portability_native_facts') IS DISTINCT FROM ({literal(json.dumps(reviewed_post, separators=(",", ":")))}::jsonb - 'portability_native_facts') THEN
@@ -440,7 +539,7 @@ BEGIN
     # receipt is created by rollback qualification; no backdated/native fiction.
     sql += f"""
  PERFORM set_config('verdify.cnpg_transition_result',jsonb_build_object(
-   'version','{VERSION}','mode','{"install" if reviewed_post else "rollback-qualification"}',
+   'version','{"cnpg-physical-runtime-transition-v1" if physical_target else VERSION}','mode','{"install" if reviewed_post else "rollback-qualification"}',
    'ddl_sha256','{digest(payload.encode())}','before_witness',v_before,'post_witness',v_post)::text,true);
 END $native_transition$;
 SELECT current_setting('verdify.cnpg_transition_result');
@@ -458,8 +557,9 @@ def bootstrap_facts_sql():
       'valid_until',rolvaliduntil) FROM pg_roles WHERE oid=10)"""
 
 
-def bootstrap_owner_sql(sql):
+def bootstrap_owner_sql(sql, *, physical_target=None):
     """Native peer bootstrap to owner DDL; never ordinary password-auth proof."""
+    cluster, _ = profile(physical_target)
     c0.require(
         sql.startswith("\\set ON_ERROR_STOP on\nBEGIN;\n") and sql.rstrip().endswith(("ROLLBACK;", "COMMIT;")),
         "guarded transactional owner SQL required",
@@ -467,7 +567,7 @@ def bootstrap_owner_sql(sql):
     prefix = f"""\\set ON_ERROR_STOP on
 DO $bootstrap_peer$ BEGIN
  IF current_database()<>'{DATABASE}' OR current_setting('server_version_num')::int<>{SERVER}
-    OR current_setting('cluster_name')<>'{operator.CLUSTER}' OR inet_client_addr() IS NOT NULL
+    OR current_setting('cluster_name')<>'{cluster}' OR inet_client_addr() IS NOT NULL
     OR pg_is_in_recovery() OR current_user<>'postgres' OR session_user<>'postgres'
     OR NOT EXISTS(SELECT 1 FROM pg_roles WHERE oid=10 AND rolname='postgres' AND rolsuper)
     OR (SELECT pg_get_userbyid(datdba) FROM pg_database WHERE datname=current_database())<>'verdify' THEN
