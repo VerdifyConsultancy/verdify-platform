@@ -78,6 +78,23 @@ def regular(path):
     return path
 
 
+def stage_path(name, prior_hash, management_path, management_hash):
+    if name is None:
+        c0.require(not any((prior_hash, management_path, management_hash)), "unexpected attempt predecessor")
+        return STAGE
+    c0.require(re.fullmatch(r"restore-custody-[a-z0-9]{8,32}", name), "invalid new custody directory")
+    c0.require(
+        transaction_hash(prior_hash) and transaction_hash(management_hash),
+        "new attempt requires exact predecessor hashes",
+    )
+    c0.require(management_path is not None, "new attempt management custody required")
+    return "/var/lib/postgresql/data/" + name
+
+
+def transaction_hash(value):
+    return isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value) is not None
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cluster-uid", required=True)
@@ -88,8 +105,20 @@ def main():
     parser.add_argument("--source-witness", required=True, type=Path)
     parser.add_argument("--source-witness-sha256", required=True)
     parser.add_argument("--receipt-dir", required=True, type=Path)
+    parser.add_argument("--stage-name")
+    parser.add_argument("--prior-custody-manifest-sha256")
+    parser.add_argument("--management-before", type=Path)
+    parser.add_argument("--management-before-sha256")
     parser.add_argument("--bash", default="/opt/homebrew/bin/bash")
     args = parser.parse_args()
+    stage = stage_path(
+        args.stage_name, args.prior_custody_manifest_sha256, args.management_before, args.management_before_sha256
+    )
+    if args.management_before:
+        raw_management = regular(args.management_before).read_bytes()
+        c0.require(
+            hashlib.sha256(raw_management).hexdigest() == args.management_before_sha256, "management custody mismatch"
+        )
     c0.require(re.fullmatch(r"verdify-\d{8}T\d{6}Z", args.stem), "invalid pair identity")
     c0.require(re.fullmatch(r"verdify-cnpg-rehearsal-[1-9]\d*", args.pod), "invalid rehearsal pod")
     for uid in (args.cluster_uid, args.pod_uid):
@@ -110,6 +139,8 @@ def main():
         for suffix in ("dump", "roles.sql", "sha256")
     }
     files["source-witness.json"] = regular(args.source_witness)
+    if args.management_before:
+        files["management-before.sql"] = regular(args.management_before)
     files.update({f"scripts/{name}": regular(ROOT / "scripts" / name) for name in SCRIPTS})
     files.update({f"db/migrations/{name}": regular(ROOT / "db/migrations" / name) for name in MIGRATIONS})
     hashes = {}
@@ -124,6 +155,9 @@ def main():
         "files": hashes,
         "before": read_target(args),
         "runtime_transition_installed": False,
+        "stage": stage,
+        "prior_custody_manifest_sha256": args.prior_custody_manifest_sha256,
+        "management_before_sha256": args.management_before_sha256,
         "production_endpoint_changed": False,
     }
     (args.receipt_dir / "custody-before.json").write_text(json.dumps(receipt, indent=2) + "\n")
@@ -134,6 +168,20 @@ def main():
     # A downward-API UID comparison is performed inside the selected pod, not
     # merely a name-based kubectl check susceptible to ordinal replacement.
     guard = 'test "$VERDIFY_REHEARSAL_POD_UID" = "$1" || exit 42; shift; exec "$@"'
+    if args.stage_name:
+        # Read and revalidate the entire original staged custody before allocating a new path.
+        predecessor = f'test "$(cd {STAGE} && pwd -P)" = {STAGE} && test "$(sha256sum {STAGE}/custody.sha256 | cut -d\' \' -f1)" = {args.prior_custody_manifest_sha256} && cd {STAGE} && sha256sum -c custody.sha256'
+        with (
+            (args.receipt_dir / "prior-custody.stdout").open("wb") as out,
+            (args.receipt_dir / "prior-custody.stderr").open("wb") as err,
+        ):
+            subprocess.run(
+                exec_args + ["sh", "-c", guard, "uid-guard", args.pod_uid, "sh", "-c", predecessor],
+                check=True,
+                stdout=out,
+                stderr=err,
+                timeout=120,
+            )
     with (args.receipt_dir / "stage.stdout").open("wb") as out, (args.receipt_dir / "stage.stderr").open("wb") as err:
         proc = subprocess.Popen(
             exec_args
@@ -145,7 +193,7 @@ def main():
                 args.pod_uid,
                 "sh",
                 "-c",
-                f"umask 077; mkdir {STAGE} && tar -xf - -C {STAGE}",
+                f"umask 077; mkdir {stage} && tar -xf - -C {stage}",
             ],
             stdin=subprocess.PIPE,
             stdout=out,
@@ -168,7 +216,7 @@ def main():
     ):
         subprocess.run(
             exec_args
-            + ["sh", "-c", guard, "uid-guard", args.pod_uid, "sh", "-c", f"cd {STAGE} && sha256sum -c custody.sha256"],
+            + ["sh", "-c", guard, "uid-guard", args.pod_uid, "sh", "-c", f"cd {stage} && sha256sum -c custody.sha256"],
             check=True,
             stdout=out,
             stderr=err,
@@ -176,31 +224,36 @@ def main():
         )
     env = {
         "RESTORE_SERVER_MODE": "cnpg",
-        "BACKUP_DIR": STAGE + "/backups",
+        "CNPG_RESTORE_CUSTODY": stage,
+        "RESTORE_WORK_DIR": stage + "/work",
+        "BACKUP_DIR": stage + "/backups",
         "BACKUP_STEM": args.stem,
         "PGDATA": "/var/lib/postgresql/data/pgdata",
         "PGHOST": "/controller/run",
         "PGPORT": "5432",
         "PGDATABASE": "verdify_rehearsal",
-        "VERIFY_SCRIPT": STAGE + "/scripts/verify-backup-pair.sh",
-        "AUDIT_SQL": STAGE + "/scripts/logical-restore-audit.sql",
-        "OWNERSHIP_SQL": STAGE + "/scripts/check-timescale-ownership.sql",
-        "OWNER_REPAIR_TEST_SQL": STAGE + "/scripts/test-timescale-parent-owner.sql",
-        "RESTORED_OWNER_TEST_SQL": STAGE + "/scripts/test-restored-timescale-parent-owner.sql",
-        "V2_INTERFACE_SQL": STAGE + "/scripts/qualify-v2-restored-interface.sql",
-        "CNPG_ROLE_HELPER": STAGE + "/scripts/cnpg-restore-role-parity.py",
-        "CNPG_ACL_HELPER": STAGE + "/scripts/cnpg-source-database-acl.py",
-        "CNPG_SOURCE_WITNESS": STAGE + "/source-witness.json",
+        "VERIFY_SCRIPT": stage + "/scripts/verify-backup-pair.sh",
+        "AUDIT_SQL": stage + "/scripts/logical-restore-audit.sql",
+        "OWNERSHIP_SQL": stage + "/scripts/check-timescale-ownership.sql",
+        "OWNER_REPAIR_TEST_SQL": stage + "/scripts/test-timescale-parent-owner.sql",
+        "RESTORED_OWNER_TEST_SQL": stage + "/scripts/test-restored-timescale-parent-owner.sql",
+        "V2_INTERFACE_SQL": stage + "/scripts/qualify-v2-restored-interface.sql",
+        "CNPG_ROLE_HELPER": stage + "/scripts/cnpg-restore-role-parity.py",
+        "CNPG_ACL_HELPER": stage + "/scripts/cnpg-source-database-acl.py",
+        "CNPG_SOURCE_WITNESS": stage + "/source-witness.json",
         "CNPG_SOURCE_WITNESS_SHA256": sha,
         "PGOPTIONS": "-c statement_timeout=180000 -c lock_timeout=10000",
     }
+    if args.management_before:
+        env["CNPG_MANAGEMENT_BEFORE"] = stage + "/management-before.sql"
+        env["CNPG_MANAGEMENT_BEFORE_SHA256"] = args.management_before_sha256
     command = [
         "env",
         *[f"{key}={value}" for key, value in env.items()],
         "timeout",
         "1800",
         "bash",
-        STAGE + "/scripts/restore-backup-pair.sh",
+        stage + "/scripts/restore-backup-pair.sh",
     ]
     with (
         (args.receipt_dir / "restore.stdout").open("wb") as out,

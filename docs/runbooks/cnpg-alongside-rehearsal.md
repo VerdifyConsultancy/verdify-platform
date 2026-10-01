@@ -93,8 +93,8 @@ artifact roles, create `verdify_rehearsal` with the artifact owner, call
 `timescaledb_pre_restore`, restore with `--exit-on-error --role <artifact owner>`
 and exact ownership (never `--no-owner`), call post_restore, refresh the supported
 matviews, then run supported parent ownership repair/adversarial tests and
-password-free role/member/owner/ACL parity. CNPG's postgres and
-rehearsal_bootstrap management roles must be enumerated separately, not silently
+password-free role/member/owner/ACL parity. CNPG's postgres, streaming_replica, rehearsal_bootstrap and
+cnpg_metrics_exporter management roles must be enumerated separately, not silently
 excluded. Existing table/function/schema/source-ledger hashes and all hypertable
 counts/time bounds must match the actual frozen pair. A failed import is preserved,
 not normalized into success. Later migrations use exact serialized source and
@@ -116,6 +116,38 @@ collisions or changed postgres posture. It never starts/stops CNPG's postmaster,
 sets a production endpoint, provisions passwords, refreshes a C0 seal or retries.
 Partial imports, original pair, source witness and all failure output are retained.
 The total native restore budget is1800 seconds; individual statements180 seconds.
+
+### Private writable custody after a failed import
+
+The 2026-10-01 actual first import stopped before role replay because the CNPG
+root filesystem made `/tmp/roles.before.sql` unwritable. Its original
+`/var/lib/postgresql/data/restore-custody` and failure output remain evidence;
+they are never overwritten or resumed. This is a failed import, not restore proof.
+
+The source adapter supports a new exclusive `restore-custody-<8..32 lowercase
+alphanumeric characters>` directory under PGDATA. Add these options to the
+original UID/image/source-pair-bound invocation, using independently captured
+literal hashes and a new receipt directory:
+
+```text
+--stage-name restore-custody-<unique-token>
+--prior-custody-manifest-sha256 <original custody.sha256 file SHA256>
+--management-before <password-free original four-management-role dump>
+--management-before-sha256 <that artifact SHA256>
+```
+
+Before allocating this path the adapter checks the original manifest hash and
+all original staged checksums inside the exact UID-bound pod. All scratch files
+then stay in exclusive mode-0700 `<new-stage>/work`, owned by UID26. The native
+empty-database/primary/server guard still runs before role replay. The current
+password-free management dump must match the supplied original dump exactly
+except PostgreSQL's random restrict/unrestrict transport tokens.
+`cnpg_metrics_exporter` must retain its exact non-superuser/non-create/non-bypass
+login posture and only the captured `pg_monitor` membership; collisions,
+additional settings or changed membership fail closed. Its verified management
+profile is separately enumerated, rather than credited as restored source data.
+Standalone restores retain a fresh private `mktemp` directory under TMPDIR.
+No command here authorizes retry after partial role or database mutation.
 
 `cnpg-c0-restore-qualification.py` emits read-only source/target witnesses. Source
 PG16.11 and targetPG16.13 are fixed; Timescale2.25.2/vector0.8.1 and the exact268
