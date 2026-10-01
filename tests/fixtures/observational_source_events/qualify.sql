@@ -36,7 +36,12 @@ BEGIN
  IF NOT rejected THEN RAISE EXCEPTION 'UUID collision accepted changed generation'; END IF;
  rejected:=false;
  BEGIN
- PERFORM public.fn_record_observational_source_event(first_id,x.kind,observed,'vallery',runtime,7,x.payload||jsonb_build_object('unexpected','changed'));
+ PERFORM public.fn_record_observational_source_event(first_id,x.kind,observed,'vallery',runtime,7,x.payload||CASE x.kind
+ WHEN 'system_state' THEN '{"value":"COOL"}'::jsonb
+ WHEN 'override' THEN '{"mode":"COOL"}'::jsonb
+ WHEN 'setpoint_observed' THEN '{"value":6}'::jsonb
+ WHEN 'esp32_log' THEN '{"message":"changed"}'::jsonb
+ WHEN 'diagnostics' THEN '{"uptime_s":31}'::jsonb END);
  EXCEPTION WHEN OTHERS THEN rejected:=true; END;
  IF NOT rejected THEN RAISE EXCEPTION 'UUID collision accepted changed payload'; END IF;
  END LOOP;
