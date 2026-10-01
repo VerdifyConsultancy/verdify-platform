@@ -733,3 +733,105 @@ async def test_ordinary_changes_do_not_gain_c1_restoration_authority(runtime, tm
     assert ordinary.phase == "send" and ordinary.changes == (("unrelated_ordinary_field", 1.0),)
     state = bounded._read(tmp_path / overlay.STATE_NAME)
     assert state["touched"] == ["mister_engage_delay_s"]
+
+
+def horizon_preparer():
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "c1_horizon_prepare", ROOT / "scripts/prepare-c1-qualification-worksheet.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.mark.parametrize(
+    "count,minutes", [(1, 12), (11, 12), (12, 12), (13, 16), (24, 16), (25, 20), (36, 20), (37, 24), (48, 24)]
+)
+def test_v3_horizon_is_count_derived_and_bounded(count, minutes):
+    prepare = horizon_preparer()
+    assert prepare.authority_minutes(3, count) == minutes
+    assert prepare.authority_minutes(2, count) == 6
+
+
+@pytest.mark.parametrize("version,count", [(3, 0), (3, 49), (4, 11)])
+def test_no_unbounded_count_or_caller_schema(version, count):
+    with pytest.raises(ValueError):
+        horizon_preparer().authority_minutes(version, count)
+
+
+def test_explicit_v3_preparer_and_runtime_preserve_actual_guards(packet):
+    sheet, preview, now = packet
+    preview["base_converged"] = True
+    actual = horizon_preparer().prepare(preview, sheet["decisions"], now=now, schema_version=3)
+    assert actual["schema"] == "verdify-c1-qualification-worksheet-v3"
+    assert datetime.fromisoformat(actual["expires_at"]) == now + timedelta(minutes=12)
+    original = json.dumps(actual, sort_keys=True)
+    assert (
+        overlay.validate_worksheet(
+            actual,
+            preview,
+            now=now + timedelta(minutes=7),
+            physics=dispatcher._validate_physics,
+            guardrails={"mister_engage_delay_s": 45},
+        )
+        == actual["projection"]
+    )
+    assert json.dumps(actual, sort_keys=True) == original
+    with pytest.raises(ValueError, match="moisture guardrail"):
+        overlay.validate_worksheet(
+            actual,
+            preview,
+            now=now + timedelta(minutes=7),
+            physics=dispatcher._validate_physics,
+            guardrails={"mister_engage_delay_s": 20},
+        )
+    with pytest.raises(ValueError, match="expired"):
+        overlay.validate_worksheet(
+            actual, preview, now=now + timedelta(minutes=12), physics=dispatcher._validate_physics, guardrails={}
+        )
+    with pytest.raises(ValueError, match="current within"):
+        horizon_preparer().prepare(preview, sheet["decisions"], now=now + timedelta(seconds=61), schema_version=3)
+
+
+@pytest.mark.parametrize("version", [1, 2])
+def test_legacy_horizon_never_gains_v3_duration(packet, version):
+    sheet, preview, now = packet
+    sheet["schema"] = f"verdify-c1-qualification-worksheet-v{version}"
+    sheet["expires_at"] = (now + timedelta(minutes=12)).isoformat()
+    with pytest.raises(ValueError, match="duration invalid"):
+        overlay.validate_worksheet(sheet, preview, now=now, physics=dispatcher._validate_physics, guardrails={})
+
+
+@pytest.mark.parametrize("minutes", [6, 11, 13, 24, 25])
+def test_v3_cannot_shorten_extend_or_rebind_expiry(packet, minutes):
+    sheet, preview, now = packet
+    sheet["schema"] = "verdify-c1-qualification-worksheet-v3"
+    sheet["expires_at"] = (now + timedelta(minutes=minutes)).isoformat()
+    with pytest.raises(ValueError, match="computed duration invalid"):
+        overlay.validate_worksheet(sheet, preview, now=now, physics=dispatcher._validate_physics, guardrails={})
+
+
+def test_v3_full_vector_horizon_validates_real_projection_past_legacy_window(full_vector):
+    sheet, preview, _ = full_vector
+    preview["base_converged"] = True
+    now = datetime.now(UTC)
+    actual = horizon_preparer().prepare(preview, sheet["decisions"], now=now, schema_version=3)
+    captured = datetime.fromisoformat(preview["captured_at"])
+    assert actual["projection"]["explicit_selection_count"] == 14
+    assert actual["projection"]["field_count"] == 48
+    assert datetime.fromisoformat(actual["expires_at"]) == captured + timedelta(minutes=16)
+    projection = overlay.validate_worksheet(
+        actual, preview, now=captured + timedelta(minutes=7), physics=dispatcher._validate_physics, guardrails={}
+    )
+    assert projection == actual["projection"]
+    original = json.dumps(actual, sort_keys=True)
+    with pytest.raises(ValueError, match="expired"):
+        overlay.validate_worksheet(
+            actual, preview, now=captured + timedelta(minutes=16), physics=dispatcher._validate_physics, guardrails={}
+        )
+    assert json.dumps(actual, sort_keys=True) == original
+    actual["expires_at"] = (captured + timedelta(minutes=17)).isoformat()
+    with pytest.raises(ValueError, match="computed duration invalid"):
+        overlay.validate_worksheet(actual, preview, now=now, physics=dispatcher._validate_physics, guardrails={})

@@ -25,6 +25,7 @@ WORKSHEET_NAME = "c1-qualification-worksheet.json"
 STATE_NAME = "c1-qualification-state.json"
 PREVIEW_NAME = "c1-qualification-preview.json"
 MAX_AUTHORITY_AGE = timedelta(minutes=6)
+MAX_V3_AUTHORITY_AGE = timedelta(minutes=24)
 
 
 @dataclass(frozen=True)
@@ -49,6 +50,7 @@ def validate_worksheet(worksheet, preview, *, now, physics, guardrails, admitted
     limits = {
         "verdify-c1-qualification-worksheet-v1": 12,
         "verdify-c1-qualification-worksheet-v2": len(CANONICAL_FIELD_ORDER),
+        "verdify-c1-qualification-worksheet-v3": len(CANONICAL_FIELD_ORDER),
     }
     if schema not in limits:
         raise ValueError("invalid C1 worksheet schema")
@@ -56,7 +58,16 @@ def validate_worksheet(worksheet, preview, *, now, physics, guardrails, admitted
         raise ValueError("invalid C1 worksheet identity")
     expires = bounded_reconcile._time(worksheet["expires_at"])
     captured = bounded_reconcile._time(worksheet["preview"]["captured_at"])
-    if not captured <= now < expires <= captured + MAX_AUTHORITY_AGE:
+    decisions = worksheet["decisions"]
+    if not 1 <= len(decisions) <= limits[schema]:
+        raise ValueError("C1 decision bundle exceeds existing bound")
+    if schema == "verdify-c1-qualification-worksheet-v3":
+        age = timedelta(minutes=8 + 4 * ((len(decisions) + 11) // 12))
+        if age > MAX_V3_AUTHORITY_AGE or expires != captured + age:
+            raise ValueError("C1 v3 computed duration invalid")
+    else:
+        age = MAX_AUTHORITY_AGE
+    if not captured <= now < expires <= captured + age:
         raise ValueError("C1 worksheet expired or duration invalid")
     expected = worksheet["preview"]
     for name in ("identity", "base_inputs_sha256"):
