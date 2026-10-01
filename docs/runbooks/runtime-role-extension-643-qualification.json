@@ -1,0 +1,137 @@
+{
+  "issue": 643,
+  "prepared_base": "2f598da07bbc240945a313dd99f13bf95f7a25e4",
+  "current_main_compared": "be0bca92f5c671aaf1db436a73b3142a2ce9c6f6",
+  "migration": "db/migrations/268-six-runtime-workload-role-boundaries.sql",
+  "source_sha256": "2397aa628e9f0eca6012dba1d6a3a41f01ec211c76d1a65644fbb57498433595",
+  "qualified_candidate_sha256": "849ca43a4f227b27de7f3ff03dbd2d70bef36cdab1d06dc3b2ea3da1d03884b8",
+  "final_guard_delta": "three fixed successor267 digest checks and comments; duty/grant/DDL bodies unchanged",
+  "immutable_predecessor": {
+    "267_runner_sha256": "39be9b39cf782b8cf815078d50f8fa8cd838f017584e91e5dbcb50669b8a8735",
+    "api": "fe79f986d58ba6deec513312441b5ba5d579168d3e7e28d5721bb5771150af81",
+    "ingestor": "15e4eff5d86ff58bf3fc98075dfc4613b5fd2a418bf3be9251fd7e6b1634a96e",
+    "mcp": "81836c70a76578da82b77899da5d1cafee4597ea819e35ee68a3fd6cf669fa45"
+  },
+  "six_duties": [
+    "grafana",
+    "planner",
+    "setpoint_server",
+    "ha_backfill",
+    "lab_publisher",
+    "vision"
+  ],
+  "clone_custody": [
+    {
+      "kind": "configmap",
+      "name": "verdify-backup-pair-restore-role2681001a-scripts",
+      "uid": "1ae62979-0405-44f6-8dc9-a97ad555b8f3"
+    },
+    {
+      "kind": "networkpolicy",
+      "name": "verdify-backup-pair-restore-role2681001a-deny-all",
+      "uid": "2a547492-8386-416a-8a96-778bbb0cfda4"
+    },
+    {
+      "kind": "job",
+      "name": "verdify-backup-pair-restore-role2681001a",
+      "uid": "7fdbb062-7ab6-4d79-ad9c-c1ae99189a81"
+    },
+    {
+      "kind": "configmap",
+      "name": "verdify-backup-pair-restore-role2681001b-scripts",
+      "uid": "57f53aad-7b2a-43ec-af91-e21d7749a9fc"
+    },
+    {
+      "kind": "networkpolicy",
+      "name": "verdify-backup-pair-restore-role2681001b-deny-all",
+      "uid": "f0d069e9-2ed2-4279-b4a4-350fa9d4ad44"
+    },
+    {
+      "kind": "job",
+      "name": "verdify-backup-pair-restore-role2681001b",
+      "uid": "82eef834-1b4e-48ec-acb8-75a0be6df0ae"
+    }
+  ],
+  "qualification": {
+    "a": {
+      "result": "/Users/jason/Documents/Codex/verdify-643-role-inventory-20261001/clone-qualification/final268/a-268-independent-result.json",
+      "result_sha256": "b163227c4efffc7c2bd1d9c755d9590aaad1f5d0f483a7a80aaf3689f0f16f7a",
+      "execution_provenance": {
+        "source_sha256": "2397aa628e9f0eca6012dba1d6a3a41f01ec211c76d1a65644fbb57498433595",
+        "executed_sha256": "affba61ca0e7ce2ff6d14352b2595557a0b115e73ee78e065a789873c9c5f643",
+        "scope": "socket-only disposable clone; exact final268 guards roleOID-qualified; no production runner receipt",
+        "mcp_qualification": "independently verified complete roleOID mapping, guard raw before/after; no receipt update",
+        "fixture_sha256": "0a98b6fc39a69bb8b5142d17662de216f4bcd753fbf12898feff84dee458a4f6"
+      }
+    },
+    "b": {
+      "result": "/Users/jason/Documents/Codex/verdify-643-role-inventory-20261001/clone-qualification/final268/b-268-independent-result.json",
+      "result_sha256": "b163227c4efffc7c2bd1d9c755d9590aaad1f5d0f483a7a80aaf3689f0f16f7a",
+      "execution_provenance": {
+        "source_sha256": "2397aa628e9f0eca6012dba1d6a3a41f01ec211c76d1a65644fbb57498433595",
+        "executed_sha256": "affba61ca0e7ce2ff6d14352b2595557a0b115e73ee78e065a789873c9c5f643",
+        "scope": "socket-only disposable clone; exact final268 guards roleOID-qualified; no production runner receipt",
+        "mcp_qualification": "independently verified complete roleOID mapping, guard raw before/after; no receipt update",
+        "fixture_sha256": "0a98b6fc39a69bb8b5142d17662de216f4bcd753fbf12898feff84dee458a4f6"
+      }
+    }
+  },
+  "exact_source_fixtures": [
+    "db/qualification/268-six-runtime-role-fixture.sql",
+    "tests/test_planner_runtime_db_boundary.py"
+  ],
+  "rollback": "both final268 tests rolledback; complete API/ingestor/MCP raw+roleOID-mapped catalogs identical; no seal refreshed",
+  "production_effects": false,
+  "credentials_provisioned": false,
+  "runtime_acceptance": "pending coordinated268/KSOPS/workload delivery and authoritative live checks",
+  "retained_failed_attempts": [
+    "attempt1 temp_schema grant",
+    "attempt2 nested public function path",
+    "attempt3 function-call wrappers not yet corrected",
+    "attempt4 fixture energy column"
+  ],
+  "evidence_directory": "/Users/jason/Documents/Codex/verdify-643-role-inventory-20261001",
+  "offline_validation": {
+    "full_make_ci": "failed before corrections: 9 failures; two owned contract failures corrected; 7 unchanged Mac platform incompatibilities remain",
+    "focused_corrected_contracts": "33 passed",
+    "subsequent_existing_ci_gates": "passed",
+    "prior_focused_source_tests": "64 passed",
+    "native_required_gate": "pending ROOT coordinated delivery; no status fabricated",
+    "platform_failure_source_inputs_unchanged_from": "d665c67ae4b6c763859415c55bd44ea2efc97000",
+    "platform_causes": [
+      "/bin/bash3.2 mapfile unavailable(3)",
+      "BSD date/flock path(1)",
+      "macOS ObjectiveC fork abort(1)",
+      "Linux renameat2 unavailable(2)"
+    ],
+    "logs": {
+      "offline-make-ci-first.log": "9f6f76aed5219534974126577696e340dd424a66175fb4acda2f46a53e43ee50",
+      "offline-make-ci-correct-tooling.log": "be6e5f32d96a223e0b7f31117067a716f9fea898130d2dfb9579b2f9e6629ff6",
+      "offline-make-ci-after-format.log": "a32666090b4f59705b729facdccde8c5409eb5a8b049b504287002bb1c99e1e6",
+      "focused-final268-contracts.log": "cb27fd7f42b6d224dfa05db3fc71777af0a383bcb32d6cfe1be44ebfcab22739",
+      "offline-subsequent-gates.log": "0f5f3e28d42301368e140aea93677b6984c1c4b8b0413bee6d25ac965f78081a"
+    },
+    "focused_with_bootstrap": "45 passed",
+    "existing_bootstrap_delivery_contracts": "15 passed"
+  },
+  "initial_verifier_bootstrap": {
+    "source": "scripts/bootstrap-six-runtime-roles.py",
+    "source_sha256": "d2255d09f8ed2c763529e0a171939c8eef2b27d0c146357bb570162128428e48",
+    "hook": "verdify-six-runtime-role-bootstrap",
+    "presync_wave": 3,
+    "actual_fixture_authentication": "Unix-socketSCRAM6exactnewroles, ownerclone local trust; no listen/network changes",
+    "actual_atomic_initial_install": true,
+    "existing_correct_no_change": true,
+    "wrong_existing_secret_no_rotation": true,
+    "auth_result": "/Users/jason/Documents/Codex/verdify-643-role-inventory-20261001/bootstrap-atomic-complete-authentication-result.json",
+    "independent_old3_seals": "/Users/jason/Documents/Codex/verdify-643-role-inventory-20261001/bootstrap-final-independent-old3-seals.json",
+    "new_credential_alphabet": "64[A-Za-z0-9_-],6distinct,notowner",
+    "old_secrets_or_verifiers_changed": false,
+    "clone_timer_extended": false
+  },
+  "final_render": {
+    "resources": 126,
+    "secrets": 0,
+    "new_hook_exact_migrate_pin": true
+  }
+}

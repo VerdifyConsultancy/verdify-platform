@@ -151,6 +151,8 @@ $PY -m pytest -q \
   tests/test_no_hosted_runner_workflows.py \
   tests/test_planner_graph_contract.py \
   tests/test_planner_memory_ingest.py \
+  tests/test_planner_runtime_db_boundary.py \
+  tests/test_six_runtime_role_bootstrap.py \
   tests/test_policy_arbiter_migration.py \
   tests/test_policy_arbiter_worker.py \
   tests/test_policy_delivery_worker.py \

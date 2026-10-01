@@ -361,8 +361,8 @@ def test_pod_mounts_no_docker_socket_and_keeps_credential_injection():
     container = pod["containers"][0]
     (pw_env,) = [e for e in container.get("env", []) if e["name"] == "POSTGRES_PASSWORD"]
     ref = pw_env["valueFrom"]["secretKeyRef"]
-    assert ref["name"] == "verdify-app-secrets"
-    assert ref["key"] == "POSTGRES_PASSWORD"
+    assert ref["name"] == "verdify-setpoint-server-runtime-db"
+    assert ref["key"] == "password"
 
 
 def test_single_writer_posture_unchanged():

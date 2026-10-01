@@ -14,7 +14,7 @@
 #
 # DATASOURCE (verdify-grafana-provisioning CM): uid `verdify-tsdb` — the exact
 # uid every site-*.json panel target references — pointed at verdify-db:5432.
-# Password is $POSTGRES_PASSWORD from verdify-app-secrets (secretKeyRef; never
+# Password is $POSTGRES_PASSWORD from the dedicated runtime Secret (secretKeyRef; never
 # inline / never printed).
 #
 # DASHBOARDS: all grafana/dashboards/site-*.json provisioned via the
@@ -240,12 +240,12 @@ spec:
             - name: GF_RENDERING_CONCURRENT_RENDER_REQUEST_LIMIT
               value: "4"
             # --- datasource password (the provisioned datasource reads
-            #     $POSTGRES_PASSWORD); same key the api/mcp/planner read. ---
+            #     $POSTGRES_PASSWORD); dedicated bounded datasource identity. ---
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: verdify-app-secrets
-                  key: POSTGRES_PASSWORD
+                  name: verdify-grafana-runtime-db
+                  key: password
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

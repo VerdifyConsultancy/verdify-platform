@@ -14,6 +14,7 @@ Output: /mnt/iris/verdify-vault/website/data/forecast/index.md
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from datetime import UTC, datetime
@@ -96,7 +97,7 @@ def psql(sql: str, timeout: int = 45) -> list[list[str]]:
             "verdify-timescaledb",
             "psql",
             "-U",
-            "verdify",
+            os.environ.get("PGUSER", os.environ.get("DB_USER", "verdify")),
             "-d",
             "verdify",
             "-t",

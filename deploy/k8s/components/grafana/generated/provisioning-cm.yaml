@@ -4,9 +4,9 @@
 # /etc/grafana/provisioning/dashboards/ (Grafana only scans those subdirs).
 #
 #   datasources/timescaledb.yaml: the IN-CLUSTER prod TimescaleDB
-#     (verdify-db:5432, db verdify, user verdify). uid MUST be `verdify-tsdb`
+#     (verdify-db:5432, db verdify, user verdify_grafana_runtime_login). uid MUST be `verdify-tsdb`
 #     to match the datasource ref baked into every site-*.json panel target.
-#     Password from $POSTGRES_PASSWORD (verdify-app-secrets via the Deployment
+#     Password from $POSTGRES_PASSWORD (verdify-grafana-runtime-db via the Deployment
 #     env; never inline). This is the ONLY datasource — never .100, never .150.
 #   dashboards/provider.yaml: a file provider scanning the json/ dir which is
 #     populated by the verdify-grafana-dashboards-{0,1} ConfigMaps.
@@ -26,7 +26,7 @@ data:
         uid: verdify-tsdb
         url: verdify-db:5432
         database: verdify
-        user: verdify
+        user: verdify_grafana_runtime_login
         isDefault: true
         editable: false
         secureJsonData:

@@ -26,7 +26,7 @@ COPY db/migrations/000-fresh-schema-hypertable-repair.sql /db/000-fresh-schema-h
 COPY db/migrations/ /db/migrations/
 COPY db/ledger/ /db/ledger/
 COPY db/apply-migrations.sh /usr/local/bin/apply-migrations.sh
-COPY scripts/check_migration_rollback_safety.py /scripts/check_migration_rollback_safety.py
+COPY scripts/check_migration_rollback_safety.py scripts/bootstrap-six-runtime-roles.py /scripts/
 COPY scripts/c0-migration-delivery.py scripts/c0-boundary-transition.py scripts/ordinary-boundary-diff.py /scripts/
 COPY db/migrate.sh /usr/local/bin/migrate.sh
 RUN chmod 0755 /usr/local/bin/migrate.sh /usr/local/bin/apply-migrations.sh \

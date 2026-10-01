@@ -1,0 +1,118 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: verdify-six-runtime-role-bootstrap
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: runtime-role-bootstrap
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: '3'
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 180
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: verdify
+        app.kubernetes.io/component: migrate
+        app.kubernetes.io/name: verdify-six-runtime-role-bootstrap
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 10
+      imagePullSecrets:
+      - name: zot-origin-cluster-pull
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: bootstrap-and-attest
+        image: ghcr.io/verdifyconsultancy/verdify-migrate
+        command:
+        - python3
+        - /scripts/bootstrap-six-runtime-roles.py
+        env:
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: verdify-config
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: verdify-config
+              key: DB_PORT
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: verdify-config
+              key: DB_NAME
+        - name: DB_ADMIN_USER
+          valueFrom:
+            configMapKeyRef:
+              name: verdify-config
+              key: DB_USER
+        - name: DB_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: verdify-app-secrets
+              key: POSTGRES_PASSWORD
+        - name: GRAFANA_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: verdify-grafana-runtime-db
+              key: password
+        - name: PLANNER_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: verdify-planner-runtime-db
+              key: password
+        - name: SETPOINT_SERVER_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: verdify-setpoint-server-runtime-db
+              key: password
+        - name: HA_BACKFILL_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: verdify-ha-backfill-runtime-db
+              key: password
+        - name: LAB_PUBLISHER_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: verdify-lab-publisher-runtime-db
+              key: password
+        - name: VISION_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: verdify-vision-runtime-db
+              key: password
+        - name: PGAPPNAME
+          value: verdify-six-runtime-role-bootstrap
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 250m
+            memory: 128Mi
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+      volumes:
+      - name: tmp
+        emptyDir:
+          sizeLimit: 16Mi

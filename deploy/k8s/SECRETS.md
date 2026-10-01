@@ -211,3 +211,26 @@ cluster-admin.** The device writer (ingestor `replicas:1` + the gated
 | `verdify-firmware-ota` / `ota_password` | flash the ESP32 via `make firmware-deploy` | operator OTA | **yes (flash)** | no | 🔒 device-affecting — stays safety-checked; not held by CI |
 
 **CI is already least-privilege** (built-in `GITHUB_TOKEN` + scoped per-job `permissions:`; no kube credential; the gated `argocd app sync` is run by a root executor outside CI). The two open hardening recommendations (own follow-ups): **(a)** repoint the Grafana datasource off the `verdify` superuser onto `agent_ro`/`pg_read_all_data`; **(b)** issue agents the `agent_ro` DSN + a narrow namespaced RBAC `Role` (`get/list` + `pods/exec` scoped to `verdify-db-0`) instead of the cluster-admin kubeconfig. **(c)** confirm `LAB_REPO_TOKEN` is a fine-grained single-repo PAT (Jason, org settings).
+
+
+## #643 prepared six-duty database credentials (not yet provisioned)
+
+The full role-boundary source candidate uses six distinct immutable password-only
+Secrets, owned exclusively by `jvallery/agents` central KSOPS. No Secret values or
+Secret manifests belong to this product repository. Provision new credentials;
+do not rotate or reuse existing API, ingestor, MCP, agent-ro or owner credentials.
+
+| Secret | Required key | Fixed database login |
+|---|---|---|
+| verdify-grafana-runtime-db | password | verdify_grafana_runtime_login |
+| verdify-planner-runtime-db | password | verdify_planner_runtime_login |
+| verdify-setpoint-server-runtime-db | password | verdify_setpoint_server_runtime_login |
+| verdify-ha-backfill-runtime-db | password | verdify_ha_backfill_runtime_login |
+| verdify-lab-publisher-runtime-db | password | verdify_lab_publisher_runtime_login |
+| verdify-vision-runtime-db | password | verdify_vision_runtime_login |
+
+Workloads must not sync this prepared switch until the complete reserved268
+migration is independently qualified, predecessor seals verified unchanged and
+these credentials are delivered by their canonical owner. URL-composed DSNs
+require the owner's established URL-safe password generation. Existing admin,
+renderer, OAuth, experiment and owner Secret keys remain unchanged.

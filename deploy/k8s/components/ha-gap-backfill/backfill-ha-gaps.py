@@ -670,9 +670,13 @@ async def check_permissions(conn: asyncpg.Connection, apply: bool) -> None:
     missing: list[str] = []
     for table in WRITE_TABLES:
         for privilege in required:
-            ok = await conn.fetchval("SELECT has_table_privilege(current_user, $1, $2)", f"public.{table}", privilege)
+            ok = await conn.fetchval(
+                "SELECT CASE WHEN $2 = 'INSERT' THEN (SELECT bool_and(has_column_privilege(current_user, c.oid, a.attnum, 'INSERT')) FROM pg_class c JOIN pg_attribute a ON a.attrelid=c.oid WHERE c.oid=to_regclass($1) AND a.attnum>0 AND NOT a.attisdropped) ELSE has_table_privilege(current_user, $1, $2) END",
+                table,
+                privilege,
+            )
             if not ok:
-                missing.append(f"{privilege} public.{table}")
+                missing.append(f"{privilege} {table}")
     if missing:
         raise RuntimeError("DB user lacks required privileges: " + ", ".join(missing))
 
@@ -682,7 +686,7 @@ async def table_columns(conn: asyncpg.Connection, table: str) -> set[str]:
         """
         SELECT column_name
           FROM information_schema.columns
-         WHERE table_schema = 'public'
+         WHERE table_schema = current_schema()
            AND table_name = $1
         """,
         table,

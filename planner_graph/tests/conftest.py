@@ -74,6 +74,10 @@ def postgres_dsn() -> Iterator[str]:
                 raise
             time.sleep(0.25)
 
+    with psycopg.connect(dsn) as conn:
+        bootstrap = ROOT.parent / "db/qualification/268-planner-bootstrap-candidate.sql"
+        conn.execute(bootstrap.read_text())
+
     try:
         yield dsn
     finally:
