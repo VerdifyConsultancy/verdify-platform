@@ -225,7 +225,6 @@ def reconcile(snapshot: dict) -> dict:
         exported = payload["rows"]
         if missing_days or len(exported) != len(rows) or {r["assignment_id"] for r in exported} != ids:
             raise ValueError("export excludes or adds an assignment")
-        by_id = {r["assignment_id"]: r for r in rows}
         for index, r in enumerate(exported, 1):
             expected_fields = {
                 "assigned_local_date",
@@ -249,7 +248,9 @@ def reconcile(snapshot: dict) -> dict:
             }
             if set(r) != expected_fields:
                 raise ValueError("export row shape mismatch")
-            source = by_id[r["assignment_id"]]
+            source = rows[index - 1]
+            if r["assignment_id"] != source["assignment_id"]:
+                raise ValueError("export changed chronological assignment order")
             if (
                 r["day_index"] != index
                 or r["assigned_local_date"] != source["local_date"]

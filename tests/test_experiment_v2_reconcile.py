@@ -236,3 +236,36 @@ def test_retained_flags_cannot_disagree_with_hashed_source():
     snapshot["rows"][0]["delivery_failed"] = True
     with pytest.raises(ValueError, match="flag lineage"):
         m.reconcile(snapshot)
+
+
+def test_rehashed_permutation_with_renumbered_days_and_bundle_is_refused():
+    snapshot = add_export(fixture())
+    payload = json.loads(snapshot["export"]["raw"])
+    payload["rows"].reverse()
+    for index, row in enumerate(payload["rows"], 1):
+        row["day_index"] = index
+    bundle = m.digest(m.EVIDENCE_DOMAIN, "".join(r["evidence_bundle_sha256"] for r in payload["rows"]))
+    payload["evidence_bundle_sha256"] = bundle
+    snapshot["export"]["evidence_bundle_sha256"] = bundle
+    snapshot["export"]["raw"] = json.dumps(payload)
+    snapshot["export"]["sha256"] = m.digest(m.SQL_EXPORT_DOMAIN, snapshot["export"]["raw"])
+    with pytest.raises(ValueError, match="chronological assignment order"):
+        m.reconcile(snapshot)
+    assert len(snapshot["rows"]) == 2  # structural refusal never filters source assignments
+
+
+def test_future_scheduled_snapshot_is_reconciled_but_not_completed():
+    snapshot = fixture()
+    snapshot["as_of"] = "2027-06-01T11:00:00+00:00"
+    for row in snapshot["rows"]:
+        for key in list(row):
+            if key not in {"assignment_id", "pair_index", "local_date"}:
+                row[key] = None
+    report = m.reconcile(snapshot)
+    assert report["status"] == "reconciled" and not report["export_verified"]
+    assert report["observed_assignments"] == 2 and all(r["state"] == "scheduled" for r in report["rows"])
+
+
+def test_owning_regressions_are_in_existing_ci_group():
+    runner = (Path(__file__).resolve().parents[1] / "scripts/ci-local.sh").read_text()
+    assert "  tests/test_experiment_v2_reconcile.py \\\n" in runner

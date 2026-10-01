@@ -145,8 +145,11 @@ explicit. No efficacy, forecast, resource saving, carryover or power is estimate
 Exact PostgreSQL JSONB text preimages are independently hashed with the existing
 migration-214 domains and UUID bytes. The final export must match its exact byte
 hash, every assignment and frozen row, ordered evidence bundle and locked analyzer
-identity. A daily receipt can reconcile scheduled days without claiming a completed
-pilot. Reset/source details remain in their hashed evidence; this receipt does not
+identity. `status=reconciled` means the snapshot accounts for the locked assignment
+calendar and has no missing evidence for already completed days. Future rows
+remain `scheduled`; `export_verified=false` can coexist with a reconciled
+snapshot. Neither status nor exit 0 means a completed pilot, accepted launch,
+physical qualification or a revealed analysis. Reset/source details remain in their hashed evidence; this receipt does not
 invent a reset classification from exposure or null outcomes.
 
 Output is exclusive mode-0600, fsynced together with its directory, and conforms
