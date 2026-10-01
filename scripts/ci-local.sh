@@ -91,6 +91,7 @@ $PY -m pytest -q \
   tests/test_component_experiment_executor.py \
   tests/test_component_experiment_observability.py \
   tests/test_component_experiment_source.py \
+  tests/test_native_transport_liveness.py \
   tests/test_component_experiment_store.py \
   tests/test_component_experiment_writer.py \
   tests/test_component_grid_qualification.py \
