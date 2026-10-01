@@ -1082,3 +1082,95 @@ async def test_original_halt_protection_does_not_hide_interrupted_rollback_trans
     current = bounded._read(tmp_path / bounded.STATE_NAME)
     assert result.action == "hold" and "acknowledgement unknown" in result.reason
     assert current["run_id"] == state["run_id"] and current["status"] == "rollback_failed"
+
+
+@pytest.mark.asyncio
+async def test_confirmed_halt_archive_binds_changed_waypoint_without_old_plan_authority(fixture, tmp_path):
+    state, original, forward, remaining = await confirmed_halt_fixture(fixture, tmp_path)
+    # A single effective journal can have later, genuinely changed waypoints.
+    # Eight value changes must not be normalized into the original plan.
+    for index, parameter in enumerate(fixture.parameters[:8]):
+        fixture.plan_values[parameter] = 2.0 + index
+    refreshed = await bounded._preview(fixture, remaining, fixture.planned(), 3)
+    assert (
+        len(
+            [
+                (a, b)
+                for a, b in zip(state["approved_preview"]["plan_rows"], refreshed["plan_rows"], strict=True)
+                if a["value"] != b["value"]
+            ]
+        )
+        == 8
+    )
+    forward = prepare_writer_stage.prepare_forward(
+        refreshed,
+        forward["custody"],
+        forward["native_requests"],
+        forward["original_writer_custody"],
+        datetime.now(UTC),
+    )
+    assert forward["version"] == 2 and forward["current_plan_rows"] == refreshed["plan_rows"]
+    assert forward["original_approval"]["approved_preview"]["plan_rows"] == state["approved_preview"]["plan_rows"]
+    bounded._write(tmp_path / bounded.RECOVERY_NAME, forward)
+    old_state = (tmp_path / bounded.STATE_NAME).read_bytes()
+    old_approval = (tmp_path / bounded.APPROVAL_NAME).read_bytes()
+    result = await bounded.choose_stage(fixture, remaining, fixture.planned(), 3, tmp_path, 12)
+    assert result.action == "hold" and result.changes == () and "fresh approval required" in result.reason
+    assert (tmp_path / bounded.STATE_NAME).read_bytes() == old_state
+    assert (tmp_path / bounded.APPROVAL_NAME).read_bytes() == old_approval
+    archive = bounded._read(tmp_path / f"writer-stage-confirmed-halt-{state['run_id']}.json")
+    assert archive["state"]["approved_preview"]["plan_rows"] != archive["forward"]["current_plan_rows"]
+    # Reusing the original approval remains a no-send hold.
+    again = await bounded.choose_stage(fixture, remaining, fixture.planned(), 3, tmp_path, 12)
+    assert again.action == "hold" and again.changes == ()
+    # Re-admission is a new current-policy run, not the old residual vector.
+    # Changed completed fields may receive NEW values through fresh authority;
+    # none of the original successful (parameter, value) effects is replayed.
+    current_changes = [
+        (parameter, fixture.plan_values.get(parameter, 1.0))
+        for parameter in fixture.parameters
+        if fixture.readbacks[parameter] != fixture.plan_values.get(parameter, 1.0)
+    ]
+    current_preview = await bounded._preview(fixture, current_changes, fixture.planned(), 3)
+    fresh_approval = prepare_writer_stage.prepare(current_preview, datetime.now(UTC))
+    bounded._write(tmp_path / bounded.APPROVAL_NAME, fresh_approval)
+    native_before = list(fixture.stage_rows)
+    admitted = await bounded.choose_stage(fixture, current_changes, fixture.planned(), 3, tmp_path, 12)
+    assert admitted.action == "send" and admitted.changes == tuple(current_changes)
+    assert admitted.run_id != original["run_id"]
+    original_effects = set(state["completed_values"].items())
+    assert not original_effects.intersection(admitted.changes)
+    assert fixture.stage_rows == native_before  # no native row replay/update
+    new_state = bounded._read(tmp_path / bounded.STATE_NAME)
+    assert new_state["approved_preview"]["plan_rows"] == current_preview["plan_rows"]
+    assert new_state["completed"] == [] and new_state["run_id"] == fresh_approval["run_id"]
+    retained = bounded._read(tmp_path / f"writer-stage-confirmed-halt-{state['run_id']}.json")
+    assert retained["state"] == state and retained["native_requests"] == forward["native_requests"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("mutation", ["missing", "value", "timestamp", "legacy", "after_archive"])
+async def test_confirmed_halt_current_plan_binding_is_required_at_archive_and_admission(fixture, tmp_path, mutation):
+    state, original, forward, remaining = await confirmed_halt_fixture(fixture, tmp_path)
+    old_state = (tmp_path / bounded.STATE_NAME).read_bytes()
+    if mutation == "after_archive":
+        result = await bounded.choose_stage(fixture, remaining, fixture.planned(), 3, tmp_path, 12)
+        assert "fresh approval required" in result.reason
+        fixture.plan_values[fixture.parameters[-1]] = 2.0
+        current = await bounded._preview(fixture, remaining, fixture.planned(), 3)
+        bounded._write(tmp_path / bounded.APPROVAL_NAME, prepare_writer_stage.prepare(current, datetime.now(UTC)))
+    else:
+        if mutation == "missing":
+            del forward["current_plan_rows"]
+        elif mutation == "legacy":
+            forward["version"] = 1
+        elif mutation == "value":
+            forward["current_plan_rows"][0]["value"] = 2.0
+        else:
+            forward["current_plan_rows"][0]["ts"] = (fixture.ts - timedelta(hours=5)).isoformat()
+        bounded._write(tmp_path / bounded.RECOVERY_NAME, forward)
+    result = await bounded.choose_stage(fixture, remaining, fixture.planned(), 3, tmp_path, 12)
+    assert result.action == "hold" and result.changes == ()
+    assert (tmp_path / bounded.STATE_NAME).read_bytes() == old_state
+    if mutation != "after_archive":
+        assert not list(tmp_path.glob("writer-stage-confirmed-halt-*.json"))
