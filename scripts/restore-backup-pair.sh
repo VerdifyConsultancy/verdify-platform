@@ -184,7 +184,7 @@ done
 # generates a fresh random psql \restrict/\unrestrict key for every invocation;
 # remove only those two transport lines before the byte-for-byte comparison.
 if ! pg_dumpall --roles-only --no-role-passwords --no-comments --no-security-labels \
-    -h "${PGHOST}" -p "${PGPORT}" -U "${owner}" -l postgres \
+    -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}" -l postgres \
     > "${work_dir}/roles.restored.sql" 2>"${work_dir}/roles-diff.stderr"; then
   echo "[restore-pair] FATAL: restored role inventory failed" >&2
   exit 1
