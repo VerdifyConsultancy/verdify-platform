@@ -7,7 +7,7 @@ remain historical facts. No qualified target profile ships with this code.
 
 ## Exact contract
 
-`scripts/cnpg-target-runtime-transition.py` consumes hash-pinned v2 source and
+`scripts/cnpg-target-runtime-transition.py` consumes hash-pinned v3 source and
 pre-transition target witnesses. The existing qualifier must accept full catalog
 and semantic boundary equality while preserving the original three seals. The
 password-free role artifact must match the source witness's nonbuiltin role names;
@@ -20,17 +20,53 @@ Generate its target witness using `cnpg-c0-restore-qualification.py --target
 --bootstrap-grantor-profile`; the original frozen source witness remains intact.
 The target witness retains raw grantor differences and physical parity failure
 separately from typed bootstrap-privilege equivalence. Owners, object ACLs,
-membership flags, all ledger rows and original seals are never normalized.
+membership flags, all ledger rows and original seals remain exact. The only
+relation ACL equivalence is PostgreSQL's native default ACL for a NULL `relacl`:
+`r` for tables/views and `s` for sequences, with exact owner/grantee/grantor,
+privileges and grant options. Explicit nondefault/revoked grants remain distinct.
 The source-derived target217/259 attesters additionally require the actual native
 OID10/name/postgres/SUPERUSER fact at runtime. Rollback qualification and literal
 install bind the profiled DDL hash and native before/post membership facts.
 Neither the profile nor the local PG16.15 fixtures certify an actual16.13 restore.
+
+
+The v3 witness keeps `raw_portable_catalog_v2` and complete separate
+`portability_native_facts` for relations, indexes, constraints and triggers.
+A genuinely fresh source v3 witness must reproduce the frozen source v2 catalog
+SHA256 `f79f3c2d171097426f98a3aeb1eb52e71d7c04283b6e92821308099a5c090908`,
+bound to the immutable source witness SHA256
+`ec9b3d5aff2bbfd5ced3d1a769551053e72dadd0cb811a5a843ec7b022110e1d`.
+Do not relabel the old witness or refreeze a changed current source.
+
+Only internal foreign-key triggers with a native built-in `pg_catalog` RI
+function, exact generated-name/actual-OID proof and native parent chain use
+relation/constraint/function identities. Their enablement, event/type, arguments,
+qualification, deferral, transition tables, referenced relation and complete
+parent semantics remain exact. User triggers and other triggers retain their
+original names/definitions. Duplicate typed identities are rejected. Raw source
+and target generated OID names remain in their separate evidence.
 
 The executor reuses the paired import's namespace/Cluster/Pod UID/operand checks
 and downward API UID guard inside the selected primary. SQL independently requires
 `verdify_rehearsal`, PostgreSQL **160013**, `verdify-cnpg-rehearsal`, a primary,
 local socket and the original `verdify` database owner. There is no fallback,
 new Pod/Job, source connection, credential installation, or retry.
+
+
+Execution uses the existing CNPG privileged local peer path: `psql -U postgres`
+on `/controller/run`. The UID-bound executor clears inherited libpq option/service/
+password aliases, verifies native bootstrap OID10/postgres/SUPERUSER, then uses
+`SET SESSION AUTHORIZATION verdify` solely for owner DDL. The original owner
+assertions still require `current_user=session_user=verdify`. Native bootstrap
+posture is checked inside the DDL transaction before COMMIT and after resetting
+session authorization. Password-free role catalogs and bootstrap metadata are
+independently captured and compared before/after the one execution; role export
+uses explicit `-U postgres -l postgres`.
+
+This is privileged operator execution, **zero ordinary password-authentication
+credit**. It does not change HBA, create credentials, or invoke ordinary clients.
+The separate authenticated-client adapter must later prove genuine ordinary
+password/pool startup under qualified native target admission.
 
 The fixed DDL changes only:
 
@@ -54,12 +90,12 @@ no target receipt and establishes no admitted runtime. No temporary schema is
 introduced into catalog measurement; a transaction-local result GUC is only an
 output channel.
 
-ROOT executes this only after actual import and independent v2 target proof:
+ROOT executes this only after actual import and independent v3 target proof:
 
 ```sh
 python3 scripts/cnpg-target-runtime-transition.py \
-  --source "$SOURCE_V2" --source-sha256 "$SOURCE_V2_SHA" \
-  --target "$TARGET_V2" --target-sha256 "$TARGET_V2_SHA" \
+  --source "$SOURCE_V3" --source-sha256 "$SOURCE_V3_SHA" \
+  --target "$TARGET_V3" --target-sha256 "$TARGET_V3_SHA" \
   --binding "$EXACT_TARGET_BINDING" --binding-sha256 "$BINDING_SHA" \
   --source-roles "$IMMUTABLE_SOURCE_ROLES" --source-roles-sha256 "$ROLES_SHA" \
   --output "$NEW_ROLLBACK_SQL" --execute --receipt-dir "$NEW_QUALIFICATION_CUSTODY"
@@ -85,6 +121,15 @@ Use new output/custody paths. The install writes **only those reviewed digest
 literals** into the distinct target receipts, binds them to the qualification
 record hash, independently checks exact generated function bodies and the complete
 post-DDL witness, verifies unchanged historical row facts, then commits atomically.
+The whole exact before witness remains a transaction guard. A separate native
+SQL guard before COMMIT requires every pre-existing raw relation/index/constraint/
+trigger fact unchanged and only the enumerated new receipt objects. Their portable
+shape and all nonallocation native fields match the reviewed post witness. Newly
+allocated table/type/TOAST/index/constraint OID slots are bound to actual native
+objects; the new heap `relfrozenxid` is bound to the actual DDL transaction ID.
+Those allocation slots cannot equal a rolled-back rehearsal's allocations. Both
+raw snapshots are retained; this distinction does not exempt existing objects or
+change native digest implementations.
 It never seals whatever a current digest happens to return. Failed predecessor or
 successor comparison aborts all target DDL/receipts; successful installation is
 not blindly replayed against a changed predecessor.

@@ -36,7 +36,7 @@ transaction = load("c0-boundary-transition")
 operator = load("cnpg-paired-restore")
 role_parity = load("cnpg-restore-role-parity")
 rollback_safety = load("check_migration_rollback_safety")
-VERSION = "cnpg-native-runtime-transition-v1"
+VERSION = "cnpg-native-runtime-transition-v2"
 DATABASE = "verdify_rehearsal"
 SERVER = 160013
 TABLE = "public.cnpg_qualified_runtime_receipts"
@@ -164,7 +164,7 @@ def ddl(bootstrap_grantor_profile=False):
 
 
 def witness_select(target=None):
-    c0.require(c0.VERSION == "cnpg-c0-logical-recovery-witness-v2", "full identity v2 prerequisite missing")
+    c0.require(c0.VERSION == "cnpg-c0-logical-recovery-witness-v3", "typed full identity v3 prerequisite missing")
     # Use the same independently source-pinned witness, including executable
     # digest guards; its attester definitions legitimately differ after DDL.
     sql = c0.emit_sql(target=True, bootstrap_grantor_profile=bool(target and target.get("bootstrap_grantor_profile")))
@@ -218,8 +218,14 @@ def validate_post(before, after):
             == sorted(e for e in after["boundaries"][login]["raw_entries"] if e.startswith("member|")),
             "post-DDL native membership drift",
         )
-    left = {(r[0], r[1]): r[2] for r in before["portable_catalog"]}
-    right = {(r[0], r[1]): r[2] for r in after["portable_catalog"]}
+    validate_raw_delta(before, after)
+    for field in ["portable_catalog", "raw_portable_catalog_v2"]:
+        validate_catalog_delta(before[field], after[field])
+
+
+def validate_catalog_delta(before, after):
+    left = {(r[0], r[1]): r[2] for r in before}
+    right = {(r[0], r[1]): r[2] for r in after}
     changed = {k for k in left.keys() & right.keys() if left[k] != right[k]}
     removed = left.keys() - right.keys()
     added = right.keys() - left.keys()
@@ -263,6 +269,106 @@ def checked_qualification(before, record):
     return record["post_witness"]
 
 
+def raw_additions():
+    return {
+        "relations": [TABLE],
+        "indexes": [TABLE + "_pkey"],
+        "constraints": [
+            TABLE + "." + n
+            for n in [
+                "cnpg_qualified_runtime_receipts_pkey",
+                "cnpg_qualified_runtime_receipts_login_name_check",
+                "cnpg_qualified_runtime_receipts_boundary_sha256_check",
+                "cnpg_qualified_runtime_receipts_qualification_sha256_check",
+            ]
+        ],
+        "triggers": [],
+    }
+
+
+def validate_raw_delta(before, after):
+    for field, allowed in raw_additions().items():
+        key = "raw_identity" if field == "triggers" else "identity"
+        old = {f[key]: f for f in before["portability_native_facts"][field]}
+        new = {f[key]: f for f in after["portability_native_facts"][field]}
+        c0.require(
+            len(old) == len(before["portability_native_facts"][field])
+            and len(new) == len(after["portability_native_facts"][field]),
+            "ambiguous raw native objects",
+        )
+        c0.require(
+            not (set(old) & set(allowed)) and set(new) - set(old) == set(allowed), "uncontrolled raw native additions"
+        )
+        c0.require(all(new.get(k) == v for k, v in old.items()), "pre-existing raw native facts changed")
+
+
+def raw_facts_guard_sql(reviewed):
+    # Executed in the same DDL transaction, before any COMMIT. Existing facts
+    # remain byte-exact. Only source-enumerated new receipt objects may appear.
+    result = ""
+    for field, allowed in raw_additions().items():
+        key = "raw_identity" if field == "triggers" else "identity"
+        identities = "ARRAY[" + ",".join(literal(n) for n in allowed) + "]::text[]"
+
+        def selected(epoch, new):
+            op = "=" if new else "<>"
+            quantifier = "ANY" if new else "ALL"
+            return f"""(SELECT coalesce(jsonb_agg(e ORDER BY e->>{literal(key)}),'[]'::jsonb)
+              FROM jsonb_array_elements({epoch}->'portability_native_facts'->{literal(field)}) e
+              WHERE e->>{literal(key)} {op} {quantifier}({identities}))"""
+
+        result += f"""
+ IF {selected("v_post", False)} IS DISTINCT FROM {selected("v_before", False)}
+  OR (SELECT coalesce(jsonb_agg(e->>{literal(key)} ORDER BY e->>{literal(key)}),'[]'::jsonb)
+       FROM jsonb_array_elements({selected("v_post", True)}) e)
+       IS DISTINCT FROM {literal(json.dumps(sorted(allowed)))}::jsonb THEN
+   RAISE EXCEPTION 'CNPG native transition refuses raw existing/addition custody drift';
+ END IF;
+"""
+        if not reviewed or not allowed:
+            continue
+        # Only OID slots allocated by this exact new table DDL are excluded from
+        # rollback-vs-install literal comparison. Definitions, owners, ACLs,
+        # storage flags and every other native field remain exact.
+        slots = {
+            "relations": ["oid", "relfilenode", "reltype", "reltoastrelid", "relfrozenxid"],
+            "indexes": ["oid", "relfilenode"],
+            "constraints": ["oid", "conrelid", "conindid"],
+        }[field]
+        subtract = " - ARRAY[" + ",".join(literal(n) for n in slots) + "]::text[]"
+        expr = "e || jsonb_build_object('native',(e->'native')" + subtract + ")"
+        if field == "indexes":
+            expr += " || jsonb_build_object('index',(e->'index') - ARRAY['indexrelid','indrelid']::text[])"
+
+        def comparable(epoch):
+            return f"(SELECT jsonb_agg({expr} ORDER BY e->>'identity') FROM jsonb_array_elements({selected(epoch, True)}) e)"
+
+        result += f"""
+ IF {comparable("v_post")} IS DISTINCT FROM {comparable("v_reviewed")} THEN
+   RAISE EXCEPTION 'CNPG native transition refuses new raw object shape drift: {field}';
+ END IF;
+"""
+    result += f"""
+ IF NOT EXISTS(SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+    JOIN pg_type rt ON rt.oid=c.reltype AND rt.typrelid=c.oid
+    JOIN pg_class toast ON toast.oid=c.reltoastrelid AND toast.relkind='t'
+    WHERE n.nspname='public' AND c.relname='cnpg_qualified_runtime_receipts' AND c.relkind='r'
+      AND c.relpersistence='p' AND c.relfilenode=c.oid AND pg_get_userbyid(c.relowner)='verdify'
+      AND c.relfrozenxid::text::bigint=(pg_current_xact_id()::text::bigint % 4294967296))
+  OR NOT EXISTS(SELECT 1 FROM pg_index i JOIN pg_class c ON c.oid=i.indexrelid
+     WHERE i.indrelid='{TABLE}'::regclass AND i.indexrelid='{TABLE}_pkey'::regclass
+       AND i.indisprimary AND i.indisunique AND c.relfilenode=c.oid)
+  OR EXISTS(SELECT 1 FROM pg_constraint x WHERE x.conrelid='{TABLE}'::regclass
+     AND (x.conname NOT IN ('cnpg_qualified_runtime_receipts_pkey','cnpg_qualified_runtime_receipts_login_name_check',
+        'cnpg_qualified_runtime_receipts_boundary_sha256_check','cnpg_qualified_runtime_receipts_qualification_sha256_check')
+       OR (x.contype='p' AND x.conindid<>'{TABLE}_pkey'::regclass)
+       OR (x.contype='c' AND x.conindid<>0))) THEN
+   RAISE EXCEPTION 'CNPG native transition refuses new native OID binding drift';
+ END IF;
+"""
+    return result
+
+
 def emit_sql(target, *, reviewed_post=None, qualification_sha256=None):
     c0.checked(target, target=True)
     c0.require(
@@ -291,6 +397,7 @@ LOCK TABLE public.schema_migrations,public.runtime_ordinary_login_attestation_re
 {guards}
 DO $native_transition$
 DECLARE v_original jsonb; v_before jsonb; v_post jsonb;
+ v_reviewed jsonb := {literal(json.dumps(reviewed_post, separators=(",", ":")))}::jsonb;
 BEGIN
  SELECT {original_facts_sql()} INTO v_original;
  {select} INTO v_before;
@@ -322,9 +429,10 @@ BEGIN
    RAISE EXCEPTION 'CNPG native transition changed original historical facts';
  END IF;
 """
+    sql += raw_facts_guard_sql(reviewed_post is not None)
     if reviewed_post is not None:
         sql += f"""
- IF v_post IS DISTINCT FROM {literal(json.dumps(reviewed_post, separators=(",", ":")))}::jsonb THEN
+ IF (v_post - 'portability_native_facts') IS DISTINCT FROM ({literal(json.dumps(reviewed_post, separators=(",", ":")))}::jsonb - 'portability_native_facts') THEN
    RAISE EXCEPTION 'CNPG native transition refuses unqualified post-DDL catalog';
  END IF;
 """
@@ -341,21 +449,80 @@ SELECT current_setting('verdify.cnpg_transition_result');
     return sql
 
 
+def bootstrap_facts_sql():
+    # Password-free native bootstrap posture; role/settings/membership parity is
+    # independently exported before and after through pg_dumpall.
+    return """(SELECT jsonb_build_object('oid',oid::int,'name',rolname,'superuser',rolsuper,
+      'inherit',rolinherit,'createrole',rolcreaterole,'createdb',rolcreatedb,'login',rolcanlogin,
+      'replication',rolreplication,'bypassrls',rolbypassrls,'connection_limit',rolconnlimit,
+      'valid_until',rolvaliduntil) FROM pg_roles WHERE oid=10)"""
+
+
+def bootstrap_owner_sql(sql):
+    """Native peer bootstrap to owner DDL; never ordinary password-auth proof."""
+    c0.require(
+        sql.startswith("\\set ON_ERROR_STOP on\nBEGIN;\n") and sql.rstrip().endswith(("ROLLBACK;", "COMMIT;")),
+        "guarded transactional owner SQL required",
+    )
+    prefix = f"""\\set ON_ERROR_STOP on
+DO $bootstrap_peer$ BEGIN
+ IF current_database()<>'{DATABASE}' OR current_setting('server_version_num')::int<>{SERVER}
+    OR current_setting('cluster_name')<>'{operator.CLUSTER}' OR inet_client_addr() IS NOT NULL
+    OR pg_is_in_recovery() OR current_user<>'postgres' OR session_user<>'postgres'
+    OR NOT EXISTS(SELECT 1 FROM pg_roles WHERE oid=10 AND rolname='postgres' AND rolsuper)
+    OR (SELECT pg_get_userbyid(datdba) FROM pg_database WHERE datname=current_database())<>'verdify' THEN
+   RAISE EXCEPTION 'CNPG native transition refuses privileged peer bootstrap';
+ END IF;
+ PERFORM set_config('verdify.cnpg_bootstrap_before',{bootstrap_facts_sql()}::text,false);
+END $bootstrap_peer$;
+SET SESSION AUTHORIZATION verdify;
+"""
+    # Check bootstrap posture inside the owner transaction, before COMMIT. A
+    # failure disconnects this one psql session with ON_ERROR_STOP; no hotload or
+    # alternate authentication path is attempted.
+    final = "COMMIT;" if sql.rstrip().endswith("COMMIT;") else "ROLLBACK;"
+    owner = (
+        sql.rstrip().removesuffix(final)
+        + f"""
+DO $bootstrap_custody$ BEGIN
+ IF current_user<>'verdify' OR session_user<>'verdify'
+    OR {bootstrap_facts_sql()} IS DISTINCT FROM current_setting('verdify.cnpg_bootstrap_before')::jsonb THEN
+   RAISE EXCEPTION 'CNPG native transition changed bootstrap/owner custody';
+ END IF;
+END $bootstrap_custody$;
+{final}
+RESET SESSION AUTHORIZATION;
+DO $bootstrap_return$ BEGIN
+ IF current_user<>'postgres' OR session_user<>'postgres'
+    OR {bootstrap_facts_sql()} IS DISTINCT FROM current_setting('verdify.cnpg_bootstrap_before')::jsonb THEN
+   RAISE EXCEPTION 'CNPG native transition failed privileged session return';
+ END IF;
+END $bootstrap_return$;
+"""
+    )
+    return prefix + owner
+
+
 def execute(sql, binding, receipt_dir, source_roles, bootstrap_mapping=None):
     """Same CNPG UID custody as paired import; never create a Pod or credential."""
     os.umask(0o077)
     receipt_dir.mkdir(mode=0o700, parents=True, exist_ok=False)
     args = SimpleNamespace(cluster_uid=binding["cluster_uid"], pod=binding["pod"], pod_uid=binding["pod_uid"])
     before = operator.read_target(args)
+    executed_sql = bootstrap_owner_sql(sql)
     receipt = {
         "version": VERSION,
         "binding": binding,
         "sql_sha256": digest(sql.encode()),
+        "executed_sql_sha256": digest(executed_sql.encode()),
+        "authentication_mode": "privileged-local-peer-bootstrap-owner-session",
+        "ordinary_password_authentication": False,
         "before": before,
         "production_endpoint_changed": False,
     }
+    (receipt_dir / "executed-owner-sql.sql").write_text(executed_sql)
     (receipt_dir / "custody-before.json").write_text(json.dumps(receipt, indent=2) + "\n")
-    guard = 'test "$VERDIFY_REHEARSAL_POD_UID" = "$1" || exit 42; shift; exec "$@"'
+    guard = 'test "$VERDIFY_REHEARSAL_POD_UID" = "$1" || exit 42; shift; unset PGOPTIONS PGSERVICE PGSERVICEFILE PGPASSWORD PGPASSFILE; exec "$@"'
     command = operator.kube(
         "exec",
         "-i",
@@ -378,7 +545,7 @@ def execute(sql, binding, receipt_dir, source_roles, bootstrap_mapping=None):
         "-p",
         "5432",
         "-U",
-        "verdify",
+        "postgres",
         "-d",
         DATABASE,
     )
@@ -402,6 +569,8 @@ def execute(sql, binding, receipt_dir, source_roles, bootstrap_mapping=None):
             "5432",
             "-U",
             "postgres",
+            "-l",
+            "postgres",
             "--roles-only",
             "--no-role-passwords",
             "--no-comments",
@@ -413,10 +582,31 @@ def execute(sql, binding, receipt_dir, source_roles, bootstrap_mapping=None):
         c0.require(result.returncode == 0, "native role metadata export failed")
         return role_parity.verify(source_roles, result.stdout.decode(), mapping=bootstrap_mapping)
 
+    def read_bootstrap(label):
+        query = (
+            "BEGIN READ ONLY; SELECT jsonb_build_object('session_user',session_user,'current_user',current_user,'bootstrap',"
+            + bootstrap_facts_sql()
+            + "); COMMIT;"
+        )
+        result = subprocess.run(command + ["-c", query], capture_output=True, timeout=60)
+        (receipt_dir / (label + "-bootstrap.json")).write_bytes(result.stdout)
+        (receipt_dir / (label + "-bootstrap.stderr")).write_bytes(result.stderr)
+        c0.require(result.returncode == 0, "native peer bootstrap observation failed")
+        facts = json.loads(result.stdout)
+        c0.require(
+            facts["current_user"] == facts["session_user"] == "postgres"
+            and facts["bootstrap"]["oid"] == 10
+            and facts["bootstrap"]["name"] == "postgres"
+            and facts["bootstrap"]["superuser"] is True,
+            "unqualified native peer bootstrap",
+        )
+        return facts
+
+    bootstrap_before = read_bootstrap("before")
     roles_before = read_roles("before")
     with (receipt_dir / "native.stdout").open("wb") as out, (receipt_dir / "native.stderr").open("wb") as err:
         try:
-            result = subprocess.run(command, input=sql.encode(), stdout=out, stderr=err, timeout=180)
+            result = subprocess.run(command, input=executed_sql.encode(), stdout=out, stderr=err, timeout=180)
         except subprocess.TimeoutExpired:
             (receipt_dir / "execution-result.json").write_text(
                 json.dumps(
@@ -434,6 +624,8 @@ def execute(sql, binding, receipt_dir, source_roles, bootstrap_mapping=None):
             raise ValueError("native execution timed out; retained unknown outcome, no retry") from None
     after = operator.read_target(args)
     roles_after = read_roles("after")
+    bootstrap_after = read_bootstrap("after")
+    c0.require(bootstrap_before == bootstrap_after, "native bootstrap metadata changed during transition")
     c0.require(roles_before == roles_after, "native role metadata changed during transition")
     (receipt_dir / "execution-result.json").write_text(
         json.dumps(
@@ -442,6 +634,11 @@ def execute(sql, binding, receipt_dir, source_roles, bootstrap_mapping=None):
                 "after": after,
                 "sql_sha256": receipt["sql_sha256"],
                 "role_parity": roles_after,
+                "bootstrap_before": bootstrap_before,
+                "bootstrap_after": bootstrap_after,
+                "authentication_mode": receipt["authentication_mode"],
+                "ordinary_password_authentication": False,
+                "executed_sql_sha256": receipt["executed_sql_sha256"],
             },
             indent=2,
         )
