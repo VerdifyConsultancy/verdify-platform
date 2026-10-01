@@ -1,8 +1,10 @@
 """Native fault/backpressure qualification for the actual firmware POD buffer."""
 
 import importlib.util
+import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -95,14 +97,26 @@ int main() {
     )
     cpp = tmp_path / "batch.cpp"
     cpp.write_text(source)
-    compiler = shutil.which("clang++") or shutil.which("g++")
+    compiler = os.environ.get("CXX") or shutil.which("g++" if sys.platform == "linux" else "clang++")
+    native_flags = ["-fno-pie", "-no-pie"] if sys.platform == "linux" else []
     assert compiler
     binary = tmp_path / "batch"
     subprocess.run(
-        [compiler, "-std=c++20", "-fno-exceptions", "-fsanitize=address,undefined", "-g", str(cpp), "-o", str(binary)],
+        [
+            compiler,
+            *native_flags,
+            "-std=c++20",
+            "-fno-exceptions",
+            "-fsanitize=address,undefined",
+            "-g",
+            str(cpp),
+            "-o",
+            str(binary),
+        ],
         check=True,
+        timeout=60,
     )
-    subprocess.run([str(binary)], check=True)
+    subprocess.run([str(binary)], check=True, timeout=15)
 
 
 def test_actual_callers_fail_closed_after_allocation_failure(tmp_path):
@@ -215,13 +229,24 @@ int main(){
     )
     path = tmp_path / "callers.cpp"
     path.write_text(source)
-    compiler = shutil.which("clang++") or shutil.which("g++")
+    compiler = os.environ.get("CXX") or shutil.which("g++" if sys.platform == "linux" else "clang++")
+    native_flags = ["-fno-pie", "-no-pie"] if sys.platform == "linux" else []
     binary = tmp_path / "callers"
     subprocess.run(
-        [compiler, "-std=c++20", "-fno-exceptions", "-fsanitize=address,undefined", str(path), "-o", str(binary)],
+        [
+            compiler,
+            *native_flags,
+            "-std=c++20",
+            "-fno-exceptions",
+            "-fsanitize=address,undefined",
+            str(path),
+            "-o",
+            str(binary),
+        ],
         check=True,
+        timeout=60,
     )
-    subprocess.run([str(binary)], check=True)
+    subprocess.run([str(binary)], check=True, timeout=15)
 
 
 def test_exact_upstream_patch_and_repeat_build(tmp_path):

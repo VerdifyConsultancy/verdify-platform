@@ -2,7 +2,9 @@
 
 import hashlib
 import importlib.util
+import os
 import subprocess
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -63,9 +65,13 @@ def compile_native(tmp_path, source, name):
     src = tmp_path / (name + ".cpp")
     src.write_text(source)
     binary = tmp_path / name
+    # Keep ASAN/UBSAN enabled and remove PIE mapping variability from the
+    # Linux harness. CXX makes the actual tool choice explicit.
+    native_flags = ["-fno-pie", "-no-pie"] if sys.platform == "linux" else []
     subprocess.run(
         [
-            "c++",
+            os.environ.get("CXX", "c++"),
+            *native_flags,
             "-std=c++20",
             "-fno-exceptions",
             "-fsanitize=address,undefined",
@@ -77,6 +83,7 @@ def compile_native(tmp_path, source, name):
         ],
         check=True,
         capture_output=True,
+        timeout=60,
     )
     return binary
 
@@ -103,7 +110,7 @@ int main(int argc, char **) {
 """
     binary = compile_native(tmp_path, PRELUDE + allocator + queue_source(False) + main, "upstream")
     for args in ([], ["second"]):
-        result = subprocess.run([str(binary), *args], capture_output=True)
+        result = subprocess.run([str(binary), *args], capture_output=True, timeout=15)
         assert result.returncode < 0, result.stderr.decode()
 
 
@@ -152,7 +159,7 @@ int main() {
 }
 """
     binary = compile_native(tmp_path, PRELUDE + "#include <string>\n" + queue_source(True) + main, "patched")
-    subprocess.run([str(binary)], check=True, capture_output=True)
+    subprocess.run([str(binary)], check=True, capture_output=True, timeout=15)
 
 
 def test_selected_real_frame_caller_marks_failed_on_enqueue_oom(tmp_path):
@@ -201,4 +208,4 @@ int main() {
 }
 """
     binary = compile_native(tmp_path, PRELUDE + queue_source(True) + scaffold + caller + main, "caller")
-    subprocess.run([str(binary)], check=True, capture_output=True)
+    subprocess.run([str(binary)], check=True, capture_output=True, timeout=15)
