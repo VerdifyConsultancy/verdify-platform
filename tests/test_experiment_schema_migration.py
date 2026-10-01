@@ -312,6 +312,8 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "265-idempotent-climate-source-events.sql",
         # Typed insertion-copy repair must run through its forward ledgered hook.
         "266-climate-integral-json-insertion.sql",
+        # Observational UUID ingestion remains a forward ledgered installation.
+        "267-idempotent-observational-source-events.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(

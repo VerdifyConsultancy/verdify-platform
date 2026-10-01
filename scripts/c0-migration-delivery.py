@@ -123,6 +123,14 @@ SUCCESSOR_266_DIGESTS = {
     "verdify_ingestor_runtime_login": "17287481525f6e831d9d2a55cedfc27af3c9c320f8f196ae9a0d976feb5ed19a",
 }
 SUCCESSOR_266_MCP_DIGEST = SUCCESSOR_265_MCP_DIGEST
+# Five insert-only observational kinds qualified on two independent restored clones.
+SUCCESSOR_267 = "267-idempotent-observational-source-events.sql"
+SUCCESSOR_267_SHA256 = "39be9b39cf782b8cf815078d50f8fa8cd838f017584e91e5dbcb50669b8a8735"
+SUCCESSOR_267_DIGESTS = {
+    "verdify_api_runtime_login": "fe79f986d58ba6deec513312441b5ba5d579168d3e7e28d5721bb5771150af81",
+    "verdify_ingestor_runtime_login": "15e4eff5d86ff58bf3fc98075dfc4613b5fd2a418bf3be9251fd7e6b1634a96e",
+}
+SUCCESSOR_267_MCP_DIGEST = SUCCESSOR_266_MCP_DIGEST
 # Exact emergency hotfix predecessor: the 262 receipt was resealed to this
 # live digest while 263 was prepared. Only a pending 263 may admit either the
 # original reviewed 262 pair or this pair; mixed receipt/live values fail.
@@ -154,6 +162,7 @@ def reviewed_post_254(later, files=None):
         SUCCESSOR_264,
         SUCCESSOR_265,
         SUCCESSOR_266,
+        SUCCESSOR_267,
     )
     require(successors == list(reviewed[: len(successors)]), "unreviewed post-254 receipt successor")
     if successors:
@@ -174,6 +183,7 @@ def reviewed_post_254(later, files=None):
                 SUCCESSOR_264_SHA256,
                 SUCCESSOR_265_SHA256,
                 SUCCESSOR_266_SHA256,
+                SUCCESSOR_267_SHA256,
             ),
             strict=True,
         ):
@@ -426,6 +436,7 @@ COMMIT;"""
         (SUCCESSOR_264, SUCCESSOR_264_DIGESTS),
         (SUCCESSOR_265, SUCCESSOR_265_DIGESTS),
         (SUCCESSOR_266, SUCCESSOR_266_DIGESTS),
+        (SUCCESSOR_267, SUCCESSOR_267_DIGESTS),
     ):
         if name in later:
             expected["api"] = expected["api_receipt"] = digests["verdify_api_runtime_login"]
