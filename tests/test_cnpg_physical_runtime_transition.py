@@ -229,6 +229,10 @@ def test_physical_atomic_raw_guards_and_copied_history(private_pg, monkeypatch, 
     )
     selects = selects.replace("__NATIVE_MEMBERS__", native_members)
     monkeypatch.setattr(t, "witness_select", lambda target=None, **kwargs: selects)
+    q("""CREATE TABLE physical_when(value integer);
+      CREATE FUNCTION physical_when_fn() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RETURN NEW; END $$;
+      CREATE TRIGGER compare_old_new BEFORE UPDATE ON physical_when FOR EACH ROW
+        WHEN (OLD.value IS DISTINCT FROM NEW.value) EXECUTE FUNCTION physical_when_fn();""")
     before = json.loads(q("SET search_path=pg_catalog,pg_temp; " + selects))
     logical_ddl, _ = t.ddl()
     q(logical_ddl)
@@ -274,6 +278,7 @@ def test_physical_atomic_raw_guards_and_copied_history(private_pg, monkeypatch, 
         "CREATE TABLE public.unapproved_native_object(x integer);",
         f"ALTER TABLE {t.PHYSICAL_TABLE} SET UNLOGGED;",
         f"UPDATE {t.TABLE} SET qualification_sha256=repeat('c',64);",
+        "ALTER TABLE public.physical_when DISABLE TRIGGER compare_old_new;",
     ]:
         with monkeypatch.context() as scope:
 
