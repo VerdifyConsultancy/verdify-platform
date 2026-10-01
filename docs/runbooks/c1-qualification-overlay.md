@@ -30,6 +30,21 @@ recovery credit, exposure credit, or qualification credit.
    The ingestor separately requires no outstanding ordinary desired differences.
    The immutable worksheet expires six minutes after the preview capture;
    preparation, confirmation and capture consume that same authority window.
+   V1/v2 keep this six-minute behavior. To explicitly prepare a new v3 worksheet,
+   add `--schema-version 3`. Its immutable horizon is
+   `8 + 4 * ceil(explicit_decision_count / 12)` minutes: 1–12 decisions get
+   12 minutes, 13–24 get 16, 25–36 get 20, and 37–48 get 24 (hard maximum).
+   The count and original capture time determine the exact expiry; callers
+   cannot supply a duration, rebind it or extend an existing worksheet.
+   Four minutes per bounded stage reflects measured native dispatch and
+   confirmation costs. The eight-minute reserve allows the first natural
+   five-minute band publication, two complete cfg epochs, scheduler/operator
+   arming and moving ordinary targets. This allowance does not guarantee
+   completion: delayed callbacks or changed source/caps still fail closed.
+   All existing freshness, identity, physics, per-command guard and confirmation
+   checks remain. Historical expired worksheets remain failed evidence;
+   a v3 worksheet requires distinct fresh admission. Passive requests still
+   expire within ten minutes and no later than the worksheet.
 4. After the concrete bundle review under the campaign authorization, copy the
    exact worksheet atomically to the sole ingestor's state directory as
    `c1-qualification-worksheet.json`. The existing scheduler wakes its dispatcher.
