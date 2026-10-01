@@ -898,6 +898,64 @@ def qualify_historical_source(source_path, frozen_path, metadata_path, capture_p
     return source
 
 
+def default_owner_boundary_entries(snapshot, data):
+    """Comparison-only NULL ACL interpretation after full native fact checks.
+
+    Keep the captured raw/semantic entries, native digests and historical
+    payload hashes intact. An explicit empty ACL is not PostgreSQL's NULL
+    default, and a real grant is never removed or changed here.
+    """
+    facts = snapshot["portability_native_facts"]["relations"]
+    by_identity = {fact["identity"]: fact for fact in facts}
+    require(len(by_identity) == len(facts), "ambiguous boundary relation facts")
+    result = []
+    for entry in data["semantic_entries"]:
+        if not entry.startswith(("relation|", "sequence|")) or "|acl=|" not in entry:
+            result.append(entry)
+            continue
+        parts = entry.split("|")
+        identity = parts[1]
+        require(identity in by_identity, "missing boundary NULL ACL native fact")
+        fact = by_identity[identity]
+        native = fact["native"]
+        definition = json.loads(fact["raw_definition_text"])
+        owner = snapshot["roles"].get(str(native["relowner"]))
+        require(
+            identity == fact["schema"] + "." + native["relname"]
+            and owner is not None
+            and definition[1] == owner
+            and native["relacl"] is None
+            and definition[5] == [],
+            "boundary empty ACL is not proved native NULL default",
+        )
+        prefix = parts[0] + "|" + identity + "|"
+        raw = [value for value in data["raw_entries"] if value.startswith(prefix)]
+        # Column ACL grantees have already undergone the captured semantic
+        # role-identity projection. The relation ACL/effective-privilege prefix
+        # itself is identical for NULL ACLs; keep all columns and tail facts.
+        require(
+            len(raw) == 1 and raw[0].split("|columns=", 1)[0] == entry.split("|columns=", 1)[0],
+            "boundary NULL ACL raw/semantic mismatch",
+        )
+        if parts[0] == "sequence":
+            require(native["relkind"] == "S" and parts[2] == "owner=" + owner, "boundary sequence kind/owner mismatch")
+            rights = ["SELECT", "UPDATE", "USAGE"]
+            acl_slot = 3
+        else:
+            require(
+                native["relkind"] in {"r", "p", "v", "m", "f"}
+                and parts[2] == "kind=" + native["relkind"]
+                and parts[3] == "owner=" + owner,
+                "boundary relation kind/owner mismatch",
+            )
+            rights = ["DELETE", "INSERT", "REFERENCES", "SELECT", "TRIGGER", "TRUNCATE", "UPDATE"]
+            acl_slot = 5
+        require(parts[acl_slot] == "acl=", "unexpected boundary ACL shape")
+        parts[acl_slot] = "acl=" + ",".join(owner + ":" + right + ":f" for right in rights)
+        result.append("|".join(parts))
+    return result
+
+
 def checked(snapshot, *, target):
     require(snapshot["version"] == VERSION, "unsupported witness")
     require(not target or "historical_snapshot" not in snapshot, "source-only historical profile on target")
@@ -1022,7 +1080,7 @@ def checked(snapshot, *, target):
                 "semantic membership differs from native raw membership",
             )
         semantic[login] = sorted(
-            data["semantic_entries"]
+            default_owner_boundary_entries(snapshot, data)
             if login in ordinary
             else [semantic_mcp(e, roles, namespaces) for e in data["raw_entries"]]
         )
