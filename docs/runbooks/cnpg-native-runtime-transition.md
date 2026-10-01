@@ -182,3 +182,19 @@ The complete externally captured predecessor and reviewed post literals still
 must match. A refresh between capture, qualification, review, or installation
 remains genuine drift and is refused; relation locks do not waive that check.
 No scheduler is disabled and no physical fact is normalized.
+
+
+### Exact creation horizon
+
+The new receipt's `relfrozenxid` must equal the creation snapshot's captured
+xmin, not the creating transaction ID. PostgreSQL 16.13's
+[heap creation callback](https://github.com/postgres/postgres/blob/REL_16_13/src/backend/access/heap/heapam_handler.c#L551)
+initializes it from `RecentXmin`. An older concurrent transaction can therefore
+produce a legitimately different cutoff.
+
+The emitter assigns the creating XID, captures the active snapshot xmin
+immediately before its source-controlled DDL, and checks both exact values:
+`pg_class.xmin` equals that creating XID and `relfrozenxid` equals the captured
+creation cutoff. This adds no range or exemption. If the horizon changes at
+that boundary, the operation refuses it. Every existing raw fact and the new
+object's owner, type, TOAST, index and constraint bindings remain guarded.

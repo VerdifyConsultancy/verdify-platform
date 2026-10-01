@@ -466,7 +466,8 @@ def raw_facts_guard_sql(reviewed, *, physical_target=None):
     JOIN pg_class toast ON toast.oid=c.reltoastrelid AND toast.relkind='t'
     WHERE n.nspname='public' AND c.relname='{table_name}' AND c.relkind='r'
       AND c.relpersistence='p' AND c.relfilenode=c.oid AND pg_get_userbyid(c.relowner)='verdify'
-      AND c.relfrozenxid::text::bigint=(pg_current_xact_id()::text::bigint % 4294967296))
+      AND c.xmin::text::bigint=v_creation_xid
+      AND c.relfrozenxid::text::bigint=v_creation_frozenxid)
   OR NOT EXISTS(SELECT 1 FROM pg_index i JOIN pg_class c ON c.oid=i.indexrelid
      WHERE i.indrelid='{receipt_table}'::regclass AND i.indexrelid='{receipt_table}_pkey'::regclass
        AND i.indisprimary AND i.indisunique AND c.relfilenode=c.oid)
@@ -561,6 +562,7 @@ LOCK TABLE public.schema_migrations,public.runtime_ordinary_login_attestation_re
 {transaction_witness_inputs_sql(target, reviewed_post)}
 DO $native_transition$
 DECLARE v_original jsonb; v_before jsonb; v_post jsonb;
+ v_creation_xid bigint; v_creation_frozenxid bigint;
  v_expected_before jsonb := current_setting('verdify.cnpg_transition_expected_before')::jsonb;
  v_reviewed jsonb := current_setting('verdify.cnpg_transition_expected_post')::jsonb;
 BEGIN
@@ -570,6 +572,11 @@ BEGIN
    RAISE EXCEPTION 'CNPG native transition refuses stale exact target witness';
  END IF;
  {history_guard}
+ -- PG16 heap creation initializes relfrozenxid from RecentXmin, not our XID.
+ -- Force our creating XID, then capture the active creation snapshot horizon.
+ -- An intervening horizon change is refused, never accepted as a range.
+ v_creation_xid := (pg_current_xact_id()::text::bigint % 4294967296);
+ v_creation_frozenxid := (pg_snapshot_xmin(pg_current_snapshot())::text::bigint % 4294967296);
  {payload}
 """
     if reviewed_post is not None:
