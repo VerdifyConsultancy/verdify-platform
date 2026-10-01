@@ -51,8 +51,19 @@ recovery credit, exposure credit, or qualification credit.
 
 ## Yield and recovery
 
-Any bound source policy/value, runtime identity, firmware/grid, current safety
-cap, worksheet content or expiry change ends qualification authority. Expiry
+Admission binds every exact current source value: an on-grid field cannot gain
+a grid decision. After admission, only an explicitly selected off-grid field
+in the existing seven-field moisture-guardrail list may change its ordinary
+source value under unchanged source-input provenance. Its original `from`,
+fixed `to`, projection and expiry remain immutable; the fixed selection must
+still satisfy the fresh moisture cap and physics before every setter. A missing
+cap for a varying source field, unsafe fixed selection, changed untouched field or other policy/identity
+change ends authority. This permits a safe explicit threshold such as 1.05 to
+remain eligible when its solar-derived source cap moves 1.11 to 1.09; it cannot
+keep an untouched 1.10 threshold above a fresh 1.09 cap.
+
+Any bound source policy, runtime identity, firmware/grid, worksheet content or
+expiry change ends qualification authority. Expiry
 and immutable worksheet/identity are checked again at the physical queue
 chokepoint. A C1-only async guard rereads the stable source inputs and current
 moisture caps from the existing pool immediately after pacing and before every

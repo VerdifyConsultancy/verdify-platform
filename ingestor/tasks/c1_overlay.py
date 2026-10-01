@@ -7,6 +7,7 @@ It has no ESPHome client, setter, replay, or generic override input.
 from __future__ import annotations
 
 import json
+import math
 import os
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -43,7 +44,7 @@ def ordinary_base48(planner_params, mister_defaults):
     return {name: bool(value) if REGISTRY[name].kind == "switch" else float(value) for name, value in values.items()}
 
 
-def validate_worksheet(worksheet, preview, *, now, physics, guardrails):
+def validate_worksheet(worksheet, preview, *, now, physics, guardrails, admitted=False):
     if worksheet.get("schema") != "verdify-c1-qualification-worksheet-v1":
         raise ValueError("invalid C1 worksheet schema")
     if str(UUID(worksheet["worksheet_id"])) != worksheet["worksheet_id"]:
@@ -53,17 +54,42 @@ def validate_worksheet(worksheet, preview, *, now, physics, guardrails):
     if not captured <= now < expires <= captured + MAX_AUTHORITY_AGE:
         raise ValueError("C1 worksheet expired or duration invalid")
     expected = worksheet["preview"]
-    for name in ("identity", "base_values", "base_inputs_sha256"):
+    for name in ("identity", "base_inputs_sha256"):
         if expected[name] != preview[name]:
             raise ValueError("C1 base policy or identity changed: " + name)
-    if bounded_reconcile._digest(expected["base_inputs"]) != expected["base_inputs_sha256"]:
+    if any(
+        bounded_reconcile._digest(packet["base_inputs"]) != packet["base_inputs_sha256"]
+        for packet in (expected, preview)
+    ):
         raise ValueError("C1 base input provenance mismatch")
-    projection = project_c1_grid_state(preview["base_values"], worksheet["decisions"])
+    decisions = worksheet["decisions"]
+    if expected["base_values"].keys() != preview["base_values"].keys():
+        raise ValueError("C1 base policy or identity changed: base_values")
+    for param, original in expected["base_values"].items():
+        current = preview["base_values"][param]
+        if current == original:
+            continue
+        # Admission still binds every exact current value. Only an already
+        # admitted off-grid decision can survive this named source cap varying;
+        # its fixed selection is checked against the fresh cap below. Retained
+        # fields (including an on-grid cap at admission) never gain authority.
+        if not (
+            admitted
+            and param in bounded_reconcile.DYNAMIC_MOISTURE_GUARDRAIL_PARAMS
+            and param in decisions
+            and param in guardrails
+            and math.isfinite(float(current))
+            and math.isfinite(float(guardrails[param]))
+            and float(current) <= float(guardrails[param])
+        ):
+            raise ValueError("C1 base policy or identity changed: base_values: " + param)
+    # Keep original from-values, projection, wire bytes and expiry immutable.
+    # No current source value is substituted into the admitted decisions.
+    projection = project_c1_grid_state(expected["base_values"], decisions)
     if projection != worksheet["projection"]:
         raise ValueError("C1 immutable decisions/projection mismatch")
     if projection["grid_revision"] != preview["identity"]["grid_revision"]:
         raise ValueError("C1 actual device grid changed")
-    decisions = worksheet["decisions"]
     if not 1 <= len(decisions) <= 12:
         raise ValueError("C1 decision bundle exceeds existing bound")
     # Validate after projection; never silently round or change an explicit
@@ -72,7 +98,9 @@ def validate_worksheet(worksheet, preview, *, now, physics, guardrails):
         applied, violation = physics(param, float(value))
         if violation is not None or not bounded_reconcile._equal(applied, value):
             raise ValueError("C1 choice contradicts physics: " + param)
-        if param in guardrails and float(value) > float(guardrails[param]):
+        if param in guardrails and (
+            not math.isfinite(float(guardrails[param])) or float(value) > float(guardrails[param])
+        ):
             raise ValueError("C1 choice contradicts moisture guardrail: " + param)
     return projection
 
@@ -175,7 +203,9 @@ async def choose(conn, changes, *, base_values, base_inputs, guardrails, physics
     try:
         if reason:
             raise ValueError(reason)
-        projection = validate_worksheet(worksheet, preview, now=now, physics=physics, guardrails=guardrails)
+        projection = validate_worksheet(
+            worksheet, preview, now=now, physics=physics, guardrails=guardrails, admitted=old is not None
+        )
         if not shared.writer_lease_strictly_held(minimum_remaining_s=3):
             raise ValueError("sole writer lease unavailable")
         if not preview["identity"]["source_revision"] or not preview["identity"]["pod"]:

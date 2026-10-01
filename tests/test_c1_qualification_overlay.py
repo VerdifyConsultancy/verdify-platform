@@ -87,6 +87,137 @@ def test_short_expiry_does_not_extend_for_capture(packet):
         )
 
 
+def guard_packet(packet, *, source=1.11, selected=1.05):
+    sheet, preview, now = packet
+    preview["base_values"]["mister_all_kpa"] = source
+    preview["base_values"]["mister_engage_kpa"] = 0.9
+    sheet["decisions"]["mister_all_kpa"] = {
+        "from": source,
+        "to": selected,
+        "rationale": "Fixed safe threshold under continuously recomputed solar cap",
+    }
+    sheet["projection"] = project_c1_grid_state(preview["base_values"], sheet["decisions"])
+    return sheet, json.loads(json.dumps(preview)), now
+
+
+def test_admitted_explicit_safe_guard_variation_keeps_original_projection_and_expiry(packet):
+    sheet, current, now = guard_packet(packet)
+    original = json.dumps(sheet, sort_keys=True)
+    for minute, cap in [(1, 1.09), (2, 1.08)]:
+        current["base_values"]["mister_all_kpa"] = cap
+        result = overlay.validate_worksheet(
+            sheet,
+            current,
+            now=now + timedelta(minutes=minute),
+            physics=dispatcher._validate_physics,
+            guardrails={"mister_all_kpa": cap},
+            admitted=True,
+        )
+        assert result == sheet["projection"]
+        assert result["proposed_values"]["mister_all_kpa"] == 1.05
+        assert json.dumps(sheet, sort_keys=True) == original
+    with pytest.raises(ValueError, match="expired"):
+        overlay.validate_worksheet(
+            sheet,
+            current,
+            now=now + timedelta(minutes=6),
+            physics=dispatcher._validate_physics,
+            guardrails={"mister_all_kpa": 1.08},
+            admitted=True,
+        )
+
+
+def test_guard_variation_cannot_admit_stale_from_value(packet):
+    sheet, current, now = guard_packet(packet)
+    current["base_values"]["mister_all_kpa"] = 1.09
+    with pytest.raises(ValueError, match="base_values"):
+        overlay.validate_worksheet(
+            sheet, current, now=now, physics=dispatcher._validate_physics, guardrails={"mister_all_kpa": 1.09}
+        )
+
+
+def test_unsafe_fixed_110_cannot_survive_fresh_109_cap(packet):
+    sheet, current, now = guard_packet(packet, selected=1.10)
+    current["base_values"]["mister_all_kpa"] = 1.09
+    with pytest.raises(ValueError, match="moisture guardrail"):
+        overlay.validate_worksheet(
+            sheet,
+            current,
+            now=now,
+            physics=dispatcher._validate_physics,
+            guardrails={"mister_all_kpa": 1.09},
+            admitted=True,
+        )
+
+
+def test_untouched_on_grid_cap_change_still_invalidates_entire_worksheet(packet):
+    sheet, preview, now = packet
+    preview["base_values"]["mister_all_kpa"] = 1.10
+    preview["base_values"]["mister_engage_kpa"] = 0.9
+    sheet["projection"] = project_c1_grid_state(preview["base_values"], sheet["decisions"])
+    current = json.loads(json.dumps(preview))
+    current["base_values"]["mister_all_kpa"] = 1.09
+    with pytest.raises(ValueError, match="base_values"):
+        overlay.validate_worksheet(
+            sheet,
+            current,
+            now=now,
+            physics=dispatcher._validate_physics,
+            guardrails={"mister_all_kpa": 1.09},
+            admitted=True,
+        )
+
+
+@pytest.mark.parametrize("caps", [{}, {"mister_all_kpa": float("nan")}, {"mister_all_kpa": 1.08}])
+def test_guard_variation_requires_finite_cap_and_consistent_current_source(packet, caps):
+    sheet, current, now = guard_packet(packet)
+    current["base_values"]["mister_all_kpa"] = 1.09
+    with pytest.raises(ValueError, match="base_values"):
+        overlay.validate_worksheet(
+            sheet, current, now=now, physics=dispatcher._validate_physics, guardrails=caps, admitted=True
+        )
+
+
+@pytest.mark.parametrize("changed", ["identity", "iris", "unselected_value"])
+def test_admitted_guard_variation_does_not_relax_other_policy_bindings(packet, changed):
+    sheet, current, now = guard_packet(packet)
+    current["base_values"]["mister_all_kpa"] = 1.09
+    if changed == "identity":
+        current["identity"]["connection_generation"] = 4
+    elif changed == "iris":
+        current["base_inputs"]["iris"][0]["plan_id"] = "different-source"
+        current["base_inputs_sha256"] = bounded._digest(current["base_inputs"])
+    else:
+        current["base_values"]["cool_exit_hysteresis_f"] = 1.2
+    with pytest.raises(ValueError, match="base policy or identity changed"):
+        overlay.validate_worksheet(
+            sheet,
+            current,
+            now=now,
+            physics=dispatcher._validate_physics,
+            guardrails={"mister_all_kpa": 1.09},
+            admitted=True,
+        )
+
+
+def test_explicit_nonguard_field_cannot_vary_even_with_a_spurious_cap(packet):
+    sheet, current, now = guard_packet(packet)
+    original = sheet["preview"]
+    original["base_values"]["cool_stage2_over_high_f"] = 1.835
+    sheet["decisions"]["cool_stage2_over_high_f"] = {"from": 1.835, "to": 1.8, "rationale": "Earlier cooling"}
+    sheet["projection"] = project_c1_grid_state(original["base_values"], sheet["decisions"])
+    current["base_values"]["cool_stage2_over_high_f"] = 1.836
+    with pytest.raises(ValueError, match="base_values"):
+        overlay.validate_worksheet(
+            sheet,
+            current,
+            now=now,
+            physics=dispatcher._validate_physics,
+            guardrails={"cool_stage2_over_high_f": 1.836},
+            admitted=True,
+        )
+
+
 def test_restoration_uses_fresh_source_and_prioritizes_touched_fields_under_cap():
     fresh = {"mister_engage_delay_s": 45.0, "cool_exit_hysteresis_f": 1.93}
     readbacks = {"mister_engage_delay_s": 30.0, "cool_exit_hysteresis_f": 2.0}
@@ -155,6 +286,44 @@ async def admit(runtime, tmp_path):
     sheet["preview"] = bounded._read(tmp_path / overlay.PREVIEW_NAME)
     bounded._write(tmp_path / overlay.WORKSHEET_NAME, sheet)
     return await overlay.choose(None, [], **args), args
+
+
+@pytest.mark.asyncio
+async def test_confirmed_admitted_guard_variation_reaches_active_without_rebinding(runtime, tmp_path):
+    sheet, preview, readbacks = runtime
+    guard_packet((sheet, preview, datetime.now(UTC)))
+    readbacks.update(preview["base_values"])
+    args = dict(
+        base_values=preview["base_values"],
+        base_inputs=preview["base_inputs"],
+        guardrails={"mister_all_kpa": 1.11, "mister_engage_delay_s": 45},
+        physics=dispatcher._validate_physics,
+        state_dir=tmp_path,
+        generation=3,
+    )
+    await overlay.choose(None, [], **args)
+    sheet["preview"] = bounded._read(tmp_path / overlay.PREVIEW_NAME)
+    bounded._write(tmp_path / overlay.WORKSHEET_NAME, sheet)
+    decision = await overlay.choose(None, [], **args)
+    assert decision.phase == "send"
+    ts = datetime.now(UTC)
+    records = [{"parameter": k, "value": v, "requested_at": ts} for k, v in decision.changes]
+    overlay.finish(tmp_path, decision, records, [])
+    readbacks.update(dict(decision.changes))
+    args["base_values"] = {**args["base_values"], "mister_all_kpa": 1.09}
+    args["guardrails"] = {**args["guardrails"], "mister_all_kpa": 1.09}
+
+    class ConfirmedConnection:
+        async def fetchrow(self, query, requested_at, parameter):
+            assert requested_at == ts and parameter in dict(decision.changes)
+            return {"delivery_status": "confirmed", "confirmed_at": datetime.now(UTC)}
+
+    active = await overlay.choose(ConfirmedConnection(), [], **args)
+    assert active.phase == "active" and active.changes == ()
+    state = bounded._read(tmp_path / overlay.STATE_NAME)
+    assert state["worksheet"] == sheet
+    assert state["stages"][0]["records"] == [{**r, "requested_at": ts.isoformat()} for r in records]
+    assert state["qualification_claimed"] is False
 
 
 @pytest.mark.asyncio
