@@ -250,7 +250,10 @@ async def choose(conn, changes, *, base_values, base_inputs, guardrails, physics
                 "worksheet": worksheet,
                 "worksheet_id": worksheet["worksheet_id"],
                 "status": "inflight",
-                "touched": sorted(set((old or {}).get("touched", [])) | {name for name, _ in selected}),
+                "touched": sorted(
+                    set((old or {}).get("touched", []))
+                    | {name for name, _ in selected if name in worksheet["decisions"]}
+                ),
                 "stage_started_at": now.isoformat(),
                 "selected": list(selected),
                 "qualification_claimed": False,

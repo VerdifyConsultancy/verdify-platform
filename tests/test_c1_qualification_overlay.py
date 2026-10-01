@@ -719,3 +719,17 @@ async def test_full_vector_unknown_stage_outcome_is_retained_not_replayed(full_v
     assert first.phase == "send" and len(first.changes) == 12
     assert held.phase == "hold" and not held.changes
     assert (tmp_path / overlay.STATE_NAME).read_bytes() == original
+
+
+@pytest.mark.asyncio
+async def test_ordinary_changes_do_not_gain_c1_restoration_authority(runtime, tmp_path):
+    first, args = await admit(runtime, tmp_path)
+    ts = datetime.now(UTC)
+    overlay.finish(tmp_path, first, [{"parameter": k, "value": v, "requested_at": ts} for k, v in first.changes], [])
+    runtime[2].update(dict(first.changes))
+    conn = StageConfirmation()
+    conn.confirmed = True
+    ordinary = await overlay.choose(conn, [("unrelated_ordinary_field", 1.0)], **args)
+    assert ordinary.phase == "send" and ordinary.changes == (("unrelated_ordinary_field", 1.0),)
+    state = bounded._read(tmp_path / overlay.STATE_NAME)
+    assert state["touched"] == ["mister_engage_delay_s"]
