@@ -64,8 +64,12 @@ def test_268_does_not_admit_gap_or_arbitrary_future_successor(failure):
         delivery.reviewed_post_254(names, files)
 
 
-def test_268_changed_or_nonrunner_stamp_fails_before_handoff():
+@pytest.mark.parametrize("seq", [268, 269])
+def test_changed_or_nonrunner_stamp_fails_before_handoff(seq):
     names, files = role_chain()
+    if seq == 269:
+        names.append(delivery.SUCCESSOR_269)
+        files[names[-1]] = delivery.SUCCESSOR_269_SHA256
     rows = {
         ("db/migrations", "db/migrations/" + name): dict(
             source="db/migrations",
@@ -77,21 +81,25 @@ def test_268_changed_or_nonrunner_stamp_fails_before_handoff():
         for name, sha in files.items()
     }
     assert delivery.post_249_inventory(files, rows) == files
-    key = ("db/migrations", "db/migrations/" + delivery.SUCCESSOR_268)
-    for change in ({"sha256": "0" * 64}, {"stamp_method": "manual"}, {"seq": 267}):
+    key = ("db/migrations", "db/migrations/" + getattr(delivery, f"SUCCESSOR_{seq}"))
+    for change in ({"sha256": "0" * 64}, {"stamp_method": "manual"}, {"seq": seq - 1}):
         changed = {k: dict(v) for k, v in rows.items()}
         changed[key].update(change)
         with pytest.raises(delivery.DeliveryError, match="post-249 stamp is not exact"):
             delivery.post_249_inventory(files, changed)
 
 
-def test_complete_owning_delivery_hands_exact_268_to_supported_runner_and_replay_is_readonly(monkeypatch):
+@pytest.mark.parametrize("seq", [268, 269])
+def test_complete_owning_delivery_hands_exact_successor_to_supported_runner_and_replay_is_readonly(monkeypatch, seq):
     """Real source inventory/admission/handoff; DB responses are explicit unit fixtures."""
     import json
     from types import SimpleNamespace
 
     directory = ROOT / "db/migrations"
-    files = delivery.inventory(directory)
+    files = {n: h for n, h in delivery.inventory(directory).items() if int(n[:3]) <= seq}
+    monkeypatch.setattr(delivery, "inventory", lambda directory: dict(files))
+    successor = getattr(delivery, f"SUCCESSOR_{seq}")
+    successor_hash = getattr(delivery, f"SUCCESSOR_{seq}_SHA256")
     rows = {
         ("db/migrations", "db/migrations/" + name): dict(
             source="db/migrations",
@@ -101,7 +109,7 @@ def test_complete_owning_delivery_hands_exact_268_to_supported_runner_and_replay
             stamp_method="runner",
         )
         for name, sha in files.items()
-        if name != delivery.SUCCESSOR_268
+        if name != successor
     }
     contract = {"version": delivery.transition.RESOURCE_VERSION}
     monkeypatch.setattr(delivery, "load_contract", lambda environment, *, plan: (contract, "fixture-pin"))
@@ -127,21 +135,21 @@ def test_complete_owning_delivery_hands_exact_268_to_supported_runner_and_replay
         narrowed = Path(env["VERDIFY_MIGRATIONS_DIR"])
         copied = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in narrowed.iterdir()}
         assert copied == {name: sha for name, sha in files.items() if int(name[:3]) >= 250}
-        assert copied[delivery.SUCCESSOR_268] == delivery.SUCCESSOR_268_SHA256
+        assert copied[successor] == successor_hash
         calls.append(copied)
-        name = delivery.SUCCESSOR_268
+        name = successor
         rows[("db/migrations", "db/migrations/" + name)] = dict(
-            source="db/migrations", filename="db/migrations/" + name, seq=268, sha256=files[name], stamp_method="runner"
+            source="db/migrations", filename="db/migrations/" + name, seq=seq, sha256=files[name], stamp_method="runner"
         )
         return SimpleNamespace(returncode=0)
 
     monkeypatch.setattr(delivery.subprocess, "run", supported)
     delivery.deliver(directory, environment={})
-    assert len(calls) == 1 and delivery.SUCCESSOR_268 not in verified[0] and delivery.SUCCESSOR_268 in verified[1]
+    assert len(calls) == 1 and successor not in verified[0] and successor in verified[1]
     stable = {k: dict(v) for k, v in rows.items()}
     delivery.deliver(directory, environment={})
     assert len(calls) == 1 and rows == stable
-    monkeypatch.setattr(delivery, "inventory", lambda directory: dict(files, **{delivery.SUCCESSOR_268: "0" * 64}))
+    monkeypatch.setattr(delivery, "inventory", lambda directory: dict(files, **{successor: "0" * 64}))
     with pytest.raises(delivery.DeliveryError, match="post-249 stamp is not exact"):
         delivery.deliver(directory, environment={})
     assert len(calls) == 1 and rows == stable
@@ -153,3 +161,31 @@ def test_268_readback_still_refuses_any_ordinary_or_mcp_boundary_drift(monkeypat
     import test_264_facility_safe_closure_delivery as boundary_tests
 
     boundary_tests.test_qualified_successor_requires_exact_ordinary_and_mcp_boundaries(monkeypatch, 268)
+
+
+def test_269_exact_topology_source_and_seals_are_admitted():
+    names, files = role_chain()
+    names.append(delivery.SUCCESSOR_269)
+    files[names[-1]] = hashlib.sha256((ROOT / "db/migrations" / names[-1]).read_bytes()).hexdigest()
+    delivery.reviewed_post_254(names, files)
+    assert files[names[-1]] == delivery.SUCCESSOR_269_SHA256
+    assert delivery.SUCCESSOR_269_DIGESTS == delivery.SUCCESSOR_268_DIGESTS
+    assert delivery.SUCCESSOR_269_MCP_DIGEST == delivery.SUCCESSOR_268_MCP_DIGEST
+    files[names[-1]] = "0" * 64
+    with pytest.raises(delivery.DeliveryError, match="269 successor source drift"):
+        delivery.reviewed_post_254(names, files)
+
+
+@pytest.mark.parametrize("change", ["gap", "future", "name"])
+def test_269_rejects_unreviewed_topology_successor(change):
+    names, files = role_chain()
+    names.append(delivery.SUCCESSOR_269)
+    files[names[-1]] = delivery.SUCCESSOR_269_SHA256
+    if change == "gap":
+        names.remove(delivery.SUCCESSOR_268)
+    elif change == "future":
+        names.append("270-unreviewed.sql")
+    else:
+        names[-1] = "269-unreviewed.sql"
+    with pytest.raises(delivery.DeliveryError, match="unreviewed post-254 receipt successor"):
+        delivery.reviewed_post_254(names, files)

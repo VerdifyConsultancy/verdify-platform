@@ -1,0 +1,44 @@
+{
+  "issue": 643,
+  "migration269_sha256": "2540c20810b07fa42e73200d120d3b753b9b36860b029a49b8db1b4a7283475d",
+  "migration268_sha256": "aed9c4e562ff0420e315d14211224d1fff6469b9e0d2a541aedbc0bc562447e0",
+  "production_delivery": "pending; no269 productionDDL or sync",
+  "native_clone": {
+    "job": "verdify-backup-pair-restore-role2691001a",
+    "job_uid": "5425d686-d44a-44d9-8121-24709b7fab78",
+    "pod_uid": "04b6d656-39a3-4671-afb4-7d8be5b3c567",
+    "backup": "verdify-20260930T081706Z",
+    "dump_sha256": "35bbad3b02cbba31b75adc227f501279e75f25139b6cade67c7431cfcf10d8bb",
+    "bounded_holder_seconds": 2400,
+    "scope": "socket-only deny-all no-token readonlydump emptyDir UID999; fixture runner stamps are not production stamps"
+  },
+  "qualified": {
+    "all_six_allow_deny_fixture": true,
+    "full_normal_lab_topology_query_owner_equality": true,
+    "new_topology_write_public_and_crossrole_denied": true,
+    "rollback_complete_raw_and_mapped_three_seals_exact": true,
+    "provenance": {
+      "scope": "one socket-only disposable clone, full268+269 rollback; fixture ledger is not production",
+      "source268_sha256": "aed9c4e562ff0420e315d14211224d1fff6469b9e0d2a541aedbc0bc562447e0",
+      "source269_sha256": "2540c20810b07fa42e73200d120d3b753b9b36860b029a49b8db1b4a7283475d",
+      "executed_sha256": "a911bc1a334fdf3486c8e1c6dac1df27e915fc489b033d60a755764ab05d6eb6",
+      "qualification": "complete raw/mapped OID catalog entries retained; guards use raw clone identities; no receipt updates",
+      "normal_lab_query_sha256": "57f9ad8110cd649126e894fd22e5d0193becb7ef7c2c26455bc0c39234e01fc0"
+    }
+  },
+  "evidence_directory": "/Users/jason/Documents/Codex/verdify-643-lab-topology269-20261001/qualification",
+  "evidence_sha256": {
+    "268269-result.json": "8dc04f46de8e280c36b7edd0da5b07be3a3958a6bc1f8246ddf6f6949d62568a",
+    "268269-provenance.json": "1a317a0c35b00a7927effaebb099b12d251b8a8ef5ee222c9aec51ff751554cf",
+    "a-268269-full-six-native-topology-rollback.sql": "a911bc1a334fdf3486c8e1c6dac1df27e915fc489b033d60a755764ab05d6eb6",
+    "a-268269-full-six-native-topology-rollback.log": "0d76a9200fa676228b84677b7556bd5708fddbbe383757870b851d47631f7b48",
+    "a-final267-ledger-receipt-readback.json": "48da72a6c11359c9d1c73e4c9d20221acdada30ed726bd305e913311461bbf1c"
+  },
+  "source_tests": {
+    "passed": 30,
+    "files": [
+      "tests/test_observational_source_migration.py",
+      "tests/test_264_facility_safe_closure_delivery.py"
+    ]
+  }
+}
