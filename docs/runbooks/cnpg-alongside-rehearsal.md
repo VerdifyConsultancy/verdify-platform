@@ -138,7 +138,9 @@ literal hashes and a new receipt directory:
 
 Before allocating this path the adapter checks the original manifest hash and
 all original staged checksums inside the exact UID-bound pod. All scratch files
-then stay in exclusive mode-0700 `<new-stage>/work`, owned by UID26. The native
+then stay in exclusive private `<new-stage>/work`, owned by UID26.
+Custody mode must be exactly0700 or02700: Longhorn fsGroup may preserve SGID
+inheritance; group and other access must still be zero. The native
 empty-database/primary/server guard still runs before role replay. The current
 password-free management dump must match the supplied original dump exactly
 except PostgreSQL's random restrict/unrestrict transport tokens.

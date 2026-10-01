@@ -34,9 +34,10 @@ echo "[restore-pair] verified backup=${BACKUP_STEM} dump_sha256=$(sha256sum -- "
 # these inner guards never permit the production database or a remote DSN.
 if [ "${RESTORE_SERVER_MODE:-standalone}" = cnpg ]; then
   stage="${CNPG_RESTORE_CUSTODY:?}"
+  custody_mode="$(stat -c '%u:%a' "${stage}")"
   if [[ ! "${stage}" =~ ^/var/lib/postgresql/data/restore-custody(-[a-z0-9]{8,32})?$ ]] \
       || [ "$(cd "${stage}" && pwd -P)" != "${stage}" ] \
-      || [ "$(stat -c '%u:%a' "${stage}")" != '26:700' ] \
+      || { [ "${custody_mode}" != '26:700' ] && [ "${custody_mode}" != '26:2700' ]; } \
       || [ "${RESTORE_WORK_DIR:-}" != "${stage}/work" ]; then
     echo '[restore-pair] FATAL: exact private writable CNPG custody required' >&2
     exit 1
