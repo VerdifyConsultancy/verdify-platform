@@ -321,8 +321,8 @@ def main() -> int:
     payload = reconcile(records[0]["snapshot"])
     raw = json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
     receipt = {"receipt": payload, "sha256": hashlib.sha256(DOMAIN + raw).hexdigest()}
-    with args.output.open("x") as f:
-        os.chmod(args.output, 0o600)
+    fd = os.open(args.output, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, "w") as f:
         json.dump(receipt, f, sort_keys=True, separators=(",", ":"))
         f.write("\n")
         f.flush()
