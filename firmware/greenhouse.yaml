@@ -24,7 +24,10 @@ esphome:
   platformio_options:
     extra_scripts:
       # Exact ESPHome2026.6.5 source/hash guard; no device/control change.
+      - pre:../../../build_api_stall_reset.py
       - pre:../../../build_api_batch_patch.py
+      # Source-only diagnostic candidate; not a control/queue correction.
+      - pre:../../../build_api_stall_trace.py
   includes:
     - lib/heap_diagnostics.h
     - lib/sntp_acquisition.h
