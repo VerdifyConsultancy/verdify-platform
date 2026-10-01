@@ -27,6 +27,15 @@ def canonical(value: dict) -> bytes:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
 
 
+def unique_object(pairs: list[tuple[str, object]]) -> dict:
+    value = {}
+    for key, item in pairs:
+        if key in value:
+            raise ValueError("duplicate JSON key in archive input")
+        value[key] = item
+    return value
+
+
 def index_archive(directory: Path, experiment_id: str) -> dict:
     experiment_id = str(UUID(experiment_id))
     validator = jsonschema.Draft202012Validator(
@@ -42,7 +51,7 @@ def index_archive(directory: Path, experiment_id: str) -> dict:
         if path.stat().st_size > 2_000_000:
             raise ValueError("receipt exceeds bounded archive contract")
         raw = path.read_bytes()
-        value = json.loads(raw)
+        value = json.loads(raw, object_pairs_hook=unique_object)
         validator.validate(value)
         receipt = value["receipt"]
         expected = hashlib.sha256(RECONCILE.DOMAIN + canonical(receipt)).hexdigest()

@@ -49,7 +49,9 @@ after the relevant day ends; it never replaces the day or its original receipt.
 
 The offline archive tool reads every `receipt-*.json` file and verifies the
 existing strict receipt schema/domain hash, experiment identity and coherent
-single design lock. It indexes duplicate files rather than dropping them,
+single design lock. Duplicate JSON keys are refused at every nesting depth
+before schema/hash checks; a last-value parser cannot redefine receipt bytes.
+It indexes duplicate files rather than dropping them,
 refuses a conflicting same-time snapshot, and preserves originals on every
 failure. It accesses no DB, provider, controller, reveal or network service.
 

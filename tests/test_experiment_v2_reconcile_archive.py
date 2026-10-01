@@ -116,3 +116,42 @@ def test_cli_refusal_never_echoes_restricted_payload(tmp_path):
     )
     assert result.returncode == 2 and not output.exists()
     assert "must-not-appear-in-output" not in result.stdout + result.stderr
+
+
+@pytest.mark.parametrize("location", ["wrapper", "nested_receipt", "deep_row_hashes"])
+def test_rehashed_duplicate_json_keys_are_refused_at_every_depth(tmp_path, location):
+    payload = receipt()
+    if location == "deep_row_hashes":
+        payload["rows"] = [
+            {
+                "assignment_id": "00000000-0000-0000-0000-000000000001",
+                "local_date": "2027-06-01",
+                "pair_index": 0,
+                "blinded_label": None,
+                "state": "scheduled",
+                "hashes": {"outcome_sha256": "a" * 64},
+                "delivery_failed": None,
+                "fallback_used": None,
+                "facility_rescue": None,
+                "zero_value_retained": None,
+                "null_value_retained": None,
+                "exposure_seconds": None,
+            }
+        ]
+    digest = hashlib.sha256(m.RECONCILE.DOMAIN + m.canonical(payload)).hexdigest()
+    raw = json.dumps({"receipt": payload, "sha256": digest})
+    if location == "wrapper":
+        raw = raw.replace('"sha256":', '"sha256": "' + ("0" * 64) + '", "sha256":', 1)
+    elif location == "nested_receipt":
+        raw = raw.replace('"status":', '"status": "incomplete", "status":', 1)
+    else:
+        raw = raw.replace('"outcome_sha256":', '"outcome_sha256": "' + ("b" * 64) + '", "outcome_sha256":', 1)
+    # Ordinary last-value parsing and a recomputed hash would accept this attack.
+    parsed = json.loads(raw)
+    assert hashlib.sha256(m.RECONCILE.DOMAIN + m.canonical(parsed["receipt"])).hexdigest() == parsed["sha256"]
+    path = tmp_path / "receipt-duplicate.json"
+    path.write_text(raw)
+    before = path.read_bytes()
+    with pytest.raises(ValueError, match="duplicate JSON key"):
+        m.index_archive(tmp_path, ID)
+    assert path.read_bytes() == before
