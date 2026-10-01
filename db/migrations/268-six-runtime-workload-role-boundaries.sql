@@ -4,9 +4,12 @@ BEGIN
  IF NOT EXISTS(SELECT 1 FROM public.schema_migrations WHERE source='db/migrations' AND seq=267
    AND sha256='39be9b39cf782b8cf815078d50f8fa8cd838f017584e91e5dbcb50669b8a8735' AND stamp_method='runner')
    OR EXISTS(SELECT 1 FROM public.schema_migrations WHERE source='db/migrations' AND seq>=268)
-   OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex')<>'fe79f986d58ba6deec513312441b5ba5d579168d3e7e28d5721bb5771150af81'
-   OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex')<>'15e4eff5d86ff58bf3fc98075dfc4613b5fd2a418bf3be9251fd7e6b1634a96e'
-   OR encode(public.fn_mcp_runtime_boundary_digest(),'hex')<>'81836c70a76578da82b77899da5d1cafee4597ea819e35ee68a3fd6cf669fa45'
+   OR public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login') IS DISTINCT FROM decode('fe79f986d58ba6deec513312441b5ba5d579168d3e7e28d5721bb5771150af81','hex')
+   OR public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login') IS DISTINCT FROM decode('15e4eff5d86ff58bf3fc98075dfc4613b5fd2a418bf3be9251fd7e6b1634a96e','hex')
+   OR public.fn_mcp_runtime_boundary_digest() IS DISTINCT FROM decode('81836c70a76578da82b77899da5d1cafee4597ea819e35ee68a3fd6cf669fa45','hex')
+   OR (SELECT count(*) FROM public.runtime_ordinary_login_attestation_receipts)<>2
+   OR NOT EXISTS(SELECT 1 FROM public.runtime_ordinary_login_attestation_receipts r WHERE r.login_name='verdify_api_runtime_login' AND r.boundary_sha256=decode('fe79f986d58ba6deec513312441b5ba5d579168d3e7e28d5721bb5771150af81','hex'))
+   OR NOT EXISTS(SELECT 1 FROM public.runtime_ordinary_login_attestation_receipts r WHERE r.login_name='verdify_ingestor_runtime_login' AND r.boundary_sha256=decode('15e4eff5d86ff58bf3fc98075dfc4613b5fd2a418bf3be9251fd7e6b1634a96e','hex'))
    OR EXISTS(SELECT 1 FROM public.runtime_ordinary_login_attestation_receipts r
       WHERE r.boundary_sha256 IS DISTINCT FROM public.fn_runtime_ordinary_boundary_digest(r.login_name))
    OR NOT EXISTS(SELECT 1 FROM public.mcp_runtime_boundary_receipt r

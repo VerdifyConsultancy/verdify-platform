@@ -14,7 +14,7 @@ PREDECESSORS = {
     "ingestor": "15e4eff5d86ff58bf3fc98075dfc4613b5fd2a418bf3be9251fd7e6b1634a96e",
     "mcp": "81836c70a76578da82b77899da5d1cafee4597ea819e35ee68a3fd6cf669fa45",
 }
-MIGRATION_SHA = "2397aa628e9f0eca6012dba1d6a3a41f01ec211c76d1a65644fbb57498433595"
+MIGRATION_SHA = "aed9c4e562ff0420e315d14211224d1fff6469b9e0d2a541aedbc0bc562447e0"
 
 
 class BootstrapError(RuntimeError):
@@ -60,11 +60,20 @@ def sealed_sql():
         if d != "mcp"
     ]
     expressions += [
+        "(SELECT count(*)=2 FROM public.runtime_ordinary_login_attestation_receipts)",
         f"encode(public.fn_mcp_runtime_boundary_digest(),'hex')='{PREDECESSORS['mcp']}'",
         "NOT EXISTS(SELECT 1 FROM public.runtime_ordinary_login_attestation_receipts r WHERE r.boundary_sha256 IS DISTINCT FROM public.fn_runtime_ordinary_boundary_digest(r.login_name))",
         "EXISTS(SELECT 1 FROM public.mcp_runtime_boundary_receipt r WHERE r.boundary_sha256=public.fn_mcp_runtime_boundary_digest())",
         f"EXISTS(SELECT 1 FROM public.schema_migrations WHERE source='db/migrations' AND seq=268 AND filename='db/migrations/268-six-runtime-workload-role-boundaries.sql' AND sha256='{MIGRATION_SHA}' AND stamp_method='runner')",
     ]
+    for duty in ("api", "ingestor"):
+        expressions.append(
+            "EXISTS(SELECT 1 FROM public.runtime_ordinary_login_attestation_receipts r WHERE r.login_name='verdify_"
+            + duty
+            + "_runtime_login' AND r.boundary_sha256=decode('"
+            + PREDECESSORS[duty]
+            + "','hex'))"
+        )
     return " AND ".join(expressions)
 
 
@@ -93,9 +102,9 @@ def admin_role_contract_sql():
         checks.append("(r.rolname='" + login + "' AND '" + config + "'=ANY(r.rolconfig) AND " + common + ")")
     names = ",".join("'verdify_" + d + "_runtime_login'" for d in DUTIES)
     return (
-        "(SELECT count(*)=6 AND bool_and("
+        "(SELECT count(*)=6 AND bool_and(COALESCE(("
         + " OR ".join(checks)
-        + ") FROM pg_roles r WHERE r.rolname IN ("
+        + "),FALSE)) FROM pg_roles r WHERE r.rolname IN ("
         + names
         + "))"
     )
@@ -145,11 +154,11 @@ def bootstrap():
             for name, value in state.items()
         )
         guard = (
-            "LOCK TABLE pg_catalog.pg_authid IN SHARE ROW EXCLUSIVE MODE; DO $guard$ BEGIN IF NOT ("
+            "LOCK TABLE pg_catalog.pg_authid IN SHARE ROW EXCLUSIVE MODE; DO $guard$ BEGIN IF ("
             + sealed_sql()
             + " AND "
             + admin_role_contract_sql()
-            + ") OR "
+            + ") IS DISTINCT FROM TRUE OR "
             + checks
             + " THEN RAISE EXCEPTION 'bootstrap authority changed'; END IF; END $guard$; SET password_encryption='scram-sha-256';"
         )

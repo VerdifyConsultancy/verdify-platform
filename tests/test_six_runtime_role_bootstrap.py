@@ -149,3 +149,33 @@ def test_native_hook_order_and_exact_secret_custody_contract():
             "key": "password",
         }
     assert set(refs) == {"DB_ADMIN_PASSWORD", *(d.upper() + "_DB_PASSWORD" for d in module.DUTIES)}
+
+
+@pytest.mark.parametrize("answer", ["f", "", "NULL"])
+def test_missing_or_unknown_prerequisite_cannot_reach_any_password_command(configured, answer):
+    calls = []
+
+    def refuse(user, password, commands, **kwargs):
+        calls.append((commands, kwargs))
+        return answer
+
+    configured.setattr(module, "psql", refuse)
+    with pytest.raises(module.BootstrapError, match="immutable migration/seal prerequisite"):
+        module.bootstrap()
+    assert len(calls) == 1
+    assert not calls[0][1].get("transactional")
+    assert not any("\\password" in c for c in calls[0][0])
+
+
+def test_guard_sql_requires_both_exact_receipts_and_null_role_rows_fail_closed():
+    sql = module.sealed_sql()
+    assert "count(*)=2" in sql
+    for duty in ("api", "ingestor"):
+        assert "r.login_name='verdify_" + duty + "_runtime_login'" in sql
+        assert "decode('" + module.PREDECESSORS[duty] + "','hex')" in sql
+    assert "bool_and(COALESCE((" in module.admin_role_contract_sql()
+    root = Path(__file__).resolve().parents[1]
+    migration = (root / "db/migrations/268-six-runtime-workload-role-boundaries.sql").read_bytes()
+    import hashlib
+
+    assert hashlib.sha256(migration).hexdigest() == module.MIGRATION_SHA
