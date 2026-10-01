@@ -207,3 +207,166 @@ def test_operator_refuses_prod_namespace_replacement_uid_and_unadopted_image():
     bad["status"]["containerStatuses"][0]["imageID"] = "registry/operand@sha256:" + "d" * 64
     with pytest.raises(ValueError):
         operator.target_identity(cluster, bad, cluster_uid=cluster_uid, pod_uid=pod_uid)
+
+
+def test_full_identities_with_same_63_character_prefix_remain_distinct():
+    source, target = witnesses()
+    prefix = "column." + "x" * 60
+    entries = [["column", prefix + suffix, digest * 64] for suffix, digest in [(".first", "a"), (".second", "b")]]
+    assert entries[0][1][:63] == entries[1][1][:63]
+    source["portable_catalog"] = copy.deepcopy(entries)
+    target["portable_catalog"] = copy.deepcopy(entries)
+    assert c0.compare(source, target)["semantic_boundaries_equal"]
+    target["portable_catalog"][1][2] = "c" * 64
+    with pytest.raises(ValueError, match="catalog drift"):
+        c0.compare(source, target)
+
+
+@pytest.mark.parametrize("mutation", ["duplicate", "duplicate-different-hash", "missing", "extra", "changed-identity"])
+def test_catalog_multiplicity_and_full_identity_drift_are_never_deduplicated(mutation):
+    source, target = witnesses()
+    entries = [["column", "public.table.first", "a" * 64], ["column", "public.table.second", "b" * 64]]
+    source["portable_catalog"] = copy.deepcopy(entries)
+    target["portable_catalog"] = copy.deepcopy(entries)
+    if mutation.startswith("duplicate"):
+        target["portable_catalog"].append(copy.deepcopy(entries[0]))
+        if mutation == "duplicate-different-hash":
+            target["portable_catalog"][-1][2] = "c" * 64
+    elif mutation == "missing":
+        target["portable_catalog"].pop()
+    elif mutation == "extra":
+        target["portable_catalog"].append(["column", "public.table.third", "c" * 64])
+    else:
+        target["portable_catalog"][1][1] += "_changed"
+    with pytest.raises(ValueError):
+        c0.compare(source, target)
+
+
+@pytest.mark.parametrize(
+    "entry",
+    [
+        None,
+        [],
+        ["column", "public.x"],
+        ["column", 17, "a" * 64],
+        ["column", "", "a" * 64],
+        ["column", "x\0y", "a" * 64],
+        ["unknown", "public.x", "a" * 64],
+        ["column", "public.x", "bad"],
+    ],
+)
+def test_malformed_catalog_entries_fail_closed(entry):
+    source, target = witnesses()
+    target["portable_catalog"] = [entry]
+    with pytest.raises(ValueError, match="malformed"):
+        c0.compare(source, target)
+
+
+def test_old_truncated_witness_version_cannot_qualify_even_if_arrays_match():
+    source, target = witnesses()
+    source["version"] = target["version"] = "cnpg-c0-logical-recovery-witness-v1"
+    with pytest.raises(ValueError, match="unsupported witness"):
+        c0.compare(source, target)
+
+
+def test_exact_catalog_sql_retains_full_qualified_identities_in_private_pg():
+    """Real UNION type resolution; its private socket never uses estate credentials."""
+    import json
+    import os
+    import shutil
+    import subprocess
+    import tempfile
+
+    bin_dir = os.environ.get("CNPG_TEST_PG_BIN")
+    if not bin_dir:
+        pytest.skip("set CNPG_TEST_PG_BIN for disposable PostgreSQL identity proof")
+    pg = Path(bin_dir)
+    cluster = Path(tempfile.mkdtemp(prefix="c5-pg-"))
+    env = {k: v for k, v in os.environ.items() if not k.startswith("PG")}
+    env["LC_ALL"] = "C"
+    started = False
+
+    def run(args, **kwargs):
+        result = subprocess.run(args, env=env, text=True, capture_output=True, timeout=60, **kwargs)
+        assert result.returncode == 0, result.stderr  # Synthetic fixture only.
+        return result.stdout.strip()
+
+    def query(sql):
+        return run(
+            [
+                str(pg / "psql"),
+                "-X",
+                "-qAt",
+                "-v",
+                "ON_ERROR_STOP=1",
+                "-h",
+                str(cluster),
+                "-p",
+                "55474",
+                "-U",
+                "c5_fixture",
+                "-d",
+                "postgres",
+            ],
+            input=sql,
+        )
+
+    try:
+        run(
+            [
+                str(pg / "initdb"),
+                "-D",
+                str(cluster / "data"),
+                "-U",
+                "c5_fixture",
+                "--auth-local=trust",
+                "--auth-host=reject",
+                "--no-locale",
+                "--encoding=UTF8",
+            ]
+        )
+        run(
+            [
+                str(pg / "pg_ctl"),
+                "-D",
+                str(cluster / "data"),
+                "-l",
+                str(cluster / "server.log"),
+                "-o",
+                f"-k {cluster} -c listen_addresses='' -p 55474",
+                "-w",
+                "start",
+            ]
+        )
+        started = True
+        schema = "s" * 50
+        table = "t" * 40
+        query(
+            f'CREATE EXTENSION pgcrypto; CREATE SCHEMA "{schema}"; '
+            f'CREATE TABLE "{schema}"."{table}" (first integer, second text);'
+        )
+        sql = c0.portable_catalog_sql()
+        cte = sql.split(" SELECT jsonb_agg(jsonb_build_array(kind,identity,")[0]
+        assert query(cte + " SELECT pg_typeof(identity)::text FROM objects LIMIT 1;") == "text"
+        catalog = json.loads(query(sql))
+        columns = [row for row in catalog if row[0] == "column" and row[1].startswith(schema + "." + table)]
+        assert len(columns) == 2
+        assert columns[0][1][:63] == columns[1][1][:63]
+        assert columns[0][1] != columns[1][1] and all(len(row[1]) > 63 for row in columns)
+        assert len({(row[0], row[1]) for row in catalog}) == len(catalog)
+        assert query(sql) == query(sql)  # Deterministic aggregate ordering.
+        old = cte.replace("SELECT 'schema',n.nspname::text,", "SELECT 'schema',n.nspname,")
+        assert query(old + " SELECT pg_typeof(identity)::text FROM objects LIMIT 1;") == "name"
+        assert (
+            int(
+                query(
+                    old + " SELECT count(*) FROM (SELECT kind,identity FROM objects "
+                    "GROUP BY kind,identity HAVING count(*)>1) collisions;"
+                )
+            )
+            > 0
+        )
+    finally:
+        if started:
+            run([str(pg / "pg_ctl"), "-D", str(cluster / "data"), "-m", "fast", "-w", "stop"])
+        shutil.rmtree(cluster)  # Only this fixture's generated cluster.

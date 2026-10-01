@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location("boundary", ROOT / "scripts/ordinary-boundary-diff.py")
 boundary = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(boundary)
-VERSION = "cnpg-c0-logical-recovery-witness-v1"
+VERSION = "cnpg-c0-logical-recovery-witness-v2"
 MCP_SOURCE = "db/migrations/263-mcp-timescale-chunk-boundary-digest.sql"
 MCP_SHA = "9f5fa53cde76224b06865095bfd9a531aadae058f6ca13e50e74ecd95ad5770b"
 MIGRATION_268_SHA = "aed9c4e562ff0420e315d14211224d1fff6469b9e0d2a541aedbc0bc562447e0"
@@ -34,12 +34,14 @@ def acl_sql(expression):
 
 
 def portable_catalog_sql():
+    # Force text before UNION: PostgreSQL name otherwise truncates qualified
+    # identities to 63 bytes and makes distinct columns collide.
     # Cover the six newly separated workload roles as well as the three
     # historical seals. No target role/OID mapping is installed in a function.
     return f"""WITH user_schemas AS (
       SELECT * FROM pg_namespace WHERE nspname !~ '^pg_' AND nspname<>'information_schema'
     ), objects(kind,identity,definition) AS (
-      SELECT 'schema',n.nspname,jsonb_build_array(pg_get_userbyid(n.nspowner),{acl_sql("n.nspacl")})
+      SELECT 'schema',n.nspname::text,jsonb_build_array(pg_get_userbyid(n.nspowner),{acl_sql("n.nspacl")})
        FROM user_schemas n
       UNION ALL
       SELECT 'relation',format('%I.%I',n.nspname,c.relname),
@@ -241,6 +243,33 @@ def checked(snapshot, *, target):
     require(snapshot["version"] == VERSION, "unsupported witness")
     require(snapshot["database"] == ("verdify_rehearsal" if target else "verdify"), "wrong database")
     require(snapshot["server"] == (160013 if target else 160011), "wrong server version")
+    catalog = snapshot["portable_catalog"]
+    require(isinstance(catalog, list) and catalog, "empty portable catalog")
+    identities = set()
+    for entry in catalog:
+        require(
+            isinstance(entry, list)
+            and len(entry) == 3
+            and all(isinstance(value, str) and value and "\x00" not in value for value in entry)
+            and entry[0]
+            in {
+                "schema",
+                "relation",
+                "column",
+                "function",
+                "constraint",
+                "index",
+                "trigger",
+                "rule",
+                "policy",
+                "default-acl",
+            }
+            and re.fullmatch(r"[0-9a-f]{64}", entry[2]) is not None,
+            "malformed portable catalog entry",
+        )
+        identity = (entry[0], entry[1])
+        require(identity not in identities, "ambiguous portable catalog identity")
+        identities.add(identity)
     roles, namespaces = snapshot["roles"], snapshot["namespaces"]
     require(len(set(roles.values())) == len(roles), "ambiguous role map")
     require(len(set(namespaces.values())) == len(namespaces), "ambiguous namespace map")

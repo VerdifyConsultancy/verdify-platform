@@ -261,8 +261,12 @@ second declaration or writable mount of the production dump PVC.
 
 ## Remaining concrete work
 
-The CNPG role-complete import adapter is not implemented. It must consume that
-fresh exact pair, preserve owners/ACLs and account for CNPG management roles. The
+The source-owned CNPG role-complete import adapter is implemented in
+`scripts/cnpg-paired-restore.py`: it consumes an exact verified pair, preserves
+owners/ACLs and accounts separately for CNPG management roles. Its execution and
+actual restored-cluster qualification remain unearned. The v2 catalog witness
+retains full text identities and rejects duplicates; v1 truncated witnesses remain
+historical evidence and cannot qualify the import. The
 current C0 release profiles depend on original database/role OIDs and target
 PostgreSQL16.11; they do not authorize a logical new-cluster16.13 receipt reset.
 A source-owned new-cluster C0 qualification/transition is needed before restored
