@@ -3,6 +3,10 @@
 import copy
 import hashlib
 import importlib.util
+import logging
+import os
+import sys
+from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
@@ -14,6 +18,50 @@ spec = importlib.util.spec_from_file_location(
 client = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(client)
 OPERAND = "sha256:8b461e37d18aa049704eb6a9cde2ba9af0f955f8d3725e921070d2450bb2f137"
+
+
+@contextmanager
+def isolated_probe_process_state():
+    """The real probe runs in its own process; driver doubles must do likewise."""
+    disabled = logging.root.manager.disable
+    environment = os.environ.copy()
+    path = sys.path[:]
+    missing = object()
+    consumer = sys.modules.get("qualified_consumer", missing)
+    try:
+        yield
+    finally:
+        logging.disable(disabled)
+        os.environ.clear()
+        os.environ.update(environment)
+        sys.path[:] = path
+        if consumer is missing:
+            sys.modules.pop("qualified_consumer", None)
+        else:
+            sys.modules["qualified_consumer"] = consumer
+
+
+@pytest.fixture(autouse=True)
+def probe_process_state():
+    with isolated_probe_process_state():
+        yield
+
+
+def test_probe_process_state_restores_logging_environment_path_and_module(caplog):
+    before_environment = os.environ.copy()
+    before_path = sys.path[:]
+    before_module = sys.modules.get("qualified_consumer")
+    with isolated_probe_process_state():
+        logging.disable(logging.CRITICAL)
+        os.environ["DB_DSN"] = "synthetic-fixture-only"
+        sys.path.insert(0, "/synthetic-image-path")
+        sys.modules["qualified_consumer"] = object()
+    assert os.environ == before_environment
+    assert sys.path == before_path
+    assert sys.modules.get("qualified_consumer") is before_module
+    with caplog.at_level(logging.WARNING):
+        logging.getLogger("probe-isolation-regression").warning("logging remains enabled")
+    assert "logging remains enabled" in caplog.text
 
 
 def binding():
