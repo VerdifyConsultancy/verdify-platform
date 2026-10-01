@@ -31,9 +31,9 @@
 #     (Apache) build would refuse to load the compressed chunks.
 #
 # This image is NOT the prod-cutover image by itself — #245 governs that. It is
-# the dev/staging validation operand for #243/#244. It is reproducible: rebuild
-# from this Dockerfile yields the same extension version.
-ARG CNPG_PG_BASE=ghcr.io/cloudnative-pg/postgresql:16.13-standard-bookworm
+# the disposable database qualification operand for #396/#243/#244. It is
+# not a second product environment; no production connection is changed.
+ARG CNPG_PG_BASE=ghcr.io/cloudnative-pg/postgresql:16.13-standard-bookworm@sha256:99b3c3731cc560c1d91a98c8004230d62c6c5cf403d92e5ba5f75c11da896700
 FROM ${CNPG_PG_BASE}
 
 # timescaledb 2.25.2 for PG16. Pinned exactly to the live source-of-record.
@@ -73,6 +73,22 @@ RUN set -eux; \
     apt-get purge -y --auto-remove gnupg wget; \
     rm -rf /var/lib/apt/lists/*
 
+# The role-complete backup also requires vector 0.8.1. Do not inherit an
+# unspecified extension version from the base image. Verify upstream source
+# bytes before compiling against this exact PG16 operand.
+ARG PGVECTOR_VERSION=0.8.1
+ARG PGVECTOR_SHA256=a9094dfb85ccdde3cbb295f1086d4c71a20db1d26bf1d6c39f07a7d164033eb4
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends build-essential postgresql-server-dev-16 curl ca-certificates; \
+    curl -fsSL "https://github.com/pgvector/pgvector/archive/refs/tags/v${PGVECTOR_VERSION}.tar.gz" -o /tmp/pgvector.tar.gz; \
+    echo "${PGVECTOR_SHA256}  /tmp/pgvector.tar.gz" | sha256sum -c -; \
+    tar -xzf /tmp/pgvector.tar.gz -C /tmp; \
+    make -C "/tmp/pgvector-${PGVECTOR_VERSION}" OPTFLAGS=""; \
+    make -C "/tmp/pgvector-${PGVECTOR_VERSION}" install; \
+    grep -q "default_version = '${PGVECTOR_VERSION}'" /usr/share/postgresql/16/extension/vector.control; \
+    rm -rf /tmp/pgvector* /var/lib/apt/lists/*
+
 # barman-cloud CLI for in-tree barmanObjectStore WAL archiving + base backups +
 # PITR. The CNPG `-standard-bookworm` operand base does NOT bundle barman-cloud
 # (the newer images dropped it in favour of the Barman Cloud Plugin), so the
@@ -93,7 +109,12 @@ RUN set -eux; \
 # the runtime back to the CNPG postgres user.
 USER 26
 
-LABEL org.opencontainers.image.title="verdify-timescaledb-cnpg" \
+ARG GIT_SHA=unknown
+
+LABEL org.opencontainers.image.source="https://github.com/VerdifyConsultancy/verdify-platform" \
+      org.opencontainers.image.revision="${GIT_SHA}" \
+      io.verdify.pgvector.version="${PGVECTOR_VERSION}" \
+      org.opencontainers.image.title="verdify-timescaledb-cnpg" \
       org.opencontainers.image.description="CloudNativePG operand image with TimescaleDB ${TIMESCALEDB_VERSION} for PG16 (Verdify HA-4, issue #243)" \
       io.verdify.timescaledb.version="${TIMESCALEDB_VERSION}" \
       io.verdify.cnpg.base="${CNPG_PG_BASE}"
