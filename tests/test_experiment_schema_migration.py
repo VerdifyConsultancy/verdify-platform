@@ -310,6 +310,8 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "264-facility-safe-closure-startup-handoff.sql",
         # UUID climate ingestion must be installed by its forward ledgered hook.
         "265-idempotent-climate-source-events.sql",
+        # Typed insertion-copy repair must run through its forward ledgered hook.
+        "266-climate-integral-json-insertion.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(
