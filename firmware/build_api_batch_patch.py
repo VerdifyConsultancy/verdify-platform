@@ -1,6 +1,6 @@
 """Guarded source correction for ESPHome2026.6.5 DeferredBatch allocation abort.
 
-Patch only generated api_connection.h/.cpp, before compilation. Unknown source
+Patch only reviewed generated API batching/overflow sources before compilation. Unknown source
 fails closed, including partially patched files; original/patched hashes identify
 exact provenance. This is not a global allocator override or protocol change.
 """
@@ -13,6 +13,8 @@ from pathlib import Path
 SOURCE_DIR = Path(__file__).parent if "__file__" in globals() else None
 UPSTREAM_VERSION = "2026.6.5"
 UPSTREAM_HASHES = {
+    "api_overflow_buffer.cpp": "81f7be6e141f043660ca87b7a1a81918caab4105d8968782880e3d02664e7cd6",
+    "api_overflow_buffer.h": "d0692231e9f63d237836c3a784f092a2abeeacef45fa04856768d0336cce8b94",
     "api_connection.h": "43e5f3718d37a0aa153f49ece2f96e96de60ef839363fc9c9c97b6d1525cfdd3",
     "api_connection.cpp": "dc923e04b1e18e43661ce02e1af98d959cb9414c51587c872478fc0b8d524517",
 }
@@ -105,6 +107,41 @@ def transform(name: str, text: str) -> str:
             "  if (this->flags_.remove)\n    return;\n\n  // If the batch is full, process it immediately",
         )
         return text
+    if name == "api_overflow_buffer.h":
+        text = replace_once(
+            text, "#include <cstdint>", "#include <cstdint>\n#include <cstdlib>\n#include <type_traits>"
+        )
+        text = replace_once(
+            text,
+            "      delete[] entry->data;\n      delete entry;  // NOLINT(cppcoreguidelines-owning-memory)",
+            "      ::free(entry->data);\n      ::free(entry);",
+        )
+        return replace_once(
+            text, "Returns false if the queue is full", "Returns false if the queue is full or allocation fails"
+        )
+    if name == "api_overflow_buffer.cpp":
+        text = replace_once(
+            text,
+            "  // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)\n"
+            "  auto *entry = new Entry{new uint8_t[buffer_size], buffer_size, 0};\n"
+            "  this->queue_[this->tail_] = entry;",
+            "  // Fallible POD storage; neither allocation failure may change the backlog.\n"
+            "  static_assert(std::is_trivial_v<Entry>);\n"
+            "  auto *entry = static_cast<Entry *>(::malloc(sizeof(Entry)));\n"
+            "  if (entry == nullptr)\n"
+            "    return false;\n"
+            "  auto *data = static_cast<uint8_t *>(::malloc(buffer_size));\n"
+            "  if (data == nullptr) {\n"
+            "    ::free(entry);\n"
+            "    return false;\n"
+            "  }\n"
+            "  *entry = Entry{data, buffer_size, 0};",
+        )
+        return replace_once(
+            text,
+            "  this->tail_ = (this->tail_ + 1) % API_MAX_SEND_QUEUE;",
+            "  this->queue_[this->tail_] = entry;\n  this->tail_ = (this->tail_ + 1) % API_MAX_SEND_QUEUE;",
+        )
     raise ValueError("unexpected ESPHome patch target")
 
 
@@ -131,11 +168,13 @@ def apply(project: Path) -> None:
         prepared[path] = patched
     for path, data in prepared.items():
         path.write_bytes(data)
-    print(f"Verified Verdify fallible DeferredBatch patch for ESPHome{UPSTREAM_VERSION}")
+    print(f"Verified Verdify fallible DeferredBatch/overflow patch for ESPHome{UPSTREAM_VERSION}")
 
 
 # Bound to the exact reviewed patch bytes. Updated only with focused tests.
 PATCHED_HASHES = {
+    "api_overflow_buffer.cpp": "370db5e67ad5c4145e6f1f7d93558a1502cb9680064f4cf28bbdae511d289003",
+    "api_overflow_buffer.h": "93524c629fbde8de099834586acd65a7e6351f818bad1a16ab9989cebc7b6359",
     "api_connection.h": "eb5bd763e06e73ad50c6f96e1c0563315892628d2f8e713d97863198e821bfb1",
     "api_connection.cpp": "485c6250d2c9960204904ef8c093ab252b4d72d49ebd98f5693546031da7a4a6",
 }

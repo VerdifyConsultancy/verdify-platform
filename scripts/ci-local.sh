@@ -126,6 +126,8 @@ $PY -m pytest -q \
   tests/test_experiment_v2_recovery_failure_boundary.py \
   tests/test_experiment_verify.py \
   tests/test_experiment_workers.py \
+  tests/test_api_deferred_batch_patch.py \
+  tests/test_api_overflow_patch.py \
   tests/test_firmware_builder_image.py \
   tests/test_firmware_provisional_rollback.py \
   tests/test_firmware_crop_agnostic_guard.py \
