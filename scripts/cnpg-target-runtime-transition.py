@@ -292,6 +292,36 @@ def checked_qualification(before, record):
     return record["post_witness"]
 
 
+def read_transition_record(path, *, version, mode):
+    """Read only a closed native two-witness transition envelope.
+
+    Real rollback/install output contains two roughly 35 MB witnesses. Keep the
+    existing individual-witness limit unchanged; this separate record reader
+    permits exactly two independently bounded witnesses and fixed metadata.
+    Reading does not replace the caller's native qualification/install guards.
+    """
+    c0.require(version in {VERSION, "cnpg-physical-runtime-transition-v1"}, "unsupported transition record version")
+    c0.require(mode in {"rollback-qualification", "install"}, "unsupported transition record mode")
+    c0.require(path.is_file() and not path.is_symlink(), "regular transition record required")
+    maximum = 2 * c0.WITNESS_MAX_BYTES + 1024
+    with path.open("rb") as stream:
+        raw = stream.read(maximum + 1)
+    c0.require(len(raw) <= maximum, "transition record exceeds two-witness bound")
+    record = json.loads(raw, object_pairs_hook=c0.boundary._pairs)
+    c0.require(
+        isinstance(record, dict) and set(record) == {"version", "mode", "ddl_sha256", "before_witness", "post_witness"},
+        "unexpected transition record shape",
+    )
+    c0.require(record["version"] == version and record["mode"] == mode, "transition record version/mode mismatch")
+    c0.require(transaction.is_hash(record["ddl_sha256"]), "invalid transition record DDL hash")
+    for key in ("before_witness", "post_witness"):
+        witness = record[key]
+        c0.require(isinstance(witness, dict), "transition record witness must be an object")
+        size = len(json.dumps(witness, ensure_ascii=False, separators=(",", ":")).encode())
+        c0.require(size <= c0.WITNESS_MAX_BYTES, "transition record individual witness exceeds bound")
+    return record, digest(raw)
+
+
 def raw_additions(*, physical_target=None):
     _, receipt_table = profile(physical_target)
     table_name = receipt_table.split(".")[1]
@@ -802,7 +832,9 @@ def main():
     post = None
     qualification_sha = None
     if args.reviewed_qualification:
-        record, qualification_sha = c0.read_witness(args.reviewed_qualification)
+        record, qualification_sha = read_transition_record(
+            args.reviewed_qualification, version=VERSION, mode="rollback-qualification"
+        )
         c0.require(qualification_sha == args.reviewed_qualification_sha256, "qualification custody mismatch")
         post = checked_qualification(data["target"], record)
     else:

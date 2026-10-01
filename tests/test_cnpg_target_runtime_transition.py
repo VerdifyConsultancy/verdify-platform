@@ -7,6 +7,7 @@ it does not certify the complete production protected closure or restore data.
 
 import ast
 import copy
+import hashlib
 import importlib.util
 import json
 import os
@@ -83,6 +84,90 @@ def test_install_cannot_be_emitted_without_reviewed_successor_hash():
     _, target = witnesses()
     with pytest.raises(ValueError):
         t.emit_sql(target, reviewed_post=target)
+
+
+@pytest.mark.parametrize("version", [t.VERSION, "cnpg-physical-runtime-transition-v1"])
+@pytest.mark.parametrize("mode", ["rollback-qualification", "install"])
+def test_composite_record_accepts_two_bounded_witnesses_without_broadening_single_reader(
+    tmp_path, monkeypatch, version, mode
+):
+    monkeypatch.setattr(t.c0, "WITNESS_MAX_BYTES", 1024)
+    record = {
+        "version": version,
+        "mode": mode,
+        "ddl_sha256": "a" * 64,
+        "before_witness": {"proof": "x" * 700},
+        "post_witness": {"proof": "y" * 700},
+    }
+    path = tmp_path / "native-record.json"
+    raw = json.dumps(record).encode()
+    path.write_bytes(raw)
+    assert len(raw) > t.c0.WITNESS_MAX_BYTES
+    with pytest.raises(ValueError, match="witness exceeds bound"):
+        t.c0.read_witness(path)
+    actual, sha = t.read_transition_record(path, version=version, mode=mode)
+    assert actual == record and sha == hashlib.sha256(raw).hexdigest()
+    assert t.c0.WITNESS_MAX_BYTES == 1024
+
+
+@pytest.mark.parametrize(
+    "tamper",
+    [
+        "oversize-before",
+        "oversize-post",
+        "oversize-envelope",
+        "wrong-version",
+        "wrong-mode",
+        "wrong-ddl-hash",
+        "missing-witness",
+        "nonobject-witness",
+        "extra-key",
+        "duplicate-key",
+        "symlink",
+    ],
+)
+def test_composite_record_refuses_unbounded_or_ambiguous_custody(tmp_path, monkeypatch, tamper):
+    monkeypatch.setattr(t.c0, "WITNESS_MAX_BYTES", 1024)
+    record = {
+        "version": t.VERSION,
+        "mode": "rollback-qualification",
+        "ddl_sha256": "a" * 64,
+        "before_witness": {"proof": "before"},
+        "post_witness": {"proof": "after"},
+    }
+    if tamper in {"oversize-before", "oversize-post"}:
+        record["before_witness" if tamper == "oversize-before" else "post_witness"] = {"proof": "x" * 1024}
+    elif tamper == "wrong-version":
+        record["version"] = "unknown"
+    elif tamper == "wrong-mode":
+        record["mode"] = "install"
+    elif tamper == "wrong-ddl-hash":
+        record["ddl_sha256"] = "invalid"
+    elif tamper == "missing-witness":
+        record.pop("post_witness")
+    elif tamper == "nonobject-witness":
+        record["post_witness"] = []
+    elif tamper == "extra-key":
+        record["bypass"] = True
+    raw = json.dumps(record).encode()
+    if tamper == "oversize-envelope":
+        raw = b" " * (2 * t.c0.WITNESS_MAX_BYTES + 1025)
+    elif tamper == "duplicate-key":
+        raw = raw[:-1] + b',"post_witness":{}}'
+    path = tmp_path / "native-record.json"
+    path.write_bytes(raw)
+    if tamper == "symlink":
+        link = tmp_path / "linked-record.json"
+        link.symlink_to(path)
+        path = link
+    with pytest.raises(ValueError):
+        t.read_transition_record(path, version=t.VERSION, mode="rollback-qualification")
+
+
+@pytest.mark.parametrize("version,mode", [("arbitrary", "install"), (t.VERSION, "unknown")])
+def test_composite_record_reader_has_no_generic_version_or_mode_override(tmp_path, version, mode):
+    with pytest.raises(ValueError, match="unsupported transition record"):
+        t.read_transition_record(tmp_path / "never-read.json", version=version, mode=mode)
 
 
 def test_complete_witness_literals_are_outside_atomic_compiler_body():
