@@ -137,6 +137,10 @@ $PY -m pytest -q \
   tests/test_ha_light_writer_boundary.py \
   tests/test_ingestor_setpoint_placement.py \
   tests/test_ingestor_gap_snapshot.py \
+  tests/test_source_spool.py \
+  tests/test_climate_event_spool.py \
+  tests/test_observation_spool.py \
+  tests/test_observational_source_migration.py \
   tests/test_lab_generator_standardization.py \
   tests/test_lab_publish_k3s_guard.py \
   tests/test_mcp_audience_auth.py \
