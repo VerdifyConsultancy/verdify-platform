@@ -72,8 +72,17 @@ $rogue_owner$;
 
 -- REASSIGN OWNED is the supported role-normalization primitive used by
 -- migration 217. Repeat it to exercise idempotence without a chunk ALTER.
-REASSIGN OWNED BY test_672_rogue TO CURRENT_USER;
-REASSIGN OWNED BY test_672_rogue TO CURRENT_USER;
+DO $repair_owner$
+DECLARE
+    database_owner name;
+BEGIN
+    SELECT r.rolname INTO STRICT database_owner
+      FROM pg_database d JOIN pg_roles r ON r.oid = d.datdba
+     WHERE d.datname = current_database();
+    EXECUTE format('REASSIGN OWNED BY test_672_rogue TO %I', database_owner);
+    EXECUTE format('REASSIGN OWNED BY test_672_rogue TO %I', database_owner);
+END;
+$repair_owner$;
 DO $restored_owner$
 BEGIN
     IF EXISTS (

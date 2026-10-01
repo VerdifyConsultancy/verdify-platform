@@ -5,6 +5,10 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 
+import pytest
+
+pytest_plugins = ["test_cnpg_target_runtime_transition"]
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -66,3 +70,41 @@ def test_optional_v2_interface_audit_uses_same_denied_restore_and_blocks_on_drif
     assert "first_interface}" in restore and "second_interface}" in restore
     assert policy["spec"]["policyTypes"] == ["Ingress", "Egress"]
     assert audited["spec"]["template"]["spec"]["automountServiceAccountToken"] is False
+
+
+@pytest.mark.parametrize("database_owner", ["verdify", 'fixture owner"quoted'])
+def test_native_fixture_repairs_to_recorded_database_owner_not_executor(private_pg, database_owner):
+    q = private_pg
+    if database_owner != "verdify":
+        quoted = '"' + database_owner.replace('"', '""') + '"'
+        q(f"CREATE ROLE {quoted}; ALTER DATABASE verdify_rehearsal OWNER TO {quoted}", user="c5_fixture")
+    source = (ROOT / "scripts/test-timescale-parent-owner.sql").read_text()
+    repair = (
+        "DO $repair_owner$" + source.split("DO $repair_owner$", 1)[1].split("$repair_owner$;", 1)[0] + "$repair_owner$;"
+    )
+    sql = (
+        """
+BEGIN;
+CREATE ROLE test_672_rogue NOLOGIN;
+CREATE ROLE test_672_reader NOLOGIN;
+CREATE TABLE public.test_672_owner_contract(value integer);
+CREATE TABLE public.unrelated_owner_canary(value integer);
+ALTER TABLE public.unrelated_owner_canary OWNER TO verdify;
+ALTER TABLE public.test_672_owner_contract OWNER TO test_672_rogue;
+GRANT SELECT ON public.test_672_owner_contract TO test_672_reader;
+REASSIGN OWNED BY test_672_rogue TO CURRENT_USER;
+SELECT pg_get_userbyid(relowner) FROM pg_class WHERE oid='public.test_672_owner_contract'::regclass;
+ALTER TABLE public.test_672_owner_contract OWNER TO test_672_rogue;
+"""
+        + repair
+        + """
+SELECT relowner=(SELECT datdba FROM pg_database WHERE datname=current_database()),
+       has_table_privilege('test_672_reader','public.test_672_owner_contract','SELECT')
+  FROM pg_class WHERE oid='public.test_672_owner_contract'::regclass;
+SELECT pg_get_userbyid(relowner) FROM pg_class WHERE oid='public.unrelated_owner_canary'::regclass;
+ROLLBACK;
+"""
+    )
+    assert q(sql, user="c5_fixture").splitlines() == ["c5_fixture", "t|t", "verdify"]
+    assert q("SELECT to_regclass('public.test_672_owner_contract') IS NULL") == "t"
+    assert q("SELECT count(*) FROM pg_roles WHERE rolname LIKE 'test_672_%'") == "0"

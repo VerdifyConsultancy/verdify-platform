@@ -192,12 +192,14 @@ fi
 awk '$1 != "\\restrict" && $1 != "\\unrestrict" { print }' "${roles}" > "${work_dir}/roles.source.canonical"
 awk '$1 != "\\restrict" && $1 != "\\unrestrict" { print }' "${work_dir}/roles.restored.sql" > "${work_dir}/roles.restored.canonical"
 if [ "${RESTORE_SERVER_MODE:-standalone}" = cnpg ]; then
-  python3 "${CNPG_ROLE_HELPER}" --source "${roles}" --current "${work_dir}/roles.restored.sql" "${bootstrap_args[@]}"
+  python3 "${CNPG_ROLE_HELPER}" --source "${roles}" --current "${work_dir}/roles.restored.sql" "${bootstrap_args[@]}" --restore-summary
 elif ! cmp -s "${work_dir}/roles.source.canonical" "${work_dir}/roles.restored.canonical"; then
   echo "[restore-pair] FATAL: role attributes, settings or memberships differ source_sha256=$(sha256sum "${work_dir}/roles.source.canonical" | awk '{print $1}') restored_sha256=$(sha256sum "${work_dir}/roles.restored.canonical" | awk '{print $1}')" >&2
   exit 1
+else
+  echo "[restore-pair] exact password-free role parity=true"
 fi
-echo "[restore-pair] exact password-free role parity=true matview_refresh_rounds=${round}"
+echo "[restore-pair] matview_refresh_rounds=${round}"
 psql -X -qAt -v ON_ERROR_STOP=1 -v role_source=paired-password-free-backup \
   -d "${PGDATABASE}" -f "${AUDIT_SQL}"
 if [ -n "${V2_INTERFACE_SQL:-}" ]; then
