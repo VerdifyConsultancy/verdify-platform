@@ -91,13 +91,14 @@ def prepare_forward(preview: dict, custody: dict, requests: list[dict], writer_c
     state = json.loads(custody[bounded.STATE_NAME])
     approval = json.loads(custody[bounded.APPROVAL_NAME])
     bounded._confirmed_halt_shape(state, approval)
-    if preview["plan_rows"] != state["approved_preview"]["plan_rows"]:
-        raise ValueError("forward handoff effective plan changed")
     bounded._confirmed_halt_writer_custody(state, writer_custody)
     native = bounded._forward_request_receipt(requests, state, now)
     return {
-        "version": 1,
+        "version": 2,
         "authority": bounded.FORWARD_AUTHORITY,
+        # Archive historical successful effects independently of desired
+        # waypoint activation. This new binding grants no setter authority.
+        "current_plan_rows": preview["plan_rows"],
         "source_run_id": state["run_id"],
         "original_writer_custody": writer_custody,
         "writer_custody_digest": bounded._digest(writer_custody),

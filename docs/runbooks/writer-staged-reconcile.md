@@ -210,9 +210,13 @@ python scripts/prepare-writer-stage.py current-preview.json local-forward.json \
 The owning operator installs this manifest as `writer-stage-recovery.json`
 with exact live Pod/file-custody checks and atomic publication. It grants no
 setter authority. The writer rechecks the exact native rows, rejects any later
-request on those fields, and verifies the unchanged plan, confirmed completed
-readbacks, and exact untouched baseline. Its six-minute identity/baseline
-binding governs initial archive creation. The immutable
+request on those fields, and verifies the complete freshly bound current plan,
+confirmed completed readbacks, and exact untouched baseline. The version-2 handoff separately
+retains the historical original plan and binds `current_plan_rows` from the
+fresh preview. A scheduled waypoint may legitimately change timestamps,
+values, and rationale; no historical plan timestamp/value is normalized or
+replayed. Any subsequent change to the bound current plan rejects archival or
+new admission. Its six-minute identity/baseline binding governs initial archive creation. The immutable
 `writer-stage-confirmed-halt-<original-run-id>.json` retains the old state,
 approval, raw custody, Pod provenance, and native outcomes. The old active
 state/approval remain unchanged; the writer holds for fresh authority.

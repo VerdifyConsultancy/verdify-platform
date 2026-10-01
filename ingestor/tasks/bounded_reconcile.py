@@ -868,7 +868,7 @@ async def _confirmed_halt_archive(conn, preview: dict, state: dict, approval: di
     original = forward["original_approval"]
     parameters = _confirmed_halt_shape(state, original)
     if (
-        forward.get("version") != 1
+        forward.get("version") != 2
         or forward.get("source_run_id") != state["run_id"]
         or forward.get("state_digest") != _digest(state)
         or forward.get("approval_digest") != _digest(original)
@@ -881,8 +881,11 @@ async def _confirmed_halt_archive(conn, preview: dict, state: dict, approval: di
         raise ValueError("confirmed-halt original Pod custody changed")
     _confirmed_halt_writer_custody(state, forward["original_writer_custody"])
     approved = state["approved_preview"]
-    if preview["plan_rows"] != approved["plan_rows"]:
-        raise ValueError("confirmed-halt effective plan changed")
+    # The original plan remains immutable in state/custody. Archival is not
+    # permission to replay it: separately bind the complete fresh current plan
+    # for archive creation and the later distinct ordinary admission.
+    if not isinstance(forward.get("current_plan_rows"), list) or preview["plan_rows"] != forward["current_plan_rows"]:
+        raise ValueError("confirmed-halt bound current effective plan changed or missing")
     for param, baseline in approved["readbacks"].items():
         current = preview["readbacks"].get(param)
         if param in parameters:
@@ -913,7 +916,7 @@ async def _confirmed_halt_archive(conn, preview: dict, state: dict, approval: di
     archive_path = state_dir / f"writer-stage-confirmed-halt-{uuid.UUID(state['run_id']).hex}.json"
     archive = _read(archive_path)
     expected = {
-        "schema": "verdify-writer-stage-confirmed-halt-v1",
+        "schema": "verdify-writer-stage-confirmed-halt-v2",
         "state": state,
         "approval": original,
         "forward": forward,
