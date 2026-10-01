@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 import importlib.util
+import os
+import pwd
+import re
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -108,3 +112,42 @@ ROLLBACK;
     assert q(sql, user="c5_fixture").splitlines() == ["c5_fixture", "t|t", "verdify"]
     assert q("SELECT to_regclass('public.test_672_owner_contract') IS NULL") == "t"
     assert q("SELECT count(*) FROM pg_roles WHERE rolname LIKE 'test_672_%'") == "0"
+
+
+def test_native_role_inventory_uses_transport_login_when_owner_is_peer_denied(private_pg):
+    q = private_pg
+    pg = Path(os.environ["CNPG_TEST_PG_BIN"])
+    hba = Path(q("SHOW hba_file"))
+    ident = Path(q("SHOW ident_file"))
+    socket = q("SHOW unix_socket_directories")
+    port = q("SHOW port")
+    local_user = pwd.getpwuid(os.getuid()).pw_name
+    # Only this disposable local fixture is modified. Real CNPG peer rules,
+    # target passwords and product roles are untouched.
+    ident.write_text(f"fixture_bootstrap {local_user} c5_fixture\n")
+    hba.write_text("local all all peer map=fixture_bootstrap\n")
+    assert q("SELECT pg_reload_conf()") == "t"
+    source = (ROOT / "scripts/restore-backup-pair.sh").read_text()
+    export = re.search(
+        r'pg_dumpall --roles-only --no-role-passwords --no-comments --no-security-labels\s+-h "\$\{PGHOST\}" -p "\$\{PGPORT\}" -U "[^"\n]+" -l postgres',
+        source.replace(chr(92) + chr(10), " "),
+    )
+    assert export is not None
+    env = {k: v for k, v in os.environ.items() if not k.startswith(("PG", "DB_", "POSTGRES_"))}
+    env.update(
+        PATH=str(pg) + os.pathsep + env["PATH"], PGHOST=socket, PGPORT=port, PGUSER="c5_fixture", owner="verdify"
+    )
+    denied_login = q("SELECT 1", user="verdify", database="postgres", check=False)
+    assert denied_login.returncode != 0 and 'Peer authentication failed for user "verdify"' in denied_login.stderr
+    denied = subprocess.run(
+        ["/bin/bash", "-c", export[0].replace("${PGUSER}", "${owner}")],
+        text=True,
+        capture_output=True,
+        env=env,
+        timeout=30,
+    )
+    assert denied.returncode != 0 and "could not connect to database" in denied.stderr
+    result = subprocess.run(["/bin/bash", "-c", export[0]], text=True, capture_output=True, env=env, timeout=30)
+    assert result.returncode == 0, result.stderr
+    assert "CREATE ROLE verdify;" in result.stdout
+    assert "PASSWORD" not in result.stdout
