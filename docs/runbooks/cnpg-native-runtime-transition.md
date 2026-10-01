@@ -165,3 +165,20 @@ installation, three existing startup query paths, historical retention and
 security failures. This is **not** actual PG16.13/Timescale protected-closure,
 backup restore, or target admission credit. ROOT must obtain those actual facts
 before creating a concrete reviewed target profile.
+
+
+### Native refresh custody
+
+Admission takes transaction-held `AccessShareLock` on exactly
+`public.v_relay_stuck` and `public.v_climate_merged` using zero-row `LIMIT 0`
+reads after the native identity guard and before the complete predecessor
+witness. PostgreSQL does not support explicit `LOCK TABLE` for materialized
+views. These reads scan no data and preserve the existing two-second lock
+budget. They prevent the imported nonconcurrent refresh jobs from rewriting
+physical catalog facts between the before and post witnesses; the jobs resume
+when qualification rolls back or installation commits.
+
+The complete externally captured predecessor and reviewed post literals still
+must match. A refresh between capture, qualification, review, or installation
+remains genuine drift and is refused; relation locks do not waive that check.
+No scheduler is disabled and no physical fact is normalized.
