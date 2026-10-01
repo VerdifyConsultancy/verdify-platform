@@ -479,10 +479,7 @@ def test_every_immediate_disconnect_signal_revokes_live_grid_evidence_first() ->
         < lease_signal
     )
 
-    ping_failure = source.index("Keepalive ping failed")
-    ping_signal = source.index("connection_lost.set()", ping_failure)
-    assert (
-        ping_failure
-        < source.index("clear_component_entity_inventory(connection_generation=connection_generation)", ping_failure)
-        < ping_signal
-    )
+    # Native ping/socket failures use the already checked on_stop path; no
+    # secondary RPC deadline may revoke a still-live generation.
+    assert "await client.device_info()" not in source
+    assert "await client.connect(on_stop=on_stop, login=True)" in source
