@@ -316,7 +316,7 @@ def private_pg(request):
             user=bootstrap,
         )
         query(
-            "CREATE EXTENSION pgcrypto; CREATE TABLE control_experiments(x integer); CREATE TABLE control_assignments(x integer); "
+            "CREATE EXTENSION pgcrypto; CREATE MATERIALIZED VIEW public.v_relay_stuck AS SELECT 1 AS value; CREATE MATERIALIZED VIEW public.v_climate_merged AS SELECT 1 AS value; CREATE TABLE control_experiments(x integer); CREATE TABLE control_assignments(x integer); "
             "CREATE TABLE schema_migrations(source text,filename text,sha256 text); INSERT INTO schema_migrations VALUES('fixture','fixture','immutable');"
         )
         for login in t.LOGINS:
@@ -752,3 +752,109 @@ ROLLBACK;
     refused = q(t.bootstrap_owner_sql(changed), user="postgres", check=False)
     assert refused.returncode != 0 and "changed bootstrap/owner custody" in refused.stderr
     assert q("SELECT " + t.bootstrap_facts_sql(), user="postgres") == before
+
+
+@pytest.mark.parametrize("terminal", ["ROLLBACK", "COMMIT"])
+def test_native_refresh_custody_blocks_concurrent_refresh_until_terminal(private_pg, terminal):
+    q = private_pg
+    socket = q("SHOW unix_socket_directories")
+    port = q("SHOW port")
+    command = [
+        str(Path(os.environ["CNPG_TEST_PG_BIN"]) / "psql"),
+        "-X",
+        "-qAt",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-h",
+        socket,
+        "-p",
+        port,
+        "-U",
+        "verdify",
+        "-d",
+        "verdify_rehearsal",
+    ]
+    env = {k: v for k, v in os.environ.items() if not k.startswith(("PG", "DB_", "POSTGRES_"))}
+    process = subprocess.Popen(
+        command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env
+    )
+    try:
+        process.stdin.write(
+            "BEGIN; SET LOCAL lock_timeout='2s';\n"
+            + t.refresh_custody_sql()
+            + "\nSELECT count(*) FROM pg_locks WHERE pid=pg_backend_pid() AND relation IN"
+            "('public.v_relay_stuck'::regclass,'public.v_climate_merged'::regclass)"
+            " AND mode='AccessShareLock' AND granted;\n"
+        )
+        process.stdin.flush()
+        assert process.stdout.readline().strip() == "2"
+        for relation in ("v_relay_stuck", "v_climate_merged"):
+            refused = q(f"SET lock_timeout='100ms'; REFRESH MATERIALIZED VIEW public.{relation};", check=False)
+            assert refused.returncode != 0 and "lock timeout" in refused.stderr
+        process.stdin.write(terminal + ";\n")
+        process.stdin.flush()
+        _, stderr = process.communicate(timeout=10)
+        assert process.returncode == 0, stderr
+        for relation in ("v_relay_stuck", "v_climate_merged"):
+            q(f"SET lock_timeout='100ms'; REFRESH MATERIALIZED VIEW public.{relation};")
+    finally:
+        if process.poll() is None:
+            process.kill()
+            process.communicate(timeout=10)
+
+
+@pytest.mark.parametrize("replacement", ["missing", "table"])
+def test_native_refresh_custody_refuses_wrong_fixed_objects(private_pg, replacement):
+    q = private_pg
+    q("DROP MATERIALIZED VIEW public.v_relay_stuck")
+    if replacement == "table":
+        q("CREATE TABLE public.v_relay_stuck(value integer)")
+    refused = q("BEGIN; " + t.refresh_custody_sql() + " ROLLBACK;", check=False)
+    assert refused.returncode != 0 and "refresh custody object shape" in refused.stderr
+
+
+def test_refresh_custody_precedes_complete_literal_witness():
+    _, target = witnesses()
+    sql = t.emit_sql(target)
+    assert sql.index("END $identity$;") < sql.index("DO $refresh_custody$") < sql.index("DO $native_transition$")
+    assert "SET LOCAL lock_timeout='2s';" in sql
+    assert "IF v_before IS DISTINCT FROM v_expected_before" in sql
+    assert "CNPG native transition refuses raw existing/addition custody drift" in sql
+
+
+def test_native_refresh_custody_acquisition_keeps_lock_timeout(private_pg):
+    q = private_pg
+    command = [
+        str(Path(os.environ["CNPG_TEST_PG_BIN"]) / "psql"),
+        "-X",
+        "-qAt",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-h",
+        q("SHOW unix_socket_directories"),
+        "-p",
+        q("SHOW port"),
+        "-U",
+        "verdify",
+        "-d",
+        "verdify_rehearsal",
+    ]
+    env = {k: v for k, v in os.environ.items() if not k.startswith(("PG", "DB_", "POSTGRES_"))}
+    process = subprocess.Popen(
+        command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env
+    )
+    try:
+        process.stdin.write("BEGIN; REFRESH MATERIALIZED VIEW public.v_relay_stuck; SELECT 'refresh-held';\n")
+        process.stdin.flush()
+        assert process.stdout.readline().strip() == "refresh-held"
+        refused = q("BEGIN; SET LOCAL lock_timeout='100ms'; " + t.refresh_custody_sql() + " ROLLBACK;", check=False)
+        assert refused.returncode != 0 and "lock timeout" in refused.stderr
+        process.stdin.write("ROLLBACK;\n")
+        process.stdin.flush()
+        _, stderr = process.communicate(timeout=10)
+        assert process.returncode == 0, stderr
+        q("BEGIN; " + t.refresh_custody_sql() + " ROLLBACK;")
+    finally:
+        if process.poll() is None:
+            process.kill()
+            process.communicate(timeout=10)

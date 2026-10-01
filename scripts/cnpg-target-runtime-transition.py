@@ -498,6 +498,25 @@ def transaction_witness_inputs_sql(before, reviewed_post):
     )
 
 
+def refresh_custody_sql():
+    """Hold relation locks without reading rows or disabling native refresh jobs.
+
+    PostgreSQL rejects LOCK TABLE for materialized views. Planning these fixed
+    LIMIT 0 reads takes AccessShareLock, held until the transaction ends, which
+    conflicts with the native nonconcurrent refresh's AccessExclusiveLock.
+    The subsequent complete literal predecessor check remains mandatory.
+    """
+    return """DO $refresh_custody$ BEGIN
+ IF (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+     WHERE n.nspname='public' AND c.relname IN ('v_relay_stuck','v_climate_merged')
+       AND c.relkind='m') <> 2 THEN
+   RAISE EXCEPTION 'CNPG native transition refuses refresh custody object shape';
+ END IF;
+END $refresh_custody$;
+SELECT 1 FROM public.v_relay_stuck LIMIT 0;
+SELECT 1 FROM public.v_climate_merged LIMIT 0;"""
+
+
 def emit_sql(target, *, reviewed_post=None, qualification_sha256=None, physical_target=None, logical_receipts=None):
     cluster, receipt_table = profile(physical_target)
     c0.require((physical_target is None) == (logical_receipts is None), "physical history custody required")
@@ -537,6 +556,7 @@ DO $identity$ BEGIN
 END $identity$;
 LOCK TABLE public.schema_migrations,public.runtime_ordinary_login_attestation_receipts,public.mcp_runtime_boundary_receipt IN SHARE MODE;
 {history_lock}
+{refresh_custody_sql()}
 {guards}
 {transaction_witness_inputs_sql(target, reviewed_post)}
 DO $native_transition$
