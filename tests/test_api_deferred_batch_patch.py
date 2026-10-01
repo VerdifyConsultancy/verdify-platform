@@ -193,6 +193,7 @@ struct APIConnection {
 struct ComponentIterator {
  APIConnection &conn;EntityBase &next;int advances=0;bool done=false;
  bool completed(){return done;}
+ uint32_t progress_token() const {return done?1:0;}
  void advance(){++advances;if(conn.schedule_message_(&next,1,24))done=true;}
 };
 """
@@ -258,11 +259,13 @@ def test_exact_upstream_patch_and_repeat_build(tmp_path):
     core = tmp_path / "src/esphome/core"
     core.mkdir()
     (core / "version.h").write_text('#define ESPHOME_VERSION "2026.6.5"\n')
+    shutil.copyfile(ROOT / "tests/fixtures/esphome_api_batch/component_iterator.h", core / "component_iterator.h")
     for name, digest in PATCH.UPSTREAM_HASHES.items():
         data = (fixture / name).read_bytes()
         assert hashlib.sha256(data).hexdigest() == digest
         (api / name).write_bytes(data)
     PATCH.apply(tmp_path)
+    assert hashlib.sha256((core / "component_iterator.h").read_bytes()).hexdigest() == PATCH.CORE_PATCHED_HASH
     for name, digest in PATCH.PATCHED_HASHES.items():
         assert hashlib.sha256((api / name).read_bytes()).hexdigest() == digest
     PATCH.apply(tmp_path)
@@ -274,6 +277,7 @@ def test_unknown_upstream_is_rejected_before_any_write(tmp_path):
     core = tmp_path / "src/esphome/core"
     core.mkdir()
     (core / "version.h").write_text('#define ESPHOME_VERSION "2026.6.5"\n')
+    shutil.copyfile(ROOT / "tests/fixtures/esphome_api_batch/component_iterator.h", core / "component_iterator.h")
     for name in PATCH.UPSTREAM_HASHES:
         (api / name).write_text("unreviewed upstream")
     try:
@@ -305,6 +309,7 @@ def test_platformio_scons_without_file_global(tmp_path):
     core = project / "src/esphome/core"
     core.mkdir()
     (core / "version.h").write_text('#define ESPHOME_VERSION "2026.6.5"\n')
+    shutil.copyfile(ROOT / "tests/fixtures/esphome_api_batch/component_iterator.h", core / "component_iterator.h")
     for name in PATCH.UPSTREAM_HASHES:
         shutil.copyfile(ROOT / "tests/fixtures/esphome_api_batch" / name, api / name)
     (tmp_path / "patches").mkdir()
