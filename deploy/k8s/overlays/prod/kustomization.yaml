@@ -278,7 +278,7 @@ images:
   # built by agent-fleet-ci/verdify-platform-build-planner-96a1d6bd-vdbkv.
   - name: ghcr.io/verdifyconsultancy/verdify-planner
     newName: registry.vallery.net/verdifyconsultancy/verdify-planner
-    digest: sha256:2bf4889b96b39887d6880d5e14df060a4e15da76471a1a4e8ca5bd83ef26c124
+    digest: sha256:61b1e7aaf510edb4feee38f6c39a949758d50f2aa8a572ef50851d2c4c70b66a
   # Hand-pinned grow-light writer: source e32df41e, build-setpoint-server in
   # agent-fleet-ci/verdify-platform-ci-5dgwr. The #399 HA call allowlist confines
   # this prod-only writer to the declared main/grow light switches.
@@ -286,13 +286,13 @@ images:
   # @sha256 is preserved inline in the component (NOT transformer-pinned).
   - name: ghcr.io/verdifyconsultancy/verdify-setpoint-server
     newName: registry.vallery.net/verdifyconsultancy/verdify-setpoint-server
-    digest: sha256:cbf053b817e8c113cc71a4b68222ce023061f38e1b524c385dbf50f841efe8f5
+    digest: sha256:6f2fef6a11c7ba67e0b297807c415fda39aa1f2977dcfa170248689087174952
   # Hand-pinned lab publisher: source e32df41e, build-lab-publisher in
   # agent-fleet-ci/verdify-platform-ci-5dgwr. Includes the route-only
   # observational block, which remains absent until a qualified publication.
   - name: ghcr.io/verdifyconsultancy/verdify-lab-publisher-k3s
     newName: registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s
-    digest: sha256:d3dc8ac954f7291c81d243e6530083be04135f21c1c8a317c0dd5f3b7127ec75
+    digest: sha256:b40411cd644cea552283a568b32af4cd0278fe2acccad12481453a3365b3e24c
 
 # Release pins: the digests production runs for the five actuator-managed
 # images. kustomize applies `transformers:` after `images:`, so these replace
