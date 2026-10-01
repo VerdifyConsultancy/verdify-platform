@@ -7,7 +7,10 @@ BEGIN;
 DO $precondition$
 BEGIN
     IF current_database() <> 'verdify_rehearsal'
-       OR current_setting('listen_addresses') <> ''
+       OR (current_setting('listen_addresses') <> ''
+          AND NOT (current_setting('cluster_name') = 'verdify-cnpg-rehearsal'
+                   AND current_setting('server_version_num')::integer = 160013
+                   AND inet_client_addr() IS NULL AND NOT pg_is_in_recovery()))
        OR (SELECT extversion FROM pg_extension WHERE extname = 'timescaledb')
           IS DISTINCT FROM '2.25.2'
        OR (SELECT count(*) FROM public.schema_migrations

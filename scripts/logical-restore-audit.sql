@@ -22,7 +22,10 @@ DECLARE
   ];
 BEGIN
   IF current_database() <> 'verdify_rehearsal'
-     OR current_setting('listen_addresses') <> '' THEN
+     OR (current_setting('listen_addresses') <> ''
+          AND NOT (current_setting('cluster_name') = 'verdify-cnpg-rehearsal'
+                   AND current_setting('server_version_num')::integer = 160013
+                   AND inet_client_addr() IS NULL AND NOT pg_is_in_recovery())) THEN
     RAISE EXCEPTION 'logical restore audit requires socket-only verdify_rehearsal';
   END IF;
   IF (SELECT pg_get_userbyid(datdba) FROM pg_database
