@@ -759,6 +759,17 @@ def finish_stage(
         state["halt_reason"] = (
             f"stage dispatch incomplete: {len(failures)} failures, {len(actual)}/{len(expected)} records"
         )
+        # A partial transport send is still a real request. Retain its exact
+        # lifecycle keys without treating it as confirmed or allowing replay.
+        key = "rollback_records" if decision.rollback else "records"
+        state[key] = [
+            {
+                "parameter": record["parameter"],
+                "value": float(record["value"]),
+                "requested_at": record["requested_at"].isoformat(),
+            }
+            for record in records
+        ]
     else:
         state["status"] = "rollback_awaiting" if decision.rollback else "awaiting_confirmation"
         key = "rollback_records" if decision.rollback else "records"
