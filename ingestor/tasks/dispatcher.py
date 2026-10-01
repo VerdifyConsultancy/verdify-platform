@@ -250,7 +250,7 @@ async def _c1_source_guard(pool, selection):
     }
     try:
         c1_overlay.validate_worksheet(
-            worksheet, current, now=datetime.now(UTC), physics=_validate_physics, guardrails=caps
+            worksheet, current, now=datetime.now(UTC), physics=_validate_physics, guardrails=caps, admitted=True
         )
     except (ValueError, KeyError, TypeError) as error:
         log.warning("c1_qualification physical_source_guard=halt reason=%s", error)
