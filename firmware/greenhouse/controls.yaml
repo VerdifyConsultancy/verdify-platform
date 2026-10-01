@@ -2651,11 +2651,13 @@ interval:
           const bool floor_met = gh_pre_ota_heap_floor_met(free_kb, largest_kb);
           // Global logging stays WARN to protect heap, so this intentionally
           // uses one WARN packet per 15 minutes instead of opening INFO logs.
+          const auto api_heap = id(ha_api).heap_snapshot();
           ESP_LOGW("heap_profile",
                    "free=%.1fKB lifetime_min=%.1fKB largest=%.1fKB floor=%s "
-                   "loop_last=%uus loop_15m_max=%uus loop_15m_overruns=%u reset=%d",
+                   "loop_last=%uus loop_15m_max=%uus loop_15m_overruns=%u reset=%d api_peers=%u api_rm=%u api_sync=%u api_ov_n=%u api_ov_b=%u api_pending_b=%u api_batch_n=%u api_batch_b=%u api_rx_b=%u api_shared_b=%u",
                    free_kb, min_free_kb, largest_kb, floor_met ? "PASS" : "FAIL",
-                   loop_last_us, loop_max_us, loop_overruns, int(esp_reset_reason()));
+                   loop_last_us, loop_max_us, loop_overruns, int(esp_reset_reason()),
+                   unsigned(api_heap.peers), unsigned(api_heap.removing), unsigned(api_heap.syncing), unsigned(api_heap.overflow_entries), unsigned(api_heap.overflow_bytes), unsigned(api_heap.pending_bytes), unsigned(api_heap.batch_items), unsigned(api_heap.batch_bytes), unsigned(api_heap.rx_bytes), unsigned(api_heap.shared_bytes));
           if(!floor_met || loop_overruns > 0) {
             ESP_LOGW("heap", "Pre-OTA runtime floor violation: heap=%s loop_overruns=%u",
                      floor_met ? "PASS" : "FAIL", loop_overruns);

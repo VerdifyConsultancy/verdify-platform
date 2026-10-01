@@ -682,10 +682,12 @@ binary_sensor:
     on_press:
       then:
         - lambda: |-
-            ESP_LOGE("heap", "Heap pressure CRITICAL: free=%.1f kB min=%.1f kB largest=%.1f kB",
+            const auto api_heap = id(ha_api).heap_snapshot();
+            ESP_LOGE("heap", "Heap pressure CRITICAL: free=%.1f kB min=%.1f kB largest=%.1f kB api_peers=%u api_rm=%u api_sync=%u api_ov_n=%u api_ov_b=%u api_pending_b=%u api_batch_n=%u api_batch_b=%u api_rx_b=%u api_shared_b=%u",
                      gh_free_heap_kb(),
                      gh_min_free_heap_kb(),
-                     gh_largest_free_heap_block_kb());
+                     gh_largest_free_heap_block_kb(),
+                     unsigned(api_heap.peers), unsigned(api_heap.removing), unsigned(api_heap.syncing), unsigned(api_heap.overflow_entries), unsigned(api_heap.overflow_bytes), unsigned(api_heap.pending_bytes), unsigned(api_heap.batch_items), unsigned(api_heap.batch_bytes), unsigned(api_heap.rx_bytes), unsigned(api_heap.shared_bytes));
     lambda: |-
       // Instantaneous — no debounce. <15 KB is panic-adjacent territory
       // (observed pre-panic floor 20.6 KB; safety margin at 15 KB).

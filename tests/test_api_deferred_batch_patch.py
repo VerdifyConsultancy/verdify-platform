@@ -313,7 +313,8 @@ def test_platformio_scons_without_file_global(tmp_path):
     for name in PATCH.UPSTREAM_HASHES:
         shutil.copyfile(ROOT / "tests/fixtures/esphome_api_batch" / name, api / name)
     (tmp_path / "patches").mkdir()
-    shutil.copyfile(ROOT / "firmware/patches/deferred_batch.inc", tmp_path / "patches/deferred_batch.inc")
+    for snippet in (ROOT / "firmware/patches").glob("*.inc"):
+        shutil.copyfile(snippet, tmp_path / "patches" / snippet.name)
 
     class BuildEnv:
         def subst(self, name):

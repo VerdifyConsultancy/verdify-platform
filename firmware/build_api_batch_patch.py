@@ -13,6 +13,9 @@ from pathlib import Path
 SOURCE_DIR = Path(__file__).parent if "__file__" in globals() else None
 UPSTREAM_VERSION = "2026.6.5"
 UPSTREAM_HASHES = {
+    "api_server.h": "bae9b6416cd3e64310a1129d5518d8d987bd9191dc9c23f8fb7824f5c1e141a5",
+    "api_frame_helper.h": "a6f3ca95be6bdebc3a4c5c3bdf552af299b90a43cb22c19ad32e13923d6fb196",
+    "api_buffer.h": "bcd26cc82a5009c02276eff38dde24dd92e72890b696552492adc24a64aad7e9",
     "api_overflow_buffer.cpp": "81f7be6e141f043660ca87b7a1a81918caab4105d8968782880e3d02664e7cd6",
     "api_overflow_buffer.h": "d0692231e9f63d237836c3a784f092a2abeeacef45fa04856768d0336cce8b94",
     "api_connection.h": "43e5f3718d37a0aa153f49ece2f96e96de60ef839363fc9c9c97b6d1525cfdd3",
@@ -72,6 +75,30 @@ def guard_after_call(text: str, signature: str, call: str) -> str:
 
 
 def transform(name: str, text: str) -> str:
+    if name == "api_buffer.h":
+        return replace_once(
+            text,
+            "  size_t size() const { return this->size_; }",
+            "  size_t capacity_bytes() const { return this->capacity_; }\n"
+            "  size_t size() const { return this->size_; }",
+        )
+    if name == "api_frame_helper.h":
+        return replace_once(
+            text,
+            "  // Release excess memory from internal buffers after initial sync",
+            "  size_t rx_capacity_bytes() const { return this->rx_buf_.capacity_bytes(); }\n"
+            "  size_t overflow_allocated_bytes() const { return this->overflow_buf_.allocated_bytes(); }\n"
+            "  size_t overflow_pending_bytes() const { return this->overflow_buf_.pending_bytes(); }\n"
+            "  size_t overflow_count() const { return this->overflow_buf_.count(); }\n"
+            "  // Release excess memory from internal buffers after initial sync",
+        )
+    if name == "api_server.h":
+        return replace_once(
+            text,
+            "  // Get reference to shared buffer for API connections",
+            (SOURCE_DIR / "patches/api_heap_snapshot.inc").read_text()
+            + "\n  // Get reference to shared buffer for API connections",
+        )
     if name == "api_connection.h":
         text = replace_once(text, "#include <vector>", "#include <cstdlib>\n#include <cstring>\n#include <type_traits>")
         start = text.index("  // Generic batching mechanism for both state updates and entity info")
@@ -132,6 +159,12 @@ def transform(name: str, text: str) -> str:
         )
         return text
     if name == "api_overflow_buffer.h":
+        text = replace_once(
+            text,
+            "  uint8_t count() const { return this->count_; }",
+            "  uint8_t count() const { return this->count_; }\n"
+            + (SOURCE_DIR / "patches/api_overflow_snapshot.inc").read_text(),
+        )
         text = replace_once(
             text, "#include <cstdint>", "#include <cstdint>\n#include <cstdlib>\n#include <type_traits>"
         )
@@ -207,8 +240,11 @@ def apply(project: Path) -> None:
 
 # Bound to the exact reviewed patch bytes. Updated only with focused tests.
 PATCHED_HASHES = {
+    "api_buffer.h": "6c5b083ae0b491eea76d01c71b1f3fbb55d73e8dadcb26559dd6e237261f1948",
+    "api_frame_helper.h": "5c16bfe0f51ec1c3afe233d0e54abb716193f2fcf4756ea6d41fd34779bd7966",
+    "api_server.h": "7c3a515f1f551c30ce058eda114ec76c2d783d5439e40a4ed5e5bc2ea53f1c8e",
     "api_overflow_buffer.cpp": "370db5e67ad5c4145e6f1f7d93558a1502cb9680064f4cf28bbdae511d289003",
-    "api_overflow_buffer.h": "93524c629fbde8de099834586acd65a7e6351f818bad1a16ab9989cebc7b6359",
+    "api_overflow_buffer.h": "efe581f47eacaa5edd12914cacc112b5f02f99c0f3df89f6b65fe950bce266f8",
     "api_connection.h": "eb5bd763e06e73ad50c6f96e1c0563315892628d2f8e713d97863198e821bfb1",
     "api_connection.cpp": "29c45da79cf5d6a8c3db0eb1c91f4997ed6c04fc0bc83687d4e200a542fbde9d",
 }
