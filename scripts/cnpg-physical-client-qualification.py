@@ -125,7 +125,15 @@ def validate_binding(profile, native, data):
     nodes = {n["metadata"]["name"]: n for n in native["nodes"]["items"]}
     domains, claims, addresses = set(), set(), set()
     pods = native["pods"]["items"]
-    require(len(pods) == 3 and sum(p == pod for p in pods) == 1, "physical three-Pod/primary capture required")
+    current = [
+        p
+        for p in pods
+        if (p["metadata"]["name"], p["metadata"]["uid"]) == (pod["metadata"]["name"], pod["metadata"]["uid"])
+    ]
+    require(
+        len(pods) == 3 and len(current) == 1 and current[0]["status"]["podIP"] == pod["status"]["podIP"],
+        "physical three-Pod/primary address capture required",
+    )
     for member in pods:
         m, spec = member["metadata"], member["spec"]
         physical.pitr.uid(m["uid"])

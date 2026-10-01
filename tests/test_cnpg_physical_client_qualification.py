@@ -271,3 +271,14 @@ def test_physical_probe_reuses_full_883_driver_refusals(profile, bad, monkeypatc
     monkeypatch.setattr(monkeypatch, "setenv", inject_fixture_custody)
     with isolated_probe_process_state():
         test_probe_pool_startup_and_identity_fail_closed_without_secret_output(monkeypatch, capsys, bad)
+
+
+def test_native_identity_accepts_metadata_refresh_but_not_primary_address_drift():
+    profile = m.t.PHYSICAL_TARGETS[0]
+    native, data = fixture(profile)
+    native["pod"] = copy.deepcopy(native["pod"])
+    native["pod"]["metadata"]["resourceVersion"] = "new-native-read"
+    assert m.validate_binding(profile, native, data)
+    native["pod"]["status"]["podIP"] = "10.42.99.99"
+    with pytest.raises(ValueError, match="primary address"):
+        m.validate_binding(profile, native, data)
