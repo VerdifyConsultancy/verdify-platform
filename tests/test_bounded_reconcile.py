@@ -496,6 +496,35 @@ async def test_crash_after_stage_claim_fails_closed(fixture, tmp_path):
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("rollback", [False, True])
+async def test_partial_dispatch_retains_request_identity_without_confirmation_or_replay(fixture, tmp_path, rollback):
+    db = fixture
+    full = [(param, 1.0) for param in db.parameters]
+    await bounded.choose_stage(db, full, db.planned(), 3, tmp_path, 12)
+    approve(bounded._read(tmp_path / bounded.PREVIEW_NAME), tmp_path)
+    first = await bounded.choose_stage(db, full, db.planned(), 3, tmp_path, 12)
+    if rollback:
+        state = bounded._read(tmp_path / bounded.STATE_NAME)
+        state["status"] = "rollback_inflight"
+        bounded._write(tmp_path / bounded.STATE_NAME, state)
+        first = bounded.Decision("send", first.changes, run_id=first.run_id, rollback=True)
+    sent = records(first.changes[:8])
+    failed = [(param, "transport_disconnected") for param, _value in first.changes[8:]]
+    bounded.finish_stage(tmp_path, first, sent, failed)
+    state = bounded._read(tmp_path / bounded.STATE_NAME)
+    assert state["status"] == ("rollback_failed" if rollback else "halted")
+    key = "rollback_records" if rollback else "records"
+    assert state[key] == [
+        {"parameter": r["parameter"], "value": r["value"], "requested_at": r["requested_at"].isoformat()} for r in sent
+    ]
+    assert state["completed"] == []
+    assert db.rows == {}  # Retained request keys do not mint database confirmations.
+    retry = await bounded.choose_stage(db, full, db.planned(), 3, tmp_path, 12)
+    assert retry.action == "hold" and not retry.changes
+    assert bounded._read(tmp_path / bounded.STATE_NAME)[key] == state[key]
+
+
+@pytest.mark.asyncio
 async def test_source_change_or_failed_delivery_stops_next_stage(fixture, tmp_path):
     db = fixture
     full = [(param, 1.0) for param in db.parameters]
