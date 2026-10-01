@@ -80,6 +80,7 @@ $PY -m pytest -q \
   tests/test_c1_grid_projection.py \
   tests/test_component_prefix_replay.py \
   tests/test_cnpg_rehearsal.py \
+  tests/test_cnpg_runtime_client_qualification.py \
   tests/test_cnpg_restore_qualification.py \
   tests/test_cnpg_restore_private_scratch.py \
   tests/test_cnpg_source_grantor_continuation.py \
