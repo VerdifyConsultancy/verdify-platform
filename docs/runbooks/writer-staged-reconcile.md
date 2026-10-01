@@ -127,3 +127,51 @@ kubectl -n verdify-prod exec -i deploy/verdify-ingestor -c ingestor -- \
 The recovered run remains stopped at `rollback_complete`; it does not resume
 the prior desired vector. A new desired-policy run requires a fresh preview
 and separate approval after resolving the mismatch.
+
+### Close an elapsed confirmation window after verified recovery
+
+A sent request can remain physically uncertain after its eight-minute
+confirmation deadline. Do not mark it failed or confirmed, replay it, or remove
+its alert by hand. For a `rollback_complete` bounded run, prepare the native
+custody companion with `scripts/prepare-recovered-confirmation-custody.py`.
+This companion grants no device authority. It binds unchanged raw state,
+original approval and recovery files, the preserved terminal recovery proof,
+and a read-only export of the exact original and rollback request rows.
+
+The request export has `original_requests` and `rollback_confirmations` arrays.
+Original rows contain `ts`, `parameter`, `value`, `delivery_status`,
+`source`, `confirmed_at` and `expired_at`; rollback rows contain the same fields except
+`expired_at`. Select original rows only for the last stage's exact parameter
+set, between `stage_started_at` and recovery `approved_at`, excluding ESP32
+observation rows. Select rollback rows by the exact timestamp/parameter keys
+in `rollback_records`. Preserve the original SQL export with the raw receipts.
+
+```bash
+python scripts/prepare-recovered-confirmation-custody.py \
+  --state preserved-state.json --approval preserved-approval.json \
+  --recovery preserved-recovery.json --terminal terminal-recovery-proof.json \
+  --requests exact-request-export.json --output local-custody.json
+```
+
+ROOT reviews and installs that new companion as
+`/srv/verdify/state/writer-stage-recovery-custody.json`, using exact file-hash
+comparison and an exclusive, fsynced publication. Preserve all existing native
+files. `/srv/verdify/state` is backed by the retained ingestor state PVC; a
+normal Recreate carries these receipts to the new sole writer. A missing or
+changed custody companion holds the run.
+
+After a normal source delivery, the recovered-run archive path requires fresh
+current-generation canonical 48 readbacks, the last stage at its original
+baseline, earlier completed stages still matching, the same actual firmware,
+a strict writer lease and the existing numeric heap guard (30 KiB free,
+18 KiB largest block). It rechecks real confirmed rollback rows and later
+request outcomes through the authorized writable projection under row locks.
+Only original `sent`/unconfirmed requests whose confirmation window has
+elapsed can transition atomically to `expired`. `expired_at` is the actual DB
+clock at transition; the deadline is recorded separately. Confirmation remains
+null, and the immutable prior-facts receipt retains the original sent status.
+Attempt receipts do not assert commit. Actual committed DB rows, including
+expiry times, become the recovered archive evidence. The existing confirmation
+monitor then owns any terminal-alert resolution. This closes a confirmation
+window; it proves neither earlier delivery nor failure and does not resume the
+stopped desired-policy run.

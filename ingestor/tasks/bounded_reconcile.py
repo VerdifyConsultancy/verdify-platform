@@ -21,6 +21,7 @@ from pathlib import Path
 import shared
 
 from verdify_schemas.policy_vector import wire_fields
+from verdify_schemas.setpoint import SetpointChange
 
 SESSION_ID = uuid.uuid4().hex  # changes on process restart, even in the same pod
 PREVIEW_NAME = "writer-stage-preview.json"
@@ -450,6 +451,220 @@ async def _rollback_decision(conn, preview: dict, state: dict, state_dir: Path, 
     return Decision("send", selected, run_id=state["run_id"], rollback=True)
 
 
+async def _expire_recovered_confirmation_window(
+    conn, preview: dict, state: dict, recovery: dict, rows, state_dir: Path
+):
+    """Close only a recovered stage's elapsed confirmation window, never infer delivery."""
+    from ._common import HEAP_DEFER_FREE_KB, HEAP_DEFER_LARGEST_BLOCK_KB
+    from .dispatcher import readback_values_equivalent
+
+    now = datetime.now(UTC)
+    deadline = _time(state["stage_started_at"]) + CONFIRM_DEADLINE
+    original = state["approved_preview"]
+    if state["status"] != "rollback_complete" or now <= deadline:
+        raise ValueError("recovered confirmation window not closed")
+    custody = _read(state_dir / "writer-stage-recovery-custody.json")
+    if custody is None or custody.get("schema") != "verdify-recovered-confirmation-custody-v1":
+        raise ValueError("recovered confirmation custody missing")
+    if (
+        custody.get("run_id") != state["run_id"]
+        or custody.get("source_revision") != original["source_revision"]
+        or custody.get("recovery_session_id") != recovery["session_id"]
+        or custody.get("recovery_generation") != recovery["generation"]
+        or now - _time(preview["captured_at"]) > MAX_STAGE_AGE
+        or preview["session_id"] != SESSION_ID
+    ):
+        raise ValueError("recovered confirmation custody changed")
+    for name, expected in custody["retained_sha256"].items():
+        if name not in {STATE_NAME, APPROVAL_NAME, RECOVERY_NAME}:
+            raise ValueError("invalid recovered custody artifact")
+        if hashlib.sha256((state_dir / name).read_bytes()).hexdigest() != expected:
+            raise ValueError("retained recovered custody bytes changed")
+    if set(custody["retained_sha256"]) != {STATE_NAME, APPROVAL_NAME, RECOVERY_NAME}:
+        raise ValueError("retained recovered custody incomplete")
+    proof_raw = custody["terminal_proof_raw"]
+    if hashlib.sha256(proof_raw.encode()).hexdigest() != custody["terminal_proof_sha256"]:
+        raise ValueError("recovered terminal proof changed")
+    proof = json.loads(proof_raw)
+    if (
+        proof["run_id"] != state["run_id"]
+        or proof["status"] != "rollback_complete"
+        or proof["source"] != original["source_revision"]
+        or proof["session"] != recovery["session_id"]
+        or proof["generation"] != recovery["generation"]
+        or proof["diagnostics"]["firmware_version"] != custody["firmware_version"]
+        or {r["parameter"] for r in proof["stage12_baseline"]} != set(state["stage_parameters"])
+        or {r["parameter"] for r in proof["first12_preserved"]} != set(state["completed_values"])
+        or not all(r["matches"] for r in proof["stage12_baseline"] + proof["first12_preserved"])
+    ):
+        raise ValueError("invalid recovered terminal proof")
+
+    def serialized(rs):
+        return [{k: v.isoformat() if isinstance(v, datetime) else v for k, v in dict(r).items()} for r in rs]
+
+    if serialized(rows) != custody["original_requests"]:
+        raise ValueError("recovered original requests changed")
+    current = await _fresh_readbacks(conn, preview["generation"])
+    if any(
+        not readback_values_equivalent(p, current.get(p), original["readbacks"][p]) for p in state["stage_parameters"]
+    ):
+        raise ValueError("recovered confirmation baseline changed")
+    if any(
+        not readback_values_equivalent(p, current.get(p), value)
+        for p, value in state.get("completed_values", {}).items()
+    ):
+        raise ValueError("earlier completed recovered stage changed")
+    if not shared.writer_lease_strictly_held(minimum_remaining_s=3):
+        raise ValueError("recovered confirmation lease not held")
+    pending = [r for r in rows if r["delivery_status"] == "sent" and r["confirmed_at"] is None]
+    for row in pending:
+        SetpointChange.model_validate({**dict(row), "source": row["source"], "delivery_status": "expired"})
+    if not pending or any(
+        r["delivery_status"]
+        not in {"sent", "deferred_heap_pressure", "confirmed", "failed", "cancelled", "superseded", "expired"}
+        or (r["delivery_status"] == "confirmed" and r["confirmed_at"] is None)
+        for r in rows
+    ):
+        raise ValueError("recovered confirmation outcome is not an elapsed sent window")
+    if any(r["ts"] + CONFIRM_DEADLINE >= now for r in pending):
+        raise ValueError("request confirmation window still open")
+    if not state.get("rollback_records"):
+        raise ValueError("real rollback confirmation evidence missing")
+
+    async with conn.transaction():
+        heap = await conn.fetchrow(
+            "SELECT heap_bytes, heap_largest_free_block_kb, ts, firmware_version FROM diagnostics ORDER BY ts DESC LIMIT 1"
+        )
+        if (
+            heap is None
+            or heap["ts"] < now - timedelta(seconds=120)
+            or heap["heap_bytes"] is None
+            or heap["heap_bytes"] < HEAP_DEFER_FREE_KB
+            or heap["heap_largest_free_block_kb"] is None
+            or heap["heap_largest_free_block_kb"] < HEAP_DEFER_LARGEST_BLOCK_KB
+        ):
+            raise ValueError("recovered confirmation numeric safety guard")
+        if heap["firmware_version"] != custody["firmware_version"]:
+            raise ValueError("recovered firmware changed")
+        for record in state["rollback_records"]:
+            row = await conn.fetchrow(
+                "SELECT ts, parameter, value, source, delivery_status, confirmed_at FROM v_runtime_setpoint_changes_write WHERE ts = $1 AND parameter = $2 FOR UPDATE",
+                _time(record["requested_at"]),
+                record["parameter"],
+            )
+            if row is None or row["delivery_status"] != "confirmed" or row["confirmed_at"] is None:
+                raise ValueError("real rollback confirmation changed")
+            if serialized([row])[0] not in custody["rollback_confirmations"]:
+                raise ValueError("recovered rollback request custody changed")
+        locked = await conn.fetch(
+            "SELECT ts, parameter, value, source, delivery_status, confirmed_at, expired_at FROM v_runtime_setpoint_changes_write "
+            "WHERE parameter = ANY($1::text[]) AND ts >= $2 AND ts <= $3 "
+            "AND COALESCE(source, '') <> 'esp32' ORDER BY ts, parameter FOR UPDATE",
+            state["stage_parameters"],
+            _time(state["stage_started_at"]),
+            _time(recovery["approved_at"]),
+        )
+        if [dict(r) for r in locked] != [dict(r) for r in rows]:
+            raise ValueError("original recovered request history changed")
+        later = await conn.fetch(
+            "SELECT delivery_status, confirmed_at FROM v_runtime_setpoint_changes_write "
+            "WHERE parameter = ANY($1::text[]) AND ts > $2 AND COALESCE(source, '') <> 'esp32' FOR UPDATE",
+            state["stage_parameters"],
+            _time(recovery["approved_at"]),
+        )
+        if any(
+            r["delivery_status"]
+            not in {"deferred_heap_pressure", "confirmed", "failed", "cancelled", "superseded", "expired"}
+            or (r["delivery_status"] == "confirmed" and r["confirmed_at"] is None)
+            for r in later
+        ):
+            raise ValueError("later recovered request remains unknown")
+        # Retain original sent/null-confirmation truth before any lifecycle update.
+        path = state_dir / f"writer-stage-expired-window-{uuid.UUID(str(state['run_id'])).hex}.json"
+        evidence = {
+            "custody": custody,
+            "schema": "verdify-recovered-confirmation-window-v1",
+            "run_id": state["run_id"],
+            "confirmation_deadline_at": deadline.isoformat(),
+            "source_revision": original["source_revision"],
+            "state": state,
+            "recovery": recovery,
+            "original_requests": [
+                {k: v.isoformat() if isinstance(v, datetime) else v for k, v in dict(r).items()} for r in rows
+            ],
+            "meaning": "confirmation window elapsed; physical dispatch outcome remains unknown; transition must be read back from DB",
+        }
+        existing = _read(path)
+        if existing is not None and existing != evidence:
+            raise ValueError("recovered confirmation expiry evidence changed")
+        if existing is None:
+            _write(path, evidence)
+            directory_fd = os.open(state_dir, os.O_RDONLY)
+            try:
+                os.fsync(directory_fd)
+            finally:
+                os.close(directory_fd)
+        _write(
+            state_dir / f"writer-stage-expiry-attempt-{uuid.uuid4().hex}.json",
+            {
+                "schema": "verdify-recovered-expiry-attempt-v1",
+                "run_id": state["run_id"],
+                "source_revision": preview["source_revision"],
+                "session_id": preview["session_id"],
+                "generation": preview["generation"],
+                "attempted_at": now.isoformat(),
+                "prior_evidence_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+                "meaning": "attempt only, not a committed DB outcome",
+            },
+        )
+        # Validate every prospective update before the first DML; keep the
+        # persisted original source rather than the model's default source.
+        for row in pending:
+            SetpointChange.model_validate({**dict(row), "source": row["source"], "delivery_status": "expired"})
+        for row in pending:
+            changed = await conn.fetchrow(
+                "UPDATE v_runtime_setpoint_changes_write SET delivery_status = 'expired', expired_at = clock_timestamp() "
+                "WHERE ts = $1 AND parameter = $2 AND value = $3 AND delivery_status = 'sent' "
+                "AND confirmed_at IS NULL AND expired_at IS NULL "
+                "RETURNING ts, parameter, value, source, delivery_status, confirmed_at, expired_at",
+                row["ts"],
+                row["parameter"],
+                row["value"],
+            )
+            if changed is None:
+                raise ValueError("recovered confirmation expiry compare-and-set failed")
+            validated = SetpointChange.model_validate(dict(changed))
+            if (
+                validated.delivery_status != "expired"
+                or validated.confirmed_at is not None
+                or validated.expired_at is None
+            ):
+                raise ValueError("recovered confirmation expiry returned invalid outcome")
+    # Read actual committed transition times; a failed readback is retried by
+    # the existing archive path without re-expiring or rewriting prior facts.
+    committed = await conn.fetch(
+        "SELECT ts, parameter, value, source, delivery_status, confirmed_at, expired_at FROM setpoint_changes "
+        "WHERE parameter = ANY($1::text[]) AND ts >= $2 AND ts <= $3 "
+        "AND COALESCE(source, '') <> 'esp32' ORDER BY ts, parameter",
+        state["stage_parameters"],
+        _time(state["stage_started_at"]),
+        _time(recovery["approved_at"]),
+    )
+
+    if len(committed) != len(rows) or {(r["ts"], r["parameter"]) for r in committed} != {
+        (r["ts"], r["parameter"]) for r in rows
+    }:
+        raise ValueError("recovered expiry committed readback incomplete")
+    closed = {(r["ts"], r["parameter"]) for r in pending}
+    if any(
+        (r["ts"], r["parameter"]) in closed
+        and (r["delivery_status"] != "expired" or r["confirmed_at"] is not None or r["expired_at"] is None)
+        for r in committed
+    ):
+        raise ValueError("recovered expiry committed outcome changed")
+    return committed
+
+
 async def _settled_recovery_archive(conn, preview: dict, state: dict, approval: dict | None, state_dir: Path) -> bool:
     """Retain a stopped run and admit only a new independently guarded approval."""
     from .dispatcher import readback_values_equivalent
@@ -464,7 +679,7 @@ async def _settled_recovery_archive(conn, preview: dict, state: dict, approval: 
     if recovery is None or recovery.get("source_run_id") != state["run_id"] or recovery.get("parameters") != parameters:
         raise ValueError("settled recovery evidence missing")
     rows = await conn.fetch(
-        "SELECT ts, parameter, value, delivery_status, confirmed_at FROM setpoint_changes "
+        "SELECT ts, parameter, value, source, delivery_status, confirmed_at, expired_at FROM setpoint_changes "
         "WHERE parameter = ANY($1::text[]) AND ts >= $2 AND ts <= $3 "
         "AND COALESCE(source, '') <> 'esp32' ORDER BY ts, parameter",
         parameters,
@@ -474,6 +689,8 @@ async def _settled_recovery_archive(conn, preview: dict, state: dict, approval: 
     known = {"deferred_heap_pressure", "confirmed", "failed", "cancelled", "superseded", "expired"}
     if len(rows) != len(parameters) or set(r["parameter"] for r in rows) != set(parameters):
         raise ValueError("last-stage durable request evidence incomplete")
+    if any(r["delivery_status"] not in known for r in rows):
+        rows = await _expire_recovered_confirmation_window(conn, preview, state, recovery, rows, state_dir)
     if any(
         r["delivery_status"] not in known or (r["delivery_status"] == "confirmed" and r["confirmed_at"] is None)
         for r in rows
@@ -500,27 +717,42 @@ async def _settled_recovery_archive(conn, preview: dict, state: dict, approval: 
             raise ValueError("settled rollback confirmation changed")
     archive_path = state_dir / f"writer-stage-recovered-{uuid.UUID(str(state['run_id'])).hex}.json"
     archive = _read(archive_path)
+    expiry_evidence = _read(state_dir / f"writer-stage-expired-window-{uuid.UUID(str(state['run_id'])).hex}.json")
+    v1 = "verdify-writer-stage-recovered-v1"
+    v2 = "verdify-writer-stage-recovered-v2"
+
+    def request_receipt(version):
+        # Preserve the exact historical v1 projection; source/expired_at were
+        # not present in that immutable archive contract.
+        fields = (
+            ("ts", "parameter", "value", "delivery_status", "confirmed_at")
+            if version == v1
+            else ("ts", "parameter", "value", "source", "delivery_status", "confirmed_at", "expired_at")
+        )
+        return [{k: r[k].isoformat() if isinstance(r[k], datetime) else r[k] for k in fields if k in r} for r in rows]
+
     if archive is None:
         if approval is None or approval.get("run_id") != state["run_id"]:
             raise ValueError("original stopped approval missing before archive")
+        version = v2 if expiry_evidence is not None else v1
         archive = {
-            "schema": "verdify-writer-stage-recovered-v1",
+            "schema": version,
             "state": state,
             "approval": approval,
             "recovery": recovery,
             "settled_baseline": {p: preview["readbacks"][p] for p in parameters},
-            "known_requests": [
-                {k: v.isoformat() if isinstance(v, datetime) else v for k, v in dict(r).items()} for r in rows
-            ],
+            "known_requests": request_receipt(version),
         }
+        if version == v2:
+            archive["confirmation_window_evidence"] = expiry_evidence
         _write(archive_path, archive)
     if (
-        archive.get("schema") != "verdify-writer-stage-recovered-v1"
+        archive.get("schema") not in {v1, v2}
         or archive.get("state") != state
         or archive.get("recovery") != recovery
         or (approval is not None and approval.get("run_id") == state["run_id"] and archive.get("approval") != approval)
-        or archive.get("known_requests")
-        != [{k: v.isoformat() if isinstance(v, datetime) else v for k, v in dict(r).items()} for r in rows]
+        or archive.get("known_requests") != request_receipt(archive.get("schema"))
+        or (archive.get("schema") == v2 and archive.get("confirmation_window_evidence") != expiry_evidence)
     ):
         raise ValueError("settled history changed")
     return approval is not None and approval.get("run_id") != state["run_id"]
