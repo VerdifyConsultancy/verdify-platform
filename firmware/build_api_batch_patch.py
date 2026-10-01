@@ -20,6 +20,20 @@ UPSTREAM_HASHES = {
 }
 
 
+CORE_UPSTREAM_HASH = "46bbeb1c1c6ac0e688677da9317a16a6293fe0ba6720d7cd26585b892a764615"
+CORE_PATCHED_HASH = "d3f6d94a8e7b8f0cde0a107cba885e3f433cc0971b8e712220f8e3117a921220"
+
+
+def transform_iterator(text: str) -> str:
+    return replace_once(
+        text,
+        "  bool completed() const { return this->state_ == IteratorState::NONE; }",
+        "  bool completed() const { return this->state_ == IteratorState::NONE; }\n"
+        "  // State+index observes progress without changing layout or completion semantics.\n"
+        "  uint32_t progress_token() const { return (static_cast<uint32_t>(this->state_) << 16) | this->at_; }",
+    )
+
+
 def replacement_batch() -> str:
     return (SOURCE_DIR / "patches/deferred_batch.inc").read_text()
 
@@ -86,6 +100,16 @@ def transform(name: str, text: str) -> str:
             "  while (!iterator.completed() && (this->deferred_batch_.size() - initial_size) < max_batch) {",
             "  while (!this->flags_.remove && !iterator.completed() &&\n"
             "         (this->deferred_batch_.size() - initial_size) < max_batch) {",
+        )
+        text = replace_once(
+            text,
+            "    iterator.advance();",
+            "    const uint32_t before = iterator.progress_token();\n"
+            "    iterator.advance();\n"
+            "    // A direct service/completion send may return false without enqueueing.\n"
+            "    // Preserve its index and return to controls/WDT instead of retrying forever.\n"
+            "    if (iterator.progress_token() == before)\n"
+            "      break;",
         )
         # OOM is terminal for this peer: no later callback, iterator flush,
         # completion, or connection-loop phase may encode/allocate afterwards.
@@ -166,6 +190,16 @@ def apply(project: Path) -> None:
         if hashlib.sha256(patched).hexdigest() != patched_digest:
             raise ValueError("source-owned API patch output hash mismatch")
         prepared[path] = patched
+    iterator = project / "src/esphome/core/component_iterator.h"
+    current = iterator.read_bytes()
+    digest = hashlib.sha256(current).hexdigest()
+    if digest != CORE_PATCHED_HASH:
+        if digest != CORE_UPSTREAM_HASH:
+            raise ValueError("ESPHome iterator upstream hash mismatch")
+        patched = transform_iterator(current.decode()).encode()
+        if hashlib.sha256(patched).hexdigest() != CORE_PATCHED_HASH:
+            raise ValueError("source-owned iterator output hash mismatch")
+        prepared[iterator] = patched
     for path, data in prepared.items():
         path.write_bytes(data)
     print(f"Verified Verdify fallible DeferredBatch/overflow patch for ESPHome{UPSTREAM_VERSION}")
@@ -176,7 +210,7 @@ PATCHED_HASHES = {
     "api_overflow_buffer.cpp": "370db5e67ad5c4145e6f1f7d93558a1502cb9680064f4cf28bbdae511d289003",
     "api_overflow_buffer.h": "93524c629fbde8de099834586acd65a7e6351f818bad1a16ab9989cebc7b6359",
     "api_connection.h": "eb5bd763e06e73ad50c6f96e1c0563315892628d2f8e713d97863198e821bfb1",
-    "api_connection.cpp": "485c6250d2c9960204904ef8c093ab252b4d72d49ebd98f5693546031da7a4a6",
+    "api_connection.cpp": "29c45da79cf5d6a8c3db0eb1c91f4997ed6c04fc0bc83687d4e200a542fbde9d",
 }
 
 if "Import" in globals():

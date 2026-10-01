@@ -20,3 +20,5 @@ SHA256:
 - api_overflow_buffer.h:d0692231e9f63d237836c3a784f092a2abeeacef45fa04856768d0336cce8b94
 - api_overflow_buffer.cpp:81f7be6e141f043660ca87b7a1a81918caab4105d8968782880e3d02664e7cd6
 - api_frame_helper.cpp:9d594b8e620e8ab4958471d5e2b1daa57973a66a3205017cd67104a6a4079a7d
+
+The component_iterator.h/.cpp and list_entities.cpp fixtures are exact selected ESPHome2026.6.5 generated sources. Native tests compile the actual iterator and service callback to reproduce the nonprogress retry loop and verify backpressure resume/full success. Only dependency types/sink are stubbed.
