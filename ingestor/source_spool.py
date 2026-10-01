@@ -40,24 +40,41 @@ class SourceSpool:
                 os.close(directory)
 
     def put(self, kind: str, identity: str, payload: dict, *, replace: tuple[str, ...] = ()) -> None:
-        encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        self.put_many([(kind, identity, payload)], replace=replace)
+
+    def put_many(self, entries: list[tuple[str, str, dict]], *, replace: tuple[str, ...] = ()) -> None:
+        encoded_entries = [
+            (kind, identity, json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False))
+            for kind, identity, payload in entries
+        ]
+        identities: dict[str, tuple[str, str]] = {}
+        for kind, identity, encoded in encoded_entries:
+            if identity in identities and identities[identity] != (kind, encoded):
+                raise ValueError("source UUID reused with different immutable payload")
+            identities[identity] = (kind, encoded)
         with self.conn:
-            previous = self.conn.execute(
-                "SELECT kind,payload FROM source_queue WHERE identity=?", (identity,)
-            ).fetchone()
-            if previous is not None:
-                if previous != (kind, encoded):
+            # Verify every existing identity before removing any replaced row.
+            for kind, identity, encoded in encoded_entries:
+                previous = self.conn.execute(
+                    "SELECT kind,payload FROM source_queue WHERE identity=?", (identity,)
+                ).fetchone()
+                if previous is not None and previous != (kind, encoded):
                     raise ValueError("source UUID reused with different immutable payload")
+            if encoded_entries and all(
+                self.conn.execute("SELECT 1 FROM source_queue WHERE identity=?", (identity,)).fetchone()
+                for _, identity, _ in encoded_entries
+            ):
                 return
             self.conn.executemany("DELETE FROM source_queue WHERE identity=?", [(item,) for item in replace])
-            count, size = self.conn.execute(
-                "SELECT count(*),coalesce(sum(length(CAST(payload AS BLOB))),0) FROM source_queue"
-            ).fetchone()
-            if count >= self.max_rows or size + len(encoded.encode()) > self.max_bytes:
-                raise OSError("source spool capacity exhausted; existing evidence retained")
-            self.conn.execute(
-                "INSERT INTO source_queue(kind,identity,payload) VALUES(?,?,?)", (kind, identity, encoded)
-            )
+            for kind, identity, encoded in encoded_entries:
+                if self.conn.execute("SELECT 1 FROM source_queue WHERE identity=?", (identity,)).fetchone():
+                    continue
+                count, size = self.backlog()
+                if count >= self.max_rows or size + len(encoded.encode()) > self.max_bytes:
+                    raise OSError("source spool capacity exhausted; existing evidence retained")
+                self.conn.execute(
+                    "INSERT INTO source_queue(kind,identity,payload) VALUES(?,?,?)", (kind, identity, encoded)
+                )
 
     def backlog(self) -> tuple[int, int]:
         return self.conn.execute(

@@ -77,6 +77,7 @@ from mqtt_fanout import (
     subscribe_mode_enabled,
     subscribe_topic_filter,
 )
+from observation_spool import ObservationSpool
 from occupancy import refresh_latest_occupancy_state, sync_occupancy_state
 from pydantic import ValidationError
 from source_spool import SourceSpool
@@ -393,6 +394,8 @@ class State:
         self.system: dict[str, str] = {}
         self.setpoints: dict[str, float] = {}
         self.diagnostics: dict[str, Any] = {}
+        self.diagnostic_observations: dict[str, tuple[datetime, int]] = {}
+        self.diagnostic_accepted_observations: dict[str, tuple[datetime, int]] = {}
         self.daily: dict[str, float] = {}
 
         # Raw device-counter evidence. Epoch ids rotate on local-day rollover,
@@ -468,6 +471,106 @@ class State:
 state = State()
 
 # Enabled only with the reviewed durable mount. No import-time filesystem I/O.
+_observation_spool: ObservationSpool | None = None
+_observation_warning_at = 0.0
+_observation_accept_failures = 0
+
+
+def _observation_spool_enabled() -> bool:
+    return os.environ.get("VERDIFY_OBSERVATION_SPOOL_ENABLED") == "1"
+
+
+def _get_observation_spool() -> ObservationSpool:
+    global _observation_spool
+    if _observation_spool is None:
+        _observation_spool = ObservationSpool(
+            STATE_DIR / "spool" / "observational-events-v1.sqlite",
+            max_rows=int(os.environ.get("OBSERVATION_SPOOL_MAX_ROWS", "30000")),
+            max_bytes=int(os.environ.get("OBSERVATION_SPOOL_MAX_BYTES", "134217728")),
+        )
+    return _observation_spool
+
+
+async def _drain_observations(pool: asyncpg.Pool) -> None:
+    """Historical INSERT-only replay; retain existing best-effort bus/log sinks."""
+    logs = []
+
+    def inserted(kind: str, observed_at: datetime, payload: dict[str, Any]) -> None:
+        if kind in {"system_state", "diagnostics"}:
+            _fanout_publish(kind, {"ts": observed_at, **payload})
+        elif kind == "esp32_log":
+            logs.append(
+                [
+                    str(int(observed_at.timestamp() * 1e9)),
+                    f"[{payload['level']}] [{payload.get('tag') or 'esp32'}] {payload['message']}",
+                ]
+            )
+
+    try:
+        await _get_observation_spool().drain(pool, on_insert=inserted)
+    finally:
+        # Best effort, unchanged delivery guarantee. Unknown commits do not
+        # duplicate a sink emission; no historical replay becomes device state.
+        if logs and LOKI_URL:
+            try:
+                payload = json.dumps(
+                    {"streams": [{"stream": {"job": "esp32", "host": "greenhouse"}, "values": logs}]}
+                ).encode()
+                req = urllib.request.Request(LOKI_URL, data=payload, headers={"Content-Type": "application/json"})
+                with urllib.request.urlopen(req, timeout=2):
+                    pass
+            except Exception:
+                pass
+
+
+def _accept_observations(events: list[tuple[str, dict[str, Any]]], observed_at: datetime) -> bool:
+    """Commit validated immutable observations before callback cache acceptance."""
+    global _observation_warning_at, _observation_accept_failures
+    models = {
+        "system_state": SystemStateRow,
+        "override": OverrideEvent,
+        "setpoint_observed": SetpointChange,
+        "esp32_log": ESP32LogRow,
+        "diagnostics": Diagnostics,
+    }
+    try:
+        accepted = []
+        for kind, payload in events:
+            if kind == "setpoint_observed" and payload["parameter"] in BAND_DRIVEN_PARAMS:
+                continue
+            values = {"ts": observed_at, "greenhouse_id": GREENHOUSE_ID, **payload}
+            if kind == "setpoint_observed":
+                values["source"] = "esp32"
+            models[kind].model_validate(values)
+            accepted.append((kind, payload))
+        if not accepted:
+            return True
+        spool = _get_observation_spool()
+        spool.accept(
+            accepted, observed_at, COUNTER_SOURCE_RUNTIME_INSTANCE_ID, shared.transport_generation, GREENHOUSE_ID
+        )
+    except Exception as exc:
+        _observation_accept_failures += 1
+        log.error(
+            "observational durable acceptance rejected; existing queue retained failures=%d reason=%s",
+            _observation_accept_failures,
+            type(exc).__name__,
+        )
+        return False
+    now = time.monotonic()
+    try:
+        depth, size = spool.queue.backlog()
+        if now - _observation_warning_at >= 60 and (
+            depth >= spool.queue.max_rows * 0.8 or size >= spool.queue.max_bytes * 0.8
+        ):
+            log.warning("observational spool backlog high rows=%d bytes=%d", depth, size)
+            _observation_warning_at = now
+    except Exception as exc:
+        # Acceptance already committed. Never make its caller accept it again.
+        log.error("observational backlog observation failed after acceptance: %s", type(exc).__name__)
+    return True
+
+
 _source_spool: SourceSpool | None = None
 _source_spool_warning_at = 0.0
 
@@ -1455,6 +1558,9 @@ async def write_legacy_equipment_events(pool: asyncpg.Pool) -> None:
 
 async def write_state_transitions(pool: asyncpg.Pool, ts: datetime) -> set[str]:
     """Flush pending state machine transitions."""
+    if _observation_spool_enabled():
+        await _drain_observations(pool)
+        return set()
     if not state.pending_states:
         return set()
     transitions = state.pending_states.copy()
@@ -2537,6 +2643,9 @@ async def write_override_events(pool: asyncpg.Pool, ts: datetime) -> None:
     cannot see any other way. "End" events are not written — the
     active_overrides system_state transitions carry that info.
     """
+    if _observation_spool_enabled():
+        await _drain_observations(pool)
+        return None
     if not state.pending_override_events:
         return
     events = state.pending_override_events.copy()
@@ -2568,6 +2677,9 @@ async def write_setpoint_changes(pool: asyncpg.Pool, ts: datetime) -> None:
     with source='plan' | 'band'). Tagged source='esp32' to preserve provenance
     per SetpointSource literal in verdify_schemas/setpoint.py.
     """
+    if _observation_spool_enabled():
+        await _drain_observations(pool)
+        return None
     if not state.pending_setpoints:
         return
     changes = state.pending_setpoints.copy()
@@ -2600,12 +2712,34 @@ async def write_setpoint_changes(pool: asyncpg.Pool, ts: datetime) -> None:
 async def write_diagnostics(pool: asyncpg.Pool, ts: datetime) -> None:
     """Write a diagnostics row."""
     d = state.diagnostics
+    if _observation_spool_enabled():
+        generation = shared.transport_generation
+        if generation < 1 or shared.esp32.get("state_subscription_generation") != generation:
+            return
+        # Retained caches are not current-generation native observations.
+        fresh = {
+            col: (moment, gen)
+            for col, (moment, gen) in state.diagnostic_observations.items()
+            if gen == generation and 0 <= (ts - moment).total_seconds() <= DIAG_FLUSH_INTERVAL
+        }
+        d = {col: value for col, value in d.items() if col in fresh}
+        if not d or fresh == state.diagnostic_accepted_observations:
+            return
+        ts = max(fresh[col][0] for col in d)
     if not d:
         return
     try:
         diag = Diagnostics.model_validate({"ts": ts, "greenhouse_id": GREENHOUSE_ID, **d})
     except ValidationError as e:
         log.error(f"diagnostics row failed schema validation: {e}")
+        return
+    if _observation_spool_enabled():
+        payload = diag.model_dump(mode="json", exclude={"ts", "greenhouse_id"})
+        if not _accept_observations([("diagnostics", payload)], ts):
+            raise OSError("diagnostics snapshot durable acceptance rejected")
+        state.diagnostic_accepted_observations = fresh
+        # Acceptance advances the snapshot cadence even while DB is down.
+        # The common FIFO drain retries it; never regenerate its UUID/time.
         return
     async with pool.acquire() as conn:
         await conn.execute(
@@ -2820,6 +2954,9 @@ async def write_daily_summary(pool: asyncpg.Pool) -> None:
 
 async def write_esp32_logs(pool: asyncpg.Pool) -> None:
     """Flush pending ESP32 log messages to esp32_logs table + Loki."""
+    if _observation_spool_enabled():
+        await _drain_observations(pool)
+        return None
     if not state.pending_logs:
         return
     logs = state.pending_logs.copy()
@@ -2905,7 +3042,10 @@ def on_log_message(msg) -> None:
         tag = tag.decode("utf-8", errors="replace")
     message = re.sub(r"\x1b\[[0-9;]*m", "", raw)  # Strip ANSI colors
     if msg.level <= ESP32_LOG_LEVEL:
-        state.pending_logs.append((level, tag, message))
+        if _observation_spool_enabled():
+            _accept_observations([("esp32_log", {"level": level, "tag": tag, "message": message})], datetime.now(UTC))
+        else:
+            state.pending_logs.append((level, tag, message))
 
 
 # ──────────────────────────────────────────────────────────────
@@ -3043,12 +3183,25 @@ def _record_diagnostic(
     obj_id: str,
     value: Any,
     observed_at: datetime | None = None,
+    native_generation: int | None = None,
 ) -> bool:
     col = DIAGNOSTIC_MAP.get(obj_id)
     if not col:
         return False
     observed_at = _equipment_source_now() if observed_at is None else observed_at
     generation = shared.transport_generation
+    state.diagnostic_observations.pop(col, None)
+
+    def note_native_observation():
+        if (
+            native_generation == generation
+            and generation >= 1
+            and shared.esp32.get("state_subscription_generation") == generation
+            and observed_at.tzinfo is not None
+            and observed_at.utcoffset() is not None
+        ):
+            state.diagnostic_observations[col] = (observed_at, generation)
+
     _begin_counter_source_generation(generation, observed_at)
     if col == "uptime_s":
         record_component_device_uptime(value)
@@ -3062,12 +3215,14 @@ def _record_diagnostic(
             state.counter_source_uptime_observed_at = observed_at
             _rotate_counter_epoch_if_needed(parsed_uptime, observed_at, generation)
             _complete_counter_generation_if_ready()
+            note_native_observation()
             return True
         if generation >= 1:
             _mark_equipment_source_gap("invalid_device_uptime")
             _invalidate_counter_epoch(observed_at)
         state.counter_source_uptime_generation = 0
         state.counter_source_uptime_observed_at = None
+        return True
     if col == "firmware_version":
         previous_firmware = state.diagnostics.get(col)
         previous_is_current = state.counter_source_firmware_generation == generation
@@ -3155,6 +3310,7 @@ def _record_diagnostic(
         state.counter_source_firmware_observed_at = observed_at
         _complete_counter_generation_if_ready()
         record_component_grid_firmware_revision(value, observed_at=observed_at)
+    note_native_observation()
     return True
 
 
@@ -3365,7 +3521,7 @@ def on_state_change(entity_state, *, native_generation: int | None = None) -> No
                 state.fixed_panel_native.observe(obj_id, val, source_observed_at, native_generation, firmware_revision)
             return
 
-        if _record_diagnostic(obj_id, val, source_observed_at):
+        if _record_diagnostic(obj_id, val, source_observed_at, native_generation if source_clock_valid else None):
             return
 
         col = DAILY_ACCUM_MAP.get(obj_id)
@@ -3380,9 +3536,15 @@ def on_state_change(entity_state, *, native_generation: int | None = None) -> No
                 return
             _mirror_irrigation_number_readback(param, val)
             old = state.setpoints.get(param)
-            state.setpoints[param] = val
             if old != val:
-                state.pending_setpoints.append((param, val))
+                if _observation_spool_enabled():
+                    if not _accept_observations(
+                        [("setpoint_observed", {"parameter": param, "value": val})], source_observed_at
+                    ):
+                        return
+                else:
+                    state.pending_setpoints.append((param, val))
+            state.setpoints[param] = val
             return
 
         # F10: numeric state-machine template sensors (mister_state,
@@ -3394,9 +3556,16 @@ def on_state_change(entity_state, *, native_generation: int | None = None) -> No
         if entity:
             decoded = _decode_numeric_state(entity, val)
             old = state.system.get(entity)
+            if old != decoded:
+                if _observation_spool_enabled():
+                    if not _accept_observations(
+                        [("system_state", {"entity": entity, "value": decoded})], source_observed_at
+                    ):
+                        return
+                else:
+                    state.pending_states.append((entity, decoded))
             state.system[entity] = decoded
             if old != decoded:
-                state.pending_states.append((entity, decoded))
                 log.info(f"state: {entity} → {decoded}")
             return
 
@@ -3445,16 +3614,27 @@ def on_state_change(entity_state, *, native_generation: int | None = None) -> No
             shared.policy_readback[POLICY_IDENTITY_SENSOR] = val
             return
 
-        if _record_diagnostic(obj_id, val):
+        if _record_diagnostic(obj_id, val, source_observed_at, native_generation if source_clock_valid else None):
             return
 
         entity = STATE_MAP.get(obj_id)
         if entity:
             old = state.system.get(entity)
-            state.system[entity] = val
             force_refresh = entity in {"gl_main_state", "gl_main_reason", "gl_grow_state", "gl_grow_reason"}
             if old != val or force_refresh:
-                state.pending_states.append((entity, val))
+                if _observation_spool_enabled():
+                    events = [("system_state", {"entity": entity, "value": val})]
+                    if entity == "overrides_active":
+                        current = _parse_override_set(val)
+                        events.extend(
+                            ("override", {"override_type": kind, "mode": state.system.get("greenhouse_state")})
+                            for kind in sorted(current - state.last_override_set)
+                        )
+                    if not _accept_observations(events, source_observed_at):
+                        return
+                else:
+                    state.pending_states.append((entity, val))
+                state.system[entity] = val
                 if old != val:
                     log.info(f"state: {entity} → {val}")
                 # OBS-1e (Sprint 16): active_overrides is a comma-separated
@@ -3465,8 +3645,9 @@ def on_state_change(entity_state, *, native_generation: int | None = None) -> No
                     started = current - state.last_override_set
                     if started:
                         mode_str = state.system.get("greenhouse_state")
-                        for otype in sorted(started):
-                            state.pending_override_events.append((otype, mode_str))
+                        if not _observation_spool_enabled():
+                            for otype in sorted(started):
+                                state.pending_override_events.append((otype, mode_str))
                     state.last_override_set = current
             return
 
@@ -3481,15 +3662,22 @@ def on_state_change(entity_state, *, native_generation: int | None = None) -> No
                 return
             _mirror_irrigation_number_readback(param, val)
             old = state.setpoints.get(param)
-            state.setpoints[param] = val
             if old != val:
                 # Suppress same-value echoes from delayed ESPHome number-state publishes.
                 import time as _time
 
                 pushed_at = shared.recently_pushed.get(param, 0)
                 if _time.time() - pushed_at < _PUSH_ECHO_SUPPRESS_S and _same_pushed_value(param, val):
+                    state.setpoints[param] = val
                     return
-                state.pending_setpoints.append((param, val))
+                if _observation_spool_enabled():
+                    if not _accept_observations(
+                        [("setpoint_observed", {"parameter": param, "value": val})], source_observed_at
+                    ):
+                        return
+                else:
+                    state.pending_setpoints.append((param, val))
+            state.setpoints[param] = val
             return
 
 
@@ -3516,6 +3704,12 @@ async def flush_loop(
         await asyncio.sleep(5)
         now = asyncio.get_event_loop().time()
         ts = datetime.now(UTC)
+
+        if _observation_spool_enabled():
+            try:
+                await _drain_observations(pool)
+            except Exception as exc:
+                log.error("observational spool drain paused: %s", type(exc).__name__)
 
         if state.fixed_panel_native.ledger_enabled:
             try:
@@ -4976,6 +5170,13 @@ async def main() -> None:
         )
         return
 
+    if _observation_spool_enabled():
+        _get_observation_spool()
+        async with pool.acquire() as conn:
+            if not await conn.fetchval(
+                "SELECT to_regprocedure('public.fn_record_observational_source_event(uuid,text,timestamptz,text,uuid,bigint,jsonb)') IS NOT NULL"
+            ):
+                raise RuntimeError("observational spool requires migration 267 before device startup")
     if _climate_event_spool_enabled():
         _get_climate_event_spool()
         async with pool.acquire() as conn:

@@ -246,3 +246,64 @@ Rolling back the mount to emptyDir loses the durability boundary. Never prune th
 PVC, drop265/ledger, clear queues, or treat replay as new device observation. Prefer
 a compatible fix forward; restoring baseline physical service may retain the PVC
 and park incompatible queues, but does not complete #382.
+
+## Observational acceptance extension (#382, forward267)
+
+The next source slice adds `observational-events-v1.sqlite` on the same retained
+state PVC. With `VERDIFY_OBSERVATION_SPOOL_ENABLED=1`, validated system-state
+transitions, firmware override starts, non-band ESP32-observed setpoint changes,
+and ESP32 log callbacks are committed before their corresponding accepted cache
+change. A state transition and its derived override starts commit together.
+Diagnostics has a separate periodic acceptance boundary: the validated snapshot
+is frozen at its original snapshot time before any database await. Raw diagnostic
+callbacks remain a latest-value cache, not a claim to preserve every callback.
+
+Every accepted observation carries its original UUID, observation/snapshot time,
+process runtime identity and transport generation. FIFO replay calls only the
+private insert-only `fn_record_observational_source_event` API. PostgreSQL commits
+before local acknowledgement; an unknown commit retries that same UUID and
+immutable payload. Distinct UUIDs at the same timestamp remain distinct. Integer
+JSON input is normalized only for typed insertion, rejecting fractions, boolean
+or string numeric input and out-of-range values. Immutable evidence is unchanged.
+
+A historical ESP32-observed setpoint row retains `confirmed_at=source_ts` and
+`delivery_status='observed'`; replay never runs the cfg-readback confirmation
+UPDATE, changes current caches, sends a setpoint, or supplies current connection
+freshness. C1 and equipment native callback identities are distinct source
+contracts. A diagnostics snapshot is an observation of the cache at acceptance,
+not a new native device callback. Existing bus/Loki emissions remain best effort;
+unknown-commit replay does not duplicate them or promise subscriber delivery.
+
+Defaults are 30,000 rows and 128MiB encoded payload for this queue, configurable
+with `OBSERVATION_SPOOL_MAX_ROWS` and `OBSERVATION_SPOOL_MAX_BYTES`. Related-event
+acceptance is atomic even if the final row exceeds capacity. New acceptance is
+rejected on capacity or fsync failure, existing accepted rows are preserved, and
+the callback cache does not advance. Payload limits exclude SQLite high-water
+pages, journals and other state files. Warnings at 80% are limited to once per
+minute; acceptance failures are explicitly logged. These logs do not prove
+production backlog alert routing, which belongs in the monitoring lane.
+
+Activation requires qualified migration267 through the normal serialized C0
+runner and full five-image release. Startup refuses the enabled gate if its
+insert-only API is absent. The initial transition cannot recover historical
+memory-only work; retain and report that boundary rather than assigning new
+identities retrospectively. The serialized267 source pins the successor pair
+established by two independent restored clones. Production delivery must still
+execute the actual C0 runner and verify the running source and retained queue
+behavior. Never edit applied265 or266.
+
+Rollback preserves this SQLite database, journals and the immutable PostgreSQL
+UUID ledger. An older image cannot drain this format; park incompatible accepted
+work without deleting it or inventing a replay identity. Focused local crash,
+DB failure/cancellation, unknown-commit, full-disk and no-fresh-confirmation tests
+are source checks. A retained-PVC Recreate and production climate replay receipt
+do not substitute for measured physical node-loss, database-outage, full-disk and
+recovery-time drills across every enabled queue.
+
+Diagnostic durable snapshots include only fields received by the current native
+ESPHome subscription within the diagnostics cadence (60 seconds). The source
+retains each field's callback timestamp and transport generation, excludes
+unfenced, old-generation, and stale cached fields, and uses the latest included
+callback time as the snapshot timestamp. An unchanged native observation set is
+not accepted again. Reconnects and flush retries cannot relabel old fields as
+current observations. Snapshot retry preserves its accepted UUID/time/generation.
