@@ -17,6 +17,9 @@ spec:
       secretAccessKey:
         name: verdify-cnpg-rehearsal-s3-writer
         key: AWS_SECRET_ACCESS_KEY
+      region:
+        name: verdify-cnpg-rehearsal-s3-region
+        key: AWS_DEFAULT_REGION
     wal:
       compression: gzip
     data:
