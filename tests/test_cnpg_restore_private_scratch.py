@@ -114,7 +114,7 @@ def shell(tmp_path):
     trace = tmp_path / "calls"
     commands = {
         "id": "echo 26",
-        "stat": "echo 26:700",
+        "stat": 'echo "${CUSTODY_UID_MODE:-26:700}"',
         "pg_dumpall": 'cat "$MANAGEMENT_FIXTURE"',
         "psql": """printf '%s\\n' "$*" >> "$TRACE"
 case "$*" in *' -f '*) exit 77;; esac
@@ -226,3 +226,23 @@ def test_random_restrict_tokens_do_not_change_management_semantics():
     assert roles.canonical(first) == roles.canonical(second)
     assert roles.prepare(SOURCE, first) == SOURCE
     assert roles.verify(SOURCE, SOURCE + second)["metrics_management_profile_verified"]
+
+
+def test_cnpg_private_sgid_custody_reaches_role_boundary(shell):
+    script, env, stage, trace = shell
+    stage.chmod(0o2700)
+    assert stage.stat().st_mode & 0o7777 == 0o2700
+    env["CUSTODY_UID_MODE"] = "26:2700"
+    result = subprocess.run(["bash", str(script)], env=env, capture_output=True, text=True)
+    assert result.returncode != 0 and "role replay failed" in result.stderr
+    assert (stage / "work/roles.before.sql").read_text() == MANAGEMENT
+    assert str(stage / "work/roles.replay.sql") in trace.read_text()
+
+
+@pytest.mark.parametrize("mode", ["999:2700", "26:2750", "26:2707", "26:1700", "26:4700"])
+def test_cnpg_custody_still_refuses_wrong_uid_or_broader_access(shell, mode):
+    script, env, stage, trace = shell
+    env["CUSTODY_UID_MODE"] = mode
+    result = subprocess.run(["bash", str(script)], env=env, capture_output=True, text=True)
+    assert result.returncode != 0 and "exact private writable CNPG custody required" in result.stderr
+    assert not trace.exists() and not (stage / "work").exists()
