@@ -149,3 +149,18 @@ These are still intentional constants or future tuning candidates:
 
 The next hardening step is a generated registry-derived ESPHome map so
 `SETPOINT_MAP`, `CFG_READBACK_MAP`, and MCP allowlists stop being hand-maintained.
+
+### Lighting cutoff and manual disable precedence (#386)
+
+A solar or fixed-hour cutoff removes automatic lighting demand, but an already
+on circuit completes its configured minimum-on interval. At the exact elapsed
+minimum the decision is OFF with `outside_window`; low lux or occupancy cannot
+restart it outside the window. An external relay OFF is current state and is
+never replaced with a cached automatic ON at the cutoff.
+
+Setting the existing per-circuit `auto_enabled` flag false requests OFF with
+`auto_disabled` immediately, including during minimum-on dwell. That explicit
+disable takes precedence over ordinary cycling protection. Invalid controller
+time still forces both relays OFF in the existing wrapper before evaluation.
+These source rules do not establish actual per-circuit transitions, DLI or
+lighting efficiency; those require separate native runtime evidence.

@@ -4320,6 +4320,73 @@ TEST(lighting_state_machine_enforces_min_on_dwell) {
     PASS();
 }
 
+// #386: a solar cutoff removes demand, but cannot truncate an accepted
+// minimum-on interval. Tick times are elapsed milliseconds, not wall time.
+TEST(lighting_solar_cutoff_holds_only_until_exact_min_on_boundary) {
+    auto sp = lighting_setpoints();
+    sp.solar_phasing = true;
+    auto s = initial_lighting_state();
+    auto in = lighting_inputs(1000.0f, 17, true);
+    in.local_minute = 59;
+    in.sunrise_min = 360;
+    in.sunset_min = 1080;
+    auto on = evaluate_lighting(in, sp, s, false, 120000);
+    ASSERT_TRUE(on.want_on);
+    ASSERT_TRUE(on.in_window);
+    ASSERT_EQ(s.last_transition_tick_ms, 120000u);
+
+    in.local_hour = 18;
+    in.local_minute = 0;
+    auto held = evaluate_lighting(in, sp, s, true, 239999);
+    ASSERT_FALSE(held.in_window);
+    ASSERT_FALSE(held.plant_supplement_demand);
+    ASSERT_FALSE(held.occupancy_task_light_demand);
+    ASSERT_TRUE(held.want_on);
+    ASSERT_TRUE(std::string(held.reason) == "min_on_hold");
+    ASSERT_EQ(s.last_transition_tick_ms, 120000u);
+
+    auto off = evaluate_lighting(in, sp, s, true, 240000);
+    ASSERT_FALSE(off.want_on);
+    ASSERT_TRUE(std::string(off.reason) == "outside_window");
+    ASSERT_EQ(s.last_transition_tick_ms, 240000u);
+    auto still_off = evaluate_lighting(in, sp, s, false, 240001);
+    ASSERT_FALSE(still_off.want_on);
+    ASSERT_TRUE(std::string(still_off.reason) == "outside_window");
+    ASSERT_EQ(s.last_transition_tick_ms, 240000u);
+    PASS();
+}
+
+TEST(lighting_solar_cutoff_does_not_reverse_external_manual_off) {
+    auto sp = lighting_setpoints();
+    sp.solar_phasing = true;
+    auto s = initial_lighting_state();
+    auto in = lighting_inputs(1000.0f, 17, true);
+    in.local_minute = 59;
+    in.sunrise_min = 360;
+    in.sunset_min = 1080;
+    evaluate_lighting(in, sp, s, false, 120000);
+    in.local_hour = 18;
+    in.local_minute = 0;
+    // The actual relay is already OFF; a prior automatic demand is not truth.
+    auto off = evaluate_lighting(in, sp, s, false, 180000);
+    ASSERT_FALSE(off.want_on);
+    ASSERT_FALSE(s.on);
+    ASSERT_TRUE(std::string(off.reason) == "outside_window");
+    ASSERT_EQ(s.last_transition_tick_ms, 180000u);
+    PASS();
+}
+
+TEST(lighting_manual_auto_disable_preempts_active_min_on_hold) {
+    auto sp = lighting_setpoints();
+    auto s = initial_lighting_state();
+    evaluate_lighting(lighting_inputs(1000.0f), sp, s, false, 120000);
+    sp.auto_enabled = false;
+    auto off = evaluate_lighting(lighting_inputs(1000.0f), sp, s, true, 180000);
+    ASSERT_FALSE(off.want_on);
+    ASSERT_TRUE(std::string(off.reason) == "auto_disabled");
+    PASS();
+}
+
 TEST(lighting_state_machine_respects_per_light_window_and_minutes_goal) {
     auto sp = lighting_setpoints();
     auto s = initial_lighting_state();
