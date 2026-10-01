@@ -451,6 +451,23 @@ def raw_facts_guard_sql(reviewed, *, physical_target=None):
     return result
 
 
+def transaction_witness_inputs_sql(before, reviewed_post):
+    """Keep complete immutable inputs outside the PL/pgSQL compiler body.
+
+    The real v3 witness is about 35 MB. Embedding it as a constant inside DO
+    makes PL/pgSQL retain/copy that source while compiling each nested query.
+    Transaction-local GUCs carry the same complete bytes in this one UID-bound
+    psql session; the atomic block still compares every JSONB field exactly.
+    No persistent table, input file, digest-only comparison or catalog filter
+    substitutes for the original full witness.
+    """
+    return "\n".join(
+        f"SELECT set_config('verdify.cnpg_transition_expected_{name}',"
+        f"{literal(json.dumps(value, separators=(',', ':')))},true) IS NOT NULL;"
+        for name, value in [("before", before), ("post", reviewed_post)]
+    )
+
+
 def emit_sql(target, *, reviewed_post=None, qualification_sha256=None, physical_target=None, logical_receipts=None):
     cluster, receipt_table = profile(physical_target)
     c0.require((physical_target is None) == (logical_receipts is None), "physical history custody required")
@@ -462,7 +479,6 @@ def emit_sql(target, *, reviewed_post=None, qualification_sha256=None, physical_
     payload, bodies = (
         ddl(bootstrap_profile, physical_target=physical_target) if physical_target else ddl(bootstrap_profile)
     )
-    before = json.dumps(target, separators=(",", ":"))
     witness = witness_select(target, physical_target=physical_target) if physical_target else witness_select(target)
     select = witness[witness.index("SELECT jsonb_build_object(") :].rstrip().removesuffix(";")
     guards = witness[: witness.index("SELECT jsonb_build_object(")]
@@ -492,13 +508,15 @@ END $identity$;
 LOCK TABLE public.schema_migrations,public.runtime_ordinary_login_attestation_receipts,public.mcp_runtime_boundary_receipt IN SHARE MODE;
 {history_lock}
 {guards}
+{transaction_witness_inputs_sql(target, reviewed_post)}
 DO $native_transition$
 DECLARE v_original jsonb; v_before jsonb; v_post jsonb;
- v_reviewed jsonb := {literal(json.dumps(reviewed_post, separators=(",", ":")))}::jsonb;
+ v_expected_before jsonb := current_setting('verdify.cnpg_transition_expected_before')::jsonb;
+ v_reviewed jsonb := current_setting('verdify.cnpg_transition_expected_post')::jsonb;
 BEGIN
  SELECT {original_facts_sql()} INTO v_original;
  {select} INTO v_before;
- IF v_before IS DISTINCT FROM {literal(before)}::jsonb THEN
+ IF v_before IS DISTINCT FROM v_expected_before THEN
    RAISE EXCEPTION 'CNPG native transition refuses stale exact target witness';
  END IF;
  {history_guard}
@@ -530,8 +548,8 @@ BEGIN
 """
     sql += raw_facts_guard_sql(reviewed_post is not None, physical_target=physical_target)
     if reviewed_post is not None:
-        sql += f"""
- IF (v_post - 'portability_native_facts') IS DISTINCT FROM ({literal(json.dumps(reviewed_post, separators=(",", ":")))}::jsonb - 'portability_native_facts') THEN
+        sql += """
+ IF (v_post - 'portability_native_facts') IS DISTINCT FROM (v_reviewed - 'portability_native_facts') THEN
    RAISE EXCEPTION 'CNPG native transition refuses unqualified post-DDL catalog';
  END IF;
 """
