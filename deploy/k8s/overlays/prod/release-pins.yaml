@@ -21,7 +21,7 @@ metadata:
   name: release-pin-verdify-api
 imageTag:
   name: registry.vallery.net/verdifyconsultancy/verdify-api
-  digest: sha256:a0dee521aa5292f6e3bb19f9ca44f59b93b8f0fde685027ac7a8216306e70701
+  digest: sha256:d9c5b6e7c0b6e088ad71ba5de3ad755819515153e339c47c4e99a75f354761bf
 ---
 apiVersion: builtin
 kind: ImageTagTransformer
@@ -29,7 +29,7 @@ metadata:
   name: release-pin-verdify-mcp
 imageTag:
   name: registry.vallery.net/verdifyconsultancy/verdify-mcp
-  digest: sha256:0b2ebbf4880f786ed31cf12188c02e96fe67d335e80dc00717cbfdac14a16d81
+  digest: sha256:12a7ea377f9e019a10c581a30f5d120f93b7a06756b03921613d3a5362187d08
 ---
 apiVersion: builtin
 kind: ImageTagTransformer
@@ -37,7 +37,7 @@ metadata:
   name: release-pin-verdify-ingestor
 imageTag:
   name: registry.vallery.net/verdifyconsultancy/verdify-ingestor
-  digest: sha256:8bdc5333ac1ac1438e3ed9622ea54ee1a856133d038fa5569668a80f633bf85c
+  digest: sha256:8b2b40b452c6eafc8ff2af56e2fa189ac53a9bff2c3dc6c3d07d2f2f8fa25251
 ---
 apiVersion: builtin
 kind: ImageTagTransformer
@@ -45,7 +45,7 @@ metadata:
   name: release-pin-verdify-migrate
 imageTag:
   name: registry.vallery.net/verdifyconsultancy/verdify-migrate
-  digest: sha256:cf6ec320a35df7457b68617e888c28b7d3e42dcef9cc704c4c8bcb47de599a2d
+  digest: sha256:2e29f557bf47db857dadcae5fa927533c47455b7fa6efcbc0f5d4e1991a81b1d
 ---
 apiVersion: builtin
 kind: ImageTagTransformer
@@ -53,4 +53,4 @@ metadata:
   name: release-pin-verdify-experiment-v2-orchestrator
 imageTag:
   name: registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator
-  digest: sha256:d1b8bd0abe06e1bcb00e8cd13b759be490b1b1d942f31d7d6dae40126919edd7
+  digest: sha256:7f04536c23e235de860d42fec5933cf1685d41a482e77f4bd3e54c0ac1bd9966
