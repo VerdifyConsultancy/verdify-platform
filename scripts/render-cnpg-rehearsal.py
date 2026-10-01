@@ -12,6 +12,7 @@ NS = "verdify-db-rehearsal"
 CLUSTER = "verdify-cnpg-rehearsal"
 STORE = "verdify-cnpg-rehearsal-backup"
 SECRET = "verdify-cnpg-rehearsal-s3-writer"
+REGION_SECRET = "verdify-cnpg-rehearsal-s3-region"
 
 
 def render(image: str) -> list[dict]:
@@ -89,6 +90,7 @@ def render(image: str) -> list[dict]:
                     "s3Credentials": {
                         "accessKeyId": {"name": SECRET, "key": "AWS_ACCESS_KEY_ID"},
                         "secretAccessKey": {"name": SECRET, "key": "AWS_SECRET_ACCESS_KEY"},
+                        "region": {"name": REGION_SECRET, "key": "AWS_DEFAULT_REGION"},
                     },
                     "wal": {"compression": "gzip"},
                     "data": {"compression": "gzip"},
