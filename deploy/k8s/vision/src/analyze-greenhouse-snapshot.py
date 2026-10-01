@@ -235,21 +235,23 @@ async def main():
         if args.image:
             path = Path(args.image)
             if path.exists():
-                await analyze_image(path, conn, args.dry_run)
+                result = await analyze_image(path, conn, args.dry_run)
+                return 0 if args.dry_run or result is not None else 1
             else:
                 log.error("File not found: %s", args.image)
+                return 1
         else:
             # Analyze today's latest snapshots
             date_str = args.date or datetime.now(DENVER).strftime("%Y-%m-%d")
             date_dir = VAULT_DIR / date_str
             if not date_dir.exists():
                 log.warning("No snapshots for %s", date_str)
-                return
+                return 1
 
             images = sorted(date_dir.glob("*.jpg"))
             if not images:
                 log.warning("No .jpg files in %s", date_dir)
-                return
+                return 1
 
             # Analyze the latest snapshot per camera
             latest_per_camera = {}
@@ -258,12 +260,15 @@ async def main():
                 latest_per_camera[cam] = img
 
             log.info("Analyzing %d snapshots from %s", len(latest_per_camera), date_str)
+            complete = 0
             for _cam, img in sorted(latest_per_camera.items()):
-                await analyze_image(img, conn, args.dry_run)
+                result = await analyze_image(img, conn, args.dry_run)
+                complete += int(args.dry_run or result is not None)
+            return 0 if complete == len(latest_per_camera) else 1
 
     finally:
         await conn.close()
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    sys.exit(asyncio.run(main()))
