@@ -320,3 +320,31 @@ def test_diagnostic_provenance_requires_native_subscription_and_valid_callback(m
     assert "wifi_rssi" not in ingestor.state.diagnostic_observations
     assert ingestor._record_diagnostic("test_rssi", -40, TS, 7)
     assert ingestor.state.diagnostic_observations["wifi_rssi"] == (TS, 7)
+
+
+def test_old_log_callback_cannot_be_relabelled_after_reconnect(monkeypatch):
+    old_client, new_client = object(), object()
+    monkeypatch.setattr(ingestor, "ESP32_LOG_LEVEL", 5)
+    monkeypatch.setattr(ingestor.shared, "transport_generation", 7)
+    for key in ("client", "state_subscription_client"):
+        monkeypatch.setitem(ingestor.shared.esp32, key, old_client)
+    monkeypatch.setitem(ingestor.shared.esp32, "state_subscription_generation", 7)
+    old_callback = ingestor._generation_log_callback(old_client, 7)
+    msg = SimpleNamespace(level=2, tag=b"native", message=b"original")
+    old_callback(msg)
+    first = ingestor._get_observation_spool().queue.rows()
+    assert len(first) == 1 and first[0][2]["connection_generation"] == 7
+    monkeypatch.setattr(ingestor.shared, "transport_generation", 8)
+    old_callback(msg)  # Generation mismatch before replacement client installs.
+    for key in ("client", "state_subscription_client"):
+        monkeypatch.setitem(ingestor.shared.esp32, key, new_client)
+    monkeypatch.setitem(ingestor.shared.esp32, "state_subscription_generation", 8)
+    old_callback(msg)  # Late prior-client callback after reconnect.
+    assert ingestor._get_observation_spool().queue.rows() == first
+    current_callback = ingestor._generation_log_callback(new_client, 8)
+    current_callback(msg)
+    rows = ingestor._get_observation_spool().queue.rows()
+    assert len(rows) == 2 and rows[1][2]["connection_generation"] == 8
+    monkeypatch.setitem(ingestor.shared.esp32, "state_subscription_client", old_client)
+    current_callback(msg)  # Same generation, wrong subscribed client.
+    assert ingestor._get_observation_spool().queue.rows() == rows

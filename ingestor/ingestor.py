@@ -3048,6 +3048,22 @@ def on_log_message(msg) -> None:
             state.pending_logs.append((level, tag, message))
 
 
+def _generation_log_callback(client, connection_generation: int):
+    """Bind logs to the same live native subscription as state callbacks."""
+
+    def on_generation_log(msg) -> None:
+        if (
+            shared.transport_generation != connection_generation
+            or shared.esp32.get("client") is not client
+            or shared.esp32.get("state_subscription_client") is not client
+            or shared.esp32.get("state_subscription_generation") != connection_generation
+        ):
+            return
+        on_log_message(msg)
+
+    return on_generation_log
+
+
 # ──────────────────────────────────────────────────────────────
 # Setpoint validation — reject boot-time defaults and implausible values
 # ──────────────────────────────────────────────────────────────
@@ -4120,7 +4136,9 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
             # Keep ESP32 log streaming opt-in. Heap pressure is covered by
             # binary sensors and diagnostics; a live API log stream costs heap.
             if ESP32_LOG_LEVEL != LogLevel.LOG_LEVEL_NONE:
-                client.subscribe_logs(on_log_message, log_level=ESP32_LOG_LEVEL)
+                client.subscribe_logs(
+                    _generation_log_callback(client, connection_generation), log_level=ESP32_LOG_LEVEL
+                )
                 log.info("Subscribed to ESP32 logs (%s+)", ESP32_LOG_LEVEL_NAME)
             else:
                 log.info("ESP32 log subscription disabled")
