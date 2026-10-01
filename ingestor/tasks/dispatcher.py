@@ -777,10 +777,11 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         missing = shared.missing_transport_cfg_readbacks(reconnect_generation)
         log.warning(
             "writer_reconcile reason=transport_reconnect generation=%d "
-            "action=blocked_readbacks_incomplete expected=%d missing=%d",
+            "action=blocked_readbacks_incomplete expected=%d missing=%d missing_params=%s",
             reconnect_generation,
             len(shared.transport_expected_cfg_readbacks),
             len(missing),
+            ",".join(sorted(missing)),
         )
         return
 
