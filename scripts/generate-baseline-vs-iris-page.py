@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import os
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -12,7 +13,16 @@ from html import escape
 from pathlib import Path
 
 DATA_OUT_PATH = Path("/mnt/iris/verdify-vault/website/data/baseline-vs-iris.md")
-DB = ["docker", "exec", "verdify-timescaledb", "psql", "-U", "verdify", "-d", "verdify"]
+DB = [
+    "docker",
+    "exec",
+    "verdify-timescaledb",
+    "psql",
+    "-U",
+    os.environ.get("PGUSER", os.environ.get("DB_USER", "verdify")),
+    "-d",
+    "verdify",
+]
 
 # Graded / controller-attributable compliance (band-compliance design §6-§7, migration
 # 146/147) is dual-written into daily_summary.compliance_v2_* alongside the untouched

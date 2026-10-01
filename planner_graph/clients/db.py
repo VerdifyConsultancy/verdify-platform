@@ -302,7 +302,9 @@ class VerdifyReadClient:
 
         if self.dsn is None:
             raise RuntimeError("VerdifyReadClient requires a DSN for database-backed mode")
-        return cast(Any, psycopg.connect(self.dsn, row_factory=dict_row))  # pyright: ignore[reportArgumentType]
+        from planner_graph.runtime_db_boundary import guard_connection
+
+        return guard_connection(cast(Any, psycopg.connect(self.dsn, row_factory=dict_row)))  # pyright: ignore[reportArgumentType]
 
     @staticmethod
     def _coerce_numeric(value: object) -> float | None:

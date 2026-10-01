@@ -6,7 +6,7 @@ datasources:
     uid: verdify-tsdb
     url: timescaledb:5432
     database: verdify
-    user: verdify
+    user: verdify_grafana_runtime_login
     secureJsonData:
       password: ${POSTGRES_PASSWORD}
     jsonData:

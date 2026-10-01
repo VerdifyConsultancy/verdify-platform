@@ -94,11 +94,13 @@ spec:
             - configMapRef:
                 name: verdify-config   # DB_HOST/DB_PORT/DB_NAME/DB_USER + HA_URL
           env:
+            - name: DB_USER
+              value: "verdify_setpoint_server_runtime_login"
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: verdify-app-secrets
-                  key: POSTGRES_PASSWORD
+                  name: verdify-setpoint-server-runtime-db
+                  key: password
             # NO composed VERDIFY_DB_DSN here: k8s $(VAR) expansion cannot see
             # envFrom variables, so the composed value arrived as a raw
             # "$(DB_USER):..." literal. The §A1 env-first get_db_url() (landed

@@ -86,10 +86,10 @@ spec:
                 - name: POSTGRES_PASSWORD
                   valueFrom:
                     secretKeyRef:
-                      name: verdify-app-secrets
-                      key: POSTGRES_PASSWORD
+                      name: verdify-vision-runtime-db
+                      key: password
                 - name: VERDIFY_DB_DSN
-                  value: postgresql://verdify:$(POSTGRES_PASSWORD)@verdify-db:5432/verdify
+                  value: postgresql://verdify_vision_runtime_login:$(POSTGRES_PASSWORD)@verdify-db:5432/verdify
               resources:
                 requests:
                   cpu: 100m

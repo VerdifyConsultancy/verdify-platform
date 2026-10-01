@@ -153,16 +153,18 @@ spec:
                 # the psql shim/libpq clients used by the publisher scripts.
                 - name: PGOPTIONS
                   value: "-c application_name=verdify-lab-publisher -c statement_timeout=45000 -c work_mem=4MB -c max_parallel_workers_per_gather=1"
+                - name: DB_USER
+                  value: "verdify_lab_publisher_runtime_login"
                 - name: POSTGRES_PASSWORD
                   valueFrom:
                     secretKeyRef:
-                      name: verdify-app-secrets
-                      key: POSTGRES_PASSWORD
+                      name: verdify-lab-publisher-runtime-db
+                      key: password
                 - name: DB_PASS
                   valueFrom:
                     secretKeyRef:
-                      name: verdify-app-secrets
-                      key: POSTGRES_PASSWORD
+                      name: verdify-lab-publisher-runtime-db
+                      key: password
               securityContext:
                 allowPrivilegeEscalation: false
                 capabilities:

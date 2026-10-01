@@ -1,0 +1,389 @@
+{
+  "source": "2f598da07bbc240945a313dd99f13bf95f7a25e4",
+  "observed_at": "2026-10-01T03:29:30.109175+00:00",
+  "migration_reserved": 268,
+  "complete_scope": [
+    "planner",
+    "setpoint_server",
+    "ha_backfill",
+    "vision",
+    "lab_publisher",
+    "grafana"
+  ],
+  "claim": "design inventory only; no grants/credentials/workloads changed",
+  "roles": {
+    "planner": {
+      "duty_role": "verdify_planner_runtime",
+      "login": "verdify_planner_runtime_login",
+      "dedicated_secret": "verdify-planner-runtime-db",
+      "secret_key": "password",
+      "credential_owner": "jvallery/agents canonical central KSOPS; new credential only, no rotation",
+      "source_paths": [
+        "planner_graph/worker.py",
+        "planner_graph/store.py",
+        "planner_graph/server.py",
+        "planner_graph/config.py",
+        "planner_graph/memory.py",
+        "planner_graph/graph.py",
+        "planner_graph/__init__.py",
+        "planner_graph/runtime.py",
+        "planner_graph/prompts.py",
+        "planner_graph/api.py",
+        "planner_graph/contracts.py",
+        "planner_graph/app.py",
+        "planner_graph/verdify_contract.py",
+        "planner_graph/state.py",
+        "planner_graph/clients/db.py",
+        "planner_graph/clients/__init__.py",
+        "planner_graph/clients/openai.py",
+        "planner_graph/clients/mcp.py",
+        "planner_graph/clients/slack.py"
+      ],
+      "direct_relation_candidates": [
+        "alert_log",
+        "climate",
+        "plan_delivery_log",
+        "plan_journal",
+        "planner_graph_runs",
+        "setpoint_clamps",
+        "setpoint_plan",
+        "setpoint_snapshot",
+        "weather_forecast"
+      ],
+      "direct_function_candidates": [
+        {
+          "proname": "fn_planner_scorecard",
+          "signature": "fn_planner_scorecard(date)",
+          "prosecdef": false,
+          "owner": "verdify"
+        }
+      ],
+      "status": "source duty inventory; grants/definer closure and isolated qualification pending",
+      "write_relations": [
+        "planner_graph_runs",
+        "planner_memory_items",
+        "planner_memory_retrievals"
+      ],
+      "bootstrap": "Move existing initialize CREATE/ALTER/index DDL into268, read-only verify existing schema at normal runtime; do not grant CREATE/ownership."
+    },
+    "setpoint_server": {
+      "duty_role": "verdify_setpoint_server_runtime",
+      "login": "verdify_setpoint_server_runtime_login",
+      "dedicated_secret": "verdify-setpoint-server-runtime-db",
+      "secret_key": "password",
+      "credential_owner": "jvallery/agents canonical central KSOPS; new credential only, no rotation",
+      "source_paths": [
+        "scripts/setpoint-server.py"
+      ],
+      "direct_relation_candidates": [
+        "climate",
+        "equipment_state",
+        "setpoint_changes",
+        "system_state",
+        "v_active_plan",
+        "v_runtime_equipment_state_write"
+      ],
+      "direct_function_candidates": [
+        {
+          "proname": "fn_lighting_minutes_policy",
+          "signature": "fn_lighting_minutes_policy(timestamp with time zone,text)",
+          "prosecdef": false,
+          "owner": "verdify"
+        },
+        {
+          "proname": "fn_house_vpd_control_band",
+          "signature": "fn_house_vpd_control_band(timestamp with time zone)",
+          "prosecdef": false,
+          "owner": "verdify"
+        },
+        {
+          "proname": "fn_band_setpoints",
+          "signature": "fn_band_setpoints(timestamp with time zone)",
+          "prosecdef": false,
+          "owner": "verdify"
+        },
+        {
+          "proname": "fn_zone_vpd_targets",
+          "signature": "fn_zone_vpd_targets(timestamp with time zone)",
+          "prosecdef": false,
+          "owner": "verdify"
+        }
+      ],
+      "status": "source duty inventory; grants/definer closure and isolated qualification pending",
+      "write_surface": "v_runtime_equipment_state_write only; protocol-aware source trigger stays mandatory; restrict writes to existing HA grow-light equipment values."
+    },
+    "ha_backfill": {
+      "duty_role": "verdify_ha_backfill_runtime",
+      "login": "verdify_ha_backfill_runtime_login",
+      "dedicated_secret": "verdify-ha-backfill-runtime-db",
+      "secret_key": "password",
+      "credential_owner": "jvallery/agents canonical central KSOPS; new credential only, no rotation",
+      "source_paths": [
+        "deploy/k8s/components/ha-gap-backfill/backfill-ha-gaps.py"
+      ],
+      "direct_relation_candidates": [
+        "climate",
+        "diagnostics",
+        "energy",
+        "equipment_state",
+        "setpoint_snapshot",
+        "system_state"
+      ],
+      "direct_function_candidates": [],
+      "status": "source duty inventory; grants/definer closure and isolated qualification pending",
+      "write_relations": [
+        "climate",
+        "diagnostics",
+        "energy",
+        "equipment_state",
+        "system_state",
+        "setpoint_snapshot"
+      ],
+      "integrity": "Use existing protocol-aware telemetry write surfaces where present; no arbitrary direct equipment/control bypass."
+    },
+    "vision": {
+      "duty_role": "verdify_vision_runtime",
+      "login": "verdify_vision_runtime_login",
+      "dedicated_secret": "verdify-vision-runtime-db",
+      "secret_key": "password",
+      "credential_owner": "jvallery/agents canonical central KSOPS; new credential only, no rotation",
+      "source_paths": [
+        "scripts/analyze-greenhouse-snapshot.py"
+      ],
+      "direct_relation_candidates": [
+        "camera_zone_map",
+        "climate",
+        "crops",
+        "image_observations",
+        "observations"
+      ],
+      "direct_function_candidates": [],
+      "status": "source duty inventory; grants/definer closure and isolated qualification pending",
+      "write_relations": [
+        "image_observations",
+        "observations"
+      ],
+      "sequences": [
+        "image_observations_id_seq",
+        "observations_id_seq"
+      ]
+    },
+    "lab_publisher": {
+      "duty_role": "verdify_lab_publisher_runtime",
+      "login": "verdify_lab_publisher_runtime_login",
+      "dedicated_secret": "verdify-lab-publisher-runtime-db",
+      "secret_key": "password",
+      "credential_owner": "jvallery/agents canonical central KSOPS; new credential only, no rotation",
+      "source_paths": [
+        "scripts/generate-daily-plan.py",
+        "scripts/generate-forecast-page.py",
+        "scripts/generate-plans-index.py",
+        "scripts/generate-lessons-page.py",
+        "scripts/generate-ai-tunables-page.py",
+        "scripts/generate-baseline-vs-iris-page.py",
+        "scripts/render-equipment-page.py",
+        "scripts/render-zone-pages.py",
+        "scripts/render-crop-profiles.py",
+        "scripts/export-hourly-performance-dataset.py",
+        "scripts/export-public-sample-dataset.sh",
+        "scripts/gather-static-context.sh"
+      ],
+      "direct_relation_candidates": [
+        "alert_log",
+        "climate",
+        "crop_catalog",
+        "crop_events",
+        "crops",
+        "daily_plan_archive_audit",
+        "daily_summary",
+        "equipment",
+        "equipment_state",
+        "forecast_deviation_log",
+        "image_observations",
+        "observations",
+        "override_events",
+        "plan_delivery_log",
+        "plan_journal",
+        "planner_lessons",
+        "planner_trigger_ledger",
+        "setpoint_changes",
+        "setpoint_clamps",
+        "setpoint_plan",
+        "setpoint_snapshot",
+        "system_state",
+        "v_active_plan",
+        "v_crop_catalog_with_profiles",
+        "v_crop_history",
+        "v_dli_daily",
+        "v_equipment_relay_map",
+        "v_equipment_resource_catalog",
+        "v_forecast_plan_outcome_mart",
+        "v_forecast_verification_contract",
+        "v_mister_effectiveness",
+        "v_position_current",
+        "v_zone_full",
+        "verdify_embeddings",
+        "weather_forecast",
+        "zones"
+      ],
+      "direct_function_candidates": [
+        {
+          "proname": "fn_setpoint_at",
+          "signature": "fn_setpoint_at(text,text,timestamp with time zone)",
+          "prosecdef": false,
+          "owner": "verdify"
+        },
+        {
+          "proname": "fn_setpoint_at",
+          "signature": "fn_setpoint_at(text,timestamp with time zone)",
+          "prosecdef": false,
+          "owner": "verdify"
+        },
+        {
+          "proname": "fn_forecast_correction",
+          "signature": "fn_forecast_correction(text,numeric)",
+          "prosecdef": false,
+          "owner": "verdify"
+        }
+      ],
+      "status": "source duty inventory; grants/definer closure and isolated qualification pending",
+      "write_relations": [
+        "daily_plan_archive_audit"
+      ],
+      "compatibility": "Some generators hardcode psql -U verdify. Replace through existing configured user path before switching credentials; preserve audit upsert, no all-table DML."
+    },
+    "grafana": {
+      "duty_role": "verdify_grafana_runtime",
+      "login": "verdify_grafana_runtime_login",
+      "dedicated_secret": "verdify-grafana-runtime-db",
+      "secret_key": "password",
+      "credential_owner": "jvallery/agents canonical central KSOPS; new credential only, no rotation",
+      "source_paths": [
+        "grafana/dashboards/site-climate-controller.json",
+        "grafana/dashboards/site-climate-humidity.json",
+        "grafana/dashboards/site-evidence-economics.json",
+        "grafana/dashboards/site-evidence-planning-quality.json",
+        "grafana/dashboards/site-evidence-dashboards.json",
+        "grafana/dashboards/site-climate-lighting.json",
+        "grafana/dashboards/site-greenhouse-crops.json",
+        "grafana/dashboards/site-greenhouse-zones.json",
+        "grafana/dashboards/site-intelligence-data.json",
+        "grafana/dashboards/site-inference-infra.json",
+        "grafana/dashboards/site-climate.json",
+        "grafana/dashboards/site-climate-cooling.json",
+        "grafana/dashboards/site-intelligence-planning.json",
+        "grafana/dashboards/site-home.json",
+        "grafana/dashboards/site-climate-water.json",
+        "grafana/dashboards/site-irrigation.json",
+        "grafana/dashboards/site-evidence-operations.json",
+        "grafana/dashboards/site-climate-heating.json",
+        "grafana/dashboards/site-intelligence.json",
+        "grafana/dashboards/site-greenhouse-equipment.json"
+      ],
+      "direct_relation_candidates": [
+        "alert_log",
+        "climate",
+        "climate_action_log",
+        "control_assignments",
+        "control_experiments",
+        "daily_summary",
+        "diagnostics",
+        "effective_policy_vectors",
+        "energy",
+        "equipment_state",
+        "experiment_events",
+        "gpu_power",
+        "infra_cpu",
+        "instrumentation_requirements",
+        "maintenance_log",
+        "mv_daily_kpi",
+        "mv_equipment_runtime_daily",
+        "plan_delivery_log",
+        "plan_journal",
+        "policy_delivery_outbox",
+        "policy_exposures",
+        "sensor_registry",
+        "setpoint_changes",
+        "setpoint_plan",
+        "setpoint_snapshot",
+        "system_state",
+        "v_band_curve",
+        "v_climate_merged",
+        "v_dif",
+        "v_disease_risk",
+        "v_dli_current",
+        "v_equipment_resource_catalog",
+        "v_forecast_plan_outcome_mart",
+        "v_gpu_power_latest",
+        "v_greenhouse_now",
+        "v_infra_cpu_latest",
+        "v_irrigation_fertigation_runs",
+        "v_irrigation_program_daily",
+        "v_irrigation_schedule_current",
+        "v_irrigation_sensor_feedback_status",
+        "v_lighting_traceability_now",
+        "v_mister_effectiveness",
+        "v_plan_compliance",
+        "v_planner_performance",
+        "v_reboot_log",
+        "v_runtime_energy_daily",
+        "v_setpoint_velocity",
+        "v_state_transition_rate",
+        "v_system_health_score",
+        "v_water_attribution_daily",
+        "weather_forecast"
+      ],
+      "direct_function_candidates": [
+        {
+          "proname": "fn_band_timeline",
+          "signature": "fn_band_timeline(timestamp with time zone,timestamp with time zone,interval,text)",
+          "prosecdef": false,
+          "owner": "verdify"
+        },
+        {
+          "proname": "fn_lighting_timeline",
+          "signature": "fn_lighting_timeline(timestamp with time zone,timestamp with time zone,interval,text)",
+          "prosecdef": false,
+          "owner": "verdify"
+        },
+        {
+          "proname": "fn_runtime_power_30m",
+          "signature": "fn_runtime_power_30m(timestamp with time zone,timestamp with time zone)",
+          "prosecdef": false,
+          "owner": "verdify"
+        },
+        {
+          "proname": "fn_lighting_policy",
+          "signature": "fn_lighting_policy(timestamp with time zone,text)",
+          "prosecdef": false,
+          "owner": "verdify"
+        },
+        {
+          "proname": "fn_forecast_correction",
+          "signature": "fn_forecast_correction(text,numeric)",
+          "prosecdef": false,
+          "owner": "verdify"
+        },
+        {
+          "proname": "fn_planner_scorecard",
+          "signature": "fn_planner_scorecard(date)",
+          "prosecdef": false,
+          "owner": "verdify"
+        }
+      ],
+      "status": "source duty inventory; grants/definer closure and isolated qualification pending",
+      "forbidden_direct_experiment_relations": [
+        "control_assignments",
+        "control_experiments",
+        "effective_policy_vectors",
+        "policy_delivery_outbox",
+        "policy_exposures",
+        "experiment_events"
+      ],
+      "required_replacement": "Five dedicated blinded ops projections for coverage, identity equality, activation lineage lifecycle and event metadata; preserve panel behavior without direct mapping/hash access."
+    }
+  },
+  "corrections": [
+    "HA backfill contains no ON CONFLICT: plain sample INSERT and equipment/system WHERE NOT EXISTS; private INSERT projections preserve those semantics."
+  ]
+}

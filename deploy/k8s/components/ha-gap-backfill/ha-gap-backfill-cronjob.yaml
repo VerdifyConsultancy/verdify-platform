@@ -65,11 +65,13 @@ spec:
                 - configMapRef:
                     name: verdify-config
               env:
+                - name: DB_USER
+                  value: "verdify_ha_backfill_runtime_login"
                 - name: POSTGRES_PASSWORD
                   valueFrom:
                     secretKeyRef:
-                      name: verdify-app-secrets
-                      key: POSTGRES_PASSWORD
+                      name: verdify-ha-backfill-runtime-db
+                      key: password
                 - name: HA_TOKEN_FILE
                   value: /mnt/agents/shared/credentials/ha_token.txt
                 - name: PYTHONPATH

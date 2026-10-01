@@ -320,35 +320,10 @@ class PostgresRunStore:
         self.dsn = dsn
 
     def initialize(self) -> None:
+        from planner_graph.runtime_db_boundary import verify_schema
+
         with self._connect() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS planner_graph_runs (
-                        trigger_id UUID PRIMARY KEY,
-                        thread_id UUID NOT NULL,
-                        status TEXT NOT NULL,
-                        run_mode TEXT NOT NULL,
-                        current_step TEXT NULL,
-                        terminal_status TEXT NULL,
-                        execution_owner TEXT NULL,
-                        last_error TEXT NULL,
-                        updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                        queued BOOLEAN NOT NULL DEFAULT TRUE,
-                        submission_count INTEGER NOT NULL DEFAULT 1,
-                        state JSONB NOT NULL DEFAULT '{}'::jsonb,
-                        lease_owner TEXT NULL,
-                        lease_expires_at TIMESTAMPTZ NULL,
-                        started_at TIMESTAMPTZ NULL,
-                        completed_at TIMESTAMPTZ NULL
-                    )
-                    """
-                )
-                cur.execute(
-                    "CREATE INDEX IF NOT EXISTS planner_graph_runs_status_idx "
-                    "ON planner_graph_runs(status, queued, updated_at)"
-                )
-                conn.commit()
+            verify_schema(conn, ["planner_graph_runs"])
 
     def create_or_resume(
         self, trigger_id: UUID, initial_state: PlannerState
@@ -554,7 +529,9 @@ class PostgresRunStore:
         import psycopg
         from psycopg.rows import dict_row
 
-        return cast(Any, psycopg.connect(self.dsn, row_factory=dict_row))  # pyright: ignore[reportArgumentType]
+        from planner_graph.runtime_db_boundary import guard_connection
+
+        return guard_connection(cast(Any, psycopg.connect(self.dsn, row_factory=dict_row)))  # pyright: ignore[reportArgumentType]
 
     def _row_to_record(self, row: dict[str, object]) -> RunRecord:
         updated_at = cast(datetime, row["updated_at"]).isoformat()

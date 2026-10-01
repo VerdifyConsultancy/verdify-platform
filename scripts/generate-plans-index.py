@@ -18,7 +18,20 @@ from verdify_public.output_policy import redact_non_public_crop_references  # no
 CONTENT_ROOT = Path("/srv/verdify/verdify-site/content")
 INDEX_ALIAS = CONTENT_ROOT / "plans" / "index.md"
 DATA_INDEX = CONTENT_ROOT / "data" / "plans" / "index.md"
-DB_CMD = ["docker", "exec", "verdify-timescaledb", "psql", "-U", "verdify", "-d", "verdify", "-t", "-A", "-F", "|"]
+DB_CMD = [
+    "docker",
+    "exec",
+    "verdify-timescaledb",
+    "psql",
+    "-U",
+    os.environ.get("PGUSER", os.environ.get("DB_USER", "verdify")),
+    "-d",
+    "verdify",
+    "-t",
+    "-A",
+    "-F",
+    "|",
+]
 PLAN_PAGE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}\.md$")
 LOCAL_TZ = ZoneInfo(os.environ.get("LAB_LOCAL_TIMEZONE") or os.environ.get("TZ") or "America/Denver")
 

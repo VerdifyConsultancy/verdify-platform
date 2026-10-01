@@ -20,7 +20,7 @@ from verdify_public.output_policy import redact_non_public_crop_references  # no
 from verdify_schemas import LessonsVaultFrontmatter  # noqa: E402
 
 DB_CONTAINER = "verdify-timescaledb"
-DB_USER = "verdify"
+DB_USER = os.environ.get("PGUSER", os.environ.get("DB_USER", "verdify"))
 DB_NAME = "verdify"
 OUTPUT_PATH = "/srv/verdify/verdify-site/content/reference/lessons.md"
 RAW_OUTPUT_PATH = "/srv/verdify/state/site-generated/raw-planner-lessons.md"

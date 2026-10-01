@@ -7,6 +7,7 @@ import argparse
 import csv
 import hashlib
 import json
+import os
 import shutil
 import subprocess
 import tempfile
@@ -180,7 +181,7 @@ def run_psql(copy_sql: str) -> str:
             "verdify-timescaledb",
             "psql",
             "-U",
-            "verdify",
+            os.environ.get("PGUSER", os.environ.get("DB_USER", "verdify")),
             "-d",
             "verdify",
             "-v",

@@ -103,11 +103,15 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.uid
+            - name: VERDIFY_PLANNER_RUNTIME_DB_ROLE_REQUIRED
+              value: "1"
+            - name: DB_USER
+              value: "verdify_planner_runtime_login"
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: verdify-app-secrets
-                  key: POSTGRES_PASSWORD
+                  name: verdify-planner-runtime-db
+                  key: password
             # planner_graph/config.py reads DB_DSN first. Construct it from the
             # ConfigMap connection fields + the Secret password ($(VAR) resolves
             # against the envFrom + env entries above), same as verdify-mcp.
