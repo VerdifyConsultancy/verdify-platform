@@ -47,7 +47,9 @@ def test_actual_iterator_service_backpressure_resume_and_full_success(tmp_path):
 #define USE_API_USER_DEFINED_ACTIONS
 #include <cassert>
 #include <cstdint>
+#include <cstddef>
 #include <vector>
+using std::size_t;
 #include "esphome/core/component_iterator.h"
 namespace esphome::api {
 class UserServiceDescriptor {public: int id; bool is_internal(){return false;} int encode_list_service_response(){return id;}};
