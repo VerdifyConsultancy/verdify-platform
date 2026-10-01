@@ -88,7 +88,14 @@ retains and compares full original receipt/ledger row facts, executes only the
 fixed DDL, emits the real post-DDL witness, and ends with **ROLLBACK**. It populates
 no target receipt and establishes no admitted runtime. No temporary schema is
 introduced into catalog measurement; a transaction-local result GUC is only an
-output channel.
+output channel. Complete expected before/post witnesses enter the same guarded
+session through transaction-local GUCs before the atomic PL/pgSQL block. This
+keeps the real roughly 35 MB witness out of that block's compiler body. The block
+still compares the full JSONB predecessor and full reviewed successor; it does
+not replace them with hashes, omit raw facts, or persist an input table. Both
+inputs expire with COMMIT/ROLLBACK. Never retry the old giant block after an
+interrupted qualification; retain the actual failure and rebind current target
+custody first.
 
 ROOT executes this only after actual import and independent v3 target proof:
 

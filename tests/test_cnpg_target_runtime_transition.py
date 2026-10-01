@@ -85,6 +85,61 @@ def test_install_cannot_be_emitted_without_reviewed_successor_hash():
         t.emit_sql(target, reviewed_post=target)
 
 
+def test_complete_witness_literals_are_outside_atomic_compiler_body():
+    _, target = witnesses()
+    sql = t.emit_sql(target)
+    before, block = sql.split("DO $native_transition$", 1)
+    assert t.literal(json.dumps(target, separators=(",", ":"))) in before
+    assert "cnpg_transition_expected_before" in before and "cnpg_transition_expected_post" in before
+    assert t.literal(json.dumps(target, separators=(",", ":"))) not in block
+    assert "current_setting('verdify.cnpg_transition_expected_before')::jsonb" in block
+    assert "v_before IS DISTINCT FROM v_expected_before" in block
+    assert "IS DISTINCT FROM v_original" in block
+    assert before.index("BEGIN;") < before.index("cnpg_transition_expected_before")
+    assert block.rstrip().endswith("ROLLBACK;")
+
+
+def test_actual_witness_scale_inputs_preserve_every_byte_and_expire_with_transaction(private_pg):
+    # The native target v3 JSON was 35,046,796 bytes. Exercise comparable input
+    # size through the actual source-generated SQL, not a reduced fixture cap.
+    before = {"raw": ["x" * 35_000_000, {"quoted": "it's \\\"\nΩ"}], "original_seals": ["unaltered"]}
+    after = {"raw": before["raw"], "original_seals": before["original_seals"], "post": "reviewed"}
+    inputs = t.transaction_witness_inputs_sql(before, after)
+    block = """DO $input_test$ DECLARE v jsonb;
+    BEGIN
+      v := current_setting('verdify.cnpg_transition_expected_before')::jsonb;
+      IF length(v->'raw'->>0)<>35000000 OR v->'original_seals'<> '["unaltered"]'::jsonb THEN
+        RAISE EXCEPTION 'incomplete before input';
+      END IF;
+      IF current_setting('verdify.cnpg_transition_expected_post')::jsonb->>'post'<>'reviewed' THEN
+        RAISE EXCEPTION 'incomplete successor input';
+      END IF;
+    END $input_test$;"""
+    assert len(block) < 1000 and "x" * 1000 not in block
+    result = private_pg(
+        "BEGIN;\n"
+        + inputs
+        + "\n"
+        + block
+        + "\nSELECT current_setting('verdify.cnpg_transition_expected_before')::jsonb="
+        + t.literal(json.dumps(before, separators=(",", ":")))
+        + "::jsonb;"
+        + "\nSELECT current_setting('verdify.cnpg_transition_expected_post')::jsonb="
+        + t.literal(json.dumps(after, separators=(",", ":")))
+        + "::jsonb;"
+        + "\nROLLBACK;\nSELECT coalesce(current_setting('verdify.cnpg_transition_expected_before',true),'')=''"
+        + " AND coalesce(current_setting('verdify.cnpg_transition_expected_post',true),'')='';"
+    )
+    assert result.splitlines() == ["t"] * 5
+    committed = private_pg(
+        "BEGIN;\n"
+        + t.transaction_witness_inputs_sql({"before": "complete"}, {"after": "reviewed"})
+        + "\nCOMMIT;\nSELECT coalesce(current_setting('verdify.cnpg_transition_expected_before',true),'')=''"
+        + " AND coalesce(current_setting('verdify.cnpg_transition_expected_post',true),'')='';"
+    )
+    assert committed.splitlines() == ["t"] * 3
+
+
 @pytest.fixture
 def private_pg(request):
     directory = os.environ.get("CNPG_TEST_PG_BIN")
@@ -441,6 +496,42 @@ def test_complete_atomic_sql_rolls_back_qualification_and_bad_successor_then_adm
     failure = q(t.emit_sql(stale), check=False)
     assert failure.returncode != 0 and "stale exact target witness" in failure.stderr
     assert json.loads(q("SET search_path=pg_catalog,pg_temp; " + selects)) == before
+    tampered_input = t.emit_sql(before).replace(
+        "DO $native_transition$",
+        "SELECT set_config('verdify.cnpg_transition_expected_before','{}',true);\nDO $native_transition$",
+        1,
+    )
+    failure = q(tampered_input, check=False)
+    assert failure.returncode != 0 and "stale exact target witness" in failure.stderr
+    assert json.loads(q("SET search_path=pg_catalog,pg_temp; " + selects)) == before
+    assert originals(q) == historical
+    # A nested witness/digest function cannot replace a stale reviewed input by
+    # mutating its session GUC after the immutable block-entry capture.
+    original_capture = " SELECT " + t.original_facts_sql() + " INTO v_original;"
+    for input_before, input_after, corrected_guc, corrected_value, message in [
+        (stale, None, "before", before, "stale exact target witness"),
+        (before, bad, "post", after, "unqualified post-DDL catalog"),
+    ]:
+        sql = t.emit_sql(
+            input_before,
+            reviewed_post=input_after,
+            qualification_sha256="a" * 64 if input_after is not None else None,
+        )
+        assert original_capture in sql
+        injected = sql.replace(
+            original_capture,
+            " PERFORM set_config('verdify.cnpg_transition_expected_"
+            + corrected_guc
+            + "',"
+            + t.literal(json.dumps(corrected_value, separators=(",", ":")))
+            + ",true);\n"
+            + original_capture,
+            1,
+        )
+        failure = q(injected, check=False)
+        assert failure.returncode != 0 and message in failure.stderr
+        assert json.loads(q("SET search_path=pg_catalog,pg_temp; " + selects)) == before
+        assert originals(q) == historical
     original_ddl = t.ddl
     for injected in [
         "GRANT SELECT ON public.control_experiments TO PUBLIC;",
