@@ -1402,7 +1402,7 @@ inline LightingDecision evaluate_lighting(
     if (want_on && !current_on && elapsed < sp.min_off_ms) {
         want_on = false;
         reason = "min_off_hold";
-    } else if (!want_on && current_on && elapsed < sp.min_on_ms) {
+    } else if (sp.auto_enabled && !want_on && current_on && elapsed < sp.min_on_ms) {
         want_on = true;
         reason = "min_on_hold";
     }
