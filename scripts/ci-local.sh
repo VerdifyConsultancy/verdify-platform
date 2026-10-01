@@ -85,6 +85,7 @@ $PY -m pytest -q \
   tests/test_cnpg_runtime_client_qualification.py \
   tests/test_cnpg_restore_qualification.py \
   tests/test_cnpg_portable_witness_v3.py \
+  tests/test_cnpg_historical_chunk_source.py \
   tests/test_cnpg_restore_private_scratch.py \
   tests/test_cnpg_source_grantor_continuation.py \
   tests/test_cnpg_target_runtime_transition.py \

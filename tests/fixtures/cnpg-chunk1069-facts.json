@@ -1,0 +1,487 @@
+{
+  "indexes": [
+    {
+      "index": {
+        "indkey": [
+          1
+        ],
+        "indpred": null,
+        "indclass": [
+          "3127"
+        ],
+        "indexprs": null,
+        "indnatts": 1,
+        "indrelid": "1581647",
+        "indislive": true,
+        "indoption": [
+          3
+        ],
+        "indexrelid": "1581655",
+        "indisready": true,
+        "indisvalid": true,
+        "indisunique": false,
+        "indnkeyatts": 1,
+        "indcheckxmin": false,
+        "indcollation": [
+          "0"
+        ],
+        "indimmediate": true,
+        "indisprimary": false,
+        "indisclustered": false,
+        "indisexclusion": false,
+        "indisreplident": false,
+        "indnullsnotdistinct": false
+      },
+      "native": {
+        "oid": "1581655",
+        "relam": "403",
+        "relacl": null,
+        "relkind": "i",
+        "relname": "_hyper_19_1069_chunk_idx_override_events_ts",
+        "reltype": "0",
+        "relnatts": 1,
+        "relowner": "10",
+        "relpages": 1,
+        "relchecks": 0,
+        "reloftype": "0",
+        "reltuples": 0,
+        "relminmxid": "0",
+        "reloptions": null,
+        "relrewrite": "0",
+        "relfilenode": "1581655",
+        "relhasindex": false,
+        "relhasrules": false,
+        "relisshared": false,
+        "relfrozenxid": "0",
+        "relnamespace": "17852",
+        "relpartbound": null,
+        "relreplident": "n",
+        "relallvisible": 0,
+        "reltablespace": "0",
+        "reltoastrelid": "0",
+        "relhassubclass": false,
+        "relhastriggers": false,
+        "relispartition": false,
+        "relispopulated": true,
+        "relpersistence": "p",
+        "relrowsecurity": false,
+        "relforcerowsecurity": false
+      },
+      "identity": "_timescaledb_internal._hyper_19_1069_chunk_idx_override_events_ts",
+      "definition": "CREATE INDEX _hyper_19_1069_chunk_idx_override_events_ts ON _timescaledb_internal._hyper_19_1069_chunk USING btree (ts DESC)"
+    },
+    {
+      "index": {
+        "indkey": [
+          2,
+          1
+        ],
+        "indpred": null,
+        "indclass": [
+          "3126",
+          "3127"
+        ],
+        "indexprs": null,
+        "indnatts": 2,
+        "indrelid": "1581647",
+        "indislive": true,
+        "indoption": [
+          0,
+          3
+        ],
+        "indexrelid": "1581656",
+        "indisready": true,
+        "indisvalid": true,
+        "indisunique": false,
+        "indnkeyatts": 2,
+        "indcheckxmin": false,
+        "indcollation": [
+          "100",
+          "0"
+        ],
+        "indimmediate": true,
+        "indisprimary": false,
+        "indisclustered": false,
+        "indisexclusion": false,
+        "indisreplident": false,
+        "indnullsnotdistinct": false
+      },
+      "native": {
+        "oid": "1581656",
+        "relam": "403",
+        "relacl": null,
+        "relkind": "i",
+        "relname": "_hyper_19_1069_chunk_idx_override_events_type",
+        "reltype": "0",
+        "relnatts": 2,
+        "relowner": "10",
+        "relpages": 1,
+        "relchecks": 0,
+        "reloftype": "0",
+        "reltuples": 0,
+        "relminmxid": "0",
+        "reloptions": null,
+        "relrewrite": "0",
+        "relfilenode": "1581656",
+        "relhasindex": false,
+        "relhasrules": false,
+        "relisshared": false,
+        "relfrozenxid": "0",
+        "relnamespace": "17852",
+        "relpartbound": null,
+        "relreplident": "n",
+        "relallvisible": 0,
+        "reltablespace": "0",
+        "reltoastrelid": "0",
+        "relhassubclass": false,
+        "relhastriggers": false,
+        "relispartition": false,
+        "relispopulated": true,
+        "relpersistence": "p",
+        "relrowsecurity": false,
+        "relforcerowsecurity": false
+      },
+      "identity": "_timescaledb_internal._hyper_19_1069_chunk_idx_override_events_type",
+      "definition": "CREATE INDEX _hyper_19_1069_chunk_idx_override_events_type ON _timescaledb_internal._hyper_19_1069_chunk USING btree (override_type, ts DESC)"
+    },
+    {
+      "index": {
+        "indkey": [
+          1
+        ],
+        "indpred": null,
+        "indclass": [
+          "3127"
+        ],
+        "indexprs": null,
+        "indnatts": 1,
+        "indrelid": "19713",
+        "indislive": true,
+        "indoption": [
+          3
+        ],
+        "indexrelid": "73948",
+        "indisready": true,
+        "indisvalid": true,
+        "indisunique": false,
+        "indnkeyatts": 1,
+        "indcheckxmin": false,
+        "indcollation": [
+          "0"
+        ],
+        "indimmediate": true,
+        "indisprimary": false,
+        "indisclustered": false,
+        "indisexclusion": false,
+        "indisreplident": false,
+        "indnullsnotdistinct": false
+      },
+      "native": {
+        "oid": "73948",
+        "relam": "403",
+        "relacl": null,
+        "relkind": "i",
+        "relname": "idx_override_events_ts",
+        "reltype": "0",
+        "relnatts": 1,
+        "relowner": "10",
+        "relpages": 1,
+        "relchecks": 0,
+        "reloftype": "0",
+        "reltuples": 0,
+        "relminmxid": "0",
+        "reloptions": null,
+        "relrewrite": "0",
+        "relfilenode": "73948",
+        "relhasindex": false,
+        "relhasrules": false,
+        "relisshared": false,
+        "relfrozenxid": "0",
+        "relnamespace": "2200",
+        "relpartbound": null,
+        "relreplident": "n",
+        "relallvisible": 0,
+        "reltablespace": "0",
+        "reltoastrelid": "0",
+        "relhassubclass": false,
+        "relhastriggers": false,
+        "relispartition": false,
+        "relispopulated": true,
+        "relpersistence": "p",
+        "relrowsecurity": false,
+        "relforcerowsecurity": false
+      },
+      "identity": "public.idx_override_events_ts",
+      "definition": "CREATE INDEX idx_override_events_ts ON public.override_events USING btree (ts DESC)"
+    },
+    {
+      "index": {
+        "indkey": [
+          2,
+          1
+        ],
+        "indpred": null,
+        "indclass": [
+          "3126",
+          "3127"
+        ],
+        "indexprs": null,
+        "indnatts": 2,
+        "indrelid": "19713",
+        "indislive": true,
+        "indoption": [
+          0,
+          3
+        ],
+        "indexrelid": "73949",
+        "indisready": true,
+        "indisvalid": true,
+        "indisunique": false,
+        "indnkeyatts": 2,
+        "indcheckxmin": false,
+        "indcollation": [
+          "100",
+          "0"
+        ],
+        "indimmediate": true,
+        "indisprimary": false,
+        "indisclustered": false,
+        "indisexclusion": false,
+        "indisreplident": false,
+        "indnullsnotdistinct": false
+      },
+      "native": {
+        "oid": "73949",
+        "relam": "403",
+        "relacl": null,
+        "relkind": "i",
+        "relname": "idx_override_events_type",
+        "reltype": "0",
+        "relnatts": 2,
+        "relowner": "10",
+        "relpages": 1,
+        "relchecks": 0,
+        "reloftype": "0",
+        "reltuples": 0,
+        "relminmxid": "0",
+        "reloptions": null,
+        "relrewrite": "0",
+        "relfilenode": "73949",
+        "relhasindex": false,
+        "relhasrules": false,
+        "relisshared": false,
+        "relfrozenxid": "0",
+        "relnamespace": "2200",
+        "relpartbound": null,
+        "relreplident": "n",
+        "relallvisible": 0,
+        "reltablespace": "0",
+        "reltoastrelid": "0",
+        "relhassubclass": false,
+        "relhastriggers": false,
+        "relispartition": false,
+        "relispopulated": true,
+        "relpersistence": "p",
+        "relrowsecurity": false,
+        "relforcerowsecurity": false
+      },
+      "identity": "public.idx_override_events_type",
+      "definition": "CREATE INDEX idx_override_events_type ON public.override_events USING btree (override_type, ts DESC)"
+    },
+    {
+      "index": {
+        "indkey": [
+          1
+        ],
+        "indpred": null,
+        "indclass": [
+          "3127"
+        ],
+        "indexprs": null,
+        "indnatts": 1,
+        "indrelid": "19713",
+        "indislive": true,
+        "indoption": [
+          3
+        ],
+        "indexrelid": "74010",
+        "indisready": true,
+        "indisvalid": true,
+        "indisunique": false,
+        "indnkeyatts": 1,
+        "indcheckxmin": false,
+        "indcollation": [
+          "0"
+        ],
+        "indimmediate": true,
+        "indisprimary": false,
+        "indisclustered": false,
+        "indisexclusion": false,
+        "indisreplident": false,
+        "indnullsnotdistinct": false
+      },
+      "native": {
+        "oid": "74010",
+        "relam": "403",
+        "relacl": null,
+        "relkind": "i",
+        "relname": "override_events_ts_idx",
+        "reltype": "0",
+        "relnatts": 1,
+        "relowner": "10",
+        "relpages": 1,
+        "relchecks": 0,
+        "reloftype": "0",
+        "reltuples": 0,
+        "relminmxid": "0",
+        "reloptions": null,
+        "relrewrite": "0",
+        "relfilenode": "74010",
+        "relhasindex": false,
+        "relhasrules": false,
+        "relisshared": false,
+        "relfrozenxid": "0",
+        "relnamespace": "2200",
+        "relpartbound": null,
+        "relreplident": "n",
+        "relallvisible": 0,
+        "reltablespace": "0",
+        "reltoastrelid": "0",
+        "relhassubclass": false,
+        "relhastriggers": false,
+        "relispartition": false,
+        "relispopulated": true,
+        "relpersistence": "p",
+        "relrowsecurity": false,
+        "relforcerowsecurity": false
+      },
+      "identity": "public.override_events_ts_idx",
+      "definition": "CREATE INDEX override_events_ts_idx ON public.override_events USING btree (ts DESC)"
+    }
+  ],
+  "triggers": [],
+  "relations": [
+    {
+      "native": {
+        "oid": "1581647",
+        "relam": "2",
+        "relacl": [
+          "verdify=arwdDxt/verdify",
+          "verdify_ingestor_runtime=r/verdify"
+        ],
+        "relkind": "r",
+        "relname": "_hyper_19_1069_chunk",
+        "reltype": "1581649",
+        "relnatts": 5,
+        "relowner": "10",
+        "relpages": 0,
+        "relchecks": 1,
+        "reloftype": "0",
+        "reltuples": -1,
+        "relminmxid": "589522",
+        "reloptions": null,
+        "relrewrite": "0",
+        "relfilenode": "1581647",
+        "relhasindex": true,
+        "relhasrules": false,
+        "relisshared": false,
+        "relfrozenxid": "6447720",
+        "relnamespace": "17852",
+        "relpartbound": null,
+        "relreplident": "d",
+        "relallvisible": 0,
+        "reltablespace": "0",
+        "reltoastrelid": "1581652",
+        "relhassubclass": false,
+        "relhastriggers": false,
+        "relispartition": false,
+        "relispopulated": true,
+        "relpersistence": "p",
+        "relrowsecurity": false,
+        "relforcerowsecurity": false
+      },
+      "schema": "_timescaledb_internal",
+      "identity": "_timescaledb_internal._hyper_19_1069_chunk",
+      "raw_definition_text": "[\"r\", \"verdify\", false, false, null, [[\"verdify\", \"verdify\", \"DELETE\", false], [\"verdify\", \"verdify\", \"INSERT\", false], [\"verdify\", \"verdify\", \"REFERENCES\", false], [\"verdify\", \"verdify\", \"SELECT\", false], [\"verdify\", \"verdify\", \"TRIGGER\", false], [\"verdify\", \"verdify\", \"TRUNCATE\", false], [\"verdify\", \"verdify\", \"UPDATE\", false], [\"verdify_ingestor_runtime\", \"verdify\", \"SELECT\", false]], null]"
+    },
+    {
+      "native": {
+        "oid": "19713",
+        "relam": "2",
+        "relacl": [
+          "verdify=arwdDxt/verdify",
+          "verdify_ingestor_runtime=r/verdify"
+        ],
+        "relkind": "r",
+        "relname": "override_events",
+        "reltype": "19715",
+        "relnatts": 5,
+        "relowner": "10",
+        "relpages": 0,
+        "relchecks": 0,
+        "reloftype": "0",
+        "reltuples": -1,
+        "relminmxid": "1",
+        "reloptions": null,
+        "relrewrite": "0",
+        "relfilenode": "19713",
+        "relhasindex": true,
+        "relhasrules": false,
+        "relisshared": false,
+        "relfrozenxid": "943",
+        "relnamespace": "2200",
+        "relpartbound": null,
+        "relreplident": "d",
+        "relallvisible": 0,
+        "reltablespace": "0",
+        "reltoastrelid": "19718",
+        "relhassubclass": true,
+        "relhastriggers": false,
+        "relispartition": false,
+        "relispopulated": true,
+        "relpersistence": "p",
+        "relrowsecurity": false,
+        "relforcerowsecurity": false
+      },
+      "schema": "public",
+      "identity": "public.override_events",
+      "raw_definition_text": "[\"r\", \"verdify\", false, false, null, [[\"verdify\", \"verdify\", \"DELETE\", false], [\"verdify\", \"verdify\", \"INSERT\", false], [\"verdify\", \"verdify\", \"REFERENCES\", false], [\"verdify\", \"verdify\", \"SELECT\", false], [\"verdify\", \"verdify\", \"TRIGGER\", false], [\"verdify\", \"verdify\", \"TRUNCATE\", false], [\"verdify\", \"verdify\", \"UPDATE\", false], [\"verdify_ingestor_runtime\", \"verdify\", \"SELECT\", false]], null]"
+    }
+  ],
+  "constraints": [
+    {
+      "native": {
+        "oid": "1581654",
+        "conbin": "{BOOLEXPR :boolop and :args ({OPEXPR :opno 1325 :opfuncid 1156 :opresulttype 16 :opretset false :opcollid 0 :inputcollid 0 :args ({VAR :varno 1 :varattno 1 :vartype 1184 :vartypmod -1 :varcollid 0 :varnullingrels (b) :varlevelsup 0 :varnosyn 1 :varattnosyn 1 :location -1} {CONST :consttype 1184 :consttypmod -1 :constcollid 0 :constlen 8 :constbyval true :constisnull false :location -1 :constvalue 8 [ 0 -64 -107 -35 -70 -1 2 0 ]}) :location -1} {OPEXPR :opno 1322 :opfuncid 1154 :opresulttype 16 :opretset false :opcollid 0 :inputcollid 0 :args ({VAR :varno 1 :varattno 1 :vartype 1184 :vartypmod -1 :varcollid 0 :varnullingrels (b) :varlevelsup 0 :varnosyn 1 :varattnosyn 1 :location -1} {CONST :consttype 1184 :consttypmod -1 :constcollid 0 :constlen 8 :constbyval true :constisnull false :location -1 :constvalue 8 [ 0 96 121 -82 71 0 3 0 ]}) :location -1}) :location -1}",
+        "conkey": [
+          1
+        ],
+        "confkey": null,
+        "conname": "constraint_886",
+        "contype": "c",
+        "conindid": "0",
+        "conrelid": "1581647",
+        "contypid": "0",
+        "conexclop": null,
+        "conffeqop": null,
+        "confrelid": "0",
+        "conpfeqop": null,
+        "conppeqop": null,
+        "conislocal": true,
+        "condeferred": false,
+        "confdeltype": " ",
+        "confupdtype": " ",
+        "coninhcount": 0,
+        "conparentid": "0",
+        "connamespace": "17852",
+        "connoinherit": false,
+        "convalidated": true,
+        "condeferrable": false,
+        "confmatchtype": " ",
+        "confdelsetcols": null
+      },
+      "identity": "_timescaledb_internal._hyper_19_1069_chunk.constraint_886",
+      "definition": "CHECK (ts >= '2026-10-01 00:00:00+00'::timestamp with time zone AND ts < '2026-10-08 00:00:00+00'::timestamp with time zone)"
+    }
+  ]
+}

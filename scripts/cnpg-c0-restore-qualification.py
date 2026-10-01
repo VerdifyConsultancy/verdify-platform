@@ -12,6 +12,7 @@ import hashlib
 import importlib.util
 import json
 import re
+from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -22,6 +23,80 @@ VERSION = "cnpg-c0-logical-recovery-witness-v3"
 RAW_VERSION = "cnpg-c0-logical-recovery-witness-v2"
 FROZEN_SOURCE_V2_SHA256 = "ec9b3d5aff2bbfd5ced3d1a769551053e72dadd0cb811a5a843ec7b022110e1d"
 FROZEN_SOURCE_V2_CATALOG_SHA256 = "f79f3c2d171097426f98a3aeb1eb52e71d7c04283b6e92821308099a5c090908"
+HISTORICAL_PROFILE = "cnpg-120237-postdump-chunk1069-v1"
+WITNESS_MAX_BYTES = 64 * 1024 * 1024
+# Independently captured original-source READ ONLY metadata and native backup custody.
+HISTORICAL_FRESH_SHA = "f2deda6beaedb6f01878f80e9ddc3a5c7f0acd8174dbdaa6fce2cf791be77c1f"
+HISTORICAL_FRESH_CONTENT_SHA = "febca847211b5805ffec0ae205b718116a03bcc16b3c0f25fdc6489f55f012f5"
+HISTORICAL_METADATA_SHA = "45166eea3e953c3736a7c932674bba58c7e49105436b2fd70332958c52ae89f2"
+HISTORICAL_CAPTURE_SHA = "66cc8f0c634dfd994c69137cbc06f9d2a96f00dcf79f59dd60ade5aa9a5e2006"
+HISTORICAL_BACKUP_SHA = "d052fbd0a5ec77392a3e4b7092d5c15255e532b393fa9d501957bb309c9e526b"
+HISTORICAL_TOC_SHA = "cf4fe98314c9070ea11bc726323b7e1b549acf964354dd58a06c14f6801da37a"
+HISTORICAL_DUMP_SHA = "e5c9ade10f29cbf026e85c260aa3374a18083899bc9107a0d5701e5cbb7f6dfc"
+HISTORICAL_SOURCE_POD_UID = "b1fa2c0e-a995-481f-a29f-4cfaad4e697b"
+HISTORICAL_CHUNK_ENTRIES = [
+    [
+        "column",
+        "_timescaledb_internal._hyper_19_1069_chunk.details",
+        "c203cd9f6f6216d8cd4c29d3c50fc4333c487eb91d94ae7d7cb48b49668c7e30",
+    ],
+    [
+        "column",
+        "_timescaledb_internal._hyper_19_1069_chunk.greenhouse_id",
+        "34eafa3e30bd0ab80a0e9a25934dffeec084dd08e21be2fbe53c8e4b019be84a",
+    ],
+    [
+        "column",
+        "_timescaledb_internal._hyper_19_1069_chunk.mode",
+        "29230b782971a5158662b12bb3b64e301674224d091f8520f899874146825f49",
+    ],
+    [
+        "column",
+        "_timescaledb_internal._hyper_19_1069_chunk.override_type",
+        "838adddfbe039f7510b64b2a799f6d0a161fcb067038d389b661b60949958116",
+    ],
+    [
+        "column",
+        "_timescaledb_internal._hyper_19_1069_chunk.ts",
+        "24f4b7dc166ff4b81e7bcbbdaf3c191b8a755fd6e7aa7c146408bf069c046a12",
+    ],
+    [
+        "column",
+        "_timescaledb_internal._hyper_19_1069_chunk_idx_override_events_ts.ts",
+        "b1ecdba7d6ede88038a8c4625e816f31fd17535aa4122152a74bf598a1e35460",
+    ],
+    [
+        "column",
+        "_timescaledb_internal._hyper_19_1069_chunk_idx_override_events_type.override_type",
+        "d37f80fb6818df7ad86f6a543afb9294a6ddd365b8c5c9ae6c2267347cba0f8c",
+    ],
+    [
+        "column",
+        "_timescaledb_internal._hyper_19_1069_chunk_idx_override_events_type.ts",
+        "e4f15e04e7d8df3542297c5084d9944ca2e8bd7e9aca7fc81a6b22c0b2473d72",
+    ],
+    [
+        "constraint",
+        "_timescaledb_internal._hyper_19_1069_chunk.constraint_886",
+        "7a74ebefbe8041c4c8cb927ddd8189bb3a1f8cdbf17589d8c67c580acdcd2427",
+    ],
+    [
+        "index",
+        "_timescaledb_internal._hyper_19_1069_chunk_idx_override_events_ts",
+        "e4df15ad87f77de6ee2c4d699328b9a6e45ab7fde1c1235ac04bcc5f6e7e6a62",
+    ],
+    [
+        "index",
+        "_timescaledb_internal._hyper_19_1069_chunk_idx_override_events_type",
+        "594a76d8be92b819ca8c1580b6c262d8201e78e85998e5f1c22e15394302f1cf",
+    ],
+    [
+        "relation",
+        "_timescaledb_internal._hyper_19_1069_chunk",
+        "f585f8d7ba94ce613a259962adb114d2ae56fa0cbe98bdb214b2bc96afb80bec",
+    ],
+]
+
 BOOTSTRAP_PROFILE = "cnpg-source-bootstrap-grantor-v1"
 MCP_SOURCE = "db/migrations/263-mcp-timescale-chunk-boundary-digest.sql"
 MCP_SHA = "9f5fa53cde76224b06865095bfd9a531aadae058f6ca13e50e74ecd95ad5770b"
@@ -231,12 +306,11 @@ def require(ok, message):
 
 
 def read_witness(path):
-    # The actual post268 catalog contains >44k objects (12.3MB formatted).
-    # Keep a separate bounded reader; do not widen the existing C0 contracts.
+    # Complete native v3 custody is 35MB; retain it plus immutable historical evidence.
     require(path.is_file() and not path.is_symlink(), "regular witness required")
     with path.open("rb") as stream:
-        raw = stream.read(32_000_001)
-    require(len(raw) <= 32_000_000, "witness exceeds bound")
+        raw = stream.read(WITNESS_MAX_BYTES + 1)
+    require(len(raw) <= WITNESS_MAX_BYTES, "witness exceeds bound")
     return json.loads(raw, object_pairs_hook=boundary._pairs), hashlib.sha256(raw).hexdigest()
 
 
@@ -516,15 +590,324 @@ def validate_projection_facts(snapshot, trigger_by_oid):
         )
 
 
+def historical_catalogs(snapshot):
+    """Prove one native postdump closure; retain full fresh fields, return explicit historical views."""
+    proof = snapshot.get("historical_snapshot")
+    if proof is None:
+        return snapshot["raw_portable_catalog_v2"], snapshot["portable_catalog"]
+    require(proof["profile"] == HISTORICAL_PROFILE, "unsupported historical snapshot profile")
+    require(
+        set(proof)
+        == {
+            "profile",
+            "fresh_witness_sha256",
+            "frozen_source_raw",
+            "metadata_raw",
+            "capture_raw",
+            "backup_raw",
+            "toc_raw",
+            "dump_sha256",
+        },
+        "historical proof shape drift",
+    )
+    require(proof["fresh_witness_sha256"] == HISTORICAL_FRESH_SHA, "missing complete fresh custody")
+
+    def pinned(field, sha):
+        raw = proof[field]
+        require(
+            isinstance(raw, str) and hashlib.sha256(raw.encode()).hexdigest() == sha,
+            "historical native custody drift: " + field,
+        )
+        return json.loads(raw, object_pairs_hook=boundary._pairs)
+
+    frozen = pinned("frozen_source_raw", FROZEN_SOURCE_V2_SHA256)
+    metadata = pinned("metadata_raw", HISTORICAL_METADATA_SHA)
+    capture = pinned("capture_raw", HISTORICAL_CAPTURE_SHA)
+    backup = pinned("backup_raw", HISTORICAL_BACKUP_SHA)
+    require(
+        hashlib.sha256(proof["toc_raw"].encode()).hexdigest() == HISTORICAL_TOC_SHA
+        and proof["dump_sha256"] == HISTORICAL_DUMP_SHA,
+        "historical dump custody drift",
+    )
+    require(
+        "_hyper_19_1069_chunk" not in proof["toc_raw"] and "TABLE public override_events verdify" in proof["toc_raw"],
+        "chunk was not absent from historical dump",
+    )
+    require(
+        frozen["version"] == RAW_VERSION and frozen["database"] == "verdify" and frozen["server"] == 160011,
+        "wrong historical source",
+    )
+    require(
+        catalog_sha256(frozen["portable_catalog"]) == FROZEN_SOURCE_V2_CATALOG_SHA256,
+        "immutable historical catalog drift",
+    )
+    for field in ["roles", "seals", "ledger", "boundaries", "namespaces", "database_acl", "database_owner"]:
+        require(snapshot[field] == frozen[field], "historical original scope changed: " + field)
+    require(
+        snapshot.get("bootstrap_identity") == {"oid": 10, "name": "verdify", "superuser": True},
+        "historical native source bootstrap changed",
+    )
+    raw = {(r[0], r[1]): r[2] for r in snapshot["raw_portable_catalog_v2"]}
+    old = {(r[0], r[1]): r[2] for r in frozen["portable_catalog"]}
+    added = {(r[0], r[1]): r[2] for r in HISTORICAL_CHUNK_ENTRIES}
+    require(
+        raw == old | added and not old.keys() & added.keys(),
+        "historical change/removal/extra or chunk projection spoof",
+    )
+    identity = metadata["identity"]
+    require(
+        identity["database"] == "verdify"
+        and identity["current_user"] == identity["session_user"] == "verdify"
+        and identity["server_version_num"] == "160011"
+        and identity["server_timezone"] == "UTC"
+        and identity["transaction_read_only"] == "on"
+        and identity["transaction_isolation"] == "repeatable read",
+        "wrong native metadata source",
+    )
+    require(
+        any(e["extname"] == "timescaledb" and e["extversion"] == "2.25.2" for e in identity["extensions"]),
+        "native Timescale version drift",
+    )
+    require(
+        capture["pod_uid"] == HISTORICAL_SOURCE_POD_UID
+        and capture["context"] == "vallery"
+        and capture["namespace"] == "verdify-prod"
+        and capture["pod"] == "verdify-db-0"
+        and capture["container"] == "postgres"
+        and capture["exit_code"] == 0
+        and capture["read_only"] is True
+        and capture["hashes"]["capture.stdout"] == HISTORICAL_METADATA_SHA
+        and capture["hashes"]["pod-before.json"] == capture["hashes"]["pod-after.json"],
+        "native source Pod/capture custody drift",
+    )
+
+    def utc(value):
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+
+    require(
+        utc(capture["started_at"]) <= utc(identity["server_now"]) <= utc(capture["finished_at"]),
+        "native source clock outside capture bounds",
+    )
+    require(
+        backup["pair_stem"] == "verdify-20261001T120237Z"
+        and backup["native_dump_succeeded"] is True
+        and backup["native_pair_published"] is True
+        and backup["native_completed"] is True
+        and backup["container_termination"]["exitCode"] == 0,
+        "wrong native original backup",
+    )
+    chunk = metadata["chunk"]
+    require(
+        chunk["id"] == 1069
+        and chunk["hypertable_id"] == 19
+        and chunk["schema_name"] == "_timescaledb_internal"
+        and chunk["table_name"] == "_hyper_19_1069_chunk"
+        and chunk["dropped"] is False
+        and chunk["osm_chunk"] is False
+        and chunk["compressed_chunk_id"] is None
+        and chunk["status"] == 0,
+        "unproved native chunk lineage",
+    )
+    require(
+        utc(backup["container_termination"]["finishedAt"]) < utc(chunk["creation_time"]) <= utc(identity["server_now"]),
+        "chunk not proved created after historical dump",
+    )
+    require(
+        [c for c in metadata["all_parent_chunks"] if c["id"] == 1069] == [chunk], "native parent chunk inventory drift"
+    )
+    ht, view = metadata["hypertable"], metadata["chunk_view"]
+    require(
+        ht["id"] == 19
+        and ht["schema_name"] == "public"
+        and ht["table_name"] == "override_events"
+        and ht["num_dimensions"] == 1
+        and ht["compression_state"] == 0
+        and ht["status"] == 0
+        and ht["compressed_hypertable_id"] is None,
+        "wrong native hypertable",
+    )
+    require(
+        view["hypertable_schema"] == "public"
+        and view["hypertable_name"] == "override_events"
+        and view["chunk_schema"] == chunk["schema_name"]
+        and view["chunk_name"] == chunk["table_name"]
+        and view["chunk_creation_time"] == chunk["creation_time"]
+        and view["is_compressed"] is False
+        and view["range_start"] == "2026-10-01T00:00:00+00:00"
+        and view["range_end"] == "2026-10-08T00:00:00+00:00"
+        and view["primary_dimension"] == "ts",
+        "native range/creation projection drift",
+    )
+    require(
+        metadata["dimensions"]
+        == [
+            {
+                "id": 15,
+                "aligned": True,
+                "num_slices": None,
+                "column_name": "ts",
+                "column_type": "timestamp with time zone",
+                "hypertable_id": 19,
+                "interval_length": 604800000000,
+                "integer_now_func": None,
+                "partitioning_func": None,
+                "integer_now_func_schema": None,
+                "compress_interval_length": None,
+                "partitioning_func_schema": None,
+            }
+        ],
+        "native dimension drift",
+    )
+    require(
+        metadata["dimension_slices"]
+        == [{"id": 886, "range_end": 1791417600000000, "range_start": 1790812800000000, "dimension_id": 15}]
+        and metadata["chunk_constraints"]
+        == [
+            {
+                "chunk_id": 1069,
+                "constraint_name": "constraint_886",
+                "dimension_slice_id": 886,
+                "hypertable_constraint_name": None,
+            }
+        ],
+        "native slice/constraint lineage drift",
+    )
+    require(
+        [i for i in metadata["inherits"] if str(i["inhrelid"]) == "1581647"]
+        == [{"inhrelid": "1581647", "inhseqno": 1, "inhparent": "19713", "inhdetachpending": False}],
+        "native inheritance lineage drift",
+    )
+    classes = {str(r["native"]["oid"]): r for r in metadata["classes"]}
+    require(len(classes) == len(metadata["classes"]) == 7, "native class inventory drift")
+    require(
+        classes["19713"]["owner"] == classes["1581647"]["owner"] == "verdify"
+        and classes["19713"]["effective_acl"] == classes["1581647"]["effective_acl"],
+        "native chunk owner/ACL drift",
+    )
+    facts = snapshot["portability_native_facts"]
+    for field in ["relations", "indexes"]:
+        matching = [r for r in facts[field] if str(r["native"]["oid"]) in classes]
+        require(len(matching) == (2 if field == "relations" else 5), "native metadata/fresh class inventory mismatch")
+        for fact in matching:
+            require(
+                fact["native"] == classes[str(fact["native"]["oid"])]["native"],
+                "native metadata/fresh class facts differ",
+            )
+    indexes = {str(r["native"]["indexrelid"]): r["native"] for r in metadata["indexes"]}
+    require(len(indexes) == len(metadata["indexes"]) == 5, "native index inventory drift")
+    for fact in facts["indexes"]:
+        if str(fact["native"]["oid"]) in indexes:
+            require(fact["index"] == indexes[str(fact["native"]["oid"])], "native metadata/fresh index facts differ")
+
+    def signature(index):
+        return json.dumps({k: v for k, v in index.items() if k not in {"indexrelid", "indrelid"}}, sort_keys=True)
+
+    require(
+        {signature(i) for i in indexes.values() if str(i["indrelid"]) == "19713"}
+        == {signature(i) for i in indexes.values() if str(i["indrelid"]) == "1581647"},
+        "native parent/chunk index correspondence drift",
+    )
+    columns = {
+        rel: {
+            r["native"]["attname"]: r
+            for r in metadata["columns"]
+            if str(r["native"]["attrelid"]) == rel and r["native"]["attnum"] > 0
+        }
+        for rel in ["19713", "1581647"]
+    }
+    require(
+        set(columns["19713"]) == set(columns["1581647"]) == {"ts", "override_type", "mode", "details", "greenhouse_id"},
+        "native column inventory drift",
+    )
+    for name, parent in columns["19713"].items():
+        child = columns["1581647"][name]
+
+        def inherited(row):
+            return {k: v for k, v in row["native"].items() if k not in {"attrelid", "attislocal", "attinhcount"}}
+
+        require(
+            inherited(parent) == inherited(child)
+            and parent["default"] == child["default"]
+            and child["native"]["attislocal"] is False
+            and child["native"]["attinhcount"] == 1,
+            "native inherited column drift",
+        )
+    require(len(metadata["constraints"]) == 1, "native constraint inventory drift")
+    native_constraint = metadata["constraints"][0]["native"]
+    require(
+        native_constraint["oid"] == "1581654"
+        and native_constraint["conrelid"] == "1581647"
+        and native_constraint["conname"] == "constraint_886"
+        and native_constraint["contype"] == "c"
+        and native_constraint["convalidated"] is True,
+        "native check constraint drift",
+    )
+    require(
+        [
+            f["native"]
+            for f in facts["constraints"]
+            if f["identity"] == "_timescaledb_internal._hyper_19_1069_chunk.constraint_886"
+        ]
+        == [native_constraint],
+        "native metadata/fresh constraint facts differ",
+    )
+    raw_view = [r for r in snapshot["raw_portable_catalog_v2"] if (r[0], r[1]) not in added]
+    semantic_view = [r for r in snapshot["portable_catalog"] if (r[0], r[1]) not in added]
+    require(len(raw_view) == len(semantic_view) == len(old), "historical projection multiplicity drift")
+    require(
+        catalog_sha256(raw_view) == FROZEN_SOURCE_V2_CATALOG_SHA256, "historical projection differs from immutable ec9"
+    )
+    complete_fresh = {k: v for k, v in snapshot.items() if k != "historical_snapshot"}
+    require(
+        hashlib.sha256(
+            json.dumps(complete_fresh, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
+        ).hexdigest()
+        == HISTORICAL_FRESH_CONTENT_SHA,
+        "historical complete fresh custody drift",
+    )
+    return raw_view, semantic_view
+
+
+def qualify_historical_source(source_path, frozen_path, metadata_path, capture_path, backup_path, toc_path, dump_path):
+    source, source_sha = read_witness(source_path)
+    require("historical_snapshot" not in source, "source already has historical qualification")
+
+    def text(path):
+        require(
+            path.is_file() and not path.is_symlink() and path.stat().st_size <= WITNESS_MAX_BYTES,
+            "regular bounded evidence required",
+        )
+        return path.read_text()
+
+    require(dump_path.is_file() and not dump_path.is_symlink(), "regular historical dump required")
+    digest = hashlib.sha256()
+    with dump_path.open("rb") as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(block)
+    source["historical_snapshot"] = {
+        "profile": HISTORICAL_PROFILE,
+        "fresh_witness_sha256": source_sha,
+        "frozen_source_raw": text(frozen_path),
+        "metadata_raw": text(metadata_path),
+        "capture_raw": text(capture_path),
+        "backup_raw": text(backup_path),
+        "toc_raw": text(toc_path),
+        "dump_sha256": digest.hexdigest(),
+    }
+    checked(source, target=False)
+    return source
+
+
 def checked(snapshot, *, target):
     require(snapshot["version"] == VERSION, "unsupported witness")
+    require(not target or "historical_snapshot" not in snapshot, "source-only historical profile on target")
     require(snapshot["database"] == ("verdify_rehearsal" if target else "verdify"), "wrong database")
     require(snapshot["server"] == (160013 if target else 160011), "wrong server version")
     semantic_ids = checked_catalog(snapshot["portable_catalog"])
     raw_ids = checked_catalog(snapshot["raw_portable_catalog_v2"], raw=True)
     if not target:
         require(
-            catalog_sha256(snapshot["raw_portable_catalog_v2"]) == FROZEN_SOURCE_V2_CATALOG_SHA256,
+            catalog_sha256(historical_catalogs(snapshot)[0]) == FROZEN_SOURCE_V2_CATALOG_SHA256,
             "source raw v2 catalog differs from frozen ec9 witness",
         )
     facts = snapshot["portability_native_facts"]
@@ -726,7 +1109,7 @@ def compare(source, target):
     require(source["ledger"] == target["ledger"], "original ledger identity changed")
     require(source["seals"] == target["seals"], "original C0 seals changed")
     require(
-        source["portable_catalog"] and source["portable_catalog"] == target["portable_catalog"],
+        source["portable_catalog"] and historical_catalogs(source)[1] == target["portable_catalog"],
         "full workload object/ACL/definition catalog drift",
     )
     physical_semantic_equal = left == right
@@ -736,6 +1119,8 @@ def compare(source, target):
         "version": VERSION,
         "frozen_source_v2_sha256": FROZEN_SOURCE_V2_SHA256,
         "source_raw_v2_catalog_sha256": catalog_sha256(source["raw_portable_catalog_v2"]),
+        "historical_source_profile": (source.get("historical_snapshot") or {}).get("profile"),
+        "historical_source_catalog_sha256": catalog_sha256(historical_catalogs(source)[0]),
         "target_raw_v2_catalog_sha256": catalog_sha256(target["raw_portable_catalog_v2"]),
         "raw_catalogs_equal": source["raw_portable_catalog_v2"] == target["raw_portable_catalog_v2"],
         "raw_portable_catalog_differences": raw_catalog_delta(source, target),
@@ -756,8 +1141,43 @@ def main():
     parser.add_argument("--source", type=Path)
     parser.add_argument("--restored", type=Path)
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--qualify-historical-source", action="store_true")
+    for field in ["frozen-source", "chunk-metadata", "chunk-capture", "backup-custody", "dump-toc", "historical-dump"]:
+        parser.add_argument("--" + field, type=Path)
     args = parser.parse_args()
-    if args.source or args.restored:
+    require(
+        args.qualify_historical_source
+        or not any(
+            [
+                args.frozen_source,
+                args.chunk_metadata,
+                args.chunk_capture,
+                args.backup_custody,
+                args.dump_toc,
+                args.historical_dump,
+            ]
+        ),
+        "historical evidence flags require explicit qualification",
+    )
+    if args.qualify_historical_source:
+        require(
+            args.source and not args.restored and not args.target and not args.bootstrap_grantor_profile,
+            "historical source qualification only",
+        )
+        paths = [
+            args.frozen_source,
+            args.chunk_metadata,
+            args.chunk_capture,
+            args.backup_custody,
+            args.dump_toc,
+            args.historical_dump,
+        ]
+        require(all(paths), "complete native historical evidence required")
+        content = (
+            json.dumps(qualify_historical_source(args.source, *paths), separators=(",", ":"), ensure_ascii=False) + "\n"
+        )
+        require(len(content.encode()) <= WITNESS_MAX_BYTES, "qualified historical witness exceeds bound")
+    elif args.source or args.restored:
         require(args.source and args.restored and not args.target, "both comparison witnesses required")
         source, source_sha = read_witness(args.source)
         target, target_sha = read_witness(args.restored)
