@@ -141,6 +141,22 @@ def render(image: str) -> list[dict]:
                         "to": [{"ipBlock": {"cidr": "192.168.7.10/32"}}, {"ipBlock": {"cidr": "10.43.0.1/32"}}],
                         "ports": [{"protocol": "TCP", "port": 443}],
                     },
+                    # Garage HTTPS traverses the apps VIP then Traefik websecure8443.
+                    # Keep namespace and pod selectors in one peer (AND), never OR.
+                    {
+                        "to": [
+                            {
+                                "namespaceSelector": {"matchLabels": {"kubernetes.io/metadata.name": "traefik-apps"}},
+                                "podSelector": {
+                                    "matchLabels": {
+                                        "app.kubernetes.io/name": "traefik",
+                                        "app.kubernetes.io/instance": "traefik-apps-traefik-apps",
+                                    }
+                                },
+                            }
+                        ],
+                        "ports": [{"protocol": "TCP", "port": 8443}],
+                    },
                     # Include observed API backend endpoints as well as the VIP; policy
                     # implementations may evaluate service traffic after DNAT.
                     {

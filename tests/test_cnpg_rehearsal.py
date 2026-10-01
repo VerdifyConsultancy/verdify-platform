@@ -4,6 +4,7 @@ import importlib.util
 from pathlib import Path
 
 import pytest
+import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location("cnpg_rehearsal", ROOT / "scripts/render-cnpg-rehearsal.py")
@@ -57,3 +58,56 @@ def test_operand_restores_required_vector_version_from_verified_source():
     assert "ARG PGVECTOR_VERSION=0.8.1" in source
     assert "sha256sum -c -" in source
     assert "standard-bookworm@sha256:" in source
+
+
+def test_archive_egress_matches_only_observed_traefik_backend_and_checked_in_render():
+    objects = module.render(
+        "registry.vallery.net/verdifyconsultancy/verdify-timescaledb-cnpg:16.13-ts2.25.2@sha256:" + "a" * 64
+    )
+    policy = next(o for o in objects if o["kind"] == "NetworkPolicy" and o["metadata"]["name"].endswith("-isolation"))
+    checked = yaml.safe_load(
+        (ROOT / "deploy/k8s/cnpg/rehearsal/cluster/verdify-cnpg-rehearsal-isolation.yaml").read_text()
+    )
+    assert policy == checked
+    backend = [r for r in policy["spec"]["egress"] if any(p["port"] == 8443 for p in r["ports"])]
+    assert backend == [
+        {
+            "to": [
+                {
+                    "namespaceSelector": {"matchLabels": {"kubernetes.io/metadata.name": "traefik-apps"}},
+                    "podSelector": {
+                        "matchLabels": {
+                            "app.kubernetes.io/name": "traefik",
+                            "app.kubernetes.io/instance": "traefik-apps-traefik-apps",
+                        }
+                    },
+                }
+            ],
+            "ports": [{"protocol": "TCP", "port": 8443}],
+        }
+    ]
+    peer = backend[0]["to"][0]
+
+    def matches(namespace, labels, port):
+        return (
+            port == 8443
+            and namespace == peer["namespaceSelector"]["matchLabels"]["kubernetes.io/metadata.name"]
+            and all(labels.get(k) == v for k, v in peer["podSelector"]["matchLabels"].items())
+        )
+
+    actual = {"app.kubernetes.io/name": "traefik", "app.kubernetes.io/instance": "traefik-apps-traefik-apps"}
+    assert matches("traefik-apps", actual, 8443)
+    assert not matches("verdify-prod", actual, 8443)
+    assert not matches("traefik-apps", {}, 8443)
+    assert not matches("traefik-apps", {**actual, "app.kubernetes.io/instance": "other"}, 8443)
+    assert not matches("traefik-apps", actual, 5432)
+    assert not matches("traefik-apps", actual, 6053)
+    assert any(
+        r
+        == {
+            "to": [{"ipBlock": {"cidr": "192.168.7.10/32"}}, {"ipBlock": {"cidr": "10.43.0.1/32"}}],
+            "ports": [{"protocol": "TCP", "port": 443}],
+        }
+        for r in policy["spec"]["egress"]
+    )
+    assert objects[-1]["spec"] == {"podSelector": {}, "policyTypes": ["Ingress", "Egress"]}

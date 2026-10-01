@@ -53,6 +53,17 @@ spec:
     - protocol: TCP
       port: 443
   - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: traefik-apps
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: traefik
+          app.kubernetes.io/instance: traefik-apps-traefik-apps
+    ports:
+    - protocol: TCP
+      port: 8443
+  - to:
     - ipBlock:
         cidr: 192.168.30.240/32
     - ipBlock:
