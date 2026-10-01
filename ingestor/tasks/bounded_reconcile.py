@@ -257,10 +257,30 @@ def _validated_residual(
         for param, value in approved["changes"]
         if param not in ZONE_VPD_TARGETS and param not in dynamic_guardrails and param not in completed
     ]
+    from ._common import SECOND_READBACK_ABS_TOLERANCE_PARAMS
     from .dispatcher import readback_values_equivalent
 
+    # Defend the admission boundary against a redundant duration rediscovered
+    # by an ordinary layer. It must be the unchanged original plan value over
+    # the unchanged baseline; this grants no authority for a new desired value.
+    original_plan = {row["parameter"]: row["value"] for row in approved["plan_rows"]}
+    redundant = {
+        param
+        for param, value in preview["changes"]
+        if param not in approved_changes
+        and param in SECOND_READBACK_ABS_TOLERANCE_PARAMS
+        and param in approved["readbacks"]
+        and param in original_plan
+        and preview["plan_rows"] == approved["plan_rows"]
+        and _equal(value, original_plan[param])
+        and _equal(preview["readbacks"].get(param), approved["readbacks"][param])
+        and readback_values_equivalent(param, preview["readbacks"].get(param), value)
+    }
+    current_changes = {param: value for param, value in current_changes.items() if param not in redundant}
     current_fixed = []
     for param, value in preview["changes"]:
+        if param in redundant:
+            continue
         if param in ZONE_VPD_TARGETS:
             continue
         if param in dynamic_guardrails:
@@ -758,6 +778,167 @@ async def _settled_recovery_archive(conn, preview: dict, state: dict, approval: 
     return approval is not None and approval.get("run_id") != state["run_id"]
 
 
+FORWARD_AUTHORITY = "confirmed_halt_forward"
+
+
+def _confirmed_halt_shape(state: dict, approval: dict) -> list[str]:
+    """Only a single fully confirmed stage can use this forward handoff."""
+    parameters = state.get("stage_parameters", [])
+    if (
+        state.get("status") != "halted"
+        or not 1 <= len(parameters) <= 12
+        or len(set(parameters)) != len(parameters)
+        or set(state.get("completed", [])) != set(parameters)
+        or len(state.get("completed", [])) != len(parameters)
+        or set(state.get("completed_values", {})) != set(parameters)
+        or state.get("records") != []
+        or any(state.get(key) for key in ("rollback_records", "rollback_parameters"))
+        or approval.get("run_id") != state.get("run_id")
+        or approval.get("approved_preview") != state.get("approved_preview")
+    ):
+        raise ValueError("forward handoff requires one fully confirmed halted stage")
+    uuid.UUID(str(state["run_id"]))
+    desired = dict(state["approved_preview"]["changes"])
+    if any(p not in desired or not _equal(state["completed_values"][p], desired[p]) for p in parameters):
+        raise ValueError("completed stage differs from original desired authority")
+    return parameters
+
+
+def _confirmed_halt_writer_custody(state: dict, custody: dict) -> None:
+    pod = custody["pod"]
+    metadata = pod["metadata"]
+    uuid.UUID(metadata["uid"])
+    original = state["approved_preview"]
+    observed = custody["current"]["preview"]
+    if (
+        pod.get("kind") != "Pod"
+        or metadata.get("namespace") != "verdify-prod"
+        or metadata.get("name") != original["pod"]
+        or custody["current"].get("pod") != original["pod"]
+        or custody["current"].get("source") != original["source_revision"]
+        or any(observed[key] != original[key] for key in ("pod", "source_revision", "session_id", "generation"))
+    ):
+        raise ValueError("confirmed-halt original full Pod custody identity mismatch")
+
+
+def _forward_request_receipt(rows, state: dict, cutoff: datetime) -> list[dict]:
+    parameters = state["stage_parameters"]
+    if len(rows) != len(parameters) or {row["parameter"] for row in rows} != set(parameters):
+        raise ValueError("forward handoff native request set incomplete or duplicated")
+    result = []
+    for row in rows:
+        ts = row["ts"] if isinstance(row["ts"], datetime) else _time(row["ts"])
+        confirmed = row["confirmed_at"]
+        confirmed = confirmed if isinstance(confirmed, datetime) else _time(confirmed) if confirmed else None
+        if (
+            row["delivery_status"] != "confirmed"
+            or confirmed is None
+            or row.get("expired_at") is not None
+            or not row.get("source")
+            or row["source"] == "esp32"
+            or not _time(state["stage_started_at"]) <= ts <= confirmed <= cutoff
+            or not _equal(row["value"], state["completed_values"][row["parameter"]])
+        ):
+            raise ValueError("forward handoff native request is not exactly confirmed")
+        result.append(
+            {
+                "ts": ts.isoformat(),
+                "parameter": row["parameter"],
+                "value": float(row["value"]),
+                "source": row["source"],
+                "delivery_status": "confirmed",
+                "confirmed_at": confirmed.isoformat(),
+                "expired_at": None,
+            }
+        )
+    return sorted(result, key=lambda row: (row["ts"], row["parameter"]))
+
+
+async def _confirmed_halt_archive(conn, preview: dict, state: dict, approval: dict | None, state_dir: Path) -> bool:
+    """Archive verified successful effects, then require independent fresh authority.
+
+    The original state remains active until normal admission validates a new
+    approval; no halted request is reset, retried, expired, or rolled back.
+    """
+    from .dispatcher import readback_values_equivalent
+
+    forward = _read(state_dir / RECOVERY_NAME)
+    if forward is None or forward.get("authority") != FORWARD_AUTHORITY:
+        raise ValueError("explicit confirmed-halt handoff missing")
+    original = forward["original_approval"]
+    parameters = _confirmed_halt_shape(state, original)
+    if (
+        forward.get("version") != 1
+        or forward.get("source_run_id") != state["run_id"]
+        or forward.get("state_digest") != _digest(state)
+        or forward.get("approval_digest") != _digest(original)
+        or forward.get("custody_sha256") != _digest(forward["custody"])
+        or json.loads(forward["custody"][STATE_NAME]) != state
+        or json.loads(forward["custody"][APPROVAL_NAME]) != original
+    ):
+        raise ValueError("confirmed-halt original custody changed")
+    if forward.get("writer_custody_digest") != _digest(forward["original_writer_custody"]):
+        raise ValueError("confirmed-halt original Pod custody changed")
+    _confirmed_halt_writer_custody(state, forward["original_writer_custody"])
+    approved = state["approved_preview"]
+    if preview["plan_rows"] != approved["plan_rows"]:
+        raise ValueError("confirmed-halt effective plan changed")
+    for param, baseline in approved["readbacks"].items():
+        current = preview["readbacks"].get(param)
+        if param in parameters:
+            if not readback_values_equivalent(param, current, state["completed_values"][param]):
+                raise ValueError(f"confirmed-halt completed readback changed: {param}")
+        elif not _equal(current, baseline):
+            raise ValueError(f"confirmed-halt untouched readback changed: {param}")
+    cutoff = _time(forward["approved_at"])
+    rows = await conn.fetch(
+        "SELECT ts, parameter, value, source, delivery_status, confirmed_at, expired_at FROM setpoint_changes "
+        "WHERE parameter = ANY($1::text[]) AND ts >= $2 AND ts <= $3 "
+        "AND COALESCE(source, '') <> 'esp32' ORDER BY ts, parameter",
+        parameters,
+        _time(state["stage_started_at"]),
+        cutoff,
+    )
+    receipt = _forward_request_receipt(rows, state, cutoff)
+    if receipt != forward["native_requests"]:
+        raise ValueError("confirmed-halt native history changed")
+    later = await conn.fetch(
+        "SELECT ts FROM setpoint_changes WHERE parameter = ANY($1::text[]) "
+        "AND ts > $2 AND COALESCE(source, '') <> 'esp32'",
+        parameters,
+        cutoff,
+    )
+    if later:
+        raise ValueError("confirmed-halt later request exists")
+    archive_path = state_dir / f"writer-stage-confirmed-halt-{uuid.UUID(state['run_id']).hex}.json"
+    archive = _read(archive_path)
+    expected = {
+        "schema": "verdify-writer-stage-confirmed-halt-v1",
+        "state": state,
+        "approval": original,
+        "forward": forward,
+        "native_requests": receipt,
+    }
+    if archive is None:
+        now = datetime.now(UTC)
+        if (
+            (state_dir / STATE_NAME).read_text() != forward["custody"][STATE_NAME]
+            or (state_dir / APPROVAL_NAME).read_text() != forward["custody"][APPROVAL_NAME]
+            or approval != original
+            or now >= _time(forward["expires_at"])
+            or _time(forward["expires_at"]) > cutoff + MAX_STAGE_AGE
+            or cutoff > now + timedelta(seconds=15)
+            or forward["current_identity"]
+            != {key: preview[key] for key in ("source_revision", "session_id", "pod", "generation")}
+            or forward["observed_readbacks"] != preview["readbacks"]
+        ):
+            raise ValueError("confirmed-halt handoff is stale or not current")
+        _write(archive_path, expected)
+    elif archive != expected:
+        raise ValueError("immutable confirmed-halt archive changed")
+    return approval is not None and approval.get("run_id") != state["run_id"]
+
+
 async def choose_stage(
     conn,
     changes,
@@ -772,9 +953,13 @@ async def choose_stage(
     approval_path = state_dir / APPROVAL_NAME
     state_path = state_dir / STATE_NAME
     recovered_admission = False
+    original_halt_digest = None
     try:
         approval = _read(approval_path)
         state = _read(state_path)
+        # A stopped receipt is historical evidence. A new preview/manifest
+        # failure cannot rewrite its original reason or completed effects.
+        original_halt_digest = _digest(state) if state is not None and state.get("status") == "halted" else None
         prior = state.get("approved_preview") if state else approval.get("approved_preview") if approval else None
         baseline_names = set(prior["readbacks"]) if prior else set()
         try:
@@ -813,6 +998,19 @@ async def choose_stage(
             # active names; a crash between unlinks resumes from the archive.
             _archive_completed_run(state_dir, state, approval)
             return Decision("ordinary")
+        forward = _read(state_dir / RECOVERY_NAME)
+        if (
+            state is not None
+            and state.get("status") == "halted"
+            and forward
+            and forward.get("authority") == FORWARD_AUTHORITY
+        ):
+            if not await _confirmed_halt_archive(conn, preview, state, approval, state_dir):
+                return Decision(
+                    "hold", reason="confirmed halt archived; fresh approval required", run_id=state["run_id"]
+                )
+            state = None
+            recovered_admission = True
         if state is not None and state.get("status") == "rollback_complete":
             if not await _settled_recovery_archive(conn, preview, state, approval, state_dir):
                 return Decision("hold", reason="settled rollback archived; fresh approval required")
@@ -935,7 +1133,11 @@ async def choose_stage(
         if state_path.exists():
             try:
                 state = _read(state_path)
-                if state and state.get("status") not in {"complete", "rollback_complete"}:
+                if (
+                    state
+                    and not (state.get("status") == "halted" and _digest(state) == original_halt_digest)
+                    and state.get("status") not in {"complete", "rollback_complete"}
+                ):
                     prior = state.get("status", "")
                     state["status"] = "rollback_failed" if prior.startswith("rollback_") else "halted"
                     state["halt_reason"] = str(error)
