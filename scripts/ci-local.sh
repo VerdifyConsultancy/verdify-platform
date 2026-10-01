@@ -128,6 +128,7 @@ $PY -m pytest -q \
   tests/test_experiment_workers.py \
   tests/test_api_deferred_batch_patch.py \
   tests/test_api_overflow_patch.py tests/test_api_iterator_backpressure.py \
+  tests/test_sensor_health_modbus_native.py \
   tests/test_firmware_builder_image.py \
   tests/test_firmware_provisional_rollback.py \
   tests/test_firmware_crop_agnostic_guard.py \
@@ -136,6 +137,7 @@ $PY -m pytest -q \
   tests/test_generate_daily_plan.py \
   tests/test_grafana_cm_check.py \
   tests/test_grafana_manifest_security.py \
+  tests/test_ha_gap_backfill_runtime_boundary.py \
   tests/test_ha_light_writer_boundary.py \
   tests/test_ingestor_setpoint_placement.py \
   tests/test_ingestor_gap_snapshot.py \

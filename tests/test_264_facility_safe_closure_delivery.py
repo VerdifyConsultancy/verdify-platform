@@ -15,7 +15,7 @@ delivery = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(delivery)
 
 
-@pytest.mark.parametrize("seq", [264, 265, 266, 267, 268])
+@pytest.mark.parametrize("seq", [264, 265, 266, 267, 268, 269])
 def test_exact_source_and_ordered_successor(seq):
     name = getattr(delivery, f"SUCCESSOR_{seq}")
     source = ROOT / "db/migrations" / name
@@ -40,7 +40,7 @@ def test_exact_source_and_ordered_successor(seq):
         delivery.reviewed_post_254(later[:-2] + [name], pins)
 
 
-@pytest.mark.parametrize("seq", [264, 265, 266, 267, 268])
+@pytest.mark.parametrize("seq", [264, 265, 266, 267, 268, 269])
 def test_qualified_successor_requires_exact_ordinary_and_mcp_boundaries(monkeypatch, seq):
     later = [delivery.SUCCESSOR_254] + [getattr(delivery, f"SUCCESSOR_{seq}") for seq in range(255, seq + 1)]
     ordinary = getattr(delivery, f"SUCCESSOR_{seq}_DIGESTS")

@@ -316,6 +316,8 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "267-idempotent-observational-source-events.sql",
         # Six least-privilege runtime duties must execute through the forward hook.
         "268-six-runtime-workload-role-boundaries.sql",
+        # Lab topology projections must also execute through the forward hook.
+        "269-lab-crop-zone-topology-projections.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(
