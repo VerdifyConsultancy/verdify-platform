@@ -179,3 +179,13 @@ def test_guard_sql_requires_both_exact_receipts_and_null_role_rows_fail_closed()
     import hashlib
 
     assert hashlib.sha256(migration).hexdigest() == module.MIGRATION_SHA
+
+
+def test_bootstrap_requires_exact_facility_status_successor_after_atomic_migration():
+    import hashlib
+
+    root = Path(__file__).resolve().parents[1]
+    migration = (root / "db/migrations/270-facility-safe-ops-projection.sql").read_bytes()
+    assert hashlib.sha256(migration).hexdigest() == module.OPS_MIGRATION_SHA
+    assert "seq=270" in module.sealed_sql()
+    assert module.OPS_MIGRATION_SHA in module.sealed_sql()

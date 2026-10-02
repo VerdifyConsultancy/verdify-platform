@@ -10,11 +10,13 @@ import subprocess
 
 DUTIES = ("grafana", "planner", "setpoint_server", "ha_backfill", "lab_publisher", "vision")
 PREDECESSORS = {
-    "api": "fe79f986d58ba6deec513312441b5ba5d579168d3e7e28d5721bb5771150af81",
-    "ingestor": "15e4eff5d86ff58bf3fc98075dfc4613b5fd2a418bf3be9251fd7e6b1634a96e",
+    "api": "ad619765f93959500d7ed438f90000ceaf614b2f744553d4a4e269a7b15103d3",
+    "ingestor": "8bf588e5381e236f68aabc6672f61d982321a444f418973089d6a10a5a1efcf6",
     "mcp": "81836c70a76578da82b77899da5d1cafee4597ea819e35ee68a3fd6cf669fa45",
 }
 MIGRATION_SHA = "aed9c4e562ff0420e315d14211224d1fff6469b9e0d2a541aedbc0bc562447e0"
+
+OPS_MIGRATION_SHA = "672d1afa92e37f243d5893fbd57cd2b84e86ea19c1c79d3975c04dfd39663532"
 
 
 class BootstrapError(RuntimeError):
@@ -66,6 +68,9 @@ def sealed_sql():
         "EXISTS(SELECT 1 FROM public.mcp_runtime_boundary_receipt r WHERE r.boundary_sha256=public.fn_mcp_runtime_boundary_digest())",
         f"EXISTS(SELECT 1 FROM public.schema_migrations WHERE source='db/migrations' AND seq=268 AND filename='db/migrations/268-six-runtime-workload-role-boundaries.sql' AND sha256='{MIGRATION_SHA}' AND stamp_method='runner')",
     ]
+    expressions.append(
+        f"EXISTS(SELECT 1 FROM public.schema_migrations WHERE source='db/migrations' AND seq=270 AND filename='db/migrations/270-facility-safe-ops-projection.sql' AND sha256='{OPS_MIGRATION_SHA}' AND stamp_method='runner')"
+    )
     for duty in ("api", "ingestor"):
         expressions.append(
             "EXISTS(SELECT 1 FROM public.runtime_ordinary_login_attestation_receipts r WHERE r.login_name='verdify_"
