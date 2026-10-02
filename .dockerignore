@@ -30,11 +30,15 @@ __pycache__
 
 # --- heavy trees, mostly image-irrelevant ---
 # Firmware is ESP32 C++/ESPHome + a ~193k-row replay corpus. Python service
-# images never ship it; the lab-publisher image needs only the public tunable
-# YAML contract read by scripts/generate-ai-tunables-page.py.
+# images ship only selected nonsecret contracts: the ingestor also needs the
+# owning solar header for independent C1 wire evidence. The lab-publisher uses
+# the public tunable YAML contract read by scripts/generate-ai-tunables-page.py.
 firmware
 !firmware
 firmware/*
+!firmware/lib
+firmware/lib/*
+!firmware/lib/greenhouse_solar.h
 !firmware/greenhouse
 firmware/greenhouse/*
 !firmware/greenhouse/controls.yaml
