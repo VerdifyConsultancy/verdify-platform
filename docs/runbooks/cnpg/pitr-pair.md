@@ -170,3 +170,14 @@ firmware timestamp joins and expiry rules. Source definitions, owners, resolutio
 season and skipped arithmetic domains must match or capture refuses. It does not
 qualify band values. All other relations retain their native queries. Keep failed
 original captures and collect new complete witnesses; partial output is not parity.
+
+The two trace inventories aggregate timestamp endpoints without eight correlated
+lookups per climate row. They materialize the same actual CENTER-admitted climate
+multiset. Snapshot minimum uses latest-before at the first climate timestamp with a
+matching snapshot (including a NULL initial lookup); maximum uses latest-before
+at the last climate timestamp. Firmware
+endpoints use exact native validity intervals minus strictly newer coverage and
+intersect them with closed singleton climate points. Expired newer readings may
+reveal older timestamps and remain represented. Duplicate timestamp peers do not
+mask one another. This qualifies count/time endpoints only, retaining the same
+function/domain, read-only, complete inventory and timeout guards.

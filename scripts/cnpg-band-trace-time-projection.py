@@ -210,3 +210,81 @@ def guard_sql(observation_at):
  END IF;
 END $trace_projection_guard$;
 """.format(" OR ".join(checks), instant, instant)
+
+
+def endpoint_aggregate(view, observation_at):
+    """Exact count/nine timestamp endpoints; interval winners retain expiry."""
+    raw = projection("v_band_trace_recent", observation_at)
+    fields = ["cw.ts"]
+    fields += ["fw_" + x + ".ts AS fw_" + x + "_ts" for x in ("temp_low", "temp_high", "vpd_low", "vpd_high")]
+    fields += ["rb_" + x + ".ts AS rb_" + x + "_ts" for x in ("temp_low", "temp_high", "vpd_low", "vpd_high")]
+    selected = "SELECT " + ",".join(fields)
+    if raw.count(selected) != 1 or raw.count("LEFT JOIN LATERAL (") != 8:
+        raise ValueError("source temporal lookup structure changed")
+    core = raw.split("LEFT JOIN LATERAL (", 1)[0].replace(selected, "SELECT cw.ts", 1).strip()
+    if view == "v_band_trace_latest":
+        instant = observation_sql(observation_at)
+        core = core.replace(instant + " - interval '14 days'", instant + " - interval '2 hours'")
+        core += " ORDER BY cw.ts DESC LIMIT 1"
+    elif view != "v_band_trace_recent":
+        raise ValueError("only two source trace views supported")
+    params = "'temp_low','temp_high','vpd_low','vpd_high'"
+    keys = ["'ts',jsonb_build_array(b.first_ts::text,b.last_ts::text)"]
+    for prefix, relation in (("fw", "firmware_ranges"), ("rb", "snapshot_ranges")):
+        for parameter in ("temp_low", "temp_high", "vpd_low", "vpd_high"):
+            keys.append(
+                "'" + prefix + "_" + parameter + "_ts',"
+                "(SELECT jsonb_build_array(lo::text,hi::text) FROM "
+                + relation
+                + " WHERE parameter='"
+                + parameter
+                + "')"
+            )
+    return (
+        """WITH admitted AS MATERIALIZED (
+"""
+        + core
+        + """
+), bounds AS MATERIALIZED (
+ SELECT count(*) AS row_count,min(ts) AS first_ts,max(ts) AS last_ts,
+        range_agg(tstzrange(ts,ts,'[]')) AS climate_points FROM admitted
+), parameters AS (SELECT unnest(ARRAY["""
+        + params
+        + """]) AS parameter),
+snapshot_ranges AS (
+ SELECT p.parameter,
+   COALESCE((SELECT max(s.ts) FROM public.setpoint_snapshot s,bounds b
+             WHERE s.greenhouse_id='vallery' AND s.parameter=p.parameter AND s.ts<=b.first_ts),
+            (SELECT max(s.ts) FROM public.setpoint_snapshot s
+             WHERE s.greenhouse_id='vallery' AND s.parameter=p.parameter AND s.ts<=
+               (SELECT min(a.ts) FROM admitted a WHERE a.ts>=
+                 (SELECT min(first.ts) FROM public.setpoint_snapshot first,bounds b
+                  WHERE first.greenhouse_id='vallery' AND first.parameter=p.parameter
+                    AND first.ts>b.first_ts AND first.ts<=b.last_ts)))) AS lo,
+   (SELECT max(s.ts) FROM public.setpoint_snapshot s,bounds b
+    WHERE s.greenhouse_id='vallery' AND s.parameter=p.parameter AND s.ts<=b.last_ts) AS hi
+ FROM parameters p
+), candidates AS (
+ SELECT s.parameter,s.ts,tstzrange(s.ts,s.expired_at,'[)') AS valid
+ FROM public.setpoint_changes s CROSS JOIN bounds b
+ WHERE s.greenhouse_id='vallery' AND s.parameter IN ("""
+        + params
+        + """)
+   AND s.ts<=b.last_ts AND (s.expired_at IS NULL OR s.expired_at>b.first_ts)
+   AND (s.expired_at IS NULL OR s.expired_at>s.ts)
+), covered AS (
+ SELECT parameter,ts,valid,
+   range_agg(valid) OVER (PARTITION BY parameter ORDER BY ts DESC
+     GROUPS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING) AS newer_coverage
+ FROM candidates
+), winning AS (
+ SELECT c.parameter,c.ts FROM covered c CROSS JOIN bounds b
+ WHERE (tstzmultirange(c.valid)-COALESCE(c.newer_coverage,'{}'::tstzmultirange)) && b.climate_points
+), firmware_ranges AS (
+ SELECT p.parameter,min(w.ts) AS lo,max(w.ts) AS hi
+ FROM parameters p LEFT JOIN winning w ON w.parameter=p.parameter GROUP BY p.parameter
+)
+SELECT b.row_count,jsonb_build_object("""
+        + ",".join(keys)
+        + ") FROM bounds b"
+    )

@@ -209,16 +209,15 @@ def dataset_sql(profile, observation_at):
     require(profile in (pitr.SOURCE, *t.PHYSICAL_TARGETS), "unsupported native dataset source/profile")
     trace = t.load("cnpg-band-trace-time-projection")
     observation = trace.observation_sql(observation_at)
-    projected_from = (
+    projected_aggregate = (
         "CASE "
         + " ".join(
-            "WHEN c.relname="
-            + t.literal(name)
-            + " THEN "
-            + t.literal("(" + trace.projection(name, observation_at) + ") AS trace_time")
+            "WHEN c.relname=" + t.literal(name) + " THEN " + t.literal(trace.endpoint_aggregate(name, observation_at))
             for name in sorted(trace.VIEWS)
         )
-        + " ELSE format('%I.%I',n.nspname,c.relname) END"
+        + " ELSE format('SELECT count(*), %s FROM %I.%I',"
+        + "CASE WHEN columns.fields IS NULL THEN '''{}''::jsonb' ELSE columns.fields END,"
+        + "n.nspname,c.relname) END"
     )
     return f"""\\set ON_ERROR_STOP on
 BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;
@@ -256,10 +255,7 @@ BEGIN
      jsonb_build_object('relation',%L,'count',row_count,'time_ranges',ranges)))::text,true);
 END $physical_relation$;
 $relation_sql$,
- format('SELECT count(*), %s FROM %s',
-   CASE WHEN columns.fields IS NULL THEN '''{{}}''::jsonb'
-        ELSE columns.fields END,
-   {projected_from}),format('%I.%I',n.nspname,c.relname))
+ {projected_aggregate},format('%I.%I',n.nspname,c.relname))
 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
 CROSS JOIN LATERAL (
  SELECT string_agg(format('jsonb_build_object(%L,jsonb_build_array(min(%I)::text,max(%I)::text))',

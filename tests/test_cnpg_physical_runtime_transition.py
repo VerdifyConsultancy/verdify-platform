@@ -73,6 +73,110 @@ def reference_trace(view, trace):
     return query
 
 
+@pytest.mark.parametrize(
+    "scenario",
+    [
+        "ordinary",
+        "revealed_old",
+        "sparse_masked",
+        "duplicates",
+        "empty",
+        "no_readings",
+        "fallback",
+        "expiry_boundary",
+        "initial_snapshot_null",
+        "sparse_snapshot",
+    ],
+)
+def test_native_interval_endpoints_equal_original_all_nine(private_pg, scenario):  # noqa: F811
+    q = private_pg
+    trace = setup_actual_trace_functions(q)
+    if scenario == "revealed_old":
+        q(
+            "TRUNCATE setpoint_changes; INSERT INTO setpoint_changes VALUES"
+            "(now()-interval '8 hours','vallery','temp_low',1,NULL),"
+            "(now()-interval '5 hours','vallery','temp_low',2,now()-interval '2 hours');"
+        )
+    elif scenario == "sparse_masked":
+        q(
+            "TRUNCATE setpoint_changes; INSERT INTO setpoint_changes VALUES"
+            "(now()-interval '2 hours','vallery','temp_low',1,now()-interval '90 minutes'),"
+            "(now()-interval '1 hour','other','temp_low',2,NULL);"
+        )
+    elif scenario == "duplicates":
+        q(
+            "INSERT INTO climate SELECT * FROM climate; INSERT INTO setpoint_changes SELECT * FROM setpoint_changes;"
+            "INSERT INTO setpoint_changes SELECT ts,greenhouse_id,parameter,value,ts FROM setpoint_changes;"
+        )
+    elif scenario == "empty":
+        q("TRUNCATE climate")
+    elif scenario == "no_readings":
+        q("TRUNCATE setpoint_changes,setpoint_snapshot")
+    elif scenario == "fallback":
+        q("DELETE FROM crop_band_anchors WHERE crop_type='house'")
+    elif scenario == "expiry_boundary":
+        q(
+            "TRUNCATE setpoint_changes; INSERT INTO setpoint_changes "
+            "SELECT min(ts)-interval '1 day','vallery','temp_low',1,NULL FROM climate;"
+            "INSERT INTO setpoint_changes SELECT min(ts)-interval '1 hour','vallery','temp_low',2,min(ts) FROM climate;"
+        )
+    elif scenario == "sparse_snapshot":
+        instant = trace.observation_sql(trace.observation_at)
+        q(
+            "TRUNCATE climate,setpoint_snapshot; INSERT INTO climate VALUES ("
+            + instant
+            + "-interval '10 minutes','vallery',70,0.9,50,40),("
+            + instant
+            + ",'vallery',70,0.9,50,40);"
+            "INSERT INTO setpoint_snapshot SELECT " + instant + "-age,'vallery',parameter,1 "
+            "FROM unnest(ARRAY[interval '5 minutes',interval '3 minutes']) age "
+            "CROSS JOIN unnest(ARRAY['temp_low','temp_high','vpd_low','vpd_high']) parameter;"
+        )
+    elif scenario == "initial_snapshot_null":
+        q(
+            "TRUNCATE setpoint_snapshot; INSERT INTO setpoint_snapshot "
+            "SELECT now()-interval '1 hour','vallery',p,1 FROM "
+            "unnest(ARRAY['temp_low','temp_high','vpd_low','vpd_high']) p;"
+        )
+    for view in sorted(trace.VIEWS):
+        sql = trace.endpoint_aggregate(view, trace.observation_at)
+        result = q(
+            "BEGIN READ ONLY; SET LOCAL search_path=pg_catalog,public,pg_temp; SET LOCAL timezone='UTC';"
+            + trace.guard_sql(trace.observation_at)
+            + trace_aggregate(reference_trace(view, trace), trace)
+            + ";"
+            + "SELECT jsonb_build_object('count',row_count,'time_ranges',ranges) FROM ("
+            + sql
+            + ") AS result(row_count,ranges);COMMIT;"
+        )
+        original, optimized = map(json.loads, result.splitlines())
+        assert original == optimized
+
+
+def test_complete_native_collector_dispatches_both_trace_endpoint_aggregates(private_pg):  # noqa: F811
+    q = private_pg
+    trace = setup_actual_trace_functions(q)
+    q(
+        "CREATE SCHEMA _timescaledb_catalog;"
+        "CREATE TABLE _timescaledb_catalog.hypertable(id int,schema_name text,table_name text);"
+        "CREATE TABLE _timescaledb_catalog.chunk(id int,hypertable_id int,schema_name text,table_name text,"
+        "compressed_chunk_id int,dropped boolean);"
+    )
+    sql = p.dataset_sql(p.pitr.SOURCE, trace.observation_at).replace(
+        "::int<>160013", "::int<>" + q("SHOW server_version_num")
+    )
+    sql = sql.replace(
+        "OR (SELECT extversion FROM pg_extension WHERE extname='timescaledb') IS DISTINCT FROM '2.25.2'", "OR false"
+    )
+    result = json.loads(q(sql))
+    for view in sorted(trace.VIEWS):
+        row = next(x for x in result["relations"] if x["relation"] == "public." + view)
+        expected = json.loads(q("SET timezone='UTC'; " + trace_aggregate(reference_trace(view, trace), trace)))
+        assert row["count"] == expected["count"]
+        assert row["time_ranges"] == expected["time_ranges"]
+    assert result["observation_at"] == trace.observation_at
+
+
 @pytest.mark.parametrize("fallback", [False, True])
 def test_actual_source_trace_timestamp_projection_equals_both_complete_views(private_pg, fallback):  # noqa: F811
     q = private_pg
@@ -529,7 +633,9 @@ def test_native_dataset_sql_is_read_only_full_inventory_and_fixed_identity(profi
         word in sql for word in ("INSERT INTO", "UPDATE public", "ALTER TABLE", "CREATE TABLE", "DELETE FROM")
     )
     assert "min(%I)::text,max(%I)::text" in sql
-    assert "\\gexec" in sql and sql.count("SELECT count(*)") == 1
+    assert "\\gexec" in sql and sql.count("SELECT count(*)") == 3
+    assert "GROUPS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING" in sql
+    assert "tstzrange(ts,ts," in sql
     assert "statement_timeout='120s'" in sql
     assert "FOR relation IN" not in sql
 
