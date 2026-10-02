@@ -175,7 +175,8 @@ def test_native_interval_endpoints_equal_original_all_nine(private_pg, scenario)
         assert original == optimized
 
 
-def test_complete_native_collector_dispatches_both_trace_endpoint_aggregates(private_pg):  # noqa: F811
+def test_complete_native_collector_dispatches_both_trace_endpoint_aggregates(private_pg, monkeypatch):  # noqa: F811
+    fixture_native_clock_loader(monkeypatch)
     q = private_pg
     trace = setup_actual_trace_functions(q)
     q(
@@ -655,7 +656,13 @@ def test_native_dataset_sql_is_read_only_full_inventory_and_fixed_identity(profi
         word in sql for word in ("INSERT INTO", "UPDATE public", "ALTER TABLE", "CREATE TABLE", "DELETE FROM")
     )
     assert "min(%I)::text,max(%I)::text" in sql
-    assert "\\gexec" in sql and sql.count("SELECT count(*)") == 3
+    # The closed native view bodies contain their own COUNT aggregates. Bind
+    # the actual per-relation dispatch instead of counting embedded tokens.
+    assert "\\gexec" in sql
+    assert sql.count("SELECT format($relation_sql$") == 1
+    assert sql.count("EXECUTE %L INTO row_count,ranges;") == 1
+    assert "WHEN c.relkind='v' THEN format(" in sql
+    assert "ELSE format('SELECT count(*), %s FROM %I.%I'," in sql
     assert "GROUPS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING" in sql
     assert "tstzrange(ts,ts," in sql
     assert "finite_expiry AS MATERIALIZED" in sql
@@ -665,7 +672,23 @@ def test_native_dataset_sql_is_read_only_full_inventory_and_fixed_identity(profi
     assert "FOR relation IN" not in sql
 
 
-def test_native_private_fixture_dataset_collector_handles_uncompressed_and_compressed(private_pg):  # noqa: F811
+def fixture_native_clock_loader(monkeypatch):
+    # These existing PG collector fixtures deliberately do not contain the
+    # closed estate's 186-view/54-function source profile. Exercise their
+    # original count/time/readonly plumbing; dedicated clock tests qualify
+    # complete inventory refusal and common-clock projection independently.
+    original_load = t.load
+    fixture_clock = SimpleNamespace(
+        guard_sql=lambda observation: "",
+        relation_aggregate_template_at=lambda observation: "SELECT count(*), %s FROM public.%I",
+    )
+    monkeypatch.setattr(
+        t, "load", lambda name: fixture_clock if name == "cnpg-public-count-time-clock" else original_load(name)
+    )
+
+
+def test_native_private_fixture_dataset_collector_handles_uncompressed_and_compressed(private_pg, monkeypatch):  # noqa: F811
+    fixture_native_clock_loader(monkeypatch)
     # This PG16 fixture has no Timescale extension. Only the collector joins,
     # counts, ranges and READ ONLY behavior are tested; no actual recovery proof.
     q = private_pg

@@ -161,7 +161,8 @@ UID binding. Pass that same value as `--observation-at` to each
 `emit-dataset-sql` invocation for source, A and B; independently moving recent
 windows cannot be compared. Each database still has its own repeatable-read,
 read-only snapshot. Keep the complete inventory, all counts and timestamp ranges,
-and the existing 120-second per-statement/180-second capture bounds.
+and the existing 120-second native per-statement limit. Record the attended
+whole-capture bound separately, using measured cumulative native work.
 
 Only the source-defined `v_band_trace_recent` (14 days) and
 `v_band_trace_latest` (two hours, latest row) use the closed count/time projection.
@@ -187,3 +188,21 @@ strictly newer nonexpiring timestamp clips the candidate, then only newer finite
 intervals before that cutoff are subtracted. This avoids repeatedly finalizing a
 growing range aggregate when nonexpiring history dominates, while retaining the
 same winner intervals for arbitrary finite expiry and timestamp peers.
+
+
+The complete count/time collector also binds the native source270 public view
+inventory and reachable function definitions through
+`cnpg-public-count-time-clock.py`. Ordinary view clock expressions and the
+source-owned SQL clock-function bodies use that same observation; stored
+materialized views stay stored. The exact native season CASE must give the
+same result at the native transaction clock and common observation. A season
+mismatch, changed definition, extra reachable overload or inventory change
+refuses the whole capture. Native CENTER/house arithmetic remains unchanged.
+
+Whole-capture duration is distinct from the 120-second native statement limit.
+The original sequential collector demonstrably exceeded eleven minutes while
+individual statements continued below that limit. An attended operator must
+record a finite whole-capture budget based on that measured work and retain
+one original session identity; a transport timeout is not native completion.
+If transport loses the output, settle that exact session before another
+capture. Never accept a partial inventory or independently moving clocks.
