@@ -206,3 +206,11 @@ record a finite whole-capture budget based on that measured work and retain
 one original session identity; a transport timeout is not native completion.
 If transport loses the output, settle that exact session before another
 capture. Never accept a partial inventory or independently moving clocks.
+
+The complete count/time capture also uses the pinned native policy-twin definition.
+Its outdoor as-of timestamps use one ordered window scan, retaining the original
+bounded LAG for windows with conflicting duplicate outdoor pairs. Equipment state
+JSON keeps the native DISTINCT expression; its timestamp uses the equivalent
+maximum of all eligible relay rows. All view rows, seven timestamp pairs, native
+profile guards, and the 120-second statement budget remain required. This query
+plan change alone does not establish native dataset parity or runtime performance.

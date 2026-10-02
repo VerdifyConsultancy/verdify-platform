@@ -96,6 +96,7 @@ $PY -m pytest -q \
   tests/test_cnpg_target270_successor.py \
   tests/test_cnpg_physical_runtime_transition.py \
   tests/test_cnpg_public_count_time_clock.py \
+  tests/test_cnpg_policy_twin_count_time.py \
   tests/test_cnpg_physical_client_qualification.py \
   tests/test_db_backup_retry_classifier.py \
   tests/test_action_log_policy_identity.py \
