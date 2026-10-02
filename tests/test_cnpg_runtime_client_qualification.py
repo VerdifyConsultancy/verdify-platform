@@ -238,7 +238,7 @@ def test_probe_failure_does_not_print_driver_exception_or_secret(capsys):
         exec(client.WRAPPED_PROBE, {})  # noqa: S102 — execute only the fixed qualification probe fixture
     assert exc.value.code == 1
     result = json.loads(capsys.readouterr().out)
-    assert result == {"status": "failed", "error_category": "KeyError", "probe_line": 4}
+    assert result == {"status": "failed", "error_category": "KeyError", "probe_line": 4, "transport_attempts": []}
 
 
 @pytest.mark.parametrize(
@@ -364,6 +364,20 @@ def test_probe_pool_startup_and_identity_fail_closed_without_secret_output(monke
         Path, "read_bytes", lambda path: b"fixture-module" if str(path) == "/app/main.py" else real_read(path)
     )
 
+    class ReadyWriter:
+        def close(self):
+            calls.append("readiness_socket_closed")
+
+        async def wait_closed(self):
+            pass
+
+    async def ready_connection(host, port):
+        assert host == client.HOST and port == 5432
+        calls.append("tcp_readiness_not_authentication")
+        return None, ReadyWriter()
+
+    monkeypatch.setattr(__import__("asyncio"), "open_connection", ready_connection)
+
     async def create_pool(dsn, **kwargs):
         calls.append("password_tcp_pool_startup")
         assert secret in dsn and "default_transaction_read_only=on" in dsn
@@ -394,6 +408,7 @@ def test_probe_pool_startup_and_identity_fail_closed_without_secret_output(monke
         "DB_USER": facts["login"],
         "VERDIFY_GIT_SHA": "b" * 40,
         "DB_HOST": client.HOST,
+        "DB_PORT": "5432",
         "DB_NAME": client.DATABASE,
         "VERDIFY_DEVICE_WRITE_ENABLED": "0",
     }.items():
@@ -405,6 +420,8 @@ def test_probe_pool_startup_and_identity_fail_closed_without_secret_output(monke
             exec(client.WRAPPED_PROBE, {})  # noqa: S102 — fixed probe under isolated driver double
         assert exit_info.value.code == 1
     output = capsys.readouterr().out
+    assert calls.count("password_tcp_pool_startup") == 1
+    assert calls.count("tcp_readiness_not_authentication") == 1
     assert secret not in output and "postgresql://" not in output
     result = json.loads(output)
     assert result["status"] == ("passed" if valid else "failed")
@@ -532,7 +549,12 @@ def test_safe_probe_location_never_formats_hostile_exception(exception, capsys):
     assert exc.value.code == 1
     output = capsys.readouterr().out
     assert secret not in output and "postgresql" not in output and "private-host" not in output
-    assert json.loads(output) == {"status": "failed", "error_category": "Hostile", "probe_line": 5}
+    assert json.loads(output) == {
+        "status": "failed",
+        "error_category": "Hostile",
+        "probe_line": 5,
+        "transport_attempts": [],
+    }
 
 
 def test_safe_probe_location_names_only_constant_probe_frame(capsys):
@@ -541,7 +563,7 @@ def test_safe_probe_location_names_only_constant_probe_frame(capsys):
     with pytest.raises(SystemExit):
         exec(wrapper, {})  # noqa: S102 — fixed wrapper excludes imported traceback frames
     result = json.loads(capsys.readouterr().out)
-    assert result == {"status": "failed", "error_category": "AssertionError", "probe_line": 1}
+    assert result == {"status": "failed", "error_category": "AssertionError", "probe_line": 1, "transport_attempts": []}
 
 
 def test_safe_probe_location_uses_deepest_nested_async_probe_frame(capsys):
@@ -558,4 +580,102 @@ def test_safe_probe_location_uses_deepest_nested_async_probe_frame(capsys):
         exec(wrapper, {})  # noqa: S102 — native async traceback order/redaction fixture
     output = capsys.readouterr().out
     assert "private-dsn-password" not in output
-    assert json.loads(output) == {"status": "failed", "error_category": "AssertionError", "probe_line": 3}
+    assert json.loads(output) == {
+        "status": "failed",
+        "error_category": "AssertionError",
+        "probe_line": 3,
+        "transport_attempts": [],
+    }
+
+
+def readiness_scope(monkeypatch, outcomes):
+    import ast
+    import asyncio
+    import datetime
+    import types
+
+    clock = [0.0]
+    calls = []
+
+    class Writer:
+        def close(self):
+            calls.append("closed")
+
+        async def wait_closed(self):
+            pass
+
+    async def connect(host, port):
+        calls.append((host, port))
+        value = outcomes.pop(0) if outcomes else ConnectionRefusedError("fixture-private-password")
+        if isinstance(value, BaseException):
+            clock[0] += 1.0
+            raise value
+        return None, Writer()
+
+    async def wait_for(awaitable, timeout):
+        assert 0 < timeout <= 1.0
+        return await awaitable
+
+    async def sleep(seconds):
+        clock[0] += seconds
+
+    monkeypatch.setenv("DB_HOST", client.HOST)
+    monkeypatch.setenv("DB_PORT", "5432")
+    scope = {
+        "asyncio": types.SimpleNamespace(
+            get_running_loop=lambda: types.SimpleNamespace(time=lambda: clock[0]),
+            open_connection=connect,
+            wait_for=wait_for,
+            sleep=sleep,
+        ),
+        "os": os,
+        "datetime": datetime,
+        "TRANSPORT_ATTEMPTS": [],
+        "EXPECTED_TRANSPORT_HOST": client.HOST,
+    }
+    node = next(
+        n for n in ast.parse(client.PROBE).body if isinstance(n, ast.AsyncFunctionDef) and n.name == "wait_transport"
+    )
+    exec(compile(ast.Module(body=[node], type_ignores=[]), "<selected-readiness>", "exec"), scope)  # noqa: S102 — selected fixed source function only
+    return scope, calls, clock, asyncio
+
+
+def test_readiness_refusal_then_success_retains_attempts_and_closes(monkeypatch):
+    scope, calls, _, asyncio = readiness_scope(monkeypatch, [ConnectionRefusedError("private"), True])
+    asyncio.run(scope["wait_transport"]())
+    attempts = scope["TRANSPORT_ATTEMPTS"]
+    assert [a["outcome"] for a in attempts] == ["ConnectionRefusedError", "connected"]
+    assert calls[-1] == "closed"
+    for a in attempts:
+        assert a["host"] == client.HOST and a["port"] == 5432
+        assert __import__("datetime").datetime.fromisoformat(a["started_at"]).tzinfo
+        assert __import__("datetime").datetime.fromisoformat(a["finished_at"]).tzinfo
+    assert "private" not in json.dumps(attempts)
+
+
+def test_readiness_deadline_is_finite_and_preserves_all_refusals(monkeypatch):
+    scope, calls, clock, asyncio = readiness_scope(monkeypatch, [])
+    with pytest.raises(TimeoutError):
+        asyncio.run(scope["wait_transport"]())
+    assert clock[0] == 10.0
+    assert len(scope["TRANSPORT_ATTEMPTS"]) == 8
+    assert all(a["outcome"] == "ConnectionRefusedError" for a in scope["TRANSPORT_ATTEMPTS"])
+    assert len(calls) == 8
+
+
+@pytest.mark.parametrize("key,value", [("DB_HOST", "foreign.example"), ("DB_PORT", "5433")])
+def test_readiness_wrong_target_never_connects(monkeypatch, key, value):
+    scope, calls, _, asyncio = readiness_scope(monkeypatch, [True])
+    monkeypatch.setenv(key, value)
+    with pytest.raises(AssertionError):
+        asyncio.run(scope["wait_transport"]())
+    assert calls == [] and scope["TRANSPORT_ATTEMPTS"] == []
+
+
+def test_readiness_unexpected_error_is_not_retried(monkeypatch):
+    scope, calls, _, asyncio = readiness_scope(monkeypatch, [PermissionError("hostile-private"), True])
+    with pytest.raises(PermissionError):
+        asyncio.run(scope["wait_transport"]())
+    assert len(calls) == 1
+    assert scope["TRANSPORT_ATTEMPTS"][0]["outcome"] == "PermissionError"
+    assert "hostile-private" not in json.dumps(scope["TRANSPORT_ATTEMPTS"])
