@@ -58,6 +58,39 @@ After independent full-record/source-delta and native successor review, the same
 helper can emit a separate installation transaction using `--before`,
 `--before-sha256`, `--reviewed`, `--reviewed-sha256` and `--output`, plus the original
 source/prior-install arguments above. It never executes that installation.
+The genuine reviewed rollback record remains immutable. If the two source
+matviews have refreshed since qualification, `installation_projection` accepts
+only the same closed five physical fields and retains the actual delta. It
+derives a separately labeled expected current post witness, retaining every
+reviewed nonphysical post field and using the complete current raw facts. This
+is an expected projection, not a new native qualification record. The original
+actual record hash remains the qualification hash.
+
+The only additional namespace lineage supported is the measured source-native
+TimescaleDB 2.25.2 history-retention job: its exact pinned policy body creates
+`__tmp_bgw_job_stat_history ON COMMIT DROP`, then truncates and reinserts history.
+The preserved actual job3 success interval is 2026-10-02 06:00:00.002336 through
+06:00:00.095788 UTC. The separate native history proof has no job3 history row;
+it proves the surviving history row and both namespaces share creating XID
+13510. These facts remain separate, with the whole original proof retained.
+
+`--namespace-custody` and its exact SHA bind the native two-row empty PostgreSQL
+temp/toast pair, same backend index and creating XID, bootstrap owner, NULL ACL,
+recognized temporary namespace status, no relations/functions/types, exact server
+and selected policy source hash. The source accepts only this pair appended to
+all original namespace mappings. It rechecks those exact native facts inside the
+installation transaction. Only the source policy's three history objects may
+also differ: the table's `relfilenode`/`relfrozenxid` and each of its two existing
+indexes' `relfilenode`/`relpages`/`reltuples`. The table horizon must match the
+proved creating XID; index statistics must match the observed TRUNCATE reset.
+All OIDs, ownership, definitions, ACLs, index linkage and other facts remain exact.
+The native namespace/history predicate can refuse if subsequent history retention
+removes the creating-XID evidence; this is a refusal, never install success.
+
+This custody input is rejected for qualification execution. It permits a distinct
+current expected projection only; the genuine 75a78 rollback record and its
+qualification hash are never rewritten or relabeled.
+
 The exact full predecessor is checked inside the native transaction before DDL;
 any intervening drift refuses the transaction. Only the source ops definition,
 one exact 270 ledger row and the three qualified-target receipt successor rows
