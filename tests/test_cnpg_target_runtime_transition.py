@@ -534,7 +534,7 @@ def test_native_qualification_record_cannot_be_substituted(tamper):
         t.checked_qualification(target, record)
 
 
-def test_complete_atomic_sql_rolls_back_qualification_and_bad_successor_then_admits(private_pg, monkeypatch):
+def selected_atomic_fixture(private_pg, monkeypatch):
     q = private_pg
     monkeypatch.setattr(t, "SERVER", int(q("SHOW server_version_num")))
     # Synthetic digest implementation/witness stand-ins only. The default
@@ -566,6 +566,11 @@ def test_complete_atomic_sql_rolls_back_qualification_and_bad_successor_then_adm
     monkeypatch.setattr(t, "witness_select", lambda target=None: selects)
     before = json.loads(q("SET search_path=pg_catalog,pg_temp; " + selects))
     historical = originals(q)
+    return q, before, selects, historical
+
+
+def test_complete_atomic_sql_rolls_back_qualification_and_bad_successor_then_admits(private_pg, monkeypatch):
+    q, before, selects, historical = selected_atomic_fixture(private_pg, monkeypatch)
     result = q(t.emit_sql(before)).splitlines()
     record = json.loads(result[-1])
     assert record["mode"] == "rollback-qualification"

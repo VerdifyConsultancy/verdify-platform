@@ -90,6 +90,7 @@ $PY -m pytest -q \
   tests/test_cnpg_restore_private_scratch.py \
   tests/test_cnpg_source_grantor_continuation.py \
   tests/test_cnpg_target_runtime_transition.py \
+  tests/test_cnpg_retained_session_admission.py \
   tests/test_cnpg_physical_runtime_transition.py \
   tests/test_cnpg_physical_client_qualification.py \
   tests/test_db_backup_retry_classifier.py \
