@@ -142,6 +142,14 @@ SUCCESSOR_269 = "269-lab-crop-zone-topology-projections.sql"
 SUCCESSOR_269_SHA256 = "2540c20810b07fa42e73200d120d3b753b9b36860b029a49b8db1b4a7283475d"
 SUCCESSOR_269_DIGESTS = SUCCESSOR_268_DIGESTS
 SUCCESSOR_269_MCP_DIGEST = SUCCESSOR_268_MCP_DIGEST
+# Exact270 body successor catalog projection; actual adoption remains atomic.
+SUCCESSOR_270 = "270-facility-safe-ops-projection.sql"
+SUCCESSOR_270_SHA256 = "672d1afa92e37f243d5893fbd57cd2b84e86ea19c1c79d3975c04dfd39663532"
+SUCCESSOR_270_DIGESTS = {
+    "verdify_api_runtime_login": "ad619765f93959500d7ed438f90000ceaf614b2f744553d4a4e269a7b15103d3",
+    "verdify_ingestor_runtime_login": "8bf588e5381e236f68aabc6672f61d982321a444f418973089d6a10a5a1efcf6",
+}
+SUCCESSOR_270_MCP_DIGEST = SUCCESSOR_269_MCP_DIGEST
 # Exact emergency hotfix predecessor: the 262 receipt was resealed to this
 # live digest while 263 was prepared. Only a pending 263 may admit either the
 # original reviewed 262 pair or this pair; mixed receipt/live values fail.
@@ -176,6 +184,7 @@ def reviewed_post_254(later, files=None):
         SUCCESSOR_267,
         SUCCESSOR_268,
         SUCCESSOR_269,
+        SUCCESSOR_270,
     )
     require(successors == list(reviewed[: len(successors)]), "unreviewed post-254 receipt successor")
     if successors:
@@ -199,6 +208,7 @@ def reviewed_post_254(later, files=None):
                 SUCCESSOR_267_SHA256,
                 SUCCESSOR_268_SHA256,
                 SUCCESSOR_269_SHA256,
+                SUCCESSOR_270_SHA256,
             ),
             strict=True,
         ):
@@ -454,6 +464,7 @@ COMMIT;"""
         (SUCCESSOR_267, SUCCESSOR_267_DIGESTS),
         (SUCCESSOR_268, SUCCESSOR_268_DIGESTS),
         (SUCCESSOR_269, SUCCESSOR_269_DIGESTS),
+        (SUCCESSOR_270, SUCCESSOR_270_DIGESTS),
     ):
         if name in later:
             expected["api"] = expected["api_receipt"] = digests["verdify_api_runtime_login"]

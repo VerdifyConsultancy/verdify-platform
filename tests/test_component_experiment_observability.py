@@ -355,3 +355,141 @@ def test_every_db_integrity_branch_round_trips_instead_of_falling_back(reason: s
 def test_nominal_ops_row_does_not_page():
     payload = _load_alert_helper()(_ops_row(alert_severity=None, alert_reason=None, admission_state="closed"))
     assert payload is None
+
+
+def _evaluate_facility_closure_predicate(**overrides):
+    """Execute the owning SQL predicate against disposable in-memory rows.
+
+    SQLite supports this EXISTS/NULL/date comparison subset unchanged. These
+    fixtures qualify status semantics, never controller or recovery evidence.
+    """
+    import sqlite3
+
+    sql = (ROOT / "db/migrations/270-facility-safe-ops-projection.sql").read_text()
+    predicate = sql.split(
+        "SELECT EXISTS (\n              SELECT 1 FROM public.experiment_v2_facility_safe_closures", 1
+    )[1]
+    predicate = (
+        "SELECT EXISTS (\n              SELECT 1 FROM public.experiment_v2_facility_safe_closures"
+        + predicate.split(") AS closed", 1)[0]
+        + ")"
+    )
+    values = dict(
+        closure=True,
+        lease=19,
+        closure_lease=19,
+        phase="shadow",
+        admission="closed",
+        enabled=False,
+        selected=None,
+        exposures=0,
+        fault=1,
+        work=1,
+        terminal=True,
+        closure_time=2,
+        now=3,
+    )
+    values.update(overrides)
+    conn = sqlite3.connect(":memory:")
+    conn.execute("ATTACH DATABASE ':memory:' AS public")
+    conn.executescript("""
+        CREATE TABLE public.experiment_v2_facility_safe_closures
+            (experiment_id TEXT, safe_state_kind TEXT, closed_lease_generation INTEGER, closed_at INTEGER);
+        CREATE TABLE public.experiment_v2_runtime_faults (experiment_id TEXT, recorded_at INTEGER);
+        CREATE TABLE public.experiment_v2_work (experiment_id TEXT, work_id TEXT, created_at INTEGER);
+        CREATE TABLE public.experiment_v2_work_events (work_id TEXT, event_kind TEXT);
+    """)
+    if values["closure"]:
+        conn.execute(
+            "INSERT INTO public.experiment_v2_facility_safe_closures VALUES(?,?,?,?)",
+            ("exp", "facility_owned_safe_state", values["closure_lease"], values["closure_time"]),
+        )
+    conn.execute("INSERT INTO public.experiment_v2_runtime_faults VALUES(?,?)", ("exp", values["fault"]))
+    conn.execute("INSERT INTO public.experiment_v2_work VALUES(?,?,?)", ("exp", "work", values["work"]))
+    if values["terminal"]:
+        conn.execute("INSERT INTO public.experiment_v2_work_events VALUES('work','failed')")
+    query = (
+        """WITH e(experiment_id,lease_generation,execution_phase,admission_state,component_enabled)
+        AS (VALUES('exp',?,?,?,?)), selected(work_id) AS (VALUES(?)),
+        exposures(open_count) AS (VALUES(?)), clock(v_now) AS (VALUES(?))
+    """
+        + predicate
+        + " FROM e CROSS JOIN selected CROSS JOIN exposures CROSS JOIN clock"
+    )
+    return bool(
+        conn.execute(
+            query,
+            (
+                values["lease"],
+                values["phase"],
+                values["admission"],
+                values["enabled"],
+                values["selected"],
+                values["exposures"],
+                values["now"],
+            ),
+        ).fetchone()[0]
+    )
+
+
+def test_old_failed_work_and_fault_new_current_lease_facility_closure_qualify():
+    assert _evaluate_facility_closure_predicate()
+    # Confirmed recovery is absent: failed work remains failed.
+    assert "WHEN facility.closed THEN 'facility_safe_closed'" in EFFECTIVE_OPS_BODY
+    assert "WHEN NOT facility.closed AND active_fault.recorded_at IS NOT NULL" in EFFECTIVE_OPS_BODY
+    assert "(NOT facility.closed AND active_fault.recorded_at IS NOT NULL" in EFFECTIVE_OPS_BODY
+    # The baseline readiness predicate is unchanged; closure is not a substitute.
+    assert "baseline.present AND baseline_confirmation.present AND" in EFFECTIVE_OPS_BODY
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"closure": False},
+        {"closure_lease": 18},
+        {"lease": 20},
+        {"phase": "commissioning"},
+        {"admission": "open"},
+        {"admission": "emergency_hold"},
+        {"enabled": True},
+        {"selected": "active-work"},
+        {"exposures": 1},
+        {"fault": 2},
+        {"fault": 3},
+        {"work": 3},
+        {"terminal": False},
+        {"closure_time": 4},
+    ],
+)
+def test_facility_closure_fails_closed(changes):
+    assert not _evaluate_facility_closure_predicate(**changes)
+
+
+def test_canonical_alert_closure_does_not_claim_confirmed_baseline_recovery():
+    _load_alert_helper()
+    from tasks.alerts import _component_experiment_closure_resolution
+
+    row = _ops_row(
+        safety_state="facility_safe_closed",
+        execution_phase="shadow",
+        admission_state="closed",
+        operation_kind=None,
+        alert_severity=None,
+        alert_reason=None,
+        rollback_ready=False,
+    )
+    assert _load_alert_helper()(row) is None
+    assert _component_experiment_closure_resolution(row) == (
+        "facility-safe authority closure; historical runtime faults retained; no confirmed baseline recovery claimed"
+    )
+    assert row["rollback_ready"] is False
+    for changes in (
+        {"safety_state": "runtime_fault"},
+        {"alert_severity": "warning"},
+        {"alert_reason": "runtime_fault_requires_recovery"},
+        {"operation_kind": "baseline_recovery"},
+        {"open_exposure_count": 1},
+        {"admission_state": "open"},
+        {"execution_phase": "commissioning"},
+    ):
+        assert _component_experiment_closure_resolution({**row, **changes}) is None

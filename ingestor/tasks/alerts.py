@@ -94,6 +94,21 @@ def _component_experiment_integrity_alert(
     }
 
 
+def _component_experiment_closure_resolution(row: Mapping[str, object]) -> str | None:
+    """Name a database-attested authority handoff without claiming baseline recovery."""
+    if (
+        row.get("safety_state") == "facility_safe_closed"
+        and row.get("execution_phase") == "shadow"
+        and row.get("admission_state") == "closed"
+        and row.get("operation_kind") is None
+        and row.get("open_exposure_count") == 0
+        and row.get("alert_severity") is None
+        and row.get("alert_reason") is None
+    ):
+        return "facility-safe authority closure; historical runtime faults retained; no confirmed baseline recovery claimed"
+    return None
+
+
 # ═════════════════════════════════════════════════════════════════
 # 6. ALERT MONITOR (every 300s)
 # ═════════════════════════════════════════════════════════════════
@@ -131,7 +146,11 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
             log.warning("component experiment ops status unavailable: %s", type(e).__name__)
             component_rows = []
             component_status_available = False
+        component_closure_resolutions = {}
         for component_row in component_rows:
+            closure_resolution = _component_experiment_closure_resolution(component_row)
+            if closure_resolution is not None:
+                component_closure_resolutions[f"experiment.v2.{component_row['experiment_id']}"] = closure_resolution
             component_alert = _component_experiment_integrity_alert(component_row)
             if component_alert is not None:
                 alerts.append(component_alert)
@@ -2419,6 +2438,8 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
         for key, row in open_keys.items():
             if key not in active_keys:
                 disposition, resolution = _auto_close_disposition(row["alert_type"], row["disposition"])
+                if key[0] == "component_experiment_integrity" and key[1] in component_closure_resolutions:
+                    disposition, resolution = "resolved", component_closure_resolutions[key[1]]
                 await conn.execute(
                     "UPDATE alert_log SET disposition = $2, resolved_at = now(), resolved_by = 'system', "
                     "resolution = $3 WHERE id = $1",
