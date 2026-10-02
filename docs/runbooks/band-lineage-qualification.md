@@ -218,3 +218,51 @@ contract cannot be served. Additive reader removal, if eventually needed, is a
 separate ledgered forward correction after consumer removal, not editing 243 or
 dropping its dependencies. Reconfirm Argo Synced + Healthy, running identities,
 live null/eligibility semantics and collector v2 adoption before acceptance.
+
+## C1 capture version 3: independent device wire projection
+
+`verdify-component-grid-capture-input-v3` and its result-v3 explicitly evaluate
+**device wire coherence**. They preserve the v2 ideal SQL comparison and its
+historical failures. They do not change `fn_band_setpoints`, API/MCP corridor
+semantics, public SQL lineage, planner policy, firmware, or Gate P acceptance.
+A passing v3 C1 capture does not resolve global #424 or establish a physical pilot.
+
+The ingestor independently selects the current desired 24 house-anchor DB rows,
+checks them against the immutable qualification worksheet's policy, applies the
+existing dispatcher precision (temperature one decimal, VPD two), and evaluates
+the delivered firmware's integer local minute, solar events, binary32 arithmetic
+and explicit fused-operation order. The supported firmware identity is exactly
+`2026.10.1.2143.d5b5c404-wifi-bound`; the resolver binds the actual archived ELF
+SHA, owning header/controls hashes, site constants, and its implementation.
+Caller-supplied projections or algorithm labels cannot pass Tool A validation.
+
+The packet separately retains:
+
+- The ideal SQL six-value tuple, pinned complete band/crop/solar/season/helper function definitions and queried database/server version.
+- Selected desired DB rows, season, query time, original worksheet and policy hash.
+- All 24 original anchor callbacks, exact sensor routes/units, current generation,
+  source timestamps and strict equality to desired wire anchors.
+- The original ASCII consumed-sample clock (sample and callback no older than 30 seconds) and independent computed solar clock.
+- The six consumed/observed values; these never enter expected-value arithmetic.
+
+Pauses, stages, reconnects, resets and cached subscription replay discard partial
+anchor evidence together with partial component/band evidence. The original
+48-field grid, source authority, immutable expiry and 30-second validation guard
+remain enforced. Anchor callbacks must be original and within 60 seconds of the
+component epoch; missing or changed policy/delivery evidence blocks publication.
+
+Tool A recomputes the entire desired-only projection, checks the complete
+provenance revision, and retains exact binary32 comparisons: an adjacent ULP
+still fails. Its result names `served_device_wire_coherence`, retains a separate
+`ideal_sql_vs_device_wire` warning and reports `global_424_resolved: false`.
+The stable resolver revision binds policy/functions; the separate complete
+evidence hash binds this epoch's callbacks and sample clock.
+
+The source differential uses explicit operations from the actual2143 ELF
+lowering, contraction disabled and separate scalar `sinf`/`cosf`/`acosf`/`fmaf`
+ABI calls. The focused matrix covers 46,080 minutes (16 boundary dates, both
+site UTC offsets, temperature and VPD anchor profiles), DST/leap clocks and
+both preserved original failed tuples. GCC12/Linux and clang/Mac source differentials are not executions of
+the Xtensa firmware or a general libm portability guarantee. Fresh original
+native epochs must still establish actual target agreement after source delivery.
+No previous failed packet may be retimed, relabeled or used as new capture credit.

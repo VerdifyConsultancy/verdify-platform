@@ -366,7 +366,7 @@ def test_stage_change_during_native_db_read_cannot_publish_prior_epoch(monkeypat
 
     class Connection:
         def transaction(self, **kwargs):
-            assert kwargs == {"readonly": True}
+            assert kwargs == {"readonly": True, "isolation": "repeatable_read"}
             return self
 
         async def __aenter__(self):
@@ -454,3 +454,185 @@ def test_legacy_switch_aliases_remain_ordinary_readbacks_not_capture_routes():
         assert CFG_READBACK_MAP[definition.cfg_readback_object_id] == name
         c.record(definition.esp_object_id, definition.default, observed_at=moment, generation=3)
     assert not c.pending and not c.epochs
+
+
+def test_anchor_callbacks_are_original_epoch_data_and_discarded_on_pause_reset_and_reconnect():
+    from verdify_schemas.control_band_wire import ANCHOR_PARAMS
+
+    c = collector()
+    moment = datetime.now(UTC)
+    for name in ANCHOR_PARAMS:
+        c.record(REGISTRY[name].cfg_readback_object_id, 1.25, observed_at=moment, generation=3)
+    fill(c, moment)
+    assert set(c.epochs[0]["anchor_callbacks"]) == set(ANCHOR_PARAMS)
+    first = c.epochs[0]
+    c.pause("unsettled")
+    assert not c.anchor_callbacks
+    c.resume(moment + timedelta(seconds=1))
+    c.record(REGISTRY[ANCHOR_PARAMS[0]].cfg_readback_object_id, 2, observed_at=moment, generation=3)
+    assert not c.anchor_callbacks
+    fill(c, moment + timedelta(seconds=30))
+    assert c.epochs[0]["anchor_callbacks"] == {}
+    assert len(first["anchor_callbacks"]) == 24
+    c.record(
+        REGISTRY[ANCHOR_PARAMS[0]].cfg_readback_object_id, 2, observed_at=moment + timedelta(seconds=31), generation=3
+    )
+    c.record("uptime_s", 100, observed_at=moment + timedelta(seconds=31), generation=3)
+    c.record("uptime_s", 1, observed_at=moment + timedelta(seconds=32), generation=3)
+    assert not c.anchor_callbacks
+    c.record(
+        REGISTRY[ANCHOR_PARAMS[0]].cfg_readback_object_id, 2, observed_at=moment + timedelta(seconds=33), generation=3
+    )
+    c.configure({"request_id": c.identity[0]}, runtime=c.identity[1], generation=4, entities=[])
+    assert not c.anchor_callbacks
+
+
+def test_cached_replay_fences_anchor_callbacks_and_later_native_credit(monkeypatch):
+    import tasks.c1_capture as module
+
+    from verdify_schemas.control_band_wire import ANCHOR_PARAMS
+
+    c = collector()
+    monkeypatch.setattr(module, "COLLECTOR", c)
+    moment = datetime.now(UTC)
+    c.record(REGISTRY[ANCHOR_PARAMS[0]].cfg_readback_object_id, 2, observed_at=moment, generation=3)
+    module.invalidate_for_cached_replay()
+    assert not c.anchor_callbacks
+    c.record(
+        REGISTRY[ANCHOR_PARAMS[0]].cfg_readback_object_id, 2, observed_at=moment + timedelta(seconds=1), generation=3
+    )
+    assert not c.anchor_callbacks
+    assert c.blocked_reason == "cached_state_replay_during_capture"
+
+
+def test_complete_source_v3_emission_keeps_ideal_sql_separate_and_is_tool_a_valid(tmp_path, monkeypatch):
+    import asyncio
+    import copy
+    import json
+    import runpy
+    from types import SimpleNamespace
+
+    import tasks.c1_capture as module
+    import tasks.component_experiment as component
+
+    fixture = runpy.run_path(str(Path(__file__).with_name("test_component_grid_capture.py")))
+    document = fixture["wire_artifact"]()
+    context = document["served_wire_contract"]
+    moment = datetime.fromisoformat(document["observed_at"])
+
+    class Clock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return moment
+
+    request = {
+        "schema": "verdify-c1-native-capture-request-v1",
+        "request_id": str(uuid4()),
+        **document["runtime"],
+        "source_revision": document["revisions"]["source_revision"],
+        "qualification_worksheet_id": context["worksheet"]["worksheet_id"],
+        "expires_at": (moment + timedelta(minutes=9)).isoformat(),
+    }
+    c = NativeCapture()
+    c.configure(
+        request, runtime=request["runtime_instance_id"], generation=request["connection_generation"], entities=[]
+    )
+    c.qualification_worksheet = copy.deepcopy(context["worksheet"])
+    c.qualification_stage = "stage-a"
+    bands = {
+        row["observed"]["slug"]: {
+            "slug": row["observed"]["slug"],
+            "value": row["observed"]["value"],
+            "observed_at": row["observed"]["as_of"],
+        }
+        for row in document["band_layers"]
+    }
+    bands.update(
+        {
+            "band_source": {"slug": "band_source", "value": "onchip_curve", "observed_at": moment.isoformat()},
+            "firmware_version": {
+                "slug": "firmware_version",
+                "value": document["revisions"]["firmware_revision"],
+                "observed_at": moment.isoformat(),
+            },
+            "consumed_band_sample_epoch": context["sample_epoch_callback"],
+        }
+    )
+    epoch = {
+        "schema": module.RAW_SCHEMA,
+        "source_epoch_id": str(uuid4()),
+        "request_id": request["request_id"],
+        "completed_at": document["observed_at"],
+        "runtime": document["runtime"],
+        "reset_detected": False,
+        "observed_components": document["observed_components"],
+        "entities": document["entities"],
+        "band_callbacks": bands,
+        "anchor_callbacks": context["anchor_callbacks"],
+    }
+    c.epochs.append(epoch)
+    qualification = {
+        "worksheet_id": request["qualification_worksheet_id"],
+        "worksheet": context["worksheet"],
+        "status": "active",
+        "stage_started_at": "stage-a",
+        "validated_at": moment.isoformat(),
+    }
+    (tmp_path / module.REQUEST_NAME).write_text(json.dumps(request))
+    monkeypatch.setattr(module, "datetime", Clock)
+    monkeypatch.setenv("STATE_DIR", str(tmp_path))
+    monkeypatch.setenv("VERDIFY_GIT_SHA", request["source_revision"])
+    monkeypatch.setattr(module, "COLLECTOR", c)
+    monkeypatch.setattr(module, "_current_qualification", lambda: qualification)
+    monkeypatch.setattr(
+        module,
+        "_source_revisions",
+        lambda: {
+            k: v
+            for k, v in document["revisions"].items()
+            if k not in {"source_revision", "firmware_revision", "crop_band_resolver_revision"}
+        },
+    )
+    monkeypatch.setattr(component, "RUNTIME_INSTANCE_ID", request["runtime_instance_id"])
+    monkeypatch.setattr(component, "_component_grid_inventory", [])
+    monkeypatch.setattr(
+        component,
+        "component_entity_grid_attestation",
+        lambda: SimpleNamespace(firmware_revision=document["revisions"]["firmware_revision"]),
+    )
+    monkeypatch.setattr(module.shared, "transport_generation", request["connection_generation"])
+    monkeypatch.setattr(module.shared, "writer_lease_strictly_held", lambda: True)
+    monkeypatch.setattr(module.shared, "transport_readbacks_ready", lambda generation: True)
+    client = object()
+    monkeypatch.setitem(module.shared.esp32, "client", client)
+    monkeypatch.setitem(module.shared.esp32, "state_subscription_client", client)
+
+    class Connection:
+        def transaction(self, **kwargs):
+            assert kwargs == {"readonly": True, "isolation": "repeatable_read"}
+            return self
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            return None
+
+        async def fetchrow(self, sql, *args):
+            return context["ideal_sql"] if "fn_band_setpoints" in sql else context["database"]
+
+        async def fetch(self, sql, *args):
+            return context["anchor_rows"]
+
+        async def fetchval(self, sql, *args):
+            if "fn_current_season" in sql:
+                return context["season"]
+            return context["sql_functions"][args[0] if args else "fn_band_setpoints(timestamptz)"]
+
+    asyncio.run(module.capture_native_source(SimpleNamespace(acquire=lambda: Connection())))
+    output = tmp_path / "c1-capture" / request["request_id"]
+    emitted = json.loads((output / (epoch["source_epoch_id"] + ".input.json")).read_text())
+    assert emitted["schema"] == "verdify-component-grid-capture-input-v3"
+    assert emitted["served_wire_contract"]["ideal_sql"] == context["ideal_sql"]
+    assert fixture["cap"].capture_from_artifact(emitted).qualified
+    assert emitted["band_layers"][0]["served"]["value"] != context["ideal_sql"]["temp_low"]

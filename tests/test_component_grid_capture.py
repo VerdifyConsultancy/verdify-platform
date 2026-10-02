@@ -963,3 +963,188 @@ def test_onchip_curve_consumed_edges_require_real_routes_and_exact_values():
     wrong = copy.deepcopy(document)
     wrong["band_layers"][0]["observed"]["value"] = "75.20"
     assert run(wrong).grid_revision is None
+
+
+def wire_artifact():
+    """Synthetic complete v3 source contract, independent of control observations."""
+    from verdify_schemas.c1_grid_projection import project_c1_grid_state
+    from verdify_schemas.control_band_wire import (
+        ANCHOR_PARAMS,
+        CONTRACT_SCHEMA,
+        SUPPORTED_FIRMWARE,
+        TARGET_ELF_SHA256,
+        algorithm_revision,
+        content_digest,
+        resolve_served_wire,
+        wire_resolver_revision,
+    )
+
+    document = artifact()
+    sample = OBSERVED_AT.replace(second=0, microsecond=0)
+    admitted = sample - timedelta(minutes=1)
+    document["schema"] = cap.WIRE_INPUT_SCHEMA
+    document["revisions"]["firmware_revision"] = SUPPORTED_FIRMWARE
+    document["band_source"]["value"] = "onchip_curve"
+    desired = {name: (70.11 if name.startswith("band_temp_") else 0.755) for name in ANCHOR_PARAMS}
+    base = {
+        name: False if ENTITY_GRIDS[name].entity_type == "switch" else float(ENTITY_GRIDS[name].minimum)
+        for name in CANONICAL_FIELD_ORDER
+    }
+    inputs = {"crop_anchors": desired, "anchor_origin": "crop_band_anchors", "band_source": "anchors"}
+    base["min_fog_on_s"] = 46.0
+    decisions = {"min_fog_on_s": {"from": 46.0, "to": 45.0, "rationale": "synthetic exact explicit choice"}}
+    worksheet = {
+        "schema": "verdify-c1-qualification-worksheet-v3",
+        "worksheet_id": "22222222-2222-4222-8222-222222222222",
+        "expires_at": (admitted + timedelta(minutes=12)).isoformat(),
+        "decisions": decisions,
+        "preview": {
+            "captured_at": admitted.isoformat(),
+            "base_values": base,
+            "base_inputs": inputs,
+            "base_inputs_sha256": content_digest(inputs),
+            "identity": {
+                **document["runtime"],
+                "source_revision": SOURCE_REVISION,
+                "firmware_revision": SUPPORTED_FIRMWARE,
+            },
+        },
+        "projection": project_c1_grid_state(base, decisions),
+    }
+    for name, value in worksheet["projection"]["proposed_values"].items():
+        document["observed_components"][name]["value"] = value
+    result = resolve_served_wire(desired, sample, base["night_vpd_bias_kpa"])
+    anchors = {}
+    rows = []
+    for name, value in desired.items():
+        series, anchor = name.removeprefix("band_").rsplit("_", 1)
+        rows.append({"crop_type": "house", "series": series, "anchor": anchor, "season": "all", "value": value})
+        slug = REGISTRY[name].cfg_readback_object_id
+        unit = "°F" if series.startswith("temp_") else "kPa"
+        document["entities"].append(
+            {
+                "object_id": slug,
+                "entity_type": "sensor",
+                "unit": unit,
+                "disabled_by_default": False,
+                "key": 900 + len(rows),
+            }
+        )
+        anchors[name] = {"slug": slug, "value": result["rounded_anchors"][name], "observed_at": sample.isoformat()}
+    contract = {
+        "schema": CONTRACT_SCHEMA,
+        "algorithm_revision": algorithm_revision(),
+        "target_elf_sha256": TARGET_ELF_SHA256,
+        "worksheet": worksheet,
+        "query_at": OBSERVED_AT.isoformat(),
+        "season": "fall",
+        "anchor_rows": rows,
+        "anchor_callbacks": anchors,
+        "sample_epoch_callback": {
+            "slug": "consumed_band_sample_epoch",
+            "value": str(int(sample.timestamp())),
+            "observed_at": sample.isoformat(),
+        },
+        "ideal_sql": {series: 70.11 if series.startswith("temp_") else 0.755 for series in BAND_VALUES},
+        "sql_functions": json.loads((ROOT / "tests/fixtures/c1_wire/ideal_sql_functions.json").read_text()),
+        "database": {"name": "verdify", "server_version_num": "160011"},
+    }
+    document["served_wire_contract"] = contract
+    document["revisions"]["crop_band_resolver_revision"] = wire_resolver_revision(contract)
+    existing = {row["object_id"] for row in document["entities"]}
+    for series, slug in cap.CONSUMED_BAND_OBSERVED_SLUGS.items():
+        if slug not in existing:
+            document["entities"].append(
+                {
+                    "object_id": slug,
+                    "entity_type": "sensor",
+                    "unit": "°F" if series.startswith("temp") else "kPa",
+                    "disabled_by_default": False,
+                    "key": 1100 + len(existing),
+                }
+            )
+            existing.add(slug)
+    for row in document["band_layers"]:
+        series = row["series"]
+        value = result["values"][series]
+        for layer in ("served", "control", "observed"):
+            row[layer]["value"] = value
+            row[layer]["as_of"] = sample.isoformat()
+        row["served"]["source"] = "independent_desired_anchor_device_wire_projection"
+        row["observed"]["slug"] = cap.CONSUMED_BAND_OBSERVED_SLUGS[series]
+    return document
+
+
+def test_v3_wire_projection_retains_ideal_difference_and_separate_424_truth():
+    result = run(wire_artifact())
+    assert result.qualified
+    assert result.served_wire_report["ideal_sql_equals_device_wire"] is False
+    assert result.served_wire_report["global_424_resolved"] is False
+    checks = cap.build_checks(result, expected_grid_revision=None)
+    assert any(c.name == "served_device_wire_coherence" and c.status == "PASS" for c in checks)
+    assert any(c.name == "ideal_sql_vs_device_wire" and c.status == "WARN" for c in checks)
+    assert not any(c.name == "band_coherence_424" for c in checks)
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "missing_anchor",
+        "stale_anchor",
+        "wrong_route",
+        "wrong_metadata",
+        "delivered_ulp",
+        "forged_expected",
+        "changed_policy",
+        "changed_firmware",
+        "missing_sql",
+        "caller_algorithm",
+        "stale_sample",
+        "arbitrary_sql",
+        "changed_48",
+        "extended_authority",
+    ],
+)
+def test_v3_complete_contract_rejects_forgery_missing_evidence_and_changed_policy(mutation):
+    from verdify_schemas.control_band_wire import ANCHOR_PARAMS, wire_resolver_revision
+
+    document = wire_artifact()
+    context = document["served_wire_contract"]
+    name = ANCHOR_PARAMS[0]
+    if mutation == "missing_anchor":
+        del context["anchor_callbacks"][name]
+    elif mutation == "stale_anchor":
+        context["anchor_callbacks"][name]["observed_at"] = (OBSERVED_AT - timedelta(minutes=3)).isoformat()
+    elif mutation == "wrong_route":
+        context["anchor_callbacks"][name]["slug"] = "arbitrary"
+    elif mutation == "wrong_metadata":
+        document["entities"][entity_index(document["entities"], REGISTRY[name].cfg_readback_object_id)]["unit"] = (
+            "arbitrary"
+        )
+    elif mutation == "delivered_ulp":
+        row = context["anchor_callbacks"][name]
+        bits = int.from_bytes(struct.pack("!f", row["value"]), "big")
+        row["value"] = struct.unpack("!f", (bits + 1).to_bytes(4, "big"))[0]
+    elif mutation == "forged_expected":
+        document["band_layers"][0]["served"]["value"] += 0.1
+    elif mutation == "changed_policy":
+        context["anchor_rows"][0]["value"] += 0.01
+    elif mutation == "changed_firmware":
+        document["revisions"]["firmware_revision"] = "unqualified"
+    elif mutation == "missing_sql":
+        context["sql_functions"].clear()
+    elif mutation == "caller_algorithm":
+        context["algorithm_revision"] = "caller-supplied"
+    elif mutation == "stale_sample":
+        context["sample_epoch_callback"]["value"] = str(int(OBSERVED_AT.timestamp()) - 31)
+    elif mutation == "arbitrary_sql":
+        first = next(iter(context["sql_functions"]))
+        context["sql_functions"][first] = "arbitrary caller SQL"
+    elif mutation == "changed_48":
+        document["observed_components"]["min_fog_on_s"]["value"] = 60
+    elif mutation == "extended_authority":
+        context["worksheet"]["expires_at"] = (OBSERVED_AT + timedelta(hours=1)).isoformat()
+    # Rebinding the caller's hash never bypasses normative evidence validation.
+    document["revisions"]["crop_band_resolver_revision"] = wire_resolver_revision(context)
+    with pytest.raises(cap.GridCaptureError):
+        run(document)

@@ -18,6 +18,17 @@ from uuid import UUID, uuid4
 import shared
 
 from verdify_schemas.component_executor import CANONICAL_FIELD_ORDER
+from verdify_schemas.control_band_wire import (
+    ANCHOR_PARAMS,
+    CONTRACT_SCHEMA,
+    SQL_FUNCTIONS,
+    TARGET_ELF_SHA256,
+    algorithm_revision,
+    resolve_served_wire,
+    selected_house_anchors,
+    validate_wire_contract,
+    wire_resolver_revision,
+)
 from verdify_schemas.experiment_config import policy_device_id
 from verdify_schemas.tunable_registry import REGISTRY
 
@@ -43,6 +54,7 @@ class NativeCapture:
         self.pending = {}
         self.band = {}
         self.band_pending = {}
+        self.anchor_callbacks = {}
         self.epochs = []
         self.last_completed = {}
         self.last_uptime = None
@@ -74,6 +86,7 @@ class NativeCapture:
         self.pending.clear()
         self.band.clear()
         self.band_pending.clear()
+        self.anchor_callbacks.clear()
         self.epochs.clear()
 
     def pause(self, reason):
@@ -96,15 +109,22 @@ class NativeCapture:
         if slug == "uptime_s":
             if isinstance(value, (int, float)) and math.isfinite(value):
                 if self.last_uptime is not None and value + 1 < self.last_uptime:
-                    self.pending.clear()
-                    self.band.clear()
-                    self.band_pending.clear()
-                    self.epochs.clear()
+                    self.discard_callbacks()
                     self.reset_detected = True
                 self.last_uptime = value
             return False
         if self.paused_reason is not None or (self.resume_after is not None and observed_at < self.resume_after):
             return False
+        anchor = next((n for n in ANCHOR_PARAMS if REGISTRY[n].cfg_readback_object_id == slug), None)
+        if (
+            anchor is not None
+            and not isinstance(value, bool)
+            and isinstance(value, (int, float))
+            and math.isfinite(value)
+        ):
+            previous = self.anchor_callbacks.get(anchor)
+            if previous is None or observed_at > datetime.fromisoformat(previous["observed_at"]):
+                self.anchor_callbacks[anchor] = {"value": value, "observed_at": observed_at.isoformat(), "slug": slug}
         if slug == "firmware_version":
             self.band[slug] = {"value": value, "observed_at": observed_at.isoformat(), "slug": slug}
         if slug in {*BAND_SLUGS.values(), "band_source", "consumed_band_sample_epoch"}:
@@ -147,6 +167,7 @@ class NativeCapture:
                 "observed_components": dict(self.pending),
                 "entities": self.entities,
                 "band_callbacks": dict(self.band),
+                "anchor_callbacks": dict(self.anchor_callbacks),
             }
         )
         self.last_completed = {n: datetime.fromisoformat(r["observed_at"]) for n, r in self.pending.items()}
@@ -161,10 +182,7 @@ COLLECTOR = NativeCapture()
 def invalidate_for_cached_replay():
     """Any same-socket replay makes an armed request unsuitable for C1 credit."""
     if COLLECTOR.identity is not None:
-        COLLECTOR.pending.clear()
-        COLLECTOR.band.clear()
-        COLLECTOR.band_pending.clear()
-        COLLECTOR.epochs.clear()
+        COLLECTOR.discard_callbacks()
         COLLECTOR.blocked_reason = "cached_state_replay_during_capture"
 
 
@@ -420,11 +438,62 @@ async def capture_native_source(pool):
         # time separately; evaluate served values for exactly its control minute.
         control_minute = sample.replace(second=0, microsecond=0)
         async with pool.acquire() as conn:
-            async with conn.transaction(readonly=True):
+            async with conn.transaction(readonly=True, isolation="repeatable_read"):
                 served = await conn.fetchrow("SELECT * FROM fn_band_setpoints($1::timestamptz)", control_minute)
                 resolver = await conn.fetchval(
                     "SELECT pg_get_functiondef('fn_band_setpoints(timestamptz)'::regprocedure)"
                 )
+                if request.get("qualification_worksheet_id") and (
+                    not _qualification_ready(COLLECTOR, _current_qualification(), datetime.now(UTC))
+                    or epoch not in COLLECTOR.epochs
+                ):
+                    return
+                wire_contract = None
+                wire_result = None
+                if request.get("qualification_worksheet_id"):
+                    rows = await conn.fetch("SELECT * FROM crop_band_anchors WHERE crop_type = 'house' ORDER BY id")
+                    season = await conn.fetchval("SELECT fn_current_season()")
+                    functions = {
+                        name: await conn.fetchval("SELECT pg_get_functiondef($1::regprocedure)", name)
+                        for name in SQL_FUNCTIONS
+                    }
+                    database = await conn.fetchrow(
+                        "SELECT current_database() AS name, current_setting('server_version_num') AS server_version_num"
+                    )
+                    wire_contract = {
+                        "schema": CONTRACT_SCHEMA,
+                        "algorithm_revision": algorithm_revision(),
+                        "target_elf_sha256": TARGET_ELF_SHA256,
+                        "worksheet": COLLECTOR.qualification_worksheet,
+                        "query_at": datetime.now(UTC).isoformat(),
+                        "season": str(season).strip().lower(),
+                        "anchor_rows": json.loads(json.dumps([dict(row) for row in rows], default=str)),
+                        "anchor_callbacks": epoch.get("anchor_callbacks", {}),
+                        "sample_epoch_callback": bands["consumed_band_sample_epoch"],
+                        "ideal_sql": {name: float(served[name]) for name in BAND_SLUGS},
+                        "sql_functions": functions,
+                        "database": dict(database),
+                    }
+                    try:
+                        desired = selected_house_anchors(wire_contract["anchor_rows"], wire_contract["season"])
+                        wire_result = resolve_served_wire(
+                            desired,
+                            sample,
+                            wire_contract["worksheet"]["projection"]["proposed_values"]["night_vpd_bias_kpa"],
+                        )
+                    except (ValueError, KeyError, TypeError, OverflowError) as error:
+                        unavailable = output / (epoch["source_epoch_id"] + ".unavailable.json")
+                        if not unavailable.exists():
+                            _atomic(
+                                unavailable,
+                                {
+                                    "source_epoch_id": epoch["source_epoch_id"],
+                                    "reason": str(error),
+                                    "qualification_claimed": False,
+                                },
+                            )
+                        continue
+
         layers = []
         for series, slug in BAND_SLUGS.items():
             row = bands[slug]
@@ -435,10 +504,12 @@ async def capture_native_source(pool):
                 {
                     "series": series,
                     "served": {
-                        "value": float(served[series]),
+                        "value": wire_result["values"][series] if wire_result else float(served[series]),
                         "unit": unit,
-                        "as_of": control_minute.isoformat(),
-                        "source": "fn_band_setpoints(device_sample_control_minute)",
+                        "as_of": sample.isoformat() if wire_result else control_minute.isoformat(),
+                        "source": "independent_desired_anchor_device_wire_projection"
+                        if wire_result
+                        else "fn_band_setpoints(device_sample_control_minute)",
                     },
                     "control": {
                         "value": row["value"],
@@ -456,7 +527,9 @@ async def capture_native_source(pool):
                 }
             )
         document = {
-            "schema": "verdify-component-grid-capture-input-v2",
+            "schema": "verdify-component-grid-capture-input-v3"
+            if wire_contract
+            else "verdify-component-grid-capture-input-v2",
             "device_id": policy_device_id(os.environ.get("GREENHOUSE_ID", "vallery")),
             "observed_at": epoch["completed_at"],
             "runtime": epoch["runtime"],
@@ -464,7 +537,9 @@ async def capture_native_source(pool):
                 **_source_revisions(),
                 "source_revision": request["source_revision"],
                 "firmware_revision": evidence.firmware_revision,
-                "crop_band_resolver_revision": "sha256:" + hashlib.sha256(resolver.encode()).hexdigest(),
+                "crop_band_resolver_revision": wire_resolver_revision(wire_contract)
+                if wire_contract
+                else "sha256:" + hashlib.sha256(resolver.encode()).hexdigest(),
             },
             "entities": epoch["entities"],
             "observed_components": epoch["observed_components"],
@@ -476,6 +551,22 @@ async def capture_native_source(pool):
                 **epoch["runtime"],
             },
         }
+        if wire_contract is not None:
+            document["served_wire_contract"] = wire_contract
+            try:
+                validate_wire_contract(wire_contract, document)
+            except (ValueError, KeyError, TypeError, OverflowError) as error:
+                unavailable = output / (epoch["source_epoch_id"] + ".unavailable.json")
+                if not unavailable.exists():
+                    _atomic(
+                        unavailable,
+                        {
+                            "source_epoch_id": epoch["source_epoch_id"],
+                            "reason": str(error),
+                            "qualification_claimed": False,
+                        },
+                    )
+                continue
         if request.get("qualification_worksheet_id") and not _qualification_ready(
             COLLECTOR, _current_qualification(), datetime.now(UTC)
         ):
