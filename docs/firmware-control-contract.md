@@ -28,6 +28,23 @@ equal to the canonical planner-policy surface. Non-policy rows are visible
 context only; they are not planner write targets. Safety rails and operator/fallback
 values remain outside planner control.
 
+## Passive full-48 configuration observations
+
+All 48 canonical policy fields expose a diagnostic sensor sampled every 30 seconds
+from the firmware's current consumed configuration. Writable Switch object IDs are
+separate from these sensor routes: ESPHome suppresses unchanged switch callbacks,
+so a switch alone cannot support successive passive full-48 observations.
+`sw_direct_wet_gate_enabled`, `sw_fog_closes_vent`, and `sw_mister_closes_vent`
+therefore use distinct `cfg_*` sensors with the same policy getter as their switches.
+The sensors return unavailable until configuration is ready; they do not set values.
+
+Legacy switch slugs remain ordinary ingestor readback aliases for firmware
+compatibility. C1 capture accepts only the registry's canonical periodic sensor
+routes, with its existing generation, timestamp, source and stage fences. Neither
+cached replays nor device toggles qualify as fresh passive evidence. This source
+contract does not claim deployed full-48 epochs; those require native observations
+after the matching firmware and consumer rollout.
+
 ## Crop-agnostic boundary
 
 The shipped firmware (`firmware/lib/*.h`, `firmware/greenhouse/*.yaml`) knows
