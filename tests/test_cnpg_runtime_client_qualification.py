@@ -251,6 +251,9 @@ def test_probe_failure_does_not_print_driver_exception_or_secret(capsys):
         "cluster",
         "replica",
         "backend",
+        "backend_family",
+        "backend_null",
+        "matching_ipv6",
         "readonly",
         "readonly_reset",
         "password",
@@ -284,11 +287,21 @@ def test_probe_pool_startup_and_identity_fail_closed_without_secret_output(monke
         "cluster": ("cluster_name", "prod"),
         "replica": ("replica", True),
         "backend": ("backend_address", "10.42.3.8"),
+        "backend_family": ("backend_address", "2001:db8::7"),
+        "backend_null": ("backend_address", None),
+        "matching_ipv6": ("backend_address", "2001:db8::7"),
         "readonly": ("transaction_read_only", "off"),
     }
     if bad in changes:
         key, value = changes[bad]
         identity[key] = value
+
+    expected_address = "2001:db8::7" if bad == "matching_ipv6" else "10.42.3.7"
+    valid = bad in (None, "matching_ipv6")
+    # PostgreSQL inet::text includes /32 or /128. The selected SQL must obtain
+    # native host semantics while retaining the unmodified raw inet evidence.
+    address = identity["backend_address"]
+    identity["backend_address_raw"] = None if address is None else address + ("/128" if ":" in address else "/32")
 
     class Context:
         async def __aenter__(self):
@@ -300,11 +313,14 @@ def test_probe_pool_startup_and_identity_fail_closed_without_secret_output(monke
     class Connection:
         identity_reads = 0
 
-        async def fetchrow(self, _sql):
+        async def fetchrow(self, sql):
             self.identity_reads += 1
+            row = dict(identity)
+            if "pg_catalog.host(inet_server_addr()) AS backend_address" not in sql:
+                row["backend_address"] = row["backend_address_raw"]
             if bad == "readonly_reset" and self.identity_reads == 2:
-                return {**identity, "default_read_only": "off"}
-            return identity
+                row["default_read_only"] = "off"
+            return row
 
         def transaction(self, **kwargs):
             calls.append(("transaction", kwargs))
@@ -366,7 +382,7 @@ def test_probe_pool_startup_and_identity_fail_closed_without_secret_output(monke
         "consumer_source": "b" * 40,
         "image_module_path": "/app/main.py",
         "consumer_module_sha256": hashlib.sha256(b"fixture-module").hexdigest(),
-        "primary_address": "10.42.3.7",
+        "primary_address": expected_address,
         "hot_sql": "SELECT 1",
         "target_binding_sha256": "e" * 64,
         "consumer_image": "qualified-image",
@@ -382,7 +398,7 @@ def test_probe_pool_startup_and_identity_fail_closed_without_secret_output(monke
         "VERDIFY_DEVICE_WRITE_ENABLED": "0",
     }.items():
         monkeypatch.setenv(key, value)
-    if bad is None:
+    if valid:
         exec(client.WRAPPED_PROBE, {})  # noqa: S102 — fixed probe under isolated driver double
     else:
         with pytest.raises(SystemExit) as exit_info:
@@ -391,11 +407,13 @@ def test_probe_pool_startup_and_identity_fail_closed_without_secret_output(monke
     output = capsys.readouterr().out
     assert secret not in output and "postgresql://" not in output
     result = json.loads(output)
-    assert result["status"] == ("passed" if bad is None else "failed")
+    assert result["status"] == ("passed" if valid else "failed")
     assert "password_tcp_pool_startup" in calls
     if bad != "password":
         assert "actual_consumer_init_callback" in calls and "pool_closed" in calls
-    if bad is None:
+    if valid:
+        assert result["identity"]["backend_address_raw"] == identity["backend_address_raw"]
+        assert result["identity"]["backend_address"] == expected_address
         assert ("transaction", {"readonly": True}) in calls and "hot_query" in calls
     elif bad == "readonly_reset":
         assert calls.count("hot_query") == 1
