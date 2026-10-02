@@ -656,7 +656,13 @@ def test_native_dataset_sql_is_read_only_full_inventory_and_fixed_identity(profi
         word in sql for word in ("INSERT INTO", "UPDATE public", "ALTER TABLE", "CREATE TABLE", "DELETE FROM")
     )
     assert "min(%I)::text,max(%I)::text" in sql
-    assert "\\gexec" in sql and sql.count("SELECT count(*)") == 3
+    # The closed native view bodies contain their own COUNT aggregates. Bind
+    # the actual per-relation dispatch instead of counting embedded tokens.
+    assert "\\gexec" in sql
+    assert sql.count("SELECT format($relation_sql$") == 1
+    assert sql.count("EXECUTE %L INTO row_count,ranges;") == 1
+    assert "WHEN c.relkind='v' THEN format(" in sql
+    assert "ELSE format('SELECT count(*), %s FROM %I.%I'," in sql
     assert "GROUPS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING" in sql
     assert "tstzrange(ts,ts," in sql
     assert "finite_expiry AS MATERIALIZED" in sql
