@@ -275,13 +275,15 @@ def validate_catalog_delta(before, after, *, physical_target=None):
     c0.require(added == expected, "uncontrolled new target object")
 
 
-def checked_qualification(before, record):
+def checked_qualification(before, record, *, retained_session=False):
     c0.require(
         isinstance(record, dict) and set(record) == {"version", "mode", "ddl_sha256", "before_witness", "post_witness"},
         "unexpected qualification shape",
     )
     c0.require(
-        record["version"] == VERSION and record["mode"] == "rollback-qualification", "unqualified native result mode"
+        record["version"] == ("cnpg-native-retained-session-transition-v1" if retained_session else VERSION)
+        and record["mode"] == ("savepoint-rollback-qualification" if retained_session else "rollback-qualification"),
+        "unqualified native result mode",
     )
     c0.require(
         record["ddl_sha256"] == digest(ddl(bool(before.get("bootstrap_grantor_profile")))[0].encode()),
@@ -518,7 +520,16 @@ SELECT 1 FROM public.v_relay_stuck LIMIT 0;
 SELECT 1 FROM public.v_climate_merged LIMIT 0;"""
 
 
-def emit_sql(target, *, reviewed_post=None, qualification_sha256=None, physical_target=None, logical_receipts=None):
+def emit_sql(
+    target,
+    *,
+    reviewed_post=None,
+    qualification_sha256=None,
+    physical_target=None,
+    logical_receipts=None,
+    retained_session=False,
+):
+    c0.require(not retained_session or physical_target is None, "retained session is logical-target-only")
     cluster, receipt_table = profile(physical_target)
     c0.require((physical_target is None) == (logical_receipts is None), "physical history custody required")
     c0.checked(target, target=True)
@@ -620,6 +631,68 @@ END $native_transition$;
 SELECT current_setting('verdify.cnpg_transition_result');
 {"COMMIT;" if reviewed_post else "ROLLBACK;"}
 """
+    if retained_session:
+        sql = retained_session_sql(sql, payload, install=reviewed_post is not None)
+    return sql
+
+
+def retained_session_sql(sql, payload, *, install):
+    """Explicit savepoint mode; caller must hold the same outer backend/locks.
+
+    Default ordinary/physical emitters retain their original transaction bytes.
+    A newly allocated child XID is proved from this backend's granted locks,
+    rather than accepting any observed tuple XID or a numeric range.
+    """
+    require = c0.require
+    require(sql.count("BEGIN;\n") == 1, "unexpected transaction envelope")
+    sql = sql.replace("BEGIN;\n", "SAVEPOINT cnpg_native_phase;\n", 1)
+    sql = sql.replace("SET LOCAL statement_timeout='120s';", "SET LOCAL statement_timeout='180s';", 1)
+    sql = sql.replace(
+        " v_creation_xid bigint; v_creation_frozenxid bigint;",
+        " v_creation_xid bigint; v_creation_frozenxid bigint;\n v_owned_xids_before xid[]; v_new_child_xids xid[];",
+    )
+    capture = " v_creation_frozenxid := (pg_snapshot_xmin(pg_current_snapshot())::text::bigint % 4294967296);"
+    require(sql.count(capture) == 1, "unexpected exact creation cutoff")
+    sql = sql.replace(
+        capture,
+        capture
+        + """
+ SELECT array_agg(transactionid ORDER BY transactionid::text) INTO v_owned_xids_before
+ FROM pg_locks WHERE pid=pg_backend_pid() AND locktype='transactionid'
+   AND mode='ExclusiveLock' AND granted;
+ IF v_owned_xids_before IS NULL OR NOT v_creation_xid::text::xid=ANY(v_owned_xids_before) THEN
+   RAISE EXCEPTION 'retained admission refuses missing creating top XID';
+ END IF;""",
+    )
+    first_create = payload[: payload.index(");\n") + 3]
+    require(sql.count(first_create) == 1, "unexpected exact first receipt CREATE")
+    sql = sql.replace(
+        first_create,
+        first_create
+        + """
+ SELECT array_agg(transactionid ORDER BY transactionid::text) INTO v_new_child_xids
+ FROM pg_locks WHERE pid=pg_backend_pid() AND locktype='transactionid'
+   AND mode='ExclusiveLock' AND granted AND NOT transactionid=ANY(v_owned_xids_before);
+ IF cardinality(v_new_child_xids) IS DISTINCT FROM 1
+    OR v_new_child_xids[1]::text::bigint=v_creation_xid
+    OR EXISTS(SELECT 1 FROM unnest(v_owned_xids_before) old
+       WHERE NOT EXISTS(SELECT 1 FROM pg_locks WHERE pid=pg_backend_pid()
+         AND locktype='transactionid' AND mode='ExclusiveLock' AND granted AND transactionid=old)) THEN
+   RAISE EXCEPTION 'retained admission refuses ambiguous creating child XID';
+ END IF;
+ v_creation_xid := v_new_child_xids[1]::text::bigint;
+""",
+    )
+    sql = sql.replace("'version','" + VERSION + "'", "'version','cnpg-native-retained-session-transition-v1'")
+    if not install:
+        require(sql.endswith("ROLLBACK;\n"), "unexpected qualification terminal")
+        sql = (
+            sql.removesuffix("ROLLBACK;\n")
+            + "ROLLBACK TO SAVEPOINT cnpg_native_phase;\nRELEASE SAVEPOINT cnpg_native_phase;\n"
+        )
+        sql = sql.replace("'mode','rollback-qualification'", "'mode','savepoint-rollback-qualification'")
+    else:
+        require(sql.endswith("COMMIT;\n"), "unexpected installation terminal")
     return sql
 
 
