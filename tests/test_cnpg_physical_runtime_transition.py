@@ -15,6 +15,263 @@ spec = importlib.util.spec_from_file_location("physical", ROOT / "scripts/cnpg-p
 p = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(p)
 t = p.t
+OBSERVATION = "2026-10-02T10:14:00.945246+00:00"
+
+
+def setup_actual_trace_functions(q):
+    fixture = ROOT / "tests/fixtures/cnpg_band_trace_time_projection"
+    properties = json.loads((fixture / "source-native-properties.json").read_text())
+    definitions = "\n".join(function["body"].rstrip() + ";" for function in properties["functions"])
+    q(
+        """CREATE TABLE climate(ts timestamptz,greenhouse_id text,temp_avg float8,vpd_avg float8,rh_avg float8,dew_point float8);
+      CREATE TABLE setpoint_changes(ts timestamptz,greenhouse_id text,parameter text,value float8,expired_at timestamptz);
+      CREATE TABLE setpoint_snapshot(ts timestamptz,greenhouse_id text,parameter text,value float8);
+      CREATE TABLE crop_band_anchors(crop_type text,series text,greenhouse_id text,growth_stage text,season text,anchor text,value float8);
+      CREATE TABLE crops(crop_catalog_id int,is_active boolean,greenhouse_id text);
+      CREATE TABLE crop_target_profiles(crop_catalog_id int,greenhouse_id text,season text,hour_of_day int,temp_ideal_min float8,temp_ideal_max float8,vpd_ideal_min float8,vpd_ideal_max float8);
+      SET check_function_bodies=off;"""
+        + definitions
+        + "SET check_function_bodies=on;"
+    )
+    for view, body in properties["views"].items():
+        q("CREATE VIEW public." + view + " AS " + body)
+    q("""INSERT INTO crop_band_anchors
+        SELECT crop,series,'vallery','default','all',anchor,
+               CASE series WHEN 'temp_low' THEN 60 WHEN 'temp_high' THEN 80
+                           WHEN 'vpd_low' THEN 0.7 WHEN 'vpd_high' THEN 1.1 ELSE 0.9 END
+        FROM unnest(ARRAY['house','cannabis','citrus','pepper','orchid']) crop
+        CROSS JOIN unnest(ARRAY['temp_low','temp_high','temp_target','vpd_low','vpd_high','vpd_target']) series
+        CROSS JOIN unnest(ARRAY['sr','sm','ss','mid']) anchor;
+      INSERT INTO climate SELECT now()-age,'vallery',70,0.9,50,40
+        FROM unnest(ARRAY[interval '15 days',interval '3 hours',interval '1 hour',interval '20 minutes']) age;
+      INSERT INTO climate VALUES(now()-interval '10 minutes','vallery',70,NULL,50,40),
+          (now()-interval '10 minutes','other',70,0.9,50,40);
+      INSERT INTO setpoint_changes SELECT now()-age,'vallery',parameter,1,
+          CASE WHEN age=interval '25 minutes' THEN now()-interval '5 minutes' ELSE NULL END
+        FROM unnest(ARRAY[interval '4 hours',interval '25 minutes']) age
+        CROSS JOIN unnest(ARRAY['temp_low','temp_high','vpd_low','vpd_high']) parameter;
+      INSERT INTO setpoint_snapshot SELECT ts,greenhouse_id,parameter,value FROM setpoint_changes;""")
+    trace = t.load("cnpg-band-trace-time-projection")
+    trace.observation_at = json.loads(q("SET timezone='UTC'; SELECT to_jsonb(now())"))
+    return trace
+
+
+def trace_aggregate(query, trace):
+    ranges = " || ".join(
+        "jsonb_build_object('" + name + "',jsonb_build_array(min(" + name + ")::text,max(" + name + ")::text))"
+        for name in trace.TIME_COLUMNS
+    )
+    return "SELECT jsonb_build_object('count',count(*),'time_ranges'," + ranges + ") FROM (" + query + ") AS trace"
+
+
+def reference_trace(view, trace):
+    instant = trace.observation_sql(trace.observation_at)
+    period = "14 days" if view.endswith("recent") else "2 hours"
+    query = "SELECT * FROM public.fn_band_trace(" + instant + "-interval '" + period + "'," + instant + ",'vallery')"
+    if view.endswith("latest"):
+        query += " ORDER BY ts DESC LIMIT 1"
+    return query
+
+
+@pytest.mark.parametrize("fallback", [False, True])
+def test_actual_source_trace_timestamp_projection_equals_both_complete_views(private_pg, fallback):  # noqa: F811
+    q = private_pg
+    trace = setup_actual_trace_functions(q)
+    if fallback:
+        # Actual center165 preserves nonNULL orchid/default fallback even when
+        # house crop SQL119 returns NULL. The prior crop-based proposal is wrong.
+        q("DELETE FROM crop_band_anchors WHERE crop_type='house'")
+    for view in sorted(trace.VIEWS):
+        reference = trace_aggregate(reference_trace(view, trace), trace)
+        projected = trace_aggregate(trace.projection(view, trace.observation_at), trace)
+        raw = q(
+            "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY; SET LOCAL search_path=pg_catalog,public,pg_temp; SET LOCAL timezone='UTC'; "
+            + trace.guard_sql(trace.observation_at)
+            + reference
+            + ";"
+            + projected
+            + ";COMMIT;"
+        )
+        before, after = map(json.loads, raw.splitlines())
+        assert before == after
+        assert before["count"] == (3 if view.endswith("recent") else 1)
+        assert set(before["time_ranges"]) == set(trace.TIME_COLUMNS)
+
+
+def test_trace_projection_retains_center_null_cardinality_not_crop_values(private_pg):  # noqa: F811
+    q = private_pg
+    trace = setup_actual_trace_functions(q)
+    # A fixture substitution exercises the relational equivalence under center
+    # zero admission. The production source guard MUST refuse this altered body.
+    q("""CREATE OR REPLACE FUNCTION public.fn_center_band_setpoints(target_ts timestamptz)
+      RETURNS TABLE(temp_low float8,temp_high float8,vpd_low float8,vpd_high float8)
+      LANGUAGE sql STABLE AS $$ SELECT 60::float8,80::float8,NULL::float8,1.1::float8 $$;""")
+    failure = q(
+        "BEGIN READ ONLY; SET LOCAL search_path=pg_catalog,public,pg_temp;" + trace.guard_sql(trace.observation_at),
+        check=False,
+    )
+    assert failure.returncode != 0 and "changed source/resolution" in failure.stderr
+    reference = trace_aggregate(reference_trace("v_band_trace_recent", trace), trace)
+    projected = trace_aggregate(trace.projection("v_band_trace_recent", trace.observation_at), trace)
+    rows = q(
+        "BEGIN READ ONLY; SET LOCAL search_path=pg_catalog,public,pg_temp;" + reference + ";" + projected + ";COMMIT;"
+    )
+    left, right = map(json.loads, rows.splitlines())
+    assert left == right and left["count"] == 0
+
+
+def test_trace_projection_preserves_boundaries_duplicates_expiry_and_common_clock(private_pg):  # noqa: F811
+    q = private_pg
+    trace = setup_actual_trace_functions(q)
+    instant = trace.observation_sql(trace.observation_at)
+    q(
+        "INSERT INTO climate SELECT "
+        + instant
+        + "-age,'vallery',70,0.9,50,40 FROM unnest(ARRAY[interval '14 days',interval '14 days 0.000001 seconds',interval '2 hours',interval '2 hours 0.000001 seconds',interval '0 seconds']) age;"
+    )
+    q(
+        "INSERT INTO setpoint_changes VALUES("
+        + instant
+        + "-interval '30 minutes','vallery','temp_low',2,"
+        + instant
+        + "-interval '20 minutes'),("
+        + instant
+        + "-interval '30 minutes','vallery','temp_low',3,NULL);"
+    )
+    for view in sorted(trace.VIEWS):
+        reference = trace_aggregate(reference_trace(view, trace), trace)
+        projected = trace_aggregate(trace.projection(view, trace.observation_at), trace)
+        result = q(
+            "BEGIN READ ONLY; SET LOCAL search_path=pg_catalog,public,pg_temp; SET LOCAL timezone='UTC';"
+            + trace.guard_sql(trace.observation_at)
+            + reference
+            + ";"
+            + projected
+            + ";COMMIT;"
+        )
+        expected, actual = map(json.loads, result.splitlines())
+        assert expected == actual
+        assert actual["count"] == (7 if view.endswith("recent") else 1)
+    # Distinct common clocks remain part of the witness; sequential native NOW
+    # values must never be silently compared as one observation.
+    left = {
+        "schema": "cnpg-physical-data-parity-v2",
+        "database": "verdify_rehearsal",
+        "observation_at": trace.observation_at,
+        "relations": [],
+        "timescale_owners": [],
+    }
+    right = copy.deepcopy(left)
+    right["observation_at"] = OBSERVATION
+    with pytest.raises(ValueError, match="drift"):
+        p.validate_dataset(left, right)
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        None,
+        "2026-10-02",
+        "2026-10-02T10:14:00",
+        "2026-10-02T10:14:00-06:00",
+        "infinity",
+        "2026-10-02T10:14:00+00:00';COMMIT;",
+    ],
+)
+def test_trace_common_observation_refuses_invalid_or_unbound_clock(value):
+    trace = t.load("cnpg-band-trace-time-projection")
+    with pytest.raises(ValueError):
+        trace.observation_sql(value)
+
+
+def test_trace_projection_refuses_skipped_float_exception_domain(private_pg):  # noqa: F811
+    q = private_pg
+    trace = setup_actual_trace_functions(q)
+    q("UPDATE crop_band_anchors SET value=1e308 WHERE crop_type='cannabis' AND series='vpd_target'")
+    original = q(
+        "BEGIN READ ONLY; SET LOCAL search_path=pg_catalog,public,pg_temp; SELECT count(*) FROM v_band_trace_recent;",
+        check=False,
+    )
+    assert original.returncode != 0 and "out of range" in original.stderr
+    optimized = q(
+        "BEGIN READ ONLY; SET LOCAL search_path=pg_catalog,public,pg_temp;" + trace.guard_sql(trace.observation_at),
+        check=False,
+    )
+    assert optimized.returncode != 0 and "unproven skipped arithmetic domain" in optimized.stderr
+
+
+@pytest.mark.parametrize("value", ["1e-323", "1e-310", "1e-200", "0"])
+def test_trace_native_tiny_harmonic_domain_and_projection_refusal(private_pg, value):  # noqa: F811
+    q = private_pg
+    trace = setup_actual_trace_functions(q)
+    q(
+        "UPDATE crop_band_anchors SET value=CASE anchor WHEN 'sr' THEN "
+        + value
+        + "::float8 ELSE 0::float8 END WHERE crop_type='cannabis' AND series='vpd_target'"
+    )
+    original = q(
+        "BEGIN READ ONLY; SET LOCAL search_path=pg_catalog,public,pg_temp; SELECT count(*) FROM v_band_trace_recent;",
+        check=False,
+    )
+    optimized = q(
+        "BEGIN READ ONLY; SET LOCAL search_path=pg_catalog,public,pg_temp;" + trace.guard_sql(trace.observation_at),
+        check=False,
+    )
+    if value == "1e-323":
+        assert original.returncode != 0 and "underflow" in original.stderr
+    else:
+        assert original.returncode == 0
+    if value == "0":
+        assert optimized.returncode == 0
+    else:
+        assert optimized.returncode != 0 and "unproven skipped arithmetic domain" in optimized.stderr
+
+
+@pytest.mark.parametrize("negative", [False, True])
+def test_trace_normal_lower_domain_cancellation_preserves_native_endpoints(private_pg, negative):  # noqa: F811
+    q = private_pg
+    trace = setup_actual_trace_functions(q)
+    sign = "-" if negative else ""
+    q(
+        "UPDATE crop_band_anchors SET value=CASE anchor WHEN 'sr' THEN 1e-100::float8 "
+        "WHEN 'ss' THEN 1.0000000000000001e-100::float8 ELSE "
+        + sign
+        + "1e-100::float8 END WHERE crop_type='cannabis' AND series='vpd_target'"
+    )
+    for view in sorted(trace.VIEWS):
+        result = q(
+            "BEGIN READ ONLY; SET LOCAL search_path=pg_catalog,public,pg_temp; SET LOCAL timezone='UTC';"
+            + trace.guard_sql(trace.observation_at)
+            + trace_aggregate(reference_trace(view, trace), trace)
+            + ";"
+            + trace_aggregate(trace.projection(view, trace.observation_at), trace)
+            + ";COMMIT;"
+        )
+        original, projected = map(json.loads, result.splitlines())
+        assert original == projected
+
+
+@pytest.mark.parametrize("change", ["zone_body", "view", "owner", "search_path", "nan_anchor", "overload"])
+def test_trace_projection_source_domain_guards_fail_closed(private_pg, change):  # noqa: F811
+    q = private_pg
+    trace = setup_actual_trace_functions(q)
+    if change == "zone_body":
+        q("""CREATE OR REPLACE FUNCTION fn_zone_vpd_targets(target_ts timestamptz)
+          RETURNS TABLE(vpd_target_south float8,vpd_target_west float8,vpd_target_east float8,vpd_target_center float8)
+          LANGUAGE plpgsql STABLE AS $$ BEGIN RAISE EXCEPTION 'fixture domain error'; END $$;""")
+    elif change == "overload":
+        q("CREATE FUNCTION fn_crop_band_value(text,text,timestamptz) RETURNS float8 LANGUAGE sql AS 'SELECT 1::float8'")
+    elif change == "view":
+        q("ALTER VIEW v_band_trace_recent RENAME TO changed_trace")
+    elif change == "owner":
+        q("ALTER FUNCTION fn_current_season() OWNER TO verdify_api_runtime_login")
+    elif change == "nan_anchor":
+        q("UPDATE crop_band_anchors SET value='NaN' WHERE crop_type='orchid' AND series='vpd_target'")
+    search = "pg_catalog,pg_temp" if change == "search_path" else "pg_catalog,public,pg_temp"
+    failure = q(
+        "BEGIN READ ONLY; SET LOCAL search_path=" + search + ";" + trace.guard_sql(trace.observation_at), check=False
+    )
+    assert failure.returncode != 0 and "projection refuses" in failure.stderr
 
 
 def test_physical_inputs_dispatch_only_the_two_logical_records_to_composite_reader(monkeypatch):
@@ -164,7 +421,8 @@ def test_physical_profile_cannot_omit_inherited_history_or_touch_logical_public_
 
 def test_dataset_parity_refuses_missing_time_count_or_compressed_ownership():
     data = {
-        "schema": "cnpg-physical-data-parity-v1",
+        "schema": "cnpg-physical-data-parity-v2",
+        "observation_at": OBSERVATION,
         "database": t.DATABASE,
         "relations": [{"relation": "public.example", "count": 3, "time_ranges": {"ts": ["start", "end"]}}],
         "timescale_owners": [
@@ -216,7 +474,8 @@ def test_original_logical_ddl_remains_exact_882_source_bytes(bootstrap, sha):
 
 def test_native_dataset_full_public_inventory_cannot_be_sampled():
     data = {
-        "schema": "cnpg-physical-data-parity-v1",
+        "schema": "cnpg-physical-data-parity-v2",
+        "observation_at": OBSERVATION,
         "database": t.DATABASE,
         "relations": [{"relation": "public.example", "count": 3, "time_ranges": {}}],
         "timescale_owners": [
@@ -259,7 +518,7 @@ def test_recovered_marker_claim_without_native_content_and_original_payload_is_r
 
 @pytest.mark.parametrize("profile", (p.pitr.SOURCE, *t.PHYSICAL_TARGETS))
 def test_native_dataset_sql_is_read_only_full_inventory_and_fixed_identity(profile):
-    sql = p.dataset_sql(profile)
+    sql = p.dataset_sql(profile, OBSERVATION)
     assert "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;" in sql
     assert "SET LOCAL search_path=pg_catalog,public,pg_temp;" in sql
     assert f"current_setting('cluster_name')<>'{profile}'" in sql
@@ -305,7 +564,7 @@ def test_native_private_fixture_dataset_collector_handles_uncompressed_and_compr
     # columns instead of silently narrowing the complete relation inventory.
     q("CREATE TABLE public.fixture_many_times(" + ",".join(f"t{i} timestamptz" for i in range(55)) + ")")
     q("INSERT INTO public.fixture_many_times DEFAULT VALUES")
-    emitted = p.dataset_sql(p.pitr.SOURCE)
+    emitted = p.dataset_sql(p.pitr.SOURCE, OBSERVATION)
     native_version = q("SHOW server_version_num")
     fixture_sql = emitted.replace("::int<>160013", "::int<>" + native_version)
     fixture_sql = fixture_sql.replace(
@@ -334,7 +593,7 @@ def test_native_private_fixture_dataset_collector_handles_uncompressed_and_compr
       CREATE VIEW public.fixture_writing_view AS SELECT public.fixture_forbidden_write() AS value;""")
     writing_failure = q(fixture_sql, check=False)
     assert writing_failure.returncode != 0 and "read-only transaction" in writing_failure.stderr
-    assert '"schema": "cnpg-physical-data-parity-v1"' not in writing_failure.stdout
+    assert '"schema": "cnpg-physical-data-parity-v2"' not in writing_failure.stdout
     assert q("SELECT count(*) FROM public.fixture_data") == "2"
 
 
@@ -463,7 +722,7 @@ def test_physical_atomic_raw_guards_and_copied_history(private_pg, monkeypatch, 
 
 @pytest.mark.parametrize("profile", (p.pitr.SOURCE, *t.PHYSICAL_TARGETS))
 def test_dataset_peer_bridge_preserves_exact_readonly_snapshot_and_profile(profile):
-    emitted = p.dataset_peer_sql(profile)
+    emitted = p.dataset_peer_sql(profile, OBSERVATION)
     assert emitted.count("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;") == 1
     assert "\nBEGIN;\n" not in emitted
     assert "current_user<>'postgres' OR session_user<>'postgres'" in emitted

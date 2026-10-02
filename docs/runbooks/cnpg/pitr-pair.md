@@ -152,3 +152,21 @@ The ordinary post269 path is unchanged. Each A/B target still requires genuine
 new-target native rollback qualification, reviewed native literals and guarded
 installation before actual password pool/startup/hot-query qualification.
 The physical client adapter shares this same optional lineage contract.
+
+### Complete dataset clock and trace count/time qualification
+
+The physical dataset witness uses `cnpg-physical-data-parity-v2`. Capture one
+actual source UTC observation timestamp and retain its native response and source
+UID binding. Pass that same value as `--observation-at` to each
+`emit-dataset-sql` invocation for source, A and B; independently moving recent
+windows cannot be compared. Each database still has its own repeatable-read,
+read-only snapshot. Keep the complete inventory, all counts and timestamp ranges,
+and the existing 120-second per-statement/180-second capture bounds.
+
+Only the source-defined `v_band_trace_recent` (14 days) and
+`v_band_trace_latest` (two hours, latest row) use the closed count/time projection.
+It retains the actual CENTER first-row admission, climate filter, readback and
+firmware timestamp joins and expiry rules. Source definitions, owners, resolution,
+season and skipped arithmetic domains must match or capture refuses. It does not
+qualify band values. All other relations retain their native queries. Keep failed
+original captures and collect new complete witnesses; partial output is not parity.
