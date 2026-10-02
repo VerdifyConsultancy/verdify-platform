@@ -1,0 +1,33 @@
+{
+  "argo": {
+    "sync_status": "Synced",
+    "revision": "a6f190f7594df2f7903d7a09a2752b7126d4feb7",
+    "health": "Healthy"
+  },
+  "deployments": [
+    {
+      "name": "verdify-api",
+      "ready": 2,
+      "desired": 2,
+      "images": [
+        "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:7387c2c0e5b22caa0679c02668240e3b639e2e6b3797dc9fe2c43ebf30655ab9"
+      ]
+    },
+    {
+      "name": "verdify-ingestor",
+      "ready": 1,
+      "desired": 1,
+      "images": [
+        "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:4c5fa5d67c256fd01b4f6519183c20ff4cf6023326ae4100c4b8daff9468b664"
+      ]
+    },
+    {
+      "name": "verdify-mcp",
+      "ready": 2,
+      "desired": 2,
+      "images": [
+        "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:64a0c79a721878c3998d0fd599dc5c4b64c028d595803d46df7816cf73cba74b"
+      ]
+    }
+  ]
+}

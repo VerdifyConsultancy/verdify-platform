@@ -1,0 +1,60 @@
+{
+  "release_id": 401967728,
+  "tag": "sprint-775-shutdown-20261002",
+  "draft": true,
+  "url": "https://github.com/VerdifyConsultancy/verdify-platform/releases/tag/untagged-894541b0778e0592c9e6",
+  "all_uploaded_size_and_server_digest_match": true,
+  "ciphertext_sha256": "895a3ae04ed1a434179358df4e519973ac009817c9227fd989ef532cb1b03f8d",
+  "assets": [
+    {
+      "name": "private-custody.tar.gz.age.part000",
+      "bytes": 900000000,
+      "sha256": "ae492912da24fa3015b81fc6af51a0583f79186a5b0a5f7fb99bc29fe2c0aec2",
+      "github_asset_id": 605989446,
+      "github_digest": "sha256:ae492912da24fa3015b81fc6af51a0583f79186a5b0a5f7fb99bc29fe2c0aec2",
+      "state": "uploaded"
+    },
+    {
+      "name": "private-custody.tar.gz.age.part001",
+      "bytes": 900000000,
+      "sha256": "2f20b7111d08d84e43156196b35b1aa101954ddac8e90f7c0c995b0c4fbe627d",
+      "github_asset_id": 605989449,
+      "github_digest": "sha256:2f20b7111d08d84e43156196b35b1aa101954ddac8e90f7c0c995b0c4fbe627d",
+      "state": "uploaded"
+    },
+    {
+      "name": "private-custody.tar.gz.age.part002",
+      "bytes": 547445704,
+      "sha256": "a924aefa5ff4fd7b000a7687acedd1e339c3b694e6367fa22a8f29d2a8995d04",
+      "github_asset_id": 605989448,
+      "github_digest": "sha256:a924aefa5ff4fd7b000a7687acedd1e339c3b694e6367fa22a8f29d2a8995d04",
+      "state": "uploaded"
+    },
+    {
+      "name": "final-custody-index.tar.gz.age",
+      "bytes": 1803075,
+      "sha256": "923d1ebf9e7ce7744ffb6ae757da7d1e2ef502190005570cb735c743c733ef1d",
+      "github_asset_id": 605992092,
+      "github_digest": "sha256:923d1ebf9e7ce7744ffb6ae757da7d1e2ef502190005570cb735c743c733ef1d",
+      "state": "uploaded"
+    },
+    {
+      "name": "encrypted-parts-manifest.json",
+      "bytes": 829,
+      "sha256": "dd1eb1541404105bdeffaa2ccf387aca24f826afc295596ff7663f2ebc3b212f",
+      "github_asset_id": 605989455,
+      "github_digest": "sha256:dd1eb1541404105bdeffaa2ccf387aca24f826afc295596ff7663f2ebc3b212f",
+      "state": "uploaded"
+    },
+    {
+      "name": "final-runtime-custody.tar.gz.age",
+      "bytes": 522968,
+      "sha256": "79725191c8ba2e74948e63168c2f7f6eb6125d627ce06637a57fbdeeb58a3fa1",
+      "github_asset_id": 605994977,
+      "github_digest": "sha256:79725191c8ba2e74948e63168c2f7f6eb6125d627ce06637a57fbdeeb58a3fa1",
+      "state": "uploaded"
+    }
+  ],
+  "plaintext_private_artifacts_published": false,
+  "decryption_verified_locally": true
+}

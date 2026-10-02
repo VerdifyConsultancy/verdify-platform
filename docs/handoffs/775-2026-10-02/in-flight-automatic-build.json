@@ -1,0 +1,141 @@
+{
+  "name": "verdify-platform-ci-b66s9",
+  "uid": "cbd4a034-5687-468c-8c2a-49bd9e58360e",
+  "phase": "Running",
+  "revision": "a6f190f7594df2f7903d7a09a2752b7126d4feb7",
+  "created": "2026-10-02T15:55:28Z",
+  "nodes": [
+    {
+      "name": "verdify-platform-ci-b66s9",
+      "phase": "Running",
+      "startedAt": "2026-10-02T15:55:28Z",
+      "finishedAt": null
+    },
+    {
+      "name": "build-migrate",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-02T16:11:53Z",
+      "finishedAt": "2026-10-02T16:14:16Z"
+    },
+    {
+      "name": "[9]",
+      "phase": "Running",
+      "startedAt": "2026-10-02T16:18:54Z",
+      "finishedAt": null
+    },
+    {
+      "name": "[5]",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-02T16:10:30Z",
+      "finishedAt": "2026-10-02T16:11:53Z"
+    },
+    {
+      "name": "[6]",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-02T16:11:53Z",
+      "finishedAt": "2026-10-02T16:14:26Z"
+    },
+    {
+      "name": "[2]",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-02T16:03:54Z",
+      "finishedAt": "2026-10-02T16:05:56Z"
+    },
+    {
+      "name": "[8]",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-02T16:15:38Z",
+      "finishedAt": "2026-10-02T16:18:54Z"
+    },
+    {
+      "name": "[3]",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-02T16:05:56Z",
+      "finishedAt": "2026-10-02T16:08:08Z"
+    },
+    {
+      "name": "build-setpoint-server",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-02T16:15:38Z",
+      "finishedAt": "2026-10-02T16:18:44Z"
+    },
+    {
+      "name": "build-mcp",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-02T16:05:56Z",
+      "finishedAt": "2026-10-02T16:08:02Z"
+    },
+    {
+      "name": "build-lab-publisher",
+      "phase": "Pending",
+      "startedAt": "2026-10-02T16:18:54Z",
+      "finishedAt": null
+    },
+    {
+      "name": "[1]",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-02T15:55:38Z",
+      "finishedAt": "2026-10-02T16:03:54Z"
+    },
+    {
+      "name": "build-orchestrator",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-02T16:14:26Z",
+      "finishedAt": "2026-10-02T16:15:35Z"
+    },
+    {
+      "name": "validate(0)",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-02T15:55:38Z",
+      "finishedAt": "2026-10-02T16:03:43Z"
+    },
+    {
+      "name": "build-api",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-02T16:03:54Z",
+      "finishedAt": "2026-10-02T16:05:52Z"
+    },
+    {
+      "name": "build-ingestor",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-02T16:08:08Z",
+      "finishedAt": "2026-10-02T16:10:25Z"
+    },
+    {
+      "name": "[4]",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-02T16:08:08Z",
+      "finishedAt": "2026-10-02T16:10:30Z"
+    },
+    {
+      "name": "[7]",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-02T16:14:26Z",
+      "finishedAt": "2026-10-02T16:15:38Z"
+    },
+    {
+      "name": "[0]",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-02T15:55:28Z",
+      "finishedAt": "2026-10-02T15:55:38Z"
+    },
+    {
+      "name": "classify-push",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-02T15:55:28Z",
+      "finishedAt": "2026-10-02T15:55:33Z"
+    },
+    {
+      "name": "validate",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-02T15:55:38Z",
+      "finishedAt": "2026-10-02T16:03:54Z"
+    },
+    {
+      "name": "build-planner",
+      "phase": "Succeeded",
+      "startedAt": "2026-10-02T16:10:30Z",
+      "finishedAt": "2026-10-02T16:11:48Z"
+    }
+  ]
+}

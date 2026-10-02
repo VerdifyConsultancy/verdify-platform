@@ -959,8 +959,8 @@
     },
     {
       "local_ref": "refs/heads/fix/cnpg-policy-twin-cumulative-20261002",
-      "sha": "229e338633786deca26628968ebeba8d8795c7df",
-      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/cnpg-policy-twin-cumulative-20261002"
+      "sha": "6927eed6e47d9a3d8e1d110c6c83387fd359098c",
+      "remote_ref": "refs/heads/fix/cnpg-policy-twin-cumulative-20261002"
     },
     {
       "local_ref": "refs/heads/fix/cnpg-portable-witness-v3-20261001",
@@ -1259,8 +1259,8 @@
     },
     {
       "local_ref": "refs/heads/handoff/775-paused-20261002",
-      "sha": "a6f190f7594df2f7903d7a09a2752b7126d4feb7",
-      "remote_ref": "refs/heads/handoff/shutdown-20261002/handoff/775-paused-20261002"
+      "sha": "9211d830311bcc68f8fb0432d05f67b67161bb85",
+      "remote_ref": "refs/heads/handoff/775-paused-20261002"
     },
     {
       "local_ref": "refs/heads/lane/c4-hermes-recovery-427-20260927",
@@ -2102,5 +2102,6 @@
       "sha": "118ae43919d1d0ce1090a4328e1a0ec5f047bbf6",
       "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-118ae43919d1"
     }
-  ]
+  ],
+  "scope": "Snapshot of every local branch and original registered detached worktree head at shutdown. Handoff branch itself advances with final custody manifest."
 }
