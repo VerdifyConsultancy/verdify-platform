@@ -11,7 +11,7 @@ from decimal import Decimal
 import pytest
 from aioesphomeapi import NumberInfo
 
-from verdify_schemas.component_executor import CANONICAL_FIELD_ORDER, ENTITY_GRIDS
+from verdify_schemas.component_executor import CANONICAL_FIELD_ORDER, ENTITY_GRIDS, GRID_REVISION
 from verdify_schemas.component_qualification import (
     ComponentGridEvidenceError,
     RuntimeEntityMetadata,
@@ -237,3 +237,66 @@ def test_required_routes_on_child_device_fail_closed() -> None:
     inventory[index] = replace(inventory[index], device_id=1)
     with pytest.raises(ComponentGridEvidenceError, match="component_entity_device_mismatch"):
         build(tuple(inventory))
+
+
+@pytest.mark.parametrize("field_name", ["sw_direct_wet_gate_enabled", "sw_fog_closes_vent", "sw_mister_closes_vent"])
+@pytest.mark.parametrize("mutation", ["missing", "wrong_type"])
+def test_periodic_sensor_route_cannot_be_replaced_by_old_switch_callback(field_name: str, mutation: str) -> None:
+    inventory = tuple(
+        row for row in exact_runtime_inventory() if row.object_id != REGISTRY[field_name].cfg_readback_object_id
+    )
+    # The setter still exists, but cannot stand in for the periodic sensor.
+    if mutation == "wrong_type":
+        inventory += (
+            RuntimeEntityMetadata(
+                object_id=REGISTRY[field_name].cfg_readback_object_id,
+                entity_type="switch",
+                key=999999,
+                assumed_state=False,
+            ),
+        )
+    with pytest.raises(ComponentGridEvidenceError):
+        build(inventory)
+
+
+def test_grid_adoption_preserves_stale_grid_refusal() -> None:
+    from verdify_schemas.component_executor import DIRECT_LAUNCH_EXPERIMENT_ID, physical_execution_qualified
+
+    stale = "live-entity-grid-v1:sha256:c10f21f692f4772acd98a41f7ee28e43e534e03d4009d3f963fc2e0fb96aa436"
+    assert (
+        GRID_REVISION == "live-entity-grid-v1:sha256:f2ce504cd79a01d9f9f8994f85bf48df1bde7450ebafc071d54ead427398af98"
+    )
+    assert not physical_execution_qualified(stale, stale, DIRECT_LAUNCH_EXPERIMENT_ID)
+    assert not physical_execution_qualified(GRID_REVISION, stale, DIRECT_LAUNCH_EXPERIMENT_ID)
+    assert not physical_execution_qualified(stale, GRID_REVISION, DIRECT_LAUNCH_EXPERIMENT_ID)
+
+
+def test_metadata_adoption_receipt_covers_exact_source48_without_replay_credit() -> None:
+    from pathlib import Path
+
+    receipt = json.loads(
+        (
+            Path(__file__).resolve().parents[1]
+            / "research/planner-efficacy/qualification/periodic-readback-grid-adoption-v1.json"
+        ).read_text()
+    )
+    assert receipt["scope"] == "SOURCE_METADATA_ADOPTION_ONLY_NOT_C1_STATE_REPLAY_HIL_OR_PHYSICAL_PILOT"
+    assert receipt["new_grid_revision"] == GRID_REVISION
+    assert [row["field_name"] for row in receipt["fields"]] == list(CANONICAL_FIELD_ORDER)
+    changed = []
+    for row in receipt["fields"]:
+        definition = REGISTRY[row["field_name"]]
+        grid = ENTITY_GRIDS[row["field_name"]]
+        assert row["setter"] == definition.esp_object_id
+        assert row["wire_id"] == definition.wire_id
+        assert row["entity_type"] == grid.entity_type
+        for attr in ("minimum", "maximum", "step"):
+            value = getattr(grid, attr)
+            assert row[attr] == (str(value) if value is not None else None)
+        assert row["current_readback"]["object_id"] == definition.cfg_readback_object_id
+        if row["prior_readback"] != row["current_readback"]:
+            changed.append(row["field_name"])
+            assert row["prior_readback"] == {"object_id": definition.esp_object_id, "entity_type": "switch"}
+            assert row["current_readback"]["entity_type"] == "sensor"
+    assert changed == receipt["changed_readback_fields"]
+    assert set(changed) == {"sw_direct_wet_gate_enabled", "sw_fog_closes_vent", "sw_mister_closes_vent"}

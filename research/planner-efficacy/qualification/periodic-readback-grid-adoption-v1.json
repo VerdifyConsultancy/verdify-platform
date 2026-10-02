@@ -1,0 +1,849 @@
+{
+  "changed_readback_fields": [
+    "sw_direct_wet_gate_enabled",
+    "sw_fog_closes_vent",
+    "sw_mister_closes_vent"
+  ],
+  "field_count": 48,
+  "fields": [
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___band_track_fraction"
+      },
+      "entity_type": "number",
+      "field_name": "band_track_fraction",
+      "maximum": "1",
+      "minimum": "0",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___band_track_fraction"
+      },
+      "setter": "band_track_fraction",
+      "step": "0.05",
+      "wire_id": 1
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___cold_vent_guard_delta___f_"
+      },
+      "entity_type": "number",
+      "field_name": "cold_vent_guard_delta_f",
+      "maximum": "15",
+      "minimum": "0",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___cold_vent_guard_delta___f_"
+      },
+      "setter": "cold_vent_guard_delta__f",
+      "step": "0.5",
+      "wire_id": 2
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___cool_exit_hyst___f_"
+      },
+      "entity_type": "number",
+      "field_name": "cool_exit_hysteresis_f",
+      "maximum": "3",
+      "minimum": "0.3",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___cool_exit_hyst___f_"
+      },
+      "setter": "cool_exit_hysteresis__f",
+      "step": "0.1",
+      "wire_id": 3
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___cool_s2_exit_hyst___f_"
+      },
+      "entity_type": "number",
+      "field_name": "cool_stage2_exit_hysteresis_f",
+      "maximum": "3",
+      "minimum": "0.3",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___cool_s2_exit_hyst___f_"
+      },
+      "setter": "cool_stage_2_exit_hyst__f",
+      "step": "0.1",
+      "wire_id": 4
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___cool_s2_over_high___f_"
+      },
+      "entity_type": "number",
+      "field_name": "cool_stage2_over_high_f",
+      "maximum": "3",
+      "minimum": "0",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___cool_s2_over_high___f_"
+      },
+      "setter": "cool_stage_2_over_high__f",
+      "step": "0.1",
+      "wire_id": 5
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg_direct_wet_stress_min_dew_margin_f"
+      },
+      "entity_type": "number",
+      "field_name": "direct_wet_stress_min_dew_margin_f",
+      "maximum": "15",
+      "minimum": "3",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg_direct_wet_stress_min_dew_margin_f"
+      },
+      "setter": "direct_wet_stress_min_dew_margin_f",
+      "step": "0.5",
+      "wire_id": 7
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg_direct_wet_stress_vpd_margin_kpa"
+      },
+      "entity_type": "number",
+      "field_name": "direct_wet_stress_vpd_margin_kpa",
+      "maximum": "0.5",
+      "minimum": "0",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg_direct_wet_stress_vpd_margin_kpa"
+      },
+      "setter": "direct_wet_stress_vpd_margin_kpa",
+      "step": "0.05",
+      "wire_id": 8
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg_dwell_gate_ms"
+      },
+      "entity_type": "number",
+      "field_name": "dwell_gate_ms",
+      "maximum": "1800000",
+      "minimum": "60000",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg_dwell_gate_ms"
+      },
+      "setter": "dwell_gate__ms_",
+      "step": "30000",
+      "wire_id": 9
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___enthalpy_close__kj_kg___"
+      },
+      "entity_type": "number",
+      "field_name": "enthalpy_close",
+      "maximum": "20",
+      "minimum": "-5",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___enthalpy_close__kj_kg___"
+      },
+      "setter": "enthalpy_close__kj_kg_",
+      "step": "0.5",
+      "wire_id": 10
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___enthalpy_open__kj_kg___"
+      },
+      "entity_type": "number",
+      "field_name": "enthalpy_open",
+      "maximum": "0",
+      "minimum": "-5",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___enthalpy_open__kj_kg___"
+      },
+      "setter": "enthalpy_open__kj_kg_",
+      "step": "0.5",
+      "wire_id": 11
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___fog_escalation__kpa_"
+      },
+      "entity_type": "number",
+      "field_name": "fog_escalation_kpa",
+      "maximum": "0.5",
+      "minimum": "0.1",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___fog_escalation__kpa_"
+      },
+      "setter": "fog_escalation__kpa_",
+      "step": "0.1",
+      "wire_id": 12
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___heat_hyst___f_"
+      },
+      "entity_type": "number",
+      "field_name": "heat_hysteresis",
+      "maximum": "3",
+      "minimum": "0",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___heat_hyst___f_"
+      },
+      "setter": "heat_hysteresis__f",
+      "step": "0.1",
+      "wire_id": 13
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___min_fan_off__s_"
+      },
+      "entity_type": "number",
+      "field_name": "min_fan_off_s",
+      "maximum": "300",
+      "minimum": "30",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___min_fan_off__s_"
+      },
+      "setter": "min_fan_off__s_",
+      "step": "10",
+      "wire_id": 14
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___min_fan_on__s_"
+      },
+      "entity_type": "number",
+      "field_name": "min_fan_on_s",
+      "maximum": "300",
+      "minimum": "30",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___min_fan_on__s_"
+      },
+      "setter": "min_fan_on__s_",
+      "step": "10",
+      "wire_id": 15
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___min_fog_off__s_"
+      },
+      "entity_type": "number",
+      "field_name": "min_fog_off_s",
+      "maximum": "300",
+      "minimum": "15",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___min_fog_off__s_"
+      },
+      "setter": "min_fog_off__s_",
+      "step": "15",
+      "wire_id": 16
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___min_fog_on__s_"
+      },
+      "entity_type": "number",
+      "field_name": "min_fog_on_s",
+      "maximum": "300",
+      "minimum": "15",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___min_fog_on__s_"
+      },
+      "setter": "min_fog_on__s_",
+      "step": "15",
+      "wire_id": 17
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___min_heat_off__s_"
+      },
+      "entity_type": "number",
+      "field_name": "min_heat_off_s",
+      "maximum": "600",
+      "minimum": "60",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___min_heat_off__s_"
+      },
+      "setter": "min_heat_off__s_",
+      "step": "10",
+      "wire_id": 18
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___min_heat_on__s_"
+      },
+      "entity_type": "number",
+      "field_name": "min_heat_on_s",
+      "maximum": "300",
+      "minimum": "30",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___min_heat_on__s_"
+      },
+      "setter": "min_heat_on__s_",
+      "step": "10",
+      "wire_id": 19
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___min_vent_off__s_"
+      },
+      "entity_type": "number",
+      "field_name": "min_vent_off_s",
+      "maximum": "300",
+      "minimum": "10",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___min_vent_off__s_"
+      },
+      "setter": "min_vent_off__s_",
+      "step": "10",
+      "wire_id": 20
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___min_vent_on__s_"
+      },
+      "entity_type": "number",
+      "field_name": "min_vent_on_s",
+      "maximum": "300",
+      "minimum": "10",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___min_vent_on__s_"
+      },
+      "setter": "min_vent_on__s_",
+      "step": "10",
+      "wire_id": 21
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___mist_backoff__s_"
+      },
+      "entity_type": "number",
+      "field_name": "mist_backoff_s",
+      "maximum": "3600",
+      "minimum": "60",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___mist_backoff__s_"
+      },
+      "setter": "mist_backoff__s_",
+      "step": "60",
+      "wire_id": 22
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___mist_max_closed_vent__s_"
+      },
+      "entity_type": "number",
+      "field_name": "mist_max_closed_vent_s",
+      "maximum": "900",
+      "minimum": "120",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___mist_max_closed_vent__s_"
+      },
+      "setter": "mist_max_closed_vent__s_",
+      "step": "60",
+      "wire_id": 23
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___mist_thermal_relief__s_"
+      },
+      "entity_type": "number",
+      "field_name": "mist_thermal_relief_s",
+      "maximum": "300",
+      "minimum": "30",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___mist_thermal_relief__s_"
+      },
+      "setter": "mist_thermal_relief__s_",
+      "step": "30",
+      "wire_id": 24
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___mister_all_delay__s_"
+      },
+      "entity_type": "number",
+      "field_name": "mister_all_delay_s",
+      "maximum": "600",
+      "minimum": "60",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___mister_all_delay__s_"
+      },
+      "setter": "mister_all_delay__s_",
+      "step": "30",
+      "wire_id": 25
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg_mister_all__kpa_"
+      },
+      "entity_type": "number",
+      "field_name": "mister_all_kpa",
+      "maximum": "2.5",
+      "minimum": "1",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg_mister_all__kpa_"
+      },
+      "setter": "vpd_mister_all_kpa",
+      "step": "0.05",
+      "wire_id": 26
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___mister_center_penalty"
+      },
+      "entity_type": "number",
+      "field_name": "mister_center_penalty",
+      "maximum": "1",
+      "minimum": "0",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___mister_center_penalty"
+      },
+      "setter": "mister_center_penalty",
+      "step": "0.1",
+      "wire_id": 27
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___mister_engage_delay__s_"
+      },
+      "entity_type": "number",
+      "field_name": "mister_engage_delay_s",
+      "maximum": "300",
+      "minimum": "30",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___mister_engage_delay__s_"
+      },
+      "setter": "mister_engage_delay__s_",
+      "step": "30",
+      "wire_id": 28
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg_mister_engage__kpa_"
+      },
+      "entity_type": "number",
+      "field_name": "mister_engage_kpa",
+      "maximum": "2.5",
+      "minimum": "0.5",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg_mister_engage__kpa_"
+      },
+      "setter": "vpd_mister_engage_kpa",
+      "step": "0.05",
+      "wire_id": 29
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___mister_min_off__s_"
+      },
+      "entity_type": "number",
+      "field_name": "mister_min_off_s",
+      "maximum": "120",
+      "minimum": "30",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___mister_min_off__s_"
+      },
+      "setter": "mister_min_off__s_",
+      "step": "5",
+      "wire_id": 30
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___mister_pulse_gap__s_"
+      },
+      "entity_type": "number",
+      "field_name": "mister_pulse_gap_s",
+      "maximum": "60",
+      "minimum": "10",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___mister_pulse_gap__s_"
+      },
+      "setter": "mister_pulse_gap__s_",
+      "step": "5",
+      "wire_id": 31
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___mister_pulse_on__s_"
+      },
+      "entity_type": "number",
+      "field_name": "mister_pulse_on_s",
+      "maximum": "90",
+      "minimum": "30",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___mister_pulse_on__s_"
+      },
+      "setter": "mister_pulse_on__s_",
+      "step": "5",
+      "wire_id": 32
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___mister_vpd_weight"
+      },
+      "entity_type": "number",
+      "field_name": "mister_vpd_weight",
+      "maximum": "3",
+      "minimum": "0.5",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___mister_vpd_weight"
+      },
+      "setter": "mister_vpd_weight",
+      "step": "0.5",
+      "wire_id": 33
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___mister_water_budget__gal_"
+      },
+      "entity_type": "number",
+      "field_name": "mister_water_budget_gal",
+      "maximum": "300",
+      "minimum": "100",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___mister_water_budget__gal_"
+      },
+      "setter": "mister_water_budget__gal_",
+      "step": "10",
+      "wire_id": 34
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg_night_vpd_bias_kpa"
+      },
+      "entity_type": "number",
+      "field_name": "night_vpd_bias_kpa",
+      "maximum": "0.25",
+      "minimum": "0",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg_night_vpd_bias_kpa"
+      },
+      "setter": "night_vpd_bias_kpa",
+      "step": "0.01",
+      "wire_id": 35
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___outdoor_staleness_max__s_"
+      },
+      "entity_type": "number",
+      "field_name": "outdoor_staleness_max_s",
+      "maximum": "1800",
+      "minimum": "120",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___outdoor_staleness_max__s_"
+      },
+      "setter": "outdoor_staleness_max__s_",
+      "step": "30",
+      "wire_id": 36
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___cool_all_fans_at_high"
+      },
+      "entity_type": "switch",
+      "field_name": "sw_cool_all_fans_at_high_enabled",
+      "maximum": null,
+      "minimum": null,
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___cool_all_fans_at_high"
+      },
+      "setter": "cool_all_fans_at_high",
+      "step": null,
+      "wire_id": 37
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg_direct_wet_gate_enabled"
+      },
+      "entity_type": "switch",
+      "field_name": "sw_direct_wet_gate_enabled",
+      "maximum": null,
+      "minimum": null,
+      "prior_readback": {
+        "entity_type": "switch",
+        "object_id": "direct_wet_gate_enabled"
+      },
+      "setter": "direct_wet_gate_enabled",
+      "step": null,
+      "wire_id": 38
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg_direct_wet_stress_override_enabled"
+      },
+      "entity_type": "switch",
+      "field_name": "sw_direct_wet_stress_override_enabled",
+      "maximum": null,
+      "minimum": null,
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg_direct_wet_stress_override_enabled"
+      },
+      "setter": "direct_wet_stress_override_enabled",
+      "step": null,
+      "wire_id": 39
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg_dwell_gate_enabled"
+      },
+      "entity_type": "switch",
+      "field_name": "sw_dwell_gate_enabled",
+      "maximum": null,
+      "minimum": null,
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg_dwell_gate_enabled"
+      },
+      "setter": "dwell_gate_enabled",
+      "step": null,
+      "wire_id": 40
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg_fog_closes_vent"
+      },
+      "entity_type": "switch",
+      "field_name": "sw_fog_closes_vent",
+      "maximum": null,
+      "minimum": null,
+      "prior_readback": {
+        "entity_type": "switch",
+        "object_id": "fog_closes_vent"
+      },
+      "setter": "fog_closes_vent",
+      "step": null,
+      "wire_id": 41
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg_mister_closes_vent"
+      },
+      "entity_type": "switch",
+      "field_name": "sw_mister_closes_vent",
+      "maximum": null,
+      "minimum": null,
+      "prior_readback": {
+        "entity_type": "switch",
+        "object_id": "mister_closes_vent"
+      },
+      "setter": "mister_closes_vent",
+      "step": null,
+      "wire_id": 42
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg_summer_vent_enabled"
+      },
+      "entity_type": "switch",
+      "field_name": "sw_summer_vent_enabled",
+      "maximum": null,
+      "minimum": null,
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg_summer_vent_enabled"
+      },
+      "setter": "summer_vent_enabled",
+      "step": null,
+      "wire_id": 43
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___temp_hyst___f_"
+      },
+      "entity_type": "number",
+      "field_name": "temp_hysteresis",
+      "maximum": "3",
+      "minimum": "0.5",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___temp_hyst___f_"
+      },
+      "setter": "temp_hysteresis__f",
+      "step": "0.1",
+      "wire_id": 44
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___vent_exchange_fraction"
+      },
+      "entity_type": "number",
+      "field_name": "vent_exchange_fraction",
+      "maximum": "0.6",
+      "minimum": "0.1",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___vent_exchange_fraction"
+      },
+      "setter": "vent_exchange_fraction",
+      "step": "0.05",
+      "wire_id": 45
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___vent_prefer_dp_delta__f_"
+      },
+      "entity_type": "number",
+      "field_name": "vent_prefer_dp_delta_f",
+      "maximum": "15",
+      "minimum": "2",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___vent_prefer_dp_delta__f_"
+      },
+      "setter": "vent_prefer_dp_delta__f_",
+      "step": "0.5",
+      "wire_id": 46
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___vent_prefer_temp_delta__f_"
+      },
+      "entity_type": "number",
+      "field_name": "vent_prefer_temp_delta_f",
+      "maximum": "15",
+      "minimum": "2",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___vent_prefer_temp_delta__f_"
+      },
+      "setter": "vent_prefer_temp_delta__f_",
+      "step": "0.5",
+      "wire_id": 47
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___vpd_hyst__kpa_"
+      },
+      "entity_type": "number",
+      "field_name": "vpd_hysteresis",
+      "maximum": "0.5",
+      "minimum": "0.05",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___vpd_hyst__kpa_"
+      },
+      "setter": "vpd_hysteresis_kpa",
+      "step": "0.05",
+      "wire_id": 48
+    },
+    {
+      "current_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___vpd_watch_dwell__s_"
+      },
+      "entity_type": "number",
+      "field_name": "vpd_watch_dwell_s",
+      "maximum": "120",
+      "minimum": "15",
+      "prior_readback": {
+        "entity_type": "sensor",
+        "object_id": "cfg___vpd_watch_dwell__s_"
+      },
+      "setter": "vpd_watch_dwell__s_",
+      "step": "15",
+      "wire_id": 49
+    }
+  ],
+  "historical_risk_receipt_sha256": "d72b0a56becac1c14b02d0d47f04a4bc61ff5418b6795bc9164d11541a9482d8",
+  "historical_risk_receipt_unchanged": true,
+  "native_attestation": {
+    "connection_generation": 1,
+    "field_count": 48,
+    "firmware_revision": "2026.10.1.2143.d5b5c404-wifi-bound",
+    "grid_revision": "live-entity-grid-v1:sha256:f2ce504cd79a01d9f9f8994f85bf48df1bde7450ebafc071d54ead427398af98",
+    "observation_receipt_sha256": "716e2b06ce5be250240fb082886486828d4b71d8bfbfd5a71d7bf08308770f4f",
+    "observed_at": "2026-10-02T04:26:19Z",
+    "pod": "verdify-ingestor-86477c9b8-7mmgq",
+    "pod_uid": "e0511aa6-d7a9-4921-80fe-abec60b94eb9",
+    "runtime_instance_id": "87f6a814-a448-49d3-9a7c-3ed6a859f32b",
+    "source_revision": "afe69431e3f5a82b7839cb945c96a244fa38d099",
+    "status": "pass",
+    "validation": "Existing ingestor enumerated original connection metadata; build_live_entity_grid_evidence checked all48 setters/types/exact binary32 source min-max-step/readback routes. This receipt lists source metadata, not exported runtime entity keys or fullstate observations."
+  },
+  "new_grid_revision": "live-entity-grid-v1:sha256:f2ce504cd79a01d9f9f8994f85bf48df1bde7450ebafc071d54ead427398af98",
+  "old_grid_revision": "live-entity-grid-v1:sha256:c10f21f692f4772acd98a41f7ee28e43e534e03d4009d3f963fc2e0fb96aa436",
+  "route_source_revision": "afe69431e3f5a82b7839cb945c96a244fa38d099",
+  "schema": "verdify-periodic-readback-grid-adoption-v1",
+  "scope": "SOURCE_METADATA_ADOPTION_ONLY_NOT_C1_STATE_REPLAY_HIL_OR_PHYSICAL_PILOT",
+  "setter_range_step_type_wire_and_order_unchanged": true,
+  "wire_manifest_digest_sha256": "0bdd80472f2a9845c24a78cd7d6662e0523314afc5f3149233c08a8e8aedb318"
+}

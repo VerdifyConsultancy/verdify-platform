@@ -69,7 +69,11 @@ def test_live_grid_and_direct_launch_risk_order_are_scoped_to_the_exact_study(mo
     assert physical_execution_qualified("source-grid-r1") is False
     assert physical_execution_qualified(GRID_REVISION, GRID_REVISION) is False
     assert physical_execution_qualified(GRID_REVISION, GRID_REVISION, "11111111-1111-4111-8111-111111111111") is False
-    assert physical_execution_qualified(GRID_REVISION, GRID_REVISION, DIRECT_LAUNCH_EXPERIMENT_ID) is True
+    # The periodic-route metadata adoption cannot inherit old replay risk.
+    assert physical_execution_qualified(GRID_REVISION, GRID_REVISION, DIRECT_LAUNCH_EXPERIMENT_ID) is False
+    historical_grid = "live-entity-grid-v1:sha256:c10f21f692f4772acd98a41f7ee28e43e534e03d4009d3f963fc2e0fb96aa436"
+    monkeypatch.setattr("verdify_schemas.component_executor.GRID_REVISION", historical_grid)
+    assert physical_execution_qualified(historical_grid, historical_grid, DIRECT_LAUNCH_EXPERIMENT_ID) is True
 
     qualified_grid = "live-entity-grid-v1:sha256:" + "a" * 64
     qualified_order = "prefix-replay-v1:sha256:" + "b" * 64
@@ -86,7 +90,11 @@ def test_direct_launch_risk_revision_is_the_exact_reviewed_artifact() -> None:
     artifact = json.loads(raw)
     assert ORDER_REVISION == f"direct-launch-risk-replay-v1:sha256:{hashlib.sha256(raw).hexdigest()}"
     assert artifact["authorization"]["scope"] == DIRECT_LAUNCH_EXPERIMENT_ID
-    assert artifact["live_grid"]["grid_revision"] == GRID_REVISION
+    # This immutable historical accepted-risk receipt predates periodic sensors.
+    # Metadata adoption does not rewrite its replay/HIL authorization.
+    assert artifact["live_grid"]["grid_revision"] == (
+        "live-entity-grid-v1:sha256:c10f21f692f4772acd98a41f7ee28e43e534e03d4009d3f963fc2e0fb96aa436"
+    )
     assert artifact["replay"]["compiled_covered_field_count"] == 27
     assert artifact["replay"]["compiled_uncovered_field_count"] == 21
     assert artifact["replay"]["interlock_unsafe"] == 0

@@ -248,11 +248,9 @@ def build_live_entity_grid_evidence(
             field_name=field_name,
             route_kind="setter",
         )
-        # Three boolean tunables publish their current state on the template
-        # switch itself.  For those exact same-slug switch routes the setter is
-        # also the readback; inventing a parallel sensor route would make the
-        # shipped firmware impossible to attest.  Every other field retains
-        # the independent cfg_* sensor requirement.
+        # Only an explicitly same-slug switch route may use its setter as a
+        # readback. The current periodic cfg_* routes require independent
+        # sensors; an old switch callback cannot substitute for those routes.
         if expected_grid.entity_type == "switch" and (definition.cfg_readback_object_id == definition.esp_object_id):
             readback = setter
         else:
