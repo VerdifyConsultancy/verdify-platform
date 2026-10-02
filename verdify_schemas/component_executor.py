@@ -32,7 +32,7 @@ type ComponentValue = bool | float
 type RawComponentValue = bool | int | float | Decimal
 type EntityType = Literal["number", "switch"]
 
-GRID_REVISION = "live-entity-grid-v1:sha256:c10f21f692f4772acd98a41f7ee28e43e534e03d4009d3f963fc2e0fb96aa436"
+GRID_REVISION = "live-entity-grid-v1:sha256:f2ce504cd79a01d9f9f8994f85bf48df1bde7450ebafc071d54ead427398af98"
 # Exact file SHA-256 of
 # research/planner-efficacy/qualification/direct-launch-risk-order-v1.json.
 # The distinct prefix prevents this accepted-risk 27/48 receipt from being

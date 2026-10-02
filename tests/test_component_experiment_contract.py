@@ -86,7 +86,11 @@ def test_direct_launch_risk_revision_is_the_exact_reviewed_artifact() -> None:
     artifact = json.loads(raw)
     assert ORDER_REVISION == f"direct-launch-risk-replay-v1:sha256:{hashlib.sha256(raw).hexdigest()}"
     assert artifact["authorization"]["scope"] == DIRECT_LAUNCH_EXPERIMENT_ID
-    assert artifact["live_grid"]["grid_revision"] == GRID_REVISION
+    # This immutable historical accepted-risk receipt predates periodic sensors.
+    # Metadata adoption does not rewrite its replay/HIL authorization.
+    assert artifact["live_grid"]["grid_revision"] == (
+        "live-entity-grid-v1:sha256:c10f21f692f4772acd98a41f7ee28e43e534e03d4009d3f963fc2e0fb96aa436"
+    )
     assert artifact["replay"]["compiled_covered_field_count"] == 27
     assert artifact["replay"]["compiled_uncovered_field_count"] == 21
     assert artifact["replay"]["interlock_unsafe"] == 0
