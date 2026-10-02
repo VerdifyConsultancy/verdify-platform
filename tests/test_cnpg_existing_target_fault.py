@@ -357,6 +357,24 @@ def test_private_pg_sentinel_conflict_and_shape(tmp_path, monkeypatch):
         result = sql(f.probe_sql("finite123"))
         assert result.returncode == 0, result.stderr
         assert f.json_line(result.stdout, "native-service-read")["rows"] == [[1, "finite123-1"]]
+        # Pure private native SQL checks selected emitted projections with typed
+        # documentation addresses. This is serialization/ACK logic, not TCP auth.
+        for address, mask in (("192.0.2.7", "/32"), ("2001:db8::7", "/128")):
+            query = (
+                f.commit_sql("finite123", 1)
+                .replace("inet_server_addr()", "'" + address + "'::inet")
+                .replace("'server',current_setting('server_version_num')::int", "'server',160013")
+            )
+            native = sql(query)
+            assert native.returncode == 0, native.stderr
+            value = f.json_line(native.stdout, "native-service-ack")
+            b = f.bind(snapshot())
+            b["pods"][b["primary"]]["pod_ip"] = address
+            assert f.ack(value, "finite123", 1, b)["server_addr_raw"] == address + mask
+            read = sql(f.probe_sql("finite123").replace("inet_server_addr()", "'" + address + "'::inet"))
+            assert read.returncode == 0, read.stderr
+            value = f.json_line(read.stdout, "native-service-read")
+            assert value["server_addr"] == address and value["server_addr_raw"] == address + mask
         assert sql("UPDATE public.cnpg_recovery_finite123 SET marker='unexpected';").returncode == 0
         conflict = sql(f.commit_sql("finite123", 1))
         assert conflict.returncode != 0 and "idempotent sentinel conflicts" in conflict.stderr
@@ -683,3 +701,51 @@ def test_snapshot_uses_native_pvc_resource_and_keeps_all_namespace_pods():
     assert ("pvc", None, "cnpg.io/cluster=" + f.CLUSTER) in calls
     assert ("pods", None, None) in calls
     assert "namespace_pods" in s and len(s["pvs"]["items"]) == 1
+
+
+@pytest.mark.parametrize("sql", [f.commit_sql("finite123", 0), f.probe_sql("finite123")])
+def test_fault_address_projection_retains_raw_inet_and_exact_native_host(sql):
+    assert "'server_addr_raw',inet_server_addr()::text" in sql
+    assert "'server_addr',pg_catalog.host(inet_server_addr())" in sql
+    assert "'server_addr',inet_server_addr()::text" not in sql
+
+
+@pytest.mark.parametrize("actual", ["10.0.0.2", "2001:db8::7", None, "10.0.0.1/32"])
+def test_fault_ack_refuses_foreign_family_null_or_unprojected_inet(actual):
+    b = f.bind(snapshot())
+    value = {
+        "kind": "native-service-ack",
+        "seq": 0,
+        "marker": "finite123-0",
+        "database": f.APP,
+        "user": f.APP,
+        "cluster": f.CLUSTER,
+        "server": 160013,
+        "recovery": False,
+        "server_addr": actual,
+        "server_addr_raw": "10.0.0.1/32",
+        "flush_lsn": "0/A",
+        "server_utc": "2026-10-02T03:00:00+00:00",
+    }
+    with pytest.raises(ValueError, match="bound primary"):
+        f.ack(value, "finite123", 0, b)
+
+
+def test_fault_ack_retains_raw_inet_evidence_with_exact_matching_host():
+    b = f.bind(snapshot())
+    value = {
+        "kind": "native-service-ack",
+        "seq": 0,
+        "marker": "finite123-0",
+        "database": f.APP,
+        "user": f.APP,
+        "cluster": f.CLUSTER,
+        "server": 160013,
+        "recovery": False,
+        "server_addr": "10.0.0.1",
+        "server_addr_raw": "10.0.0.1/32",
+        "flush_lsn": "0/A",
+        "server_utc": "2026-10-02T03:00:00+00:00",
+    }
+    assert f.ack(value, "finite123", 0, b) is value
+    assert value["server_addr_raw"] == "10.0.0.1/32"

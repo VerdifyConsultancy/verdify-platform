@@ -463,7 +463,7 @@ DO $idempotent$ BEGIN IF (SELECT marker FROM {relation} WHERE seq={seq}) IS DIST
  RAISE EXCEPTION 'idempotent sentinel conflicts with retained row'; END IF; END $idempotent$;
 COMMIT;
 SELECT jsonb_build_object('kind','native-service-ack','seq',{seq},'marker','{marker}',
- 'server_utc',clock_timestamp(),'flush_lsn',pg_current_wal_flush_lsn()::text,'server_addr',inet_server_addr()::text,
+ 'server_utc',clock_timestamp(),'flush_lsn',pg_current_wal_flush_lsn()::text,'server_addr_raw',inet_server_addr()::text,'server_addr',pg_catalog.host(inet_server_addr()),
  'database',current_database(),'user',session_user,'cluster',current_setting('cluster_name'),
  'server',current_setting('server_version_num')::int,'recovery',pg_is_in_recovery());
 """
@@ -475,7 +475,7 @@ BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;
 {client_guard()}
 {check_table(run_id)}
 SELECT jsonb_build_object('kind','native-service-read','rows',(SELECT coalesce(jsonb_agg(jsonb_build_array(seq,marker)
- ORDER BY seq),'[]'::jsonb) FROM {table(run_id)}),'server_utc',clock_timestamp(),'server_addr',inet_server_addr()::text);
+ ORDER BY seq),'[]'::jsonb) FROM {table(run_id)}),'server_utc',clock_timestamp(),'server_addr_raw',inet_server_addr()::text,'server_addr',pg_catalog.host(inet_server_addr()));
 COMMIT;
 """
 
