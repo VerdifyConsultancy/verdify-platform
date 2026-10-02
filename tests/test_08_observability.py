@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 
 import pytest
-from conftest import db_query
+from conftest import db_query, isolated_mutation_test_dsn
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "ingestor"))
@@ -1337,16 +1337,8 @@ class TestPlannerToDispatcherE2E:
         # Clear the dispatcher's in-memory dedup for our test param
         tasks_mod._last_pushed.pop(self.TEST_PARAM, None)
 
-        # Build DSN from the ingestor .env so the test uses real creds
-        env = {}
-        with open("/srv/verdify/ingestor/.env") as f:
-            for line in f:
-                line = line.strip()
-                if not line or line.startswith("#") or "=" not in line:
-                    continue
-                k, v = line.split("=", 1)
-                env[k] = v
-        dsn = f"postgresql://{env['DB_USER']}:{env['DB_PASSWORD']}@localhost:{env['DB_PORT']}/{env['DB_NAME']}"
+        # Explicit isolated fixture; no production credential discovery.
+        dsn = isolated_mutation_test_dsn()
 
         async def run():
             pool = await asyncpg.create_pool(dsn, min_size=1, max_size=2)
@@ -1407,15 +1399,7 @@ class TestPlannerToDispatcherE2E:
         tasks_mod._last_pushed[self.DRIFT_PARAM] = self.DRIFT_VALUE
         tasks_mod.shared.cfg_readback[self.DRIFT_PARAM] = self.DRIFT_READBACK
 
-        env = {}
-        with open("/srv/verdify/ingestor/.env") as f:
-            for line in f:
-                line = line.strip()
-                if not line or line.startswith("#") or "=" not in line:
-                    continue
-                k, v = line.split("=", 1)
-                env[k] = v
-        dsn = f"postgresql://{env['DB_USER']}:{env['DB_PASSWORD']}@localhost:{env['DB_PORT']}/{env['DB_NAME']}"
+        dsn = isolated_mutation_test_dsn()
 
         async def run():
             pool = await asyncpg.create_pool(dsn, min_size=1, max_size=2)
@@ -1483,10 +1467,7 @@ def test_second_based_cfg_readback_rounding_does_not_force_repush():
 class TestSetpointsFailLoud:
     """API /setpoints must fail-loud on NULL band (Tier 1 #3)."""
 
-    # Prefer the in-repo source; /srv/verdify is the retired VM layout.
-    API_PATH = (
-        str(REPO_ROOT / "api" / "main.py") if (REPO_ROOT / "api" / "main.py").exists() else "/srv/verdify/api/main.py"
-    )
+    API_PATH = str(REPO_ROOT / "api" / "main.py")
 
     def test_api_raises_on_null_band(self):
         with open(self.API_PATH) as f:
@@ -1526,7 +1507,7 @@ class TestSetpointsFailLoud:
         proving the runtime path actually fires."""
         import asyncio
 
-        api_dir = str(REPO_ROOT / "api") if (REPO_ROOT / "api" / "main.py").exists() else "/srv/verdify/api"
+        api_dir = str(REPO_ROOT / "api")
         sys.path.insert(0, api_dir)
         import main as api_mod
         from fastapi import HTTPException

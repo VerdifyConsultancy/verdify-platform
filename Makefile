@@ -1,12 +1,8 @@
 # Verdify — Development Commands
 # Usage: make <target>
 SHELL := /bin/bash
-# Tooling venv: prefer a repo-local .venv (laptop / agent-pod hosts), fall back
-# to the legacy greenhouse-VM path only if it exists, and otherwise fail with a
-# clear `make setup` hint instead of trying a dead absolute path.
-# Override explicitly with `make VENV=/path/to/venv <target>`.
-LEGACY_VENV := /srv/greenhouse/.venv
-VENV ?= $(if $(wildcard .venv/bin/python),.venv,$(if $(wildcard $(LEGACY_VENV)/bin/python),$(LEGACY_VENV),.venv))
+# Tooling belongs to this checkout; override explicitly with VENV=/path/to/venv.
+VENV ?= .venv
 PYTHON := $(VENV)/bin/python
 PYTEST := $(PYTHON) -m pytest
 RUFF := $(VENV)/bin/ruff

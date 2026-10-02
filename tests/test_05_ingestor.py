@@ -77,25 +77,12 @@ def _entity_state(key: int, value):
 
 
 class TestIngestorService:
-    """Ingestor systemd service must be healthy."""
+    """Offline deployment contract; live process health uses k3s-smoke.sh."""
 
-    def test_service_active(self):
-        result = subprocess.run(
-            ["systemctl", "is-active", "verdify-ingestor"], capture_output=True, text=True, timeout=5
-        )
-        assert result.stdout.strip() == "active"
+    def test_delivery_contract(self):
+        from test_01_infrastructure import production_documents, validate_delivery
 
-    def test_no_recent_crashes(self):
-        """No restarts in the last hour."""
-        result = subprocess.run(
-            ["journalctl", "-u", "verdify-ingestor", "--since", "1 hour ago", "--no-pager", "-q", "-o", "cat"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-        assert "Started" not in result.stdout or result.stdout.count("Started") <= 1, (
-            "Ingestor restarted in the last hour"
-        )
+        validate_delivery(production_documents())
 
 
 class TestESP32Connection:

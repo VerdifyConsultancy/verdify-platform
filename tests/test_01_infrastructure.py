@@ -1,79 +1,58 @@
-"""
-Test 01: Infrastructure — Docker containers, services, connectivity.
-Validates that all components of the stack are running and reachable.
+"""Offline current-k3s delivery contracts (#322); never contacts a service/device.
+
+Live desired/running identity and health use scripts/k3s-smoke.sh with explicit
+release receipt arguments after Argo delivery. Source render proves configuration,
+not live health. The destroyed VM's Docker/systemd suite is retired in Git history.
 """
 
+import re
+import shutil
 import subprocess
+from pathlib import Path
 
-from conftest import db_query
+import pytest
+import yaml
 
-
-class TestDockerContainers:
-    """All 7 Docker containers must be running."""
-
-    EXPECTED = [
-        "verdify-timescaledb",
-        "verdify-grafana",
-        "verdify-grafana-proxy",
-        "verdify-traefik",
-        "verdify-api",
-        "verdify-mqtt",
-        "verdify-site",
-    ]
-
-    def test_containers_running(self):
-        result = subprocess.run(
-            ["docker", "compose", "-f", "/srv/verdify/docker-compose.yml", "ps", "--format", "{{.Name}}"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-        running = set(result.stdout.strip().split("\n"))
-        for name in self.EXPECTED:
-            assert name in running, f"Container {name} is not running"
-
-    def test_container_count(self):
-        result = subprocess.run(
-            ["docker", "compose", "-f", "/srv/verdify/docker-compose.yml", "ps", "-q"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-        count = len([line for line in result.stdout.strip().split("\n") if line])
-        assert count >= 7, f"Expected >=7 containers, got {count}"
+ROOT = Path(__file__).resolve().parents[1]
 
 
-class TestSystemdServices:
-    """Critical systemd services must be active."""
-
-    def test_ingestor_active(self):
-        result = subprocess.run(
-            ["systemctl", "is-active", "verdify-ingestor"], capture_output=True, text=True, timeout=5
-        )
-        assert result.stdout.strip() == "active"
-
-    def test_docker_active(self):
-        result = subprocess.run(["systemctl", "is-active", "docker"], capture_output=True, text=True, timeout=5)
-        assert result.stdout.strip() == "active"
+def production_documents():
+    command = ["kustomize", "build"] if shutil.which("kustomize") else ["kubectl", "kustomize"]
+    result = subprocess.run(
+        [*command, str(ROOT / "deploy/k8s/overlays/prod")], capture_output=True, text=True, check=True, timeout=60
+    )
+    return [x for x in yaml.safe_load_all(result.stdout) if x]
 
 
-class TestConnectivity:
-    """Network connectivity to key services."""
+def validate_delivery(documents):
+    """Assert the same contract on genuine renders and deliberately broken fixtures."""
+    assert not any(x["kind"] == "Secret" for x in documents), "production must not render Secret values"
+    objects = {(x["kind"], x["metadata"]["name"]): x for x in documents}
+    writer = objects[("Deployment", "verdify-ingestor")]
+    assert writer["spec"]["replicas"] == 1, "exactly one ingestor replica"
+    assert writer["spec"]["strategy"]["type"] == "Recreate", "writer uses Recreate"
+    config = objects[("ConfigMap", "verdify-config")]["data"]
+    assert config["VERDIFY_DEVICE_WRITE_ENABLED"] == "1", "only explicit prod device gate enables writes"
+    assert config["VERDIFY_WRITER_LEASE_ENABLED"] == "1", "writer Lease fence enabled"
+    for name in ["verdify-api", "verdify-mcp", "verdify-ingestor"]:
+        deployment = objects[("Deployment", name)]
+        revision = deployment["spec"]["template"]["metadata"]["annotations"]["verdify.io/config-revision"]
+        assert re.fullmatch(r"[a-f0-9]{12}", revision), "explicit config identity"
+        for container in deployment["spec"]["template"]["spec"]["containers"]:
+            assert re.fullmatch(r"registry\.vallery\.net/.+@sha256:[a-f0-9]{64}", container["image"]), (
+                "immutable origin image"
+            )
+    api = objects[("Deployment", "verdify-api")]["spec"]["template"]["spec"]["containers"][0]
+    mcp = objects[("Deployment", "verdify-mcp")]["spec"]["template"]["spec"]["containers"][0]
+    assert api["readinessProbe"]["httpGet"]["path"] == "/health/detailed", "API readiness contract"
+    assert mcp["readinessProbe"]["httpGet"]["path"] == "/readyz", "MCP authenticated readiness surface"
+    assert objects[("StatefulSet", "verdify-db")]["spec"]["replicas"] == 1, "single product database"
 
-    def test_esp32_reachable(self):
-        result = subprocess.run(["ping", "-c", "1", "-W", "3", "192.168.10.111"], capture_output=True, timeout=5)
-        assert result.returncode == 0, "ESP32 at 192.168.10.111 is unreachable"
 
-    def test_database_responds(self):
-        result = db_query("SELECT 1")
-        assert result == "1"
+@pytest.fixture(scope="module")
+def production_render():
+    return production_documents()
 
-    def test_mqtt_broker_listening(self):
-        """MQTT broker container must be running and port open."""
-        result = subprocess.run(
-            ["docker", "inspect", "--format", "{{.State.Running}}", "verdify-mqtt"],
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        assert result.stdout.strip() == "true", "MQTT container not running"
+
+def test_current_k3s_delivery_source(production_render):
+    validate_delivery(production_render)
