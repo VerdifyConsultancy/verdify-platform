@@ -61,3 +61,84 @@ checks:
       \ set +e; ./test/replay_invariants test/data/replay_overrides.csv; rc=$?; set\
       \ -e; if [ \"$rc\" -eq 2 ]; then\n  echo \"replay corpus predates invariant\
       \ schema; accepted legacy corpus\";\n  exit 0;\nfi; exit \"$rc\" '"
+  - name: firmware-secretless-compile
+    command: "python3 - <<'PY'\nimport hashlib\nimport json\nimport os\nfrom pathlib\
+      \ import Path\nimport subprocess\nimport tempfile\n\nVERSION = '2026.6.5'\n\
+      IMAGE = 'ghcr.io/esphome/esphome@sha256:ffe23402d169fc9b8ff29fc3c9fc13b3c47e8a53726fce4569e2280bd534c84c'\n\
+      TARGETS = ('greenhouse', 'greenhouse-recovery')\nDUMMY = 'wifi_ssid: CI-NONDEPLOYABLE\\\
+      nwifi_password: CI-NONDEPLOYABLE-NOT-A-WLAN-PASSWORD\\nota_password: CI-NONDEPLOYABLE-NOT-AN-OTA-PASSWORD\\\
+      napi_encryption_key: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\\n'\n\n\n\
+      def digest(path):\n    return hashlib.sha256(path.read_bytes()).hexdigest()\n\
+      \n\ndef source_files(root):\n    # Read only tracked firmware blobs; never follow\
+      \ checkout symlinks, an ignored\n    # secrets.yaml, .esphome cache, operator\
+      \ artifacts or a caller-selected file.\n    names = subprocess.check_output(['git',\
+      \ 'ls-tree', '-rz', 'HEAD', 'firmware'], cwd=root).split(b'\\0')\n    result\
+      \ = {}\n    for entry in filter(None, names):\n        meta, name = entry.split(b'\\\
+      t', 1)\n        mode, kind, oid = meta.split()\n        path = name.decode()\n\
+      \        if mode not in (b'100644', b'100755') or kind != b'blob':\n       \
+      \     raise RuntimeError('non-regular tracked firmware input refused')\n   \
+      \     if any(x in path.split('/') for x in ('secrets.yaml', '.esphome', 'artifacts')):\n\
+      \            raise RuntimeError('secret/cache/artifact tracked input refused')\n\
+      \        result[path] = subprocess.check_output(['git', 'cat-file', 'blob',\
+      \ oid.decode()], cwd=root)\n    for target in TARGETS:\n        if 'firmware/'\
+      \ + target + '.yaml' not in result:\n            raise RuntimeError('declared\
+      \ firmware target missing')\n    # The original script applies a guarded correction\
+      \ to exactly this ESPHome.\n    if b'2026.6.5' not in result.get('firmware/build_api_batch_patch.py',\
+      \ b''):\n        raise RuntimeError('firmware/toolchain contract mismatch')\n\
+      \    return result\n\n\ndef main():\n    root = Path.cwd()\n    source = subprocess.check_output(['git',\
+      \ 'rev-parse', 'HEAD'], cwd=root, text=True).strip()\n    bound = os.environ.get('FLEET_CI_HEAD_REVISION')\n\
+      \    if bound and bound != source:\n        raise RuntimeError('checkout revision\
+      \ differs from native requested source')\n    files = source_files(root)\n \
+      \   report = {'schema': 'verdify.secretless-firmware/v1', 'source': source,\n\
+      \              'toolchain_image': IMAGE, 'esphome_version': VERSION,\n     \
+      \         'deployable': False, 'physical_qualification': False,\n          \
+      \    'credentials': 'public compile-only dummy values', 'targets': []}\n   \
+      \ with tempfile.TemporaryDirectory(prefix='verdify-firmware-ci-', dir=root.parent)\
+      \ as work:\n        work = Path(work)\n        home = work / 'home'; home.mkdir()\n\
+      \        env = {'PATH': os.environ['PATH'], 'HOME': str(home), 'TMPDIR': str(work),\n\
+      \               'PLATFORMIO_CORE_DIR': str(work / 'platformio'),\n         \
+      \      'ESPHOME_DEFAULT_COMPILE_PROCESS_LIMIT': '2',\n               'SOURCE_DATE_EPOCH':\
+      \ subprocess.check_output(['git', 'show', '-s', '--format=%ct', 'HEAD'], cwd=root,\
+      \ text=True).strip()}\n        import importlib.metadata\n        if importlib.metadata.version('esphome')\
+      \ != VERSION:\n            raise RuntimeError('wrong ESPHome version; no compile\
+      \ performed')\n        for target in TARGETS:\n            tree = work / target\n\
+      \            for name, content in files.items():\n                dest = tree\
+      \ / name; dest.parent.mkdir(parents=True, exist_ok=True); dest.write_bytes(content)\n\
+      \            firmware = tree / 'firmware'\n            (firmware / 'secrets.yaml').write_text(DUMMY)\n\
+      \            config = firmware / (target + '.yaml')\n            cmd = ['esphome',\
+      \ '-s', 'fw_version', 'CI-NONDEPLOYABLE-' + source[:12]]\n            subprocess.run(cmd\
+      \ + ['config', str(config)], cwd=tree, env=env, check=True)\n            subprocess.run(cmd\
+      \ + ['compile', str(config)], cwd=tree, env=env, check=True)\n            binary\
+      \ = firmware / '.esphome/build/greenhouse/.pioenvs/greenhouse/firmware.ota.bin'\n\
+      \            if not binary.is_file() or not binary.stat().st_size:\n       \
+      \         raise RuntimeError('compiler succeeded without OTA-format binary')\n\
+      \            report['targets'].append({'target': target, 'config_sha256': digest(config),\n\
+      \                'source_manifest_sha256': hashlib.sha256(json.dumps({k: hashlib.sha256(v).hexdigest()\
+      \ for k, v in sorted(files.items())}, sort_keys=True).encode()).hexdigest(),\n\
+      \                'generated_cpp_sha256': digest(firmware / '.esphome/build/greenhouse/src/main.cpp'),\n\
+      \                'platformio_ini_sha256': digest(firmware / '.esphome/build/greenhouse/platformio.ini'),\n\
+      \                'binary_sha256': digest(binary), 'binary_bytes': binary.stat().st_size,\n\
+      \                'result': 'compiled', 'deployable': False})\n            if\
+      \ target == 'greenhouse':\n                # Real generated API service regression:\
+      \ config-valid C++ must\n                # fail actual compilation. Reuse only\
+      \ this private dummy build.\n                text = config.read_text()\n   \
+      \             if text.count('  services:\\n') != 1:\n                    raise\
+      \ RuntimeError('native generated service insertion point changed')\n       \
+      \         config.write_text(text.replace('  services:\\n',\n               \
+      \     '  services:\\n    - service: ci_generated_service_failure\\n'\n     \
+      \               '      then:\\n        - lambda: |-\\n'\n                  \
+      \  '            CI_NONDEPLOYABLE_GENERATED_SERVICE_MUST_NOT_EXIST();\\n', 1))\n\
+      \                subprocess.run(cmd + ['config', str(config)], cwd=tree, env=env,\
+      \ check=True)\n                negative = subprocess.run(cmd + ['compile', str(config)],\
+      \ cwd=tree, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)\n   \
+      \             if negative.returncode == 0 or b'CI_NONDEPLOYABLE_GENERATED_SERVICE_MUST_NOT_EXIST'\
+      \ not in negative.stdout:\n                    raise RuntimeError('broken generated\
+      \ C++ did not fail compilation as expected')\n                report['generated_cpp_negative']\
+      \ = {'result': 'expected_compile_failure', 'exit_code': negative.returncode}\n\
+      \        report['platformio_packages'] = {json.loads(p.read_text())['name']:\
+      \ json.loads(p.read_text())['version'] for p in sorted((work / 'platformio/packages').glob('*/package.json'))}\n\
+      \        if not report['platformio_packages']:\n            raise RuntimeError('compiled\
+      \ toolchain package provenance absent')\n        print('FIRMWARE_SECRETLESS_RECEIPT='\
+      \ + json.dumps(report, sort_keys=True), flush=True)\n\n\nif __name__ == '__main__':\n\
+      \    main()\nPY\n"
+    image: ghcr.io/esphome/esphome@sha256:ffe23402d169fc9b8ff29fc3c9fc13b3c47e8a53726fce4569e2280bd534c84c
