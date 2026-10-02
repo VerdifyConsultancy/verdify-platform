@@ -512,6 +512,22 @@ def input_arguments(parser):
     parser.add_argument("--reviewed-physical-sha256")
 
 
+def read_logical_record(path, *, successor, install):
+    """Use the actual retained269 envelope only for the closed post270 chain."""
+    if successor is None:
+        return t.read_transition_record(
+            path, version=t.VERSION, mode="install" if install else "rollback-qualification"
+        )
+    require(path.is_file() and not path.is_symlink(), "regular retained logical record required")
+    maximum = 2 * t.c0.WITNESS_MAX_BYTES + 1024
+    with path.open("rb") as stream:
+        raw = stream.read(maximum + 1)
+    require(len(raw) <= maximum, "retained logical record exceeds two-witness bound")
+    value, _ = successor_module().r.record(raw, "install" if install else "savepoint-rollback-qualification")
+    require(t.transaction.is_hash(value["ddl_sha256"]), "invalid retained logical DDL hash")
+    return value, hashlib.sha256(raw).hexdigest()
+
+
 def qualified_inputs(args):
     data = {}
     successor = None
@@ -521,13 +537,7 @@ def qualified_inputs(args):
         require(not getattr(args, "post270_lineage_sha256", None), "incomplete post270 lineage binding")
     for key in INPUT_KEYS:
         if key in {"logical_rollback", "logical_install"}:
-            value, sha = t.read_transition_record(
-                getattr(args, key),
-                version="cnpg-native-retained-session-transition-v1" if successor is not None else t.VERSION,
-                mode=("savepoint-rollback-qualification" if successor is not None else "rollback-qualification")
-                if key == "logical_rollback"
-                else "install",
-            )
+            value, sha = read_logical_record(getattr(args, key), successor=successor, install=key == "logical_install")
         else:
             value, sha = t.c0.read_witness(getattr(args, key))
         require(sha == getattr(args, key + "_sha256"), "physical input custody mismatch")
