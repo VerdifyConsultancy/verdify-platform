@@ -225,7 +225,9 @@ def render(binding, consumer, image, source, module_sha, profile_sha, suffix):
                     "automountServiceAccountToken": False,
                     "securityContext": {
                         "runAsNonRoot": True,
-                        "runAsUser": 10001,
+                        # Match the shipped appuser and its private HOME; asyncpg
+                        # resolves ~/.postgresql paths before opening its pool.
+                        "runAsUser": 1000,
                         "seccompProfile": {"type": "RuntimeDefault"},
                     },
                     "imagePullSecrets": [{"name": "zot-origin-cluster-pull"}],
