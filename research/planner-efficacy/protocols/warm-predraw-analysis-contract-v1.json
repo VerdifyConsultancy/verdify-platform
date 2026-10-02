@@ -1,0 +1,89 @@
+{
+  "status": "predeclared_analysis_contract_not_design_lock",
+  "files": {
+    "research/planner-efficacy/protocols/direct-launch-basis-v2.json": "074d7ef29415eea922d59b3ab1596612c0a7966624011b1c29bf477d50964835",
+    "research/planner-efficacy/protocols/warm-season-calendar-prereg-2027-v1.json": "f63dcca480c5413fcd66480e81eb5afb18f4f8395885b4392975cd4eca6d1301",
+    "research/planner-efficacy/protocols/warm-daily-observer-preparation-v1.json": "a8371a67914d7f8ea328be638b1626e1974f50e1d03a49b75c500376c5c5b78b",
+    "research/planner-efficacy/protocols/planner-switchback-v2.template.yaml": "a1939e3ec6da6cff6cd63164e3e53272491ca40aa36549c956fc6bdff4b73fce",
+    "research/planner-efficacy/switchback/v2_analysis.py": "cab050add9be5ad3ce83605cb12e8ce6bf60fe622679e1c9b830942fd51f207b",
+    "research/planner-efficacy/switchback/v2_day1_export.py": "fbde0051acc67fd3b88c79649e11a5dd8865547c83ea7c3e71fd94574d3c76ad",
+    "research/planner-efficacy/switchback/v2_power.py": "fa39a9157da04a15b899dadea66a4d82b7a365521cf1c48dadede7e8c0c11921",
+    "research/planner-efficacy/switchback/v2_selector.py": "e8d194ceb3763e5549e832dd4c4fd6655716c42f7ba9e4978ea6a3901f04b431"
+  },
+  "calendar": {
+    "start": "2027-06-01",
+    "end_inclusive": "2027-07-30",
+    "timezone": "America/Denver",
+    "days": 60,
+    "pairs": 30,
+    "daily_window": "[06:00,24:00)",
+    "seconds": 64800
+  },
+  "fixed_panel": {
+    "routes": [
+      "north",
+      "east",
+      "west"
+    ],
+    "physical_contributor_authentication": false,
+    "bins_per_day": 72,
+    "required_valid_bins": 66,
+    "complete_distinct_minutes_per_bin": 12,
+    "maximum_missing_run_minutes": 30,
+    "future_target_and_route_revisions": null
+  },
+  "analysis": {
+    "one_sided_confidence": 0.975,
+    "estimand": "paired AI-minus-Frozen ITT over all30predeclaredpairs",
+    "decision_boundaries": {
+      "vpd_kpa": 0.05,
+      "temperature_F": 0.5,
+      "nine_state_minutes": 0
+    },
+    "all60assignments_retained": true,
+    "fallback_rescue_failed_delivery_reset_zero_and_null_retained": true,
+    "any_missing_pair_or_endpoint": "inconclusive; no imputation/redraw/replacement/denominator reduction",
+    "physical_missing_endpoint_bounds": {
+      "status": "unavailable_unqualified",
+      "climate": null,
+      "operating": null,
+      "requirement": "Qualify and freeze physical best/worst-case ranges per endpoint; no authentic finite physical bounds available in this receipt. Preserve requirement and report unavailable; never substitute zero or invent finite intervals.",
+      "implemented_by_current_analyzer": false
+    },
+    "analyzer_environment_digest": null,
+    "analyzer_environment_requirement": "Freeze actual NumPy/SciPy/runtime image identity and Student-t/sign-flip numeric goldens with the later design lock; source hash is not an environment digest."
+  },
+  "power": {
+    "empirical_joint_power": null,
+    "provisional_model_only": 0.13776,
+    "accepted_exploratory_underpowered": true,
+    "minimum_power_launch_gate": false,
+    "retention_sensitivities": {
+      "0.99^30": 0.7397003733882802,
+      "0.95^30": 0.21463876394293727
+    },
+    "required_replay_contract": [
+      "original pre-boundary asof forecast/context vintages",
+      "frozen once-daily selector recommendation and fallback frequency in both arms",
+      "18h fixedpanel target-qualified paired endpoint variance/covariance",
+      "source-continuity/reset/missingness and carryover sensitivities",
+      "baseline/moderate/aggressive profile proportions with uncertainty",
+      "joint intersection-union advance frequency under prespecified effects/correlation and actualcompleteness"
+    ],
+    "missing_inputs_remain_null": true,
+    "actual_replay_qualified": false
+  },
+  "design_lock": null,
+  "schedule_draw": null,
+  "production_effect": null,
+  "schema": "verdify-warm-predraw-analysis-contract-v1",
+  "source_bundle_scope": "Seven unchanged files match base_source_revision; the protocol template hash binds proposed modified template bytes before contract creation. This bundle is not claimed to exist at the base or a final head. A merged receipt must bind the final source revision separately.",
+  "acceptance_limits": [
+    "Contract publication is not #782 closure, #783 restored-data acceptance, random draw, design lock, first-day authority or empirical efficacy.",
+    "Current future physical contributors/target revisions and exact selector/forecast/equipment replay remain unproven.",
+    "Current empirical joint power and covariance/carryover/completeness remain null; provisional power0.13776 is model-only.",
+    "No minimum-power threshold or new approval gate is introduced.",
+    "Winter Nov2-Dec31 observational instance remains separate and immutable."
+  ],
+  "base_source_revision": "87cd756e26126b60fbc2c9b26e81cb9f33aa604c"
+}
