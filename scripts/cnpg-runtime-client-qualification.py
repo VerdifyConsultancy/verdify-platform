@@ -75,7 +75,8 @@ async def run():
                     current_setting('cluster_name') AS cluster_name,
                     current_setting('default_transaction_read_only') AS default_read_only,
                     current_setting('transaction_read_only') AS transaction_read_only,
-                    inet_server_addr()::text AS backend_address, pg_is_in_recovery() AS replica"""))
+                    inet_server_addr()::text AS backend_address_raw,
+                    pg_catalog.host(inet_server_addr()) AS backend_address, pg_is_in_recovery() AS replica"""))
                 assert identity['current_user'] == identity['session_user'] == login
                 assert identity['database'] == 'verdify_rehearsal' and identity['server_version'] == '160013'
                 assert identity['cluster_name'] == 'verdify-cnpg-rehearsal' and identity['replica'] is False
