@@ -141,6 +141,9 @@ struct Stats {
     // the stock CSV's conservative observation/age columns; there is no
     // force-fresh path and no claim that the Tempest packet timestamp persists.
     long outdoor_observation_backed_rows = 0;
+    long outdoor_original_device_rows = 0;
+    long outdoor_historical_proxy_rows = 0;
+    long outdoor_original_stale_rows = 0;
     long outdoor_fresh_rows = 0;
     long outdoor_fresh_cold_wet_rows = 0;
     long outdoor_fresh_wet_demand_rows = 0;
@@ -276,13 +279,23 @@ int main(int argc, char* argv[]) {
         // standard exporter; missing provenance never earns coverage even if
         // an age cell were manually populated.
         const bool observation_backed = !get("outdoor_observation_ts").empty()
-            && get("outdoor_freshness_basis")
-                == "conservative_change_observation";
+            && (get("outdoor_freshness_basis") == "conservative_change_observation"
+                || (get("outdoor_freshness_basis") == "device_reported_original_callback"
+                    && !get("outdoor_device_event_id").empty()
+                    && !get("outdoor_device_event_sha256").empty()
+                    && !get("outdoor_device_runtime_id").empty()
+                    && !get("outdoor_device_generation").empty()));
         const bool outdoor_fresh = observation_backed
             && std::isfinite(in.outdoor_temp_f)
             && std::isfinite(in.outdoor_rh_pct)
             && in.outdoor_data_age_s < sp.outdoor_staleness_max_s;
-        if (observation_backed) stats.outdoor_observation_backed_rows++;
+        if (observation_backed) {
+            stats.outdoor_observation_backed_rows++;
+            if (get("outdoor_freshness_basis") == "device_reported_original_callback") {
+                stats.outdoor_original_device_rows++;
+                if (!outdoor_fresh) stats.outdoor_original_stale_rows++;
+            } else stats.outdoor_historical_proxy_rows++;
+        }
         if (outdoor_fresh) {
             stats.outdoor_fresh_rows++;
             if (in.outdoor_temp_f < 50.0f && in.outdoor_rh_pct >= 50.0f)
@@ -409,6 +422,9 @@ int main(int argc, char* argv[]) {
     printf("\n#419 stock-corpus outdoor provenance/branch coverage:\n");
     printf("  observation-backed rows            %ld\n",
            stats.outdoor_observation_backed_rows);
+    printf("  original device callback rows     %ld\n", stats.outdoor_original_device_rows);
+    printf("  historical conservative proxies   %ld\n", stats.outdoor_historical_proxy_rows);
+    printf("  original device stale rows        %ld\n", stats.outdoor_original_stale_rows);
     printf("  fresh rows (< row staleness max)   %ld\n", stats.outdoor_fresh_rows);
     printf("  fresh cold/wet regime rows         %ld\n", stats.outdoor_fresh_cold_wet_rows);
     printf("  fresh below-target rows            %ld\n", stats.outdoor_fresh_wet_demand_rows);

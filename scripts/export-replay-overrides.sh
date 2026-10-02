@@ -14,7 +14,8 @@ DAYS=${1:-0}  # 0 = all history
 # OUTDIR is env-overridable so Makefile targets can pin output directly into
 # the firmware worktree's test/data/. Default preserves the original location
 # for standalone invocations from the main repo.
-OUTDIR=${OUTDIR:-/srv/verdify/firmware/test/data}
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+OUTDIR=${OUTDIR:-"$SCRIPT_DIR/../firmware/test/data"}
 mkdir -p "$OUTDIR"
 OUTFILE="$OUTDIR/replay_overrides.csv"
 
@@ -36,15 +37,17 @@ fi
 # New Phase-0 columns:
 #   outdoor_temp_f        — Tempest, for sprint-15 gate + new invariants
 #   outdoor_dewpoint_f    — computed from Tempest temp+rh
-#   outdoor_data_age_s    — seconds since the last persisted Tempest value change
-#                           (conservative persisted observation; drives gate eligibility)
+#   outdoor_data_age_s    — exact device-reported age + elapsed original callback time;
+#                           historical rows retain conservative_change_observation.
+# Native callback timestamps are receive clocks, not invented raw Tempest timestamps.
+# First-generation callback, gaps, malformed/missing/sentinel values remain stale.
 #   solar_irradiance_w_m2 — Tempest, for sunrise-ramp invariants
 #   indoor_dew_point      — from climate.dew_point (Magnus inside firmware)
 #   eq_<relay>            — forward-filled equipment_state at row ts (0/1)
 #   mode_reason           — sprint-15.1 diagnostic enum; drives invariant #10
 #   greenhouse_state      — for invariant #6 transition counting
-# #24: DB access via the shared psql-verdify abstraction (docker-exec default
-# preserves prior VM argv).
+# #24: DB access via the shared psql-verdify abstraction; choose kube explicitly
+# on an operator host (the default retains the standalone docker backend).
 . "$(dirname "${BASH_SOURCE[0]}")/lib/psql-verdify.sh"
 # Export each ordered source once, then perform the as-of merge locally.  The
 # former query ran one correlated lookup per source field and climate row; on
@@ -263,12 +266,36 @@ COPY (
 ) TO STDOUT WITH (FORMAT csv, DELIMITER E'\t', HEADER, NULL '')
 " > "$TMP_ROOT/equipment.tsv"
 
+echo "  reading original device-age callbacks and transport boundaries..."
+verdify_psql -c "
+COPY (
+    SELECT * FROM (
+    SELECT source_ts AS ts, 'weather' AS event_kind, event_id::text,
+           source_runtime_instance_id::text, source_connection_generation,
+           encode(event_sha256,'hex') AS event_sha256, event_payload->>'value' AS value
+      FROM public.observational_source_events
+     WHERE greenhouse_id='vallery' AND kind='system_state'
+       AND event_payload->>'entity'='climate_moisture_exchange'
+    UNION ALL
+    SELECT received_at AS ts, event_kind, NULL::text,
+           source_runtime_instance_id::text, transport_generation,
+           payload_sha256, NULL::text
+      FROM public.fixed_panel_native_events
+     WHERE event_kind IN ('connected','gap')
+    ) AS outdoor_events
+    ORDER BY ts, CASE WHEN event_kind='weather' THEN 0 ELSE 1 END, event_kind, event_id
+) TO STDOUT WITH (FORMAT csv, DELIMITER E'\\t', HEADER, NULL '')
+" > "$TMP_ROOT/outdoor-device.tsv"
+
 echo "  merging ordered sources locally..."
-python3 - "$TMP_ROOT" "$OUTFILE" <<'PY'
+python3 - "$TMP_ROOT" "$OUTFILE" "$SCRIPT_DIR" <<'PY'
 import csv
 import json
 import sys
 from pathlib import Path
+
+sys.path.insert(0, sys.argv[3])
+from replay_outdoor_age import OutdoorAge, instant
 
 tmp = Path(sys.argv[1])
 outfile = Path(sys.argv[2])
@@ -376,6 +403,11 @@ fieldnames = (
         "outdoor_observation_ts",
         "outdoor_freshness_basis",
         "sp_dehum_vent_hold_enabled",
+        "outdoor_device_reported_age_s",
+        "outdoor_device_event_id",
+        "outdoor_device_event_sha256",
+        "outdoor_device_runtime_id",
+        "outdoor_device_generation",
     ]
 )
 
@@ -395,6 +427,9 @@ def next_or_none(rows):
 sp_handle, sp_rows = open_rows("setpoints.tsv")
 sys_handle, sys_rows = open_rows("system.tsv")
 eq_handle, eq_rows = open_rows("equipment.tsv")
+weather_handle, weather_rows = open_rows("outdoor-device.tsv")
+current_weather = next_or_none(weather_rows)
+weather = OutdoorAge()
 current_sp = next_or_none(sp_rows)
 current_sys = next_or_none(sys_rows)
 current_eq = next_or_none(eq_rows)
@@ -433,6 +468,10 @@ try:
                 )
                 current_eq = next_or_none(eq_rows)
 
+            while current_weather is not None and instant(current_weather["ts"]) <= instant(ts):
+                weather.observe(current_weather)
+                current_weather = next_or_none(weather_rows)
+
             output = {field: climate.get(field, "") for field in base_fields}
             for output_name, parameter in setpoint_fields:
                 value = config.get(parameter, "")
@@ -446,12 +485,7 @@ try:
             for name in equipment_names:
                 output[f"eq_{name}"] = "1" if equipment.get(name, False) else "0"
 
-            output["outdoor_observation_ts"] = climate.get(
-                "outdoor_observation_ts", ""
-            )
-            output["outdoor_freshness_basis"] = (
-                "conservative_change_observation"
-            )
+            output.update(weather.project(climate))
             hold = config.get("sw_dehum_vent_hold_enabled", "")
             output["sp_dehum_vent_hold_enabled"] = "" if hold is None else hold
             writer.writerow(output)
@@ -459,6 +493,7 @@ finally:
     sp_handle.close()
     sys_handle.close()
     eq_handle.close()
+    weather_handle.close()
 PY
 
 ROWS=$(wc -l < "$OUTFILE")
