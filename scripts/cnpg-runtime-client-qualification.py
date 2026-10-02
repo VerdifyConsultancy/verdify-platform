@@ -102,9 +102,15 @@ def hashlib_sha(value):
     return hashlib.sha256(value).hexdigest()
 
 try:
-    exec(PROBE_TEXT)
+    exec(compile(PROBE_TEXT, '<verdify-cnpg-runtime-probe>', 'exec'))
 except BaseException as exc:
-    print(json.dumps({'status':'failed','error_category':type(exc).__name__}))
+    probe_line = None
+    trace = exc.__traceback__
+    while trace is not None:
+        if trace.tb_frame.f_code.co_filename == '<verdify-cnpg-runtime-probe>':
+            probe_line = trace.tb_lineno
+        trace = trace.tb_next
+    print(json.dumps({'status':'failed','error_category':type(exc).__name__, 'probe_line':probe_line}))
     sys.exit(1)
 """.replace("PROBE_TEXT", repr(PROBE))
 
