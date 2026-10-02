@@ -196,20 +196,13 @@ COPY (
 " > "$TMP_ROOT/climate.tsv"
 
 echo "  reading complete setpoint batches..."
-verdify_psql -c "
-COPY (
-    SELECT
-        greenhouse_id,
-        ts,
-        jsonb_object_agg(parameter, to_jsonb(value) ORDER BY parameter)
-            AS config_payload
-    FROM setpoint_snapshot
-    WHERE greenhouse_id = 'vallery'
-    GROUP BY greenhouse_id, ts
-    HAVING bool_or(parameter = 'temp_high')
-    ORDER BY ts
-) TO STDOUT WITH (FORMAT csv, DELIMITER E'\t', HEADER, NULL '')
-" > "$TMP_ROOT/setpoints.tsv"
+# A bounded replay needs the last complete batch at/before its first actual
+# climate row plus subsequent batches. Retain that seed so sparse snapshots do
+# not erase the starting policy; avoid aggregating every historical batch.
+SETPOINT_ARGS=(--climate "$TMP_ROOT/climate.tsv")
+if [ "$DAYS" -eq 0 ]; then SETPOINT_ARGS+=(--all-history); fi
+SETPOINT_SQL=$(python3 "$SCRIPT_DIR/replay_setpoint_export.py" "${SETPOINT_ARGS[@]}")
+verdify_psql -c "$SETPOINT_SQL" > "$TMP_ROOT/setpoints.tsv"
 
 echo "  reading changed system states..."
 verdify_psql -c "
