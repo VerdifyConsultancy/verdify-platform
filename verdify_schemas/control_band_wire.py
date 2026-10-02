@@ -20,7 +20,7 @@ from zoneinfo import ZoneInfo
 
 FIRMWARE_SOURCES = {
     "firmware/lib/greenhouse_solar.h": "dd0557760ac17fd61eca8a0449d0060f8452d418616edda2ab95892408a2fb0e",
-    "firmware/greenhouse/controls.yaml": "a8754756d0fb77606f582738ebff8440a2ea01be0ff156a496c7b59314f7fdd3",
+    "firmware/greenhouse/controls.yaml": "db066c4708bf33ac11014ae1d006a37d26098bbf6e17720312db3f7c36774ac3",
 }
 SERIES = ("temp_low", "temp_high", "temp_target", "vpd_low", "vpd_high", "vpd_target")
 ANCHORS = ("sr", "sm", "ss", "mid")
@@ -121,7 +121,7 @@ def solar_times(doy: int, offset: int) -> tuple[int, int, int]:
     decl = fma(-F(0.002697), cos(F(3) * g), decl)
     decl = fma(F(0.001480), sin(F(3) * g), decl)
     lat = F(SITE["latitude_deg"]) * pi / F(180)
-    # Actual2143 compute_solar_times uses these explicit madd/msub orders.
+    # Measured620a and historical2143 use these explicit madd/msub orders.
     zenith_cos = F(-0.014538058079779148)
     ha = fma(-sin(lat), sin(decl), zenith_cos) / (cos(lat) * cos(decl))
     ha = F(max(-1, min(1, ha)))
@@ -226,8 +226,8 @@ def resolve_served_wire(desired: dict, sample: datetime, night_bias: float) -> d
     }
 
 
-SUPPORTED_FIRMWARE = "2026.10.1.2143.d5b5c404-wifi-bound"
-TARGET_ELF_SHA256 = "f8cc733dd5286c2f1edf0d0a2b4a29532c8fb5460b344c2e9a7414959d158bd6"
+SUPPORTED_FIRMWARE = "2026.10.2.0637.620a218a-wifi-bound"
+TARGET_ELF_SHA256 = "39a237cfb044e72633d52646c203d27b1217ba9f9de3d4a8308798b1b7a96b5b"
 SQL_FUNCTIONS = (
     "fn_band_setpoints(timestamptz)",
     "fn_crop_band_value(text,text,timestamptz,text,text,text)",

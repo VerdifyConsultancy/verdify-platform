@@ -1150,34 +1150,70 @@ def test_v3_complete_contract_rejects_forgery_missing_evidence_and_changed_polic
         run(document)
 
 
-def test_consumed_setpoints_batch_is_fresh_and_marker_commits_last() -> None:
-    """The source marker must date one complete genuinely consumed tuple."""
+def test_consumed_setpoints_batch_is_fresh_and_marker_commits_last(tmp_path) -> None:
+    """Execute the owning publication fragment across actual timing boundaries."""
+    import subprocess
+
     controls = (ROOT / "firmware/greenhouse/controls.yaml").read_text()
-    start = controls.index("if (consumed_band_evidence_due) {")
-    end = controls.index("last_consumed_band_evidence_ms = climate_diag_now_ms;", start)
-    batch = controls[start:end]
-    expected = {
-        "gh_consumed_temp_low_f": "temp_low",
-        "gh_consumed_temp_high_f": "temp_high",
-        "gh_consumed_vpd_low_kpa": "vpd_low",
-        "gh_consumed_vpd_high_kpa": "vpd_high",
-        "gh_house_temp_target": "temp_target",
-        "gh_house_vpd_target": "vpd_target",
-    }
-    marker = batch.index("id(gh_consumed_band_sample_epoch).publish_state(")
-    for sensor, field in expected.items():
-        publish = f"id({sensor}).publish_state(setpts.{field});"
-        assert controls.count(publish) == 1
-        assert batch.index(publish) < marker
-    assert batch.index("id(gh_band_source).publish_state(") < marker
-    assert 'controller_time_valid ? std::to_string(sntp_now.timestamp) : ""' in batch
-    assert batch.count(".publish_state(") == 8
-    # A slow solar/per-zone block must never gate or duplicate this tuple.
-    assert end < controls.index("if (climate_band_diag_due) {")
-    assert "(climate_diag_now_ms - last_consumed_band_evidence_ms) >= 15000UL" in controls
-    assert "(climate_diag_now_ms - last_climate_band_diag_ms) >= 300000UL" in controls
-    slow = controls[controls.index("if (climate_band_diag_due) {") :]
-    for sensor in (*expected, "gh_band_source", "gh_consumed_band_sample_epoch"):
-        assert f"id({sensor}).publish_state(" not in slow
-    for sensor in ("gh_solar_phase", "gh_zone_wet_granted", "gh_house_temp_delta", "gh_house_vpd_delta"):
-        assert f"id({sensor}).publish_state(" in slow
+    start = controls.index("const bool consumed_band_evidence_due =")
+    end = controls.index("// ── Firmware-v2 EVIDENCE SURFACE", start)
+    fragment = controls[start:end]
+    source = tmp_path / "batch.cpp"
+    source.write_text(
+        """
+#include <cassert>
+#include <cstdint>
+#include <string>
+#include <vector>
+#define id(x) x
+struct Event { std::string name, text; float value; };
+std::vector<Event> events;
+struct Sensor {
+ std::string name;
+ void publish_state(float value) { events.push_back({name,"",value}); }
+ void publish_state(const std::string& value) { events.push_back({name,value,0}); }
+};
+int main() {
+ Sensor gh_consumed_temp_low_f{"low_t"},gh_consumed_temp_high_f{"high_t"};
+ Sensor gh_consumed_vpd_low_kpa{"low_v"},gh_consumed_vpd_high_kpa{"high_v"};
+ Sensor gh_house_temp_target{"target_t"},gh_house_vpd_target{"target_v"};
+ Sensor gh_band_source{"source"},gh_consumed_band_sample_epoch{"marker"};
+ struct { float temp_low,temp_high,vpd_low,vpd_high,temp_target,vpd_target; }
+ setpts{60,80,0.5f,1.5f,70,1.0f};
+ struct { int64_t timestamp; } sntp_now{123456};
+ bool sw_onchip_band_enabled=true,controller_time_valid=true;
+ uint32_t last_consumed_band_evidence_ms=0,climate_diag_now_ms=1000;
+ auto tick=[&](){
+"""
+        + fragment
+        + """
+ };
+ auto verify=[&](const std::string& branch,const std::string& marker){
+  assert(events.size()==8);
+  const char* names[]={"low_t","high_t","low_v","high_v","target_t","target_v"};
+  const float values[]={setpts.temp_low,setpts.temp_high,setpts.vpd_low,setpts.vpd_high,setpts.temp_target,setpts.vpd_target};
+  for(int i=0;i<6;i++){assert(events[i].name==names[i]);assert(events[i].value==values[i]);}
+  assert(events[6].name=="source" && events[6].text==branch);
+  assert(events[7].name=="marker" && events[7].text==marker);
+  assert(last_consumed_band_evidence_ms==climate_diag_now_ms);
+  events.clear();
+ };
+ tick();verify("onchip_curve","123456");
+ // No diagnostic publication can manufacture a fresh marker before the cadence.
+ climate_diag_now_ms=15999;tick();assert(events.empty());
+ setpts={61,81,0.6f,1.6f,71,1.1f};sntp_now.timestamp++;
+ climate_diag_now_ms=16000;tick();verify("onchip_curve","123457");
+ sw_onchip_band_enabled=false;controller_time_valid=false;
+ climate_diag_now_ms=31000;tick();verify("dispatcher_legacy","");
+ // Genuine computed tuple and marker remain one batch across unsigned wrap.
+ last_consumed_band_evidence_ms=UINT32_MAX-9999;
+ climate_diag_now_ms=4999;tick();assert(events.empty());
+ controller_time_valid=true;sntp_now.timestamp=123458;
+ setpts={62,82,0.7f,1.7f,72,1.2f};
+ climate_diag_now_ms=5000;tick();verify("dispatcher_legacy","123458");
+}
+"""
+    )
+    binary = tmp_path / "batch"
+    subprocess.run(["c++", "-std=c++17", str(source), "-o", str(binary)], check=True)
+    subprocess.run([str(binary)], check=True)
