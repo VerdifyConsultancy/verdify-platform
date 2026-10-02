@@ -520,3 +520,166 @@ def test_live_client_extra_privilege_rejected(extra, monkeypatch):
     monkeypatch.setattr(target, "get", lambda *a, **kw: live)
     with pytest.raises(ValueError):
         target.client(expected, uid(999), baseline)
+
+
+def repaired_snapshot():
+    """Active 1/2/4 plus the exact physically retained, detached old pair."""
+    s = snapshot()
+    old = s["pods"]["items"][2]
+    old["metadata"]["name"] = f.CLUSTER + "-4"
+    old["metadata"]["uid"] = uid(304)
+    for c in old["spec"]["volumes"]:
+        c["persistentVolumeClaim"]["claimName"] = c["persistentVolumeClaim"]["claimName"].replace("-3", "-4")
+    for c in s["pvcs"]["items"][4:]:
+        c["metadata"]["name"] = c["metadata"]["name"].replace("-3", "-4")
+        c["spec"]["volumeName"] = c["metadata"]["name"]
+    for v in s["pvs"]["items"][4:]:
+        v["metadata"]["name"] = v["metadata"]["name"].replace("-3", "-4")
+        v["spec"]["claimRef"]["name"] = v["metadata"]["name"]
+        v["spec"]["csi"]["volumeHandle"] = v["metadata"]["name"]
+    for name, expected in f.RETAINED_PAIR.items():
+        pvname = "pvc-" + expected["uid"]
+        s["pvcs"]["items"].append(
+            {
+                "metadata": {
+                    "name": name,
+                    "namespace": f.NS,
+                    "uid": expected["uid"],
+                    "labels": {
+                        "cnpg.io/cluster": f.CLUSTER,
+                        "cnpg.io/instanceName": f.CLUSTER + "-3",
+                        "cnpg.io/pvcRole": expected["role"],
+                    },
+                    "annotations": {"cnpg.io/pvcStatus": "detached"},
+                },
+                "spec": {
+                    "storageClassName": "longhorn-v1-rwo",
+                    "volumeName": pvname,
+                    "resources": {"requests": {"storage": expected["size"]}},
+                    "accessModes": ["ReadWriteOnce"],
+                    "volumeMode": "Filesystem",
+                },
+                "status": {"phase": "Bound"},
+            }
+        )
+        s["pvs"]["items"].append(
+            {
+                "metadata": {"name": pvname, "uid": expected["pv_uid"]},
+                "spec": {
+                    "claimRef": {"namespace": f.NS, "name": name, "uid": expected["uid"]},
+                    "csi": {"driver": "driver.longhorn.io", "volumeHandle": pvname},
+                    "persistentVolumeReclaimPolicy": "Retain",
+                    "storageClassName": "longhorn-v1-rwo",
+                },
+                "status": {"phase": "Bound"},
+            }
+        )
+    s["namespace_pods"] = copy.deepcopy(s["pods"])
+    return s
+
+
+def test_repaired_binding_preserves_all_eight_raw_volumes():
+    s = repaired_snapshot()
+    raw = copy.deepcopy(s)
+    b = f.bind(s)
+    assert len(b["storage"]) == 6 and set(b["retained_storage"]) == set(f.RETAINED_PAIR)
+    assert s == raw and len(s["pvcs"]["items"]) == len(s["pvs"]["items"]) == 8
+    f.preserved(b, f.bind(copy.deepcopy(s)))
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        "missing",
+        "partial",
+        "extra",
+        "duplicate_pvc",
+        "duplicate_pv",
+        "uid",
+        "pv_uid",
+        "handle",
+        "owner",
+        "attached",
+        "role",
+        "size",
+        "reclaim",
+        "pv_phase",
+        "consumer",
+        "missing_consumers",
+        "incomplete_consumers",
+        "deleting",
+    ],
+)
+def test_repaired_binding_rejects_ambiguous_or_changed_custody(case):
+    s = repaired_snapshot()
+    c, v = s["pvcs"]["items"][-1], s["pvs"]["items"][-1]
+    if case == "missing":
+        s["pvcs"]["items"] = s["pvcs"]["items"][:6]
+        s["pvs"]["items"] = s["pvs"]["items"][:6]
+    elif case == "partial":
+        s["pvcs"]["items"].pop()
+        s["pvs"]["items"].pop()
+    elif case == "extra":
+        c["metadata"]["name"] = "unknown-extra"
+    elif case == "duplicate_pvc":
+        s["pvcs"]["items"].append(copy.deepcopy(c))
+    elif case == "duplicate_pv":
+        s["pvs"]["items"].append(copy.deepcopy(v))
+    elif case == "uid":
+        c["metadata"]["uid"] = v["spec"]["claimRef"]["uid"] = uid(999)
+    elif case == "pv_uid":
+        v["metadata"]["uid"] = uid(999)
+    elif case == "handle":
+        v["spec"]["csi"]["volumeHandle"] = "wrong"
+    elif case == "owner":
+        c["metadata"]["ownerReferences"] = [{"kind": "Cluster", "uid": f.UID}]
+    elif case == "attached":
+        c["metadata"]["annotations"]["cnpg.io/pvcStatus"] = "ready"
+    elif case == "role":
+        c["metadata"]["labels"]["cnpg.io/pvcRole"] = "PG_DATA"
+    elif case == "size":
+        c["spec"]["resources"]["requests"]["storage"] = "20Gi"
+    elif case == "reclaim":
+        v["spec"]["persistentVolumeReclaimPolicy"] = "Delete"
+    elif case == "pv_phase":
+        v["status"]["phase"] = "Released"
+    elif case == "consumer":
+        s["namespace_pods"]["items"].append(
+            {
+                "metadata": {"namespace": f.NS, "uid": uid(998)},
+                "spec": {"volumes": [{"persistentVolumeClaim": {"claimName": c["metadata"]["name"]}}]},
+            }
+        )
+    elif case == "missing_consumers":
+        del s["namespace_pods"]
+    elif case == "incomplete_consumers":
+        s["namespace_pods"]["items"].pop()
+    else:
+        c["metadata"]["deletionTimestamp"] = "2026-10-02T00:00:00Z"
+    with pytest.raises((ValueError, KeyError)):
+        f.bind(s)
+
+
+def test_repaired_preserved_rejects_retained_spec_drift():
+    a = f.bind(repaired_snapshot())
+    b = copy.deepcopy(a)
+    b["retained_storage"][f.CLUSTER + "-3"]["pv_spec"]["mountOptions"] = ["changed"]
+    with pytest.raises(ValueError, match="storage"):
+        f.preserved(a, b)
+
+
+def test_snapshot_uses_native_pvc_resource_and_keeps_all_namespace_pods():
+    api = f.ExistingTarget.__new__(f.ExistingTarget)
+    calls = []
+
+    def get(resource, name=None, selector=None):
+        calls.append((resource, name, selector))
+        if resource == "pvc":
+            return {"items": [{"spec": {"volumeName": "recorded-pv"}}]}
+        return {"items": []}
+
+    api.get = get
+    s = api.snapshot()
+    assert ("pvc", None, "cnpg.io/cluster=" + f.CLUSTER) in calls
+    assert ("pods", None, None) in calls
+    assert "namespace_pods" in s and len(s["pvs"]["items"]) == 1

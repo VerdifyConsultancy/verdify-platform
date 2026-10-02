@@ -9,10 +9,22 @@ service/device writer, or delete storage. It writes its sentinel only in
 
 ## Render and binding
 
-Capture raw JSON under keys `cluster`, `pods`, `nodes`, `pvcs`, `pvs`, `service`.
+Capture raw JSON under keys `cluster`, `pods`, `namespace_pods`, `nodes`,
+`pvcs`, `pvs`, `service`.
 Pod/PVC lists are selected by `cnpg.io/cluster=verdify-cnpg-rehearsal`; `pvs`
-contains exactly the six bound volume objects. Nodes include the three owning
-nodes. The fixed original Cluster UID, operand, physical domains, primary and
+contains every selected PVC's bound volume object. `namespace_pods` contains
+all namespace Pods, including unlabelled, terminating and completed Pods, for
+retained-volume consumer checks. Nodes include the three owning nodes.
+
+After the attended replica-3 rebuild, all eight raw PVC/PV objects remain in
+custody: six Cluster-owned active data/WAL volumes and the exact two historical
+replica-3 volumes. The latter must retain their recorded PVC/PV UIDs and handles,
+Bound/Retain posture, detached annotation, sizes/roles, no owners, and no Pod
+consumer anywhere in the namespace. Missing pairs, unknown extras and ambiguous
+identities refuse qualification. No labels, volumes or history are discarded.
+Their full specs/status and custody binding must remain unchanged after the
+fault. The original six-volume shape remains supported while replica 3 is an
+active instance. The fixed original Cluster UID, operand, physical domains, primary and
 replica UIDs, all six PVC/PV UIDs/handles, synchronous configuration, and RW
 Service owner/UID/selectors are checked. Every native replica and primary is
 then checked through a UID-bound local socket read for PG160013, one writable
