@@ -13,6 +13,7 @@ import importlib.util
 import json
 import math
 import os
+import subprocess
 import sys
 from collections import Counter
 from datetime import datetime, time, timedelta
@@ -54,9 +55,37 @@ def query(experiment_id: str) -> str:
     return SQL_PATH.read_text().format(experiment_id=str(UUID(experiment_id)))
 
 
+def transaction_sql(experiment_id: str) -> str:
+    return (
+        "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY; "
+        "SET LOCAL statement_timeout='20s'; "
+        "SET LOCAL idle_in_transaction_session_timeout='30s'; "
+        "SELECT COALESCE(json_agg(row_to_json(q)), '[]'::json) FROM (" + query(experiment_id) + ") q; ROLLBACK;"
+    )
+
+
+def acquire(module: object, experiment_id: str) -> list:
+    # Reuse the owner connection/credential wrapper, with an explicit snapshot
+    # covering nested VOLATILE context-builder reads as well as the outer SELECT.
+    argv, extra_env = module.psql_command()
+    proc = subprocess.run(
+        [*argv, "-X", "-q", "-v", "ON_ERROR_STOP=1", "-t", "-A", "-c", transaction_sql(experiment_id)],
+        capture_output=True,
+        timeout=30,
+        env={**os.environ, **extra_env},
+    )
+    if proc.returncode != 0:
+        raise RuntimeError("read-only input transaction failed")
+    if len(proc.stdout) > MAX_BYTES:
+        raise ValueError("snapshot exceeds bound; do not truncate source rows")
+    return json.loads(proc.stdout, object_pairs_hook=unique_object)
+
+
 def summarize(snapshot: dict, experiment_id: str) -> dict:
     if snapshot["experiment_id"] != str(UUID(experiment_id)) or snapshot["claim_scope"] != CLAIM:
         raise ValueError("snapshot study/scope differs")
+    if snapshot["transaction_isolation"] != "repeatable read" or snapshot["transaction_read_only"] != "on":
+        raise ValueError("capture is not one read-only repeatable snapshot")
     as_of = stamp(snapshot["as_of"])
     local = as_of.astimezone(ZoneInfo("America/Denver"))
     end = datetime.combine(local.date(), time(), local.tzinfo)
@@ -143,6 +172,8 @@ def summarize(snapshot: dict, experiment_id: str) -> dict:
     )
     return {
         "as_of": snapshot["as_of"],
+        "transaction_isolation": snapshot["transaction_isolation"],
+        "transaction_read_only": snapshot["transaction_read_only"],
         "cutoff_kind": snapshot["cutoff_kind"],
         "window_start": start.isoformat(),
         "window_end": end.isoformat(),
@@ -190,7 +221,7 @@ def publish(directory: Path, snapshot: dict, experiment_id: str) -> dict:
     directory.mkdir(mode=0o700)  # Exclusive new custody directory; never overwrite a capture.
     files = {
         "snapshot.json": save(directory / "snapshot.json", raw),
-        "query.sql": save(directory / "query.sql", (query(experiment_id) + "\n").encode()),
+        "query.sql": save(directory / "query.sql", (transaction_sql(experiment_id) + "\n").encode()),
     }
     receipt = {
         "schema": "verdify-experiment-v2-observational-input-capture-v1",
@@ -224,7 +255,7 @@ def main() -> None:
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
-    records = module.run_sql_json(query(str(args.experiment_id)), timeout=30)
+    records = acquire(module, str(args.experiment_id))
     if len(records) != 1:
         raise ValueError("exactly one actual snapshot required")
     receipt = publish(args.directory, records[0]["snapshot"], str(args.experiment_id))
@@ -234,6 +265,6 @@ def main() -> None:
 if __name__ == "__main__":
     try:
         main()
-    except (ValueError, RuntimeError, OSError, KeyError, TypeError) as exc:
+    except (ValueError, RuntimeError, OSError, KeyError, TypeError, subprocess.TimeoutExpired) as exc:
         print(f"input capture refused: {type(exc).__name__}", file=sys.stderr)
         sys.exit(2)

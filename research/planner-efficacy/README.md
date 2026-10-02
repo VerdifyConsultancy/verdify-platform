@@ -153,7 +153,7 @@ in for the prospective paired randomization analysis.
 ### Genuine observational input capture
 
 `experiment-v2-capture-inputs.py` replaces the private one-off availability
-query with one source-owned, read-only statement. Run through the existing DB
+query with one source-owned query in an explicit repeatable-read, read-only transaction. Run through the existing DB
 wrapper; the operator directory must not already exist:
 
 ```bash
@@ -168,7 +168,10 @@ completed `[06:00,24:00)` day. The actual observational clock is always labeled
 as such, even when run before 06:00; it is **not** the preregistered pre06 selector
 receipt. There is no caller clock/date, provider request, selector cycle, lifecycle,
 assignment freeze, draw, reveal, authority change or device command. The existing
-DB wrapper enforces a read-only session and the statement timeout. The capture
+DB wrapper supplies the read-only connection; the capture sets a 20-second
+statement timeout and 30-second process bound. Explicit repeatable-read covers
+nested reads in the existing VOLATILE context builder. The transaction rolls
+back; process/connection exit also rolls back on failure. The capture
 refuses more than 32 MiB rather than truncating a source denominator.
 
 The private exclusive 0700 directory contains exclusive 0600 original snapshot,

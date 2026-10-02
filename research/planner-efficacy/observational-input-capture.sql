@@ -8,7 +8,9 @@ w AS MATERIALIZED (SELECT as_of,(as_of AT TIME ZONE 'America/Denver')::date AS t
 c AS MATERIALIZED (SELECT x.*
  FROM w CROSS JOIN LATERAL public.fn_experiment_v2_build_selector_context('{experiment_id}'::uuid,w.today+1,w.as_of,w.next_boundary) x)
 SELECT jsonb_build_object(
-'experiment_id','{experiment_id}','as_of',w.as_of,'current_local_clock',w.as_of AT TIME ZONE 'America/Denver',
+'transaction_isolation',current_setting('transaction_isolation'),
+ 'transaction_read_only',current_setting('transaction_read_only'),
+ 'experiment_id','{experiment_id}','as_of',w.as_of,'current_local_clock',w.as_of AT TIME ZONE 'America/Denver',
 'cutoff_kind','actual_current_clock_not_preregistered_pre06','context_cutoff_at',w.as_of,'context_boundary_at',w.next_boundary,
 'prior_completed_window_start',w.window_start,'prior_completed_window_end',w.window_end,
 'context',

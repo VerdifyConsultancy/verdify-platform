@@ -31,6 +31,8 @@ def snapshot():
     }
     raw = json.dumps(payload).encode()
     value = {
+        "transaction_isolation": "repeatable read",
+        "transaction_read_only": "on",
         "experiment_id": ID,
         "as_of": cutoff,
         "context_cutoff_at": cutoff,
@@ -201,3 +203,31 @@ def test_oversize_refuses_without_truncation_or_output(tmp_path, monkeypatch):
     with pytest.raises(ValueError, match="do not truncate"):
         m.publish(tmp_path / "large", snapshot(), ID)
     assert not (tmp_path / "large").exists()
+
+
+def test_actual_readonly_repeatable_snapshot_and_failed_transaction_no_output(monkeypatch):
+    from types import SimpleNamespace
+
+    calls = []
+    owner = SimpleNamespace(psql_command=lambda: (["existing-owner-wrapper"], {}))
+
+    def run(argv, **kwargs):
+        calls.append((argv, kwargs))
+        return SimpleNamespace(returncode=0, stdout=b"[]", stderr=b"")
+
+    monkeypatch.setattr(m.subprocess, "run", run)
+    assert m.acquire(owner, ID) == []
+    argv, options = calls[0]
+    assert argv[0] == "existing-owner-wrapper"
+    sql = argv[-1]
+    assert sql.startswith("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;")
+    assert sql.endswith("ROLLBACK;") and "COMMIT" not in sql
+    assert "SET LOCAL statement_timeout='20s'" in sql
+    assert options["timeout"] == 30 and options["capture_output"]
+    monkeypatch.setattr(
+        m.subprocess,
+        "run",
+        lambda *a, **k: SimpleNamespace(returncode=1, stdout=b"not a complete snapshot", stderr=b"private diagnostic"),
+    )
+    with pytest.raises(RuntimeError, match="read-only input transaction failed"):
+        m.acquire(owner, ID)
