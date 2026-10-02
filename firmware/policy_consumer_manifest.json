@@ -10,8 +10,8 @@
   "summary": {
     "fields": 48,
     "fields_clean": 48,
-    "read_sites": 191,
-    "reads_migrated": 159,
+    "read_sites": 194,
+    "reads_migrated": 162,
     "reads_allowlisted": 32,
     "write_sites_allowlisted": 77,
     "control_read_sites": 63,
@@ -256,7 +256,7 @@
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 2610,
+          "line": 2644,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
@@ -304,7 +304,7 @@
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 2598,
+          "line": 2632,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
@@ -345,7 +345,7 @@
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 2178,
+          "line": 2212,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
@@ -1092,7 +1092,7 @@
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 2190,
+          "line": 2224,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
@@ -1133,7 +1133,7 @@
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 2326,
+          "line": 2360,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
@@ -1190,7 +1190,7 @@
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 2350,
+          "line": 2384,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
@@ -1559,7 +1559,7 @@
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 2268,
+          "line": 2302,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
@@ -1600,7 +1600,7 @@
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 2256,
+          "line": 2290,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
@@ -1657,7 +1657,7 @@
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 2244,
+          "line": 2278,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
@@ -1728,7 +1728,7 @@
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 2291,
+          "line": 2325,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
@@ -1800,7 +1800,7 @@
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 2280,
+          "line": 2314,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
@@ -1872,7 +1872,7 @@
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 2302,
+          "line": 2336,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
@@ -1995,8 +1995,8 @@
       "name": "sw_direct_wet_gate_enabled",
       "wire_id": 38,
       "global_id": "direct_wet_gate_enabled",
-      "read_sites": 2,
-      "reads_migrated": 2,
+      "read_sites": 3,
+      "reads_migrated": 3,
       "reads_allowlisted": 0,
       "write_sites_allowlisted": 2,
       "clean": true,
@@ -2005,6 +2005,13 @@
           "file": "firmware/greenhouse/controls.yaml",
           "line": 1164,
           "category": "control",
+          "access": "read",
+          "migrated_to_snapshot": true
+        },
+        {
+          "file": "firmware/greenhouse/sensors.yaml",
+          "line": 2156,
+          "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
         },
@@ -2052,7 +2059,7 @@
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 2586,
+          "line": 2620,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
@@ -2101,7 +2108,7 @@
         },
         {
           "file": "firmware/greenhouse/sensors.yaml",
-          "line": 2166,
+          "line": 2200,
           "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
@@ -2135,8 +2142,8 @@
       "name": "sw_fog_closes_vent",
       "wire_id": 41,
       "global_id": "fog_closes_vent",
-      "read_sites": 3,
-      "reads_migrated": 3,
+      "read_sites": 4,
+      "reads_migrated": 4,
       "reads_allowlisted": 0,
       "write_sites_allowlisted": 2,
       "clean": true,
@@ -2152,6 +2159,13 @@
           "file": "firmware/greenhouse/controls.yaml",
           "line": 1923,
           "category": "control",
+          "access": "read",
+          "migrated_to_snapshot": true
+        },
+        {
+          "file": "firmware/greenhouse/sensors.yaml",
+          "line": 2167,
+          "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
         },
@@ -2184,8 +2198,8 @@
       "name": "sw_mister_closes_vent",
       "wire_id": 42,
       "global_id": "mister_closes_vent",
-      "read_sites": 2,
-      "reads_migrated": 2,
+      "read_sites": 3,
+      "reads_migrated": 3,
       "reads_allowlisted": 0,
       "write_sites_allowlisted": 2,
       "clean": true,
@@ -2194,6 +2208,13 @@
           "file": "firmware/greenhouse/controls.yaml",
           "line": 992,
           "category": "control",
+          "access": "read",
+          "migrated_to_snapshot": true
+        },
+        {
+          "file": "firmware/greenhouse/sensors.yaml",
+          "line": 2178,
+          "category": "readback",
           "access": "read",
           "migrated_to_snapshot": true
         },

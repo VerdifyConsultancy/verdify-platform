@@ -117,7 +117,7 @@ def test_source_lock_derivations_and_artifact_hashes_are_exact() -> None:
         == (LOCK["candidate_source_revisions"]["grid_revision"]["source_entity_grid_sha256"])
     )
     assert (
-        _sha256(REPO_ROOT / "verdify_schemas/tunable_registry.py")
+        _sha256(LOCK_DIR / "tunable-registry-source-v1.py.txt")
         == (LOCK["candidate_source_revisions"]["registry_revision"]["source_sha256"])
     )
 

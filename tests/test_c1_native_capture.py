@@ -388,3 +388,69 @@ def test_stage_change_during_native_db_read_cannot_publish_prior_epoch(monkeypat
     assert (output / (epoch_id + ".native.json")).exists()  # original unqualified truth retained
     assert not (output / (epoch_id + ".input.json")).exists()
     assert not c.epochs
+
+
+def _periodic_sensor_routes():
+    """ESPHome object IDs are generated from these diagnostic sensor names."""
+    import re
+
+    source = (Path(__file__).resolve().parents[1] / "firmware/greenhouse/sensors.yaml").read_text()
+    routes = {}
+    for block in re.split(r"(?=\n  - platform:)", source):
+        name = re.search(r'^\s+name: "(.*)"', block, re.MULTILINE)
+        if name:
+            slug = re.sub("[^a-z0-9_]", "_", name.group(1).lower())
+            routes[slug] = block
+    return routes
+
+
+def test_every_canonical_callback_has_genuine_periodic_sensor_source():
+    routes = _periodic_sensor_routes()
+    missing = [name for name in CANONICAL_FIELD_ORDER if REGISTRY[name].cfg_readback_object_id not in routes]
+    assert missing == [], f"change-only switch callbacks cannot complete passive48: {missing}"
+    for name in CANONICAL_FIELD_ORDER:
+        block = routes[REGISTRY[name].cfg_readback_object_id]
+        assert "update_interval: 30s" in block
+        assert "return NAN" in block  # Unready state never becomes a fabricated value.
+        assert "filters:" not in block  # A dedup filter must not erase unchanged physical samples.
+
+
+def test_change_only_switches_starve_passive_capture_but_periodic_sources_complete():
+    fields = {"sw_direct_wet_gate_enabled", "sw_fog_closes_vent", "sw_mister_closes_vent"}
+    before = collector()
+    start = datetime(2026, 10, 2, tzinfo=UTC)  # Synthetic clock; no device/protocol qualification.
+    for cycle in range(20):
+        for name in CANONICAL_FIELD_ORDER:
+            if name not in fields:
+                before.record(
+                    REGISTRY[name].cfg_readback_object_id,
+                    REGISTRY[name].default,
+                    observed_at=start + timedelta(seconds=30 * cycle),
+                    generation=3,
+                )
+    assert not before.epochs
+    assert set(CANONICAL_FIELD_ORDER) - set(before.pending) == fields
+    # New sensor callbacks carry freshly computed device values, including unchanged0/1.
+    after = collector()
+    fill(after, start)
+    fill(after, start + timedelta(seconds=30))
+    assert len(after.epochs) == 2 and all(len(e["observed_components"]) == 48 for e in after.epochs)
+    for name in fields:
+        definition = REGISTRY[name]
+        assert definition.cfg_readback_object_id != definition.esp_object_id
+        assert definition.esp_object_id == name.removeprefix("sw_")
+        assert definition.cfg_readback_object_id == "cfg_" + name.removeprefix("sw_")
+
+
+def test_legacy_switch_aliases_remain_ordinary_readbacks_not_capture_routes():
+    from entity_map import CFG_READBACK_MAP, SETPOINT_MAP
+
+    c = collector()
+    moment = datetime(2026, 10, 2, tzinfo=UTC)
+    for name in ("sw_direct_wet_gate_enabled", "sw_fog_closes_vent", "sw_mister_closes_vent"):
+        definition = REGISTRY[name]
+        assert SETPOINT_MAP[definition.esp_object_id] == name
+        assert CFG_READBACK_MAP[definition.esp_object_id] == name
+        assert CFG_READBACK_MAP[definition.cfg_readback_object_id] == name
+        c.record(definition.esp_object_id, definition.default, observed_at=moment, generation=3)
+    assert not c.pending and not c.epochs

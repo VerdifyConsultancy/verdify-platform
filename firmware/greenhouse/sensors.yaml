@@ -2143,6 +2143,40 @@ sensor:
       if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
       return verdify_policy::policy_read_b(verdify_policy::kPF_sw_summer_vent_enabled, id(sw_summer_vent_enabled)) ? 1.0f : 0.0f;
 
+  # Periodic consumed-config samples: switch callbacks deduplicate unchanged values.
+  - platform: template
+    id: cfg_direct_wet_gate_enabled
+    name: "Cfg Direct Wet Gate Enabled"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read_b(verdify_policy::kPF_sw_direct_wet_gate_enabled, id(direct_wet_gate_enabled)) ? 1.0f : 0.0f;
+
+  - platform: template
+    id: cfg_fog_closes_vent
+    name: "Cfg Fog Closes Vent"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read_b(verdify_policy::kPF_sw_fog_closes_vent, id(fog_closes_vent)) ? 1.0f : 0.0f;
+
+  - platform: template
+    id: cfg_mister_closes_vent
+    name: "Cfg Mister Closes Vent"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok) && !verdify_policy::policy_experiment_active()) return NAN;
+      return verdify_policy::policy_read_b(verdify_policy::kPF_sw_mister_closes_vent, id(mister_closes_vent)) ? 1.0f : 0.0f;
+
   - platform: template
     id: cfg_fsm_controller_enabled
     name: "Cfg FSM Controller Enabled"
