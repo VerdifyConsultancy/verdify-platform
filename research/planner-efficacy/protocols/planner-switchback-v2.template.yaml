@@ -734,7 +734,8 @@ analysis:
     all safety/integrity gates pass, both climate noninferiority gates pass and
     the locked operating-benefit gate passes at the same justified one-sided
     confidence level
-  one_sided_confidence_level: "TO-LOCK by the v2 power artifact; do not add an unnecessary IUT multiplicity penalty"
+  one_sided_confidence_level: 0.975
+  pre_draw_analysis_contract: research/planner-efficacy/protocols/warm-predraw-analysis-contract-v1.json
   report_effects_and_intervals: true
   incomplete_or_null: iterate_inconclusive
   keep_every_assignment_in_itt: true
@@ -745,6 +746,16 @@ analysis:
     classification; otherwise retain every assignment, report available-pair
     effects plus locked physical best/worst-case bounds, and classify
     inconclusive without imputation, replacement or denominator change
+  physical_missing_outcome_bounds:
+    status: unavailable_unqualified
+    finite_climate_bounds: null
+    finite_operating_bounds: null
+    requirement: >-
+      Qualify and freeze endpoint-specific physical best/worst-case bounds
+      before claiming bounded missing-outcome effects. No qualified finite
+      bounds or current analyzer bounds report exists in this source receipt.
+      Preserve every assigned row; missing endpoint remains inconclusive.
+      An unavailable bound is never zero, imputed or an advance decision.
   finite_sample_sensitivity: >-
     paired sign-flip sensitivity centered at each locked boundary: enumerate
     all 2^m sign vectors when m<=20; when m>20 use exactly 2,000,000 vectors from
