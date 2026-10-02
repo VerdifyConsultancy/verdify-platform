@@ -50,6 +50,79 @@ def test_physical_inputs_dispatch_only_the_two_logical_records_to_composite_read
     assert {row[0] for row in calls if len(row) == 2} == set(p.INPUT_KEYS) - {"logical_rollback", "logical_install"}
 
 
+@pytest.mark.parametrize("install", [False, True])
+def test_post270_retained_record_reader_preserves_actual_envelope_and_full_file_hash(tmp_path, install):
+    import hashlib
+
+    retained = p.successor_module().r
+    value = {
+        "version": retained.VERSION,
+        "mode": "install" if install else "savepoint-rollback-qualification",
+        "ddl_sha256": "a" * 64,
+        "before_witness": {"raw": ["original"]},
+        "post_witness": {"raw": ["actual"]},
+    }
+    raw = json.dumps(value, separators=(",", ":")).encode() + b"\n"
+    path = tmp_path / "actual.json"
+    path.write_bytes(raw)
+    result, sha = p.read_logical_record(path, successor={}, install=install)
+    assert result == value and sha == hashlib.sha256(raw).hexdigest()
+    assert path.read_bytes() == raw
+    with pytest.raises(ValueError, match="version"):
+        p.read_logical_record(path, successor=None, install=install)
+
+
+@pytest.mark.parametrize("tamper", ["mode", "version", "ddl_hash", "extra_field", "duplicate_field"])
+def test_post270_retained_record_reader_refuses_unrecognized_envelopes(tmp_path, tamper):
+    value = {
+        "version": p.successor_module().r.VERSION,
+        "mode": "savepoint-rollback-qualification",
+        "ddl_sha256": "a" * 64,
+        "before_witness": {},
+        "post_witness": {},
+    }
+    if tamper == "mode":
+        value["mode"] = "rollback-qualification"
+    elif tamper == "version":
+        value["version"] = "unknown"
+    elif tamper == "ddl_hash":
+        value["ddl_sha256"] = "invalid"
+    elif tamper == "extra_field":
+        value["extra"] = True
+    raw = json.dumps(value)
+    if tamper == "duplicate_field":
+        raw = raw.replace('{"version":', '{"mode":"install","version":', 1)
+    path = tmp_path / "record.json"
+    path.write_text(raw)
+    with pytest.raises(ValueError):
+        p.read_logical_record(path, successor={}, install=False)
+
+
+def test_post270_retained_reader_refuses_wrong_file_custody_before_capture_checks(tmp_path, monkeypatch):
+    args = SimpleNamespace(post270_lineage=tmp_path / "lineage", post270_lineage_sha256="a" * 64)
+    for key in p.INPUT_KEYS:
+        setattr(args, key, tmp_path / key)
+        setattr(args, key + "_sha256", "a" * 64)
+    monkeypatch.setattr(p, "read_post270_lineage", lambda *args: {})
+    monkeypatch.setattr(p.t.c0, "read_witness", lambda *args: ({}, "a" * 64))
+    monkeypatch.setattr(p, "read_logical_record", lambda *args, **kwargs: ({}, "b" * 64))
+    with pytest.raises(ValueError, match="physical input custody mismatch"):
+        p.qualified_inputs(args)
+
+
+def test_post270_retained_reader_rejects_symlink_and_oversize(tmp_path, monkeypatch):
+    path = tmp_path / "record.json"
+    path.write_text("{}")
+    link = tmp_path / "link.json"
+    link.symlink_to(path)
+    with pytest.raises(ValueError, match="regular retained"):
+        p.read_logical_record(link, successor={}, install=False)
+    monkeypatch.setattr(p.t.c0, "WITNESS_MAX_BYTES", 1)
+    path.write_bytes(b"x" * 1027)
+    with pytest.raises(ValueError, match="two-witness bound"):
+        p.read_logical_record(path, successor={}, install=False)
+
+
 @pytest.mark.parametrize("profile", t.PHYSICAL_TARGETS)
 def test_rollback_ddl_retains_original_history_and_native_digest_bodies(profile):
     _, before = witnesses()
