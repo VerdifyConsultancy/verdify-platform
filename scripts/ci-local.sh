@@ -58,7 +58,7 @@ $PY -m pytest -q \
 $PY research/planner-efficacy/generate_v2_artifacts.py --check
 
 step "device write gate"
-$PY -m pytest -q tests/test_device_write_gate.py
+$PY -m pytest -q tests/test_device_write_gate.py tests/test_replay_outdoor_device_age.py
 
 step "pure-logic / contract tests"
 $PY -m pytest -q \
