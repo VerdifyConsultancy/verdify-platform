@@ -53,6 +53,9 @@ FAST = selected_outdoor_query()
         [(0, 10, 20), (5, 10, 20), (5, 11, 20), (6, 11, 20), (30, 11, 20)],
         [(0, None, None), (5, 10, 20), (5, None, 20), (6, 11, 20), (30, 11, 20)],
         [(0, 10, 20), (24, None, None), (25, 10, 20), (48, 10, 20), (49, None, None)],
+        [(0, 10, 20), (1, 10, 20), (20, 10, 20), (50, 10, 20)],
+        [(0, 10, 20), (1, 11, 20), (26, 11, 20), (27, 11, 20)],
+        [(0, 10, 20), (0, 11, 20), (24, 11, 20), (25, 11, 20), (50, 11, 20)],
     ],
 )
 def test_native_outdoor_branch_preserves_boundary_null_sparse_duplicates(private_pg, rows):  # noqa: F811
@@ -175,3 +178,16 @@ def test_native_barrier_option_guard(private_pg, barrier):  # noqa: F811
     assert (result.returncode == 0) == barrier
     if not barrier:
         assert "native policy-twin view options changed" in result.stderr
+
+
+def test_cumulative_timestamp_max_never_restarts_bounded_frame():
+    sql = p.query_definition()
+    assert "OVER cumulative last_change" in sql
+    assert "OVER cumulative last_conflict" in sql
+    assert "ROWS UNBOUNDED PRECEDING" in sql
+    assert "ow.last_change>=c.ts-interval '24 hours'" in sql
+    assert "ow.last_conflict>=c.ts-interval '24 hours'" in sql
+    assert "first_value(ts) OVER w first_ts" in sql
+    assert "first_value(outdoor_temp_f) OVER w first_temp" in sql
+    assert "first_value(outdoor_rh_pct) OVER w first_rh" in sql
+    assert "OVER w last_change" not in sql

@@ -48,16 +48,18 @@ def query_definition():
  JOIN outdoor_pair_counts p USING(greenhouse_id,ts)
 ),outdoor_windowed AS MATERIALIZED(
  SELECT *,max(ts) FILTER(WHERE outdoor_temp_f IS NOT NULL AND outdoor_rh_pct IS NOT NULL
- AND(outdoor_temp_f IS DISTINCT FROM prev_temp OR outdoor_rh_pct IS DISTINCT FROM prev_rh)) OVER w last_change,
+ AND(outdoor_temp_f IS DISTINCT FROM prev_temp OR outdoor_rh_pct IS DISTINCT FROM prev_rh)) OVER cumulative last_change,
  first_value(ts) OVER w first_ts,first_value(outdoor_temp_f) OVER w first_temp,
- first_value(outdoor_rh_pct) OVER w first_rh,bool_or(pairs>1) OVER w conflict
+ first_value(outdoor_rh_pct) OVER w first_rh,
+ max(ts) FILTER(WHERE pairs>1) OVER cumulative last_conflict
  FROM outdoor_lagged WINDOW w AS(PARTITION BY greenhouse_id ORDER BY ts
- RANGE BETWEEN interval '24 hours' PRECEDING AND CURRENT ROW)
+ RANGE BETWEEN interval '24 hours' PRECEDING AND CURRENT ROW),
+ cumulative AS(PARTITION BY greenhouse_id ORDER BY ts ROWS UNBOUNDED PRECEDING)
 ),"""
     replacement = (
-        "LEFT JOIN outdoor_windowed ow ON ow.greenhouse_id=c.greenhouse_id AND ow.ts=c.ts\n LEFT JOIN LATERAL (SELECT CASE WHEN ow.conflict THEN ("
+        "LEFT JOIN outdoor_windowed ow ON ow.greenhouse_id=c.greenhouse_id AND ow.ts=c.ts\n LEFT JOIN LATERAL (SELECT CASE WHEN ow.last_conflict>=c.ts-interval '24 hours' THEN ("
         + original
-        + ") ELSE greatest(ow.last_change,CASE WHEN ow.first_temp IS NOT NULL AND ow.first_rh IS NOT NULL THEN ow.first_ts END) END outdoor_observation_ts) od ON true"
+        + ") ELSE greatest(CASE WHEN ow.last_change>=c.ts-interval '24 hours' THEN ow.last_change END,CASE WHEN ow.first_temp IS NOT NULL AND ow.first_rh IS NOT NULL THEN ow.first_ts END) END outdoor_observation_ts) od ON true"
     )
     s = s[:start] + replacement + s[end:]
     assert s.lstrip().startswith("WITH ranked_climate")
