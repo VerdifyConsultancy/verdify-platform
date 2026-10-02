@@ -69,6 +69,7 @@ AlertType = Literal[
     "planner_band_ownership_drift",
     "planner_evaluation_missed",
     "planner_gateway_delivery_failed",
+    "planner_tool_dependency_failed",
     "planner_plan_horizon_missing",
     "planner_required_plan_missed",
     "planner_stale",
@@ -118,6 +119,7 @@ ALERT_TYPES: tuple[str, ...] = (
     "planner_band_ownership_drift",
     "planner_evaluation_missed",
     "planner_gateway_delivery_failed",
+    "planner_tool_dependency_failed",
     "planner_plan_horizon_missing",
     "planner_required_plan_missed",
     "planner_stale",
@@ -640,6 +642,18 @@ class PlannerEvaluationMissedAlert(_AlertBase):
     details: PlannerEvaluationMissedDetails
 
 
+class PlannerToolDependencyFailedDetails(_DetailsBase):
+    tool: Literal["lessons_search", "knowledge_search"]
+    reason: Literal["embedding_credential_missing", "embedding_provider_failed", "semantic_query_failed"]
+    embedding_model: Literal["text-embedding-3-large"]
+    embedding_dimensions: Literal[3072]
+
+
+class PlannerToolDependencyFailedAlert(_AlertBase):
+    alert_type: Literal["planner_tool_dependency_failed"]
+    details: PlannerToolDependencyFailedDetails
+
+
 class PlannerGatewayDeliveryFailedAlert(_AlertBase):
     alert_type: Literal["planner_gateway_delivery_failed"]
     details: PlannerGatewayDeliveryFailedDetails
@@ -865,6 +879,7 @@ AlertEnvelopeUnion = Annotated[
     | PlannerBandOwnershipDriftAlert
     | PlannerEvaluationMissedAlert
     | PlannerGatewayDeliveryFailedAlert
+    | PlannerToolDependencyFailedAlert
     | PlannerTriggerSlaTimeoutAlert
     | PlannerPlanHorizonMissingAlert
     | PlannerRequiredPlanMissedAlert

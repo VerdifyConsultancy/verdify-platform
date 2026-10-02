@@ -41,6 +41,7 @@ from verdify_schemas.alerts import (
     PlannerPlanHorizonMissingAlert,
     PlannerRequiredPlanMissedAlert,
     PlannerStaleAlert,
+    PlannerToolDependencyFailedAlert,
     PlannerTriggerSlaTimeoutAlert,
     PlannerTunableRangeDriftAlert,
     RelayStuckAlert,
@@ -101,6 +102,15 @@ CASES = {
             "equipment": "mister_south_fert",
             "observed_at": NOW,
             "context": {"state": True},
+        },
+    ),
+    "planner_tool_dependency_failed": (
+        PlannerToolDependencyFailedAlert,
+        {
+            "tool": "lessons_search",
+            "reason": "embedding_credential_missing",
+            "embedding_model": "text-embedding-3-large",
+            "embedding_dimensions": 3072,
         },
     ),
     "alert_validation_failed": (

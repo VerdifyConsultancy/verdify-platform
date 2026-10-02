@@ -14,6 +14,7 @@ import hashlib
 import hmac
 import json
 import logging
+import math
 import os
 import re
 import sys
@@ -36,6 +37,7 @@ from slack_ops.service import handle_slack_command  # noqa: E402
 from verdify_schemas import (  # noqa: E402
     ALL_TUNABLES,
     AlertAckPayload,
+    AlertEnvelope,
     AlertResolvePayload,
     ClimateSnapshot,
     CropCreate,
@@ -4734,6 +4736,15 @@ async def alerts(action: str = "list", alert_id: int = 0, data: str = "") -> str
             return json.dumps({"ok": True, "alert_id": alert_id, "action": "acknowledged"})
 
         elif action == "resolve" and alert_id:
+            dependency = await conn.fetchrow("SELECT alert_type, source FROM alert_log WHERE id=$1", alert_id)
+            if (
+                dependency
+                and dependency["alert_type"] == "planner_tool_dependency_failed"
+                and dependency["source"] == "mcp"
+            ):
+                return json.dumps(
+                    {"error": "semantic dependency alerts resolve only after successful same-tool retrieval"}
+                )
             try:
                 res = AlertResolvePayload.model_validate(
                     {
@@ -5090,15 +5101,91 @@ def _openai_api_key() -> str | None:
     return None
 
 
-async def _embed_query(text: str) -> list[float] | None:
-    """Embed a query string for vector retrieval. None on failure."""
+class SemanticDependencyFailure(Exception):
+    def __init__(self, reason: str):
+        self.reason = reason
+        super().__init__(reason)
+
+
+async def _semantic_dependency_lifecycle(tool: str, reason: str | None, started_at: datetime) -> None:
+    """One canonical warning per tool; only successful retrieval recovers it.
+
+    Lock and timestamps fence concurrent calls: a success that started before a
+    newer failure cannot resolve that newer failure. No query or provider error
+    text is retained. Existing MCP role grants cover this ordinary alert duty.
+    """
+    envelope = None
+    if reason is not None:
+        envelope = AlertEnvelope.model_validate(
+            {
+                "alert_type": "planner_tool_dependency_failed",
+                "severity": "warning",
+                "category": "system",
+                "message": f"{tool} semantic dependency failed: {reason}",
+                "details": {
+                    "tool": tool,
+                    "reason": reason,
+                    "embedding_model": _OPENAI_EMBED_MODEL,
+                    "embedding_dimensions": _OPENAI_EMBED_DIM,
+                },
+            }
+        )
+    conn = await _db()
+    try:
+        async with conn.transaction():
+            await conn.execute("SELECT pg_advisory_xact_lock(hashtext($1))", "mcp.semantic_dependency." + tool)
+            if envelope is not None:
+                await conn.execute(
+                    """WITH updated AS (
+                        UPDATE public.alert_log SET severity='warning', message=$2, details=$3::jsonb,
+                            updated_at=clock_timestamp()
+                        WHERE alert_type='planner_tool_dependency_failed' AND source='mcp'
+                          AND disposition IN ('open','acknowledged') AND resolved_at IS NULL
+                          AND details->>'tool'=$1 RETURNING id
+                    ) INSERT INTO public.alert_log (alert_type,severity,category,message,details,source)
+                      SELECT 'planner_tool_dependency_failed','warning','system',$2,$3::jsonb,'mcp'
+                      WHERE NOT EXISTS (SELECT 1 FROM updated)""",
+                    tool,
+                    envelope.message,
+                    json.dumps(envelope.details),
+                )
+            else:
+                await conn.execute(
+                    """UPDATE public.alert_log SET disposition='resolved',resolved_at=clock_timestamp(),
+                        resolved_by='mcp.semantic_retrieval',
+                        resolution='auto-resolved: same semantic tool completed embedding and retrieval',
+                        updated_at=clock_timestamp()
+                        WHERE alert_type='planner_tool_dependency_failed' AND source='mcp'
+                          AND disposition IN ('open','acknowledged') AND resolved_at IS NULL
+                          AND details->>'tool'=$1 AND updated_at <= $2""",
+                    tool,
+                    started_at,
+                )
+    finally:
+        await conn.close()
+
+
+async def _semantic_failure_result(tool: str, reason: str, started_at: datetime) -> str:
+    try:
+        await _semantic_dependency_lifecycle(tool, reason, started_at)
+        recorded = True
+    except Exception as exc:
+        print(f"[mcp.semantic_alert] unavailable: {type(exc).__name__}", file=sys.stderr)
+        recorded = False
+    return json.dumps(
+        {"error": f"{tool} semantic dependency failed", "reason": reason, "canonical_alert_recorded": recorded}
+    )
+
+
+async def _embed_query(text: str) -> list[float]:
+    """Embed a query; raise a classified, credential-free dependency failure."""
     api_key = _openai_api_key()
     if not api_key:
-        return None
+        raise SemanticDependencyFailure("embedding_credential_missing")
     try:
         from openai import OpenAI
 
-        client = OpenAI(api_key=api_key)
+        client = OpenAI(api_key=api_key, timeout=30.0, max_retries=0)
         # Sync call wrapped in a worker thread; the OpenAI Python SDK has an
         # async client too but we keep the import surface minimal here.
         import asyncio as _asyncio
@@ -5109,10 +5196,14 @@ async def _embed_query(text: str) -> list[float] | None:
             input=text,
             dimensions=_OPENAI_EMBED_DIM,
         )
-        return list(resp.data[0].embedding)
+        vector = list(resp.data[0].embedding)
+        if len(vector) != _OPENAI_EMBED_DIM or any(not math.isfinite(float(v)) for v in vector):
+            raise ValueError("invalid embedding vector")
+        return vector
     except Exception as exc:  # pragma: no cover — surface failure to caller
-        print(f"[mcp.embed_query] failed: {exc}", file=sys.stderr)
-        return None
+        # Provider errors can contain credential-adjacent request metadata.
+        print(f"[mcp.embed_query] failed: {type(exc).__name__}", file=sys.stderr)
+        raise SemanticDependencyFailure("embedding_provider_failed") from None
 
 
 def _vector_literal(vec: list[float]) -> str:
@@ -5138,13 +5229,16 @@ async def lessons_search(query: str, top_k: int = 10, min_confidence: str = "low
     times_validated, distance} sorted by ascending cosine distance.
     """
     top_k = max(1, min(int(top_k), 25))
-    embedding = await _embed_query(query)
-    if embedding is None:
-        return json.dumps({"error": "lessons_search requires OPENAI_API_KEY for query embedding"})
+    started_at = datetime.now(ZoneInfo("UTC"))
+    try:
+        embedding = await _embed_query(query)
+    except SemanticDependencyFailure as exc:
+        return await _semantic_failure_result("lessons_search", exc.reason, started_at)
 
     rank_floor = {"low": 1, "medium": 2, "high": 3}.get(min_confidence, 1)
-    conn = await _db()
+    conn = None
     try:
+        conn = await _db()
         rows = await conn.fetch(
             """
             WITH hits AS (
@@ -5164,9 +5258,23 @@ async def lessons_search(query: str, top_k: int = 10, min_confidence: str = "low
             top_k,
             rank_floor,
         )
-        return _json([dict(r) for r in rows])
+        result = _json([dict(r) for r in rows])
+    except Exception:
+        return await _semantic_failure_result("lessons_search", "semantic_query_failed", started_at)
     finally:
-        await conn.close()
+        if conn is not None:
+            await conn.close()
+    try:
+        await _semantic_dependency_lifecycle("lessons_search", None, started_at)
+    except Exception as exc:
+        print(f"[mcp.semantic_alert] unavailable: {type(exc).__name__}", file=sys.stderr)
+        return json.dumps(
+            {
+                "error": "semantic retrieval succeeded but canonical lifecycle unavailable",
+                "canonical_alert_resolved": False,
+            }
+        )
+    return result
 
 
 @mcp.tool()
@@ -5204,12 +5312,15 @@ async def knowledge_search(
             {"error": "source_types must include at least one of: lesson, plan, site_doc, playbook, observation"}
         )
 
-    embedding = await _embed_query(query)
-    if embedding is None:
-        return json.dumps({"error": "knowledge_search requires OPENAI_API_KEY for query embedding"})
-
-    conn = await _db()
+    started_at = datetime.now(ZoneInfo("UTC"))
     try:
+        embedding = await _embed_query(query)
+    except SemanticDependencyFailure as exc:
+        return await _semantic_failure_result("knowledge_search", exc.reason, started_at)
+
+    conn = None
+    try:
+        conn = await _db()
         rows = await conn.fetch(
             """
             SELECT source_type, source_id, chunk_idx, content, metadata, distance
@@ -5228,9 +5339,23 @@ async def knowledge_search(
             top_k,
             types,
         )
-        return _json([dict(r) for r in rows])
+        result = _json([dict(r) for r in rows])
+    except Exception:
+        return await _semantic_failure_result("knowledge_search", "semantic_query_failed", started_at)
     finally:
-        await conn.close()
+        if conn is not None:
+            await conn.close()
+    try:
+        await _semantic_dependency_lifecycle("knowledge_search", None, started_at)
+    except Exception as exc:
+        print(f"[mcp.semantic_alert] unavailable: {type(exc).__name__}", file=sys.stderr)
+        return json.dumps(
+            {
+                "error": "semantic retrieval succeeded but canonical lifecycle unavailable",
+                "canonical_alert_resolved": False,
+            }
+        )
+    return result
 
 
 # ═══════════════════════════════════════════════════════════════

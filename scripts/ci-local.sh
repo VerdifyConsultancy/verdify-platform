@@ -172,6 +172,7 @@ $PY -m pytest -q \
   tests/test_lab_publish_k3s_guard.py \
   tests/test_mcp_audience_auth.py \
   tests/test_mcp_transport_runtime.py \
+  tests/test_mcp_semantic_dependency_lifecycle.py \
   tests/test_mqtt_fanout.py \
   tests/test_no_hosted_runner_workflows.py \
   tests/test_planner_graph_contract.py \
