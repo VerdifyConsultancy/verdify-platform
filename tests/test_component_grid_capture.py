@@ -1148,3 +1148,36 @@ def test_v3_complete_contract_rejects_forgery_missing_evidence_and_changed_polic
     document["revisions"]["crop_band_resolver_revision"] = wire_resolver_revision(context)
     with pytest.raises(cap.GridCaptureError):
         run(document)
+
+
+def test_consumed_setpoints_batch_is_fresh_and_marker_commits_last() -> None:
+    """The source marker must date one complete genuinely consumed tuple."""
+    controls = (ROOT / "firmware/greenhouse/controls.yaml").read_text()
+    start = controls.index("if (consumed_band_evidence_due) {")
+    end = controls.index("last_consumed_band_evidence_ms = climate_diag_now_ms;", start)
+    batch = controls[start:end]
+    expected = {
+        "gh_consumed_temp_low_f": "temp_low",
+        "gh_consumed_temp_high_f": "temp_high",
+        "gh_consumed_vpd_low_kpa": "vpd_low",
+        "gh_consumed_vpd_high_kpa": "vpd_high",
+        "gh_house_temp_target": "temp_target",
+        "gh_house_vpd_target": "vpd_target",
+    }
+    marker = batch.index("id(gh_consumed_band_sample_epoch).publish_state(")
+    for sensor, field in expected.items():
+        publish = f"id({sensor}).publish_state(setpts.{field});"
+        assert controls.count(publish) == 1
+        assert batch.index(publish) < marker
+    assert batch.index("id(gh_band_source).publish_state(") < marker
+    assert 'controller_time_valid ? std::to_string(sntp_now.timestamp) : ""' in batch
+    assert batch.count(".publish_state(") == 8
+    # A slow solar/per-zone block must never gate or duplicate this tuple.
+    assert end < controls.index("if (climate_band_diag_due) {")
+    assert "(climate_diag_now_ms - last_consumed_band_evidence_ms) >= 15000UL" in controls
+    assert "(climate_diag_now_ms - last_climate_band_diag_ms) >= 300000UL" in controls
+    slow = controls[controls.index("if (climate_band_diag_due) {") :]
+    for sensor in (*expected, "gh_band_source", "gh_consumed_band_sample_epoch"):
+        assert f"id({sensor}).publish_state(" not in slow
+    for sensor in ("gh_solar_phase", "gh_zone_wet_granted", "gh_house_temp_delta", "gh_house_vpd_delta"):
+        assert f"id({sensor}).publish_state(" in slow
