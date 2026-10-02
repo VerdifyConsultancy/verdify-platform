@@ -367,3 +367,154 @@ def test_dataset_peer_bridge_preserves_exact_readonly_snapshot_and_profile(profi
     assert not any(
         word in emitted for word in ("INSERT INTO", "UPDATE public", "ALTER TABLE", "CREATE TABLE", "DELETE FROM")
     )
+
+
+def post270_contract(monkeypatch):
+    """Small orchestration fixture; existing native suites own DDL proof."""
+    d = p.successor_module()
+    monkeypatch.setattr(p, "successor_module", lambda: d)
+    before = {"namespaces": {}, "portability_native_facts": {"fixture": "before"}}
+    admitted = copy.deepcopy(before)
+    post = copy.deepcopy(before)
+    post["ledger"] = "270"
+    post["boundaries"] = {login: {"native": str(i) * 64} for i, login in enumerate(sorted(t.LOGINS), 1)}
+    original = {
+        "ledger": [{"source": "fixture", "seq": i} for i in range(277)],
+        "ordinary": [{"id": 1}, {"id": 2}],
+        "mcp": [{"id": 3}],
+    }
+    prior = [[login, "a" * 64, "b" * 64] for login in sorted(t.LOGINS)]
+    old_rows = [
+        {
+            "login_name": login,
+            "boundary_sha256": "\\x" + h,
+            "qualification_sha256": q,
+            "qualified_at": "2026-10-01T00:00:00+00:00",
+        }
+        for login, h, q in prior
+    ]
+    new_rows = copy.deepcopy(old_rows)
+    for row in new_rows:
+        row["boundary_sha256"] = "\\x" + post["boundaries"][row["login_name"]]["native"]
+        row["qualification_sha256"] = p.POST270_ROLLBACK_SHA
+    new_original = copy.deepcopy(original)
+    new_original["ledger"].append(copy.deepcopy(p.POST270_NATIVE_LEDGER_ROW))
+    original_rollback = {
+        "version": d.r.VERSION,
+        "mode": "savepoint-rollback-qualification",
+        "ddl_sha256": "d" * 64,
+        "before_witness": before,
+        "post_witness": admitted,
+    }
+    original_install = dict(original_rollback, mode="install")
+    successor_rollback = {
+        "version": d.VERSION,
+        "mode": "rollback-qualification",
+        "before_witness": admitted,
+        "post_witness": post,
+    }
+    successor_install = dict(successor_rollback, mode="install")
+    successor = {
+        "rollback": successor_rollback,
+        "install": successor_install,
+        "prior_rows": [original, old_rows],
+        "installed_rows": {"original": new_original, "qualified": new_rows},
+        "namespace_custody": {},
+        "source_roles": "source",
+        "installed_roles": "installed",
+    }
+    calls = []
+    monkeypatch.setattr(t.c0, "compare", lambda *a: calls.append("source-compare"))
+    monkeypatch.setattr(
+        t,
+        "checked_qualification",
+        lambda *a, **k: (
+            calls.append(("original-qualification", k)),
+            {"boundaries": {login: {"native": "a" * 64} for login in t.LOGINS}},
+        )[1],
+    )
+    monkeypatch.setattr(t, "validate_installed_post", lambda *a: admitted)
+    monkeypatch.setattr(d, "validate_lineage", lambda *a, **k: calls.append("full-original-lineage"))
+    monkeypatch.setattr(d, "checked_record", lambda *a, **k: calls.append(("genuine-successor", k)))
+    monkeypatch.setattr(d, "installation_projection", lambda *a, **k: (post, []))
+    monkeypatch.setattr(t.c0, "bootstrap_profile", lambda *a: {})
+    monkeypatch.setattr(t.role_parity, "verify", lambda *a, **k: calls.append("password-free-role-parity"))
+    monkeypatch.setattr(t.c0, "checked", lambda *a, **k: calls.append("complete-inherited-witness"))
+    rows = [[login, post["boundaries"][login]["native"], p.POST270_ROLLBACK_SHA] for login in sorted(t.LOGINS)]
+    args = ({}, before, original_rollback, original_install, post, rows, "b" * 64, successor)
+    return args, calls
+
+
+def test_post270_explicit_chain_retains_native_validators_and_real_modes(monkeypatch):
+    args, calls = post270_contract(monkeypatch)
+    p.validate_post270_logical(*args)
+    assert ("original-qualification", {"retained_session": True}) in calls
+    assert ("genuine-successor", {"mode": "rollback-qualification"}) in calls
+    assert ("genuine-successor", {"mode": "install"}) in calls
+    assert calls.count("full-original-lineage") == 2
+    assert "password-free-role-parity" in calls and "complete-inherited-witness" in calls
+
+
+@pytest.mark.parametrize(
+    "tamper",
+    [
+        "original_mode",
+        "original_before",
+        "old_row",
+        "old_seal",
+        "receipt_time",
+        "qualification_sha",
+        "stamp",
+        "catalog",
+        "roles",
+        "namespace",
+        "copied_receipt",
+        "270_applied_at",
+        "270_duration",
+        "270_extra_field",
+    ],
+)
+def test_post270_chain_refuses_truthful_custody_and_inherited_drift(monkeypatch, tamper):
+    args, _ = post270_contract(monkeypatch)
+    args = list(copy.deepcopy(args))
+    successor = args[-1]
+    if tamper == "original_mode":
+        args[3]["mode"] = "rollback-qualification"
+    elif tamper == "original_before":
+        args[3]["before_witness"] = {}
+    elif tamper == "old_row":
+        successor["installed_rows"]["original"]["ledger"][0]["seq"] = 999
+    elif tamper == "old_seal":
+        successor["installed_rows"]["original"]["mcp"][0]["id"] = 999
+    elif tamper == "receipt_time":
+        successor["installed_rows"]["qualified"][0]["qualified_at"] = "changed"
+    elif tamper == "qualification_sha":
+        successor["installed_rows"]["qualified"][0]["qualification_sha256"] = "f" * 64
+    elif tamper == "stamp":
+        successor["installed_rows"]["original"]["ledger"][-1]["sha256"] = "f" * 64
+    elif tamper == "270_applied_at":
+        successor["installed_rows"]["original"]["ledger"][-1]["applied_at"] = "2026-10-02T07:00:00+00:00"
+    elif tamper == "270_duration":
+        successor["installed_rows"]["original"]["ledger"][-1]["duration_ms"] += 1
+    elif tamper == "270_extra_field":
+        successor["installed_rows"]["original"]["ledger"][-1]["extra"] = "invented"
+    elif tamper in {"catalog", "roles"}:
+        args[4][tamper] = "unexpected"
+    elif tamper == "namespace":
+        args[4]["namespaces"]["9"] = "unexpected"
+    else:
+        args[5][0][2] = "f" * 64
+    with pytest.raises(ValueError):
+        p.validate_post270_logical(*args)
+
+
+def test_post270_manifest_hash_and_incomplete_bindings_fail_closed(tmp_path):
+    path = tmp_path / "manifest.json"
+    path.write_text(json.dumps({"version": p.POST270_VERSION, "inputs": {}}))
+    import hashlib
+
+    sha = hashlib.sha256(path.read_bytes()).hexdigest()
+    with pytest.raises(ValueError, match="manifest custody"):
+        p.read_post270_lineage(path, "f" * 64)
+    with pytest.raises(ValueError, match="complete post270"):
+        p.read_post270_lineage(path, sha)

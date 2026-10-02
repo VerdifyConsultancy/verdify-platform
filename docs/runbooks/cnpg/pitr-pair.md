@@ -126,3 +126,29 @@ Cluster bootstrap and original external plugin serverName. [CNPG 1.29 API](https
 defines explicit backup and target fields. [PostgreSQL 16 recovery targets](https://www.postgresql.org/docs/16/runtime-config-wal.html#RUNTIME-CONFIG-WAL-RECOVERY-TARGET)
 defines target stop and timeline behavior. Actual archive retrieval and each
 native recovered target remain required proof.
+
+## Closed post270 logical lineage
+
+For the actual post270 rehearsal source, both physical adapters accept the
+optional `--post270-lineage FILE --post270-lineage-sha256 SHA` input. The manifest
+version is `cnpg-physical-post270-logical-lineage-v1`; its `inputs` map contains
+exactly `rollback`, `install`, `prior_rows`, `installed_rows`,
+`namespace_custody`, `source_roles` and `installed_roles`. Each entry contains
+only `path` and `sha256`. Preserve every original input file.
+
+This explicit path consumes the original **retained-session** post269
+qualification/install without relabeling their versions or modes, then the
+source-reviewed genuine270 qualification `75a78e…` and installation `74b8dd…`.
+It checks the original277 complete ledger rows, historical three seals, native
+270 runner row, original receipt timestamps/fields, password-free role parity,
+exact selected ops/body/boundary delta and inherited complete270 catalog.
+Original full row export, source role export and native empty-namespace custody
+are frozen inputs. Only the already closed source-proven physical raw fields may
+change in the inherited witness; full original/current facts remain inputs.
+Copied target receipts must contain the actual270 qualification hash and native
+boundary digests. A hash or copied receipt alone never admits a new target.
+
+The ordinary post269 path is unchanged. Each A/B target still requires genuine
+new-target native rollback qualification, reviewed native literals and guarded
+installation before actual password pool/startup/hot-query qualification.
+The physical client adapter shares this same optional lineage contract.

@@ -44,6 +44,166 @@ def validate_logical(source, before, rollback, install, inherited, logical_rows,
     require(logical_rows == expected, "copied logical receipt rows differ from independently qualified source")
 
 
+POST270_VERSION = "cnpg-physical-post270-logical-lineage-v1"
+POST270_KEYS = {
+    "rollback",
+    "install",
+    "prior_rows",
+    "installed_rows",
+    "namespace_custody",
+    "source_roles",
+    "installed_roles",
+}
+POST270_ROLLBACK_SHA = "75a78e501f8f71f443307c9e55420a32c6b92eb788aaa873b31037db4c48b439"
+POST270_INSTALL_SHA = "74b8ddedbdf57de1b657c2933c78bb530c0aa5e5b63875801652418a827da3fe"
+POST270_NATIVE_LEDGER_ROW = {
+    "seq": 270,
+    "sha256": "672d1afa92e37f243d5893fbd57cd2b84e86ea19c1c79d3975c04dfd39663532",
+    "source": "db/migrations",
+    "filename": "db/migrations/270-facility-safe-ops-projection.sql",
+    "applied_at": "2026-10-02T06:58:54.474684+00:00",
+    "applied_by": "verdify",
+    "duration_ms": 54951,
+    "stamp_method": "runner",
+}
+POST270_FROZEN_INPUTS = {
+    "installed_rows": "cfc9615125683124c92e803994d4dc2e19530dbc81ef9cd816dece88ae99c731",
+    "prior_rows": "33cbcda2257994abf79446020eba861f84a2c3ca00480b0c10910de4b25ac329",
+    "source_roles": "7b2da9d7f57db51c7d6fe25515e337bc35bb5f79f69aff943321d7d383eeaf69",
+    "namespace_custody": "2b2ab98714256daf72272277318c5c705e5f3feca17c9929bdfc9fb9328f52c0",
+}
+
+
+def successor_module():
+    return t.load("cnpg-target270-successor")
+
+
+def read_post270_lineage(path, expected_sha):
+    """Hash-bound original records, never a projected artifact labeled genuine."""
+    import json
+
+    manifest, sha = t.c0.read_witness(path)
+    require(sha == expected_sha, "post270 manifest custody mismatch")
+    require(
+        set(manifest) == {"version", "inputs"} and manifest["version"] == POST270_VERSION,
+        "closed post270 lineage manifest required",
+    )
+    require(set(manifest["inputs"]) == POST270_KEYS, "complete post270 lineage inputs required")
+    d, values = successor_module(), {}
+    for key, fact in manifest["inputs"].items():
+        require(
+            set(fact) == {"path", "sha256"} and t.transaction.is_hash(fact["sha256"]),
+            "closed post270 input binding required",
+        )
+        target = Path(fact["path"])
+        require(target.is_file() and not target.is_symlink(), "regular post270 custody file required")
+        if key in {"rollback", "install"}:
+            value, actual_sha = d.read_record(target, mode="rollback-qualification" if key == "rollback" else "install")
+        elif key == "prior_rows":
+            value, actual_sha = d.read_prior_rows(target)
+        else:
+            raw = target.read_bytes()
+            require(len(raw) <= 1_000_000, "post270 small custody bound exceeded")
+            actual_sha = hashlib.sha256(raw).hexdigest()
+            value = raw.decode() if key.endswith("roles") else json.loads(raw, object_pairs_hook=t.c0.boundary._pairs)
+        require(actual_sha == fact["sha256"], "post270 input custody mismatch")
+        if key in {"rollback", "install"}:
+            require(
+                actual_sha == (POST270_ROLLBACK_SHA if key == "rollback" else POST270_INSTALL_SHA),
+                "unreviewed post270 native record",
+            )
+        if key in POST270_FROZEN_INPUTS:
+            require(actual_sha == POST270_FROZEN_INPUTS[key], "historical post270 input changed")
+        values[key] = value
+    return values
+
+
+def validate_post270_logical(source, before, rollback, install, inherited, logical_rows, rollback_sha, successor):
+    """The real retained269 -> genuine270 chain; original facts remain separate."""
+    import copy
+
+    d = successor_module()
+    t.c0.compare(source, before)
+    qualified = t.checked_qualification(before, rollback, retained_session=True)
+    require(
+        set(install) == set(rollback) and install["version"] == d.r.VERSION and install["mode"] == "install",
+        "original retained logical install not proven",
+    )
+    require(
+        install["ddl_sha256"] == rollback["ddl_sha256"] and install["before_witness"] == before,
+        "original retained logical lineage mismatch",
+    )
+    admitted = t.validate_installed_post(before, qualified, install["post_witness"])
+    require(t.transaction.is_hash(rollback_sha), "original retained rollback custody required")
+    prior = successor["prior_rows"]
+    d.validate_prior_rows(prior)
+    require(
+        [
+            [row["login_name"], row["boundary_sha256"].removeprefix("\\x"), row["qualification_sha256"]]
+            for row in prior[1]
+        ]
+        == [[login, qualified["boundaries"][login]["native"], rollback_sha] for login in sorted(t.LOGINS)],
+        "original269 full receipt lineage mismatch",
+    )
+    require(admitted == install["post_witness"], "original269 post custody changed")
+    native_rollback, native_install = successor["rollback"], successor["install"]
+    custody = successor["namespace_custody"]
+    for record in (native_rollback, native_install):
+        predecessor = record["before_witness"]
+        proof = custody if predecessor["namespaces"] != admitted["namespaces"] else None
+        d.validate_lineage(source, install, predecessor, namespace_custody=proof)
+        d.checked_record(predecessor, record, mode="install" if record is native_install else "rollback-qualification")
+    proof = (
+        custody
+        if native_install["before_witness"]["namespaces"] != native_rollback["before_witness"]["namespaces"]
+        else None
+    )
+    expected, _ = d.installation_projection(native_install["before_witness"], native_rollback, namespace_custody=proof)
+    require(native_install["post_witness"] == expected, "actual270 install differs from reviewed current projection")
+    rows = successor["installed_rows"]
+    require(set(rows) == {"original", "qualified"}, "full actual270 row custody required")
+    original = copy.deepcopy(rows["original"])
+    added = [row for row in original["ledger"] if row["source"] == "db/migrations" and row["seq"] == 270]
+    require(len(added) == 1 and len(original["ledger"]) == 278, "exact270 ledger successor required")
+    new = added[0]
+    require(new == POST270_NATIVE_LEDGER_ROW, "actual270 complete native ledger row changed")
+    require(
+        new["filename"] == d.MIGRATION
+        and new["sha256"] == d.MIGRATION_SHA
+        and new["stamp_method"] == "runner"
+        and new["applied_by"] == "verdify"
+        and type(new["duration_ms"]) is int
+        and new["duration_ms"] >= 0
+        and isinstance(new["applied_at"], str)
+        and bool(new["applied_at"]),
+        "270 native ledger stamp changed",
+    )
+    original["ledger"].remove(new)
+    require(original == prior[0], "original277 full rows or historical seals changed")
+    expected_rows = copy.deepcopy(prior[1])
+    for row in expected_rows:
+        row["boundary_sha256"] = "\\x" + expected["boundaries"][row["login_name"]]["native"]
+        row["qualification_sha256"] = POST270_ROLLBACK_SHA
+    require(rows["qualified"] == expected_rows, "actual270 receipt fields/timestamps changed")
+    mapping = t.c0.bootstrap_profile(source, native_install["before_witness"])
+    t.role_parity.verify(successor["source_roles"], successor["installed_roles"], mapping=mapping)
+    require(set(inherited) == set(expected), "inherited270 full witness shape changed")
+    require(
+        all(inherited[key] == expected[key] for key in expected if key != "portability_native_facts"),
+        "inherited270 catalog/ledger/seals/roles/namespaces/body drift",
+    )
+    t.c0.checked(inherited, target=True)
+    if inherited["portability_native_facts"] != expected["portability_native_facts"]:
+        d.validate_raw_lineage(
+            expected["portability_native_facts"], inherited["portability_native_facts"], namespace_custody=custody
+        )
+    require(
+        logical_rows
+        == [[login, expected["boundaries"][login]["native"], POST270_ROLLBACK_SHA] for login in sorted(t.LOGINS)],
+        "copied270 receipts differ from genuine source chain",
+    )
+
+
 def dataset_sql(profile):
     """Capture actual native counts/time/owners, never sampled or synthetic rows."""
     require(profile in (pitr.SOURCE, *t.PHYSICAL_TARGETS), "unsupported native dataset source/profile")
@@ -327,6 +487,8 @@ def input_arguments(parser):
     for key in INPUT_KEYS:
         parser.add_argument("--" + key.replace("_", "-"), type=Path, required=True)
         parser.add_argument("--" + key.replace("_", "-") + "-sha256", required=True)
+    parser.add_argument("--post270-lineage", type=Path)
+    parser.add_argument("--post270-lineage-sha256")
     parser.add_argument("--captures", type=Path, required=True)
     parser.add_argument("--physical-proof-dir", type=Path, required=True)
     parser.add_argument("--reviewed-physical", type=Path)
@@ -335,12 +497,19 @@ def input_arguments(parser):
 
 def qualified_inputs(args):
     data = {}
+    successor = None
+    if getattr(args, "post270_lineage", None):
+        successor = read_post270_lineage(args.post270_lineage, args.post270_lineage_sha256)
+    else:
+        require(not getattr(args, "post270_lineage_sha256", None), "incomplete post270 lineage binding")
     for key in INPUT_KEYS:
         if key in {"logical_rollback", "logical_install"}:
             value, sha = t.read_transition_record(
                 getattr(args, key),
-                version=t.VERSION,
-                mode="rollback-qualification" if key == "logical_rollback" else "install",
+                version="cnpg-native-retained-session-transition-v1" if successor is not None else t.VERSION,
+                mode=("savepoint-rollback-qualification" if successor is not None else "rollback-qualification")
+                if key == "logical_rollback"
+                else "install",
             )
         else:
             value, sha = t.c0.read_witness(getattr(args, key))
@@ -354,7 +523,8 @@ def qualified_inputs(args):
     ):
         raw = (args.physical_proof_dir / filename).read_bytes()
         require(hashlib.sha256(raw).hexdigest() == data["recovery"][key], "raw physical capture hash mismatch")
-    validate_logical(
+    validator = validate_logical if successor is None else validate_post270_logical
+    validator(
         data["original_source"],
         data["logical_before"],
         data["logical_rollback"],
@@ -362,6 +532,7 @@ def qualified_inputs(args):
         data["physical_before"],
         data["logical_rows"],
         args.logical_rollback_sha256,
+        **({"successor": successor} if successor is not None else {}),
     )
     validate_dataset(data["source_data"], data["target_data"], data["physical_before"]["portable_catalog"])
     import json
