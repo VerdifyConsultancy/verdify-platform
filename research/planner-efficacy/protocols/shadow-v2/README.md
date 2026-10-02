@@ -115,3 +115,16 @@ After all five checks agree, supply the live values to
 `scripts/prepare_experiment_v2_shadow.py`. A generated packet is still
 non-actuating: its manifest must retain every `no_authority_claims` value as
 false and shadow admission remains closed.
+
+### Historical registry custody after periodic readback repair
+
+`source-lock-v1.json` and its live grid receipt retain their original candidate
+identities. `tunable-registry-source-v1.py.txt` preserves the exact registry bytes
+bound by the historical `5de3c748…` source hash; it is evidence, not executable
+runtime configuration. The passive full-48 readback repair changes three routes
+to distinct periodic sensors, so the current registry no longer equals this
+historical candidate. Neither this snapshot nor the old grid attestation can
+qualify a new firmware/runtime. A new candidate requires genuine current grid
+and registry/image equality; never reuse or rewrite the old live receipt as if
+it observed the new sensors. Wire IDs, field order and profile state hashes are
+unchanged by the readback repair.

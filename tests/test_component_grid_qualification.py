@@ -102,8 +102,8 @@ def test_exact_runtime_inventory_produces_stable_content_and_connection_receipt(
         "sw_fog_closes_vent",
         "sw_mister_closes_vent",
     ):
-        assert fields[field_name]["readback"]["entity_type"] == "switch"
-        assert routes[field_name]["readback_key"] == routes[field_name]["setter_key"]
+        assert fields[field_name]["readback"]["entity_type"] == "sensor"
+        assert routes[field_name]["readback_key"] != routes[field_name]["setter_key"]
 
     # Enumeration order is runtime noise. Canonical field order and keys make
     # the same authenticated inventory byte-identical when supplied reversed.
