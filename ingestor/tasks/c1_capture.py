@@ -48,14 +48,43 @@ class NativeCapture:
         self.last_uptime = None
         self.reset_detected = False
         self.blocked_reason = None
+        self.paused_reason = None
+        self.resume_after = None
+        self.qualification_worksheet = None
+        self.qualification_stage = None
 
     def configure(self, request, *, runtime, generation, entities):
         identity = (request["request_id"], runtime, generation)
+        if (
+            self.identity is not None
+            and identity[0] == self.identity[0]
+            and self.request.get("qualification_worksheet_id")
+        ):
+            if identity != self.identity or request != self.request:
+                self.discard_callbacks()
+                self.blocked_reason = "capture request or runtime changed"
+            return
         if identity != self.identity:
             self.__init__()
             self.identity = identity
             self.request = request
             self.entities = [asdict(e) for e in entities]
+
+    def discard_callbacks(self):
+        self.pending.clear()
+        self.band.clear()
+        self.band_pending.clear()
+        self.epochs.clear()
+
+    def pause(self, reason):
+        self.discard_callbacks()
+        self.paused_reason = reason
+
+    def resume(self, now):
+        if self.paused_reason is not None:
+            self.discard_callbacks()
+            self.resume_after = now
+            self.paused_reason = None
 
     def record(self, slug, value, *, observed_at, generation):
         if self.blocked_reason is not None:
@@ -73,6 +102,8 @@ class NativeCapture:
                     self.epochs.clear()
                     self.reset_detected = True
                 self.last_uptime = value
+            return False
+        if self.paused_reason is not None or (self.resume_after is not None and observed_at < self.resume_after):
             return False
         if slug == "firmware_version":
             self.band[slug] = {"value": value, "observed_at": observed_at.isoformat(), "slug": slug}
@@ -139,7 +170,85 @@ def invalidate_for_cached_replay():
 
 def record_native_callback(slug, value, *, observed_at, generation):
     """Only the fenced native subscription calls this; never a snapshot flush."""
+    if COLLECTOR.request and COLLECTOR.request.get("qualification_worksheet_id"):
+        now = datetime.now(UTC)
+        try:
+            qualification = _current_qualification()
+            if generation != COLLECTOR.identity[2] or generation != shared.transport_generation:
+                COLLECTOR.blocked_reason = "capture runtime changed"
+                COLLECTOR.discard_callbacks()
+                return False
+            if not shared.writer_lease_strictly_held() or not shared.transport_readbacks_ready(generation):
+                COLLECTOR.pause("capture transport or lease unavailable")
+                return False
+            if not _qualification_ready(COLLECTOR, qualification, now):
+                if slug == "uptime_s":
+                    COLLECTOR.record(slug, value, observed_at=observed_at, generation=generation)
+                return False
+        except (ValueError, KeyError, TypeError, OSError):
+            COLLECTOR.pause("qualification evidence unavailable")
+            return False
     return COLLECTOR.record(slug, value, observed_at=observed_at, generation=generation)
+
+
+def _current_qualification():
+    from . import bounded_reconcile, c1_overlay
+
+    directory = Path(os.environ.get("STATE_DIR", "/srv/verdify/state"))
+    qualification = bounded_reconcile._read(directory / c1_overlay.STATE_NAME)
+    worksheet = bounded_reconcile._read(directory / c1_overlay.WORKSHEET_NAME)
+    if qualification is not None and worksheet != qualification.get("worksheet"):
+        return None  # removed/replaced/changed authority, even before dispatch
+    return qualification
+
+
+def _qualification_ready(collector, qualification, now):
+    """Unsettled delivery pauses credit; ended authority fences this request."""
+    request = collector.request
+    terminal = None
+    if qualification is None or qualification.get("worksheet_id") != request["qualification_worksheet_id"]:
+        terminal = "qualification worksheet replaced or unavailable"
+    else:
+        worksheet = qualification["worksheet"]
+        expiry = datetime.fromisoformat(worksheet["expires_at"])
+        identity = worksheet["preview"]["identity"]
+        if (
+            now >= expiry
+            or now >= datetime.fromisoformat(request["expires_at"])
+            or datetime.fromisoformat(request["expires_at"]) > expiry
+        ):
+            terminal = "qualification authority expired"
+        elif any(
+            identity[key] != request[key] for key in ("runtime_instance_id", "connection_generation", "source_revision")
+        ):
+            terminal = "qualification runtime changed"
+        elif collector.qualification_worksheet is not None and worksheet != collector.qualification_worksheet:
+            terminal = "immutable qualification worksheet changed"
+        elif qualification.get("status") not in ("active", "inflight", "awaiting_confirmation"):
+            terminal = "qualification authority ended"
+        else:
+            # Copy the immutable authority, not the mutable delivery state.
+            if collector.qualification_worksheet is None:
+                collector.pause("qualification capture not yet admitted")
+            collector.qualification_worksheet = json.loads(json.dumps(worksheet))
+    if terminal:
+        collector.discard_callbacks()
+        collector.blocked_reason = terminal
+    if collector.blocked_reason is not None:
+        return False
+    stage = qualification.get("stage_started_at")
+    if collector.qualification_stage != stage:
+        collector.pause("qualification delivery stage changed")
+        collector.qualification_stage = stage
+    if qualification["status"] != "active":
+        collector.pause("qualification delivery unsettled")
+        return False
+    validated = datetime.fromisoformat(qualification["validated_at"])
+    if validated.tzinfo is None or not 0 <= (now - validated).total_seconds() <= 30:
+        collector.pause("qualification not freshly validated")
+        return False
+    collector.resume(now)
+    return True
 
 
 def _atomic(path, value):
@@ -261,21 +370,12 @@ async def capture_native_source(pool):
     client = shared.esp32.get("client")
     if client is None or shared.esp32.get("state_subscription_client") is not client:
         return
-    if request.get("qualification_worksheet_id"):
-        from . import bounded_reconcile, c1_overlay
-
-        qualification = bounded_reconcile._read(state_dir / c1_overlay.STATE_NAME)
-        if (
-            qualification is None
-            or qualification.get("status") != "active"
-            or qualification.get("worksheet_id") != request["qualification_worksheet_id"]
-            or now >= datetime.fromisoformat(qualification["worksheet"]["expires_at"])
-            or expiry > datetime.fromisoformat(qualification["worksheet"]["expires_at"])
-            or now - datetime.fromisoformat(qualification["validated_at"]) > timedelta(seconds=30)
-        ):
-            COLLECTOR.blocked_reason = "qualification authority ended or not freshly validated"
-            return
     COLLECTOR.configure(request, runtime=RUNTIME_INSTANCE_ID, generation=generation, entities=_component_grid_inventory)
+    if request.get("qualification_worksheet_id"):
+        qualification = _current_qualification()
+        ready = _qualification_ready(COLLECTOR, qualification, now)
+        if not ready and COLLECTOR.blocked_reason is None:
+            return
     output = state_dir / "c1-capture" / request["request_id"]
     if COLLECTOR.blocked_reason is not None:
         _atomic(
@@ -376,6 +476,12 @@ async def capture_native_source(pool):
                 **epoch["runtime"],
             },
         }
+        if request.get("qualification_worksheet_id") and not _qualification_ready(
+            COLLECTOR, _current_qualification(), datetime.now(UTC)
+        ):
+            return  # authority may have changed during the read-only DB query
+        if epoch not in COLLECTOR.epochs:
+            return  # an intervening stage/pause discarded this source interval
         _atomic(input_path, document)
     # Collection continues passively. Output files retain source UUIDs; periodic
     # task calls cannot synthesize or retime another source epoch.
