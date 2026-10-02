@@ -398,18 +398,7 @@ def post270_contract(monkeypatch):
         row["boundary_sha256"] = "\\x" + post["boundaries"][row["login_name"]]["native"]
         row["qualification_sha256"] = p.POST270_ROLLBACK_SHA
     new_original = copy.deepcopy(original)
-    new_original["ledger"].append(
-        {
-            "source": "db/migrations",
-            "seq": 270,
-            "filename": d.MIGRATION,
-            "sha256": d.MIGRATION_SHA,
-            "stamp_method": "runner",
-            "applied_by": "verdify",
-            "duration_ms": 1,
-            "applied_at": "2026-10-02T07:00:00+00:00",
-        }
-    )
+    new_original["ledger"].append(copy.deepcopy(p.POST270_NATIVE_LEDGER_ROW))
     original_rollback = {
         "version": d.r.VERSION,
         "mode": "savepoint-rollback-qualification",
@@ -480,6 +469,9 @@ def test_post270_explicit_chain_retains_native_validators_and_real_modes(monkeyp
         "roles",
         "namespace",
         "copied_receipt",
+        "270_applied_at",
+        "270_duration",
+        "270_extra_field",
     ],
 )
 def test_post270_chain_refuses_truthful_custody_and_inherited_drift(monkeypatch, tamper):
@@ -500,6 +492,12 @@ def test_post270_chain_refuses_truthful_custody_and_inherited_drift(monkeypatch,
         successor["installed_rows"]["qualified"][0]["qualification_sha256"] = "f" * 64
     elif tamper == "stamp":
         successor["installed_rows"]["original"]["ledger"][-1]["sha256"] = "f" * 64
+    elif tamper == "270_applied_at":
+        successor["installed_rows"]["original"]["ledger"][-1]["applied_at"] = "2026-10-02T07:00:00+00:00"
+    elif tamper == "270_duration":
+        successor["installed_rows"]["original"]["ledger"][-1]["duration_ms"] += 1
+    elif tamper == "270_extra_field":
+        successor["installed_rows"]["original"]["ledger"][-1]["extra"] = "invented"
     elif tamper in {"catalog", "roles"}:
         args[4][tamper] = "unexpected"
     elif tamper == "namespace":

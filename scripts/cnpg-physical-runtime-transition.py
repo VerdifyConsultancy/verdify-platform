@@ -56,7 +56,18 @@ POST270_KEYS = {
 }
 POST270_ROLLBACK_SHA = "75a78e501f8f71f443307c9e55420a32c6b92eb788aaa873b31037db4c48b439"
 POST270_INSTALL_SHA = "74b8ddedbdf57de1b657c2933c78bb530c0aa5e5b63875801652418a827da3fe"
+POST270_NATIVE_LEDGER_ROW = {
+    "seq": 270,
+    "sha256": "672d1afa92e37f243d5893fbd57cd2b84e86ea19c1c79d3975c04dfd39663532",
+    "source": "db/migrations",
+    "filename": "db/migrations/270-facility-safe-ops-projection.sql",
+    "applied_at": "2026-10-02T06:58:54.474684+00:00",
+    "applied_by": "verdify",
+    "duration_ms": 54951,
+    "stamp_method": "runner",
+}
 POST270_FROZEN_INPUTS = {
+    "installed_rows": "cfc9615125683124c92e803994d4dc2e19530dbc81ef9cd816dece88ae99c731",
     "prior_rows": "33cbcda2257994abf79446020eba861f84a2c3ca00480b0c10910de4b25ac329",
     "source_roles": "7b2da9d7f57db51c7d6fe25515e337bc35bb5f79f69aff943321d7d383eeaf69",
     "namespace_custody": "2b2ab98714256daf72272277318c5c705e5f3feca17c9929bdfc9fb9328f52c0",
@@ -155,6 +166,7 @@ def validate_post270_logical(source, before, rollback, install, inherited, logic
     added = [row for row in original["ledger"] if row["source"] == "db/migrations" and row["seq"] == 270]
     require(len(added) == 1 and len(original["ledger"]) == 278, "exact270 ledger successor required")
     new = added[0]
+    require(new == POST270_NATIVE_LEDGER_ROW, "actual270 complete native ledger row changed")
     require(
         new["filename"] == d.MIGRATION
         and new["sha256"] == d.MIGRATION_SHA
