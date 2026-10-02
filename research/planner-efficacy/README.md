@@ -149,3 +149,52 @@ does not emit a minute-level significance test or causal savings estimate.
 The switchback sizing is also explicitly a screening approximation: it uses
 adjacent-day variability in the all-AI exact-firmware history and cannot stand
 in for the prospective paired randomization analysis.
+
+### Genuine observational input capture
+
+`experiment-v2-capture-inputs.py` replaces the private one-off availability
+query with one source-owned, read-only statement. Run through the existing DB
+wrapper; the operator directory must not already exist:
+
+```bash
+VERDIFY_DB_BACKEND=kube VERDIFY_DB_STATEMENT_TIMEOUT_MS=20000 \
+  python scripts/experiment-v2-capture-inputs.py \
+  --experiment-id 45039c86-c1d9-52f6-a0a9-d94a17bc4b14 \
+  --directory /private/owned/path/new-input-capture
+```
+
+It retains the actual server cutoff, next local-day context boundary and prior
+completed `[06:00,24:00)` day. The actual observational clock is always labeled
+as such, even when run before 06:00; it is **not** the preregistered pre06 selector
+receipt. There is no caller clock/date, provider request, selector cycle, lifecycle,
+assignment freeze, draw, reveal, authority change or device command. The existing
+DB wrapper enforces a read-only session and the statement timeout. The capture
+refuses more than 32 MiB rather than truncating a source denominator.
+
+The private exclusive 0700 directory contains exclusive 0600 original snapshot,
+executed query and hash-bound receipt; files and both directory boundaries are
+fsynced. Partial failed publication remains available for diagnosis and must not
+be overwritten. This is local custody, not off-host backup acceptance. The packet
+binds installed context-function definition hashes and source-owned capture/query
+hashes. It verifies original PostgreSQL context and source-row canonical bytes,
+source bundle/cutoffs and equipment event-byte hashes. Receipt hashes, generations,
+resets, explicit gaps and source identities are retained unchanged. It does not
+independently qualify a complete receipt chain or physical contributor identity.
+
+Climate availability counts distinct complete minutes in the fixed numerical
+north/east/west panel and reports 72 bins, a 12-minute bin threshold and continuous
+missing-minute runs. These counts do not authenticate target/contributor revisions.
+The raw snapshot retains zero/null/gapped/reset observations, overlapping target
+and contributor revisions with their recorded-before-window flags, native frozen
+receipts and current profiles. Current profiles do not replace prospective frozen
+targets. Empirical selector admission/mix, paired 18h effects/covariance/carryover,
+joint power and physical continuity remain explicitly unqualified.
+
+The earliest climate-supported candidate remains June 1–July 30, 2027:
+**30 blinded adjacent pairs / 60 consecutive local days**, fixed north/east/west,
+18h outcome windows. That calendar is still prepared rather than locked/drawn.
+Forecast vintages are planning inputs, never observed outcomes. The separate
+Nov 2–Dec 31, 2026 passive winter study is unchanged. Next scientific acquisition
+must supply genuine prospective target/contributor lineage and observed source
+continuity, then exact frozen-selector admission/forecast/equipment replay and
+empirical joint-power inputs; this capture alone supplies none of those claims.

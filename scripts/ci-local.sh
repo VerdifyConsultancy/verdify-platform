@@ -127,6 +127,7 @@ $PY -m pytest -q \
   tests/test_experiment_v2_orchestrator_stores.py \
   tests/test_experiment_v2_reconcile.py \
   tests/test_experiment_v2_reconcile_archive.py \
+  tests/test_experiment_v2_capture_inputs.py \
   tests/test_experiment_v2_restore_rehearsal.py \
   tests/test_experiment_v2_shadow_source_lock.py \
   tests/test_experiment_v2_data_contract.py \
