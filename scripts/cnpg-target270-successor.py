@@ -9,6 +9,7 @@ Existing logical/physical admission and production migration bytes are untouched
 from __future__ import annotations
 
 import argparse
+import copy
 import hashlib
 import importlib.util
 import json
@@ -163,6 +164,109 @@ def checked_record(before, record, *, mode="rollback-qualification"):
     return record["post_witness"]
 
 
+NAMESPACE_CUSTODY_VERSION = "cnpg-native-job3-empty-temp-namespace-v1"
+POLICY_HISTORY_BODY_SHA = "bbf8b5cc24a8bcac39876db28089b517b27889f0f3e320c147894e5ec759e748"
+
+
+def validate_namespace_lineage(previous, current, custody=None):
+    """Only the measured native job3 empty temp/toast pair, never all schemas."""
+    if previous == current:
+        t.c0.require(custody is None, "unused namespace custody refused")
+        return []
+    t.c0.require(isinstance(custody, dict), "native namespace custody required")
+    t.c0.require(
+        set(custody) == {"version", "server", "extension", "policy_body_sha256", "creating_history_rows", "namespaces"}
+        and custody["version"] == NAMESPACE_CUSTODY_VERSION
+        and custody["server"] == t.SERVER
+        and custody["extension"] == "2.25.2"
+        and custody["policy_body_sha256"] == POLICY_HISTORY_BODY_SHA
+        and type(custody["creating_history_rows"]) is int
+        and custody["creating_history_rows"] > 0,
+        "native job3 namespace provenance changed",
+    )
+    rows = custody["namespaces"]
+    t.c0.require(isinstance(rows, list) and len(rows) == 2, "exact temp/toast pair required")
+    fields = {"oid", "name", "owner", "acl", "xmin", "recognized_temp", "classes", "procedures", "types"}
+    for row in rows:
+        t.c0.require(
+            set(row) == fields
+            and row["owner"] == "postgres"
+            and row["acl"] is None
+            and row["recognized_temp"] is True
+            and all(type(row[k]) is int and row[k] == 0 for k in ["classes", "procedures", "types"]),
+            "native namespace is not an empty bootstrap-owned temp schema",
+        )
+        t.c0.require(
+            all(
+                isinstance(row[k], str) and re.fullmatch(r"[0-9]+", row[k]) and 0 < int(row[k]) < 2**32
+                for k in ["oid", "xmin"]
+            ),
+            "native namespace OID/XID changed",
+        )
+    temp, toast = rows
+    match = re.fullmatch(r"pg_temp_([1-9][0-9]*)", temp["name"])
+    t.c0.require(
+        match
+        and toast["name"] == "pg_toast_temp_" + match[1]
+        and temp["xmin"] == toast["xmin"]
+        and int(temp["oid"]) < int(toast["oid"]),
+        "native temp/toast creation pair changed",
+    )
+    additions = {row["oid"]: row["name"] for row in rows}
+    t.c0.require(
+        not (set(previous) & set(additions)) and current == previous | additions, "unrelated namespace map drift"
+    )
+    return [{"oid": row["oid"], "name": row["name"], "creating_xid": row["xmin"]} for row in rows]
+
+
+def namespace_custody_sql(custody):
+    """Recheck measured native provenance inside the guarded install transaction."""
+    ids = ",".join(row["oid"] for row in custody["namespaces"])
+    xid = t.literal(custody["namespaces"][0]["xmin"])
+    return f"""(SELECT jsonb_build_object('version','{NAMESPACE_CUSTODY_VERSION}',
+ 'server',current_setting('server_version_num')::int,
+ 'extension',(SELECT extversion FROM pg_extension WHERE extname='timescaledb'),
+ 'policy_body_sha256',(SELECT encode(public.digest(p.prosrc,'sha256'),'hex') FROM pg_proc p
+ JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='_timescaledb_functions'
+ AND p.proname='policy_job_stat_history_retention' AND p.proargtypes='23 3802'::oidvector),
+ 'creating_history_rows',(SELECT count(*) FROM _timescaledb_internal.bgw_job_stat_history WHERE xmin::text={xid}),
+ 'namespaces',(SELECT jsonb_agg(jsonb_build_object('oid',n.oid::text,'name',n.nspname,'owner',pg_get_userbyid(n.nspowner),
+ 'acl',n.nspacl,'xmin',n.xmin::text,'recognized_temp',pg_is_other_temp_schema(n.oid) OR n.oid=pg_my_temp_schema(),
+ 'classes',(SELECT count(*) FROM pg_class c WHERE c.relnamespace=n.oid),
+ 'procedures',(SELECT count(*) FROM pg_proc p WHERE p.pronamespace=n.oid),
+ 'types',(SELECT count(*) FROM pg_type t WHERE t.typnamespace=n.oid)) ORDER BY n.oid)
+ FROM pg_namespace n WHERE n.oid IN ({ids}))))"""
+
+
+def installation_projection(before, reviewed, *, namespace_custody=None):
+    """Expected current successor, distinct from the genuine reviewed record.
+
+    Keep that original record immutable. Only a proven intervening refresh may
+    replace the expected physical facts; all reviewed nonphysical post fields
+    and the exact source ops tuple/definition remain unchanged.
+    """
+    post = checked_record(reviewed["before_witness"], reviewed)
+    t.c0.checked(before, target=True)
+    old = reviewed["before_witness"]
+    t.c0.require(set(before) == set(old), "reviewed predecessor shape changed")
+    raw = "portability_native_facts"
+    t.c0.require(
+        all(before[k] == old[k] for k in old if k not in {raw, "namespaces"}), "unreviewed predecessor semantic drift"
+    )
+    namespace_delta = validate_namespace_lineage(old["namespaces"], before["namespaces"], namespace_custody)
+    delta = (
+        []
+        if before[raw] == old[raw]
+        else validate_raw_lineage(old[raw], before[raw], namespace_custody=namespace_custody)
+    )
+    expected = copy.deepcopy(post)
+    expected[raw] = copy.deepcopy(before[raw])
+    expected["namespaces"] = copy.deepcopy(before["namespaces"])
+    validate_post(before, expected)
+    validate_ops(reviewed["ops_before"], reviewed["ops_after"], before, expected)
+    return expected, delta + [{"namespace_addition": row} for row in namespace_delta]
+
+
 def receipts_sql():
     return f"(SELECT jsonb_agg(to_jsonb(x) ORDER BY login_name) FROM {t.TABLE} x)"
 
@@ -176,13 +280,23 @@ def ops_sql():
     return f"(SELECT jsonb_build_object('native',to_jsonb(p),'definition',pg_get_functiondef(p.oid),'catalog_definition_text',{payload}::text) FROM pg_proc p WHERE p.oid='public.fn_experiment_v2_ops_status()'::regprocedure)"
 
 
-def emit_sql(before, *, prior_rows, reviewed=None, qualification_sha=None):
+def emit_sql(before, *, prior_rows, reviewed=None, qualification_sha=None, namespace_custody=None):
     """Complete standalone transaction, rollback by default. Caller uses existing
     peer bootstrap wrapper and exact UID/image/source custody transport."""
     t.c0.checked(before, target=True)
     validate_prior_rows(prior_rows)
     ddl, old, new = selected_source()
-    post = checked_record(before, reviewed) if reviewed is not None else None
+    post = (
+        installation_projection(before, reviewed, namespace_custody=namespace_custody)[0]
+        if reviewed is not None
+        else None
+    )
+    t.c0.require(
+        reviewed is not None or namespace_custody is None, "namespace projection requires genuine reviewed record"
+    )
+    namespace_guard = ""
+    if namespace_custody is not None:
+        namespace_guard = f"IF {namespace_custody_sql(namespace_custody)} IS DISTINCT FROM {t.literal(json.dumps(namespace_custody))}::jsonb THEN RAISE EXCEPTION 'successor native job3 namespace custody changed'; END IF;"
     t.c0.require((post is None) == (qualification_sha is None), "complete reviewed qualification required")
     if post is not None:
         t.c0.require(t.transaction.is_hash(qualification_sha), "actual qualification hash required")
@@ -227,6 +341,7 @@ DECLARE v_expected jsonb := current_setting('verdify.cnpg_transition_expected_be
  v_original jsonb; v_receipts jsonb; v_roles jsonb; v_members jsonb; v_started timestamptz := clock_timestamp();
  v_login text; v_field text; v_expected_entries jsonb;
 BEGIN
+ {namespace_guard}
  {select} INTO v_before;
  IF v_before IS DISTINCT FROM v_expected THEN RAISE EXCEPTION 'successor stale full predecessor'; END IF;
  IF NOT coalesce(({t.target_receipt_shape()}),false) OR
@@ -326,7 +441,14 @@ REFRESH_RAW_FIELDS = {
 }
 
 
-def validate_raw_lineage(previous, current):
+HISTORY_RAW_FIELDS = {
+    ("relations", "_timescaledb_internal.bgw_job_stat_history"): {"relfilenode", "relfrozenxid"},
+    ("indexes", "_timescaledb_internal.bgw_job_stat_history_pkey"): {"relfilenode", "relpages", "reltuples"},
+    ("indexes", "_timescaledb_internal.bgw_job_stat_history_job_id_idx"): {"relfilenode", "relpages", "reltuples"},
+}
+
+
+def validate_raw_lineage(previous, current, *, namespace_custody=None):
     """Closed native PG16 nonconcurrent REFRESH physical delta, not normalization.
 
     Actual preserved 269 admission/current facts showed only these five fields.
@@ -337,6 +459,9 @@ def validate_raw_lineage(previous, current):
     """
     t.c0.require(set(previous) == set(current), "raw lineage group changed")
     changes = []
+    if namespace_custody is not None:
+        rows = namespace_custody["namespaces"]
+        validate_namespace_lineage({}, {row["oid"]: row["name"] for row in rows}, namespace_custody)
     for kind in previous:
         oldrows, newrows = previous[kind], current[kind]
 
@@ -350,7 +475,8 @@ def validate_raw_lineage(previous, current):
         )
         for old, new in zip(oldrows, newrows, strict=True):
             name = identity(old)
-            allowed = REFRESH_RAW_FIELDS.get(name) if kind == "relations" else None
+            history = HISTORY_RAW_FIELDS.get((kind, name)) if namespace_custody is not None else None
+            allowed = history or (REFRESH_RAW_FIELDS.get(name) if kind == "relations" else None)
             if not allowed:
                 t.c0.require(old == new, "unrelated raw lineage drift")
                 continue
@@ -359,16 +485,31 @@ def validate_raw_lineage(previous, current):
                 "refresh definition/native fact shape changed",
             )
             a, b = old["native"], new["native"]
-            t.c0.require(set(a) == set(b) and a["relkind"] == b["relkind"] == "m", "refresh raw relation type changed")
+            expected_kind = ("i" if kind == "indexes" else "r") if history else "m"
+            t.c0.require(
+                set(a) == set(b) and a["relkind"] == b["relkind"] == expected_kind, "refresh raw relation type changed"
+            )
             t.c0.require(all(a[k] == b[k] for k in a if k not in allowed), "unapproved raw refresh field drift")
-            for field in sorted(allowed):
+            if history and kind == "relations":
                 t.c0.require(
-                    all(
-                        isinstance(value, str) and re.fullmatch(r"[0-9]+", value) and 0 < int(value) < 2**32
-                        for value in [a[field], b[field]]
-                    ),
-                    "refresh native OID/XID type changed",
+                    b["relfrozenxid"] == namespace_custody["namespaces"][0]["xmin"],
+                    "job3 truncate horizon differs from proved creating transaction",
                 )
+            for field in sorted(allowed):
+                if field in {"relpages", "reltuples"}:
+                    pairs = {(1, 0), (0, 0)} if field == "relpages" else {(0, -1), (-1, -1)}
+                    t.c0.require(
+                        type(a[field]) is int and type(b[field]) is int and (a[field], b[field]) in pairs,
+                        "job3 index truncate statistics differ from actual source operation",
+                    )
+                else:
+                    t.c0.require(
+                        all(
+                            isinstance(value, str) and re.fullmatch(r"[0-9]+", value) and 0 < int(value) < 2**32
+                            for value in [a[field], b[field]]
+                        ),
+                        "refresh native OID/XID type changed",
+                    )
                 if a[field] != b[field]:
                     changes.append(
                         {
@@ -382,7 +523,7 @@ def validate_raw_lineage(previous, current):
     return changes
 
 
-def validate_lineage(source, prior_install, before):
+def validate_lineage(source, prior_install, before, *, namespace_custody=None):
     """Historical source -> actual admission -> current complete predecessor.
 
     Complete catalog/semantic/body/ledger/seal fields remain identical. Only
@@ -401,12 +542,16 @@ def validate_lineage(source, prior_install, before):
     previous = prior_install["post_witness"]
     t.c0.require(set(before) == set(previous), "prior admission witness shape changed")
     t.c0.require(
-        all(before[k] == previous[k] for k in before if k != "portability_native_facts"),
+        all(before[k] == previous[k] for k in before if k not in {"portability_native_facts", "namespaces"}),
         "current admitted catalog/semantic/ledger/seal profile changed",
     )
-    raw_delta = validate_raw_lineage(previous["portability_native_facts"], before["portability_native_facts"])
+    namespace_delta = validate_namespace_lineage(previous["namespaces"], before["namespaces"], namespace_custody)
+    raw_delta = validate_raw_lineage(
+        previous["portability_native_facts"], before["portability_native_facts"], namespace_custody=namespace_custody
+    )
     return {
         "raw_delta": raw_delta,
+        "namespace_delta": namespace_delta,
         "original_source_to_prior_admission": True,
         "current_profile_unchanged": True,
         "prior_raw_sha256": digest(
@@ -477,7 +622,7 @@ def read_record(path, *, mode="rollback-qualification"):
     return value, digest(raw)
 
 
-def retained_sql(before, *, prior_rows, reviewed=None, qualification_sha=None):
+def retained_sql(before, *, prior_rows, reviewed=None, qualification_sha=None, namespace_custody=None):
     """Use the unchanged retained-session outer bootstrap/identity/locks.
 
     AS locks acquired before this savepoint survive a genuine qualification
@@ -486,7 +631,13 @@ def retained_sql(before, *, prior_rows, reviewed=None, qualification_sha=None):
     No new object is allocated, so new-table child-XID machinery is inapplicable.
     The complete existing pg_proc tuple fields/OID remain exact except prosrc.
     """
-    sql = emit_sql(before, prior_rows=prior_rows, reviewed=reviewed, qualification_sha=qualification_sha)
+    sql = emit_sql(
+        before,
+        prior_rows=prior_rows,
+        reviewed=reviewed,
+        qualification_sha=qualification_sha,
+        namespace_custody=namespace_custody,
+    )
     t.c0.require(sql.count("\nBEGIN;\n") == 1, "closed successor transaction required")
     sql = sql.replace("\nBEGIN;\n", "\nSAVEPOINT cnpg_target270_qualification;\n", 1)
     if reviewed is None:
@@ -670,6 +821,8 @@ def main():
     parser.add_argument("--output", type=Path)
     parser.add_argument("--reviewed", type=Path)
     parser.add_argument("--reviewed-sha256")
+    parser.add_argument("--namespace-custody", type=Path)
+    parser.add_argument("--namespace-custody-sha256")
     parser.add_argument("--execute-qualification", action="store_true")
     parser.add_argument("--binding", type=Path)
     parser.add_argument("--binding-sha256")
@@ -689,7 +842,16 @@ def main():
     t.c0.require(rows_hash == args.prior_row_custody_sha256, "original row custody hash mismatch")
     if args.execute_qualification:
         t.c0.require(
-            not any([args.before, args.output, args.reviewed, args.reviewed_sha256]),
+            not any(
+                [
+                    args.before,
+                    args.output,
+                    args.reviewed,
+                    args.reviewed_sha256,
+                    args.namespace_custody,
+                    args.namespace_custody_sha256,
+                ]
+            ),
             "rollback execution refuses mixed emit/install mode",
         )
         t.c0.require(
@@ -717,14 +879,26 @@ def main():
     t.c0.require(args.before and args.before_sha256 and args.output, "complete SQL emission custody required")
     before, before_hash = t.c0.read_witness(args.before)
     t.c0.require(before_hash == args.before_sha256, "complete predecessor custody mismatch")
-    validate_lineage(source, prior, before)
+    namespace_custody = None
+    if args.namespace_custody:
+        namespace_custody, custody_hash = t.c0.read_witness(args.namespace_custody)
+        t.c0.require(custody_hash == args.namespace_custody_sha256, "namespace custody hash changed")
+    else:
+        t.c0.require(args.namespace_custody_sha256 is None, "incomplete namespace custody")
+    validate_lineage(source, prior, before, namespace_custody=namespace_custody)
     reviewed = qualification_sha = None
     if args.reviewed:
         reviewed, qualification_sha = read_record(args.reviewed)
         t.c0.require(qualification_sha == args.reviewed_sha256, "reviewed successor custody mismatch")
     else:
         t.c0.require(args.reviewed_sha256 is None, "incomplete reviewed successor custody")
-    sql = emit_sql(before, prior_rows=prior_rows, reviewed=reviewed, qualification_sha=qualification_sha)
+    sql = emit_sql(
+        before,
+        prior_rows=prior_rows,
+        reviewed=reviewed,
+        qualification_sha=qualification_sha,
+        namespace_custody=namespace_custody,
+    )
     args.output.write_text(t.bootstrap_owner_sql(sql))
 
 
