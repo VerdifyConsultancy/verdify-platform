@@ -197,6 +197,9 @@ def test_native_dataset_sql_is_read_only_full_inventory_and_fixed_identity(profi
         word in sql for word in ("INSERT INTO", "UPDATE public", "ALTER TABLE", "CREATE TABLE", "DELETE FROM")
     )
     assert "min(%I)::text,max(%I)::text" in sql
+    assert "\\gexec" in sql and sql.count("SELECT count(*)") == 1
+    assert "statement_timeout='120s'" in sql
+    assert "FOR relation IN" not in sql
 
 
 def test_native_private_fixture_dataset_collector_handles_uncompressed_and_compressed(private_pg):  # noqa: F811
@@ -207,8 +210,8 @@ def test_native_private_fixture_dataset_collector_handles_uncompressed_and_compr
       CREATE TABLE _timescaledb_catalog.hypertable(id int,schema_name text,table_name text);
       CREATE TABLE _timescaledb_catalog.chunk(id int,hypertable_id int,schema_name text,table_name text,
         compressed_chunk_id int,dropped boolean);
-      CREATE TABLE public.fixture_data(ts timestamptz);
-      INSERT INTO public.fixture_data VALUES('2026-10-01T10:00:00Z'),('2026-10-01T10:01:00Z');
+      CREATE TABLE public.fixture_data(ts timestamptz, "other time" timestamp);
+      INSERT INTO public.fixture_data VALUES('2026-10-01T10:00:00Z','2026-10-01T09:00:00'),('2026-10-01T10:01:00Z','2026-10-01T09:01:00');
       CREATE TABLE _timescaledb_catalog.fixture_chunk(ts timestamptz);
       CREATE TABLE _timescaledb_catalog.fixture_compressed(ts timestamptz);
       INSERT INTO _timescaledb_catalog.hypertable VALUES(1,'public','fixture_data');
@@ -225,6 +228,10 @@ def test_native_private_fixture_dataset_collector_handles_uncompressed_and_compr
       CREATE FUNCTION public.fixture_nested_resolver() RETURNS int LANGUAGE plpgsql AS
           'BEGIN RETURN fixture_nested_value(); END';
       CREATE VIEW public.fixture_nested_view AS SELECT public.fixture_nested_resolver() AS value;""")
+    # jsonb_build_object has a native argument ceiling; retain all timestamp
+    # columns instead of silently narrowing the complete relation inventory.
+    q("CREATE TABLE public.fixture_many_times(" + ",".join(f"t{i} timestamptz" for i in range(55)) + ")")
+    q("INSERT INTO public.fixture_many_times DEFAULT VALUES")
     emitted = p.dataset_sql(p.pitr.SOURCE)
     native_version = q("SHOW server_version_num")
     fixture_sql = emitted.replace("::int<>160013", "::int<>" + native_version)
@@ -240,6 +247,9 @@ def test_native_private_fixture_dataset_collector_handles_uncompressed_and_compr
     assert next(row for row in result["relations"] if row["relation"] == "public.fixture_nested_view")["count"] == 1
     data = next(row for row in result["relations"] if row["relation"] == "public.fixture_data")
     assert data["count"] == 2 and data["time_ranges"]["ts"] == ["2026-10-01 10:00:00+00", "2026-10-01 10:01:00+00"]
+    assert data["time_ranges"]["other time"] == ["2026-10-01 09:00:00", "2026-10-01 09:01:00"]
+    many = next(row for row in result["relations"] if row["relation"] == "public.fixture_many_times")
+    assert many["count"] == 1 and many["time_ranges"] == {f"t{i}": [None, None] for i in range(55)}
     assert len(result["timescale_owners"]) == 2
     assert result["timescale_owners"][0]["compressed"] is None
     assert result["timescale_owners"][1]["compressed_owner"] == "verdify"
@@ -247,10 +257,11 @@ def test_native_private_fixture_dataset_collector_handles_uncompressed_and_compr
     assert bad.returncode != 0 and "refuses target/session" in bad.stderr
     # Adding public resolution must never permit a view's function to write.
     q("""CREATE FUNCTION public.fixture_forbidden_write() RETURNS int LANGUAGE plpgsql AS
-          'BEGIN INSERT INTO public.fixture_data VALUES(now()); RETURN 1; END';
+          'BEGIN INSERT INTO public.fixture_data(ts) VALUES(now()); RETURN 1; END';
       CREATE VIEW public.fixture_writing_view AS SELECT public.fixture_forbidden_write() AS value;""")
     writing_failure = q(fixture_sql, check=False)
     assert writing_failure.returncode != 0 and "read-only transaction" in writing_failure.stderr
+    assert '"schema": "cnpg-physical-data-parity-v1"' not in writing_failure.stdout
     assert q("SELECT count(*) FROM public.fixture_data") == "2"
 
 
