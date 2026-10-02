@@ -316,3 +316,51 @@ def test_record_keeps_original_single_and_composite_bounds(monkeypatch):
     raw = json.dumps(value).encode()
     with pytest.raises(ValueError, match="two-witness record bound"):
         d.record(b"{" + b" " * 1100 + raw[1:] + b"\n", "savepoint-rollback-qualification")
+
+
+def test_actual_pipe_backpressure_before_trailing_input(tmp_path):
+    import sys
+
+    # A real child emits an incompressible full-record-sized output before
+    # reading the large SQL line and trailing command. Blocking stdin-first
+    # cannot progress when both native pipes fill.
+    script = r"""
+import gzip, os, sys
+start = sys.stdin.buffer.readline().decode().strip().split()[1]
+assert sys.stdin.buffer.readline() == b"\\o | gzip -c\n"
+payload = os.urandom(1024 * 1024)
+sys.stdout.buffer.write((start + "\n").encode())
+sys.stdout.buffer.write(gzip.compress(payload))
+sys.stdout.buffer.flush()
+for line in sys.stdin.buffer:
+    if line.startswith(b"\\echo "):
+        sys.stdout.buffer.write(line.strip().split()[1] + b"\n")
+        sys.stdout.buffer.flush()
+        break
+"""
+    session = d.Session([sys.executable, "-c", script], tmp_path)
+    try:
+        raw = session.phase("pipe-pressure", "--" + os.urandom(1024 * 1024).hex())
+        assert len(raw) == 1024 * 1024
+        assert (tmp_path / "pipe-pressure.stdout").read_bytes() == raw
+        assert not session.commit_sent
+    finally:
+        session.close()
+
+
+def test_input_backpressure_shares_phase_deadline(tmp_path, monkeypatch):
+    import sys
+
+    monkeypatch.setattr(d, "PHASE_SECONDS", 0.05)
+    # A native process that never consumes input must not leave the driver
+    # blocked in write() outside the phase deadline or cleanup bounds.
+    session = d.Session([sys.executable, "-c", "import time;time.sleep(30)"], tmp_path)
+    started = time.monotonic()
+    try:
+        with pytest.raises(ValueError, match="phase deadline"):
+            session.phase("input-pressure", "--" + "x" * (1024 * 1024))
+        assert time.monotonic() - started < 2
+    finally:
+        session.close()
+    assert session.process.poll() is not None
+    assert not session.commit_sent

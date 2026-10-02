@@ -196,24 +196,39 @@ class Session:
         (self.directory / (name + ".sql")).write_text(sql)
         if name == "install":
             self.commit_sent = True
-        self.process.stdin.write(command.encode())
-        self.process.stdin.flush()
+        # Read and write together: psql can produce its complete witness before
+        # consuming the trailing savepoint/COMMIT commands. Blocking stdin first
+        # would deadlock against stdout pipe backpressure on large full records.
+        pending = memoryview(command.encode())
         deadline = min(self.started + TOTAL_SECONDS, time.monotonic() + PHASE_SECONDS)
+        os.set_blocking(self.process.stdin.fileno(), False)
+        self.selector.register(self.process.stdin, selectors.EVENT_WRITE)
         data = self.buffer
-        with (self.directory / (name + ".native-stream")).open("wb") as receipt:
-            receipt.write(data)
-            while end not in data:
-                remaining = deadline - time.monotonic()
-                t.c0.require(remaining > 0, "retained phase deadline exceeded")
-                events = self.selector.select(min(1, remaining))
-                if events:
-                    chunk = os.read(self.process.stdout.fileno(), 65536)
-                    t.c0.require(bool(chunk), "native session ended before complete phase")
-                    receipt.write(chunk)
-                    data += chunk
-                    t.c0.require(len(data) <= MAX_STREAM, "bounded native stream exceeded")
-                elif self.process.poll() is not None:
-                    raise ValueError("native session terminated before complete phase")
+        try:
+            with (self.directory / (name + ".native-stream")).open("wb") as receipt:
+                receipt.write(data)
+                while end not in data:
+                    remaining = deadline - time.monotonic()
+                    t.c0.require(remaining > 0, "retained phase deadline exceeded")
+                    events = self.selector.select(min(1, remaining))
+                    for key, _ in events:
+                        if key.fileobj is self.process.stdin:
+                            written = os.write(self.process.stdin.fileno(), pending[:65536])
+                            pending = pending[written:]
+                            if not pending:
+                                self.selector.unregister(self.process.stdin)
+                        else:
+                            chunk = os.read(self.process.stdout.fileno(), 65536)
+                            t.c0.require(bool(chunk), "native session ended before complete phase")
+                            receipt.write(chunk)
+                            data += chunk
+                            t.c0.require(len(data) <= MAX_STREAM, "bounded native stream exceeded")
+                    if not events and self.process.poll() is not None:
+                        raise ValueError("native session terminated before complete phase")
+            t.c0.require(not pending, "native phase ended before complete SQL input")
+        finally:
+            if self.process.stdin.fileno() in self.selector.get_map():
+                self.selector.unregister(self.process.stdin)
         chunk, self.buffer = data.split(end, 1)
         t.c0.require(start in chunk, "missing native phase start")
         compressed = chunk.split(start, 1)[1]
