@@ -264,22 +264,28 @@ snapshot_ranges AS (
    (SELECT max(s.ts) FROM public.setpoint_snapshot s,bounds b
     WHERE s.greenhouse_id='vallery' AND s.parameter=p.parameter AND s.ts<=b.last_ts) AS hi
  FROM parameters p
-), candidates AS (
- SELECT s.parameter,s.ts,tstzrange(s.ts,s.expired_at,'[)') AS valid
+), candidates AS MATERIALIZED (
+ SELECT s.parameter,s.ts,s.expired_at,tstzrange(s.ts,s.expired_at,'[)') AS valid
  FROM public.setpoint_changes s CROSS JOIN bounds b
  WHERE s.greenhouse_id='vallery' AND s.parameter IN ("""
         + params
         + """)
    AND s.ts<=b.last_ts AND (s.expired_at IS NULL OR s.expired_at>b.first_ts)
    AND (s.expired_at IS NULL OR s.expired_at>s.ts)
+), finite_expiry AS MATERIALIZED (
+ SELECT parameter,ts,valid FROM candidates WHERE expired_at IS NOT NULL
 ), covered AS (
- SELECT parameter,ts,valid,
-   range_agg(valid) OVER (PARTITION BY parameter ORDER BY ts DESC
-     GROUPS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING) AS newer_coverage
+ SELECT parameter,ts,expired_at,
+   min(ts) FILTER (WHERE expired_at IS NULL) OVER (PARTITION BY parameter ORDER BY ts DESC
+     GROUPS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING) AS next_permanent
  FROM candidates
 ), winning AS (
  SELECT c.parameter,c.ts FROM covered c CROSS JOIN bounds b
- WHERE (tstzmultirange(c.valid)-COALESCE(c.newer_coverage,'{}'::tstzmultirange)) && b.climate_points
+ WHERE (tstzmultirange(tstzrange(c.ts,LEAST(c.expired_at,c.next_permanent),'[)'))-
+   COALESCE((SELECT range_agg(f.valid) FROM finite_expiry f
+             WHERE f.parameter=c.parameter AND f.ts>c.ts
+               AND (c.next_permanent IS NULL OR f.ts<c.next_permanent)),
+            '{}'::tstzmultirange)) && b.climate_points
 ), firmware_ranges AS (
  SELECT p.parameter,min(w.ts) AS lo,max(w.ts) AS hi
  FROM parameters p LEFT JOIN winning w ON w.parameter=p.parameter GROUP BY p.parameter
