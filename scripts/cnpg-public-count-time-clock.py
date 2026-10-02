@@ -8,6 +8,7 @@ This module does not establish dataset parity or a performance qualification.
 """
 
 import hashlib
+import importlib.util
 import json
 import re
 from datetime import datetime
@@ -15,6 +16,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PROFILE = ROOT / "tests/fixtures/cnpg_count_time/source-public-count-time-270.json"
+POLICY_SPEC = importlib.util.spec_from_file_location(
+    "policy_twin_count_time", ROOT / "scripts/cnpg-policy-twin-count-time.py"
+)
+POLICY = importlib.util.module_from_spec(POLICY_SPEC)
+POLICY_SPEC.loader.exec_module(POLICY)
 PROFILE_SHA = "75abce66a2eb7109c7e28205b6636280e627c94b4f2d5cacc1e789c7e1b9d8b8"
 TOKEN = re.compile(
     r"(?P<space>\s+)|(?P<comment>--[^\n]*(?:\n|$)|/\*.*?\*/)"
@@ -262,7 +268,8 @@ def guard_sql(observation_expression):
         for name, value in source["views"].items()
     }
     expected_functions = source["reachable_functions"]
-    return """DO $closed_count_time_clock$
+    return (
+        """DO $closed_count_time_clock$
 DECLARE v_views jsonb; v_function record; v_actual jsonb; v_identities jsonb;
 BEGIN
  IF current_setting('TimeZone')<>'UTC' OR current_setting('transaction_read_only')<>'on' THEN
@@ -303,12 +310,25 @@ BEGIN
  END IF;
 END $closed_count_time_clock$;
 """.format(
-        views=literal(json.dumps(expected_views, sort_keys=True)),
-        functions=literal(json.dumps(expected_functions, sort_keys=True)),
-        season=season_expression(observation_expression, source),
+            views=literal(json.dumps(expected_views, sort_keys=True)),
+            functions=literal(json.dumps(expected_functions, sort_keys=True)),
+            season=season_expression(observation_expression, source),
+        )
+        + POLICY.guard_sql()
     )
 
 
 def relation_aggregate_template_at(observation_expression):
     checked_observation_expression(observation_expression)
-    return "WITH " + common_ctes(observation_expression).replace("%", "%%") + " SELECT count(*), %s FROM %I"
+    return (
+        "WITH "
+        + (
+            common_ctes(observation_expression)
+            + ",\n"
+            + POLICY.VIEW
+            + " AS NOT MATERIALIZED ("
+            + POLICY.query_definition()
+            + ")"
+        ).replace("%", "%%")
+        + " SELECT count(*), %s FROM %I"
+    )

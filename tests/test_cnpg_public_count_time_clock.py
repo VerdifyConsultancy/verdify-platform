@@ -169,6 +169,9 @@ def test_native_complete_profile_guard_and_common_window_count_time(private_pg, 
     source["dependencies"] = [{"view": "v_parent_fixture", "dependency": "v_recent_fixture"}]
     source["reachable_functions"] = {"fn_current_season()": source["reachable_functions"]["fn_current_season()"]}
     monkeypatch.setattr(c, "profile", lambda: source)
+    # This fixture replaces the complete source inventory with two local views.
+    # Policy view options are exercised separately by the owning native test.
+    monkeypatch.setattr(c.POLICY, "guard_sql", lambda: "")
     clock = json.loads(q("SET timezone='UTC'; SELECT to_jsonb(now())"))
     expression = "'" + clock + "'::timestamptz"
     if mutation == "view-body":
