@@ -49,3 +49,29 @@ Preserve both artifacts and hashes. Two complete distinct natural source epochs
 must have strictly advancing times, matching identity and no reset. Retain
 failed and off-grid evidence; an explicit grid proposal belongs to the separate
 source-derived desired-policy path.
+
+### Measured consumed-evidence firmware successor
+
+The source consumer now binds firmware `2026.10.2.0637.620a218a-wifi-bound`,
+compiled from frozen source `620a218a93cf24ca1e1b49dfed617cc97de7d258`.
+Its measured ELF SHA256 is
+`39a237cfb044e72633d52646c203d27b1217ba9f9de3d4a8308798b1b7a96b5b`;
+the exact OTA binary SHA256 is
+`0f84ea9a06a8c96928d3675361515aa8fa1ab39528d256353babb59717bd9176`.
+This source binding is preparation for that exact binary, not a deployment or
+physical qualification claim. Historical2143 captures keep their original
+firmware/source identity and outcomes.
+
+The six genuinely consumed Setpoints, branch and sample marker publish in one
+15-second controller batch, with the marker last. Solar, per-zone, wet and delta
+diagnostics keep their five-minute cadence. This adds 30.4 publications/minute;
+actual heap/API health must be verified after delivery. Control arithmetic,
+strict binary32 equality, 30-second sample freshness, original callback fences
+and authority expiry remain unchanged.
+
+Actual Xtensa GCC 14.2 ELF inspection found the same float operand order,
+loaded scalar constants and libm/division call targets for the solar/band
+functions and phase helper as historical 2143. Function relocation annotations
+and solar-phase alignment padding differ. The host 46,080-reference differential
+checks this explicit instruction contract; it does not execute the Xtensa target
+or replace two fresh native full 48-component epochs and source-owned restoration.

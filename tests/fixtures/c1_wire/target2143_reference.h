@@ -1,8 +1,10 @@
-// Source-only differential reference for actual2143 ELF instruction lowering.
-// ELF sha256 f8cc733dd5286c2f1edf0d0a2b4a29532c8fb5460b344c2e9a7414959d158bd6.
+// Source-only reference for measured successor620a and historical2143 arithmetic.
+// Successor ELF sha256 39a237cfb044e72633d52646c203d27b1217ba9f9de3d4a8308798b1b7a96b5b.
+// Historical2143 ELF sha256 f8cc733dd5286c2f1edf0d0a2b4a29532c8fb5460b344c2e9a7414959d158bd6.
 // Owning greenhouse_solar.h sha256 dd0557760ac17fd61eca8a0449d0060f8452d418616edda2ab95892408a2fb0e.
 // Explicit fmaf operands mirror madd.s/msub.s at compute_solar_times,
-// solar_phase helper 400e997c and band_value_at_phase. Compile contraction off.
+// solar_phase helper and band_value_at_phase: actual operands/literal words match
+// across the two ELFs; addresses move. Compile contraction off.
 // Host libm differential is not a target execution or native capture receipt.
 #pragma once
 /*

@@ -203,11 +203,9 @@ interval:
                   id(runtime_mister_south_ms)  = 0;
                   id(runtime_mister_west_ms)   = 0;
                   id(runtime_mister_center_ms) = 0;
-                  // Clear the dwell-fence last-off stamps so a day rollover
-                  // never leaves a stale stamp that wrongly fences a zone.
-                  id(last_off_south_ms)  = 0;
-                  id(last_off_west_ms)   = 0;
-                  id(last_off_center_ms) = 0;
+                  // Last-off stamps use monotonic millis(), not calendar days.
+                  // Preserve them across midnight so an aborted pulse cannot
+                  // bypass its existing minimum-off fence at a day rollover.
                   id(mister_water_today) = 0.0f;
                   // B5: reset DLI accumulator at midnight
                   id(dli_accumulator) = 0.0f;
@@ -1355,14 +1353,9 @@ interval:
               };
 
               auto turn_off_all_misters = [&]() {
-                // Stamp the just-energized zone's last-off BEFORE clearing
-                // mister_pulse_zone so the dwell fence can suppress a too-fast
-                // re-fire of that zone. All off-paths (pulse expiry, de-escalate,
-                // blocked, safety) funnel through here, so the stamp is complete.
-                const int off_z = id(mister_pulse_zone);
-                if(off_z == 1)      id(last_off_south_ms)  = now_ms;
-                else if(off_z == 2) id(last_off_west_ms)   = now_ms;
-                else if(off_z == 3) id(last_off_center_ms) = now_ms;
+                // GPIO falling-edge callbacks own last-off stamps for every
+                // stop path, including watchdog/irrigation cancellation. A
+                // repeated OFF request must not restart the minimum-off fence.
                 id(south_wall_mister).turn_off();
                 id(south_wall_mister_fertilized).turn_off();
                 id(west_wall_mister).turn_off();
@@ -1739,18 +1732,37 @@ interval:
             const uint32_t climate_diag_now_ms = millis();
             static uint32_t last_climate_continuous_diag_ms = 0;
             static uint32_t last_climate_band_diag_ms = 0;
+            static uint32_t last_consumed_band_evidence_ms = 0;
             const bool climate_continuous_diag_due = last_climate_continuous_diag_ms == 0
               || (climate_diag_now_ms - last_climate_continuous_diag_ms) >= 60000UL;
             const bool climate_band_diag_due = last_climate_band_diag_ms == 0
               || (climate_diag_now_ms - last_climate_band_diag_ms) >= 300000UL;
+
+            const bool consumed_band_evidence_due = last_consumed_band_evidence_ms == 0
+              || (climate_diag_now_ms - last_consumed_band_evidence_ms) >= 15000UL;
+            // Fresh computed evidence has a 30s source contract. Keep its six
+            // consumed Setpoints, branch and sample clock in one 15s batch;
+            // publish the marker last. This does not request API cached state.
+            if (consumed_band_evidence_due) {
+              id(gh_consumed_temp_low_f).publish_state(setpts.temp_low);
+              id(gh_consumed_temp_high_f).publish_state(setpts.temp_high);
+              id(gh_consumed_vpd_low_kpa).publish_state(setpts.vpd_low);
+              id(gh_consumed_vpd_high_kpa).publish_state(setpts.vpd_high);
+              id(gh_house_temp_target).publish_state(setpts.temp_target);
+              id(gh_house_vpd_target).publish_state(setpts.vpd_target);
+              id(gh_band_source).publish_state(id(sw_onchip_band_enabled) ? "onchip_curve" : "dispatcher_legacy");
+              id(gh_consumed_band_sample_epoch).publish_state(
+                controller_time_valid ? std::to_string(sntp_now.timestamp) : "");
+              last_consumed_band_evidence_ms = climate_diag_now_ms;
+            }
 
             // ── Firmware-v2 EVIDENCE SURFACE (per-zone bands + solar) ─────────
             // Compute the per-zone VPD bands on-chip from the NVS anchor curves
             // at the current solar phase, score each zone's delta-to-target,
             // run the priority arbiter, and publish the new-architecture
             // telemetry so the dispatcher/DB can verify the data is flowing.
-            // Five-minute evidence cadence is enough for these slowly varying
-            // curves and removes 18 unconditional API publications per minute.
+            // Keep slowly varying solar/per-zone/wet/delta diagnostics at five
+            // minutes; consumed Setpoints evidence has its own fresh cadence.
             if (climate_band_diag_due) {
               auto zcurve = [&](float sr, float sm, float ss, float mid) -> float {
                 BandAnchors a = {sr, sm, ss, mid};
@@ -1773,16 +1785,7 @@ interval:
               id(gh_solar_sunrise_min).publish_state(sv2_solar.sunrise_min);
               id(gh_solar_noon_min).publish_state(sv2_solar.solar_noon_min);
               id(gh_solar_sunset_min).publish_state(sv2_solar.sunset_min);
-              // Publish the edges actually consumed by controller_tick.
-              // cfg_* scalar globals are not these edges under onchip_curve.
-              // Keep this batch aligned with targets/phase/band_source below.
-              id(gh_consumed_temp_low_f).publish_state(setpts.temp_low);
-              id(gh_consumed_temp_high_f).publish_state(setpts.temp_high);
-              id(gh_consumed_vpd_low_kpa).publish_state(setpts.vpd_low);
-              id(gh_consumed_vpd_high_kpa).publish_state(setpts.vpd_high);
-              id(gh_house_temp_target).publish_state(setpts.temp_target);
               id(gh_house_temp_delta).publish_state(Tin - setpts.temp_target);
-              id(gh_house_vpd_target).publish_state(setpts.vpd_target);
               id(gh_house_vpd_delta).publish_state(VPD - setpts.vpd_target);
               id(gh_zone_vpd_target_center).publish_state(zb[ZONE_CENTER].target);
               id(gh_zone_vpd_target_south).publish_state(zb[ZONE_SOUTH].target);
@@ -1793,12 +1796,6 @@ interval:
               id(gh_zone_vpd_delta_west).publish_state(std::isfinite(zvpd[ZONE_WEST]) ? zvpd[ZONE_WEST] - zb[ZONE_WEST].target : NAN);
               id(gh_zone_vpd_delta_east).publish_state(std::isfinite(zvpd[ZONE_EAST]) ? zvpd[ZONE_EAST] - zb[ZONE_EAST].target : NAN);
               id(gh_zone_wet_granted).publish_state(won < 0 ? "none" : ZONE_NAMES[won]);
-              id(gh_band_source).publish_state(id(sw_onchip_band_enabled) ? "onchip_curve" : "dispatcher_legacy");
-              // Exact text epoch dates this computed batch; float epoch sensors
-              // lose seconds and cached SubscribeStates callbacks are not a
-              // fresh controller computation. Invalid controller time is empty.
-              id(gh_consumed_band_sample_epoch).publish_state(
-                controller_time_valid ? std::to_string(sntp_now.timestamp) : "");
               last_climate_band_diag_ms = climate_diag_now_ms;
             }
 
@@ -2504,9 +2501,9 @@ interval:
             return;
           }
           if(leak_block) { cancel_all("leak"); return; }
-          if(weekly_active && (!clock_valid || !durations.valid
+          if(weekly_active && (!id(irrig_wall_enabled) || !clock_valid || !durations.valid
              || weekly_state.commissioning_revision != id(wall_commissioning_revision))) {
-            cancel_all(!clock_valid ? "clock invalid" : !durations.valid
+            cancel_all(!id(irrig_wall_enabled) ? "wall irrigation disabled" : !clock_valid ? "clock invalid" : !durations.valid
               ? "commissioning invalid/stale" : "commissioning revision changed");
             return;
           }
