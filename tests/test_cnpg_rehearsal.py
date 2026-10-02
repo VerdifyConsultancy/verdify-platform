@@ -133,3 +133,21 @@ def test_shared_region_ref_preserves_credentials_and_cluster_pod_template():
     checked_cluster["spec"]["imageName"] = cluster["spec"]["imageName"]
     assert cluster == checked_cluster
     assert not any(e["name"] in {"AWS_REGION", "AWS_DEFAULT_REGION"} for e in cluster["spec"].get("env", []))
+
+
+def test_complete_native_witness_admission_has_isolated_memory_budget():
+    # Actual full-witness installation exhausted the original 2Gi cgroup and
+    # failed over. Reserve schedulable memory and preserve full admission guards
+    # under the qualified isolated target's ceiling; shared buffers stay fixed.
+    checked = yaml.safe_load((ROOT / "deploy/k8s/cnpg/rehearsal/cluster/cluster.yaml").read_text())
+    cluster = next(o for o in module.render(checked["spec"]["imageName"]) if o["kind"] == "Cluster")
+    assert cluster == checked
+    assert cluster["metadata"]["namespace"] == "verdify-db-rehearsal"
+    assert cluster["metadata"]["name"] == "verdify-cnpg-rehearsal"
+    assert cluster["spec"]["resources"] == {
+        "requests": {"cpu": "500m", "memory": "2Gi"},
+        "limits": {"memory": "6Gi"},
+    }
+    assert cluster["spec"]["postgresql"]["parameters"]["shared_buffers"] == "256MB"
+    assert cluster["spec"]["instances"] == 3
+    assert cluster["spec"]["postgresql"]["synchronous"]["dataDurability"] == "required"
