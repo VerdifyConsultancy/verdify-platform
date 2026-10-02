@@ -27,7 +27,7 @@ ROLES = {name: f"verdify_{name}_runtime_login" for name in ("api", "ingestor", "
 
 # Execute inside the actual reviewed consumer image, not a substitute psql image.
 PROBE = r'''
-import asyncio, importlib.util, json, logging, os, pathlib, sys, urllib.parse
+import asyncio, datetime, importlib.util, json, logging, os, pathlib, sys, urllib.parse
 logging.disable(logging.CRITICAL)
 binding = json.loads(os.environ['QUALIFICATION_BINDING'])
 role = binding['consumer']
@@ -55,10 +55,44 @@ consumer = importlib.util.module_from_spec(spec)
 sys.modules[spec.name] = consumer
 spec.loader.exec_module(consumer)
 
+EXPECTED_TRANSPORT_HOST = os.environ['DB_HOST']
+TRANSPORT_ATTEMPTS = []
+
+async def wait_transport():
+    # TCP readiness is not login evidence. No credentials or SQL are sent here.
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + 10.0
+    while loop.time() < deadline:
+        assert os.environ['DB_HOST'] == EXPECTED_TRANSPORT_HOST
+        assert os.environ['DB_PORT'] == '5432'
+        attempt = {'started_at':datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            'host':os.environ['DB_HOST'], 'port':5432}
+        TRANSPORT_ATTEMPTS.append(attempt)
+        try:
+            _, writer = await asyncio.wait_for(asyncio.open_connection(os.environ['DB_HOST'], 5432),
+                timeout=min(1.0, deadline - loop.time()))
+        except (ConnectionRefusedError, TimeoutError) as exc:
+            attempt['outcome'] = type(exc).__name__
+        except BaseException as exc:
+            attempt['outcome'] = type(exc).__name__
+            raise
+        else:
+            attempt['outcome'] = 'connected'
+            writer.close()
+            await asyncio.wait_for(writer.wait_closed(), timeout=max(0.0, min(1.0, deadline - loop.time())))
+            if loop.time() >= deadline:
+                raise TimeoutError('bounded target TCP readiness expired')
+            return
+        finally:
+            attempt['finished_at'] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        await asyncio.sleep(min(0.25, max(0.0, deadline - loop.time())))
+    raise TimeoutError('bounded target TCP readiness expired')
+
 async def run():
     import asyncpg
     pool = None
     try:
+        await wait_transport()
         if role == 'mcp':
             pool = await consumer._kpi_fanout_pool_get()
         else:
@@ -88,7 +122,8 @@ async def run():
             'hot_query_row_count':len(rows), 'target_binding_sha256':binding['target_binding_sha256'],
             'consumer_source':binding['consumer_source'], 'consumer_image':binding['consumer_image'],
             'profile_sha256':binding['profile_sha256'], 'password_authentication':'actual asyncpg TCP pool login',
-            'pool_checkout_count':2, 'service_process_started':False}
+            'pool_checkout_count':2, 'service_process_started':False,
+            'transport_readiness_is_authentication':False, 'transport_attempts':TRANSPORT_ATTEMPTS}
     finally:
         if pool is not None:
             await pool.close()
@@ -111,7 +146,8 @@ except BaseException as exc:
         if trace.tb_frame.f_code.co_filename == '<verdify-cnpg-runtime-probe>':
             probe_line = trace.tb_lineno
         trace = trace.tb_next
-    print(json.dumps({'status':'failed','error_category':type(exc).__name__, 'probe_line':probe_line}))
+    print(json.dumps({'status':'failed','error_category':type(exc).__name__, 'probe_line':probe_line,
+        'transport_attempts':globals().get('TRANSPORT_ATTEMPTS', [])}))
     sys.exit(1)
 """.replace("PROBE_TEXT", repr(PROBE))
 
