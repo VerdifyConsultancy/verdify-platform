@@ -385,14 +385,6 @@ class TestMCPToolAvailability:
     """The MCP server must expose all 17 planning tools."""
 
     def test_mcp_server_running(self):
-        import subprocess
-
-        if shutil.which("systemctl") and os.path.isdir("/run/systemd/system"):
-            result = subprocess.run(
-                ["systemctl", "is-active", "verdify-mcp"], capture_output=True, text=True, timeout=5
-            )
-            assert result.stdout.strip() == "active", "MCP server not running"
-            return
         source = (REPO_ROOT / "mcp" / "server.py").read_text()
         manifest = (REPO_ROOT / "deploy/k8s/base/mcp-deployment.yaml").read_text()
         # Route registration goes through the compatibility wrapper so the

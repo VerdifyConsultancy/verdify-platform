@@ -1,19 +1,23 @@
 #!/bin/bash
-# run.sh — Run the full Verdify smoke test suite
+# run.sh — LIVE operator smoke suite; not the offline CI gate (make ci).
 # Usage: ./tests/run.sh          # all tests
 #        ./tests/run.sh -k api   # only API tests
 #        ./tests/run.sh -v       # verbose
 set -euo pipefail
 
-cd /srv/verdify
-source /srv/greenhouse/.venv/bin/activate
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+PYTHON="${PYTHON:-.venv/bin/python}"
+if [ ! -x "$PYTHON" ]; then
+  echo "Missing checkout tooling: run make setup or set PYTHON." >&2
+  exit 127
+fi
 
 echo "═══════════════════════════════════════════════════════"
 echo "  Verdify Smoke Tests — $(date '+%Y-%m-%d %H:%M %Z')"
 echo "═══════════════════════════════════════════════════════"
 echo ""
 
-python -m pytest tests/ \
+"$PYTHON" -m pytest tests/ \
     --tb=short \
     -q \
     "$@"

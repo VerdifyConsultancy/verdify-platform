@@ -143,3 +143,95 @@ def test_occupancy_passes_through_when_enabled(mock_client, monkeypatch):
     pushed = _run(esp32_push.push_occupancy_to_esp32(True, "test"))
     assert pushed == 1
     mock_client.switch_command.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "broken", ["replicas", "rolling", "image_tag", "config_identity", "readiness", "secret", "lease"]
+)
+def test_current_k3s_contract_rejects_real_drift(broken):
+    """Native CI runs this file; each negative also has a genuine-render control."""
+    from test_01_infrastructure import production_documents, validate_delivery
+
+    documents = production_documents()
+    validate_delivery(documents)
+    objects = {(x["kind"], x["metadata"]["name"]): x for x in documents}
+    writer = objects[("Deployment", "verdify-ingestor")]
+    if broken == "replicas":
+        writer["spec"]["replicas"] = 2
+    elif broken == "rolling":
+        writer["spec"]["strategy"]["type"] = "RollingUpdate"
+    elif broken == "image_tag":
+        writer["spec"]["template"]["spec"]["containers"][0]["image"] = "registry.vallery.net/verdify-ingestor:latest"
+    elif broken == "config_identity":
+        writer["spec"]["template"]["metadata"]["annotations"]["verdify.io/config-revision"] = "unknown"
+    elif broken == "readiness":
+        objects[("Deployment", "verdify-mcp")]["spec"]["template"]["spec"]["containers"][0]["readinessProbe"][
+            "httpGet"
+        ]["path"] = "/wrong"
+    elif broken == "secret":
+        documents.append({"kind": "Secret", "metadata": {"name": "forbidden"}})
+    elif broken == "lease":
+        objects[("ConfigMap", "verdify-config")]["data"]["VERDIFY_WRITER_LEASE_ENABLED"] = "0"
+    with pytest.raises(
+        AssertionError,
+        match={
+            "replicas": "exactly one ingestor replica",
+            "rolling": "writer uses Recreate",
+            "image_tag": "immutable origin image",
+            "config_identity": "explicit config identity",
+            "readiness": "MCP authenticated readiness surface",
+            "secret": "production must not render Secret values",
+            "lease": "writer Lease fence enabled",
+        }[broken],
+    ):
+        validate_delivery(documents)
+
+
+@pytest.mark.parametrize("backend", [None, "kube", "invalid"])
+def test_smoke_db_transport_does_not_select_destroyed_vm_from_installed_docker(monkeypatch, backend):
+    from types import SimpleNamespace
+
+    import conftest
+
+    monkeypatch.delenv("VERDIFY_DB_QUERY_MODE", raising=False)
+    monkeypatch.delenv("VERDIFY_DB_BACKEND", raising=False)
+    if backend is not None:
+        monkeypatch.setenv("VERDIFY_DB_BACKEND", backend)
+    monkeypatch.setattr(conftest.shutil, "which", lambda _name: "/fixture/installed")
+    calls = []
+
+    def record(command, **kwargs):
+        calls.append(command)
+        return SimpleNamespace(returncode=0, stdout="1", stderr="")
+
+    monkeypatch.setattr(conftest.subprocess, "run", record)
+    if backend == "invalid":
+        with pytest.raises(ValueError, match="unsupported VERDIFY_DB_BACKEND"):
+            conftest.db_query("SELECT 1")
+        assert not calls
+    else:
+        assert conftest.db_query("SELECT 1") == "1"
+        assert calls[0][:2] == ["kubectl", "exec"]
+        assert calls[0][calls[0].index("-c") + 1] == "postgres"
+
+
+@pytest.mark.parametrize(
+    "dsn",
+    [
+        None,
+        "postgresql://fixture@verdify-db/verdify_test_probe",
+        "postgresql://fixture@localhost/verdify",
+        "postgresql://fixture@localhost/verdify_test_probe",
+    ],
+)
+def test_mutation_fixture_never_discovers_retired_host_or_production_credentials(monkeypatch, dsn):
+    from conftest import isolated_mutation_test_dsn
+
+    monkeypatch.delenv("VERDIFY_ISOLATED_TEST_DSN", raising=False)
+    if dsn is not None:
+        monkeypatch.setenv("VERDIFY_ISOLATED_TEST_DSN", dsn)
+    if dsn == "postgresql://fixture@localhost/verdify_test_probe":
+        assert isolated_mutation_test_dsn() == dsn
+    else:
+        with pytest.raises(ValueError, match="mutation"):
+            isolated_mutation_test_dsn()

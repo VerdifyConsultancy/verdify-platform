@@ -8,6 +8,7 @@ import os
 import shutil
 import subprocess
 from pathlib import Path
+from urllib.parse import urlsplit
 
 import pytest
 
@@ -43,12 +44,12 @@ def tasks_module_path(repo_root: Path | str | None = None) -> Path:
     return pkg if pkg.is_dir() else (root / "ingestor" / "tasks.py")
 
 
-# Docker exec wrapper for DB queries (works even if pg port isn't exposed to host)
+# Explicit live DB transport; CI tests must mock this or use private fixtures.
 def db_query(sql: str) -> str:
-    """Run a SQL query via docker exec and return stdout."""
+    """Run an explicitly selected DB transport; default to current k3s."""
     if os.environ.get("VERDIFY_DB_QUERY_MODE") == "direct" and shutil.which("psql"):
         cmd = ["psql", "-t", "-A", "-c", sql]
-    elif os.environ.get("VERDIFY_DB_BACKEND") == "kube" or not shutil.which("docker"):
+    elif os.environ.get("VERDIFY_DB_BACKEND", "kube") == "kube":
         # The k3s execution path has kubectl, not a Docker socket.
         cmd = [
             "kubectl",
@@ -56,6 +57,8 @@ def db_query(sql: str) -> str:
             "-n",
             "verdify-prod",
             "verdify-db-0",
+            "-c",
+            "postgres",
             "--",
             "psql",
             "-U",
@@ -67,8 +70,10 @@ def db_query(sql: str) -> str:
             "-c",
             sql,
         ]
-    else:
+    elif os.environ.get("VERDIFY_DB_BACKEND") == "docker":
         cmd = ["docker", "exec", "verdify-timescaledb", "psql", "-U", "verdify", "-d", "verdify", "-t", "-A", "-c", sql]
+    else:
+        raise ValueError("unsupported VERDIFY_DB_BACKEND; select kube or explicit local docker")
     result = subprocess.run(
         cmd,
         capture_output=True,
@@ -91,3 +96,14 @@ def event_loop():
     loop = asyncio.new_event_loop()
     yield loop
     loop.close()
+
+
+def isolated_mutation_test_dsn() -> str:
+    """Explicit private loopback fixture only; never infer production credentials."""
+    dsn = os.environ.get("VERDIFY_ISOLATED_TEST_DSN", "")
+    parts = urlsplit(dsn)
+    if parts.scheme not in {"postgresql", "postgres"} or parts.hostname not in {"127.0.0.1", "localhost", "::1"}:
+        raise ValueError("mutation tests require an explicit private loopback PostgreSQL fixture")
+    if not parts.path.removeprefix("/").startswith("verdify_test_"):
+        raise ValueError("mutation fixture database must use verdify_test_ prefix")
+    return dsn
