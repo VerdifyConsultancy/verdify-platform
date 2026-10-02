@@ -3,6 +3,7 @@
 import copy
 import hashlib
 import importlib.util
+import json
 import logging
 import os
 import re
@@ -236,7 +237,8 @@ def test_probe_failure_does_not_print_driver_exception_or_secret(capsys):
     with pytest.raises(SystemExit) as exc:
         exec(client.WRAPPED_PROBE, {})  # noqa: S102 — execute only the fixed qualification probe fixture
     assert exc.value.code == 1
-    assert capsys.readouterr().out == '{"status": "failed", "error_category": "KeyError"}\n'
+    result = json.loads(capsys.readouterr().out)
+    assert result == {"status": "failed", "error_category": "KeyError", "probe_line": 4}
 
 
 @pytest.mark.parametrize(
@@ -494,3 +496,48 @@ def test_actual_baked_revision_and_api_fallback_never_faked(monkeypatch, role, b
     else:
         with pytest.raises(AssertionError):
             exec(code, scope)  # noqa: S102 — exact fixed baked-revision probe branch
+
+
+@pytest.mark.parametrize("exception", ["AssertionError", "RuntimeError", "ValueError"])
+def test_safe_probe_location_never_formats_hostile_exception(exception, capsys):
+    secret = "fixture-secret-password-and-dsn"
+    code = (
+        "class Hostile(" + exception + "):\n"
+        "    def __str__(self):\n"
+        "        raise RuntimeError('exception formatting must not execute')\n"
+        "password = '" + secret + "'\n"
+        "raise Hostile('postgresql://user:' + password + '@private-host/db')\n"
+    )
+    wrapper = client.WRAPPED_PROBE.replace(repr(client.PROBE), repr(code))
+    with pytest.raises(SystemExit) as exc:
+        exec(wrapper, {})  # noqa: S102 — fixed protected-wrapper hostile exception fixture
+    assert exc.value.code == 1
+    output = capsys.readouterr().out
+    assert secret not in output and "postgresql" not in output and "private-host" not in output
+    assert json.loads(output) == {"status": "failed", "error_category": "Hostile", "probe_line": 5}
+
+
+def test_safe_probe_location_names_only_constant_probe_frame(capsys):
+    code = "exec(compile(\"raise AssertionError('fixture-private')\", '/private/module.py', 'exec'))"
+    wrapper = client.WRAPPED_PROBE.replace(repr(client.PROBE), repr(code))
+    with pytest.raises(SystemExit):
+        exec(wrapper, {})  # noqa: S102 — fixed wrapper excludes imported traceback frames
+    result = json.loads(capsys.readouterr().out)
+    assert result == {"status": "failed", "error_category": "AssertionError", "probe_line": 1}
+
+
+def test_safe_probe_location_uses_deepest_nested_async_probe_frame(capsys):
+    code = (
+        "import asyncio\n"
+        "async def inner():\n"
+        "    assert False, 'private-dsn-password'\n"
+        "async def outer():\n"
+        "    await inner()\n"
+        "asyncio.run(outer())\n"
+    )
+    wrapper = client.WRAPPED_PROBE.replace(repr(client.PROBE), repr(code))
+    with pytest.raises(SystemExit):
+        exec(wrapper, {})  # noqa: S102 — native async traceback order/redaction fixture
+    output = capsys.readouterr().out
+    assert "private-dsn-password" not in output
+    assert json.loads(output) == {"status": "failed", "error_category": "AssertionError", "probe_line": 3}
