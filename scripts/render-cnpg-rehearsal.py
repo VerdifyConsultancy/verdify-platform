@@ -66,7 +66,7 @@ def render(image: str) -> list[dict]:
                         "storage.vallery.net/longhorn": "true",
                     },
                 },
-                "resources": {"requests": {"cpu": "500m", "memory": "1Gi"}, "limits": {"memory": "2Gi"}},
+                "resources": {"requests": {"cpu": "500m", "memory": "2Gi"}, "limits": {"memory": "6Gi"}},
                 "bootstrap": {"initdb": {"database": "rehearsal_bootstrap", "owner": "rehearsal_bootstrap"}},
                 "plugins": [
                     {
