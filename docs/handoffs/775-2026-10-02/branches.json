@@ -1,0 +1,2106 @@
+{
+  "all_exact": true,
+  "pushed_refs": 217,
+  "mappings": [
+    {
+      "local_ref": "refs/heads/agent/371-route-observation-20260928",
+      "sha": "0501ec3962531b59e287a521062efdd4c09c8987",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/agent/371-route-observation-20260928"
+    },
+    {
+      "local_ref": "refs/heads/agent/371-route-publication-20260928",
+      "sha": "3a4a405dad27eced51badba866135fa15a6e0152",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/agent/371-route-publication-20260928"
+    },
+    {
+      "local_ref": "refs/heads/agent/433-fault-fixtures-20260927",
+      "sha": "c901ef64fa04eb13976376c0f59f62fdacb5ea13",
+      "remote_ref": "refs/heads/agent/433-fault-fixtures-20260927"
+    },
+    {
+      "local_ref": "refs/heads/agent/433-ordinary-stage-20260928",
+      "sha": "acd00465f56dce7423ed16e4179d98952d77152b",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/agent/433-ordinary-stage-20260928"
+    },
+    {
+      "local_ref": "refs/heads/agent/433-probe-retry-20260928",
+      "sha": "e1dd50c1d2c1ec23fe81c1131c3e93139180e81f",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/agent/433-probe-retry-20260928"
+    },
+    {
+      "local_ref": "refs/heads/agent/782-gatep-remote-20260928",
+      "sha": "957919183485b09f3c0208e8e21a213a552e3ac4",
+      "remote_ref": "refs/heads/agent/782-gatep-remote-20260928"
+    },
+    {
+      "local_ref": "refs/heads/agent/782-gatep-reseal-20260928",
+      "sha": "eb90085cc27f8028c2c1a069129a5e45a6f32f9b",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/agent/782-gatep-reseal-20260928"
+    },
+    {
+      "local_ref": "refs/heads/agent/782-pretrial-provenance-20260927",
+      "sha": "40b6eec258f4de66de4f5d34b15c0555d93a6921",
+      "remote_ref": "refs/heads/agent/782-pretrial-provenance-20260927"
+    },
+    {
+      "local_ref": "refs/heads/agent/782-warm-prereg-20260928",
+      "sha": "862165a3e20e54fb96e144aec503e255c6f62192",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/agent/782-warm-prereg-20260928"
+    },
+    {
+      "local_ref": "refs/heads/agent/783-sql-export-analyzer-20260928",
+      "sha": "45e03aac1e342dca1405d098306a5788227a0649",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/agent/783-sql-export-analyzer-20260928"
+    },
+    {
+      "local_ref": "refs/heads/agent/backup-globals-670-20260927",
+      "sha": "d3666eff495b3c9f98980baa015bf148f99dea1b",
+      "remote_ref": "refs/heads/agent/backup-globals-670-20260927"
+    },
+    {
+      "local_ref": "refs/heads/agent/backup-recovery-20260926",
+      "sha": "914d9ce0bd9de103c886e409c8fd8ba77abac9df",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/agent/backup-recovery-20260926"
+    },
+    {
+      "local_ref": "refs/heads/agent/c0-250-baseline-20260927",
+      "sha": "31e41ced31646ba41c2f8b72e73cf13f923470de",
+      "remote_ref": "refs/heads/agent/c0-250-baseline-20260927"
+    },
+    {
+      "local_ref": "refs/heads/agent/c0-778-causal-audit-20260927",
+      "sha": "5e22ca6436d512b82aa9dc6269eb7f221661215a",
+      "remote_ref": "refs/heads/agent/c0-778-causal-audit-20260927"
+    },
+    {
+      "local_ref": "refs/heads/agent/c0-854-release-20260927",
+      "sha": "62d47d25532284e93315d7f5312af19aafe4395e",
+      "remote_ref": "refs/heads/agent/c0-854-release-20260927"
+    },
+    {
+      "local_ref": "refs/heads/agent/c0-final-handpins-20260926",
+      "sha": "30d68bb8ae3241afb1dd2e32d8196348232ace92",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/agent/c0-final-handpins-20260926"
+    },
+    {
+      "local_ref": "refs/heads/agent/c0-forecast-20260927",
+      "sha": "206b74b44ff5a1e8505766f57c65e08c36cb8ed8",
+      "remote_ref": "refs/heads/agent/c0-forecast-20260927"
+    },
+    {
+      "local_ref": "refs/heads/agent/c0-integrated-20260926",
+      "sha": "95f882d99bff26182f4e8218385b0a5ad07e71e9",
+      "remote_ref": "refs/heads/agent/c0-integrated-20260926"
+    },
+    {
+      "local_ref": "refs/heads/agent/c0-mcp-role-20260928",
+      "sha": "677a0102ab9285e448c5b3e0d50e5d5747b0859e",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/agent/c0-mcp-role-20260928"
+    },
+    {
+      "local_ref": "refs/heads/agent/c0-metric-semantics-20260927",
+      "sha": "4ce0c6de77e8ef68ce6be99aaeb5a90e93dc6c12",
+      "remote_ref": "refs/heads/agent/c0-metric-semantics-20260927"
+    },
+    {
+      "local_ref": "refs/heads/agent/c1-gatep-activation-20260927",
+      "sha": "f8bd0cba582379668530aab9fdd5eb625cd3d444",
+      "remote_ref": "refs/heads/agent/c1-gatep-activation-20260927"
+    },
+    {
+      "local_ref": "refs/heads/agent/c2-direct-launch-protocol-20260927",
+      "sha": "8b78db069cbe4b7a14f6de8773dce890b96d5b88",
+      "remote_ref": "refs/heads/agent/c2-direct-launch-protocol-20260927"
+    },
+    {
+      "local_ref": "refs/heads/agent/c2-gate-r-readiness-20260927",
+      "sha": "9f1be5be2b13847728b35eb78a1bbc6eb5b020bb",
+      "remote_ref": "refs/heads/agent/c2-gate-r-readiness-20260927"
+    },
+    {
+      "local_ref": "refs/heads/agent/c2-orchestrator-pin-20260927",
+      "sha": "71147bd9558593090154d529a80aa335756f9f14",
+      "remote_ref": "refs/heads/agent/c2-orchestrator-pin-20260927"
+    },
+    {
+      "local_ref": "refs/heads/agent/c2-readiness-20260926",
+      "sha": "09539ce7bfd4408e44ee1be31a402716e54c34d1",
+      "remote_ref": "refs/heads/agent/c2-readiness-20260926"
+    },
+    {
+      "local_ref": "refs/heads/agent/c2-source-history-20260927",
+      "sha": "7d541ffb2dd7104f537e2449fe48d85401ad1d63",
+      "remote_ref": "refs/heads/agent/c2-source-history-20260927"
+    },
+    {
+      "local_ref": "refs/heads/agent/c4-hermes-427-20260927",
+      "sha": "6379ca6aa72f00a9981ceeec72017b833564f33a",
+      "remote_ref": "refs/heads/agent/c4-hermes-427-20260927"
+    },
+    {
+      "local_ref": "refs/heads/agent/c5-owner-successor-20260927",
+      "sha": "0eb7af3cee4baee469964383aa97d7a3f6e1fd71",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/agent/c5-owner-successor-20260927"
+    },
+    {
+      "local_ref": "refs/heads/agent/combined-ingestor-pin-20260927",
+      "sha": "bc3e1f1f1c68a74044f6121c391782c01ba5e121",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/agent/combined-ingestor-pin-20260927"
+    },
+    {
+      "local_ref": "refs/heads/agent/comp1-traefik-placement",
+      "sha": "6c3a3a3e6c5aff515a38724645fff0c14c2c9bee",
+      "remote_ref": "refs/heads/agent/comp1-traefik-placement"
+    },
+    {
+      "local_ref": "refs/heads/agent/component-current-capture-20260926",
+      "sha": "c8f83bdb1788a4318584be4b24212800e4bcab23",
+      "remote_ref": "refs/heads/agent/component-current-capture-20260926"
+    },
+    {
+      "local_ref": "refs/heads/agent/device-monitor-disappearing-pod-20260927",
+      "sha": "32fae66587ef763d5c5d843997ed29fd9960c6fb",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/agent/device-monitor-disappearing-pod-20260927"
+    },
+    {
+      "local_ref": "refs/heads/agent/g10-smoke-acceptance-20260926",
+      "sha": "15069cf651cb32967af22e222f5b27b10619bd7b",
+      "remote_ref": "refs/heads/agent/g10-smoke-acceptance-20260926"
+    },
+    {
+      "local_ref": "refs/heads/agent/gate-r-backup-log-20260927",
+      "sha": "a9cdd2a0326b6f2242cf07cf80ee8d4b88bfbfc8",
+      "remote_ref": "refs/heads/agent/gate-r-backup-log-20260927"
+    },
+    {
+      "local_ref": "refs/heads/agent/gate-r-evidence-correction-20260927",
+      "sha": "5eafb815f0a68772b73eddbbd542ac8a0812e040",
+      "remote_ref": "refs/heads/agent/gate-r-evidence-correction-20260927"
+    },
+    {
+      "local_ref": "refs/heads/agent/gate-r-orphan-recovery-20260927",
+      "sha": "6f075ca28266ab2a235c55da90cfec5bbd6d1d9a",
+      "remote_ref": "refs/heads/agent/gate-r-orphan-recovery-20260927"
+    },
+    {
+      "local_ref": "refs/heads/agent/gate-r-retire-20260927",
+      "sha": "8e0a0eb54aeb7fbe56d4e952f7d2e491d909ab30",
+      "remote_ref": "refs/heads/agent/gate-r-retire-20260927"
+    },
+    {
+      "local_ref": "refs/heads/agent/gatep-recovery-target-20260927",
+      "sha": "f62a351b437d40b579b37871da59a7865642bd1a",
+      "remote_ref": "refs/heads/agent/gatep-recovery-target-20260927"
+    },
+    {
+      "local_ref": "refs/heads/agent/issue-749-readiness-guard",
+      "sha": "0ede28352d331f6f09b76e28c93887e4c5243d7d",
+      "remote_ref": "refs/heads/agent/issue-749-readiness-guard"
+    },
+    {
+      "local_ref": "refs/heads/agent/legacy-recovery-terminalize-20260927",
+      "sha": "580c314d6ffbca6da62a205d98aa166f416cfaf5",
+      "remote_ref": "refs/heads/agent/legacy-recovery-terminalize-20260927"
+    },
+    {
+      "local_ref": "refs/heads/agent/logical-restore-audit-783-670-20260926",
+      "sha": "15bac2db999e0d17db40decf4e9fb732eae82f96",
+      "remote_ref": "refs/heads/agent/logical-restore-audit-783-670-20260926"
+    },
+    {
+      "local_ref": "refs/heads/agent/mcp-observer-activation-20260926",
+      "sha": "4092bf5a0fd56222262441ad6d790a2ea07b7e02",
+      "remote_ref": "refs/heads/agent/mcp-observer-activation-20260926"
+    },
+    {
+      "local_ref": "refs/heads/agent/mcp-observer-rebase-20260926",
+      "sha": "c19013da1f5b5df05b57ffb630cb45513c9dd926",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/agent/mcp-observer-rebase-20260926"
+    },
+    {
+      "local_ref": "refs/heads/agent/observed-minute-acl-371-20260927",
+      "sha": "61eb7cb08202d1b288ca8dedcdae81823d83bf8f",
+      "remote_ref": "refs/heads/agent/observed-minute-acl-371-20260927"
+    },
+    {
+      "local_ref": "refs/heads/agent/prometheus-rule-guard-563-20260926",
+      "sha": "8a0ee17ecb16592fe88ed3ef0e963341d54c8002",
+      "remote_ref": "refs/heads/agent/prometheus-rule-guard-563-20260926"
+    },
+    {
+      "local_ref": "refs/heads/agent/recovery-only-255-20260927",
+      "sha": "6dcb2d4d0be48764ab2d0379fe4aef690c31b829",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/agent/recovery-only-255-20260927"
+    },
+    {
+      "local_ref": "refs/heads/agent/rel3-grafana-cache-affinity",
+      "sha": "8c82ba6deaeaf0ed790c78b86148137d9302bdf2",
+      "remote_ref": "refs/heads/agent/rel3-grafana-cache-affinity"
+    },
+    {
+      "local_ref": "refs/heads/agent/rel3-grafana-cache-sticky",
+      "sha": "0123a99f7d7565d9d3c6cf4bad169686e8c459a7",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/agent/rel3-grafana-cache-sticky"
+    },
+    {
+      "local_ref": "refs/heads/agent/rel3-grafana-selector-isolation",
+      "sha": "034f8c21d538eeac83a322ab27409d448e6f081a",
+      "remote_ref": "refs/heads/agent/rel3-grafana-selector-isolation"
+    },
+    {
+      "local_ref": "refs/heads/agent/rel3-ingestor-gather-pghost",
+      "sha": "2c0a7876f2adba354c2c8ca61eaace0e659f03e9",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/agent/rel3-ingestor-gather-pghost"
+    },
+    {
+      "local_ref": "refs/heads/agent/rel3-publisher-missed-run",
+      "sha": "aa2798944cc9bd266c8ad1020654ff88a6b3c983",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/agent/rel3-publisher-missed-run"
+    },
+    {
+      "local_ref": "refs/heads/agent/root-lab-publisher-deadline-20260822",
+      "sha": "6cacfb13ff70aa47f21b4bcbbeb3a94b86f5cdc1",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/agent/root-lab-publisher-deadline-20260822"
+    },
+    {
+      "local_ref": "refs/heads/agent/root-mcp-k8s-trigger-disable-20260822",
+      "sha": "53a003323aa352ec23559ed52a65f4f6c03ab371",
+      "remote_ref": "refs/heads/agent/root-mcp-k8s-trigger-disable-20260822"
+    },
+    {
+      "local_ref": "refs/heads/agent/root-mcp-restart-contract-20260822",
+      "sha": "3385ba18edc2c227f9d37348479a65594c026cdb",
+      "remote_ref": "refs/heads/agent/root-mcp-restart-contract-20260822"
+    },
+    {
+      "local_ref": "refs/heads/agent/scorecard-sep4-fixed-panel-20260926",
+      "sha": "fa9b38ee262f1434ac715273f75af5a40260d0e3",
+      "remote_ref": "refs/heads/agent/scorecard-sep4-fixed-panel-20260926"
+    },
+    {
+      "local_ref": "refs/heads/agent/winter-target-20260928",
+      "sha": "a3eb0fd26ff486bf14a239d02d044b8ea2bd04e4",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/agent/winter-target-20260928"
+    },
+    {
+      "local_ref": "refs/heads/agent/writer-approval-wake-20260927",
+      "sha": "b4d6c656f7f7149cb42da557a170fe0a294edb18",
+      "remote_ref": "refs/heads/agent/writer-approval-wake-20260927"
+    },
+    {
+      "local_ref": "refs/heads/agent/writer-cfg-drift-seconds-20260927",
+      "sha": "7fde97b1a59115da3ba3f96112332b25f2bcc114",
+      "remote_ref": "refs/heads/agent/writer-cfg-drift-seconds-20260927"
+    },
+    {
+      "local_ref": "refs/heads/agent/writer-oracle-20260926",
+      "sha": "8e59d1e838c8f86e7fdeeedf5d28409a6bb878de",
+      "remote_ref": "refs/heads/agent/writer-oracle-20260926"
+    },
+    {
+      "local_ref": "refs/heads/agent/writer-pin-available-20260927",
+      "sha": "77ea82e809eb5b162a95ff470526dea46606cefd",
+      "remote_ref": "refs/heads/agent/writer-pin-available-20260927"
+    },
+    {
+      "local_ref": "refs/heads/agent/writer-reliability-20260926",
+      "sha": "62642c493cb2e201677e4ab68ece6b78110c89b8",
+      "remote_ref": "refs/heads/agent/writer-reliability-20260926"
+    },
+    {
+      "local_ref": "refs/heads/agent/writer-replay-gate-r-release-20260927",
+      "sha": "6acb6e4b8cfb121ee2bcd0d9b1ba74683fbb206c",
+      "remote_ref": "refs/heads/agent/writer-replay-gate-r-release-20260927"
+    },
+    {
+      "local_ref": "refs/heads/agent/writer-replay-pin-only-20260927",
+      "sha": "3d4f41670bfd3749ffd726d744f16cfe297c72bc",
+      "remote_ref": "refs/heads/agent/writer-replay-pin-only-20260927"
+    },
+    {
+      "local_ref": "refs/heads/agent/writer-snapshot-lag-20260926",
+      "sha": "f48597124eb03411c7f8ba2765bee58aa30ac580",
+      "remote_ref": "refs/heads/agent/writer-snapshot-lag-20260926"
+    },
+    {
+      "local_ref": "refs/heads/agent/writer-staged-delivery-20260926",
+      "sha": "3e34a6bca9af3ed03c14b65c27f3d96b8cee8546",
+      "remote_ref": "refs/heads/agent/writer-staged-delivery-20260926"
+    },
+    {
+      "local_ref": "refs/heads/audit/route-pilot-20260930",
+      "sha": "04613e8d84a45e907e8f49c867740995eb085edd",
+      "remote_ref": "refs/heads/audit/route-pilot-20260930"
+    },
+    {
+      "local_ref": "refs/heads/backup/root-accidental-capture-20260926",
+      "sha": "8bbd56676b9bd2eb98369684922f2abd71e23a8f",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/backup/root-accidental-capture-20260926"
+    },
+    {
+      "local_ref": "refs/heads/c0-255-delivery-successor-20260928",
+      "sha": "7008ab03c4980508d804dba697bfb55b4d0697b7",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/c0-255-delivery-successor-20260928"
+    },
+    {
+      "local_ref": "refs/heads/c0-winter-target-20260927",
+      "sha": "09891dd940fc7679f0a9bd958308c1d93ed94664",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/c0-winter-target-20260927"
+    },
+    {
+      "local_ref": "refs/heads/c0/fixed-panel-freshness-20260928",
+      "sha": "497164973225fe980e327c91bae414808009260e",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/c0/fixed-panel-freshness-20260928"
+    },
+    {
+      "local_ref": "refs/heads/c0/fixed-panel-ledger-261-20260928",
+      "sha": "20b5a0b36e8c53e3e88266a2d10c5248e22e405d",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/c0/fixed-panel-ledger-261-20260928"
+    },
+    {
+      "local_ref": "refs/heads/c1/783-current-vertical-20260928",
+      "sha": "46f931bb134a9818f72062f071b115e6f35dcb5b",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/c1/783-current-vertical-20260928"
+    },
+    {
+      "local_ref": "refs/heads/c2-direct-bootstrap-held-20260928",
+      "sha": "a38ffa999bf46fb2893c0ac8e44a73d56e1ef7a1",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/c2-direct-bootstrap-held-20260928"
+    },
+    {
+      "local_ref": "refs/heads/ci/first-static-validation",
+      "sha": "52daf8093e379d38e67bb3d80ab8cf5a0f7bca13",
+      "remote_ref": "refs/heads/ci/first-static-validation"
+    },
+    {
+      "local_ref": "refs/heads/codex/3517-verdify-lab",
+      "sha": "8a6774c01b78aa028a6f0339eca2da3c5e3ec468",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/codex/3517-verdify-lab"
+    },
+    {
+      "local_ref": "refs/heads/codex/371-physical-credit-20260928",
+      "sha": "7538d70b5f1e18099e31a14e6ad63b14ed6fbc39",
+      "remote_ref": "refs/heads/codex/371-physical-credit-20260928"
+    },
+    {
+      "local_ref": "refs/heads/codex/433-drift-probe-20260927",
+      "sha": "9e062ec20e8e72e2c74dab5c8595ab437002ad41",
+      "remote_ref": "refs/heads/codex/433-drift-probe-20260927"
+    },
+    {
+      "local_ref": "refs/heads/codex/672-supported-ownership-20260927",
+      "sha": "3e94348ab409135beef5fea0eef3d90955ff00f2",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/codex/672-supported-ownership-20260927"
+    },
+    {
+      "local_ref": "refs/heads/codex/778-ota-20260927",
+      "sha": "ed84ea950d9d870b8368ef75e1fe42c4162a946c",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/codex/778-ota-20260927"
+    },
+    {
+      "local_ref": "refs/heads/codex/779-delivery-receipt-20260927",
+      "sha": "d2129f7f3da2e958f67c518129239ba5ff5f4528",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/codex/779-delivery-receipt-20260927"
+    },
+    {
+      "local_ref": "refs/heads/codex/781-resource-endpoint-20260927",
+      "sha": "97929941ff006c7d9be9c7fb2a9e1892847534b4",
+      "remote_ref": "refs/heads/codex/781-resource-endpoint-20260927"
+    },
+    {
+      "local_ref": "refs/heads/codex/782-predraw-sensitivity-20260928",
+      "sha": "94f99059fe8c884019ae37ead6c1b1d029277782",
+      "remote_ref": "refs/heads/codex/782-predraw-sensitivity-20260928"
+    },
+    {
+      "local_ref": "refs/heads/codex/782-warm-basis-20260929",
+      "sha": "40afb7abe9b0a500dae3528b72986054d2291f93",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/codex/782-warm-basis-20260929"
+    },
+    {
+      "local_ref": "refs/heads/codex/783-restored-vertical-20260927",
+      "sha": "1a842517ad36a3e9049758a9c35d4edc721f4110",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/codex/783-restored-vertical-20260927"
+    },
+    {
+      "local_ref": "refs/heads/codex/argo-fullsync-operation-custody-20261002",
+      "sha": "4f8a56d1cb5cef0a20056d8b8885f2e0ddf37742",
+      "remote_ref": "refs/heads/codex/argo-fullsync-operation-custody-20261002"
+    },
+    {
+      "local_ref": "refs/heads/codex/c1-cadence-e91-release-20261002",
+      "sha": "00f3d3e40733284afc7a0fb785738075377d4971",
+      "remote_ref": "refs/heads/codex/c1-cadence-e91-release-20261002"
+    },
+    {
+      "local_ref": "refs/heads/codex/c1-consumed-evidence-cadence-20261002",
+      "sha": "30a69d6ffe572b3d5db7bbd9ed2f0551c582e9e3",
+      "remote_ref": "refs/heads/codex/c1-consumed-evidence-cadence-20261002"
+    },
+    {
+      "local_ref": "refs/heads/codex/c2-c3-readiness-20260927",
+      "sha": "bb081b0804dccce5a688f02b0475db3ca7a423f9",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/codex/c2-c3-readiness-20260927"
+    },
+    {
+      "local_ref": "refs/heads/codex/firmware-builder-portable-cache-20260927",
+      "sha": "68d7c62e039720d0b1b958964c7e488af61f433d",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/codex/firmware-builder-portable-cache-20260927"
+    },
+    {
+      "local_ref": "refs/heads/codex/firmware-stage-last-good-20260927",
+      "sha": "7db48acb0b831fd20dde0302855beb57da3c990c",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/codex/firmware-stage-last-good-20260927"
+    },
+    {
+      "local_ref": "refs/heads/codex/fixed-panel-779-20260927",
+      "sha": "ce40c224e9b7dcd62ac495c8f4ec70d11acd455e",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/codex/fixed-panel-779-20260927"
+    },
+    {
+      "local_ref": "refs/heads/codex/gate-r-recovery-alerts-20260927",
+      "sha": "fb25a3bd6690466a8cbee129edca0c12c39b3439",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/codex/gate-r-recovery-alerts-20260927"
+    },
+    {
+      "local_ref": "refs/heads/codex/integrate-779-672-20260927",
+      "sha": "ef92c0b4e2cd242baf776f982564a54d8c4aab5c",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/codex/integrate-779-672-20260927"
+    },
+    {
+      "local_ref": "refs/heads/codex/integrate-c5-c0-20260927",
+      "sha": "cfc96282d5213e792d81137851c4ffba5250f0b7",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/codex/integrate-c5-c0-20260927"
+    },
+    {
+      "local_ref": "refs/heads/codex/integrate-winter-lab-20260927",
+      "sha": "27886d331b514c26972f94b36a5ab8c530a535aa",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/codex/integrate-winter-lab-20260927"
+    },
+    {
+      "local_ref": "refs/heads/codex/lab-publisher-observability-671",
+      "sha": "d34f24cad07d7d057ebf1f1cab340909e34589cf",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/codex/lab-publisher-observability-671"
+    },
+    {
+      "local_ref": "refs/heads/codex/planner-worker-health-20260929",
+      "sha": "e5395358ee2f10c57c38e22f02048815729cc267",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/codex/planner-worker-health-20260929"
+    },
+    {
+      "local_ref": "refs/heads/codex/promote-migration254-20260927",
+      "sha": "e3a8fb612ba3aeb3da0645df7b5e669f1308298a",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/codex/promote-migration254-20260927"
+    },
+    {
+      "local_ref": "refs/heads/codex/promote-post249-migrate-20260927",
+      "sha": "910562e13b0fb5c2d155b98bd8c8d6d81b65a3c8",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/codex/promote-post249-migrate-20260927"
+    },
+    {
+      "local_ref": "refs/heads/codex/release-c0-c1-20260927",
+      "sha": "6e62780f9e1bab93f65a060ee47910636a8ad861",
+      "remote_ref": "refs/heads/codex/release-c0-c1-20260927"
+    },
+    {
+      "local_ref": "refs/heads/codex/warm-analysis-contract-20261002",
+      "sha": "4ebb8ba4544a07ea4005ec28d365a5d470fcc463",
+      "remote_ref": "refs/heads/codex/warm-analysis-contract-20261002"
+    },
+    {
+      "local_ref": "refs/heads/codex/warm-authentic-pretrial-replay-20261002",
+      "sha": "492b409c1136a43b495bd5c82fbe3e15b19c3073",
+      "remote_ref": "refs/heads/codex/warm-authentic-pretrial-replay-20261002"
+    },
+    {
+      "local_ref": "refs/heads/codex/winter-collector-20260927",
+      "sha": "850da130a3f926caa7c099d103689d2293f2ca8a",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/codex/winter-collector-20260927"
+    },
+    {
+      "local_ref": "refs/heads/codex/winter-feasibility-extract-20260927",
+      "sha": "785ff80a913906d1f234a528e44b7cf77d11b120",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/codex/winter-feasibility-extract-20260927"
+    },
+    {
+      "local_ref": "refs/heads/deliver/174-sso-ready-20260930",
+      "sha": "d0f69d927180f15e9b10e0f14f1fd38adb331157",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/deliver/174-sso-ready-20260930"
+    },
+    {
+      "local_ref": "refs/heads/diag/ee1-retained-collector-20261001",
+      "sha": "1335a983d0a19e1614ca026cf1d152cdf4cc9fee",
+      "remote_ref": "refs/heads/diag/ee1-retained-collector-20261001"
+    },
+    {
+      "local_ref": "refs/heads/diag/ee1-rtc-custody-20261001",
+      "sha": "6ba5ec7aa2e187fd0e1f95da891ba6e4a9c03c5d",
+      "remote_ref": "refs/heads/diag/ee1-rtc-custody-20261001"
+    },
+    {
+      "local_ref": "refs/heads/diag/lwip-lock-stall-20261001",
+      "sha": "86ad8757b05b63d2c02a312586656126b8ef5857",
+      "remote_ref": "refs/heads/diag/lwip-lock-stall-20261001"
+    },
+    {
+      "local_ref": "refs/heads/docs/cicd-doc-accuracy-2026-08-02",
+      "sha": "e61c51429010f29e5df044502ca4de1f1cf4b884",
+      "remote_ref": "refs/heads/docs/cicd-doc-accuracy-2026-08-02"
+    },
+    {
+      "local_ref": "refs/heads/docs/onyx-backup-recovery-20260916",
+      "sha": "604962037fc73dc5910df2b0dba77d6d89e84b95",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/docs/onyx-backup-recovery-20260916"
+    },
+    {
+      "local_ref": "refs/heads/draft/component-current-state-capture",
+      "sha": "1a6d64e853a861d4c4bd24f4cfc5f51a15f137b4",
+      "remote_ref": "refs/heads/draft/component-current-state-capture"
+    },
+    {
+      "local_ref": "refs/heads/feat/c1-grid-projection-20260929",
+      "sha": "79a2310303c9dfa5122ecc0902ee887c1db4d6b0",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/feat/c1-grid-projection-20260929"
+    },
+    {
+      "local_ref": "refs/heads/feat/cnpg-target270-successor-20261002",
+      "sha": "fd48cf558bce5b56a35952b274dfe0ed105e8746",
+      "remote_ref": "refs/heads/feat/cnpg-target270-successor-20261002"
+    },
+    {
+      "local_ref": "refs/heads/feat/component-grid-capture",
+      "sha": "37102bd960f1991e2d89267c43ab082dfdef140b",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/feat/component-grid-capture"
+    },
+    {
+      "local_ref": "refs/heads/feat/component-prefix-replay",
+      "sha": "37102bd960f1991e2d89267c43ab082dfdef140b",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/feat/component-prefix-replay"
+    },
+    {
+      "local_ref": "refs/heads/feat/component-qualification-tools",
+      "sha": "71e7638bcb1606a76d4c81013ce4b41289f1acfd",
+      "remote_ref": "refs/heads/feat/component-qualification-tools"
+    },
+    {
+      "local_ref": "refs/heads/feat/replay-invariants-full48",
+      "sha": "f12d28c8c8d7175087f96c90ad3b1acf67e25e92",
+      "remote_ref": "refs/heads/feat/replay-invariants-full48"
+    },
+    {
+      "local_ref": "refs/heads/feat/warm-pilot-inputs-20261002",
+      "sha": "e9ed916e5e9715424b69269cfee78b610c1a6261",
+      "remote_ref": "refs/heads/feat/warm-pilot-inputs-20261002"
+    },
+    {
+      "local_ref": "refs/heads/fix/174-grafana-global-sso-20260930",
+      "sha": "473a22938d773ccff4d82cff6d817a99ddaa5728",
+      "remote_ref": "refs/heads/fix/174-grafana-global-sso-20260930"
+    },
+    {
+      "local_ref": "refs/heads/fix/214-existing-keyref-delivery-20261002",
+      "sha": "6073e9a5c39a87fcb6c70f5f9e814a22ac36ab26",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/214-existing-keyref-delivery-20261002"
+    },
+    {
+      "local_ref": "refs/heads/fix/214-semantic-tool-lifecycle-20261002",
+      "sha": "50b73f5ed7216fd2c17e436dd99d573a9a801e28",
+      "remote_ref": "refs/heads/fix/214-semantic-tool-lifecycle-20261002"
+    },
+    {
+      "local_ref": "refs/heads/fix/260-outcome-kpi-scorecard-20260928",
+      "sha": "a3eb0fd26ff486bf14a239d02d044b8ea2bd04e4",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/260-outcome-kpi-scorecard-20260928"
+    },
+    {
+      "local_ref": "refs/heads/fix/265-c0-runner-successor-20260930",
+      "sha": "128f6262ba441d43479ea9d82bd343bc461df6a0",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/265-c0-runner-successor-20260930"
+    },
+    {
+      "local_ref": "refs/heads/fix/265-forward-ledger-test-20260930",
+      "sha": "965fd7004f17ab677c8c5cb2545953a0cad4e6e0",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/265-forward-ledger-test-20260930"
+    },
+    {
+      "local_ref": "refs/heads/fix/265-runner-config-revision-20260930",
+      "sha": "8f0c4cd56567e19926c75edff217dde57e4979f3",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/265-runner-config-revision-20260930"
+    },
+    {
+      "local_ref": "refs/heads/fix/266-climate-integer-json-20261001",
+      "sha": "b3b68e378a953b45ce41ca088bdc9fd9792daa01",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/266-climate-integer-json-20261001"
+    },
+    {
+      "local_ref": "refs/heads/fix/3507-live-fleet-contract",
+      "sha": "fc3798fdd75d4da78529968fb722ced9bd52587c",
+      "remote_ref": "refs/heads/fix/3507-live-fleet-contract"
+    },
+    {
+      "local_ref": "refs/heads/fix/3507-verdify-ci-contract",
+      "sha": "3859cea710a69c14ddbd5af4411b3d7bebd8fa43",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/3507-verdify-ci-contract"
+    },
+    {
+      "local_ref": "refs/heads/fix/382-adoption-linear-20260930",
+      "sha": "a6a1905315aabd4e5eca80bbbf6e1219b40806f4",
+      "remote_ref": "refs/heads/fix/382-adoption-linear-20260930"
+    },
+    {
+      "local_ref": "refs/heads/fix/382-climate-event-replay-20260930",
+      "sha": "d5970e44300dac8003e76b5b984b550dd53af1e4",
+      "remote_ref": "refs/heads/fix/382-climate-event-replay-20260930"
+    },
+    {
+      "local_ref": "refs/heads/fix/382-durable-climate-spool-20260930",
+      "sha": "efc0a95bd21019cacb54e0c65259f6547e705681",
+      "remote_ref": "refs/heads/fix/382-durable-climate-spool-20260930"
+    },
+    {
+      "local_ref": "refs/heads/fix/382-integrated-durability-20260930",
+      "sha": "e33113093e43accd9326f52134a001157fd7d3fb",
+      "remote_ref": "refs/heads/fix/382-integrated-durability-20260930"
+    },
+    {
+      "local_ref": "refs/heads/fix/382-log-generation-followup",
+      "sha": "2f598da07bbc240945a313dd99f13bf95f7a25e4",
+      "remote_ref": "refs/heads/fix/382-log-generation-followup"
+    },
+    {
+      "local_ref": "refs/heads/fix/382-observational-durability-20261001",
+      "sha": "ef07e674a47e0cff309da4f3168da24ebf93c7a8",
+      "remote_ref": "refs/heads/fix/382-observational-durability-20261001"
+    },
+    {
+      "local_ref": "refs/heads/fix/382-postobserver-20260930",
+      "sha": "e50cdb2c2ff6c6207c32b3029ccdcf2a7f5c7fa2",
+      "remote_ref": "refs/heads/fix/382-postobserver-20260930"
+    },
+    {
+      "local_ref": "refs/heads/fix/419-bounded-setpoint-export-20261002",
+      "sha": "32dc786043f89c0e5fed501f672fd6afb78c3dd2",
+      "remote_ref": "refs/heads/fix/419-bounded-setpoint-export-20261002"
+    },
+    {
+      "local_ref": "refs/heads/fix/427-hermes-pinned-client-recovery",
+      "sha": "24033e0e9b877dbf8355ec0d58c035beb0869758",
+      "remote_ref": "refs/heads/fix/427-hermes-pinned-client-recovery"
+    },
+    {
+      "local_ref": "refs/heads/fix/427-local-fallback-20260928",
+      "sha": "6624c7d36e8b7992a299c49d51dae209b54249a2",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/427-local-fallback-20260928"
+    },
+    {
+      "local_ref": "refs/heads/fix/427-required-alert-schema-20260929",
+      "sha": "21b7d5c7535b233a04da8cddca35a7df7e0d4c71",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/427-required-alert-schema-20260929"
+    },
+    {
+      "local_ref": "refs/heads/fix/433-live-moisture-support-20260930",
+      "sha": "8a05522440e1b700731b0b7a8f3abcda18d32e8c",
+      "remote_ref": "refs/heads/fix/433-live-moisture-support-20260930"
+    },
+    {
+      "local_ref": "refs/heads/fix/433-partial-stage-receipts-20261001",
+      "sha": "40ef634cc302a1e83d0530d660adb57c206d7274",
+      "remote_ref": "refs/heads/fix/433-partial-stage-receipts-20261001"
+    },
+    {
+      "local_ref": "refs/heads/fix/537-deterministic-packs",
+      "sha": "1db30cc942c6424dc49be0ab2d505be94c433a4f",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/537-deterministic-packs"
+    },
+    {
+      "local_ref": "refs/heads/fix/540-storage-lifecycle",
+      "sha": "290bbc760fdc29b5d25c432a718c360ac55cb393",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/540-storage-lifecycle"
+    },
+    {
+      "local_ref": "refs/heads/fix/568-snapshot-hydration",
+      "sha": "2085a2a40c39ff66813576d7421a26f18cce8399",
+      "remote_ref": "refs/heads/fix/568-snapshot-hydration"
+    },
+    {
+      "local_ref": "refs/heads/fix/570-production-snapshot",
+      "sha": "66061dfdfbfc3640adfbc735cf747b25e1dea5dd",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/570-production-snapshot"
+    },
+    {
+      "local_ref": "refs/heads/fix/643-c0-successor-268-20261001",
+      "sha": "b4078086ab4dbe9f6cf293fa5feb310cd305a86c",
+      "remote_ref": "refs/heads/fix/643-c0-successor-268-20261001"
+    },
+    {
+      "local_ref": "refs/heads/fix/643-ha-health-20261001",
+      "sha": "90fb2e600f5f28f030922754f090c0900ad56bf1",
+      "remote_ref": "refs/heads/fix/643-ha-health-20261001"
+    },
+    {
+      "local_ref": "refs/heads/fix/643-ha-private-energy-20261001",
+      "sha": "7f4610056dbaad3fa5f6176218a3e86d5c5d0314",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/643-ha-private-energy-20261001"
+    },
+    {
+      "local_ref": "refs/heads/fix/643-lab-topology-projections-20261001",
+      "sha": "bf75de3bcc03c5e3d8c09b5c865b62a9cc940863",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/643-lab-topology-projections-20261001"
+    },
+    {
+      "local_ref": "refs/heads/fix/643-runtime-roles-20261001",
+      "sha": "96d43a218a1b96bd6f7956f7f2f103832c9deeab",
+      "remote_ref": "refs/heads/fix/643-runtime-roles-20261001"
+    },
+    {
+      "local_ref": "refs/heads/fix/644-promotion-receipt-20260930",
+      "sha": "a6ed0105bd836625dc1c364b56c7e84e8014d9a9",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/644-promotion-receipt-20260930"
+    },
+    {
+      "local_ref": "refs/heads/fix/835-equipment-reconnect-snapshot",
+      "sha": "765b0e7e8aa528960f8a7de6f541143d053ecd86",
+      "remote_ref": "refs/heads/fix/835-equipment-reconnect-snapshot"
+    },
+    {
+      "local_ref": "refs/heads/fix/api-heap-owner-counters-20261001",
+      "sha": "c77fcf51fae0890d9912c18f69386dda5a8ac371",
+      "remote_ref": "refs/heads/fix/api-heap-owner-counters-20261001"
+    },
+    {
+      "local_ref": "refs/heads/fix/c0-424-divergence-provenance-20260927",
+      "sha": "0ba7f91df512d7ec6f7eb1fcf122511c054553f8",
+      "remote_ref": "refs/heads/fix/c0-424-divergence-provenance-20260927"
+    },
+    {
+      "local_ref": "refs/heads/fix/c0-physical-credit-contract-20260927",
+      "sha": "83422f9b805e4801bfb19e755ae91eb99873bb0e",
+      "remote_ref": "refs/heads/fix/c0-physical-credit-contract-20260927"
+    },
+    {
+      "local_ref": "refs/heads/fix/c0-post249-handoff",
+      "sha": "6300ba654d1fd1e1d82532641ea26988b9ed6ea8",
+      "remote_ref": "refs/heads/fix/c0-post249-handoff"
+    },
+    {
+      "local_ref": "refs/heads/fix/c0-successor-249-20260927",
+      "sha": "cd5fe7c8fd39ae199855cea1c13f97058803dca8",
+      "remote_ref": "refs/heads/fix/c0-successor-249-20260927"
+    },
+    {
+      "local_ref": "refs/heads/fix/c1-admitted-guard-variation-20261001",
+      "sha": "4b1f0b02eb1235957c78e71416a0e323708da449",
+      "remote_ref": "refs/heads/fix/c1-admitted-guard-variation-20261001"
+    },
+    {
+      "local_ref": "refs/heads/fix/c1-bounded-qualification-overlay-20260930",
+      "sha": "98f3a0eb23f0340e6765368f1802d06b08ef864e",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/c1-bounded-qualification-overlay-20260930"
+    },
+    {
+      "local_ref": "refs/heads/fix/c1-capture-transient-20261002",
+      "sha": "1f63e75181c1e8fa22cd30cbfd44e64fe16c8f87",
+      "remote_ref": "refs/heads/fix/c1-capture-transient-20261002"
+    },
+    {
+      "local_ref": "refs/heads/fix/c1-consumed-band-telemetry-20260930",
+      "sha": "9eb20d43af1e9ddf54c4d6dc37f801141224bbd4",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/c1-consumed-band-telemetry-20260930"
+    },
+    {
+      "local_ref": "refs/heads/fix/c1-consumer-manifest-20260930",
+      "sha": "f8680a07695d882ae06788e030d1014740fa2249",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/c1-consumer-manifest-20260930"
+    },
+    {
+      "local_ref": "refs/heads/fix/c1-generated-source-evidence-20260930",
+      "sha": "233cd732655131bf9111d6dc382122db81f69449",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/c1-generated-source-evidence-20260930"
+    },
+    {
+      "local_ref": "refs/heads/fix/c1-independent-served-wire-20261002",
+      "sha": "b819ef28de5c2efe5433aa76cf6f3103563fe449",
+      "remote_ref": "refs/heads/fix/c1-independent-served-wire-20261002"
+    },
+    {
+      "local_ref": "refs/heads/fix/c1-periodic-grid-revision-20261002",
+      "sha": "8a304d7571dd47cade4983df8a44af77f70d9940",
+      "remote_ref": "refs/heads/fix/c1-periodic-grid-revision-20261002"
+    },
+    {
+      "local_ref": "refs/heads/fix/c1-periodic-switch-readbacks-20261002",
+      "sha": "d5b5c404a9f9d3bf05e03f0e30c1418aa9f5571d",
+      "remote_ref": "refs/heads/fix/c1-periodic-switch-readbacks-20261002"
+    },
+    {
+      "local_ref": "refs/heads/fix/c1-source-qualification-20260930",
+      "sha": "dac3e04178944572ca8d553af8ebd09a72178caa",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/c1-source-qualification-20260930"
+    },
+    {
+      "local_ref": "refs/heads/fix/c1-wire-header-context-20261002",
+      "sha": "e7694507f2e43888f7b860d8c98c896522b3112b",
+      "remote_ref": "refs/heads/fix/c1-wire-header-context-20261002"
+    },
+    {
+      "local_ref": "refs/heads/fix/c5-logical-target-admission-20261001",
+      "sha": "4b248dfa4916171ebf5bb7985158199fa4013a2e",
+      "remote_ref": "refs/heads/fix/c5-logical-target-admission-20261001"
+    },
+    {
+      "local_ref": "refs/heads/fix/c5-portable-catalog-identity-20261001",
+      "sha": "60cf4f29867a38eeaa1dcd66e188920896933ff7",
+      "remote_ref": "refs/heads/fix/c5-portable-catalog-identity-20261001"
+    },
+    {
+      "local_ref": "refs/heads/fix/climate-intent-grid-20260929",
+      "sha": "86e07ee4aac04a748267dd4fae3b8124f48a9aab",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/climate-intent-grid-20260929"
+    },
+    {
+      "local_ref": "refs/heads/fix/cnpg-auth-transport-readiness-20261002",
+      "sha": "3dafef80d2d75f841c979370d33a80fbde55ba17",
+      "remote_ref": "refs/heads/fix/cnpg-auth-transport-readiness-20261002"
+    },
+    {
+      "local_ref": "refs/heads/fix/cnpg-authenticated-runtime-client-20261001",
+      "sha": "53eaa67dce076f331bb1285914cb53aa6a642122",
+      "remote_ref": "refs/heads/fix/cnpg-authenticated-runtime-client-20261001"
+    },
+    {
+      "local_ref": "refs/heads/fix/cnpg-band-time-projection-20261002",
+      "sha": "df591af33570d1077bf19cd92305e85bc99258c5",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/cnpg-band-time-projection-20261002"
+    },
+    {
+      "local_ref": "refs/heads/fix/cnpg-boundary-default-acl-20261001",
+      "sha": "78dd92b3fc322e799d1df7eaa86b19c8a67f7c54",
+      "remote_ref": "refs/heads/fix/cnpg-boundary-default-acl-20261001"
+    },
+    {
+      "local_ref": "refs/heads/fix/cnpg-bounded-range-winners-20261002",
+      "sha": "33932397181697af80381a5306e79984d65c9255",
+      "remote_ref": "refs/heads/fix/cnpg-bounded-range-winners-20261002"
+    },
+    {
+      "local_ref": "refs/heads/fix/cnpg-client-backend-host-binding-20261002",
+      "sha": "f7cb0aef4de9259cca50731d9704442efec1404e",
+      "remote_ref": "refs/heads/fix/cnpg-client-backend-host-binding-20261002"
+    },
+    {
+      "local_ref": "refs/heads/fix/cnpg-client-image-user-20261002",
+      "sha": "8372f27da74aa93eea047909fc2d8edeb892d829",
+      "remote_ref": "refs/heads/fix/cnpg-client-image-user-20261002"
+    },
+    {
+      "local_ref": "refs/heads/fix/cnpg-client-safe-probe-location-20261002",
+      "sha": "acf7c57a7ad7f3bc3b6c26019d4c32d2462a364f",
+      "remote_ref": "refs/heads/fix/cnpg-client-safe-probe-location-20261002"
+    },
+    {
+      "local_ref": "refs/heads/fix/cnpg-common-clock-band-time-20261002",
+      "sha": "efe853cdca67a92d187a8b696f25bb41e43d2d73",
+      "remote_ref": "refs/heads/fix/cnpg-common-clock-band-time-20261002"
+    },
+    {
+      "local_ref": "refs/heads/fix/cnpg-complete-view-clock-20261002",
+      "sha": "3188db3b18a1dc7eaa363b0b55360fc4cf5b5458",
+      "remote_ref": "refs/heads/fix/cnpg-complete-view-clock-20261002"
+    },
+    {
+      "local_ref": "refs/heads/fix/cnpg-dataset-one-scan-20261002",
+      "sha": "a1a0acac0b2b93a0529d7f8ee15972ae1c6096c8",
+      "remote_ref": "refs/heads/fix/cnpg-dataset-one-scan-20261002"
+    },
+    {
+      "local_ref": "refs/heads/fix/cnpg-dataset-public-searchpath-20261002",
+      "sha": "c68aa9b13a239bded040630c13526259146c3c91",
+      "remote_ref": "refs/heads/fix/cnpg-dataset-public-searchpath-20261002"
+    },
+    {
+      "local_ref": "refs/heads/fix/cnpg-existing-target-recovery-20261001",
+      "sha": "7acce17d947a0fb6436f5da1882a299b9920a267",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/cnpg-existing-target-recovery-20261001"
+    },
+    {
+      "local_ref": "refs/heads/fix/cnpg-fault-native-host-binding-20261002",
+      "sha": "24cd7cc124146bd354059c8a039c6c7a70593c88",
+      "remote_ref": "refs/heads/fix/cnpg-fault-native-host-binding-20261002"
+    },
+    {
+      "local_ref": "refs/heads/fix/cnpg-matview-custody-lock-20261001",
+      "sha": "0e192c95d363cb6bef3b15c7e4b6cb74a8a8c1ea",
+      "remote_ref": "refs/heads/fix/cnpg-matview-custody-lock-20261001"
+    },
+    {
+      "local_ref": "refs/heads/fix/cnpg-native-creation-horizon-20261001",
+      "sha": "9babdef3b3db38a32889621a8bb8464f58337361",
+      "remote_ref": "refs/heads/fix/cnpg-native-creation-horizon-20261001"
+    },
+    {
+      "local_ref": "refs/heads/fix/cnpg-physical-management-comment-20261002",
+      "sha": "33d0db3148176563d56412a79138b190bebcfa01",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/cnpg-physical-management-comment-20261002"
+    },
+    {
+      "local_ref": "refs/heads/fix/cnpg-physical-post270-lineage-20261002",
+      "sha": "4eee9146f5a31013fd97303bff93e2af28b2e7af",
+      "remote_ref": "refs/heads/fix/cnpg-physical-post270-lineage-20261002"
+    },
+    {
+      "local_ref": "refs/heads/fix/cnpg-physical-retained-input-20261002",
+      "sha": "3357c7d2079be5ccc2e25dd67cc2e734dd66bc3e",
+      "remote_ref": "refs/heads/fix/cnpg-physical-retained-input-20261002"
+    },
+    {
+      "local_ref": "refs/heads/fix/cnpg-policy-twin-count-time-20261002",
+      "sha": "e8f053e5a8bb213c815b5a10795c9d9c67d08f50",
+      "remote_ref": "refs/heads/fix/cnpg-policy-twin-count-time-20261002"
+    },
+    {
+      "local_ref": "refs/heads/fix/cnpg-policy-twin-cumulative-20261002",
+      "sha": "229e338633786deca26628968ebeba8d8795c7df",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/cnpg-policy-twin-cumulative-20261002"
+    },
+    {
+      "local_ref": "refs/heads/fix/cnpg-portable-witness-v3-20261001",
+      "sha": "b9a371ac00d0956878d0952d9b64d042a9ad1079",
+      "remote_ref": "refs/heads/fix/cnpg-portable-witness-v3-20261001"
+    },
+    {
+      "local_ref": "refs/heads/fix/cnpg-post-import-owner-truth-20261001",
+      "sha": "656e7a4071fbb0ac0fa10ad77f6ab5dbe9a774a7",
+      "remote_ref": "refs/heads/fix/cnpg-post-import-owner-truth-20261001"
+    },
+    {
+      "local_ref": "refs/heads/fix/cnpg-private-restore-scratch-20261001",
+      "sha": "2aa48786530cd50c0393788dbd100b8a37a2f829",
+      "remote_ref": "refs/heads/fix/cnpg-private-restore-scratch-20261001"
+    },
+    {
+      "local_ref": "refs/heads/fix/cnpg-private-sgid-custody-20261001",
+      "sha": "42fdb0fbbcde7749d2995f3b06a03c0eac9fe648",
+      "remote_ref": "refs/heads/fix/cnpg-private-sgid-custody-20261001"
+    },
+    {
+      "local_ref": "refs/heads/fix/cnpg-rehearsal-admission-memory-20261001",
+      "sha": "cb18e51a202e149507bd3f41121e7ca3affe5e79",
+      "remote_ref": "refs/heads/fix/cnpg-rehearsal-admission-memory-20261001"
+    },
+    {
+      "local_ref": "refs/heads/fix/cnpg-rehearsal-archive-egress-20261001",
+      "sha": "95c45e4e230b023c73685ca6bad1313bc1343bd2",
+      "remote_ref": "refs/heads/fix/cnpg-rehearsal-archive-egress-20261001"
+    },
+    {
+      "local_ref": "refs/heads/fix/cnpg-rehearsal-garage-region-20261001",
+      "sha": "6bcbda7f2b9d71cfc78b94366168265602e7779d",
+      "remote_ref": "refs/heads/fix/cnpg-rehearsal-garage-region-20261001"
+    },
+    {
+      "local_ref": "refs/heads/fix/cnpg-retained-session-admission-20261001",
+      "sha": "7a0cfac0f4b925d056fb72cbc8b17144412ebc87",
+      "remote_ref": "refs/heads/fix/cnpg-retained-session-admission-20261001"
+    },
+    {
+      "local_ref": "refs/heads/fix/cnpg-retained-volume-custody-20261002",
+      "sha": "f2cb0172c084e7817999bcd7be1ab6abf635634a",
+      "remote_ref": "refs/heads/fix/cnpg-retained-volume-custody-20261002"
+    },
+    {
+      "local_ref": "refs/heads/fix/cnpg-role-export-session-20261001",
+      "sha": "4ff431746aa568b55022eac2d9a73bc94da7050b",
+      "remote_ref": "refs/heads/fix/cnpg-role-export-session-20261001"
+    },
+    {
+      "local_ref": "refs/heads/fix/cnpg-source-grantor-continuation-20261001",
+      "sha": "5bdea03fd5cfaa759641f12d6bf15b07e97b1893",
+      "remote_ref": "refs/heads/fix/cnpg-source-grantor-continuation-20261001"
+    },
+    {
+      "local_ref": "refs/heads/fix/cnpg-target270-reviewed-refresh-20261002",
+      "sha": "b9c9d714a95ba0f4d59a8f1b2a44bfd1155d0d39",
+      "remote_ref": "refs/heads/fix/cnpg-target270-reviewed-refresh-20261002"
+    },
+    {
+      "local_ref": "refs/heads/fix/cnpg-trace-endpoint-aggregate-20261002",
+      "sha": "78ec45073a15a4d2b3f147913de193c7205978a8",
+      "remote_ref": "refs/heads/fix/cnpg-trace-endpoint-aggregate-20261002"
+    },
+    {
+      "local_ref": "refs/heads/fix/cnpg-transition-composite-reader-20261001",
+      "sha": "dfc8ecad74cf9c59a297aebb54ac8bc083565cd2",
+      "remote_ref": "refs/heads/fix/cnpg-transition-composite-reader-20261001"
+    },
+    {
+      "local_ref": "refs/heads/fix/cnpg-transition-input-memory-20261001",
+      "sha": "096d5c1db968d5b5c1e491c93dc91eb5e0428227",
+      "remote_ref": "refs/heads/fix/cnpg-transition-input-memory-20261001"
+    },
+    {
+      "local_ref": "refs/heads/fix/cold-start-native-readbacks",
+      "sha": "ab823de0600c0ec46e0450c82194f783b3d2a7c8",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/cold-start-native-readbacks"
+    },
+    {
+      "local_ref": "refs/heads/fix/component-grid-float32-readback",
+      "sha": "37102bd960f1991e2d89267c43ab082dfdef140b",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/component-grid-float32-readback"
+    },
+    {
+      "local_ref": "refs/heads/fix/controller-sntp-server-capacity-20260930",
+      "sha": "969cc7bd02eded3c49532cf9afea9b800dc582ba",
+      "remote_ref": "refs/heads/fix/controller-sntp-server-capacity-20260930"
+    },
+    {
+      "local_ref": "refs/heads/fix/credential-bootstrap-251-20260927",
+      "sha": "98fd71a3f5c0495e1f28b76b6083dd172fa23e1c",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/credential-bootstrap-251-20260927"
+    },
+    {
+      "local_ref": "refs/heads/fix/esp32-api-fallible-batch-20260930",
+      "sha": "ee1dd75f0968136a5405ab02682c86a7bb787760",
+      "remote_ref": "refs/heads/fix/esp32-api-fallible-batch-20260930"
+    },
+    {
+      "local_ref": "refs/heads/fix/esp32-api-overflow-fallible-20261001",
+      "sha": "254b9b2faa3763443881109d51a66eb87cadf804",
+      "remote_ref": "refs/heads/fix/esp32-api-overflow-fallible-20261001"
+    },
+    {
+      "local_ref": "refs/heads/fix/existing-client-log-dump-20260930",
+      "sha": "14ce0ca837c4efab16c52f1e7b6b9542245233e4",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/existing-client-log-dump-20260930"
+    },
+    {
+      "local_ref": "refs/heads/fix/experiment-facility-closure-attestation-264-20260929",
+      "sha": "86e07ee4aac04a748267dd4fae3b8124f48a9aab",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/experiment-facility-closure-attestation-264-20260929"
+    },
+    {
+      "local_ref": "refs/heads/fix/experiment-lifecycle-attestation-20260929",
+      "sha": "3423219bd8f9c606dc067000c5a9855a376e2824",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/experiment-lifecycle-attestation-20260929"
+    },
+    {
+      "local_ref": "refs/heads/fix/facility-safe-ops-20261002",
+      "sha": "5d240d0413a7013691e91292620e778e46e5683f",
+      "remote_ref": "refs/heads/fix/facility-safe-ops-20261002"
+    },
+    {
+      "local_ref": "refs/heads/fix/firmware-builder-archive-path",
+      "sha": "ba45534846f1bc338ba6d11f79fe254c7e7e264e",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/firmware-builder-archive-path"
+    },
+    {
+      "local_ref": "refs/heads/fix/firmware-provisional-rollback-20260929",
+      "sha": "ce73b28a0e8a6497c7e76f13ab6a05420e24b071",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/firmware-provisional-rollback-20260929"
+    },
+    {
+      "local_ref": "refs/heads/fix/forecast-deviation-failed-delivery-20260930",
+      "sha": "56b3d6a933c31a7f5dce4211d4ed2019b62ef3f7",
+      "remote_ref": "refs/heads/fix/forecast-deviation-failed-delivery-20260930"
+    },
+    {
+      "local_ref": "refs/heads/fix/gate-r-writer-source-20260927",
+      "sha": "8babe16b4f7f391170567089c5ecbb8c01640f04",
+      "remote_ref": "refs/heads/fix/gate-r-writer-source-20260927"
+    },
+    {
+      "local_ref": "refs/heads/fix/guardrail-stage-rebase-20260927",
+      "sha": "828a994357617c159cbe0c7da2b41fd031e16879",
+      "remote_ref": "refs/heads/fix/guardrail-stage-rebase-20260927"
+    },
+    {
+      "local_ref": "refs/heads/fix/hermes-rollback-openai-gpt56sol",
+      "sha": "37102bd960f1991e2d89267c43ab082dfdef140b",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/hermes-rollback-openai-gpt56sol"
+    },
+    {
+      "local_ref": "refs/heads/fix/hermes-tests-openai-rollback",
+      "sha": "37102bd960f1991e2d89267c43ab082dfdef140b",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/hermes-tests-openai-rollback"
+    },
+    {
+      "local_ref": "refs/heads/fix/ingestor-only-log-diagnostics-20260930",
+      "sha": "fa14611d2f9c5585e55dfb0adf5f8eafd171bacf",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/ingestor-only-log-diagnostics-20260930"
+    },
+    {
+      "local_ref": "refs/heads/fix/lab-publish-guard-cicp-review",
+      "sha": "7f740a664e6fff5d768dd0a2bfc5fdefd2622ac6",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/lab-publish-guard-cicp-review"
+    },
+    {
+      "local_ref": "refs/heads/fix/lab-rollout-deadline-20260927",
+      "sha": "cb772237fd3a6b6c486727bf2fa345b8c7808ede",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/lab-rollout-deadline-20260927"
+    },
+    {
+      "local_ref": "refs/heads/fix/lifecycle-readiness-timeout",
+      "sha": "c12846989df19b6f22efa8526f0d71ac317b96db",
+      "remote_ref": "refs/heads/fix/lifecycle-readiness-timeout"
+    },
+    {
+      "local_ref": "refs/heads/fix/mcp-observer-probe-20260921",
+      "sha": "429a89d4a406b49e4d28fdb9382e2297c376e298",
+      "remote_ref": "refs/heads/fix/mcp-observer-probe-20260921"
+    },
+    {
+      "local_ref": "refs/heads/fix/native-esphome-keepalive-20261001",
+      "sha": "93c548dc29e182df228d21a6fdc96b4ae559572d",
+      "remote_ref": "refs/heads/fix/native-esphome-keepalive-20261001"
+    },
+    {
+      "local_ref": "refs/heads/fix/native-initial-gap-observer-20260930",
+      "sha": "e4ae065d426c60d18294f18a85de33e7e3d8081d",
+      "remote_ref": "refs/heads/fix/native-initial-gap-observer-20260930"
+    },
+    {
+      "local_ref": "refs/heads/fix/outcome-kpi-acl-261-20260928",
+      "sha": "a3d0d4cde42ba9471d95511e1660997d3a5129db",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/outcome-kpi-acl-261-20260928"
+    },
+    {
+      "local_ref": "refs/heads/fix/outcome-kpi-action-timeout-20260928",
+      "sha": "16133e2d25b4740cec54ca3682eb8cced80422d1",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/outcome-kpi-action-timeout-20260928"
+    },
+    {
+      "local_ref": "refs/heads/fix/outcome-kpi-samples-263-20260928",
+      "sha": "485470068b4de13f64ae5e0202b7aa6855a1bb1e",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/outcome-kpi-samples-263-20260928"
+    },
+    {
+      "local_ref": "refs/heads/fix/post253-runtime-attestation",
+      "sha": "a777d607b0709b81616345f189fccccb511a25fd",
+      "remote_ref": "refs/heads/fix/post253-runtime-attestation"
+    },
+    {
+      "local_ref": "refs/heads/fix/post255-runner-20260928",
+      "sha": "2b64d026a5c1b227d4dcf86871bf1216c6aa6a6f",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/post255-runner-20260928"
+    },
+    {
+      "local_ref": "refs/heads/fix/sensor-health-native-format-20261001",
+      "sha": "36294ab620540277bbedf61e86c4774f92068cff",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/fix/sensor-health-native-format-20261001"
+    },
+    {
+      "local_ref": "refs/heads/fix/sent-confirmation-expiry-20261001",
+      "sha": "afed6e80999404795e19c4e3ce0ef9a84b3078a9",
+      "remote_ref": "refs/heads/fix/sent-confirmation-expiry-20261001"
+    },
+    {
+      "local_ref": "refs/heads/fix/vision-authenticated-snapshots-20261001",
+      "sha": "ffb030ef7b7234a03f099459e926fb6e0efb8523",
+      "remote_ref": "refs/heads/fix/vision-authenticated-snapshots-20261001"
+    },
+    {
+      "local_ref": "refs/heads/gate-r-climate-cadence-20260927",
+      "sha": "ca2ea924a37f8125ff3801d1e1d6db897cff5720",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/gate-r-climate-cadence-20260927"
+    },
+    {
+      "local_ref": "refs/heads/handoff/20261002/dirty-01da3cc1c55c",
+      "sha": "97bbcfd39997686a1952dcc54ede8de98dc8c5e1",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/handoff/20261002/dirty-01da3cc1c55c"
+    },
+    {
+      "local_ref": "refs/heads/handoff/20261002/dirty-1e87df1d4e9b",
+      "sha": "be7d69c87054ceb7a95d9e53ee190ab90aa62a2b",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/handoff/20261002/dirty-1e87df1d4e9b"
+    },
+    {
+      "local_ref": "refs/heads/handoff/20261002/dirty-44d8eef12d92",
+      "sha": "603b89e0915d2fc00007ce2d8118497ae0c92beb",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/handoff/20261002/dirty-44d8eef12d92"
+    },
+    {
+      "local_ref": "refs/heads/handoff/20261002/dirty-666a0d7d2c22",
+      "sha": "48fe83316cf414b0e44088fd1ab375216b05ca8f",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/handoff/20261002/dirty-666a0d7d2c22"
+    },
+    {
+      "local_ref": "refs/heads/handoff/20261002/dirty-95e81e6a90c6",
+      "sha": "1e245c14ffd99ba693931ad918e84a97200e5e6a",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/handoff/20261002/dirty-95e81e6a90c6"
+    },
+    {
+      "local_ref": "refs/heads/handoff/20261002/dirty-a0d8a1317ba6",
+      "sha": "9019c03f9beda4e507977c2dae0f212411bc4397",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/handoff/20261002/dirty-a0d8a1317ba6"
+    },
+    {
+      "local_ref": "refs/heads/handoff/20261002/dirty-bb14e91bcbd8",
+      "sha": "eb2f0f4def975abed8ccfe0f82d4d90d061a3b0e",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/handoff/20261002/dirty-bb14e91bcbd8"
+    },
+    {
+      "local_ref": "refs/heads/handoff/20261002/dirty-cd3f405bbbe7",
+      "sha": "f198cd74c81d95e5b2d42b73f59258f9a83a8c9c",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/handoff/20261002/dirty-cd3f405bbbe7"
+    },
+    {
+      "local_ref": "refs/heads/handoff/20261002/dirty-d94d35ed8450",
+      "sha": "bd75f6514ed8607518b4d8c4b7d9163dacf92f31",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/handoff/20261002/dirty-d94d35ed8450"
+    },
+    {
+      "local_ref": "refs/heads/handoff/20261002/dirty-e989d3ab70d0",
+      "sha": "ef8e961da3d1da6eede65c8c20b2811f8fb42820",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/handoff/20261002/dirty-e989d3ab70d0"
+    },
+    {
+      "local_ref": "refs/heads/handoff/20261002/dirty-fccb50a931ca",
+      "sha": "367a7c6da60155354db8252fd11817b30a736a69",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/handoff/20261002/dirty-fccb50a931ca"
+    },
+    {
+      "local_ref": "refs/heads/handoff/775-paused-20261002",
+      "sha": "a6f190f7594df2f7903d7a09a2752b7126d4feb7",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/handoff/775-paused-20261002"
+    },
+    {
+      "local_ref": "refs/heads/lane/c4-hermes-recovery-427-20260927",
+      "sha": "2e9ca80a96d096ae99b0d90f0ed802b91260a27d",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/lane/c4-hermes-recovery-427-20260927"
+    },
+    {
+      "local_ref": "refs/heads/lane/mcp-boundary-chunk-digest-263-20260929",
+      "sha": "e5395358ee2f10c57c38e22f02048815729cc267",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/lane/mcp-boundary-chunk-digest-263-20260929"
+    },
+    {
+      "local_ref": "refs/heads/main",
+      "sha": "910562e13b0fb5c2d155b98bd8c8d6d81b65a3c8",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/main"
+    },
+    {
+      "local_ref": "refs/heads/plan/verdify-next-sprint-20260926",
+      "sha": "703b2595ec0114ce49042bbda5a841986f7aa25b",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/plan/verdify-next-sprint-20260926"
+    },
+    {
+      "local_ref": "refs/heads/prep/c1-final-native-capture-20261002",
+      "sha": "285e5c1b73394de2f9d7837c2861cea624131b5e",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/prep/c1-final-native-capture-20261002"
+    },
+    {
+      "local_ref": "refs/heads/prepare/382-214-delivery-20260930",
+      "sha": "782b7bc5d7da397af7606c08ec31933d898d71cb",
+      "remote_ref": "refs/heads/prepare/382-214-delivery-20260930"
+    },
+    {
+      "local_ref": "refs/heads/release/267-c1-guard-20261001",
+      "sha": "f622945b4728a8d88803e295c10ffb8ffd938e2f",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/release/267-c1-guard-20261001"
+    },
+    {
+      "local_ref": "refs/heads/release/427-alert-schema-after-window",
+      "sha": "3234f52795e0487695a08061d83236b7f6f313c9",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/release/427-alert-schema-after-window"
+    },
+    {
+      "local_ref": "refs/heads/release/782-433-20260928",
+      "sha": "46f931bb134a9818f72062f071b115e6f35dcb5b",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/release/782-433-20260928"
+    },
+    {
+      "local_ref": "refs/heads/release/91-six-role-promotion-20261001",
+      "sha": "405a40f2c8c8037440b191e129f461348c0deabc",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/release/91-six-role-promotion-20261001"
+    },
+    {
+      "local_ref": "refs/heads/release/965-durability-promotion-20260930",
+      "sha": "1b9a229e450117f6d7d491ef75ee0a618ba65350",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/release/965-durability-promotion-20260930"
+    },
+    {
+      "local_ref": "refs/heads/release/be0-promotion-20261001",
+      "sha": "4c274853f02d1866177c522def85608e2776faa7",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/release/be0-promotion-20261001"
+    },
+    {
+      "local_ref": "refs/heads/release/c0-successor-249-20260927",
+      "sha": "24f59beb640fab046f299a468539067bc60274c2",
+      "remote_ref": "refs/heads/release/c0-successor-249-20260927"
+    },
+    {
+      "local_ref": "refs/heads/release/c1-2c82853b-promotion-20260930",
+      "sha": "b4003bd43ec98ce42b3f9ea90b955b91f3414d77",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/release/c1-2c82853b-promotion-20260930"
+    },
+    {
+      "local_ref": "refs/heads/release/c1-3234-ingestor-20260930",
+      "sha": "2c82853bcd941e1156276966bb2dc49b2013eb52",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/release/c1-3234-ingestor-20260930"
+    },
+    {
+      "local_ref": "refs/heads/release/c1-capture-transient-20261002",
+      "sha": "98cd32181ef1ed65220d9ad7932cc554501bb6aa",
+      "remote_ref": "refs/heads/release/c1-capture-transient-20261002"
+    },
+    {
+      "local_ref": "refs/heads/release/c1-periodic-grid-6b10-20261002",
+      "sha": "0f66081eceb4968462f4b01afda87e35b0089bf7",
+      "remote_ref": "refs/heads/release/c1-periodic-grid-6b10-20261002"
+    },
+    {
+      "local_ref": "refs/heads/release/c1-periodic-readbacks-20261002",
+      "sha": "06003ed248ae6eea0e1d6e35d093eadc0cdb6c42",
+      "remote_ref": "refs/heads/release/c1-periodic-readbacks-20261002"
+    },
+    {
+      "local_ref": "refs/heads/release/facility-safe-270-20261002",
+      "sha": "294b5e55ef32b0693703619a2dc7bb6ce4fbc800",
+      "remote_ref": "refs/heads/release/facility-safe-270-20261002"
+    },
+    {
+      "local_ref": "refs/heads/release/mcp-258-20260928",
+      "sha": "af465795fe656baa4c87b540987fd624e997d442",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/release/mcp-258-20260928"
+    },
+    {
+      "local_ref": "refs/heads/release/mcp-c0-427-20260928",
+      "sha": "f21c481b944343c0b8ac0707b9ec24ea4ea61fe9",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/release/mcp-c0-427-20260928"
+    },
+    {
+      "local_ref": "refs/heads/release/stage-recovery-643-20261001",
+      "sha": "c57b588f29e974a57a706af11f3beaff4d42ee37",
+      "remote_ref": "refs/heads/release/stage-recovery-643-20261001"
+    },
+    {
+      "local_ref": "refs/heads/release/writer-c0-20260927",
+      "sha": "9d260359899db4c663e6f57f46281cbcbbc165bf",
+      "remote_ref": "refs/heads/release/writer-c0-20260927"
+    },
+    {
+      "local_ref": "refs/heads/release/writer-stage-20260926",
+      "sha": "5ced6a4d28f19625f375daf1d8ada1f269560db3",
+      "remote_ref": "refs/heads/release/writer-stage-20260926"
+    },
+    {
+      "local_ref": "refs/heads/research/native-api-drain-stall-20261001",
+      "sha": "fe46633c2d75eb4e2ebf93d612c93e081bfb762a",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/research/native-api-drain-stall-20261001"
+    },
+    {
+      "local_ref": "refs/heads/root/checkpoint-m81-readiness-20260830",
+      "sha": "cb87ed9c83aa15bdfb44d997a2ab6c9654154e29",
+      "remote_ref": "refs/heads/root/checkpoint-m81-readiness-20260830"
+    },
+    {
+      "local_ref": "refs/heads/root/ci-broker-qualification-20260905",
+      "sha": "68a92e4d929c54117757546c3e544fa883f9b884",
+      "remote_ref": "refs/heads/root/ci-broker-qualification-20260905"
+    },
+    {
+      "local_ref": "refs/heads/root/fix-migrate-build-context-20260821",
+      "sha": "a64c36f97891b03c12ccdca746b07159777a1a09",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/root/fix-migrate-build-context-20260821"
+    },
+    {
+      "local_ref": "refs/heads/root/generated-ci-observation-20260905",
+      "sha": "703a6ccdedd0e12232219f750892007b187c97c9",
+      "remote_ref": "refs/heads/root/generated-ci-observation-20260905"
+    },
+    {
+      "local_ref": "refs/heads/root/ha-history-contract-20260824",
+      "sha": "cfd4f45f2be558c2faeca25fb6294bbf92683074",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/root/ha-history-contract-20260824"
+    },
+    {
+      "local_ref": "refs/heads/root/ha-history-retry-20260824",
+      "sha": "610808139a3d6c7ba8d668ab20d5b3f5bdc375a8",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/root/ha-history-retry-20260824"
+    },
+    {
+      "local_ref": "refs/heads/root/issue-575-hermes-pvc-reconcile",
+      "sha": "b944a94943e2b71b951fb08653d864257509ba3b",
+      "remote_ref": "refs/heads/root/issue-575-hermes-pvc-reconcile"
+    },
+    {
+      "local_ref": "refs/heads/root/issue-747-backup-dns-retry-20260830",
+      "sha": "68f93bcd438a03b846e7eb20178fbbf4d0775cad",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/root/issue-747-backup-dns-retry-20260830"
+    },
+    {
+      "local_ref": "refs/heads/root/m8-design-day1",
+      "sha": "787b8997394ce2ab2037a9fa42d44b151dbcce87",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/root/m8-design-day1"
+    },
+    {
+      "local_ref": "refs/heads/root/m8-s01-integration",
+      "sha": "fb499d1346521af6ce0220c7e8efbc6005209601",
+      "remote_ref": "refs/heads/root/m8-s01-integration"
+    },
+    {
+      "local_ref": "refs/heads/root/m8-security-delivery",
+      "sha": "a96b48ab4f0cedd586e8c113725e3b10998e9658",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/root/m8-security-delivery"
+    },
+    {
+      "local_ref": "refs/heads/root/m8-writer-proof",
+      "sha": "574a44c9afae15bdaff7733c9a04eb0961a85e01",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/root/m8-writer-proof"
+    },
+    {
+      "local_ref": "refs/heads/root/m81-alert-classification",
+      "sha": "e3f983228f652d3247acd95efe4c0950a95ad0b7",
+      "remote_ref": "refs/heads/root/m81-alert-classification"
+    },
+    {
+      "local_ref": "refs/heads/root/m81-gate-r-activation",
+      "sha": "1adf5aced338f788717349c91551af3f8627c9c9",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/root/m81-gate-r-activation"
+    },
+    {
+      "local_ref": "refs/heads/root/m81-gate-r-live-activation-20260830",
+      "sha": "4900d68d2f29ae100243791759846de93959e87c",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/root/m81-gate-r-live-activation-20260830"
+    },
+    {
+      "local_ref": "refs/heads/root/m81-gate-r-readiness-live",
+      "sha": "85fa81792ca6bd1b317fbfc77f1cd45fa04cfe55",
+      "remote_ref": "refs/heads/root/m81-gate-r-readiness-live"
+    },
+    {
+      "local_ref": "refs/heads/root/m81-orchestrator-pin",
+      "sha": "96e2e9749c5fe2921511589a80f0d1ab7001b10b",
+      "remote_ref": "refs/heads/root/m81-orchestrator-pin"
+    },
+    {
+      "local_ref": "refs/heads/root/m81-readiness-active-operation-pin",
+      "sha": "e53b6942e62b2f729828b0356140de65f8046fd0",
+      "remote_ref": "refs/heads/root/m81-readiness-active-operation-pin"
+    },
+    {
+      "local_ref": "refs/heads/root/m81-readiness-db-grants",
+      "sha": "ac0d8e145de9ac84c1095ee3702f8b96e360da06",
+      "remote_ref": "refs/heads/root/m81-readiness-db-grants"
+    },
+    {
+      "local_ref": "refs/heads/root/m81-readiness-lineage",
+      "sha": "8c9820e0447099a25d4441cd17ba8163b4abb19d",
+      "remote_ref": "refs/heads/root/m81-readiness-lineage"
+    },
+    {
+      "local_ref": "refs/heads/root/m81-readiness-pin-reconcile",
+      "sha": "95e2d361bc46f1b5489416c91f0a06f6cdf0982a",
+      "remote_ref": "refs/heads/root/m81-readiness-pin-reconcile"
+    },
+    {
+      "local_ref": "refs/heads/root/m81-readiness-retry",
+      "sha": "3082c49390536439323cf65a8efd923572917d79",
+      "remote_ref": "refs/heads/root/m81-readiness-retry"
+    },
+    {
+      "local_ref": "refs/heads/root/m81-s02",
+      "sha": "eb5b9e686a6e92edfbd3b2ab64d6b362a7947a1c",
+      "remote_ref": "refs/heads/root/m81-s02"
+    },
+    {
+      "local_ref": "refs/heads/root/ore-portable-lab-20260824",
+      "sha": "433c88feeddf62fe86b045b1bddf3280f51727df",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/root/ore-portable-lab-20260824"
+    },
+    {
+      "local_ref": "refs/heads/root/rel3-ci-python-20260821",
+      "sha": "071ff7a8d39b9ae1c44c2892638de275be7f2ea4",
+      "remote_ref": "refs/heads/root/rel3-ci-python-20260821"
+    },
+    {
+      "local_ref": "refs/heads/root/rel3-esphome-pin-20260821",
+      "sha": "fd0247ae4692468deed903cb2459c96c497295b1",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/root/rel3-esphome-pin-20260821"
+    },
+    {
+      "local_ref": "refs/heads/root/rel3-grafana-dashboard-replace-20260821",
+      "sha": "2929aaa9e0e3e55d7022f523e90fd3ef88ccecfb",
+      "remote_ref": "refs/heads/root/rel3-grafana-dashboard-replace-20260821"
+    },
+    {
+      "local_ref": "refs/heads/root/rel3-grafana-minready-20260821",
+      "sha": "9d757c45d19a372327899980dc2fdb6fe3605b09",
+      "remote_ref": "refs/heads/root/rel3-grafana-minready-20260821"
+    },
+    {
+      "local_ref": "refs/heads/root/rel3-ingestor-setpoint-general-20260822",
+      "sha": "783804d53eff046ce0e6d6f5c9b4538de51c05b7",
+      "remote_ref": "refs/heads/root/rel3-ingestor-setpoint-general-20260822"
+    },
+    {
+      "local_ref": "refs/heads/root/rel3-lab-guard-timeout-20260821",
+      "sha": "b8270c09ce017faca388daeb0840b004c787c2ca",
+      "remote_ref": "refs/heads/root/rel3-lab-guard-timeout-20260821"
+    },
+    {
+      "local_ref": "refs/heads/root/rel3-lab-publisher-pin-20260821",
+      "sha": "6d0cb9b689ceedcf0782746473033033537045cf",
+      "remote_ref": "refs/heads/root/rel3-lab-publisher-pin-20260821"
+    },
+    {
+      "local_ref": "refs/heads/root/rel3-lab-publisher-rebuild-timeout-20260821",
+      "sha": "6e1cc677e9015d1b7e5c872275e664a49d81f508",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/root/rel3-lab-publisher-rebuild-timeout-20260821"
+    },
+    {
+      "local_ref": "refs/heads/root/rel3-lab-publisher-rebuild-timeout-ttl-trigger-20260821",
+      "sha": "dac15e054e58b6e9a588ce0d7ef15e3aae4a1784",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/root/rel3-lab-publisher-rebuild-timeout-ttl-trigger-20260821"
+    },
+    {
+      "local_ref": "refs/heads/root/rel3-render-cache-placement-20260821",
+      "sha": "0c4c991075f255cb36aff06baf4ac011ce7dc2b5",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/root/rel3-render-cache-placement-20260821"
+    },
+    {
+      "local_ref": "refs/heads/root/shutdown-checkpoint-component-grid-20260830",
+      "sha": "1a525af41e8cadff9ea089046d4051cbb5860f36",
+      "remote_ref": "refs/heads/root/shutdown-checkpoint-component-grid-20260830"
+    },
+    {
+      "local_ref": "refs/heads/root/shutdown-checkpoint-component-prefix-20260830",
+      "sha": "3c8d6f70212c075e1303272a7339aee90245c73b",
+      "remote_ref": "refs/heads/root/shutdown-checkpoint-component-prefix-20260830"
+    },
+    {
+      "local_ref": "refs/heads/root/shutdown-checkpoint-m81-gate-r-live-20260830",
+      "sha": "224c9e44c77164d90923601b1555b10fe8e0e008",
+      "remote_ref": "refs/heads/root/shutdown-checkpoint-m81-gate-r-live-20260830"
+    },
+    {
+      "local_ref": "refs/heads/root/shutdown-checkpoint-m81-gate-r-test-20260830",
+      "sha": "11609f4766bdc9c51aca66c7532a429926f1b64f",
+      "remote_ref": "refs/heads/root/shutdown-checkpoint-m81-gate-r-test-20260830"
+    },
+    {
+      "local_ref": "refs/heads/root/writer-snapshot-release-20260927",
+      "sha": "e6b6a07e8c4d7d8e27b00ec71df5ac52f5653f3a",
+      "remote_ref": "refs/heads/root/writer-snapshot-release-20260927"
+    },
+    {
+      "local_ref": "refs/heads/test/386-lighting-boundary-20261001",
+      "sha": "ebef855258469fd8703a3107c8db6cee237d81d1",
+      "remote_ref": "refs/heads/test/386-lighting-boundary-20261001"
+    },
+    {
+      "local_ref": "refs/heads/test/783-connected-clock-20260930",
+      "sha": "9363eb375d124ebe6d6d358456e0a0b186d9ef1a",
+      "remote_ref": "refs/heads/test/783-connected-clock-20260930"
+    },
+    {
+      "local_ref": "refs/heads/work/214-semantic-phase1-promotion-20261002",
+      "sha": "1951ecba7cdb25e9e98924cfaf4ffbe5c73cd708",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/work/214-semantic-phase1-promotion-20261002"
+    },
+    {
+      "local_ref": "refs/heads/work/303-portable-firmware-ci-20261002",
+      "sha": "b43d9473d8588716164f353eab3439f812b62b39",
+      "remote_ref": "refs/heads/work/303-portable-firmware-ci-20261002"
+    },
+    {
+      "local_ref": "refs/heads/work/322-current-k3s-validation-20261002",
+      "sha": "53ebe26c2cd2b9a9a2c5068cc22fe92daacf9a6c",
+      "remote_ref": "refs/heads/work/322-current-k3s-validation-20261002"
+    },
+    {
+      "local_ref": "refs/heads/work/396-cnpg-current-storage",
+      "sha": "d665c67ae4b6c763859415c55bd44ea2efc97000",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/work/396-cnpg-current-storage"
+    },
+    {
+      "local_ref": "refs/heads/work/396-cnpg-operand-qualification",
+      "sha": "3a4bc792936fd8c104eb5884fa351d542e7e0453",
+      "remote_ref": "refs/heads/work/396-cnpg-operand-qualification"
+    },
+    {
+      "local_ref": "refs/heads/work/396-cnpg-rehearsal-delivery",
+      "sha": "81134c560333132d74221583545fd73fc4a2862a",
+      "remote_ref": "refs/heads/work/396-cnpg-rehearsal-delivery"
+    },
+    {
+      "local_ref": "refs/heads/work/396-existing-target-fault-source-20261001",
+      "sha": "a1b6c4f7577bb64a04af332cd656c2645cda38ac",
+      "remote_ref": "refs/heads/work/396-existing-target-fault-source-20261001"
+    },
+    {
+      "local_ref": "refs/heads/work/396-historical-chunk1069-source-20261001",
+      "sha": "f3ced7029580d5f6aa7556c1d02a6c80e7984c38",
+      "remote_ref": "refs/heads/work/396-historical-chunk1069-source-20261001"
+    },
+    {
+      "local_ref": "refs/heads/work/396-native-pitr-source-20261001",
+      "sha": "6403487037256d52976a80b47380a709ba05e050",
+      "remote_ref": "refs/heads/work/396-native-pitr-source-20261001"
+    },
+    {
+      "local_ref": "refs/heads/work/396-physical-runtime-profile-20261001",
+      "sha": "e3ee6c813072605206f25f1c205bb30af98db4ec",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/work/396-physical-runtime-profile-20261001"
+    },
+    {
+      "local_ref": "refs/heads/work/396-physical-runtime-v3-20261001",
+      "sha": "65ee865430690b7c5e911b3012a5645b275228d9",
+      "remote_ref": "refs/heads/work/396-physical-runtime-v3-20261001"
+    },
+    {
+      "local_ref": "refs/heads/work/396-v3-user-trigger-when-20261001",
+      "sha": "3521e35c0b0736180ea9c06f99ffbb5e71b13b09",
+      "remote_ref": "refs/heads/work/396-v3-user-trigger-when-20261001"
+    },
+    {
+      "local_ref": "refs/heads/work/419-device-age-replay-20261002",
+      "sha": "d21ca7b8f4cea650312da553886680160f88897a",
+      "remote_ref": "refs/heads/work/419-device-age-replay-20261002"
+    },
+    {
+      "local_ref": "refs/heads/work/775-promote-c1-v3-a6-20261002",
+      "sha": "cfea9834dec9e90ddf1c11aa242bb4c9d523bbd4",
+      "remote_ref": "refs/heads/work/775-promote-c1-v3-a6-20261002"
+    },
+    {
+      "local_ref": "refs/heads/work/775-promote-native-keepalive-20261001",
+      "sha": "c59c5bcb1c0b7e4f5de32ba9f16e676c7f6c42d4",
+      "remote_ref": "refs/heads/work/775-promote-native-keepalive-20261001"
+    },
+    {
+      "local_ref": "refs/heads/work/783-vertical-preparation-20261002",
+      "sha": "f040c67254f25084b9d1281900957b1a1ab04094",
+      "remote_ref": "refs/heads/work/783-vertical-preparation-20261002"
+    },
+    {
+      "local_ref": "refs/heads/work/784-blinded-daily-reconcile-20261001",
+      "sha": "c62164dac302690b44b5c45063ced7fcb7710b47",
+      "remote_ref": "refs/heads/work/784-blinded-daily-reconcile-20261001"
+    },
+    {
+      "local_ref": "refs/heads/work/784-daily-observer-preparation-20261001",
+      "sha": "1a30571924ada55a926a7732d2f76f58321ffe35",
+      "remote_ref": "refs/heads/work/784-daily-observer-preparation-20261001"
+    },
+    {
+      "local_ref": "refs/heads/work/786-comparator-preparation-20261002",
+      "sha": "755a4a0aee54cadf112fe78b0e5474c553dde517",
+      "remote_ref": "refs/heads/work/786-comparator-preparation-20261002"
+    },
+    {
+      "local_ref": "refs/heads/work/bounded-equivalent-duration-handoff-20261001",
+      "sha": "712947dfbbf238245a0ffef191c71bb82efd6a2d",
+      "remote_ref": "refs/heads/work/bounded-equivalent-duration-handoff-20261001"
+    },
+    {
+      "local_ref": "refs/heads/work/c1-fresh-plan-release-20261001",
+      "sha": "fd2a67730cbe632773cf8d8666d2e24ffc02a324",
+      "remote_ref": "refs/heads/work/c1-fresh-plan-release-20261001"
+    },
+    {
+      "local_ref": "refs/heads/work/c1-full-vector-bounded-stages-20261001",
+      "sha": "a51e18caf46113479d80d26725330d924e9e092f",
+      "remote_ref": "refs/heads/work/c1-full-vector-bounded-stages-20261001"
+    },
+    {
+      "local_ref": "refs/heads/work/c1-full48-release-promotion-20261001",
+      "sha": "edf5bcbca4b03cc7597c4d44d41d16c33ddf9ccb",
+      "remote_ref": "refs/heads/work/c1-full48-release-promotion-20261001"
+    },
+    {
+      "local_ref": "refs/heads/work/c1-v3-bounded-horizon-20261001",
+      "sha": "9366e95fe1043e9901f8c7dff65808414f270a17",
+      "remote_ref": "refs/heads/work/c1-v3-bounded-horizon-20261001"
+    },
+    {
+      "local_ref": "refs/heads/work/c1-v3-semantic-production-20261002",
+      "sha": "994fe4702b57ce1f63da66fd0e12b91584f7e9a9",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/work/c1-v3-semantic-production-20261002"
+    },
+    {
+      "local_ref": "refs/heads/work/confirmed-halt-fresh-plan-20261001",
+      "sha": "7730ad736bd83b975b66ffc6a6f9db2828111417",
+      "remote_ref": "refs/heads/work/confirmed-halt-fresh-plan-20261001"
+    },
+    {
+      "local_ref": "refs/heads/work/final-expiry-delivery-20261001",
+      "sha": "329d91a8b1d14b2840208cde3d4d4b918bae05cd",
+      "remote_ref": "refs/heads/work/final-expiry-delivery-20261001"
+    },
+    {
+      "local_ref": "refs/heads/work/ha-light-owner-399-20260928",
+      "sha": "18a1c4d76ea46736cc23eb199420d3357dde1ce9",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/work/ha-light-owner-399-20260928"
+    },
+    {
+      "local_ref": "refs/heads/work/irrigation-stop-safety-20261002",
+      "sha": "efaa4b677034bb759563b0bfb44723030f83a326",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/work/irrigation-stop-safety-20261002"
+    },
+    {
+      "local_ref": "refs/heads/work/winter-initializer-image-custody-20261001",
+      "sha": "3cac7f7a3693d0d2792b0ee3f5c36984141e99e5",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/work/winter-initializer-image-custody-20261001"
+    },
+    {
+      "worktree": "/private/tmp/rel3-final-pin-62c",
+      "sha": "62caffead96416f3d57fa5bf9bf727dfbf376bf0",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-62caffead964"
+    },
+    {
+      "worktree": "/private/tmp/verdify-c0-790c",
+      "sha": "790ce26d7e52963fae4727393bf83050133453cd",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-790ce26d7e52"
+    },
+    {
+      "worktree": "/private/tmp/verdify-c0-7f96",
+      "sha": "7f96dabbc0e23c10a016ef76cc080ae0b75c7999",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-7f96dabbc0e2"
+    },
+    {
+      "worktree": "/private/tmp/verdify-gate-r-4788",
+      "sha": "4788c32ae5ffae9c148ee2e43417338763bcafcd",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-4788c32ae5ff"
+    },
+    {
+      "worktree": "/private/tmp/verdify-gater-ad1d",
+      "sha": "ad1d13f2cab6e883268ac55abe20c10c2dcbe05c",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-ad1d13f2cab6"
+    },
+    {
+      "worktree": "/private/tmp/verdify-pinonly-base-320",
+      "sha": "3203108c2fa3042560deb8b8c77aebba5c1db8df",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-3203108c2fa3"
+    },
+    {
+      "worktree": "/private/tmp/verdify-retire-3214",
+      "sha": "3214ef09445fa232dd137a2343d1b08f0f9813f0",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-3214ef09445f"
+    },
+    {
+      "worktree": "/private/tmp/verdify-writer-pin-base-6c5c03b6",
+      "sha": "6c5c03b602902abc43a3b6f38bf1a109516839e2",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-6c5c03b60290"
+    },
+    {
+      "worktree": "/Users/jason/Documents/Codex/verdify-782-winter-collector-source-f77",
+      "sha": "f77ef0005b8cf211130eebbd4b54d881d14c335a",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-f77ef0005b8c"
+    },
+    {
+      "worktree": "/Users/jason/repos/verdify-783-restore-20260928",
+      "sha": "3287a34a7815e1d411e6efc044c168ad3dd2008f",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-3287a34a7815"
+    },
+    {
+      "worktree": "/Users/jason/repos/verdify-ci-qualification",
+      "sha": "b2e85d1d94b4d790d715dd77aac77ca5b35919c9",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-b2e85d1d94b4"
+    },
+    {
+      "worktree": "/Users/jason/repos/verdify-g10-live-20260926",
+      "sha": "86a12550782d4b482cf841b21a3d351bed04e45c",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-86a12550782d"
+    },
+    {
+      "worktree": "/Users/jason/repos/verdify-platform-840-review",
+      "sha": "dd851ad5ff6137066393c962dfb96d09e885fa07",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-dd851ad5ff61"
+    },
+    {
+      "worktree": "/Users/jason/repos/verdify-platform-qual-e0be",
+      "sha": "e0be4e05edbbf54b954bb7f9f6a6a7bca91ffaaf",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-e0be4e05edbb"
+    },
+    {
+      "worktree": "/Users/jason/repos/verdify-platform-shadow-dec782c6",
+      "sha": "dec782c6b364f75b249aa45d5dbf8d32aece507d",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-dec782c6b364"
+    },
+    {
+      "worktree": "/Users/jason/repos/verdify-platform-wt-rehearsal-fix",
+      "sha": "790a76bc6d87947de6d105029fa0d39612569853",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-790a76bc6d87"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-214-phase1-latest-preparation-20261002",
+      "sha": "f5c703efdbc3f0016be4fdc07cc0148feb792c6c",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-f5c703efdbc3"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-270-native-delivery-20261002",
+      "sha": "3f313d49423f82f83b3a8952093e74f3303788a1",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-3f313d49423f"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-386-operational-source-20261001",
+      "sha": "e857c1bedaac5281571a7c3fc31076a73e451a6d",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-e857c1bedaac"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-c1-7bb-root-resume-20261001",
+      "sha": "7bb08fdd153f9a4f16c9791b7ba093ad87a8582d",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-7bb08fdd153f"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-c1-cadence-e91-deploy543-20261002",
+      "sha": "5435537098c3c6c96dbeb7c2cf2ab0ba8e7b4c30",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-5435537098c3"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-c1-cadence-e91b-operational-source-20261002",
+      "sha": "e91b2a7d5df14baf327bd198b4333ac65e28cc6b",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-e91b2a7d5df1"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-c1-capture-transient-release-20261002",
+      "sha": "aec5271e73870c09ffc0d4fefcef855c6c6bea51",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-aec5271e7387"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-c1-final-native-capture-preparation-20261002",
+      "sha": "afe69431e3f5a82b7839cb945c96a244fa38d099",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-afe69431e3f5"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-c1-forward-live-20261001",
+      "sha": "9de3bc8b2b1ba5874a46c1746816bc0101205967",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-9de3bc8b2b1b"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-c1-forward-production-20261001",
+      "sha": "5553f6bc30250e70cd6b0608b5393f1fdcadbf4a",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-5553f6bc3025"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-c1-full48-promotion-20261001",
+      "sha": "02b53ade3372b30b896d41dd23f2e886303a101e",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-02b53ade3372"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-c1-grid-current-comparison-d947-20261002",
+      "sha": "d947df5f86041d15e68c4820da3475c6e5e04472",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-d947df5f8604"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-c1-grid-native-delivery-20261002",
+      "sha": "7cf4aebff4c9b03f7127f51ad1f2f39422f3103f",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-7cf4aebff4c9"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-c1-grid-operational-source-20261002",
+      "sha": "6b10a51e5746d4d7d3ecbd4b4f563c7a9ff4bf69",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-6b10a51e5746"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-c1-ota-final-20260930",
+      "sha": "831dc2081cc17016cb22448a920c6962128d73d3",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-831dc2081cc1"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-c1-periodic-native-delivery-20261002",
+      "sha": "3b6163e1795acd816dd47fb5e5df2038da5cb8f3",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-3b6163e1795a"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-c1-periodic-operational-source-20261002",
+      "sha": "1a9677fa9dccd0f541d96bfe27296e106399afa6",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-1a9677fa9dcc"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-c1-qualified-0d8b-source-20261002",
+      "sha": "0d8b7383ae4de506945a06a77d7b66359cd1b83e",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-0d8b7383ae4d"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-c1-qualified-35-source-20261001",
+      "sha": "35acd902200162367ec423719ada5cd90ba6d242",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-35acd9022001"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-c1-qualified-a6-source-20261002",
+      "sha": "a6febf6b1d6601c0da1aac82b06cb611d7cacc2b",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-a6febf6b1d66"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-c1-v3-attended-production-20261002",
+      "sha": "4384f31bf2b1d518e03bdd3966ef9f4fdbb6a9d0",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-4384f31bf2b1"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-c1-v3-header-operational-source-20261002",
+      "sha": "66588f015a99fe71c3931f9d9f0622835f452823",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-66588f015a99"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-c1-v3-operational-source-20261002",
+      "sha": "d7a996ca730af793990210528723176bb10bab9a",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-d7a996ca730a"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-c5-v2-witness-20261001",
+      "sha": "876efd8f06fd0258ba6aa9c16360bd684a2633dc",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-876efd8f06fd"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-cnpg-actual-native-admission-20261001",
+      "sha": "38ed0864892954000cacf24501de961a3b29a113",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-38ed08648929"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-cnpg-actual-native-admission-897-20261001",
+      "sha": "b6a8887c8ce94a9138ed07b6cebe3b21a4ddd042",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-b6a8887c8ce9"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-cnpg-actual-native-admission-899-20261001",
+      "sha": "964303be76811d4192c4b74ad49254c1f8c779df",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-964303be7681"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-cnpg-actual-native-admission-901-20261001",
+      "sha": "be6207608b956bc4410508d0bcd601efc424e55a",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-be6207608b95"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-cnpg-actual-native-admission-903-20261001",
+      "sha": "e15fb9f700ee659b5e4baa3232d4ff3d62016e1c",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-e15fb9f700ee"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-cnpg-archive-root-delivery-20261001",
+      "sha": "aefae4fd9b8d0da0824e1ef0bae36a5063611813",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-aefae4fd9b8d"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-cnpg-auth-readiness-merged921-20261002",
+      "sha": "eb30d4f4a69258fef5dd3e5a1a1c471fa663ec6c",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-eb30d4f4a692"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-cnpg-client-auth-merged918-20261002",
+      "sha": "7c412ae453663e750f5c6297afce5ac79561ea6c",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-7c412ae45366"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-cnpg-client-diagnostic-merged916-20261002",
+      "sha": "df65f7912e06ee52c4451638e811258bc4af8ee9",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-df65f7912e06"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-cnpg-client-merged913-20261002",
+      "sha": "b93722f8b023bcfae3a41a91027d56d9a970b458",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-b93722f8b023"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-cnpg-complete-dataset-merged940-20261002",
+      "sha": "7c0f4de494800701019a5b64c7e5c062814476f1",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-7c0f4de49480"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-cnpg-endpoint-dataset-merged941-20261002",
+      "sha": "003b8bbfc980c25a0aefe268732dedcbdd9a51be",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-003b8bbfc980"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-cnpg-native-v3-root-20261001",
+      "sha": "e31889bd3c28e036acb9c3fb8aebe5386f5a612b",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-e31889bd3c28"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-cnpg-permanent-finite-merged942-20261002",
+      "sha": "899a3dc186ac3dfb7aa4bb7f16cbdebfcb87e5d4",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-899a3dc186ac"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-cnpg-policy-twin-merged947-20261002",
+      "sha": "87cd756e26126b60fbc2c9b26e81cb9f33aa604c",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-87cd756e2612"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-cnpg-post-import-root-delivery-20261001",
+      "sha": "3995e80ec418c7408c005014c1c01a72eedd05e7",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-3995e80ec418"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-cnpg-private-scratch-root-delivery-20261001",
+      "sha": "75981c79317b61c0cb79c14c7edfda5ee2149978",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-75981c79317b"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-cnpg-r4-root-delivery-20261001",
+      "sha": "ead65e27429f0eabadbe33f6c146b291638c2bcf",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-ead65e27429f"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-cnpg-region-root-delivery-20261001",
+      "sha": "d2fe64fd9e1d566b5b11b2bbf9caa5ba78cbb46b",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-d2fe64fd9e1d"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-cnpg-rehearsal-admission-memory-20261001",
+      "sha": "9e7525197109b939520819f82d33f49b9adf0b7c",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-9e7525197109"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-cnpg-retained-session-merged906-20261001",
+      "sha": "8423e304148bd2e51d363a9d36453c54c69919c2",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-8423e304148b"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-cnpg-role-final-root-delivery-20261001",
+      "sha": "5480586ea67ae4026c7070283ccf88c216ea288a",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-5480586ea67a"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-cnpg-root-recovery-20261001",
+      "sha": "4c1928108da92e53b5fb521d02e0c0b1086c1fc1",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-4c1928108da9"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-cnpg-sgid-root-delivery-20261001",
+      "sha": "2c92d00cd5f4803622e8784853b04df09bc81ff2",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-2c92d00cd5f4"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-cnpg-target270-merged3575-20261002",
+      "sha": "3575cc3d300160f3ff5c6d6bfb9067567b2b09fe",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-3575cc3d3001"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-cnpg-whole-view-clock-merged944-20261002",
+      "sha": "c80806b89b8899f0ebdb0e9289375b3e711b65cc",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-c80806b89b88"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-final-expiry-delivery-20261001",
+      "sha": "346bc4d5f22b5b4e68e47b1dba4a5f350a0305b2",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-346bc4d5f22b"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-firmware-intended-20260930",
+      "sha": "5bcf4648c4976f8baa6c5041e1c247d91fd67a52",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-5bcf4648c497"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-firmware-recovery-20260929/source",
+      "sha": "09ee886f1a6fbd6452064460e1a57e5dc1399a70",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-09ee886f1a6f"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-heartbeat-root-delivery-20261001",
+      "sha": "e3b73d0c34e0db4ebb84ae287ae1cb52d25d14ca",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-e3b73d0c34e0"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-pilot-readonly-20261001",
+      "sha": "85a7fc8fcd4c70342798d16005cc3ff4dc611a9a",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-85a7fc8fcd4c"
+    },
+    {
+      "worktree": "/Volumes/Work/Codex/verdify-vision-authenticated-snapshots-20261001",
+      "sha": "118ae43919d1d0ce1090a4328e1a0ec5f047bbf6",
+      "remote_ref": "refs/heads/handoff/shutdown-20261002/detached-118ae43919d1"
+    }
+  ]
+}

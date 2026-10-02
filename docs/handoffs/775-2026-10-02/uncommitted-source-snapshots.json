@@ -1,0 +1,158 @@
+[
+  {
+    "worktree": "/Users/jason/repos/verdify-platform",
+    "preserved_locally_only": "cache or environment symlink; encrypted custody bundle covers unrelated cache"
+  },
+  {
+    "worktree": "/Users/jason/repos/verdify-371-integration-review-20260928",
+    "original_branch": null,
+    "original_head": "e1dd50c1d2c1ec23fe81c1131c3e93139180e81f",
+    "snapshot_branch": "handoff/20261002/dirty-01da3cc1c55c",
+    "snapshot_commit": "97bbcfd39997686a1952dcc54ede8de98dc8c5e1",
+    "paths": [
+      "deploy/k8s/components/grafana/generated/dashboards-cm-0.yaml",
+      "grafana/dashboards/site-home.json",
+      "verdify_schemas/views.py"
+    ],
+    "unreviewed": true
+  },
+  {
+    "worktree": "/Users/jason/repos/verdify-782-gatep-reseal-20260928",
+    "original_branch": "refs/heads/agent/782-gatep-reseal-20260928",
+    "original_head": "eb90085cc27f8028c2c1a069129a5e45a6f32f9b",
+    "snapshot_branch": "handoff/20261002/dirty-bb14e91bcbd8",
+    "snapshot_commit": "eb2f0f4def975abed8ccfe0f82d4d90d061a3b0e",
+    "paths": [
+      "scripts/probe-256-rollback-only.py",
+      "scripts/probe-ordinary-boundary-catalog.py"
+    ],
+    "unreviewed": true
+  },
+  {
+    "worktree": "/Volumes/Work/Codex/verdify-396-cnpg-current-storage-20261001",
+    "original_branch": "refs/heads/work/396-cnpg-current-storage",
+    "original_head": "d665c67ae4b6c763859415c55bd44ea2efc97000",
+    "snapshot_branch": "handoff/20261002/dirty-44d8eef12d92",
+    "snapshot_commit": "603b89e0915d2fc00007ce2d8118497ae0c92beb",
+    "paths": [
+      "deploy/k8s/cnpg/docs/PROD-CNPG-MIGRATION-RUNBOOK.md",
+      "deploy/k8s/cnpg/image/Dockerfile",
+      "scripts/ci-local.sh",
+      "docs/runbooks/cnpg-alongside-rehearsal.md",
+      "scripts/render-cnpg-rehearsal.py",
+      "tests/test_cnpg_rehearsal.py"
+    ],
+    "unreviewed": true
+  },
+  {
+    "worktree": "/Volumes/Work/Codex/verdify-644-promotion-receipt-20260930",
+    "original_branch": "refs/heads/fix/644-promotion-receipt-20260930",
+    "original_head": "a6ed0105bd836625dc1c364b56c7e84e8014d9a9",
+    "snapshot_branch": "handoff/20261002/dirty-95e81e6a90c6",
+    "snapshot_commit": "1e245c14ffd99ba693931ad918e84a97200e5e6a",
+    "paths": [
+      "SOURCE-RECEIPT.md",
+      "uv.lock"
+    ],
+    "unreviewed": true
+  },
+  {
+    "worktree": "/Volumes/Work/Codex/verdify-c1-consumer-manifest-20260930",
+    "original_branch": "refs/heads/fix/c1-consumer-manifest-20260930",
+    "original_head": "f8680a07695d882ae06788e030d1014740fa2249",
+    "snapshot_branch": "handoff/20261002/dirty-1e87df1d4e9b",
+    "snapshot_commit": "be7d69c87054ceb7a95d9e53ee190ab90aa62a2b",
+    "paths": [
+      "firmware/policy_consumer_manifest.json"
+    ],
+    "unreviewed": true
+  },
+  {
+    "worktree": "/Volumes/Work/Codex/verdify-climate-intent-grid-20260929",
+    "original_branch": "refs/heads/fix/climate-intent-grid-20260929",
+    "original_head": "86e07ee4aac04a748267dd4fae3b8124f48a9aab",
+    "snapshot_branch": "handoff/20261002/dirty-cd3f405bbbe7",
+    "snapshot_commit": "f198cd74c81d95e5b2d42b73f59258f9a83a8c9c",
+    "paths": [
+      "ingestor/tasks/dispatcher.py",
+      "tests/test_05_dispatcher.py",
+      "verdify_schemas/climate_intent.py",
+      "verdify_schemas/component_executor.py",
+      "verdify_schemas/tests/test_climate_intent.py",
+      "verdify_schemas/entity_grid.py"
+    ],
+    "unreviewed": true
+  },
+  {
+    "worktree": "/Volumes/Work/Codex/verdify-cnpg-band-time-projection-20261002",
+    "original_branch": "refs/heads/fix/cnpg-band-time-projection-20261002",
+    "original_head": "df591af33570d1077bf19cd92305e85bc99258c5",
+    "snapshot_branch": "handoff/20261002/dirty-fccb50a931ca",
+    "snapshot_commit": "367a7c6da60155354db8252fd11817b30a736a69",
+    "paths": [
+      "scripts/cnpg-physical-runtime-transition.py",
+      "tests/test_cnpg_physical_runtime_transition.py",
+      "scripts/cnpg-band-trace-time-projection.py",
+      "tests/fixtures/cnpg_band_trace_time_projection/source-native-properties.json"
+    ],
+    "unreviewed": true
+  },
+  {
+    "worktree": "/Volumes/Work/Codex/verdify-cnpg-existing-target-recovery-20261001",
+    "original_branch": "refs/heads/fix/cnpg-existing-target-recovery-20261001",
+    "original_head": "7acce17d947a0fb6436f5da1882a299b9920a267",
+    "snapshot_branch": "handoff/20261002/dirty-e989d3ab70d0",
+    "snapshot_commit": "ef8e961da3d1da6eede65c8c20b2811f8fb42820",
+    "paths": [
+      "scripts/cnpg-existing-target-recovery.py"
+    ],
+    "unreviewed": true
+  },
+  {
+    "worktree": "/Volumes/Work/Codex/verdify-cnpg-physical-runtime-profile-20261001",
+    "original_branch": "refs/heads/work/396-physical-runtime-profile-20261001",
+    "original_head": "e3ee6c813072605206f25f1c205bb30af98db4ec",
+    "snapshot_branch": "handoff/20261002/dirty-666a0d7d2c22",
+    "snapshot_commit": "48fe83316cf414b0e44088fd1ab375216b05ca8f",
+    "paths": [
+      "scripts/cnpg-target-runtime-transition.py",
+      "docs/runbooks/cnpg/physical-runtime-admission.md",
+      "scripts/cnpg-physical-runtime-transition.py",
+      "tests/test_cnpg_physical_runtime_transition.py"
+    ],
+    "unreviewed": true
+  },
+  {
+    "worktree": "/Volumes/Work/Codex/verdify-final-expiry-delivery-20261001",
+    "preserved_locally_only": "cache or environment symlink; encrypted custody bundle covers unrelated cache"
+  },
+  {
+    "worktree": "/Volumes/Work/Codex/verdify-heartbeat-root-delivery-20261001",
+    "preserved_locally_only": "cache or environment symlink; encrypted custody bundle covers unrelated cache"
+  },
+  {
+    "worktree": "/Volumes/Work/Codex/verdify-irrigation-source-audit-20261002",
+    "original_branch": "refs/heads/work/irrigation-stop-safety-20261002",
+    "original_head": "efaa4b677034bb759563b0bfb44723030f83a326",
+    "snapshot_branch": "handoff/20261002/dirty-a0d8a1317ba6",
+    "snapshot_commit": "9019c03f9beda4e507977c2dae0f212411bc4397",
+    "paths": [
+      "firmware/greenhouse/controls.yaml",
+      "firmware/greenhouse/hardware.yaml",
+      "scripts/ci-local.sh",
+      "tests/test_irrigation_stop_edges.py"
+    ],
+    "unreviewed": true
+  },
+  {
+    "worktree": "/Volumes/Work/Codex/verdify-sso-rollback-proof-20261001",
+    "original_branch": null,
+    "original_head": "b3b68e378a953b45ce41ca088bdc9fd9792daa01",
+    "snapshot_branch": "handoff/20261002/dirty-d94d35ed8450",
+    "snapshot_commit": "bd75f6514ed8607518b4d8c4b7d9163dacf92f31",
+    "paths": [
+      "deploy/k8s/components/grafana/grafana.yaml"
+    ],
+    "unreviewed": true
+  }
+]
