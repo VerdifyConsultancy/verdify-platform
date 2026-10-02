@@ -216,8 +216,6 @@ SET LOCAL timezone='UTC';
 SET LOCAL statement_timeout='120s';
 SET LOCAL lock_timeout='2s';
 DO $physical_dataset$
-DECLARE relation record; column_row record; row_count bigint; endpoints jsonb;
-        ranges jsonb; inventory jsonb := '[]'::jsonb; owners jsonb;
 BEGIN
  IF current_database()<>'verdify_rehearsal' OR current_setting('server_version_num')::int<>160013
     OR current_setting('cluster_name')<>'{profile}' OR pg_is_in_recovery()
@@ -229,21 +227,37 @@ BEGIN
            WHERE n.nspname='public' AND c.relkind='f') THEN
    RAISE EXCEPTION 'native physical dataset refuses external table endpoints';
  END IF;
- FOR relation IN SELECT c.oid, n.nspname, c.relname FROM pg_class c
-     JOIN pg_namespace n ON n.oid=c.relnamespace
-     WHERE n.nspname='public' AND c.relkind IN ('r','p','v','m','S') ORDER BY c.relname LOOP
-   EXECUTE format('SELECT count(*) FROM %I.%I', relation.nspname, relation.relname) INTO row_count;
-   ranges := '{{}}'::jsonb;
-   FOR column_row IN SELECT attname FROM pg_attribute WHERE attrelid=relation.oid
-       AND attnum>0 AND NOT attisdropped AND atttypid IN ('timestamp'::regtype,'timestamptz'::regtype)
-       ORDER BY attnum LOOP
-     EXECUTE format('SELECT jsonb_build_array(min(%I)::text,max(%I)::text) FROM %I.%I',
-                    column_row.attname,column_row.attname,relation.nspname,relation.relname) INTO endpoints;
-     ranges := ranges || jsonb_build_object(column_row.attname,endpoints);
-   END LOOP;
-   inventory := inventory || jsonb_build_array(jsonb_build_object(
-       'relation',format('%I.%I',relation.nspname,relation.relname),'count',row_count,'time_ranges',ranges));
- END LOOP;
+ -- Local transaction state only; no temporary table or persistent DML.
+ PERFORM set_config('verdify.physical_inventory','[]',true);
+END $physical_dataset$;
+-- One statement and one aggregate scan per relation. ON_ERROR_STOP makes any
+-- native failure terminal; all statements share the original readonly snapshot.
+SELECT format($relation_sql$
+DO $physical_relation$
+DECLARE row_count bigint; ranges jsonb;
+BEGIN
+ EXECUTE %L INTO row_count,ranges;
+ PERFORM set_config('verdify.physical_inventory',
+   (current_setting('verdify.physical_inventory')::jsonb || jsonb_build_array(
+     jsonb_build_object('relation',%L,'count',row_count,'time_ranges',ranges)))::text,true);
+END $physical_relation$;
+$relation_sql$,
+ format('SELECT count(*), %s FROM %I.%I',
+   CASE WHEN columns.fields IS NULL THEN '''{{}}''::jsonb'
+        ELSE columns.fields END,
+   n.nspname,c.relname),format('%I.%I',n.nspname,c.relname))
+FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+CROSS JOIN LATERAL (
+ SELECT string_agg(format('jsonb_build_object(%L,jsonb_build_array(min(%I)::text,max(%I)::text))',
+                         attname,attname,attname),' || ' ORDER BY attname) AS fields
+ FROM pg_attribute WHERE attrelid=c.oid AND attnum>0 AND NOT attisdropped
+   AND atttypid IN ('timestamp'::regtype,'timestamptz'::regtype)
+) columns
+WHERE n.nspname='public' AND c.relkind IN ('r','p','v','m','S') ORDER BY c.relname
+\\gexec
+DO $physical_owners$
+DECLARE owners jsonb;
+BEGIN
  SELECT jsonb_agg(jsonb_build_object(
     'parent',format('%I.%I',h.schema_name,h.table_name),'parent_owner',pg_get_userbyid(parent.relowner),
     'chunk',format('%I.%I',c.schema_name,c.table_name),'chunk_owner',pg_get_userbyid(chunk.relowner),
@@ -258,8 +272,9 @@ BEGIN
  WHERE h.schema_name='public' AND NOT c.dropped;
  PERFORM set_config('verdify.physical_dataset',jsonb_build_object(
      'schema','cnpg-physical-data-parity-v1','database',current_database(),
-     'relations',inventory,'timescale_owners',coalesce(owners,'[]'::jsonb))::text,true);
-END $physical_dataset$;
+     'relations',current_setting('verdify.physical_inventory')::jsonb,
+     'timescale_owners',coalesce(owners,'[]'::jsonb))::text,true);
+END $physical_owners$;
 SELECT current_setting('verdify.physical_dataset');
 COMMIT;
 """
