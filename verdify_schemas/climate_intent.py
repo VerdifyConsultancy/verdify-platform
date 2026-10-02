@@ -10,10 +10,12 @@ from __future__ import annotations
 import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from .entity_grid import ENTITY_GRIDS
 from .tunable_registry import REGISTRY, TIER1_REG, registry_value_error
 
 CLIMATE_INTENT_CONTRACT_VERSION = "2026-05-25"
@@ -422,6 +424,22 @@ def _clamp_tier1_value(parameter: str, value: float) -> float:
     return float(value)
 
 
+def _snap_materialized_component(parameter: str, value: float) -> float:
+    """Place a generated Tier 1 value on its deployed ESPHome entity grid.
+
+    The experiment executor still rejects off-grid caller-supplied targets.
+    Only this source-owned semantic-intent materializer may round its own
+    computed values before they become ordinary planner commands.
+    """
+    grid = ENTITY_GRIDS.get(parameter)
+    if grid is None or grid.entity_type == "switch":
+        return value
+    assert grid.minimum is not None and grid.maximum is not None and grid.step is not None
+    bounded = min(grid.maximum, max(grid.minimum, Decimal(str(value))))
+    steps = ((bounded - grid.minimum) / grid.step).to_integral_value(rounding=ROUND_HALF_UP)
+    return float(grid.minimum + steps * grid.step)
+
+
 def _tier1_base_params(base_params: Mapping[str, object] | None = None) -> dict[str, float]:
     params = {name: float(REGISTRY[name].default) for name in TIER1_REG}
     for name, raw_value in (base_params or {}).items():
@@ -637,7 +655,10 @@ def materialize_climate_intent_tier1(
         }
     )
 
-    materialized = {name: _clamp_tier1_value(name, params[name]) for name in TIER1_REG}
+    materialized = {
+        name: _snap_materialized_component(name, _clamp_tier1_value(name, params[name]))
+        for name in TIER1_REG
+    }
     errors = [error for name, value in materialized.items() if (error := registry_value_error(name, value))]
     if errors:
         raise ValueError("ClimateIntent materialization produced registry violations: " + "; ".join(errors))

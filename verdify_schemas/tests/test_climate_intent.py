@@ -26,6 +26,11 @@ from verdify_schemas.climate_intent import (
     climate_intent_materialization_guardrails,
     materialize_climate_intent_tier1,
 )
+from verdify_schemas.component_executor import (
+    ComponentContractError,
+    ENTITY_GRIDS,
+    normalize_component_value,
+)
 from verdify_schemas.tunable_registry import TIER1_REG, registry_value_error
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
@@ -158,7 +163,7 @@ def test_climate_intent_materializes_to_complete_bounded_tier1_params() -> None:
     assert params["vent_prefer_temp_delta_f"] == intent.economizer_temp_advantage_f
     assert params["direct_wet_stress_min_dew_margin_f"] == intent.dew_margin_floor_f
     assert params["mister_water_budget_gal"] == intent.daily_mist_budget_gal
-    assert params["fog_escalation_kpa"] == intent.fog_escalate_vpd_excess_kpa
+    assert params["fog_escalation_kpa"] == 0.3  # firmware Number step is 0.1 kPa
     assert params["mister_engage_kpa"] == pytest.approx(0.85)
     assert params["mister_all_kpa"] == pytest.approx(1.05)
     assert all(registry_value_error(name, value) is None for name, value in params.items())
@@ -178,7 +183,43 @@ def test_all_zone_mist_threshold_is_independent_from_fog_escalation() -> None:
 
     assert params["mister_engage_kpa"] == pytest.approx(1.15)
     assert params["mister_all_kpa"] == pytest.approx(1.45)
-    assert params["fog_escalation_kpa"] == pytest.approx(0.15)
+    assert params["fog_escalation_kpa"] == pytest.approx(0.2)
+
+
+@pytest.mark.parametrize(
+    "intent",
+    [
+        _valid_intent(),
+        _valid_intent(
+            forecast_temp_bias_f=3.37,
+            solar_precool_gain_f=2.63,
+            mist_duty_limit_pct=87.0,
+            relay_churn_penalty=0.73,
+            resource_sensitivity=0.19,
+        ),
+        _valid_intent(
+            forecast_vpd_bias_kpa=0.4,
+            fog_escalate_vpd_excess_kpa=0.8,
+            daily_mist_budget_gal=0.0,
+            mist_duty_limit_pct=0.0,
+        ),
+    ],
+)
+def test_generated_tier1_components_are_on_the_deployed_entity_grid(intent: ClimateIntent) -> None:
+    # A legacy active value can itself be off-grid; a new semantic plan still
+    # emits an exact 48-component baseline candidate for every Tier 1 field.
+    params = materialize_climate_intent_tier1(
+        intent,
+        {"mister_engage_delay_s": 45.0, "cool_stage2_exit_hysteresis_f": 1.87, "vpd_high": 1.23},
+    )
+    assert set(params) == set(TIER1_REG)
+    for name, value in params.items():
+        grid = ENTITY_GRIDS[name]
+        if grid.entity_type == "number":
+            assert normalize_component_value(name, value) == value
+    assert params["fog_escalation_kpa"] <= 0.5
+    with pytest.raises(ComponentContractError, match="value_off_entity_grid"):
+        normalize_component_value("cool_stage2_exit_hysteresis_f", 1.87)
 
 
 def test_materializer_forces_wet_assist_when_live_vpd_is_above_band_and_dew_is_safe() -> None:
