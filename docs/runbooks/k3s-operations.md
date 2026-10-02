@@ -234,6 +234,16 @@ and #322/#339 (retired-VM doc/test cleanup).
 
 ## 6. Durable gotchas (carry these — they were laptop tribal knowledge)
 
+- **Every new full Argo sync must atomically clear the prior terminal
+  `status.operationState` and submit the exact revision with prune off and no
+  resource selector**, guarded by the observed resourceVersion and no active
+  operation. See `laptop-operator.md` §2. On 2026-10-02, a prior full operation
+  with no selectors produced a false Succeeded/126-resource result at the new
+  revision while actual hooks/workloads retained old digests. Preserve that
+  original outcome; verify new hook Pod UID/start-time/image provenance and
+  actual running digests/source identities immediately. Revision, resource
+  count and Synced/Healthy alone do not prove delivery.
+
 - **Verify device firmware from `diagnostics.firmware_version`,** not
   `firmware/artifacts/last-good.version` (rollback floor, lags during the bake).
 - **The pinched band IS the device's control band** (pinch machinery wired since

@@ -79,31 +79,55 @@ preflight.
   kustomize build deploy/k8s/overlays/prod | grep -o 'verdify-[a-z0-9-]*@sha256:[0-9a-f]*' | sort -u
   ```
 - **The gated prod sync (the ONLY step that touches the live writer):**
-  ```bash
-  kubectl patch application verdify-prod-dark -n argocd --type merge \
-    -p '{"operation":{"initiatedBy":{"username":"laptop-root"},"sync":{"prune":false}}}'
-  ```
   Pre-check with `kustomize build deploy/k8s/overlays/prod | kubectl diff -f -`
   and confirm the ingestor Deployment (strategy: Recreate — never two writers)
-  changes only when you intend it. If the last completed operation has
-  `.status.operationState.operation.sync.resources`, Argo CD 3.4 can inherit
-  that selective scope on the next full sync ([#317](https://github.com/VerdifyConsultancy/verdify-platform/issues/317),
-  [upstream #28701](https://github.com/argoproj/argo-cd/issues/28701)). With no
-  operation active, submit the exact intended revision and clear the stale
-  operation state in **one** patch instead of the plain patch above:
+  changes only when you intend it. For **every new full sync**, submit the exact
+  intended revision and clear the previous terminal operation state atomically,
+  even when the previous operation was full and had no selectors:
   ```bash
-  kubectl patch application verdify-prod-dark -n argocd --type merge \
-    -p '{"operation":{"initiatedBy":{"username":"laptop-root"},"sync":{"revision":"<exact-main-sha>","prune":false}},"status":{"operationState":null}}'
+  set -euo pipefail
+  SYNC_REVISION='<exact-main-sha>'
+  [[ "$SYNC_REVISION" =~ ^[0-9a-f]{40}$ ]]
+  ARGO_OPERATION_SNAPSHOT="$(kubectl get application verdify-prod-dark -n argocd -o json)"
+  printf '%s' "$ARGO_OPERATION_SNAPSHOT" | jq -e '
+    .operation == null and
+    (.status.operationState == null or
+     (.status.operationState.phase | IN("Succeeded", "Failed", "Error")))'
+  ARGO_OPERATION_RV="$(printf '%s' "$ARGO_OPERATION_SNAPSHOT" | jq -r '.metadata.resourceVersion')"
+  kubectl patch application verdify-prod-dark -n argocd --type json -p "$(
+    jq -n --arg rv "$ARGO_OPERATION_RV" --arg revision "$SYNC_REVISION" '
+      [{op:"test",path:"/metadata/resourceVersion",value:$rv},
+       {op:"add",path:"/status/operationState",value:null},
+       {op:"add",path:"/operation",value:{
+         initiatedBy:{username:"laptop-root"},
+         sync:{revision:$revision,prune:false}}}]'
+  )"
   ```
-  The current Application CRD has no status subresource, so this patch is
-  atomic. Right after either submission, read
-  `.status.operationState.operation.sync.resources`; it must be absent or
-  empty. If selectors appear or the syncResult covers too few
-  resources, STOP and investigate before another operation. The explicit `resources:` list
-  (`scripts/gen-sync-resource-vector.sh`, reviewed first; see
-  `attended-convergence.md`) is a fallback only: Argo CD skips every hook on a
-  selective sync, including the `verdify-migrate` PreSync, and does not record
-  it in history.
+  Stop if the precondition or resourceVersion test fails; inspect the current
+  operation before submitting another one. The current Application CRD has no
+  status subresource, so status clearing and submission share the atomic patch.
+  A prior selective operation can leak its resource scope ([#317](https://github.com/VerdifyConsultancy/verdify-platform/issues/317),
+  [upstream #28701](https://github.com/argoproj/argo-cd/issues/28701)). A separate
+  observed failure on 2026-10-02 also reused stale `syncResult` after a prior full
+  operation: it reported Succeeded/126 resources at the intended new revision,
+  while the migrate hook and running workloads still used the old digests.
+  The original false-success receipt must remain preserved; revision/count alone
+  are insufficient deployment evidence.
+
+  Immediately verify that a **new** operation started and that
+  `.status.operationState.operation.sync.resources` is absent or empty. Inspect
+  actual migration/bootstrap hook Pod UIDs, start times and image digests against
+  the promoted receipt, then actual running workload imageIDs/source identities.
+  Require the owning ledger/readiness hooks and authenticated smoke checks; do
+  not accept cached hook results, Succeeded, Synced/Healthy, or 126 resources as
+  a substitute for those exact readbacks. If selectors, stale hook provenance,
+  old running digests or too few resources appear, stop and preserve the original
+  outcome before a documented fix-forward operation.
+
+  The explicit `resources:` list (`scripts/gen-sync-resource-vector.sh`, reviewed
+  first; see `attended-convergence.md`) is a fallback only: Argo CD skips every
+  hook on a selective sync, including the `verdify-migrate` PreSync, and does not
+  record it in history.
 
 ## 3. Firmware OTA from the laptop
 
