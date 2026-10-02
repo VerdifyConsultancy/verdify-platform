@@ -26,6 +26,22 @@ IMAGE = (
     "registry.vallery.net/verdifyconsultancy/verdify-timescaledb-cnpg:16.13-ts2.25.2@sha256:"
     "8b461e37d18aa049704eb6a9cde2ba9af0f955f8d3725e921070d2450bb2f137"
 )
+# Exact historical pair preserved by the attended replica-3 repair. These are
+# custody coordinates, never an allowance for arbitrary extra storage.
+RETAINED_PAIR = {
+    CLUSTER + "-3": {
+        "uid": "91866acb-7e8c-4176-b797-6293b837f6f1",
+        "pv_uid": "82cedda7-efce-4f6b-adff-00ae9a809675",
+        "size": "30Gi",
+        "role": "PG_DATA",
+    },
+    CLUSTER + "-3-wal": {
+        "uid": "101b7691-f232-4a3f-b6d4-75a253f0370a",
+        "pv_uid": "1e182da0-aa6b-42cb-b82b-e9d2ceec3f15",
+        "size": "10Gi",
+        "role": "PG_WAL",
+    },
+}
 HOST = "topology.vallery.net/proxmox-host"
 COMPONENT = "cnpg-existing-target-fault-client"
 APP = "rehearsal_bootstrap"
@@ -139,14 +155,14 @@ def bind(snapshot, *, degraded=False):
         )
     pvcs = snapshot["pvcs"]["items"]
     pvs = {v["metadata"]["name"]: v for v in snapshot["pvs"]["items"]}
-    storage = {}
+    require(len(pvs) == len(snapshot["pvs"]["items"]), "duplicate PV custody")
+    require(len({c["metadata"]["name"] for c in pvcs}) == len(pvcs), "duplicate PVC custody")
+    storage, retained = {}, {}
     for claim in pvcs:
         cm, cs = claim["metadata"], claim["spec"]
         require(cm["namespace"] == NS and cm["labels"]["cnpg.io/cluster"] == CLUSTER, "unscoped PVC")
-        require(
-            any(o.get("uid") == UID and o.get("kind") == "Cluster" for o in cm.get("ownerReferences", [])),
-            "PVC not owned by original Cluster",
-        )
+        owned = any(o.get("uid") == UID and o.get("kind") == "Cluster" for o in cm.get("ownerReferences", []) or [])
+        require(owned or cm["name"] in RETAINED_PAIR, "PVC not owned by original Cluster")
         require(
             claim["status"]["phase"] == "Bound" and cs["storageClassName"] == "longhorn-v1-rwo",
             "PVC not bound/qualified",
@@ -155,6 +171,40 @@ def bind(snapshot, *, degraded=False):
         ref = volume["spec"]["claimRef"]
         require((ref["namespace"], ref["name"], ref["uid"]) == (NS, cm["name"], cm["uid"]), "PV/claim UID mismatch")
         require(volume["spec"]["csi"]["driver"] == "driver.longhorn.io", "wrong PV driver")
+        if not owned:
+            expected = RETAINED_PAIR[cm["name"]]
+            require(
+                cm["uid"] == expected["uid"]
+                and volume["metadata"]["uid"] == expected["pv_uid"]
+                and cs["volumeName"] == "pvc-" + expected["uid"]
+                and volume["spec"]["csi"]["volumeHandle"] == cs["volumeName"]
+                and not cm.get("ownerReferences")
+                and not cm.get("deletionTimestamp")
+                and cm.get("annotations", {}).get("cnpg.io/pvcStatus") == "detached"
+                and cm["labels"].get("cnpg.io/instanceName") == CLUSTER + "-3"
+                and cm["labels"].get("cnpg.io/pvcRole") == expected["role"]
+                and cs["resources"]["requests"]["storage"] == expected["size"]
+                and cs.get("accessModes") == ["ReadWriteOnce"]
+                and cs.get("volumeMode") == "Filesystem"
+                and volume["spec"].get("persistentVolumeReclaimPolicy") == "Retain"
+                and volume["spec"].get("storageClassName") == "longhorn-v1-rwo"
+                and volume.get("status", {}).get("phase") == "Bound"
+                and not volume["metadata"].get("deletionTimestamp")
+                and not volume["metadata"].get("ownerReferences"),
+                "historical detached pair custody drift",
+            )
+            retained[cm["name"]] = {
+                "uid": cm["uid"],
+                "pv_uid": volume["metadata"]["uid"],
+                "pvc_spec": cs,
+                "pvc_status": claim["status"],
+                "pvc_labels": cm["labels"],
+                "detached": True,
+                "ownerless": True,
+                "pv_spec": volume["spec"],
+                "pv_status": volume["status"],
+            }
+            continue
         storage[cm["name"]] = {
             "uid": exact_uid(cm["uid"]),
             "pv": cs["volumeName"],
@@ -162,9 +212,29 @@ def bind(snapshot, *, degraded=False):
             "volume_handle": volume["spec"]["csi"]["volumeHandle"],
         }
     require(
-        len(storage) == 6 and len(pvs) == 6 and (degraded or claims == set(storage)),
+        len(storage) == 6 and len(pvs) == 6 + len(retained) and (degraded or claims == set(storage)),
         "missing source data/WAL storage custody",
     )
+    require(
+        set(retained) == set(RETAINED_PAIR) if CLUSTER + "-3" not in records else not retained,
+        "missing/ambiguous historical detached pair",
+    )
+    if retained:
+        namespace_pods = snapshot["namespace_pods"]["items"]
+        require(
+            len({p["metadata"]["uid"] for p in namespace_pods}) == len(namespace_pods)
+            and all(p["metadata"]["namespace"] == NS for p in namespace_pods)
+            and {p["metadata"]["uid"] for p in pods} <= {p["metadata"]["uid"] for p in namespace_pods},
+            "incomplete namespace consumer custody",
+        )
+        require(
+            not any(
+                v.get("persistentVolumeClaim", {}).get("claimName") in retained
+                for p in namespace_pods
+                for v in p["spec"].get("volumes", [])
+            ),
+            "historical detached volume has a Pod consumer",
+        )
     service = snapshot["service"]
     selector = service["spec"]["selector"]
     roles = [selector[k] for k in ("role", "cnpg.io/instanceRole") if k in selector]
@@ -187,6 +257,7 @@ def bind(snapshot, *, degraded=False):
         "primary": primary,
         "pods": records,
         "storage": storage,
+        "retained_storage": retained,
         "service_uid": service["metadata"]["uid"],
     }
 
@@ -444,6 +515,7 @@ def preserved(before, after):
     require(
         before["cluster_uid"] == after["cluster_uid"]
         and before["storage"] == after["storage"]
+        and before["retained_storage"] == after["retained_storage"]
         and before["service_uid"] == after["service_uid"],
         "Cluster/storage/Service identity changed",
     )
@@ -587,8 +659,9 @@ class ExistingTarget:
         values = {
             "cluster": self.get("clusters.postgresql.cnpg.io", CLUSTER),
             "pods": self.get("pods", selector="cnpg.io/cluster=" + CLUSTER),
+            "namespace_pods": self.get("pods"),
             "nodes": self.get("nodes"),
-            "pvcs": self.get("pvcs", selector="cnpg.io/cluster=" + CLUSTER),
+            "pvcs": self.get("pvc", selector="cnpg.io/cluster=" + CLUSTER),
             "service": self.get("service", CLUSTER + "-rw"),
         }
         values["pvs"] = {"items": [self.get("pv", c["spec"]["volumeName"]) for c in values["pvcs"]["items"]]}
