@@ -188,6 +188,7 @@ def test_recovered_marker_claim_without_native_content_and_original_payload_is_r
 def test_native_dataset_sql_is_read_only_full_inventory_and_fixed_identity(profile):
     sql = p.dataset_sql(profile)
     assert "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;" in sql
+    assert "SET LOCAL search_path=pg_catalog,public,pg_temp;" in sql
     assert f"current_setting('cluster_name')<>'{profile}'" in sql
     assert "current_user<>session_user" in sql and "inet_client_addr() IS NOT NULL" in sql
     assert "n.nspname='public'" in sql and "c.relkind IN ('r','p','v','m','S')" in sql
@@ -216,13 +217,27 @@ def test_native_private_fixture_dataset_collector_handles_uncompressed_and_compr
         (2,1,'_timescaledb_catalog','fixture_data_second',3,false),
         (3,9,'_timescaledb_catalog','fixture_compressed',NULL,false);
       CREATE TABLE _timescaledb_catalog.fixture_data_second(ts timestamptz);""")
+    # Real restored v_band_device_divergence calls a source-owned public
+    # PL/pgSQL resolver whose nested public helper has no SET search_path.
+    # Relation qualification alone cannot resolve that helper/default args.
+    q("""CREATE FUNCTION public.fixture_nested_value(value int DEFAULT 7)
+          RETURNS int LANGUAGE sql AS 'SELECT value';
+      CREATE FUNCTION public.fixture_nested_resolver() RETURNS int LANGUAGE plpgsql AS
+          'BEGIN RETURN fixture_nested_value(); END';
+      CREATE VIEW public.fixture_nested_view AS SELECT public.fixture_nested_resolver() AS value;""")
     emitted = p.dataset_sql(p.pitr.SOURCE)
     native_version = q("SHOW server_version_num")
     fixture_sql = emitted.replace("::int<>160013", "::int<>" + native_version)
     fixture_sql = fixture_sql.replace(
         "OR (SELECT extversion FROM pg_extension WHERE extname='timescaledb') IS DISTINCT FROM '2.25.2'", "OR false"
     )
+    old_path = fixture_sql.replace(
+        "SET LOCAL search_path=pg_catalog,public,pg_temp;", "SET LOCAL search_path=pg_catalog,pg_temp;"
+    )
+    old_failure = q(old_path, check=False)
+    assert old_failure.returncode != 0 and "fixture_nested_value() does not exist" in old_failure.stderr
     result = json.loads(q(fixture_sql))
+    assert next(row for row in result["relations"] if row["relation"] == "public.fixture_nested_view")["count"] == 1
     data = next(row for row in result["relations"] if row["relation"] == "public.fixture_data")
     assert data["count"] == 2 and data["time_ranges"]["ts"] == ["2026-10-01 10:00:00+00", "2026-10-01 10:01:00+00"]
     assert len(result["timescale_owners"]) == 2
@@ -230,6 +245,13 @@ def test_native_private_fixture_dataset_collector_handles_uncompressed_and_compr
     assert result["timescale_owners"][1]["compressed_owner"] == "verdify"
     bad = q(emitted, check=False)
     assert bad.returncode != 0 and "refuses target/session" in bad.stderr
+    # Adding public resolution must never permit a view's function to write.
+    q("""CREATE FUNCTION public.fixture_forbidden_write() RETURNS int LANGUAGE plpgsql AS
+          'BEGIN INSERT INTO public.fixture_data VALUES(now()); RETURN 1; END';
+      CREATE VIEW public.fixture_writing_view AS SELECT public.fixture_forbidden_write() AS value;""")
+    writing_failure = q(fixture_sql, check=False)
+    assert writing_failure.returncode != 0 and "read-only transaction" in writing_failure.stderr
+    assert q("SELECT count(*) FROM public.fixture_data") == "2"
 
 
 @pytest.mark.parametrize("profile", t.PHYSICAL_TARGETS)

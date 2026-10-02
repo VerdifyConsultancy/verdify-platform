@@ -209,7 +209,9 @@ def dataset_sql(profile):
     require(profile in (pitr.SOURCE, *t.PHYSICAL_TARGETS), "unsupported native dataset source/profile")
     return f"""\\set ON_ERROR_STOP on
 BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;
-SET LOCAL search_path=pg_catalog,pg_temp;
+-- Public view functions resolve their source-owned public dependencies.
+-- pg_catalog stays first; pg_temp cannot shadow those public routines.
+SET LOCAL search_path=pg_catalog,public,pg_temp;
 SET LOCAL timezone='UTC';
 SET LOCAL statement_timeout='120s';
 SET LOCAL lock_timeout='2s';
