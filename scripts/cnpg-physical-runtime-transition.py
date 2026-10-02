@@ -209,12 +209,18 @@ def dataset_sql(profile, observation_at):
     require(profile in (pitr.SOURCE, *t.PHYSICAL_TARGETS), "unsupported native dataset source/profile")
     trace = t.load("cnpg-band-trace-time-projection")
     observation = trace.observation_sql(observation_at)
+    clock = t.load("cnpg-public-count-time-clock")
+    view_template = clock.relation_aggregate_template_at(observation)
     projected_aggregate = (
         "CASE "
         + " ".join(
             "WHEN c.relname=" + t.literal(name) + " THEN " + t.literal(trace.endpoint_aggregate(name, observation_at))
             for name in sorted(trace.VIEWS)
         )
+        + " WHEN c.relkind='v' THEN format("
+        + t.literal(view_template)
+        + ","
+        + "CASE WHEN columns.fields IS NULL THEN '''{}''::jsonb' ELSE columns.fields END,c.relname)"
         + " ELSE format('SELECT count(*), %s FROM %I.%I',"
         + "CASE WHEN columns.fields IS NULL THEN '''{}''::jsonb' ELSE columns.fields END,"
         + "n.nspname,c.relname) END"
@@ -243,6 +249,7 @@ BEGIN
  PERFORM set_config('verdify.physical_inventory','[]',true);
 END $physical_dataset$;
 {trace.guard_sql(observation_at)}
+{clock.guard_sql(observation)}
 -- One statement and one aggregate scan per relation. ON_ERROR_STOP makes any
 -- native failure terminal; all statements share the original readonly snapshot.
 SELECT format($relation_sql$
