@@ -86,6 +86,9 @@ def reference_trace(view, trace):
         "expiry_boundary",
         "initial_snapshot_null",
         "sparse_snapshot",
+        "finite_between_permanent",
+        "finite_only",
+        "permanent_duplicate_peer",
     ],
 )
 def test_native_interval_endpoints_equal_original_all_nine(private_pg, scenario):  # noqa: F811
@@ -131,6 +134,25 @@ def test_native_interval_endpoints_equal_original_all_nine(private_pg, scenario)
             "INSERT INTO setpoint_snapshot SELECT " + instant + "-age,'vallery',parameter,1 "
             "FROM unnest(ARRAY[interval '5 minutes',interval '3 minutes']) age "
             "CROSS JOIN unnest(ARRAY['temp_low','temp_high','vpd_low','vpd_high']) parameter;"
+        )
+    elif scenario == "finite_between_permanent":
+        instant = trace.observation_sql(trace.observation_at)
+        q(
+            "TRUNCATE setpoint_changes; INSERT INTO setpoint_changes SELECT "
+            + instant
+            + "-start_age,'vallery',parameter,1,"
+            + instant
+            + "-end_age "
+            "FROM (VALUES(interval '8 hours',NULL::interval),(interval '2 hours',interval '30 minutes'),"
+            "(interval '90 minutes',interval '80 minutes'),(interval '15 minutes',NULL::interval)) ages(start_age,end_age) "
+            "CROSS JOIN unnest(ARRAY['temp_low','temp_high','vpd_low','vpd_high']) parameter;"
+        )
+    elif scenario == "finite_only":
+        q("UPDATE setpoint_changes SET expired_at=ts+interval '2 hours'")
+    elif scenario == "permanent_duplicate_peer":
+        q(
+            "INSERT INTO setpoint_changes SELECT ts,greenhouse_id,parameter,value,NULL FROM setpoint_changes;"
+            "INSERT INTO setpoint_changes SELECT ts,greenhouse_id,parameter,value,ts+interval '10 minutes' FROM setpoint_changes;"
         )
     elif scenario == "initial_snapshot_null":
         q(
@@ -636,6 +658,9 @@ def test_native_dataset_sql_is_read_only_full_inventory_and_fixed_identity(profi
     assert "\\gexec" in sql and sql.count("SELECT count(*)") == 3
     assert "GROUPS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING" in sql
     assert "tstzrange(ts,ts," in sql
+    assert "finite_expiry AS MATERIALIZED" in sql
+    assert "min(ts) FILTER (WHERE expired_at IS NULL) OVER" in sql
+    assert "range_agg(valid) OVER" not in sql
     assert "statement_timeout='120s'" in sql
     assert "FOR relation IN" not in sql
 

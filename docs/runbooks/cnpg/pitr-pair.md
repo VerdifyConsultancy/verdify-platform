@@ -181,3 +181,9 @@ intersect them with closed singleton climate points. Expired newer readings may
 reveal older timestamps and remain represented. Duplicate timestamp peers do not
 mask one another. This qualifies count/time endpoints only, retaining the same
 function/domain, read-only, complete inventory and timeout guards.
+
+Firmware winner coverage splits permanent and finite expiry intervals: the nearest
+strictly newer nonexpiring timestamp clips the candidate, then only newer finite
+intervals before that cutoff are subtracted. This avoids repeatedly finalizing a
+growing range aggregate when nonexpiring history dominates, while retaining the
+same winner intervals for arbitrary finite expiry and timestamp peers.
