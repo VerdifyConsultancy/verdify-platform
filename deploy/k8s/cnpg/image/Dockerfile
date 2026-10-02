@@ -33,7 +33,7 @@
 # This image is NOT the prod-cutover image by itself — #245 governs that. It is
 # the dev/staging validation operand for #243/#244. It is reproducible: rebuild
 # from this Dockerfile yields the same extension version.
-ARG CNPG_PG_BASE=ghcr.io/cloudnative-pg/postgresql:16.13-standard-bookworm
+ARG CNPG_PG_BASE=ghcr.io/cloudnative-pg/postgresql:16.13-standard-bookworm@sha256:99b3c3731cc560c1d91a98c8004230d62c6c5cf403d92e5ba5f75c11da896700
 FROM ${CNPG_PG_BASE}
 
 # timescaledb 2.25.2 for PG16. Pinned exactly to the live source-of-record.
@@ -72,6 +72,22 @@ RUN set -eux; \
     grep -q "default_version = '${TIMESCALEDB_VERSION}'" /usr/share/postgresql/16/extension/timescaledb.control; \
     apt-get purge -y --auto-remove gnupg wget; \
     rm -rf /var/lib/apt/lists/*
+
+# The role-complete backup also requires vector 0.8.1. Do not inherit an
+# unspecified extension version from the base image. Verify upstream source
+# bytes before compiling against this exact PG16 operand.
+ARG PGVECTOR_VERSION=0.8.1
+ARG PGVECTOR_SHA256=a9094dfb85ccdde3cbb295f1086d4c71a20db1d26bf1d6c39f07a7d164033eb4
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends build-essential postgresql-server-dev-16 curl ca-certificates; \
+    curl -fsSL "https://github.com/pgvector/pgvector/archive/refs/tags/v${PGVECTOR_VERSION}.tar.gz" -o /tmp/pgvector.tar.gz; \
+    echo "${PGVECTOR_SHA256}  /tmp/pgvector.tar.gz" | sha256sum -c -; \
+    tar -xzf /tmp/pgvector.tar.gz -C /tmp; \
+    make -C "/tmp/pgvector-${PGVECTOR_VERSION}" OPTFLAGS=""; \
+    make -C "/tmp/pgvector-${PGVECTOR_VERSION}" install; \
+    grep -q "default_version = '${PGVECTOR_VERSION}'" /usr/share/postgresql/16/extension/vector.control; \
+    rm -rf /tmp/pgvector* /var/lib/apt/lists/*
 
 # barman-cloud CLI for in-tree barmanObjectStore WAL archiving + base backups +
 # PITR. The CNPG `-standard-bookworm` operand base does NOT bundle barman-cloud
