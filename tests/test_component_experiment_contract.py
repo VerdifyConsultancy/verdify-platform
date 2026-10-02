@@ -69,7 +69,11 @@ def test_live_grid_and_direct_launch_risk_order_are_scoped_to_the_exact_study(mo
     assert physical_execution_qualified("source-grid-r1") is False
     assert physical_execution_qualified(GRID_REVISION, GRID_REVISION) is False
     assert physical_execution_qualified(GRID_REVISION, GRID_REVISION, "11111111-1111-4111-8111-111111111111") is False
-    assert physical_execution_qualified(GRID_REVISION, GRID_REVISION, DIRECT_LAUNCH_EXPERIMENT_ID) is True
+    # The periodic-route metadata adoption cannot inherit old replay risk.
+    assert physical_execution_qualified(GRID_REVISION, GRID_REVISION, DIRECT_LAUNCH_EXPERIMENT_ID) is False
+    historical_grid = "live-entity-grid-v1:sha256:c10f21f692f4772acd98a41f7ee28e43e534e03d4009d3f963fc2e0fb96aa436"
+    monkeypatch.setattr("verdify_schemas.component_executor.GRID_REVISION", historical_grid)
+    assert physical_execution_qualified(historical_grid, historical_grid, DIRECT_LAUNCH_EXPERIMENT_ID) is True
 
     qualified_grid = "live-entity-grid-v1:sha256:" + "a" * 64
     qualified_order = "prefix-replay-v1:sha256:" + "b" * 64
