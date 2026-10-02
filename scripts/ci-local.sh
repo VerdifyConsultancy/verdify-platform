@@ -63,6 +63,7 @@ $PY -m pytest -q tests/test_device_write_gate.py tests/test_replay_outdoor_devic
 step "pure-logic / contract tests"
 $PY -m pytest -q \
   tests/test_05_dispatcher.py \
+  tests/test_irrigation_stop_edges.py \
   tests/test_bounded_reconcile.py \
   tests/test_recovered_confirmation_expiry.py \
   tests/test_10_planner_routing.py \

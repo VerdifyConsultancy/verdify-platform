@@ -203,11 +203,9 @@ interval:
                   id(runtime_mister_south_ms)  = 0;
                   id(runtime_mister_west_ms)   = 0;
                   id(runtime_mister_center_ms) = 0;
-                  // Clear the dwell-fence last-off stamps so a day rollover
-                  // never leaves a stale stamp that wrongly fences a zone.
-                  id(last_off_south_ms)  = 0;
-                  id(last_off_west_ms)   = 0;
-                  id(last_off_center_ms) = 0;
+                  // Last-off stamps use monotonic millis(), not calendar days.
+                  // Preserve them across midnight so an aborted pulse cannot
+                  // bypass its existing minimum-off fence at a day rollover.
                   id(mister_water_today) = 0.0f;
                   // B5: reset DLI accumulator at midnight
                   id(dli_accumulator) = 0.0f;
@@ -1355,14 +1353,9 @@ interval:
               };
 
               auto turn_off_all_misters = [&]() {
-                // Stamp the just-energized zone's last-off BEFORE clearing
-                // mister_pulse_zone so the dwell fence can suppress a too-fast
-                // re-fire of that zone. All off-paths (pulse expiry, de-escalate,
-                // blocked, safety) funnel through here, so the stamp is complete.
-                const int off_z = id(mister_pulse_zone);
-                if(off_z == 1)      id(last_off_south_ms)  = now_ms;
-                else if(off_z == 2) id(last_off_west_ms)   = now_ms;
-                else if(off_z == 3) id(last_off_center_ms) = now_ms;
+                // GPIO falling-edge callbacks own last-off stamps for every
+                // stop path, including watchdog/irrigation cancellation. A
+                // repeated OFF request must not restart the minimum-off fence.
                 id(south_wall_mister).turn_off();
                 id(south_wall_mister_fertilized).turn_off();
                 id(west_wall_mister).turn_off();
@@ -2508,9 +2501,9 @@ interval:
             return;
           }
           if(leak_block) { cancel_all("leak"); return; }
-          if(weekly_active && (!clock_valid || !durations.valid
+          if(weekly_active && (!id(irrig_wall_enabled) || !clock_valid || !durations.valid
              || weekly_state.commissioning_revision != id(wall_commissioning_revision))) {
-            cancel_all(!clock_valid ? "clock invalid" : !durations.valid
+            cancel_all(!id(irrig_wall_enabled) ? "wall irrigation disabled" : !clock_valid ? "clock invalid" : !durations.valid
               ? "commissioning invalid/stale" : "commissioning revision changed");
             return;
           }
