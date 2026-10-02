@@ -72,6 +72,12 @@ spec:
                 secretKeyRef:
                   name: verdify-mcp-runtime-db
                   key: password
+            # Existing provider credential; no new secret or key rotation.
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-hermes
+                  key: OPENAI_API_KEY
             - name: VERDIFY_MCP_RUNTIME_DB_ROLE_REQUIRED
               value: "1"
             # The DB_DSN and the psql helper both use this isolated login.
