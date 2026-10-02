@@ -4,7 +4,7 @@
 This tool is the qualification half of the live-grid proof.  It is deliberately
 OFFLINE and NON-ACTUATING: it opens no socket, imports no ESPHome client, reads
 no database, reads no Kubernetes Secret and never invokes a setter or service.
-It consumes ONE input artifact (``verdify-component-grid-capture-input-v2``, see
+It consumes ONE input artifact (v2 ideal SQL or v3 independent device-wire, see
 INPUT ARTIFACT SCHEMA below) produced by a separately-approved, read-only in-pod
 emitter, and answers three questions with fail-closed evidence:
 
@@ -181,7 +181,9 @@ from verdify_schemas.policy_vector import (  # noqa: E402
 from verdify_schemas.tunable_registry import REGISTRY, WIRE_SCHEMA_VERSION  # noqa: E402
 
 INPUT_SCHEMA = "verdify-component-grid-capture-input-v2"
+WIRE_INPUT_SCHEMA = "verdify-component-grid-capture-input-v3"
 RESULT_SCHEMA = "verdify-component-grid-capture-result-v2"
+WIRE_RESULT_SCHEMA = "verdify-component-grid-capture-result-v3"
 # Emitted verbatim so scripts/prepare_component_prefix_replay.py can consume the
 # captured start state as a --current-state input without a translation step.
 CURRENT_STATE_SCHEMA = "verdify-component-current-state-v1"
@@ -337,6 +339,7 @@ class GridCaptureResult:
     observation_receipt_sha256: str | None
     grid_revision: str | None
     failures: tuple[str, ...]
+    served_wire_report: dict[str, Any] | None = None
 
     @property
     def qualified(self) -> bool:
@@ -930,8 +933,11 @@ def capture(
     band_source: Mapping[str, Any] | None = None,
     max_observation_age_s: int = DEFAULT_MAX_OBSERVATION_AGE_S,
     required_band_series: Sequence[str] = REQUIRED_BAND_SERIES,
+    served_wire_report: None = None,
 ) -> GridCaptureResult:
     """Run the whole offline capture and return a fail-closed verdict."""
+    if served_wire_report is not None:
+        raise GridCaptureError("served wire evidence requires complete v3 artifact validation")
     failures: list[str] = []
     live_grid = project_live_entity_grid(entities)
     grid_failures = compare_live_grid(live_grid)
@@ -1100,6 +1106,7 @@ class CaptureInput:
     revisions: dict[str, str]
     runtime: dict[str, Any]
     band_source: dict[str, Any]
+    served_wire_report: dict[str, Any] | None = None
 
 
 def parse_input_artifact(document: Mapping[str, Any]) -> CaptureInput:
@@ -1117,13 +1124,16 @@ def parse_input_artifact(document: Mapping[str, Any]) -> CaptureInput:
         "band_layers",
         "band_source",
     }
+    wire_v3 = document.get("schema") == WIRE_INPUT_SCHEMA
+    if wire_v3:
+        expected_keys.add("served_wire_contract")
     unknown = sorted(set(document) - expected_keys)
     if unknown:
         raise GridCaptureError(f"input artifact has unknown keys: {unknown}")
     missing = sorted(expected_keys - set(document))
     if missing:
         raise GridCaptureError(f"input artifact is missing: {missing}")
-    if document["schema"] != INPUT_SCHEMA:
+    if document["schema"] not in (INPUT_SCHEMA, WIRE_INPUT_SCHEMA):
         raise GridCaptureError(f"input artifact schema must be {INPUT_SCHEMA!r}")
     if not isinstance(document["band_source"], Mapping):
         raise GridCaptureError("band_source must be a raw observation object")
@@ -1174,6 +1184,14 @@ def parse_input_artifact(document: Mapping[str, Any]) -> CaptureInput:
     if len(band_layers) != len(band_raw):
         raise GridCaptureError("every band_layers row must be an object")
 
+    report = None
+    if wire_v3:
+        from verdify_schemas.control_band_wire import validate_wire_contract
+
+        try:
+            report = validate_wire_contract(document["served_wire_contract"], document)
+        except (ValueError, TypeError, KeyError, OverflowError, OSError) as exc:
+            raise GridCaptureError("invalid independent served wire contract: " + str(exc)) from exc
     return CaptureInput(
         device_id=_nfc_text(document["device_id"], "device_id"),
         observed_at=_timestamp(document["observed_at"], "observed_at"),
@@ -1183,6 +1201,7 @@ def parse_input_artifact(document: Mapping[str, Any]) -> CaptureInput:
         revisions=revisions,
         runtime={"runtime_instance_id": instance_id, "connection_generation": generation},
         band_source=dict(document["band_source"]),
+        served_wire_report=report,
     )
 
 
@@ -1193,7 +1212,7 @@ def capture_from_artifact(
 ) -> GridCaptureResult:
     """Parse then capture — the single entry point the CLI uses."""
     parsed = parse_input_artifact(document)
-    return capture(
+    result = capture(
         device_id=parsed.device_id,
         observed_at=parsed.observed_at,
         entities=parsed.entities,
@@ -1204,6 +1223,7 @@ def capture_from_artifact(
         band_source=parsed.band_source,
         max_observation_age_s=max_observation_age_s,
     )
+    return replace(result, served_wire_report=parsed.served_wire_report)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -1262,13 +1282,21 @@ def build_checks(result: GridCaptureResult, *, expected_grid_revision: str | Non
     resolved = sum(1 for t in result.layer_triples if t.classification == "resolved")
     checks.append(
         Check(
-            "band_coherence_424",
+            "served_device_wire_coherence" if result.served_wire_report is not None else "band_coherence_424",
             "PASS" if result.band_coherence_ok else "FAIL",
             f"{resolved}/{len(result.layer_triples)} series resolved across served/control/observed"
             if result.band_coherence_ok
             else _failure_detail(band_failures),
         )
     )
+    if result.served_wire_report is not None:
+        checks.append(
+            Check(
+                "ideal_sql_vs_device_wire",
+                "WARN",
+                "ideal SQL corridor is retained separately; global #424 is not resolved by device-wire coherence",
+            )
+        )
     checks.append(
         Check(
             "observed_start_state",
@@ -1338,7 +1366,7 @@ def build_payload(
         "qualified": result.qualified,
         "revisions": dict(result.revisions),
         "runtime": dict(result.runtime),
-        "schema": RESULT_SCHEMA,
+        "schema": WIRE_RESULT_SCHEMA if result.served_wire_report is not None else RESULT_SCHEMA,
         "source_grid_revision": SOURCE_GRID_REVISION,
         "source_grid_revision_qualified": _QUALIFIED_GRID_REVISION.fullmatch(SOURCE_GRID_REVISION) is not None,
     }
@@ -1353,6 +1381,8 @@ def build_payload(
             "schema": CURRENT_STATE_SCHEMA,
             "values": dict(result.observed_start_state),
         }
+    if result.served_wire_report is not None:
+        payload["band_coherence"]["semantic_contract"] = result.served_wire_report
     payload["computed_at"] = _timestamp_text(computed_at)
     payload["result_sha256"] = result_sha256(payload)
     return payload
@@ -1447,6 +1477,8 @@ __all__ = [
     "CURRENT_STATE_SCHEMA",
     "DEFAULT_MAX_OBSERVATION_AGE_S",
     "INPUT_SCHEMA",
+    "WIRE_INPUT_SCHEMA",
+    "WIRE_RESULT_SCHEMA",
     "REQUIRED_BAND_SERIES",
     "RESULT_SCHEMA",
     "CaptureInput",

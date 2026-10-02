@@ -65,6 +65,9 @@ COPY --from=builder /install /usr/local
 # which resolves because CWD == /app/ingestor) plus the repo-root modules it
 # reaches via the sys.path insert.
 COPY ingestor/ /app/ingestor/
+# Nonsecret owning arithmetic contract for independent C1 wire evidence.
+COPY firmware/lib/greenhouse_solar.h /app/firmware/lib/greenhouse_solar.h
+COPY firmware/greenhouse/controls.yaml /app/firmware/greenhouse/controls.yaml
 COPY slack_config.py /app/slack_config.py
 COPY slack.yaml /app/slack.yaml
 COPY slack_ops/ /app/slack_ops/
