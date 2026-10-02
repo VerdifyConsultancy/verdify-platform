@@ -5,6 +5,7 @@ import hashlib
 import importlib.util
 import logging
 import os
+import re
 import sys
 from contextlib import contextmanager
 from pathlib import Path
@@ -427,6 +428,34 @@ def test_consumer_image_packaging_matches_actual_dockerfiles():
     assert "fallback_path.read_text().strip()" in client.PROBE
     assert "valid_baked and valid_fallback and baked != fallback" in client.PROBE
     assert "for checkout in range(2):" in client.PROBE
+
+
+@pytest.mark.parametrize("role", list(client.ROLES))
+def test_client_uid_matches_shipped_appuser_private_home(role):
+    dockerfile = (ROOT / role / "Dockerfile").read_text()
+    # A different numeric UID cannot traverse the image's private appuser HOME
+    # when asyncpg resolves its default SSL paths. Keep the image's nonroot user.
+    match = re.search(r"useradd -m -u (\d+) -s /usr/sbin/nologin appuser", dockerfile)
+    assert match and "USER appuser" in dockerfile
+    module = ROOT / {"api": "api/main.py", "ingestor": "ingestor/ingestor.py", "mcp": "mcp/server.py"}[role]
+    job = client.render(
+        binding(),
+        role,
+        "registry.vallery.net/verdifyconsultancy/verdify-" + role + "@sha256:" + "a" * 64,
+        "b" * 40,
+        hashlib.sha256(module.read_bytes()).hexdigest(),
+        "d" * 64,
+        "20261002",
+    )
+    pod = job["spec"]["template"]["spec"]
+    assert pod["securityContext"]["runAsUser"] == int(match[1]) == 1000
+    assert pod["securityContext"]["runAsNonRoot"] is True
+    assert pod["automountServiceAccountToken"] is False
+    assert pod["containers"][0]["securityContext"] == {
+        "allowPrivilegeEscalation": False,
+        "readOnlyRootFilesystem": True,
+        "capabilities": {"drop": ["ALL"]},
+    }
 
 
 @pytest.mark.parametrize(
