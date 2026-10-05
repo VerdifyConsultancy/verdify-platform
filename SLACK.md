@@ -1,10 +1,18 @@
 # Verdify Slack Operations
 
-`slack.yaml` is the versioned source of truth for Verdify Slack behavior. Runtime secrets are never committed. The Iris Slack app tokens live on the Iris VM under `/etc/verdify/slack/`:
+`slack.yaml` is the versioned source of truth for Verdify Slack behavior.
+The production ingestor sender reads `/etc/verdify/slack/iris_slack_bot_token.txt`
+from the read-only `verdify-prod/verdify-slack` Secret mount. The Secret has the
+single key `iris_slack_bot_token.txt`; its values and recovery custody belong to
+`jvallery/agents` KSOPS, while this repository owns the mount and settings.
+Neither the Socket Mode app token nor an Events API signing secret is needed
+by this sender. Do not substitute another app's token.
 
-- `iris_slack_bot_token.txt` - Web API bot token used for `chat.postMessage`, history/archive reads, and deterministic command replies.
-- `iris_slack_app_token.txt` - Socket Mode app token used by OpenClaw when the Slack listener is enabled.
-- `iris_slack_signing_secret.txt` - Events API signing secret for any HTTP receiver.
+On October 5, ROOT recovered the original file from retained PBS
+`vm/306/2026-06-08T16:16:04Z` without booting the retired writer. Slack confirmed
+bot `B0ANY7P8PR6`, user `U0AN1TEB69L` (native username `greenhouse2`, real name
+`Iris`), matching the historical receipts below. The token was not rotated.
+Custody delivery and natural scheduled-message acceptance are tracked in #950.
 
 All runtime code should load Slack settings through `slack_config.load_slack_settings()`. `SLACK_TOKEN_FILE`, `SLACK_CHANNEL`, and `VERDIFY_SLACK_CONFIG` are deployment overrides only.
 
@@ -26,7 +34,7 @@ Hermes is the production Iris planner gateway. It does not monitor Slack directl
 
 OpenClaw is the operator-facing assistant/listener for Iris Slack. The expected OpenClaw auth profiles for `iris` and `iris-planner` are `openai-codex:jason@verdify.ai`, default model `openai-codex/gpt-5.5`, fallback `vllm/gemma4-26b`. OpenClaw should use the Iris Slack app token from the configured local token file and either Socket Mode or the MCP `slack_ops` tool for greenhouse operations.
 
-## Current Runtime State
+## Historical VM Runtime State — May 25, 2026
 
 As of 2026-05-25, OpenClaw is the only agent runtime confirmed to monitor and respond directly in `#greenhouse`. The active OpenClaw Slack connector is Socket Mode, not the HTTP Events API. It reads:
 
