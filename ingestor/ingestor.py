@@ -3415,8 +3415,12 @@ def _mirror_irrigation_number_readback(param: str, value: Any) -> None:
     except (TypeError, ValueError):
         log.warning("writable entity readback rejected non-numeric: %s=%r", param, value)
         return
-    if math.isnan(val):
+    if not math.isfinite(val):
         return
+    if param in _SETPOINT_RANGES:
+        lo, hi = _SETPOINT_RANGES[param]
+        if not lo <= val <= hi:
+            return
     generation = int(shared.transport_generation)
     prev = shared.cfg_readback.get(param)
     prev_generation = shared.cfg_readback_generation.get(param)
@@ -3548,9 +3552,11 @@ def on_state_change(entity_state, *, native_generation: int | None = None) -> No
 
         param = SETPOINT_MAP.get(obj_id)
         if param:
+            # Initial native replay is device truth even while the boot window
+            # suppresses firmware defaults from the historical DB write path.
+            _mirror_irrigation_number_readback(param, val)
             if not _accept_setpoint(param, val):
                 return
-            _mirror_irrigation_number_readback(param, val)
             old = state.setpoints.get(param)
             if old != val:
                 if _observation_spool_enabled():
@@ -3674,9 +3680,11 @@ def on_state_change(entity_state, *, native_generation: int | None = None) -> No
 
         param = SETPOINT_MAP.get(obj_id)
         if param:
+            # Initial native replay is device truth even while the boot window
+            # suppresses firmware defaults from the historical DB write path.
+            _mirror_irrigation_number_readback(param, val)
             if not _accept_setpoint(param, val):
                 return
-            _mirror_irrigation_number_readback(param, val)
             old = state.setpoints.get(param)
             if old != val:
                 # Suppress same-value echoes from delayed ESPHome number-state publishes.

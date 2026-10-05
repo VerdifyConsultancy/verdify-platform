@@ -749,3 +749,33 @@ async def test_cold_boot_nan_blocks_without_db_work_until_native_replay_and_reco
     ingestor._mirror_irrigation_number_readback("mister_on_s", 300.0)
     ingestor._mirror_irrigation_number_readback("mister_vpd_weight", 1.5)
     assert shared.transport_readbacks_ready(second)
+
+
+@pytest.mark.parametrize("entity_type", ["number", "sensor"])
+def test_initial_native_replay_survives_boot_window_without_historical_db_write(monkeypatch, entity_type):
+    import time
+    from types import SimpleNamespace
+
+    parameter = "mister_on_s"
+    object_id = next(key for key, value in ingestor.SETPOINT_MAP.items() if value == parameter)
+    generation = shared.note_transport_connected(frozenset({parameter}))
+    monkeypatch.setattr(shared, "esp32_connected_at", time.time())
+    monkeypatch.setattr(ingestor.state, "key_to_object_id", {987654: object_id})
+    monkeypatch.setattr(ingestor.state, "key_to_type", {987654: entity_type})
+    monkeypatch.setattr(ingestor.state, "setpoints", {})
+    monkeypatch.setattr(ingestor.state, "pending_setpoints", [])
+
+    ingestor.on_state_change(SimpleNamespace(key=987654, state=300.0), native_generation=generation)
+
+    assert shared.transport_readbacks_ready(generation)
+    assert shared.current_cfg_readbacks() == {parameter: 300.0}
+    assert ingestor.state.setpoints == {}
+    assert ingestor.state.pending_setpoints == []
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf"), 200.0])
+def test_native_mirror_rejects_nonfinite_and_out_of_range_before_replay(value):
+    generation = shared.note_transport_connected(frozenset({"safety_max"}))
+    ingestor._mirror_irrigation_number_readback("safety_max", value)
+    assert not shared.transport_readbacks_ready(generation)
+    assert shared.current_cfg_readbacks() == {}
