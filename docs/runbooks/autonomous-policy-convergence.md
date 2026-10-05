@@ -30,3 +30,30 @@ two steady hours, and independently prove one ESP32 connection. Check task age,
 heap constraints, timely confirmation, validation errors and repeat broad holds.
 Disable the prod opt-in to restore preview-only admission; retain terminal files
 and database history before any recovery. A rollout is not convergence proof.
+
+
+A declared live moisture guardrail can become a candidate after admission even
+when it originally matched the controller. It must be one of the seven listed
+source-owned fields, present in the unchanged approved plan and original native
+baseline, and equal the current dispatcher guardrail value. New fixed fields,
+changed plan rows, source/generation changes and lost readbacks still halt.
+
+The explicit `prepare-writer-stage.py --confirmed-two-stage` archive contract
+(version3) covers only a halted run with13..24 unique confirmed effects over
+two stages, each at most12 commands. Original state/approval/Pod custody is
+retained. Every first-stage request must occur after the original preview and
+confirm before the final stage starts; final-stage requests must confirm before
+the archive cutoff. Missing, duplicate, failed, sent-only, expired, changed or
+later requests reject recovery. Existing version2 single-stage custody retains
+its original ceiling and semantics. The owner supplies actual raw custody and
+independent native database request receipts through the existing preparation
+CLI; no receipt is inferred from a plan or command count alone.
+
+Archival grants no setter authority and leaves the original halt active. After
+the archive is persisted, capture a fresh preview under the reviewed running
+source, current generation and complete current effective plan. Prepare a
+distinct normal approval with the existing CLI and submit it through the sole
+writer's ordinary stage path. Never reset historical requests or replace their
+confirmation status. A successor rollout does not itself authorize an old
+approval. Restart the two-hour acceptance window only after truthful convergence
+under the successor source and digest.

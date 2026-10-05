@@ -285,8 +285,11 @@ def _validated_residual(
     approved_changes = dict(approved["changes"])
     current_changes = dict(preview["changes"])
     approved_plan_params = {row["parameter"] for row in approved["plan_rows"]}
+    # Admission binds the complete immutable plan and native baseline, not
+    # only fields that happened to differ then. A declared cap may later move
+    # a previously equivalent field; its exact live source is checked below.
     dynamic_guardrails = (
-        DYNAMIC_MOISTURE_GUARDRAIL_PARAMS & approved_plan_params & approved_changes.keys()
+        DYNAMIC_MOISTURE_GUARDRAIL_PARAMS & approved_plan_params & approved["readbacks"].keys()
         if guardrail_values is not None
         else frozenset()
     )
@@ -335,18 +338,20 @@ def _validated_residual(
         current_fixed.append([param, value])
     if current_fixed != approved_fixed:
         raise ValueError("desired fixed candidate changed or completed field reappeared")
-    if any(param not in approved_changes for param in current_changes):
+    if any(param not in approved_changes and param not in dynamic_guardrails for param in current_changes):
         raise ValueError("unapproved candidate appeared")
     # The dispatcher supplies these values after applying the current live
     # guardrail to the unchanged active plan. A missing candidate is valid only
     # when the current-generation readback already matches that value.
     dynamic_residual = []
-    for param, _approved_value in approved["changes"]:
-        if param not in dynamic_guardrails:
-            continue
+    dynamic_order = [param for param in approved_changes if param in dynamic_guardrails]
+    dynamic_order.extend(sorted(((current_changes.keys() | completed) & dynamic_guardrails) - set(dynamic_order)))
+    for param in dynamic_order:
         if guardrail_values is None or param not in guardrail_values:
             raise ValueError(f"live guardrail source unavailable: {param}")
         effective = float(guardrail_values[param])
+        if not math.isfinite(effective):
+            raise ValueError(f"live guardrail source nonfinite: {param}")
         observed = preview["readbacks"].get(param)
         current = current_changes.get(param)
         if current is not None and float(current) != effective:
@@ -819,12 +824,20 @@ async def _settled_recovery_archive(conn, preview: dict, state: dict, approval: 
 FORWARD_AUTHORITY = "confirmed_halt_forward"
 
 
-def _confirmed_halt_shape(state: dict, approval: dict) -> list[str]:
-    """Only a single fully confirmed stage can use this forward handoff."""
-    parameters = state.get("stage_parameters", [])
+def _confirmed_halt_shape(state: dict, approval: dict, *, two_stage: bool = False) -> list[str]:
+    """Bind one v2 stage or explicit v3 two-stage confirmed history.
+
+    V3 totals13..24 and retains each stage's independent12-command ceiling.
+    """
+    last_stage = state.get("stage_parameters", [])
+    parameters = state.get("completed", []) if two_stage else last_stage
     if (
         state.get("status") != "halted"
-        or not 1 <= len(parameters) <= 12
+        or not (13 <= len(parameters) <= 24 if two_stage else 1 <= len(parameters) <= 12)
+        or not 1 <= len(last_stage) <= 12
+        or len(set(last_stage)) != len(last_stage)
+        or not set(last_stage) <= set(parameters)
+        or (two_stage and not 1 <= len(set(parameters) - set(last_stage)) <= 12)
         or len(set(parameters)) != len(parameters)
         or set(state.get("completed", [])) != set(parameters)
         or len(state.get("completed", [])) != len(parameters)
@@ -834,7 +847,7 @@ def _confirmed_halt_shape(state: dict, approval: dict) -> list[str]:
         or approval.get("run_id") != state.get("run_id")
         or approval.get("approved_preview") != state.get("approved_preview")
     ):
-        raise ValueError("forward handoff requires one fully confirmed halted stage")
+        raise ValueError("forward handoff requires fully confirmed bounded halted stages")
     uuid.UUID(str(state["run_id"]))
     desired = dict(state["approved_preview"]["changes"])
     if any(p not in desired or not _equal(state["completed_values"][p], desired[p]) for p in parameters):
@@ -859,8 +872,8 @@ def _confirmed_halt_writer_custody(state: dict, custody: dict) -> None:
         raise ValueError("confirmed-halt original full Pod custody identity mismatch")
 
 
-def _forward_request_receipt(rows, state: dict, cutoff: datetime) -> list[dict]:
-    parameters = state["stage_parameters"]
+def _forward_request_receipt(rows, state: dict, cutoff: datetime, *, two_stage: bool = False) -> list[dict]:
+    parameters = state["completed"] if two_stage else state["stage_parameters"]
     if len(rows) != len(parameters) or {row["parameter"] for row in rows} != set(parameters):
         raise ValueError("forward handoff native request set incomplete or duplicated")
     result = []
@@ -868,13 +881,17 @@ def _forward_request_receipt(rows, state: dict, cutoff: datetime) -> list[dict]:
         ts = row["ts"] if isinstance(row["ts"], datetime) else _time(row["ts"])
         confirmed = row["confirmed_at"]
         confirmed = confirmed if isinstance(confirmed, datetime) else _time(confirmed) if confirmed else None
+        last_started = _time(state["stage_started_at"])
+        first_stage = two_stage and row["parameter"] not in state["stage_parameters"]
+        started = _time(state["approved_preview"]["captured_at"]) if first_stage else last_started
+        deadline = last_started if first_stage else cutoff
         if (
             row["delivery_status"] != "confirmed"
             or confirmed is None
             or row.get("expired_at") is not None
             or not row.get("source")
             or row["source"] == "esp32"
-            or not _time(state["stage_started_at"]) <= ts <= confirmed <= cutoff
+            or not started <= ts <= confirmed <= deadline
             or not _equal(row["value"], state["completed_values"][row["parameter"]])
         ):
             raise ValueError("forward handoff native request is not exactly confirmed")
@@ -904,9 +921,10 @@ async def _confirmed_halt_archive(conn, preview: dict, state: dict, approval: di
     if forward is None or forward.get("authority") != FORWARD_AUTHORITY:
         raise ValueError("explicit confirmed-halt handoff missing")
     original = forward["original_approval"]
-    parameters = _confirmed_halt_shape(state, original)
+    two_stage = forward.get("version") == 3
+    parameters = _confirmed_halt_shape(state, original, two_stage=two_stage)
     if (
-        forward.get("version") != 2
+        forward.get("version") not in {2, 3}
         or forward.get("source_run_id") != state["run_id"]
         or forward.get("state_digest") != _digest(state)
         or forward.get("approval_digest") != _digest(original)
@@ -937,10 +955,10 @@ async def _confirmed_halt_archive(conn, preview: dict, state: dict, approval: di
         "WHERE parameter = ANY($1::text[]) AND ts >= $2 AND ts <= $3 "
         "AND COALESCE(source, '') <> 'esp32' ORDER BY ts, parameter",
         parameters,
-        _time(state["stage_started_at"]),
+        _time(approved["captured_at"] if two_stage else state["stage_started_at"]),
         cutoff,
     )
-    receipt = _forward_request_receipt(rows, state, cutoff)
+    receipt = _forward_request_receipt(rows, state, cutoff, two_stage=two_stage)
     if receipt != forward["native_requests"]:
         raise ValueError("confirmed-halt native history changed")
     later = await conn.fetch(
@@ -954,7 +972,7 @@ async def _confirmed_halt_archive(conn, preview: dict, state: dict, approval: di
     archive_path = state_dir / f"writer-stage-confirmed-halt-{uuid.UUID(state['run_id']).hex}.json"
     archive = _read(archive_path)
     expected = {
-        "schema": "verdify-writer-stage-confirmed-halt-v2",
+        "schema": "verdify-writer-stage-confirmed-halt-v3" if two_stage else "verdify-writer-stage-confirmed-halt-v2",
         "state": state,
         "approval": original,
         "forward": forward,
