@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-10-05T19:00Z\u201319:30Z",
+  "captured_at": "2026-10-05T19:00:46.871317+00:00",
   "source_main_sha": "ebfe1b3ed452212c1068827fde2e12e9f2b19ccc",
   "initial_open_issue_count": 67,
   "new_issue_count": 5,
@@ -2456,7 +2456,8 @@
           "repo": "jvallery/agents",
           "number": 4461
         }
-      ]
+      ],
+      "original_verification_contract": "- The live route contains both new exclusions: `kubectl --context vallery -n verdify-prod get ingressroute verdify-tier1-forward -o jsonpath='{.spec.routes[0].match}'`.\n- The operation for `verdify-prod-dark` has phase `Succeeded`, `syncResult.resources` lists only this IngressRoute, and no entry has `hookType`.\n  - The IngressRoute is `Synced`.\n  - The other OutOfSync resources are exactly the set recorded in step 1.\n- `kubectl --context vallery -n traefik-apps logs ds/traefik-apps --since=10m | grep -i tier1-forward` shows no router or rule error.\n- Public checks match the step 1 baseline:\n  - `https://www-dev.verdify.ai/` returns 200 with the verdify-www page;\n  - `https://proposals-hello.verdify.ai/` returns 200;\n  - `api`, `lab`, `labs`, `graphs` and `mcp` return the same statuses as before;\n  - the unknown host still returns 404.\n- The ingestor pod UID and restart count are unchanged. An ESP32 connection count is not a useful signal here, because the ingestor dials the device directly and never passes through Traefik."
     },
     {
       "number": 802,
@@ -2497,7 +2498,8 @@
           "repo": "jvallery/agents",
           "number": 4459
         }
-      ]
+      ],
+      "original_verification_contract": "- All 7 objects carry `argocd.argoproj.io/tracking-id: verdify-descheduler:<group>/<kind>:<ns>/<name>`. The Namespace has none.\n- The CronJob keeps the same uid and `metadata.generation` 6. Its args are the 3 enforce args, and the evict annotation is `\"true\"`.\n- `argocd app get verdify-descheduler` shows:\n  - Synced, with `sync.revision` equal to the pinned SHA;\n  - no automated policy;\n  - tracked by `agent-fleet-local-prod-apps`;\n  - no SharedResourceWarning.\n- The next `:00`/`:30` Job completes:\n  - its pod args contain no `--dry-run`;\n  - its log has the `Number of evictions/requests` line;\n  - its log has no `Building a cached client from the cluster for the dry run` line, which prints only in dry-run mode at `--v=4`.\n- `render_sync_classification.py --audit-live` lists `verdify-descheduler` as parented and classified `direct`."
     },
     {
       "number": 835,
@@ -2701,5 +2703,6 @@
       "prior_evidence_urls": [],
       "blocked_by": []
     }
-  ]
+  ],
+  "capture_scope": "Database snapshot timestamp; supplemental runtime/GitHub observations and publications occurred later in this dated review."
 }

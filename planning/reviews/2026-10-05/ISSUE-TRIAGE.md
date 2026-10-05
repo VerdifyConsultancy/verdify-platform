@@ -897,6 +897,23 @@ Live catch-all still lackswww-dev andproposals-hello exclusions. Native agents#4
 
 Retained issue evidence: [comment](https://github.com/VerdifyConsultancy/verdify-platform/issues/801#issuecomment-5849604754), [comment](https://github.com/VerdifyConsultancy/verdify-platform/issues/801#issuecomment-5956559473).
 
+### Exact original verification contract
+
+All commands and subrequirements remain unproven beyond the explicitly stated current observations. The grouped acceptance rows above retain this complete contract:
+
+- The live route contains both new exclusions: `kubectl --context vallery -n verdify-prod get ingressroute verdify-tier1-forward -o jsonpath='{.spec.routes[0].match}'`.
+- The operation for `verdify-prod-dark` has phase `Succeeded`, `syncResult.resources` lists only this IngressRoute, and no entry has `hookType`.
+  - The IngressRoute is `Synced`.
+  - The other OutOfSync resources are exactly the set recorded in step 1.
+- `kubectl --context vallery -n traefik-apps logs ds/traefik-apps --since=10m | grep -i tier1-forward` shows no router or rule error.
+- Public checks match the step 1 baseline:
+  - `https://www-dev.verdify.ai/` returns 200 with the verdify-www page;
+  - `https://proposals-hello.verdify.ai/` returns 200;
+  - `api`, `lab`, `labs`, `graphs` and `mcp` return the same statuses as before;
+  - the unknown host still returns 404.
+- The ingestor pod UID and restart count are unchanged. An ESP32 connection count is not a useful signal here, because the ingestor dials the device directly and never passes through Traefik.
+
+
 ## #802 — [VP-01] Put verdify-descheduler under Argo (manual) with Git equal to live enforce mode
 
 State: **OPEN**; disposition: blocked; stage: estate; accountable role: Platform lead.
@@ -910,6 +927,24 @@ Live enforce args omitdry-run; no argocd verdify-deschedulerApplication exists. 
 | Natural enforce Job and live sync-classification audit pass without dry-run. | not fully proven |
 
 Retained issue evidence: [comment](https://github.com/VerdifyConsultancy/verdify-platform/issues/802#issuecomment-5849604846), [comment](https://github.com/VerdifyConsultancy/verdify-platform/issues/802#issuecomment-5956559057).
+
+### Exact original verification contract
+
+All commands and subrequirements remain unproven beyond the explicitly stated current observations. The grouped acceptance rows above retain this complete contract:
+
+- All 7 objects carry `argocd.argoproj.io/tracking-id: verdify-descheduler:<group>/<kind>:<ns>/<name>`. The Namespace has none.
+- The CronJob keeps the same uid and `metadata.generation` 6. Its args are the 3 enforce args, and the evict annotation is `"true"`.
+- `argocd app get verdify-descheduler` shows:
+  - Synced, with `sync.revision` equal to the pinned SHA;
+  - no automated policy;
+  - tracked by `agent-fleet-local-prod-apps`;
+  - no SharedResourceWarning.
+- The next `:00`/`:30` Job completes:
+  - its pod args contain no `--dry-run`;
+  - its log has the `Number of evictions/requests` line;
+  - its log has no `Building a cached client from the cluster for the dry run` line, which prints only in dry-run mode at `--v=4`.
+- `render_sync_classification.py --audit-live` lists `verdify-descheduler` as parented and classified `direct`.
+
 
 ## #835 — Fix reconnect equipment snapshot provenance and stale relay alerts
 

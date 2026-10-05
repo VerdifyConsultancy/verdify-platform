@@ -34,7 +34,9 @@ Evidence scope: bounded seven-day database aggregates across every numeric telem
 
 Five new bounded issues are #949 policy holds, #950 Slack delivery, #951 vision, #952 Grafana identity, and #953 Iris lookup. They have native parent relationships, owner roles, testable acceptance and hour estimates. #949 is an additional native predecessor of #749 because unresolved desired/readback contradictions prevent readiness qualification. This does not grant physical authority or require unrelated firmware simplification to close first.
 
-#835 and #862 now belong to the #75 observability roll-up. #801/#802/#317 remain explicitly tracked outside the85-node campaign source; the [current native graph snapshot](native-graph.json) and [full repository graph](NATIVE-DEPENDENCIES.md) include all88 reviewed historical/current nodes and external estate dependencies. The historical16 previously closed campaign tasks remain closed; each is retained as a bounded historical receipt. Draft PRs#855 and#774 remain unmerged and unchanged.
+#835 and #862 now belong to the #75 observability roll-up. #801/#802/#317 remain explicitly tracked outside the85-node campaign source; the [current native graph snapshot](native-graph.json) and [full repository graph](NATIVE-DEPENDENCIES.md) include all88 reviewed historical/current nodes and external estate dependencies. The [publication receipt](publication-receipt.json) verifies every dated issue comment, current state, label, sprint membership and updated roll-up body. The graph snapshot precedes those comment/checklist publications; its edge/parent state is unchanged.
+
+The historical16 previously closed campaign tasks remain closed; each is retained as a bounded historical receipt. Draft PRs#855 and#774 remain unmerged and unchanged.
 
 ## Next sprint
 

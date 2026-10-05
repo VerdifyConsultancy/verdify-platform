@@ -1,0 +1,15 @@
+{
+  "artifacts": {
+    "ISSUE-TRIAGE.md": "84a71cae7c6e8c33f5ede8dc496362f7d5452eaf273524256e7be4cdd85cbf86",
+    "NATIVE-DEPENDENCIES.md": "8b489bd6e8669642098daf70de797acfab71a1b49997eae60e8c448e62987d79",
+    "NEXT-SPRINT.md": "721c87cd8f9103900e803abc470077443077546d5db6e926585f9dbbd7d1558c",
+    "health-summary.json": "47dabfd09168662a89d37cf72027cd2f332ae760b380b9911dd2fc78ad7c75db",
+    "image-comparison.json": "c9436bebba0c7c44d4f3a634548fde47d404d3bc4a84ddab7e832a4d94f5e22d",
+    "issue-triage.json": "dfd35b1c4cffcf2861402c97c3d22f0a236168dd538bbc49a5f8a640e9229832",
+    "native-graph.json": "365d414d9dd5a7e58a5ffa05b6f9f9f55f87159bcef7935565cf138ea376f567",
+    "publication-receipt.json": "1d8190bcb0d5c0a84cdd8ec8264c2dc68f7a802101ad6d243037f9cf89b41994",
+    "running-images.json": "eb4282fbb5212c7ee007e0b5d0994ad887e4992cc85c0bebad2ab5c5f9c88445",
+    "telemetry-columns.json": "3aa92223dd9f5a4a344457ca004b1dfd0ede5b3d0427d1efc72ca9477a3a799d"
+  },
+  "description": "Published sanitized artifacts only; original private logs and contexts remain in operator custody."
+}
