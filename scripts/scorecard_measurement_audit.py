@@ -61,6 +61,7 @@ def cases():
         "missing_vpd_target": ([_row()], {k: v for k, v in BANDS.items() if k != "vpd_high"}),
         "duplicate_hot_minute": ([_row(temp=90)] * 60, BANDS),
         "sparse_hot_samples": ([_row(temp=90), _row(360, temp=90)], BANDS),
+        "inverted_temperature_band": ([_row()], {**BANDS, "temp_low": 90.0}),
         "nan_temperature": ([_row(temp=float("nan"))], BANDS),
         "fully_observed_in_band": ([_row()], BANDS),
         "fully_observed_out_of_band": ([_row(temp=90, vpd=2)], BANDS),
@@ -91,6 +92,7 @@ def build_report():
     for name, (readings, bands) in cases().items():
         namespace = {
             "readings": readings,
+            "isfinite": math.isfinite,
             "_band_at": lambda parameter, ts: bands.get(parameter),
             "grade_acc": _NoGradedCredit(),
             "zone_bands": {},

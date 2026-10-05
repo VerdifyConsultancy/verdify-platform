@@ -1,4 +1,4 @@
-"""Diagnostic baseline reproduction, intentionally NOT metric acceptance tests."""
+"""Execute actual writer arithmetic, including missingness regressions."""
 
 import importlib.util
 from pathlib import Path
@@ -17,16 +17,16 @@ def test_report_reproduces_actual_writer_missingness_and_nominal_duration_defect
     report = audit().build_report()
     assert report["synthetic_only"] and not report["outcome_acceptance"]
     cases = {row["case"]: row for row in report["cases"]}
-    assert cases["empty"]["legacy_denominator"] == 1
-    assert cases["empty"]["legacy_binary_pct"] == {"joint": 0, "temp": 0, "vpd": 0}
+    assert cases["empty"]["legacy_denominator"] == 0
+    assert cases["empty"]["legacy_binary_pct"] == {"joint": None, "temp": None, "vpd": None}
     assert cases["empty"]["independent_axis_reading_reference"]["temp"]["in_band_pct"] is None
-    assert cases["missing_vpd"]["legacy_binary_pct"]["temp"] == 0
+    assert cases["missing_vpd"]["legacy_binary_pct"]["temp"] == 100
     assert cases["missing_vpd"]["independent_axis_reading_reference"]["temp"]["in_band_pct"] == 100
     duplicate = cases["duplicate_hot_minute"]
     assert duplicate["unique_observed_minutes"] == 1
     assert duplicate["legacy_nominal_stress_h"]["heat"] == 1
     assert cases["sparse_hot_samples"]["legacy_nominal_stress_h"]["heat"] == 0.03
-    assert cases["nan_temperature"]["legacy_scored_readings"] == 1
+    assert cases["nan_temperature"]["legacy_scored_readings"] == 0
     assert cases["nan_temperature"]["independent_axis_reading_reference"]["temp"]["eligible_readings"] == 0
     assert not cases["fully_observed_in_band"]["findings"]
     assert not cases["fully_observed_out_of_band"]["findings"]
@@ -35,7 +35,7 @@ def test_report_reproduces_actual_writer_missingness_and_nominal_duration_defect
 def test_audit_executes_writer_source_not_a_copied_algorithm(monkeypatch, tmp_path):
     module = audit()
     source = tmp_path / "daily.py"
-    source.write_text(module.SOURCE.read_text().replace("n = scored_readings or len(readings) or 1", "n = 1000"))
+    source.write_text(module.SOURCE.read_text().replace("n = scored_readings", "n = 1000"))
     monkeypatch.setattr(module, "SOURCE", source)
     cases = {row["case"]: row for row in module.build_report()["cases"]}
     assert cases["fully_observed_in_band"]["legacy_denominator"] == 1000
@@ -57,3 +57,13 @@ def test_receipt_creation_refuses_overwrite_and_check_detects_drift(monkeypatch,
     assert module.main() == 0
     receipt.write_text("{}")
     assert module.main() == 1
+
+
+def test_writer_withholds_empty_invalid_and_missing_axes_without_erasing_other_axis():
+    cases = {row["case"]: row for row in audit().build_report()["cases"]}
+    for name in ("empty", "nan_temperature", "inverted_temperature_band"):
+        assert cases[name]["legacy_binary_pct"]["joint"] is None
+        assert cases[name]["legacy_nominal_stress_h"]["heat"] is None
+    assert cases["missing_temperature"]["legacy_binary_pct"] == {"joint": None, "temp": None, "vpd": 100}
+    assert cases["missing_vpd"]["legacy_binary_pct"] == {"joint": None, "temp": 100, "vpd": None}
+    assert cases["fully_observed_out_of_band"]["legacy_binary_pct"] == {"joint": 0, "temp": 0, "vpd": 0}

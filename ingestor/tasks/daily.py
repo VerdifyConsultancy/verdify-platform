@@ -5,6 +5,8 @@ original module. The tasks package __init__ re-exports the public
 surface so every `from tasks import X` still resolves.
 """
 
+from math import isfinite
+
 from climate_minute_metrics import refresh_observed_minute_metrics
 from partial_energy import refresh_partial_energy
 
@@ -980,9 +982,9 @@ async def _refresh_daily_summary_for_date(
                temp_east, vpd_east, temp_north, vpd_north,
                outdoor_temp_f, outdoor_rh_pct
           FROM climate
-        WHERE ts >= $1::date::timestamp AT TIME ZONE 'America/Denver'
+        WHERE greenhouse_id = 'vallery'
+          AND ts >= $1::date::timestamp AT TIME ZONE 'America/Denver'
           AND ts < ($1::date + 1)::timestamp AT TIME ZONE 'America/Denver'
-          AND temp_avg IS NOT NULL
         ORDER BY ts
         """,
         target_day,
@@ -999,49 +1001,51 @@ async def _refresh_daily_summary_for_date(
 
     heat_s = cold_s = vpd_hi_s = vpd_lo_s = 0
     temp_in_band = vpd_in_band = both_in_band = 0
-    scored_readings = 0
-    interval_h = 1.0 / 60.0  # greenhouse telemetry is nominally one row/minute
+    temp_scored_readings = vpd_scored_readings = scored_readings = 0
+    interval_h = 1.0 / 60.0  # legacy nominal reading-hours, never elapsed exposure
     for r in readings:
         th = _band_at("temp_high", r["ts"])
         tl = _band_at("temp_low", r["ts"])
         vh = _band_at("vpd_high", r["ts"])
         vl = _band_at("vpd_low", r["ts"])
-        if th is None or tl is None or vh is None or vl is None:
-            continue
-        if r["temp_avg"] is None or r["vpd_avg"] is None:
+        temp, vpd = r["temp_avg"], r["vpd_avg"]
+        t_valid = all(x is not None and isfinite(float(x)) for x in (temp, tl, th)) and tl <= th
+        v_valid = all(x is not None and isfinite(float(x)) for x in (vpd, vl, vh)) and vl <= vh
+        t_ok = v_ok = False
+        if t_valid:
+            temp_scored_readings += 1
+            temp = float(temp)
+            t_ok = tl <= temp <= th
+            temp_in_band += int(t_ok)
+            if temp > th:
+                heat_s += interval_h
+            elif temp < tl:
+                cold_s += interval_h
+        if v_valid:
+            vpd_scored_readings += 1
+            vpd = float(vpd)
+            v_ok = vl <= vpd <= vh
+            vpd_in_band += int(v_ok)
+            if vpd > vh:
+                vpd_hi_s += interval_h
+            elif vpd < vl:
+                vpd_lo_s += interval_h
+        if not (t_valid and v_valid):
             continue
         scored_readings += 1
-        temp = float(r["temp_avg"])
-        vpd = float(r["vpd_avg"])
-        if temp > th:
-            heat_s += interval_h
-        elif temp < tl:
-            cold_s += interval_h
-        if vpd > vh:
-            vpd_hi_s += interval_h
-        elif vpd < vl:
-            vpd_lo_s += interval_h
-        t_ok = tl <= temp <= th
-        v_ok = vl <= vpd <= vh
-        if t_ok:
-            temp_in_band += 1
-        if v_ok:
-            vpd_in_band += 1
-        if t_ok and v_ok:
-            both_in_band += 1
-
-        # Graded + feasibility accumulation (does NOT touch the binary calc).
+        both_in_band += int(t_ok and v_ok)
+        # Graded controller credit remains separately named and accumulated.
         grade_acc.add_reading(r, served_temp_high=th, zone_bands=zone_bands, relay_state_at=relay_state_at)
 
-    n = scored_readings or len(readings) or 1
-    compliance_pct = round((both_in_band / n) * 100, 1)
-    temp_compliance_pct = round((temp_in_band / n) * 100, 1)
-    vpd_compliance_pct = round((vpd_in_band / n) * 100, 1)
+    n = scored_readings
+    compliance_pct = round((both_in_band / n) * 100, 1) if n else None
+    temp_compliance_pct = round((temp_in_band / temp_scored_readings) * 100, 1) if temp_scored_readings else None
+    vpd_compliance_pct = round((vpd_in_band / vpd_scored_readings) * 100, 1) if vpd_scored_readings else None
     stress = {
-        "heat": round(heat_s, 2),
-        "vpd_high": round(vpd_hi_s, 2),
-        "cold": round(cold_s, 2),
-        "vpd_low": round(vpd_lo_s, 2),
+        "heat": round(heat_s, 2) if temp_scored_readings else None,
+        "vpd_high": round(vpd_hi_s, 2) if vpd_scored_readings else None,
+        "cold": round(cold_s, 2) if temp_scored_readings else None,
+        "vpd_low": round(vpd_lo_s, 2) if vpd_scored_readings else None,
     }
     graded = grade_acc.finalize()
 
@@ -1433,9 +1437,9 @@ async def daily_summary_live(pool: asyncpg.Pool) -> None:
 
     latest_day, ct, temp_max, compliance_pct = refreshed[0]
     log.info(
-        "Daily summary live: %s eligible-cost=%s, %.1f°F max, compliance %.1f%% (yesterday also refreshed)",
+        "Daily summary live: %s eligible-cost=%s, %.1f°F max, compliance %s (yesterday also refreshed)",
         latest_day,
         f"${ct:.2f}" if ct is not None else "unavailable",
         temp_max,
-        compliance_pct,
+        f"{compliance_pct:.1f}%" if compliance_pct is not None else "unavailable",
     )
