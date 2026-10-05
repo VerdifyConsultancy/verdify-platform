@@ -1,0 +1,68 @@
+{
+  "capture_utc": "2026-09-27T09:50:00.670570+00:00",
+  "extracts": {
+    "climate": {
+      "rows": 244,
+      "sha256": "bd60075c2393632ffe1b20a999506c16ae5d25870f4d1f5d97dc7be62151a647",
+      "sql_sha256": "6579a4ae5217b1d0e0471a71a474bcf4d08dea9ba4cb35477bbf121324cd496b"
+    },
+    "controller_actions": {
+      "rows": 271,
+      "sha256": "901fd6dd07704bb1296bd0b2920d1b336f87e91866fe7051913520ef748c3c9a",
+      "sql_sha256": "1e99ad789dc544ac2fe1f018c71ae4bdd6ca35f27779028d868b85fed5a22579"
+    },
+    "diagnostics": {
+      "rows": 244,
+      "sha256": "dff236019ce704d115ce8245704086522246604507bd87fb2496ce6acdba65a1",
+      "sql_sha256": "0f305d09f2df9fb3099a6e72d16ba17e5e9725c8a7a281cf340ae86b63d1558b"
+    },
+    "equipment_receipts": {
+      "rows": 38,
+      "sha256": "597007d7f86564d4d048c3ef8dbbd2ae809f67df45ce2cb099c3be2c97a10fb4",
+      "sql_sha256": "b42db560e795184f2b462f098f5fb183d1d7be5c68c4c07cd08c84ed3589e7dd"
+    },
+    "equipment_state": {
+      "rows": 173,
+      "sha256": "52f9657e42252daed97df1f98d92570eb899239e026300ac19cd5542bf0ac568",
+      "sql_sha256": "dcc158aefd5ed65ad5b41fec290fb867c1aee120636fb304c3cb9ad779c3dfc2"
+    },
+    "forecast_asof": {
+      "rows": 4,
+      "sha256": "d7fc3c831b40f5377948f6f4a480f3a596861862a375b44b94a1bea175f0b5dd",
+      "sql_sha256": "4c61e8b9bb778f9f0621f95b1270c3fd680079e368436dbfb519df0451a2082d"
+    },
+    "override_events": {
+      "rows": 3,
+      "sha256": "5065cf4e5350bf04b6048c4c5ee3a8b675235dc49c1480873518ab9d0210d944",
+      "sql_sha256": "8d31585f67eb1c4237d116a70ffd7d3a22e8f9f31ea470669721e9bff4c9c74c"
+    },
+    "plan_delivery": {
+      "rows": 2,
+      "sha256": "9e1a62117fe248331cd58281bfce8e3366689410a557bacb4950c9bd7c92ba9d",
+      "sql_sha256": "1f8592cfc82723772aab4576c6fc660f05075ae80dcad13294915af69dec70bf"
+    },
+    "setpoint_changes": {
+      "rows": 3,
+      "sha256": "e64b562a579e02ece78d654459c08f1a35d2d404a0241e4a8902d41c3bc81bd5",
+      "sql_sha256": "7401725fad341620b016b407a512a8f682a6de32778b2b66ec6687c3e1e3d8f1"
+    },
+    "setpoint_snapshots": {
+      "rows": 2921,
+      "sha256": "7078911e4f9ce3a65a3117d33f55c836095bec1d03764ca0346c5c37d2d913c9",
+      "sql_sha256": "aa0e008253375bc40dad3c53fc6ce041b83fccf240a2fecdd1d5eb16fd004a7b"
+    },
+    "system_state": {
+      "rows": 169,
+      "sha256": "cd4536f842cbe15901b14d3059eadab5db0e8645251cfe77dcbea30a8b54cbe9",
+      "sql_sha256": "f51ea4b7d60e68004425950f1ab21f11de7e14ff304faac29a77e460452ff568"
+    },
+    "water_meter_events": {
+      "rows": 37,
+      "sha256": "e0edebe600230ceb7323b926c4853aaba068cd6eaf1b0a9af3165f7ae4911df6",
+      "sql_sha256": "e48b8edba7d86be3a48f9b2ad7e158c6affba991f58fa34222496b02fba03070"
+    }
+  },
+  "source": "verdify-db-0/public tables via scripts/verdify-db.sh prod; SELECT COPY TO STDOUT only",
+  "window_end_utc_exclusive": "2026-09-05T00:45:00Z",
+  "window_start_utc": "2026-09-04T20:30:00Z"
+}

@@ -1,0 +1,4 @@
+ts,parameter,value,source,delivery_status,confirmed_at,expired_at
+2026-09-04 21:03:03.137321+00,mister_pulse_on_s,90,preemptive,confirmed,2026-09-04 21:03:32.242423+00,
+2026-09-05 00:33:04.110593+00,cool_stage2_over_high_f,0,preemptive,confirmed,2026-09-05 00:33:49.968329+00,
+2026-09-05 00:33:04.132641+00,sw_cool_all_fans_at_high_enabled,1,preemptive,confirmed,2026-09-05 00:33:49.968329+00,

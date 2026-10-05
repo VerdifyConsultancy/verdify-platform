@@ -1439,10 +1439,11 @@ def assemble(
                             ("fresh_gate_p_authorization", fresh_gate_p_authorization(datetime.now(UTC))),
                             ("recovery_path_ready", True),
                             ("stable_writer_lease_generation", writer["generation_stable"]),
-                            # #778 remains causally unresolved. Public counter plateaus
-                            # and empty occupancy pushes do not authorize wetting.
-                            # Release requires reviewed source-bound incident disposition,
-                            # not a cap increase or an arbitrary collector CLI override.
+                            # #778 v4 reproduces the source-backed vent refusal while
+                            # physical admission/rail and counter-reset qualification
+                            # remain unresolved. Closing the analysis issue cannot
+                            # release this hold: see research/planner-efficacy/
+                            # wetting-incident-2026-09-04-disposition-v4.md.
                             ("wetting_incident_778_disposition", False),
                             ("zero_exposure", int(status["open_exposure_count"]) == 0),
                         )
