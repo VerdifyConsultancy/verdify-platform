@@ -82,6 +82,9 @@ spec:
       containers:
         - name: ingestor
           env:
+            # Source/generation-bound stages retain the global 12-command cap.
+            - name: VERDIFY_AUTONOMOUS_POLICY_STAGING
+              value: "1"
             # Prepend the copied psql to PATH so the gather script's bare `psql`
             # (lib/psql-verdify.sh direct mode) resolves; LD_LIBRARY_PATH lets it
             # link the copied libpq + deps. Full base PATH preserved after.

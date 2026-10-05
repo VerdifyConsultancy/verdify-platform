@@ -13,6 +13,7 @@ import hashlib
 import json
 import math
 import os
+import re
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -232,6 +233,43 @@ async def _preview(conn, changes, planned, generation: int, baseline_names: set[
         "diagnostic_readbacks": all_readbacks,
         **identity,
     }
+
+
+def record_hold(state_dir: Path, changes, planned, generation: int, reason: str) -> None:
+    """Expose each affected field without presenting intent as confirmation."""
+    from .dispatcher import readback_values_equivalent
+
+    current = shared.current_cfg_readbacks(generation)
+    plans = {str(row["parameter"]): row for row in planned}
+    _write(
+        state_dir / "writer-policy-hold.json",
+        {
+            "schema": "verdify-ordinary-policy-hold-v1",
+            "captured_at": datetime.now(UTC).isoformat(),
+            "source_revision": os.environ.get("VERDIFY_GIT_SHA", "unknown"),
+            "session_id": SESSION_ID,
+            "generation": generation,
+            "reason": reason,
+            "disposition": "bounded_hold_no_dispatch",
+            "fields": [
+                {
+                    "parameter": param,
+                    "resolved_desired": float(value),
+                    "desired_source": "dispatcher_resolved_policy",
+                    "plan": {
+                        "plan_id": str(plans[param]["plan_id"]),
+                        "recorded_at": plans[param]["ts"].isoformat(),
+                        "value": float(plans[param]["value"]),
+                    }
+                    if param in plans
+                    else None,
+                    "current_generation_readback": current.get(param),
+                    "equivalent": param in current and readback_values_equivalent(param, current[param], value),
+                }
+                for param, value in changes
+            ],
+        },
+    )
 
 
 def _validated_residual(
@@ -972,6 +1010,9 @@ async def choose_stage(
             # cfg callbacks. A just-sent stage can be confirmed before its
             # next atomic snapshot arrives. Keep only that pending stage
             # durable and let the existing bounded recheck wait for the batch.
+            if state is None and approval is None:
+                _wake_for_confirmation()
+                return Decision("hold", reason=f"awaiting fresh atomic snapshot: {error}")
             if state is None or state.get("status") != "awaiting_confirmation":
                 raise
             approved = state["approved_preview"]
@@ -1022,7 +1063,33 @@ async def choose_stage(
             state = None
             recovered_admission = True
         if approval is None and state is None:
-            return Decision("ordinary")
+            if os.environ.get("VERDIFY_AUTONOMOUS_POLICY_STAGING") != "1" or len(changes) <= limit:
+                return Decision("ordinary")
+            # Production opt-in admits this newly captured ordinary policy,
+            # never an old approval. All existing source/generation/expiry,
+            # confirmation and terminal-history fences apply unchanged.
+            if not re.fullmatch(r"[0-9a-f]{40}", preview["source_revision"]):
+                raise ValueError("autonomous staging requires exact source revision")
+            if not preview["plan_rows"]:
+                raise ValueError("autonomous staging requires immutable active plan")
+            now = datetime.now(UTC)
+            if now + PLAN_SEND_MARGIN >= _time(preview["earliest_plan_expiry"]):
+                raise ValueError("effective plan expiry too near")
+            if not shared.writer_lease_strictly_held(minimum_remaining_s=3):
+                raise ValueError("sole-writer lease not strictly held")
+            approval = {
+                "version": 1,
+                "authority": "source_bound_ordinary_policy_v1",
+                "run_id": uuid.uuid4().hex,
+                "session_id": SESSION_ID,
+                "generation": generation,
+                "fingerprint": preview["fingerprint"],
+                "approved_preview": preview,
+                "expires_at": min(
+                    now + timedelta(minutes=30), _time(preview["earliest_plan_expiry"]) - PLAN_SEND_MARGIN
+                ).isoformat(),
+            }
+            _write(approval_path, approval)
         if approval is None:
             raise ValueError("approval removed during run")
         now = datetime.now(UTC)

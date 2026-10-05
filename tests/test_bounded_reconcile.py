@@ -1174,3 +1174,72 @@ async def test_confirmed_halt_current_plan_binding_is_required_at_archive_and_ad
     assert (tmp_path / bounded.STATE_NAME).read_bytes() == old_state
     if mutation != "after_archive":
         assert not list(tmp_path.glob("writer-stage-confirmed-halt-*.json"))
+
+
+@pytest.mark.asyncio
+async def test_autonomous_policy_admits_fresh_source_bound_stages_and_keeps_cap(fixture, tmp_path, monkeypatch):
+    db = fixture
+    monkeypatch.setenv("VERDIFY_AUTONOMOUS_POLICY_STAGING", "1")
+    monkeypatch.setenv("VERDIFY_GIT_SHA", "a" * 40)
+    candidate = [(p, 1.0) for p in db.parameters]
+    first = await bounded.choose_stage(db, candidate, db.planned(), 3, tmp_path, 12)
+    assert first.action == "send" and len(first.changes) == 12
+    approval = bounded._read(tmp_path / bounded.APPROVAL_NAME)
+    assert approval["authority"] == "source_bound_ordinary_policy_v1"
+    assert approval["fingerprint"] == approval["approved_preview"]["fingerprint"]
+    assert approval["approved_preview"]["source_revision"] == "a" * 40
+    requests = records(first.changes)
+    bounded.finish_stage(tmp_path, first, requests, [])
+    for r in requests:
+        db.readbacks[r["parameter"]] = r["value"]
+        db.rows[(r["requested_at"], r["parameter"])] = {
+            "delivery_status": "confirmed",
+            "confirmed_at": datetime.now(UTC),
+        }
+    second = await bounded.choose_stage(db, candidate[12:], db.planned(), 3, tmp_path, 12)
+    assert second.action == "send" and len(second.changes) == 1
+
+
+@pytest.mark.asyncio
+async def test_autonomous_policy_never_replaces_terminal_failure(fixture, tmp_path, monkeypatch):
+    db = fixture
+    monkeypatch.setenv("VERDIFY_AUTONOMOUS_POLICY_STAGING", "1")
+    monkeypatch.setenv("VERDIFY_GIT_SHA", "a" * 40)
+    candidate = [(p, 1.0) for p in db.parameters]
+    first = await bounded.choose_stage(db, candidate, db.planned(), 3, tmp_path, 12)
+    requests = records(first.changes)
+    bounded.finish_stage(tmp_path, first, requests, ["failed"])
+    state_before = (tmp_path / bounded.STATE_NAME).read_bytes()
+    approval_before = (tmp_path / bounded.APPROVAL_NAME).read_bytes()
+    next_decision = await bounded.choose_stage(db, candidate, db.planned(), 3, tmp_path, 12)
+    assert next_decision.action == "hold"
+    assert (tmp_path / bounded.STATE_NAME).read_bytes() == state_before
+    assert (tmp_path / bounded.APPROVAL_NAME).read_bytes() == approval_before
+
+
+@pytest.mark.asyncio
+async def test_autonomous_policy_requires_exact_source_and_active_plan(fixture, tmp_path, monkeypatch):
+    monkeypatch.setenv("VERDIFY_AUTONOMOUS_POLICY_STAGING", "1")
+    monkeypatch.setenv("VERDIFY_GIT_SHA", "unknown")
+    db = fixture
+    candidate = [(p, 1.0) for p in db.parameters]
+    refused = await bounded.choose_stage(db, candidate, db.planned(), 3, tmp_path, 12)
+    assert refused.action == "hold" and "exact source" in refused.reason
+    assert not (tmp_path / bounded.APPROVAL_NAME).exists()
+    monkeypatch.setenv("VERDIFY_GIT_SHA", "a" * 40)
+    refused = await bounded.choose_stage(db, candidate, [], 3, tmp_path, 12)
+    assert refused.action == "hold" and "active plan" in refused.reason
+    assert not (tmp_path / bounded.APPROVAL_NAME).exists()
+
+
+def test_hold_receipt_preserves_desired_and_readback_sources(fixture, tmp_path):
+    db = fixture
+    parameter = db.parameters[0]
+    bounded.record_hold(tmp_path, [(parameter, 1.0)], db.planned(), 3, "plan changed")
+    receipt = bounded._read(tmp_path / "writer-policy-hold.json")
+    assert receipt["disposition"] == "bounded_hold_no_dispatch"
+    field = receipt["fields"][0]
+    assert field["resolved_desired"] == 1.0
+    assert field["current_generation_readback"] == 0.0
+    assert field["plan"]["plan_id"] == "iris-test"
+    assert field["equivalent"] is False
