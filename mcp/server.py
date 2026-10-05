@@ -1227,6 +1227,15 @@ async def scorecard(target_date: str = "") -> str:
     not continuous exposure, fixed-panel crop compliance, a confirmed consumed
     target or an experiment endpoint. Never substitute it for the scalar metrics.
 
+    native_fixed_panel_route_evidence exposes actual source-route axis/joint
+    eligible 15-minute bins, high/low distance and severity, worst source route
+    and explicit future/undeclared/missing bins under a prospective target and
+    exact firmware/collector binding. Availability route_measurement is sampled
+    host-received callback evidence; physical serial, Modbus poll time and crop
+    placement remain unverified. Partial windows are explicit. It is not a
+    physical crop outcome, controller credit or experiment endpoint. Keep
+    physical_crop_band_evidence unavailable until its own qualification exists.
+
     Response is validated through verdify_schemas.ScorecardResponse. Partial days
     may contain null metrics; inspect evidence limitations before using a score."""
     conn = await _db()

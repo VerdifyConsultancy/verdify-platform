@@ -103,9 +103,21 @@ def zone_band(profiles: list[dict], assignments: list[dict], zone: str, season: 
     return result
 
 
-def build(snapshot: dict, day: date, now: datetime | None = None) -> dict:
+def build(snapshot: dict, day: date, now: datetime | None = None, *, effective_from: datetime | None = None) -> dict:
     start, end = bounds(day)
     now = now or datetime.now(UTC)
+    if effective_from is not None:
+        if effective_from.tzinfo is None:
+            raise ValueError("partial target start needs an explicit offset")
+        effective_from = effective_from.astimezone(UTC)
+        if (
+            not start <= effective_from < end
+            or effective_from.second
+            or effective_from.microsecond
+            or effective_from.minute % 15
+        ):
+            raise ValueError("partial target must begin on a future 15-minute boundary inside the declared day")
+        start = effective_from
     if snapshot.get("schema") != "verdify-route-day-target-source-snapshot-v1":
         raise ValueError("wrong target source snapshot")
     if snapshot.get("greenhouse_id") != "vallery":
@@ -127,7 +139,7 @@ def build(snapshot: dict, day: date, now: datetime | None = None) -> dict:
     if not any(p.get("season") == season and p.get("crop_catalog_id") is not None for p in snapshot["profiles"]):
         season = "spring"  # the fn_zone_band global fallback
     bins = []
-    for quarter in range(72):
+    for quarter in range(int((end - start).total_seconds() / 900)):
         bucket = start + timedelta(minutes=quarter * 15)
         hour = bucket.astimezone(ZONE).hour
         bands = [zone_band(snapshot["profiles"], snapshot["assignments"], z, season, hour) for z in ZONES]
@@ -144,7 +156,7 @@ def build(snapshot: dict, day: date, now: datetime | None = None) -> dict:
         "schema": "verdify-route-day-target-draft-v1",
         "local_day": day.isoformat(),
         "greenhouse_id": "vallery",
-        "target_version": f"native-route-{day.isoformat()}",
+        "target_version": f"native-route-{day.isoformat()}" + (f"-{start:%H%MZ}" if effective_from is not None else ""),
         "target_rule": "fixed_panel_equal_zone_ideal_mean_v1",
         "source_captured_at": snapshot["captured_at"],
         "source_snapshot_sha256": sha(canonical(snapshot)),
@@ -160,8 +172,15 @@ def build(snapshot: dict, day: date, now: datetime | None = None) -> dict:
 
 
 def declaration_sql(draft: dict) -> str:
-    if draft.get("schema") != "verdify-route-day-target-draft-v1" or len(draft["target_bins"]) != 72:
-        raise ValueError("one-day 72-bin target required")
+    if draft.get("schema") != "verdify-route-day-target-draft-v1" or not 1 <= len(draft["target_bins"]) <= 72:
+        raise ValueError("one prospective day or partial-day target required")
+    start = datetime.fromisoformat(draft["effective_from"])
+    end = datetime.fromisoformat(draft["effective_to"])
+    if len(draft["target_bins"]) != int((end - start).total_seconds() / 900) or any(
+        datetime.fromisoformat(row["bucket_start"]) != start + timedelta(minutes=15 * i)
+        for i, row in enumerate(draft["target_bins"])
+    ):
+        raise ValueError("target bins must exactly cover the prospective declared interval")
     bins = canonical(draft["target_bins"]).decode()
     if "$route_bins$" in bins:
         raise ValueError("invalid target JSON delimiter")
@@ -210,9 +229,16 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--day", type=date.fromisoformat, required=True)
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument(
+        "--effective-from",
+        type=datetime.fromisoformat,
+        help="future 15-minute boundary for remaining bins today; never backdated",
+    )
     args = parser.parse_args()
     start, _ = bounds(args.day)
-    if datetime.now(UTC) >= start:
+    if args.effective_from is not None:
+        start = args.effective_from
+    if start.tzinfo is None or datetime.now(UTC) >= start:
         raise SystemExit("prospective window already began")
     result = subprocess.run(
         [str(DB_SCRIPT), "prod", "-X", "-A", "-t", "-v", "ON_ERROR_STOP=1", "-c", SNAPSHOT_SQL],
@@ -224,7 +250,7 @@ def main() -> None:
     if len(lines) != 1:
         raise SystemExit("source capture did not return exactly one snapshot")
     snapshot = json.loads(lines[0])
-    draft = build(snapshot, args.day)
+    draft = build(snapshot, args.day, effective_from=args.effective_from)
     write_new(args.out / "target-source-snapshot.json", canonical(snapshot) + b"\n")
     write_new(args.out / "target-draft.json", canonical(draft) + b"\n")
     write_new(args.out / "target-declaration.sql", declaration_sql(draft).encode())
