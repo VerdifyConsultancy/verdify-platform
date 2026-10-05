@@ -236,3 +236,10 @@ migration is independently qualified, predecessor seals verified unchanged and
 these credentials are delivered by their canonical owner. URL-composed DSNs
 require the owner's established URL-safe password generation. Existing admin,
 renderer, OAuth, experiment and owner Secret keys remain unchanged.
+
+### Ingestor Slack delivery (#950)
+
+`verdify-slack` is owned by the agents KSOPS lane. It carries only
+`iris_slack_bot_token.txt`, preserving the existing Iris bot identity. The
+single ingestor mounts it read-only at `/etc/verdify/slack`, matching
+`slack.yaml`; no app/signing token is required by this sender.

@@ -7,7 +7,7 @@ kind: Component
 # prod host) — NOT a base resource, so each overlay must opt in explicitly.
 #
 # Resources:
-#   - grafana.yaml            : Deployment (stateless, emptyDir) + Service +
+#   - grafana.yaml            : Deployment (durable identity SQLite) + Service +
 #                               NetworkPolicy
 #   - grafana-render-cache.yaml: HA bounded nginx cache for public `/render/` PNGs
 #   - graphs-ingressroute.yaml: tier-2 verdify-traefik IngressRoute for
@@ -24,6 +24,7 @@ kind: Component
 # out of band and never committed. Renderer port isolation remains mandatory.
 resources:
   - grafana.yaml
+  - grafana-data.yaml
   - grafana-render-cache.yaml
   - graphs-ingressroute.yaml
   - generated/provisioning-cm.yaml
