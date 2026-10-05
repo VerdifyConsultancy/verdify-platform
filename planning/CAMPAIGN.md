@@ -36,7 +36,7 @@ flowchart LR
   C --> X[One-way reveal and decision report]
 ```
 
-The [complete graph](DEPENDENCIES.md) includes all 78 nodes and every native blocked-by edge. Parent/sub-issue relationships are ownership, not prerequisites. A task closes on its bounded evidence, so executor qualification does not wait for randomized day 1 while day 1 waits for the executor. Physical conditions, exact authority and external fleet/monitoring interfaces remain explicit issue requirements, not fabricated dependency nodes.
+The [complete graph](DEPENDENCIES.md) includes all 85 campaign nodes and every native blocked-by edge. Parent/sub-issue relationships are ownership, not prerequisites. A task closes on its bounded evidence, so executor qualification does not wait for randomized day 1 while day 1 waits for the executor. Physical conditions, exact authority and external fleet/monitoring interfaces remain explicit issue requirements, not fabricated dependency nodes.
 
 | Bundle | Implementation boundary | Exit evidence |
 |---|---|---|
@@ -51,6 +51,8 @@ The [complete graph](DEPENDENCIES.md) includes all 78 nodes and every native blo
 Use one PR per coherent release boundary, not one PR or image build per issue. C0 analysis and independent C1 device-denied qualification can overlap. Serialize shared migrations, writer changes and physical authority transitions. Estimates in [SPRINTS.md](../SPRINTS.md) are engineering ranges, not promised calendar dates. The retained pilot itself takes 60 local days; do not hide that duration inside a short sprint estimate.
 
 ## First pull order
+
+Current execution pull set and acceptance dispositions are in [the October 5 review](reviews/2026-10-05/NEXT-SPRINT.md). #949–#953 capture newly observed reliability gaps; #949 additionally precedes #749. #835 is accepted/closed. The sequence below describes campaign stages, not a claim that their historical baselines remain current.
 
 1. Rebaseline current source, desired/running digests, applied migration ledger, writer generation, backup artifact and actual Argo state through the authorized evidence path. September 5 public health and a successful scheduled backup are useful observations, not a current private-ledger or Synced/Healthy proof. Preserve PR #776 and draft #774; review/rebase only relevant hunks during implementation, never merge stale runtime pins wholesale.
 2. Pull independent C0 work: #371 metric semantics, #424 band lineage, September 4 incident timeline, outdoor forecast truth and resource eligibility. Fixed-panel historical reanalysis follows the truthful metric definition. The scientific-design issue consumes those empirical outputs.

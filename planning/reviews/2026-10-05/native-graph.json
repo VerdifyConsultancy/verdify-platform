@@ -1,0 +1,3591 @@
+{
+  "source_main_sha": "ebfe1b3ed452212c1068827fde2e12e9f2b19ccc",
+  "campaign_nodes": 85,
+  "repository_nodes": 88,
+  "open": 71,
+  "closed": 17,
+  "campaign_dependencies_equal_native": true,
+  "campaign_parents_equal_native": true,
+  "blocking_and_hierarchy_acyclic": true,
+  "issues": [
+    {
+      "number": 14,
+      "title": "[C8][P2] Twin program: qualify declared oracle coverage before using divergence as a gate",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:23Z",
+      "milestone": {
+        "number": 31,
+        "title": "C8 \u2014 Comparator and full resource claim"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 775,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [
+          {
+            "number": 31,
+            "state": "OPEN"
+          },
+          {
+            "number": 606,
+            "state": "OPEN"
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "df38baec643ff6fe30b26763a33e566219c5cc77557785a44aa06a6c42f651fd"
+    },
+    {
+      "number": 16,
+      "title": "[C7][P2] Hardware program: commission only the sensing and equipment justified by evidence",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:23Z",
+      "milestone": {
+        "number": 30,
+        "title": "C7 \u2014 Physical and seasonal commissioning"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 775,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [
+          {
+            "number": 751,
+            "state": "OPEN"
+          },
+          {
+            "number": 298,
+            "state": "OPEN"
+          },
+          {
+            "number": 398,
+            "state": "OPEN"
+          },
+          {
+            "number": 45,
+            "state": "OPEN"
+          },
+          {
+            "number": 51,
+            "state": "OPEN"
+          },
+          {
+            "number": 52,
+            "state": "OPEN"
+          },
+          {
+            "number": 412,
+            "state": "OPEN"
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "974c778e43fc075186ad4631c4d341d8a7b26dd4f60753ffc2b4fb5f75f0bec0"
+    },
+    {
+      "number": 31,
+      "title": "[C8][P2] Close twin setpoint and actuator coverage gaps with generated consumer truth",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:21Z",
+      "milestone": {
+        "number": 31,
+        "title": "C8 \u2014 Comparator and full resource claim"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 14,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "cf78fef4295e0ed8c7bfb66e081b3b46eccdfcf28497ab5e09fd7493bb02b89d"
+    },
+    {
+      "number": 45,
+      "title": "[C7][P2] Commission soil and runoff feedback before enabling irrigation decisions",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:21Z",
+      "milestone": {
+        "number": 30,
+        "title": "C7 \u2014 Physical and seasonal commissioning"
+      },
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 398,
+            "id": "I_kwDOSlarUc8AAAABGYMigQ",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 16,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "85a788d3e96eeeeafdc54d90390004be4c500f28867a600f8d94c757276e73dc"
+    },
+    {
+      "number": 49,
+      "title": "[C5][P1] Audit and close historical suppressed sensor alerts without false count-parity assumptions",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:21Z",
+      "milestone": {
+        "number": 28,
+        "title": "C5 \u2014 Durability and least privilege"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 75,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "236b0bed55e3774cd00fdc91b1f78e2a0620eb771d13d3f4de9c91cfdbbd1f3f"
+    },
+    {
+      "number": 51,
+      "title": "[C7][P2] Calibrate CO2 against a real reference and publish measurement uncertainty",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:21Z",
+      "milestone": {
+        "number": 30,
+        "title": "C7 \u2014 Physical and seasonal commissioning"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 16,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "1f093871568896a27fedfc06be540efa6afd8bafa1473bc3805ed844a95effe2"
+    },
+    {
+      "number": 52,
+      "title": "[C7][P2] Define species-appropriate seasonal dormancy care from operator observations",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:20Z",
+      "milestone": {
+        "number": 30,
+        "title": "C7 \u2014 Physical and seasonal commissioning"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 16,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "1718cfe96a750f8fbf3113cd53cb0802755406d2a97510b67065fa559beb83a0"
+    },
+    {
+      "number": 75,
+      "title": "[C4][P1] Observability program: prove actionable health from source through device",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:19Z",
+      "milestone": {
+        "number": 27,
+        "title": "C4 \u2014 Delivery and runtime reliability"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 775,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [
+          {
+            "number": 563,
+            "state": "CLOSED"
+          },
+          {
+            "number": 394,
+            "state": "CLOSED"
+          },
+          {
+            "number": 89,
+            "state": "CLOSED"
+          },
+          {
+            "number": 671,
+            "state": "CLOSED"
+          },
+          {
+            "number": 49,
+            "state": "OPEN"
+          },
+          {
+            "number": 950,
+            "state": "OPEN"
+          },
+          {
+            "number": 951,
+            "state": "OPEN"
+          },
+          {
+            "number": 952,
+            "state": "OPEN"
+          },
+          {
+            "number": 953,
+            "state": "OPEN"
+          },
+          {
+            "number": 835,
+            "state": "CLOSED"
+          },
+          {
+            "number": 862,
+            "state": "OPEN"
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "ac9b8bb2c9a6820ef3d61ee7081b20e0bfd91de35b5192e82a6b49a40780f043"
+    },
+    {
+      "number": 89,
+      "title": "[C4][P1] Verify exact-source post-deploy smoke and device-route health",
+      "state": "CLOSED",
+      "updatedAt": "2026-09-30T18:22:42Z",
+      "milestone": {
+        "number": 27,
+        "title": "C4 \u2014 Delivery and runtime reliability"
+      },
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 563,
+            "id": "I_kwDOSlarUc8AAAABLJQo3g",
+            "state": "CLOSED",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 75,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "5ed604f2f026f4d8b6ff8eb3b236844c03d17a511789b99fc036bd849bcd4d0b"
+    },
+    {
+      "number": 174,
+      "title": "[C8][P2] Rehome only current Verdify admin surfaces to global SSO, fail closed",
+      "state": "CLOSED",
+      "updatedAt": "2026-10-01T02:57:48Z",
+      "milestone": {
+        "number": 31,
+        "title": "C8 \u2014 Comparator and full resource claim"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 775,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "602b50392dbab3d318bcbfb6e5fe857bbbca67c51bcec9eb7355aba8d24c8a09"
+    },
+    {
+      "number": 214,
+      "title": "[C6][P1] Prove crop-deviation trigger \u2192 valid plan on the sole operational planner path",
+      "state": "CLOSED",
+      "updatedAt": "2026-10-02T10:58:43Z",
+      "milestone": {
+        "number": 29,
+        "title": "C6 \u2014 Evidence-led control and irrigation"
+      },
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 780,
+            "id": "I_kwDOSlarUc8AAAABP3EJxQ",
+            "state": "CLOSED",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          },
+          {
+            "number": 427,
+            "id": "I_kwDOSlarUc8AAAABH1AwSw",
+            "state": "CLOSED",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 775,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "ea4239d5e7e5c117d0cfdfe0d420af65d035c6eeae4c896025798c685b921852"
+    },
+    {
+      "number": 218,
+      "title": "[C5][P1] Durability program: recoverable backups, measured RPO/RTO and safe HA option",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:20Z",
+      "milestone": {
+        "number": 28,
+        "title": "C5 \u2014 Durability and least privilege"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 775,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [
+          {
+            "number": 670,
+            "state": "CLOSED"
+          },
+          {
+            "number": 672,
+            "state": "CLOSED"
+          },
+          {
+            "number": 382,
+            "state": "OPEN"
+          },
+          {
+            "number": 396,
+            "state": "OPEN"
+          },
+          {
+            "number": 245,
+            "state": "OPEN"
+          },
+          {
+            "number": 643,
+            "state": "OPEN"
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "87a43dad79907d896c70dae7cf04bc079925d765e4e361b146c5b9a0c567b0db"
+    },
+    {
+      "number": 245,
+      "title": "[C5][P1] Execute a separately bounded database cutover only after parity and rollback proof",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:19Z",
+      "milestone": {
+        "number": 28,
+        "title": "C5 \u2014 Durability and least privilege"
+      },
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 396,
+            "id": "I_kwDOSlarUc8AAAABGYMg7A",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          },
+          {
+            "number": 382,
+            "id": "I_kwDOSlarUc8AAAABGJXnzw",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 218,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "37684eafcab330c64865c47b35f17c36a8415704f944562a0aab2b8b404bb2d3"
+    },
+    {
+      "number": 296,
+      "title": "[C6][P1] Consider slow-hysteresis firmware irrigation feedback only after dispatcher evidence",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:18Z",
+      "milestone": {
+        "number": 29,
+        "title": "C6 \u2014 Evidence-led control and irrigation"
+      },
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 434,
+            "id": "I_kwDOSlarUc8AAAABIRT04g",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          },
+          {
+            "number": 297,
+            "id": "I_kwDOSlarUc8AAAABE7_nbg",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          },
+          {
+            "number": 45,
+            "id": "I_kwDOSlarUc8AAAABD4nmyg",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 350,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "fca36efc14f87546ee56696fb47a54f85f861f49e538056e6a4765cc0b051923"
+    },
+    {
+      "number": 297,
+      "title": "[C6][P1] Add saturation alerts and a commissioned dispatcher-side drip-skip loop",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:18Z",
+      "milestone": {
+        "number": 29,
+        "title": "C6 \u2014 Evidence-led control and irrigation"
+      },
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 398,
+            "id": "I_kwDOSlarUc8AAAABGYMigQ",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          },
+          {
+            "number": 45,
+            "id": "I_kwDOSlarUc8AAAABD4nmyg",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 350,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "cd9c0a6d1ed5fe8c8a61507dad6d7635638544612d784744e9a6f0a282385f8d"
+    },
+    {
+      "number": 298,
+      "title": "[C7][P2] Rebaseline actual crop, pot and probe topology before feedback control",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:18Z",
+      "milestone": {
+        "number": 30,
+        "title": "C7 \u2014 Physical and seasonal commissioning"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 16,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "b7ed3a69a984a9679db0f83886969e92aca879f0c08520ae0783d60f2f80102b"
+    },
+    {
+      "number": 299,
+      "title": "[C6][P1] Preserve center-mister re-fire protection through topology and reset recovery",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:18Z",
+      "milestone": {
+        "number": 29,
+        "title": "C6 \u2014 Evidence-led control and irrigation"
+      },
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 390,
+            "id": "I_kwDOSlarUc8AAAABGYMdlg",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 350,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "547b251e0b9b448f5b1a4fe0b73b2b366af4c6749f693d5f7b47fba6857e1ac5"
+    },
+    {
+      "number": 303,
+      "title": "[C4][P1] Run real portable ESPHome compilation for declared firmware targets",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:17Z",
+      "milestone": {
+        "number": 27,
+        "title": "C4 \u2014 Delivery and runtime reliability"
+      },
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 322,
+            "id": "I_kwDOSlarUc8AAAABFE6oiw",
+            "state": "CLOSED",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          },
+          {
+            "number": 304,
+            "id": "I_kwDOSlarUc8AAAABE7_pJA",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 644,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "f2508a71b4bb5a2f91e632af7b6fd0c5c3b4de62b08e6228dda103b1cf2bd8da"
+    },
+    {
+      "number": 304,
+      "title": "[C4][P1] Provide reproducible least-authority firmware and database diagnostic tooling",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:16Z",
+      "milestone": {
+        "number": 27,
+        "title": "C4 \u2014 Delivery and runtime reliability"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 644,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "5b0157db700ae0dc08582f925466d9abb71a63d6a42fd11a7ec970aa56a92911"
+    },
+    {
+      "number": 317,
+      "title": "ArgoCD: unscoped sync operations on verdify-prod-dark get rewritten to a stale 2-resource selective scope",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:21:29Z",
+      "milestone": null,
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": null,
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "78a3ce2036527b47f7538c945549abf246ef54635d37ada00fefaf7f2cfc5574"
+    },
+    {
+      "number": 322,
+      "title": "[C4][P1] Replace remaining VM-era tests with current k3s delivery contracts",
+      "state": "CLOSED",
+      "updatedAt": "2026-10-02T05:20:30Z",
+      "milestone": {
+        "number": 27,
+        "title": "C4 \u2014 Delivery and runtime reliability"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 644,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "78dd5310d3ce400ecf5b5369e789f4f7eeee735a2bee6eaa4dc93dfdc2cf7020"
+    },
+    {
+      "number": 324,
+      "title": "[C6][P1] Extend zonal band lineage compatibly for future deterministic control",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:16Z",
+      "milestone": {
+        "number": 29,
+        "title": "C6 \u2014 Evidence-led control and irrigation"
+      },
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 424,
+            "id": "I_kwDOSlarUc8AAAABHoICiw",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          },
+          {
+            "number": 371,
+            "id": "I_kwDOSlarUc8AAAABF0Ep5Q",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 359,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "13bbc50d69235eec759ff0c3cc3a176ec26ebd21964b62db54ac43ec2abb2a5f"
+    },
+    {
+      "number": 350,
+      "title": "[C6][P1] Irrigation program: topology truth, overwatering protection and commissioned wall feed",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:16Z",
+      "milestone": {
+        "number": 29,
+        "title": "C6 \u2014 Evidence-led control and irrigation"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 775,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [
+          {
+            "number": 434,
+            "state": "OPEN"
+          },
+          {
+            "number": 299,
+            "state": "OPEN"
+          },
+          {
+            "number": 297,
+            "state": "OPEN"
+          },
+          {
+            "number": 296,
+            "state": "OPEN"
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "e857bf4c86072de9ba07e44adbdbed7e442ed60e00172813679a09fc550c9076"
+    },
+    {
+      "number": 359,
+      "title": "[C6][P1] Control program: truthful crop corridors before evidence-led tuning",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:15Z",
+      "milestone": {
+        "number": 29,
+        "title": "C6 \u2014 Evidence-led control and irrigation"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 775,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [
+          {
+            "number": 371,
+            "state": "OPEN"
+          },
+          {
+            "number": 424,
+            "state": "OPEN"
+          },
+          {
+            "number": 386,
+            "state": "OPEN"
+          },
+          {
+            "number": 430,
+            "state": "OPEN"
+          },
+          {
+            "number": 368,
+            "state": "OPEN"
+          },
+          {
+            "number": 324,
+            "state": "OPEN"
+          },
+          {
+            "number": 410,
+            "state": "OPEN"
+          },
+          {
+            "number": 378,
+            "state": "OPEN"
+          },
+          {
+            "number": 361,
+            "state": "OPEN"
+          },
+          {
+            "number": 379,
+            "state": "OPEN"
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "4bb6a606bbf051754de9dfbe66f74add368374cf2a3b8425d422c66f566de957"
+    },
+    {
+      "number": 361,
+      "title": "[C6][P1] Reassess diurnal anchors only after solar parity and measured corridor evidence",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:15Z",
+      "milestone": {
+        "number": 29,
+        "title": "C6 \u2014 Evidence-led control and irrigation"
+      },
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 410,
+            "id": "I_kwDOSlarUc8AAAABHmZbSw",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          },
+          {
+            "number": 378,
+            "id": "I_kwDOSlarUc8AAAABF845aQ",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 359,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "0eae8e586e151bc25a0e4dc247061eeb4ab5eaad719d69712d9693dd77cc49de"
+    },
+    {
+      "number": 367,
+      "title": "[C6][P1] Consolidate anti-chatter into one explicit dwell contract",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:15Z",
+      "milestone": {
+        "number": 29,
+        "title": "C6 \u2014 Evidence-led control and irrigation"
+      },
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 390,
+            "id": "I_kwDOSlarUc8AAAABGYMdlg",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 430,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "9ffe2b0b657ef02620285ae8140466c111948426471baa4c3236fcaafb4f1101"
+    },
+    {
+      "number": 368,
+      "title": "[C6][P1] Define shared sensor jump, flatline and contributor-integrity semantics",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:15Z",
+      "milestone": {
+        "number": 29,
+        "title": "C6 \u2014 Evidence-led control and irrigation"
+      },
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 424,
+            "id": "I_kwDOSlarUc8AAAABHoICiw",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 359,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "b0621476de95cde85bd783c9bc56f5802bd729456a69dc089608047a3e689e74"
+    },
+    {
+      "number": 369,
+      "title": "[C6][P1] Remove dead tunables and code from a verified consumer inventory",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:13Z",
+      "milestone": {
+        "number": 29,
+        "title": "C6 \u2014 Evidence-led control and irrigation"
+      },
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 433,
+            "id": "I_kwDOSlarUc8AAAABIRT0Ww",
+            "state": "CLOSED",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          },
+          {
+            "number": 390,
+            "id": "I_kwDOSlarUc8AAAABGYMdlg",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 430,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "e2b2b68f9e193ed05a1c578e3471da5f2c4456aefac413d38ffb2ac659a2ce84"
+    },
+    {
+      "number": 370,
+      "title": "[C6][P1] Consolidate equipment conflict resolution into one pure arbitration function",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:13Z",
+      "milestone": {
+        "number": 29,
+        "title": "C6 \u2014 Evidence-led control and irrigation"
+      },
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 390,
+            "id": "I_kwDOSlarUc8AAAABGYMdlg",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          },
+          {
+            "number": 367,
+            "id": "I_kwDOSlarUc8AAAABF0EmLA",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 430,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "47284f568874068f3677ed766903bac4824a89287b6ad97445a631e0a2534d26"
+    },
+    {
+      "number": 371,
+      "title": "[C0][P0] Repair climate score semantics and publish physical outcomes separately from credit",
+      "state": "OPEN",
+      "updatedAt": "2026-10-05T19:10:29Z",
+      "milestone": {
+        "number": 32,
+        "title": "S1 \u2014 Greenhouse reliability and measurement truth (October 2026)"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 359,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "69a7d0eee51f211bad94e130c89997c8acbd736908f53a61ce48a000c703c84e"
+    },
+    {
+      "number": 378,
+      "title": "[C6][P1] Decide corridor widths from fixed-target crop and resource evidence",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:13Z",
+      "milestone": {
+        "number": 29,
+        "title": "C6 \u2014 Evidence-led control and irrigation"
+      },
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 785,
+            "id": "I_kwDOSlarUc8AAAABP3EN4w",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          },
+          {
+            "number": 371,
+            "id": "I_kwDOSlarUc8AAAABF0Ep5Q",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 359,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "98841e82ed2570369f14feba9ec38ddabc4e784f785e51cfb6556ef758a0e17a"
+    },
+    {
+      "number": 379,
+      "title": "[C8][P2] Gate grey-box forecasting and MPC on validated response models and simpler baselines",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:12Z",
+      "milestone": {
+        "number": 31,
+        "title": "C8 \u2014 Comparator and full resource claim"
+      },
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 786,
+            "id": "I_kwDOSlarUc8AAAABP3EOig",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          },
+          {
+            "number": 419,
+            "id": "I_kwDOSlarUc8AAAABHnnQ8A",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          },
+          {
+            "number": 371,
+            "id": "I_kwDOSlarUc8AAAABF0Ep5Q",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 359,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "d2c7aab0c293037db3807e187f90a4a28faa2fef01355ce75167e891244eb4ba"
+    },
+    {
+      "number": 382,
+      "title": "[C5][P1] Persist ingestor queue and spool across restart and node loss",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:12Z",
+      "milestone": {
+        "number": 28,
+        "title": "C5 \u2014 Durability and least privilege"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 218,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "20465c93c6ebc733cc2a014fe9f10be5b8eaa5e2bd08045e048482f2e1dcf396"
+    },
+    {
+      "number": 386,
+      "title": "[C4][P1] Prove grow-light minimum-on behavior at the solar-window boundary",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:12Z",
+      "milestone": {
+        "number": 27,
+        "title": "C4 \u2014 Delivery and runtime reliability"
+      },
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 303,
+            "id": "I_kwDOSlarUc8AAAABE7_o8w",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 359,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "54196258820fb2a7eeed8e715bc63463c04008fa75463085d4f72677b3aa8a96"
+    },
+    {
+      "number": 390,
+      "title": "[C4][P1] Gate firmware releases on topology, cycling, runtime safety and rollback evidence",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:12Z",
+      "milestone": {
+        "number": 27,
+        "title": "C4 \u2014 Delivery and runtime reliability"
+      },
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 419,
+            "id": "I_kwDOSlarUc8AAAABHnnQ8A",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          },
+          {
+            "number": 303,
+            "id": "I_kwDOSlarUc8AAAABE7_o8w",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 644,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [
+          {
+            "number": 419,
+            "state": "OPEN"
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "9b421f3239da089ed203bf1c470df2e217c37705c23c9412522bc692d44b1f00"
+    },
+    {
+      "number": 394,
+      "title": "[C4][P1] Deliver and fault-test live split-brain and no-writer alerts",
+      "state": "CLOSED",
+      "updatedAt": "2026-10-01T01:01:34Z",
+      "milestone": {
+        "number": 27,
+        "title": "C4 \u2014 Delivery and runtime reliability"
+      },
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 563,
+            "id": "I_kwDOSlarUc8AAAABLJQo3g",
+            "state": "CLOSED",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 75,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "83f88277a0c36d0d6119f525b68b401c3f1a8b7baad754008843aed5fc0168e7"
+    },
+    {
+      "number": 396,
+      "title": "[C5][P1] Design and rehearse CNPG alongside the live database on current storage",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:22Z",
+      "milestone": {
+        "number": 28,
+        "title": "C5 \u2014 Durability and least privilege"
+      },
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 672,
+            "id": "I_kwDOSlarUc8AAAABOaQf-A",
+            "state": "CLOSED",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          },
+          {
+            "number": 670,
+            "id": "I_kwDOSlarUc8AAAABOZzBkA",
+            "state": "CLOSED",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 218,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "a5301d551385de648530eb0ff32533df96a360d6926e8fa2fbc3bd7301c39ea1"
+    },
+    {
+      "number": 398,
+      "title": "[C7][P2] Replace stale soil threshold seeds with commissioned crop/substrate truth",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:10Z",
+      "milestone": {
+        "number": 30,
+        "title": "C7 \u2014 Physical and seasonal commissioning"
+      },
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 298,
+            "id": "I_kwDOSlarUc8AAAABE7_oAg",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 16,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "c0deac0b61eecbd4af3151961904338606fb5b1b01f5554a25ad8d320b197e73"
+    },
+    {
+      "number": 399,
+      "title": "[C4][P1] Prove the HA grow-light writer remains within the single-writer contract",
+      "state": "CLOSED",
+      "updatedAt": "2026-09-28T13:47:14Z",
+      "milestone": {
+        "number": 27,
+        "title": "C4 \u2014 Delivery and runtime reliability"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 644,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "ee9c7f297e5df56ee3522a3a6b60b632808a6a938a89eed5f8137bc3b3aad026"
+    },
+    {
+      "number": 410,
+      "title": "[C6][P1] Measure realized solar-night dry-out before changing the controller",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:10Z",
+      "milestone": {
+        "number": 29,
+        "title": "C6 \u2014 Evidence-led control and irrigation"
+      },
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 424,
+            "id": "I_kwDOSlarUc8AAAABHoICiw",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          },
+          {
+            "number": 419,
+            "id": "I_kwDOSlarUc8AAAABHnnQ8A",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          },
+          {
+            "number": 371,
+            "id": "I_kwDOSlarUc8AAAABF0Ep5Q",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 359,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "69ea39744a276ca087fd199e2622fe1805d6aded307c5e843acb7ed95d3b7671"
+    },
+    {
+      "number": 412,
+      "title": "[C7][P2] Close the seasonal door screen only when measured night conditions justify it",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:10Z",
+      "milestone": {
+        "number": 30,
+        "title": "C7 \u2014 Physical and seasonal commissioning"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 16,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "d50d2eb0eac67371787d71bfc79939cb820d446f5bc084a9418af9e05d32ed42"
+    },
+    {
+      "number": 419,
+      "title": "[C4][P1] Populate real outdoor freshness in replay and enforce branch coverage",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:10Z",
+      "milestone": {
+        "number": 27,
+        "title": "C4 \u2014 Delivery and runtime reliability"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 390,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "1bf185d364552d3ae356b146d2bce655886c6fda85d21bc84ca4b006baf6ed02"
+    },
+    {
+      "number": 424,
+      "title": "[C0][P0] Resolve served, consumed and raw-readback band lineage without fabricated device truth",
+      "state": "OPEN",
+      "updatedAt": "2026-10-05T19:10:31Z",
+      "milestone": {
+        "number": 32,
+        "title": "S1 \u2014 Greenhouse reliability and measurement truth (October 2026)"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 359,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "5ae900cd073756030bbf6bfe7fc8fec0701ea1aad1de88551a3381955d4f358e"
+    },
+    {
+      "number": 427,
+      "title": "[C4][P1] Prove active Hermes/MCP recovery and truthful non-authoritative worker health",
+      "state": "CLOSED",
+      "updatedAt": "2026-10-02T01:04:31Z",
+      "milestone": {
+        "number": 27,
+        "title": "C4 \u2014 Delivery and runtime reliability"
+      },
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 433,
+            "id": "I_kwDOSlarUc8AAAABIRT0Ww",
+            "state": "CLOSED",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 775,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "0dbd10a1d15c444d2328cda8338d1e344ecffc1f220961eb95b935bbff81745e"
+    },
+    {
+      "number": 428,
+      "title": "[C6][P1] Diagnose heap/watchdog risk and qualify the actual last-good firmware floor",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:09Z",
+      "milestone": {
+        "number": 29,
+        "title": "C6 \u2014 Evidence-led control and irrigation"
+      },
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 433,
+            "id": "I_kwDOSlarUc8AAAABIRT0Ww",
+            "state": "CLOSED",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 430,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "a21384a1bf34054129c6fb0c4eb4ea5755eadd2ce974588ce45619ceaa37fee9"
+    },
+    {
+      "number": 430,
+      "title": "[C6][P1] Simplify firmware only while preserving autonomous control and observable truth",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:09Z",
+      "milestone": {
+        "number": 29,
+        "title": "C6 \u2014 Evidence-led control and irrigation"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 359,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [
+          {
+            "number": 433,
+            "state": "CLOSED"
+          },
+          {
+            "number": 428,
+            "state": "OPEN"
+          },
+          {
+            "number": 367,
+            "state": "OPEN"
+          },
+          {
+            "number": 370,
+            "state": "OPEN"
+          },
+          {
+            "number": 369,
+            "state": "OPEN"
+          },
+          {
+            "number": 949,
+            "state": "OPEN"
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "181c70247e1cec60d8258b1387abd4af50998e355a6b48119ccc266bd2018511"
+    },
+    {
+      "number": 433,
+      "title": "[C4][P1] Finish truthful single-writer command lifecycle and no-reconcile-storm acceptance",
+      "state": "CLOSED",
+      "updatedAt": "2026-09-30T18:23:05Z",
+      "milestone": {
+        "number": 27,
+        "title": "C4 \u2014 Delivery and runtime reliability"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 430,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "2fe40641fd3c04992c6a7a63769bdcd3132e22907efabc8b0f5db48f6468f2ab"
+    },
+    {
+      "number": 434,
+      "title": "[C6][P1] Enforce center-only climate mist and commissioned wall-only fertigation",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:09Z",
+      "milestone": {
+        "number": 29,
+        "title": "C6 \u2014 Evidence-led control and irrigation"
+      },
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 390,
+            "id": "I_kwDOSlarUc8AAAABGYMdlg",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          },
+          {
+            "number": 299,
+            "id": "I_kwDOSlarUc8AAAABE7_oLg",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 350,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "8ea7e4544ac1e59f5b3498f6003080212c7fdb24b09e86666248365c829ef041"
+    },
+    {
+      "number": 563,
+      "title": "[C4][P1] Enforce the actual ConfigMap-based alert delivery contract",
+      "state": "CLOSED",
+      "updatedAt": "2026-09-26T21:58:57Z",
+      "milestone": {
+        "number": 27,
+        "title": "C4 \u2014 Delivery and runtime reliability"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 75,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "fcb66eb511a3ed0200f6719afa74da3255b3c33ea1fcc2acf6a907d6a1b8c7f4"
+    },
+    {
+      "number": 581,
+      "title": "[C2][P0] Experiment program: qualify, run and read out the bounded AI-admission pilot",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:08Z",
+      "milestone": {
+        "number": 25,
+        "title": "C2 \u2014 Seasonal design lock and randomized start"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 775,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [
+          {
+            "number": 642,
+            "state": "OPEN"
+          },
+          {
+            "number": 750,
+            "state": "OPEN"
+          },
+          {
+            "number": 639,
+            "state": "OPEN"
+          },
+          {
+            "number": 587,
+            "state": "OPEN"
+          },
+          {
+            "number": 782,
+            "state": "OPEN"
+          },
+          {
+            "number": 783,
+            "state": "OPEN"
+          },
+          {
+            "number": 588,
+            "state": "OPEN"
+          },
+          {
+            "number": 640,
+            "state": "OPEN"
+          },
+          {
+            "number": 784,
+            "state": "OPEN"
+          },
+          {
+            "number": 785,
+            "state": "OPEN"
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "ef292e0f25287e9623e0d62fdb734826cd76b7415340a555e5dfda771b316a76"
+    },
+    {
+      "number": 586,
+      "title": "[C8][P2] Qualify a future atomic firmware policy engine with crash-safe recovery",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:07Z",
+      "milestone": {
+        "number": 31,
+        "title": "C8 \u2014 Comparator and full resource claim"
+      },
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 785,
+            "id": "I_kwDOSlarUc8AAAABP3EN4w",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          },
+          {
+            "number": 638,
+            "id": "I_kwDOSlarUc8AAAABN530tg",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          },
+          {
+            "number": 390,
+            "id": "I_kwDOSlarUc8AAAABGYMdlg",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 775,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "ab9f0015be0b1b41bd1b529b241c498c339926fabbee15d56d04a6f59a73564b"
+    },
+    {
+      "number": 587,
+      "title": "[C1][P0] Qualify fail-closed lifecycle, kill switch and blinded operational visibility",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:07Z",
+      "milestone": {
+        "number": 24,
+        "title": "C1 \u2014 Recovery and integrated physical qualification"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 581,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "f75c9467b31a7f4173c6e8bae6f424a35944ccfbe9ed9f97c6273bf82f421bc9"
+    },
+    {
+      "number": 588,
+      "title": "[C2][P0] Lock the qualified pilot identity and finalize exactly one internal random draw",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:07Z",
+      "milestone": {
+        "number": 25,
+        "title": "C2 \u2014 Seasonal design lock and randomized start"
+      },
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 783,
+            "id": "I_kwDOSlarUc8AAAABP3EMYQ",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          },
+          {
+            "number": 782,
+            "id": "I_kwDOSlarUc8AAAABP3ELSQ",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          },
+          {
+            "number": 641,
+            "id": "I_kwDOSlarUc8AAAABN6Bsbw",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 581,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "f5769a63eb798b743b3416e765db0aae79633cdf56da0cf4bc7bec83977c89dd"
+    },
+    {
+      "number": 606,
+      "title": "[C8][P2] Register the twin build profile only through its owning fleet contract",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:06Z",
+      "milestone": {
+        "number": 31,
+        "title": "C8 \u2014 Comparator and full resource claim"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 14,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "016a9398e08ddcda8afb43f47f08d07bd045d744a7d4574f9e67e0f014fed2a4"
+    },
+    {
+      "number": 638,
+      "title": "[C8][P2] Unify future manifest/vector wire schema and content identity offline",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:06Z",
+      "milestone": {
+        "number": 31,
+        "title": "C8 \u2014 Comparator and full resource claim"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 775,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "65742167c0668aa1f751b9ebdccc954314461dde3d9f81ffdcc955f40458922e"
+    },
+    {
+      "number": 639,
+      "title": "[C1][P0] Qualify the existing component executor and full-state recovery before launch",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:06Z",
+      "milestone": {
+        "number": 24,
+        "title": "C1 \u2014 Recovery and integrated physical qualification"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 581,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "ffb5b641832e4eba1d133959f80a3c60ebdeaca5d47ad955f527f67aeec9dce7"
+    },
+    {
+      "number": 640,
+      "title": "[C3][P0] Freeze the first assigned-day ITT outcome and blinded reproducible export",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:06Z",
+      "milestone": {
+        "number": 26,
+        "title": "C3 \u2014 Complete pilot and decision report"
+      },
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 642,
+            "id": "I_kwDOSlarUc8AAAABN6B07Q",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 581,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "6d5965d8a65b12ee24473d640503ee05c19b5a8a9c069377d5a42086f37a0fa6"
+    },
+    {
+      "number": 641,
+      "title": "[C1][P0] Execute authorized orphan recovery and one separately attended physical proof",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:04Z",
+      "milestone": {
+        "number": 24,
+        "title": "C1 \u2014 Recovery and integrated physical qualification"
+      },
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 749,
+            "id": "I_kwDOSlarUc8AAAABO2ZLmA",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          },
+          {
+            "number": 747,
+            "id": "I_kwDOSlarUc8AAAABO2Y3lQ",
+            "state": "CLOSED",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          },
+          {
+            "number": 639,
+            "id": "I_kwDOSlarUc8AAAABN535uQ",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          },
+          {
+            "number": 587,
+            "id": "I_kwDOSlarUc8AAAABM0fHeQ",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 750,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "3a7ab2bd0ead27885978d85948db18c2c2f20bb05922de8f290e4302cafa9bd8"
+    },
+    {
+      "number": 642,
+      "title": "[C2][P0] Authorize and verify one randomized day-1 activation from the locked pilot",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:04Z",
+      "milestone": {
+        "number": 25,
+        "title": "C2 \u2014 Seasonal design lock and randomized start"
+      },
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 588,
+            "id": "I_kwDOSlarUc8AAAABM0fIRw",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 581,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [
+          {
+            "number": 676,
+            "state": "CLOSED"
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "498f5292bb2cb339ac6ffd307d5d2fc1dac0f522f3644ae1524629665531c031"
+    },
+    {
+      "number": 643,
+      "title": "[C5][P1] Extend least-privilege database roles beyond the already-required experiment boundary",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:04Z",
+      "milestone": {
+        "number": 28,
+        "title": "C5 \u2014 Durability and least privilege"
+      },
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 670,
+            "id": "I_kwDOSlarUc8AAAABOZzBkA",
+            "state": "CLOSED",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 218,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "20edc56d3eaee674b9426c583a4df52241aa31dd7747cad61428c07d081ee8d3"
+    },
+    {
+      "number": 644,
+      "title": "[C4][P1] Integrate exact-SHA, path-aware and device-safe delivery receipts",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:04Z",
+      "milestone": {
+        "number": 27,
+        "title": "C4 \u2014 Delivery and runtime reliability"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 775,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [
+          {
+            "number": 322,
+            "state": "CLOSED"
+          },
+          {
+            "number": 304,
+            "state": "OPEN"
+          },
+          {
+            "number": 303,
+            "state": "OPEN"
+          },
+          {
+            "number": 390,
+            "state": "OPEN"
+          },
+          {
+            "number": 399,
+            "state": "CLOSED"
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "7d0af99bab24813b7fca5fe2fccd0d1b9db8436af9871981f8c27800ea959289"
+    },
+    {
+      "number": 670,
+      "title": "[C5][P1] Make backup artifacts sufficient to restore roles, ownership and memberships safely",
+      "state": "CLOSED",
+      "updatedAt": "2026-09-27T15:26:42Z",
+      "milestone": {
+        "number": 28,
+        "title": "C5 \u2014 Durability and least privilege"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 218,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "a1dc06dee850a451de4af1555c99e29eac2a3a61722bb31a7ba6baa3da06a6e1"
+    },
+    {
+      "number": 671,
+      "title": "[C4][P1] Make Lab publishing failures and cache contention observable",
+      "state": "CLOSED",
+      "updatedAt": "2026-09-27T17:42:06Z",
+      "milestone": {
+        "number": 27,
+        "title": "C4 \u2014 Delivery and runtime reliability"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 75,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "90a3062ec1c9d04c002869643b347714bb5bf18c8e7a6d88c95779aca9f657e5"
+    },
+    {
+      "number": 672,
+      "title": "[C5][P1] Make compressed-chunk ownership restoration a supported blocking rehearsal test",
+      "state": "CLOSED",
+      "updatedAt": "2026-09-28T02:20:59Z",
+      "milestone": {
+        "number": 28,
+        "title": "C5 \u2014 Durability and least privilege"
+      },
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 670,
+            "id": "I_kwDOSlarUc8AAAABOZzBkA",
+            "state": "CLOSED",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 218,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "bc266d2b4c92f3773d5f2caf83be208fa05818a09db2807b5430e95098e24a70"
+    },
+    {
+      "number": 747,
+      "title": "[C1][P0] Verify corrected scheduled backups and current production recovery health",
+      "state": "CLOSED",
+      "updatedAt": "2026-09-27T10:51:05Z",
+      "milestone": {
+        "number": 24,
+        "title": "C1 \u2014 Recovery and integrated physical qualification"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 750,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "48e41f34f3207d22dccdfe37c53b05377a090ae55e9d622c4067adb912a39762"
+    },
+    {
+      "number": 749,
+      "title": "[C1][P0] Qualify current three-probe readiness and explicit safety dependencies",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:03Z",
+      "milestone": {
+        "number": 24,
+        "title": "C1 \u2014 Recovery and integrated physical qualification"
+      },
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 949,
+            "id": "I_kwDOSlarUc8AAAABVMsq6A",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          },
+          {
+            "number": 778,
+            "id": "I_kwDOSlarUc8AAAABP3EISg",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          },
+          {
+            "number": 424,
+            "id": "I_kwDOSlarUc8AAAABHoICiw",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 750,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "7ffb9b7d317791efc946fd80cea75f05dec5137af98ad49689ef5bc29846bec6"
+    },
+    {
+      "number": 750,
+      "title": "[C1][P0] Recovery/proof campaign: rebaseline current state and seal one safe physical receipt",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:03Z",
+      "milestone": {
+        "number": 24,
+        "title": "C1 \u2014 Recovery and integrated physical qualification"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 581,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [
+          {
+            "number": 747,
+            "state": "CLOSED"
+          },
+          {
+            "number": 749,
+            "state": "OPEN"
+          },
+          {
+            "number": 641,
+            "state": "OPEN"
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "856fc20cd5c2c37a3c5870fb5d6186b008b103279c8f67a58094e5e383543e1f"
+    },
+    {
+      "number": 751,
+      "title": "[C7][P2] Replace the failed south climate probe and diagnose hydro telemetry in a bounded window",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:03Z",
+      "milestone": {
+        "number": 30,
+        "title": "C7 \u2014 Physical and seasonal commissioning"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 16,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "b869d2f39617ab68d4d86e8e1fa64eae5de43b0203efceb5719c03f519a52137"
+    },
+    {
+      "number": 775,
+      "title": "[C0][P0] Campaign: trustworthy greenhouse outcomes \u2192 qualified pilot \u2192 evidence-backed control",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:22:12Z",
+      "milestone": {
+        "number": 23,
+        "title": "C0 \u2014 Measurement and incident truth"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": null,
+      "subIssues": {
+        "nodes": [
+          {
+            "number": 778,
+            "state": "OPEN"
+          },
+          {
+            "number": 779,
+            "state": "CLOSED"
+          },
+          {
+            "number": 780,
+            "state": "CLOSED"
+          },
+          {
+            "number": 781,
+            "state": "CLOSED"
+          },
+          {
+            "number": 581,
+            "state": "OPEN"
+          },
+          {
+            "number": 644,
+            "state": "OPEN"
+          },
+          {
+            "number": 427,
+            "state": "CLOSED"
+          },
+          {
+            "number": 75,
+            "state": "OPEN"
+          },
+          {
+            "number": 218,
+            "state": "OPEN"
+          },
+          {
+            "number": 359,
+            "state": "OPEN"
+          },
+          {
+            "number": 214,
+            "state": "CLOSED"
+          },
+          {
+            "number": 350,
+            "state": "OPEN"
+          },
+          {
+            "number": 16,
+            "state": "OPEN"
+          },
+          {
+            "number": 174,
+            "state": "CLOSED"
+          },
+          {
+            "number": 14,
+            "state": "OPEN"
+          },
+          {
+            "number": 638,
+            "state": "OPEN"
+          },
+          {
+            "number": 586,
+            "state": "OPEN"
+          },
+          {
+            "number": 786,
+            "state": "OPEN"
+          },
+          {
+            "number": 787,
+            "state": "OPEN"
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "007b0c899899ba8f32228cde0137cfab00a69226bb79e1bb494e70f0e192be12"
+    },
+    {
+      "number": 778,
+      "title": "[C0][P0] Investigate September 4 hot/dry peak and three-hour wetting interruption",
+      "state": "OPEN",
+      "updatedAt": "2026-10-05T19:10:32Z",
+      "milestone": {
+        "number": 32,
+        "title": "S1 \u2014 Greenhouse reliability and measurement truth (October 2026)"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 775,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "72901436202a3ab2c107982946978a88707feff421ac0b3da800493f591902d6"
+    },
+    {
+      "number": 779,
+      "title": "[C0][P1] Re-run historical planner comparisons on a fixed sensor panel and fixed target contract",
+      "state": "CLOSED",
+      "updatedAt": "2026-09-29T17:29:53Z",
+      "milestone": {
+        "number": 23,
+        "title": "C0 \u2014 Measurement and incident truth"
+      },
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 371,
+            "id": "I_kwDOSlarUc8AAAABF0Ep5Q",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 775,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "6ff47acd467f847b530bf57f11819d7cdfb0dbd5cfe89e45f4c0e5c5f2340e39"
+    },
+    {
+      "number": 780,
+      "title": "[C0][P0] Score as-of outdoor forecasts against outdoor truth and separate indoor response",
+      "state": "CLOSED",
+      "updatedAt": "2026-09-27T15:28:34Z",
+      "milestone": {
+        "number": 23,
+        "title": "C0 \u2014 Measurement and incident truth"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 775,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "cfa932c954ee561f0e271644e8ea1ee95175fbe9ffe9f87b0bdca8b9610b2ff6"
+    },
+    {
+      "number": 781,
+      "title": "[C0][P0] Commission a claim-safe water and electricity endpoint contract",
+      "state": "CLOSED",
+      "updatedAt": "2026-09-27T15:01:17Z",
+      "milestone": {
+        "number": 23,
+        "title": "C0 \u2014 Measurement and incident truth"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 775,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "3b8625f69c82013a87b1f0edbecdf18ce69bc59ffb24f14ddb5f5f5ad0a913e0"
+    },
+    {
+      "number": 782,
+      "title": "[C0][P0] Choose a season-appropriate exploratory pilot and freeze the scientific contract",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:03:51Z",
+      "milestone": {
+        "number": 23,
+        "title": "C0 \u2014 Measurement and incident truth"
+      },
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 781,
+            "id": "I_kwDOSlarUc8AAAABP3EKiA",
+            "state": "CLOSED",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          },
+          {
+            "number": 780,
+            "id": "I_kwDOSlarUc8AAAABP3EJxQ",
+            "state": "CLOSED",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          },
+          {
+            "number": 779,
+            "id": "I_kwDOSlarUc8AAAABP3EI-g",
+            "state": "CLOSED",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          },
+          {
+            "number": 371,
+            "id": "I_kwDOSlarUc8AAAABF0Ep5Q",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 581,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "6d05ddfb837128cc2124eaa57263282cb90279dec8c1a57cc63ca5187e4bfc16"
+    },
+    {
+      "number": 783,
+      "title": "[C1][P0] Prove restore \u2192 selector \u2192 setter schema \u2192 receipt \u2192 frozen outcome end to end",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:05:20Z",
+      "milestone": {
+        "number": 24,
+        "title": "C1 \u2014 Recovery and integrated physical qualification"
+      },
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 782,
+            "id": "I_kwDOSlarUc8AAAABP3ELSQ",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          },
+          {
+            "number": 639,
+            "id": "I_kwDOSlarUc8AAAABN535uQ",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          },
+          {
+            "number": 587,
+            "id": "I_kwDOSlarUc8AAAABM0fHeQ",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 581,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "0d9db0ea1a923913aad9bb369392fe5bf81f4f4a0be0fa0d8397d48723da9903"
+    },
+    {
+      "number": 784,
+      "title": "[C3][P1] Operate the complete blinded pilot and preserve every assigned day",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:01Z",
+      "milestone": {
+        "number": 26,
+        "title": "C3 \u2014 Complete pilot and decision report"
+      },
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 640,
+            "id": "I_kwDOSlarUc8AAAABN53-QQ",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 581,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "9d8e7233b472aa16f6500f93ef4ae597207ec15987229851e56f9dd6197a9e54"
+    },
+    {
+      "number": 785,
+      "title": "[C3][P1] Reveal once, reproduce the frozen analysis and publish the campaign decision",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:01Z",
+      "milestone": {
+        "number": 26,
+        "title": "C3 \u2014 Complete pilot and decision report"
+      },
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 784,
+            "id": "I_kwDOSlarUc8AAAABP3ENKg",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 581,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "bb857c1ada6a6d9898214eed74c9198f702ee4e723441e8259c0510aaccdb297"
+    },
+    {
+      "number": 786,
+      "title": "[C8][P2] Design the next comparison against a deterministic forecast-aware selector",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:01Z",
+      "milestone": {
+        "number": 31,
+        "title": "C8 \u2014 Comparator and full resource claim"
+      },
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 785,
+            "id": "I_kwDOSlarUc8AAAABP3EN4w",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          },
+          {
+            "number": 780,
+            "id": "I_kwDOSlarUc8AAAABP3EJxQ",
+            "state": "CLOSED",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 775,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "c9943e8e35bd794e3da680cd9109c21308650ec8841ec30292ff727691db81d6"
+    },
+    {
+      "number": 787,
+      "title": "[C8][P2] Plan measured heating, overnight and whole-resource economics as a separate claim",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:12:01Z",
+      "milestone": {
+        "number": 31,
+        "title": "C8 \u2014 Comparator and full resource claim"
+      },
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 785,
+            "id": "I_kwDOSlarUc8AAAABP3EN4w",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          },
+          {
+            "number": 781,
+            "id": "I_kwDOSlarUc8AAAABP3EKiA",
+            "state": "CLOSED",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          },
+          {
+            "number": 410,
+            "id": "I_kwDOSlarUc8AAAABHmZbSw",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 775,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "8cec6f67119acece31232f1d08842f5edba26f0bf42a75c25ca426bcd2c2c419"
+    },
+    {
+      "number": 801,
+      "title": "[VP-02] Exclude www-dev and proposals-hello from the verdify-tier1-forward HostRegexp",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:21:27Z",
+      "milestone": null,
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 4461,
+            "id": "I_kwDORKl1Vc8AAAABS3Q0Gw",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "jvallery/agents"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 4493,
+        "repository": {
+          "nameWithOwner": "jvallery/agents"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "d9fd82ecfbe8700ae3059561b64d449cdc243023817188650a0f377b7e9d96fd"
+    },
+    {
+      "number": 802,
+      "title": "[VP-01] Put verdify-descheduler under Argo (manual) with Git equal to live enforce mode",
+      "state": "OPEN",
+      "updatedAt": "2026-10-02T16:21:26Z",
+      "milestone": null,
+      "blockedBy": {
+        "nodes": [
+          {
+            "number": 4451,
+            "id": "I_kwDORKl1Vc8AAAABS3QeLQ",
+            "state": "OPEN",
+            "repository": {
+              "nameWithOwner": "jvallery/agents"
+            }
+          },
+          {
+            "number": 4459,
+            "id": "I_kwDORKl1Vc8AAAABS3QwrA",
+            "state": "CLOSED",
+            "repository": {
+              "nameWithOwner": "jvallery/agents"
+            }
+          }
+        ],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 4493,
+        "repository": {
+          "nameWithOwner": "jvallery/agents"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "3cf822deac9d671be8943340f729b87e522a800eb4402fd93c0895aec0b209b2"
+    },
+    {
+      "number": 835,
+      "title": "Fix reconnect equipment snapshot provenance and stale relay alerts",
+      "state": "CLOSED",
+      "updatedAt": "2026-10-05T19:09:13Z",
+      "milestone": null,
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 75,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "486f45a3fe5a2c03bb8acc1bd1fd0e9be0797618fe5616e06d5f9fb079910f81"
+    },
+    {
+      "number": 862,
+      "title": "Lab publisher: warm-cache init rescans the public tree for ~5 min, pushing runs past the 10-min schedule and the 20-min freshness window",
+      "state": "OPEN",
+      "updatedAt": "2026-10-05T19:10:28Z",
+      "milestone": {
+        "number": 32,
+        "title": "S1 \u2014 Greenhouse reliability and measurement truth (October 2026)"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 75,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "0089ceb590cca665921b947a1ec9680ffe9637d3ade50ea1cd101d6b65ecd304"
+    },
+    {
+      "number": 949,
+      "title": "[C4][P1] Bound planner-policy drift holds and prove autonomous safe convergence",
+      "state": "OPEN",
+      "updatedAt": "2026-10-05T19:10:24Z",
+      "milestone": {
+        "number": 32,
+        "title": "S1 \u2014 Greenhouse reliability and measurement truth (October 2026)"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 430,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "09982c65ea89f18fa0100531dce4afe950c82bf851e17af194ef96fdfd807d5f"
+    },
+    {
+      "number": 950,
+      "title": "[C4][P1] Restore the ingestor Slack credential-file contract and operator delivery",
+      "state": "OPEN",
+      "updatedAt": "2026-10-05T19:10:25Z",
+      "milestone": {
+        "number": 32,
+        "title": "S1 \u2014 Greenhouse reliability and measurement truth (October 2026)"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 75,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "b74563ea1474bbabe2b8dcebb5d7aa5b9c5c66374b94034138c3e7f88364f734"
+    },
+    {
+      "number": 951,
+      "title": "[C4][P1] Restore authenticated greenhouse camera snapshots after connection refusals",
+      "state": "OPEN",
+      "updatedAt": "2026-10-05T19:10:26Z",
+      "milestone": {
+        "number": 32,
+        "title": "S1 \u2014 Greenhouse reliability and measurement truth (October 2026)"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 75,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "f3f098ca0fd5372118e5bee1888923eeb866d3879300d20698ab727f3da4c92e"
+    },
+    {
+      "number": 952,
+      "title": "[C4][P1] Preserve Verdify Grafana monitoring identity across pod replacement",
+      "state": "OPEN",
+      "updatedAt": "2026-10-05T19:10:27Z",
+      "milestone": {
+        "number": 32,
+        "title": "S1 \u2014 Greenhouse reliability and measurement truth (October 2026)"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 75,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "2a390e67bb0df14795990b1714908b2e2a73a9456ef0f2d5055ca65224f62fb8"
+    },
+    {
+      "number": 953,
+      "title": "[C4][P2] Reconcile Iris planning skill lookup and required reference inventory",
+      "state": "OPEN",
+      "updatedAt": "2026-10-05T19:10:23Z",
+      "milestone": {
+        "number": 27,
+        "title": "C4 \u2014 Delivery and runtime reliability"
+      },
+      "blockedBy": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "parent": {
+        "number": 75,
+        "repository": {
+          "nameWithOwner": "VerdifyConsultancy/verdify-platform"
+        }
+      },
+      "subIssues": {
+        "nodes": [],
+        "pageInfo": {
+          "hasNextPage": false
+        }
+      },
+      "body_sha256": "f8b76f17784b25fe450a71438c8678543e623229b237117a2e505f8c0b31347a"
+    }
+  ],
+  "external_owner_issues": [
+    {
+      "number": 4451,
+      "title": "[EST-01] Create estate-ownership.yaml and the estate lane map (docs/estate/README.md)",
+      "state": "open",
+      "html_url": "https://github.com/jvallery/agents/issues/4451",
+      "updated_at": "2026-09-30T21:37:55Z"
+    },
+    {
+      "number": 4459,
+      "title": "[ROOT-02] Reconcile the three env roots and agent-fleet-appprojects to reviewed main SHAs",
+      "state": "closed",
+      "html_url": "https://github.com/jvallery/agents/issues/4459",
+      "updated_at": "2026-09-28T14:46:51Z"
+    },
+    {
+      "number": 4461,
+      "title": "[ARGO-02] Adopt the hand-applied tenant Applications into the local-prod catalog",
+      "state": "open",
+      "html_url": "https://github.com/jvallery/agents/issues/4461",
+      "updated_at": "2026-09-30T21:38:34Z"
+    },
+    {
+      "number": 4014,
+      "title": "[Get-well] Make `jvallery/agents` the authoritative, least-privilege CI/CD control repo",
+      "state": "open",
+      "html_url": "https://github.com/jvallery/agents/issues/4014",
+      "updated_at": "2026-10-01T00:55:59Z"
+    }
+  ]
+}

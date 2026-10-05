@@ -49,6 +49,13 @@ flowchart TD
     i399["#399 Prove the HA grow-light writer remains within the single-w"]
     i419["#419 Populate real outdoor freshness in replay and enforce bran"]
     i386["#386 Prove grow-light minimum-on behavior at the solar-window b"]
+    i949["#949 Bound planner-policy drift holds and prove autonomous safe"]
+    i950["#950 Restore the ingestor Slack credential-file contract and op"]
+    i951["#951 Restore authenticated greenhouse camera snapshots after co"]
+    i952["#952 Preserve Verdify Grafana monitoring identity across pod re"]
+    i953["#953 Reconcile Iris planning skill lookup and required referenc"]
+    i835["#835 Fix reconnect equipment snapshot provenance and stale rela"]
+    i862["#862 Lab publisher: warm-cache init rescans the public tree for"]
   end
   subgraph C5["C5: Durability and least privilege"]
     i218["#218 Durability program: recoverable backups, measured RPO/RTO "]
@@ -103,6 +110,7 @@ flowchart TD
   i371 --> i779
   i424 --> i749
   i778 --> i749
+  i949 --> i749
   i747 --> i641
   i749 --> i641
   i639 --> i641
@@ -183,6 +191,7 @@ flowchart TD
 | [#371](https://github.com/VerdifyConsultancy/verdify-platform/issues/371) | [#779](https://github.com/VerdifyConsultancy/verdify-platform/issues/779) |
 | [#424](https://github.com/VerdifyConsultancy/verdify-platform/issues/424) | [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) |
 | [#778](https://github.com/VerdifyConsultancy/verdify-platform/issues/778) | [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) |
+| [#949](https://github.com/VerdifyConsultancy/verdify-platform/issues/949) | [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) |
 | [#747](https://github.com/VerdifyConsultancy/verdify-platform/issues/747) | [#641](https://github.com/VerdifyConsultancy/verdify-platform/issues/641) |
 | [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) | [#641](https://github.com/VerdifyConsultancy/verdify-platform/issues/641) |
 | [#639](https://github.com/VerdifyConsultancy/verdify-platform/issues/639) | [#641](https://github.com/VerdifyConsultancy/verdify-platform/issues/641) |

@@ -25,7 +25,7 @@ One accountable role per issue; preserve existing assignees and choose an execut
 |---|---|---|---|
 | [#750](https://github.com/VerdifyConsultancy/verdify-platform/issues/750) | Recovery/proof campaign: rebaseline current state and seal one safe physical receipt | None; see concrete issue conditions | L |
 | [#747](https://github.com/VerdifyConsultancy/verdify-platform/issues/747) | Verify corrected scheduled backups and current production recovery health | None; see concrete issue conditions | S |
-| [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) | Qualify current three-probe readiness and explicit safety dependencies | [#424](https://github.com/VerdifyConsultancy/verdify-platform/issues/424), [#778](https://github.com/VerdifyConsultancy/verdify-platform/issues/778) | M |
+| [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749) | Qualify current three-probe readiness and explicit safety dependencies | [#424](https://github.com/VerdifyConsultancy/verdify-platform/issues/424), [#778](https://github.com/VerdifyConsultancy/verdify-platform/issues/778), [#949](https://github.com/VerdifyConsultancy/verdify-platform/issues/949) | M |
 | [#641](https://github.com/VerdifyConsultancy/verdify-platform/issues/641) | Execute authorized orphan recovery and one separately attended physical proof | [#747](https://github.com/VerdifyConsultancy/verdify-platform/issues/747), [#749](https://github.com/VerdifyConsultancy/verdify-platform/issues/749), [#639](https://github.com/VerdifyConsultancy/verdify-platform/issues/639), [#587](https://github.com/VerdifyConsultancy/verdify-platform/issues/587) | L |
 | [#639](https://github.com/VerdifyConsultancy/verdify-platform/issues/639) | Qualify the existing component executor and full-state recovery before launch | None; see concrete issue conditions | L |
 | [#587](https://github.com/VerdifyConsultancy/verdify-platform/issues/587) | Qualify fail-closed lifecycle, kill switch and blinded operational visibility | None; see concrete issue conditions | M |
@@ -66,6 +66,13 @@ One accountable role per issue; preserve existing assignees and choose an execut
 | [#399](https://github.com/VerdifyConsultancy/verdify-platform/issues/399) | Prove the HA grow-light writer remains within the single-writer contract | None; see concrete issue conditions | S |
 | [#419](https://github.com/VerdifyConsultancy/verdify-platform/issues/419) | Populate real outdoor freshness in replay and enforce branch coverage | None; see concrete issue conditions | M |
 | [#386](https://github.com/VerdifyConsultancy/verdify-platform/issues/386) | Prove grow-light minimum-on behavior at the solar-window boundary | [#303](https://github.com/VerdifyConsultancy/verdify-platform/issues/303) | M |
+| [#949](https://github.com/VerdifyConsultancy/verdify-platform/issues/949) | Bound planner-policy drift holds and prove autonomous safe convergence | None; see concrete issue conditions | M |
+| [#950](https://github.com/VerdifyConsultancy/verdify-platform/issues/950) | Restore the ingestor Slack credential-file contract and operator delivery | None; see concrete issue conditions | M |
+| [#951](https://github.com/VerdifyConsultancy/verdify-platform/issues/951) | Restore authenticated greenhouse camera snapshots after connection refusals | None; see concrete issue conditions | M |
+| [#952](https://github.com/VerdifyConsultancy/verdify-platform/issues/952) | Preserve Verdify Grafana monitoring identity across pod replacement | None; see concrete issue conditions | M |
+| [#953](https://github.com/VerdifyConsultancy/verdify-platform/issues/953) | Reconcile Iris planning skill lookup and required reference inventory | None; see concrete issue conditions | S |
+| [#835](https://github.com/VerdifyConsultancy/verdify-platform/issues/835) | Fix reconnect equipment snapshot provenance and stale relay alerts | None; see concrete issue conditions | M |
+| [#862](https://github.com/VerdifyConsultancy/verdify-platform/issues/862) | Lab publisher: warm-cache init rescans the public tree for ~5 min, pushing runs past the 10-min schedule and the 20-min freshness window | None; see concrete issue conditions | M |
 
 ## C5 — Data/platform lead
 

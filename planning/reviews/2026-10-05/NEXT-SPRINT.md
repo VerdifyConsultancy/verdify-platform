@@ -1,0 +1,56 @@
+# Greenhouse triage and next sprint — October 5, 2026
+
+The greenhouse control loop is operating with fresh telemetry and one device writer, but the product is **degraded and not qualified for pilot launch**. This review reconciles all 67 initially open GitHub issues, five new findings and 215 acceptance clauses. It closes only the bounded reconnect snapshot tracker #835. The underlying C0–C8 campaign remains unfinished.
+
+Authoritative source at capture: `ebfe1b3ed452212c1068827fde2e12e9f2b19ccc`. API, MCP and ingestor are built from `e91b2a7d5df14baf327bd198b4333ac65e28cc6b`. Candidate-pin commits legitimately differ from image build source. All 26 rendered Deployment/StatefulSet/CronJob image specifications equal live specifications; the render contains 126 resources and zero Secrets. Current running image IDs are separately retained in the runtime receipt. No production sync, migration, OTA, device command, experiment launch or database cutover was performed by this triage.
+
+## Current health and evidence limits
+
+| Surface | Current evidence | Assessment |
+|---|---|---|
+| Argo and workloads | `verdify-prod-dark` Synced/Degraded at exact source; every long-running workload ready; recent vision Jobs failed | Workload readiness does not establish whole-product health. Preserve failed jobs. |
+| Writer | One Ready Recreate ingestor, one writer lease; direct all-running-pod socket scan exactly one; all eight node exporters successful and aggregate one | Singleton transport holds. Current desired policy is not fully converged. |
+| Policy delivery | Last 24h: 85 confirmed writes, two superseded, 51 observed; no failed rows. Bounded 16,000-line log contains 260 protective broad-restore holds; latest requires 21 commands versus cap12 | #949 diagnoses new desired-policy movement/staging. Preserve #433's historical two-hour acceptance and the cap. A held write is not a device push or a confirmation. |
+| Controller | Firmware `2026.10.2.0637.620a218a-wifi-bound`; current uptime about77h, Wi-Fi −57dBm, SNTP valid and age24s | Current uptime is an observation, not a certified bake or independently demonstrated rollback floor. `heap_bytes` carries published KiB values; do not interpret61.24 as61 bytes. |
+| Climate | Latest capture83.78°F/1.891kPa; north88.7°F/2.870kPa, east80.24°F/1.431kPa, west82.22°F/1.372kPa; south absent | Three contributors, appreciable spatial spread. Firmware4/OK contradicts missing south. #749/#751/#368 retain fail-closed validity requirements. |
+| Seven-day coverage | All98 numeric climate fields inspected;23 have no data. Both south soil moisture channels and south EC are entirely zero. Hydro pH has27 samples but none sinceOctober1; chemistry, PAR/DLI and leaf sensing absent | No chemistry/irrigation calibration, interior-light, center-canopy or crop-effect claim. [Full per-field coverage](telemetry-columns.json). Partial first/last days are not full-day completeness estimates. |
+| Planner |28 journal entries reviewed; required sunrise/sunset/midnight/week and forecast cycles produce plans. One September29 sunrise used neutral fallback. No current overdue required cycle found | Completion is healthier than at the earlier pause. Self-scores/short-window evaluations are not causal crop outcomes. Source graph worker has no recent graph runs; its readiness is not the active Hermes path. |
+| Planner logs | Missing planning skill aliases and required preflight reference reported by Hermes | #953 owns lookup repair; no provider calls were added for this audit. |
+| Metrics | DB about0.90 CPU cores/2.67GiB working set; ingestor about0.095 cores/120MiB. Current backup exporter up; singleton exporter coverage complete | Point-in-time resource observations, not a saturation/retention benchmark. Scrape `up=1` is exporter access, not necessarily endpoint success. |
+| Operator delivery | Evening brief, midnight watch and repeated morning brief fail because expected Slack token file is absent; nonsecret file-existence check confirms absence | #950 owns mount/config contract; token values were not read and no message was sent by triage. |
+| Vision | Three retained consecutive Jobs fail; latest0/2 cameras captured with ConnectionRefusedError | #951 traces current service8971→endpoint8973, listener/policy/TLS/auth and natural analysis. Different port numbers alone do not prove a bad mapping. No fresh photo-based plant-health assessment is available. |
+| Grafana | Authenticated local and external probes fail; Grafana app is ready and state still uses emptyDir | #952 owns durable least-scope monitoring identity; #75's prior account-loss report supports investigation. Actual credential/account fault cause remains to verify. |
+| Lab | Latest three completed runs take734/754/759s and publish20min apart; served publication receipt was fresh at the19:03 observation, expiring19:12:31 | #862 remains valid. A current receipt does not eliminate cadence/freshness gaps. |
+| Backups/HA | October5 paired dump/roles/manifest completed; dump340,547,676 bytes. Rehearsal and PITR-A/B clusters ready; retained real PITR proof exists | Successful dump/Ready replicas do not prove current whole-dataset SOURCE/A/B parity. #396 retained full query failed at120.554741s; do not blindly rerun or raise timeout. |
+| Alert lifecycle |26 unresolved open/acknowledged DB alerts, all warning at capture;61 historical suppressed sensor_offline rows still lack resolved_at | No unresolved DB critical at capture is not universal safety. #49 remains incomplete; no alert rows were edited. Prometheus/Alertmanager independently report Argo and authenticated Grafana failures. |
+| Outcome truth | API separates legacy joint0.8%, temp11.0%, VPD88.8%, attributable79.5%; qualified physical publication unavailable. Current observed-minute capture has0 eligible minutes:735 observed rows lack valid bounds | #371 remains open. Credit/legacy diagnostics cannot be called qualified fixed-target crop exposure. Resource scoring excluded; partial water/electricity cannot justify savings. |
+| Experiment | Zero live randomization, assigned outcome, freeze, export, proof receipt and open exposure rows | Preparation/synthetic fixtures are not a genuine60-day pilot. #782/#783/#641 and downstream lock/start/run/readout remain incomplete. |
+
+Evidence scope: bounded seven-day database aggregates across every numeric telemetry channel; all seven-day journal plans and active parameters; 24h log requests (ingestor capped at16,000 lines, actually beginningOctober4 21:09Z); current Kubernetes/Argo, Prometheus, Alertmanager, private service HTTP readbacks, source and native GitHub graph. Historical analyses and the October2 handoff were reviewed as retained evidence, not silently rerun. Raw private logs/context remain in operator custody; published summaries contain no credentials, randomization mapping or raw private context. No independent physical inspection or fresh camera image was available.
+
+## Tracking reconciliation
+
+[The acceptance matrix](ISSUE-TRIAGE.md) records every criterion and issue disposition; [machine-readable index](issue-triage.json) includes evidence links and original body hashes. #835 is closed on exact deployed-file hash, 15 focused tests, truthful complete/incomplete snapshots and monitor-owned resolution of all11 cited alerts. No other issue has enough complete evidence to close. Stale premise text is superseded by the dated matrix without deleting historical comments.
+
+Five new bounded issues are #949 policy holds, #950 Slack delivery, #951 vision, #952 Grafana identity, and #953 Iris lookup. They have native parent relationships, owner roles, testable acceptance and hour estimates. #949 is an additional native predecessor of #749 because unresolved desired/readback contradictions prevent readiness qualification. This does not grant physical authority or require unrelated firmware simplification to close first.
+
+#835 and #862 now belong to the #75 observability roll-up. #801/#802/#317 remain explicitly tracked outside the85-node campaign source; the [current native graph snapshot](native-graph.json) and [full repository graph](NATIVE-DEPENDENCIES.md) include all88 reviewed historical/current nodes and external estate dependencies. The historical16 previously closed campaign tasks remain closed; each is retained as a bounded historical receipt. Draft PRs#855 and#774 remain unmerged and unchanged.
+
+## Next sprint
+
+[Native milestone32 — S1: Greenhouse reliability and measurement truth](https://github.com/VerdifyConsultancy/verdify-platform/milestone/32) contains an eight-issue, **96 engineering-hour** pull set. C0–C8 remain stage contracts/titles; a selected issue's single GitHub milestone now identifies this tactical sprint rather than its stage. Estimates are planning ranges, not a calendar promise. Choose accountable implementers when pulling; existing assignees are preserved.
+
+| Order | Issue | Owner role | Hours | Sprint acceptance |
+|---|---|---|---:|---|
+| 1 | #949 | Platform lead |16| Explain each sustained desired/readback hold; preserve cap and immutable delivery states; prove permitted convergence and a source-bound two-hour stable receipt. |
+| 2 | #950 | Platform lead |8| Restore credential-file contract; prove natural brief delivery and the intended alert path without duplicate/test sends or leaked token. |
+| 3 | #951 | Platform lead with sentinel owner |8| Two authenticated fresh camera JPEGs and natural full analysis succeed; failures remain truthful. |
+| 4 | #952 | Platform lead with network/monitoring owners |8| Monitoring identity survives/recreates after scoped replacement; local/external protected positive and unauthenticated negative evidence agree. |
+| 5 | #862 | Platform lead |12| Measure and remove redundant warm scans safely; match actual cadence/freshness, with current rendered/runtime receipts. |
+| 6 | #371 | Evidence/data lead |20| Finish independently qualified physical target/contributor acceptance through DB→API→planner/public; credit remains distinct and missingness explicit. |
+| 7 | #424 | Evidence/data lead |16| Finish historical/served/consumed/raw band lineage; classify true contradictions without desired/cache confirmation or OTA workaround. |
+| 8 | #778 | Evidence/data lead |8| Seal September4 raw/hash timeline and cause or explicit fail-closed unresolved disposition; incorporate it into readiness. |
+
+At reduced capacity, reliability orders1–5 are52h; data-truth orders6–8 are44h. Optional #953 is4h, outside the96h milestone. Independent #396 query diagnosis/parity remains an estimated16h follow-up, preserving exact failed plans and source semantics. #783 composes current-role whole-path qualification after its source prerequisites; #782 authentic pre-boundary target/contributor/covariance work remains required before lock.
+
+Critical path: #371→#782; #424/#778/#949→#749→#641; #639/#587/#782→#783; #641/#782/#783→#588→#642→#640→#784→#785. Current completed #779/#780/#781 contracts remain historical predecessors and do not supply unavailable physical endpoints. Genuine30-pair/60-local-day pilot observations/readout are downstream work, not this sprint's completion shortcut. Firmware OTA, randomized activation, physical maintenance and production DB cutover retain their actual bounded scope; this review performs none of them.

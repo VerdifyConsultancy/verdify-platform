@@ -2,9 +2,11 @@
 
 Start with [CAMPAIGN.md](CAMPAIGN.md) for implementation strategy and [the roadmap](../PROJECT_BOARD.md) for the complete issue index. [EVIDENCE.md](EVIDENCE.md) explains the review findings and their limits.
 
+The [October 5 greenhouse and acceptance review](reviews/2026-10-05/NEXT-SPRINT.md) supersedes the next-sprint pull set and adds current full-issue acceptance, health and native graph receipts.
+
 The [September 26 production, issue, branch and worktree review](reviews/2026-09-26/NEXT-SPRINT.md) provides the next-sprint pull set and a full 80-issue inventory. The two later estate-rationalization issues, #801 and #802, are outside this 78-issue campaign source and are included in that review with their native cross-repository dependencies.
 
-`backlog.yaml` is the v2 source of truth (JSON-compatible YAML): nine stages and every issue's owner role, priority, effort, what, why, how, acceptance, actual source paths, blocking dependencies, parent, delivery, rollback and decision boundary. The old lane/story schema and issue bodies are preserved in [the archive](archive/2026-09-05/README.md); they are not a second active backlog.
+`backlog.yaml` is the v2 source of truth (JSON-compatible YAML): nine stages and every campaign issue's owner role, priority, effort, what, why, how, acceptance, actual source paths, blocking dependencies, parent, delivery, rollback and decision boundary. The old lane/story schema and issue bodies are preserved in [the archive](archive/2026-09-05/README.md); they are not a second active backlog.
 
 ```sh
 python -m planning.render

@@ -1,0 +1,920 @@
+{
+  "capture": {
+    "kind": "capture",
+    "utc": "2026-10-05T19:00:46.871317+00:00",
+    "database": "verdify"
+  },
+  "argo": {
+    "sync": "Synced",
+    "health": "Degraded",
+    "revision": "ebfe1b3ed452212c1068827fde2e12e9f2b19ccc"
+  },
+  "image_source_sha": "e91b2a7d5df14baf327bd198b4333ac65e28cc6b",
+  "observations": [
+    {
+      "kind": "climate_daily",
+      "data": {
+        "sample_day": "2026-09-28T00:00:00",
+        "samples": 638,
+        "temp_min": 68.29999542236328,
+        "temp_max": 83.00000762939453,
+        "temp_avg": 76.38100396278884,
+        "vpd_min": 0.7801007628440857,
+        "vpd_max": 1.347267508506775,
+        "vpd_avg": 1.0464070204843923,
+        "north": 638,
+        "south": 0,
+        "east": 638,
+        "west": 638,
+        "hydro_ph": 1,
+        "ph_input": 0,
+        "co2": 638,
+        "dli": 0,
+        "soil1": 638,
+        "soil2": 638,
+        "soilwest": 633,
+        "water_min": 1203,
+        "water_max": 1208,
+        "mist_max": 0
+      }
+    },
+    {
+      "kind": "climate_daily",
+      "data": {
+        "sample_day": "2026-09-29T00:00:00",
+        "samples": 1412,
+        "temp_min": 65.18000030517578,
+        "temp_max": 85.69998931884766,
+        "temp_avg": 73.47844260542657,
+        "vpd_min": 0.5819999575614929,
+        "vpd_max": 1.7086156606674194,
+        "vpd_avg": 0.8843604477792556,
+        "north": 1412,
+        "south": 0,
+        "east": 1412,
+        "west": 1412,
+        "hydro_ph": 0,
+        "ph_input": 0,
+        "co2": 1412,
+        "dli": 0,
+        "soil1": 1412,
+        "soil2": 1412,
+        "soilwest": 1358,
+        "water_min": 1208,
+        "water_max": 1272,
+        "mist_max": 37.68324661254883
+      }
+    },
+    {
+      "kind": "climate_daily",
+      "data": {
+        "sample_day": "2026-09-30T00:00:00",
+        "samples": 1396,
+        "temp_min": 64.0999984741211,
+        "temp_max": 79.58000183105469,
+        "temp_avg": 71.42941335552402,
+        "vpd_min": 0.5666894912719727,
+        "vpd_max": 1.3034710884094238,
+        "vpd_avg": 0.9120317568580879,
+        "north": 1396,
+        "south": 0,
+        "east": 1396,
+        "west": 1396,
+        "hydro_ph": 17,
+        "ph_input": 0,
+        "co2": 1395,
+        "dli": 0,
+        "soil1": 1396,
+        "soil2": 1396,
+        "soilwest": 1197,
+        "water_min": 0,
+        "water_max": 1273,
+        "mist_max": 0
+      }
+    },
+    {
+      "kind": "climate_daily",
+      "data": {
+        "sample_day": "2026-10-01T00:00:00",
+        "samples": 1313,
+        "temp_min": 62.84000015258789,
+        "temp_max": 85.58000946044922,
+        "temp_avg": 71.79362836407452,
+        "vpd_min": 0.5643571019172668,
+        "vpd_max": 1.8289772272109985,
+        "vpd_avg": 0.8922363221191052,
+        "north": 1313,
+        "south": 0,
+        "east": 1313,
+        "west": 1313,
+        "hydro_ph": 9,
+        "ph_input": 0,
+        "co2": 1311,
+        "dli": 0,
+        "soil1": 1311,
+        "soil2": 1311,
+        "soilwest": 684,
+        "water_min": 0,
+        "water_max": 35,
+        "mist_max": 12.98522663116455
+      }
+    },
+    {
+      "kind": "climate_daily",
+      "data": {
+        "sample_day": "2026-10-02T00:00:00",
+        "samples": 1396,
+        "temp_min": 61.820003509521484,
+        "temp_max": 85.82000732421875,
+        "temp_avg": 72.11644753344079,
+        "vpd_min": 0.505473792552948,
+        "vpd_max": 1.885332703590393,
+        "vpd_avg": 0.869656374640656,
+        "north": 1396,
+        "south": 0,
+        "east": 1396,
+        "west": 1396,
+        "hydro_ph": 0,
+        "ph_input": 0,
+        "co2": 1396,
+        "dli": 0,
+        "soil1": 1396,
+        "soil2": 1396,
+        "soilwest": 447,
+        "water_min": 0,
+        "water_max": 79,
+        "mist_max": 43.60964584350586
+      }
+    },
+    {
+      "kind": "climate_daily",
+      "data": {
+        "sample_day": "2026-10-03T00:00:00",
+        "samples": 1399,
+        "temp_min": 62.29999923706055,
+        "temp_max": 85.76000213623047,
+        "temp_avg": 71.9165555314561,
+        "vpd_min": 0.5212433934211731,
+        "vpd_max": 1.9347505569458008,
+        "vpd_avg": 0.9105818653379363,
+        "north": 1399,
+        "south": 0,
+        "east": 1399,
+        "west": 1399,
+        "hydro_ph": 0,
+        "ph_input": 0,
+        "co2": 1399,
+        "dli": 0,
+        "soil1": 1399,
+        "soil2": 1399,
+        "soilwest": 818,
+        "water_min": 79,
+        "water_max": 177,
+        "mist_max": 45.238807678222656
+      }
+    },
+    {
+      "kind": "climate_daily",
+      "data": {
+        "sample_day": "2026-10-04T00:00:00",
+        "samples": 1398,
+        "temp_min": 62.53999710083008,
+        "temp_max": 85.45999908447266,
+        "temp_avg": 72.17042996648044,
+        "vpd_min": 0.4886322319507599,
+        "vpd_max": 1.8530772924423218,
+        "vpd_avg": 0.8538368933531689,
+        "north": 1398,
+        "south": 0,
+        "east": 1398,
+        "west": 1398,
+        "hydro_ph": 0,
+        "ph_input": 0,
+        "co2": 1398,
+        "dli": 0,
+        "soil1": 1398,
+        "soil2": 1398,
+        "soilwest": 1319,
+        "water_min": 177,
+        "water_max": 234,
+        "mist_max": 30.787883758544922
+      }
+    },
+    {
+      "kind": "climate_daily",
+      "data": {
+        "sample_day": "2026-10-05T00:00:00",
+        "samples": 758,
+        "temp_min": 62.2400016784668,
+        "temp_max": 84.13999938964844,
+        "temp_avg": 67.03651789562055,
+        "vpd_min": 0.5837122797966003,
+        "vpd_max": 1.990610957145691,
+        "vpd_avg": 0.7866663625340977,
+        "north": 758,
+        "south": 0,
+        "east": 758,
+        "west": 758,
+        "hydro_ph": 0,
+        "ph_input": 0,
+        "co2": 758,
+        "dli": 0,
+        "soil1": 758,
+        "soil2": 758,
+        "soilwest": 664,
+        "water_min": 234,
+        "water_max": 253,
+        "mist_max": 11.419272422790527
+      }
+    },
+    {
+      "kind": "diagnostics_latest",
+      "data": {
+        "ts": "2026-10-05T19:00:07.795715+00:00",
+        "wifi_rssi": -57,
+        "heap_bytes": 61.2421875,
+        "uptime_s": 277688.5625,
+        "probe_health": "OK",
+        "reset_reason": "Software reset",
+        "greenhouse_id": "vallery",
+        "firmware_version": "2026.10.2.0637.620a218a-wifi-bound",
+        "active_probe_count": 4,
+        "relief_cycle_count": 0,
+        "vent_latch_timer_s": 0,
+        "sealed_timer_s": 0,
+        "vpd_watch_timer_s": 226,
+        "mist_backoff_timer_s": 0,
+        "vent_mist_assist_active": 1,
+        "heap_min_free_kb": 2.3359375,
+        "heap_largest_free_block_kb": 36,
+        "controller_time_epoch": 1791226771,
+        "controller_local_hour": 12,
+        "sntp_valid": 1,
+        "sntp_miss_count": 0,
+        "last_sntp_sync_age_s": 24,
+        "effective_heat_target_f": 53.75,
+        "effective_cool_stage2_delta_f": 0,
+        "effective_vpd_hysteresis_kpa": null,
+        "effective_dehum_aggressive_kpa": 0.29999998211860657,
+        "zone_wet_granted": null,
+        "band_source": "onchip_curve"
+      }
+    },
+    {
+      "kind": "diagnostics_daily",
+      "data": {
+        "sample_day": "2026-09-28T00:00:00+00:00",
+        "samples": 293,
+        "heap_min": 63.203125,
+        "heap_max": 73.171875,
+        "uptime_min": 1124712.25,
+        "uptime_max": 1142592.375,
+        "probe_min": 4,
+        "probe_max": 4,
+        "rssi_min": -74,
+        "sntp_age_max": 1142587
+      }
+    },
+    {
+      "kind": "diagnostics_daily",
+      "data": {
+        "sample_day": "2026-09-29T00:00:00+00:00",
+        "samples": 1404,
+        "heap_min": 61.5703125,
+        "heap_max": 76.51171875,
+        "uptime_min": 1142652.375,
+        "uptime_max": 1228993.125,
+        "probe_min": 4,
+        "probe_max": 4,
+        "rssi_min": -85,
+        "sntp_age_max": 1228988
+      }
+    },
+    {
+      "kind": "diagnostics_daily",
+      "data": {
+        "sample_day": "2026-09-30T00:00:00+00:00",
+        "samples": 1398,
+        "heap_min": 19.14453125,
+        "heap_max": 76.35546875,
+        "uptime_min": 2.8989999294281006,
+        "uptime_max": 1293673.5,
+        "probe_min": 4,
+        "probe_max": 4,
+        "rssi_min": -83,
+        "sntp_age_max": 1293668
+      }
+    },
+    {
+      "kind": "diagnostics_daily",
+      "data": {
+        "sample_day": "2026-10-01T00:00:00+00:00",
+        "samples": 1309,
+        "heap_min": 2.8046875,
+        "heap_max": 72.76953125,
+        "uptime_min": 2.690000057220459,
+        "uptime_max": 38585.1875,
+        "probe_min": 2,
+        "probe_max": 4,
+        "rssi_min": -87,
+        "sntp_age_max": 486726
+      }
+    },
+    {
+      "kind": "diagnostics_daily",
+      "data": {
+        "sample_day": "2026-10-02T00:00:00+00:00",
+        "samples": 1394,
+        "heap_min": 41.765625,
+        "heap_max": 73.31640625,
+        "uptime_min": 2.371999979019165,
+        "uptime_max": 36485.35546875,
+        "probe_min": 4,
+        "probe_max": 4,
+        "rssi_min": -67,
+        "sntp_age_max": 1067
+      }
+    },
+    {
+      "kind": "diagnostics_daily",
+      "data": {
+        "sample_day": "2026-10-03T00:00:00+00:00",
+        "samples": 1389,
+        "heap_min": 21.53515625,
+        "heap_max": 64.3359375,
+        "uptime_min": 36545.35546875,
+        "uptime_max": 122886.5078125,
+        "probe_min": 4,
+        "probe_max": 4,
+        "rssi_min": -69,
+        "sntp_age_max": 877
+      }
+    },
+    {
+      "kind": "diagnostics_daily",
+      "data": {
+        "sample_day": "2026-10-04T00:00:00+00:00",
+        "samples": 1396,
+        "heap_min": 39.5234375,
+        "heap_max": 62.2421875,
+        "uptime_min": 122946.5078125,
+        "uptime_max": 209227.59375,
+        "probe_min": 4,
+        "probe_max": 4,
+        "rssi_min": -64,
+        "sntp_age_max": 928
+      }
+    },
+    {
+      "kind": "diagnostics_daily",
+      "data": {
+        "sample_day": "2026-10-05T00:00:00+00:00",
+        "samples": 1108,
+        "heap_min": 55.7578125,
+        "heap_max": 63.00390625,
+        "uptime_min": 209287.59375,
+        "uptime_max": 277688.5625,
+        "probe_min": 4,
+        "probe_max": 4,
+        "rssi_min": -70,
+        "sntp_age_max": 898
+      }
+    },
+    {
+      "kind": "trigger_summary",
+      "data": {
+        "event_type": "FORECAST_DEVIATION",
+        "status": "plan_written",
+        "terminal_action": "set_plan",
+        "failure_class": null,
+        "n": 7,
+        "latest": "2026-10-05T16:53:10.220125+00:00"
+      }
+    },
+    {
+      "kind": "trigger_summary",
+      "data": {
+        "event_type": "MIDNIGHT",
+        "status": "plan_written",
+        "terminal_action": "set_plan",
+        "failure_class": null,
+        "n": 7,
+        "latest": "2026-10-05T06:15:00+00:00"
+      }
+    },
+    {
+      "kind": "trigger_summary",
+      "data": {
+        "event_type": "SOLAR_MAX",
+        "status": "acked",
+        "terminal_action": "acknowledge_trigger",
+        "failure_class": null,
+        "n": 5,
+        "latest": "2026-10-05T18:48:58+00:00"
+      }
+    },
+    {
+      "kind": "trigger_summary",
+      "data": {
+        "event_type": "SOLAR_MAX",
+        "status": "action_completed",
+        "terminal_action": "set_tunable",
+        "failure_class": null,
+        "n": 2,
+        "latest": "2026-10-03T18:49:35+00:00"
+      }
+    },
+    {
+      "kind": "trigger_summary",
+      "data": {
+        "event_type": "SUNRISE",
+        "status": "neutral_fallback",
+        "terminal_action": "neutral_fallback",
+        "failure_class": "ingestor_local_fallback_after_required_failure",
+        "n": 1,
+        "latest": "2026-09-29T12:55:10.668001+00:00"
+      }
+    },
+    {
+      "kind": "trigger_summary",
+      "data": {
+        "event_type": "SUNRISE",
+        "status": "plan_written",
+        "terminal_action": "set_plan",
+        "failure_class": null,
+        "n": 6,
+        "latest": "2026-10-05T13:01:08.065575+00:00"
+      }
+    },
+    {
+      "kind": "trigger_summary",
+      "data": {
+        "event_type": "SUNSET",
+        "status": "expected",
+        "terminal_action": null,
+        "failure_class": null,
+        "n": 1,
+        "latest": "2026-10-06T00:35:42.640271+00:00"
+      }
+    },
+    {
+      "kind": "trigger_summary",
+      "data": {
+        "event_type": "SUNSET",
+        "status": "plan_written",
+        "terminal_action": "set_plan",
+        "failure_class": null,
+        "n": 7,
+        "latest": "2026-10-05T00:37:19.060135+00:00"
+      }
+    },
+    {
+      "kind": "trigger_summary",
+      "data": {
+        "event_type": "TRANSITION",
+        "status": "acked",
+        "terminal_action": "acknowledge_trigger",
+        "failure_class": null,
+        "n": 9,
+        "latest": "2026-10-04T20:49:17+00:00"
+      }
+    },
+    {
+      "kind": "trigger_summary",
+      "data": {
+        "event_type": "TRANSITION",
+        "status": "action_completed",
+        "terminal_action": "set_tunable",
+        "failure_class": null,
+        "n": 5,
+        "latest": "2026-10-04T23:37:19.060135+00:00"
+      }
+    },
+    {
+      "kind": "trigger_summary",
+      "data": {
+        "event_type": "TRANSITION",
+        "status": "expected",
+        "terminal_action": null,
+        "failure_class": null,
+        "n": 2,
+        "latest": "2026-10-05T23:35:42.640271+00:00"
+      }
+    },
+    {
+      "kind": "trigger_summary",
+      "data": {
+        "event_type": "WEEKLY",
+        "status": "plan_written",
+        "terminal_action": "set_plan",
+        "failure_class": null,
+        "n": 1,
+        "latest": "2026-10-05T08:00:00+00:00"
+      }
+    },
+    {
+      "kind": "setpoint_delivery",
+      "data": {
+        "source": "band",
+        "delivery_status": "failed",
+        "n": 15,
+        "latest": "2026-10-02T15:16:51.899383+00:00",
+        "latest_confirmed": null
+      }
+    },
+    {
+      "kind": "setpoint_delivery",
+      "data": {
+        "source": "band",
+        "delivery_status": "expired",
+        "n": 3,
+        "latest": "2026-10-01T08:35:23.317469+00:00",
+        "latest_confirmed": null
+      }
+    },
+    {
+      "kind": "setpoint_delivery",
+      "data": {
+        "source": "esp32",
+        "delivery_status": "observed",
+        "n": 4186,
+        "latest": "2026-10-05T17:59:43.341547+00:00",
+        "latest_confirmed": "2026-10-05T17:59:43.341547+00:00"
+      }
+    },
+    {
+      "kind": "setpoint_delivery",
+      "data": {
+        "source": "preemptive",
+        "delivery_status": "confirmed",
+        "n": 3,
+        "latest": "2026-10-05T18:38:16.527415+00:00",
+        "latest_confirmed": "2026-10-05T18:38:24.066536+00:00"
+      }
+    },
+    {
+      "kind": "setpoint_delivery",
+      "data": {
+        "source": "plan",
+        "delivery_status": "superseded",
+        "n": 197,
+        "latest": "2026-10-05T17:31:58.006165+00:00",
+        "latest_confirmed": null
+      }
+    },
+    {
+      "kind": "setpoint_delivery",
+      "data": {
+        "source": "plan",
+        "delivery_status": "expired",
+        "n": 1,
+        "latest": "2026-10-01T08:35:23.322293+00:00",
+        "latest_confirmed": null
+      }
+    },
+    {
+      "kind": "setpoint_delivery",
+      "data": {
+        "source": "plan",
+        "delivery_status": "failed",
+        "n": 18,
+        "latest": "2026-10-01T18:26:34.736981+00:00",
+        "latest_confirmed": null
+      }
+    },
+    {
+      "kind": "setpoint_delivery",
+      "data": {
+        "source": "manual",
+        "delivery_status": "confirmed",
+        "n": 117,
+        "latest": "2026-10-02T15:05:25.756016+00:00",
+        "latest_confirmed": "2026-10-02T15:08:20.056984+00:00"
+      }
+    },
+    {
+      "kind": "setpoint_delivery",
+      "data": {
+        "source": "manual",
+        "delivery_status": "failed",
+        "n": 6,
+        "latest": "2026-10-02T05:58:54.786463+00:00",
+        "latest_confirmed": null
+      }
+    },
+    {
+      "kind": "setpoint_delivery",
+      "data": {
+        "source": "plan",
+        "delivery_status": "confirmed",
+        "n": 703,
+        "latest": "2026-10-05T17:59:26.749457+00:00",
+        "latest_confirmed": "2026-10-05T18:00:06.366275+00:00"
+      }
+    },
+    {
+      "kind": "setpoint_delivery",
+      "data": {
+        "source": "band",
+        "delivery_status": "superseded",
+        "n": 116,
+        "latest": "2026-10-01T15:22:02.071303+00:00",
+        "latest_confirmed": null
+      }
+    },
+    {
+      "kind": "setpoint_delivery",
+      "data": {
+        "source": "band",
+        "delivery_status": "confirmed",
+        "n": 606,
+        "latest": "2026-10-05T17:59:26.709794+00:00",
+        "latest_confirmed": "2026-10-05T18:00:06.366275+00:00"
+      }
+    },
+    {
+      "kind": "action_summary",
+      "data": {
+        "climate_action": "IDLE",
+        "wet_assist_block_reason": null,
+        "fog_block_reason": "below_threshold",
+        "n": 782,
+        "latest": "2026-10-05T18:57:02.164026+00:00"
+      }
+    },
+    {
+      "kind": "action_summary",
+      "data": {
+        "climate_action": "HEAT",
+        "wet_assist_block_reason": null,
+        "fog_block_reason": "below_threshold",
+        "n": 479,
+        "latest": "2026-10-05T17:37:24.181219+00:00"
+      }
+    },
+    {
+      "kind": "action_summary",
+      "data": {
+        "climate_action": "SEALED_FOG",
+        "wet_assist_block_reason": "no_humidity_demand",
+        "fog_block_reason": "below_threshold",
+        "n": 39,
+        "latest": "2026-10-05T18:50:50.95349+00:00"
+      }
+    },
+    {
+      "kind": "action_summary",
+      "data": {
+        "climate_action": "VENT_COOL_FOG_ASSIST",
+        "wet_assist_block_reason": null,
+        "fog_block_reason": "served",
+        "n": 30,
+        "latest": "2026-10-05T19:00:09.44124+00:00"
+      }
+    },
+    {
+      "kind": "action_summary",
+      "data": {
+        "climate_action": "SEALED_FOG",
+        "wet_assist_block_reason": null,
+        "fog_block_reason": "served",
+        "n": 19,
+        "latest": "2026-10-05T18:47:45.028092+00:00"
+      }
+    },
+    {
+      "kind": "action_summary",
+      "data": {
+        "climate_action": "DEHUM_VENT",
+        "wet_assist_block_reason": null,
+        "fog_block_reason": "below_threshold",
+        "n": 17,
+        "latest": "2026-10-05T09:00:19.738036+00:00"
+      }
+    },
+    {
+      "kind": "action_summary",
+      "data": {
+        "climate_action": "VENT_COOL_MIST_ASSIST",
+        "wet_assist_block_reason": null,
+        "fog_block_reason": "served",
+        "n": 9,
+        "latest": "2026-10-05T18:28:02.741733+00:00"
+      }
+    },
+    {
+      "kind": "action_summary",
+      "data": {
+        "climate_action": "SEALED_FOG",
+        "wet_assist_block_reason": "no_humidity_demand",
+        "fog_block_reason": "relay_min_off",
+        "n": 9,
+        "latest": "2026-10-05T18:46:42.411269+00:00"
+      }
+    },
+    {
+      "kind": "action_summary",
+      "data": {
+        "climate_action": "VENT_COOL",
+        "wet_assist_block_reason": null,
+        "fog_block_reason": "below_threshold",
+        "n": 8,
+        "latest": "2026-10-05T18:22:52.112316+00:00"
+      }
+    },
+    {
+      "kind": "action_summary",
+      "data": {
+        "climate_action": "VENT_COOL_MIST_ASSIST",
+        "wet_assist_block_reason": null,
+        "fog_block_reason": "below_threshold",
+        "n": 2,
+        "latest": "2026-10-04T21:37:59.820915+00:00"
+      }
+    },
+    {
+      "kind": "action_summary",
+      "data": {
+        "climate_action": "VENT_COOL",
+        "wet_assist_block_reason": null,
+        "fog_block_reason": "served",
+        "n": 2,
+        "latest": "2026-10-05T18:58:04.747365+00:00"
+      }
+    },
+    {
+      "kind": "action_summary",
+      "data": {
+        "climate_action": "VENT_COOL_MIST_ASSIST",
+        "wet_assist_block_reason": null,
+        "fog_block_reason": "relay_min_off",
+        "n": 2,
+        "latest": "2026-10-05T18:59:07.153902+00:00"
+      }
+    },
+    {
+      "kind": "forecast",
+      "data": {
+        "latest_fetch": "2026-10-05T18:36:21.353187+00:00",
+        "latest_target": "2026-10-21T05:00:00+00:00",
+        "future_rows": 8270
+      }
+    },
+    {
+      "kind": "setpoint_24h",
+      "data": {
+        "delivery_status": "confirmed",
+        "n": 85,
+        "latest": "2026-10-05T18:38:16.527415+00:00"
+      }
+    },
+    {
+      "kind": "setpoint_24h",
+      "data": {
+        "delivery_status": "superseded",
+        "n": 2,
+        "latest": "2026-10-05T17:31:58.006165+00:00"
+      }
+    },
+    {
+      "kind": "setpoint_24h",
+      "data": {
+        "delivery_status": "observed",
+        "n": 51,
+        "latest": "2026-10-05T17:59:43.341547+00:00"
+      }
+    },
+    {
+      "kind": "equipment_receipt",
+      "data": {
+        "source_observed_through": "2026-10-05T19:02:44.815824+00:00",
+        "source_runtime_instance_id": "352adc9c-f208-4dfd-9212-16165fcb0cfb",
+        "source_connection_generation": 9,
+        "event_count": 3,
+        "gap_before": false,
+        "gap_reason": null,
+        "firmware_revision": "2026.10.2.0637.620a218a-wifi-bound"
+      }
+    },
+    {
+      "kind": "equipment_receipt",
+      "data": {
+        "source_observed_through": "2026-10-05T19:02:12.910788+00:00",
+        "source_runtime_instance_id": "352adc9c-f208-4dfd-9212-16165fcb0cfb",
+        "source_connection_generation": 9,
+        "event_count": 1,
+        "gap_before": false,
+        "gap_reason": null,
+        "firmware_revision": "2026.10.2.0637.620a218a-wifi-bound"
+      }
+    },
+    {
+      "kind": "water_events",
+      "data": {
+        "event_type": "delta",
+        "quality_flag": "ok",
+        "attribution_class": "manual_or_unattributed",
+        "n": 19,
+        "min_delta": 1,
+        "max_delta": 1,
+        "latest": "2026-10-04T21:11:12.215744+00:00"
+      }
+    },
+    {
+      "kind": "water_events",
+      "data": {
+        "event_type": "delta",
+        "quality_flag": "ok",
+        "attribution_class": "meter_attributed",
+        "n": 126,
+        "min_delta": 1,
+        "max_delta": 3,
+        "latest": "2026-10-05T18:59:07.153902+00:00"
+      }
+    },
+    {
+      "kind": "water_events",
+      "data": {
+        "event_type": "phantom_zero",
+        "quality_flag": "phantom_zero",
+        "attribution_class": null,
+        "n": 2155,
+        "min_delta": 0,
+        "max_delta": 0,
+        "latest": "2026-10-02T17:55:12.67135+00:00"
+      }
+    },
+    {
+      "kind": "water_events",
+      "data": {
+        "event_type": "reset",
+        "quality_flag": "counter_reset",
+        "attribution_class": null,
+        "n": 5,
+        "min_delta": 0,
+        "max_delta": 0,
+        "latest": "2026-10-02T17:56:14.380376+00:00"
+      }
+    },
+    {
+      "kind": "water_events",
+      "data": {
+        "event_type": "gap",
+        "quality_flag": "source_gap",
+        "attribution_class": null,
+        "n": 8,
+        "min_delta": 0,
+        "max_delta": 0,
+        "latest": "2026-10-01T18:52:18.442515+00:00"
+      }
+    },
+    {
+      "kind": "water_events",
+      "data": {
+        "event_type": "delta",
+        "quality_flag": "ok",
+        "attribution_class": "ambiguous_overlap",
+        "n": 173,
+        "min_delta": 1,
+        "max_delta": 3,
+        "latest": "2026-10-05T19:01:11.337612+00:00"
+      }
+    },
+    {
+      "kind": "energy",
+      "data": {
+        "latest": "2026-10-05T18:58:26.21745+00:00",
+        "n": 287,
+        "min_w": null,
+        "max_w": null
+      }
+    },
+    {
+      "kind": "experiment_counts",
+      "randomization": 0,
+      "assignments": 0,
+      "freezes": 0,
+      "exports": 0,
+      "proof_receipts": 0,
+      "open_exposures": 0
+    }
+  ],
+  "ingestor_log_window": {
+    "from": "2026-10-04T21:09:43Z",
+    "through": "2026-10-05T19:01:12Z",
+    "line_limit": 16000,
+    "blocked_broad_restore_count": 260,
+    "schema_validation_failure_count": 0
+  },
+  "backup": {
+    "job": "verdify-db-backup-29853137",
+    "artifact": "verdify-20261005T083842Z",
+    "bytes": 340547676,
+    "restore_not_repeated": true
+  },
+  "socket_monitor": {
+    "count": 1,
+    "scope": "all running verdify-prod pods; independent8-node exporter agrees"
+  },
+  "criteria_count": 215
+}

@@ -1,0 +1,222 @@
+[
+  {
+    "pod": "experiment-v2-freezer-7c8f96dcf9-lst86",
+    "pod_uid": "8b0b5712-1523-44e1-8f17-5130c93ff3f3",
+    "container": "freezer",
+    "image": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:985be9a9b427287767d66817a1d2e5106314186126803eda8c65eb713a5e2a5d",
+    "image_id": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:985be9a9b427287767d66817a1d2e5106314186126803eda8c65eb713a5e2a5d",
+    "ready": true,
+    "restarts": 0,
+    "digest_equal": true
+  },
+  {
+    "pod": "experiment-v2-lifecycle-84469f94c5-sww64",
+    "pod_uid": "2e67c9b0-9c06-4848-820e-cb55415718a6",
+    "container": "lifecycle",
+    "image": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:985be9a9b427287767d66817a1d2e5106314186126803eda8c65eb713a5e2a5d",
+    "image_id": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:985be9a9b427287767d66817a1d2e5106314186126803eda8c65eb713a5e2a5d",
+    "ready": true,
+    "restarts": 0,
+    "digest_equal": true
+  },
+  {
+    "pod": "experiment-v2-selector-6985d67798-dkcg6",
+    "pod_uid": "72ff350c-2e08-45d7-bd1f-54e8092220e0",
+    "container": "selector",
+    "image": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:985be9a9b427287767d66817a1d2e5106314186126803eda8c65eb713a5e2a5d",
+    "image_id": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:985be9a9b427287767d66817a1d2e5106314186126803eda8c65eb713a5e2a5d",
+    "ready": true,
+    "restarts": 0,
+    "digest_equal": true
+  },
+  {
+    "pod": "verdify-api-6879845d57-5nvqn",
+    "pod_uid": "df735b8b-ba45-47ae-98ad-e8b3f5e1f42c",
+    "container": "api",
+    "image": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:7387c2c0e5b22caa0679c02668240e3b639e2e6b3797dc9fe2c43ebf30655ab9",
+    "image_id": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:7387c2c0e5b22caa0679c02668240e3b639e2e6b3797dc9fe2c43ebf30655ab9",
+    "ready": true,
+    "restarts": 0,
+    "digest_equal": true
+  },
+  {
+    "pod": "verdify-api-6879845d57-wvr8s",
+    "pod_uid": "605b82b6-b410-4eab-a92a-95a6a60c4bec",
+    "container": "api",
+    "image": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:7387c2c0e5b22caa0679c02668240e3b639e2e6b3797dc9fe2c43ebf30655ab9",
+    "image_id": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:7387c2c0e5b22caa0679c02668240e3b639e2e6b3797dc9fe2c43ebf30655ab9",
+    "ready": true,
+    "restarts": 0,
+    "digest_equal": true
+  },
+  {
+    "pod": "verdify-db-0",
+    "pod_uid": "b1fa2c0e-a995-481f-a29f-4cfaad4e697b",
+    "container": "postgres",
+    "image": "timescale/timescaledb:2.25.2-pg16",
+    "image_id": "docker.io/timescale/timescaledb@sha256:0af03ecf697825f6ddae76fd275d16bf46007bed6d00eb3d754779cb7db96fa6",
+    "ready": true,
+    "restarts": 0,
+    "digest_equal": null
+  },
+  {
+    "pod": "verdify-db-backup-exporter-5bfd5d6f47-5xkfb",
+    "pod_uid": "a376250a-d9a4-4ad4-bf22-ee508122ac2a",
+    "container": "exporter",
+    "image": "python:3.12-alpine",
+    "image_id": "docker.io/library/python@sha256:236173eb74001afe2f60862de935b74fcbd00adfca247b2c27051a70a6a39a2d",
+    "ready": true,
+    "restarts": 0,
+    "digest_equal": null
+  },
+  {
+    "pod": "verdify-grafana-ff64c5b78-qtwzz",
+    "pod_uid": "7887a020-e4ba-4702-bbc3-577e58789a5f",
+    "container": "grafana",
+    "image": "grafana/grafana:12.4.5@sha256:26b8f35a9e4e4431995cf64c3f396505a4faf17bcfc19f9ed84943ec6bfd5ecd",
+    "image_id": "docker.io/grafana/grafana@sha256:26b8f35a9e4e4431995cf64c3f396505a4faf17bcfc19f9ed84943ec6bfd5ecd",
+    "ready": true,
+    "restarts": 0,
+    "digest_equal": true
+  },
+  {
+    "pod": "verdify-grafana-ff64c5b78-qtwzz",
+    "pod_uid": "7887a020-e4ba-4702-bbc3-577e58789a5f",
+    "container": "renderer",
+    "image": "grafana/grafana-image-renderer:v5.10.0@sha256:c0eb7b915a181c7bbe451718f9b633843678bef93703b5ed5fda2f28fa508986",
+    "image_id": "docker.io/grafana/grafana-image-renderer@sha256:c0eb7b915a181c7bbe451718f9b633843678bef93703b5ed5fda2f28fa508986",
+    "ready": true,
+    "restarts": 0,
+    "digest_equal": true
+  },
+  {
+    "pod": "verdify-grafana-render-cache-b4dd5d8fd-t6xzv",
+    "pod_uid": "a268ff11-acde-497e-9049-63ca7ee59e09",
+    "container": "render-cache",
+    "image": "nginxinc/nginx-unprivileged:1.29-alpine@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6",
+    "image_id": "docker.io/nginxinc/nginx-unprivileged@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6",
+    "ready": true,
+    "restarts": 0,
+    "digest_equal": true
+  },
+  {
+    "pod": "verdify-grafana-render-cache-b4dd5d8fd-ws52n",
+    "pod_uid": "10b1a91d-2fa4-44ac-863f-ce4af3180e71",
+    "container": "render-cache",
+    "image": "nginxinc/nginx-unprivileged:1.29-alpine@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6",
+    "image_id": "docker.io/nginxinc/nginx-unprivileged@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6",
+    "ready": true,
+    "restarts": 0,
+    "digest_equal": true
+  },
+  {
+    "pod": "verdify-hermes-iris-56fc9b6c95-zkrdn",
+    "pod_uid": "f82f6550-816e-443f-8cd8-d1c6f0e06f50",
+    "container": "hermes-iris",
+    "image": "nousresearch/hermes-agent@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e",
+    "image_id": "docker.io/nousresearch/hermes-agent@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e",
+    "ready": true,
+    "restarts": 1,
+    "digest_equal": true
+  },
+  {
+    "pod": "verdify-ingestor-7f974f99df-hkrk4",
+    "pod_uid": "246c9dc9-0a65-4a7d-9ba8-31e017b42e5e",
+    "container": "ingestor",
+    "image": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:4c5fa5d67c256fd01b4f6519183c20ff4cf6023326ae4100c4b8daff9468b664",
+    "image_id": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:4c5fa5d67c256fd01b4f6519183c20ff4cf6023326ae4100c4b8daff9468b664",
+    "ready": true,
+    "restarts": 0,
+    "digest_equal": true
+  },
+  {
+    "pod": "verdify-lab-6b66dc7b45-2qcsf",
+    "pod_uid": "0b32c998-551a-46f4-8ad5-4366c48e303e",
+    "container": "lab-site",
+    "image": "nginxinc/nginx-unprivileged:1.29-alpine@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6",
+    "image_id": "docker.io/nginxinc/nginx-unprivileged@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6",
+    "ready": true,
+    "restarts": 0,
+    "digest_equal": true
+  },
+  {
+    "pod": "verdify-lab-6b66dc7b45-ldr87",
+    "pod_uid": "ce4fc54d-3e57-47c8-a071-15b70cec6df1",
+    "container": "lab-site",
+    "image": "nginxinc/nginx-unprivileged:1.29-alpine@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6",
+    "image_id": "docker.io/nginxinc/nginx-unprivileged@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6",
+    "ready": true,
+    "restarts": 0,
+    "digest_equal": true
+  },
+  {
+    "pod": "verdify-mcp-64577d647d-p2mz4",
+    "pod_uid": "a33b0b68-8bf4-416a-970f-4510cf411fec",
+    "container": "mcp",
+    "image": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:64a0c79a721878c3998d0fd599dc5c4b64c028d595803d46df7816cf73cba74b",
+    "image_id": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:64a0c79a721878c3998d0fd599dc5c4b64c028d595803d46df7816cf73cba74b",
+    "ready": true,
+    "restarts": 0,
+    "digest_equal": true
+  },
+  {
+    "pod": "verdify-mcp-64577d647d-sxgc5",
+    "pod_uid": "04e31256-d423-4d3f-80e6-0599d17b41fa",
+    "container": "mcp",
+    "image": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:64a0c79a721878c3998d0fd599dc5c4b64c028d595803d46df7816cf73cba74b",
+    "image_id": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:64a0c79a721878c3998d0fd599dc5c4b64c028d595803d46df7816cf73cba74b",
+    "ready": true,
+    "restarts": 0,
+    "digest_equal": true
+  },
+  {
+    "pod": "verdify-mqtt-569d94cb4d-hzqtk",
+    "pod_uid": "4b34d822-895a-45bc-9650-8e6782f5fdd1",
+    "container": "mosquitto",
+    "image": "eclipse-mosquitto:2",
+    "image_id": "docker.io/library/eclipse-mosquitto@sha256:5d1a7ac4fc8322af27a4fa2e3a2ed03aecabdfa481af0ff62b8bb530f475ab13",
+    "ready": true,
+    "restarts": 1,
+    "digest_equal": null
+  },
+  {
+    "pod": "verdify-planner-7fd8478586-6drvt",
+    "pod_uid": "d4378534-1109-462f-9e98-97df1d1decad",
+    "container": "planner",
+    "image": "registry.vallery.net/verdifyconsultancy/verdify-planner@sha256:61b1e7aaf510edb4feee38f6c39a949758d50f2aa8a572ef50851d2c4c70b66a",
+    "image_id": "registry.vallery.net/verdifyconsultancy/verdify-planner@sha256:61b1e7aaf510edb4feee38f6c39a949758d50f2aa8a572ef50851d2c4c70b66a",
+    "ready": true,
+    "restarts": 0,
+    "digest_equal": true
+  },
+  {
+    "pod": "verdify-setpoint-server-766bb85dc-2v7d8",
+    "pod_uid": "6a77e637-5724-46a1-9ff2-16ba7c732b6a",
+    "container": "setpoint-server",
+    "image": "registry.vallery.net/verdifyconsultancy/verdify-setpoint-server@sha256:6f2fef6a11c7ba67e0b297807c415fda39aa1f2977dcfa170248689087174952",
+    "image_id": "registry.vallery.net/verdifyconsultancy/verdify-setpoint-server@sha256:6f2fef6a11c7ba67e0b297807c415fda39aa1f2977dcfa170248689087174952",
+    "ready": true,
+    "restarts": 0,
+    "digest_equal": true
+  },
+  {
+    "pod": "verdify-traefik-56b8dbd695-58nzk",
+    "pod_uid": "afe85e2e-eada-47bd-acb8-c971072a657b",
+    "container": "traefik",
+    "image": "docker.io/traefik:v3.7.1",
+    "image_id": "docker.io/library/traefik@sha256:6b9cbca6fac42ab0075f5437d8dc1685cfd188626d8d515839ea94f8b6271c42",
+    "ready": true,
+    "restarts": 0,
+    "digest_equal": null
+  },
+  {
+    "pod": "verdify-traefik-56b8dbd695-7sfvp",
+    "pod_uid": "7c2a79d1-aaaa-4018-8ba3-2a735267d8a2",
+    "container": "traefik",
+    "image": "docker.io/traefik:v3.7.1",
+    "image_id": "docker.io/library/traefik@sha256:6b9cbca6fac42ab0075f5437d8dc1685cfd188626d8d515839ea94f8b6271c42",
+    "ready": true,
+    "restarts": 0,
+    "digest_equal": null
+  }
+]
