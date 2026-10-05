@@ -119,7 +119,6 @@ from verdify_schemas.experiment_config import (  # noqa: E402
 from verdify_schemas.fixed_panel_native_route import read_native_fixed_panel_route_evidence  # noqa: E402
 from verdify_schemas.mcp_responses import ScorecardResponse  # noqa: E402
 from verdify_schemas.observed_minute_reader import read_observed_minute_evidence  # noqa: E402
-from verdify_schemas.physical_crop_band import unpublished_physical_crop_band_evidence  # noqa: E402
 from verdify_schemas.route_only_crop_band_reader import read_route_only_crop_band_evidence  # noqa: E402
 from verdify_schemas.telemetry import DliEvidence  # noqa: E402
 from verdify_schemas.tunable_registry import (  # noqa: E402
@@ -2713,6 +2712,35 @@ async def status():
     }
 
 
+async def read_physical_crop_band_evidence(conn, day, greenhouse_id="vallery"):
+    """Read only trusted-owner published revisions; invalid latest rows fail closed."""
+    from verdify_schemas.physical_crop_band import PhysicalCropBandEvidence
+
+    try:
+        async with conn.transaction():
+            await conn.execute("SET LOCAL statement_timeout = '3000ms'")
+            row = await conn.fetchrow(
+                "SELECT * FROM public.fn_physical_crop_band_evidence($1::date,$2::text)",
+                day,
+                greenhouse_id,
+                timeout=3.5,
+            )
+        data = dict(row)
+        if data["day"] != day or data["greenhouse_id"] != greenhouse_id:
+            raise ValueError("physical evidence scope mismatch")
+        if isinstance(data.get("diagnostic"), str):
+            data["diagnostic"] = json.loads(data["diagnostic"])
+        data["availability"] = "available" if data["unavailable_reason"] is None else "unavailable"
+        return PhysicalCropBandEvidence.model_validate(data)
+    except (asyncpg.QueryCanceledError, TimeoutError):
+        reason = "db_statement_timeout"
+    except (asyncpg.UndefinedFunctionError, asyncpg.UndefinedTableError, asyncpg.InsufficientPrivilegeError):
+        reason = "reader_unavailable"
+    except (ValidationError, ValueError, TypeError, KeyError, OverflowError):
+        reason = "invalid_diagnostic"
+    return PhysicalCropBandEvidence(day=day, greenhouse_id=greenhouse_id, unavailable_reason=reason)
+
+
 @app.get("/api/v1/scorecard", response_model=ScorecardResponse)
 async def planner_scorecard(scorecard_date: Annotated[date | None, Query(alias="date")] = None):
     """Planner scorecard metrics for a given date, defaulting to today."""
@@ -2721,7 +2749,7 @@ async def planner_scorecard(scorecard_date: Annotated[date | None, Query(alias="
             scorecard_date = await conn.fetchval("SELECT (now() AT TIME ZONE 'America/Denver')::date")
         rows = await _fetch_planner_scorecard(conn, scorecard_date)
         observed = await read_observed_minute_evidence(conn, scorecard_date)
-        physical = unpublished_physical_crop_band_evidence(scorecard_date)
+        physical = await read_physical_crop_band_evidence(conn, scorecard_date)
         route_only = await read_route_only_crop_band_evidence(conn, scorecard_date)
         native_route = await read_native_fixed_panel_route_evidence(conn, scorecard_date)
     try:
@@ -3747,7 +3775,7 @@ async def public_home_metrics(greenhouse_id: str = DEFAULT_GREENHOUSE):
         score_day = generated_at.astimezone(ZoneInfo("America/Denver")).date()
         score_rows = await _fetch_planner_scorecard(conn, score_day)
         observed = await read_observed_minute_evidence(conn, score_day, greenhouse_id)
-        physical = unpublished_physical_crop_band_evidence(score_day, greenhouse_id)
+        physical = await read_physical_crop_band_evidence(conn, score_day, greenhouse_id)
         route_only = await read_route_only_crop_band_evidence(conn, score_day, greenhouse_id)
         native_route = await read_native_fixed_panel_route_evidence(conn, score_day, greenhouse_id)
         scorecard = {r["metric"]: _to_float(r["value"]) for r in score_rows}
@@ -3996,7 +4024,7 @@ async def public_evidence_snapshot(greenhouse_id: str = DEFAULT_GREENHOUSE):
         score_day = generated_at.astimezone(ZoneInfo("America/Denver")).date()
         score_rows = await _fetch_planner_scorecard(conn, score_day)
         observed = await read_observed_minute_evidence(conn, score_day, greenhouse_id)
-        physical = unpublished_physical_crop_band_evidence(score_day, greenhouse_id)
+        physical = await read_physical_crop_band_evidence(conn, score_day, greenhouse_id)
         route_only = await read_route_only_crop_band_evidence(conn, score_day, greenhouse_id)
         native_route = await read_native_fixed_panel_route_evidence(conn, score_day, greenhouse_id)
         scorecard = {r["metric"]: _to_float(r["value"]) for r in score_rows}

@@ -83,7 +83,6 @@ from verdify_schemas.experiment_config import (  # noqa: E402
 )
 from verdify_schemas.fixed_panel_native_route import read_native_fixed_panel_route_evidence  # noqa: E402
 from verdify_schemas.observed_minute_reader import read_observed_minute_evidence  # noqa: E402
-from verdify_schemas.physical_crop_band import unpublished_physical_crop_band_evidence  # noqa: E402
 from verdify_schemas.plan import (  # noqa: E402
     classify_planner_terminal_action,
     plan_current_coverage_error,
@@ -1194,6 +1193,35 @@ async def climate() -> str:
         await conn.close()
 
 
+async def read_physical_crop_band_evidence(conn, day, greenhouse_id="vallery"):
+    """Read only trusted-owner published revisions; invalid latest rows fail closed."""
+    from verdify_schemas.physical_crop_band import PhysicalCropBandEvidence
+
+    try:
+        async with conn.transaction():
+            await conn.execute("SET LOCAL statement_timeout = '3000ms'")
+            row = await conn.fetchrow(
+                "SELECT * FROM public.fn_physical_crop_band_evidence($1::date,$2::text)",
+                day,
+                greenhouse_id,
+                timeout=3.5,
+            )
+        data = dict(row)
+        if data["day"] != day or data["greenhouse_id"] != greenhouse_id:
+            raise ValueError("physical evidence scope mismatch")
+        if isinstance(data.get("diagnostic"), str):
+            data["diagnostic"] = json.loads(data["diagnostic"])
+        data["availability"] = "available" if data["unavailable_reason"] is None else "unavailable"
+        return PhysicalCropBandEvidence.model_validate(data)
+    except (asyncpg.QueryCanceledError, TimeoutError):
+        reason = "db_statement_timeout"
+    except (asyncpg.UndefinedFunctionError, asyncpg.UndefinedTableError, asyncpg.InsufficientPrivilegeError):
+        reason = "reader_unavailable"
+    except (ValidationError, ValueError, TypeError, KeyError, OverflowError):
+        reason = "invalid_diagnostic"
+    return PhysicalCropBandEvidence(day=day, greenhouse_id=greenhouse_id, unavailable_reason=reason)
+
+
 @mcp.tool()
 async def scorecard(target_date: str = "") -> str:
     """Get a daily scorecard; pass YYYY-MM-DD or omit for today.
@@ -1266,7 +1294,7 @@ async def scorecard(target_date: str = "") -> str:
                 }
             )
         sc.observed_minute_evidence = await read_observed_minute_evidence(conn, d)
-        sc.physical_crop_band_evidence = unpublished_physical_crop_band_evidence(d)
+        sc.physical_crop_band_evidence = await read_physical_crop_band_evidence(conn, d)
         sc.route_only_crop_band_evidence = await read_route_only_crop_band_evidence(conn, d)
         sc.native_fixed_panel_route_evidence = await read_native_fixed_panel_route_evidence(conn, d)
         return sc.model_dump_json(by_alias=True)

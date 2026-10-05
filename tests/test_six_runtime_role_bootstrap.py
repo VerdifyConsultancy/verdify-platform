@@ -201,8 +201,11 @@ def test_successor_bootstrap_matches_actual_rollback_qualification():
     def digest(value):
         return hashlib.sha256(value).hexdigest()
 
-    assert receipt["helper_sha256"] == digest((root / "scripts/bootstrap-six-runtime-roles.py").read_bytes())
-    assert receipt["sealed_sql_sha256"] == digest(module.sealed_sql().encode())
+    successor = json.loads((root / "tests/fixtures/six-runtime-bootstrap-274-receipt.json").read_text())
+    # Preserve the original independently qualified 270/273 predicate/receipt.
+    assert receipt["helper_sha256"] == successor["predecessor_helper_sha256"]
+    assert receipt["sealed_sql_sha256"] == digest(module.sealed_sql_270_273().encode())
+    assert successor["helper_sha256"] == digest((root / "scripts/bootstrap-six-runtime-roles.py").read_bytes())
     assert receipt["role_contract_sql_sha256"] == digest(module.admin_role_contract_sql().encode())
     assert receipt["mutations_committed"] is False
     assert receipt["password_commands_executed"] is False
@@ -243,3 +246,44 @@ def test_successor_bootstrap_matches_actual_rollback_qualification():
     assert all(stages[name]["sealed"] is False for name in negatives)
     assert stages["unsafe_planner_membership"]["role_contract"] is False
     assert stages["current270_restored"]["original_sealed"] is True
+
+
+def test_physical_successor_bootstrap_matches_actual_rollback_qualification():
+    import hashlib
+
+    root = Path(__file__).resolve().parents[1]
+    receipt = json.loads((root / "tests/fixtures/six-runtime-bootstrap-274-receipt.json").read_text())
+
+    def digest(value):
+        return hashlib.sha256(value).hexdigest()
+
+    assert receipt["helper_sha256"] == digest((root / "scripts/bootstrap-six-runtime-roles.py").read_bytes())
+    assert receipt["sealed_sql_sha256"] == digest(module.sealed_sql().encode())
+    assert receipt["role_contract_sql_sha256"] == digest(module.admin_role_contract_sql().encode())
+    seq, filename, expected = module.PHYSICAL_MIGRATION
+    assert seq == 274 and receipt["migration_sha256"] == expected
+    assert digest((root / "db/migrations" / filename).read_bytes()) == expected
+    assert receipt["mutations_committed"] is False
+    assert receipt["password_commands_executed"] is False
+    stages = {r["stage"]: r for r in receipt["stages"]}
+    for stage in ("current273", "successor274", "successor274_restored", "current273_restored"):
+        assert stages[stage]["sealed"] is True
+        assert stages[stage]["combined_qualified"] is True
+        # Execute the actual caller concatenation, not a string-only assertion.
+        assert stages[stage]["precedence_appended_false"] is False
+    assert stages["unstamped274"]["sealed"] is False
+    assert stages["successor274"]["legacy_sealed"] is False
+    for stage in receipt["negative_stages"]:
+        assert stages[stage]["sealed"] is False
+        assert stages[stage]["combined_qualified"] is False
+    fingerprints = {
+        stages[s]["ingestor_capability_sha256"]
+        for s in ("current273", "unstamped274", "successor274", "successor274_restored", "current273_restored")
+    }
+    assert len(fingerprints) == 1
+    for trial in range(1, 4):
+        r = stages[f"ingestor_identity_emulation_{trial}"]
+        assert r["identity"] is True and r["attested"] is True
+        assert r["session_user"] == r["current_user"] == "verdify_ingestor_runtime_login"
+    assert receipt["actual_tcp_qualification"] is False
+    assert receipt["original_false_cause"] == "unresolved; exact-prefix and independent reruns passed"

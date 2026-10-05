@@ -187,12 +187,12 @@ def test_model_rejects_unscoped_physical_percent():
         PhysicalCropBandEvidence.model_validate(row)
 
 
-def test_production_publication_is_explicitly_unqualified_with_no_database_reader():
+def test_unpublished_default_does_not_substitute_for_authenticated_reader():
     held = unpublished_physical_crop_band_evidence(DAY)
     assert held.availability == "unavailable"
     assert held.unavailable_reason == "publication_not_qualified"
     assert held.diagnostic is None
     for path in ("api/main.py", "mcp/server.py"):
         source = (ROOT / path).read_text()
-        assert "read_physical_crop_band_evidence" not in source
-        assert "unpublished_physical_crop_band_evidence" in source
+        assert "await read_physical_crop_band_evidence(conn," in source
+        assert "unpublished_physical_crop_band_evidence" not in source
