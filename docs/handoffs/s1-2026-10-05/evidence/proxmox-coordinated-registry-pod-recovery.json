@@ -1,0 +1,38 @@
+{
+  "observed_utc": "2026-10-05T23:21:55.989537+00:00",
+  "replacement_pod_uid": "85ca16e1-465f-428a-9cb7-114a0660099d",
+  "node": "vm-k3s-node6",
+  "ready": true,
+  "pvc_uid": "bbfc1ec2-dcdd-449d-a10c-4c5c555d147a",
+  "pvc_preserved": true,
+  "signal_cm_uid": "b252258e-0f6f-4afe-9b47-fb013b80e3c1",
+  "signal_rv": "245751432",
+  "signal": {
+    "allocated_bytes": 577047756800,
+    "available_bytes": 228258611200,
+    "capacity_bytes": 805306368000,
+    "capacity_contract_id": "5e8a97b36acee313a9686a621e6db0f8d02e689e4bd2e4141dc1e86b25a0336e",
+    "observation_backend": "nfs-statvfs",
+    "observed_at": "2026-10-05T23:21:27Z",
+    "protected_set": {
+      "count": 275,
+      "current_count": 36,
+      "generation": 145,
+      "reachable": true,
+      "rollback_count": 239,
+      "schema": "agent-fleet.registry-protected-digests/1",
+      "set_hash": "e7210b13243b1a459cfbc2df292d5fcee38137d5eb84ebaa8f30a33ac39b59a1",
+      "verified_at": "2026-10-05T23:21:27Z"
+    },
+    "ready": true,
+    "schema": "agent-fleet.registry-capacity-signal/1",
+    "source": "agent-fleet-ci/registry-capacity-signal",
+    "target": "registry-origin/registry-origin-csi-data",
+    "writable": true
+  },
+  "signal_age_seconds": 28.98937,
+  "NAS_or_host_changes": false,
+  "deadline_or_freshness_changed": false,
+  "admission_bypass": false,
+  "natural_delayed_second_observation": "pending"
+}

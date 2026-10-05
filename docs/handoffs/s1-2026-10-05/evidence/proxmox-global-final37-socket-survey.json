@@ -1,0 +1,150 @@
+{
+  "observed_utc": "2026-10-05T22:50:35.437215+00:00",
+  "final_ingestor_uid": "55d2bbbf-8fd6-4297-81bf-5745710a71f6",
+  "hosts": [
+    {
+      "hostname": "vm-k3s-node1",
+      "target": "192.168.10.111",
+      "port": 6053,
+      "started_epoch": 1791240628.0335345,
+      "finished_epoch": 1791240628.0980134,
+      "unique_namespaces_discovered": 5,
+      "unique_namespaces_probed": 5,
+      "established_total": 0,
+      "connections": [],
+      "host_namespace_probed": true,
+      "errors": [],
+      "processes_vanished_during_inventory": 0,
+      "device_connection_created": false,
+      "mutation": false
+    },
+    {
+      "hostname": "vm-k3s-node2",
+      "target": "192.168.10.111",
+      "port": 6053,
+      "started_epoch": 1791240627.9363477,
+      "finished_epoch": 1791240628.001305,
+      "unique_namespaces_discovered": 5,
+      "unique_namespaces_probed": 5,
+      "established_total": 0,
+      "connections": [],
+      "host_namespace_probed": true,
+      "errors": [],
+      "processes_vanished_during_inventory": 1,
+      "device_connection_created": false,
+      "mutation": false
+    },
+    {
+      "hostname": "vm-k3s-node3",
+      "target": "192.168.10.111",
+      "port": 6053,
+      "started_epoch": 1791240628.1176472,
+      "finished_epoch": 1791240628.1849022,
+      "unique_namespaces_discovered": 5,
+      "unique_namespaces_probed": 5,
+      "established_total": 0,
+      "connections": [],
+      "host_namespace_probed": true,
+      "errors": [],
+      "processes_vanished_during_inventory": 1,
+      "device_connection_created": false,
+      "mutation": false
+    },
+    {
+      "hostname": "vm-k3s-node4",
+      "target": "192.168.10.111",
+      "port": 6053,
+      "started_epoch": 1791240630.2194076,
+      "finished_epoch": 1791240633.854763,
+      "unique_namespaces_discovered": 103,
+      "unique_namespaces_probed": 103,
+      "established_total": 1,
+      "connections": [
+        {
+          "namespace_inode": 4026535134,
+          "host_namespace": false,
+          "established_count": 1,
+          "endpoints": [
+            {
+              "local": "10.42.4.127:55768",
+              "remote": "192.168.10.111:6053"
+            }
+          ]
+        }
+      ],
+      "host_namespace_probed": true,
+      "errors": [],
+      "processes_vanished_during_inventory": 8,
+      "device_connection_created": false,
+      "mutation": false
+    },
+    {
+      "hostname": "vm-k3s-node5",
+      "target": "192.168.10.111",
+      "port": 6053,
+      "started_epoch": 1791240630.5790489,
+      "finished_epoch": 1791240634.913964,
+      "unique_namespaces_discovered": 127,
+      "unique_namespaces_probed": 127,
+      "established_total": 0,
+      "connections": [],
+      "host_namespace_probed": true,
+      "errors": [],
+      "processes_vanished_during_inventory": 268,
+      "device_connection_created": false,
+      "mutation": false
+    },
+    {
+      "hostname": "vm-k3s-node6",
+      "target": "192.168.10.111",
+      "port": 6053,
+      "started_epoch": 1791240630.229046,
+      "finished_epoch": 1791240632.9179916,
+      "unique_namespaces_discovered": 76,
+      "unique_namespaces_probed": 76,
+      "established_total": 0,
+      "connections": [],
+      "host_namespace_probed": true,
+      "errors": [],
+      "processes_vanished_during_inventory": 31,
+      "device_connection_created": false,
+      "mutation": false
+    },
+    {
+      "hostname": "vm-k3s-node7",
+      "target": "192.168.10.111",
+      "port": 6053,
+      "started_epoch": 1791240630.6263454,
+      "finished_epoch": 1791240635.4192886,
+      "unique_namespaces_discovered": 145,
+      "unique_namespaces_probed": 145,
+      "established_total": 0,
+      "connections": [],
+      "host_namespace_probed": true,
+      "errors": [],
+      "processes_vanished_during_inventory": 44,
+      "device_connection_created": false,
+      "mutation": false
+    },
+    {
+      "hostname": "vm-k3s-node8",
+      "target": "192.168.10.111",
+      "port": 6053,
+      "started_epoch": 1791240629.0937421,
+      "finished_epoch": 1791240629.7673588,
+      "unique_namespaces_discovered": 15,
+      "unique_namespaces_probed": 15,
+      "established_total": 0,
+      "connections": [],
+      "host_namespace_probed": true,
+      "errors": [],
+      "processes_vanished_during_inventory": 1,
+      "device_connection_created": false,
+      "mutation": false
+    }
+  ],
+  "established_total": 1,
+  "all_hosts_and_namespaces_probed": true,
+  "device_connection_created": false,
+  "mutation": false
+}
