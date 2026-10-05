@@ -104,3 +104,7 @@ The naturally served static Lab generation still contains its earlier unavailabl
 ### Retained source37 band-lineage audit (23:47 UTC)
 
 Issue #424 remains open pending final81 passive refresh. All six temperature/VPD low, high and target series have source, units, publication/setter grid, timestamps and generation mappings in [the retained literal audit](evidence/issue424-retained-source37-literal-audit.json). The historical 0% comparison was a reporting defect; the September 4 physical discrepancy remains unobservable. Ideal SQL residuals and controller callback aliases provide no independent wire qualification. Gate #749 remains fail closed.
+
+### Source81 registered build and source promotion (23:56 UTC)
+
+The supported same-workflow retry completed all eight exact-source images and its pin actuator. [Build and source-promotion receipt](evidence/final81-all-eight-builds-and-source-promotion.json) binds workflow UID, resolved tree and Dockerfile hashes. Promotion `6429acbb2c79f784e3978e9c74a1c8719d25076c` changes only ingestor and publisher release digests, affecting five image consumers; the retained API/MCP/migrate/orchestrator release pins remain unchanged. This is source promotion only. Full production sync is held until natural midnight brief and vision observations finish.
