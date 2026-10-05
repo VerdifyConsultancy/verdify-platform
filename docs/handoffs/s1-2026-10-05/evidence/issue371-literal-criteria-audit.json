@@ -1,0 +1,48 @@
+{
+  "schema": "s1-371-literal-criteria-audit-v1",
+  "status": "physical_sql_fixture_boundary_requires_explicit_disposition",
+  "criteria": [
+    {
+      "criterion": "high attributable credit versus low physical compliance through SQL/API/public/planner",
+      "status": "composed_fixture_proofs; exact physical SQL path unavailable",
+      "evidence": [
+        "Actual isolated PostgreSQL reproduced85.8 alias defect and repaired6.1 legacy binary versus85.8 credit.",
+        "Current-row snapshot fixture preserves0 binary/90 credit/null VPD through SQL/API/public/planner with staleMV6.1.",
+        "Separate synthetic qualified physical fixture preserves2/96=2.083333% separately from6.1 legacy and85.8 credit through typedAPI/public.",
+        "Production physical reader intentionally returnspublication_not_qualified; native route measurements cannot substitute for a physical SQL outcome."
+      ]
+    },
+    {
+      "criterion": "hand-calculated distance/missing sensor and crop versus dispatched target distinction",
+      "status": "passed_with_physical_authenticity_limit",
+      "evidence": [
+        "Fixed-panel arithmetic80F panel mean, north20F high excursion,20/3F mean zone excursion; missing westVPD leaves temperature measured and VPD/joint unavailable.",
+        "High/low misses, shared joint slots, invalid targets, duplicate samples and null/zero semantics tested.",
+        "Actual future catalog-target hashes and version differ explicitly from historical dispatched desired-band reading fractions; physical placement/serial/poll identity remainfalse."
+      ]
+    },
+    {
+      "criterion": "current/historical consumers agree with versioned definitions and immutable revisions",
+      "status": "passed_for_declared_observational_scope",
+      "evidence": [
+        "Current first native37bin and September29 full native typed SQL/API/bothMCP/Iris/Grafana parity.",
+        "Natural static public projection matches retained actual first-bin epoch; current-now2bin state explicitly newer.",
+        "Target3/binding2/contributors7/8/9 prospective; historical target2/binding1/frozenreceipt1 preserved; contractversion2 andnative definition version explicit."
+      ]
+    }
+  ],
+  "focused_validation": {
+    "source_checkout_sha": "81d76a4c3d35a925ebd2438d89099d1f657b3f8f",
+    "pure_and_model_tests_passed": 100,
+    "private_postgres_tests_passed": 3,
+    "private_postgres_tests_skipped": 0,
+    "log_sha256": "859e4851a6bbbaedfbd72cc5dfc3ea627dc53f7e3d50dda0470f6a9f8686d1cb",
+    "postgres_log_sha256": "cf426ab35f3b06fccef8290fde5325d90af130a79da1d1752031518df77c4236",
+    "postgres_isolation": "Fresh private socket clusters; no production connection"
+  },
+  "consumer_receipt": "native37-first-bin-consumer-acceptance.json",
+  "natural_public_receipt": "native37-natural-first-bin-public-asof-acceptance.json",
+  "closure": "No issue closure in this receipt; criterion1 exact physical SQL fixture path is not claimed.",
+  "physical_hardware_qualification": false,
+  "experiment_endpoint_qualification": false
+}

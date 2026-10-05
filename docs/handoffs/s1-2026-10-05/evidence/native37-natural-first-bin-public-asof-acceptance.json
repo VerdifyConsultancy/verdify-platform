@@ -1,0 +1,370 @@
+{
+  "schema": "natural-public-native-render-projection-parity-v1",
+  "captured_at": "2026-10-05T23:30:06.743807+00:00",
+  "source_git_sha": "81d76a4c3d35a925ebd2438d89099d1f657b3f8f",
+  "renderer_sha256": "3f4dddf486adda19e1a531a00ea53c11cb5a8e546ac7a9ce377e04be420a1b42",
+  "page_sha256": "fa53f01ab5991fd8b603a41b8366fedb63ef64261a5389222bffe5739d6f34b5",
+  "publication_status": {
+    "last_attempt": {
+      "at_utc": "2026-10-05T23:29:59Z",
+      "failure_class": null,
+      "outcome": "succeeded"
+    },
+    "last_contention_at_utc": null,
+    "last_success": {
+      "at_utc": "2026-10-05T23:29:59Z",
+      "content_sha256": "sha256:2a726deb4bb71a87a2f3088a258fcb53cc94da440a1cf6dcaa6327f972b69e36",
+      "fresh_until_utc": "2026-10-05T23:49:59Z",
+      "public_sha256": "sha256:20018b3ba8da5b2018ab3b6d0728f2fbb0dd315943216ed4bbafb8215a092645",
+      "source": "s3_content_prefix",
+      "source_identity_sha256": "sha256:19b7bbe14d9ff4a4b9cf2c51cf83473a153d8647f193cc6225a1c94d6b6cd964"
+    },
+    "schema_version": 1,
+    "served_public_sha256": "sha256:20018b3ba8da5b2018ab3b6d0728f2fbb0dd315943216ed4bbafb8215a092645"
+  },
+  "sql_public_typed_native": {
+    "sql_bracket_stable": true,
+    "agreement_proven": true,
+    "consumer_mismatches": [],
+    "physical_publication_qualified": false
+  },
+  "retained_reference_native": {
+    "availability": "route_measurement",
+    "causal_effect_estimate": false,
+    "collector_revision": "37a9cc0b7a2ef07585d0790f4bb4dcfbbe75bb6f",
+    "contributor_revision_ids": [
+      8,
+      7,
+      9
+    ],
+    "day": "2026-10-05",
+    "declared_route_sha256": "36d3f8ee0be85895683f319aeafad2a4262e1b4cf26741b45cac2d1adbe3729d",
+    "diagnostic": {
+      "causal_effect_estimate": false,
+      "completed_bin_count": 45,
+      "crop_placement_verified": false,
+      "definition": "fixed-panel-native-route-measurement-v1",
+      "expected_bins": 72,
+      "experiment_endpoint_eligible": false,
+      "joint": {
+        "eligible_bins": 1,
+        "in_band_bins": 0,
+        "in_band_pct": 0.0
+      },
+      "measurement_scope": "source_routes_without_physical_hardware_or_crop_placement_authentication",
+      "partial_window": true,
+      "per_probe_poll_time_verified": false,
+      "physical_hardware_identity_verified": false,
+      "physical_proof_eligible": false,
+      "sample_basis": "host_receive_time_after_initial_native_subscription_state",
+      "source_assignment_state_sha256": "03cfc72f84045cdf72fe9bb96cef8e3250138086453cf9ba4415c976c7487793",
+      "source_profile_state_sha256": "3609ee4208b6ba434bbc27ecfd1b75a948b2f70f396c44f5b2bad1310e24df0b",
+      "target_basis": "prospective_frozen_panel_mean_crop_reference",
+      "target_effective_from": "2026-10-05T23:00:00Z",
+      "target_effective_to": "2026-10-06T06:00:00Z",
+      "target_version": "native-route-2026-10-05-2300Z",
+      "temp": {
+        "eligible_bins": 1,
+        "high_miss_bins": 1,
+        "in_band_bins": 0,
+        "in_band_pct": 0.0,
+        "low_miss_bins": 0,
+        "mean_high_distance": 3.518667602539054,
+        "mean_low_distance": 0.0,
+        "mean_outside_distance": 3.518667602539054,
+        "worst_measured_zone": "east"
+      },
+      "temp_unavailable_reasons": {
+        "not_elapsed": 27,
+        "outside_prospective_target": 44
+      },
+      "vpd": {
+        "eligible_bins": 1,
+        "high_miss_bins": 0,
+        "in_band_bins": 1,
+        "in_band_pct": 100.0,
+        "low_miss_bins": 0,
+        "mean_high_distance": 0.0,
+        "mean_low_distance": 0.0,
+        "mean_outside_distance": 0.0,
+        "worst_measured_zone": "north"
+      },
+      "vpd_unavailable_reasons": {
+        "not_elapsed": 27,
+        "outside_prospective_target": 44
+      },
+      "window_end": "2026-10-06T06:00:00Z",
+      "window_start": "2026-10-05T12:00:00Z"
+    },
+    "eligible_bins": 1,
+    "experiment_endpoint_eligible": false,
+    "firmware_revision": "2026.10.2.0637.620a218a-wifi-bound",
+    "frozen_at": null,
+    "greenhouse_id": "vallery",
+    "joint_in_band_bins": 0,
+    "modbus_poll_time_verified": false,
+    "panel_source_sha256": "d2e33e117e1127b8ffb2c94c0a36779bc811a8855ef615f5af6ce98c39d9010a",
+    "physical_proof_eligible": false,
+    "physical_serial_verified": false,
+    "projection_sha256": null,
+    "reader_contract_version": 1,
+    "receipt_id": null,
+    "route_18h_available": false,
+    "served_at": "2026-10-05T23:15:22.484654Z",
+    "source_binding_id": 2,
+    "source_callback_count": null,
+    "source_continuity_verified": null,
+    "target_revision_id": 3,
+    "unavailable_reason": null
+  },
+  "retained_reference_receipt_sha256": "68681a2f96ee4561443de731a771d29a419c65bc709e83cbb5a7935897ea5e75",
+  "reference_capture_at": "2026-10-05T23:15:42.688243+00:00",
+  "reference_stable_epoch": [
+    "2026-10-05T23:15:00Z",
+    "2026-10-05T23:30:00Z"
+  ],
+  "publisher_source_snapshot_step_at": "2026-10-05T23:24:30Z",
+  "reference_as_of_comparison": true,
+  "actual_render_rows": [
+    [
+      "Native route measurement scope",
+      "Partial window \u00b7 observational",
+      "Fresh post-subscription host-received temperature/RH callbacks from the fixed north/east/west source routes, not independently authenticated physical sensor serials, Modbus poll times, actual crop placement or a physical crop outcome. Prospective target native-route-2026-10-05-2300Z; target revision 3; source binding 2. Controller credit remains separate. Physical proof and experiment eligibility are false."
+    ],
+    [
+      "Native route temperature",
+      "0.0% \u00b7 1/72 eligible bins",
+      "Mean outside distance 3.519\u00b0F; high/low misses 1/0; high/low mean distance 3.519\u00b0F/0.000\u00b0F; worst measured source route east; 71 unavailable bins ({\"not_elapsed\": 27, \"outside_prospective_target\": 44})."
+    ],
+    [
+      "Native route VPD",
+      "100.0% \u00b7 1/72 eligible bins",
+      "Mean outside distance 0.000 kPa; high/low misses 0/0; high/low mean distance 0.000 kPa/0.000 kPa; worst measured source route north; 71 unavailable bins ({\"not_elapsed\": 27, \"outside_prospective_target\": 44})."
+    ],
+    [
+      "Native route joint",
+      "0.0% \u00b7 0/1 in band; 1/72 eligible",
+      "Shared six-field source minutes; retained expected bins include future, undeclared and insufficient-source bins."
+    ]
+  ],
+  "expected_render_rows": [
+    [
+      "Native route measurement scope",
+      "Partial window \u00b7 observational",
+      "Fresh post-subscription host-received temperature/RH callbacks from the fixed north/east/west source routes, not independently authenticated physical sensor serials, Modbus poll times, actual crop placement or a physical crop outcome. Prospective target native-route-2026-10-05-2300Z; target revision 3; source binding 2. Controller credit remains separate. Physical proof and experiment eligibility are false."
+    ],
+    [
+      "Native route temperature",
+      "0.0% \u00b7 1/72 eligible bins",
+      "Mean outside distance 3.519\u00b0F; high/low misses 1/0; high/low mean distance 3.519\u00b0F/0.000\u00b0F; worst measured source route east; 71 unavailable bins ({\"not_elapsed\": 27, \"outside_prospective_target\": 44})."
+    ],
+    [
+      "Native route VPD",
+      "100.0% \u00b7 1/72 eligible bins",
+      "Mean outside distance 0.000 kPa; high/low misses 0/0; high/low mean distance 0.000 kPa/0.000 kPa; worst measured source route north; 71 unavailable bins ({\"not_elapsed\": 27, \"outside_prospective_target\": 44})."
+    ],
+    [
+      "Native route joint",
+      "0.0% \u00b7 0/1 in band; 1/72 eligible",
+      "Shared six-field source minutes; retained expected bins include future, undeclared and insufficient-source bins."
+    ]
+  ],
+  "native_render_projection_equal": true,
+  "limitations": [
+    "Rendered parity covers actual visible native fields; full typed native SQL/API/MCP parity is captured separately.",
+    "A false rendered parity may reflect a truthful earlier static as-of generation across a completed-bin boundary; it never authorizes forcing the publisher.",
+    "No physical crop qualification or planner action is inferred."
+  ],
+  "current_now_native": {
+    "reader_contract_version": 1,
+    "availability": "route_measurement",
+    "unavailable_reason": null,
+    "day": "2026-10-05",
+    "greenhouse_id": "vallery",
+    "served_at": "2026-10-05T23:30:08.052851Z",
+    "receipt_id": null,
+    "frozen_at": null,
+    "projection_sha256": null,
+    "target_revision_id": 3,
+    "contributor_revision_ids": [
+      8,
+      7,
+      9
+    ],
+    "source_binding_id": 2,
+    "panel_source_sha256": "d2e33e117e1127b8ffb2c94c0a36779bc811a8855ef615f5af6ce98c39d9010a",
+    "firmware_revision": "2026.10.2.0637.620a218a-wifi-bound",
+    "collector_revision": "37a9cc0b7a2ef07585d0790f4bb4dcfbbe75bb6f",
+    "declared_route_sha256": "36d3f8ee0be85895683f319aeafad2a4262e1b4cf26741b45cac2d1adbe3729d",
+    "source_callback_count": null,
+    "source_continuity_verified": null,
+    "eligible_bins": 2,
+    "joint_in_band_bins": 0,
+    "diagnostic": {
+      "definition": "fixed-panel-native-route-measurement-v1",
+      "window_start": "2026-10-05T12:00:00Z",
+      "window_end": "2026-10-06T06:00:00Z",
+      "expected_bins": 72,
+      "target_version": "native-route-2026-10-05-2300Z",
+      "target_basis": "prospective_frozen_panel_mean_crop_reference",
+      "sample_basis": "host_receive_time_after_initial_native_subscription_state",
+      "measurement_scope": "source_routes_without_physical_hardware_or_crop_placement_authentication",
+      "target_effective_from": "2026-10-05T23:00:00Z",
+      "target_effective_to": "2026-10-06T06:00:00Z",
+      "source_profile_state_sha256": "3609ee4208b6ba434bbc27ecfd1b75a948b2f70f396c44f5b2bad1310e24df0b",
+      "source_assignment_state_sha256": "03cfc72f84045cdf72fe9bb96cef8e3250138086453cf9ba4415c976c7487793",
+      "temp": {
+        "eligible_bins": 2,
+        "in_band_bins": 0,
+        "in_band_pct": 0.0,
+        "high_miss_bins": 2,
+        "low_miss_bins": 0,
+        "mean_high_distance": 3.0586673312716925,
+        "mean_low_distance": 0.0,
+        "mean_outside_distance": 3.0586673312716925,
+        "worst_measured_zone": "east"
+      },
+      "vpd": {
+        "eligible_bins": 2,
+        "in_band_bins": 2,
+        "in_band_pct": 100.0,
+        "high_miss_bins": 0,
+        "low_miss_bins": 0,
+        "mean_high_distance": 0.0,
+        "mean_low_distance": 0.0,
+        "mean_outside_distance": 0.0,
+        "worst_measured_zone": "north"
+      },
+      "joint": {
+        "eligible_bins": 2,
+        "in_band_bins": 0,
+        "in_band_pct": 0.0
+      },
+      "temp_unavailable_reasons": {
+        "not_elapsed": 26,
+        "outside_prospective_target": 44
+      },
+      "vpd_unavailable_reasons": {
+        "not_elapsed": 26,
+        "outside_prospective_target": 44
+      },
+      "partial_window": true,
+      "completed_bin_count": 46,
+      "physical_hardware_identity_verified": false,
+      "crop_placement_verified": false,
+      "per_probe_poll_time_verified": false,
+      "physical_proof_eligible": false,
+      "experiment_endpoint_eligible": false,
+      "causal_effect_estimate": false
+    },
+    "route_18h_available": false,
+    "physical_serial_verified": false,
+    "modbus_poll_time_verified": false,
+    "physical_proof_eligible": false,
+    "experiment_endpoint_eligible": false,
+    "causal_effect_estimate": false
+  },
+  "explicit_current_now_lag": {
+    "served_eligible_bins": 1,
+    "current_now_eligible_bins": 2,
+    "difference_reason": "Natural source snapshot occurred23:24:30 in the23:15\u201323:30 first-bin epoch; current readback occurred after second bin completed23:30.",
+    "native_current_now_projection_equal": false
+  },
+  "source_snapshot_log_sha256": "5dac81635cd320f5cd935015c805cbf18f9d0c2a2c2dc87fa2ee65036ae06ec2",
+  "natural_publisher_terminal": {
+    "pod": "verdify-lab-publisher-29854040-tzlj9",
+    "uid": "e4400d2c-c145-4605-a293-465913d01d0c",
+    "created_at": "2026-10-05T23:20:13Z",
+    "containers": [
+      {
+        "name": "prepare-private-work-root",
+        "imageID": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:f2e08c6d79c9c3a9f36f95d0612a07e32b027caad9ad8406a9b87084424ba4b0",
+        "state": {
+          "terminated": {
+            "containerID": "containerd://61448242ecd8566a53301e9b5017581e30a18c6ac3ef201b1badd920d405c29b",
+            "exitCode": 0,
+            "finishedAt": "2026-10-05T23:23:17Z",
+            "reason": "Completed",
+            "startedAt": "2026-10-05T23:20:16Z"
+          }
+        }
+      },
+      {
+        "name": "publisher",
+        "imageID": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:f2e08c6d79c9c3a9f36f95d0612a07e32b027caad9ad8406a9b87084424ba4b0",
+        "state": {
+          "terminated": {
+            "containerID": "containerd://abd296aa377dd340ebe17bde483ee083de665e928cb508aeef25d0771f2b7701",
+            "exitCode": 0,
+            "finishedAt": "2026-10-05T23:31:06Z",
+            "reason": "Completed",
+            "startedAt": "2026-10-05T23:23:18Z"
+          }
+        }
+      }
+    ],
+    "total_seconds": 653,
+    "init_seconds": 181,
+    "main_seconds": 468,
+    "phase_seconds": {
+      "source_sync": 12,
+      "build": 380,
+      "upload": 76
+    },
+    "phase_log_sha256": "5dac81635cd320f5cd935015c805cbf18f9d0c2a2c2dc87fa2ee65036ae06ec2",
+    "cadence_under600": false
+  },
+  "live_application": {
+    "uid": "cae977c6-dcd1-42aa-a526-dc9ff2bd8c69",
+    "sync": {
+      "comparedTo": {
+        "destination": {
+          "namespace": "verdify-prod",
+          "server": "https://kubernetes.default.svc"
+        },
+        "ignoreDifferences": [
+          {
+            "group": "apps",
+            "jsonPointers": [
+              "/spec/volumeClaimTemplates/0/spec/volumeMode",
+              "/spec/volumeClaimTemplates/0/status"
+            ],
+            "kind": "StatefulSet",
+            "name": "verdify-db",
+            "namespace": "verdify-prod"
+          },
+          {
+            "jsonPointers": [
+              "/spec/volumeMode",
+              "/spec/volumeName"
+            ],
+            "kind": "PersistentVolumeClaim",
+            "name": "verdify-lab-site-cache",
+            "namespace": "verdify-prod"
+          },
+          {
+            "jsonPointers": [
+              "/spec/volumeMode",
+              "/spec/volumeName"
+            ],
+            "kind": "PersistentVolumeClaim",
+            "name": "verdify-hermes-iris-data-portable-20260801",
+            "namespace": "verdify-prod"
+          }
+        ],
+        "source": {
+          "path": "deploy/k8s/overlays/prod",
+          "repoURL": "https://github.com/VerdifyConsultancy/verdify-platform.git",
+          "targetRevision": "main"
+        }
+      },
+      "revision": "81d76a4c3d35a925ebd2438d89099d1f657b3f8f",
+      "status": "Synced"
+    },
+    "health": {
+      "lastTransitionTime": "2026-10-05T23:10:02Z",
+      "status": "Healthy"
+    },
+    "last_operation_phase": "Succeeded"
+  }
+}
