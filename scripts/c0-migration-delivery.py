@@ -165,10 +165,10 @@ SUCCESSOR_272_DIGESTS = {
 }
 SUCCESSOR_272_MCP_DIGEST = "fb8c7119f87cd66451805470c018566759962949e653554cc4c0c1a063e4787a"
 SUCCESSOR_273 = "273-native-route-measurement-reader.sql"
-SUCCESSOR_273_SHA256 = "2fff6d0f7c7193a1b95adff8e659e91f9f98392488d62032f144ecaad12a57d7"
+SUCCESSOR_273_SHA256 = "a0e4fe7bea3d27ea0d4218c5d423707e19b821e2684d5884c1280b03f78df76a"
 SUCCESSOR_273_DIGESTS = {
-    "verdify_api_runtime_login": "c22a06debc0a9697629cc2854af782fab766ab6666ac38188befe48801ef299a",
-    "verdify_ingestor_runtime_login": "ce2b0c5130380b06b848def2de755a7af55c754083635e5098ea5fd4014aa2c8",
+    "verdify_api_runtime_login": "aef9e39647d84c313d76795f15b382eb5ebccb5828eecac83e73cbb97002e10e",
+    "verdify_ingestor_runtime_login": "98e59209b41ba7a445150fde66be889bdc98689c43c80aa8bc5d0c3f7a677ef7",
 }
 SUCCESSOR_273_MCP_DIGEST = "79e5bd322c1b9c60104c26b82b3d302d89fda26366031f7871f697f3c97ccf4b"
 # Exact emergency hotfix predecessor: the 262 receipt was resealed to this

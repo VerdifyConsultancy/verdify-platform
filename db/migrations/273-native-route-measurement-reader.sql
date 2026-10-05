@@ -202,14 +202,14 @@ BEGIN
 END;
 $measurement$;
 REVOKE ALL ON FUNCTION public.fn_fixed_panel_native_route_measurement(date,text) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.fn_fixed_panel_native_route_measurement(date,text) TO verdify_api_runtime,verdify_mcp_runtime;
+GRANT EXECUTE ON FUNCTION public.fn_fixed_panel_native_route_measurement(date,text) TO verdify_api_runtime,verdify_mcp_runtime,verdify_grafana_runtime;
 DO $postflight$ BEGIN
  IF false
- OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM 'c22a06debc0a9697629cc2854af782fab766ab6666ac38188befe48801ef299a'
- OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex') IS DISTINCT FROM 'ce2b0c5130380b06b848def2de755a7af55c754083635e5098ea5fd4014aa2c8'
+ OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_api_runtime_login'),'hex') IS DISTINCT FROM 'aef9e39647d84c313d76795f15b382eb5ebccb5828eecac83e73cbb97002e10e'
+ OR encode(public.fn_runtime_ordinary_boundary_digest('verdify_ingestor_runtime_login'),'hex') IS DISTINCT FROM '98e59209b41ba7a445150fde66be889bdc98689c43c80aa8bc5d0c3f7a677ef7'
  OR encode(public.fn_mcp_runtime_boundary_digest(),'hex') IS DISTINCT FROM '79e5bd322c1b9c60104c26b82b3d302d89fda26366031f7871f697f3c97ccf4b'
  THEN RAISE EXCEPTION '273 refuses unqualified successor'; END IF;
- UPDATE public.runtime_ordinary_login_attestation_receipts SET boundary_sha256=decode('c22a06debc0a9697629cc2854af782fab766ab6666ac38188befe48801ef299a','hex'),captured_at=clock_timestamp() WHERE login_name='verdify_api_runtime_login';
- UPDATE public.runtime_ordinary_login_attestation_receipts SET boundary_sha256=decode('ce2b0c5130380b06b848def2de755a7af55c754083635e5098ea5fd4014aa2c8','hex'),captured_at=clock_timestamp() WHERE login_name='verdify_ingestor_runtime_login';
+ UPDATE public.runtime_ordinary_login_attestation_receipts SET boundary_sha256=decode('aef9e39647d84c313d76795f15b382eb5ebccb5828eecac83e73cbb97002e10e','hex'),captured_at=clock_timestamp() WHERE login_name='verdify_api_runtime_login';
+ UPDATE public.runtime_ordinary_login_attestation_receipts SET boundary_sha256=decode('98e59209b41ba7a445150fde66be889bdc98689c43c80aa8bc5d0c3f7a677ef7','hex'),captured_at=clock_timestamp() WHERE login_name='verdify_ingestor_runtime_login';
  UPDATE public.mcp_runtime_boundary_receipt SET boundary_sha256=decode('79e5bd322c1b9c60104c26b82b3d302d89fda26366031f7871f697f3c97ccf4b','hex') WHERE singleton;
 END $postflight$;
