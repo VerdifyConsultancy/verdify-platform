@@ -924,7 +924,7 @@ def test_cache_initializer_validates_then_recovers_clean_old_residue(tmp_path: P
     _read_layout_attestation(private_root / ".layout-v2-scanned-ready")
 
 
-def test_cache_initializer_rejects_unsafe_legacy_before_touching_live(tmp_path: Path):
+def test_cache_initializer_does_not_scan_unserved_legacy_on_warm_tree(tmp_path: Path):
     work = tmp_path / "work"
     live = work / "publisher" / "public"
     legacy = work / "public"
@@ -951,11 +951,12 @@ def test_cache_initializer_rejects_unsafe_legacy_before_touching_live(tmp_path: 
     )
 
     output = proc.stdout + proc.stderr
-    assert proc.returncode != 0
-    assert output.strip() == "Lab cache public tree validation failed"
+    assert proc.returncode == 0, output
+    assert "scans=1" in output
     assert excluded not in output.casefold()
     assert (live / "index.html").read_text(encoding="utf-8") == "existing last-good"
-    assert not (work / "publisher" / ".layout-v2-scanned-ready").exists()
+    _read_layout_attestation(work / "publisher" / ".layout-v2-scanned-ready")
+    assert (legacy / "unsafe-link").is_symlink()
 
 
 @pytest.mark.parametrize("hazard", ["content", "symlink", "hardlink", "special"])

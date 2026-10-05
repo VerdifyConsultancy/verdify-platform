@@ -204,6 +204,8 @@ mkdir -p "$CONTENT_DIR" "$PUBLIC_DIR" "$STATE_DIR" "$BUILD_ROOT" "$LOCK_DIR" "$M
 receipt start
 trap on_exit EXIT
 
+PUBLISH_STARTED=$SECONDS
+SOURCE_STARTED=$SECONDS
 CONTENT_LIST="${STATE_DIR}/s3-content-list.tmp"
 if ! bounded_s3 aws_s3 ls "${CONTENT_URI}/" >"$CONTENT_LIST"; then
   record_failure "source_list_${S3_ERROR_CLASS}" 1
@@ -216,6 +218,7 @@ if ! bounded_s3 aws_s3 sync "${CONTENT_URI}/" "${CONTENT_DIR}/" --delete --exact
   record_failure "source_sync_${S3_ERROR_CLASS}" 1
 fi
 rm -f "$CONTENT_LIST"
+echo "Lab publisher phase=source_sync seconds=$((SECONDS - SOURCE_STARTED))"
 
 if ! find "$CONTENT_DIR" -name '*.md' -print -quit | grep -q .; then
   record_failure source_no_markdown 1
@@ -262,6 +265,7 @@ export DATABASE_URL="${DATABASE_URL:-$DB_DSN}"
 export VERDIFY_DAILY_PLAN_DB_CMD="${VERDIFY_DAILY_PLAN_DB_CMD:-psql -U ${PGUSER} -d ${PGDATABASE} -t -A}"
 
 echo "Starting k3s lab publish: date=${DATE_ARG} reason_class=${REASON_CLASS}"
+BUILD_STARTED=$SECONDS
 publish_rc=0
 "$PUBLISH_SCRIPT" --date "$DATE_ARG" --reason "$REASON" || publish_rc=$?
 
@@ -269,6 +273,8 @@ if [[ "$publish_rc" -ne 0 ]]; then
   record_failure generator_or_build_failure "$publish_rc"
 fi
 
+echo "Lab publisher phase=build seconds=$((SECONDS - BUILD_STARTED))"
+UPLOAD_STARTED=$SECONDS
 echo "Publishing content-hash deltas to object storage (skips unchanged trees)"
 if ! bounded_s3 delta_sync content "$CONTENT_DIR" "$CONTENT_URI"; then
   record_failure "content_upload_${S3_ERROR_CLASS}" 1
@@ -284,5 +290,6 @@ if ! bounded_s3 delta_sync state "$STATE_DIR" "$STATE_URI"; then
   record_failure "state_upload_${S3_ERROR_CLASS}" 1 no
 fi
 PUBLISH_TERMINAL_RECORDED=1
+echo "Lab publisher phase=upload seconds=$((SECONDS - UPLOAD_STARTED)) total_seconds=$((SECONDS - PUBLISH_STARTED))"
 
 echo "k3s lab publish complete: date=${DATE_ARG} reason_class=${REASON_CLASS}"
