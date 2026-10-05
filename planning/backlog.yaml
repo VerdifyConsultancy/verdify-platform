@@ -205,7 +205,7 @@
         "db/migrations",
         "research/planner-efficacy"
       ],
-      "baseline": "October 5, 2026: September4 joined hashed timeline/counter-reset/cause or explicit fail-closed safety disposition remains incomplete. Current wetting operation and later OTA recovery do not explain the historical three-hour interruption. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
+      "baseline": "October 5, 2026 execution update: #778 closed at 20:00:39 UTC on the permitted fail-closed investigation disposition. Published v4 reproduces 271 joined actions and 199 vent-interlock refusals from twelve hashed typed exports; earlier versions remain immutable. The source-backed vent-survival correction and regression evidence do not qualify binary or physical wetting rails. #749 retains wetting_incident_778_disposition=false and its physical-proof prerequisite. See research/planner-efficacy/wetting-incident-2026-09-04-disposition-v4.md and issue #749 comment 6001965453.",
       "delivery": "Deliver a reviewed source/data-contract PR and immutable, redacted input/output hashes. Reproduce in a clean environment; analysis alone changes no live settings. Publish conclusions with eligibility and scope.",
       "rollback": "Keep original extraction and definitions immutable; supersede with a new version and compare hashes. Never rewrite locked assignments, outcomes or an earlier analysis to improve a result.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
