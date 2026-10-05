@@ -79,7 +79,9 @@ def prepare_rollback(preview: dict, state: dict, now: datetime) -> dict:
     }
 
 
-def prepare_forward(preview: dict, custody: dict, requests: list[dict], writer_custody: dict, now: datetime) -> dict:
+def prepare_forward(
+    preview: dict, custody: dict, requests: list[dict], writer_custody: dict, now: datetime, *, two_stage: bool = False
+) -> dict:
     """Prepare explicit archive authority, never setter authority or a reset."""
     import sys
 
@@ -90,11 +92,11 @@ def prepare_forward(preview: dict, custody: dict, requests: list[dict], writer_c
     prepare(preview, now)
     state = json.loads(custody[bounded.STATE_NAME])
     approval = json.loads(custody[bounded.APPROVAL_NAME])
-    bounded._confirmed_halt_shape(state, approval)
+    bounded._confirmed_halt_shape(state, approval, two_stage=two_stage)
     bounded._confirmed_halt_writer_custody(state, writer_custody)
-    native = bounded._forward_request_receipt(requests, state, now)
+    native = bounded._forward_request_receipt(requests, state, now, two_stage=two_stage)
     return {
-        "version": 2,
+        "version": 3 if two_stage else 2,
         "authority": bounded.FORWARD_AUTHORITY,
         # Archive historical successful effects independently of desired
         # waypoint activation. This new binding grants no setter authority.
@@ -130,8 +132,15 @@ def main() -> None:
     parser.add_argument(
         "--original-writer-custody", type=Path, help="original full Pod and same-identity preview operator receipt"
     )
+    parser.add_argument(
+        "--confirmed-two-stage",
+        action="store_true",
+        help="explicit archive of two fully confirmed stages, each at most 12, totaling 13..24",
+    )
     args = parser.parse_args()
     preview = json.loads(args.preview.read_text())
+    if args.confirmed_two_stage and not args.confirmed_halt_custody:
+        parser.error("two-stage archive requires --confirmed-halt-custody")
     if args.confirmed_halt_custody:
         if not args.native_requests or not args.original_writer_custody:
             parser.error("confirmed halt requires --native-requests and --original-writer-custody")
@@ -141,6 +150,7 @@ def main() -> None:
             json.loads(args.native_requests.read_text()),
             json.loads(args.original_writer_custody.read_text()),
             datetime.now(UTC),
+            two_stage=args.confirmed_two_stage,
         )
     else:
         if args.native_requests or args.original_writer_custody:
