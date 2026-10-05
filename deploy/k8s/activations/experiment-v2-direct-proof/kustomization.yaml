@@ -12,8 +12,9 @@ resources:
 # the one-sync production apply.
 namespace: verdify-prod
 
-components:
-  - ../../components/experiment-v2-direct-proof
+# The canonical prod overlay contains this component during the one-shot
+# activation. Readding it here would duplicate object IDs; this outer render
+# remains a dormant verification shape through its local override patch.
 
 patches:
   - path: activation-values.patch.yaml

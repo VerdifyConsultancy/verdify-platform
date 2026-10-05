@@ -32,9 +32,30 @@ def _document(rendered: list[dict], kind: str, name: str) -> dict:
 
 def test_ordinary_production_excludes_all_direct_proof_activation_resources() -> None:
     prod = yaml.safe_load(PROD.read_text())
-    assert "../../components/experiment-v2-direct-proof" not in prod["components"]
     rendered = _render(PROD.parent)
     names = {(document.get("kind"), document.get("metadata", {}).get("name")) for document in rendered}
+    if "../../components/experiment-v2-direct-proof" in prod["components"]:
+        assert {"Job", "ConfigMap"}.issubset(
+            {
+                kind
+                for kind, name in names
+                if name
+                in {
+                    "verdify-experiment-v2-direct-proof",
+                    "experiment-v2-direct-proof-activation",
+                }
+            }
+        )
+        job = _document(rendered, "Job", "verdify-experiment-v2-direct-proof")
+        assert job["spec"]["suspend"] is False
+        ingestor = _document(rendered, "Deployment", "verdify-ingestor")
+        env = {row["name"]: row.get("value") for row in ingestor["spec"]["template"]["spec"]["containers"][0]["env"]}
+        assert env["VERDIFY_POLICY_VECTOR_MODE"] == "off"
+        assert env["VERDIFY_COMPONENT_EXPERIMENT_ENABLED"] == "enabled"
+        assert env["VERDIFY_ACTIVE_EXPERIMENT_ID"] == "45039c86-c1d9-52f6-a0a9-d94a17bc4b14"
+        assert "verdify.io/direct-proof-activation" in ingestor["spec"]["template"]["metadata"]["annotations"]
+        return
+
     assert ("Job", "verdify-experiment-v2-direct-proof") not in names
     assert ("ConfigMap", "experiment-v2-direct-proof") not in names
     assert ("ConfigMap", "experiment-v2-direct-proof-activation") not in names
@@ -62,7 +83,11 @@ def test_dormant_activation_is_explicit_and_self_contained() -> None:
     activation = yaml.safe_load((ACTIVATION / "kustomization.yaml").read_text())
     assert activation["resources"] == ["../../overlays/prod"]
     assert activation["namespace"] == "verdify-prod"
-    assert activation["components"] == ["../../components/experiment-v2-direct-proof"]
+    prod = yaml.safe_load(PROD.read_text())
+    if "../../components/experiment-v2-direct-proof" in prod["components"]:
+        assert "components" not in activation
+    else:
+        assert activation["components"] == ["../../components/experiment-v2-direct-proof"]
     assert activation["patches"] == [{"path": "activation-values.patch.yaml"}]
     assert set(yaml.safe_load((COMPONENT / "kustomization.yaml").read_text())["resources"]) == {
         "activation-configmap.yaml",
