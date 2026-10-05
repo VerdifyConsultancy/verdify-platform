@@ -2240,3 +2240,49 @@ def test_api_and_publisher_images_copy_and_import_shared_policy():
     for dockerfile in dockerfiles:
         assert "COPY verdify_public/" in dockerfile
         assert "import verdify_public.output_policy" in dockerfile
+
+
+def test_nonfinite_prefilter_preserves_every_numeric_matcher_and_unicode_boundaries():
+    """Differential check exact old expression over actual rendered shapes."""
+    import itertools
+
+    guard = load_guard()
+    values = ("NaN", "+nan", "-inf", "Infinity", ".nan", "+.inf", "None", "İNF", "ınf", "ordinary", "0")
+    prefixes = (
+        "",
+        "$",
+        "USD",
+        "US$",
+        "USD:",
+        "score:",
+        '"value": "',
+        "arbitrary long field name = ",
+        ">",
+        "[",
+        "x",
+        "_",
+    )
+    suffixes = ("", '"}', ",", " %", "kPa", "USD", "<", ";", "x", "_")
+    for prefix, value, suffix in itertools.product(prefixes, values, suffixes):
+        text = prefix + value + suffix
+        assert guard._has_invalid_value(text) == bool(guard.INVALID_VALUE_RE.search(text)), repr(text)
+    for text in (
+        "max-width:none; display:none",
+        "<p>Provenance: source &amp; reference</p>",
+        "information from ordinary greenhouse",
+    ):
+        assert not guard._has_invalid_value(text)
+
+
+def test_nonfinite_fast_path_skips_long_name_matchers_but_never_decoder_policy(monkeypatch):
+    guard = load_guard()
+
+    class ForbiddenSearch:
+        def search(self, text):
+            raise AssertionError("nonfinite name matcher should be unreachable")
+
+    monkeypatch.setattr(guard, "NONFINITE_ONLY_VALUE_RE", ForbiddenSearch())
+    assert guard._value_reasons("<p>Provenance: source &amp; reference</p>") == set()
+    # Canonical decoding and protected-reference scanning still execute.
+    assert "content" in guard._value_reasons("%63%61%6e%6e%61%62%69%73")
+    assert "invalid-rendered-value" in guard._value_reasons("USD%4e%6f%6e%65")

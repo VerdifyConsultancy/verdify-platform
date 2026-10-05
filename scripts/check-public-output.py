@@ -341,6 +341,32 @@ INVALID_VALUE_RE = re.compile(
     "(?:" + ")|(?:".join(pattern.pattern for pattern in INVALID_VALUE_PATTERNS) + ")",
     flags=re.IGNORECASE | re.MULTILINE,
 )
+# The long structured-name branch backtracks across ordinary HTML at every
+# position. Its three branches require a complete nonfinite token; prove that
+# necessary token exists before evaluating those unchanged exact matchers.
+NONFINITE_VALUE_TOKEN_RE = re.compile(rf"(?<![A-Za-z0-9_]){NONFINITE_NUMBER}(?![A-Za-z0-9_])", flags=re.IGNORECASE)
+_NONFINITE_ONLY_PATTERNS = (
+    INVALID_STRUCTURED_VALUE_RE,
+    INVALID_QUOTED_NUMERIC_FIELD_RE,
+    INVALID_DELIMITED_VALUE_RE,
+)
+OTHER_INVALID_VALUE_RE = re.compile(
+    "(?:" + ")|(?:".join(p.pattern for p in INVALID_VALUE_PATTERNS if p not in _NONFINITE_ONLY_PATTERNS) + ")",
+    flags=re.IGNORECASE | re.MULTILINE,
+)
+NONFINITE_ONLY_VALUE_RE = re.compile(
+    "(?:" + ")|(?:".join(p.pattern for p in _NONFINITE_ONLY_PATTERNS) + ")",
+    flags=re.IGNORECASE | re.MULTILINE,
+)
+
+
+def _has_invalid_value(text: str) -> bool:
+    return bool(
+        OTHER_INVALID_VALUE_RE.search(text)
+        or (NONFINITE_VALUE_TOKEN_RE.search(text) and NONFINITE_ONLY_VALUE_RE.search(text))
+    )
+
+
 VALUE_SCAN_TRIGGER_RE = re.compile(r"[A-Za-z0-9%&\\+$]")
 INVALID_LITERAL_TOKENS = ("nan", "inf", "none", "usd", "us$", "$")
 
@@ -365,7 +391,7 @@ def _value_reasons(value: object) -> set[str]:
             text
         ):
             reasons.add("content")
-        if any(token in lowered for token in INVALID_LITERAL_TOKENS) and INVALID_VALUE_RE.search(text):
+        if any(token in lowered for token in INVALID_LITERAL_TOKENS) and _has_invalid_value(text):
             reasons.add("invalid-rendered-value")
         return reasons
     decoded = decode_public_text(text)
@@ -374,7 +400,7 @@ def _value_reasons(value: object) -> set[str]:
     for variant in decoded.variants:
         if PUBLIC_CROP_REFERENCE_RE.search(variant):
             reasons.add("content")
-        if INVALID_VALUE_RE.search(variant):
+        if _has_invalid_value(variant):
             reasons.add("invalid-rendered-value")
     return reasons
 
@@ -383,7 +409,7 @@ def _safe_report_text(value: object) -> str:
     """Decode then sanitize paths so reports and stderr cannot echo violations."""
     decoded = decode_public_text(value)
     safe = redact_non_public_crop_references(decoded.variants[-1] if decoded.variants else "")
-    has_invalid_value = any(INVALID_VALUE_RE.search(variant) for variant in decoded.variants)
+    has_invalid_value = any(_has_invalid_value(variant) for variant in decoded.variants)
     safe = INVALID_VALUE_RE.sub("invalid-rendered-value", safe)
     if has_invalid_value or decoded.limit_hit:
         safe = INVALID_NUMBER_TOKEN_RE.sub("invalid-rendered-value", safe)
