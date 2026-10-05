@@ -13,12 +13,17 @@ import hashlib
 import importlib.util
 import json
 import subprocess
+import sys
 import urllib.request
 from datetime import UTC, date, datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from verdify_schemas.fixed_panel_native_route import NativeFixedPanelRouteEvidence  # noqa: E402
+
+NATIVE_KEY = "native_fixed_panel_route_evidence"
 METRICS = (
     "scorecard_contract_version",
     "compliance_pct",
@@ -105,11 +110,44 @@ def db(day):
         "SET statement_timeout='15s'; SELECT json_object_agg(metric,value) "
         f"FROM fn_planner_scorecard('{day}'::date) WHERE metric IN ({selected});"
     )
-    return json.loads(command([str(ROOT / "scripts/verdify-db.sh"), "prod", "-X", "-q", "-t", "-A", "-c", sql]))
+    value = json.loads(command([str(ROOT / "scripts/verdify-db.sh"), "prod", "-X", "-q", "-t", "-A", "-c", sql]))
+    native_sql = (
+        f"SET statement_timeout='3s'; SELECT public.fn_fixed_panel_native_route_measurement('{day}'::date,'vallery');"
+    )
+    native = attempt(
+        lambda: json.loads(
+            command([str(ROOT / "scripts/verdify-db.sh"), "prod", "-X", "-q", "-t", "-A", "-c", native_sql])
+        )
+    )
+    value[NATIVE_KEY] = native.get("value")
+    return value
+
+
+def native_projection(value):
+    if value is None:
+        return None
+    try:
+        result = NativeFixedPanelRouteEvidence.model_validate(value).model_dump(mode="json")
+    except Exception:
+        return None
+    result.pop("served_at", None)  # Transport read time is not a measurement revision.
+    return result
+
+
+def compare_native(before, after, consumers):
+    first, last = native_projection(before), native_projection(after)
+    stable = first is not None and first == last
+    mismatches = [name for name, value in consumers.items() if native_projection(value) != first]
+    return {
+        "sql_bracket_stable": stable,
+        "agreement_proven": stable and bool(consumers) and not mismatches,
+        "consumer_mismatches": mismatches,
+        "physical_publication_qualified": False,
+    }
 
 
 def compare(before, after, api, mcp):
-    stable = before is not None and before == after
+    stable = before is not None and after is not None and all(before.get(key) == after.get(key) for key in METRICS)
     mismatches = []
     if stable:
         for consumer, value in [("api", api), *mcp.items()]:
@@ -194,6 +232,14 @@ def capture(days):
             api.get("value"),
             {key: value.get("value") for key, value in mcp.items()},
         )
+        comparison["native_route"] = compare_native(
+            (before.get("value") or {}).get(NATIVE_KEY),
+            (after.get("value") or {}).get(NATIVE_KEY),
+            {
+                "api": (api.get("value") or {}).get(NATIVE_KEY),
+                **{key: (value.get("value") or {}).get(NATIVE_KEY) for key, value in mcp.items()},
+            },
+        )
         rows.append(
             {"date": day, "sql_before": before, "sql_after": after, "api": api, "mcp": mcp, "comparison": comparison}
         )
@@ -219,7 +265,8 @@ def capture(days):
     if (
         public.get("availability") == "captured"
         and public_before.get("value") is not None
-        and public_before.get("value") == public_after.get("value")
+        and public_after.get("value") is not None
+        and all(public_before["value"].get(key) == public_after["value"].get(key) for key in METRICS)
         and public["value"]["score_date"] == public_day
     ):
         pq = public["value"]["planning_quality"]
@@ -234,6 +281,11 @@ def capture(days):
             if public_before["value"].get(metric) != pq.get(key)
         ]
         public_comparison = {"agreement_proven": not mismatches, "metric_mismatches": mismatches}
+    public_comparison["native_route"] = compare_native(
+        (public_before.get("value") or {}).get(NATIVE_KEY),
+        (public_after.get("value") or {}).get(NATIVE_KEY),
+        {"public": ((public.get("value") or {}).get("planning_quality") or {}).get(NATIVE_KEY)},
+    )
     renderer = ROOT / "scripts/update-evidence-snapshots.py"
     spec = importlib.util.spec_from_file_location("evidence_public_renderer", renderer)
     module = importlib.util.module_from_spec(spec)

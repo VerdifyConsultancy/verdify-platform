@@ -33,3 +33,22 @@ def test_unstable_snapshot_or_missing_mcp_prevents_agreement_claim():
     assert probe.compare(values, {**values, "compliance_pct": 7}, values, {"pod": values})["agreement_proven"] is False
     assert probe.compare(values, values, values, {})["agreement_proven"] is False
     assert probe.compare(values, values, values, {"pod": None})["agreement_proven"] is False
+
+
+def test_native_agreement_ignores_only_read_time_and_detects_axis_drift():
+    import copy
+    import json
+
+    value = json.loads((ROOT / "tests/fixtures/native-route-sep29-measurement.json").read_text())
+    later = {**value, "served_at": "2026-10-05T23:00:00+00:00"}
+    result = probe.compare_native(value, later, {"api": later, "mcp": value})
+    assert result["agreement_proven"] is True
+    assert result["physical_publication_qualified"] is False
+    drift = copy.deepcopy(value)
+    drift["diagnostic"]["temp"]["worst_measured_zone"] = "east"
+    result = probe.compare_native(value, later, {"api": later, "mcp": drift})
+    assert result["agreement_proven"] is False
+    assert result["consumer_mismatches"] == ["mcp"]
+    assert probe.compare_native(value, drift, {"api": value})["agreement_proven"] is False
+    assert probe.compare_native(value, later, {"api": None})["agreement_proven"] is False
+    assert probe.compare_native(None, None, {"api": None})["agreement_proven"] is False
