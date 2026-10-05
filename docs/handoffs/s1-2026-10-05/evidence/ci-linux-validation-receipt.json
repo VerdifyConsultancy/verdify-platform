@@ -1,0 +1,14 @@
+{
+  "workflow": "verdify-platform-ci-vldl9",
+  "uid": "66602c20-9b9b-4956-a311-3dadc37ece2f",
+  "revision": "929c372b974e501067d769c6808d821f7c4c7cb7",
+  "validation_node": {
+    "id": "verdify-platform-ci-vldl9-2216596441",
+    "phase": "Succeeded",
+    "startedAt": "2026-10-05T19:53:19Z",
+    "finishedAt": "2026-10-05T20:04:03Z",
+    "hostNodeName": "vm-k3s-node5"
+  },
+  "observed_terminal_log": "ALL GATES GREEN; sub-process exited error=<nil>",
+  "log_archive_limitation": "Workflow PodGC removed validation pod before full stdout archive; terminal output was observed directly before removal. Workflow node retains authoritative success."
+}
