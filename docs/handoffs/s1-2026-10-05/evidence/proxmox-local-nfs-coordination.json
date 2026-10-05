@@ -1,0 +1,14 @@
+{
+  "recorded_at": "2026-10-05T21:29:23.767909+00:00",
+  "recipient_type": "local Codex task on Jason operator Mac",
+  "thread_id": "01a10926-2f97-7c22-9903-9840d922041e",
+  "thread_title": "Drain and shut down olivine",
+  "transport": "codex_tui.send_message_to_thread",
+  "send_result": "accepted for target thread",
+  "packet_sha256": "5b2d46e1efed8c719b62e849bc156e6c1f0e4d195a196daf21af8a4e398fcec0",
+  "fleet_pod_message_sent": false,
+  "further_nfs_mutations": "stopped pending coordinated recovery sequence",
+  "peer_acknowledgment": "Peer commentary acknowledges Verdify holding NAS changes; reports node6 uncached mount lookups/write-readback succeeded and Longhorn healthy. Those are peer-scoped observations, not independently verified whole-estate recovery.",
+  "next_verdify_action": "Existing exact-source normal build continues; scoped application rollout after build/pin proof, with no NFS mutation.",
+  "packet_custody": "Mac-private maintenance/verdify-s1-20261005/proxmox-nfs-coordination-message.txt"
+}

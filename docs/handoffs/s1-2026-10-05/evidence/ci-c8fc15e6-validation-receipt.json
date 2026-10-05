@@ -1,0 +1,22 @@
+{
+  "source_sha": "c8fc15e6a81d29b16e23d6db078893160704b4ea",
+  "workflow": "verdify-platform-ci-qbghc",
+  "workflow_uid": "491bd3a6-2a7f-4dcb-8bab-3b72f9edc4ec",
+  "validation_node": "verdify-platform-ci-qbghc-33080550",
+  "validation_phase": "Succeeded",
+  "pod": "verdify-platform-ci-qbghc-validate-1946733925",
+  "pod_uid": "023d4416-86f9-4130-b873-710be2f7cb6e",
+  "node": "vm-k3s-node5",
+  "main": {
+    "containerID": "containerd://db83c58cb26cf497825fda3e8066538703a906878ee5be77fba174667286164c",
+    "exitCode": 0,
+    "finishedAt": "2026-10-05T21:28:14Z",
+    "reason": "Completed",
+    "startedAt": "2026-10-05T21:17:50Z"
+  },
+  "stdout_sha256": "75449448fe64ff501208b743b211ed031d9d437e00f61c06ad1caba94593c9b9",
+  "stdout_bytes": 27196,
+  "all_gates_green": true,
+  "scope": "Linux source validation only; builds/promotion/deployment/product acceptance remain separate",
+  "stdout_archive": "Mac-private maintenance/verdify-s1-20261005/ci-c8fc15e6-validation.log"
+}
