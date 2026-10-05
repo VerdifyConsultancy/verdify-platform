@@ -292,7 +292,7 @@ images:
   # observational block, which remains absent until a qualified publication.
   - name: ghcr.io/verdifyconsultancy/verdify-lab-publisher-k3s
     newName: registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s
-    digest: sha256:b40411cd644cea552283a568b32af4cd0278fe2acccad12481453a3365b3e24c
+    digest: sha256:f2e08c6d79c9c3a9f36f95d0612a07e32b027caad9ad8406a9b87084424ba4b0
 
 # Release pins: the digests production runs for the five actuator-managed
 # images. kustomize applies `transformers:` after `images:`, so these replace
