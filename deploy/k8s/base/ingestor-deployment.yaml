@@ -214,6 +214,9 @@ spec:
             - name: ha-token
               mountPath: /mnt/agents/shared/credentials
               readOnly: true
+            - name: slack-token
+              mountPath: /etc/verdify/slack
+              readOnly: true
           # No httpGet probe — connect-out worker. A heartbeat/freshness exec or
           # in-process flag probe is the §3.3 design (queries max(ts) FROM climate)
           # with a generous initialDelay so transient DB latency does not restart
@@ -232,3 +235,10 @@ spec:
             items:
               - key: ha_token.txt
                 path: ha_token.txt
+
+        - name: slack-token
+          secret:
+            secretName: verdify-slack
+            items:
+              - key: iris_slack_bot_token.txt
+                path: iris_slack_bot_token.txt

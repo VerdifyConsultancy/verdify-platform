@@ -74,10 +74,12 @@ async def midnight_watch(pool: asyncpg.Pool) -> None:
                 f"but no plan yet{covers}"
             )
 
-    _midnight_watch_last_date = today_str
     try:
         token = _load_token(SLACK_TOKEN_FILE)
-        _post_slack(token, SLACK_CHANNEL, msg)
+        ts = _post_slack(token, SLACK_CHANNEL, msg)
+        if not ts:
+            raise RuntimeError("Slack returned no message receipt")
+        _midnight_watch_last_date = today_str
         log.info("midnight_watch: %s", msg)
     except Exception as e:
         log.error("midnight_watch Slack post failed: %s", e)
@@ -99,10 +101,22 @@ async def slack_operator_briefs(pool: asyncpg.Pool) -> None:
         if _slack_brief_last_fire.get(period) == fire_key:
             continue
         async with pool.acquire() as conn:
+            already_posted = await conn.fetchval(
+                "SELECT EXISTS (SELECT 1 FROM slack_notification_events "
+                "WHERE greenhouse_id = $1 AND dedupe_key = $2 "
+                "AND status = 'posted' AND message_ts IS NOT NULL)",
+                SLACK_SETTINGS.greenhouse_id,
+                fire_key,
+            )
+            if already_posted:
+                _slack_brief_last_fire[period] = fire_key
+                continue
             text, payload = await build_operator_brief(conn, period, timezone=SLACK_SETTINGS.timezone)
         try:
             token = _load_token(SLACK_TOKEN_FILE)
             ts = _post_slack(token, cfg.get("channel_id") or SLACK_CHANNEL, text)
+            if not ts:
+                raise RuntimeError("Slack returned no message receipt")
             async with pool.acquire() as conn:
                 await conn.execute(
                     """
@@ -123,4 +137,8 @@ async def slack_operator_briefs(pool: asyncpg.Pool) -> None:
             _slack_brief_last_fire[period] = fire_key
             log.info("Posted Slack %s operator brief", period)
         except Exception as exc:
-            log.error("Slack %s operator brief failed: %s", period, exc)
+            log.error(
+                "Slack %s operator brief failed (%s); retry bounded to five-minute schedule window",
+                period,
+                type(exc).__name__,
+            )

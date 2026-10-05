@@ -6,11 +6,10 @@
 # the public solo-panel embeds on lab.verdify.ai (/d-solo/site-home panels
 # 30/31/36) and the /d/site-home dashboard.
 #
-# STATELESS: anonymous-Viewer + provisioned datasource + provisioned dashboards
-# means there is NO durable org/user/dashboard state worth a PVC — the SQLite
-# store is rebuilt from git provisioning on every start. /var/lib/grafana is an
-# emptyDir (no synology-iscsi-ssd PVC; no MIGRATE item). That permits a surge-first
-# rollout: the old pod remains available until the complete new pod is Ready.
+# Identity state lives on verdify-grafana-data. SQLite must have one writer;
+# Recreate avoids two Grafana processes sharing the same database. Provisioned
+# dashboards remain generated from Git; service identities survive replacement.
+# Preserve this claim during rollback and retirement.
 #
 # DATASOURCE (verdify-grafana-provisioning CM): uid `verdify-tsdb` — the exact
 # uid every site-*.json panel target references — pointed at verdify-db:5432.
@@ -43,19 +42,13 @@ metadata:
     app.kubernetes.io/component: grafana
 spec:
   replicas: 1
-  # Attended REL-3 activation: a candidate must remain Ready for two full
-  # minutes before Kubernetes may scale the old pod down. Combined with the
-  # surge-first strategy below, this creates a real observation window rather
-  # than retiring the known-good pod on the candidate's first Ready sample.
+  # Keep two minutes of readiness evidence after a singleton replacement.
   minReadySeconds: 120
   selector:
     matchLabels:
       app.kubernetes.io/component: grafana
   strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxUnavailable: 0
-      maxSurge: 1
+    type: Recreate
   template:
     metadata:
       labels:
@@ -377,7 +370,8 @@ spec:
               mountPath: /dev/shm
       volumes:
         - name: data
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: verdify-grafana-data
         - name: tmp
           emptyDir: {}
         # Writable copy of public/views the initContainer patches with the
