@@ -35,11 +35,12 @@ class DailySummaryRow(BaseModel):
     outdoor_temp_max: float | None = None
     dli_final: float | None = None
 
-    # Stress hours (binary; NOT mutated by the migration-146 dual-write)
-    stress_hours_heat: float = Field(default=0.0, ge=0, le=24)
-    stress_hours_cold: float = Field(default=0.0, ge=0, le=24)
-    stress_hours_vpd_high: float = Field(default=0.0, ge=0, le=24)
-    stress_hours_vpd_low: float = Field(default=0.0, ge=0, le=24)
+    # Binary reading-count stress diagnostics; no eligible samples are unavailable,
+    # not measured zero. The graded dual-write retains separate fields.
+    stress_hours_heat: float | None = Field(default=None, ge=0, le=24, allow_inf_nan=False)
+    stress_hours_cold: float | None = Field(default=None, ge=0, le=24, allow_inf_nan=False)
+    stress_hours_vpd_high: float | None = Field(default=None, ge=0, le=24, allow_inf_nan=False)
+    stress_hours_vpd_low: float | None = Field(default=None, ge=0, le=24, allow_inf_nan=False)
 
     # ── Binary compliance (existing; byte-stable through the dual-write window)
     compliance_pct: float | None = Field(default=None, ge=0, le=100)
