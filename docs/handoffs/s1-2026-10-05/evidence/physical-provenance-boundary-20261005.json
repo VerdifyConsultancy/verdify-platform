@@ -1,0 +1,26 @@
+{
+  "captured_at": "2026-10-05T20:00:14.849739+00:00",
+  "current_native_source_binding": false,
+  "live_database": {
+    "contributor_capture_scopes": [
+      {
+        "capture_scope": "route_only",
+        "revisions": 6
+      }
+    ],
+    "native_bindings": [
+      {
+        "binding_id": 1,
+        "collector_revision": "20b5a0b36e8c53e3e88266a2d10c5248e22e405d",
+        "firmware_revision": "2026.7.10.1500.09ee886",
+        "valid_from": "2026-09-29T12:00:00+00:00",
+        "valid_to": "2026-09-30T06:00:00+00:00"
+      }
+    ],
+    "target_revisions": 2
+  },
+  "physical_identity_authenticated": false,
+  "schema": "verdify-physical-provenance-boundary-v1",
+  "scope": "read-only metadata; route declarations do not authenticate physical serial, placement, calibration or Modbus poll time",
+  "source_sha": "929c372b974e501067d769c6808d821f7c4c7cb7"
+}
