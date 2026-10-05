@@ -72,7 +72,12 @@ if ! "$CACHE_PYTHON" "$CACHE_LOCK_HELPER" --root "$ROOT" --fd 9 --verify-held >/
   exit 2
 fi
 
+SCAN_COUNT=0
+SCAN_SECONDS=0
+INIT_STARTED=$SECONDS
+
 validate_public_tree() {
+  local scan_started=$SECONDS
   local source="$1"
   local diagnostic="${2:-Lab cache public tree validation failed}"
   local attestation="${3:-}"
@@ -115,6 +120,8 @@ if raw != canonical:
     echo "$diagnostic" >&2
     return 1
   fi
+  SCAN_COUNT=$((SCAN_COUNT + 1))
+  SCAN_SECONDS=$((SCAN_SECONDS + SECONDS - scan_started))
 }
 
 path_exists_nofollow() {
@@ -150,10 +157,14 @@ finally:
   fi
 }
 
-# Validate every supplied source before recovery or any public-tree mutation.
+# Validate sources that can be installed before recovery or public mutation.
+# A populated v2 public tree never consumes the obsolete legacy directory;
+# rescanning that unserved residue wastes a full scan on every warm CronJob.
 # The scanner owns symlink/hardlink/special-entry and content policy; diagnostics
 # stay fixed and non-reflective so an unsafe filename or value is never logged.
-if [[ -L "$LEGACY" || -e "$LEGACY" ]]; then
+if [[ -L "$LEGACY" || -e "$LEGACY" ]] \
+    && ! { [[ ! -L "$PUBLIC" && -d "$PUBLIC" ]] \
+      && [[ -n "$(find "$PUBLIC" -mindepth 1 -print -quit)" ]]; }; then
   validate_public_tree "$LEGACY"
 fi
 if [[ -n "$BOOTSTRAP" ]]; then
@@ -294,7 +305,11 @@ elif ! path_exists_nofollow "$PUBLIC"; then
   mkdir -- "$PUBLIC"
 fi
 require_real_directory "$PUBLIC" "Lab cache public root is not a directory"
-validate_public_tree "$PUBLIC"
+# A bootstrap replacement still validates the old live tree before mutation;
+# a warm tree has no replacement and needs only the final binding scan.
+if [[ -n "$BOOTSTRAP" ]] && ! has_regular_homepage && tree_has_entries "$BOOTSTRAP"; then
+  validate_public_tree "$PUBLIC"
+fi
 chmod_public_directory
 
 # Only the Lab Deployment supplies a baked bootstrap.  It is installed while
@@ -310,7 +325,7 @@ if [[ -n "$BOOTSTRAP" ]] && ! has_regular_homepage && tree_has_entries "$BOOTSTR
 fi
 
 # Validate the exact current pathname before success.  Any permission change
-# already followed a clean scan and used an O_NOFOLLOW directory descriptor;
+# used an O_NOFOLLOW directory descriptor;
 # this final pass binds the marker to the final served state.
 require_real_directory "$PUBLIC" "Lab cache public root is not a directory"
 ready_tmp="$(mktemp "$ROOT/.layout-v2-scanned-ready.XXXXXX")"
@@ -324,3 +339,7 @@ if has_regular_homepage; then
 else
   rm -f -- "$ready_tmp" "$READY"
 fi
+
+# Emit only fixed phase names and integer durations; never tree paths/content.
+printf "Lab cache initialization: scans=%s scan_seconds=%s total_seconds=%s\n" \
+  "$SCAN_COUNT" "$SCAN_SECONDS" "$((SECONDS - INIT_STARTED))"

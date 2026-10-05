@@ -50,10 +50,9 @@ spec:
   failedJobsHistoryLimit: 5
   jobTemplate:
     spec:
-      # The publisher itself is normally brief, but preparing the private work
-      # root can take about 12 minutes when the durable cache must pull the
-      # current ~400 MiB S3 tree. Allow that cold-cache phase plus the bounded
-      # five-minute rebuild without letting a disconnected generator retain the
+      # Init validates the served cache locally (one canonical scan on a warm
+      # tree). S3 synchronization and the Quartz rebuild run in the publisher,
+      # not init. Allow cold synchronization/rebuild without letting a disconnected generator retain the
       # DB or cache PVC indefinitely. Forbid concurrency still prevents overlap
       # with the ten-minute schedule while a run is active.
       activeDeadlineSeconds: 1800
