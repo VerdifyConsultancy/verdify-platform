@@ -1,0 +1,204 @@
+{
+  "source": "37a9cc0b7a2ef07585d0790f4bb4dcfbbe75bb6f",
+  "build_workflow": "verdify-platform-ci-n4v62",
+  "build_workflow_uid": "769be28b-30b0-4322-8f61-88f7a0f9ce8d",
+  "promotion_revision": "88567ed19254a75e9bacde724c42c560709c14e6",
+  "operation": {
+    "started_at": "2026-10-05T22:44:57Z",
+    "finished_at": "2026-10-05T22:47:15Z",
+    "phase": "Succeeded",
+    "resources": 127,
+    "selector_absent": true,
+    "prune": false
+  },
+  "independent_application_readback": {
+    "sync": "Synced",
+    "health": "Healthy",
+    "revision": "88567ed19254a75e9bacde724c42c560709c14e6"
+  },
+  "fresh_hooks": [
+    {
+      "hook": "verdify-experiment-v2-credential-bootstrap",
+      "pod": "verdify-experiment-v2-credential-bootstrap-95n5x",
+      "uid": "31cf6baa-94a8-4195-a56e-558261a24ec0",
+      "created": "2026-10-05T22:45:47Z",
+      "phase": "Succeeded",
+      "containers": [
+        {
+          "name": "bootstrap-and-attest",
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:74d60c291f79a7d0c45616da6a42165a246e4531f86d269e51e10a6ca57bddcf",
+          "state": {
+            "terminated": {
+              "containerID": "containerd://3de961fa97a48b008db659a4a00c87674ddf1729f58293b53622d28ba85723e0",
+              "exitCode": 0,
+              "finishedAt": "2026-10-05T22:45:57Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-05T22:45:50Z"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "hook": "verdify-mcp-runtime-role-bootstrap",
+      "pod": "verdify-mcp-runtime-role-bootstrap-ckzzs",
+      "uid": "d3d519b5-c5b6-4c47-83d8-d3dc245424f1",
+      "created": "2026-10-05T22:45:47Z",
+      "phase": "Succeeded",
+      "containers": [
+        {
+          "name": "bootstrap-and-attest",
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:74d60c291f79a7d0c45616da6a42165a246e4531f86d269e51e10a6ca57bddcf",
+          "state": {
+            "terminated": {
+              "containerID": "containerd://082e3a5b775a040a34b7ddfc75e49141bb0232807dec83db57770b78be3f7950",
+              "exitCode": 0,
+              "finishedAt": "2026-10-05T22:45:50Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-05T22:45:50Z"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "hook": "verdify-migrate",
+      "pod": "verdify-migrate-5xp2w",
+      "uid": "d0010707-dfd4-4501-9149-1f42a84a2d63",
+      "created": "2026-10-05T22:45:20Z",
+      "phase": "Succeeded",
+      "containers": [
+        {
+          "name": "migrate",
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:74d60c291f79a7d0c45616da6a42165a246e4531f86d269e51e10a6ca57bddcf",
+          "state": {
+            "terminated": {
+              "containerID": "containerd://e01ce74a289f5a29903b60b55c459241db2d3b8695468e327b6c52e892395e76",
+              "exitCode": 0,
+              "finishedAt": "2026-10-05T22:45:27Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-05T22:45:23Z"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "hook": "verdify-runtime-role-bootstrap",
+      "pod": "verdify-runtime-role-bootstrap-rkcm9",
+      "uid": "7854a20b-f3b7-48fd-80c2-f3038d421e37",
+      "created": "2026-10-05T22:45:37Z",
+      "phase": "Succeeded",
+      "containers": [
+        {
+          "name": "bootstrap-and-attest",
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:74d60c291f79a7d0c45616da6a42165a246e4531f86d269e51e10a6ca57bddcf",
+          "state": {
+            "terminated": {
+              "containerID": "containerd://26e65106261a428b590dc03d2d783857fc7278937735506c3e6956c39037b359",
+              "exitCode": 0,
+              "finishedAt": "2026-10-05T22:45:41Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-05T22:45:39Z"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "hook": "verdify-six-runtime-role-bootstrap",
+      "pod": "verdify-six-runtime-role-bootstrap-v6hdv",
+      "uid": "adc5554b-242a-4cbb-96a1-1634a178105c",
+      "created": "2026-10-05T22:46:03Z",
+      "phase": "Succeeded",
+      "containers": [
+        {
+          "name": "bootstrap-and-attest",
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:74d60c291f79a7d0c45616da6a42165a246e4531f86d269e51e10a6ca57bddcf",
+          "state": {
+            "terminated": {
+              "containerID": "containerd://817f8744faadfdf6d0fa2909fa26c8a1ef35a33d9067f5e25c4318301e9de0e6",
+              "exitCode": 0,
+              "finishedAt": "2026-10-05T22:46:26Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-05T22:46:20Z"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "hook": "verdify-winter-archive-init",
+      "pod": "verdify-winter-archive-init-w7t2m",
+      "uid": "ba133ff7-5185-408e-8665-3b2672fc69b4",
+      "created": "2026-10-05T22:46:42Z",
+      "phase": "Succeeded",
+      "containers": [
+        {
+          "name": "init-archive",
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:09a7e0ea6f87fcea9536df19a09d95c3ac2575493bb3f63bffea6cae77eafb98",
+          "state": {
+            "terminated": {
+              "containerID": "containerd://3e0ada89c161765c9fc283f54ba7a52954ef94ed0d61e5b9964a36053cb7c107",
+              "exitCode": 0,
+              "finishedAt": "2026-10-05T22:46:57Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-05T22:46:57Z"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "ingestor": {
+    "started_at": "2026-10-05T22:48:37.787071+00:00",
+    "finished_at": "2026-10-05T22:53:38.473295+00:00",
+    "duration_seconds": 300.2344173339952,
+    "pod": "verdify-ingestor-544c5564bc-vnn8m",
+    "pod_uid": "55d2bbbf-8fd6-4297-81bf-5745710a71f6",
+    "source_sha": "37a9cc0b7a2ef07585d0790f4bb4dcfbbe75bb6f",
+    "digest": "sha256:e22e160f80adf79f70778c3d8796e036ced31a3e59fcf7b4d6e82eecb0d80f22",
+    "module_sha256": "4afb5b7daa1873952cced16387d18104a9c95923333a3210fad333d6f7ba56a6",
+    "restart_count": 0,
+    "log_sha256": "ca54a71d70b2c865a940de583193363ea3835e45aa50cec7b8f6f5fb1e5876da",
+    "log_bytes": 32461,
+    "validation_error_count": 0,
+    "row_failed_schema_validation_count": 0,
+    "same_ready_pod_through_end": true,
+    "scope": "Five-minute schema observation; policy transition/steady and sockets are separate acceptance"
+  },
+  "unchanged_protected_statefulset_uid": "692af2f5-c937-4fde-aeb3-3c4fd36710ca",
+  "protected_claims": [
+    {
+      "name": "db-data-verdify-db-0",
+      "uid": "59fe138d-1cc4-4aac-bfcb-3d332f847411",
+      "volume": "pvc-59fe138d-1cc4-4aac-bfcb-3d332f847411",
+      "phase": "Bound"
+    },
+    {
+      "name": "verdify-db-dumps",
+      "uid": "dac57082-fe28-4d59-9bc6-c793dfc6c61e",
+      "volume": "verdify-db-dumps-prod",
+      "phase": "Bound"
+    },
+    {
+      "name": "verdify-grafana-data",
+      "uid": "acad919d-b6d2-4824-b7c7-a2b2ab460103",
+      "volume": "pvc-acad919d-b6d2-4824-b7c7-a2b2ab460103",
+      "phase": "Bound"
+    }
+  ],
+  "ledger_270_273_unchanged": true,
+  "retained_consumer_source": "c8fc15e6a81d29b16e23d6db078893160704b4ea",
+  "api_smoke_passed": 9,
+  "api_smoke_failed": 0,
+  "namespace_device_socket_count": 1,
+  "global_final_socket_proof": "repeat requested from local Proxmox task; prior all8host proof retained separately",
+  "product_acceptance_remaining": [
+    "Two-hour final37 policy observation and desired/readback transition join",
+    "Prospective23:00 native first completebin and public/Iris/Grafana parity",
+    "Guardoptimization8f04 publisher build/promotion and3naturalcadence runs",
+    "Natural00:00UTC vision and eveningbrief"
+  ],
+  "scope": "Verified release, not completed sprint; actual schema/module/logs/socket/PodUID and hook identities preserved. NoNFS mutation, DBcutover, experiment or OTA."
+}

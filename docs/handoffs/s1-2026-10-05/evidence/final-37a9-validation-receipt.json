@@ -1,0 +1,20 @@
+{
+  "source": "37a9cc0b7a2ef07585d0790f4bb4dcfbbe75bb6f",
+  "workflow": "verdify-platform-ci-n4v62",
+  "workflow_uid": "769be28b-30b0-4322-8f61-88f7a0f9ce8d",
+  "validation_node_id": "verdify-platform-ci-n4v62-2913316758",
+  "phase": "Succeeded",
+  "node_finished_at": "2026-10-05T22:18:38Z",
+  "pod_uid": "76a40307-91b4-4cc1-941d-1667d2109a35",
+  "pod_node": "vm-k3s-node7",
+  "main_state": {
+    "running": {
+      "startedAt": "2026-10-05T22:10:28Z"
+    }
+  },
+  "actual_pod_terminal_retained": false,
+  "stdout_bytes": 27196,
+  "stdout_sha256": "725cfe93a7bee99f6e83b42b5a6352837118cc9379ef3d53b6890278a7e6e87a",
+  "all_gates_green": true,
+  "scope": "Linux validation only; build actuator, pin promotion, actual newwriter acceptance separate."
+}

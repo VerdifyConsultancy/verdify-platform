@@ -1,0 +1,14 @@
+{
+  "recorded_at": "2026-10-05T22:50:26.961663+00:00",
+  "scope": "Atomic future observationaltarget/route_onlycontributors/nativebinding DML; no control setpoints, no physical commissioning, noDDL/migration changes",
+  "effective_from": "2026-10-05T23:00:00+00:00",
+  "effective_to": "2026-10-06T06:00:00+00:00",
+  "collector_sha": "37a9cc0b7a2ef07585d0790f4bb4dcfbbe75bb6f",
+  "collector_digest": "sha256:e22e160f80adf79f70778c3d8796e036ced31a3e59fcf7b4d6e82eecb0d80f22",
+  "sql_sha256": "7b2e1ecc3c520138fea6098f902e0a99a1cdf5a2e40b8c680b839c2a81a5334a",
+  "stdout_sha256": "3a2610569fb5735c51875a9ca2fd22cf1b4668751f38483a6450817abadf9f8c",
+  "stderr_empty": true,
+  "prospective_bins": 28,
+  "physical_serials_and_evidence": "NULL;route_only;physical/experiment flags remain false",
+  "next_evidence": "First completedbin after23:15; query/source/consumer/public parity still required"
+}

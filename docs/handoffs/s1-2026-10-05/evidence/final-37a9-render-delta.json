@@ -1,0 +1,25 @@
+{
+  "resources": 127,
+  "secrets": 0,
+  "changed_resources": [
+    {
+      "kind": "Deployment",
+      "name": "verdify-ingestor",
+      "before": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:542acfdd6c69d092584bd71cf0ef95fdad2eb5280b5fde7f0167bd437e5b339d",
+      "after": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:e22e160f80adf79f70778c3d8796e036ced31a3e59fcf7b4d6e82eecb0d80f22"
+    },
+    {
+      "kind": "CronJob",
+      "name": "verdify-ha-gap-backfill",
+      "before": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:542acfdd6c69d092584bd71cf0ef95fdad2eb5280b5fde7f0167bd437e5b339d",
+      "after": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:e22e160f80adf79f70778c3d8796e036ced31a3e59fcf7b4d6e82eecb0d80f22"
+    },
+    {
+      "kind": "CronJob",
+      "name": "verdify-vision",
+      "before": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:542acfdd6c69d092584bd71cf0ef95fdad2eb5280b5fde7f0167bd437e5b339d",
+      "after": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:e22e160f80adf79f70778c3d8796e036ced31a3e59fcf7b4d6e82eecb0d80f22"
+    }
+  ],
+  "scope": "Only shared ingestor image changes in writer and existing HA-backfill/vision CronJobs; their packaged task modules are unchanged. Six BeforeHookCreation Jobs unchanged but will run on full sync."
+}
