@@ -53,8 +53,19 @@ class TestSetpointChange:
 class TestDailySummaryRow:
     def test_minimal(self):
         row = DailySummaryRow(date=date(2026, 4, 18))
-        assert row.stress_hours_heat == 0.0
+        assert row.stress_hours_heat is None
         assert row.cost_total is None
+
+    @pytest.mark.parametrize(
+        "field", ("stress_hours_heat", "stress_hours_cold", "stress_hours_vpd_high", "stress_hours_vpd_low")
+    )
+    def test_unavailable_stress_stays_null_and_measured_zero_stays_zero(self, field):
+        unavailable = DailySummaryRow.model_validate({"date": date(2026, 10, 5), field: None})
+        measured = DailySummaryRow.model_validate({"date": date(2026, 10, 5), field: 0.0})
+        assert unavailable.model_dump()[field] is None
+        assert measured.model_dump()[field] == 0.0
+        with pytest.raises(ValidationError):
+            DailySummaryRow.model_validate({"date": date(2026, 10, 5), field: float("nan")})
 
     def test_full_row(self):
         row = DailySummaryRow(
