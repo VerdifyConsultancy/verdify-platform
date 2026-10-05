@@ -1,0 +1,147 @@
+{
+  "kind": "actual-production-database-rollback-only-bootstrap-qualification",
+  "database": "verdify-db",
+  "mutations_committed": false,
+  "password_commands_executed": false,
+  "helper_sha256": "20d5b38d35d779e58ed3978648f3ed2e6b1414a2820945b7a05d82e2152c2c1d",
+  "sealed_sql_sha256": "03ee703843a9382434025174de5b4b5e44e39530807504c3d5a2dc68b34c066f",
+  "role_contract_sql_sha256": "e95dd4234f674b315bf22e6411249d13480b72f94bad2068e107a7107b07c804",
+  "original_helper_sha256": "5eac012522180d6f4db15399c721ad2763396f8953a91044966b3307188ac50c",
+  "rehearsal_sql_sha256": "c737eb9a84a18c5f081ac2b42808c10f4682b0831de179907a627ebdaeadbcf9",
+  "rehearsal_output_sha256": "020ce0dee6145687a645db971db3761122b714c28d60d46637e9e4cfdbaef85b",
+  "migration_sha256": {
+    "268": "aed9c4e562ff0420e315d14211224d1fff6469b9e0d2a541aedbc0bc562447e0",
+    "270": "672d1afa92e37f243d5893fbd57cd2b84e86ea19c1c79d3975c04dfd39663532",
+    "271": "8ddc650184a178b59102c46a6cf1c6b706578ce08d6680294a425694397f7642",
+    "272": "ca2e6cd2ae157aa6ebdda58964fc3eb52cbdde70d7c69f158fa0eef6294d19aa",
+    "273": "a0e4fe7bea3d27ea0d4218c5d423707e19b821e2684d5884c1280b03f78df76a"
+  },
+  "stages": [
+    {
+      "stage": "current270",
+      "ledger": 270,
+      "sealed": true,
+      "role_contract": true,
+      "original_sealed": true
+    },
+    {
+      "stage": "successor271",
+      "ledger": 271,
+      "sealed": false,
+      "role_contract": true,
+      "original_sealed": true
+    },
+    {
+      "stage": "successor272",
+      "ledger": 272,
+      "sealed": false,
+      "role_contract": true,
+      "original_sealed": false
+    },
+    {
+      "stage": "successor273",
+      "ledger": 273,
+      "sealed": true,
+      "role_contract": true,
+      "original_sealed": false
+    },
+    {
+      "stage": "wrong_273_hash",
+      "ledger": 273,
+      "sealed": false,
+      "role_contract": true,
+      "original_sealed": false
+    },
+    {
+      "stage": "wrong_271_hash",
+      "ledger": 273,
+      "sealed": false,
+      "role_contract": true,
+      "original_sealed": false
+    },
+    {
+      "stage": "wrong_273_filename",
+      "ledger": 273,
+      "sealed": false,
+      "role_contract": true,
+      "original_sealed": false
+    },
+    {
+      "stage": "wrong_273_stamp",
+      "ledger": 273,
+      "sealed": false,
+      "role_contract": true,
+      "original_sealed": false
+    },
+    {
+      "stage": "later_274_ledger",
+      "ledger": 274,
+      "sealed": false,
+      "role_contract": true,
+      "original_sealed": false
+    },
+    {
+      "stage": "wrong_api_receipt",
+      "ledger": 273,
+      "sealed": false,
+      "role_contract": true,
+      "original_sealed": false
+    },
+    {
+      "stage": "wrong_mcp_receipt",
+      "ledger": 273,
+      "sealed": false,
+      "role_contract": true,
+      "original_sealed": false
+    },
+    {
+      "stage": "extra_planner_reader_capability",
+      "ledger": 273,
+      "sealed": false,
+      "role_contract": true,
+      "original_sealed": false
+    },
+    {
+      "stage": "missing_grafana_reader_capability",
+      "ledger": 273,
+      "sealed": false,
+      "role_contract": true,
+      "original_sealed": false
+    },
+    {
+      "stage": "public_reader_capability",
+      "ledger": 273,
+      "sealed": false,
+      "role_contract": true,
+      "original_sealed": false
+    },
+    {
+      "stage": "raw_grafana_ledger_capability",
+      "ledger": 273,
+      "sealed": false,
+      "role_contract": true,
+      "original_sealed": false
+    },
+    {
+      "stage": "unsafe_planner_membership",
+      "ledger": 273,
+      "sealed": false,
+      "role_contract": false,
+      "original_sealed": false
+    },
+    {
+      "stage": "successor273_restored",
+      "ledger": 273,
+      "sealed": true,
+      "role_contract": true,
+      "original_sealed": false
+    },
+    {
+      "stage": "current270_restored",
+      "ledger": 270,
+      "sealed": true,
+      "role_contract": true,
+      "original_sealed": true
+    }
+  ]
+}

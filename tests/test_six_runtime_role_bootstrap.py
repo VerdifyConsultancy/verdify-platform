@@ -189,3 +189,57 @@ def test_bootstrap_requires_exact_facility_status_successor_after_atomic_migrati
     assert hashlib.sha256(migration).hexdigest() == module.OPS_MIGRATION_SHA
     assert "seq=270" in module.sealed_sql()
     assert module.OPS_MIGRATION_SHA in module.sealed_sql()
+
+
+def test_successor_bootstrap_matches_actual_rollback_qualification():
+    """Changing source, seals or migration bytes requires real DB requalification."""
+    import hashlib
+
+    root = Path(__file__).resolve().parents[1]
+    receipt = json.loads((root / "tests/fixtures/six-runtime-bootstrap-successor-receipt.json").read_text())
+
+    def digest(value):
+        return hashlib.sha256(value).hexdigest()
+
+    assert receipt["helper_sha256"] == digest((root / "scripts/bootstrap-six-runtime-roles.py").read_bytes())
+    assert receipt["sealed_sql_sha256"] == digest(module.sealed_sql().encode())
+    assert receipt["role_contract_sql_sha256"] == digest(module.admin_role_contract_sql().encode())
+    assert receipt["mutations_committed"] is False
+    assert receipt["password_commands_executed"] is False
+    for seq, filename, expected in module.SUCCESSOR_MIGRATIONS:
+        assert receipt["migration_sha256"][str(seq)] == expected
+        assert digest((root / "db/migrations" / filename).read_bytes()) == expected
+    stages = {row["stage"]: row for row in receipt["stages"]}
+    for name, seq in (
+        ("current270", 270),
+        ("successor273", 273),
+        ("successor273_restored", 273),
+        ("current270_restored", 270),
+    ):
+        assert stages[name]["sealed"] is True
+        assert stages[name]["role_contract"] is True
+        assert stages[name]["ledger"] == seq
+    # The prior source really fails after final migration, while the successor
+    # remains unavailable at either intermediate stage despite valid roles.
+    assert stages["successor273"]["original_sealed"] is False
+    for name in ("successor271", "successor272"):
+        assert stages[name]["sealed"] is False
+        assert stages[name]["role_contract"] is True
+    negatives = {
+        "wrong_273_hash",
+        "wrong_271_hash",
+        "wrong_273_filename",
+        "wrong_273_stamp",
+        "later_274_ledger",
+        "wrong_api_receipt",
+        "wrong_mcp_receipt",
+        "extra_planner_reader_capability",
+        "missing_grafana_reader_capability",
+        "public_reader_capability",
+        "raw_grafana_ledger_capability",
+        "unsafe_planner_membership",
+    }
+    assert len(receipt["stages"]) == len(negatives) + 6
+    assert all(stages[name]["sealed"] is False for name in negatives)
+    assert stages["unsafe_planner_membership"]["role_contract"] is False
+    assert stages["current270_restored"]["original_sealed"] is True
