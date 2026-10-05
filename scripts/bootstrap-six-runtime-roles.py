@@ -18,6 +18,27 @@ MIGRATION_SHA = "aed9c4e562ff0420e315d14211224d1fff6469b9e0d2a541aedbc0bc562447e
 
 OPS_MIGRATION_SHA = "672d1afa92e37f243d5893fbd57cd2b84e86ea19c1c79d3975c04dfd39663532"
 
+# A bootstrap accepts only catalog/source profiles qualified together. Unknown
+# or intermediate migration states never inherit authority from a receipt.
+SUCCESSOR_273 = {
+    "api": "aef9e39647d84c313d76795f15b382eb5ebccb5828eecac83e73cbb97002e10e",
+    "ingestor": "98e59209b41ba7a445150fde66be889bdc98689c43c80aa8bc5d0c3f7a677ef7",
+    "mcp": "79e5bd322c1b9c60104c26b82b3d302d89fda26366031f7871f697f3c97ccf4b",
+}
+SUCCESSOR_MIGRATIONS = (
+    (271, "271-legacy-band-trace-deprecation.sql", "8ddc650184a178b59102c46a6cf1c6b706578ce08d6680294a425694397f7642"),
+    (
+        272,
+        "272-current-climate-scorecard-snapshot.sql",
+        "ca2e6cd2ae157aa6ebdda58964fc3eb52cbdde70d7c69f158fa0eef6294d19aa",
+    ),
+    (
+        273,
+        "273-native-route-measurement-reader.sql",
+        "a0e4fe7bea3d27ea0d4218c5d423707e19b821e2684d5884c1280b03f78df76a",
+    ),
+)
+
 
 class BootstrapError(RuntimeError):
     pass
@@ -55,30 +76,92 @@ def psql(user, password, commands, *, password_input="", transactional=False):
     return result.stdout.strip()
 
 
+def ledger_row_sql(seq, filename, sha256):
+    return (
+        "EXISTS(SELECT 1 FROM public.schema_migrations WHERE source='db/migrations' "
+        f"AND seq={seq} AND filename='db/migrations/{filename}' AND sha256='{sha256}' AND stamp_method='runner')"
+    )
+
+
+def native_reader_scope_sql():
+    # The protected catalog seals also bind this definition. Explicit capability
+    # checks prevent a grant or raw-table shortcut from becoming bootstrap authority.
+    reader = "to_regprocedure('public.fn_fixed_panel_native_route_measurement(date,text)')"
+    permissions = [
+        f"has_function_privilege('verdify_{d}_runtime_login',{reader},'EXECUTE') IS NOT DISTINCT FROM {str(allowed).upper()}"
+        for d, allowed in (
+            ("api", True),
+            ("mcp", True),
+            ("grafana", True),
+            ("ingestor", False),
+            ("planner", False),
+            ("setpoint_server", False),
+            ("ha_backfill", False),
+            ("lab_publisher", False),
+            ("vision", False),
+        )
+    ]
+    no_raw_reads = [
+        f"NOT has_table_privilege('verdify_{d}_runtime_login','public.fixed_panel_native_events','SELECT')"
+        for d in ("api", "mcp", "ingestor", *DUTIES)
+    ]
+    properties = (
+        "EXISTS(SELECT 1 FROM pg_proc p WHERE p.oid="
+        + reader
+        + " AND p.prosecdef AND pg_get_userbyid(p.proowner)='verdify' "
+        + "AND 'search_path=pg_catalog, public, pg_temp'=ANY(p.proconfig) "
+        + "AND NOT EXISTS(SELECT 1 FROM aclexplode(COALESCE(p.proacl,acldefault('f',p.proowner))) a "
+        + "WHERE a.grantee=0 AND a.privilege_type='EXECUTE'))"
+    )
+    return "(" + " AND ".join([properties, *permissions, *no_raw_reads]) + ")"
+
+
+def seal_profile_sql(seq, digests):
+    expressions = [
+        f"(SELECT max(seq) FROM public.schema_migrations WHERE source='db/migrations')={seq}",
+        *[
+            f"encode(public.fn_runtime_ordinary_boundary_digest('verdify_{d}_runtime_login'),'hex')='{digests[d]}'"
+            for d in ("api", "ingestor")
+        ],
+        f"encode(public.fn_mcp_runtime_boundary_digest(),'hex')='{digests['mcp']}'",
+        *[
+            "EXISTS(SELECT 1 FROM public.runtime_ordinary_login_attestation_receipts r WHERE r.login_name='verdify_"
+            + d
+            + "_runtime_login' AND r.boundary_sha256=decode('"
+            + digests[d]
+            + "','hex'))"
+            for d in ("api", "ingestor")
+        ],
+        "EXISTS(SELECT 1 FROM public.mcp_runtime_boundary_receipt r WHERE singleton "
+        + "AND r.boundary_sha256=decode('"
+        + digests["mcp"]
+        + "','hex'))",
+    ]
+    return "(" + " AND ".join(expressions) + ")"
+
+
 def sealed_sql():
     expressions = [
-        f"encode(public.fn_runtime_ordinary_boundary_digest('verdify_{d}_runtime_login'),'hex')='{h}'"
-        for d, h in PREDECESSORS.items()
-        if d != "mcp"
-    ]
-    expressions += [
         "(SELECT count(*)=2 FROM public.runtime_ordinary_login_attestation_receipts)",
-        f"encode(public.fn_mcp_runtime_boundary_digest(),'hex')='{PREDECESSORS['mcp']}'",
+        "(SELECT count(*)=1 FROM public.mcp_runtime_boundary_receipt)",
         "NOT EXISTS(SELECT 1 FROM public.runtime_ordinary_login_attestation_receipts r WHERE r.boundary_sha256 IS DISTINCT FROM public.fn_runtime_ordinary_boundary_digest(r.login_name))",
-        "EXISTS(SELECT 1 FROM public.mcp_runtime_boundary_receipt r WHERE r.boundary_sha256=public.fn_mcp_runtime_boundary_digest())",
-        f"EXISTS(SELECT 1 FROM public.schema_migrations WHERE source='db/migrations' AND seq=268 AND filename='db/migrations/268-six-runtime-workload-role-boundaries.sql' AND sha256='{MIGRATION_SHA}' AND stamp_method='runner')",
+        "EXISTS(SELECT 1 FROM public.mcp_runtime_boundary_receipt r WHERE singleton AND r.boundary_sha256=public.fn_mcp_runtime_boundary_digest())",
+        ledger_row_sql(268, "268-six-runtime-workload-role-boundaries.sql", MIGRATION_SHA),
+        ledger_row_sql(270, "270-facility-safe-ops-projection.sql", OPS_MIGRATION_SHA),
     ]
-    expressions.append(
-        f"EXISTS(SELECT 1 FROM public.schema_migrations WHERE source='db/migrations' AND seq=270 AND filename='db/migrations/270-facility-safe-ops-projection.sql' AND sha256='{OPS_MIGRATION_SHA}' AND stamp_method='runner')"
-    )
-    for duty in ("api", "ingestor"):
-        expressions.append(
-            "EXISTS(SELECT 1 FROM public.runtime_ordinary_login_attestation_receipts r WHERE r.login_name='verdify_"
-            + duty
-            + "_runtime_login' AND r.boundary_sha256=decode('"
-            + PREDECESSORS[duty]
-            + "','hex'))"
+    current = seal_profile_sql(270, PREDECESSORS)
+    successor = (
+        "("
+        + " AND ".join(
+            [
+                seal_profile_sql(273, SUCCESSOR_273),
+                *(ledger_row_sql(*migration) for migration in SUCCESSOR_MIGRATIONS),
+                native_reader_scope_sql(),
+            ]
         )
+        + ")"
+    )
+    expressions.append("(" + current + " OR " + successor + ")")
     return " AND ".join(expressions)
 
 
