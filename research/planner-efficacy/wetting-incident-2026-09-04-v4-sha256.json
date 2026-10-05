@@ -1,0 +1,19 @@
+{
+  "research/planner-efficacy/incident-778-inputs-20260927/climate.csv": "bd60075c2393632ffe1b20a999506c16ae5d25870f4d1f5d97dc7be62151a647",
+  "research/planner-efficacy/incident-778-inputs-20260927/controller_actions.csv": "901fd6dd07704bb1296bd0b2920d1b336f87e91866fe7051913520ef748c3c9a",
+  "research/planner-efficacy/incident-778-inputs-20260927/diagnostics.csv": "dff236019ce704d115ce8245704086522246604507bd87fb2496ce6acdba65a1",
+  "research/planner-efficacy/incident-778-inputs-20260927/equipment_receipts.csv": "597007d7f86564d4d048c3ef8dbbd2ae809f67df45ce2cb099c3be2c97a10fb4",
+  "research/planner-efficacy/incident-778-inputs-20260927/equipment_state.csv": "52f9657e42252daed97df1f98d92570eb899239e026300ac19cd5542bf0ac568",
+  "research/planner-efficacy/incident-778-inputs-20260927/forecast_asof.csv": "d7fc3c831b40f5377948f6f4a480f3a596861862a375b44b94a1bea175f0b5dd",
+  "research/planner-efficacy/incident-778-inputs-20260927/manifest.json": "8ccd79d1cbb394e906962530272c496aa7b14792499737983bb6ce32f0c431df",
+  "research/planner-efficacy/incident-778-inputs-20260927/override_events.csv": "5065cf4e5350bf04b6048c4c5ee3a8b675235dc49c1480873518ab9d0210d944",
+  "research/planner-efficacy/incident-778-inputs-20260927/plan_delivery.csv": "9e1a62117fe248331cd58281bfce8e3366689410a557bacb4950c9bd7c92ba9d",
+  "research/planner-efficacy/incident-778-inputs-20260927/queries.json": "c10b7dfaebd44431ccea952c1a8e18266ac08c2d4051db2230290ad807ffd832",
+  "research/planner-efficacy/incident-778-inputs-20260927/setpoint_changes.csv": "e64b562a579e02ece78d654459c08f1a35d2d404a0241e4a8902d41c3bc81bd5",
+  "research/planner-efficacy/incident-778-inputs-20260927/setpoint_snapshots.csv": "7078911e4f9ce3a65a3117d33f55c836095bec1d03764ca0346c5c37d2d913c9",
+  "research/planner-efficacy/incident-778-inputs-20260927/system_state.csv": "cd4536f842cbe15901b14d3059eadab5db0e8645251cfe77dcbea30a8b54cbe9",
+  "research/planner-efficacy/incident-778-inputs-20260927/water_meter_events.csv": "e0edebe600230ceb7323b926c4853aaba068cd6eaf1b0a9af3165f7ae4911df6",
+  "research/planner-efficacy/results-wetting-incident-2026-09-04-v4.json": "5de90573243925eceb7c341d656d73ddc70a9c2449dd00c7f732264cad15ba8d",
+  "research/planner-efficacy/wetting-incident-2026-09-04-disposition-v4.md": "496d4fa3a2f4bade1a60066617dc049430bcb58934917b220bbec29ff59873f4",
+  "research/planner-efficacy/wetting_incident_join.py": "41001140c5ce0e0c4d521e50bb15b922847cfaacd4fc4d928e29fb08b4df6ca5"
+}

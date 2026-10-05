@@ -1,0 +1,3 @@
+delivered_at,event_type,event_label,resulting_plan_id,plan_written_at,acked_at,status,terminal_action,terminal_at,failure_class
+2026-09-04 21:01:24.743913+00,TRANSITION,Peak Stress,iris-oneshot-20260904-1502,2026-09-04 21:02:15.916413+00,,action_completed,set_tunable,2026-09-04 21:02:15.916413+00,
+2026-09-05 00:29:09.345155+00,TRANSITION,Decline,,,2026-09-05 00:29:34.253169+00,acked,acknowledge_trigger,2026-09-05 00:29:34.253169+00,
