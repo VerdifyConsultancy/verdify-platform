@@ -13,7 +13,9 @@ spec:
   suspend: false
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
-  failedJobsHistoryLimit: 3
+  # Keep bounded incident evidence across repeated provider failures. Individual
+  # historical failed Jobs may have their TTL removed until explicit disposition.
+  failedJobsHistoryLimit: 10
   jobTemplate:
     spec:
       backoffLimit: 1
