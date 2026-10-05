@@ -239,6 +239,9 @@ spec:
         - name: slack-token
           secret:
             secretName: verdify-slack
+            # Missing sender custody must not stop the sole device writer.
+            # Delivery logs fail explicitly until the existing token is restored.
+            optional: true
             items:
               - key: iris_slack_bot_token.txt
                 path: iris_slack_bot_token.txt
