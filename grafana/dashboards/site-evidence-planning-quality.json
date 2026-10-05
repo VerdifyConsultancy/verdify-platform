@@ -397,6 +397,135 @@
       "transparent": true
     },
     {
+      "id": 21,
+      "type": "table",
+      "title": "Native route eligibility and distance \u2014 physical crop outcome UNQUALIFIED",
+      "description": "Native host-received callback diagnostics for the Denver day at the selected time-range end. Fresh source routes and frozen prospective database crop reference only; physical hardware identity, actual crop placement and Modbus poll time are unverified. Physical crop outcome and experiment eligibility remain unqualified. Future, undeclared and missing bins are unavailable; nulls are never zero-success evidence. Distance uses \u00b0F for temperature and kPa for VPD. Controller credit remains separate.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "verdify-tsdb"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "verdify-tsdb"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH evidence AS MATERIALIZED (\n SELECT public.fn_fixed_panel_native_route_measurement(\n  ($__timeTo()::timestamptz AT TIME ZONE 'America/Denver')::date,'vallery') AS e\n), axes AS (\n SELECT e,axis,unit,e->'diagnostic'->axis AS a\n FROM evidence CROSS JOIN (VALUES ('temp','\u00b0F'),('vpd','kPa'),('joint','shared axes')) x(axis,unit)\n)\nSELECT initcap(axis) AS \"Source axis\",unit AS \"Distance unit\",\n (a->>'eligible_bins')::integer AS \"Eligible bins\",\n (e->'diagnostic'->>'expected_bins')::integer AS \"Expected bins\",\n (a->>'in_band_bins')::integer AS \"In-band bins\",\n (a->>'in_band_pct')::numeric AS \"In band %\",\n (a->>'high_miss_bins')::integer AS \"High misses\",\n (a->>'low_miss_bins')::integer AS \"Low misses\",\n (a->>'mean_outside_distance')::numeric AS \"Mean outside distance\",\n (a->>'mean_high_distance')::numeric AS \"Mean high distance\",\n (a->>'mean_low_distance')::numeric AS \"Mean low distance\",\n a->>'worst_measured_zone' AS \"Worst measured route\",\n CASE WHEN e->>'unavailable_reason' IS NOT NULL THEN e->>'unavailable_reason'\n      WHEN axis='joint' THEN 'Shared six-field eligibility; inspect temperature/VPD missingness'\n      ELSE (e->'diagnostic'->(axis||'_unavailable_reasons'))::text END AS \"Unavailable bins / reason\",\n 'unqualified'::text AS \"Physical crop outcome\"\nFROM axes ORDER BY CASE axis WHEN 'temp' THEN 1 WHEN 'vpd' THEN 2 ELSE 3 END",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "noValue": "Unavailable",
+          "decimals": 3
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "In band %"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false
+        }
+      },
+      "transparent": true
+    },
+    {
+      "id": 22,
+      "type": "table",
+      "title": "Native route definition and prospective lineage \u2014 selected end day",
+      "description": "Native host-received callback diagnostics for the Denver day at the selected time-range end. Fresh source routes and frozen prospective database crop reference only; physical hardware identity, actual crop placement and Modbus poll time are unverified. Physical crop outcome and experiment eligibility remain unqualified. Future, undeclared and missing bins are unavailable; nulls are never zero-success evidence. Distance uses \u00b0F for temperature and kPa for VPD. Controller credit remains separate.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "verdify-tsdb"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 24,
+        "h": 6
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "verdify-tsdb"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH evidence AS MATERIALIZED (\n SELECT public.fn_fixed_panel_native_route_measurement(\n  ($__timeTo()::timestamptz AT TIME ZONE 'America/Denver')::date,'vallery') AS e\n)\nSELECT field AS \"Definition / lineage\",value AS \"Value\" FROM evidence\nCROSS JOIN LATERAL jsonb_each_text(jsonb_build_object(\n 'Selected Denver day',e->>'day','Availability',e->>'availability',\n 'Unavailable reason',e->>'unavailable_reason','Reader definition',e->'diagnostic'->>'definition',\n 'Source measurement scope',e->'diagnostic'->>'measurement_scope',\n 'Partial window',e->'diagnostic'->>'partial_window','Completed bins',e->'diagnostic'->>'completed_bin_count',\n 'Target version',e->'diagnostic'->>'target_version','Target revision',e->>'target_revision_id',\n 'Target effective from',e->'diagnostic'->>'target_effective_from','Target effective to',e->'diagnostic'->>'target_effective_to',\n 'Source binding',e->>'source_binding_id','Contributor revisions',(e->'contributor_revision_ids')::text,\n 'Collector revision',e->>'collector_revision','Reported firmware',e->>'firmware_revision',\n 'Panel source SHA256',e->>'panel_source_sha256','Declared route SHA256',e->>'declared_route_sha256',\n 'Frozen profile state SHA256',e->'diagnostic'->>'source_profile_state_sha256',\n 'Frozen assignment state SHA256',e->'diagnostic'->>'source_assignment_state_sha256',\n 'Physical qualification','UNQUALIFIED: no authenticated hardware serial, crop placement or Modbus poll time',\n 'Experiment endpoint / causal proof','false')) AS lineage(field,value)\nORDER BY field",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "noValue": "Unavailable",
+          "decimals": 3
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false
+        }
+      },
+      "transparent": true
+    },
+    {
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "verdify-tsdb"
@@ -505,7 +634,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 4
+        "y": 18
       },
       "id": 10,
       "options": {
@@ -699,7 +828,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 12
+        "y": 26
       },
       "id": 20,
       "options": {
@@ -742,7 +871,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 13,
+        "y": 34,
         "w": 12,
         "h": 8
       },
@@ -1562,7 +1691,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 13,
+        "y": 34,
         "w": 12,
         "h": 8
       },
@@ -2468,7 +2597,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 22,
+        "y": 43,
         "w": 12,
         "h": 8
       },
@@ -2599,7 +2728,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 22,
+        "y": 43,
         "w": 12,
         "h": 8
       },
@@ -2721,7 +2850,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 31,
+        "y": 52,
         "w": 12,
         "h": 8
       },
@@ -2874,7 +3003,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 31,
+        "y": 52,
         "w": 12,
         "h": 8
       },
@@ -3027,7 +3156,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 40,
+        "y": 61,
         "w": 8,
         "h": 8
       },
@@ -3116,7 +3245,7 @@
       },
       "gridPos": {
         "x": 8,
-        "y": 40,
+        "y": 61,
         "w": 16,
         "h": 8
       },
@@ -3229,7 +3358,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 49,
+        "y": 70,
         "w": 24,
         "h": 8
       },
@@ -3351,7 +3480,7 @@
   "timezone": "browser",
   "title": "Site: Evidence \u2014 Planning Quality",
   "uid": "site-evidence-planning-quality",
-  "version": 3,
+  "version": 4,
   "weekStart": "",
   "style": "light"
 }

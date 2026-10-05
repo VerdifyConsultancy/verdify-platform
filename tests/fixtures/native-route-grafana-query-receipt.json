@@ -1,0 +1,372 @@
+{
+  "schema": "verdify-native-route-grafana-rollback-receipt-v1",
+  "capture_scope": "effective ordinary Grafana login in final unapplied migration rollback rehearsal; not deployed adoption",
+  "effective_role": "verdify_grafana_runtime_login",
+  "statement_timeout_ms": 3000,
+  "migration_sha256": "a0e4fe7bea3d27ea0d4218c5d423707e19b821e2684d5884c1280b03f78df76a",
+  "query_sha256": {
+    "21": "b704275a2b9fb6849c07bc6d57b87b196cd2ee9f3efd4acb777f7da2c64a96c3",
+    "22": "1ae32115782fe0f62bbd9ccc38364170d56807ac11d5bdf56d3de00ee6bbd059"
+  },
+  "samples": [
+    {
+      "day": "2026-09-29",
+      "rows": [
+        {
+          "In band %": 65.27777777777777,
+          "Low misses": 0,
+          "High misses": 25,
+          "Source axis": "Temp",
+          "In-band bins": 47,
+          "Distance unit": "\u00b0F",
+          "Eligible bins": 72,
+          "Expected bins": 72,
+          "Mean low distance": 0,
+          "Mean high distance": 0.574444700170445,
+          "Worst measured route": "north",
+          "Mean outside distance": 0.574444700170445,
+          "Physical crop outcome": "unqualified",
+          "Unavailable bins / reason": "{}"
+        },
+        {
+          "In band %": 100.0,
+          "Low misses": 0,
+          "High misses": 0,
+          "Source axis": "Vpd",
+          "In-band bins": 72,
+          "Distance unit": "kPa",
+          "Eligible bins": 72,
+          "Expected bins": 72,
+          "Mean low distance": 0,
+          "Mean high distance": 0,
+          "Worst measured route": "north",
+          "Mean outside distance": 0,
+          "Physical crop outcome": "unqualified",
+          "Unavailable bins / reason": "{}"
+        },
+        {
+          "In band %": 65.27777777777777,
+          "Low misses": null,
+          "High misses": null,
+          "Source axis": "Joint",
+          "In-band bins": 47,
+          "Distance unit": "shared axes",
+          "Eligible bins": 72,
+          "Expected bins": 72,
+          "Mean low distance": null,
+          "Mean high distance": null,
+          "Worst measured route": null,
+          "Mean outside distance": null,
+          "Physical crop outcome": "unqualified",
+          "Unavailable bins / reason": "Shared six-field eligibility; inspect temperature/VPD missingness"
+        }
+      ],
+      "panel": 21
+    },
+    {
+      "day": "2026-09-29",
+      "rows": [
+        {
+          "Value": "route_measurement",
+          "Definition / lineage": "Availability"
+        },
+        {
+          "Value": "20b5a0b36e8c53e3e88266a2d10c5248e22e405d",
+          "Definition / lineage": "Collector revision"
+        },
+        {
+          "Value": "72",
+          "Definition / lineage": "Completed bins"
+        },
+        {
+          "Value": "[5, 4, 6]",
+          "Definition / lineage": "Contributor revisions"
+        },
+        {
+          "Value": "36d3f8ee0be85895683f319aeafad2a4262e1b4cf26741b45cac2d1adbe3729d",
+          "Definition / lineage": "Declared route SHA256"
+        },
+        {
+          "Value": "false",
+          "Definition / lineage": "Experiment endpoint / causal proof"
+        },
+        {
+          "Value": "03cfc72f84045cdf72fe9bb96cef8e3250138086453cf9ba4415c976c7487793",
+          "Definition / lineage": "Frozen assignment state SHA256"
+        },
+        {
+          "Value": "3609ee4208b6ba434bbc27ecfd1b75a948b2f70f396c44f5b2bad1310e24df0b",
+          "Definition / lineage": "Frozen profile state SHA256"
+        },
+        {
+          "Value": "013b019e6bbec801d1bb62e52e946bfb50612401010e62283d97d88067416048",
+          "Definition / lineage": "Panel source SHA256"
+        },
+        {
+          "Value": "false",
+          "Definition / lineage": "Partial window"
+        },
+        {
+          "Value": "UNQUALIFIED: no authenticated hardware serial, crop placement or Modbus poll time",
+          "Definition / lineage": "Physical qualification"
+        },
+        {
+          "Value": "fixed-panel-native-route-measurement-v1",
+          "Definition / lineage": "Reader definition"
+        },
+        {
+          "Value": "2026.7.10.1500.09ee886",
+          "Definition / lineage": "Reported firmware"
+        },
+        {
+          "Value": "2026-09-29",
+          "Definition / lineage": "Selected Denver day"
+        },
+        {
+          "Value": "1",
+          "Definition / lineage": "Source binding"
+        },
+        {
+          "Value": "source_routes_without_physical_hardware_or_crop_placement_authentication",
+          "Definition / lineage": "Source measurement scope"
+        },
+        {
+          "Value": "2026-09-29T12:00:00+00:00",
+          "Definition / lineage": "Target effective from"
+        },
+        {
+          "Value": "2026-09-30T06:00:00+00:00",
+          "Definition / lineage": "Target effective to"
+        },
+        {
+          "Value": "2",
+          "Definition / lineage": "Target revision"
+        },
+        {
+          "Value": "native-route-2026-09-29",
+          "Definition / lineage": "Target version"
+        },
+        {
+          "Value": null,
+          "Definition / lineage": "Unavailable reason"
+        }
+      ],
+      "panel": 22
+    },
+    {
+      "day": "2026-10-05",
+      "rows": [
+        {
+          "In band %": null,
+          "Low misses": null,
+          "High misses": null,
+          "Source axis": "Temp",
+          "In-band bins": null,
+          "Distance unit": "\u00b0F",
+          "Eligible bins": null,
+          "Expected bins": null,
+          "Mean low distance": null,
+          "Mean high distance": null,
+          "Worst measured route": null,
+          "Mean outside distance": null,
+          "Physical crop outcome": "unqualified",
+          "Unavailable bins / reason": "missing_or_ambiguous_prospective_target"
+        },
+        {
+          "In band %": null,
+          "Low misses": null,
+          "High misses": null,
+          "Source axis": "Vpd",
+          "In-band bins": null,
+          "Distance unit": "kPa",
+          "Eligible bins": null,
+          "Expected bins": null,
+          "Mean low distance": null,
+          "Mean high distance": null,
+          "Worst measured route": null,
+          "Mean outside distance": null,
+          "Physical crop outcome": "unqualified",
+          "Unavailable bins / reason": "missing_or_ambiguous_prospective_target"
+        },
+        {
+          "In band %": null,
+          "Low misses": null,
+          "High misses": null,
+          "Source axis": "Joint",
+          "In-band bins": null,
+          "Distance unit": "shared axes",
+          "Eligible bins": null,
+          "Expected bins": null,
+          "Mean low distance": null,
+          "Mean high distance": null,
+          "Worst measured route": null,
+          "Mean outside distance": null,
+          "Physical crop outcome": "unqualified",
+          "Unavailable bins / reason": "missing_or_ambiguous_prospective_target"
+        }
+      ],
+      "panel": 21
+    },
+    {
+      "day": "2026-10-05",
+      "rows": [
+        {
+          "Value": "unavailable",
+          "Definition / lineage": "Availability"
+        },
+        {
+          "Value": null,
+          "Definition / lineage": "Collector revision"
+        },
+        {
+          "Value": null,
+          "Definition / lineage": "Completed bins"
+        },
+        {
+          "Value": null,
+          "Definition / lineage": "Contributor revisions"
+        },
+        {
+          "Value": null,
+          "Definition / lineage": "Declared route SHA256"
+        },
+        {
+          "Value": "false",
+          "Definition / lineage": "Experiment endpoint / causal proof"
+        },
+        {
+          "Value": null,
+          "Definition / lineage": "Frozen assignment state SHA256"
+        },
+        {
+          "Value": null,
+          "Definition / lineage": "Frozen profile state SHA256"
+        },
+        {
+          "Value": null,
+          "Definition / lineage": "Panel source SHA256"
+        },
+        {
+          "Value": null,
+          "Definition / lineage": "Partial window"
+        },
+        {
+          "Value": "UNQUALIFIED: no authenticated hardware serial, crop placement or Modbus poll time",
+          "Definition / lineage": "Physical qualification"
+        },
+        {
+          "Value": null,
+          "Definition / lineage": "Reader definition"
+        },
+        {
+          "Value": null,
+          "Definition / lineage": "Reported firmware"
+        },
+        {
+          "Value": "2026-10-05",
+          "Definition / lineage": "Selected Denver day"
+        },
+        {
+          "Value": null,
+          "Definition / lineage": "Source binding"
+        },
+        {
+          "Value": null,
+          "Definition / lineage": "Source measurement scope"
+        },
+        {
+          "Value": null,
+          "Definition / lineage": "Target effective from"
+        },
+        {
+          "Value": null,
+          "Definition / lineage": "Target effective to"
+        },
+        {
+          "Value": null,
+          "Definition / lineage": "Target revision"
+        },
+        {
+          "Value": null,
+          "Definition / lineage": "Target version"
+        },
+        {
+          "Value": "missing_or_ambiguous_prospective_target",
+          "Definition / lineage": "Unavailable reason"
+        }
+      ],
+      "panel": 22
+    }
+  ],
+  "rollback_readback": {
+    "ledger": 270,
+    "new_function": null
+  },
+  "missing_humidity_fixture": {
+    "sample_scope": "synthetic projection fixture, not production measurements",
+    "rows": [
+      {
+        "In band %": 65.27777777777777,
+        "Low misses": 0,
+        "High misses": 25,
+        "Source axis": "Temp",
+        "In-band bins": 47,
+        "Distance unit": "\u00b0F",
+        "Eligible bins": 72,
+        "Expected bins": 72,
+        "Mean low distance": 0,
+        "Mean high distance": 0.574444700170445,
+        "Worst measured route": "north",
+        "Mean outside distance": 0.574444700170445,
+        "Physical crop outcome": "unqualified",
+        "Unavailable bins / reason": "{}"
+      },
+      {
+        "In band %": null,
+        "Low misses": 0,
+        "High misses": 0,
+        "Source axis": "Vpd",
+        "In-band bins": 0,
+        "Distance unit": "kPa",
+        "Eligible bins": 0,
+        "Expected bins": 72,
+        "Mean low distance": null,
+        "Mean high distance": null,
+        "Worst measured route": null,
+        "Mean outside distance": null,
+        "Physical crop outcome": "unqualified",
+        "Unavailable bins / reason": "{\"fewer_than_12_fresh_six_field_minutes\": 72}"
+      },
+      {
+        "In band %": null,
+        "Low misses": null,
+        "High misses": null,
+        "Source axis": "Joint",
+        "In-band bins": 0,
+        "Distance unit": "shared axes",
+        "Eligible bins": 0,
+        "Expected bins": 72,
+        "Mean low distance": null,
+        "Mean high distance": null,
+        "Worst measured route": null,
+        "Mean outside distance": null,
+        "Physical crop outcome": "unqualified",
+        "Unavailable bins / reason": "Shared six-field eligibility; inspect temperature/VPD missingness"
+      }
+    ]
+  },
+  "permissions": {
+    "raw_native_table_granted": false,
+    "native_reader_capabilities": {
+      "verdify_api_runtime_login": true,
+      "verdify_mcp_runtime_login": true,
+      "verdify_vision_runtime_login": false,
+      "verdify_grafana_runtime_login": true,
+      "verdify_planner_runtime_login": false,
+      "verdify_ingestor_runtime_login": false,
+      "verdify_ha_backfill_runtime_login": false,
+      "verdify_lab_publisher_runtime_login": false,
+      "verdify_setpoint_server_runtime_login": false
+    }
+  }
+}
