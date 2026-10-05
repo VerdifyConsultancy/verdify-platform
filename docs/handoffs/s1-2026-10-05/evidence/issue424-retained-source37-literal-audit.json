@@ -1,0 +1,487 @@
+{
+  "schema": "verdify-issue424-literal-acceptance-audit-v1",
+  "source_revision": "37a9cc0b7a2ef07585d0790f4bb4dcfbbe75bb6f",
+  "firmware_revision": "2026.10.2.0637.620a218a-wifi-bound",
+  "native_capture_request": "5cfe55cf-00ae-461a-9e41-61b25ceef327",
+  "native_original_complete_epochs": 6,
+  "series_mapping": [
+    {
+      "series": "temp_low",
+      "canonical_unit": "\u00b0F",
+      "native_publication_slug": "consumed_temp_low_f",
+      "native_entity_metadata": {
+        "assumed_state": null,
+        "device_id": 0,
+        "disabled_by_default": false,
+        "entity_type": "sensor",
+        "key": 1058667604,
+        "maximum": null,
+        "minimum": null,
+        "object_id": "consumed_temp_low_f",
+        "step": null,
+        "unit": "\u00b0F"
+      },
+      "publication_grid": "none: computed binary32 sensor publication, not a writable setter",
+      "legacy_scalar_setter": {
+        "slug": "set_temp_low__f",
+        "raw_cfg_slug": "cfg___temp_low___f_",
+        "minimum": 30.0,
+        "maximum": 80.0,
+        "step": 0.5,
+        "native_declared_unit": "",
+        "canonical_unit_source": "firmware Setpoints/route contract"
+      },
+      "served": {
+        "as_of": "2026-10-05T22:50:00+00:00",
+        "source": "fn_band_setpoints(device_sample_control_minute)",
+        "unit": "\u00b0F",
+        "value": 74.46928846162719
+      },
+      "controller_published_consumed": {
+        "as_of": "2026-10-05T22:50:53+00:00",
+        "source": "firmware consumed Setpoints.temp_low",
+        "unit": "\u00b0F",
+        "value": 74.48665618896484
+      },
+      "original_raw_callback": {
+        "as_of": "2026-10-05T22:50:53.999777+00:00",
+        "slug": "consumed_temp_low_f",
+        "source": "original fenced native callback",
+        "unit": "\u00b0F",
+        "value": 74.48665618896484
+      },
+      "source_runtime": {
+        "connection_generation": 1,
+        "runtime_instance_id": "690a6e5d-9825-407f-aad6-4c0b69260a89"
+      },
+      "source_revisions": {
+        "config_revision": "c1-control-context-v1:sha256:befe92cadd7ffa93fef5de32ecf1a7f38b58bee191020035fd3cf73b45f31021",
+        "crop_band_resolver_revision": "sha256:58a0e95e646a5de45c022438546608e1677adad000800c6784e0f6316241b281",
+        "firmware_revision": "2026.10.2.0637.620a218a-wifi-bound",
+        "registry_revision": "sha256:0080c858d440760b4d850f43c6dfd58a91251299b2796af2ea8ff62435d7c9cf",
+        "sensor_registry_revision": "sha256:7ebd44923a8d5d0855a862aa6590560f3653d6aa73be52c464aeb0210564ce95",
+        "source_revision": "37a9cc0b7a2ef07585d0790f4bb4dcfbbe75bb6f"
+      },
+      "consumed_vs_raw_relationship": "controller emits consumed Setpoints field; collector names that same callback as control and observed, not two independent physical measurements",
+      "legacy_branch_relationship": "legacy cfg edges are not consumed edges under observed onchip_curve",
+      "desired_write_confirmation": "not inferred from setpoint_plan, setpoint_changes desired history, or cfg database cache"
+    },
+    {
+      "series": "temp_high",
+      "canonical_unit": "\u00b0F",
+      "native_publication_slug": "consumed_temp_high_f",
+      "native_entity_metadata": {
+        "assumed_state": null,
+        "device_id": 0,
+        "disabled_by_default": false,
+        "entity_type": "sensor",
+        "key": 2758154328,
+        "maximum": null,
+        "minimum": null,
+        "object_id": "consumed_temp_high_f",
+        "step": null,
+        "unit": "\u00b0F"
+      },
+      "publication_grid": "none: computed binary32 sensor publication, not a writable setter",
+      "legacy_scalar_setter": {
+        "slug": "set_temp_high__f",
+        "raw_cfg_slug": "cfg___temp_high___f_",
+        "minimum": 40.0,
+        "maximum": 100.0,
+        "step": 0.5,
+        "native_declared_unit": "",
+        "canonical_unit_source": "firmware Setpoints/route contract"
+      },
+      "served": {
+        "as_of": "2026-10-05T22:50:00+00:00",
+        "source": "fn_band_setpoints(device_sample_control_minute)",
+        "unit": "\u00b0F",
+        "value": 84.46928846162719
+      },
+      "controller_published_consumed": {
+        "as_of": "2026-10-05T22:50:53+00:00",
+        "source": "firmware consumed Setpoints.temp_high",
+        "unit": "\u00b0F",
+        "value": 84.48665618896484
+      },
+      "original_raw_callback": {
+        "as_of": "2026-10-05T22:50:53.999967+00:00",
+        "slug": "consumed_temp_high_f",
+        "source": "original fenced native callback",
+        "unit": "\u00b0F",
+        "value": 84.48665618896484
+      },
+      "source_runtime": {
+        "connection_generation": 1,
+        "runtime_instance_id": "690a6e5d-9825-407f-aad6-4c0b69260a89"
+      },
+      "source_revisions": {
+        "config_revision": "c1-control-context-v1:sha256:befe92cadd7ffa93fef5de32ecf1a7f38b58bee191020035fd3cf73b45f31021",
+        "crop_band_resolver_revision": "sha256:58a0e95e646a5de45c022438546608e1677adad000800c6784e0f6316241b281",
+        "firmware_revision": "2026.10.2.0637.620a218a-wifi-bound",
+        "registry_revision": "sha256:0080c858d440760b4d850f43c6dfd58a91251299b2796af2ea8ff62435d7c9cf",
+        "sensor_registry_revision": "sha256:7ebd44923a8d5d0855a862aa6590560f3653d6aa73be52c464aeb0210564ce95",
+        "source_revision": "37a9cc0b7a2ef07585d0790f4bb4dcfbbe75bb6f"
+      },
+      "consumed_vs_raw_relationship": "controller emits consumed Setpoints field; collector names that same callback as control and observed, not two independent physical measurements",
+      "legacy_branch_relationship": "legacy cfg edges are not consumed edges under observed onchip_curve",
+      "desired_write_confirmation": "not inferred from setpoint_plan, setpoint_changes desired history, or cfg database cache"
+    },
+    {
+      "series": "temp_target",
+      "canonical_unit": "\u00b0F",
+      "native_publication_slug": "house_temp_target_f",
+      "native_entity_metadata": {
+        "assumed_state": null,
+        "device_id": 0,
+        "disabled_by_default": false,
+        "entity_type": "sensor",
+        "key": 2101361043,
+        "maximum": null,
+        "minimum": null,
+        "object_id": "house_temp_target_f",
+        "step": null,
+        "unit": ""
+      },
+      "publication_grid": "none: computed binary32 sensor publication, not a writable setter",
+      "legacy_scalar_setter": null,
+      "served": {
+        "as_of": "2026-10-05T22:50:00+00:00",
+        "source": "fn_band_setpoints(device_sample_control_minute)",
+        "unit": "\u00b0F",
+        "value": 79.46928846162719
+      },
+      "controller_published_consumed": {
+        "as_of": "2026-10-05T22:50:53+00:00",
+        "source": "firmware consumed Setpoints.temp_target",
+        "unit": "\u00b0F",
+        "value": 79.48665618896484
+      },
+      "original_raw_callback": {
+        "as_of": "2026-10-05T22:50:54.000098+00:00",
+        "slug": "house_temp_target_f",
+        "source": "original fenced native callback",
+        "unit": "\u00b0F",
+        "value": 79.48665618896484
+      },
+      "source_runtime": {
+        "connection_generation": 1,
+        "runtime_instance_id": "690a6e5d-9825-407f-aad6-4c0b69260a89"
+      },
+      "source_revisions": {
+        "config_revision": "c1-control-context-v1:sha256:befe92cadd7ffa93fef5de32ecf1a7f38b58bee191020035fd3cf73b45f31021",
+        "crop_band_resolver_revision": "sha256:58a0e95e646a5de45c022438546608e1677adad000800c6784e0f6316241b281",
+        "firmware_revision": "2026.10.2.0637.620a218a-wifi-bound",
+        "registry_revision": "sha256:0080c858d440760b4d850f43c6dfd58a91251299b2796af2ea8ff62435d7c9cf",
+        "sensor_registry_revision": "sha256:7ebd44923a8d5d0855a862aa6590560f3653d6aa73be52c464aeb0210564ce95",
+        "source_revision": "37a9cc0b7a2ef07585d0790f4bb4dcfbbe75bb6f"
+      },
+      "consumed_vs_raw_relationship": "controller emits consumed Setpoints field; collector names that same callback as control and observed, not two independent physical measurements",
+      "legacy_branch_relationship": "computed target publication",
+      "desired_write_confirmation": "not inferred from setpoint_plan, setpoint_changes desired history, or cfg database cache"
+    },
+    {
+      "series": "vpd_low",
+      "canonical_unit": "kPa",
+      "native_publication_slug": "consumed_vpd_low_kpa",
+      "native_entity_metadata": {
+        "assumed_state": null,
+        "device_id": 0,
+        "disabled_by_default": false,
+        "entity_type": "sensor",
+        "key": 2239793464,
+        "maximum": null,
+        "minimum": null,
+        "object_id": "consumed_vpd_low_kpa",
+        "step": null,
+        "unit": "kPa"
+      },
+      "publication_grid": "none: computed binary32 sensor publication, not a writable setter",
+      "legacy_scalar_setter": {
+        "slug": "set_vpd_low_kpa",
+        "raw_cfg_slug": "cfg___vpd_low__kpa_",
+        "minimum": 0.1,
+        "maximum": 1.0,
+        "step": 0.05,
+        "native_declared_unit": "",
+        "canonical_unit_source": "firmware Setpoints/route contract"
+      },
+      "served": {
+        "as_of": "2026-10-05T22:50:00+00:00",
+        "source": "fn_band_setpoints(device_sample_control_minute)",
+        "unit": "kPa",
+        "value": 0.8684125581965391
+      },
+      "controller_published_consumed": {
+        "as_of": "2026-10-05T22:50:53+00:00",
+        "source": "firmware consumed Setpoints.vpd_low",
+        "unit": "kPa",
+        "value": 0.8631747961044312
+      },
+      "original_raw_callback": {
+        "as_of": "2026-10-05T22:50:54.000018+00:00",
+        "slug": "consumed_vpd_low_kpa",
+        "source": "original fenced native callback",
+        "unit": "kPa",
+        "value": 0.8631747961044312
+      },
+      "source_runtime": {
+        "connection_generation": 1,
+        "runtime_instance_id": "690a6e5d-9825-407f-aad6-4c0b69260a89"
+      },
+      "source_revisions": {
+        "config_revision": "c1-control-context-v1:sha256:befe92cadd7ffa93fef5de32ecf1a7f38b58bee191020035fd3cf73b45f31021",
+        "crop_band_resolver_revision": "sha256:58a0e95e646a5de45c022438546608e1677adad000800c6784e0f6316241b281",
+        "firmware_revision": "2026.10.2.0637.620a218a-wifi-bound",
+        "registry_revision": "sha256:0080c858d440760b4d850f43c6dfd58a91251299b2796af2ea8ff62435d7c9cf",
+        "sensor_registry_revision": "sha256:7ebd44923a8d5d0855a862aa6590560f3653d6aa73be52c464aeb0210564ce95",
+        "source_revision": "37a9cc0b7a2ef07585d0790f4bb4dcfbbe75bb6f"
+      },
+      "consumed_vs_raw_relationship": "controller emits consumed Setpoints field; collector names that same callback as control and observed, not two independent physical measurements",
+      "legacy_branch_relationship": "legacy cfg edges are not consumed edges under observed onchip_curve",
+      "desired_write_confirmation": "not inferred from setpoint_plan, setpoint_changes desired history, or cfg database cache"
+    },
+    {
+      "series": "vpd_high",
+      "canonical_unit": "kPa",
+      "native_publication_slug": "consumed_vpd_high_kpa",
+      "native_entity_metadata": {
+        "assumed_state": null,
+        "device_id": 0,
+        "disabled_by_default": false,
+        "entity_type": "sensor",
+        "key": 3650427476,
+        "maximum": null,
+        "minimum": null,
+        "object_id": "consumed_vpd_high_kpa",
+        "step": null,
+        "unit": "kPa"
+      },
+      "publication_grid": "none: computed binary32 sensor publication, not a writable setter",
+      "legacy_scalar_setter": {
+        "slug": "set_vpd_high_kpa",
+        "raw_cfg_slug": "cfg___vpd_high__kpa_",
+        "minimum": 0.4,
+        "maximum": 3.0,
+        "step": 0.05,
+        "native_declared_unit": "",
+        "canonical_unit_source": "firmware Setpoints/route contract"
+      },
+      "served": {
+        "as_of": "2026-10-05T22:50:00+00:00",
+        "source": "fn_band_setpoints(device_sample_control_minute)",
+        "unit": "kPa",
+        "value": 1.2984125581965391
+      },
+      "controller_published_consumed": {
+        "as_of": "2026-10-05T22:50:53+00:00",
+        "source": "firmware consumed Setpoints.vpd_high",
+        "unit": "kPa",
+        "value": 1.2931747436523438
+      },
+      "original_raw_callback": {
+        "as_of": "2026-10-05T22:50:54.000058+00:00",
+        "slug": "consumed_vpd_high_kpa",
+        "source": "original fenced native callback",
+        "unit": "kPa",
+        "value": 1.2931747436523438
+      },
+      "source_runtime": {
+        "connection_generation": 1,
+        "runtime_instance_id": "690a6e5d-9825-407f-aad6-4c0b69260a89"
+      },
+      "source_revisions": {
+        "config_revision": "c1-control-context-v1:sha256:befe92cadd7ffa93fef5de32ecf1a7f38b58bee191020035fd3cf73b45f31021",
+        "crop_band_resolver_revision": "sha256:58a0e95e646a5de45c022438546608e1677adad000800c6784e0f6316241b281",
+        "firmware_revision": "2026.10.2.0637.620a218a-wifi-bound",
+        "registry_revision": "sha256:0080c858d440760b4d850f43c6dfd58a91251299b2796af2ea8ff62435d7c9cf",
+        "sensor_registry_revision": "sha256:7ebd44923a8d5d0855a862aa6590560f3653d6aa73be52c464aeb0210564ce95",
+        "source_revision": "37a9cc0b7a2ef07585d0790f4bb4dcfbbe75bb6f"
+      },
+      "consumed_vs_raw_relationship": "controller emits consumed Setpoints field; collector names that same callback as control and observed, not two independent physical measurements",
+      "legacy_branch_relationship": "legacy cfg edges are not consumed edges under observed onchip_curve",
+      "desired_write_confirmation": "not inferred from setpoint_plan, setpoint_changes desired history, or cfg database cache"
+    },
+    {
+      "series": "vpd_target",
+      "canonical_unit": "kPa",
+      "native_publication_slug": "house_vpd_target_kpa",
+      "native_entity_metadata": {
+        "assumed_state": null,
+        "device_id": 0,
+        "disabled_by_default": false,
+        "entity_type": "sensor",
+        "key": 1059006359,
+        "maximum": null,
+        "minimum": null,
+        "object_id": "house_vpd_target_kpa",
+        "step": null,
+        "unit": ""
+      },
+      "publication_grid": "none: computed binary32 sensor publication, not a writable setter",
+      "legacy_scalar_setter": null,
+      "served": {
+        "as_of": "2026-10-05T22:50:00+00:00",
+        "source": "fn_band_setpoints(device_sample_control_minute)",
+        "unit": "kPa",
+        "value": 1.059336242507408
+      },
+      "controller_published_consumed": {
+        "as_of": "2026-10-05T22:50:53+00:00",
+        "source": "firmware consumed Setpoints.vpd_target",
+        "unit": "kPa",
+        "value": 1.0543580055236816
+      },
+      "original_raw_callback": {
+        "as_of": "2026-10-05T22:50:54.000228+00:00",
+        "slug": "house_vpd_target_kpa",
+        "source": "original fenced native callback",
+        "unit": "kPa",
+        "value": 1.0543580055236816
+      },
+      "source_runtime": {
+        "connection_generation": 1,
+        "runtime_instance_id": "690a6e5d-9825-407f-aad6-4c0b69260a89"
+      },
+      "source_revisions": {
+        "config_revision": "c1-control-context-v1:sha256:befe92cadd7ffa93fef5de32ecf1a7f38b58bee191020035fd3cf73b45f31021",
+        "crop_band_resolver_revision": "sha256:58a0e95e646a5de45c022438546608e1677adad000800c6784e0f6316241b281",
+        "firmware_revision": "2026.10.2.0637.620a218a-wifi-bound",
+        "registry_revision": "sha256:0080c858d440760b4d850f43c6dfd58a91251299b2796af2ea8ff62435d7c9cf",
+        "sensor_registry_revision": "sha256:7ebd44923a8d5d0855a862aa6590560f3653d6aa73be52c464aeb0210564ce95",
+        "source_revision": "37a9cc0b7a2ef07585d0790f4bb4dcfbbe75bb6f"
+      },
+      "consumed_vs_raw_relationship": "controller emits consumed Setpoints field; collector names that same callback as control and observed, not two independent physical measurements",
+      "legacy_branch_relationship": "computed target publication",
+      "desired_write_confirmation": "not inferred from setpoint_plan, setpoint_changes desired history, or cfg database cache"
+    }
+  ],
+  "criterion_1": {
+    "status": "documented_and_observed_for_retained37_epochs",
+    "evidence": "all6 low/high/target source/unit/publication-vs-setter grid/individual timestamps/source generation identified",
+    "target_native_unit_metadata": "empty; canonical units derive from reviewed firmware/route contract, not an arbitrary native unit relabel",
+    "publication_comparison_is_not_independent_wire_proof": true
+  },
+  "criterion_2": {
+    "historical_0_percent_cfg_vs_fw_report": "resolved as reporting/lineage defect; desired/dispatched history and legacy scalar cache do not measure onchip consumption",
+    "september4_real_vpd_discrepancy": "unobservable: historical original generation-bound consumed edges/independent served-wire capture unavailable; not retroactively resolved",
+    "current_ideal_sql_residual": "present in retained37 epochs, comparator has different ideal SQL vs device wire semantics",
+    "current_same_semantic_independent_wire_contradiction": "unobservable without current qualified independent wire contract; not inferred from idealSQL residual or callback alias equality"
+  },
+  "criterion_3": {
+    "status": "fail_closed_verified",
+    "gate_749": "unqualified; no physical execution revision emitted",
+    "offline_result_sha256": "3860ced2e1f794cc993b36802c9f77f2718d6c6efbf77ac83770a42ce60b2efd",
+    "qualified": false,
+    "readiness_distinguishes_reporting_numeric_diagnostic_from_physical_consumption": true,
+    "legacy_cfg_onchip_equal_values_do_not_qualify": true,
+    "real_same_semantic_drift_fixture_blocks": true,
+    "no_ota_toggle_diagnostic_write_or_second_client": true
+  },
+  "public_live_reader": {
+    "generated_at": "2026-10-05T23:45:40.142911Z",
+    "lineage_contract_version": 2,
+    "trace_quality_flag": "unobservable_consumed_band",
+    "lineage": {
+      "edges": {
+        "temp_low": {
+          "unit": "\u00b0F",
+          "raw_slug": "cfg___temp_low___f_",
+          "desired_value": 74.0,
+          "desired_recorded_at": "2026-07-10T19:21:25.417870Z",
+          "desired_conflict": false,
+          "cfg_snapshot_value": 40.0,
+          "cfg_snapshot_captured_at": "2026-10-05T23:44:59.230327Z",
+          "cfg_snapshot_conflict": false,
+          "numeric_comparison": "different_numeric"
+        },
+        "temp_high": {
+          "unit": "\u00b0F",
+          "raw_slug": "cfg___temp_high___f_",
+          "desired_value": 84.0,
+          "desired_recorded_at": "2026-07-10T19:21:25.426985Z",
+          "desired_conflict": false,
+          "cfg_snapshot_value": 95.0,
+          "cfg_snapshot_captured_at": "2026-10-05T23:44:59.230327Z",
+          "cfg_snapshot_conflict": false,
+          "numeric_comparison": "different_numeric"
+        },
+        "vpd_low": {
+          "unit": "kPa",
+          "raw_slug": "cfg___vpd_low__kpa_",
+          "desired_value": 0.67,
+          "desired_recorded_at": "2026-07-10T19:21:25.438853Z",
+          "desired_conflict": false,
+          "cfg_snapshot_value": 0.3499999940395355,
+          "cfg_snapshot_captured_at": "2026-10-05T23:44:59.230327Z",
+          "cfg_snapshot_conflict": false,
+          "numeric_comparison": "different_numeric"
+        },
+        "vpd_high": {
+          "unit": "kPa",
+          "raw_slug": "cfg___vpd_high__kpa_",
+          "desired_value": 1.22,
+          "desired_recorded_at": "2026-07-10T19:21:25.446768Z",
+          "desired_conflict": false,
+          "cfg_snapshot_value": 2.799999952316284,
+          "cfg_snapshot_captured_at": "2026-10-05T23:44:59.230327Z",
+          "cfg_snapshot_conflict": false,
+          "numeric_comparison": "different_numeric"
+        }
+      },
+      "band_source_snapshot": "onchip_curve",
+      "diagnostic_captured_at": "2026-10-05T23:44:51.381727Z",
+      "temp_target_snapshot": 78.41118621826172,
+      "vpd_target_snapshot": 1.0411378145217896,
+      "target_snapshot_captured_at": "2026-10-05T23:44:59.230327Z",
+      "raw_observation_freshness_verified": false,
+      "runtime_connection_identity_verified": false,
+      "consumed_band_verified": false,
+      "disposition": "unobservable"
+    },
+    "semantics": {
+      "contract_version": 2,
+      "reconstructed_basis": "current_house_anchor_curve_not_versioned_crop_targets",
+      "desired_basis": "setpoint_changes_not_delivery_confirmation",
+      "cfg_basis": "setpoint_snapshot_not_raw_observation_time",
+      "target_basis": "climate_snapshot_not_raw_observation_time",
+      "raw_temp_target_slug": "house_temp_target_f",
+      "raw_vpd_target_slug": "house_vpd_target_kpa",
+      "fraction_basis": "non_null_sample_comparisons_not_elapsed_time",
+      "snapshot_lookback_seconds": 900,
+      "immutable_crop_definition_verified": false,
+      "fixed_sensor_panel_verified": false,
+      "physical_proof_eligible": false,
+      "legacy_aliases": "crop_*,fw_*,rb_*,readback_match_pct,ok_trace_pct_are_deprecated_and_null"
+    },
+    "legacy_fw_aliases": {
+      "fw_temp_low": null,
+      "fw_temp_high": null,
+      "fw_vpd_low": null,
+      "fw_vpd_high": null,
+      "fw_both_in_band": null,
+      "readback_matches_fw_band": null
+    }
+  },
+  "delivery_evidence": "live271deprecation receipt and publicv2readback retained; exact37 writer/module/rolePod receipts retained",
+  "fixture_validation": {
+    "files": [
+      "tests/test_component_grid_capture.py",
+      "tests/test_public_band_lineage.py",
+      "verdify_schemas/tests/test_public_band_lineage.py"
+    ],
+    "result": "passed; one infrastructure skip",
+    "log": "issue424-focused-validation.log"
+  },
+  "closure_status": "not_closed; refresh final81runtime/passive evidence after source-qualified rollout and preserve explicit unresolved/unobservable physical disposition",
+  "evidence_sha256": {
+    "final37-lineage-disposition.json": "9877eb1890bb8a60c83d2fc069574ca1991666585e9205b2f55e24f52e6a5eb4",
+    "final37-live-deprecation.json": "983e584459241cc958a4157ff3cabe5dead6e2c7ffa8855a836ea95c4e266507",
+    "source37-live-public-band-trace.json": "2480ab46e5d655e989cc3cee3cbdcf849bcfde0f0e703de5237243b817446a96",
+    "final37-native-result-first.json": "ac831b9137e77089baab90c4ea2574c3f4dbc11a9b2fc7e255ab559a0a54dd83",
+    "issue424-focused-validation.log": "2b416d862ad1abe7230fd02fa633a04f49fffc587d913f2dc50e4949fe2088f9"
+  },
+  "audited_at": "2026-10-05T23:47:31.785503+00:00",
+  "retained_passive_freshness_limit": "Original callbacks and offline evaluation were fresh at their recorded capture/evaluation; they are now historical and confer no present GateP qualification. Final81 requires new passive capture.",
+  "original_private_artifact_sha256": "ecdfdae5e55029ae801b8e91dd8a65292128cd2b4b66311337f2f6380b89a147"
+}
