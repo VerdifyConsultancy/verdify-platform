@@ -322,6 +322,7 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "270-facility-safe-ops-projection.sql",
         # Compatibility deprecation is a new forward migration, never baseline history.
         "271-legacy-band-trace-deprecation.sql",
+        "272-current-climate-scorecard-snapshot.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(
