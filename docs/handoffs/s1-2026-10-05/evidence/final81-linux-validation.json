@@ -1,0 +1,25 @@
+{
+  "schema": "registered-linux-validation-receipt-v1",
+  "source_git_sha": "81d76a4c3d35a925ebd2438d89099d1f657b3f8f",
+  "workflow": "verdify-platform-ci-fz9s9",
+  "workflow_uid": "6cb3994a-8363-475f-a383-6c512a450922",
+  "stdout_bytes": 27196,
+  "stdout_sha256": "d4edf55c262a6e66a05e95ffdafc851231cd37e2fced9946711acd78e75903f6",
+  "all_gates_green": true,
+  "limitations": [
+    "Validation PodGC preceded terminal Pod status readback; authoritative workflow node is Succeeded and complete streamed stdout is preserved.",
+    "Image builds, promotion and runtime acceptance are separate."
+  ],
+  "validation": {
+    "id": "verdify-platform-ci-fz9s9-3458296531",
+    "phase": "Succeeded",
+    "startedAt": "2026-10-05T23:13:07Z",
+    "finishedAt": "2026-10-05T23:25:19Z",
+    "hostNodeName": "vm-k3s-node5",
+    "outputs": {
+      "exitCode": "0"
+    }
+  },
+  "pod_uid": "64effd44-8983-4fcb-be9e-2d5c6dad7555",
+  "original_receipt_sha256": "d3660f0b0722b1a590d245040b1137c5a62e001de20752b87bd81ef2fe1abfda"
+}

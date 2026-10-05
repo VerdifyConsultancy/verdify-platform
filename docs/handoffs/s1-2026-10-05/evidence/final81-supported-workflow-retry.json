@@ -1,0 +1,18 @@
+{
+  "source": "81d76a4c3d35a925ebd2438d89099d1f657b3f8f",
+  "workflow": "verdify-platform-ci-fz9s9",
+  "uid": "6cb3994a-8363-475f-a383-6c512a450922",
+  "retry_started_at": "2026-10-05T23:29:44Z",
+  "same_workflow": true,
+  "same_spec": true,
+  "successful_validation_retained": true,
+  "immediate_phase": null,
+  "confirmed_phase": "Running",
+  "capacity_observed_at": "2026-10-05T23:29:00Z",
+  "integrity_verified_at": "2026-10-05T23:26:58Z",
+  "admission_bypass": false,
+  "new_workflow_submitted": false,
+  "CLI": "official argo v4.0.5 retry",
+  "original_failure_preserved": "workflow-before.json",
+  "receipt_note": "Immediate CLI readback temporarily omitted aggregate phase; later authoritative same-UID readback confirmed Running without another retry."
+}

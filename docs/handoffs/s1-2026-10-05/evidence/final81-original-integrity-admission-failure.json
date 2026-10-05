@@ -1,0 +1,28 @@
+{
+  "source_git_sha": "81d76a4c3d35a925ebd2438d89099d1f657b3f8f",
+  "workflow": "verdify-platform-ci-fz9s9",
+  "uid": "6cb3994a-8363-475f-a383-6c512a450922",
+  "original_phase": "Failed",
+  "failed_build_started_at": "2026-10-05T23:25:27Z",
+  "failed_build_finished_at": "2026-10-05T23:25:39Z",
+  "admission_receipt": {
+    "expected": {
+      "capacity_contract_id": "5e8a97b36acee313a9686a621e6db0f8d02e689e4bd2e4141dc1e86b25a0336e",
+      "max_age_seconds": 300,
+      "min_free_bytes": 150323855360,
+      "protected_count": 275,
+      "protected_current_count": 36,
+      "protected_generation": 145,
+      "protected_max_age_seconds": 604800,
+      "protected_rollback_count": 239,
+      "protected_set_hash": "e7210b13243b1a459cfbc2df292d5fcee38137d5eb84ebaa8f30a33ac39b59a1"
+    },
+    "gate": "admission",
+    "observed": {},
+    "outcome": "blocked",
+    "reason": "integrity-invalid",
+    "schema": "agent-fleet.registry-capacity-preflight-receipt/2"
+  },
+  "images_built_before_retry": false,
+  "original_workflow_sha256": "d2d10127ee370c9633f55729f9a538db1817aace38396399bd6a8eebaedebef5"
+}
