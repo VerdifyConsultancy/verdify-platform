@@ -18,6 +18,7 @@ from pydantic import ValidationError
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 from verdify_public.output_policy import redact_non_public_crop_references  # noqa: E402
+from verdify_schemas.fixed_panel_native_route import NativeFixedPanelRouteEvidence
 from verdify_schemas.observed_minutes import ObservedMinuteEvidence  # noqa: E402
 from verdify_schemas.physical_crop_band import (  # noqa: E402
     PhysicalCropBandEvidence,
@@ -223,6 +224,43 @@ def route_only_crop_band_block(payload, expected_day: str | None = None) -> str:
     )
 
 
+def native_route_measurement_block(row: dict | None, score_date: str) -> str:
+    """Render actual native callback diagnostics without physical qualification."""
+    try:
+        evidence = NativeFixedPanelRouteEvidence.model_validate(row or {})
+    except ValidationError:
+        return '<div class="data-row"><strong>Native route measurements</strong><span>Unavailable</span><p>Malformed source-route receipt; no outcome inferred.</p></div>'
+    if evidence.day is None or evidence.day.isoformat() != score_date or evidence.availability != "route_measurement":
+        return '<div class="data-row"><strong>Native route measurements</strong><span>Unavailable</span><p>No scoped native callback diagnostic for this scorecard day. Missing observations are unavailable.</p></div>'
+    d = evidence.diagnostic
+
+    def axis(name, unit, value, reasons):
+        missing = sum(reasons.values())
+        return (
+            f'<div class="data-row"><strong>Native route {name}</strong>'
+            f"<span>{esc(fmt_number(value.in_band_pct, 1, '%'))} · {value.eligible_bins}/{d.expected_bins} eligible bins</span>"
+            f"<p>Mean outside distance {esc(fmt_number(value.mean_outside_distance, 3, unit))}; "
+            f"high/low misses {value.high_miss_bins}/{value.low_miss_bins}; "
+            f"high/low mean distance {esc(fmt_number(value.mean_high_distance, 3, unit))}/{esc(fmt_number(value.mean_low_distance, 3, unit))}; "
+            f"worst measured source route {esc(value.worst_measured_zone or 'unavailable')}; "
+            f"{missing} unavailable bins ({esc(json.dumps(reasons, sort_keys=True))}).</p></div>"
+        )
+
+    return (
+        '<div class="data-row"><strong>Native route measurement scope</strong>'
+        f"<span>{'Partial window' if d.partial_window else 'Completed window'} · observational</span>"
+        "<p>Fresh post-subscription host-received temperature/RH callbacks from the fixed north/east/west source routes, "
+        "not independently authenticated physical sensor serials, Modbus poll times, actual crop placement or a physical crop outcome. "
+        f"Prospective target {esc(d.target_version)}; target revision {evidence.target_revision_id}; source binding {evidence.source_binding_id}. "
+        "Controller credit remains separate. Physical proof and experiment eligibility are false.</p></div>"
+        + axis("temperature", "°F", d.temp, d.temp_unavailable_reasons)
+        + axis("VPD", " kPa", d.vpd, d.vpd_unavailable_reasons)
+        + f'<div class="data-row"><strong>Native route joint</strong><span>{esc(fmt_number(d.joint.in_band_pct, 1, "%"))} '
+        f"· {d.joint.in_band_bins}/{d.joint.eligible_bins} in band; {d.joint.eligible_bins}/{d.expected_bins} eligible</span>"
+        "<p>Shared six-field source minutes; retained expected bins include future, undeclared and insufficient-source bins.</p></div>"
+    )
+
+
 def planning_block(data: dict) -> str:
     pq = data.get("planning_quality") or {}
     score_date = fmt_score_date(data)
@@ -284,6 +322,7 @@ def planning_block(data: dict) -> str:
   {observed_minute_block(pq.get("observed_minute_evidence"), score_date)}
   {physical_crop_band_block(pq.get("physical_crop_band_evidence"), score_date)}
   {route_only_crop_band_block(pq.get("route_only_crop_band_evidence"), score_date)}
+  {native_route_measurement_block(pq.get("native_fixed_panel_route_evidence"), score_date)}
   <div class="data-row"><strong>Measurement basis</strong><span>{"Contract 2" if binary_verified else "Unverified contract; binary metrics withheld"}</span><p>Legacy house-average readings against historical desired setpoints; not duration-weighted, fixed-panel crop compliance or confirmed firmware consumption. Coverage is unverified and no center probe is measured. Stress assumes one minute per scored reading.</p></div>
   <div class="data-row"><strong>Last validated plan</strong><span>{esc(last_validated_plan_id)}</span><p>Validated {esc(validated_at)}{esc(outcome_text)}.</p></div>
   <div class="data-row"><strong>Latest plan status</strong><span>{esc(last_plan_id)} · {esc(last_plan_status)}</span><p>Written {esc(last_plan_created)}; age {esc(last_plan_age)} at snapshot time.</p></div>

@@ -1,0 +1,71 @@
+{
+  "day": "2026-09-29",
+  "served_at": "2026-10-05T20:16:16.553468+00:00",
+  "diagnostic": {
+    "vpd": {
+      "in_band_pct": 100.0,
+      "in_band_bins": 72,
+      "eligible_bins": 72,
+      "low_miss_bins": 0,
+      "high_miss_bins": 0,
+      "mean_low_distance": 0,
+      "mean_high_distance": 0,
+      "worst_measured_zone": "north",
+      "mean_outside_distance": 0
+    },
+    "temp": {
+      "in_band_pct": 65.27777777777777,
+      "in_band_bins": 47,
+      "eligible_bins": 72,
+      "low_miss_bins": 0,
+      "high_miss_bins": 25,
+      "mean_low_distance": 0,
+      "mean_high_distance": 0.574444700170445,
+      "worst_measured_zone": "north",
+      "mean_outside_distance": 0.574444700170445
+    },
+    "joint": {
+      "in_band_pct": 65.27777777777777,
+      "in_band_bins": 47,
+      "eligible_bins": 72
+    },
+    "definition": "fixed-panel-native-route-measurement-v1",
+    "window_end": "2026-09-30T06:00:00+00:00",
+    "sample_basis": "host_receive_time_after_initial_native_subscription_state",
+    "target_basis": "prospective_frozen_panel_mean_crop_reference",
+    "window_start": "2026-09-29T12:00:00+00:00",
+    "expected_bins": 72,
+    "partial_window": false,
+    "target_version": "native-route-2026-09-29",
+    "measurement_scope": "source_routes_without_physical_hardware_or_crop_placement_authentication",
+    "completed_bin_count": 72,
+    "target_effective_to": "2026-09-30T06:00:00+00:00",
+    "target_effective_from": "2026-09-29T12:00:00+00:00",
+    "causal_effect_estimate": false,
+    "crop_placement_verified": false,
+    "physical_proof_eligible": false,
+    "vpd_unavailable_reasons": {},
+    "temp_unavailable_reasons": {},
+    "source_profile_state_sha256": "3609ee4208b6ba434bbc27ecfd1b75a948b2f70f396c44f5b2bad1310e24df0b",
+    "experiment_endpoint_eligible": false,
+    "per_probe_poll_time_verified": false,
+    "source_assignment_state_sha256": "03cfc72f84045cdf72fe9bb96cef8e3250138086453cf9ba4415c976c7487793",
+    "physical_hardware_identity_verified": false
+  },
+  "availability": "route_measurement",
+  "eligible_bins": 72,
+  "greenhouse_id": "vallery",
+  "firmware_revision": "2026.7.10.1500.09ee886",
+  "source_binding_id": 1,
+  "collector_revision": "20b5a0b36e8c53e3e88266a2d10c5248e22e405d",
+  "joint_in_band_bins": 47,
+  "target_revision_id": 2,
+  "unavailable_reason": null,
+  "panel_source_sha256": "013b019e6bbec801d1bb62e52e946bfb50612401010e62283d97d88067416048",
+  "declared_route_sha256": "36d3f8ee0be85895683f319aeafad2a4262e1b4cf26741b45cac2d1adbe3729d",
+  "contributor_revision_ids": [
+    5,
+    4,
+    6
+  ]
+}
