@@ -649,12 +649,18 @@ def test_ha_light_sync_reads_real_lutron_switch_entities():
 
 
 def test_planner_context_surfaces_band_source_trace():
-    """The planning prompt should show the read-only crop -> dispatcher/API
-    -> firmware -> cfg_readback chain for the four compliance-band edges.
+    """Planning context separates server reconstruction, desired history and
+    bounded cfg snapshots without asserting device consumption.
     """
     script = Path("scripts/gather-plan-context.sh").read_text()
 
-    assert "BAND SETPOINT PROVENANCE" in script
+    assert "BAND DATABASE LINEAGE (diagnostic only; consumed state unobservable)" in script
+    assert "firmware_setpoint_value AS desired_value" in script
+    assert "firmware_setpoint_ts AS desired_recorded_at" in script
+    assert "cfg_readback_ts BETWEEN ts - interval '15 minutes' AND ts" in script
+    assert "Legacy firmware_* SQL columns above are relabeled desired history, never delivery confirmation" in script
+    assert "raw sensor age and runtime/connection identity remain unverified" in script
+    assert "Matching numbers do not prove acceptance or consumption" in script
     assert "fn_band_setpoint_provenance(now(), '${GREENHOUSE_ID}')" in script
     assert "Do not set band-driven, retired bias, or lighting-policy params in your plan" in script
     assert "LIGHTING POLICY (read-only; dispatcher pushes these to ESP32)" in script
@@ -1888,12 +1894,18 @@ def test_plan_transition_audit_migration_penalizes_guardrail_dependence():
     assert "v_anchor - COALESCE(v_penalty, 0)" in migration
 
 
-def test_plan_context_surfaces_transition_audit_and_corrected_vpd_forecast():
+def test_plan_context_surfaces_transition_audit_and_versioned_outdoor_priors():
     script = (REPO_ROOT / "scripts" / "gather-plan-context.sh").read_text()
     assert "GUARDRAIL-AWARE TRANSITION AUDIT" in script
     assert "fn_plan_transition_audit" in script
-    assert "corrected_vpd_kpa" in script
-    assert "'00-06h', '0-6h', '06-24h', '6-24h'" in script
+    assert "FROM v_forecast_accuracy_lead_buckets" in script
+    assert "verification_contract_version = 2" in script
+    assert "FROM v_forecast_planning_priors" in script
+    assert "raw_forecast::numeric" in script
+    assert "corrected_prior::numeric" in script
+    assert "calibration_paired_hours, calibration_observed_minutes, availability" in script
+    assert "outdoor forecast versus outdoor observations, never indoor greenhouse VPD" in script
+    assert "missing or stale calibration stays NULL" in script
     assert "HOT/DRY VENTILATE UTILIZATION" in script
 
 
@@ -3509,11 +3521,10 @@ def test_daily_summary_runtime_includes_fertigation_relays():
     ):
         assert relay in runtime_block
 
-    summary_update = src[
-        src.index("runtime_drip_wall_fert_h") : src.index(
-            "UPDATE daily_summary ds", src.index("runtime_drip_wall_fert_h")
-        )
-    ]
+    # The relay/water update is its own SQL statement; a later unrelated
+    # UPDATE's alias is not a boundary for this contract.
+    start = src.index("runtime_drip_wall_fert_h=$2")
+    summary_update = src[start : src.index("WHERE date = $1", start)]
     for column in (
         "runtime_irrigation_clean_h",
         "runtime_irrigation_fert_h",
