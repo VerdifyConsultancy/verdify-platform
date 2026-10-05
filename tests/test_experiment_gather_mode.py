@@ -113,7 +113,7 @@ def _run_gather(tmp_path: Path, args: list[str], env_extra: dict[str, str] | Non
     }
     env.update(env_extra or {})
     return subprocess.run(
-        ["/bin/bash", str(GATHER_SCRIPT), *args],
+        ["bash", str(GATHER_SCRIPT), *args],
         capture_output=True,
         text=True,
         timeout=60,

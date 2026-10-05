@@ -320,6 +320,8 @@ def test_backfill_covers_repo_migrations_except_unapplied_with_correct_shas():
         "269-lab-crop-zone-topology-projections.sql",
         # Facility closure projection must execute and qualify its exact successor seals.
         "270-facility-safe-ops-projection.sql",
+        # Compatibility deprecation is a new forward migration, never baseline history.
+        "271-legacy-band-trace-deprecation.sql",
     }
     sql = BACKFILL_SQL.read_text()
     stamped = dict(
