@@ -150,6 +150,20 @@ SUCCESSOR_270_DIGESTS = {
     "verdify_ingestor_runtime_login": "8bf588e5381e236f68aabc6672f61d982321a444f418973089d6a10a5a1efcf6",
 }
 SUCCESSOR_270_MCP_DIGEST = SUCCESSOR_269_MCP_DIGEST
+SUCCESSOR_271 = "271-legacy-band-trace-deprecation.sql"
+SUCCESSOR_271_SHA256 = "8ddc650184a178b59102c46a6cf1c6b706578ce08d6680294a425694397f7642"
+SUCCESSOR_271_DIGESTS = {
+    "verdify_api_runtime_login": "ad619765f93959500d7ed438f90000ceaf614b2f744553d4a4e269a7b15103d3",
+    "verdify_ingestor_runtime_login": "8bf588e5381e236f68aabc6672f61d982321a444f418973089d6a10a5a1efcf6",
+}
+SUCCESSOR_271_MCP_DIGEST = "81836c70a76578da82b77899da5d1cafee4597ea819e35ee68a3fd6cf669fa45"
+SUCCESSOR_272 = "272-current-climate-scorecard-snapshot.sql"
+SUCCESSOR_272_SHA256 = "ca2e6cd2ae157aa6ebdda58964fc3eb52cbdde70d7c69f158fa0eef6294d19aa"
+SUCCESSOR_272_DIGESTS = {
+    "verdify_api_runtime_login": "751699a763970db4179a7f001f697620e649efb09302b911d25650743850badc",
+    "verdify_ingestor_runtime_login": "a25d6b81b70be3b7b61a9a2e3725451adb59ecb409850f209867180cc7dc892f",
+}
+SUCCESSOR_272_MCP_DIGEST = "fb8c7119f87cd66451805470c018566759962949e653554cc4c0c1a063e4787a"
 # Exact emergency hotfix predecessor: the 262 receipt was resealed to this
 # live digest while 263 was prepared. Only a pending 263 may admit either the
 # original reviewed 262 pair or this pair; mixed receipt/live values fail.
@@ -185,6 +199,8 @@ def reviewed_post_254(later, files=None):
         SUCCESSOR_268,
         SUCCESSOR_269,
         SUCCESSOR_270,
+        SUCCESSOR_271,
+        SUCCESSOR_272,
     )
     require(successors == list(reviewed[: len(successors)]), "unreviewed post-254 receipt successor")
     if successors:
@@ -209,6 +225,8 @@ def reviewed_post_254(later, files=None):
                 SUCCESSOR_268_SHA256,
                 SUCCESSOR_269_SHA256,
                 SUCCESSOR_270_SHA256,
+                SUCCESSOR_271_SHA256,
+                SUCCESSOR_272_SHA256,
             ),
             strict=True,
         ):
@@ -465,6 +483,8 @@ COMMIT;"""
         (SUCCESSOR_268, SUCCESSOR_268_DIGESTS),
         (SUCCESSOR_269, SUCCESSOR_269_DIGESTS),
         (SUCCESSOR_270, SUCCESSOR_270_DIGESTS),
+        (SUCCESSOR_271, SUCCESSOR_271_DIGESTS),
+        (SUCCESSOR_272, SUCCESSOR_272_DIGESTS),
     ):
         if name in later:
             expected["api"] = expected["api_receipt"] = digests["verdify_api_runtime_login"]
@@ -520,6 +540,8 @@ COMMIT;"""
             if acl_repaired
             else (SUCCESSOR_260_MCP_DIGEST if repaired else SUCCESSOR_259_MCP_DIGEST)
         )
+        if SUCCESSOR_272 in later:
+            expected_mcp = SUCCESSOR_272_MCP_DIGEST
         if hotfix_predecessor_263:
             require(
                 mcp_state.get("mcp")

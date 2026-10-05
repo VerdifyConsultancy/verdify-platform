@@ -301,3 +301,48 @@ AND c.oid = 'mv_daily_kpi'::regclass;
         query("SELECT has_table_privilege('verdify_api_runtime', 'v_scorecard_climate_diagnostics', 'INSERT');") == "f"
     )
     assert ScorecardResponse.from_metric_rows(list(after.items())).climate_evidence()["both_axis_compliance_pct"] == 6.1
+
+
+def test_current_binary_and_credit_share_sql_snapshot_without_materialized_refresh(isolated_pg):
+    query = isolated_pg
+    query(_baseline_sql())
+    query(MIGRATION.read_text())
+    repair = (ROOT / "db/migrations/272-current-climate-scorecard-snapshot.sql").read_text()
+    ddl = repair[repair.index("CREATE OR REPLACE VIEW") : repair.index("DO $postflight$")]
+    before_identity = query(
+        "SELECT oid::text || ':' || proacl::text FROM pg_proc WHERE oid='fn_planner_scorecard(date)'::regprocedure"
+    )
+    query(ddl)
+    assert (
+        query(
+            "SELECT oid::text || ':' || proacl::text FROM pg_proc WHERE oid='fn_planner_scorecard(date)'::regprocedure"
+        )
+        == before_identity
+    )
+    # Deliberately retain a stale materialized cache; climate must use one row.
+    query(
+        "UPDATE daily_summary SET compliance_pct=0, temp_compliance_pct=0, vpd_compliance_pct=NULL, compliance_v2_attributable_pct=90 WHERE date='2026-09-04'"
+    )
+    rows = json.loads(
+        query(
+            "SET ROLE verdify_api_runtime; SELECT jsonb_object_agg(metric,value) FROM fn_planner_scorecard('2026-09-04')"
+        )
+    )
+    card = ScorecardResponse.from_metric_rows(rows.items())
+    evidence = card.climate_evidence()
+    assert evidence["both_axis_compliance_pct"] == 0
+    assert evidence["vpd_compliance_pct"] is None
+    assert evidence["graded_compliance_attributable_pct"] == 90
+    assert query("SELECT compliance_pct FROM mv_daily_kpi WHERE date='2026-09-04'") == "6.1"
+    spec = importlib.util.spec_from_file_location(
+        "score_snapshot_publisher", ROOT / "scripts/update-evidence-snapshots.py"
+    )
+    publisher = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(publisher)
+    rendered = publisher.planning_block({"planning_quality": evidence})
+    assert "0.0%" in rendered and "90.0%" in rendered and "not binary compliance" in rendered
+    from planner_graph.clients.db import scorecard_context
+
+    context = scorecard_context(rows)
+    assert context["compliance_pct"] == 0 and context["compliance_v2_attributable_pct"] == 90
+    assert "vpd_compliance_pct" not in context
