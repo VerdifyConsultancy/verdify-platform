@@ -1283,6 +1283,9 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             conn, changes, planned or [], reconnect_generation, STATE_DIR, zone_row, planner_params
         )
         if stage_decision.action == "hold":
+            bounded_reconcile.record_hold(
+                STATE_DIR, changes, planned or [], reconnect_generation, stage_decision.reason
+            )
             shared.defer_failed_dispatch(reconnect_generation, drift_versions)
             log.error(
                 "writer_reconcile reason=%s generation=%d action=blocked_stage reason=%s",

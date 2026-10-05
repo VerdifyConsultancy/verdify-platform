@@ -266,3 +266,36 @@ both preserved original failed tuples. GCC12/Linux and clang/Mac source differen
 the Xtensa firmware or a general libm portability guarantee. Fresh original
 native epochs must still establish actual target agreement after source delivery.
 No previous failed packet may be retimed, relabeled or used as new capture credit.
+
+## October 2026 passive observation and compatibility deprecation
+
+The deployed `2026.10.2.0637.620a218a-wifi-bound` firmware adds original
+`consumed_temp_low_f`, `consumed_temp_high_f`, `consumed_vpd_low_kpa`,
+`consumed_vpd_high_kpa` and `consumed_band_sample_epoch` callbacks. This supersedes
+only the older absence of observable on-chip edges above. `c1_capture.BAND_SLUGS`
+now maps all six series to consumed publications; legacy scalar `cfg_*` routes
+remain distinct and are never substituted. Temperature publications are decoded
+binary32 °F, VPD publications decoded binary32 kPa. Consumed publications have
+no writable setter grid. Anchor setter grids come from the attested runtime
+entity metadata; source constants alone do not prove that grid.
+
+Every epoch retains the source revision, firmware revision, runtime UUID,
+connection generation, individual raw callback times, consumed sample epoch,
+control minute, original 48-field state and resolver hash. A regular passive v2
+capture compares the ideal server SQL reconstruction with consumed values. A
+qualified v3 capture additionally compares the independent source-bound device
+wire projection, which accounts for rounded anchor delivery, target binary32
+arithmetic, local control minute, solar phase and night VPD bias. The two
+comparators answer different questions. A small ideal-SQL residual alone cannot
+be renamed a real device-control contradiction or rounded away into proof.
+Missing independent wire evidence is explicitly unobservable for that
+comparison. A real same-semantic wire/consumed contradiction stays present and
+blocks #749; no OTA or legacy-mode switch is a proof workaround.
+
+Migration271 explicitly deprecates the misleading physical-provenance aliases
+in the compatibility SQL functions/views while retaining their result signatures
+and OIDs. Public API v2 already avoids those aliases. Desired delivery history,
+including failed/pending requests, remains intact. `fw_*` values in legacy SQL
+are requested history; they are never raw readbacks or confirmation. This
+compatibility deprecation cannot turn an old 0% readback report into a physical
+failure or an old near-zero audit plot into physical agreement.
