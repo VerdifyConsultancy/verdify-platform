@@ -116,16 +116,19 @@ def test_renderer_port_is_not_exposed_by_the_public_service_or_network_policy():
     assert ingress_ports == [3000]
 
 
-def test_surge_first_rollout_requires_a_two_minute_ready_candidate_dwell():
+def test_durable_sqlite_identity_has_one_writer_and_ready_dwell():
     spec = _deployment()["spec"]
     strategy = spec["strategy"]
 
     assert spec["replicas"] == 1
     assert spec["minReadySeconds"] == 120
-    assert strategy == {
-        "type": "RollingUpdate",
-        "rollingUpdate": {"maxUnavailable": 0, "maxSurge": 1},
-    }
+    assert strategy == {"type": "Recreate"}
+    volumes = spec["template"]["spec"]["volumes"]
+    data = next(volume for volume in volumes if volume["name"] == "data")
+    assert data["persistentVolumeClaim"]["claimName"] == "verdify-grafana-data"
+    claim = yaml.safe_load((ROOT / "deploy/k8s/components/grafana/grafana-data.yaml").read_text())
+    assert claim["metadata"]["annotations"]["argocd.argoproj.io/sync-options"] == "Prune=false"
+    assert claim["spec"]["accessModes"] == ["ReadWriteOnce"]
 
 
 def test_required_runtime_secrets_fail_closed_and_sql_expressions_are_not_explicitly_enabled():
