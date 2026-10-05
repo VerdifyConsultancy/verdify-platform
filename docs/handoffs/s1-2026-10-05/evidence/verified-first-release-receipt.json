@@ -1,0 +1,238 @@
+{
+  "scope": "Verified first c8 release, not final sprint acceptance; follow-up callback repair37a9 still building. No two-hour policy credit accrued.",
+  "source": "c8fc15e6a81d29b16e23d6db078893160704b4ea",
+  "revision": "b5ffc37e483437615476cba49723a47d0eb2823f",
+  "operation": {
+    "started_at": "2026-10-05T21:53:54Z",
+    "finished_at": "2026-10-05T22:03:40Z",
+    "phase": "Succeeded",
+    "resource_count": 127,
+    "prune": false,
+    "selector_absent": true
+  },
+  "hooks": [
+    {
+      "hook": "verdify-experiment-v2-credential-bootstrap",
+      "pod": "verdify-experiment-v2-credential-bootstrap-tjd86",
+      "uid": "d2e67073-1037-425f-9aea-9985726321b5",
+      "created": "2026-10-05T21:55:10Z",
+      "phase": "Succeeded",
+      "containers": [
+        {
+          "name": "bootstrap-and-attest",
+          "image_id": "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:74d60c291f79a7d0c45616da6a42165a246e4531f86d269e51e10a6ca57bddcf",
+          "state": {
+            "terminated": {
+              "containerID": "containerd://86bb2e8ca9aaf50bd55d71725508a08a78a6295999335f25a648a94c03099993",
+              "exitCode": 0,
+              "finishedAt": "2026-10-05T21:55:19Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-05T21:55:12Z"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "hook": "verdify-mcp-runtime-role-bootstrap",
+      "pod": "verdify-mcp-runtime-role-bootstrap-98f8j",
+      "uid": "898308ea-5d3b-4b71-9fcb-7aead8a4c1d7",
+      "created": "2026-10-05T21:55:10Z",
+      "phase": "Succeeded",
+      "containers": [
+        {
+          "name": "bootstrap-and-attest",
+          "image_id": "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:74d60c291f79a7d0c45616da6a42165a246e4531f86d269e51e10a6ca57bddcf",
+          "state": {
+            "terminated": {
+              "containerID": "containerd://34e7c8f3b57261caf4bffe45736029918f9a6fb2fb7019869bdc1c55542ce91f",
+              "exitCode": 0,
+              "finishedAt": "2026-10-05T21:55:13Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-05T21:55:12Z"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "hook": "verdify-migrate",
+      "pod": "verdify-migrate-xnpmh",
+      "uid": "86994201-22ec-4a88-beab-55acf17b98d2",
+      "created": "2026-10-05T21:54:12Z",
+      "phase": "Succeeded",
+      "containers": [
+        {
+          "name": "migrate",
+          "image_id": "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:74d60c291f79a7d0c45616da6a42165a246e4531f86d269e51e10a6ca57bddcf",
+          "state": {
+            "terminated": {
+              "containerID": "containerd://67d8758b1c50f08d7d5c0e562e64f1367ae839d1d492a2e19ac78a928c37ce24",
+              "exitCode": 0,
+              "finishedAt": "2026-10-05T21:54:38Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-05T21:54:29Z"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "hook": "verdify-runtime-role-bootstrap",
+      "pod": "verdify-runtime-role-bootstrap-n5hhl",
+      "uid": "ba2a435a-931c-4c8f-a4b9-17361795957e",
+      "created": "2026-10-05T21:54:48Z",
+      "phase": "Succeeded",
+      "containers": [
+        {
+          "name": "bootstrap-and-attest",
+          "image_id": "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:74d60c291f79a7d0c45616da6a42165a246e4531f86d269e51e10a6ca57bddcf",
+          "state": {
+            "terminated": {
+              "containerID": "containerd://ab952e5960af993e68deca09e6787bbaec1b51dba9c4659875dae39ebd38335f",
+              "exitCode": 0,
+              "finishedAt": "2026-10-05T21:55:05Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-05T21:55:03Z"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "hook": "verdify-six-runtime-role-bootstrap",
+      "pod": "verdify-six-runtime-role-bootstrap-l6wjf",
+      "uid": "79373585-df1e-4959-bbb0-5bfcc2f7a0e3",
+      "created": "2026-10-05T21:55:25Z",
+      "phase": "Succeeded",
+      "containers": [
+        {
+          "name": "bootstrap-and-attest",
+          "image_id": "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:74d60c291f79a7d0c45616da6a42165a246e4531f86d269e51e10a6ca57bddcf",
+          "state": {
+            "terminated": {
+              "containerID": "containerd://9d0f2f738ea7d2de855677b6bc6e23dba338fcfae2477cc70cabd5872d8f0fd2",
+              "exitCode": 0,
+              "finishedAt": "2026-10-05T21:55:32Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-05T21:55:26Z"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "hook": "verdify-winter-archive-init",
+      "pod": "verdify-winter-archive-init-pz2d4",
+      "uid": "e84a1faf-ebd8-4eec-aaf0-5ff897190aeb",
+      "created": "2026-10-05T21:55:44Z",
+      "phase": "Succeeded",
+      "containers": [
+        {
+          "name": "init-archive",
+          "image_id": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:09a7e0ea6f87fcea9536df19a09d95c3ac2575493bb3f63bffea6cae77eafb98",
+          "state": {
+            "terminated": {
+              "containerID": "containerd://2cf48afd1e2ff38a0c6d56a2f7ca9dbbc8c9f3b5bc4454064641f2fd923578c1",
+              "exitCode": 0,
+              "finishedAt": "2026-10-05T21:56:04Z",
+              "reason": "Completed",
+              "startedAt": "2026-10-05T21:56:04Z"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "forward_ledger": [
+    {
+      "seq": 270,
+      "sha256": "672d1afa92e37f243d5893fbd57cd2b84e86ea19c1c79d3975c04dfd39663532",
+      "source": "db/migrations",
+      "filename": "db/migrations/270-facility-safe-ops-projection.sql",
+      "applied_at": "2026-10-02T02:55:10.302403+00:00",
+      "applied_by": "verdify",
+      "duration_ms": 2247,
+      "stamp_method": "runner"
+    },
+    {
+      "seq": 271,
+      "sha256": "8ddc650184a178b59102c46a6cf1c6b706578ce08d6680294a425694397f7642",
+      "source": "db/migrations",
+      "filename": "db/migrations/271-legacy-band-trace-deprecation.sql",
+      "applied_at": "2026-10-05T21:54:32.521234+00:00",
+      "applied_by": "verdify",
+      "duration_ms": 12,
+      "stamp_method": "runner"
+    },
+    {
+      "seq": 272,
+      "sha256": "ca2e6cd2ae157aa6ebdda58964fc3eb52cbdde70d7c69f158fa0eef6294d19aa",
+      "source": "db/migrations",
+      "filename": "db/migrations/272-current-climate-scorecard-snapshot.sql",
+      "applied_at": "2026-10-05T21:54:32.72091+00:00",
+      "applied_by": "verdify",
+      "duration_ms": 1676,
+      "stamp_method": "runner"
+    },
+    {
+      "seq": 273,
+      "sha256": "a0e4fe7bea3d27ea0d4218c5d423707e19b821e2684d5884c1280b03f78df76a",
+      "source": "db/migrations",
+      "filename": "db/migrations/273-native-route-measurement-reader.sql",
+      "applied_at": "2026-10-05T21:54:34.576541+00:00",
+      "applied_by": "verdify",
+      "duration_ms": 1823,
+      "stamp_method": "runner"
+    }
+  ],
+  "protected_storage": [
+    {
+      "kind": "StatefulSet",
+      "name": "verdify-db",
+      "uid": "692af2f5-c937-4fde-aeb3-3c4fd36710ca",
+      "volume": null,
+      "phase": null
+    },
+    {
+      "kind": "PersistentVolumeClaim",
+      "name": "db-data-verdify-db-0",
+      "uid": "59fe138d-1cc4-4aac-bfcb-3d332f847411",
+      "volume": "pvc-59fe138d-1cc4-4aac-bfcb-3d332f847411",
+      "phase": "Bound"
+    },
+    {
+      "kind": "PersistentVolumeClaim",
+      "name": "verdify-db-dumps",
+      "uid": "dac57082-fe28-4d59-9bc6-c793dfc6c61e",
+      "volume": "verdify-db-dumps-prod",
+      "phase": "Bound"
+    },
+    {
+      "kind": "PersistentVolumeClaim",
+      "name": "verdify-grafana-data",
+      "uid": "acad919d-b6d2-4824-b7c7-a2b2ab460103",
+      "volume": "pvc-acad919d-b6d2-4824-b7c7-a2b2ab460103",
+      "phase": "Bound"
+    }
+  ],
+  "ingestor_schema_observation": {
+    "started_at": "2026-10-05T22:04:26.196429+00:00",
+    "finished_at": "2026-10-05T22:09:26.462532+00:00",
+    "duration_seconds": 300.2638668330037,
+    "pod": "verdify-ingestor-66d88bd749-qpj5v",
+    "pod_uid": "ae448e3c-f615-4896-929c-385c15a9c3b4",
+    "source_sha": "c8fc15e6a81d29b16e23d6db078893160704b4ea",
+    "digest": "sha256:542acfdd6c69d092584bd71cf0ef95fdad2eb5280b5fde7f0167bd437e5b339d",
+    "restart_count": 0,
+    "log_sha256": "4c1f9b91e1e3d76532163a25029d946a04dd0ea9d2352a36ed3625de31e7ccf6",
+    "log_bytes": 52736,
+    "validation_error_count": 0,
+    "row_failed_schema_validation_count": 0,
+    "same_ready_pod_through_end": true,
+    "scope": "Required five-minute schema-validation log observation; separate device socket and product acceptance remain required"
+  },
+  "smoke": "9 passed, 0 failed",
+  "device_monitor": "one namespace ESP32 socket; global host proof requested from local Proxmox task",
+  "technical_limit": "No gate-r PostSync Job appears in the actual production render; no experiment activation or invented hook receipt. Initial c8 callback gaps were delayed, not permanent: periodic callbacks later yielded 12 immediate plus 9 staged genuine plan transition rows, all 21 terminal complete. Successor 37a9 accelerates initial replay correctness and is not yet promoted; no two-hour policy credit precedes its upcoming restart."
+}

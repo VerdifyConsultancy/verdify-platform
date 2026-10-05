@@ -1,0 +1,179 @@
+{
+  "schema": "verdify-grafana-monitoring-identity-acceptance-v1",
+  "issue": 952,
+  "acceptance": "complete",
+  "scope": "Dedicated product Grafana monitoring identity and separately scoped singleton replacement; other sprint acceptance remains separate.",
+  "application": {
+    "name": "verdify-prod-dark",
+    "namespace": "argocd",
+    "runtime_namespace": "verdify-prod",
+    "source_path": "deploy/k8s/overlays/prod",
+    "runtime_application_source": "c8fc15e6a81d29b16e23d6db078893160704b4ea",
+    "render_and_sync_revision": "b5ffc37e483437615476cba49723a47d0eb2823f",
+    "post_replacement_sync_status": "Synced",
+    "post_replacement_health": "Healthy"
+  },
+  "source_files": [
+    "deploy/k8s/components/grafana/grafana.yaml",
+    "deploy/k8s/components/grafana/grafana-data.yaml"
+  ],
+  "deployment": {
+    "name": "verdify-grafana",
+    "uid": "87d1186a-2baf-4922-86c9-793f2e71673c",
+    "replicas": 1,
+    "strategy": "Recreate",
+    "min_ready_seconds": 120,
+    "spec_unchanged_after_replacement": true
+  },
+  "persistent_storage": {
+    "name": "verdify-grafana-data",
+    "uid": "acad919d-b6d2-4824-b7c7-a2b2ab460103",
+    "volume": "pvc-acad919d-b6d2-4824-b7c7-a2b2ab460103",
+    "phase": "Bound",
+    "size": "1Gi",
+    "mount_path": "/var/lib/grafana",
+    "storage_class": "longhorn-v1-workspace-rwo",
+    "access_mode": "ReadWriteOnce",
+    "retained_through_replacement": true
+  },
+  "original_monitoring_identity": {
+    "account": {
+      "id": 2,
+      "org_id": 1,
+      "login": "sa-endpoint-monitor",
+      "name": "Endpoint monitor",
+      "is_admin": 0,
+      "is_service_account": 1
+    },
+    "membership": {
+      "org_id": 1,
+      "user_id": 2,
+      "role": "Viewer"
+    },
+    "token_metadata": {
+      "id": 1,
+      "org_id": 1,
+      "name": "endpoint-monitor",
+      "role": "Viewer",
+      "service_account_id": 2
+    },
+    "metadata_verified_at": "2026-10-05T22:08:53.426709+00:00",
+    "credential_rotation": false
+  },
+  "before_repair": {
+    "captured_at": "2026-10-05T21:31:45.526307+00:00",
+    "protected_api_user_status": 401,
+    "anonymous_api_user_status": 401,
+    "authenticated_admin_settings_status": 403,
+    "authenticated_identity": null,
+    "auth_evidence_by_vantage": {
+      "local": 0,
+      "external-cloudflare": 0
+    },
+    "related_firing_alert_count": 4,
+    "probe_http_status_by_vantage": {
+      "local": {
+        "anonymous": 401,
+        "authenticated": 401
+      },
+      "external-cloudflare": {
+        "anonymous": 401,
+        "authenticated": 401
+      }
+    }
+  },
+  "repaired_before_replacement": {
+    "captured_at": "2026-10-05T21:59:23.892482+00:00",
+    "protected_api_user_status": 200,
+    "anonymous_api_user_status": 401,
+    "authenticated_admin_settings_status": 403,
+    "authenticated_identity": {
+      "id": 0,
+      "orgId": 1,
+      "login": "sa-endpoint-monitor",
+      "orgRole": null,
+      "isGrafanaAdmin": false
+    },
+    "auth_evidence_by_vantage": {
+      "local": 1,
+      "external-cloudflare": 1
+    },
+    "related_firing_alert_count": 0,
+    "probe_http_status_by_vantage": {
+      "local": {
+        "anonymous": 401,
+        "authenticated": 200
+      },
+      "external-cloudflare": {
+        "anonymous": 401,
+        "authenticated": 200
+      }
+    }
+  },
+  "separate_replacement": {
+    "deployment_uid": "87d1186a-2baf-4922-86c9-793f2e71673c",
+    "old_pod_uid": "a9fc655d-00c7-4359-8b8a-e79e581f9f1c",
+    "scaled_down": true,
+    "old_pod_deleted": true,
+    "replicas_restored": true,
+    "scale_down_at": "2026-10-05T22:06:36.169633+00:00",
+    "old_pod_deleted_at": "2026-10-05T22:06:38.478834+00:00",
+    "scale_restore_at": "2026-10-05T22:06:38.602152+00:00",
+    "old_pod_name": "verdify-grafana-bdf4f5fcb-cx7hn",
+    "new_pod_name": "verdify-grafana-bdf4f5fcb-478bk",
+    "new_pod_uid": "e6dcd55b-e7fd-4d52-974d-824d3e38b6f0",
+    "new_pod_ready": true,
+    "original_identity_retained": true,
+    "same_pvc_uid": "acad919d-b6d2-4824-b7c7-a2b2ab460103",
+    "same_pv": "pvc-acad919d-b6d2-4824-b7c7-a2b2ab460103",
+    "image_ids": {
+      "grafana": "docker.io/grafana/grafana@sha256:26b8f35a9e4e4431995cf64c3f396505a4faf17bcfc19f9ed84943ec6bfd5ecd",
+      "renderer": "docker.io/grafana/grafana-image-renderer@sha256:c0eb7b915a181c7bbe451718f9b633843678bef93703b5ed5fda2f28fa508986"
+    },
+    "available_replicas_after_readiness_window": 1,
+    "ingestor_uid": "ae448e3c-f615-4896-929c-385c15a9c3b4",
+    "ingestor_unchanged": true
+  },
+  "after_replacement": {
+    "captured_at": "2026-10-05T22:09:52.558658+00:00",
+    "protected_api_user_status": 200,
+    "anonymous_api_user_status": 401,
+    "authenticated_admin_settings_status": 403,
+    "authenticated_identity": {
+      "id": 0,
+      "orgId": 1,
+      "login": "sa-endpoint-monitor",
+      "orgRole": null,
+      "isGrafanaAdmin": false
+    },
+    "auth_evidence_by_vantage": {
+      "local": 1,
+      "external-cloudflare": 1
+    },
+    "related_firing_alert_count": 0,
+    "probe_sample_times_by_vantage": {
+      "local": "2026-10-05T22:09:50.932000+00:00",
+      "external-cloudflare": "2026-10-05T22:09:52.247000+00:00"
+    },
+    "probe_http_status_by_vantage": {
+      "local": {
+        "anonymous": 401,
+        "authenticated": 200
+      },
+      "external-cloudflare": {
+        "anonymous": 401,
+        "authenticated": 200
+      }
+    }
+  },
+  "rollback": {
+    "retain_claim_name": "verdify-grafana-data",
+    "retain_claim_uid": "acad919d-b6d2-4824-b7c7-a2b2ab460103",
+    "retain_pv": "pvc-acad919d-b6d2-4824-b7c7-a2b2ab460103",
+    "never_delete_or_prune_claim": true,
+    "keep_persistent_mount": true,
+    "keep_singleton_recreate": true,
+    "recover_replicas_to": 1,
+    "image_config_reversion": "Revert owned Grafana image/config only while retaining the PVC; coordinate an exact-revision non-pruning Argo sync and repeat protected/negative and both-vantage probes."
+  }
+}

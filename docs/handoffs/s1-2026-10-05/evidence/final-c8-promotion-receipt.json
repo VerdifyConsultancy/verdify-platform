@@ -1,0 +1,38 @@
+{
+  "candidate_file_sha256": "b20a4ed11df7ef05104fa855a2230ef9c4be8cd4a9d71c0b09810d2cb29e83b8",
+  "changes": {
+    "verdify-api": {
+      "after": "sha256:09a7e0ea6f87fcea9536df19a09d95c3ac2575493bb3f63bffea6cae77eafb98",
+      "before": "sha256:7387c2c0e5b22caa0679c02668240e3b639e2e6b3797dc9fe2c43ebf30655ab9"
+    },
+    "verdify-experiment-v2-orchestrator": {
+      "after": "sha256:ae3923449e83d8fee4b2b3538aba7be03a68ab59f6abda68084b8d9e1ad061f0",
+      "before": "sha256:985be9a9b427287767d66817a1d2e5106314186126803eda8c65eb713a5e2a5d"
+    },
+    "verdify-ingestor": {
+      "after": "sha256:542acfdd6c69d092584bd71cf0ef95fdad2eb5280b5fde7f0167bd437e5b339d",
+      "before": "sha256:4c5fa5d67c256fd01b4f6519183c20ff4cf6023326ae4100c4b8daff9468b664"
+    },
+    "verdify-mcp": {
+      "after": "sha256:c7a4044b824f9f0ae2945ce1cc0f601965cacd25ee8791fecaf00fd47e6cf20a",
+      "before": "sha256:64a0c79a721878c3998d0fd599dc5c4b64c028d595803d46df7816cf73cba74b"
+    },
+    "verdify-migrate": {
+      "after": "sha256:74d60c291f79a7d0c45616da6a42165a246e4531f86d269e51e10a6ca57bddcf",
+      "before": "sha256:a5063e1e6a4e885ac67d48a6bf27c88844705240edcaa0c251e1b1def4039aeb"
+    }
+  },
+  "evidence_scope": "source-only pin promotion; build provenance, CI and live adoption remain separate",
+  "promotion_input_source_sha": "a45c44ffa6398eb583fa988fecb516bd81b1d1b5",
+  "recorded_at": "2026-10-05T21:51:48.140045+00:00",
+  "release_pins_after_sha256": "ff8e1c60da22244e2056566e8e010a7935b0fea7a066e937370a105c2028483a",
+  "release_pins_before_sha256": "dc1243466730c91ca4e15db6dc635626ed704b077b128f9df431acd1ef83f694",
+  "rollback_pins": {
+    "verdify-api": "sha256:7387c2c0e5b22caa0679c02668240e3b639e2e6b3797dc9fe2c43ebf30655ab9",
+    "verdify-experiment-v2-orchestrator": "sha256:985be9a9b427287767d66817a1d2e5106314186126803eda8c65eb713a5e2a5d",
+    "verdify-ingestor": "sha256:4c5fa5d67c256fd01b4f6519183c20ff4cf6023326ae4100c4b8daff9468b664",
+    "verdify-mcp": "sha256:64a0c79a721878c3998d0fd599dc5c4b64c028d595803d46df7816cf73cba74b",
+    "verdify-migrate": "sha256:a5063e1e6a4e885ac67d48a6bf27c88844705240edcaa0c251e1b1def4039aeb"
+  },
+  "schema": "verdify-release-pin-promotion-v1"
+}
