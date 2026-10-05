@@ -1,0 +1,30 @@
+{
+  "admission_receipt": {
+    "expected": {
+      "capacity_contract_id": "5e8a97b36acee313a9686a621e6db0f8d02e689e4bd2e4141dc1e86b25a0336e",
+      "max_age_seconds": 300,
+      "min_free_bytes": 150323855360,
+      "protected_count": 275,
+      "protected_current_count": 36,
+      "protected_generation": 145,
+      "protected_max_age_seconds": 604800,
+      "protected_rollback_count": 239,
+      "protected_set_hash": "e7210b13243b1a459cfbc2df292d5fcee38137d5eb84ebaa8f30a33ac39b59a1"
+    },
+    "gate": "admission",
+    "observed": {},
+    "outcome": "blocked",
+    "reason": "signal-stale",
+    "schema": "agent-fleet.registry-capacity-preflight-receipt/2"
+  },
+  "build_completed_at": "2026-10-05T23:01:31Z",
+  "images_built": false,
+  "original_receipt_sha256": "fe35ee21aa2c52988c83a39c0f7cb30748546add57935de6965776c9e21275d2",
+  "phase": "Failed",
+  "promotion_performed": false,
+  "source": "8f04fc1794b7ec001c550c26edcf223d72b153fd",
+  "uid": "100d72ba-845a-42de-9f78-71c4566cdc41",
+  "validation": "ALL GATES GREEN",
+  "validation_completed_at": "2026-10-05T23:00:51Z",
+  "workflow": "verdify-platform-ci-lgc5v"
+}

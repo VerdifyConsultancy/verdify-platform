@@ -1,0 +1,46 @@
+{
+  "captured_at": "2026-10-05T23:01:42.312565+00:00",
+  "completed_count": 15,
+  "disposition": "bounded_hold_no_dispatch",
+  "generation": 1,
+  "halt_reason": "desired fixed candidate changed or completed field reappeared",
+  "held_fields": [
+    {
+      "current_generation_readback": 1.309999942779541,
+      "desired_source": "dispatcher_resolved_policy",
+      "equivalent": false,
+      "parameter": "mister_all_kpa",
+      "plan": {
+        "plan_id": "iris-20261005-1650",
+        "recorded_at": "2026-10-05T22:45:00+00:00",
+        "value": 1.305
+      },
+      "resolved_desired": 1.29
+    },
+    {
+      "current_generation_readback": 1.1100000143051147,
+      "desired_source": "dispatcher_resolved_policy",
+      "equivalent": false,
+      "parameter": "mister_engage_kpa",
+      "plan": {
+        "plan_id": "iris-20261005-1650",
+        "recorded_at": "2026-10-05T22:45:00+00:00",
+        "value": 1.105
+      },
+      "resolved_desired": 1.09
+    }
+  ],
+  "last_stage_parameters": [
+    "mister_engage_delay_s",
+    "vpd_target_west",
+    "vpd_target_center"
+  ],
+  "original_receipt_sha256": "9e9e105bfb9ad923a753bf75cba194b9f627fb909fb65850ac73f75778ef70b2",
+  "recovery_performed": false,
+  "remaining_records_count": 0,
+  "run_id": "3300927b2cbf4722b788c71164d5ed06",
+  "session_id": "3f5ece9d77ef42788d0616a7c37302d4",
+  "source": "37a9cc0b7a2ef07585d0790f4bb4dcfbbe75bb6f",
+  "status": "halted",
+  "two_hour_acceptance_credit_seconds": 0
+}
