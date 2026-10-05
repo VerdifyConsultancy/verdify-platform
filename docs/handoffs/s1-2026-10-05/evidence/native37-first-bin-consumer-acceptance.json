@@ -1,0 +1,617 @@
+{
+  "schema": "verdify-native37-first-completed-bin-consumer-acceptance-v1",
+  "captured_at": "2026-10-05T23:15:42.688243+00:00",
+  "runtime_identity_readback_at": "2026-10-05T23:18:11.472595+00:00",
+  "collection_tool_source_git_sha": "81d76a4c3d35a925ebd2438d89099d1f657b3f8f",
+  "collection_tool_sha256": "b02010a9a33b68673652de92a68f869b8c52b6195101941b359163673ef472ae",
+  "collection_identity_limit": "Tool checkout identity does not identify API/MCP images or the native collector. Exact live source and image identities are recorded separately.",
+  "live_runtime": {
+    "api": [
+      {
+        "pod": "verdify-api-645c98495c-2c5qs",
+        "uid": "c71aba4c-1f1d-4dc4-82a2-bb12a7056896",
+        "source_git_sha": "c8fc15e6a81d29b16e23d6db078893160704b4ea",
+        "image_ids": [
+          "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:09a7e0ea6f87fcea9536df19a09d95c3ac2575493bb3f63bffea6cae77eafb98"
+        ],
+        "ready": true
+      },
+      {
+        "pod": "verdify-api-645c98495c-bkwlw",
+        "uid": "046b11e9-10db-482c-9ad7-2a1802a44767",
+        "source_git_sha": "c8fc15e6a81d29b16e23d6db078893160704b4ea",
+        "image_ids": [
+          "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:09a7e0ea6f87fcea9536df19a09d95c3ac2575493bb3f63bffea6cae77eafb98"
+        ],
+        "ready": true
+      }
+    ],
+    "mcp": [
+      {
+        "pod": "verdify-mcp-794dd7c47-mvncf",
+        "uid": "ca31d5f9-afb2-4e72-9f39-2143cae02f81",
+        "source_git_sha": "c8fc15e6a81d29b16e23d6db078893160704b4ea",
+        "image_ids": [
+          "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:c7a4044b824f9f0ae2945ce1cc0f601965cacd25ee8791fecaf00fd47e6cf20a"
+        ],
+        "ready": true
+      },
+      {
+        "pod": "verdify-mcp-794dd7c47-sfwzj",
+        "uid": "5cff8555-9d54-4902-892f-37bc86d35e4c",
+        "source_git_sha": "c8fc15e6a81d29b16e23d6db078893160704b4ea",
+        "image_ids": [
+          "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:c7a4044b824f9f0ae2945ce1cc0f601965cacd25ee8791fecaf00fd47e6cf20a"
+        ],
+        "ready": true
+      }
+    ],
+    "ingestor": [
+      {
+        "pod": "verdify-ingestor-544c5564bc-vnn8m",
+        "uid": "55d2bbbf-8fd6-4297-81bf-5745710a71f6",
+        "source_git_sha": "37a9cc0b7a2ef07585d0790f4bb4dcfbbe75bb6f",
+        "image_ids": [
+          "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:e22e160f80adf79f70778c3d8796e036ced31a3e59fcf7b4d6e82eecb0d80f22"
+        ],
+        "ready": true
+      }
+    ]
+  },
+  "expected_live_api_mcp_source": "c8fc15e6a81d29b16e23d6db078893160704b4ea",
+  "native_collector_source": "37a9cc0b7a2ef07585d0790f4bb4dcfbbe75bb6f",
+  "declared_first_bin_start": "2026-10-05T23:00:00+00:00",
+  "declared_first_bin_end": "2026-10-05T23:15:00+00:00",
+  "days": [
+    {
+      "day": "2026-10-05",
+      "native_route_evidence": {
+        "availability": "route_measurement",
+        "collector_revision": "37a9cc0b7a2ef07585d0790f4bb4dcfbbe75bb6f",
+        "contributor_revision_ids": [
+          8,
+          7,
+          9
+        ],
+        "day": "2026-10-05",
+        "declared_route_sha256": "36d3f8ee0be85895683f319aeafad2a4262e1b4cf26741b45cac2d1adbe3729d",
+        "diagnostic": {
+          "causal_effect_estimate": false,
+          "completed_bin_count": 45,
+          "crop_placement_verified": false,
+          "definition": "fixed-panel-native-route-measurement-v1",
+          "expected_bins": 72,
+          "experiment_endpoint_eligible": false,
+          "joint": {
+            "eligible_bins": 1,
+            "in_band_bins": 0,
+            "in_band_pct": 0.0
+          },
+          "measurement_scope": "source_routes_without_physical_hardware_or_crop_placement_authentication",
+          "partial_window": true,
+          "per_probe_poll_time_verified": false,
+          "physical_hardware_identity_verified": false,
+          "physical_proof_eligible": false,
+          "sample_basis": "host_receive_time_after_initial_native_subscription_state",
+          "source_assignment_state_sha256": "03cfc72f84045cdf72fe9bb96cef8e3250138086453cf9ba4415c976c7487793",
+          "source_profile_state_sha256": "3609ee4208b6ba434bbc27ecfd1b75a948b2f70f396c44f5b2bad1310e24df0b",
+          "target_basis": "prospective_frozen_panel_mean_crop_reference",
+          "target_effective_from": "2026-10-05T23:00:00+00:00",
+          "target_effective_to": "2026-10-06T06:00:00+00:00",
+          "target_version": "native-route-2026-10-05-2300Z",
+          "temp": {
+            "eligible_bins": 1,
+            "high_miss_bins": 1,
+            "in_band_bins": 0,
+            "in_band_pct": 0.0,
+            "low_miss_bins": 0,
+            "mean_high_distance": 3.518667602539054,
+            "mean_low_distance": 0,
+            "mean_outside_distance": 3.518667602539054,
+            "worst_measured_zone": "east"
+          },
+          "temp_unavailable_reasons": {
+            "not_elapsed": 27,
+            "outside_prospective_target": 44
+          },
+          "vpd": {
+            "eligible_bins": 1,
+            "high_miss_bins": 0,
+            "in_band_bins": 1,
+            "in_band_pct": 100.0,
+            "low_miss_bins": 0,
+            "mean_high_distance": 0,
+            "mean_low_distance": 0,
+            "mean_outside_distance": 0,
+            "worst_measured_zone": "north"
+          },
+          "vpd_unavailable_reasons": {
+            "not_elapsed": 27,
+            "outside_prospective_target": 44
+          },
+          "window_end": "2026-10-06T06:00:00+00:00",
+          "window_start": "2026-10-05T12:00:00+00:00"
+        },
+        "eligible_bins": 1,
+        "firmware_revision": "2026.10.2.0637.620a218a-wifi-bound",
+        "greenhouse_id": "vallery",
+        "joint_in_band_bins": 0,
+        "panel_source_sha256": "d2e33e117e1127b8ffb2c94c0a36779bc811a8855ef615f5af6ce98c39d9010a",
+        "served_at": "2026-10-05T23:15:27.092135+00:00",
+        "source_binding_id": 2,
+        "target_revision_id": 3,
+        "unavailable_reason": null
+      },
+      "sql_api_all_mcp_comparison": {
+        "agreement_proven": true,
+        "metric_mismatches": [],
+        "native_route": {
+          "agreement_proven": true,
+          "consumer_mismatches": [],
+          "physical_publication_qualified": false,
+          "sql_bracket_stable": true
+        },
+        "physical_publication_qualified": false,
+        "sql_bracket_stable": true
+      }
+    },
+    {
+      "day": "2026-09-29",
+      "native_route_evidence": {
+        "availability": "route_measurement",
+        "collector_revision": "20b5a0b36e8c53e3e88266a2d10c5248e22e405d",
+        "contributor_revision_ids": [
+          5,
+          4,
+          6
+        ],
+        "day": "2026-09-29",
+        "declared_route_sha256": "36d3f8ee0be85895683f319aeafad2a4262e1b4cf26741b45cac2d1adbe3729d",
+        "diagnostic": {
+          "causal_effect_estimate": false,
+          "completed_bin_count": 72,
+          "crop_placement_verified": false,
+          "definition": "fixed-panel-native-route-measurement-v1",
+          "expected_bins": 72,
+          "experiment_endpoint_eligible": false,
+          "joint": {
+            "eligible_bins": 72,
+            "in_band_bins": 47,
+            "in_band_pct": 65.27777777777777
+          },
+          "measurement_scope": "source_routes_without_physical_hardware_or_crop_placement_authentication",
+          "partial_window": false,
+          "per_probe_poll_time_verified": false,
+          "physical_hardware_identity_verified": false,
+          "physical_proof_eligible": false,
+          "sample_basis": "host_receive_time_after_initial_native_subscription_state",
+          "source_assignment_state_sha256": "03cfc72f84045cdf72fe9bb96cef8e3250138086453cf9ba4415c976c7487793",
+          "source_profile_state_sha256": "3609ee4208b6ba434bbc27ecfd1b75a948b2f70f396c44f5b2bad1310e24df0b",
+          "target_basis": "prospective_frozen_panel_mean_crop_reference",
+          "target_effective_from": "2026-09-29T12:00:00+00:00",
+          "target_effective_to": "2026-09-30T06:00:00+00:00",
+          "target_version": "native-route-2026-09-29",
+          "temp": {
+            "eligible_bins": 72,
+            "high_miss_bins": 25,
+            "in_band_bins": 47,
+            "in_band_pct": 65.27777777777777,
+            "low_miss_bins": 0,
+            "mean_high_distance": 0.574444700170445,
+            "mean_low_distance": 0,
+            "mean_outside_distance": 0.574444700170445,
+            "worst_measured_zone": "north"
+          },
+          "temp_unavailable_reasons": {},
+          "vpd": {
+            "eligible_bins": 72,
+            "high_miss_bins": 0,
+            "in_band_bins": 72,
+            "in_band_pct": 100.0,
+            "low_miss_bins": 0,
+            "mean_high_distance": 0,
+            "mean_low_distance": 0,
+            "mean_outside_distance": 0,
+            "worst_measured_zone": "north"
+          },
+          "vpd_unavailable_reasons": {},
+          "window_end": "2026-09-30T06:00:00+00:00",
+          "window_start": "2026-09-29T12:00:00+00:00"
+        },
+        "eligible_bins": 72,
+        "firmware_revision": "2026.7.10.1500.09ee886",
+        "greenhouse_id": "vallery",
+        "joint_in_band_bins": 47,
+        "panel_source_sha256": "013b019e6bbec801d1bb62e52e946bfb50612401010e62283d97d88067416048",
+        "served_at": "2026-10-05T23:15:32.690276+00:00",
+        "source_binding_id": 1,
+        "target_revision_id": 2,
+        "unavailable_reason": null
+      },
+      "sql_api_all_mcp_comparison": {
+        "agreement_proven": true,
+        "metric_mismatches": [],
+        "native_route": {
+          "agreement_proven": true,
+          "consumer_mismatches": [],
+          "physical_publication_qualified": false,
+          "sql_bracket_stable": true
+        },
+        "physical_publication_qualified": false,
+        "sql_bracket_stable": true
+      }
+    }
+  ],
+  "public_api_comparison": {
+    "agreement_proven": true,
+    "metric_mismatches": [],
+    "native_route": {
+      "agreement_proven": true,
+      "consumer_mismatches": [],
+      "physical_publication_qualified": false,
+      "sql_bracket_stable": true
+    }
+  },
+  "actual_iris": {
+    "pod": "verdify-hermes-iris-56fc9b6c95-zkrdn",
+    "uid": "f82f6550-816e-443f-8cd8-d1c6f0e06f50",
+    "ready": true,
+    "in_process_mcp_state": {
+      "fatal": false,
+      "last_event_at": 1791151326.867,
+      "process_started_at": 1791151320.57,
+      "schema_version": 1,
+      "signal_source": "full_discovery_log",
+      "state": "connected",
+      "unacknowledged_disconnect_since": null
+    },
+    "typed_native_comparisons": {
+      "2026-10-05": {
+        "sql_bracket_stable": true,
+        "agreement_proven": true,
+        "consumer_mismatches": [],
+        "physical_publication_qualified": false
+      },
+      "2026-09-29": {
+        "sql_bracket_stable": true,
+        "agreement_proven": true,
+        "consumer_mismatches": [],
+        "physical_publication_qualified": false
+      }
+    },
+    "limitations": [
+      "Read-only scorecard call from actual Iris pod using actual Iris MCP identity and configured in-cluster server; no planner run or write triggered.",
+      "This proves authenticated planner context accessibility, not a new LLM action or plan output."
+    ]
+  },
+  "grafana": {
+    "transport": "actual public Grafana datasource query API",
+    "datasource_uid": "verdify-tsdb",
+    "ordinary_database_login": "verdify_grafana_runtime_login",
+    "days": [
+      {
+        "day": "2026-10-05",
+        "captured_at": "2026-10-05T23:15:34.210720+00:00",
+        "panels": {
+          "21": {
+            "status": 200,
+            "field_names": [
+              "Source axis",
+              "Distance unit",
+              "Eligible bins",
+              "Expected bins",
+              "In-band bins",
+              "In band %",
+              "High misses",
+              "Low misses",
+              "Mean outside distance",
+              "Mean high distance",
+              "Mean low distance",
+              "Worst measured route",
+              "Unavailable bins / reason",
+              "Physical crop outcome"
+            ],
+            "column_values": [
+              [
+                "Temp",
+                "Vpd",
+                "Joint"
+              ],
+              [
+                "\u00b0F",
+                "kPa",
+                "shared axes"
+              ],
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                72,
+                72,
+                72
+              ],
+              [
+                0,
+                1,
+                0
+              ],
+              [
+                0,
+                100,
+                0
+              ],
+              [
+                1,
+                0,
+                null
+              ],
+              [
+                0,
+                0,
+                null
+              ],
+              [
+                3.518667602539054,
+                0,
+                null
+              ],
+              [
+                3.518667602539054,
+                0,
+                null
+              ],
+              [
+                0,
+                0,
+                null
+              ],
+              [
+                "east",
+                "north",
+                null
+              ],
+              [
+                "{\"not_elapsed\": 27, \"outside_prospective_target\": 44}",
+                "{\"not_elapsed\": 27, \"outside_prospective_target\": 44}",
+                "Shared six-field eligibility; inspect temperature/VPD missingness"
+              ],
+              [
+                "unqualified",
+                "unqualified",
+                "unqualified"
+              ]
+            ]
+          },
+          "22": {
+            "status": 200,
+            "field_names": [
+              "Definition / lineage",
+              "Value"
+            ],
+            "column_values": [
+              [
+                "Availability",
+                "Collector revision",
+                "Completed bins",
+                "Contributor revisions",
+                "Declared route SHA256",
+                "Experiment endpoint / causal proof",
+                "Frozen assignment state SHA256",
+                "Frozen profile state SHA256",
+                "Panel source SHA256",
+                "Partial window",
+                "Physical qualification",
+                "Reader definition",
+                "Reported firmware",
+                "Selected Denver day",
+                "Source binding",
+                "Source measurement scope",
+                "Target effective from",
+                "Target effective to",
+                "Target revision",
+                "Target version",
+                "Unavailable reason"
+              ],
+              [
+                "route_measurement",
+                "37a9cc0b7a2ef07585d0790f4bb4dcfbbe75bb6f",
+                "45",
+                "[8, 7, 9]",
+                "36d3f8ee0be85895683f319aeafad2a4262e1b4cf26741b45cac2d1adbe3729d",
+                "false",
+                "03cfc72f84045cdf72fe9bb96cef8e3250138086453cf9ba4415c976c7487793",
+                "3609ee4208b6ba434bbc27ecfd1b75a948b2f70f396c44f5b2bad1310e24df0b",
+                "d2e33e117e1127b8ffb2c94c0a36779bc811a8855ef615f5af6ce98c39d9010a",
+                "true",
+                "UNQUALIFIED: no authenticated hardware serial, crop placement or Modbus poll time",
+                "fixed-panel-native-route-measurement-v1",
+                "2026.10.2.0637.620a218a-wifi-bound",
+                "2026-10-05",
+                "2",
+                "source_routes_without_physical_hardware_or_crop_placement_authentication",
+                "2026-10-05T23:00:00+00:00",
+                "2026-10-06T06:00:00+00:00",
+                "3",
+                "native-route-2026-10-05-2300Z",
+                null
+              ]
+            ]
+          }
+        }
+      },
+      {
+        "day": "2026-09-29",
+        "captured_at": "2026-10-05T22:07:19.623565+00:00",
+        "panels": {
+          "21": {
+            "status": 200,
+            "field_names": [
+              "Source axis",
+              "Distance unit",
+              "Eligible bins",
+              "Expected bins",
+              "In-band bins",
+              "In band %",
+              "High misses",
+              "Low misses",
+              "Mean outside distance",
+              "Mean high distance",
+              "Mean low distance",
+              "Worst measured route",
+              "Unavailable bins / reason",
+              "Physical crop outcome"
+            ],
+            "column_values": [
+              [
+                "Temp",
+                "Vpd",
+                "Joint"
+              ],
+              [
+                "\u00b0F",
+                "kPa",
+                "shared axes"
+              ],
+              [
+                72,
+                72,
+                72
+              ],
+              [
+                72,
+                72,
+                72
+              ],
+              [
+                47,
+                72,
+                47
+              ],
+              [
+                65.27777777777777,
+                100,
+                65.27777777777777
+              ],
+              [
+                25,
+                0,
+                null
+              ],
+              [
+                0,
+                0,
+                null
+              ],
+              [
+                0.574444700170445,
+                0,
+                null
+              ],
+              [
+                0.574444700170445,
+                0,
+                null
+              ],
+              [
+                0,
+                0,
+                null
+              ],
+              [
+                "north",
+                "north",
+                null
+              ],
+              [
+                "{}",
+                "{}",
+                "Shared six-field eligibility; inspect temperature/VPD missingness"
+              ],
+              [
+                "unqualified",
+                "unqualified",
+                "unqualified"
+              ]
+            ]
+          },
+          "22": {
+            "status": 200,
+            "field_names": [
+              "Definition / lineage",
+              "Value"
+            ],
+            "column_values": [
+              [
+                "Availability",
+                "Collector revision",
+                "Completed bins",
+                "Contributor revisions",
+                "Declared route SHA256",
+                "Experiment endpoint / causal proof",
+                "Frozen assignment state SHA256",
+                "Frozen profile state SHA256",
+                "Panel source SHA256",
+                "Partial window",
+                "Physical qualification",
+                "Reader definition",
+                "Reported firmware",
+                "Selected Denver day",
+                "Source binding",
+                "Source measurement scope",
+                "Target effective from",
+                "Target effective to",
+                "Target revision",
+                "Target version",
+                "Unavailable reason"
+              ],
+              [
+                "route_measurement",
+                "20b5a0b36e8c53e3e88266a2d10c5248e22e405d",
+                "72",
+                "[5, 4, 6]",
+                "36d3f8ee0be85895683f319aeafad2a4262e1b4cf26741b45cac2d1adbe3729d",
+                "false",
+                "03cfc72f84045cdf72fe9bb96cef8e3250138086453cf9ba4415c976c7487793",
+                "3609ee4208b6ba434bbc27ecfd1b75a948b2f70f396c44f5b2bad1310e24df0b",
+                "013b019e6bbec801d1bb62e52e946bfb50612401010e62283d97d88067416048",
+                "false",
+                "UNQUALIFIED: no authenticated hardware serial, crop placement or Modbus poll time",
+                "fixed-panel-native-route-measurement-v1",
+                "2026.7.10.1500.09ee886",
+                "2026-09-29",
+                "1",
+                "source_routes_without_physical_hardware_or_crop_placement_authentication",
+                "2026-09-29T12:00:00+00:00",
+                "2026-09-30T06:00:00+00:00",
+                "2",
+                "native-route-2026-09-29",
+                null
+              ]
+            ]
+          }
+        }
+      }
+    ],
+    "panel_query_sha256": {
+      "21": "b704275a2b9fb6849c07bc6d57b87b196cd2ee9f3efd4acb777f7da2c64a96c3",
+      "22": "1ae32115782fe0f62bbd9ccc38364170d56807ac11d5bdf56d3de00ee6bbd059"
+    }
+  },
+  "natural_static_lab": {
+    "captured_at": "2026-10-05T23:15:46.178562+00:00",
+    "page_sha256": "0b40bfa3859eacd51c6bdadd622fac4e0fded2ad403ec5d143915bb0e9183653",
+    "served_public_sha256": "sha256:b81b7992e5d2a8785624e4fd00ac0309e7321e5e96aff15f633fc2c0c5180385",
+    "render_projection_equal": false,
+    "reason": "Static natural publication still shows earlier unavailable pre-bin snapshot; dynamic public API agrees with the measured first bin.",
+    "complete": false
+  },
+  "limitations": [
+    "One prospective source37 bin is observational and partial: 44 earlier undeclared bins and27 future bins remain unavailable.",
+    "Source37 declaration is immutable; later source callbacks cannot inherit source37 qualification or be backdated.",
+    "Physical serials, crop placement and Modbus poll times are unverified; physical, experiment and causal proof remain false.",
+    "Actual Iris context accessibility is verified; no new LLM action or plan outcome was triggered.",
+    "Source81 successor build/promotion and optimized natural publisher cadence remain pending; #371 is not closed by this receipt."
+  ]
+}

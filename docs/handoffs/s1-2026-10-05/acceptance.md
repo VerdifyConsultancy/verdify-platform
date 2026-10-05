@@ -79,3 +79,18 @@ Source `81d76a4c3d35a925ebd2438d89099d1f657b3f8f` is on main and validating thro
 The optimized publisher source8f passed full Linux validation but **built no images**: [registered build admission rejected a stale capacity signal](evidence/publisher8f-admission-blocked.json). The local Proxmox task traced repeated observer deadlines to a blocked NFSv4 file-open in node5 Zot and is coordinating replacement of only that registry Pod, preserving its PVC. The Verdify lane makes no competing NFS/storage mutation and does not bypass admission or widen deadline/freshness checks.
 
 Prospective source37 declarations remain immutable. Any later-source callbacks will be reported with truthful missingness/discontinuity rather than relabeled as37 or backdated into its interval. Current f2 publisher natural runs include651,577 and627 seconds; three consecutive runs below600 seconds have not qualified. Midnight natural vision/brief acceptance and source81 product acceptance remain pending. Live ordinary pods are Ready; aggregate Argo health newly reports Degraded and is being investigated separately from the earlier successful release receipt. **No additional issue is closed by this progress record.**
+
+## First completed native37 bin: consumer agreement and physical hold
+
+[The immutable first-bin consumer receipt](evidence/native37-first-bin-consumer-acceptance.json) records read-only capture beginning 23:15:27 UTC. The 23:00–23:15 bin is eligible under target revision3, source binding2 and route-only contributors7/8/9. SQL, API, both Running MCP replicas, the actual Iris pod's authenticated MCP context and dedicated Grafana datasource queries agree on current and historical native measurements. Public API parity also passes. Iris evidence proves authenticated context access and registration state; it does not claim a new model action or plan execution.
+
+| Denver day | Eligible bins | Temperature in band | Temperature high distance | VPD in band | Joint in band | Worst measured temperature zone |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| October5 | 1/72 | 0% | 3.518667602539054°F | 100% | 0% | east |
+| September29 | 72/72 | 65.27777777777777% | 0.574444700170445°F mean | 100% | 65.27777777777777% | north |
+
+The October5 denominator remains the full72-bin day:44 bins lie outside the prospective target and27 have not elapsed. Percentages use the one eligible bin, not invented coverage. Temperature distance is measured above the declared logical target; VPD is in band. Hardware identity, crop placement, per-probe physical poll time, physical outcome publication and experiment/causal qualification remain **false**. These are native route diagnostics, not authenticated physical crop results.
+
+Collection-tool checkout identity is source81 (`81d76a4c3d35a925ebd2438d89099d1f657b3f8f`); actual API/MCP runtimes remain sourcec8 (`c8fc15e6a81d29b16e23d6db078893160704b4ea`), and the eligible callbacks are actual collector37 (`37a9cc0b7a2ef07585d0790f4bb4dcfbbe75bb6f`). Whitelisted runtime environment readback and Pod/image identities substantiate these separate boundaries. Source81 is still validating and has not been deployed.
+
+The naturally served static Lab generation still contains its earlier unavailable projection: native render parity is **false/pending**, although its generation hash matches the public success receipt and the dynamic public API agrees. No manual publication was triggered. Preserve source37's prospective interval immutably when later collector identities arrive; do not invent overlap, backdating or physical qualification to finish acceptance. #371, #862 and sprint completion remain open pending their remaining live criteria.
