@@ -258,22 +258,22 @@ patches:
 images:
   - name: ghcr.io/verdifyconsultancy/verdify-api
     newName: registry.vallery.net/verdifyconsultancy/verdify-api
-    digest: sha256:39af8829eb4c4dc71ec7052493c8e2b5cabda6fe776bf3a70a1eaec71b0235e2
+    digest: sha256:52e576bd0846180656e2f5a60c8e00a8a7a67cc6ffd128a28832e789e4737f9f
   - name: ghcr.io/verdifyconsultancy/verdify-mcp
     newName: registry.vallery.net/verdifyconsultancy/verdify-mcp
-    digest: sha256:ef59c9e15c5b9552629df9ee2088b1464daa6bae365cc1fc884dd69d606b3e39
+    digest: sha256:37fe7918b89507667b30d5c591c212c3960c1e769c8265bfbed093a013e3c897
   - name: ghcr.io/verdifyconsultancy/verdify-ingestor
     newName: registry.vallery.net/verdifyconsultancy/verdify-ingestor
-    digest: sha256:b275855c4fca23eeac076acc18714d585d913d95d6c3f35bcb94de5add643305
+    digest: sha256:2ba90bfdabcb9b2064d29fb9347c1d881b89f01cbfba5c981fe5b0beeaccc3a2
   - name: ghcr.io/verdifyconsultancy/verdify-migrate
     newName: registry.vallery.net/verdifyconsultancy/verdify-migrate
-    digest: sha256:bba2cb29697f16c908410f3a7f49f82f03a2508374f5f76df5249f4cbddef19a
+    digest: sha256:f469176a0d608671c591e4997347b7422b6dfff21ff56200183169ef664c14b1
   # Build candidate for the feature-off experiment-v2 orchestrator (its release
   # digest is in release-pins.yaml). The component remains inert until its
   # explicit GitOps feature gate.
   - name: ghcr.io/verdifyconsultancy/verdify-experiment-v2-orchestrator
     newName: registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator
-    digest: sha256:3d4bd47cbf6d195c9951c2374f1ae02d7e4c9675e08d87a1126b5c2aaba38c13
+    digest: sha256:23723e28dd22a36a94ca6182d0d0d4adb86eadb4c97e10a9514c282e52640616
   # Hand-pinned planner: merged source 96a1d6bd includes the #822 liveness fix;
   # built by agent-fleet-ci/verdify-platform-build-planner-96a1d6bd-vdbkv.
   - name: ghcr.io/verdifyconsultancy/verdify-planner
