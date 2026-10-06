@@ -1,0 +1,36 @@
+{
+  "schema": "cnpg-s2-post-primary-loss-project-reseal-v1",
+  "complete": true,
+  "cluster_uid": "3981d0f2-4c72-48ac-9e09-826fe6bd4ed6",
+  "primary_uid": "4bdeafd3-5ef4-420a-8536-350069d33d53",
+  "timeline": 3,
+  "project_db_oid": 16447,
+  "all951_copy_relations_equal": true,
+  "copy_rows": 9699549,
+  "native_copy_seconds": 106.77611616600188,
+  "full44220_native_catalog_equal": true,
+  "all75_sequences_equal_untouched_frozen_a": true,
+  "all6_materialized_views_full_rows_equal_untouched_frozen_a": true,
+  "all9_runtime_verifiers_null": true,
+  "workers": 0,
+  "restoring": "off",
+  "scheduler_count": 0,
+  "retained_original_full_count_time_inventory": {
+    "relations": 427,
+    "timestamps": 567,
+    "timescale_owners": 614,
+    "dataset_sha256": "b6ee0debbeb016131948ed80de26cd1275d6a6e9de6a72ada565c2406830b979"
+  },
+  "no_new_full_count_time_rerun_claimed": true,
+  "sequence_accounting": "Five Timescale allocation sequences were advanced by later rollback qualifications before physical Backup; actual physical A/B all75 values are identical, all workload values equal the original restore. No rewind. Earlier stale-reference and JSON OID type comparison failures retained.",
+  "private_custody": "/Volumes/Work/verdify-s2-cnpg-20261006",
+  "sha256": {
+    "full-frozen-recovery-copy-b-post-failover-once/receipt.json": "a61b7bcafaffb3d18e8898e756417818123b31c623d3d7f7cd61c067ce2ca727",
+    "full-frozen-recovery-copy-b-post-failover-once/baseline-parity.json": "d758832885b623df819040c410d464dff4a6feeb817050c5f4611a3424343e8c",
+    "full-frozen-recovery-catalog-post-failover-once/b-receipt.json": "31057e6c75dd4fc07cea66095537eea174edf2085491f3ffc606602cb75fbf7a",
+    "full-frozen-recovery-catalog-post-failover-once/b-comparison.json": "ac6a1996ea98a1f643469379000018fcf53cc08f01587a9811cbce767459b51c",
+    "frozen-post-failover-native-metadata-attempt3/a-receipt.json": "62273bbcae145a2a99cb4d8410b3d7b37183d601f89b410c774e64d23ed4c5c6",
+    "frozen-post-failover-native-metadata-attempt3/b-receipt.json": "0080ac3c35facd698a8a5bbaad119875a4379e44fb4a31cfc72708d30c1cc7aa",
+    "frozen-post-failover-native-metadata-attempt3/parity.json": "ab722fa666070bafdbfc501c222a8ba1b295fde4f66f12f29ec1662562daf561"
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "schema": "cnpg-s2-actual-reader-recovery-timings-v1",
+  "records": [
+    {
+      "cluster": "verdify-cnpg-s2-pitr-a-frozen",
+      "cluster_uid": "bd01ec5b-efe9-4882-a6dc-c76c6b6fa7ec",
+      "native_job_pod_event_uids": [
+        "0883bd84-f9eb-4382-b73f-83eb8e06d7f7",
+        "7e19483c-7ea4-47ae-928e-8369d14df687"
+      ],
+      "created_at": "2026-10-06T06:00:09Z",
+      "base_restore_started_at": "2026-10-06T06:00:39.582665872Z",
+      "base_restore_completed_at": "2026-10-06T06:00:59.432121324Z",
+      "base_restore_seconds": 19.849456,
+      "target_reached_native": {
+        "level": "info",
+        "ts": "2026-10-06T06:01:16.684589266Z",
+        "logger": "postgres",
+        "msg": "record",
+        "logging_pod": "verdify-cnpg-s2-pitr-a-frozen-1-full-recovery",
+        "record": {
+          "log_time": "2026-10-06 06:01:16.684 UTC",
+          "process_id": "47",
+          "session_id": "6ac48e9c.2f",
+          "session_line_num": "14",
+          "session_start_time": "2026-10-06 06:01:00 UTC",
+          "virtual_transaction_id": "1/0",
+          "transaction_id": "0",
+          "error_severity": "LOG",
+          "sql_state_code": "00000",
+          "message": "recovery stopping before commit of transaction 13883, time 2026-10-06 05:38:19.212161+00",
+          "backend_type": "startup",
+          "query_id": "0"
+        }
+      },
+      "three_ready_at": "2026-10-06T06:06:36+00:00",
+      "create_to_three_ready_seconds": 387.0
+    },
+    {
+      "cluster": "verdify-cnpg-s2-pitr-b-frozen",
+      "cluster_uid": "3981d0f2-4c72-48ac-9e09-826fe6bd4ed6",
+      "native_job_pod_event_uids": [
+        "38a6e9be-bbe9-4851-88e1-b1a256c8281f",
+        "58fba19b-f4ea-49a4-9b54-24458b388aee"
+      ],
+      "created_at": "2026-10-06T06:00:09Z",
+      "base_restore_started_at": "2026-10-06T06:00:37.068257156Z",
+      "base_restore_completed_at": "2026-10-06T06:00:56.138055172Z",
+      "base_restore_seconds": 19.069798,
+      "target_reached_native": {
+        "level": "info",
+        "ts": "2026-10-06T06:01:14.542922644Z",
+        "logger": "postgres",
+        "msg": "record",
+        "logging_pod": "verdify-cnpg-s2-pitr-b-frozen-1-full-recovery",
+        "record": {
+          "log_time": "2026-10-06 06:01:14.542 UTC",
+          "process_id": "47",
+          "session_id": "6ac48e99.2f",
+          "session_line_num": "15",
+          "session_start_time": "2026-10-06 06:00:57 UTC",
+          "virtual_transaction_id": "1/0",
+          "transaction_id": "0",
+          "error_severity": "LOG",
+          "sql_state_code": "00000",
+          "message": "recovery stopping before commit of transaction 13884, time 2026-10-06 05:38:19.221592+00",
+          "backend_type": "startup",
+          "query_id": "0"
+        }
+      },
+      "three_ready_at": "2026-10-06T06:07:07+00:00",
+      "create_to_three_ready_seconds": 418.0
+    }
+  ],
+  "authority": "Original native PostgreSQL/plugin log records retrieved from retained Loki streams after CNPG GC; native Kube events UID custody joined. No synthetic log/Job success reconstruction.",
+  "loki_response_sha256": "53baf33f4b26f107439e0441d58bcbfe0adc6c796734615d141321edcfd9d159",
+  "native_events_sha256": "cf13a7208d03a02806f6d0fb6c1dd30c7da5d9dd68a95da335a82d33ee4f7de4",
+  "private_receipt_sha256": "a6ed15b14ac860012d9497efbca8eb5a67026f56a644fba24aed2dc8449a6bed",
+  "private_custody": "/Volumes/Work/verdify-s2-cnpg-20261006/frozen-recovery-loki-native-once/receipt.json"
+}

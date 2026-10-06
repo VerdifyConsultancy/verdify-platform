@@ -1,7 +1,9 @@
 # Current274 CNPG qualification custody
 
-Current274 logical restore and native admission are qualified. Full recovery
-and complete source/A/B count/time parity remain open.
+Current274 logical restore, native admission, protected physical PITR, complete
+SOURCE/A/B parity, and bounded primary-Pod loss recovery are qualified. This
+qualification preserves the authentic274 snapshot; subsequent275 work and ordinary
+client endpoint flip are separate acceptance.
 The original schema270 source/A/B clusters, failed count/time attempts and native
 admission lineage remain intact. No production endpoint, migration, role or
 writer was changed by this CNPG lane.
@@ -82,11 +84,11 @@ posture and17 memberships match after the explicit bootstrap grantor translation
 
 A complete951-relation native COPY multiset comparison traversed every original
 COPY header. All workload relation rows and hashes match the authentic exported
-dump. Source rows total9,699,546; target rows total9,699,549. Three Timescale
-installation/catalog relations still require complete typed accounting: bgw_job
+dump. Source rows total9,699,546; target rows total9,699,549. At that interim capture, three Timescale
+installation/catalog relations required complete typed accounting: bgw_job
 (two extra native scheduler jobs), compression_settings (OID-bound names), and
-metadata (one extra installation entry). They are explicit remaining acceptance,
-not ignored or counted as byte parity. The first transport attempt stopped its
+metadata (one extra installation entry). They were explicit remaining acceptance, subsequently fully accounted in the
+sealed receipt; they were never ignored or counted as byte parity. The first transport attempt stopped its
 markers six relations early despite exit0; its incomplete receipt is preserved.
 The complete retry used a checksummed target-local SQL file and required all951
 markers plus its terminal marker. No row values were written to evidence.
@@ -106,7 +108,95 @@ The historical full SOURCE count/time capture first failed on lighting under its
 original120-second budget. Both CTE-inlining variants alone and a function-body
 expansion attempt failed and remain private. Complete pinned lighting cardinality
 and all eight timestamp endpoints passed in46.89 seconds after session-local JIT
-disabling with unchanged expressions and CTE inlining. Full SOURCE/A/B count/time
-is running again at one common clock. Current274 time inventory, fresh physical
-PITR A/B, failover/data recovery, actual runtime duties and the final cutover/rollback
-packet remain open. No production DB architecture, endpoint or writer changed.
+disabling with unchanged expressions and CTE inlining. At that interim point full SOURCE/A/B count/time
+was running again at one common clock. The later full seal and actual physical
+recovery/failover are recorded below; actual ordinary runtime duties remain a
+separate ROOT/Iris lane. No production DB architecture, endpoint or writer changed.
+
+
+## Protected physical recovery and complete parity
+
+The native current274 Backup `verdify-cnpg-s2-current274-20261006`
+UID `8e3c2874-f16c-4ca2-b85d-09629910ac64`, ID `20261006T052358`,
+completed in392 seconds. Genuine RW-Service TCP commits recorded distinct A/B/C
+transactions13882/13883/13884 and flush LSNs1/740001F0,1/74000358,1/740004C0.
+The independently scoped restore-reader Job UID
+`15d24651-192b-407f-8236-8392e458ff85` retrieved and hashed backup.info and every
+WAL segment72..74, and HEAD-verified the619,166,118-byte base archive. This
+protected the password-free original baseline before #643 installed credentials.
+Backup completion alone was not accepted as recoverability.
+
+Original fresh A/B reached their exact native PITR targets, but then their
+Timescale scheduler ran restored jobs. Retention removed9,953 diagnostics rows;
+full COPY failed on the dropped chunk, and count/time/owner parity failed.
+Those Clusters, PVCs, raw failures and native scheduler timelines remain intact.
+This is actual lost restored workload data, not a harmless compression difference.
+
+Fresh distinct `verdify-cnpg-s2-pitr-a-frozen` and `...-b-frozen` use exactly the
+same protected Backup/targets/reader-only identity/image/storage as the failed
+pair, with supported startup `timescaledb.max_background_workers=0`. Original
+job rows/scheduled flags remain unchanged; `timescaledb.restoring=off`. This is an
+inspection freeze, not a claim that production jobs are disabled or safe to resume.
+A contains A only; B contains A+B; neither contains C. Native recovery stopped
+before commits13883 and13884 respectively. Native retained PostgreSQL/plugin
+logs and UID-bound Kubernetes events prove base restores19.849/19.070 seconds,
+and creation→threeReady387/418 seconds; GC of finished recovery Jobs is explicit.
+
+Every one of951 native COPY relations and9,699,549 baseline rows matches the
+sealed S2 physical baseline, including the three fully accounted native catalog
+additions. Both native catalogs match all44,220 portable and raw entries. Both
+full original427-relation/567-timestamp/614-Timescale-owner inventories match at
+the common03:58:39.426422Z source clock, dataset SHA256
+`b6ee0debbeb016131948ed80de26cd1275d6a6e9de6a72ada565c2406830b979`.
+Native count/time durations561.172/574.233 seconds retain the original per-statement
+120-second budget. No criterion was replaced with a narrower proxy.
+
+A private staging filename collision initially dispatched count/time SQL in the
+catalog slot. Those wrong-shaped outputs receive no catalog credit and remain
+preserved. Catalog recapture used distinct content-SHA filenames, verified before
+and after dispatch, and passed exact native witness equality. Existing full count/
+time results were retained. See [full physical parity](evidence/cnpg-current274-physical-full-parity.json),
+[native recovery timings](evidence/cnpg-current274-recovery-timings.json), and
+[actual PVC/Longhorn/domain bindings](evidence/cnpg-current274-frozen-storage.json).
+
+## Actual bounded primary-Pod loss
+
+On frozen B alone, the bootstrap database OID16385 owns the separate
+`public.cnpg_s2_failover_20261006` sentinel. A single180-second TCP Job
+UID `9edffdc7-2001-4e9a-b2bc-ea375ec18bc0` used its generated target application
+credential through two exact scoped policies. After148 acknowledged commits,
+a fresh threeReady/current-primary check preceded a normal-grace deletion of
+primary Pod UID `7c45cff0-5375-40ab-8cdd-ff7b638a53f1`, with UID and resourceVersion
+preconditions. No force, node/host restart or source-S2 action occurred.
+
+All454 acknowledged commits survived, with zero duplicate IDs or lost ACKs.
+Twelve ambiguous attempts were never replayed; one committed without an ACK,
+so native storage has455 rows. The fixed RW Service UID
+`1778c541-900f-4743-b9be-62b13f96c569` moved to primary
+`verdify-cnpg-s2-pitr-b-frozen-2` UID `4bdeafd3-5ef4-420a-8536-350069d33d53`,
+server10.42.5.144, timeline3. The measured same-client ACK gap was8.463647 seconds.
+All drill clients stopped. This measures exact primary-Pod loss, not physical
+host destruction or nine ordinary-client cutover. Full project reseal is recorded
+separately after the drill. See [raw-identity-bound summary](evidence/cnpg-current274-primary-loss.json).
+
+Future production cutover must explicitly handle the observed retention hazard,
+freshness, writer fencing, ordinary credentials and post-write rollback. The
+[concrete cutover/rollback packet](../../runbooks/cnpg/current274-cutover-rollback-packet.md)
+records these boundaries. Production remains on `verdify-db`; these rehearsal
+results do not authorize pointing production at an old snapshot.
+
+
+Post-failover [full project reseal](evidence/cnpg-current274-post-failover-reseal.json)
+passed951 relations/9,699,549 protected rows and all44,220 native catalog entries.
+All75 sequence values match untouched frozen A; all six materialized-view complete
+rowsets match A. Workload sequences equal the original restore. Five internal
+Timescale allocators had advanced during later rollback qualifications before
+Backup, identically preserved in A/B; no sequence rewind occurred. One stale
+pre-backup sequence comparison and one JSON string-vs-integer OID comparison
+failed locally and remain preserved, followed by the correct native comparison.
+The original full common-clock count/time inventory remains binding; no second
+full count/time pass is invented. Workers0, restoringoff, zero schedulers and all
+nine NULL ordinary verifiers were read natively on A/B. Frozen B is released to
+ROOT/Iris for separately qualified target-only admission/credentials and actual
+ordinary-client endpoint reversal. Protected274 evidence is immutable when later
+275 qualification or credentials change the mutable client clone.

@@ -1,0 +1,212 @@
+{
+  "schema": "cnpg-s2-frozen-storage-native-v1",
+  "ready_clusters": 2,
+  "ready_instances": 6,
+  "strict_three_physical_domains_each": true,
+  "placements": [
+    {
+      "cluster": "verdify-cnpg-s2-pitr-a-frozen",
+      "pod": "verdify-cnpg-s2-pitr-a-frozen-1",
+      "uid": "96caed77-a75f-457c-bbd6-d34f88a3b3ae",
+      "node": "vm-k3s-node5",
+      "domain": "opal"
+    },
+    {
+      "cluster": "verdify-cnpg-s2-pitr-a-frozen",
+      "pod": "verdify-cnpg-s2-pitr-a-frozen-2",
+      "uid": "ea68bad4-3f3b-4116-b120-6300d92161f6",
+      "node": "vm-k3s-node6",
+      "domain": "ore"
+    },
+    {
+      "cluster": "verdify-cnpg-s2-pitr-a-frozen",
+      "pod": "verdify-cnpg-s2-pitr-a-frozen-3",
+      "uid": "90ce669c-5dc8-496b-8c21-ee49eb9cf1d3",
+      "node": "vm-k3s-node7",
+      "domain": "onyx"
+    },
+    {
+      "cluster": "verdify-cnpg-s2-pitr-b-frozen",
+      "pod": "verdify-cnpg-s2-pitr-b-frozen-1",
+      "uid": "7c45cff0-5375-40ab-8cdd-ff7b638a53f1",
+      "node": "vm-k3s-node5",
+      "domain": "opal"
+    },
+    {
+      "cluster": "verdify-cnpg-s2-pitr-b-frozen",
+      "pod": "verdify-cnpg-s2-pitr-b-frozen-2",
+      "uid": "4bdeafd3-5ef4-420a-8536-350069d33d53",
+      "node": "vm-k3s-node7",
+      "domain": "onyx"
+    },
+    {
+      "cluster": "verdify-cnpg-s2-pitr-b-frozen",
+      "pod": "verdify-cnpg-s2-pitr-b-frozen-3",
+      "uid": "11f64c0a-8053-49df-bad0-85fc020b8858",
+      "node": "vm-k3s-node6",
+      "domain": "ore"
+    }
+  ],
+  "allocations": [
+    {
+      "pvc": "verdify-cnpg-s2-pitr-a-frozen-1",
+      "pvc_uid": "3a017885-20b0-47c2-adcd-0d1dc2b625e9",
+      "size": "20Gi",
+      "pv": "pvc-3a017885-20b0-47c2-adcd-0d1dc2b625e9",
+      "volume": "pvc-3a017885-20b0-47c2-adcd-0d1dc2b625e9",
+      "replica_count": 2,
+      "robustness": "healthy",
+      "replica_nodes": [
+        "vm-k3s-node5",
+        "vm-k3s-node4"
+      ]
+    },
+    {
+      "pvc": "verdify-cnpg-s2-pitr-a-frozen-1-wal",
+      "pvc_uid": "5dc7118f-8b34-478c-b7de-fa00e3791ab8",
+      "size": "5Gi",
+      "pv": "pvc-5dc7118f-8b34-478c-b7de-fa00e3791ab8",
+      "volume": "pvc-5dc7118f-8b34-478c-b7de-fa00e3791ab8",
+      "replica_count": 2,
+      "robustness": "healthy",
+      "replica_nodes": [
+        "vm-k3s-node5",
+        "vm-k3s-node8"
+      ]
+    },
+    {
+      "pvc": "verdify-cnpg-s2-pitr-a-frozen-2",
+      "pvc_uid": "e752c593-8812-4209-b7cd-17bbe9b719ab",
+      "size": "20Gi",
+      "pv": "pvc-e752c593-8812-4209-b7cd-17bbe9b719ab",
+      "volume": "pvc-e752c593-8812-4209-b7cd-17bbe9b719ab",
+      "replica_count": 2,
+      "robustness": "healthy",
+      "replica_nodes": [
+        "vm-k3s-node8",
+        "vm-k3s-node6"
+      ]
+    },
+    {
+      "pvc": "verdify-cnpg-s2-pitr-a-frozen-2-wal",
+      "pvc_uid": "4b572ec5-3982-4059-8668-f2fd1fec74d3",
+      "size": "5Gi",
+      "pv": "pvc-4b572ec5-3982-4059-8668-f2fd1fec74d3",
+      "volume": "pvc-4b572ec5-3982-4059-8668-f2fd1fec74d3",
+      "replica_count": 2,
+      "robustness": "healthy",
+      "replica_nodes": [
+        "vm-k3s-node6",
+        "vm-k3s-node4"
+      ]
+    },
+    {
+      "pvc": "verdify-cnpg-s2-pitr-a-frozen-3",
+      "pvc_uid": "4c598b52-6104-4f65-9206-7bb04755118a",
+      "size": "20Gi",
+      "pv": "pvc-4c598b52-6104-4f65-9206-7bb04755118a",
+      "volume": "pvc-4c598b52-6104-4f65-9206-7bb04755118a",
+      "replica_count": 2,
+      "robustness": "healthy",
+      "replica_nodes": [
+        "vm-k3s-node7",
+        "vm-k3s-node8"
+      ]
+    },
+    {
+      "pvc": "verdify-cnpg-s2-pitr-a-frozen-3-wal",
+      "pvc_uid": "7577f26d-4cca-462b-a69c-f2b78cf87cfc",
+      "size": "5Gi",
+      "pv": "pvc-7577f26d-4cca-462b-a69c-f2b78cf87cfc",
+      "volume": "pvc-7577f26d-4cca-462b-a69c-f2b78cf87cfc",
+      "replica_count": 2,
+      "robustness": "healthy",
+      "replica_nodes": [
+        "vm-k3s-node7",
+        "vm-k3s-node4"
+      ]
+    },
+    {
+      "pvc": "verdify-cnpg-s2-pitr-b-frozen-1",
+      "pvc_uid": "993b53bb-81fa-4fe4-8964-7958cec97a8e",
+      "size": "20Gi",
+      "pv": "pvc-993b53bb-81fa-4fe4-8964-7958cec97a8e",
+      "volume": "pvc-993b53bb-81fa-4fe4-8964-7958cec97a8e",
+      "replica_count": 2,
+      "robustness": "healthy",
+      "replica_nodes": [
+        "vm-k3s-node5",
+        "vm-k3s-node7"
+      ]
+    },
+    {
+      "pvc": "verdify-cnpg-s2-pitr-b-frozen-1-wal",
+      "pvc_uid": "d3f567f4-c8d2-4954-a330-988718680a1b",
+      "size": "5Gi",
+      "pv": "pvc-d3f567f4-c8d2-4954-a330-988718680a1b",
+      "volume": "pvc-d3f567f4-c8d2-4954-a330-988718680a1b",
+      "replica_count": 2,
+      "robustness": "healthy",
+      "replica_nodes": [
+        "vm-k3s-node7",
+        "vm-k3s-node5"
+      ]
+    },
+    {
+      "pvc": "verdify-cnpg-s2-pitr-b-frozen-2",
+      "pvc_uid": "8690f05f-f216-4166-a832-52b1aa2d34d2",
+      "size": "20Gi",
+      "pv": "pvc-8690f05f-f216-4166-a832-52b1aa2d34d2",
+      "volume": "pvc-8690f05f-f216-4166-a832-52b1aa2d34d2",
+      "replica_count": 2,
+      "robustness": "healthy",
+      "replica_nodes": [
+        "vm-k3s-node8",
+        "vm-k3s-node7"
+      ]
+    },
+    {
+      "pvc": "verdify-cnpg-s2-pitr-b-frozen-2-wal",
+      "pvc_uid": "4dcccffa-d6f5-45ee-9653-863a63697f73",
+      "size": "5Gi",
+      "pv": "pvc-4dcccffa-d6f5-45ee-9653-863a63697f73",
+      "volume": "pvc-4dcccffa-d6f5-45ee-9653-863a63697f73",
+      "replica_count": 2,
+      "robustness": "healthy",
+      "replica_nodes": [
+        "vm-k3s-node7",
+        "vm-k3s-node8"
+      ]
+    },
+    {
+      "pvc": "verdify-cnpg-s2-pitr-b-frozen-3",
+      "pvc_uid": "8d1e10d1-1482-4974-a8e0-2bdfcc56d099",
+      "size": "20Gi",
+      "pv": "pvc-8d1e10d1-1482-4974-a8e0-2bdfcc56d099",
+      "volume": "pvc-8d1e10d1-1482-4974-a8e0-2bdfcc56d099",
+      "replica_count": 2,
+      "robustness": "healthy",
+      "replica_nodes": [
+        "vm-k3s-node6",
+        "vm-k3s-node8"
+      ]
+    },
+    {
+      "pvc": "verdify-cnpg-s2-pitr-b-frozen-3-wal",
+      "pvc_uid": "2f1d154f-0271-4668-b104-e89f36988c9b",
+      "size": "5Gi",
+      "pv": "pvc-2f1d154f-0271-4668-b104-e89f36988c9b",
+      "volume": "pvc-2f1d154f-0271-4668-b104-e89f36988c9b",
+      "replica_count": 2,
+      "robustness": "healthy",
+      "replica_nodes": [
+        "vm-k3s-node6",
+        "vm-k3s-node8"
+      ]
+    }
+  ],
+  "logical_Gi": 150,
+  "potential_two_replica_Gi": 300,
+  "private_receipt_sha256": "997358118fe67d4e9accc71150100b715fa50a72bbad9113726f441e4775dc96",
+  "private_custody": "/Volumes/Work/verdify-s2-cnpg-20261006/frozen-storage-and-recovery-final-once/receipt.json"
+}
