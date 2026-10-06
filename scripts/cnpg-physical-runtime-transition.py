@@ -211,8 +211,11 @@ def dataset_sql(profile, observation_at):
     observation = trace.observation_sql(observation_at)
     clock = t.load("cnpg-public-count-time-clock")
     view_template = clock.relation_aggregate_template_at(observation)
+    policy = t.load("cnpg-policy-twin-count-time")
     projected_aggregate = (
-        "CASE "
+        "CASE WHEN c.relname='v_policy_twin_asof_input' THEN "
+        + t.literal(policy.endpoint_aggregate())
+        + " "
         + " ".join(
             "WHEN c.relname=" + t.literal(name) + " THEN " + t.literal(trace.endpoint_aggregate(name, observation_at))
             for name in sorted(trace.VIEWS)
