@@ -1,0 +1,8 @@
+{
+  "schema": "verdify-c1-native-capture-request-v1",
+  "request_id": "e7f26520-43d4-4965-9acd-8d14eabbdee7",
+  "runtime_instance_id": "d215ee98-af33-4501-acee-8444b458c7a0",
+  "connection_generation": 1,
+  "source_revision": "81d76a4c3d35a925ebd2438d89099d1f657b3f8f",
+  "expires_at": "2026-10-06T00:30:16.822920+00:00"
+}

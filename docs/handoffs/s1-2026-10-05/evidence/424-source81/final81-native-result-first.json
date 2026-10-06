@@ -1,0 +1,169 @@
+{
+  "band_coherence": {
+    "consumed_branch_observation": {
+      "as_of": "2026-10-06T00:20:33.626104+00:00",
+      "connection_generation": 1,
+      "runtime_instance_id": "d215ee98-af33-4501-acee-8444b458c7a0",
+      "slug": "band_source",
+      "value": "onchip_curve"
+    },
+    "ok": false,
+    "required_series": [
+      "temp_low",
+      "temp_high",
+      "temp_target",
+      "vpd_low",
+      "vpd_high",
+      "vpd_target"
+    ],
+    "series": [
+      {
+        "classification": "present",
+        "coherent": false,
+        "control": "72.50180053710938",
+        "detail": "served=72.48090106197593 control=72.50180053710938 observed=72.50180053710938 delta={'control_minus_served': '0.02089947513345', 'observed_minus_control': '0'}",
+        "field_name": "temp_low",
+        "observed": "72.50180053710938",
+        "observed_slug": "consumed_temp_low_f",
+        "observed_ts": "2026-10-06T00:20:33.625527Z",
+        "observed_unit": "\u00b0F",
+        "served": "72.48090106197593"
+      },
+      {
+        "classification": "present",
+        "coherent": false,
+        "control": "82.50180053710938",
+        "detail": "served=82.48090106197593 control=82.50180053710938 observed=82.50180053710938 delta={'control_minus_served': '0.02089947513345', 'observed_minus_control': '0'}",
+        "field_name": "temp_high",
+        "observed": "82.50180053710938",
+        "observed_slug": "consumed_temp_high_f",
+        "observed_ts": "2026-10-06T00:20:33.625746Z",
+        "observed_unit": "\u00b0F",
+        "served": "82.48090106197593"
+      },
+      {
+        "classification": "present",
+        "coherent": false,
+        "control": "77.50180053710938",
+        "detail": "served=77.48090106197593 control=77.50180053710938 observed=77.50180053710938 delta={'control_minus_served': '0.02089947513345', 'observed_minus_control': '0'}",
+        "field_name": "temp_target",
+        "observed": "77.50180053710938",
+        "observed_slug": "house_temp_target_f",
+        "observed_ts": "2026-10-06T00:20:33.625950Z",
+        "observed_unit": "\u00b0F",
+        "served": "77.48090106197593"
+      },
+      {
+        "classification": "present",
+        "coherent": false,
+        "control": "0.8446076512336731",
+        "detail": "served=0.8495590884358506 control=0.8446076512336731 observed=0.8446076512336731 delta={'control_minus_served': '-0.0049514372021775', 'observed_minus_control': '0'}",
+        "field_name": "vpd_low",
+        "observed": "0.8446076512336731",
+        "observed_slug": "consumed_vpd_low_kpa",
+        "observed_ts": "2026-10-06T00:20:33.625810Z",
+        "observed_unit": "kPa",
+        "served": "0.8495590884358506"
+      },
+      {
+        "classification": "present",
+        "coherent": false,
+        "control": "1.2746076583862305",
+        "detail": "served=1.2795590884358505 control=1.2746076583862305 observed=1.2746076583862305 delta={'control_minus_served': '-0.00495143004962', 'observed_minus_control': '0'}",
+        "field_name": "vpd_high",
+        "observed": "1.2746076583862305",
+        "observed_slug": "consumed_vpd_high_kpa",
+        "observed_ts": "2026-10-06T00:20:33.625894Z",
+        "observed_unit": "kPa",
+        "served": "1.2795590884358505"
+      },
+      {
+        "classification": "present",
+        "coherent": false,
+        "control": "1.0278769731521606",
+        "detail": "served=1.0326344386047208 control=1.0278769731521606 observed=1.0278769731521606 delta={'control_minus_served': '-0.0047574654525602', 'observed_minus_control': '0'}",
+        "field_name": "vpd_target",
+        "observed": "1.0278769731521606",
+        "observed_slug": "house_vpd_target_kpa",
+        "observed_ts": "2026-10-06T00:20:33.626026Z",
+        "observed_unit": "kPa",
+        "served": "1.0326344386047208"
+      }
+    ]
+  },
+  "checks": [
+    {
+      "detail": "48/48 fields byte-parity with source ENTITY_GRIDS",
+      "name": "grid_parity",
+      "status": "PASS"
+    },
+    {
+      "detail": "band_layer_incoherent:temp_low:served=72.48090106197593 control=72.50180053710938 observed=72.50180053710938 delta={'control_minus_served': '0.02089947513345', 'observed_minus_control': '0'}; band_layer_incoherent:temp_high:served=82.48090106197593 control=82.50180053710938 observed=82.50180053710938 delta={'control_minus_served': '0.02089947513345', 'observed_minus_control': '0'}; band_layer_incoherent:temp_target:served=77.48090106197593 control=77.50180053710938 observed=77.50180053710938 delta={'control_minus_served': '0.02089947513345', 'observed_minus_control': '0'}; band_layer_incoherent:vpd_low:served=0.8495590884358506 control=0.8446076512336731 observed=0.8446076512336731 delta={'control_minus_served': '-0.0049514372021775', 'observed_minus_control': '0'}; band_layer_incoherent:vpd_high:served=1.2795590884358505 control=1.2746076583862305 observed=1.2746076583862305 delta={'control_minus_served': '-0.00495143004962', 'observed_minus_control': '0'}; band_layer_incoherent:vpd_target:served=1.0326344386047208 control=1.0278769731521606 observed=1.0278769731521606 delta={'control_minus_served': '-0.0047574654525602', 'observed_minus_control': '0'}",
+      "name": "band_coherence_424",
+      "status": "FAIL"
+    },
+    {
+      "detail": "observed_component_value_invalid:cool_stage2_over_high_f:value_off_entity_grid: cool_stage2_over_high_f=1.659999966621399 step=0.1 origin=0; observed_component_value_invalid:min_fog_on_s:value_off_entity_grid: min_fog_on_s=63.0 step=15 origin=15; observed_component_value_invalid:mister_all_delay_s:value_off_entity_grid: mister_all_delay_s=75.0 step=30 origin=60; observed_component_value_invalid:mister_all_kpa:value_off_entity_grid: mister_all_kpa=1.309999942779541 step=0.05 origin=1; observed_component_value_invalid:mister_engage_delay_s:value_off_entity_grid: mister_engage_delay_s=38.0 step=30 origin=30; observed_component_value_invalid:mister_engage_kpa:value_off_entity_grid: mister_engage_kpa=1.1100000143051147 step=0.05 origin=0.5; observed_component_value_invalid:mister_pulse_on_s:value_off_entity_grid: mister_pulse_on_s=33.0 step=5 origin=30; observed_component_value_invalid:mister_vpd_weight:value_off_entity_grid: mister_vpd_weight=1.7000000476837158 step=0.5 origin=0.5; observed_component_value_invalid:vpd_hysteresis:value_off_entity_grid: vpd_hysteresis=0.1875 step=0.05 origin=0.05; observed_component_value_invalid:vpd_watch_dwell_s:value_off_entity_grid: vpd_watch_dwell_s=52.0 step=15 origin=15",
+      "name": "observed_start_state",
+      "status": "FAIL"
+    },
+    {
+      "detail": "no qualified revision emitted (capture blocked)",
+      "name": "grid_revision",
+      "status": "FAIL"
+    }
+  ],
+  "computed_at": "2026-10-06T00:22:12.508939Z",
+  "device_id": "esp32-vallery",
+  "failures": [
+    "band_layer_incoherent:temp_low:served=72.48090106197593 control=72.50180053710938 observed=72.50180053710938 delta={'control_minus_served': '0.02089947513345', 'observed_minus_control': '0'}",
+    "band_layer_incoherent:temp_high:served=82.48090106197593 control=82.50180053710938 observed=82.50180053710938 delta={'control_minus_served': '0.02089947513345', 'observed_minus_control': '0'}",
+    "band_layer_incoherent:temp_target:served=77.48090106197593 control=77.50180053710938 observed=77.50180053710938 delta={'control_minus_served': '0.02089947513345', 'observed_minus_control': '0'}",
+    "band_layer_incoherent:vpd_low:served=0.8495590884358506 control=0.8446076512336731 observed=0.8446076512336731 delta={'control_minus_served': '-0.0049514372021775', 'observed_minus_control': '0'}",
+    "band_layer_incoherent:vpd_high:served=1.2795590884358505 control=1.2746076583862305 observed=1.2746076583862305 delta={'control_minus_served': '-0.00495143004962', 'observed_minus_control': '0'}",
+    "band_layer_incoherent:vpd_target:served=1.0326344386047208 control=1.0278769731521606 observed=1.0278769731521606 delta={'control_minus_served': '-0.0047574654525602', 'observed_minus_control': '0'}",
+    "observed_component_value_invalid:cool_stage2_over_high_f:value_off_entity_grid: cool_stage2_over_high_f=1.659999966621399 step=0.1 origin=0",
+    "observed_component_value_invalid:min_fog_on_s:value_off_entity_grid: min_fog_on_s=63.0 step=15 origin=15",
+    "observed_component_value_invalid:mister_all_delay_s:value_off_entity_grid: mister_all_delay_s=75.0 step=30 origin=60",
+    "observed_component_value_invalid:mister_all_kpa:value_off_entity_grid: mister_all_kpa=1.309999942779541 step=0.05 origin=1",
+    "observed_component_value_invalid:mister_engage_delay_s:value_off_entity_grid: mister_engage_delay_s=38.0 step=30 origin=30",
+    "observed_component_value_invalid:mister_engage_kpa:value_off_entity_grid: mister_engage_kpa=1.1100000143051147 step=0.05 origin=0.5",
+    "observed_component_value_invalid:mister_pulse_on_s:value_off_entity_grid: mister_pulse_on_s=33.0 step=5 origin=30",
+    "observed_component_value_invalid:mister_vpd_weight:value_off_entity_grid: mister_vpd_weight=1.7000000476837158 step=0.5 origin=0.5",
+    "observed_component_value_invalid:vpd_hysteresis:value_off_entity_grid: vpd_hysteresis=0.1875 step=0.05 origin=0.05",
+    "observed_component_value_invalid:vpd_watch_dwell_s:value_off_entity_grid: vpd_watch_dwell_s=52.0 step=15 origin=15"
+  ],
+  "grid": {
+    "field_count": 48,
+    "grid_content_sha256": "f2ce504cd79a01d9f9f8994f85bf48df1bde7450ebafc071d54ead427398af98",
+    "observation_receipt_sha256": "1d1402ac6014d85de6d76fcb9d4c4c18163394b3c508491ee4777dd24ed4852f",
+    "parity_ok": true,
+    "wire_manifest_sha256": "0bdd80472f2a9845c24a78cd7d6662e0523314afc5f3149233c08a8e8aedb318",
+    "wire_schema_version": 2
+  },
+  "grid_revision": null,
+  "max_observation_age_s": 900,
+  "observed_at": "2026-10-06T00:20:40.058932Z",
+  "observed_state": {
+    "on_grid": false,
+    "state_content_sha256": null,
+    "wire_vector_hex": null
+  },
+  "qualified": false,
+  "result_sha256": "9762d8f2531611099d14fe30eccbdb86a4d2a1eb2e2ed274b1e53eea29d66a83",
+  "revisions": {
+    "config_revision": "c1-control-context-v1:sha256:17d70e420a93c7996fced4ab5b8483d262ec6cb00440ba48d28c09252baf5467",
+    "crop_band_resolver_revision": "sha256:58a0e95e646a5de45c022438546608e1677adad000800c6784e0f6316241b281",
+    "firmware_revision": "2026.10.2.0637.620a218a-wifi-bound",
+    "registry_revision": "sha256:0080c858d440760b4d850f43c6dfd58a91251299b2796af2ea8ff62435d7c9cf",
+    "sensor_registry_revision": "sha256:7ebd44923a8d5d0855a862aa6590560f3653d6aa73be52c464aeb0210564ce95",
+    "source_revision": "81d76a4c3d35a925ebd2438d89099d1f657b3f8f"
+  },
+  "runtime": {
+    "connection_generation": 1,
+    "runtime_instance_id": "d215ee98-af33-4501-acee-8444b458c7a0"
+  },
+  "schema": "verdify-component-grid-capture-result-v2",
+  "source_grid_revision": "live-entity-grid-v1:sha256:f2ce504cd79a01d9f9f8994f85bf48df1bde7450ebafc071d54ead427398af98",
+  "source_grid_revision_qualified": true
+}
