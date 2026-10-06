@@ -150,3 +150,29 @@ def test_legacy_jsonl_is_preserved_and_blocks_activation(tmp_path, monkeypatch):
     with pytest.raises(RuntimeError, match="lacks event identities"):
         ingestor._get_climate_event_spool()
     assert legacy.read_text() == '{"ts":"2000-01-01T00:00:00Z","temp_avg":72}\n'
+
+
+def test_periodic_health_reports_stopped_backlog_and_failure_without_payload(caplog, monkeypatch):
+    import json
+    import logging
+
+    monkeypatch.setattr(ingestor, "CLIMATE_SPOOL_MAX_ROWS", 1)
+    monkeypatch.setattr(ingestor, "_source_spool", None)
+    monkeypatch.setattr(ingestor, "_observation_spool", None)
+    ingestor.state.climate["temp_avg"] = 72
+    asyncio.run(ingestor.write_climate(Pool(fail=True), datetime(2000, 1, 1, tzinfo=UTC)))
+    # No new acceptance is needed for the periodic warning to fire.
+    caplog.clear()
+    with caplog.at_level(logging.INFO):
+        ingestor._report_spool_health()
+    report = json.loads(next(r.message.split("ingestor_spool_health ", 1)[1] for r in caplog.records))
+    assert report["queue"] == "climate" and report["backlog_high"] and report["rows"] == 1
+    assert "temp_avg" not in str(report)
+    asyncio.run(ingestor._drain_climate_event_spool(Pool()))
+    caplog.clear()
+    with caplog.at_level(logging.INFO):
+        ingestor._report_spool_health()
+    assert '"backlog_high": false' in caplog.text
+    monkeypatch.setattr(ingestor._climate_event_spool, "health", lambda: (_ for _ in ()).throw(OSError("failure")))
+    ingestor._report_spool_health()
+    assert "ingestor_spool_health_failed queue=climate reason=OSError" in caplog.text

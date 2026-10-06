@@ -1,6 +1,90 @@
 # Ingestor source spool (#382)
 
-## Source proposal and current live boundary
+## Current S2 boundary (October 6, 2026)
+
+Read-only runtime inspection confirms the sole Recreate ingestor mounts the
+retained `verdify-ingestor-state` claim at `/srv/verdify/state`; all equipment,
+climate and observational gates are enabled. The sampled format 1 queues held
+5 equipment records (2,197 payload bytes), zero climate records and zero
+observational records, with 1,994,153,984 filesystem bytes free. These are
+point-in-time measurements, not a sustained outage or node-loss qualification.
+September 30 proposal/adoption text below is retained historical context.
+
+### Periodic backlog signal
+
+The S2 source emits `ingestor_spool_health {JSON}` every 60 seconds for each
+initialized enabled queue, independent of new acceptance or successful draining.
+Fields are `queue` (`equipment`, `climate`, `observational`), `format`, `rows`,
+`payload_bytes`, `disk_bytes` (SQLite plus rollback journal), `free_bytes`,
+`max_rows`, `max_payload_bytes`, `utilization`, `backlog_high`,
+`oldest_source_age_seconds`, `backlog_stale` and `disk_headroom_low`.
+The high threshold is 80% of either configured queue limit; stale means an
+original source timestamp at least 300 seconds old. Source age is not local
+enqueue residence time: format 1 does not record that clock. Missing clocks stay
+null. Drained queues report zero rows/utilization, null age and false stale/high
+flags. Headroom warns below twice that queue's payload cap, allowing for journal
+overhead without claiming another write must succeed. Metadata failure emits
+`ingestor_spool_health_failed queue=<name> reason=<exception-class>` and does not
+drop work or stop the writer. No event payload/UUID or credential is logged.
+
+Shared alert rules and routing belong in monitoring-stack. Verify warning and
+clear states from actual Loki ingestion; source logs alone are not deployed alert
+acceptance. Suggested sustained-warning duration is 3 minutes for high/stale/low
+headroom and a separate failed-report signal.
+
+### Executable component fault qualification
+
+Run `python scripts/qualify-ingestor-spool.py --directory <new-owned-directory>`
+using the release Python and actual filesystem. It refuses an existing directory
+and never imports the device client or connects to PostgreSQL, ESP32, HA or a
+model. Three named component queues each accept 1,000 immutable records, exit
+abruptly, reopen and verify timestamp/generation/FIFO/digest, die in an
+uncommitted acknowledgement transaction, recover the actual hot journal,
+encounter SQLite page-limit `SQLITE_FULL`, preserve all accepted work, refuse
+format 999 and recover a consistent v1 SQLite backup. It reports enqueue,
+reopen/decode and local acknowledgement timings plus capacity/disk metadata.
+Page-limit exhaustion is a real SQLite full error, not exhaustion of the shared
+physical filesystem. This measurement does not prove PostgreSQL replay or
+Longhorn physical-node recovery.
+
+### Coordinated real-environment qualification plan
+
+ROOT owns execution and merges the exact source before promotion. Do not run
+these stages concurrently with production writer or migration changes.
+
+1. Preserve production UID/node/digest, enabled limits, exact accepted queue
+   identities/lineage and a consistent SQLite backup. Use SQLite backup or a
+   quiescent archive including journals, never a racing raw database copy.
+2. Run the existing climate and observational insert-only SQL fixtures on the
+   current-schema disposable #396 restore, never production. Join actual
+   PostgreSQL immutable UUID/hash, duplicate rejection, source-time confirmation
+   and ordinary-login capability results with the source tests; a fake pool is
+   not this database acceptance proof. Preserve all failed receipts.
+3. On a separate owned retained claim of the same declared Longhorn class, run
+   the exact ingestor image in a file/queue-only process (no ingestor entrypoint,
+   no ESP32/HA/MQTT credentials or egress). Record accepted IDs/hash before an
+   abrupt process kill and before replacing the Pod onto a different eligible
+   worker. Verify the same PV/claim, accepted digest and FIFO after reattachment.
+   Join replay to the disposable database through real source APIs, measure
+   unknown-commit retries and backlog/recovery/clear times. Keep synthetic
+   qualification rows separate from live product data.
+4. A process crash plus cross-node reattachment proves that declared process/
+   relocation boundary. It does not simulate hard loss of a physical host,
+   unfenced dual attachment or power loss. Physical-node outage is not performed
+   by this source lane; record its limitation explicitly. Never start a second
+   device consumer. Any actual NFS or node-recovery change requires the existing
+   Proxmox agent's coordination through ROOT.
+5. ROOT may perform the bounded sole-writer Recreate at exact promoted digest,
+   preserving accepted queue work and measuring actual replay counts/gaps. Prove
+   exactly one controller connection, fresh telemetry, unchanged old source
+   lineage and no replay-derived current confirmation. Verify Argo full sync
+   without pruning, five-minute validation-error observation and alert clear.
+6. Format stays 1 and existing readers remain compatible; no schema migration or
+   automatic conversion is added. Retain immutable DB ledgers and queue backups
+   across rollback. Incompatible future formats fail closed; parking them
+   preserves data but does not complete recovery acceptance.
+
+## Historical September 30 source proposal and live boundary
 
 This source change has not been adopted in production. The September 30 audit
 found `/srv/verdify/state` backed by `emptyDir`, no live
@@ -111,7 +195,7 @@ with the firmware/native build lane before starting a new build or changing pins
 
 ### Preserve old emptyDir and seed the retained claim
 
-The sole live writer still uses emptyDir. Read-only inventory on September30
+The sole live writer still uses emptyDir. Read-only inventory on September 30
 found five files (writer-stage-preview, dispatcher log, HA sync bookkeeping,
 C1 capture status and milestones), no climate JSONL and no retained claim. Re-read
 this inventory immediately before adoption; it is time-sensitive.
