@@ -237,6 +237,12 @@ def configure(role, endpoint, password):
         "VERDIFY_DEVICE_WRITE_ENABLED": "0",
         "VERDIFY_" + role.upper() + "_RUNTIME_DB_ROLE_REQUIRED": "1",
     }
+    if role == "mcp":
+        # The owning MCP startup contract accepts DB_PASSWORD and rejects
+        # legacy password aliases even when their values are identical.
+        values.pop("DB_PASS")
+        os.environ.pop("DB_PASS", None)
+        os.environ.pop("POSTGRES_PASSWORD", None)
     os.environ.update(values)
     return dsn
 

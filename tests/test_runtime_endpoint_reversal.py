@@ -1,6 +1,10 @@
 """Endpoint/identity fences and credential-free transient transport regression."""
 
+import ast
+import hmac
 import importlib.util
+import os
+import urllib.parse
 from pathlib import Path
 
 import pytest
@@ -10,6 +14,39 @@ SPEC = importlib.util.spec_from_file_location(
 )
 m = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(m)
+
+
+@pytest.mark.parametrize("forbidden_alias", ["DB_PASS", "POSTGRES_PASSWORD"])
+def test_mcp_configuration_obeys_actual_owning_startup_password_contract(monkeypatch, forbidden_alias):
+    monkeypatch.setattr(os, "environ", os.environ.copy())
+    source = Path(__file__).parents[1] / "mcp/server.py"
+    tree = ast.parse(source.read_text())
+    nodes = [
+        n
+        for n in tree.body
+        if isinstance(n, ast.FunctionDef) and n.name in {"_mcp_runtime_db_role_required", "_validate_mcp_runtime_dsn"}
+    ]
+    assert len(nodes) == 2
+    monkeypatch.setenv("DB_PASS", "obsolete-fixture-alias")
+    monkeypatch.setenv("POSTGRES_PASSWORD", "obsolete-fixture-alias")
+    endpoint = {"host": "verdify-cnpg-s2-pitr-a-frozen-rw.verdify-db-rehearsal.svc.cluster.local"}
+    dsn = m.configure("mcp", endpoint, "fixture-password")
+    scope = dict(
+        os=os,
+        hmac=hmac,
+        urllib=urllib,
+        DB_DSN=dsn,
+        MCP_RUNTIME_DB_LOGIN="verdify_mcp_runtime_login",
+        MCP_RUNTIME_DB_ROLE_REQUIRED_ENV="VERDIFY_MCP_RUNTIME_DB_ROLE_REQUIRED",
+    )
+    # Execute only these two trusted owning-source validators, never module startup.
+    exec(compile(ast.Module(body=nodes, type_ignores=[]), str(source), "exec"), scope)  # noqa: S102
+    scope["_validate_mcp_runtime_dsn"]()
+    assert "DB_PASS" not in os.environ and "POSTGRES_PASSWORD" not in os.environ
+    # Retaining the old harness alias must still fail the real validator.
+    monkeypatch.setenv(forbidden_alias, "fixture-password")
+    with pytest.raises(RuntimeError, match="ordinary database login contract failed"):
+        scope["_validate_mcp_runtime_dsn"]()
 
 
 def test_refuses_production_route_and_historical_admission():
