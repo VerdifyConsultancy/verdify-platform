@@ -2720,7 +2720,8 @@ async def read_physical_crop_band_evidence(conn, day, greenhouse_id="vallery"):
         async with conn.transaction():
             await conn.execute("SET LOCAL statement_timeout = '3000ms'")
             row = await conn.fetchrow(
-                "SELECT * FROM public.fn_physical_crop_band_evidence($1::date,$2::text)",
+                "SELECT reader_contract_version,day,greenhouse_id,served_at,revision_id,recorded_at,"
+                "diagnostic,unavailable_reason FROM public.fn_physical_crop_band_evidence($1::date,$2::text)",
                 day,
                 greenhouse_id,
                 timeout=3.5,
