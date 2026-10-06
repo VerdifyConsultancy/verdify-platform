@@ -214,7 +214,8 @@ def configure(role, endpoint, password):
         + "@"
         + endpoint["host"]
         + ":5432/verdify_rehearsal?"
-        + urllib.parse.urlencode({"options": options})
+        # libpq URI decoding preserves '+' literally; encode spaces as %20.
+        + urllib.parse.urlencode({"options": options}, quote_via=urllib.parse.quote)
     )
     values = {
         "DB_HOST": endpoint["host"],

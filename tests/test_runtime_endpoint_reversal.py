@@ -1,6 +1,8 @@
 """Endpoint/identity fences and credential-free transient transport regression."""
 
 import ast
+import ctypes
+import ctypes.util
 import hmac
 import importlib.util
 import os
@@ -14,6 +16,51 @@ SPEC = importlib.util.spec_from_file_location(
 )
 m = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(m)
+
+
+def test_runtime_options_uri_is_decoded_exactly_by_actual_libpq(monkeypatch):
+    monkeypatch.setattr(os, "environ", os.environ.copy())
+    library = ctypes.util.find_library("pq")
+    if library is None and Path("/opt/homebrew/opt/libpq/lib/libpq.5.dylib").exists():
+        library = "/opt/homebrew/opt/libpq/lib/libpq.5.dylib"
+    if library is None:
+        pytest.skip("actual libpq parser is unavailable")
+
+    class Option(ctypes.Structure):
+        _fields_ = [(k, ctypes.c_char_p) for k in ("keyword", "envvar", "compiled", "val", "label", "dispchar")] + [
+            ("dispsize", ctypes.c_int)
+        ]
+
+    lib = ctypes.CDLL(library)
+    lib.PQconninfoParse.argtypes = [ctypes.c_char_p, ctypes.POINTER(ctypes.c_char_p)]
+    lib.PQconninfoParse.restype = ctypes.POINTER(Option)
+    lib.PQconninfoFree.argtypes = [ctypes.POINTER(Option)]
+    dsn = m.configure("planner", {"host": "fixture.invalid"}, "fixture-password")
+    error = ctypes.c_char_p()
+    options = lib.PQconninfoParse(dsn.encode(), ctypes.byref(error))
+    assert options
+    try:
+        result = {}
+        index = 0
+        while options[index].keyword:
+            if options[index].val:
+                result[options[index].keyword.decode()] = options[index].val.decode()
+            index += 1
+        intended = "-c default_transaction_read_only=on -c statement_timeout=30000"
+        assert result["options"] == intended
+        assert urllib.parse.parse_qs(urllib.parse.urlsplit(dsn).query)["options"] == [intended]
+        old_query = urllib.parse.urlencode({"options": intended})
+        old_dsn = dsn.split("?", 1)[0] + "?" + old_query
+        old_options = lib.PQconninfoParse(old_dsn.encode(), ctypes.byref(error))
+        try:
+            index = 0
+            while old_options[index].keyword != b"options":
+                index += 1
+            assert old_options[index].val.decode() != intended
+        finally:
+            lib.PQconninfoFree(old_options)
+    finally:
+        lib.PQconninfoFree(options)
 
 
 @pytest.mark.parametrize("forbidden_alias", ["DB_PASS", "POSTGRES_PASSWORD"])
