@@ -27,7 +27,7 @@ def literal(value):
 
 def render(manifest, witness):
     probe.validate_manifest(manifest)
-    assert witness["cluster_uid"] == probe.CLUSTER_UID and witness["primary_uid"] == probe.PRIMARY_UID
+    profile = probe.clone_profile(witness)
     assert witness["database_oid"] == 16447 and witness["clients_stopped"] is True
     assert witness["before_fixture_rows"] == 0
     assert witness["manifest_run_id"] == manifest["run_id"]
@@ -93,7 +93,7 @@ def render(manifest, witness):
     row_guard += f" AND EXISTS(SELECT 1 FROM public.observational_source_events WHERE event_id={literal(diagnostics['identity'])}::uuid AND kind='diagnostics' AND greenhouse_id='vallery' AND source_ts={qts}::timestamptz AND source_runtime_instance_id={qruntime}::uuid AND source_connection_generation=7 AND event_payload={literal(json.dumps(diagnostics['event']['payload']))}::jsonb)"
     body = [
         "BEGIN; SET LOCAL statement_timeout='30s'; SET LOCAL lock_timeout='5s';",
-        "DO $guard$ BEGIN IF current_user<>'postgres' OR session_user<>'postgres' OR current_database()<>'verdify_rehearsal' OR current_setting('cluster_name')<>'verdify-cnpg-s2' OR pg_is_in_recovery() OR (SELECT oid FROM pg_database WHERE datname=current_database())<>16447 THEN RAISE EXCEPTION 'clone inverse authority refused';END IF; END $guard$;",
+        f"DO $guard$ BEGIN IF current_user<>'postgres' OR session_user<>'postgres' OR current_database()<>'verdify_rehearsal' OR current_setting('cluster_name')<>{literal(profile['cluster'])} OR pg_is_in_recovery() OR (SELECT oid FROM pg_database WHERE datname=current_database())<>16447 THEN RAISE EXCEPTION 'clone inverse authority refused';END IF; END $guard$;",
         "LOCK TABLE public.climate_source_events, public.observational_source_events, public.equipment_state_source_receipts, public.climate, public.diagnostics, public.equipment_state IN ACCESS EXCLUSIVE MODE;",
         f"DO $guard$ BEGIN IF NOT ({row_guard} AND {chunk_guards}) OR EXISTS(SELECT 1 FROM public.experiment_v2_outcome_source_bindings WHERE subject_id={equipment_id}::uuid) OR NOT EXISTS(SELECT 1 FROM public.equipment_state_source_receipts WHERE receipt_id={equipment_id}::uuid AND source_connection_generation=7 AND source_runtime_instance_id={qruntime}::uuid AND source_observed_through={qts}::timestamptz AND gap_requested AND gap_before AND gap_reason='initial_receipt' AND source_sequence=1 AND event_count=1 AND firmware_revision='s2-qualification') THEN RAISE EXCEPTION 'owned fixture/chunk/experiment guard refused'; END IF; END $guard$;",
         f"DO $guard$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_trigger WHERE tgrelid='public.equipment_state_source_receipts'::regclass AND tgname='trg_equipment_state_source_receipts_immutable' AND tgenabled={literal(trigger['enabled'])} AND encode(sha256(convert_to(pg_get_functiondef(tgfoid),'UTF8')),'hex')={literal(trigger['function_sha256'])}) THEN RAISE EXCEPTION 'original immutable trigger custody refused';END IF; END $guard$;",

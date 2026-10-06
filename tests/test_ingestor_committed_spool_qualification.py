@@ -128,6 +128,18 @@ def test_equipment_is_historical_fenced_and_inverse_restores_trigger_atomically(
         < sql.index("ENABLE TRIGGER")
     )
     assert "session_replication_role" not in sql and "GRANT" not in sql
+    a_witness = copy.deepcopy(witness)
+    a_witness.update(
+        clone_profile="frozen-a275",
+        cluster_uid=probe.CLONE_PROFILES["frozen-a275"]["cluster_uid"],
+        primary_uid=probe.CLONE_PROFILES["frozen-a275"]["primary_uid"],
+    )
+    a_sql = inverse.render(manifest, a_witness)
+    assert "current_setting('cluster_name')<>'verdify-cnpg-s2-pitr-a-frozen'" in a_sql
+    assert "current_setting('cluster_name')<>'verdify-cnpg-s2'" not in a_sql
+    a_witness["primary_uid"] = probe.PRIMARY_UID
+    with pytest.raises(AssertionError):
+        inverse.render(manifest, a_witness)
     assert "exact owned drop_chunks set mismatch" in sql
     existing = copy.deepcopy(witness)
     chunk = existing["target_chunks"][0]
@@ -153,3 +165,28 @@ def test_equipment_is_historical_fenced_and_inverse_restores_trigger_atomically(
     bad["immutable_trigger"]["function_sha256"] = "unknown"
     with pytest.raises(AssertionError):
         inverse.render(manifest, bad)
+
+
+@pytest.mark.parametrize("case", ["correct", "wrong-profile", "mixed-authority", "production-route"])
+def test_frozen_a_spool_profile_is_closed_and_uid_bound(case):
+    profile = probe.CLONE_PROFILES["frozen-a275"]
+    binding = {
+        "clone_profile": "frozen-a275",
+        "cluster_uid": profile["cluster_uid"],
+        "primary_uid": profile["primary_uid"],
+        "database_oid": 16447,
+    }
+    if case == "wrong-profile":
+        binding["clone_profile"] = "production"
+    elif case == "mixed-authority":
+        binding["cluster_uid"] = probe.CLUSTER_UID
+    elif case == "production-route":
+        binding["primary_uid"] = "source-production"
+    if case == "correct":
+        assert (
+            probe.clone_profile(binding)["host"]
+            == "verdify-cnpg-s2-pitr-a-frozen-rw.verdify-db-rehearsal.svc.cluster.local"
+        )
+    else:
+        with pytest.raises(AssertionError):
+            probe.clone_profile(binding)

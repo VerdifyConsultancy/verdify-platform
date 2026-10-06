@@ -26,6 +26,26 @@ LOGIN = "verdify_ingestor_runtime_login"
 HOST = "verdify-cnpg-s2-rw.verdify-db-rehearsal.svc.cluster.local"
 CLUSTER_UID = "4f697776-df25-4e22-b930-0b76cf35496e"
 PRIMARY_UID = "6379db06-2bad-4c5b-9a50-86feac4651dc"
+CLONE_PROFILES = {
+    "s2-original": {"cluster": "verdify-cnpg-s2", "cluster_uid": CLUSTER_UID, "primary_uid": PRIMARY_UID, "host": HOST},
+    "frozen-a275": {
+        "cluster": "verdify-cnpg-s2-pitr-a-frozen",
+        "cluster_uid": "bd01ec5b-efe9-4882-a6dc-c76c6b6fa7ec",
+        "primary_uid": "96caed77-a75f-457c-bbd6-d34f88a3b3ae",
+        "host": "verdify-cnpg-s2-pitr-a-frozen-rw.verdify-db-rehearsal.svc.cluster.local",
+    },
+}
+
+
+def clone_profile(binding):
+    name = binding.get("clone_profile", "s2-original")
+    assert name in CLONE_PROFILES, "closed isolated clone profile required"
+    profile = CLONE_PROFILES[name]
+    assert binding["cluster_uid"] == profile["cluster_uid"] and binding["primary_uid"] == profile["primary_uid"]
+    assert binding["database_oid"] == 16447
+    return profile
+
+
 PHASES = ("unavailable", "crash-climate", "crash-observation", "crash-equipment", "replay", "duplicate", "conflict")
 
 
@@ -119,15 +139,15 @@ def prepared_manifest():
 
 
 def require_authority(binding):
-    assert binding["cluster_uid"] == CLUSTER_UID and binding["primary_uid"] == PRIMARY_UID
-    assert binding["database_oid"] == 16447 and binding["cluster"] == "verdify-cnpg-s2"
+    profile = clone_profile(binding)
+    assert binding["cluster"] == profile["cluster"]
     assert binding["consumer_image"] == IMAGE and binding["consumer_source"] == SOURCE
     for key in ("sealed_admission_sha256", "protected_backup_wal_receipt_sha256"):
         value = binding[key]
         assert len(value) == 64 and all(c in "0123456789abcdef" for c in value)
     assert binding["full_native_count_time_parity"] is True and binding["protected_backup_wal"] is True
     assert os.environ["VERDIFY_GIT_SHA"] == SOURCE  # Baked image; never manifest override.
-    assert os.environ["DB_HOST"] == HOST and os.environ["DB_PORT"] == "5432"
+    assert os.environ["DB_HOST"] == profile["host"] and os.environ["DB_PORT"] == "5432"
     assert os.environ["DB_NAME"] == "verdify_rehearsal" and os.environ["DB_USER"] == LOGIN
     assert os.environ["VERDIFY_DEVICE_WRITE_ENABLED"] == "0"
     assert os.environ["VERDIFY_INGESTOR_RUNTIME_DB_ROLE_REQUIRED"] == "1"
@@ -141,6 +161,7 @@ async def run(args):
     validate_manifest(manifest)
     binding = json.loads(os.environ["QUALIFICATION_BINDING"])
     require_authority(binding)
+    profile = clone_profile(binding)
     directory = Path("/qualification-state") / ("s2-db-replay-" + manifest["run_id"])
     path = Path("/app/ingestor/ingestor.py")
     assert hashlib.sha256(path.read_bytes()).hexdigest() == MODULE_SHA
@@ -216,7 +237,7 @@ async def run(args):
             )
             assert identity["current_user"] == identity["session_user"] == LOGIN
             assert identity["database"] == "verdify_rehearsal" and identity["database_oid"] == 16447
-            assert identity["cluster_name"] == "verdify-cnpg-s2" and identity["replica"] is False
+            assert identity["cluster_name"] == profile["cluster"] and identity["replica"] is False
             assert identity["backend_address"] == binding["primary_address"]
         result["identity"] = identity
         collector = await consumer.create_equipment_source_pool()
@@ -246,7 +267,7 @@ async def run(args):
             # Exact target hostname, deliberately unavailable5433; scoped policy
             # permits5432 only. Actual asyncpg acquire fails with bounded timeout.
             unavailable = await asyncpg.create_pool(
-                host=HOST,
+                host=profile["host"],
                 port=5433,
                 database="verdify_rehearsal",
                 user=LOGIN,
