@@ -54,3 +54,15 @@ complete source role attributes, settings, comments, every membership and the
 closed bootstrap grantor translation against actual current roles. The exact
 CNPG management posture remains equal to original custody. Only this completely
 proved role replay may be skipped; an incomplete or changed role fails closed.
+
+The second attempt proved full role parity, then stopped at the original database
+ACL helper's historical-cluster identity guard. The newly created database is
+independently captured at OID16447, ownerverdify, no public relations/functions,
+onlyplpgsql, and zero other clients. Its failed stage is preserved. The ACL
+helper now supports only the two explicitly owned logical cluster names.
+The separate `--empty-database-oid 16447` continuation permits reuse of this
+exact empty database only after native full-role parity. It checks exact OID,
+cluster, owner, no nondefault extensions/schemas, no public relations/functions/
+types and zero other clients before any import. Any data/object or identity
+change refuses; it never drops or overwrites a database. Original normal restores
+still require product DB absence. No partial data import is resumed.

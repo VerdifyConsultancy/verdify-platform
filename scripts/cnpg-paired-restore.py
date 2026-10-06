@@ -113,6 +113,7 @@ def main():
     parser.add_argument("--management-before-sha256")
     parser.add_argument("--bootstrap-grantor-profile", action="store_true")
     parser.add_argument("--completed-role-replay", action="store_true")
+    parser.add_argument("--empty-database-oid")
     parser.add_argument("--role-prefix-custody", type=Path)
     parser.add_argument("--role-prefix-custody-sha256")
     parser.add_argument("--role-prefix-current", type=Path)
@@ -134,6 +135,11 @@ def main():
             and args.prior_custody_manifest_sha256
             and not args.role_prefix_custody,
             "completed replay requires isolated S2 exact predecessor custody",
+        )
+    if args.empty_database_oid:
+        c0.require(
+            args.completed_role_replay and re.fullmatch(r"[1-9]\d*", args.empty_database_oid),
+            "empty-database continuation requires completed role replay and exact OID",
         )
     prefix = None
     if args.role_prefix_custody:
@@ -317,6 +323,8 @@ def main():
         env["CNPG_BOOTSTRAP_GRANTOR_PROFILE"] = "cnpg-source-bootstrap-grantor-v1"
     if args.completed_role_replay:
         env["CNPG_COMPLETED_ROLE_REPLAY"] = "role-complete-native-verified-v1"
+    if args.empty_database_oid:
+        env["CNPG_EMPTY_DATABASE_OID"] = args.empty_database_oid
     if prefix:
         env["CNPG_ROLE_PREFIX_CUSTODY"] = stage + "/role-prefix-custody.json"
         env["CNPG_ROLE_PREFIX_CURRENT"] = stage + "/role-prefix-current.sql"

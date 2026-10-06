@@ -53,14 +53,22 @@ if [ "${RESTORE_SERVER_MODE:-standalone}" = cnpg ]; then
   mkdir -m 700 "${RESTORE_WORK_DIR}"
   work_dir="${RESTORE_WORK_DIR}"
   export PGUSER=postgres
-  psql -X -v ON_ERROR_STOP=1 -d postgres <<'SQL' >/dev/null
+  empty_oid="${CNPG_EMPTY_DATABASE_OID:-0}"
+  if [[ ! "$empty_oid" =~ ^[0-9]+$ ]]; then
+    echo '[restore-pair] FATAL: invalid empty database OID' >&2
+    exit 1
+  fi
+  psql -X -v ON_ERROR_STOP=1 -v empty_oid="$empty_oid" -d postgres <<'SQL' >/dev/null
+SET verdify.empty_database_oid TO :'empty_oid';
 DO $guard$ BEGIN
  IF current_setting('cluster_name') NOT IN ('verdify-cnpg-rehearsal','verdify-cnpg-s2')
     OR current_setting('server_version_num')::int<>160013
     OR pg_is_in_recovery()
-    OR EXISTS(SELECT 1 FROM pg_database WHERE datname='verdify_rehearsal')
+    OR EXISTS(SELECT 1 FROM pg_database WHERE datname='verdify_rehearsal'
+       AND (current_setting('cluster_name')<>'verdify-cnpg-s2'
+            OR oid::text<>current_setting('verdify.empty_database_oid')))
     OR EXISTS(SELECT 1 FROM pg_database WHERE datname NOT IN
-               ('postgres','template0','template1','rehearsal_bootstrap')) THEN
+               ('postgres','template0','template1','rehearsal_bootstrap','verdify_rehearsal')) THEN
    RAISE EXCEPTION 'CNPG import refuses target identity or nonempty cluster';
  END IF;
 END $guard$;
@@ -131,7 +139,27 @@ if [ "${RESTORE_SERVER_MODE:-standalone}" = cnpg ]; then
     > "${work_dir}/roles.after-replay.sql" 2>"${work_dir}/roles-after-replay.stderr"
   python3 "${CNPG_ROLE_HELPER}" --source "${roles}" --current "${work_dir}/roles.after-replay.sql" "${bootstrap_args[@]}"
 fi
-createdb -O "${owner}" "${PGDATABASE}"
+if [ "${RESTORE_SERVER_MODE:-standalone}" = cnpg ] && [ "${CNPG_EMPTY_DATABASE_OID:-0}" != 0 ]; then
+  [ "${CNPG_COMPLETED_ROLE_REPLAY:-}" = role-complete-native-verified-v1 ]
+  psql -X -v ON_ERROR_STOP=1 -v empty_oid="${CNPG_EMPTY_DATABASE_OID}" -d "${PGDATABASE}" <<'SQL' >/dev/null
+SET verdify.empty_database_oid TO :'empty_oid';
+DO $empty_guard$ BEGIN
+ IF current_setting('cluster_name')<>'verdify-cnpg-s2' OR current_database()<>'verdify_rehearsal'
+ OR (SELECT oid::text FROM pg_database WHERE datname=current_database())<>current_setting('verdify.empty_database_oid')
+ OR (SELECT pg_get_userbyid(datdba) FROM pg_database WHERE datname=current_database())<>'verdify'
+ OR EXISTS(SELECT 1 FROM pg_extension WHERE extname<>'plpgsql')
+ OR EXISTS(SELECT 1 FROM pg_namespace WHERE nspname NOT IN ('public','information_schema') AND nspname !~ '^pg_')
+ OR EXISTS(SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public')
+ OR EXISTS(SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public')
+ OR EXISTS(SELECT 1 FROM pg_type t JOIN pg_namespace n ON n.oid=t.typnamespace WHERE n.nspname='public')
+ OR EXISTS(SELECT 1 FROM pg_stat_activity WHERE datname=current_database() AND pid<>pg_backend_pid()) THEN
+   RAISE EXCEPTION 'empty database continuation refuses nonempty or unbound target';
+ END IF;
+END $empty_guard$;
+SQL
+else
+  createdb -O "${owner}" "${PGDATABASE}"
+fi
 if [ "${RESTORE_SERVER_MODE:-standalone}" = cnpg ]; then
   python3 "${CNPG_ACL_HELPER}" --source "${CNPG_SOURCE_WITNESS:?}" \
     --sha256 "${CNPG_SOURCE_WITNESS_SHA256:?}" --output "${work_dir}/source-database-acl.sql"
