@@ -1,0 +1,12 @@
+{
+  "pod_uid": "b1fa2c0e-a995-481f-a29f-4cfaad4e697b",
+  "exported_snapshot": "00000009-00070D44-1",
+  "stem": "verdify-20261006T035839Z",
+  "captured_at": "2026-10-06T03:58:39.426422+00:00",
+  "production_read_only": true,
+  "native_exit": 0,
+  "elapsed_seconds": 104.01492583300569,
+  "dump_bytes": 349998576,
+  "role_metadata_stable": true,
+  "source_witness_sha256": "7cf93863741a7827ef1f75e6f9e926a6966578c81e2884b3a70ed4644e1c5a50"
+}

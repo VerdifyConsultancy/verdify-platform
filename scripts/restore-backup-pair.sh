@@ -55,7 +55,7 @@ if [ "${RESTORE_SERVER_MODE:-standalone}" = cnpg ]; then
   export PGUSER=postgres
   psql -X -v ON_ERROR_STOP=1 -d postgres <<'SQL' >/dev/null
 DO $guard$ BEGIN
- IF current_setting('cluster_name')<>'verdify-cnpg-rehearsal'
+ IF current_setting('cluster_name') NOT IN ('verdify-cnpg-rehearsal','verdify-cnpg-s2')
     OR current_setting('server_version_num')::int<>160013
     OR pg_is_in_recovery()
     OR EXISTS(SELECT 1 FROM pg_database WHERE datname='verdify_rehearsal')
