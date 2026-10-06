@@ -1,0 +1,103 @@
+"""S2 isolated retained-PVC fault phases; never imports a device or DB client."""
+import argparse
+import hashlib
+import json
+import os
+import sys
+import time
+from pathlib import Path
+
+sys.path.insert(0, "/app/ingestor")
+from source_spool import SourceSpool
+
+NAMES = ("equipment", "climate", "observational")
+ROOT = Path("/qualification-state/s2-retained-boundary")
+
+
+def digest(rows):
+    return hashlib.sha256(json.dumps(rows, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
+def durable_json(path, value):
+    with path.open("x") as stream:
+        json.dump(value, stream, sort_keys=True)
+        stream.flush()
+        os.fsync(stream.fileno())
+    fd = os.open(path.parent, os.O_RDONLY)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("phase", choices=("accept", "interrupt", "recover"))
+    parser.add_argument("--module-sha256", required=True)
+    parser.add_argument("--manifest-sha256")
+    args = parser.parse_args()
+    actual_module = hashlib.sha256(Path("/app/ingestor/source_spool.py").read_bytes()).hexdigest()
+    assert actual_module == args.module_sha256, "unexpected image source"
+    started = time.monotonic()
+    if args.phase == "accept":
+        ROOT.mkdir(exist_ok=False)
+        record = {"source_module_sha256": actual_module, "queues": {}}
+        for name in NAMES:
+            queue = SourceSpool(ROOT / (name + ".sqlite"), max_rows=1000)
+            records = [(name, name + "-" + str(i), {"ordinal": i, "source_observed_at": "2000-01-01T00:00:00Z", "generation": 7, "runtime": "prior-runtime"}) for i in range(1000)]
+            queue.put_many(records)
+            assert queue.rows() == records
+            record["queues"][name] = {"accepted": len(records), "sha256": digest(records), "backlog": queue.backlog()}
+            queue.close()
+        durable_json(ROOT / "accepted.json", record)
+        print(json.dumps({"phase": "accept", "accepted": 3000, "manifest_sha256": hashlib.sha256((ROOT / "accepted.json").read_bytes()).hexdigest(), "elapsed_seconds": time.monotonic()-started, "source_module_sha256": actual_module}), flush=True)
+        os._exit(23)
+    raw = (ROOT / "accepted.json").read_bytes()
+    assert args.manifest_sha256 == hashlib.sha256(raw).hexdigest(), "accepted manifest changed"
+    record = json.loads(raw)
+    assert record["source_module_sha256"] == actual_module
+    held = []
+    outcomes = {}
+    for name in NAMES:
+        queue = SourceSpool(ROOT / (name + ".sqlite"), max_rows=1000)
+        rows = queue.rows()
+        assert len(rows) == 1000 and digest(rows) == record["queues"][name]["sha256"]
+        assert [r[2]["ordinal"] for r in rows] == list(range(1000))
+        assert all(r[2]["generation"] == 7 and r[2]["source_observed_at"] == "2000-01-01T00:00:00Z" and r[2]["runtime"] == "prior-runtime" for r in rows)
+        assert queue.conn.execute("PRAGMA integrity_check").fetchone() == ("ok",)
+        if args.phase == "interrupt":
+            queue.conn.execute("PRAGMA cache_size=1")
+            queue.conn.execute("PRAGMA cache_spill=ON")
+            queue.conn.execute("BEGIN IMMEDIATE")
+            queue.conn.execute("DELETE FROM source_queue")
+            journal = Path(str(queue.path) + "-journal")
+            assert journal.exists() and journal.stat().st_size > 512
+            held.append(queue)
+        else:
+            queue.put_many(rows)
+            assert digest(queue.rows()) == record["queues"][name]["sha256"]
+            try:
+                queue.put(name, rows[0][1], {"generation": 8})
+            except ValueError:
+                pass
+            else:
+                raise AssertionError("changed identity accepted")
+            try:
+                queue.put(name, name + "-overflow", {"generation": 7})
+            except OSError:
+                pass
+            else:
+                raise AssertionError("capacity overflow accepted")
+            assert digest(queue.rows()) == record["queues"][name]["sha256"]
+            outcomes[name] = {"accepted": 1000, "recovered": 1000, "unexplained_loss": 0, "sha256": digest(queue.rows()), "duplicate_additions": 0, "conflicting_identity_rejected": True, "capacity_rejection_retains_accepted": True}
+            queue.close()
+    result = {"phase": args.phase, "source_module_sha256": actual_module, "elapsed_seconds": time.monotonic()-started, "queues": outcomes, "scope": "abrupt process loss, interrupted local ACK and retained-PV cross-worker recovery; no physical host outage, DB replay or device connection"}
+    if args.phase == "recover":
+        durable_json(ROOT / "recovered.json", result)
+    print(json.dumps(result), flush=True)
+    if args.phase == "interrupt":
+        os._exit(24)
+
+
+if __name__ == "__main__":
+    main()
