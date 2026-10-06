@@ -119,6 +119,7 @@ def test_equipment_is_historical_fenced_and_inverse_restores_trigger_atomically(
         },
         "immutable_trigger": {"enabled": "O", "function_sha256": "b" * 64},
     }
+    witness["target_chunks"] = copy.deepcopy(witness["added_chunks"])
     sql = inverse.render(manifest, witness)
     assert sql.startswith("BEGIN;") and sql.endswith("COMMIT;\n") and sql.count("COMMIT;") == 1
     assert (
@@ -128,6 +129,21 @@ def test_equipment_is_historical_fenced_and_inverse_restores_trigger_atomically(
     )
     assert "session_replication_role" not in sql and "GRANT" not in sql
     assert "exact owned drop_chunks set mismatch" in sql
+    existing = copy.deepcopy(witness)
+    chunk = existing["target_chunks"][0]
+    existing["before_year2000_chunks"] = [
+        {k: chunk[k] for k in ("table", "name", "range_start", "range_end")} | {"row_count": 2, "row_sha256": "c" * 64}
+    ]
+    chunk["other_rows"] = 2
+    existing["added_chunks"] = existing["added_chunks"][1:]
+    preserved_sql = inverse.render(manifest, existing)
+    assert "preexisting chunk rowset changed" in preserved_sql
+    assert "SELECT count(*)=3 FROM " + chunk["name"] in preserved_sql
+    assert "ARRAY['" + chunk["name"] + "']" not in preserved_sql
+    unsafe = copy.deepcopy(existing)
+    unsafe["added_chunks"].append(copy.deepcopy(chunk))
+    with pytest.raises(AssertionError):
+        inverse.render(manifest, unsafe)
     assert "source_connection_generation=7" in sql and "gap_reason='initial_receipt'" in sql
     bad = copy.deepcopy(witness)
     bad["added_chunks"][0]["other_rows"] = 1

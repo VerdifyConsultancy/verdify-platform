@@ -29,15 +29,32 @@ def render(manifest, witness):
     probe.validate_manifest(manifest)
     assert witness["cluster_uid"] == probe.CLUSTER_UID and witness["primary_uid"] == probe.PRIMARY_UID
     assert witness["database_oid"] == 16447 and witness["clients_stopped"] is True
-    assert witness["before_year2000_chunks"] == []
     assert witness["before_fixture_rows"] == 0
     assert witness["manifest_run_id"] == manifest["run_id"]
     expected_tables = {"climate", "diagnostics", "equipment_state"}
+    before = witness["before_year2000_chunks"]
     chunks = witness["added_chunks"]
-    assert {chunk["table"] for chunk in chunks} == expected_tables and len(chunks) == 3
-    for chunk in chunks:
+    targets = witness["target_chunks"]
+    assert {chunk["table"] for chunk in targets} == expected_tables and len(targets) == 3
+    before_by_name = {chunk["name"]: chunk for chunk in before}
+    assert len(before_by_name) == len(before)
+    target_by_name = {chunk["name"]: chunk for chunk in targets}
+    assert len(target_by_name) == len(targets)
+    assert {chunk["name"] for chunk in chunks} == set(target_by_name) - set(before_by_name)
+    assert len({chunk["name"] for chunk in chunks}) == len(chunks)
+    assert all(chunk == target_by_name[chunk["name"]] for chunk in chunks)
+    for chunk in before:
+        assert chunk["table"] in expected_tables
         assert re.fullmatch(r"_timescaledb_internal\._hyper_[0-9]+_[0-9]+_chunk", chunk["name"])
-        assert chunk["owned_rows"] == 1 and chunk["other_rows"] == 0
+        assert type(chunk["row_count"]) is int and chunk["row_count"] >= 0
+        assert re.fullmatch(r"[0-9a-f]{64}", chunk["row_sha256"])
+    for chunk in targets:
+        assert re.fullmatch(r"_timescaledb_internal\._hyper_[0-9]+_[0-9]+_chunk", chunk["name"])
+        assert chunk["owned_rows"] == 1
+        prior = before_by_name.get(chunk["name"])
+        assert chunk["other_rows"] == (prior["row_count"] if prior else 0)
+        if prior:
+            assert all(chunk[k] == prior[k] for k in ("table", "range_start", "range_end"))
         assert chunk["range_start"].startswith("1999-") or chunk["range_start"].startswith("2000-")
         assert chunk["range_end"].startswith("2000-")
     hashes = witness["row_sha256"]
@@ -49,7 +66,7 @@ def render(manifest, witness):
     climate, diagnostics, equipment = (manifest["events"][k] for k in ("climate", "diagnostics", "equipment"))
     ts = climate["event"]["row"]["ts"]
     instant = datetime.fromisoformat(ts)
-    for chunk in chunks:
+    for chunk in targets:
         start, end = datetime.fromisoformat(chunk["range_start"]), datetime.fromisoformat(chunk["range_end"])
         assert start <= instant < end and end - start <= timedelta(days=31)
     assert diagnostics["event"]["observed_at"] == equipment["event"]["source_observed_through"] == ts
@@ -67,7 +84,9 @@ def render(manifest, witness):
             f"(SELECT count(*)=1 AND bool_and(encode(sha256(convert_to(to_jsonb(t)::text,'UTF8')),'hex')={literal(hashes[table])}) FROM public.{table} t WHERE {key}={literal(identity)}::uuid)"
         )
     row_guard = " AND ".join(guards)
-    chunk_guards = " AND ".join(f"(SELECT count(*)=1 FROM {chunk['name']})" for chunk in chunks)
+    chunk_guards = " AND ".join(
+        f"(SELECT count(*)={1 + chunk['other_rows']} FROM {chunk['name']})" for chunk in targets
+    )
     equipment_id = literal(equipment["identity"])
     qts, qruntime = literal(ts), literal(runtime)
     row_guard += f" AND EXISTS(SELECT 1 FROM public.climate_source_events WHERE event_id={literal(climate['identity'])}::uuid AND greenhouse_id='vallery' AND source_ts={qts}::timestamptz AND source_runtime_instance_id={qruntime}::uuid AND source_connection_generation=7 AND climate_payload={literal(json.dumps({'temp_avg': 70.0}))}::jsonb AND sample_provenance={literal(json.dumps(climate['event']['sample_provenance']))}::jsonb)"
@@ -103,6 +122,11 @@ def render(manifest, witness):
             + literal(chunk["name"])
             + "]::text[] THEN RAISE EXCEPTION 'exact owned drop_chunks set mismatch'; END IF;END $guard$;",
         ]
+    # Existing chunk bytes must survive the exact-owned row inverse unchanged.
+    for chunk in before:
+        body.append(
+            f"DO $guard$ BEGIN IF NOT (SELECT count(*)={chunk['row_count']} AND encode(sha256(convert_to(coalesce(string_agg(to_jsonb(t)::text,E'\\n' ORDER BY to_jsonb(t)::text),''),'UTF8')),'hex')={literal(chunk['row_sha256'])} FROM {chunk['name']} t) THEN RAISE EXCEPTION 'preexisting chunk rowset changed';END IF;END $guard$;"
+        )
     body += ["COMMIT;"]
     return "\n".join(body) + "\n"
 
