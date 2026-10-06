@@ -1,6 +1,6 @@
 """Complete current274 rehearsal inventory at one guarded observation clock.
 
-Only the fixed S2 target is admitted. The exact current view profile is derived
+Only the fixed S2 source and its two declared recovery targets are admitted. The exact current view profile is derived
 from the authentic restored source after complete semantic catalog equality.
 Historical270 emitters and their source custody remain unchanged.
 """
@@ -17,6 +17,12 @@ ROOT = Path(__file__).resolve().parents[1]
 PROFILE = ROOT / "tests/fixtures/cnpg_count_time/source-public-count-time-current274.json"
 PROFILE_SHA = "5ff64bbdd9994b480e7ea6c77092c4e267f513a7e6420cd574bf3b890d90e92d"
 CLUSTER = "verdify-cnpg-s2"
+RECOVERY_TARGETS = (
+    "verdify-cnpg-s2-pitr-a",
+    "verdify-cnpg-s2-pitr-b",
+    "verdify-cnpg-s2-pitr-a-frozen",
+    "verdify-cnpg-s2-pitr-b-frozen",
+)
 
 
 def load(name):
@@ -61,21 +67,25 @@ def current_profile():
     return value
 
 
-def emit_sql(observation_at):
+def emit_sql(observation_at, cluster=CLUSTER):
+    if cluster not in (CLUSTER, *RECOVERY_TARGETS):
+        raise ValueError("unsupported closed current274 dataset target")
     value = current_profile()
     clock.profile = lambda: value
     original_load = physical.t.load
     physical.t.load = lambda name: clock if name == "cnpg-public-count-time-clock" else original_load(name)
     physical.pitr.SOURCE = CLUSTER
-    return "SET SESSION AUTHORIZATION verdify;\n" + physical.dataset_sql(CLUSTER, observation_at)
+    physical.t.PHYSICAL_TARGETS = RECOVERY_TARGETS
+    return "SET SESSION AUTHORIZATION verdify;\n" + physical.dataset_sql(cluster, observation_at)
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--observation-at", required=True)
+    parser.add_argument("--cluster", choices=(CLUSTER, *RECOVERY_TARGETS), default=CLUSTER)
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
-    sql = emit_sql(args.observation_at)
+    sql = emit_sql(args.observation_at, args.cluster)
     with args.output.open("x") as stream:
         stream.write(sql)
 

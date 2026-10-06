@@ -74,3 +74,32 @@ def test_current_count_time_profile_is_closed_and_preserves_original_module(tmp_
     monkeypatch.setattr(m, "PROFILE", artifact)
     with pytest.raises(ValueError, match="closed current274"):
         m.emit_sql(observation)
+
+
+def test_s2_recovery_count_time_keeps_full_inventory_and_exact_session_guard():
+    m = load("cnpg-s2-count-time")
+    observation = "2026-10-06T03:58:39.426422+00:00"
+    source = m.emit_sql(observation)
+    for target in m.RECOVERY_TARGETS:
+        sql = m.emit_sql(observation, target)
+        assert sql == source.replace("cluster_name')<>'verdify-cnpg-s2'", f"cluster_name')<>'{target}'")
+        assert "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;" in sql
+        assert "statement_timeout='120s'" in sql
+    with pytest.raises(ValueError, match="unsupported closed current274"):
+        m.emit_sql(observation, "verdify-prod")
+    assert load("cnpg-physical-runtime-transition").pitr.SOURCE == "verdify-cnpg-rehearsal"
+
+
+def test_s2_recovery_catalog_readback_preserves_complete_readonly_witness():
+    m = load("cnpg-s2-recovery-readback")
+    original = m.c0.emit_sql(target=True, bootstrap_grantor_profile=True, cluster_name="verdify-cnpg-s2")
+    for target in m.TARGETS:
+        sql = m.emit_sql(target)
+        assert sql == original.replace(
+            "OR current_setting('cluster_name') <> 'verdify-cnpg-s2'",
+            f"OR current_setting('cluster_name') <> '{target}'",
+        )
+        assert "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;" in sql
+    for target in ("verdify-prod", "verdify-cnpg-s2", "verdify-cnpg-pitr-a"):
+        with pytest.raises(ValueError, match="unsupported closed S2 physical readback"):
+            m.emit_sql(target)

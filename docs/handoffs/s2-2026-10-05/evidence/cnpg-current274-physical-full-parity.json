@@ -1,0 +1,68 @@
+{
+  "schema": "cnpg-s2-current274-full-source-physical-parity-v1",
+  "complete": true,
+  "utc": "2026-10-06T06:17:26.302012+00:00",
+  "sealed_source_dataset_sha256": "b6ee0debbeb016131948ed80de26cd1275d6a6e9de6a72ada565c2406830b979",
+  "observation_at": "2026-10-06T03:58:39.426422+00:00",
+  "full_native_catalog_entries": 44220,
+  "native_baseline_runtime_verifiers_null": 9,
+  "background_workers": 0,
+  "timescaledb_restoring": "off",
+  "records": [
+    {
+      "label": "a",
+      "cluster": "verdify-cnpg-s2-pitr-a-frozen",
+      "cluster_uid": "bd01ec5b-efe9-4882-a6dc-c76c6b6fa7ec",
+      "copy_tables": 951,
+      "copy_rows": 9699549,
+      "count_time": {
+        "schema": "cnpg-s2-full-frozen-count-time-parity-v1",
+        "complete": true,
+        "relation_count": 427,
+        "timestamp_columns": 567,
+        "timescale_owner_rows": 614,
+        "native_exit": 0,
+        "dataset_sha256": "b6ee0debbeb016131948ed80de26cd1275d6a6e9de6a72ada565c2406830b979"
+      },
+      "full_copy_equal": true,
+      "catalog_equal": true,
+      "hashes": {
+        "full-frozen-recovery-copy-a-once/receipt.json": "c898558e8a971cc63ed201bb03ebb32ade42efb65d79c2a6969ff4bfd69e9132",
+        "full-frozen-recovery-copy-a-once/baseline-parity.json": "d758832885b623df819040c410d464dff4a6feeb817050c5f4611a3424343e8c",
+        "full-frozen-recovery-catalog-distinct-staging-once/a-dataset.json": "6d896a5d41ac0fb65e3a0115c6b71798a0115c5fd8311a474246f903b49f0d7e",
+        "full-frozen-recovery-catalog-distinct-staging-once/full-native-parity.json": "8ca0cd671c6b4f775c4d085317c8a2136d52ff9bdb999c079da08e0e166eb4a8",
+        "full-frozen-recovery-count-time-once/a-dataset.json": "b6ee0debbeb016131948ed80de26cd1275d6a6e9de6a72ada565c2406830b979",
+        "full-frozen-recovery-count-time-once/a-baseline-parity.json": "cf2052783d33a599f43f301bacfb9d646da3965e6100062f936461c77dd29ab4"
+      }
+    },
+    {
+      "label": "b",
+      "cluster": "verdify-cnpg-s2-pitr-b-frozen",
+      "cluster_uid": "3981d0f2-4c72-48ac-9e09-826fe6bd4ed6",
+      "copy_tables": 951,
+      "copy_rows": 9699549,
+      "count_time": {
+        "schema": "cnpg-s2-full-frozen-count-time-parity-v1",
+        "complete": true,
+        "relation_count": 427,
+        "timestamp_columns": 567,
+        "timescale_owner_rows": 614,
+        "native_exit": 0,
+        "dataset_sha256": "b6ee0debbeb016131948ed80de26cd1275d6a6e9de6a72ada565c2406830b979"
+      },
+      "full_copy_equal": true,
+      "catalog_equal": true,
+      "hashes": {
+        "full-frozen-recovery-copy-b-once/receipt.json": "4cca4eb40d2849f3096456ae1c61d1651a85c11fba1dd8ecd037779e345b9b9f",
+        "full-frozen-recovery-copy-b-once/baseline-parity.json": "d758832885b623df819040c410d464dff4a6feeb817050c5f4611a3424343e8c",
+        "full-frozen-recovery-catalog-distinct-staging-once/b-dataset.json": "6d896a5d41ac0fb65e3a0115c6b71798a0115c5fd8311a474246f903b49f0d7e",
+        "full-frozen-recovery-catalog-distinct-staging-once/full-native-parity.json": "8ca0cd671c6b4f775c4d085317c8a2136d52ff9bdb999c079da08e0e166eb4a8",
+        "full-frozen-recovery-count-time-once/b-dataset.json": "b6ee0debbeb016131948ed80de26cd1275d6a6e9de6a72ada565c2406830b979",
+        "full-frozen-recovery-count-time-once/b-baseline-parity.json": "cf2052783d33a599f43f301bacfb9d646da3965e6100062f936461c77dd29ab4"
+      }
+    }
+  ],
+  "scope": "Inspection freeze from initial startup; original restored job definitions/scheduled flags/catalog/data retained. Does not assert production background-worker policy, ordinary-authenticated A/B clients, primary-loss or production cutover.",
+  "private_receipt_sha256": "55db30cbb02cf22a19d0d16beeaced642a631cb8d0163428127bdb638919ce92",
+  "private_custody": "/Volumes/Work/verdify-s2-cnpg-20261006/full-current274-source-physical-parity.json"
+}

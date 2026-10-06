@@ -1,0 +1,73 @@
+{
+  "schema": "cnpg-current275-complete-native-rollback-qualified-v1",
+  "complete": true,
+  "persistent_applied": false,
+  "records": [
+    {
+      "schema": "cnpg-current275-native-rollback-execution-v1",
+      "native_exit": 0,
+      "elapsed_seconds": 21.436396416989737,
+      "binding": {
+        "cluster": "verdify-cnpg-s2",
+        "cluster_uid": "4f697776-df25-4e22-b930-0b76cf35496e",
+        "pod": "verdify-cnpg-s2-1",
+        "pod_uid": "6379db06-2bad-4c5b-9a50-86feac4651dc",
+        "operand_digest": "sha256:8b461e37d18aa049704eb6a9cde2ba9af0f955f8d3725e921070d2450bb2f137"
+      },
+      "migration_sha256": "f4f8da110236461680f41770bad766a7e28b1a6db1982ecc632e93930a375dc4",
+      "execution_sql_sha256": "17da769c0af74ef6cc7738ef60f4459fd4869a9acbcee98599c83e5fc0bbe5d7",
+      "persistent_apply": false,
+      "complete": true,
+      "full_after_rollback_witness_equal": true,
+      "qualification_sha256": "6b4c4ea99a0255ac7f3a64b08b04f5cf6788a1d5a225978ef23928e6d559bbca",
+      "post_witness_sha256": "7089e3bc3df63d583d4e95c6f350b96e6ce889122bafc1865bfc68c4e5d76d8b",
+      "full951_data_before_after_rollback_equal": true,
+      "copy_rows": 9699549,
+      "all77_sequence_values_unchanged": true,
+      "historical274_admission_rows_unchanged": true,
+      "data_receipt_sha256": {
+        "before": "2e42d6945afd052274dfe4336d505c2773d588ec5bedd5b4212b7a9031c3a9e2",
+        "after": "0d7bbd6a42cb5e0a7ec89153710eff6240f6ec6f155a1bb41e7a3bbcbdd6f912"
+      },
+      "before_after_sequence_sha256": "06f663fdc4e28113665e9ffd833132d53e4da0a4242afb851d864c95aaf7b266"
+    },
+    {
+      "schema": "cnpg-current275-native-rollback-execution-v1",
+      "native_exit": 0,
+      "elapsed_seconds": 18.496325833999435,
+      "binding": {
+        "cluster": "verdify-cnpg-s2-pitr-b-frozen",
+        "cluster_uid": "3981d0f2-4c72-48ac-9e09-826fe6bd4ed6",
+        "pod": "verdify-cnpg-s2-pitr-b-frozen-2",
+        "pod_uid": "4bdeafd3-5ef4-420a-8536-350069d33d53",
+        "operand_digest": "sha256:8b461e37d18aa049704eb6a9cde2ba9af0f955f8d3725e921070d2450bb2f137"
+      },
+      "migration_sha256": "f4f8da110236461680f41770bad766a7e28b1a6db1982ecc632e93930a375dc4",
+      "execution_sql_sha256": "23d9358bbea833c97b7bb0c363ee02a3a4cd4bdfba37f8984dc1a506dd1c56a6",
+      "persistent_apply": false,
+      "complete": true,
+      "full_after_rollback_witness_equal": true,
+      "qualification_sha256": "dc638fa6b67990f7b613cf8b574aea5537f0648d98fc404e2406cbceed017545",
+      "post_witness_sha256": "7089e3bc3df63d583d4e95c6f350b96e6ce889122bafc1865bfc68c4e5d76d8b",
+      "full951_data_before_after_rollback_equal": true,
+      "copy_rows": 9699549,
+      "all77_sequence_values_unchanged": true,
+      "historical274_admission_rows_unchanged": true,
+      "data_receipt_sha256": {
+        "before": "f459816f2c6d7eaa1cc43f17c8159ed85242db9c92bd869f8e6f7182f511fa5c",
+        "after": "4d7ba439802006a1602376dcd9f2d30b670553949b6b9f45e33d1ec1c57a0ceb"
+      },
+      "before_after_sequence_sha256": "5ef84c37d80e40314e5d15233c10ffddbf86323a4fcf3ee9a3457b1937b80fa1"
+    }
+  ],
+  "scope": "Config-only275 plus2canonicalreceiptrefresh and exact1ledger row; separate new275 nativeadmission unexecuted",
+  "preserved_failures": [
+    "S2 native successful rollback validator initially assumed absent MCP semantic_entries; original output revalidated without DDL retry",
+    "S2 afterrollback large stdout copy exit0 omitted terminal after945 exact prefixes; incomplete preserved; identical full951 SQL recaptured into private native file and compact terminal-verified receipt",
+    "synthetic fullbridge fixtures initially omitted public qualification and ledger timing columns, corrected before live use"
+  ],
+  "private_receipt_sha256": "f63956a2e86305b90dceb1f54bd53adac398e1a35099309689d7a9ea67e460de",
+  "private_custody": "/Volumes/Work/verdify-s2-cnpg-20261006",
+  "source_commit": "a650189e",
+  "new_admission_installation": "prepared separately, not executed"
+}

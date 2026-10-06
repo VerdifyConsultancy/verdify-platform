@@ -1,0 +1,42 @@
+{
+  "native_pg16": true,
+  "actual_yaml_shell_executed": true,
+  "cases": [
+    {
+      "case": "frozen",
+      "exit": 0,
+      "receipt_writes": 1,
+      "stderr": "NOTICE:  {\"status\": \"frozen\", \"receipt_id\": 1}\n",
+      "passed": true
+    },
+    {
+      "case": "not_declared",
+      "exit": 0,
+      "receipt_writes": 0,
+      "stderr": "NOTICE:  {\"status\": \"not_declared\", \"route_18h_available\": false}\n",
+      "passed": true
+    },
+    {
+      "case": "partial",
+      "exit": 0,
+      "receipt_writes": 0,
+      "stderr": "WARNING:  {\"day\": \"2026-10-05\", \"reason\": \"incomplete_prospective_18h_target\", \"status\": \"unavailable\", \"receipt_id\": null, \"route_18h_available\": false}\n",
+      "passed": true
+    },
+    {
+      "case": "ambiguous",
+      "exit": 3,
+      "receipt_writes": 0,
+      "stderr": "ERROR:  native previous-day freeze has ambiguous target\nCONTEXT:  PL/pgSQL function fn_freeze_fixed_panel_native_previous_day() line 1 at RAISE\nPL/pgSQL function inline_code_block line 5 at assignment\n",
+      "passed": true
+    },
+    {
+      "case": "denied",
+      "exit": 3,
+      "receipt_writes": 0,
+      "stderr": "ERROR:  permission denied\nCONTEXT:  PL/pgSQL function fn_freeze_fixed_panel_native_previous_day() line 1 at RAISE\nPL/pgSQL function inline_code_block line 5 at assignment\n",
+      "passed": true
+    }
+  ],
+  "all_passed": true
+}

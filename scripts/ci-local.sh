@@ -78,9 +78,14 @@ $PY -m pytest -q \
   tests/test_cnpg_s2_pitr_pair.py \
   tests/test_cnpg_s2_marker_client.py \
   tests/test_cnpg_s2_archive_reader.py \
+  tests/test_cnpg_s2_failover_client.py \
+  tests/test_cnpg_current275_transition.py \
+  tests/test_cnpg_complete_copy_receipt.py \
   tests/test_cnpg_solar_dryout_time_projection.py \
   tests/test_ordinary_runtime_qualification.py \
   tests/test_restored_runtime_duties.py \
+  tests/test_restored_duty_transport_readiness.py \
+  tests/test_ingestor_committed_spool_qualification.py \
   tests/test_cnpg_s2_client_policy.py \
   tests/test_historical_suppressed_alert_maintenance.py \
   tests/test_18_twin_divergence_dashboard.py \

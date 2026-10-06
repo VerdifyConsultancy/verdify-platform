@@ -18,6 +18,27 @@ from pathlib import Path
 DUTIES = {"planner", "setpoint_server", "ha_backfill", "vision", "lab_publisher", "grafana"}
 
 
+async def wait_target_transport(host, *, timeout=10):
+    """Bound policy/startup readiness without sending credentials or SQL."""
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + timeout
+    attempts = []
+    while loop.time() < deadline:
+        try:
+            _, writer = await asyncio.wait_for(
+                asyncio.open_connection(host, 5432), timeout=min(1.0, deadline - loop.time())
+            )
+        except (OSError, TimeoutError) as error:
+            attempts.append(type(error).__name__)
+        else:
+            writer.close()
+            await asyncio.wait_for(writer.wait_closed(), timeout=min(1.0, max(0.01, deadline - loop.time())))
+            attempts.append("connected")
+            return attempts
+        await asyncio.sleep(min(0.25, max(0.0, deadline - loop.time())))
+    raise TimeoutError("bounded target transport readiness expired")
+
+
 def target_binding(raw, cluster_uid):
     """Bind a ROOT-owned fresh native readback, not caller-invented UID labels."""
     binding = json.loads(raw)
@@ -116,6 +137,7 @@ async def qualify(args):
     # process. They are never arguments, source artifacts or receipt contents.
     login = "verdify_" + args.duty + "_runtime_login"
     password = os.environ["QUALIFICATION_DB_PASSWORD"]
+    transport_attempts = await wait_target_transport(args.target_host)
     if importlib.util.find_spec("asyncpg"):
         import asyncpg
 
@@ -204,6 +226,8 @@ async def qualify(args):
             "cluster_uid": args.cluster_uid,
             "admission_sha256": args.admission_sha256,
             "native_binding_sha256": binding_sha,
+            "transport_readiness_is_authentication": False,
+            "transport_attempts": transport_attempts,
             "identity": identity,
             "fixture_sha256": hashlib.sha256(args.fixture.read_bytes()).hexdigest(),
             "duty": args.duty,

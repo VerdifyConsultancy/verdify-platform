@@ -1,0 +1,149 @@
+{
+  "schema": "cnpg-s2-protected-baseline-archive-v1",
+  "complete": true,
+  "backup_create": {
+    "schema": "cnpg-s2-physical-backup-create-v1",
+    "backup": "verdify-cnpg-s2-current274-20261006",
+    "backup_uid": "8e3c2874-f16c-4ca2-b85d-09629910ac64",
+    "cluster_uid": "4f697776-df25-4e22-b930-0b76cf35496e",
+    "pod_uid": "6379db06-2bad-4c5b-9a50-86feac4651dc",
+    "manifest_sha256": "2b3034c011be69eda6f1dd6b42731663a8336e72b44d1872b50d3d26ce49f656",
+    "source_commit": "200c3ef995a246201ff756e7fff2843a90621c33",
+    "create_stdout": "backup.postgresql.cnpg.io/verdify-cnpg-s2-current274-20261006 created",
+    "baseline_nine_verifiers_null": true,
+    "no_project_workload_fixture_writes": true,
+    "failed_attempt": "Unqualified kubectl get backup resolves MariaDB resource; after create, authoritative full CNPG resource readback used. No second creation/retry."
+  },
+  "native_backup_status": {
+    "backupId": "20261006T052358",
+    "backupName": "backup-20261006052357",
+    "beginLSN": "1/72003EA0",
+    "beginWal": "000000010000000100000072",
+    "endLSN": "1/73035E58",
+    "endWal": "000000010000000100000073",
+    "instanceID": {
+      "ContainerID": "containerd://ea98b8e093a5a6b181d90a5a8de3ed29e99f0579199a58e04c8cf4384589344f",
+      "podName": "verdify-cnpg-s2-2",
+      "sessionID": "101d46f6-f781-431a-a449-f22e0c15e7e0"
+    },
+    "majorVersion": 16,
+    "method": "plugin",
+    "online": true,
+    "phase": "completed",
+    "pluginMetadata": {
+      "clusterUID": "4f697776-df25-4e22-b930-0b76cf35496e",
+      "displayName": "BarmanCloudInstance",
+      "name": "barman-cloud.cloudnative-pg.io",
+      "pluginName": "barman-cloud.cloudnative-pg.io",
+      "timeline": "1",
+      "version": "0.14.0"
+    },
+    "reconciliationStartedAt": "2026-10-06T05:23:57Z",
+    "reconciliationTerminatedAt": "2026-10-06T05:30:35Z",
+    "startedAt": "2026-10-06T05:23:58Z",
+    "stoppedAt": "2026-10-06T05:30:30Z"
+  },
+  "markers": {
+    "schema": "verdify-cnpg-pitr-marker-custody-v1",
+    "source": {
+      "namespace": "verdify-db-rehearsal",
+      "cluster_name": "verdify-cnpg-s2",
+      "cluster_uid": "4f697776-df25-4e22-b930-0b76cf35496e",
+      "image": "registry.vallery.net/verdifyconsultancy/verdify-timescaledb-cnpg:16.13-ts2.25.2@sha256:8b461e37d18aa049704eb6a9cde2ba9af0f955f8d3725e921070d2450bb2f137",
+      "server_version_num": 160013,
+      "database": "rehearsal_bootstrap"
+    },
+    "backup_uid": "8e3c2874-f16c-4ca2-b85d-09629910ac64",
+    "backup_id": "20261006T052358",
+    "primary_pod_uid": "6379db06-2bad-4c5b-9a50-86feac4651dc",
+    "timeline": 1,
+    "markers": {
+      "A": {
+        "transaction_started_at": "2026-10-06T05:38:19.196299+00:00",
+        "acknowledged_at": "2026-10-06T05:38:19.20758+00:00",
+        "primary_pod_uid": "6379db06-2bad-4c5b-9a50-86feac4651dc",
+        "timeline": 1,
+        "xid": "13882",
+        "marker_id": "s2-current274-20261006t053802-07219146-a",
+        "acknowledged_flush_lsn": "1/740001F0",
+        "capture_sha256": "9e0832ee06db64fa70244424d0fc209353916cdd810ddf8754e2f8f9cc045e61"
+      },
+      "B": {
+        "transaction_started_at": "2026-10-06T05:38:19.209971+00:00",
+        "acknowledged_at": "2026-10-06T05:38:19.218502+00:00",
+        "primary_pod_uid": "6379db06-2bad-4c5b-9a50-86feac4651dc",
+        "timeline": 1,
+        "xid": "13883",
+        "marker_id": "s2-current274-20261006t053802-07219146-b",
+        "acknowledged_flush_lsn": "1/74000358",
+        "capture_sha256": "091aef8081efbd29a21f3235232bf5cda1ff5deb5789b65634729db6accf4697"
+      },
+      "C": {
+        "transaction_started_at": "2026-10-06T05:38:19.220316+00:00",
+        "acknowledged_at": "2026-10-06T05:38:19.227737+00:00",
+        "primary_pod_uid": "6379db06-2bad-4c5b-9a50-86feac4651dc",
+        "timeline": 1,
+        "xid": "13884",
+        "marker_id": "s2-current274-20261006t053802-07219146-c",
+        "acknowledged_flush_lsn": "1/740004C0",
+        "capture_sha256": "56c1890daa252c13f69009c8396b0bbdb10c5d7378ea76b31b52e241f628c2c6"
+      }
+    },
+    "targets": {
+      "A": "2026-10-06T05:38:19.208619+00:00",
+      "B": "2026-10-06T05:38:19.219172+00:00"
+    },
+    "target_capture_sha256": "300dde86cd33ddfa017025a4dc52c99685855c90530ef8818df30ec918f2dcd9"
+  },
+  "independent_reader": {
+    "schema": "cnpg-s2-independent-archive-reader-v1",
+    "server_name": "verdify-cnpg-s2",
+    "backup_uid": "8e3c2874-f16c-4ca2-b85d-09629910ac64",
+    "backup_id": "20261006T052358",
+    "required_wals": [
+      "000000010000000100000072",
+      "000000010000000100000073",
+      "000000010000000100000074"
+    ],
+    "base_object_heads": [
+      {
+        "key": "postgresql/verdify-cnpg-s2/base/20261006T052358/backup.info",
+        "bytes": 1452
+      },
+      {
+        "key": "postgresql/verdify-cnpg-s2/base/20261006T052358/data.tar.gz",
+        "bytes": 619166118
+      }
+    ],
+    "retrieved": [
+      {
+        "key": "postgresql/verdify-cnpg-s2/base/20261006T052358/backup.info",
+        "bytes": 1452,
+        "sha256": "22857b5894d958a77474fa99ada244ff5707ca6037e39daf8a99e11e8f00b7d8"
+      },
+      {
+        "key": "postgresql/verdify-cnpg-s2/wals/0000000100000001/000000010000000100000072.gz",
+        "bytes": 23423,
+        "sha256": "f3fea5c0b18de5d0299a2d6c10287470625256203bf4817c69a1cf3af1362811"
+      },
+      {
+        "key": "postgresql/verdify-cnpg-s2/wals/0000000100000001/000000010000000100000073.gz",
+        "bytes": 66495,
+        "sha256": "f0719ad23f53ab60bed2a47475bdf7dd94658d8a1ecf53a942a3a4e1cda1cf32"
+      },
+      {
+        "key": "postgresql/verdify-cnpg-s2/wals/0000000100000001/000000010000000100000074.gz",
+        "bytes": 16925,
+        "sha256": "83114d43683fb3135ddfca3da5b127103e5a145666bdff2b137019bf50fc34b1"
+      }
+    ],
+    "reader_only_secret_ref": true,
+    "complete": true
+  },
+  "reader_job_uid": "15d24651-192b-407f-8236-8392e458ff85",
+  "private_artifact_sha256": {
+    "s2-physical-backup-create-once/completed-backup.json": "43da0c4314ef0bbe54c39c0f709c389c724bd3b0e0e3bec66499dcda274bd3b3",
+    "s2-pitr-markers-attempt2/marker-custody.json": "8b15fd70c01d73dfddaf24c1560da0967518f1e61c62ca53a71d166f0318177f",
+    "s2-pitr-final-capacity-once/reader.stdout": "0d0eb633a17e477cbf9d6fd0db3136e4e1824a07d7b9e3ea75b7de8d9ae9a3b9"
+  }
+}

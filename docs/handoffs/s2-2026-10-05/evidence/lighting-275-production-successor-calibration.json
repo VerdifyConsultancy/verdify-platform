@@ -1,0 +1,70 @@
+{
+  "before": {
+    "user": "verdify",
+    "session_user": "verdify",
+    "database": "verdify",
+    "database_oid": 16384,
+    "max_migration": 274,
+    "socket_transport": true,
+    "replica": false,
+    "digests": {
+      "api": "67bb961f69e72f8d59f8d38dce96201682b1fb8fb40d423071c987b075cf994e",
+      "ingestor": "126f95dc75242a126579331fadf711f0c1e8e408d20ec7cd94e3d1e27a0dcf75",
+      "mcp": "7083e4d43044e7f2b0150b58fa3cc8cc45c599a68b1f3cafaf9242e0f0f79e68"
+    },
+    "function_body_sha256": "049c12f4e73337b2bfc97eda1faf4db9685b98da64e1184c7a90f1d36520cbdd",
+    "function_metadata_without_config_sha256": "5c4c5c3c7ca109f49210daeebc93314cc232a618109927a717d35323394409a9",
+    "function_config": null
+  },
+  "binding_before": {
+    "pod_uid": "b1fa2c0e-a995-481f-a29f-4cfaad4e697b",
+    "statefulset_uid": "692af2f5-c937-4fde-aeb3-3c4fd36710ca",
+    "service_uid": "556ef7b6-2d04-4301-940e-15f8b494bab5",
+    "service_selector": {
+      "app.kubernetes.io/component": "db"
+    },
+    "pod_image_ids": [
+      "docker.io/timescale/timescaledb@sha256:0af03ecf697825f6ddae76fd275d16bf46007bed6d00eb3d754779cb7db96fa6"
+    ]
+  },
+  "binding_after": {
+    "pod_uid": "b1fa2c0e-a995-481f-a29f-4cfaad4e697b",
+    "statefulset_uid": "692af2f5-c937-4fde-aeb3-3c4fd36710ca",
+    "service_uid": "556ef7b6-2d04-4301-940e-15f8b494bab5",
+    "service_selector": {
+      "app.kubernetes.io/component": "db"
+    },
+    "pod_image_ids": [
+      "docker.io/timescale/timescaledb@sha256:0af03ecf697825f6ddae76fd275d16bf46007bed6d00eb3d754779cb7db96fa6"
+    ]
+  },
+  "observation_sha256_before": "82106dc1a49612f3a8104ff3d900fb35d514ee1a4f4dd73f68ba2b050906ada0",
+  "observation_sha256_after": "82106dc1a49612f3a8104ff3d900fb35d514ee1a4f4dd73f68ba2b050906ada0",
+  "original_function_and_all_three_boundaries_restored": true,
+  "native_authority_unchanged": true,
+  "persistent_production_mutation": false,
+  "qualified": true,
+  "transactional_successor": {
+    "user": "verdify",
+    "session_user": "verdify",
+    "database": "verdify",
+    "database_oid": 16384,
+    "max_migration": 274,
+    "socket_transport": true,
+    "replica": false,
+    "digests": {
+      "api": "5091627a4dfd40c679ed4e2c0729cde507f705ab9c45c1e2eb82b42d29634bba",
+      "ingestor": "8690d5fc25a742cdd4abbbb940b0f000f708ef567e5ff301fbfd3d27f449a743",
+      "mcp": "7083e4d43044e7f2b0150b58fa3cc8cc45c599a68b1f3cafaf9242e0f0f79e68"
+    },
+    "function_body_sha256": "049c12f4e73337b2bfc97eda1faf4db9685b98da64e1184c7a90f1d36520cbdd",
+    "function_metadata_without_config_sha256": "5c4c5c3c7ca109f49210daeebc93314cc232a618109927a717d35323394409a9",
+    "function_config": [
+      "jit=off"
+    ]
+  },
+  "schema": "verdify-s2-production-275-rolled-back-successor-v1",
+  "boundary": "Calibration only: exact reviewed function SET jit=off inside a rolled-back production transaction; no migration ledger/receipt update persisted. Guarded full migration qualification is separate.",
+  "private_receipt_sha256": "ebb431b739c2aeea0f70479360cef21571d9eea3225d3185425d1068905bf56c",
+  "calibrated_function_fragment_sha256": "70a8814a5ae9db588bfbc812b91a60b388efb88d7cb73cc6d47801bb2afde762"
+}

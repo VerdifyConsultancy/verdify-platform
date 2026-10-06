@@ -205,7 +205,7 @@ def test_successor_bootstrap_matches_actual_rollback_qualification():
     # Preserve the original independently qualified 270/273 predicate/receipt.
     assert receipt["helper_sha256"] == successor["predecessor_helper_sha256"]
     assert receipt["sealed_sql_sha256"] == digest(module.sealed_sql_270_273().encode())
-    assert successor["helper_sha256"] == digest((root / "scripts/bootstrap-six-runtime-roles.py").read_bytes())
+    assert successor["helper_sha256"] == "b10f191509b7a5cbbfaf7354965ad8725e85ca4de5b0d254b01cce242ed79bfe"
     assert receipt["role_contract_sql_sha256"] == digest(module.admin_role_contract_sql().encode())
     assert receipt["mutations_committed"] is False
     assert receipt["password_commands_executed"] is False
@@ -257,8 +257,8 @@ def test_physical_successor_bootstrap_matches_actual_rollback_qualification():
     def digest(value):
         return hashlib.sha256(value).hexdigest()
 
-    assert receipt["helper_sha256"] == digest((root / "scripts/bootstrap-six-runtime-roles.py").read_bytes())
-    assert receipt["sealed_sql_sha256"] == digest(module.sealed_sql().encode())
+    assert receipt["helper_sha256"] == "b10f191509b7a5cbbfaf7354965ad8725e85ca4de5b0d254b01cce242ed79bfe"
+    assert receipt["sealed_sql_sha256"] == digest(module.sealed_sql_270_274().encode())
     assert receipt["role_contract_sql_sha256"] == digest(module.admin_role_contract_sql().encode())
     seq, filename, expected = module.PHYSICAL_MIGRATION
     assert seq == 274 and receipt["migration_sha256"] == expected
@@ -287,3 +287,64 @@ def test_physical_successor_bootstrap_matches_actual_rollback_qualification():
         assert r["session_user"] == r["current_user"] == "verdify_ingestor_runtime_login"
     assert receipt["actual_tcp_qualification"] is False
     assert receipt["original_false_cause"] == "unresolved; exact-prefix and independent reruns passed"
+
+
+def test_lighting_successor_bootstrap_matches_actual_rollback_qualification():
+    """New source authority requires an authentic successor and refusal receipt."""
+    import hashlib
+
+    root = Path(__file__).resolve().parents[1]
+    receipt = json.loads((root / "tests/fixtures/six-runtime-bootstrap-275-receipt.json").read_text())
+
+    def digest(value):
+        return hashlib.sha256(value).hexdigest()
+
+    predecessor = json.loads((root / "tests/fixtures/six-runtime-bootstrap-274-receipt.json").read_text())
+    assert receipt["predecessor_helper_sha256"] == predecessor["helper_sha256"]
+    assert receipt["helper_sha256"] == digest((root / "scripts/bootstrap-six-runtime-roles.py").read_bytes())
+    assert receipt["sealed_sql_sha256"] == digest(module.sealed_sql().encode())
+    assert receipt["legacy_sealed_sql_sha256"] == predecessor["sealed_sql_sha256"]
+    assert receipt["legacy_sealed_sql_sha256"] == digest(module.sealed_sql_270_274().encode())
+    assert receipt["role_contract_sql_sha256"] == predecessor["role_contract_sql_sha256"]
+    assert receipt["role_contract_sql_sha256"] == digest(module.admin_role_contract_sql().encode())
+    seq, filename, expected = module.LIGHTING_MIGRATION
+    assert seq == 275 and receipt["migration_sha256"] == expected
+    assert digest((root / "db/migrations" / filename).read_bytes()) == expected
+    assert receipt["successor_catalog_digests"] == module.SUCCESSOR_275
+    assert receipt["mutations_committed"] is False
+    assert receipt["password_commands_executed"] is False
+    assert receipt["actual_tcp_qualification"] is False
+    assert receipt["independent_post_rollback_exact"] is True
+    assert receipt["native_authority_unchanged"] is True
+    assert receipt["full_relation_vectors_exact"] is True
+    assert receipt["full_relation_count"] == 6522
+    assert len(receipt["private_proof_sha256"]) == 64
+    assert receipt["historical_failed_attempts"][0]["qualified"] is False
+    assert receipt["historical_failed_attempts"][1]["mutable_qualification_sql_executed"] is False
+    stages = {r["stage"]: r for r in receipt["stages"]}
+    for name in ("current274", "successor275", "successor275_restored", "current274_restored"):
+        assert stages[name]["sealed"] is True
+        assert stages[name]["combined_qualified"] is True
+        assert stages[name]["role_contract"] is True
+        assert stages[name]["precedence_appended_false"] is False
+    assert stages["current274"]["legacy_sealed"] is True
+    assert stages["current274_restored"]["legacy_sealed"] is True
+    assert stages["successor275"]["legacy_sealed"] is False
+    assert stages["unstamped275"]["sealed"] is False
+    negatives = {
+        "wrong_275_hash",
+        "wrong_275_filename",
+        "wrong_275_stamp",
+        "later_276_ledger",
+        "wrong_api_receipt",
+        "wrong_ingestor_receipt",
+        "wrong_mcp_receipt",
+        "missing_jit_config",
+        "unsafe_planner_membership",
+        "extra_planner_physical_read",
+    }
+    assert set(receipt["negative_stages"]) == negatives
+    for name in negatives:
+        assert stages[name]["combined_qualified"] is False
+    assert stages["unsafe_planner_membership"]["role_contract"] is False
+    assert len(stages) == len(negatives) + 5

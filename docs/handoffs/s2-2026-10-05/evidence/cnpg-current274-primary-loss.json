@@ -1,0 +1,96 @@
+{
+  "schema": "cnpg-s2-bootstrap-primary-loss-v1",
+  "complete": true,
+  "boundary": "Normal graceful exact UID+RV primary Pod deletion; no physical host/node loss or ordinary-runtime-role acceptance asserted.",
+  "cluster_uid": "3981d0f2-4c72-48ac-9e09-826fe6bd4ed6",
+  "old_primary_uid": "7c45cff0-5375-40ab-8cdd-ff7b638a53f1",
+  "new_primary": "verdify-cnpg-s2-pitr-b-frozen-2",
+  "new_primary_uid": "4bdeafd3-5ef4-420a-8536-350069d33d53",
+  "rw_service_uid": "1778c541-900f-4743-b9be-62b13f96c569",
+  "rw_service_created_at": "2026-10-06T06:00:09Z",
+  "new_rw_endpoint": {
+    "addresses": [
+      "10.42.5.144"
+    ],
+    "conditions": {
+      "ready": true,
+      "serving": true,
+      "terminating": false
+    },
+    "nodeName": "vm-k3s-node7",
+    "targetRef": {
+      "kind": "Pod",
+      "name": "verdify-cnpg-s2-pitr-b-frozen-2",
+      "namespace": "verdify-db-rehearsal",
+      "uid": "4bdeafd3-5ef4-420a-8536-350069d33d53"
+    },
+    "zone": "onyx"
+  },
+  "actual_attempts": 466,
+  "acknowledged_attempts": 454,
+  "ambiguous_attempts": 12,
+  "retained_acknowledged": 454,
+  "lost_acknowledged": 0,
+  "duplicate_marker_ids": 0,
+  "native_committed_markers": 455,
+  "unacknowledged_but_committed": 1,
+  "observed_client_ack_gap_seconds": 8.463646806078032,
+  "last_old_ack": {
+    "kind": "attempt",
+    "sequence": 263,
+    "client_started_monotonic": 900355.210064241,
+    "client_started_at": "2026-10-06T06:33:35.886194+00:00",
+    "ack": {
+      "xid": "14150",
+      "kind": "ack",
+      "cluster": "verdify-cnpg-s2-pitr-b-frozen",
+      "sequence": 263,
+      "timeline": 2,
+      "flush_lsn": "1/7E044E20",
+      "marker_id": "s2-failover-20261006t063201-once-263",
+      "created_at": "2026-10-06T06:33:35.976469+00:00",
+      "backend_pid": 2940,
+      "server_port": 5432,
+      "server_address": "10.42.6.72",
+      "acknowledged_at": "2026-10-06T06:33:35.990899+00:00"
+    },
+    "outcome": "acknowledged",
+    "client_finished_monotonic": 900355.31909661
+  },
+  "first_new_ack": {
+    "kind": "attempt",
+    "sequence": 276,
+    "client_started_monotonic": 900363.553450501,
+    "client_started_at": "2026-10-06T06:33:44.229578+00:00",
+    "ack": {
+      "xid": "14153",
+      "kind": "ack",
+      "cluster": "verdify-cnpg-s2-pitr-b-frozen",
+      "sequence": 276,
+      "timeline": 3,
+      "flush_lsn": "1/7F00D9F0",
+      "marker_id": "s2-failover-20261006t063201-once-276",
+      "created_at": "2026-10-06T06:33:44.368469+00:00",
+      "backend_pid": 1577,
+      "server_port": 5432,
+      "server_address": "10.42.5.144",
+      "acknowledged_at": "2026-10-06T06:33:44.455166+00:00"
+    },
+    "outcome": "acknowledged",
+    "client_finished_monotonic": 900363.782743416
+  },
+  "native_timeline": 3,
+  "all_clients_stopped": true,
+  "source_sha256": {
+    "final-client.stdout": "a812b59d9797d8663e959e87b45b549cfd429246753e844059e4df1ad6c628cb",
+    "final-native-inventory.stdout": "9a74fed6471af74304699a4eaf54c70ddbd21e07f4f4bab4c18783ca216ebf55",
+    "actual-delete-options.json": "9f8897e25e17360c302e4320be76b84cc13702fb5da159312fafee98bfff1b09",
+    "delete-receipt.json": "444739c1012a7ee74f7fc5df162fde766bddc63632fd32bf6a57745dd40c8581",
+    "final-cluster.json": "678b574c102b60b87a6f773f7968969c869b8b84acff739e3e9e037e4a328c74",
+    "final-primary.json": "260fd5e4c7ebf9c85737d03d436cd1432ff9783d273bdba465f89ed478170e7a",
+    "final-service.json": "44888eb894534025cbd80c9d450593eae7a3064fc547f7c53fddcfba61447234",
+    "final-endpoints.json": "a0a36721186f0992d43287feb60d33e643330290fbfffd1b6663e91245ea8139"
+  },
+  "private_receipt_sha256": "948b70732dd97506c11b6e603aaf9985f2eab40e5ae1b59171949a741d3cf0d4",
+  "private_custody": "/Volumes/Work/verdify-s2-cnpg-20261006/failover-live-attempt2/failover-receipt.json"
+}

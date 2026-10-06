@@ -51,6 +51,18 @@ PHYSICAL_MIGRATION = (
 )
 
 
+SUCCESSOR_275 = {
+    "api": "5091627a4dfd40c679ed4e2c0729cde507f705ab9c45c1e2eb82b42d29634bba",
+    "ingestor": "8690d5fc25a742cdd4abbbb940b0f000f708ef567e5ff301fbfd3d27f449a743",
+    "mcp": SUCCESSOR_274["mcp"],
+}
+LIGHTING_MIGRATION = (
+    275,
+    "275-lighting-minutes-policy-bounded-jit.sql",
+    "f4f8da110236461680f41770bad766a7e28b1a6db1982ecc632e93930a375dc4",
+)
+
+
 class BootstrapError(RuntimeError):
     pass
 
@@ -237,7 +249,7 @@ def physical_reader_scope_sql():
     return "(" + " AND ".join(checks) + ")"
 
 
-def sealed_sql():
+def sealed_sql_270_274():
     # Preserve the independently qualified predecessor expression byte-for-byte.
     # The new profile correlates exact catalog seals, ledger bytes and authority.
     successor = [
@@ -254,6 +266,29 @@ def sealed_sql():
         physical_reader_scope_sql(),
     ]
     return "((" + sealed_sql_270_273() + ") OR (" + " AND ".join(successor) + "))"
+
+
+def sealed_sql_275():
+    # Explicitly qualified successor only; never infer authority from later rows.
+    expressions = [
+        "(SELECT count(*)=2 FROM public.runtime_ordinary_login_attestation_receipts)",
+        "(SELECT count(*)=1 FROM public.mcp_runtime_boundary_receipt)",
+        "NOT EXISTS(SELECT 1 FROM public.runtime_ordinary_login_attestation_receipts r WHERE r.boundary_sha256 IS DISTINCT FROM public.fn_runtime_ordinary_boundary_digest(r.login_name))",
+        "EXISTS(SELECT 1 FROM public.mcp_runtime_boundary_receipt r WHERE singleton AND r.boundary_sha256=public.fn_mcp_runtime_boundary_digest())",
+        ledger_row_sql(268, "268-six-runtime-workload-role-boundaries.sql", MIGRATION_SHA),
+        ledger_row_sql(270, "270-facility-safe-ops-projection.sql", OPS_MIGRATION_SHA),
+        seal_profile_sql(275, SUCCESSOR_275),
+        *(ledger_row_sql(*migration) for migration in SUCCESSOR_MIGRATIONS),
+        ledger_row_sql(*PHYSICAL_MIGRATION),
+        ledger_row_sql(*LIGHTING_MIGRATION),
+        native_reader_scope_sql(),
+        physical_reader_scope_sql(),
+    ]
+    return "(" + " AND ".join(expressions) + ")"
+
+
+def sealed_sql():
+    return "(" + sealed_sql_270_274() + " OR " + sealed_sql_275() + ")"
 
 
 def identity_sql(login, duty):
