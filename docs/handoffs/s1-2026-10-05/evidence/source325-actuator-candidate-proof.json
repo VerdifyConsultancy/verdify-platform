@@ -1,0 +1,16 @@
+{
+  "actuator_commit": "f710010ebc1f40f3e1d79c554e0f9c3134049382",
+  "parent_source": "325558d4d8f730b0c42afff0de87e08eda3b5aa1",
+  "changed_paths": [
+    "deploy/k8s/overlays/prod/kustomization.yaml"
+  ],
+  "five_candidate_digest_match": {
+    "verdify-api": "sha256:3d5d02f2b22a76b2434367bc51e37672ffd7358ecdc41786faa9120eba162778",
+    "verdify-mcp": "sha256:3092daedf1a4855a6e8e415be505f02e8da11d41d7c37edc63abfef5145dab93",
+    "verdify-ingestor": "sha256:2f7a34373e42aabbf581da31e5ab20f46f7b5917d6f6208bb94e42beb4e8832b",
+    "verdify-migrate": "sha256:548c40acb0b77bdb3f129ce36e7fbd3e5a8b8189fad59a04fa0cb4ea9e232585",
+    "verdify-experiment-v2-orchestrator": "sha256:b0a09549900ab6828de674899e406ef6c0b6efd388d8c3d42673e6563718af6c"
+  },
+  "release_pins_unchanged": true,
+  "scope": "Candidate publication only; source81 live writer pin remains retained and ROOT owns selective release promotion."
+}

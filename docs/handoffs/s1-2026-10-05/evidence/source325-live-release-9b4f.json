@@ -1,0 +1,243 @@
+{
+  "captured_at": "2026-10-06T01:08:31.269379+00:00",
+  "promotion_revision": "9b4f8023839ffda05b9d0fd1a70fe63e62c6d9b4",
+  "reader_source": "325558d4d8f730b0c42afff0de87e08eda3b5aa1",
+  "full_sync": {
+    "phase": "Succeeded",
+    "started_at": "2026-10-06T01:01:06Z",
+    "finished_at": "2026-10-06T01:05:19Z",
+    "resource_count": 127,
+    "prune_requested": false,
+    "terminal_prune_field": "omitted;false default",
+    "selector": null,
+    "fresh_hooks": [
+      {
+        "name": "verdify-six-runtime-role-bootstrap",
+        "uid": "ecc62f32-6afe-44fb-b60a-33d6fbfbd502",
+        "created_at": "2026-10-06T01:02:25Z",
+        "completed_at": "2026-10-06T01:02:50Z",
+        "succeeded": 1
+      },
+      {
+        "name": "verdify-winter-archive-init",
+        "uid": "25ab34de-495e-4b80-9d33-bfa6b8a24225",
+        "created_at": "2026-10-06T01:02:57Z",
+        "completed_at": "2026-10-06T01:03:21Z",
+        "succeeded": 1
+      },
+      {
+        "name": "verdify-migrate",
+        "uid": "c90a0245-5947-4b40-8822-9ec700f69826",
+        "created_at": "2026-10-06T01:01:32Z",
+        "completed_at": "2026-10-06T01:01:59Z",
+        "succeeded": 1
+      },
+      {
+        "name": "verdify-mcp-runtime-role-bootstrap",
+        "uid": "b95dba9b-e2c9-4ee4-b265-bbbb34457693",
+        "created_at": "2026-10-06T01:02:12Z",
+        "completed_at": "2026-10-06T01:02:17Z",
+        "succeeded": 1
+      },
+      {
+        "name": "verdify-runtime-role-bootstrap",
+        "uid": "c6c3034c-03cf-42ca-87fc-1993e61c9710",
+        "created_at": "2026-10-06T01:02:04Z",
+        "completed_at": "2026-10-06T01:02:11Z",
+        "succeeded": 1
+      },
+      {
+        "name": "verdify-experiment-v2-credential-bootstrap",
+        "uid": "e40fb969-374f-48c2-abdb-d3e52b611eb1",
+        "created_at": "2026-10-06T01:02:12Z",
+        "completed_at": "2026-10-06T01:02:24Z",
+        "succeeded": 1
+      }
+    ],
+    "historical_hook_captured": [
+      {
+        "name": "verdify-winter-archive-init",
+        "uid": "58d43f20-f3ba-4501-99fc-bfc4d6dfb96e",
+        "created_at": "2026-10-06T00:08:25Z",
+        "completed_at": "2026-10-06T00:08:41Z",
+        "succeeded": 1
+      }
+    ],
+    "aggregate_health": {
+      "lastTransitionTime": "2026-10-06T01:05:16Z",
+      "status": "Healthy"
+    },
+    "sync_status": "Synced"
+  },
+  "runtime_pods": [
+    {
+      "name": "verdify-api-64d768b666-8pjhm",
+      "uid": "8538fc30-9037-419d-9613-253d4232b276",
+      "node": "vm-k3s-node5",
+      "ip": "10.42.6.201",
+      "images": [
+        {
+          "name": "api",
+          "image_id": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:3d5d02f2b22a76b2434367bc51e37672ffd7358ecdc41786faa9120eba162778",
+          "ready": true,
+          "restarts": 0
+        }
+      ]
+    },
+    {
+      "name": "verdify-api-64d768b666-rhmph",
+      "uid": "59303fd5-09eb-4e0f-a8f3-dd0ae168a436",
+      "node": "vm-k3s-node7",
+      "ip": "10.42.5.244",
+      "images": [
+        {
+          "name": "api",
+          "image_id": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:3d5d02f2b22a76b2434367bc51e37672ffd7358ecdc41786faa9120eba162778",
+          "ready": true,
+          "restarts": 0
+        }
+      ]
+    },
+    {
+      "name": "verdify-ingestor-6d95d5fc9f-cscxw",
+      "uid": "237002d4-5fb9-450f-8fe2-e266c969a1e1",
+      "node": "vm-k3s-node5",
+      "ip": "10.42.6.62",
+      "images": [
+        {
+          "name": "ingestor",
+          "image_id": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:2813240dbd5ce3c644d0285fd4603901eef9ae38ad00d28f4e64deb05f46ad2d",
+          "ready": true,
+          "restarts": 0
+        }
+      ]
+    },
+    {
+      "name": "verdify-mcp-6c447bcf6c-m6cfs",
+      "uid": "d32e3b0d-3d28-401d-9763-836d9e2fb5a9",
+      "node": "vm-k3s-node7",
+      "ip": "10.42.5.11",
+      "images": [
+        {
+          "name": "mcp",
+          "image_id": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:3092daedf1a4855a6e8e415be505f02e8da11d41d7c37edc63abfef5145dab93",
+          "ready": true,
+          "restarts": 0
+        }
+      ]
+    },
+    {
+      "name": "verdify-mcp-6c447bcf6c-q9brp",
+      "uid": "1ffb2764-dd9c-4ad5-9c96-beaf37443f12",
+      "node": "vm-k3s-node5",
+      "ip": "10.42.6.254",
+      "images": [
+        {
+          "name": "mcp",
+          "image_id": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:3092daedf1a4855a6e8e415be505f02e8da11d41d7c37edc63abfef5145dab93",
+          "ready": true,
+          "restarts": 0
+        }
+      ]
+    }
+  ],
+  "protected_objects_unchanged": [
+    {
+      "kind": "statefulset",
+      "name": "verdify-db",
+      "uid": "692af2f5-c937-4fde-aeb3-3c4fd36710ca",
+      "volume_name": null,
+      "phase": null
+    },
+    {
+      "kind": "pvc",
+      "name": "db-data-verdify-db-0",
+      "uid": "59fe138d-1cc4-4aac-bfcb-3d332f847411",
+      "volume_name": "pvc-59fe138d-1cc4-4aac-bfcb-3d332f847411",
+      "phase": "Bound"
+    },
+    {
+      "kind": "pvc",
+      "name": "verdify-db-dumps",
+      "uid": "dac57082-fe28-4d59-9bc6-c793dfc6c61e",
+      "volume_name": "verdify-db-dumps-prod",
+      "phase": "Bound"
+    },
+    {
+      "kind": "pvc",
+      "name": "verdify-grafana-data",
+      "uid": "acad919d-b6d2-4824-b7c7-a2b2ab460103",
+      "volume_name": "pvc-acad919d-b6d2-4824-b7c7-a2b2ab460103",
+      "phase": "Bound"
+    }
+  ],
+  "ledger": [
+    {
+      "seq": 271,
+      "sha256": "8ddc650184a178b59102c46a6cf1c6b706578ce08d6680294a425694397f7642",
+      "filename": "db/migrations/271-legacy-band-trace-deprecation.sql",
+      "stamp_method": "runner"
+    },
+    {
+      "seq": 272,
+      "sha256": "ca2e6cd2ae157aa6ebdda58964fc3eb52cbdde70d7c69f158fa0eef6294d19aa",
+      "filename": "db/migrations/272-current-climate-scorecard-snapshot.sql",
+      "stamp_method": "runner"
+    },
+    {
+      "seq": 273,
+      "sha256": "a0e4fe7bea3d27ea0d4218c5d423707e19b821e2684d5884c1280b03f78df76a",
+      "filename": "db/migrations/273-native-route-measurement-reader.sql",
+      "stamp_method": "runner"
+    },
+    {
+      "seq": 274,
+      "sha256": "0b939df1a79e3ce71835e59aedb5d1898805cd43cae72b79fa905f77067a8e4f",
+      "filename": "db/migrations/274-qualified-physical-crop-band-publication.sql",
+      "stamp_method": "runner"
+    }
+  ],
+  "writer_post274_tcp_qualification": {
+    "observed_at": "2026-10-06T01:03:24.949020+00:00",
+    "source_revision": "81d76a4c3d35a925ebd2438d89099d1f657b3f8f",
+    "source_module_sha256": "4afb5b7daa1873952cced16387d18104a9c95923333a3210fad333d6f7ba56a6",
+    "recovery_module_sha256": {
+      "/app/ingestor/tasks/bounded_reconcile.py": "239f165f5917008c67ba2733dac6805fe1450376e95572ce2fc3e060a63b9173",
+      "/app/scripts/prepare-writer-stage.py": "08a95af91051661179a6b3f4953cc44f6a55cc4ef4f581d0909ee11a6713a1a7"
+    },
+    "image_module_path": "/app/ingestor/ingestor.py",
+    "authenticated_actual_runtime_client": "asyncpg TCP using existing application DSN",
+    "identity": {
+      "current_user": "verdify_ingestor_runtime_login",
+      "session_user": "verdify_ingestor_runtime_login",
+      "database": "verdify",
+      "search_path": "pg_catalog, public, pg_temp",
+      "ordinary_boundary_attested": true
+    },
+    "status": "passed",
+    "sql_catalog_mutation": false,
+    "cnpg_cutover": false
+  },
+  "writer_existing_capability_projection": {
+    "observed_at": "2026-10-06T01:03:56.079760+00:00",
+    "client": "actual applicationDSN asyncpg TCP",
+    "capability_projection_sha256": "ef10e776410123a1f25ab39b675fff63eb4b8909603a3ee681260b38eef18842",
+    "expected_273_274_projection_sha256": "ef10e776410123a1f25ab39b675fff63eb4b8909603a3ee681260b38eef18842",
+    "same_existing_capabilities": true
+  },
+  "smoke": {
+    "passed": 9,
+    "failed": 0,
+    "sha256": "8d57f1f8621d50f728d15af8c14247794fd9ed39a0fee427f888dab041b76e35",
+    "api_source": "325558d4d8f730b0c42afff0de87e08eda3b5aa1",
+    "api_digest": "sha256:3d5d02f2b22a76b2434367bc51e37672ffd7358ecdc41786faa9120eba162778"
+  },
+  "namespace_socket_monitor": {
+    "exact_one": true,
+    "sha256": "89a526b2793c9fdb6df6886a7047073f9459b86c3231b4b4b7114043b2d18428"
+  },
+  "fleet_global_census": "same writer proved00:31:12 by coordinated8host500namespace census; final fresh readback remains separate",
+  "physical_consumer_acceptance": "separate, in progress; no production physical rows invented",
+  "policy_7200_seconds": "separate, active00:41:25\u201302:41:25 UTC",
+  "rollback": "retain274 ledger,325 C0 bootstrap configs and migrate548; API/MCP only may return to priorpins; no full642 revert"
+}

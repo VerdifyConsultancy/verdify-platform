@@ -1,0 +1,19 @@
+{
+  "source": "325558d4d8f730b0c42afff0de87e08eda3b5aa1",
+  "workflow": "verdify-platform-ci-rxcrh",
+  "workflow_uid": "47594914-fa26-4cbf-9fe9-b7e124d9fe77",
+  "workflow_phase": "Succeeded",
+  "finished_at": "2026-10-06T00:56:49Z",
+  "validation_pod": "verdify-platform-ci-rxcrh-validate-1210310321",
+  "validation_pod_uid": "5df59e09-b537-4b08-95b0-6a23335f682c",
+  "validation_terminal_pod_retained": false,
+  "validation_full_stdout": "/Users/jason/maintenance/verdify-s1-20261005/955-main-325-validation-full.log",
+  "stdout_bytes": 27276,
+  "stdout_sha256": "979dcbb860eddd9ff45b29cd960e3c1ca6444157f66dffac3805d8969fec6e13",
+  "build_provenance_receipt": "/Users/jason/maintenance/verdify-s1-20261005/955-main-325-all-eight-build-provenance.json",
+  "pin_actuator_phase": "Succeeded",
+  "prior_failed_head": "5a3939d32e1e6ef4fac56f086f7621d23020bf12",
+  "prior_green_head": "fb7256d87fa0d326fb9b01a144f0da8c7331b424",
+  "production_physical_rows_inserted_by_lane": 0,
+  "scope": "Source, full Linux validation and eight-image build/actuator proof; promotion and live acceptance remain separate."
+}

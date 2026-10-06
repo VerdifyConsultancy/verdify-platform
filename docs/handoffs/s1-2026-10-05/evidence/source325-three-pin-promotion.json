@@ -1,0 +1,30 @@
+{
+  "candidate_file_sha256": "dd5f623244dcdfab6a7d3a078c246d1e8fcf12ae10fb7c34dd2fda48c3d654fa",
+  "changes": {
+    "verdify-api": {
+      "after": "sha256:3d5d02f2b22a76b2434367bc51e37672ffd7358ecdc41786faa9120eba162778",
+      "before": "sha256:09a7e0ea6f87fcea9536df19a09d95c3ac2575493bb3f63bffea6cae77eafb98"
+    },
+    "verdify-mcp": {
+      "after": "sha256:3092daedf1a4855a6e8e415be505f02e8da11d41d7c37edc63abfef5145dab93",
+      "before": "sha256:c7a4044b824f9f0ae2945ce1cc0f601965cacd25ee8791fecaf00fd47e6cf20a"
+    },
+    "verdify-migrate": {
+      "after": "sha256:548c40acb0b77bdb3f129ce36e7fbd3e5a8b8189fad59a04fa0cb4ea9e232585",
+      "before": "sha256:74d60c291f79a7d0c45616da6a42165a246e4531f86d269e51e10a6ca57bddcf"
+    }
+  },
+  "evidence_scope": "source-only pin promotion; build provenance, CI and live adoption remain separate",
+  "promotion_input_source_sha": "f710010ebc1f40f3e1d79c554e0f9c3134049382",
+  "recorded_at": "2026-10-06T00:58:09.860534+00:00",
+  "release_pins_after_sha256": "e82ac9c0b4b3746ecc62f8e9baf6b75ef0009e675e397a76b6342e5f7ff744db",
+  "release_pins_before_sha256": "1f4901707477c8cd8d1d9e1d4617d13a5848c24ec533e45535033beb1fc1fd9f",
+  "rollback_pins": {
+    "verdify-api": "sha256:09a7e0ea6f87fcea9536df19a09d95c3ac2575493bb3f63bffea6cae77eafb98",
+    "verdify-experiment-v2-orchestrator": "sha256:ae3923449e83d8fee4b2b3538aba7be03a68ab59f6abda68084b8d9e1ad061f0",
+    "verdify-ingestor": "sha256:2813240dbd5ce3c644d0285fd4603901eef9ae38ad00d28f4e64deb05f46ad2d",
+    "verdify-mcp": "sha256:c7a4044b824f9f0ae2945ce1cc0f601965cacd25ee8791fecaf00fd47e6cf20a",
+    "verdify-migrate": "sha256:74d60c291f79a7d0c45616da6a42165a246e4531f86d269e51e10a6ca57bddcf"
+  },
+  "schema": "verdify-release-pin-promotion-v1"
+}

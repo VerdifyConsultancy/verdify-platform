@@ -1,0 +1,89 @@
+{
+  "builds": {
+    "verdify-api": {
+      "digest": "sha256:3d5d02f2b22a76b2434367bc51e37672ffd7358ecdc41786faa9120eba162778",
+      "dockerfile": "api/Dockerfile",
+      "dockerfile_sha256": "sha256:ee37ed14ce6fc1dc3166eee7f125b13d8135b8fa445d83a9a13e11fc538f9cf9",
+      "finished_at": "2026-10-06T00:37:47Z",
+      "image_ref": "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:3d5d02f2b22a76b2434367bc51e37672ffd7358ecdc41786faa9120eba162778",
+      "source_revision": "325558d4d8f730b0c42afff0de87e08eda3b5aa1",
+      "started_at": "2026-10-06T00:35:23Z",
+      "tree": "89ad8c57fb2b73f859bbb00d79e7e53ad2d43533"
+    },
+    "verdify-experiment-v2-orchestrator": {
+      "digest": "sha256:b0a09549900ab6828de674899e406ef6c0b6efd388d8c3d42673e6563718af6c",
+      "dockerfile": "experiment_orchestrator/Dockerfile",
+      "dockerfile_sha256": "sha256:53a21487b661d55b609788d630666899e7d0ec46a01d01a1c7b2859dcbf03a9b",
+      "finished_at": "2026-10-06T00:50:19Z",
+      "image_ref": "registry.vallery.net/verdifyconsultancy/verdify-experiment-v2-orchestrator@sha256:b0a09549900ab6828de674899e406ef6c0b6efd388d8c3d42673e6563718af6c",
+      "source_revision": "325558d4d8f730b0c42afff0de87e08eda3b5aa1",
+      "started_at": "2026-10-06T00:47:49Z",
+      "tree": "89ad8c57fb2b73f859bbb00d79e7e53ad2d43533"
+    },
+    "verdify-ingestor": {
+      "digest": "sha256:2f7a34373e42aabbf581da31e5ab20f46f7b5917d6f6208bb94e42beb4e8832b",
+      "dockerfile": "ingestor/Dockerfile",
+      "dockerfile_sha256": "sha256:d5b56e49f594423d4b7666d9ae5c2f8fb75ebc9e9f8d5822861ac43fe8d0f3e4",
+      "finished_at": "2026-10-06T00:43:20Z",
+      "image_ref": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:2f7a34373e42aabbf581da31e5ab20f46f7b5917d6f6208bb94e42beb4e8832b",
+      "source_revision": "325558d4d8f730b0c42afff0de87e08eda3b5aa1",
+      "started_at": "2026-10-06T00:40:39Z",
+      "tree": "89ad8c57fb2b73f859bbb00d79e7e53ad2d43533"
+    },
+    "verdify-lab-publisher-k3s": {
+      "digest": "sha256:6520d32c98180d43c8b291e3121d693f6db8ffe437e79dab16e42762563a6fa6",
+      "dockerfile": "scripts/Dockerfile.lab-publisher",
+      "dockerfile_sha256": "sha256:11ad799558c59aad901a5ae7e58f59098f658a780db1f842424211c2804ae670",
+      "finished_at": "2026-10-06T00:56:09Z",
+      "image_ref": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:6520d32c98180d43c8b291e3121d693f6db8ffe437e79dab16e42762563a6fa6",
+      "source_revision": "325558d4d8f730b0c42afff0de87e08eda3b5aa1",
+      "started_at": "2026-10-06T00:52:37Z",
+      "tree": "89ad8c57fb2b73f859bbb00d79e7e53ad2d43533"
+    },
+    "verdify-mcp": {
+      "digest": "sha256:3092daedf1a4855a6e8e415be505f02e8da11d41d7c37edc63abfef5145dab93",
+      "dockerfile": "mcp/Dockerfile",
+      "dockerfile_sha256": "sha256:0fab57634ac98002857152bfb937eba86c0178e09658f8c5a03b12a71b1e2f2f",
+      "finished_at": "2026-10-06T00:40:28Z",
+      "image_ref": "registry.vallery.net/verdifyconsultancy/verdify-mcp@sha256:3092daedf1a4855a6e8e415be505f02e8da11d41d7c37edc63abfef5145dab93",
+      "source_revision": "325558d4d8f730b0c42afff0de87e08eda3b5aa1",
+      "started_at": "2026-10-06T00:37:56Z",
+      "tree": "89ad8c57fb2b73f859bbb00d79e7e53ad2d43533"
+    },
+    "verdify-migrate": {
+      "digest": "sha256:548c40acb0b77bdb3f129ce36e7fbd3e5a8b8189fad59a04fa0cb4ea9e232585",
+      "dockerfile": "db/Dockerfile.migrate",
+      "dockerfile_sha256": "sha256:755de9b232d8452cdd38471c8d6790659985ec5b323583ba9aba4c2f7c0da4cb",
+      "finished_at": "2026-10-06T00:47:39Z",
+      "image_ref": "registry.vallery.net/verdifyconsultancy/verdify-migrate@sha256:548c40acb0b77bdb3f129ce36e7fbd3e5a8b8189fad59a04fa0cb4ea9e232585",
+      "source_revision": "325558d4d8f730b0c42afff0de87e08eda3b5aa1",
+      "started_at": "2026-10-06T00:46:27Z",
+      "tree": "89ad8c57fb2b73f859bbb00d79e7e53ad2d43533"
+    },
+    "verdify-planner": {
+      "digest": "sha256:9718762629aab9cee24e52583bd828e9642a2925b0cf154e30f0b96ac290d182",
+      "dockerfile": "planner_graph/Dockerfile",
+      "dockerfile_sha256": "sha256:77f59ad9055df3308d6d9f2a1ee63353f853535e6953e7af16a5775a29c0f086",
+      "finished_at": "2026-10-06T00:46:14Z",
+      "image_ref": "registry.vallery.net/verdifyconsultancy/verdify-planner@sha256:9718762629aab9cee24e52583bd828e9642a2925b0cf154e30f0b96ac290d182",
+      "source_revision": "325558d4d8f730b0c42afff0de87e08eda3b5aa1",
+      "started_at": "2026-10-06T00:43:33Z",
+      "tree": "89ad8c57fb2b73f859bbb00d79e7e53ad2d43533"
+    },
+    "verdify-setpoint-server": {
+      "digest": "sha256:1acf99f41db31dab16fb54ed65a91c9e58b46854758d311099edc5178f3d2e16",
+      "dockerfile": "scripts/Dockerfile.setpoint-server",
+      "dockerfile_sha256": "sha256:ba81303f6aee14e874e231f13d6eae4988dc54ec08696faa340a9aca979a166b",
+      "finished_at": "2026-10-06T00:52:29Z",
+      "image_ref": "registry.vallery.net/verdifyconsultancy/verdify-setpoint-server@sha256:1acf99f41db31dab16fb54ed65a91c9e58b46854758d311099edc5178f3d2e16",
+      "source_revision": "325558d4d8f730b0c42afff0de87e08eda3b5aa1",
+      "started_at": "2026-10-06T00:50:23Z",
+      "tree": "89ad8c57fb2b73f859bbb00d79e7e53ad2d43533"
+    }
+  },
+  "phase": "Succeeded",
+  "scope": "Exact successful build provenance; candidate match, promotion and runtime acceptance remain separate",
+  "source": "325558d4d8f730b0c42afff0de87e08eda3b5aa1",
+  "workflow": "verdify-platform-ci-rxcrh",
+  "workflow_uid": "47594914-fa26-4cbf-9fe9-b7e124d9fe77"
+}

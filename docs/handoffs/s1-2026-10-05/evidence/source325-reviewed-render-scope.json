@@ -1,0 +1,65 @@
+{
+  "old_revision": "6429acbb2c79f784e3978e9c74a1c8719d25076c",
+  "new_source": "325558d4d8f730b0c42afff0de87e08eda3b5aa1",
+  "changed_objects": [
+    [
+      "apps/v1",
+      "Deployment",
+      "verdify-prod",
+      "verdify-api"
+    ],
+    [
+      "apps/v1",
+      "Deployment",
+      "verdify-prod",
+      "verdify-mcp"
+    ],
+    [
+      "batch/v1",
+      "CronJob",
+      "verdify-prod",
+      "verdify-winter-feasibility"
+    ],
+    [
+      "batch/v1",
+      "Job",
+      "verdify-prod",
+      "verdify-experiment-v2-credential-bootstrap"
+    ],
+    [
+      "batch/v1",
+      "Job",
+      "verdify-prod",
+      "verdify-mcp-runtime-role-bootstrap"
+    ],
+    [
+      "batch/v1",
+      "Job",
+      "verdify-prod",
+      "verdify-migrate"
+    ],
+    [
+      "batch/v1",
+      "Job",
+      "verdify-prod",
+      "verdify-runtime-role-bootstrap"
+    ],
+    [
+      "batch/v1",
+      "Job",
+      "verdify-prod",
+      "verdify-six-runtime-role-bootstrap"
+    ],
+    [
+      "batch/v1",
+      "Job",
+      "verdify-prod",
+      "verdify-winter-archive-init"
+    ]
+  ],
+  "unchanged_keys_count": 118,
+  "same_object_inventory": true,
+  "writer_spec_unchanged": true,
+  "full_dry_run_limitation": "retained Winter hook immutable template; BeforeHookCreation declares replacement",
+  "nonhook_diff_limitations": "raw kubectl diff removes injected Argo tracking annotation; metadata-only differences are not application drift"
+}
