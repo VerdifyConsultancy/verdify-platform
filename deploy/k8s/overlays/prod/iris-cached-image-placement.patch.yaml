@@ -1,0 +1,14 @@
+# Bounded cold-pull recovery, 2026-10-06 (#953; storage-infra#508).
+# node4 is Ready and advertises the exact accepted Hermes a711 digest.
+# This changes only application placement, not NFS, nodes, image or profile.
+# Inverse: remove this patch/reference after useful manifest/cold-pull recovery
+# is verified by the existing storage/Proxmox owner, then synchronize normally.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-hermes-iris
+spec:
+  template:
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: vm-k3s-node4
