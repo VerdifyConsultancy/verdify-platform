@@ -59,3 +59,30 @@ actual public/planner/ingestor health. Preserve failures and recovery coordinate
 Close #643 only after these complete behavior proofs join the production login
 matrix. Static readiness, empty SELECTs and zero-row negatives alone are partial
 acceptance, even when all nine login identities are verified.
+
+### Complete six-duty restored fixture
+
+`scripts/qualify-restored-runtime-duties.py` extracts every per-duty allow/deny
+case from the accepted `db/qualification/268-six-runtime-role-fixture.sql`.
+It removes the owner/session-auth proxy and explicit search-path rewrite, uses
+an actual bounded TCP login with its real defaults, and records exact source
+fixture/case hashes and affected row counts. Denied heater writes, invalid
+vision observation types and forbidden persistence operations remain in the
+suite; they are not replaced by empty reads. Every case has a savepoint and
+all allowed rows remain inside an outer rollback transaction.
+
+Run it only after the #396 owner seals current-schema parity/admission and
+captures sequence custody for Cluster UID and endpoint
+`verdify-cnpg-s2-rw.verdify-db-rehearsal.svc.cluster.local`. The admission hash and
+UID are external ROOT bindings, not self-issued database authority. Its
+`QUALIFICATION_DB_PASSWORD` comes from target Secret custody in the consuming
+client. Use existing consumer images/libraries where available; label any
+substitute SQL driver proof separately from actual application behavior.
+Grafana's target datasource and API/ingestor/MCP workflows need their own
+actual-client/config proofs and are not supplied by the six-role SQL executor.
+
+Sequence allocations can advance despite row rollback. The clone owner compares
+and restores known sequence custody after the suite before parity is re-sealed;
+never claim that rollback alone restores every database object. Compare complete
+study assignment/outcome/exposure/freeze state before and after. Retain failures
+and source/config/image identities for forward and rollback phases.
