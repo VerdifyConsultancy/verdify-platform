@@ -74,6 +74,8 @@ $PY -m pytest -q \
   tests/test_16_writer_lifecycle.py \
   tests/test_17_planner_health_surface.py \
   tests/test_iris_inventory.py \
+  tests/test_cnpg_s2_profile.py \
+  tests/test_ordinary_runtime_qualification.py \
   tests/test_historical_suppressed_alert_maintenance.py \
   tests/test_18_twin_divergence_dashboard.py \
   tests/test_20_vision_src_sync.py \
