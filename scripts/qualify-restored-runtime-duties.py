@@ -28,7 +28,7 @@ async def wait_target_transport(host, *, timeout=10):
             _, writer = await asyncio.wait_for(
                 asyncio.open_connection(host, 5432), timeout=min(1.0, deadline - loop.time())
             )
-        except (ConnectionRefusedError, TimeoutError) as error:
+        except (OSError, TimeoutError) as error:
             attempts.append(type(error).__name__)
         else:
             writer.close()

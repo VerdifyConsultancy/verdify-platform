@@ -27,7 +27,6 @@ HOST = "verdify-cnpg-s2-rw.verdify-db-rehearsal.svc.cluster.local"
 CLUSTER_UID = "4f697776-df25-4e22-b930-0b76cf35496e"
 PRIMARY_UID = "6379db06-2bad-4c5b-9a50-86feac4651dc"
 PHASES = ("unavailable", "crash-climate", "crash-observation", "crash-equipment", "replay", "duplicate", "conflict")
-logging.disable(logging.CRITICAL)
 
 
 def validate_manifest(manifest):
@@ -342,4 +341,7 @@ def main():
 
 
 if __name__ == "__main__":
+    # Standalone qualification emits redacted receipts. Importing its offline
+    # guards must not change logging for unrelated application callers/tests.
+    logging.disable(logging.CRITICAL)
     main()

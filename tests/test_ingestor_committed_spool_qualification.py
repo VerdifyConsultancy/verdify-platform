@@ -2,6 +2,7 @@
 
 import copy
 import importlib.util
+import logging
 from pathlib import Path
 
 import pytest
@@ -15,6 +16,19 @@ inverse_spec = importlib.util.spec_from_file_location(
 )
 inverse = importlib.util.module_from_spec(inverse_spec)
 inverse_spec.loader.exec_module(inverse)
+
+
+def test_import_preserves_application_logging(caplog):
+    with caplog.at_level(logging.WARNING):
+        before = logging.root.manager.disable
+        isolated_spec = importlib.util.spec_from_file_location(
+            "committed_spool_logging_guard", ROOT / "scripts/qualify-ingestor-committed-spool.py"
+        )
+        isolated = importlib.util.module_from_spec(isolated_spec)
+        isolated_spec.loader.exec_module(isolated)
+        assert logging.root.manager.disable == before
+        logging.getLogger("qualification.import.guard").warning("application logging survives qualification import")
+    assert "application logging survives qualification import" in caplog.text
 
 
 def test_owned_manifest_preserves_exact_historical_lineage():
