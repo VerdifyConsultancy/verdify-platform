@@ -170,6 +170,9 @@ components:
   - ../../components/ha-gap-backfill
 
 patches:
+  # Restore the unchanged Iris image from its verified node4 cache while the
+  # registry mirror cannot resolve that digest. Remove after cold-pull recovery.
+  - path: iris-cached-image-placement.patch.yaml
   # Reconcile the live, verified 2026-08-01 Hermes PVC cutover.
   - path: hermes-data-portable.patch.yaml
   # The old, detached pre-portable claim has a readable Completed backup and no
