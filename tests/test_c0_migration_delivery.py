@@ -325,3 +325,28 @@ def test_missing_contract_refuses_without_a_database_process(monkeypatch, tmp_pa
     monkeypatch.setattr(delivery, "psql", lambda *args: pytest.fail("database was contacted"))
     with pytest.raises(delivery.DeliveryError, match="reviewed contract"):
         delivery.deliver(tmp_path, environment={})
+
+
+def test_reviewed_physical_successor_requires_exact_order_and_source_hash():
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "qualified_bootstrap", ROOT / "scripts/bootstrap-six-runtime-roles.py"
+    )
+    bootstrap = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(bootstrap)
+    assert delivery.SUCCESSOR_274_SHA256 == bootstrap.PHYSICAL_MIGRATION[2]
+    assert delivery.SUCCESSOR_274_DIGESTS == {
+        "verdify_api_runtime_login": bootstrap.SUCCESSOR_274["api"],
+        "verdify_ingestor_runtime_login": bootstrap.SUCCESSOR_274["ingestor"],
+    }
+    assert delivery.SUCCESSOR_274_MCP_DIGEST == bootstrap.SUCCESSOR_274["mcp"]
+    later = [delivery.SUCCESSOR_254] + [getattr(delivery, f"SUCCESSOR_{n}") for n in range(255, 275)]
+    files = {getattr(delivery, f"SUCCESSOR_{n}"): getattr(delivery, f"SUCCESSOR_{n}_SHA256") for n in range(255, 275)}
+    delivery.reviewed_post_254(later, files)
+    with pytest.raises(delivery.DeliveryError, match="274 successor source drift"):
+        delivery.reviewed_post_254(later, {**files, delivery.SUCCESSOR_274: "0" * 64})
+    with pytest.raises(delivery.DeliveryError, match="unreviewed"):
+        delivery.reviewed_post_254([*later, "275-unknown.sql"], files)
+    with pytest.raises(delivery.DeliveryError, match="unreviewed"):
+        delivery.reviewed_post_254([n for n in later if n != delivery.SUCCESSOR_273], files)

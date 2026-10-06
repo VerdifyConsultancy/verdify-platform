@@ -1,0 +1,293 @@
+{
+  "kind": "actual-production-catalog-rollback-only-274-bootstrap-qualification",
+  "database": "verdify-db",
+  "mutations_committed": false,
+  "physical_rows_inserted": 0,
+  "password_commands_executed": false,
+  "actual_tcp_qualification": false,
+  "predecessor_helper_source_git_sha": "81d76a4c3d35a925ebd2438d89099d1f657b3f8f",
+  "predecessor_helper_sha256": "20d5b38d35d779e58ed3978648f3ed2e6b1414a2820945b7a05d82e2152c2c1d",
+  "helper_sha256": "b10f191509b7a5cbbfaf7354965ad8725e85ca4de5b0d254b01cce242ed79bfe",
+  "sealed_sql_sha256": "61dbac800dba4af1b1e82ef0315d8a427e600508a05d0101ed27f1bd7b670d38",
+  "legacy_sealed_sql_sha256": "03ee703843a9382434025174de5b4b5e44e39530807504c3d5a2dc68b34c066f",
+  "role_contract_sql_sha256": "e95dd4234f674b315bf22e6411249d13480b72f94bad2068e107a7107b07c804",
+  "migration_sha256": "0b939df1a79e3ce71835e59aedb5d1898805cd43cae72b79fa905f77067a8e4f",
+  "successor_catalog_digests": {
+    "api": "67bb961f69e72f8d59f8d38dce96201682b1fb8fb40d423071c987b075cf994e",
+    "ingestor": "126f95dc75242a126579331fadf711f0c1e8e408d20ec7cd94e3d1e27a0dcf75",
+    "mcp": "7083e4d43044e7f2b0150b58fa3cc8cc45c599a68b1f3cafaf9242e0f0f79e68"
+  },
+  "c0_delivery_helper_sha256": "da017560cf633b4e6502891d498babb0eebb05c5fdb9ee6f4a276bc2f7598322",
+  "rehearsal_sql_sha256": "6e5239470a4149a3ed7701036db06acc6867c9912565bbfce20e1bf27bc18230",
+  "rehearsal_output_sha256": "7e1d1467363f4243194ed23a21dd549c14c6d95ed31a0f05c2e833a3fc896479",
+  "capability_fingerprint_sql_sha256": "b33fdee8e95bab07060a3f6d1da6080064c1a9b65c50789f77abc78d11863aa7",
+  "negative_stages": [
+    "wrong_274_hash",
+    "wrong_274_filename",
+    "wrong_274_stamp",
+    "later_275_ledger",
+    "wrong_api_receipt",
+    "wrong_mcp_receipt",
+    "planner_physical_reader",
+    "public_physical_reader",
+    "api_physical_producer",
+    "api_raw_physical_table",
+    "ingestor_physical_sequence",
+    "missing_api_physical_reader",
+    "unsafe_planner_membership"
+  ],
+  "stages": [
+    {
+      "stage": "current273",
+      "ledger": 273,
+      "sealed": true,
+      "legacy_sealed": true,
+      "role_contract": true,
+      "combined_qualified": true,
+      "precedence_appended_false": false,
+      "ingestor_capability_sha256": "ef10e776410123a1f25ab39b675fff63eb4b8909603a3ee681260b38eef18842"
+    },
+    {
+      "stage": "unstamped274",
+      "ledger": 273,
+      "sealed": false,
+      "legacy_sealed": false,
+      "role_contract": true,
+      "combined_qualified": false,
+      "precedence_appended_false": false,
+      "ingestor_capability_sha256": "ef10e776410123a1f25ab39b675fff63eb4b8909603a3ee681260b38eef18842"
+    },
+    {
+      "stage": "successor274",
+      "ledger": 274,
+      "sealed": true,
+      "legacy_sealed": false,
+      "role_contract": true,
+      "combined_qualified": true,
+      "precedence_appended_false": false,
+      "ingestor_capability_sha256": "ef10e776410123a1f25ab39b675fff63eb4b8909603a3ee681260b38eef18842"
+    },
+    {
+      "txid": 6790554,
+      "stage": "identity_context_before",
+      "ledger274": {
+        "seq": 274,
+        "sha256": "0b939df1a79e3ce71835e59aedb5d1898805cd43cae72b79fa905f77067a8e4f",
+        "source": "db/migrations",
+        "filename": "db/migrations/274-qualified-physical-crop-band-publication.sql",
+        "stamp_method": "runner"
+      },
+      "search_path": "pg_catalog, public, pg_temp",
+      "current_user": "verdify",
+      "session_user": "verdify"
+    },
+    {
+      "txid": 6790554,
+      "stage": "ingestor_identity_emulation_1",
+      "attested": true,
+      "identity": true,
+      "search_path": "verdify_ingestor_runtime, pg_catalog, public, pg_temp",
+      "current_user": "verdify_ingestor_runtime_login",
+      "session_user": "verdify_ingestor_runtime_login"
+    },
+    {
+      "txid": 6790554,
+      "stage": "ingestor_identity_emulation_2",
+      "attested": true,
+      "identity": true,
+      "search_path": "verdify_ingestor_runtime, pg_catalog, public, pg_temp",
+      "current_user": "verdify_ingestor_runtime_login",
+      "session_user": "verdify_ingestor_runtime_login"
+    },
+    {
+      "txid": 6790554,
+      "stage": "ingestor_identity_emulation_3",
+      "attested": true,
+      "identity": true,
+      "search_path": "verdify_ingestor_runtime, pg_catalog, public, pg_temp",
+      "current_user": "verdify_ingestor_runtime_login",
+      "session_user": "verdify_ingestor_runtime_login"
+    },
+    {
+      "stage": "wrong_274_hash",
+      "ledger": 274,
+      "sealed": false,
+      "legacy_sealed": false,
+      "role_contract": true,
+      "combined_qualified": false,
+      "precedence_appended_false": false,
+      "ingestor_capability_sha256": "ef10e776410123a1f25ab39b675fff63eb4b8909603a3ee681260b38eef18842"
+    },
+    {
+      "stage": "wrong_274_filename",
+      "ledger": 274,
+      "sealed": false,
+      "legacy_sealed": false,
+      "role_contract": true,
+      "combined_qualified": false,
+      "precedence_appended_false": false,
+      "ingestor_capability_sha256": "ef10e776410123a1f25ab39b675fff63eb4b8909603a3ee681260b38eef18842"
+    },
+    {
+      "stage": "wrong_274_stamp",
+      "ledger": 274,
+      "sealed": false,
+      "legacy_sealed": false,
+      "role_contract": true,
+      "combined_qualified": false,
+      "precedence_appended_false": false,
+      "ingestor_capability_sha256": "ef10e776410123a1f25ab39b675fff63eb4b8909603a3ee681260b38eef18842"
+    },
+    {
+      "stage": "later_275_ledger",
+      "ledger": 275,
+      "sealed": false,
+      "legacy_sealed": false,
+      "role_contract": true,
+      "combined_qualified": false,
+      "precedence_appended_false": false,
+      "ingestor_capability_sha256": "ef10e776410123a1f25ab39b675fff63eb4b8909603a3ee681260b38eef18842"
+    },
+    {
+      "stage": "wrong_api_receipt",
+      "ledger": 274,
+      "sealed": false,
+      "legacy_sealed": false,
+      "role_contract": true,
+      "combined_qualified": false,
+      "precedence_appended_false": false,
+      "ingestor_capability_sha256": "ef10e776410123a1f25ab39b675fff63eb4b8909603a3ee681260b38eef18842"
+    },
+    {
+      "stage": "wrong_mcp_receipt",
+      "ledger": 274,
+      "sealed": false,
+      "legacy_sealed": false,
+      "role_contract": true,
+      "combined_qualified": false,
+      "precedence_appended_false": false,
+      "ingestor_capability_sha256": "ef10e776410123a1f25ab39b675fff63eb4b8909603a3ee681260b38eef18842"
+    },
+    {
+      "stage": "planner_physical_reader",
+      "ledger": 274,
+      "sealed": false,
+      "legacy_sealed": false,
+      "role_contract": true,
+      "combined_qualified": false,
+      "precedence_appended_false": false,
+      "ingestor_capability_sha256": "ef10e776410123a1f25ab39b675fff63eb4b8909603a3ee681260b38eef18842"
+    },
+    {
+      "stage": "public_physical_reader",
+      "ledger": 274,
+      "sealed": false,
+      "legacy_sealed": false,
+      "role_contract": true,
+      "combined_qualified": false,
+      "precedence_appended_false": false,
+      "ingestor_capability_sha256": "6246f8639b7af8b6c202bb7c41fca276cb83de71df41be933d720487e9e84513"
+    },
+    {
+      "stage": "api_physical_producer",
+      "ledger": 274,
+      "sealed": false,
+      "legacy_sealed": false,
+      "role_contract": true,
+      "combined_qualified": false,
+      "precedence_appended_false": false,
+      "ingestor_capability_sha256": "ef10e776410123a1f25ab39b675fff63eb4b8909603a3ee681260b38eef18842"
+    },
+    {
+      "stage": "api_raw_physical_table",
+      "ledger": 274,
+      "sealed": false,
+      "legacy_sealed": false,
+      "role_contract": true,
+      "combined_qualified": false,
+      "precedence_appended_false": false,
+      "ingestor_capability_sha256": "ef10e776410123a1f25ab39b675fff63eb4b8909603a3ee681260b38eef18842"
+    },
+    {
+      "stage": "ingestor_physical_sequence",
+      "ledger": 274,
+      "sealed": false,
+      "legacy_sealed": false,
+      "role_contract": true,
+      "combined_qualified": false,
+      "precedence_appended_false": false,
+      "ingestor_capability_sha256": "ef10e776410123a1f25ab39b675fff63eb4b8909603a3ee681260b38eef18842"
+    },
+    {
+      "stage": "missing_api_physical_reader",
+      "ledger": 274,
+      "sealed": false,
+      "legacy_sealed": false,
+      "role_contract": true,
+      "combined_qualified": false,
+      "precedence_appended_false": false,
+      "ingestor_capability_sha256": "ef10e776410123a1f25ab39b675fff63eb4b8909603a3ee681260b38eef18842"
+    },
+    {
+      "stage": "unsafe_planner_membership",
+      "ledger": 274,
+      "sealed": false,
+      "legacy_sealed": false,
+      "role_contract": false,
+      "combined_qualified": false,
+      "precedence_appended_false": false,
+      "ingestor_capability_sha256": "ef10e776410123a1f25ab39b675fff63eb4b8909603a3ee681260b38eef18842"
+    },
+    {
+      "stage": "successor274_restored",
+      "ledger": 274,
+      "sealed": true,
+      "legacy_sealed": false,
+      "role_contract": true,
+      "combined_qualified": true,
+      "precedence_appended_false": false,
+      "ingestor_capability_sha256": "ef10e776410123a1f25ab39b675fff63eb4b8909603a3ee681260b38eef18842"
+    },
+    {
+      "stage": "current273_restored",
+      "ledger": 273,
+      "sealed": true,
+      "legacy_sealed": true,
+      "role_contract": true,
+      "combined_qualified": true,
+      "precedence_appended_false": false,
+      "ingestor_capability_sha256": "ef10e776410123a1f25ab39b675fff63eb4b8909603a3ee681260b38eef18842"
+    },
+    {
+      "stage": "no_committed_physical_table",
+      "absent": true
+    }
+  ],
+  "original_false_cause": "unresolved; exact-prefix and independent reruns passed",
+  "original_false_output_sha256": "e7740cc9d2a8f405c263684bf8d708b585ce6e55530ec5472e7c854d8fe0309a",
+  "original_false_sql_sha256": "5b197fa096b5f1ae63b83d0a082edc8e337d88745f71acd0f713962cef20069f",
+  "nonreproduction_receipts": [
+    {
+      "name": "274-ingestor-attest-diagnostic-rollback",
+      "sql_sha256": "a4294a7594ab4ca93390bfe48b3cfd5d30cdf68eeabce056326cfda759fbbb6a",
+      "output_sha256": "760c48ad93b6b710ed92bc500e94f303e07db549b1a744ae26b6728e3d5346cf"
+    },
+    {
+      "name": "274-ingestor-attest-stamped-diagnostic-rollback",
+      "sql_sha256": "4b33c0da8b9219d53c07b94866939b30bee5676aaf907edeb46c219d446934e9",
+      "output_sha256": "a876356fe51d21ac7c941df43ee0b460829f76f1834b36584b3e99c1fffaecdc"
+    },
+    {
+      "name": "274-ingestor-attest-matrix-prefix-rollback",
+      "sql_sha256": "704b55912d22c9772d13eba17fff302a0240663bbf1d8558eb02562b988c77f3",
+      "output_sha256": "6fb85c016baf48fddadccfc824b8f12872b24a13624b34e8dfcac1bf1a25124f"
+    }
+  ],
+  "limitations": [
+    "Role identity uses SET SESSION AUTHORIZATION within the owner rollback transaction; it is not actual TCP/password authentication.",
+    "Actual retained source81 writer same PodUID/generation and ordinary DSN attestation after live274 remains mandatory.",
+    "Original emulated false preserved without invented cause; repeated exact reruns passed.",
+    "Existing callable function definitions/effective table grants/role attributes/memberships are unchanged; new inaccessible owner-private physical objects alter protected global catalog fingerprint.",
+    "No producer ran and no qualified physical rows were inserted in production."
+  ]
+}

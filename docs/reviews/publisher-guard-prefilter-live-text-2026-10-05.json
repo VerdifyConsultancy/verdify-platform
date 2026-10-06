@@ -1,0 +1,108 @@
+{
+  "schema": "bounded-actual-served-text-guard-equivalence-v1",
+  "guard_before_sha256": "9feb01794ffda38411439441b129af4688940ae77a6341f477d3d362985c00ca",
+  "guard_after_sha256": "826f8ff6bc2634d150ef6e7eaffe736c78cbe0182995c1c1c8cfef21702a6bf0",
+  "samples": [
+    {
+      "route": "plans/2026-10-05",
+      "bytes": 143467,
+      "sha256": "bdaad5e22395832eb28e034983eb392e4e99f6b5b9eee134aa508903c7ce8380",
+      "trials_seconds": {
+        "before": [
+          0.18333400000119582,
+          0.18295191599463578,
+          0.1875666250125505
+        ],
+        "after": [
+          0.11797262501204386,
+          0.11884666701371316,
+          0.11724708300607745
+        ]
+      },
+      "median_seconds": {
+        "before": 0.18333400000119582,
+        "after": 0.11797262501204386
+      },
+      "same_findings": true,
+      "finding_count": 0
+    },
+    {
+      "route": "plans/2026-10-04",
+      "bytes": 104537,
+      "sha256": "d3e3af6597d183d77d856d9a5c1e46b4f1beec9aea4e5967452e7b86d331cf07",
+      "trials_seconds": {
+        "before": [
+          0.16272274999937508,
+          0.1640465829987079,
+          0.1616907080024248
+        ],
+        "after": [
+          0.10507387500547338,
+          0.10438554099528119,
+          0.1044845830037957
+        ]
+      },
+      "median_seconds": {
+        "before": 0.16272274999937508,
+        "after": 0.1044845830037957
+      },
+      "same_findings": true,
+      "finding_count": 0
+    },
+    {
+      "route": "data/planning-quality",
+      "bytes": 49216,
+      "sha256": "24c4a444bcabc7d7f279c2e653e54abcae91946a413cb8e46455f8ea4a99c1b8",
+      "trials_seconds": {
+        "before": [
+          0.10428854200290516,
+          0.10292308300267905,
+          0.10441033300594427
+        ],
+        "after": [
+          0.06659383300575428,
+          0.06839137501083314,
+          0.06752108299406245
+        ]
+      },
+      "median_seconds": {
+        "before": 0.10428854200290516,
+        "after": 0.06752108299406245
+      },
+      "same_findings": true,
+      "finding_count": 0
+    },
+    {
+      "route": "reference/ai-tunables",
+      "bytes": 180846,
+      "sha256": "e5493acd1c760dee9b384b645e30f91e02579a2662e0dd04124d38dc211e4e5f",
+      "trials_seconds": {
+        "before": [
+          0.21227841700601857,
+          0.21490441699279472,
+          0.21204220899380744
+        ],
+        "after": [
+          0.11295337499177549,
+          0.11485912499483675,
+          0.11413150001317263
+        ]
+      },
+      "median_seconds": {
+        "before": 0.21227841700601857,
+        "after": 0.11413150001317263
+      },
+      "same_findings": true,
+      "finding_count": 0
+    }
+  ],
+  "aggregate_median_seconds": {
+    "before": 0.6626237090094946,
+    "after": 0.40410979102307465
+  },
+  "reduction_percent": 39.01368370486662,
+  "limitations": [
+    "Mac text matcher microbenchmark of four actual served pages; not a full-tree Linux runtime or natural cadence proof.",
+    "Decoder and exact regex policy unchanged; full Linux guard/media/atomic tests still required."
+  ]
+}

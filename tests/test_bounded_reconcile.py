@@ -1243,3 +1243,176 @@ def test_hold_receipt_preserves_desired_and_readback_sources(fixture, tmp_path):
     assert field["current_generation_readback"] == 0.0
     assert field["plan"]["plan_id"] == "iris-test"
     assert field["equivalent"] is False
+
+
+@pytest.mark.asyncio
+async def test_declared_guardrail_can_emerge_after_admission_under_same_plan(fixture, tmp_path, monkeypatch):
+    db = fixture
+    emerging = ["mister_all_kpa", "mister_engage_kpa"]
+    fixed = [p for p in db.names if p not in bounded.DYNAMIC_MOISTURE_GUARDRAIL_PARAMS | bounded.ZONE_VPD_TARGETS][:13]
+    db.parameters = fixed + emerging
+    initial = [(p, 1.0) for p in fixed]
+    source = {p: 0.0 for p in emerging}
+    await bounded.choose_stage(db, initial, db.planned(), 3, tmp_path, 12, guardrail_values=source)
+    approve(bounded._read(tmp_path / bounded.PREVIEW_NAME), tmp_path)
+    first = await bounded.choose_stage(db, initial, db.planned(), 3, tmp_path, 12, guardrail_values=source)
+    assert first.action == "send" and len(first.changes) == 12
+    sent = records(first.changes)
+    bounded.finish_stage(tmp_path, first, sent, [])
+    for record in sent:
+        db.readbacks[record["parameter"]] = record["value"]
+        db.rows[(record["requested_at"], record["parameter"])] = {
+            "delivery_status": "confirmed",
+            "confirmed_at": datetime.now(UTC),
+        }
+    source = {emerging[0]: 0.3, emerging[1]: 0.4}
+    candidate = [(fixed[-1], 1.0), *source.items()]
+    for contradiction in ("source", "plan", "generation", "baseline"):
+        target = tmp_path.parent / contradiction
+        shutil.copytree(tmp_path, target)
+        changed = list(candidate)
+        planned = db.planned()
+        generation = 3
+        if contradiction == "source":
+            changed[-1] = (emerging[-1], 0.5)
+        elif contradiction == "plan":
+            planned[-1] = {**planned[-1], "value": 2.0}
+        elif contradiction == "generation":
+            generation = 4
+        else:
+            state = bounded._read(target / bounded.STATE_NAME)
+            state["approved_preview"]["readbacks"].pop(emerging[-1])
+            bounded._write(target / bounded.STATE_NAME, state)
+        held = await bounded.choose_stage(db, changed, planned, generation, target, 12, guardrail_values=source)
+        assert held.action == "hold"
+    writer_source = tmp_path.parent / "writer-source-fence"
+    shutil.copytree(tmp_path, writer_source)
+    with monkeypatch.context() as changed_writer:
+        changed_writer.setenv("VERDIFY_GIT_SHA", "e" * 40)
+        held = await bounded.choose_stage(db, candidate, db.planned(), 3, writer_source, 12, guardrail_values=source)
+    assert held.action == "hold" and "source revision changed" in held.reason
+    second = await bounded.choose_stage(db, candidate, db.planned(), 3, tmp_path, 12, guardrail_values=source)
+    assert second.action == "send" and second.changes == tuple(candidate)
+    sent = records(second.changes)
+    bounded.finish_stage(tmp_path, second, sent, [])
+    for record in sent:
+        db.readbacks[record["parameter"]] = record["value"]
+        db.rows[(record["requested_at"], record["parameter"])] = {
+            "delivery_status": "confirmed",
+            "confirmed_at": datetime.now(UTC),
+        }
+    complete = await bounded.choose_stage(db, [], db.planned(), 3, tmp_path, 12, guardrail_values=source)
+    assert complete.action == "complete"
+
+
+async def confirmed_two_stage_fixture(db, tmp_path):
+    import json
+
+    state, original, _forward, _remaining = await confirmed_halt_fixture(db, tmp_path)
+    parameters = [p for p in db.names if p not in bounded.DYNAMIC_MOISTURE_GUARDRAIL_PARAMS | bounded.ZONE_VPD_TARGETS][
+        :15
+    ]
+    db.parameters = parameters + ["mister_all_kpa", "mister_engage_kpa"]
+    changes = [(p, 1.0) for p in parameters]
+    preview = await bounded._preview(db, changes, db.planned(), 3)
+    original = prepare_writer_stage.prepare(preview, datetime.now(UTC))
+    admitted = datetime.now(UTC) - timedelta(seconds=6)
+    preview["captured_at"] = admitted.isoformat()
+    # Refresh the prepared fingerprint, whose canonical identity excludes time.
+    original["approved_preview"] = preview
+    last_started = admitted + timedelta(seconds=3)
+    state.update(
+        {
+            "run_id": original["run_id"],
+            "approved_preview": preview,
+            "expires_at": original["expires_at"],
+            "completed": parameters,
+            "completed_values": {p: 1.0 for p in parameters},
+            "stage_parameters": parameters[12:],
+            "stage_started_at": last_started.isoformat(),
+        }
+    )
+    requests = []
+    for i, parameter in enumerate(parameters):
+        started = admitted + timedelta(seconds=1 if i < 12 else 4)
+        db.readbacks[parameter] = 1.0
+        requests.append(
+            {
+                "ts": started + timedelta(microseconds=i),
+                "parameter": parameter,
+                "value": 1.0,
+                "source": "planner",
+                "delivery_status": "confirmed",
+                "confirmed_at": started + timedelta(milliseconds=100),
+                "expired_at": None,
+            }
+        )
+    db.stage_rows = requests
+    for name, value in ((bounded.STATE_NAME, state), (bounded.APPROVAL_NAME, original)):
+        bounded._write(tmp_path / name, value)
+    custody = {name: (tmp_path / name).read_text() for name in (bounded.STATE_NAME, bounded.APPROVAL_NAME)}
+    fresh = await bounded._preview(db, [("mister_all_kpa", 1.0), ("mister_engage_kpa", 1.0)], db.planned(), 3)
+    serialized = json.loads(json.dumps(requests, default=lambda v: v.isoformat()))
+    writer = {
+        "pod": {
+            "kind": "Pod",
+            "metadata": {"uid": str(uuid.uuid4()), "namespace": "verdify-prod", "name": preview["pod"]},
+        },
+        "current": {"pod": preview["pod"], "source": preview["source_revision"], "preview": preview},
+    }
+    with pytest.raises(ValueError):
+        prepare_writer_stage.prepare_forward(fresh, custody, serialized, writer, datetime.now(UTC))
+    forward = prepare_writer_stage.prepare_forward(
+        fresh, custody, serialized, writer, datetime.now(UTC), two_stage=True
+    )
+    bounded._write(tmp_path / bounded.RECOVERY_NAME, forward)
+    return state, original, forward
+
+
+@pytest.mark.asyncio
+async def test_two_stage_confirmed_halt_archives_15_original_effects_without_replay(fixture, tmp_path, monkeypatch):
+    state, original, forward = await confirmed_two_stage_fixture(fixture, tmp_path)
+    state_bytes = (tmp_path / bounded.STATE_NAME).read_bytes()
+    approval_bytes = (tmp_path / bounded.APPROVAL_NAME).read_bytes()
+    result = await bounded.choose_stage(fixture, [], fixture.planned(), 3, tmp_path, 12)
+    assert result.action == "hold" and result.reason == "confirmed halt archived; fresh approval required"
+    archive = bounded._read(tmp_path / f"writer-stage-confirmed-halt-{state['run_id']}.json")
+    assert archive["schema"] == "verdify-writer-stage-confirmed-halt-v3"
+    assert len(archive["native_requests"]) == 15 and archive["forward"] == forward
+    assert (tmp_path / bounded.STATE_NAME).read_bytes() == state_bytes
+    assert (tmp_path / bounded.APPROVAL_NAME).read_bytes() == approval_bytes
+    assert original["run_id"] == state["run_id"]
+    archive_bytes = (tmp_path / f"writer-stage-confirmed-halt-{state['run_id']}.json").read_bytes()
+    monkeypatch.setattr(bounded, "SESSION_ID", uuid.uuid4().hex)
+    monkeypatch.setenv("VERDIFY_GIT_SHA", "e" * 40)
+    remaining = [("mister_all_kpa", 1.0), ("mister_engage_kpa", 1.0)]
+    fresh = await bounded._preview(fixture, remaining, fixture.planned(), 3)
+    new_authority = prepare_writer_stage.prepare(fresh, datetime.now(UTC))
+    assert new_authority["run_id"] != original["run_id"]
+    bounded._write(tmp_path / bounded.APPROVAL_NAME, new_authority)
+    result = await bounded.choose_stage(fixture, remaining, fixture.planned(), 3, tmp_path, 12)
+    assert result.action == "send" and result.changes == tuple(remaining)
+    assert result.run_id == new_authority["run_id"]
+    assert (tmp_path / f"writer-stage-confirmed-halt-{state['run_id']}.json").read_bytes() == archive_bytes
+    assert not (tmp_path / bounded.RECOVERY_NAME).exists()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("contradiction", ["missing", "failed", "sent", "unconfirmed", "first_after_last", "oversize"])
+async def test_two_stage_archive_rejects_incomplete_or_unbounded_history(fixture, tmp_path, contradiction):
+    state, original, _forward = await confirmed_two_stage_fixture(fixture, tmp_path)
+    if contradiction == "missing":
+        fixture.stage_rows.pop()
+    elif contradiction in {"failed", "sent"}:
+        fixture.stage_rows[0]["delivery_status"] = contradiction
+    elif contradiction == "unconfirmed":
+        fixture.stage_rows[0]["confirmed_at"] = None
+    elif contradiction == "first_after_last":
+        fixture.stage_rows[0]["confirmed_at"] = datetime.fromisoformat(state["stage_started_at"]) + timedelta(seconds=1)
+    else:
+        state["stage_parameters"] = state["completed"][:1]
+        bounded._write(tmp_path / bounded.STATE_NAME, state)
+    result = await bounded.choose_stage(fixture, [], fixture.planned(), 3, tmp_path, 12)
+    assert result.action == "hold"
+    assert not list(tmp_path.glob("writer-stage-confirmed-halt-*.json"))
+    assert bounded._read(tmp_path / bounded.STATE_NAME)["status"] == "halted"
