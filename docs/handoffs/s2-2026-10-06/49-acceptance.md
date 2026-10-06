@@ -1,0 +1,9 @@
+# Historical suppressed alerts — #49 acceptance
+
+The reviewed March–May historical set is exactly 61 IDs. The guarded maintenance uses those IDs and original lifecycle timestamps and resolution hashes; it never broadens to new candidates or forces raw/canonical count parity. It preserves resolution content and uses the normal updated_at trigger. The only changed fields are resolved_at, resolved_by and trigger-updated updated_at.
+
+A real PostgreSQL dry run updated exactly61 and rolled back; a changed snapshot was rejected before update. The committed SQL tool emitted byte-for-byte the applied SQL. Live apply changed exactly61, a second live run changed0, and canonical open-alert membership stayed exactly26 IDs in both repeatable-read transactions. No active alert was hidden. No lifecycle source or trigger was disabled or changed. Existing v_open_alerts semantics remain resolved_at NULL and disposition not suppressed.
+
+[Receipt](evidence/49/receipt.json), [reviewed hashed scope](evidence/49/reviewed-snapshot.json), [before/after exact touched fields](evidence/49/apply-receipt.json), and [second run](evidence/49/second-run-receipt.json) retain non-secret IDs, times and reversal data. Resolution content was unchanged and is represented by hashes, not private alert text. Reversal must use this exact original touched-field custody and compare current post-state first; the broad historical migration151 rollback is not appropriate. Restoring original updated_at needs a bounded transaction accounting for the normal update trigger, with trigger state preserved; do not overwrite a subsequent lifecycle event.
+
+No schema migration, runtime restart, NFS change or device connection was used for this cleanup. Source publication and complete sprint validation follow in the final S2 delivery receipt. The initial source commit formatting rejection and subsequent provenance correction are recorded explicitly, not hidden.

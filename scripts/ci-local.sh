@@ -73,6 +73,8 @@ $PY -m pytest -q \
   tests/test_14_site_doctor.py \
   tests/test_16_writer_lifecycle.py \
   tests/test_17_planner_health_surface.py \
+  tests/test_iris_inventory.py \
+  tests/test_historical_suppressed_alert_maintenance.py \
   tests/test_18_twin_divergence_dashboard.py \
   tests/test_20_vision_src_sync.py \
   tests/test_vision_authenticated_snapshots.py \
@@ -97,6 +99,7 @@ $PY -m pytest -q \
   tests/test_cnpg_physical_runtime_transition.py \
   tests/test_cnpg_public_count_time_clock.py \
   tests/test_cnpg_policy_twin_count_time.py \
+  tests/test_cnpg_policy_twin_endpoints.py \
   tests/test_cnpg_physical_client_qualification.py \
   tests/test_db_backup_retry_classifier.py \
   tests/test_action_log_policy_identity.py \
