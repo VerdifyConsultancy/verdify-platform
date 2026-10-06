@@ -8,7 +8,7 @@ DO $precondition$
 BEGIN
     IF current_database() <> 'verdify_rehearsal'
        OR (current_setting('listen_addresses') <> ''
-          AND NOT (current_setting('cluster_name') = 'verdify-cnpg-rehearsal'
+          AND NOT (current_setting('cluster_name') IN ('verdify-cnpg-rehearsal','verdify-cnpg-s2')
                    AND current_setting('server_version_num')::integer = 160013
                    AND inet_client_addr() IS NULL AND NOT pg_is_in_recovery()))
        OR (SELECT extversion FROM pg_extension WHERE extname = 'timescaledb')

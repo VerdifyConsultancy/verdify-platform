@@ -235,6 +235,7 @@ BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;
 SET LOCAL search_path=pg_catalog,public,pg_temp;
 SET LOCAL timezone='UTC';
 SET LOCAL statement_timeout='120s';
+SET LOCAL jit=off;
 SET LOCAL lock_timeout='2s';
 DO $physical_dataset$
 BEGIN

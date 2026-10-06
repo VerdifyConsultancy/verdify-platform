@@ -1,6 +1,7 @@
 # Current274 CNPG qualification custody
 
-This is preparation and source qualification, not completed restore or recovery.
+Current274 logical restore and native admission are qualified. Full recovery
+and complete source/A/B count/time parity remain open.
 The original schema270 source/A/B clusters, failed count/time attempts and native
 admission lineage remain intact. No production endpoint, migration, role or
 writer was changed by this CNPG lane.
@@ -66,3 +67,46 @@ cluster, owner, no nondefault extensions/schemas, no public relations/functions/
 types and zero other clients before any import. Any data/object or identity
 change refuses; it never drops or overwrites a database. Original normal restores
 still require product DB absence. No partial data import is resumed.
+
+## Current native restore and admission
+
+The real pair imported into the declared isolated S2 database OID16447. A third
+failed attempt is preserved: data, indexes and Timescale post-restore completed,
+but the original owner-fixture identity guard refused the additional S2 name.
+The guard now admits only the two declared logical targets. The actual restored
+regular/compressed hypertable ownership adversarial fixture passed with rollback;
+the full logical audit and two identical read-only v2 interface audits passed.
+Six materialized views reached the original refresh fixed point in seven attempts;
+one initial dependency refusal remains preserved. Full37-role comments, settings,
+posture and17 memberships match after the explicit bootstrap grantor translation.
+
+A complete951-relation native COPY multiset comparison traversed every original
+COPY header. All workload relation rows and hashes match the authentic exported
+dump. Source rows total9,699,546; target rows total9,699,549. Three Timescale
+installation/catalog relations still require complete typed accounting: bgw_job
+(two extra native scheduler jobs), compression_settings (OID-bound names), and
+metadata (one extra installation entry). They are explicit remaining acceptance,
+not ignored or counted as byte parity. The first transport attempt stopped its
+markers six relations early despite exit0; its incomplete receipt is preserved.
+The complete retry used a checksummed target-local SQL file and required all951
+markers plus its terminal marker. No row values were written to evidence.
+
+The full source→target C0 semantic object/ACL/definition comparison passed,
+preserving the entire original ledger and three authentic seals. Catalog queries
+hit the existing60-second budget with JIT; disabling JIT only for each bounded
+qualification transaction allowed the unchanged complete witness to pass. No
+statement budget or acceptance projection was narrowed. The full rollback
+admission qualification passed natively in23.09 seconds; guarded installation
+passed in26.50 seconds and its full native post-validator passed. These add the
+separate target receipts; they do not relabel source seals as target authority.
+The authoritative receipt readback is hash-bound in
+[evidence/cnpg-current274-native-restore.json](evidence/cnpg-current274-native-restore.json).
+
+The historical full SOURCE count/time capture first failed on lighting under its
+original120-second budget. Both CTE-inlining variants alone and a function-body
+expansion attempt failed and remain private. Complete pinned lighting cardinality
+and all eight timestamp endpoints passed in46.89 seconds after session-local JIT
+disabling with unchanged expressions and CTE inlining. Full SOURCE/A/B count/time
+is running again at one common clock. Current274 time inventory, fresh physical
+PITR A/B, failover/data recovery, actual runtime duties and the final cutover/rollback
+packet remain open. No production DB architecture, endpoint or writer changed.

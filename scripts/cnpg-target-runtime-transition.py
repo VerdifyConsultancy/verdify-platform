@@ -560,6 +560,7 @@ def emit_sql(
 BEGIN;
 SET LOCAL search_path=pg_catalog,pg_temp;
 SET LOCAL statement_timeout='120s';
+SET LOCAL jit=off;
 SET LOCAL lock_timeout='2s';
 SELECT pg_advisory_xact_lock(hashtext('verdify-schema-migrations'));
 DO $identity$ BEGIN

@@ -240,13 +240,17 @@ def dependency_order(source):
 def common_ctes(observation_expression):
     checked_observation_expression(observation_expression)
     source = profile()
-    return ",\n".join(
-        name
-        + " AS NOT MATERIALIZED (\n"
-        + rewrite(source["views"][name]["definition"].strip().removesuffix(";"), observation_expression, source)
-        + "\n)"
-        for name in dependency_order(source)
-    )
+    definitions = []
+    for name in dependency_order(source):
+        definition = source["views"][name]["definition"].strip().removesuffix(";")
+        if name == "v_lighting_status_now":
+            definition = definition.replace("circuits AS (", "circuits AS NOT MATERIALIZED (")
+        if name == "v_lighting_minutes_status_now":
+            definition = definition.replace("policy AS (", "policy AS NOT MATERIALIZED (")
+        definitions.append(
+            name + " AS NOT MATERIALIZED (\n" + rewrite(definition, observation_expression, source) + "\n)"
+        )
+    return ",\n".join(definitions)
 
 
 def literal(value):

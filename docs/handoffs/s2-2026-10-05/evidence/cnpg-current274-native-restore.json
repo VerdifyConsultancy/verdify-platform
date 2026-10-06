@@ -1,0 +1,55 @@
+{
+  "schema": "cnpg-s2-native-admission-v1",
+  "cluster": "verdify-cnpg-s2",
+  "database_oid": 16447,
+  "binding": {
+    "cluster_uid": "4f697776-df25-4e22-b930-0b76cf35496e",
+    "pod": "verdify-cnpg-s2-1",
+    "pod_uid": "6379db06-2bad-4c5b-9a50-86feac4651dc",
+    "operand_digest": "sha256:8b461e37d18aa049704eb6a9cde2ba9af0f955f8d3725e921070d2450bb2f137"
+  },
+  "source_sha256": "7cf93863741a7827ef1f75e6f9e926a6966578c81e2884b3a70ed4644e1c5a50",
+  "qualification_sha256": "09e73ff49d02b63735a3deae649fa0d782026d2cc405740dd63b08e9d6c874ee",
+  "installation_sha256": "9abb6d1e4296614ab2cd617a3d0e65d0aa8a39618b5f47ace5f8fa00224439fa",
+  "historical_seals_and_ledger_retained": true,
+  "authenticated_runtime_client_acceptance": false,
+  "full_data_internal_catalog_accounting_complete": false,
+  "complete_copy_inventory": {
+    "schema": "verdify-restored-full-copy-parity-v1",
+    "dump_sha256": "a24299f4f56db959048f9d2becfe1c3a672f23e7d90173d0db04bbef2c5a62dd",
+    "native_exit": 0,
+    "elapsed_seconds": 75.9561386659916,
+    "table_count": 951,
+    "row_count": 9699549,
+    "mismatch_count": 3,
+    "complete": true
+  },
+  "internal_catalog_differences": [
+    {
+      "relation": "_timescaledb_catalog.bgw_job",
+      "rows": 14
+    },
+    {
+      "relation": "_timescaledb_catalog.compression_settings",
+      "rows": 144
+    },
+    {
+      "relation": "_timescaledb_catalog.metadata",
+      "rows": 4
+    }
+  ],
+  "full_semantic_catalog_parity": true,
+  "role_inventory": {
+    "source_roles": 37,
+    "source_memberships": 17,
+    "posture_settings_comments_and_options_equal": true,
+    "explicit_bootstrap_grantor_translation": true
+  },
+  "native_checks": {
+    "restored_hypertable_owner_rollback": true,
+    "logical_restore_audit": true,
+    "v2_interface_twice_identical": true,
+    "all_materialized_views_populated": true
+  },
+  "native_readback_sha256": "4e7507d8894cd3bd3835a1a1f7d14b4cfee1bcb0636c7587aaf5f36e23bfa4c5"
+}
