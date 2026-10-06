@@ -86,3 +86,27 @@ and restores known sequence custody after the suite before parity is re-sealed;
 never claim that rollback alone restores every database object. Compare complete
 study assignment/outcome/exposure/freeze state before and after. Retain failures
 and source/config/image identities for forward and rollback phases.
+
+### S2 client network and admission
+
+Apply only the reviewed `cnpg-s2-runtime-client-policy.yaml` resources through
+ROOT, never the whole historical cluster kustomization. Use exact client labels
+`app.kubernetes.io/part-of=verdify`,
+`app.kubernetes.io/component=cnpg-s2-runtime-qualification` and
+`verdify.ai/qualification-target=verdify-cnpg-s2`. These clients must not also
+carry `component=cnpg-rehearsal` or the historical qualification component.
+NetworkPolicy allows are additive: inspect **every** matching live policy before
+executing a client. New-client egress is only s2 cluster PostgreSQL/5432 and
+kube-system kube-dns TCP/UDP53; no ingress is granted. The s2 database server
+retains its existing operator/peer allowances; this addition does not claim to
+replace them. Keep namespace deny-all intact and bind policy UIDs/spec hashes.
+
+Cluster Ready alone is not admission. Before credential installation or any
+fixture Job, read back the authoritative #396 full data/catalog/capability parity
+and native target admission receipt, then bind its hash to current Cluster UID,
+primary Pod UID/start/system identity, exact source/image profile and current
+service endpoints. Inspect live Kubernetes and database identities immediately
+before and after the operation; CLI UID/hash assertions alone do not establish
+those facts. Stop target mutations if any binding changes or acceptance is
+unsealed. Never overwrite an existing verifier, reuse historical A/B targets or
+rotate a source credential to make a target qualification pass.
