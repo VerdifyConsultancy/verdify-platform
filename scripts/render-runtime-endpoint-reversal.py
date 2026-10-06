@@ -90,7 +90,10 @@ def render(binding, sources):
                 {"name": "qualification", "mountPath": "/qualification", "readOnly": True},
                 {"name": "tmp", "mountPath": "/tmp"},  # noqa: S108 - private per-Pod emptyDir
             ]
-            volumes = [{"name": "qualification", "configMap": {"name": CM}}, {"name": "tmp", "emptyDir": {}}]
+            volumes = [
+                {"name": "qualification", "configMap": {"name": CM, "defaultMode": 420}},
+                {"name": "tmp", "emptyDir": {}},
+            ]
             container = {
                 "name": "qualify",
                 "image": profile["image"],
@@ -229,7 +232,7 @@ def render(binding, sources):
                 containers = [server, container]
             pod = {
                 "restartPolicy": "Never",
-                "nodeSelector": {"kubernetes.io/hostname": "node4"},
+                "nodeSelector": {"kubernetes.io/hostname": "vm-k3s-node4"},
                 "automountServiceAccountToken": False,
                 "enableServiceLinks": False,
                 "imagePullSecrets": [{"name": "zot-origin-cluster-pull"}],

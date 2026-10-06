@@ -64,7 +64,7 @@ def test_all_nine_clients_suspended_with_no_provider_device_or_storage_authority
         assert s["suspend"] and s["backoffLimit"] == 0 and s["activeDeadlineSeconds"] == 240
         pod = s["template"]["spec"]
         assert pod["automountServiceAccountToken"] is False
-        assert pod["nodeSelector"] == {"kubernetes.io/hostname": "node4"}
+        assert pod["nodeSelector"] == {"kubernetes.io/hostname": "vm-k3s-node4"}
         assert not any(k in v for v in pod["volumes"] for k in ("persistentVolumeClaim", "hostPath"))
         for c in pod["containers"]:
             assert c["securityContext"]["capabilities"]["drop"] == ["ALL"]
