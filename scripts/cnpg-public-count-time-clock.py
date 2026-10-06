@@ -21,6 +21,11 @@ POLICY_SPEC = importlib.util.spec_from_file_location(
 )
 POLICY = importlib.util.module_from_spec(POLICY_SPEC)
 POLICY_SPEC.loader.exec_module(POLICY)
+DRYOUT_SPEC = importlib.util.spec_from_file_location(
+    "dryout_time_projection", ROOT / "scripts/cnpg-solar-dryout-time-projection.py"
+)
+DRYOUT = importlib.util.module_from_spec(DRYOUT_SPEC)
+DRYOUT_SPEC.loader.exec_module(DRYOUT)
 PROFILE_SHA = "75abce66a2eb7109c7e28205b6636280e627c94b4f2d5cacc1e789c7e1b9d8b8"
 TOKEN = re.compile(
     r"(?P<space>\s+)|(?P<comment>--[^\n]*(?:\n|$)|/\*.*?\*/)"
@@ -30,6 +35,7 @@ TOKEN = re.compile(
     re.DOTALL,
 )
 PARAMETERS = {
+    "fn_realized_solar_night_dryout": ("p_start_night", "p_end_night", "p_greenhouse_id"),
     "fn_system_health": (),
     "fn_band_timeline": ("p_start", "p_end", "p_step", "p_greenhouse_id"),
     "fn_climate_action_effectiveness": ("p_window",),
@@ -37,13 +43,19 @@ PARAMETERS = {
     "fn_timeline_setpoint_value": ("p_greenhouse_id", "p_param", "p_ts", "p_default"),
 }
 PARAMETER_TYPES = {
+    "fn_realized_solar_night_dryout": ("date", "date", "text"),
     "fn_system_health": (),
     "fn_band_timeline": ("timestamptz", "timestamptz", "interval", "text"),
     "fn_climate_action_effectiveness": ("interval",),
     "fn_plan_transition_audit": ("text", "interval", "interval"),
     "fn_timeline_setpoint_value": ("text", "text", "timestamptz", "double precision"),
 }
-TABLE_FUNCTIONS = {"fn_band_timeline", "fn_climate_action_effectiveness", "fn_plan_transition_audit"}
+TABLE_FUNCTIONS = {
+    "fn_realized_solar_night_dryout",
+    "fn_band_timeline",
+    "fn_climate_action_effectiveness",
+    "fn_plan_transition_audit",
+}
 
 
 def profile():
@@ -69,6 +81,10 @@ def profile():
             or hashlib.sha256(entry["definition"].encode()).hexdigest() != entry["definition_sha256"]
         ):
             raise ValueError("native clock table-function posture changed")
+    dryout = DRYOUT.source_function()
+    if dryout["definition_sha256"] != value["reachable_functions"][dryout["identity"]]["definition_sha256"]:
+        raise ValueError("dryout reachable source closure changed")
+    value["clock_table_functions"][dryout["name"]] = dryout
     return value
 
 
@@ -131,6 +147,8 @@ def table_body(name, arguments, source):
     if definition.count("AS $function$") != 1 or definition.count("$function$") != 2:
         raise ValueError("native SQL table-function envelope changed")
     body = definition.split("AS $function$", 1)[1].split("$function$", 1)[0].strip().removesuffix(";")
+    if name == "fn_realized_solar_night_dryout":
+        body = DRYOUT.transform(body)
     values = {
         parameter: "(" + argument + ")::" + datatype
         for parameter, argument, datatype in zip(PARAMETERS[name], arguments, PARAMETER_TYPES[name], strict=True)

@@ -1,0 +1,131 @@
+{
+  "actual_image_metadata": {
+    "baked_VERDIFY_GIT_SHA": "unknown",
+    "fallback_source_revision": null,
+    "ingestor_module_sha256": "ea56f9c331b6ee9271fa3856fd55379636b3efa5a72f9d7acec0d21ff4f84aff",
+    "source_spool_sha256": "8d31c70d81ca5c68875fdce6b28c96feb0ee36469aa354df6eb0e44dfa6f7983"
+  },
+  "claim": {
+    "driver": "driver.longhorn.io",
+    "name": "verdify-s2-spool-qualification",
+    "namespace": "verdify-db-rehearsal",
+    "pv": "pvc-a7158960-36dc-439c-bd6f-14f1aa744bab",
+    "pv_uid": "8197e64e-e6ad-4ed3-a6f0-fea54e070fc3",
+    "uid": "a7158960-36dc-439c-bd6f-14f1aa744bab"
+  },
+  "cleanup": "retained all Pods/ConfigMaps/PVC/directories and failed-attempt evidence for ROOT exact-UID custody",
+  "final_volume": {
+    "currentNodeID": "",
+    "replicas": 2,
+    "robustness": "unknown",
+    "state": "detached",
+    "volume_uid": "7c0f9af2-f480-424c-a606-a38a1df1f7f0"
+  },
+  "imageID": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:ce2399170bb9406cd9b90a1b6eac3cd5a483faec72ee00bf67d317daf0508e67",
+  "pods": [
+    {
+      "containers": [
+        {
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:ce2399170bb9406cd9b90a1b6eac3cd5a483faec72ee00bf67d317daf0508e67",
+          "name": "qualification",
+          "termination": {
+            "containerID": "containerd://5e7ee6bd159f661dd4be4388584b25f55216706f9fa1c259fbbf5edbfa81877a",
+            "exitCode": 1,
+            "finishedAt": "2026-10-06T04:48:51Z",
+            "reason": "Error",
+            "startedAt": "2026-10-06T04:48:50Z"
+          }
+        }
+      ],
+      "name": "verdify-s2-promoted-spool-qualification",
+      "node": "vm-k3s-node4",
+      "phase": "Failed",
+      "uid": "db2397f6-3926-4be1-8b94-92ef95d1805b"
+    },
+    {
+      "containers": [
+        {
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:ce2399170bb9406cd9b90a1b6eac3cd5a483faec72ee00bf67d317daf0508e67",
+          "name": "qualification",
+          "termination": {
+            "containerID": "containerd://aa770a8c13331e670ddd79b1bfb69c59798f5bc853a84f81488f55cb9ee86d9e",
+            "exitCode": 0,
+            "finishedAt": "2026-10-06T04:49:37Z",
+            "reason": "Completed",
+            "startedAt": "2026-10-06T04:49:36Z"
+          }
+        }
+      ],
+      "name": "verdify-s2-promoted-spool-image-metadata",
+      "node": "vm-k3s-node4",
+      "phase": "Succeeded",
+      "uid": "aece0770-1a90-4883-97f7-429eb4b76d48"
+    },
+    {
+      "containers": [
+        {
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:ce2399170bb9406cd9b90a1b6eac3cd5a483faec72ee00bf67d317daf0508e67",
+          "name": "qualification",
+          "termination": {
+            "containerID": "containerd://a819b4d1ce8a1222aa209a4ead50fa280521ac6bfd5e8c85c52332ff2017a2e7",
+            "exitCode": 1,
+            "finishedAt": "2026-10-06T04:50:26Z",
+            "reason": "Error",
+            "startedAt": "2026-10-06T04:50:24Z"
+          }
+        }
+      ],
+      "name": "verdify-s2-promoted-spool-qualification-v2",
+      "node": "vm-k3s-node4",
+      "phase": "Failed",
+      "uid": "b0fc2be8-a1dd-4b6d-b1c9-661a440b73b2"
+    },
+    {
+      "containers": [
+        {
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:ce2399170bb9406cd9b90a1b6eac3cd5a483faec72ee00bf67d317daf0508e67",
+          "name": "qualification",
+          "termination": {
+            "containerID": "containerd://1df322c99e1929cc27faacbed95d55a491b6cb815850fa2f2bfde20d892b66fa",
+            "exitCode": 1,
+            "finishedAt": "2026-10-06T04:51:56Z",
+            "reason": "Error",
+            "startedAt": "2026-10-06T04:51:54Z"
+          }
+        }
+      ],
+      "name": "verdify-s2-promoted-spool-qualification-v3",
+      "node": "vm-k3s-node4",
+      "phase": "Failed",
+      "uid": "b67e917c-1743-43f3-bfac-69e7a70d05b9"
+    },
+    {
+      "containers": [
+        {
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:ce2399170bb9406cd9b90a1b6eac3cd5a483faec72ee00bf67d317daf0508e67",
+          "name": "qualification",
+          "termination": {
+            "containerID": "containerd://db9756edeb0521664f1120d0b9b7dfc996032802cc3d8d3034f50fbe46552572",
+            "exitCode": 0,
+            "finishedAt": "2026-10-06T04:53:18Z",
+            "reason": "Completed",
+            "startedAt": "2026-10-06T04:52:29Z"
+          }
+        }
+      ],
+      "name": "verdify-s2-promoted-spool-qualification-v4",
+      "node": "vm-k3s-node4",
+      "phase": "Succeeded",
+      "uid": "0d901d6c-c1f8-4107-aa63-55bc6ad3aa8b"
+    }
+  ],
+  "qualified_file_queue_boundary": true,
+  "result_sha256": "96bdc72738b6acf22ae844c23e1e8e070dfa4c4136e9c477eb8a43d0c309742a",
+  "schema": "s2-promoted-spool-boundary-custody-v1",
+  "scope": "component+new-reader retained-old-byte compatibility only; no PostgreSQL commit/DB replay, actual physical outage, production adoption, device or NFS change",
+  "typed_source": {
+    "resolved_sha": "4d435345580a10b4afe940825e1f54dff4f6021f",
+    "revision": "4d435345580a10b4afe940825e1f54dff4f6021f"
+  },
+  "typed_terminal_receipt_sha256": "07eae68113253e08253650417457e18cf6e3eb033a2fe41e80efd77e0ef8ec8c"
+}

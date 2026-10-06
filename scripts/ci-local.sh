@@ -75,6 +75,10 @@ $PY -m pytest -q \
   tests/test_17_planner_health_surface.py \
   tests/test_iris_inventory.py \
   tests/test_cnpg_s2_profile.py \
+  tests/test_cnpg_s2_pitr_pair.py \
+  tests/test_cnpg_s2_marker_client.py \
+  tests/test_cnpg_s2_archive_reader.py \
+  tests/test_cnpg_solar_dryout_time_projection.py \
   tests/test_ordinary_runtime_qualification.py \
   tests/test_restored_runtime_duties.py \
   tests/test_cnpg_s2_client_policy.py \

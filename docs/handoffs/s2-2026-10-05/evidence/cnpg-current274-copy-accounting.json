@@ -1,0 +1,49 @@
+{
+  "schema": "cnpg-s2-complete-copy-accounting-v1",
+  "dump_sha256": "a24299f4f56db959048f9d2becfe1c3a672f23e7d90173d0db04bbef2c5a62dd",
+  "complete_copy_relations": 951,
+  "source_exported_rows": 9699546,
+  "target_full_native_rows": 9699549,
+  "all_workload_rows_and_multisets_equal": true,
+  "all_exported_timescale_catalog_rows_equal": true,
+  "compression_settings_full_typed_catalog_mapping_equal": true,
+  "compression_settings_rows": 144,
+  "exact_native_installation_additions": [
+    {
+      "catalog": "bgw_job",
+      "id": 1,
+      "application_name": "Telemetry Reporter [1]",
+      "proc_schema": "_timescaledb_functions",
+      "proc_name": "policy_telemetry"
+    },
+    {
+      "catalog": "bgw_job",
+      "id": 3,
+      "application_name": "Job History Log Retention Policy [3]",
+      "proc_schema": "_timescaledb_functions",
+      "proc_name": "policy_job_stat_history_retention"
+    },
+    {
+      "catalog": "metadata",
+      "key": "uuid",
+      "purpose": "new Timescale installation identity"
+    }
+  ],
+  "native_timescale_dump_filters": [
+    {
+      "relation": "_timescaledb_catalog.bgw_job",
+      "condition": "WHERE id >= 1000"
+    },
+    {
+      "relation": "_timescaledb_catalog.metadata",
+      "condition": " WHERE key <> 'uuid' "
+    }
+  ],
+  "source_filtered_roles_catalog_unchanged": true,
+  "complete_full_native_rows_accounted_for": true,
+  "native_custody_hashes": {
+    "source.rows.private.json": "fe777a1c85cd78b12bfe284e22fc5ca8a1019d205674c9499b76968d7ab78b52",
+    "target.rows.private.json": "fe777a1c85cd78b12bfe284e22fc5ca8a1019d205674c9499b76968d7ab78b52",
+    "native-installation.private.json": "594cc0eacf1d25837f32ba84f731dd9c91f6d739fd5bf5cd6cc2feda0d7e7d89"
+  }
+}

@@ -1,0 +1,178 @@
+{
+  "baked_VERDIFY_GIT_SHA": "unknown",
+  "baked_source_metadata_qualified": false,
+  "component_faults": {
+    "queues": {
+      "climate-events": {
+        "abrupt_process_exit": "passed",
+        "accepted_rows": 1000,
+        "accepted_sha256": "05b94db6e529077dc1f4f888593de5453b574801606319902a48ac27d7b07413",
+        "before_drain_health": {
+          "backlog_high": false,
+          "backlog_stale": true,
+          "disk_bytes": 159744,
+          "disk_headroom_low": false,
+          "format": 1,
+          "free_bytes": 2020876288,
+          "max_payload_bytes": 134217728,
+          "max_rows": 30000,
+          "oldest_source_age_seconds": 844577580.9584324,
+          "payload_bytes": 99890,
+          "rows": 1000,
+          "utilization": 0.03333333333333333
+        },
+        "enqueue_seconds": 14.804180230014026,
+        "incompatible_format_preserved": "passed",
+        "interrupted_ack_hot_journal": "passed",
+        "local_ack_seconds": 0.027173370006494224,
+        "restart_reopen_decode_seconds": 0.025519260088913143,
+        "sqlite_full_preserves_accepted": "passed",
+        "timestamp_generation_fifo": "passed",
+        "unexplained_loss": 0,
+        "v1_backup_restoration": "passed"
+      },
+      "equipment-source": {
+        "abrupt_process_exit": "passed",
+        "accepted_rows": 1000,
+        "accepted_sha256": "05b94db6e529077dc1f4f888593de5453b574801606319902a48ac27d7b07413",
+        "before_drain_health": {
+          "backlog_high": false,
+          "backlog_stale": true,
+          "disk_bytes": 159744,
+          "disk_headroom_low": false,
+          "format": 1,
+          "free_bytes": 2021199872,
+          "max_payload_bytes": 134217728,
+          "max_rows": 30000,
+          "oldest_source_age_seconds": 844577565.5433049,
+          "payload_bytes": 99890,
+          "rows": 1000,
+          "utilization": 0.03333333333333333
+        },
+        "enqueue_seconds": 14.126266616978683,
+        "incompatible_format_preserved": "passed",
+        "interrupted_ack_hot_journal": "passed",
+        "local_ack_seconds": 0.02436836704146117,
+        "restart_reopen_decode_seconds": 0.024447267991490662,
+        "sqlite_full_preserves_accepted": "passed",
+        "timestamp_generation_fifo": "passed",
+        "unexplained_loss": 0,
+        "v1_backup_restoration": "passed"
+      },
+      "observational-events": {
+        "abrupt_process_exit": "passed",
+        "accepted_rows": 1000,
+        "accepted_sha256": "05b94db6e529077dc1f4f888593de5453b574801606319902a48ac27d7b07413",
+        "before_drain_health": {
+          "backlog_high": false,
+          "backlog_stale": true,
+          "disk_bytes": 159744,
+          "disk_headroom_low": false,
+          "format": 1,
+          "free_bytes": 2020552704,
+          "max_payload_bytes": 134217728,
+          "max_rows": 30000,
+          "oldest_source_age_seconds": 844577597.9149458,
+          "payload_bytes": 99890,
+          "rows": 1000,
+          "utilization": 0.03333333333333333
+        },
+        "enqueue_seconds": 16.16499217506498,
+        "incompatible_format_preserved": "passed",
+        "interrupted_ack_hot_journal": "passed",
+        "local_ack_seconds": 0.023317740997299552,
+        "restart_reopen_decode_seconds": 0.023260632995516062,
+        "sqlite_full_preserves_accepted": "passed",
+        "timestamp_generation_fifo": "passed",
+        "unexplained_loss": 0,
+        "v1_backup_restoration": "passed"
+      }
+    },
+    "scope": "SQLite component on actual filesystem; no database/device/physical-node proof"
+  },
+  "elapsed_seconds": 48.43483251600992,
+  "new_reader_copy_directory": "/qualification-state/s2-promoted-reader-v4-20261006",
+  "retained_baseline_source_spool_sha256": "0b901a3500ff364b99ef8d9aa48ed01fe6f3b1bd9f7cb594ee16163ca558895f",
+  "retained_manifest_sha256": "a38ff0af64f71a3d5fabe042caf3fa3bb8a0dc5cceee66b641aab7832fcda61e",
+  "retained_original_files_sha256": {
+    "accepted.json": "a38ff0af64f71a3d5fabe042caf3fa3bb8a0dc5cceee66b641aab7832fcda61e",
+    "climate.sqlite": "8197f091d298870e8b046ae01e9c19b229cb41ec5e988024d1fe326fee719748",
+    "equipment.sqlite": "ea34043dd7e4ea76f7ca2ae249c4e91bf6dfb05217dbed252178a8544db67c09",
+    "observational.sqlite": "4c24e5030655b674bcb5d05cec012809bea7d30d25dc758af7d71c2302eb08a6",
+    "recovered.json": "e68d48b775c36d5c369079e5b2cdf9de85e5ed47801c70dd6402a7b8da0c9c14"
+  },
+  "retained_original_files_unchanged": true,
+  "retained_queues": {
+    "climate": {
+      "accepted_sha256": "4ae77bcfd68f79575543d153e03f7830d1b9b4d7deeef2421a103015e8a37cd5",
+      "capacity_refusal_preserves_accepted": true,
+      "conflicting_identity_refused": true,
+      "duplicate_additions": 0,
+      "fifo_time_generation_exact": true,
+      "health": {
+        "backlog_high": true,
+        "backlog_stale": true,
+        "disk_bytes": 172032,
+        "disk_headroom_low": false,
+        "format": 1,
+        "free_bytes": 2021560320,
+        "max_payload_bytes": 134217728,
+        "max_rows": 1000,
+        "oldest_source_age_seconds": 844577550.5251284,
+        "payload_bytes": 99890,
+        "rows": 1000,
+        "utilization": 1.0
+      },
+      "recovered": 1000
+    },
+    "equipment": {
+      "accepted_sha256": "25cdafd95e787a7ee72f018007678db5d76acee646d0f2f81c9fd978555f9cae",
+      "capacity_refusal_preserves_accepted": true,
+      "conflicting_identity_refused": true,
+      "duplicate_additions": 0,
+      "fifo_time_generation_exact": true,
+      "health": {
+        "backlog_high": true,
+        "backlog_stale": true,
+        "disk_bytes": 180224,
+        "disk_headroom_low": false,
+        "format": 1,
+        "free_bytes": 2021732352,
+        "max_payload_bytes": 134217728,
+        "max_rows": 1000,
+        "oldest_source_age_seconds": 844577550.4153843,
+        "payload_bytes": 99890,
+        "rows": 1000,
+        "utilization": 1.0
+      },
+      "recovered": 1000
+    },
+    "observational": {
+      "accepted_sha256": "c2660ffaf48ba7dd8e04fd4d50aec4a68fef7b502321128c74ce4e84d78a745c",
+      "capacity_refusal_preserves_accepted": true,
+      "conflicting_identity_refused": true,
+      "duplicate_additions": 0,
+      "fifo_time_generation_exact": true,
+      "health": {
+        "backlog_high": true,
+        "backlog_stale": true,
+        "disk_bytes": 192512,
+        "disk_headroom_low": false,
+        "format": 1,
+        "free_bytes": 2021367808,
+        "max_payload_bytes": 134217728,
+        "max_rows": 1000,
+        "oldest_source_age_seconds": 844577550.6351991,
+        "payload_bytes": 99890,
+        "rows": 1000,
+        "utilization": 1.0
+      },
+      "recovered": 1000
+    }
+  },
+  "retained_rows_recovered": 3000,
+  "schema": "s2-promoted-ingestor-spool-qualification-v1",
+  "scope": "new actual image reads exact retained old SQLite bytes in owned copies; original3000 rows/files preserved; file/queue-only process faults, not PostgreSQL commit or physical outage proof",
+  "source_spool_sha256": "8d31c70d81ca5c68875fdce6b28c96feb0ee36469aa354df6eb0e44dfa6f7983",
+  "typed_terminal_receipt_build": "4d435345580a10b4afe940825e1f54dff4f6021f"
+}
