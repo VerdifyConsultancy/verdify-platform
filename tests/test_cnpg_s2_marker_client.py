@@ -40,6 +40,9 @@ def test_only_fixed_bootstrap_tcp_and_existing_secret_refs_with_separate_stateme
     assert env["PGPASSWORD"]["valueFrom"]["secretKeyRef"] == {"name": "verdify-cnpg-s2-app", "key": "password"}
     assert container["command"][:2] == ["sh", "-c"]
     assert "| psql -X -qAt -v ON_ERROR_STOP=1" in container["command"][2]
+    assert "until pg_isready" in container["command"][2]
+    assert '"$i" -lt 20' in container["command"][2]
+    assert container["command"][2].count("| psql ") == 1
     sql = container["command"][-1]
     assert sql.count("BEGIN;\n") == sql.count("COMMIT;\n") == 3
     assert sql.count("'kind','boundary'") == 2

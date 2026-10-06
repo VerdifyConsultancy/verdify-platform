@@ -128,6 +128,9 @@ SELECT jsonb_build_object('kind','ack','name','{name}','acknowledged_at',clock_t
                             "command": [
                                 "sh",
                                 "-c",
+                                'i=0; until pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -t 2 >/dev/null 2>&1; do '
+                                'i=$((i+1)); [ "$i" -lt 20 ] || exit 70; sleep 1; done; '
+                                'printf "{\\"kind\\":\\"connect-ready\\",\\"attempts\\":%s}\\n" "$i"; '
                                 'printf "%s" "$1" | psql -X -qAt -v ON_ERROR_STOP=1',
                                 "marker-sql",
                                 sql,
