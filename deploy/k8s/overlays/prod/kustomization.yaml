@@ -290,12 +290,12 @@ images:
   - name: ghcr.io/verdifyconsultancy/verdify-setpoint-server
     newName: registry.vallery.net/verdifyconsultancy/verdify-setpoint-server
     digest: sha256:6f2fef6a11c7ba67e0b297807c415fda39aa1f2977dcfa170248689087174952
-  # Hand-pinned lab publisher: source e32df41e, build-lab-publisher in
-  # agent-fleet-ci/verdify-platform-ci-5dgwr. Includes the route-only
-  # observational block, which remains absent until a qualified publication.
+  # Hand-pinned lab publisher: source f48c6bf0257b, build-lab-publisher in
+  # agent-fleet-ci/verdify-platform-ci-629rt; exact manifest/config/source and
+  # immutable build tag readback passed. Route eligibility remains evidence-bound.
   - name: ghcr.io/verdifyconsultancy/verdify-lab-publisher-k3s
     newName: registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s
-    digest: sha256:3a678ee015274bd9429a7c2b71361a9ecf7bd96f974fa291d203f731f67d5b52
+    digest: sha256:b91acc449e447272c332c9084162c393915689de52b99e2646f29defd7524e7e
 
 # Release pins: the digests production runs for the five actuator-managed
 # images. kustomize applies `transformers:` after `images:`, so these replace
