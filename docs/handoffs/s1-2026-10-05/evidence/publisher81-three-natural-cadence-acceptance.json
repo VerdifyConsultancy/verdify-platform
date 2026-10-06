@@ -1,0 +1,236 @@
+{
+  "schema": "verdify-optimized-natural-publisher-acceptance-v2",
+  "captured_at": "2026-10-06T00:47:10.624999+00:00",
+  "source_git_sha": "81d76a4c3d35a925ebd2438d89099d1f657b3f8f",
+  "expected_image_digest": "3a678ee015274bd9429a7c2b71361a9ecf7bd96f974fa291d203f731f67d5b52",
+  "full_sync_fence": "2026-10-06T00:15:39Z",
+  "natural_runs": [
+    {
+      "pod": "verdify-lab-publisher-29854100-dxmcr",
+      "pod_uid": "4731a2b2-72d2-4d23-8154-4ee8671b722b",
+      "job": "verdify-lab-publisher-29854100",
+      "job_uid": "57dcf3a7-50e6-4e0d-856f-8d3fe3f11f7d",
+      "node": "vm-k3s-node7",
+      "created_at": "2026-10-06T00:20:00Z",
+      "scheduled_at": "2026-10-06T00:20:00Z",
+      "phase": "Succeeded",
+      "expected_image_digest": "3a678ee015274bd9429a7c2b71361a9ecf7bd96f974fa291d203f731f67d5b52",
+      "metadata_body_sha256": "d0ccd093e6cd9073188eddf8fb6ae4d2d3fbeba31780b23344bff9207dc75149",
+      "init_seconds": 106.0,
+      "main_seconds": 302.0,
+      "total_seconds": 410.0,
+      "container_states": {
+        "prepare-private-work-root": {
+          "containerID": "containerd://719584cdf0e47215203a86b4bc0a55219790e44fd190e43578cba50cbd70188b",
+          "exitCode": 0,
+          "finishedAt": "2026-10-06T00:21:48Z",
+          "reason": "Completed",
+          "startedAt": "2026-10-06T00:20:02Z"
+        },
+        "publisher": {
+          "containerID": "containerd://5d14cd448de83fc6584736e97fd1a6bb45e35a614ef0646556ad40f7f2a3435e",
+          "exitCode": 0,
+          "finishedAt": "2026-10-06T00:26:50Z",
+          "reason": "Completed",
+          "startedAt": "2026-10-06T00:21:48Z"
+        }
+      },
+      "log_sha256": {
+        "prepare-private-work-root": "a67c8f2b9be9497524e60dce633146547c1304188f20f907a1b746557e00d442",
+        "publisher": "59dea20fa6133218c207f62c6d8938c16cbb57734ea5a8056f17b8de3ce4e529"
+      },
+      "timing_lines": [
+        "Lab cache initialization: scans=1 scan_seconds=106 total_seconds=106",
+        "Lab publisher phase=source_sync seconds=10",
+        "Lab publisher phase=build seconds=277",
+        "Lab publisher phase=upload seconds=14 total_seconds=301"
+      ],
+      "single_warm_scan": true,
+      "phase_logging_complete": true,
+      "successful_under600": true,
+      "actual_image_ids": {
+        "prepare-private-work-root": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:3a678ee015274bd9429a7c2b71361a9ecf7bd96f974fa291d203f731f67d5b52",
+        "publisher": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:3a678ee015274bd9429a7c2b71361a9ecf7bd96f974fa291d203f731f67d5b52"
+      }
+    },
+    {
+      "pod": "verdify-lab-publisher-29854110-5dgvw",
+      "pod_uid": "b1d63011-d630-4cb8-a96d-045049fdba42",
+      "job": "verdify-lab-publisher-29854110",
+      "job_uid": "2a4a4783-a56e-4dc6-a44a-c55f3d610888",
+      "node": "vm-k3s-node7",
+      "created_at": "2026-10-06T00:30:00Z",
+      "scheduled_at": "2026-10-06T00:30:00Z",
+      "phase": "Succeeded",
+      "expected_image_digest": "3a678ee015274bd9429a7c2b71361a9ecf7bd96f974fa291d203f731f67d5b52",
+      "metadata_body_sha256": "4a3e5ac89b5cda0ed570e9769694946c1c93478020f137c1e7468678598690ff",
+      "init_seconds": 109.0,
+      "main_seconds": 308.0,
+      "total_seconds": 420.0,
+      "container_states": {
+        "prepare-private-work-root": {
+          "containerID": "containerd://8a3c75a5f676098cce03970ced64ce6132ccb80a22a22afda4899690ca0182b4",
+          "exitCode": 0,
+          "finishedAt": "2026-10-06T00:31:52Z",
+          "reason": "Completed",
+          "startedAt": "2026-10-06T00:30:03Z"
+        },
+        "publisher": {
+          "containerID": "containerd://0f13cbda2e608b2679d7409eb957c244f631f0ba820e45c87a81bbf3e613a104",
+          "exitCode": 0,
+          "finishedAt": "2026-10-06T00:37:00Z",
+          "reason": "Completed",
+          "startedAt": "2026-10-06T00:31:52Z"
+        }
+      },
+      "log_sha256": {
+        "prepare-private-work-root": "c97c44b82b7fe967cfc5defb789cf8515570f99abbd8718ef422dd56b8f57485",
+        "publisher": "5a4d43ca486edc117155646b13796c8897e9d5a6ce89aaa1241c132ec40f98be"
+      },
+      "timing_lines": [
+        "Lab cache initialization: scans=1 scan_seconds=108 total_seconds=108",
+        "Lab publisher phase=source_sync seconds=11",
+        "Lab publisher phase=build seconds=281",
+        "Lab publisher phase=upload seconds=15 total_seconds=307"
+      ],
+      "single_warm_scan": true,
+      "phase_logging_complete": true,
+      "successful_under600": true,
+      "actual_image_ids": {
+        "prepare-private-work-root": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:3a678ee015274bd9429a7c2b71361a9ecf7bd96f974fa291d203f731f67d5b52",
+        "publisher": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:3a678ee015274bd9429a7c2b71361a9ecf7bd96f974fa291d203f731f67d5b52"
+      }
+    },
+    {
+      "pod": "verdify-lab-publisher-29854120-5g98g",
+      "pod_uid": "139cf1f3-fc6c-477a-b8e8-950ece0ae83c",
+      "job": "verdify-lab-publisher-29854120",
+      "job_uid": "de360898-f69a-4977-bfda-e868e5a030d0",
+      "node": "vm-k3s-node7",
+      "created_at": "2026-10-06T00:40:00Z",
+      "scheduled_at": "2026-10-06T00:40:00Z",
+      "phase": "Succeeded",
+      "expected_image_digest": "3a678ee015274bd9429a7c2b71361a9ecf7bd96f974fa291d203f731f67d5b52",
+      "metadata_body_sha256": "f6c2394f3987e7434976698fe40b4c06ac93eb842153fdfd95625da55398c70f",
+      "init_seconds": 101.0,
+      "main_seconds": 304.0,
+      "total_seconds": 410.0,
+      "container_states": {
+        "prepare-private-work-root": {
+          "containerID": "containerd://f1945c599da90a8026ef96a8c127d970b678154d407ba190392aeddc8fe2888a",
+          "exitCode": 0,
+          "finishedAt": "2026-10-06T00:41:45Z",
+          "reason": "Completed",
+          "startedAt": "2026-10-06T00:40:04Z"
+        },
+        "publisher": {
+          "containerID": "containerd://52248c7685493857ea3eeb20212b208a83924cb60a40fee04252e39d2d3a7c8b",
+          "exitCode": 0,
+          "finishedAt": "2026-10-06T00:46:50Z",
+          "reason": "Completed",
+          "startedAt": "2026-10-06T00:41:46Z"
+        }
+      },
+      "log_sha256": {
+        "prepare-private-work-root": "74acdcac06c27415f6001be2e0967914502c2871791c00d4c487f7d9a74ec7ba",
+        "publisher": "1540e7df7a19df9aad9a1e0da6110f394ac64aaad1d42b716f23c5b1ace7509d"
+      },
+      "timing_lines": [
+        "Lab cache initialization: scans=1 scan_seconds=101 total_seconds=101",
+        "Lab publisher phase=source_sync seconds=10",
+        "Lab publisher phase=build seconds=280",
+        "Lab publisher phase=upload seconds=14 total_seconds=304"
+      ],
+      "single_warm_scan": true,
+      "phase_logging_complete": true,
+      "successful_under600": true,
+      "actual_image_ids": {
+        "prepare-private-work-root": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:3a678ee015274bd9429a7c2b71361a9ecf7bd96f974fa291d203f731f67d5b52",
+        "publisher": "registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:3a678ee015274bd9429a7c2b71361a9ecf7bd96f974fa291d203f731f67d5b52"
+      }
+    }
+  ],
+  "three_consecutive_natural_runs_under600_with_complete_single_scan_phase_logs": true,
+  "qualified_schedule_intervals_seconds": [
+    600.0,
+    600.0
+  ],
+  "public_status": {
+    "last_attempt": {
+      "at_utc": "2026-10-06T00:46:45Z",
+      "failure_class": null,
+      "outcome": "succeeded"
+    },
+    "last_contention_at_utc": "2026-10-06T00:13:24Z",
+    "last_success": {
+      "at_utc": "2026-10-06T00:46:45Z",
+      "content_sha256": "sha256:33e3344f2219245cb5935754eb77a16933deb58a6660420f162c6e212d3ab7e6",
+      "fresh_until_utc": "2026-10-06T01:06:45Z",
+      "public_sha256": "sha256:74c60316a081fcdbe36ec2dd9440e9be0f7e3f93ca58da328a25a004558c4508",
+      "source": "s3_content_prefix",
+      "source_identity_sha256": "sha256:19b7bbe14d9ff4a4b9cf2c51cf83473a153d8647f193cc6225a1c94d6b6cd964"
+    },
+    "schema_version": 1,
+    "served_public_sha256": "sha256:74c60316a081fcdbe36ec2dd9440e9be0f7e3f93ca58da328a25a004558c4508"
+  },
+  "public_status_body_sha256": "8c18f86212b9aafd17aceca72473eecbba7fdc61e6f409211083a6742c897908",
+  "publication_fresh": true,
+  "unchanged_freshness_seconds": 1200.0,
+  "public_generation_bound_to_third_natural_run": true,
+  "served_generation_matches_success": true,
+  "planning_page_body_sha256": "b7445e0d1f2b9ed978aef104798312d3485003b48ab9503a4e78eafec237ca3c",
+  "physical_hold_explicit": true,
+  "cron_contract": {
+    "schedule": "*/10 * * * *",
+    "concurrencyPolicy": "Forbid",
+    "startingDeadlineSeconds": 30
+  },
+  "accepted": true,
+  "limitations": [
+    "Three runs prove this bounded cadence, not long-term percentile reliability.",
+    "Role/source receipts and public native measurement as-of parity are separate.",
+    "No manual job, altered schedule, altered TTL or weakened guard was used."
+  ],
+  "stream_capture_summary": {
+    "fence": "2026-10-06T00:15:39Z",
+    "digest": "3a678ee015274bd9429a7c2b71361a9ecf7bd96f974fa291d203f731f67d5b52",
+    "natural_pods": [
+      "verdify-lab-publisher-29854100-dxmcr",
+      "verdify-lab-publisher-29854110-5dgvw",
+      "verdify-lab-publisher-29854120-5g98g"
+    ],
+    "streams": [
+      {
+        "pod": "verdify-lab-publisher-29854100-dxmcr",
+        "container": "prepare-private-work-root",
+        "exit_code": 0
+      },
+      {
+        "pod": "verdify-lab-publisher-29854100-dxmcr",
+        "container": "publisher",
+        "exit_code": 0
+      },
+      {
+        "pod": "verdify-lab-publisher-29854110-5dgvw",
+        "container": "prepare-private-work-root",
+        "exit_code": 0
+      },
+      {
+        "pod": "verdify-lab-publisher-29854110-5dgvw",
+        "container": "publisher",
+        "exit_code": 0
+      },
+      {
+        "pod": "verdify-lab-publisher-29854120-5g98g",
+        "container": "prepare-private-work-root",
+        "exit_code": 0
+      },
+      {
+        "pod": "verdify-lab-publisher-29854120-5g98g",
+        "container": "publisher",
+        "exit_code": 0
+      }
+    ]
+  },
+  "custody": "Full original init/main logs and Pod/Job metadata retained privately; published fixed timing lines and original-byte SHA256 checksums."
+}
