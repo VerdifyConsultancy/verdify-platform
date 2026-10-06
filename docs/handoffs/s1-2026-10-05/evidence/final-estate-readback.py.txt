@@ -1,0 +1,50 @@
+#!/usr/bin/env python3
+"""Read-only final sprint proof; emit whitelisted metadata, never Secret data."""
+import datetime
+import json
+import subprocess
+from pathlib import Path
+
+ROOT = Path('/Users/jason/maintenance/verdify-s1-20261005')
+PRIOR = json.loads((ROOT / 'sync-9b4f8023839f/verified-source325-release-receipt.json').read_text())
+
+
+def kube(ns, *args):
+    return subprocess.check_output(['kubectl', '--context', 'vallery', '-n', ns, *args], text=True)
+
+
+def obj(ns, kind, name):
+    return json.loads(kube(ns, 'get', kind, name, '-o', 'json'))
+
+
+app = obj('argocd', 'application', 'verdify-prod-dark')
+pods = json.loads(kube('verdify-prod', 'get', 'pods', '-o', 'json'))['items']
+runtime = []
+for p in pods:
+    if p['metadata'].get('deletionTimestamp') or not any(r['kind'] == 'ReplicaSet' for r in p['metadata'].get('ownerReferences', [])) or not any(p['metadata']['name'].startswith(x + '-') for x in ('verdify-api', 'verdify-mcp', 'verdify-ingestor')):
+        continue
+    runtime.append({'name': p['metadata']['name'], 'uid': p['metadata']['uid'], 'node': p['spec']['nodeName'], 'ip': p['status'].get('podIP'), 'images': [{'name': c['name'], 'image_id': c.get('imageID'), 'ready': c['ready'], 'restarts': c['restartCount']} for c in p['status'].get('containerStatuses', [])]})
+assert len(runtime) == 5, runtime
+assert all(c['ready'] for p in runtime for c in p['images']), 'unready runtime'
+prior_images = {c['name']: c['image_id'] for p in PRIOR['runtime_pods'] for c in p['images']}
+assert all(c['image_id'] == prior_images[c['name']] for p in runtime for c in p['images']), 'runtime image changed'
+writer_pods = [p for p in runtime if p['name'].startswith('verdify-ingestor-')]
+assert len(writer_pods) == 1 and writer_pods[0]['uid'] == '237002d4-5fb9-450f-8fe2-e266c969a1e1'
+assert all(c['restarts'] == 0 for c in writer_pods[0]['images']), 'writer restarted'
+assert sum(p['name'].startswith('verdify-api-') for p in runtime) == 2
+assert sum(p['name'].startswith('verdify-mcp-') for p in runtime) == 2
+writer = obj('verdify-prod', 'deployment', 'verdify-ingestor')
+assert writer['spec']['replicas'] == 1 and writer['spec']['strategy']['type'] == 'Recreate'
+protected = []
+for expected in PRIOR['protected_objects_unchanged']:
+    actual = obj('verdify-prod', expected['kind'], expected['name'])
+    record = {'kind': expected['kind'], 'name': expected['name'], 'uid': actual['metadata']['uid'], 'volume_name': actual['spec'].get('volumeName'), 'phase': actual['status'].get('phase')}
+    assert record == expected, ('protected identity changed', record)
+    protected.append(record)
+sql = "BEGIN READ ONLY; SELECT coalesce(json_agg(x ORDER BY seq),'[]'::json) FROM (SELECT seq,sha256,filename,stamp_method FROM public.schema_migrations WHERE source='db/migrations' AND seq BETWEEN 271 AND 274) x; COMMIT;"
+ledger = json.loads(kube('verdify-prod', 'exec', 'verdify-db-0', '--', 'psql', '-U', 'verdify', '-d', 'verdify', '-Atq', '-c', sql).strip())
+assert ledger == PRIOR['ledger'], 'migration ledger changed'
+assert app['status']['sync']['status'] == 'Synced' and app['status']['health']['status'] == 'Healthy'
+receipt = {'captured_at': datetime.datetime.now(datetime.timezone.utc).isoformat(), 'read_only': True, 'application': {'sync': app['status']['sync']['status'], 'health': app['status']['health']['status'], 'revision': app['status']['sync']['revision'], 'path': app['spec']['source']['path'], 'target_revision': app['spec']['source']['targetRevision']}, 'runtime_pods': runtime, 'writer': {'replicas': writer['spec']['replicas'], 'strategy': writer['spec']['strategy']['type']}, 'protected_objects': protected, 'ledger': ledger}
+(ROOT / 'final-estate-readback.json').write_text(json.dumps(receipt, indent=2) + '\n')
+print(json.dumps({'captured_at': receipt['captured_at'], 'application': receipt['application'], 'runtime_pods': len(runtime), 'protected_objects': len(protected), 'ledger_sequences': [x['seq'] for x in ledger], 'writer': receipt['writer']}))

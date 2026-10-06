@@ -205,7 +205,7 @@
         "db/migrations",
         "research/planner-efficacy"
       ],
-      "baseline": "October 5, 2026 execution update: #778 closed at 20:00:39 UTC on the permitted fail-closed investigation disposition. Published v4 reproduces 271 joined actions and 199 vent-interlock refusals from twelve hashed typed exports; earlier versions remain immutable. The source-backed vent-survival correction and regression evidence do not qualify binary or physical wetting rails. #749 retains wetting_incident_778_disposition=false and its physical-proof prerequisite. See research/planner-efficacy/wetting-incident-2026-09-04-disposition-v4.md and issue #749 comment 6001965453.",
+      "baseline": "October 5 S1 acceptance: the permitted fail-closed investigation disposition reproduces 271 joined actions and 199 vent-interlock refusals from twelve hashed typed exports. Earlier versions and source-backed regression evidence remain immutable. No 600-gallon exhausted-budget or physical wetting-rail qualification is claimed. Closed at 20:00:39 UTC. #749 retains its false wetting-disposition prerequisite and physical-proof hold. See research/planner-efficacy/wetting-incident-2026-09-04-disposition-v4.md.",
       "delivery": "Deliver a reviewed source/data-contract PR and immutable, redacted input/output hashes. Reproduce in a clean environment; analysis alone changes no live settings. Publish conclusions with eligibility and scope.",
       "rollback": "Keep original extraction and definitions immutable; supersede with a new version and compare hashes. Never rewrite locked assignments, outcomes or an earlier analysis to improve a result.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -241,7 +241,7 @@
         "scripts",
         "verdify_schemas"
       ],
-      "baseline": "October 6 UTC S1 acceptance: source325 API/MCP/migrate runs at full127-resource revision9b4f8023, Synced/Healthy. Forward274 is ledgered at exact0b939df1 hash;271\u2013273 hashes and protected objects are unchanged. Genuine SQL\u2192HTTP API/FastMCP/public/planning fixtures distinguish2.1% physical compliance from85.8% attributable credit. Live current/historical SQL/API/both MCP/Iris/public agree, with zero production physical rows and explicit unavailability. Closed01:15:56 UTC. Retain274/new C0 bootstrap/migrate548 on rollback; re-pin API/MCP only. See docs/handoffs/s1-2026-10-05/physical-reader-371-acceptance.md.",
+      "baseline": "October 6 UTC S1 acceptance: source325 API/MCP/migrate was promoted through full revision9b4f sync and forward migration274. Prior applied hashes and protected objects are unchanged. Qualified SQL/API/MCP/public/planning fixtures separate 2.1% physical compliance from 85.8% attribution credit. Actual current/historical SQL, both MCP replicas, API, Iris and public projections agree; production physical rows remain zero and unavailable. Closed at 01:15:56 UTC. Retain274/bootstrap/migrate548 on rollback; re-pin API/MCP only. See docs/handoffs/s1-2026-10-05/physical-reader-371-acceptance.md.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -276,7 +276,7 @@
         "ingestor/tasks",
         "scripts"
       ],
-      "baseline": "October 6 UTC S1 acceptance: six temperature/VPD low/high/target series have source, canonical\u00b0F/kPa, getter/setter grids, original two48-field callback epochs, generation and timestamp lineage. The historical0% report is resolved as a reporting defect; the September4 physical discrepancy remains unobservable. Ideal SQL residuals are not independent wire proof; #749 remains fail closed. Closed00:30:34 UTC. See docs/handoffs/s1-2026-10-05/band-lineage-424-acceptance.md.",
+      "baseline": "October 6 UTC S1 acceptance: six band fields are mapped through served, consumed and raw-readback lineage with units, grids, timestamps, generation and original48-field callbacks. The historical zero-percent reporting defect is resolved; the September4 physical discrepancy remains unobservable. Current ideal SQL diagnostics are explicitly separated from native wire and physical proof. Closed at 00:30:34 UTC. See docs/handoffs/s1-2026-10-05/band-lineage-424-acceptance.md.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -2951,7 +2951,7 @@
         "ingestor/tasks/dispatcher.py",
         "tests"
       ],
-      "baseline": "2026-10-04T21:09:43\u20132026-10-05T19:01:12 bounded 16,000-line log: 260 blocked_broad_restore records. Latest 18:58:59Z has command_count=21, limit=12, connection generation9. At 18:00:02Z a stage was refused because fog_escalation_kpa snapshot did not match the connection. 85 writes confirmed over24h; no failed24h delivery rows. Sole Recreate writer digest4c5fa5d\u2026b664/sourcee91b2a7d; independent socket oracle exactly1. Newly identified; implementation and live acceptance remain open.",
+      "baseline": "October 6 UTC S1 acceptance: source81 writer completed a genuine eight-field Iris plan transition with bounded confirmed commands and explicit guardrail exceptions. The original exact-source interval passed 7,209.36 seconds, 118 samples and zero errors; all 59 interval requests confirmed. Seven snapshot-lag holds have safe dispositions. Cap 12, terminal failure history and single Recreate writer remain intact. The fresh eight-host census found exactly one expected ESP32 connection. Closed at 02:44:31 UTC. See docs/handoffs/s1-2026-10-05/ordinary-policy-949-acceptance.md.",
       "delivery": "Deliver the smallest owner-lane repair through existing exact-source build/pins/reconciliation when needed; verify actual natural behavior and retained rollback identities. Estimate: 16 engineering hours.",
       "rollback": "Preserve old source/digest/config and failed attempts; restore the exact prior contract if the change regresses service. Never remove evidence just to clear an alert.",
       "decision": "Triage and planning perform no device writes, OTA, experiment launch, database cutover or unsolicited credential rotation."
@@ -2984,7 +2984,7 @@
         "ingestor/tasks",
         "deploy/k8s"
       ],
-      "baseline": "October 6 UTC S1 acceptance: the existing Iris Slack identity is readable at the declared credential-file path, with bounded retries preserved. A controlled alert and exactly one natural midnight brief (DB31, Slack1791244839.494799) were independently verified. Closed00:13:08 UTC. See docs/handoffs/s1-2026-10-05/operator-950-951-acceptance.md; no token values or rotation are published.",
+      "baseline": "October 6 UTC S1 acceptance: the source-rendered Slack credential-file contract matches the running writer and preserves the existing secret identity. A controlled alert and exactly one natural evening brief were independently verified; retry behavior is bounded. Closed at 00:13:08 UTC. See docs/handoffs/s1-2026-10-05/operator-950-951-acceptance.md.",
       "delivery": "Deliver the smallest owner-lane repair through existing exact-source build/pins/reconciliation when needed; verify actual natural behavior and retained rollback identities. Estimate: 8 engineering hours.",
       "rollback": "Preserve old source/digest/config and failed attempts; restore the exact prior contract if the change regresses service. Never remove evidence just to clear an alert.",
       "decision": "Triage and planning perform no device writes, OTA, experiment launch, database cutover or unsolicited credential rotation."
@@ -3016,7 +3016,7 @@
         "scripts/frigate-snapshot.py",
         "deploy/k8s/vision"
       ],
-      "baseline": "October 6 UTC S1 acceptance: natural vision Job29854080 captured two fresh authenticated TLS JPEGs with18:00:12/13 MDT overlays and completed analyses723/724. The actual go2rtc live-keyframe route has no cached preview fallback; producer counters advance and failures remain nonzero. Closed00:13:09 UTC; historical failed Jobs remain preserved. See docs/handoffs/s1-2026-10-05/operator-950-951-acceptance.md.",
+      "baseline": "October 6 UTC S1 acceptance: both cameras supplied fresh valid authenticated HTTPS images and natural Job 29854080 completed analyses 723/724. The live keyframe route avoids cached-preview replay; unauthenticated access remains denied. Closed at 00:13:09 UTC. See docs/handoffs/s1-2026-10-05/operator-950-951-acceptance.md.",
       "delivery": "Deliver the smallest owner-lane repair through existing exact-source build/pins/reconciliation when needed; verify actual natural behavior and retained rollback identities. Estimate: 8 engineering hours.",
       "rollback": "Preserve old source/digest/config and failed attempts; restore the exact prior contract if the change regresses service. Never remove evidence just to clear an alert.",
       "decision": "Triage and planning perform no device writes, OTA, experiment launch, database cutover or unsolicited credential rotation."
@@ -3047,7 +3047,7 @@
       "paths": [
         "deploy/k8s/components/grafana"
       ],
-      "baseline": "October 5 UTC S1 acceptance: the least-scope Grafana Viewer identity and PVC/SQLite state survived actual pod replacement. Protected200, anonymous401 and admin403 were verified from both vantages before and after replacement; account/PVC identity stayed unchanged and probes recovered. Closed22:18:25 UTC. See docs/handoffs/s1-2026-10-05/grafana-952-acceptance.md.",
+      "baseline": "October 5 S1 acceptance: the durable Grafana Viewer identity and SQLite/PVC state survived actual pod replacement. Protected access returned 200, anonymous access 401 and administrative access 403 from both probe vantages. Original credentials were preserved. Closed at 22:18:25 UTC. See docs/handoffs/s1-2026-10-05/grafana-952-acceptance.md.",
       "delivery": "Deliver the smallest owner-lane repair through existing exact-source build/pins/reconciliation when needed; verify actual natural behavior and retained rollback identities. Estimate: 8 engineering hours.",
       "rollback": "Preserve old source/digest/config and failed attempts; restore the exact prior contract if the change regresses service. Never remove evidence just to clear an alert.",
       "decision": "Triage and planning perform no device writes, OTA, experiment launch, database cutover or unsolicited credential rotation."
@@ -3142,7 +3142,7 @@
         "scripts/prepare-lab-cache.sh",
         "deploy/k8s/components/lab-site/lab-publisher.yaml"
       ],
-      "baseline": "October 6 UTC S1 acceptance: exact source81/publisher3a natural00:20/30/40 runs completed410/420/410 seconds on600-second cadence, with one validation scan each and the original guards/TTL1200. The third served/success hash matches a fresh public generation. Mean413.3 seconds is36.7% below the retained653-second warm baseline. Closed00:48:59 UTC. See docs/handoffs/s1-2026-10-05/publisher-862-acceptance.md.",
+      "baseline": "October 6 UTC S1 acceptance: three natural source81/publisher3a runs completed in 410, 420 and 410 seconds on the unchanged ten-minute cadence, each with one validation scan and original freshness guards. Mean duration of 413.3 seconds is 36.7% below the retained 653-second warm baseline. Fresh served and success hashes matched. Closed at 00:48:59 UTC. See docs/handoffs/s1-2026-10-05/publisher-862-acceptance.md.",
       "delivery": "Bounded exact-source live receipt; see October5 acceptance matrix. Estimate:12 engineering hours.",
       "rollback": "Preserve snapshots, source/digests, alerts and publication receipts; do not remove evidence to fabricate health.",
       "decision": "Read-only triage performs no production deployment or device action."

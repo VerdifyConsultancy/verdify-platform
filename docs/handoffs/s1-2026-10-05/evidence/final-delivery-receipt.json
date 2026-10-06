@@ -1,0 +1,78 @@
+{
+  "captured_at": "2026-10-06T02:46:51.022224+00:00",
+  "operator": "Jason local Mac/iTerm ROOT session",
+  "goal_started_at": "2026-10-05T19:32:27Z",
+  "last_issue_closed_at": "2026-10-06T02:44:31Z",
+  "issues": [
+    {
+      "closedAt": "2026-10-05T22:18:25Z",
+      "number": 952,
+      "state": "CLOSED",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/952"
+    },
+    {
+      "closedAt": "2026-10-06T00:13:09Z",
+      "number": 951,
+      "state": "CLOSED",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/951"
+    },
+    {
+      "closedAt": "2026-10-06T00:13:08Z",
+      "number": 950,
+      "state": "CLOSED",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/950"
+    },
+    {
+      "closedAt": "2026-10-06T02:44:31Z",
+      "number": 949,
+      "state": "CLOSED",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/949"
+    },
+    {
+      "closedAt": "2026-10-06T00:48:59Z",
+      "number": 862,
+      "state": "CLOSED",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/862"
+    },
+    {
+      "closedAt": "2026-10-05T20:00:39Z",
+      "number": 778,
+      "state": "CLOSED",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/778"
+    },
+    {
+      "closedAt": "2026-10-06T00:30:34Z",
+      "number": 424,
+      "state": "CLOSED",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/424"
+    },
+    {
+      "closedAt": "2026-10-06T01:15:56Z",
+      "number": 371,
+      "state": "CLOSED",
+      "url": "https://github.com/VerdifyConsultancy/verdify-platform/issues/371"
+    }
+  ],
+  "planning_validation": {
+    "schema_coverage_DAG": "passed",
+    "issues": 85,
+    "stages": 9,
+    "dependency_edges": 75,
+    "generated_views": 7,
+    "focused_tests": 21,
+    "exit_code": 0
+  },
+  "documentation_delivery": {
+    "runtime_render_equal_qualified_revision9b": true,
+    "render_sha256": "ae1b412dcd7c35d488b51973c97e321780762c75df2d8bd98361d6ace9aa9573",
+    "diff_readback": "passed",
+    "local_handoff_links": "passed",
+    "current_main_required_status_checks": null,
+    "current_main_required_pull_request_reviews": null,
+    "branch_rules": []
+  },
+  "protected_estate": "final-estate-readback.json",
+  "final_policy": "949-source81/steady-terminal-receipt.json",
+  "final_census": "949-source81/fleet-esp32-source81-final-readonly-receipt-20261006.json",
+  "external_limit": "Production qualified physical rows remain zero; #749 remains fail-closed."
+}
