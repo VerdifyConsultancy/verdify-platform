@@ -161,7 +161,7 @@ async def qualify(args):
         await run("SET LOCAL statement_timeout='30s'")
         await run("SET LOCAL lock_timeout='5s'")
         rows, _count = await run(
-            "SELECT current_user,session_user,current_database(),inet_server_addr()::text AS server_addr,current_setting('search_path') AS search_path,current_setting('transaction_read_only') AS transaction_read_only,(SELECT oid::bigint FROM pg_database WHERE datname=current_database()) AS database_oid,current_setting('cluster_name') AS cluster_name,pg_is_in_recovery() AS replica,current_setting('server_version_num') AS server_version_num"
+            "SELECT current_user,session_user,current_database(),pg_catalog.host(inet_server_addr()) AS server_addr,current_setting('search_path') AS search_path,current_setting('transaction_read_only') AS transaction_read_only,(SELECT oid::bigint FROM pg_database WHERE datname=current_database()) AS database_oid,current_setting('cluster_name') AS cluster_name,pg_is_in_recovery() AS replica,current_setting('server_version_num') AS server_version_num"
         )
         identity = rows[0]
         assert identity["current_user"] == identity["session_user"] == login
