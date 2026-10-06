@@ -69,6 +69,7 @@ BEGIN
     OR current_user<>session_user OR current_setting('cluster_name')<>'{p.SOURCE}'
     OR current_setting('server_version_num')::int<>160013 OR pg_is_in_recovery()
     OR current_setting('synchronous_commit')<>'on'
+    OR current_setting('wal_segment_size')<>'16MB'
     OR inet_client_addr() IS NULL OR inet_server_addr()<>'{ip}'::inet
     OR clock_timestamp()<='{status["stoppedAt"]}'::timestamptz
     OR (SELECT oid FROM pg_database WHERE datname=current_database())<>16385
