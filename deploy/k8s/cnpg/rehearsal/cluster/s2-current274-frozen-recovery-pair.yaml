@@ -1,0 +1,151 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: verdify-cnpg-s2-pitr-a-frozen
+  namespace: verdify-db-rehearsal
+  labels: &id001
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: cnpg-rehearsal
+  annotations:
+    verdify.ai/pitr-source-cluster-uid: 4f697776-df25-4e22-b930-0b76cf35496e
+    verdify.ai/pitr-source-backup-uid: 8e3c2874-f16c-4ca2-b85d-09629910ac64
+spec:
+  instances: 3
+  imageName: registry.vallery.net/verdifyconsultancy/verdify-timescaledb-cnpg:16.13-ts2.25.2@sha256:8b461e37d18aa049704eb6a9cde2ba9af0f955f8d3725e921070d2450bb2f137
+  env:
+  - name: VERDIFY_REHEARSAL_POD_UID
+    valueFrom:
+      fieldRef:
+        fieldPath: metadata.uid
+  imagePullSecrets:
+  - name: zot-origin-cluster-pull
+  enableSuperuserAccess: false
+  inheritedMetadata:
+    labels: *id001
+  postgresql:
+    shared_preload_libraries:
+    - timescaledb
+    - pg_stat_statements
+    parameters:
+      shared_buffers: 256MB
+      max_worker_processes: '32'
+      synchronous_commit: 'on'
+      timescaledb.telemetry_level: 'off'
+      timescaledb.max_background_workers: '0'
+    synchronous:
+      method: any
+      number: 1
+      dataDurability: required
+      failoverQuorum: true
+  storage:
+    size: 20Gi
+    storageClass: longhorn-v1-rwo
+  walStorage:
+    size: 5Gi
+    storageClass: longhorn-v1-rwo
+  affinity:
+    enablePodAntiAffinity: true
+    podAntiAffinityType: required
+    topologyKey: topology.vallery.net/proxmox-host
+    nodeSelector:
+      agentfleet.vallery.net/control-plane: 'false'
+      storage.vallery.net/longhorn: 'true'
+  resources:
+    requests:
+      cpu: 500m
+      memory: 2Gi
+    limits:
+      memory: 6Gi
+  bootstrap:
+    recovery:
+      source: original-rehearsal
+      database: rehearsal_bootstrap
+      owner: rehearsal_bootstrap
+      recoveryTarget:
+        backupID: 20261006T052358
+        targetTime: '2026-10-06T05:38:19.208619+00:00'
+        targetTLI: '1'
+        exclusive: false
+  externalClusters:
+  - name: original-rehearsal
+    plugin:
+      name: barman-cloud.cloudnative-pg.io
+      parameters:
+        barmanObjectName: verdify-cnpg-pitr-reader
+        serverName: verdify-cnpg-s2
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: verdify-cnpg-s2-pitr-b-frozen
+  namespace: verdify-db-rehearsal
+  labels: &id001
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: cnpg-rehearsal
+  annotations:
+    verdify.ai/pitr-source-cluster-uid: 4f697776-df25-4e22-b930-0b76cf35496e
+    verdify.ai/pitr-source-backup-uid: 8e3c2874-f16c-4ca2-b85d-09629910ac64
+spec:
+  instances: 3
+  imageName: registry.vallery.net/verdifyconsultancy/verdify-timescaledb-cnpg:16.13-ts2.25.2@sha256:8b461e37d18aa049704eb6a9cde2ba9af0f955f8d3725e921070d2450bb2f137
+  env:
+  - name: VERDIFY_REHEARSAL_POD_UID
+    valueFrom:
+      fieldRef:
+        fieldPath: metadata.uid
+  imagePullSecrets:
+  - name: zot-origin-cluster-pull
+  enableSuperuserAccess: false
+  inheritedMetadata:
+    labels: *id001
+  postgresql:
+    shared_preload_libraries:
+    - timescaledb
+    - pg_stat_statements
+    parameters:
+      shared_buffers: 256MB
+      max_worker_processes: '32'
+      synchronous_commit: 'on'
+      timescaledb.telemetry_level: 'off'
+      timescaledb.max_background_workers: '0'
+    synchronous:
+      method: any
+      number: 1
+      dataDurability: required
+      failoverQuorum: true
+  storage:
+    size: 20Gi
+    storageClass: longhorn-v1-rwo
+  walStorage:
+    size: 5Gi
+    storageClass: longhorn-v1-rwo
+  affinity:
+    enablePodAntiAffinity: true
+    podAntiAffinityType: required
+    topologyKey: topology.vallery.net/proxmox-host
+    nodeSelector:
+      agentfleet.vallery.net/control-plane: 'false'
+      storage.vallery.net/longhorn: 'true'
+  resources:
+    requests:
+      cpu: 500m
+      memory: 2Gi
+    limits:
+      memory: 6Gi
+  bootstrap:
+    recovery:
+      source: original-rehearsal
+      database: rehearsal_bootstrap
+      owner: rehearsal_bootstrap
+      recoveryTarget:
+        backupID: 20261006T052358
+        targetTime: '2026-10-06T05:38:19.219172+00:00'
+        targetTLI: '1'
+        exclusive: false
+  externalClusters:
+  - name: original-rehearsal
+    plugin:
+      name: barman-cloud.cloudnative-pg.io
+      parameters:
+        barmanObjectName: verdify-cnpg-pitr-reader
+        serverName: verdify-cnpg-s2
