@@ -53,6 +53,6 @@ No firmware OTA, pilot activation, production database cutover, storage mutation
 
 Use the [paste-ready local ROOT goal](GOAL.md) to begin execution. This review only carves off the sprint. Full delivery requires enforced checks, merged source, exact running digests, successful appropriate migrations/hooks, authoritative product behavior and issue-specific recovery evidence. CI, manifests, synthetic fixtures and backup success have distinct proof limits. Do not close partial acceptance or relabel unavailable physical evidence.
 
-The planning renderer and published schema validate every campaign node, source path, dependency and generated view. Native milestone members and relevant issue comments are read back after publication; [publication receipt](publication-receipt.json) records verified IDs and hashes. Preserve the existing two draft PRs and unrelated worktrees.
+The planning renderer and published schema validate every campaign node, source path, dependency and generated view. Native milestone members and relevant issue comments are read back after publication; [publication receipt](publication-receipt.json) records verified IDs and hashes; [remote custody](remote-publication-receipt.json) verifies every published file and current native sprint membership. Preserve the existing two draft PRs and unrelated worktrees.
 
 Criteria provenance: 181 literal issue-body acceptance checkboxes and 7 retained reviewer-derived bug/Verify conditions for #317/#801/#802; those issues have no Acceptance checkbox section.

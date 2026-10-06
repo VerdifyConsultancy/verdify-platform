@@ -12,7 +12,7 @@ Original goal: **Do a full review of the platform, current issues, and then carv
 
 ## Acceptance passed
 
-The original review goal is accepted only after the full matrix, native sprint membership, all 63 status comments and source publication are read back. See publication-receipt.json and the remote publication receipt for exact evidence.
+The original review goal is accepted only after the full matrix, native sprint membership, all 63 status comments and source publication are read back. See [tracking publication receipt](publication-receipt.json) and [remote publication receipt](remote-publication-receipt.json) for exact evidence.
 
 Current operational checks passed: smoke 9/9, all 16 long-running workloads Ready, all 26 desired/live workload image specifications equal, production Argo Synced/Healthy, zero rendered Secrets, authenticated MCP inventory, both protected Grafana probes, current lab generation agreement and exactly one ESP32 connection across eight hosts/501 pinned namespaces. Planning validation passes coverage/schema/DAG/render checks and all 21 existing planning tests.
 

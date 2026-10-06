@@ -1,0 +1,110 @@
+{
+  "verified_at": "2026-10-06T03:47:26.054967+00:00",
+  "review_commit": "1e0f24e9b88854604517feb494e7b71c76c77014",
+  "remote_main_at_verification": "1e0f24e9b88854604517feb494e7b71c76c77014",
+  "remote_exact": true,
+  "remote_files": [
+    {
+      "path": "planning/README.md",
+      "git_blob": "443c449de660ab2f26bd865f1f6b08e300c9ac51",
+      "remote_exact": true
+    },
+    {
+      "path": "planning/backlog.yaml",
+      "git_blob": "4ef13b3156f03a5d4a0de0916cae30183879ce63",
+      "remote_exact": true
+    },
+    {
+      "path": "planning/issues_manifest.json",
+      "git_blob": "8846036b2679222f5b8559f289744edcf87611ff",
+      "remote_exact": true
+    },
+    {
+      "path": "planning/reviews/2026-10-06/GOAL.md",
+      "git_blob": "120ce38d485939e011ae796ef5787b9c766d365a",
+      "remote_exact": true
+    },
+    {
+      "path": "planning/reviews/2026-10-06/ISSUE-TRIAGE.md",
+      "git_blob": "abb642a29e4f8803f16e31212e1612ea0cb82b3b",
+      "remote_exact": true
+    },
+    {
+      "path": "planning/reviews/2026-10-06/NATIVE-DEPENDENCIES.md",
+      "git_blob": "da112302c6c7c1be38c92fbc83324a27bc09d65e",
+      "remote_exact": true
+    },
+    {
+      "path": "planning/reviews/2026-10-06/NEXT-SPRINT.md",
+      "git_blob": "fb12dcb22e06a5db65dc9a34938526a5c27f2d19",
+      "remote_exact": true
+    },
+    {
+      "path": "planning/reviews/2026-10-06/STATUS.md",
+      "git_blob": "1e6c0f1c88b2dec2044c063e7106ed0230e15835",
+      "remote_exact": true
+    },
+    {
+      "path": "planning/reviews/2026-10-06/artifact-sha256.json",
+      "git_blob": "4bab206e44c54ea56bb3875adc4adb85856b4586",
+      "remote_exact": true
+    },
+    {
+      "path": "planning/reviews/2026-10-06/cnpg-qualified-current.json",
+      "git_blob": "ced9a9fa6cd206e7e962e547be4ae26a442fd165",
+      "remote_exact": true
+    },
+    {
+      "path": "planning/reviews/2026-10-06/health-summary.json",
+      "git_blob": "c58c4720ef9092ec54596eca5272755fd8882ee2",
+      "remote_exact": true
+    },
+    {
+      "path": "planning/reviews/2026-10-06/image-comparison.json",
+      "git_blob": "b8fca3ac1356a18b022fab84148dc36e61e9778a",
+      "remote_exact": true
+    },
+    {
+      "path": "planning/reviews/2026-10-06/issue-triage.json",
+      "git_blob": "54beab15db601a6a6fb63da5164d8c282c7d7500",
+      "remote_exact": true
+    },
+    {
+      "path": "planning/reviews/2026-10-06/native-graph.json",
+      "git_blob": "91a2adac869be52c05d1f89b8f54ac5bcb31ac09",
+      "remote_exact": true
+    },
+    {
+      "path": "planning/reviews/2026-10-06/publication-receipt.json",
+      "git_blob": "05947afe38049eb947c06a58ff0f19d50128365c",
+      "remote_exact": true
+    },
+    {
+      "path": "planning/reviews/2026-10-06/telemetry-columns.json",
+      "git_blob": "aa6204cc3112edfc6b43c44c4d5d2a0279622c22",
+      "remote_exact": true
+    }
+  ],
+  "current_open_issues": 63,
+  "all_open_issue_status_comments_verified": "publication-receipt.json",
+  "s1_closed_8_of_8": true,
+  "s2_exact_members": [
+    49,
+    382,
+    396,
+    643,
+    644,
+    953
+  ],
+  "engineering_hours": 68,
+  "checks_passed": [
+    "schema coverage and DAG",
+    "seven generated views",
+    "21 planning tests",
+    "diff/readback",
+    "precommit JSON/YAML/conflict/private-key checks"
+  ],
+  "runtime_changed": false,
+  "nfs_changed": false,
+  "publication_history": "linear fast-forward; no branch-rule bypass warning"
+}
