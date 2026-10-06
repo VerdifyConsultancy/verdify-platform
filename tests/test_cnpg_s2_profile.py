@@ -57,3 +57,20 @@ def test_s2_runtime_emitter_has_fixed_cluster_and_original_module_is_independent
     assert "cluster_name')<>'verdify-cnpg-s2'" in sql
     assert "public.cnpg_qualified_runtime_receipts" in sql
     assert "runtime_ordinary_login_attestation_receipts" not in sql
+
+
+def test_current_count_time_profile_is_closed_and_preserves_original_module(tmp_path, monkeypatch):
+    import json
+
+    m = load("cnpg-s2-count-time")
+    original = load("cnpg-public-count-time-clock")
+    observation = "2026-10-06T03:58:39.426422+00:00"
+    assert m.emit_sql(observation) == m.emit_sql(observation)
+    assert original.profile()["version"] == "cnpg-public-count-time-source270-v1"
+    changed = m.current_profile()
+    changed["views"]["v_scorecard_climate_diagnostics"]["time_columns"] = []
+    artifact = tmp_path / "changed-current-clock.json"
+    artifact.write_text(json.dumps(changed))
+    monkeypatch.setattr(m, "PROFILE", artifact)
+    with pytest.raises(ValueError, match="closed current274"):
+        m.emit_sql(observation)
