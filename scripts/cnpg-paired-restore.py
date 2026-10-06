@@ -45,16 +45,17 @@ def kube(*args):
     return ["kubectl", "--context", "vallery", "-n", NS, *args]
 
 
-def target_identity(cluster, pod, *, cluster_uid, pod_uid):
+def target_identity(cluster, pod, *, cluster_uid, pod_uid, cluster_name=CLUSTER):
+    c0.require(cluster_name in (CLUSTER, "verdify-cnpg-s2"), "unsupported isolated restore profile")
     c0.require(
-        cluster["metadata"]["name"] == CLUSTER
+        cluster["metadata"]["name"] == cluster_name
         and cluster["metadata"]["namespace"] == NS
         and cluster["metadata"]["uid"] == cluster_uid,
         "cluster identity mismatch",
     )
     c0.require(cluster["spec"]["imageName"].endswith("@" + DIGEST), "unqualified operand")
     c0.require(pod["metadata"]["namespace"] == NS and pod["metadata"]["uid"] == pod_uid, "pod identity mismatch")
-    c0.require(pod["metadata"]["labels"].get("cnpg.io/cluster") == CLUSTER, "wrong cluster label")
+    c0.require(pod["metadata"]["labels"].get("cnpg.io/cluster") == cluster_name, "wrong cluster label")
     c0.require(
         any(o["kind"] == "Cluster" and o["uid"] == cluster_uid for o in pod["metadata"]["ownerReferences"]),
         "wrong pod owner",
@@ -67,9 +68,9 @@ def target_identity(cluster, pod, *, cluster_uid, pod_uid):
 
 
 def read_target(args):
-    cluster = json.loads(subprocess.check_output(kube("get", "cluster", CLUSTER, "-o", "json"), timeout=30))
+    cluster = json.loads(subprocess.check_output(kube("get", "cluster", args.cluster_name, "-o", "json"), timeout=30))
     pod = json.loads(subprocess.check_output(kube("get", "pod", args.pod, "-o", "json"), timeout=30))
-    target_identity(cluster, pod, cluster_uid=args.cluster_uid, pod_uid=args.pod_uid)
+    target_identity(cluster, pod, cluster_uid=args.cluster_uid, pod_uid=args.pod_uid, cluster_name=args.cluster_name)
     return {"cluster": cluster, "pod": pod}
 
 
@@ -97,6 +98,7 @@ def transaction_hash(value):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--cluster-name", choices=(CLUSTER, "verdify-cnpg-s2"), default=CLUSTER)
     parser.add_argument("--cluster-uid", required=True)
     parser.add_argument("--pod", required=True)
     parser.add_argument("--pod-uid", required=True)
@@ -145,7 +147,7 @@ def main():
             not args.role_prefix_current and not args.role_prefix_custody_sha256, "unexpected partial continuation"
         )
     c0.require(re.fullmatch(r"verdify-\d{8}T\d{6}Z", args.stem), "invalid pair identity")
-    c0.require(re.fullmatch(r"verdify-cnpg-rehearsal-[1-9]\d*", args.pod), "invalid rehearsal pod")
+    c0.require(re.fullmatch(re.escape(args.cluster_name) + r"-[1-9]\d*", args.pod), "invalid rehearsal pod")
     for uid in (args.cluster_uid, args.pod_uid):
         c0.require(re.fullmatch(r"[0-9a-f-]{36}", uid), "invalid UID")
     source, sha = c0.read_witness(args.source_witness)
