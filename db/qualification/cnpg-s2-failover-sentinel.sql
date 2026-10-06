@@ -11,7 +11,8 @@ BEGIN
     OR current_setting('cluster_name')<>'verdify-cnpg-s2-pitr-b-frozen'
     OR current_setting('server_version_num')::int<>160013
     OR current_setting('timescaledb.max_background_workers')<>'0'
-    OR current_setting('timescaledb.restoring')<>'off'
+    OR EXISTS(SELECT 1 FROM pg_extension WHERE extname='timescaledb')
+    OR coalesce(current_setting('timescaledb.restoring',true),'off')<>'off'
     OR pg_is_in_recovery() OR inet_client_addr() IS NOT NULL
     OR current_user<>session_user OR current_user<>'rehearsal_bootstrap'
     OR to_regclass('public.cnpg_s2_failover_20261006') IS NOT NULL THEN

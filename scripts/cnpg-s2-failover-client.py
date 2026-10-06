@@ -21,7 +21,8 @@ GUARD = f"""DO $failover_client_guard$ BEGIN
     OR current_setting('server_version_num')::int<>160013 OR pg_is_in_recovery()
     OR (SELECT oid FROM pg_database WHERE datname=current_database())<>16385
     OR current_setting('timescaledb.max_background_workers')<>'0'
-    OR current_setting('timescaledb.restoring')<>'off'
+    OR EXISTS(SELECT 1 FROM pg_extension WHERE extname='timescaledb')
+    OR coalesce(current_setting('timescaledb.restoring',true),'off')<>'off'
     OR current_setting('synchronous_commit')<>'on'
     OR inet_client_addr() IS NULL OR inet_server_port()<>5432
     OR (SELECT pg_get_userbyid(relowner) FROM pg_class WHERE oid='{TABLE}'::regclass)<>'rehearsal_bootstrap'
