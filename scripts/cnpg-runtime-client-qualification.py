@@ -41,7 +41,7 @@ valid_baked = len(baked) == 40 and all(c in '0123456789abcdef' for c in baked)
 valid_fallback = len(fallback) == 40 and all(c in '0123456789abcdef' for c in fallback)
 assert not (valid_baked and valid_fallback and baked != fallback)
 assert (baked if valid_baked else fallback if valid_fallback else '') == binding['consumer_source']
-assert os.environ['DB_HOST'] == 'verdify-cnpg-rehearsal-rw.verdify-db-rehearsal.svc.cluster.local'
+assert os.environ['DB_HOST'] == binding.get('target_host', 'verdify-cnpg-rehearsal-rw.verdify-db-rehearsal.svc.cluster.local')
 assert os.environ['DB_NAME'] == 'verdify_rehearsal'
 assert os.environ['VERDIFY_DEVICE_WRITE_ENABLED'] == '0'
 assert not any(os.environ.get(k) for k in ('POSTGRES_PASSWORD','DB_PASS','ESP32_API_KEY','DATABASE_URL'))
@@ -113,7 +113,7 @@ async def run():
                     pg_catalog.host(inet_server_addr()) AS backend_address, pg_is_in_recovery() AS replica"""))
                 assert identity['current_user'] == identity['session_user'] == login
                 assert identity['database'] == 'verdify_rehearsal' and identity['server_version'] == '160013'
-                assert identity['cluster_name'] == 'verdify-cnpg-rehearsal' and identity['replica'] is False
+                assert identity['cluster_name'] == binding.get('target_cluster', 'verdify-cnpg-rehearsal') and identity['replica'] is False
                 assert identity['backend_address'] == binding['primary_address']
                 assert identity['default_read_only'] == identity['transaction_read_only'] == 'on'
                 async with conn.transaction(readonly=True):
@@ -157,7 +157,16 @@ def require(ok, message):
         raise ValueError(message)
 
 
-def validate_binding(binding):
+def validate_binding(binding, target=CLUSTER):
+    require(target in {CLUSTER, "verdify-cnpg-s2"}, "unsupported target")
+    if target == "verdify-cnpg-s2":
+        spec = importlib.util.spec_from_file_location(
+            "restored_duty_binding", ROOT / "scripts/qualify-restored-runtime-duties.py"
+        )
+        adapter = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(adapter)
+        adapter.target_binding(json.dumps(binding).encode(), binding["cluster"]["metadata"]["uid"])
+        return hashlib.sha256(json.dumps(binding, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     require(set(binding) == {"cluster", "pod", "service"}, "exact native Cluster/Pod/Service binding required")
     cluster, pod, service = (binding[k] for k in ("cluster", "pod", "service"))
     spec = importlib.util.spec_from_file_location("qualified_restore", ROOT / "scripts/cnpg-paired-restore.py")
@@ -198,8 +207,9 @@ def validate_binding(binding):
     return hashlib.sha256(json.dumps(binding, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
-def render(binding, consumer, image, source, module_sha, profile_sha, suffix):
-    binding_sha = validate_binding(binding)
+def render(binding, consumer, image, source, module_sha, profile_sha, suffix, target=CLUSTER):
+    binding_sha = validate_binding(binding, target)
+    target_host = target + "-rw." + NS + ".svc.cluster.local"
     require(consumer in ROLES, "ordinary consumer required")
     require(
         re.fullmatch(r"registry\.vallery\.net/verdifyconsultancy/verdify-" + consumer + r"@sha256:[0-9a-f]{64}", image),
@@ -218,6 +228,8 @@ def render(binding, consumer, image, source, module_sha, profile_sha, suffix):
     )
     facts = {
         "consumer": consumer,
+        "target_host": target_host,
+        "target_cluster": target,
         "login": ROLES[consumer],
         "consumer_source": source,
         "consumer_image": image,
@@ -233,12 +245,12 @@ def render(binding, consumer, image, source, module_sha, profile_sha, suffix):
         "primary_address": binding["pod"]["status"]["podIP"],
         "hot_sql": hot_query(consumer),
     }
-    labels = {"app.kubernetes.io/part-of": "verdify", "app.kubernetes.io/component": "cnpg-runtime-qualification"}
+    labels = client_labels(target)
     env = [
         {"name": k, "value": v}
         for k, v in {
             "QUALIFICATION_BINDING": json.dumps(facts, sort_keys=True),
-            "DB_HOST": HOST,
+            "DB_HOST": target_host,
             "DB_PORT": "5432",
             "DB_NAME": DATABASE,
             "DB_USER": ROLES[consumer],
@@ -249,15 +261,17 @@ def render(binding, consumer, image, source, module_sha, profile_sha, suffix):
     env.append(
         {
             "name": "DB_PASSWORD",
-            "valueFrom": {
-                "secretKeyRef": {"name": "verdify-cnpg-rehearsal-" + consumer + "-client-auth", "key": "password"}
-            },
+            "valueFrom": {"secretKeyRef": {"name": target + "-" + consumer + "-client-auth", "key": "password"}},
         }
     )
     return {
         "apiVersion": "batch/v1",
         "kind": "Job",
-        "metadata": {"name": "cnpg-runtime-" + consumer + "-" + suffix, "namespace": NS, "labels": labels},
+        "metadata": {
+            "name": ("cnpg-s2-runtime-" if target == "verdify-cnpg-s2" else "cnpg-runtime-") + consumer + "-" + suffix,
+            "namespace": NS,
+            "labels": labels,
+        },
         "spec": {
             "backoffLimit": 0,
             "activeDeadlineSeconds": 180,
@@ -315,14 +329,24 @@ def hot_query(consumer):
     return matches[0]
 
 
-def policies():
-    client = {"app.kubernetes.io/part-of": "verdify", "app.kubernetes.io/component": "cnpg-runtime-qualification"}
-    database = {"cnpg.io/cluster": CLUSTER}
+def client_labels(target):
+    require(target in {CLUSTER, "verdify-cnpg-s2"}, "unsupported target")
+    labels = {"app.kubernetes.io/part-of": "verdify", "app.kubernetes.io/component": "cnpg-runtime-qualification"}
+    if target == "verdify-cnpg-s2":
+        labels["app.kubernetes.io/component"] = "cnpg-s2-runtime-qualification"
+        labels["verdify.ai/qualification-target"] = target
+    return labels
+
+
+def policies(target=CLUSTER):
+    client = client_labels(target)
+    database = {"cnpg.io/cluster": target}
+    prefix = "cnpg-s2-runtime-client" if target == "verdify-cnpg-s2" else "cnpg-runtime-client"
     return [
         {
             "apiVersion": "networking.k8s.io/v1",
             "kind": "NetworkPolicy",
-            "metadata": {"name": "cnpg-runtime-client-only", "namespace": NS},
+            "metadata": {"name": prefix + "-only", "namespace": NS},
             "spec": {
                 "podSelector": {"matchLabels": client},
                 "policyTypes": ["Ingress", "Egress"],
@@ -344,7 +368,7 @@ def policies():
         {
             "apiVersion": "networking.k8s.io/v1",
             "kind": "NetworkPolicy",
-            "metadata": {"name": "cnpg-runtime-client-ingress", "namespace": NS},
+            "metadata": {"name": prefix + "-ingress", "namespace": NS},
             "spec": {
                 "podSelector": {"matchLabels": database},
                 "policyTypes": ["Ingress"],
@@ -358,6 +382,7 @@ def policies():
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--target", choices=(CLUSTER, "verdify-cnpg-s2"), default=CLUSTER)
     parser.add_argument("--binding", type=Path, required=True)
     parser.add_argument("--binding-sha256", required=True)
     parser.add_argument("--consumer", choices=ROLES, required=True)
@@ -371,10 +396,17 @@ def main():
     raw = args.binding.read_bytes()
     require(hashlib.sha256(raw).hexdigest() == args.binding_sha256, "raw binding custody mismatch")
     job = render(
-        json.loads(raw), args.consumer, args.image, args.source, args.module_sha256, args.profile_sha256, args.suffix
+        json.loads(raw),
+        args.consumer,
+        args.image,
+        args.source,
+        args.module_sha256,
+        args.profile_sha256,
+        args.suffix,
+        args.target,
     )
     with args.output.open("x") as out:
-        json.dump({"apiVersion": "v1", "kind": "List", "items": [*policies(), job]}, out, indent=2)
+        json.dump({"apiVersion": "v1", "kind": "List", "items": [*policies(args.target), job]}, out, indent=2)
         out.write("\n")
 
 

@@ -103,6 +103,42 @@ def binding():
     }
 
 
+def test_s2_mode_binds_native_primary_and_exact_new_policy_secret_scope():
+    facts = binding()
+    target = "verdify-cnpg-s2"
+    facts["cluster"]["metadata"]["name"] = target
+    facts["cluster"]["status"]["currentPrimary"] = target + "-1"
+    facts["pod"]["metadata"]["name"] = target + "-1"
+    facts["pod"]["metadata"]["labels"]["cnpg.io/cluster"] = target
+    facts["pod"]["status"].update(phase="Running", conditions=[{"type": "Ready", "status": "True"}])
+    facts["service"]["metadata"]["name"] = target + "-rw"
+    facts["service"]["spec"]["selector"]["cnpg.io/cluster"] = target
+    job = client.render(
+        facts,
+        "api",
+        "registry.vallery.net/verdifyconsultancy/verdify-api@sha256:" + "a" * 64,
+        "b" * 40,
+        hashlib.sha256((ROOT / "api/main.py").read_bytes()).hexdigest(),
+        "d" * 64,
+        "20261006",
+        target,
+    )
+    labels = job["spec"]["template"]["metadata"]["labels"]
+    assert labels == {
+        "app.kubernetes.io/part-of": "verdify",
+        "app.kubernetes.io/component": "cnpg-s2-runtime-qualification",
+        "verdify.ai/qualification-target": target,
+    }
+    env = {e["name"]: e for e in job["spec"]["template"]["spec"]["containers"][0]["env"]}
+    assert env["DB_HOST"]["value"] == target + "-rw.verdify-db-rehearsal.svc.cluster.local"
+    assert env["DB_PASSWORD"]["valueFrom"]["secretKeyRef"]["name"] == target + "-api-client-auth"
+    assert json.loads(env["QUALIFICATION_BINDING"]["value"])["target_cluster"] == target
+    assert client.policies(target)[0]["spec"]["podSelector"]["matchLabels"] == labels
+    facts["service"]["metadata"]["ownerReferences"][0]["uid"] = "wrong-owner"
+    with pytest.raises(AssertionError):
+        client.validate_binding(facts, target)
+
+
 @pytest.mark.parametrize("role", list(client.ROLES))
 def test_actual_consumer_only_scoped_secret_readonly_and_no_service_loop(role):
     job = client.render(

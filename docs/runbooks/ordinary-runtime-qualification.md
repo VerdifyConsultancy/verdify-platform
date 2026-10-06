@@ -120,3 +120,13 @@ OID, cluster name, primary status and PostgreSQL16.13. A stale binding or failov
 fails closed; take a new authoritative readback instead of bypassing the check.
 The binding file remains evidence custody, not independent proof of admission;
 ROOT still compares the actual admission receipt and target before/after execution.
+
+For the API, ingestor and MCP actual source-native startup/pool checks, use
+`scripts/cnpg-runtime-client-qualification.py --target verdify-cnpg-s2` with
+the freshly read native binding and reviewed current image/source hashes.
+This closed mode preserves the historical default adapter, uses the three S2
+policy labels and only the separate `verdify-cnpg-s2-{api,ingestor,mcp}-client-auth`
+Secrets. It does not reuse historical namespace Secrets or start device/service
+loops. Do not reapply rendered policies when ROOT has already installed the
+identical source-owned policies; apply only reviewed Jobs. These pool startup
+checks complement intended duty DML and still do not prove whole-service rollback.
