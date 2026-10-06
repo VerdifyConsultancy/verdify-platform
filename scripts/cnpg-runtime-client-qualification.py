@@ -41,7 +41,7 @@ valid_baked = len(baked) == 40 and all(c in '0123456789abcdef' for c in baked)
 valid_fallback = len(fallback) == 40 and all(c in '0123456789abcdef' for c in fallback)
 assert not (valid_baked and valid_fallback and baked != fallback)
 assert (baked if valid_baked else fallback if valid_fallback else '') == binding['consumer_source']
-assert os.environ['DB_HOST'] == binding.get('target_host', 'verdify-cnpg-rehearsal-rw.verdify-db-rehearsal.svc.cluster.local')
+assert os.environ['DB_HOST'] == 'verdify-cnpg-rehearsal-rw.verdify-db-rehearsal.svc.cluster.local'
 assert os.environ['DB_NAME'] == 'verdify_rehearsal'
 assert os.environ['VERDIFY_DEVICE_WRITE_ENABLED'] == '0'
 assert not any(os.environ.get(k) for k in ('POSTGRES_PASSWORD','DB_PASS','ESP32_API_KEY','DATABASE_URL'))
@@ -113,7 +113,7 @@ async def run():
                     pg_catalog.host(inet_server_addr()) AS backend_address, pg_is_in_recovery() AS replica"""))
                 assert identity['current_user'] == identity['session_user'] == login
                 assert identity['database'] == 'verdify_rehearsal' and identity['server_version'] == '160013'
-                assert identity['cluster_name'] == binding.get('target_cluster', 'verdify-cnpg-rehearsal') and identity['replica'] is False
+                assert identity['cluster_name'] == 'verdify-cnpg-rehearsal' and identity['replica'] is False
                 assert identity['backend_address'] == binding['primary_address']
                 assert identity['default_read_only'] == identity['transaction_read_only'] == 'on'
                 async with conn.transaction(readonly=True):
@@ -207,6 +207,21 @@ def validate_binding(binding, target=CLUSTER):
     return hashlib.sha256(json.dumps(binding, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
+def wrapped_probe(target):
+    require(target in {CLUSTER, "verdify-cnpg-s2"}, "unsupported literal probe target")
+    if target == CLUSTER:
+        return WRAPPED_PROBE
+    old_host = "assert os.environ['DB_HOST'] == '" + HOST + "'"
+    old_cluster = "assert identity['cluster_name'] == '" + CLUSTER + "'"
+    require(PROBE.count(old_host) == PROBE.count(old_cluster) == 1, "original probe identity shape changed")
+    probe = PROBE.replace(
+        old_host, "assert os.environ['DB_HOST'] == 'verdify-cnpg-s2-rw." + NS + ".svc.cluster.local'", 1
+    )
+    probe = probe.replace(old_cluster, "assert identity['cluster_name'] == 'verdify-cnpg-s2'", 1)
+    require(WRAPPED_PROBE.count(repr(PROBE)) == 1, "original wrapped probe envelope changed")
+    return WRAPPED_PROBE.replace(repr(PROBE), repr(probe), 1)
+
+
 def render(binding, consumer, image, source, module_sha, profile_sha, suffix, target=CLUSTER):
     binding_sha = validate_binding(binding, target)
     target_host = target + "-rw." + NS + ".svc.cluster.local"
@@ -292,7 +307,7 @@ def render(binding, consumer, image, source, module_sha, profile_sha, suffix, ta
                         {
                             "name": "client",
                             "image": image,
-                            "command": ["python", "-I", "-c", WRAPPED_PROBE],
+                            "command": ["python", "-I", "-c", wrapped_probe(target)],
                             "env": env,
                             "securityContext": {
                                 "allowPrivilegeEscalation": False,
