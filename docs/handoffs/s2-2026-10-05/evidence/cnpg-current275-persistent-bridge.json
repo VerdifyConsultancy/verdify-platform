@@ -1,0 +1,119 @@
+{
+  "schema": "cnpg-current275-persistent-bridge-public-v1",
+  "complete": true,
+  "production_mutated": false,
+  "protected274_physical_pair_unchanged": true,
+  "source_sha256": "f4f8da110236461680f41770bad766a7e28b1a6db1982ecc632e93930a375dc4",
+  "complete_before_sha256": "6d896a5d41ac0fb65e3a0115c6b71798a0115c5fd8311a474246f903b49f0d7e",
+  "complete_post_sha256": "7089e3bc3df63d583d4e95c6f350b96e6ce889122bafc1865bfc68c4e5d76d8b",
+  "targets": {
+    "s2": {
+      "native": {
+        "schema": "cnpg-current275-native-persistent-bridge-v1",
+        "complete": true,
+        "binding": {
+          "cluster": "verdify-cnpg-s2",
+          "cluster_uid": "4f697776-df25-4e22-b930-0b76cf35496e",
+          "pod": "verdify-cnpg-s2-1",
+          "pod_uid": "6379db06-2bad-4c5b-9a50-86feac4651dc",
+          "operand_digest": "sha256:8b461e37d18aa049704eb6a9cde2ba9af0f955f8d3725e921070d2450bb2f137"
+        },
+        "source_sha256": "f4f8da110236461680f41770bad766a7e28b1a6db1982ecc632e93930a375dc4",
+        "execution_sql_sha256": "a8834b77f352ca49ac1339ed8131c74df8b14400070fa59c3d504998b85c5019",
+        "installation_sha256": "db20342e6b5966bc00ef87716ccfed15e03a78f741641798a1bc96015a16492e",
+        "independent_complete_post_sha256": "7089e3bc3df63d583d4e95c6f350b96e6ce889122bafc1865bfc68c4e5d76d8b",
+        "fresh_zero_ordinary_clients": true,
+        "exact_config_two_canonical_receipts_one_ledger_delta": true,
+        "new_native_admission_installed": false,
+        "credentials_changed": false
+      },
+      "full_copy": {
+        "complete": true,
+        "full951_only_two_canonical_receipts_plus_one_ledger_row": true,
+        "row_count": 9699550,
+        "native_stdout_sha256": "6e2b7886f020f46d3ba64d396ce9dadb96ecb13933200dde81c59c3079d06cc3",
+        "native_stdout_bytes": 2457973269,
+        "compact_receipt_sha256": "01b21850eb18ecd0ebdbef61faf4c6c259ebf2d469ae96390445ee9c457d0d71",
+        "input_sha256": {
+          "capture.sql": "a42d2fd970a2e53ff5ea4dfb2cf43958643107b4f8d2c93be2c5c0c717fb11b6",
+          "headers.json": "d439f890cdd56231c1b76387e400838db90b72665395d4c0cc08d55063a78f59",
+          "receipt.py": "297f733c4923d98e40fad807aea54cdd045bc783a40c43b6f58a1f39eb3b3294"
+        },
+        "elapsed_seconds": 76.46731091701076,
+        "remote_private_directory": "/controller/run/cnpg-copy275-s2postpersistent-native-20261006-once"
+      },
+      "all77_sequences_exact": true,
+      "all_three_historical274_receipt_rows_exact": true,
+      "native_data_relations": 951,
+      "native_before_rows": 9699549,
+      "native_post_rows": 9699550,
+      "other949_rowsets_exact": true,
+      "only_modified_relations": [
+        "public.runtime_ordinary_login_attestation_receipts",
+        "public.schema_migrations"
+      ],
+      "receipt_captured_at_native_clock_change_expected": true,
+      "allowed_catalog_delta": "Only lighting function jit=off; all other pg_proc fields unchanged",
+      "private_custody": "current275-native-persistent-s2-once"
+    },
+    "b": {
+      "native": {
+        "schema": "cnpg-current275-native-persistent-bridge-v1",
+        "complete": true,
+        "binding": {
+          "cluster": "verdify-cnpg-s2-pitr-b-frozen",
+          "cluster_uid": "3981d0f2-4c72-48ac-9e09-826fe6bd4ed6",
+          "pod": "verdify-cnpg-s2-pitr-b-frozen-1",
+          "pod_uid": "b8288ef5-ca89-4bb5-85e5-ce71dd27bbec",
+          "operand_digest": "sha256:8b461e37d18aa049704eb6a9cde2ba9af0f955f8d3725e921070d2450bb2f137"
+        },
+        "source_sha256": "f4f8da110236461680f41770bad766a7e28b1a6db1982ecc632e93930a375dc4",
+        "execution_sql_sha256": "fce8ee6c293e1f435275a245b5286c31f917459ce239d4aab687124cdb8eb01b",
+        "installation_sha256": "96d46e2252b4df63a467e4c446e98ef711b1d5b69affe19ebb79f4bd4df9f347",
+        "independent_complete_post_sha256": "7089e3bc3df63d583d4e95c6f350b96e6ce889122bafc1865bfc68c4e5d76d8b",
+        "fresh_zero_ordinary_clients": true,
+        "exact_config_two_canonical_receipts_one_ledger_delta": true,
+        "new_native_admission_installed": false,
+        "credentials_changed": false
+      },
+      "full_copy": {
+        "complete": true,
+        "full951_only_two_canonical_receipts_plus_one_ledger_row": true,
+        "row_count": 9699550,
+        "native_stdout_sha256": "71efefd01165b2481daacd2f9efda1d60a2f711271cedcbd2358bdeff4f66749",
+        "native_stdout_bytes": 2457973269,
+        "compact_receipt_sha256": "2deea921872fd6ce506c3991180f692745bbf8e11a3f2e26212bfc668d8f469b",
+        "input_sha256": {
+          "capture.sql": "a42d2fd970a2e53ff5ea4dfb2cf43958643107b4f8d2c93be2c5c0c717fb11b6",
+          "headers.json": "d439f890cdd56231c1b76387e400838db90b72665395d4c0cc08d55063a78f59",
+          "receipt.py": "297f733c4923d98e40fad807aea54cdd045bc783a40c43b6f58a1f39eb3b3294"
+        },
+        "elapsed_seconds": 120.09212041700084,
+        "remote_private_directory": "/controller/run/cnpg-copy275-bpostpersistent-native-20261006-once"
+      },
+      "all77_sequences_exact": true,
+      "all_three_historical274_receipt_rows_exact": true,
+      "native_data_relations": 951,
+      "native_before_rows": 9699549,
+      "native_post_rows": 9699550,
+      "other949_rowsets_exact": true,
+      "only_modified_relations": [
+        "public.runtime_ordinary_login_attestation_receipts",
+        "public.schema_migrations"
+      ],
+      "receipt_captured_at_native_clock_change_expected": true,
+      "allowed_catalog_delta": "Only lighting function jit=off; all other pg_proc fields unchanged",
+      "private_custody": "current275-native-persistent-b-rebound-once"
+    }
+  },
+  "preserved_preflight_failure": {
+    "path": "current275-native-persistent-b-once/preflight-failure.json",
+    "no_sql_dispatched": true,
+    "native_event": "07:18:23 SwitchingOver: old primary on unschedulable vm-k3s-node7",
+    "new_primary_since": "2026-10-06T07:18:25.576308Z",
+    "new_timeline": 4,
+    "no_node_changes_by_this_lane": true
+  },
+  "persistent_native275_admission": false,
+  "credentials_changed": false
+}

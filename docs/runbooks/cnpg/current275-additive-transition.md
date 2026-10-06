@@ -108,3 +108,36 @@ Admission uses the same witness/qualification options and `--copied-rows` contai
 all three independently read old274 target receipt rows. Its before witness is the
 qualified275 bridge post. Generated SQL is source preparation; actual native
 execution, compact row receipts and pool behavior establish acceptance.
+
+## Actual additive execution custody, 2026-10-06
+
+Both reviewed bridges were committed once and independently resealed to the exact
+7089e3bc… complete witness. Native full951 scans on each target contain9,699,550
+rows:949 existing rowsets remain exact, the two-row canonical ordinary receipt
+relation changes only its reviewed hashes/captured_at, and the ledger gains the
+one exact275 row. All77 sequences and the old three-row274 admission table remain
+exact. The protected274 Backup, frozenA and historical qualification artifacts
+were not rewritten or repeated. See
+[`cnpg-current275-persistent-bridge.json`](../../handoffs/s2-2026-10-05/evidence/cnpg-current275-persistent-bridge.json).
+
+FrozenB's initial dispatch preflight stopped before any SQL: CNPG had switched
+from its unschedulable node7 primary to primary-1 at07:18:25Z, timeline4. The
+native event and failed preflight were preserved. A separately coordinated
+wrapper-only rebind verified the same ClusterUID/image, unchanged RWServiceUID,
+3Ready, complete274 witness, all77 sequences and zero ordinary clients, then
+used the original unchanged fce8ee6c… SQL once. No node or host change was made
+by this lane. The prior measured timeline2→3 primary-Pod-loss drill remains a
+separate historical event.
+
+Both new275 admission stages then passed separate native ROLLBACK qualification,
+including exact generated helper bodies/table posture and complete catalog delta:
+only two attester replacements plus10 new-table catalog objects. Independent
+after-rollback witnesses equal the committed275 bridge witness; all77 sequences
+and old274 rows remain exact. S2's local wrapper initially misread the helper's
+DDL tuple after nativeSQL had already succeeded and rolled back. That failure
+was preserved; the retained native output was validated without SQL replay. See
+[`cnpg-current275-native-admission-rollback.json`](../../handoffs/s2-2026-10-05/evidence/cnpg-current275-native-admission-rollback.json).
+
+These admission results qualify installation payloads, not authenticated client
+readiness. Persistent admission installation, target credentials, all-nine plus
+collector actual clients and ordinary endpoint reversal remain separate proof.

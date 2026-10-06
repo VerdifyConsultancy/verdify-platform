@@ -1,0 +1,227 @@
+{
+  "schema": "cnpg-current275-native-admission-rollback-public-v1",
+  "complete": true,
+  "persistent_installed": false,
+  "credentials_changed": false,
+  "actual_authenticated_clients_qualified": false,
+  "runtime_table": "public.cnpg_s2_275_runtime_receipts",
+  "historical274_table_preserved": "public.cnpg_qualified_runtime_receipts",
+  "separate_from_migration_bridge": true,
+  "targets": {
+    "s2": {
+      "schema": "cnpg-current275-native-admission-rollback-v1",
+      "complete": true,
+      "binding": {
+        "cluster": "verdify-cnpg-s2",
+        "cluster_uid": "4f697776-df25-4e22-b930-0b76cf35496e",
+        "pod": "verdify-cnpg-s2-1",
+        "pod_uid": "6379db06-2bad-4c5b-9a50-86feac4651dc",
+        "operand_digest": "sha256:8b461e37d18aa049704eb6a9cde2ba9af0f955f8d3725e921070d2450bb2f137"
+      },
+      "source_sha256": "f4f8da110236461680f41770bad766a7e28b1a6db1982ecc632e93930a375dc4",
+      "execution_sql_sha256": "0d06016aebaf04f6cada570b690729daa9f94abbfd7474a5190676a23e740b40",
+      "qualification_sha256": "fb114e39cb5391624a28aa936fe5a1dc2c5f9fcc136eee7b928cf60691abfc43",
+      "post_witness_sha256": "ae4eb5ebb09aecb8d23a3420f26e1aed66358374069977ac7f6ff75260826369",
+      "independent_after_rollback_sha256": "7089e3bc3df63d583d4e95c6f350b96e6ce889122bafc1865bfc68c4e5d76d8b",
+      "ddl_sha256": "c5ffc277312582311e452975b3d6ca65835d5b36beeae5dc8b2cfa439943b708",
+      "fresh_zero_ordinary_clients": true,
+      "native_attesters_exact_new275_table_no274_fallback": true,
+      "persistent_admission": false,
+      "credentials_changed": false,
+      "new_catalog_objects": [
+        [
+          "column",
+          "public.cnpg_s2_275_runtime_receipts.boundary_sha256"
+        ],
+        [
+          "column",
+          "public.cnpg_s2_275_runtime_receipts.login_name"
+        ],
+        [
+          "column",
+          "public.cnpg_s2_275_runtime_receipts.qualification_sha256"
+        ],
+        [
+          "column",
+          "public.cnpg_s2_275_runtime_receipts_pkey.login_name"
+        ],
+        [
+          "constraint",
+          "public.cnpg_s2_275_runtime_receipts.cnpg_s2_275_runtime_receipts_boundary_sha256_check"
+        ],
+        [
+          "constraint",
+          "public.cnpg_s2_275_runtime_receipts.cnpg_s2_275_runtime_receipts_login_name_check"
+        ],
+        [
+          "constraint",
+          "public.cnpg_s2_275_runtime_receipts.cnpg_s2_275_runtime_receipts_pkey"
+        ],
+        [
+          "constraint",
+          "public.cnpg_s2_275_runtime_receipts.cnpg_s2_275_runtime_receipts_qualification_sha256_check"
+        ],
+        [
+          "index",
+          "public.cnpg_s2_275_runtime_receipts_pkey"
+        ],
+        [
+          "relation",
+          "public.cnpg_s2_275_runtime_receipts"
+        ]
+      ],
+      "replaced_functions": [
+        [
+          "function",
+          "public.fn_mcp_runtime_attest_ordinary_login()"
+        ],
+        [
+          "function",
+          "public.fn_runtime_attest_ordinary_login()"
+        ]
+      ],
+      "function_body_sha256": {
+        "fn_runtime_attest_ordinary_login": "09705a7f1a4fd11438b83fe3dc2b865bc618cb57d9d98e996bef2e3f308b5e06",
+        "fn_mcp_runtime_attest_ordinary_login": "23ac303633639491392295cff7b3003ce804be374244a3758790d05e74b32d2f"
+      },
+      "native_sql_checks_exact_bodies_definer_config_owner_and_table_posture": true,
+      "all77_sequences_exact_after_rollback": true,
+      "all3_historical274_rows_exact_after_rollback": true,
+      "private_custody": "current275-native-admission-rollback-s2-once",
+      "proposed_persistent_install": {
+        "schema": "cnpg-current275-native-admission-rollback-v1",
+        "complete": true,
+        "binding": {
+          "cluster": "verdify-cnpg-s2",
+          "cluster_uid": "4f697776-df25-4e22-b930-0b76cf35496e",
+          "pod": "verdify-cnpg-s2-1",
+          "pod_uid": "6379db06-2bad-4c5b-9a50-86feac4651dc",
+          "operand_digest": "sha256:8b461e37d18aa049704eb6a9cde2ba9af0f955f8d3725e921070d2450bb2f137"
+        },
+        "source_sha256": "f4f8da110236461680f41770bad766a7e28b1a6db1982ecc632e93930a375dc4",
+        "execution_sql_sha256": "0d06016aebaf04f6cada570b690729daa9f94abbfd7474a5190676a23e740b40",
+        "qualification_sha256": "fb114e39cb5391624a28aa936fe5a1dc2c5f9fcc136eee7b928cf60691abfc43",
+        "post_witness_sha256": "ae4eb5ebb09aecb8d23a3420f26e1aed66358374069977ac7f6ff75260826369",
+        "independent_after_rollback_sha256": "7089e3bc3df63d583d4e95c6f350b96e6ce889122bafc1865bfc68c4e5d76d8b",
+        "ddl_sha256": "c5ffc277312582311e452975b3d6ca65835d5b36beeae5dc8b2cfa439943b708",
+        "fresh_zero_ordinary_clients": true,
+        "native_attesters_exact_new275_table_no274_fallback": true,
+        "persistent_admission": false,
+        "credentials_changed": false,
+        "proposed_install_sql_sha256": "07e73b1c613e3988f5214581bdf4ebb4dc565e315b2f1146c2a22bc733d38101",
+        "persistent_installed": false
+      }
+    },
+    "b": {
+      "schema": "cnpg-current275-native-admission-rollback-v1",
+      "complete": true,
+      "binding": {
+        "cluster": "verdify-cnpg-s2-pitr-b-frozen",
+        "cluster_uid": "3981d0f2-4c72-48ac-9e09-826fe6bd4ed6",
+        "pod": "verdify-cnpg-s2-pitr-b-frozen-1",
+        "pod_uid": "b8288ef5-ca89-4bb5-85e5-ce71dd27bbec",
+        "operand_digest": "sha256:8b461e37d18aa049704eb6a9cde2ba9af0f955f8d3725e921070d2450bb2f137"
+      },
+      "source_sha256": "f4f8da110236461680f41770bad766a7e28b1a6db1982ecc632e93930a375dc4",
+      "execution_sql_sha256": "f09819e507ad13192fbb45cb86b0a0c2fa7c794f2b0d8a4713b69629af209112",
+      "qualification_sha256": "f471b313922b8090b50ae6d30df5cc5b64edd3505047da8ec73e48e0214c82a3",
+      "post_witness_sha256": "c7c66c87efefa2425e9ea985ea759dcecf3e49a308c1296a3447ea8e043ec7c7",
+      "independent_after_rollback_sha256": "7089e3bc3df63d583d4e95c6f350b96e6ce889122bafc1865bfc68c4e5d76d8b",
+      "ddl_sha256": "814f374998d49fa200f48cfc6fbdd72a17ee8e2006da1c87cbea9e22fdb2d255",
+      "fresh_zero_ordinary_clients": true,
+      "native_attesters_exact_new275_table_no274_fallback": true,
+      "persistent_admission": false,
+      "credentials_changed": false,
+      "new_catalog_objects": [
+        [
+          "column",
+          "public.cnpg_s2_275_runtime_receipts.boundary_sha256"
+        ],
+        [
+          "column",
+          "public.cnpg_s2_275_runtime_receipts.login_name"
+        ],
+        [
+          "column",
+          "public.cnpg_s2_275_runtime_receipts.qualification_sha256"
+        ],
+        [
+          "column",
+          "public.cnpg_s2_275_runtime_receipts_pkey.login_name"
+        ],
+        [
+          "constraint",
+          "public.cnpg_s2_275_runtime_receipts.cnpg_s2_275_runtime_receipts_boundary_sha256_check"
+        ],
+        [
+          "constraint",
+          "public.cnpg_s2_275_runtime_receipts.cnpg_s2_275_runtime_receipts_login_name_check"
+        ],
+        [
+          "constraint",
+          "public.cnpg_s2_275_runtime_receipts.cnpg_s2_275_runtime_receipts_pkey"
+        ],
+        [
+          "constraint",
+          "public.cnpg_s2_275_runtime_receipts.cnpg_s2_275_runtime_receipts_qualification_sha256_check"
+        ],
+        [
+          "index",
+          "public.cnpg_s2_275_runtime_receipts_pkey"
+        ],
+        [
+          "relation",
+          "public.cnpg_s2_275_runtime_receipts"
+        ]
+      ],
+      "replaced_functions": [
+        [
+          "function",
+          "public.fn_mcp_runtime_attest_ordinary_login()"
+        ],
+        [
+          "function",
+          "public.fn_runtime_attest_ordinary_login()"
+        ]
+      ],
+      "function_body_sha256": {
+        "fn_runtime_attest_ordinary_login": "9bcc075deb04fc847aa209817f570be615e56f39be6f0df15377abbafd34caa1",
+        "fn_mcp_runtime_attest_ordinary_login": "35559af85a3f2a0b9f80205c819d783b56fbbc55c628225afb304b1ee1807479"
+      },
+      "native_sql_checks_exact_bodies_definer_config_owner_and_table_posture": true,
+      "all77_sequences_exact_after_rollback": true,
+      "all3_historical274_rows_exact_after_rollback": true,
+      "private_custody": "current275-native-admission-rollback-b-once",
+      "proposed_persistent_install": {
+        "schema": "cnpg-current275-native-admission-rollback-v1",
+        "complete": true,
+        "binding": {
+          "cluster": "verdify-cnpg-s2-pitr-b-frozen",
+          "cluster_uid": "3981d0f2-4c72-48ac-9e09-826fe6bd4ed6",
+          "pod": "verdify-cnpg-s2-pitr-b-frozen-1",
+          "pod_uid": "b8288ef5-ca89-4bb5-85e5-ce71dd27bbec",
+          "operand_digest": "sha256:8b461e37d18aa049704eb6a9cde2ba9af0f955f8d3725e921070d2450bb2f137"
+        },
+        "source_sha256": "f4f8da110236461680f41770bad766a7e28b1a6db1982ecc632e93930a375dc4",
+        "execution_sql_sha256": "f09819e507ad13192fbb45cb86b0a0c2fa7c794f2b0d8a4713b69629af209112",
+        "qualification_sha256": "f471b313922b8090b50ae6d30df5cc5b64edd3505047da8ec73e48e0214c82a3",
+        "post_witness_sha256": "c7c66c87efefa2425e9ea985ea759dcecf3e49a308c1296a3447ea8e043ec7c7",
+        "independent_after_rollback_sha256": "7089e3bc3df63d583d4e95c6f350b96e6ce889122bafc1865bfc68c4e5d76d8b",
+        "ddl_sha256": "814f374998d49fa200f48cfc6fbdd72a17ee8e2006da1c87cbea9e22fdb2d255",
+        "fresh_zero_ordinary_clients": true,
+        "native_attesters_exact_new275_table_no274_fallback": true,
+        "persistent_admission": false,
+        "credentials_changed": false,
+        "proposed_install_sql_sha256": "93a4def68c059c63a3d668ed8578f8f490986fa5e83586d5d0f3f1dfbba1e6ea",
+        "persistent_installed": false
+      }
+    }
+  },
+  "preserved_validator_failure": {
+    "target": "s2",
+    "native_sql_exit": 0,
+    "reason": "local wrapper treated ddl(payload,bodies) tuple as string",
+    "retained_native_output_revalidated": true,
+    "native_sql_replayed": false
+  }
+}
