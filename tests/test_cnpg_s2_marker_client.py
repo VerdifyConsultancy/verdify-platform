@@ -15,15 +15,17 @@ spec.loader.exec_module(m)
 
 def fixture():
     cluster, backup, _, admission = s2_fixture()
-    cluster["status"] = {"currentPrimary": "verdify-cnpg-s2-1"}
+    cluster["status"] = {"currentPrimary": "verdify-cnpg-s2-1", "readyInstances": 3}
     primary = {
         "metadata": {
             "name": "verdify-cnpg-s2-1",
+            "namespace": "verdify-db-rehearsal",
             "uid": "6379db06-2bad-4c5b-9a50-86feac4651dc",
             "labels": {"cnpg.io/cluster": "verdify-cnpg-s2"},
         },
         "status": {"phase": "Running", "podIP": "10.42.6.1"},
     }
+    admission["binding"]["pod_uid"] = primary["metadata"]["uid"]
     return cluster, primary, backup, admission, "s2-fixture-unique"
 
 
@@ -43,6 +45,8 @@ def test_only_fixed_bootstrap_tcp_and_existing_secret_refs_with_separate_stateme
     assert sql.count("'kind','boundary'") == 2
     assert "'xid',xmin::text" in sql and "acknowledged_flush_lsn" in sql
     assert "synchronous_commit" in sql and "inet_client_addr() IS NULL" in sql
+    assert "'server_address',pg_catalog.host(inet_server_addr())" in sql
+    assert sql.index("pg_walfile_name(pg_current_wal_flush_lsn()) IS NULL") < sql.index("INSERT INTO")
     assert "verdify_rehearsal" not in sql and "DROP " not in sql
 
 

@@ -1,0 +1,21 @@
+{
+  "schema": "cnpg-s2-native-admission-v1",
+  "cluster": "verdify-cnpg-s2",
+  "database_oid": 16447,
+  "binding": {
+    "cluster_uid": "4f697776-df25-4e22-b930-0b76cf35496e",
+    "pod": "verdify-cnpg-s2-1",
+    "pod_uid": "6379db06-2bad-4c5b-9a50-86feac4651dc",
+    "operand_digest": "sha256:8b461e37d18aa049704eb6a9cde2ba9af0f955f8d3725e921070d2450bb2f137"
+  },
+  "source_sha256": "7cf93863741a7827ef1f75e6f9e926a6966578c81e2884b3a70ed4644e1c5a50",
+  "qualification_sha256": "09e73ff49d02b63735a3deae649fa0d782026d2cc405740dd63b08e9d6c874ee",
+  "installation_sha256": "9abb6d1e4296614ab2cd617a3d0e65d0aa8a39618b5f47ace5f8fa00224439fa",
+  "historical_seals_and_ledger_retained": true,
+  "authenticated_runtime_client_acceptance": false,
+  "full_data_internal_catalog_accounting_complete": true,
+  "full_count_time_receipt_sha256": "bfb49d89cbf8cb9ed73175f04c3707321ff797644180954b2c8126296b46ea5b",
+  "complete_copy_accounting_sha256": "ad91e02b903bc6fd8b6161b711a139ed9a8b8702af317a5fd0d4f56922d0920c",
+  "sealed_readback_sha256": "2d9fb41440e3272194d4cc421e1afcd4b5563a8f080f00494474ce0bf356d14a",
+  "baseline_workload_frozen": true
+}

@@ -29,10 +29,13 @@ def render(cluster, primary, backup, admission, run_id):
         and cm["namespace"] == p.pitr.NS
         and cluster["spec"]["imageName"] == p.pitr.IMAGE
         and cluster["status"]["currentPrimary"] == pm["name"]
+        and cluster["status"].get("readyInstances") == 3
+        and pm["namespace"] == p.pitr.NS
         and primary["status"]["phase"] == "Running"
         and primary["metadata"]["labels"].get("cnpg.io/cluster") == p.SOURCE
         and admission.get("full_data_internal_catalog_accounting_complete") is True
         and admission.get("binding", {}).get("cluster_uid") == p.SOURCE_UID
+        and admission.get("binding", {}).get("pod_uid") == pm["uid"]
         and admission.get("installation_sha256") == p.INSTALL_SHA,
         "S2 marker refuses unsealed source/primary",
     )
@@ -70,6 +73,7 @@ BEGIN
     OR clock_timestamp()<='{status["stoppedAt"]}'::timestamptz
     OR (SELECT oid FROM pg_database WHERE datname=current_database())<>16385
     OR (SELECT pg_get_userbyid(relowner) FROM pg_class WHERE oid='{TABLE}'::regclass)<>'rehearsal_bootstrap'
+    OR pg_walfile_name(pg_current_wal_flush_lsn()) IS NULL
     OR EXISTS (SELECT 1 FROM {TABLE} WHERE marker_id IN ('{run_id}-a','{run_id}-b','{run_id}-c')) THEN
    RAISE EXCEPTION 'S2 marker refuses endpoint/session/lineage/reused attempt';
  END IF;
@@ -79,7 +83,7 @@ END $marker_guard$;
         marker_id = run_id + "-" + name.lower()
         sql += f"""BEGIN;
 SELECT jsonb_build_object('kind','start','name','{name}',
- 'transaction_started_at',clock_timestamp(),'server_address',inet_server_addr(),
+ 'transaction_started_at',clock_timestamp(),'server_address',pg_catalog.host(inet_server_addr()),
  'server_port',inet_server_port(),'backend_pid',pg_backend_pid());
 INSERT INTO {TABLE}(marker_id,marker_name,payload)
 VALUES ('{marker_id}','{name}',jsonb_build_object('contract','s2-current274','run','{run_id}','name','{name}'))
