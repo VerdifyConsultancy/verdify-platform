@@ -241,7 +241,7 @@
         "scripts",
         "verdify_schemas"
       ],
-      "baseline": "October 5, 2026: API current evidence separates legacy joint0.8%, temperature11.0%, VPD88.8% and attributable79.5%. Qualified physical target publication is unavailable; observed-minute capture has0 eligible minutes because735 rows lack valid bounds. Separation is partial delivery, not crop-outcome acceptance. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
+      "baseline": "October 6 UTC S1 acceptance: source325 API/MCP/migrate runs at full127-resource revision9b4f8023, Synced/Healthy. Forward274 is ledgered at exact0b939df1 hash;271\u2013273 hashes and protected objects are unchanged. Genuine SQL\u2192HTTP API/FastMCP/public/planning fixtures distinguish2.1% physical compliance from85.8% attributable credit. Live current/historical SQL/API/both MCP/Iris/public agree, with zero production physical rows and explicit unavailability. Closed01:15:56 UTC. Retain274/new C0 bootstrap/migrate548 on rollback; re-pin API/MCP only. See docs/handoffs/s1-2026-10-05/physical-reader-371-acceptance.md.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -276,7 +276,7 @@
         "ingestor/tasks",
         "scripts"
       ],
-      "baseline": "October 5, 2026: C1 retained original callback/two-epoch/full48 work remains distinct from historical ideal-SQL/served/device semantics. Current rawreadbacks and repeated desired drift holds do not close historical/consumed-band lineage; do not label desired/cache rows device confirmation. See planning/reviews/2026-10-05/ISSUE-TRIAGE.md for current evidence and limitations.",
+      "baseline": "October 6 UTC S1 acceptance: six temperature/VPD low/high/target series have source, canonical\u00b0F/kPa, getter/setter grids, original two48-field callback epochs, generation and timestamp lineage. The historical0% report is resolved as a reporting defect; the September4 physical discrepancy remains unobservable. Ideal SQL residuals are not independent wire proof; #749 remains fail closed. Closed00:30:34 UTC. See docs/handoffs/s1-2026-10-05/band-lineage-424-acceptance.md.",
       "delivery": "Use a focused PR from current main, relevant repository checks and an exact-SHA result. If runtime source changes, build only affected registered images through Kaniko/Zot, pin digests in Git and use owning Argo reconciliation (no prune). Close only on exact desired/running identity, Synced + Healthy and live acceptance.",
       "rollback": "Capture prior source/digests/config and data state before mutation. Revert declarative source and verify reconciliation; use forward-safe ledgered DB corrections instead of editing applied migrations. Preserve failed attempts and measurements. Experiment rollback closes exposure/revokes nonbaseline first, then facility-authorized full-48 baseline recovery, two fresh epochs, disable/ID clear and ordinary-writer handoff.",
       "decision": "None beyond normal scoped delivery; this planning campaign authorizes no physical experiment or OTA."
@@ -2984,7 +2984,7 @@
         "ingestor/tasks",
         "deploy/k8s"
       ],
-      "baseline": "Current ingestor logs: evening brief2026-10-05T00:04:30Z, midnight watch06:05:25Z, and five morning retries13:30:58\u201313:34:59Z fail FileNotFoundError for /etc/verdify/slack/iris_slack_bot_token.txt. Source base ingestor mounts HA credentials, but no Slack mount at that path; SLACK_TOKEN_FILE env is absent. No credential contents were read. Newly identified; implementation and live acceptance remain open.",
+      "baseline": "October 6 UTC S1 acceptance: the existing Iris Slack identity is readable at the declared credential-file path, with bounded retries preserved. A controlled alert and exactly one natural midnight brief (DB31, Slack1791244839.494799) were independently verified. Closed00:13:08 UTC. See docs/handoffs/s1-2026-10-05/operator-950-951-acceptance.md; no token values or rotation are published.",
       "delivery": "Deliver the smallest owner-lane repair through existing exact-source build/pins/reconciliation when needed; verify actual natural behavior and retained rollback identities. Estimate: 8 engineering hours.",
       "rollback": "Preserve old source/digest/config and failed attempts; restore the exact prior contract if the change regresses service. Never remove evidence just to clear an alert.",
       "decision": "Triage and planning perform no device writes, OTA, experiment launch, database cutover or unsolicited credential rotation."
@@ -3016,7 +3016,7 @@
         "scripts/frigate-snapshot.py",
         "deploy/k8s/vision"
       ],
-      "baseline": "Jobs29852640,29852820,29853000 (2026-10-05T00:00/03:00/06:00Z) failed. Latest logs: both greenhouse_1/2 ConnectionRefusedError,0/2 captured. CronJob uses https://frigate.frigate.svc.cluster.local:8971 with cameras.vallery.net TLS identity. Service port8971 currently targets endpoint192.168.30.39:8973. A port-number difference is a diagnostic lead, not proof it is wrong. Newly identified; implementation and live acceptance remain open.",
+      "baseline": "October 6 UTC S1 acceptance: natural vision Job29854080 captured two fresh authenticated TLS JPEGs with18:00:12/13 MDT overlays and completed analyses723/724. The actual go2rtc live-keyframe route has no cached preview fallback; producer counters advance and failures remain nonzero. Closed00:13:09 UTC; historical failed Jobs remain preserved. See docs/handoffs/s1-2026-10-05/operator-950-951-acceptance.md.",
       "delivery": "Deliver the smallest owner-lane repair through existing exact-source build/pins/reconciliation when needed; verify actual natural behavior and retained rollback identities. Estimate: 8 engineering hours.",
       "rollback": "Preserve old source/digest/config and failed attempts; restore the exact prior contract if the change regresses service. Never remove evidence just to clear an alert.",
       "decision": "Triage and planning perform no device writes, OTA, experiment launch, database cutover or unsolicited credential rotation."
@@ -3047,7 +3047,7 @@
       "paths": [
         "deploy/k8s/components/grafana"
       ],
-      "baseline": "Current Prometheus/Alertmanager: EndpointProbeCellDown and EndpointProbeAuthEvidenceFailed for graphs.verdify.ai at local and external-cloudflare. #75 comment5852409374 reports service-account loss after pod replacement; current grafana.yaml still mounts /var/lib/grafana from emptyDir. Anonymous/basic scrape success is not authenticated account acceptance. Newly identified; implementation and live acceptance remain open.",
+      "baseline": "October 5 UTC S1 acceptance: the least-scope Grafana Viewer identity and PVC/SQLite state survived actual pod replacement. Protected200, anonymous401 and admin403 were verified from both vantages before and after replacement; account/PVC identity stayed unchanged and probes recovered. Closed22:18:25 UTC. See docs/handoffs/s1-2026-10-05/grafana-952-acceptance.md.",
       "delivery": "Deliver the smallest owner-lane repair through existing exact-source build/pins/reconciliation when needed; verify actual natural behavior and retained rollback identities. Estimate: 8 engineering hours.",
       "rollback": "Preserve old source/digest/config and failed attempts; restore the exact prior contract if the change regresses service. Never remove evidence just to clear an alert.",
       "decision": "Triage and planning perform no device writes, OTA, experiment launch, database cutover or unsolicited credential rotation."
@@ -3142,7 +3142,7 @@
         "scripts/prepare-lab-cache.sh",
         "deploy/k8s/components/lab-site/lab-publisher.yaml"
       ],
-      "baseline": "Latest three publisher runs last734/754/759seconds, exceeding10-minute schedule and landing20minutes apart. Served receipt was current at19:03 but expires19:12:31; repeated warm-scan/cadence/freshness defect remains, not a stalled init.",
+      "baseline": "October 6 UTC S1 acceptance: exact source81/publisher3a natural00:20/30/40 runs completed410/420/410 seconds on600-second cadence, with one validation scan each and the original guards/TTL1200. The third served/success hash matches a fresh public generation. Mean413.3 seconds is36.7% below the retained653-second warm baseline. Closed00:48:59 UTC. See docs/handoffs/s1-2026-10-05/publisher-862-acceptance.md.",
       "delivery": "Bounded exact-source live receipt; see October5 acceptance matrix. Estimate:12 engineering hours.",
       "rollback": "Preserve snapshots, source/digests, alerts and publication receipts; do not remove evidence to fabricate health.",
       "decision": "Read-only triage performs no production deployment or device action."
