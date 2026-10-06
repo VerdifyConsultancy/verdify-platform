@@ -45,9 +45,33 @@ spec:
               command:
                 - /bin/sh
                 - -ec
-                - >-
-                  psql -X -qAt -v ON_ERROR_STOP=1
-                  -c "SELECT public.fn_freeze_fixed_panel_native_previous_day()::text"
+                - |
+                  psql -X -qAt -v ON_ERROR_STOP=1 <<'SQL'
+                  DO $daily_freezer$
+                  DECLARE result jsonb; failure_message text;
+                  BEGIN
+                    BEGIN
+                      result := public.fn_freeze_fixed_panel_native_previous_day();
+                    EXCEPTION WHEN SQLSTATE 'P0001' THEN
+                      GET STACKED DIAGNOSTICS failure_message = MESSAGE_TEXT;
+                      IF failure_message <> 'native previous-day freeze lacks complete prospective target' THEN
+                        RAISE;
+                      END IF;
+                      -- A declared partial-day window cannot become an 18-hour
+                      -- receipt. Keep the SQL integrity guard and expose absence;
+                      -- do not fail unrelated delivery on this expected outcome.
+                      result := jsonb_build_object(
+                        'day', (clock_timestamp() AT TIME ZONE 'America/Denver')::date - 1,
+                        'status', 'unavailable',
+                        'reason', 'incomplete_prospective_18h_target',
+                        'receipt_id', NULL, 'route_18h_available', false);
+                      RAISE WARNING '%', result;
+                      RETURN;
+                    END;
+                    RAISE NOTICE '%', result;
+                  END;
+                  $daily_freezer$;
+                  SQL
               env:
                 - name: PGHOST
                   value: verdify-db
