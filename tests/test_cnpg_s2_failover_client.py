@@ -7,6 +7,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
+from test_cnpg_target_runtime_transition import private_pg  # noqa: F401
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -128,3 +129,17 @@ def test_marker_protocol_requires_guarded_commit_before_ack():
     ):
         with pytest.raises(ValueError):
             m.statement(run_id, sequence)
+
+
+def test_bootstrap_absent_extension_guc_and_present_restoring_native_refusal(private_pg):  # noqa: F811
+    m = load("cnpg-s2-failover-client")
+    expression = "coalesce" + m.GUARD.split("OR coalesce", 1)[1].split("\n", 1)[0]
+    assert private_pg("SELECT " + expression) == "f"
+    for value, expected in (("off", "f"), ("on", "t"), ("", "t")):
+        assert (
+            private_pg("BEGIN; SET LOCAL timescaledb.restoring='" + value + "'; SELECT " + expression + "; ROLLBACK;")
+            == expected
+        )
+    ddl = (ROOT / "db/qualification/cnpg-s2-failover-sentinel.sql").read_text()
+    assert expression in ddl
+    assert "EXISTS(SELECT 1 FROM pg_extension WHERE extname='timescaledb')" in m.GUARD
