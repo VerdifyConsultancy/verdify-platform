@@ -160,6 +160,12 @@ spec:
             - secretRef:
                 name: verdify-hermes
           env:
+            # Preserve the accepted in-cluster API listener explicitly. The
+            # upstream fallback binds loopback when profile extra.host is absent.
+            - name: API_SERVER_HOST
+              value: "0.0.0.0"
+            - name: API_SERVER_PORT
+              value: "8642"
             # compose:375 VERDIFY_SLACK_CONFIG=/opt/data/slack.yaml (on the PVC).
             - name: VERDIFY_SLACK_CONFIG
               value: /opt/data/slack.yaml
