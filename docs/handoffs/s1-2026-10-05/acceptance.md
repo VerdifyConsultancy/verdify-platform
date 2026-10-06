@@ -109,7 +109,7 @@ Issue #424 remains open pending final81 passive refresh. All six temperature/VPD
 
 The supported same-workflow retry completed all eight exact-source images and its pin actuator. [Build and source-promotion receipt](evidence/final81-all-eight-builds-and-source-promotion.json) binds workflow UID, resolved tree and Dockerfile hashes. Promotion `6429acbb2c79f784e3978e9c74a1c8719d25076c` changes only ingestor and publisher release digests, affecting five image consumers; the retained API/MCP/migrate/orchestrator release pins remain unchanged. This is source promotion only. Full production sync is held until natural midnight brief and vision observations finish.
 
-## Source81 live release and sole-writer verification (October6 00:36 UTC)
+## Source81 live release and sole-writer verification (October6 00:34 UTC)
 
 [Actual live release](evidence/final81-live-release-6429.json) supersedes the prior source-only promotion status. Full revision `6429acbb2c79f784e3978e9c74a1c8719d25076c` synced without prune or selector:127 resources, six newly created successful normal hooks. The observer also captured one retained historical Winter Job; it is not counted as a fresh hook. Initial terminal health was Degraded; ordinary ingestor initialization completed and Argo naturally became Healthy at00:20:04. Independent readback was Synced/Healthy at the exact revision. No optional experiment gate hook was activated.
 
