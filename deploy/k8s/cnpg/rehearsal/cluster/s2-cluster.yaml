@@ -1,0 +1,63 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: verdify-cnpg-s2
+  namespace: verdify-db-rehearsal
+  labels: &id001
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: cnpg-rehearsal
+spec:
+  instances: 3
+  imageName: registry.vallery.net/verdifyconsultancy/verdify-timescaledb-cnpg:16.13-ts2.25.2@sha256:8b461e37d18aa049704eb6a9cde2ba9af0f955f8d3725e921070d2450bb2f137
+  env:
+  - name: VERDIFY_REHEARSAL_POD_UID
+    valueFrom:
+      fieldRef:
+        fieldPath: metadata.uid
+  imagePullSecrets:
+  - name: zot-origin-cluster-pull
+  enableSuperuserAccess: false
+  inheritedMetadata:
+    labels: *id001
+  postgresql:
+    shared_preload_libraries:
+    - timescaledb
+    - pg_stat_statements
+    parameters:
+      shared_buffers: 256MB
+      max_worker_processes: '32'
+      synchronous_commit: 'on'
+      timescaledb.telemetry_level: 'off'
+    synchronous:
+      method: any
+      number: 1
+      dataDurability: required
+      failoverQuorum: true
+  storage:
+    size: 20Gi
+    storageClass: longhorn-v1-rwo
+  walStorage:
+    size: 5Gi
+    storageClass: longhorn-v1-rwo
+  affinity:
+    enablePodAntiAffinity: true
+    podAntiAffinityType: required
+    topologyKey: topology.vallery.net/proxmox-host
+    nodeSelector:
+      agentfleet.vallery.net/control-plane: 'false'
+      storage.vallery.net/longhorn: 'true'
+  resources:
+    requests:
+      cpu: 500m
+      memory: 2Gi
+    limits:
+      memory: 6Gi
+  bootstrap:
+    initdb:
+      database: rehearsal_bootstrap
+      owner: rehearsal_bootstrap
+  plugins:
+  - name: barman-cloud.cloudnative-pg.io
+    isWALArchiver: true
+    parameters:
+      barmanObjectName: verdify-cnpg-rehearsal-backup
