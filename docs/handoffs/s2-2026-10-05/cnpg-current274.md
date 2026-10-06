@@ -200,3 +200,26 @@ nine NULL ordinary verifiers were read natively on A/B. Frozen B is released to
 ROOT/Iris for separately qualified target-only admission/credentials and actual
 ordinary-client endpoint reversal. Protected274 evidence is immutable when later
 275 qualification or credentials change the mutable client clone.
+
+
+## Additive275 qualification remains separate
+
+A subsequent bounded275 clone bridge qualified on S2 and frozen B with native
+ROLLBACK, in21.436 and18.496 seconds. Only the unchanged lighting function's
+jit=off proconfig, two canonical ordinary receipts/timestamps and one exact
+source275 ledger row changed inside that transaction. Both complete native
+post-witnesses matched SHA7089e3bc…; independent rollback readbacks restored the
+original full274 witness6d896a5d… exactly. Every951 relation/9,699,549 native row
+multiset, all77 current sequence values and old274 target receipt rows remained
+equal before/after rollback. No275 persistent change or new admission install is
+credited by that rollback. See [additive275 receipt](evidence/cnpg-current275-rollback-qualified.json)
+and [closed transition procedure](../../runbooks/cnpg/current275-additive-transition.md).
+
+One large S2 after-rollback stdout stream ended without the terminal marker despite
+exit0; its945 matching prefixes received no full-data credit. The identical951
+read-only SQL was captured into a private native mode600 file, then all rows were
+hashed natively before retrieving the compact receipt with a mandatory terminal
+marker and SHA. All951/9,699,549 rowsets passed. Original partial output and the
+MCP post-validator shape failure remain preserved; the successful native migration
+rollback was not repeated to fix a Python validator. The sealed274 physical
+evidence above is unchanged.
