@@ -1,0 +1,167 @@
+{
+  "recorded_at": "2026-10-06T00:29:19.685883+00:00",
+  "promotion_revision": "6429acbb2c79f784e3978e9c74a1c8719d25076c",
+  "writer_source": "81d76a4c3d35a925ebd2438d89099d1f657b3f8f",
+  "writer_digest": "sha256:2813240dbd5ce3c644d0285fd4603901eef9ae38ad00d28f4e64deb05f46ad2d",
+  "writer_pod": "verdify-ingestor-6d95d5fc9f-cscxw",
+  "writer_uid": "237002d4-5fb9-450f-8fe2-e266c969a1e1",
+  "writer_node": "vm-k3s-node5",
+  "full_sync": {
+    "revision": "6429acbb2c79f784e3978e9c74a1c8719d25076c",
+    "phase": "Succeeded",
+    "started_at": "2026-10-06T00:06:55Z",
+    "finished_at": "2026-10-06T00:15:39Z",
+    "resource_count": 127,
+    "fresh_hooks": [
+      {
+        "name": "verdify-mcp-runtime-role-bootstrap",
+        "uid": "db5297c6-7007-4ef9-bd2f-fa73cf4553a4",
+        "created_at": "2026-10-06T00:07:44Z",
+        "completed_at": "2026-10-06T00:07:50Z",
+        "succeeded": 1
+      },
+      {
+        "name": "verdify-runtime-role-bootstrap",
+        "uid": "58f3387e-6322-476f-a992-a30ceb606216",
+        "created_at": "2026-10-06T00:07:35Z",
+        "completed_at": "2026-10-06T00:07:43Z",
+        "succeeded": 1
+      },
+      {
+        "name": "verdify-six-runtime-role-bootstrap",
+        "uid": "8c055d2a-0f3d-496f-8679-9b63b11d46f8",
+        "created_at": "2026-10-06T00:07:56Z",
+        "completed_at": "2026-10-06T00:08:19Z",
+        "succeeded": 1
+      },
+      {
+        "name": "verdify-migrate",
+        "uid": "3db78559-e3f1-46d6-9984-753b1f8ef698",
+        "created_at": "2026-10-06T00:07:07Z",
+        "completed_at": "2026-10-06T00:07:32Z",
+        "succeeded": 1
+      },
+      {
+        "name": "verdify-winter-archive-init",
+        "uid": "58d43f20-f3ba-4501-99fc-bfc4d6dfb96e",
+        "created_at": "2026-10-06T00:08:25Z",
+        "completed_at": "2026-10-06T00:08:41Z",
+        "succeeded": 1
+      },
+      {
+        "name": "verdify-experiment-v2-credential-bootstrap",
+        "uid": "d5ec2895-b47a-4f52-ae0f-a7f6793554f4",
+        "created_at": "2026-10-06T00:07:44Z",
+        "completed_at": "2026-10-06T00:07:55Z",
+        "succeeded": 1
+      }
+    ],
+    "extra_historical_job_captured_before_replacement": [
+      {
+        "name": "verdify-winter-archive-init",
+        "uid": "38477fd9-dd76-49da-809b-b912b7cda9d0",
+        "created_at": "2026-10-05T22:46:42Z",
+        "completed_at": "2026-10-05T22:47:00Z",
+        "succeeded": 1
+      }
+    ],
+    "no_selector": true,
+    "prune_requested": false,
+    "runtime_acceptance": "separate; first terminal application health was Degraded, ingestor initialized afterward"
+  },
+  "five_minute_logs": {
+    "started_at": "2026-10-06T00:19:13.577928+00:00",
+    "finished_at": "2026-10-06T00:24:14.556087+00:00",
+    "duration_seconds": 300.2676937919896,
+    "pod": "verdify-ingestor-6d95d5fc9f-cscxw",
+    "pod_uid": "237002d4-5fb9-450f-8fe2-e266c969a1e1",
+    "source_sha": "81d76a4c3d35a925ebd2438d89099d1f657b3f8f",
+    "digest": "sha256:2813240dbd5ce3c644d0285fd4603901eef9ae38ad00d28f4e64deb05f46ad2d",
+    "module_sha256": "4afb5b7daa1873952cced16387d18104a9c95923333a3210fad333d6f7ba56a6",
+    "restart_count": 0,
+    "log_sha256": "00e95af1cd2fa9e16e67d85113d739f257763a93884e729d49bfcbb20084031a",
+    "log_bytes": 27388,
+    "validation_error_count": 0,
+    "row_failed_schema_validation_count": 0,
+    "same_ready_pod_through_end": true,
+    "scope": "Five-minute schema observation; policy transition/steady and sockets are separate acceptance"
+  },
+  "protected_and_ledger": {
+    "captured_at": "2026-10-06T00:22:22.568046+00:00",
+    "objects": [
+      {
+        "kind": "statefulset",
+        "name": "verdify-db",
+        "uid": "692af2f5-c937-4fde-aeb3-3c4fd36710ca",
+        "volume_name": null,
+        "phase": null
+      },
+      {
+        "kind": "pvc",
+        "name": "db-data-verdify-db-0",
+        "uid": "59fe138d-1cc4-4aac-bfcb-3d332f847411",
+        "volume_name": "pvc-59fe138d-1cc4-4aac-bfcb-3d332f847411",
+        "phase": "Bound"
+      },
+      {
+        "kind": "pvc",
+        "name": "verdify-db-dumps",
+        "uid": "dac57082-fe28-4d59-9bc6-c793dfc6c61e",
+        "volume_name": "verdify-db-dumps-prod",
+        "phase": "Bound"
+      },
+      {
+        "kind": "pvc",
+        "name": "verdify-grafana-data",
+        "uid": "acad919d-b6d2-4824-b7c7-a2b2ab460103",
+        "volume_name": "pvc-acad919d-b6d2-4824-b7c7-a2b2ab460103",
+        "phase": "Bound"
+      }
+    ],
+    "same_UID_volume_identity_and_bound_state": true,
+    "ledger": [
+      {
+        "seq": 271,
+        "filename": "db/migrations/271-legacy-band-trace-deprecation.sql",
+        "sha256": "8ddc650184a178b59102c46a6cf1c6b706578ce08d6680294a425694397f7642",
+        "stamp_method": "runner"
+      },
+      {
+        "seq": 272,
+        "filename": "db/migrations/272-current-climate-scorecard-snapshot.sql",
+        "sha256": "ca2e6cd2ae157aa6ebdda58964fc3eb52cbdde70d7c69f158fa0eef6294d19aa",
+        "stamp_method": "runner"
+      },
+      {
+        "seq": 273,
+        "filename": "db/migrations/273-native-route-measurement-reader.sql",
+        "sha256": "a0e4fe7bea3d27ea0d4218c5d423707e19b821e2684d5884c1280b03f78df76a",
+        "stamp_method": "runner"
+      }
+    ],
+    "applied_migration_hashes_unchanged": true,
+    "migration274_applied": false
+  },
+  "independent_health": {
+    "status": {
+      "lastTransitionTime": "2026-10-06T00:20:04Z",
+      "status": "Healthy"
+    },
+    "sync": "Synced",
+    "revision": "6429acbb2c79f784e3978e9c74a1c8719d25076c"
+  },
+  "smoke": {
+    "passed": 9,
+    "failed": 0,
+    "reviewed_api_source": "c8fc15e6a81d29b16e23d6db078893160704b4ea",
+    "reviewed_api_digest": "sha256:09a7e0ea6f87fcea9536df19a09d95c3ac2575493bb3f63bffea6cae77eafb98",
+    "raw_sha256": "db95b21becb381b2d59ea56978bb16532677b3ce1be2452aded833fbf5f89179"
+  },
+  "namespace_socket_monitor": {
+    "established": 1,
+    "raw_sha256": "48d205c8c35ca4daedd58a30ff16a00cd8df25e349630575977c68077bdbe946"
+  },
+  "fleet_socket_survey": "requested from local Proxmox peer; receipt pending",
+  "policy_transition_and_7200_steady": "separate acceptance, not yet complete",
+  "publisher_cadence": "separate acceptance, first qualified natural run only"
+}

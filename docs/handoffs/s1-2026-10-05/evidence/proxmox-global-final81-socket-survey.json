@@ -1,0 +1,192 @@
+{
+  "utc": "2026-10-06T00:31:12.780349+00:00",
+  "expected_pod": "verdify-ingestor-6d95d5fc9f-cscxw",
+  "expected_pod_uid": "237002d4-5fb9-450f-8fe2-e266c969a1e1",
+  "expected_source": "81d76a4c3d35a925ebd2438d89099d1f657b3f8f",
+  "all_8_hosts_and_namespaces_covered": true,
+  "unique_network_namespaces": 500,
+  "established_total": 1,
+  "exact_single_expected_connection": true,
+  "connections": [
+    {
+      "node": "vm-k3s-node5",
+      "namespace_inode": 4026546838,
+      "host_namespace": false,
+      "established_count": 1,
+      "endpoints": [
+        {
+          "local": "10.42.6.62:34928",
+          "remote": "192.168.10.111:6053"
+        }
+      ]
+    }
+  ],
+  "hosts": [
+    {
+      "node": "vm-k3s-node1",
+      "ip": "192.168.30.31",
+      "hostname": "vm-k3s-node1",
+      "target": "192.168.10.111",
+      "port": 6053,
+      "started_epoch": 1791246663.342619,
+      "finished_epoch": 1791246663.470554,
+      "unique_namespaces_discovered": 6,
+      "unique_namespaces_probed": 6,
+      "established_total": 0,
+      "connections": [],
+      "host_namespace_probed": true,
+      "errors": [],
+      "processes_vanished_before_handle_capture": 0,
+      "namespace_handles_pinned_during_probe": true,
+      "device_connection_created": false,
+      "mutation": false
+    },
+    {
+      "node": "vm-k3s-node2",
+      "ip": "192.168.30.32",
+      "hostname": "vm-k3s-node2",
+      "target": "192.168.10.111",
+      "port": 6053,
+      "started_epoch": 1791246662.4899957,
+      "finished_epoch": 1791246662.5633793,
+      "unique_namespaces_discovered": 6,
+      "unique_namespaces_probed": 6,
+      "established_total": 0,
+      "connections": [],
+      "host_namespace_probed": true,
+      "errors": [],
+      "processes_vanished_before_handle_capture": 0,
+      "namespace_handles_pinned_during_probe": true,
+      "device_connection_created": false,
+      "mutation": false
+    },
+    {
+      "node": "vm-k3s-node3",
+      "ip": "192.168.30.33",
+      "hostname": "vm-k3s-node3",
+      "target": "192.168.10.111",
+      "port": 6053,
+      "started_epoch": 1791246663.6209826,
+      "finished_epoch": 1791246663.7043736,
+      "unique_namespaces_discovered": 6,
+      "unique_namespaces_probed": 6,
+      "established_total": 0,
+      "connections": [],
+      "host_namespace_probed": true,
+      "errors": [],
+      "processes_vanished_before_handle_capture": 2,
+      "namespace_handles_pinned_during_probe": true,
+      "device_connection_created": false,
+      "mutation": false
+    },
+    {
+      "node": "vm-k3s-node4",
+      "ip": "192.168.30.35",
+      "hostname": "vm-k3s-node4",
+      "target": "192.168.10.111",
+      "port": 6053,
+      "started_epoch": 1791246664.3380132,
+      "finished_epoch": 1791246668.2090275,
+      "unique_namespaces_discovered": 105,
+      "unique_namespaces_probed": 105,
+      "established_total": 0,
+      "connections": [],
+      "host_namespace_probed": true,
+      "errors": [],
+      "processes_vanished_before_handle_capture": 0,
+      "namespace_handles_pinned_during_probe": true,
+      "device_connection_created": false,
+      "mutation": false
+    },
+    {
+      "node": "vm-k3s-node5",
+      "ip": "192.168.30.36",
+      "hostname": "vm-k3s-node5",
+      "target": "192.168.10.111",
+      "port": 6053,
+      "started_epoch": 1791246667.7325644,
+      "finished_epoch": 1791246672.768646,
+      "unique_namespaces_discovered": 139,
+      "unique_namespaces_probed": 139,
+      "established_total": 1,
+      "connections": [
+        {
+          "namespace_inode": 4026546838,
+          "host_namespace": false,
+          "established_count": 1,
+          "endpoints": [
+            {
+              "local": "10.42.6.62:34928",
+              "remote": "192.168.10.111:6053"
+            }
+          ]
+        }
+      ],
+      "host_namespace_probed": true,
+      "errors": [],
+      "processes_vanished_before_handle_capture": 274,
+      "namespace_handles_pinned_during_probe": true,
+      "device_connection_created": false,
+      "mutation": false
+    },
+    {
+      "node": "vm-k3s-node6",
+      "ip": "192.168.30.37",
+      "hostname": "vm-k3s-node6",
+      "target": "192.168.10.111",
+      "port": 6053,
+      "started_epoch": 1791246664.8552837,
+      "finished_epoch": 1791246667.8252716,
+      "unique_namespaces_discovered": 79,
+      "unique_namespaces_probed": 79,
+      "established_total": 0,
+      "connections": [],
+      "host_namespace_probed": true,
+      "errors": [],
+      "processes_vanished_before_handle_capture": 27,
+      "namespace_handles_pinned_during_probe": true,
+      "device_connection_created": false,
+      "mutation": false
+    },
+    {
+      "node": "vm-k3s-node7",
+      "ip": "192.168.30.38",
+      "hostname": "vm-k3s-node7",
+      "target": "192.168.10.111",
+      "port": 6053,
+      "started_epoch": 1791246665.155882,
+      "finished_epoch": 1791246669.6990323,
+      "unique_namespaces_discovered": 143,
+      "unique_namespaces_probed": 143,
+      "established_total": 0,
+      "connections": [],
+      "host_namespace_probed": true,
+      "errors": [],
+      "processes_vanished_before_handle_capture": 17,
+      "namespace_handles_pinned_during_probe": true,
+      "device_connection_created": false,
+      "mutation": false
+    },
+    {
+      "node": "vm-k3s-node8",
+      "ip": "192.168.30.39",
+      "hostname": "vm-k3s-node8",
+      "target": "192.168.10.111",
+      "port": 6053,
+      "started_epoch": 1791246663.4252486,
+      "finished_epoch": 1791246664.4480984,
+      "unique_namespaces_discovered": 16,
+      "unique_namespaces_probed": 16,
+      "established_total": 0,
+      "connections": [],
+      "host_namespace_probed": true,
+      "errors": [],
+      "processes_vanished_before_handle_capture": 1,
+      "namespace_handles_pinned_during_probe": true,
+      "device_connection_created": false,
+      "mutation": false
+    }
+  ],
+  "device_connection_created": false,
+  "mutation": false
+}
