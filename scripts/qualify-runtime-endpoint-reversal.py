@@ -34,6 +34,7 @@ pg_catalog.host(inet_client_addr()) AS client_address,pg_backend_pid() AS backen
 current_setting('search_path') AS search_path,current_setting('statement_timeout') AS statement_timeout,
 current_setting('default_transaction_read_only') AS default_read_only,current_setting('transaction_read_only') AS transaction_read_only,
 pg_is_in_recovery() AS replica,
+has_table_privilege(current_user,'public.schema_migrations','DELETE') AS ledger_delete_allowed,
 (SELECT rolsuper OR rolbypassrls OR rolcreatedb OR rolcreaterole OR rolreplication FROM pg_roles WHERE rolname=current_user) AS elevated,
 (SELECT array_agg(d.rolname::text ORDER BY d.rolname) FROM pg_auth_members m JOIN pg_roles d ON d.oid=m.roleid WHERE m.member=(SELECT oid FROM pg_roles WHERE rolname=current_user)) AS memberships"""
 HOT = {
@@ -50,7 +51,7 @@ DENY = {
     "mapping": "SELECT * FROM public.experiment_v2_randomization WHERE FALSE",
     "reveal": "SELECT * FROM public.experiment_v2_reveals WHERE FALSE",
     "owner": "SET ROLE verdify",
-    "unrelated_dml": "DELETE FROM public.schema_migrations WHERE FALSE",
+    "unrelated_dml_plan": "EXPLAIN (FORMAT JSON) DELETE FROM public.schema_migrations WHERE FALSE",
 }
 
 
@@ -131,6 +132,7 @@ def checked_identity(identity, role, endpoint):
         identity["elevated"] is False and identity["memberships"] == ["verdify_" + role + "_runtime"],
         "bounded runtime posture changed",
     )
+    require(identity["ledger_delete_allowed"] is False, "unrelated ledger DML permission unexpectedly granted")
     require(0 < timeout_ms(identity["statement_timeout"]) <= 30000, "source statement fence exceeded30s or disabled")
 
 
@@ -138,6 +140,15 @@ def timeout_ms(value):
     match = re.fullmatch(r"([0-9]+)(ms|s|min|h)?", value)
     require(match is not None, "unexpected statement fence encoding")
     return int(match[1]) * {None: 1, "ms": 1, "s": 1000, "min": 60000, "h": 3600000}[match[2]]
+
+
+def verify_source_files(profile):
+    paths = {profile["module_path"]: profile["module_sha256"], **profile.get("supporting_source_sha256", {})}
+    for name, expected in paths.items():
+        path = Path(name)
+        require(path.suffix in {".py", ".sh"}, "only owning source files may be inventoried")
+        require(re.fullmatch(r"[0-9a-f]{64}", expected), "exact source hash required")
+        require(digest(path.read_bytes()) == expected, "owning module/supporting source changed")
 
 
 def load_module(path, name):
@@ -355,7 +366,7 @@ def sync_probe(role, profile, endpoint, password):
                     conn.execute(sql)
             except Exception as error:
                 require(getattr(error, "sqlstate", None) == "42501", "expected privilege denial missing")
-                outcomes.append({"case": label, "sqlstate": "42501"})
+                outcomes.append({"case": label, "sqlstate": "42501", "planned_dml_only": label == "unrelated_dml_plan"})
             else:
                 raise RuntimeError("forbidden capability accepted")
         conn.rollback()
@@ -419,7 +430,14 @@ def publisher_probe(path, endpoint):
         checked_identity(identities[0], "lab_publisher", endpoint)
         states = [v.decode() for v in re.findall(rb"ERROR:\s+([A-Z0-9]{5})", r.stderr)]
         require(r.returncode != 0 and states == ["42501"], "exact owning psql privilege denial missing")
-        outcomes.append({"case": label, "sqlstate": "42501", "backend_pid": identities[0]["backend_pid"]})
+        outcomes.append(
+            {
+                "case": label,
+                "sqlstate": "42501",
+                "backend_pid": identities[0]["backend_pid"],
+                "planned_dml_only": label == "unrelated_dml_plan",
+            }
+        )
     return {
         "identity": rows[0],
         "hot_row_count": rows[1]["row_count"],
@@ -440,6 +458,7 @@ def main():
     binding = json.loads(args.binding.read_text())
     endpoints = checked_endpoints(binding)
     profile = binding["profiles"][args.duty]
+    verify_source_files(profile)
     require(os.environ.get("VERDIFY_DEVICE_WRITE_ENABLED") == "0", "device authority refused")
     if profile["identity_kind"] == "baked-image":
         require(

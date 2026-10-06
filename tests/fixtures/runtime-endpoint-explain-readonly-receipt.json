@@ -1,0 +1,31 @@
+{
+  "explain": {
+    "sqlstate": "42501",
+    "identity": {
+      "tx_ro": "on",
+      "current": "acl_probe_login",
+      "session": "acl_probe_login",
+      "default_ro": "on",
+      "delete_privilege": false
+    },
+    "query": "EXPLAIN (FORMAT JSON) DELETE FROM public.acl_probe WHERE FALSE;",
+    "executed_dml": false
+  },
+  "direct": {
+    "sqlstate": "25006",
+    "identity": {
+      "tx_ro": "on",
+      "current": "acl_probe_login",
+      "session": "acl_probe_login",
+      "default_ro": "on",
+      "delete_privilege": false
+    },
+    "query": "DELETE FROM public.acl_probe WHERE FALSE;",
+    "executed_dml": false
+  },
+  "scope": "disposable local PostgreSQL16 only",
+  "complete": true,
+  "schema": "runtime-endpoint-explain-readonly-local-semantic-proof-v1",
+  "native_receipt_sha256": "d7247fa6df2f34b16d48ed382dfa223428e9aae32653c318e3236370c581de1e",
+  "ordinary_product_client_acceptance": false
+}

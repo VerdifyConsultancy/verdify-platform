@@ -98,7 +98,7 @@ def main():
             bool(error) and re.search(r"(?:SQLSTATE\s*|\()42501\b", error),
             "exact actual Grafana privilege denial required",
         )
-        denies.append({"case": label, "sqlstate": "42501"})
+        denies.append({"case": label, "sqlstate": "42501", "planned_dml_only": label == "unrelated_dml_plan"})
     print(
         json.dumps(
             {

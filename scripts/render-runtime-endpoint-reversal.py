@@ -42,7 +42,15 @@ def render(binding, sources):
     ends = m.checked_endpoints(binding)
     require(set(binding["profiles"]) == set(m.ROLES) | {"grafana"}, "all nine genuine owning-image profiles required")
     data = {"binding.json": json.dumps(binding, sort_keys=True), **sources}
-    objects = [{"apiVersion": "v1", "kind": "ConfigMap", "metadata": {"name": CM, "namespace": NS}, "data": data}]
+    objects = [
+        {
+            "apiVersion": "v1",
+            "kind": "ConfigMap",
+            "metadata": {"name": CM, "namespace": NS},
+            "immutable": True,
+            "data": data,
+        }
+    ]
     for role in (*m.ROLES, "grafana"):
         profile = binding["profiles"][role]
         require(re.fullmatch(r"[^\s]+@sha256:[0-9a-f]{64}", profile["image"]), "immutable owning image required")
@@ -51,7 +59,24 @@ def render(binding, sources):
             "explicit actual source identity required",
         )
         if role != "grafana":
+            require(profile["identity_kind"] in {"baked-image", "mounted-source"}, "ordinary source identity required")
             require(re.fullmatch(r"[0-9a-f]{64}", profile["module_sha256"]), "module hash required")
+            if profile["identity_kind"] == "baked-image":
+                require(re.fullmatch(r"[0-9a-f]{40}", profile["image_source_sha"]), "known baked source required")
+            else:
+                require(
+                    re.fullmatch(r"[0-9a-f]{40}", profile["mounted_source_sha"]),
+                    "known mounted source revision required",
+                )
+                require(
+                    any(
+                        v["path"] == profile["module_path"] and v["sha256"] == profile["module_sha256"]
+                        for v in profile.get("source_mounts", [])
+                    ),
+                    "mounted source must be the hash-bound actual module",
+                )
+        else:
+            require(profile["identity_kind"] == "actual-grafana-server", "actual Grafana server identity required")
         waves = ("before", "target", "restored") if role == "grafana" else ("all",)
         for wave in waves:
             name = "verdify-s2-endpoint-" + role.replace("_", "-") + "-" + wave
@@ -204,6 +229,7 @@ def render(binding, sources):
                 containers = [server, container]
             pod = {
                 "restartPolicy": "Never",
+                "nodeSelector": {"kubernetes.io/hostname": "node4"},
                 "automountServiceAccountToken": False,
                 "enableServiceLinks": False,
                 "imagePullSecrets": [{"name": "zot-origin-cluster-pull"}],

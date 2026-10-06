@@ -92,8 +92,8 @@ def test_ast_constructor_uses_only_source_call_and_refuses_ambiguity(tmp_path):
 def test_denials_include_real_unrelated_dml_and_cross_role():
     for role in (*m.ROLES, "grafana"):
         denied = m.deny_cases(role)
-        assert denied["unrelated_dml"] == "DELETE FROM public.schema_migrations WHERE FALSE"
-        assert set(denied) == {"mapping", "reveal", "owner", "unrelated_dml", "cross_workload"}
+        assert denied["unrelated_dml_plan"] == "EXPLAIN (FORMAT JSON) DELETE FROM public.schema_migrations WHERE FALSE"
+        assert set(denied) == {"mapping", "reveal", "owner", "unrelated_dml_plan", "cross_workload"}
         assert denied["cross_workload"] != "SET ROLE verdify_" + role + "_runtime"
     assert 'error.sqlstate == "42501"' in Path(m.__file__).read_text()
     assert '"25006"' not in Path(m.__file__).read_text()
@@ -145,6 +145,7 @@ def identity():
         elevated=False,
         memberships=["verdify_api_runtime"],
         statement_timeout="15s",
+        ledger_delete_allowed=False,
     )
 
 
@@ -191,3 +192,34 @@ def test_actual_backend_role_timeout_and_readonly_are_mandatory(key, value):
     actual[key] = value
     with pytest.raises(RuntimeError):
         m.checked_identity(actual, "api", {"cluster": "verdify-cnpg-s2", "primary_ip": "10.42.3.106"})
+
+
+def test_native_postgres16_semantics_keep_readonly_and_distinguish_denials():
+    import json
+
+    receipt = json.loads(
+        (Path(__file__).parent / "fixtures/runtime-endpoint-explain-readonly-receipt.json").read_text()
+    )
+    assert receipt["complete"] and receipt["scope"] == "disposable local PostgreSQL16 only"
+    assert receipt["explain"]["sqlstate"] == "42501" and receipt["direct"]["sqlstate"] == "25006"
+    assert receipt["explain"]["identity"]["tx_ro"] == receipt["explain"]["identity"]["default_ro"] == "on"
+    assert receipt["explain"]["identity"]["delete_privilege"] is False
+    assert receipt["ordinary_product_client_acceptance"] is False and receipt["explain"]["executed_dml"] is False
+    assert m.deny_cases("api")["unrelated_dml_plan"].startswith("EXPLAIN (FORMAT JSON) DELETE")
+    assert "ANALYZE" not in m.deny_cases("api")["unrelated_dml_plan"]
+
+
+def test_supporting_source_inventory_refuses_changed_owning_driver(tmp_path):
+    source = tmp_path / "config.py"
+    driver = tmp_path / "db.py"
+    source.write_text("own config")
+    driver.write_text("own driver")
+    profile = {
+        "module_path": str(source),
+        "module_sha256": m.digest(source.read_bytes()),
+        "supporting_source_sha256": {str(driver): m.digest(driver.read_bytes())},
+    }
+    m.verify_source_files(profile)
+    driver.write_text("changed driver")
+    with pytest.raises(RuntimeError, match="supporting source"):
+        m.verify_source_files(profile)
