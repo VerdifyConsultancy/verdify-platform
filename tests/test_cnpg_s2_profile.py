@@ -30,3 +30,19 @@ def test_pair_profile_is_uid_bound_and_device_namespace_excluded():
     shell = (ROOT / "scripts/restore-backup-pair.sh").read_text()
     assert "cluster_name') NOT IN ('verdify-cnpg-rehearsal','verdify-cnpg-s2')" in shell
     assert "OR EXISTS(SELECT 1 FROM pg_database WHERE datname='verdify_rehearsal')" in shell
+
+
+def test_source_role_comments_are_compared_and_management_comment_is_explicit():
+    m = load("cnpg-restore-role-parity")
+    source = "CREATE ROLE app;\nALTER ROLE app WITH NOLOGIN;\nCOMMENT ON ROLE app IS 'source custody';\n"
+    current = (
+        source
+        + "CREATE ROLE postgres;\nALTER ROLE postgres WITH SUPERUSER;\n"
+        + next(iter(m.MANAGEMENT_COMMENTS))
+        + "\n"
+    )
+    assert m.verify(source, current)["role_byte_parity"] is True
+    with pytest.raises(ValueError, match="restored role posture"):
+        m.verify(source, current.replace("source custody", "different"))
+    with pytest.raises(ValueError, match="restored role posture"):
+        m.verify(source, current.replace("Special user for streaming replication", "Unrecognized management metadata"))

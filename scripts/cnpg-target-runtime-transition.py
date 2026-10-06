@@ -180,7 +180,11 @@ def witness_select(target=None, *, physical_target=None):
     c0.require(c0.VERSION == "cnpg-c0-logical-recovery-witness-v3", "typed full identity v3 prerequisite missing")
     # Use the same independently source-pinned witness, including executable
     # digest guards; its attester definitions legitimately differ after DDL.
-    sql = c0.emit_sql(target=True, bootstrap_grantor_profile=bool(target and target.get("bootstrap_grantor_profile")))
+    sql = c0.emit_sql(
+        target=True,
+        bootstrap_grantor_profile=bool(target and target.get("bootstrap_grantor_profile")),
+        cluster_name=operator.CLUSTER,
+    )
     if physical_target:
         old_guard = "OR current_setting('cluster_name') <> '" + operator.CLUSTER + "'"
         c0.require(sql.count(old_guard) == 1, "unexpected exact witness identity guard")
@@ -207,7 +211,7 @@ def validate_inputs(source, target, binding):
             and re.fullmatch(r"[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}", binding[key]),
             "invalid target UID",
         )
-    c0.require(re.fullmatch(r"verdify-cnpg-rehearsal-[1-9]\d*", binding["pod"]), "wrong exact primary")
+    c0.require(re.fullmatch(re.escape(operator.CLUSTER) + r"-[1-9]\d*", binding["pod"]), "wrong exact primary")
     c0.require(binding["operand_digest"] == operator.DIGEST, "unqualified target image")
     return result
 

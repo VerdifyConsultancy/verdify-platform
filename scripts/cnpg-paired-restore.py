@@ -112,6 +112,7 @@ def main():
     parser.add_argument("--management-before", type=Path)
     parser.add_argument("--management-before-sha256")
     parser.add_argument("--bootstrap-grantor-profile", action="store_true")
+    parser.add_argument("--completed-role-replay", action="store_true")
     parser.add_argument("--role-prefix-custody", type=Path)
     parser.add_argument("--role-prefix-custody-sha256")
     parser.add_argument("--role-prefix-current", type=Path)
@@ -124,6 +125,15 @@ def main():
         raw_management = regular(args.management_before).read_bytes()
         c0.require(
             hashlib.sha256(raw_management).hexdigest() == args.management_before_sha256, "management custody mismatch"
+        )
+    if args.completed_role_replay:
+        c0.require(
+            args.cluster_name == "verdify-cnpg-s2"
+            and args.stage_name
+            and args.management_before
+            and args.prior_custody_manifest_sha256
+            and not args.role_prefix_custody,
+            "completed replay requires isolated S2 exact predecessor custody",
         )
     prefix = None
     if args.role_prefix_custody:
@@ -305,6 +315,8 @@ def main():
         env["CNPG_MANAGEMENT_BEFORE_SHA256"] = args.management_before_sha256
     if args.bootstrap_grantor_profile:
         env["CNPG_BOOTSTRAP_GRANTOR_PROFILE"] = "cnpg-source-bootstrap-grantor-v1"
+    if args.completed_role_replay:
+        env["CNPG_COMPLETED_ROLE_REPLAY"] = "role-complete-native-verified-v1"
     if prefix:
         env["CNPG_ROLE_PREFIX_CUSTODY"] = stage + "/role-prefix-custody.json"
         env["CNPG_ROLE_PREFIX_CURRENT"] = stage + "/role-prefix-current.sql"

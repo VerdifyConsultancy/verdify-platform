@@ -34,6 +34,11 @@ def role(line):
     return (match[1] or match[2]) if match else None
 
 
+MANAGEMENT_COMMENTS = {
+    "COMMENT ON ROLE streaming_replica IS 'Special user for streaming replication created by CloudNativePG';"
+}
+
+
 METRICS_PROFILE = {
     "CREATE ROLE cnpg_metrics_exporter;",
     "ALTER ROLE cnpg_metrics_exporter WITH NOSUPERUSER INHERIT NOCREATEROLE NOCREATEDB LOGIN NOREPLICATION NOBYPASSRLS;",
@@ -146,8 +151,11 @@ def management_profile(text):
     return sorted(
         line
         for line in canonical(text)
-        if role(line) in MANAGEMENT
-        or re.search(r"\b(?:cnpg_metrics_exporter|streaming_replica|rehearsal_bootstrap)\b", line)
+        if line not in MANAGEMENT_COMMENTS
+        and (
+            role(line) in MANAGEMENT
+            or re.search(r"\b(?:cnpg_metrics_exporter|streaming_replica|rehearsal_bootstrap)\b", line)
+        )
     )
 
 
@@ -202,7 +210,9 @@ def verify(source, restored, mapping=None):
     filtered = [
         line
         for line in restored
-        if role(line) not in extras and not ("cnpg_metrics_exporter" in extras and line in METRICS_PROFILE)
+        if role(line) not in extras
+        and line not in MANAGEMENT_COMMENTS
+        and not ("cnpg_metrics_exporter" in extras and line in METRICS_PROFILE)
     ]
     expected = [
         translated_membership(line, mapping) if mapping and line.startswith("GRANT ") else line for line in source
@@ -223,6 +233,7 @@ def verify(source, restored, mapping=None):
         "raw_membership_differences": deltas,
         "separately_enumerated_management_roles": sorted(actual_names - names),
         "metrics_management_profile_verified": bool(METRICS_PROFILE <= set(restored)),
+        "separately_enumerated_management_comments": sorted(set(restored) & MANAGEMENT_COMMENTS),
     }
 
 
@@ -253,6 +264,7 @@ def main():
     parser.add_argument("--role-prefix-custody", type=Path)
     parser.add_argument("--role-prefix-current", type=Path)
     parser.add_argument("--restore-summary", action="store_true")
+    parser.add_argument("--completed-role-replay", action="store_true")
     parser.add_argument("--bootstrap-identity", type=Path)
     parser.add_argument("--source-witness", type=Path)
     parser.add_argument("--source-witness-sha256")
@@ -280,12 +292,17 @@ def main():
         require(
             hashlib.sha256(raw).hexdigest() == args.management_before_sha256, "management predecessor custody mismatch"
         )
-        if not args.role_prefix_custody:
+        if not args.role_prefix_custody and not args.completed_role_replay:
             require(canonical(raw.decode()) == canonical(current), "management predecessor semantic drift")
+        if args.completed_role_replay:
+            require(
+                management_profile(raw.decode()) == management_profile(current), "completed replay management drift"
+            )
         check_metrics(canonical(current))
     else:
         require(not args.management_before_sha256, "incomplete management predecessor")
     if args.role_prefix_custody:
+        require(not args.completed_role_replay, "conflicting continuation profiles")
         require(args.replay and args.role_prefix_current and args.management_before, "incomplete partial continuation")
         descriptor = prefix_descriptor(args.role_prefix_custody.read_text())
         old = Path("/var/lib/postgresql/data") / descriptor["stage_name"]
@@ -307,7 +324,15 @@ def main():
         )
     else:
         require(not args.role_prefix_current, "unexpected partial role artifact")
-        result = prepare(source, current, mapping=mapping) if args.replay else None
+        if args.completed_role_replay:
+            require(
+                args.replay and args.management_before and not args.restore_summary,
+                "completed role continuation requires replay and immutable management custody",
+            )
+            verify(source, current, mapping=mapping)
+            result = "SELECT 'complete source role replay independently verified';\n"
+        else:
+            result = prepare(source, current, mapping=mapping) if args.replay else None
     if args.replay:
         require(not args.restore_summary, "summary requires completed verification")
         with args.replay.open("x") as stream:
