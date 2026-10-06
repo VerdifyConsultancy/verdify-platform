@@ -15,3 +15,4 @@ resources:
   # state PVC by the seed-config initContainer so it can never silently drift back
   # to the stock openrouter/anthropic template that 401'd every planner LLM call.
   - hermes-config.yaml
+  - iris-inventory.yaml
