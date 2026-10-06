@@ -8,3 +8,7 @@ resources:
 - verdify-cnpg-rehearsal-isolation.yaml
 - deny-all-rehearsal.yaml
 - cnpg-s2-runtime-client-policy.yaml
+- pitr-reader-object-store.yaml
+- s2-current274-backup.yaml
+- s2-current274-frozen-recovery-pair.yaml
+- cnpg-s2-archive-reader-policy.yaml

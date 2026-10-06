@@ -1,7 +1,8 @@
 # Current275 additive clone qualification
 
 `scripts/cnpg-current275-transition.py` emits a separate closed transition for
-`verdify-cnpg-s2` and `verdify-cnpg-s2-pitr-b-frozen` only. It never admits the
+`verdify-cnpg-s2`, `verdify-cnpg-s2-pitr-a-frozen` and
+`verdify-cnpg-s2-pitr-b-frozen` only. It never admits the
 production database or arbitrary targets. The protected274 physical pair, full
 parity and old target receipt table remain historical evidence.
 
@@ -64,7 +65,7 @@ After the bridge has passed independently, `admission-qualify` emits a second
 separate ROLLBACK qualification. `admission-install` requires its exact native
 artifact and reviewed complete post witness. This stage creates only
 `public.cnpg_s2_275_runtime_receipts` and replaces the two target attesters with
-source-generated bodies bound to the exact S2 or frozen-B cluster and new table.
+source-generated bodies bound to the exact S2, frozen-A or frozen-B cluster and new table.
 It preserves `public.cnpg_qualified_runtime_receipts` byte-for-byte as274 history.
 This deliberate target admission delta is not folded into the narrower migration
 bridge allowance.
@@ -85,7 +86,35 @@ Missing or changed new-table authority refuses readiness; there is no274 fallbac
 Consumer probes must bind actual endpoint/Cluster/Pod/Service identities and the
 new profile/body SHA before actual startup/endpoint-flip credit. Nine runtime
 credential custody, the independent six-role bootstrap275 profile, collector,
-allowed duties and S2→B→S2 reversal remain separate ROOT/Iris acceptance.
+allowed duties and the actual frozen-A→frozen-B→frozen-A endpoint reversal remain
+separate ROOT/Iris acceptance.
+
+## Actual installation and recovered-candidate preservation
+
+The earlier [rollback-only receipt](../../handoffs/s2-2026-10-05/evidence/cnpg-current275-rollback-qualified.json)
+is immutable historical evidence; its statement that admission was unexecuted
+describes that earlier capture. Separate persistent bridge and admission installs
+subsequently completed. The original S2 clone later failed complete preservation
+when a replacement primary resumed Timescale maintenance and lost9,953 diagnostics
+rows. Its [failed transport witness](../../handoffs/s2-2026-10-05/evidence/cnpg-current275-s2-rejected-transport.json)
+remains rejected; unchanged admission authority cannot waive missing workload data.
+
+The intact frozen A and B candidates each passed complete current275 preservation
+after natural operator primary switches. Their separate transport receipts bind
+the new primary UID/IP/timeline to the original installed authority; historical
+installation and receipt bytes are unchanged. Full952 rowsets, all77 genuine
+sequence values and all42 study tables are retained as checksum-bound public
+metadata in the [recovered-candidate receipt](../../handoffs/s2-2026-10-05/evidence/cnpg-current275-recovered-candidates.json).
+All six instances have source-declared workers0 and actual restoringoff. This
+inspection freeze pauses automatic maintenance and requires a separately qualified
+production scheduler policy; it is not permission to resume unknown restored jobs.
+
+The A-only versus A+B-not-C bootstrap markers and target-native admission digests
+remain legitimate target differences. Compare each candidate with its own complete
+protected baseline, not whole-database A/B equality. Credential custody does not
+credit actual owning-client authentication, endpoint reversal or spool/inverse
+acceptance. Those and the final independent post-client/inverse reseal remain open
+in the receipt until genuine execution results are recorded.
 
 ## Emission interface
 

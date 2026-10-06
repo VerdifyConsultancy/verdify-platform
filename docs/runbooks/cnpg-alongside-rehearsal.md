@@ -1,5 +1,31 @@
 # #396: current-storage CNPG alongside rehearsal
 
+## Current delivery checkpoint
+
+The preparation commands and post268 sequencing below are historical procedures,
+not assertions that today's restore and recovery proofs are unexecuted. The
+immutable [current274 physical proof](../handoffs/s2-2026-10-05/evidence/cnpg-current274-physical-full-parity.json)
+records authentic full restore/PITR and the measured primary-Pod-loss boundary.
+The additive [current275 recovered-candidate proof](../handoffs/s2-2026-10-05/evidence/cnpg-current275-recovered-candidates.json)
+records separate native bridge/admission installations, complete A/B preservation
+through natural primary switches, and the rejected S2 scheduler-loss attempt.
+The [cutover/rollback packet](cnpg/current274-cutover-rollback-packet.md) carries
+actual measured risks and both write-boundary rollback strategies for #245.
+
+The owning cluster render now includes the exact existing frozen A/B declarations,
+completed S2 Backup, independent reader ObjectStore and archive-reader policy.
+Reconciliation must first verify their existing UIDs/specs: adoption is not a new
+restore, backup trigger, credential install or recreation of immutable Cluster
+bootstrap fields. Preserve all failed and historical targets; prune stays off.
+The AppProject already permits these resource kinds and denies Secrets. Existing
+reader/writer Secret references remain unchanged and values never enter this source.
+
+Source publication and rendering alone do not complete #396. Actual ordinary
+A→B→A endpoint/Grafana qualification, committed spool plus exact inverse, final
+independent952/77/42/native reseal and exact-revision Synced/Healthy owning Argo
+reconciliation remain open. ROOT serializes delivery and Iris owns active client
+qualification; this lane performs no production database endpoint cutover.
+
 Status: source preparation; operand image and a scratch extension ABI fixture are
 qualified. No Verdify CNPG deployment, role-complete restore, failover or PITR
 has been performed by this change. Production `DB_HOST=verdify-db`, its
@@ -252,7 +278,7 @@ revert resource/digest coordinates and retained PVC/backup identities. Productio
 endpoint, quiesce, final delta, actual flip and decommission belong to ROOT/#245;
 this alongside lane performs none of them.
 
-## Source and operator start sequence
+## Historical source and operator start sequence
 
 The product source owns the two renders; Agents owns project
 `app-verdify-cnpg-rehearsal` and Applications
@@ -303,7 +329,7 @@ manual keys, Secret copies or fabricated binding metadata. The existing
 `zot-origin-cluster-pull` reflector source already permits every namespace except
 `frigate-dev`; no additional pull identity or Secret declarer is needed here.
 
-## Fresh post-268 recovery source
+## Historical post-268 recovery source procedure
 
 Use the actual post-268 runner ledger/source checksum, all six runtime workload
 role boundaries and the three preserved API/ingestor/MCP sealed receipts from ROOT's production
@@ -327,7 +353,7 @@ by CNPG in the dedicated namespace: the CNPG import adapter must use a bounded
 verified stream into scratch storage on the exact rehearsal primary, never a
 second declaration or writable mount of the production dump PVC.
 
-## Remaining concrete work
+## Historical initial import requirements
 
 The source-owned CNPG role-complete import adapter is implemented in
 `scripts/cnpg-paired-restore.py`: it consumes an exact verified pair, preserves
@@ -346,7 +372,7 @@ are still unearned. Current storage/CPU observations are capacity evidence, not 
 reservation or future schedulability guarantee.
 
 
-## Next actual pair import command
+## Historical initial pair import command
 
 After the reviewed owner source is adopted, namespace bindings and the CNPG
 cluster are healthy, ROOT's six-role production release has completed, and one

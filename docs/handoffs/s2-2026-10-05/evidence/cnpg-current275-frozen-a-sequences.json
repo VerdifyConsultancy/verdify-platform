@@ -1,0 +1,310 @@
+{
+  "_timescaledb_catalog.bgw_job_id_seq": {
+    "last_value": 1024,
+    "is_called": true
+  },
+  "_timescaledb_catalog.chunk_column_stats_id_seq": {
+    "last_value": 1,
+    "is_called": false
+  },
+  "_timescaledb_catalog.chunk_constraint_name": {
+    "last_value": 1009,
+    "is_called": true
+  },
+  "_timescaledb_catalog.chunk_id_seq": {
+    "last_value": 1108,
+    "is_called": true
+  },
+  "_timescaledb_catalog.continuous_agg_migrate_plan_step_step_id_seq": {
+    "last_value": 1,
+    "is_called": false
+  },
+  "_timescaledb_catalog.dimension_id_seq": {
+    "last_value": 62,
+    "is_called": true
+  },
+  "_timescaledb_catalog.dimension_slice_id_seq": {
+    "last_value": 925,
+    "is_called": true
+  },
+  "_timescaledb_catalog.hypertable_id_seq": {
+    "last_value": 72,
+    "is_called": true
+  },
+  "_timescaledb_catalog.tablespace_id_seq": {
+    "last_value": 1,
+    "is_called": false
+  },
+  "_timescaledb_internal.bgw_job_stat_history_id_seq": {
+    "last_value": 1,
+    "is_called": false
+  },
+  "public.alert_log_id_seq": {
+    "last_value": 12548,
+    "is_called": true
+  },
+  "public.consumables_log_id_seq": {
+    "last_value": 1,
+    "is_called": false
+  },
+  "public.control_transition_ledger_ledger_id_seq": {
+    "last_value": 1,
+    "is_called": false
+  },
+  "public.crop_assignment_revisions_revision_id_seq": {
+    "last_value": 10,
+    "is_called": true
+  },
+  "public.crop_band_anchors_id_seq": {
+    "last_value": 264,
+    "is_called": true
+  },
+  "public.crop_catalog_id_seq": {
+    "last_value": 56,
+    "is_called": true
+  },
+  "public.crop_events_id_seq": {
+    "last_value": 94,
+    "is_called": true
+  },
+  "public.crop_target_profile_revisions_revision_id_seq": {
+    "last_value": 288,
+    "is_called": true
+  },
+  "public.crop_target_profiles_id_seq": {
+    "last_value": 4320,
+    "is_called": true
+  },
+  "public.crop_tasks_id_seq": {
+    "last_value": 20,
+    "is_called": true
+  },
+  "public.crops_id_seq": {
+    "last_value": 15,
+    "is_called": true
+  },
+  "public.daily_checklist_log_id_seq": {
+    "last_value": 772,
+    "is_called": true
+  },
+  "public.daily_checklist_template_id_seq": {
+    "last_value": 20,
+    "is_called": true
+  },
+  "public.daily_climate_metric_revisions_revision_id_seq": {
+    "last_value": 3260,
+    "is_called": true
+  },
+  "public.data_gaps_id_seq": {
+    "last_value": 390,
+    "is_called": true
+  },
+  "public.dli_validity_intervals_id_seq": {
+    "last_value": 1,
+    "is_called": true
+  },
+  "public.equipment_aliases_id_seq": {
+    "last_value": 3,
+    "is_called": true
+  },
+  "public.equipment_assets_id_seq": {
+    "last_value": 119,
+    "is_called": true
+  },
+  "public.equipment_id_seq": {
+    "last_value": 116,
+    "is_called": true
+  },
+  "public.experiment_events_event_id_seq": {
+    "last_value": 218,
+    "is_called": true
+  },
+  "public.experiment_v2_bundle_attempts_attempt_id_seq": {
+    "last_value": 560,
+    "is_called": true
+  },
+  "public.experiment_v2_component_outcomes_component_outcome_id_seq": {
+    "last_value": 6263,
+    "is_called": true
+  },
+  "public.experiment_v2_runtime_generations_generation_event_id_seq": {
+    "last_value": 225,
+    "is_called": true
+  },
+  "public.experiment_v2_work_events_work_event_id_seq": {
+    "last_value": 323,
+    "is_called": true
+  },
+  "public.fixed_panel_contributor_revisions_revision_id_seq": {
+    "last_value": 9,
+    "is_called": true
+  },
+  "public.fixed_panel_native_day_receipts_receipt_id_seq": {
+    "last_value": 1,
+    "is_called": true
+  },
+  "public.fixed_panel_native_source_bindings_binding_id_seq": {
+    "last_value": 2,
+    "is_called": true
+  },
+  "public.fixed_panel_target_revisions_revision_id_seq": {
+    "last_value": 3,
+    "is_called": true
+  },
+  "public.forecast_action_log_id_seq": {
+    "last_value": 115183,
+    "is_called": true
+  },
+  "public.forecast_action_rules_id_seq": {
+    "last_value": 9,
+    "is_called": true
+  },
+  "public.harvests_id_seq": {
+    "last_value": 2,
+    "is_called": true
+  },
+  "public.image_observations_id_seq": {
+    "last_value": 726,
+    "is_called": true
+  },
+  "public.irrigation_log_id_seq": {
+    "last_value": 375,
+    "is_called": true
+  },
+  "public.irrigation_schedule_id_seq": {
+    "last_value": 186,
+    "is_called": true
+  },
+  "public.lab_results_id_seq": {
+    "last_value": 1,
+    "is_called": false
+  },
+  "public.maintenance_log_id_seq": {
+    "last_value": 11,
+    "is_called": true
+  },
+  "public.nutrient_recipes_id_seq": {
+    "last_value": 33,
+    "is_called": true
+  },
+  "public.observations_id_seq": {
+    "last_value": 1826,
+    "is_called": true
+  },
+  "public.openclaw_interaction_log_id_seq": {
+    "last_value": 1178,
+    "is_called": true
+  },
+  "public.physical_crop_band_revisions_revision_id_seq": {
+    "last_value": 1,
+    "is_called": false
+  },
+  "public.plan_delivery_log_id_seq": {
+    "last_value": 6002,
+    "is_called": true
+  },
+  "public.planner_lessons_id_seq": {
+    "last_value": 326,
+    "is_called": true
+  },
+  "public.planner_trigger_ledger_id_seq": {
+    "last_value": 1053172,
+    "is_called": true
+  },
+  "public.playbook_content_id_seq": {
+    "last_value": 124,
+    "is_called": true
+  },
+  "public.policy_delivery_attempts_attempt_id_seq": {
+    "last_value": 1,
+    "is_called": false
+  },
+  "public.policy_device_snapshots_snapshot_id_seq": {
+    "last_value": 1,
+    "is_called": false
+  },
+  "public.positions_id_seq": {
+    "last_value": 576,
+    "is_called": true
+  },
+  "public.pressure_groups_id_seq": {
+    "last_value": 12,
+    "is_called": true
+  },
+  "public.public_contact_submissions_id_seq": {
+    "last_value": 15,
+    "is_called": true
+  },
+  "public.resource_coefficients_id_seq": {
+    "last_value": 16,
+    "is_called": true
+  },
+  "public.route_only_crop_band_publications_publication_id_seq": {
+    "last_value": 1,
+    "is_called": false
+  },
+  "public.sensors_id_seq": {
+    "last_value": 114,
+    "is_called": true
+  },
+  "public.shelves_id_seq": {
+    "last_value": 60,
+    "is_called": true
+  },
+  "public.slack_alert_actions_id_seq": {
+    "last_value": 1,
+    "is_called": false
+  },
+  "public.slack_alert_runbooks_id_seq": {
+    "last_value": 37,
+    "is_called": true
+  },
+  "public.slack_command_audit_id_seq": {
+    "last_value": 2630,
+    "is_called": true
+  },
+  "public.slack_notification_events_id_seq": {
+    "last_value": 31,
+    "is_called": true
+  },
+  "public.slack_user_roles_id_seq": {
+    "last_value": 1,
+    "is_called": false
+  },
+  "public.soil_moisture_targets_id_seq": {
+    "last_value": 3,
+    "is_called": true
+  },
+  "public.succession_plan_id_seq": {
+    "last_value": 1,
+    "is_called": false
+  },
+  "public.switches_id_seq": {
+    "last_value": 96,
+    "is_called": true
+  },
+  "public.treatments_id_seq": {
+    "last_value": 4,
+    "is_called": true
+  },
+  "public.utility_cost_id_seq": {
+    "last_value": 3708,
+    "is_called": true
+  },
+  "public.verdify_embeddings_id_seq": {
+    "last_value": 8608,
+    "is_called": true
+  },
+  "public.water_meter_events_id_seq": {
+    "last_value": 210038,
+    "is_called": true
+  },
+  "public.water_systems_id_seq": {
+    "last_value": 52,
+    "is_called": true
+  },
+  "public.zones_id_seq": {
+    "last_value": 30,
+    "is_called": true
+  }
+}

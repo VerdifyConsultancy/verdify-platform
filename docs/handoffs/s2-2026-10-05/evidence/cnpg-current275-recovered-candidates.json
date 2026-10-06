@@ -1,0 +1,204 @@
+{
+  "schema": "cnpg-current275-recovered-candidates-v1",
+  "source_base_commit": "54b98ee62bcfc72fcea0098ef21a95d1fd963941",
+  "acceptance_complete": false,
+  "scope": "Rehearsal only; no production database endpoint cutover",
+  "migration_source_sha256": "f4f8da110236461680f41770bad766a7e28b1a6db1982ecc632e93930a375dc4",
+  "protected_current274_history_unchanged": true,
+  "records": [
+    {
+      "target": "a",
+      "transport_sha256": "7744a77e9681353cdb7a2be297c0917839a064175b9b289f4843b6c255107a22",
+      "native_binding": {
+        "current_cluster_uid": "bd01ec5b-efe9-4882-a6dc-c76c6b6fa7ec",
+        "current_primary_name": "verdify-cnpg-s2-pitr-a-frozen-2",
+        "current_primary_uid": "ea68bad4-3f3b-4116-b120-6300d92161f6",
+        "current_primary_ip": "10.42.3.133",
+        "current_timeline": 3,
+        "current_rw_service_uid": "93314da9-22ad-465c-b87b-34f7483b356f",
+        "current_operand_digest": "sha256:8b461e37d18aa049704eb6a9cde2ba9af0f955f8d3725e921070d2450bb2f137",
+        "database_oid": 16447
+      },
+      "historical_installation_sha256": "9d7f12596ec4b015a45d9a3fc3f35df1f09f1be088d97b79ab03f0a00dae4ad9",
+      "historical_ready_sha256": "a7bd0e253d64d7159013358f1e4e9bfc306c89a412f64f2e1d26676fe669317b",
+      "original_primary_uid_preserved": "96caed77-a75f-457c-bbd6-d34f88a3b3ae",
+      "full_installed_witness_sha256": "5676356cd2209d6b8b99a21d83a480d4f8a1c34f7db5ea6afdff62a25c1f7394",
+      "full952_unchanged": true,
+      "all77_sequences_unchanged": true,
+      "study42_unchanged": true,
+      "installed275_authority_unchanged": true,
+      "historical274_receipts_unchanged": true,
+      "all_six_workers_zero": true,
+      "public_evidence": {
+        "copy": {
+          "path": "docs/handoffs/s2-2026-10-05/evidence/cnpg-current275-frozen-a-copy.json",
+          "sha256": "4c5668164d32ccdbf418b9e54bbb5e131d6fdee5586444076236a43b85ec86ad"
+        },
+        "sequences": {
+          "path": "docs/handoffs/s2-2026-10-05/evidence/cnpg-current275-frozen-a-sequences.json",
+          "sha256": "5ef84c37d80e40314e5d15233c10ffddbf86323a4fcf3ee9a3457b1937b80fa1"
+        },
+        "study42": {
+          "path": "docs/handoffs/s2-2026-10-05/evidence/cnpg-current275-frozen-a-study42.json",
+          "sha256": "2f9edb4c7e2ef00c9bd319274539cea077dfe99132e6c1ff8a15ea095908bcfb"
+        },
+        "authority": {
+          "path": "docs/handoffs/s2-2026-10-05/evidence/cnpg-current275-frozen-a-authority.json",
+          "sha256": "56bcb4fa9d933d1d112579bcbe68ef3f00004283486c8486160c7b896e33294d"
+        },
+        "transport": {
+          "path": "docs/handoffs/s2-2026-10-05/evidence/cnpg-current275-frozen-a-transport.json",
+          "sha256": "7744a77e9681353cdb7a2be297c0917839a064175b9b289f4843b6c255107a22"
+        }
+      },
+      "operator_event_utc": "2026-10-06T09:23:42Z",
+      "new_primary_since_utc": "2026-10-06T09:23:46.751499Z",
+      "consumer_outage_measured": false,
+      "credentials_changed_for_rebinding": false
+    },
+    {
+      "target": "b",
+      "transport_sha256": "e786df5666993f5cff15ec507f27633339d3780a9942e184e63d0f6bcfe16c41",
+      "native_binding": {
+        "current_cluster_uid": "3981d0f2-4c72-48ac-9e09-826fe6bd4ed6",
+        "current_primary_name": "verdify-cnpg-s2-pitr-b-frozen-3",
+        "current_primary_uid": "11f64c0a-8053-49df-bad0-85fc020b8858",
+        "current_primary_ip": "10.42.3.191",
+        "current_timeline": 5,
+        "current_rw_service_uid": "1778c541-900f-4743-b9be-62b13f96c569",
+        "current_operand_digest": "sha256:8b461e37d18aa049704eb6a9cde2ba9af0f955f8d3725e921070d2450bb2f137",
+        "database_oid": 16447
+      },
+      "historical_installation_sha256": "5313c60665d208981aa8b3ab95e8e5f21220074f261efa90fd7375dc0bf13583",
+      "historical_ready_sha256": "a7bd0e253d64d7159013358f1e4e9bfc306c89a412f64f2e1d26676fe669317b",
+      "original_primary_uid_preserved": "b8288ef5-ca89-4bb5-85e5-ce71dd27bbec",
+      "full_installed_witness_sha256": "7f80fb5fe051e35e496a16a17127f1618c480c17fd01d3680e198fa03095380f",
+      "full952_unchanged": true,
+      "all77_sequences_unchanged": true,
+      "study42_unchanged": true,
+      "installed275_authority_unchanged": true,
+      "historical274_receipts_unchanged": true,
+      "all_six_workers_zero": true,
+      "public_evidence": {
+        "copy": {
+          "path": "docs/handoffs/s2-2026-10-05/evidence/cnpg-current275-frozen-b-copy.json",
+          "sha256": "e3e455597d227261fbe253f7d42d91d6f32c6268723969a7b42d8d2d10c0f43a"
+        },
+        "sequences": {
+          "path": "docs/handoffs/s2-2026-10-05/evidence/cnpg-current275-frozen-b-sequences.json",
+          "sha256": "5ef84c37d80e40314e5d15233c10ffddbf86323a4fcf3ee9a3457b1937b80fa1"
+        },
+        "study42": {
+          "path": "docs/handoffs/s2-2026-10-05/evidence/cnpg-current275-frozen-b-study42.json",
+          "sha256": "2f9edb4c7e2ef00c9bd319274539cea077dfe99132e6c1ff8a15ea095908bcfb"
+        },
+        "authority": {
+          "path": "docs/handoffs/s2-2026-10-05/evidence/cnpg-current275-frozen-b-authority.json",
+          "sha256": "ff2336df0b9bb7f864df18a73b01112eb48405134283d4c7f958e3befd3ec812"
+        },
+        "transport": {
+          "path": "docs/handoffs/s2-2026-10-05/evidence/cnpg-current275-frozen-b-transport.json",
+          "sha256": "e786df5666993f5cff15ec507f27633339d3780a9942e184e63d0f6bcfe16c41"
+        }
+      },
+      "operator_event_utc": "2026-10-06T09:23:40Z",
+      "new_primary_since_utc": "2026-10-06T09:23:44.152255Z",
+      "consumer_outage_measured": false,
+      "credentials_changed_for_rebinding": false
+    }
+  ],
+  "installed_native_metadata": {
+    "a": {
+      "schema": "cnpg-current275-native-admission-installed-v1",
+      "complete": true,
+      "binding": {
+        "cluster": "verdify-cnpg-s2-pitr-a-frozen",
+        "cluster_uid": "bd01ec5b-efe9-4882-a6dc-c76c6b6fa7ec",
+        "pod": "verdify-cnpg-s2-pitr-a-frozen-1",
+        "pod_uid": "96caed77-a75f-457c-bbd6-d34f88a3b3ae",
+        "operand_digest": "sha256:8b461e37d18aa049704eb6a9cde2ba9af0f955f8d3725e921070d2450bb2f137",
+        "primary_address": "10.42.6.70",
+        "timeline": 2,
+        "service_uid": "93314da9-22ad-465c-b87b-34f7483b356f"
+      },
+      "database_oid": 16447,
+      "rw_service_uid": "93314da9-22ad-465c-b87b-34f7483b356f",
+      "rw_service_host": "verdify-cnpg-s2-pitr-a-frozen-rw.verdify-db-rehearsal.svc.cluster.local",
+      "source_sha256": "f4f8da110236461680f41770bad766a7e28b1a6db1982ecc632e93930a375dc4",
+      "execution_sql_sha256": "03adc0f9fe0130177f94f2155633d134ee4589f6f0f0bf9fd8c07cd7189bb529",
+      "installation_sha256": "9d7f12596ec4b015a45d9a3fc3f35df1f09f1be088d97b79ab03f0a00dae4ad9",
+      "post_witness_sha256": "5676356cd2209d6b8b99a21d83a480d4f8a1c34f7db5ea6afdff62a25c1f7394",
+      "independent_post_witness_sha256": "5676356cd2209d6b8b99a21d83a480d4f8a1c34f7db5ea6afdff62a25c1f7394",
+      "ddl_sha256": "9b21dca6d2d7eee217427b6ca273edb60f640577a6ea4dd8beb2682708c0cedd",
+      "fresh_zero_ordinary_clients_and_actors": true,
+      "qualified_allocation_normalization_only": true,
+      "native_attesters_exact_new275_table_no274_fallback": true,
+      "persistent_admission": true,
+      "credentials_changed": false
+    },
+    "b": {
+      "schema": "cnpg-current275-native-admission-installed-v1",
+      "complete": true,
+      "binding": {
+        "cluster": "verdify-cnpg-s2-pitr-b-frozen",
+        "cluster_uid": "3981d0f2-4c72-48ac-9e09-826fe6bd4ed6",
+        "pod": "verdify-cnpg-s2-pitr-b-frozen-1",
+        "pod_uid": "b8288ef5-ca89-4bb5-85e5-ce71dd27bbec",
+        "operand_digest": "sha256:8b461e37d18aa049704eb6a9cde2ba9af0f955f8d3725e921070d2450bb2f137"
+      },
+      "database_oid": 16447,
+      "rw_service_uid": "1778c541-900f-4743-b9be-62b13f96c569",
+      "rw_service_host": "verdify-cnpg-s2-pitr-b-frozen-rw.verdify-db-rehearsal.svc.cluster.local",
+      "source_sha256": "f4f8da110236461680f41770bad766a7e28b1a6db1982ecc632e93930a375dc4",
+      "execution_sql_sha256": "93a4def68c059c63a3d668ed8578f8f490986fa5e83586d5d0f3f1dfbba1e6ea",
+      "installation_sha256": "5313c60665d208981aa8b3ab95e8e5f21220074f261efa90fd7375dc0bf13583",
+      "post_witness_sha256": "7f80fb5fe051e35e496a16a17127f1618c480c17fd01d3680e198fa03095380f",
+      "independent_post_witness_sha256": "7f80fb5fe051e35e496a16a17127f1618c480c17fd01d3680e198fa03095380f",
+      "ddl_sha256": "814f374998d49fa200f48cfc6fbdd72a17ee8e2006da1c87cbea9e22fdb2d255",
+      "fresh_zero_ordinary_clients_and_actors": true,
+      "qualified_allocation_normalization_only": true,
+      "native_attesters_exact_new275_table_no274_fallback": true,
+      "persistent_admission": true,
+      "credentials_changed": false
+    }
+  },
+  "original_pitr_marker_lineage": {
+    "a": [
+      "A"
+    ],
+    "b": [
+      "A",
+      "B"
+    ],
+    "C_absent_both": true,
+    "whole_databases_identical_not_claimed": true
+  },
+  "rejected_s2": {
+    "path": "docs/handoffs/s2-2026-10-05/evidence/cnpg-current275-s2-rejected-transport.json",
+    "sha256": "d89b00467ad112fc840b773b49a1a2228d8fd997777eea2ddfe48de9713d6df8",
+    "full952_failed": true,
+    "diagnostics_rows_lost": 9953,
+    "not_waived": true
+  },
+  "remaining_acceptance": [
+    "actual nine ordinary owning-client A\u2192B\u2192A endpoint reversal",
+    "actual Grafana phases",
+    "committed-spool qualification and exact inverse",
+    "independent post-client/inverse full952/77/42/native reseal",
+    "canonical source integration and exact-head checks",
+    "owning no-prune rehearsal reconciliation Synced+Healthy exact revision"
+  ],
+  "production_db_cutover_performed": false,
+  "native_payload_or_credentials_rewritten": false,
+  "packet": {
+    "path": "docs/runbooks/cnpg/current274-cutover-rollback-packet.md",
+    "sha256": "bfc41640ef3179f9e19a05224cc470f25a26a3023bc8c9a4f1af899dde1dbbb4"
+  },
+  "owning_render_adoption": {
+    "path": "docs/handoffs/s2-2026-10-05/evidence/cnpg-current275-owning-render-adoption.json",
+    "sha256": "e135db37bd492e0592447e2cef7aab152f80e9006dd3c976945e96014f719dfd",
+    "applied": false,
+    "resource_count": 13,
+    "native_existing_specs_exact": true
+  }
+}

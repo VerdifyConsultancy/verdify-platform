@@ -1,0 +1,126 @@
+{
+  "schema": "cnpg-current275-transport-rebinding-v1",
+  "complete": true,
+  "historical_installation_sha256": "5313c60665d208981aa8b3ab95e8e5f21220074f261efa90fd7375dc0bf13583",
+  "historical_ready_sha256": "a7bd0e253d64d7159013358f1e4e9bfc306c89a412f64f2e1d26676fe669317b",
+  "current_cluster_uid": "3981d0f2-4c72-48ac-9e09-826fe6bd4ed6",
+  "current_primary_name": "verdify-cnpg-s2-pitr-b-frozen-3",
+  "current_primary_uid": "11f64c0a-8053-49df-bad0-85fc020b8858",
+  "current_primary_ip": "10.42.3.191",
+  "current_timeline": 5,
+  "current_rw_service_uid": "1778c541-900f-4743-b9be-62b13f96c569",
+  "current_operand_digest": "sha256:8b461e37d18aa049704eb6a9cde2ba9af0f955f8d3725e921070d2450bb2f137",
+  "database_oid": 16447,
+  "full952_unchanged": true,
+  "all77_sequences_unchanged": true,
+  "study42_unchanged": true,
+  "installed275_authority_unchanged": true,
+  "full_installed_witness_unchanged": true,
+  "full_installed_witness_sha256": "7f80fb5fe051e35e496a16a17127f1618c480c17fd01d3680e198fa03095380f",
+  "workers_zero_all_instances": true,
+  "all_six_worker_settings_path": "/Volumes/Work/verdify-s2-cnpg-20261006/frozen-b275-primary-rebinding-once/all-six-worker-settings/readiness.json",
+  "all_six_worker_settings_sha256": "174f57ebfd50d4f3cda49f579b92e6a4c31cb8dc0aa76d605a2643dbb991e534",
+  "actual_authority_path": "/Volumes/Work/verdify-s2-cnpg-20261006/frozen-b275-primary-rebinding-once/authority-readback/authority.json",
+  "actual_authority_sha256": "ff2336df0b9bb7f864df18a73b01112eb48405134283d4c7f958e3befd3ec812",
+  "row_count": 9699553,
+  "relation_count": 952,
+  "full952_receipt_path": "/Volumes/Work/verdify-s2-cnpg-20261006/frozen-b275-primary-rebinding-once/full952-copy/receipt.json",
+  "full952_receipt_sha256": "e3e455597d227261fbe253f7d42d91d6f32c6268723969a7b42d8d2d10c0f43a",
+  "native_copy_stdout_sha256": "da1c1d73bb4aaa861693e15210a5a9ccee4068f004e8380ac070b28583313c83",
+  "all77_sequence_path": "/Volumes/Work/verdify-s2-cnpg-20261006/frozen-b275-primary-rebinding-once/sequences-history/s2-sequences.json",
+  "historical274_receipts_unchanged": true,
+  "ordinary9_verifiers_scram_post_credential_custody": true,
+  "ordinary_backend_count": 0,
+  "active_non_database_actors": 0,
+  "source_installation_not_rewritten": true,
+  "original_primary_uid_preserved": "b8288ef5-ca89-4bb5-85e5-ce71dd27bbec",
+  "operator_reason": "Current primary on unschedulable vm-k3s-node5",
+  "operator_event_utc": "2026-10-06T09:23:40Z",
+  "new_primary_since_utc": "2026-10-06T09:23:44.152255Z",
+  "mutations_performed_for_rebinding": false,
+  "credentials_changed_for_rebinding": false,
+  "qualification_client_jobs_started": false,
+  "full952_acceptance_from_failed_s2_not_waived": true,
+  "evidence": [
+    {
+      "path": "/Volumes/Work/verdify-s2-cnpg-20261006/frozen-b275-primary-rebinding-once/binding.json",
+      "sha256": "306e3b07641fb4a32fced27a184a99e17208a9820462b27111be5dc6da7079d1"
+    },
+    {
+      "path": "/Volumes/Work/verdify-s2-cnpg-20261006/frozen-b275-primary-rebinding-once/cluster.json",
+      "sha256": "39a5da3208230184ff22f84661b900f8270d157252478d099625e735dcc1cf24"
+    },
+    {
+      "path": "/Volumes/Work/verdify-s2-cnpg-20261006/frozen-b275-primary-rebinding-once/primary.json",
+      "sha256": "899d0ac6dbd60ed579acd47714ab2a380d6237a1a06e42c3ffe31358e58a847f"
+    },
+    {
+      "path": "/Volumes/Work/verdify-s2-cnpg-20261006/frozen-b275-primary-rebinding-once/service.json",
+      "sha256": "38f7ac39997f6fbebb69a7d181c358eb908ce117de859c014b697886033b37a6"
+    },
+    {
+      "path": "/Volumes/Work/verdify-s2-cnpg-20261006/frozen-b275-primary-rebinding-once/events.json",
+      "sha256": "e6ce891acd70cd20f185fc63a0555c65eee05baa792062b007ba833a6aad909d"
+    },
+    {
+      "path": "/Volumes/Work/verdify-s2-cnpg-20261006/frozen-b275-primary-rebinding-once/complete-witness/witness.json",
+      "sha256": "7f80fb5fe051e35e496a16a17127f1618c480c17fd01d3680e198fa03095380f"
+    },
+    {
+      "path": "/Volumes/Work/verdify-s2-cnpg-20261006/frozen-b275-primary-rebinding-once/authority-readback/authority.json",
+      "sha256": "ff2336df0b9bb7f864df18a73b01112eb48405134283d4c7f958e3befd3ec812"
+    },
+    {
+      "path": "/Volumes/Work/verdify-s2-cnpg-20261006/frozen-b275-primary-rebinding-once/sequences-history/s2-sequences.json",
+      "sha256": "5ef84c37d80e40314e5d15233c10ffddbf86323a4fcf3ee9a3457b1937b80fa1"
+    },
+    {
+      "path": "/Volumes/Work/verdify-s2-cnpg-20261006/frozen-b275-primary-rebinding-once/sequences-history/s2-copied-rows.json",
+      "sha256": "46696d760f190934d563b489f3e73bb8413549e1a72013de60fae47792385329"
+    },
+    {
+      "path": "/Volumes/Work/verdify-s2-cnpg-20261006/frozen-b275-primary-rebinding-once/study42-readback/study42.json",
+      "sha256": "2f9edb4c7e2ef00c9bd319274539cea077dfe99132e6c1ff8a15ea095908bcfb"
+    },
+    {
+      "path": "/Volumes/Work/verdify-s2-cnpg-20261006/frozen-b275-primary-rebinding-once/study42-readback/jobs.json",
+      "sha256": "e20e3e2f60dc8cfd20806314faf0a88a935e0e4848e9de316b726849e329229a"
+    },
+    {
+      "path": "/Volumes/Work/verdify-s2-cnpg-20261006/frozen-b275-primary-rebinding-once/login-custody/custody.json",
+      "sha256": "e749b97867f16ed7fe28ece318c3b45708005358589c337185dbe865ab737d36"
+    },
+    {
+      "path": "/Volumes/Work/verdify-s2-cnpg-20261006/frozen-b275-primary-rebinding-once/full952-copy/receipt.json",
+      "sha256": "e3e455597d227261fbe253f7d42d91d6f32c6268723969a7b42d8d2d10c0f43a"
+    },
+    {
+      "path": "/Volumes/Work/verdify-s2-cnpg-20261006/frozen-b275-primary-rebinding-once/full952-copy/parity.json",
+      "sha256": "f5fc3311425468d3086a5247303756d2291723cdc3da936f4bbd22af7fe2abe8"
+    },
+    {
+      "path": "/Volumes/Work/verdify-s2-cnpg-20261006/frozen-b275-primary-rebinding-once/bootstrap-lineage/receipt.json",
+      "sha256": "63198e78e6c1079104bcd78f5d9c80d06b6bfdaf1908de6c7b44be74c107cd45"
+    },
+    {
+      "path": "/Volumes/Work/verdify-s2-cnpg-20261006/frozen-b275-primary-rebinding-once/final-login-custody/custody.json",
+      "sha256": "e749b97867f16ed7fe28ece318c3b45708005358589c337185dbe865ab737d36"
+    },
+    {
+      "path": "/Volumes/Work/verdify-s2-cnpg-20261006/frozen-b275-primary-rebinding-once/all-six-worker-settings/readiness.json",
+      "sha256": "174f57ebfd50d4f3cda49f579b92e6a4c31cb8dc0aa76d605a2643dbb991e534"
+    },
+    {
+      "path": "/Volumes/Work/verdify-s2-cnpg-20261006/frozen-b275-primary-rebinding-once/final-cluster.json",
+      "sha256": "39a5da3208230184ff22f84661b900f8270d157252478d099625e735dcc1cf24"
+    },
+    {
+      "path": "/Volumes/Work/verdify-s2-cnpg-20261006/frozen-b275-primary-rebinding-once/final-primary.json",
+      "sha256": "899d0ac6dbd60ed579acd47714ab2a380d6237a1a06e42c3ffe31358e58a847f"
+    },
+    {
+      "path": "/Volumes/Work/verdify-s2-cnpg-20261006/frozen-b275-primary-rebinding-once/final-service.json",
+      "sha256": "38f7ac39997f6fbebb69a7d181c358eb908ce117de859c014b697886033b37a6"
+    }
+  ]
+}

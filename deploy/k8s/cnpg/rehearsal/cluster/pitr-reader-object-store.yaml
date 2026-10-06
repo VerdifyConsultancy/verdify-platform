@@ -1,0 +1,23 @@
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: verdify-cnpg-pitr-reader
+  namespace: verdify-db-rehearsal
+spec:
+  configuration:
+    data:
+      compression: gzip
+    destinationPath: s3://verdify-cnpg-rehearsal/postgresql
+    endpointURL: https://s3-hdd.vallery.net
+    s3Credentials:
+      accessKeyId:
+        key: AWS_ACCESS_KEY_ID
+        name: verdify-cnpg-rehearsal-s3-reader
+      region:
+        key: AWS_DEFAULT_REGION
+        name: verdify-cnpg-rehearsal-s3-region
+      secretAccessKey:
+        key: AWS_SECRET_ACCESS_KEY
+        name: verdify-cnpg-rehearsal-s3-reader
+    wal:
+      compression: gzip

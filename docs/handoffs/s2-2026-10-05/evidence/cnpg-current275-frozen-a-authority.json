@@ -1,0 +1,26 @@
+{
+  "helpers": {
+    "fn_runtime_attest_ordinary_login": "d050a74ebf50f3b4e88674c9a96cede7e728a235cf0fb28ad9ede94a754fe263",
+    "fn_mcp_runtime_attest_ordinary_login": "fbf402de9dca99010d45553a808a69daea3c5f9e335c0a85c7f5155f13411fde"
+  },
+  "receipts": [
+    [
+      "verdify_api_runtime_login",
+      "c7bb3e597892438c81e2494eb73c91d2796d9f85d3f3317cd5bcaa14d310be5f",
+      "3a67067cad68a68337a14a2519b73633ee764b2cc369ed3b924104dca4fd09d8"
+    ],
+    [
+      "verdify_ingestor_runtime_login",
+      "048ff64d43aa48ac4c4f0462471dd5948cefd240e4ffe211a8d6e7c39a043895",
+      "3a67067cad68a68337a14a2519b73633ee764b2cc369ed3b924104dca4fd09d8"
+    ],
+    [
+      "verdify_mcp_runtime_login",
+      "06bb84ee0092b77395d45c0eac5fd2a54c70e008588e11347250437472a0c25b",
+      "3a67067cad68a68337a14a2519b73633ee764b2cc369ed3b924104dca4fd09d8"
+    ]
+  ],
+  "native_api": "c7bb3e597892438c81e2494eb73c91d2796d9f85d3f3317cd5bcaa14d310be5f",
+  "native_mcp": "06bb84ee0092b77395d45c0eac5fd2a54c70e008588e11347250437472a0c25b",
+  "native_ingestor": "048ff64d43aa48ac4c4f0462471dd5948cefd240e4ffe211a8d6e7c39a043895"
+}

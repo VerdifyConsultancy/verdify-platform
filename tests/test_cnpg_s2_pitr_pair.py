@@ -2,6 +2,7 @@
 
 import copy
 import importlib.util
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -57,6 +58,41 @@ def test_frozen_recovery_disables_scheduler_before_start_without_catalog_rewrite
         assert after["spec"]["postgresql"]["parameters"].pop("timescaledb.max_background_workers") == "0"
         after["metadata"]["name"] = before["metadata"]["name"]
         assert after == before
+
+
+def test_owning_render_adopts_frozen_candidates_with_reader_only_failover_policy():
+    directory = ROOT / "deploy/k8s/cnpg/rehearsal/cluster"
+    objects = list(yaml.safe_load_all(subprocess.check_output(["kustomize", "build", str(directory)])))
+    identities = [(o["kind"], o["metadata"]["name"]) for o in objects]
+    assert len(identities) == len(set(identities))
+    assert all(o["metadata"]["namespace"] == "verdify-db-rehearsal" for o in objects)
+    assert not any(o["kind"] in {"Secret", "Job", "Deployment", "StatefulSet", "PersistentVolume"} for o in objects)
+    frozen = [o for o in objects if o["kind"] == "Cluster" and o["metadata"]["name"].endswith("-frozen")]
+    assert {o["metadata"]["name"] for o in frozen} == {
+        "verdify-cnpg-s2-pitr-a-frozen",
+        "verdify-cnpg-s2-pitr-b-frozen",
+    }
+    for o in frozen:
+        assert o["spec"]["postgresql"]["parameters"]["timescaledb.max_background_workers"] == "0"
+        assert o["spec"]["instances"] == 3
+        assert o["spec"]["affinity"]["podAntiAffinityType"] == "required"
+        assert "plugins" not in o["spec"]
+        assert (
+            o["spec"]["externalClusters"][0]["plugin"]["parameters"]["barmanObjectName"] == "verdify-cnpg-pitr-reader"
+        )
+    reader = next(
+        o for o in objects if o["kind"] == "ObjectStore" and o["metadata"]["name"] == "verdify-cnpg-pitr-reader"
+    )
+    credentials = reader["spec"]["configuration"]["s3Credentials"]
+    assert (
+        credentials["accessKeyId"]["name"]
+        == credentials["secretAccessKey"]["name"]
+        == "verdify-cnpg-rehearsal-s3-reader"
+    )
+    assert "retentionPolicy" not in reader["spec"]
+    backup = next(o for o in objects if o["kind"] == "Backup")
+    assert backup["metadata"]["name"] == "verdify-cnpg-s2-current274-20261006"
+    assert backup["metadata"]["ownerReferences"][0]["uid"] == m.SOURCE_UID
 
 
 @pytest.mark.parametrize(

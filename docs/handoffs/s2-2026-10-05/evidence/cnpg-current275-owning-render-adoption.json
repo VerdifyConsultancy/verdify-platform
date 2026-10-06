@@ -1,0 +1,154 @@
+{
+  "schema": "cnpg-canonical-render-adoption-audit-v1",
+  "complete": true,
+  "base_commit": "54b98ee62bcfc72fcea0098ef21a95d1fd963941",
+  "render_sha256": "98d2783b4a462e8ef4fd45b55512360a602ba9407240798279b0c47c8e125ba1",
+  "resource_count": 13,
+  "all_resources_already_exist": true,
+  "all_declared_spec_fields_exact_live": true,
+  "no_new_backup_or_restore_requested": true,
+  "prune": false,
+  "mutation_performed": false,
+  "records": [
+    {
+      "kind": "ObjectStore",
+      "api_group": "barmancloud.cnpg.io",
+      "name": "verdify-cnpg-pitr-reader",
+      "uid": "e6dd97f3-3323-4155-b339-c984734b3d18",
+      "resource_version": "235797161",
+      "all_declared_spec_fields_exact_live": true,
+      "native_readback_path": "/Volumes/Work/verdify-s2-cnpg-20261006/canonical-integration-audit-once/proposed-native-ObjectStore-verdify-cnpg-pitr-reader.json",
+      "native_readback_sha256": "4c5719a6c3aecc9004ca10fe43d00f85e1f9dac1161d075b23de7a4d7654b362"
+    },
+    {
+      "kind": "ObjectStore",
+      "api_group": "barmancloud.cnpg.io",
+      "name": "verdify-cnpg-rehearsal-backup",
+      "uid": "cd64a49f-140e-43ae-819e-0b9454a79bad",
+      "resource_version": "246604402",
+      "all_declared_spec_fields_exact_live": true,
+      "native_readback_path": "/Volumes/Work/verdify-s2-cnpg-20261006/canonical-integration-audit-once/proposed-native-ObjectStore-verdify-cnpg-rehearsal-backup.json",
+      "native_readback_sha256": "beaa0ef2e100345c0a323a5150c5840810abde081e5a3b8e7e060748161afe95"
+    },
+    {
+      "kind": "NetworkPolicy",
+      "api_group": "networking.k8s.io",
+      "name": "cnpg-s2-archive-reader-only",
+      "uid": "780fd9db-f49f-4703-afad-a28297be30e7",
+      "resource_version": "246628313",
+      "all_declared_spec_fields_exact_live": true,
+      "native_readback_path": "/Volumes/Work/verdify-s2-cnpg-20261006/canonical-integration-audit-once/proposed-native-NetworkPolicy-cnpg-s2-archive-reader-only.json",
+      "native_readback_sha256": "f4c64da337b54b4985e2eb377ae12a55e2b6d0c8ee2cf2d590cd291fdac6c66c"
+    },
+    {
+      "kind": "NetworkPolicy",
+      "api_group": "networking.k8s.io",
+      "name": "cnpg-s2-runtime-client-ingress",
+      "uid": "5639f7fc-8583-4943-a88f-6af2e9eecffe",
+      "resource_version": "246445269",
+      "all_declared_spec_fields_exact_live": true,
+      "native_readback_path": "/Volumes/Work/verdify-s2-cnpg-20261006/canonical-integration-audit-once/proposed-native-NetworkPolicy-cnpg-s2-runtime-client-ingress.json",
+      "native_readback_sha256": "1297c1471b6452036fa165e3fe8f154041cc836c9bcd5ca8c2441efb287b504b"
+    },
+    {
+      "kind": "NetworkPolicy",
+      "api_group": "networking.k8s.io",
+      "name": "cnpg-s2-runtime-client-only",
+      "uid": "267ae81d-a148-418d-ab7a-184ed539cdc8",
+      "resource_version": "246445268",
+      "all_declared_spec_fields_exact_live": true,
+      "native_readback_path": "/Volumes/Work/verdify-s2-cnpg-20261006/canonical-integration-audit-once/proposed-native-NetworkPolicy-cnpg-s2-runtime-client-only.json",
+      "native_readback_sha256": "38f53a34db62ad06c9b5b092a8471ec758ef5406f0a33463ee0469b16124a599"
+    },
+    {
+      "kind": "NetworkPolicy",
+      "api_group": "networking.k8s.io",
+      "name": "deny-all-rehearsal",
+      "uid": "bdd627d5-6c2b-49dc-9a0b-bfb0d3ac7230",
+      "resource_version": "234764721",
+      "all_declared_spec_fields_exact_live": true,
+      "native_readback_path": "/Volumes/Work/verdify-s2-cnpg-20261006/canonical-integration-audit-once/proposed-native-NetworkPolicy-deny-all-rehearsal.json",
+      "native_readback_sha256": "a8b286d25896d159a780072bd07ff2f10b6c27c73a6ee53202e0448b5216e95a"
+    },
+    {
+      "kind": "NetworkPolicy",
+      "api_group": "networking.k8s.io",
+      "name": "verdify-cnpg-rehearsal-isolation",
+      "uid": "be675f81-54bc-4786-a53d-bcdbf7542e64",
+      "resource_version": "234764722",
+      "all_declared_spec_fields_exact_live": true,
+      "native_readback_path": "/Volumes/Work/verdify-s2-cnpg-20261006/canonical-integration-audit-once/proposed-native-NetworkPolicy-verdify-cnpg-rehearsal-isolation.json",
+      "native_readback_sha256": "3b81a806a81210704d8b9b7645efe55f2c7394f40f88e4d129f684a0f72156a2"
+    },
+    {
+      "kind": "Backup",
+      "api_group": "postgresql.cnpg.io",
+      "name": "verdify-cnpg-s2-current274-20261006",
+      "uid": "8e3c2874-f16c-4ca2-b85d-09629910ac64",
+      "resource_version": "246604405",
+      "all_declared_spec_fields_exact_live": true,
+      "native_readback_path": "/Volumes/Work/verdify-s2-cnpg-20261006/canonical-integration-audit-once/proposed-native-Backup-verdify-cnpg-s2-current274-20261006.json",
+      "native_readback_sha256": "43da0c4314ef0bbe54c39c0f709c389c724bd3b0e0e3bec66499dcda274bd3b3",
+      "native_phase": "completed",
+      "backup_id": "20261006T052358"
+    },
+    {
+      "kind": "Cluster",
+      "api_group": "postgresql.cnpg.io",
+      "name": "verdify-cnpg-rehearsal",
+      "uid": "e11f1014-a77e-4ccf-9d97-e8cf5c037484",
+      "resource_version": "247112090",
+      "all_declared_spec_fields_exact_live": true,
+      "native_readback_path": "/Volumes/Work/verdify-s2-cnpg-20261006/canonical-integration-audit-once/proposed-native-Cluster-verdify-cnpg-rehearsal.json",
+      "native_readback_sha256": "b2561c7cc9635ae6132b8856bb85f9b95264b4b29dd43ae708483678edcfb5e3"
+    },
+    {
+      "kind": "Cluster",
+      "api_group": "postgresql.cnpg.io",
+      "name": "verdify-cnpg-s2",
+      "uid": "4f697776-df25-4e22-b930-0b76cf35496e",
+      "resource_version": "247112011",
+      "all_declared_spec_fields_exact_live": true,
+      "native_readback_path": "/Volumes/Work/verdify-s2-cnpg-20261006/canonical-integration-audit-once/proposed-native-Cluster-verdify-cnpg-s2.json",
+      "native_readback_sha256": "598f97402639cdd9293462ffabd439d415eea06bea26c27c74c8cfc071c58932"
+    },
+    {
+      "kind": "Cluster",
+      "api_group": "postgresql.cnpg.io",
+      "name": "verdify-cnpg-s2-pitr-a-frozen",
+      "uid": "bd01ec5b-efe9-4882-a6dc-c76c6b6fa7ec",
+      "resource_version": "247111724",
+      "all_declared_spec_fields_exact_live": true,
+      "native_readback_path": "/Volumes/Work/verdify-s2-cnpg-20261006/canonical-integration-audit-once/proposed-native-Cluster-verdify-cnpg-s2-pitr-a-frozen.json",
+      "native_readback_sha256": "a23258429d155de39189756140b4c37608df7e77a91eaf3a37717d1265277058",
+      "ready_instances": 3,
+      "current_primary": "verdify-cnpg-s2-pitr-a-frozen-2",
+      "timeline": 3,
+      "bootstrap_spec_unchanged": true
+    },
+    {
+      "kind": "Cluster",
+      "api_group": "postgresql.cnpg.io",
+      "name": "verdify-cnpg-s2-pitr-b-frozen",
+      "uid": "3981d0f2-4c72-48ac-9e09-826fe6bd4ed6",
+      "resource_version": "247111709",
+      "all_declared_spec_fields_exact_live": true,
+      "native_readback_path": "/Volumes/Work/verdify-s2-cnpg-20261006/canonical-integration-audit-once/proposed-native-Cluster-verdify-cnpg-s2-pitr-b-frozen.json",
+      "native_readback_sha256": "39a5da3208230184ff22f84661b900f8270d157252478d099625e735dcc1cf24",
+      "ready_instances": 3,
+      "current_primary": "verdify-cnpg-s2-pitr-b-frozen-3",
+      "timeline": 5,
+      "bootstrap_spec_unchanged": true
+    },
+    {
+      "kind": "ScheduledBackup",
+      "api_group": "postgresql.cnpg.io",
+      "name": "verdify-cnpg-rehearsal-daily",
+      "uid": "8bc413da-2c57-45ac-a85e-b35c2ce332e4",
+      "resource_version": "246323598",
+      "all_declared_spec_fields_exact_live": true,
+      "native_readback_path": "/Volumes/Work/verdify-s2-cnpg-20261006/canonical-integration-audit-once/proposed-native-ScheduledBackup-verdify-cnpg-rehearsal-daily.json",
+      "native_readback_sha256": "d51222cb2fb0340668e34657fe0e53b433941e319477b3ee4278ef1f9ca253a1"
+    }
+  ]
+}

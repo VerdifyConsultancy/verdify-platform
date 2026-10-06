@@ -1,0 +1,212 @@
+[
+  {
+    "name": "control_assignments",
+    "rows": 0,
+    "row_digest": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "name": "crop_assignment_revisions",
+    "rows": 10,
+    "row_digest": "8bfb713f395c4b7b7cc205242ac0bf4a"
+  },
+  {
+    "name": "experiment_v2_approvals",
+    "rows": 0,
+    "row_digest": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "name": "experiment_v2_bundle_attempts",
+    "rows": 560,
+    "row_digest": "318b0ae8c63e3817a0d3907466cd0a49"
+  },
+  {
+    "name": "experiment_v2_candidate_revisions",
+    "rows": 1,
+    "row_digest": "24a53125dd95324ba0ea121f055dbf1d"
+  },
+  {
+    "name": "experiment_v2_component_outcomes",
+    "rows": 6263,
+    "row_digest": "35ec1172d8cd67e67ee5fb2222261277"
+  },
+  {
+    "name": "experiment_v2_contract_constants",
+    "rows": 1,
+    "row_digest": "840f3e5820ef7c3174aae47b68238e37"
+  },
+  {
+    "name": "experiment_v2_day_evidence",
+    "rows": 0,
+    "row_digest": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "name": "experiment_v2_delivery_bundle_completions",
+    "rows": 26,
+    "row_digest": "0f9f51cf4a7a60ae095ffa66d31af302"
+  },
+  {
+    "name": "experiment_v2_delivery_bundles",
+    "rows": 43,
+    "row_digest": "9fc8ca1a802fd7a28f5d0de160985ab4"
+  },
+  {
+    "name": "experiment_v2_direct_launch_waivers",
+    "rows": 0,
+    "row_digest": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "name": "experiment_v2_direct_proof_attempt_events",
+    "rows": 5,
+    "row_digest": "ffe7b9dbd8cdde60c7a6850eae6b1464"
+  },
+  {
+    "name": "experiment_v2_direct_proof_attempt_work",
+    "rows": 6,
+    "row_digest": "87437ebca506e9af5cc98ed2592d461d"
+  },
+  {
+    "name": "experiment_v2_direct_proof_authorizations",
+    "rows": 3,
+    "row_digest": "e01f78e40fd24d35b4e7a84deed96151"
+  },
+  {
+    "name": "experiment_v2_direct_proof_emergency_recovery_attempt_events",
+    "rows": 8,
+    "row_digest": "3e22a7511455c424de2a86c476c1b0c7"
+  },
+  {
+    "name": "experiment_v2_direct_proof_emergency_recovery_receipts",
+    "rows": 3,
+    "row_digest": "c59b83787fcdc349a8d1c4542cf27871"
+  },
+  {
+    "name": "experiment_v2_direct_proof_emergency_resolutions",
+    "rows": 11,
+    "row_digest": "43c5c6072b077221050ecb451786205a"
+  },
+  {
+    "name": "experiment_v2_direct_proof_receipts",
+    "rows": 0,
+    "row_digest": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "name": "experiment_v2_exports",
+    "rows": 0,
+    "row_digest": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "name": "experiment_v2_exposure_closures",
+    "rows": 0,
+    "row_digest": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "name": "experiment_v2_exposures",
+    "rows": 0,
+    "row_digest": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "name": "experiment_v2_facility_safe_closures",
+    "rows": 1,
+    "row_digest": "7fcf21e6fbaf0a8e230a944eecb0fa91"
+  },
+  {
+    "name": "experiment_v2_observation_epochs",
+    "rows": 25,
+    "row_digest": "b21445dd3b70f54e77ea4a396b288b7f"
+  },
+  {
+    "name": "experiment_v2_observation_receipts",
+    "rows": 25,
+    "row_digest": "831b4ede455f4c66bff927ba1da3846c"
+  },
+  {
+    "name": "experiment_v2_outcome_freezes",
+    "rows": 0,
+    "row_digest": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "name": "experiment_v2_outcome_source_bindings",
+    "rows": 0,
+    "row_digest": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "name": "experiment_v2_outcomes",
+    "rows": 0,
+    "row_digest": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "name": "experiment_v2_preexposure_mismatch_epochs",
+    "rows": 0,
+    "row_digest": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "name": "experiment_v2_randomization",
+    "rows": 0,
+    "row_digest": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "name": "experiment_v2_reveals",
+    "rows": 0,
+    "row_digest": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "name": "experiment_v2_runtime_faults",
+    "rows": 94,
+    "row_digest": "540133d90e86af07f59933d76027e0d8"
+  },
+  {
+    "name": "experiment_v2_runtime_generations",
+    "rows": 225,
+    "row_digest": "0a981387232b21c732d37b610deddf6b"
+  },
+  {
+    "name": "experiment_v2_runtime_snapshots",
+    "rows": 0,
+    "row_digest": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "name": "experiment_v2_selector_choices",
+    "rows": 0,
+    "row_digest": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "name": "experiment_v2_selector_contexts",
+    "rows": 0,
+    "row_digest": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "name": "experiment_v2_shadow_choices",
+    "rows": 0,
+    "row_digest": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "name": "experiment_v2_shadow_contexts",
+    "rows": 0,
+    "row_digest": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "name": "experiment_v2_shadow_cycles",
+    "rows": 0,
+    "row_digest": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "name": "experiment_v2_shadow_outcome_previews",
+    "rows": 0,
+    "row_digest": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  {
+    "name": "experiment_v2_state_artifacts",
+    "rows": 3,
+    "row_digest": "fa2090646ab457d90afc3c3c01af1f33"
+  },
+  {
+    "name": "experiment_v2_work",
+    "rows": 111,
+    "row_digest": "524100ed5a909f068019f0bcf4a5a3ea"
+  },
+  {
+    "name": "experiment_v2_work_events",
+    "rows": 322,
+    "row_digest": "35146774434e9a8a353e640812f09c90"
+  }
+]
