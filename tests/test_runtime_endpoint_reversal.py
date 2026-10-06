@@ -128,3 +128,66 @@ def test_owning_api_pool_closes_when_lifespan_attestation_fails(tmp_path, monkey
     with pytest.raises(RuntimeError, match="attestation refused"):
         asyncio.run(m.async_probe("api", profile, {"host": "isolated"}, "qualification-only-password", "before"))
     assert pool.closed
+
+
+def identity():
+    return dict(
+        current_user="verdify_api_runtime_login",
+        session_user="verdify_api_runtime_login",
+        database="verdify_rehearsal",
+        database_oid=16447,
+        cluster_name="verdify-cnpg-s2",
+        backend_address="10.42.3.106",
+        replica=False,
+        default_read_only="on",
+        transaction_read_only="on",
+        search_path="pg_catalog, public, pg_temp",
+        elevated=False,
+        memberships=["verdify_api_runtime"],
+        statement_timeout="15s",
+    )
+
+
+@pytest.mark.parametrize("state", ("42501", "25006"))
+def test_readonly_denial_never_substitutes_for_privilege_denial(monkeypatch, state):
+    import asyncio
+
+    class Denied(Exception):
+        sqlstate = state
+
+    class Conn:
+        async def fetchrow(self, sql):
+            return identity()
+
+        async def fetch(self, sql):
+            if sql == m.HOT["api"]:
+                return []
+            raise Denied()
+
+    monkeypatch.setattr(m, "async_error_types", lambda: (Denied,))
+    endpoint = {"cluster": "verdify-cnpg-s2", "primary_ip": "10.42.3.106"}
+    if state == "25006":
+        with pytest.raises(RuntimeError, match="privilege denial"):
+            asyncio.run(m.run_async_queries(Conn(), "api", endpoint))
+    else:
+        result = asyncio.run(m.run_async_queries(Conn(), "api", endpoint))
+        assert len(result["deny"]) == 5 and all(d["sqlstate"] == "42501" for d in result["deny"])
+
+
+@pytest.mark.parametrize(
+    "key,value",
+    [
+        ("backend_address", "10.42.99.99"),
+        ("elevated", True),
+        ("memberships", ["verdify"]),
+        ("statement_timeout", "0"),
+        ("statement_timeout", "31s"),
+        ("default_read_only", "off"),
+        ("search_path", "public"),
+    ],
+)
+def test_actual_backend_role_timeout_and_readonly_are_mandatory(key, value):
+    actual = identity()
+    actual[key] = value
+    with pytest.raises(RuntimeError):
+        m.checked_identity(actual, "api", {"cluster": "verdify-cnpg-s2", "primary_ip": "10.42.3.106"})
