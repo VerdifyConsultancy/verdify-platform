@@ -1,0 +1,160 @@
+{
+  "schema": "verdify-slack-natural-acceptance-v1",
+  "issue": 950,
+  "acceptance": "complete",
+  "runtime_source": "37a9cc0b7a2ef07585d0790f4bb4dcfbbe75bb6f",
+  "runtime_image_digest": "sha256:e22e160f80adf79f70778c3d8796e036ced31a3e59fcf7b4d6e82eecb0d80f22",
+  "source_contract_files": [
+    "deploy/k8s/base/ingestor.yaml",
+    "deploy/k8s/SECRETS.md",
+    "ingestor/config.py",
+    "ingestor/tasks/watch.py"
+  ],
+  "mounted_contract": {
+    "captured_at": "2026-10-05T22:54:52.087253+00:00",
+    "effective_token_file": "/etc/verdify/slack/iris_slack_bot_token.txt",
+    "environment_token_file": null,
+    "readable_nonempty": true,
+    "file_size_bytes": 59,
+    "consuming_uid": 1000,
+    "runtime_source": "37a9cc0b7a2ef07585d0790f4bb4dcfbbe75bb6f",
+    "auth_test": {
+      "ok": true,
+      "user": "greenhouse2",
+      "user_id": "U0AN1TEB69L",
+      "bot_id": "B0ANY7P8PR6",
+      "team_id": "T0A8F1215M3"
+    },
+    "pod": {
+      "name": "verdify-ingestor-544c5564bc-vnn8m",
+      "uid": "55d2bbbf-8fd6-4297-81bf-5745710a71f6",
+      "images": [
+        {
+          "name": "ingestor",
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:e22e160f80adf79f70778c3d8796e036ced31a3e59fcf7b4d6e82eecb0d80f22",
+          "ready": true
+        }
+      ]
+    },
+    "declared_projected_volume": {
+      "name": "slack-token",
+      "secret": {
+        "defaultMode": 420,
+        "items": [
+          {
+            "key": "iris_slack_bot_token.txt",
+            "path": "iris_slack_bot_token.txt"
+          }
+        ],
+        "optional": true,
+        "secretName": "verdify-slack"
+      }
+    },
+    "brief_schedule": {
+      "timezone": "America/Denver",
+      "evening": "18:00",
+      "morning": "07:30",
+      "channel_id": "C0ANVVAPLD6"
+    }
+  },
+  "secret_identity": {
+    "namespace": "verdify-prod",
+    "name": "verdify-slack",
+    "uid": "bcb014e4-8ac4-4c18-a633-486640de86d6",
+    "key": "iris_slack_bot_token.txt",
+    "owner": "jvallery/agents KSOPS",
+    "custody_pr": "https://github.com/jvallery/agents/pull/4733",
+    "custody_merge_revision": "08098e5b7712ffd096c45694e131e2c068cfbb9c",
+    "existing_identity_preserved": true,
+    "credential_rotation": false
+  },
+  "natural_evening_delivery": {
+    "captured_at": "2026-10-06T00:06:04.275069+00:00",
+    "scheduled_at": "2026-10-06T00:00:00Z",
+    "timezone": "America/Denver",
+    "local_schedule": "2026-10-05T18:00:00-06:00",
+    "ingestor": {
+      "name": "verdify-ingestor-544c5564bc-vnn8m",
+      "uid": "55d2bbbf-8fd6-4297-81bf-5745710a71f6",
+      "images": [
+        {
+          "name": "ingestor",
+          "imageID": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:e22e160f80adf79f70778c3d8796e036ced31a3e59fcf7b4d6e82eecb0d80f22",
+          "ready": true
+        }
+      ]
+    },
+    "events": [
+      {
+        "id": 31,
+        "ts": "2026-10-06T00:00:39.572751+00:00",
+        "greenhouse_id": "vallery",
+        "source": "ingestor",
+        "event_type": "operator_brief",
+        "severity": "info",
+        "channel_id": "C0ANVVAPLD6",
+        "message_ts": "1791244839.494799",
+        "dedupe_key": "evening:2026-10-05",
+        "status": "posted",
+        "post_mode": "immediate",
+        "error": null
+      }
+    ],
+    "scheduled_brief_log_lines": [
+      "2026-10-06T00:00:39 INFO Posted Slack evening operator brief"
+    ],
+    "window_finished": true,
+    "vision_collector_returncode": 0
+  },
+  "slack_api_receipt_readback": {
+    "captured_at": "2026-10-06T00:06:28.241421+00:00",
+    "api": "conversations.history",
+    "ok": true,
+    "error": null,
+    "has_more": false,
+    "channel_id": "C0ANVVAPLD6",
+    "window_start_utc": "2026-10-06T00:00:00Z",
+    "window_end_utc": "2026-10-06T00:06:00Z",
+    "original_bot_evening_brief_messages": [
+      {
+        "ts": "1791244839.494799",
+        "bot_id": "B0ANY7P8PR6",
+        "user": null,
+        "type": "message"
+      }
+    ],
+    "brief_message_count": 1
+  },
+  "independent_alert_transport": {
+    "message_ts": "1791230129.066369",
+    "channel_id": "C0ANVVAPLD6",
+    "transport": "deployed ingestor tasks._common._post_slack",
+    "policy": "critical alert immediate",
+    "test_only": true,
+    "explicitly_authorized_controlled_check": true,
+    "notification_event_id": 30,
+    "event_type": "alert_transport_validation",
+    "source": "root-operator",
+    "status": "posted",
+    "dedupe_key": "s1-950-alert-transport-20261005",
+    "greenhouse_alert_or_device_command_created": false
+  },
+  "retry_and_dedupe": {
+    "natural_full_window_failure_log_count": 0,
+    "natural_full_window_success_log_count": 1,
+    "natural_database_dedupe_rows": 1,
+    "actual_slack_window_brief_messages": 1,
+    "schedule_retry_window_minutes": 5,
+    "no_receipt_never_records_posted": true,
+    "persistent_posted_dedupe_survives_process_reset": true,
+    "source_failure_log_includes_exception_type_and_retry_bound": true
+  },
+  "focused_offline_regressions": {
+    "command": "python -m pytest tests/test_vision_authenticated_snapshots.py tests/test_slack_delivery_receipts.py -q",
+    "result": "30 passed",
+    "tested_checkout_revision": "6429acbb2c79f784e3978e9c74a1c8719d25076c",
+    "tested_capture_modules_and_regression_files_identical_to_runtime_source37": true,
+    "completed_utc_date": "2026-10-06"
+  },
+  "rollback": "Retain existing KSOPS Secret/identity. Revert only owned mount/config changes if necessary with coordinated exact-source image promotion and non-pruning full sync; keep one Recreate ingestor, explicit missing-file failure and no unsolicited rotation."
+}

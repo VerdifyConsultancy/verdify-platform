@@ -1,0 +1,36 @@
+# Natural operator delivery and vision — October 6, 2026
+
+#950 and #951 have complete acceptance on the actual natural 00:00 UTC runs. This evidence belongs to running application source `37a9cc0b7a2ef07585d0790f4bb4dcfbbe75bb6f`, image digest `sha256:e22e160f80adf79f70778c3d8796e036ced31a3e59fcf7b4d6e82eecb0d80f22`, promoted by full-sync revision `88567ed19254a75e9bacde724c42c560709c14e6`. A pending successor release is separate.
+
+## #950 — original Slack identity and natural brief
+
+The [Slack receipt](evidence/slack-950-natural-acceptance-20261006.json) records source/rendered/running agreement: the declared `verdify-slack` key projects to `/etc/verdify/slack/iris_slack_bot_token.txt`, the shared default applies with no environment override, and consuming UID 1000 reads a nonempty file. Secret UID `bcb014e4-8ac4-4c18-a633-486640de86d6` and original user `U0AN1TEB69L`, bot `B0ANY7P8PR6`, team `T0A8F1215M3` remain unchanged. Values stay in the agents KSOPS owner; [custody PR #4733](https://github.com/jvallery/agents/pull/4733) preserved the existing credential without rotation.
+
+The natural evening brief scheduled for October 5 at 18:00 America/Denver posted at 00:00:39 UTC. Notification event 31 has `status=posted`, dedupe key `evening:2026-10-05`, channel `C0ANVVAPLD6` and returned Slack message timestamp `1791244839.494799`. The complete 00:00–00:06 readback found one database row, one success log, zero failure/retry logs and exactly one matching original-bot message through Slack `conversations.history`, with `has_more=false`. Writer UID was `55d2bbbf-8fd6-4297-81bf-5745710a71f6` throughout this proof.
+
+The independent, explicitly authorized controlled alert transport check returned message timestamp `1791230129.066369` in the intended channel and recorded event 30. It is labeled validation, separate from the natural brief; no greenhouse alert or device command was created. Source retries are confined to the five-minute schedule window and log the exception type. Regression tests prove missing receipts never record success and persistent dedupe survives process reset.
+
+## #951 — authenticated fresh capture and full analysis
+
+The [vision receipt](evidence/vision-951-natural-acceptance-20261006.json) binds Job `verdify-vision-29854080`, UID `2b573751-150f-4c92-abdd-6caa30df1579`, to CronJob UID `4b0f62d3-20f2-4e28-b841-b7f649a12ddb` and its genuine 00:00 UTC scheduled annotation. Pod UID `9f62d59d-9ed0-46db-ad99-2fff72d19ccc` ran 00:00:10–00:00:42 UTC, exited 0 and the Job completed at 00:00:45. All five mounted camera/analysis source hashes match the exact source revision.
+
+| Camera | JPEG bytes | Visible camera timestamp (Denver) | Capture UTC | Genuine analysis row / time UTC | Model / confidence |
+|---|---:|---|---|---|---|
+| greenhouse_1 | 306,841 | October 5 18:00:12 | 00:00:12 | 723 / 00:00:27.849679 | gemini-3.1-pro-preview / 0.85 |
+| greenhouse_2 | 313,155 | October 5 18:00:13 | 00:00:13 | 724 / 00:00:42.161614 | gemini-3.1-pro-preview / 0.85 |
+
+Both JPEGs decode correctly and contain the current camera overlays, within 3.344 and 2.343 seconds of collector observation. Actual capture uses authenticated HTTPS to the cluster service with verified TLS identity `cameras.vallery.net` and only the two allowlisted camera paths. Anonymous requests to both camera paths returned 401; an unsupported camera returned 404; the dedicated credential's broad config request returned 302 to SSO, with no redirect followed or body exposed. Image metadata is published; private JPEGs are retained separately.
+
+The provider remained the same Ready pod UID `c4084913-1c81-4197-b7cb-0fb1cfa98a19`. Its actual scoped routes forward to go2rtc `/api/frame.jpeg?src=greenhouse_N&h=1080`, with a 15-second proxy timeout. They do not use Frigate's offline preview fallback. The live go2rtc binary identifies version 1.9.14, matching primary-source commit `b5948cfb25404cc5cb37b166ecaa2dca20b11d4b`; hashes and exact proxy URLs are in the receipt.
+
+The matching [JPEG handler](https://github.com/AlexxIT/go2rtc/blob/b5948cfb25404cc5cb37b166ecaa2dca20b11d4b/internal/mjpeg/mjpeg.go) enables cached JPEG reuse only with an explicit `cache` query, absent from both actual routes. Each request creates a new [keyframe consumer](https://github.com/AlexxIT/go2rtc/blob/b5948cfb25404cc5cb37b166ecaa2dca20b11d4b/pkg/magic/keyframe.go) and [write/once buffer](https://github.com/AlexxIT/go2rtc/blob/b5948cfb25404cc5cb37b166ecaa2dca20b11d4b/pkg/core/writebuffer.go). [Receiver forwarding](https://github.com/AlexxIT/go2rtc/blob/b5948cfb25404cc5cb37b166ecaa2dca20b11d4b/pkg/core/track.go) and [attachment](https://github.com/AlexxIT/go2rtc/blob/b5948cfb25404cc5cb37b166ecaa2dca20b11d4b/pkg/core/node.go) consume incoming packets rather than replaying a prior frame. [Producer dial failure](https://github.com/AlexxIT/go2rtc/blob/b5948cfb25404cc5cb37b166ecaa2dca20b11d4b/internal/streams/add_consumer.go) yields empty content, rejected by Verdify's MIME/size/marker checks; absent new frames reach the client's 15-second timeout and failure exit. Per-Job emptyDir prevents earlier-run file reuse. No generalized image timestamp detector is claimed. Read-only producer samples additionally show advancing video packet counts for both cameras on the same producer IDs.
+
+Thirty focused offline regressions passed for capture, analysis and Slack receipt behavior. The tested capture modules and regression files are identical to runtime source 37. Missing/partial inputs, invalid responses, redirects, analysis failures and exceptions remain failures rather than successful Job exits.
+
+## Independent health, retained failures and recovery
+
+At 00:06:02, Verdify was independently **OutOfSync / Healthy** against the pending successor pin revision `6429acbb2c79f784e3978e9c74a1c8719d25076c`, while actual writer/vision remained source 37. The provider application `frigate/frigate-local-prod` was independently **OutOfSync / Healthy**; no provider Synced claim is made. The earlier transient product Degraded state recovered at 23:10:02 without history deletion; its exact historical aggregate-resource cause remains unproven.
+
+Failed vision Jobs 29852820, 29853000 and 29853900 retain their original UIDs and Failed statuses after natural success. Failed history is bounded at 10. The October 5 midnight failure 29852640 had already been automatically removed under the former limit of 3 when a fourth failure arrived; its original metadata was captured before removal. No operator deleted a failed Job or forced health green. The 21:00 failure and manual 21:14 recovery retain their distinct dispositions; this acceptance counts only the genuine midnight scheduled success.
+
+Rollback retains the existing Slack identity and owning KSOPS custody, authenticated HTTPS/TLS, the exact camera allowlist and truthful failure exits. Revert owned source/pins only through coordinated exact-revision, non-pruning delivery, keeping a single Recreate ingestor. Preserve failed evidence and the bounded history; archive and explicit retention disposition precede any TTL restoration. No source patch, extra vision Job, provider disruption or NFS mutation was needed for this final acceptance.

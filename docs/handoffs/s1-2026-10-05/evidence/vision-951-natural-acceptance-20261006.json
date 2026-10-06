@@ -1,0 +1,596 @@
+{
+  "schema": "verdify-vision-natural-acceptance-v1",
+  "issue": 951,
+  "acceptance": "complete",
+  "runtime_source": "37a9cc0b7a2ef07585d0790f4bb4dcfbbe75bb6f",
+  "runtime_image_digest": "sha256:e22e160f80adf79f70778c3d8796e036ced31a3e59fcf7b4d6e82eecb0d80f22",
+  "last_full_promoted_revision_for_runtime": "88567ed19254a75e9bacde724c42c560709c14e6",
+  "natural_job": {
+    "captured_at": "2026-10-06T00:00:46.659579+00:00",
+    "scheduled_utc": "2026-10-06T00:00:00+00:00",
+    "job": {
+      "name": "verdify-vision-29854080",
+      "uid": "2b573751-150f-4c92-abdd-6caa30df1579",
+      "creationTimestamp": "2026-10-06T00:00:00Z",
+      "ownerReferences": [
+        {
+          "apiVersion": "batch/v1",
+          "blockOwnerDeletion": true,
+          "controller": true,
+          "kind": "CronJob",
+          "name": "verdify-vision",
+          "uid": "4b0f62d3-20f2-4e28-b841-b7f649a12ddb"
+        }
+      ],
+      "annotations": {
+        "batch.kubernetes.io/cronjob-scheduled-timestamp": "2026-10-06T00:00:00Z"
+      }
+    },
+    "image": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:e22e160f80adf79f70778c3d8796e036ced31a3e59fcf7b4d6e82eecb0d80f22",
+    "status": {
+      "completionTime": "2026-10-06T00:00:45Z",
+      "conditions": [
+        {
+          "lastProbeTime": "2026-10-06T00:00:45Z",
+          "lastTransitionTime": "2026-10-06T00:00:45Z",
+          "message": "Reached expected number of succeeded pods",
+          "reason": "CompletionsReached",
+          "status": "True",
+          "type": "SuccessCriteriaMet"
+        },
+        {
+          "lastProbeTime": "2026-10-06T00:00:45Z",
+          "lastTransitionTime": "2026-10-06T00:00:45Z",
+          "message": "Reached expected number of succeeded pods",
+          "reason": "CompletionsReached",
+          "status": "True",
+          "type": "Complete"
+        }
+      ],
+      "ready": 0,
+      "startTime": "2026-10-06T00:00:00Z",
+      "succeeded": 1,
+      "terminating": 0,
+      "uncountedTerminatedPods": {}
+    },
+    "pods": [
+      {
+        "name": "verdify-vision-29854080-bdrvd",
+        "uid": "9f62d59d-9ed0-46db-ad99-2fff72d19ccc",
+        "image_status": [
+          {
+            "name": "vision",
+            "image": "sha256:1809c169122e747fd5cce4758282ab34c6690832b8277e4735075268ddeb46b8",
+            "imageID": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:e22e160f80adf79f70778c3d8796e036ced31a3e59fcf7b4d6e82eecb0d80f22",
+            "state": {
+              "terminated": {
+                "containerID": "containerd://9021605c0dd09500f768b43fae3e6a1e41c3dcfa0bb9e449e03c1bcd3adf5e6a",
+                "exitCode": 0,
+                "finishedAt": "2026-10-06T00:00:42Z",
+                "reason": "Completed",
+                "startedAt": "2026-10-06T00:00:10Z"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "logs_sha256": "171eb889efcf105b860bdf957e07dd95758407a251919919dff0b426e435c864",
+    "natural_schedule": true,
+    "jpeg_artifact_copy_obtained": true
+  },
+  "mounted_runtime_source_and_tls": {
+    "environment": {
+      "VERDIFY_GIT_SHA": "37a9cc0b7a2ef07585d0790f4bb4dcfbbe75bb6f",
+      "VERDIFY_BUILD_TIME": "unknown",
+      "VERDIFY_FRIGATE_URL": "https://frigate.frigate.svc.cluster.local:8971",
+      "VERDIFY_FRIGATE_TLS_SERVER_NAME": "cameras.vallery.net",
+      "VERDIFY_FRIGATE_TOKEN_FILE": "/vfrigate/token"
+    },
+    "source_hashes": {
+      "frigate-snapshot.py": "aed7e794eb3216bdee62117faeedfd16ff7d93e6fbe7fa69b665417ebdcd5431",
+      "analyze-greenhouse-snapshot.py": "fdd0a769d566908703c03c2b81dfd3b7891d7989656ef1165a908390f45714bf",
+      "zones.yaml": "36a01ef3ed8e224c872179d7cf7c1520a3a3fe29f8adc5e0dae0f92d3e1fc6b7",
+      "ai.yaml": "385ba73cce2695c387f7d92c1a7614df06d1504c7a03e8e265c796c62dad7ce3",
+      "vision-analysis.j2": "d9f1cf21a9b3d73ec28c9c68f2e4c1fa55d04f8fd6195d8df2590661f6ce10ab"
+    }
+  },
+  "actual_source_binding": {
+    "application_source": "37a9cc0b7a2ef07585d0790f4bb4dcfbbe75bb6f",
+    "camera_modules": {
+      "ai.yaml": "385ba73cce2695c387f7d92c1a7614df06d1504c7a03e8e265c796c62dad7ce3",
+      "analyze-greenhouse-snapshot.py": "fdd0a769d566908703c03c2b81dfd3b7891d7989656ef1165a908390f45714bf",
+      "frigate-snapshot.py": "aed7e794eb3216bdee62117faeedfd16ff7d93e6fbe7fa69b665417ebdcd5431",
+      "vision-analysis.j2": "d9f1cf21a9b3d73ec28c9c68f2e4c1fa55d04f8fd6195d8df2590661f6ce10ab",
+      "zones.yaml": "36a01ef3ed8e224c872179d7cf7c1520a3a3fe29f8adc5e0dae0f92d3e1fc6b7"
+    }
+  },
+  "fresh_images": {
+    "pod_uid": "9f62d59d-9ed0-46db-ad99-2fff72d19ccc",
+    "job_uid": "2b573751-150f-4c92-abdd-6caa30df1579",
+    "images": [
+      {
+        "camera": "greenhouse_2",
+        "path": "./2026-10-05/greenhouse_2_1800.jpg",
+        "bytes": 313155,
+        "sha256": "669ea78d052b2debb2c2780cd885d270120c75ef2978600b1c5820f2c1d1e925",
+        "mtime_utc": "2026-10-06T00:00:13+00:00",
+        "observed_utc": "2026-10-06T00:00:15.343201+00:00",
+        "jpeg_markers_valid": true,
+        "visually_read_camera_overlay_local": "2026-10-05T18:00:13-06:00",
+        "camera_overlay_utc": "2026-10-06T00:00:13+00:00",
+        "visual_jpeg_decode_valid": true,
+        "overlay_to_collector_observed_seconds": 2.343201
+      },
+      {
+        "camera": "greenhouse_1",
+        "path": "./2026-10-05/greenhouse_1_1800.jpg",
+        "bytes": 306841,
+        "sha256": "80804241594440599f7d0f77dd1ed46df63c00240729b37dbb5440746eadc791",
+        "mtime_utc": "2026-10-06T00:00:12+00:00",
+        "observed_utc": "2026-10-06T00:00:15.343851+00:00",
+        "jpeg_markers_valid": true,
+        "visually_read_camera_overlay_local": "2026-10-05T18:00:12-06:00",
+        "camera_overlay_utc": "2026-10-06T00:00:12+00:00",
+        "visual_jpeg_decode_valid": true,
+        "overlay_to_collector_observed_seconds": 3.343851
+      }
+    ],
+    "visual_readback_at": "2026-10-06T00:00:35.617905+00:00"
+  },
+  "analysis_rows": [
+    {
+      "id": 723,
+      "ts": "2026-10-06T00:00:27.849679+00:00",
+      "camera": "greenhouse_1",
+      "zone": "south",
+      "image_path": "/snap/2026-10-05/greenhouse_1_1800.jpg",
+      "model": "gemini-3.1-pro-preview",
+      "processing_ms": 10812,
+      "confidence": 0.85,
+      "has_analysis": true,
+      "analysis_type": "object"
+    },
+    {
+      "id": 724,
+      "ts": "2026-10-06T00:00:42.161614+00:00",
+      "camera": "greenhouse_2",
+      "zone": "east",
+      "image_path": "/snap/2026-10-05/greenhouse_2_1800.jpg",
+      "model": "gemini-3.1-pro-preview",
+      "processing_ms": 14060,
+      "confidence": 0.85,
+      "has_analysis": true,
+      "analysis_type": "object"
+    }
+  ],
+  "security_negative_probes": {
+    "captured_at": "2026-10-06T00:00:14.811262+00:00",
+    "tls_verified": true,
+    "tls_identity": "cameras.vallery.net",
+    "redirects_followed": false,
+    "probes": [
+      {
+        "path": "/api/vision/greenhouse_1/latest.jpg",
+        "dedicated_auth_supplied": false,
+        "status": 401
+      },
+      {
+        "path": "/api/vision/greenhouse_2/latest.jpg",
+        "dedicated_auth_supplied": false,
+        "status": 401
+      },
+      {
+        "path": "/api/config",
+        "dedicated_auth_supplied": true,
+        "status": 302
+      },
+      {
+        "path": "/api/vision/other_camera/latest.jpg",
+        "dedicated_auth_supplied": true,
+        "status": 404
+      }
+    ]
+  },
+  "provider": {
+    "name": "frigate-68fb67d47f-hcpgh",
+    "uid": "c4084913-1c81-4197-b7cb-0fb1cfa98a19",
+    "node": "vm-k3s-node8",
+    "conditions": [
+      {
+        "lastProbeTime": null,
+        "lastTransitionTime": "2026-10-05T21:09:09Z",
+        "observedGeneration": 1,
+        "status": "True",
+        "type": "PodReadyToStartContainers"
+      },
+      {
+        "lastProbeTime": null,
+        "lastTransitionTime": "2026-10-05T21:09:09Z",
+        "observedGeneration": 1,
+        "status": "True",
+        "type": "Initialized"
+      },
+      {
+        "lastProbeTime": null,
+        "lastTransitionTime": "2026-10-05T21:09:38Z",
+        "observedGeneration": 1,
+        "status": "True",
+        "type": "Ready"
+      },
+      {
+        "lastProbeTime": null,
+        "lastTransitionTime": "2026-10-05T21:09:38Z",
+        "observedGeneration": 1,
+        "status": "True",
+        "type": "ContainersReady"
+      },
+      {
+        "lastProbeTime": null,
+        "lastTransitionTime": "2026-10-05T20:54:56Z",
+        "observedGeneration": 1,
+        "status": "True",
+        "type": "PodScheduled"
+      }
+    ],
+    "images": [
+      {
+        "name": "auth-proxy",
+        "image": "sha256:1ae82dcc4a34bcd976195b3c4c5a6b7e569505527a1e2a28c2101e032159a5c7",
+        "imageID": "docker.io/library/nginx@sha256:dc5069ad14f19660b141b21236140b91656bf89bbc3e2417c70ae650cd66104c",
+        "ready": true,
+        "restartCount": 0,
+        "state": {
+          "running": {
+            "startedAt": "2026-10-05T21:09:10Z"
+          }
+        }
+      },
+      {
+        "name": "frigate",
+        "image": "sha256:7470db6af576957be9a131846cb75f5ad116f55d70ca1aaf6940e1dfc3a3fe0c",
+        "imageID": "ghcr.io/blakeblackshear/frigate@sha256:82d7475ba7e5f950911bd9d06f2392de96881f39eeacd78824a526dde9b5cad9",
+        "ready": true,
+        "restartCount": 0,
+        "state": {
+          "running": {
+            "startedAt": "2026-10-05T21:09:10Z"
+          }
+        }
+      }
+    ],
+    "configmaps": [
+      {
+        "name": "frigate-auth-proxy-kg454th485",
+        "uid": "7d94baea-dc12-437e-99d0-40dfc4146e74",
+        "resource_version": "232793122",
+        "file_hashes": {
+          "metrics.conf": "bc59e6ae5c55ee3e716b542d4d8adab07189d71951bc49e2b0364caa738f8255",
+          "nginx.conf.template": "2323206b079069ebd43e21441db3f9b67793a1ebd854af2fb6de83a76da2cb42",
+          "start.sh": "ac1356689df6436964f18f999802da0559ce18f752abd0f2ca817c59a4696dde"
+        }
+      },
+      {
+        "name": "frigate-config-yaml",
+        "uid": "8b21ba09-9497-4dfd-aff6-b6b1feaa6f05",
+        "resource_version": "245641903",
+        "file_hashes": {
+          "config.yml": "5be55e4017c39b2ba31c041aef939f69357d3e4a19ab2223049881ba6a762946"
+        }
+      }
+    ]
+  },
+  "provider_independent_argo_readback": {
+    "captured_at": "2026-10-06T00:10:09.127846+00:00",
+    "namespace": "frigate",
+    "name": "frigate-local-prod",
+    "source": {
+      "path": "platform/kubernetes/frigate",
+      "repoURL": "https://github.com/jvallery/sentinel.git",
+      "targetRevision": "main"
+    },
+    "sync_status": "OutOfSync",
+    "revision": "81efa2c23492d2baf8c5b7b58b98cc1c38396b19",
+    "health": {
+      "lastTransitionTime": "2026-10-05T21:09:39Z",
+      "status": "Healthy"
+    }
+  },
+  "actual_proxy_route_contract": {
+    "name": "frigate-auth-proxy-kg454th485",
+    "uid": "7d94baea-dc12-437e-99d0-40dfc4146e74",
+    "file_hashes": {
+      "metrics.conf": "bc59e6ae5c55ee3e716b542d4d8adab07189d71951bc49e2b0364caa738f8255",
+      "nginx.conf.template": "2323206b079069ebd43e21441db3f9b67793a1ebd854af2fb6de83a76da2cb42",
+      "start.sh": "ac1356689df6436964f18f999802da0559ce18f752abd0f2ca817c59a4696dde"
+    },
+    "camera_routes": [
+      {
+        "location": "location = /api/vision/greenhouse_1/latest.jpg {",
+        "directives": [
+          "proxy_read_timeout 15s;",
+          "proxy_pass http://127.0.0.1:1984/api/frame.jpeg?src=greenhouse_1&h=1080;"
+        ]
+      },
+      {
+        "location": "location = /api/vision/greenhouse_2/latest.jpg {",
+        "directives": [
+          "proxy_read_timeout 15s;",
+          "proxy_pass http://127.0.0.1:1984/api/frame.jpeg?src=greenhouse_2&h=1080;"
+        ]
+      }
+    ]
+  },
+  "matching_live_go2rtc_producers": {
+    "provider_pod": "frigate-68fb67d47f-hcpgh",
+    "provider_uid": "c4084913-1c81-4197-b7cb-0fb1cfa98a19",
+    "binary_version": "go2rtc version 1.9.14 (b5948cf) linux/amd64",
+    "binary_sha256": "32d616af226bd731678ffde328b94cfb94e30339bfefc469cfb76323144615a6",
+    "samples": [
+      {
+        "captured_at": "2026-10-06T00:07:45.291106+00:00",
+        "streams": [
+          {
+            "camera": "greenhouse_1",
+            "producers": [
+              {
+                "id": 1273,
+                "format_name": "rtsp",
+                "protocol": "rtsp+tcp",
+                "recv_bytes": null,
+                "receivers": [
+                  {
+                    "bytes": 7681862300,
+                    "packets": 5364429
+                  }
+                ]
+              }
+            ],
+            "consumer_count": 1
+          },
+          {
+            "camera": "greenhouse_2",
+            "producers": [
+              {
+                "id": 1205,
+                "format_name": "rtsp",
+                "protocol": "rtsp+tcp",
+                "recv_bytes": null,
+                "receivers": [
+                  {
+                    "bytes": 7196842096,
+                    "packets": 4972742
+                  },
+                  {
+                    "bytes": 16937979,
+                    "packets": 66949
+                  }
+                ]
+              }
+            ],
+            "consumer_count": 2
+          }
+        ]
+      },
+      {
+        "captured_at": "2026-10-06T00:07:47.301890+00:00",
+        "streams": [
+          {
+            "camera": "greenhouse_1",
+            "producers": [
+              {
+                "id": 1273,
+                "format_name": "rtsp",
+                "protocol": "rtsp+tcp",
+                "recv_bytes": null,
+                "receivers": [
+                  {
+                    "bytes": 7683694521,
+                    "packets": 5365708
+                  }
+                ]
+              }
+            ],
+            "consumer_count": 1
+          },
+          {
+            "camera": "greenhouse_2",
+            "producers": [
+              {
+                "id": 1205,
+                "format_name": "rtsp",
+                "protocol": "rtsp+tcp",
+                "recv_bytes": null,
+                "receivers": [
+                  {
+                    "bytes": 7198529293,
+                    "packets": 4973907
+                  },
+                  {
+                    "bytes": 16942131,
+                    "packets": 66965
+                  }
+                ]
+              }
+            ],
+            "consumer_count": 2
+          }
+        ]
+      }
+    ]
+  },
+  "fresh_frame_upstream_contract": {
+    "retrieved_at": "2026-10-06T00:08:36.451102+00:00",
+    "repository": "AlexxIT/go2rtc",
+    "version": "1.9.14",
+    "exact_revision": "b5948cfb25404cc5cb37b166ecaa2dca20b11d4b",
+    "sources": [
+      {
+        "path": "internal/mjpeg/mjpeg.go",
+        "source_url": "https://github.com/AlexxIT/go2rtc/blob/b5948cfb25404cc5cb37b166ecaa2dca20b11d4b/internal/mjpeg/mjpeg.go",
+        "sha256": "6cd8289709658983c8375ee63c0d1462f9ab0c30525ab7efb9e9d3b625e2c136"
+      },
+      {
+        "path": "pkg/magic/keyframe.go",
+        "source_url": "https://github.com/AlexxIT/go2rtc/blob/b5948cfb25404cc5cb37b166ecaa2dca20b11d4b/pkg/magic/keyframe.go",
+        "sha256": "a36d6cbc395b74d12516037cd4298064df5152a37a754ecf43c1a3437c6cf7bc"
+      },
+      {
+        "path": "pkg/core/writebuffer.go",
+        "source_url": "https://github.com/AlexxIT/go2rtc/blob/b5948cfb25404cc5cb37b166ecaa2dca20b11d4b/pkg/core/writebuffer.go",
+        "sha256": "9358f57ebbe675ef80dcf4df95dc02d661c68e4b7d3cf528011673a1c368d4d2"
+      },
+      {
+        "path": "pkg/core/track.go",
+        "source_url": "https://github.com/AlexxIT/go2rtc/blob/b5948cfb25404cc5cb37b166ecaa2dca20b11d4b/pkg/core/track.go",
+        "sha256": "6a8cf66c10b46d751555e90979ed7d11038beba96e6861f777bf2ad458ef9649"
+      },
+      {
+        "path": "pkg/core/node.go",
+        "source_url": "https://github.com/AlexxIT/go2rtc/blob/b5948cfb25404cc5cb37b166ecaa2dca20b11d4b/pkg/core/node.go",
+        "sha256": "e50a5c290499d6089434592cb7bd6c36b5dd3a7d02d37baccf8330a6ef1a760d"
+      },
+      {
+        "path": "internal/streams/add_consumer.go",
+        "source_url": "https://github.com/AlexxIT/go2rtc/blob/b5948cfb25404cc5cb37b166ecaa2dca20b11d4b/internal/streams/add_consumer.go",
+        "sha256": "12da29c66f28f5dabab58d9ddbb31e93afdd2cb0e16d07684f2fbd3230edd565"
+      }
+    ],
+    "actual_camera_upstreams": {
+      "greenhouse_1": "http://127.0.0.1:1984/api/frame.jpeg?src=greenhouse_1&h=1080",
+      "greenhouse_2": "http://127.0.0.1:1984/api/frame.jpeg?src=greenhouse_2&h=1080"
+    },
+    "cache_query_present": false,
+    "contract": "Optional JPEG cache requires cache query. Actual scoped routes omit it. Each request creates a fresh Keyframe/WriteBuffer/OnceBuffer and attaches to receiver before capturing incoming data. Producer dial failure returns empty content rejected by Verdify; no new frame reaches client timeout15s and nonzero capture/Job status. Per-Job emptyDir prevents earlier-job file reuse. Frigate latest-frame preview fallback is not the served scoped route.",
+    "limitation": "No generalized image timestamp detector is claimed; actual natural frame overlays and receipt times separately establish freshness."
+  },
+  "focused_offline_regressions": {
+    "command": "python -m pytest tests/test_vision_authenticated_snapshots.py tests/test_slack_delivery_receipts.py -q",
+    "result": "30 passed",
+    "tested_checkout_revision": "6429acbb2c79f784e3978e9c74a1c8719d25076c",
+    "tested_capture_modules_and_regression_files_identical_to_runtime_source37": true,
+    "completed_utc_date": "2026-10-06"
+  },
+  "verdify_aggregate_before": {
+    "captured_at": "2026-10-05T23:59:01.003450+00:00",
+    "sync_status": "Synced",
+    "compared_revision": "452af45f066308624c7d890407de18af1be0a3c8",
+    "health": {
+      "lastTransitionTime": "2026-10-05T23:10:02Z",
+      "status": "Healthy"
+    },
+    "last_operation_phase": "Succeeded"
+  },
+  "verdify_aggregate_after": {
+    "captured_at": "2026-10-06T00:06:02.284255+00:00",
+    "sync_status": "OutOfSync",
+    "compared_revision": "6429acbb2c79f784e3978e9c74a1c8719d25076c",
+    "health": {
+      "lastTransitionTime": "2026-10-05T23:10:02Z",
+      "status": "Healthy"
+    },
+    "last_operation_phase": "Succeeded"
+  },
+  "retained_failed_job_history": {
+    "cron_failed_history_limit": 10,
+    "jobs_before": [
+      {
+        "name": "verdify-vision-29852820",
+        "uid": "d359f217-5a30-4406-a52b-54096d4405e4",
+        "failed_conditions": [
+          {
+            "lastProbeTime": "2026-10-05T03:00:20Z",
+            "lastTransitionTime": "2026-10-05T03:00:20Z",
+            "message": "Job has reached the specified backoff limit",
+            "reason": "BackoffLimitExceeded",
+            "status": "True",
+            "type": "Failed"
+          }
+        ]
+      },
+      {
+        "name": "verdify-vision-29853000",
+        "uid": "42aff88a-30a7-4865-b55f-e30b30d7a6be",
+        "failed_conditions": [
+          {
+            "lastProbeTime": "2026-10-05T06:00:18Z",
+            "lastTransitionTime": "2026-10-05T06:00:18Z",
+            "message": "Job has reached the specified backoff limit",
+            "reason": "BackoffLimitExceeded",
+            "status": "True",
+            "type": "Failed"
+          }
+        ]
+      },
+      {
+        "name": "verdify-vision-29853900",
+        "uid": "45f6824d-67b6-42e9-9e07-b2f13d96f196",
+        "failed_conditions": [
+          {
+            "lastProbeTime": "2026-10-05T21:00:21Z",
+            "lastTransitionTime": "2026-10-05T21:00:21Z",
+            "message": "Job has reached the specified backoff limit",
+            "reason": "BackoffLimitExceeded",
+            "status": "True",
+            "type": "Failed"
+          }
+        ]
+      }
+    ],
+    "jobs_after": [
+      {
+        "name": "verdify-vision-29852820",
+        "uid": "d359f217-5a30-4406-a52b-54096d4405e4",
+        "failed_conditions": [
+          {
+            "lastProbeTime": "2026-10-05T03:00:20Z",
+            "lastTransitionTime": "2026-10-05T03:00:20Z",
+            "message": "Job has reached the specified backoff limit",
+            "reason": "BackoffLimitExceeded",
+            "status": "True",
+            "type": "Failed"
+          }
+        ]
+      },
+      {
+        "name": "verdify-vision-29853000",
+        "uid": "42aff88a-30a7-4865-b55f-e30b30d7a6be",
+        "failed_conditions": [
+          {
+            "lastProbeTime": "2026-10-05T06:00:18Z",
+            "lastTransitionTime": "2026-10-05T06:00:18Z",
+            "message": "Job has reached the specified backoff limit",
+            "reason": "BackoffLimitExceeded",
+            "status": "True",
+            "type": "Failed"
+          }
+        ]
+      },
+      {
+        "name": "verdify-vision-29853900",
+        "uid": "45f6824d-67b6-42e9-9e07-b2f13d96f196",
+        "failed_conditions": [
+          {
+            "lastProbeTime": "2026-10-05T21:00:21Z",
+            "lastTransitionTime": "2026-10-05T21:00:21Z",
+            "message": "Job has reached the specified backoff limit",
+            "reason": "BackoffLimitExceeded",
+            "status": "True",
+            "type": "Failed"
+          }
+        ]
+      }
+    ],
+    "operator_deleted_failed_jobs": false,
+    "operator_forced_health_override": false,
+    "already_automatically_deleted_before_retention_repair": {
+      "name": "verdify-vision-29852640",
+      "uid": "6db2910c-d8fa-4835-a70c-6208e6dc167d",
+      "failed_at": "2026-10-05T00:00:18Z",
+      "disposition": "CronJob controller removed oldest failure under former history limit3 when fourth failure occurred. Original metadata was captured before removal; no operator deletion."
+    }
+  },
+  "historical_disposition": "The21UTC run remains Failed through two retries during independent provider replacement/NFS initialization. The manual21:14 recovery is explicitly non-natural. Only this00UTC Cron-owned run is counted as natural success.",
+  "aggregate_health_limit": "Verdify transient23:06:36 Degraded recovered23:10:02 without history deletion. Exact historical aggregate-resource cause is unproven; nearby real deadline/readiness failures are correlations. At00:06 product was OutOfSync/Healthy because a successor pin promotion was pending; this acceptance belongs to actual37 runtime. Provider remains OutOfSync/Healthy independently, not claimed Synced.",
+  "rollback": "Keep authenticated HTTPS, cameras.vallery.net TLS verification, dedicated credential, exact camera allowlist and no fallback/caching. Restore owned source/pins only through coordinated non-pruning exact-revision delivery. Preserve failed Job identities/status and bounded history10; TTL disposition follows durable archive, never health-color cleanup."
+}
