@@ -1,0 +1,19 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Backup
+metadata:
+  name: verdify-cnpg-s2-current274-20261006
+  namespace: verdify-db-rehearsal
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: cnpg-rehearsal
+  ownerReferences:
+  - apiVersion: postgresql.cnpg.io/v1
+    kind: Cluster
+    name: verdify-cnpg-s2
+    uid: 4f697776-df25-4e22-b930-0b76cf35496e
+spec:
+  cluster:
+    name: verdify-cnpg-s2
+  method: plugin
+  pluginConfiguration:
+    name: barman-cloud.cloudnative-pg.io
