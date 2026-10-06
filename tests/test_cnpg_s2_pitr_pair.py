@@ -49,6 +49,16 @@ def test_only_two_new_s2_reader_only_clusters_and_original_profile_unchanged():
     assert fixture() == original
 
 
+def test_frozen_recovery_disables_scheduler_before_start_without_catalog_rewrites():
+    original = m.render(*s2_fixture())
+    frozen = m.render(*s2_fixture(), freeze_background_workers=True)
+    for before, after in zip(original, frozen, strict=True):
+        assert after["metadata"]["name"] == before["metadata"]["name"] + "-frozen"
+        assert after["spec"]["postgresql"]["parameters"].pop("timescaledb.max_background_workers") == "0"
+        after["metadata"]["name"] = before["metadata"]["name"]
+        assert after == before
+
+
 @pytest.mark.parametrize(
     "part,key,value",
     [

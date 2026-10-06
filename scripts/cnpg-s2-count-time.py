@@ -17,7 +17,12 @@ ROOT = Path(__file__).resolve().parents[1]
 PROFILE = ROOT / "tests/fixtures/cnpg_count_time/source-public-count-time-current274.json"
 PROFILE_SHA = "5ff64bbdd9994b480e7ea6c77092c4e267f513a7e6420cd574bf3b890d90e92d"
 CLUSTER = "verdify-cnpg-s2"
-RECOVERY_TARGETS = ("verdify-cnpg-s2-pitr-a", "verdify-cnpg-s2-pitr-b")
+RECOVERY_TARGETS = (
+    "verdify-cnpg-s2-pitr-a",
+    "verdify-cnpg-s2-pitr-b",
+    "verdify-cnpg-s2-pitr-a-frozen",
+    "verdify-cnpg-s2-pitr-b-frozen",
+)
 
 
 def load(name):

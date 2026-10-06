@@ -21,7 +21,7 @@ INSTALL_SHA = "9abb6d1e4296614ab2cd617a3d0e65d0aa8a39618b5f47ace5f8fa00224439fa"
 pitr.SOURCE, pitr.SOURCE_UID = SOURCE, SOURCE_UID
 
 
-def render(cluster, backup, custody, admission):
+def render(cluster, backup, custody, admission, *, freeze_background_workers=False):
     pitr.require(
         admission.get("schema") == "cnpg-s2-native-admission-v1"
         and admission.get("cluster") == SOURCE
@@ -44,6 +44,11 @@ def render(cluster, backup, custody, admission):
     pitr.require(len(clusters) == 2 and objects[0]["metadata"]["name"] == pitr.STORE, "reader lineage drift")
     for suffix, restored in zip(("a", "b"), clusters, strict=True):
         restored["metadata"]["name"] = "verdify-cnpg-s2-pitr-" + suffix
+        if freeze_background_workers:
+            restored["metadata"]["name"] += "-frozen"
+            # Postmaster parameter, present before the first recovery server
+            # starts. Keep the restored job rows and restoring=off unchanged.
+            restored["spec"]["postgresql"]["parameters"]["timescaledb.max_background_workers"] = "0"
         for field in ("storage", "walStorage", "affinity", "resources", "instances"):
             restored["spec"][field] = declared["spec"][field]
     return clusters
@@ -51,6 +56,7 @@ def render(cluster, backup, custody, admission):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--freeze-background-workers", action="store_true")
     for name in ("cluster", "backup", "custody", "admission", "capture-directory", "output"):
         parser.add_argument("--" + name, required=True, type=Path)
     args = parser.parse_args()
@@ -61,6 +67,7 @@ def main():
         json.loads(args.backup.read_text()),
         custody,
         json.loads(args.admission.read_text()),
+        freeze_background_workers=args.freeze_background_workers,
     )
     with args.output.open("x") as stream:
         yaml.safe_dump_all(objects, stream, sort_keys=False)

@@ -10,7 +10,12 @@ import importlib.util
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-TARGETS = ("verdify-cnpg-s2-pitr-a", "verdify-cnpg-s2-pitr-b")
+TARGETS = (
+    "verdify-cnpg-s2-pitr-a",
+    "verdify-cnpg-s2-pitr-b",
+    "verdify-cnpg-s2-pitr-a-frozen",
+    "verdify-cnpg-s2-pitr-b-frozen",
+)
 spec = importlib.util.spec_from_file_location("s2_recovery_catalog", ROOT / "scripts/cnpg-c0-restore-qualification.py")
 c0 = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(c0)
