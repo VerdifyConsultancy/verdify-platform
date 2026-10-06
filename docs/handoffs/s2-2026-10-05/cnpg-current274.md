@@ -35,3 +35,22 @@ and network isolation remain unchanged.
 
 Raw source witness, dump, roles, SQL and all failed attempts remain Mac-private at
 `/Users/jason/maintenance/verdify-s2-delivery-20261005/cnpg/`.
+
+## First failure and explicit role-complete continuation
+
+The first new274 import replayed all37 source roles and17 translated membership
+commands, then stopped **before database creation**: its post-replay role dump
+used `--no-comments` while the real fresh pair retained nine source role comments.
+The original failure, complete native role artifacts and custody remain unchanged.
+The forward comparison retains every source comment and separately enumerates
+only CNPG's exact native streaming_replica comment. A changed source comment or
+unknown management comment still refuses parity.
+
+`--completed-role-replay` is supported only on the isolated S2 profile with a new
+exclusive stage, exact immutable original custody-manifest and management-dump
+hashes, no prefix-continuation profile, and the unchanged empty-cluster guard.
+Before emitting any continuation SQL, the native role helper revalidates the
+complete source role attributes, settings, comments, every membership and the
+closed bootstrap grantor translation against actual current roles. The exact
+CNPG management posture remains equal to original custody. Only this completely
+proved role replay may be skipped; an incomplete or changed role fails closed.

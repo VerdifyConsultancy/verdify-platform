@@ -65,7 +65,7 @@ DO $guard$ BEGIN
  END IF;
 END $guard$;
 SQL
-  pg_dumpall --roles-only --no-role-passwords --no-comments --no-security-labels \
+  pg_dumpall --roles-only --no-role-passwords --no-security-labels \
     > "${work_dir}/roles.before.sql" 2>"${work_dir}/roles-before.stderr"
   bootstrap_args=()
   if [ "${CNPG_BOOTSTRAP_GRANTOR_PROFILE:-}" = cnpg-source-bootstrap-grantor-v1 ]; then
@@ -80,6 +80,13 @@ SQL
     [ "${CNPG_MANAGEMENT_BEFORE}" = "${stage}/management-before.sql" ]
     management_args=(--management-before "${CNPG_MANAGEMENT_BEFORE}" --management-before-sha256 "${CNPG_MANAGEMENT_BEFORE_SHA256:?}")
   fi
+  completed_args=()
+  if [ "${CNPG_COMPLETED_ROLE_REPLAY:-}" = role-complete-native-verified-v1 ]; then
+    completed_args=(--completed-role-replay)
+  elif [ -n "${CNPG_COMPLETED_ROLE_REPLAY:-}" ]; then
+    echo '[restore-pair] FATAL: unknown completed-role continuation' >&2
+    exit 1
+  fi
   prefix_args=()
   if [ -n "${CNPG_ROLE_PREFIX_CUSTODY:-}" ]; then
     [ "${CNPG_ROLE_PREFIX_CUSTODY}" = "${stage}/role-prefix-custody.json" ]
@@ -87,7 +94,7 @@ SQL
     prefix_args=(--role-prefix-custody "${CNPG_ROLE_PREFIX_CUSTODY}" --role-prefix-current "${CNPG_ROLE_PREFIX_CURRENT}")
   fi
   python3 "${CNPG_ROLE_HELPER}" --source "${roles}" --current "${work_dir}/roles.before.sql" \
-    "${management_args[@]}" "${prefix_args[@]}" "${bootstrap_args[@]}" --replay "${work_dir}/roles.replay.sql"
+    "${management_args[@]}" "${prefix_args[@]}" "${completed_args[@]}" "${bootstrap_args[@]}" --replay "${work_dir}/roles.replay.sql"
 elif [ "${RESTORE_SERVER_MODE:-standalone}" = standalone ]; then
   work_dir="$(mktemp -d "${TMPDIR:-/tmp}/verdify-restore.XXXXXXXX")"
 # The TimescaleDB image can run as backup-plane uid 999 without a passwd entry.
@@ -120,7 +127,7 @@ if ! psql -X -v ON_ERROR_STOP=1 -d postgres -f "${work_dir}/roles.replay.sql" \
   exit 1
 fi
 if [ "${RESTORE_SERVER_MODE:-standalone}" = cnpg ]; then
-  pg_dumpall --roles-only --no-role-passwords --no-comments --no-security-labels \
+  pg_dumpall --roles-only --no-role-passwords --no-security-labels \
     > "${work_dir}/roles.after-replay.sql" 2>"${work_dir}/roles-after-replay.stderr"
   python3 "${CNPG_ROLE_HELPER}" --source "${roles}" --current "${work_dir}/roles.after-replay.sql" "${bootstrap_args[@]}"
 fi
@@ -183,7 +190,7 @@ done
 # Re-export the normalized role catalog from the restored cluster. pg_dumpall
 # generates a fresh random psql \restrict/\unrestrict key for every invocation;
 # remove only those two transport lines before the byte-for-byte comparison.
-if ! pg_dumpall --roles-only --no-role-passwords --no-comments --no-security-labels \
+if ! pg_dumpall --roles-only --no-role-passwords --no-security-labels \
     -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}" -l postgres \
     > "${work_dir}/roles.restored.sql" 2>"${work_dir}/roles-diff.stderr"; then
   echo "[restore-pair] FATAL: restored role inventory failed" >&2
