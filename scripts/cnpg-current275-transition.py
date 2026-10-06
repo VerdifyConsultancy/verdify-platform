@@ -20,7 +20,11 @@ spec = importlib.util.spec_from_file_location(
 )
 t = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(t)
-TARGETS = ("verdify-cnpg-s2", "verdify-cnpg-s2-pitr-b-frozen")
+TARGETS = (
+    "verdify-cnpg-s2",
+    "verdify-cnpg-s2-pitr-b-frozen",
+    "verdify-cnpg-s2-pitr-a-frozen",
+)
 TABLE = "public.cnpg_s2_275_runtime_receipts"
 MIGRATION = "db/migrations/275-lighting-minutes-policy-bounded-jit.sql"
 MIGRATION_SHA = "f4f8da110236461680f41770bad766a7e28b1a6db1982ecc632e93930a375dc4"

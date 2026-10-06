@@ -34,7 +34,7 @@ def test_exact_six_computed_guards_only_and_canonical_receipts_retained():
         m.remap_migration(raw + b"\n")
 
 
-@pytest.mark.parametrize("cluster", ("verdify-db", "verdify-cnpg-s2-pitr-a-frozen", "arbitrary"))
+@pytest.mark.parametrize("cluster", ("verdify-db", "verdify-cnpg-s2-pitr-a", "arbitrary"))
 def test_unowned_targets_refused(cluster):
     with pytest.raises(ValueError, match="closed275"):
         m.configured(cluster)
