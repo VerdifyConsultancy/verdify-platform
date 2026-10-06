@@ -100,3 +100,63 @@ def test_refuse_incomplete_or_changed_owned_sources(bad):
         ]
     with pytest.raises(ValueError):
         m.render(b, {"script.py": "changed-source"})
+
+
+def a_binding():
+    b = binding()
+    b["source_cluster"] = "verdify-cnpg-s2-pitr-a-frozen"
+    e = b["endpoints"].pop("verdify-cnpg-s2")
+    e.update(
+        cluster_uid="bd01ec5b-efe9-4882-a6dc-c76c6b6fa7ec",
+        host=b["source_cluster"] + "-rw.verdify-db-rehearsal.svc.cluster.local",
+    )
+    b["endpoints"][b["source_cluster"]] = e
+    return b
+
+
+def test_frozen_a_cohort_preserves_old_names_and_has_only_a_b_database_routes():
+    old = m.render(binding(), {"probe.py": "source"})
+    new = m.render(a_binding(), {"probe.py": "source"})
+    assert {o["metadata"]["name"] for o in old if o["kind"] in {"Job", "ConfigMap"}}.isdisjoint(
+        {o["metadata"]["name"] for o in new if o["kind"] in {"Job", "ConfigMap"}}
+    )
+    for j in (o for o in new if o["kind"] == "Job"):
+        assert j["spec"]["suspend"] and j["metadata"]["name"].endswith("-a275")
+        assert (
+            j["spec"]["template"]["metadata"]["labels"]["verdify.ai/qualification-target"]
+            == "verdify-cnpg-s2-pitr-a-frozen"
+        )
+        for c in j["spec"]["template"]["spec"]["containers"]:
+            for e in c.get("env", []):
+                if (
+                    e["name"] in {"SOURCE_DB_PASSWORD", "GRAFANA_RUNTIME_DB_PASSWORD"}
+                    and "target-a275" not in j["metadata"]["name"]
+                ):
+                    assert e["valueFrom"]["secretKeyRef"]["name"] == "verdify-cnpg-s2-pitr-a-frozen-runtime-client-auth"
+    policies = [o for o in new if o["kind"] == "NetworkPolicy"]
+    assert len(policies) == 4
+    destinations = {
+        to["podSelector"]["matchLabels"]["cnpg.io/cluster"]
+        for o in policies
+        for rule in o["spec"].get("egress", [])
+        for to in rule.get("to", [])
+        if "cnpg.io/cluster" in to.get("podSelector", {}).get("matchLabels", {})
+    }
+    assert destinations == {"verdify-cnpg-s2-pitr-a-frozen", m.B}
+
+
+@pytest.mark.parametrize("bad", ["production-source", "mixed-s2-a", "wrong-a-uid", "unsealed-a", "wrong-cohort"])
+def test_closed_a_profile_never_accepts_arbitrary_or_unsealed_recovery(bad):
+    b = a_binding()
+    if bad == "production-source":
+        b["source_cluster"] = "verdify-db"
+    elif bad == "mixed-s2-a":
+        b["endpoints"]["verdify-cnpg-s2"] = binding()["endpoints"]["verdify-cnpg-s2"]
+    elif bad == "wrong-a-uid":
+        b["endpoints"][b["source_cluster"]]["cluster_uid"] = "wrong"
+    elif bad == "unsealed-a":
+        b["endpoints"][b["source_cluster"]]["full_data_sequence_seal"] = False
+    else:
+        b["cohort"] = "../../production"
+    with pytest.raises((ValueError, RuntimeError)):
+        m.render(b, {})

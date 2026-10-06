@@ -27,6 +27,16 @@ CLUSTERS = {
     "verdify-cnpg-s2": "4f697776-df25-4e22-b930-0b76cf35496e",
     "verdify-cnpg-s2-pitr-b-frozen": "3981d0f2-4c72-48ac-9e09-826fe6bd4ed6",
 }
+A = "verdify-cnpg-s2-pitr-a-frozen"
+SOURCE_CLUSTERS = {"verdify-cnpg-s2": CLUSTERS["verdify-cnpg-s2"], A: "bd01ec5b-efe9-4882-a6dc-c76c6b6fa7ec"}
+
+
+def source_cluster(binding):
+    source = binding.get("source_cluster", "verdify-cnpg-s2")
+    require(source in SOURCE_CLUSTERS, "closed isolated source profile required")
+    return source
+
+
 IDENTITY = """SELECT current_user::text AS current_user,session_user::text AS session_user,
 current_database() AS database,(SELECT oid::bigint FROM pg_database WHERE datname=current_database()) AS database_oid,
 current_setting('cluster_name') AS cluster_name,pg_catalog.host(inet_server_addr()) AS backend_address,
@@ -85,10 +95,15 @@ def wait_transport(host, timeout=15):
 def checked_endpoints(binding):
     require(binding["schema"] == "cnpg-current275-nine-endpoint-reversal-v1", "new275 reversal binding required")
     endpoints = binding["endpoints"]
-    require(set(endpoints) == set(CLUSTERS), "exact S2 and frozen-B endpoints required")
+    source = source_cluster(binding)
+    allowed = {
+        source: SOURCE_CLUSTERS[source],
+        "verdify-cnpg-s2-pitr-b-frozen": CLUSTERS["verdify-cnpg-s2-pitr-b-frozen"],
+    }
+    require(set(endpoints) == set(allowed), "exact closed source and frozen-B endpoints required")
     for name, endpoint in endpoints.items():
         require(
-            endpoint["cluster_uid"] == CLUSTERS[name] and endpoint["database_oid"] == 16447, "wrong target authority"
+            endpoint["cluster_uid"] == allowed[name] and endpoint["database_oid"] == 16447, "wrong target authority"
         )
         require(
             endpoint["host"] == name + "-rw.verdify-db-rehearsal.svc.cluster.local",
@@ -478,9 +493,9 @@ def main():
     require(passwords["before"] == passwords["target"], "credential custody differs; no credential flip allowed")
     waves = []
     for wave, cluster in (
-        ("before", "verdify-cnpg-s2"),
+        ("before", source_cluster(binding)),
         ("target", "verdify-cnpg-s2-pitr-b-frozen"),
-        ("restored", "verdify-cnpg-s2"),
+        ("restored", source_cluster(binding)),
     ):
         endpoint = dict(endpoints[cluster], cluster=cluster)
         started = time.monotonic()

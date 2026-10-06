@@ -26,7 +26,7 @@ def main():
     spec.loader.exec_module(m)
     binding = json.loads(args.binding.read_text())
     ends = m.checked_endpoints(binding)
-    cluster = "verdify-cnpg-s2-pitr-b-frozen" if args.wave == "target" else "verdify-cnpg-s2"
+    cluster = "verdify-cnpg-s2-pitr-b-frozen" if args.wave == "target" else m.source_cluster(binding)
     endpoint = dict(ends[cluster], cluster=cluster)
     auth = base64.b64encode(("admin:" + os.environ["GRAFANA_ADMIN_PASSWORD"]).encode()).decode()
 

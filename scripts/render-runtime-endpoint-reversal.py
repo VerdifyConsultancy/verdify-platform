@@ -40,13 +40,20 @@ def render(binding, sources):
     m = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(m)
     ends = m.checked_endpoints(binding)
+    source = m.source_cluster(binding)
+    cohort = binding.get("cohort", "a275" if source == m.A else "")
+    require(not cohort or re.fullmatch(r"[a-z][a-z0-9-]{0,11}", cohort), "bounded DNS cohort suffix required")
+    suffix = "-" + cohort if cohort else ""
+    cm_name = CM + suffix
+    labels = {**LABELS, "verdify.ai/qualification-target": source}
+    source_secret = source + "-runtime-client-auth"
     require(set(binding["profiles"]) == set(m.ROLES) | {"grafana"}, "all nine genuine owning-image profiles required")
     data = {"binding.json": json.dumps(binding, sort_keys=True), **sources}
     objects = [
         {
             "apiVersion": "v1",
             "kind": "ConfigMap",
-            "metadata": {"name": CM, "namespace": NS},
+            "metadata": {"name": cm_name, "namespace": NS},
             "immutable": True,
             "data": data,
         }
@@ -79,11 +86,11 @@ def render(binding, sources):
             require(profile["identity_kind"] == "actual-grafana-server", "actual Grafana server identity required")
         waves = ("before", "target", "restored") if role == "grafana" else ("all",)
         for wave in waves:
-            name = "verdify-s2-endpoint-" + role.replace("_", "-") + "-" + wave
+            name = "verdify-s2-endpoint-" + role.replace("_", "-") + "-" + wave + suffix
             env = [
                 {"name": "VERDIFY_DEVICE_WRITE_ENABLED", "value": "0"},
                 {"name": "PYTHONDONTWRITEBYTECODE", "value": "1"},
-                ref("SOURCE_DB_PASSWORD", role, "verdify-cnpg-s2-runtime-client-auth"),
+                ref("SOURCE_DB_PASSWORD", role, source_secret),
                 ref("TARGET_DB_PASSWORD", role, B + "-runtime-client-auth"),
             ]
             mounts = [
@@ -91,7 +98,7 @@ def render(binding, sources):
                 {"name": "tmp", "mountPath": "/tmp"},  # noqa: S108 - private per-Pod emptyDir
             ]
             volumes = [
-                {"name": "qualification", "configMap": {"name": CM, "defaultMode": 420}},
+                {"name": "qualification", "configMap": {"name": cm_name, "defaultMode": 420}},
                 {"name": "tmp", "emptyDir": {}},
             ]
             container = {
@@ -127,7 +134,7 @@ def render(binding, sources):
                 )
             containers = [container]
             if role == "grafana":
-                cluster = B if wave == "target" else S2
+                cluster = B if wave == "target" else source
                 datasource = {
                     "apiVersion": 1,
                     "datasources": [
@@ -182,7 +189,7 @@ def render(binding, sources):
                         ref(
                             "GRAFANA_RUNTIME_DB_PASSWORD",
                             "grafana",
-                            B + "-runtime-client-auth" if wave == "target" else "verdify-cnpg-s2-runtime-client-auth",
+                            B + "-runtime-client-auth" if wave == "target" else source_secret,
                         ),
                     ]
                 )
@@ -253,9 +260,9 @@ def render(binding, sources):
                     "metadata": {
                         "name": name,
                         "namespace": NS,
-                        "labels": LABELS,
+                        "labels": labels,
                         "annotations": {
-                            "verdify.ai/proof-scope": "isolated actual owning client readonly S2-B-S2; not production cutover",
+                            "verdify.ai/proof-scope": "isolated actual owning client readonly source-B-source; not production cutover",
                             "verdify.ai/binding-sha256": hashlib.sha256(data["binding.json"].encode()).hexdigest(),
                         },
                     },
@@ -263,12 +270,12 @@ def render(binding, sources):
                         "suspend": True,
                         "backoffLimit": 0,
                         "activeDeadlineSeconds": 240,
-                        "template": {"metadata": {"labels": LABELS}, "spec": pod},
+                        "template": {"metadata": {"labels": labels}, "spec": pod},
                     },
                 }
             )
     # Existing exact S2 policies remain; these additions permit only B5432 and DNS.
-    clients = {"matchLabels": LABELS}
+    clients = {"matchLabels": labels}
     server = {"matchLabels": {"cnpg.io/cluster": B}}
     objects.extend(
         [
@@ -307,6 +314,39 @@ def render(binding, sources):
             },
         ]
     )
+    if source == m.A:
+        objects.extend(
+            [
+                {
+                    "apiVersion": "networking.k8s.io/v1",
+                    "kind": "NetworkPolicy",
+                    "metadata": {"name": "verdify-a275-endpoint-source-egress", "namespace": NS},
+                    "spec": {
+                        "podSelector": clients,
+                        "policyTypes": ["Egress"],
+                        "egress": [
+                            {
+                                "to": [{"podSelector": {"matchLabels": {"cnpg.io/cluster": source}}}],
+                                "ports": [{"protocol": "TCP", "port": 5432}],
+                            }
+                        ],
+                    },
+                },
+                {
+                    "apiVersion": "networking.k8s.io/v1",
+                    "kind": "NetworkPolicy",
+                    "metadata": {"name": "verdify-a275-endpoint-source-ingress", "namespace": NS},
+                    "spec": {
+                        "podSelector": {"matchLabels": {"cnpg.io/cluster": source}},
+                        "policyTypes": ["Ingress"],
+                        "ingress": [{"from": [{"podSelector": clients}], "ports": [{"protocol": "TCP", "port": 5432}]}],
+                    },
+                },
+            ]
+        )
+        for obj in objects:
+            if obj["kind"] == "NetworkPolicy" and obj["metadata"]["name"].startswith("verdify-s2-endpoint-"):
+                obj["metadata"]["name"] += suffix
     return objects
 
 
