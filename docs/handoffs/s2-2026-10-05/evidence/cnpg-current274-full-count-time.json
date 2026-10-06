@@ -1,0 +1,23 @@
+{
+  "schema": "cnpg-s2-current274-full-count-time-v1",
+  "cluster_uid": "4f697776-df25-4e22-b930-0b76cf35496e",
+  "database_oid": 16447,
+  "public_relations": 427,
+  "timestamp_columns": 567,
+  "timescale_owner_entries": 614,
+  "full_native_relation_and_timestamp_inventory_equal": true,
+  "full_native_installation_catalog_inventory_equal": true,
+  "native_receipt": {
+    "label": "current274",
+    "native_exit": 0,
+    "elapsed_seconds": 496.1074137079995,
+    "sql_sha256": "64f1dc73f185b92c593ace1b4068ad79ae43478f939e8f2a6e8a219573b30c36",
+    "read_only": true,
+    "observation_at": "2026-10-06T03:58:39.426422+00:00"
+  },
+  "dataset_sha256": "b6ee0debbeb016131948ed80de26cd1275d6a6e9de6a72ada565c2406830b979",
+  "column_inventory_sha256": "af8547866b2df7b5ef2cf9910bd3ae00889134e8b1debb9edaeb46744dfaa721",
+  "complete_copy_accounting_sha256": "ad91e02b903bc6fd8b6161b711a139ed9a8b8702af317a5fd0d4f56922d0920c",
+  "historical270_source_a_b_full_parity_sha256": "9a6fc621d5cfe1cfc1485d0ccc351327e0a840238356f5a69975ca89c38c8161",
+  "failed_attempts_retained": true
+}
