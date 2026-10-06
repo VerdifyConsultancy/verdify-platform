@@ -69,7 +69,16 @@
     "local_handoff_links": "passed",
     "current_main_required_status_checks": null,
     "current_main_required_pull_request_reviews": null,
-    "branch_rules": []
+    "branch_rules": [],
+    "classic_required_linear_history": true,
+    "enforce_admins": false,
+    "accepted_main_publication": "f45bfe7a215e04aa654bda0faf4879a43a332077",
+    "accepted_ROOT_linear_history_bypass": {
+      "merge_commit": "656b18b3d5bc44d4138654e7cbb72ceaab46ef7e",
+      "remote_report": "Bypassed rule violations for refs/heads/main: This branch must not contain merge commits.",
+      "initial_readback_limitation": "The initial query selected status/review requirements and rules endpoint, omitting classic required_linear_history. No required CI/status check was bypassed.",
+      "response": "Published ancestry is preserved; this follow-up records the actual accepted bypass without rewriting main."
+    }
   },
   "protected_estate": "final-estate-readback.json",
   "final_policy": "949-source81/steady-terminal-receipt.json",
