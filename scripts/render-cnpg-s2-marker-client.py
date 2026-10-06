@@ -114,6 +114,12 @@ SELECT jsonb_build_object('kind','ack','name','{name}','acknowledged_at',clock_t
                 "spec": {
                     "restartPolicy": "Never",
                     "automountServiceAccountToken": False,
+                    "securityContext": {
+                        "runAsNonRoot": True,
+                        "runAsUser": 26,
+                        "runAsGroup": 26,
+                        "seccompProfile": {"type": "RuntimeDefault"},
+                    },
                     "imagePullSecrets": [{"name": "zot-origin-cluster-pull"}],
                     "containers": [
                         {

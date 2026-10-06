@@ -76,6 +76,12 @@ def render(cluster, backup, custody, admission):
                 "spec": {
                     "restartPolicy": "Never",
                     "automountServiceAccountToken": False,
+                    "securityContext": {
+                        "runAsNonRoot": True,
+                        "runAsUser": 26,
+                        "runAsGroup": 26,
+                        "seccompProfile": {"type": "RuntimeDefault"},
+                    },
                     "containers": [
                         {
                             "name": "reader",
