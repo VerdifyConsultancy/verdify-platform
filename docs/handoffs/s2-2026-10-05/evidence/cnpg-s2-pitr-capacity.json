@@ -1,0 +1,152 @@
+{
+  "schema": "cnpg-s2-pitr-capacity-v1",
+  "potential_replica_Gi": 300,
+  "new_logical_Gi": 150,
+  "eligible_disks": [
+    {
+      "node": "vm-k3s-node4",
+      "physical_domain": "oro",
+      "disk": "nvme-s7u5nj0xa01267a",
+      "pod_eligible": true,
+      "available_Gi": 429.98046875,
+      "physical_headroom_above_25pct_Gi": 201.02660751342773,
+      "logical_200pct_headroom_Gi": 987.3808898925781,
+      "physical_headroom_above_25pct_and_reserved_Gi": 191.02660751342773
+    },
+    {
+      "node": "vm-k3s-node4",
+      "physical_domain": "oro",
+      "disk": "nvme-s7u5nj0xa16865a",
+      "pod_eligible": true,
+      "available_Gi": 429.19921875,
+      "physical_headroom_above_25pct_Gi": 200.24535751342773,
+      "logical_200pct_headroom_Gi": 851.5332336425781,
+      "physical_headroom_above_25pct_and_reserved_Gi": 190.24535751342773
+    },
+    {
+      "node": "vm-k3s-node5",
+      "physical_domain": "opal",
+      "disk": "nvme-s4p4ng0m103293d",
+      "pod_eligible": true,
+      "available_Gi": 363.37890625,
+      "physical_headroom_above_25pct_Gi": 134.42504501342773,
+      "logical_200pct_headroom_Gi": 625.2832336425781,
+      "physical_headroom_above_25pct_and_reserved_Gi": 124.42504501342773
+    },
+    {
+      "node": "vm-k3s-node5",
+      "physical_domain": "opal",
+      "disk": "nvme-s59anj0n203499k",
+      "pod_eligible": true,
+      "available_Gi": 421.2890625,
+      "physical_headroom_above_25pct_Gi": 192.33520126342773,
+      "logical_200pct_headroom_Gi": 1048.6308898925781,
+      "physical_headroom_above_25pct_and_reserved_Gi": 182.33520126342773
+    },
+    {
+      "node": "vm-k3s-node6",
+      "physical_domain": "ore",
+      "disk": "nvme-s4p4ng0m103292y",
+      "pod_eligible": true,
+      "available_Gi": 429.1015625,
+      "physical_headroom_above_25pct_Gi": 200.14753246307373,
+      "logical_200pct_headroom_Gi": 632.4095840454102,
+      "physical_headroom_above_25pct_and_reserved_Gi": 190.14753246307373
+    },
+    {
+      "node": "vm-k3s-node6",
+      "physical_domain": "ore",
+      "disk": "nvme-s4p4ng0m105377e",
+      "pod_eligible": true,
+      "available_Gi": 375.390625,
+      "physical_headroom_above_25pct_Gi": 146.43659496307373,
+      "logical_200pct_headroom_Gi": 1186.6322402954102,
+      "physical_headroom_above_25pct_and_reserved_Gi": 136.43659496307373
+    },
+    {
+      "node": "vm-k3s-node7",
+      "physical_domain": "onyx",
+      "disk": "nvme-s7u5nj0xa01246z",
+      "pod_eligible": true,
+      "available_Gi": 341.796875,
+      "physical_headroom_above_25pct_Gi": 112.84284496307373,
+      "logical_200pct_headroom_Gi": 984.6322402954102,
+      "physical_headroom_above_25pct_and_reserved_Gi": 102.84284496307373
+    },
+    {
+      "node": "vm-k3s-node8",
+      "physical_domain": "olivine",
+      "disk": "nvme-s7u5nj0xa01169z",
+      "pod_eligible": false,
+      "available_Gi": 297.0703125,
+      "physical_headroom_above_25pct_Gi": 68.11645126342773,
+      "logical_200pct_headroom_Gi": 1533.6308898925781,
+      "physical_headroom_above_25pct_and_reserved_Gi": 58.116451263427734
+    },
+    {
+      "node": "vm-k3s-node8",
+      "physical_domain": "olivine",
+      "disk": "nvme-s7u5nj0xa01268w",
+      "pod_eligible": false,
+      "available_Gi": 439.84375,
+      "physical_headroom_above_25pct_Gi": 210.88988876342773,
+      "logical_200pct_headroom_Gi": 1168.6308898925781,
+      "physical_headroom_above_25pct_and_reserved_Gi": 200.88988876342773
+    }
+  ],
+  "pod_eligible_domains": [
+    "onyx",
+    "opal",
+    "ore",
+    "oro"
+  ],
+  "physical_headroom_above_minimal_total_Gi": 1466.4655237197876,
+  "physical_headroom_above_minimal_pod_eligible_Gi": 1187.4591836929321,
+  "logical_headroom_total_Gi": 9018.7640914917,
+  "source_hashes": {
+    "longhorn-nodes.private.json": "abdbc8669022db02028a56d1877b09d19166068dd4c9de72e1da29c7bf72d436",
+    "pods.private.json": "b866527b03357e0c9d302d93705d786b8e2255545a9bbb0060ccdb7ac1a5c275",
+    "worker-nodes.private.json": "d1636ba3edf422bf4ac30ca44c9d3fa96c74872954c84fc41aab74d304920476",
+    "pvc.private.json": "d5e5fd2d44e53cc2fe818fba24664f46b732b4f0018bca6fb3e26c6a26946c4d",
+    "pod-requests.metadata.json": "dbb806da2dd0749348ecdf65f37695e17a50dbf7618912d6d96310dccac9a498"
+  },
+  "excluded": [
+    "node1-3 control planes: unschedulable and Longhorn not ready",
+    "node7 disk nvme-s59ans0na05876v: native Schedulable=False DiskPressure",
+    "node8: storage replica eligible, CNPG pod ineligible dedicated=frigate:NoSchedule without toleration"
+  ],
+  "no_shared_storage_changes": true,
+  "pod_request_headroom": [
+    {
+      "node": "vm-k3s-node4",
+      "domain": "oro",
+      "memory_request_remaining_Gi": 11.589928666129708,
+      "cpu_request_remaining_cores": 8.404999999999994
+    },
+    {
+      "node": "vm-k3s-node5",
+      "domain": "opal",
+      "memory_request_remaining_Gi": 15.284257736988366,
+      "cpu_request_remaining_cores": 10.839999999999975
+    },
+    {
+      "node": "vm-k3s-node6",
+      "domain": "ore",
+      "memory_request_remaining_Gi": 15.319111863151193,
+      "cpu_request_remaining_cores": 16.730000000000008
+    },
+    {
+      "node": "vm-k3s-node7",
+      "domain": "onyx",
+      "memory_request_remaining_Gi": 18.715044636279345,
+      "cpu_request_remaining_cores": 16.61499999999999
+    }
+  ],
+  "new_six_instances_requests": {
+    "cpu_cores": 3,
+    "memory_Gi": 12
+  },
+  "conservative_physical_headroom_total_Gi": 1376.4655237197876,
+  "conservative_physical_headroom_pod_eligible_Gi": 1117.4591836929321,
+  "reserve_accounting": "Deduct actual10Gi disk reserve in addition to25% maximum threshold; conservative native-schedulable disks only"
+}

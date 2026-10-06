@@ -1,0 +1,67 @@
+"""Closed S2 profile refuses incomplete baseline and retains reader-only lineage."""
+
+import copy
+import importlib.util
+from pathlib import Path
+
+import pytest
+import yaml
+from test_cnpg_pitr_pair import fixture
+
+ROOT = Path(__file__).resolve().parents[1]
+spec = importlib.util.spec_from_file_location("s2_pitr", ROOT / "scripts/render-cnpg-s2-pitr-pair.py")
+m = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(m)
+
+
+def s2_fixture():
+    cluster, backup, custody = fixture()
+    cluster = yaml.safe_load((ROOT / "deploy/k8s/cnpg/rehearsal/cluster/s2-cluster.yaml").read_text())
+    cluster["metadata"]["uid"] = m.SOURCE_UID
+    backup["spec"]["cluster"]["name"] = m.SOURCE
+    backup["metadata"]["ownerReferences"] = [{"kind": "Cluster", "name": m.SOURCE, "uid": m.SOURCE_UID}]
+    custody["source"].update(cluster_name=m.SOURCE, cluster_uid=m.SOURCE_UID)
+    admission = {
+        "schema": "cnpg-s2-native-admission-v1",
+        "cluster": m.SOURCE,
+        "binding": {"cluster_uid": m.SOURCE_UID},
+        "database_oid": 16447,
+        "installation_sha256": m.INSTALL_SHA,
+        "full_data_internal_catalog_accounting_complete": True,
+        "historical_seals_and_ledger_retained": True,
+    }
+    return cluster, backup, custody, admission
+
+
+def test_only_two_new_s2_reader_only_clusters_and_original_profile_unchanged():
+    original = fixture()
+    objects = m.render(*s2_fixture())
+    assert {o["metadata"]["name"] for o in objects} == {"verdify-cnpg-s2-pitr-a", "verdify-cnpg-s2-pitr-b"}
+    for o in objects:
+        assert o["kind"] == "Cluster" and o["spec"]["instances"] == 3
+        assert o["spec"]["storage"]["size"] == "20Gi"
+        assert o["spec"]["walStorage"]["size"] == "5Gi"
+        assert "plugins" not in o["spec"]
+        assert o["spec"]["externalClusters"][0]["plugin"]["parameters"] == {
+            "barmanObjectName": "verdify-cnpg-pitr-reader",
+            "serverName": m.SOURCE,
+        }
+    assert fixture() == original
+
+
+@pytest.mark.parametrize(
+    "part,key,value",
+    [
+        (3, "full_data_internal_catalog_accounting_complete", False),
+        (3, "installation_sha256", "a" * 64),
+        (3, "database_oid", 123),
+        (0, "storage", {"size": "30Gi", "storageClass": "longhorn-v1-rwo"}),
+        (0, "affinity", {}),
+    ],
+)
+def test_refuses_admission_and_capacity_drift(part, key, value):
+    args = copy.deepcopy(s2_fixture())
+    target = args[part]["spec"] if part == 0 else args[part]
+    target[key] = value
+    with pytest.raises(ValueError):
+        m.render(*args)
