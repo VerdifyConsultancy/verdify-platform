@@ -190,3 +190,20 @@ def test_frozen_a_spool_profile_is_closed_and_uid_bound(case):
     else:
         with pytest.raises(AssertionError):
             probe.clone_profile(binding)
+
+
+@pytest.mark.parametrize("case", ["correct", "old-primary", "wrong-transport", "relabeled-installation"])
+def test_frozen_a_successor_preserves_installation_and_requires_complete_transport(case):
+    profile = probe.CLONE_PROFILES["frozen-a275-primary2"]
+    binding = {**profile, "clone_profile": "frozen-a275-primary2", "database_oid": 16447}
+    if case == "old-primary":
+        binding["primary_uid"] = probe.CLONE_PROFILES["frozen-a275"]["primary_uid"]
+    elif case == "wrong-transport":
+        binding["transport_rebinding_sha256"] = "a" * 64
+    elif case == "relabeled-installation":
+        binding["historical_installation_sha256"] = "b" * 64
+    if case == "correct":
+        assert probe.clone_profile(binding) == profile
+    else:
+        with pytest.raises(AssertionError):
+            probe.clone_profile(binding)

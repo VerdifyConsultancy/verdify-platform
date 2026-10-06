@@ -34,6 +34,14 @@ CLONE_PROFILES = {
         "primary_uid": "96caed77-a75f-457c-bbd6-d34f88a3b3ae",
         "host": "verdify-cnpg-s2-pitr-a-frozen-rw.verdify-db-rehearsal.svc.cluster.local",
     },
+    "frozen-a275-primary2": {
+        "cluster": "verdify-cnpg-s2-pitr-a-frozen",
+        "cluster_uid": "bd01ec5b-efe9-4882-a6dc-c76c6b6fa7ec",
+        "primary_uid": "ea68bad4-3f3b-4116-b120-6300d92161f6",
+        "host": "verdify-cnpg-s2-pitr-a-frozen-rw.verdify-db-rehearsal.svc.cluster.local",
+        "transport_rebinding_sha256": "7744a77e9681353cdb7a2be297c0917839a064175b9b289f4843b6c255107a22",
+        "historical_installation_sha256": "9d7f12596ec4b015a45d9a3fc3f35df1f09f1be088d97b79ab03f0a00dae4ad9",
+    },
 }
 
 
@@ -43,6 +51,9 @@ def clone_profile(binding):
     profile = CLONE_PROFILES[name]
     assert binding["cluster_uid"] == profile["cluster_uid"] and binding["primary_uid"] == profile["primary_uid"]
     assert binding["database_oid"] == 16447
+    if "transport_rebinding_sha256" in profile:
+        for key in ("transport_rebinding_sha256", "historical_installation_sha256"):
+            assert binding[key] == profile[key], "qualified transport successor custody required"
     return profile
 
 
