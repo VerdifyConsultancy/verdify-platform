@@ -29,7 +29,7 @@ def test_pair_profile_is_uid_bound_and_device_namespace_excluded():
         m.target_identity({}, {}, cluster_uid="anything", pod_uid="anything", cluster_name="verdify-prod")
     shell = (ROOT / "scripts/restore-backup-pair.sh").read_text()
     assert "cluster_name') NOT IN ('verdify-cnpg-rehearsal','verdify-cnpg-s2')" in shell
-    assert "OR EXISTS(SELECT 1 FROM pg_database WHERE datname='verdify_rehearsal')" in shell
+    assert "OR EXISTS(SELECT 1 FROM pg_database WHERE datname='verdify_rehearsal'" in shell
 
 
 def test_source_role_comments_are_compared_and_management_comment_is_explicit():

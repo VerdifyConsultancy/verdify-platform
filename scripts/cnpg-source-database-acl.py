@@ -52,7 +52,7 @@ SET LOCAL statement_timeout='30s';
 SET LOCAL lock_timeout='2s';
 DO $guard$ BEGIN
  IF current_database()<>'verdify_rehearsal'
-    OR current_setting('cluster_name')<>'verdify-cnpg-rehearsal'
+    OR current_setting('cluster_name') NOT IN ('verdify-cnpg-rehearsal','verdify-cnpg-s2')
     OR current_setting('server_version_num')::int<>160013
     OR inet_client_addr() IS NOT NULL OR pg_is_in_recovery()
     OR (SELECT pg_get_userbyid(datdba) FROM pg_database WHERE datname=current_database())<>'verdify' THEN
