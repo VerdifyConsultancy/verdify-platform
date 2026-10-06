@@ -1,0 +1,149 @@
+{
+  "source_revision": "81d76a4c3d35a925ebd2438d89099d1f657b3f8f",
+  "audit": [
+    {
+      "id": 5995,
+      "delivered_at": "2026-10-06 00:28:19.452677+00:00",
+      "event_type": "MANUAL",
+      "event_label": "Sprint S1 ordinary-policy convergence acceptance. Evaluate the current greenhouse and forecast, and produce a justified current 72-hour planning update through set_plan when warranted. Preserve crop safety and normal planner validation. No synthetic plan, forced tunable, scientific overlay, or acknowledgement-only substitute. Source 81d76a4c3d35a925ebd2438d89099d1f657b3f8f",
+      "trigger_id": "476b4a01-948a-4e99-b49b-aef77c9192b1",
+      "instance": "local",
+      "gateway_status": 202,
+      "hermes_run_id": "run_3c3d655a122942a889b3e1ddaed8dd81",
+      "status": "plan_written",
+      "resulting_plan_id": "iris-20261005-1828"
+    }
+  ],
+  "old_plan_ids": [
+    "iris-20261005-1755"
+  ],
+  "new_plan_ids": [
+    "iris-20261005-1828"
+  ],
+  "changed_desired_value_count": 8,
+  "changes": [
+    {
+      "parameter": "cool_stage2_over_high_f",
+      "old": {
+        "parameter": "cool_stage2_over_high_f",
+        "value": 1.7875,
+        "plan_id": "iris-20261005-1755",
+        "ts": "2026-10-05 23:49:00+00:00"
+      },
+      "new": {
+        "parameter": "cool_stage2_over_high_f",
+        "value": 1.8175000000000001,
+        "plan_id": "iris-20261005-1828",
+        "ts": "2026-10-06 00:25:00+00:00"
+      }
+    },
+    {
+      "parameter": "fog_escalation_kpa",
+      "old": {
+        "parameter": "fog_escalation_kpa",
+        "value": 0.2,
+        "plan_id": "iris-20261005-1755",
+        "ts": "2026-10-05 23:49:00+00:00"
+      },
+      "new": {
+        "parameter": "fog_escalation_kpa",
+        "value": 0.25,
+        "plan_id": "iris-20261005-1828",
+        "ts": "2026-10-06 00:25:00+00:00"
+      }
+    },
+    {
+      "parameter": "min_fog_off_s",
+      "old": {
+        "parameter": "min_fog_off_s",
+        "value": 60.0,
+        "plan_id": "iris-20261005-1755",
+        "ts": "2026-10-05 23:49:00+00:00"
+      },
+      "new": {
+        "parameter": "min_fog_off_s",
+        "value": 72.0,
+        "plan_id": "iris-20261005-1828",
+        "ts": "2026-10-06 00:25:00+00:00"
+      }
+    },
+    {
+      "parameter": "min_fog_on_s",
+      "old": {
+        "parameter": "min_fog_on_s",
+        "value": 63.75,
+        "plan_id": "iris-20261005-1755",
+        "ts": "2026-10-05 23:49:00+00:00"
+      },
+      "new": {
+        "parameter": "min_fog_on_s",
+        "value": 59.25,
+        "plan_id": "iris-20261005-1828",
+        "ts": "2026-10-06 00:25:00+00:00"
+      }
+    },
+    {
+      "parameter": "mister_all_kpa",
+      "old": {
+        "parameter": "mister_all_kpa",
+        "value": 1.245,
+        "plan_id": "iris-20261005-1755",
+        "ts": "2026-10-05 23:49:00+00:00"
+      },
+      "new": {
+        "parameter": "mister_all_kpa",
+        "value": 1.157,
+        "plan_id": "iris-20261005-1828",
+        "ts": "2026-10-06 00:25:00+00:00"
+      }
+    },
+    {
+      "parameter": "mister_engage_kpa",
+      "old": {
+        "parameter": "mister_engage_kpa",
+        "value": 1.045,
+        "plan_id": "iris-20261005-1755",
+        "ts": "2026-10-05 23:49:00+00:00"
+      },
+      "new": {
+        "parameter": "mister_engage_kpa",
+        "value": 1.007,
+        "plan_id": "iris-20261005-1828",
+        "ts": "2026-10-06 00:25:00+00:00"
+      }
+    },
+    {
+      "parameter": "mister_pulse_gap_s",
+      "old": {
+        "parameter": "mister_pulse_gap_s",
+        "value": 33.75,
+        "plan_id": "iris-20261005-1755",
+        "ts": "2026-10-05 23:49:00+00:00"
+      },
+      "new": {
+        "parameter": "mister_pulse_gap_s",
+        "value": 41.25,
+        "plan_id": "iris-20261005-1828",
+        "ts": "2026-10-06 00:25:00+00:00"
+      }
+    },
+    {
+      "parameter": "mister_water_budget_gal",
+      "old": {
+        "parameter": "mister_water_budget_gal",
+        "value": 150.0,
+        "plan_id": "iris-20261005-1755",
+        "ts": "2026-10-05 23:49:00+00:00"
+      },
+      "new": {
+        "parameter": "mister_water_budget_gal",
+        "value": 180.0,
+        "plan_id": "iris-20261005-1828",
+        "ts": "2026-10-06 00:25:00+00:00"
+      }
+    }
+  ],
+  "actual_plan_transition_confirmed": true,
+  "device_convergence_confirmed": false,
+  "observed_at": "2026-10-06T00:32:12.487233+00:00"
+}

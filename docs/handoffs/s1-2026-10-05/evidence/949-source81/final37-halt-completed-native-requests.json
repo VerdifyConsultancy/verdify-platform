@@ -1,0 +1,137 @@
+[
+  {
+    "ts": "2026-10-05T22:59:12.633855+00:00",
+    "value": 1.6,
+    "source": "plan",
+    "parameter": "cool_exit_hysteresis_f",
+    "expired_at": null,
+    "confirmed_at": "2026-10-05T22:59:19.365302+00:00",
+    "delivery_status": "confirmed"
+  },
+  {
+    "ts": "2026-10-05T22:59:12.644232+00:00",
+    "value": 1.66,
+    "source": "plan",
+    "parameter": "cool_stage2_over_high_f",
+    "expired_at": null,
+    "confirmed_at": "2026-10-05T22:59:19.365302+00:00",
+    "delivery_status": "confirmed"
+  },
+  {
+    "ts": "2026-10-05T22:59:12.650504+00:00",
+    "value": 210000,
+    "source": "plan",
+    "parameter": "dwell_gate_ms",
+    "expired_at": null,
+    "confirmed_at": "2026-10-05T23:00:23.046847+00:00",
+    "delivery_status": "confirmed"
+  },
+  {
+    "ts": "2026-10-05T22:59:12.66033+00:00",
+    "value": 63.75,
+    "source": "plan",
+    "parameter": "min_fog_on_s",
+    "expired_at": null,
+    "confirmed_at": "2026-10-05T23:00:23.046847+00:00",
+    "delivery_status": "confirmed"
+  },
+  {
+    "ts": "2026-10-05T22:59:12.674732+00:00",
+    "value": 33.75,
+    "source": "plan",
+    "parameter": "mister_pulse_on_s",
+    "expired_at": null,
+    "confirmed_at": "2026-10-05T23:00:23.046847+00:00",
+    "delivery_status": "confirmed"
+  },
+  {
+    "ts": "2026-10-05T22:59:12.681888+00:00",
+    "value": 1.7,
+    "source": "plan",
+    "parameter": "mister_vpd_weight",
+    "expired_at": null,
+    "confirmed_at": "2026-10-05T23:00:23.046847+00:00",
+    "delivery_status": "confirmed"
+  },
+  {
+    "ts": "2026-10-05T22:59:12.690324+00:00",
+    "value": 1,
+    "source": "plan",
+    "parameter": "sw_direct_wet_stress_override_enabled",
+    "expired_at": null,
+    "confirmed_at": "2026-10-05T23:00:23.046847+00:00",
+    "delivery_status": "confirmed"
+  },
+  {
+    "ts": "2026-10-05T22:59:12.701723+00:00",
+    "value": 1.6,
+    "source": "plan",
+    "parameter": "temp_hysteresis",
+    "expired_at": null,
+    "confirmed_at": "2026-10-05T23:00:23.046847+00:00",
+    "delivery_status": "confirmed"
+  },
+  {
+    "ts": "2026-10-05T22:59:12.75527+00:00",
+    "value": 0.1875,
+    "source": "plan",
+    "parameter": "vpd_hysteresis",
+    "expired_at": null,
+    "confirmed_at": "2026-10-05T23:00:23.046847+00:00",
+    "delivery_status": "confirmed"
+  },
+  {
+    "ts": "2026-10-05T22:59:12.907324+00:00",
+    "value": 52.5,
+    "source": "plan",
+    "parameter": "vpd_watch_dwell_s",
+    "expired_at": null,
+    "confirmed_at": "2026-10-05T23:00:23.046847+00:00",
+    "delivery_status": "confirmed"
+  },
+  {
+    "ts": "2026-10-05T22:59:12.915075+00:00",
+    "value": 0.2,
+    "source": "plan",
+    "parameter": "fog_escalation_kpa",
+    "expired_at": null,
+    "confirmed_at": "2026-10-05T23:00:23.046847+00:00",
+    "delivery_status": "confirmed"
+  },
+  {
+    "ts": "2026-10-05T22:59:12.922316+00:00",
+    "value": 75,
+    "source": "plan",
+    "parameter": "mister_all_delay_s",
+    "expired_at": null,
+    "confirmed_at": "2026-10-05T23:00:23.046847+00:00",
+    "delivery_status": "confirmed"
+  },
+  {
+    "ts": "2026-10-05T23:00:37.747326+00:00",
+    "value": 37.5,
+    "source": "plan",
+    "parameter": "mister_engage_delay_s",
+    "expired_at": null,
+    "confirmed_at": "2026-10-05T23:01:26.874969+00:00",
+    "delivery_status": "confirmed"
+  },
+  {
+    "ts": "2026-10-05T23:00:37.757673+00:00",
+    "value": 0.84,
+    "source": "band",
+    "parameter": "vpd_target_west",
+    "expired_at": null,
+    "confirmed_at": "2026-10-05T23:01:26.874969+00:00",
+    "delivery_status": "confirmed"
+  },
+  {
+    "ts": "2026-10-05T23:00:37.768782+00:00",
+    "value": 0.98,
+    "source": "band",
+    "parameter": "vpd_target_center",
+    "expired_at": null,
+    "confirmed_at": "2026-10-05T23:01:26.874969+00:00",
+    "delivery_status": "confirmed"
+  }
+]

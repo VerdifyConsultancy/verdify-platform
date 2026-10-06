@@ -1,0 +1,801 @@
+{
+    "apiVersion": "v1",
+    "kind": "Pod",
+    "metadata": {
+        "annotations": {
+            "k8s.v1.cni.cncf.io/network-status": "[{\n    \"name\": \"cbr0\",\n    \"interface\": \"eth0\",\n    \"ips\": [\n        \"10.42.6.62\"\n    ],\n    \"mac\": \"1e:93:77:7d:77:d8\",\n    \"default\": true,\n    \"dns\": {},\n    \"gateway\": [\n        \"10.42.6.1\"\n    ]\n}]",
+            "kubectl.kubernetes.io/restartedAt": "2026-07-10T14:31:59-06:00",
+            "kubernetes.io/limit-ranger": "LimitRanger plugin set: cpu, memory request for init container install-psql; memory limit for init container install-psql; cpu, memory request for init container wait-for-db; memory limit for init container wait-for-db",
+            "verdify.io/config-revision": "913430b974ab",
+            "verdify.io/gather-script-revision": "pghost-parent-env-v1"
+        },
+        "creationTimestamp": "2026-10-06T00:15:40Z",
+        "generateName": "verdify-ingestor-6d95d5fc9f-",
+        "generation": 1,
+        "labels": {
+            "app.kubernetes.io/component": "ingestor",
+            "app.kubernetes.io/part-of": "verdify",
+            "pod-template-hash": "6d95d5fc9f",
+            "topology.kubernetes.io/zone": "opal"
+        },
+        "name": "verdify-ingestor-6d95d5fc9f-cscxw",
+        "namespace": "verdify-prod",
+        "ownerReferences": [
+            {
+                "apiVersion": "apps/v1",
+                "blockOwnerDeletion": true,
+                "controller": true,
+                "kind": "ReplicaSet",
+                "name": "verdify-ingestor-6d95d5fc9f",
+                "uid": "8078e153-352d-4adf-aa7f-6733f093d7e0"
+            }
+        ],
+        "resourceVersion": "245898447",
+        "uid": "237002d4-5fb9-450f-8fe2-e266c969a1e1"
+    },
+    "spec": {
+        "affinity": {
+            "nodeAffinity": {
+                "preferredDuringSchedulingIgnoredDuringExecution": [
+                    {
+                        "preference": {
+                            "matchExpressions": [
+                                {
+                                    "key": "kubernetes.io/hostname",
+                                    "operator": "NotIn",
+                                    "values": [
+                                        "vm-k3s-node6"
+                                    ]
+                                }
+                            ]
+                        },
+                        "weight": 100
+                    }
+                ]
+            }
+        },
+        "containers": [
+            {
+                "command": [
+                    "python",
+                    "ingestor.py"
+                ],
+                "env": [
+                    {
+                        "name": "ESP32_LOG_LEVEL",
+                        "value": "WARN"
+                    },
+                    {
+                        "name": "VERDIFY_SOURCE_SPOOL_ENABLED",
+                        "value": "1"
+                    },
+                    {
+                        "name": "SOURCE_SPOOL_MAX_ROWS",
+                        "value": "30000"
+                    },
+                    {
+                        "name": "SOURCE_SPOOL_MAX_BYTES",
+                        "value": "134217728"
+                    },
+                    {
+                        "name": "VERDIFY_OBSERVATION_SPOOL_ENABLED",
+                        "value": "1"
+                    },
+                    {
+                        "name": "OBSERVATION_SPOOL_MAX_ROWS",
+                        "value": "30000"
+                    },
+                    {
+                        "name": "OBSERVATION_SPOOL_MAX_BYTES",
+                        "value": "134217728"
+                    },
+                    {
+                        "name": "VERDIFY_CLIMATE_EVENT_SPOOL_ENABLED",
+                        "value": "1"
+                    },
+                    {
+                        "name": "CLIMATE_EVENT_SPOOL_MAX_BYTES",
+                        "value": "134217728"
+                    },
+                    {
+                        "name": "CLIMATE_SPOOL_MAX_ROWS",
+                        "value": "2880"
+                    },
+                    {
+                        "name": "VERDIFY_AUTONOMOUS_POLICY_STAGING",
+                        "value": "1"
+                    },
+                    {
+                        "name": "PATH",
+                        "value": "/opt/pgclient/bin:/home/appuser/.local/bin:/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin"
+                    },
+                    {
+                        "name": "LD_LIBRARY_PATH",
+                        "value": "/opt/pgclient/lib"
+                    },
+                    {
+                        "name": "HERMES_IRIS_API_KEY",
+                        "valueFrom": {
+                            "secretKeyRef": {
+                                "key": "HERMES_IRIS_API_KEY",
+                                "name": "verdify-hermes"
+                            }
+                        }
+                    },
+                    {
+                        "name": "PGPASSWORD",
+                        "valueFrom": {
+                            "secretKeyRef": {
+                                "key": "VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD",
+                                "name": "verdify-app-secrets"
+                            }
+                        }
+                    },
+                    {
+                        "name": "VERDIFY_FIXED_PANEL_NATIVE_LEDGER_ENABLED",
+                        "value": "1"
+                    },
+                    {
+                        "name": "DB_USER",
+                        "valueFrom": {
+                            "secretKeyRef": {
+                                "key": "VERDIFY_INGESTOR_RUNTIME_DB_USER",
+                                "name": "verdify-app-secrets"
+                            }
+                        }
+                    },
+                    {
+                        "name": "DB_PASSWORD",
+                        "valueFrom": {
+                            "secretKeyRef": {
+                                "key": "VERDIFY_INGESTOR_RUNTIME_DB_PASSWORD",
+                                "name": "verdify-app-secrets"
+                            }
+                        }
+                    },
+                    {
+                        "name": "VERDIFY_INGESTOR_RUNTIME_DB_ROLE_REQUIRED",
+                        "value": "1"
+                    },
+                    {
+                        "name": "POD_NAME",
+                        "valueFrom": {
+                            "fieldRef": {
+                                "apiVersion": "v1",
+                                "fieldPath": "metadata.name"
+                            }
+                        }
+                    },
+                    {
+                        "name": "POD_NAMESPACE",
+                        "valueFrom": {
+                            "fieldRef": {
+                                "apiVersion": "v1",
+                                "fieldPath": "metadata.namespace"
+                            }
+                        }
+                    },
+                    {
+                        "name": "VERDIFY_EXPERIMENT_COMPONENT_DB_USER",
+                        "valueFrom": {
+                            "secretKeyRef": {
+                                "key": "VERDIFY_EXPERIMENT_COMPONENT_DB_USER",
+                                "name": "verdify-app-secrets",
+                                "optional": true
+                            }
+                        }
+                    },
+                    {
+                        "name": "VERDIFY_EXPERIMENT_COMPONENT_DB_PASSWORD",
+                        "valueFrom": {
+                            "secretKeyRef": {
+                                "key": "VERDIFY_EXPERIMENT_COMPONENT_DB_PASSWORD",
+                                "name": "verdify-app-secrets",
+                                "optional": true
+                            }
+                        }
+                    },
+                    {
+                        "name": "VERDIFY_EXPERIMENT_EQUIPMENT_SOURCE_COLLECTOR_DB_USER",
+                        "valueFrom": {
+                            "secretKeyRef": {
+                                "key": "VERDIFY_EXPERIMENT_EQUIPMENT_SOURCE_COLLECTOR_DB_USER",
+                                "name": "verdify-app-secrets",
+                                "optional": true
+                            }
+                        }
+                    },
+                    {
+                        "name": "VERDIFY_EXPERIMENT_EQUIPMENT_SOURCE_COLLECTOR_DB_PASSWORD",
+                        "valueFrom": {
+                            "secretKeyRef": {
+                                "key": "VERDIFY_EXPERIMENT_EQUIPMENT_SOURCE_COLLECTOR_DB_PASSWORD",
+                                "name": "verdify-app-secrets",
+                                "optional": true
+                            }
+                        }
+                    },
+                    {
+                        "name": "ESP32_API_KEY",
+                        "valueFrom": {
+                            "secretKeyRef": {
+                                "key": "ESP32_API_KEY",
+                                "name": "verdify-app-secrets"
+                            }
+                        }
+                    },
+                    {
+                        "name": "MQTT_USER",
+                        "valueFrom": {
+                            "secretKeyRef": {
+                                "key": "MQTT_USER",
+                                "name": "verdify-app-secrets"
+                            }
+                        }
+                    },
+                    {
+                        "name": "MQTT_PASS",
+                        "valueFrom": {
+                            "secretKeyRef": {
+                                "key": "MQTT_PASS",
+                                "name": "verdify-app-secrets"
+                            }
+                        }
+                    }
+                ],
+                "envFrom": [
+                    {
+                        "configMapRef": {
+                            "name": "verdify-config"
+                        }
+                    }
+                ],
+                "image": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:2813240dbd5ce3c644d0285fd4603901eef9ae38ad00d28f4e64deb05f46ad2d",
+                "imagePullPolicy": "IfNotPresent",
+                "livenessProbe": {
+                    "exec": {
+                        "command": [
+                            "sh",
+                            "-c",
+                            "python ingestor-healthz.py; rc=$?; [ \"$rc\" = 0 ] || [ \"$rc\" = 2 ]"
+                        ]
+                    },
+                    "failureThreshold": 5,
+                    "initialDelaySeconds": 120,
+                    "periodSeconds": 30,
+                    "successThreshold": 1,
+                    "timeoutSeconds": 10
+                },
+                "name": "ingestor",
+                "resources": {
+                    "limits": {
+                        "memory": "1Gi"
+                    },
+                    "requests": {
+                        "cpu": "500m",
+                        "memory": "256Mi"
+                    }
+                },
+                "securityContext": {
+                    "allowPrivilegeEscalation": false,
+                    "capabilities": {
+                        "drop": [
+                            "ALL"
+                        ]
+                    },
+                    "readOnlyRootFilesystem": true
+                },
+                "terminationMessagePath": "/dev/termination-log",
+                "terminationMessagePolicy": "File",
+                "volumeMounts": [
+                    {
+                        "mountPath": "/srv/verdify/state",
+                        "name": "state"
+                    },
+                    {
+                        "mountPath": "/srv/verdify/scripts/gather-plan-context.sh",
+                        "name": "gather-script",
+                        "readOnly": true,
+                        "subPath": "gather-plan-context.sh"
+                    },
+                    {
+                        "mountPath": "/srv/verdify/scripts/lib/psql-verdify.sh",
+                        "name": "gather-script",
+                        "readOnly": true,
+                        "subPath": "psql-verdify.sh"
+                    },
+                    {
+                        "mountPath": "/opt/pgclient",
+                        "name": "pgclient",
+                        "readOnly": true
+                    },
+                    {
+                        "mountPath": "/tmp",
+                        "name": "tmp"
+                    },
+                    {
+                        "mountPath": "/mnt/agents/shared/credentials",
+                        "name": "ha-token",
+                        "readOnly": true
+                    },
+                    {
+                        "mountPath": "/etc/verdify/slack",
+                        "name": "slack-token",
+                        "readOnly": true
+                    },
+                    {
+                        "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                        "name": "kube-api-access-7597v",
+                        "readOnly": true
+                    }
+                ]
+            }
+        ],
+        "dnsPolicy": "ClusterFirst",
+        "enableServiceLinks": true,
+        "imagePullSecrets": [
+            {
+                "name": "zot-origin-cluster-pull"
+            },
+            {
+                "name": "ghcr-jvallery-readonly"
+            }
+        ],
+        "initContainers": [
+            {
+                "args": [
+                    "set -e\nmkdir -p /opt/pgclient/bin /opt/pgclient/lib\ncp -L /usr/lib/postgresql/16/bin/psql /opt/pgclient/bin/psql\nfor lib in $(ldd /usr/lib/postgresql/16/bin/psql | awk '/=\u003e/{print $3}'); do\n  cp -L \"$lib\" /opt/pgclient/lib/ 2\u003e/dev/null || true\ndone\n"
+                ],
+                "command": [
+                    "bash",
+                    "-c"
+                ],
+                "image": "postgres:16",
+                "imagePullPolicy": "IfNotPresent",
+                "name": "install-psql",
+                "resources": {
+                    "limits": {
+                        "memory": "1Gi"
+                    },
+                    "requests": {
+                        "cpu": "25m",
+                        "memory": "32Mi"
+                    }
+                },
+                "securityContext": {
+                    "allowPrivilegeEscalation": false,
+                    "capabilities": {
+                        "drop": [
+                            "ALL"
+                        ]
+                    },
+                    "readOnlyRootFilesystem": true,
+                    "runAsNonRoot": true,
+                    "runAsUser": 1000,
+                    "seccompProfile": {
+                        "type": "RuntimeDefault"
+                    }
+                },
+                "terminationMessagePath": "/dev/termination-log",
+                "terminationMessagePolicy": "File",
+                "volumeMounts": [
+                    {
+                        "mountPath": "/opt/pgclient",
+                        "name": "pgclient"
+                    },
+                    {
+                        "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                        "name": "kube-api-access-7597v",
+                        "readOnly": true
+                    }
+                ]
+            },
+            {
+                "command": [
+                    "sh",
+                    "-c",
+                    "until pg_isready -h verdify-db -p 5432 -U verdify; do echo \"waiting for db\"; sleep 2; done"
+                ],
+                "image": "timescale/timescaledb:2.25.2-pg16",
+                "imagePullPolicy": "IfNotPresent",
+                "name": "wait-for-db",
+                "resources": {
+                    "limits": {
+                        "memory": "1Gi"
+                    },
+                    "requests": {
+                        "cpu": "25m",
+                        "memory": "32Mi"
+                    }
+                },
+                "securityContext": {
+                    "allowPrivilegeEscalation": false,
+                    "capabilities": {
+                        "drop": [
+                            "ALL"
+                        ]
+                    },
+                    "readOnlyRootFilesystem": true,
+                    "runAsNonRoot": true,
+                    "runAsUser": 999
+                },
+                "terminationMessagePath": "/dev/termination-log",
+                "terminationMessagePolicy": "File",
+                "volumeMounts": [
+                    {
+                        "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                        "name": "kube-api-access-7597v",
+                        "readOnly": true
+                    }
+                ]
+            }
+        ],
+        "nodeName": "vm-k3s-node5",
+        "nodeSelector": {
+            "agentfleet.vallery.net/node-class": "general"
+        },
+        "preemptionPolicy": "PreemptLowerPriority",
+        "priority": 900000000,
+        "priorityClassName": "verdify-device-writer",
+        "restartPolicy": "Always",
+        "schedulerName": "default-scheduler",
+        "securityContext": {
+            "fsGroup": 1000,
+            "runAsGroup": 1000,
+            "runAsNonRoot": true,
+            "runAsUser": 1000,
+            "seccompProfile": {
+                "type": "RuntimeDefault"
+            }
+        },
+        "serviceAccount": "verdify-ingestor",
+        "serviceAccountName": "verdify-ingestor",
+        "terminationGracePeriodSeconds": 15,
+        "tolerations": [
+            {
+                "effect": "NoExecute",
+                "key": "node.kubernetes.io/not-ready",
+                "operator": "Exists",
+                "tolerationSeconds": 20
+            },
+            {
+                "effect": "NoExecute",
+                "key": "node.kubernetes.io/unreachable",
+                "operator": "Exists",
+                "tolerationSeconds": 20
+            }
+        ],
+        "volumes": [
+            {
+                "name": "state",
+                "persistentVolumeClaim": {
+                    "claimName": "verdify-ingestor-state"
+                }
+            },
+            {
+                "configMap": {
+                    "defaultMode": 365,
+                    "name": "verdify-ingestor-gather-script"
+                },
+                "name": "gather-script"
+            },
+            {
+                "emptyDir": {},
+                "name": "pgclient"
+            },
+            {
+                "emptyDir": {},
+                "name": "tmp"
+            },
+            {
+                "name": "ha-token",
+                "secret": {
+                    "defaultMode": 420,
+                    "items": [
+                        {
+                            "key": "ha_token.txt",
+                            "path": "ha_token.txt"
+                        }
+                    ],
+                    "secretName": "verdify-ha-token"
+                }
+            },
+            {
+                "name": "slack-token",
+                "secret": {
+                    "defaultMode": 420,
+                    "items": [
+                        {
+                            "key": "iris_slack_bot_token.txt",
+                            "path": "iris_slack_bot_token.txt"
+                        }
+                    ],
+                    "optional": true,
+                    "secretName": "verdify-slack"
+                }
+            },
+            {
+                "name": "kube-api-access-7597v",
+                "projected": {
+                    "defaultMode": 420,
+                    "sources": [
+                        {
+                            "serviceAccountToken": {
+                                "expirationSeconds": 3607,
+                                "path": "token"
+                            }
+                        },
+                        {
+                            "configMap": {
+                                "items": [
+                                    {
+                                        "key": "ca.crt",
+                                        "path": "ca.crt"
+                                    }
+                                ],
+                                "name": "kube-root-ca.crt"
+                            }
+                        },
+                        {
+                            "downwardAPI": {
+                                "items": [
+                                    {
+                                        "fieldRef": {
+                                            "apiVersion": "v1",
+                                            "fieldPath": "metadata.namespace"
+                                        },
+                                        "path": "namespace"
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    },
+    "status": {
+        "conditions": [
+            {
+                "lastProbeTime": null,
+                "lastTransitionTime": "2026-10-06T00:17:46Z",
+                "observedGeneration": 1,
+                "status": "True",
+                "type": "PodReadyToStartContainers"
+            },
+            {
+                "lastProbeTime": null,
+                "lastTransitionTime": "2026-10-06T00:17:48Z",
+                "observedGeneration": 1,
+                "status": "True",
+                "type": "Initialized"
+            },
+            {
+                "lastProbeTime": null,
+                "lastTransitionTime": "2026-10-06T00:18:06Z",
+                "observedGeneration": 1,
+                "status": "True",
+                "type": "Ready"
+            },
+            {
+                "lastProbeTime": null,
+                "lastTransitionTime": "2026-10-06T00:18:06Z",
+                "observedGeneration": 1,
+                "status": "True",
+                "type": "ContainersReady"
+            },
+            {
+                "lastProbeTime": null,
+                "lastTransitionTime": "2026-10-06T00:15:40Z",
+                "observedGeneration": 1,
+                "status": "True",
+                "type": "PodScheduled"
+            }
+        ],
+        "containerStatuses": [
+            {
+                "allocatedResources": {
+                    "cpu": "500m",
+                    "memory": "256Mi"
+                },
+                "containerID": "containerd://4ddebc2479261ada002203ffde9af9537c1ed3ce49e068e70c0a824a8b1c6633",
+                "image": "sha256:3a4e67c40a995248f22b89945b54778294e79755798d4b6e4dc4760fcd568157",
+                "imageID": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:2813240dbd5ce3c644d0285fd4603901eef9ae38ad00d28f4e64deb05f46ad2d",
+                "lastState": {},
+                "name": "ingestor",
+                "ready": true,
+                "resources": {
+                    "limits": {
+                        "memory": "1Gi"
+                    },
+                    "requests": {
+                        "cpu": "500m",
+                        "memory": "256Mi"
+                    }
+                },
+                "restartCount": 0,
+                "started": true,
+                "state": {
+                    "running": {
+                        "startedAt": "2026-10-06T00:18:06Z"
+                    }
+                },
+                "user": {
+                    "linux": {
+                        "gid": 1000,
+                        "supplementalGroups": [
+                            1000
+                        ],
+                        "uid": 1000
+                    }
+                },
+                "volumeMounts": [
+                    {
+                        "mountPath": "/srv/verdify/state",
+                        "name": "state"
+                    },
+                    {
+                        "mountPath": "/srv/verdify/scripts/gather-plan-context.sh",
+                        "name": "gather-script",
+                        "readOnly": true,
+                        "recursiveReadOnly": "Disabled"
+                    },
+                    {
+                        "mountPath": "/srv/verdify/scripts/lib/psql-verdify.sh",
+                        "name": "gather-script",
+                        "readOnly": true,
+                        "recursiveReadOnly": "Disabled"
+                    },
+                    {
+                        "mountPath": "/opt/pgclient",
+                        "name": "pgclient",
+                        "readOnly": true,
+                        "recursiveReadOnly": "Disabled"
+                    },
+                    {
+                        "mountPath": "/tmp",
+                        "name": "tmp"
+                    },
+                    {
+                        "mountPath": "/mnt/agents/shared/credentials",
+                        "name": "ha-token",
+                        "readOnly": true,
+                        "recursiveReadOnly": "Disabled"
+                    },
+                    {
+                        "mountPath": "/etc/verdify/slack",
+                        "name": "slack-token",
+                        "readOnly": true,
+                        "recursiveReadOnly": "Disabled"
+                    },
+                    {
+                        "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                        "name": "kube-api-access-7597v",
+                        "readOnly": true,
+                        "recursiveReadOnly": "Disabled"
+                    }
+                ]
+            }
+        ],
+        "hostIP": "192.168.30.36",
+        "hostIPs": [
+            {
+                "ip": "192.168.30.36"
+            }
+        ],
+        "initContainerStatuses": [
+            {
+                "allocatedResources": {
+                    "cpu": "25m",
+                    "memory": "32Mi"
+                },
+                "containerID": "containerd://5ff49b57178c35d4a02c491790dc4c6fa533d535f39214c7e2d238c9d1abef20",
+                "image": "docker.io/library/postgres:16",
+                "imageID": "docker.io/library/postgres@sha256:23802cef9f494cc5969106e32cbb75c056eebb32bd27fc2ccab35156571f52d4",
+                "lastState": {},
+                "name": "install-psql",
+                "ready": true,
+                "resources": {
+                    "limits": {
+                        "memory": "1Gi"
+                    },
+                    "requests": {
+                        "cpu": "25m",
+                        "memory": "32Mi"
+                    }
+                },
+                "restartCount": 0,
+                "started": false,
+                "state": {
+                    "terminated": {
+                        "containerID": "containerd://5ff49b57178c35d4a02c491790dc4c6fa533d535f39214c7e2d238c9d1abef20",
+                        "exitCode": 0,
+                        "finishedAt": "2026-10-06T00:17:46Z",
+                        "reason": "Completed",
+                        "startedAt": "2026-10-06T00:17:45Z"
+                    }
+                },
+                "user": {
+                    "linux": {
+                        "gid": 1000,
+                        "supplementalGroups": [
+                            1000
+                        ],
+                        "uid": 1000
+                    }
+                },
+                "volumeMounts": [
+                    {
+                        "mountPath": "/opt/pgclient",
+                        "name": "pgclient"
+                    },
+                    {
+                        "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                        "name": "kube-api-access-7597v",
+                        "readOnly": true,
+                        "recursiveReadOnly": "Disabled"
+                    }
+                ]
+            },
+            {
+                "allocatedResources": {
+                    "cpu": "25m",
+                    "memory": "32Mi"
+                },
+                "containerID": "containerd://af4f232bbde52f5bc98f2a0883d3a40703139869e326c3e601d73c208f21292e",
+                "image": "docker.io/timescale/timescaledb:2.25.2-pg16",
+                "imageID": "docker.io/timescale/timescaledb@sha256:0af03ecf697825f6ddae76fd275d16bf46007bed6d00eb3d754779cb7db96fa6",
+                "lastState": {},
+                "name": "wait-for-db",
+                "ready": true,
+                "resources": {
+                    "limits": {
+                        "memory": "1Gi"
+                    },
+                    "requests": {
+                        "cpu": "25m",
+                        "memory": "32Mi"
+                    }
+                },
+                "restartCount": 0,
+                "started": false,
+                "state": {
+                    "terminated": {
+                        "containerID": "containerd://af4f232bbde52f5bc98f2a0883d3a40703139869e326c3e601d73c208f21292e",
+                        "exitCode": 0,
+                        "finishedAt": "2026-10-06T00:17:48Z",
+                        "reason": "Completed",
+                        "startedAt": "2026-10-06T00:17:48Z"
+                    }
+                },
+                "user": {
+                    "linux": {
+                        "gid": 1000,
+                        "supplementalGroups": [
+                            1000
+                        ],
+                        "uid": 999
+                    }
+                },
+                "volumeMounts": [
+                    {
+                        "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                        "name": "kube-api-access-7597v",
+                        "readOnly": true,
+                        "recursiveReadOnly": "Disabled"
+                    }
+                ]
+            }
+        ],
+        "observedGeneration": 1,
+        "phase": "Running",
+        "podIP": "10.42.6.62",
+        "podIPs": [
+            {
+                "ip": "10.42.6.62"
+            }
+        ],
+        "qosClass": "Burstable",
+        "startTime": "2026-10-06T00:15:40Z"
+    }
+}

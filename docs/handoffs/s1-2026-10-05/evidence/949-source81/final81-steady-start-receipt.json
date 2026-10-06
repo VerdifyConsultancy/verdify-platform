@@ -1,0 +1,923 @@
+{
+  "schema": "verdify-final81-policy-steady-start-v1",
+  "started_at": "2026-10-06T00:41:25.066316+00:00",
+  "not_before_end": "2026-10-06T02:41:25.066316+00:00",
+  "observer_session_id": 69996,
+  "source_revision": "81d76a4c3d35a925ebd2438d89099d1f657b3f8f",
+  "digest": "sha256:2813240dbd5ce3c644d0285fd4603901eef9ae38ad00d28f4e64deb05f46ad2d",
+  "pod_uid": "237002d4-5fb9-450f-8fe2-e266c969a1e1",
+  "runtime_instance_id": "d215ee98-af33-4501-acee-8444b458c7a0",
+  "generation": 1,
+  "restarts": 0,
+  "actual_plan_transition": {
+    "source_revision": "81d76a4c3d35a925ebd2438d89099d1f657b3f8f",
+    "audit": [
+      {
+        "id": 5995,
+        "delivered_at": "2026-10-06 00:28:19.452677+00:00",
+        "event_type": "MANUAL",
+        "event_label": "Sprint S1 ordinary-policy convergence acceptance. Evaluate the current greenhouse and forecast, and produce a justified current 72-hour planning update through set_plan when warranted. Preserve crop safety and normal planner validation. No synthetic plan, forced tunable, scientific overlay, or acknowledgement-only substitute. Source 81d76a4c3d35a925ebd2438d89099d1f657b3f8f",
+        "trigger_id": "476b4a01-948a-4e99-b49b-aef77c9192b1",
+        "instance": "local",
+        "gateway_status": 202,
+        "hermes_run_id": "run_3c3d655a122942a889b3e1ddaed8dd81",
+        "status": "plan_written",
+        "resulting_plan_id": "iris-20261005-1828"
+      }
+    ],
+    "old_plan_ids": [
+      "iris-20261005-1755"
+    ],
+    "new_plan_ids": [
+      "iris-20261005-1828"
+    ],
+    "changed_desired_value_count": 8,
+    "changes": [
+      {
+        "parameter": "cool_stage2_over_high_f",
+        "old": {
+          "parameter": "cool_stage2_over_high_f",
+          "value": 1.7875,
+          "plan_id": "iris-20261005-1755",
+          "ts": "2026-10-05 23:49:00+00:00"
+        },
+        "new": {
+          "parameter": "cool_stage2_over_high_f",
+          "value": 1.8175000000000001,
+          "plan_id": "iris-20261005-1828",
+          "ts": "2026-10-06 00:25:00+00:00"
+        }
+      },
+      {
+        "parameter": "fog_escalation_kpa",
+        "old": {
+          "parameter": "fog_escalation_kpa",
+          "value": 0.2,
+          "plan_id": "iris-20261005-1755",
+          "ts": "2026-10-05 23:49:00+00:00"
+        },
+        "new": {
+          "parameter": "fog_escalation_kpa",
+          "value": 0.25,
+          "plan_id": "iris-20261005-1828",
+          "ts": "2026-10-06 00:25:00+00:00"
+        }
+      },
+      {
+        "parameter": "min_fog_off_s",
+        "old": {
+          "parameter": "min_fog_off_s",
+          "value": 60.0,
+          "plan_id": "iris-20261005-1755",
+          "ts": "2026-10-05 23:49:00+00:00"
+        },
+        "new": {
+          "parameter": "min_fog_off_s",
+          "value": 72.0,
+          "plan_id": "iris-20261005-1828",
+          "ts": "2026-10-06 00:25:00+00:00"
+        }
+      },
+      {
+        "parameter": "min_fog_on_s",
+        "old": {
+          "parameter": "min_fog_on_s",
+          "value": 63.75,
+          "plan_id": "iris-20261005-1755",
+          "ts": "2026-10-05 23:49:00+00:00"
+        },
+        "new": {
+          "parameter": "min_fog_on_s",
+          "value": 59.25,
+          "plan_id": "iris-20261005-1828",
+          "ts": "2026-10-06 00:25:00+00:00"
+        }
+      },
+      {
+        "parameter": "mister_all_kpa",
+        "old": {
+          "parameter": "mister_all_kpa",
+          "value": 1.245,
+          "plan_id": "iris-20261005-1755",
+          "ts": "2026-10-05 23:49:00+00:00"
+        },
+        "new": {
+          "parameter": "mister_all_kpa",
+          "value": 1.157,
+          "plan_id": "iris-20261005-1828",
+          "ts": "2026-10-06 00:25:00+00:00"
+        }
+      },
+      {
+        "parameter": "mister_engage_kpa",
+        "old": {
+          "parameter": "mister_engage_kpa",
+          "value": 1.045,
+          "plan_id": "iris-20261005-1755",
+          "ts": "2026-10-05 23:49:00+00:00"
+        },
+        "new": {
+          "parameter": "mister_engage_kpa",
+          "value": 1.007,
+          "plan_id": "iris-20261005-1828",
+          "ts": "2026-10-06 00:25:00+00:00"
+        }
+      },
+      {
+        "parameter": "mister_pulse_gap_s",
+        "old": {
+          "parameter": "mister_pulse_gap_s",
+          "value": 33.75,
+          "plan_id": "iris-20261005-1755",
+          "ts": "2026-10-05 23:49:00+00:00"
+        },
+        "new": {
+          "parameter": "mister_pulse_gap_s",
+          "value": 41.25,
+          "plan_id": "iris-20261005-1828",
+          "ts": "2026-10-06 00:25:00+00:00"
+        }
+      },
+      {
+        "parameter": "mister_water_budget_gal",
+        "old": {
+          "parameter": "mister_water_budget_gal",
+          "value": 150.0,
+          "plan_id": "iris-20261005-1755",
+          "ts": "2026-10-05 23:49:00+00:00"
+        },
+        "new": {
+          "parameter": "mister_water_budget_gal",
+          "value": 180.0,
+          "plan_id": "iris-20261005-1828",
+          "ts": "2026-10-06 00:25:00+00:00"
+        }
+      }
+    ],
+    "actual_plan_transition_confirmed": true,
+    "device_convergence_confirmed": false,
+    "observed_at": "2026-10-06T00:32:12.487233+00:00"
+  },
+  "post_transition_real_requests": [
+    {
+      "ts": "2026-10-06 00:33:48.613582+00:00",
+      "parameter": "vpd_target_south",
+      "value": 0.95,
+      "source": "band",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-06 00:33:52.790734+00:00",
+      "expired_at": null
+    },
+    {
+      "ts": "2026-10-06 00:33:48.618572+00:00",
+      "parameter": "vpd_target_west",
+      "value": 0.7,
+      "source": "band",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-06 00:33:52.790734+00:00",
+      "expired_at": null
+    },
+    {
+      "ts": "2026-10-06 00:33:48.622513+00:00",
+      "parameter": "vpd_target_east",
+      "value": 0.9,
+      "source": "band",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-06 00:34:54.844290+00:00",
+      "expired_at": null
+    },
+    {
+      "ts": "2026-10-06 00:33:48.628913+00:00",
+      "parameter": "vpd_target_center",
+      "value": 0.9,
+      "source": "band",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-06 00:34:54.844290+00:00",
+      "expired_at": null
+    },
+    {
+      "ts": "2026-10-06 00:33:48.632609+00:00",
+      "parameter": "cool_stage2_over_high_f",
+      "value": 1.8175000000000001,
+      "source": "plan",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-06 00:34:54.844290+00:00",
+      "expired_at": null
+    },
+    {
+      "ts": "2026-10-06 00:33:48.636465+00:00",
+      "parameter": "fog_escalation_kpa",
+      "value": 0.25,
+      "source": "plan",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-06 00:34:54.844290+00:00",
+      "expired_at": null
+    },
+    {
+      "ts": "2026-10-06 00:33:48.682116+00:00",
+      "parameter": "min_fog_on_s",
+      "value": 59.25,
+      "source": "plan",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-06 00:34:54.844290+00:00",
+      "expired_at": null
+    },
+    {
+      "ts": "2026-10-06 00:33:48.741256+00:00",
+      "parameter": "mister_all_kpa",
+      "value": 1.157,
+      "source": "plan",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-06 00:34:54.844290+00:00",
+      "expired_at": null
+    },
+    {
+      "ts": "2026-10-06 00:33:48.745728+00:00",
+      "parameter": "mister_water_budget_gal",
+      "value": 180.0,
+      "source": "plan",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-06 00:34:54.844290+00:00",
+      "expired_at": null
+    },
+    {
+      "ts": "2026-10-06 00:39:32.355457+00:00",
+      "parameter": "min_fog_on_s",
+      "value": 61.5,
+      "source": "plan",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-06 00:40:04.213730+00:00",
+      "expired_at": null
+    },
+    {
+      "ts": "2026-10-06 00:39:32.362576+00:00",
+      "parameter": "mister_all_kpa",
+      "value": 1.1989999999999998,
+      "source": "plan",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-06 00:40:04.213730+00:00",
+      "expired_at": null
+    },
+    {
+      "ts": "2026-10-06 00:39:32.366978+00:00",
+      "parameter": "mister_engage_kpa",
+      "value": 0.999,
+      "source": "plan",
+      "delivery_status": "confirmed",
+      "confirmed_at": "2026-10-06 00:40:04.213730+00:00",
+      "expired_at": null
+    }
+  ],
+  "fresh_native_preview": {
+    "captured_at": "2026-10-06T00:39:32.107210+00:00",
+    "changes": [
+      [
+        "min_fog_on_s",
+        61.5
+      ],
+      [
+        "mister_all_kpa",
+        1.1989999999999998
+      ],
+      [
+        "mister_engage_kpa",
+        0.999
+      ]
+    ],
+    "diagnostic_readbacks": {
+      "activity_duration_min": 780.0,
+      "activity_start_hour": 7.0,
+      "activity_start_minute": 0.0,
+      "band_temp_high_mid": 70.69999694824219,
+      "band_temp_high_sm": 83.80000305175781,
+      "band_temp_high_sr": 72.5,
+      "band_temp_high_ss": 82.0,
+      "band_temp_low_mid": 60.70000076293945,
+      "band_temp_low_sm": 73.80000305175781,
+      "band_temp_low_sr": 62.5,
+      "band_temp_low_ss": 72.0,
+      "band_temp_target_mid": 65.69999694824219,
+      "band_temp_target_sm": 78.80000305175781,
+      "band_temp_target_sr": 67.5,
+      "band_temp_target_ss": 77.0,
+      "band_track_fraction": 0.0,
+      "band_vpd_high_mid": 1.1699999570846558,
+      "band_vpd_high_sm": 1.2899999618530273,
+      "band_vpd_high_sr": 1.190000057220459,
+      "band_vpd_high_ss": 1.2699999809265137,
+      "band_vpd_low_mid": 0.7400000095367432,
+      "band_vpd_low_sm": 0.8600000143051147,
+      "band_vpd_low_sr": 0.7599999904632568,
+      "band_vpd_low_ss": 0.8399999737739563,
+      "band_vpd_target_mid": 0.8299999833106995,
+      "band_vpd_target_sm": 1.0399999618530273,
+      "band_vpd_target_sr": 0.9399999976158142,
+      "band_vpd_target_ss": 1.0199999809265137,
+      "bias_cool": 0.0,
+      "bias_heat": 0.0,
+      "cold_vent_guard_delta_f": 8.0,
+      "cool_exit_hysteresis_f": 1.6,
+      "cool_stage2_exit_hysteresis_f": 1.0,
+      "cool_stage2_over_high_f": 1.8175,
+      "d_cool_stage_2": 3.0,
+      "d_heat_stage_2": 5.0,
+      "dawn_boost_offset_min": 0.0,
+      "dawn_rehydrate_gap_s": 0.0,
+      "dawn_rehydrate_on_s": 0.0,
+      "dawn_rehydrate_window_min": 0.0,
+      "dehum_aggressive_kpa": 0.6,
+      "direct_wet_center_drydown_before_off_min": 180.0,
+      "direct_wet_center_start_offset_min": 120.0,
+      "direct_wet_min_temp_f": 65.0,
+      "direct_wet_south_drydown_before_off_min": 120.0,
+      "direct_wet_south_start_offset_min": 60.0,
+      "direct_wet_stress_min_dew_margin_f": 8.0,
+      "direct_wet_stress_vpd_margin_kpa": 0.05,
+      "direct_wet_wall_drydown_before_off_min": 120.0,
+      "direct_wet_wall_start_offset_min": 60.0,
+      "direct_wet_west_drydown_before_off_min": 120.0,
+      "direct_wet_west_start_offset_min": 60.0,
+      "dwell_gate_ms": 210000.0,
+      "east_adjacency_factor": 0.3,
+      "econ_heat_margin_f": 5.0,
+      "enthalpy_close": 1.0,
+      "enthalpy_open": -2.0,
+      "fallback_window_s": 3600.0,
+      "fan_burst_min": 10.0,
+      "feed_end_hour": 0.0,
+      "feed_start_hour": 0.0,
+      "fog_burst_min": 5.0,
+      "fog_escalation_kpa": 0.25,
+      "fog_min_temp_f": 55.0,
+      "fog_rh_ceiling_pct": 90.0,
+      "gl_dli_target": 14.0,
+      "gl_grow_dli_target": 21.0,
+      "gl_grow_lux_hysteresis": 8000.0,
+      "gl_grow_lux_threshold": 40000.0,
+      "gl_grow_min_off_s": 60.0,
+      "gl_grow_min_on_s": 120.0,
+      "gl_grow_sunrise_hour": 7.0,
+      "gl_grow_sunrise_offset_min": 0.0,
+      "gl_grow_sunset_hour": 22.0,
+      "gl_grow_sunset_offset_min": 0.0,
+      "gl_grow_target_light_minutes": 900.0,
+      "gl_lux_hysteresis": 1500.0,
+      "gl_lux_threshold": 3000.0,
+      "gl_main_dli_target": 13.0,
+      "gl_main_lux_hysteresis": 8000.0,
+      "gl_main_lux_threshold": 40000.0,
+      "gl_main_min_off_s": 60.0,
+      "gl_main_min_on_s": 120.0,
+      "gl_main_sunrise_hour": 7.0,
+      "gl_main_sunrise_offset_min": 0.0,
+      "gl_main_sunset_hour": 20.0,
+      "gl_main_sunset_offset_min": 0.0,
+      "gl_main_target_light_minutes": 780.0,
+      "gl_sunrise_hour": 7.0,
+      "gl_sunset_hour": 19.0,
+      "heat_hysteresis": 1.0,
+      "irrig_center_days_mask": 0.0,
+      "irrig_center_duration_min": 10.0,
+      "irrig_center_fert_days_mask": 0.0,
+      "irrig_center_fert_duration_min": 0.0,
+      "irrig_center_fert_every_n": 0.0,
+      "irrig_center_flush_min": 0.0,
+      "irrig_center_interval_days": 0.0,
+      "irrig_center_start_hour": 0.0,
+      "irrig_center_start_min": 0.0,
+      "irrig_vpd_boost_pct": 25.0,
+      "irrig_vpd_boost_threshold_hrs": 3.0,
+      "irrig_wall_days_mask": 0.0,
+      "irrig_wall_duration_min": 10.0,
+      "irrig_wall_fert_days_mask": 0.0,
+      "irrig_wall_fert_duration_min": 0.0,
+      "irrig_wall_fert_every_n": 0.0,
+      "irrig_wall_flush_min": 0.0,
+      "irrig_wall_interval_days": 0.0,
+      "irrig_wall_start_hour": 0.0,
+      "irrig_wall_start_min": 0.0,
+      "lead_rotate_s": 600.0,
+      "manual_override_timeout_min": 10.0,
+      "max_relief_cycles": 3.0,
+      "midday_boost_offset_min": 0.0,
+      "midday_drench_gap_s": 0.0,
+      "midday_drench_on_s": 0.0,
+      "midday_drench_window_min": 0.0,
+      "min_fan_off_s": 90.0,
+      "min_fan_on_s": 120.0,
+      "min_fog_off_s": 60.0,
+      "min_fog_on_s": 59.0,
+      "min_heat_off_s": 180.0,
+      "min_heat_on_s": 120.0,
+      "min_vent_off_s": 60.0,
+      "min_vent_on_s": 60.0,
+      "mist_backoff_s": 600.0,
+      "mist_max_closed_vent_s": 600.0,
+      "mist_thermal_relief_s": 90.0,
+      "mist_vent_close_lead_s": 15.0,
+      "mist_vent_reopen_delay_s": 45.0,
+      "mister_all_delay_s": 75.0,
+      "mister_all_kpa": 1.157,
+      "mister_all_off_s": 420.0,
+      "mister_all_on_s": 480.0,
+      "mister_center_penalty": 0.5,
+      "mister_engage_delay_s": 38.0,
+      "mister_engage_kpa": 1.01,
+      "mister_max_runtime_min": 120.0,
+      "mister_min_off_s": 45.0,
+      "mister_off_s": 600.0,
+      "mister_on_s": 300.0,
+      "mister_pulse_gap_s": 30.0,
+      "mister_pulse_on_s": 33.0,
+      "mister_vpd_weight": 1.7,
+      "mister_water_budget_gal": 180.0,
+      "night_vpd_bias_kpa": 0.0,
+      "outdoor_dewpoint_f": 35.278961181640625,
+      "outdoor_staleness_max_s": 600.0,
+      "outdoor_temp_f": 79.91600036621094,
+      "safety_max": 100.0,
+      "safety_max_seal_margin_f": 5.0,
+      "safety_min": 40.0,
+      "safety_vpd_max": 2.5,
+      "safety_vpd_min": 0.30000001192092896,
+      "site_pressure_hpa": 840.0,
+      "summer_vent_min_runtime_s": 180.0,
+      "sw_arbiter_zone_enabled": 0.0,
+      "sw_cool_all_fans_at_high_enabled": 0.0,
+      "sw_dawn_rehydrate_enabled": 0.0,
+      "sw_dehum_vent_hold_enabled": 1.0,
+      "sw_direct_wet_gate_enabled": 1.0,
+      "sw_direct_wet_stress_override_enabled": 1.0,
+      "sw_dwell_gate_enabled": 1.0,
+      "sw_economiser_enabled": 0.0,
+      "sw_fog_closes_vent": 1.0,
+      "sw_fsm_controller_enabled": 1.0,
+      "sw_gl_auto_mode": 1.0,
+      "sw_gl_grow_auto_mode": 1.0,
+      "sw_gl_grow_out_of_service": 0.0,
+      "sw_gl_grow_solar_phasing": 0.0,
+      "sw_gl_main_auto_mode": 1.0,
+      "sw_gl_main_out_of_service": 0.0,
+      "sw_gl_main_solar_phasing": 0.0,
+      "sw_irrig_center_enabled": 0.0,
+      "sw_irrig_enabled": 1.0,
+      "sw_irrig_south_enabled": 0.0,
+      "sw_irrig_wall_enabled": 1.0,
+      "sw_irrig_west_enabled": 0.0,
+      "sw_irrigation_center_enabled": 0.0,
+      "sw_irrigation_enabled": 1.0,
+      "sw_irrigation_wall_enabled": 1.0,
+      "sw_irrigation_weather_skip": 0.0,
+      "sw_midday_drench_enabled": 0.0,
+      "sw_mister_closes_vent": 0.0,
+      "sw_occupancy_inhibit": 1.0,
+      "sw_summer_vent_enabled": 1.0,
+      "sw_wall_fertigation_commissioned": 0.0,
+      "temp_high": 95.0,
+      "temp_hysteresis": 1.6,
+      "temp_low": 40.0,
+      "vent_bypass_min": 10.0,
+      "vent_exchange_fraction": 0.30000001192092896,
+      "vent_latch_timeout_ms": 1800000.0,
+      "vent_prefer_dp_delta_f": 3.0,
+      "vent_prefer_temp_delta_f": 4.0,
+      "vpd_high": 2.8,
+      "vpd_hysteresis": 0.1875,
+      "vpd_low": 0.35,
+      "vpd_target_center": 0.9,
+      "vpd_target_east": 0.8999999761581421,
+      "vpd_target_south": 0.95,
+      "vpd_target_west": 0.7,
+      "vpd_watch_dwell_s": 52.0,
+      "wall_commissioning_evidence_mask": 0.0,
+      "wall_commissioning_revision": 0.0,
+      "wall_commissioning_valid_until_epoch_s": 0.0,
+      "wall_feed_liters": 0.0,
+      "wall_flow_lpm": 0.0,
+      "wall_flow_valid_until_epoch_s": 0.0,
+      "wall_flush_liters": 0.0,
+      "wall_prewet_liters": 0.0,
+      "wet_taper_before_sunset_min": 120.0,
+      "zone_priority_center": 1.0,
+      "zone_priority_east": 4.0,
+      "zone_priority_south": 2.0,
+      "zone_priority_west": 3.0,
+      "zone_vpd_target_center_mid": 0.699999988079071,
+      "zone_vpd_target_center_sm": 1.100000023841858,
+      "zone_vpd_target_center_sr": 0.8999999761581421,
+      "zone_vpd_target_center_ss": 0.8999999761581421,
+      "zone_vpd_target_east_mid": 0.7400000095367432,
+      "zone_vpd_target_east_sm": 1.2200000286102295,
+      "zone_vpd_target_east_sr": 0.800000011920929,
+      "zone_vpd_target_east_ss": 0.8999999761581421,
+      "zone_vpd_target_south_mid": 0.75,
+      "zone_vpd_target_south_sm": 1.1799999475479126,
+      "zone_vpd_target_south_sr": 0.8500000238418579,
+      "zone_vpd_target_south_ss": 0.949999988079071,
+      "zone_vpd_target_west_mid": 0.5699999928474426,
+      "zone_vpd_target_west_sm": 1.100000023841858,
+      "zone_vpd_target_west_sr": 0.6000000238418579,
+      "zone_vpd_target_west_ss": 0.699999988079071,
+      "zone_vpd_width_above_center": 0.3499999940395355,
+      "zone_vpd_width_above_east": 0.23000000417232513,
+      "zone_vpd_width_above_south": 0.2199999988079071,
+      "zone_vpd_width_above_west": 0.2199999988079071,
+      "zone_vpd_width_below_center": 0.20000000298023224,
+      "zone_vpd_width_below_east": 0.15000000596046448,
+      "zone_vpd_width_below_south": 0.18000000715255737,
+      "zone_vpd_width_below_west": 0.1599999964237213
+    },
+    "earliest_plan_expiry": "2026-10-06T13:00:00+00:00",
+    "fingerprint": "3ade189349450a03f4d2bf6e853842f43e3599b1d75b97bfac16e0f10cff848c",
+    "generation": 1,
+    "plan_rows": [
+      {
+        "expires_at": "2026-10-06T13:00:00+00:00",
+        "parameter": "band_track_fraction",
+        "plan_id": "iris-20261005-1837",
+        "ts": "2026-10-06T00:36:00+00:00",
+        "value": 0.0
+      },
+      {
+        "expires_at": "2026-10-06T13:00:00+00:00",
+        "parameter": "cold_vent_guard_delta_f",
+        "plan_id": "iris-20261005-1837",
+        "ts": "2026-10-06T00:36:00+00:00",
+        "value": 8.0
+      },
+      {
+        "expires_at": "2026-10-06T13:00:00+00:00",
+        "parameter": "cool_exit_hysteresis_f",
+        "plan_id": "iris-20261005-1837",
+        "ts": "2026-10-06T00:36:00+00:00",
+        "value": 1.6
+      },
+      {
+        "expires_at": "2026-10-06T13:00:00+00:00",
+        "parameter": "cool_stage2_exit_hysteresis_f",
+        "plan_id": "iris-20261005-1837",
+        "ts": "2026-10-06T00:36:00+00:00",
+        "value": 1.0
+      },
+      {
+        "expires_at": "2026-10-06T13:00:00+00:00",
+        "parameter": "cool_stage2_over_high_f",
+        "plan_id": "iris-20261005-1837",
+        "ts": "2026-10-06T00:36:00+00:00",
+        "value": 1.8025000000000002
+      },
+      {
+        "expires_at": "2026-10-06T13:00:00+00:00",
+        "parameter": "direct_wet_stress_min_dew_margin_f",
+        "plan_id": "iris-20261005-1837",
+        "ts": "2026-10-06T00:36:00+00:00",
+        "value": 8.0
+      },
+      {
+        "expires_at": "2026-10-06T13:00:00+00:00",
+        "parameter": "direct_wet_stress_vpd_margin_kpa",
+        "plan_id": "iris-20261005-1837",
+        "ts": "2026-10-06T00:36:00+00:00",
+        "value": 0.05
+      },
+      {
+        "expires_at": "2026-10-06T13:00:00+00:00",
+        "parameter": "dwell_gate_ms",
+        "plan_id": "iris-20261005-1837",
+        "ts": "2026-10-06T00:36:00+00:00",
+        "value": 210000.0
+      },
+      {
+        "expires_at": "2026-10-06T13:00:00+00:00",
+        "parameter": "enthalpy_close",
+        "plan_id": "iris-20261005-1837",
+        "ts": "2026-10-06T00:36:00+00:00",
+        "value": 1.0
+      },
+      {
+        "expires_at": "2026-10-06T13:00:00+00:00",
+        "parameter": "enthalpy_open",
+        "plan_id": "iris-20261005-1837",
+        "ts": "2026-10-06T00:36:00+00:00",
+        "value": -2.0
+      },
+      {
+        "expires_at": "2026-10-06T13:00:00+00:00",
+        "parameter": "fog_escalation_kpa",
+        "plan_id": "iris-20261005-1837",
+        "ts": "2026-10-06T00:36:00+00:00",
+        "value": 0.25
+      },
+      {
+        "expires_at": "2026-10-06T13:00:00+00:00",
+        "parameter": "heat_hysteresis",
+        "plan_id": "iris-20261005-1837",
+        "ts": "2026-10-06T00:36:00+00:00",
+        "value": 1.0
+      },
+      {
+        "expires_at": "2026-10-06T13:00:00+00:00",
+        "parameter": "min_fog_off_s",
+        "plan_id": "iris-20261005-1837",
+        "ts": "2026-10-06T00:36:00+00:00",
+        "value": 66.0
+      },
+      {
+        "expires_at": "2026-10-06T13:00:00+00:00",
+        "parameter": "min_fog_on_s",
+        "plan_id": "iris-20261005-1837",
+        "ts": "2026-10-06T00:36:00+00:00",
+        "value": 61.5
+      },
+      {
+        "expires_at": "2026-10-06T13:00:00+00:00",
+        "parameter": "mist_backoff_s",
+        "plan_id": "iris-20261005-1837",
+        "ts": "2026-10-06T00:36:00+00:00",
+        "value": 600.0
+      },
+      {
+        "expires_at": "2026-10-06T13:00:00+00:00",
+        "parameter": "mist_max_closed_vent_s",
+        "plan_id": "iris-20261005-1837",
+        "ts": "2026-10-06T00:36:00+00:00",
+        "value": 600.0
+      },
+      {
+        "expires_at": "2026-10-06T13:00:00+00:00",
+        "parameter": "mist_thermal_relief_s",
+        "plan_id": "iris-20261005-1837",
+        "ts": "2026-10-06T00:36:00+00:00",
+        "value": 90.0
+      },
+      {
+        "expires_at": "2026-10-06T13:00:00+00:00",
+        "parameter": "mister_all_delay_s",
+        "plan_id": "iris-20261005-1837",
+        "ts": "2026-10-06T00:36:00+00:00",
+        "value": 75.0
+      },
+      {
+        "expires_at": "2026-10-06T13:00:00+00:00",
+        "parameter": "mister_all_kpa",
+        "plan_id": "iris-20261005-1837",
+        "ts": "2026-10-06T00:36:00+00:00",
+        "value": 1.1989999999999998
+      },
+      {
+        "expires_at": "2026-10-06T13:00:00+00:00",
+        "parameter": "mister_engage_delay_s",
+        "plan_id": "iris-20261005-1837",
+        "ts": "2026-10-06T00:36:00+00:00",
+        "value": 37.5
+      },
+      {
+        "expires_at": "2026-10-06T13:00:00+00:00",
+        "parameter": "mister_engage_kpa",
+        "plan_id": "iris-20261005-1837",
+        "ts": "2026-10-06T00:36:00+00:00",
+        "value": 0.999
+      },
+      {
+        "expires_at": "2026-10-06T13:00:00+00:00",
+        "parameter": "mister_pulse_gap_s",
+        "plan_id": "iris-20261005-1837",
+        "ts": "2026-10-06T00:36:00+00:00",
+        "value": 37.5
+      },
+      {
+        "expires_at": "2026-10-06T13:00:00+00:00",
+        "parameter": "mister_pulse_on_s",
+        "plan_id": "iris-20261005-1837",
+        "ts": "2026-10-06T00:36:00+00:00",
+        "value": 33.75
+      },
+      {
+        "expires_at": "2026-10-06T13:00:00+00:00",
+        "parameter": "mister_vpd_weight",
+        "plan_id": "iris-20261005-1837",
+        "ts": "2026-10-06T00:36:00+00:00",
+        "value": 1.7
+      },
+      {
+        "expires_at": "2026-10-06T13:00:00+00:00",
+        "parameter": "mister_water_budget_gal",
+        "plan_id": "iris-20261005-1837",
+        "ts": "2026-10-06T00:36:00+00:00",
+        "value": 180.0
+      },
+      {
+        "expires_at": "2026-10-06T13:00:00+00:00",
+        "parameter": "night_vpd_bias_kpa",
+        "plan_id": "iris-20261005-1837",
+        "ts": "2026-10-06T00:36:00+00:00",
+        "value": 0.0
+      },
+      {
+        "expires_at": "2026-10-06T13:00:00+00:00",
+        "parameter": "outdoor_staleness_max_s",
+        "plan_id": "iris-20261005-1837",
+        "ts": "2026-10-06T00:36:00+00:00",
+        "value": 600.0
+      },
+      {
+        "expires_at": "2026-10-06T13:00:00+00:00",
+        "parameter": "sw_cool_all_fans_at_high_enabled",
+        "plan_id": "iris-20261005-1837",
+        "ts": "2026-10-06T00:36:00+00:00",
+        "value": 0.0
+      },
+      {
+        "expires_at": "2026-10-06T13:00:00+00:00",
+        "parameter": "sw_direct_wet_stress_override_enabled",
+        "plan_id": "iris-20261005-1837",
+        "ts": "2026-10-06T00:36:00+00:00",
+        "value": 1.0
+      },
+      {
+        "expires_at": "2026-10-06T13:00:00+00:00",
+        "parameter": "sw_dwell_gate_enabled",
+        "plan_id": "iris-20261005-1837",
+        "ts": "2026-10-06T00:36:00+00:00",
+        "value": 1.0
+      },
+      {
+        "expires_at": "2026-10-06T13:00:00+00:00",
+        "parameter": "sw_fog_closes_vent",
+        "plan_id": "iris-20261005-1837",
+        "ts": "2026-10-06T00:36:00+00:00",
+        "value": 1.0
+      },
+      {
+        "expires_at": "2026-10-06T13:00:00+00:00",
+        "parameter": "sw_mister_closes_vent",
+        "plan_id": "iris-20261005-1837",
+        "ts": "2026-10-06T00:36:00+00:00",
+        "value": 0.0
+      },
+      {
+        "expires_at": "2026-10-06T13:00:00+00:00",
+        "parameter": "sw_summer_vent_enabled",
+        "plan_id": "iris-20261005-1837",
+        "ts": "2026-10-06T00:36:00+00:00",
+        "value": 1.0
+      },
+      {
+        "expires_at": "2026-10-06T13:00:00+00:00",
+        "parameter": "temp_hysteresis",
+        "plan_id": "iris-20261005-1837",
+        "ts": "2026-10-06T00:36:00+00:00",
+        "value": 1.6
+      },
+      {
+        "expires_at": "2026-10-06T13:00:00+00:00",
+        "parameter": "vent_exchange_fraction",
+        "plan_id": "iris-20261005-1837",
+        "ts": "2026-10-06T00:36:00+00:00",
+        "value": 0.3
+      },
+      {
+        "expires_at": "2026-10-06T13:00:00+00:00",
+        "parameter": "vent_prefer_dp_delta_f",
+        "plan_id": "iris-20261005-1837",
+        "ts": "2026-10-06T00:36:00+00:00",
+        "value": 3.0
+      },
+      {
+        "expires_at": "2026-10-06T13:00:00+00:00",
+        "parameter": "vent_prefer_temp_delta_f",
+        "plan_id": "iris-20261005-1837",
+        "ts": "2026-10-06T00:36:00+00:00",
+        "value": 4.0
+      },
+      {
+        "expires_at": "2026-10-06T13:00:00+00:00",
+        "parameter": "vpd_hysteresis",
+        "plan_id": "iris-20261005-1837",
+        "ts": "2026-10-06T00:36:00+00:00",
+        "value": 0.1875
+      },
+      {
+        "expires_at": "2026-10-06T13:00:00+00:00",
+        "parameter": "vpd_watch_dwell_s",
+        "plan_id": "iris-20261005-1837",
+        "ts": "2026-10-06T00:36:00+00:00",
+        "value": 52.5
+      }
+    ],
+    "pod": "verdify-ingestor-6d95d5fc9f-cscxw",
+    "readbacks": {
+      "band_track_fraction": 0.0,
+      "cold_vent_guard_delta_f": 8.0,
+      "cool_exit_hysteresis_f": 1.6,
+      "cool_stage2_exit_hysteresis_f": 1.0,
+      "cool_stage2_over_high_f": 1.8175,
+      "direct_wet_stress_min_dew_margin_f": 8.0,
+      "direct_wet_stress_vpd_margin_kpa": 0.05,
+      "dwell_gate_ms": 210000.0,
+      "enthalpy_close": 1.0,
+      "enthalpy_open": -2.0,
+      "fog_escalation_kpa": 0.25,
+      "heat_hysteresis": 1.0,
+      "min_fan_off_s": 90.0,
+      "min_fan_on_s": 120.0,
+      "min_fog_off_s": 60.0,
+      "min_fog_on_s": 59.0,
+      "min_heat_off_s": 180.0,
+      "min_heat_on_s": 120.0,
+      "min_vent_off_s": 60.0,
+      "min_vent_on_s": 60.0,
+      "mist_backoff_s": 600.0,
+      "mist_max_closed_vent_s": 600.0,
+      "mist_thermal_relief_s": 90.0,
+      "mister_all_delay_s": 75.0,
+      "mister_all_kpa": 1.157,
+      "mister_center_penalty": 0.5,
+      "mister_engage_delay_s": 38.0,
+      "mister_engage_kpa": 1.01,
+      "mister_min_off_s": 45.0,
+      "mister_pulse_gap_s": 30.0,
+      "mister_pulse_on_s": 33.0,
+      "mister_vpd_weight": 1.7,
+      "mister_water_budget_gal": 180.0,
+      "night_vpd_bias_kpa": 0.0,
+      "outdoor_staleness_max_s": 600.0,
+      "sw_cool_all_fans_at_high_enabled": 0.0,
+      "sw_direct_wet_gate_enabled": 1.0,
+      "sw_direct_wet_stress_override_enabled": 1.0,
+      "sw_dwell_gate_enabled": 1.0,
+      "sw_fog_closes_vent": 1.0,
+      "sw_mister_closes_vent": 0.0,
+      "sw_summer_vent_enabled": 1.0,
+      "temp_hysteresis": 1.6,
+      "vent_exchange_fraction": 0.30000001192092896,
+      "vent_prefer_dp_delta_f": 3.0,
+      "vent_prefer_temp_delta_f": 4.0,
+      "vpd_hysteresis": 0.1875,
+      "vpd_target_center": 0.9,
+      "vpd_target_east": 0.8999999761581421,
+      "vpd_target_south": 0.95,
+      "vpd_target_west": 0.7,
+      "vpd_watch_dwell_s": 52.0
+    },
+    "session_id": "46fc0e1997bb4432b84e5d930cdc4048",
+    "source_revision": "81d76a4c3d35a925ebd2438d89099d1f657b3f8f",
+    "version": 1
+  },
+  "historical_hold": {
+    "captured_at": "2026-10-06T00:34:31.319845+00:00",
+    "disposition": "bounded_hold_no_dispatch",
+    "fields": [
+      {
+        "current_generation_readback": 1.01,
+        "desired_source": "dispatcher_resolved_policy",
+        "equivalent": false,
+        "parameter": "mister_engage_kpa",
+        "plan": {
+          "plan_id": "iris-20261005-1828",
+          "recorded_at": "2026-10-06T00:25:00+00:00",
+          "value": 1.007
+        },
+        "resolved_desired": 1.0
+      }
+    ],
+    "generation": 1,
+    "reason": "snapshot does not match current connection: cool_stage2_over_high_f",
+    "schema": "verdify-ordinary-policy-hold-v1",
+    "session_id": "46fc0e1997bb4432b84e5d930cdc4048",
+    "source_revision": "81d76a4c3d35a925ebd2438d89099d1f657b3f8f"
+  },
+  "historical_hold_disposition": "superseded by fresh00:39:32 source/generation preview and3realconfirmedresolvedwaypoint requests00:40:04; no current halted run",
+  "no_preconvergence_duration_credit": true,
+  "remaining_seconds": 7200,
+  "required_post274_actual_tcp_qualification": true,
+  "evidence_hashes": {
+    "final81-v3-live-immutable-archive.json": "f7c80509c9637057169a1dc5886257002028877227c0293eb7ccef80e433931b",
+    "final81-transition-value-diff.json": "fd12afaaa834bc503c4f03cd6e5b0eab7e8a3cdbe87d5f3974f60d4713b18e4e",
+    "final81-clock-start-requests.json": "167a4f92010fc428705dfeb7283f9d485803205d47f4694ef1766336e5884e02",
+    "final81-convergence-current-0039.json": "725dd82813b7570068d442e0e0461de1e094c5e614e8bb9972e4a4f58ddd3378",
+    "qualified-runtime-final81.json": "2a1f434a02075e3e07db8c0789205efe63259fc6f9ba7f570aaaa54371718a3d"
+  },
+  "changed_plan_field_dispositions": [
+    {
+      "parameter": "min_fog_off_s",
+      "plan_value": 72.0,
+      "native_readback_at_fresh_preview": 60.0,
+      "resolved_policy_source": "dispatcher._vpd_high_moisture_guardrails live dry-side context",
+      "disposition": "existing conservative guardrail keeps60; no mismatched planner setter dispatched"
+    },
+    {
+      "parameter": "mister_pulse_gap_s",
+      "plan_value": 41.25,
+      "native_readback_at_fresh_preview": 30.0,
+      "resolved_policy_source": "dispatcher._vpd_high_moisture_guardrails fixed30sec",
+      "disposition": "existing conservative guardrail keeps30; no mismatched planner setter dispatched"
+    },
+    {
+      "parameter": "mister_engage_kpa",
+      "plan_value_first_waypoint": 1.007,
+      "source": "fresh subsequent effective waypoint+dispatcher resolution",
+      "disposition": "initialbounded snapshotlag superseded; resolved0.999 requestconfirmed00:40:04"
+    }
+  ]
+}

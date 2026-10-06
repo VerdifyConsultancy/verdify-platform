@@ -1,0 +1,1 @@
+{"observed_at": "2026-10-06T02:42:02.990690+00:00", "client": "actual applicationDSN asyncpg TCP", "capability_projection_sha256": "ef10e776410123a1f25ab39b675fff63eb4b8909603a3ee681260b38eef18842", "expected_273_274_projection_sha256": "ef10e776410123a1f25ab39b675fff63eb4b8909603a3ee681260b38eef18842", "same_existing_capabilities": true}

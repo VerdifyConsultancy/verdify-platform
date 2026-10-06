@@ -1,0 +1,73 @@
+{
+  "schema": "verdify-final81-post274-runtime-requalification-v1",
+  "actual_source": "81d76a4c3d35a925ebd2438d89099d1f657b3f8f",
+  "same_writer_uid": "237002d4-5fb9-450f-8fe2-e266c969a1e1",
+  "actual_tcp_qualification": {
+    "observed_at": "2026-10-06T01:03:24.949020+00:00",
+    "source_revision": "81d76a4c3d35a925ebd2438d89099d1f657b3f8f",
+    "source_module_sha256": "4afb5b7daa1873952cced16387d18104a9c95923333a3210fad333d6f7ba56a6",
+    "recovery_module_sha256": {
+      "/app/ingestor/tasks/bounded_reconcile.py": "239f165f5917008c67ba2733dac6805fe1450376e95572ce2fc3e060a63b9173",
+      "/app/scripts/prepare-writer-stage.py": "08a95af91051661179a6b3f4953cc44f6a55cc4ef4f581d0909ee11a6713a1a7"
+    },
+    "image_module_path": "/app/ingestor/ingestor.py",
+    "authenticated_actual_runtime_client": "asyncpg TCP using existing application DSN",
+    "identity": {
+      "current_user": "verdify_ingestor_runtime_login",
+      "session_user": "verdify_ingestor_runtime_login",
+      "database": "verdify",
+      "search_path": "pg_catalog, public, pg_temp",
+      "ordinary_boundary_attested": true
+    },
+    "status": "passed",
+    "sql_catalog_mutation": false,
+    "cnpg_cutover": false
+  },
+  "capabilities": {
+    "observed_at": "2026-10-06T01:03:56.079760+00:00",
+    "client": "actual applicationDSN asyncpg TCP",
+    "capability_projection_sha256": "ef10e776410123a1f25ab39b675fff63eb4b8909603a3ee681260b38eef18842",
+    "expected_273_274_projection_sha256": "ef10e776410123a1f25ab39b675fff63eb4b8909603a3ee681260b38eef18842",
+    "same_existing_capabilities": true
+  },
+  "ledger_and_current_seal": {
+    "migration": {
+      "seq": 274,
+      "sha256": "0b939df1a79e3ce71835e59aedb5d1898805cd43cae72b79fa905f77067a8e4f",
+      "source": "db/migrations",
+      "filename": "db/migrations/274-qualified-physical-crop-band-publication.sql",
+      "applied_at": "2026-10-06T01:01:53.37532+00:00",
+      "applied_by": "verdify",
+      "duration_ms": 1694,
+      "stamp_method": "runner"
+    },
+    "observed_at": "2026-10-06T01:02:41.145632+00:00",
+    "ordinary_receipts": [
+      {
+        "login_name": "verdify_api_runtime_login",
+        "boundary_sha256": "67bb961f69e72f8d59f8d38dce96201682b1fb8fb40d423071c987b075cf994e"
+      },
+      {
+        "login_name": "verdify_ingestor_runtime_login",
+        "boundary_sha256": "126f95dc75242a126579331fadf711f0c1e8e408d20ec7cd94e3d1e27a0dcf75"
+      }
+    ]
+  },
+  "migration_applied_at": "2026-10-06T01:01:53.37532+00:00",
+  "six_runtime_hook_completed_at_root_verified": "2026-10-06T01:02:50+00:00",
+  "timing_correction": "filename final81-pre274-actual-capabilities.json retained immutable but observed01:02:06.438 after274 stamp; it is POST-migration, not a pre274 baseline",
+  "old_profile_comparison_source": "parent private rollback matrix current273/unstamped274/successor274 with invariant ef10 capability projection",
+  "steady_started_at": "2026-10-06T00:41:25.066316+00:00",
+  "failed_samples_suppressed": false,
+  "unchanged_capabilities": true,
+  "catalog_profile_changed_legitimately": true,
+  "evidence_sha256": {
+    "qualified-runtime-final81-post274.json": "4265390a901723596070243a811c51b572fa0d8c0c559ab41a40c3d6a4b5c5b3",
+    "qualified-runtime-final81-post274-pod.json": "5c9fb2c33fefd78e1152d56c4d5059735b3814a4ce59d4058a403c16884a89f1",
+    "final81-post274-ef10-capability.json": "9a205443b60b538eaa672fc295c5bfcf456ef6f8bd279e408da545319e73424d",
+    "final81-274-ledger-ordinary-seal.json": "2471f230a44c7dd4d4795ee72541b5c777436dbaa6715db73b0e6debbf1067b1",
+    "final81-pre274-actual-capabilities.json": "ad7ecfc44d5529ecc797eead103cd297c8bf4cc6d7eef6cdde95ae871d690294",
+    "274-current-jobs-0103.json": "e1f987ef2d9c0b4673cc97d8695093f4d5da3af494fede7a7c8f92a45e546308"
+  },
+  "recorded_at": "2026-10-06T01:04:16.826049+00:00"
+}
