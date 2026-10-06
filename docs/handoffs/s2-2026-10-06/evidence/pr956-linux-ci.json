@@ -1,0 +1,82 @@
+{
+  "workflow": "verdify-platform-pr-ci-5p2b5",
+  "uid": "e2d4a067-1c6a-4555-8752-c8903ac299d9",
+  "source": "fac33d6f89b2121cf8847ec1908d5579d6fa5472",
+  "phase": "Succeeded",
+  "started_at": "2026-10-06T04:14:49Z",
+  "finished_at": "2026-10-06T04:25:35Z",
+  "nodes": [
+    {
+      "name": "verdify-platform-pr-ci-5p2b5",
+      "phase": "Succeeded",
+      "started_at": "2026-10-06T04:14:49Z",
+      "finished_at": "2026-10-06T04:25:15Z"
+    },
+    {
+      "name": "report",
+      "phase": "Succeeded",
+      "started_at": "2026-10-06T04:25:15Z",
+      "finished_at": "2026-10-06T04:25:35Z"
+    },
+    {
+      "name": "[1]",
+      "phase": "Succeeded",
+      "started_at": "2026-10-06T04:15:19Z",
+      "finished_at": "2026-10-06T04:25:15Z"
+    },
+    {
+      "name": "[0]",
+      "phase": "Succeeded",
+      "started_at": "2026-10-06T04:25:15Z",
+      "finished_at": "2026-10-06T04:25:35Z"
+    },
+    {
+      "name": "validate(0)",
+      "phase": "Succeeded",
+      "started_at": "2026-10-06T04:15:19Z",
+      "finished_at": "2026-10-06T04:25:11Z"
+    },
+    {
+      "name": "validate",
+      "phase": "Succeeded",
+      "started_at": "2026-10-06T04:15:19Z",
+      "finished_at": "2026-10-06T04:25:15Z"
+    },
+    {
+      "name": "[0]",
+      "phase": "Succeeded",
+      "started_at": "2026-10-06T04:14:49Z",
+      "finished_at": "2026-10-06T04:15:19Z"
+    },
+    {
+      "name": "trusted-precheck",
+      "phase": "Succeeded",
+      "started_at": "2026-10-06T04:14:49Z",
+      "finished_at": "2026-10-06T04:14:56Z"
+    },
+    {
+      "name": "report-pending(0)",
+      "phase": "Succeeded",
+      "started_at": "2026-10-06T04:14:49Z",
+      "finished_at": "2026-10-06T04:15:06Z"
+    },
+    {
+      "name": "verdify-platform-pr-ci-5p2b5.onExit",
+      "phase": "Succeeded",
+      "started_at": "2026-10-06T04:25:15Z",
+      "finished_at": "2026-10-06T04:25:35Z"
+    },
+    {
+      "name": "report(0)",
+      "phase": "Succeeded",
+      "started_at": "2026-10-06T04:25:15Z",
+      "finished_at": "2026-10-06T04:25:28Z"
+    },
+    {
+      "name": "report-pending",
+      "phase": "Succeeded",
+      "started_at": "2026-10-06T04:14:49Z",
+      "finished_at": "2026-10-06T04:15:19Z"
+    }
+  ]
+}

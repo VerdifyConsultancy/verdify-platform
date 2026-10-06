@@ -1,0 +1,88 @@
+{
+  "scope": "abrupt process loss, interrupted local ACK and retained-PV cross-worker recovery; no physical host outage, DB replay or device connection",
+  "release_status": "accepted runtime baseline; must join promoted-source and current-schema replay acceptance",
+  "checked_at": "2026-10-06T04:24:32.536552+00:00",
+  "claim": {
+    "name": "verdify-s2-spool-qualification",
+    "uid": "a7158960-36dc-439c-bd6f-14f1aa744bab",
+    "class": "longhorn-v1-workspace-rwo",
+    "pv": "pvc-a7158960-36dc-439c-bd6f-14f1aa744bab",
+    "pv_uid": "8197e64e-e6ad-4ed3-a6f0-fea54e070fc3",
+    "volume_handle": "pvc-a7158960-36dc-439c-bd6f-14f1aa744bab",
+    "replicas": 2,
+    "final_attachment_state": "detached",
+    "final_robustness": "unknown"
+  },
+  "phases": [
+    {
+      "phase": "accept",
+      "pod_uid": "0547b4de-ac56-4f80-af8e-d6e38a5a3a8e",
+      "node": "vm-k3s-node5",
+      "image_id": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:2813240dbd5ce3c644d0285fd4603901eef9ae38ad00d28f4e64deb05f46ad2d",
+      "started_at": "2026-10-06T04:21:23Z",
+      "finished_at": "2026-10-06T04:21:24Z",
+      "exit_code": 23
+    },
+    {
+      "phase": "interrupt",
+      "pod_uid": "74e151a0-d108-48b8-a4e0-682166d35bc2",
+      "node": "vm-k3s-node5",
+      "image_id": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:2813240dbd5ce3c644d0285fd4603901eef9ae38ad00d28f4e64deb05f46ad2d",
+      "started_at": "2026-10-06T04:22:05Z",
+      "finished_at": "2026-10-06T04:22:07Z",
+      "exit_code": 24
+    },
+    {
+      "phase": "recover",
+      "pod_uid": "7a321f1e-d65d-4a42-9b2f-9f38302613e6",
+      "node": "vm-k3s-node4",
+      "image_id": "registry.vallery.net/verdifyconsultancy/verdify-ingestor@sha256:2813240dbd5ce3c644d0285fd4603901eef9ae38ad00d28f4e64deb05f46ad2d",
+      "started_at": "2026-10-06T04:22:54Z",
+      "finished_at": "2026-10-06T04:22:55Z",
+      "exit_code": 0
+    }
+  ],
+  "accepted": {
+    "phase": "accept",
+    "accepted": 3000,
+    "manifest_sha256": "a38ff0af64f71a3d5fabe042caf3fa3bb8a0dc5cceee66b641aab7832fcda61e",
+    "elapsed_seconds": 1.0203591330209747,
+    "source_module_sha256": "0b901a3500ff364b99ef8d9aa48ed01fe6f3b1bd9f7cb594ee16163ca558895f"
+  },
+  "recovered": {
+    "phase": "recover",
+    "source_module_sha256": "0b901a3500ff364b99ef8d9aa48ed01fe6f3b1bd9f7cb594ee16163ca558895f",
+    "elapsed_seconds": 0.47833967092446983,
+    "queues": {
+      "equipment": {
+        "accepted": 1000,
+        "recovered": 1000,
+        "unexplained_loss": 0,
+        "sha256": "25cdafd95e787a7ee72f018007678db5d76acee646d0f2f81c9fd978555f9cae",
+        "duplicate_additions": 0,
+        "conflicting_identity_rejected": true,
+        "capacity_rejection_retains_accepted": true
+      },
+      "climate": {
+        "accepted": 1000,
+        "recovered": 1000,
+        "unexplained_loss": 0,
+        "sha256": "4ae77bcfd68f79575543d153e03f7830d1b9b4d7deeef2421a103015e8a37cd5",
+        "duplicate_additions": 0,
+        "conflicting_identity_rejected": true,
+        "capacity_rejection_retains_accepted": true
+      },
+      "observational": {
+        "accepted": 1000,
+        "recovered": 1000,
+        "unexplained_loss": 0,
+        "sha256": "c2660ffaf48ba7dd8e04fd4d50aec4a68fef7b502321128c74ce4e84d78a745c",
+        "duplicate_additions": 0,
+        "conflicting_identity_rejected": true,
+        "capacity_rejection_retains_accepted": true
+      }
+    },
+    "scope": "abrupt process loss, interrupted local ACK and retained-PV cross-worker recovery; no physical host outage, DB replay or device connection"
+  },
+  "precondition_correction": "First Pod failed image pull before executing; retained failed receipt, then used existing namespace imagePullSecret without exposing or mounting it."
+}

@@ -389,6 +389,9 @@ def emit_sql(target=False, *, bootstrap_grantor_profile=False, cluster_name="ver
 BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;
 SET LOCAL search_path=pg_catalog,pg_temp;
 SET LOCAL statement_timeout='60s';
+-- Catalog projection has many correlated FK witnesses; LLVM startup must not
+-- consume the bounded native query budget. This changes only the query plan.
+SET LOCAL jit=off;
 SET LOCAL lock_timeout='2s';
 DO $guard$ BEGIN
  IF current_database()<>'{database}' OR current_setting('server_version_num')::int<>{version}

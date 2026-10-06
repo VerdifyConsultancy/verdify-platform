@@ -7,3 +7,4 @@ resources:
 - scheduled-backup.yaml
 - verdify-cnpg-rehearsal-isolation.yaml
 - deny-all-rehearsal.yaml
+- cnpg-s2-runtime-client-policy.yaml

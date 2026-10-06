@@ -1,0 +1,136 @@
+{
+  "endpoint": "live Loki Prometheus rules API",
+  "status": "success",
+  "groups": [
+    {
+      "name": "verdify.ingestor.spool",
+      "file": "verdify-spool.yaml",
+      "rules": [
+        {
+          "state": "inactive",
+          "name": "VerdifyIngestBacklogHigh",
+          "query": "(sum by (queue)(count_over_time({namespace=\"verdify-prod\", container=\"ingestor\", pod=~\"verdify-ingestor-.+\"} |= \"ingestor_spool_health \" | regexp \"ingestor_spool_health (?P<health>.*)\" | line_format \"{{.health}}\" | json | backlog_high=\"true\" | __error__=\"\"[2m])) > 0)",
+          "duration": 180,
+          "labels": {
+            "area": "applications",
+            "component": "ingestor",
+            "dashboard": "verdify-health",
+            "domain": "applications",
+            "environment": "production",
+            "impact": "degraded-ingest-durability",
+            "owner": "jvallery/monitoring-stack",
+            "runbook": "docs/runbooks/verdify-ingest-durability.md",
+            "service": "verdify-ingestor",
+            "severity": "warning",
+            "source_id": "verdify-ingestor-spool",
+            "tier": "1"
+          },
+          "annotations": {
+            "description": "Queue {{ $labels.queue }} repeatedly reports this condition for three minutes. Event age retains the original source clock, not a fresh device confirmation. Capture queue/PVC state and coordinate recovery with the product owner. The two-minute log window clears within two minutes plus the one-minute evaluation cadence after healthy reports.",
+            "summary": "Retained ingest queue is at least 80% full"
+          },
+          "alerts": [],
+          "health": "ok",
+          "lastError": "",
+          "type": "alerting",
+          "lastEvaluation": "2026-10-06T04:30:50.342092969Z",
+          "evaluationTime": 0.004649871
+        },
+        {
+          "state": "inactive",
+          "name": "VerdifyIngestBacklogStale",
+          "query": "(sum by (queue)(count_over_time({namespace=\"verdify-prod\", container=\"ingestor\", pod=~\"verdify-ingestor-.+\"} |= \"ingestor_spool_health \" | regexp \"ingestor_spool_health (?P<health>.*)\" | line_format \"{{.health}}\" | json | backlog_stale=\"true\" | __error__=\"\"[2m])) > 0)",
+          "duration": 180,
+          "labels": {
+            "area": "applications",
+            "component": "ingestor",
+            "dashboard": "verdify-health",
+            "domain": "applications",
+            "environment": "production",
+            "impact": "degraded-ingest-durability",
+            "owner": "jvallery/monitoring-stack",
+            "runbook": "docs/runbooks/verdify-ingest-durability.md",
+            "service": "verdify-ingestor",
+            "severity": "warning",
+            "source_id": "verdify-ingestor-spool",
+            "tier": "1"
+          },
+          "annotations": {
+            "description": "Queue {{ $labels.queue }} repeatedly reports this condition for three minutes. Event age retains the original source clock, not a fresh device confirmation. Capture queue/PVC state and coordinate recovery with the product owner. The two-minute log window clears within two minutes plus the one-minute evaluation cadence after healthy reports.",
+            "summary": "Retained ingest source events are at least five minutes old"
+          },
+          "alerts": [],
+          "health": "ok",
+          "lastError": "",
+          "type": "alerting",
+          "lastEvaluation": "2026-10-06T04:30:50.346755244Z",
+          "evaluationTime": 0.002910039
+        },
+        {
+          "state": "inactive",
+          "name": "VerdifyIngestDiskHeadroomLow",
+          "query": "(sum by (queue)(count_over_time({namespace=\"verdify-prod\", container=\"ingestor\", pod=~\"verdify-ingestor-.+\"} |= \"ingestor_spool_health \" | regexp \"ingestor_spool_health (?P<health>.*)\" | line_format \"{{.health}}\" | json | disk_headroom_low=\"true\" | __error__=\"\"[2m])) > 0)",
+          "duration": 180,
+          "labels": {
+            "area": "applications",
+            "component": "ingestor",
+            "dashboard": "verdify-health",
+            "domain": "applications",
+            "environment": "production",
+            "impact": "degraded-ingest-durability",
+            "owner": "jvallery/monitoring-stack",
+            "runbook": "docs/runbooks/verdify-ingest-durability.md",
+            "service": "verdify-ingestor",
+            "severity": "warning",
+            "source_id": "verdify-ingestor-spool",
+            "tier": "1"
+          },
+          "annotations": {
+            "description": "Queue {{ $labels.queue }} repeatedly reports this condition for three minutes. Event age retains the original source clock, not a fresh device confirmation. Capture queue/PVC state and coordinate recovery with the product owner. The two-minute log window clears within two minutes plus the one-minute evaluation cadence after healthy reports.",
+            "summary": "Ingest state has less than two queue-capacities of free space"
+          },
+          "alerts": [],
+          "health": "ok",
+          "lastError": "",
+          "type": "alerting",
+          "lastEvaluation": "2026-10-06T04:30:50.349678197Z",
+          "evaluationTime": 0.004222026
+        },
+        {
+          "state": "inactive",
+          "name": "VerdifyIngestSpoolHealthUnknown",
+          "query": "(sum by (queue)(count_over_time({namespace=\"verdify-prod\", container=\"ingestor\", pod=~\"verdify-ingestor-.+\"} |= \"ingestor_spool_health_failed \" | regexp \"queue=(?P<queue>[^ ]+)\"[2m])) > 0)",
+          "duration": 180,
+          "labels": {
+            "area": "applications",
+            "component": "ingestor",
+            "dashboard": "verdify-health",
+            "domain": "applications",
+            "environment": "production",
+            "impact": "unknown-ingest-durability",
+            "owner": "jvallery/monitoring-stack",
+            "runbook": "docs/runbooks/verdify-ingest-durability.md",
+            "service": "verdify-ingestor",
+            "severity": "warning",
+            "source_id": "verdify-ingestor-spool",
+            "tier": "1"
+          },
+          "annotations": {
+            "description": "Queue {{ $labels.queue }} metadata inspection repeatedly failed for three minutes. Do not interpret unavailable queue evidence as healthy or delete retained data to clear the warning.",
+            "summary": "Ingest queue health cannot be measured"
+          },
+          "alerts": [],
+          "health": "ok",
+          "lastError": "",
+          "type": "alerting",
+          "lastEvaluation": "2026-10-06T04:30:50.353934358Z",
+          "evaluationTime": 0.003890266
+        }
+      ],
+      "interval": 60,
+      "limit": 0,
+      "lastEvaluation": "2026-10-06T04:30:50.34203022Z",
+      "evaluationTime": 0.015800966
+    }
+  ]
+}

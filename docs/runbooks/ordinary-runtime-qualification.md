@@ -59,3 +59,74 @@ actual public/planner/ingestor health. Preserve failures and recovery coordinate
 Close #643 only after these complete behavior proofs join the production login
 matrix. Static readiness, empty SELECTs and zero-row negatives alone are partial
 acceptance, even when all nine login identities are verified.
+
+### Complete six-duty restored fixture
+
+`scripts/qualify-restored-runtime-duties.py` extracts every per-duty allow/deny
+case from the accepted `db/qualification/268-six-runtime-role-fixture.sql`.
+It removes the owner/session-auth proxy and explicit search-path rewrite, uses
+an actual bounded TCP login with its real defaults, and records exact source
+fixture/case hashes and affected row counts. Denied heater writes, invalid
+vision observation types and forbidden persistence operations remain in the
+suite; they are not replaced by empty reads. Every case has a savepoint and
+all allowed rows remain inside an outer rollback transaction.
+
+Run it only after the #396 owner seals current-schema parity/admission and
+captures sequence custody for Cluster UID and endpoint
+`verdify-cnpg-s2-rw.verdify-db-rehearsal.svc.cluster.local`. The admission hash and
+UID are external ROOT bindings, not self-issued database authority. Its
+`QUALIFICATION_DB_PASSWORD` comes from target Secret custody in the consuming
+client. Use existing consumer images/libraries where available; label any
+substitute SQL driver proof separately from actual application behavior.
+Grafana's target datasource and API/ingestor/MCP workflows need their own
+actual-client/config proofs and are not supplied by the six-role SQL executor.
+
+Sequence allocations can advance despite row rollback. The clone owner compares
+and restores known sequence custody after the suite before parity is re-sealed;
+never claim that rollback alone restores every database object. Compare complete
+study assignment/outcome/exposure/freeze state before and after. Retain failures
+and source/config/image identities for forward and rollback phases.
+
+### S2 client network and admission
+
+Apply only the reviewed `cnpg-s2-runtime-client-policy.yaml` resources through
+ROOT, never the whole historical cluster kustomization. Use exact client labels
+`app.kubernetes.io/part-of=verdify`,
+`app.kubernetes.io/component=cnpg-s2-runtime-qualification` and
+`verdify.ai/qualification-target=verdify-cnpg-s2`. These clients must not also
+carry `component=cnpg-rehearsal` or the historical qualification component.
+NetworkPolicy allows are additive: inspect **every** matching live policy before
+executing a client. New-client egress is only s2 cluster PostgreSQL/5432 and
+kube-system kube-dns TCP/UDP53; no ingress is granted. The s2 database server
+retains its existing operator/peer allowances; this addition does not claim to
+replace them. Keep namespace deny-all intact and bind policy UIDs/spec hashes.
+
+Cluster Ready alone is not admission. Before credential installation or any
+fixture Job, read back the authoritative #396 full data/catalog/capability parity
+and native target admission receipt, then bind its hash to current Cluster UID,
+primary Pod UID/start/system identity, exact source/image profile and current
+service endpoints. Inspect live Kubernetes and database identities immediately
+before and after the operation; CLI UID/hash assertions alone do not establish
+those facts. Stop target mutations if any binding changes or acceptance is
+unsealed. Never overwrite an existing verifier, reuse historical A/B targets or
+rotate a source credential to make a target qualification pass.
+
+The restored-duty executor also requires `--native-binding` containing ROOT's
+fresh exact Cluster/primary Pod/RW Service JSON and `--database-oid` from the
+sealed native admission readback. It binds the Cluster UID, Service ownership and
+primary selector, Ready primary Pod address, and raw binding SHA256. Before any
+fixture statement it verifies the authenticated backend address, native database
+OID, cluster name, primary status and PostgreSQL16.13. A stale binding or failover
+fails closed; take a new authoritative readback instead of bypassing the check.
+The binding file remains evidence custody, not independent proof of admission;
+ROOT still compares the actual admission receipt and target before/after execution.
+
+For the API, ingestor and MCP actual source-native startup/pool checks, use
+`scripts/cnpg-runtime-client-qualification.py --target verdify-cnpg-s2` with
+the freshly read native binding and reviewed current image/source hashes.
+This closed mode preserves the historical default adapter, uses the three S2
+policy labels and only the separate `verdify-cnpg-s2-{api,ingestor,mcp}-client-auth`
+Secrets. It does not reuse historical namespace Secrets or start device/service
+loops. Do not reapply rendered policies when ROOT has already installed the
+identical source-owned policies; apply only reviewed Jobs. These pool startup
+checks complement intended duty DML and still do not prove whole-service rollback.
