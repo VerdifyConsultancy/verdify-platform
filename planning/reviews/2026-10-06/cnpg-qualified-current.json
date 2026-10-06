@@ -1,0 +1,74 @@
+{
+  "captured_at": "2026-10-06T03:30:28.618153+00:00",
+  "clusters": [
+    {
+      "cluster": "verdify-cnpg-pitr-a",
+      "uid": "f1898844-6070-4879-8803-3422ab8f5fc9",
+      "primary": "verdify-cnpg-pitr-a-1",
+      "image": "registry.vallery.net/verdifyconsultancy/verdify-timescaledb-cnpg:16.13-ts2.25.2@sha256:8b461e37d18aa049704eb6a9cde2ba9af0f955f8d3725e921070d2450bb2f137",
+      "ready": 3,
+      "instances": 3,
+      "storage": {
+        "resizeInUseVolumes": true,
+        "size": "30Gi",
+        "storageClass": "longhorn-v1-rwo"
+      },
+      "phase": "Cluster in healthy state",
+      "database": "verdify_rehearsal",
+      "ledger_query_exit": 0,
+      "ledger": {
+        "database": "verdify_rehearsal",
+        "max_migration": 270,
+        "last_applied": "2026-10-02T06:58:54.474684+00:00"
+      },
+      "query_error": null
+    },
+    {
+      "cluster": "verdify-cnpg-pitr-b",
+      "uid": "8a93256b-d1c1-4677-aac4-6f88c978a040",
+      "primary": "verdify-cnpg-pitr-b-1",
+      "image": "registry.vallery.net/verdifyconsultancy/verdify-timescaledb-cnpg:16.13-ts2.25.2@sha256:8b461e37d18aa049704eb6a9cde2ba9af0f955f8d3725e921070d2450bb2f137",
+      "ready": 3,
+      "instances": 3,
+      "storage": {
+        "resizeInUseVolumes": true,
+        "size": "30Gi",
+        "storageClass": "longhorn-v1-rwo"
+      },
+      "phase": "Cluster in healthy state",
+      "database": "verdify_rehearsal",
+      "ledger_query_exit": 0,
+      "ledger": {
+        "database": "verdify_rehearsal",
+        "max_migration": 270,
+        "last_applied": "2026-10-02T06:58:54.474684+00:00"
+      },
+      "query_error": null
+    },
+    {
+      "cluster": "verdify-cnpg-rehearsal",
+      "uid": "e11f1014-a77e-4ccf-9d97-e8cf5c037484",
+      "primary": "verdify-cnpg-rehearsal-2",
+      "image": "registry.vallery.net/verdifyconsultancy/verdify-timescaledb-cnpg:16.13-ts2.25.2@sha256:8b461e37d18aa049704eb6a9cde2ba9af0f955f8d3725e921070d2450bb2f137",
+      "ready": 3,
+      "instances": 3,
+      "storage": {
+        "resizeInUseVolumes": true,
+        "size": "30Gi",
+        "storageClass": "longhorn-v1-rwo"
+      },
+      "phase": "Cluster in healthy state",
+      "database": "verdify_rehearsal",
+      "ledger_query_exit": 0,
+      "ledger": {
+        "database": "verdify_rehearsal",
+        "max_migration": 270,
+        "last_applied": "2026-10-02T06:58:54.474684+00:00"
+      },
+      "query_error": null
+    }
+  ],
+  "prior_wrong_database_operator_probe_retained": "cnpg-current.json",
+  "production_changed": false,
+  "full_parity_query_rerun": false
+}

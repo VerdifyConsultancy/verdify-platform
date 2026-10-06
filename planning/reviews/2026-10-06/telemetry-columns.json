@@ -1,0 +1,786 @@
+[
+  {
+    "field": "temp_avg",
+    "nonnull": 9708,
+    "zeros": 0,
+    "min": 61.820003509521484,
+    "max": 85.82000732421875,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "temp_north",
+    "nonnull": 9709,
+    "zeros": 0,
+    "min": 61.15999984741211,
+    "max": 93.3800048828125,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "temp_south",
+    "nonnull": 0,
+    "zeros": 0,
+    "min": null,
+    "max": null,
+    "last_nonnull": null
+  },
+  {
+    "field": "temp_east",
+    "nonnull": 9709,
+    "zeros": 0,
+    "min": 63.1400032043457,
+    "max": 85.81999969482422,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "temp_west",
+    "nonnull": 9709,
+    "zeros": 0,
+    "min": 61.15999984741211,
+    "max": 85.81999969482422,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "temp_case",
+    "nonnull": 9709,
+    "zeros": 0,
+    "min": 61.70000076293945,
+    "max": 88.16000366210938,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "temp_control",
+    "nonnull": 9709,
+    "zeros": 0,
+    "min": 61.820003509521484,
+    "max": 85.82000732421875,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "temp_intake",
+    "nonnull": 9709,
+    "zeros": 0,
+    "min": 47.84000015258789,
+    "max": 86.36000061035156,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "rh_avg",
+    "nonnull": 9708,
+    "zeros": 0,
+    "min": 46.766666412353516,
+    "max": 76.53333282470703,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "rh_north",
+    "nonnull": 9709,
+    "zeros": 0,
+    "min": 31.700000762939453,
+    "max": 78.0999984741211,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "rh_south",
+    "nonnull": 0,
+    "zeros": 0,
+    "min": null,
+    "max": null,
+    "last_nonnull": null
+  },
+  {
+    "field": "rh_east",
+    "nonnull": 9709,
+    "zeros": 0,
+    "min": 47.900001525878906,
+    "max": 80.30000305175781,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "rh_west",
+    "nonnull": 9709,
+    "zeros": 0,
+    "min": 44,
+    "max": 82.5,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "rh_case",
+    "nonnull": 9709,
+    "zeros": 0,
+    "min": 33.29999923706055,
+    "max": 71.80000305175781,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "vpd_avg",
+    "nonnull": 9708,
+    "zeros": 0,
+    "min": 0.4886322319507599,
+    "max": 2.2927472591400146,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "vpd_north",
+    "nonnull": 9709,
+    "zeros": 0,
+    "min": 0.45528268814086914,
+    "max": 3.6393237113952637,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "vpd_south",
+    "nonnull": 0,
+    "zeros": 0,
+    "min": null,
+    "max": null,
+    "last_nonnull": null
+  },
+  {
+    "field": "vpd_east",
+    "nonnull": 9708,
+    "zeros": 0,
+    "min": 0.5836376547813416,
+    "max": 1.7732235193252563,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "vpd_west",
+    "nonnull": 9708,
+    "zeros": 0,
+    "min": 0.40950915217399597,
+    "max": 1.8951773643493652,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "vpd_control",
+    "nonnull": 9709,
+    "zeros": 0,
+    "min": 0.48733025789260864,
+    "max": 2.1947500705718994,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "dew_point",
+    "nonnull": 9708,
+    "zeros": 0,
+    "min": 43.952003479003906,
+    "max": 75.95535278320312,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "abs_humidity",
+    "nonnull": 9708,
+    "zeros": 0,
+    "min": 7.302824020385742,
+    "max": 21.873945236206055,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "enthalpy_delta",
+    "nonnull": 9682,
+    "zeros": 0,
+    "min": -45.76592254638672,
+    "max": -5.9619903564453125,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "co2_ppm",
+    "nonnull": 9706,
+    "zeros": 2,
+    "min": 0,
+    "max": 3128.533447265625,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "lux",
+    "nonnull": 9706,
+    "zeros": 7784,
+    "min": 0,
+    "max": 25955.83203125,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "dli_today",
+    "nonnull": 0,
+    "zeros": 0,
+    "min": null,
+    "max": null,
+    "last_nonnull": null
+  },
+  {
+    "field": "flow_gpm",
+    "nonnull": 9705,
+    "zeros": 9329,
+    "min": 0,
+    "max": 3.0000500679016113,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "water_total_gal",
+    "nonnull": 9706,
+    "zeros": 2195,
+    "min": 0,
+    "max": 1273,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "mister_water_today",
+    "nonnull": 9708,
+    "zeros": 6368,
+    "min": 0,
+    "max": 61.83641815185547,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "outdoor_temp_f",
+    "nonnull": 9707,
+    "zeros": 0,
+    "min": 47.10199737548828,
+    "max": 90.53599548339844,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "outdoor_rh_pct",
+    "nonnull": 9706,
+    "zeros": 0,
+    "min": 13.789999961853027,
+    "max": 84.29999542236328,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "ph_input",
+    "nonnull": 0,
+    "zeros": 0,
+    "min": null,
+    "max": null,
+    "last_nonnull": null
+  },
+  {
+    "field": "ec_input",
+    "nonnull": 0,
+    "zeros": 0,
+    "min": null,
+    "max": null,
+    "last_nonnull": null
+  },
+  {
+    "field": "ph_runoff_wall",
+    "nonnull": 0,
+    "zeros": 0,
+    "min": null,
+    "max": null,
+    "last_nonnull": null
+  },
+  {
+    "field": "ec_runoff_wall",
+    "nonnull": 0,
+    "zeros": 0,
+    "min": null,
+    "max": null,
+    "last_nonnull": null
+  },
+  {
+    "field": "ph_runoff_center",
+    "nonnull": 0,
+    "zeros": 0,
+    "min": null,
+    "max": null,
+    "last_nonnull": null
+  },
+  {
+    "field": "ec_runoff_center",
+    "nonnull": 0,
+    "zeros": 0,
+    "min": null,
+    "max": null,
+    "last_nonnull": null
+  },
+  {
+    "field": "moisture_north",
+    "nonnull": 0,
+    "zeros": 0,
+    "min": null,
+    "max": null,
+    "last_nonnull": null
+  },
+  {
+    "field": "moisture_south",
+    "nonnull": 0,
+    "zeros": 0,
+    "min": null,
+    "max": null,
+    "last_nonnull": null
+  },
+  {
+    "field": "moisture_center",
+    "nonnull": 0,
+    "zeros": 0,
+    "min": null,
+    "max": null,
+    "last_nonnull": null
+  },
+  {
+    "field": "ppfd",
+    "nonnull": 0,
+    "zeros": 0,
+    "min": null,
+    "max": null,
+    "last_nonnull": null
+  },
+  {
+    "field": "dli_par_today",
+    "nonnull": 0,
+    "zeros": 0,
+    "min": null,
+    "max": null,
+    "last_nonnull": null
+  },
+  {
+    "field": "pressure_hpa",
+    "nonnull": 9706,
+    "zeros": 0,
+    "min": 838.7099609375,
+    "max": 854.7603431921885,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "leaf_temp_north",
+    "nonnull": 0,
+    "zeros": 0,
+    "min": null,
+    "max": null,
+    "last_nonnull": null
+  },
+  {
+    "field": "leaf_temp_south",
+    "nonnull": 0,
+    "zeros": 0,
+    "min": null,
+    "max": null,
+    "last_nonnull": null
+  },
+  {
+    "field": "leaf_wetness_north",
+    "nonnull": 0,
+    "zeros": 0,
+    "min": null,
+    "max": null,
+    "last_nonnull": null
+  },
+  {
+    "field": "leaf_wetness_south",
+    "nonnull": 0,
+    "zeros": 0,
+    "min": null,
+    "max": null,
+    "last_nonnull": null
+  },
+  {
+    "field": "wind_speed_mph",
+    "nonnull": 9707,
+    "zeros": 306,
+    "min": 0,
+    "max": 11.4083750894775,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "wind_direction_deg",
+    "nonnull": 9707,
+    "zeros": 336,
+    "min": 0,
+    "max": 359,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "outdoor_lux",
+    "nonnull": 9706,
+    "zeros": 4300,
+    "min": 0,
+    "max": 110703,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "solar_irradiance_w_m2",
+    "nonnull": 9705,
+    "zeros": 4835,
+    "min": 0,
+    "max": 923,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "precip_in",
+    "nonnull": 9708,
+    "zeros": 9708,
+    "min": 0,
+    "max": 0,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "uv_index",
+    "nonnull": 9707,
+    "zeros": 4903,
+    "min": 0,
+    "max": 7.579999923706055,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "hydro_tds_ppm",
+    "nonnull": 26,
+    "zeros": 0,
+    "min": 886,
+    "max": 886,
+    "last_nonnull": "2026-10-01T12:48:00+00:00"
+  },
+  {
+    "field": "hydro_water_temp_f",
+    "nonnull": 0,
+    "zeros": 0,
+    "min": null,
+    "max": null,
+    "last_nonnull": null
+  },
+  {
+    "field": "wind_gust_mph",
+    "nonnull": 9706,
+    "zeros": 79,
+    "min": 0,
+    "max": 12.616679191589355,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "wind_lull_mph",
+    "nonnull": 9707,
+    "zeros": 3176,
+    "min": 0,
+    "max": 4.227930068969727,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "wind_speed_avg_mph",
+    "nonnull": 2261,
+    "zeros": 33,
+    "min": 0,
+    "max": 6.21868289191124,
+    "last_nonnull": "2026-10-06T03:23:12.842532+00:00"
+  },
+  {
+    "field": "wind_direction_avg_deg",
+    "nonnull": 2261,
+    "zeros": 45,
+    "min": 0,
+    "max": 359,
+    "last_nonnull": "2026-10-06T03:23:12.842532+00:00"
+  },
+  {
+    "field": "feels_like_f",
+    "nonnull": 2261,
+    "zeros": 0,
+    "min": 46.6838743771594,
+    "max": 90.446,
+    "last_nonnull": "2026-10-06T03:23:12.842532+00:00"
+  },
+  {
+    "field": "wet_bulb_temp_f",
+    "nonnull": 2261,
+    "zeros": 0,
+    "min": 42.31094622429,
+    "max": 59.4947652337805,
+    "last_nonnull": "2026-10-06T03:23:12.842532+00:00"
+  },
+  {
+    "field": "vapor_pressure_inhg",
+    "nonnull": 2261,
+    "zeros": 0,
+    "min": 0.175627921441171,
+    "max": 0.403013549051683,
+    "last_nonnull": "2026-10-06T03:23:12.842532+00:00"
+  },
+  {
+    "field": "air_density_kg_m3",
+    "nonnull": 2261,
+    "zeros": 0,
+    "min": 0.962966687937663,
+    "max": 1.05157753514163,
+    "last_nonnull": "2026-10-06T03:23:12.842532+00:00"
+  },
+  {
+    "field": "precip_intensity_in_h",
+    "nonnull": 2261,
+    "zeros": 2261,
+    "min": 0,
+    "max": 0,
+    "last_nonnull": "2026-10-06T03:23:12.842532+00:00"
+  },
+  {
+    "field": "lightning_count",
+    "nonnull": 9707,
+    "zeros": 9707,
+    "min": 0,
+    "max": 0,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "lightning_avg_dist_mi",
+    "nonnull": 9705,
+    "zeros": 9705,
+    "min": 0,
+    "max": 0,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "solar_altitude_deg",
+    "nonnull": 9709,
+    "zeros": 1,
+    "min": -54.6,
+    "max": 47.19,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "solar_azimuth_deg",
+    "nonnull": 9709,
+    "zeros": 0,
+    "min": 0.1,
+    "max": 359.95,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "hydro_ec_us_cm",
+    "nonnull": 26,
+    "zeros": 0,
+    "min": 2478,
+    "max": 2478,
+    "last_nonnull": "2026-10-01T12:48:00+00:00"
+  },
+  {
+    "field": "hydro_orp_mv",
+    "nonnull": 0,
+    "zeros": 0,
+    "min": null,
+    "max": null,
+    "last_nonnull": null
+  },
+  {
+    "field": "hydro_ph",
+    "nonnull": 26,
+    "zeros": 0,
+    "min": 7.78,
+    "max": 7.78,
+    "last_nonnull": "2026-10-01T12:48:00+00:00"
+  },
+  {
+    "field": "hydro_battery_pct",
+    "nonnull": 0,
+    "zeros": 0,
+    "min": null,
+    "max": null,
+    "last_nonnull": null
+  },
+  {
+    "field": "soil_moisture_south_1",
+    "nonnull": 9707,
+    "zeros": 9707,
+    "min": 0,
+    "max": 0,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "soil_temp_south_1",
+    "nonnull": 9707,
+    "zeros": 0,
+    "min": 60.79999923706055,
+    "max": 86.36000061035156,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "soil_ec_south_1",
+    "nonnull": 9681,
+    "zeros": 9681,
+    "min": 0,
+    "max": 0,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "soil_moisture_south_2",
+    "nonnull": 9707,
+    "zeros": 9707,
+    "min": 0,
+    "max": 0,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "soil_temp_south_2",
+    "nonnull": 9707,
+    "zeros": 0,
+    "min": 58.099998474121094,
+    "max": 95.36000061035156,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "soil_moisture_west",
+    "nonnull": 7107,
+    "zeros": 119,
+    "min": 0,
+    "max": 78.80000305175781,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "soil_temp_west",
+    "nonnull": 7107,
+    "zeros": 0,
+    "min": 32,
+    "max": 77.9000015258789,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "intake_rh",
+    "nonnull": 9709,
+    "zeros": 0,
+    "min": 15.5,
+    "max": 85.80000305175781,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "intake_vpd",
+    "nonnull": 9709,
+    "zeros": 0,
+    "min": 0.1619265079498291,
+    "max": 3.585390329360962,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "outdoor_illuminance",
+    "nonnull": 9394,
+    "zeros": 4168,
+    "min": 0,
+    "max": 110703,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "solar_phase",
+    "nonnull": 9699,
+    "zeros": 5,
+    "min": 0,
+    "max": 3.9972259998321533,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "solar_sunrise_min",
+    "nonnull": 9673,
+    "zeros": 0,
+    "min": 412,
+    "max": 419,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "solar_noon_min",
+    "nonnull": 9673,
+    "zeros": 0,
+    "min": 769,
+    "max": 771,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "solar_sunset_min",
+    "nonnull": 9673,
+    "zeros": 0,
+    "min": 1118,
+    "max": 1130,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "house_temp_target_f",
+    "nonnull": 9699,
+    "zeros": 0,
+    "min": 64.15895080566406,
+    "max": 80.34104919433594,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "house_temp_delta_f",
+    "nonnull": 9699,
+    "zeros": 0,
+    "min": -15.325881958007812,
+    "max": 5.435935974121094,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "house_vpd_target",
+    "nonnull": 9699,
+    "zeros": 0,
+    "min": 0.8259206414222717,
+    "max": 1.060034990310669,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "house_vpd_delta",
+    "nonnull": 9699,
+    "zeros": 0,
+    "min": -0.4292491674423218,
+    "max": 1.022547960281372,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "vpd_target_center",
+    "nonnull": 9699,
+    "zeros": 0,
+    "min": 0.7000072002410889,
+    "max": 1.099998116493225,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "vpd_target_south",
+    "nonnull": 9699,
+    "zeros": 0,
+    "min": 0.7373375296592712,
+    "max": 1.183611273765564,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "vpd_target_west",
+    "nonnull": 9699,
+    "zeros": 0,
+    "min": 0.5175677537918091,
+    "max": 1.1019656658172607,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "vpd_target_east",
+    "nonnull": 9699,
+    "zeros": 0,
+    "min": 0.7098923921585083,
+    "max": 1.222496747970581,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "vpd_delta_center",
+    "nonnull": 9699,
+    "zeros": 0,
+    "min": -0.3899623155593872,
+    "max": 0.9612288475036621,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "vpd_delta_south",
+    "nonnull": 0,
+    "zeros": 0,
+    "min": null,
+    "max": null,
+    "last_nonnull": null
+  },
+  {
+    "field": "vpd_delta_west",
+    "nonnull": 9663,
+    "zeros": 0,
+    "min": -0.431568443775177,
+    "max": 0.7462748885154724,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  },
+  {
+    "field": "vpd_delta_east",
+    "nonnull": 9663,
+    "zeros": 0,
+    "min": -0.5059252381324768,
+    "max": 0.6209811568260193,
+    "last_nonnull": "2026-10-06T03:25:16.427347+00:00"
+  }
+]

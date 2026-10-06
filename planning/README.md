@@ -2,7 +2,9 @@
 
 Start with [CAMPAIGN.md](CAMPAIGN.md) for implementation strategy and [the roadmap](../PROJECT_BOARD.md) for the complete issue index. [EVIDENCE.md](EVIDENCE.md) explains the review findings and their limits.
 
-The [October 5 greenhouse and acceptance review](reviews/2026-10-05/NEXT-SPRINT.md) supersedes the next-sprint pull set and adds current full-issue acceptance, health and native graph receipts.
+The [October 6 platform review and S2 pull set](reviews/2026-10-06/NEXT-SPRINT.md) is the latest full acceptance review. S1 is closed; S2 selects six issues with 68 engineering hours.
+
+The historical [October 5 greenhouse and acceptance review](reviews/2026-10-05/NEXT-SPRINT.md) records the previous S1 pull set and its dated full-issue acceptance, health and native graph receipts.
 
 The [September 26 production, issue, branch and worktree review](reviews/2026-09-26/NEXT-SPRINT.md) provides the next-sprint pull set and a full 80-issue inventory. The two later estate-rationalization issues, #801 and #802, are outside this 78-issue campaign source and are included in that review with their native cross-repository dependencies.
 

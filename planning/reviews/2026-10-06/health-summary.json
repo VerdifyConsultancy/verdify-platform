@@ -1,0 +1,87 @@
+{
+  "captured_at": "2026-10-06T03:25:19.141609+00:00",
+  "source_main_sha": "a847e8f1aeb8fc1a59925d0ad77d945f875667bd",
+  "production": {
+    "argo": "Synced/Healthy",
+    "long_running_ready_workloads": 16,
+    "matching_workload_image_specs": 26,
+    "rendered_objects": 127,
+    "rendered_secrets": 0,
+    "smoke_passed": 9,
+    "smoke_total": 9,
+    "production_max_migration": 274
+  },
+  "writer": {
+    "pinned_census_utc": "2026-10-06T03:35:19.032116+00:00",
+    "hosts": 8,
+    "namespaces": 501,
+    "errors": 0,
+    "established_connections": 1,
+    "pod_uid": "237002d4-5fb9-450f-8fe2-e266c969a1e1",
+    "pod_ip": "10.42.6.62",
+    "restarts": 0,
+    "namespace_monitor": "UNKNOWN: publisher pod appeared during scan; failure retained privately, not treated as duplicate writer"
+  },
+  "telemetry": {
+    "numeric_columns": 98,
+    "no_data_columns": [
+      "temp_south",
+      "rh_south",
+      "vpd_south",
+      "dli_today",
+      "ph_input",
+      "ec_input",
+      "ph_runoff_wall",
+      "ec_runoff_wall",
+      "ph_runoff_center",
+      "ec_runoff_center",
+      "moisture_north",
+      "moisture_south",
+      "moisture_center",
+      "ppfd",
+      "dli_par_today",
+      "leaf_temp_north",
+      "leaf_temp_south",
+      "leaf_wetness_north",
+      "leaf_wetness_south",
+      "hydro_water_temp_f",
+      "hydro_orp_mv",
+      "hydro_battery_pct",
+      "vpd_delta_south"
+    ],
+    "south_triplet_available": false,
+    "firmware_probe_claim": "4 / OK; contradicts missing south",
+    "firmware": "2026.10.2.0637.620a218a-wifi-bound",
+    "uptime_seconds": 307928.8125,
+    "heap_kib": 61.21484375
+  },
+  "alerts": {
+    "unresolved_open_ack_warning": 27,
+    "unresolved_critical": 0,
+    "historical_suppressed_unresolved": 61
+  },
+  "planning": {
+    "current_nonterminal_overdue": 0,
+    "hermes_missing_skill_lookups_4h": 6
+  },
+  "backup": {
+    "latest_paired_job": "Succeeded",
+    "restore_proven_by_backup": false,
+    "cnpg_rehearsal_max_migration": 270,
+    "full_parity": "not qualified"
+  },
+  "physical": {
+    "qualified_band_revisions": 0,
+    "calibration_commissioned": false
+  },
+  "experiment": {
+    "draws": 0,
+    "assigned_outcomes": 0,
+    "freezes": 0,
+    "exports": 0,
+    "proof_receipts": 0,
+    "open_exposures": 0
+  },
+  "runtime_changed": false,
+  "private_evidence_custody": "/Users/jason/maintenance/verdify-s2-review-20261005"
+}
