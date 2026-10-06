@@ -39,6 +39,17 @@ SUCCESSOR_MIGRATIONS = (
     ),
 )
 
+SUCCESSOR_274 = {
+    "api": "67bb961f69e72f8d59f8d38dce96201682b1fb8fb40d423071c987b075cf994e",
+    "ingestor": "126f95dc75242a126579331fadf711f0c1e8e408d20ec7cd94e3d1e27a0dcf75",
+    "mcp": "7083e4d43044e7f2b0150b58fa3cc8cc45c599a68b1f3cafaf9242e0f0f79e68",
+}
+PHYSICAL_MIGRATION = (
+    274,
+    "274-qualified-physical-crop-band-publication.sql",
+    "0b939df1a79e3ce71835e59aedb5d1898805cd43cae72b79fa905f77067a8e4f",
+)
+
 
 class BootstrapError(RuntimeError):
     pass
@@ -140,7 +151,7 @@ def seal_profile_sql(seq, digests):
     return "(" + " AND ".join(expressions) + ")"
 
 
-def sealed_sql():
+def sealed_sql_270_273():
     expressions = [
         "(SELECT count(*)=2 FROM public.runtime_ordinary_login_attestation_receipts)",
         "(SELECT count(*)=1 FROM public.mcp_runtime_boundary_receipt)",
@@ -163,6 +174,86 @@ def sealed_sql():
     )
     expressions.append("(" + current + " OR " + successor + ")")
     return " AND ".join(expressions)
+
+
+def physical_reader_scope_sql():
+    reader = "to_regprocedure('public.fn_physical_crop_band_evidence(date,text)')"
+    private_functions = (
+        "fn_publish_physical_crop_band_evidence(jsonb,jsonb)",
+        "fn_validate_physical_crop_band_diagnostic(jsonb)",
+        "fn_physical_crop_band_revision_immutable()",
+    )
+    checks = []
+    for signature, definer in (
+        ("fn_physical_crop_band_evidence(date,text)", True),
+        *((name, False) for name in private_functions),
+    ):
+        function = "to_regprocedure('public." + signature + "')"
+        checks.append(
+            "EXISTS(SELECT 1 FROM pg_proc p WHERE p.oid="
+            + function
+            + " AND p.prosecdef="
+            + str(definer).upper()
+            + " AND pg_get_userbyid(p.proowner)='verdify'"
+            + " AND 'search_path=pg_catalog, public, pg_temp'=ANY(p.proconfig)"
+            + " AND NOT EXISTS(SELECT 1 FROM aclexplode(COALESCE(p.proacl,acldefault('f',p.proowner))) a"
+            + " WHERE a.grantee=0 AND a.privilege_type='EXECUTE'))"
+        )
+    for duty in ("api", "mcp", "ingestor", *DUTIES):
+        login = "verdify_" + duty + "_runtime_login"
+        checks.append(
+            "has_function_privilege('"
+            + login
+            + "',"
+            + reader
+            + ",'EXECUTE') IS NOT DISTINCT FROM "
+            + str(duty in ("api", "mcp")).upper()
+        )
+        for signature in private_functions:
+            checks.append(
+                "has_function_privilege('"
+                + login
+                + "',to_regprocedure('public."
+                + signature
+                + "'),'EXECUTE') IS NOT DISTINCT FROM FALSE"
+            )
+        checks.append(
+            "has_table_privilege('"
+            + login
+            + "',to_regclass('public.physical_crop_band_revisions'),"
+            + "'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER') IS NOT DISTINCT FROM FALSE"
+        )
+        checks.append(
+            "has_sequence_privilege('"
+            + login
+            + "',to_regclass('public.physical_crop_band_revisions_revision_id_seq'),"
+            + "'USAGE,SELECT,UPDATE') IS NOT DISTINCT FROM FALSE"
+        )
+    checks.append(
+        "EXISTS(SELECT 1 FROM pg_class c WHERE c.oid=to_regclass('public.physical_crop_band_revisions')"
+        + " AND pg_get_userbyid(c.relowner)='verdify'"
+        + " AND NOT EXISTS(SELECT 1 FROM aclexplode(COALESCE(c.relacl,acldefault('r',c.relowner))) a WHERE a.grantee=0))"
+    )
+    return "(" + " AND ".join(checks) + ")"
+
+
+def sealed_sql():
+    # Preserve the independently qualified predecessor expression byte-for-byte.
+    # The new profile correlates exact catalog seals, ledger bytes and authority.
+    successor = [
+        "(SELECT count(*)=2 FROM public.runtime_ordinary_login_attestation_receipts)",
+        "(SELECT count(*)=1 FROM public.mcp_runtime_boundary_receipt)",
+        "NOT EXISTS(SELECT 1 FROM public.runtime_ordinary_login_attestation_receipts r WHERE r.boundary_sha256 IS DISTINCT FROM public.fn_runtime_ordinary_boundary_digest(r.login_name))",
+        "EXISTS(SELECT 1 FROM public.mcp_runtime_boundary_receipt r WHERE singleton AND r.boundary_sha256=public.fn_mcp_runtime_boundary_digest())",
+        ledger_row_sql(268, "268-six-runtime-workload-role-boundaries.sql", MIGRATION_SHA),
+        ledger_row_sql(270, "270-facility-safe-ops-projection.sql", OPS_MIGRATION_SHA),
+        seal_profile_sql(274, SUCCESSOR_274),
+        *(ledger_row_sql(*migration) for migration in SUCCESSOR_MIGRATIONS),
+        ledger_row_sql(*PHYSICAL_MIGRATION),
+        native_reader_scope_sql(),
+        physical_reader_scope_sql(),
+    ]
+    return "((" + sealed_sql_270_273() + ") OR (" + " AND ".join(successor) + "))"
 
 
 def identity_sql(login, duty):

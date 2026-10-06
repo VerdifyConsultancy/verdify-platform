@@ -382,13 +382,16 @@ def test_actual_scorecard_consumers_attach_separate_typed_snapshot(consumer, use
     async def db():
         return conn
 
+    async def read_physical(conn, day):
+        return physical
+
     namespace = dict(
         ScorecardResponse=ScorecardResponse,
         ValidationError=ValidationError,
         read_observed_minute_evidence=read,
         read_route_only_crop_band_evidence=read_route,
         read_native_fixed_panel_route_evidence=read_native_route,
-        unpublished_physical_crop_band_evidence=lambda day: physical,
+        read_physical_crop_band_evidence=read_physical,
         _fetch_planner_scorecard=fetch,
         pool=SimpleNamespace(acquire=Checkout),
         _db=db,
