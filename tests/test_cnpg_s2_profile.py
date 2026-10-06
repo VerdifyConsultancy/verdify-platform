@@ -46,3 +46,14 @@ def test_source_role_comments_are_compared_and_management_comment_is_explicit():
         m.verify(source, current.replace("source custody", "different"))
     with pytest.raises(ValueError, match="restored role posture"):
         m.verify(source, current.replace("Special user for streaming replication", "Unrecognized management metadata"))
+
+
+def test_s2_runtime_emitter_has_fixed_cluster_and_original_module_is_independent():
+    m = load("cnpg-s2-runtime-transition")
+    original = load("cnpg-target-runtime-transition")
+    assert m.t.profile()[0] == "verdify-cnpg-s2"
+    assert original.profile()[0] == "verdify-cnpg-rehearsal"
+    sql = m.t.ddl(True)[0]
+    assert "cluster_name')<>'verdify-cnpg-s2'" in sql
+    assert "public.cnpg_qualified_runtime_receipts" in sql
+    assert "runtime_ordinary_login_attestation_receipts" not in sql
