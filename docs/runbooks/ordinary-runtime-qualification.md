@@ -110,3 +110,13 @@ before and after the operation; CLI UID/hash assertions alone do not establish
 those facts. Stop target mutations if any binding changes or acceptance is
 unsealed. Never overwrite an existing verifier, reuse historical A/B targets or
 rotate a source credential to make a target qualification pass.
+
+The restored-duty executor also requires `--native-binding` containing ROOT's
+fresh exact Cluster/primary Pod/RW Service JSON and `--database-oid` from the
+sealed native admission readback. It binds the Cluster UID, Service ownership and
+primary selector, Ready primary Pod address, and raw binding SHA256. Before any
+fixture statement it verifies the authenticated backend address, native database
+OID, cluster name, primary status and PostgreSQL16.13. A stale binding or failover
+fails closed; take a new authoritative readback instead of bypassing the check.
+The binding file remains evidence custody, not independent proof of admission;
+ROOT still compares the actual admission receipt and target before/after execution.
