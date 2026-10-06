@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 from pathlib import Path
 
 import pytest
@@ -38,3 +39,44 @@ def test_complete_source_fixture_reuses_each_duty_without_owner_session_auth_pro
     # Genuine write duties remain included; no substitution with empty queries.
     for duty in mod.DUTIES - {"grafana"}:
         assert any(c["expect"] == "allowed" and c["sql"].startswith("INSERT") for c in mod.cases(fixture, duty))
+
+
+def test_native_binding_and_backend_refuse_wrong_owner_replica_or_address():
+    mod = module()
+    uid = "4f697776-df25-4e22-b930-0b76cf35496e"
+
+    def meta(name):
+        return {"name": name, "namespace": "verdify-db-rehearsal", "uid": uid}
+
+    binding = {
+        "cluster": {"metadata": meta("verdify-cnpg-s2"), "status": {"currentPrimary": "verdify-cnpg-s2-1"}},
+        "pod": {
+            "metadata": {**meta("verdify-cnpg-s2-1"), "labels": {"cnpg.io/cluster": "verdify-cnpg-s2"}},
+            "status": {"phase": "Running", "podIP": "10.42.5.100", "conditions": [{"type": "Ready", "status": "True"}]},
+        },
+        "service": {
+            "metadata": {**meta("verdify-cnpg-s2-rw"), "ownerReferences": [{"kind": "Cluster", "uid": uid}]},
+            "spec": {"selector": {"cnpg.io/cluster": "verdify-cnpg-s2", "role": "primary"}, "ports": [{"port": 5432}]},
+        },
+    }
+    address, digest = mod.target_binding(json.dumps(binding).encode(), uid)
+    assert address == "10.42.5.100" and len(digest) == 64
+    identity = {
+        "server_addr": address,
+        "database_oid": 16385,
+        "cluster_name": "verdify-cnpg-s2",
+        "replica": False,
+        "server_version_num": "160013",
+    }
+    mod.check_target_identity(identity, address, 16385)
+    for key, value in (
+        ("server_addr", "10.42.5.101"),
+        ("database_oid", 16384),
+        ("replica", True),
+        ("cluster_name", "verdify-cnpg-rehearsal"),
+    ):
+        with pytest.raises(AssertionError):
+            mod.check_target_identity({**identity, key: value}, address, 16385)
+    binding["service"]["metadata"]["ownerReferences"][0]["uid"] = "wrong-cluster"
+    with pytest.raises(AssertionError):
+        mod.target_binding(json.dumps(binding).encode(), uid)
