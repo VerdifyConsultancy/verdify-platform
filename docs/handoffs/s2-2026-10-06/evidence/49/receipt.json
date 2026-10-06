@@ -1,0 +1,17 @@
+{
+  "source_commit": "27581197",
+  "committed_sql_byte_exact_to_applied": true,
+  "applied_sql_sha256": "3e736a4f88bd58d34fa4dac90ccf8488aa640f03219bde477c4cf1824a98130e",
+  "reviewed_count": 61,
+  "changed_count": 61,
+  "second_run_changed_count": 0,
+  "canonical_membership_unchanged": true,
+  "canonical_count": 26,
+  "normal_updated_at_trigger_enabled": true,
+  "resolution_content_unchanged": true,
+  "reversal_fields": "Exact before/after resolved_at, resolved_by and trigger-updated updated_at in receipt; resolution was not changed. Never use historical151 broad rollback. Reverse only captured IDs under a checked isolated transaction; original updated_at restoration must account for its normal trigger.",
+  "dry_run_rollback_passed": true,
+  "stale_snapshot_negative_rejected": true,
+  "focused_tests": 12,
+  "initial_commit_format_hook_failure": "The initial commit was rejected by Ruff formatting, but subsequent authorized SQL execution proceeded. Formatting was corrected, all12 tests rerun, source committed, and committed SQL emission proved byte-exact to applied SQL. Original attempt/output retained privately."
+}

@@ -2,6 +2,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
 - cluster.yaml
+- s2-cluster.yaml
 - object-store.yaml
 - scheduled-backup.yaml
 - verdify-cnpg-rehearsal-isolation.yaml

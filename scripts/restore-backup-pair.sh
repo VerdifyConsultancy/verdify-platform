@@ -53,19 +53,27 @@ if [ "${RESTORE_SERVER_MODE:-standalone}" = cnpg ]; then
   mkdir -m 700 "${RESTORE_WORK_DIR}"
   work_dir="${RESTORE_WORK_DIR}"
   export PGUSER=postgres
-  psql -X -v ON_ERROR_STOP=1 -d postgres <<'SQL' >/dev/null
+  empty_oid="${CNPG_EMPTY_DATABASE_OID:-0}"
+  if [[ ! "$empty_oid" =~ ^[0-9]+$ ]]; then
+    echo '[restore-pair] FATAL: invalid empty database OID' >&2
+    exit 1
+  fi
+  psql -X -v ON_ERROR_STOP=1 -v empty_oid="$empty_oid" -d postgres <<'SQL' >/dev/null
+SET verdify.empty_database_oid TO :'empty_oid';
 DO $guard$ BEGIN
- IF current_setting('cluster_name')<>'verdify-cnpg-rehearsal'
+ IF current_setting('cluster_name') NOT IN ('verdify-cnpg-rehearsal','verdify-cnpg-s2')
     OR current_setting('server_version_num')::int<>160013
     OR pg_is_in_recovery()
-    OR EXISTS(SELECT 1 FROM pg_database WHERE datname='verdify_rehearsal')
+    OR EXISTS(SELECT 1 FROM pg_database WHERE datname='verdify_rehearsal'
+       AND (current_setting('cluster_name')<>'verdify-cnpg-s2'
+            OR oid::text<>current_setting('verdify.empty_database_oid')))
     OR EXISTS(SELECT 1 FROM pg_database WHERE datname NOT IN
-               ('postgres','template0','template1','rehearsal_bootstrap')) THEN
+               ('postgres','template0','template1','rehearsal_bootstrap','verdify_rehearsal')) THEN
    RAISE EXCEPTION 'CNPG import refuses target identity or nonempty cluster';
  END IF;
 END $guard$;
 SQL
-  pg_dumpall --roles-only --no-role-passwords --no-comments --no-security-labels \
+  pg_dumpall --roles-only --no-role-passwords --no-security-labels \
     > "${work_dir}/roles.before.sql" 2>"${work_dir}/roles-before.stderr"
   bootstrap_args=()
   if [ "${CNPG_BOOTSTRAP_GRANTOR_PROFILE:-}" = cnpg-source-bootstrap-grantor-v1 ]; then
@@ -80,6 +88,13 @@ SQL
     [ "${CNPG_MANAGEMENT_BEFORE}" = "${stage}/management-before.sql" ]
     management_args=(--management-before "${CNPG_MANAGEMENT_BEFORE}" --management-before-sha256 "${CNPG_MANAGEMENT_BEFORE_SHA256:?}")
   fi
+  completed_args=()
+  if [ "${CNPG_COMPLETED_ROLE_REPLAY:-}" = role-complete-native-verified-v1 ]; then
+    completed_args=(--completed-role-replay)
+  elif [ -n "${CNPG_COMPLETED_ROLE_REPLAY:-}" ]; then
+    echo '[restore-pair] FATAL: unknown completed-role continuation' >&2
+    exit 1
+  fi
   prefix_args=()
   if [ -n "${CNPG_ROLE_PREFIX_CUSTODY:-}" ]; then
     [ "${CNPG_ROLE_PREFIX_CUSTODY}" = "${stage}/role-prefix-custody.json" ]
@@ -87,7 +102,7 @@ SQL
     prefix_args=(--role-prefix-custody "${CNPG_ROLE_PREFIX_CUSTODY}" --role-prefix-current "${CNPG_ROLE_PREFIX_CURRENT}")
   fi
   python3 "${CNPG_ROLE_HELPER}" --source "${roles}" --current "${work_dir}/roles.before.sql" \
-    "${management_args[@]}" "${prefix_args[@]}" "${bootstrap_args[@]}" --replay "${work_dir}/roles.replay.sql"
+    "${management_args[@]}" "${prefix_args[@]}" "${completed_args[@]}" "${bootstrap_args[@]}" --replay "${work_dir}/roles.replay.sql"
 elif [ "${RESTORE_SERVER_MODE:-standalone}" = standalone ]; then
   work_dir="$(mktemp -d "${TMPDIR:-/tmp}/verdify-restore.XXXXXXXX")"
 # The TimescaleDB image can run as backup-plane uid 999 without a passwd entry.
@@ -120,11 +135,31 @@ if ! psql -X -v ON_ERROR_STOP=1 -d postgres -f "${work_dir}/roles.replay.sql" \
   exit 1
 fi
 if [ "${RESTORE_SERVER_MODE:-standalone}" = cnpg ]; then
-  pg_dumpall --roles-only --no-role-passwords --no-comments --no-security-labels \
+  pg_dumpall --roles-only --no-role-passwords --no-security-labels \
     > "${work_dir}/roles.after-replay.sql" 2>"${work_dir}/roles-after-replay.stderr"
   python3 "${CNPG_ROLE_HELPER}" --source "${roles}" --current "${work_dir}/roles.after-replay.sql" "${bootstrap_args[@]}"
 fi
-createdb -O "${owner}" "${PGDATABASE}"
+if [ "${RESTORE_SERVER_MODE:-standalone}" = cnpg ] && [ "${CNPG_EMPTY_DATABASE_OID:-0}" != 0 ]; then
+  [ "${CNPG_COMPLETED_ROLE_REPLAY:-}" = role-complete-native-verified-v1 ]
+  psql -X -v ON_ERROR_STOP=1 -v empty_oid="${CNPG_EMPTY_DATABASE_OID}" -d "${PGDATABASE}" <<'SQL' >/dev/null
+SET verdify.empty_database_oid TO :'empty_oid';
+DO $empty_guard$ BEGIN
+ IF current_setting('cluster_name')<>'verdify-cnpg-s2' OR current_database()<>'verdify_rehearsal'
+ OR (SELECT oid::text FROM pg_database WHERE datname=current_database())<>current_setting('verdify.empty_database_oid')
+ OR (SELECT pg_get_userbyid(datdba) FROM pg_database WHERE datname=current_database())<>'verdify'
+ OR EXISTS(SELECT 1 FROM pg_extension WHERE extname<>'plpgsql')
+ OR EXISTS(SELECT 1 FROM pg_namespace WHERE nspname NOT IN ('public','information_schema') AND nspname !~ '^pg_')
+ OR EXISTS(SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public')
+ OR EXISTS(SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public')
+ OR EXISTS(SELECT 1 FROM pg_type t JOIN pg_namespace n ON n.oid=t.typnamespace WHERE n.nspname='public')
+ OR EXISTS(SELECT 1 FROM pg_stat_activity WHERE datname=current_database() AND pid<>pg_backend_pid()) THEN
+   RAISE EXCEPTION 'empty database continuation refuses nonempty or unbound target';
+ END IF;
+END $empty_guard$;
+SQL
+else
+  createdb -O "${owner}" "${PGDATABASE}"
+fi
 if [ "${RESTORE_SERVER_MODE:-standalone}" = cnpg ]; then
   python3 "${CNPG_ACL_HELPER}" --source "${CNPG_SOURCE_WITNESS:?}" \
     --sha256 "${CNPG_SOURCE_WITNESS_SHA256:?}" --output "${work_dir}/source-database-acl.sql"
@@ -183,7 +218,7 @@ done
 # Re-export the normalized role catalog from the restored cluster. pg_dumpall
 # generates a fresh random psql \restrict/\unrestrict key for every invocation;
 # remove only those two transport lines before the byte-for-byte comparison.
-if ! pg_dumpall --roles-only --no-role-passwords --no-comments --no-security-labels \
+if ! pg_dumpall --roles-only --no-role-passwords --no-security-labels \
     -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}" -l postgres \
     > "${work_dir}/roles.restored.sql" 2>"${work_dir}/roles-diff.stderr"; then
   echo "[restore-pair] FATAL: restored role inventory failed" >&2

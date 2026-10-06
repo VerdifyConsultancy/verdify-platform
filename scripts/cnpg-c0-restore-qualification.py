@@ -337,11 +337,12 @@ def ordinary_projection(login, *, semantic=False):
     return body, cte
 
 
-def emit_sql(target=False, *, bootstrap_grantor_profile=False):
+def emit_sql(target=False, *, bootstrap_grantor_profile=False, cluster_name="verdify-cnpg-rehearsal"):
+    require(cluster_name in ("verdify-cnpg-rehearsal", "verdify-cnpg-s2"), "unsupported isolated cluster profile")
     require(not bootstrap_grantor_profile or target, "bootstrap translation is target-only")
     profile_sql = "'" + BOOTSTRAP_PROFILE + "'" if bootstrap_grantor_profile else "NULL"
     database, version = ("verdify_rehearsal", 160013) if target else ("verdify", 160011)
-    guard = "OR current_setting('cluster_name') <> 'verdify-cnpg-rehearsal'" if target else ""
+    guard = f"OR current_setting('cluster_name') <> '{cluster_name}'" if target else ""
     queries = []
     implementation_guards = []
     for login in boundary.LOGINS:
@@ -956,6 +957,10 @@ def default_owner_boundary_entries(snapshot, data):
     return result
 
 
+CURRENT274_SOURCE_WITNESS_SHA256 = "7cf93863741a7827ef1f75e6f9e926a6966578c81e2884b3a70ed4644e1c5a50"
+CURRENT274_SOURCE_V2_CATALOG_SHA256 = "10d0cdf8e2f3a4633f6f97d4283ee41aa0897b009df3e17aec61fef4b00471df"
+
+
 def checked(snapshot, *, target):
     require(snapshot["version"] == VERSION, "unsupported witness")
     require(not target or "historical_snapshot" not in snapshot, "source-only historical profile on target")
@@ -964,9 +969,15 @@ def checked(snapshot, *, target):
     semantic_ids = checked_catalog(snapshot["portable_catalog"])
     raw_ids = checked_catalog(snapshot["raw_portable_catalog_v2"], raw=True)
     if not target:
+        raw_catalog_sha = catalog_sha256(historical_catalogs(snapshot)[0])
+        current274 = (
+            hashlib.sha256((json.dumps(snapshot, separators=(",", ":")) + "\n").encode()).hexdigest()
+            == CURRENT274_SOURCE_WITNESS_SHA256
+        )
         require(
-            catalog_sha256(historical_catalogs(snapshot)[0]) == FROZEN_SOURCE_V2_CATALOG_SHA256,
-            "source raw v2 catalog differs from frozen ec9 witness",
+            raw_catalog_sha == FROZEN_SOURCE_V2_CATALOG_SHA256
+            or (current274 and raw_catalog_sha == CURRENT274_SOURCE_V2_CATALOG_SHA256),
+            "source raw v2 catalog differs from frozen ec9 or exact current274 witness",
         )
     facts = snapshot["portability_native_facts"]
     require(
@@ -1195,6 +1206,9 @@ def compare(source, target):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--target", action="store_true")
+    parser.add_argument(
+        "--cluster-name", choices=("verdify-cnpg-rehearsal", "verdify-cnpg-s2"), default="verdify-cnpg-rehearsal"
+    )
     parser.add_argument("--bootstrap-grantor-profile", action="store_true")
     parser.add_argument("--source", type=Path)
     parser.add_argument("--restored", type=Path)
@@ -1242,7 +1256,9 @@ def main():
         result = compare(source, target) | {"source_witness_sha256": source_sha, "target_witness_sha256": target_sha}
         content = json.dumps(result, indent=2) + "\n"
     else:
-        content = emit_sql(args.target, bootstrap_grantor_profile=args.bootstrap_grantor_profile)
+        content = emit_sql(
+            args.target, bootstrap_grantor_profile=args.bootstrap_grantor_profile, cluster_name=args.cluster_name
+        )
     with args.output.open("x") as stream:
         stream.write(content)
 

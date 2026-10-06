@@ -1,0 +1,89 @@
+{
+  "queues": {
+    "climate-events": {
+      "abrupt_process_exit": "passed",
+      "accepted_rows": 1000,
+      "accepted_sha256": "05b94db6e529077dc1f4f888593de5453b574801606319902a48ac27d7b07413",
+      "before_drain_health": {
+        "backlog_high": false,
+        "backlog_stale": true,
+        "disk_bytes": 159744,
+        "disk_headroom_low": false,
+        "format": 1,
+        "free_bytes": 15946563584,
+        "max_payload_bytes": 134217728,
+        "max_rows": 30000,
+        "oldest_source_age_seconds": 844574124.998368,
+        "payload_bytes": 99890,
+        "rows": 1000,
+        "utilization": 0.03333333333333333
+      },
+      "enqueue_seconds": 0.3026479999971343,
+      "incompatible_format_preserved": "passed",
+      "interrupted_ack_hot_journal": "passed",
+      "local_ack_seconds": 0.0011373339948477224,
+      "restart_reopen_decode_seconds": 0.0021869170013815165,
+      "sqlite_full_preserves_accepted": "passed",
+      "timestamp_generation_fifo": "passed",
+      "unexplained_loss": 0,
+      "v1_backup_restoration": "passed"
+    },
+    "equipment-source": {
+      "abrupt_process_exit": "passed",
+      "accepted_rows": 1000,
+      "accepted_sha256": "05b94db6e529077dc1f4f888593de5453b574801606319902a48ac27d7b07413",
+      "before_drain_health": {
+        "backlog_high": false,
+        "backlog_stale": true,
+        "disk_bytes": 159744,
+        "disk_headroom_low": false,
+        "format": 1,
+        "free_bytes": 15959199744,
+        "max_payload_bytes": 134217728,
+        "max_rows": 30000,
+        "oldest_source_age_seconds": 844574124.662864,
+        "payload_bytes": 99890,
+        "rows": 1000,
+        "utilization": 0.03333333333333333
+      },
+      "enqueue_seconds": 0.3368126669956837,
+      "incompatible_format_preserved": "passed",
+      "interrupted_ack_hot_journal": "passed",
+      "local_ack_seconds": 0.0011652499961201102,
+      "restart_reopen_decode_seconds": 0.002136958995833993,
+      "sqlite_full_preserves_accepted": "passed",
+      "timestamp_generation_fifo": "passed",
+      "unexplained_loss": 0,
+      "v1_backup_restoration": "passed"
+    },
+    "observational-events": {
+      "abrupt_process_exit": "passed",
+      "accepted_rows": 1000,
+      "accepted_sha256": "05b94db6e529077dc1f4f888593de5453b574801606319902a48ac27d7b07413",
+      "before_drain_health": {
+        "backlog_high": false,
+        "backlog_stale": true,
+        "disk_bytes": 159744,
+        "disk_headroom_low": false,
+        "format": 1,
+        "free_bytes": 15976579072,
+        "max_payload_bytes": 134217728,
+        "max_rows": 30000,
+        "oldest_source_age_seconds": 844574125.3652532,
+        "payload_bytes": 99890,
+        "rows": 1000,
+        "utilization": 0.03333333333333333
+      },
+      "enqueue_seconds": 0.3322835419967305,
+      "incompatible_format_preserved": "passed",
+      "interrupted_ack_hot_journal": "passed",
+      "local_ack_seconds": 0.0010681249987101182,
+      "restart_reopen_decode_seconds": 0.002006791008170694,
+      "sqlite_full_preserves_accepted": "passed",
+      "timestamp_generation_fifo": "passed",
+      "unexplained_loss": 0,
+      "v1_backup_restoration": "passed"
+    }
+  },
+  "scope": "SQLite component on actual filesystem; no database/device/physical-node proof"
+}

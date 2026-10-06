@@ -6,19 +6,12 @@ description: Verdify greenhouse planning skill — complete operational playbook
 <!--
 Canonical source of the Verdify planner operational playbook.
 
-Iris reads this file at runtime from the agent-host path
-`/mnt/agents/iris/skills/greenhouse-planner.md`. That file is an
-operational mirror of this one and must stay in sync — any content change
-should land here first (validated, version-controlled) and then be copied
-out to the agent host.
-
-A module-level assertion in `ingestor/iris_planner.py` checks the agent-host
-path exists at planner-import time; if it's missing or stale, Iris loses
-her operational playbook at runtime and planning quality drops silently.
-Sync is currently manual. The old G4 deploy-time automation follow-up is
-archived in
-`/Users/jason/Orbit/context_dump/verdify-platform/docs/backlog/genai.md`;
-current tracking lives in GitHub issues.
+In k3s, scripts/gen-iris-inventory-cm.py packages this canonical playbook as
+references/greenhouse-playbook.md in the greenhouse-planning-mcp skill. The
+Hermes seed init container installs it on every start. Read it through
+skill_view(name="greenhouse-planning-mcp", file_path="references/greenhouse-playbook.md").
+Do not read the retired /mnt/agents mirror or use arbitrary filesystem tools.
+Changes here require regenerating the inventory ConfigMap and its rollout hash.
 -->
 
 # Greenhouse Planner — Operational Playbook

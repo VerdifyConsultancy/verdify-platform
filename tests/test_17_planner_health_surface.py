@@ -465,13 +465,15 @@ def test_hermes_profile_revision_rolls_and_reseeds_on_config_change():
     workloads = yaml.safe_load_all((REPO_ROOT / "deploy/k8s/components/hermes-iris/hermes-iris.yaml").read_text())
     workload = next(document for document in workloads if document.get("kind") == "Deployment")
 
-    assert workload["spec"]["template"]["metadata"]["annotations"] == {
-        "verdify.io/hermes-profile-revision": expected_profile,
-    }
+    assert (
+        workload["spec"]["template"]["metadata"]["annotations"]["verdify.io/hermes-profile-revision"]
+        == expected_profile
+    )
     init_by_name = {item["name"]: item for item in workload["spec"]["template"]["spec"]["initContainers"]}
     assert init_by_name["seed-config"]["command"] == [
         "sh",
         "-c",
+        "python3 /etc/verdify/iris-inventory/seed-inventory.py && "
         "cp -f /etc/verdify/hermes-config/config.yaml /opt/data/config.yaml && "
         "echo 'seeded /opt/data/config.yaml from verdify-hermes-iris-config'",
     ]

@@ -86,6 +86,7 @@ spec:
         # sha256[:12] of hermes-config.yaml data.config.yaml. Profile edits roll
         # this Recreate Deployment so seed-config refreshes the state PVC before
         # startup. Keep this independent of provider-specific runtime patches.
+        verdify.io/iris-inventory-revision: "aaefffac230b"
         verdify.io/hermes-profile-revision: "51de00576417"
       labels:
         app.kubernetes.io/part-of: verdify
@@ -108,11 +109,12 @@ spec:
         # ConfigMap so the profile can NEVER silently drift back to the stock
         # hermes-agent template (the openrouter/anthropic default that 401'd every
         # planner LLM call). The PVC stays the writable HERMES_HOME for run state;
-        # only config.yaml is reconciled here. Uses the SAME upstream image (no
-        # extra pull) just to get a shell; it only does a file copy.
+        # config.yaml plus source-owned SOUL/required skill references are
+        # reconciled here. The learned skill/history and credentials are
+        # retained. Uses the SAME upstream image (no extra pull).
         - name: seed-config
           image: nousresearch/hermes-agent@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e
-          command: ["sh", "-c", "cp -f /etc/verdify/hermes-config/config.yaml /opt/data/config.yaml && echo 'seeded /opt/data/config.yaml from verdify-hermes-iris-config'"]
+          command: ["sh", "-c", "python3 /etc/verdify/iris-inventory/seed-inventory.py && cp -f /etc/verdify/hermes-config/config.yaml /opt/data/config.yaml && echo 'seeded /opt/data/config.yaml from verdify-hermes-iris-config'"]
           securityContext:
             runAsNonRoot: true
             runAsUser: 1000
@@ -128,6 +130,9 @@ spec:
               mountPath: /opt/data
             - name: hermes-config
               mountPath: /etc/verdify/hermes-config
+              readOnly: true
+            - name: iris-inventory
+              mountPath: /etc/verdify/iris-inventory
               readOnly: true
       containers:
         - name: hermes-iris
@@ -213,6 +218,9 @@ spec:
             timeoutSeconds: 5
             failureThreshold: 1
       volumes:
+        - name: iris-inventory
+          configMap:
+            name: verdify-iris-inventory
         - name: data
           persistentVolumeClaim:
             claimName: verdify-hermes-iris-data

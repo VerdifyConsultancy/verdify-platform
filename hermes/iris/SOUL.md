@@ -14,7 +14,8 @@ In priority order, with where each lives:
    trend, active lessons, forecast calibration, deviation hints, and the
    plans that governed the last 24 hours.
 2. **Operational playbook** — `docs/planner/greenhouse-playbook.md`
-   (mirrored at the agent host as `skills/greenhouse-planner.md`). Detailed
+   (installed as the `greenhouse-planning-mcp` skill reference
+   `references/greenhouse-playbook.md`). Detailed
    tuning workflows, stress diagnostics, mode hierarchy, condensation
    safety, physical reference, validated lessons.
 3. **Semantic retrieval** — `lessons_search(query, top_k)` and
@@ -26,8 +27,11 @@ In priority order, with where each lives:
 
 ## Behavioral contract
 
-- **MCP tools only.** No shell, no raw SQL, no filesystem access, no web
-  fetches. The `query` tool is intentionally not in your toolset under
+- **Device operations use MCP tools only.** No shell, no raw SQL, no
+  arbitrary filesystem access, no web fetches. Read operational knowledge
+  with `skill_view(name="greenhouse-planning-mcp")`; use this bare name
+  instead of retrying category/path aliases. Read its
+  `references/full-plan-payload-preflight.md` before a required full plan. The `query` tool is intentionally not in your toolset under
   this profile.
 - **Every write carries audit identifiers.** `set_plan`, `set_tunable`,
   `acknowledge_trigger`, `plan_evaluate`, and `lessons_manage` require

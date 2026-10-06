@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import sqlite3
+import time
 from pathlib import Path
 
 
@@ -88,6 +90,44 @@ class SourceSpool:
                 "SELECT kind,identity,payload FROM source_queue ORDER BY seq"
             )
         ]
+
+    def health(self) -> dict:
+        """Bounded metadata only; does not consume rows or expose their payloads."""
+        count, size = self.backlog()
+        free = shutil.disk_usage(self.path.parent).free
+        # Journals/high-water pages consume space beyond serialized payload.
+        disk_bytes = sum(
+            path.stat().st_size for path in (self.path, Path(str(self.path) + "-journal")) if path.exists()
+        )
+        utilization = max(count / self.max_rows, size / self.max_bytes)
+        oldest = self.conn.execute(
+            """SELECT min((julianday(coalesce(
+                json_extract(payload,'$.observed_at'),
+                json_extract(payload,'$.row.ts'),
+                json_extract(payload,'$.source_observed_at'),
+                json_extract(payload,'$.source_observed_through'),
+                json_extract(payload,'$.observations[0][2]')
+            ))-2440587.5)*86400.0) FROM source_queue"""
+        ).fetchone()[0]
+        # Historical source age, not wall time of enqueue. Legacy format has
+        # no local accepted-at clock; absent clocks remain null, never guessed.
+        source_age = max(0.0, time.time() - oldest) if oldest is not None else None
+        return {
+            "format": self.conn.execute("PRAGMA user_version").fetchone()[0],
+            "rows": count,
+            "payload_bytes": size,
+            "disk_bytes": disk_bytes,
+            "free_bytes": free,
+            "max_rows": self.max_rows,
+            "max_payload_bytes": self.max_bytes,
+            "utilization": utilization,
+            "backlog_high": utilization >= 0.8,
+            "oldest_source_age_seconds": source_age,
+            "backlog_stale": source_age is not None and source_age >= 300,
+            # Allow a full-size new payload and rollback-journal copy. This is
+            # headroom warning, not a promise that another write will succeed.
+            "disk_headroom_low": free < 2 * self.max_bytes,
+        }
 
     def acknowledge(self, identities: list[str]) -> None:
         with self.conn:

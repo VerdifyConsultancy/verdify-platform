@@ -3708,6 +3708,29 @@ def on_state_change(entity_state, *, native_generation: int | None = None) -> No
 # ──────────────────────────────────────────────────────────────
 # Flush loop
 # ──────────────────────────────────────────────────────────────
+def _report_spool_health() -> None:
+    """Report enabled queues even when acceptance/draining has stopped."""
+    queues = {
+        "equipment": _source_spool,
+        "climate": _climate_event_spool,
+        "observational": _observation_spool.queue if _observation_spool is not None else None,
+    }
+    for name, queue in queues.items():
+        if queue is None:
+            continue
+        try:
+            report = {"queue": name, **queue.health()}
+            level = (
+                logging.WARNING
+                if any(report[key] for key in ("backlog_high", "backlog_stale", "disk_headroom_low"))
+                else logging.INFO
+            )
+            log.log(level, "ingestor_spool_health %s", json.dumps(report, sort_keys=True))
+        except Exception as exc:
+            # Metadata failure must not disrupt the sole writer or drop work.
+            log.error("ingestor_spool_health_failed queue=%s reason=%s", name, type(exc).__name__)
+
+
 async def flush_loop(
     pool: asyncpg.Pool,
     equipment_source_pool: asyncpg.Pool | None = None,
@@ -3723,11 +3746,16 @@ async def flush_loop(
     last_diag = 0.0
     last_fixed_panel_report = 0.0
     last_fixed_panel_db_error = 0.0
+    last_spool_report = 0.0
 
     while True:
         await asyncio.sleep(5)
         now = asyncio.get_event_loop().time()
         ts = datetime.now(UTC)
+
+        if now - last_spool_report >= 60:
+            _report_spool_health()
+            last_spool_report = now
 
         if _observation_spool_enabled():
             try:
